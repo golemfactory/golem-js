@@ -78,20 +78,20 @@ export class OfferProposal {
   }
 
   issuer(): string {
-    return this._proposal!.proposal!.issuerId || "";
+    return this._proposal.proposal!.issuerId || "";
   }
 
   id(): string {
-    return this._proposal!.proposal!.proposalId || "";
+    return this._proposal.proposal!.proposalId || "";
   }
 
   props() {
-    return this._proposal!.proposal!.properties;
+    return this._proposal.proposal!.properties;
   }
 
   is_draft(): boolean {
     return (
-      this._proposal!.proposal!.state == models.ProposalAllOfStateEnum.Draft
+      this._proposal.proposal!.state == models.ProposalAllOfStateEnum.Draft
     );
   }
 

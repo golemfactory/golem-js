@@ -16,7 +16,7 @@ export class DemandBuilder {
   cons(): string {
     let c_list = this._constraints;
     let c_value: string;
-    if (!c_list) c_value = "()";
+    if (!c_list || c_list.length < 1) c_value = "()";
     else if (Object.keys(c_list).length == 1) c_value = c_list[0];
     else {
       let rules = c_list.join("\n\t");
@@ -54,7 +54,7 @@ export class DemandBuilder {
   }
 
   async subscribe(market: Market): Promise<Subscription> {
-    let result: Subscription = await market.subscribe(this._props, this.cons());
+    let result: Subscription = await market.subscribe(this.props(), this.cons());
     return result;
   }
 }

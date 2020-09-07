@@ -1,4 +1,4 @@
-# YAJSAPI
+# Golem JS Api
 ## (Highly Experimental/WIP) Almost 1:1 Porf of Yapapi to Typescript
 
 ## Installation
