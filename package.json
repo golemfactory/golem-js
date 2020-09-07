@@ -8,6 +8,7 @@
     "scripts": {
         "clean": "rm -Rf node_modules/ *.js",
         "start": "ts-node-script ./examples/blender/index.ts",
+        "start:low": "ts-node-script ./examples/low-level-api/index.ts",
         "build": "tsc",
         "test": "npm run build && node dist/client.js"
     },
