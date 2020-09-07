@@ -9,3 +9,4 @@
 ## Running
 
 `npm run start` will start blender example by default
+`npm run start:low` will start low level api example
