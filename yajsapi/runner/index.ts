@@ -226,7 +226,7 @@ export class Engine {
     async function _tmp_log() {
       while (true) {
         let item = await event_queue.get();
-        console.log("_tmp_log", item);
+        console.log("_tmp_log", ...item);
       }
     }
 
