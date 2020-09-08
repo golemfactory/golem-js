@@ -1,3 +1,4 @@
+import exitHook from "async-exit-hook";
 import {
   RequestorControlApi,
   RequestorStateApi,
@@ -36,6 +37,10 @@ export class Activity {
 
   constructor(_api: RequestorControlApi) {
     this._api = _api;
+    exitHook(async (callback) => {
+      await this.done();
+      callback();
+    })
   }
 
   set id(x) {
@@ -64,7 +69,7 @@ export class Activity {
     return this;
   }
 
-  async done(exc_type, exc_val, exc_tb): Promise<void> {
+  async done(): Promise<void> {
     await this._api.destroyActivity(this._id);
   }
 }

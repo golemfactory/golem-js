@@ -1,3 +1,4 @@
+import exitHook from "async-exit-hook";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import { Model } from "../props";
@@ -145,6 +146,11 @@ export class Subscription extends Object {
     this._open = true;
     this._deleted = false;
     this._details = _details;
+
+    exitHook(async (callback) => {
+      await this.done();
+      callback();
+    });
   }
 
   id() {
@@ -159,7 +165,7 @@ export class Subscription extends Object {
     return this;
   }
 
-  async done(_exc_type, _exc_value, _traceback) {
+  async done() {
     await this.delete();
   }
 
@@ -178,7 +184,6 @@ export class Subscription extends Object {
   async *events(): AsyncGenerator<OfferProposal> {
     while (this._open) {
       let { data: proposals } = await this._api.collectOffers(this._id, 10, 10);
-      console.log("proposals", this._id, proposals);
       for (let _proposal of proposals) {
         yield new OfferProposal(this, _proposal as ProposalEvent);
       }

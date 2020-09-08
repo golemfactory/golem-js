@@ -1,3 +1,5 @@
+import exitHook from "async-exit-hook";
+
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 
@@ -97,6 +99,11 @@ class _AllocationTask extends ResourceCtx<Allocation> {
     super();
     this._api = api;
     this.model = model;
+
+    exitHook(async (callback) => {
+      await this.done();
+      callback();
+    });
   }
 
   async ready() {
@@ -124,7 +131,7 @@ class _AllocationTask extends ResourceCtx<Allocation> {
     }
   }
 
-  async done(exc_type, exc_val, exc_tb) {
+  async done() {
     if (this._id) {
       await this._api.releaseAllocation(this._id);
     }
