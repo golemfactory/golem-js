@@ -8,7 +8,11 @@ import rest from "../../yajsapi/rest";
 dayjs.extend(utc);
 const { Configuration, Market } = rest;
 
-async function list_offers(conf: any): Promise<void> {
+async function list_offers(conf: any, timeout: number): Promise<void> {
+  setTimeout(() => {
+    subscription.close()
+  }, timeout * 1000);
+
   let client = await conf.market();
   let market_api = new Market(client);
   let dbuild = new DemandBuilder();
@@ -31,4 +35,4 @@ async function list_offers(conf: any): Promise<void> {
   console.log("done");
 }
 
-list_offers(new Configuration());
+list_offers(new Configuration(), 4);

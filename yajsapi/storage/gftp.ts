@@ -1,3 +1,5 @@
+import exitHook from "async-exit-hook";
+
 import process from "process";
 import { spawn, ChildProcess } from "child_process";
 import { StorageProvider, Destination, Source, Content } from ".";
@@ -207,6 +209,10 @@ class GftpProvider implements StorageProvider {
     // this.__exit_stack = new AsyncExitStack()
     this._temp_dir = tmpdir || null;
     this._process = null;
+    exitHook(async (callback) => {
+      await this.done();
+      callback();
+    });
   }
   upload_bytes(data: Buffer): Promise<Source> {
     throw new Error("Method not implemented.");
@@ -222,9 +228,6 @@ class GftpProvider implements StorageProvider {
   }
 
   async done(
-    exc_type?: Error,
-    exc_value?: Error,
-    traceback?: Error
   ): Promise<boolean | null | void> {
     await this.__exit_stack.aclose();
     return null;
