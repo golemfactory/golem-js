@@ -5,27 +5,40 @@ export class CommandContainer {
 
   constructor() {
     this._commands = [];
+    return new Proxy(this, this.getattr());
   }
 
   commands() {
     return this._commands;
   }
 
-  getattr(item) {
-    let self = this;
-    function add_command(): Number {
-      let _arguments = {};
-      let args = Array.prototype.slice.call(arguments, add_command.length);
-      for (const [key, value] of args) {
-        if (key[0] == "_") {
-          _arguments = { ..._arguments, [key.slice(1)]: value };
+  getattr() {
+    const self = this;
+    return {
+      get(target, name) {
+        if (target[name] !== undefined) {
+          return target[name];
         }
-      }
-      let idx = self._commands.length();
-      self._commands.append({ [item]: _arguments });
-      return idx;
-    }
-    return add_command;
+        const newFunction = function () {
+          let _arguments = {};
+          let args = arguments[0] || {};
+          for (const [key, value] of Object.entries(args)) {
+            _arguments = {
+              ..._arguments,
+              [key.startsWith("_") ? key.slice(1) : key]: value,
+            };
+          }
+          let idx = self._commands.length;
+          self._commands.push({ [name]: _arguments });
+          return idx;
+        };
+        return new Proxy(newFunction, {
+          apply: function (target, thisArg, argumentsList) {
+            return target.apply(thisArg, argumentsList);
+          },
+        });
+      },
+    };
   }
 }
 
@@ -72,10 +85,10 @@ class _SendWork extends Work {
   register(commands: any) {
     //CommandContainer
     if (!this._src) throw "cmd prepared";
-    this._idx = commands.transfer(
-      this._src.download_url,
-      `container:${this._dst_path}`
-    );
+    this._idx = commands.transfer({
+      _from: this._src.download_url(),
+      _to: `container:${this._dst_path}`,
+    });
   }
 }
 
@@ -127,7 +140,10 @@ class _Run extends Work {
 
   register(commands: any) {
     //CommandContainer
-    this._idx = commands.run(this.cmd, this.args);
+    this._idx = commands.run({
+      entry_point: this.cmd,
+      args: this.args || [],
+    });
   }
 }
 
@@ -153,11 +169,11 @@ class _RecvFile extends Work {
 
   register(commands: any) {
     //CommandContainer
-    if (this._dst_slot) throw "_RecvFile command creation without prepare";
-    this._idx = commands.transfer(
-      `container:${this._src_path}`,
-      this._dst_slot!.upload_url
-    );
+    if (!this._dst_slot) throw "_RecvFile command creation without prepare";
+    this._idx = commands.transfer({
+      _from: `container:${this._src_path}`,
+      _to: this._dst_slot!.upload_url(),
+    });
   }
 
   async post() {
@@ -216,6 +232,7 @@ export class WorkContext {
   }
   begin() {}
   send_json(json_path: string, data: {}) {
+    this._prepare();
     this._pending_steps.push(new _SendJson(this._storage, data, json_path));
   }
   send_file(src_path: string, dst_path: string) {

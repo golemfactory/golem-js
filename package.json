@@ -15,6 +15,7 @@
     "author": "Muhammed Tanrikulu <muhammed@golem.network>",
     "license": "Unlicense",
     "dependencies": {
+        "@rauschma/stringio": "^1.4.0",
         "@types/bluebird": "^3.5.32",
         "async-exit-hook": "^2.0.1",
         "axios": "^0.19.2",

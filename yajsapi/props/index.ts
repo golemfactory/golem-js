@@ -8,9 +8,12 @@ export class Identification extends Model {
     metadata: { key: "golem.node.debug.subnet" },
   });
 
-  constructor(subnet_tag: string = "testnet") {
+  constructor(subnet_tag: string = "testnet", name?: string) {
     super();
     this.subnet_tag.value = subnet_tag;
+    if(name) {
+      this.name.value = name;
+    }
   }
 }
 

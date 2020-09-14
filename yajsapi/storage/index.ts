@@ -1,4 +1,5 @@
 import Path from "path";
+import { applyMixins } from "../utils";
 const { promises: fs } = require("fs");
 
 const _BUF_SIZE = 40960;
@@ -104,6 +105,9 @@ export class OutputStorageProvider {
 export interface StorageProvider
   extends InputStorageProvider,
     OutputStorageProvider {}
+export class StorageProvider {}
+
+applyMixins(StorageProvider, [InputStorageProvider, OutputStorageProvider]);
 
 export class ComposedStorageProvider implements StorageProvider {
   private _input;
