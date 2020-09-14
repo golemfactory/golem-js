@@ -121,15 +121,14 @@ export class Model {
     }
 
     this._custom_mapping(props, data);
-    let self = new (Object.getPrototypeOf(this).constructor)({ ...data });
-    let data_keys = Object.keys(data);
-    data_keys.forEach((item) => {
-      if (self[item] instanceof Field) {
-        self[item].value = data[item];
-      } else {
-        self[item] = data[item];
+    let self = new (Object.getPrototypeOf(this).constructor)();
+    for (let [key, value] of Object.entries(data)) {
+      if(self[key] instanceof Field) {
+        self[key].value = value;
+      } else  {
+        self[key] = value;
       }
-    });
+    }
     return self;
   }
 

@@ -1,3 +1,9 @@
+#Node modules
 /node_modules
+
+#Outputs
+/examples/blender/*.png
+
+#Lock files
 package-lock.json
 *.lock

@@ -1,10 +1,15 @@
 import exitHook from "async-exit-hook";
-
-import process from "process";
+import {
+  chomp,
+  streamWrite,
+  streamEnd,
+  chunksToLinesAsync,
+} from "@rauschma/stringio";
 import { spawn, ChildProcess } from "child_process";
 import { StorageProvider, Destination, Source, Content } from ".";
+import { AsyncExitStack } from "../utils";
 
-const { promises: fs } = require("fs");
+const fs = require("fs");
 const path = require("path");
 const { v4: uuid } = require("uuid");
 const tmp = require("tmp");
@@ -22,22 +27,21 @@ class PubLink {
 let CommandStatus: string;
 
 class GftpDriver {
+  private _proc;
   //Protocol
   //"""Golem FTP service API.
 
-  async version(): Promise<string> {
+  async version(): Promise<any> {
     //"""Gets driver version."""
-    return "";
+    return await this._jsonrpc("version");
   }
 
-  async publish(files: string[]): Promise<PubLink[]> {
+  async publish(files: string[]): Promise<any> {
     /*Exposes local file as GFTP url.
-
-        `files`
-        :   local files to be exposed
-
-        */
-    return [];
+    `files`
+    :   local files to be exposed
+    */
+    return await this._jsonrpc("publish", { files });
   }
 
   // async close(urls: string[]): Promise<CommandStatus> {
@@ -45,29 +49,50 @@ class GftpDriver {
   //     pass
   // }
 
-  async receive(output_file: string): Promise<PubLink> {
+  async receive(output_file: string): Promise<any> {
     /*Creates GFTP url for receiving file.
-
-         :  `output_file` -
-         */
-    return new PubLink();
+    :  `output_file` -
+    */
+    return await this._jsonrpc("receive", { output_file });
   }
 
   // async upload(file: string, url: string) {
   //     pass
   // }
 
-  // async shutdown(): Promise<CommandStatus> {
-  //     /*Stops GFTP service.
+  async shutdown(): Promise<any> {
+    /*Stops GFTP service.
+      After shutdown all generated urls will be unavailable.
+    */
+    await this._jsonrpc("shutdown");
+    await streamEnd(this._proc.stdin);
+  }
 
-  //      After shutdown all generated urls will be unavailable.
-  //     */
-  //     pass
-  // }
+  async _jsonrpc(method: string, params: object = {}) {
+    let query = `{"jsonrpc": "2.0", "id": "1", "method": "${method}", "params": ${JSON.stringify(
+      params
+    )}}\n`;
+    await streamWrite(this._proc.stdin, query);
+    try {
+      let { value } = await this._reader(this._proc.stdout).next();
+      const { result } = JSON.parse(value as string);
+      return result;
+    } catch (error) {
+      console.error(error);
+      throw Error(error);
+    }
+  }
+
+  async *_reader(readable) {
+    for await (const line of chunksToLinesAsync(readable)) {
+      yield chomp(line);
+    }
+  }
 }
 
-function service(debug = false) {
-  let proc = new _Process(debug);
+function* service(debug = false) {
+  let _process = new _Process(debug);
+  let proc = yield _process.ready();
   return proc;
 }
 
@@ -80,42 +105,43 @@ class _Process {
     this._proc = null;
   }
 
-  // async ready(): Promise<GftpDriver> {
-  //     let env = this._debug ? { ...process.env, RUST_LOG: "debug" } : null
-  //     this._proc = await spawn("gftp server", [],
-  //         {
-  //             shell: true,
-  //             env: env,
-  //             stdio: [process.stdin, process.stdout, process.stderr]
-  //          })
-  //     return this
-  // }
+  async ready(): Promise<GftpDriver> {
+    let env: NodeJS.ProcessEnv = this._debug
+      ? { ...process.env, RUST_LOG: "debug" }
+      : {};
+    this._proc = await spawn("gftp server", [], {
+      shell: true,
+      env: env,
+    });
+    let gftp = new GftpDriver();
+    gftp["_proc"] = this._proc;
+    return gftp;
+  }
 
-  // async done(exc_type, exc_val, exc_tb) {
-  //     // with contextlib.suppress(Exception):
-  //         await this._close()
-  // }
+  async done() {
+    // with contextlib.suppress(Exception):
+    await this._close();
+  }
 
-  // async _close() {
-  //     if (!this._proc)
-  //         return
-  //     let p: ChildProcess = this._proc
-  //     this._proc = null
+  async _close() {
+    if (!this._proc) return;
+    let p: ChildProcess = this._proc;
+    this._proc = null;
 
-  //     // with contextlib.suppress(Exception):
-  //         await (this as GftpDriver).shutdown()
+    // with contextlib.suppress(Exception):
+    await (<GftpDriver>(<unknown>this)).shutdown();
 
-  //     if (p.stdin)
-  //         await p.stdin.drain()
-  //         p.stdin.close()
-  //         try {
-  //             await asyncio.wait_for(p.wait(), 10.0)
-  //             return
-  //         } catch(err: asyncio.TimeoutError){}
-  //     p.kill()
-  //     let ret_code = await p.wait()
-  //     _logger.debug("GFTP server closed, code=%d", ret_code)
-  // }
+    if (p.stdin) {
+      p.stdin.destroy(); // p.stdin.close()
+      // try {
+      //   await Promise.any([waitProcess(p), sleep(10)]);
+      //   return;
+      // } catch (err) {}
+    }
+    p.kill();
+    let ret_code = await p.signalCode;
+    console.debug("GFTP server closed, code=%d", ret_code);
+  }
 
   _log_debug(msg_dir: string, msg: string | Buffer) {
     if (this._debug) {
@@ -200,51 +226,50 @@ class GftpDestination extends Destination {
   }
 }
 
-class GftpProvider implements StorageProvider {
+class GftpProvider extends StorageProvider {
   _temp_dir?: string | null;
   __exit_stack;
   _process;
 
   constructor(tmpdir: string | null = null) {
-    // this.__exit_stack = new AsyncExitStack()
+    super();
+    this.__exit_stack = new AsyncExitStack();
     this._temp_dir = tmpdir || null;
     this._process = null;
-    // exitHook(async (callback) => {
-    //   await this.done();
-    //   callback();
-    // });
-  }
-  upload_bytes(data: Buffer): Promise<Source> {
-    throw new Error("Method not implemented.");
+    exitHook(async (callback) => {
+      await this.done();
+      callback();
+    });
   }
 
   async ready(): Promise<StorageProvider> {
-    this._temp_dir = tmp.dirSync();
-    // let _process = await this.__get_process()
-    // let _ver = await _process.version()
-    //# TODO check version
-    // if(!_ver) throw ""
+    this._temp_dir = tmp.dirSync().name;
+    let _process = await this.__get_process();
+    let _ver = await _process.version();
+    console.log("GFTP Version:", _ver);
+    if(!_ver) throw Error("GFTP couldn't found.");
     return this as StorageProvider;
   }
 
-  async done(
-  ): Promise<boolean | null | void> {
+  async done(): Promise<boolean | null | void> {
     await this.__exit_stack.aclose();
     return null;
   }
 
   __new_file(): string {
-    let temp_dir: string =
-      this._temp_dir || this.__exit_stack.enter_context(tmp.dirSync());
+    let temp_dir: string = this._temp_dir || tmp.dirSync().name;
     if (!this._temp_dir) this._temp_dir = temp_dir;
-    return this.__exit_stack.enter_context(_temp_file(temp_dir));
+    const { value } = this.__exit_stack.enterContext(
+      _temp_file.bind(null, temp_dir)
+    );
+    return value;
   }
 
   async __get_process(): Promise<GftpDriver> {
     let _debug = !!process.env["DEBUG_GFTP"];
     let _process =
       this._process ||
-      (await this.__exit_stack.enter_async_context(service(_debug)));
+      (await this.__exit_stack.enterAsyncContext(service.bind(_debug)));
     if (!this._process) this._process = _process;
     return _process;
   }
@@ -254,7 +279,7 @@ class GftpProvider implements StorageProvider {
     stream: AsyncGenerator<Buffer>
   ): Promise<Source> {
     let file_name = this.__new_file();
-    let wStream = fs.writeableStream(file_name);
+    let wStream = fs.createWriteStream(file_name);
     for await (let chunk of stream) {
       wStream.write(chunk);
     }
@@ -282,10 +307,10 @@ class GftpProvider implements StorageProvider {
       }
     }
     let output_file = destination_file
-      ? destination_file!.toString()
+      ? destination_file.toString()
       : this.__new_file();
     let _process = await this.__get_process();
-    let link = await _process.receive((output_file = output_file));
+    let link = await _process.receive(output_file);
     return new GftpDestination(_process, link);
   }
 }
