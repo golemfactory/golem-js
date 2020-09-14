@@ -30,6 +30,13 @@ export class ActivityService {
   }
 }
 
+class ExeScriptRequest implements yaa.ExeScriptRequest {
+  text!: string;
+  constructor(text) {
+    this.text = text;
+  }
+}
+
 export class Activity {
   private _api!: RequestorControlApi;
   private _state!: RequestorStateApi;
@@ -40,7 +47,7 @@ export class Activity {
     exitHook(async (callback) => {
       await this.done();
       callback();
-    })
+    });
   }
 
   set id(x) {
@@ -59,10 +66,11 @@ export class Activity {
 
   async send(script: object[]) {
     let script_txt = JSON.stringify(script);
-    let _script: yaa.ExeScriptRequest;
-    _script!.text = script_txt;
-    let { data: batch_id } = await this._api.exec(this._id, _script!);
-    return new Batch(this._api, this._id, batch_id, script.length.toString());
+    let _script_request: yaa.ExeScriptRequest = new ExeScriptRequest(
+      script_txt
+    );
+    let { data: batch_id } = await this._api.exec(this._id, _script_request);
+    return new Batch(this._api, this._id, batch_id, script.length);
   }
 
   async ready(): Promise<Activity> {
@@ -86,7 +94,7 @@ class CommandExecutionError extends Error {
   }
 }
 
-class Batch implements AsyncGenerator<Result> {
+class Batch implements AsyncIterable<Result> {
   private _api!: RequestorControlApi;
   private _activity_id!: string;
   private _batch_id!: string;
@@ -96,7 +104,7 @@ class Batch implements AsyncGenerator<Result> {
     _api: RequestorControlApi,
     activity_id: string,
     batch_id: string,
-    batch_size: string
+    batch_size: number
   ) {
     this._api = _api;
     this._activity_id = activity_id;
@@ -109,16 +117,13 @@ class Batch implements AsyncGenerator<Result> {
   throw(e: any): Promise<IteratorResult<Result, any>> {
     throw new Error("Method not implemented.");
   }
-  [Symbol.asyncIterator](): AsyncGenerator<Result, any, unknown> {
-    throw new Error("Method not implemented.");
-  }
 
   id() {
     this._batch_id;
   }
 
-  async *next(): any {
-    //Promise<IteratorResult<Result, void>>
+  async *[Symbol.asyncIterator](): any {
+    // AsyncGenerator<Result, any, unknown>
     let last_idx = 0;
     while (last_idx < this._size) {
       let any_new: boolean = false;

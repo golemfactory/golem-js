@@ -20,7 +20,6 @@ import duration from "dayjs/plugin/duration";
 import blue, { Promise as bluePromise } from "bluebird";
 import * as _vm from "./vm";
 
-
 dayjs.extend(duration);
 dayjs.extend(utc);
 const CFG_INVOICE_TIMEOUT: any = dayjs
@@ -236,7 +235,7 @@ export class Engine {
       resource_id: number | string | null,
       ...rest
     ) {
-      event_queue.put([resource_type, event_type, resource_id, rest]); //put_no_wait
+      event_queue.put([resource_type, event_type, resource_id, rest]);
     }
 
     async function find_offers() {
@@ -245,13 +244,13 @@ export class Engine {
       )) as Subscription;
       emit_progress("sub", "created", subscription.id());
       for await (let proposal of subscription.events()) {
-        emit_progress("prop", "recv", proposal.id(), proposal.issuer()); //_from=
+        emit_progress("prop", "recv", proposal.id(), proposal.issuer());
         let score = await strategy.score_offer(proposal);
         if (score < SCORE_NEUTRAL) {
-          let [proposal_id, provider_id] = [proposal.id, proposal.issuer];
+          let [proposal_id, provider_id] = [proposal.id(), proposal.issuer()];
           // with contextlib.suppress(Exception):
           await proposal.reject();
-          emit_progress("prop", "rejected", proposal_id(), provider_id); //_for=
+          emit_progress("prop", "rejected", proposal_id, provider_id);
           continue;
         }
         if (proposal.is_draft()) {
@@ -263,8 +262,8 @@ export class Engine {
             proposal
           );
         } else {
-          emit_progress("prop", "respond", proposal.id());
           await proposal.respond(builder.props(), builder.cons());
+          emit_progress("prop", "respond", proposal.id());
         }
       }
     }
@@ -311,7 +310,7 @@ export class Engine {
         for await (let step of remote) {
           let message = step.message ? step.message.slice(0, 25) : null;
           let idx = step.idx;
-          emit_progress("wkr", "step", wid, (message = message), (idx = idx));
+          emit_progress("wkr", "step", wid, message, idx);
         }
         emit_progress("wkr", "get-results", wid);
         await batch.post();

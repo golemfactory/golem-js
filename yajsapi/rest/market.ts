@@ -58,10 +58,10 @@ export class Agreement {
 class mProposal implements models.Proposal {
   properties!: object;
   constraints!: string;
-  proposalId?: string | undefined;
-  issuerId?: string | undefined;
-  state?: models.ProposalAllOfStateEnum | undefined;
-  prevProposalId?: string | undefined;
+  proposalId?: string;
+  issuerId?: string;
+  state?: models.ProposalAllOfStateEnum;
+  prevProposalId?: string;
 }
 
 class mAgreementProposal implements models.AgreementProposal {
@@ -183,13 +183,22 @@ export class Subscription extends Object {
 
   async *events(): AsyncGenerator<OfferProposal> {
     while (this._open) {
-      let { data: proposals } = await this._api.collectOffers(this._id, 10, 10);
-      for (let _proposal of proposals) {
-        yield new OfferProposal(this, _proposal as ProposalEvent);
-      }
-
-      if (!proposals || !proposals.length) {
-        await sleep(1);
+      console.log("checking proposals...");
+      try {
+        let { data: proposals } = await this._api.collectOffers(
+          this._id,
+          10,
+          10
+        );
+        for (let _proposal of proposals) {
+          yield new OfferProposal(this, _proposal as ProposalEvent);
+        }
+        if (!proposals || !proposals.length) {
+          await sleep(1);
+        }
+      } catch (error) {
+        console.error(error);
+        throw Error(error);
       }
     }
   }

@@ -1,3 +1,5 @@
+import blue from "bluebird";
+
 export const sleep = (time) =>
   new Promise((resolve) => setTimeout(resolve, time * 1000));
 
@@ -46,7 +48,7 @@ export class Queue<T> {
       let item;
       while (!item) {
         item = this._tasks.shift();
-        await sleep(1);
+        if (!item) await sleep(1);
       }
       resolve(item);
     });
@@ -54,5 +56,36 @@ export class Queue<T> {
 
   empty() {
     return this._tasks.length == 0;
+  }
+}
+
+export class AsyncExitStack {
+  private _async_jobs: Function[] = [];
+  private _sync_jobs: Function[] = [];
+  constructor() {}
+
+  async enterAsyncContext(fn: Function): Promise<any> {
+    blue.Promise.config({ cancellation: true });
+    this._async_jobs.push(fn);
+    return blue.coroutine(function* () {
+      return new blue.Promise(async (resolve, reject, onCancel) => {
+        let { value } = await fn().next();
+        resolve(value);
+        onCancel!(() => {
+          console.log("cancelled!");
+          reject("cancelled!");
+        });
+      });
+    })();
+  }
+
+  enterContext(fn: Function): void {
+    this._sync_jobs.push(fn);
+    return fn().next();
+  }
+
+  async aclose() {
+    // await this._async_jobs.forEach(async (fn) => await fn());
+    // this._sync_jobs.forEach((fn) => fn());
   }
 }
