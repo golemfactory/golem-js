@@ -1,6 +1,6 @@
 import Path from "path";
 import { applyMixins } from "../utils";
-const { promises: fs } = require("fs");
+const fs = require("fs");
 
 const _BUF_SIZE = 40960;
 
@@ -45,10 +45,13 @@ export class Destination {
 
   async download_file(destination_file: string) {
     let content = await this.download_stream();
-    var writableStream = fs.createWriteStream(destination_file);
-    content.stream.on("data", function (chunk) {
-      writableStream.write(chunk);
+    var writableStream = fs.createWriteStream(destination_file, {
+      encoding: "binary",
     });
+    for await (let chunk of content.stream) {
+      writableStream.write(chunk)
+    }
+    writableStream.end();
   }
 }
 
@@ -76,9 +79,10 @@ export class InputStorageProvider {
         highWaterMark: _BUF_SIZE,
         encoding: "utf8",
       });
-      for (let chunk of stream) {
+      for await (let chunk of stream) {
         yield chunk;
       }
+      stream.destroy();
     }
 
     return await this.upload_stream(file_size, read_file());

@@ -140,7 +140,7 @@ class _Process {
     }
     p.kill();
     let ret_code = await p.signalCode;
-    console.debug("GFTP server closed, code=%d", ret_code);
+    console.debug("GFTP server closed, code=", ret_code);
   }
 
   _log_debug(msg_dir: string, msg: string | Buffer) {
@@ -214,7 +214,8 @@ class GftpDestination extends Destination {
         highWaterMark: 30000,
         encoding: "utf8",
       });
-      for (let chunk of stream) yield chunk;
+      for await (let chunk of stream) yield chunk;
+      stream.destroy();
     }
 
     return new Content(length, chunks());
@@ -247,7 +248,7 @@ class GftpProvider extends StorageProvider {
     let _process = await this.__get_process();
     let _ver = await _process.version();
     console.log("GFTP Version:", _ver);
-    if(!_ver) throw Error("GFTP couldn't found.");
+    if (!_ver) throw Error("GFTP couldn't found.");
     return this as StorageProvider;
   }
 
@@ -279,10 +280,13 @@ class GftpProvider extends StorageProvider {
     stream: AsyncGenerator<Buffer>
   ): Promise<Source> {
     let file_name = this.__new_file();
-    let wStream = fs.createWriteStream(file_name);
+    let wStream = fs.createWriteStream(file_name, {
+      encoding: "binary",
+    });
     for await (let chunk of stream) {
       wStream.write(chunk);
     }
+    wStream.end();
     let _process = await this.__get_process();
     let links = await _process.publish([file_name.toString()]);
     if (links.length !== 1) throw "invalid gftp publish response";
