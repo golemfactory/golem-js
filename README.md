@@ -1,5 +1,5 @@
 # Golem JS Api
-## (Highly Experimental/WIP) Almost 1:1 Porf of Yapapi to Typescript
+## (Highly Experimental/WIP) Almost 1:1 Port of Yapapi to Typescript
 
 ## Installation
 
