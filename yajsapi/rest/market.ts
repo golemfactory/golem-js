@@ -51,7 +51,7 @@ export class Agreement {
   async confirm() {
     await this._api.confirmAgreement(this._id);
     let msg = await this._api.waitForApproval(this._id, 90, 100);
-    console.log("msg", msg);
+    console.log("market > confirm > ", msg);
   }
 }
 
