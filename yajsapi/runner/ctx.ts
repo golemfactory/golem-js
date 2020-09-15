@@ -177,9 +177,9 @@ class _RecvFile extends Work {
   }
 
   async post() {
-    if (this._dst_slot) throw "_RecvFile post without prepare";
+    if (!this._dst_slot) throw "_RecvFile post without prepare";
     console.log("start");
-    await this._dst_slot!.download_file(this._dst_path);
+    await this._dst_slot.download_file(this._dst_path);
     console.log("done");
   }
 }
