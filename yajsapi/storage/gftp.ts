@@ -108,7 +108,7 @@ class _Process {
   async ready(): Promise<GftpDriver> {
     let env: NodeJS.ProcessEnv = this._debug
       ? { ...process.env, RUST_LOG: "debug" }
-      : {};
+      : { ...process.env };
     this._proc = await spawn("gftp server", [], {
       shell: true,
       env: env,
