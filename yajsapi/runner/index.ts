@@ -323,7 +323,6 @@ export class Engine {
     async function worker_starter() {
       while (true) {
         await sleep(2);
-        console.log("offer_buffer", offer_buffer);
         if (
           Object.keys(offer_buffer).length > 0 &&
           workers.size < self._conf.max_workers
@@ -402,7 +401,6 @@ export class Engine {
         task_fill_q,
         loop.create_task(worker_starter),
       ];
-      console.log("task_fill_q", services.indexOf(task_fill_q));
       while (
         [...services].indexOf(task_fill_q) > -1 ||
         !work_queue.empty() ||
@@ -411,7 +409,6 @@ export class Engine {
         await bluePromise.any([...services, ...workers]); //add timeout
         workers = new Set([...workers].filter((x) => x.isPending()));
         services = new Set([...services].filter((x) => x.isPending()));
-        console.info("length", [...services].length);
       }
       console.log("all work done");
     } catch (e) {
@@ -434,7 +431,6 @@ export class Engine {
     this._market_api = new rest.Market(market_client);
 
     let activity_client = await this._api_config.activity();
-    console.log(`act_url=${this._api_config.activity_url}`);
     this._activity_api = new rest.Activity(activity_client);
 
     let payment_client = await this._api_config.payment();
