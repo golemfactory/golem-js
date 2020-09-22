@@ -48,10 +48,14 @@ export class Destination {
     var writableStream = fs.createWriteStream(destination_file, {
       encoding: "binary",
     });
-    for await (let chunk of content.stream) {
-      writableStream.write(chunk)
-    }
-    writableStream.end();
+
+    await new Promise(async (fulfill) => {
+      writableStream.on("finish", fulfill);
+      for await (let chunk of content.stream) {
+        writableStream.write(chunk);
+      }
+      writableStream.end();
+    });
   }
 }
 
@@ -77,12 +81,14 @@ export class InputStorageProvider {
     async function* read_file() {
       const stream = fs.createReadStream(path, {
         highWaterMark: _BUF_SIZE,
-        encoding: "utf8",
+        encoding: "binary",
       });
+      stream.on("end", () => {
+        stream.destroy();
+      })
       for await (let chunk of stream) {
         yield chunk;
       }
-      stream.destroy();
     }
 
     return await this.upload_stream(file_size, read_file());

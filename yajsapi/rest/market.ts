@@ -118,10 +118,13 @@ export class OfferProposal {
   }
 
   // TODO: This timeout is for negotiation ?
-  async agreement(timeout = 86400): Promise<Agreement> {
+  async agreement(timeout = 3600): Promise<Agreement> {
     let proposal: mAgreementProposal = new mAgreementProposal();
     proposal.proposalId = this.id();
-    proposal.validTo = dayjs().add(timeout, "second").utc().format();
+    proposal.validTo = dayjs()
+      .add(timeout, "second")
+      .utc()
+      .format("YYYY-MM-DD HH:mm:ss.SSSSSSZ");
     let api: RequestorApi = this._subscription._api;
     let { data: agreement_id } = await api.createAgreement(proposal);
     return new Agreement(api, this._subscription, agreement_id);
@@ -194,7 +197,7 @@ export class Subscription extends Object {
           yield new OfferProposal(this, _proposal as ProposalEvent);
         }
         if (!proposals || !proposals.length) {
-          await sleep(1);
+          await sleep(2);
         }
       } catch (error) {
         console.error(error);

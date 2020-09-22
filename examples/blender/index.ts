@@ -1,5 +1,6 @@
-import { Engine, Task, vm, WorkContext } from "../../yajsapi";
 import path from "path";
+import { Engine, Task, vm, WorkContext } from "../../yajsapi";
+import { range } from "../../yajsapi/utils";
 
 async function main() {
   let _package = await vm.repo(
@@ -51,7 +52,7 @@ async function main() {
     ctx.log("no more frames to render");
   }
 
-  let frames: number[] = [0, 10, 20, 30, 40, 50];
+  let frames: number[] = range(0, 60, 10);
 
   let engine = await new Engine(
     _package,
