@@ -130,7 +130,7 @@ class _Run extends Work {
   private env;
   private _idx;
 
-  constructor(cmd: string, args: Generator<string>, env: {} | null = null) {
+  constructor(cmd: string, args: Iterable<string> = [], env: {} | null = null) {
     super();
     this.cmd = cmd;
     this.args = args;
@@ -239,9 +239,9 @@ export class WorkContext {
     this._prepare();
     this._pending_steps.push(new _SendFile(this._storage, src_path, dst_path));
   }
-  run(cmd: string, args?: Generator<string>, env: object | null = null) {
+  run(cmd: string, args?: Iterable<string>, env: object | null = null) {
     this._prepare();
-    this._pending_steps.push(new _Run(cmd, args!, (env = env)));
+    this._pending_steps.push(new _Run(cmd, args, env));
   }
   download_file(src_path: string, dst_path: string) {
     this._prepare();

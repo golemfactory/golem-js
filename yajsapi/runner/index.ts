@@ -283,7 +283,7 @@ export class Engine {
         "created",
         wid,
         agreement.id,
-        (provider_idn = provider_idn)
+        provider_idn
       );
 
       async function* task_emiter() {
@@ -314,7 +314,7 @@ export class Engine {
         }
         emit_progress("wkr", "get-results", wid);
         await batch.post();
-        emit_progress("wkr", "bach-done", wid);
+        emit_progress("wkr", "batch-done", wid);
       }
 
       emit_progress("wkr", "done", wid, agreement.id);
@@ -410,6 +410,7 @@ export class Engine {
         workers = new Set([...workers].filter((x) => x.isPending()));
         services = new Set([...services].filter((x) => x.isPending()));
       }
+      yield { stage: "all work done" }
       console.log("all work done");
     } catch (e) {
       console.log("fail=", e);
