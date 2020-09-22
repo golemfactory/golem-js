@@ -7,7 +7,7 @@ import {
 } from "@rauschma/stringio";
 import { spawn, ChildProcess } from "child_process";
 import { StorageProvider, Destination, Source, Content } from ".";
-import { AsyncExitStack } from "../utils";
+import { AsyncExitStack, sleep } from "../utils";
 
 const fs = require("fs");
 const path = require("path");
@@ -212,10 +212,12 @@ class GftpDestination extends Destination {
     async function* chunks(): AsyncGenerator<Buffer> {
       const stream = fs.createReadStream(file_path, {
         highWaterMark: 30000,
-        encoding: "utf8",
+        encoding: "binary",
       });
+      stream.on("end", () => {
+        stream.destroy();
+      })
       for await (let chunk of stream) yield chunk;
-      stream.destroy();
     }
 
     return new Content(length, chunks());
@@ -283,10 +285,13 @@ class GftpProvider extends StorageProvider {
     let wStream = fs.createWriteStream(file_name, {
       encoding: "binary",
     });
-    for await (let chunk of stream) {
-      wStream.write(chunk);
-    }
-    wStream.end();
+    await new Promise(async (fulfill) => {
+      wStream.on("finish", fulfill);
+      for await (let chunk of stream) {
+        wStream.write(chunk);
+      }
+      wStream.end();
+    });
     let _process = await this.__get_process();
     let links = await _process.publish([file_name.toString()]);
     if (links.length !== 1) throw "invalid gftp publish response";
