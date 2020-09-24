@@ -243,12 +243,15 @@ export class Engine {
 
     async function accept_payment_for_agreement(agreement_id: string): Promise<boolean> {
       let allocation = self._budget_allocation;
+      emit_progress('agr', 'payment_prep', agreement_id);
       if (!invoices.has(agreement_id)) {
         agreements_to_pay.add(agreement_id);
+        emit_progress('agr', 'payment_queued', agreement_id);
         return false;
       }
       let inv = invoices.get(agreement_id);
       invoices.delete(agreement_id);
+      emit_progress('agr', 'payment_accept', agreement_id, inv);
       if (allocation != null && inv != null) {
         await inv.accept(inv.amount, allocation);
       }
