@@ -227,7 +227,7 @@ export class Engine {
     let payment_closing: boolean = false;
 
     async function process_invoices() {
-      let allocation: Allocation = self._budget_allocation;
+      let allocation = self._budget_allocation;
       for await (let invoice of self._payment_api.incoming_invoices()) {
         if (agreements_to_pay.has(invoice.agreement_id)) {
           agreements_to_pay.delete(invoice.agreement_id);
@@ -242,14 +242,16 @@ export class Engine {
     }
 
     async function accept_payment_for_agreement(agreement_id: string): Promise<boolean> {
-      let allocation: Allocation = self._budget_allocation;
+      let allocation = self._budget_allocation;
       if (!invoices.has(agreement_id)) {
         agreements_to_pay.add(agreement_id);
         return false;
       }
       let inv = invoices.get(agreement_id);
       invoices.delete(agreement_id);
-      await inv.accept(inv.amount, allocation);
+      if (allocation != null && inv != null) {
+        await inv.accept(inv.amount, allocation);
+      }
       return true;
     }
 
