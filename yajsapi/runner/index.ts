@@ -228,7 +228,7 @@ export class Engine {
 
     async function process_invoices() {
       let allocation: rest.payment.Allocation = self._budget_allocation;
-      for await (let invoice of self._payment_api.incoming_invoices())
+      for await (let invoice of self._payment_api.incoming_invoices()) {
         if (agreements_to_pay.has(invoice.agreement_id)) {
           agreements_to_pay.delete(invoice.agreement_id);
           await invoice.accept(invoice.amount, allocation);
