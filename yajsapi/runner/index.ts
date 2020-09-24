@@ -222,6 +222,37 @@ export class Engine {
     let last_wid = 0;
     let self = this;
 
+    let agreements_to_pay: Set<string> = new Set();
+    let invoices: Map<string, rest.payment.Invoice> = new Map();
+    let payment_closing: boolean = false;
+
+    async function process_invoices() {
+      let allocation: rest.payment.Allocation = self._budget_allocation;
+      for await (let invoice of self._payment_api.incoming_invoices())
+        if (agreements_to_pay.has(invoice.agreement_id)) {
+          agreements_to_pay.delete(invoice.agreement_id);
+          await invoice.accept(invoice.amount, allocation);
+        } else {
+          invoices[invoice.agreement_id] = invoice;
+        }
+        if (payment_closing && agreements_to_pay.size === 0) {
+          break;
+        }
+      }
+    }
+
+    async function accept_payment_for_agreement(agreement_id: string): boolean {
+      let allocation: rest.payment.Allocation = self._budget_allocation;
+      if (!invoices.has(agreement_id)) {
+        agreements_to_pay.add(agreement_id);
+        return false;
+      }
+      let inv = invoices.get(agreement_id);
+      invoices.delete(agreement_id);
+      await inv.accept(inv.amount, allocation);
+      return true;
+    }
+
     async function _tmp_log() {
       while (true) {
         let item = await event_queue.get();
