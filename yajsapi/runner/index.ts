@@ -8,7 +8,7 @@ import {
 import { Activity, Identification, IdentificationKeys } from "../props";
 import { DemandBuilder } from "../props/builder";
 import { OfferProposal, Subscription } from "../rest/market";
-import { Allocation } from "../rest/payment";
+import { Allocation, Invoice } from "../rest/payment";
 import rest from "../rest";
 import { Agreement } from "../rest/market";
 import { sleep, applyMixins, Queue } from "../utils";
@@ -223,11 +223,11 @@ export class Engine {
     let self = this;
 
     let agreements_to_pay: Set<string> = new Set();
-    let invoices: Map<string, rest.payment.Invoice> = new Map();
+    let invoices: Map<string, Invoice> = new Map();
     let payment_closing: boolean = false;
 
     async function process_invoices() {
-      let allocation: rest.payment.Allocation = self._budget_allocation;
+      let allocation: Allocation = self._budget_allocation;
       for await (let invoice of self._payment_api.incoming_invoices()) {
         if (agreements_to_pay.has(invoice.agreement_id)) {
           agreements_to_pay.delete(invoice.agreement_id);
@@ -242,7 +242,7 @@ export class Engine {
     }
 
     async function accept_payment_for_agreement(agreement_id: string): Promise<boolean> {
-      let allocation: rest.payment.Allocation = self._budget_allocation;
+      let allocation: Allocation = self._budget_allocation;
       if (!invoices.has(agreement_id)) {
         agreements_to_pay.add(agreement_id);
         return false;
@@ -460,7 +460,7 @@ export class Engine {
 
     yield { stage: "wait for invoices", agreements_to_pay: agreements_to_pay };
     payment_closing = true;
-    await Promise.all({ process_invoices_job });
+    await Promise.all([ process_invoices_job ]);
     yield { done: true };
   }
 
