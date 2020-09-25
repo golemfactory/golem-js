@@ -1,6 +1,6 @@
 import exitHook from "async-exit-hook";
 
-import dayjs from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 import utc from "dayjs/plugin/utc";
 
 import { RequestorApi } from "ya-ts-client/dist/ya-payment/api";
@@ -223,24 +223,25 @@ export class Payment {
   }
 
   incoming_invoices(): AsyncGenerator<Invoice> {
-    let ts = new Date(); //timezone.utc
+    let ts = dayjs().utc();
     let api = this._api;
     let self = this;
 
-    async function* fetch(init_ts: Date) {
+    async function* fetch(init_ts: Dayjs) {
       let ts = init_ts;
       while (true) {
         let { data: items } = await api.getRequestorInvoiceEvents(
           5,
-          ts.toString()
+          ts.format("YYYY-MM-DD HH:mm:ss.SSSSSSZ")
         );
         for (let ev of items) {
-          ts = new Date(parseInt(ev.timestamp as string) * 1000);
+          ts = dayjs(new Date(parseInt(ev.timestamp as string) * 1000));
           if (ev.eventType == yap.EventType.RECEIVED) {
             let invoice = await self.invoice(ev.invoiceId);
             yield invoice;
           }
         }
+        if(items.length > 0) break;
       }
     }
 
