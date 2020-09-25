@@ -131,7 +131,7 @@ export class OfferProposal {
   }
 }
 
-export class Subscription extends Object {
+export class Subscription {
   public _api: RequestorApi;
   private _id: string;
   private _open: boolean;
@@ -143,7 +143,6 @@ export class Subscription extends Object {
     subscription_id: string,
     _details: models.Demand | null = null
   ) {
-    super();
     this._api = api;
     this._id = subscription_id;
     this._open = true;

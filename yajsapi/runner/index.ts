@@ -1,3 +1,8 @@
+import blue, { Promise as bluePromise } from "bluebird";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import duration from "dayjs/plugin/duration";
+
 import {
   BillingScheme,
   ComLinear,
@@ -7,19 +12,17 @@ import {
 } from "../props/com";
 import { Activity, Identification, IdentificationKeys } from "../props";
 import { DemandBuilder } from "../props/builder";
+
+import rest from "../rest";
 import { OfferProposal, Subscription } from "../rest/market";
 import { Allocation, Invoice } from "../rest/payment";
-import rest from "../rest";
 import { Agreement } from "../rest/market";
-import { sleep, applyMixins, Queue } from "../utils";
+
 import * as gftp from "../storage/gftp";
 import { WorkContext, Work, CommandContainer } from "./ctx";
-import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
-import duration from "dayjs/plugin/duration";
-import blue, { Promise as bluePromise } from "bluebird";
 import * as _vm from "./vm";
 
+import { sleep, applyMixins, Queue } from "../utils";
 dayjs.extend(duration);
 dayjs.extend(utc);
 const CFG_INVOICE_TIMEOUT: any = dayjs
@@ -353,7 +356,7 @@ export class Engine {
         emit_progress("wkr", "batch-done", wid);
         await accept_payment_for_agreement(agreement.id());
       }
-
+      
       await accept_payment_for_agreement(agreement.id());
       emit_progress("wkr", "done", wid, agreement.id());
     }
@@ -396,7 +399,6 @@ export class Engine {
               (b as _BufferItem).proposal.id(),
               e.toString()
             );
-          } finally {
           }
         }
       }
@@ -413,7 +415,7 @@ export class Engine {
       blue.Promise.config({ cancellation: true });
       return {
         create_task: blue.coroutine(function* (fn): any {
-          return yield new blue.Promise(async (resolve, reject, onCancel) => {
+          yield new blue.Promise(async (resolve, reject, onCancel) => {
             try {
               await fn();
               resolve();
@@ -427,6 +429,12 @@ export class Engine {
           });
         }) as any,
       };
+    }
+
+    async function promise_timeout(seconds: number) {
+      return blue.coroutine(function* (): any {
+        yield sleep(seconds);
+      })();
     }
 
     let loop = get_event_loop();
@@ -446,27 +454,32 @@ export class Engine {
         !work_queue.empty() ||
         tasks_processed["s"] > tasks_processed["c"]
       ) {
-        await bluePromise.any([...services, ...workers]); //add timeout
+        await bluePromise.any([...services, ...workers, promise_timeout(10)]);
         workers = new Set([...workers].filter((x) => x.isPending()));
         services = new Set([...services].filter((x) => x.isPending()));
       }
-      yield { stage: "all work done" }
+      yield { stage: "all work done" };
       console.log("all work done");
+      for (let service of [...services]) {
+        service.cancel();
+      }
     } catch (e) {
       console.log("fail=", e);
     } finally {
       payment_closing = true;
-      for (let worker_task of workers) {
+      for (let worker_task of [...workers]) {
         worker_task.cancel();
       }
+
+      console.log("find_offers_task", find_offers_task);
       find_offers_task.cancel();
-      await Promise.all({ ...workers, ...{ find_offers_task } });
     }
 
     yield { stage: "wait for invoices", agreements_to_pay: agreements_to_pay };
     payment_closing = true;
     await Promise.all([ process_invoices_job ]);
     yield { done: true };
+    return;
   }
 
   async ready() {
@@ -553,7 +566,7 @@ export class Task extends TaskGeneral {
 
   accept_task(result: TaskResult | null = null) {
     if (this._emit_event) {
-      this._emit_event("task", "accept", null, (result = result));
+      this._emit_event("task", "accept", null, result);
     }
     if (this._status != TaskStatus.RUNNING) throw "";
     this._status = TaskStatus.ACCEPTED;
