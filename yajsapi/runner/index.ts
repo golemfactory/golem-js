@@ -15,7 +15,7 @@ import { DemandBuilder } from "../props/builder";
 
 import rest from "../rest";
 import { OfferProposal, Subscription } from "../rest/market";
-import { Allocation } from "../rest/payment";
+import { Allocation, Invoice } from "../rest/payment";
 import { Agreement } from "../rest/market";
 
 import * as gftp from "../storage/gftp";
@@ -225,6 +225,42 @@ export class Engine {
     let last_wid = 0;
     let self = this;
 
+    let agreements_to_pay: Set<string> = new Set();
+    let invoices: Map<string, Invoice> = new Map();
+    let payment_closing: boolean = false;
+
+    async function process_invoices() {
+      let allocation = self._budget_allocation;
+      for await (let invoice of self._payment_api.incoming_invoices()) {
+        if (agreements_to_pay.has(invoice.agreement_id)) {
+          agreements_to_pay.delete(invoice.agreement_id);
+          await invoice.accept(invoice.amount, allocation);
+        } else {
+          invoices[invoice.agreement_id] = invoice;
+        }
+        if (payment_closing && agreements_to_pay.size === 0) {
+          break;
+        }
+      }
+    }
+
+    async function accept_payment_for_agreement(agreement_id: string): Promise<boolean> {
+      let allocation = self._budget_allocation;
+      emit_progress("agr", "payment_prep", agreement_id);
+      if (!invoices.has(agreement_id)) {
+        agreements_to_pay.add(agreement_id);
+        emit_progress("agr", "payment_queued", agreement_id);
+        return false;
+      }
+      let inv = invoices.get(agreement_id);
+      invoices.delete(agreement_id);
+      emit_progress("agr", "payment_accept", agreement_id, inv);
+      if (allocation != null && inv != null) {
+        await inv.accept(inv.amount, allocation);
+      }
+      return true;
+    }
+
     async function _tmp_log() {
       while (true) {
         let item = await event_queue.get();
@@ -281,7 +317,13 @@ export class Engine {
 
       let details = await agreement.details();
       let provider_idn = details.view_prov(new Identification());
-      emit_progress("wkr", "created", wid, agreement.id(), provider_idn);
+      emit_progress(
+        "wkr",
+        "created",
+        wid,
+        agreement.id(),
+        provider_idn
+      );
 
       async function* task_emiter() {
         while (true) {
@@ -312,8 +354,10 @@ export class Engine {
         emit_progress("wkr", "get-results", wid);
         await batch.post();
         emit_progress("wkr", "batch-done", wid);
+        await accept_payment_for_agreement(agreement.id());
       }
-
+      
+      await accept_payment_for_agreement(agreement.id());
       emit_progress("wkr", "done", wid, agreement.id());
     }
 
@@ -395,6 +439,7 @@ export class Engine {
 
     let loop = get_event_loop();
     let find_offers_task = loop.create_task(find_offers);
+    let process_invoices_job = loop.create_task(process_invoices);
     try {
       let task_fill_q = loop.create_task(fill_work_q);
       let services: any = [
@@ -402,6 +447,7 @@ export class Engine {
         loop.create_task(_tmp_log),
         task_fill_q,
         loop.create_task(worker_starter),
+        process_invoices_job,
       ];
       while (
         [...services].indexOf(task_fill_q) > -1 ||
@@ -420,6 +466,7 @@ export class Engine {
     } catch (e) {
       console.log("fail=", e);
     } finally {
+      payment_closing = true;
       for (let worker_task of [...workers]) {
         worker_task.cancel();
       }
@@ -428,6 +475,9 @@ export class Engine {
       find_offers_task.cancel();
     }
 
+    yield { stage: "wait for invoices", agreements_to_pay: agreements_to_pay };
+    payment_closing = true;
+    await Promise.all([ process_invoices_job ]);
     yield { done: true };
     return;
   }
