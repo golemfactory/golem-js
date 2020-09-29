@@ -232,11 +232,11 @@ export class Engine {
     async function process_invoices() {
       let allocation = self._budget_allocation;
       for await (let invoice of self._payment_api.incoming_invoices()) {
-        if (agreements_to_pay.has(invoice.agreement_id)) {
-          agreements_to_pay.delete(invoice.agreement_id);
+        if (agreements_to_pay.has(invoice.agreementId)) {
+          agreements_to_pay.delete(invoice.agreementId);
           await invoice.accept(invoice.amount, allocation);
         } else {
-          invoices[invoice.agreement_id] = invoice;
+          invoices[invoice.agreementId] = invoice;
         }
         if (payment_closing && agreements_to_pay.size === 0) {
           break;
@@ -477,7 +477,7 @@ export class Engine {
 
     yield { stage: "wait for invoices", agreements_to_pay: agreements_to_pay };
     payment_closing = true;
-    await Promise.all([ process_invoices_job ]);
+    await bluePromise.any([Promise.all([ process_invoices_job ]), promise_timeout(15)]);
     yield { done: true };
     return;
   }
