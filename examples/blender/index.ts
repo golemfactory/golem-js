@@ -8,7 +8,6 @@ async function main() {
     0.5,
     2.0
   );
-  // console.log(_package);
 
   async function* worker(ctx: WorkContext, tasks) {
     ctx.send_file(

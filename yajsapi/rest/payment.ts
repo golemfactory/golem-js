@@ -32,7 +32,7 @@ export class Invoice extends yInvoice {
   constructor(_api: RequestorApi, _base: yap.Invoice) {
     super();
     for (let [key, value] of Object.entries(_base)) {
-      this[key] = value
+      this[key] = value;
     }
     this._api = _api;
   }
@@ -241,7 +241,7 @@ export class Payment {
             yield invoice;
           }
         }
-        if(items.length > 0) break;
+        if (items.length > 0) break;
       }
     }
 
