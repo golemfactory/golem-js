@@ -1,4 +1,4 @@
-import blue, { Promise as bluePromise } from "bluebird";
+import bluebird from "bluebird";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import duration from "dayjs/plugin/duration";
@@ -23,8 +23,15 @@ import { WorkContext, Work, CommandContainer } from "./ctx";
 import * as _vm from "./vm";
 
 import { sleep, applyMixins, Queue } from "../utils";
+import CancellationToken from "../utils/cancellationToken";
+import asyncWith from "../utils/asyncWith";
+import AsyncExitStack from "../utils/asyncExitStack";
+
 dayjs.extend(duration);
 dayjs.extend(utc);
+
+const cancellationToken = new CancellationToken();
+
 const CFG_INVOICE_TIMEOUT: any = dayjs
   .duration({ minutes: 5 })
   .asMilliseconds();
@@ -148,6 +155,7 @@ export class Engine {
   private _subnet;
   private _strategy;
   private _api_config;
+  private _stack;
   private _package;
   private _conf;
   private _expires;
@@ -169,6 +177,7 @@ export class Engine {
     this._subnet = subnet_tag;
     this._strategy = strategy;
     this._api_config = new rest.Configuration();
+    this._stack = new AsyncExitStack();
     this._package = _package;
     this._conf = new _EngineConf(max_workers, timeout);
     // TODO: setup precision
@@ -185,12 +194,12 @@ export class Engine {
 
     // Creating allocation
     if (!this._budget_allocation) {
-      await this.ready();
-      let allocationTask = this._payment_api.new_allocation(
-        this._budget_amount,
-        this._expires.add(CFG_INVOICE_TIMEOUT, "ms")
+      this._budget_allocation = await this._stack.enter_async_context(
+        this._payment_api.new_allocation(
+          this._budget_amount,
+          this._expires.add(CFG_INVOICE_TIMEOUT, "ms")
+        )
       );
-      this._budget_allocation = await allocationTask.ready();
       const result = await this._budget_allocation!.details();
       yield {
         allocation: this._budget_allocation!.id,
@@ -213,13 +222,13 @@ export class Engine {
     let market_api = this._market_api;
     let activity_api = this._activity_api;
     let strategy = this._strategy;
-    let work_queue: Queue<Task> = new Queue();
+    let work_queue: Queue<Task> = new Queue([], cancellationToken);
     let event_queue: Queue<[
       string,
       string,
       string | number | null,
       {}
-    ]> = new Queue();
+    ]> = new Queue([], cancellationToken);
 
     let workers: Set<any> = new Set(); //asyncio.Task[]
     let last_wid = 0;
@@ -231,7 +240,9 @@ export class Engine {
 
     async function process_invoices() {
       let allocation = self._budget_allocation;
-      for await (let invoice of self._payment_api.incoming_invoices()) {
+      for await (let invoice of self._payment_api.incoming_invoices(
+        cancellationToken
+      )) {
         if (agreements_to_pay.has(invoice.agreementId)) {
           agreements_to_pay.delete(invoice.agreementId);
           await invoice.accept(invoice.amount, allocation);
@@ -244,7 +255,9 @@ export class Engine {
       }
     }
 
-    async function accept_payment_for_agreement(agreement_id: string): Promise<boolean> {
+    async function accept_payment_for_agreement(
+      agreement_id: string
+    ): Promise<boolean> {
       let allocation = self._budget_allocation;
       emit_progress("agr", "payment_prep", agreement_id);
       if (!invoices.has(agreement_id)) {
@@ -263,6 +276,7 @@ export class Engine {
 
     async function _tmp_log() {
       while (true) {
+        if (cancellationToken.cancelled) break;
         let item = await event_queue.get();
         console.log("_tmp_log", ...item);
       }
@@ -278,37 +292,48 @@ export class Engine {
     }
 
     async function find_offers() {
-      const subscription = (await builder.subscribe(
-        market_api
-      )) as Subscription;
-      emit_progress("sub", "created", subscription.id());
-      for await (let proposal of subscription.events()) {
-        emit_progress("prop", "recv", proposal.id(), proposal.issuer());
-        let score = await strategy.score_offer(proposal);
-        if (score < SCORE_NEUTRAL) {
-          let [proposal_id, provider_id] = [proposal.id(), proposal.issuer()];
-          // with contextlib.suppress(Exception):
-          await proposal.reject();
-          emit_progress("prop", "rejected", proposal_id, provider_id);
-          continue;
+      await asyncWith(
+        await builder.subscribe(market_api),
+        async (subscription) => {
+          emit_progress("sub", "created", subscription.id());
+          for await (let proposal of subscription.events(cancellationToken)) {
+            emit_progress("prop", "recv", proposal.id(), proposal.issuer());
+            let score = await strategy.score_offer(proposal);
+            if (score < SCORE_NEUTRAL) {
+              let [proposal_id, provider_id] = [
+                proposal.id(),
+                proposal.issuer(),
+              ];
+              // with contextlib.suppress(Exception):
+              await proposal.reject();
+              emit_progress("prop", "rejected", proposal_id, provider_id);
+              continue;
+            }
+            if (proposal.is_draft()) {
+              emit_progress("prop", "buffered", proposal.id());
+              offer_buffer["ala"] = new _BufferItem(
+                Date.now(),
+                score,
+                proposal
+              );
+              offer_buffer[proposal.issuer()] = new _BufferItem(
+                Date.now(),
+                score,
+                proposal
+              );
+            } else {
+              await proposal.respond(builder.props(), builder.cons());
+              emit_progress("prop", "respond", proposal.id());
+            }
+          }
         }
-        if (proposal.is_draft()) {
-          emit_progress("prop", "buffered", proposal.id());
-          offer_buffer["ala"] = new _BufferItem(Date.now(), score, proposal);
-          offer_buffer[proposal.issuer()] = new _BufferItem(
-            Date.now(),
-            score,
-            proposal
-          );
-        } else {
-          await proposal.respond(builder.props(), builder.cons());
-          emit_progress("prop", "respond", proposal.id());
-        }
-      }
+      );
     }
 
     console.log("pre");
-    let storage_manager = await gftp.provider().ready();
+    let storage_manager = await this._stack.enter_async_context(
+      gftp.provider()
+    );
     console.log("post");
 
     async function start_worker(agreement: Agreement) {
@@ -317,52 +342,53 @@ export class Engine {
 
       let details = await agreement.details();
       let provider_idn = details.view_prov(new Identification());
-      emit_progress(
-        "wkr",
-        "created",
-        wid,
-        agreement.id(),
-        provider_idn
-      );
+      emit_progress("wkr", "created", wid, agreement.id(), provider_idn);
 
       async function* task_emiter() {
         while (true) {
+          if (cancellationToken.cancelled) break;
           let item = await work_queue.get();
           item._add_callback(on_work_done);
           emit_progress("wkr", "get-work", wid, item);
           item._start(emit_progress);
           yield item;
         }
+        return;
       }
 
-      const act = await activity_api.new_activity(agreement.id());
-      emit_progress("act", "create", act.id);
+      await asyncWith(
+        await activity_api.new_activity(agreement.id()),
+        async (act) => {
+          emit_progress("act", "create", act.id);
 
-      let work_context = new WorkContext(`worker-${wid}`, storage_manager);
-      for await (let batch of worker(work_context, task_emiter())) {
-        await batch.prepare();
-        console.log("prepared");
-        let cc = new CommandContainer();
-        batch.register(cc);
-        let remote = await act.send(cc.commands());
-        console.log("new batch !!!", cc.commands(), remote);
-        for await (let step of remote) {
-          let message = step.message ? step.message.slice(0, 25) : null;
-          let idx = step.idx;
-          emit_progress("wkr", "step", wid, message, idx);
+          let work_context = new WorkContext(`worker-${wid}`, storage_manager);
+          for await (let batch of worker(work_context, task_emiter())) {
+            await batch.prepare();
+            console.log("prepared");
+            let cc = new CommandContainer();
+            batch.register(cc);
+            let remote = await act.send(cc.commands());
+            console.log("new batch !!!", cc.commands(), remote);
+            for await (let step of remote) {
+              let message = step.message ? step.message.slice(0, 25) : null;
+              let idx = step.idx;
+              emit_progress("wkr", "step", wid, message, idx);
+            }
+            emit_progress("wkr", "get-results", wid);
+            await batch.post();
+            emit_progress("wkr", "batch-done", wid);
+            await accept_payment_for_agreement(agreement.id());
+          }
+
+          await accept_payment_for_agreement(agreement.id());
+          emit_progress("wkr", "done", wid, agreement.id());
         }
-        emit_progress("wkr", "get-results", wid);
-        await batch.post();
-        emit_progress("wkr", "batch-done", wid);
-        await accept_payment_for_agreement(agreement.id());
-      }
-      
-      await accept_payment_for_agreement(agreement.id());
-      emit_progress("wkr", "done", wid, agreement.id());
+      );
     }
 
     async function worker_starter() {
       while (true) {
+        if (cancellationToken.cancelled) break;
         await sleep(2);
         if (
           Object.keys(offer_buffer).length > 0 &&
@@ -412,10 +438,10 @@ export class Engine {
     }
 
     function get_event_loop() {
-      blue.Promise.config({ cancellation: true });
+      bluebird.Promise.config({ cancellation: true });
       return {
-        create_task: blue.coroutine(function* (fn): any {
-          yield new blue.Promise(async (resolve, reject, onCancel) => {
+        create_task: bluebird.coroutine(function* (fn): any {
+          yield new bluebird.Promise(async (resolve, reject, onCancel) => {
             try {
               await fn();
               resolve();
@@ -432,7 +458,7 @@ export class Engine {
     }
 
     async function promise_timeout(seconds: number) {
-      return blue.coroutine(function* (): any {
+      return bluebird.coroutine(function* (): any {
         yield sleep(seconds);
       })();
     }
@@ -454,7 +480,11 @@ export class Engine {
         !work_queue.empty() ||
         tasks_processed["s"] > tasks_processed["c"]
       ) {
-        await bluePromise.any([...services, ...workers, promise_timeout(10)]);
+        await bluebird.Promise.any([
+          ...services,
+          ...workers,
+          promise_timeout(10),
+        ]);
         workers = new Set([...workers].filter((x) => x.isPending()));
         services = new Set([...services].filter((x) => x.isPending()));
       }
@@ -477,8 +507,13 @@ export class Engine {
 
     yield { stage: "wait for invoices", agreements_to_pay: agreements_to_pay };
     payment_closing = true;
-    await bluePromise.any([Promise.all([ process_invoices_job ]), promise_timeout(15)]);
+    await bluebird.Promise.any([
+      Promise.all([process_invoices_job]),
+      promise_timeout(15),
+    ]);
+    cancellationToken.cancel();
     yield { done: true };
+    // process.abort(); //until cleanup for async branches implemented properly
     return;
   }
 
@@ -497,11 +532,11 @@ export class Engine {
   }
 
   // cleanup, if needed
-  // async done(this, exc_type, exc_val, exc_tb) {
-  //     // this._market_api = None
-  //     // this._payment_api = None
-  //     await this._stack.aclose()
-  // }
+  async done(this) {
+    this._market_api = null;
+    this._payment_api = null;
+    await this._stack.aclose();
+  }
 }
 
 export enum TaskStatus {

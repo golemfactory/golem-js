@@ -1,4 +1,3 @@
-import exitHook from "async-exit-hook";
 import {
   RequestorControlApi,
   RequestorStateApi,
@@ -44,10 +43,6 @@ export class Activity {
 
   constructor(_api: RequestorControlApi) {
     this._api = _api;
-    exitHook(async (callback) => {
-      await this.done();
-      callback();
-    });
   }
 
   set id(x) {
@@ -151,5 +146,6 @@ class Batch implements AsyncIterable<Result> {
         if (!any_new) await sleep(10);
       }
     }
+    return;
   }
 }

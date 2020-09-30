@@ -1,5 +1,3 @@
-import blue from "bluebird";
-
 export const sleep = (time) =>
   new Promise((resolve) => setTimeout(resolve, time * 1000));
 
@@ -30,9 +28,11 @@ export function applyMixins(derivedCtor: any, constructors: any[]) {
 export interface Queue<T> {}
 export class Queue<T> {
   private _tasks;
+  private _cancellationToken;
 
-  constructor(list = []) {
+  constructor(list = [], cancellationToken) {
     this._tasks = list;
+    this._cancellationToken = cancellationToken;
     if (list.length > 0) {
       let first = this._tasks.shift();
       first();
@@ -44,49 +44,20 @@ export class Queue<T> {
   }
 
   async get(): Promise<T> {
-    return new Promise(async (resolve) => {
+    return new Promise(async (resolve, reject) => {
       let item;
       while (!item) {
+        if(this._cancellationToken.cancelled) break;
         item = this._tasks.shift();
-        if (!item) await sleep(1);
+        if (!item) await sleep(2);
       }
+      if(this._cancellationToken.cancelled) reject();
       resolve(item);
     });
   }
 
   empty() {
     return this._tasks.length == 0;
-  }
-}
-
-export class AsyncExitStack {
-  private _async_jobs: Function[] = [];
-  private _sync_jobs: Function[] = [];
-  constructor() {}
-
-  async enterAsyncContext(fn: Function): Promise<any> {
-    blue.Promise.config({ cancellation: true });
-    this._async_jobs.push(fn);
-    return blue.coroutine(function* () {
-      return new blue.Promise(async (resolve, reject, onCancel) => {
-        let { value } = await fn().next();
-        resolve(value);
-        onCancel!(() => {
-          console.log("cancelled!");
-          reject("cancelled!");
-        });
-      });
-    })();
-  }
-
-  enterContext(fn: Function): void {
-    this._sync_jobs.push(fn);
-    return fn().next();
-  }
-
-  async aclose() {
-    // await this._async_jobs.forEach(async (fn) => await fn());
-    // this._sync_jobs.forEach((fn) => fn());
   }
 }
 
