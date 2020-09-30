@@ -1,5 +1,3 @@
-import exitHook from "async-exit-hook";
-
 import dayjs, { Dayjs } from "dayjs";
 import utc from "dayjs/plugin/utc";
 
@@ -99,11 +97,6 @@ class _AllocationTask extends ResourceCtx<Allocation> {
     super();
     this._api = api;
     this.model = model;
-
-    exitHook(async (callback) => {
-      await this.done();
-      callback();
-    });
   }
 
   async ready() {
@@ -192,6 +185,7 @@ export class Payment {
       );
       yield _allocation;
     }
+    return;
   }
 
   async allocation(allocation_id: string): Promise<Allocation> {
@@ -214,6 +208,7 @@ export class Payment {
     for (let invoice_obj of result) {
       yield new Invoice(this._api, invoice_obj);
     }
+    return;
   }
 
   async invoice(invoice_id: string): Promise<Invoice> {
@@ -222,7 +217,7 @@ export class Payment {
     return new Invoice(this._api, invoice_obj);
   }
 
-  incoming_invoices(): AsyncGenerator<Invoice> {
+  incoming_invoices(cancellationToken): AsyncGenerator<Invoice> {
     let ts = dayjs().utc();
     let api = this._api;
     let self = this;
@@ -230,6 +225,7 @@ export class Payment {
     async function* fetch(init_ts: Dayjs) {
       let ts = init_ts;
       while (true) {
+        if(cancellationToken.cancelled) break;
         let { data: items } = await api.getRequestorInvoiceEvents(
           5,
           ts.format("YYYY-MM-DD HH:mm:ss.SSSSSSZ")
@@ -243,6 +239,7 @@ export class Payment {
         }
         if (items.length > 0) break;
       }
+      return;
     }
 
     return fetch(ts);

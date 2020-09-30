@@ -1,6 +1,7 @@
 import path from "path";
 import { Engine, Task, vm, WorkContext } from "../../yajsapi";
 import { range } from "../../yajsapi/utils";
+import asyncWith from "../../yajsapi/utils/asyncWith";
 
 async function main() {
   let _package = await vm.repo(
@@ -38,7 +39,7 @@ async function main() {
       });
       ctx.run("/golem/entrypoints/run-blender.sh");
       ctx.download_file(
-        `/golem/output/out${frame.toString().padStart(4, '0')}.png`,
+        `/golem/output/out${frame.toString().padStart(4, "0")}.png`,
         path.join(__dirname, `./output_${frame}.png`)
       );
       yield ctx.commit();
@@ -49,25 +50,30 @@ async function main() {
     }
 
     ctx.log("no more frames to render");
+    return;
   }
 
   let frames: number[] = range(0, 60, 10);
 
-  let engine = await new Engine(
-    _package,
-    6,
-    900000, //5 min to 30 min
-    "10.0",
-    undefined,
-    "testnet"
+  await asyncWith(
+    await new Engine(
+      _package,
+      6,
+      900000, //5 min to 30 min
+      "10.0",
+      undefined,
+      "testnet"
+    ),
+    async (engine) => {
+      for await (let progress of engine.map(
+        worker,
+        frames.map((frame) => new Task(frame))
+      )) {
+        console.log("progress=", progress);
+      }
+    }
   );
-
-  for await (let progress of engine.map(
-    worker,
-    frames.map((frame) => new Task(frame))
-  )) {
-    console.log("progress=", progress);
-  }
+  return;
 }
 
 main();
