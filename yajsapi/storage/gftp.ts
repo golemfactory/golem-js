@@ -1,4 +1,3 @@
-import exitHook from "async-exit-hook";
 import {
   chomp,
   streamWrite,
@@ -7,7 +6,7 @@ import {
 } from "@rauschma/stringio";
 import { spawn, ChildProcess } from "child_process";
 import { StorageProvider, Destination, Source, Content } from ".";
-import { AsyncExitStack, sleep } from "../utils";
+import AsyncExitStack from "../utils/asyncExitStack";
 
 const fs = require("fs");
 const path = require("path");
@@ -64,7 +63,7 @@ class GftpDriver {
     /*Stops GFTP service.
       After shutdown all generated urls will be unavailable.
     */
-    await this._jsonrpc("shutdown");
+    // await this._jsonrpc("shutdown");
     await streamEnd(this._proc.stdin);
   }
 
@@ -90,10 +89,8 @@ class GftpDriver {
   }
 }
 
-function* service(debug = false) {
-  let _process = new _Process(debug);
-  let proc = yield _process.ready();
-  return proc;
+function service(debug = false) {
+  return new _Process(debug);
 }
 
 class _Process {
@@ -129,7 +126,7 @@ class _Process {
     this._proc = null;
 
     // with contextlib.suppress(Exception):
-    await (<GftpDriver>(<unknown>this)).shutdown();
+    // await GftpDriver.shutdown();
 
     if (p.stdin) {
       p.stdin.destroy(); // p.stdin.close()
@@ -168,10 +165,11 @@ class _Process {
   }
 }
 
-function* _temp_file(temp_dir: string): Generator<string> {
+function _temp_file(temp_dir: string): string {
   let file_name = path.join(temp_dir, uuid().toString());
-  yield file_name;
   if (fs.existsSync(file_name)) fs.unlinkSync(file_name);
+  return file_name;
+  
 }
 
 class GftpSource extends Source {
@@ -239,10 +237,6 @@ class GftpProvider extends StorageProvider {
     this.__exit_stack = new AsyncExitStack();
     this._temp_dir = tmpdir || null;
     this._process = null;
-    exitHook(async (callback) => {
-      await this.done();
-      callback();
-    });
   }
 
   async ready(): Promise<StorageProvider> {
@@ -262,17 +256,15 @@ class GftpProvider extends StorageProvider {
   __new_file(): string {
     let temp_dir: string = this._temp_dir || tmp.dirSync().name;
     if (!this._temp_dir) this._temp_dir = temp_dir;
-    const { value } = this.__exit_stack.enterContext(
-      _temp_file.bind(null, temp_dir)
-    );
-    return value;
+    const temp_file = _temp_file(temp_dir);
+    return temp_file;
   }
 
   async __get_process(): Promise<GftpDriver> {
     let _debug = !!process.env["DEBUG_GFTP"];
     let _process =
       this._process ||
-      (await this.__exit_stack.enterAsyncContext(service.bind(_debug)));
+      (await this.__exit_stack.enter_async_context(service(_debug)));
     if (!this._process) this._process = _process;
     return _process;
   }
