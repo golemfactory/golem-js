@@ -237,11 +237,7 @@ export class Market {
     try {
       let { data: demands } = await this._api.getDemands();
       for (let demand of demands) {
-        for (let _subscription of Object.values(
-          new Subscription(this._api, demand.demandId as string, demand)
-        )) {
-          yield _subscription;
-        }
+        yield new Subscription(this._api, demand.demandId as string, demand);
       }
     } catch (error) {
       console.warn("getDemands error:", error);
