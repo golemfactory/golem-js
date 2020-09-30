@@ -1,7 +1,7 @@
 {
     "name": "yajsapi",
     "version": "",
-    "description": "NodeJS client for ya-payment",
+    "description": "NodeJS API for Next Golem",
     "repository": "https://github.com/golemfactory/yajsapi",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
@@ -17,7 +17,6 @@
     "dependencies": {
         "@rauschma/stringio": "^1.4.0",
         "@types/bluebird": "^3.5.32",
-        "async-exit-hook": "^2.0.1",
         "axios": "^0.19.2",
         "bluebird": "^3.5.0",
         "dayjs": "^1.8.31",
