@@ -1,4 +1,3 @@
-import exitHook from "async-exit-hook";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import { Model } from "../props";
@@ -148,11 +147,6 @@ export class Subscription {
     this._open = true;
     this._deleted = false;
     this._details = _details;
-
-    exitHook(async (callback) => {
-      await this.done();
-      callback();
-    });
   }
 
   id() {
@@ -183,8 +177,9 @@ export class Subscription {
     }
   }
 
-  async *events(): AsyncGenerator<OfferProposal> {
+  async *events(cancellationToken?): AsyncGenerator<OfferProposal> {
     while (this._open) {
+      if(cancellationToken && cancellationToken.cancelled) break;
       console.log("checking proposals...");
       try {
         let { data: proposals } = await this._api.collectOffers(
@@ -203,6 +198,7 @@ export class Subscription {
         throw Error(error);
       }
     }
+    return;
   }
 }
 
@@ -238,13 +234,18 @@ export class Market {
   }
 
   async *subscriptions(): AsyncGenerator<Subscription> {
-    let { data: demands } = await this._api.getDemands();
-    for (let demand of demands) {
-      for (let _subscription of Object.values(
-        new Subscription(this._api, demand.demandId as string, demand)
-      )) {
-        yield _subscription;
+    try {
+      let { data: demands } = await this._api.getDemands();
+      for (let demand of demands) {
+        for (let _subscription of Object.values(
+          new Subscription(this._api, demand.demandId as string, demand)
+        )) {
+          yield _subscription;
+        }
       }
+    } catch (error) {
+      console.warn("getDemands error:", error);
     }
+    return;
   }
 }
