@@ -2,6 +2,7 @@
 /node_modules
 
 #Outputs
+/dist
 /examples/blender/*.png
 
 #Lock files

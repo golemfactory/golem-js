@@ -10,7 +10,7 @@
         "start": "ts-node-script ./examples/blender/index.ts",
         "start:low": "ts-node-script ./examples/low-level-api/index.ts",
         "build": "tsc",
-        "test": "npm run build && node dist/client.js"
+        "test": "npm run build && node dist/index.js"
     },
     "author": "Muhammed Tanrikulu <muhammed@golem.network>",
     "license": "Unlicense",
