@@ -19,8 +19,8 @@
       "esnext",
       "dom",
     ],
-    "outDir": "../../dist/ya-payment",
+    "outDir": "dist",
     "typeRoots": ["node_modules/@types"]
   },
-  "exclude": ["dist", "node_modules"]
+  "exclude": ["dist", "node_modules", "examples"]
 }

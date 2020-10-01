@@ -1,0 +1,8 @@
+/.vscode
+/examples
+/node_modules
+/yajsapi
+.gitignore
+package-lock.json
+tsconfig.json
+yarn.lock
