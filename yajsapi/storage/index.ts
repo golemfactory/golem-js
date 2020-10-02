@@ -1,4 +1,3 @@
-import Path from "path";
 import { applyMixins } from "../utils";
 const fs = require("fs");
 

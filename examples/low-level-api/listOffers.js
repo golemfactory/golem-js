@@ -1,21 +1,18 @@
-import Bluebird from "bluebird";
-import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
-
-import * as yp from "../../yajsapi/props";
-import { DemandBuilder } from "../../yajsapi/props/builder";
-import rest from "../../yajsapi/rest";
-import asyncWith from "../../yajsapi/utils/asyncWith";
-import Token from "../../yajsapi/utils/cancellationToken";
+const Bluebird = require("bluebird");
+const dayjs = require("dayjs");
+const utc = require("dayjs/plugin/utc");
+const { props: yp, rest, utils } = require("yajsapi");
 
 dayjs.extend(utc);
-const { Configuration, Market } = rest;
-const cancellationToken = new Token();
 
-async function list_offers(conf: any): Promise<void> {
+const { Configuration, Market } = rest;
+const { asyncWith, CancellationToken } = utils;
+const cancellationToken = new CancellationToken();
+
+async function list_offers(conf) {
   let client = await conf.market();
   let market_api = new Market(client);
-  let dbuild = new DemandBuilder();
+  let dbuild = new yp.DemandBuilder();
 
   let idx = new yp.Identification("testnet");
   idx.name.value = "some scanning node";
@@ -39,11 +36,11 @@ async function list_offers(conf: any): Promise<void> {
   console.log("done");
 }
 
-const sleep = (time) =>
+const promiseTimeout = (seconds) =>
   new Promise((resolve) =>
     setTimeout(() => {
       cancellationToken.cancel();
       resolve();
-    }, time * 1000)
+    }, seconds * 1000)
   );
-Bluebird.Promise.all([list_offers(new Configuration()), sleep(4)]);
+Bluebird.Promise.any([list_offers(new Configuration()), promiseTimeout(4)]);

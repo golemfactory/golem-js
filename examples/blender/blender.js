@@ -1,16 +1,19 @@
-import path from "path";
-import { Engine, Task, vm, WorkContext } from "../../yajsapi";
-import { range } from "../../yajsapi/utils";
-import asyncWith from "../../yajsapi/utils/asyncWith";
+const path = require("path");
+const dayjs = require("dayjs");
+const duration = require("dayjs/plugin/duration");
+const { Engine, Task, utils, vm } = require("yajsapi");
+
+dayjs.extend(duration);
+const { asyncWith, range } = utils;
 
 async function main() {
-  let _package = await vm.repo(
+  const _package = await vm.repo(
     "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
     0.5,
     2.0
   );
 
-  async function* worker(ctx: WorkContext, tasks) {
+  async function* worker(ctx, tasks) {
     ctx.send_file(
       path.join(__dirname, "./cubes.blend"),
       "/golem/resource/scene.blend"
@@ -53,13 +56,14 @@ async function main() {
     return;
   }
 
-  let frames: number[] = range(0, 60, 10);
+  const frames = range(0, 60, 10);
+  const timeout = dayjs.duration({ minutes: 15 }).asMilliseconds();
 
   await asyncWith(
     await new Engine(
       _package,
       6,
-      900000, //5 min to 30 min
+      timeout, //5 min to 30 min
       "10.0",
       undefined,
       "testnet"

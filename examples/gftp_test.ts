@@ -6,7 +6,7 @@ const {
   chunksToLinesAsync,
 } = require("@rauschma/stringio");
 
-let childProcess = spawn("gftp", ["server"], {
+const childProcess = spawn("gftp", ["server"], {
   shell: true,
 });
 
@@ -17,8 +17,10 @@ async function writeToWritable(writable) {
     writable,
     '{"jsonrpc": "2.0", "id": "1", "method": "version", "params":{}}\n'
   );
-  let result = await echoReadable(childProcess.stdout).next();
-  console.log("result", result);
+  const { value } = await echoReadable(childProcess.stdout).next();
+  const { result } = JSON.parse(value);
+  console.log('Output', value);
+  console.log('GFTP', `v${result}`);
   await streamEnd(writable);
 }
 
