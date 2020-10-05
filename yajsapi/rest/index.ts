@@ -4,7 +4,7 @@ import { Invoice, InvoiceStatus, Payment } from "./payment";
 import { ActivityService as Activity } from "./activity";
 import * as vm from "../runner/vm";
 
-export default {
+export {
   Activity,
   Configuration,
   Invoice,

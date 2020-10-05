@@ -1,8 +1,10 @@
 #Node modules
 /node_modules
+/examples/node_modules
 
 #Outputs
 /dist
+/examples/dist
 /examples/blender/*.png
 
 #Lock files

@@ -3,6 +3,7 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import duration from "dayjs/plugin/duration";
 
+import { WorkContext, Work, CommandContainer } from "./ctx";
 import {
   BillingScheme,
   ComLinear,
@@ -13,19 +14,21 @@ import {
 import { Activity, Identification, IdentificationKeys } from "../props";
 import { DemandBuilder } from "../props/builder";
 
-import rest from "../rest";
-import { OfferProposal, Subscription } from "../rest/market";
+import * as rest from "../rest";
+import { OfferProposal } from "../rest/market";
 import { Allocation, Invoice } from "../rest/payment";
 import { Agreement } from "../rest/market";
 
 import * as gftp from "../storage/gftp";
-import { WorkContext, Work, CommandContainer } from "./ctx";
+import {
+  applyMixins,
+  AsyncExitStack,
+  asyncWith,
+  CancellationToken,
+  Queue,
+  sleep,
+} from "../utils";
 import * as _vm from "./vm";
-
-import { sleep, applyMixins, Queue } from "../utils";
-import CancellationToken from "../utils/cancellationToken";
-import asyncWith from "../utils/asyncWith";
-import AsyncExitStack from "../utils/asyncExitStack";
 
 dayjs.extend(duration);
 dayjs.extend(utc);
