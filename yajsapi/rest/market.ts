@@ -1,10 +1,9 @@
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import { Model } from "../props";
-import { ProviderApi, RequestorApi } from "ya-ts-client/dist/ya-market/api";
-import * as models from "ya-ts-client/dist/ya-market/src/models";
 import { sleep } from "../utils";
-import { ProposalEvent } from "ya-ts-client/dist/ya-market/src/models";
+import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
+import * as models from "ya-ts-client/dist/ya-market/src/models";
 import { Configuration } from "ya-ts-client/dist/ya-activity";
 
 dayjs.extend(utc);
@@ -188,7 +187,7 @@ export class Subscription {
           10
         );
         for (let _proposal of proposals) {
-          yield new OfferProposal(this, _proposal as ProposalEvent);
+          yield new OfferProposal(this, _proposal as models.ProposalEvent);
         }
         if (!proposals || !proposals.length) {
           await sleep(2);

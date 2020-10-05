@@ -1,6 +1,7 @@
 import { Field, Model } from "./base";
+import { DemandBuilder } from "./builder";
 
-export { Model };
+export { DemandBuilder, Model };
 
 export class Identification extends Model {
   name: Field = new Field({ metadata: { key: "golem.node.id.name" } });

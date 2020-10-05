@@ -1,0 +1,26 @@
+{
+    "compilerOptions": {
+      "module": "commonjs",
+      "noImplicitAny": false,
+      "suppressImplicitAnyIndexErrors": true,
+      "target": "esnext",
+      "strict": true,
+      "esModuleInterop": true,
+      "moduleResolution": "node",
+      "removeComments": true,
+      "sourceMap": true,
+      "noLib": false,
+      "declaration": true,
+      "lib": [
+        "es2015",
+        "es2016",
+        "es2017",
+        "es2018",
+        "esnext",
+        "dom",
+      ],
+      "outDir": "dist",
+      "typeRoots": ["node_modules/@types"]
+    },
+    "exclude": ["dist", "node_modules"]
+  }

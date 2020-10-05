@@ -1,19 +1,17 @@
 {
     "name": "yajsapi",
-    "version": "",
+    "version": "0.1.0-alpha.0",
     "description": "NodeJS API for Next Golem",
     "repository": "https://github.com/golemfactory/yajsapi",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "scripts": {
-        "clean": "rm -Rf node_modules/ *.js",
-        "start": "ts-node-script ./examples/blender/index.ts",
-        "start:low": "ts-node-script ./examples/low-level-api/index.ts",
+        "clean": "rm -Rf node_modules/ dist/",
         "build": "tsc",
         "test": "npm run build && node dist/index.js"
     },
     "author": "Muhammed Tanrikulu <muhammed@golem.network>",
-    "license": "Unlicense",
+    "license": "LGPL-3.0",
     "dependencies": {
         "@rauschma/stringio": "^1.4.0",
         "@types/bluebird": "^3.5.32",
@@ -22,13 +20,13 @@
         "dayjs": "^1.8.31",
         "rewire": "^3.0.2",
         "tmp": "^0.2.1",
-        "ts-node": "9.0.0",
         "uuid": "^8.3.0",
         "ya-ts-client": "^0.1.2"
     },
     "devDependencies": {
         "@types/node": "14.6.2",
         "tsconfig-paths": "^3.9.0",
+        "ts-node": "^9.0.0",
         "typescript": "^3.9.7"
     }
 }

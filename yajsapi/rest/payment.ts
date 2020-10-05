@@ -1,11 +1,9 @@
 import dayjs, { Dayjs } from "dayjs";
 import utc from "dayjs/plugin/utc";
-
-import { RequestorApi } from "ya-ts-client/dist/ya-payment/api";
-import * as yap from "ya-ts-client/dist/ya-payment/src/models";
-
 import { ResourceCtx } from "./resource";
+import * as yap from "ya-ts-client/dist/ya-payment/src/models";
 import { Configuration } from "ya-ts-client/dist/ya-activity";
+import { RequestorApi } from "ya-ts-client/dist/ya-payment/api";
 
 dayjs.extend(utc);
 

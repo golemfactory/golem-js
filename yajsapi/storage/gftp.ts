@@ -6,7 +6,7 @@ import {
 } from "@rauschma/stringio";
 import { spawn, ChildProcess } from "child_process";
 import { StorageProvider, Destination, Source, Content } from ".";
-import AsyncExitStack from "../utils/asyncExitStack";
+import { AsyncExitStack } from "../utils";
 
 const fs = require("fs");
 const path = require("path");
