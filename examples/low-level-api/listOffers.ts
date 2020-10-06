@@ -15,7 +15,7 @@ async function list_offers(conf: rest.Configuration): Promise<void> {
   let market_api = new Market(client);
   let dbuild = new yp.DemandBuilder();
 
-  let idx = new yp.Identification("testnet");
+  let idx = new yp.Identification("devnet-alpha.2");
   idx.name.value = "some scanning node";
   dbuild.add(idx);
 
