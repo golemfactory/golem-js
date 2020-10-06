@@ -67,7 +67,7 @@ async function main() {
       timeout, //5 min to 30 min
       "10.0",
       undefined,
-      "testnet"
+      "devnet-alpha.2"
     ),
     async (engine: Engine): Promise<void> => {
       for await (let progress of engine.map(
