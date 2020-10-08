@@ -25,6 +25,7 @@ import {
   AsyncExitStack,
   asyncWith,
   CancellationToken,
+  logger,
   Queue,
   sleep,
 } from "../utils";
@@ -280,8 +281,10 @@ export class Engine {
     async function _tmp_log() {
       while (true) {
         if (cancellationToken.cancelled) break;
-        let item = await event_queue.get();
-        console.log("_tmp_log", ...item);
+        let [label, direction, info, rest] = await event_queue.get();
+        logger.debug(
+          `[${label}] [${direction}] ${info} ${JSON.stringify(rest)}`
+        );
       }
     }
 
@@ -333,26 +336,32 @@ export class Engine {
       );
     }
 
-    console.log("pre");
+    logger.debug("pre");
     let storage_manager = await this._stack.enter_async_context(
       gftp.provider()
     );
-    console.log("post");
+    logger.debug("post");
 
     async function start_worker(agreement: Agreement) {
       let wid = last_wid;
       last_wid += 1;
 
       let details = await agreement.details();
-      let provider_idn = details.view_prov(new Identification());
-      emit_progress("wkr", "created", wid, agreement.id(), provider_idn);
+      let provider_info = details.view_prov(new Identification());
+      emit_progress(
+        "wkr",
+        "created",
+        wid,
+        agreement.id(),
+        `provider: ${provider_info["name"].value}`
+      );
 
       async function* task_emiter() {
         while (true) {
           if (cancellationToken.cancelled) break;
           let item = await work_queue.get();
           item._add_callback(on_work_done);
-          emit_progress("wkr", "get-work", wid, item);
+          emit_progress("wkr", "get-work", wid, item.status());
           item._start(emit_progress);
           yield item;
         }
@@ -367,11 +376,11 @@ export class Engine {
           let work_context = new WorkContext(`worker-${wid}`, storage_manager);
           for await (let batch of worker(work_context, task_emiter())) {
             await batch.prepare();
-            console.log("prepared");
+            logger.info("batch prepared");
             let cc = new CommandContainer();
             batch.register(cc);
             let remote = await act.send(cc.commands());
-            console.log("new batch !!!", cc.commands(), remote);
+            logger.info("new batch !!!");
             for await (let step of remote) {
               let message = step.message ? step.message.slice(0, 25) : null;
               let idx = step.idx;
@@ -402,31 +411,34 @@ export class Engine {
             _offer_list[
               Math.floor(Math.random() * Object.keys(offer_buffer).length)
             ];
-          let [provider_id, b] = _sample;
+          let [provider_id, buffer] = _sample;
           delete offer_buffer[provider_id];
 
           let task: any | null = null;
           let agreement: Agreement | null = null;
 
           try {
-            agreement = await (b as _BufferItem).proposal.agreement();
+            agreement = await (buffer as _BufferItem).proposal.agreement();
+            const provider_info = (await agreement.details()).view_prov(
+              new Identification()
+            );
             emit_progress(
               "agr",
               "create",
               agreement.id(),
-              (await agreement.details()).view_prov(new Identification())
+              `provider: ${provider_info["name"].value}`
             );
             await agreement.confirm();
             emit_progress("agr", "confirm", agreement.id());
             task = loop.create_task(start_worker.bind(null, agreement));
             workers.add(task);
-          } catch (e) {
+          } catch (error) {
             if (task) task.cancel();
             emit_progress(
               "prop",
               "fail",
-              (b as _BufferItem).proposal.id(),
-              e.toString()
+              (buffer as _BufferItem).proposal.id(),
+              error.toString()
             );
           }
         }
@@ -452,7 +464,7 @@ export class Engine {
               reject(error);
             }
             onCancel!(() => {
-              console.log("cancelled!");
+              logger.warn("cancelled!");
               reject("cancelled!");
             });
           });
@@ -492,19 +504,18 @@ export class Engine {
         services = new Set([...services].filter((x) => x.isPending()));
       }
       yield { stage: "all work done" };
-      console.log("all work done");
+      logger.info("all work done");
       for (let service of [...services]) {
         service.cancel();
       }
-    } catch (e) {
-      console.log("fail=", e);
+    } catch (error) {
+      logger.error(`fail= ${error}`);
     } finally {
       payment_closing = true;
       for (let worker_task of [...workers]) {
         worker_task.cancel();
       }
 
-      console.log("find_offers_task", find_offers_task);
       find_offers_task.cancel();
     }
 
@@ -588,6 +599,10 @@ export class Task extends TaskGeneral {
   _start(_emiter) {
     this._status = TaskStatus.RUNNING;
     this._emit_event = _emiter;
+  }
+
+  status() {
+    return this._status;
   }
 
   data(): TaskData {

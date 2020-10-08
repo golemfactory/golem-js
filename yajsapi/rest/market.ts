@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import { Model } from "../props";
-import { sleep } from "../utils";
+import { logger, sleep } from "../utils";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import * as models from "ya-ts-client/dist/ya-market/src/models";
 import { Configuration } from "ya-ts-client/dist/ya-activity";
@@ -48,8 +48,7 @@ export class Agreement {
 
   async confirm() {
     await this._api.confirmAgreement(this._id);
-    let msg = await this._api.waitForApproval(this._id, 90, 100);
-    console.log("market > confirm > ", msg);
+    await this._api.waitForApproval(this._id, 90, 100);
   }
 }
 
@@ -179,7 +178,7 @@ export class Subscription {
   async *events(cancellationToken?): AsyncGenerator<OfferProposal> {
     while (this._open) {
       if(cancellationToken && cancellationToken.cancelled) break;
-      console.log("checking proposals...");
+      logger.info("checking proposals...");
       try {
         let { data: proposals } = await this._api.collectOffers(
           this._id,
@@ -193,7 +192,7 @@ export class Subscription {
           await sleep(2);
         }
       } catch (error) {
-        console.error(error);
+        logger.error(error);
         throw Error(error);
       }
     }
@@ -224,7 +223,7 @@ export class Market {
         let { data: sub_id } = await self._api.subscribeDemand(request);
         return new Subscription(self._api, sub_id);
       } catch (error) {
-        console.error(error);
+        logger.error(error);
         throw new Error(error);
       }
     }
@@ -239,7 +238,7 @@ export class Market {
         yield new Subscription(this._api, demand.demandId as string, demand);
       }
     } catch (error) {
-      console.warn("getDemands error:", error);
+      logger.warn(`getDemands error: ${error}`);
     }
     return;
   }
