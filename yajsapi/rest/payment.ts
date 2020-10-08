@@ -4,6 +4,7 @@ import { ResourceCtx } from "./resource";
 import * as yap from "ya-ts-client/dist/ya-payment/src/models";
 import { Configuration } from "ya-ts-client/dist/ya-activity";
 import { RequestorApi } from "ya-ts-client/dist/ya-payment/api";
+import { logger } from "../utils";
 
 dayjs.extend(utc);
 
@@ -74,7 +75,7 @@ export class Allocation extends _Link {
       allocationDetails.spent_amount = parseFloat(details.spentAmount);
       allocationDetails.remaining_amount = parseFloat(details.remainingAmount);
     } catch (error) {
-      console.error(error);
+      logger.error(error);
       throw new Error(error);
     }
 
@@ -117,7 +118,7 @@ class _AllocationTask extends ResourceCtx<Allocation> {
       _allocation.expires = new Date(parseInt(model.timeout) * 1000);
       return _allocation;
     } catch (error) {
-      console.error(error);
+      logger.error(error);
       throw new Error(error);
     }
   }
@@ -211,7 +212,7 @@ export class Payment {
 
   async invoice(invoice_id: string): Promise<Invoice> {
     let { data: invoice_obj } = await this._api.getReceivedInvoice(invoice_id);
-    console.log("got=", invoice_obj);
+    logger.log("debug", `got=${JSON.stringify(invoice_obj)}`);
     return new Invoice(this._api, invoice_obj);
   }
 

@@ -6,7 +6,7 @@ import {
 } from "@rauschma/stringio";
 import { spawn, ChildProcess } from "child_process";
 import { StorageProvider, Destination, Source, Content } from ".";
-import { AsyncExitStack } from "../utils";
+import { AsyncExitStack, logger } from "../utils";
 
 const fs = require("fs");
 const path = require("path");
@@ -77,7 +77,7 @@ class GftpDriver {
       const { result } = JSON.parse(value as string);
       return result;
     } catch (error) {
-      console.error(error);
+      logger.error(error);
       throw Error(error);
     }
   }
@@ -137,7 +137,7 @@ class _Process {
     }
     p.kill();
     let ret_code = await p.signalCode;
-    console.debug("GFTP server closed, code=", ret_code);
+    logger.debug(`GFTP server closed, code=${ret_code}`);
   }
 
   _log_debug(msg_dir: string, msg: string | Buffer) {
@@ -243,7 +243,7 @@ class GftpProvider extends StorageProvider {
     this._temp_dir = tmp.dirSync().name;
     let _process = await this.__get_process();
     let _ver = await _process.version();
-    console.log("GFTP Version:", _ver);
+    logger.info(`GFTP Version:${_ver}`);
     if (!_ver) throw Error("GFTP couldn't found.");
     return this as StorageProvider;
   }

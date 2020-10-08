@@ -5,6 +5,7 @@ import {
 import * as yaa from "ya-ts-client/dist/ya-activity/src/models";
 import { sleep } from "../utils";
 import { Configuration } from "ya-ts-client/dist/ya-activity";
+import { logger } from "../utils";
 
 export class ActivityService {
   private _api;
@@ -23,7 +24,7 @@ export class ActivityService {
       _activity.id = activity_id;
       return _activity;
     } catch (error) {
-      console.error("fail to create activity", agreement_id);
+      logger.error(`fail to create activity ${agreement_id}`);
       throw error;
     }
   }
