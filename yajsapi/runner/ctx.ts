@@ -1,4 +1,5 @@
 import { StorageProvider, Source, Destination } from "../storage";
+import { logger } from "../utils";
 
 export class CommandContainer {
   private _commands;
@@ -178,9 +179,9 @@ class _RecvFile extends Work {
 
   async post() {
     if (!this._dst_slot) throw "_RecvFile post without prepare";
-    console.log("start");
+    logger.log("debug", `download is started: ${this._dst_path}`);
     await this._dst_slot.download_file(this._dst_path);
-    console.log("done");
+    logger.info(`download is done: ${this._dst_path}`);
   }
 }
 
