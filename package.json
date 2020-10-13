@@ -17,18 +17,18 @@
         "@types/bluebird": "^3.5.32",
         "axios": "^0.19.2",
         "bluebird": "^3.5.0",
+        "commander": "^6.1.0",
         "dayjs": "^1.8.31",
         "rewire": "^3.0.2",
         "tmp": "^0.2.1",
         "uuid": "^8.3.0",
-        "ya-ts-client": "^0.1.2"
+        "ya-ts-client": "^0.1.2",
+        "winston": "^3.3.3"
     },
     "devDependencies": {
         "@types/node": "14.6.2",
-        "commander": "^6.1.0",
         "ts-node": "^9.0.0",
         "tsconfig-paths": "^3.9.0",
-        "typescript": "^3.9.7",
-        "winston": "^3.3.3"
+        "typescript": "^3.9.7"
     }
 }
