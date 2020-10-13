@@ -310,9 +310,13 @@ export class Engine {
                 proposal.id(),
                 proposal.issuer(),
               ];
-              // with contextlib.suppress(Exception):
-              await proposal.reject();
-              emit_progress("prop", "rejected", proposal_id, provider_id);
+              try {
+                await proposal.reject();
+                emit_progress("prop", "rejected", proposal_id, provider_id);
+              } catch(error) {
+                //suppress and log the error and continue;
+                logger.log('debug', `Reject error: ${error}`);
+              }
               continue;
             }
             if (proposal.is_draft()) {
@@ -328,8 +332,13 @@ export class Engine {
                 proposal
               );
             } else {
-              await proposal.respond(builder.props(), builder.cons());
-              emit_progress("prop", "respond", proposal.id());
+              try {
+                await proposal.respond(builder.props(), builder.cons());
+                emit_progress("prop", "respond", proposal.id());
+              } catch(error) {
+                //suppress and log the error and continue;
+                logger.log('debug', `Respond error: ${error}`);
+              }
             }
           }
         }
