@@ -321,11 +321,6 @@ export class Engine {
             }
             if (proposal.is_draft()) {
               emit_progress("prop", "buffered", proposal.id());
-              offer_buffer["ala"] = new _BufferItem(
-                Date.now(),
-                score,
-                proposal
-              );
               offer_buffer[proposal.issuer()] = new _BufferItem(
                 Date.now(),
                 score,
@@ -368,11 +363,15 @@ export class Engine {
       async function* task_emiter() {
         while (true) {
           if (cancellationToken.cancelled) break;
-          let item = await work_queue.get();
-          item._add_callback(on_work_done);
-          emit_progress("wkr", "get-work", wid, item.status());
-          item._start(emit_progress);
-          yield item;
+          try {
+            let item = await work_queue.get();
+            item._add_callback(on_work_done);
+            emit_progress("wkr", "get-work", wid, item.status());
+            item._start(emit_progress);
+            yield item;
+          } catch(error) {
+            break;
+          }
         }
         return;
       }

@@ -15,7 +15,7 @@
         "bluebird": "^3.5.0",
         "dayjs": "^1.8.31",
         "ts-node": "^9.0.0",
-        "yajsapi": "0.1.0-alpha.2"
+        "yajsapi": "file:../"
     },
     "devDependencies": {
         "tsconfig-paths": "^3.9.0",
