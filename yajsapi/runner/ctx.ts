@@ -249,7 +249,7 @@ export class WorkContext {
     this._pending_steps.push(new _RecvFile(this._storage, src_path, dst_path));
   }
   log(args) {
-    console.log(`W${this._id}: `, args);
+    logger.info(`${this._id}: ${args}`);
   }
 
   commit(): Work {
