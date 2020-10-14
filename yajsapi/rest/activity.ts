@@ -127,7 +127,7 @@ class Batch implements AsyncIterable<Result> {
         this._activity_id,
         this._batch_id,
         undefined,
-        20 //timeout 20s
+        30 //timeout 30s
       );
       let results: yaa.ExeScriptCommandResult[] = exe_list;
       results = results.slice(last_idx);
