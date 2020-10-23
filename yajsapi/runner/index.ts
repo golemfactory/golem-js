@@ -42,7 +42,7 @@ let cancellationHandler = () => {
   }
 }
 
-["SIGINT", "SIGTERM", "exit", "uncaughtException"].forEach((event) => {
+["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP", "exit", "uncaughtException"].forEach((event) => {
     process.on(event, cancellationHandler);
 });
 
