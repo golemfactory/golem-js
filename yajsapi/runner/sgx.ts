@@ -65,7 +65,7 @@ class _SgxDenoConstrains extends Constraints {
 
 const SGX_HASH_SIZE: number = 32;
 const DEFAULT_SGX_CONFIG = {
-  "enableAttestation": false, // FIXME: enable
+  "enableAttestation": true,
   "exeunitHashes": ["5edbb025714683961d4a2cb51b1d0a4ee8225a6ced167f29eb67f639313d9490"],
   "allowDebug": true,
   "allowOutdatedTcb": true,
