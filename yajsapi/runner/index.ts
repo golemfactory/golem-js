@@ -36,6 +36,16 @@ dayjs.extend(utc);
 
 const cancellationToken = new CancellationToken();
 
+let cancellationHandler = () => {
+  if (!cancellationToken.cancelled) {
+    cancellationToken.cancel();
+  }
+}
+
+["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP", "exit", "uncaughtException"].forEach((event) => {
+    process.on(event, cancellationHandler);
+});
+
 const CFG_INVOICE_TIMEOUT: any = dayjs
   .duration({ minutes: 5 })
   .asMilliseconds();
@@ -503,6 +513,7 @@ export class Engine {
         !work_queue.empty() ||
         tasks_processed["s"] > tasks_processed["c"]
       ) {
+        if (cancellationToken.cancelled) { throw new Error("Cancelled"); }
         await bluebird.Promise.any([
           ...services,
           ...workers,
