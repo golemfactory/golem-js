@@ -89,6 +89,7 @@ class _SendWork extends Work {
     this._idx = commands.transfer({
       _from: this._src.download_url(),
       _to: `container:${this._dst_path}`,
+      _args: {},
     });
   }
 }

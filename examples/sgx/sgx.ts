@@ -1,14 +1,15 @@
 import path from "path";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
-import { Engine, Task, utils, vm, WorkContext } from "yajsapi";
+import { Engine, Task, utils, sgx, WorkContext } from "yajsapi";
 
 dayjs.extend(duration);
 
 const { asyncWith, range } = utils;
 
 async function main() {
-  const _package = await vm.demand(
+  const _package = await sgx.demand(
+    sgx.SgxEngine.WASI,
     "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
     0.5,
     2.0
@@ -16,35 +17,22 @@ async function main() {
 
   async function* worker(ctx: WorkContext, tasks) {
     ctx.send_file(
-      path.join(__dirname, "./cubes.blend"),
-      "/golem/resource/scene.blend"
+      path.join(__dirname, "./input.txt"),
+      "/golem/resource/input.txt"
     );
     for await (let task of tasks) {
-      let frame = task.data();
+      let data = task.data();
       ctx.begin();
-      let crops = [
-        {
-          outfilebasename: "out",
-          borders_x: [0.0, 1.0],
-          borders_y: [0.0, 1.0],
-        },
-      ];
       ctx.send_json("/golem/work/params.json", {
-        scene_file: "/golem/resource/scene.blend",
-        resolution: [400, 300],
-        use_compositing: false,
-        crops: crops,
-        samples: 100,
-        frames: [frame],
-        output_format: "PNG",
+        input_file: "/golem/resource/input.txt",
         RESOURCES_DIR: "/golem/resources",
         WORK_DIR: "/golem/work",
         OUTPUT_DIR: "/golem/output",
       });
-      ctx.run("/golem/entrypoints/run-blender.sh");
+      ctx.run("/golem/entrypoints/run.sh");
       ctx.download_file(
-        `/golem/output/out${frame.toString().padStart(4, "0")}.png`,
-        path.join(__dirname, `./output_${frame}.png`)
+        `/golem/output/out${data.toString().padStart(4, "0")}.png`,
+        path.join(__dirname, `./output_${data}.png`)
       );
       yield ctx.commit();
       // TODO: Check
@@ -53,7 +41,7 @@ async function main() {
       task.accept_task();
     }
 
-    ctx.log("no more frames to render");
+    ctx.log("task completed");
     return;
   }
 

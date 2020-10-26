@@ -5,45 +5,104 @@ import {
 import * as yaa from "ya-ts-client/dist/ya-activity/src/models";
 import { sleep } from "../utils";
 import { Configuration } from "ya-ts-client/dist/ya-activity";
+import { Credentials, ExeScriptCommandResult, SgxCredentials } from "ya-ts-client/dist/ya-activity/src/models";
+import { CryptoCtx, PrivateKey, PublicKey, rand_hex } from "../crypto";
 import { logger } from "../utils";
+import { Agreement } from "./market";
+import { SGX_CONFIG } from "../runner/sgx";
 
 export class ActivityService {
-  private _api;
-  private _state;
+  private _api!: RequestorControlApi;
+  private _state!: RequestorStateApi;
 
   constructor(cfg: Configuration) {
     this._api = new RequestorControlApi(cfg);
     this._state = new RequestorStateApi(cfg);
   }
 
-  async new_activity(agreement_id: string): Promise<Activity> {
+  async create_activity(agreement: Agreement, secure: boolean = false): Promise<Activity> {
     try {
-      let { data: activity_id } = await this._api.createActivity(agreement_id);
-      let _activity = new Activity(this._api);
-      _activity.state = this._state;
-      _activity.id = activity_id;
-      return _activity;
+      if (secure) {
+        return await this._create_secure_activity(agreement);
+      } else {
+        return await this._create_activity(agreement.id());
+      }
     } catch (error) {
-      logger.error(`fail to create activity ${agreement_id}`);
+      logger.error(`Failed to create activity for agreement ${agreement.id()}`);
       throw error;
     }
+  }
+
+  async _create_secure_activity(agreement: Agreement): Promise<SecureActivity> {
+    let priv_key = new PrivateKey();
+    let pub_key = priv_key.publicKey();
+    let crypto_ctx: CryptoCtx;
+
+    let {
+      data: {
+        activityId: activity_id,
+        credentials: credentials,
+      }
+    } = await this._api.createActivity({
+      agreementId: agreement.id(),
+      requestorPubKey: pub_key.toString(),
+    });
+
+    try {
+      if (!credentials) {
+        throw Error("Missing credentials in CreateActivity response");
+      }
+      if (pub_key.toString() != credentials.sgx.requestorPubKey) {
+        throw Error("Invalid requestor public key in CreateActivity response");
+      }
+
+      let enclave_key = PublicKey.fromHex(credentials.sgx.enclavePubKey);
+      crypto_ctx = await CryptoCtx.from(enclave_key, priv_key);
+      await this._attest(pub_key, credentials);
+
+    } catch (error) {
+      await this._api.destroyActivity(activity_id);
+      throw error;
+    }
+
+    return new SecureActivity(activity_id, crypto_ctx, this._api, this._state);
+  }
+
+  async _attest(_pub_key: PublicKey, _credentials?: Credentials) {
+    if (!!SGX_CONFIG.enableAttestation) {
+      // TODO: call attestation API
+
+      if (!SGX_CONFIG.allowDebug) {
+        // ..
+      }
+      if (!SGX_CONFIG.allowOutdatedTcb) {
+        // ..
+      }
+    }
+  }
+
+  async _create_activity(agreement_id: string): Promise<Activity> {
+    let { data: { activityId: activity_id } } = await this._api.createActivity(agreement_id);
+    return new Activity(activity_id, this._api, this._state);
   }
 }
 
 class ExeScriptRequest implements yaa.ExeScriptRequest {
   text!: string;
-  constructor(text) {
+  constructor(text: string) {
     this.text = text;
   }
 }
 
-export class Activity {
-  private _api!: RequestorControlApi;
-  private _state!: RequestorStateApi;
-  private _id!: string;
+class Activity {
+  protected _api!: RequestorControlApi;
+  protected _state!: RequestorStateApi;
+  protected _id!: string;
 
-  constructor(_api: RequestorControlApi) {
+  constructor(id: string, _api: RequestorControlApi, _state: RequestorStateApi) {
+    this._id = id;
     this._api = _api;
+    this._state = _state;
   }
 
   set id(x) {
@@ -54,19 +113,27 @@ export class Activity {
     return this._id;
   }
 
+  async exec(script: object[]) {
+    let script_txt = JSON.stringify(script);
+    let req: yaa.ExeScriptRequest = new ExeScriptRequest(script_txt);
+    let { data: batch_id } = await this._api.exec(this._id, req);
+    return new Batch(this, batch_id, script.length);
+  }
+
   async state(): Promise<yaa.ActivityState> {
     let { data: result } = await this._state.getActivityState(this._id);
     let state: yaa.ActivityState = result;
     return state;
   }
 
-  async send(script: object[]) {
-    let script_txt = JSON.stringify(script);
-    let _script_request: yaa.ExeScriptRequest = new ExeScriptRequest(
-      script_txt
+  async results(batch_id: string, timeout: number = 30): Promise<ExeScriptCommandResult[]> {
+    let { data: results } = await this._api.getExecBatchResults(
+      this._id,
+      batch_id,
+      undefined,
+      timeout,
     );
-    let { data: batch_id } = await this._api.exec(this._id, _script_request);
-    return new Batch(this._api, this._id, batch_id, script.length);
+    return results;
   }
 
   async ready(): Promise<Activity> {
@@ -75,6 +142,94 @@ export class Activity {
 
   async done(): Promise<void> {
     await this._api.destroyActivity(this._id);
+  }
+}
+
+class SecureActivity extends Activity {
+  _crypto_ctx!: CryptoCtx;
+
+  constructor(
+    id: string,
+    crypto_ctx: CryptoCtx,
+    _api: RequestorControlApi,
+    _state: RequestorStateApi
+  ) {
+    super(id, _api, _state);
+    this._crypto_ctx = crypto_ctx;
+  }
+
+  async exec(script: object[]) {
+    let cmd = { exec: { exe_script: script } };
+    let batch_id = await this._send(rand_hex(32), cmd);
+    return new Batch(this, batch_id, script.length);
+  }
+
+  async results(batch_id: string, timeout: number = 10): Promise<ExeScriptCommandResult[]> {
+    let cmd = { getExecBatchResults: { command_index: undefined } };
+    let res = await this._send(batch_id, cmd, timeout);
+    return <ExeScriptCommandResult[]> res;
+  }
+
+  async _send(batch_id: string, cmd: object, timeout?: number): Promise<any> {
+    let req = new SecureRequest(this._id, batch_id, cmd, timeout);
+    let req_buf = Buffer.from(JSON.stringify(req));
+    let enc_req = this._crypto_ctx.encrypt(req_buf);
+
+    let {
+      data: enc_res,
+      status: status,
+      statusText: status_text,
+    } = await this._api.callEncrypted(
+      this._id,
+      // cannot be null / undefined;
+      // overriden by transformRequest below
+      '',
+      {
+        responseType: 'arraybuffer',
+        headers: {
+          'Content-Type': 'application/octet-stream',
+          'Accept': 'application/octet-stream'
+        },
+        transformRequest: [
+          // workaround for string conversion;
+          // we _must_ send a Buffer object
+          (_headers: any, _data: any) => enc_req,
+        ],
+        timeout: 0,
+      }
+    );
+
+    let res_buf = this._crypto_ctx.decrypt(Buffer.from(enc_res));
+    let res = SecureResponse.from_buffer(res_buf);
+    return res.unwrap();
+  }
+}
+
+class SecureRequest {
+  constructor(
+    private activityId: string,
+    private batchId: string,
+    private command: object,
+    private timeout?: number) {}
+}
+
+class SecureResponse {
+  command!: string;
+  Ok?: any;
+  Err?: any;
+
+  static from_buffer(buffer: Buffer): SecureResponse {
+    return Object.assign(
+      new SecureResponse(),
+      JSON.parse(buffer.toString())
+    );
+  }
+
+  unwrap(): any {
+    if (this.command == "error" || !!this.Err) {
+      throw new Error(this.Err || this.Ok);
+    }
+    return this.Ok;
   }
 }
 
@@ -91,19 +246,16 @@ class CommandExecutionError extends Error {
 }
 
 class Batch implements AsyncIterable<Result> {
-  private _api!: RequestorControlApi;
-  private _activity_id!: string;
+  private _activity!: Activity;
   private _batch_id!: string;
-  private _size;
+  private _size!: number;
 
   constructor(
-    _api: RequestorControlApi,
-    activity_id: string,
+    activity: Activity,
     batch_id: string,
     batch_size: number
   ) {
-    this._api = _api;
-    this._activity_id = activity_id;
+    this._activity = activity;
     this._batch_id = batch_id;
     this._size = batch_size;
   }
@@ -123,12 +275,7 @@ class Batch implements AsyncIterable<Result> {
     let last_idx = 0;
     while (last_idx < this._size) {
       let any_new: boolean = false;
-      let { data: exe_list } = await this._api.getExecBatchResults(
-        this._activity_id,
-        this._batch_id,
-        undefined,
-        30 //timeout 30s
-      );
+      let exe_list = await this._activity.results(this._batch_id);
       let results: yaa.ExeScriptCommandResult[] = exe_list;
       results = results.slice(last_idx);
       for (let result of results) {

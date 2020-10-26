@@ -29,7 +29,13 @@ import {
   Queue,
   sleep,
 } from "../utils";
+
+import * as _common from "./common";
 import * as _vm from "./vm";
+import * as _sgx from "./sgx";
+
+export const vm = _vm;
+export const sgx = _sgx;
 
 dayjs.extend(duration);
 dayjs.extend(utc);
@@ -160,7 +166,7 @@ export class Engine {
   private _strategy;
   private _api_config;
   private _stack;
-  private _package;
+  private _demand_decor;
   private _conf;
   private _expires;
   private _budget_amount;
@@ -171,7 +177,7 @@ export class Engine {
   private _payment_api;
 
   constructor(
-    _package: _vm.Package,
+    _demand_decor: _common.DemandDecor,
     max_workers: Number = 5,
     timeout: any = dayjs.duration({ minutes: 5 }).asMilliseconds(), //timedelta
     budget: string, //number
@@ -182,7 +188,7 @@ export class Engine {
     this._strategy = strategy;
     this._api_config = new rest.Configuration();
     this._stack = new AsyncExitStack();
-    this._package = _package;
+    this._demand_decor = _demand_decor;
     this._conf = new _EngineConf(max_workers, timeout);
     // TODO: setup precision
     this._budget_amount = parseFloat(budget);
@@ -219,7 +225,7 @@ export class Engine {
     builder.add(new Identification(this._subnet));
     if (this._subnet)
       builder.ensure(`(${IdentificationKeys.subnet_tag}=${this._subnet})`);
-    await this._package.decorate_demand(builder);
+    await this._demand_decor.decorate_demand(builder);
     await this._strategy.decorate_demand(builder);
 
     let offer_buffer: { [key: string]: string | _BufferItem } = {}; //Dict[str, _BufferItem]
@@ -241,6 +247,7 @@ export class Engine {
     let agreements_to_pay: Set<string> = new Set();
     let invoices: Map<string, Invoice> = new Map();
     let payment_closing: boolean = false;
+    let secure = this._demand_decor.secure;
 
     async function process_invoices() {
       let allocation = self._budget_allocation;
@@ -377,7 +384,7 @@ export class Engine {
       }
 
       await asyncWith(
-        await activity_api.new_activity(agreement.id()),
+        await activity_api.create_activity(agreement, secure),
         async (act) => {
           emit_progress("act", "create", act.id);
 
@@ -387,7 +394,7 @@ export class Engine {
             logger.info("batch prepared");
             let cc = new CommandContainer();
             batch.register(cc);
-            let remote = await act.send(cc.commands());
+            let remote = await act.exec(cc.commands());
             logger.info("new batch !!!");
             for await (let step of remote) {
               let message = step.message ? step.message.slice(0, 25) : null;
@@ -639,5 +646,3 @@ export class Task extends TaskGeneral {
     this._status = TaskStatus.REJECTED;
   }
 }
-
-export const vm = _vm;
