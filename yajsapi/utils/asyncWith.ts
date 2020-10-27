@@ -1,6 +1,6 @@
 import { logger } from "./";
 export default async function asyncWith(expression, block) {
-    let mgr = await expression.ready();
+    let mgr = expression ? await expression.ready() : null;
     try {
         await block(mgr);
     } catch(error) {
