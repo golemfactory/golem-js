@@ -164,7 +164,7 @@ class SecureActivity extends Activity {
     return new Batch(this, batch_id, script.length);
   }
 
-  async results(batch_id: string, timeout: number = 10): Promise<ExeScriptCommandResult[]> {
+  async results(batch_id: string, timeout: number = 8): Promise<ExeScriptCommandResult[]> {
     let cmd = { getExecBatchResults: { command_index: undefined } };
     let res = await this._send(batch_id, cmd, timeout);
     return <ExeScriptCommandResult[]> res;
