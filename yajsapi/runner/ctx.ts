@@ -149,6 +149,20 @@ class _Run extends Work {
   }
 }
 
+class _Sign extends Work {
+  private _idx;
+
+  constructor() {
+    super();
+    this._idx = null;
+  }
+
+  register(commands: any) {
+    //CommandContainer
+    this._idx = commands.sign({});
+  }
+}
+
 class _RecvFile extends Work {
   private _storage;
   private _dst_path;
@@ -233,6 +247,10 @@ export class WorkContext {
     }
   }
   begin() {}
+  provider_signature() {
+    this._prepare();
+    this._pending_steps.push(new _Sign());
+  }
   send_json(json_path: string, data: {}) {
     this._prepare();
     this._pending_steps.push(new _SendJson(this._storage, data, json_path));

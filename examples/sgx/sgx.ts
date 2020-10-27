@@ -23,6 +23,7 @@ async function main() {
     for await (let task of tasks) {
       let data = task.data();
       ctx.begin();
+      ctx.provider_signature();
       ctx.send_json("/golem/work/params.json", {
         input_file: "/golem/resource/input.txt",
         RESOURCES_DIR: "/golem/resources",
@@ -31,8 +32,8 @@ async function main() {
       });
       ctx.run("/golem/entrypoints/run.sh");
       ctx.download_file(
-        `/golem/output/out${data.toString().padStart(4, "0")}.png`,
-        path.join(__dirname, `./output_${data}.png`)
+        `/golem/output/out${data.toString().padStart(4, "0")}.bin`,
+        path.join(__dirname, `./output_${data}.bin`)
       );
       yield ctx.commit();
       // TODO: Check
