@@ -33,6 +33,11 @@ export class ActivityService {
     }
   }
 
+  async _create_activity(agreement_id: string): Promise<Activity> {
+    let { data: { activityId: activity_id } } = await this._api.createActivity(agreement_id);
+    return new Activity(activity_id, this._api, this._state);
+  }
+
   async _create_secure_activity(agreement: Agreement): Promise<SecureActivity> {
     let priv_key = new PrivateKey();
     let pub_key = priv_key.publicKey();
@@ -79,11 +84,6 @@ export class ActivityService {
         // ..
       }
     }
-  }
-
-  async _create_activity(agreement_id: string): Promise<Activity> {
-    let { data: { activityId: activity_id } } = await this._api.createActivity(agreement_id);
-    return new Activity(activity_id, this._api, this._state);
   }
 }
 
@@ -175,11 +175,7 @@ class SecureActivity extends Activity {
     let req_buf = Buffer.from(JSON.stringify(req));
     let enc_req = this._crypto_ctx.encrypt(req_buf);
 
-    let {
-      data: enc_res,
-      status: status,
-      statusText: status_text,
-    } = await this._api.callEncrypted(
+    let { data: enc_res } = await this._api.callEncrypted(
       this._id,
       // cannot be null / undefined;
       // overriden by transformRequest below
