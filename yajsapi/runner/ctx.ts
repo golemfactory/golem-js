@@ -1,5 +1,7 @@
+import * as events from "./events";
+
 import { StorageProvider, Source, Destination } from "../storage";
-import { logger } from "../utils";
+import { Callable, logger } from "../utils";
 
 export class CommandContainer {
   private _commands;
@@ -62,8 +64,8 @@ class _InitStep extends Work {
 }
 
 class _SendWork extends Work {
-  private _storage;
-  private _dst_path;
+  private _storage: StorageProvider;
+  private _dst_path: string;
   private _src?: Source | null;
   private _idx: Number | null;
 
@@ -148,20 +150,28 @@ class _Run extends Work {
   }
 }
 
+const StorageEvent = events.DownloadStarted || events.DownloadFinished;
 class _RecvFile extends Work {
   private _storage;
   private _dst_path;
   private _src_path!: string;
-  private _idx: number | null;
   private _dst_slot: Destination | null;
+  private _idx: number | null;
+  private _emitter?: Callable<[StorageEvent], void> | null = null;
 
-  constructor(storage: StorageProvider, src_path: string, dst_path: string) {
+  constructor(
+    storage: StorageProvider,
+    src_path: string,
+    dst_path: string,
+    emitter: Callable<[StorageEvent], void> | null = null
+  ) {
     super();
     this._storage = storage;
     this._dst_path = dst_path;
     this._src_path = src_path;
-    this._idx = null;
     this._dst_slot = null;
+    this._idx = null;
+    this._emitter = emitter;
   }
 
   async prepare() {
@@ -177,11 +187,13 @@ class _RecvFile extends Work {
     });
   }
 
-  async post() {
+  async post(): Promise<void> {
     if (!this._dst_slot) throw "_RecvFile post without prepare";
-    logger.log("debug", `download is started: ${this._dst_path}`);
+    if (this._emitter)
+      this._emitter(new events.DownloadStarted({ path: this._src_path }));
     await this._dst_slot.download_file(this._dst_path);
-    logger.info(`download is done: ${this._dst_path}`);
+    if (this._emitter)
+      this._emitter(new events.DownloadFinished({ path: this._dst_path }));
   }
 }
 
@@ -218,12 +230,18 @@ export class WorkContext {
   private _storage: StorageProvider;
   private _pending_steps: Work[];
   private _started: boolean;
+  private _emitter: Callable<[StorageEvent], void> | null;
 
-  constructor(ctx_id: string, storage: StorageProvider) {
+  constructor(
+    ctx_id: string,
+    storage: StorageProvider,
+    emitter: Callable<[StorageEvent], void> | null = null
+  ) {
     this._id = ctx_id;
     this._storage = storage;
     this._pending_steps = [];
     this._started = false;
+    this._emitter = emitter;
   }
   _prepare() {
     if (!this._started) {
@@ -246,7 +264,9 @@ export class WorkContext {
   }
   download_file(src_path: string, dst_path: string) {
     this._prepare();
-    this._pending_steps.push(new _RecvFile(this._storage, src_path, dst_path));
+    this._pending_steps.push(
+      new _RecvFile(this._storage, src_path, dst_path, this._emitter)
+    );
   }
   log(args) {
     logger.info(`${this._id}: ${args}`);

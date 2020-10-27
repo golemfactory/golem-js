@@ -1,9 +1,10 @@
-import bluebird from "bluebird";
+import bluebird, { TimeoutError } from "bluebird";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import duration from "dayjs/plugin/duration";
 
 import { WorkContext, Work, CommandContainer } from "./ctx";
+import * as events from "./events";
 import {
   BillingScheme,
   ComLinear,
@@ -15,7 +16,7 @@ import { Activity, Identification, IdentificationKeys } from "../props";
 import { DemandBuilder } from "../props/builder";
 
 import * as rest from "../rest";
-import { OfferProposal } from "../rest/market";
+import { OfferProposal, Subscription } from "../rest/market";
 import { Allocation, Invoice } from "../rest/payment";
 import { Agreement } from "../rest/market";
 
@@ -24,12 +25,18 @@ import {
   applyMixins,
   AsyncExitStack,
   asyncWith,
+  AsyncWrapper,
   CancellationToken,
+  eventLoop,
   logger,
   Queue,
   sleep,
 } from "../utils";
 import * as _vm from "./vm";
+import { Task, TaskStatus } from "./task";
+import { SmartQueue } from "./smartq";
+
+export { Task, TaskStatus };
 
 dayjs.extend(duration);
 dayjs.extend(utc);
@@ -52,7 +59,9 @@ const CFF_DEFAULT_PRICE_FOR_COUNTER: Map<Counter, number> = new Map([
 
 export class _EngineConf {
   max_workers: Number = 5;
-  timeout: any = dayjs.duration({ minutes: 5 }).asMilliseconds();
+  timeout: number = dayjs.duration({ minutes: 5 }).asMilliseconds();
+  get_offers_timeout: number = dayjs.duration({ seconds: 20 }).asMilliseconds();
+  traceback: boolean = false; //TODO fix
   constructor(max_workers, timeout) {
     this.max_workers = max_workers;
     this.timeout = timeout;
@@ -151,8 +160,15 @@ export class _BufferItem {
   }
 }
 
-interface CallableWork {
-  (ctx: WorkContext, tasks: AsyncIterable<any>): AsyncGenerator<Work>; //WorkContext | AsyncGenerator<"Task"> |
+type D = "D"; // Type var for task data
+type R = "R"; // Type var for task result
+
+// interface CallableWork {
+//   (ctx: WorkContext, tasks: AsyncIterable<Task<D, R>>): AsyncGenerator<Work>; //WorkContext | AsyncGenerator<"Task"> |
+// }
+
+interface Callable<T, R> {
+  (...T): R;
 }
 
 export class Engine {
@@ -163,6 +179,7 @@ export class Engine {
   private _package;
   private _conf;
   private _expires;
+  private _get_offers_deadline;
   private _budget_amount;
   private _budget_allocation: Allocation | null;
 
@@ -170,13 +187,16 @@ export class Engine {
   private _market_api;
   private _payment_api;
 
+  private _wrapped_emitter;
+
   constructor(
     _package: _vm.Package,
     max_workers: Number = 5,
     timeout: any = dayjs.duration({ minutes: 5 }).asMilliseconds(), //timedelta
     budget: string, //number
     strategy: MarketStrategy = new DummyMS(),
-    subnet_tag?: string
+    subnet_tag?: string,
+    event_emitter?: Callable<[events.YaEvent], void> //TODO not default event
   ) {
     this._subnet = subnet_tag;
     this._strategy = strategy;
@@ -187,14 +207,26 @@ export class Engine {
     // TODO: setup precision
     this._budget_amount = parseFloat(budget);
     this._budget_allocation = null;
+
+    if (!event_emitter) {
+      //from ..log import log_event
+      // event_emitter = log_event
+    }
+    this._wrapped_emitter =
+      event_emitter && new AsyncWrapper(event_emitter, null, cancellationToken);
   }
 
-  async *map(worker: CallableWork, data) {
-    let tasks_processed = { c: 0, s: 0 };
-
-    function on_work_done(task, status) {
-      tasks_processed["c"] += 1;
-    }
+  async *map(
+    worker: Callable<
+      [WorkContext, AsyncIterable<Task<D, R>>],
+      AsyncGenerator<Work>
+    >,
+    data: Iterable<Task<D, R>>
+  ): AsyncGenerator<Task<D, R>> {
+    const emit = <Callable<[events.YaEvent], void>>(
+      this._wrapped_emitter.async_call.bind(this._wrapped_emitter)
+    );
+    console.log('emit', emit);
 
     // Creating allocation
     if (!this._budget_allocation) {
@@ -204,13 +236,9 @@ export class Engine {
           this._expires.add(CFG_INVOICE_TIMEOUT, "ms")
         )
       );
-      const result = await this._budget_allocation!.details();
-      yield {
-        allocation: this._budget_allocation!.id,
-        ...result,
-      };
     }
 
+    emit(new events.ComputationStarted());
     // Building offer
     let builder = new DemandBuilder();
     let _activity = new Activity();
@@ -226,13 +254,20 @@ export class Engine {
     let market_api = this._market_api;
     let activity_api = this._activity_api;
     let strategy = this._strategy;
-    let work_queue: Queue<Task> = new Queue([], cancellationToken);
-    let event_queue: Queue<[
-      string,
-      string,
-      string | number | null,
-      {}
-    ]> = new Queue([], cancellationToken);
+    let done_queue: Queue<Task<D, R>> = new Queue([], cancellationToken);
+
+    function on_task_done(task: Task<D, R>, status: TaskStatus): void {
+      if (status === TaskStatus.ACCEPTED) done_queue.put(task); //put_nowait
+    }
+
+    function* input_tasks(): Iterable<Task<D, R>> {
+      for (let task of data) {
+        task._add_callback(on_task_done);
+        yield task;
+      }
+    }
+
+    let work_queue = new SmartQueue(input_tasks());
 
     let workers: Set<any> = new Set(); //asyncio.Task[]
     let last_wid = 0;
@@ -242,12 +277,22 @@ export class Engine {
     let invoices: Map<string, Invoice> = new Map();
     let payment_closing: boolean = false;
 
-    async function process_invoices() {
+    let offers_collected = 0;
+    let proposals_confirmed = 0;
+
+    async function process_invoices(): Promise<void> {
       let allocation = self._budget_allocation;
       for await (let invoice of self._payment_api.incoming_invoices(
         cancellationToken
       )) {
         if (agreements_to_pay.has(invoice.agreementId)) {
+          emit(
+            new events.InvoiceReceived({
+              agr_id: invoice.agreement_id,
+              inv_id: invoice.invoice_id,
+              amount: invoice.amount,
+            })
+          );
           agreements_to_pay.delete(invoice.agreementId);
           await invoice.accept(invoice.amount, allocation);
         } else {
@@ -259,85 +304,107 @@ export class Engine {
       }
     }
 
-    async function accept_payment_for_agreement(
-      agreement_id: string
-    ): Promise<boolean> {
+    async function accept_payment_for_agreement({
+      agreement_id,
+      partial,
+    }): Promise<boolean> {
       let allocation = self._budget_allocation;
-      emit_progress("agr", "payment_prep", agreement_id);
+      emit(new events.PaymentPrepared({ agr_id: agreement_id }));
       if (!invoices.has(agreement_id)) {
         agreements_to_pay.add(agreement_id);
-        emit_progress("agr", "payment_queued", agreement_id);
+        emit(new events.PaymentQueued({ agr_id: agreement_id }));
         return false;
       }
       let inv = invoices.get(agreement_id);
       invoices.delete(agreement_id);
-      emit_progress("agr", "payment_accept", agreement_id, inv);
+      if (inv)
+        emit(
+          new events.PaymentAccepted({
+            agr_id: agreement_id,
+            inv_id: inv.invoiceId,
+            amount: inv.amount,
+          })
+        );
       if (allocation != null && inv != null) {
         await inv.accept(inv.amount, allocation);
       }
       return true;
     }
 
-    async function _tmp_log() {
-      while (true) {
-        if (cancellationToken.cancelled) break;
-        let [label, direction, info, rest] = await event_queue.get();
-        logger.debug(
-          `[${label}] [${direction}] ${info} ${JSON.stringify(rest)}`
-        );
-      }
-    }
-
-    function emit_progress(
-      resource_type: "sub" | "prop" | "agr" | "act" | "wkr",
-      event_type: string,
-      resource_id: number | string | null,
-      ...rest
-    ) {
-      event_queue.put([resource_type, event_type, resource_id, rest]);
-    }
-
     async function find_offers() {
-      await asyncWith(
-        await builder.subscribe(market_api),
-        async (subscription) => {
-          emit_progress("sub", "created", subscription.id());
-          for await (let proposal of subscription.events(cancellationToken)) {
-            emit_progress("prop", "recv", proposal.id(), proposal.issuer());
-            let score = await strategy.score_offer(proposal);
-            if (score < SCORE_NEUTRAL) {
-              let [proposal_id, provider_id] = [
-                proposal.id(),
-                proposal.issuer(),
-              ];
-              try {
-                await proposal.reject();
-                emit_progress("prop", "rejected", proposal_id, provider_id);
-              } catch(error) {
-                //suppress and log the error and continue;
-                logger.log('debug', `Reject error: ${error}`);
-              }
-              continue;
+      let _subscription: Subscription;
+      try {
+        _subscription = await builder.subscribe(market_api);
+      } catch (error) {
+        emit(new events.SubscriptionFailed({ reason: error }));
+        throw error;
+      }
+      await asyncWith(_subscription, async (subscription) => {
+        emit(new events.SubscriptionCreated({ sub_id: subscription.id() }));
+        let _proposals;
+        try {
+          _proposals = subscription.events(cancellationToken);
+        } catch (error) {
+          emit(
+            new events.CollectFailed({
+              sub_id: subscription.id(),
+              reason: error,
+            })
+          );
+        }
+        for await (let proposal of _proposals) {
+          emit(
+            new events.ProposalReceived({
+              prop_id: proposal.id(),
+              provider_id: proposal.issuer(),
+            })
+          );
+          offers_collected += 1;
+          let score;
+          try {
+            score = await strategy.score_offer(proposal);
+          } catch (error) {
+            emit(
+              new events.ProposalRejected({
+                prop_id: proposal.id(),
+                reason: error,
+              })
+            );
+            continue;
+          }
+          if (score < SCORE_NEUTRAL) {
+            try {
+              await proposal.reject();
+              emit(new events.ProposalRejected({ prop_id: proposal.id() }));
+            } catch (error) {
+              //suppress and log the error and continue;
+              logger.log("debug", `Reject error: ${error}`);
             }
-            if (proposal.is_draft()) {
-              emit_progress("prop", "buffered", proposal.id());
-              offer_buffer[proposal.issuer()] = new _BufferItem(
-                Date.now(),
-                score,
-                proposal
+            continue;
+          }
+          if (!proposal.is_draft()) {
+            try {
+              await proposal.respond(builder.props(), builder.cons());
+              emit(new events.ProposalResponded({ prop_id: proposal.id() }));
+            } catch (error) {
+              emit(
+                new events.ProposalFailed({
+                  prop_id: proposal.id(),
+                  reason: error,
+                })
               );
-            } else {
-              try {
-                await proposal.respond(builder.props(), builder.cons());
-                emit_progress("prop", "respond", proposal.id());
-              } catch(error) {
-                //suppress and log the error and continue;
-                logger.log('debug', `Respond error: ${error}`);
-              }
             }
+          } else {
+            emit(new events.ProposalConfirmed({ prop_id: proposal.id() }));
+            offer_buffer[proposal.issuer()] = new _BufferItem(
+              Date.now(),
+              score,
+              proposal
+            );
+            proposals_confirmed += 1;
           }
         }
-      );
+      });
     }
 
     logger.debug("pre");
@@ -346,67 +413,138 @@ export class Engine {
     );
     logger.debug("post");
 
-    async function start_worker(agreement: Agreement) {
+    async function start_worker(agreement: Agreement): Promise<void> {
       let wid = last_wid;
       last_wid += 1;
 
-      let details = await agreement.details();
-      let provider_info = details.view_prov(new Identification());
-      emit_progress(
-        "wkr",
-        "created",
-        wid,
-        agreement.id(),
-        `provider: ${provider_info["name"].value}`
-      );
+      emit(new events.WorkerStarted({ agr_id: agreement.id() }));
 
-      async function* task_emiter() {
-        while (true) {
-          if (cancellationToken.cancelled) break;
-          try {
-            let item = await work_queue.get();
-            item._add_callback(on_work_done);
-            emit_progress("wkr", "get-work", wid, item.status());
-            item._start(emit_progress);
-            yield item;
-          } catch(error) {
-            break;
-          }
-        }
-        return;
+      let _act;
+      try {
+        _act = await activity_api.new_activity(agreement.id());
+      } catch (error) {
+        emit(new events.ActivityCreateFailed({ agr_id: agreement.id() }));
+        throw error;
       }
 
-      await asyncWith(
-        await activity_api.new_activity(agreement.id()),
-        async (act) => {
-          emit_progress("act", "create", act.id);
+      async function* task_emitter(consumer) {
+        console.log('task_emitter', consumer);
+        for await (let handle of consumer) {
+          yield Task.for_handle(handle, work_queue, emit);
+        }
+      }
 
-          let work_context = new WorkContext(`worker-${wid}`, storage_manager);
-          for await (let batch of worker(work_context, task_emiter())) {
+      await asyncWith(_act, async (act) => {
+        emit(
+          new events.ActivityCreated({ act_id: act.id, agr_id: agreement.id() })
+        );
+
+        let work_context = new WorkContext(
+          `worker-${wid}`,
+          storage_manager,
+          emit
+        );
+        let consumer = work_queue.new_consumer();
+        console.log('consumer', consumer)
+
+        let command_generator = worker(work_context, task_emitter(consumer));
+        for await (let batch of command_generator) {
+          try {
+            let current_worker_task = consumer.last_item();
+            if (current_worker_task) {
+              emit(
+                new events.TaskStarted({
+                  agr_id: agreement.id(),
+                  task_id: current_worker_task.id,
+                  task_data: current_worker_task.data,
+                })
+              );
+            }
+            let task_id = current_worker_task ? current_worker_task.id : null;
             await batch.prepare();
-            logger.info("batch prepared");
             let cc = new CommandContainer();
             batch.register(cc);
             let remote = await act.send(cc.commands());
-            logger.info("new batch !!!");
-            for await (let step of remote) {
-              let message = step.message ? step.message.slice(0, 25) : null;
-              let idx = step.idx;
-              emit_progress("wkr", "step", wid, message, idx);
+            emit(
+              new events.ScriptSent({
+                agr_id: agreement.id(),
+                task_id: task_id,
+                cmds: cc.commands(),
+              })
+            );
+            try {
+              for await (let step of remote) {
+                emit(
+                  new events.CommandExecuted({
+                    success: true,
+                    agr_id: agreement.id(),
+                    task_id: task_id,
+                    command: cc.commands()[step.idx],
+                    message: step.message,
+                    cmd_idx: step.idx,
+                  })
+                );
+              }
+            } catch (error) {
+              // assert len(err.args) >= 2
+              const [cmd_msg, cmd_idx] = error;
+              emit(
+                new events.CommandExecuted({
+                  success: false,
+                  agr_id: agreement.id(),
+                  task_id: task_id,
+                  command: cc.commands()[cmd_idx],
+                  message: cmd_msg,
+                  cmd_idx: cmd_idx,
+                })
+              );
+              throw error;
             }
-            emit_progress("wkr", "get-results", wid);
+            emit(
+              new events.GettingResults({
+                agr_id: agreement.id(),
+                task_id: task_id,
+              })
+            );
             await batch.post();
-            emit_progress("wkr", "batch-done", wid);
-            await accept_payment_for_agreement(agreement.id());
+            emit(
+              new events.ScriptFinished({
+                agr_id: agreement.id(),
+                task_id: task_id,
+              })
+            );
+            await accept_payment_for_agreement({
+              agreement_id: agreement.id(),
+              partial: true,
+            });
+          } catch (error) {
+            try {
+              // await command_generator.athrow(*sys.exc_info())
+            } catch (error) {
+              emit(
+                new events.WorkerFinished({
+                  agr_id: agreement.id(),
+                  exception: [error],
+                })
+              );
+              return;
+            }
           }
-
-          await accept_payment_for_agreement(agreement.id());
-          emit_progress("wkr", "done", wid, agreement.id());
         }
-      );
+        await accept_payment_for_agreement({
+          agreement_id: agreement.id(),
+          partial: false,
+        });
+        emit(
+          new events.WorkerFinished({
+            agr_id: agreement.id(),
+            exception: undefined,
+          })
+        );
+      });
     }
 
-    async function worker_starter() {
+    async function worker_starter(): Promise<void> {
       while (true) {
         if (cancellationToken.cancelled) break;
         await sleep(2);
@@ -422,62 +560,39 @@ export class Engine {
           let [provider_id, buffer] = _sample;
           delete offer_buffer[provider_id];
 
-          let task: any | null = null;
+          let new_task: any | null = null;
           let agreement: Agreement | null = null;
-
           try {
             agreement = await (buffer as _BufferItem).proposal.agreement();
             const provider_info = (await agreement.details()).view_prov(
               new Identification()
             );
-            emit_progress(
-              "agr",
-              "create",
-              agreement.id(),
-              `provider: ${provider_info["name"].value}`
+            emit(
+              new events.AgreementCreated({
+                agr_id: agreement.id(),
+                provider_id: provider_info,
+              })
             );
-            await agreement.confirm();
-            emit_progress("agr", "confirm", agreement.id());
-            task = loop.create_task(start_worker.bind(null, agreement));
-            workers.add(task);
+            try {
+              await agreement.confirm();
+              emit(new events.AgreementConfirmed({ agr_id: agreement.id() }));
+            } catch (error) {
+              emit(new events.AgreementRejected({ agr_id: agreement.id() }));
+              continue;
+            }
+            new_task = loop.create_task(start_worker.bind(null, agreement));
+            workers.add(new_task);
           } catch (error) {
-            if (task) task.cancel();
-            emit_progress(
-              "prop",
-              "fail",
-              (buffer as _BufferItem).proposal.id(),
-              error.toString()
+            if (new_task) new_task.cancel();
+            emit(
+              new events.ProposalFailed({
+                prop_id: (buffer as _BufferItem).proposal.id(),
+                reason: error.toString(),
+              })
             );
           }
         }
       }
-    }
-
-    async function fill_work_q() {
-      for (let task of data) {
-        tasks_processed["s"] += 1;
-        await work_queue.put(task);
-      }
-    }
-
-    function get_event_loop() {
-      bluebird.Promise.config({ cancellation: true });
-      return {
-        create_task: bluebird.coroutine(function* (fn): any {
-          yield new bluebird.Promise(async (resolve, reject, onCancel) => {
-            try {
-              await fn();
-              resolve();
-            } catch (error) {
-              reject(error);
-            }
-            onCancel!(() => {
-              logger.warn("cancelled!");
-              reject("cancelled!");
-            });
-          });
-        }) as any,
-      };
     }
 
     async function promise_timeout(seconds: number) {
@@ -486,32 +601,60 @@ export class Engine {
       })();
     }
 
-    let loop = get_event_loop();
+    let loop = eventLoop();
     let find_offers_task = loop.create_task(find_offers);
     let process_invoices_job = loop.create_task(process_invoices);
+    let wait_until_done = loop.create_task(work_queue.wait_until_done());
     try {
-      let task_fill_q = loop.create_task(fill_work_q);
+      let get_done_task: any = null;
       let services: any = [
         find_offers_task,
-        loop.create_task(_tmp_log),
-        task_fill_q,
         loop.create_task(worker_starter),
         process_invoices_job,
+        wait_until_done,
       ];
       while (
-        [...services].indexOf(task_fill_q) > -1 ||
-        !work_queue.empty() ||
-        tasks_processed["s"] > tasks_processed["c"]
+        [...services].indexOf(wait_until_done) > -1 ||
+        !done_queue.empty()
       ) {
+        const now = dayjs.utc();
+        if (now > this._expires) {
+          throw new TimeoutError(
+            `task timeout exceeded. timeout=${this._conf.timeout}`
+          );
+        }
+        if (now > this._get_offers_deadline && proposals_confirmed == 0) {
+          emit(
+            new events.NoProposalsConfirmed({
+              num_offers: offers_collected,
+              timeout: this._conf.get_offers_timeout,
+            })
+          );
+          this._get_offers_deadline += this._conf.get_offers_timeout;
+        }
+
+        if (!get_done_task) {
+          get_done_task = loop.create_task(done_queue.get.bind(done_queue));
+          services.push(get_done_task);
+        }
+
         await bluebird.Promise.any([
           ...services,
           ...workers,
           promise_timeout(10),
         ]);
+
         workers = new Set([...workers].filter((x) => x.isPending()));
         services = new Set([...services].filter((x) => x.isPending()));
+
+        if (!get_done_task) throw "";
+        if (get_done_task.done()) {
+          yield get_done_task.result();
+          if ([...services].indexOf(get_done_task) > -1) throw "";
+          get_done_task = null;
+        }
       }
-      yield { stage: "all work done" };
+      emit(new events.ComputationFinished());
       logger.info("all work done");
       for (let service of [...services]) {
         service.cancel();
@@ -520,28 +663,37 @@ export class Engine {
       logger.error(`fail= ${error}`);
     } finally {
       payment_closing = true;
-      for (let worker_task of [...workers]) {
-        worker_task.cancel();
+      find_offers_task.cancel();
+      try {
+        if (workers) {
+          for (let worker_task of [...workers]) {
+            worker_task.cancel();
+          }
+          // await asyncio.wait(workers, timeout=15, return_when=asyncio.ALL_COMPLETED)
+        }
+      } catch (error) {
+        logger.error(error);
       }
 
-      find_offers_task.cancel();
+      // find_offers_task.cancel();
     }
 
-    yield { stage: "wait for invoices", agreements_to_pay: agreements_to_pay };
     payment_closing = true;
-    await bluebird.Promise.any([
-      Promise.all([process_invoices_job]),
-      promise_timeout(15),
-    ]);
+    if (agreements_to_pay) {
+      await bluebird.Promise.any([
+        Promise.all([process_invoices_job]),
+        promise_timeout(15),
+      ]);
+    }
     cancellationToken.cancel();
-    yield { done: true };
-    // process.abort(); //until cleanup for async branches implemented properly
     return;
   }
 
-  async ready() {
+  async ready(): Promise<Engine> {
+    let stack = this._stack;
     // TODO: Cleanup on exception here.
     this._expires = dayjs.utc().add(this._conf.timeout, "ms");
+    this._get_offers_deadline = dayjs.utc() + this._conf.get_offers_timeout;
     let market_client = await this._api_config.market();
     this._market_api = new rest.Market(market_client);
 
@@ -550,6 +702,8 @@ export class Engine {
 
     let payment_client = await this._api_config.payment();
     this._payment_api = new rest.Payment(payment_client);
+    await stack.enter_async_context(this._wrapped_emitter);
+
     return this;
   }
 
@@ -558,85 +712,6 @@ export class Engine {
     this._market_api = null;
     this._payment_api = null;
     await this._stack.aclose();
-  }
-}
-
-export enum TaskStatus {
-  WAITING = "WAITING",
-  RUNNING = "RUNNING",
-  ACCEPTED = "ACCEPTED",
-  REJECTED = "REJECTED",
-}
-
-class TaskData {}
-class TaskResult {}
-class TaskGeneral {}
-interface TaskGeneral extends TaskData, TaskResult {}
-
-applyMixins(TaskGeneral, [TaskData, TaskResult, Object]);
-
-export class Task extends TaskGeneral {
-  private _started: number;
-  private _expires: number | null;
-  private _emit_event: any;
-  private _callbacks!: Set<Function | null>;
-  private _result?: TaskResult | null;
-  private _data;
-  private _status!: TaskStatus;
-  constructor(
-    data: TaskData,
-    expires: number | null = null,
-    timeout: number | null = null
-  ) {
-    super();
-    this._started = Date.now();
-    this._emit_event = null;
-    this._callbacks = new Set();
-    if (timeout) this._expires = this._started + timeout;
-    else this._expires = expires;
-
-    this._result = null;
-    this._data = data;
-    this._status = TaskStatus.WAITING;
-  }
-
-  _add_callback(callback) {
-    this._callbacks.add(callback);
-  }
-
-  _start(_emiter) {
-    this._status = TaskStatus.RUNNING;
-    this._emit_event = _emiter;
-  }
-
-  status() {
-    return this._status;
-  }
-
-  data(): TaskData {
-    return this._data;
-  }
-
-  output(): TaskResult | null | undefined {
-    return this._result;
-  }
-
-  expires() {
-    return this._expires;
-  }
-
-  accept_task(result: TaskResult | null = null) {
-    if (this._emit_event) {
-      this._emit_event("task", "accept", null, result);
-    }
-    if (this._status != TaskStatus.RUNNING) throw "";
-    this._status = TaskStatus.ACCEPTED;
-    for (let cb of this._callbacks) cb && cb(this, "accept");
-  }
-
-  reject_task() {
-    if (this._status != TaskStatus.RUNNING) throw "";
-    this._status = TaskStatus.REJECTED;
   }
 }
 
