@@ -3,10 +3,10 @@ import * as events from "./events";
 import { Handle, SmartQueue } from "./smartq";
 
 export enum TaskStatus {
-  WAITING = "WAITING",
-  RUNNING = "RUNNING",
-  ACCEPTED = "ACCEPTED",
-  REJECTED = "REJECTED",
+  WAITING = "wait",
+  RUNNING = "run",
+  ACCEPTED = "accept",
+  REJECTED = "reject",
 }
 
 type TaskData = "TaskData";
