@@ -353,7 +353,6 @@ export class Engine {
     let storage_manager = await this._stack.enter_async_context(
       gftp.provider()
     );
-    logger.debug("post");
 
     async function start_worker(agreement: Agreement) {
       let wid = last_wid;
