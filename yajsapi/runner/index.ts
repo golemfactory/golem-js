@@ -267,7 +267,7 @@ export class Engine {
       }
     }
 
-    let work_queue = new SmartQueue(input_tasks());
+    let work_queue = new SmartQueue([...input_tasks()]);
 
     let workers: Set<any> = new Set(); //asyncio.Task[]
     let last_wid = 0;
@@ -445,7 +445,6 @@ export class Engine {
           emit
         );
         let consumer = work_queue.new_consumer();
-        console.log('consumer', consumer)
 
         let command_generator = worker(work_context, task_emitter(consumer));
         for await (let batch of command_generator) {
