@@ -350,7 +350,6 @@ export class Engine {
       );
     }
 
-    logger.debug("pre");
     let storage_manager = await this._stack.enter_async_context(
       gftp.provider()
     );
