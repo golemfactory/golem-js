@@ -226,7 +226,7 @@ export class Engine {
     const emit = <Callable<[events.YaEvent], void>>(
       this._wrapped_emitter.async_call.bind(this._wrapped_emitter)
     );
-    console.log('emit', emit);
+    console.log("emit", emit);
 
     // Creating allocation
     if (!this._budget_allocation) {
@@ -428,7 +428,6 @@ export class Engine {
       }
 
       async function* task_emitter(consumer) {
-        console.log('task_emitter', consumer);
         for await (let handle of consumer) {
           yield Task.for_handle(handle, work_queue, emit);
         }
@@ -603,7 +602,9 @@ export class Engine {
     let loop = eventLoop();
     let find_offers_task = loop.create_task(find_offers);
     let process_invoices_job = loop.create_task(process_invoices);
-    let wait_until_done = loop.create_task(work_queue.wait_until_done());
+    let wait_until_done = loop.create_task(
+      work_queue.wait_until_done.bind(work_queue)
+    );
     try {
       let get_done_task: any = null;
       let services: any = [
@@ -612,10 +613,7 @@ export class Engine {
         process_invoices_job,
         wait_until_done,
       ];
-      while (
-        [...services].indexOf(wait_until_done) > -1 ||
-        !done_queue.empty()
-      ) {
+      while (services.indexOf(wait_until_done) > -1 || !done_queue.empty()) {
         const now = dayjs.utc();
         if (now > this._expires) {
           throw new TimeoutError(
@@ -644,18 +642,18 @@ export class Engine {
         ]);
 
         workers = new Set([...workers].filter((x) => x.isPending()));
-        services = new Set([...services].filter((x) => x.isPending()));
+        services = services.filter((x) => x.isPending());
 
         if (!get_done_task) throw "";
-        if (get_done_task.done()) {
+        if (await get_done_task.done()) {
           yield get_done_task.result();
-          if ([...services].indexOf(get_done_task) > -1) throw "";
+          if (services.indexOf(get_done_task) > -1) throw "";
           get_done_task = null;
         }
       }
       emit(new events.ComputationFinished());
       logger.info("all work done");
-      for (let service of [...services]) {
+      for (let service of services) {
         service.cancel();
       }
     } catch (error) {
