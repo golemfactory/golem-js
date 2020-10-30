@@ -3,13 +3,14 @@ import {
   RequestorStateApi,
 } from "ya-ts-client/dist/ya-activity/api";
 import * as yaa from "ya-ts-client/dist/ya-activity/src/models";
-import { sleep } from "../utils";
+import { attest, types } from "sgx-ias-js";
 import { Configuration } from "ya-ts-client/dist/ya-activity";
-import { Credentials, ExeScriptCommandResult, SgxCredentials } from "ya-ts-client/dist/ya-activity/src/models";
+import { Credentials, ExeScriptCommandResult } from "ya-ts-client/dist/ya-activity/src/models";
 import { CryptoCtx, PrivateKey, PublicKey, rand_hex } from "../crypto";
-import { logger } from "../utils";
+import { sleep, logger } from "../utils";
 import { Agreement } from "./market";
 import { SGX_CONFIG } from "../runner/sgx";
+import * as utf8 from "utf8";
 
 export class ActivityService {
   private _api!: RequestorControlApi;
@@ -70,7 +71,10 @@ export class ActivityService {
 
       let enclave_key = PublicKey.fromHex(credentials.sgx.enclavePubKey);
       crypto_ctx = await CryptoCtx.from(enclave_key, priv_key);
-      await this._attest(pub_key, credentials);
+
+      if (SGX_CONFIG.enableAttestation) {
+        await this._attest(activity_id, agreement, credentials);
+      }
 
     } catch (error) {
       await this._api.destroyActivity(activity_id);
@@ -80,16 +84,37 @@ export class ActivityService {
     return new SecureActivity(activity_id, crypto_ctx, this._api, this._state);
   }
 
-  async _attest(_pub_key: PublicKey, _credentials?: Credentials) {
-    if (!!SGX_CONFIG.enableAttestation) {
-      // TODO: call attestation API
+  async _attest(activity_id: string, agreement: Agreement, credentials: Credentials) {
+    let demand = (await agreement.details()).raw_details.demand;
+    let pkg = demand.properties["golem.srv.comp.task_package"];
 
-      if (!SGX_CONFIG.allowDebug) {
-        // ..
-      }
-      if (!SGX_CONFIG.allowOutdatedTcb) {
-        // ..
-      }
+    if (!pkg) {
+      throw new Error("Invalid agreement: missing package");
+    }
+
+    let evidence: attest.AttestationResponse = {
+      report: credentials.sgx.iasReport,
+      signature: types.parseHex(credentials.sgx.iasSig),
+    };
+    let verifier = attest.AttestationVerifier.from(evidence)
+      .data(types.parseHex(credentials.sgx.requestorPubKey))
+      .data(types.parseHex(credentials.sgx.enclavePubKey))
+      .data(new TextEncoder().encode(pkg)) // encode as utf-8 bytes
+      .mr_enclave_list(SGX_CONFIG.exeunitHashes)
+      .nonce(utf8.encode(activity_id)) // encode as utf-8 string
+      .max_age(SGX_CONFIG.maxEvidenceAge);
+
+    if (!SGX_CONFIG.allowDebug) {
+      verifier.not_debug();
+    }
+    if (!SGX_CONFIG.allowOutdatedTcb) {
+      verifier.not_outdated();
+    }
+
+    let result = verifier.verify();
+    if (result.verdict != attest.AttestationVerdict.Ok) {
+      let name = result.verdict.toString();
+      throw new Error(`Attestation failed: ${name}: ${result.message}`)
     }
   }
 }

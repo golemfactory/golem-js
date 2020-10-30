@@ -21,7 +21,6 @@ async function main() {
       "/golem/resource/input.txt"
     );
     for await (let task of tasks) {
-      let data = task.data();
       ctx.begin();
       ctx.provider_signature();
       ctx.send_json("/golem/work/params.json", {

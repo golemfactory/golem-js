@@ -1,3 +1,4 @@
+import * as fs from "fs";
 import { Field } from "../props/base";
 import {
   DEFAULT_REPO_URL,
@@ -12,7 +13,7 @@ import {
   InfBase,
   RuntimeType,
 } from "../props/inf";
-import * as fs from "fs";
+import { types } from "sgx-ias-js";
 
 class _InfSgxWasi extends InfBase {
   runtime = new Field({
@@ -63,7 +64,6 @@ class _SgxJsSpConstrains extends Constraints {
   }
 }
 
-const SGX_HASH_SIZE: number = 32;
 const DEFAULT_SGX_CONFIG = {
   "enableAttestation": true,
   "exeunitHashes": ["5edbb025714683961d4a2cb51b1d0a4ee8225a6ced167f29eb67f639313d9490"],
@@ -74,22 +74,19 @@ const DEFAULT_SGX_CONFIG = {
 
 class SgxConfig {
   enableAttestation!: boolean;
-  exeunitHashes!: Buffer[];
+  exeunitHashes!: types.bytes.Bytes32[];
   allowDebug!: boolean;
   allowOutdatedTcb!: boolean;
   maxEvidenceAge!: number; // seconds
 
   static from_env(): SgxConfig {
-    let sgx_config_env = process.env.YAGNA_SGX_CONFIG;
-    let json = sgx_config_env
-      ? fs.readFileSync(sgx_config_env)
+    let env_path = process.env.YAGNA_SGX_CONFIG;
+    let json = env_path
+      ? fs.readFileSync(env_path)
       : DEFAULT_SGX_CONFIG;
 
-    json["exeunitHashes"].forEach((hex: string) => {
-      let buf = Buffer.from(hex, "hex");
-      if (buf.byteLength != SGX_HASH_SIZE) {
-        throw Error(`ExeUnit hash length != 32 for ${hex}`);
-      }
+    json["exeunitHashes"].forEach((hex: string, i: number) => {
+      json["exeunitHashes"][i] = types.bytes.Bytes32.from(types.parseHex(hex));
     });
 
     let sgx_config: SgxConfig = Object.create(this.prototype);
