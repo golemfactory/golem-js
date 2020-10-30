@@ -4,6 +4,7 @@ const duration = require("dayjs/plugin/duration");
 const { Engine, Task, utils, vm } = require("yajsapi");
 
 dayjs.extend(duration);
+
 const { asyncWith, range } = utils;
 
 async function main() {
@@ -20,7 +21,6 @@ async function main() {
     );
     for await (let task of tasks) {
       let frame = task.data();
-      ctx.begin();
       let crops = [
         {
           outfilebasename: "out",
@@ -41,6 +41,7 @@ async function main() {
         OUTPUT_DIR: "/golem/output",
       });
       ctx.run("/golem/entrypoints/run-blender.sh");
+      const output_file = `output_${frame.toString()}.png`
       ctx.download_file(
         `/golem/output/out${frame.toString().padStart(4, "0")}.png`,
         path.join(__dirname, `./output_${frame}.png`)
@@ -49,7 +50,7 @@ async function main() {
       // TODO: Check
       // job results are valid // and reject by:
       // task.reject_task(msg = 'invalid file')
-      task.accept_task();
+      task.accept_task(output_file);
     }
 
     ctx.log("no more frames to render");
@@ -66,14 +67,15 @@ async function main() {
       timeout, //5 min to 30 min
       "10.0",
       undefined,
-      "devnet-alpha.2"
+      "devnet-alpha.2",
+      () => {}
     ),
     async (engine) => {
-      for await (let progress of engine.map(
+      for await (let task of engine.map(
         worker,
         frames.map((frame) => new Task(frame))
       )) {
-        console.log("progress=", progress);
+        console.log("result=", task.output());
       }
     }
   );
