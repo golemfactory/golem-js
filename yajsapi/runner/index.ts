@@ -641,12 +641,12 @@ export class Engine {
           promise_timeout(10),
         ]);
 
-        workers = new Set([...workers].filter((x) => x.isPending()));
-        services = services.filter((x) => x.isPending());
+        workers = new Set([...workers].filter((worker) => worker.isPending()));
+        services = services.filter((service) => service.isPending());
 
         if (!get_done_task) throw "";
-        if (await get_done_task.done()) {
-          yield get_done_task.result();
+        if (!get_done_task.isPending()) {
+          yield await get_done_task;
           if (services.indexOf(get_done_task) > -1) throw "";
           get_done_task = null;
         }
