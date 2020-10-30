@@ -57,8 +57,8 @@ export class Task<TaskData, TaskResult> {
     if (this._handle) {
       const [handle, queue] = this._handle;
       let loop = eventLoop();
-      if (retry) loop.create_task(queue.reschedule(handle));
-      else loop.create_task(queue.mark_done(handle));
+      if (retry) loop.create_task(queue.reschedule.bind(queue, handle));
+      else loop.create_task(queue.mark_done.bind(queue, handle));
     }
   }
 
@@ -94,8 +94,10 @@ export class Task<TaskData, TaskResult> {
     if (this._emit_event) {
       this._emit_event("task", "accept", null, result);
     }
-    if (this._status != TaskStatus.RUNNING) throw "";
+    if (this._status != TaskStatus.RUNNING) throw "Accepted task not running";
     this._status = TaskStatus.ACCEPTED;
+    this._result = result;
+    this._stop();
     for (let cb of this._callbacks) cb && cb(this, "accept");
   }
 

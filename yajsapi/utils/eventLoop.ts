@@ -5,8 +5,7 @@ export default function get_event_loop() {
   bluebird.Promise.config({ cancellation: true });
   return {
     create_task: bluebird.coroutine(function* (fn): any {
-      console.log("coroutine", fn)
-      yield new bluebird.Promise(async (resolve, reject, onCancel) => {
+      return yield new bluebird.Promise(async (resolve, reject, onCancel) => {
         try {
           let result = await fn();
           resolve(result);

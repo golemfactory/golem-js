@@ -83,10 +83,8 @@ export class Activity {
       await this._api.getExecBatchResults(this._id, batch_id, 1);
     } catch (error) {
       logger.error(`failed to destroy activity: ${this._id}`);
-    } finally {
-      //with contextlib.suppress(yexc.ApiException):
-      await this._api.destroyActivity(this._id);
     }
+    await this._api.destroyActivity(this._id);
   }
 }
 
