@@ -43,6 +43,16 @@ dayjs.extend(utc);
 
 const cancellationToken = new CancellationToken();
 
+let cancellationHandler = () => {
+  if (!cancellationToken.cancelled) {
+    cancellationToken.cancel();
+  }
+}
+
+["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP", "exit", "uncaughtException"].forEach((event) => {
+    process.on(event, cancellationHandler);
+});
+
 const CFG_INVOICE_TIMEOUT: any = dayjs
   .duration({ minutes: 5 })
   .asMilliseconds();
@@ -407,11 +417,9 @@ export class Engine {
       });
     }
 
-    logger.debug("pre");
     let storage_manager = await this._stack.enter_async_context(
       gftp.provider()
     );
-    logger.debug("post");
 
     async function start_worker(agreement: Agreement): Promise<void> {
       let wid = last_wid;
