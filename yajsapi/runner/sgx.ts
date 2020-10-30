@@ -39,7 +39,7 @@ class _SgxWasiConstrains extends Constraints {
   }
 }
 
-class _InfSgxDeno extends InfBase {
+class _InfSgxJsSp extends InfBase {
   runtime = new Field({
     value: RuntimeType.SGX_DENO,
     metadata: { key: INF_RUNTIME },
@@ -47,18 +47,18 @@ class _InfSgxDeno extends InfBase {
   cores: Field = new Field({ value: 1, metadata: { key: INF_CORES } });
 }
 
-const _InfSgxDenoKeys = InfBase.fields(
-  new _InfSgxDeno(),
+const _InfSgxJsSpKeys = InfBase.fields(
+  new _InfSgxJsSp(),
   ["cores", "mem", "storage", "runtime"]);
 
-class _SgxDenoConstrains extends Constraints {
+class _SgxJsSpConstrains extends Constraints {
   constructor(min_mem_gib: number, min_storage_gib: number) {
     super();
     super.extend([
-      `(${_InfSgxDenoKeys["cores"]}>=1)`,
-      `(${_InfSgxDenoKeys["mem"]}>=${min_mem_gib})`,
-      `(${_InfSgxDenoKeys["storage"]}>=${min_storage_gib})`,
-      `(${_InfSgxDenoKeys["runtime"]}=${RuntimeType.SGX_DENO})`,
+      `(${_InfSgxJsSpKeys["cores"]}>=1)`,
+      `(${_InfSgxJsSpKeys["mem"]}>=${min_mem_gib})`,
+      `(${_InfSgxJsSpKeys["storage"]}>=${min_storage_gib})`,
+      `(${_InfSgxJsSpKeys["runtime"]}=${RuntimeType.SGX_DENO})`,
     ]);
   }
 }
@@ -101,10 +101,10 @@ export const SGX_CONFIG = SgxConfig.from_env();
 
 export enum SgxEngine {
   WASI = "sgx",
-  JS = "sgx-deno",
+  JS_SP = "sgx-js-sp",
 }
 
-export async function demand(
+export async function repo(
   engine: SgxEngine,
   image_hash: string,
   min_mem_gib: number = 0.5,
@@ -126,9 +126,9 @@ export async function demand(
   let secure = true;
 
   switch (engine) {
-    case SgxEngine.JS:
+    case SgxEngine.JS_SP:
       return new DemandDecor(
-        new _SgxDenoConstrains(min_mem_gib, min_storage_gib),
+        new _SgxJsSpConstrains(min_mem_gib, min_storage_gib),
         new ExeUnitRequest(pkg_url),
         secure,
       );

@@ -34,7 +34,10 @@ export class ActivityService {
   }
 
   async _create_activity(agreement_id: string): Promise<Activity> {
-    let { data: { activityId: activity_id } } = await this._api.createActivity(agreement_id);
+    let { data: response } = await this._api.createActivity(agreement_id);
+    let activity_id = typeof response == "string"
+      ? response
+      : response.activityId;
     return new Activity(activity_id, this._api, this._state);
   }
 
@@ -44,14 +47,18 @@ export class ActivityService {
     let crypto_ctx: CryptoCtx;
 
     let {
-      data: {
-        activityId: activity_id,
-        credentials: credentials,
-      }
+      data: response,
     } = await this._api.createActivity({
       agreementId: agreement.id(),
       requestorPubKey: pub_key.toString(),
     });
+
+    let activity_id = typeof response == "string"
+      ? response
+      : response.activityId;
+    let credentials = typeof response == "string"
+      ? undefined
+      : response.credentials;
 
     try {
       if (!credentials) {

@@ -145,6 +145,10 @@ class _Run extends Work {
     this._idx = commands.run({
       entry_point: this.cmd,
       args: this.args || [],
+      capture: {
+        stdout: { atEnd: {} },
+        stderr: { atEnd: {} },
+      }
     });
   }
 }

@@ -7,7 +7,8 @@
         "js:blender": "node ./blender/blender.js",
         "ts:blender": "ts-node-script ./blender/blender.ts",
         "js:low": "node ./low-level-api/listOffers.js",
-        "ts:low": "ts-node-script ./low-level-api/listOffers.ts"
+        "ts:low": "ts-node-script ./low-level-api/listOffers.ts",
+        "ts:sgx": "ts-node-script ./sgx/sgx.ts"
     },
     "author": "Muhammed Tanrikulu <muhammed@golem.network>",
     "license": "LGPL-3.0",

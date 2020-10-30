@@ -51,7 +51,7 @@ class _VmRequest extends ExeUnitRequest {
   }
 }
 
-export async function demand(
+export async function repo(
   image_hash: string,
   min_mem_gib: number = 0.5,
   min_storage_gib: number = 2.0,

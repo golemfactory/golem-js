@@ -8,7 +8,7 @@ dayjs.extend(duration);
 const { asyncWith, range } = utils;
 
 async function main() {
-  const _package = await sgx.demand(
+  const _package = await sgx.repo(
     sgx.SgxEngine.WASI,
     "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
     0.5,
@@ -26,15 +26,8 @@ async function main() {
       ctx.provider_signature();
       ctx.send_json("/golem/work/params.json", {
         input_file: "/golem/resource/input.txt",
-        RESOURCES_DIR: "/golem/resources",
-        WORK_DIR: "/golem/work",
-        OUTPUT_DIR: "/golem/output",
       });
       ctx.run("/golem/entrypoints/run.sh");
-      ctx.download_file(
-        `/golem/output/out${data.toString().padStart(4, "0")}.bin`,
-        path.join(__dirname, `./output_${data}.bin`)
-      );
       yield ctx.commit();
       // TODO: Check
       // job results are valid // and reject by:
@@ -56,7 +49,7 @@ async function main() {
       timeout, //5 min to 30 min
       "10.0",
       undefined,
-      "devnet-alpha.2"
+      "devnet-alpha.3"
     ),
     async (engine: Engine): Promise<void> => {
       for await (let progress of engine.map(
