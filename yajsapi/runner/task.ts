@@ -44,16 +44,16 @@ export class Task<TaskData, TaskResult> {
     this._status = TaskStatus.WAITING;
   }
 
-  _add_callback(callback) {
+  _add_callback(callback: Function): void {
     this._callbacks.add(callback);
   }
 
-  _start(_emitter) {
+  _start(_emitter): void {
     this._status = TaskStatus.RUNNING;
     this._emit_event = _emitter;
   }
 
-  _stop(retry: boolean = false) {
+  _stop(retry: boolean = false): void {
     if (this._handle) {
       const [handle, queue] = this._handle;
       let loop = eventLoop();
@@ -66,15 +66,14 @@ export class Task<TaskData, TaskResult> {
     handle: Handle<Task<any, any>>,
     queue: SmartQueue<Task<any, any>>,
     emitter: Callable<[events.YaEvent], void>
-  ): any {
-    //Task<TaskData, TaskResult>
+  ): Task<"TaskData", "TaskResult"> {
     let task = handle.data();
     task._handle = [handle, queue];
     task._start(emitter);
     return task;
   }
 
-  status() {
+  status(): TaskStatus {
     return this._status;
   }
 
@@ -86,11 +85,11 @@ export class Task<TaskData, TaskResult> {
     return this._result;
   }
 
-  expires() {
+  expires(): number | null {
     return this._expires;
   }
 
-  accept_task(result: TaskResult | null = null) {
+  accept_task(result: TaskResult | null = null): void {
     if (this._emit_event) {
       this._emit_event("task", "accept", null, result);
     }
@@ -101,12 +100,12 @@ export class Task<TaskData, TaskResult> {
     for (let cb of this._callbacks) cb && cb(this, "accept");
   }
 
-  reject_task() {
+  reject_task(): void {
     if (this._status != TaskStatus.RUNNING) throw "";
     this._status = TaskStatus.REJECTED;
   }
 
-  static get counter() {
+  static get counter(): number {
     Task.count = (Task.count || 0) + 1;
     return Task.count;
   }

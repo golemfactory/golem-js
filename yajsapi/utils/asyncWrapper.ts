@@ -20,7 +20,6 @@ export default class AsyncWrapper {
     async _worker(): Promise<void> {
         while (true) {
             const args = await this._args_buffer.get()
-            console.log('args', args);
             this._wrapped(...args)
             // this._args_buffer.task_done()
         }

@@ -68,7 +68,9 @@ async function main() {
       "10.0",
       undefined,
       "devnet-alpha.2",
-      () => {}
+      (event) => {
+        console.debug(event);
+      }
     ),
     async (engine) => {
       for await (let task of engine.map(

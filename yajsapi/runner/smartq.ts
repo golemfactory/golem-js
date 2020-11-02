@@ -15,7 +15,7 @@ export class Handle<Item> {
     this._consumer = consumer;
   }
 
-  consumer() {
+  consumer(): Consumer<Item> | null {
     return this._consumer;
   }
 
@@ -49,7 +49,7 @@ export class SmartQueue<Item> {
     return new Consumer(this);
   }
 
-  __have_data() {
+  __have_data(): boolean {
     const have_data =
       !!(this._items && this._items.length) ||
       !!this._rescheduled_items.size ||
@@ -64,7 +64,10 @@ export class SmartQueue<Item> {
     return items[Symbol.iterator]().next().value;
   }
 
-  async *get(consumer: Consumer<Item>, callback?): AsyncGenerator<Handle<Item>> {
+  async *get(
+    consumer: Consumer<Item>,
+    callback: Function | null | undefined
+  ): AsyncGenerator<Handle<Item>> {
     while (this.__have_data()) {
       let handle = this.__find_rescheduled_item(consumer);
       if (!!handle) {
@@ -113,7 +116,7 @@ export class SmartQueue<Item> {
     csp.putAsync(this.__new_items, true);
   }
 
-  async reschedule_all(consumer: Consumer<Item>) {
+  async reschedule_all(consumer: Consumer<Item>): Promise<void> {
     let handles = [...this._in_progress].map((handle) => {
       if (handle.consumer() === consumer) return handle;
     });
@@ -136,7 +139,7 @@ export class SmartQueue<Item> {
 
   async wait_until_done(): Promise<void> {
     while (this.__have_data()) {
-        await promisify(csp.takeAsync)(this.__eof);
+      await promisify(csp.takeAsync)(this.__eof);
     }
   }
 }
@@ -164,7 +167,7 @@ export class Consumer<Item> {
   }
 
   async *[Symbol.asyncIterator](): AsyncGenerator<Handle<Item>, any, any> {
-    const _fetch = (handle) => this._fetched = handle;
+    const _fetch = (handle: Handle<Item>) => (this._fetched = handle);
     const val = await this._queue.get(this, _fetch);
     yield* val;
   }

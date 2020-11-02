@@ -103,7 +103,6 @@ export class NoProposalsConfirmed extends YaEvent {
   }
 }
 
-// @dataclass(init=False)
 class AgreementEvent extends YaEvent {
   agr_id?: string;
 }
@@ -190,7 +189,6 @@ export class ActivityCreateFailed extends AgreementEvent {
   }
 }
 
-// @dataclass(init=False)
 class TaskEvent extends YaEvent {
   task_id?: string;
 }
@@ -230,7 +228,6 @@ export class WorkerFinished extends AgreementEvent {
   }
 }
 
-// @dataclass(init=False)
 class ScriptEvent extends AgreementEvent {
   task_id?: string | null;
 }
