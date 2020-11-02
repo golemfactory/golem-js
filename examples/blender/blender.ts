@@ -1,7 +1,7 @@
 import path from "path";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
-import { Engine, Task, utils, vm, WorkContext } from "../../yajsapi";
+import { Engine, Task, utils, vm, WorkContext } from "yajsapi";
 
 dayjs.extend(duration);
 
@@ -69,7 +69,9 @@ async function main() {
       "10.0",
       undefined,
       "devnet-alpha.2",
-      () => {}
+      (event) => {
+        console.debug(event);
+      }
     ),
     async (engine: Engine): Promise<void> => {
       for await (let task of engine.map(

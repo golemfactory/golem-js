@@ -26,6 +26,7 @@ import {
   AsyncExitStack,
   asyncWith,
   AsyncWrapper,
+  Callable,
   CancellationToken,
   eventLoop,
   logger,
@@ -34,7 +35,7 @@ import {
 } from "../utils";
 import * as _vm from "./vm";
 import { Task, TaskStatus } from "./task";
-import { SmartQueue } from "./smartq";
+import { Consumer, SmartQueue } from "./smartq";
 
 export { Task, TaskStatus };
 
@@ -43,17 +44,24 @@ dayjs.extend(utc);
 
 const cancellationToken = new CancellationToken();
 
-let cancellationHandler = () => {
+let cancellationHandler = (): void => {
   if (!cancellationToken.cancelled) {
     cancellationToken.cancel();
   }
-}
+};
 
-["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP", "exit", "uncaughtException"].forEach((event) => {
-    process.on(event, cancellationHandler);
+[
+  "SIGINT",
+  "SIGTERM",
+  "SIGBREAK",
+  "SIGHUP",
+  "exit",
+  "uncaughtException",
+].forEach((event) => {
+  process.on(event, cancellationHandler);
 });
 
-const CFG_INVOICE_TIMEOUT: any = dayjs
+const CFG_INVOICE_TIMEOUT: number = dayjs
   .duration({ minutes: 5 })
   .asMilliseconds();
 //"Time to receive invoice from provider after tasks ended."
@@ -172,14 +180,6 @@ export class _BufferItem {
 
 type D = "D"; // Type var for task data
 type R = "R"; // Type var for task result
-
-// interface CallableWork {
-//   (ctx: WorkContext, tasks: AsyncIterable<Task<D, R>>): AsyncGenerator<Work>; //WorkContext | AsyncGenerator<"Task"> |
-// }
-
-interface Callable<T, R> {
-  (...T): R;
-}
 
 export class Engine {
   private _subnet;
@@ -341,7 +341,7 @@ export class Engine {
       return true;
     }
 
-    async function find_offers() {
+    async function find_offers(): Promise<void> {
       let _subscription: Subscription;
       try {
         _subscription = await builder.subscribe(market_api);
@@ -435,119 +435,127 @@ export class Engine {
         throw error;
       }
 
-      async function* task_emitter(consumer) {
+      async function* task_emitter(
+        consumer: Consumer<any>
+      ): AsyncGenerator<Task<"TaskData", "TaskResult">> {
         for await (let handle of consumer) {
           yield Task.for_handle(handle, work_queue, emit);
         }
       }
 
-      await asyncWith(_act, async (act) => {
-        emit(
-          new events.ActivityCreated({ act_id: act.id, agr_id: agreement.id() })
-        );
+      await asyncWith(
+        _act,
+        async (act): Promise<void> => {
+          emit(
+            new events.ActivityCreated({
+              act_id: act.id,
+              agr_id: agreement.id(),
+            })
+          );
 
-        let work_context = new WorkContext(
-          `worker-${wid}`,
-          storage_manager,
-          emit
-        );
-        let consumer = work_queue.new_consumer();
+          let work_context = new WorkContext(
+            `worker-${wid}`,
+            storage_manager,
+            emit
+          );
+          let consumer = work_queue.new_consumer();
 
-        let command_generator = worker(work_context, task_emitter(consumer));
-        for await (let batch of command_generator) {
-          try {
-            let current_worker_task = consumer.last_item();
-            if (current_worker_task) {
-              emit(
-                new events.TaskStarted({
-                  agr_id: agreement.id(),
-                  task_id: current_worker_task.id,
-                  task_data: current_worker_task.data,
-                })
-              );
-            }
-            let task_id = current_worker_task ? current_worker_task.id : null;
-            await batch.prepare();
-            let cc = new CommandContainer();
-            batch.register(cc);
-            let remote = await act.send(cc.commands());
-            emit(
-              new events.ScriptSent({
-                agr_id: agreement.id(),
-                task_id: task_id,
-                cmds: cc.commands(),
-              })
-            );
+          let command_generator = worker(work_context, task_emitter(consumer));
+          for await (let batch of command_generator) {
             try {
-              for await (let step of remote) {
+              let current_worker_task = consumer.last_item();
+              if (current_worker_task) {
                 emit(
-                  new events.CommandExecuted({
-                    success: true,
+                  new events.TaskStarted({
                     agr_id: agreement.id(),
-                    task_id: task_id,
-                    command: cc.commands()[step.idx],
-                    message: step.message,
-                    cmd_idx: step.idx,
+                    task_id: current_worker_task.id,
+                    task_data: current_worker_task.data,
                   })
                 );
               }
-            } catch (error) {
-              // assert len(err.args) >= 2
-              const [cmd_msg, cmd_idx] = error;
+              let task_id = current_worker_task ? current_worker_task.id : null;
+              await batch.prepare();
+              let cc = new CommandContainer();
+              batch.register(cc);
+              let remote = await act.send(cc.commands());
               emit(
-                new events.CommandExecuted({
-                  success: false,
+                new events.ScriptSent({
                   agr_id: agreement.id(),
                   task_id: task_id,
-                  command: cc.commands()[cmd_idx],
-                  message: cmd_msg,
-                  cmd_idx: cmd_idx,
+                  cmds: cc.commands(),
                 })
               );
-              throw error;
-            }
-            emit(
-              new events.GettingResults({
-                agr_id: agreement.id(),
-                task_id: task_id,
-              })
-            );
-            await batch.post();
-            emit(
-              new events.ScriptFinished({
-                agr_id: agreement.id(),
-                task_id: task_id,
-              })
-            );
-            await accept_payment_for_agreement({
-              agreement_id: agreement.id(),
-              partial: true,
-            });
-          } catch (error) {
-            try {
-              // await command_generator.athrow(*sys.exc_info())
-            } catch (error) {
+              try {
+                for await (let step of remote) {
+                  emit(
+                    new events.CommandExecuted({
+                      success: true,
+                      agr_id: agreement.id(),
+                      task_id: task_id,
+                      command: cc.commands()[step.idx],
+                      message: step.message,
+                      cmd_idx: step.idx,
+                    })
+                  );
+                }
+              } catch (error) {
+                // assert len(err.args) >= 2
+                const [cmd_msg, cmd_idx] = error;
+                emit(
+                  new events.CommandExecuted({
+                    success: false,
+                    agr_id: agreement.id(),
+                    task_id: task_id,
+                    command: cc.commands()[cmd_idx],
+                    message: cmd_msg,
+                    cmd_idx: cmd_idx,
+                  })
+                );
+                throw error;
+              }
               emit(
-                new events.WorkerFinished({
+                new events.GettingResults({
                   agr_id: agreement.id(),
-                  exception: [error],
+                  task_id: task_id,
                 })
               );
-              return;
+              await batch.post();
+              emit(
+                new events.ScriptFinished({
+                  agr_id: agreement.id(),
+                  task_id: task_id,
+                })
+              );
+              await accept_payment_for_agreement({
+                agreement_id: agreement.id(),
+                partial: true,
+              });
+            } catch (error) {
+              try {
+                // await command_generator.athrow(*sys.exc_info())
+              } catch (error) {
+                emit(
+                  new events.WorkerFinished({
+                    agr_id: agreement.id(),
+                    exception: [error],
+                  })
+                );
+                return;
+              }
             }
           }
+          await accept_payment_for_agreement({
+            agreement_id: agreement.id(),
+            partial: false,
+          });
+          emit(
+            new events.WorkerFinished({
+              agr_id: agreement.id(),
+              exception: undefined,
+            })
+          );
         }
-        await accept_payment_for_agreement({
-          agreement_id: agreement.id(),
-          partial: false,
-        });
-        emit(
-          new events.WorkerFinished({
-            agr_id: agreement.id(),
-            exception: undefined,
-          })
-        );
-      });
+      );
     }
 
     async function worker_starter(): Promise<void> {
@@ -713,7 +721,7 @@ export class Engine {
   }
 
   // cleanup, if needed
-  async done(this) {
+  async done(this): Promise<void> {
     this._market_api = null;
     this._payment_api = null;
     await this._stack.aclose();
