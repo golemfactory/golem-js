@@ -284,20 +284,10 @@ export class CommandExecuted extends CommandEvent {
 
 export class CommandStarted extends CommandEvent {
   command!: string;
-
-  // constructor({ agr_id, task_id, cmd_idx, command }) {
-  //   super({agr_id, task_id, cmd_idx});
-  //   if (command) this.command = command;
-  // }
 }
 
 export class CommandStdOut extends CommandEvent {
   output!: string;
-
-  // constructor({ agr_id, task_id, cmd_idx, output }) {
-  //   super({agr_id, task_id, cmd_idx});
-  //   if (output) this.output = output;
-  // }
 }
 
 export class CommandStdErr extends CommandEvent {
