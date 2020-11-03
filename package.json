@@ -1,6 +1,6 @@
 {
     "name": "yajsapi",
-    "version": "0.1.0-alpha.3",
+    "version": "0.1.1-alpha.3",
     "description": "NodeJS API for Next Golem",
     "repository": "https://github.com/golemfactory/yajsapi",
     "main": "dist/index.js",
@@ -15,16 +15,18 @@
     "dependencies": {
         "@rauschma/stringio": "^1.4.0",
         "@types/bluebird": "^3.5.32",
+        "@types/eventsource": "~1.0.1",
         "axios": "^0.19.2",
         "bluebird": "^3.5.0",
         "commander": "^6.1.0",
         "dayjs": "^1.8.31",
+        "eventsource": "~1.0.7",
         "js-csp": "^1.0.1",
         "rewire": "^3.0.2",
         "tmp": "^0.2.1",
         "uuid": "^8.3.0",
         "winston": "^3.3.3",
-        "ya-ts-client": "^0.1.2"
+        "ya-ts-client": "~0.2.0"
     },
     "devDependencies": {
         "@types/node": "14.6.2",

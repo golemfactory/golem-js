@@ -6,6 +6,16 @@ import * as yaa from "ya-ts-client/dist/ya-activity/src/models";
 import { sleep } from "../utils";
 import { Configuration } from "ya-ts-client/dist/ya-activity";
 import { logger } from "../utils";
+import { BaseAPI } from "ya-ts-client/dist/ya-activity/base";
+import {
+  CommandEvent,
+  CommandEventContext,
+  CommandExecuted,
+  CommandStarted,
+  CommandStdErr,
+  CommandStdOut
+} from "../runner/events";
+import ServerEventSource from "eventsource";
 
 export class ActivityService {
   private _api;
@@ -60,12 +70,17 @@ export class Activity {
     return state;
   }
 
-  async send(script: object[]) {
+  async send(script: object[], stream: boolean = false) {
     let script_txt = JSON.stringify(script);
     let _script_request: yaa.ExeScriptRequest = new ExeScriptRequest(
       script_txt
     );
     let { data: batch_id } = await this._api.exec(this._id, _script_request);
+
+    // FIXME
+    if (!stream) {
+      return new StreamingBatch(this._api, this._id, batch_id, script.length);
+    }
     return new Batch(this._api, this._id, batch_id, script.length);
   }
 
@@ -87,12 +102,6 @@ export class Activity {
     await this._api.destroyActivity(this._id);
   }
 }
-
-class Result {
-  idx!: Number;
-  message?: string;
-}
-
 class CommandExecutionError extends Error {
   constructor(key: string, description: string) {
     super(description);
@@ -100,11 +109,11 @@ class CommandExecutionError extends Error {
   }
 }
 
-class Batch implements AsyncIterable<Result> {
-  private _api!: RequestorControlApi;
-  private _activity_id!: string;
-  private _batch_id!: string;
-  private _size;
+class Batch implements AsyncIterable<CommandEventContext> {
+  protected _api!: RequestorControlApi;
+  protected _activity_id!: string;
+  protected _batch_id!: string;
+  protected _size;
 
   constructor(
     _api: RequestorControlApi,
@@ -117,10 +126,10 @@ class Batch implements AsyncIterable<Result> {
     this._batch_id = batch_id;
     this._size = batch_size;
   }
-  return(value: any): Promise<IteratorResult<Result, any>> {
+  return(value: any): Promise<IteratorResult<CommandEventContext, any>> {
     throw new Error("Method not implemented.");
   }
-  throw(e: any): Promise<IteratorResult<Result, any>> {
+  throw(e: any): Promise<IteratorResult<CommandEventContext, any>> {
     throw new Error("Method not implemented.");
   }
 
@@ -148,17 +157,110 @@ class Batch implements AsyncIterable<Result> {
         if (result.result.toString() == "Error")
           throw new CommandExecutionError(
             last_idx.toString(),
-            result.message || ""
+            JSON.stringify(result)
           );
-        let _result = new Result();
-        _result.idx = result.index;
-        _result.message = result.message;
-        yield _result;
+
+        let evt = Object.create(CommandExecuted.prototype);
+        evt.cmd_idx = result.index;
+        evt.success = true;
+        evt.message = JSON.stringify({
+          stdout: result.stdout,
+          stderr: result.stderr,
+          message: result.message,
+        });
+        yield new CommandEventContext(evt);
+
         last_idx = result.index + 1;
         if (result.isBatchFinished) break;
         if (!any_new) await sleep(10);
       }
     }
     return;
+  }
+}
+
+class StreamingBatch extends Batch {
+  async *[Symbol.asyncIterator](): any {
+    let config_prov = new ApiConfigProvider(this._api);
+    let host = config_prov.base_path();
+    let api_key = await config_prov.api_key();
+
+    let event_source = new ServerEventSource(
+      `${host}/activity/${this._activity_id}/exec/${this._batch_id}`,
+      {
+        headers: {
+          "Accept": "text/event-stream",
+          "Authorization": api_key ? `Bearer ${api_key}`: undefined,
+        }
+      }
+    );
+
+    let last_idx = this._size - 1;
+    let results: CommandEventContext[] = [];
+    let finished = false;
+    let resolve: () => void;
+    let promise = new Promise(r => resolve = r);
+
+    event_source.addEventListener('runtime', e => {
+      try {
+        results.push(CommandEventContext.fromJson(e["data"]));
+        resolve();
+        promise = new Promise(r => resolve = r);
+      } catch (e) {
+        logger.warn("Runtime event error:", e);
+      }
+    });
+    event_source.onerror = e => {
+      if (!e) {
+        return;
+      }
+
+      logger.error(
+        "Runtime event source error:",
+        e["message"] || e["data"] || e["status"]
+      );
+      finished = true;
+    };
+
+    while (!finished) {
+      await promise;
+
+      for (let result of results) {
+        yield result;
+
+        if (result.computation_finished(last_idx)) {
+          finished = true;
+          break;
+        }
+      }
+
+      results = [];
+    }
+
+    console.log("Close event source");
+    event_source.close();
+  }
+}
+
+export class ApiConfigProvider extends BaseAPI {
+  constructor(api: BaseAPI) {
+    let as_this: ApiConfigProvider = <ApiConfigProvider> api;
+    super(as_this.configuration, as_this.basePath, as_this.axios);
+  }
+
+  base_path(): string {
+    return (this.configuration && this.configuration.basePath)
+      ? this.configuration.basePath
+      : "";
+  }
+
+  async api_key(): Promise<string | undefined> {
+    let api_key = this.configuration
+      ? this.configuration.apiKey
+      : undefined;
+    if (typeof api_key === "string") {
+      return api_key;
+    }
+    return undefined;
   }
 }

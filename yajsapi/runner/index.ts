@@ -286,6 +286,7 @@ export class Engine {
     let agreements_to_pay: Set<string> = new Set();
     let invoices: Map<string, Invoice> = new Map();
     let payment_closing: boolean = false;
+    let stream = false;
 
     let offers_collected = 0;
     let proposals_confirmed = 0;
@@ -476,8 +477,9 @@ export class Engine {
               let task_id = current_worker_task ? current_worker_task.id : null;
               await batch.prepare();
               let cc = new CommandContainer();
+              let cmds = cc.commands();
               batch.register(cc);
-              let remote = await act.send(cc.commands());
+              let remote = await act.send(cc.commands(), stream);
               emit(
                 new events.ScriptSent({
                   agr_id: agreement.id(),
@@ -486,17 +488,8 @@ export class Engine {
                 })
               );
               try {
-                for await (let step of remote) {
-                  emit(
-                    new events.CommandExecuted({
-                      success: true,
-                      agr_id: agreement.id(),
-                      task_id: task_id,
-                      command: cc.commands()[step.idx],
-                      message: step.message,
-                      cmd_idx: step.idx,
-                    })
-                  );
+                for await (let evt_ctx of remote) {
+                  emit(evt_ctx.event(agreement.id(), task_id, cmds));
                 }
               } catch (error) {
                 // assert len(err.args) >= 2

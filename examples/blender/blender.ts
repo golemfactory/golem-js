@@ -62,7 +62,7 @@ async function main() {
   const timeout: number = dayjs.duration({ minutes: 15 }).asMilliseconds();
 
   await asyncWith(
-    await new Engine(
+    new Engine(
       _package,
       6,
       timeout, //5 min to 30 min
@@ -78,7 +78,7 @@ async function main() {
         worker,
         frames.map((frame) => new Task(frame))
       )) {
-        console.log("result=", task.output());
+        console.log("result=", task);
       }
     }
   );
