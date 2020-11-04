@@ -298,8 +298,8 @@ export class Engine {
         if (agreements_to_pay.has(invoice.agreementId)) {
           emit(
             new events.InvoiceReceived({
-              agr_id: invoice.agreement_id,
-              inv_id: invoice.invoice_id,
+              agr_id: invoice.agreementId,
+              inv_id: invoice.invoiceId,
               amount: invoice.amount,
             })
           );
@@ -469,7 +469,7 @@ export class Engine {
                   new events.TaskStarted({
                     agr_id: agreement.id(),
                     task_id: current_worker_task.id,
-                    task_data: current_worker_task.data,
+                    task_data: current_worker_task.data(),
                   })
                 );
               }
@@ -668,7 +668,6 @@ export class Engine {
         }
       }
       emit(new events.ComputationFinished());
-      logger.info("all work done");
       for (let service of services) {
         service.cancel();
       }
