@@ -42,7 +42,7 @@ class _SgxWasiConstrains extends Constraints {
 
 class _InfSgxJsSp extends InfBase {
   runtime = new Field({
-    value: RuntimeType.SGX_DENO,
+    value: RuntimeType.SGX_JS_SP,
     metadata: { key: INF_RUNTIME },
   });
   cores: Field = new Field({ value: 1, metadata: { key: INF_CORES } });
@@ -59,7 +59,7 @@ class _SgxJsSpConstrains extends Constraints {
       `(${_InfSgxJsSpKeys["cores"]}>=1)`,
       `(${_InfSgxJsSpKeys["mem"]}>=${min_mem_gib})`,
       `(${_InfSgxJsSpKeys["storage"]}>=${min_storage_gib})`,
-      `(${_InfSgxJsSpKeys["runtime"]}=${RuntimeType.SGX_DENO})`,
+      `(${_InfSgxJsSpKeys["runtime"]}=${RuntimeType.SGX_JS_SP})`,
     ]);
   }
 }

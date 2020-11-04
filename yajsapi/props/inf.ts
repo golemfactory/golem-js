@@ -12,7 +12,7 @@ export enum RuntimeType {
   EMSCRIPTEN = "emscripten",
   VM = "vm",
   SGX_WASI = "sgx",
-  SGX_DENO = "sgx-deno",
+  SGX_JS_SP = "sgx-js-sp",
 }
 
 export class InfBase {
