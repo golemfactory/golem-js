@@ -184,14 +184,14 @@ class SummaryLogger {
       let msg;
       if (event["num_offers"] === 0)
         msg = `No offers have been collected from the market for
-            ${this.time_waiting_for_proposals.asSeconds()}s.`;
+            ${this.time_waiting_for_proposals.asSeconds()}s. `;
       else
         msg = `${
           event["num_offers"]
         } offers have been collected from the market, but
-             no provider has responded for ${this.time_waiting_for_proposals.asSeconds()}s.`;
+             no provider has responded for ${this.time_waiting_for_proposals.asSeconds()}s. `;
       msg +=
-        "Make sure you're using the latest released versions of yagna and yapapi, and the correct subnet.";
+        "Make sure you're using the latest released versions of yagna and yajsapi, and the correct subnet.";
       logger.warn(msg);
     } else if (eventName === events.AgreementCreated.name) {
       let provider_name = event["provider_id"].name.value;

@@ -204,7 +204,7 @@ export class TaskStarted extends EventGeneral {
     super();
     if (agr_id) this.agr_id = agr_id;
     if (task_id) this.task_id = task_id;
-    if (task_data) this.task_data = task_data;
+    this.task_data = task_data;
   }
 }
 
