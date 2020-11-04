@@ -212,7 +212,7 @@ export class Payment {
 
   async invoice(invoice_id: string): Promise<Invoice> {
     let { data: invoice_obj } = await this._api.getReceivedInvoice(invoice_id);
-    logger.log("debug", `got=${JSON.stringify(invoice_obj)}`);
+    // logger.log("debug", `got=${JSON.stringify(invoice_obj)}`);
     return new Invoice(this._api, invoice_obj);
   }
 
