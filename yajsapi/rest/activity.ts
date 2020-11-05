@@ -80,7 +80,11 @@ export class Activity {
         new ExeScriptRequest('[{"terminate":{}}]')
       );
       //with contextlib.suppress(yexc.ApiException):
-      await this._api.getExecBatchResults(this._id, batch_id, 1);
+      try {
+        await this._api.getExecBatchResults(this._id, batch_id, 1);
+      } catch(error) {
+        //suppress api error
+      }
     } catch (error) {
       logger.error(`failed to destroy activity: ${this._id}`);
     }
