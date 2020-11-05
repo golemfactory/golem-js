@@ -198,10 +198,19 @@ class StreamingBatch extends Batch {
     let last_idx = this._size - 1;
     let results: CommandEventContext[] = [];
     let finished = false;
+
     let resolve: () => void;
     let promise = new Promise(r => resolve = r);
 
-    event_source.addEventListener('runtime', e => {
+    const on_error = (e: object) => {
+      if (!e) return;
+      let msg = !e["message"]
+        ? "source unavailable"
+        : e["message"];
+      logger.error("Runtime event source error:", msg);
+      cleanup();
+    };
+    const on_event = (e: object) => {
       try {
         results.push(CommandEventContext.fromJson(e["data"]));
         resolve();
@@ -209,18 +218,18 @@ class StreamingBatch extends Batch {
       } catch (e) {
         logger.warn("Runtime event error:", e);
       }
-    });
-    event_source.onerror = e => {
-      if (!e) {
-        return;
-      }
-
-      logger.error(
-        "Runtime event source error:",
-        e["message"] || e["data"] || e["status"]
-      );
-      finished = true;
     };
+    const cleanup = () => {
+      event_source.removeEventListener('error', on_error);
+      event_source.removeEventListener('runtime', on_event);
+      event_source.close();
+
+      finished = true;
+      resolve();
+    };
+
+    event_source.addEventListener('error', on_error);
+    event_source.addEventListener('runtime', on_event);
 
     while (!finished) {
       await promise;
@@ -233,12 +242,10 @@ class StreamingBatch extends Batch {
           break;
         }
       }
-
       results = [];
     }
 
-    console.log("Close event source");
-    event_source.close();
+    cleanup();
   }
 }
 
