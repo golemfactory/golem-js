@@ -27,6 +27,7 @@ let CommandStatus: string;
 
 class GftpDriver {
   private _proc;
+  private _reader;
   //Protocol
   //"""Golem FTP service API.
 
@@ -68,12 +69,15 @@ class GftpDriver {
   }
 
   async _jsonrpc(method: string, params: object = {}) {
+    if (!this._reader) {
+      this._reader = this._readStream(this._proc.stdout);
+    }
     let query = `{"jsonrpc": "2.0", "id": "1", "method": "${method}", "params": ${JSON.stringify(
       params
     )}}\n`;
     await streamWrite(this._proc.stdin, query);
     try {
-      let { value } = await this._reader(this._proc.stdout).next();
+      let { value } = await this._reader.next();
       const { result } = JSON.parse(value as string);
       return result;
     } catch (error) {
@@ -82,7 +86,7 @@ class GftpDriver {
     }
   }
 
-  async *_reader(readable) {
+  async *_readStream(readable) {
     for await (const line of chunksToLinesAsync(readable)) {
       yield chomp(line);
     }
@@ -169,7 +173,6 @@ function _temp_file(temp_dir: string): string {
   let file_name = path.join(temp_dir, uuid().toString());
   if (fs.existsSync(file_name)) fs.unlinkSync(file_name);
   return file_name;
-  
 }
 
 class GftpSource extends Source {
@@ -212,9 +215,9 @@ class GftpDestination extends Destination {
         highWaterMark: 30000,
         encoding: "binary",
       });
-      stream.on("end", () => {
+      stream.once("end", () => {
         stream.destroy();
-      })
+      });
       for await (let chunk of stream) yield chunk;
     }
 
@@ -278,7 +281,7 @@ class GftpProvider extends StorageProvider {
       encoding: "binary",
     });
     await new Promise(async (fulfill) => {
-      wStream.on("finish", fulfill);
+      wStream.once("finish", fulfill);
       for await (let chunk of stream) {
         wStream.write(chunk);
       }
