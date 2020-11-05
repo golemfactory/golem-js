@@ -317,46 +317,40 @@ export enum CaptureFormat {
 export class CaptureContext {
 
   constructor(
-    private mode: CaptureMode,
+    private mode: string,
     private limit?: number,
-    private fmt?: CaptureFormat
+    private fmt?: string
   ) {}
 
   static build(mode?: string, limit?: number, fmt?: string): CaptureContext {
-    mode = mode
-      ? mode.toLowerCase()
-      : undefined;
-
     if (!mode || mode == "all") {
-        return this._build(CaptureMode.HEAD, undefined, fmt)
-    } else if (mode == "stream") {
-        return this._build(CaptureMode.STREAM, limit, fmt)
-    } else if (mode == "head") {
-        return this._build(CaptureMode.HEAD, limit, fmt)
-    } else if (mode == "tail") {
-        return this._build(CaptureMode.TAIL, limit, fmt)
-    } else if  (mode == "headTail") {
-        return this._build(CaptureMode.HEAD_TAIL, limit, fmt)
+      mode = "head";
+      limit = undefined;
     }
 
-    throw new Error(`Invalid output capture mode: ${mode}`)
-  }
+    fmt = fmt
+      ? fmt.toLowerCase()
+      : 'str';
 
-  private static _build(mode: CaptureMode, limit?: number, fmt?: string): CaptureContext {
-    let cap_fmt = fmt
-      ? CaptureFormat[fmt]
-      : undefined;
+    const get_key = (e: object, s: string) => Object.keys(e).find(k => e[k] == s);
 
-    return new CaptureContext(mode, limit, cap_fmt);
+    if (!get_key(CaptureMode, mode)) {
+      throw new Error(`Invalid output capture mode: ${mode}`)
+    }
+    if (!get_key(CaptureFormat, fmt)) {
+      throw new Error(`Invalid output capture format: ${fmt}`)
+    }
+
+    return new CaptureContext(mode, limit, fmt);
   }
 
   capture_param(): object {
     let inner = {};
     if (this.limit) {
-        inner[CaptureMode[this.mode]] = this.limit;
+        inner[this.mode] = this.limit;
     }
     if (this.fmt) {
-        inner["format"] = CaptureFormat[this.fmt];
+        inner["format"] = this.fmt;
     }
 
     return this.is_streaming()
