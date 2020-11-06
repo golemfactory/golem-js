@@ -61,8 +61,8 @@ export class ProposalReceived extends ProposalEvent {
 }
 
 export class ProposalRejected extends ProposalEvent {
-  reason?: string | null = null;
-  constructor({ prop_id = null, reason = null }) {
+  reason?: string;
+  constructor({ prop_id, reason = "" }) {
     super();
     if (prop_id) this.prop_id = prop_id;
     if (reason) this.reason = reason;
