@@ -236,33 +236,8 @@ export class Engine {
     const emit = <Callable<[events.YaEvent], void>>(
       this._wrapped_emitter.async_call.bind(this._wrapped_emitter)
     );
-    console.log("emit", emit);
 
-    let ids_to_decorate: string[] = [];
-    if (!this._budget_allocations.length) {
-      for await (let account of this._payment_api.accounts()) {
-        let allocation: Allocation = await this._stack.enter_async_context(
-          this._payment_api.new_allocation(
-            this._budget_amount,
-            account.platform,
-            account.address,
-            this._expires.add(CFG_INVOICE_TIMEOUT, "ms")
-          )
-        );
-        this._budget_allocations.push(allocation);
-        ids_to_decorate.push(allocation.id);
-      }
-    }
-
-    if (!this._budget_allocations.length) {
-      throw Error(
-        "No payment accounts. Did you forget to run 'yagna payment init -r'?"
-      );
-    }
-
-    const multi_payment_decoration = await this._payment_api.decorate_demand(
-      ids_to_decorate
-    );
+    const multi_payment_decoration = await this._create_allocations();
 
     emit(new events.ComputationStarted());
     // Building offer
@@ -314,20 +289,6 @@ export class Engine {
     let offers_collected = 0;
     let proposals_confirmed = 0;
 
-    function allocation_for_platform(invoice: Invoice): Allocation {
-      try {
-        const _allocation = self._budget_allocations.find(
-          (allocation) =>
-            allocation.payment_platform === invoice.paymentPlatform &&
-            allocation.payment_address === invoice.payerAddr
-        );
-        if (_allocation) return _allocation;
-        throw `No allocation for ${invoice.paymentPlatform} ${invoice.payerAddr}.`;
-      } catch (error) {
-        throw new Error(error);
-      }
-    }
-
     async function process_invoices(): Promise<void> {
       for await (let invoice of self._payment_api.incoming_invoices(
         cancellationToken
@@ -340,7 +301,7 @@ export class Engine {
               amount: invoice.amount,
             })
           );
-          const allocation = allocation_for_platform(invoice);
+          const allocation = self.allocation_for_invoice(invoice);
           agreements_to_pay.delete(invoice.agreement_id);
           await invoice.accept(invoice.amount, allocation);
           emit(
@@ -371,7 +332,7 @@ export class Engine {
         return;
       }
       invoices.delete(agreement_id);
-      const allocation = allocation_for_platform(inv);
+      const allocation = self.allocation_for_invoice(inv);
       await inv.accept(inv.amount, allocation);
       emit(
         new events.PaymentAccepted({
@@ -449,9 +410,8 @@ export class Engine {
                 prov_platforms.includes(value)
               );
               if (common_platforms.length) {
-                builder._props[
-                  "golem.com.payment.chosen-platform"
-                ] = common_platforms[0];
+                builder._props["golem.com.payment.chosen-platform"] =
+                  common_platforms[0];
               } else {
                 try {
                   await proposal.reject();
@@ -771,6 +731,49 @@ export class Engine {
     }
     cancellationToken.cancel();
     return;
+  }
+
+  async _create_allocations() {
+    let ids_to_decorate: string[] = [];
+    if (!this._budget_allocations.length) {
+      for await (let account of this._payment_api.accounts()) {
+        let allocation: Allocation = await this._stack.enter_async_context(
+          this._payment_api.new_allocation(
+            this._budget_amount,
+            account.platform,
+            account.address,
+            this._expires.add(CFG_INVOICE_TIMEOUT, "ms")
+          )
+        );
+        this._budget_allocations.push(allocation);
+        ids_to_decorate.push(allocation.id);
+      }
+    }
+
+    if (!this._budget_allocations.length) {
+      throw Error(
+        "No payment accounts. Did you forget to run 'yagna payment init -r'?"
+      );
+    }
+
+    const {
+      data: multi_payment_decoration,
+    } = await this._payment_api.decorate_demand(ids_to_decorate);
+    return multi_payment_decoration;
+  }
+
+  allocation_for_invoice(invoice: Invoice): Allocation {
+    try {
+      const _allocation = this._budget_allocations.find(
+        (allocation) =>
+          allocation.payment_platform === invoice.paymentPlatform &&
+          allocation.payment_address === invoice.payerAddr
+      );
+      if (_allocation) return _allocation;
+      throw `No allocation for ${invoice.paymentPlatform} ${invoice.payerAddr}.`;
+    } catch (error) {
+      throw new Error(error);
+    }
   }
 
   async ready(): Promise<Engine> {
