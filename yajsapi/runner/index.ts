@@ -2,6 +2,7 @@ import bluebird, { TimeoutError } from "bluebird";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import duration from "dayjs/plugin/duration";
+import { MarketDecoration } from "ya-ts-client/dist/ya-payment/src/models";
 
 import { WorkContext, Work, CommandContainer } from "./ctx";
 import * as events from "./events";
@@ -396,18 +397,8 @@ export class Engine {
           }
           if (!proposal.is_draft()) {
             try {
-              let prov_platforms = proposal.props.filter((prop) => {
-                if (prop.startsWith("golem.com.payment.platform."))
-                  return prop.split(".")[4];
-              });
-              if (!prov_platforms) {
-                prov_platforms = ["NGNT"];
-              }
-              const req_platforms = self._budget_allocations.map(
-                (budget_allocation) => budget_allocation.payment_platform
-              );
-              const common_platforms = req_platforms.filter((value) =>
-                prov_platforms.includes(value)
+              const common_platforms = self._get_common_payment_platforms(
+                proposal
               );
               if (common_platforms.length) {
                 builder._props["golem.com.payment.chosen-platform"] =
@@ -733,7 +724,7 @@ export class Engine {
     return;
   }
 
-  async _create_allocations() {
+  async _create_allocations(): Promise<MarketDecoration> {
     let ids_to_decorate: string[] = [];
     if (!this._budget_allocations.length) {
       for await (let account of this._payment_api.accounts()) {
@@ -760,6 +751,22 @@ export class Engine {
       data: multi_payment_decoration,
     } = await this._payment_api.decorate_demand(ids_to_decorate);
     return multi_payment_decoration;
+  }
+
+  _get_common_payment_platforms(proposal: OfferProposal): string[] {
+    let prov_platforms = Object.values(proposal.props()).filter((prop) => {
+      if (prop.startsWith("golem.com.payment.platform."))
+        return prop.split(".")[4];
+    });
+    if (!prov_platforms) {
+      prov_platforms = ["NGNT"];
+    }
+    const req_platforms = this._budget_allocations.map(
+      (budget_allocation) => budget_allocation.payment_platform
+    );
+    return req_platforms.filter((value) =>
+      prov_platforms.includes(value)
+    ) as string[];
   }
 
   allocation_for_invoice(invoice: Invoice): Allocation {
