@@ -251,10 +251,6 @@ export class WorkContext {
     }
   }
   begin() {}
-  provider_signature() {
-    this._prepare();
-    this._pending_steps.push(new _Sign());
-  }
   send_json(json_path: string, data: {}) {
     this._prepare();
     this._pending_steps.push(new _SendJson(this._storage, data, json_path));
@@ -270,6 +266,10 @@ export class WorkContext {
   download_file(src_path: string, dst_path: string) {
     this._prepare();
     this._pending_steps.push(new _RecvFile(this._storage, src_path, dst_path));
+  }
+  sign() {
+    this._prepare();
+    this._pending_steps.push(new _Sign());
   }
   log(args) {
     logger.info(`${this._id}: ${args}`);
