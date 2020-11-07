@@ -66,7 +66,7 @@ export class Allocation extends _Link {
   //"Payment platform, e.g. NGNT"
 
   payment_address?: string;
-  //"Payment address, e.g. 0x123..." 
+  //"Payment address, e.g. 0x123..."
 
   expires?: Date;
   //"Allocation expiration timestamp"
@@ -220,14 +220,14 @@ export class Payment {
 
   async *accounts(): AsyncGenerator<yap.Account> {
     let { data: _accounts } = await this._api.getSendAccounts();
-    for await ( let account_obj of _accounts ) {
+    for (let account_obj of _accounts) {
       yield account_obj;
     }
   }
 
   async decorate_demand(ids: string[]): Promise<yap.MarketDecoration> {
     const { data: _decorate_demand } = await this._api.decorateDemand(ids);
-    return _decorate_demand; 
+    return _decorate_demand;
   }
 
   async *invoices(): AsyncGenerator<Invoice> {
@@ -252,7 +252,7 @@ export class Payment {
     async function* fetch(init_ts: Dayjs) {
       let ts = init_ts;
       while (true) {
-        if(cancellationToken.cancelled) break;
+        if (cancellationToken.cancelled) break;
         let { data: items } = await api.getRequestorInvoiceEvents(
           5,
           ts.format("YYYY-MM-DD HH:mm:ss.SSSSSSZ")
