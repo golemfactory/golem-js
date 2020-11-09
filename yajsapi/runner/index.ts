@@ -399,6 +399,7 @@ export class Engine {
             for await (let step of remote) {
               let message = step.message ? step.message.slice(0, 25) : null;
               let idx = step.idx;
+              batch.output.push(step);
               emit_progress("wkr", "step", wid, message, idx);
             }
             emit_progress("wkr", "get-results", wid);

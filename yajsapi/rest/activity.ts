@@ -263,6 +263,8 @@ class SecureResponse {
 
 class Result {
   idx!: Number;
+  stdout?: string;
+  stderr?: string;
   message?: string;
 }
 
@@ -313,10 +315,12 @@ class Batch implements AsyncIterable<Result> {
         if (result.result.toString() == "Error")
           throw new CommandExecutionError(
             last_idx.toString(),
-            result.message || ""
+            result.stderr || result.message || ""
           );
         let _result = new Result();
         _result.idx = result.index;
+        _result.stdout = result.stdout;
+        _result.stderr = result.stderr;
         _result.message = result.message;
         yield _result;
         last_idx = result.index + 1;
