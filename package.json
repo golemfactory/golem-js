@@ -18,16 +18,17 @@
         "axios": "^0.19.2",
         "bluebird": "^3.5.0",
         "commander": "^6.1.0",
-        "eccrypto": "^1.1.5",
         "dayjs": "~1.9.1",
+        "eccrypto": "^1.1.5",
+        "minimist": "^1.2.5",
         "rewire": "^3.0.2",
         "secp256k1": "^4.0.2",
         "sgx-ias-js": "~0.1.1",
         "tmp": "^0.2.1",
-        "uuid": "^8.3.0",
         "utf8": "~3.0.0",
-        "ya-ts-client": "~0.2.0",
-        "winston": "^3.3.3"
+        "uuid": "^8.3.0",
+        "winston": "^3.3.3",
+        "ya-ts-client": "~0.2.0"
     },
     "devDependencies": {
         "@types/eccrypto": "^1.1.2",

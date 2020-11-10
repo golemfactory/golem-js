@@ -390,6 +390,11 @@ export class Engine {
 
           let work_context = new WorkContext(`worker-${wid}`, storage_manager);
           for await (let batch of worker(work_context, task_emiter())) {
+            batch.attestation = {
+              credentials: act.credentials,
+              nonce: act.id,
+              exeunitHashes: act.exeunitHashes
+            };
             await batch.prepare();
             logger.info("batch prepared");
             let cc = new CommandContainer();
@@ -398,9 +403,8 @@ export class Engine {
             logger.info("new batch !!!");
             for await (let step of remote) {
               let message = step.message ? step.message.slice(0, 25) : null;
-              let idx = step.idx;
               batch.output.push(step);
-              emit_progress("wkr", "step", wid, message, idx);
+              emit_progress("wkr", "step", wid, message, step.idx);
             }
             emit_progress("wkr", "get-results", wid);
             await batch.post();

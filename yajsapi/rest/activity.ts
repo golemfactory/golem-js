@@ -5,7 +5,7 @@ import {
 import * as yaa from "ya-ts-client/dist/ya-activity/src/models";
 import { attest, types } from "sgx-ias-js";
 import { Configuration } from "ya-ts-client/dist/ya-activity";
-import { Credentials, ExeScriptCommandResult } from "ya-ts-client/dist/ya-activity/src/models";
+import { Credentials, ExeScriptCommandResult, SgxCredentials } from "ya-ts-client/dist/ya-activity/src/models";
 import { CryptoCtx, PrivateKey, PublicKey, rand_hex } from "../crypto";
 import { sleep, logger } from "../utils";
 import { Agreement } from "./market";
@@ -81,7 +81,13 @@ export class ActivityService {
       throw error;
     }
 
-    return new SecureActivity(activity_id, crypto_ctx, this._api, this._state);
+    return new SecureActivity(
+      activity_id,
+      credentials.sgx,
+      crypto_ctx,
+      this._api,
+      this._state
+    );
   }
 
   async _attest(activity_id: string, agreement: Agreement, credentials: Credentials) {
@@ -130,6 +136,7 @@ class Activity {
   protected _api!: RequestorControlApi;
   protected _state!: RequestorStateApi;
   protected _id!: string;
+  protected _credentials?: object;
 
   constructor(id: string, _api: RequestorControlApi, _state: RequestorStateApi) {
     this._id = id;
@@ -143,6 +150,14 @@ class Activity {
 
   get id(): string {
     return this._id;
+  }
+
+  get credentials(): object | undefined {
+    return this._credentials;
+  }
+
+  get exeunitHashes(): string[] | undefined {
+    return SGX_CONFIG.exeunitHashes.map(value => value.toString());
   }
 
   async exec(script: object[]) {
@@ -182,11 +197,13 @@ class SecureActivity extends Activity {
 
   constructor(
     id: string,
+    credentials: SgxCredentials,
     crypto_ctx: CryptoCtx,
     _api: RequestorControlApi,
     _state: RequestorStateApi
   ) {
     super(id, _api, _state);
+    this._credentials = credentials;
     this._crypto_ctx = crypto_ctx;
   }
 
@@ -279,15 +296,18 @@ class Batch implements AsyncIterable<Result> {
   private _activity!: Activity;
   private _batch_id!: string;
   private _size!: number;
+  public credentials?: SgxCredentials;
 
   constructor(
     activity: Activity,
     batch_id: string,
-    batch_size: number
+    batch_size: number,
+    credentials?: SgxCredentials,
   ) {
     this._activity = activity;
     this._batch_id = batch_id;
     this._size = batch_size;
+    this.credentials = credentials;
   }
   return(value: any): Promise<IteratorResult<Result, any>> {
     throw new Error("Method not implemented.");

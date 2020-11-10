@@ -45,6 +45,8 @@ export class CommandContainer {
 
 export class Work {
   public output: object[] = [];
+  public attestation?: object;
+
   async prepare() {
     // Executes before commands are send to provider.
   }
