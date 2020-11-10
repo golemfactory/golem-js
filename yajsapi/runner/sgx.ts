@@ -65,7 +65,7 @@ class _SgxJsSpConstrains extends Constraints {
 }
 
 const DEFAULT_SGX_CONFIG = {
-  "enableAttestation": false,
+  "enableAttestation": true,
   "exeunitHashes": ["5edbb025714683961d4a2cb51b1d0a4ee8225a6ced167f29eb67f639313d9490"],
   "allowDebug": true,
   "allowOutdatedTcb": true,
