@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import winston from "winston";
-import { Callable, commander } from "./";
+import { Callable } from "./";
 import * as events from "../runner/events";
 
 dayjs.extend(duration);
@@ -46,8 +46,8 @@ const customFormat = printf(({ level, message, label, timestamp }) => {
   return `${timestamp} [${label}] ${level}: ${message}`;
 });
 
-const options = {
-  level: commander.debug ? "debug" : "info",
+let options = {
+  level: "info",
   format: combine(
     colorize(),
     label({ label: "yajsapi" }),
@@ -179,7 +179,7 @@ class SummaryLogger {
       );
     } else if (eventName === events.NoProposalsConfirmed.name) {
       this.time_waiting_for_proposals = this.time_waiting_for_proposals.add({
-        milisecond: parseInt(event["timeout"]),
+        millisecond: parseInt(event["timeout"]),
       });
       let msg;
       if (event["num_offers"] === 0)
@@ -299,5 +299,10 @@ function isSuperset(set: Set<any>, subset: Set<any>) {
   }
   return true;
 }
+
+export const changeLogLevel = ((level: string) => {
+    options.level = level;
+    logger.configure(options);
+});
 
 export default logger;
