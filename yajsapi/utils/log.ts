@@ -47,7 +47,7 @@ const customFormat = printf(({ level, message, label, timestamp }) => {
 });
 
 let options = {
-  level: "info"
+  level: "info",
   format: combine(
     colorize(),
     label({ label: "yajsapi" }),
@@ -179,7 +179,7 @@ class SummaryLogger {
       );
     } else if (eventName === events.NoProposalsConfirmed.name) {
       this.time_waiting_for_proposals = this.time_waiting_for_proposals.add({
-        milisecond: parseInt(event["timeout"]),
+        millisecond: parseInt(event["timeout"]),
       });
       let msg;
       if (event["num_offers"] === 0)
