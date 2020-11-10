@@ -178,7 +178,6 @@ export class Subscription {
   async *events(cancellationToken?): AsyncGenerator<OfferProposal> {
     while (this._open) {
       if(cancellationToken && cancellationToken.cancelled) break;
-      logger.info("checking proposals...");
       try {
         let { data: proposals } = await this._api.collectOffers(
           this._id,
