@@ -7,7 +7,6 @@ export default async function asyncWith(expression, block) {
     const { message, stack } = error;
     console.log();
     logger.error(`${message}\n\n${stack}\n`);
-    await expression.done(mgr);
   }
   await expression.done(mgr);
 }
