@@ -2,6 +2,7 @@ import bluebird, { TimeoutError } from "bluebird";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import duration from "dayjs/plugin/duration";
+import { MarketDecoration } from "ya-ts-client/dist/ya-payment/src/models";
 
 import { WorkContext, Work, CommandContainer } from "./ctx";
 import * as events from "./events";
@@ -191,7 +192,7 @@ export class Engine {
   private _expires;
   private _get_offers_deadline;
   private _budget_amount;
-  private _budget_allocation: Allocation | null;
+  private _budget_allocations: Allocation[];
 
   private _activity_api;
   private _market_api;
@@ -216,7 +217,7 @@ export class Engine {
     this._conf = new _EngineConf(max_workers, timeout);
     // TODO: setup precision
     this._budget_amount = parseFloat(budget);
-    this._budget_allocation = null;
+    this._budget_allocations = [];
 
     if (!event_emitter) {
       //from ..log import log_event
@@ -236,17 +237,8 @@ export class Engine {
     const emit = <Callable<[events.YaEvent], void>>(
       this._wrapped_emitter.async_call.bind(this._wrapped_emitter)
     );
-    console.log("emit", emit);
 
-    // Creating allocation
-    if (!this._budget_allocation) {
-      this._budget_allocation = await this._stack.enter_async_context(
-        this._payment_api.new_allocation(
-          this._budget_amount,
-          this._expires.add(CFG_INVOICE_TIMEOUT, "ms")
-        )
-      );
-    }
+    const multi_payment_decoration = await this._create_allocations();
 
     emit(new events.ComputationStarted());
     // Building offer
@@ -257,6 +249,14 @@ export class Engine {
     builder.add(new Identification(this._subnet));
     if (this._subnet)
       builder.ensure(`(${IdentificationKeys.subnet_tag}=${this._subnet})`);
+    for (let constraint of multi_payment_decoration.constraints) {
+      builder.ensure(constraint);
+    }
+    const _decoration_properties = multi_payment_decoration.properties.reduce(
+      (acc, prop) => (acc[prop.key] = prop.value),
+      {}
+    );
+    builder._props = Object.assign(builder._props, _decoration_properties);
     await this._package.decorate_demand(builder);
     await this._strategy.decorate_demand(builder);
 
@@ -291,7 +291,6 @@ export class Engine {
     let proposals_confirmed = 0;
 
     async function process_invoices(): Promise<void> {
-      let allocation = self._budget_allocation;
       for await (let invoice of self._payment_api.incoming_invoices(
         cancellationToken
       )) {
@@ -303,8 +302,16 @@ export class Engine {
               amount: invoice.amount,
             })
           );
-          agreements_to_pay.delete(invoice.agreementId);
+          const allocation = self.allocation_for_invoice(invoice);
+          agreements_to_pay.delete(invoice.agreement_id);
           await invoice.accept(invoice.amount, allocation);
+          emit(
+            new events.PaymentAccepted({
+              agr_id: invoice.agreement_id,
+              inv_id: invoice.invoiceId,
+              amount: invoice.amount,
+            })
+          );
         } else {
           invoices[invoice.agreementId] = invoice;
         }
@@ -317,28 +324,24 @@ export class Engine {
     async function accept_payment_for_agreement({
       agreement_id,
       partial,
-    }): Promise<boolean> {
-      let allocation = self._budget_allocation;
+    }): Promise<void> {
       emit(new events.PaymentPrepared({ agr_id: agreement_id }));
-      if (!invoices.has(agreement_id)) {
+      let inv = invoices.get(agreement_id);
+      if (!inv) {
         agreements_to_pay.add(agreement_id);
         emit(new events.PaymentQueued({ agr_id: agreement_id }));
-        return false;
+        return;
       }
-      let inv = invoices.get(agreement_id);
       invoices.delete(agreement_id);
-      if (inv)
-        emit(
-          new events.PaymentAccepted({
-            agr_id: agreement_id,
-            inv_id: inv.invoiceId,
-            amount: inv.amount,
-          })
-        );
-      if (allocation != null && inv != null) {
-        await inv.accept(inv.amount, allocation);
-      }
-      return true;
+      const allocation = self.allocation_for_invoice(inv);
+      await inv.accept(inv.amount, allocation);
+      emit(
+        new events.PaymentAccepted({
+          agr_id: agreement_id,
+          inv_id: inv.invoiceId,
+          amount: inv.amount,
+        })
+      );
     }
 
     async function find_offers(): Promise<void> {
@@ -394,6 +397,25 @@ export class Engine {
           }
           if (!proposal.is_draft()) {
             try {
+              const common_platforms = self._get_common_payment_platforms(
+                proposal
+              );
+              if (common_platforms.length) {
+                builder._props["golem.com.payment.chosen-platform"] =
+                  common_platforms[0];
+              } else {
+                try {
+                  await proposal.reject();
+                  emit(
+                    new events.ProposalRejected({
+                      prop_id: proposal.id,
+                      reason: "No common payment platforms",
+                    })
+                  );
+                } catch (error) {
+                  //suppress error
+                }
+              }
               await proposal.respond(builder.props(), builder.cons());
               emit(new events.ProposalResponded({ prop_id: proposal.id() }));
             } catch (error) {
@@ -699,6 +721,65 @@ export class Engine {
     }
     cancellationToken.cancel();
     return;
+  }
+
+  async _create_allocations(): Promise<MarketDecoration> {
+    let ids_to_decorate: string[] = [];
+    if (!this._budget_allocations.length) {
+      for await (let account of this._payment_api.accounts()) {
+        let allocation: Allocation = await this._stack.enter_async_context(
+          this._payment_api.new_allocation(
+            this._budget_amount,
+            account.platform,
+            account.address,
+            this._expires.add(CFG_INVOICE_TIMEOUT, "ms")
+          )
+        );
+        this._budget_allocations.push(allocation);
+        ids_to_decorate.push(allocation.id);
+      }
+    }
+
+    if (!this._budget_allocations.length) {
+      throw Error(
+        "No payment accounts. Did you forget to run 'yagna payment init -r'?"
+      );
+    }
+
+    const {
+      data: multi_payment_decoration,
+    } = await this._payment_api.decorate_demand(ids_to_decorate);
+    return multi_payment_decoration;
+  }
+
+  _get_common_payment_platforms(proposal: OfferProposal): string[] {
+    let prov_platforms = Object.values(proposal.props()).filter((prop) => {
+      if (prop.startsWith("golem.com.payment.platform."))
+        return prop.split(".")[4];
+    });
+    if (!prov_platforms) {
+      prov_platforms = ["NGNT"];
+    }
+    const req_platforms = this._budget_allocations.map(
+      (budget_allocation) => budget_allocation.payment_platform
+    );
+    return req_platforms.filter((value) =>
+      prov_platforms.includes(value)
+    ) as string[];
+  }
+
+  allocation_for_invoice(invoice: Invoice): Allocation {
+    try {
+      const _allocation = this._budget_allocations.find(
+        (allocation) =>
+          allocation.payment_platform === invoice.paymentPlatform &&
+          allocation.payment_address === invoice.payerAddr
+      );
+      if (_allocation) return _allocation;
+      throw `No allocation for ${invoice.paymentPlatform} ${invoice.payerAddr}.`;
+    } catch (error) {
+      throw new Error(error);
+    }
   }
 
   async ready(): Promise<Engine> {
