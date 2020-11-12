@@ -252,11 +252,9 @@ export class Engine {
     for (let constraint of multi_payment_decoration.constraints) {
       builder.ensure(constraint);
     }
-    const _decoration_properties = multi_payment_decoration.properties.reduce(
-      (acc, prop) => (acc[prop.key] = prop.value),
-      {}
-    );
-    builder._props = Object.assign(builder._props, _decoration_properties);
+    for (let x of multi_payment_decoration.properties) {
+        builder._props[x.key] = x.value;
+    }
     await this._package.decorate_demand(builder);
     await this._strategy.decorate_demand(builder);
 
@@ -746,16 +744,14 @@ export class Engine {
       );
     }
 
-    const {
-      data: multi_payment_decoration,
-    } = await this._payment_api.decorate_demand(ids_to_decorate);
-    return multi_payment_decoration;
+    return await this._payment_api.decorate_demand(ids_to_decorate);
   }
 
   _get_common_payment_platforms(proposal: OfferProposal): string[] {
-    let prov_platforms = Object.values(proposal.props()).filter((prop) => {
-      if (prop.startsWith("golem.com.payment.platform."))
-        return prop.split(".")[4];
+    let prov_platforms = Object.keys(proposal.props()).filter((prop) => {
+      return prop.startsWith("golem.com.payment.platform.")
+    }).map((prop) => {
+      return prop.split(".")[4];
     });
     if (!prov_platforms) {
       prov_platforms = ["NGNT"];
@@ -764,7 +760,7 @@ export class Engine {
       (budget_allocation) => budget_allocation.payment_platform
     );
     return req_platforms.filter((value) =>
-      prov_platforms.includes(value)
+      value && prov_platforms.includes(value)
     ) as string[];
   }
 
