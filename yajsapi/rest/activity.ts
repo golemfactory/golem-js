@@ -86,7 +86,7 @@ export class Activity {
         //suppress api error
       }
     } catch (error) {
-      logger.error(`failed to destroy activity: ${this._id}`);
+      logger.error(`Failed to destroy activity: ${this._id}`);
     }
     await this._api.destroyActivity(this._id);
   }
