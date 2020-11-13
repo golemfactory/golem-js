@@ -1,6 +1,6 @@
 {
     "name": "yajsapi_examples",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "NodeJS API Examples for Next Golem",
     "repository": "https://github.com/golemfactory/yajsapi",
     "scripts": {
@@ -15,7 +15,7 @@
         "bluebird": "^3.5.0",
         "dayjs": "^1.8.31",
         "ts-node": "^9.0.0",
-        "yajsapi": "0.1.0-alpha.3"
+        "yajsapi": "file:../"
     },
     "devDependencies": {
         "tsconfig-paths": "^3.9.0",

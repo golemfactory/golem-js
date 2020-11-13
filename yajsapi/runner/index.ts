@@ -34,7 +34,12 @@ import {
   Queue,
   sleep,
 } from "../utils";
+
+import * as _common from "./common";
 import * as _vm from "./vm";
+import * as _sgx from "./sgx";
+export const sgx = _sgx;
+export const vm = _vm;
 import { Task, TaskStatus } from "./task";
 import { Consumer, SmartQueue } from "./smartq";
 
@@ -187,7 +192,7 @@ export class Engine {
   private _strategy;
   private _api_config;
   private _stack;
-  private _package;
+  private _demand_decor;
   private _conf;
   private _expires;
   private _get_offers_deadline;
@@ -201,7 +206,7 @@ export class Engine {
   private _wrapped_emitter;
 
   constructor(
-    _package: _vm.Package,
+    _demand_decor: _common.DemandDecor,
     max_workers: Number = 5,
     timeout: any = dayjs.duration({ minutes: 5 }).asMilliseconds(), //timedelta
     budget: string, //number
@@ -213,7 +218,7 @@ export class Engine {
     this._strategy = strategy;
     this._api_config = new rest.Configuration();
     this._stack = new AsyncExitStack();
-    this._package = _package;
+    this._demand_decor = _demand_decor;
     this._conf = new _EngineConf(max_workers, timeout);
     // TODO: setup precision
     this._budget_amount = parseFloat(budget);
@@ -255,7 +260,7 @@ export class Engine {
     for (let x of multi_payment_decoration.properties) {
         builder._props[x.key] = x.value;
     }
-    await this._package.decorate_demand(builder);
+    await this._demand_decor.decorate_demand(builder);
     await this._strategy.decorate_demand(builder);
 
     let offer_buffer: { [key: string]: string | _BufferItem } = {}; //Dict[str, _BufferItem]
@@ -284,6 +289,7 @@ export class Engine {
     let agreements_to_pay: Set<string> = new Set();
     let invoices: Map<string, Invoice> = new Map();
     let payment_closing: boolean = false;
+    let secure = this._demand_decor.secure;
 
     let offers_collected = 0;
     let proposals_confirmed = 0;
@@ -449,7 +455,7 @@ export class Engine {
 
       let _act;
       try {
-        _act = await activity_api.new_activity(agreement.id());
+        _act = await activity_api.create_activity(agreement, secure)
       } catch (error) {
         emit(new events.ActivityCreateFailed({ agr_id: agreement.id() }));
         throw error;
@@ -494,10 +500,15 @@ export class Engine {
                 );
               }
               let task_id = current_worker_task ? current_worker_task.id : null;
+              batch.attestation = {
+                credentials: act.credentials,
+                nonce: act.id,
+                exeunitHashes: act.exeunitHashes
+              };
               await batch.prepare();
               let cc = new CommandContainer();
               batch.register(cc);
-              let remote = await act.send(cc.commands());
+              let remote = await act.exec(cc.commands());
               emit(
                 new events.ScriptSent({
                   agr_id: agreement.id(),
@@ -507,6 +518,7 @@ export class Engine {
               );
               try {
                 for await (let step of remote) {
+                  batch.output.push(step);
                   emit(
                     new events.CommandExecuted({
                       success: true,
@@ -803,5 +815,3 @@ export class Engine {
     await this._stack.aclose();
   }
 }
-
-export const vm = _vm;
