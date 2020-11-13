@@ -31,6 +31,6 @@ export default class Queue<T> {
   }
 
   empty() {
-    return this._tasks.length == 0;
+    return this._tasks.length === 0;
   }
 }

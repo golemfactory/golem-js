@@ -49,7 +49,7 @@ export class Destination {
     });
 
     await new Promise(async (fulfill) => {
-      writableStream.on("finish", fulfill);
+      writableStream.once("finish", fulfill);
       for await (let chunk of content.stream) {
         writableStream.write(chunk);
       }
@@ -82,7 +82,7 @@ export class InputStorageProvider {
         highWaterMark: _BUF_SIZE,
         encoding: "binary",
       });
-      stream.on("end", () => {
+      stream.once("end", () => {
         stream.destroy();
       })
       for await (let chunk of stream) {

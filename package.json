@@ -14,16 +14,17 @@
     "license": "LGPL-3.0",
     "dependencies": {
         "@rauschma/stringio": "^1.4.0",
-        "@types/bluebird": "^3.5.32",
+        "@types/bluebird": "^3.5.33",
         "axios": "^0.19.2",
         "bluebird": "^3.5.0",
-        "commander": "^6.1.0",
-        "dayjs": "^1.8.31",
+        "commander": "^6.2.0",
+        "dayjs": "^1.9.6",
+        "js-csp": "^1.0.1",
         "rewire": "^3.0.2",
         "tmp": "^0.2.1",
-        "uuid": "^8.3.0",
-        "ya-ts-client": "^0.1.2",
-        "winston": "^3.3.3"
+        "uuid": "^8.3.1",
+        "winston": "^3.3.3",
+        "ya-ts-client": "^0.2.0"
     },
     "devDependencies": {
         "@types/node": "14.6.2",
