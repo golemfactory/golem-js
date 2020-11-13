@@ -254,7 +254,6 @@ export class Engine {
     builder.add(new Identification(this._subnet));
     if (this._subnet)
       builder.ensure(`(${IdentificationKeys.subnet_tag}=${this._subnet})`);
-    await this._demand_decor.decorate_demand(builder);
     for (let constraint of multi_payment_decoration.constraints) {
       builder.ensure(constraint);
     }
