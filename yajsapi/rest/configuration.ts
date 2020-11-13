@@ -1,4 +1,6 @@
 import { yaActivity, yaMarket, yaPayment } from "ya-ts-client";
+import { Agent as HttpAgent } from "http";
+import { Agent as HttpsAgent } from "https";
 
 const DEFAULT_API_URL: string = "http://127.0.0.1:7465";
 
@@ -21,6 +23,7 @@ export class Configuration {
   private __market_url!: string;
   private __payment_url!: string;
   private __activity_url!: string;
+  private __axios_opts!: object;
 
   constructor(
     app_key = null,
@@ -58,6 +61,15 @@ export class Configuration {
       "YAGNA_ACTIVITY_URL",
       "/activity-api/v1"
     );
+
+    this.__axios_opts = {
+      httpAgent: new HttpAgent({
+        keepAlive: true,
+      }),
+      httpsAgent: new HttpsAgent({
+        keepAlive: true,
+      }),
+    };
   }
 
   app_key(): string | null {
@@ -81,6 +93,7 @@ export class Configuration {
       apiKey: this.app_key() as string,
       basePath: this.__market_url,
       accessToken: this.app_key() as string,
+      baseOptions: this.__axios_opts,
     });
     return cfg;
   }
@@ -90,6 +103,7 @@ export class Configuration {
       apiKey: this.app_key() as string,
       basePath: this.__payment_url,
       accessToken: this.app_key() as string,
+      baseOptions: this.__axios_opts,
     });
     return cfg;
   }
@@ -99,6 +113,7 @@ export class Configuration {
       apiKey: this.app_key() as string,
       basePath: this.__activity_url,
       accessToken: this.app_key() as string,
+      baseOptions: this.__axios_opts,
     });
     return cfg;
   }

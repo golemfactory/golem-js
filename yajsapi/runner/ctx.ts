@@ -46,6 +46,9 @@ export class CommandContainer {
 }
 
 export class Work {
+  public output: object[] = [];
+  public attestation?: object;
+
   async prepare() {
     // Executes before commands are send to provider.
   }
@@ -91,6 +94,7 @@ class _SendWork extends Work {
     this._idx = commands.transfer({
       _from: this._src.download_url(),
       _to: `container:${this._dst_path}`,
+      _args: {},
     });
   }
 }
@@ -146,11 +150,30 @@ class _Run extends Work {
     this._idx = commands.run({
       entry_point: this.cmd,
       args: this.args || [],
+      capture: {
+        stdout: { atEnd: {} },
+        stderr: { atEnd: {} },
+      }
     });
   }
 }
 
+class _Sign extends Work {
+  private _idx;
+
+  constructor() {
+    super();
+    this._idx = null;
+  }
+
+  register(commands: any) {
+    //CommandContainer
+    this._idx = commands.sign({});
+  }
+}
+
 const StorageEvent = events.DownloadStarted || events.DownloadFinished;
+
 class _RecvFile extends Work {
   private _storage;
   private _dst_path;
@@ -267,6 +290,10 @@ export class WorkContext {
     this._pending_steps.push(
       new _RecvFile(this._storage, src_path, dst_path, this._emitter)
     );
+  }
+  sign() {
+    this._prepare();
+    this._pending_steps.push(new _Sign());
   }
   log(args) {
     logger.info(`${this._id}: ${args}`);
