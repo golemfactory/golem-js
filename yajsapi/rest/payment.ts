@@ -62,6 +62,12 @@ export class Allocation extends _Link {
   amount!: number;
   //"Total amount allocated"
 
+  payment_platform?: string;
+  //"Payment platform, e.g. NGNT"
+
+  payment_address?: string;
+  //"Payment address, e.g. 0x123..."
+
   expires?: Date;
   //"Allocation expiration timestamp"
 
@@ -114,6 +120,8 @@ class _AllocationTask extends ResourceCtx<Allocation> {
       let _allocation = new Allocation();
       _allocation.id = this._id;
       _allocation._api = this._api;
+      _allocation.payment_platform = model.paymentPlatform;
+      _allocation.payment_address = model.address;
       _allocation.amount = parseFloat(model.totalAmount);
       _allocation.expires = new Date(parseInt(model.timeout) * 1000);
       return _allocation;
@@ -150,6 +158,8 @@ export class Payment {
 
   new_allocation(
     amount: number,
+    payment_platform: string,
+    payment_address: string,
     expires: Date | null = null,
     make_deposit: boolean = false
   ): ResourceCtx<Allocation> {
@@ -163,6 +173,8 @@ export class Payment {
     let allocation_timeout =
       expires || dayjs().add(30, "minute").utc().toDate();
     let _allocation: yap.Allocation = new yAllocation();
+    _allocation.paymentPlatform = payment_platform;
+    _allocation.address = payment_address;
     _allocation.totalAmount = amount.toString();
     _allocation!.timeout = allocation_timeout.toISOString();
     _allocation!.makeDeposit = make_deposit;
@@ -179,6 +191,8 @@ export class Payment {
       _allocation._api = this._api;
       _allocation.id = alloc_obj.allocationId;
       _allocation.amount = parseFloat(alloc_obj.totalAmount);
+      _allocation.payment_platform = alloc_obj.paymentPlatform;
+      _allocation.payment_address = alloc_obj.address;
       _allocation.expires = new Date(
         parseInt(alloc_obj.timeout as string) * 1000
       );
@@ -196,10 +210,24 @@ export class Payment {
     _allocation._api = this._api;
     _allocation.id = allocation_obj.allocationId;
     _allocation.amount = parseFloat(allocation_obj.totalAmount);
+    _allocation.payment_platform = allocation_obj.paymentPlatform;
+    _allocation.payment_address = allocation_obj.address;
     _allocation.expires = new Date(
       parseInt(allocation_obj.timeout as string) * 1000
     );
     return _allocation;
+  }
+
+  async *accounts(): AsyncGenerator<yap.Account> {
+    let { data: _accounts } = await this._api.getSendAccounts();
+    for (let account_obj of _accounts) {
+      yield account_obj;
+    }
+  }
+
+  async decorate_demand(ids: string[]): Promise<yap.MarketDecoration> {
+    const { data: _decorate_demand } = await this._api.decorateDemand(ids);
+    return _decorate_demand;
   }
 
   async *invoices(): AsyncGenerator<Invoice> {
@@ -212,7 +240,7 @@ export class Payment {
 
   async invoice(invoice_id: string): Promise<Invoice> {
     let { data: invoice_obj } = await this._api.getReceivedInvoice(invoice_id);
-    logger.log("debug", `got=${JSON.stringify(invoice_obj)}`);
+    // logger.log("debug", `got=${JSON.stringify(invoice_obj)}`);
     return new Invoice(this._api, invoice_obj);
   }
 
@@ -224,7 +252,7 @@ export class Payment {
     async function* fetch(init_ts: Dayjs) {
       let ts = init_ts;
       while (true) {
-        if(cancellationToken.cancelled) break;
+        if (cancellationToken.cancelled) break;
         let { data: items } = await api.getRequestorInvoiceEvents(
           5,
           ts.format("YYYY-MM-DD HH:mm:ss.SSSSSSZ")
