@@ -3,6 +3,7 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import { props as yp, rest, utils } from "yajsapi";
 import { Subscription } from "yajsapi/dist/rest/market";
+import { program } from "commander";
 
 dayjs.extend(utc);
 
@@ -10,12 +11,12 @@ const { Configuration, Market } = rest;
 const { asyncWith, CancellationToken } = utils;
 const cancellationToken = new CancellationToken();
 
-async function list_offers(conf: rest.Configuration): Promise<void> {
+async function list_offers(conf: rest.Configuration, subnetTag: string): Promise<void> {
   let client = await conf.market();
   let market_api = new Market(client);
   let dbuild = new yp.DemandBuilder();
 
-  let idx = new yp.Identification("devnet-alpha.2");
+  let idx = new yp.Identification(subnetTag);
   idx.name.value = "some scanning node";
   dbuild.add(idx);
 
@@ -44,4 +45,9 @@ const promiseTimeout = (seconds: number) =>
       resolve();
     }, seconds * 1000)
   );
-Bluebird.Promise.any([list_offers(new Configuration()), promiseTimeout(4)]);
+
+program.option('--subnet-tag <subnet>', 'set subnet name', 'devnet-alpha.3');
+program.parse(process.argv);
+console.log(`Using subnet: ${program.subnetTag}`);
+
+Bluebird.Promise.any([list_offers(new Configuration(), program.subnetTag), promiseTimeout(4)]);

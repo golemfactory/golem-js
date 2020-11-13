@@ -38,4 +38,7 @@ export YAGNA_APPKEY=your_yagna_app_key_here
 - `npm run ts:low`      will start typescript low level api example
 
 ### Need more logs
-Call `-d` or `--debug` flag on your example script
+Call `-d` or `--debug` flag on your example script, e.g. `npm run ts:blender -- -d`
+
+### Subnet
+Use the `--subnet-tag` option, e.g. `npm run ts:blender -- --subnet-tag YOUR_SUBNET`.

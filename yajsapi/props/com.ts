@@ -41,7 +41,6 @@ export class ComLinear extends Com {
     let fixed_price = parseFloat(coeffs.pop() || "0");
     let price_for: object = {};
     for (let i = 0; i < coeffs.length; i++) {
-      // (<any>Object).values(Counter).includes(usages[i])
       price_for = { ...price_for, [usages[i]]: parseFloat(coeffs[i]) };
     }
 

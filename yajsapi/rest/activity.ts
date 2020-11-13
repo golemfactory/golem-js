@@ -188,6 +188,20 @@ class Activity {
   }
 
   async done(): Promise<void> {
+    try {
+      const { data: batch_id } = await this._api.exec(
+        this._id,
+        new ExeScriptRequest('[{"terminate":{}}]')
+      );
+      //with contextlib.suppress(yexc.ApiException):
+      try {
+        await this._api.getExecBatchResults(this._id, batch_id, 1);
+      } catch(error) {
+        //suppress api error
+      }
+    } catch (error) {
+      logger.error(`Failed to destroy activity: ${this._id}`);
+    }
     await this._api.destroyActivity(this._id);
   }
 }
