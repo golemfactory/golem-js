@@ -18,7 +18,7 @@
         "axios": "^0.19.2",
         "bluebird": "^3.5.0",
         "commander": "^6.2.0",
-        "dayjs": "^1.9.6",
+        "dayjs": "~1.9.1",
         "js-csp": "^1.0.1",
         "eccrypto": "^1.1.5",
         "minimist": "^1.2.5",
