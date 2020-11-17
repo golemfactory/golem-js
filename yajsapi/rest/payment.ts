@@ -24,6 +24,11 @@ class yInvoice implements yap.Invoice {
   status!: yap.InvoiceStatus;
 }
 
+class yAcceptance implements yap.Acceptance {
+    totalAmountAccepted!: string;
+    allocationId!: string;
+}
+
 export class Invoice extends yInvoice {
   private _api: RequestorApi;
   constructor(_api: RequestorApi, _base: yap.Invoice) {
@@ -35,7 +40,7 @@ export class Invoice extends yInvoice {
   }
 
   async accept(amount: number | string, allocation: Allocation) {
-    let acceptance: yap.Acceptance;
+    let acceptance: yap.Acceptance = new yAcceptance();
     acceptance!.totalAmountAccepted = amount.toString();
     acceptance!.allocationId = allocation.id;
     await this._api.acceptInvoice(this.invoiceId, acceptance!);
