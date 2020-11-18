@@ -201,8 +201,13 @@ class Activity {
       }
     } catch (error) {
       logger.error(`Failed to destroy activity: ${this._id}`);
+    } finally {
+      try {
+        await this._api.destroyActivity(this._id);
+      } catch (error) {
+        //suppress api error
+      }
     }
-    await this._api.destroyActivity(this._id);
   }
 }
 

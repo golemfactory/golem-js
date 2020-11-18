@@ -1,6 +1,6 @@
 import { logger } from "./";
 export default async function asyncWith(expression, block) {
-  let mgr = expression ? await expression.ready() : null;
+  let mgr = expression ? await expression.ready.call(expression) : null;
   try {
     await block(mgr);
   } catch (error) {
@@ -8,5 +8,5 @@ export default async function asyncWith(expression, block) {
     console.log();
     logger.error(`${message}\n\n${stack}\n`);
   }
-  await expression.done(mgr);
+  await expression.done.call(expression, mgr);
 }
