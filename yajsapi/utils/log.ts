@@ -188,8 +188,7 @@ class SummaryLogger {
       else
         msg = `${
           event["num_offers"]
-        } offers have been collected from the market, but
-             no provider has responded for ${this.time_waiting_for_proposals.asSeconds()}s. `;
+        } offers have been collected from the market, but no provider has responded for ${this.time_waiting_for_proposals.asSeconds()}s. `;
       msg +=
         "Make sure you're using the latest released versions of yagna and yajsapi, and the correct subnet.";
       logger.warn(msg);
@@ -223,7 +222,7 @@ class SummaryLogger {
       if (event["success"]) return;
       const provider_name = this.agreement_provider_name[event["agr_id"]];
       logger.warn(
-        `Command failed on provider '${provider_name}', command: ${event["command"]}, output: ${event["message"]}`
+        `Command failed on provider '${provider_name}', command: ${JSON.stringify(event["command"])}, output: ${event["message"]}`
       );
     } else if (eventName === events.ScriptFinished.name) {
       const provider_name = this.agreement_provider_name[event["agr_id"]];
@@ -309,9 +308,9 @@ function isSuperset(set: Set<any>, subset: Set<any>) {
   return true;
 }
 
-export const changeLogLevel = ((level: string) => {
-    options.level = level;
-    logger.configure(options);
-});
+export const changeLogLevel = (level: string) => {
+  options.level = level;
+  logger.configure(options);
+};
 
 export default logger;

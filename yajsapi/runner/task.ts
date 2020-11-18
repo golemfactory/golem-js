@@ -91,18 +91,24 @@ export class Task<TaskData, TaskResult> {
 
   accept_task(result: TaskResult | null = null): void {
     if (this._emit_event) {
-      this._emit_event("task", "accept", null, result);
+      this._emit_event(new events.TaskAccepted({task_id: this.id, result}));
     }
     if (this._status != TaskStatus.RUNNING) throw "Accepted task not running";
     this._status = TaskStatus.ACCEPTED;
     this._result = result;
     this._stop();
-    for (let cb of this._callbacks) cb && cb(this, "accept");
+    for (let cb of this._callbacks) cb && cb(this, TaskStatus.ACCEPTED);
   }
 
-  reject_task(): void {
-    if (this._status != TaskStatus.RUNNING) throw "";
+  reject_task(reason: string | null = null, retry: boolean = false): void {
+    if (this._emit_event) {
+      this._emit_event(new events.TaskRejected({task_id: this.id, reason}));
+    }
+    if (this._status != TaskStatus.RUNNING) throw "Rejected task not running";
     this._status = TaskStatus.REJECTED;
+    this._stop(retry)
+
+    for (let cb of this._callbacks) cb && cb(self, TaskStatus.REJECTED)
   }
 
   static get counter(): number {
