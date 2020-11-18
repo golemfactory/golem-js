@@ -279,8 +279,17 @@ class SummaryLogger {
           `Activity failed ${count} time(s) on provider '${provider_name}'`
         );
       this._print_total_cost();
-    } else if (eventName === events.ComputationFailed.name)
+    } else if (eventName === events.ComputationFailed.name) {
       logger.error(`Computation failed, reason: ${event["reason"]}`);
+    } else if (eventName === events.PaymentAccepted.name) {
+      logger.info(
+        `Accepted payment: ${event["amount"]} for invoice ${event["inv_id"].substr(0, 17)}`
+      );
+    } else if (eventName === events.PaymentPrepared.name) {
+      logger.info(`Payment for agreement ${event["agr_id"].substr(0, 17)} prepared`);
+    } else if (eventName === events.PaymentQueued.name) {
+      logger.info(`Payment for agreement ${event["agr_id"].substr(0, 17)} queued`);
+    }
   }
 }
 
