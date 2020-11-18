@@ -286,9 +286,9 @@ class SummaryLogger {
         `Accepted payment: ${event["amount"]} for invoice ${event["inv_id"].substr(0, 17)}`
       );
     } else if (eventName === events.PaymentPrepared.name) {
-      logger.info(`Payment for agreement ${event["agr_id"].substr(0, 17)} prepared`);
+      logger.debug(`Prepared payment for agreement ${event["agr_id"].substr(0, 17)}`);
     } else if (eventName === events.PaymentQueued.name) {
-      logger.info(`Payment for agreement ${event["agr_id"].substr(0, 17)} queued`);
+      logger.debug(`Queued payment for agreement ${event["agr_id"].substr(0, 17)}`);
     }
   }
 }
