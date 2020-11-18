@@ -734,7 +734,6 @@ export class Engine {
   }
 
   async _create_allocations(): Promise<MarketDecoration> {
-    let ids_to_decorate: string[] = [];
     if (!this._budget_allocations.length) {
       for await (let account of this._payment_api.accounts()) {
         let allocation: Allocation = await this._stack.enter_async_context(
@@ -746,17 +745,15 @@ export class Engine {
           )
         );
         this._budget_allocations.push(allocation);
-        ids_to_decorate.push(allocation.id);
       }
     }
-
     if (!this._budget_allocations.length) {
       throw Error(
         "No payment accounts. Did you forget to run 'yagna payment init -r'?"
       );
     }
-
-    return await this._payment_api.decorate_demand(ids_to_decorate);
+    let allocation_ids = this._budget_allocations.map((a) => a.id);
+    return await this._payment_api.decorate_demand(allocation_ids);
   }
 
   _get_common_payment_platforms(proposal: OfferProposal): string[] {
