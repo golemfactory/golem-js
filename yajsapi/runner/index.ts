@@ -258,7 +258,7 @@ export class Engine {
       builder.ensure(constraint);
     }
     for (let x of multi_payment_decoration.properties) {
-        builder._props[x.key] = x.value;
+      builder._props[x.key] = x.value;
     }
     await this._demand_decor.decorate_demand(builder);
     await this._strategy.decorate_demand(builder);
@@ -455,7 +455,7 @@ export class Engine {
 
       let _act;
       try {
-        _act = await activity_api.create_activity(agreement, secure)
+        _act = await activity_api.create_activity(agreement, secure);
       } catch (error) {
         emit(new events.ActivityCreateFailed({ agr_id: agreement.id() }));
         throw error;
@@ -484,98 +484,104 @@ export class Engine {
             storage_manager,
             emit
           );
-          let consumer = work_queue.new_consumer();
-
-          let command_generator = worker(work_context, task_emitter(consumer));
-          for await (let batch of command_generator) {
-            try {
-              let current_worker_task = consumer.last_item();
-              if (current_worker_task) {
-                emit(
-                  new events.TaskStarted({
-                    agr_id: agreement.id(),
-                    task_id: current_worker_task.id,
-                    task_data: current_worker_task.data(),
-                  })
-                );
-              }
-              let task_id = current_worker_task ? current_worker_task.id : null;
-              batch.attestation = {
-                credentials: act.credentials,
-                nonce: act.id,
-                exeunitHashes: act.exeunitHashes
-              };
-              await batch.prepare();
-              let cc = new CommandContainer();
-              batch.register(cc);
-              let remote = await act.exec(cc.commands());
-              emit(
-                new events.ScriptSent({
-                  agr_id: agreement.id(),
-                  task_id: task_id,
-                  cmds: cc.commands(),
-                })
-              );
+          await asyncWith(work_queue.new_consumer(), async (consumer) => {
+            let command_generator = worker(
+              work_context,
+              task_emitter(consumer)
+            );
+            for await (let batch of command_generator) {
               try {
-                for await (let step of remote) {
-                  batch.output.push(step);
+                let current_worker_task = consumer.last_item();
+                if (current_worker_task) {
                   emit(
-                    new events.CommandExecuted({
-                      success: true,
+                    new events.TaskStarted({
                       agr_id: agreement.id(),
-                      task_id: task_id,
-                      command: cc.commands()[step.idx],
-                      message: step.message,
-                      cmd_idx: step.idx,
+                      task_id: current_worker_task.id,
+                      task_data: current_worker_task.data(),
                     })
                   );
                 }
-              } catch (error) {
-                // assert len(err.args) >= 2
-                const [cmd_msg, cmd_idx] = error;
+                let task_id = current_worker_task
+                  ? current_worker_task.id
+                  : null;
+                batch.attestation = {
+                  credentials: act.credentials,
+                  nonce: act.id,
+                  exeunitHashes: act.exeunitHashes,
+                };
+                await batch.prepare();
+                let cc = new CommandContainer();
+                batch.register(cc);
+                let remote = await act.exec(cc.commands());
                 emit(
-                  new events.CommandExecuted({
-                    success: false,
+                  new events.ScriptSent({
                     agr_id: agreement.id(),
                     task_id: task_id,
-                    command: cc.commands()[cmd_idx],
-                    message: cmd_msg,
-                    cmd_idx: cmd_idx,
+                    cmds: cc.commands(),
                   })
                 );
-                throw error;
-              }
-              emit(
-                new events.GettingResults({
-                  agr_id: agreement.id(),
-                  task_id: task_id,
-                })
-              );
-              await batch.post();
-              emit(
-                new events.ScriptFinished({
-                  agr_id: agreement.id(),
-                  task_id: task_id,
-                })
-              );
-              await accept_payment_for_agreement({
-                agreement_id: agreement.id(),
-                partial: true,
-              });
-            } catch (error) {
-              try {
-                // await command_generator.athrow(*sys.exc_info())
-              } catch (error) {
+                try {
+                  for await (let step of remote) {
+                    batch.output.push(step);
+                    emit(
+                      new events.CommandExecuted({
+                        success: true,
+                        agr_id: agreement.id(),
+                        task_id: task_id,
+                        command: cc.commands()[step.idx],
+                        message: step.message,
+                        cmd_idx: step.idx,
+                      })
+                    );
+                  }
+                } catch (error) {
+                  // assert len(err.args) >= 2
+                  const { name: cmd_idx , description } = error;
+                  //throws new CommandExecutionError from activity#355
+                  emit(
+                    new events.CommandExecuted({
+                      success: false,
+                      agr_id: agreement.id(),
+                      task_id: task_id,
+                      command: cc.commands()[cmd_idx],
+                      message: description,
+                      cmd_idx: cmd_idx,
+                    })
+                  );
+                  throw error;
+                }
                 emit(
-                  new events.WorkerFinished({
+                  new events.GettingResults({
                     agr_id: agreement.id(),
-                    exception: [error],
+                    task_id: task_id,
                   })
                 );
-                return;
+                await batch.post();
+                emit(
+                  new events.ScriptFinished({
+                    agr_id: agreement.id(),
+                    task_id: task_id,
+                  })
+                );
+                await accept_payment_for_agreement({
+                  agreement_id: agreement.id(),
+                  partial: true,
+                });
+              } catch (error) {
+                try {
+                  await command_generator.throw(error)
+                } catch (error) {
+                  emit(
+                    new events.WorkerFinished({
+                      agr_id: agreement.id(),
+                      exception: [error],
+                    })
+                  );
+                  return;
+                }
               }
             }
-          }
+          });
           await accept_payment_for_agreement({
             agreement_id: agreement.id(),
             partial: false,
@@ -757,19 +763,21 @@ export class Engine {
   }
 
   _get_common_payment_platforms(proposal: OfferProposal): string[] {
-    let prov_platforms = Object.keys(proposal.props()).filter((prop) => {
-      return prop.startsWith("golem.com.payment.platform.")
-    }).map((prop) => {
-      return prop.split(".")[4];
-    });
+    let prov_platforms = Object.keys(proposal.props())
+      .filter((prop) => {
+        return prop.startsWith("golem.com.payment.platform.");
+      })
+      .map((prop) => {
+        return prop.split(".")[4];
+      });
     if (!prov_platforms) {
       prov_platforms = ["NGNT"];
     }
     const req_platforms = this._budget_allocations.map(
       (budget_allocation) => budget_allocation.payment_platform
     );
-    return req_platforms.filter((value) =>
-      value && prov_platforms.includes(value)
+    return req_platforms.filter(
+      (value) => value && prov_platforms.includes(value)
     ) as string[];
   }
 
