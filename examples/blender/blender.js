@@ -6,7 +6,7 @@ const { program } = require("commander");
 
 dayjs.extend(duration);
 
-const { asyncWith, range } = utils;
+const { asyncWith, logUtils, range } = utils;
 
 async function main(subnetTag) {
   const _package = await vm.repo(
@@ -69,9 +69,7 @@ async function main(subnetTag) {
       "10.0",
       undefined,
       subnetTag,
-      (event) => {
-        console.debug(event);
-      }
+      logUtils.logSummary()
     ),
     async (engine) => {
       for await (let task of engine.map(
