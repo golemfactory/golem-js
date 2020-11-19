@@ -86,7 +86,7 @@ async function main(subnetTag: string) {
 }
 
 program
-  .option('--subnet-tag <subnet>', 'set subnet name', 'devnet-alpha.3')
+  .option('--subnet-tag <subnet>', 'set subnet name', 'community.3')
   .option('-d, --debug', 'output extra debugging');
 program.parse(process.argv);
 if (program.debug) {
