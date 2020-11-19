@@ -744,7 +744,6 @@ export class Engine {
             this._expires.add(CFG_INVOICE_TIMEOUT, "ms")
           )
         );
-        this._budget_allocations.push(allocation);
         ids_to_decorate.push(allocation.id);
       }
     }
