@@ -6,6 +6,9 @@
 /dist
 /examples/dist
 /examples/blender/*.png
+/examples/yacat/*.sh
+/examples/yacat/*.txt
+/examples/yacat/*.hash
 
 #Lock files
 package-lock.json
