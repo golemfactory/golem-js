@@ -48,24 +48,7 @@ export { Task, TaskStatus };
 dayjs.extend(duration);
 dayjs.extend(utc);
 
-const cancellationToken = new CancellationToken();
-
-let cancellationHandler = (): void => {
-  if (!cancellationToken.cancelled) {
-    cancellationToken.cancel();
-  }
-};
-
-[
-  "SIGINT",
-  "SIGTERM",
-  "SIGBREAK",
-  "SIGHUP",
-  "exit",
-  "uncaughtException",
-].forEach((event) => {
-  process.on(event, cancellationHandler);
-});
+const SIGNALS = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
 
 const CFG_INVOICE_TIMEOUT: number = dayjs
   .duration({ minutes: 5 })
@@ -204,6 +187,7 @@ export class Engine {
   private _payment_api;
 
   private _wrapped_emitter;
+  private _cancellation_token: CancellationToken;
 
   constructor(
     _demand_decor: _common.DemandDecor,
@@ -223,6 +207,19 @@ export class Engine {
     // TODO: setup precision
     this._budget_amount = parseFloat(budget);
     this._budget_allocations = [];
+
+    this._cancellation_token = new CancellationToken();
+    let cancellationToken = this._cancellation_token;
+
+    function cancel(e) {
+      if (cancellationToken && !cancellationToken.cancelled) {
+        cancellationToken.cancel();
+      }
+      SIGNALS.forEach((event) => {
+        process.off(event, cancel);
+      });
+    }
+    SIGNALS.forEach((event) => process.on(event, cancel));
 
     if (!event_emitter) {
       //from ..log import log_event
@@ -267,6 +264,7 @@ export class Engine {
     let market_api = this._market_api;
     let activity_api = this._activity_api;
     let strategy = this._strategy;
+    let cancellationToken = this._cancellation_token;
     let done_queue: Queue<Task<D, R>> = new Queue([], cancellationToken);
 
     function on_task_done(task: Task<D, R>, status: TaskStatus): void {
