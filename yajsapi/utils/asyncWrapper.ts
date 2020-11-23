@@ -26,7 +26,9 @@ export default class AsyncWrapper {
     }
 
     async ready() {
-        this._task = this._loop.create_task(this._worker.bind(this))
+        this._task = this._loop
+          .create_task(this._worker.bind(this))
+          .catch(() => {}); // the task might be cancelled
     }
 
     async done(): Promise<void> {
