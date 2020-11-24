@@ -624,18 +624,11 @@ export class Engine {
                 provider_id: provider_info,
               })
             );
-            try {
-              let conf_res = await agreement.confirm();
-              if (conf_res) {
-                emit(new events.AgreementConfirmed({ agr_id: agreement.id() }));
-              } else {
-                emit(new events.AgreementRejected({ agr_id: agreement.id() }));
-                continue;
-              }
-            } catch (error) {
+            if (!await agreement.confirm()) {
               emit(new events.AgreementRejected({ agr_id: agreement.id() }));
               continue;
             }
+            emit(new events.AgreementConfirmed({ agr_id: agreement.id() }));
             new_task = loop.create_task(start_worker.bind(null, agreement));
             workers.add(new_task);
           } catch (error) {
