@@ -695,10 +695,12 @@ export class Engine {
           promise_timeout(10),
         ]);
 
+        let done_workers = new Set([...workers].filter((worker) => !worker.isPending()));
+
         workers = new Set([...workers].filter((worker) => worker.isPending()));
         services = services.filter((service) => service.isPending());
 
-        for (let worker_task of [...workers]) {
+        for (let worker_task of [...done_workers]) {
             if (worker_task.isPending()) {
                 await worker_task;
             }
