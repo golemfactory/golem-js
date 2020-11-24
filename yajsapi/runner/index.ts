@@ -698,6 +698,12 @@ export class Engine {
         workers = new Set([...workers].filter((worker) => worker.isPending()));
         services = services.filter((service) => service.isPending());
 
+        for (let worker_task of [...workers]) {
+            if (worker_task.isPending()) {
+                await worker_task;
+            }
+        }
+
         if (!get_done_task) throw "";
         if (!get_done_task.isPending()) {
           yield await get_done_task;
@@ -706,11 +712,10 @@ export class Engine {
         }
       }
       emit(new events.ComputationFinished());
-      for (let service of services) {
-        service.cancel();
-      }
     } catch (error) {
       logger.error(`fail= ${error}`);
+      // TODO: implement ComputationFinished(error)
+      emit(new events.ComputationFinished());
     } finally {
       payment_closing = true;
       find_offers_task.cancel();
@@ -719,21 +724,23 @@ export class Engine {
           for (let worker_task of [...workers]) {
             worker_task.cancel();
           }
-          // await asyncio.wait(workers, timeout=15, return_when=asyncio.ALL_COMPLETED)
+          // TODO add timeout
+          await bluebird.Promise.all([...workers]);
         }
       } catch (error) {
         logger.error(error);
       }
-
-      // find_offers_task.cancel();
-    }
-
-    payment_closing = true;
-    if (agreements_to_pay) {
-      await bluebird.Promise.any([
-        Promise.all([process_invoices_job]),
-        promise_timeout(15),
+      await bluebird.Promise.all([
+        ...find_offers_task,
+        ...process_invoices_job,
+        promise_timeout(5),
       ]);
+      if (agreements_to_pay) {
+        await bluebird.Promise.all([
+          Promise.all([process_invoices_job]),
+          promise_timeout(15),
+        ]);
+      }
     }
     cancellationToken.cancel();
     return;
