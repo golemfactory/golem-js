@@ -153,12 +153,12 @@ export class Consumer<Item> {
     this._fetched = null;
   }
 
-  __enter__(): Consumer<Item> {
+  ready(): Consumer<Item> {
     return this;
   }
 
-  __exit__() {
-    eventLoop().create_task(this._queue.reschedule_all(this));
+  done() {
+    eventLoop().create_task(this._queue.reschedule_all.bind(this._queue, this));
     return null;
   }
 

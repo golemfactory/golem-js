@@ -2,12 +2,11 @@ import path from "path";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import { Engine, Task, utils, vm, WorkContext } from "yajsapi";
-import { logSummary } from "yajsapi/utils/log";
 import { program } from "commander";
 
 dayjs.extend(duration);
 
-const { asyncWith, range } = utils;
+const { asyncWith, logUtils, range } = utils;
 
 async function main(subnetTag: string) {
   const _package = await vm.repo(
@@ -71,7 +70,7 @@ async function main(subnetTag: string) {
       "10.0",
       undefined,
       subnetTag,
-      logSummary()
+      logUtils.logSummary()
     ),
     async (engine: Engine): Promise<void> => {
       for await (let task of engine.map(
@@ -86,7 +85,7 @@ async function main(subnetTag: string) {
 }
 
 program
-  .option('--subnet-tag <subnet>', 'set subnet name', 'devnet-alpha.3')
+  .option('--subnet-tag <subnet>', 'set subnet name', 'community.3')
   .option('-d, --debug', 'output extra debugging');
 program.parse(process.argv);
 if (program.debug) {

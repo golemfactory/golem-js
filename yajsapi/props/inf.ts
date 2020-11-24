@@ -11,8 +11,10 @@ export enum RuntimeType {
   WASMTIME = "wasmtime",
   EMSCRIPTEN = "emscripten",
   VM = "vm",
-  SGX_WASI = "sgx",
-  SGX_JS_SP = "sgx-js-sp",
+  SGX = "sgx",
+  SGX_JS = "sgx-js",
+  SGX_WASM = "sgx-wasm",
+  SGX_WASI = "sgx-wasi",
 }
 
 export class InfBase {

@@ -48,24 +48,7 @@ export { Task, TaskStatus };
 dayjs.extend(duration);
 dayjs.extend(utc);
 
-const cancellationToken = new CancellationToken();
-
-let cancellationHandler = (): void => {
-  if (!cancellationToken.cancelled) {
-    cancellationToken.cancel();
-  }
-};
-
-[
-  "SIGINT",
-  "SIGTERM",
-  "SIGBREAK",
-  "SIGHUP",
-  "exit",
-  "uncaughtException",
-].forEach((event) => {
-  process.on(event, cancellationHandler);
-});
+const SIGNALS = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
 
 const CFG_INVOICE_TIMEOUT: number = dayjs
   .duration({ minutes: 5 })
@@ -204,6 +187,7 @@ export class Engine {
   private _payment_api;
 
   private _wrapped_emitter;
+  private _cancellation_token: CancellationToken;
 
   constructor(
     _demand_decor: _common.DemandDecor,
@@ -223,6 +207,19 @@ export class Engine {
     // TODO: setup precision
     this._budget_amount = parseFloat(budget);
     this._budget_allocations = [];
+
+    this._cancellation_token = new CancellationToken();
+    let cancellationToken = this._cancellation_token;
+
+    function cancel(e) {
+      if (cancellationToken && !cancellationToken.cancelled) {
+        cancellationToken.cancel();
+      }
+      SIGNALS.forEach((event) => {
+        process.off(event, cancel);
+      });
+    }
+    SIGNALS.forEach((event) => process.on(event, cancel));
 
     if (!event_emitter) {
       //from ..log import log_event
@@ -258,7 +255,7 @@ export class Engine {
       builder.ensure(constraint);
     }
     for (let x of multi_payment_decoration.properties) {
-        builder._props[x.key] = x.value;
+      builder._props[x.key] = x.value;
     }
     await this._demand_decor.decorate_demand(builder);
     await this._strategy.decorate_demand(builder);
@@ -267,6 +264,7 @@ export class Engine {
     let market_api = this._market_api;
     let activity_api = this._activity_api;
     let strategy = this._strategy;
+    let cancellationToken = this._cancellation_token;
     let done_queue: Queue<Task<D, R>> = new Queue([], cancellationToken);
 
     function on_task_done(task: Task<D, R>, status: TaskStatus): void {
@@ -455,7 +453,7 @@ export class Engine {
 
       let _act;
       try {
-        _act = await activity_api.create_activity(agreement, secure)
+        _act = await activity_api.create_activity(agreement, secure);
       } catch (error) {
         emit(new events.ActivityCreateFailed({ agr_id: agreement.id() }));
         throw error;
@@ -484,98 +482,104 @@ export class Engine {
             storage_manager,
             emit
           );
-          let consumer = work_queue.new_consumer();
-
-          let command_generator = worker(work_context, task_emitter(consumer));
-          for await (let batch of command_generator) {
-            try {
-              let current_worker_task = consumer.last_item();
-              if (current_worker_task) {
-                emit(
-                  new events.TaskStarted({
-                    agr_id: agreement.id(),
-                    task_id: current_worker_task.id,
-                    task_data: current_worker_task.data(),
-                  })
-                );
-              }
-              let task_id = current_worker_task ? current_worker_task.id : null;
-              batch.attestation = {
-                credentials: act.credentials,
-                nonce: act.id,
-                exeunitHashes: act.exeunitHashes
-              };
-              await batch.prepare();
-              let cc = new CommandContainer();
-              batch.register(cc);
-              let remote = await act.exec(cc.commands());
-              emit(
-                new events.ScriptSent({
-                  agr_id: agreement.id(),
-                  task_id: task_id,
-                  cmds: cc.commands(),
-                })
-              );
+          await asyncWith(work_queue.new_consumer(), async (consumer) => {
+            let command_generator = worker(
+              work_context,
+              task_emitter(consumer)
+            );
+            for await (let batch of command_generator) {
               try {
-                for await (let step of remote) {
-                  batch.output.push(step);
+                let current_worker_task = consumer.last_item();
+                if (current_worker_task) {
                   emit(
-                    new events.CommandExecuted({
-                      success: true,
+                    new events.TaskStarted({
                       agr_id: agreement.id(),
-                      task_id: task_id,
-                      command: cc.commands()[step.idx],
-                      message: step.message,
-                      cmd_idx: step.idx,
+                      task_id: current_worker_task.id,
+                      task_data: current_worker_task.data(),
                     })
                   );
                 }
-              } catch (error) {
-                // assert len(err.args) >= 2
-                const [cmd_msg, cmd_idx] = error;
+                let task_id = current_worker_task
+                  ? current_worker_task.id
+                  : null;
+                batch.attestation = {
+                  credentials: act.credentials,
+                  nonce: act.id,
+                  exeunitHashes: act.exeunitHashes,
+                };
+                await batch.prepare();
+                let cc = new CommandContainer();
+                batch.register(cc);
+                let remote = await act.exec(cc.commands());
                 emit(
-                  new events.CommandExecuted({
-                    success: false,
+                  new events.ScriptSent({
                     agr_id: agreement.id(),
                     task_id: task_id,
-                    command: cc.commands()[cmd_idx],
-                    message: cmd_msg,
-                    cmd_idx: cmd_idx,
+                    cmds: cc.commands(),
                   })
                 );
-                throw error;
-              }
-              emit(
-                new events.GettingResults({
-                  agr_id: agreement.id(),
-                  task_id: task_id,
-                })
-              );
-              await batch.post();
-              emit(
-                new events.ScriptFinished({
-                  agr_id: agreement.id(),
-                  task_id: task_id,
-                })
-              );
-              await accept_payment_for_agreement({
-                agreement_id: agreement.id(),
-                partial: true,
-              });
-            } catch (error) {
-              try {
-                // await command_generator.athrow(*sys.exc_info())
-              } catch (error) {
+                try {
+                  for await (let step of remote) {
+                    batch.output.push(step);
+                    emit(
+                      new events.CommandExecuted({
+                        success: true,
+                        agr_id: agreement.id(),
+                        task_id: task_id,
+                        command: cc.commands()[step.idx],
+                        message: step.message,
+                        cmd_idx: step.idx,
+                      })
+                    );
+                  }
+                } catch (error) {
+                  // assert len(err.args) >= 2
+                  const { name: cmd_idx , description } = error;
+                  //throws new CommandExecutionError from activity#355
+                  emit(
+                    new events.CommandExecuted({
+                      success: false,
+                      agr_id: agreement.id(),
+                      task_id: task_id,
+                      command: cc.commands()[cmd_idx],
+                      message: description,
+                      cmd_idx: cmd_idx,
+                    })
+                  );
+                  throw error;
+                }
                 emit(
-                  new events.WorkerFinished({
+                  new events.GettingResults({
                     agr_id: agreement.id(),
-                    exception: [error],
+                    task_id: task_id,
                   })
                 );
-                return;
+                await batch.post();
+                emit(
+                  new events.ScriptFinished({
+                    agr_id: agreement.id(),
+                    task_id: task_id,
+                  })
+                );
+                await accept_payment_for_agreement({
+                  agreement_id: agreement.id(),
+                  partial: true,
+                });
+              } catch (error) {
+                try {
+                  await command_generator.throw(error)
+                } catch (error) {
+                  emit(
+                    new events.WorkerFinished({
+                      agr_id: agreement.id(),
+                      exception: [error],
+                    })
+                  );
+                  return;
+                }
               }
             }
-          }
+          });
           await accept_payment_for_agreement({
             agreement_id: agreement.id(),
             partial: false,
@@ -734,7 +738,6 @@ export class Engine {
   }
 
   async _create_allocations(): Promise<MarketDecoration> {
-    let ids_to_decorate: string[] = [];
     if (!this._budget_allocations.length) {
       for await (let account of this._payment_api.accounts()) {
         let allocation: Allocation = await this._stack.enter_async_context(
@@ -746,33 +749,33 @@ export class Engine {
           )
         );
         this._budget_allocations.push(allocation);
-        ids_to_decorate.push(allocation.id);
       }
     }
-
     if (!this._budget_allocations.length) {
       throw Error(
         "No payment accounts. Did you forget to run 'yagna payment init -r'?"
       );
     }
-
-    return await this._payment_api.decorate_demand(ids_to_decorate);
+    let allocation_ids = this._budget_allocations.map((a) => a.id);
+    return await this._payment_api.decorate_demand(allocation_ids);
   }
 
   _get_common_payment_platforms(proposal: OfferProposal): string[] {
-    let prov_platforms = Object.keys(proposal.props()).filter((prop) => {
-      return prop.startsWith("golem.com.payment.platform.")
-    }).map((prop) => {
-      return prop.split(".")[4];
-    });
+    let prov_platforms = Object.keys(proposal.props())
+      .filter((prop) => {
+        return prop.startsWith("golem.com.payment.platform.");
+      })
+      .map((prop) => {
+        return prop.split(".")[4];
+      });
     if (!prov_platforms) {
       prov_platforms = ["NGNT"];
     }
     const req_platforms = this._budget_allocations.map(
       (budget_allocation) => budget_allocation.payment_platform
     );
-    return req_platforms.filter((value) =>
-      value && prov_platforms.includes(value)
+    return req_platforms.filter(
+      (value) => value && prov_platforms.includes(value)
     ) as string[];
   }
 

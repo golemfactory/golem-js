@@ -136,7 +136,7 @@ class SummaryLogger {
   _print_total_cost(): void {
     if (!this.finished) return;
     const provider_names = new Set(Object.keys(this.provider_tasks));
-    if (isSuperset(provider_names, new Set(Object.keys(this.provider_cost)))) {
+    if (isSuperset(new Set(Object.keys(this.provider_cost)), provider_names)) {
       const total_cost = Object.values(this.provider_cost).reduce(
         (item, acc) => (acc += item),
         0
@@ -188,8 +188,7 @@ class SummaryLogger {
       else
         msg = `${
           event["num_offers"]
-        } offers have been collected from the market, but
-             no provider has responded for ${this.time_waiting_for_proposals.asSeconds()}s. `;
+        } offers have been collected from the market, but no provider has responded for ${this.time_waiting_for_proposals.asSeconds()}s. `;
       msg +=
         "Make sure you're using the latest released versions of yagna and yajsapi, and the correct subnet.";
       logger.warn(msg);
@@ -223,7 +222,7 @@ class SummaryLogger {
       if (event["success"]) return;
       const provider_name = this.agreement_provider_name[event["agr_id"]];
       logger.warn(
-        `Command failed on provider '${provider_name}', command: ${event["command"]}, output: ${event["message"]}`
+        `Command failed on provider '${provider_name}', command: ${JSON.stringify(event["command"])}, output: ${event["message"]}`
       );
     } else if (eventName === events.ScriptFinished.name) {
       const provider_name = this.agreement_provider_name[event["agr_id"]];
@@ -279,8 +278,17 @@ class SummaryLogger {
           `Activity failed ${count} time(s) on provider '${provider_name}'`
         );
       this._print_total_cost();
-    } else if (eventName === events.ComputationFailed.name)
+    } else if (eventName === events.ComputationFailed.name) {
       logger.error(`Computation failed, reason: ${event["reason"]}`);
+    } else if (eventName === events.PaymentAccepted.name) {
+      logger.info(
+        `Accepted payment: ${event["amount"]} for invoice ${event["inv_id"].substr(0, 17)}`
+      );
+    } else if (eventName === events.PaymentPrepared.name) {
+      logger.debug(`Prepared payment for agreement ${event["agr_id"].substr(0, 17)}`);
+    } else if (eventName === events.PaymentQueued.name) {
+      logger.debug(`Queued payment for agreement ${event["agr_id"].substr(0, 17)}`);
+    }
   }
 }
 
@@ -300,9 +308,9 @@ function isSuperset(set: Set<any>, subset: Set<any>) {
   return true;
 }
 
-export const changeLogLevel = ((level: string) => {
-    options.level = level;
-    logger.configure(options);
-});
+export const changeLogLevel = (level: string) => {
+  options.level = level;
+  logger.configure(options);
+};
 
 export default logger;
