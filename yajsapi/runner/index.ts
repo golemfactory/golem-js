@@ -733,7 +733,7 @@ export class Engine {
       // TODO add timeout
       await bluebird.Promise.all([
         find_offers_task,
-        ...process_invoices_job,
+        process_invoices_job,
       ]);
       if (agreements_to_pay) {
         await bluebird.Promise.all([
