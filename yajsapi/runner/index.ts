@@ -726,16 +726,20 @@ export class Engine {
           for (let worker_task of [...workers]) {
             worker_task.cancel();
           }
-          // TODO add timeout
-          await bluebird.Promise.all([...workers]);
+          await bluebird.Promise.any([
+            bluebird.Promise.all([...workers]),
+            promise_timeout(10)
+          ]);
         }
       } catch (error) {
         logger.error(error);
       }
-      // TODO add timeout
-      await bluebird.Promise.all([
-        find_offers_task,
-        process_invoices_job,
+      await bluebird.Promise.any([
+        bluebird.Promise.all([
+          find_offers_task,
+          process_invoices_job,
+        ]),
+        promise_timeout(10)
       ]);
       if (agreements_to_pay.size == 0) {
         await bluebird.Promise.all([
