@@ -1,42 +1,43 @@
 {
-    "name": "yajsapi",
-    "version": "0.2.0-alpha.2",
-    "description": "NodeJS API for Next Golem",
-    "repository": "https://github.com/golemfactory/yajsapi",
-    "main": "dist/index.js",
-    "types": "dist/index.d.ts",
-    "scripts": {
-        "clean": "rm -Rf node_modules/ dist/",
-        "build": "tsc",
-        "test": "npm run build && node dist/index.js"
-    },
-    "author": "Muhammed Tanrikulu <muhammed@golem.network>",
-    "license": "LGPL-3.0",
-    "dependencies": {
-        "@rauschma/stringio": "^1.4.0",
-        "@types/bluebird": "^3.5.33",
-        "axios": "^0.19.2",
-        "bluebird": "^3.5.0",
-        "commander": "^6.2.0",
-        "dayjs": "~1.9.1",
-        "js-csp": "^1.0.1",
-        "eccrypto": "^1.1.5",
-        "minimist": "^1.2.5",
-        "rewire": "^3.0.2",
-        "secp256k1": "^4.0.2",
-        "sgx-ias-js": "~0.1.1",
-        "tmp": "^0.2.1",
-        "utf8": "~3.0.0",
-        "uuid": "^8.3.1",
-        "winston": "^3.3.3",
-        "ya-ts-client": "^0.2.0"
-    },
-    "devDependencies": {
-        "@types/eccrypto": "^1.1.2",
-        "@types/node": "14.6.2",
-        "@types/utf8": "^2.1.6",
-        "ts-node": "^9.0.0",
-        "tsconfig-paths": "^3.9.0",
-        "typescript": "^3.9.7"
-    }
+  "name": "yajsapi",
+  "version": "0.2.0-alpha.2",
+  "description": "NodeJS API for Next Golem",
+  "repository": "https://github.com/golemfactory/yajsapi",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "clean": "rimraf node_modules/ dist/ || echo 'Project is already clean'",
+    "build": "tsc",
+    "test": "npm run build && node dist/index.js"
+  },
+  "author": "Muhammed Tanrikulu <muhammed@golem.network>",
+  "license": "LGPL-3.0",
+  "dependencies": {
+    "@rauschma/stringio": "^1.4.0",
+    "@types/bluebird": "^3.5.33",
+    "axios": "^0.19.2",
+    "bluebird": "^3.5.0",
+    "commander": "^6.2.0",
+    "dayjs": "~1.9.1",
+    "eccrypto": "^1.1.5",
+    "js-csp": "^1.0.1",
+    "minimist": "^1.2.5",
+    "rewire": "^3.0.2",
+    "secp256k1": "^4.0.2",
+    "sgx-ias-js": "~0.1.1",
+    "tmp": "^0.2.1",
+    "utf8": "~3.0.0",
+    "uuid": "^8.3.1",
+    "winston": "^3.3.3",
+    "ya-ts-client": "^0.2.0"
+  },
+  "devDependencies": {
+    "@types/eccrypto": "^1.1.2",
+    "@types/node": "14.6.2",
+    "@types/utf8": "^2.1.6",
+    "rimraf": "^3.0.2",
+    "ts-node": "^9.0.0",
+    "tsconfig-paths": "^3.9.0",
+    "typescript": "^3.9.7"
+  }
 }
