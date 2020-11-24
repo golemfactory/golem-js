@@ -178,7 +178,6 @@ export class Engine {
   private _demand_decor;
   private _conf;
   private _expires;
-  private _get_offers_deadline;
   private _budget_amount;
   private _budget_allocations: Allocation[];
 
@@ -623,13 +622,11 @@ export class Engine {
                 provider_id: provider_info,
               })
             );
-            try {
-              await agreement.confirm();
-              emit(new events.AgreementConfirmed({ agr_id: agreement.id() }));
-            } catch (error) {
+            if (!await agreement.confirm()) {
               emit(new events.AgreementRejected({ agr_id: agreement.id() }));
               continue;
             }
+            emit(new events.AgreementConfirmed({ agr_id: agreement.id() }));
             new_task = loop.create_task(start_worker.bind(null, agreement));
             workers.add(new_task);
           } catch (error) {
@@ -657,14 +654,15 @@ export class Engine {
     let wait_until_done = loop.create_task(
       work_queue.wait_until_done.bind(work_queue)
     );
+    let get_offers_deadline = dayjs.utc() + this._conf.get_offers_timeout;
+    let get_done_task: any = null;
+    let services: any = [
+      find_offers_task,
+      loop.create_task(worker_starter),
+      process_invoices_job,
+      wait_until_done,
+    ];
     try {
-      let get_done_task: any = null;
-      let services: any = [
-        find_offers_task,
-        loop.create_task(worker_starter),
-        process_invoices_job,
-        wait_until_done,
-      ];
       while (services.indexOf(wait_until_done) > -1 || !done_queue.empty()) {
         const now = dayjs.utc();
         if (now > this._expires) {
@@ -672,14 +670,14 @@ export class Engine {
             `task timeout exceeded. timeout=${this._conf.timeout}`
           );
         }
-        if (now > this._get_offers_deadline && proposals_confirmed == 0) {
+        if (now > get_offers_deadline && proposals_confirmed == 0) {
           emit(
             new events.NoProposalsConfirmed({
               num_offers: offers_collected,
               timeout: this._conf.get_offers_timeout,
             })
           );
-          this._get_offers_deadline += this._conf.get_offers_timeout;
+          get_offers_deadline += this._conf.get_offers_timeout;
         }
 
         if (!get_done_task) {
@@ -693,8 +691,16 @@ export class Engine {
           promise_timeout(10),
         ]);
 
+        let done_workers = new Set([...workers].filter((worker) => !worker.isPending()));
+
         workers = new Set([...workers].filter((worker) => worker.isPending()));
         services = services.filter((service) => service.isPending());
+
+        for (let worker_task of [...done_workers]) {
+            if (worker_task.isPending()) {
+                await worker_task;
+            }
+        }
 
         if (!get_done_task) throw "";
         if (!get_done_task.isPending()) {
@@ -704,11 +710,10 @@ export class Engine {
         }
       }
       emit(new events.ComputationFinished());
-      for (let service of services) {
-        service.cancel();
-      }
     } catch (error) {
       logger.error(`fail= ${error}`);
+      // TODO: implement ComputationFinished(error)
+      emit(new events.ComputationFinished());
     } finally {
       payment_closing = true;
       find_offers_task.cancel();
@@ -717,21 +722,27 @@ export class Engine {
           for (let worker_task of [...workers]) {
             worker_task.cancel();
           }
-          // await asyncio.wait(workers, timeout=15, return_when=asyncio.ALL_COMPLETED)
+          await bluebird.Promise.any([
+            bluebird.Promise.all([...workers]),
+            promise_timeout(10)
+          ]);
         }
       } catch (error) {
         logger.error(error);
       }
-
-      // find_offers_task.cancel();
-    }
-
-    payment_closing = true;
-    if (agreements_to_pay) {
       await bluebird.Promise.any([
-        Promise.all([process_invoices_job]),
-        promise_timeout(15),
+        bluebird.Promise.all([
+          find_offers_task,
+          process_invoices_job,
+        ]),
+        promise_timeout(10)
       ]);
+      if (agreements_to_pay.size == 0) {
+        await bluebird.Promise.all([
+          Promise.all([process_invoices_job]),
+          promise_timeout(15),
+        ]);
+      }
     }
     cancellationToken.cancel();
     return;
@@ -797,7 +808,6 @@ export class Engine {
     let stack = this._stack;
     // TODO: Cleanup on exception here.
     this._expires = dayjs.utc().add(this._conf.timeout, "ms");
-    this._get_offers_deadline = dayjs.utc() + this._conf.get_offers_timeout;
     let market_client = await this._api_config.market();
     this._market_api = new rest.Market(market_client);
 
