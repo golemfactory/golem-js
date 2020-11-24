@@ -195,7 +195,6 @@ export class Engine {
   private _demand_decor;
   private _conf;
   private _expires;
-  private _get_offers_deadline;
   private _budget_amount;
   private _budget_allocations: Allocation[];
 
@@ -659,14 +658,15 @@ export class Engine {
     let wait_until_done = loop.create_task(
       work_queue.wait_until_done.bind(work_queue)
     );
+    let get_offers_deadline = dayjs.utc() + this._conf.get_offers_timeout;
+    let get_done_task: any = null;
+    let services: any = [
+      find_offers_task,
+      loop.create_task(worker_starter),
+      process_invoices_job,
+      wait_until_done,
+    ];
     try {
-      let get_done_task: any = null;
-      let services: any = [
-        find_offers_task,
-        loop.create_task(worker_starter),
-        process_invoices_job,
-        wait_until_done,
-      ];
       while (services.indexOf(wait_until_done) > -1 || !done_queue.empty()) {
         const now = dayjs.utc();
         if (now > this._expires) {
@@ -674,14 +674,14 @@ export class Engine {
             `task timeout exceeded. timeout=${this._conf.timeout}`
           );
         }
-        if (now > this._get_offers_deadline && proposals_confirmed == 0) {
+        if (now > get_offers_deadline && proposals_confirmed == 0) {
           emit(
             new events.NoProposalsConfirmed({
               num_offers: offers_collected,
               timeout: this._conf.get_offers_timeout,
             })
           );
-          this._get_offers_deadline += this._conf.get_offers_timeout;
+          get_offers_deadline += this._conf.get_offers_timeout;
         }
 
         if (!get_done_task) {
@@ -806,7 +806,6 @@ export class Engine {
     let stack = this._stack;
     // TODO: Cleanup on exception here.
     this._expires = dayjs.utc().add(this._conf.timeout, "ms");
-    this._get_offers_deadline = dayjs.utc() + this._conf.get_offers_timeout;
     let market_client = await this._api_config.market();
     this._market_api = new rest.Market(market_client);
 
