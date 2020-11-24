@@ -46,9 +46,10 @@ export class Agreement {
     return new AgreementDetails(data);
   }
 
-  async confirm() {
+  async confirm(): Promise<boolean> {
     await this._api.confirmAgreement(this._id);
-    await this._api.waitForApproval(this._id, 90, 100);
+    let { data: msg } = await this._api.waitForApproval(this._id, 90, 100);
+    return msg.trim().toLowerCase() == "approved";
   }
 }
 

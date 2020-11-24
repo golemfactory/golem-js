@@ -625,8 +625,13 @@ export class Engine {
               })
             );
             try {
-              await agreement.confirm();
-              emit(new events.AgreementConfirmed({ agr_id: agreement.id() }));
+              let conf_res = await agreement.confirm();
+              if (conf_res) {
+                emit(new events.AgreementConfirmed({ agr_id: agreement.id() }));
+              } else {
+                emit(new events.AgreementRejected({ agr_id: agreement.id() }));
+                continue;
+              }
             } catch (error) {
               emit(new events.AgreementRejected({ agr_id: agreement.id() }));
               continue;
