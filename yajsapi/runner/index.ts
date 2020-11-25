@@ -695,16 +695,8 @@ export class Engine {
           promise_timeout(10),
         ]);
 
-        let done_workers = new Set([...workers].filter((worker) => !worker.isPending()));
-
         workers = new Set([...workers].filter((worker) => worker.isPending()));
         services = services.filter((service) => service.isPending());
-
-        for (let worker_task of [...done_workers]) {
-            if (worker_task.isPending()) {
-                await worker_task;
-            }
-        }
 
         if (!get_done_task) throw "";
         if (!get_done_task.isPending()) {
@@ -742,7 +734,7 @@ export class Engine {
         promise_timeout(10)
       ]);
       if (agreements_to_pay.size > 0) {
-        await bluebird.Promise.all([
+        await bluebird.Promise.any([
           Promise.all([process_invoices_job]),
           promise_timeout(15),
         ]);
