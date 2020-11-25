@@ -212,7 +212,6 @@ export class Engine {
     let cancellationToken = this._cancellation_token;
 
     this._worker_cancellation_token = new CancellationToken();
-    let workerCancellationToken = this._worker_cancellation_token;
 
     function cancel(e) {
       if (cancellationToken && !cancellationToken.cancelled) {
