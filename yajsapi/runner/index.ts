@@ -725,10 +725,12 @@ export class Engine {
           for (let worker_task of [...workers]) {
             worker_task.cancel();
           }
+          emit(new events.CheckingPayments());
           await bluebird.Promise.any([
             bluebird.Promise.all([...workers]),
             promise_timeout(10),
           ]);
+          emit(new events.CheckingPayments());
         }
       } catch (error) {
         logger.error(error);
@@ -737,11 +739,13 @@ export class Engine {
         bluebird.Promise.all([find_offers_task, process_invoices_job]),
         promise_timeout(10),
       ]);
+      emit(new events.CheckingPayments());
       if (agreements_to_pay.size > 0) {
         await bluebird.Promise.any([
           Promise.all([process_invoices_job]),
           promise_timeout(15),
         ]);
+        emit(new events.CheckingPayments());
       }
     }
     cancellationToken.cancel();

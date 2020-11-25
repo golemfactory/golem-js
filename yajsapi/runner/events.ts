@@ -163,6 +163,9 @@ export class PaymentQueued extends AgreementEvent {
   }
 }
 
+export class CheckingPayments extends AgreementEvent {
+}
+
 export class InvoiceReceived extends AgreementEvent {
   inv_id?: string;
   amount?: string;
