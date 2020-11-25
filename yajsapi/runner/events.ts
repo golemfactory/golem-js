@@ -141,6 +141,14 @@ export class PaymentAccepted extends AgreementEvent {
   }
 }
 
+export class PaymentFailed extends AgreementEvent {
+  // TODO add exc_info
+  constructor({ agr_id }) {
+    super();
+    if (agr_id) this.agr_id = agr_id;
+  }
+}
+
 export class PaymentPrepared extends AgreementEvent {
   constructor({ agr_id }) {
     super();
