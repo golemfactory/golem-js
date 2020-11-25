@@ -306,15 +306,19 @@ export class Engine {
             })
           );
           const allocation = self.allocation_for_invoice(invoice);
-          agreements_to_pay.delete(invoice.agreement_id);
-          await invoice.accept(invoice.amount, allocation);
-          emit(
-            new events.PaymentAccepted({
-              agr_id: invoice.agreement_id,
-              inv_id: invoice.invoiceId,
-              amount: invoice.amount,
-            })
-          );
+          try {
+            await invoice.accept(invoice.amount, allocation);
+            agreements_to_pay.delete(invoice.agreement_id);
+            emit(
+              new events.PaymentAccepted({
+                agr_id: invoice.agreement_id,
+                inv_id: invoice.invoiceId,
+                amount: invoice.amount,
+              })
+            );
+          } catch (e) {
+            emit(new events.PaymentFailed({ agr_id: invoice.agreement_id }));
+          }
         } else {
           invoices[invoice.agreementId] = invoice;
         }

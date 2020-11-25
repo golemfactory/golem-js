@@ -24,6 +24,7 @@ const event_type_to_string = {
   [events.AgreementRejected.name]: "Agreement rejected by provider",
   [events.PaymentAccepted.name]: "Payment accepted", // by who?
   [events.PaymentPrepared.name]: "Payment prepared",
+  [events.PaymentFailed.name]: "Payment failed",
   [events.PaymentQueued.name]: "Payment queued",
   [events.InvoiceReceived.name]: "Invoice received", // by who?
   [events.WorkerStarted.name]: "Worker started for agreement",
@@ -283,6 +284,11 @@ class SummaryLogger {
     } else if (eventName === events.PaymentAccepted.name) {
       logger.info(
         `Accepted payment: ${event["amount"]} for invoice ${event["inv_id"].substr(0, 17)}`
+      );
+    } else if (eventName === events.PaymentFailed.name) {
+      const provider_name = this.agreement_provider_name[event["agr_id"]];
+      logger.error(
+        `Payment for provider ${$provider_name} failed.`
       );
     } else if (eventName === events.PaymentPrepared.name) {
       logger.debug(`Prepared payment for agreement ${event["agr_id"].substr(0, 17)}`);
