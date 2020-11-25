@@ -665,9 +665,10 @@ export class Engine {
     );
     let get_offers_deadline = dayjs.utc() + this._conf.get_offers_timeout;
     let get_done_task: any = null;
+    let worker_starter_task = loop.create_task(worker_starter);
     let services: any = [
       find_offers_task,
-      loop.create_task(worker_starter),
+      worker_starter_task,
       process_invoices_job,
       wait_until_done,
     ];
@@ -720,6 +721,7 @@ export class Engine {
     } finally {
       payment_closing = true;
       find_offers_task.cancel();
+      worker_starter_task.cancel();
       if (!self._worker_cancellation_token.cancelled)
         self._worker_cancellation_token.cancel();
       try {
