@@ -249,8 +249,7 @@ class SummaryLogger {
     } else if (eventName === events.CheckingPayments.name) {
       const computed = JSON.stringify(this.provider_tasks);
       const invoiced = JSON.stringify(this.provider_cost);
-      logger.debug(`Tasks computed: ${computed}`);
-      logger.debug(`Invoices received: ${invoiced}`);
+      logger.debug(`Tasks computed: ${computed}, invoices received: ${invoiced}`);
     } else if (eventName === events.WorkerFinished.name) {
       if (event["exception"] === null) return;
       const [exc_type, exc, tb] = event["exception"];

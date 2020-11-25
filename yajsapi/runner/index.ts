@@ -306,6 +306,7 @@ export class Engine {
               amount: invoice.amount,
             })
           );
+          emit(new events.CheckingPayments());
           const allocation = self.allocation_for_invoice(invoice);
           try {
             await invoice.accept(invoice.amount, allocation);
@@ -524,6 +525,7 @@ export class Engine {
                     cmds: cc.commands(),
                   })
                 );
+                emit(new events.CheckingPayments());
                 try {
                   for await (let step of remote) {
                     batch.output.push(step);
