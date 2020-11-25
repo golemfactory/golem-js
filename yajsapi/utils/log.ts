@@ -288,7 +288,7 @@ class SummaryLogger {
     } else if (eventName === events.PaymentFailed.name) {
       const provider_name = this.agreement_provider_name[event["agr_id"]];
       logger.error(
-        `Payment for provider ${$provider_name} failed.`
+        `Payment for provider ${provider_name} failed.`
       );
     } else if (eventName === events.PaymentPrepared.name) {
       logger.debug(`Prepared payment for agreement ${event["agr_id"].substr(0, 17)}`);
