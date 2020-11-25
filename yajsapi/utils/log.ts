@@ -249,6 +249,7 @@ class SummaryLogger {
       if (event["exception"] === null) return;
       const [exc_type, exc, tb] = event["exception"];
       const provider_name = this.agreement_provider_name[event["agr_id"]];
+      if (!this.provider_failures[provider_name]) this.provider_failures[provider_name] = 0;
       this.provider_failures[provider_name] += 1;
       logger.warn(
         `Activity failed on provider '${provider_name}', reason: ${exc}`
