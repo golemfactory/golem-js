@@ -187,6 +187,7 @@ export class Engine {
 
   private _wrapped_emitter;
   private _cancellation_token: CancellationToken;
+  private _worker_cancellation_token: CancellationToken;
 
   constructor(
     _demand_decor: _common.DemandDecor,
@@ -209,6 +210,8 @@ export class Engine {
 
     this._cancellation_token = new CancellationToken();
     let cancellationToken = this._cancellation_token;
+
+    this._worker_cancellation_token = new CancellationToken();
 
     function cancel(e) {
       if (cancellationToken && !cancellationToken.cancelled) {
@@ -303,6 +306,7 @@ export class Engine {
               amount: invoice.amount,
             })
           );
+          emit(new events.CheckingPayments());
           const allocation = self.allocation_for_invoice(invoice);
           try {
             await invoice.accept(invoice.amount, allocation);
@@ -361,7 +365,7 @@ export class Engine {
         emit(new events.SubscriptionCreated({ sub_id: subscription.id() }));
         let _proposals;
         try {
-          _proposals = subscription.events(cancellationToken);
+          _proposals = subscription.events(self._worker_cancellation_token);
         } catch (error) {
           emit(
             new events.CollectFailed({
@@ -521,6 +525,7 @@ export class Engine {
                     cmds: cc.commands(),
                   })
                 );
+                emit(new events.CheckingPayments());
                 try {
                   for await (let step of remote) {
                     batch.output.push(step);
@@ -537,7 +542,7 @@ export class Engine {
                   }
                 } catch (error) {
                   // assert len(err.args) >= 2
-                  const { name: cmd_idx , description } = error;
+                  const { name: cmd_idx, description } = error;
                   //throws new CommandExecutionError from activity#355
                   emit(
                     new events.CommandExecuted({
@@ -570,7 +575,7 @@ export class Engine {
                 });
               } catch (error) {
                 try {
-                  await command_generator.throw(error)
+                  await command_generator.throw(error);
                 } catch (error) {
                   emit(
                     new events.WorkerFinished({
@@ -599,7 +604,7 @@ export class Engine {
 
     async function worker_starter(): Promise<void> {
       while (true) {
-        if (cancellationToken.cancelled) break;
+        if (self._worker_cancellation_token.cancelled) break;
         await sleep(2);
         if (
           Object.keys(offer_buffer).length > 0 &&
@@ -626,7 +631,7 @@ export class Engine {
                 provider_id: provider_info,
               })
             );
-            if (!await agreement.confirm()) {
+            if (!(await agreement.confirm())) {
               emit(new events.AgreementRejected({ agr_id: agreement.id() }));
               continue;
             }
@@ -660,9 +665,10 @@ export class Engine {
     );
     let get_offers_deadline = dayjs.utc() + this._conf.get_offers_timeout;
     let get_done_task: any = null;
+    let worker_starter_task = loop.create_task(worker_starter);
     let services: any = [
       find_offers_task,
-      loop.create_task(worker_starter),
+      worker_starter_task,
       process_invoices_job,
       wait_until_done,
     ];
@@ -708,36 +714,42 @@ export class Engine {
       emit(new events.ComputationFinished());
     } catch (error) {
       logger.error(`fail= ${error}`);
+      if (!self._worker_cancellation_token.cancelled)
+        self._worker_cancellation_token.cancel();
       // TODO: implement ComputationFinished(error)
       emit(new events.ComputationFinished());
     } finally {
       payment_closing = true;
       find_offers_task.cancel();
+      worker_starter_task.cancel();
+      if (!self._worker_cancellation_token.cancelled)
+        self._worker_cancellation_token.cancel();
       try {
         if (workers) {
           for (let worker_task of [...workers]) {
             worker_task.cancel();
           }
+          emit(new events.CheckingPayments());
           await bluebird.Promise.any([
             bluebird.Promise.all([...workers]),
-            promise_timeout(10)
+            promise_timeout(10),
           ]);
+          emit(new events.CheckingPayments());
         }
       } catch (error) {
         logger.error(error);
       }
       await bluebird.Promise.any([
-        bluebird.Promise.all([
-          find_offers_task,
-          process_invoices_job,
-        ]),
-        promise_timeout(10)
+        bluebird.Promise.all([find_offers_task, process_invoices_job]),
+        promise_timeout(10),
       ]);
+      emit(new events.CheckingPayments());
       if (agreements_to_pay.size > 0) {
         await bluebird.Promise.any([
           Promise.all([process_invoices_job]),
           promise_timeout(15),
         ]);
+        emit(new events.CheckingPayments());
       }
     }
     cancellationToken.cancel();
