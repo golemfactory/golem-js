@@ -743,7 +743,7 @@ export class Engine {
         ]),
         promise_timeout(10)
       ]);
-      if (agreements_to_pay.size == 0) {
+      if (agreements_to_pay.size > 0) {
         await bluebird.Promise.all([
           Promise.all([process_invoices_job]),
           promise_timeout(15),
