@@ -721,15 +721,17 @@ export class Engine {
 
       // find_offers_task.cancel();
     }
-
     payment_closing = true;
     if (agreements_to_pay) {
+      emit(new events.CheckingPayments());
       await bluebird.Promise.any([
-        Promise.all([process_invoices_job]),
+        process_invoices_job,
         promise_timeout(15),
       ]);
     }
+    emit(new events.CheckingPayments());
     cancellationToken.cancel();
+    emit(new events.CheckingPayments());
     return;
   }
 

@@ -25,6 +25,7 @@ const event_type_to_string = {
   [events.PaymentAccepted.name]: "Payment accepted", // by who?
   [events.PaymentPrepared.name]: "Payment prepared",
   [events.PaymentQueued.name]: "Payment queued",
+  [events.CheckingPayments.name]: "Checking payments",
   [events.InvoiceReceived.name]: "Invoice received", // by who?
   [events.WorkerStarted.name]: "Worker started for agreement",
   [events.ActivityCreated.name]: "Activity created on provider",
@@ -245,6 +246,11 @@ class SummaryLogger {
       cost += parseFloat(event["amount"]);
       this.provider_cost[provider_name] = cost;
       this._print_total_cost();
+    } else if (eventName === events.CheckingPayments.name) {
+      const computed = JSON.stringify(this.provider_tasks);
+      const invoiced = JSON.stringify(this.provider_cost);
+      logger.debug(`Tasks computed: ${computed}`);
+      logger.debug(`Invoices received: ${invoiced}`);
     } else if (eventName === events.WorkerFinished.name) {
       if (event["exception"] === null) return;
       const [exc_type, exc, tb] = event["exception"];
