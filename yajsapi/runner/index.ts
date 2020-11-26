@@ -752,6 +752,8 @@ export class Engine {
         emit(new events.CheckingPayments());
       }
     }
+    emit(new events.PaymentsFinished());
+    await sleep(2);
     cancellationToken.cancel();
     return;
   }
