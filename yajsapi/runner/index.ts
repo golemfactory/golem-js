@@ -752,8 +752,6 @@ export class Engine {
         emit(new events.CheckingPayments());
       }
     }
-    emit(new events.PaymentsFinished());
-    await promise_timeout(1);
     cancellationToken.cancel();
     return;
   }

@@ -137,6 +137,7 @@ class SummaryLogger {
   }
 
   _print_total_cost(): void {
+    if (options.level != "debug") return;
     const results = [...this.confirmed_agreements].map(
       (agr_id) => {
         const name = this.agreement_provider_name[agr_id];
@@ -150,7 +151,6 @@ class SummaryLogger {
       }
     );
     const total_cost = Object.values(this.provider_cost).reduce((item, acc) => (acc + item), 0);
-    // TODO: print table using logger
     console.table(results);
     console.table([{ 'Total Cost:': total_cost }]);
   }
