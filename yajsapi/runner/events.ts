@@ -20,6 +20,8 @@ export class ComputationFailed extends YaEvent {
   reason?: string;
 }
 
+export class PaymentsFinished extends YaEvent {}
+
 export class SubscriptionCreated extends YaEvent {
   sub_id?: string;
   constructor({ sub_id }) {
@@ -161,6 +163,9 @@ export class PaymentQueued extends AgreementEvent {
     super();
     if (agr_id) this.agr_id = agr_id;
   }
+}
+
+export class CheckingPayments extends AgreementEvent {
 }
 
 export class InvoiceReceived extends AgreementEvent {

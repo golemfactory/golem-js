@@ -26,6 +26,8 @@ const event_type_to_string = {
   [events.PaymentPrepared.name]: "Payment prepared",
   [events.PaymentFailed.name]: "Payment failed",
   [events.PaymentQueued.name]: "Payment queued",
+  [events.PaymentsFinished.name]: "Finished waiting for payments",
+  [events.CheckingPayments.name]: "Checking payments",
   [events.InvoiceReceived.name]: "Invoice received", // by who?
   [events.WorkerStarted.name]: "Worker started for agreement",
   [events.ActivityCreated.name]: "Activity created on provider",
@@ -135,15 +137,28 @@ class SummaryLogger {
   }
 
   _print_total_cost(): void {
-    if (!this.finished) return;
     const provider_names = new Set(Object.keys(this.provider_tasks));
-    if (isSuperset(new Set(Object.keys(this.provider_cost)), provider_names)) {
-      const total_cost = Object.values(this.provider_cost).reduce(
-        (item, acc) => (acc += item),
-        0
-      );
-      logger.info(`Total cost: ${total_cost}`);
+    const total_cost = Object.values(this.provider_cost).reduce((acc, item) => (acc + item), 0);
+    if (options.level != "debug") {
+      if (this.finished && isSuperset(new Set(Object.keys(this.provider_cost)), provider_names)) {
+        logger.info(`Total Cost: ${total_cost}`)
+      }
+      return;
     }
+    const results = [...this.confirmed_agreements].map(
+      (agr_id) => {
+        const name = this.agreement_provider_name[agr_id];
+        const tasks = this.provider_tasks[name];
+        const cost = this.provider_cost[name] || "0 (no invoices?)";
+        return {
+          'Provider Name': name,
+          'Tasks Computed': tasks ? tasks.length : 0,
+          'Total Cost': cost,
+        };
+      }
+    );
+    console.table(results);
+    console.table([{ 'Total Cost:': total_cost }]);
   }
 
   log(event: events.YaEvent): void {
@@ -244,6 +259,12 @@ class SummaryLogger {
       let cost = this.provider_cost[provider_name] || 0;
       cost += parseFloat(event["amount"]);
       this.provider_cost[provider_name] = cost;
+      logger.debug(
+        `Received an invoice from ${provider_name}. Amount: ${
+          event["amount"]
+        }; (so far: ${cost} from this provider).`
+      );
+    } else if (eventName === events.CheckingPayments.name) {
       this._print_total_cost();
     } else if (eventName === events.WorkerFinished.name) {
       if (event["exception"] === null) return;
@@ -279,6 +300,8 @@ class SummaryLogger {
         logger.info(
           `Activity failed ${count} time(s) on provider '${provider_name}'`
         );
+    } else if (eventName === events.PaymentsFinished.name) {
+      logger.info(`Finished waiting for payments. Summary:`);
       this._print_total_cost();
     } else if (eventName === events.ComputationFailed.name) {
       logger.error(`Computation failed, reason: ${event["reason"]}`);

@@ -306,6 +306,7 @@ export class Engine {
               amount: invoice.amount,
             })
           );
+          emit(new events.CheckingPayments());
           const allocation = self.allocation_for_invoice(invoice);
           try {
             await invoice.accept(invoice.amount, allocation);
@@ -524,6 +525,7 @@ export class Engine {
                     cmds: cc.commands(),
                   })
                 );
+                emit(new events.CheckingPayments());
                 try {
                   for await (let step of remote) {
                     batch.output.push(step);
@@ -663,9 +665,10 @@ export class Engine {
     );
     let get_offers_deadline = dayjs.utc() + this._conf.get_offers_timeout;
     let get_done_task: any = null;
+    let worker_starter_task = loop.create_task(worker_starter);
     let services: any = [
       find_offers_task,
-      loop.create_task(worker_starter),
+      worker_starter_task,
       process_invoices_job,
       wait_until_done,
     ];
@@ -718,6 +721,7 @@ export class Engine {
     } finally {
       payment_closing = true;
       find_offers_task.cancel();
+      worker_starter_task.cancel();
       if (!self._worker_cancellation_token.cancelled)
         self._worker_cancellation_token.cancel();
       try {
@@ -725,10 +729,12 @@ export class Engine {
           for (let worker_task of [...workers]) {
             worker_task.cancel();
           }
+          emit(new events.CheckingPayments());
           await bluebird.Promise.any([
             bluebird.Promise.all([...workers]),
             promise_timeout(10),
           ]);
+          emit(new events.CheckingPayments());
         }
       } catch (error) {
         logger.error(error);
@@ -737,11 +743,13 @@ export class Engine {
         bluebird.Promise.all([find_offers_task, process_invoices_job]),
         promise_timeout(10),
       ]);
+      emit(new events.CheckingPayments());
       if (agreements_to_pay.size > 0) {
         await bluebird.Promise.any([
           Promise.all([process_invoices_job]),
           promise_timeout(15),
         ]);
+        emit(new events.CheckingPayments());
       }
     }
     cancellationToken.cancel();
