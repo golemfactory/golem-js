@@ -310,16 +310,16 @@ export class Engine {
           const allocation = self.allocation_for_invoice(invoice);
           try {
             await invoice.accept(invoice.amount, allocation);
-            agreements_to_pay.delete(invoice.agreement_id);
+            agreements_to_pay.delete(invoice.agreementId);
             emit(
               new events.PaymentAccepted({
-                agr_id: invoice.agreement_id,
+                agr_id: invoice.agreementId,
                 inv_id: invoice.invoiceId,
                 amount: invoice.amount,
               })
             );
           } catch (e) {
-            emit(new events.PaymentFailed({ agr_id: invoice.agreement_id }));
+            emit(new events.PaymentFailed({ agr_id: invoice.agreementId }));
           }
         } else {
           invoices[invoice.agreementId] = invoice;
@@ -746,12 +746,14 @@ export class Engine {
       emit(new events.CheckingPayments());
       if (agreements_to_pay.size > 0) {
         await bluebird.Promise.any([
-          Promise.all([process_invoices_job]),
+          process_invoices_job,
           promise_timeout(15),
         ]);
         emit(new events.CheckingPayments());
       }
     }
+    emit(new events.PaymentsFinished());
+    await sleep(2);
     cancellationToken.cancel();
     return;
   }
