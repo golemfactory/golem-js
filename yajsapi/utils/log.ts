@@ -150,7 +150,7 @@ class SummaryLogger {
         };
       }
     );
-    const total_cost = Object.values(this.provider_cost).reduce((item, acc) => (acc + item), 0);
+    const total_cost = Object.values(this.provider_cost).reduce((acc, item) => (acc + item), 0);
     console.table(results);
     console.table([{ 'Total Cost:': total_cost }]);
   }
