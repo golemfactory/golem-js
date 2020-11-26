@@ -136,15 +136,8 @@ class SummaryLogger {
     this.time_waiting_for_proposals = dayjs.duration(0);
   }
 
-  _print_total_cost(): void {
+  _print_cost(): void {
     const provider_names = new Set(Object.keys(this.provider_tasks));
-    const total_cost = Object.values(this.provider_cost).reduce((acc, item) => (acc + item), 0);
-    if (options.level != "debug") {
-      if (this.finished && isSuperset(new Set(Object.keys(this.provider_cost)), provider_names)) {
-        logger.info(`Total Cost: ${total_cost}`)
-      }
-      return;
-    }
     const results = [...this.confirmed_agreements].map(
       (agr_id) => {
         const name = this.agreement_provider_name[agr_id];
@@ -153,12 +146,11 @@ class SummaryLogger {
         return {
           'Provider Name': name,
           'Tasks Computed': tasks ? tasks.length : 0,
-          'Total Cost': cost,
+          'Cost': cost,
         };
       }
     );
     console.table(results);
-    console.table([{ 'Total Cost:': total_cost }]);
   }
 
   log(event: events.YaEvent): void {
@@ -265,7 +257,9 @@ class SummaryLogger {
         }; (so far: ${cost} from this provider).`
       );
     } else if (eventName === events.CheckingPayments.name) {
-      this._print_total_cost();
+      if (options.level == "debug") {
+        this._print_cost();
+      }
     } else if (eventName === events.WorkerFinished.name) {
       if (event["exception"] === null) return;
       const [exc_type, exc, tb] = event["exception"];
@@ -302,7 +296,9 @@ class SummaryLogger {
         );
     } else if (eventName === events.PaymentsFinished.name) {
       logger.info(`Finished waiting for payments. Summary:`);
-      this._print_total_cost();
+      this._print_cost();
+      const total_cost = Object.values(this.provider_cost).reduce((acc, item) => (acc + item), 0);
+      logger.info(`Total Cost: ${total_cost}`)
     } else if (eventName === events.ComputationFailed.name) {
       logger.error(`Computation failed, reason: ${event["reason"]}`);
     } else if (eventName === events.PaymentAccepted.name) {
