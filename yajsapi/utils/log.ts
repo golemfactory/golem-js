@@ -137,8 +137,9 @@ class SummaryLogger {
   }
 
   _print_total_cost(): void {
+    const provider_names = new Set(Object.keys(this.provider_tasks));
     const total_cost = Object.values(this.provider_cost).reduce((acc, item) => (acc + item), 0);
-    if (options.level != "debug") {
+    if (options.level != "debug" && isSuperset(new Set(Object.keys(this.provider_cost)), provider_names)) {
       logger.info(`Total Cost: ${total_cost}`)
       return;
     }
