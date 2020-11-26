@@ -20,6 +20,8 @@ export class ComputationFailed extends YaEvent {
   reason?: string;
 }
 
+export class PaymentsFinished extends YaEvent {}
+
 export class SubscriptionCreated extends YaEvent {
   sub_id?: string;
   constructor({ sub_id }) {
