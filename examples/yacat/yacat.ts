@@ -73,7 +73,7 @@ async function main(args) {
       let limit = skip + step;
       // Commands to be run on the provider
       const commands = `touch /golem/work/hashcat.potfile; 
-        hashcat -a 3 -m 400 /golem/work/in.hash --skip ${skip} --limit ${limit} ${args.mask} -o /golem/work/hashcat.potfile`;
+        hashcat -a 3 -m 400 /golem/work/in.hash --skip=${skip} --limit=${limit} ${args.mask} -o /golem/work/hashcat.potfile --self-test-disable`;
       ctx.run("/bin/sh", ["-c", commands]);
 
       let output_file = `hashcat_${skip}.potfile`;
