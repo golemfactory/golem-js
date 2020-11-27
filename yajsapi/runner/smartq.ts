@@ -93,7 +93,7 @@ export class SmartQueue<Item> {
           yield handle;
         }
       }
-      await await promisify(csp.takeAsync)(this.__new_items);
+      await promisify(csp.takeAsync)(this.__new_items);
     }
     // throw new Error(); //StopAsyncIteration
   }

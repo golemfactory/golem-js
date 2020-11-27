@@ -267,7 +267,6 @@ export class Payment {
             yield invoice;
           }
         }
-        if (items.length > 0) break;
       }
       return;
     }

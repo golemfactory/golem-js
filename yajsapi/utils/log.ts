@@ -24,7 +24,10 @@ const event_type_to_string = {
   [events.AgreementRejected.name]: "Agreement rejected by provider",
   [events.PaymentAccepted.name]: "Payment accepted", // by who?
   [events.PaymentPrepared.name]: "Payment prepared",
+  [events.PaymentFailed.name]: "Payment failed",
   [events.PaymentQueued.name]: "Payment queued",
+  [events.PaymentsFinished.name]: "Finished waiting for payments",
+  [events.CheckingPayments.name]: "Checking payments",
   [events.InvoiceReceived.name]: "Invoice received", // by who?
   [events.WorkerStarted.name]: "Worker started for agreement",
   [events.ActivityCreated.name]: "Activity created on provider",
@@ -133,16 +136,21 @@ class SummaryLogger {
     this.time_waiting_for_proposals = dayjs.duration(0);
   }
 
-  _print_total_cost(): void {
-    if (!this.finished) return;
+  _print_cost(): void {
     const provider_names = new Set(Object.keys(this.provider_tasks));
-    if (isSuperset(new Set(Object.keys(this.provider_cost)), provider_names)) {
-      const total_cost = Object.values(this.provider_cost).reduce(
-        (item, acc) => (acc += item),
-        0
-      );
-      logger.info(`Total cost: ${total_cost}`);
-    }
+    const results = [...this.confirmed_agreements].map(
+      (agr_id) => {
+        const name = this.agreement_provider_name[agr_id];
+        const tasks = this.provider_tasks[name];
+        const cost = this.provider_cost[name] || "0 (no invoices?)";
+        return {
+          'Provider Name': name,
+          'Tasks Computed': tasks ? tasks.length : 0,
+          'Cost': cost,
+        };
+      }
+    );
+    console.table(results);
   }
 
   log(event: events.YaEvent): void {
@@ -243,11 +251,20 @@ class SummaryLogger {
       let cost = this.provider_cost[provider_name] || 0;
       cost += parseFloat(event["amount"]);
       this.provider_cost[provider_name] = cost;
-      this._print_total_cost();
+      logger.debug(
+        `Received an invoice from ${provider_name}. Amount: ${
+          event["amount"]
+        }; (so far: ${cost} from this provider).`
+      );
+    } else if (eventName === events.CheckingPayments.name) {
+      if (options.level == "debug") {
+        this._print_cost();
+      }
     } else if (eventName === events.WorkerFinished.name) {
       if (event["exception"] === null) return;
       const [exc_type, exc, tb] = event["exception"];
       const provider_name = this.agreement_provider_name[event["agr_id"]];
+      if (!this.provider_failures[provider_name]) this.provider_failures[provider_name] = 0;
       this.provider_failures[provider_name] += 1;
       logger.warn(
         `Activity failed on provider '${provider_name}', reason: ${exc}`
@@ -277,12 +294,21 @@ class SummaryLogger {
         logger.info(
           `Activity failed ${count} time(s) on provider '${provider_name}'`
         );
-      this._print_total_cost();
+    } else if (eventName === events.PaymentsFinished.name) {
+      logger.info(`Finished waiting for payments. Summary:`);
+      this._print_cost();
+      const total_cost = Object.values(this.provider_cost).reduce((acc, item) => (acc + item), 0);
+      logger.info(`Total Cost: ${total_cost}`)
     } else if (eventName === events.ComputationFailed.name) {
       logger.error(`Computation failed, reason: ${event["reason"]}`);
     } else if (eventName === events.PaymentAccepted.name) {
       logger.info(
         `Accepted payment: ${event["amount"]} for invoice ${event["inv_id"].substr(0, 17)}`
+      );
+    } else if (eventName === events.PaymentFailed.name) {
+      const provider_name = this.agreement_provider_name[event["agr_id"]];
+      logger.error(
+        `Payment for provider ${provider_name} failed.`
       );
     } else if (eventName === events.PaymentPrepared.name) {
       logger.debug(`Prepared payment for agreement ${event["agr_id"].substr(0, 17)}`);
