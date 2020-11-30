@@ -608,7 +608,8 @@ export class Engine {
         await sleep(2);
         if (
           Object.keys(offer_buffer).length > 0 &&
-          workers.size < self._conf.max_workers
+          workers.size < self._conf.max_workers &&
+          work_queue.has_unassigned_tasks()
         ) {
           let _offer_list = Object.entries(offer_buffer);
           let _sample =
