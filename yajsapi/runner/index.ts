@@ -714,7 +714,11 @@ export class Engine {
       }
       emit(new events.ComputationFinished());
     } catch (error) {
-      logger.error(`fail= ${error}`);
+      if (error === undefined) { // this needs more research
+        logger.error("Computation interrupted by the user.");
+      } else {
+        logger.error(`fail= ${error}`);
+      }
       if (!self._worker_cancellation_token.cancelled)
         self._worker_cancellation_token.cancel();
       // TODO: implement ComputationFinished(error)
