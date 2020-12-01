@@ -143,7 +143,7 @@ export class SmartQueue<Item> {
     }
   }
 
-  has_unassigned_tasks(): boolean {
+  has_unassigned_items(): boolean {
     return !!(this._items && this._items.length) || !!this._rescheduled_items.size
   }
 }
