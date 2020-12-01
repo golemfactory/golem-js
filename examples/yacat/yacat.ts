@@ -27,12 +27,13 @@ function write_keyspace_check_script(mask) {
 function read_keyspace() {
   const filePath = path.join(__dirname, "keyspace.txt");
   const data = fs.readFileSync(filePath, { encoding: "utf8", flag: "r" });
-  return data;
+  return parseInt(data);
 }
 
 function read_password(ranges) {
   for (let r of ranges) {
     const filePath = path.join(__dirname, `hashcat_${r}.potfile`);
+    if (!fs.existsSync(filePath)) continue;
     const line = fs.readFileSync(filePath, {
       encoding: "utf8",
       flag: "r",
@@ -53,34 +54,34 @@ async function main(args) {
 
   async function* worker_check_keyspace(ctx: WorkContext, tasks) {
     for await (let task of tasks) {
-      let keyspace_sh_filename = "keyspace.sh";
+      const keyspace_sh_filename = "keyspace.sh";
       ctx.send_file(
-        path.join(__dirname, `./${keyspace_sh_filename}`),
+        path.join(__dirname, keyspace_sh_filename),
         "/golem/work/keyspace.sh"
       );
-      ctx.run("/bin/sh", "/golem/work/keyspace.sh");
+      ctx.run("/bin/sh", ["/golem/work/keyspace.sh"]);
       const output_file = path.join(__dirname, "keyspace.txt");
       ctx.download_file("/golem/work/keyspace.txt", output_file);
       yield ctx.commit();
-      task.accept_result();
+      task.accept_task();
     }
   }
 
   async function* worker_find_password(ctx: WorkContext, tasks) {
-    ctx.send_file(path.join(__dirname, "./in.hash"), "/golem/work/in.hash");
+    ctx.send_file(path.join(__dirname, "in.hash"), "/golem/work/in.hash");
     for await (let task of tasks) {
       let skip = task.data();
       let limit = skip + step;
       // Commands to be run on the provider
-      const commands = `touch /golem/work/hashcat.potfile; 
-        hashcat -a 3 -m 400 /golem/work/in.hash --skip=${skip} --limit=${limit} ${args.mask} -o /golem/work/hashcat.potfile --self-test-disable`;
+      const commands = `touch /golem/work/hashcat_${skip}.potfile; 
+        hashcat -a 3 -m 400 /golem/work/in.hash ${args.mask} --skip=${skip} --limit=${limit} --self-test-disable -o /golem/work/hashcat_${skip}.potfile || true`;
       ctx.run("/bin/sh", ["-c", commands]);
 
       let output_file = `hashcat_${skip}.potfile`;
-      ctx.download_file("/golem/work/hashcat.potfile", output_file);
+      ctx.download_file(`/golem/work/hashcat_${skip}.potfile`, output_file);
 
       yield ctx.commit();
-      task.accept_result(output_file);
+      task.accept_task(output_file);
     }
   }
 
@@ -93,7 +94,7 @@ async function main(args) {
   await asyncWith(
     await new Engine(
       _package,
-      6,
+      args.number_of_providers,
       timeout, //5 min to 30 min
       "10.0",
       undefined,
@@ -103,16 +104,20 @@ async function main(args) {
       }
     ),
     async (engine: Engine): Promise<void> => {
+      let keyspace_computed = false;
       // This is not a typical use of executor.submit as there is only one task, with no data:
       for await (let task of engine.map(worker_check_keyspace, [
         new Task(null as any),
-      ]))
-        null;
+      ])) {
+        keyspace_computed = true;
+      }
+      // Assume the errors have been already reported and we may return quietly.
+      if (!keyspace_computed) return;
 
       const keyspace = read_keyspace();
-      const ranges = range(0, parseInt(keyspace), step);
 
-      step = parseInt(keyspace) / args.number_of_providers + 1;
+      step = keyspace / args.number_of_providers + 1;
+      const ranges = range(0, keyspace, parseInt(step));
 
       for await (let task of engine.map(
         worker_find_password,
