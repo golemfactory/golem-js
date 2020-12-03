@@ -212,10 +212,14 @@ export class Engine {
     let cancellationToken = this._cancellation_token;
 
     this._worker_cancellation_token = new CancellationToken();
+    let workerCancellationToken = this._worker_cancellation_token;
 
-    function cancel(e) {
+    function cancel(event) {
       if (cancellationToken && !cancellationToken.cancelled) {
         cancellationToken.cancel();
+      }
+      if (workerCancellationToken && !workerCancellationToken.cancelled) {
+        workerCancellationToken.cancel();
       }
       SIGNALS.forEach((event) => {
         process.off(event, cancel);
@@ -267,7 +271,7 @@ export class Engine {
     let activity_api = this._activity_api;
     let strategy = this._strategy;
     let cancellationToken = this._cancellation_token;
-    let done_queue: Queue<Task<D, R>> = new Queue([], cancellationToken);
+    let done_queue: Queue<Task<D, R>> = new Queue([]);
 
     function on_task_done(task: Task<D, R>, status: TaskStatus): void {
       if (status === TaskStatus.ACCEPTED) done_queue.put(task); //put_nowait
@@ -745,10 +749,7 @@ export class Engine {
       ]);
       emit(new events.CheckingPayments());
       if (agreements_to_pay.size > 0) {
-        await bluebird.Promise.any([
-          process_invoices_job,
-          promise_timeout(15),
-        ]);
+        await bluebird.Promise.any([process_invoices_job, promise_timeout(15)]);
         emit(new events.CheckingPayments());
       }
     }

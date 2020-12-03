@@ -13,7 +13,7 @@ export default class AsyncWrapper {
         cancellationToken
     ) {
         this._wrapped = wrapped;
-        this._args_buffer = new Queue([], cancellationToken);
+        this._args_buffer = new Queue([]);
         this._task = null;
         this._loop = event_loop || eventLoop();
         this._cancellationToken = cancellationToken;
@@ -23,7 +23,7 @@ export default class AsyncWrapper {
         while (true) {
             if(this._cancellationToken.cancelled) break;
             const args = await this._args_buffer.get()
-            this._wrapped(...args)
+            if(args) this._wrapped(...args)
             // this._args_buffer.task_done()
         }
     }
@@ -36,6 +36,7 @@ export default class AsyncWrapper {
 
     async done(): Promise<void> {
         // await this._args_buffer.join()
+        this._args_buffer.close();
         if (this._task)
             this._task.cancel()
         this._task = null

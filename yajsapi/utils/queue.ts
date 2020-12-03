@@ -1,12 +1,15 @@
-import sleep from "./sleep";
+import * as csp from "js-csp";
+import promisify from "./promisify";
+
 export default interface Queue<T> {}
 export default class Queue<T> {
   private _tasks;
-  private _cancellationToken;
+  private __new_items;
 
-  constructor(list = [], cancellationToken) {
+  constructor(list = []) {
     this._tasks = list;
-    this._cancellationToken = cancellationToken;
+    this.__new_items = csp.chan();
+
     if (list.length > 0) {
       let first = this._tasks.shift();
       first();
@@ -14,23 +17,29 @@ export default class Queue<T> {
   }
 
   put(item: T) {
+    if(item === undefined || item === null) return;
     this._tasks.push(item);
+    csp.putAsync(this.__new_items, true);
   }
 
   async get(): Promise<T> {
     return new Promise(async (resolve, reject) => {
-      let item;
-      while (!item) {
-        if (this._cancellationToken.cancelled) break;
-        item = this._tasks.shift();
-        if (!item) await sleep(2);
+      try {
+        if (!this._tasks.length)
+          await promisify(csp.takeAsync)(this.__new_items);
+        let item = this._tasks.shift();
+        resolve(item);
+      } catch (error) {
+        reject(error);
       }
-      if (this._cancellationToken.cancelled) reject();
-      resolve(item);
     });
   }
 
   empty() {
     return this._tasks.length === 0;
+  }
+
+  close() {
+    this.__new_items.close();
   }
 }
