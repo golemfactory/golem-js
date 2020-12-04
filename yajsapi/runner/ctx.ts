@@ -49,12 +49,13 @@ export class Work {
   public output: object[] = [];
   public attestation?: object;
 
-  async prepare() {
-    // Executes before commands are send to provider.
-  }
+  // Executes before commands are send to provider.
+  async prepare() {}
 
+  // A hook which adds the required command to the exescript.
   register(commands: CommandContainer) {}
 
+  // A hook to be executed on requestor's end after the script has finished.
   async post() {}
 }
 
@@ -153,7 +154,7 @@ class _Run extends Work {
       capture: {
         stdout: { atEnd: {} },
         stderr: { atEnd: {} },
-      }
+      },
     });
   }
 }
@@ -229,18 +230,21 @@ class _Steps extends Work {
     else steps.forEach((step) => this._steps.push(step));
   }
 
+  // Execute the `prepare` hook for all the defined steps.
   async prepare() {
     for (let step of this._steps) {
       await step.prepare();
     }
   }
 
+  // Execute the `register` hook for all the defined steps.
   register(commands: CommandContainer) {
     for (let step of this._steps) {
       step.register(commands);
     }
   }
 
+  // Execute the `post` step for all the defined steps.
   async post() {
     for (let step of this._steps) {
       await step.post();
@@ -248,6 +252,9 @@ class _Steps extends Work {
   }
 }
 
+/**
+ * An object used to schedule commands to be sent to provider.
+ */
 export class WorkContext {
   private _id;
   private _storage: StorageProvider;
@@ -273,32 +280,68 @@ export class WorkContext {
     }
   }
   begin() {}
+
+  /**
+   * Schedule sending JSON data to the provider.
+   *
+   * @param json_path  remote (provider) path
+   * @param data       object representing JSON data
+   */
   send_json(json_path: string, data: {}) {
     this._prepare();
     this._pending_steps.push(new _SendJson(this._storage, data, json_path));
   }
+
+  /**
+   * Schedule sending file to the provider.
+   *
+   * @param src_path local (requestor) path
+   * @param dst_path remote (provider) path
+   */
   send_file(src_path: string, dst_path: string) {
     this._prepare();
     this._pending_steps.push(new _SendFile(this._storage, src_path, dst_path));
   }
+
+  /**
+   * Schedule running a command.
+   *
+   * @param cmd   command to run on the provider, e.g. /my/dir/run.sh
+   * @param args  command arguments, e.g. "input1.txt", "output1.txt"
+   * @param env   optional object with environmental variables
+   */
   run(cmd: string, args?: Iterable<string>, env: object | null = null) {
     this._prepare();
     this._pending_steps.push(new _Run(cmd, args, env));
   }
+
+  /**
+   * Schedule downloading remote file from the provider.
+   *
+   * @param src_path  remote (provider) path
+   * @param dst_path  local (requestor) path
+   */
   download_file(src_path: string, dst_path: string) {
     this._prepare();
     this._pending_steps.push(
       new _RecvFile(this._storage, src_path, dst_path, this._emitter)
     );
   }
+
   sign() {
     this._prepare();
     this._pending_steps.push(new _Sign());
   }
+
   log(args) {
     logger.info(`${this._id}: ${args}`);
   }
 
+  /**
+   * Creates sequence of commands to be sent to provider.
+   *
+   * @returns Work object (the latter contains sequence commands added before calling this method)
+   */
   commit(): Work {
     let steps = this._pending_steps;
     this._pending_steps = [];

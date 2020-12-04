@@ -4,9 +4,17 @@ import applyMixins from "../utils/applyMixins";
 
 type ExcInfo = [Error, Error, any?]; // TracebackType
 
+/**
+ * An abstract base class for types of events emitted by `Engine.map()`.
+ */
 export class YaEvent {
   constructor() {}
 
+  /**
+   * Extract exception information from this event.
+   * 
+   * @returns The extracted exception information and a copy of the event without the exception information.
+   */
   extract_exc_info(): [ExcInfo | null | undefined, YaEvent] {
     return [null, this];
   }
@@ -14,6 +22,7 @@ export class YaEvent {
 
 export class ComputationStarted extends YaEvent {}
 
+// Indicates successful completion if `exc_info` is `None` and a failure otherwise.
 export class ComputationFinished extends YaEvent {}
 
 export class ComputationFailed extends YaEvent {
@@ -221,6 +230,7 @@ export class TaskStarted extends EventGeneral {
   }
 }
 
+// Indicates successful completion if `exc_info` is `None` and a failure otherwise.
 export class WorkerFinished extends AgreementEvent {
   exception?: ExcInfo | null = null;
 

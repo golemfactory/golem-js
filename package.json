@@ -6,8 +6,10 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "clean": "rimraf node_modules/ dist/ || echo 'Project is already clean'",
     "build": "tsc",
+    "clean": "rimraf node_modules/ dist/ || echo 'Project is already clean'",
+    "docs": "typedoc yajsapi/ --plugin none",
+    "docs:md": "typedoc yajsapi/ --plugin typedoc-plugin-markdown",
     "test": "npm run build && node dist/index.js"
   },
   "author": "Muhammed Tanrikulu <muhammed@golem.network>",
@@ -38,6 +40,8 @@
     "rimraf": "^3.0.2",
     "ts-node": "^9.0.0",
     "tsconfig-paths": "^3.9.0",
+    "typedoc": "^0.19.2",
+    "typedoc-plugin-markdown": "^3.0.11",
     "typescript": "^3.9.7"
   }
 }

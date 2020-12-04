@@ -94,6 +94,12 @@ class InvalidPropertiesError extends Error {
       this.name = key;
     }
 }
+
+/**
+ * Base class from which all property models inherit.
+ * 
+ * @description Provides helper methods to load the property model data from an object and to get a mapping of all the keys available in the given model.
+ */
 export class Model {
   constructor() {}
 
@@ -111,6 +117,18 @@ export class Model {
     return fields;
   }
 
+  /**
+   * Initialize the model from an object representation.
+   * 
+   * @description When provided with an object of properties, it will find the matching keys
+        within it and fill the model fields with the values from the object.
+        
+        It ignores non-matching keys - i.e. doesn't require filtering of the properties'
+        object before the model is fed with the data. Thus, several models can be
+        initialized from the same object and all models will only load their own data.
+   * 
+   * @param props 
+   */
   from_props(props: object): any {
     let field_map = {};
     let data = {};
@@ -139,6 +157,11 @@ export class Model {
     return self;
   }
 
+  /**
+   * @returns a mapping between the model's field names and the property keys
+   * 
+   * @example TODO
+   */
   keys(): any {
     class _Keys {
       constructor(iter) {

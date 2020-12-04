@@ -51,6 +51,16 @@ class _VmRequest extends ExeUnitRequest {
   }
 }
 
+/**
+ * Builds reference to application package.
+ * 
+ * @param image_hash       finds package by its contents hash.
+ * @param min_mem_gib      minimal memory required to execute application code.
+ * @param min_storage_gib  minimal disk storage to execute tasks.
+ * @param min_cores        cpu core count to execute tasks.
+ * @param image_format     Format of the image
+ * @param image_repo       Url of image repo
+ */
 export async function repo(
   image_hash: string,
   min_mem_gib: number = 0.5,
@@ -59,18 +69,6 @@ export async function repo(
   image_format: VmPackageFormat = VmPackageFormat.GVMKIT_SQUASH,
   image_repo: string = DEFAULT_REPO_URL,
 ): Promise<DemandDecor> {
-  /*
-    Builds reference to a demand decorator.
-
-    - *image_hash*: finds package by its contents hash.
-    - *image_format* vm image format to use.
-    - *image_repo* image repository to query.
-    - *min_mem_gib*: minimal memory required to execute application code.
-    - *min_storage_gib* minimal disk storage to execute tasks.
-    - *min_cores* minimal cpu core count to execute tasks.
-
-    */
-
   let pkg_url = await resolve_url(image_repo, image_hash);
 
   return new DemandDecor(

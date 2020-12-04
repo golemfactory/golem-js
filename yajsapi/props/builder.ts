@@ -1,6 +1,16 @@
 import dayjs from "dayjs";
 import { Market, Subscription } from "../rest/market";
 
+/**
+ * Builds an object of properties and constraints from high-level models.
+ * @example
+ * @description The object represents a Demand object, which is later matched by the new Golem's
+    market implementation against Offers coming from providers to find those providers
+    who can satisfy the requestor's demand.
+ * 
+ * @example TODO
+ * 
+ */
 export class DemandBuilder {
   public _props: Object;
   public _constraints: string[];
@@ -9,10 +19,12 @@ export class DemandBuilder {
     this._constraints = [];
   }
 
+  // List of properties for this demand.
   props(): object {
     return this._props;
   }
 
+  // List of constraints for this demand.
   cons(): string {
     let c_list = this._constraints;
     let c_value: string;
@@ -26,10 +38,12 @@ export class DemandBuilder {
     return c_value;
   }
 
+  // Add a constraint to the demand definition.
   ensure(constraint: string): void {
     this._constraints.push(constraint);
   }
 
+  // Add properties from the specified model to this demand definition.
   add(m) {
     let kv = m.keys();
 
@@ -53,6 +67,7 @@ export class DemandBuilder {
     }
   }
 
+  // Create a Demand on the market and subscribe to Offers that will match that Demand.
   async subscribe(market: Market): Promise<Subscription> {
     let result: Subscription = await market.subscribe(this.props(), this.cons());
     return result;

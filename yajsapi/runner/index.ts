@@ -170,6 +170,11 @@ export class _BufferItem {
 type D = "D"; // Type var for task data
 type R = "R"; // Type var for task result
 
+/**
+ * Task executor 
+ * 
+ * @description Used to run tasks using the specified application package within providers' execution units.
+ */
 export class Engine {
   private _subnet;
   private _strategy;
@@ -189,6 +194,17 @@ export class Engine {
   private _cancellation_token: CancellationToken;
   private _worker_cancellation_token: CancellationToken;
 
+  /**
+   * Create new executor
+   * 
+   * @param _demand_decor   a package common for all tasks; vm.repo() function may be used to return package from a repository
+   * @param max_workers     maximum number of workers doing the computation
+   * @param timeout         timeout for the whole computation
+   * @param budget          maximum budget for payments
+   * @param strategy        market strategy used to select providers from the market (e.g. LeastExpensiveLinearPayuMS or DummyMS)
+   * @param subnet_tag      use only providers in the subnet with the subnet_tag name
+   * @param event_emitter   a callable that processes events related to the computation; by default it is a function that logs all events
+   */
   constructor(
     _demand_decor: _common.DemandDecor,
     max_workers: Number = 5,
@@ -231,6 +247,13 @@ export class Engine {
       event_emitter && new AsyncWrapper(event_emitter, null, cancellationToken);
   }
 
+  /**
+   * Submit a computation to be executed on providers.
+   * 
+   * @param worker   a callable that takes a WorkContext object and a list o tasks, adds commands to the context object and yields committed commands
+   * @param data     an iterator of Task objects to be computed on providers
+   * @returns        yields computation progress events
+   */
   async *map(
     worker: Callable<
       [WorkContext, AsyncIterable<Task<D, R>>],
@@ -307,7 +330,7 @@ export class Engine {
             })
           );
           emit(new events.CheckingPayments());
-          const allocation = self.allocation_for_invoice(invoice);
+          const allocation = self._allocation_for_invoice(invoice);
           try {
             await invoice.accept(invoice.amount, allocation);
             agreements_to_pay.delete(invoice.agreementId);
@@ -342,7 +365,7 @@ export class Engine {
         return;
       }
       invoices.delete(agreement_id);
-      const allocation = self.allocation_for_invoice(inv);
+      const allocation = self._allocation_for_invoice(inv);
       await inv.accept(inv.amount, allocation);
       emit(
         new events.PaymentAccepted({
@@ -758,6 +781,7 @@ export class Engine {
     return;
   }
 
+
   async _create_allocations(): Promise<MarketDecoration> {
     if (!this._budget_allocations.length) {
       for await (let account of this._payment_api.accounts()) {
@@ -800,7 +824,7 @@ export class Engine {
     ) as string[];
   }
 
-  allocation_for_invoice(invoice: Invoice): Allocation {
+  _allocation_for_invoice(invoice: Invoice): Allocation {
     try {
       const _allocation = this._budget_allocations.find(
         (allocation) =>
