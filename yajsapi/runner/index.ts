@@ -608,7 +608,8 @@ export class Engine {
         await sleep(2);
         if (
           Object.keys(offer_buffer).length > 0 &&
-          workers.size < self._conf.max_workers
+          workers.size < self._conf.max_workers &&
+          work_queue.has_unassigned_items()
         ) {
           let _offer_list = Object.entries(offer_buffer);
           let _sample =
@@ -713,7 +714,11 @@ export class Engine {
       }
       emit(new events.ComputationFinished());
     } catch (error) {
-      logger.error(`fail= ${error}`);
+      if (error === undefined) { // this needs more research
+        logger.error("Computation interrupted by the user.");
+      } else {
+        logger.error(`fail= ${error}`);
+      }
       if (!self._worker_cancellation_token.cancelled)
         self._worker_cancellation_token.cancel();
       // TODO: implement ComputationFinished(error)
