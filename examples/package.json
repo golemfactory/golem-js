@@ -7,7 +7,8 @@
         "js:blender": "node ./blender/blender.js",
         "ts:blender": "ts-node-script ./blender/blender.ts",
         "js:low": "node ./low-level-api/listOffers.js",
-        "ts:low": "ts-node-script ./low-level-api/listOffers.ts"
+        "ts:low": "ts-node-script ./low-level-api/listOffers.ts",
+        "clean": "rimraf node_modules/ yarn.lock || echo 'Project is already clean'"
     },
     "author": "Muhammed Tanrikulu <muhammed@golem.network>",
     "license": "LGPL-3.0",
@@ -15,7 +16,7 @@
         "bluebird": "^3.5.0",
         "dayjs": "^1.8.31",
         "ts-node": "^9.0.0",
-        "yajsapi": "file:../"
+        "yajsapi": "^0.2.0"
     },
     "devDependencies": {
         "tsconfig-paths": "^3.9.0",

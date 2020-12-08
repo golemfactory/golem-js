@@ -20,6 +20,8 @@ export class ComputationFailed extends YaEvent {
   reason?: string;
 }
 
+export class PaymentsFinished extends YaEvent {}
+
 export class SubscriptionCreated extends YaEvent {
   sub_id?: string;
   constructor({ sub_id }) {
@@ -98,8 +100,8 @@ export class NoProposalsConfirmed extends YaEvent {
 
   constructor({ num_offers, timeout }) {
     super();
-    if (num_offers) this.num_offers = num_offers;
-    if (timeout) this.timeout = timeout;
+    this.num_offers = num_offers;
+    this.timeout = timeout;
   }
 }
 
@@ -141,6 +143,14 @@ export class PaymentAccepted extends AgreementEvent {
   }
 }
 
+export class PaymentFailed extends AgreementEvent {
+  // TODO add exc_info
+  constructor({ agr_id }) {
+    super();
+    if (agr_id) this.agr_id = agr_id;
+  }
+}
+
 export class PaymentPrepared extends AgreementEvent {
   constructor({ agr_id }) {
     super();
@@ -153,6 +163,9 @@ export class PaymentQueued extends AgreementEvent {
     super();
     if (agr_id) this.agr_id = agr_id;
   }
+}
+
+export class CheckingPayments extends AgreementEvent {
 }
 
 export class InvoiceReceived extends AgreementEvent {
@@ -277,10 +290,20 @@ export class ScriptFinished extends ScriptEvent {
 
 export class TaskAccepted extends TaskEvent {
   result?: any;
+  constructor({ task_id, result }) {
+    super();
+    if (task_id) this.task_id = task_id;
+    if (result) this.result = result;
+  }
 }
 
 export class TaskRejected extends TaskEvent {
   reason?: string | null;
+  constructor({ task_id, reason }) {
+    super();
+    if (task_id) this.task_id = task_id;
+    if (reason) this.reason = reason;
+  }
 }
 
 export class DownloadStarted extends YaEvent {

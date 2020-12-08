@@ -48,24 +48,7 @@ export { Task, TaskStatus };
 dayjs.extend(duration);
 dayjs.extend(utc);
 
-const cancellationToken = new CancellationToken();
-
-let cancellationHandler = (): void => {
-  if (!cancellationToken.cancelled) {
-    cancellationToken.cancel();
-  }
-};
-
-[
-  "SIGINT",
-  "SIGTERM",
-  "SIGBREAK",
-  "SIGHUP",
-  "exit",
-  "uncaughtException",
-].forEach((event) => {
-  process.on(event, cancellationHandler);
-});
+const SIGNALS = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
 
 const CFG_INVOICE_TIMEOUT: number = dayjs
   .duration({ minutes: 5 })
@@ -195,7 +178,6 @@ export class Engine {
   private _demand_decor;
   private _conf;
   private _expires;
-  private _get_offers_deadline;
   private _budget_amount;
   private _budget_allocations: Allocation[];
 
@@ -204,6 +186,8 @@ export class Engine {
   private _payment_api;
 
   private _wrapped_emitter;
+  private _cancellation_token: CancellationToken;
+  private _worker_cancellation_token: CancellationToken;
 
   constructor(
     _demand_decor: _common.DemandDecor,
@@ -223,6 +207,21 @@ export class Engine {
     // TODO: setup precision
     this._budget_amount = parseFloat(budget);
     this._budget_allocations = [];
+
+    this._cancellation_token = new CancellationToken();
+    let cancellationToken = this._cancellation_token;
+
+    this._worker_cancellation_token = new CancellationToken();
+
+    function cancel(e) {
+      if (cancellationToken && !cancellationToken.cancelled) {
+        cancellationToken.cancel();
+      }
+      SIGNALS.forEach((event) => {
+        process.off(event, cancel);
+      });
+    }
+    SIGNALS.forEach((event) => process.on(event, cancel));
 
     if (!event_emitter) {
       //from ..log import log_event
@@ -258,7 +257,7 @@ export class Engine {
       builder.ensure(constraint);
     }
     for (let x of multi_payment_decoration.properties) {
-        builder._props[x.key] = x.value;
+      builder._props[x.key] = x.value;
     }
     await this._demand_decor.decorate_demand(builder);
     await this._strategy.decorate_demand(builder);
@@ -267,6 +266,7 @@ export class Engine {
     let market_api = this._market_api;
     let activity_api = this._activity_api;
     let strategy = this._strategy;
+    let cancellationToken = this._cancellation_token;
     let done_queue: Queue<Task<D, R>> = new Queue([], cancellationToken);
 
     function on_task_done(task: Task<D, R>, status: TaskStatus): void {
@@ -306,16 +306,21 @@ export class Engine {
               amount: invoice.amount,
             })
           );
+          emit(new events.CheckingPayments());
           const allocation = self.allocation_for_invoice(invoice);
-          agreements_to_pay.delete(invoice.agreement_id);
-          await invoice.accept(invoice.amount, allocation);
-          emit(
-            new events.PaymentAccepted({
-              agr_id: invoice.agreement_id,
-              inv_id: invoice.invoiceId,
-              amount: invoice.amount,
-            })
-          );
+          try {
+            await invoice.accept(invoice.amount, allocation);
+            agreements_to_pay.delete(invoice.agreementId);
+            emit(
+              new events.PaymentAccepted({
+                agr_id: invoice.agreementId,
+                inv_id: invoice.invoiceId,
+                amount: invoice.amount,
+              })
+            );
+          } catch (e) {
+            emit(new events.PaymentFailed({ agr_id: invoice.agreementId }));
+          }
         } else {
           invoices[invoice.agreementId] = invoice;
         }
@@ -360,7 +365,7 @@ export class Engine {
         emit(new events.SubscriptionCreated({ sub_id: subscription.id() }));
         let _proposals;
         try {
-          _proposals = subscription.events(cancellationToken);
+          _proposals = subscription.events(self._worker_cancellation_token);
         } catch (error) {
           emit(
             new events.CollectFailed({
@@ -455,7 +460,7 @@ export class Engine {
 
       let _act;
       try {
-        _act = await activity_api.create_activity(agreement, secure)
+        _act = await activity_api.create_activity(agreement, secure);
       } catch (error) {
         emit(new events.ActivityCreateFailed({ agr_id: agreement.id() }));
         throw error;
@@ -484,98 +489,105 @@ export class Engine {
             storage_manager,
             emit
           );
-          let consumer = work_queue.new_consumer();
-
-          let command_generator = worker(work_context, task_emitter(consumer));
-          for await (let batch of command_generator) {
-            try {
-              let current_worker_task = consumer.last_item();
-              if (current_worker_task) {
-                emit(
-                  new events.TaskStarted({
-                    agr_id: agreement.id(),
-                    task_id: current_worker_task.id,
-                    task_data: current_worker_task.data(),
-                  })
-                );
-              }
-              let task_id = current_worker_task ? current_worker_task.id : null;
-              batch.attestation = {
-                credentials: act.credentials,
-                nonce: act.id,
-                exeunitHashes: act.exeunitHashes
-              };
-              await batch.prepare();
-              let cc = new CommandContainer();
-              batch.register(cc);
-              let remote = await act.exec(cc.commands());
-              emit(
-                new events.ScriptSent({
-                  agr_id: agreement.id(),
-                  task_id: task_id,
-                  cmds: cc.commands(),
-                })
-              );
+          await asyncWith(work_queue.new_consumer(), async (consumer) => {
+            let command_generator = worker(
+              work_context,
+              task_emitter(consumer)
+            );
+            for await (let batch of command_generator) {
               try {
-                for await (let step of remote) {
-                  batch.output.push(step);
+                let current_worker_task = consumer.last_item();
+                if (current_worker_task) {
                   emit(
-                    new events.CommandExecuted({
-                      success: true,
+                    new events.TaskStarted({
                       agr_id: agreement.id(),
-                      task_id: task_id,
-                      command: cc.commands()[step.idx],
-                      message: step.message,
-                      cmd_idx: step.idx,
+                      task_id: current_worker_task.id,
+                      task_data: current_worker_task.data(),
                     })
                   );
                 }
-              } catch (error) {
-                // assert len(err.args) >= 2
-                const [cmd_msg, cmd_idx] = error;
+                let task_id = current_worker_task
+                  ? current_worker_task.id
+                  : null;
+                batch.attestation = {
+                  credentials: act.credentials,
+                  nonce: act.id,
+                  exeunitHashes: act.exeunitHashes,
+                };
+                await batch.prepare();
+                let cc = new CommandContainer();
+                batch.register(cc);
+                let remote = await act.exec(cc.commands());
                 emit(
-                  new events.CommandExecuted({
-                    success: false,
+                  new events.ScriptSent({
                     agr_id: agreement.id(),
                     task_id: task_id,
-                    command: cc.commands()[cmd_idx],
-                    message: cmd_msg,
-                    cmd_idx: cmd_idx,
+                    cmds: cc.commands(),
                   })
                 );
-                throw error;
-              }
-              emit(
-                new events.GettingResults({
-                  agr_id: agreement.id(),
-                  task_id: task_id,
-                })
-              );
-              await batch.post();
-              emit(
-                new events.ScriptFinished({
-                  agr_id: agreement.id(),
-                  task_id: task_id,
-                })
-              );
-              await accept_payment_for_agreement({
-                agreement_id: agreement.id(),
-                partial: true,
-              });
-            } catch (error) {
-              try {
-                // await command_generator.athrow(*sys.exc_info())
-              } catch (error) {
+                emit(new events.CheckingPayments());
+                try {
+                  for await (let step of remote) {
+                    batch.output.push(step);
+                    emit(
+                      new events.CommandExecuted({
+                        success: true,
+                        agr_id: agreement.id(),
+                        task_id: task_id,
+                        command: cc.commands()[step.idx],
+                        message: step.message,
+                        cmd_idx: step.idx,
+                      })
+                    );
+                  }
+                } catch (error) {
+                  // assert len(err.args) >= 2
+                  const { name: cmd_idx, description } = error;
+                  //throws new CommandExecutionError from activity#355
+                  emit(
+                    new events.CommandExecuted({
+                      success: false,
+                      agr_id: agreement.id(),
+                      task_id: task_id,
+                      command: cc.commands()[cmd_idx],
+                      message: description,
+                      cmd_idx: cmd_idx,
+                    })
+                  );
+                  throw error;
+                }
                 emit(
-                  new events.WorkerFinished({
+                  new events.GettingResults({
                     agr_id: agreement.id(),
-                    exception: [error],
+                    task_id: task_id,
                   })
                 );
-                return;
+                await batch.post();
+                emit(
+                  new events.ScriptFinished({
+                    agr_id: agreement.id(),
+                    task_id: task_id,
+                  })
+                );
+                await accept_payment_for_agreement({
+                  agreement_id: agreement.id(),
+                  partial: true,
+                });
+              } catch (error) {
+                try {
+                  await command_generator.throw(error);
+                } catch (error) {
+                  emit(
+                    new events.WorkerFinished({
+                      agr_id: agreement.id(),
+                      exception: [error],
+                    })
+                  );
+                  return;
+                }
               }
             }
-          }
+          });
           await accept_payment_for_agreement({
             agreement_id: agreement.id(),
             partial: false,
@@ -592,7 +604,7 @@ export class Engine {
 
     async function worker_starter(): Promise<void> {
       while (true) {
-        if (cancellationToken.cancelled) break;
+        if (self._worker_cancellation_token.cancelled) break;
         await sleep(2);
         if (
           Object.keys(offer_buffer).length > 0 &&
@@ -619,13 +631,11 @@ export class Engine {
                 provider_id: provider_info,
               })
             );
-            try {
-              await agreement.confirm();
-              emit(new events.AgreementConfirmed({ agr_id: agreement.id() }));
-            } catch (error) {
+            if (!(await agreement.confirm())) {
               emit(new events.AgreementRejected({ agr_id: agreement.id() }));
               continue;
             }
+            emit(new events.AgreementConfirmed({ agr_id: agreement.id() }));
             new_task = loop.create_task(start_worker.bind(null, agreement));
             workers.add(new_task);
           } catch (error) {
@@ -653,14 +663,16 @@ export class Engine {
     let wait_until_done = loop.create_task(
       work_queue.wait_until_done.bind(work_queue)
     );
+    let get_offers_deadline = dayjs.utc() + this._conf.get_offers_timeout;
+    let get_done_task: any = null;
+    let worker_starter_task = loop.create_task(worker_starter);
+    let services: any = [
+      find_offers_task,
+      worker_starter_task,
+      process_invoices_job,
+      wait_until_done,
+    ];
     try {
-      let get_done_task: any = null;
-      let services: any = [
-        find_offers_task,
-        loop.create_task(worker_starter),
-        process_invoices_job,
-        wait_until_done,
-      ];
       while (services.indexOf(wait_until_done) > -1 || !done_queue.empty()) {
         const now = dayjs.utc();
         if (now > this._expires) {
@@ -668,14 +680,14 @@ export class Engine {
             `task timeout exceeded. timeout=${this._conf.timeout}`
           );
         }
-        if (now > this._get_offers_deadline && proposals_confirmed == 0) {
+        if (now > get_offers_deadline && proposals_confirmed == 0) {
           emit(
             new events.NoProposalsConfirmed({
               num_offers: offers_collected,
               timeout: this._conf.get_offers_timeout,
             })
           );
-          this._get_offers_deadline += this._conf.get_offers_timeout;
+          get_offers_deadline += this._conf.get_offers_timeout;
         }
 
         if (!get_done_task) {
@@ -700,41 +712,53 @@ export class Engine {
         }
       }
       emit(new events.ComputationFinished());
-      for (let service of services) {
-        service.cancel();
-      }
     } catch (error) {
       logger.error(`fail= ${error}`);
+      if (!self._worker_cancellation_token.cancelled)
+        self._worker_cancellation_token.cancel();
+      // TODO: implement ComputationFinished(error)
+      emit(new events.ComputationFinished());
     } finally {
       payment_closing = true;
       find_offers_task.cancel();
+      worker_starter_task.cancel();
+      if (!self._worker_cancellation_token.cancelled)
+        self._worker_cancellation_token.cancel();
       try {
         if (workers) {
           for (let worker_task of [...workers]) {
             worker_task.cancel();
           }
-          // await asyncio.wait(workers, timeout=15, return_when=asyncio.ALL_COMPLETED)
+          emit(new events.CheckingPayments());
+          await bluebird.Promise.any([
+            bluebird.Promise.all([...workers]),
+            promise_timeout(10),
+          ]);
+          emit(new events.CheckingPayments());
         }
       } catch (error) {
         logger.error(error);
       }
-
-      // find_offers_task.cancel();
-    }
-
-    payment_closing = true;
-    if (agreements_to_pay) {
       await bluebird.Promise.any([
-        Promise.all([process_invoices_job]),
-        promise_timeout(15),
+        bluebird.Promise.all([find_offers_task, process_invoices_job]),
+        promise_timeout(10),
       ]);
+      emit(new events.CheckingPayments());
+      if (agreements_to_pay.size > 0) {
+        await bluebird.Promise.any([
+          process_invoices_job,
+          promise_timeout(15),
+        ]);
+        emit(new events.CheckingPayments());
+      }
     }
+    emit(new events.PaymentsFinished());
+    await sleep(2);
     cancellationToken.cancel();
     return;
   }
 
   async _create_allocations(): Promise<MarketDecoration> {
-    let ids_to_decorate: string[] = [];
     if (!this._budget_allocations.length) {
       for await (let account of this._payment_api.accounts()) {
         let allocation: Allocation = await this._stack.enter_async_context(
@@ -746,33 +770,33 @@ export class Engine {
           )
         );
         this._budget_allocations.push(allocation);
-        ids_to_decorate.push(allocation.id);
       }
     }
-
     if (!this._budget_allocations.length) {
       throw Error(
         "No payment accounts. Did you forget to run 'yagna payment init -r'?"
       );
     }
-
-    return await this._payment_api.decorate_demand(ids_to_decorate);
+    let allocation_ids = this._budget_allocations.map((a) => a.id);
+    return await this._payment_api.decorate_demand(allocation_ids);
   }
 
   _get_common_payment_platforms(proposal: OfferProposal): string[] {
-    let prov_platforms = Object.keys(proposal.props()).filter((prop) => {
-      return prop.startsWith("golem.com.payment.platform.")
-    }).map((prop) => {
-      return prop.split(".")[4];
-    });
+    let prov_platforms = Object.keys(proposal.props())
+      .filter((prop) => {
+        return prop.startsWith("golem.com.payment.platform.");
+      })
+      .map((prop) => {
+        return prop.split(".")[4];
+      });
     if (!prov_platforms) {
       prov_platforms = ["NGNT"];
     }
     const req_platforms = this._budget_allocations.map(
       (budget_allocation) => budget_allocation.payment_platform
     );
-    return req_platforms.filter((value) =>
-      value && prov_platforms.includes(value)
+    return req_platforms.filter(
+      (value) => value && prov_platforms.includes(value)
     ) as string[];
   }
 
@@ -794,7 +818,6 @@ export class Engine {
     let stack = this._stack;
     // TODO: Cleanup on exception here.
     this._expires = dayjs.utc().add(this._conf.timeout, "ms");
-    this._get_offers_deadline = dayjs.utc() + this._conf.get_offers_timeout;
     let market_client = await this._api_config.market();
     this._market_api = new rest.Market(market_client);
 
