@@ -6,7 +6,7 @@ import Callable from "./callable";
 import CancellationToken from "./cancellationToken";
 import eventLoop from "./eventLoop";
 import getAllProperties from "./getAllProperties";
-import logger from "./log";
+import logger, * as logUtils from "./log";
 import { changeLogLevel } from "./log";
 import Queue from "./queue";
 import range from "./range";
@@ -23,6 +23,7 @@ export {
   changeLogLevel,
   getAllProperties,
   logger,
+  logUtils,
   Queue,
   range,
   sleep,

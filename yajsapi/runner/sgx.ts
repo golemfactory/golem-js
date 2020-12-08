@@ -15,51 +15,32 @@ import {
 } from "../props/inf";
 import { types } from "sgx-ias-js";
 
-class _InfSgxWasi extends InfBase {
-  runtime = new Field({
-    value: RuntimeType.SGX_WASI,
-    metadata: { key: INF_RUNTIME },
-  });
-  cores: Field = new Field({ value: 1, metadata: { key: INF_CORES } });
-}
-
-const _InfSgxWasiKeys = InfBase.fields(
-  new _InfSgxWasi(),
-  ["cores", "mem", "storage", "runtime"]
-);
-
-class _SgxWasiConstrains extends Constraints {
-  constructor(min_mem_gib: number, min_storage_gib: number) {
+class _InfSgx extends InfBase {
+  constructor(runtime: RuntimeType) {
     super();
-    super.extend([
-      `(${_InfSgxWasiKeys["cores"]}>=1)`,
-      `(${_InfSgxWasiKeys["mem"]}>=${min_mem_gib})`,
-      `(${_InfSgxWasiKeys["storage"]}>=${min_storage_gib})`,
-      `(${_InfSgxWasiKeys["runtime"]}=${RuntimeType.SGX_WASI})`,
-    ]);
+
+    this.runtime = new Field({
+      value: runtime,
+      metadata: { key: INF_RUNTIME },
+    });
+    this.cores = new Field({ value: 1, metadata: { key: INF_CORES } });
   }
 }
 
-class _InfSgxJsSp extends InfBase {
-  runtime = new Field({
-    value: RuntimeType.SGX_JS_SP,
-    metadata: { key: INF_RUNTIME },
-  });
-  cores: Field = new Field({ value: 1, metadata: { key: INF_CORES } });
-}
-
-const _InfSgxJsSpKeys = InfBase.fields(
-  new _InfSgxJsSp(),
-  ["cores", "mem", "storage", "runtime"]);
-
-class _SgxJsSpConstrains extends Constraints {
-  constructor(min_mem_gib: number, min_storage_gib: number) {
+class _SgxConstrains extends Constraints {
+  constructor(runtime: RuntimeType, min_mem_gib: number, min_storage_gib: number) {
     super();
+
+    const fields = InfBase.fields(
+      new _InfSgx(runtime),
+      ["cores", "mem", "storage", "runtime"]
+    );
+
     super.extend([
-      `(${_InfSgxJsSpKeys["cores"]}>=1)`,
-      `(${_InfSgxJsSpKeys["mem"]}>=${min_mem_gib})`,
-      `(${_InfSgxJsSpKeys["storage"]}>=${min_storage_gib})`,
-      `(${_InfSgxJsSpKeys["runtime"]}=${RuntimeType.SGX_JS_SP})`,
+      `(${fields["cores"]}>=1)`,
+      `(${fields["mem"]}>=${min_mem_gib})`,
+      `(${fields["storage"]}>=${min_storage_gib})`,
+      `(${fields["runtime"]}=${runtime})`,
     ]);
   }
 }
@@ -97,8 +78,10 @@ class SgxConfig {
 export const SGX_CONFIG = SgxConfig.from_env();
 
 export enum SgxEngine {
-  WASI = "sgx",
-  JS_SP = "sgx-js-sp",
+  GRAPHENE = "sgx",
+  JS = "sgx-js",
+  WASM = "sgx-wasm",
+  WASI = "sgx-wasi",
 }
 
 export async function repo(
@@ -121,21 +104,28 @@ export async function repo(
 
   let pkg_url = await resolve_url(image_repo, image_hash);
   let secure = true;
+  let runtime: RuntimeType;
 
   switch (engine) {
-    case SgxEngine.JS_SP:
-      return new DemandDecor(
-        new _SgxJsSpConstrains(min_mem_gib, min_storage_gib),
-        new ExeUnitRequest(pkg_url),
-        secure,
-      );
+    case SgxEngine.GRAPHENE:
+      runtime = RuntimeType.SGX;
+      break;
+    case SgxEngine.JS:
+      runtime = RuntimeType.SGX_JS;
+      break;
+    case SgxEngine.WASM:
+      runtime = RuntimeType.SGX_WASM;
+      break;
     case SgxEngine.WASI:
-      return new DemandDecor(
-        new _SgxWasiConstrains(min_mem_gib, min_storage_gib),
-        new ExeUnitRequest(pkg_url),
-        secure,
-      );
+      runtime = RuntimeType.SGX_WASI;
+      break;
     default:
-      throw Error(`Invalid SGX runtime engine: ${engine}`);
+      throw Error(`Invalid SGX runtime: ${engine}`);
   }
+
+  return new DemandDecor(
+    new _SgxConstrains(runtime, min_mem_gib, min_storage_gib),
+    new ExeUnitRequest(pkg_url),
+    secure,
+  );
 }

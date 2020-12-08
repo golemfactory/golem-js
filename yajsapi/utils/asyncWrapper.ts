@@ -5,6 +5,7 @@ export default class AsyncWrapper {
     private _args_buffer: Queue<any>;
     private _task: any;
     private _loop: any;
+    private _cancellationToken;
 
     constructor(
         wrapped: Callable<any, any>,
@@ -15,10 +16,12 @@ export default class AsyncWrapper {
         this._args_buffer = new Queue([], cancellationToken);
         this._task = null;
         this._loop = event_loop || eventLoop();
+        this._cancellationToken = cancellationToken;
     }
 
     async _worker(): Promise<void> {
         while (true) {
+            if(this._cancellationToken.cancelled) break;
             const args = await this._args_buffer.get()
             this._wrapped(...args)
             // this._args_buffer.task_done()
@@ -26,7 +29,9 @@ export default class AsyncWrapper {
     }
 
     async ready() {
-        this._task = this._loop.create_task(this._worker.bind(this))
+        this._task = this._loop
+          .create_task(this._worker.bind(this))
+          .catch(() => {}); // the task might be cancelled
     }
 
     async done(): Promise<void> {

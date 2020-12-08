@@ -35,7 +35,10 @@ export class Invoice extends yInvoice {
   }
 
   async accept(amount: number | string, allocation: Allocation) {
-    let acceptance: yap.Acceptance;
+    let acceptance: yap.Acceptance = {
+      totalAmountAccepted: amount.toString(),
+      allocationId: allocation.id
+    };
     acceptance!.totalAmountAccepted = amount.toString();
     acceptance!.allocationId = allocation.id;
     await this._api.acceptInvoice(this.invoiceId, acceptance!);
@@ -264,7 +267,6 @@ export class Payment {
             yield invoice;
           }
         }
-        if (items.length > 0) break;
       }
       return;
     }
