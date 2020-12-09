@@ -1,7 +1,7 @@
 const path = require("path");
 const dayjs = require("dayjs");
 const duration = require("dayjs/plugin/duration");
-const { Engine, Task, utils, vm } = require("yajsapi");
+const { Executor, Task, utils, vm } = require("yajsapi");
 const { program } = require("commander");
 
 dayjs.extend(duration);
@@ -42,7 +42,7 @@ async function main(subnetTag) {
         OUTPUT_DIR: "/golem/output",
       });
       ctx.run("/golem/entrypoints/run-blender.sh");
-      const output_file = `output_${frame.toString()}.png`
+      const output_file = `output_${frame.toString()}.png`;
       ctx.download_file(
         `/golem/output/out${frame.toString().padStart(4, "0")}.png`,
         path.join(__dirname, `./output_${frame}.png`)
@@ -51,7 +51,7 @@ async function main(subnetTag) {
       // TODO: Check
       // job results are valid // and reject by:
       // task.reject_task(msg = 'invalid file')
-      task.accept_task(output_file);
+      task.accept_result(output_file);
     }
 
     ctx.log("no more frames to render");
@@ -62,21 +62,20 @@ async function main(subnetTag) {
   const timeout = dayjs.duration({ minutes: 15 }).asMilliseconds();
 
   await asyncWith(
-    await new Engine(
-      _package,
-      6,
-      timeout, //5 min to 30 min
-      "10.0",
-      undefined,
-      subnetTag,
-      logUtils.logSummary()
-    ),
-    async (engine) => {
-      for await (let task of engine.map(
+    new Executor({
+      task_package: _package,
+      max_workers: 6,
+      timeout: timeout,
+      budget: "10.0",
+      subnet_tag: subnetTag,
+      event_consumer: logUtils.logSummary(),
+    }),
+    async (executor) => {
+      for await (let task of executor.result(
         worker,
         frames.map((frame) => new Task(frame))
       )) {
-        console.log("result=", task.output());
+        console.log("result=", task.result());
       }
     }
   );
@@ -84,8 +83,8 @@ async function main(subnetTag) {
 }
 
 program
-  .option('--subnet-tag <subnet>', 'set subnet name', 'community.3')
-  .option('-d, --debug', 'output extra debugging');
+  .option("--subnet-tag <subnet>", "set subnet name", "community.3")
+  .option("-d, --debug", "output extra debugging");
 program.parse(process.argv);
 if (program.debug) {
   utils.changeLogLevel("debug");

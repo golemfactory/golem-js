@@ -8,6 +8,15 @@ import { Configuration } from "ya-ts-client/dist/ya-activity";
 
 dayjs.extend(utc);
 
+type _ModelType = Model & { properties };
+
+class View {
+  private _properties!: object;
+
+  view_prov(c: _ModelType): Model {
+    return c.from_properties(c.properties);
+  }
+}
 class AgreementDetails extends Object {
   raw_details!: models.Agreement;
 
@@ -16,9 +25,14 @@ class AgreementDetails extends Object {
     this.raw_details = _ref;
   }
 
-  view_prov(c: Model): Model {
+  provider_view(c: Model): View {
     let offer: models.Offer = this.raw_details.offer;
-    return c.from_props(offer.properties);
+    return c.from_properties(offer.properties);
+  }
+
+  requestor_view(c: Model): View {
+    let demand: models.Offer = this.raw_details.demand;
+    return c.from_properties(demand.properties);
   }
 }
 
@@ -116,7 +130,7 @@ export class OfferProposal {
   }
 
   // TODO: This timeout is for negotiation ?
-  async agreement(timeout = 3600): Promise<Agreement> {
+  async create_agreement(timeout = 3600): Promise<Agreement> {
     let proposal: mAgreementProposal = new mAgreementProposal();
     proposal.proposalId = this.id();
     proposal.validTo = dayjs()
@@ -178,7 +192,7 @@ export class Subscription {
 
   async *events(cancellationToken?): AsyncGenerator<OfferProposal> {
     while (this._open) {
-      if(cancellationToken && cancellationToken.cancelled) break;
+      if (cancellationToken && cancellationToken.cancelled) break;
       try {
         let { data: proposals } = await this._api.collectOffers(
           this._id,
