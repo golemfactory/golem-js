@@ -540,9 +540,9 @@ export class Executor {
           let agreement: Agreement | null = null;
           try {
             agreement = await (buffer as _BufferItem).proposal.create_agreement();
-            const provider_info = (await agreement.details()).provider_view(
-              new NodeInfo()
-            );
+            const provider_info = (await agreement.details())
+              .provider_view()
+              .extract(new NodeInfo());
             emit(
               new events.AgreementCreated({
                 agr_id: agreement.id(),

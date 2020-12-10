@@ -1,11 +1,12 @@
-import {
-  RuntimeType,
-  InfVmKeys,
-} from "../props/inf";
-import { Constraints, DEFAULT_REPO_URL, Package, VmPackage } from ".";
+import { RuntimeType, InfVmKeys } from "../props/inf";
+import { Constraints, DEFAULT_REPO_URL, Package, RepoOpts, VmPackage } from ".";
 
 class _VmConstrains extends Constraints {
-  constructor(min_mem_gib: number, min_storage_gib: number, min_cores: number = 1) {
+  constructor(
+    min_mem_gib: number,
+    min_storage_gib: number,
+    cores: number = 1
+  ) {
     super();
     super.extend([
       // `(${_InfVmKeys["cores"]}>=${min_cores})`,
@@ -16,11 +17,11 @@ class _VmConstrains extends Constraints {
   }
 }
 
-export async function repo(
-  image_hash: string,
-  min_mem_gib: number = 0.5,
-  min_storage_gib: number = 2.0
-): Promise<Package> {
+export async function repo({
+  image_hash,
+  min_mem_gib = 0.5,
+  min_storage_gib = 2.0,
+}: RepoOpts): Promise<Package> {
   /*
     Builds reference to a demand decorator.
 

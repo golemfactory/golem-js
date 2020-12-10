@@ -4,6 +4,13 @@ import { VmPackageFormat, VmRequest } from "../props/inf";
 
 export const DEFAULT_REPO_URL = "http://3.249.139.167:8000";
 
+export type RepoOpts = {
+  engine?: string,
+  image_hash: string;
+  min_mem_gib: number;
+  min_storage_gib: number;
+};
+
 export class Constraints {
   inner!: string[];
 

@@ -8,13 +8,17 @@ import { Configuration } from "ya-ts-client/dist/ya-activity";
 
 dayjs.extend(utc);
 
-type _ModelType = Model & { properties };
+type _ModelType = Pick<Model, "from_properties"> & Partial<Model>;
 
 class View {
   private _properties!: object;
 
-  view_prov(c: _ModelType): Model {
-    return c.from_properties(c.properties);
+  constructor(properties: object) {
+    this._properties = properties;
+  }
+
+  extract(m: _ModelType): _ModelType {
+    return m.from_properties(this._properties);
   }
 }
 class AgreementDetails extends Object {
@@ -25,14 +29,14 @@ class AgreementDetails extends Object {
     this.raw_details = _ref;
   }
 
-  provider_view(c: Model): View {
+  provider_view(): View {
     let offer: models.Offer = this.raw_details.offer;
-    return c.from_properties(offer.properties);
+    return new View(offer.properties);
   }
 
   requestor_view(c: Model): View {
     let demand: models.Offer = this.raw_details.demand;
-    return c.from_properties(demand.properties);
+    return new View(demand.properties);
   }
 }
 

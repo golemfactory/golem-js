@@ -1,13 +1,8 @@
 import * as fs from "fs";
 import { Field } from "../props/base";
-import {
-  INF_CORES,
-  INF_RUNTIME,
-  InfBase,
-  RuntimeType,
-} from "../props/inf";
+import { INF_CORES, INF_RUNTIME, InfBase, RuntimeType } from "../props/inf";
 import { types } from "sgx-ias-js";
-import { Constraints, DEFAULT_REPO_URL, Package, VmPackage } from ".";
+import { Constraints, DEFAULT_REPO_URL, Package, RepoOpts, VmPackage } from ".";
 
 class _InfSgx extends InfBase {
   constructor(runtime: RuntimeType) {
@@ -89,22 +84,16 @@ export enum SgxEngine {
 
     - *engine*: SGX runtime engine to use.
     - *image_hash*: finds package by its contents hash.
-    - *image_repo* image repository to query.
     - *min_mem_gib*: minimal memory required to execute application code.
     - *min_storage_gib* minimal disk storage to execute tasks.
 
     */
-/**
- * 
- * @param param0 
- */
 export async function repo({
   engine,
   image_hash,
   min_mem_gib,
   min_storage_gib,
-}): Promise<Package> {
-
+}: RepoOpts): Promise<Package> {
   let secure = true;
   let runtime: RuntimeType;
 
