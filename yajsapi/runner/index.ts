@@ -544,16 +544,18 @@ export class Engine {
                   // assert len(err.args) >= 2
                   const { name: cmd_idx, description } = error;
                   //throws new CommandExecutionError from activity#355
-                  emit(
-                    new events.CommandExecuted({
-                      success: false,
-                      agr_id: agreement.id(),
-                      task_id: task_id,
-                      command: cc.commands()[cmd_idx],
-                      message: description,
-                      cmd_idx: cmd_idx,
-                    })
-                  );
+                  if (cmd_idx) {
+                    emit(
+                      new events.CommandExecuted({
+                        success: false,
+                        agr_id: agreement.id(),
+                        task_id: task_id,
+                        command: cc.commands()[cmd_idx],
+                        message: description,
+                        cmd_idx: cmd_idx,
+                      })
+                    );
+                  }
                   throw error;
                 }
                 emit(
