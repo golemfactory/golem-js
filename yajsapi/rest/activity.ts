@@ -173,7 +173,7 @@ class Activity {
     return state;
   }
 
-  async results(batch_id: string, timeout: number = 30): Promise<ExeScriptCommandResult[]> {
+  async results(batch_id: string, timeout: number = 5): Promise<ExeScriptCommandResult[]> {
     let { data: results } = await this._api.getExecBatchResults(
       this._id,
       batch_id,
@@ -372,8 +372,8 @@ class Batch implements AsyncIterable<Result> {
         yield _result;
         last_idx = result.index + 1;
         if (result.isBatchFinished) break;
-        if (!any_new) await sleep(10);
       }
+      if (!any_new) await sleep(3);
     }
     return;
   }
