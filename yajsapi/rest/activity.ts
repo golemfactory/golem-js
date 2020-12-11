@@ -344,8 +344,16 @@ class Batch implements AsyncIterable<Result> {
     let last_idx = 0;
     while (last_idx < this._size) {
       let any_new: boolean = false;
-      let exe_list = await this._activity.results(this._batch_id);
-      let results: yaa.ExeScriptCommandResult[] = exe_list;
+      let results: yaa.ExeScriptCommandResult[] = []
+      try {
+        results = await this._activity.results(this._batch_id);
+      } catch (error) {
+        if (error.response && error.response.status && error.response.status == 408) {
+          continue;
+        } else {
+          throw error;
+        }
+      }
       results = results.slice(last_idx);
       for (let result of results) {
         any_new = true;
