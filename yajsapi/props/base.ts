@@ -88,7 +88,7 @@ class _PyField {
 }
 
 class InvalidPropertiesError extends Error {
-    // Raised by `Model.from_props(cls, props)` when given invalid `props`.
+    // Raised by `Model.from_properties(cls, props)` when given invalid `props`.
     constructor(key: string, description: string) {
       super(description);
       this.name = key;
@@ -129,7 +129,7 @@ export class Model {
    * 
    * @param props 
    */
-  from_props(props: object): any {
+  from_properties(props: object): any {
     let field_map = {};
     let data = {};
     for (let f of this.fields(this)) {

@@ -9,7 +9,7 @@ import { Credentials, ExeScriptCommandResult, SgxCredentials } from "ya-ts-clien
 import { CryptoCtx, PrivateKey, PublicKey, rand_hex } from "../crypto";
 import { sleep, logger } from "../utils";
 import { Agreement } from "./market";
-import { SGX_CONFIG } from "../runner/sgx";
+import { SGX_CONFIG } from "../package/sgx";
 import * as utf8 from "utf8";
 
 /**

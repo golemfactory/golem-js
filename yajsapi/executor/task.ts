@@ -94,7 +94,7 @@ export class Task<TaskData, TaskResult> {
     return this._data;
   }
 
-  output(): TaskResult | null | undefined {
+  result(): TaskResult | null | undefined {
     return this._result;
   }
 
@@ -108,9 +108,9 @@ export class Task<TaskData, TaskResult> {
    * @description Must be called when the result is correct to mark this task as completed.
    * @param result task computation result (optional)
    */
-  accept_task(result: TaskResult | null = null): void {
+  accept_result(result: TaskResult | null = null): void {
     if (this._emit_event) {
-      this._emit_event(new events.TaskAccepted({ task_id: this.id, result }));
+      this._emit_event(new events.TaskAccepted({task_id: this.id, result}));
     }
     if (this._status != TaskStatus.RUNNING) throw "Accepted task not running";
     this._status = TaskStatus.ACCEPTED;
@@ -127,15 +127,15 @@ export class Task<TaskData, TaskResult> {
    * @param reason  Task rejection description (optional)
    * @param retry   Task retry in case of rejects (optional)
    */
-  reject_task(reason: string | null = null, retry: boolean = false): void {
+  reject_result(reason: string | null = null, retry: boolean = false): void {
     if (this._emit_event) {
-      this._emit_event(new events.TaskRejected({ task_id: this.id, reason }));
+      this._emit_event(new events.TaskRejected({task_id: this.id, reason}));
     }
     if (this._status != TaskStatus.RUNNING) throw "Rejected task not running";
     this._status = TaskStatus.REJECTED;
-    this._stop(retry);
+    this._stop(retry)
 
-    for (let cb of this._callbacks) cb && cb(self, TaskStatus.REJECTED);
+    for (let cb of this._callbacks) cb && cb(self, TaskStatus.REJECTED)
   }
 
   static get counter(): number {
