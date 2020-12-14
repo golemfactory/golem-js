@@ -137,11 +137,13 @@ class Activity {
   protected _state!: RequestorStateApi;
   protected _id!: string;
   protected _credentials?: object;
+  _finished: boolean;
 
   constructor(id: string, _api: RequestorControlApi, _state: RequestorStateApi) {
     this._id = id;
     this._api = _api;
     this._state = _state;
+    this._finished = false;
   }
 
   set id(x) {
@@ -188,6 +190,7 @@ class Activity {
   }
 
   async done(): Promise<void> {
+    this._finished = true;
     try {
       const { data: batch_id } = await this._api.exec(
         this._id,
@@ -195,7 +198,7 @@ class Activity {
       );
       //with contextlib.suppress(yexc.ApiException):
       try {
-        await this._api.getExecBatchResults(this._id, batch_id, 1);
+        await this._api.getExecBatchResults(this._id, batch_id, undefined, 1);
       } catch(error) {
         //suppress api error
       }
@@ -342,12 +345,13 @@ class Batch implements AsyncIterable<Result> {
   async *[Symbol.asyncIterator](): any {
     // AsyncGenerator<Result, any, unknown>
     let last_idx = 0;
-    while (last_idx < this._size) {
+    while (last_idx < this._size && !self._finished) {
       let any_new: boolean = false;
       let results: yaa.ExeScriptCommandResult[] = []
       try {
         results = await this._activity.results(this._batch_id);
       } catch (error) {
+        if (self._finished) { break; }
         if (error.response && error.response.status && error.response.status == 408) {
           continue;
         } else {
@@ -373,6 +377,7 @@ class Batch implements AsyncIterable<Result> {
         last_idx = result.index + 1;
         if (result.isBatchFinished) break;
       }
+      if (self._finished) { break; }
       if (!any_new) await sleep(3);
     }
     return;
