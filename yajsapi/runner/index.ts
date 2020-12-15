@@ -194,7 +194,7 @@ export class Engine {
     max_workers: Number = 5,
     timeout: any = dayjs.duration({ minutes: 5 }).asMilliseconds(), //timedelta
     budget: string, //number
-    strategy: MarketStrategy = new DummyMS(),
+    strategy: MarketStrategy = new LeastExpensiveLinearPayuMS(),
     subnet_tag?: string,
     event_emitter?: Callable<[events.YaEvent], void> //TODO not default event
   ) {
