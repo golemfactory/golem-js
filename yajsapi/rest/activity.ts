@@ -12,6 +12,9 @@ import { Agreement } from "./market";
 import { SGX_CONFIG } from "../package/sgx";
 import * as utf8 from "utf8";
 
+/**
+ * A convenience helper to facilitate the creation of an Activity.
+ */
 export class ActivityService {
   private _api!: RequestorControlApi;
   private _state!: RequestorStateApi;
@@ -21,6 +24,13 @@ export class ActivityService {
     this._state = new RequestorStateApi(cfg);
   }
 
+  /**
+   * Create an activity within bounds of the specified agreement.
+   * 
+   * @param agreement -
+   * @param secure    - 
+   * @returns Activity
+   */
   async create_activity(agreement: Agreement, secure: boolean = false): Promise<Activity> {
     try {
       if (secure) {
@@ -132,6 +142,7 @@ class ExeScriptRequest implements yaa.ExeScriptRequest {
   }
 }
 
+// Mid-level wrapper for REST's Activity endpoint
 class Activity {
   protected _api!: RequestorControlApi;
   protected _state!: RequestorStateApi;
