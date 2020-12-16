@@ -73,6 +73,7 @@ export class _BufferItem {
 type D = "D"; // Type var for task data
 type R = "R"; // Type var for task result
 
+
 export type ExecutorOpts = {
   task_package: Package;
   max_workers?: Number;
@@ -83,6 +84,11 @@ export type ExecutorOpts = {
   event_consumer?: Callable<[events.YaEvent], void>; //TODO not default event
 };
 
+/**
+ * Task executor 
+ * 
+ * @description Used to run tasks using the specified application package within providers' execution units.
+ */
 export class Executor {
   private _subnet;
   private _strategy;
@@ -102,6 +108,17 @@ export class Executor {
   private _cancellation_token: CancellationToken;
   private _worker_cancellation_token: CancellationToken;
 
+  /**
+   * Create new executor
+   * 
+   * @param task_package    a package common for all tasks; vm.repo() function may be used to return package from a repository
+   * @param max_workers     maximum number of workers doing the computation
+   * @param timeout         timeout for the whole computation
+   * @param budget          maximum budget for payments
+   * @param strategy        market strategy used to select providers from the market (e.g. LeastExpensiveLinearPayuMS or DummyMS)
+   * @param subnet_tag      use only providers in the subnet with the subnet_tag name
+   * @param event_consumer  a callable that processes events related to the computation; by default it is a function that logs all events
+   */
   constructor({
     task_package,
     max_workers = 5,
@@ -145,6 +162,13 @@ export class Executor {
       new AsyncWrapper(event_consumer, null, cancellationToken);
   }
 
+  /**
+   * Submit a computation to be executed on providers.
+   * 
+   * @param worker   a callable that takes a WorkContext object and a list o tasks, adds commands to the context object and yields committed commands
+   * @param data     an iterator of Task objects to be computed on providers
+   * @returns        yields computation progress events
+   */
   async *submit(
     worker: Callable<
       [WorkContext, AsyncIterable<Task<D, R>>],
@@ -221,7 +245,7 @@ export class Executor {
             })
           );
           emit(new events.CheckingPayments());
-          const allocation = self.allocation_for_invoice(invoice);
+          const allocation = self._allocation_for_invoice(invoice);
           try {
             await invoice.accept(invoice.amount, allocation);
             agreements_to_pay.delete(invoice.agreementId);
@@ -256,7 +280,7 @@ export class Executor {
         return;
       }
       invoices.delete(agreement_id);
-      const allocation = self.allocation_for_invoice(inv);
+      const allocation = self._allocation_for_invoice(inv);
       await inv.accept(inv.amount, allocation);
       emit(
         new events.PaymentAccepted({
@@ -678,6 +702,7 @@ export class Executor {
     return;
   }
 
+
   async _create_allocations(): Promise<MarketDecoration> {
     if (!this._budget_allocations.length) {
       for await (let account of this._payment_api.accounts()) {
@@ -720,7 +745,7 @@ export class Executor {
     ) as string[];
   }
 
-  allocation_for_invoice(invoice: Invoice): Allocation {
+  _allocation_for_invoice(invoice: Invoice): Allocation {
     try {
       const _allocation = this._budget_allocations.find(
         (allocation) =>
