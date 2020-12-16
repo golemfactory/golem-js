@@ -1,5 +1,4 @@
-import { any } from "bluebird";
-import { Identification } from "../props";
+import { NodeInfo } from "../props";
 import applyMixins from "../utils/applyMixins";
 
 type ExcInfo = [Error, Error, any?]; // TracebackType
@@ -110,7 +109,7 @@ class AgreementEvent extends YaEvent {
 }
 
 export class AgreementCreated extends AgreementEvent {
-  provider_id?: Identification;
+  provider_id?: NodeInfo;
   constructor({ agr_id, provider_id }) {
     super();
     if (agr_id) this.agr_id = agr_id;
