@@ -161,7 +161,19 @@ export class Model {
   /**
    * @returns a mapping between the model's field names and the property keys
    * 
-   * @example TODO
+   * @example 
+   * ```js
+   * import { props } from "yajsapi"
+   * const { Field, Model } = props;
+   * export class NodeInfo extends Model {
+   *   name: Field = new Field({ metadata: { key: "golem.node.id.name" } });
+   *   subnet_tag: Field = new Field({
+   *     metadata: { key: "golem.node.debug.subnet" },
+   *   });
+   * }
+   * new NodeInfo().keys().name()
+   * // Output: 'golem.node.id.name'
+   * ```
    */
   keys(): any {
     class _Keys {

@@ -3,15 +3,32 @@ import { Market, Subscription } from "../rest/market";
 
 /**
  * Builds an object of properties and constraints from high-level models.
- * 
- * @example  TODO
  *
  * @description The object represents a Demand object, which is later matched by the new Golem's
  *  market implementation against Offers coming from providers to find those providers
  *  who can satisfy the requestor's demand.
  * 
- * @example TODO
+ * @example 
+ * ```js
+ * import dayjs from "dayjs"
+ * import { props } from "yajsapi"
  * 
+ * dayjs.extend(utc);
+ * 
+ * const { Activity, DemandBuilder, NodeInfo } = props;
+ * let builder = new DemandBuilder();
+ * builder.add(NodeInfo("testnet", "a node"));
+ * let act = new yp.Activity();
+ * act.expiration.value = dayjs().utc().unix() * 1000;
+ * builder.add(act);
+ * console.log(builder);
+ * // Output: 
+ * // {'properties':
+ * //    {'golem.node.id.name': 'a node',
+ * //     'golem.node.debug.subnet': 'testnet',
+ * //     'golem.srv.comp.expiration': 1601655628772},
+ * //  'constraints': []}
+ * ```
  */
 export class DemandBuilder {
   public _properties: Object;
