@@ -4,7 +4,7 @@ import applyMixins from "../utils/applyMixins";
 type ExcInfo = [Error, Error, any?]; // TracebackType
 
 /**
- * An abstract base class for types of events emitted by `Engine.map()`.
+ * An abstract base class for types of events emitted by `Executor.submit()`.
  */
 export class YaEvent {
   constructor() {}
