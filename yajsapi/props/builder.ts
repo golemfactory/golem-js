@@ -3,10 +3,12 @@ import { Market, Subscription } from "../rest/market";
 
 /**
  * Builds an object of properties and constraints from high-level models.
- * @example
+ * 
+ * @example  TODO
+ *
  * @description The object represents a Demand object, which is later matched by the new Golem's
-    market implementation against Offers coming from providers to find those providers
-    who can satisfy the requestor's demand.
+ *  market implementation against Offers coming from providers to find those providers
+ *  who can satisfy the requestor's demand.
  * 
  * @example TODO
  * 
