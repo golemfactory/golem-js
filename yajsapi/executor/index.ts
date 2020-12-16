@@ -73,7 +73,7 @@ export class _BufferItem {
 type D = "D"; // Type var for task data
 type R = "R"; // Type var for task result
 
-export type ExectorOpts = {
+export type ExecutorOpts = {
   task_package: Package;
   max_workers?: Number;
   timeout?: Number | String; //timedelta
@@ -110,7 +110,7 @@ export class Executor {
     strategy = new DummyMS(),
     subnet_tag,
     event_consumer,
-  }: ExectorOpts) {
+  }: ExecutorOpts) {
     this._subnet = subnet_tag;
     this._strategy = strategy;
     this._api_config = new rest.Configuration();
