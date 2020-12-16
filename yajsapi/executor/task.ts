@@ -81,7 +81,7 @@ export class Task<TaskData, TaskResult> {
     return this._data;
   }
 
-  output(): TaskResult | null | undefined {
+  result(): TaskResult | null | undefined {
     return this._result;
   }
 
@@ -89,7 +89,7 @@ export class Task<TaskData, TaskResult> {
     return this._expires;
   }
 
-  accept_task(result: TaskResult | null = null): void {
+  accept_result(result: TaskResult | null = null): void {
     if (this._emit_event) {
       this._emit_event(new events.TaskAccepted({task_id: this.id, result}));
     }
@@ -100,7 +100,7 @@ export class Task<TaskData, TaskResult> {
     for (let cb of this._callbacks) cb && cb(this, TaskStatus.ACCEPTED);
   }
 
-  reject_task(reason: string | null = null, retry: boolean = false): void {
+  reject_result(reason: string | null = null, retry: boolean = false): void {
     if (this._emit_event) {
       this._emit_event(new events.TaskRejected({task_id: this.id, reason}));
     }

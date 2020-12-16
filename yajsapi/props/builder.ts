@@ -2,18 +2,18 @@ import dayjs from "dayjs";
 import { Market, Subscription } from "../rest/market";
 
 export class DemandBuilder {
-  public _props: Object;
+  public _properties: Object;
   public _constraints: string[];
   constructor() {
-    this._props = {};
+    this._properties = {};
     this._constraints = [];
   }
 
-  props(): object {
-    return this._props;
+  properties(): object {
+    return this._properties;
   }
 
-  cons(): string {
+  constraints(): string {
     let c_list = this._constraints;
     let c_value: string;
     if (!c_list || c_list.length < 1) c_value = "()";
@@ -49,12 +49,12 @@ export class DemandBuilder {
         )
           throw Error("");
       }
-      this._props[prop_id] = value;
+      this._properties[prop_id] = value;
     }
   }
 
   async subscribe(market: Market): Promise<Subscription> {
-    let result: Subscription = await market.subscribe(this.props(), this.cons());
+    let result: Subscription = await market.subscribe(this.properties(), this.constraints());
     return result;
   }
 }
