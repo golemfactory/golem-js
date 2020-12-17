@@ -352,9 +352,15 @@ class Batch implements AsyncIterable<Result> {
         results = await this._activity.results(this._batch_id);
       } catch (error) {
         if (this._activity._finished) { break; }
-        if (error.response && error.response.status && error.response.status == 408) {
+        if (error.response && error.response.status == 408) {
           continue;
         } else {
+          if (error.response && error.response.status == 500 && error.response.data) {
+            throw new CommandExecutionError(
+              last_idx.toString(),
+              `Provider might have disconnected (error: ${error.response.data.message})`
+            );
+          }
           throw error;
         }
       }
