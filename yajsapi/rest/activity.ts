@@ -137,13 +137,11 @@ class Activity {
   protected _state!: RequestorStateApi;
   protected _id!: string;
   protected _credentials?: object;
-  _finished: boolean;
 
   constructor(id: string, _api: RequestorControlApi, _state: RequestorStateApi) {
     this._id = id;
     this._api = _api;
     this._state = _state;
-    this._finished = false;
   }
 
   set id(x) {
@@ -190,7 +188,6 @@ class Activity {
   }
 
   async done(): Promise<void> {
-    this._finished = true;
     try {
       const { data: batch_id } = await this._api.exec(
         this._id,
@@ -345,13 +342,12 @@ class Batch implements AsyncIterable<Result> {
   async *[Symbol.asyncIterator](): any {
     // AsyncGenerator<Result, any, unknown>
     let last_idx = 0;
-    while (last_idx < this._size && !this._activity._finished) {
+    while (last_idx < this._size) {
       let any_new: boolean = false;
       let results: yaa.ExeScriptCommandResult[] = []
       try {
         results = await this._activity.results(this._batch_id);
       } catch (error) {
-        if (this._activity._finished) { break; }
         if (error.response && error.response.status == 408) {
           continue;
         } else {
@@ -383,7 +379,6 @@ class Batch implements AsyncIterable<Result> {
         last_idx = result.index + 1;
         if (result.isBatchFinished) break;
       }
-      if (this._activity._finished) { break; }
       if (!any_new) await sleep(3);
     }
     return;
