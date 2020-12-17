@@ -130,7 +130,7 @@ export class LeastExpensiveLinearPayuMS {
   }
 
   async score_offer(offer: OfferProposal): Promise<Number> {
-    const linear: ComLinear = new ComLinear().from_props(offer.props);
+    const linear: ComLinear = new ComLinear().from_props(offer.props());
 
     if (linear.scheme.value != BillingScheme.PAYU) return SCORE_REJECTED;
 
