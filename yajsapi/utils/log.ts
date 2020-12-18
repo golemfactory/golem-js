@@ -270,8 +270,12 @@ class SummaryLogger {
       const provider_name = this.agreement_provider_name[event["agr_id"]];
       if (!this.provider_failures[provider_name]) this.provider_failures[provider_name] = 0;
       this.provider_failures[provider_name] += 1;
+      let more_info = "";
+      if (event["exception"] && event["exception"].response && event["exception"].response.data) {
+        more_info = `, info: ${event["exception"].response.data.message}`;
+      }
       logger.warn(
-        `Activity failed on provider '${provider_name}', reason: ${event["exception"]}`
+        `Activity failed on provider '${provider_name}', reason: ${event["exception"]}${more_info}`
       );
     } else if (eventName === events.ComputationFinished.name) {
       this.finished = true;

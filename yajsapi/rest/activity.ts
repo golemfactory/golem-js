@@ -309,6 +309,9 @@ class CommandExecutionError extends Error {
     super(description);
     this.name = key;
   }
+  toString() {
+    return this.message;
+  }
 }
 
 class Batch implements AsyncIterable<Result> {

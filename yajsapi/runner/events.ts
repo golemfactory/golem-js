@@ -2,7 +2,7 @@ import { any } from "bluebird";
 import { Identification } from "../props";
 import applyMixins from "../utils/applyMixins";
 
-type ExcInfo = [Error, Error, any?]; // TracebackType
+type ExcInfo = Error;
 
 export class YaEvent {
   constructor() {}
