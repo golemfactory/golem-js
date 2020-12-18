@@ -37,7 +37,7 @@ export class Invoice extends yInvoice {
   async accept(amount: number | string, allocation: Allocation) {
     let acceptance: yap.Acceptance = {
       totalAmountAccepted: amount.toString(),
-      allocationId: allocation.id
+      allocationId: allocation.id,
     };
     acceptance!.totalAmountAccepted = amount.toString();
     acceptance!.allocationId = allocation.id;
@@ -222,19 +222,22 @@ export class Payment {
   }
 
   async *accounts(): AsyncGenerator<yap.Account> {
-    let { data: _accounts } = await this._api.getSendAccounts();
+    let { data: _accounts } = await this._api.getRequestorAccounts();
     for (let account_obj of _accounts) {
       yield account_obj;
     }
   }
 
   async decorate_demand(ids: string[]): Promise<yap.MarketDecoration> {
-    const { data: _decorate_demand } = await this._api.decorateDemand(ids);
+    const { data: _decorate_demand } = await this._api.getDemandDecorations(
+      ids
+    );
     return _decorate_demand;
   }
 
   async *invoices(): AsyncGenerator<Invoice> {
-    let { data: result } = await this._api.getReceivedInvoices();
+    let { data: result } = await this._api.getInvoices();
+    // TODO may need to check only requestor invoices
     for (let invoice_obj of result) {
       yield new Invoice(this._api, invoice_obj);
     }
@@ -242,7 +245,8 @@ export class Payment {
   }
 
   async invoice(invoice_id: string): Promise<Invoice> {
-    let { data: invoice_obj } = await this._api.getReceivedInvoice(invoice_id);
+    let { data: invoice_obj } = await this._api.getInvoice(invoice_id);
+    // TODO may need to check only requestor invoices
     // logger.log("debug", `got=${JSON.stringify(invoice_obj)}`);
     return new Invoice(this._api, invoice_obj);
   }
@@ -256,14 +260,15 @@ export class Payment {
       let ts = init_ts;
       while (true) {
         if (cancellationToken.cancelled) break;
-        let { data: items } = await api.getRequestorInvoiceEvents(
+        let { data: items } = await api.getInvoiceEvents(
           5,
           ts.format("YYYY-MM-DD HH:mm:ss.SSSSSSZ")
         );
         for (let ev of items) {
-          ts = dayjs(new Date(parseInt(ev.timestamp as string) * 1000));
-          if (ev.eventType == yap.EventType.RECEIVED) {
-            let invoice = await self.invoice(ev.invoiceId);
+          // TODO may need to check only requestor invoices
+          ts = dayjs(new Date(parseInt(ev.eventDate as string) * 1000));
+          if (ev.eventType == yap.InvoiceStatus.Received) {
+            let invoice = await self.invoice(ev["invoiceId"]);
             yield invoice;
           }
         }

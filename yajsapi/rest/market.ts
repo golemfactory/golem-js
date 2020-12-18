@@ -56,10 +56,16 @@ export class Agreement {
 class mProposal implements models.Proposal {
   properties!: object;
   constraints!: string;
-  proposalId?: string;
-  issuerId?: string;
-  state?: models.ProposalAllOfStateEnum;
+  proposalId!: string;
+  issuerId!: string;
+  state!: models.ProposalAllOfStateEnum;
   prevProposalId?: string;
+  timestamp!: string;
+}
+
+class mDemandOfferBase implements models.DemandOfferBase {
+  properties!: object;
+  constraints!: string;
 }
 
 class mAgreementProposal implements models.AgreementProposal {
@@ -88,6 +94,10 @@ export class OfferProposal {
     return this._proposal.proposal!.properties;
   }
 
+  state() {
+    return this._proposal.proposal!.state;
+  }
+
   is_draft(): boolean {
     return (
       this._proposal.proposal!.state == models.ProposalAllOfStateEnum.Draft
@@ -102,15 +112,15 @@ export class OfferProposal {
   }
 
   async respond(props: object, constraints: string): Promise<string> {
-    let proposal: mProposal = new mProposal();
-    proposal.properties = props;
-    proposal.constraints = constraints;
+    let with_proposal: mDemandOfferBase = new mDemandOfferBase();
+    with_proposal.properties = props;
+    with_proposal.constraints = constraints;
     let {
       data: new_proposal,
     } = await this._subscription._api.counterProposalDemand(
       this._subscription.id(),
       this.id(),
-      proposal
+      with_proposal
     );
     return new_proposal;
   }
@@ -201,10 +211,11 @@ export class Subscription {
 }
 
 class mDemand implements models.Demand {
-  demandId?: string = "";
-  requestorId?: string = "";
+  demandId: string = "";
+  requestorId: string = "";
   properties!: object;
   constraints!: string;
+  timestamp!: string;
 }
 
 export class Market {
@@ -214,7 +225,7 @@ export class Market {
   }
 
   subscribe(props: {}, constraints: string): Promise<Subscription> {
-    let request: models.Demand = new mDemand();
+    let request: models.DemandOfferBase = new mDemandOfferBase();
     request.properties = props;
     request.constraints = constraints;
     let self = this;
