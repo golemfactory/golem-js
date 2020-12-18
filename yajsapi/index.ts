@@ -1,4 +1,3 @@
-import events from "events";
 import { Engine, Task, sgx, vm } from "./runner";
 import { WorkContext } from "./runner/ctx";
 import * as props from "./props";
