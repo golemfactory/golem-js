@@ -13,6 +13,11 @@ type TaskData = "TaskData";
 type TaskResult = "TaskResult";
 type TaskEvents = events.TaskAccepted | events.TaskRejected;
 
+/**
+ * One computation unit.
+ *
+ * @description Represents one computation unit that will be run on the provider (e.g. rendering of one frame of an animation).
+ */
 export class Task<TaskData, TaskResult> {
   static count: number = 0;
   public id: number = 0;
@@ -27,6 +32,14 @@ export class Task<TaskData, TaskResult> {
   private _result?: TaskResult | null;
   private _data;
   private _status!: TaskStatus;
+
+  /**
+   * Create a new Task object.
+   *
+   * @param data     contains information needed to prepare command list for the provider
+   * @param expires
+   * @param timeout
+   */
   constructor(
     data: TaskData,
     expires: number | null = null,
@@ -81,7 +94,7 @@ export class Task<TaskData, TaskResult> {
     return this._data;
   }
 
-  output(): TaskResult | null | undefined {
+  result(): TaskResult | null | undefined {
     return this._result;
   }
 
@@ -89,7 +102,13 @@ export class Task<TaskData, TaskResult> {
     return this._expires;
   }
 
-  accept_task(result: TaskResult | null = null): void {
+  /**
+   * Accept the result of this task.
+   *
+   * @description Must be called when the result is correct to mark this task as completed.
+   * @param result task computation result (optional)
+   */
+  accept_result(result: TaskResult | null = null): void {
     if (this._emit_event) {
       this._emit_event(new events.TaskAccepted({task_id: this.id, result}));
     }
@@ -100,7 +119,15 @@ export class Task<TaskData, TaskResult> {
     for (let cb of this._callbacks) cb && cb(this, TaskStatus.ACCEPTED);
   }
 
-  reject_task(reason: string | null = null, retry: boolean = false): void {
+  /**
+   * Reject the result of this task.
+   *
+   * @description Must be called when the result is not correct to indicate that the task should be retried.
+   *
+   * @param reason  Task rejection description (optional)
+   * @param retry   Task retry in case of rejects (optional)
+   */
+  reject_result(reason: string | null = null, retry: boolean = false): void {
     if (this._emit_event) {
       this._emit_event(new events.TaskRejected({task_id: this.id, reason}));
     }

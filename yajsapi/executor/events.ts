@@ -1,12 +1,19 @@
-import { any } from "bluebird";
-import { Identification } from "../props";
+import { NodeInfo } from "../props";
 import applyMixins from "../utils/applyMixins";
 
 type ExcInfo = [Error, Error, any?]; // TracebackType
 
+/**
+ * An abstract base class for types of events emitted by `Executor.submit()`.
+ */
 export class YaEvent {
   constructor() {}
 
+  /**
+   * Extract exception information from this event.
+   * 
+   * @returns The extracted exception information and a copy of the event without the exception information.
+   */
   extract_exc_info(): [ExcInfo | null | undefined, YaEvent] {
     return [null, this];
   }
@@ -14,6 +21,7 @@ export class YaEvent {
 
 export class ComputationStarted extends YaEvent {}
 
+// Indicates successful completion if `exc_info` is `None` and a failure otherwise.
 export class ComputationFinished extends YaEvent {}
 
 export class ComputationFailed extends YaEvent {
@@ -110,7 +118,7 @@ class AgreementEvent extends YaEvent {
 }
 
 export class AgreementCreated extends AgreementEvent {
-  provider_id?: Identification;
+  provider_id?: NodeInfo;
   constructor({ agr_id, provider_id }) {
     super();
     if (agr_id) this.agr_id = agr_id;
@@ -221,6 +229,7 @@ export class TaskStarted extends EventGeneral {
   }
 }
 
+// Indicates successful completion if `exc_info` is `None` and a failure otherwise.
 export class WorkerFinished extends AgreementEvent {
   exception?: ExcInfo | null = null;
 

@@ -8,6 +8,19 @@ import { Configuration } from "ya-ts-client/dist/ya-activity";
 
 dayjs.extend(utc);
 
+type _ModelType = Pick<Model, "from_properties"> & Partial<Model>;
+
+class View {
+  private _properties!: object;
+
+  constructor(properties: object) {
+    this._properties = properties;
+  }
+
+  extract(m: _ModelType): _ModelType {
+    return m.from_properties(this._properties);
+  }
+}
 class AgreementDetails extends Object {
   raw_details!: models.Agreement;
 
@@ -16,9 +29,14 @@ class AgreementDetails extends Object {
     this.raw_details = _ref;
   }
 
-  view_prov(c: Model): Model {
+  provider_view(): View {
     let offer: models.Offer = this.raw_details.offer;
-    return c.from_props(offer.properties);
+    return new View(offer.properties);
+  }
+
+  requestor_view(c: Model): View {
+    let demand: models.Offer = this.raw_details.demand;
+    return new View(demand.properties);
   }
 }
 
@@ -126,7 +144,7 @@ export class OfferProposal {
   }
 
   // TODO: This timeout is for negotiation ?
-  async agreement(timeout = 3600): Promise<Agreement> {
+  async create_agreement(timeout = 3600): Promise<Agreement> {
     let proposal: mAgreementProposal = new mAgreementProposal();
     proposal.proposalId = this.id();
     proposal.validTo = dayjs()
@@ -188,7 +206,7 @@ export class Subscription {
 
   async *events(cancellationToken?): AsyncGenerator<OfferProposal> {
     while (this._open) {
-      if(cancellationToken && cancellationToken.cancelled) break;
+      if (cancellationToken && cancellationToken.cancelled) break;
       try {
         let { data: proposals } = await this._api.collectOffers(
           this._id,
