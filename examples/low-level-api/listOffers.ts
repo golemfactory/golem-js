@@ -16,7 +16,7 @@ async function list_offers(conf: rest.Configuration, subnetTag: string): Promise
   let market_api = new Market(client);
   let dbuild = new yp.DemandBuilder();
 
-  let idx = new yp.Identification(subnetTag);
+  let idx = new yp.NodeInfo(subnetTag);
   idx.name.value = "some scanning node";
   dbuild.add(idx);
 
@@ -25,7 +25,7 @@ async function list_offers(conf: rest.Configuration, subnetTag: string): Promise
   dbuild.add(act);
 
   await asyncWith(
-    await market_api.subscribe(dbuild.props(), dbuild.cons()),
+    await market_api.subscribe(dbuild.properties(), dbuild.constraints()),
     async (subscription: Subscription) => {
       for await (let event of subscription.events(cancellationToken)) {
         console.log(`Offer: ${event.id()}`);

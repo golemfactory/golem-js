@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import winston from "winston";
 import { Callable } from "./";
-import * as events from "../runner/events";
+import * as events from "../executor/events";
 
 dayjs.extend(duration);
 

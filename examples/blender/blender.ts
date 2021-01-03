@@ -1,7 +1,7 @@
 import path from "path";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
-import { Engine, Task, utils, vm, WorkContext } from "yajsapi";
+import { Executor, Task, utils, vm, WorkContext } from "yajsapi";
 import { program } from "commander";
 
 dayjs.extend(duration);
@@ -9,11 +9,11 @@ dayjs.extend(duration);
 const { asyncWith, logUtils, range } = utils;
 
 async function main(subnetTag: string) {
-  const _package = await vm.repo(
-    "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
-    0.5,
-    2.0
-  );
+  const _package = await vm.repo({
+    image_hash: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+    min_mem_gib: 0.5,
+    min_storage_gib: 2.0,
+  });
 
   async function* worker(ctx: WorkContext, tasks) {
     ctx.send_file(
@@ -43,7 +43,7 @@ async function main(subnetTag: string) {
         OUTPUT_DIR: "/golem/output",
       });
       ctx.run("/golem/entrypoints/run-blender.sh");
-      const output_file = `output_${frame.toString()}.png`
+      const output_file = `output_${frame.toString()}.png`;
       ctx.download_file(
         `/golem/output/out${frame.toString().padStart(4, "0")}.png`,
         path.join(__dirname, `./output_${frame}.png`)
@@ -52,7 +52,7 @@ async function main(subnetTag: string) {
       // TODO: Check
       // job results are valid // and reject by:
       // task.reject_task(msg = 'invalid file')
-      task.accept_task(output_file);
+      task.accept_result(output_file);
     }
 
     ctx.log("no more frames to render");
@@ -63,21 +63,20 @@ async function main(subnetTag: string) {
   const timeout: number = dayjs.duration({ minutes: 15 }).asMilliseconds();
 
   await asyncWith(
-    await new Engine(
-      _package,
-      6,
-      timeout, //5 min to 30 min
-      "10.0",
-      undefined,
-      subnetTag,
-      logUtils.logSummary()
-    ),
-    async (engine: Engine): Promise<void> => {
-      for await (let task of engine.map(
+    new Executor({
+      task_package: _package,
+      max_workers: 6,
+      timeout: timeout,
+      budget: "10.0",
+      subnet_tag: subnetTag,
+      event_consumer: logUtils.logSummary(),
+    }),
+    async (executor: Executor): Promise<void> => {
+      for await (let task of executor.submit(
         worker,
         frames.map((frame) => new Task(frame))
       )) {
-        console.log("result=", task.output());
+        console.log("result=", task.result());
       }
     }
   );
@@ -85,8 +84,8 @@ async function main(subnetTag: string) {
 }
 
 program
-  .option('--subnet-tag <subnet>', 'set subnet name', 'community.3')
-  .option('-d, --debug', 'output extra debugging');
+  .option("--subnet-tag <subnet>", "set subnet name", "community.3")
+  .option("-d, --debug", "output extra debugging");
 program.parse(process.argv);
 if (program.debug) {
   utils.changeLogLevel("debug");
