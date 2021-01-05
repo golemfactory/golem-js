@@ -4,7 +4,7 @@ import { ResourceCtx } from "./resource";
 import * as yap from "ya-ts-client/dist/ya-payment/src/models";
 import { Configuration } from "ya-ts-client/dist/ya-activity";
 import { RequestorApi } from "ya-ts-client/dist/ya-payment/api";
-import { logger } from "../utils";
+import { logger, sleep } from "../utils";
 
 dayjs.extend(utc);
 
@@ -260,17 +260,24 @@ export class Payment {
       let ts = init_ts;
       while (true) {
         if (cancellationToken.cancelled) break;
-        let { data: items } = await api.getInvoiceEvents(
-          5,
+        let { data: events } = await api.getInvoiceEvents(
+          undefined,
           ts.format("YYYY-MM-DD HH:mm:ss.SSSSSSZ")
         );
-        for (let ev of items) {
-          // TODO may need to check only requestor invoices
+        for (let ev of events) {
+          logger.debug(
+            `Received invoice event: ${JSON.stringify(
+              ev
+            )}, type: ${JSON.stringify(Object.getPrototypeOf(ev))}`
+          );
           ts = dayjs(new Date(parseInt(ev.eventDate as string) * 1000));
-          if (ev.eventType == yap.InvoiceStatus.Received) {
+          if (ev.eventType === "InvoiceReceivedEvent") {
             let invoice = await self.invoice(ev["invoiceId"]);
             yield invoice;
           }
+        }
+        if (!events || !events.length) {
+          await sleep(1);
         }
       }
       return;

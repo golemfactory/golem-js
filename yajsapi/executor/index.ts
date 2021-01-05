@@ -10,9 +10,9 @@ import { Activity, NodeInfo, NodeInfoKeys } from "../props";
 import { DemandBuilder } from "../props/builder";
 
 import * as rest from "../rest";
-import { OfferProposal, Subscription } from "../rest/market";
+import { Agreement,  OfferProposal, Subscription } from "../rest/market";
 import { Allocation, Invoice } from "../rest/payment";
-import { Agreement } from "../rest/market";
+import { CommandExecutionError } from "../rest/activity";
 
 import * as gftp from "../storage/gftp";
 import {
@@ -91,6 +91,7 @@ export type ExecutorOpts = {
  */
 export class Executor {
   private _subnet;
+  private _stream_output;
   private _strategy;
   private _api_config;
   private _stack;
@@ -129,6 +130,7 @@ export class Executor {
     event_consumer,
   }: ExecutorOpts) {
     this._subnet = subnet_tag;
+    this._stream_output = true;
     this._strategy = strategy;
     this._api_config = new rest.Configuration();
     this._stack = new AsyncExitStack();
@@ -182,7 +184,7 @@ export class Executor {
 
     const multi_payment_decoration = await this._create_allocations();
 
-    emit(new events.ComputationStarted());
+    emit(new events.ComputationStarted({ expires: this._expires }));
     // Building offer
     let builder = new DemandBuilder();
     let _activity = new Activity();
@@ -206,6 +208,7 @@ export class Executor {
     let strategy = this._strategy;
     let cancellationToken = this._cancellation_token;
     let done_queue: Queue<Task<D, R>> = new Queue([], cancellationToken);
+    let stream_output = this._stream_output;
 
     function on_task_done(task: Task<D, R>, status: TaskStatus): void {
       if (status === TaskStatus.ACCEPTED) done_queue.put(task); //put_nowait
@@ -401,7 +404,7 @@ export class Executor {
 
       let _act;
       try {
-        _act = await activity_api.create_activity(agreement, secure);
+        _act = await activity_api.new_activity(agreement, secure);
       } catch (error) {
         emit(new events.ActivityCreateFailed({ agr_id: agreement.id() }));
         throw error;
@@ -436,6 +439,10 @@ export class Executor {
               task_emitter(consumer)
             );
             for await (let batch of command_generator) {
+              const _batch_timeout = batch.timeout();
+              const batch_deadline = _batch_timeout 
+                ? dayjs.utc().unix() - _batch_timeout 
+                : null;
               try {
                 let current_worker_task = consumer.last_item();
                 if (current_worker_task) {
@@ -458,44 +465,22 @@ export class Executor {
                 await batch.prepare();
                 let cc = new CommandContainer();
                 batch.register(cc);
-                let remote = await act.exec(cc.commands());
+                let remote = await act.send(cc.commands(), stream_output, batch_deadline);
+                let cmds = cc.commands();
                 emit(
                   new events.ScriptSent({
                     agr_id: agreement.id(),
-                    task_id: task_id,
-                    cmds: cc.commands(),
+                    task_id,
+                    cmds,
                   })
                 );
                 emit(new events.CheckingPayments());
-                try {
-                  for await (let step of remote) {
-                    batch.output.push(step);
-                    emit(
-                      new events.CommandExecuted({
-                        success: true,
-                        agr_id: agreement.id(),
-                        task_id: task_id,
-                        command: cc.commands()[step.idx],
-                        message: step.message,
-                        cmd_idx: step.idx,
-                      })
-                    );
+                for await (let evt_ctx of remote) {
+                  let evt = evt_ctx.event(agreement.id(), task_id, cmds);
+                  emit(evt);
+                  if (evt instanceof events.CommandExecuted) {
+                    throw new CommandExecutionError(evt.command, evt.message)
                   }
-                } catch (error) {
-                  // assert len(err.args) >= 2
-                  const { name: cmd_idx, description } = error;
-                  //throws new CommandExecutionError from activity#355
-                  emit(
-                    new events.CommandExecuted({
-                      success: false,
-                      agr_id: agreement.id(),
-                      task_id: task_id,
-                      command: cc.commands()[cmd_idx],
-                      message: description,
-                      cmd_idx: cmd_idx,
-                    })
-                  );
-                  throw error;
                 }
                 emit(
                   new events.GettingResults({
@@ -544,6 +529,13 @@ export class Executor {
     }
 
     async function worker_starter(): Promise<void> {
+      async function _start_worker(agreement) {
+        try {
+          await start_worker(agreement);
+        } finally {
+          await agreement.terminate();
+        }
+      }
       while (true) {
         if (self._worker_cancellation_token.cancelled) break;
         await sleep(2);
@@ -578,7 +570,7 @@ export class Executor {
               continue;
             }
             emit(new events.AgreementConfirmed({ agr_id: agreement.id() }));
-            new_task = loop.create_task(start_worker.bind(null, agreement));
+            new_task = loop.create_task(_start_worker.bind(null, agreement));
             workers.add(new_task);
           } catch (error) {
             if (new_task) new_task.cancel();

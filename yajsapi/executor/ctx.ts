@@ -57,6 +57,10 @@ export class Work {
 
   // A hook to be executed on requestor's end after the script has finished.
   async post() {}
+
+  timeout() {
+    return null
+  }
 }
 
 class _InitStep extends Work {
@@ -137,24 +141,35 @@ class _Run extends Work {
   private args;
   private env;
   private _idx;
+  private _stdout?: CaptureContext;
+  private _stderr?: CaptureContext;
 
-  constructor(cmd: string, args: Iterable<string> = [], env: {} | null = null) {
+  constructor(
+    cmd: string, 
+    args: Iterable<string> = [], 
+    env: {} | null = null,
+    stdout?: CaptureContext,
+    stderr?: CaptureContext,) {
     super();
     this.cmd = cmd;
     this.args = args;
     this.env = env;
     this._idx = null;
+    this._stdout = stdout;
+    this._stdout = stderr;
   }
 
   register(commands: any) {
+    let capture = {}
+    if (this._stdout)
+      capture['stdout'] = this._stdout.to_dict()
+    if (this._stderr)
+      capture['stderr'] = this._stderr.to_dict()
     //CommandContainer
     this._idx = commands.run({
       entry_point: this.cmd,
       args: this.args || [],
-      capture: {
-        stdout: { atEnd: {} },
-        stderr: { atEnd: {} },
-      },
+      capture,
     });
   }
 }
@@ -223,11 +238,17 @@ class _RecvFile extends Work {
 
 class _Steps extends Work {
   private _steps: Work[] = [];
+  private _timeout?: string;
 
-  constructor(steps: Work | Work[]) {
+  constructor(steps: Work | Work[], timeout?: string) {
     super();
     if (steps instanceof Work) this._steps.push(steps);
     else steps.forEach((step) => this._steps.push(step));
+    this._timeout = timeout;
+  }
+
+  timeout(): any {
+    return this._timeout;
   }
 
   // Execute the `prepare` hook for all the defined steps.
@@ -311,8 +332,10 @@ export class WorkContext {
    * @param env   optional object with environmental variables
    */
   run(cmd: string, args?: Iterable<string>, env: object | null = null) {
+    const stdout = CaptureContext.build("stream");
+    const stderr = CaptureContext.build("stream");
     this._prepare();
-    this._pending_steps.push(new _Run(cmd, args, env));
+    this._pending_steps.push(new _Run(cmd, args, env, stdout, stderr));
   }
 
   /**
@@ -342,9 +365,71 @@ export class WorkContext {
    *
    * @returns Work object (the latter contains sequence commands added before calling this method)
    */
-  commit(): Work {
+  commit(timeout?: string): Work {
     let steps = this._pending_steps;
     this._pending_steps = [];
-    return new _Steps(steps);
+    return new _Steps(steps, timeout);
+  }
+}
+
+enum CaptureMode {
+  HEAD = "head",
+  TAIL = "tail",
+  HEAD_TAIL = "headTail",
+  STREAM = "stream"
+}
+
+enum CaptureFormat {
+  BIN = "bin",
+  STR = "str"
+}
+
+class CaptureContext {
+  private mode!: string;
+  private limit?: number;
+  private fmt?: string;
+
+  constructor(mode, limit?, fmt?) {
+    this.mode = mode;
+    this.limit = limit;
+    this.fmt = fmt
+  }
+
+  static build(mode?: string, limit?: number, fmt?: string): CaptureContext {
+    if(!mode || mode === "all") {
+      mode = CaptureMode.HEAD;
+      limit = undefined;
+    }
+
+    fmt = fmt ? fmt.toLowerCase() : "str";
+
+    const get_key = (e: object, s: string) => Object.keys(e).find(k => e[k] == s);
+
+    if (!get_key(CaptureMode, mode)) {
+      throw new Error(`Invalid output capture mode: ${mode}`)
+    }
+    if (!get_key(CaptureFormat, fmt)) {
+      throw new Error(`Invalid output capture format: ${fmt}`)
+    }
+
+    return new CaptureContext(mode, limit, fmt);
+  }
+
+  to_dict() {
+    let inner = {}
+
+    if(this.limit) {
+      inner[this.mode] = this.limit;
+    }
+
+    if(this.fmt) {
+      inner["format"] = this.fmt;
+    }
+
+    return {[this.mode === CaptureMode.STREAM ? "stream" : "atEnd"]: inner}
+  }
+
+  is_streaming() {
+    return this.mode === CaptureMode.STREAM;
   }
 }

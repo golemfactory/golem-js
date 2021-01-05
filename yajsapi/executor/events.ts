@@ -19,7 +19,13 @@ export class YaEvent {
   }
 }
 
-export class ComputationStarted extends YaEvent {}
+export class ComputationStarted extends YaEvent {
+  expires?: number
+  constructor({ expires }) {
+    super();
+    this.expires = expires;
+  }
+}
 
 // Indicates successful completion if `exc_info` is `None` and a failure otherwise.
 export class ComputationFinished extends YaEvent {}
@@ -134,6 +140,13 @@ export class AgreementConfirmed extends AgreementEvent {
 }
 
 export class AgreementRejected extends AgreementEvent {
+  constructor({ agr_id }) {
+    super();
+    if (agr_id) this.agr_id = agr_id;
+  }
+}
+
+export class AgreementTerminated extends AgreementEvent {
   constructor({ agr_id }) {
     super();
     if (agr_id) this.agr_id = agr_id;
@@ -264,23 +277,6 @@ export class ScriptSent extends ScriptEvent {
   }
 }
 
-export class CommandExecuted extends ScriptEvent {
-  success?: boolean;
-  cmd_idx?: number;
-  command?: any;
-  message?: string;
-
-  constructor({ agr_id, task_id, success, cmd_idx, command, message }) {
-    super();
-    if (agr_id) this.agr_id = agr_id;
-    if (task_id) this.task_id = task_id;
-    if (success) this.success = success;
-    if (cmd_idx) this.cmd_idx = cmd_idx;
-    if (command) this.command = command;
-    if (message) this.message = message;
-  }
-}
-
 export class GettingResults extends ScriptEvent {
   constructor({ agr_id, task_id }) {
     super();
@@ -294,6 +290,149 @@ export class ScriptFinished extends ScriptEvent {
     super();
     if (agr_id) this.agr_id = agr_id;
     if (task_id) this.task_id = task_id;
+  }
+}
+
+export class CommandEvent extends ScriptEvent {
+  cmd_idx: number;
+  constructor({ agr_id, task_id, cmd_idx }) {
+    super();
+    if (agr_id) this.agr_id = agr_id;
+    this.task_id = task_id;
+    this.cmd_idx = cmd_idx;
+  }
+}
+
+export class CommandExecuted extends CommandEvent {
+  command?: any;
+  success?: boolean; // ? field
+  message?: string; // ? field
+
+  constructor({ agr_id, task_id, success, cmd_idx, command, message }) {
+    super({agr_id, cmd_idx, task_id});
+    if (success) this.success = success;
+    if (command) this.command = command;
+    if (message) this.message = message;
+  }
+}
+
+export class CommandEventContext {
+  evt: CommandEvent
+  constructor(evt_cls) {
+    this.evt = evt_cls;
+  }
+
+  static fromJson(json: string): CommandEventContext {
+    let rt_evt: RuntimeEvent = JSON.parse(json);
+    let out_evt: CommandEvent;
+
+    if (rt_evt.kind.started) {
+
+      let evt = Object.create(CommandStarted.prototype);
+      evt.cmd_idx = rt_evt.index;
+      evt.command = rt_evt.kind.started.command;
+      out_evt = evt;
+
+    } else if (rt_evt.kind.stdout) {
+
+      let evt = Object.create(CommandStdOut.prototype);
+      evt.cmd_idx = rt_evt.index;
+      evt.output = rt_evt.kind.stdout
+        ? rt_evt.kind.stdout.toString().trimEnd()
+        : "";
+      out_evt = evt;
+
+    } else if (rt_evt.kind.stderr) {
+
+      let evt = Object.create(CommandStdErr.prototype);
+      evt.cmd_idx = rt_evt.index;
+      evt.output = rt_evt.kind.stderr
+        ? rt_evt.kind.stderr.toString().trimEnd()
+        : "";
+      out_evt = evt;
+
+    } else if (rt_evt.kind.finished) {
+
+      let evt = Object.create(CommandExecuted.prototype);
+      evt.cmd_idx = rt_evt.index;
+      evt.command = rt_evt.kind.finished.command;
+      evt.success = rt_evt.kind.finished.return_code == 0;
+      out_evt = evt;
+
+    } else {
+      throw new Error(`invalid event: ${json}`);
+    }
+
+    return new CommandEventContext(out_evt);
+  }
+
+  computation_finished(last_idx): boolean {
+    let cmd_idx = this.evt.cmd_idx;
+    let success = this.evt.hasOwnProperty("success")
+      ? this.evt["success"]
+      : undefined;
+    return cmd_idx !== undefined && (
+      cmd_idx >= last_idx || success === false
+    )
+  }
+
+  event(agr_id: string, task_id: string, cmds: any[]): CommandEvent {
+    this.evt.agr_id = agr_id;
+    this.evt.task_id = task_id;
+
+    if (this.evt.hasOwnProperty("command")) {
+      let idx: number = this.evt.cmd_idx;
+      this.evt["command"] = cmds[idx];
+    }
+    return this.evt;
+  }
+}
+
+interface RuntimeEvent {
+  batch_id: string;
+  index: number;
+  timestamp: string;
+  kind: RuntimeEventKind;
+}
+
+interface RuntimeEventKind {
+  started?: RuntimeEventStarted;
+  stdout?: RuntimeEventStdOut;
+  stderr?: RuntimeEventStdErr;
+  finished?: RuntimeEventFinished;
+}
+
+interface RuntimeEventStarted {
+  command: object,
+}
+
+interface RuntimeEventStdOut {
+  output: string | ArrayBuffer;
+}
+
+interface RuntimeEventStdErr {
+  output: string | ArrayBuffer;
+}
+
+interface RuntimeEventFinished {
+  command: object;
+  return_code: number;
+}
+
+export class CommandStarted extends CommandEvent {
+  command!: string;
+} 
+
+export class CommandStdOut extends CommandEvent {
+  output!: string;
+}
+
+export class CommandStdErr extends CommandEvent {
+  output: string;
+
+  constructor({ agr_id, task_id, cmd_idx, output }) {
+    super({agr_id, task_id, cmd_idx});
+    this.output = output;
   }
 }
 
@@ -331,4 +470,8 @@ export class DownloadFinished extends YaEvent {
     super();
     if (path) this.path = path;
   }
+}
+
+export class ShutdownFinished {
+  // TBD
 }
