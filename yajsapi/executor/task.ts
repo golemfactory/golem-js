@@ -1,6 +1,10 @@
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 import { Callable, eventLoop } from "../utils";
 import * as events from "./events";
 import { Handle, SmartQueue } from "./smartq";
+
+dayjs.extend(utc);
 
 export enum TaskStatus {
   WAITING = "wait",
@@ -21,8 +25,8 @@ type TaskEvents = events.TaskAccepted | events.TaskRejected;
 export class Task<TaskData, TaskResult> {
   static count: number = 0;
   public id: number = 0;
-  private _started: number;
-  private _expires: number | null;
+  private _started: number | null;
+  private _finished: number | null;
   private _emit_event: any;
   private _callbacks!: Set<Function | null>;
   private _handle?: [
@@ -37,20 +41,15 @@ export class Task<TaskData, TaskResult> {
    * Create a new Task object.
    *
    * @param data     contains information needed to prepare command list for the provider
-   * @param expires
-   * @param timeout
    */
   constructor(
     data: TaskData,
-    expires: number | null = null,
-    timeout: number | null = null
   ) {
     this.id = Task.counter;
-    this._started = Date.now();
+    this._started = null;
+    this._finished = null;
     this._emit_event = null;
     this._callbacks = new Set();
-    if (timeout) this._expires = this._started + timeout;
-    else this._expires = expires;
 
     this._result = null;
     this._data = data;
@@ -64,9 +63,12 @@ export class Task<TaskData, TaskResult> {
   _start(_emitter): void {
     this._status = TaskStatus.RUNNING;
     this._emit_event = _emitter;
+    this._started = dayjs.utc().unix();
+    this._finished = null;
   }
 
   _stop(retry: boolean = false): void {
+    this._finished = dayjs.utc().unix();
     if (this._handle) {
       const [handle, queue] = this._handle;
       let loop = eventLoop();
@@ -98,8 +100,15 @@ export class Task<TaskData, TaskResult> {
     return this._result;
   }
 
-  expires(): number | null {
-    return this._expires;
+  running_time(): number | null {
+    if (this._finished) {
+      if(!this._started) throw Error("Task._started is null");
+      return this._finished - this._started;
+    }
+    if(this._started) {
+      return dayjs.utc().unix() - this._started;
+    }
+    return null;
   }
 
   /**

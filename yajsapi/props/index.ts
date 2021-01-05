@@ -52,6 +52,12 @@ export class Activity extends Model {
   expiration: Field = new Field({
     metadata: { key: "golem.srv.comp.expiration" },
   });
+
+  multi_activity: Field = new Field({
+    metadata: { key: "golem.srv.caps.multi-activity" },
+  })
+  /*Whether client supports multi_activity (executing more than one activity per agreement).
+  */
 }
 
 export const ActivityKeys = new Activity().keys().get();

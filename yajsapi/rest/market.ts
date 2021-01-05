@@ -35,7 +35,7 @@ class AgreementDetails extends Object {
   }
 
   requestor_view(c: Model): View {
-    let demand: models.Offer = this.raw_details.demand;
+    let demand: models.Demand = this.raw_details.demand;
     return new View(demand.properties);
   }
 }
@@ -66,8 +66,30 @@ export class Agreement {
 
   async confirm(): Promise<boolean> {
     await this._api.confirmAgreement(this._id);
-    let { data: msg } = await this._api.waitForApproval(this._id, 90, 100);
-    return msg.trim().toLowerCase() == "approved";
+    try {
+      let { data: msg } = await this._api.waitForApproval(this._id, 90, 100);
+      return true;
+    } catch (error) {
+      logger.debug(`waitForApproval(${this._id}) raised ApiException`);
+      return false;
+    }
+  }
+
+  async terminate(reason: string = "Finished"): Promise<boolean> {
+    try {
+      await this._api.terminateAgreement(this._id, { message: reason });
+      logger.debug(`terminateAgreement(${this._id}) returned successfully`);
+      return true;
+    } catch (error) {
+      if (error.response.status === 410) {
+        logger.debug(
+          `terminateAgreement(${this._id}) raised ApiException: status = 410, message = ${error.message}`
+        );
+      } else {
+        logger.debug(`terminateAgreement(${this._id}) raised ApiException`);
+      }
+      return false;
+    }
   }
 }
 
@@ -214,6 +236,7 @@ export class Subscription {
           10
         );
         for (let _proposal of proposals) {
+          // if(_proposal instanceof models.ProposalEvent)
           yield new OfferProposal(this, _proposal as models.ProposalEvent);
         }
         if (!proposals || !proposals.length) {
