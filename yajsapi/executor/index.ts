@@ -478,7 +478,7 @@ export class Executor {
                 for await (let evt_ctx of remote) {
                   let evt = evt_ctx.event(agreement.id(), task_id, cmds);
                   emit(evt);
-                  if (evt instanceof events.CommandExecuted) {
+                  if (evt instanceof events.CommandExecuted && !evt.success) {
                     throw new CommandExecutionError(evt.command, evt.message)
                   }
                 }

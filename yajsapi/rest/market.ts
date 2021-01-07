@@ -236,8 +236,9 @@ export class Subscription {
           10
         );
         for (let _proposal of proposals) {
-          // if(_proposal instanceof models.ProposalEvent)
-          yield new OfferProposal(this, _proposal as models.ProposalEvent);
+          if(_proposal.eventType === "ProposalEvent") {
+            yield new OfferProposal(this, _proposal as models.ProposalEvent);
+          }
         }
         if (!proposals || !proposals.length) {
           await sleep(2);

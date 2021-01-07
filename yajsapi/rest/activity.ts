@@ -56,7 +56,7 @@ export class ActivityService {
   }
 
   async _create_activity(agreement_id: string): Promise<Activity> {
-    let { data: response } = await this._api.createActivity(agreement_id);
+    let { data: response } = await this._api.createActivity({ agreementId: agreement_id });
     let activity_id =
       typeof response == "string" ? response : response.activityId;
     return new Activity(activity_id, this._api, this._state);
@@ -402,12 +402,12 @@ class Batch implements AsyncIterable<events.CommandEventContext> {
     this.activity_id = activity_id;
     this.batch_id = batch_id;
     this.size = batch_size;
-    this.deadline = deadline ? deadline : new Dayjs().utc().add(365000, "day");
+    this.deadline = deadline ? deadline : dayjs().utc().add(365000, "day");
     this.credentials = credentials;
   }
 
   seconds_left(): number | undefined {
-    const now = new Dayjs().utc();
+    const now = dayjs().utc();
     return this.deadline && this.deadline.diff(now, "second");
   }
 
