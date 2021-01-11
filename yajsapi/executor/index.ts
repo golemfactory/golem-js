@@ -441,7 +441,7 @@ export class Executor {
             for await (let batch of command_generator) {
               const _batch_timeout = batch.timeout();
               const batch_deadline = _batch_timeout 
-                ? dayjs.utc().unix() - _batch_timeout 
+                ? dayjs.utc().unix() + _batch_timeout
                 : null;
               try {
                 let current_worker_task = consumer.last_item();
