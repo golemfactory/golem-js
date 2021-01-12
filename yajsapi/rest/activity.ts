@@ -409,9 +409,9 @@ class Batch implements AsyncIterable<events.CommandEventContext> {
     this.credentials = credentials;
   }
 
-  seconds_left(): number | undefined {
+  milliseconds_left(): number | undefined {
     const now = dayjs().utc();
-    return this.deadline && this.deadline.diff(now, "second");
+    return this.deadline && this.deadline.diff(now, "millisecond");
   }
 
   id() {
@@ -438,7 +438,7 @@ class PollingBatch extends Batch {
     let last_idx = 0,
       results: yaa.ExeScriptCommandResult[] = [];
     while (last_idx < this.size) {
-      const timeout = this.seconds_left();
+      const timeout = this.milliseconds_left();
       if (timeout && timeout <= 0) {
         throw new BatchTimeoutError();
       }
