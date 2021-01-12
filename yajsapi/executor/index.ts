@@ -506,7 +506,7 @@ export class Executor {
                   emit(
                     new events.WorkerFinished({
                       agr_id: agreement.id(),
-                      exception: [error],
+                      exception: error,
                     })
                   );
                   return;

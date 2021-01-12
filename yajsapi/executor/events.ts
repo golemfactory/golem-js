@@ -1,7 +1,7 @@
 import { NodeInfo } from "../props";
 import applyMixins from "../utils/applyMixins";
 
-type ExcInfo = [Error, Error, any?]; // TracebackType
+type ExcInfo = Error;
 
 /**
  * An abstract base class for types of events emitted by `Executor.submit()`.
