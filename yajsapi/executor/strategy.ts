@@ -70,7 +70,7 @@ export class LeastExpensiveLinearPayuMS {
   }
 
   async decorate_demand(demand: DemandBuilder): Promise<void> {
-    demand.ensure(`({com.PRICE_MODEL}={com.PriceModel.LINEAR.value})`);
+    demand.ensure(`(${PRICE_MODEL}=${PriceModel.LINEAR})`);
   }
 
   async score_offer(offer: OfferProposal): Promise<Number> {

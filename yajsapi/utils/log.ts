@@ -227,11 +227,16 @@ class SummaryLogger {
         }`
       );
     } else if (eventName === events.CommandExecuted.name) {
-      if (event["success"]) return;
       const provider_name = this.agreement_provider_name[event["agr_id"]];
-      logger.warn(
-        `Command failed on provider '${provider_name}', command: ${JSON.stringify(event["command"])}, output: ${event["message"]}`
-      );
+      if (event["success"]) {
+        logger.debug(
+          `Command successful on provider '${provider_name}', command: ${JSON.stringify(event["command"])}.`
+        );
+      } else {
+        logger.warn(
+          `Command failed on provider '${provider_name}', command: ${JSON.stringify(event["command"])}, output: ${event["message"]}`
+        );
+      }
     } else if (eventName === events.ScriptFinished.name) {
       const provider_name = this.agreement_provider_name[event["agr_id"]];
       logger.info(
@@ -262,12 +267,15 @@ class SummaryLogger {
       }
     } else if (eventName === events.WorkerFinished.name) {
       if (event["exception"] === null) return;
-      const [exc_type, exc, tb] = event["exception"];
       const provider_name = this.agreement_provider_name[event["agr_id"]];
       if (!this.provider_failures[provider_name]) this.provider_failures[provider_name] = 0;
       this.provider_failures[provider_name] += 1;
+      let more_info = "";
+      if (event["exception"] && event["exception"].response && event["exception"].response.data) {
+        more_info = `, info: ${event["exception"].response.data.message}`;
+      }
       logger.warn(
-        `Activity failed on provider '${provider_name}', reason: ${exc}`
+        `Activity failed on provider '${provider_name}', reason: ${event["exception"]}${more_info}`
       );
     } else if (eventName === events.ComputationFinished.name) {
       this.finished = true;

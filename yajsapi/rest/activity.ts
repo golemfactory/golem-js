@@ -221,13 +221,13 @@ class Activity {
 
   async results(
     batch_id: string,
-    timeout: number = 30
+    timeout: number = 5
   ): Promise<ExeScriptCommandResult[]> {
     let { data: results } = await this._api.getExecBatchResults(
       this._id,
       batch_id,
       undefined,
-      timeout
+      { timeout }
     );
     return results;
   }
@@ -378,6 +378,9 @@ export class CommandExecutionError extends Error {
     this.command = command;
     this.message = message || "";
   }
+  toString() {
+    return this.message;
+  }
 }
 
 class BatchTimeoutError extends Error {}
@@ -443,12 +446,21 @@ class PollingBatch extends Batch {
         let { data } = await this.api.getExecBatchResults(
           this.activity_id,
           this.batch_id,
-          timeout
+          undefined,
+          { timeout }
         );
         results = data;
       } catch (error) {
-        if (error.response.status === 408) {
-          throw new BatchTimeoutError();
+        if (error.response && error.response.status === 408) {
+          continue;
+        } else {
+          if (error.response && error.response.status == 500 && error.response.data) {
+            throw new CommandExecutionError(
+              last_idx.toString(),
+              `Provider might have disconnected (error: ${error.response.data.message})`
+            );
+          }
+          throw error;
         }
       }
       let any_new: boolean = false;
