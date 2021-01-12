@@ -219,19 +219,6 @@ class Activity {
     );
   }
 
-  async results(
-    batch_id: string,
-    timeout: number = 5
-  ): Promise<ExeScriptCommandResult[]> {
-    let { data: results } = await this._api.getExecBatchResults(
-      this._id,
-      batch_id,
-      undefined,
-      { timeout }
-    );
-    return results;
-  }
-
   async ready(): Promise<Activity> {
     return this;
   }
@@ -295,15 +282,6 @@ class SecureActivity extends Activity {
       script.length,
       deadline
     );
-  }
-
-  async results(
-    batch_id: string,
-    timeout: number = 8
-  ): Promise<ExeScriptCommandResult[]> {
-    let cmd = { getExecBatchResults: { command_index: undefined } };
-    let res = await this._send(batch_id, cmd, timeout);
-    return <ExeScriptCommandResult[]>res;
   }
 
   async _send(batch_id: string, cmd: object, timeout?: number): Promise<any> {
@@ -443,11 +421,15 @@ class PollingBatch extends Batch {
         throw new BatchTimeoutError();
       }
       try {
-        let { data } = await this.api.getExecBatchResults(
+        let { data } = timeout ? await this.api.getExecBatchResults(
           this.activity_id,
           this.batch_id,
           undefined,
-          { timeout }
+          { Math.min(timeout, 5000) }
+        ) : await this.api.getExecBatchResults(
+          this.activity_id,
+          this.batch_id,
+          undefined
         );
         results = data;
       } catch (error) {
