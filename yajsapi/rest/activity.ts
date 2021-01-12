@@ -421,15 +421,11 @@ class PollingBatch extends Batch {
         throw new BatchTimeoutError();
       }
       try {
-        let { data } = timeout ? await this.api.getExecBatchResults(
+        let { data } = await this.api.getExecBatchResults(
           this.activity_id,
           this.batch_id,
           undefined,
-          { Math.min(timeout, 5000) }
-        ) : await this.api.getExecBatchResults(
-          this.activity_id,
-          this.batch_id,
-          undefined
+          { timeout: timeout ? Math.min(timeout, 5000) : 5000 }
         );
         results = data;
       } catch (error) {
