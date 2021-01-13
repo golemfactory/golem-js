@@ -260,24 +260,28 @@ export class Payment {
       let ts = init_ts;
       while (true) {
         if (cancellationToken.cancelled) break;
-        let { data: events } = await api.getInvoiceEvents(
-          5,
-          ts.unix().toString()
-        );
-        for (let ev of events) {
-          logger.debug(
-            `Received invoice event: ${JSON.stringify(
-              ev
-            )}, type: ${JSON.stringify(Object.getPrototypeOf(ev))}`
+        try {
+          let { data: events } = await api.getInvoiceEvents(
+            5,
+            ts.format("YYYY-MM-DDTHH:mm:ss.SSSSSSZ")
           );
-          ts = dayjs(new Date(parseInt(ev.eventDate as string) * 1000));
-          if (ev.eventType === "InvoiceReceivedEvent") {
-            let invoice = await self.invoice(ev["invoiceId"]);
-            yield invoice;
+          for (let ev of events) {
+            logger.debug(
+              `Received invoice event: ${JSON.stringify(
+                ev
+              )}, type: ${JSON.stringify(Object.getPrototypeOf(ev))}`
+            );
+            ts = dayjs(new Date(parseInt(ev.eventDate as string) * 1000));
+            if (ev.eventType === "InvoiceReceivedEvent") {
+              let invoice = await self.invoice(ev["invoiceId"]);
+              yield invoice;
+            }
           }
-        }
-        if (!events || !events.length) {
-          await sleep(1);
+          if (!events || !events.length) {
+            await sleep(1);
+          }
+        } catch (error) {
+          console.log("Received invoice error", error);
         }
       }
       return;
