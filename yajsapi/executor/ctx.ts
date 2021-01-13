@@ -332,8 +332,8 @@ export class WorkContext {
    * @param env   optional object with environmental variables
    */
   run(cmd: string, args?: Iterable<string>, env: object | null = null) {
-    const stdout = CaptureContext.build("stream");
-    const stderr = CaptureContext.build("stream");
+    const stdout = CaptureContext.build("all");
+    const stderr = CaptureContext.build("all");
     this._prepare();
     this._pending_steps.push(new _Run(cmd, args, env, stdout, stderr));
   }

@@ -226,7 +226,7 @@ class Activity {
   async done(): Promise<void> {
     try {
       const deadline = dayjs.utc().add(10, "s");
-      const batch = await this.send([{ terminate: {} }], true, deadline);
+      const batch = await this.send([{ terminate: {} }], false, deadline);
       for await (let evt_ctx of batch) {
         logger.debug(`Command output for 'terminate' ${evt_ctx}`);
       }

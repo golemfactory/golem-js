@@ -130,7 +130,7 @@ export class Executor {
     event_consumer,
   }: ExecutorOpts) {
     this._subnet = subnet_tag;
-    this._stream_output = true;
+    this._stream_output = false;
     this._strategy = strategy;
     this._api_config = new rest.Configuration();
     this._stack = new AsyncExitStack();
