@@ -238,9 +238,9 @@ class _RecvFile extends Work {
 
 class _Steps extends Work {
   private _steps: Work[] = [];
-  private _timeout?: string;
+  private _timeout?: number;
 
-  constructor(steps: Work | Work[], timeout?: string) {
+  constructor(steps: Work | Work[], timeout?: number) {
     super();
     if (steps instanceof Work) this._steps.push(steps);
     else steps.forEach((step) => this._steps.push(step));
@@ -365,7 +365,7 @@ export class WorkContext {
    *
    * @returns Work object (the latter contains sequence commands added before calling this method)
    */
-  commit(timeout?: string): Work {
+  commit({ timeout }: { timeout?: number }): Work {
     let steps = this._pending_steps;
     this._pending_steps = [];
     return new _Steps(steps, timeout);

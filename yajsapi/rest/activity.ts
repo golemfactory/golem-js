@@ -193,7 +193,7 @@ class Activity {
   async send(
     script: object[],
     stream: boolean,
-    deadline?: Dayjs
+    deadline?: number
   ): Promise<any> {
     const script_txt = JSON.stringify(script);
     const { data: batch_id } = await this._api.exec(
@@ -225,7 +225,7 @@ class Activity {
 
   async done(): Promise<void> {
     try {
-      const deadline = dayjs.utc().add(10, "s");
+      const deadline = dayjs.utc().add(10, "s").unix();
       const batch = await this.send([{ terminate: {} }], false, deadline);
       for await (let evt_ctx of batch) {
         logger.debug(`Command output for 'terminate' ${evt_ctx}`);
@@ -261,7 +261,7 @@ class SecureActivity extends Activity {
   async send(
     script: object[],
     stream: boolean,
-    deadline?: Dayjs
+    deadline?: number
   ): Promise<any> {
     let cmd = { exec: { exe_script: script } };
     let batch_id = await this._send(rand_hex(32), cmd);
@@ -376,14 +376,14 @@ class Batch implements AsyncIterable<events.CommandEventContext> {
     activity_id: string,
     batch_id: string,
     batch_size: number,
-    deadline?: Dayjs,
+    deadline?: number,
     credentials?: SgxCredentials
   ) {
     this.api = api;
     this.activity_id = activity_id;
     this.batch_id = batch_id;
     this.size = batch_size;
-    this.deadline = deadline ? deadline : dayjs().utc().add(1, "day");
+    this.deadline = deadline ? dayjs.unix(deadline) : dayjs().utc().add(1, "day");
     this.credentials = credentials;
   }
 
@@ -405,7 +405,7 @@ class PollingBatch extends Batch {
     activity_id: string,
     batch_id: string,
     batch_size: number,
-    deadline?: Dayjs
+    deadline?: number
   ) {
     // this._api, this._id, batch_id, script.length, deadline
     super(api, activity_id, batch_id, batch_size, deadline);
@@ -481,7 +481,7 @@ class StreamingBatch extends Batch {
     activity_id: string,
     batch_id: string,
     batch_size: number,
-    deadline?: Dayjs
+    deadline?: number
   ) {
     super(api, activity_id, batch_id, batch_size, deadline);
   }
