@@ -271,7 +271,7 @@ export class Payment {
                 ev
               )}, type: ${JSON.stringify(Object.getPrototypeOf(ev))}`
             );
-            ts = dayjs(new Date(parseInt(ev.eventDate as string) * 1000));
+            ts = dayjs(ev.eventDate);
             if (ev.eventType === "InvoiceReceivedEvent") {
               let invoice = await self.invoice(ev["invoiceId"]);
               yield invoice;
