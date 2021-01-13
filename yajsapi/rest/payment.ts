@@ -261,8 +261,8 @@ export class Payment {
       while (true) {
         if (cancellationToken.cancelled) break;
         let { data: events } = await api.getInvoiceEvents(
-          undefined,
-          ts.format("YYYY-MM-DD HH:mm:ss.SSSSSSZ")
+          5,
+          ts.unix().toString()
         );
         for (let ev of events) {
           logger.debug(
