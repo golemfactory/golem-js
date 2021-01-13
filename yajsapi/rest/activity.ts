@@ -383,7 +383,7 @@ class Batch implements AsyncIterable<events.CommandEventContext> {
     this.activity_id = activity_id;
     this.batch_id = batch_id;
     this.size = batch_size;
-    this.deadline = deadline ? deadline : dayjs().utc().add(365000, "day");
+    this.deadline = deadline ? deadline : dayjs().utc().add(1, "day");
     this.credentials = credentials;
   }
 
