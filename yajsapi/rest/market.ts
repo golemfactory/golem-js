@@ -70,7 +70,7 @@ export class Agreement {
       let { data: msg } = await this._api.waitForApproval(this._id, 90, { timeout: 100000 });
       return true;
     } catch (error) {
-      logger.debug(`waitForApproval(${this._id}) raised ApiException`);
+      logger.debug(`waitForApproval(${this._id}) raised ApiException ${error}`);
       return false;
     }
   }
