@@ -3,7 +3,7 @@ import { DemandBuilder } from "./builder";
 
 export { DemandBuilder, Model };
 
-export class Identification extends Model {
+export class NodeInfo extends Model {
   name: Field = new Field({ metadata: { key: "golem.node.id.name" } });
   subnet_tag: Field = new Field({
     metadata: { key: "golem.node.debug.subnet" },
@@ -18,7 +18,7 @@ export class Identification extends Model {
   }
 }
 
-export const IdentificationKeys: any = new Identification().keys().get();
+export const NodeInfoKeys: any = new NodeInfo().keys().get();
 
 export class Activity extends Model {
   /*Activity-related Properties*/
@@ -52,6 +52,12 @@ export class Activity extends Model {
   expiration: Field = new Field({
     metadata: { key: "golem.srv.comp.expiration" },
   });
+
+  multi_activity: Field = new Field({
+    metadata: { key: "golem.srv.caps.multi-activity" },
+  })
+  /*Whether client supports multi_activity (executing more than one activity per agreement).
+  */
 }
 
 export const ActivityKeys = new Activity().keys().get();

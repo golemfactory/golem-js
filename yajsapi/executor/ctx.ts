@@ -49,13 +49,18 @@ export class Work {
   public output: object[] = [];
   public attestation?: object;
 
-  async prepare() {
-    // Executes before commands are send to provider.
-  }
+  // Executes before commands are send to provider.
+  async prepare() {}
 
+  // A hook which adds the required command to the exescript.
   register(commands: CommandContainer) {}
 
+  // A hook to be executed on requestor's end after the script has finished.
   async post() {}
+
+  timeout() {
+    return null
+  }
 }
 
 class _InitStep extends Work {
@@ -136,24 +141,35 @@ class _Run extends Work {
   private args;
   private env;
   private _idx;
+  private _stdout?: CaptureContext;
+  private _stderr?: CaptureContext;
 
-  constructor(cmd: string, args: Iterable<string> = [], env: {} | null = null) {
+  constructor(
+    cmd: string, 
+    args: Iterable<string> = [], 
+    env: {} | null = null,
+    stdout?: CaptureContext,
+    stderr?: CaptureContext,) {
     super();
     this.cmd = cmd;
     this.args = args;
     this.env = env;
     this._idx = null;
+    this._stdout = stdout;
+    this._stdout = stderr;
   }
 
   register(commands: any) {
+    let capture = {}
+    if (this._stdout)
+      capture['stdout'] = this._stdout.to_dict()
+    if (this._stderr)
+      capture['stderr'] = this._stderr.to_dict()
     //CommandContainer
     this._idx = commands.run({
       entry_point: this.cmd,
       args: this.args || [],
-      capture: {
-        stdout: { atEnd: {} },
-        stderr: { atEnd: {} },
-      }
+      capture,
     });
   }
 }
@@ -222,25 +238,34 @@ class _RecvFile extends Work {
 
 class _Steps extends Work {
   private _steps: Work[] = [];
+  private _timeout?: number;
 
-  constructor(steps: Work | Work[]) {
+  constructor(steps: Work | Work[], timeout?: number) {
     super();
     if (steps instanceof Work) this._steps.push(steps);
     else steps.forEach((step) => this._steps.push(step));
+    this._timeout = timeout;
   }
 
+  timeout(): any {
+    return this._timeout;
+  }
+
+  // Execute the `prepare` hook for all the defined steps.
   async prepare() {
     for (let step of this._steps) {
       await step.prepare();
     }
   }
 
+  // Execute the `register` hook for all the defined steps.
   register(commands: CommandContainer) {
     for (let step of this._steps) {
       step.register(commands);
     }
   }
 
+  // Execute the `post` step for all the defined steps.
   async post() {
     for (let step of this._steps) {
       await step.post();
@@ -248,6 +273,9 @@ class _Steps extends Work {
   }
 }
 
+/**
+ * An object used to schedule commands to be sent to provider.
+ */
 export class WorkContext {
   private _id;
   private _storage: StorageProvider;
@@ -273,35 +301,135 @@ export class WorkContext {
     }
   }
   begin() {}
+
+  /**
+   * Schedule sending JSON data to the provider.
+   *
+   * @param json_path  remote (provider) path
+   * @param data       object representing JSON data
+   */
   send_json(json_path: string, data: {}) {
     this._prepare();
     this._pending_steps.push(new _SendJson(this._storage, data, json_path));
   }
+
+  /**
+   * Schedule sending file to the provider.
+   *
+   * @param src_path local (requestor) path
+   * @param dst_path remote (provider) path
+   */
   send_file(src_path: string, dst_path: string) {
     this._prepare();
     this._pending_steps.push(new _SendFile(this._storage, src_path, dst_path));
   }
+
+  /**
+   * Schedule running a command.
+   *
+   * @param cmd   command to run on the provider, e.g. /my/dir/run.sh
+   * @param args  command arguments, e.g. "input1.txt", "output1.txt"
+   * @param env   optional object with environmental variables
+   */
   run(cmd: string, args?: Iterable<string>, env: object | null = null) {
+    const stdout = CaptureContext.build("all");
+    const stderr = CaptureContext.build("all");
     this._prepare();
-    this._pending_steps.push(new _Run(cmd, args, env));
+    this._pending_steps.push(new _Run(cmd, args, env, stdout, stderr));
   }
+
+  /**
+   * Schedule downloading remote file from the provider.
+   *
+   * @param src_path  remote (provider) path
+   * @param dst_path  local (requestor) path
+   */
   download_file(src_path: string, dst_path: string) {
     this._prepare();
     this._pending_steps.push(
       new _RecvFile(this._storage, src_path, dst_path, this._emitter)
     );
   }
+
   sign() {
     this._prepare();
     this._pending_steps.push(new _Sign());
   }
+
   log(args) {
     logger.info(`${this._id}: ${args}`);
   }
 
-  commit(): Work {
+  /**
+   * Creates sequence of commands to be sent to provider.
+   *
+   * @returns Work object (the latter contains sequence commands added before calling this method)
+   */
+  commit({ timeout }: { timeout?: number }): Work {
     let steps = this._pending_steps;
     this._pending_steps = [];
-    return new _Steps(steps);
+    return new _Steps(steps, timeout);
+  }
+}
+
+enum CaptureMode {
+  HEAD = "head",
+  TAIL = "tail",
+  HEAD_TAIL = "headTail",
+  STREAM = "stream"
+}
+
+enum CaptureFormat {
+  BIN = "bin",
+  STR = "str"
+}
+
+class CaptureContext {
+  private mode!: string;
+  private limit?: number;
+  private fmt?: string;
+
+  constructor(mode, limit?, fmt?) {
+    this.mode = mode;
+    this.limit = limit;
+    this.fmt = fmt
+  }
+
+  static build(mode?: string, limit?: number, fmt?: string): CaptureContext {
+    if(!mode || mode === "all") {
+      mode = CaptureMode.HEAD;
+      limit = undefined;
+    }
+
+    fmt = fmt ? fmt.toLowerCase() : "str";
+
+    const get_key = (e: object, s: string) => Object.keys(e).find(k => e[k] == s);
+
+    if (!get_key(CaptureMode, mode)) {
+      throw new Error(`Invalid output capture mode: ${mode}`)
+    }
+    if (!get_key(CaptureFormat, fmt)) {
+      throw new Error(`Invalid output capture format: ${fmt}`)
+    }
+
+    return new CaptureContext(mode, limit, fmt);
+  }
+
+  to_dict() {
+    let inner = {}
+
+    if(this.limit) {
+      inner[this.mode] = this.limit;
+    }
+
+    if(this.fmt) {
+      inner["format"] = this.fmt;
+    }
+
+    return {[this.mode === CaptureMode.STREAM ? "stream" : "atEnd"]: inner}
+  }
+
+  is_streaming() {
+    return this.mode === CaptureMode.STREAM;
   }
 }
