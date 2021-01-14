@@ -1,3 +1,5 @@
+import EventSource from "eventsource";
+import { BaseAPI } from "ya-ts-client/dist/ya-activity/base";
 import {
   RequestorControlApi,
   RequestorStateApi,
@@ -5,13 +7,22 @@ import {
 import * as yaa from "ya-ts-client/dist/ya-activity/src/models";
 import { attest, types } from "sgx-ias-js";
 import { Configuration } from "ya-ts-client/dist/ya-activity";
-import { Credentials, ExeScriptCommandResult, SgxCredentials } from "ya-ts-client/dist/ya-activity/src/models";
+import {
+  Credentials,
+  ExeScriptCommandResult,
+  SgxCredentials,
+} from "ya-ts-client/dist/ya-activity/src/models";
 import { CryptoCtx, PrivateKey, PublicKey, rand_hex } from "../crypto";
 import { sleep, logger } from "../utils";
+import * as events from "../executor/events";
 import { Agreement } from "./market";
-import { SGX_CONFIG } from "../runner/sgx";
+import { SGX_CONFIG } from "../package/sgx";
 import * as utf8 from "utf8";
+import dayjs, { Dayjs } from "dayjs";
 
+/**
+ * A convenience helper to facilitate the creation of an Activity.
+ */
 export class ActivityService {
   private _api!: RequestorControlApi;
   private _state!: RequestorStateApi;
@@ -21,7 +32,17 @@ export class ActivityService {
     this._state = new RequestorStateApi(cfg);
   }
 
-  async create_activity(agreement: Agreement, secure: boolean = false): Promise<Activity> {
+  /**
+   * Create an activity within bounds of the specified agreement.
+   *
+   * @param agreement -
+   * @param secure    -
+   * @returns Activity
+   */
+  async new_activity(
+    agreement: Agreement,
+    secure: boolean = false
+  ): Promise<Activity> {
     try {
       if (secure) {
         return await this._create_secure_activity(agreement);
@@ -29,16 +50,15 @@ export class ActivityService {
         return await this._create_activity(agreement.id());
       }
     } catch (error) {
-      logger.error(`Failed to create activity for agreement ${agreement.id()}`);
+      logger.error(`Failed to create activity for agreement ${agreement.id()}: ${error}`);
       throw error;
     }
   }
 
   async _create_activity(agreement_id: string): Promise<Activity> {
-    let { data: response } = await this._api.createActivity(agreement_id);
-    let activity_id = typeof response == "string"
-      ? response
-      : response.activityId;
+    let { data: response } = await this._api.createActivity({ agreementId: agreement_id });
+    let activity_id =
+      typeof response == "string" ? response : response.activityId;
     return new Activity(activity_id, this._api, this._state);
   }
 
@@ -47,19 +67,15 @@ export class ActivityService {
     let pub_key = priv_key.publicKey();
     let crypto_ctx: CryptoCtx;
 
-    let {
-      data: response,
-    } = await this._api.createActivity({
+    let { data: response } = await this._api.createActivity({
       agreementId: agreement.id(),
       requestorPubKey: pub_key.toString(),
     });
 
-    let activity_id = typeof response == "string"
-      ? response
-      : response.activityId;
-    let credentials = typeof response == "string"
-      ? undefined
-      : response.credentials;
+    let activity_id =
+      typeof response == "string" ? response : response.activityId;
+    let credentials =
+      typeof response == "string" ? undefined : response.credentials;
 
     try {
       if (!credentials) {
@@ -75,7 +91,6 @@ export class ActivityService {
       if (SGX_CONFIG.enableAttestation) {
         await this._attest(activity_id, agreement, credentials);
       }
-
     } catch (error) {
       await this._api.destroyActivity(activity_id);
       throw error;
@@ -90,7 +105,11 @@ export class ActivityService {
     );
   }
 
-  async _attest(activity_id: string, agreement: Agreement, credentials: Credentials) {
+  async _attest(
+    activity_id: string,
+    agreement: Agreement,
+    credentials: Credentials
+  ) {
     let demand = (await agreement.details()).raw_details.demand;
     let pkg = demand.properties["golem.srv.comp.task_package"];
 
@@ -120,7 +139,7 @@ export class ActivityService {
     let result = verifier.verify();
     if (result.verdict != attest.AttestationVerdict.Ok) {
       let name = result.verdict.toString();
-      throw new Error(`Attestation failed: ${name}: ${result.message}`)
+      throw new Error(`Attestation failed: ${name}: ${result.message}`);
     }
   }
 }
@@ -132,13 +151,18 @@ class ExeScriptRequest implements yaa.ExeScriptRequest {
   }
 }
 
+// Mid-level wrapper for REST's Activity endpoint
 class Activity {
   protected _api!: RequestorControlApi;
   protected _state!: RequestorStateApi;
   protected _id!: string;
   protected _credentials?: object;
 
-  constructor(id: string, _api: RequestorControlApi, _state: RequestorStateApi) {
+  constructor(
+    id: string,
+    _api: RequestorControlApi,
+    _state: RequestorStateApi
+  ) {
     this._id = id;
     this._api = _api;
     this._state = _state;
@@ -157,14 +181,7 @@ class Activity {
   }
 
   get exeunitHashes(): string[] | undefined {
-    return SGX_CONFIG.exeunitHashes.map(value => value.toString());
-  }
-
-  async exec(script: object[]) {
-    let script_txt = JSON.stringify(script);
-    let req: yaa.ExeScriptRequest = new ExeScriptRequest(script_txt);
-    let { data: batch_id } = await this._api.exec(this._id, req);
-    return new Batch(this, batch_id, script.length);
+    return SGX_CONFIG.exeunitHashes.map((value) => value.toString());
   }
 
   async state(): Promise<yaa.ActivityState> {
@@ -173,14 +190,33 @@ class Activity {
     return state;
   }
 
-  async results(batch_id: string, timeout: number = 30): Promise<ExeScriptCommandResult[]> {
-    let { data: results } = await this._api.getExecBatchResults(
+  async send(
+    script: object[],
+    stream: boolean,
+    deadline?: number
+  ): Promise<any> {
+    const script_txt = JSON.stringify(script);
+    const { data: batch_id } = await this._api.exec(
+      this._id,
+      new ExeScriptRequest(script_txt)
+    );
+
+    if (stream) {
+      return new StreamingBatch(
+        this._api,
+        this._id,
+        batch_id,
+        script.length,
+        deadline
+      );
+    }
+    return new PollingBatch(
+      this._api,
       this._id,
       batch_id,
-      undefined,
-      timeout,
+      script.length,
+      deadline
     );
-    return results;
   }
 
   async ready(): Promise<Activity> {
@@ -189,24 +225,9 @@ class Activity {
 
   async done(): Promise<void> {
     try {
-      const { data: batch_id } = await this._api.exec(
-        this._id,
-        new ExeScriptRequest('[{"terminate":{}}]')
-      );
-      //with contextlib.suppress(yexc.ApiException):
-      try {
-        await this._api.getExecBatchResults(this._id, batch_id, 1);
-      } catch(error) {
-        //suppress api error
-      }
+      await this._api.destroyActivity(this._id);
     } catch (error) {
-      logger.error(`Failed to destroy activity: ${this._id}`);
-    } finally {
-      try {
-        await this._api.destroyActivity(this._id);
-      } catch (error) {
-        //suppress api error
-      }
+      logger.error(`Got API Exception when destroying activity ${this._id}: ${error}`);
     }
   }
 }
@@ -226,16 +247,30 @@ class SecureActivity extends Activity {
     this._crypto_ctx = crypto_ctx;
   }
 
-  async exec(script: object[]) {
+  async send(
+    script: object[],
+    stream: boolean,
+    deadline?: number
+  ): Promise<any> {
     let cmd = { exec: { exe_script: script } };
     let batch_id = await this._send(rand_hex(32), cmd);
-    return new Batch(this, batch_id, script.length);
-  }
 
-  async results(batch_id: string, timeout: number = 8): Promise<ExeScriptCommandResult[]> {
-    let cmd = { getExecBatchResults: { command_index: undefined } };
-    let res = await this._send(batch_id, cmd, timeout);
-    return <ExeScriptCommandResult[]> res;
+    if (stream) {
+      return new StreamingBatch(
+        this._api,
+        this._id,
+        batch_id,
+        script.length,
+        deadline
+      );
+    }
+    return new PollingBatch(
+      this._api,
+      this._id,
+      batch_id,
+      script.length,
+      deadline
+    );
   }
 
   async _send(batch_id: string, cmd: object, timeout?: number): Promise<any> {
@@ -247,12 +282,12 @@ class SecureActivity extends Activity {
       this._id,
       // cannot be null / undefined;
       // overriden by transformRequest below
-      '',
+      "",
       {
-        responseType: 'arraybuffer',
+        responseType: "arraybuffer",
         headers: {
-          'Content-Type': 'application/octet-stream',
-          'Accept': 'application/octet-stream'
+          "Content-Type": "application/octet-stream",
+          Accept: "application/octet-stream",
         },
         transformRequest: [
           // workaround for string conversion;
@@ -274,7 +309,8 @@ class SecureRequest {
     private activityId: string,
     private batchId: string,
     private command: object,
-    private timeout?: number) {}
+    private timeout?: number
+  ) {}
 }
 
 class SecureResponse {
@@ -283,10 +319,7 @@ class SecureResponse {
   Err?: any;
 
   static from_buffer(buffer: Buffer): SecureResponse {
-    return Object.assign(
-      new SecureResponse(),
-      JSON.parse(buffer.toString())
-    );
+    return Object.assign(new SecureResponse(), JSON.parse(buffer.toString()));
   }
 
   unwrap(): any {
@@ -304,69 +337,269 @@ class Result {
   message?: string;
 }
 
-class CommandExecutionError extends Error {
-  constructor(key: string, description: string) {
-    super(description);
-    this.name = key;
+export class CommandExecutionError extends Error {
+  command: string;
+  message: string;
+  constructor(command: string, message?: string) {
+    super(message);
+    this.command = command;
+    this.message = message || "";
+  }
+  toString() {
+    return this.message;
   }
 }
 
-class Batch implements AsyncIterable<Result> {
-  private _activity!: Activity;
-  private _batch_id!: string;
-  private _size!: number;
-  public credentials?: SgxCredentials;
+class BatchTimeoutError extends Error {}
+
+class Batch implements AsyncIterable<events.CommandEventContext> {
+  protected api!: RequestorControlApi;
+  protected activity_id!: string;
+  protected batch_id!: string;
+  protected size!: number;
+  protected deadline?: Dayjs;
+  protected credentials?: SgxCredentials;
 
   constructor(
-    activity: Activity,
+    api: RequestorControlApi,
+    activity_id: string,
     batch_id: string,
     batch_size: number,
-    credentials?: SgxCredentials,
+    deadline?: number,
+    credentials?: SgxCredentials
   ) {
-    this._activity = activity;
-    this._batch_id = batch_id;
-    this._size = batch_size;
+    this.api = api;
+    this.activity_id = activity_id;
+    this.batch_id = batch_id;
+    this.size = batch_size;
+    this.deadline = deadline ? dayjs.unix(deadline) : dayjs().utc().add(1, "day");
     this.credentials = credentials;
   }
-  return(value: any): Promise<IteratorResult<Result, any>> {
-    throw new Error("Method not implemented.");
-  }
-  throw(e: any): Promise<IteratorResult<Result, any>> {
-    throw new Error("Method not implemented.");
+
+  milliseconds_left(): number | undefined {
+    const now = dayjs().utc();
+    return this.deadline && this.deadline.diff(now, "millisecond");
   }
 
   id() {
-    this._batch_id;
+    this.batch_id;
+  }
+
+  async *[Symbol.asyncIterator](): any {}
+}
+
+class PollingBatch extends Batch {
+  constructor(
+    api: RequestorControlApi,
+    activity_id: string,
+    batch_id: string,
+    batch_size: number,
+    deadline?: number
+  ) {
+    // this._api, this._id, batch_id, script.length, deadline
+    super(api, activity_id, batch_id, batch_size, deadline);
   }
 
   async *[Symbol.asyncIterator](): any {
     // AsyncGenerator<Result, any, unknown>
-    let last_idx = 0;
-    while (last_idx < this._size) {
+    let last_idx = 0,
+      results: yaa.ExeScriptCommandResult[] = [];
+    while (last_idx < this.size) {
+      const timeout = this.milliseconds_left();
+      if (timeout && timeout <= 0) {
+        throw new BatchTimeoutError();
+      }
+      try {
+        let { data } = await this.api.getExecBatchResults(
+          this.activity_id,
+          this.batch_id,
+          undefined,
+          { timeout: timeout ? Math.min(timeout, 5000) : 5000 }
+        );
+        results = data;
+      } catch (error) {
+        if (error.response && error.response.status === 408) {
+          continue;
+        } else {
+          if (error.response && error.response.status == 500 && error.response.data) {
+            throw new CommandExecutionError(
+              last_idx.toString(),
+              `Provider might have disconnected (error: ${error.response.data.message})`
+            );
+          }
+          throw error;
+        }
+      }
       let any_new: boolean = false;
-      let exe_list = await this._activity.results(this._batch_id);
-      let results: yaa.ExeScriptCommandResult[] = exe_list;
       results = results.slice(last_idx);
       for (let result of results) {
         any_new = true;
         if (last_idx != result.index)
           throw `Expected ${last_idx}, got ${result.index}`;
-        if (result.result.toString() == "Error")
-          throw new CommandExecutionError(
-            last_idx.toString(),
-            result.stderr || result.message || ""
-          );
-        let _result = new Result();
-        _result.idx = result.index;
-        _result.stdout = result.stdout;
-        _result.stderr = result.stderr;
-        _result.message = result.message;
-        yield _result;
+
+        const { message, stdout, stderr } = result;
+        let _message: string = "";
+
+        if (message) {
+          _message = message;
+        } else if (stdout || stderr) {
+          _message = JSON.stringify({ stdout, stderr });
+        }
+
+        let evt = Object.create(events.CommandExecuted.prototype);
+        evt.idx = result.index;
+        evt.stdout = result.stdout;
+        evt.stderr = result.stderr;
+        evt.message = result.message;
+        yield new events.CommandEventContext({
+          evt_cls: events.CommandExecuted,
+          props: evt,
+        });
         last_idx = result.index + 1;
         if (result.isBatchFinished) break;
         if (!any_new) await sleep(10);
       }
     }
     return;
+  }
+}
+
+class StreamingBatch extends Batch {
+  constructor(
+    api: RequestorControlApi,
+    activity_id: string,
+    batch_id: string,
+    batch_size: number,
+    deadline?: number
+  ) {
+    super(api, activity_id, batch_id, batch_size, deadline);
+  }
+
+  async *[Symbol.asyncIterator](): any {
+    const activity_id = this.activity_id;
+    const batch_id = this.batch_id;
+    const last_idx = this.size - 1;
+
+    let config_prov = new ApiConfigProvider(this.api);
+    let host = config_prov.base_path();
+    let api_key = await config_prov.api_key();
+
+    let evtSource = new EventSource(
+      `${host}/activity/${activity_id}/exec/${batch_id}`,
+      {
+        headers: {
+          Accept: "text/event-stream",
+          Authorization: api_key ? `Bearer ${api_key}` : undefined,
+        },
+      }
+    );
+
+    let results: events.CommandEventContext[] = [];
+    let finished = false;
+
+    let resolve: (value?: any) => void;
+    let promise = new Promise((r) => (resolve = r));
+
+    const on_error = (e: object) => {
+      if (!e) return;
+      let msg = !e["message"] ? "source unavailable" : e["message"];
+      logger.error("Runtime event source error:", msg);
+      cleanup();
+    };
+    const on_event = (e: object) => {
+      try {
+        results.push(events.CommandEventContext.fromJson(e["data"]));
+        resolve();
+        promise = new Promise((r) => (resolve = r));
+      } catch (e) {
+        logger.warn("Runtime event error:", e);
+      }
+    };
+    const cleanup = () => {
+      evtSource.removeEventListener("error", on_error);
+      evtSource.removeEventListener("runtime", on_event);
+      evtSource.close();
+
+      finished = true;
+      resolve();
+    };
+
+    evtSource.addEventListener("error", on_error);
+    evtSource.addEventListener("runtime", on_event);
+
+    while (!finished) {
+      await promise;
+
+      for (let result of results) {
+        yield result;
+
+        if (result.computation_finished(last_idx)) {
+          finished = true;
+          break;
+        }
+      }
+      results = [];
+    }
+
+    cleanup();
+  }
+}
+
+function _command_event_ctx(msg_event) {
+  if (msg_event.type === "runtime") {
+    throw Error(`Unsupported event: ${msg_event.type}`);
+  }
+
+  const evt_obj = JSON.parse(msg_event.data);
+  const evt_kind = evt_obj["kind"][0];
+  const evt_data = evt_obj["kind"][evt_kind]; // ?
+
+  let evt_cls!: typeof events.CommandEvent;
+  let props: { [key: string]: any } = { cmd_idx: parseInt(evt_obj["index"]) };
+
+  switch (evt_kind) {
+    case "started":
+      if (!(evt_obj instanceof Object && evt_data["command"])) {
+        throw Error("Invalid CommandStarted event: missing 'command'");
+      }
+      evt_cls = events.CommandStarted;
+      props["command"] = evt_data["command"];
+    case "finished":
+      if (!(evt_obj instanceof Object && Number(evt_data["return_code"]))) {
+        throw Error("Invalid CommandFinished event: missing 'return code'");
+      }
+      evt_cls = events.CommandExecuted;
+      props["success"] = parseInt(evt_data["return_code"]) === 0;
+      props["message"] = evt_data["message"];
+    case "stdout":
+      evt_cls = events.CommandStdOut;
+      props["output"] = JSON.stringify(evt_data) || "";
+    case "stderr":
+      evt_cls = events.CommandStdErr;
+      props["output"] = JSON.stringify(evt_data) || "";
+    default:
+      throw Error(`Unsupported runtime event: ${evt_kind}`);
+  }
+  return new events.CommandEventContext({ evt_cls, props });
+}
+
+export class ApiConfigProvider extends BaseAPI {
+  constructor(api: BaseAPI) {
+    let as_this: ApiConfigProvider = <ApiConfigProvider>api;
+    super(as_this.configuration, as_this.basePath, as_this.axios);
+  }
+
+  base_path(): string {
+    return this.configuration && this.configuration.basePath
+      ? this.configuration.basePath
+      : "";
+  }
+
+  async api_key(): Promise<string | undefined> {
+    let api_key = this.configuration ? this.configuration.apiKey : undefined;
+    if (typeof api_key === "string") {
+      return api_key;
+    }
+    return undefined;
   }
 }
