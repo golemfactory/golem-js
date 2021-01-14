@@ -66,25 +66,13 @@ export class Agreement {
 
   async confirm(): Promise<boolean> {
     await this._api.confirmAgreement(this._id);
-    const startDate = Date.now();
-    while (true) {
-      try {
-        let { data: msg } = await this._api.waitForApproval(this._id, 90, { timeout: 100000 });
-        return true;
-      } catch (error) {
-        if (error.response.status === 408) {
-          const waitTime = Date.now() - startDate;
-          if (waitTime > 200000) {
-            logger.debug(`waitForApproval(${this._id}) returned 408 Timeout for ${waitTime}ms`);
-            return false;
-          }
-        } else {
-          logger.debug(`waitForApproval(${this._id}) raised ApiException ${error}`);
-          return false;
-        }
-      }
+    try {
+      let { data: msg } = await this._api.waitForApproval(this._id, 90, { timeout: 100000 });
+      return true;
+    } catch (error) {
+      logger.debug(`waitForApproval(${this._id}) raised ApiException ${error}`);
+      return false;
     }
-    return true;
   }
 
   async terminate(reason: string = "Finished"): Promise<boolean> {
