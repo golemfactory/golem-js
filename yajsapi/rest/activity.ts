@@ -225,20 +225,9 @@ class Activity {
 
   async done(): Promise<void> {
     try {
-      const deadline = dayjs.utc().add(10, "s").unix();
-      const batch = await this.send([{ terminate: {} }], false, deadline);
-      for await (let evt_ctx of batch) {
-        logger.debug(`Command output for 'terminate' ${evt_ctx}`);
-      }
-      logger.debug(`Successfully terminated activity' ${this._id}`);
+      await this._api.destroyActivity(this._id);
     } catch (error) {
-      logger.error(`Failed to destroy activity: ${this._id}`);
-    } finally {
-      try {
-        await this._api.destroyActivity(this._id);
-      } catch (error) {
-        //suppress api error
-      }
+      logger.error(`Got API Exception when destroying activity ${this._id}: ${error}`);
     }
   }
 }
