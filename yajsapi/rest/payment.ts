@@ -281,7 +281,7 @@ export class Payment {
             await sleep(1);
           }
         } catch (error) {
-          console.log("Received invoice error", error);
+          logger.error(`Received invoice error: ${error}`);
         }
       }
       return;
