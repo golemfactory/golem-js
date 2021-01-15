@@ -162,8 +162,7 @@ class SummaryLogger {
     try {
       this._handle(event);
     } catch (error) {
-      console.log("error", error);
-      logger.error("SummaryLogger entered invalid state");
+      logger.error(`SummaryLogger entered invalid state ${error}`);
       this.error_occurred = true;
     }
   }
