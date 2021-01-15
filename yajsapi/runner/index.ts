@@ -617,7 +617,7 @@ export class Engine {
               .map(x => { return { obj: x, rnd: Math.random() }; })
               .sort((a, b) => a.rnd - b.rnd)
               .map(x => x.obj)
-              .reduce((item, acc) => item[1].score > acc[1].score ? item : acc);
+              .reduce((acc, item) => item[1].score > acc[1].score ? item : acc);
           let [provider_id, buffer] = _sample;
           delete offer_buffer[provider_id];
 
