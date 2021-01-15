@@ -126,11 +126,11 @@ export class LeastExpensiveLinearPayuMS {
   }
 
   async decorate_demand(demand: DemandBuilder): Promise<void> {
-    demand.ensure(`({com.PRICE_MODEL}={com.PriceModel.LINEAR.value})`);
+    demand.ensure(`(${PRICE_MODEL}=${PriceModel.LINEAR})`);
   }
 
   async score_offer(offer: OfferProposal): Promise<Number> {
-    const linear: ComLinear = new ComLinear().from_props(offer.props);
+    const linear: ComLinear = new ComLinear().from_props(offer.props());
 
     if (linear.scheme.value != BillingScheme.PAYU) return SCORE_REJECTED;
 
@@ -194,7 +194,7 @@ export class Engine {
     max_workers: Number = 5,
     timeout: any = dayjs.duration({ minutes: 5 }).asMilliseconds(), //timedelta
     budget: string, //number
-    strategy: MarketStrategy = new DummyMS(),
+    strategy: MarketStrategy = new LeastExpensiveLinearPayuMS(),
     subnet_tag?: string,
     event_emitter?: Callable<[events.YaEvent], void> //TODO not default event
   ) {
@@ -262,7 +262,7 @@ export class Engine {
     await this._demand_decor.decorate_demand(builder);
     await this._strategy.decorate_demand(builder);
 
-    let offer_buffer: { [key: string]: string | _BufferItem } = {}; //Dict[str, _BufferItem]
+    let offer_buffer: { [key: string]: _BufferItem } = {}; //Dict[str, _BufferItem]
     let market_api = this._market_api;
     let activity_api = this._activity_api;
     let strategy = this._strategy;
@@ -613,16 +613,18 @@ export class Engine {
         ) {
           let _offer_list = Object.entries(offer_buffer);
           let _sample =
-            _offer_list[
-              Math.floor(Math.random() * Object.keys(offer_buffer).length)
-            ];
+            _offer_list
+              .map(x => { return { obj: x, rnd: Math.random() }; })
+              .sort((a, b) => a.rnd - b.rnd)
+              .map(x => x.obj)
+              .reduce((acc, item) => item[1].score > acc[1].score ? item : acc);
           let [provider_id, buffer] = _sample;
           delete offer_buffer[provider_id];
 
           let new_task: any | null = null;
           let agreement: Agreement | null = null;
           try {
-            agreement = await (buffer as _BufferItem).proposal.agreement();
+            agreement = await buffer.proposal.agreement();
             const provider_info = (await agreement.details()).view_prov(
               new Identification()
             );
@@ -643,7 +645,7 @@ export class Engine {
             if (new_task) new_task.cancel();
             emit(
               new events.ProposalFailed({
-                prop_id: (buffer as _BufferItem).proposal.id(),
+                prop_id: buffer.proposal.id(),
                 reason: error.toString(),
               })
             );
