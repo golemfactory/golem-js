@@ -200,7 +200,7 @@ export class Executor {
     await this._task_package.decorate_demand(builder);
     await this._strategy.decorate_demand(builder);
 
-    let offer_buffer: { [key: string]: string | _BufferItem } = {}; //Dict[str, _BufferItem]
+    let offer_buffer: { [key: string]: _BufferItem } = {}; //Dict[str, _BufferItem]
     let market_api = this._market_api;
     let activity_api = this._activity_api;
     let strategy = this._strategy;
@@ -554,9 +554,11 @@ export class Executor {
         ) {
           let _offer_list = Object.entries(offer_buffer);
           let _sample =
-            _offer_list[
-              Math.floor(Math.random() * Object.keys(offer_buffer).length)
-            ];
+            _offer_list
+              .map(x => { return { obj: x, rnd: Math.random() }; })
+              .sort((a, b) => a.rnd - b.rnd)
+              .map(x => x.obj)
+              .reduce((acc, item) => item[1].score > acc[1].score ? item : acc);
           let [provider_id, buffer] = _sample;
           delete offer_buffer[provider_id];
 
@@ -584,7 +586,7 @@ export class Executor {
             if (new_task) new_task.cancel();
             emit(
               new events.ProposalFailed({
-                prop_id: (buffer as _BufferItem).proposal.id(),
+                prop_id: buffer.proposal.id(),
                 reason: error.toString(),
               })
             );
