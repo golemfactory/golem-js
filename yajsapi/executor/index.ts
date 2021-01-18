@@ -532,6 +532,8 @@ export class Executor {
       async function _start_worker(agreement) {
         try {
           await start_worker(agreement);
+        } catch (error) {
+          logger.error(`Worker finished with error: ${error}`);
         } finally {
           await agreement.terminate();
         }
