@@ -35,7 +35,7 @@ class AgreementDetails extends Object {
   }
 
   requestor_view(c: Model): View {
-    let demand: models.Offer = this.raw_details.demand;
+    let demand: models.Demand = this.raw_details.demand;
     return new View(demand.properties);
   }
 }
@@ -66,18 +66,46 @@ export class Agreement {
 
   async confirm(): Promise<boolean> {
     await this._api.confirmAgreement(this._id);
-    let { data: msg } = await this._api.waitForApproval(this._id, 90, 100);
-    return msg.trim().toLowerCase() == "approved";
+    try {
+      let { data: msg } = await this._api.waitForApproval(this._id, 90, { timeout: 100000 });
+      return true;
+    } catch (error) {
+      logger.debug(`waitForApproval(${this._id}) raised ApiException ${error}`);
+      return false;
+    }
+  }
+
+  async terminate(reason: string = "Finished"): Promise<boolean> {
+    try {
+      await this._api.terminateAgreement(this._id, { message: reason });
+      logger.debug(`terminateAgreement(${this._id}) returned successfully`);
+      return true;
+    } catch (error) {
+      if (error.response.status === 410) {
+        logger.debug(
+          `terminateAgreement(${this._id}) raised ApiException: status = 410, message = ${error.message}`
+        );
+      } else {
+        logger.debug(`terminateAgreement(${this._id}) raised ApiException`);
+      }
+      return false;
+    }
   }
 }
 
 class mProposal implements models.Proposal {
   properties!: object;
   constraints!: string;
-  proposalId?: string;
-  issuerId?: string;
-  state?: models.ProposalAllOfStateEnum;
+  proposalId!: string;
+  issuerId!: string;
+  state!: models.ProposalAllOfStateEnum;
   prevProposalId?: string;
+  timestamp!: string;
+}
+
+class mDemandOfferBase implements models.DemandOfferBase {
+  properties!: object;
+  constraints!: string;
 }
 
 class mAgreementProposal implements models.AgreementProposal {
@@ -106,6 +134,10 @@ export class OfferProposal {
     return this._proposal.proposal!.properties;
   }
 
+  state() {
+    return this._proposal.proposal!.state;
+  }
+
   is_draft(): boolean {
     return (
       this._proposal.proposal!.state == models.ProposalAllOfStateEnum.Draft
@@ -120,15 +152,15 @@ export class OfferProposal {
   }
 
   async respond(props: object, constraints: string): Promise<string> {
-    let proposal: mProposal = new mProposal();
-    proposal.properties = props;
-    proposal.constraints = constraints;
+    let with_proposal: mDemandOfferBase = new mDemandOfferBase();
+    with_proposal.properties = props;
+    with_proposal.constraints = constraints;
     let {
       data: new_proposal,
     } = await this._subscription._api.counterProposalDemand(
       this._subscription.id(),
       this.id(),
-      proposal
+      with_proposal
     );
     return new_proposal;
   }
@@ -204,7 +236,9 @@ export class Subscription {
           10
         );
         for (let _proposal of proposals) {
-          yield new OfferProposal(this, _proposal as models.ProposalEvent);
+          if(_proposal.eventType === "ProposalEvent") {
+            yield new OfferProposal(this, _proposal as models.ProposalEvent);
+          }
         }
         if (!proposals || !proposals.length) {
           await sleep(2);
@@ -219,10 +253,11 @@ export class Subscription {
 }
 
 class mDemand implements models.Demand {
-  demandId?: string = "";
-  requestorId?: string = "";
+  demandId: string = "";
+  requestorId: string = "";
   properties!: object;
   constraints!: string;
+  timestamp!: string;
 }
 
 export class Market {
@@ -232,7 +267,7 @@ export class Market {
   }
 
   subscribe(props: {}, constraints: string): Promise<Subscription> {
-    let request: models.Demand = new mDemand();
+    let request: models.DemandOfferBase = new mDemandOfferBase();
     request.properties = props;
     request.constraints = constraints;
     let self = this;

@@ -22,6 +22,7 @@
     "commander": "^6.2.0",
     "dayjs": "~1.9.1",
     "eccrypto": "^1.1.5",
+    "eventsource": "^1.0.7",
     "js-csp": "^1.0.1",
     "minimist": "^1.2.5",
     "rewire": "^3.0.2",
@@ -31,7 +32,7 @@
     "utf8": "~3.0.0",
     "uuid": "^8.3.1",
     "winston": "^3.3.3",
-    "ya-ts-client": "^0.2.0"
+    "ya-ts-client": "^0.3.1"
   },
   "devDependencies": {
     "@types/eccrypto": "^1.1.2",
