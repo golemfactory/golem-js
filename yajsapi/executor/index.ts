@@ -189,6 +189,7 @@ export class Executor {
     let builder = new DemandBuilder();
     let _activity = new Activity();
     _activity.expiration.value = this._expires;
+    _activity.multi_activity.value = true;
     builder.add(_activity);
     builder.add(new NodeInfo(this._subnet));
     if (this._subnet)
