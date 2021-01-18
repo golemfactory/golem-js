@@ -1,6 +1,10 @@
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 import { Callable, eventLoop } from "../utils";
 import * as events from "./events";
 import { Handle, SmartQueue } from "./smartq";
+
+dayjs.extend(utc);
 
 export enum TaskStatus {
   WAITING = "wait",
@@ -13,11 +17,16 @@ type TaskData = "TaskData";
 type TaskResult = "TaskResult";
 type TaskEvents = events.TaskAccepted | events.TaskRejected;
 
+/**
+ * One computation unit.
+ *
+ * @description Represents one computation unit that will be run on the provider (e.g. rendering of one frame of an animation).
+ */
 export class Task<TaskData, TaskResult> {
   static count: number = 0;
   public id: number = 0;
-  private _started: number;
-  private _expires: number | null;
+  private _started: number | null;
+  private _finished: number | null;
   private _emit_event: any;
   private _callbacks!: Set<Function | null>;
   private _handle?: [
@@ -27,17 +36,20 @@ export class Task<TaskData, TaskResult> {
   private _result?: TaskResult | null;
   private _data;
   private _status!: TaskStatus;
+
+  /**
+   * Create a new Task object.
+   *
+   * @param data     contains information needed to prepare command list for the provider
+   */
   constructor(
     data: TaskData,
-    expires: number | null = null,
-    timeout: number | null = null
   ) {
     this.id = Task.counter;
-    this._started = Date.now();
+    this._started = null;
+    this._finished = null;
     this._emit_event = null;
     this._callbacks = new Set();
-    if (timeout) this._expires = this._started + timeout;
-    else this._expires = expires;
 
     this._result = null;
     this._data = data;
@@ -51,9 +63,12 @@ export class Task<TaskData, TaskResult> {
   _start(_emitter): void {
     this._status = TaskStatus.RUNNING;
     this._emit_event = _emitter;
+    this._started = dayjs.utc().unix();
+    this._finished = null;
   }
 
   _stop(retry: boolean = false): void {
+    this._finished = dayjs.utc().unix();
     if (this._handle) {
       const [handle, queue] = this._handle;
       let loop = eventLoop();
@@ -81,15 +96,28 @@ export class Task<TaskData, TaskResult> {
     return this._data;
   }
 
-  output(): TaskResult | null | undefined {
+  result(): TaskResult | null | undefined {
     return this._result;
   }
 
-  expires(): number | null {
-    return this._expires;
+  running_time(): number | null {
+    if (this._finished) {
+      if(!this._started) throw Error("Task._started is null");
+      return this._finished - this._started;
+    }
+    if(this._started) {
+      return dayjs.utc().unix() - this._started;
+    }
+    return null;
   }
 
-  accept_task(result: TaskResult | null = null): void {
+  /**
+   * Accept the result of this task.
+   *
+   * @description Must be called when the result is correct to mark this task as completed.
+   * @param result task computation result (optional)
+   */
+  accept_result(result: TaskResult | null = null): void {
     if (this._emit_event) {
       this._emit_event(new events.TaskAccepted({task_id: this.id, result}));
     }
@@ -100,7 +128,15 @@ export class Task<TaskData, TaskResult> {
     for (let cb of this._callbacks) cb && cb(this, TaskStatus.ACCEPTED);
   }
 
-  reject_task(reason: string | null = null, retry: boolean = false): void {
+  /**
+   * Reject the result of this task.
+   *
+   * @description Must be called when the result is not correct to indicate that the task should be retried.
+   *
+   * @param reason  Task rejection description (optional)
+   * @param retry   Task retry in case of rejects (optional)
+   */
+  reject_result(reason: string | null = null, retry: boolean = false): void {
     if (this._emit_event) {
       this._emit_event(new events.TaskRejected({task_id: this.id, reason}));
     }

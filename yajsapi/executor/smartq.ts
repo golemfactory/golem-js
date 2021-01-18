@@ -142,6 +142,10 @@ export class SmartQueue<Item> {
       await promisify(csp.takeAsync)(this.__eof);
     }
   }
+
+  has_unassigned_items(): boolean {
+    return !!(this._items && this._items.length) || !!this._rescheduled_items.size
+  }
 }
 
 export class Consumer<Item> {
