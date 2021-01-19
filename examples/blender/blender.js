@@ -47,7 +47,7 @@ async function main(subnetTag) {
         `/golem/output/out${frame.toString().padStart(4, "0")}.png`,
         path.join(__dirname, `./output_${frame}.png`)
       );
-      yield ctx.commit();
+      yield ctx.commit({timeout: dayjs.duration({ seconds: 120 }).asMilliseconds()});
       // TODO: Check
       // job results are valid // and reject by:
       // task.reject_task(msg = 'invalid file')
@@ -71,7 +71,7 @@ async function main(subnetTag) {
       event_consumer: logUtils.logSummary(),
     }),
     async (executor) => {
-      for await (let task of executor.result(
+      for await (let task of executor.submit(
         worker,
         frames.map((frame) => new Task(frame))
       )) {
