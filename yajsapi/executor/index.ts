@@ -6,24 +6,16 @@ import { MarketDecoration } from "ya-ts-client/dist/ya-payment/src/models";
 
 import { WorkContext, Work, CommandContainer } from "./ctx";
 import * as events from "./events";
-import {
-  BillingScheme,
-  ComLinear,
-  Counter,
-  PRICE_MODEL,
-  PriceModel,
-} from "../props/com";
-import { Activity, Identification, IdentificationKeys } from "../props";
+import { Activity, NodeInfo, NodeInfoKeys } from "../props";
 import { DemandBuilder } from "../props/builder";
 
 import * as rest from "../rest";
-import { OfferProposal, Subscription } from "../rest/market";
+import { Agreement,  OfferProposal, Subscription } from "../rest/market";
 import { Allocation, Invoice } from "../rest/payment";
-import { Agreement } from "../rest/market";
+import { CommandExecutionError } from "../rest/activity";
 
 import * as gftp from "../storage/gftp";
 import {
-  applyMixins,
   AsyncExitStack,
   asyncWith,
   AsyncWrapper,
@@ -35,13 +27,14 @@ import {
   sleep,
 } from "../utils";
 
-import * as _common from "./common";
-import * as _vm from "./vm";
-import * as _sgx from "./sgx";
+import * as _vm from "../package/vm";
+import * as _sgx from "../package/sgx";
 export const sgx = _sgx;
 export const vm = _vm;
 import { Task, TaskStatus } from "./task";
 import { Consumer, SmartQueue } from "./smartq";
+import { DummyMS, MarketStrategy, SCORE_NEUTRAL } from "./strategy";
+import { Package } from "../package";
 
 export { Task, TaskStatus };
 
@@ -55,16 +48,7 @@ const CFG_INVOICE_TIMEOUT: number = dayjs
   .asMilliseconds();
 //"Time to receive invoice from provider after tasks ended."
 
-const SCORE_NEUTRAL: number = 0.0;
-const SCORE_REJECTED: number = -1.0;
-const SCORE_TRUSTED: number = 100.0;
-
-const CFF_DEFAULT_PRICE_FOR_COUNTER: Map<Counter, number> = new Map([
-  [Counter.TIME, parseFloat("0.002")],
-  [Counter.CPU, parseFloat("0.002") * 10],
-]);
-
-export class _EngineConf {
+export class _ExecutorConfig {
   max_workers: Number = 5;
   timeout: number = dayjs.duration({ minutes: 5 }).asMilliseconds();
   get_offers_timeout: number = dayjs.duration({ seconds: 20 }).asMilliseconds();
@@ -72,87 +56,6 @@ export class _EngineConf {
   constructor(max_workers, timeout) {
     this.max_workers = max_workers;
     this.timeout = timeout;
-  }
-}
-
-export class MarketStrategy {
-  /*Abstract market strategy*/
-
-  async decorate_demand(demand: DemandBuilder): Promise<void> {}
-
-  async score_offer(offer: OfferProposal): Promise<Number> {
-    return SCORE_REJECTED;
-  }
-}
-
-interface MarketGeneral extends MarketStrategy, Object {}
-class MarketGeneral {}
-
-applyMixins(MarketGeneral, [MarketStrategy, Object]);
-
-export class DummyMS extends MarketGeneral {
-  max_for_counter: Map<Counter, Number> = CFF_DEFAULT_PRICE_FOR_COUNTER;
-  max_fixed: Number = parseFloat("0.05");
-  _activity?: Activity;
-
-  async decorate_demand(demand: DemandBuilder): Promise<void> {
-    demand.ensure(`(${PRICE_MODEL}=${PriceModel.LINEAR})`);
-    this._activity = new Activity().from_props(demand._props);
-  }
-
-  async score_offer(offer: OfferProposal): Promise<Number> {
-    const linear: ComLinear = new ComLinear().from_props(offer.props());
-
-    if (linear.scheme.value != BillingScheme.PAYU) {
-      return SCORE_REJECTED;
-    }
-
-    if (linear.fixed_price > this.max_fixed) return SCORE_REJECTED;
-
-    for (const [counter, price] of Object.entries(linear.price_for)) {
-      if (!this.max_for_counter.has(counter as Counter)) return SCORE_REJECTED;
-      if (price > <any>this.max_for_counter.get(counter as Counter))
-        return SCORE_REJECTED;
-    }
-
-    return SCORE_NEUTRAL;
-  }
-}
-
-export class LeastExpensiveLinearPayuMS {
-  private _expected_time_secs: number;
-  constructor(expected_time_secs: number = 60) {
-    this._expected_time_secs = expected_time_secs;
-  }
-
-  async decorate_demand(demand: DemandBuilder): Promise<void> {
-    demand.ensure(`(${PRICE_MODEL}=${PriceModel.LINEAR})`);
-  }
-
-  async score_offer(offer: OfferProposal): Promise<Number> {
-    const linear: ComLinear = new ComLinear().from_props(offer.props());
-
-    if (linear.scheme.value != BillingScheme.PAYU) return SCORE_REJECTED;
-
-    const known_time_prices = [Counter.TIME, Counter.CPU];
-
-    for (const counter in Object.keys(linear.price_for)) {
-      if (!(counter in known_time_prices)) return SCORE_REJECTED;
-    }
-
-    if (linear.fixed_price < 0) return SCORE_REJECTED;
-    let expected_price = linear.fixed_price;
-
-    for (const resource in known_time_prices) {
-      if (linear.price_for[resource] < 0) return SCORE_REJECTED;
-      expected_price += linear.price_for[resource] * this._expected_time_secs;
-    }
-
-    // The higher the expected price value, the lower the score.
-    // The score is always lower than SCORE_TRUSTED and is always higher than 0.
-    const score: number = (SCORE_TRUSTED * 1.0) / (expected_price + 1.01);
-
-    return score;
   }
 }
 
@@ -170,12 +73,29 @@ export class _BufferItem {
 type D = "D"; // Type var for task data
 type R = "R"; // Type var for task result
 
-export class Engine {
+
+export type ExecutorOpts = {
+  task_package: Package;
+  max_workers?: Number;
+  timeout?: Number | String; //timedelta
+  budget: string; //number?
+  strategy?: MarketStrategy;
+  subnet_tag?: string;
+  event_consumer?: Callable<[events.YaEvent], void>; //TODO not default event
+};
+
+/**
+ * Task executor 
+ * 
+ * @description Used to run tasks using the specified application package within providers' execution units.
+ */
+export class Executor {
   private _subnet;
+  private _stream_output;
   private _strategy;
   private _api_config;
   private _stack;
-  private _demand_decor;
+  private _task_package;
   private _conf;
   private _expires;
   private _budget_amount;
@@ -185,25 +105,37 @@ export class Engine {
   private _market_api;
   private _payment_api;
 
-  private _wrapped_emitter;
+  private _wrapped_consumer;
   private _cancellation_token: CancellationToken;
   private _worker_cancellation_token: CancellationToken;
 
-  constructor(
-    _demand_decor: _common.DemandDecor,
-    max_workers: Number = 5,
-    timeout: any = dayjs.duration({ minutes: 5 }).asMilliseconds(), //timedelta
-    budget: string, //number
-    strategy: MarketStrategy = new LeastExpensiveLinearPayuMS(),
-    subnet_tag?: string,
-    event_emitter?: Callable<[events.YaEvent], void> //TODO not default event
-  ) {
+  /**
+   * Create new executor
+   * 
+   * @param task_package    a package common for all tasks; vm.repo() function may be used to return package from a repository
+   * @param max_workers     maximum number of workers doing the computation
+   * @param timeout         timeout for the whole computation
+   * @param budget          maximum budget for payments
+   * @param strategy        market strategy used to select providers from the market (e.g. LeastExpensiveLinearPayuMS or DummyMS)
+   * @param subnet_tag      use only providers in the subnet with the subnet_tag name
+   * @param event_consumer  a callable that processes events related to the computation; by default it is a function that logs all events
+   */
+  constructor({
+    task_package,
+    max_workers = 5,
+    timeout = dayjs.duration({ minutes: 5 }).asMilliseconds(),
+    budget,
+    strategy = new DummyMS(),
+    subnet_tag,
+    event_consumer,
+  }: ExecutorOpts) {
     this._subnet = subnet_tag;
+    this._stream_output = false;
     this._strategy = strategy;
     this._api_config = new rest.Configuration();
     this._stack = new AsyncExitStack();
-    this._demand_decor = _demand_decor;
-    this._conf = new _EngineConf(max_workers, timeout);
+    this._task_package = task_package;
+    this._conf = new _ExecutorConfig(max_workers, timeout);
     // TODO: setup precision
     this._budget_amount = parseFloat(budget);
     this._budget_allocations = [];
@@ -223,15 +155,23 @@ export class Engine {
     }
     SIGNALS.forEach((event) => process.on(event, cancel));
 
-    if (!event_emitter) {
+    if (!event_consumer) {
       //from ..log import log_event
       // event_emitter = log_event
     }
-    this._wrapped_emitter =
-      event_emitter && new AsyncWrapper(event_emitter, null, cancellationToken);
+    this._wrapped_consumer =
+      event_consumer &&
+      new AsyncWrapper(event_consumer, null, cancellationToken);
   }
 
-  async *map(
+  /**
+   * Submit a computation to be executed on providers.
+   * 
+   * @param worker   a callable that takes a WorkContext object and a list o tasks, adds commands to the context object and yields committed commands
+   * @param data     an iterator of Task objects to be computed on providers
+   * @returns        yields computation progress events
+   */
+  async *submit(
     worker: Callable<
       [WorkContext, AsyncIterable<Task<D, R>>],
       AsyncGenerator<Work>
@@ -239,27 +179,28 @@ export class Engine {
     data: Iterable<Task<D, R>>
   ): AsyncGenerator<Task<D, R>> {
     const emit = <Callable<[events.YaEvent], void>>(
-      this._wrapped_emitter.async_call.bind(this._wrapped_emitter)
+      this._wrapped_consumer.async_call.bind(this._wrapped_consumer)
     );
 
     const multi_payment_decoration = await this._create_allocations();
 
-    emit(new events.ComputationStarted());
+    emit(new events.ComputationStarted({ expires: this._expires }));
     // Building offer
     let builder = new DemandBuilder();
     let _activity = new Activity();
     _activity.expiration.value = this._expires;
+    _activity.multi_activity.value = true;
     builder.add(_activity);
-    builder.add(new Identification(this._subnet));
+    builder.add(new NodeInfo(this._subnet));
     if (this._subnet)
-      builder.ensure(`(${IdentificationKeys.subnet_tag}=${this._subnet})`);
+      builder.ensure(`(${NodeInfoKeys.subnet_tag}=${this._subnet})`);
     for (let constraint of multi_payment_decoration.constraints) {
       builder.ensure(constraint);
     }
     for (let x of multi_payment_decoration.properties) {
-      builder._props[x.key] = x.value;
+      builder._properties[x.key] = x.value;
     }
-    await this._demand_decor.decorate_demand(builder);
+    await this._task_package.decorate_demand(builder);
     await this._strategy.decorate_demand(builder);
 
     let offer_buffer: { [key: string]: _BufferItem } = {}; //Dict[str, _BufferItem]
@@ -268,6 +209,7 @@ export class Engine {
     let strategy = this._strategy;
     let cancellationToken = this._cancellation_token;
     let done_queue: Queue<Task<D, R>> = new Queue([], cancellationToken);
+    let stream_output = this._stream_output;
 
     function on_task_done(task: Task<D, R>, status: TaskStatus): void {
       if (status === TaskStatus.ACCEPTED) done_queue.put(task); //put_nowait
@@ -289,7 +231,7 @@ export class Engine {
     let agreements_to_pay: Set<string> = new Set();
     let invoices: Map<string, Invoice> = new Map();
     let payment_closing: boolean = false;
-    let secure = this._demand_decor.secure;
+    let secure = this._task_package.secure;
 
     let offers_collected = 0;
     let proposals_confirmed = 0;
@@ -307,7 +249,7 @@ export class Engine {
             })
           );
           emit(new events.CheckingPayments());
-          const allocation = self.allocation_for_invoice(invoice);
+          const allocation = self._allocation_for_invoice(invoice);
           try {
             await invoice.accept(invoice.amount, allocation);
             agreements_to_pay.delete(invoice.agreementId);
@@ -342,7 +284,7 @@ export class Engine {
         return;
       }
       invoices.delete(agreement_id);
-      const allocation = self.allocation_for_invoice(inv);
+      const allocation = self._allocation_for_invoice(inv);
       await inv.accept(inv.amount, allocation);
       emit(
         new events.PaymentAccepted({
@@ -410,7 +352,7 @@ export class Engine {
                 proposal
               );
               if (common_platforms.length) {
-                builder._props["golem.com.payment.chosen-platform"] =
+                builder._properties["golem.com.payment.chosen-platform"] =
                   common_platforms[0];
               } else {
                 try {
@@ -425,7 +367,10 @@ export class Engine {
                   //suppress error
                 }
               }
-              await proposal.respond(builder.props(), builder.cons());
+              await proposal.respond(
+                builder.properties(),
+                builder.constraints()
+              );
               emit(new events.ProposalResponded({ prop_id: proposal.id() }));
             } catch (error) {
               emit(
@@ -460,7 +405,7 @@ export class Engine {
 
       let _act;
       try {
-        _act = await activity_api.create_activity(agreement, secure);
+        _act = await activity_api.new_activity(agreement, secure);
       } catch (error) {
         emit(new events.ActivityCreateFailed({ agr_id: agreement.id() }));
         throw error;
@@ -495,6 +440,10 @@ export class Engine {
               task_emitter(consumer)
             );
             for await (let batch of command_generator) {
+              const _batch_timeout = batch.timeout();
+              const batch_deadline = _batch_timeout 
+                ? dayjs.utc().unix() + _batch_timeout
+                : null;
               try {
                 let current_worker_task = consumer.last_item();
                 if (current_worker_task) {
@@ -517,44 +466,22 @@ export class Engine {
                 await batch.prepare();
                 let cc = new CommandContainer();
                 batch.register(cc);
-                let remote = await act.exec(cc.commands());
+                let remote = await act.send(cc.commands(), stream_output, batch_deadline);
+                let cmds = cc.commands();
                 emit(
                   new events.ScriptSent({
                     agr_id: agreement.id(),
-                    task_id: task_id,
-                    cmds: cc.commands(),
+                    task_id,
+                    cmds,
                   })
                 );
                 emit(new events.CheckingPayments());
-                try {
-                  for await (let step of remote) {
-                    batch.output.push(step);
-                    emit(
-                      new events.CommandExecuted({
-                        success: true,
-                        agr_id: agreement.id(),
-                        task_id: task_id,
-                        command: cc.commands()[step.idx],
-                        message: step.message,
-                        cmd_idx: step.idx,
-                      })
-                    );
+                for await (let evt_ctx of remote) {
+                  let evt = evt_ctx.event(agreement.id(), task_id, cmds);
+                  emit(evt);
+                  if (evt instanceof events.CommandExecuted && !evt.success) {
+                    throw new CommandExecutionError(evt.command, evt.message)
                   }
-                } catch (error) {
-                  // assert len(err.args) >= 2
-                  const { name: cmd_idx, description } = error;
-                  //throws new CommandExecutionError from activity#355
-                  emit(
-                    new events.CommandExecuted({
-                      success: false,
-                      agr_id: agreement.id(),
-                      task_id: task_id,
-                      command: cc.commands()[cmd_idx],
-                      message: description,
-                      cmd_idx: cmd_idx,
-                    })
-                  );
-                  throw error;
                 }
                 emit(
                   new events.GettingResults({
@@ -580,7 +507,7 @@ export class Engine {
                   emit(
                     new events.WorkerFinished({
                       agr_id: agreement.id(),
-                      exception: [error],
+                      exception: error,
                     })
                   );
                   return;
@@ -603,6 +530,15 @@ export class Engine {
     }
 
     async function worker_starter(): Promise<void> {
+      async function _start_worker(agreement) {
+        try {
+          await start_worker(agreement);
+        } catch (error) {
+          logger.error(`Worker finished with error: ${error}`);
+        } finally {
+          await agreement.terminate();
+        }
+      }
       while (true) {
         if (self._worker_cancellation_token.cancelled) break;
         await sleep(2);
@@ -624,10 +560,10 @@ export class Engine {
           let new_task: any | null = null;
           let agreement: Agreement | null = null;
           try {
-            agreement = await buffer.proposal.agreement();
-            const provider_info = (await agreement.details()).view_prov(
-              new Identification()
-            );
+            agreement = await (buffer as _BufferItem).proposal.create_agreement();
+            const provider_info = (await agreement.details())
+              .provider_view()
+              .extract(new NodeInfo());
             emit(
               new events.AgreementCreated({
                 agr_id: agreement.id(),
@@ -639,7 +575,7 @@ export class Engine {
               continue;
             }
             emit(new events.AgreementConfirmed({ agr_id: agreement.id() }));
-            new_task = loop.create_task(start_worker.bind(null, agreement));
+            new_task = loop.create_task(_start_worker.bind(null, agreement));
             workers.add(new_task);
           } catch (error) {
             if (new_task) new_task.cancel();
@@ -716,7 +652,8 @@ export class Engine {
       }
       emit(new events.ComputationFinished());
     } catch (error) {
-      if (error === undefined) { // this needs more research
+      if (error === undefined) {
+        // this needs more research
         logger.error("Computation interrupted by the user.");
       } else {
         logger.error(`fail= ${error}`);
@@ -752,10 +689,7 @@ export class Engine {
       ]);
       emit(new events.CheckingPayments());
       if (agreements_to_pay.size > 0) {
-        await bluebird.Promise.any([
-          process_invoices_job,
-          promise_timeout(15),
-        ]);
+        await bluebird.Promise.any([process_invoices_job, promise_timeout(15)]);
         emit(new events.CheckingPayments());
       }
     }
@@ -764,6 +698,7 @@ export class Engine {
     cancellationToken.cancel();
     return;
   }
+
 
   async _create_allocations(): Promise<MarketDecoration> {
     if (!this._budget_allocations.length) {
@@ -807,7 +742,7 @@ export class Engine {
     ) as string[];
   }
 
-  allocation_for_invoice(invoice: Invoice): Allocation {
+  _allocation_for_invoice(invoice: Invoice): Allocation {
     try {
       const _allocation = this._budget_allocations.find(
         (allocation) =>
@@ -821,7 +756,7 @@ export class Engine {
     }
   }
 
-  async ready(): Promise<Engine> {
+  async ready(): Promise<Executor> {
     let stack = this._stack;
     // TODO: Cleanup on exception here.
     this._expires = dayjs.utc().add(this._conf.timeout, "ms");
@@ -833,7 +768,7 @@ export class Engine {
 
     let payment_client = await this._api_config.payment();
     this._payment_api = new rest.Payment(payment_client);
-    await stack.enter_async_context(this._wrapped_emitter);
+    await stack.enter_async_context(this._wrapped_consumer);
 
     return this;
   }
