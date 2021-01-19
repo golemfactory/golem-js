@@ -30,6 +30,17 @@ export class InfBase {
   }
 }
 
+export class InfVm extends InfBase {
+  runtime = new Field({
+    value: RuntimeType.VM,
+    metadata: { key: INF_RUNTIME },
+  });
+}
+export const InfVmKeys = InfBase.fields(
+  new InfVm(),
+  ["cores", "mem", "storage", "runtime"]
+);
+
 function getFields(obj: object, keys: string[]) {
   let fields = {};
   keys.forEach((key) => {
@@ -46,5 +57,21 @@ export class ExeUnitRequest extends Model {
   constructor(package_url: any) {
     super();
     this.package_url.value = package_url;
+  }
+}
+
+export enum VmPackageFormat {
+  UNKNOWN = "",
+  GVMKIT_SQUASH = "gvmkit-squash",
+}
+
+export class VmRequest extends ExeUnitRequest {
+  package_format: Field = new Field({
+    metadata: { key: "golem.srv.comp.vm.package_format" },
+  });
+
+  constructor(package_url: string, package_format: VmPackageFormat) {
+    super(package_url);
+    this.package_format.value = package_format;
   }
 }
