@@ -33,7 +33,7 @@ export const sgx = _sgx;
 export const vm = _vm;
 import { Task, TaskStatus } from "./task";
 import { Consumer, SmartQueue } from "./smartq";
-import { DummyMS, MarketStrategy, SCORE_NEUTRAL } from "./strategy";
+import { LeastExpensiveLinearPayuMS, MarketStrategy, SCORE_NEUTRAL } from "./strategy";
 import { Package } from "../package";
 
 export { Task, TaskStatus };
@@ -125,7 +125,7 @@ export class Executor {
     max_workers = 5,
     timeout = dayjs.duration({ minutes: 5 }).asMilliseconds(),
     budget,
-    strategy = new DummyMS(),
+    strategy = new LeastExpensiveLinearPayuMS(),
     subnet_tag,
     event_consumer,
   }: ExecutorOpts) {
@@ -327,6 +327,10 @@ export class Executor {
           let score;
           try {
             score = await strategy.score_offer(proposal);
+            logger.debug(`Proposal scored by ${strategy.constructor.name}, ` +
+                         `provider: '${proposal.props()["golem.node.id.name"]}', ` +
+                         `coeffs: ${proposal.props()["golem.com.pricing.model.linear.coeffs"]}, ` +
+                         `score: ${score}`);
           } catch (error) {
             emit(
               new events.ProposalRejected({
