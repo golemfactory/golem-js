@@ -87,7 +87,7 @@ export class LeastExpensiveLinearPayuMS {
     if (linear.fixed_price < 0) return SCORE_REJECTED;
     let expected_price = linear.fixed_price;
 
-    for (const resource in known_time_prices) {
+    for (const resource of known_time_prices) {
       if (linear.price_for[resource] < 0) return SCORE_REJECTED;
       expected_price += linear.price_for[resource] * this._expected_time_secs;
     }
