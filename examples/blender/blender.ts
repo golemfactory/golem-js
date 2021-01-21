@@ -87,8 +87,8 @@ async function main(subnetTag: string, driver?: string, network?: string) {
 
 program
   .option("--subnet-tag <subnet>", "set subnet name", "community.3")
-  .option("--driver <driver>", "payment driver name, for example 'zksync'")
-  .option("--network <network>", "network name, for example 'rinkeby'")
+  .option("--driver <driver>", "payment driver name, for example 'zksync'", "zksync")
+  .option("--network <network>", "network name, for example 'rinkeby'", "rinkeby")
   .option("-d, --debug", "output extra debugging");
 program.parse(process.argv);
 if (program.debug) {
