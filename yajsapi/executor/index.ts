@@ -59,7 +59,6 @@ export class NoPaymentAccountError extends Error {
   //"Network required for the account."
   constructor(required_driver, required_network) {
     super(`No payment account available for driver ${required_driver} and network ${required_network}`);
-    this.message = super.message;
     this.name = this.constructor.name;
     this.required_driver = required_driver;
     this.required_network = required_network;
