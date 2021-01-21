@@ -159,8 +159,8 @@ export class Executor {
     event_consumer,
   }: ExecutorOpts) {
     this._subnet = subnet_tag;
-    this._driver = driver != null ? driver.toLowerCase() : DEFAULT_DRIVER;
-    this._network = network != null ? network.toLowerCase() : DEFAULT_NETWORK;
+    this._driver = driver ? driver.toLowerCase() : DEFAULT_DRIVER;
+    this._network = network ? network.toLowerCase() : DEFAULT_NETWORK;
     this._stream_output = false;
     this._strategy = strategy;
     this._api_config = new rest.Configuration();
