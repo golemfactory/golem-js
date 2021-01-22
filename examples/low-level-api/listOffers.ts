@@ -38,7 +38,7 @@ async function list_offers(conf: rest.Configuration, subnetTag: string): Promise
   console.log("done");
 }
 
-const promiseTimeout = (seconds: number) =>
+const promiseTimeout = (seconds: number): Promise<void> =>
   new Promise((resolve) =>
     setTimeout(() => {
       cancellationToken.cancel();
