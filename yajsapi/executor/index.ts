@@ -48,6 +48,26 @@ const CFG_INVOICE_TIMEOUT: number = dayjs
   .asMilliseconds();
 //"Time to receive invoice from provider after tasks ended."
 
+const DEFAULT_NETWORK: string = "rinkeby";
+const DEFAULT_DRIVER: string = "zksync";
+
+export class NoPaymentAccountError extends Error {
+  //"The error raised if no payment account for the required driver/network is available."
+  required_driver: string;
+  //"Payment driver required for the account."
+  required_network: string;
+  //"Network required for the account."
+  constructor(required_driver, required_network) {
+    super(`No payment account available for driver ${required_driver} and network ${required_network}`);
+    this.name = this.constructor.name;
+    this.required_driver = required_driver;
+    this.required_network = required_network;
+  }
+  toString() {
+    return this.message;
+  }
+}
+
 export class _ExecutorConfig {
   max_workers: Number = 5;
   timeout: number = dayjs.duration({ minutes: 5 }).asMilliseconds();
@@ -81,6 +101,8 @@ export type ExecutorOpts = {
   budget: string; //number?
   strategy?: MarketStrategy;
   subnet_tag?: string;
+  driver?: string;
+  network?: string;
   event_consumer?: Callable<[events.YaEvent], void>; //TODO not default event
 };
 
@@ -91,6 +113,8 @@ export type ExecutorOpts = {
  */
 export class Executor {
   private _subnet;
+  private _driver;
+  private _network;
   private _stream_output;
   private _strategy;
   private _api_config;
@@ -118,6 +142,8 @@ export class Executor {
    * @param budget          maximum budget for payments
    * @param strategy        market strategy used to select providers from the market (e.g. LeastExpensiveLinearPayuMS or DummyMS)
    * @param subnet_tag      use only providers in the subnet with the subnet_tag name
+   * @param driver          name of the payment driver to use or null to use the default driver; only payment platforms with the specified driver will be used
+   * @param network         name of the network to use or null to use the default network; only payment platforms with the specified network will be used
    * @param event_consumer  a callable that processes events related to the computation; by default it is a function that logs all events
    */
   constructor({
@@ -127,9 +153,13 @@ export class Executor {
     budget,
     strategy = new LeastExpensiveLinearPayuMS(),
     subnet_tag,
+    driver,
+    network,
     event_consumer,
   }: ExecutorOpts) {
     this._subnet = subnet_tag;
+    this._driver = driver ? driver.toLowerCase() : DEFAULT_DRIVER;
+    this._network = network ? network.toLowerCase() : DEFAULT_NETWORK;
     this._stream_output = false;
     this._strategy = strategy;
     this._api_config = new rest.Configuration();
@@ -707,6 +737,17 @@ export class Executor {
   async _create_allocations(): Promise<MarketDecoration> {
     if (!this._budget_allocations.length) {
       for await (let account of this._payment_api.accounts()) {
+        let driver = account.driver ? account.driver.toLowerCase() : "";
+        let network = account.driver ? account.network.toLowerCase() : "";
+        if (driver != this._driver || network != this._network) {
+          logger.debug(
+            `Not using payment platform ${account.platform}, platform's driver/network ` +
+            `${driver}/${network} is different than requested ` +
+            `driver/network ${this._driver}/${this._network}`
+          );
+          continue;
+        }
+        logger.debug(`Creating allocation using payment platform ${account.platform}`);
         let allocation: Allocation = await this._stack.enter_async_context(
           this._payment_api.new_allocation(
             this._budget_amount,
@@ -717,11 +758,9 @@ export class Executor {
         );
         this._budget_allocations.push(allocation);
       }
-    }
-    if (!this._budget_allocations.length) {
-      throw Error(
-        "No payment accounts. Did you forget to run 'yagna payment init -r'?"
-      );
+      if (!this._budget_allocations.length) {
+        throw new NoPaymentAccountError(this._driver, this._network);
+      }
     }
     let allocation_ids = this._budget_allocations.map((a) => a.id);
     return await this._payment_api.decorate_demand(allocation_ids);
