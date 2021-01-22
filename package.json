@@ -17,7 +17,7 @@
   "dependencies": {
     "@rauschma/stringio": "^1.4.0",
     "@types/bluebird": "^3.5.33",
-    "axios": "^0.19.2",
+    "axios": "^0.21.1",
     "bluebird": "^3.5.0",
     "commander": "^6.2.0",
     "dayjs": "~1.9.1",
@@ -32,7 +32,7 @@
     "utf8": "~3.0.0",
     "uuid": "^8.3.1",
     "winston": "^3.3.3",
-    "ya-ts-client": "^0.3.1"
+    "ya-ts-client": "^0.4.0"
   },
   "devDependencies": {
     "@types/eccrypto": "^1.1.2",
