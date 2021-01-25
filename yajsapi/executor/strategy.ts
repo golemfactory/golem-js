@@ -47,7 +47,7 @@ export class DummyMS extends MarketGeneral {
   async score_offer(offer: OfferProposal): Promise<Number> {
     const linear: ComLinear = new ComLinear().from_properties(offer.props());
 
-    if (linear.scheme.value != BillingScheme.PAYU) {
+    if (linear.scheme.value !== BillingScheme.PAYU) {
       return SCORE_REJECTED;
     }
 
@@ -77,15 +77,15 @@ export class LeastExpensiveLinearPayuMS {
     const linear: ComLinear = new ComLinear().from_properties(offer.props());
 
     logger.debug(`Scoring offer ${offer.id()}, parameters: ${linear}`);
-    if (linear.scheme.value != BillingScheme.PAYU) {
+    if (linear.scheme.value !== BillingScheme.PAYU) {
       logger.debug(`Rejected offer ${offer.id()}: unsupported scheme '${linear.scheme.value}'`);
       return SCORE_REJECTED;
     }
 
-    const known_time_prices = [Counter.TIME, Counter.CPU];
+    const known_time_prices = new Set([Counter.TIME, Counter.CPU]);
 
-    for (const counter in Object.keys(linear.price_for)) {
-      if (!(counter in known_time_prices)) {
+    for (const counter of Object.keys(linear.price_for)) {
+      if (!(known_time_prices.has(counter as Counter))) {
         logger.debug(`Rejected offer ${offer.id()}: unsupported counter '${counter}'`);
         return SCORE_REJECTED;
       }
