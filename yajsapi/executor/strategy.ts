@@ -84,7 +84,7 @@ export class LeastExpensiveLinearPayuMS {
 
     const known_time_prices = new Set([Counter.TIME, Counter.CPU]);
 
-    for (const counter of Object.keys(linear.price_for)) {
+    for (const counter in linear.price_for) {
       if (!(known_time_prices.has(counter as Counter))) {
         logger.debug(`Rejected offer ${offer.id()}: unsupported counter '${counter}'`);
         return SCORE_REJECTED;
