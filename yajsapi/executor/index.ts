@@ -357,9 +357,9 @@ export class Executor {
           let score;
           try {
             score = await strategy.score_offer(proposal);
-            logger.debug(`Proposal scored by ${strategy.constructor.name}, ` +
-                         `provider: '${proposal.props()["golem.node.id.name"]}', ` +
-                         `coeffs: ${proposal.props()["golem.com.pricing.model.linear.coeffs"]}, ` +
+            logger.debug(`Scored offer ${proposal.id()}, ` +
+                         `provider: ${proposal.props()["golem.node.id.name"]}, ` +
+                         `strategy: ${strategy.constructor.name}, ` +
                          `score: ${score}`);
           } catch (error) {
             emit(
@@ -373,7 +373,10 @@ export class Executor {
           if (score < SCORE_NEUTRAL) {
             try {
               await proposal.reject();
-              emit(new events.ProposalRejected({ prop_id: proposal.id() }));
+              emit(new events.ProposalRejected({
+                prop_id: proposal.id(),
+                reason: "Score too low",
+              }));
             } catch (error) {
               //suppress and log the error and continue;
               logger.log("debug", `Reject error: ${error}`);
