@@ -296,7 +296,7 @@ export class Executor {
               })
             );
           } catch (e) {
-            emit(new events.PaymentFailed({ agr_id: invoice.agreementId }));
+            emit(new events.PaymentFailed({ agr_id: invoice.agreementId, reason: e.toString() }));
           }
         } else {
           invoices[invoice.agreementId] = invoice;
@@ -344,9 +344,8 @@ export class Executor {
           const allocation = self._get_allocation(debit_note);
           try {
             await debit_note.accept(debit_note.totalAmountDue, allocation);
-            // TODO emit(new events.DebitNoteAccepted({})
           } catch (e) {
-            // TODO emit(new events.PaymentFailed({ agr_id: debit_note.agreementId }));
+            emit(new events.PaymentFailed({ agr_id: debit_note.agreementId, reason: e.toString() }));
           }
         }
         if (payment_closing && agreements_to_pay.size === 0) {

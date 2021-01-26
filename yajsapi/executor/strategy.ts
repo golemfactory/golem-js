@@ -76,7 +76,7 @@ export class LeastExpensiveLinearPayuMS {
   async score_offer(offer: OfferProposal): Promise<Number> {
     const linear: ComLinear = new ComLinear().from_properties(offer.props());
 
-    logger.debug(`Scoring offer ${offer.id()}, parameters: ${linear}`);
+    logger.debug(`Scoring offer ${offer.id()}, parameters: ${JSON.stringify(linear)}`);
     if (linear.scheme.value !== BillingScheme.PAYU) {
       logger.debug(`Rejected offer ${offer.id()}: unsupported scheme '${linear.scheme.value}'`);
       return SCORE_REJECTED;

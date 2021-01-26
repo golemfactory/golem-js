@@ -315,8 +315,9 @@ class SummaryLogger {
       );
     } else if (eventName === events.PaymentFailed.name) {
       const provider_name = this.agreement_provider_name[event["agr_id"]];
+      const reason = this.agreement_provider_name[event["reason"]];
       logger.error(
-        `Payment for provider ${provider_name} failed.`
+        `Payment for provider ${provider_name} failed; reason: ${reason}.`
       );
     } else if (eventName === events.PaymentPrepared.name) {
       logger.debug(`Prepared payment for agreement ${event["agr_id"].substr(0, 17)}`);
