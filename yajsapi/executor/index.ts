@@ -336,7 +336,11 @@ export class Executor {
         cancellationToken
       )) {
         if (agreements_to_pay.has(debit_note.agreementId)) {
-          // TODO emit(new events.DebitNoteReceived({})
+          emit(new events.DebitNoteReceived({
+            agr_id: debit_note.agreementId,
+            note_id: debit_note.debitNodeId,
+            amount: debit_note.totalAmountDue,
+          })
           const allocation = self._get_allocation(debit_note);
           try {
             await debit_note.accept(debit_note.totalAmountDue, allocation);
