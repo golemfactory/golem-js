@@ -22,6 +22,7 @@ const event_type_to_string = {
   [events.AgreementCreated.name]: "Agreement proposal sent to provider",
   [events.AgreementConfirmed.name]: "Agreement approved by provider",
   [events.AgreementRejected.name]: "Agreement rejected by provider",
+  [events.DebitNoteReceived.name]: "Debit note received",
   [events.PaymentAccepted.name]: "Payment accepted", // by who?
   [events.PaymentPrepared.name]: "Payment prepared",
   [events.PaymentFailed.name]: "Payment failed",

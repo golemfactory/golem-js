@@ -11,7 +11,7 @@ import { DemandBuilder } from "../props/builder";
 
 import * as rest from "../rest";
 import { Agreement,  OfferProposal, Subscription } from "../rest/market";
-import { Allocation, Invoice } from "../rest/payment";
+import { Allocation, DebitNote, Invoice } from "../rest/payment";
 import { CommandExecutionError } from "../rest/activity";
 
 import * as gftp from "../storage/gftp";
@@ -42,6 +42,11 @@ dayjs.extend(duration);
 dayjs.extend(utc);
 
 const SIGNALS = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
+
+const DEBIT_NOTE_MIN_TIMEOUT: number = 30; // in seconds
+//"Shortest debit note acceptance timeout the requestor will accept."
+
+const DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: string = "golem.com.payment.debit-notes.acceptance-timeout";
 
 const CFG_INVOICE_TIMEOUT: number = dayjs
   .duration({ minutes: 5 })
@@ -279,7 +284,7 @@ export class Executor {
             })
           );
           emit(new events.CheckingPayments());
-          const allocation = self._allocation_for_invoice(invoice);
+          const allocation = self._get_allocation(invoice);
           try {
             await invoice.accept(invoice.amount, allocation);
             agreements_to_pay.delete(invoice.agreementId);
@@ -314,7 +319,7 @@ export class Executor {
         return;
       }
       invoices.delete(agreement_id);
-      const allocation = self._allocation_for_invoice(inv);
+      const allocation = self._get_allocation(inv);
       await inv.accept(inv.amount, allocation);
       emit(
         new events.PaymentAccepted({
@@ -323,6 +328,27 @@ export class Executor {
           amount: inv.amount,
         })
       );
+    }
+
+    /* TODO Consider processing invoices and debit notes together */
+    async function process_debit_notes(): Promise<void> {
+      for await (let debit_note of self._payment_api.incoming_debit_notes(
+        cancellationToken
+      )) {
+        if (agreements_to_pay.has(debit_note.agreementId)) {
+          // TODO emit(new events.DebitNoteReceived({})
+          const allocation = self._get_allocation(debit_note);
+          try {
+            await debit_note.accept(debit_note.totalAmountDue, allocation);
+            // TODO emit(new events.DebitNoteAccepted({})
+          } catch (e) {
+            // TODO emit(new events.PaymentFailed({ agr_id: debit_note.agreementId }));
+          }
+        }
+        if (payment_closing && agreements_to_pay.size === 0) {
+          break;
+        }
+      }
     }
 
     async function find_offers(): Promise<void> {
@@ -402,6 +428,24 @@ export class Executor {
                   );
                 } catch (error) {
                   //suppress error
+                }
+              }
+              let timeout = proposal.props()[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP];
+              if (timeout) {
+                if (timeout < DEBIT_NOTE_MIN_TIMEOUT) {
+                  try {
+                    await proposal.reject();
+                  } catch (e) {
+                    // with contextlib.suppress(Exception):
+                  }
+                  emit(
+                    new events.ProposalRejected({
+                      prop_id: proposal.id,
+                      reason: "Debit note acceptance timeout too short",
+                    })
+                  );
+                } else {
+                  builder._properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout;
                 }
               }
               await proposal.respond(
@@ -642,11 +686,13 @@ export class Executor {
     let get_offers_deadline = dayjs.utc() + this._conf.get_offers_timeout;
     let get_done_task: any = null;
     let worker_starter_task = loop.create_task(worker_starter);
+    let debit_notes_job = loop.create_task(process_debit_notes);
     let services: any = [
       find_offers_task,
       worker_starter_task,
       process_invoices_job,
       wait_until_done,
+      debit_notes_job,
     ];
     try {
       while (services.indexOf(wait_until_done) > -1 || !done_queue.empty()) {
@@ -788,15 +834,15 @@ export class Executor {
     ) as string[];
   }
 
-  _allocation_for_invoice(invoice: Invoice): Allocation {
+  _get_allocation(item: Invoice | DebitNote): Allocation {
     try {
       const _allocation = this._budget_allocations.find(
         (allocation) =>
-          allocation.payment_platform === invoice.paymentPlatform &&
-          allocation.payment_address === invoice.payerAddr
+          allocation.payment_platform === item.paymentPlatform &&
+          allocation.payment_address === item.payerAddr
       );
       if (_allocation) return _allocation;
-      throw `No allocation for ${invoice.paymentPlatform} ${invoice.payerAddr}.`;
+      throw `No allocation for ${item.paymentPlatform} ${item.payerAddr}.`;
     } catch (error) {
       throw new Error(error);
     }

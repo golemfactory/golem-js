@@ -24,6 +24,23 @@ class yInvoice implements yap.Invoice {
   status!: yap.InvoiceStatus;
 }
 
+class yDebitNote implements yap.DebitNote {
+  debitNoteId!: string;
+  issuerId!: string;
+  recipientId!: string;
+  payeeAddr?: string | undefined;
+  payerAddr?: string | undefined;
+  paymentPlatform?: string | undefined;
+  previousDebitNoteId?: string | undefined;
+  timestamp!: string;
+  agreementId!: string;
+  activityId!: string;
+  totalAmountDue!: string;
+  usageCounterVector?: object;
+  paymentDueDate?: string;
+  status!: yap.InvoiceStatus;
+}
+
 export class Invoice extends yInvoice {
   private _api: RequestorApi;
   constructor(_api: RequestorApi, _base: yap.Invoice) {
@@ -46,6 +63,27 @@ export class Invoice extends yInvoice {
 }
 
 export const InvoiceStatus = yap.InvoiceStatus;
+
+export class DebitNote extends yDebitNote {
+  private _api: RequestorApi;
+  constructor(_api: RequestorApi, _base: yap.DebitNote) {
+    super();
+    for (let [key, value] of Object.entries(_base)) {
+      this[key] = value;
+    }
+    this._api = _api;
+  }
+
+  async accept(amount: number | string, allocation: Allocation) {
+    let acceptance: yap.Acceptance = {
+      totalAmountAccepted: amount.toString(),
+      allocationId: allocation.id,
+    };
+    acceptance!.totalAmountAccepted = amount.toString();
+    acceptance!.allocationId = allocation.id;
+    await this._api.acceptDebitNote(this.debitNoteId, acceptance!);
+  }
+}
 
 class _Link {
   _api!: RequestorApi;
@@ -235,6 +273,13 @@ export class Payment {
     return _decorate_demand;
   }
 
+  async debit_note(debit_note_id: string): Promise<DebitNote> {
+    let { data: debit_note_obj } = await this._api.getDebitNote(debit_note_id);
+    // TODO may need to check only requestor debit notes
+    return new DebitNote(this._api, debit_note_obj)
+  }
+
+
   async *invoices(): AsyncGenerator<Invoice> {
     let { data: result } = await this._api.getInvoices();
     // TODO may need to check only requestor invoices
@@ -282,6 +327,45 @@ export class Payment {
           }
         } catch (error) {
           logger.error(`Received invoice error: ${error}`);
+        }
+      }
+      return;
+    }
+
+    return fetch(ts);
+  }
+
+  incoming_debit_notes(cancellationToken): AsyncGenerator<DebitNote> {
+    let ts = dayjs().utc();
+    let api = this._api;
+    let self = this;
+
+    async function* fetch(init_ts: Dayjs) {
+      let ts = init_ts;
+      while (true) {
+        if (cancellationToken.cancelled) break;
+        try {
+          let { data: events } = await api.getDebitNoteEvents(
+            5,
+            ts.format("YYYY-MM-DDTHH:mm:ss.SSSSSSZ")
+          );
+          for (let ev of events) {
+            logger.debug(
+              `Received debit note event: ${JSON.stringify(
+                ev
+              )}, type: ${JSON.stringify(Object.getPrototypeOf(ev))}`
+            );
+            ts = dayjs(ev.eventDate);
+            if (ev.eventType === "DebitNoteReceivedEvent") {
+              let debit_note = await self.debit_note(ev["debitNoteId"]);
+              yield debit_note;
+            }
+          }
+          if (!events || !events.length) {
+            await sleep(1);
+          }
+        } catch (error) {
+          logger.error(`Received debit note error: ${error}`);
         }
       }
       return;
