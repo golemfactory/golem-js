@@ -124,11 +124,13 @@ class AgreementEvent extends YaEvent {
 }
 
 export class AgreementCreated extends AgreementEvent {
-  provider_id?: NodeInfo;
-  constructor({ agr_id, provider_id }) {
+  provider_id?: string;
+  provider_info?: NodeInfo;
+  constructor({ agr_id, provider_id, provider_info }) {
     super();
     if (agr_id) this.agr_id = agr_id;
-    if (provider_id) this.provider_id = provider_id;
+    this.provider_id = provider_id;
+    if (provider_info) this.provider_info = provider_info;
   }
 }
 
