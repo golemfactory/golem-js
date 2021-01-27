@@ -644,14 +644,15 @@ export class Executor {
           let new_task: any | null = null;
           let agreement: Agreement | null = null;
           try {
-            agreement = await (buffer as _BufferItem).proposal.create_agreement();
-            const provider_info = (await agreement.details())
+            agreement = await buffer.proposal.create_agreement();
+            const node_info = (await agreement.details())
               .provider_view()
               .extract(new NodeInfo());
             emit(
               new events.AgreementCreated({
                 agr_id: agreement.id(),
-                provider_id: provider_info,
+                provider_id: provider_id,
+                provider_info: node_info,
               })
             );
             if (!(await agreement.confirm())) {
