@@ -130,7 +130,11 @@ export class Allocation extends _Link {
   }
 
   async delete() {
-    await this._api.releaseAllocation(this.id);
+    try {
+      await this._api.releaseAllocation(this.id);
+    } catch(error) {
+      logger.error(`Release allocation: ${error}`);
+    }
   }
 }
 
@@ -174,7 +178,11 @@ class _AllocationTask extends ResourceCtx<Allocation> {
 
   async done() {
     if (this._id) {
-      await this._api.releaseAllocation(this._id);
+      try {
+        await this._api.releaseAllocation(this._id);
+      } catch(error) {
+        logger.error(`Release allocation: ${error}`);
+      }
     }
   }
 }
@@ -226,37 +234,45 @@ export class Payment {
 
   async *allocations(): AsyncGenerator<Allocation> {
     /*Lists all active allocations.*/
-    let { data: result } = await this._api.getAllocations();
-    for (let alloc_obj of result) {
-      let _allocation = new Allocation();
-      _allocation._api = this._api;
-      _allocation.id = alloc_obj.allocationId;
-      _allocation.amount = parseFloat(alloc_obj.totalAmount);
-      _allocation.payment_platform = alloc_obj.paymentPlatform;
-      _allocation.payment_address = alloc_obj.address;
-      _allocation.expires = new Date(
-        parseInt(alloc_obj.timeout as string) * 1000
-      );
-      yield _allocation;
+    try {
+      let { data: result } = await this._api.getAllocations();
+      for (let alloc_obj of result) {
+        let _allocation = new Allocation();
+        _allocation._api = this._api;
+        _allocation.id = alloc_obj.allocationId;
+        _allocation.amount = parseFloat(alloc_obj.totalAmount);
+        _allocation.payment_platform = alloc_obj.paymentPlatform;
+        _allocation.payment_address = alloc_obj.address;
+        _allocation.expires = new Date(
+          parseInt(alloc_obj.timeout as string) * 1000
+        );
+        yield _allocation;
+      }
+    } catch (error) {
+      throw error;
     }
     return;
   }
 
   async allocation(allocation_id: string): Promise<Allocation> {
-    let {
-      data: result,
-    }: { data: yap.Allocation } = await this._api.getAllocation(allocation_id);
-    let allocation_obj = result;
-    let _allocation = new Allocation();
-    _allocation._api = this._api;
-    _allocation.id = allocation_obj.allocationId;
-    _allocation.amount = parseFloat(allocation_obj.totalAmount);
-    _allocation.payment_platform = allocation_obj.paymentPlatform;
-    _allocation.payment_address = allocation_obj.address;
-    _allocation.expires = new Date(
-      parseInt(allocation_obj.timeout as string) * 1000
-    );
-    return _allocation;
+    try {
+      let {
+        data: result,
+      }: { data: yap.Allocation } = await this._api.getAllocation(allocation_id);
+      let allocation_obj = result;
+      let _allocation = new Allocation();
+      _allocation._api = this._api;
+      _allocation.id = allocation_obj.allocationId;
+      _allocation.amount = parseFloat(allocation_obj.totalAmount);
+      _allocation.payment_platform = allocation_obj.paymentPlatform;
+      _allocation.payment_address = allocation_obj.address;
+      _allocation.expires = new Date(
+        parseInt(allocation_obj.timeout as string) * 1000
+      );
+      return _allocation;
+    } catch (error) {
+      throw error;
+    }
   }
 
   async *accounts(): AsyncGenerator<yap.Account> {
