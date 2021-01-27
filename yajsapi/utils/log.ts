@@ -79,13 +79,13 @@ winston.addColors(logColors);
 const logger = winston.createLogger(options);
 
 class ProviderInfo {
-  public provider_id: string;
-  public provider_name: string;
-  public provider_subnet: string | null;
-  constructor(provider_id: string, provider_name: string, provider_subnet: string | null) {
-    this.provider_id = provider_id;
-    this.provider_name = provider_name;
-    this.provider_subnet = provider_subnet;
+  public id: string;
+  public name: string;
+  public subnet_tag: string | null;
+  constructor(id: string, name: string, subnet_tag: string | null) {
+    this.id = id;
+    this.name = name;
+    this.subnet_tag = subnet_tag;
   }
 }
 
@@ -155,7 +155,7 @@ class SummaryLogger {
         const cost = this.provider_cost.get(info) || "0 (no invoices?)";
         return {
           'Agreement': agr_id.toString().substring(0, 10),
-          'Provider Name': info.provider_name,
+          'Provider Name': info.name,
           'Tasks Computed': tasks ? tasks.length : 0,
           'Cost': cost,
         };
@@ -218,7 +218,7 @@ class SummaryLogger {
     } else if (eventName === events.AgreementConfirmed.name) {
       logger.info(
         `Agreement confirmed by provider '${
-          this.agreement_provider_info[event["agr_id"]].provider_name
+          this.agreement_provider_info[event["agr_id"]].name
         }'`
       );
       this.confirmed_agreements.add(event["agr_id"]);
@@ -227,14 +227,14 @@ class SummaryLogger {
     } else if (eventName === events.ScriptSent.name) {
       const provider_info = this.agreement_provider_info[event["agr_id"]];
       logger.info(
-        `Task sent to provider '${provider_info.provider_name}', task data: ${
+        `Task sent to provider '${provider_info.name}', task data: ${
           event["task_id"]
             ? this.task_data[event["task_id"]]
             : "<initialization>"
         }`
       );
     } else if (eventName === events.CommandExecuted.name) {
-      const provider_name = this.agreement_provider_info[event["agr_id"]].provider_name;
+      const provider_name = this.agreement_provider_info[event["agr_id"]].name;
       if (event["success"]) {
         logger.debug(
           `Command successful on provider '${provider_name}', command: ${JSON.stringify(event["command"])}.`
@@ -247,7 +247,7 @@ class SummaryLogger {
     } else if (eventName === events.ScriptFinished.name) {
       const provider_info = this.agreement_provider_info[event["agr_id"]];
       logger.info(
-        `Task computed by provider '${provider_info.provider_name}', task data: ${
+        `Task computed by provider '${provider_info.name}', task data: ${
           event["task_id"]
             ? this.task_data[event["task_id"]]
             : "<initialization>"
@@ -268,7 +268,7 @@ class SummaryLogger {
       cost += parseFloat(event["amount"]);
       this.provider_cost.set(provider_info, cost);
       logger.debug(
-        `Received an invoice from ${provider_info.provider_name}. Amount: ${
+        `Received an invoice from ${provider_info.name}. Amount: ${
           event["amount"]
         }; (so far: ${cost} from this provider).`
       );
@@ -287,7 +287,7 @@ class SummaryLogger {
         more_info = `, info: ${event["exception"].response.data.message}`;
       }
       logger.warn(
-        `Activity failed on provider '${provider_info.provider_name}', reason: ${event["exception"]}${more_info}`
+        `Activity failed on provider '${provider_info.name}', reason: ${event["exception"]}${more_info}`
       );
     } else if (eventName === events.ComputationFinished.name) {
       this.finished = true;
@@ -301,18 +301,18 @@ class SummaryLogger {
       );
       for (let [info, tasks] of this.provider_tasks.entries()) {
         logger.info(
-          `Provider '${info.provider_name}' computed ${tasks.length} tasks`
+          `Provider '${info.name}' computed ${tasks.length} tasks`
         );
       }
       for (let info of new Set(
         Object.values(this.agreement_provider_info)
       )) {
         if (!this.provider_tasks.has(info))
-          logger.info(`Provider '${info.provider_name}' did not compute any tasks`);
+          logger.info(`Provider '${info.name}' did not compute any tasks`);
       }
       for (let [info, num] of this.provider_failures.entries())
         logger.info(
-          `Activity failed ${num} time(s) on provider '${info.provider_name}'`
+          `Activity failed ${num} time(s) on provider '${info.name}'`
         );
     } else if (eventName === events.PaymentsFinished.name) {
       logger.info(`Finished waiting for payments. Summary:`);
@@ -326,7 +326,7 @@ class SummaryLogger {
         `Accepted payment: ${event["amount"]} for invoice ${event["inv_id"].substr(0, 17)}`
       );
     } else if (eventName === events.PaymentFailed.name) {
-      const provider_name = this.agreement_provider_info[event["agr_id"]].provider_name;
+      const provider_name = this.agreement_provider_info[event["agr_id"]].name;
       logger.error(
         `Payment for provider ${provider_name} failed; reason: ${event["reason"]}.`
       );
