@@ -153,6 +153,17 @@ export class AgreementTerminated extends AgreementEvent {
   }
 }
 
+export class DebitNoteReceived extends AgreementEvent {
+  note_id!: string;
+  amount!: string;
+  constructor({ agr_id, note_id, amount }) {
+    super();
+    if (agr_id) this.agr_id = agr_id;
+    this.note_id = note_id;
+    this.amount = amount;
+  }
+}
+
 export class PaymentAccepted extends AgreementEvent {
   inv_id!: string;
   amount!: string;
@@ -166,9 +177,11 @@ export class PaymentAccepted extends AgreementEvent {
 
 export class PaymentFailed extends AgreementEvent {
   // TODO add exc_info
-  constructor({ agr_id }) {
+  reason!: string;
+  constructor({ agr_id, reason }) {
     super();
     if (agr_id) this.agr_id = agr_id;
+    this.reason = reason;
   }
 }
 
