@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
+import path from "path";
 import winston from "winston";
 import { Callable } from "./";
 import * as events from "../executor/events";
@@ -317,7 +318,7 @@ class SummaryLogger {
     } else if (eventName === events.PaymentsFinished.name) {
       logger.info(`Finished waiting for payments. Summary:`);
       this._print_cost();
-      const total_cost = Object.values(this.provider_cost).reduce((acc, item) => (acc + item), 0);
+      const total_cost = [...this.provider_cost.values()].reduce((acc, item) => (acc + item), 0);
       logger.info(`Total Cost: ${total_cost}`)
     } else if (eventName === events.ComputationFailed.name) {
       logger.error(`Computation failed, reason: ${event["reason"]}`);
@@ -345,17 +346,17 @@ export function logSummary(
   return summary_logger.log.bind(summary_logger);
 }
 
-function isSuperset(set: Set<any>, subset: Set<any>) {
-  for (let elem of subset) {
-    if (!set.has(elem)) {
-      return false;
-    }
-  }
-  return true;
-}
-
 export const changeLogLevel = (level: string) => {
   options.level = level;
+  options.transports.push(new winston.transports.File({ 
+    filename: path.join("logs", `yajsapi-${dayjs().format()}.log`),
+    level: 'debug'
+  }) as any);
+  options.transports.push(new winston.transports.File({ 
+    filename: path.join("logs", "yajsapi-current.log"),
+    level: 'debug',
+    options: { flags: 'w' } 
+  }) as any);
   logger.configure(options);
 };
 
