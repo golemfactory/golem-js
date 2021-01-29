@@ -46,7 +46,7 @@ const SIGNALS = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
 const DEBIT_NOTE_MIN_TIMEOUT: number = 30; // in seconds
 //"Shortest debit note acceptance timeout the requestor will accept."
 
-const DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: string = "golem.com.payment.debit-notes.acceptance-timeout";
+const DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: string = "golem.com.payment.debit-notes.accept-timeout?";
 
 const CFG_INVOICE_TIMEOUT: number = dayjs
   .duration({ minutes: 5 })
