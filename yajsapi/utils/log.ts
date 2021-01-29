@@ -61,12 +61,6 @@ let options = {
   ),
   defaultMeta: { service: "user-service" },
   transports: [
-    //
-    // - Write all logs with level `error` and below to `error.log`
-    // - Write all logs with level `info` and below to `combined.log`
-    //
-    //   new winston.transports.File({ filename: 'error.log', level: 'error' }),
-    //   new winston.transports.File({ filename: 'combined.log' }),
     new winston.transports.Console(),
   ],
 };
@@ -148,20 +142,17 @@ class SummaryLogger {
   }
 
   _print_cost(): void {
-    const provider_names = new Set(Object.keys(this.provider_tasks));
-    const results = [...this.confirmed_agreements].map(
-      (agr_id) => {
-        const info = this.agreement_provider_info[agr_id];
-        const tasks = this.provider_tasks.get(info);
-        const cost = this.provider_cost.get(info) || "0 (no invoices?)";
-        return {
-          'Agreement': agr_id.toString().substring(0, 10),
-          'Provider Name': info.name,
-          'Tasks Computed': tasks ? tasks.length : 0,
-          'Cost': cost,
-        };
-      }
-    );
+    const results = [...this.confirmed_agreements].map((agr_id) => {
+      const info = this.agreement_provider_info[agr_id];
+      const tasks = this.provider_tasks.get(info);
+      const cost = this.provider_cost.get(info) || "0 (no invoices?)";
+      return {
+        Agreement: agr_id.toString().substring(0, 10),
+        "Provider Name": info.name,
+        "Tasks Computed": tasks ? tasks.length : 0,
+        Cost: cost,
+      };
+    });
     console.table(results);
   }
 
@@ -212,10 +203,14 @@ class SummaryLogger {
         "Make sure you're using the latest released versions of yagna and yajsapi, and the correct subnet.";
       logger.warn(msg);
     } else if (eventName === events.AgreementCreated.name) {
-      let provider_name = event["provider_info"].name.value || event["provider_id"];
+      let provider_name =
+        event["provider_info"].name.value || event["provider_id"];
       logger.info(`Agreement proposed to provider '${provider_name}'`);
-      this.agreement_provider_info[event["agr_id"]] =
-        new ProviderInfo(event["provider_id"], provider_name, event["provider_info"].subnet_tag);
+      this.agreement_provider_info[event["agr_id"]] = new ProviderInfo(
+        event["provider_id"],
+        provider_name,
+        event["provider_info"].subnet_tag
+      );
     } else if (eventName === events.AgreementConfirmed.name) {
       logger.info(
         `Agreement confirmed by provider '${
@@ -238,11 +233,15 @@ class SummaryLogger {
       const provider_name = this.agreement_provider_info[event["agr_id"]].name;
       if (event["success"]) {
         logger.debug(
-          `Command successful on provider '${provider_name}', command: ${JSON.stringify(event["command"])}.`
+          `Command successful on provider '${provider_name}', command: ${JSON.stringify(
+            event["command"]
+          )}.`
         );
       } else {
         logger.warn(
-          `Command failed on provider '${provider_name}', command: ${JSON.stringify(event["command"])}, output: ${event["message"]}`
+          `Command failed on provider '${provider_name}', command: ${JSON.stringify(
+            event["command"]
+          )}, output: ${event["message"]}`
         );
       }
     } else if (eventName === events.ScriptFinished.name) {
@@ -256,8 +255,7 @@ class SummaryLogger {
       );
       if (event["task_id"]) {
         let ids = this.provider_tasks.get(provider_info);
-        if (!ids)
-          this.provider_tasks.set(provider_info, [event["task_id"]]);
+        if (!ids) this.provider_tasks.set(provider_info, [event["task_id"]]);
         else {
           ids.push(event["task_id"]);
           this.provider_tasks.set(provider_info, ids);
@@ -269,9 +267,7 @@ class SummaryLogger {
       cost += parseFloat(event["amount"]);
       this.provider_cost.set(provider_info, cost);
       logger.debug(
-        `Received an invoice from ${provider_info.name}. Amount: ${
-          event["amount"]
-        }; (so far: ${cost} from this provider).`
+        `Received an invoice from ${provider_info.name}. Amount: ${event["amount"]}; (so far: ${cost} from this provider).`
       );
     } else if (eventName === events.CheckingPayments.name) {
       if (options.level == "debug") {
@@ -284,7 +280,11 @@ class SummaryLogger {
       if (!failures) this.provider_failures.set(provider_info, 0);
       else this.provider_failures.set(provider_info, failures + 1);
       let more_info = "";
-      if (event["exception"] && event["exception"].response && event["exception"].response.data) {
+      if (
+        event["exception"] &&
+        event["exception"].response &&
+        event["exception"].response.data
+      ) {
         more_info = `, info: ${event["exception"].response.data.message}`;
       }
       logger.warn(
@@ -301,13 +301,9 @@ class SummaryLogger {
         `Negotiated ${this.confirmed_agreements.size} agreements with ${num_providers} providers`
       );
       for (let [info, tasks] of this.provider_tasks.entries()) {
-        logger.info(
-          `Provider '${info.name}' computed ${tasks.length} tasks`
-        );
+        logger.info(`Provider '${info.name}' computed ${tasks.length} tasks`);
       }
-      for (let info of new Set(
-        Object.values(this.agreement_provider_info)
-      )) {
+      for (let info of new Set(Object.values(this.agreement_provider_info))) {
         if (!this.provider_tasks.has(info))
           logger.info(`Provider '${info.name}' did not compute any tasks`);
       }
@@ -318,13 +314,18 @@ class SummaryLogger {
     } else if (eventName === events.PaymentsFinished.name) {
       logger.info(`Finished waiting for payments. Summary:`);
       this._print_cost();
-      const total_cost = [...this.provider_cost.values()].reduce((acc, item) => (acc + item), 0);
-      logger.info(`Total Cost: ${total_cost}`)
+      const total_cost = [...this.provider_cost.values()].reduce(
+        (acc, item) => acc + item,
+        0
+      );
+      logger.info(`Total Cost: ${total_cost}`);
     } else if (eventName === events.ComputationFailed.name) {
       logger.error(`Computation failed, reason: ${event["reason"]}`);
     } else if (eventName === events.PaymentAccepted.name) {
       logger.info(
-        `Accepted payment: ${event["amount"]} for invoice ${event["inv_id"].substr(0, 17)}`
+        `Accepted payment: ${event["amount"]} for invoice ${event[
+          "inv_id"
+        ].substr(0, 17)}`
       );
     } else if (eventName === events.PaymentFailed.name) {
       const provider_name = this.agreement_provider_info[event["agr_id"]].name;
@@ -332,9 +333,13 @@ class SummaryLogger {
         `Payment for provider ${provider_name} failed; reason: ${event["reason"]}.`
       );
     } else if (eventName === events.PaymentPrepared.name) {
-      logger.debug(`Prepared payment for agreement ${event["agr_id"].substr(0, 17)}`);
+      logger.debug(
+        `Prepared payment for agreement ${event["agr_id"].substr(0, 17)}`
+      );
     } else if (eventName === events.PaymentQueued.name) {
-      logger.debug(`Queued payment for agreement ${event["agr_id"].substr(0, 17)}`);
+      logger.debug(
+        `Queued payment for agreement ${event["agr_id"].substr(0, 17)}`
+      );
     }
   }
 }
@@ -348,15 +353,22 @@ export function logSummary(
 
 export const changeLogLevel = (level: string) => {
   options.level = level;
-  options.transports.push(new winston.transports.File({ 
-    filename: path.join("logs", `yajsapi-${dayjs().format()}.log`),
-    level: 'debug'
-  }) as any);
-  options.transports.push(new winston.transports.File({ 
-    filename: path.join("logs", "yajsapi-current.log"),
-    level: 'debug',
-    options: { flags: 'w' } 
-  }) as any);
+  options.transports.push(
+    new winston.transports.File({
+      filename: path.join(
+        "logs",
+        `yajsapi-${dayjs().format("YYYY-MM-DD_HH-mm-ss")}.log`
+      ),
+      level: "debug",
+    }) as any
+  );
+  options.transports.push(
+    new winston.transports.File({
+      filename: path.join("logs", "yajsapi-current.log"),
+      level: "debug",
+      options: { flags: "w" },
+    }) as any
+  );
   logger.configure(options);
 };
 
