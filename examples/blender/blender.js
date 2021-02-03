@@ -8,7 +8,7 @@ dayjs.extend(duration);
 
 const { asyncWith, logUtils, range } = utils;
 
-async function main(subnetTag) {
+async function main(subnetTag, driver, network) {
   const _package = await vm.repo({
     image_hash: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
     min_mem_gib: 0.5,
@@ -20,6 +20,7 @@ async function main(subnetTag) {
       path.join(__dirname, "./cubes.blend"),
       "/golem/resource/scene.blend"
     );
+    
     for await (let task of tasks) {
       let frame = task.data();
       let crops = [
@@ -68,6 +69,8 @@ async function main(subnetTag) {
       timeout: timeout,
       budget: "10.0",
       subnet_tag: subnetTag,
+      driver: driver,
+      network: network,
       event_consumer: logUtils.logSummary(),
     }),
     async (executor) => {
@@ -83,11 +86,13 @@ async function main(subnetTag) {
 }
 
 program
-  .option("--subnet-tag <subnet>", "set subnet name", "community.3")
+  .option("--subnet-tag <subnet>", "set subnet name", "devnet-alpha.4")
+  .option("--driver <driver>", "payment driver name, for example 'zksync'", "zksync")
+  .option("--network <network>", "network name, for example 'rinkeby'", "rinkeby")
   .option("-d, --debug", "output extra debugging");
 program.parse(process.argv);
 if (program.debug) {
   utils.changeLogLevel("debug");
 }
-console.log(`Using subnet: ${program.subnetTag}`);
-main(program.subnetTag);
+console.log(`Using subnet: ${program.subnetTag}, network: ${program.network}, driver: ${program.driver}`);
+main(program.subnetTag, program.driver, program.network);
