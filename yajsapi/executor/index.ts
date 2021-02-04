@@ -11,7 +11,7 @@ import { DemandBuilder } from "../props/builder";
 
 import * as rest from "../rest";
 import { Agreement,  OfferProposal, Subscription } from "../rest/market";
-import { Allocation, Invoice } from "../rest/payment";
+import { Allocation, DebitNote, Invoice } from "../rest/payment";
 import { CommandExecutionError } from "../rest/activity";
 
 import * as gftp from "../storage/gftp";
@@ -33,7 +33,7 @@ export const sgx = _sgx;
 export const vm = _vm;
 import { Task, TaskStatus } from "./task";
 import { Consumer, SmartQueue } from "./smartq";
-import { DummyMS, MarketStrategy, SCORE_NEUTRAL } from "./strategy";
+import { LeastExpensiveLinearPayuMS, MarketStrategy, SCORE_NEUTRAL } from "./strategy";
 import { Package } from "../package";
 
 export { Task, TaskStatus };
@@ -43,10 +43,35 @@ dayjs.extend(utc);
 
 const SIGNALS = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
 
+const DEBIT_NOTE_MIN_TIMEOUT: number = 30; // in seconds
+//"Shortest debit note acceptance timeout the requestor will accept."
+
+const DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: string = "golem.com.payment.debit-notes.accept-timeout?";
+
 const CFG_INVOICE_TIMEOUT: number = dayjs
   .duration({ minutes: 5 })
   .asMilliseconds();
 //"Time to receive invoice from provider after tasks ended."
+
+const DEFAULT_NETWORK: string = "rinkeby";
+const DEFAULT_DRIVER: string = "zksync";
+
+export class NoPaymentAccountError extends Error {
+  //"The error raised if no payment account for the required driver/network is available."
+  required_driver: string;
+  //"Payment driver required for the account."
+  required_network: string;
+  //"Network required for the account."
+  constructor(required_driver, required_network) {
+    super(`No payment account available for driver ${required_driver} and network ${required_network}`);
+    this.name = this.constructor.name;
+    this.required_driver = required_driver;
+    this.required_network = required_network;
+  }
+  toString() {
+    return this.message;
+  }
+}
 
 export class _ExecutorConfig {
   max_workers: Number = 5;
@@ -81,6 +106,8 @@ export type ExecutorOpts = {
   budget: string; //number?
   strategy?: MarketStrategy;
   subnet_tag?: string;
+  driver?: string;
+  network?: string;
   event_consumer?: Callable<[events.YaEvent], void>; //TODO not default event
 };
 
@@ -91,6 +118,8 @@ export type ExecutorOpts = {
  */
 export class Executor {
   private _subnet;
+  private _driver;
+  private _network;
   private _stream_output;
   private _strategy;
   private _api_config;
@@ -118,6 +147,8 @@ export class Executor {
    * @param budget          maximum budget for payments
    * @param strategy        market strategy used to select providers from the market (e.g. LeastExpensiveLinearPayuMS or DummyMS)
    * @param subnet_tag      use only providers in the subnet with the subnet_tag name
+   * @param driver          name of the payment driver to use or null to use the default driver; only payment platforms with the specified driver will be used
+   * @param network         name of the network to use or null to use the default network; only payment platforms with the specified network will be used
    * @param event_consumer  a callable that processes events related to the computation; by default it is a function that logs all events
    */
   constructor({
@@ -125,11 +156,15 @@ export class Executor {
     max_workers = 5,
     timeout = dayjs.duration({ minutes: 5 }).asMilliseconds(),
     budget,
-    strategy = new DummyMS(),
+    strategy = new LeastExpensiveLinearPayuMS(),
     subnet_tag,
+    driver,
+    network,
     event_consumer,
   }: ExecutorOpts) {
     this._subnet = subnet_tag;
+    this._driver = driver ? driver.toLowerCase() : DEFAULT_DRIVER;
+    this._network = network ? network.toLowerCase() : DEFAULT_NETWORK;
     this._stream_output = false;
     this._strategy = strategy;
     this._api_config = new rest.Configuration();
@@ -207,7 +242,7 @@ export class Executor {
     await this._task_package.decorate_demand(builder);
     await this._strategy.decorate_demand(builder);
 
-    let offer_buffer: { [key: string]: string | _BufferItem } = {}; //Dict[str, _BufferItem]
+    let offer_buffer: { [key: string]: _BufferItem } = {}; //Dict[str, _BufferItem]
     let market_api = this._market_api;
     let activity_api = this._activity_api;
     let strategy = this._strategy;
@@ -253,7 +288,7 @@ export class Executor {
             })
           );
           emit(new events.CheckingPayments());
-          const allocation = self._allocation_for_invoice(invoice);
+          const allocation = self._get_allocation(invoice);
           try {
             await invoice.accept(invoice.amount, allocation);
             agreements_to_pay.delete(invoice.agreementId);
@@ -265,7 +300,7 @@ export class Executor {
               })
             );
           } catch (e) {
-            emit(new events.PaymentFailed({ agr_id: invoice.agreementId }));
+            emit(new events.PaymentFailed({ agr_id: invoice.agreementId, reason: e.toString() }));
           }
         } else {
           invoices[invoice.agreementId] = invoice;
@@ -288,7 +323,7 @@ export class Executor {
         return;
       }
       invoices.delete(agreement_id);
-      const allocation = self._allocation_for_invoice(inv);
+      const allocation = self._get_allocation(inv);
       await inv.accept(inv.amount, allocation);
       emit(
         new events.PaymentAccepted({
@@ -297,6 +332,30 @@ export class Executor {
           amount: inv.amount,
         })
       );
+    }
+
+    /* TODO Consider processing invoices and debit notes together */
+    async function process_debit_notes(): Promise<void> {
+      for await (let debit_note of self._payment_api.incoming_debit_notes(
+        cancellationToken
+      )) {
+        if (agreements_to_pay.has(debit_note.agreementId)) {
+          emit(new events.DebitNoteReceived({
+            agr_id: debit_note.agreementId,
+            note_id: debit_note.debitNodeId,
+            amount: debit_note.totalAmountDue,
+          }));
+          const allocation = self._get_allocation(debit_note);
+          try {
+            await debit_note.accept(debit_note.totalAmountDue, allocation);
+          } catch (e) {
+            emit(new events.PaymentFailed({ agr_id: debit_note.agreementId, reason: e.toString() }));
+          }
+        }
+        if (payment_closing && agreements_to_pay.size === 0) {
+          break;
+        }
+      }
     }
 
     async function find_offers(): Promise<void> {
@@ -331,6 +390,10 @@ export class Executor {
           let score;
           try {
             score = await strategy.score_offer(proposal);
+            logger.debug(`Scored offer ${proposal.id()}, ` +
+                         `provider: ${proposal.props()["golem.node.id.name"]}, ` +
+                         `strategy: ${strategy.constructor.name}, ` +
+                         `score: ${score}`);
           } catch (error) {
             emit(
               new events.ProposalRejected({
@@ -343,7 +406,10 @@ export class Executor {
           if (score < SCORE_NEUTRAL) {
             try {
               await proposal.reject();
-              emit(new events.ProposalRejected({ prop_id: proposal.id() }));
+              emit(new events.ProposalRejected({
+                prop_id: proposal.id(),
+                reason: "Score too low",
+              }));
             } catch (error) {
               //suppress and log the error and continue;
               logger.log("debug", `Reject error: ${error}`);
@@ -369,6 +435,24 @@ export class Executor {
                   );
                 } catch (error) {
                   //suppress error
+                }
+              }
+              let timeout = proposal.props()[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP];
+              if (timeout) {
+                if (timeout < DEBIT_NOTE_MIN_TIMEOUT) {
+                  try {
+                    await proposal.reject();
+                  } catch (e) {
+                    // with contextlib.suppress(Exception):
+                  }
+                  emit(
+                    new events.ProposalRejected({
+                      prop_id: proposal.id,
+                      reason: "Debit note acceptance timeout too short",
+                    })
+                  );
+                } else {
+                  builder._properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout;
                 }
               }
               await proposal.respond(
@@ -553,23 +637,26 @@ export class Executor {
         ) {
           let _offer_list = Object.entries(offer_buffer);
           let _sample =
-            _offer_list[
-              Math.floor(Math.random() * Object.keys(offer_buffer).length)
-            ];
+            _offer_list
+              .map(x => { return { obj: x, rnd: Math.random() }; })
+              .sort((a, b) => a.rnd - b.rnd)
+              .map(x => x.obj)
+              .reduce((acc, item) => item[1].score > acc[1].score ? item : acc);
           let [provider_id, buffer] = _sample;
           delete offer_buffer[provider_id];
 
           let new_task: any | null = null;
           let agreement: Agreement | null = null;
           try {
-            agreement = await (buffer as _BufferItem).proposal.create_agreement();
-            const provider_info = (await agreement.details())
+            agreement = await buffer.proposal.create_agreement();
+            const node_info = (await agreement.details())
               .provider_view()
               .extract(new NodeInfo());
             emit(
               new events.AgreementCreated({
                 agr_id: agreement.id(),
-                provider_id: provider_info,
+                provider_id: provider_id,
+                provider_info: node_info,
               })
             );
             if (!(await agreement.confirm())) {
@@ -583,7 +670,7 @@ export class Executor {
             if (new_task) new_task.cancel();
             emit(
               new events.ProposalFailed({
-                prop_id: (buffer as _BufferItem).proposal.id(),
+                prop_id: buffer.proposal.id(),
                 reason: error.toString(),
               })
             );
@@ -607,11 +694,13 @@ export class Executor {
     let get_offers_deadline = dayjs.utc() + this._conf.get_offers_timeout;
     let get_done_task: any = null;
     let worker_starter_task = loop.create_task(worker_starter);
+    let debit_notes_job = loop.create_task(process_debit_notes);
     let services: any = [
       find_offers_task,
       worker_starter_task,
       process_invoices_job,
       wait_until_done,
+      debit_notes_job,
     ];
     try {
       while (services.indexOf(wait_until_done) > -1 || !done_queue.empty()) {
@@ -705,6 +794,17 @@ export class Executor {
   async _create_allocations(): Promise<MarketDecoration> {
     if (!this._budget_allocations.length) {
       for await (let account of this._payment_api.accounts()) {
+        let driver = account.driver ? account.driver.toLowerCase() : "";
+        let network = account.driver ? account.network.toLowerCase() : "";
+        if (driver != this._driver || network != this._network) {
+          logger.debug(
+            `Not using payment platform ${account.platform}, platform's driver/network ` +
+            `${driver}/${network} is different than requested ` +
+            `driver/network ${this._driver}/${this._network}`
+          );
+          continue;
+        }
+        logger.debug(`Creating allocation using payment platform ${account.platform}`);
         let allocation: Allocation = await this._stack.enter_async_context(
           this._payment_api.new_allocation(
             this._budget_amount,
@@ -715,11 +815,9 @@ export class Executor {
         );
         this._budget_allocations.push(allocation);
       }
-    }
-    if (!this._budget_allocations.length) {
-      throw Error(
-        "No payment accounts. Did you forget to run 'yagna payment init -r'?"
-      );
+      if (!this._budget_allocations.length) {
+        throw new NoPaymentAccountError(this._driver, this._network);
+      }
     }
     let allocation_ids = this._budget_allocations.map((a) => a.id);
     return await this._payment_api.decorate_demand(allocation_ids);
@@ -744,15 +842,15 @@ export class Executor {
     ) as string[];
   }
 
-  _allocation_for_invoice(invoice: Invoice): Allocation {
+  _get_allocation(item: Invoice | DebitNote): Allocation {
     try {
       const _allocation = this._budget_allocations.find(
         (allocation) =>
-          allocation.payment_platform === invoice.paymentPlatform &&
-          allocation.payment_address === invoice.payerAddr
+          allocation.payment_platform === item.paymentPlatform &&
+          allocation.payment_address === item.payerAddr
       );
       if (_allocation) return _allocation;
-      throw `No allocation for ${invoice.paymentPlatform} ${invoice.payerAddr}.`;
+      throw `No allocation for ${item.paymentPlatform} ${item.payerAddr}.`;
     } catch (error) {
       throw new Error(error);
     }

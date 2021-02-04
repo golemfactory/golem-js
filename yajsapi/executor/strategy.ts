@@ -8,7 +8,7 @@ import {
   PRICE_MODEL,
 } from "../props/com";
 import { OfferProposal } from "../rest/market";
-import { applyMixins } from "../utils";
+import { applyMixins, logger } from "../utils";
 
 export const SCORE_NEUTRAL: number = 0.0;
 export const SCORE_REJECTED: number = -1.0;
@@ -47,7 +47,7 @@ export class DummyMS extends MarketGeneral {
   async score_offer(offer: OfferProposal): Promise<Number> {
     const linear: ComLinear = new ComLinear().from_properties(offer.props());
 
-    if (linear.scheme.value != BillingScheme.PAYU) {
+    if (linear.scheme.value !== BillingScheme.PAYU) {
       return SCORE_REJECTED;
     }
 
@@ -76,26 +76,38 @@ export class LeastExpensiveLinearPayuMS {
   async score_offer(offer: OfferProposal): Promise<Number> {
     const linear: ComLinear = new ComLinear().from_properties(offer.props());
 
-    if (linear.scheme.value != BillingScheme.PAYU) return SCORE_REJECTED;
-
-    const known_time_prices = [Counter.TIME, Counter.CPU];
-
-    for (const counter in Object.keys(linear.price_for)) {
-      if (!(counter in known_time_prices)) return SCORE_REJECTED;
+    logger.debug(`Scoring offer ${offer.id()}, parameters: ${JSON.stringify(linear)}`);
+    if (linear.scheme.value !== BillingScheme.PAYU) {
+      logger.debug(`Rejected offer ${offer.id()}: unsupported scheme '${linear.scheme.value}'`);
+      return SCORE_REJECTED;
     }
 
-    if (linear.fixed_price < 0) return SCORE_REJECTED;
+    const known_time_prices = new Set([Counter.TIME, Counter.CPU]);
+
+    for (const counter in linear.price_for) {
+      if (!(known_time_prices.has(counter as Counter))) {
+        logger.debug(`Rejected offer ${offer.id()}: unsupported counter '${counter}'`);
+        return SCORE_REJECTED;
+      }
+    }
+
+    if (linear.fixed_price < 0) {
+      logger.debug(`Rejected offer ${offer.id()}: negative fixed price`);
+      return SCORE_REJECTED;
+    }
     let expected_price = linear.fixed_price;
 
-    for (const resource in known_time_prices) {
-      if (linear.price_for[resource] < 0) return SCORE_REJECTED;
+    for (const resource of known_time_prices) {
+      if (linear.price_for[resource] < 0) {
+        logger.debug(`Rejected offer ${offer.id()}: negative price for '${resource}'`);
+        return SCORE_REJECTED;
+      }
       expected_price += linear.price_for[resource] * this._expected_time_secs;
     }
 
     // The higher the expected price value, the lower the score.
     // The score is always lower than SCORE_TRUSTED and is always higher than 0.
     const score: number = (SCORE_TRUSTED * 1.0) / (expected_price + 1.01);
-
     return score;
   }
 }

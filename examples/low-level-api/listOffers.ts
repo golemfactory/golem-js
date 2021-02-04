@@ -38,7 +38,7 @@ async function list_offers(conf: rest.Configuration, subnetTag: string): Promise
   console.log("done");
 }
 
-const promiseTimeout = (seconds: number) =>
+const promiseTimeout = (seconds: number): Promise<void> =>
   new Promise((resolve) =>
     setTimeout(() => {
       cancellationToken.cancel();
@@ -46,7 +46,7 @@ const promiseTimeout = (seconds: number) =>
     }, seconds * 1000)
   );
 
-program.option('--subnet-tag <subnet>', 'set subnet name', 'community.3');
+program.option('--subnet-tag <subnet>', 'set subnet name', 'devnet-alpha.4');
 program.parse(process.argv);
 console.log(`Using subnet: ${program.subnetTag}`);
 

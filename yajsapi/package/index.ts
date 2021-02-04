@@ -1,8 +1,12 @@
 import axios from "axios";
+import * as srv from "srvclient";
 import { DemandBuilder } from "../props";
 import { VmPackageFormat, VmRequest } from "../props/inf";
+import { logger } from "../utils";
 
-export const DEFAULT_REPO_URL = "http://3.249.139.167:8000";
+
+const FALLBACK_REPO_URL = "http://3.249.139.167:8000";
+export const DEFAULT_REPO_SRV = "_girepo._tcp.dev.golem.network";
 
 export type RepoOpts = {
   engine?: string,
@@ -67,3 +71,37 @@ export class VmPackage extends Package {
     demand.add(new VmRequest(image_url, VmPackageFormat.GVMKIT_SQUASH));
   }
 }
+
+export const resolve_repo_srv = async ({
+  repo_srv,
+  fallback_url = FALLBACK_REPO_URL,
+}) => {
+  async function _resolve_repo_srv() {
+    return new Promise((resolve, reject) => {
+      let verify_records = async function (err, records) {
+        for (let record of records) {
+          let url = `http://${record.name}:${record.port}`;
+          try {
+            await axios.head(url);
+            resolve(url);
+          } catch (error) {
+            if (error.response != undefined) {
+              resolve(url);
+            }
+          }
+        }
+        resolve(null);
+      };
+
+      srv.getRandomTargets(repo_srv, verify_records);
+    });
+  }
+
+  const repo_url = await _resolve_repo_srv();
+    if (repo_url) {
+        logger.debug(`Using image repository: ${repo_srv} -> ${repo_url}.`);
+        return repo_url;
+    }
+    logger.warn(`Problem resolving image repository: ${repo_srv}, falling back to ${fallback_url}.`);
+    return fallback_url;
+};

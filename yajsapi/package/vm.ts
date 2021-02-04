@@ -1,5 +1,5 @@
 import { RuntimeType, InfVmKeys } from "../props/inf";
-import { Constraints, DEFAULT_REPO_URL, Package, RepoOpts, VmPackage } from ".";
+import { Constraints, DEFAULT_REPO_SRV, Package, RepoOpts, VmPackage, resolve_repo_srv } from ".";
 
 class _VmConstrains extends Constraints {
   constructor(
@@ -32,7 +32,7 @@ export async function repo({
     */
 
   return new VmPackage({
-    repo_url: DEFAULT_REPO_URL,
+    repo_url: await resolve_repo_srv({repo_srv: DEFAULT_REPO_SRV}),
     image_hash,
     constraints: new _VmConstrains(min_mem_gib, min_storage_gib),
   });

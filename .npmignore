@@ -1,5 +1,6 @@
 /.vscode
 /examples
+/logs
 /node_modules
 /yajsapi
 .gitignore
