@@ -179,10 +179,14 @@ export class Executor {
     let cancellationToken = this._cancellation_token;
 
     this._worker_cancellation_token = new CancellationToken();
+    let workerCancellationToken = this._worker_cancellation_token;
 
-    function cancel(e) {
+    function cancel(event) {
       if (cancellationToken && !cancellationToken.cancelled) {
         cancellationToken.cancel();
+      }
+      if (workerCancellationToken && !workerCancellationToken.cancelled) {
+        workerCancellationToken.cancel();
       }
       SIGNALS.forEach((event) => {
         process.off(event, cancel);
@@ -243,7 +247,7 @@ export class Executor {
     let activity_api = this._activity_api;
     let strategy = this._strategy;
     let cancellationToken = this._cancellation_token;
-    let done_queue: Queue<Task<D, R>> = new Queue([], cancellationToken);
+    let done_queue: Queue<Task<D, R>> = new Queue([]);
     let stream_output = this._stream_output;
 
     function on_task_done(task: Task<D, R>, status: TaskStatus): void {
