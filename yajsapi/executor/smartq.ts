@@ -1,5 +1,5 @@
 import * as csp from "js-csp";
-import { eventLoop } from "../utils";
+import { eventLoop, promisify } from "../utils";
 
 type Item = "Item";
 
@@ -175,15 +175,4 @@ export class Consumer<Item> {
     const val = await this._queue.get(this, _fetch);
     yield* val;
   }
-}
-
-function promisify(fn) {
-  return (...args) =>
-    new Promise((resolve, reject) => {
-      try {
-        fn(...args, resolve);
-      } catch (error) {
-        reject(error);
-      }
-    });
 }
