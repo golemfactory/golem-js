@@ -13,7 +13,8 @@
     "test": "run-s build && node dist/index.js",
     "test:unit": "nyc --silent --cache false ava --verbose",
     "cov": "nyc --cache false ava --verbose",
-    "cov:html": "run-s test:unit && nyc report --reporter=html"
+    "cov:html": "run-s test:unit && nyc report --reporter=html",
+    "cov:lcov": "run-s test:unit && nyc report --reporter=lcov"
   },
   "author": "Muhammed Tanrikulu <muhammed@golem.network>",
   "license": "LGPL-3.0",
