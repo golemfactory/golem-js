@@ -785,9 +785,14 @@ export class Executor {
         emit(new events.CheckingPayments());
       }
     }
+    if (cancellationToken.cancelled) {
+      logger.error("Gracefully quitting...");
+      await sleep(3);
+    }
     emit(new events.PaymentsFinished());
     await sleep(2);
     cancellationToken.cancel();
+    await sleep(3);
     return;
   }
 
