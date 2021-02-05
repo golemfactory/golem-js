@@ -92,7 +92,7 @@ export class ActivityService {
         await this._attest(activity_id, agreement, credentials);
       }
     } catch (error) {
-      await this._api.destroyActivity(activity_id, { timeout: 5000 });
+      await this._api.destroyActivity(activity_id);
       throw error;
     }
 
@@ -225,7 +225,7 @@ class Activity {
 
   async done(): Promise<void> {
     try {
-      await this._api.destroyActivity(this._id, { timeout: 5000 });
+      await this._api.destroyActivity(this._id);
     } catch (error) {
       logger.error(`Got API Exception when destroying activity ${this._id}: ${error}`);
     }
