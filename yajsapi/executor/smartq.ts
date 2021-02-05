@@ -46,7 +46,7 @@ export class SmartQueue<Item> {
   }
 
   close() {
-    if (this._items !== null) this._items.length = 0;
+    if (this._items) this._items.length = 0;
     this._rescheduled_items.clear();
     this._in_progress.clear();
     this.__new_items.close();
