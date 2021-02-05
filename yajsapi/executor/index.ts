@@ -746,17 +746,15 @@ export class Executor {
       }
       emit(new events.ComputationFinished());
     } catch (error) {
-      if (error === undefined) {
-        // this needs more research
-        logger.error("Computation interrupted by the user.");
-      } else {
-        logger.error(`fail= ${error}`);
-      }
+      logger.error(`fail= ${error}`);
       if (!self._worker_cancellation_token.cancelled)
         self._worker_cancellation_token.cancel();
       // TODO: implement ComputationFinished(error)
       emit(new events.ComputationFinished());
     } finally {
+      if (cancellationToken.cancelled) {
+        logger.error("Computation interrupted by the user.");
+      }
       payment_closing = true;
       find_offers_task.cancel();
       worker_starter_task.cancel();
