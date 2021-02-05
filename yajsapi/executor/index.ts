@@ -628,7 +628,10 @@ export class Executor {
         }
       }
       while (true) {
-        if (self._worker_cancellation_token.cancelled) break;
+        if (self._worker_cancellation_token.cancelled) {
+          work_queue.close();
+          break;
+        };
         await sleep(2);
         if (
           Object.keys(offer_buffer).length > 0 &&
