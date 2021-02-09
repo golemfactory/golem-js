@@ -60,7 +60,7 @@ export class Agreement {
   }
 
   async details(): Promise<AgreementDetails> {
-    let { data } = await this._api.getAgreement(this._id);
+    let { data } = await this._api.getAgreement(this._id, { timeout: 3000 });
     return new AgreementDetails(data);
   }
 
@@ -77,7 +77,7 @@ export class Agreement {
 
   async terminate(reason: string = "Finished"): Promise<boolean> {
     try {
-      await this._api.terminateAgreement(this._id, { message: reason });
+      await this._api.terminateAgreement(this._id, { message: reason }, { timeout: 5000 });
       logger.debug(`terminateAgreement(${this._id}) returned successfully`);
       return true;
     } catch (error) {
@@ -160,7 +160,8 @@ export class OfferProposal {
     } = await this._subscription._api.counterProposalDemand(
       this._subscription.id(),
       this.id(),
-      with_proposal
+      with_proposal,
+      { timeout: 5000 }
     );
     return new_proposal;
   }
@@ -174,7 +175,7 @@ export class OfferProposal {
       .utc()
       .format("YYYY-MM-DD HH:mm:ss.SSSSSSZ");
     let api: RequestorApi = this._subscription._api;
-    let { data: agreement_id } = await api.createAgreement(proposal);
+    let { data: agreement_id } = await api.createAgreement(proposal, { timeout: 3000 });
     return new Agreement(api, this._subscription, agreement_id);
   }
 }
@@ -222,7 +223,7 @@ export class Subscription {
   async delete() {
     this._open = false;
     if (!this._deleted) {
-      await this._api.unsubscribeDemand(this._id);
+      await this._api.unsubscribeDemand(this._id, { timeout: 3000 });
     }
   }
 
@@ -232,8 +233,9 @@ export class Subscription {
       try {
         let { data: proposals } = await this._api.collectOffers(
           this._id,
+          3,
           10,
-          10
+          { timeout: 5000 }
         );
         for (let _proposal of proposals) {
           if(_proposal.eventType === "ProposalEvent") {
@@ -273,7 +275,7 @@ export class Market {
     let self = this;
     async function create(): Promise<Subscription> {
       try {
-        let { data: sub_id } = await self._api.subscribeDemand(request);
+        let { data: sub_id } = await self._api.subscribeDemand(request, { timeout: 5000 });
         return new Subscription(self._api, sub_id);
       } catch (error) {
         logger.error(error);
@@ -286,7 +288,7 @@ export class Market {
 
   async *subscriptions(): AsyncGenerator<Subscription> {
     try {
-      let { data: demands } = await this._api.getDemands();
+      let { data: demands } = await this._api.getDemands({ timeout: 3000 });
       for (let demand of demands) {
         yield new Subscription(this._api, demand.demandId as string, demand);
       }
