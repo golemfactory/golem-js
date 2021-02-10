@@ -169,6 +169,7 @@ class _Process {
       msg = JSON.parse(msg);
     } catch (error) {
       logger.error(`gftp error ${error} while parsing ${msg}`);
+      throw error;
     }
     return message.parse_response(msg);
   }
