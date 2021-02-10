@@ -414,7 +414,7 @@ class PollingBatch extends Batch {
           this.activity_id,
           this.batch_id,
           undefined,
-          { timeout: timeout ? Math.min(timeout, 5000) : 5000 }
+          { params: { timeout: 5 } }
         );
         results = data;
       } catch (error) {
