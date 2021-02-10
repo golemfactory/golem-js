@@ -13,7 +13,7 @@ import {
   SgxCredentials,
 } from "ya-ts-client/dist/ya-activity/src/models";
 import { CryptoCtx, PrivateKey, PublicKey, rand_hex } from "../crypto";
-import { sleep, logger } from "../utils";
+import { sleep, logger, CancellationToken } from "../utils";
 import * as events from "../executor/events";
 import { Agreement } from "./market";
 import { SGX_CONFIG } from "../package/sgx";
@@ -193,7 +193,8 @@ class Activity {
   async send(
     script: object[],
     stream: boolean,
-    deadline?: number
+    deadline?: number,
+    cancellationToken?: CancellationToken
   ): Promise<any> {
     const script_txt = JSON.stringify(script);
     const { data: batch_id } = await this._api.exec(
@@ -208,7 +209,8 @@ class Activity {
         this._id,
         batch_id,
         script.length,
-        deadline
+        deadline,
+        cancellationToken
       );
     }
     return new PollingBatch(
@@ -216,7 +218,8 @@ class Activity {
       this._id,
       batch_id,
       script.length,
-      deadline
+      deadline,
+      cancellationToken
     );
   }
 
@@ -360,6 +363,7 @@ class Batch implements AsyncIterable<events.CommandEventContext> {
   protected size!: number;
   protected deadline?: Dayjs;
   protected credentials?: SgxCredentials;
+  protected cancellationToken?: CancellationToken;
 
   constructor(
     api: RequestorControlApi,
@@ -367,7 +371,8 @@ class Batch implements AsyncIterable<events.CommandEventContext> {
     batch_id: string,
     batch_size: number,
     deadline?: number,
-    credentials?: SgxCredentials
+    credentials?: SgxCredentials,
+    cancellationToken?: CancellationToken
   ) {
     this.api = api;
     this.activity_id = activity_id;
@@ -375,6 +380,7 @@ class Batch implements AsyncIterable<events.CommandEventContext> {
     this.size = batch_size;
     this.deadline = deadline ? dayjs.unix(deadline) : dayjs().utc().add(1, "day");
     this.credentials = credentials;
+    this.cancellationToken = cancellationToken;
   }
 
   milliseconds_left(): number | undefined {
@@ -395,10 +401,11 @@ class PollingBatch extends Batch {
     activity_id: string,
     batch_id: string,
     batch_size: number,
-    deadline?: number
+    deadline?: number,
+    cancellationToken?: CancellationToken
   ) {
     // this._api, this._id, batch_id, script.length, deadline
-    super(api, activity_id, batch_id, batch_size, deadline);
+    super(api, activity_id, batch_id, batch_size, deadline, undefined, cancellationToken);
   }
 
   async *[Symbol.asyncIterator](): any {
@@ -407,6 +414,9 @@ class PollingBatch extends Batch {
       results: yaa.ExeScriptCommandResult[] = [];
     while (last_idx < this.size) {
       const timeout = this.milliseconds_left();
+      if (this.cancellationToken && this.cancellationToken.cancelled) {
+        throw new CommandExecutionError(last_idx.toString(), "Interrupted.");
+      }
       if (timeout && timeout <= 0) {
         throw new BatchTimeoutError();
       }
@@ -471,9 +481,10 @@ class StreamingBatch extends Batch {
     activity_id: string,
     batch_id: string,
     batch_size: number,
-    deadline?: number
+    deadline?: number,
+    cancellationToken?: CancellationToken
   ) {
-    super(api, activity_id, batch_id, batch_size, deadline);
+    super(api, activity_id, batch_id, batch_size, deadline, undefined, cancellationToken);
   }
 
   async *[Symbol.asyncIterator](): any {

@@ -560,7 +560,9 @@ export class Executor {
                 let cc = new CommandContainer();
                 batch.register(cc);
                 if (self._worker_cancellation_token.cancelled) { return; }
-                let remote = await act.send(cc.commands(), stream_output, batch_deadline);
+                let remote = await act.send(
+                  cc.commands(), stream_output, batch_deadline, self._worker_cancellation_token
+                );
                 let cmds = cc.commands();
                 emit(
                   new events.ScriptSent({
