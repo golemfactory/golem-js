@@ -721,7 +721,7 @@ export class Executor {
     ];
     try {
       while (services.indexOf(wait_until_done) > -1 || !done_queue.empty()) {
-        if (cancellationToken.cancelled) { break; }
+        if (cancellationToken.cancelled) { done_queue.close(); }
         const now = dayjs.utc();
         if (now > this._expires) {
           throw new TimeoutError(
@@ -754,7 +754,8 @@ export class Executor {
 
         if (!get_done_task) throw "";
         if (!get_done_task.isPending()) {
-          yield await get_done_task;
+          const res = await get_done_task;
+          if (res) { yield res; } else { break; }
           if (services.indexOf(get_done_task) > -1) throw "";
           get_done_task = null;
         }
