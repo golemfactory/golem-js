@@ -2,11 +2,15 @@ import dayjs from "dayjs";
 import { getAllProperties } from "../utils";
 export function as_list(data: string | string[]): string[] {
   if (!(typeof data == "string")) return data;
-  let item = JSON.parse(data);
-  if (typeof item == "object")
-    // is array?
-    return item;
-  return [JSON.stringify(item)];
+  try {
+    let item = JSON.parse(data);
+    if (typeof item == "object")
+      // is array?
+      return item;
+    return [JSON.stringify(item)];
+  } catch (_e) {
+    return [];
+  }
 }
 
 function _find_enum(enum_type: object, val: string): any {

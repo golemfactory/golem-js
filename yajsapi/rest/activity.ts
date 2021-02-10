@@ -56,7 +56,7 @@ export class ActivityService {
   }
 
   async _create_activity(agreement_id: string): Promise<Activity> {
-    let { data: response } = await this._api.createActivity({ agreementId: agreement_id });
+    let { data: response } = await this._api.createActivity({ agreementId: agreement_id }, { timeout: 30000 });
     let activity_id =
       typeof response == "string" ? response : response.activityId;
     return new Activity(activity_id, this._api, this._state);
@@ -70,7 +70,7 @@ export class ActivityService {
     let { data: response } = await this._api.createActivity({
       agreementId: agreement.id(),
       requestorPubKey: pub_key.toString(),
-    });
+    }, { timeout: 30000 });
 
     let activity_id =
       typeof response == "string" ? response : response.activityId;
@@ -198,7 +198,8 @@ class Activity {
     const script_txt = JSON.stringify(script);
     const { data: batch_id } = await this._api.exec(
       this._id,
-      new ExeScriptRequest(script_txt)
+      new ExeScriptRequest(script_txt),
+      { timeout: 5000 }
     );
 
     if (stream) {
@@ -549,8 +550,12 @@ function _command_event_ctx(msg_event) {
   if (msg_event.type === "runtime") {
     throw Error(`Unsupported event: ${msg_event.type}`);
   }
-
-  const evt_obj = JSON.parse(msg_event.data);
+  let evt_obj;
+  try {
+    evt_obj = JSON.parse(msg_event.data);
+  } catch (e) {
+    throw Error(`Cannot parse: ${msg_event.data}`);
+  }
   const evt_kind = evt_obj["kind"][0];
   const evt_data = evt_obj["kind"][evt_kind]; // ?
 
