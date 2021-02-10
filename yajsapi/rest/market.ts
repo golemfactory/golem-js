@@ -238,10 +238,11 @@ export class Subscription {
           { timeout: 5000 }
         );
         for (let _proposal of proposals) {
-          if(_proposal.eventType === "ProposalEvent") {
+          if (_proposal.eventType === "ProposalEvent") {
             yield new OfferProposal(this, _proposal as models.ProposalEvent);
           }
         }
+        if (cancellationToken && cancellationToken.cancelled) break;
         if (!proposals || !proposals.length) {
           await sleep(2);
         }
