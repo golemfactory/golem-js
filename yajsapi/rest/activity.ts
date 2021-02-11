@@ -57,7 +57,7 @@ export class ActivityService {
   }
 
   async _create_activity(agreement_id: string): Promise<Activity> {
-    let { data: response } = await this._api.createActivity({ agreementId: agreement_id }, { timeout: 30000 });
+    let { data: response } = await this._api.createActivity({ agreementId: agreement_id }, { timeout: 30000, params: { timeout: 25 } });
     let activity_id =
       typeof response == "string" ? response : response.activityId;
     return new Activity(activity_id, this._api, this._state);
