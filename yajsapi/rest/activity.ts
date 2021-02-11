@@ -564,7 +564,7 @@ function _command_event_ctx(msg_event) {
   let evt_obj;
   try {
     evt_obj = JSON.parse(msg_event.data);
-  } catch (e) {
+  } catch (_e) {
     throw Error(`Cannot parse: ${msg_event.data}`);
   }
   const evt_kind = evt_obj["kind"][0];

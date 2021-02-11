@@ -8,7 +8,7 @@ export function as_list(data: string | string[]): string[] {
       // is array?
       return item;
     return [JSON.stringify(item)];
-  } catch (e) {
+  } catch (_e) {
     throw `Cannot convert ${data} to list.`;
   }
 }
