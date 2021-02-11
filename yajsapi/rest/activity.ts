@@ -10,6 +10,7 @@ import { Configuration } from "ya-ts-client/dist/ya-activity";
 import {
   Credentials,
   ExeScriptCommandResult,
+  ExeScriptCommandResultResultEnum,
   SgxCredentials,
 } from "ya-ts-client/dist/ya-activity/src/models";
 import { CryptoCtx, PrivateKey, PublicKey, rand_hex } from "../crypto";
@@ -458,14 +459,13 @@ class PollingBatch extends Batch {
         }
 
         let evt = Object.create(events.CommandExecuted.prototype);
-        evt.idx = result.index;
+        evt.cmd_idx = evt.idx = result.index;
         evt.stdout = result.stdout;
         evt.stderr = result.stderr;
         evt.message = result.message;
-        yield new events.CommandEventContext({
-          evt_cls: events.CommandExecuted,
-          props: evt,
-        });
+        evt.command = "";
+        evt.success = result.result === ExeScriptCommandResultResultEnum.Ok;
+        yield new events.CommandEventContext(evt);
         last_idx = result.index + 1;
         if (result.isBatchFinished) break;
         if (!any_new) await sleep(10);
