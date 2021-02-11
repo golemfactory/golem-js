@@ -72,16 +72,17 @@ class GftpDriver {
     if (!this._reader) {
       this._reader = this._readStream(this._proc.stdout);
     }
-    let query = `{"jsonrpc": "2.0", "id": "1", "method": "${method}", "params": ${JSON.stringify(
-      params
-    )}}\n`;
+    let paramsStr = JSON.stringify(params);
+    let query = `{"jsonrpc": "2.0", "id": "1", "method": "${method}", "params": ${paramsStr}}\n`;
+    let valueStr = "";
     await streamWrite(this._proc.stdin, query);
     try {
       let { value } = await this._reader.next();
+      valueStr = JSON.stringify(value);
       const { result } = JSON.parse(value as string);
       return result;
     } catch (error) {
-      logger.error(error);
+      logger.error(`gftp error. query: ${query} value: ${valueStr} error: ${JSON.stringify(error)}`);
       throw Error(error);
     }
   }
@@ -164,7 +165,12 @@ class _Process {
     await this._proc.stdin.drain();
     let msg = await this._proc.stdout.readline();
     this._log_debug("in", msg);
-    msg = JSON.parse(msg);
+    try {
+      msg = JSON.parse(msg);
+    } catch (error) {
+      logger.error(`gftp error ${error} while parsing ${msg}`);
+      throw error;
+    }
     return message.parse_response(msg);
   }
 }

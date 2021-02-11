@@ -491,6 +491,7 @@ export class Executor {
 
       emit(new events.WorkerStarted({ agr_id: agreement.id() }));
 
+      if (self._worker_cancellation_token.cancelled) { return; }
       let _act;
       try {
         _act = await activity_api.new_activity(agreement, secure);
@@ -503,6 +504,7 @@ export class Executor {
         consumer: Consumer<any>
       ): AsyncGenerator<Task<"TaskData", "TaskResult">> {
         for await (let handle of consumer) {
+          if (self._worker_cancellation_token.cancelled) { break; }
           yield Task.for_handle(handle, work_queue, emit);
         }
       }
@@ -527,7 +529,9 @@ export class Executor {
               work_context,
               task_emitter(consumer)
             );
+            if (self._worker_cancellation_token.cancelled) { return; }
             for await (let batch of command_generator) {
+              if (self._worker_cancellation_token.cancelled) { return; }
               const _batch_timeout = batch.timeout();
               const batch_deadline = _batch_timeout 
                 ? dayjs.utc().unix() + _batch_timeout
@@ -551,10 +555,14 @@ export class Executor {
                   nonce: act.id,
                   exeunitHashes: act.exeunitHashes,
                 };
+                if (self._worker_cancellation_token.cancelled) { return; }
                 await batch.prepare();
                 let cc = new CommandContainer();
                 batch.register(cc);
-                let remote = await act.send(cc.commands(), stream_output, batch_deadline);
+                if (self._worker_cancellation_token.cancelled) { return; }
+                let remote = await act.send(
+                  cc.commands(), stream_output, batch_deadline, self._worker_cancellation_token
+                );
                 let cmds = cc.commands();
                 emit(
                   new events.ScriptSent({
@@ -565,6 +573,7 @@ export class Executor {
                 );
                 emit(new events.CheckingPayments());
                 for await (let evt_ctx of remote) {
+                  if (self._worker_cancellation_token.cancelled) { return; }
                   let evt = evt_ctx.event(agreement.id(), task_id, cmds);
                   emit(evt);
                   if (evt instanceof events.CommandExecuted && !evt.success) {
@@ -577,6 +586,7 @@ export class Executor {
                     task_id: task_id,
                   })
                 );
+                if (self._worker_cancellation_token.cancelled) { return; }
                 await batch.post();
                 emit(
                   new events.ScriptFinished({
@@ -584,11 +594,13 @@ export class Executor {
                     task_id: task_id,
                   })
                 );
+                if (self._worker_cancellation_token.cancelled) { return; }
                 await accept_payment_for_agreement({
                   agreement_id: agreement.id(),
                   partial: true,
                 });
               } catch (error) {
+                if (self._worker_cancellation_token.cancelled) { return; }
                 try {
                   await command_generator.throw(error);
                 } catch (error) {
@@ -603,6 +615,7 @@ export class Executor {
               }
             }
           });
+          if (self._worker_cancellation_token.cancelled) { return; }
           await accept_payment_for_agreement({
             agreement_id: agreement.id(),
             partial: false,
@@ -628,8 +641,8 @@ export class Executor {
         }
       }
       while (true) {
-        if (self._worker_cancellation_token.cancelled) break;
         await sleep(2);
+        if (self._worker_cancellation_token.cancelled) { break; }
         if (
           Object.keys(offer_buffer).length > 0 &&
           workers.size < self._conf.max_workers &&
@@ -648,7 +661,9 @@ export class Executor {
           let new_task: any | null = null;
           let agreement: Agreement | null = null;
           try {
+            if (self._worker_cancellation_token.cancelled) { break; }
             agreement = await buffer.proposal.create_agreement();
+            if (self._worker_cancellation_token.cancelled) { break; }
             const node_info = (await agreement.details())
               .provider_view()
               .extract(new NodeInfo());
@@ -659,11 +674,13 @@ export class Executor {
                 provider_info: node_info,
               })
             );
+            if (self._worker_cancellation_token.cancelled) { break; }
             if (!(await agreement.confirm())) {
               emit(new events.AgreementRejected({ agr_id: agreement.id() }));
               continue;
             }
             emit(new events.AgreementConfirmed({ agr_id: agreement.id() }));
+            if (self._worker_cancellation_token.cancelled) { break; }
             new_task = loop.create_task(_start_worker.bind(null, agreement));
             workers.add(new_task);
           } catch (error) {
@@ -704,6 +721,7 @@ export class Executor {
     ];
     try {
       while (services.indexOf(wait_until_done) > -1 || !done_queue.empty()) {
+        if (cancellationToken.cancelled) { done_queue.close(); }
         const now = dayjs.utc();
         if (now > this._expires) {
           throw new TimeoutError(
@@ -736,24 +754,23 @@ export class Executor {
 
         if (!get_done_task) throw "";
         if (!get_done_task.isPending()) {
-          yield await get_done_task;
+          const res = await get_done_task;
+          if (res) { yield res; } else { break; }
           if (services.indexOf(get_done_task) > -1) throw "";
           get_done_task = null;
         }
       }
       emit(new events.ComputationFinished());
     } catch (error) {
-      if (error === undefined) {
-        // this needs more research
-        logger.error("Computation interrupted by the user.");
-      } else {
-        logger.error(`fail= ${error}`);
-      }
+      logger.error(`fail= ${error}`);
       if (!self._worker_cancellation_token.cancelled)
         self._worker_cancellation_token.cancel();
       // TODO: implement ComputationFinished(error)
       emit(new events.ComputationFinished());
     } finally {
+      if (cancellationToken.cancelled) {
+        logger.error("Computation interrupted by the user.");
+      }
       payment_closing = true;
       find_offers_task.cancel();
       worker_starter_task.cancel();

@@ -338,7 +338,12 @@ export class CommandEventContext {
   }
 
   static fromJson(json: string): CommandEventContext {
-    let rt_evt: RuntimeEvent = JSON.parse(json);
+    let rt_evt: RuntimeEvent;
+    try {
+      rt_evt = JSON.parse(json);
+    } catch (_e) {
+      throw new Error(`cannot parse ${json} as RuntimeEvent`);
+    }
     let out_evt: CommandEvent;
 
     if (rt_evt.kind.started) {

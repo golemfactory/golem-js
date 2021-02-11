@@ -58,7 +58,7 @@ export class Invoice extends yInvoice {
     };
     acceptance!.totalAmountAccepted = amount.toString();
     acceptance!.allocationId = allocation.id;
-    await this._api.acceptInvoice(this.invoiceId, acceptance!);
+    await this._api.acceptInvoice(this.invoiceId, acceptance!, undefined, { timeout: 15000 });
   }
 }
 
@@ -81,7 +81,7 @@ export class DebitNote extends yDebitNote {
     };
     acceptance!.totalAmountAccepted = amount.toString();
     acceptance!.allocationId = allocation.id;
-    await this._api.acceptDebitNote(this.debitNoteId, acceptance!);
+    await this._api.acceptDebitNote(this.debitNoteId, acceptance!, undefined, { timeout: 15000 });
   }
 }
 
@@ -118,7 +118,7 @@ export class Allocation extends _Link {
     try {
       let {
         data: details,
-      }: { data: yap.Allocation } = await this._api.getAllocation(this.id);
+      }: { data: yap.Allocation } = await this._api.getAllocation(this.id, { timeout: 15000 });
       allocationDetails.spent_amount = parseFloat(details.spentAmount);
       allocationDetails.remaining_amount = parseFloat(details.remainingAmount);
     } catch (error) {
@@ -131,7 +131,7 @@ export class Allocation extends _Link {
 
   async delete() {
     try {
-      await this._api.releaseAllocation(this.id);
+      await this._api.releaseAllocation(this.id, { timeout: 15000 });
     } catch(error) {
       logger.error(`Release allocation: ${error}`);
     }
@@ -155,7 +155,7 @@ class _AllocationTask extends ResourceCtx<Allocation> {
         data: new_allocation,
       }: {
         data: yap.Allocation;
-      } = await this._api.createAllocation(this.model);
+      } = await this._api.createAllocation(this.model, undefined, undefined, { timeout: 25000 });
       this._id = new_allocation.allocationId;
       let model = this.model;
       if (!model.totalAmount) throw "";
@@ -179,7 +179,7 @@ class _AllocationTask extends ResourceCtx<Allocation> {
   async done() {
     if (this._id) {
       try {
-        await this._api.releaseAllocation(this._id);
+        await this._api.releaseAllocation(this._id, { timeout: 5000 });
       } catch(error) {
         logger.error(`Release allocation: ${error}`);
       }
@@ -290,14 +290,14 @@ export class Payment {
   }
 
   async debit_note(debit_note_id: string): Promise<DebitNote> {
-    let { data: debit_note_obj } = await this._api.getDebitNote(debit_note_id);
+    let { data: debit_note_obj } = await this._api.getDebitNote(debit_note_id, { timeout: 5000 });
     // TODO may need to check only requestor debit notes
     return new DebitNote(this._api, debit_note_obj)
   }
 
 
   async *invoices(): AsyncGenerator<Invoice> {
-    let { data: result } = await this._api.getInvoices();
+    let { data: result } = await this._api.getInvoices(undefined, undefined, { timeout: 5000 });
     // TODO may need to check only requestor invoices
     for (let invoice_obj of result) {
       yield new Invoice(this._api, invoice_obj);
@@ -306,7 +306,7 @@ export class Payment {
   }
 
   async invoice(invoice_id: string): Promise<Invoice> {
-    let { data: invoice_obj } = await this._api.getInvoice(invoice_id);
+    let { data: invoice_obj } = await this._api.getInvoice(invoice_id, { timeout: 5000 });
     // TODO may need to check only requestor invoices
     // logger.log("debug", `got=${JSON.stringify(invoice_obj)}`);
     return new Invoice(this._api, invoice_obj);
