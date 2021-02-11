@@ -79,6 +79,10 @@ export const resolve_repo_srv = async ({
   async function _resolve_repo_srv() {
     return new Promise((resolve, reject) => {
       let verify_records = async function (err, records) {
+        if (!(Symbol.iterator in Object(records))) {
+          resolve(null);
+          return;
+        }
         for (let record of records) {
           let url = `http://${record.name}:${record.port}`;
           try {
