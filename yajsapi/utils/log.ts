@@ -237,7 +237,7 @@ class SummaryLogger {
         logger.silly(`Command ${cmd}: stdout: ${event["stdout"]}, stderr: ${event["stderr"]}, msg: ${event["message"]}.`);
       } else {
         logger.warn(`Command failed on provider '${provider_name}', command: ${cmd}, msg: ${event["message"]}`);
-        logger.silly(`Command ${cmd}: stdout: ${event["stdout"]}, stderr: ${event["stderr"]}.`);
+        logger.debug(`Command ${cmd}: stdout: ${event["stdout"]}, stderr: ${event["stderr"]}.`);
       }
     } else if (eventName === events.ScriptFinished.name) {
       const provider_info = this.agreement_provider_info[event["agr_id"]];
