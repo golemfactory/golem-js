@@ -135,7 +135,7 @@ export class DecreaseScoreForUnconfirmedAgreement {
   async score_offer(offer: OfferProposal, history?: ComputationHistory): Promise<Number> {
     /* Score `offer` using the base strategy and apply penalty if needed.
        If the offer issuer failed to approve the previous agreement (if any)
-       then the base score is multiplied by `self._factor`. */
+       then the base score is multiplied by `this._factor`. */
     let score = await this._base_strategy.score_offer(offer);
     if (history && history.rejected_last_agreement(offer.issuer()) && score > 0) {
       score *= this._factor;
