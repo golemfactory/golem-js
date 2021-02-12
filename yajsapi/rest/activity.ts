@@ -424,9 +424,7 @@ class PollingBatch extends Batch {
       try {
         let { data } = await this.api.getExecBatchResults(
           this.activity_id,
-          this.batch_id,
-          undefined,
-          { params: { timeout: 5 } }
+          this.batch_id
         );
         results = data;
       } catch (error) {
