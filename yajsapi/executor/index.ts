@@ -135,7 +135,7 @@ export class Executor implements ComputationHistory {
   private _expires;
   private _budget_amount;
   private _budget_allocations: Allocation[];
-  private _failed_agreements: Set<string>;
+  private _rejecting_providers: Set<string>;
 
   private _activity_api;
   private _market_api;
@@ -182,7 +182,7 @@ export class Executor implements ComputationHistory {
     // TODO: setup precision
     this._budget_amount = parseFloat(budget);
     this._budget_allocations = [];
-    this._failed_agreements = new Set();
+    this._rejecting_providers = new Set();
 
     this._cancellation_token = new CancellationToken();
     let cancellationToken = this._cancellation_token;
@@ -686,10 +686,10 @@ export class Executor implements ComputationHistory {
             if (self._worker_cancellation_token.cancelled) { break; }
             if (!(await agreement.confirm())) {
               emit(new events.AgreementRejected({ agr_id: agreement.id() }));
-              self._failed_agreements.add(provider_id);
+              self._rejecting_providers.add(provider_id);
               continue;
             }
-            self._failed_agreements.delete(provider_id);
+            self._rejecting_providers.delete(provider_id);
             emit(new events.AgreementConfirmed({ agr_id: agreement.id() }));
             if (self._worker_cancellation_token.cancelled) { break; }
             new_task = loop.create_task(_start_worker.bind(null, agreement));
@@ -884,8 +884,8 @@ export class Executor implements ComputationHistory {
     }
   }
 
-  last_agreement_rejected(provider_id: string): boolean {
-    return this._failed_agreements.has(provider_id);
+  rejected_last_agreement(provider_id: string): boolean {
+    return this._rejecting_providers.has(provider_id);
   }
 
   async ready(): Promise<Executor> {

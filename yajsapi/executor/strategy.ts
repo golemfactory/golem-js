@@ -20,7 +20,7 @@ export const CFF_DEFAULT_PRICE_FOR_COUNTER: Map<Counter, number> = new Map([
 ]);
 
 export interface ComputationHistory {
-  last_agreement_rejected: (string) => boolean;
+  rejected_last_agreement: (string) => boolean;
 }
 
 export class MarketStrategy {
@@ -137,7 +137,7 @@ export class DecreaseScoreForUnconfirmedAgreement {
        If the offer issuer failed to approve the previous agreement (if any)
        then the base score is multiplied by `self._factor`. */
     let score = await this._base_strategy.score_offer(offer);
-    if (history && history.last_agreement_rejected(offer.issuer())) {
+    if (history && history.rejected_last_agreement(offer.issuer()) && score > 0) {
       score *= this._factor;
       logger.debug(`Decreasing score for offer ${offer.id()} from '${offer.issuer()}'`);
     }
