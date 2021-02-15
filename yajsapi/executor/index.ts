@@ -33,7 +33,13 @@ export const sgx = _sgx;
 export const vm = _vm;
 import { Task, TaskStatus } from "./task";
 import { Consumer, SmartQueue } from "./smartq";
-import { LeastExpensiveLinearPayuMS, MarketStrategy, SCORE_NEUTRAL } from "./strategy";
+import {
+  ComputationHistory,
+  DecreaseScoreForUnconfirmedAgreement,
+  LeastExpensiveLinearPayuMS,
+  MarketStrategy,
+  SCORE_NEUTRAL
+} from "./strategy";
 import { Package } from "../package";
 
 export { Task, TaskStatus };
@@ -116,7 +122,7 @@ export type ExecutorOpts = {
  * 
  * @description Used to run tasks using the specified application package within providers' execution units.
  */
-export class Executor {
+export class Executor implements ComputationHistory {
   private _subnet;
   private _driver;
   private _network;
@@ -129,6 +135,7 @@ export class Executor {
   private _expires;
   private _budget_amount;
   private _budget_allocations: Allocation[];
+  private _rejecting_providers: Set<string>;
 
   private _activity_api;
   private _market_api;
@@ -156,7 +163,7 @@ export class Executor {
     max_workers = 5,
     timeout = dayjs.duration({ minutes: 5 }).asMilliseconds(),
     budget,
-    strategy = new LeastExpensiveLinearPayuMS(),
+    strategy,
     subnet_tag,
     driver,
     network,
@@ -166,7 +173,8 @@ export class Executor {
     this._driver = driver ? driver.toLowerCase() : DEFAULT_DRIVER;
     this._network = network ? network.toLowerCase() : DEFAULT_NETWORK;
     this._stream_output = false;
-    this._strategy = strategy;
+    this._strategy =
+      strategy || new DecreaseScoreForUnconfirmedAgreement(new LeastExpensiveLinearPayuMS(), 0.5);
     this._api_config = new rest.Configuration();
     this._stack = new AsyncExitStack();
     this._task_package = task_package;
@@ -174,6 +182,7 @@ export class Executor {
     // TODO: setup precision
     this._budget_amount = parseFloat(budget);
     this._budget_allocations = [];
+    this._rejecting_providers = new Set();
 
     this._cancellation_token = new CancellationToken();
     let cancellationToken = this._cancellation_token;
@@ -389,7 +398,7 @@ export class Executor {
           offers_collected += 1;
           let score;
           try {
-            score = await strategy.score_offer(proposal);
+            score = await strategy.score_offer(proposal, self);
             logger.debug(`Scored offer ${proposal.id()}, ` +
                          `provider: ${proposal.props()["golem.node.id.name"]}, ` +
                          `strategy: ${strategy.constructor.name}, ` +
@@ -677,8 +686,10 @@ export class Executor {
             if (self._worker_cancellation_token.cancelled) { break; }
             if (!(await agreement.confirm())) {
               emit(new events.AgreementRejected({ agr_id: agreement.id() }));
+              self._rejecting_providers.add(provider_id);
               continue;
             }
+            self._rejecting_providers.delete(provider_id);
             emit(new events.AgreementConfirmed({ agr_id: agreement.id() }));
             if (self._worker_cancellation_token.cancelled) { break; }
             new_task = loop.create_task(_start_worker.bind(null, agreement));
@@ -871,6 +882,10 @@ export class Executor {
     } catch (error) {
       throw new Error(error);
     }
+  }
+
+  rejected_last_agreement(provider_id: string): boolean {
+    return this._rejecting_providers.has(provider_id);
   }
 
   async ready(): Promise<Executor> {
