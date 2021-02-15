@@ -426,11 +426,14 @@ class PollingBatch extends Batch {
           this.activity_id,
           this.batch_id,
           undefined,
-          { params: { timeout: 5 } }
+          { timeout: 5000 }
         );
         results = data;
       } catch (error) {
+        const timeout_msg = error.message && error.message.includes("timeout");
         if (error.response && error.response.status === 408) {
+          continue;
+        } else if (error.code === "ETIMEDOUT" || (error.code === "ECONNABORTED" && timeout_msg)) {
           continue;
         } else {
           if (error.response && error.response.status == 500 && error.response.data) {
