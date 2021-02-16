@@ -51,9 +51,11 @@ export class SmartQueue<Item> {
     if (this._items) this._items.length = 0;
     this._rescheduled_items.clear();
     this._in_progress.clear();
+    this.__done = true;
+    csp.putAsync(this.__eof, true);
+    csp.putAsync(this.__new_items, true);
     this.__new_items.close();
     this.__eof.close();
-    this.__done = true;
   }
 
   new_consumer(): Consumer<Item> {

@@ -322,6 +322,9 @@ export class Executor implements ComputationHistory {
           break;
         }
       }
+      if (!paymentCancellationToken.cancelled) {
+        paymentCancellationToken.cancel();
+      }
       logger.debug("Stopped processing invoices.");
     }
 
@@ -351,7 +354,7 @@ export class Executor implements ComputationHistory {
     /* TODO Consider processing invoices and debit notes together */
     async function process_debit_notes(): Promise<void> {
       for await (let debit_note of self._payment_api.incoming_debit_notes(
-        cancellationToken
+        paymentCancellationToken
       )) {
         if (agreements_to_pay.has(debit_note.agreementId)) {
           emit(new events.DebitNoteReceived({
@@ -741,7 +744,7 @@ export class Executor implements ComputationHistory {
     ];
     try {
       while (services.indexOf(wait_until_done) > -1 || !done_queue.empty()) {
-        if (cancellationToken.cancelled) { done_queue.close(); }
+        if (cancellationToken.cancelled) { work_queue.close(); done_queue.close(); break; }
         const now = dayjs.utc();
         if (now > this._expires) {
           throw new TimeoutError(
@@ -812,12 +815,12 @@ export class Executor implements ComputationHistory {
         logger.error(error);
       }
       await bluebird.Promise.any([
-        bluebird.Promise.all([find_offers_task, process_invoices_job]),
-        promise_timeout(10),
+        bluebird.Promise.all([process_invoices_job, debit_notes_job]),
+        promise_timeout(20),
       ]);
       emit(new events.CheckingPayments());
       if (agreements_to_pay.size > 0) {
-        await bluebird.Promise.any([process_invoices_job, promise_timeout(15)]);
+        await bluebird.Promise.any([process_invoices_job, debit_notes_job, promise_timeout(15)]);
         emit(new events.CheckingPayments());
       }
     }
