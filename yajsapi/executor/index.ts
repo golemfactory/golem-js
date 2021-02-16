@@ -322,6 +322,7 @@ export class Executor implements ComputationHistory {
           break;
         }
       }
+      logger.debug("Stopped processing invoices.");
     }
 
     async function accept_payment_for_agreement({
@@ -369,6 +370,7 @@ export class Executor implements ComputationHistory {
           break;
         }
       }
+      logger.debug("Stopped processing debit notes.");
     }
 
     async function find_offers(): Promise<void> {
@@ -492,6 +494,7 @@ export class Executor implements ComputationHistory {
           }
         }
       });
+      logger.debug("Stopped checking and scoring new offers.");
     }
 
     let storage_manager = await this._stack.enter_async_context(
@@ -641,6 +644,7 @@ export class Executor implements ComputationHistory {
           );
         }
       );
+      logger.debug(`Stopped worker related to agreement ${agreement.id()}.`);
     }
 
     async function worker_starter(): Promise<void> {
@@ -709,6 +713,7 @@ export class Executor implements ComputationHistory {
           }
         }
       }
+      logger.debug("Stopped starting new tasks on providers.");
     }
 
     async function promise_timeout(seconds: number) {
