@@ -144,6 +144,7 @@ export class Executor implements ComputationHistory {
   private _wrapped_consumer;
   private _cancellation_token: CancellationToken;
   private _worker_cancellation_token: CancellationToken;
+  private _payment_cancellation_token: CancellationToken;
 
   /**
    * Create new executor
@@ -189,6 +190,8 @@ export class Executor implements ComputationHistory {
 
     this._worker_cancellation_token = new CancellationToken();
     let workerCancellationToken = this._worker_cancellation_token;
+
+    this._payment_cancellation_token = new CancellationToken();
 
     function cancel(event) {
       if (cancellationToken && !cancellationToken.cancelled) {
@@ -256,6 +259,7 @@ export class Executor implements ComputationHistory {
     let activity_api = this._activity_api;
     let strategy = this._strategy;
     let cancellationToken = this._cancellation_token;
+    let paymentCancellationToken = this._payment_cancellation_token;
     let done_queue: Queue<Task<D, R>> = new Queue([]);
     let stream_output = this._stream_output;
 
@@ -286,7 +290,7 @@ export class Executor implements ComputationHistory {
 
     async function process_invoices(): Promise<void> {
       for await (let invoice of self._payment_api.incoming_invoices(
-        cancellationToken
+        paymentCancellationToken
       )) {
         if (agreements_to_pay.has(invoice.agreementId)) {
           emit(
@@ -812,6 +816,8 @@ export class Executor implements ComputationHistory {
         emit(new events.CheckingPayments());
       }
     }
+    if (!self._payment_cancellation_token.cancelled)
+      self._payment_cancellation_token.cancel();
     emit(new events.PaymentsFinished());
     await sleep(2);
     cancellationToken.cancel();
