@@ -828,7 +828,10 @@ export class Executor implements ComputationHistory {
       self._payment_cancellation_token.cancel();
     emit(new events.PaymentsFinished());
     await sleep(2);
+    logger.info("Shutting down...");
     cancellationToken.cancel();
+    await sleep(15);
+    logger.info("Shutdown complete.");
     return;
   }
 
