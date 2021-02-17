@@ -45,7 +45,7 @@ const promiseTimeout = (seconds) =>
     }, seconds * 1000)
   );
 
-program.option('--subnet-tag <subnet>', 'set subnet name', 'community.3');
+program.option('--subnet-tag <subnet>', 'set subnet name', 'community.4');
 program.parse(process.argv);
 console.log(`Using subnet: ${program.subnetTag}`);
 
