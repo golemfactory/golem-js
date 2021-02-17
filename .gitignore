@@ -1,11 +1,13 @@
 #Node modules
 /node_modules
+/examples/logs
 /examples/node_modules
 
 #Outputs
 /dist
 /examples/dist
 /examples/blender/*.png
+/logs
 
 #Lock files
 package-lock.json

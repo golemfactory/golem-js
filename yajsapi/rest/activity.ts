@@ -10,10 +10,11 @@ import { Configuration } from "ya-ts-client/dist/ya-activity";
 import {
   Credentials,
   ExeScriptCommandResult,
+  ExeScriptCommandResultResultEnum,
   SgxCredentials,
 } from "ya-ts-client/dist/ya-activity/src/models";
 import { CryptoCtx, PrivateKey, PublicKey, rand_hex } from "../crypto";
-import { sleep, logger } from "../utils";
+import { sleep, logger, CancellationToken } from "../utils";
 import * as events from "../executor/events";
 import { Agreement } from "./market";
 import { SGX_CONFIG } from "../package/sgx";
@@ -56,7 +57,7 @@ export class ActivityService {
   }
 
   async _create_activity(agreement_id: string): Promise<Activity> {
-    let { data: response } = await this._api.createActivity({ agreementId: agreement_id });
+    let { data: response } = await this._api.createActivity({ agreementId: agreement_id }, { timeout: 30000, params: { timeout: 25 } });
     let activity_id =
       typeof response == "string" ? response : response.activityId;
     return new Activity(activity_id, this._api, this._state);
@@ -70,7 +71,7 @@ export class ActivityService {
     let { data: response } = await this._api.createActivity({
       agreementId: agreement.id(),
       requestorPubKey: pub_key.toString(),
-    });
+    }, { timeout: 30000 });
 
     let activity_id =
       typeof response == "string" ? response : response.activityId;
@@ -92,7 +93,7 @@ export class ActivityService {
         await this._attest(activity_id, agreement, credentials);
       }
     } catch (error) {
-      await this._api.destroyActivity(activity_id);
+      await this._api.destroyActivity(activity_id, { timeout: 5000 });
       throw error;
     }
 
@@ -193,12 +194,14 @@ class Activity {
   async send(
     script: object[],
     stream: boolean,
-    deadline?: number
+    deadline?: number,
+    cancellationToken?: CancellationToken
   ): Promise<any> {
     const script_txt = JSON.stringify(script);
     const { data: batch_id } = await this._api.exec(
       this._id,
-      new ExeScriptRequest(script_txt)
+      new ExeScriptRequest(script_txt),
+      { timeout: 5000 }
     );
 
     if (stream) {
@@ -207,7 +210,8 @@ class Activity {
         this._id,
         batch_id,
         script.length,
-        deadline
+        deadline,
+        cancellationToken
       );
     }
     return new PollingBatch(
@@ -215,7 +219,8 @@ class Activity {
       this._id,
       batch_id,
       script.length,
-      deadline
+      deadline,
+      cancellationToken
     );
   }
 
@@ -225,7 +230,7 @@ class Activity {
 
   async done(): Promise<void> {
     try {
-      await this._api.destroyActivity(this._id);
+      await this._api.destroyActivity(this._id, { timeout: 5000 });
     } catch (error) {
       logger.error(`Got API Exception when destroying activity ${this._id}: ${error}`);
     }
@@ -359,6 +364,7 @@ class Batch implements AsyncIterable<events.CommandEventContext> {
   protected size!: number;
   protected deadline?: Dayjs;
   protected credentials?: SgxCredentials;
+  protected cancellationToken?: CancellationToken;
 
   constructor(
     api: RequestorControlApi,
@@ -366,7 +372,8 @@ class Batch implements AsyncIterable<events.CommandEventContext> {
     batch_id: string,
     batch_size: number,
     deadline?: number,
-    credentials?: SgxCredentials
+    credentials?: SgxCredentials,
+    cancellationToken?: CancellationToken
   ) {
     this.api = api;
     this.activity_id = activity_id;
@@ -374,6 +381,7 @@ class Batch implements AsyncIterable<events.CommandEventContext> {
     this.size = batch_size;
     this.deadline = deadline ? dayjs.unix(deadline) : dayjs().utc().add(1, "day");
     this.credentials = credentials;
+    this.cancellationToken = cancellationToken;
   }
 
   milliseconds_left(): number | undefined {
@@ -394,10 +402,11 @@ class PollingBatch extends Batch {
     activity_id: string,
     batch_id: string,
     batch_size: number,
-    deadline?: number
+    deadline?: number,
+    cancellationToken?: CancellationToken
   ) {
     // this._api, this._id, batch_id, script.length, deadline
-    super(api, activity_id, batch_id, batch_size, deadline);
+    super(api, activity_id, batch_id, batch_size, deadline, undefined, cancellationToken);
   }
 
   async *[Symbol.asyncIterator](): any {
@@ -406,6 +415,9 @@ class PollingBatch extends Batch {
       results: yaa.ExeScriptCommandResult[] = [];
     while (last_idx < this.size) {
       const timeout = this.milliseconds_left();
+      if (this.cancellationToken && this.cancellationToken.cancelled) {
+        throw new CommandExecutionError(last_idx.toString(), "Interrupted.");
+      }
       if (timeout && timeout <= 0) {
         throw new BatchTimeoutError();
       }
@@ -414,7 +426,7 @@ class PollingBatch extends Batch {
           this.activity_id,
           this.batch_id,
           undefined,
-          { timeout: timeout ? Math.min(timeout, 5000) : 5000 }
+          { params: { timeout: 5 } }
         );
         results = data;
       } catch (error) {
@@ -447,14 +459,13 @@ class PollingBatch extends Batch {
         }
 
         let evt = Object.create(events.CommandExecuted.prototype);
-        evt.idx = result.index;
+        evt.cmd_idx = evt.idx = result.index;
         evt.stdout = result.stdout;
         evt.stderr = result.stderr;
         evt.message = result.message;
-        yield new events.CommandEventContext({
-          evt_cls: events.CommandExecuted,
-          props: evt,
-        });
+        evt.command = "";
+        evt.success = result.result === ExeScriptCommandResultResultEnum.Ok;
+        yield new events.CommandEventContext(evt);
         last_idx = result.index + 1;
         if (result.isBatchFinished) break;
         if (!any_new) await sleep(10);
@@ -470,9 +481,10 @@ class StreamingBatch extends Batch {
     activity_id: string,
     batch_id: string,
     batch_size: number,
-    deadline?: number
+    deadline?: number,
+    cancellationToken?: CancellationToken
   ) {
-    super(api, activity_id, batch_id, batch_size, deadline);
+    super(api, activity_id, batch_id, batch_size, deadline, undefined, cancellationToken);
   }
 
   async *[Symbol.asyncIterator](): any {
@@ -549,8 +561,12 @@ function _command_event_ctx(msg_event) {
   if (msg_event.type === "runtime") {
     throw Error(`Unsupported event: ${msg_event.type}`);
   }
-
-  const evt_obj = JSON.parse(msg_event.data);
+  let evt_obj;
+  try {
+    evt_obj = JSON.parse(msg_event.data);
+  } catch (_e) {
+    throw Error(`Cannot parse: ${msg_event.data}`);
+  }
   const evt_kind = evt_obj["kind"][0];
   const evt_data = evt_obj["kind"][evt_kind]; // ?
 

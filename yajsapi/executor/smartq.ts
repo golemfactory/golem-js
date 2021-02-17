@@ -1,5 +1,5 @@
 import * as csp from "js-csp";
-import { eventLoop } from "../utils";
+import { eventLoop, promisify } from "../utils";
 
 type Item = "Item";
 
@@ -35,6 +35,7 @@ export class SmartQueue<Item> {
   private _in_progress: Set<Handle<Item>>;
   private __new_items;
   private __eof;
+  private __done;
 
   constructor(items: Array<Item>, retry_cnt: number = 2, ...rest) {
     this._items = items;
@@ -43,6 +44,16 @@ export class SmartQueue<Item> {
 
     this.__new_items = csp.chan();
     this.__eof = csp.chan();
+    this.__done = false;
+  }
+
+  close() {
+    if (this._items) this._items.length = 0;
+    this._rescheduled_items.clear();
+    this._in_progress.clear();
+    this.__new_items.close();
+    this.__eof.close();
+    this.__done = true;
   }
 
   new_consumer(): Consumer<Item> {
@@ -84,7 +95,7 @@ export class SmartQueue<Item> {
           this._items = null;
           if (!this._rescheduled_items && !this._in_progress) {
             csp.putAsync(this.__new_items, true);
-            throw new Error();
+            if (this.__done) { return; } else { throw new Error(); }
           }
         } else {
           handle = new Handle({ data: next_elem, consumer: consumer });
@@ -99,6 +110,7 @@ export class SmartQueue<Item> {
   }
 
   async mark_done(handle: Handle<Item>): Promise<void> {
+    if (this.__done) return;
     if (!this._in_progress.has(handle)) throw "handle is not in progress";
     this._in_progress.delete(handle);
     csp.putAsync(this.__eof, true);
@@ -110,6 +122,7 @@ export class SmartQueue<Item> {
   }
 
   async reschedule(handle: Handle<Item>): Promise<void> {
+    if (this.__done) return;
     if (!this._in_progress.has(handle)) throw "handle is not in progress";
     this._in_progress.delete(handle);
     this._rescheduled_items.add(handle);
@@ -117,6 +130,7 @@ export class SmartQueue<Item> {
   }
 
   async reschedule_all(consumer: Consumer<Item>): Promise<void> {
+    if (this.__done) return;
     let handles = [...this._in_progress].map((handle) => {
       if (handle.consumer() === consumer) return handle;
     });
@@ -175,15 +189,4 @@ export class Consumer<Item> {
     const val = await this._queue.get(this, _fetch);
     yield* val;
   }
-}
-
-function promisify(fn) {
-  return (...args) =>
-    new Promise((resolve, reject) => {
-      try {
-        fn(...args, resolve);
-      } catch (error) {
-        reject(error);
-      }
-    });
 }

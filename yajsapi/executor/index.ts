@@ -11,7 +11,7 @@ import { DemandBuilder } from "../props/builder";
 
 import * as rest from "../rest";
 import { Agreement,  OfferProposal, Subscription } from "../rest/market";
-import { Allocation, Invoice } from "../rest/payment";
+import { Allocation, DebitNote, Invoice } from "../rest/payment";
 import { CommandExecutionError } from "../rest/activity";
 
 import * as gftp from "../storage/gftp";
@@ -42,6 +42,11 @@ dayjs.extend(duration);
 dayjs.extend(utc);
 
 const SIGNALS = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
+
+const DEBIT_NOTE_MIN_TIMEOUT: number = 30; // in seconds
+//"Shortest debit note acceptance timeout the requestor will accept."
+
+const DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: string = "golem.com.payment.debit-notes.accept-timeout?";
 
 const CFG_INVOICE_TIMEOUT: number = dayjs
   .duration({ minutes: 5 })
@@ -174,10 +179,14 @@ export class Executor {
     let cancellationToken = this._cancellation_token;
 
     this._worker_cancellation_token = new CancellationToken();
+    let workerCancellationToken = this._worker_cancellation_token;
 
-    function cancel(e) {
+    function cancel(event) {
       if (cancellationToken && !cancellationToken.cancelled) {
         cancellationToken.cancel();
+      }
+      if (workerCancellationToken && !workerCancellationToken.cancelled) {
+        workerCancellationToken.cancel();
       }
       SIGNALS.forEach((event) => {
         process.off(event, cancel);
@@ -238,7 +247,7 @@ export class Executor {
     let activity_api = this._activity_api;
     let strategy = this._strategy;
     let cancellationToken = this._cancellation_token;
-    let done_queue: Queue<Task<D, R>> = new Queue([], cancellationToken);
+    let done_queue: Queue<Task<D, R>> = new Queue([]);
     let stream_output = this._stream_output;
 
     function on_task_done(task: Task<D, R>, status: TaskStatus): void {
@@ -279,7 +288,7 @@ export class Executor {
             })
           );
           emit(new events.CheckingPayments());
-          const allocation = self._allocation_for_invoice(invoice);
+          const allocation = self._get_allocation(invoice);
           try {
             await invoice.accept(invoice.amount, allocation);
             agreements_to_pay.delete(invoice.agreementId);
@@ -291,7 +300,7 @@ export class Executor {
               })
             );
           } catch (e) {
-            emit(new events.PaymentFailed({ agr_id: invoice.agreementId }));
+            emit(new events.PaymentFailed({ agr_id: invoice.agreementId, reason: e.toString() }));
           }
         } else {
           invoices[invoice.agreementId] = invoice;
@@ -314,7 +323,7 @@ export class Executor {
         return;
       }
       invoices.delete(agreement_id);
-      const allocation = self._allocation_for_invoice(inv);
+      const allocation = self._get_allocation(inv);
       await inv.accept(inv.amount, allocation);
       emit(
         new events.PaymentAccepted({
@@ -323,6 +332,30 @@ export class Executor {
           amount: inv.amount,
         })
       );
+    }
+
+    /* TODO Consider processing invoices and debit notes together */
+    async function process_debit_notes(): Promise<void> {
+      for await (let debit_note of self._payment_api.incoming_debit_notes(
+        cancellationToken
+      )) {
+        if (agreements_to_pay.has(debit_note.agreementId)) {
+          emit(new events.DebitNoteReceived({
+            agr_id: debit_note.agreementId,
+            note_id: debit_note.debitNodeId,
+            amount: debit_note.totalAmountDue,
+          }));
+          const allocation = self._get_allocation(debit_note);
+          try {
+            await debit_note.accept(debit_note.totalAmountDue, allocation);
+          } catch (e) {
+            emit(new events.PaymentFailed({ agr_id: debit_note.agreementId, reason: e.toString() }));
+          }
+        }
+        if (payment_closing && agreements_to_pay.size === 0) {
+          break;
+        }
+      }
     }
 
     async function find_offers(): Promise<void> {
@@ -404,6 +437,24 @@ export class Executor {
                   //suppress error
                 }
               }
+              let timeout = proposal.props()[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP];
+              if (timeout) {
+                if (timeout < DEBIT_NOTE_MIN_TIMEOUT) {
+                  try {
+                    await proposal.reject();
+                  } catch (e) {
+                    // with contextlib.suppress(Exception):
+                  }
+                  emit(
+                    new events.ProposalRejected({
+                      prop_id: proposal.id,
+                      reason: "Debit note acceptance timeout too short",
+                    })
+                  );
+                } else {
+                  builder._properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout;
+                }
+              }
               await proposal.respond(
                 builder.properties(),
                 builder.constraints()
@@ -440,6 +491,7 @@ export class Executor {
 
       emit(new events.WorkerStarted({ agr_id: agreement.id() }));
 
+      if (self._worker_cancellation_token.cancelled) { return; }
       let _act;
       try {
         _act = await activity_api.new_activity(agreement, secure);
@@ -452,6 +504,7 @@ export class Executor {
         consumer: Consumer<any>
       ): AsyncGenerator<Task<"TaskData", "TaskResult">> {
         for await (let handle of consumer) {
+          if (self._worker_cancellation_token.cancelled) { break; }
           yield Task.for_handle(handle, work_queue, emit);
         }
       }
@@ -476,7 +529,9 @@ export class Executor {
               work_context,
               task_emitter(consumer)
             );
+            if (self._worker_cancellation_token.cancelled) { return; }
             for await (let batch of command_generator) {
+              if (self._worker_cancellation_token.cancelled) { return; }
               const _batch_timeout = batch.timeout();
               const batch_deadline = _batch_timeout 
                 ? dayjs.utc().unix() + _batch_timeout
@@ -500,10 +555,14 @@ export class Executor {
                   nonce: act.id,
                   exeunitHashes: act.exeunitHashes,
                 };
+                if (self._worker_cancellation_token.cancelled) { return; }
                 await batch.prepare();
                 let cc = new CommandContainer();
                 batch.register(cc);
-                let remote = await act.send(cc.commands(), stream_output, batch_deadline);
+                if (self._worker_cancellation_token.cancelled) { return; }
+                let remote = await act.send(
+                  cc.commands(), stream_output, batch_deadline, self._worker_cancellation_token
+                );
                 let cmds = cc.commands();
                 emit(
                   new events.ScriptSent({
@@ -514,6 +573,7 @@ export class Executor {
                 );
                 emit(new events.CheckingPayments());
                 for await (let evt_ctx of remote) {
+                  if (self._worker_cancellation_token.cancelled) { return; }
                   let evt = evt_ctx.event(agreement.id(), task_id, cmds);
                   emit(evt);
                   if (evt instanceof events.CommandExecuted && !evt.success) {
@@ -526,6 +586,7 @@ export class Executor {
                     task_id: task_id,
                   })
                 );
+                if (self._worker_cancellation_token.cancelled) { return; }
                 await batch.post();
                 emit(
                   new events.ScriptFinished({
@@ -533,11 +594,13 @@ export class Executor {
                     task_id: task_id,
                   })
                 );
+                if (self._worker_cancellation_token.cancelled) { return; }
                 await accept_payment_for_agreement({
                   agreement_id: agreement.id(),
                   partial: true,
                 });
               } catch (error) {
+                if (self._worker_cancellation_token.cancelled) { return; }
                 try {
                   await command_generator.throw(error);
                 } catch (error) {
@@ -552,6 +615,7 @@ export class Executor {
               }
             }
           });
+          if (self._worker_cancellation_token.cancelled) { return; }
           await accept_payment_for_agreement({
             agreement_id: agreement.id(),
             partial: false,
@@ -577,8 +641,8 @@ export class Executor {
         }
       }
       while (true) {
-        if (self._worker_cancellation_token.cancelled) break;
         await sleep(2);
+        if (self._worker_cancellation_token.cancelled) { break; }
         if (
           Object.keys(offer_buffer).length > 0 &&
           workers.size < self._conf.max_workers &&
@@ -597,21 +661,26 @@ export class Executor {
           let new_task: any | null = null;
           let agreement: Agreement | null = null;
           try {
-            agreement = await (buffer as _BufferItem).proposal.create_agreement();
-            const provider_info = (await agreement.details())
+            if (self._worker_cancellation_token.cancelled) { break; }
+            agreement = await buffer.proposal.create_agreement();
+            if (self._worker_cancellation_token.cancelled) { break; }
+            const node_info = (await agreement.details())
               .provider_view()
               .extract(new NodeInfo());
             emit(
               new events.AgreementCreated({
                 agr_id: agreement.id(),
-                provider_id: provider_info,
+                provider_id: provider_id,
+                provider_info: node_info,
               })
             );
+            if (self._worker_cancellation_token.cancelled) { break; }
             if (!(await agreement.confirm())) {
               emit(new events.AgreementRejected({ agr_id: agreement.id() }));
               continue;
             }
             emit(new events.AgreementConfirmed({ agr_id: agreement.id() }));
+            if (self._worker_cancellation_token.cancelled) { break; }
             new_task = loop.create_task(_start_worker.bind(null, agreement));
             workers.add(new_task);
           } catch (error) {
@@ -642,14 +711,17 @@ export class Executor {
     let get_offers_deadline = dayjs.utc() + this._conf.get_offers_timeout;
     let get_done_task: any = null;
     let worker_starter_task = loop.create_task(worker_starter);
+    let debit_notes_job = loop.create_task(process_debit_notes);
     let services: any = [
       find_offers_task,
       worker_starter_task,
       process_invoices_job,
       wait_until_done,
+      debit_notes_job,
     ];
     try {
       while (services.indexOf(wait_until_done) > -1 || !done_queue.empty()) {
+        if (cancellationToken.cancelled) { done_queue.close(); }
         const now = dayjs.utc();
         if (now > this._expires) {
           throw new TimeoutError(
@@ -682,24 +754,23 @@ export class Executor {
 
         if (!get_done_task) throw "";
         if (!get_done_task.isPending()) {
-          yield await get_done_task;
+          const res = await get_done_task;
+          if (res) { yield res; } else { break; }
           if (services.indexOf(get_done_task) > -1) throw "";
           get_done_task = null;
         }
       }
       emit(new events.ComputationFinished());
     } catch (error) {
-      if (error === undefined) {
-        // this needs more research
-        logger.error("Computation interrupted by the user.");
-      } else {
-        logger.error(`fail= ${error}`);
-      }
+      logger.error(`fail= ${error}`);
       if (!self._worker_cancellation_token.cancelled)
         self._worker_cancellation_token.cancel();
       // TODO: implement ComputationFinished(error)
       emit(new events.ComputationFinished());
     } finally {
+      if (cancellationToken.cancelled) {
+        logger.error("Computation interrupted by the user.");
+      }
       payment_closing = true;
       find_offers_task.cancel();
       worker_starter_task.cancel();
@@ -788,15 +859,15 @@ export class Executor {
     ) as string[];
   }
 
-  _allocation_for_invoice(invoice: Invoice): Allocation {
+  _get_allocation(item: Invoice | DebitNote): Allocation {
     try {
       const _allocation = this._budget_allocations.find(
         (allocation) =>
-          allocation.payment_platform === invoice.paymentPlatform &&
-          allocation.payment_address === invoice.payerAddr
+          allocation.payment_platform === item.paymentPlatform &&
+          allocation.payment_address === item.payerAddr
       );
       if (_allocation) return _allocation;
-      throw `No allocation for ${invoice.paymentPlatform} ${invoice.payerAddr}.`;
+      throw `No allocation for ${item.paymentPlatform} ${item.payerAddr}.`;
     } catch (error) {
       throw new Error(error);
     }
