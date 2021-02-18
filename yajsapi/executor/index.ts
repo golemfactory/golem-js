@@ -33,7 +33,13 @@ export const sgx = _sgx;
 export const vm = _vm;
 import { Task, TaskStatus } from "./task";
 import { Consumer, SmartQueue } from "./smartq";
-import { LeastExpensiveLinearPayuMS, MarketStrategy, SCORE_NEUTRAL } from "./strategy";
+import {
+  ComputationHistory,
+  DecreaseScoreForUnconfirmedAgreement,
+  LeastExpensiveLinearPayuMS,
+  MarketStrategy,
+  SCORE_NEUTRAL
+} from "./strategy";
 import { Package } from "../package";
 
 export { Task, TaskStatus };
@@ -116,7 +122,7 @@ export type ExecutorOpts = {
  * 
  * @description Used to run tasks using the specified application package within providers' execution units.
  */
-export class Executor {
+export class Executor implements ComputationHistory {
   private _subnet;
   private _driver;
   private _network;
@@ -129,6 +135,7 @@ export class Executor {
   private _expires;
   private _budget_amount;
   private _budget_allocations: Allocation[];
+  private _rejecting_providers: Set<string>;
 
   private _activity_api;
   private _market_api;
@@ -137,6 +144,7 @@ export class Executor {
   private _wrapped_consumer;
   private _cancellation_token: CancellationToken;
   private _worker_cancellation_token: CancellationToken;
+  private _payment_cancellation_token: CancellationToken;
 
   /**
    * Create new executor
@@ -156,7 +164,7 @@ export class Executor {
     max_workers = 5,
     timeout = dayjs.duration({ minutes: 5 }).asMilliseconds(),
     budget,
-    strategy = new LeastExpensiveLinearPayuMS(),
+    strategy,
     subnet_tag,
     driver,
     network,
@@ -166,7 +174,8 @@ export class Executor {
     this._driver = driver ? driver.toLowerCase() : DEFAULT_DRIVER;
     this._network = network ? network.toLowerCase() : DEFAULT_NETWORK;
     this._stream_output = false;
-    this._strategy = strategy;
+    this._strategy =
+      strategy || new DecreaseScoreForUnconfirmedAgreement(new LeastExpensiveLinearPayuMS(), 0.5);
     this._api_config = new rest.Configuration();
     this._stack = new AsyncExitStack();
     this._task_package = task_package;
@@ -174,12 +183,15 @@ export class Executor {
     // TODO: setup precision
     this._budget_amount = parseFloat(budget);
     this._budget_allocations = [];
+    this._rejecting_providers = new Set();
 
     this._cancellation_token = new CancellationToken();
     let cancellationToken = this._cancellation_token;
 
     this._worker_cancellation_token = new CancellationToken();
     let workerCancellationToken = this._worker_cancellation_token;
+
+    this._payment_cancellation_token = new CancellationToken();
 
     function cancel(event) {
       if (cancellationToken && !cancellationToken.cancelled) {
@@ -247,6 +259,7 @@ export class Executor {
     let activity_api = this._activity_api;
     let strategy = this._strategy;
     let cancellationToken = this._cancellation_token;
+    let paymentCancellationToken = this._payment_cancellation_token;
     let done_queue: Queue<Task<D, R>> = new Queue([]);
     let stream_output = this._stream_output;
 
@@ -277,7 +290,7 @@ export class Executor {
 
     async function process_invoices(): Promise<void> {
       for await (let invoice of self._payment_api.incoming_invoices(
-        cancellationToken
+        paymentCancellationToken
       )) {
         if (agreements_to_pay.has(invoice.agreementId)) {
           emit(
@@ -309,6 +322,10 @@ export class Executor {
           break;
         }
       }
+      if (!paymentCancellationToken.cancelled) {
+        paymentCancellationToken.cancel();
+      }
+      logger.debug("Stopped processing invoices.");
     }
 
     async function accept_payment_for_agreement({
@@ -337,7 +354,7 @@ export class Executor {
     /* TODO Consider processing invoices and debit notes together */
     async function process_debit_notes(): Promise<void> {
       for await (let debit_note of self._payment_api.incoming_debit_notes(
-        cancellationToken
+        paymentCancellationToken
       )) {
         if (agreements_to_pay.has(debit_note.agreementId)) {
           emit(new events.DebitNoteReceived({
@@ -356,6 +373,7 @@ export class Executor {
           break;
         }
       }
+      logger.debug("Stopped processing debit notes.");
     }
 
     async function find_offers(): Promise<void> {
@@ -389,7 +407,7 @@ export class Executor {
           offers_collected += 1;
           let score;
           try {
-            score = await strategy.score_offer(proposal);
+            score = await strategy.score_offer(proposal, self);
             logger.debug(`Scored offer ${proposal.id()}, ` +
                          `provider: ${proposal.props()["golem.node.id.name"]}, ` +
                          `strategy: ${strategy.constructor.name}, ` +
@@ -479,6 +497,7 @@ export class Executor {
           }
         }
       });
+      logger.debug("Stopped checking and scoring new offers.");
     }
 
     let storage_manager = await this._stack.enter_async_context(
@@ -628,6 +647,7 @@ export class Executor {
           );
         }
       );
+      logger.debug(`Stopped worker related to agreement ${agreement.id()}.`);
     }
 
     async function worker_starter(): Promise<void> {
@@ -677,8 +697,10 @@ export class Executor {
             if (self._worker_cancellation_token.cancelled) { break; }
             if (!(await agreement.confirm())) {
               emit(new events.AgreementRejected({ agr_id: agreement.id() }));
+              self._rejecting_providers.add(provider_id);
               continue;
             }
+            self._rejecting_providers.delete(provider_id);
             emit(new events.AgreementConfirmed({ agr_id: agreement.id() }));
             if (self._worker_cancellation_token.cancelled) { break; }
             new_task = loop.create_task(_start_worker.bind(null, agreement));
@@ -694,6 +716,7 @@ export class Executor {
           }
         }
       }
+      logger.debug("Stopped starting new tasks on providers.");
     }
 
     async function promise_timeout(seconds: number) {
@@ -721,7 +744,7 @@ export class Executor {
     ];
     try {
       while (services.indexOf(wait_until_done) > -1 || !done_queue.empty()) {
-        if (cancellationToken.cancelled) { done_queue.close(); }
+        if (cancellationToken.cancelled) { work_queue.close(); done_queue.close(); break; }
         const now = dayjs.utc();
         if (now > this._expires) {
           throw new TimeoutError(
@@ -792,18 +815,23 @@ export class Executor {
         logger.error(error);
       }
       await bluebird.Promise.any([
-        bluebird.Promise.all([find_offers_task, process_invoices_job]),
-        promise_timeout(10),
+        bluebird.Promise.all([process_invoices_job, debit_notes_job]),
+        promise_timeout(20),
       ]);
       emit(new events.CheckingPayments());
       if (agreements_to_pay.size > 0) {
-        await bluebird.Promise.any([process_invoices_job, promise_timeout(15)]);
+        await bluebird.Promise.any([process_invoices_job, debit_notes_job, promise_timeout(15)]);
         emit(new events.CheckingPayments());
       }
     }
+    if (!self._payment_cancellation_token.cancelled)
+      self._payment_cancellation_token.cancel();
     emit(new events.PaymentsFinished());
     await sleep(2);
+    logger.info("Shutting down...");
     cancellationToken.cancel();
+    await sleep(15);
+    logger.info("Shutdown complete.");
     return;
   }
 
@@ -871,6 +899,10 @@ export class Executor {
     } catch (error) {
       throw new Error(error);
     }
+  }
+
+  rejected_last_agreement(provider_id: string): boolean {
+    return this._rejecting_providers.has(provider_id);
   }
 
   async ready(): Promise<Executor> {

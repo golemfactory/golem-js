@@ -19,12 +19,16 @@ export const CFF_DEFAULT_PRICE_FOR_COUNTER: Map<Counter, number> = new Map([
   [Counter.CPU, parseFloat("0.002") * 10],
 ]);
 
+export interface ComputationHistory {
+  rejected_last_agreement: (string) => boolean;
+}
+
 export class MarketStrategy {
   /*Abstract market strategy*/
 
   async decorate_demand(demand: DemandBuilder): Promise<void> {}
 
-  async score_offer(offer: OfferProposal): Promise<Number> {
+  async score_offer(offer: OfferProposal, history?: ComputationHistory): Promise<Number> {
     return SCORE_REJECTED;
   }
 }
@@ -44,7 +48,7 @@ export class DummyMS extends MarketGeneral {
     this._activity = new Activity().from_properties(demand._properties);
   }
 
-  async score_offer(offer: OfferProposal): Promise<Number> {
+  async score_offer(offer: OfferProposal, history?: ComputationHistory): Promise<Number> {
     const linear: ComLinear = new ComLinear().from_properties(offer.props());
 
     if (linear.scheme.value !== BillingScheme.PAYU) {
@@ -73,7 +77,7 @@ export class LeastExpensiveLinearPayuMS {
     demand.ensure(`(${PRICE_MODEL}=${PriceModel.LINEAR})`);
   }
 
-  async score_offer(offer: OfferProposal): Promise<Number> {
+  async score_offer(offer: OfferProposal, history?: ComputationHistory): Promise<Number> {
     const linear: ComLinear = new ComLinear().from_properties(offer.props());
 
     logger.debug(`Scoring offer ${offer.id()}, parameters: ${JSON.stringify(linear)}`);
@@ -108,6 +112,35 @@ export class LeastExpensiveLinearPayuMS {
     // The higher the expected price value, the lower the score.
     // The score is always lower than SCORE_TRUSTED and is always higher than 0.
     const score: number = (SCORE_TRUSTED * 1.0) / (expected_price + 1.01);
+    return score;
+  }
+}
+
+export class DecreaseScoreForUnconfirmedAgreement {
+  /* A market strategy that modifies a base strategy based on history of agreements. */
+
+  private _base_strategy;
+  private _factor;
+
+  constructor(base_strategy, factor) {
+    this._base_strategy = base_strategy;
+    this._factor = factor;
+  }
+
+  async decorate_demand(demand: DemandBuilder): Promise<void> {
+    /* Decorate `demand` using the base strategy. */
+    await this._base_strategy.decorate_demand(demand);
+  }
+
+  async score_offer(offer: OfferProposal, history?: ComputationHistory): Promise<Number> {
+    /* Score `offer` using the base strategy and apply penalty if needed.
+       If the offer issuer failed to approve the previous agreement (if any)
+       then the base score is multiplied by `this._factor`. */
+    let score = await this._base_strategy.score_offer(offer);
+    if (history && history.rejected_last_agreement(offer.issuer()) && score > 0) {
+      score *= this._factor;
+      logger.debug(`Decreasing score for offer ${offer.id()} from '${offer.issuer()}'`);
+    }
     return score;
   }
 }

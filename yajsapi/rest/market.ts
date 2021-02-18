@@ -67,7 +67,7 @@ export class Agreement {
   async confirm(): Promise<boolean> {
     await this._api.confirmAgreement(this._id);
     try {
-      let { data: msg } = await this._api.waitForApproval(this._id, 90, { timeout: 100000 });
+      let { data: msg } = await this._api.waitForApproval(this._id, 15, { timeout: 16000 });
       return true;
     } catch (error) {
       logger.debug(`waitForApproval(${this._id}) raised ApiException ${error}`);
@@ -78,7 +78,7 @@ export class Agreement {
   async terminate(reason: string = "Finished"): Promise<boolean> {
     try {
       await this._api.terminateAgreement(this._id, { message: reason }, { timeout: 5000 });
-      logger.debug(`terminateAgreement(${this._id}) returned successfully`);
+      logger.debug(`Terminated agreement ${this._id}.`);
       return true;
     } catch (error) {
       if (error.response.status === 410) {
