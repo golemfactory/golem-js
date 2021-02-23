@@ -59,6 +59,10 @@ const CFG_INVOICE_TIMEOUT: number = dayjs
   .asMilliseconds();
 //"Time to receive invoice from provider after tasks ended."
 
+const DEFAULT_EXECUTOR_TIMEOUT: number = dayjs
+  .duration({ minutes: 15 })
+  .asMilliseconds()
+
 const DEFAULT_NETWORK: string = "rinkeby";
 const DEFAULT_DRIVER: string = "zksync";
 
@@ -81,7 +85,7 @@ export class NoPaymentAccountError extends Error {
 
 export class _ExecutorConfig {
   max_workers: Number = 5;
-  timeout: number = dayjs.duration({ minutes: 5 }).asMilliseconds();
+  timeout: number = DEFAULT_EXECUTOR_TIMEOUT;
   get_offers_timeout: number = dayjs.duration({ seconds: 20 }).asMilliseconds();
   traceback: boolean = false; //TODO fix
   constructor(max_workers, timeout) {
@@ -162,7 +166,7 @@ export class Executor implements ComputationHistory {
   constructor({
     task_package,
     max_workers = 5,
-    timeout = dayjs.duration({ minutes: 5 }).asMilliseconds(),
+    timeout = DEFAULT_EXECUTOR_TIMEOUT,
     budget,
     strategy,
     subnet_tag,
