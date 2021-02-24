@@ -69,10 +69,17 @@ export class DummyMS extends MarketGeneral {
 
 export class LeastExpensiveLinearPayuMS {
   private _expected_time_secs: number;
-  private _price_caps?: ComLinear;
-  constructor(expected_time_secs: number = 60, price_caps?: ComLinear) {
+  private _max_fixed_price?: number;
+  private _max_price_for?: Map<Counter, number>
+
+  constructor(
+    expected_time_secs: number = 60,
+    max_fixed_price?: number,
+    max_price_for?: Map<Counter, number>
+  ) {
     this._expected_time_secs = expected_time_secs;
-    if (price_caps) this._price_caps = price_caps;
+    if (max_fixed_price) this._max_fixed_price = max_fixed_price;
+    if (max_price_for) this._max_price_for = max_price_for;
   }
 
   async decorate_demand(demand: DemandBuilder): Promise<void> {
@@ -97,10 +104,10 @@ export class LeastExpensiveLinearPayuMS {
       }
     }
 
-    if (this._price_caps) {
-      const fixed_price_cap = this._price_caps.fixed_price;
+    if (this._max_fixed_price) {
+      const fixed_price_cap = this._max_fixed_price;
       if (fixed_price_cap !== undefined && linear.fixed_price > fixed_price_cap) {
-        logger.debug(`Rejected offer ${offer.id()}: fixed price higher than fixed price cap=${fixed_price_cap}.`);
+        logger.debug(`Rejected offer ${offer.id()}: fixed price higher than fixed price cap ${fixed_price_cap}.`);
         return SCORE_REJECTED;
       }
     }
@@ -115,10 +122,10 @@ export class LeastExpensiveLinearPayuMS {
         logger.debug(`Rejected offer ${offer.id()}: negative price for '${resource}'`);
         return SCORE_REJECTED;
       }
-      if (this._price_caps) {
-        const resource_cap = this._price_caps.price_for[resource];
-        if (resource_cap !== undefined && linear.price_for[resource] > resource_cap) {
-          logger.debug(`Rejected offer ${offer.id()}: price for '${resource}' higher than price cap=${resource_cap}`);
+      if (this._max_price_for) {
+        const max_price = this._max_price_for.get(resource as Counter)
+        if (max_price !== undefined && linear.price_for[resource] > max_price) {
+          logger.debug(`Rejected offer ${offer.id()}: price for '${resource}' higher than price cap ${max_price}`);
           return SCORE_REJECTED;
         }
       }

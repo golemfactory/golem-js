@@ -145,10 +145,16 @@ export class OfferProposal {
   }
 
   async reject(_reason: string | null = null) {
-    await this._subscription._api.rejectProposalOffer(
-      this._subscription.id(),
-      this.id()
-    );
+    try {
+      await this._subscription._api.rejectProposalOffer(
+        this._subscription.id(),
+        this.id(),
+        { message: "Rejected" as Object }
+      );
+    } catch (e) {
+      logger.debug(`Cannot reject offer ${this.id()}` + e.response.data.message);
+      throw(e);
+    }
   }
 
   async respond(props: object, constraints: string): Promise<string> {

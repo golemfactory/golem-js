@@ -183,8 +183,10 @@ export class Executor implements ComputationHistory {
     this._budget_amount = parseFloat(budget);
     this._strategy = strategy || new DecreaseScoreForUnconfirmedAgreement(
       new LeastExpensiveLinearPayuMS(
-        60,
-        new ComLinear(1.0, { [Counter.TIME]: 1.0, [Counter.CPU]: 1.0 })
+        60, 1.0, new Map([
+          [Counter.TIME, 1.0],
+          [Counter.CPU, 1.0]
+        ]),
       ),
       0.5
     );

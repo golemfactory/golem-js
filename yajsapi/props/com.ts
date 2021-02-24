@@ -31,12 +31,6 @@ export class ComLinear extends Com {
   public fixed_price!: number;
   public price_for!: Object;
 
-  constructor(fixed_price: number = 0, price_for: Object = {}) {
-    super();
-    this.fixed_price = fixed_price;
-    this.price_for = price_for;
-  }
-
   _custom_mapping(props, data: any) {
     if (data["price_model"] != PriceModel.LINEAR)
       throw "expected linear pricing model";
