@@ -69,8 +69,10 @@ export class DummyMS extends MarketGeneral {
 
 export class LeastExpensiveLinearPayuMS {
   private _expected_time_secs: number;
-  constructor(expected_time_secs: number = 60) {
+  private _price_caps?: ComLinear;
+  constructor(expected_time_secs: number = 60, price_caps?: ComLinear) {
     this._expected_time_secs = expected_time_secs;
+    if (price_caps) this._price_caps = price_caps;
   }
 
   async decorate_demand(demand: DemandBuilder): Promise<void> {
@@ -95,6 +97,13 @@ export class LeastExpensiveLinearPayuMS {
       }
     }
 
+    if (this._price_caps) {
+      const fixed_price_cap = this._price_caps.fixed_price;
+      if (fixed_price_cap !== undefined && linear.fixed_price > fixed_price_cap) {
+        logger.debug(`Rejected offer ${offer.id()}: fixed price higher than fixed price cap=${fixed_price_cap}.`);
+        return SCORE_REJECTED;
+      }
+    }
     if (linear.fixed_price < 0) {
       logger.debug(`Rejected offer ${offer.id()}: negative fixed price`);
       return SCORE_REJECTED;
@@ -105,6 +114,13 @@ export class LeastExpensiveLinearPayuMS {
       if (linear.price_for[resource] < 0) {
         logger.debug(`Rejected offer ${offer.id()}: negative price for '${resource}'`);
         return SCORE_REJECTED;
+      }
+      if (this._price_caps) {
+        const resource_cap = this._price_caps.price_for[resource];
+        if (resource_cap !== undefined && linear.price_for[resource] > resource_cap) {
+          logger.debug(`Rejected offer ${offer.id()}: price for '${resource}' higher than price cap=${resource_cap}`);
+          return SCORE_REJECTED;
+        }
       }
       expected_price += linear.price_for[resource] * this._expected_time_secs;
     }

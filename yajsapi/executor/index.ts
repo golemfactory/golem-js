@@ -7,6 +7,7 @@ import { MarketDecoration } from "ya-ts-client/dist/ya-payment/src/models";
 import { WorkContext, Work, CommandContainer } from "./ctx";
 import * as events from "./events";
 import { Activity, NodeInfo, NodeInfoKeys } from "../props";
+import { ComLinear, Counter } from "../props/com";
 import { DemandBuilder } from "../props/builder";
 
 import * as rest from "../rest";
@@ -174,14 +175,19 @@ export class Executor implements ComputationHistory {
     this._driver = driver ? driver.toLowerCase() : DEFAULT_DRIVER;
     this._network = network ? network.toLowerCase() : DEFAULT_NETWORK;
     this._stream_output = false;
-    this._strategy =
-      strategy || new DecreaseScoreForUnconfirmedAgreement(new LeastExpensiveLinearPayuMS(), 0.5);
     this._api_config = new rest.Configuration();
     this._stack = new AsyncExitStack();
     this._task_package = task_package;
     this._conf = new _ExecutorConfig(max_workers, timeout);
     // TODO: setup precision
     this._budget_amount = parseFloat(budget);
+    this._strategy = strategy || new DecreaseScoreForUnconfirmedAgreement(
+      new LeastExpensiveLinearPayuMS(
+        60,
+        new ComLinear(1.0, { [Counter.TIME]: 1.0, [Counter.CPU]: 1.0 })
+      ),
+      0.5
+    );
     this._budget_allocations = [];
     this._rejecting_providers = new Set();
 
