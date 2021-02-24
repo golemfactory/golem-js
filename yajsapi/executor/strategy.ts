@@ -104,9 +104,9 @@ export class LeastExpensiveLinearPayuMS {
       }
     }
 
-    if (this._max_fixed_price) {
+    if (this._max_fixed_price !== undefined) {
       const fixed_price_cap = this._max_fixed_price;
-      if (fixed_price_cap !== undefined && linear.fixed_price > fixed_price_cap) {
+      if (linear.fixed_price > fixed_price_cap) {
         logger.debug(`Rejected offer ${offer.id()}: fixed price higher than fixed price cap ${fixed_price_cap}.`);
         return SCORE_REJECTED;
       }
