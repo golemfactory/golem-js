@@ -7,6 +7,7 @@ import { MarketDecoration } from "ya-ts-client/dist/ya-payment/src/models";
 import { WorkContext, Work, CommandContainer } from "./ctx";
 import * as events from "./events";
 import { Activity, NodeInfo, NodeInfoKeys } from "../props";
+import { Counter } from "../props/com";
 import { DemandBuilder } from "../props/builder";
 
 import * as rest from "../rest";
@@ -59,6 +60,10 @@ const CFG_INVOICE_TIMEOUT: number = dayjs
   .asMilliseconds();
 //"Time to receive invoice from provider after tasks ended."
 
+const DEFAULT_EXECUTOR_TIMEOUT: number = dayjs
+  .duration({ minutes: 15 })
+  .asMilliseconds()
+
 const DEFAULT_NETWORK: string = "rinkeby";
 const DEFAULT_DRIVER: string = "zksync";
 
@@ -81,7 +86,7 @@ export class NoPaymentAccountError extends Error {
 
 export class _ExecutorConfig {
   max_workers: Number = 5;
-  timeout: number = dayjs.duration({ minutes: 5 }).asMilliseconds();
+  timeout: number = DEFAULT_EXECUTOR_TIMEOUT;
   get_offers_timeout: number = dayjs.duration({ seconds: 20 }).asMilliseconds();
   traceback: boolean = false; //TODO fix
   constructor(max_workers, timeout) {
@@ -162,7 +167,7 @@ export class Executor implements ComputationHistory {
   constructor({
     task_package,
     max_workers = 5,
-    timeout = dayjs.duration({ minutes: 5 }).asMilliseconds(),
+    timeout = DEFAULT_EXECUTOR_TIMEOUT,
     budget,
     strategy,
     subnet_tag,
@@ -174,14 +179,21 @@ export class Executor implements ComputationHistory {
     this._driver = driver ? driver.toLowerCase() : DEFAULT_DRIVER;
     this._network = network ? network.toLowerCase() : DEFAULT_NETWORK;
     this._stream_output = false;
-    this._strategy =
-      strategy || new DecreaseScoreForUnconfirmedAgreement(new LeastExpensiveLinearPayuMS(), 0.5);
     this._api_config = new rest.Configuration();
     this._stack = new AsyncExitStack();
     this._task_package = task_package;
     this._conf = new _ExecutorConfig(max_workers, timeout);
     // TODO: setup precision
     this._budget_amount = parseFloat(budget);
+    this._strategy = strategy || new DecreaseScoreForUnconfirmedAgreement(
+      new LeastExpensiveLinearPayuMS(
+        60, 1.0, new Map([
+          [Counter.TIME, 0.1],
+          [Counter.CPU, 0.2]
+        ]),
+      ),
+      0.5
+    );
     this._budget_allocations = [];
     this._rejecting_providers = new Set();
 
@@ -423,10 +435,11 @@ export class Executor implements ComputationHistory {
           }
           if (score < SCORE_NEUTRAL) {
             try {
-              await proposal.reject();
+              const reason = "Score too low";
+              await proposal.reject(reason);
               emit(new events.ProposalRejected({
                 prop_id: proposal.id(),
-                reason: "Score too low",
+                reason: reason,
               }));
             } catch (error) {
               //suppress and log the error and continue;
@@ -444,11 +457,12 @@ export class Executor implements ComputationHistory {
                   common_platforms[0];
               } else {
                 try {
-                  await proposal.reject();
+                  const reason = "No common payment platforms";
+                  await proposal.reject(reason);
                   emit(
                     new events.ProposalRejected({
                       prop_id: proposal.id,
-                      reason: "No common payment platforms",
+                      reason: reason,
                     })
                   );
                 } catch (error) {
@@ -458,15 +472,16 @@ export class Executor implements ComputationHistory {
               let timeout = proposal.props()[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP];
               if (timeout) {
                 if (timeout < DEBIT_NOTE_MIN_TIMEOUT) {
+                  const reason = "Debit note acceptance timeout too short";
                   try {
-                    await proposal.reject();
+                    await proposal.reject(reason);
                   } catch (e) {
                     // with contextlib.suppress(Exception):
                   }
                   emit(
                     new events.ProposalRejected({
                       prop_id: proposal.id,
-                      reason: "Debit note acceptance timeout too short",
+                      reason: reason,
                     })
                   );
                 } else {

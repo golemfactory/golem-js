@@ -156,7 +156,7 @@ class _Run extends Work {
     this.env = env;
     this._idx = null;
     this._stdout = stdout;
-    this._stdout = stderr;
+    this._stderr = stderr;
   }
 
   register(commands: any) {
