@@ -7,7 +7,7 @@ import { MarketDecoration } from "ya-ts-client/dist/ya-payment/src/models";
 import { WorkContext, Work, CommandContainer } from "./ctx";
 import * as events from "./events";
 import { Activity, NodeInfo, NodeInfoKeys } from "../props";
-import { ComLinear, Counter } from "../props/com";
+import { Counter } from "../props/com";
 import { DemandBuilder } from "../props/builder";
 
 import * as rest from "../rest";

@@ -14,11 +14,6 @@ export const SCORE_NEUTRAL: number = 0.0;
 export const SCORE_REJECTED: number = -1.0;
 export const SCORE_TRUSTED: number = 100.0;
 
-export const CFF_DEFAULT_PRICE_FOR_COUNTER: Map<Counter, number> = new Map([
-  [Counter.TIME, parseFloat("0.002")],
-  [Counter.CPU, parseFloat("0.002") * 10],
-]);
-
 export interface ComputationHistory {
   rejected_last_agreement: (string) => boolean;
 }
@@ -39,7 +34,10 @@ class MarketGeneral {}
 applyMixins(MarketGeneral, [MarketStrategy, Object]);
 
 export class DummyMS extends MarketGeneral {
-  max_for_counter: Map<Counter, Number> = CFF_DEFAULT_PRICE_FOR_COUNTER;
+  max_for_counter: Map<Counter, Number> = new Map([
+    [Counter.TIME, parseFloat("0.002")],
+    [Counter.CPU, parseFloat("0.002") * 10],
+  ]);
   max_fixed: Number = parseFloat("0.05");
   _activity?: Activity;
 
