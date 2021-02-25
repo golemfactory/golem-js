@@ -184,8 +184,8 @@ export class Executor implements ComputationHistory {
     this._strategy = strategy || new DecreaseScoreForUnconfirmedAgreement(
       new LeastExpensiveLinearPayuMS(
         60, 1.0, new Map([
-          [Counter.TIME, 1.0],
-          [Counter.CPU, 1.0]
+          [Counter.TIME, 0.1],
+          [Counter.CPU, 0.2]
         ]),
       ),
       0.5
