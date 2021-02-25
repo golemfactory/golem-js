@@ -471,8 +471,8 @@ class PollingBatch extends Batch {
         yield new events.CommandEventContext(evt);
         last_idx = result.index + 1;
         if (result.isBatchFinished) break;
-        if (!any_new) await sleep(10);
       }
+      if (!any_new) await sleep(3);
     }
     return;
   }
