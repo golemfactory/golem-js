@@ -149,7 +149,7 @@ export class OfferProposal {
       await this._subscription._api.rejectProposalOffer(
         this._subscription.id(),
         this.id(),
-        { message: "Rejected" as Object }
+        { message: (_reason || "no reason") as Object }
       );
     } catch (e) {
       logger.debug(`Cannot reject offer ${this.id()}` + e.response.data.message);
