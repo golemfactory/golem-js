@@ -431,10 +431,11 @@ export class Executor implements ComputationHistory {
           }
           if (score < SCORE_NEUTRAL) {
             try {
-              await proposal.reject();
+              const reason = "Score too low";
+              await proposal.reject(reason);
               emit(new events.ProposalRejected({
                 prop_id: proposal.id(),
-                reason: "Score too low",
+                reason: reason,
               }));
             } catch (error) {
               //suppress and log the error and continue;
@@ -452,11 +453,12 @@ export class Executor implements ComputationHistory {
                   common_platforms[0];
               } else {
                 try {
-                  await proposal.reject();
+                  const reason = "No common payment platforms";
+                  await proposal.reject(reason);
                   emit(
                     new events.ProposalRejected({
                       prop_id: proposal.id,
-                      reason: "No common payment platforms",
+                      reason: reason,
                     })
                   );
                 } catch (error) {
@@ -466,15 +468,16 @@ export class Executor implements ComputationHistory {
               let timeout = proposal.props()[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP];
               if (timeout) {
                 if (timeout < DEBIT_NOTE_MIN_TIMEOUT) {
+                  const reason = "Debit note acceptance timeout too short";
                   try {
-                    await proposal.reject();
+                    await proposal.reject(reason);
                   } catch (e) {
                     // with contextlib.suppress(Exception):
                   }
                   emit(
                     new events.ProposalRejected({
                       prop_id: proposal.id,
-                      reason: "Debit note acceptance timeout too short",
+                      reason: reason,
                     })
                   );
                 } else {
