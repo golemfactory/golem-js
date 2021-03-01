@@ -80,10 +80,14 @@ class GftpDriver {
       let { value } = await this._reader.next();
       valueStr = JSON.stringify(value);
       const { result } = JSON.parse(value as string);
+      if (result === undefined) {
+        throw value;
+      }
       return result;
     } catch (error) {
-      logger.error(`gftp error. query: ${query} value: ${valueStr} error: ${JSON.stringify(error)}`);
-      throw Error(error);
+      const msg = `gftp error. query: ${query} value: ${valueStr} error: ${JSON.stringify(error)}`;
+      logger.error(msg);
+      throw Error(msg);
     }
   }
 
