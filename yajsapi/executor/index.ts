@@ -253,7 +253,6 @@ export class Executor implements ComputationHistory {
     this._active_computations += 1;
     let generator = this._submit(worker, data);
     generator.return = async (value) => {
-      this._active_computations -= 1;
       csp.putAsync(this._chan_computation_done, true);
       await generator.throw("User decided to stop computations.");
       return { done: true, value: undefined };
