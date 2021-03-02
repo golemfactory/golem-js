@@ -51,7 +51,7 @@ export class ActivityService {
         return await this._create_activity(agreement.id());
       }
     } catch (error) {
-      logger.error(`Failed to create activity for agreement ${agreement.id()}: ${error}`);
+      logger.warn(`Failed to create activity for agreement ${agreement.id()}: ${error}`);
       throw error;
     }
   }
