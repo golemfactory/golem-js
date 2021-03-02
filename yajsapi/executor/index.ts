@@ -109,6 +109,8 @@ export class _BufferItem {
   }
 }
 
+class AsyncGeneratorBreak extends Error {}
+
 type D = "D"; // Type var for task data
 type R = "R"; // Type var for task result
 
@@ -254,12 +256,10 @@ export class Executor implements ComputationHistory {
     let generator = this._submit(worker, data);
     generator.return = async (value) => {
       csp.putAsync(this._chan_computation_done, true);
-      await generator.throw("User decided to stop computations.");
+      await generator.throw(new AsyncGeneratorBreak());
       return { done: true, value: undefined };
     }
-    for await (let result of generator) {
-      yield result;
-    }
+    yield* generator;
     csp.putAsync(this._chan_computation_done, true);
   }
 
@@ -788,7 +788,11 @@ export class Executor implements ComputationHistory {
     ];
     try {
       while (services.indexOf(wait_until_done) > -1 || !done_queue.empty()) {
-        if (cancellationToken.cancelled) { work_queue.close(); done_queue.close(); break; }
+        if (cancellationToken.cancelled) {
+          work_queue.close();
+          done_queue.close();
+          break;
+        }
         const now = dayjs.utc();
         if (now > this._expires) {
           throw new TimeoutError(
@@ -829,7 +833,13 @@ export class Executor implements ComputationHistory {
       }
       emit(new events.ComputationFinished());
     } catch (error) {
-      logger.error(`fail= ${error}`);
+      if (error instanceof AsyncGeneratorBreak) {
+        work_queue.close();
+        done_queue.close();
+        logger.info("User decided to break the computations");
+      } else {
+        logger.error(`fail= ${error}`);
+      }
       if (!self._worker_cancellation_token.cancelled)
         self._worker_cancellation_token.cancel();
       // TODO: implement ComputationFinished(error)
