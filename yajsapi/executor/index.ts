@@ -699,7 +699,7 @@ export class Executor implements ComputationHistory {
         try {
           await start_worker(agreement);
         } catch (error) {
-          logger.error(`Worker finished with error: ${error}`);
+          logger.warn(`Worker finished with error: ${error}`);
         } finally {
           await agreement.terminate();
         }
