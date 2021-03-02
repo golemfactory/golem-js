@@ -87,7 +87,7 @@ class GftpDriver {
     } catch (error) {
       const msg = `gftp error. query: ${query} value: ${valueStr} error: ${JSON.stringify(error)}`;
       logger.error(msg);
-      throw Error(msg);
+      throw Error(error);
     }
   }
 
