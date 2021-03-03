@@ -15,6 +15,8 @@ import { Agreement,  OfferProposal, Subscription } from "../rest/market";
 import { Allocation, DebitNote, Invoice } from "../rest/payment";
 import { CommandExecutionError } from "../rest/activity";
 
+import * as csp from "js-csp";
+
 import * as gftp from "../storage/gftp";
 import {
   AsyncExitStack,
@@ -24,6 +26,7 @@ import {
   CancellationToken,
   eventLoop,
   logger,
+  promisify,
   Queue,
   sleep,
 } from "../utils";
@@ -106,6 +109,8 @@ export class _BufferItem {
   }
 }
 
+class AsyncGeneratorBreak extends Error {}
+
 type D = "D"; // Type var for task data
 type R = "R"; // Type var for task result
 
@@ -147,6 +152,8 @@ export class Executor implements ComputationHistory {
   private _payment_api;
 
   private _wrapped_consumer;
+  private _active_computations;
+  private _chan_computation_done;
   private _cancellation_token: CancellationToken;
   private _worker_cancellation_token: CancellationToken;
   private _payment_cancellation_token: CancellationToken;
@@ -225,6 +232,10 @@ export class Executor implements ComputationHistory {
     this._wrapped_consumer =
       event_consumer &&
       new AsyncWrapper(event_consumer, null, cancellationToken);
+    // Each call to `submit()` will put an item in the channel.
+    // The channel can be used to wait until all calls to `submit()` are finished.
+    this._chan_computation_done = csp.chan();
+    this._active_computations = 0;
   }
 
   /**
@@ -235,6 +246,24 @@ export class Executor implements ComputationHistory {
    * @returns        yields computation progress events
    */
   async *submit(
+    worker: Callable<
+      [WorkContext, AsyncIterable<Task<D, R>>],
+      AsyncGenerator<Work>
+    >,
+    data: Iterable<Task<D, R>>
+  ): AsyncGenerator<Task<D, R>> {
+    this._active_computations += 1;
+    let generator = this._submit(worker, data);
+    generator.return = async (value) => {
+      csp.putAsync(this._chan_computation_done, true);
+      await generator.throw(new AsyncGeneratorBreak());
+      return { done: true, value: undefined };
+    }
+    yield* generator;
+    csp.putAsync(this._chan_computation_done, true);
+  }
+
+  async *_submit(
     worker: Callable<
       [WorkContext, AsyncIterable<Task<D, R>>],
       AsyncGenerator<Work>
@@ -670,7 +699,7 @@ export class Executor implements ComputationHistory {
         try {
           await start_worker(agreement);
         } catch (error) {
-          logger.error(`Worker finished with error: ${error}`);
+          logger.warn(`Worker finished with error: ${error}`);
         } finally {
           await agreement.terminate();
         }
@@ -759,7 +788,11 @@ export class Executor implements ComputationHistory {
     ];
     try {
       while (services.indexOf(wait_until_done) > -1 || !done_queue.empty()) {
-        if (cancellationToken.cancelled) { work_queue.close(); done_queue.close(); break; }
+        if (cancellationToken.cancelled) {
+          work_queue.close();
+          done_queue.close();
+          break;
+        }
         const now = dayjs.utc();
         if (now > this._expires) {
           throw new TimeoutError(
@@ -800,7 +833,13 @@ export class Executor implements ComputationHistory {
       }
       emit(new events.ComputationFinished());
     } catch (error) {
-      logger.error(`fail= ${error}`);
+      if (error instanceof AsyncGeneratorBreak) {
+        work_queue.close();
+        done_queue.close();
+        logger.info("Break in the async for loop. Gracefully stopping all computations.");
+      } else {
+        logger.error(`Computation Failed. Error: ${error}`);
+      }
       if (!self._worker_cancellation_token.cancelled)
         self._worker_cancellation_token.cancel();
       // TODO: implement ComputationFinished(error)
@@ -939,6 +978,14 @@ export class Executor implements ComputationHistory {
 
   // cleanup, if needed
   async done(this): Promise<void> {
+    logger.debug("Executor is shutting down...");
+    while (this._active_computations > 0) {
+      logger.debug(`Waiting for ${this._active_computations} computation(s)...`);
+      await promisify(csp.takeAsync)(this._chan_computation_done);
+      this._active_computations -= 1;
+    }
+    // TODO: prevent new computations at this point (if it's even possible to start one)
+    logger.debug("Executor shut down.");
     this._market_api = null;
     this._payment_api = null;
     await this._stack.aclose();
