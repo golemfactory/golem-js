@@ -836,7 +836,7 @@ export class Executor implements ComputationHistory {
       if (error instanceof AsyncGeneratorBreak) {
         work_queue.close();
         done_queue.close();
-        logger.info("User decided to stop getting new results.");
+        logger.info("Break in the async for loop. Gracefully stopping all computations.");
       } else {
         logger.error(`Computation Failed. Error: ${error}`);
       }
