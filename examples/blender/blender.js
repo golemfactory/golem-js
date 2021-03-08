@@ -86,7 +86,7 @@ async function main(subnetTag, driver, network) {
 }
 
 program
-  .option("--subnet-tag <subnet>", "set subnet name", "community.4")
+  .option("--subnet-tag <subnet>", "set subnet name", "devnet-beta.1")
   .option("--driver <driver>", "payment driver name, for example 'zksync'", "zksync")
   .option("--network <network>", "network name, for example 'rinkeby'", "rinkeby")
   .option("-d, --debug", "output extra debugging");
