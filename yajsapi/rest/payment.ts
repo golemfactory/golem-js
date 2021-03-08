@@ -171,7 +171,8 @@ class _AllocationTask extends ResourceCtx<Allocation> {
       _allocation.expires = new Date(parseInt(model.timeout) * 1000);
       return _allocation;
     } catch (error) {
-      logger.error(error);
+      const msg = error.response && error.response.data ? error.response.data.message : error.message;
+      logger.error(`Payment allocation error (message: ${msg}). Please run "yagna payment status" to check your account.`);
       throw new Error(error);
     }
   }

@@ -7,12 +7,15 @@ import { MarketDecoration } from "ya-ts-client/dist/ya-payment/src/models";
 import { WorkContext, Work, CommandContainer } from "./ctx";
 import * as events from "./events";
 import { Activity, NodeInfo, NodeInfoKeys } from "../props";
+import { Counter } from "../props/com";
 import { DemandBuilder } from "../props/builder";
 
 import * as rest from "../rest";
 import { Agreement,  OfferProposal, Subscription } from "../rest/market";
 import { Allocation, DebitNote, Invoice } from "../rest/payment";
 import { CommandExecutionError } from "../rest/activity";
+
+import * as csp from "js-csp";
 
 import * as gftp from "../storage/gftp";
 import {
@@ -23,6 +26,7 @@ import {
   CancellationToken,
   eventLoop,
   logger,
+  promisify,
   Queue,
   sleep,
 } from "../utils";
@@ -33,7 +37,13 @@ export const sgx = _sgx;
 export const vm = _vm;
 import { Task, TaskStatus } from "./task";
 import { Consumer, SmartQueue } from "./smartq";
-import { LeastExpensiveLinearPayuMS, MarketStrategy, SCORE_NEUTRAL } from "./strategy";
+import {
+  ComputationHistory,
+  DecreaseScoreForUnconfirmedAgreement,
+  LeastExpensiveLinearPayuMS,
+  MarketStrategy,
+  SCORE_NEUTRAL
+} from "./strategy";
 import { Package } from "../package";
 
 export { Task, TaskStatus };
@@ -52,6 +62,10 @@ const CFG_INVOICE_TIMEOUT: number = dayjs
   .duration({ minutes: 5 })
   .asMilliseconds();
 //"Time to receive invoice from provider after tasks ended."
+
+const DEFAULT_EXECUTOR_TIMEOUT: number = dayjs
+  .duration({ minutes: 15 })
+  .asMilliseconds()
 
 const DEFAULT_NETWORK: string = "rinkeby";
 const DEFAULT_DRIVER: string = "zksync";
@@ -75,7 +89,7 @@ export class NoPaymentAccountError extends Error {
 
 export class _ExecutorConfig {
   max_workers: Number = 5;
-  timeout: number = dayjs.duration({ minutes: 5 }).asMilliseconds();
+  timeout: number = DEFAULT_EXECUTOR_TIMEOUT;
   get_offers_timeout: number = dayjs.duration({ seconds: 20 }).asMilliseconds();
   traceback: boolean = false; //TODO fix
   constructor(max_workers, timeout) {
@@ -94,6 +108,8 @@ export class _BufferItem {
     this.proposal = proposal;
   }
 }
+
+class AsyncGeneratorBreak extends Error {}
 
 type D = "D"; // Type var for task data
 type R = "R"; // Type var for task result
@@ -116,7 +132,7 @@ export type ExecutorOpts = {
  * 
  * @description Used to run tasks using the specified application package within providers' execution units.
  */
-export class Executor {
+export class Executor implements ComputationHistory {
   private _subnet;
   private _driver;
   private _network;
@@ -129,14 +145,18 @@ export class Executor {
   private _expires;
   private _budget_amount;
   private _budget_allocations: Allocation[];
+  private _rejecting_providers: Set<string>;
 
   private _activity_api;
   private _market_api;
   private _payment_api;
 
   private _wrapped_consumer;
+  private _active_computations;
+  private _chan_computation_done;
   private _cancellation_token: CancellationToken;
   private _worker_cancellation_token: CancellationToken;
+  private _payment_cancellation_token: CancellationToken;
 
   /**
    * Create new executor
@@ -154,9 +174,9 @@ export class Executor {
   constructor({
     task_package,
     max_workers = 5,
-    timeout = dayjs.duration({ minutes: 5 }).asMilliseconds(),
+    timeout = DEFAULT_EXECUTOR_TIMEOUT,
     budget,
-    strategy = new LeastExpensiveLinearPayuMS(),
+    strategy,
     subnet_tag,
     driver,
     network,
@@ -166,20 +186,31 @@ export class Executor {
     this._driver = driver ? driver.toLowerCase() : DEFAULT_DRIVER;
     this._network = network ? network.toLowerCase() : DEFAULT_NETWORK;
     this._stream_output = false;
-    this._strategy = strategy;
     this._api_config = new rest.Configuration();
     this._stack = new AsyncExitStack();
     this._task_package = task_package;
     this._conf = new _ExecutorConfig(max_workers, timeout);
     // TODO: setup precision
     this._budget_amount = parseFloat(budget);
+    this._strategy = strategy || new DecreaseScoreForUnconfirmedAgreement(
+      new LeastExpensiveLinearPayuMS(
+        60, 1.0, new Map([
+          [Counter.TIME, 0.1],
+          [Counter.CPU, 0.2]
+        ]),
+      ),
+      0.5
+    );
     this._budget_allocations = [];
+    this._rejecting_providers = new Set();
 
     this._cancellation_token = new CancellationToken();
     let cancellationToken = this._cancellation_token;
 
     this._worker_cancellation_token = new CancellationToken();
     let workerCancellationToken = this._worker_cancellation_token;
+
+    this._payment_cancellation_token = new CancellationToken();
 
     function cancel(event) {
       if (cancellationToken && !cancellationToken.cancelled) {
@@ -201,6 +232,10 @@ export class Executor {
     this._wrapped_consumer =
       event_consumer &&
       new AsyncWrapper(event_consumer, null, cancellationToken);
+    // Each call to `submit()` will put an item in the channel.
+    // The channel can be used to wait until all calls to `submit()` are finished.
+    this._chan_computation_done = csp.chan();
+    this._active_computations = 0;
   }
 
   /**
@@ -211,6 +246,24 @@ export class Executor {
    * @returns        yields computation progress events
    */
   async *submit(
+    worker: Callable<
+      [WorkContext, AsyncIterable<Task<D, R>>],
+      AsyncGenerator<Work>
+    >,
+    data: Iterable<Task<D, R>>
+  ): AsyncGenerator<Task<D, R>> {
+    this._active_computations += 1;
+    let generator = this._submit(worker, data);
+    generator.return = async (value) => {
+      csp.putAsync(this._chan_computation_done, true);
+      await generator.throw(new AsyncGeneratorBreak());
+      return { done: true, value: undefined };
+    }
+    yield* generator;
+    csp.putAsync(this._chan_computation_done, true);
+  }
+
+  async *_submit(
     worker: Callable<
       [WorkContext, AsyncIterable<Task<D, R>>],
       AsyncGenerator<Work>
@@ -247,6 +300,7 @@ export class Executor {
     let activity_api = this._activity_api;
     let strategy = this._strategy;
     let cancellationToken = this._cancellation_token;
+    let paymentCancellationToken = this._payment_cancellation_token;
     let done_queue: Queue<Task<D, R>> = new Queue([]);
     let stream_output = this._stream_output;
 
@@ -277,7 +331,7 @@ export class Executor {
 
     async function process_invoices(): Promise<void> {
       for await (let invoice of self._payment_api.incoming_invoices(
-        cancellationToken
+        paymentCancellationToken
       )) {
         if (agreements_to_pay.has(invoice.agreementId)) {
           emit(
@@ -309,6 +363,10 @@ export class Executor {
           break;
         }
       }
+      if (!paymentCancellationToken.cancelled) {
+        paymentCancellationToken.cancel();
+      }
+      logger.debug("Stopped processing invoices.");
     }
 
     async function accept_payment_for_agreement({
@@ -337,7 +395,7 @@ export class Executor {
     /* TODO Consider processing invoices and debit notes together */
     async function process_debit_notes(): Promise<void> {
       for await (let debit_note of self._payment_api.incoming_debit_notes(
-        cancellationToken
+        paymentCancellationToken
       )) {
         if (agreements_to_pay.has(debit_note.agreementId)) {
           emit(new events.DebitNoteReceived({
@@ -356,6 +414,7 @@ export class Executor {
           break;
         }
       }
+      logger.debug("Stopped processing debit notes.");
     }
 
     async function find_offers(): Promise<void> {
@@ -389,7 +448,7 @@ export class Executor {
           offers_collected += 1;
           let score;
           try {
-            score = await strategy.score_offer(proposal);
+            score = await strategy.score_offer(proposal, self);
             logger.debug(`Scored offer ${proposal.id()}, ` +
                          `provider: ${proposal.props()["golem.node.id.name"]}, ` +
                          `strategy: ${strategy.constructor.name}, ` +
@@ -405,10 +464,11 @@ export class Executor {
           }
           if (score < SCORE_NEUTRAL) {
             try {
-              await proposal.reject();
+              const reason = "Score too low";
+              await proposal.reject(reason);
               emit(new events.ProposalRejected({
                 prop_id: proposal.id(),
-                reason: "Score too low",
+                reason: reason,
               }));
             } catch (error) {
               //suppress and log the error and continue;
@@ -426,11 +486,12 @@ export class Executor {
                   common_platforms[0];
               } else {
                 try {
-                  await proposal.reject();
+                  const reason = "No common payment platforms";
+                  await proposal.reject(reason);
                   emit(
                     new events.ProposalRejected({
                       prop_id: proposal.id,
-                      reason: "No common payment platforms",
+                      reason: reason,
                     })
                   );
                 } catch (error) {
@@ -440,15 +501,16 @@ export class Executor {
               let timeout = proposal.props()[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP];
               if (timeout) {
                 if (timeout < DEBIT_NOTE_MIN_TIMEOUT) {
+                  const reason = "Debit note acceptance timeout too short";
                   try {
-                    await proposal.reject();
+                    await proposal.reject(reason);
                   } catch (e) {
                     // with contextlib.suppress(Exception):
                   }
                   emit(
                     new events.ProposalRejected({
                       prop_id: proposal.id,
-                      reason: "Debit note acceptance timeout too short",
+                      reason: reason,
                     })
                   );
                 } else {
@@ -479,6 +541,7 @@ export class Executor {
           }
         }
       });
+      logger.debug("Stopped checking and scoring new offers.");
     }
 
     let storage_manager = await this._stack.enter_async_context(
@@ -628,6 +691,7 @@ export class Executor {
           );
         }
       );
+      logger.debug(`Stopped worker related to agreement ${agreement.id()}.`);
     }
 
     async function worker_starter(): Promise<void> {
@@ -635,7 +699,7 @@ export class Executor {
         try {
           await start_worker(agreement);
         } catch (error) {
-          logger.error(`Worker finished with error: ${error}`);
+          logger.warn(`Worker finished with error: ${error}`);
         } finally {
           await agreement.terminate();
         }
@@ -677,8 +741,10 @@ export class Executor {
             if (self._worker_cancellation_token.cancelled) { break; }
             if (!(await agreement.confirm())) {
               emit(new events.AgreementRejected({ agr_id: agreement.id() }));
+              self._rejecting_providers.add(provider_id);
               continue;
             }
+            self._rejecting_providers.delete(provider_id);
             emit(new events.AgreementConfirmed({ agr_id: agreement.id() }));
             if (self._worker_cancellation_token.cancelled) { break; }
             new_task = loop.create_task(_start_worker.bind(null, agreement));
@@ -694,6 +760,7 @@ export class Executor {
           }
         }
       }
+      logger.debug("Stopped starting new tasks on providers.");
     }
 
     async function promise_timeout(seconds: number) {
@@ -721,7 +788,11 @@ export class Executor {
     ];
     try {
       while (services.indexOf(wait_until_done) > -1 || !done_queue.empty()) {
-        if (cancellationToken.cancelled) { done_queue.close(); }
+        if (cancellationToken.cancelled) {
+          work_queue.close();
+          done_queue.close();
+          break;
+        }
         const now = dayjs.utc();
         if (now > this._expires) {
           throw new TimeoutError(
@@ -762,7 +833,13 @@ export class Executor {
       }
       emit(new events.ComputationFinished());
     } catch (error) {
-      logger.error(`fail= ${error}`);
+      if (error instanceof AsyncGeneratorBreak) {
+        work_queue.close();
+        done_queue.close();
+        logger.info("Break in the async for loop. Gracefully stopping all computations.");
+      } else {
+        logger.error(`Computation Failed. Error: ${error}`);
+      }
       if (!self._worker_cancellation_token.cancelled)
         self._worker_cancellation_token.cancel();
       // TODO: implement ComputationFinished(error)
@@ -792,18 +869,23 @@ export class Executor {
         logger.error(error);
       }
       await bluebird.Promise.any([
-        bluebird.Promise.all([find_offers_task, process_invoices_job]),
-        promise_timeout(10),
+        bluebird.Promise.all([process_invoices_job, debit_notes_job]),
+        promise_timeout(20),
       ]);
       emit(new events.CheckingPayments());
       if (agreements_to_pay.size > 0) {
-        await bluebird.Promise.any([process_invoices_job, promise_timeout(15)]);
+        await bluebird.Promise.any([process_invoices_job, debit_notes_job, promise_timeout(15)]);
         emit(new events.CheckingPayments());
       }
     }
+    if (!self._payment_cancellation_token.cancelled)
+      self._payment_cancellation_token.cancel();
     emit(new events.PaymentsFinished());
     await sleep(2);
+    logger.info("Shutting down...");
     cancellationToken.cancel();
+    await sleep(15);
+    logger.info("Shutdown complete.");
     return;
   }
 
@@ -873,6 +955,10 @@ export class Executor {
     }
   }
 
+  rejected_last_agreement(provider_id: string): boolean {
+    return this._rejecting_providers.has(provider_id);
+  }
+
   async ready(): Promise<Executor> {
     let stack = this._stack;
     // TODO: Cleanup on exception here.
@@ -892,6 +978,14 @@ export class Executor {
 
   // cleanup, if needed
   async done(this): Promise<void> {
+    logger.debug("Executor is shutting down...");
+    while (this._active_computations > 0) {
+      logger.debug(`Waiting for ${this._active_computations} computation(s)...`);
+      await promisify(csp.takeAsync)(this._chan_computation_done);
+      this._active_computations -= 1;
+    }
+    // TODO: prevent new computations at this point (if it's even possible to start one)
+    logger.debug("Executor shut down.");
     this._market_api = null;
     this._payment_api = null;
     await this._stack.aclose();

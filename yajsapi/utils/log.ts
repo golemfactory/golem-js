@@ -231,18 +231,13 @@ class SummaryLogger {
       );
     } else if (eventName === events.CommandExecuted.name) {
       const provider_name = this.agreement_provider_info[event["agr_id"]].name;
+      const cmd = JSON.stringify(event["command"]);
       if (event["success"]) {
-        logger.debug(
-          `Command successful on provider '${provider_name}', command: ${JSON.stringify(
-            event["command"]
-          )}.`
-        );
+        logger.debug(`Command successful on provider '${provider_name}', command: ${cmd}.`);
+        logger.silly(`Command ${cmd}: stdout: ${event["stdout"]}, stderr: ${event["stderr"]}, msg: ${event["message"]}.`);
       } else {
-        logger.warn(
-          `Command failed on provider '${provider_name}', command: ${JSON.stringify(
-            event["command"]
-          )}, output: ${event["message"]}`
-        );
+        logger.warn(`Command failed on provider '${provider_name}', command: ${cmd}, msg: ${event["message"]}`);
+        logger.debug(`Command ${cmd}: stdout: ${event["stdout"]}, stderr: ${event["stderr"]}.`);
       }
     } else if (eventName === events.ScriptFinished.name) {
       const provider_info = this.agreement_provider_info[event["agr_id"]];
@@ -353,22 +348,21 @@ export function logSummary(
 
 export const changeLogLevel = (level: string) => {
   options.level = level;
-  options.transports.push(
+  options.transports = [
+    new winston.transports.Console({ level: level }),
     new winston.transports.File({
       filename: path.join(
         "logs",
         `yajsapi-${dayjs().format("YYYY-MM-DD_HH-mm-ss")}.log`
       ),
-      level: "debug",
-    }) as any
-  );
-  options.transports.push(
+      level: "silly",
+    }) as any,
     new winston.transports.File({
       filename: path.join("logs", "yajsapi-current.log"),
-      level: "debug",
+      level: "silly",
       options: { flags: "w" },
     }) as any
-  );
+  ];
   logger.configure(options);
 };
 
