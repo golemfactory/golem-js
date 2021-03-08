@@ -1,5 +1,5 @@
 import test from 'ava';
-import range from "./range";
+import range from "../../yajsapi/utils/range";
 
 test('get range', t => {
     const result: number[] = range(0, 5);

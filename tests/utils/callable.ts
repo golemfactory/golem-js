@@ -1,5 +1,5 @@
 import anyTest, {Macro, TestInterface} from 'ava';
-import Callable from "./callable";
+import Callable from "../../yajsapi/utils/callable";
 
 const test = anyTest as TestInterface<Callable<[string], string>>;
 

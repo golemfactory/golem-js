@@ -61,7 +61,7 @@
     ],
     "failFast": true,
     "files": [
-      "yajsapi/**/*.spec.ts"
+      "tests/**/*.ts"
     ],
     "ignoredByWatcher": [
       "yajsapi/**/*.ts"
@@ -73,7 +73,7 @@
   "nyc": {
     "extends": "@istanbuljs/nyc-config-typescript",
     "exclude": [
-      "**/*.spec.js"
+      "tests/**/*.js"
     ]
   }
 }

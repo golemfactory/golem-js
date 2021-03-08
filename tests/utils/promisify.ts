@@ -1,5 +1,5 @@
 import test from "ava";
-import promisify from "./promisify";
+import promisify from "../../yajsapi/utils/promisify";
 
 test("promisify resolve given fn", async (t) => {
   function wantCb(param, cb) {
