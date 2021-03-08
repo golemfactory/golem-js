@@ -51,7 +51,7 @@ export class ActivityService {
         return await this._create_activity(agreement.id());
       }
     } catch (error) {
-      logger.error(`Failed to create activity for agreement ${agreement.id()}: ${error}`);
+      logger.warn(`Failed to create activity for agreement ${agreement.id()}: ${error}`);
       throw error;
     }
   }
@@ -71,7 +71,7 @@ export class ActivityService {
     let { data: response } = await this._api.createActivity({
       agreementId: agreement.id(),
       requestorPubKey: pub_key.toString(),
-    }, { timeout: 30000 });
+    }, { timeout: 30000, params: { timeout: 25 } });
 
     let activity_id =
       typeof response == "string" ? response : response.activityId;
@@ -93,7 +93,7 @@ export class ActivityService {
         await this._attest(activity_id, agreement, credentials);
       }
     } catch (error) {
-      await this._api.destroyActivity(activity_id, { timeout: 5000 });
+      await this._api.destroyActivity(activity_id, { timeout: 11000, params: { timeout: 10 } });
       throw error;
     }
 
@@ -230,7 +230,7 @@ class Activity {
 
   async done(): Promise<void> {
     try {
-      await this._api.destroyActivity(this._id, { timeout: 5000 });
+      await this._api.destroyActivity(this._id, { timeout: 11000, params: { timeout: 10 } });
     } catch (error) {
       logger.error(`Got API Exception when destroying activity ${this._id}: ${error}`);
     }
@@ -426,11 +426,14 @@ class PollingBatch extends Batch {
           this.activity_id,
           this.batch_id,
           undefined,
-          { params: { timeout: 5 } }
+          { timeout: 5000 }
         );
         results = data;
       } catch (error) {
+        const timeout_msg = error.message && error.message.includes("timeout");
         if (error.response && error.response.status === 408) {
+          continue;
+        } else if (error.code === "ETIMEDOUT" || (error.code === "ECONNABORTED" && timeout_msg)) {
           continue;
         } else {
           if (error.response && error.response.status == 500 && error.response.data) {
@@ -468,8 +471,8 @@ class PollingBatch extends Batch {
         yield new events.CommandEventContext(evt);
         last_idx = result.index + 1;
         if (result.isBatchFinished) break;
-        if (!any_new) await sleep(10);
       }
+      if (!any_new) await sleep(3);
     }
     return;
   }
