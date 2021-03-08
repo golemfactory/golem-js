@@ -5,7 +5,7 @@ import { VmPackageFormat, VmRequest } from "../props/inf";
 import { logger } from "../utils";
 
 
-const FALLBACK_REPO_URL = "http://3.249.139.167:8000";
+const FALLBACK_REPO_URL = "http://yacn2.dev.golem.network:8000";
 export const DEFAULT_REPO_SRV = "_girepo._tcp.dev.golem.network";
 
 export type RepoOpts = {
