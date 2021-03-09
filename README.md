@@ -22,6 +22,14 @@ _(not needed for running examples)_
 - build is ready in `dist` folder!
 <br/><br/>
 
+### Testing
+| Command | Description |
+| --- | --- |
+| `yarn test:unit` | Run all unit test
+|`yarn cov` | Show tests coverage
+| `yarn cov:html` | GeneratedDetailed test coverage report (HTML in `coverage` directory)
+| `yarn cov:lcov` | Generate lcov.info file
+
 # Running Examples
 ### Installation
 - `cd examples`         will take you to examples folder
