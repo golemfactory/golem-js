@@ -1,0 +1,32 @@
+name: Unit tests - continuous integration
+
+on:
+  push:
+    branches:
+      - master
+      - b0.*
+  pull_request:
+    branches:
+      - master
+      - b0.*
+
+jobs:
+  build:
+
+    strategy:
+      matrix:
+        node-version: [12.x, 14.x, 15.x]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Unit tests for Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v1
+      with:
+        node-version: ${{ matrix.node-version }}
+    - run: yarn install
+    - run: yarn build
+    - run: yarn test:unit
+    - run: yarn cov
