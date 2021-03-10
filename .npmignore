@@ -1,4 +1,6 @@
+/.nyc_output
 /.vscode
+/coverage
 /examples
 /logs
 /node_modules

@@ -4,6 +4,8 @@
 /examples/node_modules
 
 #Outputs
+/.nyc_output
+/coverage
 /dist
 /examples/dist
 /examples/blender/*.png
