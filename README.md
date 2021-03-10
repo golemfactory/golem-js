@@ -1,10 +1,7 @@
-<div align="center">
-  <h1>Ya<b>JS</b>api</h1>
-  <p>
-    <strong>(Experimental/Alpha) Almost 1:1 Port of Yapapi to Typescript</strong>
-  </p>
-</div>
-<br/><br/>
+
+# ya*JS*api
+
+The JS/TS port of [yapapi, Golem's Python API](https://github.com/golemfactory/yapapi)
 
 ## Prerequisites
 
