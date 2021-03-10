@@ -6,13 +6,12 @@ export default class Queue<T> {
   private _tasks;
   private __new_items;
 
-  constructor(list = []) {
+  constructor(list: any[] = []) {
     this._tasks = list;
     this.__new_items = csp.chan();
 
     if (list.length > 0) {
-      let first = this._tasks.shift();
-      first();
+      csp.putAsync(this.__new_items, true);
     }
   }
 
