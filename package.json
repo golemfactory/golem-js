@@ -10,11 +10,17 @@
     "clean": "rimraf node_modules/ dist/ || echo 'Project is already clean'",
     "docs": "typedoc yajsapi/ --plugin none",
     "docs:md": "typedoc yajsapi/ --plugin typedoc-plugin-markdown",
+    "docs:clean": "rimraf docs/ && run-s handbook:clean",
     "test": "run-s build && node dist/index.js",
     "test:unit": "nyc --silent --cache false ava --verbose",
     "cov": "nyc --cache false ava --verbose",
     "cov:html": "run-s test:unit && nyc report --reporter=html",
-    "cov:lcov": "run-s test:unit && nyc report --reporter=lcov"
+    "cov:lcov": "run-s test:unit && nyc report --reporter=lcov",
+    "handbook:clean": "rimraf handbook/ handbook_gen/.env",
+    "handbook:py": "python3 -m venv handbook_gen/.env && source handbook_gen/.env/bin/activate",
+    "handbook:poetry": "pip install -U pip && pip install poetry && cd handbook_gen && poetry install",
+    "handbook:summary": "python handbook_gen/handbook_gen.py --overwrite",
+    "handbook": "run-s docs:md && run-s handbook:py && run-s handbook:poetry && run-s handbook:summary"
   },
   "author": "Muhammed Tanrikulu <muhammed@golem.network>",
   "license": "LGPL-3.0",
