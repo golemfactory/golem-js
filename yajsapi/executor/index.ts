@@ -412,7 +412,7 @@ export class Executor implements ComputationHistory {
             emit(new events.PaymentFailed({ agr_id: debit_note.agreementId, reason: e.toString() }));
           }
         }
-        if (payment_closing && debit_notes_accepted.size === 0) {
+        if (payment_closing && agreements_to_pay.size === 0) {
           break;
         }
       }
