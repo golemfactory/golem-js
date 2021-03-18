@@ -1,6 +1,6 @@
 {
   "name": "yajsapi",
-  "version": "0.3.2-alpha.0",
+  "version": "0.3.2-alpha.1",
   "description": "NodeJS API for Next Golem",
   "repository": "https://github.com/golemfactory/yajsapi",
   "main": "dist/index.js",
@@ -16,6 +16,9 @@
     "cov:html": "run-s test:unit && nyc report --reporter=html",
     "cov:lcov": "run-s test:unit && nyc report --reporter=lcov"
   },
+  "files": [
+    "dist"
+  ],
   "author": "Muhammed Tanrikulu <muhammed@golem.network>",
   "license": "LGPL-3.0",
   "dependencies": {
