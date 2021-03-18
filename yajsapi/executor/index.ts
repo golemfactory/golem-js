@@ -322,6 +322,7 @@ export class Executor implements ComputationHistory {
     let self = this;
 
     let agreements_to_pay: Set<string> = new Set();
+    let agreements_accepting_debit_notes: Set<string> = new Set();
     let invoices: Map<string, Invoice> = new Map();
     let payment_closing: boolean = false;
     let secure = this._task_package.secure;
@@ -346,6 +347,7 @@ export class Executor implements ComputationHistory {
           try {
             await invoice.accept(invoice.amount, allocation);
             agreements_to_pay.delete(invoice.agreementId);
+            agreements_accepting_debit_notes.delete(invoice.agreementId);
             emit(
               new events.PaymentAccepted({
                 agr_id: invoice.agreementId,
@@ -397,7 +399,7 @@ export class Executor implements ComputationHistory {
       for await (let debit_note of self._payment_api.incoming_debit_notes(
         paymentCancellationToken
       )) {
-        if (agreements_to_pay.has(debit_note.agreementId)) {
+        if (agreements_accepting_debit_notes.has(debit_note.agreementId)) {
           emit(new events.DebitNoteReceived({
             agr_id: debit_note.agreementId,
             note_id: debit_note.debitNodeId,
@@ -581,7 +583,7 @@ export class Executor implements ComputationHistory {
               agr_id: agreement.id(),
             })
           );
-
+          agreements_accepting_debit_notes.add(agreement.id());
           let work_context = new WorkContext(
             `worker-${wid}`,
             storage_manager,
