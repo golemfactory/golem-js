@@ -19,5 +19,6 @@ documentation = "https://handbook.golem.network/yajsapi/"
 readme = "README.md"
 
 [tool.poetry.dependencies]
+python = "^3.8.0"
 pytest = "^5.4.3"
 goth = {git = "https://github.com/golemfactory/goth.git", branch = "master"}
