@@ -32,7 +32,6 @@ jobs:
       - name: Install dependencies
         run: |
           cd tests/goth/
-          poetry env remove python3.8
           poetry env use python3.8
           poetry install
 
@@ -55,3 +54,13 @@ jobs:
       - name: Remove test logs
         if: always()
         run: rm -rf /tmp/goth-tests
+
+      # Only relevant for self-hosted runners
+      - name: Remove poetry virtual env
+        if: always()
+        # Python version below should agree with the version set up by this job.
+        # In future we'll be able to use the `--all` flag here to remove envs for
+        # all Python versions (https://github.com/python-poetry/poetry/issues/3208).
+        run: |
+          cd tests/goth/
+          poetry env remove python3.8 
