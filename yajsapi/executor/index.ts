@@ -456,30 +456,41 @@ export class Executor implements ComputationHistory {
                          `strategy: ${strategy.constructor.name}, ` +
                          `score: ${score}`);
           } catch (error) {
+            logger.log("debug", `Score offer error: ${error}`);
             try {
               await proposal.reject(error);
+              emit(
+                new events.ProposalRejected({
+                  prop_id: proposal.id(),
+                  reason: error,
+                })
+              );
             } catch (e) {
-              //suppress error
+              emit(
+                new events.ProposalFailed({
+                  prop_id: proposal.id(),
+                  reason: e,
+                })
+              );
             }
-            emit(
-              new events.ProposalRejected({
-                prop_id: proposal.id(),
-                reason: error,
-              })
-            );
             continue;
           }
           if (score < SCORE_NEUTRAL) {
             const reason = "Score too low";
             try {
               await proposal.reject(reason);
+              emit(new events.ProposalRejected({
+                prop_id: proposal.id(),
+                reason: reason,
+              }));
             } catch (error) {
-              logger.log("debug", `Reject error: ${error}`);
+              emit(
+                new events.ProposalFailed({
+                  prop_id: proposal.id(),
+                  reason: error,
+                })
+              );
             }
-            emit(new events.ProposalRejected({
-              prop_id: proposal.id(),
-              reason: reason,
-            }));
             continue;
           }
           if (!proposal.is_draft()) {
@@ -494,15 +505,20 @@ export class Executor implements ComputationHistory {
                 const reason = "No common payment platforms";
                 try {
                   await proposal.reject(reason);
+                  emit(
+                    new events.ProposalRejected({
+                      prop_id: proposal.id,
+                      reason: reason,
+                    })
+                  );
                 } catch (error) {
-                  logger.log("debug", `Reject error: ${error}`);
+                  emit(
+                    new events.ProposalFailed({
+                      prop_id: proposal.id(),
+                      reason: error,
+                    })
+                  );
                 }
-                emit(
-                  new events.ProposalRejected({
-                    prop_id: proposal.id,
-                    reason: reason,
-                  })
-                );
                 continue;
               }
               let timeout = proposal.props()[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP];
@@ -511,15 +527,20 @@ export class Executor implements ComputationHistory {
                   const reason = "Debit note acceptance timeout too short";
                   try {
                     await proposal.reject(reason);
+                    emit(
+                      new events.ProposalRejected({
+                        prop_id: proposal.id,
+                        reason: reason,
+                      })
+                    );
                   } catch (e) {
-                    logger.log("debug", `Reject error: ${e}`);
+                    emit(
+                      new events.ProposalFailed({
+                        prop_id: proposal.id(),
+                        reason: e,
+                      })
+                    );
                   }
-                  emit(
-                    new events.ProposalRejected({
-                      prop_id: proposal.id,
-                      reason: reason,
-                    })
-                  );
                   continue;
                 } else {
                   builder._properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout;
