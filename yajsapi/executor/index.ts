@@ -456,12 +456,17 @@ export class Executor implements ComputationHistory {
                          `strategy: ${strategy.constructor.name}, ` +
                          `score: ${score}`);
           } catch (error) {
-            emit(
-              new events.ProposalRejected({
-                prop_id: proposal.id(),
-                reason: error,
-              })
-            );
+            try {
+              await proposal.reject(error);
+              emit(
+                new events.ProposalRejected({
+                  prop_id: proposal.id(),
+                  reason: error,
+                })
+              );
+            } catch (e) {
+              //suppress error
+            }
             continue;
           }
           if (score < SCORE_NEUTRAL) {
@@ -499,6 +504,7 @@ export class Executor implements ComputationHistory {
                 } catch (error) {
                   //suppress error
                 }
+                continue;
               }
               let timeout = proposal.props()[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP];
               if (timeout) {
