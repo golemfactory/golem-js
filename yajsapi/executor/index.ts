@@ -491,8 +491,8 @@ export class Executor implements ComputationHistory {
                 builder._properties["golem.com.payment.chosen-platform"] =
                   common_platforms[0];
               } else {
+                const reason = "No common payment platforms";
                 try {
-                  const reason = "No common payment platforms";
                   await proposal.reject(reason);
                 } catch (error) {
                   logger.log("debug", `Reject error: ${error}`);
