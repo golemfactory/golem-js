@@ -458,29 +458,28 @@ export class Executor implements ComputationHistory {
           } catch (error) {
             try {
               await proposal.reject(error);
-              emit(
-                new events.ProposalRejected({
-                  prop_id: proposal.id(),
-                  reason: error,
-                })
-              );
             } catch (e) {
               //suppress error
             }
+            emit(
+              new events.ProposalRejected({
+                prop_id: proposal.id(),
+                reason: error,
+              })
+            );
             continue;
           }
           if (score < SCORE_NEUTRAL) {
+            const reason = "Score too low";
             try {
-              const reason = "Score too low";
               await proposal.reject(reason);
-              emit(new events.ProposalRejected({
-                prop_id: proposal.id(),
-                reason: reason,
-              }));
             } catch (error) {
-              //suppress and log the error and continue;
               logger.log("debug", `Reject error: ${error}`);
             }
+            emit(new events.ProposalRejected({
+              prop_id: proposal.id(),
+              reason: reason,
+            }));
             continue;
           }
           if (!proposal.is_draft()) {
@@ -495,15 +494,15 @@ export class Executor implements ComputationHistory {
                 try {
                   const reason = "No common payment platforms";
                   await proposal.reject(reason);
-                  emit(
-                    new events.ProposalRejected({
-                      prop_id: proposal.id,
-                      reason: reason,
-                    })
-                  );
                 } catch (error) {
-                  //suppress error
+                  logger.log("debug", `Reject error: ${error}`);
                 }
+                emit(
+                  new events.ProposalRejected({
+                    prop_id: proposal.id,
+                    reason: reason,
+                  })
+                );
                 continue;
               }
               let timeout = proposal.props()[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP];
@@ -513,7 +512,7 @@ export class Executor implements ComputationHistory {
                   try {
                     await proposal.reject(reason);
                   } catch (e) {
-                    // with contextlib.suppress(Exception):
+                    logger.log("debug", `Reject error: ${e}`);
                   }
                   emit(
                     new events.ProposalRejected({
@@ -521,6 +520,7 @@ export class Executor implements ComputationHistory {
                       reason: reason,
                     })
                   );
+                  continue;
                 } else {
                   builder._properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout;
                 }
