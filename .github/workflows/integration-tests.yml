@@ -27,8 +27,8 @@ jobs:
       - name: Build yajsapi
         run: |
           cd examples
-          yarn install
-          yarn build
+          npm install
+          npm build
 
       - name: Configure python
         uses: actions/setup-python@v2
