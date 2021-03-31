@@ -12,6 +12,9 @@ from goth.runner import Runner
 from goth.runner.probe import RequestorProbe
 
 
+logger = logging.getLogger("goth.test.run_blender")
+
+
 @pytest.mark.asyncio
 async def test_run_blender(
     log_dir: Path,
