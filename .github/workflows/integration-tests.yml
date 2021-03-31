@@ -43,8 +43,8 @@ jobs:
           GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd tests/goth/
-          poetry run python -m goth create-assets tests/goth/assets
-          poetry run pytest -svx tests/goth
+          poetry run python -m goth create-assets assets
+          poetry run pytest -svx .
 
       - name: Upload test logs
         uses: actions/upload-artifact@v2
