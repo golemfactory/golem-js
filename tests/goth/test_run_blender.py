@@ -15,6 +15,17 @@ from goth.runner.probe import RequestorProbe
 logger = logging.getLogger("goth.test.run_blender")
 
 
+# Temporal assertions expressing properties of sequences of "events". In this case, each "event"
+# is just a line of output from `blender.py`.
+
+
+async def assert_no_errors(output_lines: EventStream[str]):
+    """Assert that no output line contains the substring `ERROR`."""
+    async for line in output_lines:
+        if "ERROR" in line:
+            raise AssertionError("Command reported ERROR")
+
+
 @pytest.mark.asyncio
 async def test_run_blender(
     log_dir: Path,
