@@ -1,3 +1,5 @@
+import pytest
+
 @pytest.mark.asyncio
 async def test_run_blender(
     log_dir: Path,
