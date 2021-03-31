@@ -25,9 +25,6 @@ jobs:
           node-version: '12.18.3'
 
       - name: Build yajsapi
-        uses: actions/setup-node@v1
-        with:
-          node-version: '12.18.3'
         run: |
           cd examples
           yarn install
