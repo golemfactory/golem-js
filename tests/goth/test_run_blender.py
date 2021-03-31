@@ -22,6 +22,7 @@ logger = logging.getLogger("goth.test.run_blender")
 async def assert_no_errors(output_lines: EventStream[str]):
     """Assert that no output line contains the substring `ERROR`."""
     async for line in output_lines:
+        logger.debug(line)
         if "ERROR" in line:
             raise AssertionError("Command reported ERROR")
 
