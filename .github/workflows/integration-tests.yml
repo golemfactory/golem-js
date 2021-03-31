@@ -24,6 +24,12 @@ jobs:
         with:
           node-version: '12.18.3'
 
+      - name: Build yajsapi
+        run: |
+          cd examples
+          yarn install
+          yarn build
+
       - name: Configure python
         uses: actions/setup-python@v2
         with:
@@ -42,9 +48,6 @@ jobs:
 
       - name: Log in to GitHub Docker repository
         run: echo ${{ secrets.GITHUB_TOKEN }} | docker login docker.pkg.github.com -u ${{github.actor}} --password-stdin
-
-      - name: Test node.js
-        run: node --version
 
       - name: Run test suite
         env:
