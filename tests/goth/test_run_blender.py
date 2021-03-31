@@ -34,6 +34,8 @@ async def test_run_blender(
 
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
+        logger.error("test %s", blender_path)
+
         async with requestor.run_command_on_host(
             f"node {blender_path} --subnet-tag goth",
             env=os.environ,
