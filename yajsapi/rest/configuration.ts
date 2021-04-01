@@ -2,7 +2,7 @@ import { yaActivity, yaMarket, yaPayment } from "ya-ts-client";
 import { Agent as HttpAgent } from "http";
 import { Agent as HttpsAgent } from "https";
 
-const DEFAULT_API_URL: string = "http://127.0.0.1:7465";
+const DEFAULT_YAGNA_API_URL: string = "http://127.0.0.1:7465";
 
 class MissingConfiguration extends Error {
   constructor(key: string, description: string) {
@@ -34,7 +34,7 @@ export class Configuration {
   ) {
     this.__app_key =
       app_key || env_or_fail("YAGNA_APPKEY", "API authentication token");
-    this.__url = url || DEFAULT_API_URL;
+    this.__url = url || process.env["YAGNA_API_URL"] || DEFAULT_YAGNA_API_URL;
 
     const resolve_url = (
       given_url?: string,
