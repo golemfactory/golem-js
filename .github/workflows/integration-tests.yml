@@ -32,7 +32,7 @@ jobs:
           ls -al
           npm install
           npm run-script build
-          ls -al
+          ls -alR
           cd examples
           npm install
           sed -i 's/require("yajsapi");/require("..\/..\/dist\/dist\/yajsapi");/' blender/blender.js
