@@ -28,11 +28,8 @@ jobs:
         run: |
           sudo apt-get update -y
           sudo apt-get install -y build-essential
-          pwd
-          ls -al
           npm install
           npm run-script build
-          ls -alR
           cd examples
           npm install
           sed -i 's/require("yajsapi");/require("..\/..\/dist\/yajsapi");/' blender/blender.js
