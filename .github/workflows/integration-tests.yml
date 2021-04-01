@@ -35,7 +35,7 @@ jobs:
           ls -al
           cd examples
           npm install
-          sed -i 's/require("yajsapi");/require("/opt/actions-runner/_work/yajsapi/yajsapi/dist");/' blender/blender.js
+          sed -i 's/require("yajsapi");/require("\/opt\/actions-runner\/_work\/yajsapi\/yajsapi\/dist");/' blender/blender.js
 
       - name: Configure python
         uses: actions/setup-python@v2
