@@ -55,11 +55,6 @@ jobs:
         run: |
           cd tests/goth/
           poetry run python -m goth create-assets assets
-          echo yagnaurl2=$YAGNA_API_URL
-          echo yagnaurl1=${{env.YAGNA_API_URL}}
-          export YAGNA_MARKET_URL=$YAGNA_API_URL/market-api/v1
-          export YAGNA_PAYMENT_URL=$YAGNA_API_URL/payment-api/v1
-          export YAGNA_ACTIVITY_URL=$YAGNA_API_URL/activity-api/v1
           poetry run pytest -svx .
 
       - name: Upload test logs
