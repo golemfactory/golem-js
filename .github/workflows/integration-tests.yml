@@ -33,7 +33,6 @@ jobs:
           cd examples
           sed -i 's/require("yajsapi");/require("..\/..\/dist");/' blender/blender.js
           npm install
-          npm run-script build
 
       - name: Configure python
         uses: actions/setup-python@v2
