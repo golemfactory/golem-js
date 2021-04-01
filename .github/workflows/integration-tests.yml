@@ -26,7 +26,10 @@ jobs:
 
       - name: Build yajsapi
         run: |
+          npm install
+          npm build
           cd examples
+          sed 's/require("yajsapi");/require("../../dist");/' blender/blender.js
           npm install
           npm build
 
