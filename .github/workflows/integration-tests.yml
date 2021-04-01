@@ -27,11 +27,11 @@ jobs:
       - name: Build yajsapi
         run: |
           npm install
-          npm build
+          npm run-script build
           cd examples
           sed 's/require("yajsapi");/require("../../dist");/' blender/blender.js
           npm install
-          npm build
+          npm run-script build
 
       - name: Configure python
         uses: actions/setup-python@v2
