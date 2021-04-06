@@ -4,10 +4,11 @@ on:
   push:
     branches:
       - master
-      # - <your-branch>    # put your branch name here to test it @ GH Actions
+      - b0.*
   pull_request:
     branches:
       - master
+      - b0.*
 
 jobs:
 
