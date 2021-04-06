@@ -31,6 +31,7 @@ jobs:
           sudo apt-get install -y build-essential
           npm install
           npm run-script build
+          ls -lR
           cd examples
           npm install
           sed -i 's/require("yajsapi");/require("..\/..\/dist\/index.js");/' blender/blender.js
