@@ -317,10 +317,11 @@ class SummaryLogger {
     } else if (eventName === events.ComputationFailed.name) {
       logger.error(`Computation failed, reason: ${event["reason"]}`);
     } else if (eventName === events.PaymentAccepted.name) {
+      const provider_info = this.agreement_provider_info[event["agr_id"]];
+      let cost = this.provider_cost.get(provider_info) || 0;
+      cost += parseFloat(event["amount"]);
       logger.info(
-        `Accepted payment: ${event["amount"]} for invoice ${event[
-          "inv_id"
-        ].substr(0, 17)}`
+        `Accepted invoice from '${provider_info.name}', amount ${cost}`
       );
     } else if (eventName === events.PaymentFailed.name) {
       const provider_name = this.agreement_provider_info[event["agr_id"]].name;
