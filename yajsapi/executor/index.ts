@@ -987,9 +987,13 @@ export class Executor implements ComputationHistory {
       this._active_computations -= 1;
     }
     // TODO: prevent new computations at this point (if it's even possible to start one)
-    logger.debug("Executor shut down.");
     this._market_api = null;
     this._payment_api = null;
-    await this._stack.aclose();
+    try {
+      await this._stack.aclose();
+      logger.info("Executor has shut down");
+    } catch (e) {
+      logger.error(`Error when shutting down Executor: ${e}`);
+    }
   }
 }

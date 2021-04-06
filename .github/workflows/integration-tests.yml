@@ -1,0 +1,84 @@
+name: Integrations Tests
+
+on:
+  push:
+    branches:
+      - master
+      # - <your-branch>    # put your branch name here to test it @ GH Actions
+  pull_request:
+    branches:
+      - master
+
+jobs:
+
+  goth-tests:
+    name: Run integration tests
+    runs-on: goth
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Configure node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: '12.18.3'
+
+      - name: Build yajsapi
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y build-essential
+          npm install
+          npm run-script build
+          cd examples
+          npm install
+          sed -i 's/require("yajsapi");/require("..\/..\/dist\/yajsapi");/' blender/blender.js
+
+      - name: Configure python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8.0'
+
+      - name: Configure poetry
+        uses: Gr1N/setup-poetry@v4
+        with:
+          poetry-version: 1.1.4
+
+      - name: Install dependencies
+        run: |
+          cd tests/goth/
+          poetry env use python3.8
+          poetry install
+
+      - name: Log in to GitHub Docker repository
+        run: echo ${{ secrets.GITHUB_TOKEN }} | docker login docker.pkg.github.com -u ${{github.actor}} --password-stdin
+
+      - name: Run test suite
+        env:
+          GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd tests/goth/
+          poetry run python -m goth create-assets assets
+          poetry run pytest -svx .
+
+      - name: Upload test logs
+        uses: actions/upload-artifact@v2
+        if: always()
+        with:
+           name: goth-logs
+           path: /tmp/goth-tests
+
+      # Only relevant for self-hosted runners
+      - name: Remove test logs
+        if: always()
+        run: rm -rf /tmp/goth-tests
+
+      # Only relevant for self-hosted runners
+      - name: Remove poetry virtual env
+        if: always()
+        # Python version below should agree with the version set up by this job.
+        # In future we'll be able to use the `--all` flag here to remove envs for
+        # all Python versions (https://github.com/python-poetry/poetry/issues/3208).
+        run: |
+          cd tests/goth/
+          poetry env remove python3.8 
