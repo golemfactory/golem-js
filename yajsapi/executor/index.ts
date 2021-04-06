@@ -991,7 +991,7 @@ export class Executor implements ComputationHistory {
     this._payment_api = null;
     try {
       await this._stack.aclose();
-      logger.debug("Executor has shut down");
+      logger.info("Executor has shut down");
     } catch (e) {
       logger.error(`Error when shutting down Executor: ${e}`);
     }
