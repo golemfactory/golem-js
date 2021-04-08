@@ -5,6 +5,8 @@
 /logs
 /node_modules
 /yajsapi
+/tests
+.github
 .gitignore
 package-lock.json
 tsconfig.json
