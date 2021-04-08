@@ -65,7 +65,7 @@ export class Agreement {
   }
 
   async confirm(): Promise<boolean> {
-    await this._api.confirmAgreement(this._id);
+    await this._api.confirmAgreement(this._id, undefined, { timeout: 16000 });
     try {
       let { data: msg } = await this._api.waitForApproval(this._id, 15, { timeout: 16000 });
       return true;
@@ -149,7 +149,8 @@ export class OfferProposal {
       await this._subscription._api.rejectProposalOffer(
         this._subscription.id(),
         this.id(),
-        { message: (_reason || "no reason") as Object }
+        { message: (_reason || "no reason") as Object },
+        { timeout: 5000 }
       );
     } catch (e) {
       logger.debug(`Cannot reject offer ${this.id()}` + e.response.data.message);
