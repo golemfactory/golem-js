@@ -359,7 +359,7 @@ export class Executor implements ComputationHistory {
             emit(new events.PaymentFailed({ agr_id: invoice.agreementId, reason: e.toString() }));
           }
         } else {
-          invoices[invoice.agreementId] = invoice;
+          invoices.set(invoice.agreementId, invoice);
         }
         if (payment_closing && agreements_to_pay.size === 0) {
           break;
