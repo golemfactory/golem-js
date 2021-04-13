@@ -60,7 +60,7 @@ class AgreementsPool {
     return task;
   }
   async _set_worker(agreement_id: string, task: any): Promise<void> {
-    let buffered_agreement: BufferedAgreement = this._agreements.get(agreement_id);
+    let buffered_agreement = this._agreements.get(agreement_id);
     if (buffered_agreement === undefined) return;
     if (buffered_agreement.worker_task) throw "worker_task must be empty";
     buffered_agreement.worker_task = task;
@@ -135,11 +135,11 @@ class AgreementsPool {
     }
   }
   private async _terminate_agreement(agreement_id: string, reason: object): Promise<void> {
-    if (!this._agreements.has(agreement_id)) {
+    const buffered_agreement = this._agreements.get(agreement_id)
+    if (buffered_agreement === undefined) {
       logger.warning("Trying to terminate agreement not in the pool. id: ${agreement_id}");
       return;
     }
-    const buffered_agreement: BufferedAgreement = this._agreements.get(agreement_id)
     const agreement_details = await buffered_agreement.agreement.details()
     const provider = agreement_details.provider_view().extract(new NodeInfo());
     logger.debug("Terminating agreement. id: ${agreement_id}, reason: ${reason}, provider: ${provider}");
@@ -168,7 +168,7 @@ class AgreementsPool {
   }
   async on_agreement_terminated(agr_id: string, reason: object): Promise<void> {
     // TODO async with self._lock:
-    const buffered_agreement: BufferedAgreement = this._agreements.get(agr_id);
+    const buffered_agreement = this._agreements.get(agr_id);
     if (buffered_agreement === undefined) return;
     if (buffered_agreement.worker_task) buffered_agreement.worker_task.cancel(); // TODO: cancel task in JS
     this._agreements.delete(agr_id);
