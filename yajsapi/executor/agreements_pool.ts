@@ -1,5 +1,6 @@
 import { NodeInfo } from "../props";
 import { Agreement, OfferProposal } from "../rest/market";
+import { logger } from "../utils";
 
 class _BufferedProposal {
   ts: Date;
@@ -33,8 +34,8 @@ class AgreementsPool {
   private _rejecting_providers: Set<string> = new Set();
   private _confirmed: number = 0;
   async cycle(): Promise<void> {
-    for (const agreement_id of this._agreements.keys()) {
-      let buffered_agreement = this._agreements[agreement_id];
+    for (const agreement_id of new Map(this._agreements).keys()) {
+      let buffered_agreement = this._agreements.get(agreement_id);
       if (buffered_agreement === undefined) { continue; }
       let task = buffered_agreement.worker_task;
       /* TODO put JS/TS version of asyncio.Task done() here
@@ -46,7 +47,7 @@ class AgreementsPool {
   }
   async add_proposal(score: number, proposal: OfferProposal): Promise<void> {
     // TODO async with self._lock:
-    this._offer_buffer[proposal.issuer()] = new _BufferedProposal(new Date(), score, proposal);
+    this._offer_buffer.set(proposal.issuer(), new _BufferedProposal(new Date(), score, proposal));
   }
   async use_agreement(cbk: any): Promise<any> {
     // TODO async with self._lock:
@@ -59,15 +60,14 @@ class AgreementsPool {
     return task;
   }
   async _set_worker(agreement_id: string, task: any): Promise<void> {
-    let buffered_agreement: BufferedAgreement = this._agreements[agreement_id];
+    let buffered_agreement: BufferedAgreement = this._agreements.get(agreement_id);
     if (buffered_agreement === undefined) return;
     if (buffered_agreement.worker_task) throw "worker_task must be empty";
     buffered_agreement.worker_task = task;
   }
   private async _get_agreement(): Promise<[Agreement, NodeInfo] | undefined> {
-    /* TODO port to JS
-    emit = self.emitter
-
+    // TODO const emit = this.emitter;
+    /*
     try:
         buffered_agreement = random.choice(
             [ba for ba in self._agreements.values() if ba.worker_task is None]
@@ -125,7 +125,7 @@ class AgreementsPool {
   }
   async release_agreement(agreement_id: string, allow_reuse: boolean = true): Promise<void> {
     // TODO async with self._lock:
-    const buffered_agreement = this._agreements[agreement_id];
+    const buffered_agreement = this._agreements.get(agreement_id);
     if (buffered_agreement === undefined) return;
     buffered_agreement.worker_task = undefined;
     // Check whether agreement can be reused
@@ -136,25 +136,25 @@ class AgreementsPool {
   }
   private async _terminate_agreement(agreement_id: string, reason: object): Promise<void> {
     if (!this._agreements.has(agreement_id)) {
-      // TODO logger.warning("Trying to terminate agreement not in the pool. id: ${agreement_id}")
+      logger.warning("Trying to terminate agreement not in the pool. id: ${agreement_id}");
       return;
     }
-    const buffered_agreement: BufferedAgreement = this._agreements[agreement_id]
+    const buffered_agreement: BufferedAgreement = this._agreements.get(agreement_id)
     const agreement_details = await buffered_agreement.agreement.details()
-    // TODO const provider = agreement_details.provider_view.extract(NodeInfo)
-    // TODO logger.debug("Terminating agreement. id: ${agreement_id}, reason: ${reason}, provider: ${provider}");
+    const provider = agreement_details.provider_view().extract(new NodeInfo());
+    logger.debug("Terminating agreement. id: ${agreement_id}, reason: ${reason}, provider: ${provider}");
     if (buffered_agreement.worker_task && !buffered_agreement.worker_task.done()) { // TODO done() in JS
-      /* TODO logger.debug(
+      logger.debug(
         "Terminating agreement that still has worker. " +
         "agreement_id: ${buffered_agreement.agreement.id()}, worker: ${buffered_agreement.worker_task}"
-      ); */
+      );
       buffered_agreement.worker_task.cancel(); // TODO cancel() in JS
     }
     if (buffered_agreement.has_multi_activity) {
       if (!(await buffered_agreement.agreement.terminate(reason.toString()))) {
-        /* TODO logger.debug(
+        logger.debug(
           "Couldn't terminate agreement. id=${buffered_agreement.agreement.id()}, provider=${provider}"
-        );*/
+        );
       }
     }
     this._agreements.delete(agreement_id);
@@ -162,17 +162,17 @@ class AgreementsPool {
   }
   async terminate_all(reason: object): Promise<void> {
     // TODO async with self._lock:
-    for (const agreement_id of this._agreements.keys()) {
+    for (const agreement_id of new Map(this._agreements).keys()) {
       await this._terminate_agreement(agreement_id, reason)
     }
   }
   async on_agreement_terminated(agr_id: string, reason: object): Promise<void> {
     // TODO async with self._lock:
-    const buffered_agreement: BufferedAgreement = this._agreements[agr_id];
+    const buffered_agreement: BufferedAgreement = this._agreements.get(agr_id);
     if (buffered_agreement === undefined) return;
     if (buffered_agreement.worker_task) buffered_agreement.worker_task.cancel(); // TODO: cancel task in JS
     this._agreements.delete(agr_id);
-    // TODO this.emitter(events.AgreementTerminated(agr_id=agr_id, reason=reason));
+    // TODO self.emitter(events.AgreementTerminated(agr_id=agr_id, reason=reason));
   }
   rejected_last_agreement(provider_id: string): boolean {
     return this._rejecting_providers.has(provider_id);
