@@ -34,7 +34,7 @@ class AgreementDetails extends Object {
     return new View(offer.properties);
   }
 
-  requestor_view(c: Model): View {
+  requestor_view(): View {
     let demand: models.Demand = this.raw_details.demand;
     return new View(demand.properties);
   }
@@ -154,7 +154,7 @@ export class OfferProposal {
       );
     } catch (e) {
       logger.debug(`Cannot reject offer ${this.id()}` + e.response.data.message);
-      throw(e);
+      throw e;
     }
   }
 

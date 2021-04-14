@@ -1,4 +1,4 @@
-import { NodeInfo } from "../props";
+import { Activity, NodeInfo } from "../props";
 import { Agreement, OfferProposal } from "../rest/market";
 import { logger } from "../utils";
 
@@ -67,60 +67,67 @@ class AgreementsPool {
   }
   private async _get_agreement(): Promise<[Agreement, NodeInfo] | undefined> {
     // TODO const emit = this.emitter;
-    /*
-    try:
-        buffered_agreement = random.choice(
-            [ba for ba in self._agreements.values() if ba.worker_task is None]
-        )
-        logger.debug("Reusing agreement. id: %s", buffered_agreement.agreement.id)
-        return buffered_agreement.agreement, buffered_agreement.node_info
-    except IndexError:  # empty pool
-        pass
+    const available_agreements =
+      [...this._agreements.values()].filter(agr => agr.worker_task !== undefined);
+    if (available_agreements.length > 0) {
+      const buffered_agreement
+        = available_agreements[Math.floor(Math.random() * available_agreements.length)];
+      logger.debug(`Reusing agreement. id: ${buffered_agreement.agreement.id}`);
+      return [buffered_agreement.agreement, buffered_agreement.node_info];
+    }
 
-    try:
-        offers = list(self._offer_buffer.items())
-        # Shuffle the offers before picking one with the max score,
-        # in case there's more than one with this score.
-        random.shuffle(offers)
-        provider_id, offer = max(offers, key=lambda elem: elem[1].score)
-    except ValueError:  # empty pool
-        return None
-    del self._offer_buffer[provider_id]
-    try:
-        agreement = await offer.proposal.create_agreement()
-    except asyncio.CancelledError:
-        raise
-    except Exception as e:
-        exc_info = (type(e), e, sys.exc_info()[2])
-        emit(events.ProposalFailed(prop_id=offer.proposal.id, exc_info=exc_info))
-        raise
-    agreement_details = await agreement.details()
-    provider_activity = agreement_details.provider_view.extract(Activity)
-    requestor_activity = agreement_details.requestor_view.extract(Activity)
-    node_info = agreement_details.provider_view.extract(NodeInfo)
-    logger.debug("New agreement. id: %s, provider: %s", agreement.id, node_info)
-    emit(
-        events.AgreementCreated(
-            agr_id=agreement.id, provider_id=provider_id, provider_info=node_info
+    if (this._offer_buffer.size === 0) { return; }
+    let _sample =
+      [...this._offer_buffer.entries()]
+      .map(x => { return { obj: x, rnd: Math.random() }; })
+      .sort((a, b) => a.rnd - b.rnd)
+      .map(x => x.obj)
+      .reduce((acc, item) => item[1].score > acc[1].score ? item : acc);
+    let [provider_id, offer] = _sample;
+    this._offer_buffer.delete(provider_id);
+    try {
+      const agreement = await offer.proposal.create_agreement();
+      const agreement_details = await agreement.details()
+      const provider_activity = <Activity>agreement_details.provider_view().extract(new Activity());
+      const requestor_activity = <Activity>agreement_details.requestor_view().extract(new Activity());
+      const node_info = <NodeInfo>agreement_details.provider_view().extract(new NodeInfo());
+      logger.debug(`New agreement. id: ${agreement.id()}, provider: ${node_info}`);
+      /* TODO emit(
+        new events.AgreementCreated({
+          agr_id: agreement.id(),
+          provider_id: provider_id,
+          provider_info: node_info,
+        })
+      );*/
+      if (!(await agreement.confirm())) {
+        /* TODO emit(new events.AgreementRejected({ agr_id: agreement.id() })); */
+        this._rejecting_providers.add(provider_id);
+        return;
+      }
+      this._rejecting_providers.delete(provider_id);
+      this._agreements.set(
+        agreement.id(),
+        new BufferedAgreement(
+          agreement,
+          node_info,
+          undefined,
+          !!(provider_activity.multi_activity.value()) &&
+          !!(requestor_activity.multi_activity.value())
         )
-    )
-    if not await agreement.confirm():
-        emit(events.AgreementRejected(agr_id=agreement.id))
-        self._rejecting_providers.add(provider_id)
-        return None
-    self._rejecting_providers.discard(provider_id)
-    self._agreements[agreement.id] = BufferedAgreement(
-        agreement=agreement,
-        node_info=node_info,
-        worker_task=None,
-        has_multi_activity=bool(
-            provider_activity.multi_activity and requestor_activity.multi_activity
-        ),
-    )
-    emit(events.AgreementConfirmed(agr_id=agreement.id))
-    self.confirmed += 1
-    return agreement, node_info
-    */
+      )
+      /* TODO emit(new events.AgreementConfirmed({ agr_id: agreement.id() })); */
+      this._confirmed += 1;
+      return [agreement, node_info];
+    } catch (e) {
+      /* TODO
+      emit(
+        new events.ProposalFailed({
+          prop_id: offer.proposal.id(),
+          reason: e.toString(),
+        })
+      );*/
+      throw e;
+    }
     return;
   }
   async release_agreement(agreement_id: string, allow_reuse: boolean = true): Promise<void> {
@@ -137,23 +144,23 @@ class AgreementsPool {
   private async _terminate_agreement(agreement_id: string, reason: object): Promise<void> {
     const buffered_agreement = this._agreements.get(agreement_id)
     if (buffered_agreement === undefined) {
-      logger.warning("Trying to terminate agreement not in the pool. id: ${agreement_id}");
+      logger.warning(`Trying to terminate agreement not in the pool. id: ${agreement_id}`);
       return;
     }
     const agreement_details = await buffered_agreement.agreement.details()
     const provider = agreement_details.provider_view().extract(new NodeInfo());
-    logger.debug("Terminating agreement. id: ${agreement_id}, reason: ${reason}, provider: ${provider}");
+    logger.debug(`Terminating agreement. id: ${agreement_id}, reason: ${reason}, provider: ${provider}`);
     if (buffered_agreement.worker_task && !buffered_agreement.worker_task.done()) { // TODO done() in JS
       logger.debug(
         "Terminating agreement that still has worker. " +
-        "agreement_id: ${buffered_agreement.agreement.id()}, worker: ${buffered_agreement.worker_task}"
+        `agreement_id: ${buffered_agreement.agreement.id()}, worker: ${buffered_agreement.worker_task}`
       );
       buffered_agreement.worker_task.cancel(); // TODO cancel() in JS
     }
     if (buffered_agreement.has_multi_activity) {
       if (!(await buffered_agreement.agreement.terminate(reason.toString()))) {
         logger.debug(
-          "Couldn't terminate agreement. id=${buffered_agreement.agreement.id()}, provider=${provider}"
+          `Couldn't terminate agreement. id=${buffered_agreement.agreement.id()}, provider=${provider}`
         );
       }
     }
