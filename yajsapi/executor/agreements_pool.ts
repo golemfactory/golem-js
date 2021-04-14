@@ -53,7 +53,7 @@ class AgreementsPool {
     // TODO async with self._lock:
     /* TODO check if it's correct */
     let agreement_with_info = await this._get_agreement();
-    if (!agreement_with_info) return null;
+    if (!agreement_with_info) return;
     let [agreement, node_info] = agreement_with_info;
     let task = cbk(agreement, node_info);
     await this._set_worker(agreement.id(), task);
@@ -88,6 +88,7 @@ class AgreementsPool {
     try {
       const agreement = await offer.proposal.create_agreement();
       const agreement_details = await agreement.details()
+      /* TODO check if casting works */
       const provider_activity = <Activity>agreement_details.provider_view().extract(new Activity());
       const requestor_activity = <Activity>agreement_details.requestor_view().extract(new Activity());
       const node_info = <NodeInfo>agreement_details.provider_view().extract(new NodeInfo());
@@ -105,6 +106,7 @@ class AgreementsPool {
         return;
       }
       this._rejecting_providers.delete(provider_id);
+      /* TODO check if .multi_activity.value is correct */
       this._agreements.set(
         agreement.id(),
         new BufferedAgreement(
