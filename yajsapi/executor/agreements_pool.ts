@@ -111,8 +111,7 @@ class AgreementsPool {
           agreement,
           node_info,
           undefined,
-          !!(provider_activity.multi_activity.value()) &&
-          !!(requestor_activity.multi_activity.value())
+          provider_activity.multi_activity.value && requestor_activity.multi_activity.value
         )
       )
       /* TODO emit(new events.AgreementConfirmed({ agr_id: agreement.id() })); */
