@@ -1,6 +1,7 @@
 import { Activity, NodeInfo } from "../props";
 import { Agreement, OfferProposal } from "../rest/market";
-import { logger } from "../utils";
+import { asyncWith, logger } from "../utils";
+import { Lock } from "../utils/lock";
 import * as events from "./events";
 
 class _BufferedProposal {
@@ -31,7 +32,7 @@ class AgreementsPool {
   private emitter;
   private _offer_buffer: Map<string, _BufferedProposal> = new Map();
   private _agreements: Map<string, BufferedAgreement> = new Map();
-  // TODO _lock;
+  private _lock: Lock = new Lock();
   private _rejecting_providers: Set<string> = new Set();
   private _confirmed: number = 0;
   constructor(emitter) {
@@ -42,26 +43,26 @@ class AgreementsPool {
       let buffered_agreement = this._agreements.get(agreement_id);
       if (buffered_agreement === undefined) { continue; }
       let task = buffered_agreement.worker_task;
-      /* TODO put JS/TS version of asyncio.Task done() here
-      if (task && task.done() {
+      if (task && task.isFulfilled()) {
         await this.release_agreement(buffered_agreement.agreement.id(), !(task.exception))
       }
-      */
     }
   }
   async add_proposal(score: number, proposal: OfferProposal): Promise<void> {
-    // TODO async with self._lock:
-    this._offer_buffer.set(proposal.issuer(), new _BufferedProposal(new Date(), score, proposal));
+    await asyncWith(this._lock, async (lock) => {
+      this._offer_buffer.set(proposal.issuer(), new _BufferedProposal(new Date(), score, proposal));
+    });
   }
   async use_agreement(cbk: any): Promise<any> {
-    // TODO async with self._lock:
-    /* TODO check if it's correct */
-    let agreement_with_info = await this._get_agreement();
-    if (!agreement_with_info) return;
-    let [agreement, node_info] = agreement_with_info;
-    let task = cbk(agreement, node_info);
-    await this._set_worker(agreement.id(), task);
-    return task;
+    await asyncWith(this._lock, async (lock) => {
+      /* TODO check if it's correct */
+      let agreement_with_info = await this._get_agreement();
+      if (!agreement_with_info) return;
+      let [agreement, node_info] = agreement_with_info;
+      let task = cbk(agreement, node_info);
+      await this._set_worker(agreement.id(), task);
+      return task;
+    });
   }
   async _set_worker(agreement_id: string, task: any): Promise<void> {
     let buffered_agreement = this._agreements.get(agreement_id);
@@ -135,15 +136,16 @@ class AgreementsPool {
     return;
   }
   async release_agreement(agreement_id: string, allow_reuse: boolean = true): Promise<void> {
-    // TODO async with self._lock:
-    const buffered_agreement = this._agreements.get(agreement_id);
-    if (buffered_agreement === undefined) return;
-    buffered_agreement.worker_task = undefined;
-    // Check whether agreement can be reused
-    if (!allow_reuse || !buffered_agreement.has_multi_activity) {
-      const reason = { "message": "Work cancelled", "golem.requestor.code": "Cancelled" };
-      await this._terminate_agreement(agreement_id, reason);
-    }
+    await asyncWith(this._lock, async (lock) => {
+      const buffered_agreement = this._agreements.get(agreement_id);
+      if (buffered_agreement === undefined) return;
+      buffered_agreement.worker_task = undefined;
+      // Check whether agreement can be reused
+      if (!allow_reuse || !buffered_agreement.has_multi_activity) {
+        const reason = { "message": "Work cancelled", "golem.requestor.code": "Cancelled" };
+        await this._terminate_agreement(agreement_id, reason);
+      }
+    });
   }
   private async _terminate_agreement(agreement_id: string, reason: object): Promise<void> {
     const buffered_agreement = this._agreements.get(agreement_id)
@@ -154,12 +156,12 @@ class AgreementsPool {
     const agreement_details = await buffered_agreement.agreement.details()
     const provider = agreement_details.provider_view().extract(new NodeInfo());
     logger.debug(`Terminating agreement. id: ${agreement_id}, reason: ${reason}, provider: ${provider}`);
-    if (buffered_agreement.worker_task && !buffered_agreement.worker_task.done()) { // TODO done() in JS
+    if (buffered_agreement.worker_task && !buffered_agreement.worker_task.isFulfilled()) {
       logger.debug(
         "Terminating agreement that still has worker. " +
         `agreement_id: ${buffered_agreement.agreement.id()}, worker: ${buffered_agreement.worker_task}`
       );
-      buffered_agreement.worker_task.cancel(); // TODO cancel() in JS
+      buffered_agreement.worker_task.cancel(); // TODO: cancel() doesn't work
     }
     if (buffered_agreement.has_multi_activity) {
       if (!(await buffered_agreement.agreement.terminate(reason.toString()))) {
@@ -175,21 +177,23 @@ class AgreementsPool {
     }));
   }
   async terminate_all(reason: object): Promise<void> {
-    // TODO async with self._lock:
-    for (const agreement_id of new Map(this._agreements).keys()) {
-      await this._terminate_agreement(agreement_id, reason)
-    }
+    await asyncWith(this._lock, async (lock) => {
+      for (const agreement_id of new Map(this._agreements).keys()) {
+        await this._terminate_agreement(agreement_id, reason)
+      }
+    });
   }
   async on_agreement_terminated(agr_id: string, reason: object): Promise<void> {
-    // TODO async with self._lock:
-    const buffered_agreement = this._agreements.get(agr_id);
-    if (buffered_agreement === undefined) return;
-    if (buffered_agreement.worker_task) buffered_agreement.worker_task.cancel(); // TODO: cancel task in JS
-    this._agreements.delete(agr_id);
-    this.emitter(new events.AgreementTerminated({
-      agr_id: agr_id,
-      reason: reason.toString(),
-    }));
+    await asyncWith(this._lock, async (lock) => {
+      const buffered_agreement = this._agreements.get(agr_id);
+      if (buffered_agreement === undefined) return;
+      if (buffered_agreement.worker_task) buffered_agreement.worker_task.cancel(); // TODO: cancel doesn't work
+      this._agreements.delete(agr_id);
+      this.emitter(new events.AgreementTerminated({
+        agr_id: agr_id,
+        reason: reason.toString(),
+      }));
+    }
   }
   rejected_last_agreement(provider_id: string): boolean {
     return this._rejecting_providers.has(provider_id);
