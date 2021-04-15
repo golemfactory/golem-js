@@ -1,6 +1,7 @@
 import { Activity, NodeInfo } from "../props";
 import { Agreement, OfferProposal } from "../rest/market";
 import { logger } from "../utils";
+import * as events from "./events";
 
 class _BufferedProposal {
   ts: Date;
@@ -27,12 +28,15 @@ class BufferedAgreement {
 }
 
 class AgreementsPool {
-  // TODO emitter;
+  private emitter;
   private _offer_buffer: Map<string, _BufferedProposal> = new Map();
   private _agreements: Map<string, BufferedAgreement> = new Map();
   // TODO _lock;
   private _rejecting_providers: Set<string> = new Set();
   private _confirmed: number = 0;
+  constructor(emitter) {
+    this.emitter = emitter;
+  }
   async cycle(): Promise<void> {
     for (const agreement_id of new Map(this._agreements).keys()) {
       let buffered_agreement = this._agreements.get(agreement_id);
@@ -66,7 +70,7 @@ class AgreementsPool {
     buffered_agreement.worker_task = task;
   }
   private async _get_agreement(): Promise<[Agreement, NodeInfo] | undefined> {
-    // TODO const emit = this.emitter;
+    const emit = this.emitter;
     const available_agreements =
       [...this._agreements.values()].filter(agr => agr.worker_task !== undefined);
     if (available_agreements.length > 0) {
@@ -93,15 +97,15 @@ class AgreementsPool {
       const requestor_activity = <Activity>agreement_details.requestor_view().extract(new Activity());
       const node_info = <NodeInfo>agreement_details.provider_view().extract(new NodeInfo());
       logger.debug(`New agreement. id: ${agreement.id()}, provider: ${node_info}`);
-      /* TODO emit(
+      emit(
         new events.AgreementCreated({
           agr_id: agreement.id(),
           provider_id: provider_id,
           provider_info: node_info,
         })
-      );*/
+      );
       if (!(await agreement.confirm())) {
-        /* TODO emit(new events.AgreementRejected({ agr_id: agreement.id() })); */
+        emit(new events.AgreementRejected({ agr_id: agreement.id() }));
         this._rejecting_providers.add(provider_id);
         return;
       }
@@ -116,17 +120,16 @@ class AgreementsPool {
           provider_activity.multi_activity.value && requestor_activity.multi_activity.value
         )
       )
-      /* TODO emit(new events.AgreementConfirmed({ agr_id: agreement.id() })); */
+      emit(new events.AgreementConfirmed({ agr_id: agreement.id() }));
       this._confirmed += 1;
       return [agreement, node_info];
     } catch (e) {
-      /* TODO
       emit(
         new events.ProposalFailed({
           prop_id: offer.proposal.id(),
           reason: e.toString(),
         })
-      );*/
+      );
       throw e;
     }
     return;
@@ -166,7 +169,10 @@ class AgreementsPool {
       }
     }
     this._agreements.delete(agreement_id);
-    /* TODO self.emitter(events.AgreementTerminated(agr_id=agreement_id, reason=reason)) */
+    this.emitter(new events.AgreementTerminated({
+      agr_id: agreement_id,
+      reason: reason.toString(),
+    }));
   }
   async terminate_all(reason: object): Promise<void> {
     // TODO async with self._lock:
@@ -180,7 +186,10 @@ class AgreementsPool {
     if (buffered_agreement === undefined) return;
     if (buffered_agreement.worker_task) buffered_agreement.worker_task.cancel(); // TODO: cancel task in JS
     this._agreements.delete(agr_id);
-    // TODO self.emitter(events.AgreementTerminated(agr_id=agr_id, reason=reason));
+    this.emitter(new events.AgreementTerminated({
+      agr_id: agr_id,
+      reason: reason.toString(),
+    }));
   }
   rejected_last_agreement(provider_id: string): boolean {
     return this._rejecting_providers.has(provider_id);
