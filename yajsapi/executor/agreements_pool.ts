@@ -193,7 +193,7 @@ class AgreementsPool {
         agr_id: agr_id,
         reason: reason.toString(),
       }));
-    }
+    });
   }
   rejected_last_agreement(provider_id: string): boolean {
     return this._rejecting_providers.has(provider_id);
