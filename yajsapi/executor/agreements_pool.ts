@@ -1,7 +1,6 @@
 import { Activity, NodeInfo } from "../props";
 import { Agreement, OfferProposal } from "../rest/market";
-import { asyncWith, logger } from "../utils";
-import { Lock } from "../utils/lock";
+import { asyncWith, Lock, logger } from "../utils";
 import * as events from "./events";
 
 class _BufferedProposal {
