@@ -54,15 +54,16 @@ export class AgreementsPool implements ComputationHistory {
     });
   }
   async use_agreement(cbk: any): Promise<any> {
+    let task;
     await asyncWith(this._lock, async (lock) => {
       /* TODO check if it's correct */
       let agreement_with_info = await this._get_agreement();
       if (!agreement_with_info) return;
       let [agreement, node_info] = agreement_with_info;
-      let task = cbk(agreement, node_info);
+      task = cbk(agreement, node_info);
       await this._set_worker(agreement.id(), task);
-      return task;
     });
+    return task;
   }
   async _set_worker(agreement_id: string, task: any): Promise<void> {
     let buffered_agreement = this._agreements.get(agreement_id);
@@ -97,7 +98,7 @@ export class AgreementsPool implements ComputationHistory {
       const provider_activity = <Activity>agreement_details.provider_view().extract(new Activity());
       const requestor_activity = <Activity>agreement_details.requestor_view().extract(new Activity());
       const node_info = <NodeInfo>agreement_details.provider_view().extract(new NodeInfo());
-      logger.debug(`New agreement. id: ${agreement.id()}, provider: ${node_info}`);
+      logger.debug(`New agreement. id: ${agreement.id()}, provider: ${node_info.name}`);
       emit(
         new events.AgreementCreated({
           agr_id: agreement.id(),
@@ -154,8 +155,8 @@ export class AgreementsPool implements ComputationHistory {
       return;
     }
     const agreement_details = await buffered_agreement.agreement.details()
-    const provider = agreement_details.provider_view().extract(new NodeInfo());
-    logger.debug(`Terminating agreement. id: ${agreement_id}, reason: ${reason}, provider: ${provider}`);
+    const provider = <NodeInfo>agreement_details.provider_view().extract(new NodeInfo());
+    logger.debug(`Terminating agreement. id: ${agreement_id}, reason: ${reason}, provider: ${provider.name}`);
     if (buffered_agreement.worker_task && !buffered_agreement.worker_task.isFulfilled()) {
       logger.debug(
         "Terminating agreement that still has worker. " +
@@ -166,7 +167,7 @@ export class AgreementsPool implements ComputationHistory {
     if (buffered_agreement.has_multi_activity) {
       if (!(await buffered_agreement.agreement.terminate(reason.toString()))) {
         logger.debug(
-          `Couldn't terminate agreement. id=${buffered_agreement.agreement.id()}, provider=${provider}`
+          `Couldn't terminate agreement. id=${buffered_agreement.agreement.id()}, provider=${provider.name}`
         );
       }
     }

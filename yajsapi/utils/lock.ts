@@ -1,5 +1,5 @@
 import * as csp from "js-csp";
-import { promisify } from "util";
+import promisify from "./promisify";
 
 export class Lock {
   private _lock: any;

@@ -81,7 +81,7 @@ export class Agreement {
       logger.debug(`Terminated agreement ${this._id}.`);
       return true;
     } catch (error) {
-      if (error.response.status === 410) {
+      if (error.response && error.response.status === 410) {
         logger.debug(
           `terminateAgreement(${this._id}) raised ApiException: status = 410, message = ${error.message}`
         );
