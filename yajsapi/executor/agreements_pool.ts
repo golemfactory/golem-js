@@ -2,6 +2,7 @@ import { Activity, NodeInfo } from "../props";
 import { Agreement, OfferProposal } from "../rest/market";
 import { asyncWith, Lock, logger } from "../utils";
 import * as events from "./events";
+import { ComputationHistory } from "./strategy";
 
 class _BufferedProposal {
   ts: Date;
@@ -27,7 +28,7 @@ class BufferedAgreement {
   }
 }
 
-class AgreementsPool {
+export class AgreementsPool implements ComputationHistory {
   private emitter;
   private _offer_buffer: Map<string, _BufferedProposal> = new Map();
   private _agreements: Map<string, BufferedAgreement> = new Map();
