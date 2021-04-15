@@ -74,7 +74,7 @@ export class AgreementsPool implements ComputationHistory {
   private async _get_agreement(): Promise<[Agreement, NodeInfo] | undefined> {
     const emit = this.emitter;
     const available_agreements =
-      [...this._agreements.values()].filter(agr => agr.worker_task !== undefined);
+      [...this._agreements.values()].filter(agr => agr.worker_task === undefined);
     if (available_agreements.length > 0) {
       const buffered_agreement
         = available_agreements[Math.floor(Math.random() * available_agreements.length)];
