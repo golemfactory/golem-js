@@ -13,5 +13,5 @@ export class Lock {
   }
   async done() {
     csp.putAsync(this._lock, true);
-  }    
+  }
 }

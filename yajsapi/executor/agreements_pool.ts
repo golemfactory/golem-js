@@ -43,8 +43,8 @@ export class AgreementsPool implements ComputationHistory {
       let buffered_agreement = this._agreements.get(agreement_id);
       if (buffered_agreement === undefined) { continue; }
       let task = buffered_agreement.worker_task;
-      if (task && task.isFulfilled()) {
-        await this.release_agreement(buffered_agreement.agreement.id(), !(task.exception))
+      if (task && task.isFulfilled()) { /* TODO!!! task.exception in JS */
+        await this.release_agreement(buffered_agreement.agreement.id(), false /* TODO !(task.exception) */)
       }
     }
   }
@@ -63,7 +63,7 @@ export class AgreementsPool implements ComputationHistory {
       task = cbk(agreement, node_info);
       await this._set_worker(agreement.id(), task);
     });
-    return task;
+    return { task };
   }
   async _set_worker(agreement_id: string, task: any): Promise<void> {
     let buffered_agreement = this._agreements.get(agreement_id);
@@ -78,7 +78,7 @@ export class AgreementsPool implements ComputationHistory {
     if (available_agreements.length > 0) {
       const buffered_agreement
         = available_agreements[Math.floor(Math.random() * available_agreements.length)];
-      logger.debug(`Reusing agreement. id: ${buffered_agreement.agreement.id}`);
+      logger.debug(`Reusing agreement. id: ${buffered_agreement.agreement.id()}`);
       return [buffered_agreement.agreement, buffered_agreement.node_info];
     }
 
