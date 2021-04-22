@@ -626,7 +626,7 @@ export class Executor implements ComputationHistory {
               if (self._worker_cancellation_token.cancelled) { return; }
               const _batch_timeout = batch.timeout();
               const batch_deadline = _batch_timeout 
-                ? dayjs.utc().unix() + _batch_timeout
+                ? dayjs.utc().unix() + _batch_timeout / 1000
                 : null;
               try {
                 let current_worker_task = consumer.last_item();
