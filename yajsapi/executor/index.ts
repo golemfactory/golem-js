@@ -739,12 +739,7 @@ export class Executor {
           try {
             if (self._worker_cancellation_token.cancelled) { break; }
             const { task: new_task } = await agreements_pool.use_agreement(
-              (agreement: Agreement, _: any) => {
-                console.log("1) Here we go.");
-                let t = loop.create_task(_start_worker.bind(null, agreement));
-                console.log("2) Created.");
-                return t;
-              }
+              (agreement: Agreement, _: any) => loop.create_task(_start_worker.bind(null, agreement))
             );
             if (new_task === undefined) { continue; }
             workers.add(new_task);
