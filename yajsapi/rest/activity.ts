@@ -199,11 +199,18 @@ class Activity {
     cancellationToken?: CancellationToken
   ): Promise<any> {
     const script_txt = JSON.stringify(script);
-    const { data: batch_id } = await this._api.exec(
-      this._id,
-      new ExeScriptRequest(script_txt),
-      { timeout: 5000 }
-    );
+    let batch_id;
+    try {
+      const { data } = await this._api.exec(
+        this._id,
+        new ExeScriptRequest(script_txt),
+        { timeout: 10000 }
+      );
+      batch_id = data;
+    } catch (error) {
+      logger.warn(`Error while sending batch script to provider: ${error}`);
+      throw error;
+    }
 
     if (stream) {
       return new StreamingBatch(
