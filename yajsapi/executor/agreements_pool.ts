@@ -56,7 +56,6 @@ export class AgreementsPool implements ComputationHistory {
   async use_agreement(cbk: any): Promise<any> {
     let task;
     await asyncWith(this._lock, async (lock) => {
-      /* TODO check if it's correct */
       let agreement_with_info = await this._get_agreement();
       if (!agreement_with_info) return;
       let [agreement, node_info] = agreement_with_info;
@@ -154,7 +153,7 @@ export class AgreementsPool implements ComputationHistory {
     }
     const agreement_details = await buffered_agreement.agreement.details()
     const provider = <NodeInfo>agreement_details.provider_view().extract(new NodeInfo());
-    logger.debug(`Terminating agreement. id: ${agreement_id}, reason: ${reason}, provider: ${provider.name}`);
+    logger.debug(`Terminating agreement. id: ${agreement_id}, reason: ${JSON.stringify(reason)}, provider: ${provider.name.value()}`);
     if (buffered_agreement.worker_task && buffered_agreement.worker_task.isPending()) {
       logger.debug(
         "Terminating agreement that still has worker. " +

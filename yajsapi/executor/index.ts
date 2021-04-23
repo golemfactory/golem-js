@@ -854,7 +854,7 @@ export class Executor {
         await agreements_pool.cycle();
         await agreements_pool.terminate_all({ reason: "Computation finished." })
       } catch (error) {
-        logger.debug("Problem with agreements termination")
+        logger.debug(`Problem with agreements termination ${error}`);
       }
       await bluebird.Promise.any([
         bluebird.Promise.all([process_invoices_job, debit_notes_job]),
