@@ -272,7 +272,7 @@ class SummaryLogger {
       if (event["exception"] === null || event["exception"] === undefined) return;
       const provider_info = this.agreement_provider_info[event["agr_id"]];
       let failures = this.provider_failures.get(provider_info);
-      if (failures === undefined) this.provider_failures.set(provider_info, 0);
+      if (failures === undefined) this.provider_failures.set(provider_info, 1);
       else this.provider_failures.set(provider_info, failures + 1);
       let more_info = "";
       if (
