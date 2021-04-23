@@ -43,8 +43,8 @@ export class AgreementsPool implements ComputationHistory {
       let buffered_agreement = this._agreements.get(agreement_id);
       if (buffered_agreement === undefined) { continue; }
       let task = buffered_agreement.worker_task;
-      if (task && task.isFulfilled()) { /* TODO!!! task.exception in JS */
-        await this.release_agreement(buffered_agreement.agreement.id(), false /* TODO !(task.exception) */)
+      if (task && (task.isFulfilled() || task.isRejected())) {
+        await this.release_agreement(buffered_agreement.agreement.id(), !task.isRejected());
       }
     }
   }
@@ -94,7 +94,6 @@ export class AgreementsPool implements ComputationHistory {
     try {
       const agreement = await offer.proposal.create_agreement();
       const agreement_details = await agreement.details()
-      /* TODO check if casting works */
       const provider_activity = <Activity>agreement_details.provider_view().extract(new Activity());
       const requestor_activity = <Activity>agreement_details.requestor_view().extract(new Activity());
       const node_info = <NodeInfo>agreement_details.provider_view().extract(new NodeInfo());
@@ -112,7 +111,6 @@ export class AgreementsPool implements ComputationHistory {
         return;
       }
       this._rejecting_providers.delete(provider_id);
-      /* TODO check if .multi_activity.value is correct */
       this._agreements.set(
         agreement.id(),
         new BufferedAgreement(
@@ -157,12 +155,12 @@ export class AgreementsPool implements ComputationHistory {
     const agreement_details = await buffered_agreement.agreement.details()
     const provider = <NodeInfo>agreement_details.provider_view().extract(new NodeInfo());
     logger.debug(`Terminating agreement. id: ${agreement_id}, reason: ${reason}, provider: ${provider.name}`);
-    if (buffered_agreement.worker_task && !buffered_agreement.worker_task.isFulfilled()) {
+    if (buffered_agreement.worker_task && buffered_agreement.worker_task.isPending()) {
       logger.debug(
         "Terminating agreement that still has worker. " +
         `agreement_id: ${buffered_agreement.agreement.id()}, worker: ${buffered_agreement.worker_task}`
       );
-      buffered_agreement.worker_task.cancel(); // TODO: cancel() doesn't work
+      buffered_agreement.worker_task.cancel();
     }
     if (buffered_agreement.has_multi_activity) {
       if (!(await buffered_agreement.agreement.terminate(reason.toString()))) {
@@ -182,18 +180,6 @@ export class AgreementsPool implements ComputationHistory {
       for (const agreement_id of new Map(this._agreements).keys()) {
         await this._terminate_agreement(agreement_id, reason)
       }
-    });
-  }
-  async on_agreement_terminated(agr_id: string, reason: object): Promise<void> {
-    await asyncWith(this._lock, async (lock) => {
-      const buffered_agreement = this._agreements.get(agr_id);
-      if (buffered_agreement === undefined) return;
-      if (buffered_agreement.worker_task) buffered_agreement.worker_task.cancel(); // TODO: cancel doesn't work
-      this._agreements.delete(agr_id);
-      this.emitter(new events.AgreementTerminated({
-        agr_id: agr_id,
-        reason: reason.toString(),
-      }));
     });
   }
   rejected_last_agreement(provider_id: string): boolean {

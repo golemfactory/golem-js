@@ -688,6 +688,7 @@ export class Executor {
               } catch (error) {
                 if (self._worker_cancellation_token.cancelled) { return; }
                 try {
+                  /* rethrow this error in the user-supplied generator (worker function) */
                   await command_generator.throw(error);
                 } catch (error) {
                   emit(
@@ -696,7 +697,7 @@ export class Executor {
                       exception: error,
                     })
                   );
-                  return;
+                  throw error;
                 }
               }
             }
@@ -739,7 +740,7 @@ export class Executor {
           try {
             if (self._worker_cancellation_token.cancelled) { break; }
             const { task: new_task } = await agreements_pool.use_agreement(
-              (agreement: Agreement, _: any) => loop.create_task(_start_worker.bind(null, agreement))
+              (agreement: Agreement, _: any) => loop.create_task(start_worker.bind(null, agreement))
             );
             if (new_task === undefined) { continue; }
             workers.add(new_task);
