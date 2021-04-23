@@ -685,6 +685,7 @@ export class Executor {
                   agreement_id: agreement.id(),
                   partial: true,
                 });
+                emit(new events.CheckingPayments());
               } catch (error) {
                 if (self._worker_cancellation_token.cancelled) { return; }
                 try {
@@ -719,15 +720,6 @@ export class Executor {
     }
 
     async function worker_starter(): Promise<void> {
-      async function _start_worker(agreement: Agreement) {
-        try {
-          await start_worker(agreement);
-        } catch (error) {
-          logger.warn(`Worker finished with error: ${error}`);
-        } finally {
-          await agreement.terminate();
-        }
-      }
       while (true) {
         await sleep(2);
         await agreements_pool.cycle();
@@ -859,6 +851,7 @@ export class Executor {
         logger.error(error);
       }
       try {
+        await agreements_pool.cycle();
         await agreements_pool.terminate_all({ reason: "Computation finished." })
       } catch (error) {
         logger.debug("Problem with agreements termination")
