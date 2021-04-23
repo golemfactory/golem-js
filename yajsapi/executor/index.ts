@@ -341,8 +341,8 @@ export class Executor {
             })
           );
           emit(new events.CheckingPayments());
-          const allocation = self._get_allocation(invoice);
           try {
+            const allocation = self._get_allocation(invoice);
             await invoice.accept(invoice.amount, allocation);
             agreements_to_pay.delete(invoice.agreementId);
             agreements_accepting_debit_notes.delete(invoice.agreementId);
@@ -403,8 +403,8 @@ export class Executor {
             note_id: debit_note.debitNodeId,
             amount: debit_note.totalAmountDue,
           }));
-          const allocation = self._get_allocation(debit_note);
           try {
+            const allocation = self._get_allocation(debit_note);
             await debit_note.accept(debit_note.totalAmountDue, allocation);
           } catch (e) {
             emit(new events.PaymentFailed({ agr_id: debit_note.agreementId, reason: e.toString() }));
