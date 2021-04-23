@@ -153,7 +153,7 @@ export class AgreementsPool implements ComputationHistory {
     }
     const agreement_details = await buffered_agreement.agreement.details()
     const provider = <NodeInfo>agreement_details.provider_view().extract(new NodeInfo());
-    logger.debug(`Terminating agreement. id: ${agreement_id}, reason: ${JSON.stringify(reason)}, provider: ${provider.name.value()}`);
+    logger.debug(`Terminating agreement. id: ${agreement_id}, reason: ${JSON.stringify(reason)}, provider: ${provider.name.value}`);
     if (buffered_agreement.worker_task && buffered_agreement.worker_task.isPending()) {
       logger.debug(
         "Terminating agreement that still has worker. " +
