@@ -293,7 +293,7 @@ export class Executor {
     await this._task_package.decorate_demand(builder);
     await this._strategy.decorate_demand(builder);
 
-    let agreements_pool = new AgreementsPool(emit);
+    let agreements_pool = new AgreementsPool(emit, this._worker_cancellation_token);
     let market_api = this._market_api;
     let activity_api = this._activity_api;
     let strategy = this._strategy;

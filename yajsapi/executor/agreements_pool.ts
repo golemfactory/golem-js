@@ -1,6 +1,6 @@
 import { Activity, NodeInfo } from "../props";
 import { Agreement, OfferProposal } from "../rest/market";
-import { asyncWith, Lock, logger } from "../utils";
+import { asyncWith, CancellationToken, Lock, logger } from "../utils";
 import * as events from "./events";
 import { ComputationHistory } from "./strategy";
 
@@ -30,13 +30,15 @@ class BufferedAgreement {
 
 export class AgreementsPool implements ComputationHistory {
   private emitter;
+  private _cancellation_token: CancellationToken;
   private _offer_buffer: Map<string, _BufferedProposal> = new Map();
   private _agreements: Map<string, BufferedAgreement> = new Map();
   private _lock: Lock = new Lock();
   private _rejecting_providers: Set<string> = new Set();
   private _confirmed: number = 0;
-  constructor(emitter) {
+  constructor(emitter, cancellation_token: CancellationToken) {
     this.emitter = emitter;
+    this._cancellation_token = cancellation_token;
   }
   async cycle(): Promise<void> {
     for (const agreement_id of new Map(this._agreements).keys()) {
@@ -91,6 +93,7 @@ export class AgreementsPool implements ComputationHistory {
     let [provider_id, offer] = _sample;
     this._offer_buffer.delete(provider_id);
     try {
+      if (this._cancellation_token.cancelled) return;
       const agreement = await offer.proposal.create_agreement();
       const agreement_details = await agreement.details()
       const provider_activity = <Activity>agreement_details.provider_view().extract(new Activity());
@@ -104,6 +107,7 @@ export class AgreementsPool implements ComputationHistory {
           provider_info: node_info,
         })
       );
+      if (this._cancellation_token.cancelled) return;
       if (!(await agreement.confirm())) {
         emit(new events.AgreementRejected({ agr_id: agreement.id() }));
         this._rejecting_providers.add(provider_id);
@@ -151,6 +155,7 @@ export class AgreementsPool implements ComputationHistory {
       logger.warning(`Trying to terminate agreement not in the pool. id: ${agreement_id}`);
       return;
     }
+    if (this._cancellation_token.cancelled) return;
     const agreement_details = await buffered_agreement.agreement.details()
     const provider = <NodeInfo>agreement_details.provider_view().extract(new NodeInfo());
     logger.debug(`Terminating agreement. id: ${agreement_id}, reason: ${JSON.stringify(reason)}, provider: ${provider.name.value}`);
@@ -162,6 +167,7 @@ export class AgreementsPool implements ComputationHistory {
       buffered_agreement.worker_task.cancel();
     }
     if (buffered_agreement.has_multi_activity) {
+      if (this._cancellation_token.cancelled) return;
       if (!(await buffered_agreement.agreement.terminate(reason.toString()))) {
         logger.debug(
           `Couldn't terminate agreement. id=${buffered_agreement.agreement.id()}, provider=${provider.name}`
