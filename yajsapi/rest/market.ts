@@ -65,7 +65,12 @@ export class Agreement {
   }
 
   async confirm(): Promise<boolean> {
-    await this._api.confirmAgreement(this._id, undefined, { timeout: 16000 });
+    try {
+      await this._api.confirmAgreement(this._id, undefined, { timeout: 16000 });
+    } catch (error) {
+      logger.debug(`confirmAgreement(${this._id}) raised ApiException ${error}`);
+      return false;
+    }
     try {
       let { data: msg } = await this._api.waitForApproval(this._id, 15, { timeout: 16000 });
       return true;
