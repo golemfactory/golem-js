@@ -566,8 +566,7 @@ export class Executor implements ComputationHistory {
 
     async function find_offers(): Promise<void> {
       let keepSubscribing = true;
-      while (keepSubscribing) {
-        if (self._worker_cancellation_token.cancelled) { break; }
+      while (keepSubscribing && !self._worker_cancellation_token.cancelled) {
         try {
           const subscription = await builder.subscribe(market_api);
           await asyncWith(subscription, async (subscription) => {
