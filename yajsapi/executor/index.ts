@@ -419,15 +419,7 @@ export class Executor implements ComputationHistory {
       logger.debug("Stopped processing debit notes.");
     }
 
-    async function find_offers(): Promise<void> {
-      let _subscription: Subscription;
-      try {
-        _subscription = await builder.subscribe(market_api);
-      } catch (error) {
-        emit(new events.SubscriptionFailed({ reason: error }));
-        throw error;
-      }
-      await asyncWith(_subscription, async (subscription) => {
+    async function find_offers_for_subscription(subscription: Subscription): Promise<void> {
         emit(new events.SubscriptionCreated({ sub_id: subscription.id() }));
         let _proposals;
         try {
@@ -569,7 +561,21 @@ export class Executor implements ComputationHistory {
             proposals_confirmed += 1;
           }
         }
-      });
+    }
+
+    async function find_offers(): Promise<void> {
+      while (true) {
+        if (self._worker_cancellation_token.cancelled) { break; }
+        try {
+          const subscription = await builder.subscribe(market_api);
+          await asyncWith(subscription, async (subscription) => {
+            await find_offers_for_subscription(subscription);
+          });
+        } catch (error) {
+          emit(new events.SubscriptionFailed({ reason: error }));
+          throw error;
+        }
+      }
       logger.debug("Stopped checking and scoring new offers.");
     }
 
