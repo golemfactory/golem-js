@@ -431,6 +431,7 @@ export class Executor implements ComputationHistory {
             reason: error,
           })
         );
+        throw error;
       }
       for await (let proposal of _proposals) {
         emit(
@@ -564,16 +565,22 @@ export class Executor implements ComputationHistory {
     }
 
     async function find_offers(): Promise<void> {
-      while (true) {
+      let keepSubscribing = true;
+      while (keepSubscribing) {
         if (self._worker_cancellation_token.cancelled) { break; }
         try {
           const subscription = await builder.subscribe(market_api);
           await asyncWith(subscription, async (subscription) => {
-            await find_offers_for_subscription(subscription);
+            try {
+              await find_offers_for_subscription(subscription);
+            } catch (error) {
+              logger.error(`Error while finding offers for a subscription: ${error}`);
+              keepSubscribing = false;
+            }
           });
         } catch (error) {
           emit(new events.SubscriptionFailed({ reason: error }));
-          throw error;
+          keepSubscribing = false;
         }
       }
       logger.debug("Stopped checking and scoring new offers.");
