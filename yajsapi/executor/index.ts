@@ -420,81 +420,103 @@ export class Executor implements ComputationHistory {
     }
 
     async function find_offers_for_subscription(subscription: Subscription): Promise<void> {
-        emit(new events.SubscriptionCreated({ sub_id: subscription.id() }));
-        let _proposals;
+      emit(new events.SubscriptionCreated({ sub_id: subscription.id() }));
+      let _proposals;
+      try {
+        _proposals = subscription.events(self._worker_cancellation_token);
+      } catch (error) {
+        emit(
+          new events.CollectFailed({
+            sub_id: subscription.id(),
+            reason: error,
+          })
+        );
+      }
+      for await (let proposal of _proposals) {
+        emit(
+          new events.ProposalReceived({
+            prop_id: proposal.id(),
+            provider_id: proposal.issuer(),
+          })
+        );
+        offers_collected += 1;
+        let score;
         try {
-          _proposals = subscription.events(self._worker_cancellation_token);
+          score = await strategy.score_offer(proposal, self);
+          logger.debug(`Scored offer ${proposal.id()}, ` +
+                        `provider: ${proposal.props()["golem.node.id.name"]}, ` +
+                        `strategy: ${strategy.constructor.name}, ` +
+                        `score: ${score}`);
         } catch (error) {
-          emit(
-            new events.CollectFailed({
-              sub_id: subscription.id(),
-              reason: error,
-            })
-          );
-        }
-        for await (let proposal of _proposals) {
-          emit(
-            new events.ProposalReceived({
-              prop_id: proposal.id(),
-              provider_id: proposal.issuer(),
-            })
-          );
-          offers_collected += 1;
-          let score;
+          logger.log("debug", `Score offer error: ${error}`);
           try {
-            score = await strategy.score_offer(proposal, self);
-            logger.debug(`Scored offer ${proposal.id()}, ` +
-                         `provider: ${proposal.props()["golem.node.id.name"]}, ` +
-                         `strategy: ${strategy.constructor.name}, ` +
-                         `score: ${score}`);
-          } catch (error) {
-            logger.log("debug", `Score offer error: ${error}`);
-            try {
-              await proposal.reject(error);
-              emit(
-                new events.ProposalRejected({
-                  prop_id: proposal.id(),
-                  reason: error,
-                })
-              );
-            } catch (e) {
-              emit(
-                new events.ProposalFailed({
-                  prop_id: proposal.id(),
-                  reason: e,
-                })
-              );
-            }
-            continue;
-          }
-          if (score < SCORE_NEUTRAL) {
-            const reason = "Score too low";
-            try {
-              await proposal.reject(reason);
-              emit(new events.ProposalRejected({
+            await proposal.reject(error);
+            emit(
+              new events.ProposalRejected({
                 prop_id: proposal.id(),
-                reason: reason,
-              }));
-            } catch (error) {
-              emit(
-                new events.ProposalFailed({
-                  prop_id: proposal.id(),
-                  reason: error,
-                })
-              );
-            }
-            continue;
+                reason: error,
+              })
+            );
+          } catch (e) {
+            emit(
+              new events.ProposalFailed({
+                prop_id: proposal.id(),
+                reason: e,
+              })
+            );
           }
-          if (!proposal.is_draft()) {
-            try {
-              const common_platforms = self._get_common_payment_platforms(
-                proposal
-              );
-              if (common_platforms.length) {
-                builder._properties["golem.com.payment.chosen-platform"] =
-                  common_platforms[0];
-              } else {
-                const reason = "No common payment platforms";
+          continue;
+        }
+        if (score < SCORE_NEUTRAL) {
+          const reason = "Score too low";
+          try {
+            await proposal.reject(reason);
+            emit(new events.ProposalRejected({
+              prop_id: proposal.id(),
+              reason: reason,
+            }));
+          } catch (error) {
+            emit(
+              new events.ProposalFailed({
+                prop_id: proposal.id(),
+                reason: error,
+              })
+            );
+          }
+          continue;
+        }
+        if (!proposal.is_draft()) {
+          try {
+            const common_platforms = self._get_common_payment_platforms(
+              proposal
+            );
+            if (common_platforms.length) {
+              builder._properties["golem.com.payment.chosen-platform"] =
+                common_platforms[0];
+            } else {
+              const reason = "No common payment platforms";
+              try {
+                await proposal.reject(reason);
+                emit(
+                  new events.ProposalRejected({
+                    prop_id: proposal.id,
+                    reason: reason,
+                  })
+                );
+              } catch (error) {
+                emit(
+                  new events.ProposalFailed({
+                    prop_id: proposal.id(),
+                    reason: error,
+                  })
+                );
+              }
+              continue;
+            }
+            let timeout = proposal.props()[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP];
+            if (timeout) {
+              if (timeout < DEBIT_NOTE_MIN_TIMEOUT) {
+                const reason = "Debit note acceptance timeout too short";
                 try {
                   await proposal.reject(reason);
                   emit(
@@ -503,64 +525,42 @@ export class Executor implements ComputationHistory {
                       reason: reason,
                     })
                   );
-                } catch (error) {
+                } catch (e) {
                   emit(
                     new events.ProposalFailed({
                       prop_id: proposal.id(),
-                      reason: error,
+                      reason: e,
                     })
                   );
                 }
                 continue;
+              } else {
+                builder._properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout;
               }
-              let timeout = proposal.props()[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP];
-              if (timeout) {
-                if (timeout < DEBIT_NOTE_MIN_TIMEOUT) {
-                  const reason = "Debit note acceptance timeout too short";
-                  try {
-                    await proposal.reject(reason);
-                    emit(
-                      new events.ProposalRejected({
-                        prop_id: proposal.id,
-                        reason: reason,
-                      })
-                    );
-                  } catch (e) {
-                    emit(
-                      new events.ProposalFailed({
-                        prop_id: proposal.id(),
-                        reason: e,
-                      })
-                    );
-                  }
-                  continue;
-                } else {
-                  builder._properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout;
-                }
-              }
-              await proposal.respond(
-                builder.properties(),
-                builder.constraints()
-              );
-              emit(new events.ProposalResponded({ prop_id: proposal.id() }));
-            } catch (error) {
-              emit(
-                new events.ProposalFailed({
-                  prop_id: proposal.id(),
-                  reason: error,
-                })
-              );
             }
-          } else {
-            emit(new events.ProposalConfirmed({ prop_id: proposal.id() }));
-            offer_buffer[proposal.issuer()] = new _BufferItem(
-              Date.now(),
-              score,
-              proposal
+            await proposal.respond(
+              builder.properties(),
+              builder.constraints()
             );
-            proposals_confirmed += 1;
+            emit(new events.ProposalResponded({ prop_id: proposal.id() }));
+          } catch (error) {
+            emit(
+              new events.ProposalFailed({
+                prop_id: proposal.id(),
+                reason: error,
+              })
+            );
           }
+        } else {
+          emit(new events.ProposalConfirmed({ prop_id: proposal.id() }));
+          offer_buffer[proposal.issuer()] = new _BufferItem(
+            Date.now(),
+            score,
+            proposal
+          );
+          proposals_confirmed += 1;
         }
+      }
     }
 
     async function find_offers(): Promise<void> {
