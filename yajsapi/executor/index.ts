@@ -272,7 +272,12 @@ export class Executor {
       this._wrapped_consumer.async_call.bind(this._wrapped_consumer)
     );
 
-    const multi_payment_decoration = await this._create_allocations();
+    let multi_payment_decoration;
+    try {
+      multi_payment_decoration = await this._create_allocations();
+    } catch (error) {
+      logger.error(error);
+    }
 
     emit(new events.ComputationStarted({ expires: this._expires }));
     // Building offer
