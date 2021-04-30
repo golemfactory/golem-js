@@ -703,6 +703,7 @@ export class Executor implements ComputationHistory {
                   agreement_id: agreement.id(),
                   partial: true,
                 });
+                emit(new events.CheckingPayments());
               } catch (error) {
                 if (self._worker_cancellation_token.cancelled) { return; }
                 try {

@@ -260,8 +260,8 @@ export class Subscription {
           // Prevent calling `unsubscribe` which would result in API error for expired demand subscriptions
           this._deleted = true;
         } else {
-          logger.error(error);
-          throw Error(error);
+          logger.error(`Error while collecting offers: ${error}`);
+          throw error;
         }
       }
     }
@@ -293,8 +293,8 @@ export class Market {
         let { data: sub_id } = await self._api.subscribeDemand(request, { timeout: 5000 });
         return new Subscription(self._api, sub_id);
       } catch (error) {
-        logger.error(error);
-        throw new Error(error);
+        logger.error(`Error while subscribing: ${error}`);
+        throw error;
       }
     }
 

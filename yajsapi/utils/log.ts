@@ -176,7 +176,7 @@ class SummaryLogger {
     if (eventName === events.SubscriptionCreated.name)
       logger.info(event_type_to_string[eventName]);
     else if (eventName === events.SubscriptionFailed.name)
-      logger.info(`Subscription failed: ${JSON.stringify(event["reason"])}`);
+      logger.error(`Subscription failed: ${event["reason"]}`);
     else if (eventName === events.ProposalReceived.name)
       this.received_proposals[event["prop_id"]] = event["provider_id"];
     else if (eventName === events.ProposalConfirmed.name) {
