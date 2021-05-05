@@ -45,8 +45,9 @@ export class AgreementsPool implements ComputationHistory {
       let buffered_agreement = this._agreements.get(agreement_id);
       if (buffered_agreement === undefined) { continue; }
       let task = buffered_agreement.worker_task;
-      if (task && (task.isFulfilled() || task.isRejected())) {
-        await this.release_agreement(buffered_agreement.agreement.id(), !task.isRejected());
+      if (task && task.isFulfilled()) {
+        /* reuse agreement if possible; workers that failed call this method with allow_reuse set to false */
+        await this.release_agreement(buffered_agreement.agreement.id(), true);
       }
     }
   }

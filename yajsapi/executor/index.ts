@@ -725,6 +725,14 @@ export class Executor {
     }
 
     async function worker_starter(): Promise<void> {
+      async function _start_worker(agreement: Agreement): Promise<void> {
+        try {
+          await start_worker(agreement);
+        } catch (error) {
+          logger.warn(`Worker for agreement ${agreement.id()} finished with error: ${error}`);
+          await agreements_pool.release_agreement(agreement.id(), false);
+        }
+      }
       while (true) {
         await sleep(2);
         await agreements_pool.cycle();
@@ -737,7 +745,7 @@ export class Executor {
           try {
             if (self._worker_cancellation_token.cancelled) { break; }
             const { task: new_task } = await agreements_pool.use_agreement(
-              (agreement: Agreement, _: any) => loop.create_task(start_worker.bind(null, agreement))
+              (agreement: Agreement, _: any) => loop.create_task(_start_worker.bind(null, agreement))
             );
             if (new_task === undefined) { continue; }
             workers.add(new_task);
