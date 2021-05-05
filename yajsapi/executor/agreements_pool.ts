@@ -140,7 +140,6 @@ export class AgreementsPool implements ComputationHistory {
       );
       throw e;
     }
-    return;
   }
   async release_agreement(agreement_id: string, allow_reuse: boolean = true): Promise<void> {
     await asyncWith(this._lock, async (lock) => {
