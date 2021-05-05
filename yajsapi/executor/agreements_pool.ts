@@ -99,7 +99,7 @@ export class AgreementsPool implements ComputationHistory {
         const provider_activity = <Activity>agreement_details.provider_view().extract(new Activity());
         const requestor_activity = <Activity>agreement_details.requestor_view().extract(new Activity());
         const node_info = <NodeInfo>agreement_details.provider_view().extract(new NodeInfo());
-        logger.debug(`New agreement. id: ${agreement.id()}, provider: ${node_info.name}`);
+        logger.debug(`New agreement. id: ${agreement.id()}, provider: ${node_info.name.value}`);
         emit(
           new events.AgreementCreated({
             agr_id: agreement.id(),
