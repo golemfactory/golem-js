@@ -98,17 +98,6 @@ export class _ExecutorConfig {
   }
 }
 
-export class _BufferItem {
-  public ts!: Date; //datetime
-  public score!: Number;
-  public proposal!: OfferProposal;
-  constructor(ts, score, proposal) {
-    this.ts = ts;
-    this.score = score;
-    this.proposal = proposal;
-  }
-}
-
 class AsyncGeneratorBreak extends Error {}
 
 type D = "D"; // Type var for task data
