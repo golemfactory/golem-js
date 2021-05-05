@@ -102,10 +102,10 @@ export const resolve_repo_srv = async ({
   }
 
   const repo_url = await _resolve_repo_srv();
-    if (repo_url) {
-        logger.debug(`Using image repository: ${repo_srv} -> ${repo_url}.`);
-        return repo_url;
-    }
-    logger.warn(`Problem resolving image repository: ${repo_srv}, falling back to ${fallback_url}.`);
-    return fallback_url;
+  if (repo_url) {
+    logger.debug(`Using image repository: ${repo_srv} -> ${repo_url}.`);
+    return repo_url;
+  }
+  logger.warn(`Problem resolving image repository: ${repo_srv}, falling back to ${fallback_url}.`);
+  return fallback_url;
 };
