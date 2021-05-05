@@ -160,7 +160,6 @@ export class AgreementsPool implements ComputationHistory {
       logger.warning(`Trying to terminate agreement not in the pool. id: ${agreement_id}`);
       return;
     }
-    if (this._cancellation_token.cancelled) return;
     logger.debug(`Terminating agreement. id: ${agreement_id}, reason: ${JSON.stringify(reason)}`);
     if (buffered_agreement.worker_task && buffered_agreement.worker_task.isPending()) {
       logger.debug(
@@ -170,7 +169,6 @@ export class AgreementsPool implements ComputationHistory {
       buffered_agreement.worker_task.cancel();
     }
     if (buffered_agreement.has_multi_activity) {
-      if (this._cancellation_token.cancelled) return;
       if (!(await buffered_agreement.agreement.terminate(reason.toString()))) {
         logger.debug(`Couldn't terminate agreement. id: ${buffered_agreement.agreement.id()}`);
       }
