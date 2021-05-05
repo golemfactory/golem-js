@@ -250,17 +250,24 @@ export class Subscription {
           { timeout: 5000 }
         );
         for (let _proposal of proposals) {
+          if (cancellationToken && cancellationToken.cancelled) return;
           if (_proposal.eventType === "ProposalEvent") {
             yield new OfferProposal(this, _proposal as models.ProposalEvent);
           }
         }
-        if (cancellationToken && cancellationToken.cancelled) break;
         if (!proposals || !proposals.length) {
           await sleep(2);
         }
       } catch (error) {
-        logger.error(error);
-        throw Error(error);
+        if (error.response && error.response.status === 404) {
+          logger.debug(`Offer unsubscribed or its subscription expired, subscription_id: ${this._id}`);
+          this._open = false;
+          // Prevent calling `unsubscribe` which would result in API error for expired demand subscriptions
+          this._deleted = true;
+        } else {
+          logger.error(`Error while collecting offers: ${error}`);
+          throw error;
+        }
       }
     }
     return;
@@ -291,8 +298,8 @@ export class Market {
         let { data: sub_id } = await self._api.subscribeDemand(request, { timeout: 5000 });
         return new Subscription(self._api, sub_id);
       } catch (error) {
-        logger.error(error);
-        throw new Error(error);
+        logger.error(`Error while subscribing: ${error}`);
+        throw error;
       }
     }
 
