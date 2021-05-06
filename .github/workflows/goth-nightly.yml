@@ -1,4 +1,4 @@
-name: goth-stable
+name: Goth nightly
 
 on:
   schedule:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   goth-tests:
-    name: Run integration tests (stable)
+    name: Run integration tests
     runs-on: goth
 
     steps:
