@@ -62,16 +62,22 @@ async def assert_all_invoices_accepted(output_lines: EventStream[str]):
         m = re.search("Agreement confirmed by provider '([^']*)'", line)
         if m:
             prov_name = m.group(1)
-            logger.debug("assert_all_invoices_accepted: adding provider '%s'", prov_name)
+            logger.debug(
+                "assert_all_invoices_accepted: adding provider '%s'", prov_name
+            )
             unpaid_agreement_providers.add(prov_name)
         m = re.search("Accepted invoice from '([^']*)'", line)
         if m:
             prov_name = m.group(1)
-            logger.debug("assert_all_invoices_accepted: adding invoice for '%s'", prov_name)
+            logger.debug(
+                "assert_all_invoices_accepted: adding invoice for '%s'", prov_name
+            )
             unpaid_agreement_providers.remove(prov_name)
 
     if unpaid_agreement_providers:
-        raise AssertionError(f"Unpaid agreements for: {','.join(unpaid_agreement_providers)}")
+        raise AssertionError(
+            f"Unpaid agreements for: {','.join(unpaid_agreement_providers)}"
+        )
 
 
 @pytest.mark.asyncio
@@ -107,7 +113,9 @@ async def test_run_blender(
             all_sent = cmd_monitor.add_assertion(assert_all_tasks_sent)
             all_computed = cmd_monitor.add_assertion(assert_all_tasks_computed)
 
-            await cmd_monitor.wait_for_pattern(".*Received proposals from 2 ", timeout=10)
+            await cmd_monitor.wait_for_pattern(
+                ".*Received proposals from 2 ", timeout=10
+            )
             logger.info("Received proposals")
 
             await cmd_monitor.wait_for_pattern(".*Agreement proposed ", timeout=10)
