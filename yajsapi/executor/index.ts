@@ -295,6 +295,7 @@ export class Executor {
     let paymentCancellationToken = this._payment_cancellation_token;
     let done_queue: Queue<Task<D, R>> = new Queue([]);
     let stream_output = this._stream_output;
+    let workers_done = csp.chan();
 
     function on_task_done(task: Task<D, R>, status: TaskStatus): void {
       if (status === TaskStatus.ACCEPTED) done_queue.put(task); //put_nowait
@@ -733,6 +734,7 @@ export class Executor {
           logger.warn(`Worker for agreement ${agreement.id()} finished with error: ${error}`);
         } finally {
           await agreements_pool.release_agreement(agreement.id(), false);
+          csp.putAsync(workers_done, true);
         }
       }
       while (true) {
@@ -846,24 +848,20 @@ export class Executor {
         logger.error("Computation interrupted by the user.");
       }
       payment_closing = true;
-      find_offers_task.cancel();
-      worker_starter_task.cancel();
       if (!self._worker_cancellation_token.cancelled)
         self._worker_cancellation_token.cancel();
       try {
-        if (workers) {
-          for (let worker_task of [...workers]) {
-            worker_task.cancel();
-          }
+        if (workers.size > 0) {
           emit(new events.CheckingPayments());
-          await bluebird.Promise.any([
-            bluebird.Promise.all([...workers]),
-            promise_timeout(10),
-          ]);
+          logger.debug(`Waiting for ${workers.size} workers to stop...`);
+          for (let i = workers.size; i > 0; --i) {
+            await promisify(csp.takeAsync)(workers_done);
+            logger.debug(`Waiting for workers to stop: ${workers.size - i + 1}/${workers.size} done.`);
+          }
           emit(new events.CheckingPayments());
         }
       } catch (error) {
-        logger.error(error);
+        logger.error(`Error while waiting for workers to finish: ${error}.`);
       }
       try {
         await agreements_pool.cycle();
@@ -871,24 +869,20 @@ export class Executor {
       } catch (error) {
         logger.debug(`Problem with agreements termination ${error}`);
       }
-      await bluebird.Promise.any([
-        bluebird.Promise.all([process_invoices_job, debit_notes_job]),
-        promise_timeout(20),
-      ]);
-      emit(new events.CheckingPayments());
-      if (agreements_to_pay.size > 0) {
-        await bluebird.Promise.any([process_invoices_job, debit_notes_job, promise_timeout(15)]);
-        emit(new events.CheckingPayments());
+      if (agreements_to_pay.size > 0) { logger.debug(`Waiting for ${agreements_to_pay.size} invoices...`); }
+      try {
+        await bluebird.Promise.all([process_invoices_job, debit_notes_job]).timeout(25000);
+      } catch (error) {
+        logger.warn(`Error while waiting for invoices: ${error}.`);
       }
+      emit(new events.CheckingPayments());
+      if (agreements_to_pay.size > 0) { logger.warn(`${agreements_to_pay.size} unpaid invoices ${JSON.stringify(agreements_to_pay.keys())}.`); }
+      if (!self._payment_cancellation_token.cancelled) { self._payment_cancellation_token.cancel(); }
+      emit(new events.PaymentsFinished());
+      await sleep(2);
+      cancellationToken.cancel();
+      logger.info("Shutdown complete.");
     }
-    if (!self._payment_cancellation_token.cancelled)
-      self._payment_cancellation_token.cancel();
-    emit(new events.PaymentsFinished());
-    await sleep(2);
-    logger.info("Shutting down...");
-    cancellationToken.cancel();
-    await sleep(15);
-    logger.info("Shutdown complete.");
     return;
   }
 
