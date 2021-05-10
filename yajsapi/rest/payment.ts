@@ -5,6 +5,7 @@ import * as yap from "ya-ts-client/dist/ya-payment/src/models";
 import { Configuration } from "ya-ts-client/dist/ya-activity";
 import { RequestorApi } from "ya-ts-client/dist/ya-payment/api";
 import { logger, sleep } from "../utils";
+import { is_intermittent_error, suppress_exceptions } from "./common";
 
 dayjs.extend(utc);
 
@@ -322,28 +323,27 @@ export class Payment {
       let ts = init_ts;
       while (true) {
         if (cancellationToken.cancelled) break;
-        try {
-          let { data: events } = await api.getInvoiceEvents(
+        let events: any[] = [];
+        await suppress_exceptions(is_intermittent_error, async () => {
+          let { data } = await api.getInvoiceEvents(
             5,
             ts.format("YYYY-MM-DDTHH:mm:ss.SSSSSSZ")
           );
-          for (let ev of events) {
-            logger.debug(
-              `Received invoice event: ${JSON.stringify(
-                ev
-              )}, type: ${JSON.stringify(Object.getPrototypeOf(ev))}`
-            );
-            ts = dayjs(ev.eventDate);
-            if (ev.eventType === "InvoiceReceivedEvent") {
-              let invoice = await self.invoice(ev["invoiceId"]);
-              yield invoice;
-            }
+          events = data;
+        });
+        for (let ev of events) {
+          logger.debug(
+            `Received invoice event: ${JSON.stringify(ev)}, ` +
+            `type: ${JSON.stringify(Object.getPrototypeOf(ev))}`
+          );
+          ts = dayjs(ev.eventDate);
+          if (ev.eventType === "InvoiceReceivedEvent") {
+            let invoice = await self.invoice(ev["invoiceId"]);
+            yield invoice;
           }
-          if (!events || !events.length) {
-            await sleep(1);
-          }
-        } catch (error) {
-          logger.error(`Received invoice error: ${error}`);
+        }
+        if (!events.length) {
+          await sleep(1);
         }
       }
       return;
@@ -361,28 +361,27 @@ export class Payment {
       let ts = init_ts;
       while (true) {
         if (cancellationToken.cancelled) break;
-        try {
-          let { data: events } = await api.getDebitNoteEvents(
+        let events: any[] = [];
+        await suppress_exceptions(is_intermittent_error, async () => {
+          let { data } = await api.getDebitNoteEvents(
             5,
             ts.format("YYYY-MM-DDTHH:mm:ss.SSSSSSZ")
           );
-          for (let ev of events) {
-            logger.debug(
-              `Received debit note event: ${JSON.stringify(
-                ev
-              )}, type: ${JSON.stringify(Object.getPrototypeOf(ev))}`
-            );
-            ts = dayjs(ev.eventDate);
-            if (ev.eventType === "DebitNoteReceivedEvent") {
-              let debit_note = await self.debit_note(ev["debitNoteId"]);
-              yield debit_note;
-            }
+          events = data;
+        });
+        for (let ev of events) {
+          logger.debug(
+            `Received debit note event: ${JSON.stringify(ev)}, ` +
+            `type: ${JSON.stringify(Object.getPrototypeOf(ev))}`
+          );
+          ts = dayjs(ev.eventDate);
+          if (ev.eventType === "DebitNoteReceivedEvent") {
+            let debit_note = await self.debit_note(ev["debitNoteId"]);
+            yield debit_note;
           }
-          if (!events || !events.length) {
-            await sleep(1);
-          }
-        } catch (error) {
-          logger.error(`Received debit note error: ${error}`);
+        }
+        if (!events.length) {
+          await sleep(1);
         }
       }
       return;
