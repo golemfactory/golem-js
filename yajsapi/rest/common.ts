@@ -26,8 +26,8 @@ export async function suppress_exceptions(
 export async function repeat_on_error(
   block: any,
   max_tries: number = 5,
-  interval: number = 0.0
-  condition: any = is_intermittent_error,
+  interval: number = 0.0,
+  condition: any = is_intermittent_error
 ) {
   for (let try_num = 1; try_num <= max_tries; ++try_num) {
     if (try_num > 1) {
