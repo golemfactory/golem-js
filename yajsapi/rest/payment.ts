@@ -5,7 +5,7 @@ import * as yap from "ya-ts-client/dist/ya-payment/src/models";
 import { Configuration } from "ya-ts-client/dist/ya-activity";
 import { RequestorApi } from "ya-ts-client/dist/ya-payment/api";
 import { logger, sleep } from "../utils";
-import { is_intermittent_error, suppress_exceptions } from "./common";
+import { is_intermittent_error, repeat_on_error, suppress_exceptions } from "./common";
 
 dayjs.extend(utc);
 
@@ -59,7 +59,9 @@ export class Invoice extends yInvoice {
     };
     acceptance!.totalAmountAccepted = amount.toString();
     acceptance!.allocationId = allocation.id;
-    await this._api.acceptInvoice(this.invoiceId, acceptance!, undefined, { timeout: 15000 });
+    await repeat_on_error(async () => {
+      await this._api.acceptInvoice(this.invoiceId, acceptance!, undefined, { timeout: 15000 });
+    });
   }
 }
 
@@ -82,7 +84,9 @@ export class DebitNote extends yDebitNote {
     };
     acceptance!.totalAmountAccepted = amount.toString();
     acceptance!.allocationId = allocation.id;
-    await this._api.acceptDebitNote(this.debitNoteId, acceptance!, undefined, { timeout: 15000 });
+    await repeat_on_error(async () => {
+      await this._api.acceptDebitNote(this.debitNoteId, acceptance!, undefined, { timeout: 15000 });
+    });
   }
 }
 
@@ -116,25 +120,24 @@ export class Allocation extends _Link {
   async details(): Promise<AllocationDetails> {
     let allocationDetails = new AllocationDetails();
 
-    try {
+    await repeat_on_error(async () => {
       let {
         data: details,
       }: { data: yap.Allocation } = await this._api.getAllocation(this.id, { timeout: 15000 });
       allocationDetails.spent_amount = parseFloat(details.spentAmount);
       allocationDetails.remaining_amount = parseFloat(details.remainingAmount);
-    } catch (error) {
-      logger.error(error);
-      throw new Error(error);
-    }
+    });
 
     return allocationDetails;
   }
 
   async delete() {
     try {
-      await this._api.releaseAllocation(this.id, { timeout: 15000 });
+      await repeat_on_error(async () => {
+        await this._api.releaseAllocation(this.id, { timeout: 15000 });
+      });
     } catch(error) {
-      logger.error(`Release allocation: ${error}`);
+      logger.error(`Release allocation error: ${error}`);
     }
   }
 }
@@ -292,7 +295,11 @@ export class Payment {
   }
 
   async debit_note(debit_note_id: string): Promise<DebitNote> {
-    let { data: debit_note_obj } = await this._api.getDebitNote(debit_note_id, { timeout: 5000 });
+    let debit_note_obj;
+    await repeat_on_error(async () => {
+      let { data } = await this._api.getDebitNote(debit_note_id, { timeout: 5000 });
+      debit_note_obj = data;
+    });
     // TODO may need to check only requestor debit notes
     return new DebitNote(this._api, debit_note_obj)
   }
@@ -308,9 +315,12 @@ export class Payment {
   }
 
   async invoice(invoice_id: string): Promise<Invoice> {
-    let { data: invoice_obj } = await this._api.getInvoice(invoice_id, { timeout: 5000 });
+    let invoice_obj;
+    await repeat_on_error(async () => {
+      let { data } = await this._api.getInvoice(invoice_id, { timeout: 5000 });
+      invoice_obj = data;
+    });
     // TODO may need to check only requestor invoices
-    // logger.log("debug", `got=${JSON.stringify(invoice_obj)}`);
     return new Invoice(this._api, invoice_obj);
   }
 
