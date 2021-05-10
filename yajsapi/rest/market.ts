@@ -5,6 +5,7 @@ import { logger, sleep } from "../utils";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import * as models from "ya-ts-client/dist/ya-market/src/models";
 import { Configuration } from "ya-ts-client/dist/ya-activity";
+import { suppress_exceptions, is_intermittent_error } from "./common";
 
 dayjs.extend(utc);
 
@@ -237,20 +238,19 @@ export class Subscription {
   async *events(cancellationToken?): AsyncGenerator<OfferProposal> {
     while (this._open) {
       if (cancellationToken && cancellationToken.cancelled) break;
+      let proposals: any[] = [];
       try {
-        let { data: proposals } = await this._api.collectOffers(
-          this._id,
-          3,
-          10,
-          { timeout: 5000 }
-        );
+        await suppress_exceptions(is_intermittent_error, async () => {
+          let { data } = await this._api.collectOffers(this._id, 3, 10, { timeout: 5000 });
+          proposals = data;
+        });
         for (let _proposal of proposals) {
           if (cancellationToken && cancellationToken.cancelled) return;
           if (_proposal.eventType === "ProposalEvent") {
             yield new OfferProposal(this, _proposal as models.ProposalEvent);
           }
         }
-        if (!proposals || !proposals.length) {
+        if (!proposals.length) {
           await sleep(2);
         }
       } catch (error) {
