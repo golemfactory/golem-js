@@ -26,23 +26,30 @@ export async function suppress_exceptions(
 export async function repeat_on_error(
   block: Callable<void, any>,
   max_tries: number = 5,
+  max_duration_ms = 15000,
   interval: number = 0.0,
   condition: Callable<Error, boolean> = is_intermittent_error
 ) {
+  let start_time = Date.now();
   for (let try_num = 1; try_num <= max_tries; ++try_num) {
     if (try_num > 1) {
       await sleep(interval);
     }
-    try {
-      return await suppress_exceptions(condition, async () => {
-        return await block();
-      });
-    } catch (error) {
-      let repeat = try_num < max_tries;
-      let msg = `API call timed out (attempt ${try_num}/${max_tries}), ` +
-                repeat ? `retrying in ${interval} s` : "giving up";
-      logger.debug(msg);
-      if (!repeat) { throw error; }
-    }
+    let err_in_block, ret_value;
+    await suppress_exceptions(condition, async () => {
+      try {
+        ret_value = await block();
+      } catch (error) {
+        err_in_block = error;
+        throw error;
+      }
+    });
+    if (err_in_block === undefined) { return ret_value; }
+    let duration = Date.now() - start_time;
+    let repeat = try_num < max_tries && duration < max_duration_ms;
+    let msg = `API call timed out (attempt ${try_num}/${max_tries}), ` +
+              repeat ? `retrying in ${interval} s` : "giving up after ${duration}ms";
+    logger.debug(msg);
+    if (!repeat) { throw err_in_block; }
   }
 }
