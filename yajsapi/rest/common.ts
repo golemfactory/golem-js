@@ -1,4 +1,4 @@
-import { logger, sleep } from "../utils";
+import { Callable, logger, sleep } from "../utils";
 
 export function is_intermittent_error(e) {
   if (e.response && e.response.status === 408) { return true; }
@@ -8,8 +8,8 @@ export function is_intermittent_error(e) {
 }
 
 export async function suppress_exceptions(
-  condition: any,
-  block: any,
+  condition: Callable<Error, boolean>,
+  block: Callable<void, any>,
   report_exceptions: boolean = true
 ): Promise<any> {
   try {
@@ -24,10 +24,10 @@ export async function suppress_exceptions(
 }
 
 export async function repeat_on_error(
-  block: any,
+  block: Callable<void, any>,
   max_tries: number = 5,
   interval: number = 0.0,
-  condition: any = is_intermittent_error
+  condition: Callable<Error, boolean> = is_intermittent_error
 ) {
   for (let try_num = 1; try_num <= max_tries; ++try_num) {
     if (try_num > 1) {
