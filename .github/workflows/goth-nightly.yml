@@ -1,20 +1,11 @@
-name: Integrations Tests
+name: Goth nightly
 
 on:
-  push:
-    branches:
-      - master
-      - b0.*
-  pull_request:
-    branches:
-      - master
-      - b0.*
   schedule:
-    # run this workflow every day at 2:30 AM UTC
-    - cron: '30 2 * * *'
+    # run this workflow every day at 2:00 AM UTC
+    - cron: '0 2 * * *'
 
 jobs:
-
   goth-tests:
     name: Run integration tests
     runs-on: goth
@@ -22,6 +13,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          ref: 'b0.3'
 
       - name: Configure node.js
         uses: actions/setup-node@v1
