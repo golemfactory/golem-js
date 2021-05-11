@@ -60,7 +60,7 @@ export class Invoice extends yInvoice {
     acceptance!.totalAmountAccepted = amount.toString();
     acceptance!.allocationId = allocation.id;
     await repeat_on_error(async () => {
-      await this._api.acceptInvoice(this.invoiceId, acceptance!, undefined, { timeout: 15000 });
+      await this._api.acceptInvoice(this.invoiceId, acceptance!, undefined, { timeout: 7000 });
     });
   }
 }
@@ -85,7 +85,7 @@ export class DebitNote extends yDebitNote {
     acceptance!.totalAmountAccepted = amount.toString();
     acceptance!.allocationId = allocation.id;
     await repeat_on_error(async () => {
-      await this._api.acceptDebitNote(this.debitNoteId, acceptance!, undefined, { timeout: 15000 });
+      await this._api.acceptDebitNote(this.debitNoteId, acceptance!, undefined, { timeout: 7000 });
     });
   }
 }
@@ -118,23 +118,21 @@ export class Allocation extends _Link {
   //"Allocation expiration timestamp"
 
   async details(): Promise<AllocationDetails> {
-    let allocationDetails = new AllocationDetails();
-
-    await repeat_on_error(async () => {
+    return await repeat_on_error(async () => {
+      let allocationDetails = new AllocationDetails();
       let {
         data: details,
-      }: { data: yap.Allocation } = await this._api.getAllocation(this.id, { timeout: 15000 });
+      }: { data: yap.Allocation } = await this._api.getAllocation(this.id, { timeout: 7000 });
       allocationDetails.spent_amount = parseFloat(details.spentAmount);
       allocationDetails.remaining_amount = parseFloat(details.remainingAmount);
+      return allocationDetails;
     });
-
-    return allocationDetails;
   }
 
   async delete() {
     try {
       await repeat_on_error(async () => {
-        await this._api.releaseAllocation(this.id, { timeout: 15000 });
+        await this._api.releaseAllocation(this.id, { timeout: 7000 });
       });
     } catch(error) {
       logger.error(`Release allocation error: ${error}`);
@@ -295,10 +293,8 @@ export class Payment {
   }
 
   async debit_note(debit_note_id: string): Promise<DebitNote> {
-    let debit_note_obj;
-    await repeat_on_error(async () => {
-      let { data } = await this._api.getDebitNote(debit_note_id, { timeout: 5000 });
-      debit_note_obj = data;
+    let debit_note_obj = await repeat_on_error(async () => {
+      return (await this._api.getDebitNote(debit_note_id, { timeout: 5000 })).data;
     });
     // TODO may need to check only requestor debit notes
     return new DebitNote(this._api, debit_note_obj)
@@ -315,10 +311,8 @@ export class Payment {
   }
 
   async invoice(invoice_id: string): Promise<Invoice> {
-    let invoice_obj;
-    await repeat_on_error(async () => {
-      let { data } = await this._api.getInvoice(invoice_id, { timeout: 5000 });
-      invoice_obj = data;
+    let invoice_obj = await repeat_on_error(async () => {
+      return (await this._api.getInvoice(invoice_id, { timeout: 5000 })).data;
     });
     // TODO may need to check only requestor invoices
     return new Invoice(this._api, invoice_obj);
