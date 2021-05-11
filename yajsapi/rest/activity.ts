@@ -60,6 +60,7 @@ export class ActivityService {
     let { data: response } = await this._api.createActivity({ agreementId: agreement_id }, { timeout: 30000, params: { timeout: 25 } });
     let activity_id =
       typeof response == "string" ? response : response.activityId;
+    logger.debug(`Created activity ${activity_id} for agreement ${agreement_id}`);
     return new Activity(activity_id, this._api, this._state);
   }
 
@@ -198,11 +199,18 @@ class Activity {
     cancellationToken?: CancellationToken
   ): Promise<any> {
     const script_txt = JSON.stringify(script);
-    const { data: batch_id } = await this._api.exec(
-      this._id,
-      new ExeScriptRequest(script_txt),
-      { timeout: 5000 }
-    );
+    let batch_id;
+    try {
+      const { data } = await this._api.exec(
+        this._id,
+        new ExeScriptRequest(script_txt),
+        { timeout: 10000 }
+      );
+      batch_id = data;
+    } catch (error) {
+      logger.warn(`Error while sending batch script to provider: ${error}`);
+      throw error;
+    }
 
     if (stream) {
       return new StreamingBatch(
@@ -355,7 +363,12 @@ export class CommandExecutionError extends Error {
   }
 }
 
-class BatchTimeoutError extends Error {}
+class BatchTimeoutError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "BatchTimeoutError";
+  }
+}
 
 class Batch implements AsyncIterable<events.CommandEventContext> {
   protected api!: RequestorControlApi;
@@ -419,7 +432,7 @@ class PollingBatch extends Batch {
         throw new CommandExecutionError(last_idx.toString(), "Interrupted.");
       }
       if (timeout && timeout <= 0) {
-        throw new BatchTimeoutError();
+        throw new BatchTimeoutError(`Task timeout for activity ${this.activity_id}`);
       }
       try {
         let { data } = await this.api.getExecBatchResults(
