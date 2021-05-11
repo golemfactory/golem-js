@@ -436,7 +436,7 @@ export class Executor {
         offers_collected += 1;
         let score;
         try {
-          score = await strategy.score_offer(proposal, self);
+          score = await strategy.score_offer(proposal, agreements_pool);
           logger.debug(`Scored offer ${proposal.id()}, ` +
                         `provider: ${proposal.props()["golem.node.id.name"]}, ` +
                         `strategy: ${strategy.constructor.name}, ` +
