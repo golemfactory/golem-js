@@ -68,7 +68,7 @@ async def test_multiactivity_agreement(project_dir: Path, log_dir: Path, config_
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(
-            "npm run-script test-multiactivity-agreement", env=os.environ
+            "node ./tests/goth/test_multiactivity_agreement/requestor.js", env=os.environ
         ) as (_cmd_task, cmd_monitor):
 
             # Wait for agreement

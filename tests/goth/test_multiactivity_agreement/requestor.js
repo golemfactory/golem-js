@@ -1,5 +1,4 @@
-import { Executor, Task, utils, vm, WorkContext } from "../../../yajsapi";
-
+const { Executor, Task, utils, vm, WorkContext } = require("../../../dist");
 const { asyncWith, logUtils, range } = utils;
 
 async function main() {
@@ -9,7 +8,7 @@ async function main() {
     min_storage_gib: 2.0,
   });
 
-  async function* worker(work_ctx: WorkContext, tasks) {
+  async function* worker(work_ctx, tasks) {
     for await (let task of tasks) {
       work_ctx.run("/bin/sleep", ["1"]);
       yield work_ctx.commit({ timeout: 15 * 60 * 1000 });
@@ -27,8 +26,8 @@ async function main() {
       subnet_tag: "goth",
       event_consumer: logUtils.logSummary(),
     }),
-    async (executor: Executor): Promise<void> => {
-      const tasks: any[] = range(0, 3).map((frame) => new Task(frame));
+    async (executor) => {
+      const tasks = range(0, 3).map((frame) => new Task(frame));
       for await (let task of executor.submit(worker, tasks)) {
         console.log(`Task computed: ${task.result()}`);
       }
