@@ -17,13 +17,11 @@ logger = logging.getLogger("goth.test.multiactivity_agreement")
 
 
 async def assert_agreement_created(events):
-    """Assert that `AgreementCreated` event occurs."""
-
     async for line in events:
-        m = re.match(r"New agreement. id: ([^,]+)", line)
+        m = re.match(r".*New agreement. id: ([^,]+)", line)
         if m:
             return m.group(1)
-    raise AssertionError("Expected AgreementCreated event")
+    raise AssertionError("Expected new agreement log message")
 
 
 async def assert_multiple_workers_run(agr_id, events):
@@ -33,13 +31,13 @@ async def assert_multiple_workers_run(agr_id, events):
     workers_finished = 0
 
     async for line in events:
-        m = re.match(r"Stopped worker related to agreement ([0-9a-f]+)", line)
+        m = re.match(r".*Stopped worker related to agreement ([0-9a-f]+)", line)
         if m:
             worker_agr_id = m.group(1)
             assert worker_agr_id == agr_id, "Worker run for another agreement"
             assert " finished with error" not in line, "Worker finished with error"
             workers_finished += 1
-        elif re.match("Computation finished", line):
+        elif re.match(".*Computation finished in", line):
             break
 
     assert workers_finished > 1, (
