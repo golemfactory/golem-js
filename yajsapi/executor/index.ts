@@ -732,8 +732,8 @@ export class Executor {
           await start_worker(agreement);
         } catch (error) {
           logger.warn(`Worker for agreement ${agreement.id()} finished with error: ${error}`);
-        } finally {
           await agreements_pool.release_agreement(agreement.id(), false);
+        } finally {
           csp.putAsync(workers_done, true);
         }
       }
