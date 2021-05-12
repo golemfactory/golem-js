@@ -63,12 +63,14 @@ async def test_multiactivity_agreement(project_dir: Path, log_dir: Path, config_
 
     runner = Runner(base_log_dir=log_dir, compose_config=goth_config.compose_config)
 
+    requestor_path = project_dir / "tests" / "goth" / "test_multiactivity_agreement" / "requestor.js";
+
     async with runner(goth_config.containers):
 
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(
-            "node ./tests/goth/test_multiactivity_agreement/requestor.js", env=os.environ
+            f"node {requestor_path}", env=os.environ
         ) as (_cmd_task, cmd_monitor):
 
             # Wait for agreement
