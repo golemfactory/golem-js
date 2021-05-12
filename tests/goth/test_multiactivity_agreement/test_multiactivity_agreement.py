@@ -75,11 +75,11 @@ async def test_multiactivity_agreement(project_dir: Path, log_dir: Path, config_
 
             # Wait for agreement
             assertion = cmd_monitor.add_assertion(assert_agreement_created)
-            agr_id = await assertion.wait_for_result(timeout=30)
+            agr_id = await assertion.wait_for_result(timeout=120)
 
             # Wait for multiple workers run for the agreement
             assertion = cmd_monitor.add_assertion(
                 partial(assert_multiple_workers_run, agr_id),
                 name=f"assert_multiple_workers_run({agr_id})",
             )
-            await assertion.wait_for_result(timeout=60)
+            await assertion.wait_for_result(timeout=120)
