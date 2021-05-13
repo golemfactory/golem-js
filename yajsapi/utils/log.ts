@@ -222,6 +222,9 @@ class SummaryLogger {
       this.confirmed_agreements.add(event["agr_id"]);
     } else if (eventName === events.TaskStarted.name) {
       this.task_data[event["task_id"]] = event["task_data"];
+      logger.debug(`Task started for agreement ${event["agr_id"]}`);
+    } else if (eventName === events.TaskAccepted.name) {
+      logger.debug(`Task accepted, task_id=${event["task_id"]}`);
     } else if (eventName === events.ScriptSent.name) {
       const provider_info = this.agreement_provider_info[event["agr_id"]];
       logger.info(
