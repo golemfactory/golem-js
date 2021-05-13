@@ -40,7 +40,7 @@ async function main() {
       max_workers: 1,
       timeout: 6 * 60 * 1000,
       budget: "10.0",
-      subnet_tag: "devnet-beta.1",
+      subnet_tag: "goth",
       driver: "zksync",
       network: "rinkeby",
       event_consumer: logUtils.logSummary(),
