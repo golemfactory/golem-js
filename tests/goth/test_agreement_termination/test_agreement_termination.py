@@ -81,7 +81,7 @@ async def test_agreement_termination(
 
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
-        async with requestor.run_command_on_host(test_script_path, env=os.environ) as (
+        async with requestor.run_command_on_host(f"node {test_script_path}", env=os.environ) as (
             _cmd_task,
             cmd_monitor,
         ):
