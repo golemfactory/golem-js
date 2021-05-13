@@ -32,6 +32,7 @@ async def assert_agreement_cancelled(agr_id, stream):
     """
 
     async for line in stream:
+        logger.info(f"--> {line}")
         if re.match(rf".*Task started for agreement {agr_id}.*", line):
             raise AssertionError(f"Task started for agreement {agr_id}")
         if re.match(
