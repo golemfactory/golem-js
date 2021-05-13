@@ -45,7 +45,7 @@ async def assert_all_tasks_computed(stream):
     remaining_ids = {1, 2, 3, 4, 5, 6}
 
     async for line in stream:
-        m = re.search(r".*Task accepted, task_id=([0-9a-f]+).*", line)
+        m = re.search(r".*Task accepted, task_id=([0-9]+).*", line)
         if m:
             task_id = int(m.group(1))
             logger.debug("assert_all_tasks_computed: Task %d computed", task_id)
@@ -98,7 +98,7 @@ async def test_agreement_termination(
                 partial(assert_agreement_cancelled, agr_id),
                 name=f"assert_agreement_cancelled({agr_id})",
             )
-            await assertion.wait_for_result(timeout=30)
+            await assertion.wait_for_result(timeout=120)
 
             # Wait for executor shutdown
             await cmd_monitor.wait_for_pattern(".*Shutdown complete.*", timeout=120)
