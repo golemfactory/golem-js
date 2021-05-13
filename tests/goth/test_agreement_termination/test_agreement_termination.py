@@ -101,5 +101,5 @@ async def test_agreement_termination(
             await assertion.wait_for_result(timeout=30)
 
             # Wait for executor shutdown
-            await cmd_monitor.wait_for_pattern("ShutdownFinished", timeout=120)
+            await cmd_monitor.wait_for_pattern(".*Shutdown complete.*", timeout=120)
             logger.info("Requestor script finished")
