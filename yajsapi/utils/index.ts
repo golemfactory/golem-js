@@ -12,6 +12,7 @@ import promisify from './promisify';
 import Queue from "./queue";
 import range from "./range";
 import sleep from "./sleep";
+import { Lock } from "./lock";
 
 export {
   applyMixins,
@@ -23,6 +24,7 @@ export {
   eventLoop,
   changeLogLevel,
   getAllProperties,
+  Lock,
   logger,
   logUtils,
   promisify,

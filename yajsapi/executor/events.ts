@@ -149,9 +149,11 @@ export class AgreementRejected extends AgreementEvent {
 }
 
 export class AgreementTerminated extends AgreementEvent {
-  constructor({ agr_id }) {
+  reason?: string | null;
+  constructor({ agr_id, reason }) {
     super();
     if (agr_id) this.agr_id = agr_id;
+    if (reason) this.reason = reason;
   }
 }
 

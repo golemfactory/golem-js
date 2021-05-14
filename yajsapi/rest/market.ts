@@ -34,7 +34,7 @@ class AgreementDetails extends Object {
     return new View(offer.properties);
   }
 
-  requestor_view(c: Model): View {
+  requestor_view(): View {
     let demand: models.Demand = this.raw_details.demand;
     return new View(demand.properties);
   }
@@ -65,7 +65,12 @@ export class Agreement {
   }
 
   async confirm(): Promise<boolean> {
-    await this._api.confirmAgreement(this._id, undefined, { timeout: 16000 });
+    try {
+      await this._api.confirmAgreement(this._id, undefined, { timeout: 16000 });
+    } catch (error) {
+      logger.debug(`confirmAgreement(${this._id}) raised ApiException ${error}`);
+      return false;
+    }
     try {
       let { data: msg } = await this._api.waitForApproval(this._id, 15, { timeout: 16000 });
       return true;
@@ -81,7 +86,7 @@ export class Agreement {
       logger.debug(`Terminated agreement ${this._id}.`);
       return true;
     } catch (error) {
-      if (error.response.status === 410) {
+      if (error.response && error.response.status === 410) {
         logger.debug(
           `terminateAgreement(${this._id}) raised ApiException: status = 410, message = ${error.message}`
         );
@@ -154,7 +159,7 @@ export class OfferProposal {
       );
     } catch (e) {
       logger.debug(`Cannot reject offer ${this.id()}` + e.response.data.message);
-      throw(e);
+      throw e;
     }
   }
 

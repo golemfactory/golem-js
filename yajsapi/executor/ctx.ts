@@ -365,7 +365,7 @@ export class WorkContext {
    *
    * @returns Work object (the latter contains sequence commands added before calling this method)
    */
-  commit({ timeout }: { timeout?: number }): Work {
+  commit({ timeout }: { timeout?: number } = {}): Work {
     let steps = this._pending_steps;
     this._pending_steps = [];
     return new _Steps(steps, timeout);
