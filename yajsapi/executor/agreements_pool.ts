@@ -157,14 +157,13 @@ export class AgreementsPool implements ComputationHistory {
   private async _terminate_agreement(agreement_id: string, reason: object): Promise<void> {
     const buffered_agreement = this._agreements.get(agreement_id)
     if (buffered_agreement === undefined) {
-      logger.warning(`Trying to terminate agreement not in the pool. id: ${agreement_id}`);
+      logger.warn(`Trying to terminate agreement not in the pool. id: ${agreement_id}`);
       return;
     }
     logger.debug(`Terminating agreement. id: ${agreement_id}, reason: ${JSON.stringify(reason)}`);
     if (buffered_agreement.worker_task && buffered_agreement.worker_task.isPending()) {
       logger.debug(
-        "Terminating agreement that still has worker. " +
-        `agreement_id: ${buffered_agreement.agreement.id()}, worker: ${buffered_agreement.worker_task}`
+        `Terminating agreement that still has worker. agr_id: ${buffered_agreement.agreement.id()}`
       );
       buffered_agreement.worker_task.cancel();
     }
