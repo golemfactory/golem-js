@@ -26,11 +26,12 @@ async def assert_command_error(stream):
     raise AssertionError("Expected worker failure")
 
 
-async def assert_agreement_cancelled(agr_id, stream):
+async def assert_agreement_cancelled(stream):
     """Assert that the agreement with the given id is eventually terminated.
     Fails if a new task is started for the agreement.
     """
-
+    agr_id = await assert_command_error(stream)
+    logger.info("Detected command error in activity for agreement %s", agr_id)
     async for line in stream:
         if re.match(rf".*Task started for agreement {agr_id}.*", line):
             raise AssertionError(f"Task started for agreement {agr_id}")
@@ -88,14 +89,9 @@ async def test_agreement_termination(
 
             cmd_monitor.add_assertion(assert_all_tasks_computed)
 
-            # Wait for worker failure due to command error
-            assertion = cmd_monitor.add_assertion(assert_command_error)
-            agr_id = await assertion.wait_for_result(timeout=120)
-            logger.info("Detected command error in activity for agreement %s", agr_id)
-
             # Make sure no new tasks are sent and the agreement is terminated
             assertion = cmd_monitor.add_assertion(
-                partial(assert_agreement_cancelled, agr_id),
+                assert_agreement_cancelled,
                 name=f"assert_agreement_cancelled({agr_id})",
             )
             await assertion.wait_for_result(timeout=120)
