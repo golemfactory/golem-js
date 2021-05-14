@@ -222,6 +222,9 @@ class SummaryLogger {
       this.confirmed_agreements.add(event["agr_id"]);
     } else if (eventName === events.TaskStarted.name) {
       this.task_data[event["task_id"]] = event["task_data"];
+      logger.debug(`Task started for agreement ${event["agr_id"]}`);
+    } else if (eventName === events.TaskAccepted.name) {
+      logger.debug(`Task accepted, task_id=${event["task_id"]}`);
     } else if (eventName === events.ScriptSent.name) {
       const provider_info = this.agreement_provider_info[event["agr_id"]];
       logger.info(
@@ -271,10 +274,10 @@ class SummaryLogger {
         this._print_cost();
       }
     } else if (eventName === events.WorkerFinished.name) {
-      if (event["exception"] === null) return;
+      if (event["exception"] === null || event["exception"] === undefined) return;
       const provider_info = this.agreement_provider_info[event["agr_id"]];
       let failures = this.provider_failures.get(provider_info);
-      if (!failures) this.provider_failures.set(provider_info, 0);
+      if (failures === undefined) this.provider_failures.set(provider_info, 1);
       else this.provider_failures.set(provider_info, failures + 1);
       let more_info = "";
       if (

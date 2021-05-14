@@ -70,7 +70,8 @@
     ],
     "failFast": true,
     "files": [
-      "tests/**/*.ts"
+      "tests/**/*.ts",
+      "!tests/goth/**/*.ts"
     ],
     "ignoredByWatcher": [
       "yajsapi/**/*.ts"

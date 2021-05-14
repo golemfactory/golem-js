@@ -12,6 +12,7 @@ import { DemandBuilder } from "../props/builder";
 
 import * as rest from "../rest";
 import { Agreement,  OfferProposal, Subscription } from "../rest/market";
+import { AgreementsPool } from "./agreements_pool";
 import { Allocation, DebitNote, Invoice } from "../rest/payment";
 import { CommandExecutionError } from "../rest/activity";
 
@@ -38,7 +39,6 @@ export const vm = _vm;
 import { Task, TaskStatus } from "./task";
 import { Consumer, SmartQueue } from "./smartq";
 import {
-  ComputationHistory,
   DecreaseScoreForUnconfirmedAgreement,
   LeastExpensiveLinearPayuMS,
   MarketStrategy,
@@ -98,17 +98,6 @@ export class _ExecutorConfig {
   }
 }
 
-export class _BufferItem {
-  public ts!: Date; //datetime
-  public score!: Number;
-  public proposal!: OfferProposal;
-  constructor(ts, score, proposal) {
-    this.ts = ts;
-    this.score = score;
-    this.proposal = proposal;
-  }
-}
-
 class AsyncGeneratorBreak extends Error {}
 
 type D = "D"; // Type var for task data
@@ -132,7 +121,7 @@ export type ExecutorOpts = {
  * 
  * @description Used to run tasks using the specified application package within providers' execution units.
  */
-export class Executor implements ComputationHistory {
+export class Executor {
   private _subnet;
   private _driver;
   private _network;
@@ -145,7 +134,6 @@ export class Executor implements ComputationHistory {
   private _expires;
   private _budget_amount;
   private _budget_allocations: Allocation[];
-  private _rejecting_providers: Set<string>;
 
   private _activity_api;
   private _market_api;
@@ -202,7 +190,6 @@ export class Executor implements ComputationHistory {
       0.5
     );
     this._budget_allocations = [];
-    this._rejecting_providers = new Set();
 
     this._cancellation_token = new CancellationToken();
     let cancellationToken = this._cancellation_token;
@@ -274,7 +261,12 @@ export class Executor implements ComputationHistory {
       this._wrapped_consumer.async_call.bind(this._wrapped_consumer)
     );
 
-    const multi_payment_decoration = await this._create_allocations();
+    let multi_payment_decoration;
+    try {
+      multi_payment_decoration = await this._create_allocations();
+    } catch (error) {
+      logger.error(error);
+    }
 
     emit(new events.ComputationStarted({ expires: this._expires }));
     // Building offer
@@ -295,7 +287,7 @@ export class Executor implements ComputationHistory {
     await this._task_package.decorate_demand(builder);
     await this._strategy.decorate_demand(builder);
 
-    let offer_buffer: { [key: string]: _BufferItem } = {}; //Dict[str, _BufferItem]
+    let agreements_pool = new AgreementsPool(emit, this._worker_cancellation_token);
     let market_api = this._market_api;
     let activity_api = this._activity_api;
     let strategy = this._strategy;
@@ -303,6 +295,7 @@ export class Executor implements ComputationHistory {
     let paymentCancellationToken = this._payment_cancellation_token;
     let done_queue: Queue<Task<D, R>> = new Queue([]);
     let stream_output = this._stream_output;
+    let workers_done = csp.chan();
 
     function on_task_done(task: Task<D, R>, status: TaskStatus): void {
       if (status === TaskStatus.ACCEPTED) done_queue.put(task); //put_nowait
@@ -343,8 +336,8 @@ export class Executor implements ComputationHistory {
             })
           );
           emit(new events.CheckingPayments());
-          const allocation = self._get_allocation(invoice);
           try {
+            const allocation = self._get_allocation(invoice);
             await invoice.accept(invoice.amount, allocation);
             agreements_to_pay.delete(invoice.agreementId);
             agreements_accepting_debit_notes.delete(invoice.agreementId);
@@ -405,8 +398,8 @@ export class Executor implements ComputationHistory {
             note_id: debit_note.debitNodeId,
             amount: debit_note.totalAmountDue,
           }));
-          const allocation = self._get_allocation(debit_note);
           try {
+            const allocation = self._get_allocation(debit_note);
             await debit_note.accept(debit_note.totalAmountDue, allocation);
           } catch (e) {
             emit(new events.PaymentFailed({ agr_id: debit_note.agreementId, reason: e.toString() }));
@@ -443,7 +436,7 @@ export class Executor implements ComputationHistory {
         offers_collected += 1;
         let score;
         try {
-          score = await strategy.score_offer(proposal, self);
+          score = await strategy.score_offer(proposal, agreements_pool);
           logger.debug(`Scored offer ${proposal.id()}, ` +
                         `provider: ${proposal.props()["golem.node.id.name"]}, ` +
                         `strategy: ${strategy.constructor.name}, ` +
@@ -554,11 +547,7 @@ export class Executor implements ComputationHistory {
           }
         } else {
           emit(new events.ProposalConfirmed({ prop_id: proposal.id() }));
-          offer_buffer[proposal.issuer()] = new _BufferItem(
-            Date.now(),
-            score,
-            proposal
-          );
+          await agreements_pool.add_proposal(score, proposal);
           proposals_confirmed += 1;
         }
       }
@@ -707,6 +696,7 @@ export class Executor implements ComputationHistory {
               } catch (error) {
                 if (self._worker_cancellation_token.cancelled) { return; }
                 try {
+                  /* rethrow this error in the user-supplied generator (worker function) */
                   await command_generator.throw(error);
                 } catch (error) {
                   emit(
@@ -715,7 +705,7 @@ export class Executor implements ComputationHistory {
                       exception: error,
                     })
                   );
-                  return;
+                  throw error;
                 }
               }
             }
@@ -737,68 +727,35 @@ export class Executor implements ComputationHistory {
     }
 
     async function worker_starter(): Promise<void> {
-      async function _start_worker(agreement) {
+      async function _start_worker(agreement: Agreement): Promise<void> {
         try {
           await start_worker(agreement);
         } catch (error) {
-          logger.warn(`Worker finished with error: ${error}`);
+          logger.warn(`Worker for agreement ${agreement.id()} finished with error: ${error}`);
+          await agreements_pool.release_agreement(agreement.id(), false);
         } finally {
-          await agreement.terminate();
+          csp.putAsync(workers_done, true);
         }
       }
       while (true) {
         await sleep(2);
+        await agreements_pool.cycle();
         if (self._worker_cancellation_token.cancelled) { break; }
         if (
-          Object.keys(offer_buffer).length > 0 &&
           workers.size < self._conf.max_workers &&
           work_queue.has_unassigned_items()
         ) {
-          let _offer_list = Object.entries(offer_buffer);
-          let _sample =
-            _offer_list
-              .map(x => { return { obj: x, rnd: Math.random() }; })
-              .sort((a, b) => a.rnd - b.rnd)
-              .map(x => x.obj)
-              .reduce((acc, item) => item[1].score > acc[1].score ? item : acc);
-          let [provider_id, buffer] = _sample;
-          delete offer_buffer[provider_id];
-
-          let new_task: any | null = null;
-          let agreement: Agreement | null = null;
+          let new_task: any;
           try {
             if (self._worker_cancellation_token.cancelled) { break; }
-            agreement = await buffer.proposal.create_agreement();
-            if (self._worker_cancellation_token.cancelled) { break; }
-            const node_info = (await agreement.details())
-              .provider_view()
-              .extract(new NodeInfo());
-            emit(
-              new events.AgreementCreated({
-                agr_id: agreement.id(),
-                provider_id: provider_id,
-                provider_info: node_info,
-              })
+            const { task: new_task } = await agreements_pool.use_agreement(
+              (agreement: Agreement, _: any) => loop.create_task(_start_worker.bind(null, agreement))
             );
-            if (self._worker_cancellation_token.cancelled) { break; }
-            if (!(await agreement.confirm())) {
-              emit(new events.AgreementRejected({ agr_id: agreement.id() }));
-              self._rejecting_providers.add(provider_id);
-              continue;
-            }
-            self._rejecting_providers.delete(provider_id);
-            emit(new events.AgreementConfirmed({ agr_id: agreement.id() }));
-            if (self._worker_cancellation_token.cancelled) { break; }
-            new_task = loop.create_task(_start_worker.bind(null, agreement));
+            if (new_task === undefined) { continue; }
             workers.add(new_task);
           } catch (error) {
             if (new_task) new_task.cancel();
-            emit(
-              new events.ProposalFailed({
-                prop_id: buffer.proposal.id(),
-                reason: error.toString(),
-              })
-            );
+            logger.debug(`There was a problem during use_agreement: ${error}.`);
           }
         }
       }
@@ -891,43 +848,41 @@ export class Executor implements ComputationHistory {
         logger.error("Computation interrupted by the user.");
       }
       payment_closing = true;
-      find_offers_task.cancel();
-      worker_starter_task.cancel();
       if (!self._worker_cancellation_token.cancelled)
         self._worker_cancellation_token.cancel();
       try {
-        if (workers) {
-          for (let worker_task of [...workers]) {
-            worker_task.cancel();
-          }
+        if (workers.size > 0) {
           emit(new events.CheckingPayments());
-          await bluebird.Promise.any([
-            bluebird.Promise.all([...workers]),
-            promise_timeout(10),
-          ]);
+          logger.debug(`Waiting for ${workers.size} workers to stop...`);
+          for (let i = workers.size; i > 0; --i) {
+            await promisify(csp.takeAsync)(workers_done);
+            logger.debug(`Waiting for workers to stop: ${workers.size - i + 1}/${workers.size} done.`);
+          }
           emit(new events.CheckingPayments());
         }
       } catch (error) {
-        logger.error(error);
+        logger.error(`Error while waiting for workers to finish: ${error}.`);
       }
-      await bluebird.Promise.any([
-        bluebird.Promise.all([process_invoices_job, debit_notes_job]),
-        promise_timeout(20),
-      ]);
+      try {
+        await agreements_pool.cycle();
+        await agreements_pool.terminate_all({ reason: "Computation finished." })
+      } catch (error) {
+        logger.debug(`Problem with agreements termination ${error}`);
+      }
+      if (agreements_to_pay.size > 0) { logger.debug(`Waiting for ${agreements_to_pay.size} invoices...`); }
+      try {
+        await bluebird.Promise.all([process_invoices_job, debit_notes_job]).timeout(25000);
+      } catch (error) {
+        logger.warn(`Error while waiting for invoices: ${error}.`);
+      }
       emit(new events.CheckingPayments());
-      if (agreements_to_pay.size > 0) {
-        await bluebird.Promise.any([process_invoices_job, debit_notes_job, promise_timeout(15)]);
-        emit(new events.CheckingPayments());
-      }
+      if (agreements_to_pay.size > 0) { logger.warn(`${agreements_to_pay.size} unpaid invoices ${JSON.stringify(agreements_to_pay.keys())}.`); }
+      if (!self._payment_cancellation_token.cancelled) { self._payment_cancellation_token.cancel(); }
+      emit(new events.PaymentsFinished());
+      await sleep(2);
+      cancellationToken.cancel();
+      logger.info("Shutdown complete.");
     }
-    if (!self._payment_cancellation_token.cancelled)
-      self._payment_cancellation_token.cancel();
-    emit(new events.PaymentsFinished());
-    await sleep(2);
-    logger.info("Shutting down...");
-    cancellationToken.cancel();
-    await sleep(15);
-    logger.info("Shutdown complete.");
     return;
   }
 
@@ -995,10 +950,6 @@ export class Executor implements ComputationHistory {
     } catch (error) {
       throw new Error(error);
     }
-  }
-
-  rejected_last_agreement(provider_id: string): boolean {
-    return this._rejecting_providers.has(provider_id);
   }
 
   async ready(): Promise<Executor> {
