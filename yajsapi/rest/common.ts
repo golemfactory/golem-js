@@ -4,6 +4,7 @@ export function is_intermittent_error(e) {
   if (e.response && e.response.status === 408) { return true; }
   if (e.code === "ECONNABORTED" && e.message && e.message.includes("timeout")) { return true; }
   if (e.code === "ETIMEDOUT") { return true; }
+  if (e.code === "EPIPE") { return true; }
   return false;
 }
 
