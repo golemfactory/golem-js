@@ -90,10 +90,7 @@ async def test_agreement_termination(
             cmd_monitor.add_assertion(assert_all_tasks_computed)
 
             # Make sure no new tasks are sent and the agreement is terminated
-            assertion = cmd_monitor.add_assertion(
-                assert_agreement_cancelled,
-                name=f"assert_agreement_cancelled({agr_id})",
-            )
+            assertion = cmd_monitor.add_assertion(assert_agreement_cancelled)
             await assertion.wait_for_result(timeout=120)
 
             # Wait for executor shutdown
