@@ -412,8 +412,55 @@ export class Executor {
       logger.debug("Stopped processing debit notes.");
     }
 
+    async function _handle_proposal(proposal: OfferProposal): Promise<events.YaEvent>{
+      let reject_proposal = async (reason: string): Promise<events.YaEvent> => {
+        await proposal.reject(reason);
+        return new events.ProposalRejected({ prop_id: proposal.id(), reason: reason });
+      }
+      let score;
+      try {
+        score = await strategy.score_offer(proposal, agreements_pool);
+        logger.debug(`Scored offer ${proposal.id()}, ` +
+                      `provider: ${proposal.props()["golem.node.id.name"]}, ` +
+                      `strategy: ${strategy.constructor.name}, ` +
+                      `score: ${score}`);
+      } catch (error) {
+        logger.log("debug", `Score offer error: ${error}`);
+        return await reject_proposal(`Score offer error: ${error}`);
+      }
+      if (score < SCORE_NEUTRAL) {
+        return await reject_proposal("Score too low")
+      }
+      if (!proposal.is_draft()) {
+        const common_platforms = self._get_common_payment_platforms(proposal);
+        if (common_platforms.length) {
+          builder._properties["golem.com.payment.chosen-platform"] = common_platforms[0];
+        } else {
+          return await reject_proposal("No common payment platforms");
+        }
+        let timeout = proposal.props()[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP];
+        if (timeout) {
+          if (timeout < DEBIT_NOTE_MIN_TIMEOUT) {
+            return await reject_proposal("Debit note acceptance timeout too short");
+          } else {
+            builder._properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout;
+          }
+        }
+        await proposal.respond(builder.properties(), builder.constraints());
+        return new events.ProposalResponded({ prop_id: proposal.id() });
+      } else {
+        await agreements_pool.add_proposal(score, proposal);
+        return new events.ProposalConfirmed({ prop_id: proposal.id() });
+      }
+    }
+
     async function find_offers_for_subscription(subscription: Subscription): Promise<void> {
       emit(new events.SubscriptionCreated({ sub_id: subscription.id() }));
+      const chan_offer_tokens = csp.chan();
+      const max_number_of_tasks = 5;
+      for (let i = 0; i < max_number_of_tasks; ++i) {
+        csp.putAsync(chan_offer_tokens, true);
+      }
       let _proposals;
       try {
         _proposals = subscription.events(self._worker_cancellation_token);
@@ -424,75 +471,20 @@ export class Executor {
       for await (let proposal of _proposals) {
         emit(new events.ProposalReceived({ prop_id: proposal.id(), provider_id: proposal.issuer() }));
         offers_collected += 1;
-        let score;
-        try {
-          score = await strategy.score_offer(proposal, agreements_pool);
-          logger.debug(`Scored offer ${proposal.id()}, ` +
-                        `provider: ${proposal.props()["golem.node.id.name"]}, ` +
-                        `strategy: ${strategy.constructor.name}, ` +
-                        `score: ${score}`);
-        } catch (error) {
-          logger.log("debug", `Score offer error: ${error}`);
+        let handler = async (pr: OfferProposal) => {
           try {
-            await proposal.reject(error);
-            emit(new events.ProposalRejected({ prop_id: proposal.id(), reason: error }));
-          } catch (e) {
-            emit(new events.ProposalFailed({ prop_id: proposal.id(), reason: e }));
-          }
-          continue;
-        }
-        if (score < SCORE_NEUTRAL) {
-          const reason = "Score too low";
-          try {
-            await proposal.reject(reason);
-            emit(new events.ProposalRejected({ prop_id: proposal.id(), reason: reason }));
+            const event: events.YaEvent = await _handle_proposal(pr);
+            if (event instanceof events.ProposalEvent) { throw "Expected ProposalEvent"; }
+            emit(event);
+            if (event instanceof events.ProposalConfirmed) { proposals_confirmed += 1; }
           } catch (error) {
-            emit(new events.ProposalFailed({ prop_id: proposal.id(), reason: error }));
+            emit(new events.ProposalFailed({ prop_id: pr.id(), reason: error }));
+          } finally {
+            csp.putAsync(chan_offer_tokens, true);
           }
-          continue;
         }
-        if (!proposal.is_draft()) {
-          try {
-            const common_platforms = self._get_common_payment_platforms(
-              proposal
-            );
-            if (common_platforms.length) {
-              builder._properties["golem.com.payment.chosen-platform"] = common_platforms[0];
-            } else {
-              const reason = "No common payment platforms";
-              try {
-                await proposal.reject(reason);
-                emit(new events.ProposalRejected({ prop_id: proposal.id, reason: reason }));
-              } catch (error) {
-                emit(new events.ProposalFailed({ prop_id: proposal.id(), reason: error }));
-              }
-              continue;
-            }
-            let timeout = proposal.props()[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP];
-            if (timeout) {
-              if (timeout < DEBIT_NOTE_MIN_TIMEOUT) {
-                const reason = "Debit note acceptance timeout too short";
-                try {
-                  await proposal.reject(reason);
-                  emit(new events.ProposalRejected({ prop_id: proposal.id, reason: reason }));
-                } catch (e) {
-                  emit(new events.ProposalFailed({ prop_id: proposal.id(), reason: e }));
-                }
-                continue;
-              } else {
-                builder._properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout;
-              }
-            }
-            await proposal.respond(builder.properties(), builder.constraints());
-            emit(new events.ProposalResponded({ prop_id: proposal.id() }));
-          } catch (error) {
-            emit(new events.ProposalFailed({ prop_id: proposal.id(), reason: error }));
-          }
-        } else {
-          emit(new events.ProposalConfirmed({ prop_id: proposal.id() }));
-          await agreements_pool.add_proposal(score, proposal);
-          proposals_confirmed += 1;
-        }
+        handler(proposal);
+        await promisify(csp.takeAsync)(chan_offer_tokens); // TODO putAsync on ctrl+c
       }
     }
 
