@@ -418,21 +418,11 @@ export class Executor {
       try {
         _proposals = subscription.events(self._worker_cancellation_token);
       } catch (error) {
-        emit(
-          new events.CollectFailed({
-            sub_id: subscription.id(),
-            reason: error,
-          })
-        );
+        emit(new events.CollectFailed({ sub_id: subscription.id(), reason: error }));
         throw error;
       }
       for await (let proposal of _proposals) {
-        emit(
-          new events.ProposalReceived({
-            prop_id: proposal.id(),
-            provider_id: proposal.issuer(),
-          })
-        );
+        emit(new events.ProposalReceived({ prop_id: proposal.id(), provider_id: proposal.issuer() }));
         offers_collected += 1;
         let score;
         try {
@@ -445,19 +435,9 @@ export class Executor {
           logger.log("debug", `Score offer error: ${error}`);
           try {
             await proposal.reject(error);
-            emit(
-              new events.ProposalRejected({
-                prop_id: proposal.id(),
-                reason: error,
-              })
-            );
+            emit(new events.ProposalRejected({ prop_id: proposal.id(), reason: error }));
           } catch (e) {
-            emit(
-              new events.ProposalFailed({
-                prop_id: proposal.id(),
-                reason: e,
-              })
-            );
+            emit(new events.ProposalFailed({ prop_id: proposal.id(), reason: e }));
           }
           continue;
         }
@@ -465,17 +445,9 @@ export class Executor {
           const reason = "Score too low";
           try {
             await proposal.reject(reason);
-            emit(new events.ProposalRejected({
-              prop_id: proposal.id(),
-              reason: reason,
-            }));
+            emit(new events.ProposalRejected({ prop_id: proposal.id(), reason: reason }));
           } catch (error) {
-            emit(
-              new events.ProposalFailed({
-                prop_id: proposal.id(),
-                reason: error,
-              })
-            );
+            emit(new events.ProposalFailed({ prop_id: proposal.id(), reason: error }));
           }
           continue;
         }
@@ -485,25 +457,14 @@ export class Executor {
               proposal
             );
             if (common_platforms.length) {
-              builder._properties["golem.com.payment.chosen-platform"] =
-                common_platforms[0];
+              builder._properties["golem.com.payment.chosen-platform"] = common_platforms[0];
             } else {
               const reason = "No common payment platforms";
               try {
                 await proposal.reject(reason);
-                emit(
-                  new events.ProposalRejected({
-                    prop_id: proposal.id,
-                    reason: reason,
-                  })
-                );
+                emit(new events.ProposalRejected({ prop_id: proposal.id, reason: reason }));
               } catch (error) {
-                emit(
-                  new events.ProposalFailed({
-                    prop_id: proposal.id(),
-                    reason: error,
-                  })
-                );
+                emit(new events.ProposalFailed({ prop_id: proposal.id(), reason: error }));
               }
               continue;
             }
@@ -513,37 +474,19 @@ export class Executor {
                 const reason = "Debit note acceptance timeout too short";
                 try {
                   await proposal.reject(reason);
-                  emit(
-                    new events.ProposalRejected({
-                      prop_id: proposal.id,
-                      reason: reason,
-                    })
-                  );
+                  emit(new events.ProposalRejected({ prop_id: proposal.id, reason: reason }));
                 } catch (e) {
-                  emit(
-                    new events.ProposalFailed({
-                      prop_id: proposal.id(),
-                      reason: e,
-                    })
-                  );
+                  emit(new events.ProposalFailed({ prop_id: proposal.id(), reason: e }));
                 }
                 continue;
               } else {
                 builder._properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout;
               }
             }
-            await proposal.respond(
-              builder.properties(),
-              builder.constraints()
-            );
+            await proposal.respond(builder.properties(), builder.constraints());
             emit(new events.ProposalResponded({ prop_id: proposal.id() }));
           } catch (error) {
-            emit(
-              new events.ProposalFailed({
-                prop_id: proposal.id(),
-                reason: error,
-              })
-            );
+            emit(new events.ProposalFailed({ prop_id: proposal.id(), reason: error }));
           }
         } else {
           emit(new events.ProposalConfirmed({ prop_id: proposal.id() }));
