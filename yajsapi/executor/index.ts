@@ -4,7 +4,7 @@ import utc from "dayjs/plugin/utc";
 import duration from "dayjs/plugin/duration";
 import { MarketDecoration } from "ya-ts-client/dist/ya-payment/src/models";
 
-import { WorkContext, Work, CommandContainer } from "./ctx";
+import { WorkContext, Work, CommandContainer, ExecOptions } from "./ctx";
 import * as events from "./events";
 import { Activity, NodeInfo, NodeInfoKeys } from "../props";
 import { Counter } from "../props/com";
@@ -99,6 +99,8 @@ export class _ExecutorConfig {
 }
 
 class AsyncGeneratorBreak extends Error {}
+
+type WorkItem = Work | [Work, ExecOptions];
 
 type D = "D"; // Type var for task data
 type R = "R"; // Type var for task result
@@ -235,7 +237,7 @@ export class Executor {
   async *submit(
     worker: Callable<
       [WorkContext, AsyncIterable<Task<D, R>>],
-      AsyncGenerator<Work>
+      AsyncGenerator<Work, any> /* TODO any -> Awaitable[List[events.CommandEvent]] */
     >,
     data: Iterable<Task<D, R>>
   ): AsyncGenerator<Task<D, R>> {
@@ -253,7 +255,7 @@ export class Executor {
   async *_submit(
     worker: Callable<
       [WorkContext, AsyncIterable<Task<D, R>>],
-      AsyncGenerator<Work>
+      AsyncGenerator<Work, any> /* TODO any -> Awaitable[List[events.CommandEvent]] */
     >,
     data: Iterable<Task<D, R>>
   ): AsyncGenerator<Task<D, R>> {
@@ -577,6 +579,19 @@ export class Executor {
     let storage_manager = await this._stack.enter_async_context(
       gftp.provider()
     );
+
+    let unpack_work_item = (item: WorkItem): [WorkItem, ExecOptions] => {
+      return item instanceof Work ? [item, new ExecOptions()] : item;
+    };
+
+    async function process_batches(
+      agreement_id: string,
+      activity: Activity,
+      command_generator: Callable<[WorkContext, AsyncIterable<Task<D, R>>], AsyncGenerator<Work, any>>,
+      consumer: Consumer<Task<D, R>>
+    ): Promise<void> {
+      /* TODO!!! */
+    }
 
     async function start_worker(agreement: Agreement): Promise<void> {
       let wid = last_wid;

@@ -273,6 +273,11 @@ class _Steps extends Work {
   }
 }
 
+export class ExecOptions {
+  wait_for_results: boolean = true;
+  batch_timeout?: number;
+}
+
 /**
  * An object used to schedule commands to be sent to provider.
  */
