@@ -580,17 +580,34 @@ export class Executor {
       gftp.provider()
     );
 
-    let unpack_work_item = (item: WorkItem): [WorkItem, ExecOptions] => {
+    let unpack_work_item = (item: WorkItem): [Work, ExecOptions] => {
       return item instanceof Work ? [item, new ExecOptions()] : item;
     };
 
     async function process_batches(
       agreement_id: string,
       activity: Activity,
-      command_generator: Callable<[WorkContext, AsyncIterable<Task<D, R>>], AsyncGenerator<Work, any>>,
+      command_generator: AsyncGenerator<Work, any>,
       consumer: Consumer<Task<D, R>>
     ): Promise<void> {
-      /* TODO!!! */
+      const item = await (await command_generator.next()).value;
+      while (true) {
+        const [batch, exec_options] = unpack_work_item(item);
+        if (batch.timeout()) {
+          if (exec_options.batch_timeout) {
+            logger.warn(
+              "Overriding batch timeout set with commit(batch_timeout) by the value set in exec options"
+            );
+          } else {
+            exec_options.batch_timeout = batch.timeout();
+          }
+        }
+        let batch_deadline
+          = exec_options.batch_timeout ? (Date.now() + exec_options.batch_timeout) : undefined;
+        /*
+          TODO!!!
+        */
+      }
     }
 
     async function start_worker(agreement: Agreement): Promise<void> {
