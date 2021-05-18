@@ -14,7 +14,7 @@ import * as rest from "../rest";
 import { Agreement,  OfferProposal, Subscription } from "../rest/market";
 import { AgreementsPool } from "./agreements_pool";
 import { Allocation, DebitNote, Invoice } from "../rest/payment";
-import { CommandExecutionError } from "../rest/activity";
+import { ActivityService, CommandExecutionError } from "../rest/activity";
 
 import * as csp from "js-csp";
 
@@ -586,10 +586,11 @@ export class Executor {
 
     async function process_batches(
       agreement_id: string,
-      activity: Activity,
+      activity: rest.Activity,
       command_generator: AsyncGenerator<Work, any>,
       consumer: Consumer<Task<D, R>>
     ): Promise<void> {
+      /* TODO ctrl+c handling */
       const item = await (await command_generator.next()).value;
       while (true) {
         const [batch, exec_options] = unpack_work_item(item);
@@ -602,11 +603,52 @@ export class Executor {
             exec_options.batch_timeout = batch.timeout();
           }
         }
-        let batch_deadline
+        const batch_deadline
           = exec_options.batch_timeout ? (Date.now() + exec_options.batch_timeout) : undefined;
-        /*
-          TODO!!!
-        */
+        const current_worker_task = consumer.last_item();
+        if (current_worker_task) {
+          emit(new events.TaskStarted({
+            agr_id: agreement_id,
+            task_id: current_worker_task.id,
+            task_data: current_worker_task.data(),
+          }));
+        }
+        const task_id = current_worker_task ? current_worker_task.id : undefined;
+        await batch.prepare();
+        const cc = new CommandContainer();
+        batch.register(cc);
+        const remote = await activity.send(
+          cc.commands(),
+          stream_output,
+          batch_deadline,
+          self._worker_cancellation_token
+        );
+        const cmds = cc.commands();
+        emit(new events.ScriptSent({ agr_id: agreement_id, task_id, cmds }));
+        const get_batch_results = async () : Promise<events.CommandEvent[]> => {
+          let results: events.CommandEvent[] = [];
+          for await (let evt_ctx of remote) {
+            let evt = evt_ctx.event(agreement_id, task_id, cmds);
+            emit(evt);
+            results.push(evt);
+            if (evt instanceof events.CommandExecuted && !evt.success) {
+              throw new CommandExecutionError(evt.command, evt.message)
+            }
+          }
+          emit(new events.GettingResults({ agr_id: agreement_id, task_id: task_id }));
+          await batch.post();
+          emit(new events.ScriptFinished({ agr_id: agreement_id, task_id: task_id }));
+          await accept_payment_for_agreement({ agreement_id: agreement_id, partial: true });
+          emit(new events.CheckingPayments());
+          return results;
+        }
+        if (exec_options.wait_for_results) {
+          // Block until the results are available
+          /* TODO */
+        } else {
+          // Schedule the coroutine in a separate asyncio task
+          /* TODO */
+        }
       }
     }
 
@@ -617,7 +659,7 @@ export class Executor {
       emit(new events.WorkerStarted({ agr_id: agreement.id() }));
 
       if (self._worker_cancellation_token.cancelled) { return; }
-      let _act;
+      let _act: Activity;
       try {
         _act = await activity_api.new_activity(agreement, secure);
       } catch (error) {
@@ -992,7 +1034,7 @@ export class Executor {
     this._market_api = new rest.Market(market_client);
 
     let activity_client = await this._api_config.activity();
-    this._activity_api = new rest.Activity(activity_client);
+    this._activity_api = new ActivityService(activity_client);
 
     let payment_client = await this._api_config.payment();
     this._payment_api = new rest.Payment(payment_client);

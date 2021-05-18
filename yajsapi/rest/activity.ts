@@ -154,7 +154,7 @@ class ExeScriptRequest implements yaa.ExeScriptRequest {
 }
 
 // Mid-level wrapper for REST's Activity endpoint
-class Activity {
+export class Activity {
   protected _api!: RequestorControlApi;
   protected _state!: RequestorStateApi;
   protected _id!: string;
