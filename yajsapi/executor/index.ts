@@ -266,8 +266,8 @@ export class Executor {
   async _handle_proposal(
     state: SubmissionState,
     proposal: OfferProposal
-  ): Promise<events.YaEvent> {
-    let reject_proposal = async (reason: string): Promise<events.YaEvent> => {
+  ): Promise<events.ProposalEvent> {
+    let reject_proposal = async (reason: string): Promise<events.ProposalEvent> => {
       await proposal.reject(reason);
       return new events.ProposalRejected({ prop_id: proposal.id(), reason: reason });
     }
@@ -331,8 +331,7 @@ export class Executor {
       state.offers_collected += 1;
       let handler = async (pr: OfferProposal) => {
         try {
-          const event: events.YaEvent = await this._handle_proposal(state, pr);
-          if (event instanceof events.ProposalEvent) { throw "Expected ProposalEvent"; }
+          const event: events.ProposalEvent = await this._handle_proposal(state, pr);
           emit(event);
           if (event instanceof events.ProposalConfirmed) { state.proposals_confirmed += 1; }
         } catch (error) {
@@ -440,9 +439,6 @@ export class Executor {
     let invoices: Map<string, Invoice> = new Map();
     let payment_closing: boolean = false;
     let secure = this._task_package.secure;
-
-    let offers_collected = 0;
-    let proposals_confirmed = 0;
 
     async function process_invoices(): Promise<void> {
       for await (let invoice of self._payment_api.incoming_invoices(
