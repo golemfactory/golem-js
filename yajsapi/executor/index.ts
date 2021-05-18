@@ -263,6 +263,113 @@ export class Executor {
     csp.putAsync(this._chan_computation_done, true);
   }
 
+  async _handle_proposal(
+    state: SubmissionState,
+    proposal: OfferProposal
+  ): Promise<events.YaEvent> {
+    let reject_proposal = async (reason: string): Promise<events.YaEvent> => {
+      await proposal.reject(reason);
+      return new events.ProposalRejected({ prop_id: proposal.id(), reason: reason });
+    }
+    let score;
+    try {
+      score = await this._strategy.score_offer(proposal, state.agreements_pool);
+      logger.debug(`Scored offer ${proposal.id()}, ` +
+                    `provider: ${proposal.props()["golem.node.id.name"]}, ` +
+                    `strategy: ${this._strategy.constructor.name}, ` +
+                    `score: ${score}`);
+    } catch (error) {
+      logger.log("debug", `Score offer error: ${error}`);
+      return await reject_proposal(`Score offer error: ${error}`);
+    }
+    if (score < SCORE_NEUTRAL) {
+      return await reject_proposal("Score too low")
+    }
+    if (!proposal.is_draft()) {
+      const common_platforms = this._get_common_payment_platforms(proposal);
+      if (common_platforms.length) {
+        state.builder._properties["golem.com.payment.chosen-platform"] = common_platforms[0];
+      } else {
+        return await reject_proposal("No common payment platforms");
+      }
+      let timeout = proposal.props()[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP];
+      if (timeout) {
+        if (timeout < DEBIT_NOTE_MIN_TIMEOUT) {
+          return await reject_proposal("Debit note acceptance timeout too short");
+        } else {
+          state.builder._properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout;
+        }
+      }
+      await proposal.respond(state.builder.properties(), state.builder.constraints());
+      return new events.ProposalResponded({ prop_id: proposal.id() });
+    } else {
+      await state.agreements_pool.add_proposal(score, proposal);
+      return new events.ProposalConfirmed({ prop_id: proposal.id() });
+    }
+  }
+
+  async find_offers_for_subscription(
+    state: SubmissionState,
+    subscription: Subscription,
+    emit: Callable<[events.YaEvent], void>
+  ): Promise<void> {
+    emit(new events.SubscriptionCreated({ sub_id: subscription.id() }));
+    const chan_offer_tokens = csp.chan();
+    const max_number_of_tasks = 5;
+    for (let i = 0; i < max_number_of_tasks; ++i) {
+      csp.putAsync(chan_offer_tokens, true);
+    }
+    let _proposals;
+    try {
+      _proposals = subscription.events(this._worker_cancellation_token);
+    } catch (error) {
+      emit(new events.CollectFailed({ sub_id: subscription.id(), reason: error }));
+      throw error;
+    }
+    for await (let proposal of _proposals) {
+      emit(new events.ProposalReceived({ prop_id: proposal.id(), provider_id: proposal.issuer() }));
+      state.offers_collected += 1;
+      let handler = async (pr: OfferProposal) => {
+        try {
+          const event: events.YaEvent = await this._handle_proposal(state, pr);
+          if (event instanceof events.ProposalEvent) { throw "Expected ProposalEvent"; }
+          emit(event);
+          if (event instanceof events.ProposalConfirmed) { state.proposals_confirmed += 1; }
+        } catch (error) {
+          emit(new events.ProposalFailed({ prop_id: pr.id(), reason: error }));
+        } finally {
+          csp.putAsync(chan_offer_tokens, true);
+        }
+      }
+      handler(proposal);
+      await promisify(csp.takeAsync)(chan_offer_tokens); // TODO putAsync on ctrl+c
+    }
+  }
+
+  async find_offers(
+    state: SubmissionState,
+    emit: Callable<[events.YaEvent], void>
+  ): Promise<void> {
+    let keepSubscribing = true;
+    while (keepSubscribing && !this._worker_cancellation_token.cancelled) {
+      try {
+        const subscription = await state.builder.subscribe(this._market_api);
+        await asyncWith(subscription, async (subscription) => {
+          try {
+            await this.find_offers_for_subscription(state, subscription, emit);
+          } catch (error) {
+            logger.error(`Error while finding offers for a subscription: ${error}`);
+            keepSubscribing = false;
+          }
+        });
+      } catch (error) {
+        emit(new events.SubscriptionFailed({ reason: error }));
+        keepSubscribing = false;
+      }
+    }
+    logger.debug("Stopped checking and scoring new offers.");
+  }
+
   async *_submit(
     worker: Callable<
       [WorkContext, AsyncIterable<Task<D, R>>],
@@ -424,109 +531,6 @@ export class Executor {
         }
       }
       logger.debug("Stopped processing debit notes.");
-    }
-
-    async function _handle_proposal(
-      state: SubmissionState,
-      proposal: OfferProposal
-    ): Promise<events.YaEvent> {
-      let reject_proposal = async (reason: string): Promise<events.YaEvent> => {
-        await proposal.reject(reason);
-        return new events.ProposalRejected({ prop_id: proposal.id(), reason: reason });
-      }
-      let score;
-      try {
-        score = await self._strategy.score_offer(proposal, agreements_pool);
-        logger.debug(`Scored offer ${proposal.id()}, ` +
-                      `provider: ${proposal.props()["golem.node.id.name"]}, ` +
-                      `strategy: ${strategy.constructor.name}, ` +
-                      `score: ${score}`);
-      } catch (error) {
-        logger.log("debug", `Score offer error: ${error}`);
-        return await reject_proposal(`Score offer error: ${error}`);
-      }
-      if (score < SCORE_NEUTRAL) {
-        return await reject_proposal("Score too low")
-      }
-      if (!proposal.is_draft()) {
-        const common_platforms = self._get_common_payment_platforms(proposal);
-        if (common_platforms.length) {
-          state.builder._properties["golem.com.payment.chosen-platform"] = common_platforms[0];
-        } else {
-          return await reject_proposal("No common payment platforms");
-        }
-        let timeout = proposal.props()[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP];
-        if (timeout) {
-          if (timeout < DEBIT_NOTE_MIN_TIMEOUT) {
-            return await reject_proposal("Debit note acceptance timeout too short");
-          } else {
-            state.builder._properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout;
-          }
-        }
-        await proposal.respond(state.builder.properties(), state.builder.constraints());
-        return new events.ProposalResponded({ prop_id: proposal.id() });
-      } else {
-        await state.agreements_pool.add_proposal(score, proposal);
-        return new events.ProposalConfirmed({ prop_id: proposal.id() });
-      }
-    }
-
-    async function find_offers_for_subscription(
-      state: SubmissionState,
-      subscription: Subscription
-    ): Promise<void> {
-      emit(new events.SubscriptionCreated({ sub_id: subscription.id() }));
-      const chan_offer_tokens = csp.chan();
-      const max_number_of_tasks = 5;
-      for (let i = 0; i < max_number_of_tasks; ++i) {
-        csp.putAsync(chan_offer_tokens, true);
-      }
-      let _proposals;
-      try {
-        _proposals = subscription.events(self._worker_cancellation_token);
-      } catch (error) {
-        emit(new events.CollectFailed({ sub_id: subscription.id(), reason: error }));
-        throw error;
-      }
-      for await (let proposal of _proposals) {
-        emit(new events.ProposalReceived({ prop_id: proposal.id(), provider_id: proposal.issuer() }));
-        state.offers_collected += 1;
-        let handler = async (pr: OfferProposal) => {
-          try {
-            const event: events.YaEvent = await _handle_proposal(state, pr);
-            if (event instanceof events.ProposalEvent) { throw "Expected ProposalEvent"; }
-            emit(event);
-            if (event instanceof events.ProposalConfirmed) { state.proposals_confirmed += 1; }
-          } catch (error) {
-            emit(new events.ProposalFailed({ prop_id: pr.id(), reason: error }));
-          } finally {
-            csp.putAsync(chan_offer_tokens, true);
-          }
-        }
-        handler(proposal);
-        await promisify(csp.takeAsync)(chan_offer_tokens); // TODO putAsync on ctrl+c
-      }
-    }
-
-    async function find_offers(state: SubmissionState): Promise<void> {
-      let keepSubscribing = true;
-      while (keepSubscribing && !self._worker_cancellation_token.cancelled) {
-        try {
-          const subscription = await state.builder.subscribe(market_api);
-          await asyncWith(subscription, async (subscription) => {
-            try {
-              await find_offers_for_subscription(state, subscription);
-            } catch (error) {
-              logger.error(`Error while finding offers for a subscription: ${error}`);
-              keepSubscribing = false;
-            }
-          });
-        } catch (error) {
-          emit(new events.SubscriptionFailed({ reason: error }));
-          keepSubscribing = false;
-        }
-      }
-      logger.debug("Stopped checking and scoring new offers.");
     }
 
     let storage_manager = await this._stack.enter_async_context(
@@ -724,7 +728,7 @@ export class Executor {
     }
 
     let loop = eventLoop();
-    let find_offers_task = loop.create_task(find_offers.bind(null, this.state));
+    let find_offers_task = loop.create_task(this.find_offers.bind(this, this.state, emit));
     let process_invoices_job = loop.create_task(process_invoices);
     let wait_until_done = loop.create_task(
       work_queue.wait_until_done.bind(work_queue)
