@@ -64,7 +64,7 @@ export class CollectFailed extends YaEvent {
 
 // @dataclass(init=False)
 export class ProposalEvent extends YaEvent {
-  prop_id?: string | null;
+  prop_id?: string;
 }
 
 export class ProposalReceived extends ProposalEvent {
