@@ -591,7 +591,7 @@ export class Executor {
       consumer: Consumer<Task<D, R>>
     ): Promise<void> {
       /* TODO ctrl+c handling */
-      const item = await (await command_generator.next()).value;
+      let item = (await command_generator.next()).value;
       while (true) {
         const [batch, exec_options] = unpack_work_item(item);
         if (batch.timeout()) {
@@ -644,10 +644,15 @@ export class Executor {
         }
         if (exec_options.wait_for_results) {
           // Block until the results are available
-          /* TODO */
+          try {
+            let results = await get_batch_results(); // TODO
+            item = (await command_generator.next(results)).value;
+          } catch (e) {
+            // TODO
+          }
         } else {
-          // Schedule the coroutine in a separate asyncio task
-          /* TODO */
+          // Schedule the coroutine in a separate task
+          item = (await command_generator.next(get_batch_results()));
         }
       }
     }
