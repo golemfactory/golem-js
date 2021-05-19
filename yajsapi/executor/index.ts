@@ -591,8 +591,9 @@ export class Executor {
       consumer: Consumer<Task<D, R>>
     ): Promise<void> {
       /* TODO ctrl+c handling */
-      let item = (await command_generator.next()).value;
-      while (true) {
+      let { done = false, value: item }: { done?: boolean; value: WorkItem }
+        = await command_generator.next();
+      while (!done) {
         const [batch, exec_options] = unpack_work_item(item);
         if (batch.timeout()) {
           if (exec_options.batch_timeout) {
@@ -646,13 +647,16 @@ export class Executor {
           // Block until the results are available
           try {
             let results = await get_batch_results();
-            item = (await command_generator.next(async () => results)).value;
-          } catch (e) {
-            // TODO
+            ({ done = false, value: item } = await command_generator.next(async () => results));
+          } catch (error) {
+            // Raise the exception in `command_generator` (the `worker` coroutine).
+            // If the client code is able to handle it then we'll proceed with
+            // subsequent batches. Otherwise the worker finishes with error.
+            ({ done = false, value: item } = await command_generator.throw(error));
           }
         } else {
           // Schedule the coroutine in a separate task
-          item = (await command_generator.next(get_batch_results())).value;
+          ({ done = false, value: item } = await command_generator.next(get_batch_results()));
         }
       }
     }
