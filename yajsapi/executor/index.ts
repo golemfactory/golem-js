@@ -645,14 +645,14 @@ export class Executor {
         if (exec_options.wait_for_results) {
           // Block until the results are available
           try {
-            let results = await get_batch_results(); // TODO
-            item = (await command_generator.next(results)).value;
+            let results = await get_batch_results();
+            item = (await command_generator.next(async () => results)).value;
           } catch (e) {
             // TODO
           }
         } else {
           // Schedule the coroutine in a separate task
-          item = (await command_generator.next(get_batch_results()));
+          item = (await command_generator.next(get_batch_results())).value;
         }
       }
     }
