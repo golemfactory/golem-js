@@ -673,6 +673,7 @@ export class Executor {
         _act = await activity_api.new_activity(agreement, secure);
       } catch (error) {
         emit(new events.ActivityCreateFailed({ agr_id: agreement.id() }));
+        emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error }));
         throw error;
       }
 
@@ -688,122 +689,25 @@ export class Executor {
       await asyncWith(
         _act,
         async (act): Promise<void> => {
-          emit(
-            new events.ActivityCreated({
-              act_id: act.id,
-              agr_id: agreement.id(),
-            })
-          );
+          emit(new events.ActivityCreated({ act_id: act.id, agr_id: agreement.id() }));
           agreements_accepting_debit_notes.add(agreement.id());
-          let work_context = new WorkContext(
-            `worker-${wid}`,
-            storage_manager,
-            emit
-          );
+          let work_context = new WorkContext(`worker-${wid}`, storage_manager, emit);
           await asyncWith(work_queue.new_consumer(), async (consumer) => {
-            let command_generator = worker(
-              work_context,
-              task_emitter(consumer)
-            );
-            if (self._worker_cancellation_token.cancelled) { return; }
-            for await (let batch of command_generator) {
-              if (self._worker_cancellation_token.cancelled) { return; }
-              const _batch_timeout = batch.timeout();
-              const batch_deadline = _batch_timeout 
-                ? dayjs.utc().unix() + _batch_timeout / 1000
-                : null;
-              try {
-                let current_worker_task = consumer.last_item();
-                if (current_worker_task) {
-                  emit(
-                    new events.TaskStarted({
-                      agr_id: agreement.id(),
-                      task_id: current_worker_task.id,
-                      task_data: current_worker_task.data(),
-                    })
-                  );
-                }
-                let task_id = current_worker_task
-                  ? current_worker_task.id
-                  : null;
-                batch.attestation = {
-                  credentials: act.credentials,
-                  nonce: act.id,
-                  exeunitHashes: act.exeunitHashes,
-                };
-                if (self._worker_cancellation_token.cancelled) { return; }
-                await batch.prepare();
-                let cc = new CommandContainer();
-                batch.register(cc);
-                if (self._worker_cancellation_token.cancelled) { return; }
-                let remote = await act.send(
-                  cc.commands(), stream_output, batch_deadline, self._worker_cancellation_token
-                );
-                let cmds = cc.commands();
-                emit(
-                  new events.ScriptSent({
-                    agr_id: agreement.id(),
-                    task_id,
-                    cmds,
-                  })
-                );
-                emit(new events.CheckingPayments());
-                for await (let evt_ctx of remote) {
-                  if (self._worker_cancellation_token.cancelled) { return; }
-                  let evt = evt_ctx.event(agreement.id(), task_id, cmds);
-                  emit(evt);
-                  if (evt instanceof events.CommandExecuted && !evt.success) {
-                    throw new CommandExecutionError(evt.command, evt.message)
-                  }
-                }
-                emit(
-                  new events.GettingResults({
-                    agr_id: agreement.id(),
-                    task_id: task_id,
-                  })
-                );
-                if (self._worker_cancellation_token.cancelled) { return; }
-                await batch.post();
-                emit(
-                  new events.ScriptFinished({
-                    agr_id: agreement.id(),
-                    task_id: task_id,
-                  })
-                );
-                if (self._worker_cancellation_token.cancelled) { return; }
-                await accept_payment_for_agreement({
-                  agreement_id: agreement.id(),
-                  partial: true,
-                });
-                emit(new events.CheckingPayments());
-              } catch (error) {
-                if (self._worker_cancellation_token.cancelled) { return; }
-                try {
-                  /* rethrow this error in the user-supplied generator (worker function) */
-                  await command_generator.throw(error);
-                } catch (error) {
-                  emit(
-                    new events.WorkerFinished({
-                      agr_id: agreement.id(),
-                      exception: error,
-                    })
-                  );
-                  throw error;
-                }
-              }
+            try {
+              let tasks = task_emitter(consumer);
+              const batch_generator = worker(work_context, tasks);
+              process_batches(agreement.id(), act, batch_generator, consumer);
+              emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
+            } catch (error) {
+              emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error }));
+              throw error;
+            } finally {
+              await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
             }
           });
           if (self._worker_cancellation_token.cancelled) { return; }
-          await accept_payment_for_agreement({
-            agreement_id: agreement.id(),
-            partial: false,
-          });
-          emit(
-            new events.WorkerFinished({
-              agr_id: agreement.id(),
-              exception: undefined,
-            })
-          );
+          await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
+          emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
         }
       );
       logger.debug(`Stopped worker related to agreement ${agreement.id()}.`);
