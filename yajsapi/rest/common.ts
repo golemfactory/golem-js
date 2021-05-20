@@ -28,7 +28,7 @@ export async function repeat_on_error(
   block: Callable<void, any>,
   max_tries: number = 5,
   max_duration_ms = 15000,
-  interval: number = 0.0,
+  interval: number = 1000,
   condition: Callable<Error, boolean> = is_intermittent_error
 ) {
   let start_time = Date.now();
