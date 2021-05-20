@@ -1,6 +1,6 @@
 {
   "name": "yajsapi",
-  "version": "0.3.4",
+  "version": "0.3.5-alpha.0",
   "description": "NodeJS API for Next Golem",
   "repository": "https://github.com/golemfactory/yajsapi",
   "main": "dist/index.js",
