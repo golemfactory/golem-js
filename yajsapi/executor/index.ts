@@ -701,7 +701,7 @@ export class Executor {
             try {
               let tasks = task_emitter(consumer);
               const batch_generator = worker(work_context, tasks);
-              process_batches(agreement.id(), act, batch_generator, consumer);
+              await process_batches(agreement.id(), act, batch_generator, consumer);
               emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
             } catch (error) {
               emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error }));
