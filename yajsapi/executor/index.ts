@@ -615,6 +615,11 @@ export class Executor {
           }));
         }
         const task_id = current_worker_task ? current_worker_task.id : undefined;
+        batch.attestation = {
+          credentials: activity.credentials,
+          nonce: activity.id,
+          exeunitHashes: activity.exeunitHashes,
+        };
         await batch.prepare();
         const cc = new CommandContainer();
         batch.register(cc);
