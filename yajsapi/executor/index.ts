@@ -341,7 +341,7 @@ export class Executor {
         }
       }
       handler(proposal);
-      await promisify(csp.takeAsync)(chan_offer_tokens); // TODO putAsync on ctrl+c
+      await promisify(csp.takeAsync)(chan_offer_tokens);
     }
   }
 
