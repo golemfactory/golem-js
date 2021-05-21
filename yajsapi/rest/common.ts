@@ -28,13 +28,13 @@ export async function repeat_on_error(
   block: Callable<void, any>,
   max_tries: number = 5,
   max_duration_ms = 15000,
-  interval: number = 1000,
+  interval_ms: number = 1000,
   condition: Callable<Error, boolean> = is_intermittent_error
 ) {
   let start_time = Date.now();
   for (let try_num = 1; try_num <= max_tries; ++try_num) {
     if (try_num > 1) {
-      await sleep(Math.min(interval, start_time + max_duration_ms - Date.now()));
+      await sleep(Math.min(interval_ms, start_time + max_duration_ms - Date.now()));
     }
     let err_in_block, ret_value;
     await suppress_exceptions(condition, async () => {
@@ -49,7 +49,7 @@ export async function repeat_on_error(
     const duration = Date.now() - start_time;
     const repeat = try_num < max_tries && duration < max_duration_ms;
     const msg = `API call timed out (attempt ${try_num}/${max_tries}), ` +
-              (repeat ? `retrying in ${interval}s` : `giving up after ${duration}ms`);
+              (repeat ? `retrying in ${interval_ms}ms` : `giving up after ${duration}ms`);
     logger.debug(msg);
     if (!repeat) { throw err_in_block; }
   }
