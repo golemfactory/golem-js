@@ -240,7 +240,7 @@ class Activity {
     try {
       await this._api.destroyActivity(this._id, { timeout: 11000, params: { timeout: 10 } });
     } catch (error) {
-      logger.error(`Got API Exception when destroying activity ${this._id}: ${error}`);
+      logger.warn(`Got API Exception when destroying activity ${this._id}: ${error}`);
     }
   }
 }
