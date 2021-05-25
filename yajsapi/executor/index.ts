@@ -615,11 +615,19 @@ export class Executor {
             ({ done = false, value: item } = await command_generator.throw(error));
           }
           if (results !== undefined) {
-            ({ done = false, value: item } = await command_generator.next(async () => results));
+            ({ done = false, value: item } = await command_generator.next((async () => results)()));
           }
         } else {
-          // Schedule the coroutine in a separate task
-          ({ done = false, value: item } = await command_generator.next(get_batch_results()));
+          // Run without blocking, user may await the next
+          const get_results = (async () => {
+            try {
+              return await get_batch_results();
+            } catch (error) {
+              logger.error(`Error while getting batch results: ${error}`);
+              return []; // TODO
+            }
+          })();
+          ({ done = false, value: item } = await command_generator.next(get_results));
         }
       }
     }
