@@ -118,6 +118,17 @@ export type ExecutorOpts = {
   event_consumer?: Callable<[events.YaEvent], void>; //TODO not default event
 };
 
+export class SubmissionState {
+  builder!: DemandBuilder;
+  agreements_pool!: AgreementsPool;
+  offers_collected: number = 0;
+  proposals_confirmed: number = 0;
+  constructor(builder: DemandBuilder, agreements_pool: AgreementsPool) {
+    this.builder = builder;
+    this.agreements_pool = agreements_pool;
+  }
+};
+
 /**
  * Task executor 
  * 
@@ -136,6 +147,8 @@ export class Executor {
   private _expires;
   private _budget_amount;
   private _budget_allocations: Allocation[];
+
+  private state?: SubmissionState;
 
   private _activity_api;
   private _market_api;
@@ -252,6 +265,112 @@ export class Executor {
     csp.putAsync(this._chan_computation_done, true);
   }
 
+  async _handle_proposal(
+    state: SubmissionState,
+    proposal: OfferProposal
+  ): Promise<events.ProposalEvent> {
+    let reject_proposal = async (reason: string): Promise<events.ProposalEvent> => {
+      await proposal.reject(reason);
+      return new events.ProposalRejected({ prop_id: proposal.id(), reason: reason });
+    }
+    let score;
+    try {
+      score = await this._strategy.score_offer(proposal, state.agreements_pool);
+      logger.debug(`Scored offer ${proposal.id()}, ` +
+                    `provider: ${proposal.props()["golem.node.id.name"]}, ` +
+                    `strategy: ${this._strategy.constructor.name}, ` +
+                    `score: ${score}`);
+    } catch (error) {
+      logger.log("debug", `Score offer error: ${error}`);
+      return await reject_proposal(`Score offer error: ${error}`);
+    }
+    if (score < SCORE_NEUTRAL) {
+      return await reject_proposal("Score too low")
+    }
+    if (!proposal.is_draft()) {
+      const common_platforms = this._get_common_payment_platforms(proposal);
+      if (common_platforms.length) {
+        state.builder._properties["golem.com.payment.chosen-platform"] = common_platforms[0];
+      } else {
+        return await reject_proposal("No common payment platforms");
+      }
+      let timeout = proposal.props()[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP];
+      if (timeout) {
+        if (timeout < DEBIT_NOTE_MIN_TIMEOUT) {
+          return await reject_proposal("Debit note acceptance timeout too short");
+        } else {
+          state.builder._properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout;
+        }
+      }
+      await proposal.respond(state.builder.properties(), state.builder.constraints());
+      return new events.ProposalResponded({ prop_id: proposal.id() });
+    } else {
+      await state.agreements_pool.add_proposal(score, proposal);
+      return new events.ProposalConfirmed({ prop_id: proposal.id() });
+    }
+  }
+
+  async find_offers_for_subscription(
+    state: SubmissionState,
+    subscription: Subscription,
+    emit: Callable<[events.YaEvent], void>
+  ): Promise<void> {
+    emit(new events.SubscriptionCreated({ sub_id: subscription.id() }));
+    const chan_offer_tokens = csp.chan();
+    const max_number_of_tasks = 5;
+    for (let i = 0; i < max_number_of_tasks; ++i) {
+      csp.putAsync(chan_offer_tokens, true);
+    }
+    let _proposals;
+    try {
+      _proposals = subscription.events(this._worker_cancellation_token);
+    } catch (error) {
+      emit(new events.CollectFailed({ sub_id: subscription.id(), reason: error }));
+      throw error;
+    }
+    for await (let proposal of _proposals) {
+      emit(new events.ProposalReceived({ prop_id: proposal.id(), provider_id: proposal.issuer() }));
+      state.offers_collected += 1;
+      let handler = async (pr: OfferProposal) => {
+        try {
+          const event: events.ProposalEvent = await this._handle_proposal(state, pr);
+          emit(event);
+          if (event instanceof events.ProposalConfirmed) { state.proposals_confirmed += 1; }
+        } catch (error) {
+          emit(new events.ProposalFailed({ prop_id: pr.id(), reason: error }));
+        } finally {
+          csp.putAsync(chan_offer_tokens, true);
+        }
+      }
+      handler(proposal);
+      await promisify(csp.takeAsync)(chan_offer_tokens);
+    }
+  }
+
+  async find_offers(
+    state: SubmissionState,
+    emit: Callable<[events.YaEvent], void>
+  ): Promise<void> {
+    let keepSubscribing = true;
+    while (keepSubscribing && !this._worker_cancellation_token.cancelled) {
+      try {
+        const subscription = await state.builder.subscribe(this._market_api);
+        await asyncWith(subscription, async (subscription) => {
+          try {
+            await this.find_offers_for_subscription(state, subscription, emit);
+          } catch (error) {
+            logger.error(`Error while finding offers for a subscription: ${error}`);
+            keepSubscribing = false;
+          }
+        });
+      } catch (error) {
+        emit(new events.SubscriptionFailed({ reason: error }));
+        keepSubscribing = false;
+      }
+    }
+    logger.debug("Stopped checking and scoring new offers.");
+  }
+
   async *_submit(
     worker: Callable<
       [WorkContext, AsyncIterable<Task<D, R>>],
@@ -290,6 +409,7 @@ export class Executor {
     await this._strategy.decorate_demand(builder);
 
     let agreements_pool = new AgreementsPool(emit, this._worker_cancellation_token);
+    this.state = new SubmissionState(builder, agreements_pool);
     let market_api = this._market_api;
     let activity_api = this._activity_api;
     let strategy = this._strategy;
@@ -321,9 +441,6 @@ export class Executor {
     let invoices: Map<string, Invoice> = new Map();
     let payment_closing: boolean = false;
     let secure = this._task_package.secure;
-
-    let offers_collected = 0;
-    let proposals_confirmed = 0;
 
     async function process_invoices(): Promise<void> {
       for await (let invoice of self._payment_api.incoming_invoices(
@@ -412,168 +529,6 @@ export class Executor {
         }
       }
       logger.debug("Stopped processing debit notes.");
-    }
-
-    async function find_offers_for_subscription(subscription: Subscription): Promise<void> {
-      emit(new events.SubscriptionCreated({ sub_id: subscription.id() }));
-      let _proposals;
-      try {
-        _proposals = subscription.events(self._worker_cancellation_token);
-      } catch (error) {
-        emit(
-          new events.CollectFailed({
-            sub_id: subscription.id(),
-            reason: error,
-          })
-        );
-        throw error;
-      }
-      for await (let proposal of _proposals) {
-        emit(
-          new events.ProposalReceived({
-            prop_id: proposal.id(),
-            provider_id: proposal.issuer(),
-          })
-        );
-        offers_collected += 1;
-        let score;
-        try {
-          score = await strategy.score_offer(proposal, agreements_pool);
-          logger.debug(`Scored offer ${proposal.id()}, ` +
-                        `provider: ${proposal.props()["golem.node.id.name"]}, ` +
-                        `strategy: ${strategy.constructor.name}, ` +
-                        `score: ${score}`);
-        } catch (error) {
-          logger.log("debug", `Score offer error: ${error}`);
-          try {
-            await proposal.reject(error);
-            emit(
-              new events.ProposalRejected({
-                prop_id: proposal.id(),
-                reason: error,
-              })
-            );
-          } catch (e) {
-            emit(
-              new events.ProposalFailed({
-                prop_id: proposal.id(),
-                reason: e,
-              })
-            );
-          }
-          continue;
-        }
-        if (score < SCORE_NEUTRAL) {
-          const reason = "Score too low";
-          try {
-            await proposal.reject(reason);
-            emit(new events.ProposalRejected({
-              prop_id: proposal.id(),
-              reason: reason,
-            }));
-          } catch (error) {
-            emit(
-              new events.ProposalFailed({
-                prop_id: proposal.id(),
-                reason: error,
-              })
-            );
-          }
-          continue;
-        }
-        if (!proposal.is_draft()) {
-          try {
-            const common_platforms = self._get_common_payment_platforms(
-              proposal
-            );
-            if (common_platforms.length) {
-              builder._properties["golem.com.payment.chosen-platform"] =
-                common_platforms[0];
-            } else {
-              const reason = "No common payment platforms";
-              try {
-                await proposal.reject(reason);
-                emit(
-                  new events.ProposalRejected({
-                    prop_id: proposal.id,
-                    reason: reason,
-                  })
-                );
-              } catch (error) {
-                emit(
-                  new events.ProposalFailed({
-                    prop_id: proposal.id(),
-                    reason: error,
-                  })
-                );
-              }
-              continue;
-            }
-            let timeout = proposal.props()[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP];
-            if (timeout) {
-              if (timeout < DEBIT_NOTE_MIN_TIMEOUT) {
-                const reason = "Debit note acceptance timeout too short";
-                try {
-                  await proposal.reject(reason);
-                  emit(
-                    new events.ProposalRejected({
-                      prop_id: proposal.id,
-                      reason: reason,
-                    })
-                  );
-                } catch (e) {
-                  emit(
-                    new events.ProposalFailed({
-                      prop_id: proposal.id(),
-                      reason: e,
-                    })
-                  );
-                }
-                continue;
-              } else {
-                builder._properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout;
-              }
-            }
-            await proposal.respond(
-              builder.properties(),
-              builder.constraints()
-            );
-            emit(new events.ProposalResponded({ prop_id: proposal.id() }));
-          } catch (error) {
-            emit(
-              new events.ProposalFailed({
-                prop_id: proposal.id(),
-                reason: error,
-              })
-            );
-          }
-        } else {
-          emit(new events.ProposalConfirmed({ prop_id: proposal.id() }));
-          await agreements_pool.add_proposal(score, proposal);
-          proposals_confirmed += 1;
-        }
-      }
-    }
-
-    async function find_offers(): Promise<void> {
-      let keepSubscribing = true;
-      while (keepSubscribing && !self._worker_cancellation_token.cancelled) {
-        try {
-          const subscription = await builder.subscribe(market_api);
-          await asyncWith(subscription, async (subscription) => {
-            try {
-              await find_offers_for_subscription(subscription);
-            } catch (error) {
-              logger.error(`Error while finding offers for a subscription: ${error}`);
-              keepSubscribing = false;
-            }
-          });
-        } catch (error) {
-          emit(new events.SubscriptionFailed({ reason: error }));
-          keepSubscribing = false;
-        }
-      }
-      logger.debug("Stopped checking and scoring new offers.");
     }
 
     let storage_manager = await this._stack.enter_async_context(
@@ -764,7 +719,7 @@ export class Executor {
     }
 
     let loop = eventLoop();
-    let find_offers_task = loop.create_task(find_offers);
+    let find_offers_task = loop.create_task(this.find_offers.bind(this, this.state, emit));
     let process_invoices_job = loop.create_task(process_invoices);
     let wait_until_done = loop.create_task(
       work_queue.wait_until_done.bind(work_queue)
@@ -793,10 +748,10 @@ export class Executor {
             `task timeout exceeded. timeout=${this._conf.timeout}`
           );
         }
-        if (now > get_offers_deadline && proposals_confirmed == 0) {
+        if (now > get_offers_deadline && this.state.proposals_confirmed == 0) {
           emit(
             new events.NoProposalsConfirmed({
-              num_offers: offers_collected,
+              num_offers: this.state.offers_collected,
               timeout: this._conf.get_offers_timeout,
             })
           );
