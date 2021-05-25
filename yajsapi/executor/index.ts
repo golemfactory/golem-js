@@ -237,7 +237,7 @@ export class Executor {
   async *submit(
     worker: Callable<
       [WorkContext, AsyncIterable<Task<D, R>>],
-      AsyncGenerator<Work, any> /* TODO any -> Awaitable[List[events.CommandEvent]] */
+      AsyncGenerator<WorkItem, any> /* TODO any -> Awaitable[List[events.CommandEvent]] */
     >,
     data: Iterable<Task<D, R>>
   ): AsyncGenerator<Task<D, R>> {
@@ -255,7 +255,7 @@ export class Executor {
   async *_submit(
     worker: Callable<
       [WorkContext, AsyncIterable<Task<D, R>>],
-      AsyncGenerator<Work, any> /* TODO any -> Awaitable[List[events.CommandEvent]] */
+      AsyncGenerator<WorkItem, any> /* TODO any -> Awaitable[List[events.CommandEvent]] */
     >,
     data: Iterable<Task<D, R>>
   ): AsyncGenerator<Task<D, R>> {
@@ -587,7 +587,7 @@ export class Executor {
     async function process_batches(
       agreement_id: string,
       activity: rest.Activity,
-      command_generator: AsyncGenerator<Work, any>,
+      command_generator: AsyncGenerator<WorkItem, any>,
       consumer: Consumer<Task<D, R>>
     ): Promise<void> {
       /* TODO ctrl+c handling */
