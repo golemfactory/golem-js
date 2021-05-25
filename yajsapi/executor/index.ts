@@ -650,14 +650,17 @@ export class Executor {
         }
         if (exec_options.wait_for_results) {
           // Block until the results are available
+          let results;
           try {
-            let results = await get_batch_results();
-            ({ done = false, value: item } = await command_generator.next(async () => results));
+            results = await get_batch_results();
           } catch (error) {
             // Raise the exception in `command_generator` (the `worker` coroutine).
             // If the client code is able to handle it then we'll proceed with
             // subsequent batches. Otherwise the worker finishes with error.
             ({ done = false, value: item } = await command_generator.throw(error));
+          }
+          if (results !== undefined) {
+            ({ done = false, value: item } = await command_generator.next(async () => results));
           }
         } else {
           // Schedule the coroutine in a separate task
