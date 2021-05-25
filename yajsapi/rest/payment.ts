@@ -5,6 +5,7 @@ import * as yap from "ya-ts-client/dist/ya-payment/src/models";
 import { Configuration } from "ya-ts-client/dist/ya-activity";
 import { RequestorApi } from "ya-ts-client/dist/ya-payment/api";
 import { logger, sleep } from "../utils";
+import { is_intermittent_error, repeat_on_error, suppress_exceptions } from "./common";
 
 dayjs.extend(utc);
 
@@ -58,7 +59,9 @@ export class Invoice extends yInvoice {
     };
     acceptance!.totalAmountAccepted = amount.toString();
     acceptance!.allocationId = allocation.id;
-    await this._api.acceptInvoice(this.invoiceId, acceptance!, undefined, { timeout: 15000 });
+    await repeat_on_error(async () => {
+      await this._api.acceptInvoice(this.invoiceId, acceptance!, undefined, { timeout: 7000 });
+    });
   }
 }
 
@@ -81,7 +84,9 @@ export class DebitNote extends yDebitNote {
     };
     acceptance!.totalAmountAccepted = amount.toString();
     acceptance!.allocationId = allocation.id;
-    await this._api.acceptDebitNote(this.debitNoteId, acceptance!, undefined, { timeout: 15000 });
+    await repeat_on_error(async () => {
+      await this._api.acceptDebitNote(this.debitNoteId, acceptance!, undefined, { timeout: 7000 });
+    });
   }
 }
 
@@ -113,27 +118,24 @@ export class Allocation extends _Link {
   //"Allocation expiration timestamp"
 
   async details(): Promise<AllocationDetails> {
-    let allocationDetails = new AllocationDetails();
-
-    try {
+    return await repeat_on_error(async () => {
+      let allocationDetails = new AllocationDetails();
       let {
         data: details,
-      }: { data: yap.Allocation } = await this._api.getAllocation(this.id, { timeout: 15000 });
+      }: { data: yap.Allocation } = await this._api.getAllocation(this.id, { timeout: 7000 });
       allocationDetails.spent_amount = parseFloat(details.spentAmount);
       allocationDetails.remaining_amount = parseFloat(details.remainingAmount);
-    } catch (error) {
-      logger.error(error);
-      throw new Error(error);
-    }
-
-    return allocationDetails;
+      return allocationDetails;
+    });
   }
 
   async delete() {
     try {
-      await this._api.releaseAllocation(this.id, { timeout: 15000 });
+      await repeat_on_error(async () => {
+        await this._api.releaseAllocation(this.id, { timeout: 7000 });
+      });
     } catch(error) {
-      logger.error(`Release allocation: ${error}`);
+      logger.error(`Release allocation error: ${error}`);
     }
   }
 }
@@ -291,7 +293,9 @@ export class Payment {
   }
 
   async debit_note(debit_note_id: string): Promise<DebitNote> {
-    let { data: debit_note_obj } = await this._api.getDebitNote(debit_note_id, { timeout: 5000 });
+    let debit_note_obj = await repeat_on_error(async () => {
+      return (await this._api.getDebitNote(debit_note_id, { timeout: 5000 })).data;
+    });
     // TODO may need to check only requestor debit notes
     return new DebitNote(this._api, debit_note_obj)
   }
@@ -307,9 +311,10 @@ export class Payment {
   }
 
   async invoice(invoice_id: string): Promise<Invoice> {
-    let { data: invoice_obj } = await this._api.getInvoice(invoice_id, { timeout: 5000 });
+    let invoice_obj = await repeat_on_error(async () => {
+      return (await this._api.getInvoice(invoice_id, { timeout: 5000 })).data;
+    });
     // TODO may need to check only requestor invoices
-    // logger.log("debug", `got=${JSON.stringify(invoice_obj)}`);
     return new Invoice(this._api, invoice_obj);
   }
 
@@ -322,28 +327,27 @@ export class Payment {
       let ts = init_ts;
       while (true) {
         if (cancellationToken.cancelled) break;
-        try {
-          let { data: events } = await api.getInvoiceEvents(
+        let events: any[] = [];
+        await suppress_exceptions(is_intermittent_error, async () => {
+          let { data } = await api.getInvoiceEvents(
             5,
             ts.format("YYYY-MM-DDTHH:mm:ss.SSSSSSZ")
           );
-          for (let ev of events) {
-            logger.debug(
-              `Received invoice event: ${JSON.stringify(
-                ev
-              )}, type: ${JSON.stringify(Object.getPrototypeOf(ev))}`
-            );
-            ts = dayjs(ev.eventDate);
-            if (ev.eventType === "InvoiceReceivedEvent") {
-              let invoice = await self.invoice(ev["invoiceId"]);
-              yield invoice;
-            }
+          events = data;
+        });
+        for (let ev of events) {
+          logger.debug(
+            `Received invoice event: ${JSON.stringify(ev)}, ` +
+            `type: ${JSON.stringify(Object.getPrototypeOf(ev))}`
+          );
+          ts = dayjs(ev.eventDate);
+          if (ev.eventType === "InvoiceReceivedEvent") {
+            let invoice = await self.invoice(ev["invoiceId"]);
+            yield invoice;
           }
-          if (!events || !events.length) {
-            await sleep(1);
-          }
-        } catch (error) {
-          logger.error(`Received invoice error: ${error}`);
+        }
+        if (!events.length) {
+          await sleep(1);
         }
       }
       return;
@@ -361,28 +365,27 @@ export class Payment {
       let ts = init_ts;
       while (true) {
         if (cancellationToken.cancelled) break;
-        try {
-          let { data: events } = await api.getDebitNoteEvents(
+        let events: any[] = [];
+        await suppress_exceptions(is_intermittent_error, async () => {
+          let { data } = await api.getDebitNoteEvents(
             5,
             ts.format("YYYY-MM-DDTHH:mm:ss.SSSSSSZ")
           );
-          for (let ev of events) {
-            logger.debug(
-              `Received debit note event: ${JSON.stringify(
-                ev
-              )}, type: ${JSON.stringify(Object.getPrototypeOf(ev))}`
-            );
-            ts = dayjs(ev.eventDate);
-            if (ev.eventType === "DebitNoteReceivedEvent") {
-              let debit_note = await self.debit_note(ev["debitNoteId"]);
-              yield debit_note;
-            }
+          events = data;
+        });
+        for (let ev of events) {
+          logger.debug(
+            `Received debit note event: ${JSON.stringify(ev)}, ` +
+            `type: ${JSON.stringify(Object.getPrototypeOf(ev))}`
+          );
+          ts = dayjs(ev.eventDate);
+          if (ev.eventType === "DebitNoteReceivedEvent") {
+            let debit_note = await self.debit_note(ev["debitNoteId"]);
+            yield debit_note;
           }
-          if (!events || !events.length) {
-            await sleep(1);
-          }
-        } catch (error) {
-          logger.error(`Received debit note error: ${error}`);
+        }
+        if (!events.length) {
+          await sleep(1);
         }
       }
       return;
