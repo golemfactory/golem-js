@@ -560,7 +560,7 @@ export class Executor {
           }
         }
         const batch_deadline
-          = exec_options.batch_timeout ? (Date.now() + exec_options.batch_timeout) : undefined;
+          = exec_options.batch_timeout ? ((Date.now() + exec_options.batch_timeout) / 1000) : undefined;
         const current_worker_task = consumer.last_item();
         if (current_worker_task) {
           emit(new events.TaskStarted({
@@ -623,8 +623,8 @@ export class Executor {
             try {
               return await get_batch_results();
             } catch (error) {
-              logger.error(`Error while getting batch results: ${error}`);
-              return []; // TODO
+              logger.warn(`Error while getting batch results: ${error}`);
+              throw error;
             }
           })();
           ({ done = false, value: item } = await command_generator.next(get_results));
