@@ -618,7 +618,7 @@ export class Executor {
             ({ done = false, value: item } = await command_generator.next((async () => results)()));
           }
         } else {
-          // Run without blocking, user may await the next
+          // Run without blocking
           const get_results = (async () => {
             try {
               return await get_batch_results();
