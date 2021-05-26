@@ -553,7 +553,7 @@ export class Executor {
         if (batch.timeout()) {
           if (exec_options.batch_timeout) {
             logger.warn(
-              "Overriding batch timeout set with commit(batch_timeout) by the value set in exec options"
+              "Overriding batch timeout set with commit({timeout:...}) by value from ExecOptions"
             );
           } else {
             exec_options.batch_timeout = batch.timeout();
@@ -621,10 +621,11 @@ export class Executor {
           // Run without blocking
           const get_results = (async () => {
             try {
-              return await get_batch_results();
+              let results = await get_batch_results();
+              return new Promise((resolve, reject) => resolve(results) );
             } catch (error) {
               logger.warn(`Error while getting batch results: ${error}`);
-              throw error;
+              return new Promise((resolve, reject) => reject(error) );
             }
           })();
           ({ done = false, value: item } = await command_generator.next(get_results));
