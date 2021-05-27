@@ -22,7 +22,7 @@ readme = "README.md"
 python = "^3.8.0"
 pytest = "^6.2"
 pytest-asyncio = "^0.14"
-goth = "^0.2"
+goth = "^0.3"
 
 [tool.poetry.dev-dependencies]
 black = "^20.8b1"
