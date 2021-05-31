@@ -322,16 +322,14 @@ export class CommandEvent extends ScriptEvent {
 
 export class CommandExecuted extends CommandEvent {
   command?: any;
-  success?: boolean;
-  stdout?: string;
-  stderr?: string;
+  success?: boolean; // ? field
+  message?: string; // ? field
 
-  constructor({ agr_id, task_id, success, cmd_idx, command, stdout, stderr }) {
+  constructor({ agr_id, task_id, success, cmd_idx, command, message }) {
     super({agr_id, cmd_idx, task_id});
     if (success) this.success = success;
     if (command) this.command = command;
-    if (stdout) this.stdout = stdout;
-    if (stderr) this.stderr = stderr;
+    if (message) this.message = message;
   }
 }
 
@@ -407,18 +405,6 @@ export class CommandEventContext {
     if (this.evt.hasOwnProperty("command")) {
       let idx: number = this.evt.cmd_idx;
       this.evt["command"] = cmds[idx];
-    }
-
-    delete this.evt["stdout"];
-    delete this.evt["stderr"];
-    const message = this.evt["message"];
-    if (message) {
-      delete this.evt["message"];
-      try {
-        const message_dict = JSON.parse(message);
-        this.evt["stdout"] = message_dict["stdout"];
-        this.evt["stderr"] = message_dict["stderr"];
-      } catch (e) {}
     }
     return this.evt;
   }
