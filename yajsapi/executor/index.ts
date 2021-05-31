@@ -598,7 +598,7 @@ export class Executor {
             emit(evt);
             results.push(evt);
             if (evt instanceof events.CommandExecuted && !evt.success) {
-              throw new CommandExecutionError(evt.command, evt.message)
+              throw new CommandExecutionError(evt.command, evt.stdout)
             }
           }
           emit(new events.GettingResults({ agr_id: agreement_id, task_id: task_id }));
