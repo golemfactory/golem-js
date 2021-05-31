@@ -98,6 +98,11 @@ export class _ExecutorConfig {
   }
 }
 
+export class BatchResults {
+  results?: events.CommandEvent[];
+  error?: any;
+}
+
 class AsyncGeneratorBreak extends Error {}
 
 type WorkItem = Work | [Work, ExecOptions];
@@ -605,9 +610,9 @@ export class Executor {
         }
         if (exec_options.wait_for_results) {
           // Block until the results are available
-          let results;
+          let results: BatchResults | undefined;
           try {
-            results = await get_batch_results();
+            results = { results: await get_batch_results() };
           } catch (error) {
             // Raise the exception in `command_generator` (the `worker` coroutine).
             // If the client code is able to handle it then we'll proceed with
@@ -619,13 +624,13 @@ export class Executor {
           }
         } else {
           // Run without blocking
-          const get_results = (async () => {
+          const get_results = (async () : Promise<BatchResults> => {
             try {
               let results = await get_batch_results();
-              return new Promise((resolve, reject) => resolve(results) );
+              return new Promise((resolve, _) => resolve({ results }));
             } catch (error) {
               logger.warn(`Error while getting batch results: ${error}`);
-              return new Promise((resolve, reject) => reject(error) );
+              return new Promise((resolve, _) => resolve({ error }));
             }
           })();
           ({ done = false, value: item } = await command_generator.next(get_results));
