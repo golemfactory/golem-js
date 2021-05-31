@@ -1,5 +1,5 @@
-import { Executor, Task, sgx, vm } from "./executor";
-import { WorkContext } from "./executor/ctx";
+import { BatchResults, Executor, Task, sgx, vm } from "./executor";
+import { WorkContext, Work, ExecOptions } from "./executor/ctx";
 import * as props from "./props";
 import * as rest from "./rest";
 import * as storage from "./storage";
@@ -12,4 +12,4 @@ import * as utils from "./utils";
 //   console.log('Unhandled Rejection at: Promise', p, 'reason:', reason);
 // });
 
-export { Executor, Task, sgx, vm, WorkContext, props, rest, storage, utils };
+export { Executor, ExecOptions, Task, sgx, vm, Work, WorkContext, BatchResults, props, rest, storage, utils };

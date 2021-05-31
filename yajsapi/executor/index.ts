@@ -4,7 +4,7 @@ import utc from "dayjs/plugin/utc";
 import duration from "dayjs/plugin/duration";
 import { MarketDecoration } from "ya-ts-client/dist/ya-payment/src/models";
 
-import { WorkContext, Work, CommandContainer } from "./ctx";
+import { WorkContext, Work, CommandContainer, ExecOptions } from "./ctx";
 import * as events from "./events";
 import { Activity, NodeInfo, NodeInfoKeys } from "../props";
 import { Counter } from "../props/com";
@@ -14,7 +14,7 @@ import * as rest from "../rest";
 import { Agreement,  OfferProposal, Subscription } from "../rest/market";
 import { AgreementsPool } from "./agreements_pool";
 import { Allocation, DebitNote, Invoice } from "../rest/payment";
-import { CommandExecutionError } from "../rest/activity";
+import { ActivityService, CommandExecutionError } from "../rest/activity";
 
 import * as csp from "js-csp";
 
@@ -98,7 +98,14 @@ export class _ExecutorConfig {
   }
 }
 
+export class BatchResults {
+  results?: events.CommandEvent[];
+  error?: any;
+}
+
 class AsyncGeneratorBreak extends Error {}
+
+type WorkItem = Work | [Work, ExecOptions];
 
 type D = "D"; // Type var for task data
 type R = "R"; // Type var for task result
@@ -248,7 +255,7 @@ export class Executor {
   async *submit(
     worker: Callable<
       [WorkContext, AsyncIterable<Task<D, R>>],
-      AsyncGenerator<Work>
+      AsyncGenerator<WorkItem, any, BatchResults>
     >,
     data: Iterable<Task<D, R>>
   ): AsyncGenerator<Task<D, R>> {
@@ -372,7 +379,7 @@ export class Executor {
   async *_submit(
     worker: Callable<
       [WorkContext, AsyncIterable<Task<D, R>>],
-      AsyncGenerator<Work>
+      AsyncGenerator<WorkItem, any, BatchResults>
     >,
     data: Iterable<Task<D, R>>
   ): AsyncGenerator<Task<D, R>> {
@@ -533,6 +540,104 @@ export class Executor {
       gftp.provider()
     );
 
+    let unpack_work_item = (item: WorkItem): [Work, ExecOptions] => {
+      return item instanceof Work ? [item, new ExecOptions()] : item;
+    };
+
+    async function process_batches(
+      agreement_id: string,
+      activity: rest.Activity,
+      command_generator: AsyncGenerator<WorkItem, any>,
+      consumer: Consumer<Task<D, R>>
+    ): Promise<void> {
+      /* TODO ctrl+c handling */
+      let { done = false, value: item }: { done?: boolean; value: WorkItem }
+        = await command_generator.next();
+      while (!done) {
+        const [batch, exec_options] = unpack_work_item(item);
+        if (batch.timeout()) {
+          if (exec_options.batch_timeout) {
+            logger.warn(
+              "Overriding batch timeout set with commit({timeout:...}) by value from ExecOptions"
+            );
+          } else {
+            exec_options.batch_timeout = batch.timeout();
+          }
+        }
+        const batch_deadline
+          = exec_options.batch_timeout ? ((Date.now() + exec_options.batch_timeout) / 1000) : undefined;
+        const current_worker_task = consumer.last_item();
+        if (current_worker_task) {
+          emit(new events.TaskStarted({
+            agr_id: agreement_id,
+            task_id: current_worker_task.id,
+            task_data: current_worker_task.data(),
+          }));
+        }
+        const task_id = current_worker_task ? current_worker_task.id : undefined;
+        batch.attestation = {
+          credentials: activity.credentials,
+          nonce: activity.id,
+          exeunitHashes: activity.exeunitHashes,
+        };
+        await batch.prepare();
+        const cc = new CommandContainer();
+        batch.register(cc);
+        const remote = await activity.send(
+          cc.commands(),
+          stream_output,
+          batch_deadline,
+          self._worker_cancellation_token
+        );
+        const cmds = cc.commands();
+        emit(new events.ScriptSent({ agr_id: agreement_id, task_id, cmds }));
+        const get_batch_results = async () : Promise<events.CommandEvent[]> => {
+          let results: events.CommandEvent[] = [];
+          for await (let evt_ctx of remote) {
+            let evt = evt_ctx.event(agreement_id, task_id, cmds);
+            emit(evt);
+            results.push(evt);
+            if (evt instanceof events.CommandExecuted && !evt.success) {
+              throw new CommandExecutionError(evt.command, evt.message)
+            }
+          }
+          emit(new events.GettingResults({ agr_id: agreement_id, task_id: task_id }));
+          await batch.post();
+          emit(new events.ScriptFinished({ agr_id: agreement_id, task_id: task_id }));
+          await accept_payment_for_agreement({ agreement_id: agreement_id, partial: true });
+          emit(new events.CheckingPayments());
+          return results;
+        }
+        if (exec_options.wait_for_results) {
+          // Block until the results are available
+          let results: BatchResults | undefined;
+          try {
+            results = { results: await get_batch_results() };
+          } catch (error) {
+            // Raise the exception in `command_generator` (the `worker` coroutine).
+            // If the client code is able to handle it then we'll proceed with
+            // subsequent batches. Otherwise the worker finishes with error.
+            ({ done = false, value: item } = await command_generator.throw(error));
+          }
+          if (results !== undefined) {
+            ({ done = false, value: item } = await command_generator.next((async () => results)()));
+          }
+        } else {
+          // Run without blocking
+          const get_results = (async () : Promise<BatchResults> => {
+            try {
+              let results = await get_batch_results();
+              return new Promise((resolve, _) => resolve({ results }));
+            } catch (error) {
+              logger.warn(`Error while getting batch results: ${error}`);
+              return new Promise((resolve, _) => resolve({ error }));
+            }
+          })();
+          ({ done = false, value: item } = await command_generator.next(get_results));
+        }
+      }
+    }
+
     async function start_worker(agreement: Agreement): Promise<void> {
       let wid = last_wid;
       last_wid += 1;
@@ -540,11 +645,12 @@ export class Executor {
       emit(new events.WorkerStarted({ agr_id: agreement.id() }));
 
       if (self._worker_cancellation_token.cancelled) { return; }
-      let _act;
+      let _act: Activity;
       try {
         _act = await activity_api.new_activity(agreement, secure);
       } catch (error) {
         emit(new events.ActivityCreateFailed({ agr_id: agreement.id() }));
+        emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error }));
         throw error;
       }
 
@@ -560,122 +666,25 @@ export class Executor {
       await asyncWith(
         _act,
         async (act): Promise<void> => {
-          emit(
-            new events.ActivityCreated({
-              act_id: act.id,
-              agr_id: agreement.id(),
-            })
-          );
+          emit(new events.ActivityCreated({ act_id: act.id, agr_id: agreement.id() }));
           agreements_accepting_debit_notes.add(agreement.id());
-          let work_context = new WorkContext(
-            `worker-${wid}`,
-            storage_manager,
-            emit
-          );
+          let work_context = new WorkContext(`worker-${wid}`, storage_manager, emit);
           await asyncWith(work_queue.new_consumer(), async (consumer) => {
-            let command_generator = worker(
-              work_context,
-              task_emitter(consumer)
-            );
-            if (self._worker_cancellation_token.cancelled) { return; }
-            for await (let batch of command_generator) {
-              if (self._worker_cancellation_token.cancelled) { return; }
-              const _batch_timeout = batch.timeout();
-              const batch_deadline = _batch_timeout 
-                ? dayjs.utc().unix() + _batch_timeout / 1000
-                : null;
-              try {
-                let current_worker_task = consumer.last_item();
-                if (current_worker_task) {
-                  emit(
-                    new events.TaskStarted({
-                      agr_id: agreement.id(),
-                      task_id: current_worker_task.id,
-                      task_data: current_worker_task.data(),
-                    })
-                  );
-                }
-                let task_id = current_worker_task
-                  ? current_worker_task.id
-                  : null;
-                batch.attestation = {
-                  credentials: act.credentials,
-                  nonce: act.id,
-                  exeunitHashes: act.exeunitHashes,
-                };
-                if (self._worker_cancellation_token.cancelled) { return; }
-                await batch.prepare();
-                let cc = new CommandContainer();
-                batch.register(cc);
-                if (self._worker_cancellation_token.cancelled) { return; }
-                let remote = await act.send(
-                  cc.commands(), stream_output, batch_deadline, self._worker_cancellation_token
-                );
-                let cmds = cc.commands();
-                emit(
-                  new events.ScriptSent({
-                    agr_id: agreement.id(),
-                    task_id,
-                    cmds,
-                  })
-                );
-                emit(new events.CheckingPayments());
-                for await (let evt_ctx of remote) {
-                  if (self._worker_cancellation_token.cancelled) { return; }
-                  let evt = evt_ctx.event(agreement.id(), task_id, cmds);
-                  emit(evt);
-                  if (evt instanceof events.CommandExecuted && !evt.success) {
-                    throw new CommandExecutionError(evt.command, evt.message)
-                  }
-                }
-                emit(
-                  new events.GettingResults({
-                    agr_id: agreement.id(),
-                    task_id: task_id,
-                  })
-                );
-                if (self._worker_cancellation_token.cancelled) { return; }
-                await batch.post();
-                emit(
-                  new events.ScriptFinished({
-                    agr_id: agreement.id(),
-                    task_id: task_id,
-                  })
-                );
-                if (self._worker_cancellation_token.cancelled) { return; }
-                await accept_payment_for_agreement({
-                  agreement_id: agreement.id(),
-                  partial: true,
-                });
-                emit(new events.CheckingPayments());
-              } catch (error) {
-                if (self._worker_cancellation_token.cancelled) { return; }
-                try {
-                  /* rethrow this error in the user-supplied generator (worker function) */
-                  await command_generator.throw(error);
-                } catch (error) {
-                  emit(
-                    new events.WorkerFinished({
-                      agr_id: agreement.id(),
-                      exception: error,
-                    })
-                  );
-                  throw error;
-                }
-              }
+            try {
+              let tasks = task_emitter(consumer);
+              const batch_generator = worker(work_context, tasks);
+              await process_batches(agreement.id(), act, batch_generator, consumer);
+              emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
+            } catch (error) {
+              emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error }));
+              throw error;
+            } finally {
+              await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
             }
           });
           if (self._worker_cancellation_token.cancelled) { return; }
-          await accept_payment_for_agreement({
-            agreement_id: agreement.id(),
-            partial: false,
-          });
-          emit(
-            new events.WorkerFinished({
-              agr_id: agreement.id(),
-              exception: undefined,
-            })
-          );
+          await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
+          emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
         }
       );
       logger.debug(`Stopped worker related to agreement ${agreement.id()}.`);
@@ -915,7 +924,7 @@ export class Executor {
     this._market_api = new rest.Market(market_client);
 
     let activity_client = await this._api_config.activity();
-    this._activity_api = new rest.Activity(activity_client);
+    this._activity_api = new ActivityService(activity_client);
 
     let payment_client = await this._api_config.payment();
     this._payment_api = new rest.Payment(payment_client);
