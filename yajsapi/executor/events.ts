@@ -322,14 +322,18 @@ export class CommandEvent extends ScriptEvent {
 
 export class CommandExecuted extends CommandEvent {
   command?: any;
-  success?: boolean; // ? field
-  message?: string; // ? field
+  success?: boolean;
+  message?: string;
+  stdout?: string;
+  stderr?: string;
 
-  constructor({ agr_id, task_id, success, cmd_idx, command, message }) {
+  constructor({ agr_id, task_id, success, cmd_idx, command, message, stdout, stderr }) {
     super({agr_id, cmd_idx, task_id});
     if (success) this.success = success;
     if (command) this.command = command;
     if (message) this.message = message;
+    if (stdout) this.stdout = stdout;
+    if (stderr) this.stderr = stderr;
   }
 }
 
