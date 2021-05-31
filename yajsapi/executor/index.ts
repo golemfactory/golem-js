@@ -255,7 +255,7 @@ export class Executor {
   async *submit(
     worker: Callable<
       [WorkContext, AsyncIterable<Task<D, R>>],
-      AsyncGenerator<WorkItem, any> /* TODO any -> Awaitable[List[events.CommandEvent]] */
+      AsyncGenerator<WorkItem, any, BatchResults>
     >,
     data: Iterable<Task<D, R>>
   ): AsyncGenerator<Task<D, R>> {
@@ -379,7 +379,7 @@ export class Executor {
   async *_submit(
     worker: Callable<
       [WorkContext, AsyncIterable<Task<D, R>>],
-      AsyncGenerator<WorkItem, any> /* TODO any -> Awaitable[List[events.CommandEvent]] */
+      AsyncGenerator<WorkItem, any, BatchResults>
     >,
     data: Iterable<Task<D, R>>
   ): AsyncGenerator<Task<D, R>> {
