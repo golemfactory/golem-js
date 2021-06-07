@@ -1,4 +1,4 @@
-const { Executor, Task, utils: { asyncWith, logUtils }, vm } = require("yajsapi");
+const { Executor, Task, utils: { asyncWith }, vm } = require("yajsapi");
 
 async function main() {
   const _package = await vm.repo({
