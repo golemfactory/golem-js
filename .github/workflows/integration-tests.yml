@@ -35,6 +35,7 @@ jobs:
           npm install
           npm run-script build
           cd examples
+          sed -i 's/"yajsapi": ".*"/"yajsapi": "\*"/' package.json
           npm install
           sed -i 's,require("yajsapi");,require("'$([ -f ../dist/index.js ] && echo "../../dist/index.js" || echo "../../dist/yajsapi/index.js")'");,' blender/blender.js
 
