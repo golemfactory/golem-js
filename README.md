@@ -37,6 +37,7 @@ export YAGNA_APPKEY=your_yagna_app_key_here
 ```
 
 ### When ready
+- `npm run js:hello`    will start hello world javascript example
 - `npm run js:blender`  will start blender javascript example
 - `npm run ts:blender`  will start blender typescript example
 - `npm run js:low`      will start javascript low level api example
