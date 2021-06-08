@@ -27,6 +27,7 @@ import {
   CancellationToken,
   eventLoop,
   logger,
+  logUtils,
   promisify,
   Queue,
   sleep,
@@ -233,8 +234,7 @@ export class Executor {
     SIGNALS.forEach((event) => process.on(event, cancel));
 
     if (!event_consumer) {
-      //from ..log import log_event
-      // event_emitter = log_event
+      event_consumer = logUtils.logSummary();
     }
     this._wrapped_consumer =
       event_consumer &&
