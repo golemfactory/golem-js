@@ -137,7 +137,7 @@ program
   .option("-d, --debug", "output extra debugging")
   .option(
     "--number-of-providers <number_of_providers>",
-    "Number of profiders",
+    "Number of providers",
     (value) => parseInt(value),
     3
   )
