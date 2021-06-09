@@ -2,12 +2,12 @@ import fs from "fs";
 import path from "path";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
-import { Engine, Task, utils, vm, WorkContext } from "../../yajsapi";
+import { Executor, Task, utils, vm, WorkContext } from "yajsapi";
 import { program } from "commander";
 
 dayjs.extend(duration);
 
-const { asyncWith, logger, range } = utils;
+const { asyncWith, logger, logUtils, range } = utils;
 
 function write_hash(hash) {
   const filePath = path.join(__dirname, "in.hash");
@@ -45,11 +45,11 @@ function read_password(ranges) {
 }
 
 async function main(args) {
-  const _package = await vm.repo(
-    "2c17589f1651baff9b82aa431850e296455777be265c2c5446c902e9",
-    0.5,
-    2.0
-  );
+  const _package = await vm.repo({
+    image_hash: "2c17589f1651baff9b82aa431850e296455777be265c2c5446c902e9",
+    min_mem_gib: 0.5,
+    min_storage_gib: 2.0,
+  });
   let step;
 
   async function* worker_check_keyspace(ctx: WorkContext, tasks) {
@@ -92,21 +92,18 @@ async function main(args) {
   const timeout = dayjs.duration({ minutes: 35 }).asMilliseconds();
 
   await asyncWith(
-    await new Engine(
-      _package,
-      args.number_of_providers,
-      timeout, //5 min to 30 min
-      "10.0",
-      undefined,
-      args.subnetTag,
-      (event) => {
-        console.debug(event);
-      }
-    ),
-    async (engine: Engine): Promise<void> => {
+    await new Executor({
+      task_package: _package,
+      max_workers: args.number_of_providers,
+      timeout: timeout, //5 min to 30 min
+      budget: "10.0",
+      subnet_tag: args.subnetTag,
+      event_consumer: logUtils.logSummary(),
+    }),
+    async (engine: Executor): Promise<void> => {
       let keyspace_computed = false;
       // This is not a typical use of executor.submit as there is only one task, with no data:
-      for await (let task of engine.map(worker_check_keyspace, [
+      for await (let task of engine.submit(worker_check_keyspace, [
         new Task(null as any),
       ])) {
         keyspace_computed = true;
@@ -119,11 +116,11 @@ async function main(args) {
       step = keyspace / args.number_of_providers + 1;
       const ranges = range(0, keyspace, parseInt(step));
 
-      for await (let task of engine.map(
+      for await (let task of engine.submit(
         worker_find_password,
         ranges.map((range) => new Task(range as any))
       )) {
-        console.log("result=", task.output());
+        console.log("result=", task.result());
       }
 
       const password = read_password(ranges);
@@ -136,7 +133,7 @@ async function main(args) {
 }
 
 program
-  .option("--subnet-tag <subnet>", "set subnet name", "community.3")
+  .option("--subnet-tag <subnet>", "set subnet name", "devnet-beta.1")
   .option("-d, --debug", "output extra debugging")
   .option(
     "--number-of-providers <number_of_providers>",
