@@ -110,8 +110,7 @@ async function main(args) {
       if (!keyspace_computed) return;
 
       const keyspace = read_keyspace();
-
-      step = keyspace / args.number_of_providers + 1;
+      step = keyspace / args.numberOfProviders + 1;
       const ranges = range(0, keyspace, parseInt(step));
       for await (let task of executor.submit(
         worker_find_password,
