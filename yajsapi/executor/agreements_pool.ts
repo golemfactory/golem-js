@@ -30,15 +30,14 @@ class BufferedAgreement {
 
 export class AgreementsPool implements ComputationHistory {
   private emitter;
-  private _cancellation_token: CancellationToken;
   private _offer_buffer: Map<string, _BufferedProposal> = new Map();
   private _agreements: Map<string, BufferedAgreement> = new Map();
   private _lock: Lock = new Lock();
   private _rejecting_providers: Set<string> = new Set();
   private _confirmed: number = 0;
-  constructor(emitter, cancellation_token: CancellationToken) {
+  cancellation_token?: CancellationToken;
+  constructor(emitter) {
     this.emitter = emitter;
-    this._cancellation_token = cancellation_token;
   }
   async cycle(): Promise<void> {
     for (const agreement_id of new Map(this._agreements).keys()) {
@@ -92,7 +91,7 @@ export class AgreementsPool implements ComputationHistory {
       .reduce((acc, item) => item[1].score > acc[1].score ? item : acc);
     let [provider_id, offer] = _sample;
     this._offer_buffer.delete(provider_id);
-    if (this._cancellation_token.cancelled) return;
+    if (this.cancellation_token && this.cancellation_token.cancelled) return;
     try {
       const agreement = await offer.proposal.create_agreement();
       try {
@@ -108,7 +107,7 @@ export class AgreementsPool implements ComputationHistory {
             provider_info: node_info,
           })
         );
-        if (this._cancellation_token.cancelled) return;
+        if (this.cancellation_token && this.cancellation_token.cancelled) return;
         if (!(await agreement.confirm())) {
           emit(new events.AgreementRejected({ agr_id: agreement.id() }));
           this._rejecting_providers.add(provider_id);
