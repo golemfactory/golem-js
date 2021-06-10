@@ -580,7 +580,7 @@ export class Executor {
           cc.commands(),
           stream_output,
           batch_deadline,
-          self.state ? self.state.worker_cancellation_token : undefined
+          (<SubmissionState>self.state).worker_cancellation_token
         );
         const cmds = cc.commands();
         emit(new events.ScriptSent({ agr_id: agreement_id, task_id, cmds }));
@@ -637,7 +637,7 @@ export class Executor {
 
       emit(new events.WorkerStarted({ agr_id: agreement.id() }));
 
-      if (self.state && self.state.worker_cancellation_token.cancelled) { return; }
+      if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) { return; }
       let _act: Activity;
       try {
         _act = await activity_api.new_activity(agreement, secure);
@@ -651,7 +651,7 @@ export class Executor {
         consumer: Consumer<any>
       ): AsyncGenerator<Task<"TaskData", "TaskResult">> {
         for await (let handle of consumer) {
-          if (self.state && self.state.worker_cancellation_token.cancelled) { break; }
+          if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) { break; }
           yield Task.for_handle(handle, work_queue, emit);
         }
       }
@@ -675,7 +675,7 @@ export class Executor {
               await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
             }
           });
-          if (self.state && self.state.worker_cancellation_token.cancelled) { return; }
+          if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) { return; }
           await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
           emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
         }
@@ -697,14 +697,14 @@ export class Executor {
       while (true) {
         await sleep(2);
         await agreements_pool.cycle();
-        if (self.state && self.state.worker_cancellation_token.cancelled) { break; }
+        if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) { break; }
         if (
           workers.size < self._conf.max_workers &&
           work_queue.has_unassigned_items()
         ) {
           let new_task: any;
           try {
-            if (self.state && self.state.worker_cancellation_token.cancelled) { break; }
+            if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) { break; }
             const { task: new_task } = await agreements_pool.use_agreement(
               (agreement: Agreement, _: any) => loop.create_task(_start_worker.bind(null, agreement))
             );
@@ -803,8 +803,8 @@ export class Executor {
         logger.error("Computation interrupted by the user.");
       }
       payment_closing = true;
-      if (self.state && !self.state.worker_cancellation_token.cancelled)
-        self.state.worker_cancellation_token.cancel();
+      if (!(<SubmissionState>self.state).worker_cancellation_token.cancelled)
+        (<SubmissionState>self.state).worker_cancellation_token.cancel();
       try {
         if (workers.size > 0) {
           emit(new events.CheckingPayments());
