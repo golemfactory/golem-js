@@ -77,7 +77,7 @@ async function main(args) {
         hashcat -a 3 -m 400 /golem/work/in.hash ${args.mask} --skip=${skip} --limit=${limit} --self-test-disable -o /golem/work/hashcat_${skip}.potfile || true`;
       ctx.run("/bin/sh", ["-c", commands]);
 
-      let output_file = `hashcat_${skip}.potfile`;
+      let output_file = path.join(__dirname, `hashcat_${skip}.potfile`);
       ctx.download_file(`/golem/work/hashcat_${skip}.potfile`, output_file);
 
       yield ctx.commit();
