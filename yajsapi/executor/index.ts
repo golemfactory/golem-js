@@ -129,6 +129,8 @@ export class SubmissionState {
   agreements_pool!: AgreementsPool;
   offers_collected: number = 0;
   proposals_confirmed: number = 0;
+  payment_cancellation_token: CancellationToken = new CancellationToken();
+  worker_cancellation_token: CancellationToken = new CancellationToken();
   constructor(builder: DemandBuilder, agreements_pool: AgreementsPool) {
     this.builder = builder;
     this.agreements_pool = agreements_pool;
@@ -164,8 +166,6 @@ export class Executor {
   private _active_computations;
   private _chan_computation_done;
   private _cancellation_token: CancellationToken;
-  private _worker_cancellation_token: CancellationToken;
-  private _payment_cancellation_token: CancellationToken;
 
   /**
    * Create new executor
@@ -215,17 +215,9 @@ export class Executor {
     this._cancellation_token = new CancellationToken();
     let cancellationToken = this._cancellation_token;
 
-    this._worker_cancellation_token = new CancellationToken();
-    let workerCancellationToken = this._worker_cancellation_token;
-
-    this._payment_cancellation_token = new CancellationToken();
-
     function cancel(event) {
       if (cancellationToken && !cancellationToken.cancelled) {
         cancellationToken.cancel();
-      }
-      if (workerCancellationToken && !workerCancellationToken.cancelled) {
-        workerCancellationToken.cancel();
       }
       SIGNALS.forEach((event) => {
         process.off(event, cancel);
@@ -328,7 +320,7 @@ export class Executor {
     }
     let _proposals;
     try {
-      _proposals = subscription.events(this._worker_cancellation_token);
+      _proposals = subscription.events(state.worker_cancellation_token);
     } catch (error) {
       emit(new events.CollectFailed({ sub_id: subscription.id(), reason: error }));
       throw error;
@@ -357,7 +349,7 @@ export class Executor {
     emit: Callable<[events.YaEvent], void>
   ): Promise<void> {
     let keepSubscribing = true;
-    while (keepSubscribing && !this._worker_cancellation_token.cancelled) {
+    while (keepSubscribing && !state.worker_cancellation_token.cancelled) {
       try {
         const subscription = await state.builder.subscribe(this._market_api);
         await asyncWith(subscription, async (subscription) => {
@@ -413,13 +405,14 @@ export class Executor {
     await this._task_package.decorate_demand(builder);
     await this._strategy.decorate_demand(builder);
 
-    let agreements_pool = new AgreementsPool(emit, this._worker_cancellation_token);
+    let agreements_pool = new AgreementsPool(emit);
     this.state = new SubmissionState(builder, agreements_pool);
+    agreements_pool.cancellation_token = this.state.worker_cancellation_token;
     let market_api = this._market_api;
     let activity_api = this._activity_api;
     let strategy = this._strategy;
     let cancellationToken = this._cancellation_token;
-    let paymentCancellationToken = this._payment_cancellation_token;
+    let paymentCancellationToken = this.state.payment_cancellation_token;
     let done_queue: Queue<Task<D, R>> = new Queue([]);
     let stream_output = this._stream_output;
     let workers_done = csp.chan();
@@ -587,7 +580,7 @@ export class Executor {
           cc.commands(),
           stream_output,
           batch_deadline,
-          self._worker_cancellation_token
+          self.state ? self.state.worker_cancellation_token : undefined
         );
         const cmds = cc.commands();
         emit(new events.ScriptSent({ agr_id: agreement_id, task_id, cmds }));
@@ -644,7 +637,7 @@ export class Executor {
 
       emit(new events.WorkerStarted({ agr_id: agreement.id() }));
 
-      if (self._worker_cancellation_token.cancelled) { return; }
+      if (self.state && self.state.worker_cancellation_token.cancelled) { return; }
       let _act: Activity;
       try {
         _act = await activity_api.new_activity(agreement, secure);
@@ -658,7 +651,7 @@ export class Executor {
         consumer: Consumer<any>
       ): AsyncGenerator<Task<"TaskData", "TaskResult">> {
         for await (let handle of consumer) {
-          if (self._worker_cancellation_token.cancelled) { break; }
+          if (self.state && self.state.worker_cancellation_token.cancelled) { break; }
           yield Task.for_handle(handle, work_queue, emit);
         }
       }
@@ -682,7 +675,7 @@ export class Executor {
               await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
             }
           });
-          if (self._worker_cancellation_token.cancelled) { return; }
+          if (self.state && self.state.worker_cancellation_token.cancelled) { return; }
           await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
           emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
         }
@@ -704,14 +697,14 @@ export class Executor {
       while (true) {
         await sleep(2);
         await agreements_pool.cycle();
-        if (self._worker_cancellation_token.cancelled) { break; }
+        if (self.state && self.state.worker_cancellation_token.cancelled) { break; }
         if (
           workers.size < self._conf.max_workers &&
           work_queue.has_unassigned_items()
         ) {
           let new_task: any;
           try {
-            if (self._worker_cancellation_token.cancelled) { break; }
+            if (self.state && self.state.worker_cancellation_token.cancelled) { break; }
             const { task: new_task } = await agreements_pool.use_agreement(
               (agreement: Agreement, _: any) => loop.create_task(_start_worker.bind(null, agreement))
             );
@@ -803,8 +796,6 @@ export class Executor {
       } else {
         logger.error(`Computation Failed. Error: ${error}`);
       }
-      if (!self._worker_cancellation_token.cancelled)
-        self._worker_cancellation_token.cancel();
       // TODO: implement ComputationFinished(error)
       emit(new events.ComputationFinished());
     } finally {
@@ -812,8 +803,8 @@ export class Executor {
         logger.error("Computation interrupted by the user.");
       }
       payment_closing = true;
-      if (!self._worker_cancellation_token.cancelled)
-        self._worker_cancellation_token.cancel();
+      if (self.state && !self.state.worker_cancellation_token.cancelled)
+        self.state.worker_cancellation_token.cancel();
       try {
         if (workers.size > 0) {
           emit(new events.CheckingPayments());
@@ -840,11 +831,9 @@ export class Executor {
         logger.warn(`Error while waiting for invoices: ${error}.`);
       }
       emit(new events.CheckingPayments());
-      if (agreements_to_pay.size > 0) { logger.warn(`${agreements_to_pay.size} unpaid invoices ${JSON.stringify(agreements_to_pay.keys())}.`); }
-      if (!self._payment_cancellation_token.cancelled) { self._payment_cancellation_token.cancel(); }
+      if (agreements_to_pay.size > 0) { logger.warn(`${agreements_to_pay.size} unpaid invoices ${Array.from(agreements_to_pay.keys()).join(",")}.`); }
+      if (!paymentCancellationToken.cancelled) { paymentCancellationToken.cancel(); }
       emit(new events.PaymentsFinished());
-      await sleep(2);
-      cancellationToken.cancel();
       logger.info("Shutdown complete.");
     }
     return;
@@ -941,6 +930,7 @@ export class Executor {
       await promisify(csp.takeAsync)(this._chan_computation_done);
       this._active_computations -= 1;
     }
+    this._cancellation_token.cancel();
     // TODO: prevent new computations at this point (if it's even possible to start one)
     this._market_api = null;
     this._payment_api = null;
