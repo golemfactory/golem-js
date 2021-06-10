@@ -81,7 +81,7 @@ async function main(args) {
       ctx.download_file(`/golem/work/hashcat_${skip}.potfile`, output_file);
 
       yield ctx.commit();
-      task.accept_task(output_file);
+      task.accept_result(output_file);
     }
   }
 
@@ -89,23 +89,21 @@ async function main(args) {
   write_hash(args.hash);
   write_keyspace_check_script(args.mask);
 
-  const timeout = dayjs.duration({ minutes: 35 }).asMilliseconds();
+  const timeout = dayjs.duration({ minutes: 25 }).asMilliseconds();
 
   await asyncWith(
     await new Executor({
       task_package: _package,
-      max_workers: args.number_of_providers,
+      max_workers: args.numberOfProviders,
       timeout: timeout, //5 min to 30 min
       budget: "10.0",
       subnet_tag: args.subnetTag,
       event_consumer: logUtils.logSummary(),
     }),
-    async (engine: Executor): Promise<void> => {
+    async (executor: Executor): Promise<void> => {
       let keyspace_computed = false;
       // This is not a typical use of executor.submit as there is only one task, with no data:
-      for await (let task of engine.submit(worker_check_keyspace, [
-        new Task(null as any),
-      ])) {
+      for await (let task of executor.submit(worker_check_keyspace, [new Task(null as any)])) {
         keyspace_computed = true;
       }
       // Assume the errors have been already reported and we may return quietly.
@@ -115,8 +113,7 @@ async function main(args) {
 
       step = keyspace / args.number_of_providers + 1;
       const ranges = range(0, keyspace, parseInt(step));
-
-      for await (let task of engine.submit(
+      for await (let task of executor.submit(
         worker_find_password,
         ranges.map((range) => new Task(range as any))
       )) {
@@ -137,7 +134,7 @@ program
   .option("-d, --debug", "output extra debugging")
   .option(
     "--number-of-providers <number_of_providers>",
-    "Number of providers",
+    "number of providers",
     (value) => parseInt(value),
     3
   )
