@@ -17,7 +17,7 @@ function write_hash(hash) {
 }
 
 function write_keyspace_check_script(mask) {
-  const command = `hashcat --keyspace -a 3 ${mask} -m 400 > /golem/work/keyspace.txt`;
+  const command = `hashcat --keyspace -a 3 ${mask} -m 400 > /golem/output/keyspace.txt`;
   const filePath = path.join(__dirname, "keyspace.sh");
   fs.writeFile(filePath, command, (error) => {
     if (error) logger.error(error);
@@ -46,7 +46,7 @@ function read_password(ranges) {
 
 async function main(args) {
   const _package = await vm.repo({
-    image_hash: "2c17589f1651baff9b82aa431850e296455777be265c2c5446c902e9",
+    image_hash: "055911c811e56da4d75ffc928361a78ed13077933ffa8320fb1ec2db",
     min_mem_gib: 0.5,
     min_storage_gib: 2.0,
   });
@@ -57,28 +57,28 @@ async function main(args) {
       const keyspace_sh_filename = "keyspace.sh";
       ctx.send_file(
         path.join(__dirname, keyspace_sh_filename),
-        "/golem/work/keyspace.sh"
+        "/golem/input/keyspace.sh"
       );
-      ctx.run("/bin/sh", ["/golem/work/keyspace.sh"]);
+      ctx.run("/bin/sh", ["/golem/input/keyspace.sh"]);
       const output_file = path.join(__dirname, "keyspace.txt");
-      ctx.download_file("/golem/work/keyspace.txt", output_file);
+      ctx.download_file("/golem/output/keyspace.txt", output_file);
       yield ctx.commit();
       task.accept_result();
     }
   }
 
   async function* worker_find_password(ctx: WorkContext, tasks) {
-    ctx.send_file(path.join(__dirname, "in.hash"), "/golem/work/in.hash");
+    ctx.send_file(path.join(__dirname, "in.hash"), "/golem/input/in.hash");
     for await (let task of tasks) {
       let skip = task.data();
       let limit = skip + step;
       // Commands to be run on the provider
-      const commands = `touch /golem/work/hashcat_${skip}.potfile; 
-        hashcat -a 3 -m 400 /golem/work/in.hash ${args.mask} --skip=${skip} --limit=${limit} --self-test-disable -o /golem/work/hashcat_${skip}.potfile || true`;
+      const commands = `touch /golem/output/hashcat_${skip}.potfile;
+        hashcat -a 3 -m 400 /golem/input/in.hash ${args.mask} --skip=${skip} --limit=${limit} --self-test-disable -o /golem/output/hashcat_${skip}.potfile || true`;
       ctx.run("/bin/sh", ["-c", commands]);
 
       let output_file = path.join(__dirname, `hashcat_${skip}.potfile`);
-      ctx.download_file(`/golem/work/hashcat_${skip}.potfile`, output_file);
+      ctx.download_file(`/golem/output/hashcat_${skip}.potfile`, output_file);
 
       yield ctx.commit();
       task.accept_result(output_file);
