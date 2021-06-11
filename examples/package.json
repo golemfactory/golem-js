@@ -9,6 +9,7 @@
         "js:low": "node ./low-level-api/listOffers.js",
         "ts:low": "ts-node-script ./low-level-api/listOffers.ts",
         "ts:yacat": "ts-node-script ./yacat/yacat.ts",
+        "js:hello": "node ./hello-world/hello.js",
         "clean": "rimraf node_modules/ yarn.lock || echo 'Project is already clean'"
     },
     "author": "Muhammed Tanrikulu <muhammed@golem.network>",
@@ -17,7 +18,7 @@
         "bluebird": "^3.5.0",
         "dayjs": "^1.8.31",
         "ts-node": "^9.0.0",
-        "yajsapi": "^0.3.0"
+        "yajsapi": "^0.4.0"
     },
     "devDependencies": {
         "tsconfig-paths": "^3.9.0",
