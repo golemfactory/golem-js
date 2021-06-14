@@ -47,8 +47,10 @@ export async function repeat_on_error(
         throw error;
       }
     }, function_name);
-    if (err_in_block === undefined && try_num > 1) {
-      logger.debug(`API call to ${function_name} succeeded after ${try_num} attempts.`);
+    if (err_in_block === undefined) {
+      if (try_num > 1) {
+        logger.debug(`API call to ${function_name} succeeded after ${try_num} attempts.`);
+      }
       return ret_value;
     }
     const duration = Date.now() - start_time;
