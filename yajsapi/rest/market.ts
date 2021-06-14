@@ -248,7 +248,7 @@ export class Subscription {
         await suppress_exceptions(is_intermittent_error, async () => {
           let { data } = await this._api.collectOffers(this._id, 3, 10, { timeout: 5000 });
           proposals = data;
-        });
+        }, "collectOffers");
         for (let _proposal of proposals) {
           if (cancellationToken && cancellationToken.cancelled) return;
           if (_proposal.eventType === "ProposalEvent") {
