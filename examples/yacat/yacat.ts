@@ -1,11 +1,7 @@
 import fs from "fs";
 import path from "path";
-import dayjs from "dayjs";
-import duration from "dayjs/plugin/duration";
 import { Executor, Task, utils, vm, WorkContext } from "yajsapi";
 import { program } from "commander";
-
-dayjs.extend(duration);
 
 const { asyncWith, logger, logUtils, range } = utils;
 
@@ -89,16 +85,12 @@ async function main(args) {
   write_hash(args.hash);
   write_keyspace_check_script(args.mask);
 
-  const timeout = dayjs.duration({ minutes: 25 }).asMilliseconds();
-
   await asyncWith(
     await new Executor({
       task_package: _package,
       max_workers: args.numberOfProviders,
-      timeout: timeout, //5 min to 30 min
       budget: "10.0",
       subnet_tag: args.subnetTag,
-      event_consumer: logUtils.logSummary(),
     }),
     async (executor: Executor): Promise<void> => {
       let keyspace_computed = false;
@@ -110,6 +102,7 @@ async function main(args) {
       if (!keyspace_computed) return;
 
       const keyspace = read_keyspace();
+      console.log(`Keyspace size computed. Keyspace size = ${keyspace}.`);
       step = Math.floor(keyspace / args.numberOfProviders + 1);
       const ranges = range(0, keyspace, parseInt(step));
       for await (let task of executor.submit(
@@ -122,7 +115,7 @@ async function main(args) {
       const password = read_password(ranges);
 
       if (!password) logger.info("No password found");
-      else logger.info(`PASSWORD FOUND! ${password}`);
+      else logger.info(`Password found: ${password}`);
     }
   );
   return;
