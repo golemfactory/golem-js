@@ -34,7 +34,7 @@ export async function repeat_on_error(
   let start_time = Date.now();
   for (let try_num = 1; try_num <= max_tries; ++try_num) {
     if (try_num > 1) {
-      await sleep(Math.min(interval_ms, start_time + max_duration_ms - Date.now()) / 1000);
+      await sleep(Math.min(interval_ms, start_time + max_duration_ms - Date.now()));
     }
     let err_in_block, ret_value;
     await suppress_exceptions(condition, async () => {
