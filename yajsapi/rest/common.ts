@@ -11,7 +11,7 @@ export function is_intermittent_error(e) {
 export async function suppress_exceptions(
   condition: Callable<Error, boolean>,
   block: Callable<void, any>,
-  function_name?: string,
+  function_name: string,
   report_exceptions: boolean = true
 ): Promise<any> {
   try {
@@ -27,7 +27,7 @@ export async function suppress_exceptions(
 
 export async function repeat_on_error(
   block: Callable<void, any>,
-  function_name?: string,
+  function_name: string,
   max_tries: number = 5,
   max_duration_ms = 15000,
   interval_ms: number = 1000,
