@@ -60,7 +60,7 @@ export class Invoice extends yInvoice {
     acceptance!.totalAmountAccepted = amount.toString();
     acceptance!.allocationId = allocation.id;
     await repeat_on_error(async () => {
-      await this._api.acceptInvoice(this.invoiceId, acceptance!, undefined, { timeout: 7000 });
+      await this._api.acceptInvoice(this.invoiceId, acceptance!, 5, { timeout: 7000 });
     });
   }
 }
@@ -85,7 +85,7 @@ export class DebitNote extends yDebitNote {
     acceptance!.totalAmountAccepted = amount.toString();
     acceptance!.allocationId = allocation.id;
     await repeat_on_error(async () => {
-      await this._api.acceptDebitNote(this.debitNoteId, acceptance!, undefined, { timeout: 7000 });
+      await this._api.acceptDebitNote(this.debitNoteId, acceptance!, 5, { timeout: 7000 });
     });
   }
 }
@@ -331,7 +331,10 @@ export class Payment {
         await suppress_exceptions(is_intermittent_error, async () => {
           let { data } = await api.getInvoiceEvents(
             5,
-            ts.format("YYYY-MM-DDTHH:mm:ss.SSSSSSZ")
+            ts.format("YYYY-MM-DDTHH:mm:ss.SSSSSSZ"),
+            undefined,
+            undefined,
+            { timeout: 7000 }
           );
           events = data;
         });
@@ -369,7 +372,10 @@ export class Payment {
         await suppress_exceptions(is_intermittent_error, async () => {
           let { data } = await api.getDebitNoteEvents(
             5,
-            ts.format("YYYY-MM-DDTHH:mm:ss.SSSSSSZ")
+            ts.format("YYYY-MM-DDTHH:mm:ss.SSSSSSZ"),
+            undefined,
+            undefined,
+            { timeout: 7000 }
           );
           events = data;
         });
