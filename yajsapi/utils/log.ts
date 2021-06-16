@@ -56,7 +56,7 @@ let options = {
   format: combine(
     colorize(),
     label({ label: "yajsapi" }),
-    timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
+    timestamp({ format: "YYYY-MM-DD HH:mm:ss.SSSZ" }),
     customFormat
   ),
   defaultMeta: { service: "user-service" },
