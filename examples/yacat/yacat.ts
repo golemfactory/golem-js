@@ -122,7 +122,7 @@ async function main(args) {
 }
 
 program
-  .option("--subnet-tag <subnet>", "set subnet name", "devnet-beta.1")
+  .option("--subnet-tag <subnet>", "set subnet name", "devnet-beta.2")
   .option("-d, --debug", "output extra debugging")
   .option(
     "--number-of-providers <number_of_providers>",

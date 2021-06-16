@@ -42,6 +42,7 @@ export YAGNA_APPKEY=your_yagna_app_key_here
 - `npm run ts:blender`  will start blender typescript example
 - `npm run js:low`      will start javascript low level api example
 - `npm run ts:low`      will start typescript low level api example
+- `npm run ts:yacat`    will start typescript yacat example
 
 ### Need more logs
 Call `-d` or `--debug` flag on your example script, e.g. `npm run ts:blender -- -d`
