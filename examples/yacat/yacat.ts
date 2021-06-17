@@ -3,7 +3,7 @@ import path from "path";
 import { Executor, Task, utils, vm, WorkContext } from "yajsapi";
 import { program } from "commander";
 
-const { asyncWith, logger, logUtils, range } = utils;
+const { asyncWith, logger, range } = utils;
 
 function write_hash(hash) {
   const filePath = path.join(__dirname, "in.hash");
@@ -102,14 +102,14 @@ async function main(args) {
       if (!keyspace_computed) return;
 
       const keyspace = read_keyspace();
-      console.log(`Keyspace size computed. Keyspace size = ${keyspace}.`);
+      logger.info(`Keyspace size computed. Keyspace size = ${keyspace}.`);
       step = Math.floor(keyspace / args.numberOfProviders + 1);
       const ranges = range(0, keyspace, parseInt(step));
       for await (let task of executor.submit(
         worker_find_password,
         ranges.map((range) => new Task(range as any))
       )) {
-        console.log("result=", task.result());
+        logger.info(`result=${task.result()}`);
       }
 
       const password = read_password(ranges);
@@ -137,5 +137,5 @@ program.parse(process.argv);
 if (program.debug) {
   utils.changeLogLevel("debug");
 }
-console.log(`Using subnet: ${program.subnetTag}`);
+logger.info(`Using subnet: ${program.subnetTag}`);
 main(program);
