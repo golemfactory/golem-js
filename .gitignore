@@ -12,6 +12,7 @@
 /examples/yacat/*.sh
 /examples/yacat/*.txt
 /examples/yacat/*.hash
+/examples/yacat/*.potfile
 /logs
 
 #Lock files
