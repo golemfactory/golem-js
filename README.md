@@ -45,12 +45,14 @@ export YAGNA_APPKEY=your_yagna_app_key_here
 - `npm run ts:yacat`    will start typescript yacat example
 
 To run `yacat` using `npm`, special characters like `$` have to be escaped using `\`, e.g.:
-
- `npm run ts:yacat -- --mask '?a?a?a' --hash '\$P\$5ZDzPE45CLLhEx/72qt3NehVzwN2Ry/'`
+```
+npm run ts:yacat -- --mask '?a?a?a' --hash '\$P\$5ZDzPE45CLLhEx/72qt3NehVzwN2Ry/'
+```
  
- To run using `yarn`:
- 
- `yarn run ts:yacat --mask '?a?a?a' --hash '$P$5ZDzPE45CLLhEx/72qt3NehVzwN2Ry/'`
+`yarn` accepts all characters:
+```
+yarn run ts:yacat --mask '?a?a?a' --hash '$P$5ZDzPE45CLLhEx/72qt3NehVzwN2Ry/'
+```
 
 ### Need more logs
 Call `-d` or `--debug` flag on your example script, e.g. `npm run ts:blender -- -d`
