@@ -34,7 +34,7 @@ function read_password(ranges) {
       encoding: "utf8",
       flag: "r",
     });
-    const split_list = line.split(":");
+    const split_list = line.trimRight().split(":");
     if (split_list.length >= 2) return split_list[1];
   }
   return null;
@@ -48,7 +48,7 @@ async function main(args) {
   });
   let step;
 
-  async function* worker_check_keyspace(ctx: WorkContext, tasks) {
+  async function* compute_keyspace(ctx: WorkContext, tasks) {
     for await (let task of tasks) {
       const keyspace_sh_filename = "keyspace.sh";
       ctx.send_file(
@@ -63,15 +63,22 @@ async function main(args) {
     }
   }
 
-  async function* worker_find_password(ctx: WorkContext, tasks) {
+  // Commands to be run on the provider
+  function _make_attack_command(skip: number, limit: number, mask: string) {
+    return `touch /golem/output/hashcat_${skip}.potfile; ` +
+          `hashcat -a 3 -m 400 /golem/input/in.hash ` +
+          `${args.mask} --skip=${skip} --limit=${limit} ` +
+          `--self-test-disable -o /golem/output/hashcat_${skip}.potfile || true`;
+  }
+
+  async function* perform_mask_attack(ctx: WorkContext, tasks) {
     ctx.send_file(path.join(__dirname, "in.hash"), "/golem/input/in.hash");
     for await (let task of tasks) {
       let skip = task.data();
       let limit = skip + step;
-      // Commands to be run on the provider
-      const commands = `touch /golem/output/hashcat_${skip}.potfile;
-        hashcat -a 3 -m 400 /golem/input/in.hash ${args.mask} --skip=${skip} --limit=${limit} --self-test-disable -o /golem/output/hashcat_${skip}.potfile || true`;
-      ctx.run("/bin/sh", ["-c", commands]);
+
+      const worker_output_path = `/golem/output/hashcat_${skip}.potfile`;
+      ctx.run("/bin/sh", ["-c", _make_attack_command(skip, limit, worker_output_path)]);
 
       let output_file = path.join(__dirname, `hashcat_${skip}.potfile`);
       ctx.download_file(`/golem/output/hashcat_${skip}.potfile`, output_file);
@@ -95,7 +102,7 @@ async function main(args) {
     async (executor: Executor): Promise<void> => {
       let keyspace_computed = false;
       // This is not a typical use of executor.submit as there is only one task, with no data:
-      for await (let task of executor.submit(worker_check_keyspace, [new Task(null as any)])) {
+      for await (let task of executor.submit(compute_keyspace, [new Task(null as any)])) {
         keyspace_computed = true;
       }
       // Assume the errors have been already reported and we may return quietly.
@@ -106,7 +113,7 @@ async function main(args) {
       step = Math.floor(keyspace / args.numberOfProviders + 1);
       const ranges = range(0, keyspace, parseInt(step));
       for await (let task of executor.submit(
-        worker_find_password,
+        perform_mask_attack,
         ranges.map((range) => new Task(range as any))
       )) {
         logger.info(`result=${task.result()}`);
