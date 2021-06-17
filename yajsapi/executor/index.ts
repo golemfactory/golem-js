@@ -383,7 +383,11 @@ export class Executor {
     try {
       multi_payment_decoration = await this._create_allocations();
     } catch (error) {
-      logger.error(error);
+      logger.error(
+        error.response && error.response.status === 401 ?
+        "Error: not authorized. Please check if YAGNA_APPKEY env variable is valid." : error
+      );
+      throw error;
     }
 
     emit(new events.ComputationStarted({ expires: this._expires }));
