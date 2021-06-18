@@ -102,7 +102,9 @@ async function main(args) {
     async (executor: Executor): Promise<void> => {
       let keyspace_computed = false;
       // This is not a typical use of executor.submit as there is only one task, with no data:
-      for await (let task of executor.submit(compute_keyspace, [new Task(null as any)])) {
+      for await (let task of executor.submit(
+        compute_keyspace, [new Task("compute_keyspace" as any)]
+      )) {
         keyspace_computed = true;
       }
       // Assume the errors have been already reported and we may return quietly.
