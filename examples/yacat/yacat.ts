@@ -59,7 +59,7 @@ async function main(args) {
       const output_file = path.join(__dirname, "keyspace.txt");
       ctx.download_file("/golem/output/keyspace.txt", output_file);
       yield ctx.commit();
-      task.accept_result();
+      task.accept_result("compute_keyspace");
     }
   }
 
