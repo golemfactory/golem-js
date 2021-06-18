@@ -8,6 +8,7 @@
         "ts:blender": "ts-node-script ./blender/blender.ts",
         "js:low": "node ./low-level-api/listOffers.js",
         "ts:low": "ts-node-script ./low-level-api/listOffers.ts",
+        "ts:yacat": "ts-node-script ./yacat/yacat.ts",
         "js:hello": "node ./hello-world/hello.js",
         "clean": "rimraf node_modules/ yarn.lock || echo 'Project is already clean'"
     },

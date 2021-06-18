@@ -60,8 +60,8 @@ export class Invoice extends yInvoice {
     acceptance!.totalAmountAccepted = amount.toString();
     acceptance!.allocationId = allocation.id;
     await repeat_on_error(async () => {
-      await this._api.acceptInvoice(this.invoiceId, acceptance!, undefined, { timeout: 7000 });
-    });
+      await this._api.acceptInvoice(this.invoiceId, acceptance!, 5, { timeout: 7000 });
+    }, "acceptInvoice");
   }
 }
 
@@ -85,8 +85,8 @@ export class DebitNote extends yDebitNote {
     acceptance!.totalAmountAccepted = amount.toString();
     acceptance!.allocationId = allocation.id;
     await repeat_on_error(async () => {
-      await this._api.acceptDebitNote(this.debitNoteId, acceptance!, undefined, { timeout: 7000 });
-    });
+      await this._api.acceptDebitNote(this.debitNoteId, acceptance!, 5, { timeout: 7000 });
+    }, "acceptDebitNote");
   }
 }
 
@@ -126,14 +126,14 @@ export class Allocation extends _Link {
       allocationDetails.spent_amount = parseFloat(details.spentAmount);
       allocationDetails.remaining_amount = parseFloat(details.remainingAmount);
       return allocationDetails;
-    });
+    }, "getAllocation");
   }
 
   async delete() {
     try {
       await repeat_on_error(async () => {
         await this._api.releaseAllocation(this.id, { timeout: 7000 });
-      });
+      }, "releaseAllocation");
     } catch(error) {
       logger.error(`Release allocation error: ${error}`);
     }
@@ -295,7 +295,7 @@ export class Payment {
   async debit_note(debit_note_id: string): Promise<DebitNote> {
     let debit_note_obj = await repeat_on_error(async () => {
       return (await this._api.getDebitNote(debit_note_id, { timeout: 5000 })).data;
-    });
+    }, "getDebitNote");
     // TODO may need to check only requestor debit notes
     return new DebitNote(this._api, debit_note_obj)
   }
@@ -313,7 +313,7 @@ export class Payment {
   async invoice(invoice_id: string): Promise<Invoice> {
     let invoice_obj = await repeat_on_error(async () => {
       return (await this._api.getInvoice(invoice_id, { timeout: 5000 })).data;
-    });
+    }, "getInvoice");
     // TODO may need to check only requestor invoices
     return new Invoice(this._api, invoice_obj);
   }
@@ -331,10 +331,13 @@ export class Payment {
         await suppress_exceptions(is_intermittent_error, async () => {
           let { data } = await api.getInvoiceEvents(
             5,
-            ts.format("YYYY-MM-DDTHH:mm:ss.SSSSSSZ")
+            ts.format("YYYY-MM-DDTHH:mm:ss.SSSSSSZ"),
+            undefined,
+            undefined,
+            { timeout: 7000 }
           );
           events = data;
-        });
+        }, "getInvoiceEvents");
         for (let ev of events) {
           logger.debug(
             `Received invoice event: ${JSON.stringify(ev)}, ` +
@@ -369,10 +372,13 @@ export class Payment {
         await suppress_exceptions(is_intermittent_error, async () => {
           let { data } = await api.getDebitNoteEvents(
             5,
-            ts.format("YYYY-MM-DDTHH:mm:ss.SSSSSSZ")
+            ts.format("YYYY-MM-DDTHH:mm:ss.SSSSSSZ"),
+            undefined,
+            undefined,
+            { timeout: 7000 }
           );
           events = data;
-        });
+        }, "getDebitNoteEvents");
         for (let ev of events) {
           logger.debug(
             `Received debit note event: ${JSON.stringify(ev)}, ` +
