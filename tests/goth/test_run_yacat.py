@@ -16,7 +16,7 @@ from goth.runner.probe import RequestorProbe
 logger = logging.getLogger("goth.test.run_yacat")
 
 EXPECTED_KEYSPACE_SIZE = 95
-ALL_TASKS = {"compute_keyspace", "0", "3009", "6018"}
+ALL_TASKS = {"compute_keyspace", "0", "48"}
 
 
 # Temporal assertions expressing properties of sequences of "events". In this case, each "event"
