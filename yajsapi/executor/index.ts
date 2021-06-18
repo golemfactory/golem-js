@@ -383,7 +383,11 @@ export class Executor {
     try {
       multi_payment_decoration = await this._create_allocations();
     } catch (error) {
-      logger.error(error);
+      logger.error(
+        error.response && error.response.status === 401 ?
+        "Error: not authorized. Please check if YAGNA_APPKEY env variable is valid." : error
+      );
+      throw error;
     }
 
     emit(new events.ComputationStarted({ expires: this._expires }));
@@ -834,6 +838,7 @@ export class Executor {
       if (agreements_to_pay.size > 0) { logger.warn(`${agreements_to_pay.size} unpaid invoices ${Array.from(agreements_to_pay.keys()).join(",")}.`); }
       if (!paymentCancellationToken.cancelled) { paymentCancellationToken.cancel(); }
       emit(new events.PaymentsFinished());
+      await sleep(1);
       logger.info("Shutdown complete.");
     }
     return;
