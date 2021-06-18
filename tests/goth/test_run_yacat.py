@@ -101,9 +101,9 @@ async def test_run_yacat(
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(
-            f"npm run --prefix ${examples_dir} ts:yacat "
-            f"--mask ?a?a --hash '\$P\$5ZDzPE45CigTC6EY4cXbyJSLj/pGee0' "
-            f"--subnet-tag goth --number-of-providers 2 ",
+            f"npm run --prefix {examples_dir} ts:yacat "
+            r"--mask ?a?a --hash \$P\$5ZDzPE45CigTC6EY4cXbyJSLj/pGee0 "
+            "--subnet-tag goth --number-of-providers 2",
             env=os.environ,
         ) as (_cmd_task, cmd_monitor):
 
