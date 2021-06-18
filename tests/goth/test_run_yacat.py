@@ -114,7 +114,7 @@ async def test_run_yacat(
             all_computed = cmd_monitor.add_assertion(assert_all_tasks_computed)
 
             await cmd_monitor.wait_for_pattern(
-                f".*The keyspace size is {EXPECTED_KEYSPACE_SIZE}", timeout=120
+                f".*Keyspace size computed. Keyspace size = {EXPECTED_KEYSPACE_SIZE}", timeout=120
             )
             logger.info("Keyspace found")
 
