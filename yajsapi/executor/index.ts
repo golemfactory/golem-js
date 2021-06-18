@@ -838,6 +838,7 @@ export class Executor {
       if (agreements_to_pay.size > 0) { logger.warn(`${agreements_to_pay.size} unpaid invoices ${Array.from(agreements_to_pay.keys()).join(",")}.`); }
       if (!paymentCancellationToken.cancelled) { paymentCancellationToken.cancel(); }
       emit(new events.PaymentsFinished());
+      await sleep(1);
       logger.info("Shutdown complete.");
     }
     return;
