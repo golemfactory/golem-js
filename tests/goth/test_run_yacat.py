@@ -35,7 +35,7 @@ async def assert_all_tasks_processed(status: str, output_lines: EventStream[str]
     remaining_tasks = ALL_TASKS.copy()
 
     async for line in output_lines:
-        m = re.search(rf".*Task {status} .* task data: ([0-9]+)", line)
+        m = re.search(rf".*Task {status} .* task data: (.+)", line)
         if m:
             task_data = int(m.group(1))
             logger.debug("assert_all_tasks_processed: Task %s: %d", status, task_data)
