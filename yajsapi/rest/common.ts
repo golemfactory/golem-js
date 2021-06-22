@@ -11,13 +11,14 @@ export function is_intermittent_error(e) {
 export async function suppress_exceptions(
   condition: Callable<Error, boolean>,
   block: Callable<void, any>,
+  function_name: string,
   report_exceptions: boolean = true
 ): Promise<any> {
   try {
     return await block();
   } catch (error) {
     if (condition(error)) {
-      logger.debug(`Exception suppressed: ${error}`);
+      logger.debug(`Exception suppressed in ${function_name}: ${error}`);
     } else {
       throw error;
     }
@@ -26,6 +27,7 @@ export async function suppress_exceptions(
 
 export async function repeat_on_error(
   block: Callable<void, any>,
+  function_name: string,
   max_tries: number = 5,
   max_duration_ms = 15000,
   interval_ms: number = 1000,
@@ -34,7 +36,7 @@ export async function repeat_on_error(
   let start_time = Date.now();
   for (let try_num = 1; try_num <= max_tries; ++try_num) {
     if (try_num > 1) {
-      await sleep(Math.min(interval_ms, start_time + max_duration_ms - Date.now()));
+      await sleep(Math.min(interval_ms, start_time + max_duration_ms - Date.now()) / 1000);
     }
     let err_in_block, ret_value;
     await suppress_exceptions(condition, async () => {
@@ -44,11 +46,16 @@ export async function repeat_on_error(
         err_in_block = error;
         throw error;
       }
-    });
-    if (err_in_block === undefined) { return ret_value; }
+    }, function_name);
+    if (err_in_block === undefined) {
+      if (try_num > 1) {
+        logger.debug(`API call to ${function_name} succeeded after ${try_num} attempts.`);
+      }
+      return ret_value;
+    }
     const duration = Date.now() - start_time;
     const repeat = try_num < max_tries && duration < max_duration_ms;
-    const msg = `API call timed out (attempt ${try_num}/${max_tries}), ` +
+    const msg = `API call to ${function_name} timed out (attempt ${try_num}/${max_tries}), ` +
               (repeat ? `retrying in ${interval_ms}ms` : `giving up after ${duration}ms`);
     logger.debug(msg);
     if (!repeat) { throw err_in_block; }
