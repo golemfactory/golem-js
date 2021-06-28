@@ -167,7 +167,7 @@ export class AgreementsPool implements ComputationHistory {
       buffered_agreement.worker_task.cancel();
     }
     if (buffered_agreement.has_multi_activity) {
-      if (!(await buffered_agreement.agreement.terminate(reason.toString()))) {
+      if (!(await buffered_agreement.agreement.terminate(JSON.stringify(reason)))) {
         logger.debug(`Couldn't terminate agreement. id: ${buffered_agreement.agreement.id()}`);
       }
     }
