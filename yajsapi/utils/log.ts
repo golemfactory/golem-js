@@ -96,6 +96,9 @@ class SummaryLogger {
   // Set of confirmed proposal ids
   confirmed_proposals!: Set<string>;
 
+  // Last logged confirmed proposal time (seconds)
+  last_logged_proposal_time!: number | null;
+
   // Maps agreement ids to provider infos
   agreement_provider_info!: { [key: string]: ProviderInfo };
 
@@ -139,6 +142,7 @@ class SummaryLogger {
     this.finished = false;
     this.error_occurred = false;
     this.time_waiting_for_proposals = dayjs.duration(0);
+    this.last_logged_proposal_time = null;
   }
 
   _print_cost(): void {
@@ -186,9 +190,15 @@ class SummaryLogger {
           (prop_id) => this.received_proposals[prop_id]
         )
       );
-      logger.info(
-        `Received proposals from ${confirmed_providers.size} providers so far`
-      );
+      const now = Date.now() / 1000;
+      if (
+        this.last_logged_proposal_time === null
+        || now - this.last_logged_proposal_time >= 3
+        || confirmed_providers.size < 10
+      ) {
+        logger.info(`Received proposals from ${confirmed_providers.size} providers so far`);
+        this.last_logged_proposal_time = now;
+      }
     } else if (eventName === events.NoProposalsConfirmed.name) {
       this.time_waiting_for_proposals = this.time_waiting_for_proposals.add({
         millisecond: parseInt(event["timeout"]),
