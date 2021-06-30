@@ -99,6 +99,9 @@ class SummaryLogger {
   // Last logged confirmed proposal time (seconds)
   last_logged_proposal_time!: number | null;
 
+  // Last number of confirmed providers
+  last_confirmed_providers_number!: number;
+
   // Maps agreement ids to provider infos
   agreement_provider_info!: { [key: string]: ProviderInfo };
 
@@ -143,6 +146,7 @@ class SummaryLogger {
     this.error_occurred = false;
     this.time_waiting_for_proposals = dayjs.duration(0);
     this.last_logged_proposal_time = null;
+    this.last_confirmed_providers_number = 0;
   }
 
   _print_cost(): void {
@@ -174,6 +178,23 @@ class SummaryLogger {
     }
   }
 
+  _print_confirmed_providers_if_needed() {
+    const confirmed_providers = new Set(
+      [...this.confirmed_proposals].map(
+        (prop_id) => this.received_proposals[prop_id]
+      )
+    );
+    const now = Date.now() / 1000;
+    if (
+      (this.last_logged_proposal_time === null || now - this.last_logged_proposal_time >= 3)
+      && this.last_confirmed_providers_number < confirmed_providers.size
+    ) {
+      logger.info(`Received proposals from ${confirmed_providers.size} providers so far`);
+      this.last_logged_proposal_time = now;
+      this.last_confirmed_providers_number = confirmed_providers.size;
+    }
+  }
+
   _handle(event: events.YaEvent) {
     const eventName = event.constructor.name;
     if (eventName === events.ComputationStarted.name) this._reset();
@@ -185,20 +206,6 @@ class SummaryLogger {
       this.received_proposals[event["prop_id"]] = event["provider_id"];
     else if (eventName === events.ProposalConfirmed.name) {
       this.confirmed_proposals.add(event["prop_id"]);
-      const confirmed_providers = new Set(
-        [...this.confirmed_proposals].map(
-          (prop_id) => this.received_proposals[prop_id]
-        )
-      );
-      const now = Date.now() / 1000;
-      if (
-        this.last_logged_proposal_time === null
-        || now - this.last_logged_proposal_time >= 3
-        || confirmed_providers.size < 10
-      ) {
-        logger.info(`Received proposals from ${confirmed_providers.size} providers so far`);
-        this.last_logged_proposal_time = now;
-      }
     } else if (eventName === events.NoProposalsConfirmed.name) {
       this.time_waiting_for_proposals = this.time_waiting_for_proposals.add({
         millisecond: parseInt(event["timeout"]),
@@ -348,6 +355,7 @@ class SummaryLogger {
         `Queued payment for agreement ${event["agr_id"].substr(0, 17)}`
       );
     }
+    this._print_confirmed_providers_if_needed();
   }
 }
 
