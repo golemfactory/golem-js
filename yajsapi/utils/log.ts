@@ -5,6 +5,8 @@ import winston from "winston";
 import { Callable } from "./";
 import * as events from "../executor/events";
 
+const REPORT_CONFIRMED_PROVIDERS_INTERVAL: number = 3000;
+
 dayjs.extend(duration);
 
 const event_type_to_string = {
@@ -96,11 +98,8 @@ class SummaryLogger {
   // Set of confirmed proposal ids
   confirmed_proposals!: Set<string>;
 
-  // Last logged confirmed proposal time (seconds)
-  last_logged_proposal_time!: number | null;
-
   // Last number of confirmed providers
-  last_confirmed_providers_number!: number;
+  prev_confirmed_providers!: number;
 
   // Maps agreement ids to provider infos
   agreement_provider_info!: { [key: string]: ProviderInfo };
@@ -123,6 +122,9 @@ class SummaryLogger {
   // Has computation finished?
   finished!: boolean;
 
+  // Has Executor shut down?
+  shutdown_complete: boolean = false;
+
   error_occurred!: boolean;
 
   time_waiting_for_proposals;
@@ -130,6 +132,7 @@ class SummaryLogger {
   constructor(wrapped_emitter: Callable<[events.YaEvent], void> | null = null) {
     this._wrapped_emitter = wrapped_emitter;
     this._reset();
+    this._print_confirmed_providers();
   }
 
   _reset(): void {
@@ -145,8 +148,7 @@ class SummaryLogger {
     this.finished = false;
     this.error_occurred = false;
     this.time_waiting_for_proposals = dayjs.duration(0);
-    this.last_logged_proposal_time = null;
-    this.last_confirmed_providers_number = 0;
+    this.prev_confirmed_providers = 0;
   }
 
   _print_cost(): void {
@@ -164,6 +166,21 @@ class SummaryLogger {
     console.table(results);
   }
 
+  _print_confirmed_providers(): void {
+    const confirmed_providers = new Set(
+      [...this.confirmed_proposals].map(
+        (prop_id) => this.received_proposals[prop_id]
+      )
+    );
+    if (this.prev_confirmed_providers < confirmed_providers.size) {
+      logger.info(`Received proposals from ${confirmed_providers.size} providers so far`);
+      this.prev_confirmed_providers = confirmed_providers.size;
+    }
+    if (!this.shutdown_complete) {
+      setTimeout(() => this._print_confirmed_providers(), REPORT_CONFIRMED_PROVIDERS_INTERVAL);
+    }
+  }
+
   log(event: events.YaEvent): void {
     // """Register an event."""
 
@@ -175,23 +192,6 @@ class SummaryLogger {
     } catch (error) {
       logger.error(`SummaryLogger entered invalid state ${error}`);
       this.error_occurred = true;
-    }
-  }
-
-  _print_confirmed_providers_if_needed() {
-    const confirmed_providers = new Set(
-      [...this.confirmed_proposals].map(
-        (prop_id) => this.received_proposals[prop_id]
-      )
-    );
-    const now = Date.now() / 1000;
-    if (
-      (this.last_logged_proposal_time === null || now - this.last_logged_proposal_time >= 3)
-      && this.last_confirmed_providers_number < confirmed_providers.size
-    ) {
-      logger.info(`Received proposals from ${confirmed_providers.size} providers so far`);
-      this.last_logged_proposal_time = now;
-      this.last_confirmed_providers_number = confirmed_providers.size;
     }
   }
 
@@ -354,8 +354,9 @@ class SummaryLogger {
       logger.debug(
         `Queued payment for agreement ${event["agr_id"].substr(0, 17)}`
       );
+    } else if (eventName === events.ShutdownFinished.name) {
+      this.shutdown_complete = true;
     }
-    this._print_confirmed_providers_if_needed();
   }
 }
 
