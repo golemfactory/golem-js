@@ -23,7 +23,7 @@ export async function repo({
   image_hash,
   min_mem_gib = 0.5,
   min_storage_gib = 2.0,
-  min_cpu_threads = 1,
+  min_available_logical_cpu_cores = 1,
 }: RepoOpts): Promise<Package> {
   /*
     Builds reference to a demand decorator.
@@ -37,6 +37,6 @@ export async function repo({
   return new VmPackage({
     repo_url: await resolve_repo_srv({repo_srv: DEFAULT_REPO_SRV}),
     image_hash,
-    constraints: new _VmConstrains(min_mem_gib, min_storage_gib, min_cpu_threads),
+    constraints: new _VmConstrains(min_mem_gib, min_storage_gib, min_available_logical_cpu_cores),
   });
 }
