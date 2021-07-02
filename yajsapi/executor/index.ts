@@ -826,7 +826,12 @@ export class Executor {
       }
       try {
         await agreements_pool.cycle();
-        await agreements_pool.terminate_all({ reason: "Computation finished." })
+        await agreements_pool.terminate_all({
+          "message":
+            cancellationToken.cancelled ? "Work cancelled" : "Successfully finished all work",
+          "golem.requestor.code":
+            cancellationToken.cancelled ? "Cancelled" : "Success"
+        });
       } catch (error) {
         logger.debug(`Problem with agreements termination ${error}`);
       }
