@@ -10,6 +10,7 @@ import { suppress_exceptions, is_intermittent_error } from "./common";
 dayjs.extend(utc);
 
 type _ModelType = Pick<Model, "from_properties"> & Partial<Model>;
+export type TerminationReason = { "message": string, "golem.requestor.code"?: string };
 
 class View {
   private _properties!: object;
@@ -81,9 +82,9 @@ export class Agreement {
     }
   }
 
-  async terminate(reason: string = "Finished"): Promise<boolean> {
+  async terminate(reason: TerminationReason = { "message": "Finished" }): Promise<boolean> {
     try {
-      await this._api.terminateAgreement(this._id, { message: reason }, { timeout: 5000 });
+      await this._api.terminateAgreement(this._id, reason, { timeout: 5000 });
       logger.debug(`Terminated agreement ${this._id}.`);
       return true;
     } catch (error) {

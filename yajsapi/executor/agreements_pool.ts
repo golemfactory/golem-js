@@ -1,5 +1,5 @@
 import { Activity, NodeInfo } from "../props";
-import { Agreement, OfferProposal } from "../rest/market";
+import { Agreement, OfferProposal, TerminationReason } from "../rest/market";
 import { asyncWith, CancellationToken, Lock, logger } from "../utils";
 import * as events from "./events";
 import { ComputationHistory } from "./strategy";
@@ -153,7 +153,10 @@ export class AgreementsPool implements ComputationHistory {
       }
     });
   }
-  private async _terminate_agreement(agreement_id: string, reason: object): Promise<void> {
+  private async _terminate_agreement(
+    agreement_id: string,
+    reason: TerminationReason
+  ): Promise<void> {
     const buffered_agreement = this._agreements.get(agreement_id)
     if (buffered_agreement === undefined) {
       logger.warn(`Trying to terminate agreement not in the pool. id: ${agreement_id}`);
@@ -167,17 +170,17 @@ export class AgreementsPool implements ComputationHistory {
       buffered_agreement.worker_task.cancel();
     }
     if (buffered_agreement.has_multi_activity) {
-      if (!(await buffered_agreement.agreement.terminate(reason.toString()))) {
+      if (!(await buffered_agreement.agreement.terminate(reason))) {
         logger.debug(`Couldn't terminate agreement. id: ${buffered_agreement.agreement.id()}`);
       }
     }
     this._agreements.delete(agreement_id);
     this.emitter(new events.AgreementTerminated({
       agr_id: agreement_id,
-      reason: reason.toString(),
+      reason: JSON.stringify(reason),
     }));
   }
-  async terminate_all(reason: object): Promise<void> {
+  async terminate_all(reason: TerminationReason): Promise<void> {
     await asyncWith(this._lock, async (lock) => {
       for (const agreement_id of new Map(this._agreements).keys()) {
         await this._terminate_agreement(agreement_id, reason)
