@@ -13,7 +13,7 @@ export type RepoOpts = {
   image_hash: string;
   min_mem_gib: number;
   min_storage_gib: number;
-  min_available_logical_cpu_cores?: number;
+  min_cpu_threads?: number;
 };
 
 export class Constraints {
