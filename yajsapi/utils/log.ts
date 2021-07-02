@@ -5,6 +5,8 @@ import winston from "winston";
 import { Callable } from "./";
 import * as events from "../executor/events";
 
+const REPORT_CONFIRMED_PROVIDERS_INTERVAL: number = 3000;
+
 dayjs.extend(duration);
 
 const event_type_to_string = {
@@ -96,6 +98,9 @@ class SummaryLogger {
   // Set of confirmed proposal ids
   confirmed_proposals!: Set<string>;
 
+  // Last number of confirmed providers
+  prev_confirmed_providers!: number;
+
   // Maps agreement ids to provider infos
   agreement_provider_info!: { [key: string]: ProviderInfo };
 
@@ -117,6 +122,9 @@ class SummaryLogger {
   // Has computation finished?
   finished!: boolean;
 
+  // Has Executor shut down?
+  shutdown_complete: boolean = false;
+
   error_occurred!: boolean;
 
   time_waiting_for_proposals;
@@ -124,6 +132,7 @@ class SummaryLogger {
   constructor(wrapped_emitter: Callable<[events.YaEvent], void> | null = null) {
     this._wrapped_emitter = wrapped_emitter;
     this._reset();
+    this._print_confirmed_providers();
   }
 
   _reset(): void {
@@ -139,6 +148,7 @@ class SummaryLogger {
     this.finished = false;
     this.error_occurred = false;
     this.time_waiting_for_proposals = dayjs.duration(0);
+    this.prev_confirmed_providers = 0;
   }
 
   _print_cost(): void {
@@ -154,6 +164,21 @@ class SummaryLogger {
       };
     });
     console.table(results);
+  }
+
+  _print_confirmed_providers(): void {
+    const confirmed_providers = new Set(
+      [...this.confirmed_proposals].map(
+        (prop_id) => this.received_proposals[prop_id]
+      )
+    );
+    if (this.prev_confirmed_providers < confirmed_providers.size) {
+      logger.info(`Received proposals from ${confirmed_providers.size} providers so far`);
+      this.prev_confirmed_providers = confirmed_providers.size;
+    }
+    if (!this.shutdown_complete) {
+      setTimeout(() => this._print_confirmed_providers(), REPORT_CONFIRMED_PROVIDERS_INTERVAL);
+    }
   }
 
   log(event: events.YaEvent): void {
@@ -181,14 +206,6 @@ class SummaryLogger {
       this.received_proposals[event["prop_id"]] = event["provider_id"];
     else if (eventName === events.ProposalConfirmed.name) {
       this.confirmed_proposals.add(event["prop_id"]);
-      const confirmed_providers = new Set(
-        [...this.confirmed_proposals].map(
-          (prop_id) => this.received_proposals[prop_id]
-        )
-      );
-      logger.info(
-        `Received proposals from ${confirmed_providers.size} providers so far`
-      );
     } else if (eventName === events.NoProposalsConfirmed.name) {
       this.time_waiting_for_proposals = this.time_waiting_for_proposals.add({
         millisecond: parseInt(event["timeout"]),
@@ -337,6 +354,8 @@ class SummaryLogger {
       logger.debug(
         `Queued payment for agreement ${event["agr_id"].substr(0, 17)}`
       );
+    } else if (eventName === events.ShutdownFinished.name) {
+      this.shutdown_complete = true;
     }
   }
 }
