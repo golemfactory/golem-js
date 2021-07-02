@@ -167,6 +167,8 @@ export class Executor {
   private _chan_computation_done;
   private _cancellation_token: CancellationToken;
 
+  private emit;
+
   /**
    * Create new executor
    * 
@@ -231,6 +233,9 @@ export class Executor {
     this._wrapped_consumer =
       event_consumer &&
       new AsyncWrapper(event_consumer, null, cancellationToken);
+    this.emit = <Callable<[events.YaEvent], void>>(
+      this._wrapped_consumer.async_call.bind(this._wrapped_consumer)
+    )
     // Each call to `submit()` will put an item in the channel.
     // The channel can be used to wait until all calls to `submit()` are finished.
     this._chan_computation_done = csp.chan();
@@ -375,10 +380,7 @@ export class Executor {
     >,
     data: Iterable<Task<D, R>>
   ): AsyncGenerator<Task<D, R>> {
-    const emit = <Callable<[events.YaEvent], void>>(
-      this._wrapped_consumer.async_call.bind(this._wrapped_consumer)
-    );
-
+    const emit = this.emit;
     let multi_payment_decoration;
     try {
       multi_payment_decoration = await this._create_allocations();
@@ -824,7 +826,12 @@ export class Executor {
       }
       try {
         await agreements_pool.cycle();
-        await agreements_pool.terminate_all({ reason: "Computation finished." })
+        await agreements_pool.terminate_all({
+          "message":
+            cancellationToken.cancelled ? "Work cancelled" : "Successfully finished all work",
+          "golem.requestor.code":
+            cancellationToken.cancelled ? "Cancelled" : "Success"
+        });
       } catch (error) {
         logger.debug(`Problem with agreements termination ${error}`);
       }
@@ -939,6 +946,7 @@ export class Executor {
     // TODO: prevent new computations at this point (if it's even possible to start one)
     this._market_api = null;
     this._payment_api = null;
+    this.emit(new events.ShutdownFinished());
     try {
       await this._stack.aclose();
       logger.info("Executor has shut down");
