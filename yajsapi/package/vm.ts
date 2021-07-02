@@ -31,6 +31,7 @@ export async function repo({
     - *image_hash*: finds package by its contents hash.
     - *min_mem_gib*: minimal memory required to execute application code.
     - *min_storage_gib* minimal disk storage to execute tasks.
+    - *min_cpu_threads*: minimal available logical CPU cores (CPU threads).
 
     */
 
