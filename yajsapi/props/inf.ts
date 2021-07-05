@@ -3,6 +3,7 @@ import { Field, Model } from "./base";
 export const INF_MEM: string = "golem.inf.mem.gib";
 export const INF_STORAGE: string = "golem.inf.storage.gib";
 export const INF_CORES: string = "golem.inf.cpu.cores";
+export const INF_THREADS: string = "golem.inf.cpu.threads";
 export const INF_RUNTIME: string = "golem.runtime.name";
 export const TRANSFER_CAPS: string = "golem.activity.caps.transfer.protocol";
 
@@ -19,6 +20,7 @@ export enum RuntimeType {
 
 export class InfBase {
   cores: Field = new Field({ metadata: { key: INF_CORES } });
+  threads: Field = new Field({ metadata: { key: INF_THREADS } });
   mem: Field = new Field({ metadata: { key: INF_MEM } });
   runtime: Field = new Field({ metadata: { key: INF_RUNTIME } });
 
@@ -38,7 +40,7 @@ export class InfVm extends InfBase {
 }
 export const InfVmKeys = InfBase.fields(
   new InfVm(),
-  ["cores", "mem", "storage", "runtime"]
+  ["cores", "mem", "storage", "runtime", "threads"]
 );
 
 function getFields(obj: object, keys: string[]) {
