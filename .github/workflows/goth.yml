@@ -1,4 +1,4 @@
-name: Integrations Tests
+name: Goth (PR and push)
 
 on:
   push:
@@ -9,16 +9,11 @@ on:
     branches:
       - master
       - b0.*
-  schedule:
-    # run this workflow every day at 2:30 AM UTC
-    - cron: '30 2 * * *'
 
 jobs:
-
   goth-tests:
     name: Run integration tests
     runs-on: goth
-
     steps:
       - name: Checkout
         uses: actions/checkout@v2
