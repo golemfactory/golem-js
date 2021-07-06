@@ -147,4 +147,5 @@ if (program.debug) {
   utils.changeLogLevel("debug");
 }
 logger.info(`Using subnet: ${program.subnetTag}`);
+logger.info(`Start`);
 main(program);
