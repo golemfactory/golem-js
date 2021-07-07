@@ -17,7 +17,7 @@ import { Market, Subscription } from "../rest/market";
  * 
  * const { Activity, DemandBuilder, NodeInfo } = props;
  * let builder = new DemandBuilder();
- * builder.add(NodeInfo("testnet", "a node"));
+ * builder.add(new NodeInfo("testnet", "a node"));
  * let act = new yp.Activity();
  * act.expiration.value = dayjs().utc().unix() * 1000;
  * builder.add(act);
