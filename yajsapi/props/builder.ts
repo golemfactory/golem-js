@@ -47,7 +47,7 @@ export class DemandBuilder {
   constraints(): string {
     let c_list = this._constraints;
     let c_value: string;
-    if (!c_list || c_list.length < 1) c_value = "()";
+    if (!c_list || c_list.length < 1) c_value = "(&)";
     else if (Object.keys(c_list).length == 1) c_value = c_list[0];
     else {
       let rules = c_list.join("\n\t");
