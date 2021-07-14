@@ -13,9 +13,9 @@ class yInvoice implements yap.Invoice {
   invoiceId!: string;
   issuerId!: string;
   recipientId!: string;
-  payeeAddr?: string | undefined;
-  payerAddr?: string | undefined;
-  paymentPlatform?: string | undefined;
+  payeeAddr!: string;
+  payerAddr!: string;
+  paymentPlatform!: string;
   lastDebitNoteId?: string | undefined;
   timestamp!: string;
   agreementId!: string;
@@ -29,9 +29,9 @@ class yDebitNote implements yap.DebitNote {
   debitNoteId!: string;
   issuerId!: string;
   recipientId!: string;
-  payeeAddr?: string | undefined;
-  payerAddr?: string | undefined;
-  paymentPlatform?: string | undefined;
+  payeeAddr!: string;
+  payerAddr!: string;
+  paymentPlatform!: string;
   previousDebitNoteId?: string | undefined;
   timestamp!: string;
   agreementId!: string;
@@ -199,6 +199,7 @@ class yAllocation implements yap.Allocation {
   remainingAmount!: string;
   timeout?: string | undefined;
   makeDeposit!: boolean;
+  timestamp!: string;
 }
 
 export class Payment {
@@ -232,6 +233,7 @@ export class Payment {
     _allocation!.makeDeposit = make_deposit;
     _allocation!.spentAmount = "";
     _allocation!.remainingAmount = "";
+    _allocation.timestamp = dayjs().utc().format("YYYY-MM-DDTHH:mm:ss.SSSSSSZ");
     return new _AllocationTask(this._api, _allocation!);
   }
 
