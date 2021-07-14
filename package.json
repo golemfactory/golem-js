@@ -1,6 +1,6 @@
 {
   "name": "yajsapi",
-  "version": "0.4.2-alpha.0",
+  "version": "0.4.2",
   "description": "NodeJS API for Next Golem",
   "repository": "https://github.com/golemfactory/yajsapi",
   "main": "dist/index.js",
@@ -46,7 +46,7 @@
     "utf8": "~3.0.0",
     "uuid": "^8.3.1",
     "winston": "^3.3.3",
-    "ya-ts-client": "^0.4.0"
+    "ya-ts-client": "^0.5.1"
   },
   "devDependencies": {
     "@istanbuljs/nyc-config-typescript": "^1.0.1",
@@ -61,7 +61,7 @@
     "ts-node": "^9.0.0",
     "tsconfig-paths": "^3.9.0",
     "typedoc": "^0.20.16",
-    "typedoc-plugin-markdown": "^3.4.1",
+    "typedoc-plugin-markdown": "~3.9.0",
     "typescript": "^3.9.7"
   },
   "ava": {

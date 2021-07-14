@@ -57,7 +57,7 @@ export class ActivityService {
   }
 
   async _create_activity(agreement_id: string): Promise<Activity> {
-    let { data: response } = await this._api.createActivity({ agreementId: agreement_id }, { timeout: 30000, params: { timeout: 25 } });
+    let { data: response } = await this._api.createActivity({ agreementId: agreement_id }, 25, { timeout: 30000 });
     let activity_id =
       typeof response == "string" ? response : response.activityId;
     logger.debug(`Created activity ${activity_id} for agreement ${agreement_id}`);
@@ -72,7 +72,7 @@ export class ActivityService {
     let { data: response } = await this._api.createActivity({
       agreementId: agreement.id(),
       requestorPubKey: pub_key.toString(),
-    }, { timeout: 30000, params: { timeout: 25 } });
+    }, 25, { timeout: 30000 });
 
     let activity_id =
       typeof response == "string" ? response : response.activityId;
@@ -94,7 +94,7 @@ export class ActivityService {
         await this._attest(activity_id, agreement, credentials);
       }
     } catch (error) {
-      await this._api.destroyActivity(activity_id, { timeout: 11000, params: { timeout: 10 } });
+      await this._api.destroyActivity(activity_id, 10, { timeout: 11000 });
       throw error;
     }
 
@@ -238,7 +238,7 @@ export class Activity {
 
   async done(): Promise<void> {
     try {
-      await this._api.destroyActivity(this._id, { timeout: 11000, params: { timeout: 10 } });
+      await this._api.destroyActivity(this._id, 10, { timeout: 11000 });
     } catch (error) {
       logger.warn(`Got API Exception when destroying activity ${this._id}: ${error}`);
     }
@@ -439,7 +439,8 @@ class PollingBatch extends Batch {
           this.activity_id,
           this.batch_id,
           undefined,
-          { timeout: 5000 }
+          5,
+          { timeout: 6000 }
         );
         results = data;
       } catch (error) {
