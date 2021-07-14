@@ -61,7 +61,7 @@
     "ts-node": "^9.0.0",
     "tsconfig-paths": "^3.9.0",
     "typedoc": "^0.20.16",
-    "typedoc-plugin-markdown": "^3.4.1",
+    "typedoc-plugin-markdown": "~3.9.0",
     "typescript": "^3.9.7"
   },
   "ava": {
