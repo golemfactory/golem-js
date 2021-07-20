@@ -68,8 +68,8 @@ const DEFAULT_EXECUTOR_TIMEOUT: number = dayjs
   .duration({ minutes: 15 })
   .asMilliseconds()
 
-const DEFAULT_NETWORK: string = "rinkeby";
-const DEFAULT_DRIVER: string = "zksync";
+const DEFAULT_NETWORK: string = "rinkeby"; // process.env["YAGNA_NETWORK"]
+const DEFAULT_DRIVER: string = "zksync"; // process.env["YAGNA_PAYMENT_DRIVER"]
 
 export class NoPaymentAccountError extends Error {
   //"The error raised if no payment account for the required driver/network is available."
