@@ -98,6 +98,8 @@ async function main(args) {
       max_workers: args.numberOfProviders,
       budget: "10.0",
       subnet_tag: args.subnetTag,
+      driver: args.driver,
+      network: args.network,
     }),
     async (executor: Executor): Promise<void> => {
       let keyspace_computed = false;
@@ -131,7 +133,9 @@ async function main(args) {
 }
 
 program
-  .option("--subnet-tag <subnet>", "set subnet name", "devnet-beta.2")
+  .option("--subnet-tag <subnet>", "set subnet name, for example 'devnet-beta.2'")
+  .option("--driver <driver>", "payment driver name, for example 'zksync'")
+  .option("--network <network>", "network name, for example 'rinkeby'")
   .option("-d, --debug", "output extra debugging")
   .option(
     "--number-of-providers <number_of_providers>",
@@ -146,5 +150,4 @@ program.parse(process.argv);
 if (program.debug) {
   utils.changeLogLevel("debug");
 }
-logger.info(`Using subnet: ${program.subnetTag}`);
 main(program);
