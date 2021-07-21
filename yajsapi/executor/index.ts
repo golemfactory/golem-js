@@ -68,8 +68,9 @@ const DEFAULT_EXECUTOR_TIMEOUT: number = dayjs
   .duration({ minutes: 15 })
   .asMilliseconds()
 
-const DEFAULT_NETWORK: string = "rinkeby";
-const DEFAULT_DRIVER: string = "zksync";
+const DEFAULT_NETWORK: string = process.env["YAGNA_NETWORK"] || "rinkeby";
+const DEFAULT_DRIVER: string = process.env["YAGNA_PAYMENT_DRIVER"] || "zksync";
+const DEFAULT_SUBNET: string = process.env["YAGNA_SUBNET"] || "devnet-beta.2";
 
 export class NoPaymentAccountError extends Error {
   //"The error raised if no payment account for the required driver/network is available."
@@ -177,9 +178,9 @@ export class Executor {
    * @param timeout         timeout for the whole computation
    * @param budget          maximum budget for payments
    * @param strategy        market strategy used to select providers from the market (e.g. LeastExpensiveLinearPayuMS or DummyMS)
-   * @param subnet_tag      use only providers in the subnet with the subnet_tag name
-   * @param driver          name of the payment driver to use or null to use the default driver; only payment platforms with the specified driver will be used
-   * @param network         name of the network to use or null to use the default network; only payment platforms with the specified network will be used
+   * @param subnet_tag      use only providers in the subnet with the subnet_tag name (env variable equivalent: YAGNA_SUBNET)
+   * @param driver          name of the payment driver to use or null to use the default driver; only payment platforms with the specified driver will be used (env variable equivalent: YAGNA_PAYMENT_DRIVER)
+   * @param network         name of the network to use or null to use the default network; only payment platforms with the specified network will be used (env variable equivalent: YAGNA_NETWORK)
    * @param event_consumer  a callable that processes events related to the computation; by default it is a function that logs all events
    */
   constructor({
@@ -193,9 +194,12 @@ export class Executor {
     network,
     event_consumer,
   }: ExecutorOpts) {
-    this._subnet = subnet_tag;
+    this._subnet = subnet_tag ? subnet_tag : DEFAULT_SUBNET;
     this._driver = driver ? driver.toLowerCase() : DEFAULT_DRIVER;
     this._network = network ? network.toLowerCase() : DEFAULT_NETWORK;
+    logger.debug(
+      `Using subnet: ${this._subnet}, network: ${this._network}, driver: ${this._driver}`
+    );
     this._stream_output = false;
     this._api_config = new rest.Configuration();
     this._stack = new AsyncExitStack();
