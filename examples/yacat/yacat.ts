@@ -98,6 +98,8 @@ async function main(args) {
       max_workers: args.numberOfProviders,
       budget: "10.0",
       subnet_tag: args.subnetTag,
+      driver: args.driver,
+      network: args.network,
     }),
     async (executor: Executor): Promise<void> => {
       let keyspace_computed = false;
