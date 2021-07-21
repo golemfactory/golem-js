@@ -70,7 +70,7 @@ const DEFAULT_EXECUTOR_TIMEOUT: number = dayjs
 
 const DEFAULT_NETWORK: string = process.env["YAGNA_NETWORK"] || "rinkeby";
 const DEFAULT_DRIVER: string = process.env["YAGNA_PAYMENT_DRIVER"] || "zksync";
-const DEFAULT_SUBNET: string | undefined = process.env["YAGNA_SUBNET"];
+const DEFAULT_SUBNET: string = process.env["YAGNA_SUBNET"] || "devnet-beta.2";
 
 export class NoPaymentAccountError extends Error {
   //"The error raised if no payment account for the required driver/network is available."
@@ -197,6 +197,9 @@ export class Executor {
     this._subnet = subnet_tag ? subnet_tag : DEFAULT_SUBNET;
     this._driver = driver ? driver.toLowerCase() : DEFAULT_DRIVER;
     this._network = network ? network.toLowerCase() : DEFAULT_NETWORK;
+    logger.debug(
+      `Using subnet: ${this._subnet}, network: ${this._network}, driver: ${this._driver}`
+    );
     this._stream_output = false;
     this._api_config = new rest.Configuration();
     this._stack = new AsyncExitStack();
