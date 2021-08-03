@@ -167,6 +167,7 @@ export class Executor {
   private _active_computations;
   private _chan_computation_done;
   private _cancellation_token: CancellationToken;
+  private _event_consumer_cancellation_token: CancellationToken;
 
   private emit;
 
@@ -234,9 +235,10 @@ export class Executor {
     if (!event_consumer) {
       event_consumer = logUtils.logSummary();
     }
+    this._event_consumer_cancellation_token = new CancellationToken();
     this._wrapped_consumer =
       event_consumer &&
-      new AsyncWrapper(event_consumer, null, cancellationToken);
+      new AsyncWrapper(event_consumer, null, this._event_consumer_cancellation_token);
     this.emit = <Callable<[events.YaEvent], void>>(
       this._wrapped_consumer.async_call.bind(this._wrapped_consumer)
     )
@@ -956,6 +958,8 @@ export class Executor {
       logger.info("Executor has shut down");
     } catch (e) {
       logger.error(`Error when shutting down Executor: ${e}`);
+    } finally {
+      this._event_consumer_cancellation_token.cancel();
     }
   }
 }

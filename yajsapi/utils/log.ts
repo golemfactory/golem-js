@@ -163,7 +163,7 @@ class SummaryLogger {
         Cost: cost,
       };
     });
-    console.table(results);
+    if (results.length > 0) { console.table(results); }
   }
 
   _print_confirmed_providers(): void {
