@@ -119,6 +119,9 @@ class SummaryLogger {
   // Count how many times a worker failed on a provider
   provider_failures!: Map<ProviderInfo, number>;
 
+  // Payment status
+  payment_status!: Map<ProviderInfo, string>;
+
   // Has computation finished?
   finished!: boolean;
 
@@ -144,6 +147,7 @@ class SummaryLogger {
     this.task_data = {};
     this.provider_tasks = new Map<ProviderInfo, string[]>();
     this.provider_cost = new Map<ProviderInfo, number>();
+    this.payment_status = new Map<ProviderInfo, string>();
     this.provider_failures = new Map<ProviderInfo, number>();
     this.finished = false;
     this.error_occurred = false;
@@ -155,12 +159,14 @@ class SummaryLogger {
     const results = [...this.confirmed_agreements].map((agr_id) => {
       const info = this.agreement_provider_info[agr_id];
       const tasks = this.provider_tasks.get(info);
-      const cost = this.provider_cost.get(info) || "0 (no invoices?)";
+      const cost = this.provider_cost.get(info) || 0;
+      const status = this.payment_status.get(info) || "no invoices";
       return {
         Agreement: agr_id.toString().substring(0, 10),
         "Provider Name": info.name,
         "Tasks Computed": tasks ? tasks.length : 0,
         Cost: cost,
+        "Payment Status": status,
       };
     });
     if (results.length > 0) { console.table(results); }
@@ -283,6 +289,7 @@ class SummaryLogger {
       let cost = this.provider_cost.get(provider_info) || 0;
       cost += parseFloat(event["amount"]);
       this.provider_cost.set(provider_info, cost);
+      this.payment_status.set(provider_info, "pending");
       logger.debug(
         `Received an invoice from ${provider_info.name}. Amount: ${event["amount"]}; (so far: ${cost} from this provider).`
       );
@@ -335,14 +342,21 @@ class SummaryLogger {
         (acc, item) => acc + item,
         0
       );
-      logger.info(`Total Cost: ${total_cost}`);
+      const total_paid = [...this.provider_cost.entries()].reduce(
+        (acc, item) => acc + (this.payment_status.get(item[0]) === "paid" ? item[1] : 0),
+        0
+      );
+      logger.info(`Total Cost: ${total_cost} Total Paid: ${total_paid}`);
     } else if (eventName === events.ComputationFailed.name) {
       logger.error(`Computation failed, reason: ${event["reason"]}`);
     } else if (eventName === events.PaymentAccepted.name) {
       const provider_info = this.agreement_provider_info[event["agr_id"]];
+      this.payment_status.set(provider_info, "paid");
       logger.info(`Accepted invoice from '${provider_info.name}'`);
     } else if (eventName === events.PaymentFailed.name) {
-      const provider_name = this.agreement_provider_info[event["agr_id"]].name;
+      const provider_info = this.agreement_provider_info[event["agr_id"]];
+      const provider_name = provider_info.name;
+      this.payment_status.set(provider_info, "failed");
       logger.error(
         `Payment for provider ${provider_name} failed; reason: ${event["reason"]}.`
       );
