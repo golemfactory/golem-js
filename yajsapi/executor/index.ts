@@ -478,7 +478,10 @@ export class Executor {
               })
             );
           } catch (e) {
-            emit(new events.PaymentFailed({ agr_id: invoice.agreementId, reason: e.toString() }));
+            emit(new events.PaymentFailed({
+              agr_id: invoice.agreementId,
+              reason: `${e}: ${e.response && e.response.data ? e.response.data.message : ''}`
+            }));
           }
         } else {
           invoices.set(invoice.agreementId, invoice);
