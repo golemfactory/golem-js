@@ -269,8 +269,13 @@ export class Executor {
       await generator.throw(new AsyncGeneratorBreak());
       return { done: true, value: undefined };
     }
-    yield* generator;
-    csp.putAsync(this._chan_computation_done, true);
+    try {
+      yield* generator;
+    } catch (e) {
+      logger.error(e);
+    } finally {
+      csp.putAsync(this._chan_computation_done, true);
+    }
   }
 
   async _handle_proposal(
@@ -391,11 +396,13 @@ export class Executor {
     try {
       multi_payment_decoration = await this._create_allocations();
     } catch (error) {
-      logger.error(
-        error.response && error.response.status === 401 ?
-        "Error: not authorized. Please check if YAGNA_APPKEY env variable is valid." : error
-      );
-      throw error;
+      if (error.response && error.response.status === 401) {
+        throw new Error(
+          "Error: not authorized. Please check if YAGNA_APPKEY env variable is valid."
+        );
+      } else {
+        throw error;
+      }
     }
 
     emit(new events.ComputationStarted({ expires: this._expires }));
