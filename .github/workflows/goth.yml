@@ -33,6 +33,7 @@ jobs:
           sed -i 's/"yajsapi": ".*"/"yajsapi": "\*"/' package.json
           npm install
           sed -i 's,require("yajsapi");,require("'$([ -f ../dist/index.js ] && echo "../../dist/index.js" || echo "../../dist/yajsapi/index.js")'");,' blender/blender.js
+          sed -i 's,from "yajsapi",from "../../yajsapi",' yacat/yacat.ts
 
       - name: Configure python
         uses: actions/setup-python@v2
