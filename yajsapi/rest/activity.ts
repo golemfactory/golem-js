@@ -426,6 +426,8 @@ class PollingBatch extends Batch {
     // AsyncGenerator<Result, any, unknown>
     let last_idx = 0,
       results: yaa.ExeScriptCommandResult[] = [];
+    let retry_count = 0;
+    const MAX_RETRIES = 3;
     while (last_idx < this.size) {
       const timeout = this.milliseconds_left();
       if (this.cancellationToken && this.cancellationToken.cancelled) {
@@ -451,9 +453,21 @@ class PollingBatch extends Batch {
           continue;
         } else {
           if (error.response && error.response.status == 500 && error.response.data) {
+            let data = error.response.data;
+            if (data.message && data.message.includes("GSB error")) {
+              if (retry_count < MAX_RETRIES) {
+                ++retry_count;
+                await sleep(2);
+                continue;
+              } else {
+                throw new CommandExecutionError(
+                  last_idx.toString(), `getExecBatchResults error: ${data.message}`
+                );
+              }
+            }
             throw new CommandExecutionError(
               last_idx.toString(),
-              `Provider might have disconnected (error: ${error.response.data.message})`
+              `Provider might have disconnected (error: ${data.message})`
             );
           }
           throw error;
