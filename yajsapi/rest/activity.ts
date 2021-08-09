@@ -473,6 +473,7 @@ class PollingBatch extends Batch {
           throw error;
         }
       }
+      retry_count = 0;
       let any_new: boolean = false;
       results = results.slice(last_idx);
       for (let result of results) {
