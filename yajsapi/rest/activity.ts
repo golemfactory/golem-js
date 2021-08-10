@@ -381,7 +381,7 @@ class Batch implements AsyncIterable<events.CommandEventContext> {
   protected cancellationToken?: CancellationToken;
 
   constructor(
-    activity,
+    activity: Activity,
     batch_id: string,
     batch_size: number,
     deadline?: number,
@@ -433,9 +433,6 @@ class PollingBatch extends Batch {
 
   _is_endpoint_not_found_error(error): boolean {
     // Check if `err` is caused by "endpoint address not found" GSB error.
-    // if (error.response && error.response.status == 500 && error.response.data) {
-    //   let data = error.response.data;
-    //   if (data.message && data.message.includes("GSB error")) {
     if (!error.response) { return false; }
     if (error.response.status !== 500) { return false; }
     if (!error.response.data || !error.response.data.message) {
