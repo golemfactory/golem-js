@@ -421,10 +421,10 @@ class PollingBatch extends Batch {
   }
 
   async _activity_terminated(): Promise<boolean> {
-    // Check if the activity we're using is in "Terminated" state.
+    // check if the activity we're using is in the "Terminated" state
     try {
-      const state_list = (await this.activity.state()).state;
-      return state_list.includes(ActivityStateStateEnum.Terminated);
+      const state = await this.activity.state();
+      return state.state && state.state.includes(ActivityStateStateEnum.Terminated);
     } catch (err) {
       logger.debug(`Cannot query activity state: ${err}`);
       return false;
@@ -432,7 +432,7 @@ class PollingBatch extends Batch {
   }
 
   _is_endpoint_not_found_error(error): boolean {
-    // Check if `err` is caused by "endpoint address not found" GSB error.
+    // check if `err` is caused by "endpoint address not found" GSB error
     if (!error.response) { return false; }
     if (error.response.status !== 500) { return false; }
     if (!error.response.data || !error.response.data.message) {
@@ -482,9 +482,13 @@ class PollingBatch extends Batch {
             throw error;
           }
           ++retry_count;
+          const fail_msg = "getExecBatchResults failed due to GSB error";
           if (retry_count < MAX_RETRIES) {
+            logger.debug(`${fail_msg}, retrying in ${RETRY_DELAY}.`);
             await sleep(RETRY_DELAY);
             continue;
+          } else {
+            logger.debug(`${fail_msg}, giving up.`);
           }
           const msg = error.response && error.response.data ? error.response.data.message : error;
           throw new CommandExecutionError(last_idx.toString(), `getExecBatchResults error: ${msg}`);
