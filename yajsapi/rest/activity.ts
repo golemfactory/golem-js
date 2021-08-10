@@ -8,6 +8,7 @@ import * as yaa from "ya-ts-client/dist/ya-activity/src/models";
 import { attest, types } from "sgx-ias-js";
 import { Configuration } from "ya-ts-client/dist/ya-activity";
 import {
+  ActivityStateStateEnum,
   Credentials,
   ExeScriptCommandResult,
   ExeScriptCommandResultResultEnum,
@@ -20,6 +21,7 @@ import { Agreement } from "./market";
 import { SGX_CONFIG } from "../package/sgx";
 import * as utf8 from "utf8";
 import dayjs, { Dayjs } from "dayjs";
+import { suppress_exceptions, is_intermittent_error } from "./common";
 
 /**
  * A convenience helper to facilitate the creation of an Activity.
@@ -178,6 +180,10 @@ export class Activity {
     return this._id;
   }
 
+  get api(): RequestorControlApi {
+    return this._api;
+  }
+
   get credentials(): object | undefined {
     return this._credentials;
   }
@@ -214,8 +220,7 @@ export class Activity {
 
     if (stream) {
       return new StreamingBatch(
-        this._api,
-        this._id,
+        this,
         batch_id,
         script.length,
         deadline,
@@ -223,8 +228,7 @@ export class Activity {
       );
     }
     return new PollingBatch(
-      this._api,
-      this._id,
+      this,
       batch_id,
       script.length,
       deadline,
@@ -270,16 +274,14 @@ class SecureActivity extends Activity {
 
     if (stream) {
       return new StreamingBatch(
-        this._api,
-        this._id,
+        this,
         batch_id,
         script.length,
         deadline
       );
     }
     return new PollingBatch(
-      this._api,
-      this._id,
+      this,
       batch_id,
       script.length,
       deadline
@@ -371,8 +373,7 @@ class BatchTimeoutError extends Error {
 }
 
 class Batch implements AsyncIterable<events.CommandEventContext> {
-  protected api!: RequestorControlApi;
-  protected activity_id!: string;
+  protected activity!: Activity;
   protected batch_id!: string;
   protected size!: number;
   protected deadline?: Dayjs;
@@ -380,16 +381,14 @@ class Batch implements AsyncIterable<events.CommandEventContext> {
   protected cancellationToken?: CancellationToken;
 
   constructor(
-    api: RequestorControlApi,
-    activity_id: string,
+    activity,
     batch_id: string,
     batch_size: number,
     deadline?: number,
     credentials?: SgxCredentials,
     cancellationToken?: CancellationToken
   ) {
-    this.api = api;
-    this.activity_id = activity_id;
+    this.activity = activity;
     this.batch_id = batch_id;
     this.size = batch_size;
     this.deadline = deadline ? dayjs.unix(deadline) : dayjs().utc().add(1, "day");
@@ -411,15 +410,40 @@ class Batch implements AsyncIterable<events.CommandEventContext> {
 
 class PollingBatch extends Batch {
   constructor(
-    api: RequestorControlApi,
-    activity_id: string,
+    activity: Activity,
     batch_id: string,
     batch_size: number,
     deadline?: number,
     cancellationToken?: CancellationToken
   ) {
     // this._api, this._id, batch_id, script.length, deadline
-    super(api, activity_id, batch_id, batch_size, deadline, undefined, cancellationToken);
+    super(activity, batch_id, batch_size, deadline, undefined, cancellationToken);
+  }
+
+  async _activity_terminated(): Promise<boolean> {
+    // Check if the activity we're using is in "Terminated" state.
+    try {
+      const state_list = (await this.activity.state()).state;
+      return state_list.includes(ActivityStateStateEnum.Terminated);
+    } catch (err) {
+      logger.debug(`Cannot query activity state: ${err}`);
+      return false;
+    }
+  }
+
+  _is_endpoint_not_found_error(error): boolean {
+    // Check if `err` is caused by "endpoint address not found" GSB error.
+    // if (error.response && error.response.status == 500 && error.response.data) {
+    //   let data = error.response.data;
+    //   if (data.message && data.message.includes("GSB error")) {
+    if (!error.response) { return false; }
+    if (error.response.status !== 500) { return false; }
+    if (!error.response.data || !error.response.data.message) {
+      logger.debug(`Cannot read error message, response: ${error.response}`);
+      return false;
+    }
+    const message = error.response.data.message;
+    return message.includes("endpoint address not found") && message.includes("GSB error");
   }
 
   async *[Symbol.asyncIterator](): any {
@@ -428,17 +452,18 @@ class PollingBatch extends Batch {
       results: yaa.ExeScriptCommandResult[] = [];
     let retry_count = 0;
     const MAX_RETRIES = 3;
+    const RETRY_DELAY = 2.0;
     while (last_idx < this.size) {
       const timeout = this.milliseconds_left();
       if (this.cancellationToken && this.cancellationToken.cancelled) {
         throw new CommandExecutionError(last_idx.toString(), "Interrupted.");
       }
       if (timeout && timeout <= 0) {
-        throw new BatchTimeoutError(`Task timeout for activity ${this.activity_id}`);
+        throw new BatchTimeoutError(`Task timeout for activity ${this.activity.id}`);
       }
       try {
-        let { data } = await this.api.getExecBatchResults(
-          this.activity_id,
+        let { data } = await this.activity.api.getExecBatchResults(
+          this.activity.id,
           this.batch_id,
           last_idx,
           5,
@@ -452,25 +477,20 @@ class PollingBatch extends Batch {
         } else if (error.code === "ETIMEDOUT" || (error.code === "ECONNABORTED" && timeout_msg)) {
           continue;
         } else {
-          if (error.response && error.response.status == 500 && error.response.data) {
-            let data = error.response.data;
-            if (data.message && data.message.includes("GSB error")) {
-              if (retry_count < MAX_RETRIES) {
-                ++retry_count;
-                await sleep(2);
-                continue;
-              } else {
-                throw new CommandExecutionError(
-                  last_idx.toString(), `getExecBatchResults error: ${data.message}`
-                );
-              }
-            }
-            throw new CommandExecutionError(
-              last_idx.toString(),
-              `Provider might have disconnected (error: ${data.message})`
-            );
+          if (await this._activity_terminated()) {
+            logger.debug(`Activity ${this.activity.id} terminated by provider.`);
+            throw error;
           }
-          throw error;
+          if (!this._is_endpoint_not_found_error(error)) {
+            throw error;
+          }
+          ++retry_count;
+          if (retry_count < MAX_RETRIES) {
+            await sleep(RETRY_DELAY);
+            continue;
+          }
+          const msg = error.response && error.response.data ? error.response.data.message : error;
+          throw new CommandExecutionError(last_idx.toString(), `getExecBatchResults error: ${msg}`);
         }
       }
       retry_count = 0;
@@ -509,22 +529,21 @@ class PollingBatch extends Batch {
 
 class StreamingBatch extends Batch {
   constructor(
-    api: RequestorControlApi,
-    activity_id: string,
+    activity: Activity,
     batch_id: string,
     batch_size: number,
     deadline?: number,
     cancellationToken?: CancellationToken
   ) {
-    super(api, activity_id, batch_id, batch_size, deadline, undefined, cancellationToken);
+    super(activity, batch_id, batch_size, deadline, undefined, cancellationToken);
   }
 
   async *[Symbol.asyncIterator](): any {
-    const activity_id = this.activity_id;
+    const activity_id = this.activity.id;
     const batch_id = this.batch_id;
     const last_idx = this.size - 1;
 
-    let config_prov = new ApiConfigProvider(this.api);
+    let config_prov = new ApiConfigProvider(this.activity.api);
     let host = config_prov.base_path();
     let api_key = await config_prov.api_key();
 
