@@ -408,6 +408,18 @@ class Batch implements AsyncIterable<events.CommandEventContext> {
   async *[Symbol.asyncIterator](): any {}
 }
 
+function _is_gsb_endpoint_not_found_error(error): boolean {
+  // check if `err` is caused by "endpoint address not found" GSB error
+  if (!error.response) { return false; }
+  if (error.response.status !== 500) { return false; }
+  if (!error.response.data || !error.response.data.message) {
+    logger.debug(`Cannot read error message, response: ${error.response}`);
+    return false;
+  }
+  const message = error.response.data.message;
+  return message.includes("endpoint address not found") && message.includes("GSB error");
+}
+
 class PollingBatch extends Batch {
   constructor(
     activity: Activity,
@@ -429,18 +441,6 @@ class PollingBatch extends Batch {
       logger.debug(`Cannot query activity state: ${err}`);
       return false;
     }
-  }
-
-  _is_endpoint_not_found_error(error): boolean {
-    // check if `err` is caused by "endpoint address not found" GSB error
-    if (!error.response) { return false; }
-    if (error.response.status !== 500) { return false; }
-    if (!error.response.data || !error.response.data.message) {
-      logger.debug(`Cannot read error message, response: ${error.response}`);
-      return false;
-    }
-    const message = error.response.data.message;
-    return message.includes("endpoint address not found") && message.includes("GSB error");
   }
 
   async *[Symbol.asyncIterator](): any {
@@ -478,7 +478,7 @@ class PollingBatch extends Batch {
             logger.debug(`Activity ${this.activity.id} terminated by provider.`);
             throw error;
           }
-          if (!this._is_endpoint_not_found_error(error)) {
+          if (!_is_gsb_endpoint_not_found_error(error)) {
             throw error;
           }
           ++retry_count;
@@ -488,7 +488,7 @@ class PollingBatch extends Batch {
             await sleep(RETRY_DELAY);
             continue;
           } else {
-            logger.debug(`${fail_msg}, giving up.`);
+            logger.debug(`${fail_msg}, giving up after ${retry_count} attempts.`);
           }
           const msg = error.response && error.response.data ? error.response.data.message : error;
           throw new CommandExecutionError(last_idx.toString(), `getExecBatchResults error: ${msg}`);
