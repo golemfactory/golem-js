@@ -475,7 +475,7 @@ class PollingBatch extends Batch {
           continue;
         } else {
           if (await this._activity_terminated()) {
-            logger.debug(`Activity ${this.activity.id} terminated by provider.`);
+            logger.warn(`Activity ${this.activity.id} terminated by provider.`);
             throw error;
           }
           if (!_is_gsb_endpoint_not_found_error(error)) {
