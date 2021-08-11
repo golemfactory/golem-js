@@ -432,14 +432,18 @@ class PollingBatch extends Batch {
     super(activity, batch_id, batch_size, deadline, undefined, cancellationToken);
   }
 
-  async _activity_terminated(): Promise<boolean> {
+  async _activity_terminated(): Promise<{ terminated: boolean, reason?: string, err?: string }> {
     // check if the activity we're using is in the "Terminated" state
     try {
       const state = await this.activity.state();
-      return state.state && state.state.includes(ActivityStateStateEnum.Terminated);
+      return {
+        terminated: state.state && state.state.includes(ActivityStateStateEnum.Terminated),
+        reason: state.reason,
+        err: state.errorMessage,
+      }
     } catch (err) {
       logger.debug(`Cannot query activity state: ${err}`);
-      return false;
+      return { terminated: false };
     }
   }
 
@@ -474,8 +478,11 @@ class PollingBatch extends Batch {
         } else if (error.code === "ETIMEDOUT" || (error.code === "ECONNABORTED" && timeout_msg)) {
           continue;
         } else {
-          if (await this._activity_terminated()) {
-            logger.warn(`Activity ${this.activity.id} terminated by provider.`);
+          const { terminated, reason, err } = await this._activity_terminated();
+          if (terminated) {
+            logger.warn(
+              `Activity ${this.activity.id} terminated by provider. Reason: ${reason}, err: ${err}`
+            );
             throw error;
           }
           if (!_is_gsb_endpoint_not_found_error(error)) {
