@@ -16,7 +16,7 @@ async function main() {
   }
 
   await asyncWith(
-    new Executor({ task_package: package, budget: "1.0", subnet_tag: "devnet-beta.2" }),
+    new Executor({ task_package: package, budget: "1.0", subnet_tag: "devnet-beta" }),
     async (executor) => {
       for await (let completed of executor.submit(worker, tasks)) {
         console.log(completed.result().stdout);
