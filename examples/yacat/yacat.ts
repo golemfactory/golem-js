@@ -134,8 +134,8 @@ async function main(args) {
 
 program
   .option("--subnet-tag <subnet>", "set subnet name, for example 'devnet-beta'")
-  .option("--driver <driver>", "payment driver name, for example 'zksync'")
-  .option("--network <network>", "network name, for example 'rinkeby'")
+  .option("--driver <driver>", "payment driver name, for example 'erc20'")
+  .option("--network <network>", "network name, for example 'mumbai'")
   .option("-d, --debug", "output extra debugging")
   .option(
     "--number-of-providers <number_of_providers>",

@@ -24,8 +24,8 @@ async function main() {
       timeout: 6 * 60 * 1000,
       budget: "10.0",
       subnet_tag: "goth",
-      driver: "zksync",
-      network: "rinkeby",
+      driver: "erc20",
+      network: "mumbai",
       event_consumer: logUtils.logSummary(),
     }),
     async (executor) => {
