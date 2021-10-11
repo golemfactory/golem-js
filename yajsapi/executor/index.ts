@@ -69,7 +69,7 @@ const DEFAULT_EXECUTOR_TIMEOUT: number = dayjs
   .asMilliseconds()
 
 const DEFAULT_NETWORK: string = process.env["YAGNA_PAYMENT_NETWORK"] || "rinkeby";
-const DEFAULT_DRIVER: string = process.env["YAGNA_PAYMENT_DRIVER"] || "zksync";
+const DEFAULT_DRIVER: string = process.env["YAGNA_PAYMENT_DRIVER"] || "polygon";
 const DEFAULT_SUBNET: string = process.env["YAGNA_SUBNET"] || "devnet-beta";
 
 export class NoPaymentAccountError extends Error {
