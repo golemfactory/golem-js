@@ -42,7 +42,7 @@ async function main() {
       budget: "10.0",
       subnet_tag: "goth",
       driver: "erc20",
-      network: "mumbai",
+      network: "rinkeby",
       event_consumer: logUtils.logSummary(),
     }),
     async (executor) => {

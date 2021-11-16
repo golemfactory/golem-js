@@ -88,7 +88,7 @@ async function main(subnetTag: string, driver?: string, network?: string) {
 program
   .option("--subnet-tag <subnet>", "set subnet name, for example 'devnet-beta'")
   .option("--driver <driver>", "payment driver name, for example 'erc20'")
-  .option("--network <network>", "network name, for example 'mumbai'")
+  .option("--network <network>", "network name, for example 'rinkeby'")
   .option("-d, --debug", "output extra debugging");
 program.parse(process.argv);
 if (program.debug) {
