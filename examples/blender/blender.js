@@ -94,5 +94,4 @@ program.parse(process.argv);
 if (program.debug) {
   utils.changeLogLevel("debug");
 }
-console.log(`Using subnet: ${program.subnetTag}, network: ${program.network}, driver: ${program.driver}`);
 main(program.subnetTag, program.driver, program.network);
