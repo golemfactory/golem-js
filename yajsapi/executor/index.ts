@@ -198,7 +198,7 @@ export class Executor {
     this._subnet = subnet_tag ? subnet_tag : DEFAULT_SUBNET;
     this._driver = driver ? driver.toLowerCase() : DEFAULT_DRIVER;
     this._network = network ? network.toLowerCase() : DEFAULT_NETWORK;
-    logger.debug(
+    logger.info(
       `Using subnet: ${this._subnet}, network: ${this._network}, driver: ${this._driver}`
     );
     this._stream_output = false;
