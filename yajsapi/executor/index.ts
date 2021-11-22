@@ -69,7 +69,7 @@ const DEFAULT_EXECUTOR_TIMEOUT: number = dayjs
   .asMilliseconds()
 
 const DEFAULT_NETWORK: string = process.env["YAGNA_PAYMENT_NETWORK"] || "rinkeby";
-const DEFAULT_DRIVER: string = process.env["YAGNA_PAYMENT_DRIVER"] || "zksync";
+const DEFAULT_DRIVER: string = process.env["YAGNA_PAYMENT_DRIVER"] || "erc20";
 const DEFAULT_SUBNET: string = process.env["YAGNA_SUBNET"] || "devnet-beta";
 
 export class NoPaymentAccountError extends Error {
@@ -198,7 +198,7 @@ export class Executor {
     this._subnet = subnet_tag ? subnet_tag : DEFAULT_SUBNET;
     this._driver = driver ? driver.toLowerCase() : DEFAULT_DRIVER;
     this._network = network ? network.toLowerCase() : DEFAULT_NETWORK;
-    logger.debug(
+    logger.info(
       `Using subnet: ${this._subnet}, network: ${this._network}, driver: ${this._driver}`
     );
     this._stream_output = false;

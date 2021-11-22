@@ -87,12 +87,11 @@ async function main(subnetTag, driver, network) {
 
 program
   .option("--subnet-tag <subnet>", "set subnet name", "devnet-beta")
-  .option("--driver <driver>", "payment driver name, for example 'zksync'", "zksync")
-  .option("--network <network>", "network name, for example 'rinkeby'", "rinkeby")
+  .option("--driver <driver>", "payment driver name, for example 'erc20'")
+  .option("--network <network>", "network name, for example 'rinkeby'")
   .option("-d, --debug", "output extra debugging");
 program.parse(process.argv);
 if (program.debug) {
   utils.changeLogLevel("debug");
 }
-console.log(`Using subnet: ${program.subnetTag}, network: ${program.network}, driver: ${program.driver}`);
 main(program.subnetTag, program.driver, program.network);
