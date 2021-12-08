@@ -31,7 +31,6 @@ jobs:
           npm run-script build
           cd examples
           jq 'del(.dependencies.yajsapi)' <package.json >tmp.json && mv tmp.json package.json
-          cat package.json
           npm install
           sed -i 's,require("yajsapi");,require("'$([ -f ../dist/index.js ] && echo "../../dist/index.js" || echo "../../dist/yajsapi/index.js")'");,' blender/blender.js
           sed -i 's,from "yajsapi",from "../../yajsapi",' yacat/yacat.ts
