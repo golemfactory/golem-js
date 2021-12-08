@@ -30,7 +30,6 @@ jobs:
           npm install
           npm run-script build
           cd examples
-          sed -i 's/"yajsapi": ".*"/d' package.json
           awk '/"yajsapi"/{ print next; } //{ print $0 }' package.json >tmp.json && mv tmp.json package.json
           awk '/"ts-node"/{ print substr($0, 1, length($0)-1); next; } //{ print $0 }' package.json >tmp.json && mv tmp.json package.json
           npm install
