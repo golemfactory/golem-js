@@ -54,7 +54,7 @@ const customFormat = printf(({ level, message, label, timestamp }) => {
 });
 
 let options = {
-  level: "info" as winston.level,
+  level: "info",
   format: combine(
     colorize(),
     label({ label: "yajsapi" }),
@@ -382,19 +382,19 @@ export function logSummary(
 }
 
 export const changeLogLevel = (level: string) => {
-  options.level = level as winston.level;
+  options.level = level;
   options.transports = [
-    new winston.transports.Console({ level: level as winston.level }),
+    new winston.transports.Console({ level: level }),
     new winston.transports.File({
       filename: path.join(
         "logs",
         `yajsapi-${dayjs().format("YYYY-MM-DD_HH-mm-ss")}.log`
       ),
-      level: "silly" as winston.level,
+      level: "silly",
     }) as any,
     new winston.transports.File({
       filename: path.join("logs", "yajsapi-current.log"),
-      level: "silly" as winston.level,
+      level: "silly",
       options: { flags: "w" },
     }) as any
   ];
