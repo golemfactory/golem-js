@@ -105,18 +105,13 @@ async def test_run_blender(
         async with requestor.run_command_on_host(
             f"node {blender_path} --subnet-tag goth",
             env=os.environ,
-        ) as (_cmd_task, cmd_monitor):
+        ) as (_cmd_task, cmd_monitor, _process_monitor):
 
             # Add assertions to the command output monitor `cmd_monitor`:
             cmd_monitor.add_assertion(assert_no_errors)
             cmd_monitor.add_assertion(assert_all_invoices_accepted)
             all_sent = cmd_monitor.add_assertion(assert_all_tasks_sent)
             all_computed = cmd_monitor.add_assertion(assert_all_tasks_computed)
-
-            await cmd_monitor.wait_for_pattern(
-                ".*Received proposals from 2 ", timeout=20
-            )
-            logger.info("Received proposals")
 
             await cmd_monitor.wait_for_pattern(".*Agreement proposed ", timeout=20)
             logger.info("Agreement proposed")
