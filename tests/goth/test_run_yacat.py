@@ -105,7 +105,7 @@ async def test_run_yacat(
             r"--mask ?a?a --hash \$P\$5ZDzPE45CigTC6EY4cXbyJSLj/pGee0 "
             "--subnet-tag goth --number-of-providers 2",
             env=os.environ,
-        ) as (_cmd_task, cmd_monitor):
+        ) as (_cmd_task, cmd_monitor, _process_monitor):
 
             # Add assertions to the command output monitor `cmd_monitor`:
             cmd_monitor.add_assertion(assert_no_errors)

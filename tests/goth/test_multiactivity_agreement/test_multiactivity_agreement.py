@@ -71,7 +71,7 @@ async def test_multiactivity_agreement(project_dir: Path, log_dir: Path, config_
 
         async with requestor.run_command_on_host(
             f"node {requestor_path}", env=os.environ
-        ) as (_cmd_task, cmd_monitor):
+        ) as (_cmd_task, cmd_monitor, _process_monitor):
 
             # Wait for agreement
             assertion = cmd_monitor.add_assertion(assert_agreement_created)
