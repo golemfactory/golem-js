@@ -22,7 +22,6 @@ async function main(fibo_n = 1, tasks_count = 1, subnetTag, driver, network) {
     new Executor({
       task_package: _package,
       budget: "1",
-      strategy: new DummyMS(),
       subnet_tag: subnetTag,
       driver: driver,
       network: network,
