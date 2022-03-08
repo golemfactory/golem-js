@@ -1,11 +1,10 @@
 const { Executor, Task, utils, vm } = require("yajsapi");
 const { asyncWith, logUtils } = utils;
 const { program } = require("commander");
-const { DummyMS } = require("yajsapi/dist/executor/strategy");
 
 async function main(fibo_n = 1, tasks_count = 1, subnetTag, driver, network) {
   const _package = await vm.repo({
-    image_hash: "3d29fc96a6c5c8c5f80d5336f5b0c1829fc28ac9aa9b75413e54fba1"
+    image_hash: "529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4"
   });
   const tasks = Array(tasks_count).fill(new Task({}));
 
