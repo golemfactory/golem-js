@@ -1,4 +1,4 @@
-import { yaActivity, yaMarket, yaPayment } from "ya-ts-client";
+import { yaActivity, yaMarket, yaPayment, yaNet } from "ya-ts-client";
 import { Agent as HttpAgent } from "http";
 import { Agent as HttpsAgent } from "https";
 
@@ -23,6 +23,7 @@ export class Configuration {
   private __market_url!: string;
   private __payment_url!: string;
   private __activity_url!: string;
+  private __net_url!: string;
   private __axios_opts!: object;
 
   constructor(
@@ -30,7 +31,8 @@ export class Configuration {
     url?: string,
     market_url?: string,
     payment_url?: string,
-    activity_url?: string
+    activity_url?: string,
+    net_url?: string,
   ) {
     this.__app_key =
       app_key || env_or_fail("YAGNA_APPKEY", "API authentication token");
@@ -61,6 +63,11 @@ export class Configuration {
       "YAGNA_ACTIVITY_URL",
       "/activity-api/v1"
     );
+    this.__net_url = resolve_url(
+      activity_url,
+      "YAGNA_NET_URL",
+      "/net-api/v1"
+    );
 
     this.__axios_opts = {
       httpAgent: new HttpAgent({
@@ -88,6 +95,10 @@ export class Configuration {
     return this.__activity_url;
   }
 
+  net_url(): string {
+    return this.__net_url;
+  }
+
   market(): yaMarket.Configuration {
     let cfg = new yaMarket.Configuration({
       apiKey: this.app_key() as string,
@@ -112,6 +123,16 @@ export class Configuration {
     let cfg = new yaActivity.Configuration({
       apiKey: this.app_key() as string,
       basePath: this.__activity_url,
+      accessToken: this.app_key() as string,
+      baseOptions: this.__axios_opts,
+    });
+    return cfg;
+  }
+
+  net(): yaNet.Configuration {
+    let cfg = new yaNet.Configuration({
+      apiKey: this.app_key() as string,
+      basePath: this.__net_url,
       accessToken: this.app_key() as string,
       baseOptions: this.__axios_opts,
     });
