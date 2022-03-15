@@ -1,12 +1,18 @@
 import { RequestorApi } from "ya-ts-client/dist/ya-net/api";
-import * as models from "ya-ts-client/dist/ya-net/src/models";
+import { Configuration } from "ya-ts-client/dist/ya-net";
 
 export class Net {
-  constructor(private _api: RequestorApi) { }
+  private _api!: RequestorApi;
+  private _cfg: Configuration;
 
-  async create_network(ip: string, mask?: string, gateway?: string): Promise<models.Network> {
-    const network = await this._api.createNetwork({ ip, mask, gateway });
-    return network.data;
+  constructor(private cfg: Configuration) {
+    this._cfg = cfg;
+    this._api = new RequestorApi(cfg);
+  }
+
+  async create_network(ip: string, mask?: string, gateway?: string): Promise<string> {
+    const { data: response } = await this._api.createNetwork({ ip, mask, gateway });
+    return response.id!;
   }
 
   async remove_network(id: string) {
@@ -17,7 +23,11 @@ export class Net {
     await this._api.addAddress(network_id, { ip });
   }
 
-  async add_node_node(network_id: string, node_id: string, ip: string) {
+  async add_node(network_id: string, node_id: string, ip: string) {
     await this._api.addNode(network_id, { id: node_id, ip });
+  }
+
+  get_url() {
+    return this._cfg.basePath!;
   }
 }
