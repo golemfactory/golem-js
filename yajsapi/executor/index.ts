@@ -445,6 +445,7 @@ export class Executor {
     let done_queue: Queue<Task<D, R>> = new Queue([]);
     let stream_output = this._stream_output;
     let workers_done = csp.chan();
+    let network = this._network;
 
     function on_task_done(task: Task<D, R>, status: TaskStatus): void {
       if (status === TaskStatus.ACCEPTED) done_queue.put(task); //put_nowait
@@ -693,7 +694,15 @@ export class Executor {
         async (act): Promise<void> => {
           emit(new events.ActivityCreated({ act_id: act.id, agr_id: agreement.id() }));
           agreements_accepting_debit_notes.add(agreement.id());
-          let work_context = new WorkContext(`worker-${wid}`, storage_manager, emit);
+          const agreement_details = await agreement.details();
+          const node_info = <NodeInfo>agreement_details.provider_view().extract(new NodeInfo());
+          const provider_name = node_info.name.value;
+          const provider_id = agreement_details.raw_details.offer.providerId;
+          let network_node;
+          if (network) {
+            network_node = await network.add_node(provider_id);
+          }
+          let work_context = new WorkContext(`worker-${wid}`, storage_manager, emit, { provider_id, provider_name }, network_node);
           await asyncWith(work_queue.new_consumer(), async (consumer) => {
             try {
               let tasks = task_emitter(consumer);

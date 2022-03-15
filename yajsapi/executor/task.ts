@@ -117,15 +117,13 @@ export class Task<TaskData, TaskResult> {
    * @description Must be called when the result is correct to mark this task as completed.
    * @param result task computation result (optional)
    */
-  accept_result(result: TaskResult | null = null, stop: boolean = true): void {
-    if (stop) {
-      if (this._emit_event) {
-        this._emit_event(new events.TaskAccepted({task_id: this.id, result}));
-      }
-      if (this._status != TaskStatus.RUNNING) throw "Accepted task not running";
-      this._status = TaskStatus.ACCEPTED;
-      this._stop();
+  accept_result(result: TaskResult | null = null): void {
+    if (this._emit_event) {
+      this._emit_event(new events.TaskAccepted({task_id: this.id, result}));
     }
+    if (this._status != TaskStatus.RUNNING) throw "Accepted task not running";
+    this._status = TaskStatus.ACCEPTED;
+    this._stop();
     this._result = result;
     for (let cb of this._callbacks) cb && cb(this, TaskStatus.ACCEPTED);
   }
