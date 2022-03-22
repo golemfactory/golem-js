@@ -29,14 +29,6 @@ export class NetworkNode {
   }
 }
 
-export enum NetworkStates {
-  INITIALIZED = "initialize",
-  CREATING = "create",
-  READY = "ready",
-  REMOVING = "removing",
-  REMOVED = "removed",
-}
-
 interface NetworkInfo {
   id: string;
   ip: string;
@@ -48,7 +40,6 @@ export class NetworkError extends Error {}
 
 export class Network {
   private _net_api: Net;
-  private _state: NetworkStates;
   private _ip: IPv4;
   private _ip_range: IPv4CidrRange;
   private _mask: IPv4Mask;
@@ -66,7 +57,6 @@ export class Network {
               mask?: string,
               gateway?: string) {
     this._net_api = net_api;
-    this._state = NetworkStates.CREATING;
     this._ip_range = IPv4CidrRange.fromCidr(mask ? `${ip}/${mask}` : ip);
     this._ip_iterator = this._ip_range[Symbol.iterator]();
     this._ip = this._next_address();
@@ -76,9 +66,6 @@ export class Network {
     this._gateway = gateway ? new IPv4(gateway) : undefined;
     this._nodes = new Map<string, NetworkNode>();
 
-  }
-  get state() {
-    return this._state;
   }
 
   toString() {
@@ -93,7 +80,6 @@ export class Network {
   }
 
   async add_node(node_id: string, ip?: IPv4): Promise<NetworkNode> {
-    // TODO: state ??
     if (ip) {
       this._ensure_ip_in_network(ip);
       this._ensure_ip_unique(ip);
