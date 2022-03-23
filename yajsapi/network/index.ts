@@ -143,7 +143,11 @@ export class Network {
 
   static async create(net_api: Net, ip: string, owner_id: string, owner_ip?: string, mask?: string, gateway?: string): Promise<Network> {
     const network = new Network(net_api, ip, owner_id, owner_ip, mask, gateway);
-    network.network_id = await net_api.create_network(network._ip.toString(), network._mask.toString(), network._gateway?.toString());
+    network.network_id= await net_api.create_network(
+      network._ip.toString(),
+      network._mask.toString(),
+      network._gateway ? network._gateway.toString() : undefined
+    );
     logger.info("Created network: " + network.toString());
     await network.add_owner_address();
 
