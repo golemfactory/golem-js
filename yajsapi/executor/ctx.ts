@@ -71,7 +71,7 @@ class _InitStep extends Work {
   }
   register(commands: any) {
     //CommandContainer
-    commands.deploy(this.network_node?.get_deploy_args());
+    commands.deploy(this.network_node ? this.network_node.get_deploy_args() : undefined);
     commands.start();
   }
 }
