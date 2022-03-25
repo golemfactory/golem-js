@@ -122,8 +122,8 @@ export type ExecutorOpts = {
   budget: string; //number?
   strategy?: MarketStrategy;
   subnet_tag?: string;
-  payment_driver?: string;
-  payment_network?: string;
+  driver?: string;
+  network?: string;
   event_consumer?: Callable<[events.YaEvent], void>; //TODO not default event
   network_address?: string
 };
@@ -187,8 +187,8 @@ export class Executor {
    * @param budget          maximum budget for payments
    * @param strategy        market strategy used to select providers from the market (e.g. LeastExpensiveLinearPayuMS or DummyMS)
    * @param subnet_tag      use only providers in the subnet with the subnet_tag name (env variable equivalent: YAGNA_SUBNET)
-   * @param payment_driver  name of the payment driver to use or null to use the default driver; only payment platforms with the specified driver will be used (env variable equivalent: YAGNA_PAYMENT_DRIVER)
-   * @param payment_network name of the network to use or null to use the default network; only payment platforms with the specified network will be used (env variable equivalent: YAGNA_PAYMENT_NETWORK)
+   * @param driver          name of the payment driver to use or null to use the default driver; only payment platforms with the specified driver will be used (env variable equivalent: YAGNA_PAYMENT_DRIVER)
+   * @param network         name of the network to use or null to use the default network; only payment platforms with the specified network will be used (env variable equivalent: YAGNA_PAYMENT_NETWORK)
    * @param event_consumer  a callable that processes events related to the computation; by default it is a function that logs all events
    * @param network_address network address for VPN
    */
@@ -199,14 +199,14 @@ export class Executor {
     budget,
     strategy,
     subnet_tag,
-    payment_driver,
-    payment_network,
+    driver,
+    network,
     event_consumer,
     network_address
   }: ExecutorOpts) {
     this._subnet = subnet_tag ? subnet_tag : DEFAULT_SUBNET;
-    this._payment_driver = payment_driver ? payment_driver.toLowerCase() : DEFAULT_DRIVER;
-    this._payment_network = payment_network ? payment_network.toLowerCase() : DEFAULT_NETWORK;
+    this._payment_driver = driver ? driver.toLowerCase() : DEFAULT_DRIVER;
+    this._payment_network = network ? network.toLowerCase() : DEFAULT_NETWORK;
     logger.info(
       `Using subnet: ${this._subnet}, network: ${this._payment_network}, driver: ${this._payment_driver}`
     );
