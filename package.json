@@ -67,12 +67,14 @@
   },
   "ava": {
     "extensions": [
-      "ts"
+      "ts",
+      "spec.ts"
     ],
     "failFast": true,
     "files": [
       "tests/**/*.ts",
-      "!tests/goth/**/*.ts"
+      "!tests/goth/**/*.ts",
+      "!tests/mock/**/*.ts"
     ],
     "ignoredByWatcher": [
       "yajsapi/**/*.ts"
@@ -84,7 +86,8 @@
   "nyc": {
     "extends": "@istanbuljs/nyc-config-typescript",
     "exclude": [
-      "tests/**/*.js"
+      "tests/**/*.js",
+      "tests/mock/**/*.ts"
     ]
   }
 }

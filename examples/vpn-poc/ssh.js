@@ -11,7 +11,7 @@ async function main() {
   const tasks = new Array(SESSION_COUNT).fill(new Task(null));
 
   async function* worker(context, tasks) {
-    const password = '12345';
+    const password = crypto.randomBytes(3).toString('hex');
     const connection_uri = context.network_node.get_websocket_uri(22);
     const app_key = process.env["YAGNA_APPKEY"];
 
@@ -28,7 +28,7 @@ async function main() {
       context.run("/bin/bash", ["-c", "/usr/sbin/sshd"]);
       const future_result = yield context.commit();
       const { results } = await future_result;
-      if (results[results.length - 1]?.success) {
+      if (results[results.length - 1].success) {
         await sleep(SESSION_TIMEOUT);
         task.accept_result();
       } else {

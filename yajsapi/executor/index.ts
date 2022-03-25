@@ -994,6 +994,8 @@ export class Executor {
     // TODO: prevent new computations at this point (if it's even possible to start one)
     this._market_api = null;
     this._payment_api = null;
+    if (this._network) await this._network.remove();
+    this._net_api = null;
     this.emit(new events.ShutdownFinished());
     try {
       await this._stack.aclose();
