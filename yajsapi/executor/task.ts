@@ -118,7 +118,6 @@ export class Task<TaskData, TaskResult> {
    * @param result task computation result (optional)
    */
   accept_result(result: TaskResult | null = null): void {
-    console.log('XXXXXXXXXXXX', result);
     if (this._emit_event) {
       this._emit_event(new events.TaskAccepted({task_id: this.id, result}));
     }
