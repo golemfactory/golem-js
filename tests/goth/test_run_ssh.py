@@ -138,7 +138,7 @@ async def test_run_ssh(
                 proxy_cmd = re.sub(":16(\\d\\d\\d)", ":6\\1", matches.group(1))
 
                 auth_str = matches.group(2)
-                password = re.sub("password: ", "", await cmd_monitor.wait_for_pattern("password:"))
+                password = re.sub("Password: ", "", await cmd_monitor.wait_for_pattern("Password:"))
 
                 ssh_connections.append((proxy_cmd, auth_str, password))
 

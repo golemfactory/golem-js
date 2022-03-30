@@ -3,7 +3,7 @@ const { asyncWith, sleep } = utils;
 const crypto = require("crypto");
 const { program } = require("commander");
 
-async function main(subnetTag, driver, network, count = 2, session_timeout = 5) {
+async function main(subnetTag, driver, network, count = 2, session_timeout = 1) {
   const SESSION_TIMEOUT = session_timeout * 60;
   const _package = await vm.repo({
     image_hash: "1e06505997e8bd1b9e1a00bd10d255fc6a390905e4d6840a22a79902",
