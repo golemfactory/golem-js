@@ -17,14 +17,9 @@ from goth.runner.log import configure_logging
 from goth.runner import Runner
 from goth.runner.probe import RequestorProbe
 
-
-# from .assertions import assert_no_errors, assert_all_invoices_accepted
-
-
 logger = logging.getLogger("goth.test.run_ssh")
 
 SUBNET_TAG = "goth"
-
 
 # Temporal assertions expressing properties of sequences of "events". In this case, each "event"
 # is just a line of output from `blender.py`.
@@ -34,32 +29,6 @@ async def assert_no_errors(output_lines: EventStream[str]):
     async for line in output_lines:
         if "ERROR" in line or " error: " in line:
             raise AssertionError("Command reported ERROR")
-
-
-async def assert_all_tasks_processed(status: str, output_lines: EventStream[str]):
-    """Assert that for every task in `ALL_TASKS` a line with `Task {status}` will appear."""
-    remaining_tasks = ALL_TASKS.copy()
-
-    async for line in output_lines:
-        m = re.search(rf".*Task {status} .* task data: ([0-9]+)", line)
-        if m:
-            task_data = int(m.group(1))
-            logger.debug("assert_all_tasks_processed: Task %s: %d", status, task_data)
-            remaining_tasks.discard(task_data)
-        if not remaining_tasks:
-            return
-
-    raise AssertionError(f"Tasks not {status}: {remaining_tasks}")
-
-
-async def assert_all_tasks_sent(output_lines: EventStream[str]):
-    """Assert that for every task a line with `Task sent` will appear."""
-    await assert_all_tasks_processed("sent", output_lines)
-
-
-async def assert_all_tasks_computed(output_lines: EventStream[str]):
-    """Assert that for every task a line with `Task computed` will appear."""
-    await assert_all_tasks_processed("computed", output_lines)
 
 
 async def assert_all_invoices_accepted(output_lines: EventStream[str]):
@@ -87,8 +56,6 @@ async def assert_all_invoices_accepted(output_lines: EventStream[str]):
             f"Unpaid agreements for: {','.join(unpaid_agreement_providers)}"
         )
 
-
-
 @pytest.mark.asyncio
 async def test_run_ssh(
     log_dir: Path,
@@ -113,7 +80,7 @@ async def test_run_ssh(
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(
-            f"node {requestor_path} --subnet-tag {SUBNET_TAG}",
+            f"node {requestor_path} --subnet-tag {SUBNET_TAG} --timeout 10",
             env=os.environ,
         ) as (_cmd_task, cmd_monitor, process_monitor):
             start_time = time.time()
@@ -124,10 +91,21 @@ async def test_run_ssh(
             cmd_monitor.add_assertion(assert_no_errors)
             cmd_monitor.add_assertion(assert_all_invoices_accepted)
 
+            await cmd_monitor.wait_for_pattern(".*Created network", timeout=20)
+            logger.info(f"Network created")
+
+            await cmd_monitor.wait_for_pattern(".*Agreement proposed ", timeout=20)
+            logger.info("Agreement proposed")
+
+            await cmd_monitor.wait_for_pattern(".*Agreement confirmed ", timeout=20)
+            logger.info("Agreement confirmed")
+
+
             ssh_connections = []
 
             # # A longer timeout to account for downloading a VM image
             for i in range(2):
+                await cmd_monitor.wait_for_pattern(".*Task sent to provider", timeout=120)
                 ssh_string = await cmd_monitor.wait_for_pattern("ssh -o ProxyCommand", timeout=120)
                 matches = re.match("ssh -o ProxyCommand=('.*') (root@.*)", ssh_string)
 
@@ -136,15 +114,9 @@ async def test_run_ssh(
                 # hence, we're replacing it with a port that connects directly
                 # to the daemon's port in the requestor's Docker container
                 proxy_cmd = re.sub(":16(\\d\\d\\d)", ":6\\1", matches.group(1))
-
                 auth_str = matches.group(2)
                 password = re.sub("Password: ", "", await cmd_monitor.wait_for_pattern("Password:"))
-
                 ssh_connections.append((proxy_cmd, auth_str, password))
-
-            await cmd_monitor.wait_for_pattern(
-                ".Task computed by provider '*SshService', task data: null", timeout=10
-            )
 
             if not ssh_verify_connection:
                 logger.warning(
@@ -175,16 +147,12 @@ async def test_run_ssh(
 
                 logger.info("SSH connections confirmed.")
 
-            proc: asyncio.subprocess.Process = await process_monitor.get_process()
-            proc.send_signal(signal.SIGINT)
-            logger.info("Sent SIGINT...")
-
             for _ in range(2):
-                await cmd_monitor.wait_for_pattern(
-                    ".*SshService terminated on provider", timeout=120
-                )
+                await cmd_monitor.wait_for_pattern("Task .* completed", timeout=20)
 
-            logger.info(f"The instances have been terminated ({elapsed_time()})")
+            await cmd_monitor.wait_for_pattern(".*Computation finished", timeout=20)
+            await cmd_monitor.wait_for_pattern(".*Removed network", timeout=20)
+            logger.info(f"Network removed")
 
-            await cmd_monitor.wait_for_pattern(".*All jobs have finished", timeout=20)
+            await cmd_monitor.wait_for_pattern(".*Executor has shut down", timeout=20)
             logger.info(f"Requestor script finished ({elapsed_time()})")

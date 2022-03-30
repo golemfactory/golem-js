@@ -3,8 +3,8 @@ const { asyncWith, sleep } = utils;
 const crypto = require("crypto");
 const { program } = require("commander");
 
-async function main(subnetTag, driver, network, count = 2, session_timeout = 1) {
-  const SESSION_TIMEOUT = session_timeout * 60;
+async function main(subnetTag, driver, network, count = 2, session_timeout = 60) {
+  const SESSION_TIMEOUT = session_timeout;
   const _package = await vm.repo({
     image_hash: "1e06505997e8bd1b9e1a00bd10d255fc6a390905e4d6840a22a79902",
     capabilities: ['vpn']
@@ -48,7 +48,7 @@ async function main(subnetTag, driver, network, count = 2, session_timeout = 1) 
     }),
     async (executor) => {
       for await (let completed of executor.submit(worker, tasks)) {
-        console.log(`Task ${completed.id} completed. Session SSH closed after ${session_timeout} min timeout.`);
+        console.log(`Task ${completed.id} completed. Session SSH closed after ${session_timeout} secs timeout.`);
       }
     }
   );
@@ -59,7 +59,7 @@ program
   .option("--payment-driver, --driver <driver>", "payment driver name, for example 'erc20'")
   .option("--payment-network, --network <network>", "network name, for example 'rinkeby'")
   .option("--task-count, --count <count>", "task count", val => parseInt(val))
-  .option("--session-timeout, --timeout <timeout>", "ssh session timeout (in minutes)", val => parseInt(val))
+  .option("--session-timeout, --timeout <timeout>", "ssh session timeout (in seconds)", val => parseInt(val))
   .option("-d, --debug", "output extra debugging");
 program.parse(process.argv);
 if (program.debug) {
