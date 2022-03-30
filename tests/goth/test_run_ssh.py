@@ -105,7 +105,6 @@ async def test_run_ssh(
 
             # # A longer timeout to account for downloading a VM image
             for i in range(2):
-                await cmd_monitor.wait_for_pattern(".*Task sent to provider", timeout=120)
                 ssh_string = await cmd_monitor.wait_for_pattern("ssh -o ProxyCommand", timeout=120)
                 matches = re.match("ssh -o ProxyCommand=('.*') (root@.*)", ssh_string)
 
