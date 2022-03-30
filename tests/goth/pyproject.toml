@@ -34,5 +34,5 @@ poethepoet = "^0.8.0"
 [tool.poe.tasks]
 codestyle = "black --check --diff ."
 goth-assets = "python -m goth create-assets assets"
-goth-tests = "pytest -svx . --reruns 3 --only-rerun AssertionError --only-rerun TimeoutError --only-rerun goth.runner.exceptions.TemporalAssertionError --only-rerun urllib.error.URLError --only-rerun goth.runner.exceptions.CommandError"
+goth-tests = "pytest -svx . --ssh-verify-connection --reruns 3 --only-rerun AssertionError --only-rerun TimeoutError --only-rerun goth.runner.exceptions.TemporalAssertionError --only-rerun urllib.error.URLError --only-rerun goth.runner.exceptions.CommandError"
 typecheck = "mypy ."
