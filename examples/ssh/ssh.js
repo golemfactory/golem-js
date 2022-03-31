@@ -4,17 +4,16 @@ const crypto = require("crypto");
 const { program } = require("commander");
 
 async function main(subnetTag, driver, network, count = 2, session_timeout = 60) {
-  const SESSION_TIMEOUT = session_timeout;
   const _package = await vm.repo({
     image_hash: "1e06505997e8bd1b9e1a00bd10d255fc6a390905e4d6840a22a79902",
-    capabilities: ['vpn']
+    capabilities: ["vpn"],
   });
-  const tasks = (new Array(count)).fill(null).map(t => new Task(null));
+  const tasks = new Array(count).fill(null).map((t) => new Task(null));
   const app_key = process.env["YAGNA_APPKEY"];
 
   async function* worker(context, tasks) {
     for await (let task of tasks) {
-      const password = crypto.randomBytes(3).toString('hex');
+      const password = crypto.randomBytes(3).toString("hex");
       context.run("/bin/bash", ["-c", "syslogd"]);
       context.run("/bin/bash", ["-c", "ssh-keygen -A"]);
       context.run("/bin/bash", ["-c", `echo -e "${password}\n${password}" | passwd`]);
@@ -25,10 +24,10 @@ async function main(subnetTag, driver, network, count = 2, session_timeout = 60)
         const connection_uri = context.network_node.get_websocket_uri(22);
         console.log("\n------------------------------------------");
         console.log(`Connect via ssh to provider "${context.provider_info.provider_name}" with:`);
-        console.log(`ssh -o ProxyCommand='websocat asyncstdio: ${connection_uri} --binary -H=Authorization:\"Bearer ${app_key}\"' root@${crypto.randomBytes(10).toString('hex')}`);
+        console.log(`ssh -o ProxyCommand='websocat asyncstdio: ${connection_uri} --binary -H=Authorization:\"Bearer ${app_key}\"' root@${crypto.randomBytes(10).toString("hex")}`);
         console.log(`Password: ${password}`);
         console.log("------------------------------------------\n");
-        await sleep(SESSION_TIMEOUT);
+        await sleep(session_timeout);
         task.accept_result();
       } else {
         task.reject_result();
@@ -58,8 +57,8 @@ program
   .option("--subnet-tag <subnet>", "set subnet name, for example 'devnet-beta'")
   .option("--payment-driver, --driver <driver>", "payment driver name, for example 'erc20'")
   .option("--payment-network, --network <network>", "network name, for example 'rinkeby'")
-  .option("--task-count, --count <count>", "task count", val => parseInt(val))
-  .option("--session-timeout, --timeout <timeout>", "ssh session timeout (in seconds)", val => parseInt(val))
+  .option("--task-count, --count <count>", "task count", (val) => parseInt(val))
+  .option("--session-timeout, --timeout <timeout>", "ssh session timeout (in seconds)", (val) => parseInt(val))
   .option("-d, --debug", "output extra debugging");
 program.parse(process.argv);
 if (program.debug) {
