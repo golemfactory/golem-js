@@ -21,9 +21,6 @@ logger = logging.getLogger("goth.test.run_ssh")
 
 SUBNET_TAG = "goth"
 
-# Temporal assertions expressing properties of sequences of "events". In this case, each "event"
-# is just a line of output from `blender.py`.
-
 async def assert_no_errors(output_lines: EventStream[str]):
     """Assert that no output line contains the substring `ERROR`."""
     async for line in output_lines:
@@ -99,7 +96,6 @@ async def test_run_ssh(
 
             await cmd_monitor.wait_for_pattern(".*Agreement confirmed ", timeout=20)
             logger.info("Agreement confirmed")
-
 
             ssh_connections = []
 
