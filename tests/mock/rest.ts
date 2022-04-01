@@ -12,7 +12,7 @@ export class NetMock extends Net {
       result = 'test';
     })
   }
-  async create_network(ip: string, mask?: string, gateway?: string): Promise<string> { return 'test'; }
+  async create_network(ip: string, mask?: string, gateway?: string): Promise<string> { return 'mock-network-id'; }
   async remove_network(id: string) { }
   async add_address(network_id: string, ip: string) { }
   async add_node(network_id: string, node_id: string, ip: string) { }
