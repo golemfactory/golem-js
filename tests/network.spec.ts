@@ -120,7 +120,7 @@ test("get node deploy args", async (t) => {
   t.deepEqual(node.get_deploy_args(), {
     net: [
       {
-        id: "test",
+        id: "mock-network-id",
         ip: "192.168.0.0",
         mask: "255.255.255.0",
         nodeIp: "192.168.0.2",
