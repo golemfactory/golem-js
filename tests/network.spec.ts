@@ -20,7 +20,7 @@ test("create network", async (t) => {
 test("create network with 16 bit mask", async (t) => {
   const network = await Network.create(netApiMock, "192.168.7.0/16", "1");
   const { id, ip, mask } = network.get_network_info();
-  t.deepEqual({ id, ip, mask }, { id: "test", ip: "192.168.0.0", mask: "255.255.0.0" });
+  t.deepEqual({ id, ip, mask }, { id: "mock-network-id", ip: "192.168.0.0", mask: "255.255.0.0" });
 });
 
 test("create network with 24 bit mask", async (t) => {
