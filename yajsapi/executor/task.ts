@@ -121,10 +121,10 @@ export class Task<TaskData, TaskResult> {
     if (this._emit_event) {
       this._emit_event(new events.TaskAccepted({task_id: this.id, result}));
     }
-    if (this._status != TaskStatus.RUNNING) throw "Accepted task not running";
+    if (this._status != TaskStatus.RUNNING) throw "Accepted task not running. STATUS: " + this._status;
     this._status = TaskStatus.ACCEPTED;
-    this._result = result;
     this._stop();
+    this._result = result;
     for (let cb of this._callbacks) cb && cb(this, TaskStatus.ACCEPTED);
   }
 

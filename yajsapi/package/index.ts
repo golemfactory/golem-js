@@ -14,6 +14,8 @@ export type RepoOpts = {
   min_mem_gib: number;
   min_storage_gib: number;
   min_cpu_threads?: number;
+  cores?: number;
+  capabilities?: string[]
 };
 
 export class Constraints {
