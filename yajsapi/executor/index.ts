@@ -984,6 +984,7 @@ export class Executor {
 
     if (this._network_address) {
       // TODO: replace with a proper REST API client once ya-client and ya-ts-client are updated
+      // https://github.com/golemfactory/yajsapi/issues/290
       const { data: { identity } } = await axios.get(
         this._api_config.__url + '/me',
         { headers: { authorization: `Bearer ${net_client.accessToken}` }
