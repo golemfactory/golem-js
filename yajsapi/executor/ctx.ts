@@ -2,6 +2,8 @@ import * as events from "./events";
 
 import { StorageProvider, Source, Destination } from "../storage";
 import { Callable, logger } from "../utils";
+import { Agreement } from "../rest/market";
+import { NetworkNode } from "../network";
 
 export class CommandContainer {
   private _commands;
@@ -18,7 +20,7 @@ export class CommandContainer {
   getattr() {
     const self = this;
     return {
-      get(target, name) {
+          get(target, name) {
         if (target[name] !== undefined) {
           return target[name];
         }
@@ -64,9 +66,12 @@ export class Work {
 }
 
 class _InitStep extends Work {
+  constructor(private network_node?: NetworkNode) {
+    super();
+  }
   register(commands: any) {
     //CommandContainer
-    commands.deploy();
+    commands.deploy(this.network_node ? this.network_node.get_deploy_args() : undefined);
     commands.start();
   }
 }
@@ -145,8 +150,8 @@ class _Run extends Work {
   private _stderr?: CaptureContext;
 
   constructor(
-    cmd: string, 
-    args: Iterable<string> = [], 
+    cmd: string,
+    args: Iterable<string> = [],
     env: {} | null = null,
     stdout?: CaptureContext,
     stderr?: CaptureContext,) {
@@ -287,21 +292,32 @@ export class WorkContext {
   private _pending_steps: Work[];
   private _started: boolean;
   private _emitter: Callable<[StorageEvent], void> | null;
+  private _network_node?: NetworkNode;
+  public provider_info: { provider_id: string, provider_name: string };
 
   constructor(
     ctx_id: string,
     storage: StorageProvider,
-    emitter: Callable<[StorageEvent], void> | null = null
+    emitter: Callable<[StorageEvent], void> | null = null,
+    provider_info: { provider_id: string, provider_name: string },
+    network_node?: NetworkNode
   ) {
     this._id = ctx_id;
     this._storage = storage;
     this._pending_steps = [];
     this._started = false;
     this._emitter = emitter;
+    this._network_node = network_node;
+    this.provider_info = provider_info;
+  }
+
+  get network_node() {
+    if (!this._network_node) throw 'There is no network node';
+    return this._network_node;
   }
   _prepare() {
     if (!this._started) {
-      this._pending_steps.push(new _InitStep());
+      this._pending_steps.push(new _InitStep(this._network_node));
       this._started = true;
     }
   }

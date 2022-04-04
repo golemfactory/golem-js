@@ -13,8 +13,12 @@
 /examples/yacat/*.txt
 /examples/yacat/*.hash
 /examples/yacat/*.potfile
-/logs
+logs/
 
 #Lock files
 package-lock.json
 *.lock
+
+#IDE
+.idea
+*.DS_Store

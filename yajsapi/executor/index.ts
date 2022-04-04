@@ -9,6 +9,7 @@ import * as events from "./events";
 import { Activity, NodeInfo, NodeInfoKeys } from "../props";
 import { Counter } from "../props/com";
 import { DemandBuilder } from "../props/builder";
+import { Network } from "../network"
 
 import * as rest from "../rest";
 import { Agreement,  OfferProposal, Subscription } from "../rest/market";
@@ -46,6 +47,7 @@ import {
   SCORE_NEUTRAL
 } from "./strategy";
 import { Package } from "../package";
+import axios from "axios";
 
 export { Task, TaskStatus };
 
@@ -120,9 +122,12 @@ export type ExecutorOpts = {
   budget: string; //number?
   strategy?: MarketStrategy;
   subnet_tag?: string;
-  driver?: string;
-  network?: string;
+  driver?: string; // @deprecated
+  network?: string; // @deprecated
+  payment_driver?: string;
+  payment_network?: string;
   event_consumer?: Callable<[events.YaEvent], void>; //TODO not default event
+  network_address?: string
 };
 
 export class SubmissionState {
@@ -139,14 +144,14 @@ export class SubmissionState {
 };
 
 /**
- * Task executor 
- * 
+ * Task executor
+ *
  * @description Used to run tasks using the specified application package within providers' execution units.
  */
 export class Executor {
   private _subnet;
-  private _driver;
-  private _network;
+  private _payment_driver;
+  private _payment_network;
   private _stream_output;
   private _strategy;
   private _api_config;
@@ -162,6 +167,7 @@ export class Executor {
   private _activity_api;
   private _market_api;
   private _payment_api;
+  private _net_api;
 
   private _wrapped_consumer;
   private _active_computations;
@@ -171,18 +177,24 @@ export class Executor {
 
   private emit;
 
+  private _network?: Network;
+  private _network_address?: string;
+
   /**
    * Create new executor
-   * 
+   *
    * @param task_package    a package common for all tasks; vm.repo() function may be used to return package from a repository
    * @param max_workers     maximum number of workers doing the computation
    * @param timeout         timeout for the whole computation
    * @param budget          maximum budget for payments
    * @param strategy        market strategy used to select providers from the market (e.g. LeastExpensiveLinearPayuMS or DummyMS)
    * @param subnet_tag      use only providers in the subnet with the subnet_tag name (env variable equivalent: YAGNA_SUBNET)
-   * @param driver          name of the payment driver to use or null to use the default driver; only payment platforms with the specified driver will be used (env variable equivalent: YAGNA_PAYMENT_DRIVER)
-   * @param network         name of the network to use or null to use the default network; only payment platforms with the specified network will be used (env variable equivalent: YAGNA_PAYMENT_NETWORK)
+   * @param driver          @deprecated - it will be removed in a future release
+   * @param network         @deprecated - it will be removed in a future release
+   * @param payment_driver  name of the payment driver to use or null to use the default driver; only payment platforms with the specified driver will be used (env variable equivalent: YAGNA_PAYMENT_DRIVER)
+   * @param payment_network name of the network to use or null to use the default network; only payment platforms with the specified network will be used (env variable equivalent: YAGNA_PAYMENT_NETWORK)
    * @param event_consumer  a callable that processes events related to the computation; by default it is a function that logs all events
+   * @param network_address network address for VPN
    */
   constructor({
     task_package,
@@ -193,13 +205,22 @@ export class Executor {
     subnet_tag,
     driver,
     network,
+    payment_driver,
+    payment_network,
     event_consumer,
+    network_address
   }: ExecutorOpts) {
     this._subnet = subnet_tag ? subnet_tag : DEFAULT_SUBNET;
-    this._driver = driver ? driver.toLowerCase() : DEFAULT_DRIVER;
-    this._network = network ? network.toLowerCase() : DEFAULT_NETWORK;
+    this._payment_driver = payment_driver ? payment_driver.toLowerCase() : (driver ? driver.toLowerCase() : DEFAULT_DRIVER);
+    this._payment_network = payment_network ? payment_network.toLowerCase() : (network ? network.toLowerCase() : DEFAULT_NETWORK);
+    if (driver) {
+      logger.warn(`The 'driver' parameter is deprecated. It will be removed in a future release. Use 'payment_driver' instead.`);
+    }
+    if (network) {
+      logger.warn(`The 'network' parameter is deprecated. It will be removed in a future release. Use 'payment_network' instead.`);
+    }
     logger.info(
-      `Using subnet: ${this._subnet}, network: ${this._network}, driver: ${this._driver}`
+      `Using subnet: ${this._subnet}, network: ${this._payment_network}, driver: ${this._payment_driver}`
     );
     this._stream_output = false;
     this._api_config = new rest.Configuration();
@@ -246,11 +267,12 @@ export class Executor {
     // The channel can be used to wait until all calls to `submit()` are finished.
     this._chan_computation_done = csp.chan();
     this._active_computations = 0;
+    this._network_address = network_address;
   }
 
   /**
    * Submit a computation to be executed on providers.
-   * 
+   *
    * @param worker   a callable that takes a WorkContext object and a list o tasks, adds commands to the context object and yields committed commands
    * @param data     an iterator of Task objects to be computed on providers
    * @returns        yields computation progress events
@@ -435,6 +457,7 @@ export class Executor {
     let done_queue: Queue<Task<D, R>> = new Queue([]);
     let stream_output = this._stream_output;
     let workers_done = csp.chan();
+    let network = this._network;
 
     function on_task_done(task: Task<D, R>, status: TaskStatus): void {
       if (status === TaskStatus.ACCEPTED) done_queue.put(task); //put_nowait
@@ -683,7 +706,15 @@ export class Executor {
         async (act): Promise<void> => {
           emit(new events.ActivityCreated({ act_id: act.id, agr_id: agreement.id() }));
           agreements_accepting_debit_notes.add(agreement.id());
-          let work_context = new WorkContext(`worker-${wid}`, storage_manager, emit);
+          const agreement_details = await agreement.details();
+          const node_info = <NodeInfo>agreement_details.provider_view().extract(new NodeInfo());
+          const provider_name = node_info.name.value;
+          const provider_id = agreement_details.raw_details.offer.providerId;
+          let network_node;
+          if (network) {
+            network_node = await network.add_node(provider_id);
+          }
+          let work_context = new WorkContext(`worker-${wid}`, storage_manager, emit, { provider_id, provider_name }, network_node);
           await asyncWith(work_queue.new_consumer(), async (consumer) => {
             try {
               let tasks = task_emitter(consumer);
@@ -873,11 +904,11 @@ export class Executor {
       for await (let account of this._payment_api.accounts()) {
         let driver = account.driver ? account.driver.toLowerCase() : "";
         let network = account.driver ? account.network.toLowerCase() : "";
-        if (driver != this._driver || network != this._network) {
+        if (driver != this._payment_driver || network != this._payment_network) {
           logger.debug(
             `Not using payment platform ${account.platform}, platform's driver/network ` +
             `${driver}/${network} is different than requested ` +
-            `driver/network ${this._driver}/${this._network}`
+            `driver/network ${this._payment_driver}/${this._payment_network}`
           );
           continue;
         }
@@ -893,7 +924,7 @@ export class Executor {
         this._budget_allocations.push(allocation);
       }
       if (!this._budget_allocations.length) {
-        throw new NoPaymentAccountError(this._driver, this._network);
+        throw new NoPaymentAccountError(this._payment_driver, this._payment_network);
       }
     }
     let allocation_ids = this._budget_allocations.map((a) => a.id);
@@ -945,7 +976,21 @@ export class Executor {
 
     let payment_client = await this._api_config.payment();
     this._payment_api = new rest.Payment(payment_client);
+
+    let net_client = await this._api_config.net();
+    this._net_api = new rest.Net(net_client);
+
     await stack.enter_async_context(this._wrapped_consumer);
+
+    if (this._network_address) {
+      // TODO: replace with a proper REST API client once ya-client and ya-ts-client are updated
+      // https://github.com/golemfactory/yajsapi/issues/290
+      const { data: { identity } } = await axios.get(
+        this._api_config.__url + '/me',
+        { headers: { authorization: `Bearer ${net_client.accessToken}` }
+      });
+      this._network = await Network.create(this._net_api, this._network_address, identity);
+    }
 
     return this;
   }
@@ -962,6 +1007,8 @@ export class Executor {
     // TODO: prevent new computations at this point (if it's even possible to start one)
     this._market_api = null;
     this._payment_api = null;
+    if (this._network) await this._network.remove();
+    this._net_api = null;
     this.emit(new events.ShutdownFinished());
     try {
       await this._stack.aclose();
