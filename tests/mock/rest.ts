@@ -9,7 +9,7 @@ export class NetMock extends Net {
     this[function_name] = async () => new Promise((res, rej) => {
       if (error) rej(error);
       res(result);
-      result = 'test';
+      result = 'mock-network-id';
     })
   }
   async create_network(ip: string, mask?: string, gateway?: string): Promise<string> { return 'mock-network-id'; }

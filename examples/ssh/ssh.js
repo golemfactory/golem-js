@@ -3,8 +3,9 @@ const { asyncWith, sleep } = utils;
 const crypto = require("crypto");
 const { program } = require("commander");
 
-async function main(subnetTag, driver, network, count = 2, session_timeout = 60) {
+async function main(subnetTag, payment_driver, payment_network, count = 2, session_timeout = 60) {
   const _package = await vm.repo({
+    // this hash points to an image built from the Dockerfile in this directory.
     image_hash: "1e06505997e8bd1b9e1a00bd10d255fc6a390905e4d6840a22a79902",
     capabilities: ["vpn"],
   });
@@ -40,8 +41,8 @@ async function main(subnetTag, driver, network, count = 2, session_timeout = 60)
       task_package: _package,
       budget: "1.0",
       subnet_tag: subnetTag,
-      driver: driver,
-      network: network,
+      payment_driver,
+      payment_network,
       network_address: "192.168.0.0/24",
       max_workers: count
     }),
@@ -55,8 +56,8 @@ async function main(subnetTag, driver, network, count = 2, session_timeout = 60)
 
 program
   .option("--subnet-tag <subnet>", "set subnet name, for example 'devnet-beta'")
-  .option("--payment-driver, --driver <driver>", "payment driver name, for example 'erc20'")
-  .option("--payment-network, --network <network>", "network name, for example 'rinkeby'")
+  .option("--payment-driver <payment_driver>", "payment driver name, for example 'erc20'")
+  .option("--payment-network <payment_network>", "network name, for example 'rinkeby'")
   .option("--task-count, --count <count>", "task count", (val) => parseInt(val))
   .option("--session-timeout, --timeout <timeout>", "ssh session timeout (in seconds)", (val) => parseInt(val))
   .option("-d, --debug", "output extra debugging");
@@ -64,4 +65,4 @@ program.parse(process.argv);
 if (program.debug) {
   utils.changeLogLevel("debug");
 }
-main(program.subnetTag, program.driver, program.network, program.count, program.timeout);
+main(program.subnetTag, program.payment_driver, program.payment_network, program.count, program.timeout);
