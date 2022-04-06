@@ -1,4 +1,4 @@
-const { Executor, Task, utils: { asyncWith }, vm } = require("yajsapi");
+const { Executor, Task, utils: { asyncWith }, vm } = require("../../dist");
 
 async function main() {
   const package = await vm.repo({
@@ -15,14 +15,21 @@ async function main() {
     }
   }
 
-  await asyncWith(
-    new Executor({ task_package: package, budget: "1.0", subnet_tag: "devnet-beta" }),
-    async (executor) => {
-      for await (let completed of executor.submit(worker, tasks)) {
-        console.log(completed.result().stdout);
-      }
+  const executor = new Executor({ task_package: package, budget: "1.0", subnet_tag: "devnet-beta" });
+  await executor.run(async (executor) => {
+    for await (let completed of executor.submit(worker, tasks)) {
+      console.log(completed.result().stdout);
     }
-  );
+  });
+
+  // await asyncWith(
+  //   new Executor({ task_package: package, budget: "1.0", subnet_tag: "devnet-beta" }),
+  //   async (executor) => {
+  //     for await (let completed of executor.submit(worker, tasks)) {
+  //       console.log(completed.result().stdout);
+  //     }
+  //   }
+  // );
 }
 
 main();
