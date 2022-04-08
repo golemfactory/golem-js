@@ -1,8 +1,8 @@
 export default function getAllProperties(obj: any) {
-  var allProps: any = [],
-    curr = obj;
+  const allProps: any = [];
+  let curr = obj;
   do {
-    var props = Object.getOwnPropertyNames(curr);
+    const props = Object.getOwnPropertyNames(curr);
     props.forEach(function (prop) {
       if (allProps.indexOf(prop) === -1) allProps.push(prop);
     });
