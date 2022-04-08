@@ -27,7 +27,7 @@ function read_keyspace() {
 }
 
 function read_password(ranges) {
-  for (let r of ranges) {
+  for (const r of ranges) {
     const filePath = path.join(__dirname, `hashcat_${r}.potfile`);
     if (!fs.existsSync(filePath)) continue;
     const line = fs.readFileSync(filePath, {
@@ -49,7 +49,7 @@ async function main(args) {
   let step;
 
   async function* compute_keyspace(ctx: WorkContext, tasks) {
-    for await (let task of tasks) {
+    for await (const task of tasks) {
       const keyspace_sh_filename = "keyspace.sh";
       ctx.send_file(
         path.join(__dirname, keyspace_sh_filename),
@@ -73,14 +73,14 @@ async function main(args) {
 
   async function* perform_mask_attack(ctx: WorkContext, tasks) {
     ctx.send_file(path.join(__dirname, "in.hash"), "/golem/input/in.hash");
-    for await (let task of tasks) {
-      let skip = task.data();
-      let limit = skip + step;
+    for await (const task of tasks) {
+      const skip = task.data();
+      const limit = skip + step;
 
       const worker_output_path = `/golem/output/hashcat_${skip}.potfile`;
       ctx.run("/bin/sh", ["-c", _make_attack_command(skip, limit, worker_output_path)]);
 
-      let output_file = path.join(__dirname, `hashcat_${skip}.potfile`);
+      const output_file = path.join(__dirname, `hashcat_${skip}.potfile`);
       ctx.download_file(`/golem/output/hashcat_${skip}.potfile`, output_file);
 
       yield ctx.commit();
@@ -104,7 +104,7 @@ async function main(args) {
     async (executor: Executor): Promise<void> => {
       let keyspace_computed = false;
       // This is not a typical use of executor.submit as there is only one task, with no data:
-      for await (let task of executor.submit(
+      for await (const task of executor.submit(
         compute_keyspace, [new Task("compute_keyspace" as any)]
       )) {
         keyspace_computed = true;
@@ -116,7 +116,7 @@ async function main(args) {
       logger.info(`Keyspace size computed. Keyspace size = ${keyspace}.`);
       step = Math.floor(keyspace / args.numberOfProviders + 1);
       const ranges = range(0, keyspace, parseInt(step));
-      for await (let task of executor.submit(
+      for await (const task of executor.submit(
         perform_mask_attack,
         ranges.map((range) => new Task(range as any))
       )) {

@@ -7,9 +7,9 @@ dayjs.extend(utc);
 const { Configuration, Market } = rest;
 
 async function unlist_offers(conf: any): Promise<void> {
-  let client = await conf.market();
-  let market_api = new Market(client);
-  for await (let subscription of market_api.subscriptions()) {
+  const client = await conf.market();
+  const market_api = new Market(client);
+  for await (const subscription of market_api.subscriptions()) {
     console.log('subscription:', subscription);
     subscription.delete();
   }

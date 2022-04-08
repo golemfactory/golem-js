@@ -12,22 +12,22 @@ const { asyncWith, CancellationToken } = utils;
 const cancellationToken = new CancellationToken();
 
 async function list_offers(conf: rest.Configuration, subnetTag: string): Promise<void> {
-  let client = await conf.market();
-  let market_api = new Market(client);
-  let dbuild = new yp.DemandBuilder();
+  const client = await conf.market();
+  const market_api = new Market(client);
+  const dbuild = new yp.DemandBuilder();
 
-  let idx = new yp.NodeInfo(subnetTag);
+  const idx = new yp.NodeInfo(subnetTag);
   idx.name.value = "some scanning node";
   dbuild.add(idx);
 
-  let act = new yp.Activity();
+  const act = new yp.Activity();
   act.expiration.value = dayjs().utc().unix() * 1000;
   dbuild.add(act);
 
   await asyncWith(
     await market_api.subscribe(dbuild.properties(), dbuild.constraints()),
     async (subscription: Subscription) => {
-      for await (let event of subscription.events(cancellationToken)) {
+      for await (const event of subscription.events(cancellationToken)) {
         console.log(`Offer: ${event.id()}`);
         console.log(`from ${event.issuer()}`);
         console.log(`props ${JSON.stringify(event.props(), null, 4)}`);
