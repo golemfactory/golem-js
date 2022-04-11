@@ -1,3 +1,4 @@
+/* eslint no-prototype-builtins: 0 */
 import { NodeInfo } from "../props";
 import applyMixins from "../utils/applyMixins";
 
@@ -376,7 +377,7 @@ export class CommandEventContext {
 
   computation_finished(last_idx): boolean {
     const cmd_idx = this.evt.cmd_idx;
-    const success = Object.hasOwn(this.evt, "success") ? this.evt["success"] : undefined;
+    const success = this.evt.hasOwnProperty("success") ? this.evt["success"] : undefined;
     return cmd_idx !== undefined && (cmd_idx >= last_idx || success === false);
   }
 
@@ -384,7 +385,7 @@ export class CommandEventContext {
     this.evt.agr_id = agr_id;
     this.evt.task_id = task_id;
 
-    if (Object.hasOwn(this.evt, "command")) {
+    if (this.evt.hasOwnProperty("command")) {
       const idx: number = this.evt.cmd_idx;
       this.evt["command"] = cmds[idx];
     }
