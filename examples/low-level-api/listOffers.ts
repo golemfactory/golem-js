@@ -1,8 +1,8 @@
 import Bluebird from "bluebird";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
-import { props as yp, rest, utils } from "yajsapi";
-import { Subscription } from "yajsapi/dist/rest/market";
+import { props as yp, rest, utils } from "../../yajsapi";
+import { Subscription } from "../../yajsapi/rest/market";
 import { program } from "commander";
 
 dayjs.extend(utc);
@@ -46,8 +46,9 @@ const promiseTimeout = (seconds: number): Promise<void> =>
     }, seconds * 1000)
   );
 
-program.option('--subnet-tag <subnet>', 'set subnet name', 'devnet-beta');
+program.option("--subnet-tag <subnet>", "set subnet name", "devnet-beta");
 program.parse(process.argv);
-console.log(`Using subnet: ${program.subnetTag}`);
+const options = program.opts();
+console.log(`Using subnet: ${options.subnetTag}`);
 
-Bluebird.Promise.any([list_offers(new Configuration(), program.subnetTag), promiseTimeout(4)]);
+Bluebird.Promise.any([list_offers(new Configuration(), options.subnetTag), promiseTimeout(4)]);

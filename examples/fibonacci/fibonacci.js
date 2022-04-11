@@ -1,10 +1,10 @@
-const { Executor, Task, utils, vm } = require("yajsapi");
+const { Executor, Task, utils, vm } = require("../../dist");
 const { asyncWith, logUtils } = utils;
 const { program } = require("commander");
 
 async function main(fibo_n = 1, tasks_count = 1, subnetTag, driver, network) {
   const _package = await vm.repo({
-    image_hash: "529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4"
+    image_hash: "529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4",
   });
   const tasks = Array(tasks_count).fill(new Task({}));
 
@@ -13,7 +13,7 @@ async function main(fibo_n = 1, tasks_count = 1, subnetTag, driver, network) {
       context.run("/usr/local/bin/node", ["/golem/work/fibo.js", fibo_n.toString()]);
       const future_result = yield context.commit();
       const { results } = await future_result;
-      task.accept_result(results[results.length - 1])
+      task.accept_result(results[results.length - 1]);
     }
   }
 
@@ -34,14 +34,15 @@ async function main(fibo_n = 1, tasks_count = 1, subnetTag, driver, network) {
   );
 }
 program
-  .requiredOption("-n, --fibonacci-number <n>", "fibonacci number", val => parseInt(val))
-  .option("-c, --tasks-count <c>", "tasks count", val => parseInt(val))
+  .requiredOption("-n, --fibonacci-number <n>", "fibonacci number", (val) => parseInt(val))
+  .option("-c, --tasks-count <c>", "tasks count", (val) => parseInt(val))
   .option("--subnet-tag <subnet>", "set subnet name, for example 'devnet-beta'")
   .option("--payment-driver, --driver <driver>", "payment driver name, for example 'erc20'")
   .option("--payment-network, --network <network>", "network name, for example 'rinkeby'")
   .option("-d, --debug", "output extra debugging");
-program.parse(process.argv);
-if (program.debug) {
+program.parse();
+const options = program.opts();
+if (options.debug) {
   utils.changeLogLevel("debug");
 }
-main(program.fibonacciNumber, program.tasksCount, program.subnetTag, program.driver, program.network);
+main(options.fibonacciNumber, options.tasksCount, options.subnetTag, options.driver, options.network);
