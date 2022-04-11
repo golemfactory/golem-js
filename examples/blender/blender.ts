@@ -1,7 +1,7 @@
 import path from "path";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
-import { Executor, Task, utils, vm, WorkContext } from "yajsapi";
+import { Executor, Task, utils, vm, WorkContext } from "../../yajsapi";
 import { program } from "commander";
 
 dayjs.extend(duration);
@@ -88,7 +88,8 @@ program
   .option("--payment-network, --network <network>", "network name, for example 'rinkeby'")
   .option("-d, --debug", "output extra debugging");
 program.parse(process.argv);
-if (program.debug) {
+const options = program.opts();
+if (options.debug) {
   utils.changeLogLevel("debug");
 }
-main(program.subnetTag, program.driver, program.network);
+main(options.subnetTag, options.driver, options.network);

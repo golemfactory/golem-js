@@ -31,6 +31,7 @@ _(not needed for running examples)_
 ### Installation
 - `cd examples`         will take you to examples folder
 - `yarn`                will install dependencies for the examples
+- `yarn build`          will build typescript examples
 - add `YAGNA_APPKEY` as environment variable; 
 ```
 export YAGNA_APPKEY=your_yagna_app_key_here
