@@ -89,6 +89,8 @@ async def test_run_blender(
     # This is the default configuration with 2 wasm/VM providers
     goth_config = load_yaml(Path(__file__).parent / "assets" / "goth-config.yml")
 
+    examples_dir = project_dir / "examples"
+
     configure_logging(log_dir)
 
     runner = Runner(
@@ -101,7 +103,7 @@ async def test_run_blender(
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(
-            f"npm run ts:blender --subnet-tag goth",
+            f"npm run --prefix {examples_dir} ts:blender --subnet-tag goth",
             env=os.environ,
         ) as (_cmd_task, cmd_monitor, _process_monitor):
 
