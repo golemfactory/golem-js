@@ -103,7 +103,7 @@ async def test_run_blender(
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(
-            f"npm run --prefix {examples_dir} ts:blender --subnet-tag goth",
+            f"npm run --prefix {examples_dir} ts:blender -- -d --subnet-tag goth",
             env=os.environ,
         ) as (_cmd_task, cmd_monitor, _process_monitor):
 
