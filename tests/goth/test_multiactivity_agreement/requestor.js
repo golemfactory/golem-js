@@ -1,4 +1,4 @@
-const { Executor, Task, utils, vm, WorkContext } = require("../../../dist");
+const { Executor, Task, utils, vm } = require("../../../dist");
 const { asyncWith, logUtils, range } = utils;
 
 async function main() {
