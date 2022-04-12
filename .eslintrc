@@ -1,13 +1,11 @@
 {
   "root": true,
   "parser": "@typescript-eslint/parser",
-  "plugins": [
-    "@typescript-eslint"
-  ],
+  "env": {
+    "node": true
+  },
   "extends": [
     "eslint:recommended",
-    "plugin:@typescript-eslint/eslint-recommended",
-    "plugin:@typescript-eslint/recommended",
     "prettier"
   ],
   "rules": {
@@ -17,5 +15,22 @@
         "checkLoops": false
       }
     ]
-  }
+  },
+  "overrides": [
+    {
+      "files": ["**/*.ts"],
+      "extends": [
+        "plugin:@typescript-eslint/eslint-recommended",
+        "plugin:@typescript-eslint/recommended"
+      ],
+      "plugins": ["@typescript-eslint"]
+    },
+    {
+      "files": ["**/*.js"],
+      "extends": [
+        "eslint:recommended"
+      ]
+    }
+  ],
+  "ignorePatterns": ["dist/", "handbook_gen/"]
 }

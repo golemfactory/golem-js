@@ -87,7 +87,7 @@ program
   .option("--payment-driver, --driver <driver>", "payment driver name, for example 'erc20'")
   .option("--payment-network, --network <network>", "network name, for example 'rinkeby'")
   .option("-d, --debug", "output extra debugging");
-program.parse(process.argv);
+program.parse();
 const options = program.opts();
 if (options.debug) {
   utils.changeLogLevel("debug");
