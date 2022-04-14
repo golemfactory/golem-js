@@ -1,3 +1,4 @@
+/* eslint no-prototype-builtins: 0 */
 import { NodeInfo } from "../props";
 import applyMixins from "../utils/applyMixins";
 
@@ -7,11 +8,9 @@ type ExcInfo = Error;
  * An abstract base class for types of events emitted by `Executor.submit()`.
  */
 export class YaEvent {
-  constructor() {}
-
   /**
    * Extract exception information from this event.
-   * 
+   *
    * @returns The extracted exception information and a copy of the event without the exception information.
    */
   extract_exc_info(): [ExcInfo | null | undefined, YaEvent] {
@@ -20,7 +19,7 @@ export class YaEvent {
 }
 
 export class ComputationStarted extends YaEvent {
-  expires?: number
+  expires?: number;
   constructor({ expires }) {
     super();
     this.expires = expires;
@@ -203,8 +202,7 @@ export class PaymentQueued extends AgreementEvent {
   }
 }
 
-export class CheckingPayments extends AgreementEvent {
-}
+export class CheckingPayments extends AgreementEvent {}
 
 export class InvoiceReceived extends AgreementEvent {
   inv_id?: string;
@@ -271,10 +269,7 @@ export class WorkerFinished extends AgreementEvent {
 
   extract_exc_info(): [ExcInfo | null | undefined, YaEvent] {
     const exc_info = this.exception;
-    const me = Object.assign(
-      new WorkerFinished({ agr_id: undefined, exception: undefined }),
-      this
-    );
+    const me = Object.assign(new WorkerFinished({ agr_id: undefined, exception: undefined }), this);
     me.exception = null;
     return [exc_info, me];
   }
@@ -328,7 +323,7 @@ export class CommandExecuted extends CommandEvent {
   stderr?: string;
 
   constructor({ agr_id, task_id, success, cmd_idx, command, message, stdout, stderr }) {
-    super({agr_id, cmd_idx, task_id});
+    super({ agr_id, cmd_idx, task_id });
     if (success) this.success = success;
     if (command) this.command = command;
     if (message) this.message = message;
@@ -338,7 +333,7 @@ export class CommandExecuted extends CommandEvent {
 }
 
 export class CommandEventContext {
-  evt: CommandEvent
+  evt: CommandEvent;
   constructor(evt_cls) {
     this.evt = evt_cls;
   }
@@ -353,38 +348,26 @@ export class CommandEventContext {
     let out_evt: CommandEvent;
 
     if (rt_evt.kind.started) {
-
-      let evt = Object.create(CommandStarted.prototype);
+      const evt = Object.create(CommandStarted.prototype);
       evt.cmd_idx = rt_evt.index;
       evt.command = rt_evt.kind.started.command;
       out_evt = evt;
-
     } else if (rt_evt.kind.stdout) {
-
-      let evt = Object.create(CommandStdOut.prototype);
+      const evt = Object.create(CommandStdOut.prototype);
       evt.cmd_idx = rt_evt.index;
-      evt.output = rt_evt.kind.stdout
-        ? rt_evt.kind.stdout.toString().trimEnd()
-        : "";
+      evt.output = rt_evt.kind.stdout ? rt_evt.kind.stdout.toString().trimEnd() : "";
       out_evt = evt;
-
     } else if (rt_evt.kind.stderr) {
-
-      let evt = Object.create(CommandStdErr.prototype);
+      const evt = Object.create(CommandStdErr.prototype);
       evt.cmd_idx = rt_evt.index;
-      evt.output = rt_evt.kind.stderr
-        ? rt_evt.kind.stderr.toString().trimEnd()
-        : "";
+      evt.output = rt_evt.kind.stderr ? rt_evt.kind.stderr.toString().trimEnd() : "";
       out_evt = evt;
-
     } else if (rt_evt.kind.finished) {
-
-      let evt = Object.create(CommandExecuted.prototype);
+      const evt = Object.create(CommandExecuted.prototype);
       evt.cmd_idx = rt_evt.index;
       evt.command = rt_evt.kind.finished.command;
       evt.success = rt_evt.kind.finished.return_code == 0;
       out_evt = evt;
-
     } else {
       throw new Error(`invalid event: ${json}`);
     }
@@ -393,13 +376,9 @@ export class CommandEventContext {
   }
 
   computation_finished(last_idx): boolean {
-    let cmd_idx = this.evt.cmd_idx;
-    let success = this.evt.hasOwnProperty("success")
-      ? this.evt["success"]
-      : undefined;
-    return cmd_idx !== undefined && (
-      cmd_idx >= last_idx || success === false
-    )
+    const cmd_idx = this.evt.cmd_idx;
+    const success = this.evt.hasOwnProperty("success") ? this.evt["success"] : undefined;
+    return cmd_idx !== undefined && (cmd_idx >= last_idx || success === false);
   }
 
   event(agr_id: string, task_id: string, cmds: any[]): CommandEvent {
@@ -407,7 +386,7 @@ export class CommandEventContext {
     this.evt.task_id = task_id;
 
     if (this.evt.hasOwnProperty("command")) {
-      let idx: number = this.evt.cmd_idx;
+      const idx: number = this.evt.cmd_idx;
       this.evt["command"] = cmds[idx];
     }
     return this.evt;
@@ -429,7 +408,7 @@ interface RuntimeEventKind {
 }
 
 interface RuntimeEventStarted {
-  command: object,
+  command: object;
 }
 
 interface RuntimeEventStdOut {
@@ -447,7 +426,7 @@ interface RuntimeEventFinished {
 
 export class CommandStarted extends CommandEvent {
   command!: string;
-} 
+}
 
 export class CommandStdOut extends CommandEvent {
   output!: string;
@@ -457,7 +436,7 @@ export class CommandStdErr extends CommandEvent {
   output: string;
 
   constructor({ agr_id, task_id, cmd_idx, output }) {
-    super({agr_id, task_id, cmd_idx});
+    super({ agr_id, task_id, cmd_idx });
     this.output = output;
   }
 }

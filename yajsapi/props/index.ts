@@ -9,10 +9,10 @@ export class NodeInfo extends Model {
     metadata: { key: "golem.node.debug.subnet" },
   });
 
-  constructor(subnet_tag: string = "testnet", name?: string) {
+  constructor(subnet_tag = "testnet", name?: string) {
     super();
     this.subnet_tag.value = subnet_tag;
-    if(name) {
+    if (name) {
       this.name.value = name;
     }
   }
@@ -55,9 +55,9 @@ export class Activity extends Model {
 
   multi_activity: Field = new Field({
     metadata: { key: "golem.srv.caps.multi-activity" },
-  })
+  });
   /*Whether client supports multi_activity (executing more than one activity per agreement).
-  */
+   */
 }
 
 export const ActivityKeys = new Activity().keys().get();
