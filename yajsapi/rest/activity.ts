@@ -1,9 +1,6 @@
 import EventSource from "eventsource";
 import { BaseAPI } from "ya-ts-client/dist/ya-activity/base";
-import {
-  RequestorControlApi,
-  RequestorStateApi,
-} from "ya-ts-client/dist/ya-activity/api";
+import { RequestorControlApi, RequestorStateApi } from "ya-ts-client/dist/ya-activity/api";
 import * as yaa from "ya-ts-client/dist/ya-activity/src/models";
 import { attest, types } from "sgx-ias-js";
 import { Configuration } from "ya-ts-client/dist/ya-activity";
@@ -42,10 +39,7 @@ export class ActivityService {
    * @param secure    -
    * @returns Activity
    */
-  async new_activity(
-    agreement: Agreement,
-    secure: boolean = false
-  ): Promise<Activity> {
+  async new_activity(agreement: Agreement, secure = false): Promise<Activity> {
     try {
       if (secure) {
         return await this._create_secure_activity(agreement);
@@ -59,27 +53,28 @@ export class ActivityService {
   }
 
   async _create_activity(agreement_id: string): Promise<Activity> {
-    let { data: response } = await this._api.createActivity({ agreementId: agreement_id }, 25, { timeout: 30000 });
-    let activity_id =
-      typeof response == "string" ? response : response.activityId;
+    const { data: response } = await this._api.createActivity({ agreementId: agreement_id }, 25, { timeout: 30000 });
+    const activity_id = typeof response == "string" ? response : response.activityId;
     logger.debug(`Created activity ${activity_id} for agreement ${agreement_id}`);
     return new Activity(activity_id, this._api, this._state);
   }
 
   async _create_secure_activity(agreement: Agreement): Promise<SecureActivity> {
-    let priv_key = new PrivateKey();
-    let pub_key = priv_key.publicKey();
+    const priv_key = new PrivateKey();
+    const pub_key = priv_key.publicKey();
     let crypto_ctx: CryptoCtx;
 
-    let { data: response } = await this._api.createActivity({
-      agreementId: agreement.id(),
-      requestorPubKey: pub_key.toString(),
-    }, 25, { timeout: 30000 });
+    const { data: response } = await this._api.createActivity(
+      {
+        agreementId: agreement.id(),
+        requestorPubKey: pub_key.toString(),
+      },
+      25,
+      { timeout: 30000 }
+    );
 
-    let activity_id =
-      typeof response == "string" ? response : response.activityId;
-    let credentials =
-      typeof response == "string" ? undefined : response.credentials;
+    const activity_id = typeof response == "string" ? response : response.activityId;
+    const credentials = typeof response == "string" ? undefined : response.credentials;
 
     try {
       if (!credentials) {
@@ -89,7 +84,7 @@ export class ActivityService {
         throw Error("Invalid requestor public key in CreateActivity response");
       }
 
-      let enclave_key = PublicKey.fromHex(credentials.sgx.enclavePubKey);
+      const enclave_key = PublicKey.fromHex(credentials.sgx.enclavePubKey);
       crypto_ctx = await CryptoCtx.from(enclave_key, priv_key);
 
       if (SGX_CONFIG.enableAttestation) {
@@ -100,32 +95,22 @@ export class ActivityService {
       throw error;
     }
 
-    return new SecureActivity(
-      activity_id,
-      credentials.sgx,
-      crypto_ctx,
-      this._api,
-      this._state
-    );
+    return new SecureActivity(activity_id, credentials.sgx, crypto_ctx, this._api, this._state);
   }
 
-  async _attest(
-    activity_id: string,
-    agreement: Agreement,
-    credentials: Credentials
-  ) {
-    let demand = (await agreement.details()).raw_details.demand;
-    let pkg = demand.properties["golem.srv.comp.task_package"];
+  async _attest(activity_id: string, agreement: Agreement, credentials: Credentials) {
+    const demand = (await agreement.details()).raw_details.demand;
+    const pkg = demand.properties["golem.srv.comp.task_package"];
 
     if (!pkg) {
       throw new Error("Invalid agreement: missing package");
     }
 
-    let evidence: attest.AttestationResponse = {
+    const evidence: attest.AttestationResponse = {
       report: credentials.sgx.iasReport,
       signature: types.parseHex(credentials.sgx.iasSig),
     };
-    let verifier = attest.AttestationVerifier.from(evidence)
+    const verifier = attest.AttestationVerifier.from(evidence)
       .data(types.parseHex(credentials.sgx.requestorPubKey))
       .data(types.parseHex(credentials.sgx.enclavePubKey))
       .data(new TextEncoder().encode(pkg)) // encode as utf-8 bytes
@@ -140,9 +125,9 @@ export class ActivityService {
       verifier.not_outdated();
     }
 
-    let result = verifier.verify();
+    const result = verifier.verify();
     if (result.verdict != attest.AttestationVerdict.Ok) {
-      let name = result.verdict.toString();
+      const name = result.verdict.toString();
       throw new Error(`Attestation failed: ${name}: ${result.message}`);
     }
   }
@@ -162,11 +147,7 @@ export class Activity {
   protected _id!: string;
   protected _credentials?: object;
 
-  constructor(
-    id: string,
-    _api: RequestorControlApi,
-    _state: RequestorStateApi
-  ) {
+  constructor(id: string, _api: RequestorControlApi, _state: RequestorStateApi) {
     this._id = id;
     this._api = _api;
     this._state = _state;
@@ -193,8 +174,8 @@ export class Activity {
   }
 
   async state(): Promise<yaa.ActivityState> {
-    let { data: result } = await this._state.getActivityState(this._id);
-    let state: yaa.ActivityState = result;
+    const { data: result } = await this._state.getActivityState(this._id);
+    const state: yaa.ActivityState = result;
     return state;
   }
 
@@ -207,11 +188,7 @@ export class Activity {
     const script_txt = JSON.stringify(script);
     let batch_id;
     try {
-      const { data } = await this._api.exec(
-        this._id,
-        new ExeScriptRequest(script_txt),
-        { timeout: 10000 }
-      );
+      const { data } = await this._api.exec(this._id, new ExeScriptRequest(script_txt), { timeout: 10000 });
       batch_id = data;
     } catch (error) {
       logger.warn(`Error while sending batch script to provider: ${error}`);
@@ -219,21 +196,9 @@ export class Activity {
     }
 
     if (stream) {
-      return new StreamingBatch(
-        this,
-        batch_id,
-        script.length,
-        deadline,
-        cancellationToken
-      );
+      return new StreamingBatch(this, batch_id, script.length, deadline, cancellationToken);
     }
-    return new PollingBatch(
-      this,
-      batch_id,
-      script.length,
-      deadline,
-      cancellationToken
-    );
+    return new PollingBatch(this, batch_id, script.length, deadline, cancellationToken);
   }
 
   async ready(): Promise<Activity> {
@@ -264,36 +229,22 @@ class SecureActivity extends Activity {
     this._crypto_ctx = crypto_ctx;
   }
 
-  async send(
-    script: object[],
-    stream: boolean,
-    deadline?: number
-  ): Promise<any> {
-    let cmd = { exec: { exe_script: script } };
-    let batch_id = await this._send(rand_hex(32), cmd);
+  async send(script: object[], stream: boolean, deadline?: number): Promise<any> {
+    const cmd = { exec: { exe_script: script } };
+    const batch_id = await this._send(rand_hex(32), cmd);
 
     if (stream) {
-      return new StreamingBatch(
-        this,
-        batch_id,
-        script.length,
-        deadline
-      );
+      return new StreamingBatch(this, batch_id, script.length, deadline);
     }
-    return new PollingBatch(
-      this,
-      batch_id,
-      script.length,
-      deadline
-    );
+    return new PollingBatch(this, batch_id, script.length, deadline);
   }
 
   async _send(batch_id: string, cmd: object, timeout?: number): Promise<any> {
-    let req = new SecureRequest(this._id, batch_id, cmd, timeout);
-    let req_buf = Buffer.from(JSON.stringify(req));
-    let enc_req = this._crypto_ctx.encrypt(req_buf);
+    const req = new SecureRequest(this._id, batch_id, cmd, timeout);
+    const req_buf = Buffer.from(JSON.stringify(req));
+    const enc_req = this._crypto_ctx.encrypt(req_buf);
 
-    let { data: enc_res } = await this._api.callEncrypted(
+    const { data: enc_res } = await this._api.callEncrypted(
       this._id,
       // cannot be null / undefined;
       // overriden by transformRequest below
@@ -313,19 +264,14 @@ class SecureActivity extends Activity {
       }
     );
 
-    let res_buf = this._crypto_ctx.decrypt(Buffer.from(enc_res));
-    let res = SecureResponse.from_buffer(res_buf);
+    const res_buf = this._crypto_ctx.decrypt(Buffer.from(enc_res));
+    const res = SecureResponse.from_buffer(res_buf);
     return res.unwrap();
   }
 }
 
 class SecureRequest {
-  constructor(
-    private activityId: string,
-    private batchId: string,
-    private command: object,
-    private timeout?: number
-  ) {}
+  constructor(private activityId: string, private batchId: string, private command: object, private timeout?: number) {}
 }
 
 class SecureResponse {
@@ -346,7 +292,7 @@ class SecureResponse {
 }
 
 class Result {
-  idx!: Number;
+  idx!: number;
   stdout?: string;
   stderr?: string;
   message?: string;
@@ -405,13 +351,19 @@ class Batch implements AsyncIterable<events.CommandEventContext> {
     this.batch_id;
   }
 
-  async *[Symbol.asyncIterator](): any {}
+  async *[Symbol.asyncIterator](): any {
+    // abstract
+  }
 }
 
 function _is_gsb_endpoint_not_found_error(error): boolean {
   // check if `err` is caused by "endpoint address not found" GSB error
-  if (!error.response) { return false; }
-  if (error.response.status !== 500) { return false; }
+  if (!error.response) {
+    return false;
+  }
+  if (error.response.status !== 500) {
+    return false;
+  }
   if (!error.response.data || !error.response.data.message) {
     logger.debug(`Cannot read error message, response: ${error.response}`);
     return false;
@@ -432,7 +384,7 @@ class PollingBatch extends Batch {
     super(activity, batch_id, batch_size, deadline, undefined, cancellationToken);
   }
 
-  async _activity_terminated(): Promise<{ terminated: boolean, reason?: string, err?: string }> {
+  async _activity_terminated(): Promise<{ terminated: boolean; reason?: string; err?: string }> {
     // check if the activity we're using is in the "Terminated" state
     try {
       const state = await this.activity.state();
@@ -440,7 +392,7 @@ class PollingBatch extends Batch {
         terminated: state.state && state.state.includes(ActivityStateStateEnum.Terminated),
         reason: state.reason,
         err: state.errorMessage,
-      }
+      };
     } catch (err) {
       logger.debug(`Cannot query activity state: ${err}`);
       return { terminated: false };
@@ -463,13 +415,9 @@ class PollingBatch extends Batch {
         throw new BatchTimeoutError(`Task timeout for activity ${this.activity.id}`);
       }
       try {
-        let { data } = await this.activity.api.getExecBatchResults(
-          this.activity.id,
-          this.batch_id,
-          last_idx,
-          5,
-          { timeout: 6000 }
-        );
+        const { data } = await this.activity.api.getExecBatchResults(this.activity.id, this.batch_id, last_idx, 5, {
+          timeout: 6000,
+        });
         results = data;
       } catch (error) {
         const timeout_msg = error.message && error.message.includes("timeout");
@@ -480,9 +428,7 @@ class PollingBatch extends Batch {
         } else {
           const { terminated, reason, err } = await this._activity_terminated();
           if (terminated) {
-            logger.warn(
-              `Activity ${this.activity.id} terminated by provider. Reason: ${reason}, err: ${err}`
-            );
+            logger.warn(`Activity ${this.activity.id} terminated by provider. Reason: ${reason}, err: ${err}`);
             throw error;
           }
           if (!_is_gsb_endpoint_not_found_error(error)) {
@@ -502,15 +448,14 @@ class PollingBatch extends Batch {
         }
       }
       retry_count = 0;
-      let any_new: boolean = false;
+      let any_new = false;
       results = results.slice(last_idx);
-      for (let result of results) {
+      for (const result of results) {
         any_new = true;
-        if (last_idx != result.index)
-          throw `Expected ${last_idx}, got ${result.index}`;
+        if (last_idx != result.index) throw `Expected ${last_idx}, got ${result.index}`;
 
         const { message, stdout, stderr } = result;
-        let _message: string = "";
+        let _message = "";
 
         if (message) {
           _message = message;
@@ -518,7 +463,7 @@ class PollingBatch extends Batch {
           _message = JSON.stringify({ stdout, stderr });
         }
 
-        let evt = Object.create(events.CommandExecuted.prototype);
+        const evt = Object.create(events.CommandExecuted.prototype);
         evt.cmd_idx = evt.idx = result.index;
         evt.stdout = result.stdout;
         evt.stderr = result.stderr;
@@ -551,19 +496,16 @@ class StreamingBatch extends Batch {
     const batch_id = this.batch_id;
     const last_idx = this.size - 1;
 
-    let config_prov = new ApiConfigProvider(this.activity.api);
-    let host = config_prov.base_path();
-    let api_key = await config_prov.api_key();
+    const config_prov = new ApiConfigProvider(this.activity.api);
+    const host = config_prov.base_path();
+    const api_key = await config_prov.api_key();
 
-    let evtSource = new EventSource(
-      `${host}/activity/${activity_id}/exec/${batch_id}`,
-      {
-        headers: {
-          Accept: "text/event-stream",
-          Authorization: api_key ? `Bearer ${api_key}` : undefined,
-        },
-      }
-    );
+    const evtSource = new EventSource(`${host}/activity/${activity_id}/exec/${batch_id}`, {
+      headers: {
+        Accept: "text/event-stream",
+        Authorization: api_key ? `Bearer ${api_key}` : undefined,
+      },
+    });
 
     let results: events.CommandEventContext[] = [];
     let finished = false;
@@ -573,7 +515,7 @@ class StreamingBatch extends Batch {
 
     const on_error = (e: object) => {
       if (!e) return;
-      let msg = !e["message"] ? "source unavailable" : e["message"];
+      const msg = !e["message"] ? "source unavailable" : e["message"];
       logger.error("Runtime event source error:", msg);
       cleanup();
     };
@@ -601,7 +543,7 @@ class StreamingBatch extends Batch {
     while (!finished) {
       await promise;
 
-      for (let result of results) {
+      for (const result of results) {
         yield result;
 
         if (result.computation_finished(last_idx)) {
@@ -630,7 +572,7 @@ function _command_event_ctx(msg_event) {
   const evt_data = evt_obj["kind"][evt_kind]; // ?
 
   let evt_cls!: typeof events.CommandEvent;
-  let props: { [key: string]: any } = { cmd_idx: parseInt(evt_obj["index"]) };
+  const props: { [key: string]: any } = { cmd_idx: parseInt(evt_obj["index"]) };
 
   switch (evt_kind) {
     case "started":
@@ -639,6 +581,7 @@ function _command_event_ctx(msg_event) {
       }
       evt_cls = events.CommandStarted;
       props["command"] = evt_data["command"];
+      break;
     case "finished":
       if (!(evt_obj instanceof Object && Number(evt_data["return_code"]))) {
         throw Error("Invalid CommandFinished event: missing 'return code'");
@@ -646,12 +589,15 @@ function _command_event_ctx(msg_event) {
       evt_cls = events.CommandExecuted;
       props["success"] = parseInt(evt_data["return_code"]) === 0;
       props["message"] = evt_data["message"];
+      break;
     case "stdout":
       evt_cls = events.CommandStdOut;
       props["output"] = JSON.stringify(evt_data) || "";
+      break;
     case "stderr":
       evt_cls = events.CommandStdErr;
       props["output"] = JSON.stringify(evt_data) || "";
+      break;
     default:
       throw Error(`Unsupported runtime event: ${evt_kind}`);
   }
@@ -660,18 +606,16 @@ function _command_event_ctx(msg_event) {
 
 export class ApiConfigProvider extends BaseAPI {
   constructor(api: BaseAPI) {
-    let as_this: ApiConfigProvider = <ApiConfigProvider>api;
+    const as_this: ApiConfigProvider = <ApiConfigProvider>api;
     super(as_this.configuration, as_this.basePath, as_this.axios);
   }
 
   base_path(): string {
-    return this.configuration && this.configuration.basePath
-      ? this.configuration.basePath
-      : "";
+    return this.configuration && this.configuration.basePath ? this.configuration.basePath : "";
   }
 
   async api_key(): Promise<string | undefined> {
-    let api_key = this.configuration ? this.configuration.apiKey : undefined;
+    const api_key = this.configuration ? this.configuration.apiKey : undefined;
     if (typeof api_key === "string") {
       return api_key;
     }

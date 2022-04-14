@@ -17,19 +17,10 @@ class _InfSgx extends InfBase {
 }
 
 class _SgxConstrains extends Constraints {
-  constructor(
-    runtime: RuntimeType,
-    min_mem_gib: number,
-    min_storage_gib: number
-  ) {
+  constructor(runtime: RuntimeType, min_mem_gib: number, min_storage_gib: number) {
     super();
 
-    const fields = InfBase.fields(new _InfSgx(runtime), [
-      "cores",
-      "mem",
-      "storage",
-      "runtime",
-    ]);
+    const fields = InfBase.fields(new _InfSgx(runtime), ["cores", "mem", "storage", "runtime"]);
 
     super.extend([
       `(${fields["cores"]}>=1)`,
@@ -42,9 +33,7 @@ class _SgxConstrains extends Constraints {
 
 const DEFAULT_SGX_CONFIG = {
   enableAttestation: true,
-  exeunitHashes: [
-    "5edbb025714683961d4a2cb51b1d0a4ee8225a6ced167f29eb67f639313d9490",
-  ],
+  exeunitHashes: ["5edbb025714683961d4a2cb51b1d0a4ee8225a6ced167f29eb67f639313d9490"],
   allowDebug: true,
   allowOutdatedTcb: true,
   maxEvidenceAge: 60,
@@ -58,14 +47,14 @@ class SgxConfig {
   maxEvidenceAge!: number; // seconds
 
   static from_env(): SgxConfig {
-    let env_path = process.env.YAGNA_SGX_CONFIG;
-    let json = env_path ? fs.readFileSync(env_path) : DEFAULT_SGX_CONFIG;
+    const env_path = process.env.YAGNA_SGX_CONFIG;
+    const json = env_path ? fs.readFileSync(env_path) : DEFAULT_SGX_CONFIG;
 
     json["exeunitHashes"].forEach((hex: string, i: number) => {
       json["exeunitHashes"][i] = types.bytes.Bytes32.from(types.parseHex(hex));
     });
 
-    let sgx_config: SgxConfig = Object.create(this.prototype);
+    const sgx_config: SgxConfig = Object.create(this.prototype);
     return Object.assign(sgx_config, json);
   }
 }
@@ -88,13 +77,8 @@ export enum SgxEngine {
     - *min_storage_gib* minimal disk storage to execute tasks.
 
     */
-export async function repo({
-  engine,
-  image_hash,
-  min_mem_gib,
-  min_storage_gib,
-}: RepoOpts): Promise<Package> {
-  let secure = true;
+export async function repo({ engine, image_hash, min_mem_gib, min_storage_gib }: RepoOpts): Promise<Package> {
+  const secure = true;
   let runtime: RuntimeType;
 
   switch (engine) {
@@ -115,7 +99,7 @@ export async function repo({
   }
 
   return new VmPackage({
-    repo_url: await resolve_repo_srv({repo_srv: DEFAULT_REPO_SRV}),
+    repo_url: await resolve_repo_srv({ repo_srv: DEFAULT_REPO_SRV }),
     image_hash,
     constraints: new _SgxConstrains(runtime, min_mem_gib, min_storage_gib),
     secure,

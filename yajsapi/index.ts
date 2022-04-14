@@ -4,7 +4,7 @@ import * as props from "./props";
 import * as rest from "./rest";
 import * as storage from "./storage";
 import * as utils from "./utils";
-import { Network } from "./network";
+import * as network from "./network";
 
 // For debug purposes, in case of unhandled rejection issues
 // detect the related async call with this
@@ -13,4 +13,4 @@ import { Network } from "./network";
 //   console.log('Unhandled Rejection at: Promise', p, 'reason:', reason);
 // });
 
-export { Executor, ExecOptions, Task, sgx, vm, Work, WorkContext, BatchResults, props, rest, storage, utils };
+export { Executor, ExecOptions, Task, sgx, vm, Work, WorkContext, BatchResults, props, rest, storage, utils, network };

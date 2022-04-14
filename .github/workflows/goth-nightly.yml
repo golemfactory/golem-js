@@ -46,7 +46,7 @@ jobs:
       - name: Configure node.js
         uses: actions/setup-node@v1
         with:
-          node-version: '12.18.3'
+          node-version: '14.17.0'
 
       - name: Build yajsapi
         run: |
@@ -124,7 +124,7 @@ jobs:
         # all Python versions (https://github.com/python-poetry/poetry/issues/3208).
         run: |
           cd tests/goth/
-          poetry env remove python3.8 
+          poetry env remove python3.8
 
       - name: Send Discord notification on failure
         uses: Ilshidur/action-discord@0.3.2

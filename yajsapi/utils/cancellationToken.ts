@@ -7,10 +7,7 @@ export default class Token {
   }
 
   get cancelled(): boolean {
-    return (
-      this._cancelled ||
-      (this._cancelled = this._parent ? this._parent.cancelled : false)
-    );
+    return this._cancelled || (this._cancelled = this._parent ? this._parent.cancelled : false);
   }
 
   cancel(): void {
