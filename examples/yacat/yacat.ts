@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { Executor, Task, utils, vm, WorkContext } from "../../yajsapi";
+import { Executor, Task, utils, vm, WorkContext } from "yajsapi";
 import { program } from "commander";
 
 const { asyncWith, logger, range } = utils;

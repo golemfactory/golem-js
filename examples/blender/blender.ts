@@ -1,7 +1,7 @@
 import path from "path";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
-import { Executor, Task, utils, vm, WorkContext } from "../../yajsapi";
+import { Executor, Task, utils, vm, WorkContext } from "yajsapi";
 import { program } from "commander";
 
 dayjs.extend(duration);
