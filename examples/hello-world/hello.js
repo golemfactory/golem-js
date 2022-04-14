@@ -3,7 +3,7 @@ const {
   Task,
   utils: { asyncWith },
   vm,
-} = require("../../dist");
+} = require("yajsapi");
 
 async function main() {
   const task_package = await vm.repo({

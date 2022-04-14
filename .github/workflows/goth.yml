@@ -30,6 +30,7 @@ jobs:
           npm install
           npm run-script build
           cd examples
+          jq '.dependencies.yajsapi = "file:../dist"' <package.json >tmp.json && mv tmp.json package.json
           npm install
           npm run build
 

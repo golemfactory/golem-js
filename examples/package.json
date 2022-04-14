@@ -26,7 +26,8 @@
         "bluebird": "^3.7.2",
         "commander": "^9.1.0",
         "dayjs": "~1.9.1",
-        "ts-node": "^10.7.0"
+        "ts-node": "^10.7.0",
+        "yajsapi": "^0.6.0"
     },
     "devDependencies": {
         "@types/node": "14",
