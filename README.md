@@ -38,12 +38,14 @@ export YAGNA_APPKEY=your_yagna_app_key_here
 ```
 
 ### When ready
-- `npm run js:hello`    will start hello world javascript example
-- `npm run js:blender`  will start blender javascript example
-- `npm run ts:blender`  will start blender typescript example
-- `npm run js:low`      will start javascript low level api example
-- `npm run ts:low`      will start typescript low level api example
-- `npm run ts:yacat`    will start typescript yacat example
+- `npm run js:hello`        will start hello world javascript example
+- `npm run js:blender`      will start blender javascript example
+- `npm run ts:blender`      will start blender typescript example
+- `npm run js:low`          will start javascript low level api example
+- `npm run ts:low`          will start typescript low level api example
+- `npm run ts:yacat`        will start typescript yacat example
+- `npm run js:fibonacci`    will start nodejs example
+- `npm run js:ssh`          will start javascript ssh example
 
 To run `yacat` using `npm`, special characters like `$` have to be escaped using `\`, e.g.:
 ```
