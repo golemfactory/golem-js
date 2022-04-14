@@ -26,7 +26,7 @@ async function main(subnetTag, payment_driver, payment_network, count = 2, sessi
         console.log("\n------------------------------------------");
         console.log(`Connect via ssh to provider "${context.provider_info.provider_name}" with:`);
         console.log(
-          `ssh -o ProxyCommand='websocat asyncstdio: ${connection_uri} --binary -H=Authorization:"Bearer ${app_key}"'s root@${crypto
+          `ssh -o ProxyCommand='websocat asyncstdio: ${connection_uri} --binary -H=Authorization:"Bearer ${app_key}"' root@${crypto
             .randomBytes(10)
             .toString("hex")}`
         );
