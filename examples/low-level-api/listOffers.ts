@@ -24,17 +24,14 @@ async function list_offers(conf: rest.Configuration, subnetTag: string): Promise
   act.expiration.value = dayjs().utc().unix() * 1000;
   dbuild.add(act);
 
-  await asyncWith(
-    await market_api.subscribe(dbuild.properties(), dbuild.constraints()),
-    async (subscription: Subscription) => {
-      for await (const event of subscription.events(cancellationToken)) {
-        console.log(`Offer: ${event.id()}`);
-        console.log(`from ${event.issuer()}`);
-        console.log(`props ${JSON.stringify(event.props(), null, 4)}`);
-        console.log("\n\n");
-      }
-    }
-  );
+  const subscription = await market_api.subscribe(dbuild.properties(), dbuild.constraints());
+  for await (const event of subscription.events(cancellationToken)) {
+    console.log(`Offer: ${event.id()}`);
+    console.log(`from ${event.issuer()}`);
+    console.log(`props ${JSON.stringify(event.props(), null, 4)}`);
+    console.log("\n\n");
+  }
+  await subscription.delete();
   console.log("done");
 }
 

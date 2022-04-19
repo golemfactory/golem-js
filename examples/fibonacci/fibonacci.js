@@ -1,9 +1,9 @@
 const { Executor, Task, utils, vm } = require("yajsapi");
-const { asyncWith, logUtils } = utils;
+const { logUtils } = utils;
 const { program } = require("commander");
 
-async function main(fibo_n = 1, tasks_count = 1, subnetTag, driver, network) {
-  const _package = await vm.repo({
+async function main(fibo_n = 1, tasks_count = 1, subnet_tag, payment_driver, payment_network) {
+  const task_package = await vm.repo({
     image_hash: "529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4",
   });
   const tasks = Array(tasks_count).fill(new Task({}));
@@ -17,21 +17,20 @@ async function main(fibo_n = 1, tasks_count = 1, subnetTag, driver, network) {
     }
   }
 
-  await asyncWith(
-    new Executor({
-      task_package: _package,
-      budget: "1",
-      subnet_tag: subnetTag,
-      driver: driver,
-      network: network,
-      event_consumer: logUtils.logSummary(),
-    }),
-    async (executor) => {
-      for await (let completed of executor.submit(worker, tasks)) {
-        console.log(completed.result().stdout);
-      }
+  const executor = new Executor({
+    task_package,
+    budget: "1",
+    subnet_tag,
+    payment_driver,
+    payment_network,
+    event_consumer: logUtils.logSummary(),
+  });
+
+  await executor.run(async (executor) => {
+    for await (let completed of executor.submit(worker, tasks)) {
+      console.log(completed.result().stdout);
     }
-  );
+  });
 }
 program
   .requiredOption("-n, --fibonacci-number <n>", "fibonacci number", (val) => parseInt(val))
