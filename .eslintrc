@@ -32,5 +32,5 @@
       ]
     }
   ],
-  "ignorePatterns": ["dist/", "handbook_gen/"]
+  "ignorePatterns": ["dist/", "handbook_gen/", "docs/"]
 }
