@@ -122,7 +122,7 @@ export class Network {
   }
 
   private _ensure_ip_in_network(ip: IPv4) {
-    if (!this._ip_range.contains(new IPv4CidrRange(ip, new IPv4Prefix(this._mask.prefix)))) {
+    if (!this._ip_range.contains(new IPv4CidrRange(ip, new IPv4Prefix(BigInt(this._mask.prefix))))) {
       throw new NetworkError(
         `The given IP ('${ip.toString()}') address must belong to the network ('${this._ip_range.toCidrString()}').`
       );
