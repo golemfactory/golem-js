@@ -1,24 +1,29 @@
-import { Activity as ActivityApi } from "../rest";
-import { Readable } from "stream";
+import stream from "stream";
 
 interface Script {
-    command: string;
-    arguments: string[];
-    environment: object;
+  commands: Command[];
+}
+
+interface Command {
+  todo: true;
+}
+
+interface Results extends stream.Readable {
+  todo: true;
 }
 
 export class Activity {
-    public readonly id;
+  public readonly id;
 
-    constructor(private activity_api: ActivityApi) {
-        
-    }
+  constructor(id) {
+    this.id = id;
+  }
 
-    async executeOne(script: Script): Promise<Readable> {
+  async execute(script: Script): Promise<Results> {
+    // todo
+  }
 
-    }
-
-    async executeMany(scripts: Script[]): Promise<Readable> {
-
-    }
+  async stop(): Promise<boolean> {
+    // todo
+  }
 }
