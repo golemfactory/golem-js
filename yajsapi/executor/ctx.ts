@@ -238,11 +238,13 @@ class _RecvFile extends Work {
 
   async post(): Promise<void> {
     if (!this._dst_slot) throw "_RecvFile post without prepare";
-    if (this._emitter) { 
-        this._emitter(new events.DownloadStarted({ path: this._src_path }));
+    if (this._emitter) {
+      this._emitter(new events.DownloadStarted({ path: this._src_path }));
     }
     await this._dst_slot.download_file(this._dst_path);
-    if (this._emitter) this._emitter(new events.DownloadFinished({ path: this._dst_path }));
+    if (this._emitter) {
+      this._emitter(new events.DownloadFinished({ path: this._dst_path }));
+    }
   }
 }
 
