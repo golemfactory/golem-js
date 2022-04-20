@@ -1,4 +1,4 @@
-export default function promisify(fn: (...args) => void): (arg) => Promise<any> {
+export default function promisify(fn: (...args) => any): (arg) => Promise<any> {
   return (...args) =>
     new Promise((resolve, reject) => {
       try {
