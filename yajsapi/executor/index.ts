@@ -208,25 +208,19 @@ export class Executor {
     network_address,
   }: ExecutorOpts) {
     this._subnet = subnet_tag ? subnet_tag : DEFAULT_SUBNET;
-    this._payment_driver = payment_driver
-      ? payment_driver.toLowerCase()
-      : driver
-      ? driver.toLowerCase()
-      : DEFAULT_DRIVER;
-    this._payment_network = payment_network
-      ? payment_network.toLowerCase()
-      : network
-      ? network.toLowerCase()
-      : DEFAULT_NETWORK;
+    this._payment_driver = payment_driver ? payment_driver.toLowerCase() : DEFAULT_DRIVER;
+    this._payment_network = payment_network ? payment_network.toLowerCase() : DEFAULT_NETWORK;
     if (driver) {
       logger.warn(
         `The 'driver' parameter is deprecated. It will be removed in a future release. Use 'payment_driver' instead.`
       );
+      this._payment_driver = driver.toLowerCase();
     }
     if (network) {
       logger.warn(
         `The 'network' parameter is deprecated. It will be removed in a future release. Use 'payment_network' instead.`
       );
+      this._payment_network = network.toLowerCase();
     }
     logger.info(`Using subnet: ${this._subnet}, network: ${this._payment_network}, driver: ${this._payment_driver}`);
     this._stream_output = false;
@@ -591,9 +585,10 @@ export class Executor {
             exec_options.batch_timeout = batch.timeout();
           }
         }
-        const batch_deadline = exec_options.batch_timeout
-          ? (Date.now() + exec_options.batch_timeout) / 1000
-          : undefined;
+        let batch_deadline;
+        if (exec_options.batch_timeout) {
+          batch_deadline = (Date.now() + exec_options.batch_timeout) / 1000;
+        }
         const current_worker_task = consumer.last_item();
         if (current_worker_task) {
           emit(
