@@ -6,7 +6,7 @@ const { program } = require("commander");
 
 dayjs.extend(duration);
 
-const { asyncWith, logUtils, range } = utils;
+const { logUtils, range } = utils;
 
 async function main(subnetTag, driver, network) {
   const _package = await vm.repo({
@@ -58,26 +58,24 @@ async function main(subnetTag, driver, network) {
   const frames = range(0, 60, 10);
   const timeout = dayjs.duration({ minutes: 15 }).asMilliseconds();
 
-  await asyncWith(
-    new Executor({
-      task_package: _package,
-      max_workers: 6,
-      timeout: timeout,
-      budget: "10.0",
-      subnet_tag: subnetTag,
-      driver: driver,
-      network: network,
-      event_consumer: logUtils.logSummary(),
-    }),
-    async (executor) => {
-      for await (let task of executor.submit(
-        worker,
-        frames.map((frame) => new Task(frame))
-      )) {
-        console.log("result=", task.result());
-      }
+  const executor = new Executor({
+    task_package: _package,
+    max_workers: 6,
+    timeout: timeout,
+    budget: "10.0",
+    subnet_tag: subnetTag,
+    driver: driver,
+    network: network,
+    event_consumer: logUtils.logSummary(),
+  });
+  await executor.run(async (executor) => {
+    for await (let task of executor.submit(
+      worker,
+      frames.map((frame) => new Task(frame))
+    )) {
+      console.log("result=", task.result());
     }
-  );
+  });
 }
 
 program

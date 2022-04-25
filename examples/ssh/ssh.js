@@ -1,5 +1,5 @@
 const { Executor, Task, utils, vm } = require("yajsapi");
-const { asyncWith, sleep } = utils;
+const { sleep } = utils;
 const crypto = require("crypto");
 const { program } = require("commander");
 
