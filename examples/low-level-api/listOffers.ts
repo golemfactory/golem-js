@@ -8,7 +8,7 @@ import { program } from "commander";
 dayjs.extend(utc);
 
 const { Configuration, Market } = rest;
-const { asyncWith, CancellationToken } = utils;
+const { CancellationToken } = utils;
 const cancellationToken = new CancellationToken();
 
 async function list_offers(conf: rest.Configuration, subnetTag: string): Promise<void> {
