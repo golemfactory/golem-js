@@ -2,7 +2,6 @@ import Bluebird from "bluebird";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import { props as yp, rest, utils } from "yajsapi";
-import { Subscription } from "yajsapi/rest/market";
 import { program } from "commander";
 
 dayjs.extend(utc);
