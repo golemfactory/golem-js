@@ -1,7 +1,6 @@
 import * as csp from "js-csp";
 import promisify from "./promisify";
 
-export default interface Queue<T> {}
 export default class Queue<T> {
   private _tasks;
   private __new_items;
@@ -22,11 +21,12 @@ export default class Queue<T> {
   }
 
   async get(): Promise<T> {
+    // eslint-disable-next-line no-async-promise-executor
     return new Promise(async (resolve, reject) => {
       if (this.__new_items.closed) reject("new_items channel interrupted");
       try {
         await promisify(csp.takeAsync)(this.__new_items);
-        let item = this._tasks.shift();
+        const item = this._tasks.shift();
         resolve(item);
       } catch (error) {
         reject(error);

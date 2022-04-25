@@ -27,7 +27,7 @@ function read_keyspace() {
 }
 
 function read_password(ranges) {
-  for (let r of ranges) {
+  for (const r of ranges) {
     const filePath = path.join(__dirname, `hashcat_${r}.potfile`);
     if (!fs.existsSync(filePath)) continue;
     const line = fs.readFileSync(filePath, {
@@ -49,12 +49,9 @@ async function main(args) {
   let step;
 
   async function* compute_keyspace(ctx: WorkContext, tasks) {
-    for await (let task of tasks) {
+    for await (const task of tasks) {
       const keyspace_sh_filename = "keyspace.sh";
-      ctx.send_file(
-        path.join(__dirname, keyspace_sh_filename),
-        "/golem/input/keyspace.sh"
-      );
+      ctx.send_file(path.join(__dirname, keyspace_sh_filename), "/golem/input/keyspace.sh");
       ctx.run("/bin/sh", ["/golem/input/keyspace.sh"]);
       const output_file = path.join(__dirname, "keyspace.txt");
       ctx.download_file("/golem/output/keyspace.txt", output_file);
@@ -65,22 +62,24 @@ async function main(args) {
 
   // Commands to be run on the provider
   function _make_attack_command(skip: number, limit: number, mask: string) {
-    return `touch /golem/output/hashcat_${skip}.potfile; ` +
-          `hashcat -a 3 -m 400 /golem/input/in.hash ` +
-          `${args.mask} --skip=${skip} --limit=${limit} ` +
-          `--self-test-disable -o /golem/output/hashcat_${skip}.potfile || true`;
+    return (
+      `touch /golem/output/hashcat_${skip}.potfile; ` +
+      `hashcat -a 3 -m 400 /golem/input/in.hash ` +
+      `${args.mask} --skip=${skip} --limit=${limit} ` +
+      `--self-test-disable -o /golem/output/hashcat_${skip}.potfile || true`
+    );
   }
 
   async function* perform_mask_attack(ctx: WorkContext, tasks) {
     ctx.send_file(path.join(__dirname, "in.hash"), "/golem/input/in.hash");
-    for await (let task of tasks) {
-      let skip = task.data();
-      let limit = skip + step;
+    for await (const task of tasks) {
+      const skip = task.data();
+      const limit = skip + step;
 
       const worker_output_path = `/golem/output/hashcat_${skip}.potfile`;
       ctx.run("/bin/sh", ["-c", _make_attack_command(skip, limit, worker_output_path)]);
 
-      let output_file = path.join(__dirname, `hashcat_${skip}.potfile`);
+      const output_file = path.join(__dirname, `hashcat_${skip}.potfile`);
       ctx.download_file(`/golem/output/hashcat_${skip}.potfile`, output_file);
 
       yield ctx.commit();
@@ -104,9 +103,7 @@ async function main(args) {
     async (executor: Executor): Promise<void> => {
       let keyspace_computed = false;
       // This is not a typical use of executor.submit as there is only one task, with no data:
-      for await (let task of executor.submit(
-        compute_keyspace, [new Task("compute_keyspace" as any)]
-      )) {
+      for await (const task of executor.submit(compute_keyspace, [new Task("compute_keyspace" as any)])) {
         keyspace_computed = true;
       }
       // Assume the errors have been already reported and we may return quietly.
@@ -116,7 +113,7 @@ async function main(args) {
       logger.info(`Keyspace size computed. Keyspace size = ${keyspace}.`);
       step = Math.floor(keyspace / args.numberOfProviders + 1);
       const ranges = range(0, keyspace, parseInt(step));
-      for await (let task of executor.submit(
+      for await (const task of executor.submit(
         perform_mask_attack,
         ranges.map((range) => new Task(range as any))
       )) {
@@ -137,17 +134,13 @@ program
   .option("--payment-driver, --driver <driver>", "payment driver name, for example 'erc20'")
   .option("--payment-network, --network <network>", "network name, for example 'rinkeby'")
   .option("-d, --debug", "output extra debugging")
-  .option(
-    "--number-of-providers <number_of_providers>",
-    "number of providers",
-    (value) => parseInt(value),
-    3
-  )
+  .option("--number-of-providers <number_of_providers>", "number of providers", (value) => parseInt(value), 3)
   .option("--mask <mask>")
   .option("--hash <hash>");
 
 program.parse(process.argv);
-if (program.debug) {
+const options = program.opts();
+if (options.debug) {
   utils.changeLogLevel("debug");
 }
-main(program);
+main(options);

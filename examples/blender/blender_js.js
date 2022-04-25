@@ -16,11 +16,8 @@ async function main(subnetTag, driver, network) {
   });
 
   async function* worker(ctx, tasks) {
-    ctx.send_file(
-      path.join(__dirname, "./cubes.blend"),
-      "/golem/resource/scene.blend"
-    );
-    
+    ctx.send_file(path.join(__dirname, "./cubes.blend"), "/golem/resource/scene.blend");
+
     for await (let task of tasks) {
       let frame = task.data();
       let crops = [
@@ -48,7 +45,7 @@ async function main(subnetTag, driver, network) {
         `/golem/output/out${frame.toString().padStart(4, "0")}.png`,
         path.join(__dirname, `./output_${frame}.png`)
       );
-      yield ctx.commit({timeout: dayjs.duration({ seconds: 120 }).asMilliseconds()});
+      yield ctx.commit({ timeout: dayjs.duration({ seconds: 120 }).asMilliseconds() });
       // TODO: Check
       // job results are valid // and reject by:
       // task.reject_task(msg = 'invalid file')
@@ -56,7 +53,6 @@ async function main(subnetTag, driver, network) {
     }
 
     ctx.log("no more frames to render");
-    return;
   }
 
   const frames = range(0, 60, 10);
@@ -82,7 +78,6 @@ async function main(subnetTag, driver, network) {
       }
     }
   );
-  return;
 }
 
 program
@@ -90,8 +85,9 @@ program
   .option("--payment-driver, --driver <driver>", "payment driver name, for example 'erc20'")
   .option("--payment-network, --network <network>", "network name, for example 'rinkeby'")
   .option("-d, --debug", "output extra debugging");
-program.parse(process.argv);
-if (program.debug) {
+program.parse();
+const options = program.opts();
+if (options.debug) {
   utils.changeLogLevel("debug");
 }
-main(program.subnetTag, program.driver, program.network);
+main(options.subnetTag, options.driver, options.network);
