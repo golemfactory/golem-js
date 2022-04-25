@@ -1,10 +1,11 @@
+/* eslint @typescript-eslint/ban-types: 0 */
 import { as_list, Model, Field } from "./base";
 
-export const SCHEME: string = "golem.com.scheme";
-export const PRICE_MODEL: string = "golem.com.pricing.model";
+export const SCHEME = "golem.com.scheme";
+export const PRICE_MODEL = "golem.com.pricing.model";
 
-export const LINEAR_COEFFS: string = "golem.com.pricing.model.linear.coeffs";
-export const DEFINED_USAGES: string = "golem.com.usage.vector";
+export const LINEAR_COEFFS = "golem.com.pricing.model.linear.coeffs";
+export const DEFINED_USAGES = "golem.com.usage.vector";
 
 export enum BillingScheme {
   PAYU = "payu",
@@ -32,13 +33,12 @@ export class ComLinear extends Com {
   public price_for!: Object;
 
   _custom_mapping(props, data: any) {
-    if (data["price_model"] != PriceModel.LINEAR)
-      throw "expected linear pricing model";
+    if (data["price_model"] != PriceModel.LINEAR) throw "expected linear pricing model";
 
-    let coeffs = as_list(props[LINEAR_COEFFS]);
-    let usages = as_list(props[DEFINED_USAGES]);
+    const coeffs = as_list(props[LINEAR_COEFFS]);
+    const usages = as_list(props[DEFINED_USAGES]);
 
-    let fixed_price = parseFloat(coeffs.pop() || "0");
+    const fixed_price = parseFloat(coeffs.pop() || "0");
     let price_for: object = {};
     for (let i = 0; i < coeffs.length; i++) {
       price_for = { ...price_for, [usages[i]]: parseFloat(coeffs[i]) };

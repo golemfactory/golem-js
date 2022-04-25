@@ -8,7 +8,7 @@ import eventLoop from "./eventLoop";
 import getAllProperties from "./getAllProperties";
 import logger, * as logUtils from "./log";
 import { changeLogLevel } from "./log";
-import promisify from './promisify';
+import promisify from "./promisify";
 import Queue from "./queue";
 import range from "./range";
 import sleep from "./sleep";

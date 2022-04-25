@@ -8,12 +8,13 @@ export default function get_event_loop() {
     create_task: bluebird.coroutine(function* (fn): any {
       return yield new bluebird.Promise(async (resolve, reject, onCancel) => {
         try {
-          let result = await fn();
+          const result = await fn();
           resolve(result);
         } catch (error) {
           reject(error);
         }
-        if(onCancel) onCancel(() => {
+        if (onCancel)
+          onCancel(() => {
             logger.warn("cancelled!");
             reject("cancelled!");
           });

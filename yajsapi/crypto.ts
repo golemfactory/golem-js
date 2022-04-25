@@ -3,7 +3,7 @@ import * as eccrypto from "eccrypto";
 import * as secp256k1 from "secp256k1";
 
 export function rand_hex(length: number): string {
-  let byte_sz = Math.floor(length / 2);
+  const byte_sz = Math.floor(length / 2);
   return crypto.randomBytes(byte_sz).toString("hex");
 }
 
@@ -15,20 +15,18 @@ export class PrivateKey {
   }
 
   static from(buffer: Buffer): PrivateKey {
-    let key = Object.create(this.prototype);
+    const key = Object.create(this.prototype);
     key.inner = buffer;
     return key;
   }
 
   static fromHex(hex: string): PublicKey {
-    let inner = Buffer.from(hex, "hex");
+    const inner = Buffer.from(hex, "hex");
     return PublicKey.from(inner);
   }
 
-  publicKey(compressed: boolean = true): PublicKey {
-    let buffer = compressed
-      ? eccrypto.getPublicCompressed(this.inner)
-      : eccrypto.getPublic(this.inner);
+  publicKey(compressed = true): PublicKey {
+    const buffer = compressed ? eccrypto.getPublicCompressed(this.inner) : eccrypto.getPublic(this.inner);
     return PublicKey.from(buffer);
   }
 
@@ -48,16 +46,14 @@ export class PrivateKey {
 export class PublicKey {
   inner!: Buffer;
 
-  private constructor() {}
-
   static from(buffer: Buffer): PublicKey {
-    let key = Object.create(this.prototype);
+    const key = Object.create(this.prototype);
     key.inner = buffer;
     return key;
   }
 
   static fromHex(hex: string): PublicKey {
-    let inner = Buffer.from(hex, "hex");
+    const inner = Buffer.from(hex, "hex");
     return PublicKey.from(inner);
   }
 
@@ -72,7 +68,7 @@ export class CryptoCtx {
 
   static async from(pub_key: PublicKey, priv_key?: PrivateKey): Promise<CryptoCtx> {
     priv_key = priv_key ? priv_key : new PrivateKey();
-    let ephem_key = Buffer.from(secp256k1.ecdh(pub_key.inner, priv_key.inner));
+    const ephem_key = Buffer.from(secp256k1.ecdh(pub_key.inner, priv_key.inner));
     return new CryptoCtx(priv_key, ephem_key);
   }
 
@@ -82,14 +78,14 @@ export class CryptoCtx {
   }
 
   encrypt(data: Buffer): Buffer {
-    let iv = crypto.randomBytes(12);
-    let cipher = crypto.createCipheriv("aes-256-gcm", this.ephem_key, iv);
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv("aes-256-gcm", this.ephem_key, iv);
 
-    let chunk_1 = cipher.update(data);
-    let chunk_2 = cipher.final();
-    let tag = cipher.getAuthTag();
+    const chunk_1 = cipher.update(data);
+    const chunk_2 = cipher.final();
+    const tag = cipher.getAuthTag();
 
-    let buffer = Buffer.alloc(1 + iv.length + 1 + tag.length, 0, 'binary');
+    const buffer = Buffer.alloc(1 + iv.length + 1 + tag.length, 0, "binary");
     let off = 0;
 
     buffer.writeUInt8(iv.length, off);
@@ -105,17 +101,17 @@ export class CryptoCtx {
 
   decrypt(data: Buffer): Buffer {
     let off = 0;
-    let iv_length = data.readUInt8(off);
+    const iv_length = data.readUInt8(off);
     off += 1;
-    let iv = data.slice(off, off + iv_length);
+    const iv = data.slice(off, off + iv_length);
     off += iv_length;
-    let tag_length = data.readUInt8(off);
+    const tag_length = data.readUInt8(off);
     off += 1;
-    let tag = data.slice(off, off + tag_length);
+    const tag = data.slice(off, off + tag_length);
     off += tag_length;
-    let enc = data.slice(off);
+    const enc = data.slice(off);
 
-    var cipher = crypto.createDecipheriv("aes-256-gcm", this.ephem_key, iv);
+    const cipher = crypto.createDecipheriv("aes-256-gcm", this.ephem_key, iv);
     cipher.setAuthTag(tag);
 
     return Buffer.concat([cipher.update(enc), cipher.final()]);

@@ -5,8 +5,8 @@ class _VmConstrains extends Constraints {
   constructor(
     min_mem_gib: number,
     min_storage_gib: number,
-    min_cpu_threads: number = 1,
-    cores: number = 1,
+    min_cpu_threads = 1,
+    cores = 1,
     capabilities: string[] = []
   ) {
     super();
@@ -17,7 +17,7 @@ class _VmConstrains extends Constraints {
       `(${InfVmKeys["runtime"]}=${RuntimeType.VM})`,
     ];
     if (capabilities.length) {
-      items.push(`(${InfVmKeys["capabilities"]}=${capabilities.join(',')})`)
+      items.push(`(${InfVmKeys["capabilities"]}=${capabilities.join(",")})`);
     }
     super.extend(items);
   }
@@ -29,7 +29,7 @@ export async function repo({
   min_storage_gib = 2.0,
   min_cpu_threads = 1,
   cores = 1,
-  capabilities = []
+  capabilities = [],
 }: RepoOpts): Promise<Package> {
   /*
     Builds reference to a demand decorator.
@@ -42,7 +42,7 @@ export async function repo({
     */
 
   return new VmPackage({
-    repo_url: await resolve_repo_srv({repo_srv: DEFAULT_REPO_SRV}),
+    repo_url: await resolve_repo_srv({ repo_srv: DEFAULT_REPO_SRV }),
     image_hash,
     constraints: new _VmConstrains(min_mem_gib, min_storage_gib, min_cpu_threads, cores, capabilities),
   });
