@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 
-import { rest } from "../yajsapi";
+import { rest } from "yajsapi";
 
 dayjs.extend(utc);
 const { Configuration, Market } = rest;
