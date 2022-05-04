@@ -2,6 +2,9 @@ import { Net } from "../rest";
 import { IPv4, IPv4Mask, IPv4Prefix, IPv4CidrRange } from "ip-num";
 import { logger } from "../utils";
 
+/**
+ * Describes a node in a VPN, mapping a Golem node id to an IP address
+ */
 export class NetworkNode {
   constructor(
     public readonly node_id: string,
@@ -10,6 +13,11 @@ export class NetworkNode {
     private net_api_url: string
   ) {}
 
+  /**
+   * Generate a dictionary of arguments that are required for the appropriate
+   `Deploy` command of an exescript in order to pass the network configuration to the runtime
+   on the provider's end.
+   */
   get_deploy_args() {
     return {
       net: [
@@ -21,6 +29,11 @@ export class NetworkNode {
     };
   }
 
+  /**
+   * Get the websocket URI corresponding with a specific TCP port on this Node.
+   * @param port TCP port of the service within the runtime
+   * @return the url
+   */
   get_websocket_uri(port: number) {
     const url = new URL(this.net_api_url);
     url.protocol = "ws";
@@ -37,6 +50,11 @@ interface NetworkInfo {
 
 export class NetworkError extends Error {}
 
+/**
+ * Network
+ *
+ * @description Describes a VPN created between the requestor and the provider nodes within Golem Network.
+ */
 export class Network {
   private _net_api: Net;
   private _ip: IPv4;
@@ -49,6 +67,16 @@ export class Network {
   private _nodes: Map<string, NetworkNode>;
   private network_id?: string;
 
+  /**
+   * Create a new VPN.
+   *
+   * @param net_api   the mid-level binding used directly to perform calls to the REST API.
+   * @param ip        the IP address of the network. May contain netmask, e.g. "192.168.0.0/24"
+   * @param owner_id  the node ID of the owner of this VPN (the requestor)
+   * @param owner_ip  the desired IP address of the requestor node within the newly-created network
+   * @param mask      optional netmask (only if not provided within the `ip` argument)
+   * @param gateway   optional gateway address for the network
+   */
   constructor(net_api: Net, ip: string, owner_id: string, owner_ip?: string, mask?: string, gateway?: string) {
     this._net_api = net_api;
     this._ip_range = IPv4CidrRange.fromCidr(mask ? `${ip}/${mask}` : ip);
@@ -74,6 +102,12 @@ export class Network {
     };
   }
 
+  /**
+   * Add a new node to the network.
+   *
+   * @param node_id Node ID within the Golem network of this VPN node
+   * @param ip_str  IP address to assign to this node
+   */
   async add_node(node_id: string, ip_str?: string): Promise<NetworkNode> {
     this._ensure_id_unique(node_id);
     let ip: IPv4;
@@ -93,6 +127,9 @@ export class Network {
     return node;
   }
 
+  /**
+   * Remove this network, terminating any connections it provides
+   */
   async remove(): Promise<boolean> {
     try {
       await this._net_api.remove_network(this.network_id!);
@@ -122,7 +159,7 @@ export class Network {
   }
 
   private _ensure_ip_in_network(ip: IPv4) {
-    if (!this._ip_range.contains(new IPv4CidrRange(ip, new IPv4Prefix(this._mask.prefix)))) {
+    if (!this._ip_range.contains(new IPv4CidrRange(ip, new IPv4Prefix(BigInt(this._mask.prefix))))) {
       throw new NetworkError(
         `The given IP ('${ip.toString()}') address must belong to the network ('${this._ip_range.toCidrString()}').`
       );
@@ -148,6 +185,16 @@ export class Network {
     }
   }
 
+  /**
+   * Create a new VPN.
+   *
+   * @param net_api   the mid-level binding used directly to perform calls to the REST API.
+   * @param ip        the IP address of the network. May contain netmask, e.g. "192.168.0.0/24"
+   * @param owner_id  the node ID of the owner of this VPN (the requestor)
+   * @param owner_ip  the desired IP address of the requestor node within the newly-created network
+   * @param mask      optional netmask (only if not provided within the `ip` argument)
+   * @param gateway   optional gateway address for the network
+   */
   static async create(
     net_api: Net,
     ip: string,

@@ -21,6 +21,7 @@ logger = logging.getLogger("goth.test.run_ssh")
 
 SUBNET_TAG = "goth"
 
+
 async def assert_no_errors(output_lines: EventStream[str]):
     """Assert that no output line contains the substring `ERROR`."""
     async for line in output_lines:
@@ -53,6 +54,7 @@ async def assert_all_invoices_accepted(output_lines: EventStream[str]):
             f"Unpaid agreements for: {','.join(unpaid_agreement_providers)}"
         )
 
+
 @pytest.mark.asyncio
 async def test_run_ssh(
     log_dir: Path,
@@ -60,6 +62,13 @@ async def test_run_ssh(
     config_overrides: List[Override],
     ssh_verify_connection: bool,
 ) -> None:
+
+    websocat_check = pexpect.spawn("/usr/bin/which websocat")
+    exit_code = websocat_check.wait()
+    if exit_code != 0:
+        raise ProcessLookupError(
+            "websocat binary not found, please install it or check your PATH."
+        )
 
     configure_logging(log_dir)
     # This is the default configuration with 2 wasm/VM providers
@@ -77,7 +86,7 @@ async def test_run_ssh(
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(
-            f"node {requestor_path} --subnet-tag {SUBNET_TAG} --timeout 10",
+            f"node {requestor_path} --subnet-tag {SUBNET_TAG} --timeout 15",
             env=os.environ,
         ) as (_cmd_task, cmd_monitor, process_monitor):
             start_time = time.time()
@@ -101,7 +110,9 @@ async def test_run_ssh(
 
             # # A longer timeout to account for downloading a VM image
             for i in range(2):
-                ssh_string = await cmd_monitor.wait_for_pattern("ssh -o ProxyCommand", timeout=120)
+                ssh_string = await cmd_monitor.wait_for_pattern(
+                    "ssh -o ProxyCommand", timeout=120
+                )
                 matches = re.match("ssh -o ProxyCommand=('.*') (root@.*)", ssh_string)
 
                 # the default API port goes through a proxy that logs REST requests
@@ -110,7 +121,9 @@ async def test_run_ssh(
                 # to the daemon's port in the requestor's Docker container
                 proxy_cmd = re.sub(":16(\\d\\d\\d)", ":6\\1", matches.group(1))
                 auth_str = matches.group(2)
-                password = re.sub("Password: ", "", await cmd_monitor.wait_for_pattern("Password:"))
+                password = re.sub(
+                    "Password: ", "", await cmd_monitor.wait_for_pattern("Password:")
+                )
                 ssh_connections.append((proxy_cmd, auth_str, password))
 
             if not ssh_verify_connection:

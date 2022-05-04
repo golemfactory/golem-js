@@ -46,7 +46,8 @@ const promiseTimeout = (seconds) =>
   );
 
 program.option('--subnet-tag <subnet>', 'set subnet name', 'devnet-beta');
-program.parse(process.argv);
-console.log(`Using subnet: ${program.subnetTag}`);
+program.parse();
+const options = program.opts();
+console.log(`Using subnet: ${options.subnetTag}`);
 
-Bluebird.Promise.any([list_offers(new Configuration(), program.subnetTag), promiseTimeout(4)]);
+Bluebird.Promise.any([list_offers(new Configuration(), options.subnetTag), promiseTimeout(4)]);
