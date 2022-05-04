@@ -6,15 +6,4 @@ import { Net } from "./net";
 import * as sgx from "../package/sgx";
 import * as vm from "../package/vm";
 
-export {
-  Activity,
-  ActivityService,
-  Configuration,
-  Invoice,
-  InvoiceStatus,
-  Market,
-  Payment,
-  Net,
-  vm,
-  sgx,
-};
+export { Activity, ActivityService, Configuration, Invoice, InvoiceStatus, Market, Payment, Net, vm, sgx };

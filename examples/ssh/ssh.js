@@ -1,4 +1,4 @@
-const { Executor, Task, utils, vm } = require("../../dist");
+const { Executor, Task, utils, vm } = require("yajsapi");
 const { asyncWith, sleep } = utils;
 const crypto = require("crypto");
 const { program } = require("commander");
@@ -9,7 +9,7 @@ async function main(subnetTag, payment_driver, payment_network, count = 2, sessi
     image_hash: "1e06505997e8bd1b9e1a00bd10d255fc6a390905e4d6840a22a79902",
     capabilities: ["vpn"],
   });
-  const tasks = new Array(count).fill(null).map((t) => new Task(null));
+  const tasks = new Array(count).fill(null).map(() => new Task(null));
   const app_key = process.env["YAGNA_APPKEY"];
 
   async function* worker(context, tasks) {
@@ -25,7 +25,11 @@ async function main(subnetTag, payment_driver, payment_network, count = 2, sessi
         const connection_uri = context.network_node.get_websocket_uri(22);
         console.log("\n------------------------------------------");
         console.log(`Connect via ssh to provider "${context.provider_info.provider_name}" with:`);
-        console.log(`ssh -o ProxyCommand='websocat asyncstdio: ${connection_uri} --binary -H=Authorization:\"Bearer ${app_key}\"' root@${crypto.randomBytes(10).toString("hex")}`);
+        console.log(
+          `ssh -o ProxyCommand='websocat asyncstdio: ${connection_uri} --binary -H=Authorization:"Bearer ${app_key}"' root@${crypto
+            .randomBytes(10)
+            .toString("hex")}`
+        );
         console.log(`Password: ${password}`);
         console.log("------------------------------------------\n");
         await sleep(session_timeout);
@@ -44,7 +48,7 @@ async function main(subnetTag, payment_driver, payment_network, count = 2, sessi
       payment_driver,
       payment_network,
       network_address: "192.168.0.0/24",
-      max_workers: count
+      max_workers: count,
     }),
     async (executor) => {
       for await (let completed of executor.submit(worker, tasks)) {
@@ -61,8 +65,9 @@ program
   .option("--task-count, --count <count>", "task count", (val) => parseInt(val))
   .option("--session-timeout, --timeout <timeout>", "ssh session timeout (in seconds)", (val) => parseInt(val))
   .option("-d, --debug", "output extra debugging");
-program.parse(process.argv);
-if (program.debug) {
+program.parse();
+const options = program.opts();
+if (options.debug) {
   utils.changeLogLevel("debug");
 }
-main(program.subnetTag, program.payment_driver, program.payment_network, program.count, program.timeout);
+main(options.subnetTag, options.payment_driver, options.payment_network, options.count, options.timeout);

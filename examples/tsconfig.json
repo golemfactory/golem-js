@@ -3,6 +3,7 @@
       "module": "commonjs",
       "noImplicitAny": false,
       "suppressImplicitAnyIndexErrors": true,
+      "useUnknownInCatchVariables": false,
       "target": "esnext",
       "strict": true,
       "esModuleInterop": true,
