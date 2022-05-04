@@ -21,9 +21,11 @@ export class Activity {
 
   async execute(script: Script): Promise<Results> {
     // todo
+    return {} as Results;
   }
 
   async stop(): Promise<boolean> {
     // todo
+    return false;
   }
 }
