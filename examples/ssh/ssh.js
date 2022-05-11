@@ -1,5 +1,5 @@
 const { Executor, Task, utils, vm } = require("yajsapi");
-const { asyncWith, sleep } = utils;
+const { sleep } = utils;
 const crypto = require("crypto");
 const { program } = require("commander");
 
@@ -40,22 +40,20 @@ async function main(subnetTag, payment_driver, payment_network, count = 2, sessi
     }
   }
 
-  await asyncWith(
-    new Executor({
-      task_package: _package,
-      budget: "1.0",
-      subnet_tag: subnetTag,
-      payment_driver,
-      payment_network,
-      network_address: "192.168.0.0/24",
-      max_workers: count,
-    }),
-    async (executor) => {
-      for await (let completed of executor.submit(worker, tasks)) {
-        console.log(`Task ${completed.id} completed. Session SSH closed after ${session_timeout} secs timeout.`);
-      }
+  const executor = new Executor({
+    task_package: _package,
+    budget: "1.0",
+    subnet_tag: subnetTag,
+    payment_driver,
+    payment_network,
+    network_address: "192.168.0.0/24",
+    max_workers: count,
+  });
+  await executor.run(async (executor) => {
+    for await (let completed of executor.submit(worker, tasks)) {
+      console.log(`Task ${completed.id} completed. Session SSH closed after ${session_timeout} secs timeout.`);
     }
-  );
+  });
 }
 
 program
