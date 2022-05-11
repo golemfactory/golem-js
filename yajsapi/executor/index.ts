@@ -1005,4 +1005,16 @@ export class Executor {
       this._event_consumer_cancellation_token.cancel();
     }
   }
+
+  async run(runner) {
+    const executor = await this.ready();
+    let errorInRunner;
+    try {
+      await runner(executor);
+    } catch (error) {
+      errorInRunner = error;
+    }
+    await this.done();
+    if (errorInRunner) { throw errorInRunner; }
+  }
 }
