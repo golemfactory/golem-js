@@ -15,6 +15,12 @@ test("execute activity", async (t) => {
   for await (const result of results) {
     t.is(result, "OK");
   }
+  return new Promise((res) => {
+    activity.on("StateChanged", (state) => {
+      t.is(state, "Terminated");
+      res();
+    });
+  });
 });
 
 test("stop activity", async (t) => {
