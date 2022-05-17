@@ -3,7 +3,7 @@ import { executeMock, stateApi } from "./mock";
 import { Logger, LoggerOptions } from "../utils/logger";
 import EventEmitter from "events";
 import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity/src/models/activity-state";
-import { RequestorControlApi } from "ya-ts-client/dist/ya-activity/api";
+import * as api from "ya-ts-client/dist/ya-activity/api";
 
 export enum ActivityEvents {
   StateChanged = "StateChanged",
@@ -22,7 +22,7 @@ export interface ActivityOptions {
 
 export class Activity extends EventEmitter {
   private state: ActivityStateStateEnum;
-  private api: RequestorControlApi;
+  private api: api.RequestorControlApi;
   private stateApi;
   private logger?: Logger;
   private readonly stateFetchIntervalId?: NodeJS.Timeout;
@@ -33,7 +33,7 @@ export class Activity extends EventEmitter {
   constructor(public readonly id, private readonly options?: ActivityOptions) {
     super({ captureRejections: true });
     this.state = ActivityStateStateEnum.New;
-    this.api = new RequestorControlApi();
+    this.api = new api.RequestorControlApi();
     this.stateApi = new stateApi();
     this.requestTimeout = options?.requestTimeout || 10;
     this.isResultsFetchingByStream = options?.isResultsFetchingByStream || false;
@@ -50,11 +50,16 @@ export class Activity extends EventEmitter {
   async execute(script: Script): Promise<Results> {
     // TODO: check this in yagna
     // if (this.state !== ActivityStateStateEnum.Ready) throw new Error("TODO");
-    const results = executeMock(script);
-    this.emit(ActivityEvents.ScriptSent);
-    results.on("end", () => this.emit(ActivityEvents.ScriptExecuted));
-    await this.getState();
-    return results;
+    if (this.isResultsFetchingByStream) {
+      // todo
+    }
+
+    // @ts-ignore
+    return this.api.exec("xxx", null);
+    // this.emit(ActivityEvents.ScriptSent);
+    // results.on("end", () => this.emit(ActivityEvents.ScriptExecuted));
+    // await this.getState();
+    // return results;
   }
 
   async stop(): Promise<boolean> {
