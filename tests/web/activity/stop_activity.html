@@ -7,44 +7,18 @@
 </head>
 <body>
     <h1>Activity module</h1>
-    <h2>Tests:</h2>
-    <ol>
-        <li>create activity: <b id="create_activity"></b></li>
-        <li>execute activity: <b id="execute_activity"></b></li>
-        <li>stop activity: <b id="stop_activity"></b></li>
-    </ol>
-    <h2>Events:</h2>
-    <ul id="events">
-    </ul>
+    <h2>Stop Activity Test</h2>
+    <button onclick="stop()">stop</button>
+    <h4>Result: <b id="stop_activity">--</b></h4>
+    <h4>Event: <b id="stop_activity_event">--</b></h4>
     <script>
-        async function main() {
-            const create_activity_el = document.getElementById('create_activity');
-            const execute_activity_el = document.getElementById('execute_activity');
-            const stop_activity_el = document.getElementById('stop_activity');
-            const events_el = document.getElementById('events');
-
+        async function stop() {
             const activity = new yajsapi.Activity('test_id');
-            create_activity_el.innerText = activity ? 'OK' : 'FAILED';
-
-            const appendEvent = (name, data) => {
-                console.log(name, data);
-                const li = document.createElement('li');
-                li.appendChild(document.createTextNode(`${name}: ${data}`));
-                events_el.appendChild(li);
-            }
-            activity.on('StateChanged', (e) => appendEvent('StateChanged', e));
-            activity.on('ScriptSent', (e) => appendEvent('ScriptSent', e));
-            activity.on('ScriptExecuted', (e) => appendEvent('ScriptExecuted', e));
-
-            const script = new yajsapi.Script(['test_command']);
-            const results = await activity.execute(script);
-            for await (const result of results) {
-                execute_activity_el.innerHTML += result + ', ';
-            }
-            if (results) execute_activity_el.innerText = 'OK';
+            const stop_activity_el = document.getElementById('stop_activity');
+            const stop_activity_event_el = document.getElementById('stop_activity_event');
+            activity.on('ActivityEnded', (e) => (stop_activity_event_el.innerText = 'ActivityEnded - OK'));
             stop_activity_el.innerText = await activity.stop() ? 'OK' : 'FAILED';
         }
-        main();
     </script>
 </body>
 </html>

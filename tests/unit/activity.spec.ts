@@ -63,7 +63,7 @@ test("get activity state by event", async (t) => {
   ]);
   return new Promise((res) => {
     activity.on("StateChanged", (state) => {
-      t.is(state, ActivityStateStateEnum.Ready);
+      t.is(state, ActivityStateStateEnum.Initialized);
       res();
     });
   });

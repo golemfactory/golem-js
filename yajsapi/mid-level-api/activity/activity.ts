@@ -109,7 +109,7 @@ export class Activity extends EventEmitter {
     //     .catch((error) => this.logger?.warn(`Got API Exception when destroying activity ${this.id}: ${error}`));
     if (this.stateFetchIntervalId) clearInterval(this.stateFetchIntervalId);
     await this.getState();
-    this.emit(ActivityEvents.ActivityEnded, this.state);
+    this.emit(ActivityEvents.ActivityEnded);
     if (error) this.logger?.debug("Activity ended with an error: " + error);
     else this.logger?.debug("Activity ended");
   }
