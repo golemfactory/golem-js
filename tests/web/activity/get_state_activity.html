@@ -27,6 +27,7 @@
             create_activity_el.innerText = activity ? 'OK' : 'FAILED';
 
             const appendEvent = (name, data) => {
+                console.log(name, data);
                 const li = document.createElement('li');
                 li.appendChild(document.createTextNode(`${name}: ${data}`));
                 events_el.appendChild(li);
@@ -38,8 +39,9 @@
             const script = new yajsapi.Script(['test_command']);
             const results = await activity.execute(script);
             for await (const result of results) {
-                execute_activity_el.innerText += result;
+                execute_activity_el.innerHTML += result + ', ';
             }
+            if (results) execute_activity_el.innerText = 'OK';
             stop_activity_el.innerText = await activity.stop() ? 'OK' : 'FAILED';
         }
         main();

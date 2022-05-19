@@ -15,11 +15,15 @@ module.exports = {
   },
   resolve: {
     extensions: [".ts", ".js"],
+    alias: {
+      "ya-ts-client/dist/ya-activity/api$": path.resolve(__dirname, "tests/mock/activity_api.ts"),
+    },
     fallback: {
       child_process: "empty",
       // fs: require.resolve("browserify-fs"),
       stream: require.resolve("stream-browserify"),
       buffer: require.resolve("buffer/"),
+      timers: require.resolve("timers-browserify"),
       // dgram: require.resolve("dgram-browserify"),
       // util: require.resolve("util"),
       // http: require.resolve("stream-http"),

@@ -2,6 +2,7 @@
 /node_modules
 /examples/logs
 /examples/node_modules
+/tests/web/node_modules/
 
 #Outputs
 /.nyc_output
@@ -14,6 +15,7 @@
 /examples/yacat/*.hash
 /examples/yacat/*.potfile
 logs/
+/tests/web/output/
 
 #Lock files
 package-lock.json
