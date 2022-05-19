@@ -22,7 +22,7 @@
 
             const appendEvent = (name, data) => {
                 const li = document.createElement('li');
-                li.appendChild(document.createTextNode(`${name}: ${data || '-'}`));
+                li.appendChild(document.createTextNode(`${name}: ${data || 'OK'}`));
                 events_el.appendChild(li);
             }
             activity.on('StateChanged', (e) => appendEvent('StateChanged', e));

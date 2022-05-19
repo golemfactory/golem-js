@@ -12,5 +12,5 @@ Scenario("Execute activity", ({ I }) => {
   I.see("ScriptExecuted", "#events > li");
   I.see("StateChanged: Initialized", "#events > li");
   I.waitForText("StateChanged: Deployed", 6, "#events > li");
-  I.waitForText("StateChanged: Terminated", 10, "#events > li");
+  I.waitForText("StateChanged: Terminated", 12, "#events > li");
 });
