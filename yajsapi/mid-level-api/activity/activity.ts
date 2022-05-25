@@ -1,5 +1,6 @@
-import { Command, Results, Script } from "./script";
-import { Logger, LoggerOptions } from "../utils/logger";
+import { Command, Script } from "../script/script";
+import { Results, BatchResults, StreamResults } from "./results";
+import { Logger } from "../utils/logger";
 import EventEmitter from "events";
 import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity/src/models/activity-state";
 import { RequestorControlApi, RequestorStateApi } from "ya-ts-client/dist/ya-activity/api";
@@ -7,18 +8,13 @@ import { setInterval } from "timers";
 
 export enum ActivityEvents {
   StateChanged = "StateChanged",
-  ScriptSent = "ScriptSent",
-  ScriptExecuted = "ScriptExecuted",
-  ActivityEnded = "ActivityEnded",
 }
 
 export interface ActivityOptions {
   credentials?: { TODO: true };
   requestTimeout?: number;
-  isResultsFetchingByStream?: boolean; // TODO: explain difference in docs / comments.
-  stateFetchIntervalTime?: number; // TODO: explain event emitter via polling state..
-  logger?: Logger | boolean;
-  loggerOptions?: LoggerOptions;
+  stateFetchInterval?: number; // TODO: explain event emitter via polling state..
+  logger?: Logger;
 }
 
 export class Activity extends EventEmitter {
@@ -28,8 +24,7 @@ export class Activity extends EventEmitter {
   private readonly logger?: Logger;
   private readonly stateFetchIntervalId?: NodeJS.Timeout;
   private readonly requestTimeout: number;
-  private readonly isResultsFetchingByStream: boolean;
-  private readonly stateFetchIntervalTime: number;
+  private readonly stateFetchInterval: number;
 
   constructor(public readonly id, private readonly options?: ActivityOptions) {
     super({ captureRejections: true });
@@ -37,18 +32,17 @@ export class Activity extends EventEmitter {
     this.api = new RequestorControlApi();
     this.stateApi = new RequestorStateApi();
     this.requestTimeout = options?.requestTimeout || 10;
-    this.isResultsFetchingByStream = options?.isResultsFetchingByStream || false;
-    this.stateFetchIntervalTime = options?.stateFetchIntervalTime || 5000;
+    this.stateFetchInterval = options?.stateFetchInterval || 5000;
     if (options?.logger instanceof Logger) {
       this.logger = options.logger;
-    } else if (options?.logger) {
-      this.logger = new Logger(options?.loggerOptions);
+    } else if (options?.logger !== false) {
+      this.logger = new Logger();
     }
-    this.stateFetchIntervalId = setInterval(() => this.getState(), this.stateFetchIntervalTime);
+    this.stateFetchIntervalId = setInterval(() => this.getState(), this.stateFetchInterval);
     this.getState();
   }
 
-  async execute(script: Script): Promise<Results> {
+  async execute(script: Script, stream?: boolean): Promise<Results<StreamResults | BatchResults>> {
     // TODO: if (this.state !== ActivityStateStateEnum.Ready) throw new Error("TODO");
     let batchId;
     try {
@@ -58,15 +52,14 @@ export class Activity extends EventEmitter {
       this.logger?.warn(`Error while sending batch script to provider: ${error}`);
       throw error;
     }
-    this.emit(ActivityEvents.ScriptSent);
-    if (this.isResultsFetchingByStream) {
-      // todo
-    }
     const api = this.api;
     const activityId = this.id;
-    const emit = (e) => this.emit(e);
     let i = 0; // mocked
-    return new Results({
+    if (stream) {
+      // todo
+      return new Results<StreamResults>();
+    }
+    return new Results<BatchResults>({
       encoding: "utf8",
       async read() {
         if (i < 5) {
@@ -75,7 +68,6 @@ export class Activity extends EventEmitter {
           this.push(results.pop());
           ++i;
         } else {
-          emit(ActivityEvents.ScriptExecuted);
           this.push(null);
         }
       },
@@ -109,7 +101,6 @@ export class Activity extends EventEmitter {
     //     .catch((error) => this.logger?.warn(`Got API Exception when destroying activity ${this.id}: ${error}`));
     if (this.stateFetchIntervalId) clearInterval(this.stateFetchIntervalId);
     await this.getState();
-    this.emit(ActivityEvents.ActivityEnded);
     if (error) this.logger?.debug("Activity ended with an error: " + error);
     else this.logger?.debug("Activity ended");
   }
