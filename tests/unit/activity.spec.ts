@@ -8,7 +8,7 @@ rewiremock("ya-ts-client/dist/ya-activity/api").with({
 });
 rewiremock.enable();
 import { Activity } from "../../yajsapi/mid-level-api/activity/activity";
-import { Script, Command } from "../../yajsapi/mid-level-api/activity/script";
+import { Script, Start, Deploy, Run, Terminate } from "../../yajsapi/mid-level-api/script/script";
 import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity/src/models/activity-state";
 
 test("create activity", async (t) => {
@@ -18,7 +18,7 @@ test("create activity", async (t) => {
 
 test("execute activity and get results by iterator", async (t) => {
   const activity = new Activity("test_id");
-  const command = new Command("test_command");
+  const command = new Run("test_command");
   const script = new Script([command]);
   activity["api"]["setExpected"]("exec", "test_batch_id");
   activity["api"]["setExpected"]("getExecBatchResults", ["one", "two", "three", "four"]);
@@ -31,7 +31,7 @@ test("execute activity and get results by iterator", async (t) => {
 
 test("execute activity and get results by events", async (t) => {
   const activity = new Activity("test_id");
-  const command = new Command("test_command");
+  const command = new Run("test_command");
   const script = new Script([command]);
   activity["api"]["setExpected"]("exec", "test_batch_id");
   activity["api"]["setExpected"]("getExecBatchResults", ["one", "two", "three", "four"]);
@@ -72,4 +72,16 @@ test("get activity state by event", async (t) => {
 test("stop activity", async (t) => {
   const activity = new Activity("test_id");
   t.is(await activity.stop(), true);
+});
+
+test("execute one command in activity", async (t) => {
+  const activity = new Activity("test_id");
+  const resultDeploy = await activity.executeCommand(new Deploy());
+  const resultStart = await activity.executeCommand(new Start());
+  const resultRun = await activity.executeCommand(new Run("date"));
+  const resultTerminate = await activity.executeCommand(new Terminate());
+  t.is(resultDeploy, { todo: 1 });
+  t.is(resultStart, { todo: 1 });
+  t.is(resultRun, { todo: 1 });
+  t.is(resultTerminate, { todo: 1 });
 });
