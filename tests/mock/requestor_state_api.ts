@@ -8,11 +8,11 @@ export class RequestorSateApiMock extends RequestorStateApi {
     getActivityState: null,
   };
   private mockStackResults = [
-    [ActivityStateStateEnum.Terminated, ActivityStateStateEnum.Unresponsive],
-    [ActivityStateStateEnum.Unresponsive, ActivityStateStateEnum.Deployed],
-    [ActivityStateStateEnum.Deployed, ActivityStateStateEnum.Ready],
-    [ActivityStateStateEnum.Ready, ActivityStateStateEnum.Initialized],
-    [ActivityStateStateEnum.Initialized, ActivityStateStateEnum.New],
+    [ActivityStateStateEnum.Initialized, ActivityStateStateEnum.Ready],
+    [ActivityStateStateEnum.Ready, ActivityStateStateEnum.Deployed],
+    [ActivityStateStateEnum.Deployed, ActivityStateStateEnum.Unresponsive],
+    [ActivityStateStateEnum.Unresponsive, ActivityStateStateEnum.Terminated],
+    [ActivityStateStateEnum.Terminated, null],
   ];
   private expectedErrors = {};
 
@@ -25,10 +25,14 @@ export class RequestorSateApiMock extends RequestorStateApi {
     this.expectedErrors[function_name] = errors;
   }
 
+  setExpectedNextStates(states) {
+    this.mockStackResults = states;
+  }
+
   // @ts-ignore
   getActivityState(activityId: string, options?: AxiosRequestConfig): Promise<AxiosResponse<ActivityState>> {
     return new Promise((res) =>
-      res({ data: { state: this.expectedResults?.getActivityState || this.mockStackResults.pop() } } as AxiosResponse)
+      res({ data: { state: this.expectedResults?.getActivityState || this.mockStackResults.shift() } } as AxiosResponse)
     );
   }
 }
