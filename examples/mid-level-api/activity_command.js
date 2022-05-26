@@ -2,7 +2,7 @@ const { Activity, ActivityFactory } = require("../../dist/mid-level-api/activity
 const { Run, Start, Deploy, Terminate } = require("../../dist/mid-level-api/script");
 
 async function main() {
-  const agreementId = "de853ce07ab76f95f3539d9312fe1c91735e246e4a7fcd7693ba272e75b47e4f";
+  const agreementId = "769d892c72f10ca4e3df3afd96178d90edd6f5acca74bfd0a52f4aecbcecb707";
   const activityFactory = new ActivityFactory();
   const activityId = await activityFactory.create(agreementId).catch((e) => console.error(e));
   const activity = new Activity(activityId);
@@ -14,10 +14,7 @@ async function main() {
   const commandResult = await activity.executeCommand(command).catch((e) => console.error(e));
   console.log("RESULTS: ", commandResult);
   await activity.executeCommand(new Terminate());
-  // await activity.stop();
-  setTimeout(() => {
-    console.log("END");
-  }, 100000);
+  await activity.stop();
 }
 
 main();
