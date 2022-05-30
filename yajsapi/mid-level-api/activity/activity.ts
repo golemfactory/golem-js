@@ -5,7 +5,6 @@ import EventEmitter from "events";
 import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity/src/models/activity-state";
 import { RequestorControlApi, RequestorStateApi } from "ya-ts-client/dist/ya-activity/api";
 import { setInterval } from "timers";
-import { sleep } from "../../utils";
 import { yaActivity } from "ya-ts-client";
 
 export enum ActivityEvents {
@@ -13,7 +12,7 @@ export enum ActivityEvents {
 }
 
 export interface ActivityOptions {
-  credentials?: { YAGNA_APPKEY: string };
+  credentials?: { YAGNA_APPKEY: string; YAGNA_API_BASEPATH: string };
   requestTimeout?: number;
   responseTimeout?: number; // deadline ?
   stateFetchInterval?: number | null; // TODO: explain event emitter via polling state..
@@ -34,9 +33,9 @@ export class Activity extends EventEmitter {
     super({ captureRejections: true });
     this.state = ActivityStateStateEnum.New;
     const config = new yaActivity.Configuration({
-      apiKey: process.env.YAGNA_APPKEY,
-      basePath: process.env.YAGNA_API_BASEPATH + "/activity-api/v1",
-      accessToken: process.env.YAGNA_APPKEY,
+      apiKey: this.options?.credentials?.YAGNA_APPKEY || process.env.YAGNA_APPKEY,
+      basePath: (this.options?.credentials?.YAGNA_API_BASEPATH || process.env.YAGNA_API_BASEPATH) + "/activity-api/v1",
+      accessToken: this.options?.credentials?.YAGNA_APPKEY || process.env.YAGNA_APPKEY,
     });
     this.api = new RequestorControlApi(config);
     this.stateApi = new RequestorStateApi(config);
@@ -72,12 +71,13 @@ export class Activity extends EventEmitter {
       try {
         const { data: results } = await this.api.getExecBatchResults(this.id, batchId);
         if (results.length) {
+          console.log(results);
           return results[0];
         }
       } catch (error) {
         throw "todo";
       }
-      await sleep(1);
+      await new Promise((res) => setTimeout(res, 3000));
     }
   }
 
@@ -112,11 +112,12 @@ export class Activity extends EventEmitter {
                 lastIndex = result.index;
               });
             }
-            await sleep(3);
+            await new Promise((res) => setTimeout(res, 3000));
           } catch (error) {
             throw "todo";
           }
         }
+        this.push(null);
       },
     });
   }
