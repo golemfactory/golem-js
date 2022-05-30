@@ -3,13 +3,13 @@ import { yaActivity } from "ya-ts-client";
 
 export class ActivityFactory {
   private api: RequestorControlApi;
-  constructor() {
+  constructor(apiKey?: string, basePath?: string) {
     // TODO: check appkey and basepath
     this.api = new RequestorControlApi(
       new yaActivity.Configuration({
-        apiKey: process.env.YAGNA_APPKEY,
-        basePath: process.env.YAGNA_API_BASEPATH + "/activity-api/v1",
-        accessToken: process.env.YAGNA_APPKEY,
+        apiKey: apiKey || process.env.YAGNA_APPKEY,
+        basePath: (basePath || process.env.YAGNA_API_BASEPATH) + "/activity-api/v1",
+        accessToken: apiKey || process.env.YAGNA_APPKEY,
       })
     );
   }
