@@ -14,7 +14,11 @@ export class ActivityFactory {
     );
   }
   async create(agreementId: string): Promise<string> {
-    const { data } = await this.api.createActivity({ agreementId });
-    return typeof data == "string" ? data : data.activityId;
+    try {
+      const { data } = await this.api.createActivity({ agreementId });
+      return typeof data == "string" ? data : data.activityId;
+    } catch (error) {
+      throw error?.response?.data?.message || error;
+    }
   }
 }

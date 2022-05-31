@@ -5,17 +5,18 @@ import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity/src/models
 import { RequestorControlApi, RequestorStateApi } from "ya-ts-client/dist/ya-activity/api";
 import { setInterval } from "timers";
 import { yaActivity } from "ya-ts-client";
-import { Logger, sleep } from "../utils";
+import { Logger, sleep, CancellationToken } from "../utils";
 
 export enum ActivityEvents {
   StateChanged = "StateChanged",
+  CommandExecuted = "StateChanged", // TODO: ????????
 }
 
 export interface ActivityOptions {
   credentials?: { YAGNA_APPKEY: string; YAGNA_API_BASEPATH: string };
   requestTimeout?: number;
-  responseTimeout?: number; // deadline ?
-  executeTimeout?: number;
+  responseTimeout?: number;
+  executeTimeout?: number; // deadline ?
   stateFetchInterval?: number | null; // TODO: explain event emitter via polling state..
   logger?: Logger;
 }
@@ -56,7 +57,7 @@ export class Activity extends EventEmitter {
     this.getState();
   }
 
-  async executeCommand(command: Command, timeout?: number): Promise<Result> {
+  async executeCommand(command: Command, timeout?: number, cancellationToken?: CancellationToken): Promise<Result> {
     let batchId;
     let startTime = new Date();
     try {
@@ -71,7 +72,10 @@ export class Activity extends EventEmitter {
     const maxRetries = 3;
     while (true) {
       if (startTime.valueOf() + (timeout || this.executeTimeout) <= new Date().valueOf()) {
-        throw new Error("Response exe command timeout - todo");
+        throw new Error(`Activity ${this.id} timeout.`);
+      }
+      if (cancellationToken?.cancelled) {
+        throw new Error(`Activity ${this.id} has been interrupted.`);
       }
       try {
         const { data: results } = await this.api.getExecBatchResults(this.id, batchId);
@@ -88,7 +92,8 @@ export class Activity extends EventEmitter {
   async executeScript(
     script: Script,
     stream?: boolean,
-    timeout?: number
+    timeout?: number,
+    cancellationToken?: CancellationToken
   ): Promise<Results<StreamResults | BatchResults>> {
     let batchId;
     let startTime = new Date();
@@ -114,7 +119,10 @@ export class Activity extends EventEmitter {
       async read() {
         while (!isBatchFinished) {
           if (startTime.valueOf() + (timeout || executeTimeout) <= new Date().valueOf()) {
-            throw new Error("Response exe command timeout - todo");
+            throw new Error(`Activity ${activityId} timeout.`);
+          }
+          if (cancellationToken?.cancelled) {
+            throw new Error(`Activity ${activityId} has been interrupted.`);
           }
           try {
             const { data: results } = await api.getExecBatchResults(activityId, batchId);
@@ -170,7 +178,7 @@ export class Activity extends EventEmitter {
       this.logger?.warn("TIMEOUT todo");
       return;
     }
-    const { terminated, reason, errorMessage } = await this.isActivityTerminated();
+    const { terminated, reason, errorMessage } = await this.isTerminated();
     if (terminated) {
       this.logger?.warn(`Activity ${this.id} terminated by provider. Reason: ${reason}, Error: ${errorMessage}`);
       throw error;
@@ -212,7 +220,7 @@ export class Activity extends EventEmitter {
     return message.includes("endpoint address not found") && message.includes("GSB error");
   }
 
-  private async isActivityTerminated(): Promise<{ terminated: boolean; reason?: string; errorMessage?: string }> {
+  private async isTerminated(): Promise<{ terminated: boolean; reason?: string; errorMessage?: string }> {
     try {
       const { data } = await this.stateApi.getActivityState(this.id);
       return {
