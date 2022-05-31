@@ -1,3 +1,4 @@
 import sleep from "./sleep";
 import { Logger } from "./logger";
-export { sleep, Logger };
+import { CancellationToken } from "./cancellationToken";
+export { sleep, Logger, CancellationToken };

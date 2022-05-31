@@ -12,5 +12,5 @@ export interface Result {
 
 export class Results<T = StreamResults | BatchResults> extends stream.Readable {}
 
-export class StreamResults extends Results {}
-export class BatchResults extends Results {}
+export type StreamResults = { todo: true };
+export type BatchResults = Array<Result>;

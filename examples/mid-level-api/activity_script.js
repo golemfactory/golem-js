@@ -23,9 +23,13 @@ async function main() {
   const scriptResults = await activity
     .executeScript(script)
     .catch((e) => console.error(e?.response?.data?.message || e));
-  for await (const result of scriptResults) {
+
+  for await (const result of scriptResults)
     console.log(`command #${result.index}`, "result:", result.result, "stdout: ", result.stdout);
-  }
+
+  scriptResults.on("data", (result) =>
+    console.log(`command #${result}`, "result:", result.result, "stdout: ", result.stdout)
+  );
 }
 
 main();
