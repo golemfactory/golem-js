@@ -1,11 +1,11 @@
 import { Script, Command } from "../script";
 import { Results, BatchResults, StreamResults, Result } from "./results";
-import { Logger } from "../utils/logger";
 import EventEmitter from "events";
 import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity/src/models/activity-state";
 import { RequestorControlApi, RequestorStateApi } from "ya-ts-client/dist/ya-activity/api";
 import { setInterval } from "timers";
 import { yaActivity } from "ya-ts-client";
+import { Logger, sleep } from "../utils";
 
 export enum ActivityEvents {
   StateChanged = "StateChanged",
@@ -15,6 +15,7 @@ export interface ActivityOptions {
   credentials?: { YAGNA_APPKEY: string; YAGNA_API_BASEPATH: string };
   requestTimeout?: number;
   responseTimeout?: number; // deadline ?
+  executeTimeout?: number;
   stateFetchInterval?: number | null; // TODO: explain event emitter via polling state..
   logger?: Logger;
 }
@@ -26,7 +27,8 @@ export class Activity extends EventEmitter {
   private readonly logger?: Logger;
   private readonly stateFetchIntervalId?: NodeJS.Timeout;
   private readonly requestTimeout: number;
-  private readonly commandTimeout: number;
+  private readonly responseTimeout: number;
+  private readonly executeTimeout: number;
   private readonly stateFetchInterval: number | null;
 
   constructor(public readonly id, private readonly options?: ActivityOptions) {
@@ -40,7 +42,8 @@ export class Activity extends EventEmitter {
     this.api = new RequestorControlApi(config);
     this.stateApi = new RequestorStateApi(config);
     this.requestTimeout = options?.requestTimeout || 10000;
-    this.commandTimeout = options?.responseTimeout || 10000;
+    this.responseTimeout = options?.responseTimeout || 10000;
+    this.executeTimeout = options?.executeTimeout || 20000;
     this.stateFetchInterval = options?.stateFetchInterval || null;
     if (options?.logger instanceof Logger) {
       this.logger = options.logger;
@@ -61,47 +64,58 @@ export class Activity extends EventEmitter {
       batchId = data;
       startTime = new Date();
     } catch (error) {
-      this.logger?.warn(`Error while sending batch script to provider: ${error}`);
-      throw error;
+      throw new Error(error?.response?.data?.message || error);
     }
+    const exeBatchResultsFetchInterval = 3000;
+    const retryCount = 0;
+    const maxRetries = 3;
     while (true) {
-      if (startTime.valueOf() + (timeout || this.commandTimeout) <= new Date().valueOf()) {
+      if (startTime.valueOf() + (timeout || this.executeTimeout) <= new Date().valueOf()) {
         throw new Error("Response exe command timeout - todo");
       }
       try {
         const { data: results } = await this.api.getExecBatchResults(this.id, batchId);
         if (results.length) {
-          console.log(results);
           return results[0];
         }
       } catch (error) {
-        throw "todo";
+        await this.handleError(error, 0, retryCount, maxRetries, exeBatchResultsFetchInterval);
       }
-      await new Promise((res) => setTimeout(res, 3000));
+      await sleep(exeBatchResultsFetchInterval);
     }
   }
 
-  async executeScript(script: Script, stream?: boolean): Promise<Results<StreamResults | BatchResults>> {
+  async executeScript(
+    script: Script,
+    stream?: boolean,
+    timeout?: number
+  ): Promise<Results<StreamResults | BatchResults>> {
     let batchId;
+    let startTime = new Date();
     try {
       const { data } = await this.api.exec(this.id, script.getExeScriptRequest(), { timeout: this.requestTimeout });
       batchId = data;
+      startTime = new Date();
     } catch (error) {
-      this.logger?.warn(`Error while sending batch script to provider: ${error}`);
-      throw error;
+      throw new Error(error?.response?.data?.message || error);
     }
-    const api = this.api;
-    const activityId = this.id;
     if (stream) {
       // todo
       return new Results<StreamResults>();
     }
+    const exeBatchResultsFetchInterval = 3000;
     let isBatchFinished = false;
     let lastIndex;
+    const retryCount = 0;
+    const maxRetries = 3;
+    const { id: activityId, executeTimeout, api, handleError } = this;
     return new Results<BatchResults>({
       objectMode: true,
       async read() {
         while (!isBatchFinished) {
+          if (startTime.valueOf() + (timeout || executeTimeout) <= new Date().valueOf()) {
+            throw new Error("Response exe command timeout - todo");
+          }
           try {
             const { data: results } = await api.getExecBatchResults(activityId, batchId);
             const newResults = results.slice(lastIndex + 1);
@@ -112,9 +126,9 @@ export class Activity extends EventEmitter {
                 lastIndex = result.index;
               });
             }
-            await new Promise((res) => setTimeout(res, 3000));
+            await sleep(exeBatchResultsFetchInterval);
           } catch (error) {
-            throw "todo";
+            await handleError(error, lastIndex, retryCount, maxRetries, exeBatchResultsFetchInterval);
           }
         }
         this.push(null);
@@ -137,11 +151,6 @@ export class Activity extends EventEmitter {
     return this.state;
   }
 
-  private async [EventEmitter.captureRejectionSymbol](error, event, ...args) {
-    this.logger?.debug("Rejection happened for" + event + "with" + error + args);
-    await this.end(error);
-  }
-
   private async end(error?: Error) {
     // if (this.state !== ActivityStateStateEnum.Terminated)
     //   await this.api
@@ -151,5 +160,69 @@ export class Activity extends EventEmitter {
     await this.getState();
     if (error) this.logger?.debug("Activity ended with an error: " + error);
     else this.logger?.debug("Activity ended");
+  }
+
+  private async handleError(error, cmdIndex, retryCount, maxRetries, retryDelay) {
+    if (!this.isGsbError(error)) {
+      throw error;
+    }
+    if (this.isTimeoutError(error)) {
+      this.logger?.warn("TIMEOUT todo");
+      return;
+    }
+    const { terminated, reason, errorMessage } = await this.isActivityTerminated();
+    if (terminated) {
+      this.logger?.warn(`Activity ${this.id} terminated by provider. Reason: ${reason}, Error: ${errorMessage}`);
+      throw error;
+    }
+    ++retryCount;
+    const fail_msg = "getExecBatchResults failed due to GSB error";
+    if (retryCount < maxRetries) {
+      this.logger?.debug(`${fail_msg}, retrying in ${retryDelay}.`);
+      return;
+    } else {
+      this.logger?.debug(`${fail_msg}, giving up after ${retryCount} attempts.`);
+    }
+    const msg = error?.response?.data?.message || error;
+    throw new Error(`Command #${cmdIndex} getExecBatchResults error: ${msg}`);
+  }
+
+  private isTimeoutError(error) {
+    const timeoutMsg = error.message && error.message.includes("timeout");
+    return (
+      (error.response && error.response.status === 408) ||
+      error.code === "ETIMEDOUT" ||
+      (error.code === "ECONNABORTED" && timeoutMsg)
+    );
+  }
+
+  private isGsbError(error) {
+    // check if `err` is caused by "endpoint address not found" GSB error
+    if (!error.response) {
+      return false;
+    }
+    if (error.response.status !== 500) {
+      return false;
+    }
+    if (!error.response.data || !error.response.data.message) {
+      this.logger?.debug(`Cannot read error message, response: ${error.response}`);
+      return false;
+    }
+    const message = error.response.data.message;
+    return message.includes("endpoint address not found") && message.includes("GSB error");
+  }
+
+  private async isActivityTerminated(): Promise<{ terminated: boolean; reason?: string; errorMessage?: string }> {
+    try {
+      const { data } = await this.stateApi.getActivityState(this.id);
+      return {
+        terminated: data?.state?.[0] === ActivityStateStateEnum.Terminated,
+        reason: data?.reason,
+        errorMessage: data?.errorMessage,
+      };
+    } catch (err) {
+      this.logger?.debug(`Cannot query activity state: ${err}`);
+      return { terminated: false };
+    }
   }
 }

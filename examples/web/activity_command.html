@@ -101,9 +101,15 @@
                         YAGNA_APPKEY: appKey,
                         YAGNA_API_BASEPATH: basePath
                     },
-                    stateFetchInterval: stateFetchInterval * 1000
+                    stateFetchInterval: stateFetchInterval * 1000,
+                    logger
                 });
                 activity.on('StateChanged', event);
+                activity.on('StateChanged', (state) => {
+                    if (state === 'Ready') {
+
+                    }
+                })
                 enableActions();
             }
         }
@@ -113,11 +119,11 @@
                 return;
             }
             const cmd = new yajsapi[command]();
-            const results = await activity.executeCommand(cmd).catch(err => log(err?.response?.data?.message || err));
+            const results = await activity.executeCommand(cmd).catch(err => logger.error(err));
             if (results.result === 'Ok') {
                 log(`Command ${command} has been successfully executed`);
             } else {
-                log(results.message || `Command ${command} Error`);
+                logger.warn(results.message || `Command ${command} Error`);
             }
         }
         async function executeRunCommand() {
@@ -127,13 +133,13 @@
             }
             const bashCommand = document.getElementById('COMMAND').value
             const command = new yajsapi.Run("/bin/sh", ["-c", bashCommand]);
-            const results = await activity.executeCommand(command).catch(err => log(err?.response?.data?.message || err));
+            const results = await activity.executeCommand(command).catch(err => logger.error(err));
             if (results.stdout) appendResults('[stdout] ' + results.stdout);
             if (results.stderr) appendResults('[stderr] ' + results.stderr);
             if (results.result === 'Ok') {
                 log(`Command Run has been successfully executed`);
             } else {
-                log(results.message || `Command Run Error`);
+                logger.warn(results.message || `Command Run Error`);
             }
         }
         async function getState() {
@@ -141,12 +147,18 @@
                 log('Error: Activity not created');
                 return;
             }
-            const state = await activity.getState().catch(err => log(err?.response?.data?.message || err));
+            const state = await activity.getState().catch(err => logger.error(err));
             log(`Activity State: ${state}`);
         }
         function enableActions() {
             const disabled =  document.querySelectorAll("input:disabled, button:disabled");
             disabled.forEach(el => el.removeAttribute('disabled'));
+        }
+        const logger = {
+            log: (msg) => log(msg),
+            warn: (msg) => log('[warn] ' + msg),
+            debug: (msg) => log('[debug] ' + msg),
+            error: (msg) => log('[error] ' + msg),
         }
     </script>
 </body>
