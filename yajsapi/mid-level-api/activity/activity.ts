@@ -9,7 +9,7 @@ import { Logger, sleep, CancellationToken } from "../utils";
 
 export enum ActivityEvents {
   StateChanged = "StateChanged",
-  CommandExecuted = "StateChanged", // TODO: ????????
+  CommandExecuted = "CommandExecuted", // TODO: ????????
 }
 
 export interface ActivityOptions {
