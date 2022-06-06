@@ -40,3 +40,9 @@ export class Terminate extends Command {
     super("terminate", args);
   }
 }
+
+export class Transfer extends Command {
+  constructor(from: string, to: string, args?: object) {
+    super("transfer", { from, to, args });
+  }
+}

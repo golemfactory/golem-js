@@ -37,7 +37,8 @@ export class Activity extends EventEmitter {
     this.state = ActivityStateStateEnum.New;
     const config = new yaActivity.Configuration({
       apiKey: this.options?.credentials?.YAGNA_APPKEY || process.env.YAGNA_APPKEY,
-      basePath: (this.options?.credentials?.YAGNA_API_BASEPATH || process.env.YAGNA_API_BASEPATH) + "/activity-api/v1",
+      // basePath: (this.options?.credentials?.YAGNA_API_BASEPATH || process.env.YAGNA_API_BASEPATH) + "/activity-api/v1",
+      basePath: this.options?.credentials?.YAGNA_API_BASEPATH || process.env.YAGNA_API_BASEPATH,
       accessToken: this.options?.credentials?.YAGNA_APPKEY || process.env.YAGNA_APPKEY,
     });
     this.api = new RequestorControlApi(config);
@@ -94,7 +95,7 @@ export class Activity extends EventEmitter {
     stream?: boolean,
     timeout?: number,
     cancellationToken?: CancellationToken
-  ): Promise<Results<StreamResults | BatchResults>> {
+  ): Promise<Results> {
     let batchId;
     let startTime = new Date();
     try {
@@ -160,10 +161,9 @@ export class Activity extends EventEmitter {
   }
 
   private async end(error?: Error) {
-    // if (this.state !== ActivityStateStateEnum.Terminated)
-    //   await this.api
-    //     .destroyActivity(this.id, this.requestTimeout, { timeout: (this.requestTimeout + 1) * 1000 })
-    //     .catch((error) => this.logger?.warn(`Got API Exception when destroying activity ${this.id}: ${error}`));
+    await this.api
+      .destroyActivity(this.id, this.requestTimeout, { timeout: (this.requestTimeout + 1) * 1000 })
+      .catch((error) => this.logger?.warn(`Got API Exception when destroying activity ${this.id}: ${error}`));
     if (this.stateFetchIntervalId) clearInterval(this.stateFetchIntervalId);
     await this.getState();
     if (error) this.logger?.debug("Activity ended with an error: " + error);

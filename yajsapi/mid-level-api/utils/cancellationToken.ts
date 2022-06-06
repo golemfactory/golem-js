@@ -1,11 +1,12 @@
 export class CancellationToken {
-  private isCancelled = false;
+  // private isCancelled = false;
+  private _cancelled = false;
 
   get cancelled(): boolean {
-    return this.isCancelled;
+    return this._cancelled;
   }
 
   cancel(): void {
-    this.isCancelled = true;
+    this._cancelled = true;
   }
 }

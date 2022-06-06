@@ -17,7 +17,7 @@
                     <input id="YAGNA_APPKEY" type="text" value="411aa8e620954a318093687757053b8d"/>
                 </div>
                 <div>
-                    <label for="YAGNA_API_BASEPATH">YAGNA_API_BASEPATH: </label>
+                    <label for="YAGNA_API_BASEPATH">YAGNA_API_BASEURL: </label>
                     <input id="YAGNA_API_BASEPATH" type="text" value="http://127.0.0.1:7465" />
                 </div>
                 <div class="small">
@@ -32,6 +32,7 @@
                     <div class="row padding-0">
                         <input id="AGREEMENT_ID" type="text" />
                         <button onclick="createActivity()">Create Activity</button>
+                        <button disabled onclick="destroyActivity()">Destroy Activity</button>
                     </div>
                 </div>
             </div>
@@ -69,13 +70,13 @@
 
     <script>
         let activity;
-        function log(msg) {
+        function appendLog(msg) {
             const logs_el = document.getElementById('logs');
             const li = document.createElement('li');
-            li.appendChild(document.createTextNode(`[${new Date().toISOString()}] ${msg}`));
+            li.appendChild(document.createTextNode(msg));
             logs_el.appendChild(li);
         }
-        function event(event) {
+        function appendEvent(event) {
             const events_el = document.getElementById('events');
             const li = document.createElement('li');
             li.appendChild(document.createTextNode(`[${new Date().toISOString()}] ${event}`));
@@ -87,15 +88,25 @@
             li.appendChild(document.createTextNode(result));
             results_el.appendChild(li);
         }
+        function enableActions() {
+            const disabled =  document.querySelectorAll("input:disabled, button:disabled");
+            disabled.forEach(el => el.removeAttribute('disabled'));
+        }
+        const logger = {
+            log: (msg) => appendLog(`[${new Date().toISOString()}] ${msg}`),
+            warn: (msg) => appendLog(`[${new Date().toISOString()}] [warn] ${msg}`),
+            debug: (msg) => appendLog(`[${new Date().toISOString()}] [debug] ${msg}`),
+            error: (msg) => appendLog(`[${new Date().toISOString()}] [error] ${msg}`),
+        }
         async function createActivity() {
             const appKey = document.getElementById('YAGNA_APPKEY').value;
             const basePath = document.getElementById('YAGNA_API_BASEPATH').value;
             const stateFetchInterval = document.getElementById('STATE_FETCH_INTERVAL').value;
             const agreementId = document.getElementById('AGREEMENT_ID').value;
             const factory = new yajsapi.ActivityFactory(appKey, basePath);
-            const activityId = await factory.create(agreementId).catch(err => log(err?.response?.data?.message || err));
+            const activityId = await factory.create(agreementId).catch(logger.error);
             if (activityId) {
-                log(`Activity created. ID: ${activityId}`);
+                logger.log(`Activity created. ID: ${activityId}`);
                 activity = new yajsapi.Activity(activityId, {
                     credentials: {
                         YAGNA_APPKEY: appKey,
@@ -104,31 +115,39 @@
                     stateFetchInterval: stateFetchInterval * 1000,
                     logger
                 });
-                activity.on('StateChanged', event);
-                activity.on('StateChanged', (state) => {
-                    if (state === 'Ready') {
-
-                    }
-                })
+                activity.on('StateChanged', appendEvent);
+                // activity.on('StateChanged', state => state === 'Ready' && alert('XXXXXXXXXXXX'));
                 enableActions();
+            }
+        }
+        async function destroyActivity() {
+            if (!activity) {
+                logger.error('Activity not created');
+                return;
+            }
+            const result = await activity.stop().catch(e => logger.error(e));
+            if (result) {
+                logger.log('Activity has been destroyed');
+            } else {
+                logger.error('Activity cannot destroy.');
             }
         }
         async function executeCommand(command) {
             if (!activity) {
-                log('Error: Activity not created');
+                logger.log('Error: Activity not created');
                 return;
             }
             const cmd = new yajsapi[command]();
             const results = await activity.executeCommand(cmd).catch(err => logger.error(err));
             if (results.result === 'Ok') {
-                log(`Command ${command} has been successfully executed`);
+                logger.log(`Command ${command} has been executed`);
             } else {
                 logger.warn(results.message || `Command ${command} Error`);
             }
         }
         async function executeRunCommand() {
             if (!activity) {
-                log('Error: Activity not created');
+                logger.error('Activity not created');
                 return;
             }
             const bashCommand = document.getElementById('COMMAND').value
@@ -137,28 +156,18 @@
             if (results.stdout) appendResults('[stdout] ' + results.stdout);
             if (results.stderr) appendResults('[stderr] ' + results.stderr);
             if (results.result === 'Ok') {
-                log(`Command Run has been successfully executed`);
+                logger.log(`Command Run has been executed`);
             } else {
                 logger.warn(results.message || `Command Run Error`);
             }
         }
         async function getState() {
             if (!activity) {
-                log('Error: Activity not created');
+                logger.error('Activity not created');
                 return;
             }
             const state = await activity.getState().catch(err => logger.error(err));
-            log(`Activity State: ${state}`);
-        }
-        function enableActions() {
-            const disabled =  document.querySelectorAll("input:disabled, button:disabled");
-            disabled.forEach(el => el.removeAttribute('disabled'));
-        }
-        const logger = {
-            log: (msg) => log(msg),
-            warn: (msg) => log('[warn] ' + msg),
-            debug: (msg) => log('[debug] ' + msg),
-            error: (msg) => log('[error] ' + msg),
+            logger.log(`Activity State: ${state}`);
         }
     </script>
 </body>
