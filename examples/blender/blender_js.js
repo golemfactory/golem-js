@@ -1,7 +1,7 @@
 const path = require("path");
 const dayjs = require("dayjs");
 const duration = require("dayjs/plugin/duration");
-const { Executor, Task, utils, vm } = require("yajsapi");
+const { Executor, Task, utils, vm } = require("../../dist");
 const { program } = require("commander");
 
 dayjs.extend(duration);

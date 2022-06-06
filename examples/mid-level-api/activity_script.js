@@ -18,7 +18,7 @@ async function main() {
   const command5 = new Run("/bin/sh", ["-c", 'date +"DATE3: %d-%m-%Y %H:%m:%S.%s"']);
   const command6 = new Terminate();
 
-  const script = new Script([command1, command2, command3, command4, command5, command6]);
+  const script = new Script([command1, command2, command21, command3, command4, command5, command6]);
 
   const scriptResults = await activity
     .executeScript(script)

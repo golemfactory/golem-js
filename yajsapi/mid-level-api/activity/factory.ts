@@ -8,7 +8,8 @@ export class ActivityFactory {
     this.api = new RequestorControlApi(
       new yaActivity.Configuration({
         apiKey: apiKey || process.env.YAGNA_APPKEY,
-        basePath: (basePath || process.env.YAGNA_API_BASEPATH) + "/activity-api/v1",
+        // basePath: (basePath || process.env.YAGNA_API_BASEPATH) + "/activity-api/v1",
+        basePath: basePath || process.env.YAGNA_API_BASEPATH,
         accessToken: apiKey || process.env.YAGNA_APPKEY,
       })
     );

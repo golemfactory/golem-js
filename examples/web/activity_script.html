@@ -17,7 +17,7 @@
                     <input id="YAGNA_APPKEY" type="text" value="411aa8e620954a318093687757053b8d"/>
                 </div>
                 <div>
-                    <label for="YAGNA_API_BASEPATH">YAGNA_API_BASEPATH: </label>
+                    <label for="YAGNA_API_BASEPATH">YAGNA_API_BASEURL: </label>
                     <input id="YAGNA_API_BASEPATH" type="text" value="http://127.0.0.1:7465" />
                 </div>
                 <div class="small">
@@ -32,6 +32,7 @@
                     <div class="row padding-0">
                         <input id="AGREEMENT_ID" type="text" />
                         <button onclick="createActivity()">Create Activity</button>
+                        <button disabled onclick="destroyActivity()">Destroy Activity</button>
                     </div>
                 </div>
             </div>
@@ -76,7 +77,9 @@
         let activity;
         let commands = [
             new yajsapi.Deploy(),
+            // new yajsapi.Command("test_command", { test: 1 }),
             new yajsapi.Start(),
+            // new yajsapi.Transfer('http://example.com/index.html', 'container:/golem/index_example.html'),
             new yajsapi.Terminate()
         ];
         refreshScript();
@@ -123,7 +126,7 @@
             const agreementId = document.getElementById('AGREEMENT_ID').value;
             const stateFetchInterval = document.getElementById('STATE_FETCH_INTERVAL').value;
             const factory = new yajsapi.ActivityFactory(appKey, basePath);
-            const activityId = await factory.create(agreementId).catch(err => log(err?.response?.data?.message || err));
+            const activityId = await factory.create(agreementId).catch(err => logger.error(err));
             if (activityId) {
                 log(`Activity created. ID: ${activityId}`);
                 activity = new yajsapi.Activity(activityId, {
@@ -137,6 +140,18 @@
                 enableActions();
             }
         }
+        async function destroyActivity() {
+            if (!activity) {
+                logger.error('Activity not created');
+                return;
+            }
+            const result = await activity.stop().catch(e => logger.error(e));
+            if (result) {
+                logger.log('Activity has been destroyed');
+            } else {
+                logger.error('Activity cannot destroy.');
+            }
+        }
         async function addToScript() {
             const bashCommand = document.getElementById('COMMAND').value
             const runCommand = new yajsapi.Run("/bin/sh", ["-c", bashCommand]);
@@ -146,11 +161,11 @@
         }
         async function executeScript() {
             if (!activity) {
-                log('Error: Activity not created');
+                logger.error('Activity not created');
                 return;
             }
             const script = new yajsapi.Script(commands);
-            const results = await activity.executeScript(script);
+            const results = await activity.executeScript(script).catch(err => logger.error(err));
             // for await (const result of results) {
             //     if (result.stdout) appendResults('[stdout] ' + result.stdout);
             //     if (result.stderr) appendResults('[stderr] ' + result.stderr);
@@ -164,7 +179,7 @@
                 if (result.stdout) appendResults('[stdout] ' + result.stdout);
                 if (result.stderr) appendResults('[stderr] ' + result.stderr);
                 if (result.result === 'Ok') {
-                    log(`Command index ${result.index} has been successfully executed`);
+                    log(`Command #${result.index} has been executed`);
                 } else {
                     log(result.message || `Command Run Error`);
                 }
@@ -176,15 +191,21 @@
         }
         async function getState() {
             if (!activity) {
-                log('Error: Activity not created');
+                logger.error('Activity not created');
                 return;
             }
-            const state = await activity.getState().catch(err => log(err?.response?.data?.message || err));
+            const state = await activity.getState().catch(err => logger.error(err));
             log(`Activity State: ${state}`);
         }
         function enableActions() {
             const disabled =  document.querySelectorAll("input:disabled, button:disabled");
             disabled.forEach(el => el.removeAttribute('disabled'));
+        }
+        const logger = {
+            log: (msg) => log(msg),
+            warn: (msg) => log('[warn] ' + msg),
+            debug: (msg) => log('[debug] ' + msg),
+            error: (msg) => log('[error] ' + msg),
         }
     </script>
 </body>
