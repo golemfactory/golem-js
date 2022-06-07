@@ -53,6 +53,7 @@ import {
 import { Package } from "../package";
 import axios from "axios";
 import { Script, Command } from "../mid-level-api";
+import { ExeScriptCommandResultResultEnum } from "ya-ts-client/dist/ya-activity/src/models";
 
 export { Task, TaskStatus };
 
@@ -623,18 +624,36 @@ export class Executor {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         const cancellationToken = (<SubmissionState>self.state).worker_cancellation_token as CancellationToken;
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        const scriptResults = await activity.executeScript(script, false, batch_deadline, cancellationToken);
+
+        const scriptResults = await activity
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          .executeScript(script, false, batch_deadline, cancellationToken)
+          .catch((e) => {
+            throw new CommandExecutionError("", e.toString());
+          });
 
         emit(new events.ScriptSent({ agr_id: agreement_id, task_id, cmds }));
 
         const get_batch_results_NEW = async (): Promise<events.CommandEvent[]> => {
           const results: events.CommandEvent[] = [];
+          scriptResults.on("error", (error) => {
+            throw new CommandExecutionError("", error.toString());
+          });
           for await (const result of scriptResults) {
-            results.push(result);
-            if (result.result === "Error") {
-              throw new CommandExecutionError(result.index, result.message);
+            let evt = Object.create(events.CommandExecuted.prototype);
+            evt.cmd_idx = evt.idx = result.index;
+            evt.stdout = result.stdout;
+            evt.stderr = result.stderr;
+            evt.message = result.message;
+            evt.command = "";
+            evt.success = result.result === ExeScriptCommandResultResultEnum.Ok;
+            evt = new events.CommandEventContext(evt);
+            evt = evt.event(agreement_id, task_id, cmds);
+            emit(evt);
+            results.push(evt);
+            if (evt instanceof events.CommandExecuted && !evt.success) {
+              throw new CommandExecutionError(evt.command, evt.message);
             }
           }
           emit(new events.GettingResults({ agr_id: agreement_id, task_id: task_id }));
@@ -705,11 +724,10 @@ export class Executor {
       }
       let _act: Activity;
       try {
-        const activityId = await activity_api.create(agreement.id());
-        _act = new Activity(activityId, {
+        _act = await activity_api.create(agreement.id(), {
           credentials: {
-            YAGNA_APPKEY: activity_config.appKey,
-            YAGNA_API_BASEPATH: activity_config.basePath,
+            appKey: activity_config.appKey,
+            basePath: activity_config.basePath,
           },
         });
       } catch (error) {
@@ -767,43 +785,43 @@ export class Executor {
 
       /* -------- END OF NEW ACTIVITY ------------ */
 
-      await asyncWith(_act, async (act): Promise<void> => {
-        emit(new events.ActivityCreated({ act_id: act.id, agr_id: agreement.id() }));
-        agreements_accepting_debit_notes.add(agreement.id());
-        const agreement_details = await agreement.details();
-        const node_info = <NodeInfo>agreement_details.provider_view().extract(new NodeInfo());
-        const provider_name = node_info.name.value;
-        const provider_id = agreement_details.raw_details.offer.providerId;
-        let network_node;
-        if (network) {
-          network_node = await network.add_node(provider_id);
-        }
-        const work_context = new WorkContext(
-          `worker-${wid}`,
-          storage_manager,
-          emit,
-          { provider_id, provider_name },
-          network_node
-        );
-        await asyncWith(work_queue.new_consumer(), async (consumer) => {
-          try {
-            const tasks = task_emitter(consumer);
-            const batch_generator = worker(work_context, tasks);
-            await process_batches(agreement.id(), act, batch_generator, consumer);
-            emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
-          } catch (error) {
-            emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error }));
-            throw error;
-          } finally {
-            await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
-          }
-        });
-        if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
-          return;
-        }
-        await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
-        emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
-      });
+      // await asyncWith(_act, async (act): Promise<void> => {
+      //   emit(new events.ActivityCreated({ act_id: act.id, agr_id: agreement.id() }));
+      //   agreements_accepting_debit_notes.add(agreement.id());
+      //   const agreement_details = await agreement.details();
+      //   const node_info = <NodeInfo>agreement_details.provider_view().extract(new NodeInfo());
+      //   const provider_name = node_info.name.value;
+      //   const provider_id = agreement_details.raw_details.offer.providerId;
+      //   let network_node;
+      //   if (network) {
+      //     network_node = await network.add_node(provider_id);
+      //   }
+      //   const work_context = new WorkContext(
+      //     `worker-${wid}`,
+      //     storage_manager,
+      //     emit,
+      //     { provider_id, provider_name },
+      //     network_node
+      //   );
+      //   await asyncWith(work_queue.new_consumer(), async (consumer) => {
+      //     try {
+      //       const tasks = task_emitter(consumer);
+      //       const batch_generator = worker(work_context, tasks);
+      //       await process_batches(agreement.id(), act, batch_generator, consumer);
+      //       emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
+      //     } catch (error) {
+      //       emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error }));
+      //       throw error;
+      //     } finally {
+      //       await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
+      //     }
+      //   });
+      //   if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
+      //     return;
+      //   }
+      //   await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
+      //   emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
+      // });
       logger.debug(`Stopped worker related to agreement ${agreement.id()}.`);
     }
 
