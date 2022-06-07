@@ -13,7 +13,7 @@ export enum ActivityEvents {
 }
 
 export interface ActivityOptions {
-  credentials?: { YAGNA_APPKEY: string; YAGNA_API_BASEPATH: string };
+  credentials?: { apiKey?: string; basePath?: string };
   requestTimeout?: number;
   responseTimeout?: number;
   executeTimeout?: number; // deadline ?
@@ -36,10 +36,9 @@ export class Activity extends EventEmitter {
     super({ captureRejections: true });
     this.state = ActivityStateStateEnum.New;
     const config = new yaActivity.Configuration({
-      apiKey: this.options?.credentials?.YAGNA_APPKEY || process.env.YAGNA_APPKEY,
-      // basePath: (this.options?.credentials?.YAGNA_API_BASEPATH || process.env.YAGNA_API_BASEPATH) + "/activity-api/v1",
-      basePath: this.options?.credentials?.YAGNA_API_BASEPATH || process.env.YAGNA_API_BASEPATH,
-      accessToken: this.options?.credentials?.YAGNA_APPKEY || process.env.YAGNA_APPKEY,
+      apiKey: this.options?.credentials?.apiKey || process.env.YAGNA_APPKEY,
+      basePath: this.options?.credentials?.basePath || process.env.YAGNA_API_BASEPATH,
+      accessToken: this.options?.credentials?.apiKey || process.env.YAGNA_APPKEY,
     });
     this.api = new RequestorControlApi(config);
     this.stateApi = new RequestorStateApi(config);
@@ -114,7 +113,7 @@ export class Activity extends EventEmitter {
     let lastIndex;
     const retryCount = 0;
     const maxRetries = 3;
-    const { id: activityId, executeTimeout, api, handleError } = this;
+    const { id: activityId, executeTimeout, api, handleError, emit } = this;
     return new Results<BatchResults>({
       objectMode: true,
       async read() {
@@ -158,6 +157,11 @@ export class Activity extends EventEmitter {
       this.emit(ActivityEvents.StateChanged, this.state);
     }
     return this.state;
+  }
+
+  async [EventEmitter.captureRejectionSymbol](error, event, ...args) {
+    this.logger?.debug("Rejection happened for" + event + "with" + error + args);
+    await this.end(error);
   }
 
   private async end(error?: Error) {
