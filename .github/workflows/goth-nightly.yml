@@ -46,18 +46,19 @@ jobs:
       - name: Configure node.js
         uses: actions/setup-node@v1
         with:
-          node-version: '12.18.3'
+          node-version: '14.17.0'
 
       - name: Build yajsapi
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y build-essential
-          npm install
-          npm run-script build
+          sudo apt-get install -y build-essential jq
+          npm install -g yarn
+          yarn install
+          yarn build
           cd examples
-          npm install
-          sed -i 's,require("yajsapi");,require("'$([ -f ../dist/index.js ] && echo "../../dist/index.js" || echo "../../dist/yajsapi/index.js")'");,' blender/blender.js
-          sed -i 's,from "yajsapi",from "../../yajsapi",' yacat/yacat.ts
+          jq '.dependencies.yajsapi = "file:../dist"' <package.json >tmp.json && mv tmp.json package.json
+          yarn install
+          yarn build
 
       - name: Configure python
         uses: actions/setup-python@v2
@@ -123,7 +124,7 @@ jobs:
         # all Python versions (https://github.com/python-poetry/poetry/issues/3208).
         run: |
           cd tests/goth/
-          poetry env remove python3.8 
+          poetry env remove python3.8
 
       - name: Send Discord notification on failure
         uses: Ilshidur/action-discord@0.3.2

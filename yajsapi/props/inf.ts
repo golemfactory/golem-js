@@ -1,11 +1,12 @@
 import { Field, Model } from "./base";
 
-export const INF_MEM: string = "golem.inf.mem.gib";
-export const INF_STORAGE: string = "golem.inf.storage.gib";
-export const INF_CORES: string = "golem.inf.cpu.cores";
-export const INF_THREADS: string = "golem.inf.cpu.threads";
-export const INF_RUNTIME: string = "golem.runtime.name";
-export const TRANSFER_CAPS: string = "golem.activity.caps.transfer.protocol";
+export const INF_MEM = "golem.inf.mem.gib";
+export const INF_STORAGE = "golem.inf.storage.gib";
+export const INF_CAPABILITIES = "golem.runtime.capabilities";
+export const INF_CORES = "golem.inf.cpu.cores";
+export const INF_THREADS = "golem.inf.cpu.threads";
+export const INF_RUNTIME = "golem.runtime.name";
+export const TRANSFER_CAPS = "golem.activity.caps.transfer.protocol";
 
 export enum RuntimeType {
   UNKNOWN = "",
@@ -25,6 +26,7 @@ export class InfBase {
   runtime: Field = new Field({ metadata: { key: INF_RUNTIME } });
 
   storage?: Field = new Field({ metadata: { key: INF_STORAGE } });
+  capabilities?: Field = new Field({ metadata: { key: INF_CAPABILITIES } });
   transfers: Field = new Field({ metadata: { key: TRANSFER_CAPS } });
 
   static fields(inf: InfBase, keys: string[]) {
@@ -38,13 +40,10 @@ export class InfVm extends InfBase {
     metadata: { key: INF_RUNTIME },
   });
 }
-export const InfVmKeys = InfBase.fields(
-  new InfVm(),
-  ["cores", "mem", "storage", "runtime", "threads"]
-);
+export const InfVmKeys = InfBase.fields(new InfVm(), ["cores", "mem", "storage", "runtime", "threads", "capabilities"]);
 
 function getFields(obj: object, keys: string[]) {
-  let fields = {};
+  const fields = {};
   keys.forEach((key) => {
     fields[key] = obj[key].metadata.key;
   });

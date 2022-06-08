@@ -1,44 +1,32 @@
 import { Activity } from "../props";
-import { DemandBuilder } from "../props/builder";
-import {
-  BillingScheme,
-  ComLinear,
-  Counter,
-  PriceModel,
-  PRICE_MODEL,
-} from "../props/com";
+import { DemandBuilder } from "../props";
+import { BillingScheme, ComLinear, Counter, PriceModel, PRICE_MODEL } from "../props/com";
 import { OfferProposal } from "../rest/market";
 import { applyMixins, logger } from "../utils";
 
-export const SCORE_NEUTRAL: number = 0.0;
-export const SCORE_REJECTED: number = -1.0;
-export const SCORE_TRUSTED: number = 100.0;
+export const SCORE_NEUTRAL = 0.0;
+export const SCORE_REJECTED = -1.0;
+export const SCORE_TRUSTED = 100.0;
 
 export interface ComputationHistory {
   rejected_last_agreement: (string) => boolean;
 }
 
-export class MarketStrategy {
-  /*Abstract market strategy*/
-
-  async decorate_demand(demand: DemandBuilder): Promise<void> {}
-
-  async score_offer(offer: OfferProposal, history?: ComputationHistory): Promise<Number> {
-    return SCORE_REJECTED;
-  }
+export abstract class MarketStrategy {
+  abstract decorate_demand(demand: DemandBuilder): Promise<void>;
+  abstract score_offer(offer: OfferProposal, history?: ComputationHistory): Promise<number>;
 }
 
-interface MarketGeneral extends MarketStrategy, Object {}
 class MarketGeneral {}
 
 applyMixins(MarketGeneral, [MarketStrategy, Object]);
 
 export class DummyMS extends MarketGeneral {
-  max_for_counter: Map<Counter, Number> = new Map([
+  max_for_counter: Map<Counter, number> = new Map([
     [Counter.TIME, parseFloat("0.002")],
     [Counter.CPU, parseFloat("0.002") * 10],
   ]);
-  max_fixed: Number = parseFloat("0.05");
+  max_fixed: number = parseFloat("0.05");
   _activity?: Activity;
 
   async decorate_demand(demand: DemandBuilder): Promise<void> {
@@ -46,7 +34,7 @@ export class DummyMS extends MarketGeneral {
     this._activity = new Activity().from_properties(demand._properties);
   }
 
-  async score_offer(offer: OfferProposal, history?: ComputationHistory): Promise<Number> {
+  async score_offer(offer: OfferProposal): Promise<number> {
     const linear: ComLinear = new ComLinear().from_properties(offer.props());
 
     if (linear.scheme.value !== BillingScheme.PAYU) {
@@ -57,8 +45,7 @@ export class DummyMS extends MarketGeneral {
 
     for (const [counter, price] of Object.entries(linear.price_for)) {
       if (!this.max_for_counter.has(counter as Counter)) return SCORE_REJECTED;
-      if (price > <any>this.max_for_counter.get(counter as Counter))
-        return SCORE_REJECTED;
+      if (price > (this.max_for_counter.get(counter as Counter) ?? 0)) return SCORE_REJECTED;
     }
 
     return SCORE_NEUTRAL;
@@ -68,13 +55,9 @@ export class DummyMS extends MarketGeneral {
 export class LeastExpensiveLinearPayuMS {
   private _expected_time_secs: number;
   private _max_fixed_price?: number;
-  private _max_price_for?: Map<Counter, number>
+  private _max_price_for?: Map<Counter, number>;
 
-  constructor(
-    expected_time_secs: number = 60,
-    max_fixed_price?: number,
-    max_price_for?: Map<Counter, number>
-  ) {
+  constructor(expected_time_secs = 60, max_fixed_price?: number, max_price_for?: Map<Counter, number>) {
     this._expected_time_secs = expected_time_secs;
     if (max_fixed_price) this._max_fixed_price = max_fixed_price;
     if (max_price_for) this._max_price_for = max_price_for;
@@ -84,7 +67,7 @@ export class LeastExpensiveLinearPayuMS {
     demand.ensure(`(${PRICE_MODEL}=${PriceModel.LINEAR})`);
   }
 
-  async score_offer(offer: OfferProposal, history?: ComputationHistory): Promise<Number> {
+  async score_offer(offer: OfferProposal): Promise<number> {
     const linear: ComLinear = new ComLinear().from_properties(offer.props());
 
     logger.debug(`Scoring offer ${offer.id()}, parameters: ${JSON.stringify(linear)}`);
@@ -96,7 +79,7 @@ export class LeastExpensiveLinearPayuMS {
     const known_time_prices = new Set([Counter.TIME, Counter.CPU]);
 
     for (const counter in linear.price_for) {
-      if (!(known_time_prices.has(counter as Counter))) {
+      if (!known_time_prices.has(counter as Counter)) {
         logger.debug(`Rejected offer ${offer.id()}: unsupported counter '${counter}'`);
         return SCORE_REJECTED;
       }
@@ -121,7 +104,7 @@ export class LeastExpensiveLinearPayuMS {
         return SCORE_REJECTED;
       }
       if (this._max_price_for) {
-        const max_price = this._max_price_for.get(resource as Counter)
+        const max_price = this._max_price_for.get(resource as Counter);
         if (max_price !== undefined && linear.price_for[resource] > max_price) {
           logger.debug(`Rejected offer ${offer.id()}: price for '${resource}' higher than price cap ${max_price}`);
           return SCORE_REJECTED;
@@ -132,7 +115,7 @@ export class LeastExpensiveLinearPayuMS {
 
     // The higher the expected price value, the lower the score.
     // The score is always lower than SCORE_TRUSTED and is always higher than 0.
-    const score: number = (SCORE_TRUSTED * 1.0) / (expected_price + 1.01);
+    const score: number = SCORE_TRUSTED / (expected_price + 1.01);
     return score;
   }
 }
@@ -153,7 +136,7 @@ export class DecreaseScoreForUnconfirmedAgreement {
     await this._base_strategy.decorate_demand(demand);
   }
 
-  async score_offer(offer: OfferProposal, history?: ComputationHistory): Promise<Number> {
+  async score_offer(offer: OfferProposal, history?: ComputationHistory): Promise<number> {
     /* Score `offer` using the base strategy and apply penalty if needed.
        If the offer issuer failed to approve the previous agreement (if any)
        then the base score is multiplied by `this._factor`. */

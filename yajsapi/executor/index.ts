@@ -1,3 +1,5 @@
+/* eslint @typescript-eslint/no-this-alias: 0 */
+/* eslint no-constant-condition: 0 */
 import bluebird, { TimeoutError } from "bluebird";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -9,9 +11,10 @@ import * as events from "./events";
 import { Activity, NodeInfo, NodeInfoKeys } from "../props";
 import { Counter } from "../props/com";
 import { DemandBuilder } from "../props/builder";
+import { Network } from "../network";
 
 import * as rest from "../rest";
-import { Agreement,  OfferProposal, Subscription } from "../rest/market";
+import { Agreement, OfferProposal, Subscription } from "../rest/market";
 import { AgreementsPool } from "./agreements_pool";
 import { Allocation, DebitNote, Invoice } from "../rest/payment";
 import { ActivityService, CommandExecutionError } from "../rest/activity";
@@ -43,9 +46,10 @@ import {
   DecreaseScoreForUnconfirmedAgreement,
   LeastExpensiveLinearPayuMS,
   MarketStrategy,
-  SCORE_NEUTRAL
+  SCORE_NEUTRAL,
 } from "./strategy";
 import { Package } from "../package";
+import axios from "axios";
 
 export { Task, TaskStatus };
 
@@ -54,19 +58,15 @@ dayjs.extend(utc);
 
 const SIGNALS = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
 
-const DEBIT_NOTE_MIN_TIMEOUT: number = 30; // in seconds
+const DEBIT_NOTE_MIN_TIMEOUT = 30; // in seconds
 //"Shortest debit note acceptance timeout the requestor will accept."
 
-const DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP: string = "golem.com.payment.debit-notes.accept-timeout?";
+const DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP = "golem.com.payment.debit-notes.accept-timeout?";
 
-const CFG_INVOICE_TIMEOUT: number = dayjs
-  .duration({ minutes: 5 })
-  .asMilliseconds();
+const CFG_INVOICE_TIMEOUT: number = dayjs.duration({ minutes: 5 }).asMilliseconds();
 //"Time to receive invoice from provider after tasks ended."
 
-const DEFAULT_EXECUTOR_TIMEOUT: number = dayjs
-  .duration({ minutes: 15 })
-  .asMilliseconds()
+const DEFAULT_EXECUTOR_TIMEOUT: number = dayjs.duration({ minutes: 15 }).asMilliseconds();
 
 const DEFAULT_NETWORK: string = process.env["YAGNA_PAYMENT_NETWORK"] || "rinkeby";
 const DEFAULT_DRIVER: string = process.env["YAGNA_PAYMENT_DRIVER"] || "erc20";
@@ -90,10 +90,10 @@ export class NoPaymentAccountError extends Error {
 }
 
 export class _ExecutorConfig {
-  max_workers: Number = 5;
+  max_workers = 5;
   timeout: number = DEFAULT_EXECUTOR_TIMEOUT;
   get_offers_timeout: number = dayjs.duration({ seconds: 20 }).asMilliseconds();
-  traceback: boolean = false; //TODO fix
+  traceback = false; //TODO fix
   constructor(max_workers, timeout) {
     this.max_workers = max_workers;
     this.timeout = timeout;
@@ -112,41 +112,43 @@ type WorkItem = Work | [Work, ExecOptions];
 type D = "D"; // Type var for task data
 type R = "R"; // Type var for task result
 
-
 export type ExecutorOpts = {
   task_package: Package;
-  max_workers?: Number;
-  timeout?: Number | String; //timedelta
+  max_workers?: number;
+  timeout?: number | string; //timedelta
   budget: string; //number?
   strategy?: MarketStrategy;
   subnet_tag?: string;
-  driver?: string;
-  network?: string;
+  driver?: string; // @deprecated
+  network?: string; // @deprecated
+  payment_driver?: string;
+  payment_network?: string;
   event_consumer?: Callable<[events.YaEvent], void>; //TODO not default event
+  network_address?: string;
 };
 
 export class SubmissionState {
   builder!: DemandBuilder;
   agreements_pool!: AgreementsPool;
-  offers_collected: number = 0;
-  proposals_confirmed: number = 0;
+  offers_collected = 0;
+  proposals_confirmed = 0;
   payment_cancellation_token: CancellationToken = new CancellationToken();
   worker_cancellation_token: CancellationToken = new CancellationToken();
   constructor(builder: DemandBuilder, agreements_pool: AgreementsPool) {
     this.builder = builder;
     this.agreements_pool = agreements_pool;
   }
-};
+}
 
 /**
- * Task executor 
- * 
+ * Task executor
+ *
  * @description Used to run tasks using the specified application package within providers' execution units.
  */
 export class Executor {
   private _subnet;
-  private _driver;
-  private _network;
+  private _payment_driver;
+  private _payment_network;
   private _stream_output;
   private _strategy;
   private _api_config;
@@ -162,6 +164,7 @@ export class Executor {
   private _activity_api;
   private _market_api;
   private _payment_api;
+  private _net_api;
 
   private _wrapped_consumer;
   private _active_computations;
@@ -171,18 +174,24 @@ export class Executor {
 
   private emit;
 
+  private _network?: Network;
+  private _network_address?: string;
+
   /**
    * Create new executor
-   * 
+   *
    * @param task_package    a package common for all tasks; vm.repo() function may be used to return package from a repository
    * @param max_workers     maximum number of workers doing the computation
    * @param timeout         timeout for the whole computation
    * @param budget          maximum budget for payments
    * @param strategy        market strategy used to select providers from the market (e.g. LeastExpensiveLinearPayuMS or DummyMS)
    * @param subnet_tag      use only providers in the subnet with the subnet_tag name (env variable equivalent: YAGNA_SUBNET)
-   * @param driver          name of the payment driver to use or null to use the default driver; only payment platforms with the specified driver will be used (env variable equivalent: YAGNA_PAYMENT_DRIVER)
-   * @param network         name of the network to use or null to use the default network; only payment platforms with the specified network will be used (env variable equivalent: YAGNA_PAYMENT_NETWORK)
+   * @param driver          @deprecated - it will be removed in a future release
+   * @param network         @deprecated - it will be removed in a future release
+   * @param payment_driver  name of the payment driver to use or null to use the default driver; only payment platforms with the specified driver will be used (env variable equivalent: YAGNA_PAYMENT_DRIVER)
+   * @param payment_network name of the network to use or null to use the default network; only payment platforms with the specified network will be used (env variable equivalent: YAGNA_PAYMENT_NETWORK)
    * @param event_consumer  a callable that processes events related to the computation; by default it is a function that logs all events
+   * @param network_address network address for VPN
    */
   constructor({
     task_package,
@@ -193,14 +202,27 @@ export class Executor {
     subnet_tag,
     driver,
     network,
+    payment_driver,
+    payment_network,
     event_consumer,
+    network_address,
   }: ExecutorOpts) {
     this._subnet = subnet_tag ? subnet_tag : DEFAULT_SUBNET;
-    this._driver = driver ? driver.toLowerCase() : DEFAULT_DRIVER;
-    this._network = network ? network.toLowerCase() : DEFAULT_NETWORK;
-    logger.info(
-      `Using subnet: ${this._subnet}, network: ${this._network}, driver: ${this._driver}`
-    );
+    this._payment_driver = payment_driver ? payment_driver.toLowerCase() : DEFAULT_DRIVER;
+    this._payment_network = payment_network ? payment_network.toLowerCase() : DEFAULT_NETWORK;
+    if (driver) {
+      logger.warn(
+        `The 'driver' parameter is deprecated. It will be removed in a future release. Use 'payment_driver' instead.`
+      );
+      this._payment_driver = driver.toLowerCase();
+    }
+    if (network) {
+      logger.warn(
+        `The 'network' parameter is deprecated. It will be removed in a future release. Use 'payment_network' instead.`
+      );
+      this._payment_network = network.toLowerCase();
+    }
+    logger.info(`Using subnet: ${this._subnet}, network: ${this._payment_network}, driver: ${this._payment_driver}`);
     this._stream_output = false;
     this._api_config = new rest.Configuration();
     this._stack = new AsyncExitStack();
@@ -208,19 +230,23 @@ export class Executor {
     this._conf = new _ExecutorConfig(max_workers, timeout);
     // TODO: setup precision
     this._budget_amount = parseFloat(budget);
-    this._strategy = strategy || new DecreaseScoreForUnconfirmedAgreement(
-      new LeastExpensiveLinearPayuMS(
-        60, 1.0, new Map([
-          [Counter.TIME, 0.1],
-          [Counter.CPU, 0.2]
-        ]),
-      ),
-      0.5
-    );
+    this._strategy =
+      strategy ||
+      new DecreaseScoreForUnconfirmedAgreement(
+        new LeastExpensiveLinearPayuMS(
+          60,
+          1.0,
+          new Map([
+            [Counter.TIME, 0.1],
+            [Counter.CPU, 0.2],
+          ])
+        ),
+        0.5
+      );
     this._budget_allocations = [];
 
     this._cancellation_token = new CancellationToken();
-    let cancellationToken = this._cancellation_token;
+    const cancellationToken = this._cancellation_token;
 
     function cancel(event) {
       if (cancellationToken && !cancellationToken.cancelled) {
@@ -237,38 +263,33 @@ export class Executor {
     }
     this._event_consumer_cancellation_token = new CancellationToken();
     this._wrapped_consumer =
-      event_consumer &&
-      new AsyncWrapper(event_consumer, null, this._event_consumer_cancellation_token);
-    this.emit = <Callable<[events.YaEvent], void>>(
-      this._wrapped_consumer.async_call.bind(this._wrapped_consumer)
-    )
+      event_consumer && new AsyncWrapper(event_consumer, null, this._event_consumer_cancellation_token);
+    this.emit = <Callable<[events.YaEvent], void>>this._wrapped_consumer.async_call.bind(this._wrapped_consumer);
     // Each call to `submit()` will put an item in the channel.
     // The channel can be used to wait until all calls to `submit()` are finished.
     this._chan_computation_done = csp.chan();
     this._active_computations = 0;
+    this._network_address = network_address;
   }
 
   /**
    * Submit a computation to be executed on providers.
-   * 
+   *
    * @param worker   a callable that takes a WorkContext object and a list o tasks, adds commands to the context object and yields committed commands
    * @param data     an iterator of Task objects to be computed on providers
    * @returns        yields computation progress events
    */
   async *submit(
-    worker: Callable<
-      [WorkContext, AsyncIterable<Task<D, R>>],
-      AsyncGenerator<WorkItem, any, BatchResults>
-    >,
+    worker: Callable<[WorkContext, AsyncIterable<Task<D, R>>], AsyncGenerator<WorkItem, any, BatchResults>>,
     data: Iterable<Task<D, R>>
   ): AsyncGenerator<Task<D, R>> {
     this._active_computations += 1;
-    let generator = this._submit(worker, data);
+    const generator = this._submit(worker, data);
     generator.return = async (value) => {
       csp.putAsync(this._chan_computation_done, true);
       await generator.throw(new AsyncGeneratorBreak());
       return { done: true, value: undefined };
-    }
+    };
     try {
       yield* generator;
     } catch (e) {
@@ -278,27 +299,26 @@ export class Executor {
     }
   }
 
-  async _handle_proposal(
-    state: SubmissionState,
-    proposal: OfferProposal
-  ): Promise<events.ProposalEvent> {
-    let reject_proposal = async (reason: string): Promise<events.ProposalEvent> => {
+  async _handle_proposal(state: SubmissionState, proposal: OfferProposal): Promise<events.ProposalEvent> {
+    const reject_proposal = async (reason: string): Promise<events.ProposalEvent> => {
       await proposal.reject(reason);
       return new events.ProposalRejected({ prop_id: proposal.id(), reason: reason });
-    }
+    };
     let score;
     try {
       score = await this._strategy.score_offer(proposal, state.agreements_pool);
-      logger.debug(`Scored offer ${proposal.id()}, ` +
-                    `provider: ${proposal.props()["golem.node.id.name"]}, ` +
-                    `strategy: ${this._strategy.constructor.name}, ` +
-                    `score: ${score}`);
+      logger.debug(
+        `Scored offer ${proposal.id()}, ` +
+          `provider: ${proposal.props()["golem.node.id.name"]}, ` +
+          `strategy: ${this._strategy.constructor.name}, ` +
+          `score: ${score}`
+      );
     } catch (error) {
       logger.log("debug", `Score offer error: ${error}`);
       return await reject_proposal(`Score offer error: ${error}`);
     }
     if (score < SCORE_NEUTRAL) {
-      return await reject_proposal("Score too low")
+      return await reject_proposal("Score too low");
     }
     if (!proposal.is_draft()) {
       const common_platforms = this._get_common_payment_platforms(proposal);
@@ -307,7 +327,7 @@ export class Executor {
       } else {
         return await reject_proposal("No common payment platforms");
       }
-      let timeout = proposal.props()[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP];
+      const timeout = proposal.props()[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP];
       if (timeout) {
         if (timeout < DEBIT_NOTE_MIN_TIMEOUT) {
           return await reject_proposal("Debit note acceptance timeout too short");
@@ -341,29 +361,28 @@ export class Executor {
       emit(new events.CollectFailed({ sub_id: subscription.id(), reason: error }));
       throw error;
     }
-    for await (let proposal of _proposals) {
+    for await (const proposal of _proposals) {
       emit(new events.ProposalReceived({ prop_id: proposal.id(), provider_id: proposal.issuer() }));
       state.offers_collected += 1;
-      let handler = async (pr: OfferProposal) => {
+      const handler = async (pr: OfferProposal) => {
         try {
           const event: events.ProposalEvent = await this._handle_proposal(state, pr);
           emit(event);
-          if (event instanceof events.ProposalConfirmed) { state.proposals_confirmed += 1; }
+          if (event instanceof events.ProposalConfirmed) {
+            state.proposals_confirmed += 1;
+          }
         } catch (error) {
           emit(new events.ProposalFailed({ prop_id: pr.id(), reason: error }));
         } finally {
           csp.putAsync(chan_offer_tokens, true);
         }
-      }
+      };
       handler(proposal);
       await promisify(csp.takeAsync)(chan_offer_tokens);
     }
   }
 
-  async find_offers(
-    state: SubmissionState,
-    emit: Callable<[events.YaEvent], void>
-  ): Promise<void> {
+  async find_offers(state: SubmissionState, emit: Callable<[events.YaEvent], void>): Promise<void> {
     let keepSubscribing = true;
     while (keepSubscribing && !state.worker_cancellation_token.cancelled) {
       try {
@@ -385,10 +404,7 @@ export class Executor {
   }
 
   async *_submit(
-    worker: Callable<
-      [WorkContext, AsyncIterable<Task<D, R>>],
-      AsyncGenerator<WorkItem, any, BatchResults>
-    >,
+    worker: Callable<[WorkContext, AsyncIterable<Task<D, R>>], AsyncGenerator<WorkItem, any, BatchResults>>,
     data: Iterable<Task<D, R>>
   ): AsyncGenerator<Task<D, R>> {
     const emit = this.emit;
@@ -397,9 +413,7 @@ export class Executor {
       multi_payment_decoration = await this._create_allocations();
     } catch (error) {
       if (error.response && error.response.status === 401) {
-        throw new Error(
-          "Error: not authorized. Please check if YAGNA_APPKEY env variable is valid."
-        );
+        throw new Error("Error: not authorized. Please check if YAGNA_APPKEY env variable is valid.");
       } else {
         throw error;
       }
@@ -407,62 +421,60 @@ export class Executor {
 
     emit(new events.ComputationStarted({ expires: this._expires }));
     // Building offer
-    let builder = new DemandBuilder();
-    let _activity = new Activity();
+    const builder = new DemandBuilder();
+    const _activity = new Activity();
     _activity.expiration.value = this._expires;
     _activity.multi_activity.value = true;
     builder.add(_activity);
     builder.add(new NodeInfo(this._subnet));
-    if (this._subnet)
-      builder.ensure(`(${NodeInfoKeys.subnet_tag}=${this._subnet})`);
-    for (let constraint of multi_payment_decoration.constraints) {
+    if (this._subnet) builder.ensure(`(${NodeInfoKeys.subnet_tag}=${this._subnet})`);
+    for (const constraint of multi_payment_decoration.constraints) {
       builder.ensure(constraint);
     }
-    for (let x of multi_payment_decoration.properties) {
+    for (const x of multi_payment_decoration.properties) {
       builder._properties[x.key] = x.value;
     }
     await this._task_package.decorate_demand(builder);
     await this._strategy.decorate_demand(builder);
 
-    let agreements_pool = new AgreementsPool(emit);
+    const agreements_pool = new AgreementsPool(emit);
     this.state = new SubmissionState(builder, agreements_pool);
     agreements_pool.cancellation_token = this.state.worker_cancellation_token;
-    let market_api = this._market_api;
-    let activity_api = this._activity_api;
-    let strategy = this._strategy;
-    let cancellationToken = this._cancellation_token;
-    let paymentCancellationToken = this.state.payment_cancellation_token;
-    let done_queue: Queue<Task<D, R>> = new Queue([]);
-    let stream_output = this._stream_output;
-    let workers_done = csp.chan();
+    const market_api = this._market_api;
+    const activity_api = this._activity_api;
+    const strategy = this._strategy;
+    const cancellationToken = this._cancellation_token;
+    const paymentCancellationToken = this.state.payment_cancellation_token;
+    const done_queue: Queue<Task<D, R>> = new Queue([]);
+    const stream_output = this._stream_output;
+    const workers_done = csp.chan();
+    const network = this._network;
 
     function on_task_done(task: Task<D, R>, status: TaskStatus): void {
       if (status === TaskStatus.ACCEPTED) done_queue.put(task); //put_nowait
     }
 
     function* input_tasks(): Iterable<Task<D, R>> {
-      for (let task of data) {
+      for (const task of data) {
         task._add_callback(on_task_done);
         yield task;
       }
     }
 
-    let work_queue = new SmartQueue([...input_tasks()]);
+    const work_queue = new SmartQueue([...input_tasks()]);
 
     let workers: Set<any> = new Set(); //asyncio.Task[]
     let last_wid = 0;
-    let self = this;
+    const self = this;
 
-    let agreements_to_pay: Set<string> = new Set();
-    let agreements_accepting_debit_notes: Set<string> = new Set();
-    let invoices: Map<string, Invoice> = new Map();
-    let payment_closing: boolean = false;
-    let secure = this._task_package.secure;
+    const agreements_to_pay: Set<string> = new Set();
+    const agreements_accepting_debit_notes: Set<string> = new Set();
+    const invoices: Map<string, Invoice> = new Map();
+    let payment_closing = false;
+    const secure = this._task_package.secure;
 
     async function process_invoices(): Promise<void> {
-      for await (let invoice of self._payment_api.incoming_invoices(
-        paymentCancellationToken
-      )) {
+      for await (const invoice of self._payment_api.incoming_invoices(paymentCancellationToken)) {
         if (agreements_to_pay.has(invoice.agreementId)) {
           emit(
             new events.InvoiceReceived({
@@ -485,10 +497,12 @@ export class Executor {
               })
             );
           } catch (e) {
-            emit(new events.PaymentFailed({
-              agr_id: invoice.agreementId,
-              reason: `${e}: ${e.response && e.response.data ? e.response.data.message : ''}`
-            }));
+            emit(
+              new events.PaymentFailed({
+                agr_id: invoice.agreementId,
+                reason: `${e}: ${e.response && e.response.data ? e.response.data.message : ""}`,
+              })
+            );
           }
         } else {
           invoices.set(invoice.agreementId, invoice);
@@ -503,12 +517,9 @@ export class Executor {
       logger.debug("Stopped processing invoices.");
     }
 
-    async function accept_payment_for_agreement({
-      agreement_id,
-      partial,
-    }): Promise<void> {
+    async function accept_payment_for_agreement({ agreement_id, partial }): Promise<void> {
       emit(new events.PaymentPrepared({ agr_id: agreement_id }));
-      let inv = invoices.get(agreement_id);
+      const inv = invoices.get(agreement_id);
       if (!inv) {
         agreements_to_pay.add(agreement_id);
         emit(new events.PaymentQueued({ agr_id: agreement_id }));
@@ -528,15 +539,15 @@ export class Executor {
 
     /* TODO Consider processing invoices and debit notes together */
     async function process_debit_notes(): Promise<void> {
-      for await (let debit_note of self._payment_api.incoming_debit_notes(
-        paymentCancellationToken
-      )) {
+      for await (const debit_note of self._payment_api.incoming_debit_notes(paymentCancellationToken)) {
         if (agreements_accepting_debit_notes.has(debit_note.agreementId)) {
-          emit(new events.DebitNoteReceived({
-            agr_id: debit_note.agreementId,
-            note_id: debit_note.debitNodeId,
-            amount: debit_note.totalAmountDue,
-          }));
+          emit(
+            new events.DebitNoteReceived({
+              agr_id: debit_note.agreementId,
+              note_id: debit_note.debitNodeId,
+              amount: debit_note.totalAmountDue,
+            })
+          );
           try {
             const allocation = self._get_allocation(debit_note);
             await debit_note.accept(debit_note.totalAmountDue, allocation);
@@ -551,11 +562,9 @@ export class Executor {
       logger.debug("Stopped processing debit notes.");
     }
 
-    let storage_manager = await this._stack.enter_async_context(
-      gftp.provider()
-    );
+    const storage_manager = await this._stack.enter_async_context(gftp.provider());
 
-    let unpack_work_item = (item: WorkItem): [Work, ExecOptions] => {
+    const unpack_work_item = (item: WorkItem): [Work, ExecOptions] => {
       return item instanceof Work ? [item, new ExecOptions()] : item;
     };
 
@@ -566,28 +575,29 @@ export class Executor {
       consumer: Consumer<Task<D, R>>
     ): Promise<void> {
       /* TODO ctrl+c handling */
-      let { done = false, value: item }: { done?: boolean; value: WorkItem }
-        = await command_generator.next();
+      let { done = false, value: item }: { done?: boolean; value: WorkItem } = await command_generator.next();
       while (!done) {
         const [batch, exec_options] = unpack_work_item(item);
         if (batch.timeout()) {
           if (exec_options.batch_timeout) {
-            logger.warn(
-              "Overriding batch timeout set with commit({timeout:...}) by value from ExecOptions"
-            );
+            logger.warn("Overriding batch timeout set with commit({timeout:...}) by value from ExecOptions");
           } else {
             exec_options.batch_timeout = batch.timeout();
           }
         }
-        const batch_deadline
-          = exec_options.batch_timeout ? ((Date.now() + exec_options.batch_timeout) / 1000) : undefined;
+        let batch_deadline;
+        if (exec_options.batch_timeout) {
+          batch_deadline = (Date.now() + exec_options.batch_timeout) / 1000;
+        }
         const current_worker_task = consumer.last_item();
         if (current_worker_task) {
-          emit(new events.TaskStarted({
-            agr_id: agreement_id,
-            task_id: current_worker_task.id,
-            task_data: current_worker_task.data(),
-          }));
+          emit(
+            new events.TaskStarted({
+              agr_id: agreement_id,
+              task_id: current_worker_task.id,
+              task_data: current_worker_task.data(),
+            })
+          );
         }
         const task_id = current_worker_task ? current_worker_task.id : undefined;
         batch.attestation = {
@@ -606,14 +616,14 @@ export class Executor {
         );
         const cmds = cc.commands();
         emit(new events.ScriptSent({ agr_id: agreement_id, task_id, cmds }));
-        const get_batch_results = async () : Promise<events.CommandEvent[]> => {
-          let results: events.CommandEvent[] = [];
-          for await (let evt_ctx of remote) {
-            let evt = evt_ctx.event(agreement_id, task_id, cmds);
+        const get_batch_results = async (): Promise<events.CommandEvent[]> => {
+          const results: events.CommandEvent[] = [];
+          for await (const evt_ctx of remote) {
+            const evt = evt_ctx.event(agreement_id, task_id, cmds);
             emit(evt);
             results.push(evt);
             if (evt instanceof events.CommandExecuted && !evt.success) {
-              throw new CommandExecutionError(evt.command, evt.message)
+              throw new CommandExecutionError(evt.command, evt.message);
             }
           }
           emit(new events.GettingResults({ agr_id: agreement_id, task_id: task_id }));
@@ -622,7 +632,7 @@ export class Executor {
           await accept_payment_for_agreement({ agreement_id: agreement_id, partial: true });
           emit(new events.CheckingPayments());
           return results;
-        }
+        };
         if (exec_options.wait_for_results) {
           // Block until the results are available
           let results: BatchResults | undefined;
@@ -639,9 +649,9 @@ export class Executor {
           }
         } else {
           // Run without blocking
-          const get_results = (async () : Promise<BatchResults> => {
+          const get_results = (async (): Promise<BatchResults> => {
             try {
-              let results = await get_batch_results();
+              const results = await get_batch_results();
               return new Promise((resolve, _) => resolve({ results }));
             } catch (error) {
               logger.warn(`Error while getting batch results: ${error}`);
@@ -654,12 +664,14 @@ export class Executor {
     }
 
     async function start_worker(agreement: Agreement): Promise<void> {
-      let wid = last_wid;
+      const wid = last_wid;
       last_wid += 1;
 
       emit(new events.WorkerStarted({ agr_id: agreement.id() }));
 
-      if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) { return; }
+      if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
+        return;
+      }
       let _act: Activity;
       try {
         _act = await activity_api.new_activity(agreement, secure);
@@ -669,39 +681,52 @@ export class Executor {
         throw error;
       }
 
-      async function* task_emitter(
-        consumer: Consumer<any>
-      ): AsyncGenerator<Task<"TaskData", "TaskResult">> {
-        for await (let handle of consumer) {
-          if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) { break; }
+      async function* task_emitter(consumer: Consumer<any>): AsyncGenerator<Task<"TaskData", "TaskResult">> {
+        for await (const handle of consumer) {
+          if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
+            break;
+          }
           yield Task.for_handle(handle, work_queue, emit);
         }
       }
 
-      await asyncWith(
-        _act,
-        async (act): Promise<void> => {
-          emit(new events.ActivityCreated({ act_id: act.id, agr_id: agreement.id() }));
-          agreements_accepting_debit_notes.add(agreement.id());
-          let work_context = new WorkContext(`worker-${wid}`, storage_manager, emit);
-          await asyncWith(work_queue.new_consumer(), async (consumer) => {
-            try {
-              let tasks = task_emitter(consumer);
-              const batch_generator = worker(work_context, tasks);
-              await process_batches(agreement.id(), act, batch_generator, consumer);
-              emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
-            } catch (error) {
-              emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error }));
-              throw error;
-            } finally {
-              await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
-            }
-          });
-          if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) { return; }
-          await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
-          emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
+      await asyncWith(_act, async (act): Promise<void> => {
+        emit(new events.ActivityCreated({ act_id: act.id, agr_id: agreement.id() }));
+        agreements_accepting_debit_notes.add(agreement.id());
+        const agreement_details = await agreement.details();
+        const node_info = <NodeInfo>agreement_details.provider_view().extract(new NodeInfo());
+        const provider_name = node_info.name.value;
+        const provider_id = agreement_details.raw_details.offer.providerId;
+        let network_node;
+        if (network) {
+          network_node = await network.add_node(provider_id);
         }
-      );
+        const work_context = new WorkContext(
+          `worker-${wid}`,
+          storage_manager,
+          emit,
+          { provider_id, provider_name },
+          network_node
+        );
+        await asyncWith(work_queue.new_consumer(), async (consumer) => {
+          try {
+            const tasks = task_emitter(consumer);
+            const batch_generator = worker(work_context, tasks);
+            await process_batches(agreement.id(), act, batch_generator, consumer);
+            emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
+          } catch (error) {
+            emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error }));
+            throw error;
+          } finally {
+            await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
+          }
+        });
+        if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
+          return;
+        }
+        await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
+        emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
+      });
       logger.debug(`Stopped worker related to agreement ${agreement.id()}.`);
     }
 
@@ -719,18 +744,21 @@ export class Executor {
       while (true) {
         await sleep(2);
         await agreements_pool.cycle();
-        if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) { break; }
-        if (
-          workers.size < self._conf.max_workers &&
-          work_queue.has_unassigned_items()
-        ) {
+        if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
+          break;
+        }
+        if (workers.size < self._conf.max_workers && work_queue.has_unassigned_items()) {
           let new_task: any;
           try {
-            if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) { break; }
-            const { task: new_task } = await agreements_pool.use_agreement(
-              (agreement: Agreement, _: any) => loop.create_task(_start_worker.bind(null, agreement))
+            if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
+              break;
+            }
+            const { task: new_task } = await agreements_pool.use_agreement((agreement: Agreement, _: any) =>
+              loop.create_task(_start_worker.bind(null, agreement))
             );
-            if (new_task === undefined) { continue; }
+            if (new_task === undefined) {
+              continue;
+            }
             workers.add(new_task);
           } catch (error) {
             if (new_task) new_task.cancel();
@@ -747,23 +775,15 @@ export class Executor {
       })();
     }
 
-    let loop = eventLoop();
-    let find_offers_task = loop.create_task(this.find_offers.bind(this, this.state, emit));
-    let process_invoices_job = loop.create_task(process_invoices);
-    let wait_until_done = loop.create_task(
-      work_queue.wait_until_done.bind(work_queue)
-    );
+    const loop = eventLoop();
+    const find_offers_task = loop.create_task(this.find_offers.bind(this, this.state, emit));
+    const process_invoices_job = loop.create_task(process_invoices);
+    const wait_until_done = loop.create_task(work_queue.wait_until_done.bind(work_queue));
     let get_offers_deadline = dayjs.utc() + this._conf.get_offers_timeout;
     let get_done_task: any = null;
-    let worker_starter_task = loop.create_task(worker_starter);
-    let debit_notes_job = loop.create_task(process_debit_notes);
-    let services: any = [
-      find_offers_task,
-      worker_starter_task,
-      process_invoices_job,
-      wait_until_done,
-      debit_notes_job,
-    ];
+    const worker_starter_task = loop.create_task(worker_starter);
+    const debit_notes_job = loop.create_task(process_debit_notes);
+    let services: any = [find_offers_task, worker_starter_task, process_invoices_job, wait_until_done, debit_notes_job];
     try {
       while (services.indexOf(wait_until_done) > -1 || !done_queue.empty()) {
         if (cancellationToken.cancelled) {
@@ -773,9 +793,7 @@ export class Executor {
         }
         const now = dayjs.utc();
         if (now > this._expires) {
-          throw new TimeoutError(
-            `task timeout exceeded. timeout=${this._conf.timeout}`
-          );
+          throw new TimeoutError(`task timeout exceeded. timeout=${this._conf.timeout}`);
         }
         if (now > get_offers_deadline && this.state.proposals_confirmed == 0) {
           emit(
@@ -792,11 +810,7 @@ export class Executor {
           services.push(get_done_task);
         }
 
-        await bluebird.Promise.any([
-          ...services,
-          ...workers,
-          promise_timeout(10),
-        ]);
+        await bluebird.Promise.any([...services, ...workers, promise_timeout(10)]);
 
         workers = new Set([...workers].filter((worker) => worker.isPending()));
         services = services.filter((service) => service.isPending());
@@ -804,7 +818,11 @@ export class Executor {
         if (!get_done_task) throw "";
         if (!get_done_task.isPending()) {
           const res = await get_done_task;
-          if (res) { yield res; } else { break; }
+          if (res) {
+            yield res;
+          } else {
+            break;
+          }
           if (services.indexOf(get_done_task) > -1) throw "";
           get_done_task = null;
         }
@@ -843,23 +861,27 @@ export class Executor {
       try {
         await agreements_pool.cycle();
         await agreements_pool.terminate_all({
-          "message":
-            cancellationToken.cancelled ? "Work cancelled" : "Successfully finished all work",
-          "golem.requestor.code":
-            cancellationToken.cancelled ? "Cancelled" : "Success"
+          message: cancellationToken.cancelled ? "Work cancelled" : "Successfully finished all work",
+          "golem.requestor.code": cancellationToken.cancelled ? "Cancelled" : "Success",
         });
       } catch (error) {
         logger.debug(`Problem with agreements termination ${error}`);
       }
-      if (agreements_to_pay.size > 0) { logger.debug(`Waiting for ${agreements_to_pay.size} invoices...`); }
+      if (agreements_to_pay.size > 0) {
+        logger.debug(`Waiting for ${agreements_to_pay.size} invoices...`);
+      }
       try {
         await bluebird.Promise.all([process_invoices_job, debit_notes_job]).timeout(25000);
       } catch (error) {
         logger.warn(`Error while waiting for invoices: ${error}.`);
       }
       emit(new events.CheckingPayments());
-      if (agreements_to_pay.size > 0) { logger.warn(`${agreements_to_pay.size} unpaid invoices ${Array.from(agreements_to_pay.keys()).join(",")}.`); }
-      if (!paymentCancellationToken.cancelled) { paymentCancellationToken.cancel(); }
+      if (agreements_to_pay.size > 0) {
+        logger.warn(`${agreements_to_pay.size} unpaid invoices ${Array.from(agreements_to_pay.keys()).join(",")}.`);
+      }
+      if (!paymentCancellationToken.cancelled) {
+        paymentCancellationToken.cancel();
+      }
       emit(new events.PaymentsFinished());
       await sleep(1);
       logger.info("Shutdown complete.");
@@ -867,22 +889,21 @@ export class Executor {
     return;
   }
 
-
   async _create_allocations(): Promise<MarketDecoration> {
     if (!this._budget_allocations.length) {
-      for await (let account of this._payment_api.accounts()) {
-        let driver = account.driver ? account.driver.toLowerCase() : "";
-        let network = account.driver ? account.network.toLowerCase() : "";
-        if (driver != this._driver || network != this._network) {
+      for await (const account of this._payment_api.accounts()) {
+        const driver = account.driver ? account.driver.toLowerCase() : "";
+        const network = account.driver ? account.network.toLowerCase() : "";
+        if (driver != this._payment_driver || network != this._payment_network) {
           logger.debug(
             `Not using payment platform ${account.platform}, platform's driver/network ` +
-            `${driver}/${network} is different than requested ` +
-            `driver/network ${this._driver}/${this._network}`
+              `${driver}/${network} is different than requested ` +
+              `driver/network ${this._payment_driver}/${this._payment_network}`
           );
           continue;
         }
         logger.debug(`Creating allocation using payment platform ${account.platform}`);
-        let allocation: Allocation = await this._stack.enter_async_context(
+        const allocation: Allocation = await this._stack.enter_async_context(
           this._payment_api.new_allocation(
             this._budget_amount,
             account.platform,
@@ -893,10 +914,10 @@ export class Executor {
         this._budget_allocations.push(allocation);
       }
       if (!this._budget_allocations.length) {
-        throw new NoPaymentAccountError(this._driver, this._network);
+        throw new NoPaymentAccountError(this._payment_driver, this._payment_network);
       }
     }
-    let allocation_ids = this._budget_allocations.map((a) => a.id);
+    const allocation_ids = this._budget_allocations.map((a) => a.id);
     return await this._payment_api.decorate_demand(allocation_ids);
   }
 
@@ -911,20 +932,15 @@ export class Executor {
     if (!prov_platforms) {
       prov_platforms = ["NGNT"];
     }
-    const req_platforms = this._budget_allocations.map(
-      (budget_allocation) => budget_allocation.payment_platform
-    );
-    return req_platforms.filter(
-      (value) => value && prov_platforms.includes(value)
-    ) as string[];
+    const req_platforms = this._budget_allocations.map((budget_allocation) => budget_allocation.payment_platform);
+    return req_platforms.filter((value) => value && prov_platforms.includes(value)) as string[];
   }
 
   _get_allocation(item: Invoice | DebitNote): Allocation {
     try {
       const _allocation = this._budget_allocations.find(
         (allocation) =>
-          allocation.payment_platform === item.paymentPlatform &&
-          allocation.payment_address === item.payerAddr
+          allocation.payment_platform === item.paymentPlatform && allocation.payment_address === item.payerAddr
       );
       if (_allocation) return _allocation;
       throw `No allocation for ${item.paymentPlatform} ${item.payerAddr}.`;
@@ -934,18 +950,33 @@ export class Executor {
   }
 
   async ready(): Promise<Executor> {
-    let stack = this._stack;
+    const stack = this._stack;
     // TODO: Cleanup on exception here.
     this._expires = dayjs.utc().add(this._conf.timeout, "ms");
-    let market_client = await this._api_config.market();
+    const market_client = await this._api_config.market();
     this._market_api = new rest.Market(market_client);
 
-    let activity_client = await this._api_config.activity();
+    const activity_client = await this._api_config.activity();
     this._activity_api = new ActivityService(activity_client);
 
-    let payment_client = await this._api_config.payment();
+    const payment_client = await this._api_config.payment();
     this._payment_api = new rest.Payment(payment_client);
+
+    const net_client = await this._api_config.net();
+    this._net_api = new rest.Net(net_client);
+
     await stack.enter_async_context(this._wrapped_consumer);
+
+    if (this._network_address) {
+      // TODO: replace with a proper REST API client once ya-client and ya-ts-client are updated
+      // https://github.com/golemfactory/yajsapi/issues/290
+      const {
+        data: { identity },
+      } = await axios.get(this._api_config.__url + "/me", {
+        headers: { authorization: `Bearer ${net_client.accessToken}` },
+      });
+      this._network = await Network.create(this._net_api, this._network_address, identity);
+    }
 
     return this;
   }
@@ -962,6 +993,8 @@ export class Executor {
     // TODO: prevent new computations at this point (if it's even possible to start one)
     this._market_api = null;
     this._payment_api = null;
+    if (this._network) await this._network.remove();
+    this._net_api = null;
     this.emit(new events.ShutdownFinished());
     try {
       await this._stack.aclose();
@@ -971,5 +1004,17 @@ export class Executor {
     } finally {
       this._event_consumer_cancellation_token.cancel();
     }
+  }
+
+  async run(runner) {
+    const executor = await this.ready();
+    let errorInRunner;
+    try {
+      await runner(executor);
+    } catch (error) {
+      errorInRunner = error;
+    }
+    await this.done();
+    if (errorInRunner) { throw errorInRunner; }
   }
 }

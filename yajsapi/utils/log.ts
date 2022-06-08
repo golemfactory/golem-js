@@ -5,7 +5,7 @@ import winston from "winston";
 import { Callable } from "./";
 import * as events from "../executor/events";
 
-const REPORT_CONFIRMED_PROVIDERS_INTERVAL: number = 3000;
+const REPORT_CONFIRMED_PROVIDERS_INTERVAL = 3000;
 
 dayjs.extend(duration);
 
@@ -53,7 +53,7 @@ const customFormat = printf(({ level, message, label, timestamp }) => {
   return `${timestamp} [${label}] ${level}: ${message}`;
 });
 
-let options = {
+const options = {
   level: "info",
   format: combine(
     colorize(),
@@ -62,9 +62,7 @@ let options = {
     customFormat
   ),
   defaultMeta: { service: "user-service" },
-  transports: [
-    new winston.transports.Console(),
-  ],
+  transports: [new winston.transports.Console()],
 };
 const logColors = {
   info: "blue",
@@ -126,7 +124,7 @@ class SummaryLogger {
   finished!: boolean;
 
   // Has Executor shut down?
-  shutdown_complete: boolean = false;
+  shutdown_complete = false;
 
   error_occurred!: boolean;
 
@@ -169,14 +167,14 @@ class SummaryLogger {
         "Payment Status": status,
       };
     });
-    if (results.length > 0) { console.table(results); }
+    if (results.length > 0) {
+      console.table(results);
+    }
   }
 
   _print_confirmed_providers(): void {
     const confirmed_providers = new Set(
-      [...this.confirmed_proposals].map(
-        (prop_id) => this.received_proposals[prop_id]
-      )
+      [...this.confirmed_proposals].map((prop_id) => this.received_proposals[prop_id])
     );
     if (this.prev_confirmed_providers < confirmed_providers.size) {
       logger.info(`Received proposals from ${confirmed_providers.size} providers so far`);
@@ -204,10 +202,8 @@ class SummaryLogger {
   _handle(event: events.YaEvent) {
     const eventName = event.constructor.name;
     if (eventName === events.ComputationStarted.name) this._reset();
-    if (eventName === events.SubscriptionCreated.name)
-      logger.info(event_type_to_string[eventName]);
-    else if (eventName === events.SubscriptionFailed.name)
-      logger.error(`Subscription failed: ${event["reason"]}`);
+    if (eventName === events.SubscriptionCreated.name) logger.info(event_type_to_string[eventName]);
+    else if (eventName === events.SubscriptionFailed.name) logger.error(`Subscription failed: ${event["reason"]}`);
     else if (eventName === events.ProposalReceived.name)
       this.received_proposals[event["prop_id"]] = event["provider_id"];
     else if (eventName === events.ProposalConfirmed.name) {
@@ -224,12 +220,10 @@ class SummaryLogger {
         msg = `${
           event["num_offers"]
         } offers have been collected from the market, but no provider has responded for ${this.time_waiting_for_proposals.asSeconds()}s. `;
-      msg +=
-        "Make sure you're using the latest released versions of yagna and yajsapi, and the correct subnet.";
+      msg += "Make sure you're using the latest released versions of yagna and yajsapi, and the correct subnet.";
       logger.warn(msg);
     } else if (eventName === events.AgreementCreated.name) {
-      let provider_name =
-        event["provider_info"].name.value || event["provider_id"];
+      const provider_name = event["provider_info"].name.value || event["provider_id"];
       logger.info(`Agreement proposed to provider '${provider_name}'`);
       this.agreement_provider_info[event["agr_id"]] = new ProviderInfo(
         event["provider_id"],
@@ -237,11 +231,7 @@ class SummaryLogger {
         event["provider_info"].subnet_tag
       );
     } else if (eventName === events.AgreementConfirmed.name) {
-      logger.info(
-        `Agreement confirmed by provider '${
-          this.agreement_provider_info[event["agr_id"]].name
-        }'`
-      );
+      logger.info(`Agreement confirmed by provider '${this.agreement_provider_info[event["agr_id"]].name}'`);
       this.confirmed_agreements.add(event["agr_id"]);
     } else if (eventName === events.TaskStarted.name) {
       this.task_data[event["task_id"]] = event["task_data"];
@@ -252,9 +242,7 @@ class SummaryLogger {
       const provider_info = this.agreement_provider_info[event["agr_id"]];
       logger.info(
         `Task sent to provider '${provider_info.name}', task data: ${
-          event["task_id"]
-            ? this.task_data[event["task_id"]]
-            : "<initialization>"
+          event["task_id"] ? this.task_data[event["task_id"]] : "<initialization>"
         }`
       );
     } else if (eventName === events.CommandExecuted.name) {
@@ -262,7 +250,9 @@ class SummaryLogger {
       const cmd = JSON.stringify(event["command"]);
       if (event["success"]) {
         logger.debug(`Command successful on provider '${provider_name}', command: ${cmd}.`);
-        logger.silly(`Command ${cmd}: stdout: ${event["stdout"]}, stderr: ${event["stderr"]}, msg: ${event["message"]}.`);
+        logger.silly(
+          `Command ${cmd}: stdout: ${event["stdout"]}, stderr: ${event["stderr"]}, msg: ${event["message"]}.`
+        );
       } else {
         logger.warn(`Command failed on provider '${provider_name}', command: ${cmd}, msg: ${event["message"]}`);
         logger.debug(`Command ${cmd}: stdout: ${event["stdout"]}, stderr: ${event["stderr"]}.`);
@@ -271,13 +261,11 @@ class SummaryLogger {
       const provider_info = this.agreement_provider_info[event["agr_id"]];
       logger.info(
         `Task computed by provider '${provider_info.name}', task data: ${
-          event["task_id"]
-            ? this.task_data[event["task_id"]]
-            : "<initialization>"
+          event["task_id"] ? this.task_data[event["task_id"]] : "<initialization>"
         }`
       );
       if (event["task_id"]) {
-        let ids = this.provider_tasks.get(provider_info);
+        const ids = this.provider_tasks.get(provider_info);
         if (!ids) this.provider_tasks.set(provider_info, [event["task_id"]]);
         else {
           ids.push(event["task_id"]);
@@ -300,48 +288,32 @@ class SummaryLogger {
     } else if (eventName === events.WorkerFinished.name) {
       if (event["exception"] === null || event["exception"] === undefined) return;
       const provider_info = this.agreement_provider_info[event["agr_id"]];
-      let failures = this.provider_failures.get(provider_info);
+      const failures = this.provider_failures.get(provider_info);
       if (failures === undefined) this.provider_failures.set(provider_info, 1);
       else this.provider_failures.set(provider_info, failures + 1);
       let more_info = "";
-      if (
-        event["exception"] &&
-        event["exception"].response &&
-        event["exception"].response.data
-      ) {
+      if (event["exception"] && event["exception"].response && event["exception"].response.data) {
         more_info = `, info: ${event["exception"].response.data.message}`;
       }
-      logger.warn(
-        `Activity failed on provider '${provider_info.name}', reason: ${event["exception"]}${more_info}`
-      );
+      logger.warn(`Activity failed on provider '${provider_info.name}', reason: ${event["exception"]}${more_info}`);
     } else if (eventName === events.ComputationFinished.name) {
       this.finished = true;
       const total_time = dayjs().valueOf() / 1000 - this.start_time;
       logger.info(`Computation finished in ${total_time.toFixed(1)}s`);
-      const num_providers = [...this.confirmed_agreements].map(
-        (agr_id) => this.agreement_provider_info[agr_id]
-      ).length;
-      logger.info(
-        `Negotiated ${this.confirmed_agreements.size} agreements with ${num_providers} providers`
-      );
-      for (let [info, tasks] of this.provider_tasks.entries()) {
+      const num_providers = [...this.confirmed_agreements].map((agr_id) => this.agreement_provider_info[agr_id]).length;
+      logger.info(`Negotiated ${this.confirmed_agreements.size} agreements with ${num_providers} providers`);
+      for (const [info, tasks] of this.provider_tasks.entries()) {
         logger.info(`Provider '${info.name}' computed ${tasks.length} tasks`);
       }
-      for (let info of new Set(Object.values(this.agreement_provider_info))) {
-        if (!this.provider_tasks.has(info))
-          logger.info(`Provider '${info.name}' did not compute any tasks`);
+      for (const info of new Set(Object.values(this.agreement_provider_info))) {
+        if (!this.provider_tasks.has(info)) logger.info(`Provider '${info.name}' did not compute any tasks`);
       }
-      for (let [info, num] of this.provider_failures.entries())
-        logger.info(
-          `Activity failed ${num} time(s) on provider '${info.name}'`
-        );
+      for (const [info, num] of this.provider_failures.entries())
+        logger.info(`Activity failed ${num} time(s) on provider '${info.name}'`);
     } else if (eventName === events.PaymentsFinished.name) {
       logger.info(`Finished waiting for payments. Summary:`);
       this._print_cost();
-      const total_cost = [...this.provider_cost.values()].reduce(
-        (acc, item) => acc + item,
-        0
-      );
+      const total_cost = [...this.provider_cost.values()].reduce((acc, item) => acc + item, 0);
       const total_paid = [...this.provider_cost.entries()].reduce(
         (acc, item) => acc + (this.payment_status.get(item[0]) === "paid" ? item[1] : 0),
         0
@@ -357,26 +329,18 @@ class SummaryLogger {
       const provider_info = this.agreement_provider_info[event["agr_id"]];
       const provider_name = provider_info.name;
       this.payment_status.set(provider_info, "failed");
-      logger.error(
-        `Payment for provider ${provider_name} failed; reason: ${event["reason"]}.`
-      );
+      logger.error(`Payment for provider ${provider_name} failed; reason: ${event["reason"]}.`);
     } else if (eventName === events.PaymentPrepared.name) {
-      logger.debug(
-        `Prepared payment for agreement ${event["agr_id"].substr(0, 17)}`
-      );
+      logger.debug(`Prepared payment for agreement ${event["agr_id"].substr(0, 17)}`);
     } else if (eventName === events.PaymentQueued.name) {
-      logger.debug(
-        `Queued payment for agreement ${event["agr_id"].substr(0, 17)}`
-      );
+      logger.debug(`Queued payment for agreement ${event["agr_id"].substr(0, 17)}`);
     } else if (eventName === events.ShutdownFinished.name) {
       this.shutdown_complete = true;
     }
   }
 }
 
-export function logSummary(
-  wrapped_emitter?: Callable<[events.YaEvent], void> | null | undefined
-) {
+export function logSummary(wrapped_emitter?: Callable<[events.YaEvent], void> | null | undefined) {
   const summary_logger = new SummaryLogger(wrapped_emitter);
   return summary_logger.log.bind(summary_logger);
 }
@@ -386,17 +350,14 @@ export const changeLogLevel = (level: string) => {
   options.transports = [
     new winston.transports.Console({ level: level }),
     new winston.transports.File({
-      filename: path.join(
-        "logs",
-        `yajsapi-${dayjs().format("YYYY-MM-DD_HH-mm-ss")}.log`
-      ),
+      filename: path.join("logs", `yajsapi-${dayjs().format("YYYY-MM-DD_HH-mm-ss")}.log`),
       level: "silly",
     }) as any,
     new winston.transports.File({
       filename: path.join("logs", "yajsapi-current.log"),
       level: "silly",
       options: { flags: "w" },
-    }) as any
+    }) as any,
   ];
   logger.configure(options);
 };

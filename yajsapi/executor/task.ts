@@ -23,16 +23,13 @@ type TaskEvents = events.TaskAccepted | events.TaskRejected;
  * @description Represents one computation unit that will be run on the provider (e.g. rendering of one frame of an animation).
  */
 export class Task<TaskData, TaskResult> {
-  static count: number = 0;
-  public id: number = 0;
+  static count = 0;
+  public id = 0;
   private _started: number | null;
   private _finished: number | null;
   private _emit_event: any;
-  private _callbacks!: Set<Function | null>;
-  private _handle?: [
-    Handle<Task<TaskData, TaskResult>>,
-    SmartQueue<Task<TaskData, TaskResult>>
-  ];
+  private _callbacks!: Set<(...args) => void | null>;
+  private _handle?: [Handle<Task<TaskData, TaskResult>>, SmartQueue<Task<TaskData, TaskResult>>];
   private _result?: TaskResult | null;
   private _data;
   private _status!: TaskStatus;
@@ -42,9 +39,7 @@ export class Task<TaskData, TaskResult> {
    *
    * @param data     contains information needed to prepare command list for the provider
    */
-  constructor(
-    data: TaskData,
-  ) {
+  constructor(data: TaskData) {
     this.id = Task.counter;
     this._started = null;
     this._finished = null;
@@ -56,7 +51,7 @@ export class Task<TaskData, TaskResult> {
     this._status = TaskStatus.WAITING;
   }
 
-  _add_callback(callback: Function): void {
+  _add_callback(callback: (...args) => void): void {
     this._callbacks.add(callback);
   }
 
@@ -67,11 +62,11 @@ export class Task<TaskData, TaskResult> {
     this._finished = null;
   }
 
-  _stop(retry: boolean = false): void {
+  _stop(retry = false): void {
     this._finished = dayjs.utc().unix();
     if (this._handle) {
       const [handle, queue] = this._handle;
-      let loop = eventLoop();
+      const loop = eventLoop();
       if (retry) loop.create_task(queue.reschedule.bind(queue, handle));
       else loop.create_task(queue.mark_done.bind(queue, handle));
     }
@@ -82,7 +77,7 @@ export class Task<TaskData, TaskResult> {
     queue: SmartQueue<Task<any, any>>,
     emitter: Callable<[events.YaEvent], void>
   ): Task<"TaskData", "TaskResult"> {
-    let task = handle.data();
+    const task = handle.data();
     task._handle = [handle, queue];
     task._start(emitter);
     return task;
@@ -102,10 +97,10 @@ export class Task<TaskData, TaskResult> {
 
   running_time(): number | null {
     if (this._finished) {
-      if(!this._started) throw Error("Task._started is null");
+      if (!this._started) throw Error("Task._started is null");
       return this._finished - this._started;
     }
-    if(this._started) {
+    if (this._started) {
       return dayjs.utc().unix() - this._started;
     }
     return null;
@@ -119,13 +114,13 @@ export class Task<TaskData, TaskResult> {
    */
   accept_result(result: TaskResult | null = null): void {
     if (this._emit_event) {
-      this._emit_event(new events.TaskAccepted({task_id: this.id, result}));
+      this._emit_event(new events.TaskAccepted({ task_id: this.id, result }));
     }
-    if (this._status != TaskStatus.RUNNING) throw "Accepted task not running";
+    if (this._status != TaskStatus.RUNNING) throw "Accepted task not running. STATUS: " + this._status;
     this._status = TaskStatus.ACCEPTED;
-    this._result = result;
     this._stop();
-    for (let cb of this._callbacks) cb && cb(this, TaskStatus.ACCEPTED);
+    this._result = result;
+    for (const cb of this._callbacks) cb && cb(this, TaskStatus.ACCEPTED);
   }
 
   /**
@@ -136,15 +131,15 @@ export class Task<TaskData, TaskResult> {
    * @param reason  Task rejection description (optional)
    * @param retry   Task retry in case of rejects (optional)
    */
-  reject_result(reason: string | null = null, retry: boolean = false): void {
+  reject_result(reason: string | null = null, retry = false): void {
     if (this._emit_event) {
-      this._emit_event(new events.TaskRejected({task_id: this.id, reason}));
+      this._emit_event(new events.TaskRejected({ task_id: this.id, reason }));
     }
     if (this._status != TaskStatus.RUNNING) throw "Rejected task not running";
     this._status = TaskStatus.REJECTED;
-    this._stop(retry)
+    this._stop(retry);
 
-    for (let cb of this._callbacks) cb && cb(self, TaskStatus.REJECTED)
+    for (const cb of this._callbacks) cb && cb(self, TaskStatus.REJECTED);
   }
 
   static get counter(): number {
