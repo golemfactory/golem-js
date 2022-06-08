@@ -6,7 +6,7 @@ const { program } = require("commander");
 
 dayjs.extend(duration);
 
-const { asyncWith, logUtils, range } = utils;
+const { logUtils, range } = utils;
 
 async function main(subnetTag, driver, network) {
   const _package = await vm.repo({
@@ -16,11 +16,8 @@ async function main(subnetTag, driver, network) {
   });
 
   async function* worker(ctx, tasks) {
-    ctx.send_file(
-      path.join(__dirname, "./cubes.blend"),
-      "/golem/resource/scene.blend"
-    );
-    
+    ctx.send_file(path.join(__dirname, "./cubes.blend"), "/golem/resource/scene.blend");
+
     for await (let task of tasks) {
       let frame = task.data();
       let crops = [
@@ -48,7 +45,7 @@ async function main(subnetTag, driver, network) {
         `/golem/output/out${frame.toString().padStart(4, "0")}.png`,
         path.join(__dirname, `./output_${frame}.png`)
       );
-      yield ctx.commit({timeout: dayjs.duration({ seconds: 120 }).asMilliseconds()});
+      yield ctx.commit({ timeout: dayjs.duration({ seconds: 120 }).asMilliseconds() });
       // TODO: Check
       // job results are valid // and reject by:
       // task.reject_task(msg = 'invalid file')
@@ -56,33 +53,29 @@ async function main(subnetTag, driver, network) {
     }
 
     ctx.log("no more frames to render");
-    return;
   }
 
   const frames = range(0, 60, 10);
   const timeout = dayjs.duration({ minutes: 15 }).asMilliseconds();
 
-  await asyncWith(
-    new Executor({
-      task_package: _package,
-      max_workers: 6,
-      timeout: timeout,
-      budget: "10.0",
-      subnet_tag: subnetTag,
-      driver: driver,
-      network: network,
-      event_consumer: logUtils.logSummary(),
-    }),
-    async (executor) => {
-      for await (let task of executor.submit(
-        worker,
-        frames.map((frame) => new Task(frame))
-      )) {
-        console.log("result=", task.result());
-      }
+  const executor = new Executor({
+    task_package: _package,
+    max_workers: 6,
+    timeout: timeout,
+    budget: "10.0",
+    subnet_tag: subnetTag,
+    driver: driver,
+    network: network,
+    event_consumer: logUtils.logSummary(),
+  });
+  await executor.run(async (executor) => {
+    for await (let task of executor.submit(
+      worker,
+      frames.map((frame) => new Task(frame))
+    )) {
+      console.log("result=", task.result());
     }
-  );
-  return;
+  });
 }
 
 program
@@ -90,8 +83,9 @@ program
   .option("--payment-driver, --driver <driver>", "payment driver name, for example 'erc20'")
   .option("--payment-network, --network <network>", "network name, for example 'rinkeby'")
   .option("-d, --debug", "output extra debugging");
-program.parse(process.argv);
-if (program.debug) {
+program.parse();
+const options = program.opts();
+if (options.debug) {
   utils.changeLogLevel("debug");
 }
-main(program.subnetTag, program.driver, program.network);
+main(options.subnetTag, options.driver, options.network);

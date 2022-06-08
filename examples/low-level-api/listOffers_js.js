@@ -7,7 +7,7 @@ const { program } = require("commander");
 dayjs.extend(utc);
 
 const { Configuration, Market } = rest;
-const { asyncWith, CancellationToken } = utils;
+const { CancellationToken } = utils;
 const cancellationToken = new CancellationToken();
 
 async function list_offers(conf, subnetTag) {
@@ -23,17 +23,14 @@ async function list_offers(conf, subnetTag) {
   act.expiration.value = dayjs().utc().unix() * 1000;
   dbuild.add(act);
 
-  await asyncWith(
-    await market_api.subscribe(dbuild.properties(), dbuild.constraints()),
-    async (subscription) => {
-      for await (let event of subscription.events(cancellationToken)) {
-        console.log(`Offer: ${event.id()}`);
-        console.log(`from ${event.issuer()}`);
-        console.log(`props ${JSON.stringify(event.props(), null, 4)}`);
-        console.log("\n\n");
-      }
-    }
-  );
+  const subscription = await market_api.subscribe(dbuild.properties(), dbuild.constraints());
+  for await (const event of subscription.events(cancellationToken)) {
+    console.log(`Offer: ${event.id()}`);
+    console.log(`from ${event.issuer()}`);
+    console.log(`props ${JSON.stringify(event.props(), null, 4)}`);
+    console.log("\n\n");
+  }
+  await subscription.delete();
   console.log("done");
 }
 
@@ -45,8 +42,9 @@ const promiseTimeout = (seconds) =>
     }, seconds * 1000)
   );
 
-program.option('--subnet-tag <subnet>', 'set subnet name', 'devnet-beta');
-program.parse(process.argv);
-console.log(`Using subnet: ${program.subnetTag}`);
+program.option("--subnet-tag <subnet>", "set subnet name", "devnet-beta");
+program.parse();
+const options = program.opts();
+console.log(`Using subnet: ${options.subnetTag}`);
 
-Bluebird.Promise.any([list_offers(new Configuration(), program.subnetTag), promiseTimeout(4)]);
+Bluebird.Promise.any([list_offers(new Configuration(), options.subnetTag), promiseTimeout(4)]);
