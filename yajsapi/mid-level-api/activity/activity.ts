@@ -89,8 +89,8 @@ export class Activity extends EventEmitter {
     }
   }
 
-  async executeScript(
-    script: Script,
+  async execute(
+    script: string,
     stream?: boolean,
     timeout?: number,
     cancellationToken?: CancellationToken
@@ -98,7 +98,7 @@ export class Activity extends EventEmitter {
     let batchId;
     let startTime = new Date();
     try {
-      const { data } = await this.api.exec(this.id, script.getExeScriptRequest(), { timeout: this.requestTimeout });
+      const { data } = await this.api.exec(this.id, { text: script }, { timeout: this.requestTimeout });
       batchId = data;
       startTime = new Date();
     } catch (error) {
@@ -113,7 +113,7 @@ export class Activity extends EventEmitter {
     let lastIndex;
     const retryCount = 0;
     const maxRetries = 3;
-    const { id: activityId, executeTimeout, api, handleError, emit } = this;
+    const { id: activityId, executeTimeout, api, handleError } = this;
     return new Results<BatchResults>({
       objectMode: true,
       async read() {
@@ -157,11 +157,6 @@ export class Activity extends EventEmitter {
       this.emit(ActivityEvents.StateChanged, this.state);
     }
     return this.state;
-  }
-
-  async [EventEmitter.captureRejectionSymbol](error, event, ...args) {
-    this.logger?.debug("Rejection happened for" + event + "with" + error + args);
-    await this.end(error);
   }
 
   private async end(error?: Error) {
