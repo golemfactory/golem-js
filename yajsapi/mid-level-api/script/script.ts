@@ -6,4 +6,5 @@ export class Script {
   getExeScriptRequest(): ExeScriptRequest {
     return { text: JSON.stringify(this.commands.map((cmd) => cmd.toJson())) };
   }
+  addCommand(command: Command) {}
 }
