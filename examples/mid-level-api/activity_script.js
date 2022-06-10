@@ -1,15 +1,10 @@
-const { Activity, ActivityFactory } = require("../../dist/mid-level-api/activity");
+const { ActivityFactory } = require("../../dist/mid-level-api/activity");
 const { Deploy, Start, Run, Terminate, Script } = require("../../dist/mid-level-api/script");
 
 async function main() {
-  const agreementId = "5e7bef14f9e501dd3dee62c12b746e81a1fd5299b35b9703fef0698b4ecca09b";
+  const agreementId = "e828bd0682c0b3efd591e5567ec52c3fe3b3efd0dbf0cbd6a298f10cbbb2ca46";
   const activityFactory = new ActivityFactory();
-  const activityId = await activityFactory.create(agreementId).catch((e) => console.error(e));
-  const activity = new Activity(activityId, { stateFetchInterval: 1000 });
-  activity.on("StateChanged", (e) => {
-    console.log("[EVENT] State changed: ", e);
-    if (e === "Terminated") process.exit(1);
-  });
+  const activity = await activityFactory.create(agreementId);
 
   const command1 = new Deploy();
   const command2 = new Start();
@@ -18,18 +13,21 @@ async function main() {
   const command5 = new Run("/bin/sh", ["-c", 'date +"DATE3: %d-%m-%Y %H:%m:%S.%s"']);
   const command6 = new Terminate();
 
-  const script = new Script([command1, command2, command21, command3, command4, command5, command6]);
+  const script = new Script([command1, command2, command3, command4, command5, command6]);
+  await script.before();
+  const batchTxt = script.serialize();
+  const results = await activity.execute(batchTxt);
 
-  const scriptResults = await activity
-    .executeScript(script)
-    .catch((e) => console.error(e?.response?.data?.message || e));
-
-  for await (const result of scriptResults)
-    console.log(`command #${result.index}`, "result:", result.result, "stdout: ", result.stdout);
-
-  scriptResults.on("data", (result) =>
-    console.log(`command #${result}`, "result:", result.result, "stdout: ", result.stdout)
+  results.on("data", (result) =>
+    console.log(`command #${result.index}`, "result:", result.result, "stdout: ", result.stdout)
   );
+
+  results.on("end", async () => {
+    await script.after();
+  });
 }
 
-main();
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
