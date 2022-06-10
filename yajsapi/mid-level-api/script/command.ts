@@ -1,14 +1,18 @@
-import { ExeScriptRequest } from "ya-ts-client/dist/ya-activity/src/models";
-
 export class Command {
-  constructor(private commandName: string, private args?: object) {}
+  protected args: object;
+  constructor(private commandName: string, args?: object) {
+    this.args = args || {};
+  }
   toJson() {
     return {
-      [this.commandName]: this.args || {},
+      [this.commandName]: this.args,
     };
   }
-  getExeScriptRequest(): ExeScriptRequest {
-    return { text: JSON.stringify([this.toJson()]) };
+  async before() {
+    // abstract
+  }
+  async after() {
+    // abstract
   }
 }
 
@@ -42,7 +46,27 @@ export class Terminate extends Command {
 }
 
 export class Transfer extends Command {
-  constructor(from: string, to: string, args?: object) {
+  constructor(protected from?: string, protected to?: string, args?: object) {
     super("transfer", { from, to, args });
+  }
+}
+
+export class SendFile extends Transfer {
+  constructor(private storageProvider: StorageProvider, private srcPath: string, private dstPath: string) {
+    super();
+    this.args["to"] = `container:${dstPath}`;
+  }
+  async before() {
+    this.args["from"] = await this.storageProvider.upload(this.srcPath);
+  }
+}
+
+export class DownloadFile extends Transfer {
+  constructor(private storageProvider: StorageProvider, private srcPath: string, private dstPath: string) {
+    super();
+    this.args = { from: `container:${srcPath}` };
+  }
+  async before() {
+    this.args["to"] = await this.storageProvider.download(this.dstPath);
   }
 }

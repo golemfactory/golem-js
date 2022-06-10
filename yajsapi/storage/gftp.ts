@@ -69,6 +69,7 @@ class GftpDriver {
     }
     const paramsStr = JSON.stringify(params);
     const query = `{"jsonrpc": "2.0", "id": "1", "method": "${method}", "params": ${paramsStr}}\n`;
+    console.log({ query });
     let valueStr = "";
     await streamWrite(this._proc.stdin, query);
     try {
@@ -302,11 +303,11 @@ class GftpProvider extends StorageProvider {
   }
 
   async new_destination(destination_file: string | null = null): Promise<Destination> {
-    if (destination_file) {
-      if (fs.existsSync(destination_file)) {
-        destination_file = null;
-      }
-    }
+    // if (destination_file) {
+    //   if (fs.existsSync(destination_file)) {
+    //     destination_file = null;
+    //   }
+    // }
     const output_file = destination_file ? destination_file.toString() : this.__new_file();
     const _process = await this.__get_process();
     const link = await _process.receive(output_file);

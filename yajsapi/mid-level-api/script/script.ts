@@ -3,8 +3,16 @@ import { Command } from "./command";
 
 export class Script {
   constructor(private commands: Command[]) {}
-  getExeScriptRequest(): ExeScriptRequest {
-    return { text: JSON.stringify(this.commands.map((cmd) => cmd.toJson())) };
+  addCommand(command: Command) {
+    this.commands.push(command);
   }
-  addCommand(command: Command) {}
+  async before() {
+    for (const cmd of this.commands) await cmd.before();
+  }
+  async after() {
+    for (const cmd of this.commands) await cmd.after();
+  }
+  serialize(): string {
+    return JSON.stringify(this.commands.map((cmd) => cmd.toJson()));
+  }
 }

@@ -1,4 +1,6 @@
 interface StorageProvider {
-  download(src: string, dst: string): Promise<boolean>;
-  upload(src: string, dst: string): Promise<boolean>;
+  init(): Promise<void>;
+  end(): Promise<void>;
+  download(path: string): Promise<string>;
+  upload(path: string): Promise<string>;
 }

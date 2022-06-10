@@ -61,7 +61,11 @@ export class Activity extends EventEmitter {
     let batchId;
     let startTime = new Date();
     try {
-      const { data } = await this.api.exec(this.id, command.getExeScriptRequest(), { timeout: this.requestTimeout });
+      const { data } = await this.api.exec(
+        this.id,
+        { text: JSON.stringify([command.toJson()]) },
+        { timeout: this.requestTimeout }
+      );
       batchId = data;
       startTime = new Date();
     } catch (error) {
@@ -102,6 +106,7 @@ export class Activity extends EventEmitter {
       batchId = data;
       startTime = new Date();
     } catch (error) {
+      console.error(error);
       throw new Error(error?.response?.data?.message || error);
     }
     if (stream) {
