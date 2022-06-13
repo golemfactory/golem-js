@@ -628,7 +628,7 @@ export class Executor {
         const scriptResults = await activity
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore
-          .executeScript(script, false, batch_deadline, cancellationToken)
+          .execute(script.serialize(), false, batch_deadline, cancellationToken)
           .catch((e) => {
             throw new CommandExecutionError("", e.toString());
           });

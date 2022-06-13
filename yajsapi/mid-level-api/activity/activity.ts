@@ -7,21 +7,15 @@ import { setInterval } from "timers";
 import { yaActivity } from "ya-ts-client";
 import { Logger, sleep, CancellationToken } from "../utils";
 
-export enum ActivityEvents {
-  StateChanged = "StateChanged",
-  CommandExecuted = "CommandExecuted", // TODO: ????????
-}
-
 export interface ActivityOptions {
   credentials?: { apiKey?: string; basePath?: string };
   requestTimeout?: number;
   responseTimeout?: number;
-  executeTimeout?: number; // deadline ?
-  stateFetchInterval?: number | null; // TODO: explain event emitter via polling state..
+  executeTimeout?: number;
   logger?: Logger;
 }
 
-export class Activity extends EventEmitter {
+export class Activity {
   private state: ActivityStateStateEnum;
   private readonly api: RequestorControlApi;
   private readonly stateApi: RequestorStateApi;
@@ -30,10 +24,8 @@ export class Activity extends EventEmitter {
   private readonly requestTimeout: number;
   private readonly responseTimeout: number;
   private readonly executeTimeout: number;
-  private readonly stateFetchInterval: number | null;
 
   constructor(public readonly id, private readonly options?: ActivityOptions) {
-    super({ captureRejections: true });
     this.state = ActivityStateStateEnum.New;
     const config = new yaActivity.Configuration({
       apiKey: this.options?.credentials?.apiKey || process.env.YAGNA_APPKEY,
@@ -45,56 +37,51 @@ export class Activity extends EventEmitter {
     this.requestTimeout = options?.requestTimeout || 10000;
     this.responseTimeout = options?.responseTimeout || 10000;
     this.executeTimeout = options?.executeTimeout || 20000;
-    this.stateFetchInterval = options?.stateFetchInterval || null;
     if (options?.logger instanceof Logger) {
       this.logger = options.logger;
     } else if (options?.logger !== false) {
       this.logger = new Logger();
     }
-    if (this.stateFetchInterval) {
-      this.stateFetchIntervalId = setInterval(() => this.getState(), this.stateFetchInterval);
-    }
-    this.getState();
   }
-
-  async executeCommand(command: Command, timeout?: number, cancellationToken?: CancellationToken): Promise<Result> {
-    let batchId;
-    let startTime = new Date();
-    try {
-      const { data } = await this.api.exec(
-        this.id,
-        { text: JSON.stringify([command.toJson()]) },
-        { timeout: this.requestTimeout }
-      );
-      batchId = data;
-      startTime = new Date();
-    } catch (error) {
-      throw new Error(error?.response?.data?.message || error);
-    }
-    const exeBatchResultsFetchInterval = 3000;
-    const retryCount = 0;
-    const maxRetries = 3;
-    while (true) {
-      if (startTime.valueOf() + (timeout || this.executeTimeout) <= new Date().valueOf()) {
-        throw new Error(`Activity ${this.id} timeout.`);
-      }
-      if (cancellationToken?.cancelled) {
-        throw new Error(`Activity ${this.id} has been interrupted.`);
-      }
-      try {
-        const { data: results } = await this.api.getExecBatchResults(this.id, batchId);
-        if (results.length) {
-          return results[0];
-        }
-      } catch (error) {
-        await this.handleError(error, 0, retryCount, maxRetries, exeBatchResultsFetchInterval);
-      }
-      await sleep(exeBatchResultsFetchInterval);
-    }
-  }
+  //
+  // async executeCommand(command: Command, timeout?: number, cancellationToken?: CancellationToken): Promise<Result> {
+  //   let batchId;
+  //   let startTime = new Date();
+  //   try {
+  //     const { data } = await this.api.exec(
+  //       this.id,
+  //       { text: JSON.stringify([command.toJson()]) },
+  //       { timeout: this.requestTimeout }
+  //     );
+  //     batchId = data;
+  //     startTime = new Date();
+  //   } catch (error) {
+  //     throw new Error(error?.response?.data?.message || error);
+  //   }
+  //   const exeBatchResultsFetchInterval = 3000;
+  //   const retryCount = 0;
+  //   const maxRetries = 3;
+  //   while (true) {
+  //     if (startTime.valueOf() + (timeout || this.executeTimeout) <= new Date().valueOf()) {
+  //       throw new Error(`Activity ${this.id} timeout.`);
+  //     }
+  //     if (cancellationToken?.cancelled) {
+  //       throw new Error(`Activity ${this.id} has been interrupted.`);
+  //     }
+  //     try {
+  //       const { data: results } = await this.api.getExecBatchResults(this.id, batchId);
+  //       if (results.length) {
+  //         return results[0];
+  //       }
+  //     } catch (error) {
+  //       await this.handleError(error, 0, retryCount, maxRetries, exeBatchResultsFetchInterval);
+  //     }
+  //     await sleep(exeBatchResultsFetchInterval);
+  //   }
+  // }
 
   async execute(
-    script: string,
+    batchTxt: string,
     stream?: boolean,
     timeout?: number,
     cancellationToken?: CancellationToken
@@ -102,7 +89,7 @@ export class Activity extends EventEmitter {
     let batchId;
     let startTime = new Date();
     try {
-      const { data } = await this.api.exec(this.id, { text: script }, { timeout: this.requestTimeout });
+      const { data } = await this.api.exec(this.id, { text: batchTxt }, { timeout: this.requestTimeout });
       batchId = data;
       startTime = new Date();
     } catch (error) {
@@ -159,7 +146,6 @@ export class Activity extends EventEmitter {
     // TODO: catch and check error
     if (data?.state?.[0] && data?.state?.[0] !== this.state) {
       this.state = data.state[0];
-      this.emit(ActivityEvents.StateChanged, this.state);
     }
     return this.state;
   }
