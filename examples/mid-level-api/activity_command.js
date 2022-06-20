@@ -6,12 +6,12 @@ async function main() {
   const activityFactory = new ActivityFactory();
   const activity = await activityFactory.create(agreementId);
 
-  await activity.execute([new Deploy().toJson()]);
-  await activity.execute([new Start().toJson()]);
+  await activity.execute(new Deploy().toExeScriptRequest());
+  await activity.execute(new Start().toExeScriptRequest());
   const commandRun = new Run("/bin/sh", ["-c", "echo 'Hello World'"]);
-  const commandRunResult = await activity.execute([commandRun.toJson()]);
+  const commandRunResult = await activity.execute(commandRun.toExeScriptRequest());
   console.log("RESULTS: ", commandRunResult.read());
-  await activity.execute([new Terminate().toJson()]);
+  await activity.execute(new Terminate().toExeScriptRequest());
   await activity.stop();
 }
 
