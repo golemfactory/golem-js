@@ -61,10 +61,6 @@
                 <h3>Logs</h3>
                 <ul id="logs"></ul>
             </div>
-            <div class="events console">
-                <h3>Events</h3>
-                <ul id="events"></ul>
-            </div>
         </div>
     </div>
 
@@ -75,12 +71,6 @@
             const li = document.createElement('li');
             li.appendChild(document.createTextNode(msg));
             logs_el.appendChild(li);
-        }
-        function appendEvent(event) {
-            const events_el = document.getElementById('events');
-            const li = document.createElement('li');
-            li.appendChild(document.createTextNode(`[${new Date().toISOString()}] ${event}`));
-            events_el.appendChild(li);
         }
         function appendResults(result) {
             const results_el = document.getElementById('results');
@@ -104,19 +94,9 @@
             const stateFetchInterval = document.getElementById('STATE_FETCH_INTERVAL').value;
             const agreementId = document.getElementById('AGREEMENT_ID').value;
             const factory = new yajsapi.ActivityFactory(appKey, basePath);
-            const activityId = await factory.create(agreementId).catch(logger.error);
-            if (activityId) {
+            const activity = await factory.create(agreementId).catch(logger.error);
+            if (activity) {
                 logger.log(`Activity created. ID: ${activityId}`);
-                activity = new yajsapi.Activity(activityId, {
-                    credentials: {
-                        YAGNA_APPKEY: appKey,
-                        YAGNA_API_BASEPATH: basePath
-                    },
-                    stateFetchInterval: stateFetchInterval * 1000,
-                    logger
-                });
-                activity.on('StateChanged', appendEvent);
-                // activity.on('StateChanged', state => state === 'Ready' && alert('XXXXXXXXXXXX'));
                 enableActions();
             }
         }
@@ -138,7 +118,7 @@
                 return;
             }
             const cmd = new yajsapi[command]();
-            const results = await activity.executeCommand(cmd).catch(err => logger.error(err));
+            const results = await activity.execute(cmd.toExeScriptRequest()).catch(err => logger.error(err));
             if (results.result === 'Ok') {
                 logger.log(`Command ${command} has been executed`);
             } else {
@@ -152,7 +132,7 @@
             }
             const bashCommand = document.getElementById('COMMAND').value
             const command = new yajsapi.Run("/bin/sh", ["-c", bashCommand]);
-            const results = await activity.executeCommand(command).catch(err => logger.error(err));
+            const results = await activity.execute(command.toExeScriptRequest()).catch(err => logger.error(err));
             if (results.stdout) appendResults('[stdout] ' + results.stdout);
             if (results.stderr) appendResults('[stderr] ' + results.stderr);
             if (results.result === 'Ok') {

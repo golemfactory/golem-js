@@ -62,10 +62,6 @@
                 <h3>Logs</h3>
                 <ul id="logs"></ul>
             </div>
-            <div class="events console">
-                <h3>Events</h3>
-                <ul id="events"></ul>
-            </div>
             <div class="results console">
                 <h3>Results</h3>
                 <ul id="results"></ul>
@@ -77,9 +73,7 @@
         let activity;
         let commands = [
             new yajsapi.Deploy(),
-            // new yajsapi.Command("test_command", { test: 1 }),
             new yajsapi.Start(),
-            // new yajsapi.Transfer('http://example.com/index.html', 'container:/golem/index_example.html'),
             new yajsapi.Terminate()
         ];
         refreshScript();
@@ -88,12 +82,6 @@
             const li = document.createElement('li');
             li.appendChild(document.createTextNode(`[${new Date().toISOString()}] ${msg}`));
             logs_el.appendChild(li);
-        }
-        function event(event) {
-            const events_el = document.getElementById('events');
-            const li = document.createElement('li');
-            li.appendChild(document.createTextNode(`[${new Date().toISOString()}] ${event}`));
-            events_el.appendChild(li);
         }
         function appendResults(result) {
             const results_el = document.getElementById('results');
@@ -126,17 +114,9 @@
             const agreementId = document.getElementById('AGREEMENT_ID').value;
             const stateFetchInterval = document.getElementById('STATE_FETCH_INTERVAL').value;
             const factory = new yajsapi.ActivityFactory(appKey, basePath);
-            const activityId = await factory.create(agreementId).catch(err => logger.error(err));
-            if (activityId) {
-                log(`Activity created. ID: ${activityId}`);
-                activity = new yajsapi.Activity(activityId, {
-                    credentials: {
-                        YAGNA_APPKEY: appKey,
-                        YAGNA_API_BASEPATH: basePath
-                    },
-                    stateFetchInterval: stateFetchInterval * 1000
-                });
-                activity.on('StateChanged', event);
+            const activity = await factory.create(agreementId).catch(err => logger.error(err));
+            if (activity) {
+                log(`Activity created. ID: ${activity.id}`);
                 enableActions();
             }
         }
@@ -165,16 +145,7 @@
                 return;
             }
             const script = new yajsapi.Script(commands);
-            const results = await activity.executeScript(script).catch(err => logger.error(err));
-            // for await (const result of results) {
-            //     if (result.stdout) appendResults('[stdout] ' + result.stdout);
-            //     if (result.stderr) appendResults('[stderr] ' + result.stderr);
-            //     if (result.result === 'Ok') {
-            //         log(`Command index ${result.index} has been successfully executed`);
-            //     } else {
-            //         log(result.message || `Command Run Error`);
-            //     }
-            // }
+            const results = await activity.execute(script.getExeScriptRequest()).catch(err => logger.error(err));
             results.on('data', (result) => {
                 if (result.stdout) appendResults('[stdout] ' + result.stdout);
                 if (result.stderr) appendResults('[stderr] ' + result.stderr);
