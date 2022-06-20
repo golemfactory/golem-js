@@ -302,6 +302,7 @@ class GftpProvider extends StorageProvider {
   }
 
   async new_destination(destination_file: string | null = null): Promise<Destination> {
+    // Temporary disable for checking new transfer approach (without after hook)
     // if (destination_file) {
     //   if (fs.existsSync(destination_file)) {
     //     destination_file = null;
