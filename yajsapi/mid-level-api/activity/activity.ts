@@ -1,9 +1,6 @@
-import { Script, Command } from "../script";
-import { Results, BatchResults, StreamResults, Result } from "./results";
-import EventEmitter from "events";
+import { Results, BatchResults, StreamResults } from "./results";
 import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity/src/models/activity-state";
 import { RequestorControlApi, RequestorStateApi } from "ya-ts-client/dist/ya-activity/api";
-import { setInterval } from "timers";
 import { yaActivity } from "ya-ts-client";
 import { Logger, sleep, CancellationToken } from "../utils";
 
@@ -43,45 +40,9 @@ export class Activity {
       this.logger = new Logger();
     }
   }
-  //
-  // async executeCommand(command: Command, timeout?: number, cancellationToken?: CancellationToken): Promise<Result> {
-  //   let batchId;
-  //   let startTime = new Date();
-  //   try {
-  //     const { data } = await this.api.exec(
-  //       this.id,
-  //       { text: JSON.stringify([command.toJson()]) },
-  //       { timeout: this.requestTimeout }
-  //     );
-  //     batchId = data;
-  //     startTime = new Date();
-  //   } catch (error) {
-  //     throw new Error(error?.response?.data?.message || error);
-  //   }
-  //   const exeBatchResultsFetchInterval = 3000;
-  //   const retryCount = 0;
-  //   const maxRetries = 3;
-  //   while (true) {
-  //     if (startTime.valueOf() + (timeout || this.executeTimeout) <= new Date().valueOf()) {
-  //       throw new Error(`Activity ${this.id} timeout.`);
-  //     }
-  //     if (cancellationToken?.cancelled) {
-  //       throw new Error(`Activity ${this.id} has been interrupted.`);
-  //     }
-  //     try {
-  //       const { data: results } = await this.api.getExecBatchResults(this.id, batchId);
-  //       if (results.length) {
-  //         return results[0];
-  //       }
-  //     } catch (error) {
-  //       await this.handleError(error, 0, retryCount, maxRetries, exeBatchResultsFetchInterval);
-  //     }
-  //     await sleep(exeBatchResultsFetchInterval);
-  //   }
-  // }
 
   async execute(
-    batchTxt: string,
+    script: yaActivity.ExeScriptRequest,
     stream?: boolean,
     timeout?: number,
     cancellationToken?: CancellationToken
@@ -89,7 +50,7 @@ export class Activity {
     let batchId;
     let startTime = new Date();
     try {
-      const { data } = await this.api.exec(this.id, { text: batchTxt }, { timeout: this.requestTimeout });
+      const { data } = await this.api.exec(this.id, script, { timeout: this.requestTimeout });
       batchId = data;
       startTime = new Date();
     } catch (error) {

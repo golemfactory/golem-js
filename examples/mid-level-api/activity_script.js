@@ -15,8 +15,7 @@ async function main() {
 
   const script = new Script([command1, command2, command3, command4, command5, command6]);
   await script.before();
-  const batchTxt = script.serialize();
-  const results = await activity.execute(batchTxt);
+  const results = await activity.execute(script.getExeScriptRequest());
 
   results.on("data", (result) =>
     console.log(`command #${result.index}`, "result:", result.result, "stdout: ", result.stdout)

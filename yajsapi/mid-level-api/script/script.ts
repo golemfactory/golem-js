@@ -12,7 +12,7 @@ export class Script {
   async after() {
     for (const cmd of this.commands) await cmd.after();
   }
-  serialize(): string {
-    return JSON.stringify(this.commands.map((cmd) => cmd.toJson()));
+  getExeScriptRequest(): ExeScriptRequest {
+    return { text: JSON.stringify(this.commands.map((cmd) => cmd.toJson())) };
   }
 }

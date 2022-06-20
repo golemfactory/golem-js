@@ -69,7 +69,6 @@ class GftpDriver {
     }
     const paramsStr = JSON.stringify(params);
     const query = `{"jsonrpc": "2.0", "id": "1", "method": "${method}", "params": ${paramsStr}}\n`;
-    console.log({ query });
     let valueStr = "";
     await streamWrite(this._proc.stdin, query);
     try {

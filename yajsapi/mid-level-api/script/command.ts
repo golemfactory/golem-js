@@ -1,3 +1,5 @@
+import { ExeScriptRequest } from "ya-ts-client/dist/ya-activity/src/models";
+
 export class Command {
   protected args: object;
   constructor(private commandName: string, args?: object) {
@@ -7,6 +9,9 @@ export class Command {
     return {
       [this.commandName]: this.args,
     };
+  }
+  toExeScriptRequest(): ExeScriptRequest {
+    return { text: JSON.stringify([this.toJson()]) };
   }
   async before() {
     // abstract
