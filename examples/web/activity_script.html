@@ -18,11 +18,7 @@
                 </div>
                 <div>
                     <label for="YAGNA_API_BASEPATH">YAGNA_API_BASEURL: </label>
-                    <input id="YAGNA_API_BASEPATH" type="text" value="http://127.0.0.1:7465" />
-                </div>
-                <div class="small">
-                    <label for="YAGNA_API_BASEPATH">Event fetch interval: </label>
-                    <input id="STATE_FETCH_INTERVAL" type="number" value="2" />
+                    <input id="YAGNA_API_BASEPATH" type="text" value="http://127.0.0.1:7465/activity-api/v1" />
                 </div>
             </div>
             <h3>Actions</h3>
@@ -112,9 +108,8 @@
             const appKey = document.getElementById('YAGNA_APPKEY').value;
             const basePath = document.getElementById('YAGNA_API_BASEPATH').value;
             const agreementId = document.getElementById('AGREEMENT_ID').value;
-            const stateFetchInterval = document.getElementById('STATE_FETCH_INTERVAL').value;
             const factory = new yajsapi.ActivityFactory(appKey, basePath);
-            const activity = await factory.create(agreementId).catch(err => logger.error(err));
+            activity = await factory.create(agreementId).catch(err => logger.error(err));
             if (activity) {
                 log(`Activity created. ID: ${activity.id}`);
                 enableActions();
