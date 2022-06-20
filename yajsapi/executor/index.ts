@@ -721,8 +721,6 @@ export class Executor {
         }
       }
 
-      /* -------- NEW ACTIVITY ------------ */
-
       emit(new events.ActivityCreated({ act_id: _act.id, agr_id: agreement.id() }));
       agreements_accepting_debit_notes.add(agreement.id());
       const agreement_details = await agreement.details();
@@ -759,45 +757,6 @@ export class Executor {
       await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
       emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
 
-      /* -------- END OF NEW ACTIVITY ------------ */
-
-      // await asyncWith(_act, async (act): Promise<void> => {
-      //   emit(new events.ActivityCreated({ act_id: act.id, agr_id: agreement.id() }));
-      //   agreements_accepting_debit_notes.add(agreement.id());
-      //   const agreement_details = await agreement.details();
-      //   const node_info = <NodeInfo>agreement_details.provider_view().extract(new NodeInfo());
-      //   const provider_name = node_info.name.value;
-      //   const provider_id = agreement_details.raw_details.offer.providerId;
-      //   let network_node;
-      //   if (network) {
-      //     network_node = await network.add_node(provider_id);
-      //   }
-      //   const work_context = new WorkContext(
-      //     `worker-${wid}`,
-      //     storage_manager,
-      //     emit,
-      //     { provider_id, provider_name },
-      //     network_node
-      //   );
-      //   await asyncWith(work_queue.new_consumer(), async (consumer) => {
-      //     try {
-      //       const tasks = task_emitter(consumer);
-      //       const batch_generator = worker(work_context, tasks);
-      //       await process_batches(agreement.id(), act, batch_generator, consumer);
-      //       emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
-      //     } catch (error) {
-      //       emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error }));
-      //       throw error;
-      //     } finally {
-      //       await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
-      //     }
-      //   });
-      //   if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
-      //     return;
-      //   }
-      //   await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
-      //   emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
-      // });
       logger.debug(`Stopped worker related to agreement ${agreement.id()}.`);
     }
 
