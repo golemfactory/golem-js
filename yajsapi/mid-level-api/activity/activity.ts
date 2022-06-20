@@ -9,6 +9,7 @@ export interface ActivityOptions {
   requestTimeout?: number;
   responseTimeout?: number;
   executeTimeout?: number;
+  exeBatchResultsFetchInterval?: number;
   logger?: Logger;
 }
 
@@ -21,6 +22,7 @@ export class Activity {
   private readonly requestTimeout: number;
   private readonly responseTimeout: number;
   private readonly executeTimeout: number;
+  private readonly exeBatchResultsFetchInterval: number;
 
   constructor(public readonly id, private readonly options?: ActivityOptions) {
     this.state = ActivityStateStateEnum.New;
@@ -34,6 +36,7 @@ export class Activity {
     this.requestTimeout = options?.requestTimeout || 10000;
     this.responseTimeout = options?.responseTimeout || 10000;
     this.executeTimeout = options?.executeTimeout || 20000;
+    this.exeBatchResultsFetchInterval = options?.exeBatchResultsFetchInterval || 3000;
     if (options?.logger instanceof Logger) {
       this.logger = options.logger;
     } else if (options?.logger !== false) {
@@ -61,12 +64,11 @@ export class Activity {
       // todo
       return new Results<StreamResults>();
     }
-    const exeBatchResultsFetchInterval = 3000;
     let isBatchFinished = false;
     let lastIndex;
     const retryCount = 0;
     const maxRetries = 3;
-    const { id: activityId, executeTimeout, api, handleError } = this;
+    const { id: activityId, executeTimeout, api, handleError, exeBatchResultsFetchInterval } = this;
     return new Results<BatchResults>({
       objectMode: true,
       async read() {
@@ -89,7 +91,7 @@ export class Activity {
             }
             await sleep(exeBatchResultsFetchInterval);
           } catch (error) {
-            await handleError(error, lastIndex, retryCount, maxRetries, exeBatchResultsFetchInterval);
+            await handleError(error, lastIndex, retryCount, maxRetries);
           }
         }
         this.push(null);
@@ -121,67 +123,7 @@ export class Activity {
     else this.logger?.debug("Activity ended");
   }
 
-  private async handleError(error, cmdIndex, retryCount, maxRetries, retryDelay) {
-    if (!this.isGsbError(error)) {
-      throw error;
-    }
-    if (this.isTimeoutError(error)) {
-      this.logger?.warn("TIMEOUT todo");
-      return;
-    }
-    const { terminated, reason, errorMessage } = await this.isTerminated();
-    if (terminated) {
-      this.logger?.warn(`Activity ${this.id} terminated by provider. Reason: ${reason}, Error: ${errorMessage}`);
-      throw error;
-    }
-    ++retryCount;
-    const fail_msg = "getExecBatchResults failed due to GSB error";
-    if (retryCount < maxRetries) {
-      this.logger?.debug(`${fail_msg}, retrying in ${retryDelay}.`);
-      return;
-    } else {
-      this.logger?.debug(`${fail_msg}, giving up after ${retryCount} attempts.`);
-    }
-    const msg = error?.response?.data?.message || error;
-    throw new Error(`Command #${cmdIndex} getExecBatchResults error: ${msg}`);
-  }
-
-  private isTimeoutError(error) {
-    const timeoutMsg = error.message && error.message.includes("timeout");
-    return (
-      (error.response && error.response.status === 408) ||
-      error.code === "ETIMEDOUT" ||
-      (error.code === "ECONNABORTED" && timeoutMsg)
-    );
-  }
-
-  private isGsbError(error) {
-    // check if `err` is caused by "endpoint address not found" GSB error
-    if (!error.response) {
-      return false;
-    }
-    if (error.response.status !== 500) {
-      return false;
-    }
-    if (!error.response.data || !error.response.data.message) {
-      this.logger?.debug(`Cannot read error message, response: ${error.response}`);
-      return false;
-    }
-    const message = error.response.data.message;
-    return message.includes("endpoint address not found") && message.includes("GSB error");
-  }
-
-  private async isTerminated(): Promise<{ terminated: boolean; reason?: string; errorMessage?: string }> {
-    try {
-      const { data } = await this.stateApi.getActivityState(this.id);
-      return {
-        terminated: data?.state?.[0] === ActivityStateStateEnum.Terminated,
-        reason: data?.reason,
-        errorMessage: data?.errorMessage,
-      };
-    } catch (err) {
-      this.logger?.debug(`Cannot query activity state: ${err}`);
-      return { terminated: false };
-    }
+  private async handleError(error, cmdIndex, retryCount, maxRetries) {
+    // todo
   }
 }
