@@ -987,7 +987,6 @@ export class Executor {
     this._market_api = new rest.Market(market_client);
 
     const activity_config = await this._api_config.activity();
-    // this._activity_api = new ActivityService(activity_client);
     this._activity_api = new ActivityFactory(activity_config.apiKey, activity_config.basePath);
 
     const payment_client = await this._api_config.payment();
