@@ -3,6 +3,7 @@ import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity/src/models
 import { RequestorControlApi, RequestorStateApi } from "ya-ts-client/dist/ya-activity/api";
 import { yaActivity } from "ya-ts-client";
 import { Logger, sleep, CancellationToken } from "../utils";
+import { logger } from "../../utils";
 
 export interface ActivityOptions {
   credentials?: { apiKey?: string; basePath?: string };
@@ -105,12 +106,16 @@ export class Activity {
   }
 
   async getState(): Promise<ActivityStateStateEnum> {
-    const { data } = await this.stateApi.getActivityState(this.id);
-    // TODO: catch and check error
-    if (data?.state?.[0] && data?.state?.[0] !== this.state) {
-      this.state = data.state[0];
+    try {
+      const { data } = await this.stateApi.getActivityState(this.id);
+      if (data?.state?.[0] && data?.state?.[0] !== this.state) {
+        this.state = data.state[0];
+      }
+      return this.state;
+    } catch (error) {
+      logger.warn(`Error while getting activity state: ${error}`);
+      throw error;
     }
-    return this.state;
   }
 
   private async end(error?: Error) {
@@ -124,6 +129,66 @@ export class Activity {
   }
 
   private async handleError(error, cmdIndex, retryCount, maxRetries) {
-    // todo
+    if (!this.isGsbError(error)) {
+      throw error;
+    }
+    if (this.isTimeoutError(error)) {
+      this.logger?.warn("API request timeout." + error.toString());
+      return;
+    }
+    const { terminated, reason, errorMessage } = await this.isTerminated();
+    if (terminated) {
+      this.logger?.warn(`Activity ${this.id} terminated by provider. Reason: ${reason}, Error: ${errorMessage}`);
+      throw error;
+    }
+    ++retryCount;
+    const fail_msg = "getExecBatchResults failed due to GSB error";
+    if (retryCount < maxRetries) {
+      this.logger?.debug(`${fail_msg}, retrying in ${this.exeBatchResultsFetchInterval}.`);
+      return;
+    } else {
+      this.logger?.debug(`${fail_msg}, giving up after ${retryCount} attempts.`);
+    }
+    const msg = error?.response?.data?.message || error;
+    throw new Error(`Command #${cmdIndex} getExecBatchResults error: ${msg}`);
+  }
+
+  private isTimeoutError(error) {
+    const timeoutMsg = error.message && error.message.includes("timeout");
+    return (
+      (error.response && error.response.status === 408) ||
+      error.code === "ETIMEDOUT" ||
+      (error.code === "ECONNABORTED" && timeoutMsg)
+    );
+  }
+
+  private isGsbError(error) {
+    // check if `err` is caused by "endpoint address not found" GSB error
+    if (!error.response) {
+      return false;
+    }
+    if (error.response.status !== 500) {
+      return false;
+    }
+    if (!error.response.data || !error.response.data.message) {
+      this.logger?.debug(`Cannot read error message, response: ${error.response}`);
+      return false;
+    }
+    const message = error.response.data.message;
+    return message.includes("endpoint address not found") && message.includes("GSB error");
+  }
+
+  private async isTerminated(): Promise<{ terminated: boolean; reason?: string; errorMessage?: string }> {
+    try {
+      const { data } = await this.stateApi.getActivityState(this.id);
+      return {
+        terminated: data?.state?.[0] === ActivityStateStateEnum.Terminated,
+        reason: data?.reason,
+        errorMessage: data?.errorMessage,
+      };
+    } catch (err) {
+      this.logger?.debug(`Cannot query activity state: ${err}`);
+      return { terminated: false };
+    }
   }
 }
