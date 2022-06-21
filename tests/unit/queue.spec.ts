@@ -2,23 +2,20 @@ import test from "ava";
 import Queue from "../../yajsapi/utils/queue";
 import sleep from "../../yajsapi/utils/sleep";
 
-let queue!: Queue<string>;
+let queueSpec!: Queue<string>;
 
 test.before((t) => {
-  queue = new Queue();
-  queue.put("odin");
+  queueSpec = new Queue();
+  queueSpec.put("odin");
 });
 
 test("queue put/get", async (t) => {
-  const result: string = await queue.get();
+  const result: string = await queueSpec.get();
   t.is(result, "odin");
 });
 
 test("queue wait for item with timeout", async (t) => {
-  const result: undefined = await Promise.race([
-    queue.get() as any,
-    sleep(0.5),
-  ]);
+  const result: undefined = await Promise.race([queueSpec.get() as any, sleep(0.5)]);
   t.is(result, undefined);
 });
 
@@ -30,8 +27,8 @@ test("queue initial item", async (t) => {
 
 test("queue empty", async (t) => {
   await sleep(0.5);
-  queue.put("odin");
-  queue.empty();
-  const result = await Promise.race([queue.get() as any, sleep(0.5)]);
+  queueSpec.put("odin");
+  queueSpec.empty();
+  const result = await Promise.race([queueSpec.get() as any, sleep(0.5)]);
   t.is(result, undefined);
 });
