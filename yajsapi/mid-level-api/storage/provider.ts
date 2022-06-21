@@ -1,4 +1,4 @@
-interface StorageProvider {
+export interface StorageProvider {
   init(): Promise<void>;
   end(): Promise<void>;
   download(path: string): Promise<string>;

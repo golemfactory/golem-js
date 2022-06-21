@@ -1,4 +1,5 @@
 import { provider } from "../../storage/gftp";
+import { StorageProvider } from "./provider";
 
 export class OldStorageProviderFacade implements StorageProvider {
   private oldProvider;

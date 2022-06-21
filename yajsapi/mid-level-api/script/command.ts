@@ -1,4 +1,5 @@
 import { ExeScriptRequest } from "ya-ts-client/dist/ya-activity/src/models";
+import { StorageProvider } from "../storage/provider";
 
 export class Command {
   protected args: object;
