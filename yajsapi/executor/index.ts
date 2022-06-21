@@ -676,7 +676,6 @@ export class Executor {
           const get_results = (async (): Promise<BatchResults> => {
             try {
               const results = await get_batch_results();
-              // const results = await get_batch_results();
               return new Promise((resolve, _) => resolve({ results }));
             } catch (error) {
               logger.warn(`Error while getting batch results: ${error}`);
@@ -688,7 +687,6 @@ export class Executor {
       }
     }
 
-    const activity_config = await this._api_config.activity();
     async function start_worker(agreement: Agreement): Promise<void> {
       const wid = last_wid;
       last_wid += 1;
@@ -700,12 +698,7 @@ export class Executor {
       }
       let _act: Activity;
       try {
-        _act = await activity_api.create(agreement.id(), {
-          credentials: {
-            appKey: activity_config.appKey,
-            basePath: activity_config.basePath,
-          },
-        });
+        _act = await activity_api.create(agreement.id());
       } catch (error) {
         emit(new events.ActivityCreateFailed({ agr_id: agreement.id() }));
         emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error }));
