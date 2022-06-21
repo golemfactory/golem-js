@@ -1,4 +1,4 @@
-const { ActivityFactory } = require("../../dist/mid-level-api/activity");
+const { ActivityFactory, ActivityStateEnum } = require("../../dist/mid-level-api/activity");
 const { Run, Start, Deploy, Terminate } = require("../../dist/mid-level-api/script");
 
 async function main() {
@@ -8,7 +8,7 @@ async function main() {
 
   await activity.execute(new Deploy().toExeScriptRequest());
   await activity.execute(new Start().toExeScriptRequest());
-  while ((await activity.getState()) !== "Ready") {
+  while ((await activity.getState()) !== ActivityStateEnum.Ready) {
     await new Promise((res) => setTimeout(res, 500));
   }
   const commandRun = new Run("/bin/sh", ["-c", "echo 'Hello World'"]);
