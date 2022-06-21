@@ -2,7 +2,7 @@ const { ActivityFactory } = require("../../dist/mid-level-api/activity");
 const { Deploy, Start, Run, Terminate, Script } = require("../../dist/mid-level-api/script");
 
 async function main() {
-  const agreementId = "e828bd0682c0b3efd591e5567ec52c3fe3b3efd0dbf0cbd6a298f10cbbb2ca46";
+  const agreementId = "946191f0af799328fa2c8fbab5bf52f23155d653fbde2e761e10caed16b537a4";
   const activityFactory = new ActivityFactory();
   const activity = await activityFactory.create(agreementId);
 
@@ -23,6 +23,7 @@ async function main() {
 
   results.on("end", async () => {
     await script.after();
+    console.log("Script finished.");
   });
 }
 
