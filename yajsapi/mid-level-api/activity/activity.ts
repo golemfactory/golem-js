@@ -1,5 +1,5 @@
 import { Results, BatchResults, StreamResults } from "./results";
-import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity/src/models/activity-state";
+import { ActivityStateStateEnum as ActivityStateEnum } from "ya-ts-client/dist/ya-activity/src/models/activity-state";
 import { RequestorControlApi, RequestorStateApi } from "ya-ts-client/dist/ya-activity/api";
 import { yaActivity } from "ya-ts-client";
 import { Logger, sleep, CancellationToken } from "../utils";
@@ -13,8 +13,10 @@ export interface ActivityOptions {
   logger?: Logger;
 }
 
+export { ActivityStateEnum };
+
 export class Activity {
-  private state: ActivityStateStateEnum;
+  private state: ActivityStateEnum;
   private readonly api: RequestorControlApi;
   private readonly stateApi: RequestorStateApi;
   private readonly logger?: Logger;
@@ -25,7 +27,7 @@ export class Activity {
   private readonly exeBatchResultsFetchInterval: number;
 
   constructor(public readonly id, private readonly options?: ActivityOptions) {
-    this.state = ActivityStateStateEnum.New;
+    this.state = ActivityStateEnum.New;
     const config = new yaActivity.Configuration({
       apiKey: this.options?.credentials?.apiKey || process.env.YAGNA_APPKEY,
       basePath: this.options?.credentials?.basePath || process.env.YAGNA_API_BASEPATH,
@@ -104,7 +106,7 @@ export class Activity {
     return true;
   }
 
-  async getState(): Promise<ActivityStateStateEnum> {
+  async getState(): Promise<ActivityStateEnum> {
     const { data } = await this.stateApi.getActivityState(this.id);
     // TODO: catch and check error
     if (data?.state?.[0] && data?.state?.[0] !== this.state) {
