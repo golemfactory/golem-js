@@ -3,7 +3,6 @@ import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity/src/models
 import { RequestorControlApi, RequestorStateApi } from "ya-ts-client/dist/ya-activity/api";
 import { yaActivity } from "ya-ts-client";
 import { Logger, sleep, CancellationToken } from "../utils";
-import { logger } from "../../utils";
 
 export interface ActivityOptions {
   credentials?: { apiKey?: string; basePath?: string };
@@ -113,7 +112,7 @@ export class Activity {
       }
       return this.state;
     } catch (error) {
-      logger.warn(`Error while getting activity state: ${error}`);
+      this.logger?.warn(`Error while getting activity state: ${error}`);
       throw error;
     }
   }
