@@ -144,12 +144,12 @@ export class Activity {
       throw error;
     }
     ++retryCount;
-    const fail_msg = "getExecBatchResults failed due to GSB error";
+    const failMsg = "getExecBatchResults failed due to GSB error";
     if (retryCount < maxRetries) {
-      this.logger?.debug(`${fail_msg}, retrying in ${this.exeBatchResultsFetchInterval}.`);
+      this.logger?.debug(`${failMsg}, retrying in ${this.exeBatchResultsFetchInterval}.`);
       return retryCount;
     } else {
-      this.logger?.debug(`${fail_msg}, giving up after ${retryCount} attempts.`);
+      this.logger?.debug(`${failMsg}, giving up after ${retryCount} attempts.`);
     }
     const msg = error?.response?.data?.message || error;
     throw new Error(`Command #${cmdIndex || 0} getExecBatchResults error: ${msg}`);
