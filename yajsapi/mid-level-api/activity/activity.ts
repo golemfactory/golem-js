@@ -1,5 +1,5 @@
 import { Results, BatchResults, StreamResults } from "./results";
-import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity/src/models/activity-state";
+import { ActivityStateStateEnum as ActivityStateEnum } from "ya-ts-client/dist/ya-activity/src/models/activity-state";
 import { RequestorControlApi, RequestorStateApi } from "ya-ts-client/dist/ya-activity/api";
 import { yaActivity } from "ya-ts-client";
 import { Logger, sleep, CancellationToken } from "../utils";
@@ -13,8 +13,10 @@ export interface ActivityOptions {
   logger?: Logger;
 }
 
+export { ActivityStateEnum };
+
 export class Activity {
-  private state: ActivityStateStateEnum;
+  private state: ActivityStateEnum;
   private readonly api: RequestorControlApi;
   private readonly stateApi: RequestorStateApi;
   private readonly logger?: Logger;
@@ -25,7 +27,7 @@ export class Activity {
   private readonly exeBatchResultsFetchInterval: number;
 
   constructor(public readonly id, private readonly options?: ActivityOptions) {
-    this.state = ActivityStateStateEnum.New;
+    this.state = ActivityStateEnum.New;
     const config = new yaActivity.Configuration({
       apiKey: this.options?.credentials?.apiKey || process.env.YAGNA_APPKEY,
       basePath: this.options?.credentials?.basePath || process.env.YAGNA_API_BASEPATH,
@@ -57,7 +59,7 @@ export class Activity {
       batchId = data;
       startTime = new Date();
     } catch (error) {
-      console.error(error);
+      this.logger?.error(error);
       throw new Error(error?.response?.data?.message || error);
     }
     if (stream) {
@@ -66,18 +68,19 @@ export class Activity {
     }
     let isBatchFinished = false;
     let lastIndex;
-    const retryCount = 0;
+    let retryCount = 0;
     const maxRetries = 3;
-    const { id: activityId, executeTimeout, api, handleError, exeBatchResultsFetchInterval } = this;
+    const { id: activityId, executeTimeout, api, exeBatchResultsFetchInterval } = this;
+    const handleError = this.handleError.bind(this);
     return new Results<BatchResults>({
       objectMode: true,
       async read() {
         while (!isBatchFinished) {
           if (startTime.valueOf() + (timeout || executeTimeout) <= new Date().valueOf()) {
-            throw new Error(`Activity ${activityId} timeout.`);
+            this.destroy(new Error(`Activity ${activityId} timeout.`));
           }
           if (cancellationToken?.cancelled) {
-            throw new Error(`Activity ${activityId} has been interrupted.`);
+            this.destroy(new Error(`Activity ${activityId} has been interrupted.`));
           }
           try {
             const { data: results } = await api.getExecBatchResults(activityId, batchId);
@@ -91,7 +94,9 @@ export class Activity {
             }
             await sleep(exeBatchResultsFetchInterval);
           } catch (error) {
-            await handleError(error, lastIndex, retryCount, maxRetries);
+            retryCount = await handleError(error, lastIndex, retryCount, maxRetries).catch((error) =>
+              this.destroy(error)
+            );
           }
         }
         this.push(null);
@@ -104,7 +109,7 @@ export class Activity {
     return true;
   }
 
-  async getState(): Promise<ActivityStateStateEnum> {
+  async getState(): Promise<ActivityStateEnum> {
     try {
       const { data } = await this.stateApi.getActivityState(this.id);
       if (data?.state?.[0] && data?.state?.[0] !== this.state) {
@@ -121,35 +126,33 @@ export class Activity {
     await this.api
       .destroyActivity(this.id, this.requestTimeout, { timeout: (this.requestTimeout + 1) * 1000 })
       .catch((error) => this.logger?.warn(`Got API Exception when destroying activity ${this.id}: ${error}`));
-    if (this.stateFetchIntervalId) clearInterval(this.stateFetchIntervalId);
-    await this.getState();
     if (error) this.logger?.debug("Activity ended with an error: " + error);
     else this.logger?.debug("Activity ended");
   }
 
   private async handleError(error, cmdIndex, retryCount, maxRetries) {
-    if (!this.isGsbError(error)) {
-      throw error;
-    }
     if (this.isTimeoutError(error)) {
       this.logger?.warn("API request timeout." + error.toString());
-      return;
+      return retryCount;
     }
     const { terminated, reason, errorMessage } = await this.isTerminated();
     if (terminated) {
       this.logger?.warn(`Activity ${this.id} terminated by provider. Reason: ${reason}, Error: ${errorMessage}`);
       throw error;
     }
+    if (!this.isGsbError(error)) {
+      throw error;
+    }
     ++retryCount;
-    const failMsg = "getExecBatchResults failed due to GSB error";
+    const fail_msg = "getExecBatchResults failed due to GSB error";
     if (retryCount < maxRetries) {
-      this.logger?.debug(`${failMsg}, retrying in ${this.exeBatchResultsFetchInterval}.`);
-      return;
+      this.logger?.debug(`${fail_msg}, retrying in ${this.exeBatchResultsFetchInterval}.`);
+      return retryCount;
     } else {
-      this.logger?.debug(`${failMsg}, giving up after ${retryCount} attempts.`);
+      this.logger?.debug(`${fail_msg}, giving up after ${retryCount} attempts.`);
     }
     const msg = error?.response?.data?.message || error;
-    throw new Error(`Command #${cmdIndex} getExecBatchResults error: ${msg}`);
+    throw new Error(`Command #${cmdIndex || 0} getExecBatchResults error: ${msg}`);
   }
 
   private isTimeoutError(error) {
@@ -181,7 +184,7 @@ export class Activity {
     try {
       const { data } = await this.stateApi.getActivityState(this.id);
       return {
-        terminated: data?.state?.[0] === ActivityStateStateEnum.Terminated,
+        terminated: data?.state?.[0] === ActivityStateEnum.Terminated,
         reason: data?.reason,
         errorMessage: data?.errorMessage,
       };
