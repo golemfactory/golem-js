@@ -3,6 +3,7 @@ import { ActivityStateStateEnum as ActivityStateEnum } from "ya-ts-client/dist/y
 import { RequestorControlApi, RequestorStateApi } from "ya-ts-client/dist/ya-activity/api";
 import { yaActivity } from "ya-ts-client";
 import { Logger, sleep, CancellationToken } from "../utils";
+import EventSource from "eventsource";
 
 export interface ActivityOptions {
   credentials?: { apiKey?: string; basePath?: string };
@@ -16,25 +17,24 @@ export interface ActivityOptions {
 export { ActivityStateEnum };
 
 export class Activity {
-  private state: ActivityStateEnum;
+  private readonly config: { apiKey: string; basePath: string };
   private readonly api: RequestorControlApi;
   private readonly stateApi: RequestorStateApi;
   private readonly logger?: Logger;
-  private readonly stateFetchIntervalId?: NodeJS.Timeout;
   private readonly requestTimeout: number;
   private readonly responseTimeout: number;
   private readonly executeTimeout: number;
   private readonly exeBatchResultsFetchInterval: number;
 
   constructor(public readonly id, private readonly options?: ActivityOptions) {
-    this.state = ActivityStateEnum.New;
-    const config = new yaActivity.Configuration({
-      apiKey: this.options?.credentials?.apiKey || process.env.YAGNA_APPKEY,
-      basePath: this.options?.credentials?.basePath || process.env.YAGNA_API_BASEPATH,
-      accessToken: this.options?.credentials?.apiKey || process.env.YAGNA_APPKEY,
-    });
-    this.api = new RequestorControlApi(config);
-    this.stateApi = new RequestorStateApi(config);
+    const apiKey = this.options?.credentials?.apiKey || process.env.YAGNA_APPKEY;
+    const basePath = this.options?.credentials?.basePath || process.env.YAGNA_API_BASEPATH;
+    if (!apiKey) throw new Error("Api key not defined");
+    if (!basePath) throw new Error("Api base path not defined");
+    this.config = { apiKey, basePath };
+    const apiConfig = new yaActivity.Configuration({ apiKey, basePath, accessToken: apiKey });
+    this.api = new RequestorControlApi(apiConfig);
+    this.stateApi = new RequestorStateApi(apiConfig);
     this.requestTimeout = options?.requestTimeout || 10000;
     this.responseTimeout = options?.responseTimeout || 10000;
     this.executeTimeout = options?.executeTimeout || 20000;
@@ -62,10 +62,33 @@ export class Activity {
       this.logger?.error(error);
       throw new Error(error?.response?.data?.message || error);
     }
-    if (stream) {
-      // todo
-      return new Results<StreamResults>();
+    return stream ? this.streamingBatch() : this.pollingBatch(batchId, startTime, timeout, cancellationToken);
+  }
+
+  async stop(): Promise<boolean> {
+    await this.end();
+    return true;
+  }
+
+  async getState(): Promise<ActivityStateEnum> {
+    try {
+      const { data } = await this.stateApi.getActivityState(this.id);
+      return data.state[0];
+    } catch (error) {
+      this.logger?.warn(`Cannot query activity state: ${error}`);
+      throw error;
     }
+  }
+
+  private async end(error?: Error) {
+    await this.api
+      .destroyActivity(this.id, this.requestTimeout, { timeout: (this.requestTimeout + 1) * 1000 })
+      .catch((error) => this.logger?.warn(`Got API Exception when destroying activity ${this.id}: ${error}`));
+    if (error) this.logger?.debug("Activity ended with an error: " + error);
+    else this.logger?.debug("Activity ended");
+  }
+
+  private async pollingBatch(batchId, startTime, timeout, cancellationToken): Promise<Results<BatchResults>> {
     let isBatchFinished = false;
     let lastIndex;
     let retryCount = 0;
@@ -104,30 +127,16 @@ export class Activity {
     });
   }
 
-  async stop(): Promise<boolean> {
-    await this.end();
-    return true;
-  }
-
-  async getState(): Promise<ActivityStateEnum> {
-    try {
-      const { data } = await this.stateApi.getActivityState(this.id);
-      if (data?.state?.[0] && data?.state?.[0] !== this.state) {
-        this.state = data.state[0];
-      }
-      return this.state;
-    } catch (error) {
-      this.logger?.warn(`Cannot query activity state: ${error}`);
-      throw error;
-    }
-  }
-
-  private async end(error?: Error) {
-    await this.api
-      .destroyActivity(this.id, this.requestTimeout, { timeout: (this.requestTimeout + 1) * 1000 })
-      .catch((error) => this.logger?.warn(`Got API Exception when destroying activity ${this.id}: ${error}`));
-    if (error) this.logger?.debug("Activity ended with an error: " + error);
-    else this.logger?.debug("Activity ended");
+  private async streamingBatch(batchId): Promise<Results<StreamResults>> {
+    const eventSource = new EventSource(`${this.config.basePath}/activity/${this.id}/exec/${batchId}`, {
+      headers: {
+        Accept: "text/event-stream",
+        Authorization: `Bearer ${this.config.apiKey}`,
+      },
+    });
+    eventSource.addEventListener("error", (e) => console.error(e));
+    eventSource.addEventListener("runtime", (e) => console.log(e));
+    while (true) sleep(3000);
   }
 
   private async handleError(error, cmdIndex, retryCount, maxRetries) {
