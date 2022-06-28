@@ -175,7 +175,6 @@ export class Activity {
   }
 
   private async handleError(error, cmdIndex, retryCount, maxRetries) {
-    console.log({ error });
     if (this.isTimeoutError(error)) {
       this.logger?.warn("API request timeout." + error.toString());
       return retryCount;
