@@ -1,9 +1,13 @@
-import { Results, BatchResults, StreamResults } from "./results";
-import { ActivityStateStateEnum as ActivityStateEnum } from "ya-ts-client/dist/ya-activity/src/models/activity-state";
+import { Result, StreamingBatchEvent } from "./results";
+import {
+  ActivityStateStateEnum as ActivityStateEnum,
+  ExeScriptRequest,
+} from "ya-ts-client/dist/ya-activity/src/models";
 import { RequestorControlApi, RequestorStateApi } from "ya-ts-client/dist/ya-activity/api";
 import { yaActivity } from "ya-ts-client";
 import { Logger, sleep, CancellationToken } from "../utils";
 import EventSource from "eventsource";
+import { Readable } from "stream";
 
 export interface ActivityOptions {
   credentials?: { apiKey?: string; basePath?: string };
@@ -47,22 +51,25 @@ export class Activity {
   }
 
   async execute(
-    script: yaActivity.ExeScriptRequest,
+    script: ExeScriptRequest,
     stream?: boolean,
     timeout?: number,
     cancellationToken?: CancellationToken
-  ): Promise<Results> {
-    let batchId;
+  ): Promise<Readable> {
+    let batchId, batchSize;
     let startTime = new Date();
     try {
       const { data } = await this.api.exec(this.id, script, { timeout: this.requestTimeout });
       batchId = data;
       startTime = new Date();
+      batchSize = JSON.parse(script.text).length;
     } catch (error) {
       this.logger?.error(error);
       throw new Error(error?.response?.data?.message || error);
     }
-    return stream ? this.streamingBatch() : this.pollingBatch(batchId, startTime, timeout, cancellationToken);
+    return stream
+      ? this.streamingBatch(batchId, batchSize, startTime, timeout, cancellationToken)
+      : this.pollingBatch(batchId, startTime, timeout, cancellationToken);
   }
 
   async stop(): Promise<boolean> {
@@ -88,14 +95,14 @@ export class Activity {
     else this.logger?.debug("Activity ended");
   }
 
-  private async pollingBatch(batchId, startTime, timeout, cancellationToken): Promise<Results<BatchResults>> {
+  private async pollingBatch(batchId, startTime, timeout, cancellationToken): Promise<Readable> {
     let isBatchFinished = false;
     let lastIndex;
     let retryCount = 0;
     const maxRetries = 3;
     const { id: activityId, executeTimeout, api, exeBatchResultsFetchInterval } = this;
     const handleError = this.handleError.bind(this);
-    return new Results<BatchResults>({
+    return new Readable({
       objectMode: true,
       async read() {
         while (!isBatchFinished) {
@@ -106,7 +113,7 @@ export class Activity {
             this.destroy(new Error(`Activity ${activityId} has been interrupted.`));
           }
           try {
-            const { data: results } = await api.getExecBatchResults(activityId, batchId);
+            const { data: results }: { data: Result[] } = await api.getExecBatchResults(activityId, batchId);
             const newResults = results.slice(lastIndex + 1);
             if (newResults.length) {
               newResults.forEach((result) => {
@@ -127,19 +134,48 @@ export class Activity {
     });
   }
 
-  private async streamingBatch(batchId): Promise<Results<StreamResults>> {
+  private async streamingBatch(batchId, batchSize, startTime, timeout, cancellationToken): Promise<Readable> {
     const eventSource = new EventSource(`${this.config.basePath}/activity/${this.id}/exec/${batchId}`, {
       headers: {
         Accept: "text/event-stream",
         Authorization: `Bearer ${this.config.apiKey}`,
       },
     });
-    eventSource.addEventListener("error", (e) => console.error(e));
-    eventSource.addEventListener("runtime", (e) => console.log(e));
-    while (true) sleep(3000);
+
+    let isBatchFinished = false;
+    const retryCount = 0;
+    const maxRetries = 3;
+    const { id: activityId, executeTimeout } = this;
+    // TODO
+    eventSource.addEventListener("error", (error) => this.handleError(error, 0, retryCount, maxRetries));
+
+    const results: Result[] = [];
+    eventSource.addEventListener("runtime", (event) => results.push(this.parseEventToResult(event.data, batchSize)));
+
+    return new Readable({
+      objectMode: true,
+      async read() {
+        while (!isBatchFinished) {
+          if (startTime.valueOf() + (timeout || executeTimeout) <= new Date().valueOf()) {
+            this.destroy(new Error(`Activity ${activityId} timeout.`));
+          }
+          if (cancellationToken?.cancelled) {
+            this.destroy(new Error(`Activity ${activityId} has been interrupted.`));
+          }
+          if (results.length) {
+            const result = results.shift();
+            this.push(result);
+            isBatchFinished = result?.isBatchFinished || false;
+          }
+          await sleep(500);
+        }
+        this.push(null);
+      },
+    });
   }
 
   private async handleError(error, cmdIndex, retryCount, maxRetries) {
+    console.log({ error });
     if (this.isTimeoutError(error)) {
       this.logger?.warn("API request timeout." + error.toString());
       return retryCount;
@@ -200,6 +236,23 @@ export class Activity {
     } catch (err) {
       this.logger?.debug(`Cannot query activity state: ${err}`);
       return { terminated: false };
+    }
+  }
+
+  private parseEventToResult(msg: string, batchSize: number): Result {
+    try {
+      const event: StreamingBatchEvent = JSON.parse(msg);
+      return {
+        index: event.index,
+        eventDate: event.timestamp,
+        result: event?.kind?.finished ? (event?.kind?.finished?.return_code === 0 ? "Ok" : "Error") : undefined,
+        stdout: event?.kind?.stdout,
+        stderr: event?.kind?.stderr,
+        message: event?.kind?.finished?.message,
+        isBatchFinished: event.index + 1 >= batchSize && Boolean(event?.kind?.finished),
+      } as Result;
+    } catch (error) {
+      throw new Error(`Cannot parse ${msg} as StreamingBatchEvent`);
     }
   }
 }
