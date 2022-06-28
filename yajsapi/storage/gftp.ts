@@ -51,6 +51,13 @@ class GftpDriver {
     return await this._jsonrpc("receive", { output_file });
   }
 
+  async close(urls: string[]): Promise<any> {
+    /*
+     * Stops exposing GFTP urls created by publish(files)
+     */
+    return await this._jsonrpc("close", { urls });
+  }
+
   // async upload(file: string, url: string) {
   //     pass
   // }
@@ -311,6 +318,12 @@ class GftpProvider extends StorageProvider {
     const _process = await this.__get_process();
     const link = await _process.receive(output_file);
     return new GftpDestination(_process, link);
+  }
+
+  async release(urls: string[]): Promise<void> {
+    const _process = await this.__get_process();
+    const result = await _process.close(urls);
+    console.log({ result });
   }
 }
 

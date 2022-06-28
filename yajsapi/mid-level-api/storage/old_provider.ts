@@ -3,7 +3,7 @@ import { StorageProvider } from "./provider";
 
 export class OldStorageProviderFacade implements StorageProvider {
   private oldProvider;
-  // private publishedUrls: string[] = [];
+  private publishedUrls: string[] = [];
   constructor() {
     this.oldProvider = provider();
   }
@@ -19,11 +19,11 @@ export class OldStorageProviderFacade implements StorageProvider {
 
   async upload(path: string): Promise<string> {
     const source = await this.oldProvider.upload_file(path);
-    // this.publishedUrls.push(source.download_url());
+    this.publishedUrls.push(source.download_url());
     return source.download_url();
   }
   async end() {
-    // await this.oldProvider.release(this.publishedUrls);
+    await this.oldProvider.release(this.publishedUrls);
     await this.oldProvider.done();
   }
 }
