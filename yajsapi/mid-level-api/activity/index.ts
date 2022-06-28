@@ -1,5 +1,5 @@
-import { Activity } from "./activity";
+import { Activity, ActivityStateEnum } from "./activity";
 import { ActivityFactory } from "./factory";
-import { Results } from "./results";
+import { Result } from "./results";
 
-export { ActivityFactory, Activity, Results };
+export { ActivityFactory, Activity, Result, ActivityStateEnum };

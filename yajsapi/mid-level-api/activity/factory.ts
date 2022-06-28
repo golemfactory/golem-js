@@ -17,7 +17,7 @@ export class ActivityFactory {
       })
     );
   }
-  async create(agreementId: string, options: ActivityOptions): Promise<Activity> {
+  async create(agreementId: string, options?: ActivityOptions): Promise<Activity> {
     try {
       const { data } = await this.api.createActivity({ agreementId });
       const activityId = typeof data == "string" ? data : data.activityId;
