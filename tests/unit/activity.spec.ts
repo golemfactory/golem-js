@@ -15,6 +15,11 @@ import { Deploy, Start, Run, Terminate, SendFile, DownloadFile, Script } from ".
 import { CancellationToken } from "../../yajsapi/mid-level-api/utils";
 import { CaptureFormat, CaptureMode } from "../../yajsapi/mid-level-api/script/command";
 
+test.before(() => {
+  process.env.YAGNA_APPKEY = "test";
+  process.env.YAGNA_API_BASEPATH = "http://127.0.0.1:7465/activity-api/v1";
+});
+
 test("create activity", async (t) => {
   const factory = new ActivityFactory();
   const activity = await factory.create("test_agreement_id");
@@ -22,8 +27,34 @@ test("create activity", async (t) => {
   t.truthy(activity.id);
 });
 
+test("create activity without credentials", async (t) => {
+  process.env.YAGNA_APPKEY = "";
+  t.throws(
+    () => {
+      new Activity("test_id_0");
+    },
+    {
+      message: "Api key not defined",
+    }
+  );
+  process.env.YAGNA_APPKEY = "test";
+});
+
+test("create activity without api base path", async (t) => {
+  process.env.YAGNA_API_BASEPATH = "";
+  t.throws(
+    () => {
+      new Activity("test_id_0");
+    },
+    {
+      message: "Api base path not defined",
+    }
+  );
+  process.env.YAGNA_API_BASEPATH = "http://127.0.0.1:7465/activity-api/v1";
+});
+
 test("execute commands on activity", async (t) => {
-  const activity = new Activity("test_id", {});
+  const activity = new Activity("test_id");
   const streamResult = await activity.execute(new Deploy().toExeScriptRequest());
   const { value: result } = await streamResult[Symbol.asyncIterator]().next();
   t.is(result.result, "Ok");
@@ -345,7 +376,6 @@ test("handle some error while streaming batch", async (t) => {
   const command3 = new Run("test_command1", null, null, capture);
   const command4 = new Terminate();
   const script = new Script([command1, command2, command3, command4]);
-  const results = await activity.execute(script.getExeScriptRequest());
   const expectedErrors = [
     {
       type: "error",
@@ -353,9 +383,11 @@ test("handle some error while streaming batch", async (t) => {
     },
   ];
   setExpectedErrorEvents(activity.id, expectedErrors);
+  await script.before();
+  const results = await activity.execute(script.getExeScriptRequest(), true);
   return new Promise((res) => {
     results.on("error", (error) => {
-      t.is(error.toString(), "Error: Some undefined error");
+      t.is(error.toString(), 'Error: GetExecBatchResults failed due to errors: ["Some undefined error"]');
       return res();
     });
     results.on("data", () => null);

@@ -19,12 +19,12 @@ export default class EventSourceMock {
       }, 100);
     }
     if (eventName === "error") {
-      const runtimeInterval = setInterval(() => {
+      const errorInterval = setInterval(() => {
         const mockEvents = errorEvents.get(this.activityId) || [];
         if (mockEvents.length) {
           callback(mockEvents.shift());
         } else {
-          clearInterval(runtimeInterval);
+          clearInterval(errorInterval);
         }
       }, 100);
     }
