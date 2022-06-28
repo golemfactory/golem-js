@@ -322,8 +322,7 @@ class GftpProvider extends StorageProvider {
 
   async release(urls: string[]): Promise<void> {
     const _process = await this.__get_process();
-    const result = await _process.close(urls);
-    console.log({ result });
+    await _process.close(urls);
   }
 }
 
