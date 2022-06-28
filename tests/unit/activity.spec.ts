@@ -388,7 +388,7 @@ test("handle some error while streaming batch", async (t) => {
   const expectedErrors = [
     {
       type: "error",
-      data: "Some undefined error",
+      message: "Some undefined error",
     },
   ];
   setExpectedErrorEvents(activity.id, expectedErrors);

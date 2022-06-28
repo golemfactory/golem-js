@@ -1,4 +1,30 @@
-import { ActivityFactory, Activity, Results } from "./activity";
-import { Script, Command, Run, Deploy, Start, Terminate, Transfer } from "./script";
+import { ActivityFactory, Activity, Result, ActivityStateEnum } from "./activity";
+import {
+  Script,
+  Command,
+  Run,
+  Deploy,
+  Start,
+  Terminate,
+  Transfer,
+  Capture,
+  CaptureMode,
+  CaptureFormat,
+} from "./script";
 
-export { ActivityFactory, Activity, Results, Script, Command, Run, Deploy, Start, Terminate, Transfer };
+export {
+  ActivityFactory,
+  Activity,
+  Result,
+  ActivityStateEnum,
+  Script,
+  Command,
+  Run,
+  Deploy,
+  Start,
+  Terminate,
+  Transfer,
+  Capture,
+  CaptureMode,
+  CaptureFormat,
+};

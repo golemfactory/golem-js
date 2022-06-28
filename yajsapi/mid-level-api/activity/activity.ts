@@ -146,7 +146,7 @@ export class Activity {
     const { id: activityId, executeTimeout } = this;
 
     const errors: object[] = [];
-    eventSource.addEventListener("error", (error) => errors.push(error?.data || error));
+    eventSource.addEventListener("error", (error) => errors.push(error?.message || error));
 
     const results: Result[] = [];
     eventSource.addEventListener("runtime", (event) => results.push(this.parseEventToResult(event.data, batchSize)));
