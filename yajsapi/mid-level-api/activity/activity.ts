@@ -143,11 +143,10 @@ export class Activity {
     });
 
     let isBatchFinished = false;
-    const retryCount = 0;
-    const maxRetries = 3;
     const { id: activityId, executeTimeout } = this;
-    // TODO
-    eventSource.addEventListener("error", (error) => this.handleError(error, 0, retryCount, maxRetries));
+
+    const errors: object[] = [];
+    eventSource.addEventListener("error", (error) => errors.push(error?.data || error));
 
     const results: Result[] = [];
     eventSource.addEventListener("runtime", (event) => results.push(this.parseEventToResult(event.data, batchSize)));
@@ -161,6 +160,9 @@ export class Activity {
           }
           if (cancellationToken?.cancelled) {
             this.destroy(new Error(`Activity ${activityId} has been interrupted.`));
+          }
+          if (errors.length) {
+            this.destroy(new Error(`GetExecBatchResults failed due to errors: ${JSON.stringify(errors)}`));
           }
           if (results.length) {
             const result = results.shift();
