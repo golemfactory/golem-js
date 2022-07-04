@@ -18,7 +18,11 @@ export class ActivityFactory {
       })
     );
   }
-  async create(agreementId: string, options: ActivityOptions, secure = false): Promise<Activity | SecureActivity> {
+  public async create(
+    agreementId: string,
+    options: ActivityOptions,
+    secure = false
+  ): Promise<Activity | SecureActivity> {
     try {
       return secure ? createSecureActivity(this.api, agreementId, options) : this.createActivity(agreementId, options);
     } catch (error) {
