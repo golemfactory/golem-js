@@ -11,22 +11,23 @@ export interface ActivityOptions {
   executeTimeout?: number;
   exeBatchResultsFetchInterval?: number;
   logger?: Logger;
+  taskPackage?: string;
 }
 
 export { ActivityStateEnum };
 
 export class Activity {
   private state: ActivityStateEnum;
-  private readonly api: RequestorControlApi;
+  protected readonly api: RequestorControlApi;
   private readonly stateApi: RequestorStateApi;
   private readonly logger?: Logger;
   private readonly stateFetchIntervalId?: NodeJS.Timeout;
-  private readonly requestTimeout: number;
+  protected readonly requestTimeout: number;
   private readonly responseTimeout: number;
   private readonly executeTimeout: number;
   private readonly exeBatchResultsFetchInterval: number;
 
-  constructor(public readonly id, private readonly options?: ActivityOptions) {
+  constructor(public readonly id, protected readonly options?: ActivityOptions) {
     this.state = ActivityStateEnum.New;
     const config = new yaActivity.Configuration({
       apiKey: this.options?.credentials?.apiKey || process.env.YAGNA_APPKEY,
@@ -46,7 +47,7 @@ export class Activity {
     }
   }
 
-  async execute(
+  public async execute(
     script: yaActivity.ExeScriptRequest,
     stream?: boolean,
     timeout?: number,
@@ -55,8 +56,7 @@ export class Activity {
     let batchId;
     let startTime = new Date();
     try {
-      const { data } = await this.api.exec(this.id, script, { timeout: this.requestTimeout });
-      batchId = data;
+      batchId = await this.send(script);
       startTime = new Date();
     } catch (error) {
       this.logger?.error(error);
@@ -104,12 +104,12 @@ export class Activity {
     });
   }
 
-  async stop(): Promise<boolean> {
+  public async stop(): Promise<boolean> {
     await this.end();
     return true;
   }
 
-  async getState(): Promise<ActivityStateEnum> {
+  public async getState(): Promise<ActivityStateEnum> {
     try {
       const { data } = await this.stateApi.getActivityState(this.id);
       if (data?.state?.[0] && data?.state?.[0] !== this.state) {
@@ -120,6 +120,11 @@ export class Activity {
       this.logger?.warn(`Cannot query activity state: ${error}`);
       throw error;
     }
+  }
+
+  protected async send(script: yaActivity.ExeScriptRequest): Promise<string> {
+    const { data: batchId } = await this.api.exec(this.id, script, { timeout: this.requestTimeout });
+    return batchId;
   }
 
   private async end(error?: Error) {
