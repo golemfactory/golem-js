@@ -15,10 +15,7 @@ test("queue put/get", async (t) => {
 });
 
 test("queue wait for item with timeout", async (t) => {
-  const result: undefined = await Promise.race([
-    queue.get() as any,
-    sleep(0.5),
-  ]);
+  const result: undefined = await Promise.race([queue.get() as any, sleep(0.5)]);
   t.is(result, undefined);
 });
 
