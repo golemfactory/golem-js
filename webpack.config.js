@@ -17,6 +17,8 @@ module.exports = {
     extensions: [".ts", ".js"],
     alias: {
       // "ya-ts-client/dist/ya-activity/api$": path.resolve(__dirname, "tests/mock/activity_api.ts"),
+      [path.resolve(__dirname, "./yajsapi/mid-level-api/activity/secure")]: false,
+      [path.resolve(__dirname, "./yajsapi/storage/gftp")]: false,
     },
     fallback: {
       child_process: "empty",
