@@ -32,7 +32,13 @@ export class RequestorSateApiMock extends RequestorStateApi {
   // @ts-ignore
   getActivityState(activityId: string, options?: AxiosRequestConfig): Promise<AxiosResponse<ActivityState>> {
     return new Promise((res) =>
-      res({ data: { state: this.expectedResults?.getActivityState || this.mockStackResults.shift() } } as AxiosResponse)
+      res({
+        data: {
+          state: this.expectedResults?.getActivityState || this.mockStackResults.shift(),
+          reason: "test",
+          errorMessage: "test",
+        },
+      } as AxiosResponse)
     );
   }
 }

@@ -25,10 +25,11 @@ module.exports = {
       stream: require.resolve("stream-browserify"),
       buffer: require.resolve("buffer/"),
       timers: require.resolve("timers-browserify"),
+      eventsource: require.resolve("eventsource/lib/eventsource-polyfill.js"),
+      http: require.resolve("stream-http"),
+      https: require.resolve("https-browserify"),
       // dgram: require.resolve("dgram-browserify"),
       // util: require.resolve("util"),
-      // http: require.resolve("stream-http"),
-      // https: require.resolve("https-browserify"),
       // net: require.resolve("net-browserify"),
       // crypto: require.resolve("crypto-browserify"),
       // path: require.resolve("path-browserify"),
@@ -37,6 +38,9 @@ module.exports = {
     },
   },
   plugins: [
+    new webpack.ProvidePlugin({
+      Buffer: ["buffer", "Buffer"],
+    }),
     new webpack.ProvidePlugin({
       process: "process/browser",
     }),

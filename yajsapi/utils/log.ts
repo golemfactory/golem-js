@@ -362,4 +362,11 @@ export const changeLogLevel = (level: string) => {
   logger.configure(options);
 };
 
+export interface Logger {
+  log(msg);
+  warn(msg);
+  error(msg);
+  debug(msg);
+}
+
 export default logger;

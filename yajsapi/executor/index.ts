@@ -8,7 +8,7 @@ import { MarketDecoration } from "ya-ts-client/dist/ya-payment/src/models";
 
 import { WorkContext, Work, CommandContainer, ExecOptions } from "./ctx";
 import * as events from "./events";
-import { Activity, NodeInfo, NodeInfoKeys } from "../props";
+import { Activity as ActivityProp, NodeInfo, NodeInfoKeys } from "../props";
 import { Counter } from "../props/com";
 import { DemandBuilder } from "../props/builder";
 import { Network } from "../network";
@@ -17,7 +17,7 @@ import * as rest from "../rest";
 import { Agreement, OfferProposal, Subscription } from "../rest/market";
 import { AgreementsPool } from "./agreements_pool";
 import { Allocation, DebitNote, Invoice } from "../rest/payment";
-import { ActivityService, CommandExecutionError } from "../rest/activity";
+import { ActivityFactory, Activity } from "../activity";
 
 import * as csp from "js-csp";
 
@@ -50,6 +50,7 @@ import {
 } from "./strategy";
 import { Package } from "../package";
 import axios from "axios";
+import { Script, Command } from "../script";
 
 export { Task, TaskStatus };
 
@@ -83,6 +84,19 @@ export class NoPaymentAccountError extends Error {
     this.name = this.constructor.name;
     this.required_driver = required_driver;
     this.required_network = required_network;
+  }
+  toString() {
+    return this.message;
+  }
+}
+
+export class CommandExecutionError extends Error {
+  command: string;
+  message: string;
+  constructor(command: string, message?: string) {
+    super(message);
+    this.command = command;
+    this.message = message || "";
   }
   toString() {
     return this.message;
@@ -422,7 +436,7 @@ export class Executor {
     emit(new events.ComputationStarted({ expires: this._expires }));
     // Building offer
     const builder = new DemandBuilder();
-    const _activity = new Activity();
+    const _activity = new ActivityProp();
     _activity.expiration.value = this._expires;
     _activity.multi_activity.value = true;
     builder.add(_activity);
@@ -570,7 +584,7 @@ export class Executor {
 
     async function process_batches(
       agreement_id: string,
-      activity: rest.Activity,
+      activity: Activity,
       command_generator: AsyncGenerator<WorkItem, any>,
       consumer: Consumer<Task<D, R>>
     ): Promise<void> {
@@ -599,27 +613,40 @@ export class Executor {
             })
           );
         }
-        const task_id = current_worker_task ? current_worker_task.id : undefined;
-        batch.attestation = {
-          credentials: activity.credentials,
-          nonce: activity.id,
-          exeunitHashes: activity.exeunitHashes,
-        };
+        const task_id = current_worker_task ? current_worker_task.id : "";
+        // batch.attestation = {
+        //   credentials: activity.credentials,
+        //   nonce: activity.id,
+        //   exeunitHashes: activity.exeunitHashes,
+        // };
         await batch.prepare();
         const cc = new CommandContainer();
         batch.register(cc);
-        const remote = await activity.send(
-          cc.commands(),
-          stream_output,
-          batch_deadline,
-          (<SubmissionState>self.state).worker_cancellation_token
-        );
         const cmds = cc.commands();
+
+        const script = new Script(cmds.map((cmd) => new Command(Object.keys(cmd)[0], cmd[Object.keys(cmd)[0]])));
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        const cancellationToken = (<SubmissionState>self.state).worker_cancellation_token as CancellationToken;
+
+        const scriptResults = await activity
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          .execute(script.getExeScriptRequest(), false, batch_deadline, cancellationToken)
+          .catch((e) => {
+            throw new CommandExecutionError("", e.toString());
+          });
+
         emit(new events.ScriptSent({ agr_id: agreement_id, task_id, cmds }));
+
         const get_batch_results = async (): Promise<events.CommandEvent[]> => {
           const results: events.CommandEvent[] = [];
-          for await (const evt_ctx of remote) {
-            const evt = evt_ctx.event(agreement_id, task_id, cmds);
+          scriptResults.on("error", (error) => {
+            throw new CommandExecutionError("", error.toString());
+          });
+          for await (const result of scriptResults) {
+            const evtCtx = events.CommandExecuted.fromActivityResult(result);
+            const evt = evtCtx.event(agreement_id, task_id.toString(), cmds);
             emit(evt);
             results.push(evt);
             if (evt instanceof events.CommandExecuted && !evt.success) {
@@ -674,7 +701,7 @@ export class Executor {
       }
       let _act: Activity;
       try {
-        _act = await activity_api.new_activity(agreement, secure);
+        _act = await activity_api.create(agreement.id());
       } catch (error) {
         emit(new events.ActivityCreateFailed({ agr_id: agreement.id() }));
         emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error }));
@@ -690,43 +717,42 @@ export class Executor {
         }
       }
 
-      await asyncWith(_act, async (act): Promise<void> => {
-        emit(new events.ActivityCreated({ act_id: act.id, agr_id: agreement.id() }));
-        agreements_accepting_debit_notes.add(agreement.id());
-        const agreement_details = await agreement.details();
-        const node_info = <NodeInfo>agreement_details.provider_view().extract(new NodeInfo());
-        const provider_name = node_info.name.value;
-        const provider_id = agreement_details.raw_details.offer.providerId;
-        let network_node;
-        if (network) {
-          network_node = await network.add_node(provider_id);
+      emit(new events.ActivityCreated({ act_id: _act.id, agr_id: agreement.id() }));
+      agreements_accepting_debit_notes.add(agreement.id());
+      const agreement_details = await agreement.details();
+      const node_info = <NodeInfo>agreement_details.provider_view().extract(new NodeInfo());
+      const provider_name = node_info.name.value;
+      const provider_id = agreement_details.raw_details.offer.providerId;
+      let network_node;
+      if (network) {
+        network_node = await network.add_node(provider_id);
+      }
+      const work_context = new WorkContext(
+        `worker-${wid}`,
+        storage_manager,
+        emit,
+        { provider_id, provider_name },
+        network_node
+      );
+      await asyncWith(work_queue.new_consumer(), async (consumer) => {
+        try {
+          const tasks = task_emitter(consumer);
+          const batch_generator = worker(work_context, tasks);
+          await process_batches(agreement.id(), _act, batch_generator, consumer);
+          emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
+        } catch (error) {
+          emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error }));
+          throw error;
+        } finally {
+          await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
         }
-        const work_context = new WorkContext(
-          `worker-${wid}`,
-          storage_manager,
-          emit,
-          { provider_id, provider_name },
-          network_node
-        );
-        await asyncWith(work_queue.new_consumer(), async (consumer) => {
-          try {
-            const tasks = task_emitter(consumer);
-            const batch_generator = worker(work_context, tasks);
-            await process_batches(agreement.id(), act, batch_generator, consumer);
-            emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
-          } catch (error) {
-            emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error }));
-            throw error;
-          } finally {
-            await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
-          }
-        });
-        if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
-          return;
-        }
-        await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
-        emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
       });
+      if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
+        return;
+      }
+      await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
+      emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
+
       logger.debug(`Stopped worker related to agreement ${agreement.id()}.`);
     }
 
@@ -956,8 +982,8 @@ export class Executor {
     const market_client = await this._api_config.market();
     this._market_api = new rest.Market(market_client);
 
-    const activity_client = await this._api_config.activity();
-    this._activity_api = new ActivityService(activity_client);
+    const activity_config = await this._api_config.activity();
+    this._activity_api = new ActivityFactory(activity_config.apiKey, activity_config.basePath);
 
     const payment_client = await this._api_config.payment();
     this._payment_api = new rest.Payment(payment_client);
@@ -1015,6 +1041,8 @@ export class Executor {
       errorInRunner = error;
     }
     await this.done();
-    if (errorInRunner) { throw errorInRunner; }
+    if (errorInRunner) {
+      throw errorInRunner;
+    }
   }
 }
