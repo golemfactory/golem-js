@@ -17,9 +17,8 @@ async function main() {
   await script.before();
   const results = await activity.execute(script.getExeScriptRequest());
 
-  results.on(
-    "data",
-    (result) => console.log(`command #${result.index}`, "result:", result.result, "stdout: ", result.stdout);
+  results.on("data", (result) =>
+    console.log(`command #${result.index}`, "result:", result.result, "stdout: ", result.stdout)
   );
 
   results.on("end", async () => {

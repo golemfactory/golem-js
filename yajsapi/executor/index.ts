@@ -17,9 +17,7 @@ import * as rest from "../rest";
 import { Agreement, OfferProposal, Subscription } from "../rest/market";
 import { AgreementsPool } from "./agreements_pool";
 import { Allocation, DebitNote, Invoice } from "../rest/payment";
-import { CommandExecutionError } from "../rest/activity";
-
-import { ActivityFactory, Activity } from "../mid-level-api/activity";
+import { ActivityFactory, Activity } from "../activity";
 
 import * as csp from "js-csp";
 
@@ -52,8 +50,7 @@ import {
 } from "./strategy";
 import { Package } from "../package";
 import axios from "axios";
-import { Script, Command } from "../mid-level-api";
-import { ExeScriptCommandResultResultEnum } from "ya-ts-client/dist/ya-activity/src/models";
+import { Script, Command } from "../script";
 
 export { Task, TaskStatus };
 
@@ -87,6 +84,19 @@ export class NoPaymentAccountError extends Error {
     this.name = this.constructor.name;
     this.required_driver = required_driver;
     this.required_network = required_network;
+  }
+  toString() {
+    return this.message;
+  }
+}
+
+export class CommandExecutionError extends Error {
+  command: string;
+  message: string;
+  constructor(command: string, message?: string) {
+    super(message);
+    this.command = command;
+    this.message = message || "";
   }
   toString() {
     return this.message;
@@ -603,7 +613,7 @@ export class Executor {
             })
           );
         }
-        const task_id = current_worker_task ? current_worker_task.id : '';
+        const task_id = current_worker_task ? current_worker_task.id : "";
         // batch.attestation = {
         //   credentials: activity.credentials,
         //   nonce: activity.id,
@@ -636,7 +646,7 @@ export class Executor {
           });
           for await (const result of scriptResults) {
             const evtCtx = events.CommandExecuted.fromActivityResult(result);
-            const evt = evtCtx.event(agreement_id, task_id.toString() , cmds);
+            const evt = evtCtx.event(agreement_id, task_id.toString(), cmds);
             emit(evt);
             results.push(evt);
             if (evt instanceof events.CommandExecuted && !evt.success) {
