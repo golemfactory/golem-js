@@ -603,7 +603,7 @@ export class Executor {
             })
           );
         }
-        const task_id = current_worker_task ? current_worker_task.id : undefined;
+        const task_id = current_worker_task ? current_worker_task.id : '';
         // batch.attestation = {
         //   credentials: activity.credentials,
         //   nonce: activity.id,
@@ -635,15 +635,8 @@ export class Executor {
             throw new CommandExecutionError("", error.toString());
           });
           for await (const result of scriptResults) {
-            let evt = Object.create(events.CommandExecuted.prototype);
-            evt.cmd_idx = evt.idx = result.index;
-            evt.stdout = result.stdout;
-            evt.stderr = result.stderr;
-            evt.message = result.message;
-            evt.command = "";
-            evt.success = result.result === ExeScriptCommandResultResultEnum.Ok;
-            evt = new events.CommandEventContext(evt);
-            evt = evt.event(agreement_id, task_id, cmds);
+            const evtCtx = events.CommandExecuted.fromActivityResult(result);
+            const evt = evtCtx.event(agreement_id, task_id.toString() , cmds);
             emit(evt);
             results.push(evt);
             if (evt instanceof events.CommandExecuted && !evt.success) {
