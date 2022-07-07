@@ -17,7 +17,7 @@ import {
   Start,
   Run,
   Terminate,
-  SendFile,
+  UploadFile,
   DownloadFile,
   Script,
   CaptureFormat,
@@ -109,7 +109,7 @@ test("execute script and get results by events", async (t) => {
   const activity = new Activity("test_id");
   const command1 = new Deploy();
   const command2 = new Start();
-  const command3 = new SendFile(new StorageProviderMock(), "testSrc", "testDst");
+  const command3 = new UploadFile(new StorageProviderMock(), "testSrc", "testDst");
   const command4 = new Run("test_command1");
   const command5 = new DownloadFile(new StorageProviderMock(), "testSrc", "testDst");
   const command6 = new Terminate();
