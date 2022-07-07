@@ -115,7 +115,7 @@ export class Activity {
           try {
             const { data: results }: { data: Result[] } = await api.getExecBatchResults(activityId, batchId);
             const newResults = results.slice(lastIndex + 1);
-            if (newResults.length) {
+            if (Array.isArray(newResults) && newResults.length) {
               newResults.forEach((result) => {
                 this.push(result);
                 isBatchFinished = result.isBatchFinished || false;

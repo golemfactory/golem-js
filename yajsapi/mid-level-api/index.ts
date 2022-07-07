@@ -12,6 +12,7 @@ import {
   CaptureFormat,
 } from "./script";
 
+
 export {
   ActivityFactory,
   Activity,
@@ -26,5 +27,5 @@ export {
   Transfer,
   Capture,
   CaptureMode,
-  CaptureFormat,
+  CaptureFormat
 };
