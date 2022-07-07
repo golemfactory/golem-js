@@ -1,4 +1,4 @@
-import { provider } from "../../storage/gftp";
+import { provider } from "./gftp";
 import { StorageProvider } from "./provider";
 
 export class GftpStorageProvider implements StorageProvider {

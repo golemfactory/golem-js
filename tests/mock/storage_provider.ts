@@ -1,4 +1,4 @@
-import { StorageProvider } from "../../yajsapi/mid-level-api/storage/provider";
+import { StorageProvider } from "../../yajsapi/storage/provider";
 
 export class StorageProviderMock implements StorageProvider {
   receive(path: string): Promise<string> {

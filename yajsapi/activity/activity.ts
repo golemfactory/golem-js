@@ -5,7 +5,7 @@ import {
 } from "ya-ts-client/dist/ya-activity/src/models";
 import { RequestorControlApi, RequestorStateApi } from "ya-ts-client/dist/ya-activity/api";
 import { yaActivity } from "ya-ts-client";
-import { Logger, sleep, CancellationToken } from "../utils";
+import { logUtils, sleep, CancellationToken } from "../utils";
 import EventSource from "eventsource";
 import { Readable } from "stream";
 
@@ -15,7 +15,7 @@ export interface ActivityOptions {
   responseTimeout?: number;
   executeTimeout?: number;
   exeBatchResultsFetchInterval?: number;
-  logger?: Logger;
+  logger?: logUtils.Logger;
 }
 
 export { ActivityStateEnum };
@@ -24,7 +24,7 @@ export class Activity {
   private readonly config: { apiKey: string; basePath: string };
   private readonly api: RequestorControlApi;
   private readonly stateApi: RequestorStateApi;
-  private readonly logger?: Logger;
+  private readonly logger?: logUtils.Logger;
   private readonly requestTimeout: number;
   private readonly responseTimeout: number;
   private readonly executeTimeout: number;
@@ -43,11 +43,7 @@ export class Activity {
     this.responseTimeout = options?.responseTimeout || 10000;
     this.executeTimeout = options?.executeTimeout || 20000;
     this.exeBatchResultsFetchInterval = options?.exeBatchResultsFetchInterval || 3000;
-    if (options?.logger instanceof Logger) {
-      this.logger = options.logger;
-    } else if (options?.logger !== false) {
-      this.logger = new Logger();
-    }
+    this.logger = options?.logger;
   }
 
   async execute(
@@ -122,7 +118,7 @@ export class Activity {
                 lastIndex = result.index;
               });
             }
-            await sleep(exeBatchResultsFetchInterval);
+            await sleep(exeBatchResultsFetchInterval, true);
           } catch (error) {
             retryCount = await handleError(error, lastIndex, retryCount, maxRetries).catch((error) =>
               this.destroy(error)
@@ -169,7 +165,7 @@ export class Activity {
             this.push(result);
             isBatchFinished = result?.isBatchFinished || false;
           }
-          await sleep(500);
+          await sleep(500, true);
         }
         this.push(null);
       },

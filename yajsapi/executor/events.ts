@@ -2,7 +2,7 @@
 import { NodeInfo } from "../props";
 import applyMixins from "../utils/applyMixins";
 import { ExeScriptCommandResultResultEnum } from "ya-ts-client/dist/ya-activity/src/models";
-import { Result } from "../mid-level-api/activity/results";
+import { Result } from "../activity";
 
 type ExcInfo = Error;
 

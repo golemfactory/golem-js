@@ -10,8 +10,8 @@ rewiremock("ya-ts-client/dist/ya-activity/api").with({
 rewiremock("eventsource").with(EventSourceMock);
 rewiremock.enable();
 import { StorageProviderMock } from "../mock/storage_provider";
-import { Activity, ActivityStateEnum, ActivityFactory } from "../../yajsapi/mid-level-api/activity";
-import { CancellationToken } from "../../yajsapi/mid-level-api/utils";
+import { Activity, ActivityStateEnum, ActivityFactory } from "../../yajsapi/activity";
+import { CancellationToken } from "../../yajsapi/utils";
 import {
   Deploy,
   Start,
@@ -22,7 +22,7 @@ import {
   Script,
   CaptureFormat,
   CaptureMode,
-} from "../../yajsapi/mid-level-api/script";
+} from "../../yajsapi/script";
 
 test.before(() => {
   process.env.YAGNA_APPKEY = "test";
