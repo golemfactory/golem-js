@@ -1,16 +1,32 @@
-import * as stream from "stream";
-
 export interface Result {
   index: number;
   eventDate: string;
-  result: "Ok" | "Error";
+  result?: "Ok" | "Error";
   stdout?: string;
   stderr?: string;
   message?: string;
   isBatchFinished?: boolean;
 }
 
-export class Results<T = StreamResults | BatchResults> extends stream.Readable {}
+export interface StreamingBatchEvent {
+  batch_id: string;
+  index: number;
+  timestamp: string;
+  kind: RuntimeEventKind;
+}
 
-export type StreamResults = { todo: true };
-export type BatchResults = Array<Result>;
+interface RuntimeEventKind {
+  started?: RuntimeEventStarted;
+  stdout?: string | ArrayBuffer;
+  stderr?: string | ArrayBuffer;
+  finished?: RuntimeEventFinished;
+}
+
+interface RuntimeEventStarted {
+  command: object;
+}
+
+interface RuntimeEventFinished {
+  return_code: number;
+  message: string;
+}
