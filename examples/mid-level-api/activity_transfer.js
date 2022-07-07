@@ -1,6 +1,6 @@
 const { ActivityFactory } = require("../../dist/mid-level-api/activity");
 const { Deploy, Start, Run, Terminate, SendFile, DownloadFile, Script } = require("../../dist/mid-level-api/script");
-const { OldStorageProviderFacade } = require("../../dist/mid-level-api/storage/old_provider");
+const { GftpStorageProvider } = require("../../dist/mid-level-api/storage/gftp_provider");
 const fs = require("fs");
 const path = require("path");
 
@@ -8,7 +8,7 @@ async function main() {
   const agreementId = "a5f63b3d0d066d7e94ea60bad9e87eaea9c1067feb1165c2facb8f8fa49a0659";
   const activityFactory = new ActivityFactory();
   const activity = await activityFactory.create(agreementId);
-  const storageProvider = new OldStorageProviderFacade();
+  const storageProvider = new GftpStorageProvider();
 
   const command1 = new Deploy();
   const command2 = new Start();
