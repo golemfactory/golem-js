@@ -5,11 +5,10 @@ const fs = require("fs");
 const path = require("path");
 
 async function main() {
-  const agreementId = "c9adc2a219c6196a7caf9efc6d93f9d9f62654f557eccc8e70d5d9b8a6e9865a";
+  const agreementId = "a5f63b3d0d066d7e94ea60bad9e87eaea9c1067feb1165c2facb8f8fa49a0659";
   const activityFactory = new ActivityFactory();
   const activity = await activityFactory.create(agreementId);
   const storageProvider = new OldStorageProviderFacade();
-  await storageProvider.init();
 
   const command1 = new Deploy();
   const command2 = new Start();
@@ -30,7 +29,6 @@ async function main() {
   results.on("end", async () => {
     await script.after();
     console.log("New file content: ", fs.readFileSync(path.join(__dirname, "new_file.txt"), "utf8"));
-    await storageProvider.end();
     process.exit(0);
   });
 }
