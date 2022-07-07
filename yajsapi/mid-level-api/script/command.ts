@@ -76,13 +76,16 @@ export class Transfer extends Command {
   }
 }
 
-export class SendFile extends Transfer {
+export class UploadFile extends Transfer {
   constructor(private storageProvider: StorageProvider, private srcPath: string, private dstPath: string) {
     super();
     this.args["to"] = `container:${dstPath}`;
   }
   async before() {
-    this.args["from"] = await this.storageProvider.upload(this.srcPath);
+    this.args["from"] = await this.storageProvider.publish(this.srcPath);
+  }
+  async after() {
+    await this.storageProvider.release([this.args["from"]]);
   }
 }
 
@@ -92,6 +95,6 @@ export class DownloadFile extends Transfer {
     this.args = { from: `container:${srcPath}` };
   }
   async before() {
-    this.args["to"] = await this.storageProvider.download(this.dstPath);
+    this.args["to"] = await this.storageProvider.receive(this.dstPath);
   }
 }
