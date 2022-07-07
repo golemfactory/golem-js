@@ -309,11 +309,12 @@ class GftpProvider extends StorageProvider {
   }
 
   async new_destination(destination_file: string | null = null): Promise<Destination> {
-    if (destination_file) {
-      if (fs.existsSync(destination_file)) {
-        destination_file = null;
-      }
-    }
+    // Temporary disable for checking new transfer approach (without after hook)
+    // if (destination_file) {
+    //   if (fs.existsSync(destination_file)) {
+    //     destination_file = null;
+    //   }
+    // }
     const output_file = destination_file ? destination_file.toString() : this.__new_file();
     const _process = await this.__get_process();
     const link = await _process.receive(output_file);
