@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Activity module - Commands</title>
+    <script src="bundle.js"></script>
+    <link rel="stylesheet" href="main.css">
+</head>
+<body>
+    <h1>Activity module - Commands</h1>
+    <div class="container">
+        <div class="col-6">
+            <h3>Credentials</h3>
+            <div class="row">
+                <div>
+                    <label for="YAGNA_APPKEY">YAGNA_APPKEY: </label>
+                    <input id="YAGNA_APPKEY" type="text" value=""/>
+                </div>
+                <div>
+                    <label for="YAGNA_API_BASEPATH">YAGNA_API_BASEURL: </label>
+                    <input id="YAGNA_API_BASEPATH" type="text" value="http://127.0.0.1:7465/activity-api/v1" />
+                </div>
+            </div>
+            <h3>Actions</h3>
+            <div class="row vertical">
+                <div>
+                    <label for="AGREEMENT_ID">AGREEMENT_ID: </label>
+                    <div class="row padding-0">
+                        <input id="AGREEMENT_ID" type="text" />
+                        <button onclick="createActivity()">Create Activity</button>
+                        <button disabled onclick="destroyActivity()">Destroy Activity</button>
+                    </div>
+                </div>
+            </div>
+            <div class="row vertical">
+                <div>
+                    <div class="row commands">
+                        <button disabled onclick="executeCommand('Deploy')">Deploy</button>
+                        <button disabled onclick="executeCommand('Start')">Start</button>
+                        <button disabled onclick="executeCommand('Terminate')">Terminate</button>
+                        <button disabled onclick="getState()">Get state</button>
+                    </div>
+                    <label for="COMMAND">RUN SHELL COMMAND: </label>
+                    <div class="row padding-0">
+                        <input disabled id="COMMAND" type="text" />
+                        <button disabled onclick="executeRunCommand()">Execute</button>
+                    </div>
+                </div>
+            </div>
+            <div class="results console">
+                <h3>Results</h3>
+                <ul id="results"></ul>
+            </div>
+        </div>
+        <div class="col-6 border-left">
+            <div class="logs console">
+                <h3>Logs</h3>
+                <ul id="logs"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let activity;
+        function appendLog(msg) {
+            const logs_el = document.getElementById('logs');
+            const li = document.createElement('li');
+            li.appendChild(document.createTextNode(msg));
+            logs_el.appendChild(li);
+        }
+        function appendResults(result) {
+            const results_el = document.getElementById('results');
+            const li = document.createElement('li');
+            li.appendChild(document.createTextNode(result));
+            results_el.appendChild(li);
+        }
+        function enableActions() {
+            const disabled =  document.querySelectorAll("input:disabled, button:disabled");
+            disabled.forEach(el => el.removeAttribute('disabled'));
+        }
+        const logger = {
+            log: (msg) => appendLog(`[${new Date().toISOString()}] ${msg}`),
+            warn: (msg) => appendLog(`[${new Date().toISOString()}] [warn] ${msg}`),
+            debug: (msg) => appendLog(`[${new Date().toISOString()}] [debug] ${msg}`),
+            error: (msg) => appendLog(`[${new Date().toISOString()}] [error] ${msg}`),
+        }
+        async function createActivity() {
+            const appKey = document.getElementById('YAGNA_APPKEY').value;
+            const basePath = document.getElementById('YAGNA_API_BASEPATH').value;
+            const agreementId = document.getElementById('AGREEMENT_ID').value;
+            const factory = new yajsapi.ActivityFactory(appKey, basePath);
+            activity = await factory.create(agreementId).catch(logger.error);
+            if (activity) {
+                logger.log(`Activity created. ID: ${activity.id}`);
+                enableActions();
+            }
+        }
+        async function destroyActivity() {
+            if (!activity) {
+                logger.error('Activity not created');
+                return;
+            }
+            const result = await activity.stop().catch(e => logger.error(e));
+            if (result) {
+                logger.log('Activity has been destroyed');
+            } else {
+                logger.error('Activity cannot destroy.');
+            }
+        }
+        async function executeCommand(command) {
+            if (!activity) {
+                logger.log('Error: Activity not created');
+                return;
+            }
+            const cmd = new yajsapi[command]();
+            const results = await activity.execute(cmd.toExeScriptRequest()).catch(err => logger.error(err));
+            if (!results) return;
+            const { value: result } = await results[Symbol.asyncIterator]().next();
+            if (result.result === 'Ok') {
+                logger.log(`Command ${command} has been executed`);
+            } else {
+                logger.warn(result.message || result.stderr || `Command ${command} Error`);
+            }
+        }
+        async function executeRunCommand() {
+            if (!activity) {
+                logger.error('Activity not created');
+                return;
+            }
+            const bashCommand = document.getElementById('COMMAND').value
+            const command = new yajsapi.Run("/bin/sh", ["-c", bashCommand]);
+            const results = await activity.execute(command.toExeScriptRequest()).catch(err => logger.error(err));
+            if (!results) return;
+            const { value: result } = await results[Symbol.asyncIterator]().next();
+            if (result.stdout) appendResults('[stdout] ' + result.stdout);
+            if (result.stderr) appendResults('[stderr] ' + result.stderr);
+            if (result.result === 'Ok') {
+                logger.log(`Command Run has been executed`);
+            } else {
+                logger.warn(result.message || `Command Run Error`);
+            }
+        }
+        async function getState() {
+            if (!activity) {
+                logger.error('Activity not created');
+                return;
+            }
+            const state = await activity.getState().catch(err => logger.error(err));
+            logger.log(`Activity State: ${state}`);
+        }
+    </script>
+</body>
+</html>
