@@ -1,6 +1,7 @@
 export interface StorageProvider {
   init(): Promise<void>;
-  end(): Promise<void>;
-  download(path: string): Promise<string>;
-  upload(path: string): Promise<string>;
+  close(): Promise<void>;
+  receive(path: string): Promise<string>;
+  publish(path: string): Promise<string>;
+  release(urls: string[]): Promise<void>;
 }

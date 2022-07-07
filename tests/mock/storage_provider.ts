@@ -1,11 +1,11 @@
 import { StorageProvider } from "../../yajsapi/mid-level-api/storage/provider";
 
 export class StorageProviderMock implements StorageProvider {
-  download(path: string): Promise<string> {
+  receive(path: string): Promise<string> {
     return Promise.resolve("");
   }
 
-  end(): Promise<void> {
+  close(): Promise<void> {
     return Promise.resolve(undefined);
   }
 
@@ -13,7 +13,11 @@ export class StorageProviderMock implements StorageProvider {
     return Promise.resolve(undefined);
   }
 
-  upload(path: string): Promise<string> {
+  publish(path: string): Promise<string> {
     return Promise.resolve("");
+  }
+
+  release(urls: string[]): Promise<void> {
+    return Promise.resolve();
   }
 }
