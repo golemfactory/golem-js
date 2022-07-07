@@ -59,7 +59,7 @@ export class Activity {
       batchId = data;
       startTime = new Date();
     } catch (error) {
-      console.error(error);
+      this.logger?.error(error);
       throw new Error(error?.response?.data?.message || error);
     }
     if (stream) {
@@ -68,23 +68,24 @@ export class Activity {
     }
     let isBatchFinished = false;
     let lastIndex;
-    const retryCount = 0;
+    let retryCount = 0;
     const maxRetries = 3;
-    const { id: activityId, executeTimeout, api, handleError, exeBatchResultsFetchInterval } = this;
+    const { id: activityId, executeTimeout, api, exeBatchResultsFetchInterval } = this;
+    const handleError = this.handleError.bind(this);
     return new Results<BatchResults>({
       objectMode: true,
       async read() {
         while (!isBatchFinished) {
           if (startTime.valueOf() + (timeout || executeTimeout) <= new Date().valueOf()) {
-            throw new Error(`Activity ${activityId} timeout.`);
+            this.destroy(new Error(`Activity ${activityId} timeout.`));
           }
           if (cancellationToken?.cancelled) {
-            throw new Error(`Activity ${activityId} has been interrupted.`);
+            this.destroy(new Error(`Activity ${activityId} has been interrupted.`));
           }
           try {
             const { data: results } = await api.getExecBatchResults(activityId, batchId);
             const newResults = results.slice(lastIndex + 1);
-            if (newResults.length) {
+            if (Array.isArray(newResults) && newResults.length) {
               newResults.forEach((result) => {
                 this.push(result);
                 isBatchFinished = result.isBatchFinished || false;
@@ -93,7 +94,9 @@ export class Activity {
             }
             await sleep(exeBatchResultsFetchInterval);
           } catch (error) {
-            await handleError(error, lastIndex, retryCount, maxRetries);
+            retryCount = await handleError(error, lastIndex, retryCount, maxRetries).catch((error) =>
+              this.destroy(error)
+            );
           }
         }
         this.push(null);
@@ -107,25 +110,87 @@ export class Activity {
   }
 
   async getState(): Promise<ActivityStateEnum> {
-    const { data } = await this.stateApi.getActivityState(this.id);
-    // TODO: catch and check error
-    if (data?.state?.[0] && data?.state?.[0] !== this.state) {
-      this.state = data.state[0];
+    try {
+      const { data } = await this.stateApi.getActivityState(this.id);
+      if (data?.state?.[0] && data?.state?.[0] !== this.state) {
+        this.state = data.state[0];
+      }
+      return this.state;
+    } catch (error) {
+      this.logger?.warn(`Cannot query activity state: ${error}`);
+      throw error;
     }
-    return this.state;
   }
 
   private async end(error?: Error) {
     await this.api
       .destroyActivity(this.id, this.requestTimeout, { timeout: (this.requestTimeout + 1) * 1000 })
       .catch((error) => this.logger?.warn(`Got API Exception when destroying activity ${this.id}: ${error}`));
-    if (this.stateFetchIntervalId) clearInterval(this.stateFetchIntervalId);
-    await this.getState();
     if (error) this.logger?.debug("Activity ended with an error: " + error);
     else this.logger?.debug("Activity ended");
   }
 
   private async handleError(error, cmdIndex, retryCount, maxRetries) {
-    // todo
+    if (this.isTimeoutError(error)) {
+      this.logger?.warn("API request timeout." + error.toString());
+      return retryCount;
+    }
+    const { terminated, reason, errorMessage } = await this.isTerminated();
+    if (terminated) {
+      this.logger?.warn(`Activity ${this.id} terminated by provider. Reason: ${reason}, Error: ${errorMessage}`);
+      throw error;
+    }
+    if (!this.isGsbError(error)) {
+      throw error;
+    }
+    ++retryCount;
+    const failMsg = "getExecBatchResults failed due to GSB error";
+    if (retryCount < maxRetries) {
+      this.logger?.debug(`${failMsg}, retrying in ${this.exeBatchResultsFetchInterval}.`);
+      return retryCount;
+    } else {
+      this.logger?.debug(`${failMsg}, giving up after ${retryCount} attempts.`);
+    }
+    const msg = error?.response?.data?.message || error;
+    throw new Error(`Command #${cmdIndex || 0} getExecBatchResults error: ${msg}`);
+  }
+
+  private isTimeoutError(error) {
+    const timeoutMsg = error.message && error.message.includes("timeout");
+    return (
+      (error.response && error.response.status === 408) ||
+      error.code === "ETIMEDOUT" ||
+      (error.code === "ECONNABORTED" && timeoutMsg)
+    );
+  }
+
+  private isGsbError(error) {
+    // check if `err` is caused by "endpoint address not found" GSB error
+    if (!error.response) {
+      return false;
+    }
+    if (error.response.status !== 500) {
+      return false;
+    }
+    if (!error.response.data || !error.response.data.message) {
+      this.logger?.debug(`Cannot read error message, response: ${error.response}`);
+      return false;
+    }
+    const message = error.response.data.message;
+    return message.includes("endpoint address not found") && message.includes("GSB error");
+  }
+
+  private async isTerminated(): Promise<{ terminated: boolean; reason?: string; errorMessage?: string }> {
+    try {
+      const { data } = await this.stateApi.getActivityState(this.id);
+      return {
+        terminated: data?.state?.[0] === ActivityStateEnum.Terminated,
+        reason: data?.reason,
+        errorMessage: data?.errorMessage,
+      };
+    } catch (err) {
+      this.logger?.debug(`Cannot query activity state: ${err}`);
+      return { terminated: false };
+    }
   }
 }
