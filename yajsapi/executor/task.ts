@@ -139,7 +139,7 @@ export class Task<TaskData, TaskResult> {
     this._status = TaskStatus.REJECTED;
     this._stop(retry);
 
-    for (const cb of this._callbacks) cb && cb(self, TaskStatus.REJECTED);
+    for (const cb of this._callbacks) cb && cb(this, TaskStatus.REJECTED);
   }
 
   static get counter(): number {
