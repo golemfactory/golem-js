@@ -112,7 +112,6 @@
                 logger.log('Error: Activity not created');
                 return;
             }
-            console.log(command);
             const cmd = new yajsapi.script[command]();
             const results = await activity.execute(cmd.toExeScriptRequest()).catch(err => logger.error(err));
             if (!results) return;

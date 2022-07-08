@@ -68,9 +68,9 @@
     <script>
         let activity;
         let commands = [
-            new yajsapi.Deploy(),
-            new yajsapi.Start(),
-            new yajsapi.Terminate()
+            new yajsapi.script.Deploy(),
+            new yajsapi.script.Start(),
+            new yajsapi.script.Terminate()
         ];
         refreshScript();
         function log(msg) {
@@ -98,9 +98,9 @@
         }
         function clearScript() {
             commands = [
-                new yajsapi.Deploy(),
-                new yajsapi.Start(),
-                new yajsapi.Terminate()
+                new yajsapi.script.Deploy(),
+                new yajsapi.script.Start(),
+                new yajsapi.script.Terminate()
             ];
             refreshScript();
         }
@@ -108,7 +108,7 @@
             const appKey = document.getElementById('YAGNA_APPKEY').value;
             const basePath = document.getElementById('YAGNA_API_BASEPATH').value;
             const agreementId = document.getElementById('AGREEMENT_ID').value;
-            const factory = new yajsapi.ActivityFactory(appKey, basePath);
+            const factory = new yajsapi.activity.ActivityFactory(appKey, basePath);
             activity = await factory.create(agreementId).catch(err => logger.error(err));
             if (activity) {
                 log(`Activity created. ID: ${activity.id}`);
@@ -129,7 +129,7 @@
         }
         async function addToScript() {
             const bashCommand = document.getElementById('COMMAND').value
-            const runCommand = new yajsapi.Run("/bin/sh", ["-c", bashCommand]);
+            const runCommand = new yajsapi.script.Run("/bin/sh", ["-c", bashCommand]);
             commands.splice(commands.length - 1, 0, runCommand);
             refreshScript();
             document.getElementById('COMMAND').value = "";
@@ -139,7 +139,7 @@
                 logger.error('Activity not created');
                 return;
             }
-            const script = new yajsapi.Script(commands);
+            const script = new yajsapi.script.Script(commands);
             const results = await activity.execute(script.getExeScriptRequest()).catch(err => logger.error(err));
             results.on('data', (result) => {
                 if (result.stdout) appendResults('[stdout] ' + result.stdout);
