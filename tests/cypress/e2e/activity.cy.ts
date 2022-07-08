@@ -51,15 +51,18 @@ describe("Test standalone activity module", () => {
     cy.contains("YAGNA_APPKEY").type("test_yagna_app_key");
     cy.contains("AGREEMENT_ID").type("test_agreement_id");
     cy.contains("Create Activity").click();
-    cy.contains("RUN SHELL COMMAND").type('echo "test_result"');
+    cy.contains("RUN SHELL COMMAND").type('echo "test echo 1"');
     cy.contains("Add to script").click();
-    cy.contains("RUN SHELL COMMAND").type('echo "test_result 222"');
+    cy.contains("RUN SHELL COMMAND").type('echo "test echo 2"');
     cy.contains("Add to script").click();
-    cy.contains("Execute").click();
     cy.window().then((win) => {
-      // use this area to code using the variable, prepending with "win." eg.
-      cy.log(win.activity); // or console.log(win.varyingUrl)
+      win["activity"].api.setExpectedResult([
+        ["stdout", "test echo 1"],
+        ["stdout", "test echo 2"],
+      ]);
     });
-    cy.get("#results").should("include.text", "[stdout] test_result");
+    cy.contains("Execute").click();
+    cy.get("#results").should("include.text", "[stdout] test echo 1");
+    cy.get("#results").should("include.text", "[stdout] test echo 2");
   });
 });

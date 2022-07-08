@@ -125,14 +125,17 @@ test("execute script and get results by events", async (t) => {
   const expectedRunStdOuts = ["test", "test", "stdout_test_command_run_1", "stdout_test_command_run_2", "test", "test"];
   await script.before();
   const results = await activity.execute(script.getExeScriptRequest());
+  let resultCount = 0;
   return new Promise((res) => {
     results.on("data", (result) => {
       t.is(result.result, "Ok");
       t.is(result.stdout, expectedRunStdOuts.shift());
+      ++resultCount;
     });
     results.on("end", async () => {
       await script.after();
       await activity.stop();
+      t.is(resultCount, 6);
       return res();
     });
   });

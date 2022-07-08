@@ -21,7 +21,8 @@
       "dom",
     ],
     "outDir": "dist",
-    "typeRoots": ["node_modules/@types"]
+    "typeRoots": ["node_modules/@types"],
+    "types": ["cypress", "node"]
   },
   "typedocOptions": {
     "exclude": ["**/*.spec.ts"],
