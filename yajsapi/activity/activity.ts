@@ -83,12 +83,14 @@ export class Activity {
     }
   }
 
-  private async end(error?: Error) {
+  private async end() {
     await this.api
       .destroyActivity(this.id, this.requestTimeout, { timeout: (this.requestTimeout + 1) * 1000 })
-      .catch((error) => this.logger?.warn(`Got API Exception when destroying activity ${this.id}: ${error}`));
-    if (error) this.logger?.debug("Activity ended with an error: " + error);
-    else this.logger?.debug("Activity ended");
+      .catch((error) => {
+        this.logger?.warn(`Got API Exception when destroying activity ${this.id}: ${error}`);
+        throw error;
+      });
+    this.logger?.debug("Activity ended");
   }
 
   private async pollingBatch(batchId, startTime, timeout, cancellationToken): Promise<Readable> {
