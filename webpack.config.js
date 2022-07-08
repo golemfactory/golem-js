@@ -2,7 +2,7 @@ const path = require("path");
 const webpack = require("webpack");
 
 module.exports = {
-  entry: "./yajsapi/mid-level-api/index.ts",
+  entry: "./yajsapi/index_browser.ts",
   mode: "development",
   module: {
     rules: [
@@ -16,7 +16,7 @@ module.exports = {
   resolve: {
     extensions: [".ts", ".js"],
     alias: {
-      [path.resolve(__dirname, "./yajsapi/mid-level-api/activity/secure")]: false,
+      [path.resolve(__dirname, "./yajsapi/activity/secure")]: false,
       [path.resolve(__dirname, "./yajsapi/storage/gftp")]: false,
     },
     fallback: {

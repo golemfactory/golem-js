@@ -13,10 +13,11 @@ export default defineConfig({
   fileServerFolder: "examples/web",
   supportFolder: "tests/cypress/support",
   fixturesFolder: "tests/cypress/fixtures",
+  videosFolder: ".cypress/video",
   experimentalInteractiveRunEvents: true,
   e2e: {
-    supportFile: "tests/cypress/support/e2e.{js,ts}",
-    specPattern: "tests/cypress/e2e/**/*.cy.{js,ts}",
+    supportFile: "tests/cypress/support/e2e.ts",
+    specPattern: "tests/cypress/e2e/**/*.cy.ts",
     setupNodeEvents(on) {
       on("before:run", () => {
         webpack(webpackConfig, (err, stats) => {

@@ -5,9 +5,11 @@ import {
 } from "ya-ts-client/dist/ya-activity/src/models";
 import { RequestorControlApi, RequestorStateApi } from "ya-ts-client/dist/ya-activity/api";
 import { yaActivity } from "ya-ts-client";
-import { logUtils, sleep, CancellationToken } from "../utils";
 import EventSource from "eventsource";
 import { Readable } from "stream";
+import { Logger } from "../utils/logger";
+import sleep from "../utils/sleep";
+import CancellationToken from "../utils/cancellationToken";
 
 export interface ActivityOptions {
   credentials?: { apiKey?: string; basePath?: string };
@@ -15,7 +17,7 @@ export interface ActivityOptions {
   responseTimeout?: number;
   executeTimeout?: number;
   exeBatchResultsFetchInterval?: number;
-  logger?: logUtils.Logger;
+  logger?: Logger;
 }
 
 export { ActivityStateEnum };
@@ -24,7 +26,7 @@ export class Activity {
   private readonly config: { apiKey: string; basePath: string };
   private readonly api: RequestorControlApi;
   private readonly stateApi: RequestorStateApi;
-  private readonly logger?: logUtils.Logger;
+  private readonly logger?: Logger;
   private readonly requestTimeout: number;
   private readonly responseTimeout: number;
   private readonly executeTimeout: number;
