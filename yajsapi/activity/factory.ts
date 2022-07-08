@@ -9,7 +9,7 @@ export class ActivityFactory {
   private readonly basePath?: string;
   constructor(apiKey?: string, basePath?: string) {
     this.apiKey = apiKey || process.env.YAGNA_APPKEY;
-    this.basePath = basePath || process.env.YAGNA_API_BASEPATH;
+    this.basePath = basePath || process.env.YAGNA_API_BASEPATH || "http://127.0.0.1:7465/activity-api/v1";
     this.api = new RequestorControlApi(
       new yaActivity.Configuration({
         apiKey: this.apiKey,
