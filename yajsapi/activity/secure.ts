@@ -1,6 +1,6 @@
 import { Activity, ActivityOptions } from "./activity";
-import { CryptoCtx, PrivateKey, PublicKey, rand_hex } from "../../crypto";
-import { SGX_CONFIG } from "../../package/sgx";
+import { CryptoCtx, PrivateKey, PublicKey, rand_hex } from "../crypto";
+import { SGX_CONFIG } from "../package/sgx";
 import { attest, types } from "sgx-ias-js/index";
 import * as utf8 from "utf8";
 import { Credentials } from "ya-ts-client/dist/ya-activity/src/models";
@@ -9,7 +9,7 @@ import { yaActivity } from "ya-ts-client";
 export async function createSecureActivity(
   api,
   agreementId: string,
-  options: ActivityOptions
+  options?: ActivityOptions
 ): Promise<SecureActivity> {
   if (!options?.taskPackage) {
     throw new Error("Task package option is required for create secure activity");
@@ -100,10 +100,8 @@ export class SecureActivity extends Activity {
         "Content-Type": "application/octet-stream",
         Accept: "application/octet-stream",
       },
-      transformRequest: [
-        // workaround for string conversion; we _must_ send a Buffer object
-        (_headers: any, _data: any) => encryptedRequest,
-      ],
+      // workaround for string conversion; we _must_ send a Buffer object
+      transformRequest: [() => encryptedRequest],
       timeout: 0,
     });
 

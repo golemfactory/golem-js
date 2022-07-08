@@ -20,7 +20,7 @@ export class ActivityFactory {
   }
   public async create(
     agreementId: string,
-    options: ActivityOptions,
+    options?: ActivityOptions,
     secure = false
   ): Promise<Activity | SecureActivity> {
     try {
@@ -30,7 +30,7 @@ export class ActivityFactory {
     }
   }
 
-  private async createActivity(agreementId: string, options: ActivityOptions): Promise<Activity> {
+  private async createActivity(agreementId: string, options?: ActivityOptions): Promise<Activity> {
     const { data } = await this.api.createActivity({ agreementId });
     const activityId = typeof data == "string" ? data : data.activityId;
     return new Activity(activityId, {

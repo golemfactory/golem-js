@@ -16,6 +16,7 @@ export interface ActivityOptions {
   executeTimeout?: number;
   exeBatchResultsFetchInterval?: number;
   logger?: logUtils.Logger;
+  taskPackage?: string;
 }
 
 export { ActivityStateEnum };
@@ -30,7 +31,7 @@ export class Activity {
   private readonly executeTimeout: number;
   private readonly exeBatchResultsFetchInterval: number;
 
-  constructor(public readonly id, private readonly options?: ActivityOptions) {
+  constructor(public readonly id, protected readonly options?: ActivityOptions) {
     const apiKey = this.options?.credentials?.apiKey || process.env.YAGNA_APPKEY;
     const basePath = this.options?.credentials?.basePath || process.env.YAGNA_API_BASEPATH;
     if (!apiKey) throw new Error("Api key not defined");
@@ -89,8 +90,8 @@ export class Activity {
 
   private async end(error?: Error) {
     await this.api
-        .destroyActivity(this.id, this.requestTimeout, { timeout: (this.requestTimeout + 1) * 1000 })
-        .catch((error) => this.logger?.warn(`Got API Exception when destroying activity ${this.id}: ${error}`));
+      .destroyActivity(this.id, this.requestTimeout, { timeout: (this.requestTimeout + 1) * 1000 })
+      .catch((error) => this.logger?.warn(`Got API Exception when destroying activity ${this.id}: ${error}`));
     if (error) this.logger?.debug("Activity ended with an error: " + error);
     else this.logger?.debug("Activity ended");
   }
@@ -125,7 +126,7 @@ export class Activity {
             await sleep(exeBatchResultsFetchInterval, true);
           } catch (error) {
             retryCount = await handleError(error, lastIndex, retryCount, maxRetries).catch((error) =>
-                this.destroy(error)
+              this.destroy(error)
             );
           }
         }
@@ -204,9 +205,9 @@ export class Activity {
   private isTimeoutError(error) {
     const timeoutMsg = error.message && error.message.includes("timeout");
     return (
-        (error.response && error.response.status === 408) ||
-        error.code === "ETIMEDOUT" ||
-        (error.code === "ECONNABORTED" && timeoutMsg)
+      (error.response && error.response.status === 408) ||
+      error.code === "ETIMEDOUT" ||
+      (error.code === "ECONNABORTED" && timeoutMsg)
     );
   }
 
