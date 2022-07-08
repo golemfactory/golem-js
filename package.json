@@ -105,9 +105,9 @@
   },
   "nyc": {
     "extends": "@istanbuljs/nyc-config-typescript",
-    "exclude": [
-      "tests/**/*.js",
-      "tests/mock/**/*.ts"
-    ]
+    "include": [
+      "yajsapi/**/*.ts"
+    ],
+    "all": true
   }
 }
