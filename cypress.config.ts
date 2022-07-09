@@ -8,6 +8,8 @@ webpackConfig.resolve.alias["ya-ts-client/dist/ya-activity/api$"] = path.resolve
   __dirname,
   "tests/mock/activity_api.ts"
 );
+webpackConfig.resolve.alias["eventsource"] = path.resolve(__dirname, "tests/mock/event_source.ts");
+webpackConfig.resolve.fallback["eventsource"] = path.resolve(__dirname, "tests/mock/event_source.ts");
 
 export default defineConfig({
   fileServerFolder: "examples/web",
