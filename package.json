@@ -14,6 +14,7 @@
     "docs:clean": "rimraf docs/ && run-s handbook:clean",
     "test": "run-s build && node dist/index.js",
     "test:unit": "nyc --silent --cache false ava tests/unit/*.spec.ts --verbose",
+    "test:cypress": "cypress run",
     "cov": "nyc --cache false --exclude tests ava tests/unit/*.spec.ts --verbose",
     "cov:html": "run-s test:unit && nyc report --reporter=html",
     "cov:lcov": "run-s test:unit && nyc report --reporter=lcov",

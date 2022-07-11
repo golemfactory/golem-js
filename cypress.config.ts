@@ -19,7 +19,7 @@ export default defineConfig({
   experimentalInteractiveRunEvents: true,
   e2e: {
     supportFile: "tests/cypress/support/e2e.ts",
-    specPattern: "tests/cypress/e2e/**/*.cy.ts",
+    specPattern: "tests/cypress/ui/**/*.cy.ts",
     setupNodeEvents(on) {
       on("before:run", () => {
         webpack(webpackConfig, (err, stats) => {
