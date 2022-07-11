@@ -1,4 +1,4 @@
-name: Cypress (PR and push)
+name: Cypress
 
 on:
   push:
