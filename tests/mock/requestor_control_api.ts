@@ -79,4 +79,13 @@ export class RequestorControlApiMock extends RequestorControlApi {
       res({ data: this.mockedResults.length ? this.mockedResults : [this.exampleResult] } as AxiosResponse)
     );
   }
+
+  // @ts-ignore
+  async destroyActivity(
+    activityId: string,
+    timeout?: number,
+    options?: AxiosRequestConfig
+  ): Promise<import("axios").AxiosResponse<void>> {
+    return new Promise((res) => res({ data: null } as AxiosResponse));
+  }
 }
