@@ -80,14 +80,13 @@ async function main(args) {
   logger.info(`Keyspace size computed. Keyspace size = ${keyspace}.`);
   const step = Math.floor(keyspace / args.numberOfProviders + 1);
   const ranges = range(0, keyspace, parseInt(step));
-  const tasks = ranges.map((range) => new Task(range));
 
   await golem.init(async (ctx) => {
     ctx.send_file(path.join(__dirname, "in.hash"), "/golem/input/in.hash");
     await ctx.commit();
   });
 
-  await golem.map(tasks, async (ctx, task) => {
+  await golem.map(ranges, async (ctx, task) => {
     const skip = task.data();
     ctx.send_file(path.join(__dirname, "in.hash"), "/golem/input/in.hash");
     ctx.run("/bin/sh", ["-c", make_attack_command(skip, skip + step, args.mask)]);

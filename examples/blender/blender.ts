@@ -59,16 +59,7 @@ async function main(subnetTag: string, driver?: string, network?: string) {
   const frames: any[] = range(0, 60, 10);
   const timeout: number = dayjs.duration({ minutes: 15 }).asMilliseconds();
 
-  const executor = new Executor({
-    task_package: _package,
-    max_workers: 6,
-    timeout: timeout,
-    budget: "10.0",
-    subnet_tag: subnetTag,
-    driver: driver,
-    network: network,
-    event_consumer: logUtils.logSummary(),
-  });
+  const executor = new Executor({});
   await executor.run(async (executor: Executor): Promise<void> => {
     for await (const task of executor.submit(
       worker,
