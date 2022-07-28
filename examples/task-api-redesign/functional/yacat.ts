@@ -51,26 +51,19 @@ async function main(args) {
   write_hash(args.hash);
   write_keyspace_check_script(args.mask);
 
-  const golem = new Golem({
-    package: {
-      image_hash: "055911c811e56da4d75ffc928361a78ed13077933ffa8320fb1ec2db",
-    },
-    max_workers: args.numberOfProviders,
-    budget: "10.0",
-    subnet_tag: args.subnetTag,
-    driver: args.driver,
-    network: args.network,
-  });
-  const keyspace_computed = await golem.run(async (ctx, task) => {
-    ctx.send_file(path.join(__dirname, "keyspace.sh"), "/golem/input/keyspace.sh");
-    ctx.run("/bin/sh", ["/golem/input/keyspace.sh"]);
-    ctx.download_file("/golem/output/keyspace.txt", path.join(__dirname, "keyspace.txt"));
-    const result = await ctx.commit();
+  const golem = new Golem("055911c811e56da4d75ffc928361a78ed13077933ffa8320fb1ec2db");
+  const keyspace_computed = await golem.run(async (ctx) => {
+    const result = await ctx
+      .beginBatch()
+      .sendFile(path.join(__dirname, "keyspace.sh"), "/golem/input/keyspace.sh")
+      .run("/bin/sh", ["/golem/input/keyspace.sh"])
+      .downloadFile("/golem/output/keyspace.txt", path.join(__dirname, "keyspace.txt"))
+      .end();
     if (result.result === "ok") {
-      task.accept_result();
+      ctx.acceptResult();
       return true;
     }
-    task.reject_result();
+    ctx.rejectResult();
   });
 
   if (!keyspace_computed) {
@@ -81,20 +74,17 @@ async function main(args) {
   const step = Math.floor(keyspace / args.numberOfProviders + 1);
   const ranges = range(0, keyspace, parseInt(step));
 
-  await golem.init(async (ctx) => {
-    ctx.send_file(path.join(__dirname, "in.hash"), "/golem/input/in.hash");
-    await ctx.commit();
-  });
+  await golem.inbeforeEachit((ctx) => ctx.sendFile(path.join(__dirname, "in.hash"), "/golem/input/in.hash"));
 
-  await golem.map(ranges, async (ctx, task) => {
-    const skip = task.data();
-    ctx.send_file(path.join(__dirname, "in.hash"), "/golem/input/in.hash");
-    ctx.run("/bin/sh", ["-c", make_attack_command(skip, skip + step, args.mask)]);
-    ctx.download_file(`/golem/output/hashcat_${skip}.potfile`, path.join(__dirname, `hashcat_${skip}.potfile`));
-
-    const result = await ctx.commit();
-    task.accept_result(result);
+  await golem.map(ranges, async (ctx, skip) => {
+    const result = await ctx
+      .beginBatch()
+      .sendFile(path.join(__dirname, "in.hash"), "/golem/input/in.hash")
+      .run("/bin/sh", ["-c", make_attack_command(skip, skip + step, args.mask)])
+      .downloadFile(`/golem/output/hashcat_${skip}.potfile`, path.join(__dirname, `hashcat_${skip}.potfile`))
+      .end();
     console.log(`result=${result.stdout}`);
+    ctx.acceptResult(result);
   });
 
   const password = read_password(ranges);
