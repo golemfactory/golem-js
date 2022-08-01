@@ -12,7 +12,6 @@ on:
 jobs:
   cypress-run:
     runs-on: ubuntu-latest
-    container: cypress/included:10.3.0
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -23,4 +22,5 @@ jobs:
       - name: Cypress run
         run: |
           npm install
+          npm run build
           npm run test:cypress
