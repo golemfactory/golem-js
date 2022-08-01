@@ -12,7 +12,7 @@ on:
 jobs:
   install:
     runs-on: ubuntu-latest
-    container: cypress/browsers:node12.18.3-chrome87-ff82
+    container: cypress/browsers:node14.17.0-chrome88-ff89
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -22,6 +22,7 @@ jobs:
         with:
           # Disable running of tests within install job
           runTests: false
+          install: yarn install
           build: yarn build
 
       - name: Save build folder
