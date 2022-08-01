@@ -16,11 +16,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: 'UI Tests - Chrome'
+      - name: Build yajsapi
+        run: |
+          npm install
+          npm run build
+      - name: Cypress run
         uses: cypress-io/github-action@v4
         with:
-          install: npm install
-          build: npm run build
+          install: false
           start: npm run test:cypress
           browser: chrome
           record: false
