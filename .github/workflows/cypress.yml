@@ -10,31 +10,18 @@ on:
       - b0.*
 
 jobs:
-  ui-chrome-tests:
+  cypress-run:
     runs-on: ubuntu-latest
-    container: cypress/browsers:node14.17.0-chrome88-ff89
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-
-      - name: Install
-        run: |
-          yarn install
-          yarn build
-
-      - name: 'UI Tests - Chrome'
-        uses: cypress-io/github-action@v4
+      - name: Configure node.js
+        uses: actions/setup-node@v1
         with:
-          start: yarn test:cypress
-          wait-on-timeout: 120
-          browser: chrome
-          group: 'UI - Chrome'
-          spec: tests/cypress/ui/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/upload-artifact@v2
-        if: always()
+          node-version: '14.17.0'
+      - name: Cypress run
+        uses: cypress-io/github-action@v2
         with:
-          name: cypress-videos
-          path: ./cypress/videos
+          install: npm install
+          build: npm run build
 
