@@ -12,16 +12,16 @@ on:
 jobs:
   cypress-run:
     runs-on: ubuntu-latest
-    container: cypress/included:10.3.0
+    container: cypress/browsers:node14.17.0-chrome87-ff82
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Configure node.js
-        uses: actions/setup-node@v1
+      - name: 'UI Tests - Chrome'
+        uses: cypress-io/github-action@v4
         with:
-          node-version: '14.17.0'
-      - name: Cypress run
-        run: |
-          npm install
-          npm run build
-          npm run test:cypress
+          install: npm install
+          build: npm run build
+          start: npm run test:cypress
+          browser: chrome
+          record: false
+          parallel: false
