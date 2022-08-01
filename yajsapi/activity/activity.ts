@@ -17,7 +17,7 @@ export interface ActivityOptions {
   responseTimeout?: number;
   executeTimeout?: number;
   exeBatchResultsFetchInterval?: number;
-  logger?: logUtils.Logger;
+  logger?: Logger;
   taskPackage?: string;
 }
 
@@ -27,7 +27,7 @@ export class Activity {
   private readonly config: { apiKey: string; basePath: string };
   protected readonly api: RequestorControlApi;
   private readonly stateApi: RequestorStateApi;
-  private readonly logger?: logUtils.Logger;
+  private readonly logger?: Logger;
   protected readonly requestTimeout: number;
   private readonly responseTimeout: number;
   private readonly executeTimeout: number;
