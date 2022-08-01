@@ -3,8 +3,7 @@ name: Cypress
 on:
   push:
     branches:
-      - master
-      - b0.*
+      - '*'
   pull_request:
     branches:
       - master
