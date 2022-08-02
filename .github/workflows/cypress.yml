@@ -26,5 +26,8 @@ jobs:
           install: false
           start: npm run test:cypress
           browser: chrome
-          record: false
+          record: true
           parallel: false
+        env:
+          CYPRESS_RECORD_KEY: "7fc6c206-96bd-40a1-8a44-043bab27d147"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -12,6 +12,7 @@ webpackConfig.resolve.alias["eventsource"] = path.resolve(__dirname, "tests/mock
 webpackConfig.resolve.fallback["eventsource"] = path.resolve(__dirname, "tests/mock/event_source.ts");
 
 export default defineConfig({
+  projectId: "dm6cbd",
   fileServerFolder: "examples/web",
   supportFolder: "tests/cypress/support",
   fixturesFolder: "tests/cypress/fixtures",
