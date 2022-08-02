@@ -2,7 +2,7 @@ const path = require("path");
 const webpack = require("webpack");
 
 module.exports = {
-  entry: "./yajsapi/mid-level-api/index.ts",
+  entry: "./yajsapi/index_browser.ts",
   mode: "development",
   module: {
     rules: [
@@ -16,7 +16,8 @@ module.exports = {
   resolve: {
     extensions: [".ts", ".js"],
     alias: {
-      // "ya-ts-client/dist/ya-activity/api$": path.resolve(__dirname, "tests/mock/activity_api.ts"),
+      [path.resolve(__dirname, "./yajsapi/activity/secure")]: false,
+      [path.resolve(__dirname, "./yajsapi/storage/gftp")]: false,
     },
     fallback: {
       child_process: "empty",
@@ -47,7 +48,8 @@ module.exports = {
   output: {
     filename: "bundle.js",
     // path: path.resolve(__dirname, "tests/web/activity"),
-    path: path.resolve(__dirname, "examples/web"),
+    path: path.resolve(__dirname, "dist/web"),
     library: "yajsapi",
+    clean: true,
   },
 };

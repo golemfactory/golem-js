@@ -44,3 +44,11 @@ export const setExpectedErrorEvents = (activityId, expectedErrors) => {
     expectedErrors.map((e) => JSON.parse(JSON.stringify(e)))
   );
 };
+
+const isBrowser = new Function("try {return this===window;}catch(e){ return false;}");
+if (isBrowser()) {
+  window["eventSourceMock"] = {
+    setExpectedEvents,
+    setExpectedErrorEvents,
+  };
+}

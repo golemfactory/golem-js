@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Activity module - Commands</title>
-    <script src="bundle.js"></script>
-    <link rel="stylesheet" href="main.css">
+    <script src="./../js/bundle.js"></script>
+    <link rel="stylesheet" href="../css/main.css">
 </head>
 <body>
     <h1>Activity module - Commands</h1>
@@ -88,7 +88,7 @@
             const appKey = document.getElementById('YAGNA_APPKEY').value;
             const basePath = document.getElementById('YAGNA_API_BASEPATH').value;
             const agreementId = document.getElementById('AGREEMENT_ID').value;
-            const factory = new yajsapi.ActivityFactory(appKey, basePath);
+            const factory = new yajsapi.activity.ActivityFactory(appKey, basePath);
             activity = await factory.create(agreementId).catch(logger.error);
             if (activity) {
                 logger.log(`Activity created. ID: ${activity.id}`);
@@ -112,7 +112,7 @@
                 logger.log('Error: Activity not created');
                 return;
             }
-            const cmd = new yajsapi[command]();
+            const cmd = new yajsapi.script[command]();
             const results = await activity.execute(cmd.toExeScriptRequest()).catch(err => logger.error(err));
             if (!results) return;
             const { value: result } = await results[Symbol.asyncIterator]().next();
@@ -128,7 +128,7 @@
                 return;
             }
             const bashCommand = document.getElementById('COMMAND').value
-            const command = new yajsapi.Run("/bin/sh", ["-c", bashCommand]);
+            const command = new yajsapi.script.Run("/bin/sh", ["-c", bashCommand]);
             const results = await activity.execute(command.toExeScriptRequest()).catch(err => logger.error(err));
             if (!results) return;
             const { value: result } = await results[Symbol.asyncIterator]().next();

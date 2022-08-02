@@ -22,7 +22,7 @@ export class RequestorControlApiMock extends RequestorControlApi {
     stdout: "test_result",
     stderr: "",
     message: "",
-    isBatchFinished: true,
+    isBatchFinished: false,
   };
 
   constructor() {
@@ -32,7 +32,11 @@ export class RequestorControlApiMock extends RequestorControlApi {
   setExpectedResult(results) {
     results.forEach((result, i) => {
       this.expectedResults[i] = Object.assign({}, this.exampleResult);
+      this.expectedResults[i].index = i;
       this.expectedResults[i][result[0]] = result[1];
+      if (i === results.length - 1) {
+        this.expectedResults[i].isBatchFinished = true;
+      }
     });
   }
   setExpectedErrors(errors) {
@@ -74,7 +78,7 @@ export class RequestorControlApiMock extends RequestorControlApi {
     if (this.expectedResults?.length) {
       this.mockedResults.push(this.expectedResults?.shift() as ExeScriptCommandResult);
     }
-    await new Promise((res) => setTimeout(res, 1000));
+    await new Promise((res) => setTimeout(res, 100));
     return new Promise((res) =>
       res({ data: this.mockedResults.length ? this.mockedResults : [this.exampleResult] } as AxiosResponse)
     );

@@ -15,7 +15,7 @@
 /examples/yacat/*.hash
 /examples/yacat/*.potfile
 logs/
-/tests/web/output/
+.cypress
 
 #Lock files
 package-lock.json

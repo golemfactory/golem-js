@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Activity module - Script (streaming batch)</title>
-    <script src="bundle.js"></script>
-    <link rel="stylesheet" href="main.css">
+    <title>Activity module - Script</title>
+    <script src="./../js/bundle.js"></script>
+    <link rel="stylesheet" href="../css/main.css">
 </head>
 <body>
     <h1>Activity module - Script</h1>
@@ -14,7 +14,7 @@
             <div class="row">
                 <div>
                     <label for="YAGNA_APPKEY">YAGNA_APPKEY: </label>
-                    <input id="YAGNA_APPKEY" type="text" value="411aa8e620954a318093687757053b8d"/>
+                    <input id="YAGNA_APPKEY" type="text" value=""/>
                 </div>
                 <div>
                     <label for="YAGNA_API_BASEPATH">YAGNA_API_BASEURL: </label>
@@ -66,11 +66,11 @@
     </div>
 
     <script>
-        let activity;
+        var activity;
         let commands = [
-            new yajsapi.Deploy(),
-            new yajsapi.Start(),
-            new yajsapi.Terminate()
+            new yajsapi.script.Deploy(),
+            new yajsapi.script.Start(),
+            new yajsapi.script.Terminate()
         ];
         refreshScript();
         function log(msg) {
@@ -91,15 +91,16 @@
             commands.forEach(command => {
                 const pre = document.createElement('pre');
                 const cmdText = JSON.parse(JSON.stringify(command.toJson()));
+                Object.keys(cmdText).forEach(key => (delete cmdText[key]?.capture));
                 pre.innerHTML = JSON.stringify(cmdText, null, 2);
                 script_el.appendChild(pre)
             })
         }
         function clearScript() {
             commands = [
-                new yajsapi.Deploy(),
-                new yajsapi.Start(),
-                new yajsapi.Terminate()
+                new yajsapi.script.Deploy(),
+                new yajsapi.script.Start(),
+                new yajsapi.script.Terminate()
             ];
             refreshScript();
         }
@@ -107,7 +108,7 @@
             const appKey = document.getElementById('YAGNA_APPKEY').value;
             const basePath = document.getElementById('YAGNA_API_BASEPATH').value;
             const agreementId = document.getElementById('AGREEMENT_ID').value;
-            const factory = new yajsapi.ActivityFactory(appKey, basePath);
+            const factory = new yajsapi.activity.ActivityFactory(appKey, basePath);
             activity = await factory.create(agreementId).catch(err => logger.error(err));
             if (activity) {
                 log(`Activity created. ID: ${activity.id}`);
@@ -128,11 +129,7 @@
         }
         async function addToScript() {
             const bashCommand = document.getElementById('COMMAND').value
-            const capture = {
-                stdout: { [yajsapi.CaptureMode.STREAM]: { format: yajsapi.CaptureFormat.STR } },
-                stderr: { [yajsapi.CaptureMode.STREAM]: { format: yajsapi.CaptureFormat.STR } },
-            };
-            const runCommand = new yajsapi.Run("/bin/sh", ["-c", bashCommand], undefined, capture);
+            const runCommand = new yajsapi.script.Run("/bin/sh", ["-c", bashCommand]);
             commands.splice(commands.length - 1, 0, runCommand);
             refreshScript();
             document.getElementById('COMMAND').value = "";
@@ -142,14 +139,20 @@
                 logger.error('Activity not created');
                 return;
             }
-            const script = new yajsapi.Script(commands);
-            const results = await activity.execute(script.getExeScriptRequest(), true).catch(err => logger.error(err));
+            const script = new yajsapi.script.Script(commands);
+            const results = await activity.execute(script.getExeScriptRequest()).catch(err => logger.error(err));
             results.on('data', (result) => {
-                appendResults(JSON.stringify(result));
-                log(`Command #${result.index} has been executed`);
+                if (result.stdout) appendResults('[stdout] ' + result.stdout);
+                if (result.stderr) appendResults('[stderr] ' + result.stderr);
+                if (result.result === 'Ok') {
+                    log(`Command #${result.index} has been executed`);
+                } else {
+                    log(result.message || `Command Run Error`);
+                }
             });
-            results.on('error', (error) => logger.error(error));
-            results.on('end', () => log('All script commands has been executed'));
+            results.on('end', () => {
+                log('All script commands has been executed');
+            })
 
         }
         async function getState() {
