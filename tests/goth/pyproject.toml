@@ -23,7 +23,7 @@ python = "^3.8.0"
 pytest = "^6.2"
 pytest-asyncio = "^0.14"
 pytest-rerunfailures = "^10.1"
-goth =  "0.12"
+goth = "0.12"
 pexpect = "^4.8.0"
 
 [tool.poetry.dev-dependencies]

@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { Executor, Task, utils, vm, WorkContext } from "../../dist";
+import { Executor, Task, utils, vm, WorkContext } from "yajsapi";
 import { program } from "commander";
 
 const { asyncWith, logger, range } = utils;
@@ -100,30 +100,31 @@ async function main(args) {
     network: args.network,
   });
   await executor.run(async (executor: Executor): Promise<void> => {
-    let keyspace_computed = false;
-    // This is not a typical use of executor.submit as there is only one task, with no data:
-    for await (const task of executor.submit(compute_keyspace, [new Task("compute_keyspace" as any)])) {
-      keyspace_computed = true;
-    }
-    // Assume the errors have been already reported and we may return quietly.
-    if (!keyspace_computed) return;
+        let keyspace_computed = false;
+        // This is not a typical use of executor.submit as there is only one task, with no data:
+        for await (const task of executor.submit(compute_keyspace, [new Task("compute_keyspace" as any)])) {
+          keyspace_computed = true;
+        }
+        // Assume the errors have been already reported and we may return quietly.
+        if (!keyspace_computed) return;
 
-    const keyspace = read_keyspace();
-    logger.info(`Keyspace size computed. Keyspace size = ${keyspace}.`);
-    step = Math.floor(keyspace / args.numberOfProviders + 1);
-    const ranges = range(0, keyspace, parseInt(step));
-    for await (const task of executor.submit(
-      perform_mask_attack,
-      ranges.map((range) => new Task(range as any))
-    )) {
-      logger.info(`result=${task.result()}`);
-    }
+        const keyspace = read_keyspace();
+        logger.info(`Keyspace size computed. Keyspace size = ${keyspace}.`);
+        step = Math.floor(keyspace / args.numberOfProviders + 1);
+        const ranges = range(0, keyspace, parseInt(step));
+        for await (const task of executor.submit(
+            perform_mask_attack,
+            ranges.map((range) => new Task(range as any))
+        )) {
+          logger.info(`result=${task.result()}`);
+        }
 
-    const password = read_password(ranges);
+        const password = read_password(ranges);
 
-    if (!password) logger.info("No password found");
-    else logger.info(`Password found: ${password}`);
-  });
+        if (!password) logger.info("No password found");
+        else logger.info(`Password found: ${password}`);
+      }
+  );
 }
 
 program

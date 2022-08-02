@@ -1,4 +1,4 @@
-const { Executor, Task, utils, vm } = require("../../dist");
+const { Executor, Task, utils, vm } = require("yajsapi");
 const { logUtils } = utils;
 const { program } = require("commander");
 

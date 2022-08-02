@@ -49,16 +49,15 @@ jobs:
           node-version: '14.17.0'
 
       - name: Build yajsapi
+        if: github.ref == 'refs/heads/master'
         run: |
           sudo apt-get update -y
           sudo apt-get install -y build-essential jq
-          npm install -g yarn
-          yarn install
-          yarn build
+          npm install
+          npm run build
           cd examples
-          jq '.dependencies.yajsapi = "file:../dist"' <package.json >tmp.json && mv tmp.json package.json
-          yarn install
-          yarn build
+          jq '.dependencies.yajsapi = "file:../"' <package.json >tmp.json && mv tmp.json package.json
+          npm install
 
       - name: Configure python
         uses: actions/setup-python@v2
