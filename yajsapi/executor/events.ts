@@ -1,6 +1,8 @@
 /* eslint no-prototype-builtins: 0 */
 import { NodeInfo } from "../props";
 import applyMixins from "../utils/applyMixins";
+import { ExeScriptCommandResultResultEnum } from "ya-ts-client/dist/ya-activity/src/models";
+import { Result } from "../activity";
 
 type ExcInfo = Error;
 
@@ -329,6 +331,17 @@ export class CommandExecuted extends CommandEvent {
     if (message) this.message = message;
     if (stdout) this.stdout = stdout;
     if (stderr) this.stderr = stderr;
+  }
+
+  static fromActivityResult(result: Result): CommandEventContext {
+    const evt = Object.create(CommandExecuted.prototype);
+    evt.cmd_idx = evt.idx = result.index;
+    evt.stdout = result.stdout;
+    evt.stderr = result.stderr;
+    evt.message = result.message;
+    evt.command = "";
+    evt.success = result.result === ExeScriptCommandResultResultEnum.Ok;
+    return new CommandEventContext(evt);
   }
 }
 
