@@ -1,4 +1,4 @@
-import { Task, Golem, range } from "./todo";
+import { Golem, utils } from "../../dist";
 
 const blender_params = (frame) => ({
   scene_file: "/golem/resource/scene.blend",
@@ -20,27 +20,25 @@ const blender_params = (frame) => ({
 async function main() {
   const golem = new Golem("9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae");
 
-  const init_task = new Task().sendFile("./cubes.blend", "/golem/resource/scene.blend");
-  await golem.init([init_task]);
+  await golem.beforeEach(async (ctx) => {
+    await ctx.sendFile("./cubes.blend", "/golem/resource/scene.blend");
+  });
 
-  const tasks = range(0, 60, 10).map((frame) =>
-    new Task()
+  const results = await golem.map(utils.range(0, 60, 10), async (ctx, frame) => {
+    const result = await ctx
+      .beginBatch()
       .sendJson("/golem/work/params.json", blender_params(frame))
       .run("/golem/entrypoints/run-blender.sh")
       .downloadFile(`/golem/output/out${frame.toString().padStart(4, "0")}.png`, `./output_${frame}.png`)
-  );
-
-  const results = await golem.run(tasks);
-
-  results.on("data", async (result) => {
-    console.log(`Task: ${result.task_id}, Provider: ${result.provider_id}, Stdout: ${result.stdout}`);
-    await result.accept();
+      .end();
+    ctx.acceptResult(result);
+    return result.stdout;
   });
 
-  results.on("end", async () => {
-    console.log("All frames rendered");
-    await golem.end();
-  });
+  for await (const result of results) {
+    console.log(`result=${result}`);
+  }
+  await golem.end();
 }
 
 main();

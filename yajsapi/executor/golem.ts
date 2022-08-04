@@ -1,4 +1,6 @@
 import { MarketStrategy } from "./strategy";
+import { Package } from "../package";
+import { WorkContext } from "./work_context";
 
 type GolemOptions =
   | string
@@ -17,7 +19,7 @@ type GolemOptions =
       network_address?: string;
     };
 
-type Worker = (ctx: WorkContext, data: unknown) => Promise<void>;
+type Worker<T = unknown, O = string | void> = (ctx: WorkContext, data: T) => Promise<O>;
 
 const DEFAULT_OPTIONS = {
   max_workers: 5,
@@ -34,12 +36,9 @@ const DEFAULT_OPTIONS = {
 };
 
 export class Golem {
-  private package;
+  private package: Package;
   constructor(options: GolemOptions) {
-    this.package =
-      typeof options === "string" || typeof options?.package === "string"
-        ? this.createPackage(options?.package || options)
-        : options.package;
+    this.package = typeof options === "string" ? this.createPackage(options) : (options.package as Package);
     for (const key in DEFAULT_OPTIONS) {
       this[key] = options[key] ?? process.env?.[key.toUpperCase()] ?? DEFAULT_OPTIONS[key];
     }
@@ -50,7 +49,9 @@ export class Golem {
   async run(worker: Worker) {
     // todo
   }
-  async map<T,O)>(iterable: Iterable<T>, worker: Worker<T, O>): AsyncIterable<O> {
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  map<T, O>(iterable: Iterable<T>, worker: Worker<T, O>): AsyncIterable<O> {
     // todo
   }
   async end() {
@@ -59,5 +60,6 @@ export class Golem {
 
   private createPackage(image_hash: string): Package {
     // todo
+    return new Package();
   }
 }
