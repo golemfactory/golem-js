@@ -1,6 +1,8 @@
 import { MarketStrategy } from "./strategy";
 import { Package } from "../package";
 import { WorkContext } from "./work_context";
+import { Executor, Task } from "./";
+import { Result } from "../activity";
 
 type GolemOptions =
   | string
@@ -19,7 +21,10 @@ type GolemOptions =
       network_address?: string;
     };
 
-type Worker<T = unknown, O = string | void> = (ctx: WorkContext, data: T) => Promise<O>;
+export type Worker<InputType = unknown, OutputType = string | void> = (
+  ctx: WorkContext,
+  data: InputType
+) => Promise<OutputType>;
 
 const DEFAULT_OPTIONS = {
   max_workers: 5,
@@ -37,25 +42,36 @@ const DEFAULT_OPTIONS = {
 
 export class Golem {
   private package: Package;
+  private oldExecutor: Executor;
+  private options;
+
   constructor(options: GolemOptions) {
     this.package = typeof options === "string" ? this.createPackage(options) : (options.package as Package);
     for (const key in DEFAULT_OPTIONS) {
-      this[key] = options[key] ?? process.env?.[key.toUpperCase()] ?? DEFAULT_OPTIONS[key];
+      this.options[key] = options[key] ?? process.env?.[key.toUpperCase()] ?? DEFAULT_OPTIONS[key];
     }
+    this.oldExecutor = new Executor(this.options);
   }
+
+  private async init() {
+    await this.oldExecutor.ready();
+  }
+
   async beforeEach(worker: Worker) {
     // todo
   }
-  async run(worker: Worker) {
-    // todo
+  async run<OutputType>(worker: Worker): Promise<OutputType> {
+    return new Promise(() => ({} as OutputType));
   }
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  map<T, O>(iterable: Iterable<T>, worker: Worker<T, O>): AsyncIterable<O> {
-    // todo
+
+  map<InputType, OutputType>(
+    data: Iterable<InputType>,
+    worker: Worker<InputType, OutputType>
+  ): AsyncIterable<OutputType> {
+    return this.oldExecutor.submit_new<InputType, OutputType>(worker, data);
   }
   async end() {
-    // todo
+    await this.oldExecutor.done();
   }
 
   private createPackage(image_hash: string): Package {

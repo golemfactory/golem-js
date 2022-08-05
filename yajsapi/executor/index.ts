@@ -52,6 +52,8 @@ import { Package } from "../package";
 import axios from "axios";
 import { Script, Command } from "../script";
 
+import { Worker } from "./golem";
+
 export { Task, TaskStatus };
 
 dayjs.extend(duration);
@@ -311,6 +313,33 @@ export class Executor {
     } finally {
       csp.putAsync(this._chan_computation_done, true);
     }
+  }
+
+  submit_new<InputType, OutputType>(
+    worker: Worker<InputType, OutputType>,
+    data: Iterable<InputType>
+  ): AsyncIterable<OutputType> {
+    this._active_computations += 1;
+    const generator_wrap: AsyncIterable<OutputType> = {
+      [Symbol.asyncIterator]() {
+        return {
+          async next(): Promise<IteratorYieldResult<OutputType>> {
+            return new Promise((res) => {
+              // TODO
+              return {} as IteratorYieldResult<OutputType>;
+            });
+          },
+        };
+      },
+    };
+    try {
+      // todo
+    } catch (e) {
+      logger.error(e);
+    } finally {
+      csp.putAsync(this._chan_computation_done, true);
+    }
+    return generator_wrap;
   }
 
   async _handle_proposal(state: SubmissionState, proposal: OfferProposal): Promise<events.ProposalEvent> {
@@ -737,6 +766,8 @@ export class Executor {
       await asyncWith(work_queue.new_consumer(), async (consumer) => {
         try {
           const tasks = task_emitter(consumer);
+          // TODO: replace with new worker
+
           const batch_generator = worker(work_context, tasks);
           await process_batches(agreement.id(), _act, batch_generator, consumer);
           emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));

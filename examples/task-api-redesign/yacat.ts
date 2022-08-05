@@ -74,7 +74,7 @@ async function main(args) {
   const step = Math.floor(keyspace / args.numberOfProviders + 1);
   const ranges = range(0, keyspace, parseInt(step));
 
-  await golem.inbeforeEachit((ctx) => ctx.sendFile(path.join(__dirname, "in.hash"), "/golem/input/in.hash"));
+  await golem.beforeEach((ctx) => ctx.sendFile(path.join(__dirname, "in.hash"), "/golem/input/in.hash"));
 
   await golem.map(ranges, async (ctx, skip) => {
     const result = await ctx

@@ -1,6 +1,4 @@
-type Result = {
-  stdout: string;
-};
+import { Result } from "../activity";
 
 export class WorkContext {
   constructor() {
@@ -29,10 +27,10 @@ export class WorkContext {
   async end(): Promise<Result> {
     return new Promise((res) => ({} as Result));
   }
-  async acceptResult(result: Result) {
+  async acceptResult(msg: string) {
     // todo
   }
-  async rejestResult(result: Result) {
+  async rejectResult(msg: string) {
     // todo
   }
 }
