@@ -53,6 +53,8 @@ import axios from "axios";
 import { Script, Command } from "../script";
 
 import { Worker } from "./golem";
+import { convertDefaultValue } from "typedoc/dist/lib/converter";
+import { WorkContextNew } from "./work_context";
 
 export { Task, TaskStatus };
 
@@ -315,32 +317,53 @@ export class Executor {
     }
   }
 
-  submit_new<InputType, OutputType>(
-    worker: Worker<InputType, OutputType>,
-    data: Iterable<InputType>
-  ): AsyncIterable<OutputType> {
+  async submit_new_run(worker): Promise<Array<string | null | undefined>> {
     this._active_computations += 1;
-    const generator_wrap: AsyncIterable<OutputType> = {
-      [Symbol.asyncIterator]() {
-        return {
-          async next(): Promise<IteratorYieldResult<OutputType>> {
-            return new Promise((res) => {
-              // TODO
-              return {} as IteratorYieldResult<OutputType>;
-            });
-          },
-        };
-      },
+    const generator = this._submit(worker, [new Task({} as "D")]);
+    generator.return = async () => {
+      csp.putAsync(this._chan_computation_done, true);
+      await generator.throw(new AsyncGeneratorBreak());
+      return { done: true, value: undefined };
     };
+    const results: Array<string | null | undefined> = [];
     try {
-      // todo
+      for await (const result of generator) {
+        results.push(result.result());
+      }
     } catch (e) {
       logger.error(e);
     } finally {
       csp.putAsync(this._chan_computation_done, true);
     }
-    return generator_wrap;
+    return results;
   }
+
+  // async submit_new<InputType, OutputType>(
+  //   worker: Worker<InputType, OutputType>,
+  //   data: Iterable<InputType>
+  // ): AsyncIterable<OutputType> {
+  //   this._active_computations += 1;
+  //   const generator_wrap: AsyncIterable<OutputType> = {
+  //     [Symbol.asyncIterator]() {
+  //       return {
+  //         async next(): Promise<IteratorYieldResult<OutputType>> {
+  //           return new Promise((res) => {
+  //             // TODO
+  //             return {} as IteratorYieldResult<OutputType>;
+  //           });
+  //         },
+  //       };
+  //     },
+  //   };
+  //   try {
+  //     // todo
+  //   } catch (e) {
+  //     logger.error(e);
+  //   } finally {
+  //     csp.putAsync(this._chan_computation_done, true);
+  //   }
+  //   return generator_wrap;
+  // }
 
   async _handle_proposal(state: SubmissionState, proposal: OfferProposal): Promise<events.ProposalEvent> {
     const reject_proposal = async (reason: string): Promise<events.ProposalEvent> => {
@@ -458,6 +481,7 @@ export class Executor {
       if (error.response && error.response.status === 401) {
         throw new Error("Error: not authorized. Please check if YAGNA_APPKEY env variable is valid.");
       } else {
+        console.log({ error });
         throw error;
       }
     }
@@ -719,9 +743,38 @@ export class Executor {
       }
     }
 
+    async function process_batches_new(
+      agreement_id: string,
+      ctx: WorkContextNew,
+      worker,
+      consumer: Consumer<Task<D, R>>
+    ): Promise<void> {
+      /* TODO ctrl+c handling */
+      try {
+        // todo
+        const current_worker_task = consumer.last_item();
+        if (current_worker_task) {
+          emit(
+            new events.TaskStarted({
+              agr_id: agreement_id,
+              task_id: current_worker_task.id,
+              task_data: current_worker_task.data(),
+            })
+          );
+        }
+        const task_id = current_worker_task ? current_worker_task.id : "";
+        await worker(ctx, current_worker_task?.data());
+      } catch (e) {
+        // todo
+      } finally {
+        // todo
+      }
+    }
+
     async function start_worker(agreement: Agreement): Promise<void> {
       const wid = last_wid;
       last_wid += 1;
+      console.log("START WORKER: ", wid);
 
       emit(new events.WorkerStarted({ agr_id: agreement.id() }));
 
@@ -736,6 +789,7 @@ export class Executor {
         emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error }));
         throw error;
       }
+      console.log("CREATE ACTIVITY ", _act.id);
 
       async function* task_emitter(consumer: Consumer<any>): AsyncGenerator<Task<"TaskData", "TaskResult">> {
         for await (const handle of consumer) {
@@ -763,13 +817,11 @@ export class Executor {
         { provider_id, provider_name },
         network_node
       );
+      // TODO:
+      const new_work_context = new WorkContextNew(_act);
       await asyncWith(work_queue.new_consumer(), async (consumer) => {
         try {
-          const tasks = task_emitter(consumer);
-          // TODO: replace with new worker
-
-          const batch_generator = worker(work_context, tasks);
-          await process_batches(agreement.id(), _act, batch_generator, consumer);
+          await process_batches_new(agreement.id(), new_work_context, worker, consumer);
           emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
         } catch (error) {
           emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error }));

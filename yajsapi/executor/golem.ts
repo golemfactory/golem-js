@@ -1,25 +1,23 @@
 import { MarketStrategy } from "./strategy";
 import { Package } from "../package";
 import { WorkContext } from "./work_context";
-import { Executor, Task } from "./";
-import { Result } from "../activity";
+import { Executor, vm } from "./";
 
-type GolemOptions =
-  | string
-  | {
-      package: string | Package;
-      max_workers?: number;
-      timeout?: number;
-      budget?: number;
-      strategy?: MarketStrategy;
-      subnet_tag?: string;
-      driver?: string;
-      network?: string;
-      payment_driver?: string;
-      payment_network?: string;
-      event_consumer?: string;
-      network_address?: string;
-    };
+type GolemOptions = {
+  package: string | Package;
+  task_package: Package;
+  max_workers?: number;
+  timeout?: number;
+  budget?: number;
+  strategy?: MarketStrategy;
+  subnet_tag?: string;
+  payment_driver?: string;
+  payment_network?: string;
+  event_consumer?: string;
+  network_address?: string;
+};
+
+type GolemOptionsMixin = string | GolemOptions;
 
 export type Worker<InputType = unknown, OutputType = string | void> = (
   ctx: WorkContext,
@@ -28,32 +26,36 @@ export type Worker<InputType = unknown, OutputType = string | void> = (
 
 const DEFAULT_OPTIONS = {
   max_workers: 5,
-  timeout: 0,
-  budget: 0,
+  budget: 1,
   strategy: null,
   subnet_tag: "devnet-beta",
-  driver: "erc20",
-  network: null,
   payment_driver: "erc20",
   payment_network: "rinkeby",
-  event_consumer: null,
-  network_address: "192.169.0.0/24",
 };
 
 export class Golem {
-  private package: Package;
-  private oldExecutor: Executor;
-  private options;
+  private oldExecutor: Executor | undefined;
+  private options: GolemOptions = {};
+  private image_hash?: string;
 
-  constructor(options: GolemOptions) {
-    this.package = typeof options === "string" ? this.createPackage(options) : (options.package as Package);
+  constructor(options: GolemOptionsMixin) {
+    if (typeof options === "string") {
+      this.image_hash = options;
+    }
     for (const key in DEFAULT_OPTIONS) {
       this.options[key] = options[key] ?? process.env?.[key.toUpperCase()] ?? DEFAULT_OPTIONS[key];
     }
-    this.oldExecutor = new Executor(this.options);
   }
 
-  private async init() {
+  async init() {
+    if (this.image_hash) {
+      this.options.task_package = await this.createPackage(this.image_hash);
+    } else if (typeof this.options.package === "string") {
+      this.options.task_package = await this.createPackage(this.options.package);
+    } else {
+      this.options.task_package = this.options.package;
+    }
+    this.oldExecutor = new Executor(this.options);
     await this.oldExecutor.ready();
   }
 
@@ -61,21 +63,22 @@ export class Golem {
     // todo
   }
   async run<OutputType>(worker: Worker): Promise<OutputType> {
-    return new Promise(() => ({} as OutputType));
+    // @ts-ignore
+    return this.oldExecutor.submit_new_run(worker);
   }
 
   map<InputType, OutputType>(
     data: Iterable<InputType>,
     worker: Worker<InputType, OutputType>
   ): AsyncIterable<OutputType> {
-    return this.oldExecutor.submit_new<InputType, OutputType>(worker, data);
+    // @ts-ignore
+    return this.oldExecutor.submit_new_map<InputType, OutputType>(worker, data);
   }
   async end() {
-    await this.oldExecutor.done();
+    await this.oldExecutor?.done();
   }
 
-  private createPackage(image_hash: string): Package {
-    // todo
-    return new Package();
+  private async createPackage(image_hash: string): Promise<Package> {
+    return vm.repo({ image_hash, min_mem_gib: 0.5, min_storage_gib: 2.0 });
   }
 }
