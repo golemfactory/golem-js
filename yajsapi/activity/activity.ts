@@ -62,6 +62,7 @@ export class Activity {
       startTime = new Date();
       batchSize = JSON.parse(script.text).length;
     } catch (error) {
+      console.log(error);
       this.logger?.error(error);
       throw new Error(error?.response?.data?.message || error);
     }

@@ -745,29 +745,35 @@ export class Executor {
 
     async function process_batches_new(
       agreement_id: string,
+      activity: Activity,
       ctx: WorkContextNew,
       worker,
-      consumer: Consumer<Task<D, R>>
+      task: Task<D, R>
     ): Promise<void> {
       /* TODO ctrl+c handling */
       try {
         // todo
-        const current_worker_task = consumer.last_item();
-        if (current_worker_task) {
-          emit(
-            new events.TaskStarted({
-              agr_id: agreement_id,
-              task_id: current_worker_task.id,
-              task_data: current_worker_task.data(),
-            })
-          );
-        }
-        const task_id = current_worker_task ? current_worker_task.id : "";
-        await worker(ctx, current_worker_task?.data());
+        emit(
+          new events.TaskStarted({
+            agr_id: agreement_id,
+            task_id: task.id,
+            task_data: task.data(),
+          })
+        );
+        emit(new events.ScriptSent({ agr_id: agreement_id, task_id: task.id, cmds: [] }));
+        await worker(ctx, task?.data());
+        emit(new events.GettingResults({ agr_id: agreement_id, task_id: task.id }));
+        emit(new events.ScriptFinished({ agr_id: agreement_id, task_id: task.id }));
+        await accept_payment_for_agreement({ agreement_id: agreement_id, partial: true });
+        emit(new events.CheckingPayments());
       } catch (e) {
         // todo
       } finally {
         // todo
+        // task.accept_result();
+        // console.log("TASK ACCEPTED");
+        await activity.stop();
+        console.log("ACTIVITY STOPPED");
       }
     }
 
@@ -821,7 +827,21 @@ export class Executor {
       const new_work_context = new WorkContextNew(_act);
       await asyncWith(work_queue.new_consumer(), async (consumer) => {
         try {
-          await process_batches_new(agreement.id(), new_work_context, worker, consumer);
+          console.log("PROCESS BATCH NEW");
+
+          console.log("SMARTQ 1", work_queue.has_unassigned_items());
+          const tasks = task_emitter(consumer);
+          const { done, value: task } = await tasks.next();
+          console.log("SMARTQ 2", work_queue.has_unassigned_items());
+          if (done) {
+            console.log("DONE");
+            return;
+          }
+          await process_batches_new(agreement.id(), _act, new_work_context, worker, task);
+
+          // const tasks = task_emitter(consumer);
+          // const batch_generator = worker(work_context, tasks);
+          // await process_batches(agreement.id(), _act, batch_generator, consumer);
           emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
         } catch (error) {
           emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error }));
@@ -856,6 +876,7 @@ export class Executor {
         if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
           break;
         }
+        console.log("has_unassigned_items ", work_queue.has_unassigned_items());
         if (workers.size < self._conf.max_workers && work_queue.has_unassigned_items()) {
           let new_task: any;
           try {

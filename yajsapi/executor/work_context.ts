@@ -1,5 +1,6 @@
 import { Activity, Result } from "../activity";
 import { Command, Run, Script } from "../script";
+import { colonHexadecimalNotationToBinaryString } from "ip-num";
 
 interface BatchResult {
   todo: true;
@@ -34,9 +35,14 @@ export class WorkContextNew {
   }
   async run(command: string): Promise<Result[]> {
     const script = new Script([new Run("/bin/sh", ["-c", command])]);
-    const results = await this.activity.execute(script.getExeScriptRequest());
+    console.log("[CTX RUN]", script.getExeScriptRequest());
+    const results = await this.activity.execute(script.getExeScriptRequest()).catch((e) => {
+      console.log({ e });
+    });
     const batchResults: Result[] = [];
+    console.log({ results });
     for await (const result of results[Symbol.asyncIterator]()) {
+      console.log("[[CTX RUN RESULT]]", result);
       batchResults.push(result);
     }
     return batchResults;

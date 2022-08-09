@@ -39,9 +39,7 @@ export type Capture = {
 };
 
 export enum CaptureMode {
-  HEAD = "head",
-  TAIL = "tail",
-  HEAD_TAIL = "headTail",
+  AT_END = "atEnd",
   STREAM = "stream",
 }
 
@@ -53,8 +51,8 @@ export enum CaptureFormat {
 export class Run extends Command {
   constructor(cmd: string, args?: string[] | null, env?: object | null, capture?: Capture) {
     const captureOpt = capture || {
-      stdout: { [CaptureMode.HEAD]: { format: CaptureFormat.STR } },
-      stderr: { [CaptureMode.HEAD]: { format: CaptureFormat.STR } },
+      stdout: { [CaptureMode.AT_END]: { format: CaptureFormat.STR } },
+      stderr: { [CaptureMode.AT_END]: { format: CaptureFormat.STR } },
     };
     super("run", {
       entry_point: cmd,

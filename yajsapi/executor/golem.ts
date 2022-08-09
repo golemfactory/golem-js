@@ -25,7 +25,7 @@ export type Worker<InputType = unknown, OutputType = string | void> = (
 ) => Promise<OutputType>;
 
 const DEFAULT_OPTIONS = {
-  max_workers: 5,
+  max_workers: 1,
   budget: 1,
   strategy: null,
   subnet_tag: "devnet-beta",
