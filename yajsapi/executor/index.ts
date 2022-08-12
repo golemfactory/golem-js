@@ -17,7 +17,7 @@ import * as rest from "../rest";
 import { Agreement, OfferProposal, Subscription } from "../rest/market";
 import { AgreementsPool } from "./agreements_pool";
 import { Allocation, DebitNote, Invoice } from "../rest/payment";
-import { ActivityFactory, Activity } from "../activity";
+import { ActivityFactory, Activity, Result } from "../activity";
 
 import * as csp from "js-csp";
 
@@ -317,7 +317,7 @@ export class Executor {
     }
   }
 
-  async submit_new_run(worker): Promise<Array<string | null | undefined>> {
+  async submit_new_run(worker): Promise<Array<Result>> {
     this._active_computations += 1;
     const generator = this._submit(worker, [new Task({} as "D")]);
     generator.return = async () => {
@@ -325,17 +325,17 @@ export class Executor {
       await generator.throw(new AsyncGeneratorBreak());
       return { done: true, value: undefined };
     };
-    const results: Array<string | null | undefined> = [];
+    const results: Array<Result> = [];
     try {
       for await (const result of generator) {
-        results.push(result.result());
+        results.push(...result.result());
       }
+      return results;
     } catch (e) {
       logger.error(e);
     } finally {
       csp.putAsync(this._chan_computation_done, true);
     }
-    return results;
   }
 
   // async submit_new<InputType, OutputType>(
@@ -747,40 +747,40 @@ export class Executor {
       agreement_id: string,
       activity: Activity,
       ctx: WorkContextNew,
-      worker,
-      task: Task<D, R>
-    ): Promise<void> {
+      worker
+    ): Promise<Result[] | undefined> {
       /* TODO ctrl+c handling */
+      let results;
       try {
         // todo
         emit(
           new events.TaskStarted({
             agr_id: agreement_id,
-            task_id: task.id,
-            task_data: task.data(),
+            task_id: ctx.task.id,
+            task_data: ctx.task.data(),
           })
         );
-        emit(new events.ScriptSent({ agr_id: agreement_id, task_id: task.id, cmds: [] }));
-        await worker(ctx, task?.data());
-        emit(new events.GettingResults({ agr_id: agreement_id, task_id: task.id }));
-        emit(new events.ScriptFinished({ agr_id: agreement_id, task_id: task.id }));
+        emit(new events.ScriptSent({ agr_id: agreement_id, task_id: ctx.task.id, cmds: [] }));
+        results = await worker(ctx, ctx.task?.data());
+        emit(new events.GettingResults({ agr_id: agreement_id, task_id: ctx.task.id }));
+        emit(new events.ScriptFinished({ agr_id: agreement_id, task_id: ctx.task.id }));
         await accept_payment_for_agreement({ agreement_id: agreement_id, partial: true });
         emit(new events.CheckingPayments());
       } catch (e) {
         // todo
       } finally {
         // todo
-        // task.accept_result();
-        // console.log("TASK ACCEPTED");
+        if (results) {
+          ctx.acceptResult(results);
+        }
         await activity.stop();
-        console.log("ACTIVITY STOPPED");
       }
+      return results;
     }
 
     async function start_worker(agreement: Agreement): Promise<void> {
       const wid = last_wid;
       last_wid += 1;
-      console.log("START WORKER: ", wid);
 
       emit(new events.WorkerStarted({ agr_id: agreement.id() }));
 
@@ -789,7 +789,7 @@ export class Executor {
       }
       let _act: Activity;
       try {
-        _act = await activity_api.create(agreement.id());
+        _act = await activity_api.create(agreement.id(), { logger });
       } catch (error) {
         emit(new events.ActivityCreateFailed({ agr_id: agreement.id() }));
         emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error }));
@@ -823,25 +823,21 @@ export class Executor {
         { provider_id, provider_name },
         network_node
       );
-      // TODO:
-      const new_work_context = new WorkContextNew(_act);
       await asyncWith(work_queue.new_consumer(), async (consumer) => {
         try {
-          console.log("PROCESS BATCH NEW");
-
-          console.log("SMARTQ 1", work_queue.has_unassigned_items());
           const tasks = task_emitter(consumer);
           const { done, value: task } = await tasks.next();
-          console.log("SMARTQ 2", work_queue.has_unassigned_items());
           if (done) {
-            console.log("DONE");
             return;
           }
-          await process_batches_new(agreement.id(), _act, new_work_context, worker, task);
+          const new_work_context = new WorkContextNew(_act, task);
+          await new_work_context.before();
+          await process_batches_new(agreement.id(), _act, new_work_context, worker);
 
           // const tasks = task_emitter(consumer);
           // const batch_generator = worker(work_context, tasks);
           // await process_batches(agreement.id(), _act, batch_generator, consumer);
+          await new_work_context.after();
           emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
         } catch (error) {
           emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error }));
