@@ -6,7 +6,7 @@ import utc from "dayjs/plugin/utc";
 import duration from "dayjs/plugin/duration";
 import { MarketDecoration } from "ya-ts-client/dist/ya-payment/src/models";
 
-import { WorkContext, Work, CommandContainer, ExecOptions } from "./ctx";
+import { ExecOptions, Work, WorkContext } from "./ctx";
 import * as events from "./events";
 import { Activity as ActivityProp, NodeInfo, NodeInfoKeys } from "../props";
 import { Counter } from "../props/com";
@@ -17,7 +17,7 @@ import * as rest from "../rest";
 import { Agreement, OfferProposal, Subscription } from "../rest/market";
 import { AgreementsPool } from "./agreements_pool";
 import { Allocation, DebitNote, Invoice } from "../rest/payment";
-import { ActivityFactory, Activity, Result } from "../activity";
+import { Activity, ActivityFactory, Result } from "../activity";
 
 import * as csp from "js-csp";
 
@@ -38,8 +38,6 @@ import {
 
 import * as _vm from "../package/vm";
 import * as _sgx from "../package/sgx";
-export const sgx = _sgx;
-export const vm = _vm;
 import { Task, TaskStatus } from "./task";
 import { Consumer, SmartQueue } from "./smartq";
 import {
@@ -50,11 +48,12 @@ import {
 } from "./strategy";
 import { Package } from "../package";
 import axios from "axios";
-import { Script, Command } from "../script";
 
 import { Worker } from "./golem";
-import { convertDefaultValue } from "typedoc/dist/lib/converter";
 import { WorkContextNew } from "./work_context";
+
+export const sgx = _sgx;
+export const vm = _vm;
 
 export { Task, TaskStatus };
 
@@ -194,6 +193,10 @@ export class Executor {
 
   private _network?: Network;
   private _network_address?: string;
+  private work_queue?: SmartQueue<Task<D, R>>;
+  private done_queue?: Queue<Task<D, R>>;
+  private isFinished = false;
+  private agreements_to_pay = new Set<string>();
 
   /**
    * Create new executor
@@ -317,53 +320,41 @@ export class Executor {
     }
   }
 
-  async submit_new_run(worker): Promise<Array<Result>> {
+  async submit_new_run<OutputType = Result>(worker): Promise<OutputType> {
     this._active_computations += 1;
-    const generator = this._submit(worker, [new Task({} as "D")]);
-    generator.return = async () => {
-      csp.putAsync(this._chan_computation_done, true);
-      await generator.throw(new AsyncGeneratorBreak());
-      return { done: true, value: undefined };
-    };
-    const results: Array<Result> = [];
+    let result;
     try {
-      for await (const result of generator) {
-        results.push(...result.result());
-      }
-      return results;
+      result = await this.submit_new_task<OutputType>(worker);
+      csp.putAsync(this._chan_computation_done, true);
     } catch (e) {
       logger.error(e);
-    } finally {
-      csp.putAsync(this._chan_computation_done, true);
     }
+    return result;
   }
 
-  // async submit_new<InputType, OutputType>(
-  //   worker: Worker<InputType, OutputType>,
-  //   data: Iterable<InputType>
-  // ): AsyncIterable<OutputType> {
-  //   this._active_computations += 1;
-  //   const generator_wrap: AsyncIterable<OutputType> = {
-  //     [Symbol.asyncIterator]() {
-  //       return {
-  //         async next(): Promise<IteratorYieldResult<OutputType>> {
-  //           return new Promise((res) => {
-  //             // TODO
-  //             return {} as IteratorYieldResult<OutputType>;
-  //           });
-  //         },
-  //       };
-  //     },
-  //   };
-  //   try {
-  //     // todo
-  //   } catch (e) {
-  //     logger.error(e);
-  //   } finally {
-  //     csp.putAsync(this._chan_computation_done, true);
-  //   }
-  //   return generator_wrap;
-  // }
+  submit_new_map<InputType, OutputType>(data: Iterable<InputType>, worker): AsyncIterable<OutputType | undefined> {
+    const inputs = [...data];
+    const featureResults = inputs.map((value) => this.submit_new_task<OutputType>(worker, value));
+    const results: OutputType[] = [];
+    let resultsCount = 0;
+    featureResults.forEach((featureResult) => featureResult.then((res) => results.push(res)));
+    return {
+      [Symbol.asyncIterator](): AsyncIterator<OutputType | undefined> {
+        return {
+          async next() {
+            if (resultsCount === inputs.length) {
+              return Promise.resolve({ done: true, value: undefined });
+            }
+            while (results.length === 0 && resultsCount < inputs.length) {
+              await sleep(100, true);
+            }
+            resultsCount += 1;
+            return Promise.resolve({ done: false, value: results.pop() });
+          },
+        };
+      },
+    };
+  }
 
   async _handle_proposal(state: SubmissionState, proposal: OfferProposal): Promise<events.ProposalEvent> {
     const reject_proposal = async (reason: string): Promise<events.ProposalEvent> => {
@@ -469,10 +460,7 @@ export class Executor {
     logger.debug("Stopped checking and scoring new offers.");
   }
 
-  async *_submit(
-    worker: Callable<[WorkContext, AsyncIterable<Task<D, R>>], AsyncGenerator<WorkItem, any, BatchResults>>,
-    data: Iterable<Task<D, R>>
-  ): AsyncGenerator<Task<D, R>> {
+  async init() {
     const emit = this.emit;
     let multi_payment_decoration;
     try {
@@ -507,38 +495,24 @@ export class Executor {
     const agreements_pool = new AgreementsPool(emit);
     this.state = new SubmissionState(builder, agreements_pool);
     agreements_pool.cancellation_token = this.state.worker_cancellation_token;
-    const market_api = this._market_api;
     const activity_api = this._activity_api;
-    const strategy = this._strategy;
     const cancellationToken = this._cancellation_token;
     const paymentCancellationToken = this.state.payment_cancellation_token;
     const done_queue: Queue<Task<D, R>> = new Queue([]);
-    const stream_output = this._stream_output;
+    this.done_queue = done_queue;
     const workers_done = csp.chan();
     const network = this._network;
+    this.work_queue = new SmartQueue([]);
+    const work_queue = this.work_queue;
 
-    function on_task_done(task: Task<D, R>, status: TaskStatus): void {
-      if (status === TaskStatus.ACCEPTED) done_queue.put(task); //put_nowait
-    }
-
-    function* input_tasks(): Iterable<Task<D, R>> {
-      for (const task of data) {
-        task._add_callback(on_task_done);
-        yield task;
-      }
-    }
-
-    const work_queue = new SmartQueue([...input_tasks()]);
-
-    let workers: Set<any> = new Set(); //asyncio.Task[]
+    let workers: Set<any> = new Set();
     let last_wid = 0;
     const self = this;
 
-    const agreements_to_pay: Set<string> = new Set();
+    const agreements_to_pay = this.agreements_to_pay;
     const agreements_accepting_debit_notes: Set<string> = new Set();
     const invoices: Map<string, Invoice> = new Map();
     let payment_closing = false;
-    const secure = this._task_package.secure;
 
     async function process_invoices(): Promise<void> {
       for await (const invoice of self._payment_api.incoming_invoices(paymentCancellationToken)) {
@@ -631,126 +605,8 @@ export class Executor {
 
     const storage_manager = await this._stack.enter_async_context(gftp.provider());
 
-    const unpack_work_item = (item: WorkItem): [Work, ExecOptions] => {
-      return item instanceof Work ? [item, new ExecOptions()] : item;
-    };
-
-    async function process_batches(
-      agreement_id: string,
-      activity: Activity,
-      command_generator: AsyncGenerator<WorkItem, any>,
-      consumer: Consumer<Task<D, R>>
-    ): Promise<void> {
+    async function process_batches(agreement_id: string, activity: Activity, ctx: WorkContextNew, worker: Worker) {
       /* TODO ctrl+c handling */
-      let { done = false, value: item }: { done?: boolean; value: WorkItem } = await command_generator.next();
-      while (!done) {
-        const [batch, exec_options] = unpack_work_item(item);
-        if (batch.timeout()) {
-          if (exec_options.batch_timeout) {
-            logger.warn("Overriding batch timeout set with commit({timeout:...}) by value from ExecOptions");
-          } else {
-            exec_options.batch_timeout = batch.timeout();
-          }
-        }
-        let batch_deadline;
-        if (exec_options.batch_timeout) {
-          batch_deadline = (Date.now() + exec_options.batch_timeout) / 1000;
-        }
-        const current_worker_task = consumer.last_item();
-        if (current_worker_task) {
-          emit(
-            new events.TaskStarted({
-              agr_id: agreement_id,
-              task_id: current_worker_task.id,
-              task_data: current_worker_task.data(),
-            })
-          );
-        }
-        const task_id = current_worker_task ? current_worker_task.id : "";
-        // batch.attestation = {
-        //   credentials: activity.credentials,
-        //   nonce: activity.id,
-        //   exeunitHashes: activity.exeunitHashes,
-        // };
-        await batch.prepare();
-        const cc = new CommandContainer();
-        batch.register(cc);
-        const cmds = cc.commands();
-
-        const script = new Script(cmds.map((cmd) => new Command(Object.keys(cmd)[0], cmd[Object.keys(cmd)[0]])));
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        const cancellationToken = (<SubmissionState>self.state).worker_cancellation_token as CancellationToken;
-
-        const scriptResults = await activity
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
-          .execute(script.getExeScriptRequest(), false, batch_deadline, cancellationToken)
-          .catch((e) => {
-            throw new CommandExecutionError("", e.toString());
-          });
-
-        emit(new events.ScriptSent({ agr_id: agreement_id, task_id, cmds }));
-
-        const get_batch_results = async (): Promise<events.CommandEvent[]> => {
-          const results: events.CommandEvent[] = [];
-          scriptResults.on("error", (error) => {
-            throw new CommandExecutionError("", error.toString());
-          });
-          for await (const result of scriptResults) {
-            const evtCtx = events.CommandExecuted.fromActivityResult(result);
-            const evt = evtCtx.event(agreement_id, task_id.toString(), cmds);
-            emit(evt);
-            results.push(evt);
-            if (evt instanceof events.CommandExecuted && !evt.success) {
-              throw new CommandExecutionError(evt.command, evt.message);
-            }
-          }
-          emit(new events.GettingResults({ agr_id: agreement_id, task_id: task_id }));
-          await batch.post();
-          emit(new events.ScriptFinished({ agr_id: agreement_id, task_id: task_id }));
-          await accept_payment_for_agreement({ agreement_id: agreement_id, partial: true });
-          emit(new events.CheckingPayments());
-          return results;
-        };
-        if (exec_options.wait_for_results) {
-          // Block until the results are available
-          let results: BatchResults | undefined;
-          try {
-            results = { results: await get_batch_results() };
-          } catch (error) {
-            // Raise the exception in `command_generator` (the `worker` coroutine).
-            // If the client code is able to handle it then we'll proceed with
-            // subsequent batches. Otherwise the worker finishes with error.
-            ({ done = false, value: item } = await command_generator.throw(error));
-          }
-          if (results !== undefined) {
-            ({ done = false, value: item } = await command_generator.next((async () => results)()));
-          }
-        } else {
-          // Run without blocking
-          const get_results = (async (): Promise<BatchResults> => {
-            try {
-              const results = await get_batch_results();
-              return new Promise((resolve, _) => resolve({ results }));
-            } catch (error) {
-              logger.warn(`Error while getting batch results: ${error}`);
-              return new Promise((resolve, _) => resolve({ error }));
-            }
-          })();
-          ({ done = false, value: item } = await command_generator.next(get_results));
-        }
-      }
-    }
-
-    async function process_batches_new(
-      agreement_id: string,
-      activity: Activity,
-      ctx: WorkContextNew,
-      worker
-    ): Promise<Result[] | undefined> {
-      /* TODO ctrl+c handling */
-      let results;
       try {
         // todo
         emit(
@@ -761,7 +617,7 @@ export class Executor {
           })
         );
         emit(new events.ScriptSent({ agr_id: agreement_id, task_id: ctx.task.id, cmds: [] }));
-        results = await worker(ctx, ctx.task?.data());
+        ctx.acceptResult(await worker(ctx, ctx.task?.data()));
         emit(new events.GettingResults({ agr_id: agreement_id, task_id: ctx.task.id }));
         emit(new events.ScriptFinished({ agr_id: agreement_id, task_id: ctx.task.id }));
         await accept_payment_for_agreement({ agreement_id: agreement_id, partial: true });
@@ -769,17 +625,11 @@ export class Executor {
       } catch (e) {
         // todo
       } finally {
-        // todo
-        if (results) {
-          ctx.acceptResult(results);
-        }
         await activity.stop();
       }
-      return results;
     }
 
     async function start_worker(agreement: Agreement): Promise<void> {
-      const wid = last_wid;
       last_wid += 1;
 
       emit(new events.WorkerStarted({ agr_id: agreement.id() }));
@@ -795,7 +645,6 @@ export class Executor {
         emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error }));
         throw error;
       }
-      console.log("CREATE ACTIVITY ", _act.id);
 
       async function* task_emitter(consumer: Consumer<any>): AsyncGenerator<Task<"TaskData", "TaskResult">> {
         for await (const handle of consumer) {
@@ -816,13 +665,6 @@ export class Executor {
       if (network) {
         network_node = await network.add_node(provider_id);
       }
-      const work_context = new WorkContext(
-        `worker-${wid}`,
-        storage_manager,
-        emit,
-        { provider_id, provider_name },
-        network_node
-      );
       await asyncWith(work_queue.new_consumer(), async (consumer) => {
         try {
           const tasks = task_emitter(consumer);
@@ -830,13 +672,9 @@ export class Executor {
           if (done) {
             return;
           }
-          const new_work_context = new WorkContextNew(_act, task);
+          const new_work_context = new WorkContextNew(_act, task, { provider_id, provider_name }, network_node);
           await new_work_context.before();
-          await process_batches_new(agreement.id(), _act, new_work_context, worker);
-
-          // const tasks = task_emitter(consumer);
-          // const batch_generator = worker(work_context, tasks);
-          // await process_batches(agreement.id(), _act, batch_generator, consumer);
+          await process_batches(agreement.id(), _act, new_work_context, task.worker());
           await new_work_context.after();
           emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
         } catch (error) {
@@ -850,6 +688,7 @@ export class Executor {
         return;
       }
       await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
+
       emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
 
       logger.debug(`Stopped worker related to agreement ${agreement.id()}.`);
@@ -872,7 +711,6 @@ export class Executor {
         if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
           break;
         }
-        console.log("has_unassigned_items ", work_queue.has_unassigned_items());
         if (workers.size < self._conf.max_workers && work_queue.has_unassigned_items()) {
           let new_task: any;
           try {
@@ -911,7 +749,12 @@ export class Executor {
     const debit_notes_job = loop.create_task(process_debit_notes);
     let services: any = [find_offers_task, worker_starter_task, process_invoices_job, wait_until_done, debit_notes_job];
     try {
-      while (services.indexOf(wait_until_done) > -1 || !done_queue.empty()) {
+      while (services.indexOf(wait_until_done) > -1 || !done_queue.empty() || !this.isFinished) {
+        if (workers.size === 0) {
+          await sleep(2);
+          logger.debug("Waiting for new tasks...");
+          continue;
+        }
         if (cancellationToken.cancelled) {
           work_queue.close();
           done_queue.close();
@@ -945,7 +788,7 @@ export class Executor {
         if (!get_done_task.isPending()) {
           const res = await get_done_task;
           if (res) {
-            yield res;
+            // return res.result();
           } else {
             break;
           }
@@ -1010,9 +853,26 @@ export class Executor {
       }
       emit(new events.PaymentsFinished());
       await sleep(1);
-      logger.info("Shutdown complete.");
     }
-    return;
+  }
+
+  async submit_new_task<OutputType>(worker: Worker, data?: unknown): Promise<OutputType> {
+    while (!this.done_queue && !this.work_queue) {
+      await sleep(2);
+      logger.debug("Executor is not initialized");
+    }
+    const done_queue = this.done_queue;
+    function on_task_done(task: Task<D, R>, status: TaskStatus): void {
+      if (status === TaskStatus.ACCEPTED) done_queue!.put(task); //put_nowait
+    }
+    // @ts-ignore
+    const task = new Task<D, OutputType>(data, worker);
+    task._add_callback(on_task_done);
+    this.work_queue!.add(task);
+    while (true) {
+      if (task.status() === TaskStatus.ACCEPTED) return task.result() as OutputType;
+      await sleep(2);
+    }
   }
 
   async _create_allocations(): Promise<MarketDecoration> {
@@ -1109,12 +969,18 @@ export class Executor {
 
   // cleanup, if needed
   async done(this): Promise<void> {
+    this.isFinished = true;
     logger.debug("Executor is shutting down...");
     while (this._active_computations > 0) {
       logger.debug(`Waiting for ${this._active_computations} computation(s)...`);
       await promisify(csp.takeAsync)(this._chan_computation_done);
       this._active_computations -= 1;
     }
+    while (this.agreements_to_pay.size > 0) {
+      logger.debug(`Waiting for ${this.agreements_to_pay.size} payment(s)...`);
+      await sleep(4);
+    }
+    await sleep(5);
     this._cancellation_token.cancel();
     // TODO: prevent new computations at this point (if it's even possible to start one)
     this._market_api = null;

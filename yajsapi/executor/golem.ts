@@ -2,6 +2,7 @@ import { MarketStrategy } from "./strategy";
 import { Package } from "../package";
 import { WorkContext } from "./work_context";
 import { Executor, vm } from "./";
+import { Result } from "../activity";
 
 type GolemOptions = {
   package: string | Package;
@@ -25,7 +26,7 @@ export type Worker<InputType = unknown, OutputType = string | void> = (
 ) => Promise<OutputType>;
 
 const DEFAULT_OPTIONS = {
-  max_workers: 1,
+  max_workers: 5,
   budget: 1,
   strategy: null,
   subnet_tag: "devnet-beta",
@@ -57,22 +58,21 @@ export class Golem {
     }
     this.oldExecutor = new Executor(this.options);
     await this.oldExecutor.ready();
+    this.oldExecutor.init();
   }
 
   async beforeEach(worker: Worker) {
     // todo
   }
-  async run<OutputType>(worker: Worker): Promise<OutputType> {
-    // @ts-ignore
-    return this.oldExecutor.submit_new_run(worker);
+  async run<OutputType = Result>(worker: Worker): Promise<OutputType> {
+    return this.oldExecutor!.submit_new_run<OutputType>(worker);
   }
 
   map<InputType, OutputType>(
     data: Iterable<InputType>,
     worker: Worker<InputType, OutputType>
-  ): AsyncIterable<OutputType> {
-    // @ts-ignore
-    return this.oldExecutor.submit_new_map<InputType, OutputType>(worker, data);
+  ): AsyncIterable<OutputType | undefined> {
+    return this.oldExecutor!.submit_new_map<InputType, OutputType>(data, worker);
   }
   async end() {
     await this.oldExecutor?.done();

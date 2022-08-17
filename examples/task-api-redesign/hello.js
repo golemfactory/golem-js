@@ -5,6 +5,7 @@ const { Golem } = require("../../dist");
 (async function main() {
   const golem = new Golem("9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae");
   await golem.init();
-  const results = await golem.run((ctx) => ctx.run("echo 'Hello World!'"));
-  console.log(results[0].stdout);
+  await golem.run(async (ctx) => console.log((await ctx.run("echo 'Hello World 11111!'")).stdout));
+  await golem.run(async (ctx) => console.log((await ctx.run("echo 'Hello World 22222!'")).stdout));
+  await golem.end();
 })();
