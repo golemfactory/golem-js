@@ -78,7 +78,7 @@ export class Task<TaskData, TaskResult> {
     handle: Handle<Task<any, any>>,
     queue: SmartQueue<Task<any, any>>,
     emitter: Callable<[events.YaEvent], void>
-  ): Task<"TaskData", "TaskResult"> {
+  ): Task<"D", "R"> {
     const task = handle.data();
     task._handle = [handle, queue];
     task._start(emitter);

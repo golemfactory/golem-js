@@ -26,7 +26,7 @@ export type Worker<InputType = unknown, OutputType = string | void> = (
 ) => Promise<OutputType>;
 
 const DEFAULT_OPTIONS = {
-  max_workers: 5,
+  max_workers: 9,
   budget: 1,
   strategy: null,
   subnet_tag: "devnet-beta",
@@ -61,8 +61,8 @@ export class Golem {
     this.oldExecutor.init();
   }
 
-  async beforeEach(worker: Worker) {
-    // todo
+  beforeEach(worker: Worker) {
+    this.oldExecutor!.submit_new_run_before(worker);
   }
   async run<OutputType = Result>(worker: Worker): Promise<OutputType> {
     return this.oldExecutor!.submit_new_run<OutputType>(worker);

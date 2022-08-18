@@ -197,6 +197,9 @@ export class Executor {
   private done_queue?: Queue<Task<D, R>>;
   private isFinished = false;
   private agreements_to_pay = new Set<string>();
+  private activities = new Map<string, Activity>();
+  private beforeEachTask = Worker;
+  private beforeEachTasks = new Set<string>();
 
   /**
    * Create new executor
@@ -356,6 +359,10 @@ export class Executor {
     };
   }
 
+  submit_new_run_before(worker) {
+    this.beforeEachTask = worker;
+  }
+
   async _handle_proposal(state: SubmissionState, proposal: OfferProposal): Promise<events.ProposalEvent> {
     const reject_proposal = async (reason: string): Promise<events.ProposalEvent> => {
       await proposal.reject(reason);
@@ -513,6 +520,9 @@ export class Executor {
     const agreements_accepting_debit_notes: Set<string> = new Set();
     const invoices: Map<string, Invoice> = new Map();
     let payment_closing = false;
+    const activities = this.activities;
+    const beforeEachTask = this.beforeEachTask;
+    const beforeEachTasks = this.beforeEachTasks;
 
     async function process_invoices(): Promise<void> {
       for await (const invoice of self._payment_api.incoming_invoices(paymentCancellationToken)) {
@@ -605,54 +615,61 @@ export class Executor {
 
     const storage_manager = await this._stack.enter_async_context(gftp.provider());
 
-    async function process_batches(agreement_id: string, activity: Activity, ctx: WorkContextNew, worker: Worker) {
+    async function process_batches(
+      agreement_id: string,
+      activity: Activity,
+      ctx: WorkContextNew,
+      worker: Worker,
+      task: Task<D, R>
+    ) {
       /* TODO ctrl+c handling */
       try {
-        // todo
         emit(
           new events.TaskStarted({
             agr_id: agreement_id,
-            task_id: ctx.task.id,
-            task_data: ctx.task.data(),
+            task_id: task.id,
+            task_data: task.data(),
           })
         );
-        emit(new events.ScriptSent({ agr_id: agreement_id, task_id: ctx.task.id, cmds: [] }));
-        ctx.acceptResult(await worker(ctx, ctx.task?.data()));
-        emit(new events.GettingResults({ agr_id: agreement_id, task_id: ctx.task.id }));
-        emit(new events.ScriptFinished({ agr_id: agreement_id, task_id: ctx.task.id }));
+        await ctx.beforeEach();
+        emit(new events.ScriptSent({ agr_id: agreement_id, task_id: task.id, cmds: [] }));
+        // @ts-ignore
+        task.accept_result(await worker(ctx, task.data()));
+        await ctx.afterEach();
+        emit(new events.GettingResults({ agr_id: agreement_id, task_id: task.id }));
+        emit(new events.ScriptFinished({ agr_id: agreement_id, task_id: task.id }));
         await accept_payment_for_agreement({ agreement_id: agreement_id, partial: true });
         emit(new events.CheckingPayments());
       } catch (e) {
         // todo
       } finally {
-        await activity.stop();
+        // todo
+      }
+    }
+
+    async function* task_emitter(consumer: Consumer<any>): AsyncGenerator<Task<D, R>> {
+      for await (const handle of consumer) {
+        if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
+          break;
+        }
+        yield Task.for_handle(handle, work_queue, emit);
       }
     }
 
     async function start_worker(agreement: Agreement): Promise<void> {
       last_wid += 1;
-
       emit(new events.WorkerStarted({ agr_id: agreement.id() }));
-
       if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
         return;
       }
       let _act: Activity;
       try {
-        _act = await activity_api.create(agreement.id(), { logger });
+        _act = activities.get(agreement.id()) || (await activity_api.create(agreement.id(), { logger }));
+        activities.set(agreement.id(), _act);
       } catch (error) {
         emit(new events.ActivityCreateFailed({ agr_id: agreement.id() }));
         emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error }));
         throw error;
-      }
-
-      async function* task_emitter(consumer: Consumer<any>): AsyncGenerator<Task<"TaskData", "TaskResult">> {
-        for await (const handle of consumer) {
-          if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
-            break;
-          }
-          yield Task.for_handle(handle, work_queue, emit);
-        }
       }
 
       emit(new events.ActivityCreated({ act_id: _act.id, agr_id: agreement.id() }));
@@ -665,6 +682,13 @@ export class Executor {
       if (network) {
         network_node = await network.add_node(provider_id);
       }
+      const new_work_context = new WorkContextNew(
+        _act,
+        storage_manager,
+        { providerId: provider_id, providerName: provider_name },
+        network_node?.get_deploy_args()
+      );
+      await new_work_context.before(beforeEachTask);
       await asyncWith(work_queue.new_consumer(), async (consumer) => {
         try {
           const tasks = task_emitter(consumer);
@@ -672,10 +696,7 @@ export class Executor {
           if (done) {
             return;
           }
-          const new_work_context = new WorkContextNew(_act, task, { provider_id, provider_name }, network_node);
-          await new_work_context.before();
-          await process_batches(agreement.id(), _act, new_work_context, task.worker());
-          await new_work_context.after();
+          await process_batches(agreement.id(), _act, new_work_context, task.worker(), task);
           emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
         } catch (error) {
           emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error }));
@@ -688,22 +709,20 @@ export class Executor {
         return;
       }
       await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
-
+      await new_work_context.after();
       emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
 
       logger.debug(`Stopped worker related to agreement ${agreement.id()}.`);
+      csp.putAsync(workers_done, true);
     }
 
     async function worker_starter(): Promise<void> {
       async function _start_worker(agreement: Agreement): Promise<void> {
-        try {
-          await start_worker(agreement);
-        } catch (error) {
+        start_worker(agreement).catch(async (error) => {
           logger.warn(`Worker for agreement ${agreement.id()} finished with error: ${error}`);
           await agreements_pool.release_agreement(agreement.id(), false);
-        } finally {
-          csp.putAsync(workers_done, true);
-        }
+          activities.delete(agreement.id());
+        });
       }
       while (true) {
         await sleep(2);
@@ -750,11 +769,6 @@ export class Executor {
     let services: any = [find_offers_task, worker_starter_task, process_invoices_job, wait_until_done, debit_notes_job];
     try {
       while (services.indexOf(wait_until_done) > -1 || !done_queue.empty() || !this.isFinished) {
-        if (workers.size === 0) {
-          await sleep(2);
-          logger.debug("Waiting for new tasks...");
-          continue;
-        }
         if (cancellationToken.cancelled) {
           work_queue.close();
           done_queue.close();
@@ -783,18 +797,17 @@ export class Executor {
 
         workers = new Set([...workers].filter((worker) => worker.isPending()));
         services = services.filter((service) => service.isPending());
-
         if (!get_done_task) throw "";
         if (!get_done_task.isPending()) {
           const res = await get_done_task;
-          if (res) {
-            // return res.result();
-          } else {
-            break;
-          }
+          if (!res) break;
           if (services.indexOf(get_done_task) > -1) throw "";
           get_done_task = null;
         }
+        // if (workers.size === 0) {
+        //   await sleep(2);
+        //   logger.debug("Waiting for new tasks...");
+        // }
       }
       emit(new events.ComputationFinished());
     } catch (error) {
@@ -828,6 +841,10 @@ export class Executor {
         logger.error(`Error while waiting for workers to finish: ${error}.`);
       }
       try {
+        for (const [agreementId, activity] of activities) {
+          await activity.stop();
+          activities.delete(agreementId);
+        }
         await agreements_pool.cycle();
         await agreements_pool.terminate_all({
           message: cancellationToken.cancelled ? "Work cancelled" : "Successfully finished all work",
@@ -975,6 +992,10 @@ export class Executor {
       logger.debug(`Waiting for ${this._active_computations} computation(s)...`);
       await promisify(csp.takeAsync)(this._chan_computation_done);
       this._active_computations -= 1;
+    }
+    for (const [agreementId, activity] of this.activities) {
+      await activity.stop();
+      logger.debug(`Stop activity ${activity.id} for agreement ${agreementId}`);
     }
     while (this.agreements_to_pay.size > 0) {
       logger.debug(`Waiting for ${this.agreements_to_pay.size} payment(s)...`);

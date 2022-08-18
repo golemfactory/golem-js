@@ -1,60 +1,92 @@
 import { Activity, Result } from "../activity";
-import { Command, Run, Script, Deploy, Start, Terminate } from "../script";
-import { Task } from "./task";
+import { Command, Deploy, DownloadFile, Run, Script, Start, UploadFile } from "../script";
+import { StorageProvider } from "../storage/provider";
+import { Readable } from "stream";
+import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity";
+import { sleep } from "../utils";
 
 interface BatchResult {
   todo: true;
 }
 
-export class WorkContextNew {
-  private commands: Command[] = [];
-  private resultAccepted = false;
-  constructor(private activity: Activity, public readonly task: Task) {
-    // todo
+class Batch {
+  private script: Script;
+  constructor(private activity: Activity, private storageProvider: StorageProvider) {
+    this.script = new Script([]);
   }
-  async before() {
-    const results = await this.activity.execute(new Script([new Deploy(), new Start()]).getExeScriptRequest());
-    return new Promise((res, rej) => {
-      results.on("data", () => null);
-      results.on("end", () => res(1));
-      results.on("error", rej);
-    });
-  }
-  async after() {
-    // const results = await this.activity.execute(new Script([new Terminate()]).getExeScriptRequest());
-    // return new Promise((res, rej) => {
-    //   results.on("data", () => null);
-    //   results.on("end", () => res(1));
-    //   results.on("error", rej);
-    // });
-  }
-  beginBatch() {
-    // todo
+  run(...args: Array<string | string[]>) {
+    this.script.addCommand(
+      args.length === 1 ? new Run("/bin/sh", ["-c", <string>args[0]]) : new Run(<string>args[0], <string[]>args[1])
+    );
     return this;
   }
-  sendFile(src: string, dst: string) {
-    // todo
-    return this;
-  }
-  sendJson(dst: string, json: object) {
-    // todo;
+  uploadFile(src: string, dst: string) {
+    this.script.addCommand(new UploadFile(this.storageProvider, src, dst));
     return this;
   }
   downloadFile(src: string, dst: string) {
-    // todo
+    this.script.addCommand(new DownloadFile(this.storageProvider, src, dst));
     return this;
+  }
+  async end(): Promise<Readable> {
+    return this.activity.execute(this.script.getExeScriptRequest());
+  }
+}
+
+export interface ProviderInfo {
+  providerName: string;
+  providerId: string;
+}
+
+export class WorkContextNew {
+  private resultAccepted = false;
+  constructor(
+    private activity: Activity,
+    private storageProvider: StorageProvider,
+    private nodeInfo: ProviderInfo,
+    private networkNodeInfo: object
+  ) {}
+  async before(worke): Promise<Result[] | void> {
+    let state = await this.activity.getState();
+    if (state === ActivityStateStateEnum.Ready) return;
+    if (state === ActivityStateStateEnum.Initialized) {
+      await this.activity.execute(new Script([new Deploy(this.networkNodeInfo), new Start()]).getExeScriptRequest());
+    }
+    let timeout = false;
+    setTimeout(() => (timeout = true), 10000);
+    while (state !== ActivityStateStateEnum.Ready || !timeout) {
+      await sleep(2);
+      state = await this.activity.getState();
+    }
+    if (state !== ActivityStateStateEnum.Ready) {
+      throw new Error(`Activity ${this.activity.id} can't be ready`);
+    }
+  }
+  async after(): Promise<void> {
+    // todo
+  }
+  async beforeEach() {
+    // todo
+  }
+  async afterEach() {
+    // todo
   }
   async run(...args: Array<string | string[]>): Promise<Result | undefined> {
     const command =
       args.length === 1 ? new Run("/bin/sh", ["-c", <string>args[0]]) : new Run(<string>args[0], <string[]>args[1]);
-    const script = new Script([command]);
-    const results = await this.activity.execute(script.getExeScriptRequest());
-    for await (const result of results[Symbol.asyncIterator]()) {
-      return result;
-    }
+    return this.runCommandOnce(command);
   }
-  async end(): Promise<Result> {
-    return new Promise((res) => ({} as Result));
+  async uploadFile(src: string, dst: string) {
+    return this.runCommandOnce(new UploadFile(this.storageProvider, src, dst));
+  }
+  async uploadJson(dst: string, json: object) {
+    throw "Not implemented";
+  }
+  async downloadFile(src: string, dst: string) {
+    return this.runCommandOnce(new DownloadFile(this.storageProvider, src, dst));
+  }
+  beginBatch() {
+    return new Batch(this.activity, this.storageProvider);
   }
   acceptResult(result: unknown) {
     if (!this.resultAccepted) {
@@ -66,5 +98,13 @@ export class WorkContextNew {
   }
   log(msg: string) {
     // todo
+  }
+
+  private async runCommandOnce(command: Command): Promise<Result | undefined> {
+    const script = new Script([command]);
+    const results = await this.activity.execute(script.getExeScriptRequest());
+    for await (const result of results[Symbol.asyncIterator]()) {
+      return result;
+    }
   }
 }
