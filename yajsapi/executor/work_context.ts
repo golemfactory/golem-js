@@ -81,7 +81,6 @@ export class WorkContextNew {
       throw new Error(`Activity ${this.activity.id} can't be ready`);
     }
     if (worker) {
-      console.log("BEFORE WORKER", this.activity.id);
       await worker(this, null);
     }
   }

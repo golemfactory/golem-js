@@ -297,33 +297,6 @@ export class Executor {
     this._network_address = network_address;
   }
 
-  /**
-   * Submit a computation to be executed on providers.
-   *
-   * @param worker   a callable that takes a WorkContext object and a list o tasks, adds commands to the context object and yields committed commands
-   * @param data     an iterator of Task objects to be computed on providers
-   * @returns        yields computation progress events
-   */
-  async *submit(
-    worker: Callable<[WorkContext, AsyncIterable<Task<D, R>>], AsyncGenerator<WorkItem, any, BatchResults>>,
-    data: Iterable<Task<D, R>>
-  ): AsyncGenerator<Task<D, R>> {
-    this._active_computations += 1;
-    const generator = this._submit(worker, data);
-    generator.return = async (value) => {
-      csp.putAsync(this._chan_computation_done, true);
-      await generator.throw(new AsyncGeneratorBreak());
-      return { done: true, value: undefined };
-    };
-    try {
-      yield* generator;
-    } catch (e) {
-      logger.error(e);
-    } finally {
-      csp.putAsync(this._chan_computation_done, true);
-    }
-  }
-
   async submit_new_run<OutputType = Result>(worker): Promise<OutputType> {
     this._active_computations += 1;
     let result;
@@ -728,7 +701,7 @@ export class Executor {
     }
 
     async function worker_starter(): Promise<void> {
-      async function _start_worker(agreement: Agreement): Promise<void> {
+      function _start_worker(agreement: Agreement): Promise<void> {
         start_worker(agreement).catch(async (error) => {
           logger.warn(`Worker for agreement ${agreement.id()} finished with error: ${error}`);
           await agreements_pool.release_agreement(agreement.id(), false);
@@ -895,7 +868,7 @@ export class Executor {
     // TODO: timeout
     while (true) {
       if (task.status() === TaskStatus.REJECTED) {
-        logger.debug("Creating new task for rejected one");
+        logger.warn(`Task for data ${data} has been rejected. Creating new one.`);
         task = new Task<D, OutputType>(data, worker);
         task._add_callback(on_task_done);
         this.work_queue!.add(task);

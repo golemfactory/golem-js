@@ -41,7 +41,6 @@ async function main() {
       .end();
     const error = results.find((res) => res.result === "Error");
     if (error) {
-      console.log("REJECT", frame, error.message);
       ctx.rejectResult();
       return null;
     }
