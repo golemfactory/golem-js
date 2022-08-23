@@ -20,7 +20,7 @@ type GolemOptions = {
 
 type GolemOptionsMixin = string | GolemOptions;
 
-export type Worker<InputType = unknown, OutputType = string | void> = (
+export type Worker<InputType = unknown, OutputType = unknown> = (
   ctx: WorkContext,
   data: InputType
 ) => Promise<OutputType>;

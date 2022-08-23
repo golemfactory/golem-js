@@ -44,7 +44,7 @@ export class Activity {
     this.stateApi = new RequestorStateApi(apiConfig);
     this.requestTimeout = options?.requestTimeout || 10000;
     this.responseTimeout = options?.responseTimeout || 10000;
-    this.executeTimeout = options?.executeTimeout || 20000;
+    this.executeTimeout = options?.executeTimeout || 60000;
     this.exeBatchResultsFetchInterval = options?.exeBatchResultsFetchInterval || 3000;
     this.logger = options?.logger;
   }
@@ -129,9 +129,11 @@ export class Activity {
             }
             await sleep(exeBatchResultsFetchInterval, true);
           } catch (error) {
-            retryCount = await handleError(error, lastIndex, retryCount, maxRetries).catch((error) =>
-              this.destroy(error)
-            );
+            try {
+              retryCount = await handleError(error, lastIndex, retryCount, maxRetries);
+            } catch (error) {
+              return this.destroy(error);
+            }
           }
         }
         this.push(null);

@@ -1,13 +1,10 @@
 import { Activity, Result } from "../activity";
 import { Command, Deploy, DownloadFile, Run, Script, Start, UploadFile } from "../script";
 import { StorageProvider } from "../storage/provider";
-import { Readable } from "stream";
 import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity";
-import { sleep } from "../utils";
-
-interface BatchResult {
-  todo: true;
-}
+import { Worker } from "./golem";
+import { sleep, logger } from "../utils";
+import { Task } from "./task";
 
 class Batch {
   private script: Script;
@@ -24,12 +21,30 @@ class Batch {
     this.script.addCommand(new UploadFile(this.storageProvider, src, dst));
     return this;
   }
+  uploadJson(json: Buffer, dst: string) {
+    const src = Buffer.from(JSON.stringify(json), "utf-8");
+    this.script.addCommand(new UploadFile(this.storageProvider, src, dst));
+    return this;
+  }
   downloadFile(src: string, dst: string) {
     this.script.addCommand(new DownloadFile(this.storageProvider, src, dst));
     return this;
   }
-  async end(): Promise<Readable> {
-    return this.activity.execute(this.script.getExeScriptRequest());
+  async end(): Promise<Result[]> {
+    await this.script.before();
+    const results = await this.activity.execute(this.script.getExeScriptRequest());
+    const allResults: Result[] = [];
+    return new Promise((res, rej) => {
+      results.on("data", (res) => allResults.push(res));
+      results.on("end", () => {
+        this.script.after();
+        res(allResults);
+      });
+      results.on("error", (error) => {
+        this.script.after();
+        rej(error);
+      });
+    });
   }
 }
 
@@ -44,11 +59,15 @@ export class WorkContextNew {
     private activity: Activity,
     private storageProvider: StorageProvider,
     private nodeInfo: ProviderInfo,
-    private networkNodeInfo: object
+    private networkNodeInfo: object,
+    private task: Task<"D", "R">
   ) {}
-  async before(worke): Promise<Result[] | void> {
+  async before(worker?: Worker): Promise<Result[] | void> {
     let state = await this.activity.getState();
-    if (state === ActivityStateStateEnum.Ready) return;
+    if (state === ActivityStateStateEnum.Ready) {
+      if (worker) await worker(this, null);
+      return;
+    }
     if (state === ActivityStateStateEnum.Initialized) {
       await this.activity.execute(new Script([new Deploy(this.networkNodeInfo), new Start()]).getExeScriptRequest());
     }
@@ -60,6 +79,10 @@ export class WorkContextNew {
     }
     if (state !== ActivityStateStateEnum.Ready) {
       throw new Error(`Activity ${this.activity.id} can't be ready`);
+    }
+    if (worker) {
+      console.log("BEFORE WORKER", this.activity.id);
+      await worker(this, null);
     }
   }
   async after(): Promise<void> {
@@ -80,7 +103,8 @@ export class WorkContextNew {
     return this.runCommandOnce(new UploadFile(this.storageProvider, src, dst));
   }
   async uploadJson(dst: string, json: object) {
-    throw "Not implemented";
+    const src = Buffer.from(JSON.stringify(json), "utf-8");
+    return this.runCommandOnce(new UploadFile(this.storageProvider, src, dst));
   }
   async downloadFile(src: string, dst: string) {
     return this.runCommandOnce(new DownloadFile(this.storageProvider, src, dst));
@@ -89,22 +113,23 @@ export class WorkContextNew {
     return new Batch(this.activity, this.storageProvider);
   }
   acceptResult(result: unknown) {
-    if (!this.resultAccepted) {
-      this.task.accept_result(result);
-    }
+    if (!this.resultAccepted) this.task.accept_result(result as "R");
+    this.resultAccepted = true;
   }
   rejectResult(msg: string) {
-    // todo
+    this.task.reject_result(msg);
+    this.resultAccepted = true;
   }
   log(msg: string) {
-    // todo
+    logger.info(`[${this.nodeInfo.providerName}] ${msg}`);
   }
 
   private async runCommandOnce(command: Command): Promise<Result | undefined> {
     const script = new Script([command]);
+    await script.before();
     const results = await this.activity.execute(script.getExeScriptRequest());
-    for await (const result of results[Symbol.asyncIterator]()) {
-      return result;
-    }
+    const { value: firstResult } = await results[Symbol.asyncIterator]().next();
+    await script.after();
+    return firstResult;
   }
 }

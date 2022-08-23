@@ -1,7 +1,8 @@
-import fs from "fs";
+import { Golem, utils } from "../../dist";
 import path from "path";
+import fs from "fs";
 import { program } from "commander";
-import { Task, Golem, range, logger } from "./todo";
+const logger = utils.logger;
 
 function write_hash(hash) {
   const filePath = path.join(__dirname, "in.hash");
@@ -52,18 +53,21 @@ async function main(args) {
   write_keyspace_check_script(args.mask);
 
   const golem = new Golem("055911c811e56da4d75ffc928361a78ed13077933ffa8320fb1ec2db");
+  await golem.init();
   const keyspace_computed = await golem.run(async (ctx) => {
-    const result = await ctx
+    const results = await ctx
       .beginBatch()
-      .sendFile(path.join(__dirname, "keyspace.sh"), "/golem/input/keyspace.sh")
+      .uploadFile(path.join(__dirname, "keyspace.sh"), "/golem/input/keyspace.sh")
       .run("/bin/sh", ["/golem/input/keyspace.sh"])
       .downloadFile("/golem/output/keyspace.txt", path.join(__dirname, "keyspace.txt"))
       .end();
-    if (result.result === "ok") {
-      ctx.acceptResult();
-      return true;
+    const error = results.find((res) => res.result === "Error");
+    if (error) {
+      console.error(error);
+      ctx.rejectResult();
+      return null;
     }
-    ctx.rejectResult();
+    return true;
   });
 
   if (!keyspace_computed) {
@@ -72,24 +76,34 @@ async function main(args) {
   const keyspace = read_keyspace();
   logger.info(`Keyspace size computed. Keyspace size = ${keyspace}.`);
   const step = Math.floor(keyspace / args.numberOfProviders + 1);
-  const ranges = range(0, keyspace, parseInt(step));
+  const ranges = utils.range(0, keyspace, step);
 
   await golem.beforeEach((ctx) => ctx.sendFile(path.join(__dirname, "in.hash"), "/golem/input/in.hash"));
 
-  await golem.map(ranges, async (ctx, skip) => {
-    const result = await ctx
+  const results = golem.map(ranges, async (ctx, skip) => {
+    const outputFile = path.join(__dirname, `hashcat_${skip}.potfile`);
+    const results = await ctx
       .beginBatch()
-      .sendFile(path.join(__dirname, "in.hash"), "/golem/input/in.hash")
+      .uploadFile(path.join(__dirname, "in.hash"), "/golem/input/in.hash")
       .run("/bin/sh", ["-c", make_attack_command(skip, skip + step, args.mask)])
-      .downloadFile(`/golem/output/hashcat_${skip}.potfile`, path.join(__dirname, `hashcat_${skip}.potfile`))
+      .downloadFile(`/golem/output/hashcat_${skip}.potfile`, outputFile)
       .end();
-    console.log(`result=${result.stdout}`);
-    ctx.acceptResult(result);
+    const error = results.find((res) => res.result === "Error");
+    if (error) {
+      logger.error(error);
+      ctx.rejectResult();
+      return null;
+    }
+    logger.info(`Result=${outputFile}`);
   });
+
+  for await (const result of results) {
+  }
 
   const password = read_password(ranges);
   if (!password) logger.info("No password found");
   else logger.info(`Password found: ${password}`);
+  await golem.end();
 }
 
 program

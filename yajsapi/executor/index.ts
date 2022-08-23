@@ -51,6 +51,7 @@ import axios from "axios";
 
 import { Worker } from "./golem";
 import { WorkContextNew } from "./work_context";
+import { GftpStorageProvider } from "../storage/gftp_provider";
 
 export const sgx = _sgx;
 export const vm = _vm;
@@ -198,8 +199,8 @@ export class Executor {
   private isFinished = false;
   private agreements_to_pay = new Set<string>();
   private activities = new Map<string, Activity>();
-  private beforeEachTask = Worker;
-  private beforeEachTasks = new Set<string>();
+  private beforeWorker?: Worker;
+  private beforeWorkerDoneInActivity = new Set<string>();
 
   /**
    * Create new executor
@@ -360,7 +361,7 @@ export class Executor {
   }
 
   submit_new_run_before(worker) {
-    this.beforeEachTask = worker;
+    this.beforeWorker = worker;
   }
 
   async _handle_proposal(state: SubmissionState, proposal: OfferProposal): Promise<events.ProposalEvent> {
@@ -521,8 +522,9 @@ export class Executor {
     const invoices: Map<string, Invoice> = new Map();
     let payment_closing = false;
     const activities = this.activities;
-    const beforeEachTask = this.beforeEachTask;
-    const beforeEachTasks = this.beforeEachTasks;
+    const beforeWorker = this.beforeWorker;
+    const beforeWorkerDoneInActivity = this.beforeWorkerDoneInActivity;
+    const busyActivities = new Set();
 
     async function process_invoices(): Promise<void> {
       for await (const invoice of self._payment_api.incoming_invoices(paymentCancellationToken)) {
@@ -633,15 +635,14 @@ export class Executor {
         );
         await ctx.beforeEach();
         emit(new events.ScriptSent({ agr_id: agreement_id, task_id: task.id, cmds: [] }));
-        // @ts-ignore
-        task.accept_result(await worker(ctx, task.data()));
+        ctx.acceptResult(await worker(ctx, task.data()));
         await ctx.afterEach();
         emit(new events.GettingResults({ agr_id: agreement_id, task_id: task.id }));
         emit(new events.ScriptFinished({ agr_id: agreement_id, task_id: task.id }));
         await accept_payment_for_agreement({ agreement_id: agreement_id, partial: true });
         emit(new events.CheckingPayments());
       } catch (e) {
-        // todo
+        logger.error(e.toString());
       } finally {
         // todo
       }
@@ -682,26 +683,37 @@ export class Executor {
       if (network) {
         network_node = await network.add_node(provider_id);
       }
-      const new_work_context = new WorkContextNew(
-        _act,
-        storage_manager,
-        { providerId: provider_id, providerName: provider_name },
-        network_node?.get_deploy_args()
-      );
-      await new_work_context.before(beforeEachTask);
+      const storageProvider = new GftpStorageProvider(storage_manager);
       await asyncWith(work_queue.new_consumer(), async (consumer) => {
         try {
           const tasks = task_emitter(consumer);
           const { done, value: task } = await tasks.next();
-          if (done) {
-            return;
+          if (done) return;
+          const new_work_context = new WorkContextNew(
+            _act,
+            storageProvider,
+            { providerId: provider_id, providerName: provider_name },
+            network_node?.get_deploy_args(),
+            task
+          );
+          let timeout = false;
+          setTimeout(() => (timeout = true), 30000);
+          while (busyActivities.has(_act.id && !timeout)) {
+            logger.info(`Waiting for activity ${_act.id} will be available`);
+            await sleep(2);
           }
+          await new_work_context.before(beforeWorkerDoneInActivity.has(_act.id) ? undefined : beforeWorker);
+          beforeWorkerDoneInActivity.add(_act.id);
+          busyActivities.add(_act.id);
           await process_batches(agreement.id(), _act, new_work_context, task.worker(), task);
+          await new_work_context.after();
+          busyActivities.delete(_act.id);
           emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
         } catch (error) {
           emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error }));
           throw error;
         } finally {
+          await agreements_pool.release_agreement(agreement.id(), true);
           await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
         }
       });
@@ -709,7 +721,6 @@ export class Executor {
         return;
       }
       await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
-      await new_work_context.after();
       emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
 
       logger.debug(`Stopped worker related to agreement ${agreement.id()}.`);
@@ -726,7 +737,7 @@ export class Executor {
       }
       while (true) {
         await sleep(2);
-        await agreements_pool.cycle();
+        // await agreements_pool.cycle();
         if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
           break;
         }
@@ -804,10 +815,6 @@ export class Executor {
           if (services.indexOf(get_done_task) > -1) throw "";
           get_done_task = null;
         }
-        // if (workers.size === 0) {
-        //   await sleep(2);
-        //   logger.debug("Waiting for new tasks...");
-        // }
       }
       emit(new events.ComputationFinished());
     } catch (error) {
@@ -882,11 +889,17 @@ export class Executor {
     function on_task_done(task: Task<D, R>, status: TaskStatus): void {
       if (status === TaskStatus.ACCEPTED) done_queue!.put(task); //put_nowait
     }
-    // @ts-ignore
-    const task = new Task<D, OutputType>(data, worker);
+    let task = new Task<D, OutputType>(data, worker);
     task._add_callback(on_task_done);
     this.work_queue!.add(task);
+    // TODO: timeout
     while (true) {
+      if (task.status() === TaskStatus.REJECTED) {
+        logger.debug("Creating new task for rejected one");
+        task = new Task<D, OutputType>(data, worker);
+        task._add_callback(on_task_done);
+        this.work_queue!.add(task);
+      }
       if (task.status() === TaskStatus.ACCEPTED) return task.result() as OutputType;
       await sleep(2);
     }
@@ -997,7 +1010,9 @@ export class Executor {
       await activity.stop();
       logger.debug(`Stop activity ${activity.id} for agreement ${agreementId}`);
     }
-    while (this.agreements_to_pay.size > 0) {
+    let timeout = false;
+    setTimeout(() => (timeout = true), 10000);
+    while (this.agreements_to_pay.size > 0 && !timeout) {
       logger.debug(`Waiting for ${this.agreements_to_pay.size} payment(s)...`);
       await sleep(4);
     }

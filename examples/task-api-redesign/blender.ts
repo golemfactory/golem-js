@@ -1,14 +1,18 @@
 import { Golem, utils } from "../../dist";
+import path from "path";
+// utils.changeLogLevel("debug");
 
 const blender_params = (frame) => ({
   scene_file: "/golem/resource/scene.blend",
   resolution: [400, 300],
   use_compositing: false,
-  crops: {
-    outfilebasename: "out",
-    borders_x: [0.0, 1.0],
-    borders_y: [0.0, 1.0],
-  },
+  crops: [
+    {
+      outfilebasename: "out",
+      borders_x: [0.0, 1.0],
+      borders_y: [0.0, 1.0],
+    },
+  ],
   samples: 100,
   frames: [frame],
   output_format: "PNG",
@@ -19,24 +23,32 @@ const blender_params = (frame) => ({
 
 async function main() {
   const golem = new Golem("9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae");
+  await golem.init();
 
   golem.beforeEach(async (ctx) => {
-    await ctx.sendFile("./cubes.blend", "/golem/resource/scene.blend");
+    await ctx.uploadFile(path.join(__dirname, "./cubes.blend"), "/golem/resource/scene.blend");
   });
 
   const results = await golem.map(utils.range(0, 60, 10), async (ctx, frame) => {
-    const result = await ctx
+    const results = await ctx
       .beginBatch()
-      .sendJson("/golem/work/params.json", blender_params(frame))
+      .uploadJson(blender_params(frame), "/golem/work/params.json")
       .run("/golem/entrypoints/run-blender.sh")
-      .downloadFile(`/golem/output/out${frame.toString().padStart(4, "0")}.png`, `./output_${frame}.png`)
+      .downloadFile(
+        `/golem/output/out${frame.toString().padStart(4, "0")}.png`,
+        path.join(__dirname, `./output_${frame}.png`)
+      )
       .end();
-    ctx.acceptResult(result);
-    return result.stdout;
+    const error = results.find((res) => res.result === "Error");
+    if (error) {
+      console.log("REJECT", frame, error.message);
+      ctx.rejectResult();
+      return null;
+    }
+    return `output_${frame}.png`;
   });
-
   for await (const result of results) {
-    console.log(`result=${result}`);
+    console.log(result);
   }
   await golem.end();
 }

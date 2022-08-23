@@ -75,12 +75,12 @@ export class Transfer extends Command {
 }
 
 export class UploadFile extends Transfer {
-  constructor(private storageProvider: StorageProvider, private srcPath: string, private dstPath: string) {
+  constructor(private storageProvider: StorageProvider, private src: string | Buffer, private dstPath: string) {
     super();
     this.args["to"] = `container:${dstPath}`;
   }
   async before() {
-    this.args["from"] = await this.storageProvider.publish(this.srcPath);
+    this.args["from"] = await this.storageProvider.publish(this.src);
   }
   async after() {
     await this.storageProvider.release([this.args["from"]]);
