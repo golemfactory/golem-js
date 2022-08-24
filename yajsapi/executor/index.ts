@@ -752,7 +752,7 @@ export class Executor {
       }
       await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
       emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
-
+      await _act.stop();
       logger.debug(`Stopped worker related to agreement ${agreement.id()}.`);
     }
 
