@@ -1,7 +1,7 @@
 import axios from "axios";
 import * as srv from "srvclient";
 import { DemandBuilder } from "../props";
-import { VmPackageFormat, VmRequest } from "../props/inf";
+import { VmPackageFormat, VmRequest, VmManifestRequest } from "../props/inf";
 import { logger } from "../utils";
 
 const FALLBACK_REPO_URL = "http://girepo.dev.golem.network:8000";
@@ -12,6 +12,18 @@ export type RepoOpts = {
   image_hash: string;
   min_mem_gib: number;
   min_storage_gib: number;
+  min_cpu_threads?: number;
+  cores?: number;
+  capabilities?: string[];
+};
+
+export type ManifestOpts = {
+  manifest: string;
+  manifest_sig: string;
+  manifest_sig_algorithm: string;
+  manifest_cert: string;
+  min_mem_gib?: number;
+  min_storage_gib?: number;
   min_cpu_threads?: number;
   cores?: number;
   capabilities?: string[];
@@ -41,6 +53,40 @@ export class Package {
 
   async decorate_demand(demand: DemandBuilder) {
     // Add package information to a Demand.
+  }
+}
+
+export class VMManifestPackage extends Package {
+  manifest: string;
+  manifest_sig?: string;
+  manifest_sig_algorithm?: string;
+  manifest_cert?: string;
+  constraints!: Constraints;
+
+  constructor({ manifest, manifest_sig, manifest_sig_algorithm, manifest_cert, constraints }) {
+    super();
+    this.manifest = manifest;
+    this.manifest_sig = manifest_sig;
+    this.manifest_sig_algorithm = manifest_sig_algorithm;
+    this.manifest_cert = manifest_cert;
+    this.constraints = constraints;
+  }
+
+  async resolve_url(): Promise<string> {
+    return "";
+  }
+
+  async decorate_demand(demand: DemandBuilder) {
+    demand.ensure(this.constraints.toString());
+    demand.add(
+      new VmManifestRequest({
+        manifest: this.manifest,
+        manifest_sig: this.manifest_sig,
+        manifest_sig_algorithm: this.manifest_sig_algorithm,
+        manifest_cert: this.manifest_cert,
+        package_format: VmPackageFormat.GVMKIT_SQUASH,
+      })
+    );
   }
 }
 

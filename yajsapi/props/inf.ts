@@ -61,6 +61,28 @@ export class ExeUnitRequest extends Model {
   }
 }
 
+export class ExeUnitManifestRequest extends Model {
+  manifest: Field = new Field({
+    metadata: { key: "golem.srv.comp.payload" },
+  });
+  manifest_sig: Field = new Field({
+    metadata: { key: "golem.srv.comp.payload.sig" },
+  });
+  manifest_sig_algorithm: Field = new Field({
+    metadata: { key: "golem.srv.comp.payload.sig.algorithm" },
+  });
+  manifest_cert: Field = new Field({
+    metadata: { key: "golem.srv.comp.payload.cert" },
+  });
+  constructor({ manifest, manifest_sig, manifest_sig_algorithm, manifest_cert }) {
+    super();
+    this.manifest.value = manifest;
+    this.manifest_sig.value = manifest_sig;
+    this.manifest_sig_algorithm.value = manifest_sig_algorithm;
+    this.manifest_cert.value = manifest_cert;
+  }
+}
+
 export enum VmPackageFormat {
   UNKNOWN = "",
   GVMKIT_SQUASH = "gvmkit-squash",
@@ -73,6 +95,23 @@ export class VmRequest extends ExeUnitRequest {
 
   constructor(package_url: string, package_format: VmPackageFormat) {
     super(package_url);
+    this.package_format.value = package_format;
+  }
+}
+
+export class VmManifestRequest extends ExeUnitManifestRequest {
+  package_format: Field = new Field({
+    metadata: { key: "golem.srv.comp.vm.package_format" },
+  });
+
+  constructor({
+    manifest,
+    manifest_sig,
+    manifest_sig_algorithm,
+    manifest_cert,
+    package_format = VmPackageFormat.GVMKIT_SQUASH,
+  }) {
+    super({ manifest, manifest_sig, manifest_sig_algorithm, manifest_cert });
     this.package_format.value = package_format;
   }
 }

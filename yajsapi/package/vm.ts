@@ -1,5 +1,14 @@
 import { RuntimeType, InfVmKeys } from "../props/inf";
-import { Constraints, DEFAULT_REPO_SRV, Package, RepoOpts, VmPackage, resolve_repo_srv } from ".";
+import {
+  Constraints,
+  DEFAULT_REPO_SRV,
+  Package,
+  RepoOpts,
+  ManifestOpts,
+  VmPackage,
+  VMManifestPackage,
+  resolve_repo_srv,
+} from ".";
 
 class _VmConstrains extends Constraints {
   constructor(
@@ -21,6 +30,26 @@ class _VmConstrains extends Constraints {
     }
     super.extend(items);
   }
+}
+
+export async function manifest({
+  manifest,
+  manifest_sig,
+  manifest_sig_algorithm,
+  manifest_cert,
+  min_mem_gib = 0.5,
+  min_storage_gib = 2.0,
+  min_cpu_threads = 1,
+  cores = 1,
+  capabilities = [],
+}: ManifestOpts): Promise<Package> {
+  return new VMManifestPackage({
+    manifest,
+    manifest_sig,
+    manifest_sig_algorithm,
+    manifest_cert,
+    constraints: new _VmConstrains(min_mem_gib, min_storage_gib, min_cpu_threads, cores, capabilities),
+  });
 }
 
 export async function repo({
