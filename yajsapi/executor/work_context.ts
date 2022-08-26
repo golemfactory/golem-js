@@ -5,6 +5,7 @@ import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity";
 import { Worker } from "./golem";
 import { sleep, logger } from "../utils";
 import { Task } from "./task";
+import { Readable } from "stream";
 
 class Batch {
   private script: Script;
@@ -21,7 +22,7 @@ class Batch {
     this.script.addCommand(new UploadFile(this.storageProvider, src, dst));
     return this;
   }
-  uploadJson(json: Buffer, dst: string) {
+  uploadJson(json: object, dst: string) {
     const src = Buffer.from(JSON.stringify(json), "utf-8");
     this.script.addCommand(new UploadFile(this.storageProvider, src, dst));
     return this;
@@ -46,6 +47,16 @@ class Batch {
       });
     });
   }
+  async endStream(): Promise<Readable> {
+    await this.script.before();
+    const results = await this.activity.execute(this.script.getExeScriptRequest());
+    results.on("end", () => this.script.after());
+    results.on("error", (error) => {
+      this.script.after();
+      results.destroy(error);
+    });
+    return results;
+  }
 }
 
 export interface ProviderInfo {
@@ -55,6 +66,7 @@ export interface ProviderInfo {
 
 export class WorkContextNew {
   private resultAccepted = false;
+  private resultRejected = false;
   constructor(
     private activity: Activity,
     private storageProvider: StorageProvider,
@@ -93,20 +105,20 @@ export class WorkContextNew {
   async afterEach() {
     // todo
   }
-  async run(...args: Array<string | string[]>): Promise<Result | undefined> {
+  async run(...args: Array<string | string[]>): Promise<Result> {
     const command =
       args.length === 1 ? new Run("/bin/sh", ["-c", <string>args[0]]) : new Run(<string>args[0], <string[]>args[1]);
-    return this.runCommandOnce(command);
+    return this.runOneCommand(command);
   }
-  async uploadFile(src: string, dst: string) {
-    return this.runCommandOnce(new UploadFile(this.storageProvider, src, dst));
+  async uploadFile(src: string, dst: string): Promise<Result> {
+    return this.runOneCommand(new UploadFile(this.storageProvider, src, dst));
   }
-  async uploadJson(dst: string, json: object) {
+  async uploadJson(json: object, dst: string): Promise<Result> {
     const src = Buffer.from(JSON.stringify(json), "utf-8");
-    return this.runCommandOnce(new UploadFile(this.storageProvider, src, dst));
+    return this.runOneCommand(new UploadFile(this.storageProvider, src, dst));
   }
-  async downloadFile(src: string, dst: string) {
-    return this.runCommandOnce(new DownloadFile(this.storageProvider, src, dst));
+  async downloadFile(src: string, dst: string): Promise<Result> {
+    return this.runOneCommand(new DownloadFile(this.storageProvider, src, dst));
   }
   beginBatch() {
     return new Batch(this.activity, this.storageProvider);
@@ -116,19 +128,29 @@ export class WorkContextNew {
     this.resultAccepted = true;
   }
   rejectResult(msg: string) {
-    this.task.reject_result(msg);
+    if (!this.resultRejected) this.task.reject_result(msg, true);
+    this.resultRejected = true;
     this.resultAccepted = true;
   }
   log(msg: string) {
     logger.info(`[${this.nodeInfo.providerName}] ${msg}`);
   }
 
-  private async runCommandOnce(command: Command): Promise<Result | undefined> {
+  private async runOneCommand(command: Command): Promise<Result> {
     const script = new Script([command]);
     await script.before();
     const results = await this.activity.execute(script.getExeScriptRequest());
-    const { value: firstResult } = await results[Symbol.asyncIterator]().next();
+    const allResults: Result[] = [];
+    for await (const result of results) allResults.push(result);
+    const commandsErrors = allResults.filter((res) => res.result === "Error");
     await script.after();
-    return firstResult;
+    if (commandsErrors.length) {
+      const errorMessage = commandsErrors
+        .map((err) => `Error: ${err.message}. Stderr: ${err.stderr?.trim()}`)
+        .join(". ");
+      this.rejectResult(`Task error on provider ${this.nodeInfo.providerName}. ${errorMessage}`);
+      throw new Error(errorMessage);
+    }
+    return allResults[0];
   }
 }

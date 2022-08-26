@@ -495,7 +495,6 @@ export class Executor {
     const invoices: Map<string, Invoice> = new Map();
     let payment_closing = false;
     const activities = this.activities;
-    const beforeWorker = this.beforeWorker;
     const beforeWorkerDoneInActivity = this.beforeWorkerDoneInActivity;
     const busyActivities = new Set();
 
@@ -675,7 +674,7 @@ export class Executor {
             logger.info(`Waiting for activity ${_act.id} will be available`);
             await sleep(2);
           }
-          await new_work_context.before(beforeWorkerDoneInActivity.has(_act.id) ? undefined : beforeWorker);
+          await new_work_context.before(beforeWorkerDoneInActivity.has(_act.id) ? undefined : self.beforeWorker);
           beforeWorkerDoneInActivity.add(_act.id);
           busyActivities.add(_act.id);
           await process_batches(agreement.id(), _act, new_work_context, task.worker(), task);
@@ -760,7 +759,7 @@ export class Executor {
         }
         const now = dayjs.utc();
         if (now > this._expires) {
-          throw new TimeoutError(`task timeout exceeded. timeout=${this._conf.timeout}`);
+          throw new TimeoutError(`Task timeout exceeded. timeout=${this._conf.timeout}`);
         }
         if (now > get_offers_deadline && this.state.proposals_confirmed == 0) {
           emit(
@@ -862,17 +861,11 @@ export class Executor {
     function on_task_done(task: Task<D, R>, status: TaskStatus): void {
       if (status === TaskStatus.ACCEPTED) done_queue!.put(task); //put_nowait
     }
-    let task = new Task<D, OutputType>(data, worker);
+    const task = new Task<D, OutputType>(data, worker);
     task._add_callback(on_task_done);
     this.work_queue!.add(task);
     // TODO: timeout
     while (true) {
-      if (task.status() === TaskStatus.REJECTED) {
-        logger.warn(`Task for data ${data} has been rejected. Creating new one.`);
-        task = new Task<D, OutputType>(data, worker);
-        task._add_callback(on_task_done);
-        this.work_queue!.add(task);
-      }
       if (task.status() === TaskStatus.ACCEPTED) return task.result() as OutputType;
       await sleep(2);
     }

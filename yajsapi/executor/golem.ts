@@ -1,8 +1,9 @@
 import { MarketStrategy } from "./strategy";
 import { Package } from "../package";
-import { WorkContext } from "./work_context";
+import { WorkContextNew } from "./work_context";
 import { Executor, vm } from "./";
 import { Result } from "../activity";
+import { logger } from "../utils";
 
 type GolemOptions = {
   package: string | Package;
@@ -21,9 +22,9 @@ type GolemOptions = {
 type GolemOptionsMixin = string | GolemOptions;
 
 export type Worker<InputType = unknown, OutputType = unknown> = (
-  ctx: WorkContext,
+  ctx: WorkContextNew,
   data: InputType
-) => Promise<OutputType>;
+) => Promise<OutputType | void>;
 
 const DEFAULT_OPTIONS = {
   max_workers: 5,
@@ -35,7 +36,7 @@ const DEFAULT_OPTIONS = {
 };
 
 export class Golem {
-  private oldExecutor: Executor | undefined;
+  private oldExecutor?: Executor;
   private options: GolemOptions = {};
   private image_hash?: string;
 
@@ -58,12 +59,15 @@ export class Golem {
     }
     this.oldExecutor = new Executor(this.options);
     await this.oldExecutor.ready();
-    this.oldExecutor.init();
+    this.oldExecutor.init().catch((error) => {
+      throw error;
+    });
   }
 
   beforeEach(worker: Worker) {
     this.oldExecutor!.submit_new_run_before(worker);
   }
+
   async run<OutputType = Result>(worker: Worker): Promise<OutputType> {
     return this.oldExecutor!.submit_new_run<OutputType>(worker);
   }
@@ -74,6 +78,7 @@ export class Golem {
   ): AsyncIterable<OutputType | undefined> {
     return this.oldExecutor!.submit_new_map<InputType, OutputType>(data, worker);
   }
+
   async end() {
     await this.oldExecutor?.done();
   }
@@ -81,4 +86,10 @@ export class Golem {
   private async createPackage(image_hash: string): Promise<Package> {
     return vm.repo({ image_hash, min_mem_gib: 0.5, min_storage_gib: 2.0 });
   }
+}
+
+export async function createGolem(options: GolemOptionsMixin) {
+  const golem = new Golem(options);
+  await golem.init();
+  return golem;
 }
