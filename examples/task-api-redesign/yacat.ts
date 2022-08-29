@@ -1,37 +1,8 @@
 import { createGolem, utils } from "../../dist";
-import path from "path";
-import fs from "fs";
 import { program } from "commander";
 const logger = utils.logger;
 
-function write_hash(hash) {
-  const filePath = path.join(__dirname, "in.hash");
-  fs.writeFile(filePath, hash, (error) => {
-    if (error) logger.error(error);
-  });
-}
-
-function write_keyspace_check_script(mask) {
-  const command = `hashcat --keyspace -a 3 ${mask} -m 400 > /golem/output/keyspace.txt`;
-  const filePath = path.join(__dirname, "keyspace.sh");
-  fs.writeFile(filePath, command, (error) => {
-    if (error) logger.error(error);
-  });
-}
-
-function make_attack_command(skip: number | undefined, limit: number | undefined, mask: string) {
-  return (
-    `touch /golem/output/hashcat_${skip}.potfile; ` +
-    `hashcat -a 3 -m 400 /golem/input/in.hash ` +
-    `${mask} --skip=${skip} --limit=${limit} ` +
-    `--self-test-disable || true`
-  );
-}
-
 async function main(args) {
-  write_hash(args.hash);
-  write_keyspace_check_script(args.mask);
-
   const golem = await createGolem("055911c811e56da4d75ffc928361a78ed13077933ffa8320fb1ec2db");
   const keyspace = await golem.run<number>(async (ctx) => {
     const result = await ctx.run(`hashcat --keyspace -a 3 ${args.mask} -m 400`);
@@ -44,19 +15,23 @@ async function main(args) {
   const ranges = utils.range(0, keyspace, step);
 
   const results = golem.map(ranges, async (ctx, skip) => {
-    const result = await ctx.run(
-      `hashcat -a 3 -m 400 "${args.hash}" "${args.mask}" --skip=${skip} --limit=${skip + step} --self-test-disable`
-    );
-    console.log("xxx", result.stdout);
-    return results;
+    const results = await ctx
+      .beginBatch()
+      .run(`hashcat -a 3 -m 400 '${args.hash}' '${args.mask}' --skip=${skip} --limit=${skip + step} -o pass.potfile`)
+      .run("cat pass.potfile")
+      .end();
+    if (!results?.[1]?.stdout) return false;
+    return results?.[1]?.stdout.split(":")[1];
   });
 
+  let password = "";
   for await (const result of results) {
-    console.log(result);
+    if (result) {
+      password = result;
+      break;
+    }
   }
-
-  const password = false;
-  if (!password) logger.info("No password found");
+  if (!password) logger.warn("No password found");
   else logger.info(`Password found: ${password}`);
   await golem.end();
 }

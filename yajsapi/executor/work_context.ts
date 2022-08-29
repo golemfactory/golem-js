@@ -146,7 +146,7 @@ export class WorkContextNew {
     await script.after();
     if (commandsErrors.length) {
       const errorMessage = commandsErrors
-        .map((err) => `Error: ${err.message}. Stderr: ${err.stderr?.trim()}`)
+        .map((err) => `Error: ${err.message}. Stdout: ${err.stdout?.trim()}. Stderr: ${err.stderr?.trim()}`)
         .join(". ");
       this.rejectResult(`Task error on provider ${this.nodeInfo.providerName}. ${errorMessage}`);
       throw new Error(errorMessage);
