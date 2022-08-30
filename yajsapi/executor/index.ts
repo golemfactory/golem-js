@@ -134,7 +134,7 @@ export type ExecutorOpts = {
   task_package: Package;
   max_workers?: number;
   timeout?: number | string; //timedelta
-  budget: string; //number?
+  budget?: string; //number?
   strategy?: MarketStrategy;
   subnet_tag?: string;
   driver?: string; // @deprecated
@@ -222,7 +222,7 @@ export class Executor {
     task_package,
     max_workers = 5,
     timeout = DEFAULT_EXECUTOR_TIMEOUT,
-    budget,
+    budget = "1.0",
     strategy,
     subnet_tag,
     driver,
@@ -609,10 +609,8 @@ export class Executor {
             task_data: task.data(),
           })
         );
-        await ctx.beforeEach();
         emit(new events.ScriptSent({ agr_id: agreement_id, task_id: task.id, cmds: [] }));
         ctx.acceptResult(await worker(ctx, task.data()));
-        await ctx.afterEach();
         emit(new events.GettingResults({ agr_id: agreement_id, task_id: task.id }));
         emit(new events.ScriptFinished({ agr_id: agreement_id, task_id: task.id }));
         await accept_payment_for_agreement({ agreement_id: agreement_id, partial: true });
@@ -669,8 +667,8 @@ export class Executor {
             _act,
             storageProvider,
             { providerId: provider_id, providerName: provider_name },
-            network_node,
-            task
+            task,
+            network_node
           );
           let timeout = false;
           setTimeout(() => (timeout = true), 30000);
@@ -682,7 +680,6 @@ export class Executor {
           beforeWorkerDoneInActivity.add(_act.id);
           busyActivities.add(_act.id);
           await process_batches(agreement.id(), _act, new_work_context, task.worker(), task);
-          await new_work_context.after();
           busyActivities.delete(_act.id);
           emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
         } catch (error) {
@@ -704,7 +701,7 @@ export class Executor {
     }
 
     async function worker_starter(): Promise<void> {
-      function _start_worker(agreement: Agreement): Promise<void> {
+      function _start_worker(agreement: Agreement) {
         start_worker(agreement).catch(async (error) => {
           logger.warn(`Worker for agreement ${agreement.id()} finished with error: ${error}`);
           await agreements_pool.release_agreement(agreement.id(), false);
@@ -865,12 +862,16 @@ export class Executor {
     function on_task_done(task: Task<D, R>, status: TaskStatus): void {
       if (status === TaskStatus.ACCEPTED) done_queue!.put(task); //put_nowait
     }
-    const task = new Task<D, OutputType>(data, worker);
+    const task = new Task<D, R>(data as D, worker);
     task._add_callback(on_task_done);
     this.work_queue!.add(task);
     // TODO: timeout
     while (true) {
-      if (task.status() === TaskStatus.ACCEPTED) return task.result() as OutputType;
+      if (task.status() === TaskStatus.ACCEPTED) {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        return task.result() as OutputType;
+      }
       await sleep(2);
     }
   }

@@ -36,7 +36,7 @@ export type Worker<InputType = unknown, OutputType = unknown> = (
 
 const DEFAULT_OPTIONS = {
   max_workers: 5,
-  budget: "1",
+  budget: "1.0",
   strategy: null,
   subnet_tag: "devnet-beta",
   payment_driver: "erc20",

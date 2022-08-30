@@ -6,7 +6,6 @@ import { createGolem } from "../../dist";
   await golem.forEach(data, async (ctx, x) => {
     const res = await ctx.run(`echo "${x}"`);
     console.log(`Result=${res.stdout}`);
-    return res.stdout?.trim();
   });
   await golem.end();
 })();

@@ -61,13 +61,14 @@ class Batch {
     const errorResultHandler = new Transform({
       objectMode: true,
       transform(chunk, encoding, callback) {
-        script.after();
         const error =
           chunk?.result === "Error"
             ? new Error(`${chunk?.message}. Stdout: ${chunk?.stdout?.trim()}. Stderr: ${chunk?.stderr?.trim()}`)
             : null;
-        if (error) this.destroy(error);
-        else callback(null, chunk);
+        if (error) {
+          script.after();
+          this.destroy(error);
+        } else callback(null, chunk);
       },
     });
     results.on("end", () => this.script.after());
@@ -91,8 +92,8 @@ export class WorkContextNew {
     private activity: Activity,
     private storageProvider: StorageProvider,
     private nodeInfo: ProviderInfo,
-    private networkNode?: NetworkNode,
-    private task: Task<"D", "R">
+    private task: Task<"D", "R">,
+    private networkNode?: NetworkNode
   ) {}
   async before(worker?: Worker): Promise<Result[] | void> {
     let state = await this.activity.getState();
@@ -117,15 +118,6 @@ export class WorkContextNew {
     if (worker) {
       await worker(this, null);
     }
-  }
-  async after(): Promise<void> {
-    // todo
-  }
-  async beforeEach() {
-    // todo
-  }
-  async afterEach() {
-    // todo
   }
   async run(...args: Array<string | string[]>): Promise<Result> {
     const command =
