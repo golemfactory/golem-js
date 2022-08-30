@@ -333,6 +333,10 @@ export class Executor {
     };
   }
 
+  async submit_new_foreach<InputType, OutputType>(data: Iterable<InputType>, worker): Promise<void> {
+    await Promise.all([...data].map((value) => this.submit_new_task<OutputType>(worker, value)));
+  }
+
   submit_new_run_before(worker) {
     this.beforeWorker = worker;
   }
@@ -665,7 +669,7 @@ export class Executor {
             _act,
             storageProvider,
             { providerId: provider_id, providerName: provider_name },
-            network_node?.get_deploy_args(),
+            network_node,
             task
           );
           let timeout = false;

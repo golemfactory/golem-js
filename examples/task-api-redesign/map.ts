@@ -6,7 +6,6 @@ import { createGolem } from "../../dist";
 
   const results = golem.map<string, string>(data, async (ctx, x) => {
     const res = await ctx.run(`echo "${x}"`);
-    console.log(`Result=${res.stdout}`);
     return res.stdout?.trim();
   });
   const finalOutput: string[] = [];

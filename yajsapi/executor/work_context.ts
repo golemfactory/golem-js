@@ -5,7 +5,8 @@ import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity";
 import { Worker } from "./golem";
 import { sleep, logger } from "../utils";
 import { Task } from "./task";
-import { Readable } from "stream";
+import { Readable, Transform } from "stream";
+import { NetworkNode } from "../network";
 
 class Batch {
   private script: Script;
@@ -36,7 +37,13 @@ class Batch {
     const results = await this.activity.execute(this.script.getExeScriptRequest());
     const allResults: Result[] = [];
     return new Promise((res, rej) => {
-      results.on("data", (res) => allResults.push(res));
+      results.on("data", (res) => {
+        if (res.result === "Error") {
+          this.script.after();
+          return rej(`${res.message}. Stdout: ${res.stdout?.trim()}. Stderr: ${res.stderr?.trim()}`);
+        }
+        allResults.push(res);
+      });
       results.on("end", () => {
         this.script.after();
         res(allResults);
@@ -48,14 +55,27 @@ class Batch {
     });
   }
   async endStream(): Promise<Readable> {
-    await this.script.before();
+    const script = this.script;
+    await script.before();
     const results = await this.activity.execute(this.script.getExeScriptRequest());
+    const errorResultHandler = new Transform({
+      objectMode: true,
+      transform(chunk, encoding, callback) {
+        script.after();
+        const error =
+          chunk?.result === "Error"
+            ? new Error(`${chunk?.message}. Stdout: ${chunk?.stdout?.trim()}. Stderr: ${chunk?.stderr?.trim()}`)
+            : null;
+        if (error) this.destroy(error);
+        else callback(null, chunk);
+      },
+    });
     results.on("end", () => this.script.after());
     results.on("error", (error) => {
-      this.script.after();
+      script.after();
       results.destroy(error);
     });
-    return results;
+    return results.pipe(errorResultHandler);
   }
 }
 
@@ -71,7 +91,7 @@ export class WorkContextNew {
     private activity: Activity,
     private storageProvider: StorageProvider,
     private nodeInfo: ProviderInfo,
-    private networkNodeInfo: object,
+    private networkNode?: NetworkNode,
     private task: Task<"D", "R">
   ) {}
   async before(worker?: Worker): Promise<Result[] | void> {
@@ -81,7 +101,9 @@ export class WorkContextNew {
       return;
     }
     if (state === ActivityStateStateEnum.Initialized) {
-      await this.activity.execute(new Script([new Deploy(this.networkNodeInfo), new Start()]).getExeScriptRequest());
+      await this.activity.execute(
+        new Script([new Deploy(this.networkNode?.get_deploy_args()), new Start()]).getExeScriptRequest()
+      );
     }
     let timeout = false;
     setTimeout(() => (timeout = true), 10000);
@@ -134,6 +156,12 @@ export class WorkContextNew {
   }
   log(msg: string) {
     logger.info(`[${this.nodeInfo.providerName}] ${msg}`);
+  }
+  getProviderInfo(): ProviderInfo {
+    return this.nodeInfo;
+  }
+  getWebsocketUri(port: number) {
+    return this.networkNode?.get_websocket_uri(port);
   }
 
   private async runOneCommand(command: Command): Promise<Result> {

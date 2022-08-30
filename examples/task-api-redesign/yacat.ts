@@ -19,7 +19,8 @@ async function main(args) {
       .beginBatch()
       .run(`hashcat -a 3 -m 400 '${args.hash}' '${args.mask}' --skip=${skip} --limit=${skip + step} -o pass.potfile`)
       .run("cat pass.potfile")
-      .end();
+      .end()
+      .catch((err) => console.error(err));
     if (!results?.[1]?.stdout) return false;
     return results?.[1]?.stdout.split(":")[1];
   });
@@ -43,7 +44,7 @@ program
   .option("-d, --debug", "output extra debugging")
   .option("--number-of-providers <number_of_providers>", "number of providers", (value) => parseInt(value), 3)
   .option("--mask <mask>")
-  .option("--hash <hash>");
+  .requiredOption("--hash <hash>");
 
 program.parse(process.argv);
 main(program.opts()).catch((e) => console.error(e));

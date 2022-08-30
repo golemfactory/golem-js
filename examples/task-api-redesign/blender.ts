@@ -1,6 +1,5 @@
 import { createGolem, utils } from "../../dist";
 import path from "path";
-// utils.changeLogLevel("debug");
 
 const blender_params = (frame) => ({
   scene_file: "/golem/resource/scene.blend",
@@ -29,7 +28,7 @@ async function main() {
   });
 
   const results = golem.map<number, string>(utils.range(0, 60, 10), async (ctx, frame) => {
-    await ctx
+    const result = await ctx
       .beginBatch()
       .uploadJson(blender_params(frame), "/golem/work/params.json")
       .run("/golem/entrypoints/run-blender.sh")
@@ -39,7 +38,7 @@ async function main() {
       )
       .end()
       .catch((error) => console.error(error));
-    return `output_${frame}.png`;
+    return result ? `output_${frame}.png` : "";
   });
   for await (const result of results) {
     console.log(result);

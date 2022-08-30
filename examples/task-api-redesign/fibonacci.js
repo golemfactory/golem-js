@@ -13,3 +13,4 @@ async function main() {
   const result = await golem.run((ctx) => fibo(ctx, 5));
   console.log(result.stdout);
 }
+main().catch((e) => console.error(e));
