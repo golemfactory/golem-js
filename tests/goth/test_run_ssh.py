@@ -72,7 +72,7 @@ async def test_run_ssh(
 
     configure_logging(log_dir)
     # This is the default configuration with 2 wasm/VM providers
-    goth_config = load_yaml(Path(__file__).parent / "assets" / "goth-config.yml")
+    goth_config = load_yaml(Path(__file__).parent / "assets" / "goth-config.yml", config_overrides)
 
     requestor_path = project_dir / "examples" / "ssh" / "ssh.js"
 
