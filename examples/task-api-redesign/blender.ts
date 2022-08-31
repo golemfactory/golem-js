@@ -40,9 +40,7 @@ async function main() {
       .catch((error) => console.error(error));
     return result ? `output_${frame}.png` : "";
   });
-  for await (const result of results) {
-    console.log(result);
-  }
+  for await (const result of results) console.log(result);
   await golem.end();
 }
 
