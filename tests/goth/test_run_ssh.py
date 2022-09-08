@@ -74,7 +74,7 @@ async def test_run_ssh(
     # This is the default configuration with 2 wasm/VM providers
     goth_config = load_yaml(Path(__file__).parent / "assets" / "goth-config.yml")
 
-    requestor_path = project_dir / "examples" / "ssh" / "ssh.js"
+    examples_dir = project_dir / "examples"
 
     runner = Runner(
         base_log_dir=log_dir,
@@ -86,7 +86,7 @@ async def test_run_ssh(
         requestor = runner.get_probes(probe_type=RequestorProbe)[0]
 
         async with requestor.run_command_on_host(
-            f"node {requestor_path} --subnet-tag {SUBNET_TAG} --timeout 15",
+            f"npm run --prefix {examples_dir} ts:ssh -- -d --subnet-tag {SUBNET_TAG} --timeout 15",
             env=os.environ,
         ) as (_cmd_task, cmd_monitor, process_monitor):
             start_time = time.time()
