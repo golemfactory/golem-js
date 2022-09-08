@@ -122,13 +122,6 @@ export class Activity {
             const newResults = results.slice(lastIndex + 1);
             if (Array.isArray(newResults) && newResults.length) {
               newResults.forEach((result) => {
-                // if (result.result === "Error") {
-                //   this.destroy(
-                //     new Error(
-                //       `Error: ${result?.message}. Stdout: ${result?.stdout?.trim()}. Stderr: ${result?.stderr?.trim()}`
-                //     )
-                //   );
-                // }
                 this.push(result);
                 isBatchFinished = result.isBatchFinished || false;
                 lastIndex = result.index;
