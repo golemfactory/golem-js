@@ -1,35 +1,19 @@
-const { Executor, Task, utils, vm } = require("yajsapi");
-const { logUtils } = utils;
+const { createExecutor, utils } = require("../../dist");
 const { program } = require("commander");
 
 async function main(fibo_n = 1, tasks_count = 1, subnet_tag, payment_driver, payment_network) {
-  const task_package = await vm.repo({
-    image_hash: "529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4",
-  });
-  const tasks = Array(tasks_count).fill(new Task({}));
-
-  async function* worker(context, tasks) {
-    for await (let task of tasks) {
-      context.run("/usr/local/bin/node", ["/golem/work/fibo.js", fibo_n.toString()]);
-      const future_result = yield context.commit();
-      const { results } = await future_result;
-      task.accept_result(results[results.length - 1]);
-    }
-  }
-
-  const executor = new Executor({
-    task_package,
-    budget: "1",
+  const executor = await createExecutor({
+    package: "529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4",
     subnet_tag,
     payment_driver,
     payment_network,
-    event_consumer: logUtils.logSummary(),
   });
 
-  await executor.run(async (executor) => {
-    for await (let completed of executor.submit(worker, tasks)) {
-      console.log(completed.result().stdout);
-    }
+  const data = Array(tasks_count).fill(null);
+
+  await executor.forEach(data, async (ctx) => {
+    const result = await ctx.run("/usr/local/bin/node", ["/golem/work/fibo.js", fibo_n.toString()]);
+    console.log(result.stdout);
   });
 }
 program
