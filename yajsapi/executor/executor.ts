@@ -6,7 +6,7 @@ import { MarketStrategy } from "./strategy";
 import { Callable, sleep } from "../utils";
 import * as events from "./events";
 
-type GolemOptions = {
+type ExecutorOptions = {
   package: string | Package;
   max_workers?: number;
   timeout?: number | string;
@@ -27,7 +27,7 @@ type GolemOptions = {
   capabilities?: string[];
 };
 
-type GolemOptionsMixin = string | GolemOptions;
+type ExecutorOptionsMixin = string | ExecutorOptions;
 
 export type Worker<InputType = unknown, OutputType = unknown> = (
   ctx: WorkContext,
@@ -43,16 +43,16 @@ const DEFAULT_OPTIONS = {
   payment_network: "rinkeby",
 };
 
-export class Golem {
+export class TaskExecutor {
   private executor?: Executor;
-  private options: GolemOptions;
+  private options: ExecutorOptions;
   private image_hash?: string;
 
-  constructor(options: GolemOptionsMixin) {
+  constructor(options: ExecutorOptionsMixin) {
     if (typeof options === "string") {
       this.image_hash = options;
     }
-    this.options = {} as GolemOptions;
+    this.options = {} as ExecutorOptions;
     for (const key in typeof options === "object" ? { ...DEFAULT_OPTIONS, ...options } : DEFAULT_OPTIONS) {
       this.options[key] = options[key] ?? process.env?.[key.toUpperCase()] ?? DEFAULT_OPTIONS[key];
     }
@@ -129,8 +129,8 @@ export class Golem {
   }
 }
 
-export async function createGolem(options: GolemOptionsMixin) {
-  const golem = new Golem(options);
-  await golem.init();
-  return golem;
+export async function createExecutor(options: ExecutorOptionsMixin) {
+  const executor = new TaskExecutor(options);
+  await executor.init();
+  return executor;
 }

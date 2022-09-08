@@ -47,7 +47,7 @@ import {
 import { Package } from "../package";
 import axios from "axios";
 
-import { Worker } from "./golem";
+import { Worker } from "./executor";
 import { WorkContext } from "./work_context";
 import { GftpStorageProvider } from "../storage/gftp_provider";
 
