@@ -6,18 +6,16 @@ import utc from "dayjs/plugin/utc";
 import duration from "dayjs/plugin/duration";
 import { MarketDecoration } from "ya-ts-client/dist/ya-payment/src/models";
 
-import { ExecOptions, Work, WorkContext } from "./ctx";
 import * as events from "./events";
-import { Activity as ActivityProp, NodeInfo, NodeInfoKeys } from "../props";
+import { Activity as ActivityProp, NodeInfo, NodeInfoKeys, DemandBuilder } from "../props";
 import { Counter } from "../props/com";
-import { DemandBuilder } from "../props/builder";
 import { Network } from "../network";
 
 import * as rest from "../rest";
 import { Agreement, OfferProposal, Subscription } from "../rest/market";
 import { AgreementsPool } from "./agreements_pool";
 import { Allocation, DebitNote, Invoice } from "../rest/payment";
-import { Activity, ActivityFactory, Result } from "../activity";
+import { Activity, ActivityFactory } from "../activity";
 
 import * as csp from "js-csp";
 
@@ -50,7 +48,7 @@ import { Package } from "../package";
 import axios from "axios";
 
 import { Worker } from "./golem";
-import { WorkContextNew } from "./work_context";
+import { WorkContext } from "./work_context";
 import { GftpStorageProvider } from "../storage/gftp_provider";
 
 export const sgx = _sgx;
@@ -124,8 +122,6 @@ export class BatchResults {
 }
 
 class AsyncGeneratorBreak extends Error {}
-
-type WorkItem = Work | [Work, ExecOptions];
 
 type D = "D"; // Type var for task data
 type R = "R"; // Type var for task result
@@ -297,47 +293,7 @@ export class Executor {
     this._network_address = network_address;
   }
 
-  async submit_new_run<OutputType = Result>(worker): Promise<OutputType> {
-    this._active_computations += 1;
-    let result;
-    try {
-      result = await this.submit_new_task<OutputType>(worker);
-      csp.putAsync(this._chan_computation_done, true);
-    } catch (e) {
-      logger.error(e);
-    }
-    return result;
-  }
-
-  submit_new_map<InputType, OutputType>(data: Iterable<InputType>, worker): AsyncIterable<OutputType | undefined> {
-    const inputs = [...data];
-    const featureResults = inputs.map((value) => this.submit_new_task<OutputType>(worker, value));
-    const results: OutputType[] = [];
-    let resultsCount = 0;
-    featureResults.forEach((featureResult) => featureResult.then((res) => results.push(res)));
-    return {
-      [Symbol.asyncIterator](): AsyncIterator<OutputType | undefined> {
-        return {
-          async next() {
-            if (resultsCount === inputs.length) {
-              return Promise.resolve({ done: true, value: undefined });
-            }
-            while (results.length === 0 && resultsCount < inputs.length) {
-              await sleep(100, true);
-            }
-            resultsCount += 1;
-            return Promise.resolve({ done: false, value: results.pop() });
-          },
-        };
-      },
-    };
-  }
-
-  async submit_new_foreach<InputType, OutputType>(data: Iterable<InputType>, worker): Promise<void> {
-    await Promise.all([...data].map((value) => this.submit_new_task<OutputType>(worker, value)));
-  }
-
-  submit_new_run_before(worker) {
+  submit_before(worker) {
     this.beforeWorker = worker;
   }
 
@@ -596,7 +552,7 @@ export class Executor {
     async function process_batches(
       agreement_id: string,
       activity: Activity,
-      ctx: WorkContextNew,
+      ctx: WorkContext,
       worker: Worker,
       task: Task<D, R>
     ) {
@@ -663,7 +619,7 @@ export class Executor {
           const tasks = task_emitter(consumer);
           const { done, value: task } = await tasks.next();
           if (done) return;
-          const new_work_context = new WorkContextNew(
+          const new_work_context = new WorkContext(
             _act,
             storageProvider,
             { providerId: provider_id, providerName: provider_name },
@@ -853,7 +809,10 @@ export class Executor {
     }
   }
 
-  async submit_new_task<OutputType>(worker: Worker, data?: unknown): Promise<OutputType> {
+  async submit_new_task<InputType, OutputType>(
+    worker: Worker<InputType, OutputType>,
+    data?: unknown
+  ): Promise<OutputType> {
     while (!this.done_queue && !this.work_queue) {
       await sleep(2);
       logger.debug("Executor is not initialized");

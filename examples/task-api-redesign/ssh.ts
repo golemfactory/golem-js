@@ -6,11 +6,11 @@ async function main(subnet_tag, payment_driver, payment_network, count = 2, sess
   const golem = await createGolem({
     package: "1e06505997e8bd1b9e1a00bd10d255fc6a390905e4d6840a22a79902",
     capabilities: ["vpn"],
+    network_address: "192.168.0.0/24",
+    max_workers: count,
     subnet_tag,
     payment_driver,
     payment_network,
-    network_address: "192.168.0.0/24",
-    max_workers: count,
   });
   const data = new Array(count).fill(null);
   const app_key = process.env["YAGNA_APPKEY"];

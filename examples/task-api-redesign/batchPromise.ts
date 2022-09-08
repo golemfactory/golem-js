@@ -5,8 +5,8 @@ import { createGolem } from "../../dist";
   await golem.run(async (ctx) => {
     const res = await ctx
       .beginBatch()
-      .run('echo "Hello World"')
       .run('echo "Hello Golem"')
+      .run('echo "Hello World"')
       .run("error_command")
       .end()
       .catch((error) => console.log(error));

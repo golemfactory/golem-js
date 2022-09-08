@@ -1,9 +1,9 @@
-import { Package, RepoOpts } from "../package";
-import { WorkContextNew } from "./work_context";
-import { Executor, ExecutorOpts, vm } from "./";
+import { Package } from "../package";
+import { WorkContext } from "./work_context";
+import { Executor, vm } from "./";
 import { Result } from "../activity";
 import { MarketStrategy } from "./strategy";
-import { Callable } from "../utils";
+import { Callable, sleep } from "../utils";
 import * as events from "./events";
 
 type GolemOptions = {
@@ -30,7 +30,7 @@ type GolemOptions = {
 type GolemOptionsMixin = string | GolemOptions;
 
 export type Worker<InputType = unknown, OutputType = unknown> = (
-  ctx: WorkContextNew,
+  ctx: WorkContext,
   data: InputType
 ) => Promise<OutputType | void>;
 
@@ -44,7 +44,7 @@ const DEFAULT_OPTIONS = {
 };
 
 export class Golem {
-  private oldExecutor?: Executor;
+  private executor?: Executor;
   private options: GolemOptions;
   private image_hash?: string;
 
@@ -67,34 +67,61 @@ export class Golem {
     } else {
       task_package = this.options.package;
     }
-    this.oldExecutor = new Executor({ ...this.options, task_package });
-    await this.oldExecutor.ready();
-    this.oldExecutor.init().catch((error) => {
+    this.executor = new Executor({ ...this.options, task_package });
+    await this.executor.ready();
+    this.executor.init().catch((error) => {
       throw error;
     });
   }
 
   beforeEach(worker: Worker) {
-    this.oldExecutor!.submit_new_run_before(worker);
+    if (!this.executor) throw new Error("Golem executor not initialized");
+    this.executor.submit_before(worker);
   }
 
-  async run<OutputType = Result>(worker: Worker): Promise<OutputType> {
-    return this.oldExecutor!.submit_new_run<OutputType>(worker);
+  async run<OutputType = Result>(worker: Worker<undefined, OutputType>): Promise<OutputType> {
+    if (!this.executor) throw new Error("Golem executor is not initialized");
+    return this.executor.submit_new_task<undefined, OutputType>(worker);
   }
 
   map<InputType, OutputType>(
     data: Iterable<InputType>,
     worker: Worker<InputType, OutputType>
   ): AsyncIterable<OutputType | undefined> {
-    return this.oldExecutor!.submit_new_map<InputType, OutputType>(data, worker);
+    if (!this.executor) throw new Error("Golem executor is not initialized");
+    const inputs = [...data];
+    const featureResults = inputs.map((value) => this.executor!.submit_new_task<InputType, OutputType>(worker, value));
+    const results: OutputType[] = [];
+    let resultsCount = 0;
+    featureResults.forEach((featureResult) => featureResult.then((res) => results.push(res)));
+    return {
+      [Symbol.asyncIterator](): AsyncIterator<OutputType | undefined> {
+        return {
+          async next() {
+            if (resultsCount === inputs.length) {
+              return Promise.resolve({ done: true, value: undefined });
+            }
+            while (results.length === 0 && resultsCount < inputs.length) {
+              await sleep(100, true);
+            }
+            resultsCount += 1;
+            return Promise.resolve({ done: false, value: results.pop() });
+          },
+        };
+      },
+    };
   }
 
-  forEach<InputType, OutputType>(data: Iterable<InputType>, worker: Worker<InputType, OutputType>): Promise<void> {
-    return this.oldExecutor!.submit_new_foreach<InputType, OutputType>(data, worker);
+  async forEach<InputType, OutputType>(
+    data: Iterable<InputType>,
+    worker: Worker<InputType, OutputType>
+  ): Promise<void> {
+    if (!this.executor) throw new Error("Golem executor is not initialized");
+    await Promise.all([...data].map((value) => this.executor!.submit_new_task<InputType, OutputType>(worker, value)));
   }
 
   async end() {
-    await this.oldExecutor?.done();
+    await this.executor?.done();
   }
 
   private async createPackage(image_hash: string): Promise<Package> {

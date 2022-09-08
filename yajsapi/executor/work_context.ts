@@ -85,7 +85,7 @@ export interface ProviderInfo {
   providerId: string;
 }
 
-export class WorkContextNew {
+export class WorkContext {
   private resultAccepted = false;
   private resultRejected = false;
   constructor(
