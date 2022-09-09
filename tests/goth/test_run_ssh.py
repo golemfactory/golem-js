@@ -156,11 +156,11 @@ async def test_run_ssh(
                 logger.info("SSH connections confirmed.")
 
             for _ in range(2):
-                await cmd_monitor.wait_for_pattern("Task .* completed", timeout=20)
+                await cmd_monitor.wait_for_pattern("Task completed", timeout=30)
 
-            await cmd_monitor.wait_for_pattern(".*Computation finished", timeout=20)
-            await cmd_monitor.wait_for_pattern(".*Removed network", timeout=20)
+            await cmd_monitor.wait_for_pattern(".*Computation finished", timeout=40)
+            await cmd_monitor.wait_for_pattern(".*Removed network", timeout=40)
             logger.info(f"Network removed")
 
-            await cmd_monitor.wait_for_pattern(".*Executor has shut down", timeout=20)
+            await cmd_monitor.wait_for_pattern(".*Executor has shut down", timeout=40)
             logger.info(f"Requestor script finished ({elapsed_time()})")
