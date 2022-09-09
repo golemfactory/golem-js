@@ -75,12 +75,12 @@ export class TaskExecutor {
   }
 
   beforeEach(worker: Worker) {
-    if (!this.executor) throw new Error("Golem executor not initialized");
+    if (!this.executor) throw new Error("Task executor not initialized");
     this.executor.submit_before(worker);
   }
 
   async run<OutputType = Result>(worker: Worker<undefined, OutputType>): Promise<OutputType> {
-    if (!this.executor) throw new Error("Golem executor is not initialized");
+    if (!this.executor) throw new Error("Task executor is not initialized");
     return this.executor.submit_new_task<undefined, OutputType>(worker);
   }
 
@@ -88,7 +88,7 @@ export class TaskExecutor {
     data: Iterable<InputType>,
     worker: Worker<InputType, OutputType>
   ): AsyncIterable<OutputType | undefined> {
-    if (!this.executor) throw new Error("Golem executor is not initialized");
+    if (!this.executor) throw new Error("Task executor is not initialized");
     const inputs = [...data];
     const featureResults = inputs.map((value) => this.executor!.submit_new_task<InputType, OutputType>(worker, value));
     const results: OutputType[] = [];
@@ -116,7 +116,7 @@ export class TaskExecutor {
     data: Iterable<InputType>,
     worker: Worker<InputType, OutputType>
   ): Promise<void> {
-    if (!this.executor) throw new Error("Golem executor is not initialized");
+    if (!this.executor) throw new Error("Task executor is not initialized");
     await Promise.all([...data].map((value) => this.executor!.submit_new_task<InputType, OutputType>(worker, value)));
   }
 
