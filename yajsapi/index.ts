@@ -1,6 +1,6 @@
 import { BatchResults, Executor, Task, sgx, vm } from "./executor";
 import { WorkContext, Work, ExecOptions } from "./executor/ctx";
-import { createGolem } from "./executor/golem";
+import { createExecutor } from "./executor/executor";
 import * as props from "./props";
 import * as rest from "./rest";
 import * as storage from "./storage";
@@ -17,7 +17,7 @@ import * as script from "./script";
 // });
 
 export {
-  createGolem,
+  createExecutor,
   Executor,
   ExecOptions,
   Task,
