@@ -36,7 +36,7 @@ async function main(subnet_tag, payment_driver, payment_network, count = 2, sess
     console.log("------------------------------------------\n");
     await utils.sleep(session_timeout);
     ctx.acceptResult("ok");
-    console.log("Session timeout");
+    console.log(`Task completed. Session SSH closed after ${session_timeout} secs timeout.`);
   });
   await executor.end();
 }

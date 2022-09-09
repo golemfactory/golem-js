@@ -14,7 +14,7 @@
         "ts:yacat": "ts-node-script ./yacat/yacat.ts",
         "js:hello": "node ./hello-world/hello.js",
         "js:fibonacci": "node ./fibonacci/fibonacci.js",
-        "js:ssh": "node ./ssh/ssh.js"
+        "ts:ssh": "ts-node ./ssh/ssh.ts"
     },
     "author": "Muhammed Tanrikulu <muhammed@golem.network>",
     "license": "LGPL-3.0",
