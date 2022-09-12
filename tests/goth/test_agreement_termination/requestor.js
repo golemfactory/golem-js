@@ -16,16 +16,17 @@ async function main() {
   });
 
   await executor.run(async (ctx) => {
-    await ctx.run("invalid_command").catch((e) => null);
     ctx.acceptResult();
+    await ctx.run("invalid_command");
   });
 
   const results = await executor.map(range(0, 5), async (ctx) => ctx.run("/bin/sleep", ["1"]));
 
   for await (let result of results) {
-    console.log(`Task computed: ${result.stdout}`);
+    console.log(`Task computed: ${result.index}`);
   }
   console.log("All tasks computed");
+  await executor.end();
 }
 
 utils.changeLogLevel("debug");
