@@ -3,7 +3,14 @@ import { program } from "commander";
 const logger = utils.logger;
 
 async function main(args) {
-  const executor = await createExecutor("055911c811e56da4d75ffc928361a78ed13077933ffa8320fb1ec2db");
+  const executor = await createExecutor({
+    package: "055911c811e56da4d75ffc928361a78ed13077933ffa8320fb1ec2db",
+    max_workers: args.number_of_providers,
+    budget: 10,
+    subnet_tag: args.subnet,
+    payment_driver: args.driver,
+    payment_network: args.network,
+  });
   const keyspace = await executor.run<number>(async (ctx) => {
     const result = await ctx.run(`hashcat --keyspace -a 3 ${args.mask} -m 400`);
     return parseInt(result.stdout || "");
@@ -45,6 +52,9 @@ program
   .option("--number-of-providers <number_of_providers>", "number of providers", (value) => parseInt(value), 3)
   .option("--mask <mask>")
   .requiredOption("--hash <hash>");
-
-program.parse(process.argv);
-main(program.opts()).catch((e) => console.error(e));
+program.parse();
+const options = program.opts();
+if (options.debug) {
+  utils.changeLogLevel("debug");
+}
+main(options).catch((e) => console.error(e));
