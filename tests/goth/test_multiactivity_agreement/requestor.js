@@ -19,6 +19,8 @@ async function main() {
     const result = await ctx.run("/bin/sleep", ["1"]);
     console.log(`Task computed: ${result.stdout}`);
   });
+
+  await executor.end();
 }
 
 utils.changeLogLevel("debug");
