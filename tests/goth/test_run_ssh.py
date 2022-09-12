@@ -72,7 +72,7 @@ async def test_run_ssh(
 
     configure_logging(log_dir)
     # This is the default configuration with 2 wasm/VM providers
-    goth_config = load_yaml(Path(__file__).parent / "assets" / "goth-config.yml")
+    goth_config = load_yaml(Path(__file__).parent / "assets" / "goth-config.yml", config_overrides)
 
     examples_dir = project_dir / "examples"
 
@@ -156,7 +156,7 @@ async def test_run_ssh(
                 logger.info("SSH connections confirmed.")
 
             for _ in range(2):
-                await cmd_monitor.wait_for_pattern("Task completed", timeout=30)
+                await cmd_monitor.wait_for_pattern("Task completed", timeout=40)
 
             await cmd_monitor.wait_for_pattern(".*Computation finished", timeout=40)
             await cmd_monitor.wait_for_pattern(".*Removed network", timeout=40)
