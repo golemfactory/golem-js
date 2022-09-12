@@ -557,25 +557,19 @@ export class Executor {
       task: Task<D, R>
     ) {
       /* TODO ctrl+c handling */
-      try {
-        emit(
+      emit(
           new events.TaskStarted({
             agr_id: agreement_id,
             task_id: task.id,
             task_data: task.data(),
           })
-        );
-        emit(new events.ScriptSent({ agr_id: agreement_id, task_id: task.id, cmds: [] }));
-        ctx.acceptResult(await worker(ctx, task.data()));
-        emit(new events.GettingResults({ agr_id: agreement_id, task_id: task.id }));
-        emit(new events.ScriptFinished({ agr_id: agreement_id, task_id: task.id }));
-        await accept_payment_for_agreement({ agreement_id: agreement_id, partial: true });
-        emit(new events.CheckingPayments());
-      } catch (e) {
-        logger.error(e.toString());
-      } finally {
-        // todo
-      }
+      );
+      emit(new events.ScriptSent({ agr_id: agreement_id, task_id: task.id, cmds: [] }));
+      ctx.acceptResult(await worker(ctx, task.data()));
+      emit(new events.GettingResults({ agr_id: agreement_id, task_id: task.id }));
+      emit(new events.ScriptFinished({ agr_id: agreement_id, task_id: task.id }));
+      await accept_payment_for_agreement({ agreement_id: agreement_id, partial: true });
+      emit(new events.CheckingPayments());
     }
 
     async function* task_emitter(consumer: Consumer<any>): AsyncGenerator<Task<D, R>> {

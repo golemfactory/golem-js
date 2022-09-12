@@ -142,7 +142,7 @@ export class WorkContext {
     this.resultAccepted = true;
   }
   rejectResult(msg: string) {
-    if (!this.resultRejected) this.task.reject_result(msg, true);
+    if (!this.resultRejected && !this.resultAccepted) this.task.reject_result(msg, true);
     this.resultRejected = true;
     this.resultAccepted = true;
   }
