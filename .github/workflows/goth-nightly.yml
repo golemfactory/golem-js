@@ -45,7 +45,7 @@ jobs:
     runs-on: goth
     needs: prepare-matrix-master-only
     strategy:
-      matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix-json) }}
+      matrix: ${{ fromJson(needs.prepare-matrix-master-only.outputs.matrix-json) }}
       fail-fast: false
     name: Run integration tests (nightly) on ${{ matrix.branch }}
     steps:
