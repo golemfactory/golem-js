@@ -36,7 +36,7 @@ jobs:
     outputs:
       matrix-json: ${{ steps.get-matrix.outputs.matrix }}
     steps:
-      # prepares JSON object representing strategy matrix which only the master branch
+      # prepares JSON object representing strategy matrix with only the master branch
       - name: Get matrix JSON
         id: get-matrix
         run: echo "::set-output name=matrix::{\"include\":[{\"branch\":\"master\"}]}"
@@ -45,7 +45,7 @@ jobs:
     runs-on: goth
     needs: prepare-matrix-master-only
     strategy:
-      matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix-json) }}
+      matrix: ${{ fromJson(needs.prepare-matrix-master-only.outputs.matrix-json) }}
       fail-fast: false
     name: Run integration tests (nightly) on ${{ matrix.branch }}
     steps:
