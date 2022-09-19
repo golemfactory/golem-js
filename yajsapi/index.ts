@@ -5,6 +5,8 @@ import * as rest from "./rest";
 import * as storage from "./storage";
 import * as utils from "./utils";
 import * as network from "./network";
+import * as activity from "./activity";
+import * as script from "./script";
 
 // For debug purposes, in case of unhandled rejection issues
 // detect the related async call with this
@@ -13,4 +15,20 @@ import * as network from "./network";
 //   console.log('Unhandled Rejection at: Promise', p, 'reason:', reason);
 // });
 
-export { Executor, ExecOptions, Task, sgx, vm, Work, WorkContext, BatchResults, props, rest, storage, utils, network };
+export {
+  Executor,
+  ExecOptions,
+  Task,
+  sgx,
+  vm,
+  Work,
+  WorkContext,
+  BatchResults,
+  props,
+  rest,
+  storage,
+  utils,
+  network,
+  activity,
+  script,
+};

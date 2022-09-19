@@ -1,0 +1,30 @@
+name: Cypress
+
+on:
+  push:
+    branches:
+      - master
+      - b0.*
+  pull_request:
+    branches:
+      - master
+      - b0.*
+
+jobs:
+  cypress-run:
+    runs-on: ubuntu-latest
+    container: cypress/browsers:node14.17.0-chrome88-ff89
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Build yajsapi
+        run: |
+          npm install
+          npm run build
+      - name: Cypress run
+        uses: cypress-io/github-action@v4
+        with:
+          install: false
+          start: npm run test:cypress
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
