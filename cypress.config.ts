@@ -38,7 +38,7 @@ export default defineConfig({
         });
         let isCompiled = false;
         let timeout = false;
-        setTimeout(() => (timeout = true), 20000);
+        setTimeout(() => (timeout = true), 60000);
         while (!isCompiled && !timeout) {
           isCompiled = existsSync(path.resolve(webpackConfig.output.path, webpackConfig.output.filename));
           console.log("Waiting for webpack...");
