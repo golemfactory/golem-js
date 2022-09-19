@@ -14,7 +14,6 @@ import CancellationToken from "../utils/cancellationToken";
 export interface ActivityOptions {
   credentials?: { apiKey?: string; basePath?: string };
   requestTimeout?: number;
-  responseTimeout?: number;
   executeTimeout?: number;
   exeBatchResultsFetchInterval?: number;
   logger?: Logger;
@@ -29,10 +28,21 @@ export class Activity {
   private readonly stateApi: RequestorStateApi;
   private readonly logger?: Logger;
   protected readonly requestTimeout: number;
-  private readonly responseTimeout: number;
   private readonly executeTimeout: number;
   private readonly exeBatchResultsFetchInterval: number;
 
+  /**
+   * Create an Activity
+   * @param id - activity ID created by Activity Factory
+   * @param options - ActivityOptions
+   * @param options.credentials.apiKey - Yagna Api Key
+   * @param options.credentials.basePath - Yagna base path to Activity REST Api
+   * @param options.requestTimeout - timeout for sending and creating batch
+   * @param options.executeTimeout - timeout for executing batch
+   * @param options.exeBatchResultsFetchInterval - interval for fetching batch results while polling
+   * @param options.logger - logger module
+   * @param options.taskPackage - required for create secure activity
+   */
   constructor(public readonly id, protected readonly options?: ActivityOptions) {
     const apiKey = this.options?.credentials?.apiKey || process.env.YAGNA_APPKEY;
     const basePath = this.options?.credentials?.basePath || process.env.YAGNA_API_BASEPATH;
@@ -43,12 +53,18 @@ export class Activity {
     this.api = new RequestorControlApi(apiConfig);
     this.stateApi = new RequestorStateApi(apiConfig);
     this.requestTimeout = options?.requestTimeout || 10000;
-    this.responseTimeout = options?.responseTimeout || 10000;
     this.executeTimeout = options?.executeTimeout || 60000;
     this.exeBatchResultsFetchInterval = options?.exeBatchResultsFetchInterval || 3000;
     this.logger = options?.logger;
   }
 
+  /**
+   * Execute script
+   * @param script - exe script request
+   * @param stream - define type of getting results from execution (polling or streaming)
+   * @param timeout - execution timeout
+   * @param cancellationToken - token for interrupting activity
+   */
   public async execute(
     script: ExeScriptRequest,
     stream?: boolean,
@@ -70,11 +86,17 @@ export class Activity {
       : this.pollingBatch(batchId, startTime, timeout, cancellationToken);
   }
 
+  /**
+   * Stop and destroy activity
+   */
   public async stop(): Promise<boolean> {
     await this.end();
     return true;
   }
 
+  /**
+   * Getting current state of activity
+   */
   public async getState(): Promise<ActivityStateEnum> {
     try {
       const { data } = await this.stateApi.getActivityState(this.id);
