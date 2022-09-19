@@ -1,5 +1,6 @@
 /* eslint @typescript-eslint/no-this-alias: 0 */
 /* eslint no-constant-condition: 0 */
+/* old executor */
 import bluebird, { TimeoutError } from "bluebird";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
