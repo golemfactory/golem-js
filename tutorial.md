@@ -9,6 +9,17 @@ The new version of the Taks API introduces a simplified interface for executing 
 The executor can be created by passing appropriate initial parameters such as: ...
 One required parameter is image_hash.
 
+```js
+const executor = await createExecutor("9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae"); 
+// OR
+const executor = await createExecutor({
+  subnet_tag,
+  payment_driver,
+  payment_network,
+  package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+});
+```
+
 ### 2. Execute one of the available executor methods: `run`, `map` or `forEach`.
 
 #### a) `run` method - we use method run to execute one worker function, eg.
@@ -35,7 +46,12 @@ In results we get async iterable object, so we can iterate for each element by `
 
 ### 3. Termination an executor instance
 
-   Termination of contracts, payment processing, etc.
+Termination of contracts, payment processing, etc.
+
+```js
+await executor.end();
+```
+
 
 ### Worker Function and Work Context API
 
