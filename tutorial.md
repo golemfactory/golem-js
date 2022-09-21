@@ -2,16 +2,17 @@
 
 The new version of the Taks API introduces a simplified interface for executing commands in the Golem network.
 
-## The basic algorithm is as follows:
+## The basic algorithm
 
 ### 1. Creating a Executor instance
 
-The executor can be created by passing appropriate initial parameters such as: ...
-One required parameter is image_hash.
-
+The executor can be created by passing appropriate initial parameters such as package, budget, subnet tag, payment driver, payment network etc.
+One required parameter is package. This can be done in two ways. First by pass only package image hash, e.g.
 ```js
 const executor = await createExecutor("9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae"); 
-// OR
+```
+Or by passing some optional parameters, eg
+```js
 const executor = await createExecutor({
   subnet_tag,
   payment_driver,
@@ -20,15 +21,15 @@ const executor = await createExecutor({
 });
 ```
 
-### 2. Execute one of the available executor methods: `run`, `map` or `forEach`.
+### 2. Executing one of the available executor methods: `run`, `map` or `forEach`.
 
-#### a) `run` method - we use method run to execute one worker function, eg.
+#### a) `run` method - to execute one worker function, e.g.
 ```js
   const result = await executor.run((ctx) => ctx.run("echo 'Hello World!'"));
   console.log(result.stdout)
 ```
 
-#### b) `map` - we use method map to get results for each element in iterable object, eg,
+#### b) `map` - to get results for each element in iterable object, e.g.
 ```js
   const data = [1, 2, 3, 4, 5];
   const results = executor.map(data, (ctx, item) => ctx.run(`echo "${item}"`));
@@ -36,7 +37,7 @@ const executor = await createExecutor({
 ```
 In results we get async iterable object, so we can iterate for each element by `for await` statement.
 
-#### c) `forEach` method - it is very similar to map, but it does not return any value, eg.
+#### c) `forEach` method - it is very similar to map, but it does not return any value, e.g.
 ```js
   const data = [1, 2, 3, 4, 5];
   await executor.forEach(data, async (ctx, item) => {
@@ -55,9 +56,9 @@ await executor.end();
 
 ### Worker Function and Work Context API
 
-Each of available method: `run`, `map` and `forEach` takes as a parameter `worker` function. Worker function is asynchronous and provide `Work Contect API` - `ctx`.
+Each of available method: `run`, `map` and `forEach` takes as a parameter `worker` function. Worker function is asynchronous and provide `Work Contect API` - `ctx` object.
 
-Wor Context allow to run single commands or batch of commands in provider.
+Work Context allow to run single commands or batch of commands on provider.
 
 Single commands available to run on provider:
 
@@ -66,7 +67,7 @@ Single commands available to run on provider:
    - `uploadJson()`
    - `downloadFile()`
 
-We can also compose particular command into batch. To do this we should use `beginBatch`, eg.
+You can also compose particular commands into batch. For this you should use `beginBatch`, e.g.
 
 ```js
 const res = await ctx
@@ -79,9 +80,9 @@ const res = await ctx
 
 res?.map(({ stdout }) => console.log(stdout));
 ```
-We can end batch of command by `end()` as above and it means that this code return `Promise` of `Result` objects (or throw an error if occurred).
+You can end batch of command by `end()` as above and it means that this code return `Promise` of `Result` objects (or throw an error if occurred).
 
-We can also end this batch by `endStream()` and then we get `Readable` stream, eg:
+You can also end this batch by `endStream()` and then you get `Readable` stream, e.g.
 
 ```js
 const results = await ctx
@@ -98,8 +99,8 @@ const results = await ctx
 
 ### Additional executor method `beforeEach()` 
 
-There is special method available in executor object, that allow to run a worker function once before each workers on provider per one activity. It's `beforeEach()` method.
-These method takes as parameter one worker function and run it only once on every new activity on provider. Below example demonstrate usage of this method.
+There is special method available in executor object, that allow you to run the worker function once before each workers on provider per one activity. This is `beforeEach()` method.
+This method takes as parameter one worker function and run it only once for each new provider activity. The following example demonstrate the use of this method.
 
 ```js
   executor.beforeEach(async (ctx) => {
