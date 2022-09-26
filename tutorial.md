@@ -80,7 +80,7 @@ const res = await ctx
 
 res?.map(({ stdout }) => console.log(stdout));
 ```
-You can end batch of command by `end()` as above and it means that this code return `Promise` of `Result` objects (or throw an error if occurred).
+You can end the batch of commands by using the `end()` method shown above, meaning this code returns a `Promise` of multiple `Result` objects (or throw an error if occurred).
 
 You can also end this batch by `endStream()` to get a `Readable` stream, e.g.
 
