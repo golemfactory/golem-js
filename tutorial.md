@@ -99,7 +99,7 @@ const results = await ctx
 
 ### Additional executor method `beforeEach()` 
 
-There is special method available in executor object, that allow you to run the worker function once before each workers on provider per one activity. This is `beforeEach()` method.
+There is a special method available in the executor object, that allows you to run the worker function once before each worker executes other tasks on the provider, but within the same activity. This is `beforeEach()` method.
 This method takes as parameter one worker function and run it only once for each new provider activity. The following example demonstrate the use of this method.
 
 ```js
