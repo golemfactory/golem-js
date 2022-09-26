@@ -82,7 +82,7 @@ res?.map(({ stdout }) => console.log(stdout));
 ```
 You can end batch of command by `end()` as above and it means that this code return `Promise` of `Result` objects (or throw an error if occurred).
 
-You can also end this batch by `endStream()` and then you get `Readable` stream, e.g.
+You can also end this batch by `endStream()` to get a `Readable` stream, e.g.
 
 ```js
 const results = await ctx
