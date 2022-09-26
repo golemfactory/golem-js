@@ -1,6 +1,6 @@
 # New Task API
 
-The new version of the Taks API introduces a simplified interface for executing commands in the Golem network.
+The new version of the Task API introduces a simplified interface for executing commands in the Golem network.
 
 ## The basic algorithm
 
