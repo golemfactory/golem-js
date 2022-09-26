@@ -1,5 +1,6 @@
 /* eslint @typescript-eslint/no-this-alias: 0 */
 /* eslint no-constant-condition: 0 */
+/* old executor */
 import bluebird, { TimeoutError } from "bluebird";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -645,7 +646,7 @@ export class Executor {
       }
       await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
       emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
-
+      await _act.stop();
       logger.debug(`Stopped worker related to agreement ${agreement.id()}.`);
       csp.putAsync(workers_done, true);
     }

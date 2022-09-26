@@ -1,13 +1,5 @@
 const { ActivityFactory } = require("../../dist/mid-level-api/activity");
-const {
-  Deploy,
-  Start,
-  Run,
-  Terminate,
-  Script,
-  CaptureMode,
-  CaptureFormat,
-} = require("../../dist/mid-level-api/script");
+const { Deploy, Start, Run, Terminate, Script } = require("../../dist/mid-level-api/script");
 
 async function main() {
   const agreementId = "fc2b499a50dc2d48cfbb7031f0f06001590cf62131e2d79aac9f3e7ee6a7e993";
@@ -19,8 +11,8 @@ async function main() {
   const command1 = new Deploy();
   const command2 = new Start();
   const capture = {
-    stdout: { [CaptureMode.STREAM]: { format: CaptureFormat.STR } },
-    stderr: { [CaptureMode.STREAM]: { format: CaptureFormat.STR } },
+    stdout: { stream: { format: "string" } },
+    stderr: { stream: { format: "string" } },
   };
   const command3 = new Run("/bin/sh", ["-c", 'echo "test"'], null, capture);
   const command4 = new Terminate();

@@ -25,20 +25,11 @@ export default defineConfig({
     setupNodeEvents(on) {
       on("before:run", async () => {
         webpack(webpackConfig, (err, stats) => {
-          if (err) {
-            throw err;
-          }
-          const info = stats?.toJson();
-          if (stats?.hasErrors()) {
-            throw info?.errors;
-          }
-          if (stats?.hasWarnings()) {
-            console.warn(info?.warnings);
-          }
+          if (err) throw err;
         });
         let isCompiled = false;
         let timeout = false;
-        setTimeout(() => (timeout = true), 20000);
+        setTimeout(() => (timeout = true), 60000);
         while (!isCompiled && !timeout) {
           isCompiled = existsSync(path.resolve(webpackConfig.output.path, webpackConfig.output.filename));
           console.log("Waiting for webpack...");

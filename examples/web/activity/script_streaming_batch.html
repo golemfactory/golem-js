@@ -129,8 +129,8 @@
         async function addToScript() {
             const bashCommand = document.getElementById('COMMAND').value
             const capture = {
-                stdout: { [yajsapi.script.CaptureMode.STREAM]: { format: yajsapi.script.CaptureFormat.STR } },
-                stderr: { [yajsapi.script.CaptureMode.STREAM]: { format: yajsapi.script.CaptureFormat.STR } },
+                stdout: { stream: { format: "string" } },
+                stderr: { stream: { format: "string" } },
             };
             const runCommand = new yajsapi.script.Run("/bin/sh", ["-c", bashCommand], undefined, capture);
             commands.splice(commands.length - 1, 0, runCommand);

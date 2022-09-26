@@ -2,7 +2,7 @@ import { Activity, Result } from "../activity";
 import { Command, Deploy, DownloadFile, Run, Script, Start, UploadFile } from "../script";
 import { StorageProvider } from "../storage/provider";
 import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity";
-import { Worker } from "./golem";
+import { Worker } from "./executor";
 import { sleep, logger } from "../utils";
 import { Task } from "./task";
 import { Readable, Transform } from "stream";

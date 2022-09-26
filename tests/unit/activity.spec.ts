@@ -12,17 +12,7 @@ rewiremock.enable();
 import { StorageProviderMock } from "../mock/storage_provider";
 import { Activity, ActivityStateEnum, ActivityFactory } from "../../yajsapi/activity";
 import { CancellationToken } from "../../yajsapi/utils";
-import {
-  Deploy,
-  Start,
-  Run,
-  Terminate,
-  UploadFile,
-  DownloadFile,
-  Script,
-  CaptureFormat,
-  CaptureMode,
-} from "../../yajsapi/script";
+import { Deploy, Start, Run, Terminate, UploadFile, DownloadFile, Script, Capture } from "../../yajsapi/script";
 
 test.before(() => {
   process.env.YAGNA_APPKEY = "test";
@@ -273,9 +263,9 @@ test("execute script by streaming batch", async (t) => {
   const activity = new Activity("test_id_2");
   const command1 = new Deploy();
   const command2 = new Start();
-  const capture = {
-    stdout: { [CaptureMode.STREAM]: { format: CaptureFormat.STR } },
-    stderr: { [CaptureMode.STREAM]: { format: CaptureFormat.STR } },
+  const capture: Capture = {
+    stdout: { stream: { format: "string" } },
+    stderr: { stream: { format: "string" } },
   };
   const command3 = new Run("test_command1", null, null, capture);
   const command4 = new Terminate();
@@ -335,9 +325,9 @@ test("handle timeout error while streaming batch", async (t) => {
   const activity = new Activity("test_id_3");
   const command1 = new Deploy();
   const command2 = new Start();
-  const capture = {
-    stdout: { [CaptureMode.STREAM]: { format: CaptureFormat.STR } },
-    stderr: { [CaptureMode.STREAM]: { format: CaptureFormat.STR } },
+  const capture: Capture = {
+    stdout: { stream: { format: "string" } },
+    stderr: { stream: { format: "string" } },
   };
   const command3 = new Run("test_command1", null, null, capture);
   const command4 = new Terminate();
@@ -357,9 +347,9 @@ test("cancel activity by cancellation token while streaming batch", async (t) =>
   const activity = new Activity("test_id_3");
   const command1 = new Deploy();
   const command2 = new Start();
-  const capture = {
-    stdout: { [CaptureMode.STREAM]: { format: CaptureFormat.STR } },
-    stderr: { [CaptureMode.STREAM]: { format: CaptureFormat.STR } },
+  const capture: Capture = {
+    stdout: { stream: { format: "string" } },
+    stderr: { stream: { format: "string" } },
   };
   const command3 = new Run("test_command1", null, null, capture);
   const command4 = new Terminate();
@@ -381,9 +371,9 @@ test("handle some error while streaming batch", async (t) => {
   const activity = new Activity("test_id_5");
   const command1 = new Deploy();
   const command2 = new Start();
-  const capture = {
-    stdout: { [CaptureMode.STREAM]: { format: CaptureFormat.STR } },
-    stderr: { [CaptureMode.STREAM]: { format: CaptureFormat.STR } },
+  const capture: Capture = {
+    stdout: { stream: { format: "string" } },
+    stderr: { stream: { format: "string" } },
   };
   const command3 = new Run("test_command1", null, null, capture);
   const command4 = new Terminate();

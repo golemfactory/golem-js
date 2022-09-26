@@ -34,25 +34,22 @@ export class Start extends Command {
 }
 
 export type Capture = {
-  stdout: { [key in CaptureMode]?: { format: `${CaptureFormat}` } };
-  stderr: { [key in CaptureMode]?: { format: `${CaptureFormat}` } };
+  stdout?: CaptureMode;
+  stderr?: CaptureMode;
 };
+type CaptureMode =
+  | { atEnd: { part?: CapturePart; format?: CaptureFormat } }
+  | { stream: { limit?: number; format?: CaptureFormat } };
+type CapturePart = { head: number } | { tail: number } | { headTail: number };
 
-export enum CaptureMode {
-  AT_END = "atEnd",
-  STREAM = "stream",
-}
+type CaptureFormat = "string" | "binary";
 
-export enum CaptureFormat {
-  BIN = "bin",
-  STR = "str",
-}
 
 export class Run extends Command {
   constructor(cmd: string, args?: string[] | null, env?: object | null, capture?: Capture) {
     const captureOpt = capture || {
-      stdout: { [CaptureMode.AT_END]: { format: CaptureFormat.STR } },
-      stderr: { [CaptureMode.AT_END]: { format: CaptureFormat.STR } },
+      stdout: { atEnd: { format: "string" } },
+      stderr: { atEnd: { format: "string" } },
     };
     super("run", {
       entry_point: cmd,
