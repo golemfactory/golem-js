@@ -35,7 +35,7 @@ const executor = await createExecutor({
   const results = executor.map(data, (ctx, item) => ctx.run(`echo "${item}"`));
   for await (const result of results) console.log(result.stdout);
 ```
-In results we get async iterable object, so we can iterate for each element by `for await` statement.
+In the `results` variable, we have an async iterable object, with each element accessible with the `for await` statement.
 
 #### c) `forEach` method - it is very similar to map, but it does not return any value, e.g.
 ```js
