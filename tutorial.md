@@ -14,9 +14,9 @@ const executor = await createExecutor("9a3b5d67b0b27746283cb5f287c13eab1beaa12d9
 Or by passing some optional parameters, eg
 ```js
 const executor = await createExecutor({
-  subnet_tag,
-  payment_driver,
-  payment_network,
+  subnet_tag: "devnet-beta",
+  payment_driver: "erc-20",
+  payment_network: "rinkeby",
   package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
 });
 ```
