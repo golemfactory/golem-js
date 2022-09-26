@@ -67,7 +67,7 @@ Single commands available to run on provider:
    - `uploadJson()`
    - `downloadFile()`
 
-You can also compose particular commands into batch. For this you should use `beginBatch`, e.g.
+You can also compose particular commands into batches. For this, you should use `beginBatch`, e.g.
 
 ```js
 const res = await ctx
