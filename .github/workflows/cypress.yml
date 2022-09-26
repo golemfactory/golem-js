@@ -25,6 +25,6 @@ jobs:
         uses: cypress-io/github-action@v4
         with:
           install: false
-          start: npm run test:cypress
+          start: npm run test:cypress video=false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
