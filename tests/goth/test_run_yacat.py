@@ -16,7 +16,7 @@ from goth.runner.probe import RequestorProbe
 logger = logging.getLogger("goth.test.run_yacat")
 
 EXPECTED_KEYSPACE_SIZE = 95
-ALL_TASKS = {"compute_keyspace", "0", "48"}
+ALL_TASKS = {"undefined", "0", "48"}
 
 
 # Temporal assertions expressing properties of sequences of "events". In this case, each "event"
@@ -114,13 +114,14 @@ async def test_run_yacat(
             all_sent = cmd_monitor.add_assertion(assert_all_tasks_sent)
             all_computed = cmd_monitor.add_assertion(assert_all_tasks_computed)
 
+            await cmd_monitor.wait_for_pattern(".*Received proposals from 2 ", timeout=40)
+            logger.info("Received proposals")
+
             await cmd_monitor.wait_for_pattern(
                 f".*Keyspace size computed. Keyspace size = {EXPECTED_KEYSPACE_SIZE}", timeout=120
             )
             logger.info("Keyspace found")
 
-            await cmd_monitor.wait_for_pattern(".*Received proposals from 2 ", timeout=20)
-            logger.info("Received proposals")
 
             await all_sent.wait_for_result(timeout=120)
             logger.info("All tasks sent")
