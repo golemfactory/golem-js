@@ -10,8 +10,8 @@ export const DEFAULT_REPO_SRV = "_girepo._tcp.dev.golem.network";
 export type RepoOpts = {
   engine?: string;
   image_hash: string;
-  min_mem_gib: number;
-  min_storage_gib: number;
+  min_mem_gib?: number;
+  min_storage_gib?: number;
   min_cpu_threads?: number;
   cores?: number;
   capabilities?: string[];

@@ -32,6 +32,7 @@ export class Task<TaskData, TaskResult> {
   private _handle?: [Handle<Task<TaskData, TaskResult>>, SmartQueue<Task<TaskData, TaskResult>>];
   private _result?: TaskResult | null;
   private _data;
+  private _worker;
   private _status!: TaskStatus;
 
   /**
@@ -39,7 +40,7 @@ export class Task<TaskData, TaskResult> {
    *
    * @param data     contains information needed to prepare command list for the provider
    */
-  constructor(data: TaskData) {
+  constructor(data: TaskData, worker) {
     this.id = Task.counter;
     this._started = null;
     this._finished = null;
@@ -48,6 +49,7 @@ export class Task<TaskData, TaskResult> {
 
     this._result = null;
     this._data = data;
+    this._worker = worker;
     this._status = TaskStatus.WAITING;
   }
 
@@ -76,7 +78,7 @@ export class Task<TaskData, TaskResult> {
     handle: Handle<Task<any, any>>,
     queue: SmartQueue<Task<any, any>>,
     emitter: Callable<[events.YaEvent], void>
-  ): Task<"TaskData", "TaskResult"> {
+  ): Task<"D", "R"> {
     const task = handle.data();
     task._handle = [handle, queue];
     task._start(emitter);
@@ -89,6 +91,10 @@ export class Task<TaskData, TaskResult> {
 
   data(): TaskData {
     return this._data;
+  }
+
+  worker() {
+    return this._worker;
   }
 
   result(): TaskResult | null | undefined {

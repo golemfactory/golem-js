@@ -238,6 +238,8 @@ class SummaryLogger {
       logger.debug(`Task started for agreement ${event["agr_id"]}`);
     } else if (eventName === events.TaskAccepted.name) {
       logger.debug(`Task accepted, task_id=${event["task_id"]}`);
+    } else if (eventName === events.TaskRejected.name) {
+      logger.warn(`Task rejected, task_id=${event["task_id"]}, reason: ${event["reason"]}`);
     } else if (eventName === events.ScriptSent.name) {
       const provider_info = this.agreement_provider_info[event["agr_id"]];
       logger.info(

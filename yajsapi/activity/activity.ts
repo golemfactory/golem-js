@@ -151,9 +151,11 @@ export class Activity {
             }
             await sleep(exeBatchResultsFetchInterval, true);
           } catch (error) {
-            retryCount = await handleError(error, lastIndex, retryCount, maxRetries).catch((error) =>
-              this.destroy(error)
-            );
+            try {
+              retryCount = await handleError(error, lastIndex, retryCount, maxRetries);
+            } catch (error) {
+              return this.destroy(error);
+            }
           }
         }
         this.push(null);

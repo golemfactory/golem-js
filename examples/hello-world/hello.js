@@ -1,4 +1,4 @@
-const { Executor, Task, vm } = require("yajsapi");
+const { Executor, Task, vm } = require("../../dist");
 
 async function main() {
   const task_package = await vm.repo({
