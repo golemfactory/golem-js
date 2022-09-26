@@ -7,7 +7,7 @@ The new version of the Taks API introduces a simplified interface for executing 
 ### 1. Creating a Executor instance
 
 The executor can be created by passing appropriate initial parameters such as package, budget, subnet tag, payment driver, payment network etc.
-One required parameter is package. This can be done in two ways. First by pass only package image hash, e.g.
+One required parameter is a package. This can be done in two ways. First by passing only package image hash, e.g.
 ```js
 const executor = await createExecutor("9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae"); 
 ```
