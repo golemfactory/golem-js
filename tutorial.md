@@ -11,7 +11,7 @@ One required parameter is a package. This can be done in two ways. First by pass
 ```js
 const executor = await createExecutor("9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae"); 
 ```
-Or by passing some optional parameters, eg
+Or by passing some optional parameters, e.g.
 ```js
 const executor = await createExecutor({
   subnet_tag: "devnet-beta",
