@@ -37,7 +37,7 @@ const executor = await createExecutor({
 ```
 In the `results` variable, we have an async iterable object, with each element accessible with the `for await` statement.
 
-#### c) `forEach` method - it is very similar to map, but it does not return any value, e.g.
+#### c) `forEach` method - it is very similar to a map, but it does not return any value, e.g.
 ```js
   const data = [1, 2, 3, 4, 5];
   await executor.forEach(data, async (ctx, item) => {
@@ -45,7 +45,7 @@ In the `results` variable, we have an async iterable object, with each element a
   });
 ```
 
-### 3. Termination an executor instance
+### 3. Termination of an executor instance
 
 Termination of contracts, payment processing, etc.
 
@@ -56,11 +56,11 @@ await executor.end();
 
 ### Worker Function and Work Context API
 
-Each of available method: `run`, `map` and `forEach` takes as a parameter `worker` function. Worker function is asynchronous and provide `Work Contect API` - `ctx` object.
+Each of the available methods: `run`, `map` and `forEach` takes the `worker` function as a parameter. The worker function is asynchronous and provides a `Work Context API` - `ctx` object.
 
-Work Context allow to run single commands or batch of commands on provider.
+Work Context allows running single commands or batches of commands on a provider.
 
-Single commands available to run on provider:
+Single commands available to run on a provider:
 
    - `run()`
    - `uploadFile()`
