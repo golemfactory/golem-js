@@ -59,6 +59,7 @@ async def assert_all_invoices_accepted(output_lines: EventStream[str]):
 async def test_run_ssh(
     log_dir: Path,
     project_dir: Path,
+    goth_config_path: Path,
     config_overrides: List[Override],
     ssh_verify_connection: bool,
 ) -> None:
@@ -71,8 +72,7 @@ async def test_run_ssh(
         )
 
     configure_logging(log_dir)
-    # This is the default configuration with 2 wasm/VM providers
-    goth_config = load_yaml(Path(__file__).parent / "assets" / "goth-config.yml", config_overrides)
+    goth_config = load_yaml(goth_config_path, config_overrides)
 
     requestor_path = project_dir / "examples" / "ssh" / "ssh.js"
 
