@@ -111,7 +111,7 @@ async def test_run_ssh(
             # # A longer timeout to account for downloading a VM image
             for i in range(2):
                 ssh_string = await cmd_monitor.wait_for_pattern(
-                    "ssh -o ProxyCommand", timeout=120
+                    "ssh -o ProxyCommand", timeout=240
                 )
                 matches = re.match("ssh -o ProxyCommand=('.*') (root@.*)", ssh_string)
 
@@ -147,20 +147,20 @@ async def test_run_ssh(
                     logger.debug("running ssh with: %s", args)
 
                     ssh = pexpect.spawn(" ".join(args))
-                    ssh.expect("[pP]assword:", timeout=5)
+                    ssh.expect("[pP]assword:", timeout=15)
                     ssh.sendline(password)
-                    ssh.expect("#1-Alpine SMP", timeout=5)
-                    ssh.expect(pexpect.EOF, timeout=5)
+                    ssh.expect("#1-Alpine SMP", timeout=15)
+                    ssh.expect(pexpect.EOF, timeout=15)
                     logger.info("Connection to %s confirmed.", auth_str)
 
                 logger.info("SSH connections confirmed.")
 
             for _ in range(2):
-                await cmd_monitor.wait_for_pattern("Task .* completed", timeout=20)
+                await cmd_monitor.wait_for_pattern("Task .* completed", timeout=240)
 
-            await cmd_monitor.wait_for_pattern(".*Computation finished", timeout=20)
-            await cmd_monitor.wait_for_pattern(".*Removed network", timeout=20)
+            await cmd_monitor.wait_for_pattern(".*Computation finished", timeout=240)
+            await cmd_monitor.wait_for_pattern(".*Removed network", timeout=240)
             logger.info(f"Network removed")
 
-            await cmd_monitor.wait_for_pattern(".*Executor has shut down", timeout=20)
+            await cmd_monitor.wait_for_pattern(".*Executor has shut down", timeout=240)
             logger.info(f"Requestor script finished ({elapsed_time()})")
