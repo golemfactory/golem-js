@@ -34,5 +34,5 @@ poethepoet = "^0.8.0"
 [tool.poe.tasks]
 codestyle = "black --check --diff ."
 goth-assets = "python -m goth create-assets assets"
-goth-tests = "pytest -svx . --config-override docker-compose.compose-file=docker-compose-hybrid-net.yml --ssh-verify-connection --reruns 3 --only-rerun AssertionError --only-rerun TimeoutError --only-rerun goth.runner.exceptions.TemporalAssertionError --only-rerun urllib.error.URLError --only-rerun goth.runner.exceptions.CommandError"
+goth-tests = "pytest -svx . --config-override docker-compose.build-environment.release-tag=pre-rel-v0.12.0-rc2 --config-path tests/goth/assets/goth-config.yml --ssh-verify-connection --reruns 3 --only-rerun AssertionError --only-rerun TimeoutError --only-rerun goth.runner.exceptions.TemporalAssertionError --only-rerun urllib.error.URLError --only-rerun goth.runner.exceptions.CommandError"
 typecheck = "mypy ."
