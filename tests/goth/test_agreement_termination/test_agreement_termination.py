@@ -60,6 +60,7 @@ async def assert_all_tasks_computed(stream):
 @pytest.mark.asyncio
 async def test_agreement_termination(
     project_dir: Path,
+    log_dir: Path,
     goth_config_path: Path,
     config_overrides,
 ) -> None:
