@@ -59,6 +59,7 @@ async def assert_all_invoices_accepted(output_lines: EventStream[str]):
 async def test_run_ssh(
     log_dir: Path,
     project_dir: Path,
+    goth_config_path: Path,
     config_overrides: List[Override],
     ssh_verify_connection: bool,
 ) -> None:
@@ -71,8 +72,7 @@ async def test_run_ssh(
         )
 
     configure_logging(log_dir)
-    # This is the default configuration with 2 wasm/VM providers
-    goth_config = load_yaml(Path(__file__).parent / "assets" / "goth-config.yml", config_overrides)
+    goth_config = load_yaml(goth_config_path, config_overrides)
 
     requestor_path = project_dir / "examples" / "ssh" / "ssh.js"
 
@@ -97,13 +97,13 @@ async def test_run_ssh(
             cmd_monitor.add_assertion(assert_no_errors)
             cmd_monitor.add_assertion(assert_all_invoices_accepted)
 
-            await cmd_monitor.wait_for_pattern(".*Created network", timeout=20)
+            await cmd_monitor.wait_for_pattern(".*Created network", timeout=60)
             logger.info(f"Network created")
 
-            await cmd_monitor.wait_for_pattern(".*Agreement proposed ", timeout=20)
+            await cmd_monitor.wait_for_pattern(".*Agreement proposed ", timeout=60)
             logger.info("Agreement proposed")
 
-            await cmd_monitor.wait_for_pattern(".*Agreement confirmed ", timeout=20)
+            await cmd_monitor.wait_for_pattern(".*Agreement confirmed ", timeout=60)
             logger.info("Agreement confirmed")
 
             ssh_connections = []
@@ -111,7 +111,7 @@ async def test_run_ssh(
             # # A longer timeout to account for downloading a VM image
             for i in range(2):
                 ssh_string = await cmd_monitor.wait_for_pattern(
-                    "ssh -o ProxyCommand", timeout=120
+                    "ssh -o ProxyCommand", timeout=240
                 )
                 matches = re.match("ssh -o ProxyCommand=('.*') (root@.*)", ssh_string)
 
@@ -147,20 +147,20 @@ async def test_run_ssh(
                     logger.debug("running ssh with: %s", args)
 
                     ssh = pexpect.spawn(" ".join(args))
-                    ssh.expect("[pP]assword:", timeout=5)
+                    ssh.expect("[pP]assword:", timeout=15)
                     ssh.sendline(password)
-                    ssh.expect("#1-Alpine SMP", timeout=5)
-                    ssh.expect(pexpect.EOF, timeout=5)
+                    ssh.expect("#1-Alpine SMP", timeout=15)
+                    ssh.expect(pexpect.EOF, timeout=15)
                     logger.info("Connection to %s confirmed.", auth_str)
 
                 logger.info("SSH connections confirmed.")
 
             for _ in range(2):
-                await cmd_monitor.wait_for_pattern("Task .* completed", timeout=20)
+                await cmd_monitor.wait_for_pattern("Task .* completed", timeout=320)
 
-            await cmd_monitor.wait_for_pattern(".*Computation finished", timeout=20)
-            await cmd_monitor.wait_for_pattern(".*Removed network", timeout=20)
+            await cmd_monitor.wait_for_pattern(".*Computation finished", timeout=320)
+            await cmd_monitor.wait_for_pattern(".*Removed network", timeout=320)
             logger.info(f"Network removed")
 
-            await cmd_monitor.wait_for_pattern(".*Executor has shut down", timeout=20)
+            await cmd_monitor.wait_for_pattern(".*Executor has shut down", timeout=320)
             logger.info(f"Requestor script finished ({elapsed_time()})")
