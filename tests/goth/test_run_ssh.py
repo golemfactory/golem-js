@@ -97,13 +97,13 @@ async def test_run_ssh(
             cmd_monitor.add_assertion(assert_no_errors)
             cmd_monitor.add_assertion(assert_all_invoices_accepted)
 
-            await cmd_monitor.wait_for_pattern(".*Created network", timeout=20)
+            await cmd_monitor.wait_for_pattern(".*Created network", timeout=60)
             logger.info(f"Network created")
 
-            await cmd_monitor.wait_for_pattern(".*Agreement proposed ", timeout=20)
+            await cmd_monitor.wait_for_pattern(".*Agreement proposed ", timeout=60)
             logger.info("Agreement proposed")
 
-            await cmd_monitor.wait_for_pattern(".*Agreement confirmed ", timeout=20)
+            await cmd_monitor.wait_for_pattern(".*Agreement confirmed ", timeout=60)
             logger.info("Agreement confirmed")
 
             ssh_connections = []
@@ -156,11 +156,11 @@ async def test_run_ssh(
                 logger.info("SSH connections confirmed.")
 
             for _ in range(2):
-                await cmd_monitor.wait_for_pattern("Task .* completed", timeout=240)
+                await cmd_monitor.wait_for_pattern("Task .* completed", timeout=320)
 
-            await cmd_monitor.wait_for_pattern(".*Computation finished", timeout=240)
-            await cmd_monitor.wait_for_pattern(".*Removed network", timeout=240)
+            await cmd_monitor.wait_for_pattern(".*Computation finished", timeout=320)
+            await cmd_monitor.wait_for_pattern(".*Removed network", timeout=320)
             logger.info(f"Network removed")
 
-            await cmd_monitor.wait_for_pattern(".*Executor has shut down", timeout=240)
+            await cmd_monitor.wait_for_pattern(".*Executor has shut down", timeout=320)
             logger.info(f"Requestor script finished ({elapsed_time()})")
