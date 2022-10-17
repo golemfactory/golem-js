@@ -84,11 +84,11 @@ async def assert_all_invoices_accepted(output_lines: EventStream[str]):
 async def test_run_blender(
     log_dir: Path,
     project_dir: Path,
+    goth_config_path: Path,
     config_overrides
 ) -> None:
 
-    # This is the default configuration with 2 wasm/VM providers
-    goth_config = load_yaml(Path(__file__).parent / "assets" / "goth-config.yml", config_overrides)
+    goth_config = load_yaml(goth_config_path, config_overrides)
 
     examples_dir = project_dir / "examples"
 
@@ -120,12 +120,12 @@ async def test_run_blender(
             await cmd_monitor.wait_for_pattern(".*Agreement confirmed ", timeout=20)
             logger.info("Agreement confirmed")
 
-            await all_sent.wait_for_result(timeout=120)
+            await all_sent.wait_for_result(timeout=240)
             logger.info("All tasks sent")
 
-            await all_computed.wait_for_result(timeout=120)
+            await all_computed.wait_for_result(timeout=240)
             logger.info("All tasks computed, waiting for Executor shutdown")
 
-            await cmd_monitor.wait_for_pattern(".*Executor has shut down", timeout=180)
+            await cmd_monitor.wait_for_pattern(".*Executor has shut down", timeout=240)
 
             logger.info("Requestor script finished")
