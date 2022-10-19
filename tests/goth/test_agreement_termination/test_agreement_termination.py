@@ -89,8 +89,8 @@ async def test_agreement_termination(
 
             # Make sure no new tasks are sent and the agreement is terminated
             assertion = cmd_monitor.add_assertion(assert_agreement_cancelled)
-            await assertion.wait_for_result(timeout=120)
+            await assertion.wait_for_result(timeout=300)
 
             # Wait for executor shutdown
-            await cmd_monitor.wait_for_pattern(".*Executor has shut down.*", timeout=120)
+            await cmd_monitor.wait_for_pattern(".*Executor has shut down.*", timeout=300)
             logger.info("Requestor script finished")
