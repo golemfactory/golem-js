@@ -108,7 +108,7 @@ export class WorkContext {
     }
     let timeout = false;
     setTimeout(() => (timeout = true), 10000);
-    while (state !== ActivityStateStateEnum.Ready || !timeout) {
+    while (state !== ActivityStateStateEnum.Ready && !timeout) {
       await sleep(2);
       state = await this.activity.getState();
     }
