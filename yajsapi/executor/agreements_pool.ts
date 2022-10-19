@@ -1,9 +1,10 @@
 /* eslint @typescript-eslint/no-explicit-any: 0 */
 import { Activity, NodeInfo } from "../props";
 import { Agreement, OfferProposal, TerminationReason } from "../rest/market";
-import { asyncWith, CancellationToken, Lock, logger } from "../utils";
+import { asyncWith, CancellationToken, Lock } from "../utils";
 import * as events from "./events";
 import { ComputationHistory } from "./strategy";
+import { Logger } from "../utils/logger";
 
 class _BufferedProposal {
   ts: Date;
@@ -38,10 +39,12 @@ export class AgreementsPool implements ComputationHistory {
   private _lock: Lock = new Lock();
   private _rejecting_providers: Set<string> = new Set();
   private _confirmed = 0;
+  private logger?: Logger;
   cancellation_token?: CancellationToken;
 
-  constructor(emitter) {
+  constructor(emitter, logger) {
     this.emitter = emitter;
+    this.logger = logger;
   }
 
   async cycle(): Promise<void> {
@@ -88,7 +91,7 @@ export class AgreementsPool implements ComputationHistory {
     const available_agreements = [...this._agreements.values()].filter((agr) => agr.worker_task === undefined);
     if (available_agreements.length > 0) {
       const buffered_agreement = available_agreements[Math.floor(Math.random() * available_agreements.length)];
-      logger.debug(`Reusing agreement. id: ${buffered_agreement.agreement.id()}`);
+      this.logger?.debug(`Reusing agreement. id: ${buffered_agreement.agreement.id()}`);
       return [buffered_agreement.agreement, buffered_agreement.node_info];
     }
     if (this._offer_buffer.size === 0) {
@@ -111,7 +114,7 @@ export class AgreementsPool implements ComputationHistory {
         const provider_activity = <Activity>agreement_details.provider_view().extract(new Activity());
         const requestor_activity = <Activity>agreement_details.requestor_view().extract(new Activity());
         const node_info = <NodeInfo>agreement_details.provider_view().extract(new NodeInfo());
-        logger.debug(`New agreement. id: ${agreement.id()}, provider: ${node_info.name.value}`);
+        this.logger?.debug(`New agreement. id: ${agreement.id()}, provider: ${node_info.name.value}`);
         emit(
           new events.AgreementCreated({
             agr_id: agreement.id(),
@@ -139,7 +142,7 @@ export class AgreementsPool implements ComputationHistory {
         this._confirmed += 1;
         return [agreement, node_info];
       } catch (error) {
-        logger.debug(`Cannot get agreement details. id: ${agreement.id()}`);
+        this.logger?.debug(`Cannot get agreement details. id: ${agreement.id()}`);
         emit(new events.AgreementRejected({ agr_id: agreement.id() }));
         return;
       }
@@ -170,17 +173,17 @@ export class AgreementsPool implements ComputationHistory {
   private async _terminate_agreement(agreement_id: string, reason: TerminationReason): Promise<void> {
     const buffered_agreement = this._agreements.get(agreement_id);
     if (buffered_agreement === undefined) {
-      logger.warn(`Trying to terminate agreement not in the pool. id: ${agreement_id}`);
+      this.logger?.warn(`Trying to terminate agreement not in the pool. id: ${agreement_id}`);
       return;
     }
-    logger.debug(`Terminating agreement. id: ${agreement_id}, reason: ${JSON.stringify(reason)}`);
+    this.logger?.debug(`Terminating agreement. id: ${agreement_id}, reason: ${JSON.stringify(reason)}`);
     if (buffered_agreement.worker_task && buffered_agreement.worker_task.isPending()) {
-      logger.debug(`Terminating agreement that still has worker. agr_id: ${buffered_agreement.agreement.id()}`);
+      this.logger?.debug(`Terminating agreement that still has worker. agr_id: ${buffered_agreement.agreement.id()}`);
       buffered_agreement.worker_task.cancel();
     }
     if (buffered_agreement.has_multi_activity) {
       if (!(await buffered_agreement.agreement.terminate(reason))) {
-        logger.debug(`Couldn't terminate agreement. id: ${buffered_agreement.agreement.id()}`);
+        this.logger?.debug(`Couldn't terminate agreement. id: ${buffered_agreement.agreement.id()}`);
       }
     }
     this._agreements.delete(agreement_id);

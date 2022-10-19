@@ -9,9 +9,9 @@
 <body>
     <h1>Task API</h1>
     <div class="container">
-        <div class="col-6">
+        <div class="col-5">
             <h3>Credentials</h3>
-            <div class="row">
+            <div class="column">
                 <div>
                     <label for="YAGNA_APPKEY">YAGNA_APPKEY: </label>
                     <input id="YAGNA_APPKEY" type="text" value=""/>
@@ -32,7 +32,7 @@
                 <ul id="results"></ul>
             </div>
         </div>
-        <div class="col-6 border-left">
+        <div class="col-7 border-left">
             <div class="logs console">
                 <h3>Logs</h3>
                 <ul id="logs"></ul>
@@ -59,15 +59,27 @@
             warn: (msg) => appendLog(`[${new Date().toISOString()}] [warn] ${msg}`),
             debug: (msg) => appendLog(`[${new Date().toISOString()}] [debug] ${msg}`),
             error: (msg) => appendLog(`[${new Date().toISOString()}] [error] ${msg}`),
+            info: (msg) => {
+              console.log(msg);
+              appendLog(`[${new Date().toISOString()}] [info] ${msg}`)
+            },
         }
         async function run() {
             const appKey = document.getElementById('YAGNA_APPKEY').value;
             const basePath = document.getElementById('YAGNA_API_BASEPATH').value;
             console.log('creating executor...');
-            const executor = await yajsapi.createExecutor("9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae").catch(e => console.log(e));
+            const executor = await yajsapi
+              .createExecutor({
+                package:"9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+                logger
+              })
+              .catch(e => console.error(e));
             console.log('executor created');
+            console.log({executor});
             console.log('run command...');
-            await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout)).catch(e => console.log(e));
+            await executor
+              .run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout))
+              .catch(e => logger.error(e));
             await executor.end();
 
             // const executor = await yajsapi.createExecutor("9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae");

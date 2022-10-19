@@ -3,10 +3,11 @@ import { Command, Deploy, DownloadFile, Run, Script, Start, UploadFile } from ".
 import { StorageProvider } from "../storage/provider";
 import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity";
 import { Worker } from "./executor";
-import { sleep, logger } from "../utils";
+import { sleep } from "../utils";
 import { Task } from "./task";
 import { Readable, Transform } from "stream";
 import { NetworkNode } from "../network";
+import { Logger } from "../utils/logger";
 
 class Batch {
   private script: Script;
@@ -93,7 +94,8 @@ export class WorkContext {
     private storageProvider: StorageProvider,
     private nodeInfo: ProviderInfo,
     private task: Task<"D", "R">,
-    private networkNode?: NetworkNode
+    private networkNode?: NetworkNode,
+    private logger?: Logger
   ) {}
   async before(worker?: Worker): Promise<Result[] | void> {
     let state = await this.activity.getState();
@@ -147,7 +149,7 @@ export class WorkContext {
     this.resultAccepted = true;
   }
   log(msg: string) {
-    logger.info(`[${this.nodeInfo.providerName}] ${msg}`);
+    this.logger?.info(`[${this.nodeInfo.providerName}] ${msg}`);
   }
   getProviderInfo(): ProviderInfo {
     return this.nodeInfo;

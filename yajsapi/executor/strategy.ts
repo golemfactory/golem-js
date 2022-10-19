@@ -2,7 +2,8 @@ import { Activity } from "../props";
 import { DemandBuilder } from "../props";
 import { BillingScheme, ComLinear, Counter, PriceModel, PRICE_MODEL } from "../props/com";
 import { OfferProposal } from "../rest/market";
-import { applyMixins, logger } from "../utils";
+import { applyMixins } from "../utils";
+import { Logger } from "../utils/logger";
 
 export const SCORE_NEUTRAL = 0.0;
 export const SCORE_REJECTED = -1.0;
@@ -56,11 +57,18 @@ export class LeastExpensiveLinearPayuMS {
   private _expected_time_secs: number;
   private _max_fixed_price?: number;
   private _max_price_for?: Map<Counter, number>;
+  private logger?: Logger;
 
-  constructor(expected_time_secs = 60, max_fixed_price?: number, max_price_for?: Map<Counter, number>) {
+  constructor(
+    expected_time_secs = 60,
+    max_fixed_price?: number,
+    max_price_for?: Map<Counter, number>,
+    logger?: Logger
+  ) {
     this._expected_time_secs = expected_time_secs;
     if (max_fixed_price) this._max_fixed_price = max_fixed_price;
     if (max_price_for) this._max_price_for = max_price_for;
+    this.logger = logger;
   }
 
   async decorate_demand(demand: DemandBuilder): Promise<void> {
@@ -70,9 +78,9 @@ export class LeastExpensiveLinearPayuMS {
   async score_offer(offer: OfferProposal): Promise<number> {
     const linear: ComLinear = new ComLinear().from_properties(offer.props());
 
-    logger.debug(`Scoring offer ${offer.id()}, parameters: ${JSON.stringify(linear)}`);
+    this.logger?.debug(`Scoring offer ${offer.id()}, parameters: ${JSON.stringify(linear)}`);
     if (linear.scheme.value !== BillingScheme.PAYU) {
-      logger.debug(`Rejected offer ${offer.id()}: unsupported scheme '${linear.scheme.value}'`);
+      this.logger?.debug(`Rejected offer ${offer.id()}: unsupported scheme '${linear.scheme.value}'`);
       return SCORE_REJECTED;
     }
 
@@ -80,7 +88,7 @@ export class LeastExpensiveLinearPayuMS {
 
     for (const counter in linear.price_for) {
       if (!known_time_prices.has(counter as Counter)) {
-        logger.debug(`Rejected offer ${offer.id()}: unsupported counter '${counter}'`);
+        this.logger?.debug(`Rejected offer ${offer.id()}: unsupported counter '${counter}'`);
         return SCORE_REJECTED;
       }
     }
@@ -88,25 +96,27 @@ export class LeastExpensiveLinearPayuMS {
     if (this._max_fixed_price !== undefined) {
       const fixed_price_cap = this._max_fixed_price;
       if (linear.fixed_price > fixed_price_cap) {
-        logger.debug(`Rejected offer ${offer.id()}: fixed price higher than fixed price cap ${fixed_price_cap}.`);
+        this.logger?.debug(`Rejected offer ${offer.id()}: fixed price higher than fixed price cap ${fixed_price_cap}.`);
         return SCORE_REJECTED;
       }
     }
     if (linear.fixed_price < 0) {
-      logger.debug(`Rejected offer ${offer.id()}: negative fixed price`);
+      this.logger?.debug(`Rejected offer ${offer.id()}: negative fixed price`);
       return SCORE_REJECTED;
     }
     let expected_price = linear.fixed_price;
 
     for (const resource of known_time_prices) {
       if (linear.price_for[resource] < 0) {
-        logger.debug(`Rejected offer ${offer.id()}: negative price for '${resource}'`);
+        this.logger?.debug(`Rejected offer ${offer.id()}: negative price for '${resource}'`);
         return SCORE_REJECTED;
       }
       if (this._max_price_for) {
         const max_price = this._max_price_for.get(resource as Counter);
         if (max_price !== undefined && linear.price_for[resource] > max_price) {
-          logger.debug(`Rejected offer ${offer.id()}: price for '${resource}' higher than price cap ${max_price}`);
+          this.logger?.debug(
+            `Rejected offer ${offer.id()}: price for '${resource}' higher than price cap ${max_price}`
+          );
           return SCORE_REJECTED;
         }
       }
@@ -125,10 +135,12 @@ export class DecreaseScoreForUnconfirmedAgreement {
 
   private _base_strategy;
   private _factor;
+  private logger;
 
-  constructor(base_strategy, factor) {
+  constructor(base_strategy, factor, logger) {
     this._base_strategy = base_strategy;
     this._factor = factor;
+    this.logger = logger;
   }
 
   async decorate_demand(demand: DemandBuilder): Promise<void> {
@@ -143,7 +155,7 @@ export class DecreaseScoreForUnconfirmedAgreement {
     let score = await this._base_strategy.score_offer(offer);
     if (history && history.rejected_last_agreement(offer.issuer()) && score > 0) {
       score *= this._factor;
-      logger.debug(`Decreasing score for offer ${offer.id()} from '${offer.issuer()}'`);
+      this.logger?.debug(`Decreasing score for offer ${offer.id()} from '${offer.issuer()}'`);
     }
     return score;
   }

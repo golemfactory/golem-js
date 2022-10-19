@@ -6,13 +6,14 @@ import Callable from "./callable";
 import CancellationToken from "./cancellationToken";
 import eventLoop from "./eventLoop";
 import getAllProperties from "./getAllProperties";
-import logger, * as logUtils from "./log";
-import { changeLogLevel } from "./log";
+import logSummary from "./log";
 import promisify from "./promisify";
 import Queue from "./queue";
 import range from "./range";
 import sleep from "./sleep";
 import { Lock } from "./lock";
+import { winstonLogger } from "./winstonLogger";
+import { isBrowser } from "./runtimeContextChecker";
 
 export {
   applyMixins,
@@ -22,13 +23,13 @@ export {
   Callable,
   CancellationToken,
   eventLoop,
-  changeLogLevel,
   getAllProperties,
   Lock,
-  logger,
-  logUtils,
+  logSummary,
   promisify,
   Queue,
   range,
   sleep,
+  winstonLogger,
+  isBrowser,
 };

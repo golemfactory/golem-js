@@ -5,6 +5,7 @@ import { Result } from "../activity";
 import { MarketStrategy } from "./strategy";
 import { Callable, sleep } from "../utils";
 import * as events from "./events";
+import { Logger } from "../utils/logger";
 
 type ExecutorOptions = {
   package: string | Package;
@@ -25,6 +26,7 @@ type ExecutorOptions = {
   min_cpu_threads?: number;
   cores?: number;
   capabilities?: string[];
+  logger?: Logger;
 };
 
 type ExecutorOptionsMixin = string | ExecutorOptions;

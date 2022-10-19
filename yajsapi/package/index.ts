@@ -1,8 +1,6 @@
 import axios from "axios";
-import * as srv from "srvclient";
 import { DemandBuilder } from "../props";
 import { VmPackageFormat, VmRequest } from "../props/inf";
-import { logger } from "../utils";
 
 const FALLBACK_REPO_URL = "http://girepo.dev.golem.network:8000";
 export const DEFAULT_REPO_SRV = "_girepo._tcp.dev.golem.network";
@@ -74,37 +72,40 @@ export class VmPackage extends Package {
   }
 }
 
-export const resolve_repo_srv = async ({ repo_srv, fallback_url = FALLBACK_REPO_URL }) => {
+export const resolve_repo_srv = async ({ repo_srv, fallback_url = FALLBACK_REPO_URL, logger }) => {
   async function _resolve_repo_srv() {
     return new Promise((resolve, reject) => {
-      const verify_records = async function (err, records) {
-        if (!(Symbol.iterator in Object(records))) {
-          resolve(null);
-          return;
-        }
-        for (const record of records) {
-          const url = `http://${record.name}:${record.port}`;
-          try {
-            await axios.head(url);
-            resolve(url);
-          } catch (error) {
-            if (error.response != undefined) {
-              resolve(url);
-            }
-          }
-        }
-        resolve(null);
-      };
-
-      srv.getRandomTargets(repo_srv, verify_records);
+      resolve(`http://girepo.dev.golem.network:8000`);
+      // const verify_records = async function (err, records) {
+      //   if (!(Symbol.iterator in Object(records))) {
+      //     resolve(null);
+      //     return;
+      //   }
+      //   for (const record of records) {
+      //     const url = `http://${record.name}:${record.port}`;
+      //     try {
+      //       await axios.head(url);
+      //       resolve(url);
+      //     } catch (error) {
+      //       if (error.response != undefined) {
+      //         resolve(url);
+      //       }
+      //     }
+      //   }
+      //   resolve(null);
+      // };
+      //
+      // const resolver = new Resolver();
+      // resolver.setServers(["8.8.8.8", "4.4.4.4"]);
+      // resolver.resolveSrv(repo_srv, verify_records);
     });
   }
 
   const repo_url = await _resolve_repo_srv();
   if (repo_url) {
-    logger.debug(`Using image repository: ${repo_srv} -> ${repo_url}.`);
+    logger?.debug(`Using image repository: ${repo_srv} -> ${repo_url}.`);
     return repo_url;
   }
-  logger.warn(`Problem resolving image repository: ${repo_srv}, falling back to ${fallback_url}.`);
+  logger?.warn(`Problem resolving image repository: ${repo_srv}, falling back to ${fallback_url}.`);
   return fallback_url;
 };
