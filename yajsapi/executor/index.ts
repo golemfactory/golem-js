@@ -634,7 +634,7 @@ export class Executor {
           busyActivities.delete(_act.id);
           emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
         } catch (error) {
-          emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error }));
+          emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error?.message }));
           throw error;
         } finally {
           await agreements_pool.release_agreement(agreement.id(), true);
