@@ -654,7 +654,7 @@ export class Executor {
     async function worker_starter(): Promise<void> {
       function _start_worker(agreement: Agreement) {
         start_worker(agreement).catch(async (error) => {
-          logger.warn(`Worker for agreement ${agreement.id()} finished with error: ${error}`);
+          logger.warn(`Worker for agreement ${agreement.id()} failed, reason: ${error?.message}`);
           await agreements_pool.release_agreement(agreement.id(), false);
           activities.delete(agreement.id());
         });
