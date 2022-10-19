@@ -559,11 +559,11 @@ export class Executor {
     ) {
       /* TODO ctrl+c handling */
       emit(
-          new events.TaskStarted({
-            agr_id: agreement_id,
-            task_id: task.id,
-            task_data: task.data(),
-          })
+        new events.TaskStarted({
+          agr_id: agreement_id,
+          task_id: task.id,
+          task_data: task.data(),
+        })
       );
       emit(new events.ScriptSent({ agr_id: agreement_id, task_id: task.id, cmds: [] }));
       ctx.acceptResult(await worker(ctx, task.data()));
@@ -594,7 +594,7 @@ export class Executor {
         activities.set(agreement.id(), _act);
       } catch (error) {
         emit(new events.ActivityCreateFailed({ agr_id: agreement.id() }));
-        emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error }));
+        emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error?.message }));
         throw error;
       }
 
