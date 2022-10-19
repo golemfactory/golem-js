@@ -19,7 +19,7 @@ import { AgreementsPool } from "./agreements_pool";
 import { Allocation, DebitNote, Invoice } from "../rest/payment";
 import { ActivityFactory, Activity } from "../activity";
 
-import * as csp from "js-csp";
+import * as csp from "./../utils/csp";
 
 import * as gftp from "../storage/gftp";
 import {

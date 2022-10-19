@@ -1,4 +1,4 @@
-import * as csp from "js-csp";
+import * as csp from "./csp";
 import promisify from "./promisify";
 
 export default class Queue<T> {

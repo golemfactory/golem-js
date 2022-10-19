@@ -1,4 +1,4 @@
-import * as csp from "js-csp";
+import * as csp from "./../utils/csp";
 import { eventLoop, promisify } from "../utils";
 
 type Item = "Item";
