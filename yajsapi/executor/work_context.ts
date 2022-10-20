@@ -113,7 +113,7 @@ export class WorkContext {
       state = await this.activity.getState();
     }
     if (state !== ActivityStateStateEnum.Ready) {
-      throw new Error(`Activity ${this.activity.id} cannot reach the ready state`);
+      throw new Error(`Activity ${this.activity.id} cannot reach the Ready state. Current state: ${state}`);
     }
     if (worker) {
       await worker(this, null);
