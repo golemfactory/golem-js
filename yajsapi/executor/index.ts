@@ -31,6 +31,7 @@ import {
   promisify,
   Queue,
   sleep,
+  Logger,
   winstonLogger,
   runtimeContextChecker,
 } from "../utils";
@@ -51,7 +52,6 @@ import axios from "axios";
 import { Worker } from "./executor";
 import { WorkContext } from "./work_context";
 import { GftpStorageProvider } from "../storage/gftp_provider";
-import { Logger } from "../utils/logger";
 
 export const vm = _vm;
 
@@ -473,7 +473,6 @@ export class Executor {
     const busyActivities = new Set();
     const logger = this.logger;
     const gftp = runtimeContextChecker.isNode ? await import("../storage/gftp") : null;
-    const sgx = runtimeContextChecker.isNode ? await import("../package/sgx") : null;
 
     async function process_invoices(): Promise<void> {
       for await (const invoice of self._payment_api.incoming_invoices(paymentCancellationToken)) {
