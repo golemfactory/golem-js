@@ -42,8 +42,8 @@ export class SmartQueue<Item> {
     this._rescheduled_items = new Set();
     this._in_progress = new Set();
 
-    this.__new_items = csp.chan();
-    this.__eof = csp.chan();
+    this.__new_items = csp.chan('new_items');
+    this.__eof = csp.chan('eof');
     this.__done = false;
   }
 

@@ -4,7 +4,7 @@ import promisify from "./promisify";
 export class Lock {
   private _lock: any;
   constructor() {
-    this._lock = csp.chan();
+    this._lock = csp.chan('lock');
     csp.putAsync(this._lock, true);
   }
   async ready(): Promise<this> {

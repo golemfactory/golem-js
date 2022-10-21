@@ -7,7 +7,7 @@ export default class Queue<T> {
 
   constructor(list: any[] = []) {
     this._tasks = list;
-    this.__new_items = csp.chan();
+    this.__new_items = csp.chan('new_items');
 
     if (list.length > 0) {
       csp.putAsync(this.__new_items, true);

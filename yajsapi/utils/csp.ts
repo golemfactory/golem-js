@@ -9,8 +9,13 @@ type mixed = string | number | object | boolean;
 type Task = mixed;
 
 export class Channel {
+    name: string | null = null;
     tasks: Array<Task> = [];
     closed = false;
+
+    constructor(name: null | string = null) {
+        this.name = name;
+    }
 
     /**
      * Put Task on task stack
@@ -26,13 +31,21 @@ export class Channel {
     take(): Task | undefined {
         return this.tasks.shift();
     }
+
+    /**
+     * Close channel
+     */
+    close(): void {
+        this.closed = true;
+    }
 }
 
 /**
  * Create a new Channel and return a new Channel object
  */
-export function chan() {
-    return new Channel();
+export function chan(name: string | null = null) {
+    //console.log('chan', name)
+    return new Channel(name);
 }
 
 /**
@@ -41,6 +54,7 @@ export function chan() {
  * @param task - Task to stack on
  */
 export function putAsync(channel: Channel, task: Task): void {
+    //console.log('putAsync', channel.name, task)
     channel.put(task);
 }
 
@@ -53,6 +67,7 @@ export function putAsync(channel: Channel, task: Task): void {
  */
 // eslint-disable-next-line @typescript-eslint/ban-types
 export function takeAsync(channel: Channel, callback: Function | null): void {
+    //console.log('takeAsync', channel.name, callback)
     const result = channel.take();
     if (result && callback) {
         callback(result);

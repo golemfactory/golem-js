@@ -281,7 +281,7 @@ export class Executor {
     this.emit = <Callable<[events.YaEvent], void>>this._wrapped_consumer.async_call.bind(this._wrapped_consumer);
     // Each call to `submit()` will put an item in the channel.
     // The channel can be used to wait until all calls to `submit()` are finished.
-    this._chan_computation_done = csp.chan();
+    this._chan_computation_done = csp.chan('chan_computation_done');
     this._active_computations = 0;
     this._network_address = network_address;
   }
@@ -363,7 +363,7 @@ export class Executor {
     emit: Callable<[events.YaEvent], void>
   ): Promise<void> {
     emit(new events.SubscriptionCreated({ sub_id: subscription.id() }));
-    const chan_offer_tokens = csp.chan();
+    const chan_offer_tokens = csp.chan('chan_offer_tokens');
     const max_number_of_tasks = 5;
     for (let i = 0; i < max_number_of_tasks; ++i) {
       csp.putAsync(chan_offer_tokens, true);
@@ -394,6 +394,7 @@ export class Executor {
       handler(proposal);
       await promisify(csp.takeAsync)(chan_offer_tokens);
     }
+    console.log('--> find_offers_for_subscription')
   }
 
   async find_offers(state: SubmissionState, emit: Callable<[events.YaEvent], void>): Promise<void> {
@@ -404,6 +405,7 @@ export class Executor {
         await asyncWith(subscription, async (subscription) => {
           try {
             await this.find_offers_for_subscription(state, subscription, emit);
+            console.log('END find_offers_for_subscription');
           } catch (error) {
             logger.error(`Error while finding offers for a subscription: ${error}`);
             keepSubscribing = false;
@@ -461,7 +463,7 @@ export class Executor {
     const paymentCancellationToken = this.state.payment_cancellation_token;
     const done_queue: Queue<Task<D, R>> = new Queue([]);
     const stream_output = this._stream_output;
-    const workers_done = csp.chan();
+    const workers_done = csp.chan('workers_done');
     const network = this._network;
 
     function on_task_done(task: Task<D, R>, status: TaskStatus): void {
