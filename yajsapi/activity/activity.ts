@@ -119,7 +119,7 @@ export class Activity {
         this.logger?.warn(`Got API Exception when destroying activity ${this.id}: ${error}`);
         throw error;
       });
-    this.logger?.debug("Activity ended");
+    this.logger?.debug(`Activity ${this.id} ended.`);
   }
 
   private async pollingBatch(batchId, startTime, timeout, cancellationToken): Promise<Readable> {

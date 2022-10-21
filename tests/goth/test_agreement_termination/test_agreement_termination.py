@@ -20,7 +20,7 @@ async def assert_command_error(stream):
     """Assert that a worker failure is reported."""
 
     async for line in stream:
-        m = re.match(r".*Worker for agreement ([0-9a-f]+) finished with error.*", line)
+        m = re.match(r".*Worker for agreement ([0-9a-f]+) failed.*", line)
         if m:
             return m.group(1)
     raise AssertionError("Expected worker failure")
@@ -89,8 +89,8 @@ async def test_agreement_termination(
 
             # Make sure no new tasks are sent and the agreement is terminated
             assertion = cmd_monitor.add_assertion(assert_agreement_cancelled)
-            await assertion.wait_for_result(timeout=300)
+            await assertion.wait_for_result(timeout=120)
 
             # Wait for executor shutdown
-            await cmd_monitor.wait_for_pattern(".*Executor has shut down.*", timeout=300)
+            await cmd_monitor.wait_for_pattern(".*Executor has shut down.*", timeout=120)
             logger.info("Requestor script finished")
