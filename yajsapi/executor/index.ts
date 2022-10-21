@@ -20,7 +20,6 @@ import { Activity, ActivityFactory } from "../activity";
 
 import * as csp from "js-csp";
 
-import * as gftp from "../storage/gftp";
 import {
   AsyncExitStack,
   asyncWith,
@@ -33,11 +32,11 @@ import {
   Queue,
   sleep,
   winstonLogger,
-  isBrowser,
+  runtimeContextChecker,
 } from "../utils";
 
 import * as _vm from "../package/vm";
-// import * as _sgx from "../package/sgx";
+
 import { Task, TaskStatus } from "./task";
 import { Consumer, SmartQueue } from "./smartq";
 import {
@@ -54,7 +53,6 @@ import { WorkContext } from "./work_context";
 import { GftpStorageProvider } from "../storage/gftp_provider";
 import { Logger } from "../utils/logger";
 
-// export const sgx = _sgx;
 export const vm = _vm;
 
 export { Task, TaskStatus };
@@ -237,7 +235,7 @@ export class Executor {
     logger,
   }: ExecutorOpts) {
     this.logger = logger;
-    if (!logger && !isBrowser) this.logger = winstonLogger;
+    if (!logger && !runtimeContextChecker.isBrowser) this.logger = winstonLogger;
     this._subnet = subnet_tag ? subnet_tag : DEFAULT_SUBNET;
     this._payment_driver = payment_driver ? payment_driver.toLowerCase() : DEFAULT_DRIVER;
     this._payment_network = payment_network ? payment_network.toLowerCase() : DEFAULT_NETWORK;
@@ -474,6 +472,8 @@ export class Executor {
     const beforeWorkerDoneInActivity = this.beforeWorkerDoneInActivity;
     const busyActivities = new Set();
     const logger = this.logger;
+    const gftp = runtimeContextChecker.isNode ? await import("../storage/gftp") : null;
+    const sgx = runtimeContextChecker.isNode ? await import("../package/sgx") : null;
 
     async function process_invoices(): Promise<void> {
       for await (const invoice of self._payment_api.incoming_invoices(paymentCancellationToken)) {
@@ -564,7 +564,9 @@ export class Executor {
       logger?.debug("Stopped processing debit notes.");
     }
 
-    const storage_manager = isBrowser ? null : await this._stack.enter_async_context(gftp.provider());
+    const storage_manager = runtimeContextChecker.isNode
+      ? await this._stack.enter_async_context(gftp?.provider())
+      : null;
 
     async function process_batches(
       agreement_id: string,
@@ -624,7 +626,7 @@ export class Executor {
       if (network) {
         network_node = await network.add_node(provider_id);
       }
-      const storageProvider = new GftpStorageProvider(storage_manager);
+      const storageProvider = runtimeContextChecker.isNode ? new GftpStorageProvider(storage_manager) : undefined;
       await asyncWith(work_queue.new_consumer(), async (consumer) => {
         try {
           const tasks = task_emitter(consumer);
@@ -632,10 +634,10 @@ export class Executor {
           if (done) return;
           const new_work_context = new WorkContext(
             _act,
-            storageProvider,
             { providerId: provider_id, providerName: provider_name },
             task,
             network_node,
+            storageProvider,
             logger
           );
           let timeout = false;

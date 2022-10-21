@@ -4,3 +4,7 @@ export const isNode = typeof process !== "undefined" && process.versions != null
 
 export const isWebWorker =
   typeof self === "object" && self.constructor && self.constructor.name === "DedicatedWorkerGlobalScope";
+
+export function checkAndThrowUnsupportedInBrowserError(feature: string) {
+  if (isBrowser) throw new Error(`Feature ${feature} is unsupported in the browser.`);
+}
