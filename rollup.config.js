@@ -8,6 +8,7 @@ const inject = require("@rollup/plugin-inject");
 
 module.exports = {
   input: path.resolve(__dirname, "./dist/yajsapi/index_browser.js"),
+  // TODO: tests es module format in browser
   output: {
     file: path.resolve(__dirname, "./examples/web/js/bundle.js"),
     format: "iife",
