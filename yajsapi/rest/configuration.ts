@@ -27,7 +27,7 @@ export class Configuration {
   private __axios_opts!: object;
 
   constructor(
-    app_key = null,
+    app_key?: string,
     url?: string,
     market_url?: string,
     payment_url?: string,

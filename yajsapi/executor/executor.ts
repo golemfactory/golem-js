@@ -25,6 +25,7 @@ type ExecutorOptions = {
   min_cpu_threads?: number;
   cores?: number;
   capabilities?: string[];
+  credentials?: { apiKey?: string; apiUrl?: string };
 };
 
 type ExecutorOptionsMixin = string | ExecutorOptions;

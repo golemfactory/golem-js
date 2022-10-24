@@ -140,6 +140,7 @@ export type ExecutorOpts = {
   payment_network?: string;
   event_consumer?: Callable<[events.YaEvent], void>; //TODO not default event
   network_address?: string;
+  credentials?: { apiKey?: string; apiUrl?: string };
 };
 
 export class SubmissionState {
@@ -198,6 +199,7 @@ export class Executor {
   private activities = new Map<string, Activity>();
   private beforeWorker?: Worker;
   private beforeWorkerDoneInActivity = new Set<string>();
+  private credentials?: { apiKey?: string; apiUrl?: string };
 
   /**
    * Create new executor
@@ -214,6 +216,9 @@ export class Executor {
    * @param payment_network name of the network to use or null to use the default network; only payment platforms with the specified network will be used (env variable equivalent: YAGNA_PAYMENT_NETWORK)
    * @param event_consumer  a callable that processes events related to the computation; by default it is a function that logs all events
    * @param network_address network address for VPN
+   * @param credentials     optional params to set Yagna app key and base URL
+   * @param credentials.apiKey env variable equivalent: YAGNA_APPKEY
+   * @param credentials.apiUrl env variable equivalent: YAGNA_API_URL
    */
   constructor({
     task_package,
@@ -228,6 +233,7 @@ export class Executor {
     payment_network,
     event_consumer,
     network_address,
+    credentials,
   }: ExecutorOpts) {
     this._subnet = subnet_tag ? subnet_tag : DEFAULT_SUBNET;
     this._payment_driver = payment_driver ? payment_driver.toLowerCase() : DEFAULT_DRIVER;
@@ -246,7 +252,7 @@ export class Executor {
     }
     logger.info(`Using subnet: ${this._subnet}, network: ${this._payment_network}, driver: ${this._payment_driver}`);
     this._stream_output = false;
-    this._api_config = new rest.Configuration();
+    this._api_config = new rest.Configuration(this.credentials?.apiKey, this.credentials?.apiUrl);
     this._stack = new AsyncExitStack();
     this._task_package = task_package;
     this._conf = new _ExecutorConfig(max_workers, timeout);
@@ -292,6 +298,7 @@ export class Executor {
     this._chan_computation_done = csp.chan();
     this._active_computations = 0;
     this._network_address = network_address;
+    this.credentials = credentials;
   }
 
   submit_before(worker) {
@@ -559,11 +566,11 @@ export class Executor {
     ) {
       /* TODO ctrl+c handling */
       emit(
-          new events.TaskStarted({
-            agr_id: agreement_id,
-            task_id: task.id,
-            task_data: task.data(),
-          })
+        new events.TaskStarted({
+          agr_id: agreement_id,
+          task_id: task.id,
+          task_data: task.data(),
+        })
       );
       emit(new events.ScriptSent({ agr_id: agreement_id, task_id: task.id, cmds: [] }));
       ctx.acceptResult(await worker(ctx, task.data()));
