@@ -51,7 +51,6 @@ import axios from "axios";
 
 import { Worker } from "./executor";
 import { WorkContext } from "./work_context";
-import { GftpStorageProvider } from "../storage/gftp_provider";
 
 export const vm = _vm;
 
@@ -625,7 +624,11 @@ export class Executor {
       if (network) {
         network_node = await network.add_node(provider_id);
       }
-      const storageProvider = runtimeContextChecker.isNode ? new GftpStorageProvider(storage_manager) : undefined;
+      let storageProvider;
+      if (runtimeContextChecker.isNode) {
+        const { GftpStorageProvider } = await import("../storage/gftp_provider");
+        storageProvider = new GftpStorageProvider(storage_manager);
+      }
       await asyncWith(work_queue.new_consumer(), async (consumer) => {
         try {
           const tasks = task_emitter(consumer);
