@@ -285,11 +285,11 @@ export class Executor {
       if (cancellationToken && !cancellationToken.cancelled) {
         cancellationToken.cancel();
       }
-      // SIGNALS.forEach((event) => {
-      //   process.off(event, cancel);
-      // });
+      SIGNALS.forEach((event) => {
+        process?.off(event, cancel);
+      });
     }
-    // SIGNALS.forEach((event) => process.on(event, cancel));
+    SIGNALS.forEach((event) => process?.on(event, cancel));
 
     if (!event_consumer && this.logger) {
       event_consumer = logSummary(this.logger);
