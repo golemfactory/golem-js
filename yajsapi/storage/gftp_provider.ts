@@ -1,10 +1,13 @@
 import { provider } from "./gftp";
 import { StorageProvider } from "./provider";
+import { runtimeContextChecker } from "../utils";
 
 export class GftpStorageProvider implements StorageProvider {
   private gftpProvider;
   private publishedUrls: string[] = [];
   constructor(prov?) {
+    if (runtimeContextChecker.isBrowser)
+      throw new Error(`File transfer by GFTP module is unsupported in the browser context.`);
     this.gftpProvider = prov || provider();
   }
 
