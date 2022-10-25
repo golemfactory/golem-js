@@ -559,11 +559,11 @@ export class Executor {
     ) {
       /* TODO ctrl+c handling */
       emit(
-          new events.TaskStarted({
-            agr_id: agreement_id,
-            task_id: task.id,
-            task_data: task.data(),
-          })
+        new events.TaskStarted({
+          agr_id: agreement_id,
+          task_id: task.id,
+          task_data: task.data(),
+        })
       );
       emit(new events.ScriptSent({ agr_id: agreement_id, task_id: task.id, cmds: [] }));
       ctx.acceptResult(await worker(ctx, task.data()));
@@ -590,15 +590,20 @@ export class Executor {
       }
       let _act: Activity;
       try {
-        _act = activities.get(agreement.id()) || (await activity_api.create(agreement.id(), { logger }));
-        activities.set(agreement.id(), _act);
+        if (!activities.has(agreement.id())) {
+          _act = await activity_api.create(agreement.id(), { logger });
+          activities.set(agreement.id(), _act);
+          emit(new events.ActivityCreated({ act_id: _act.id, agr_id: agreement.id() }));
+        } else {
+          _act = activities.get(agreement.id())!;
+          logger.debug(`Activity ${_act.id} reused for agreement ${agreement.id()}`);
+        }
       } catch (error) {
         emit(new events.ActivityCreateFailed({ agr_id: agreement.id() }));
-        emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error }));
+        emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error?.message }));
         throw error;
       }
 
-      emit(new events.ActivityCreated({ act_id: _act.id, agr_id: agreement.id() }));
       agreements_accepting_debit_notes.add(agreement.id());
       const agreement_details = await agreement.details();
       const node_info = <NodeInfo>agreement_details.provider_view().extract(new NodeInfo());
@@ -634,7 +639,9 @@ export class Executor {
           busyActivities.delete(_act.id);
           emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
         } catch (error) {
-          emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error }));
+          activities.delete(agreement.id());
+          await _act.stop();
+          emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error?.message }));
           throw error;
         } finally {
           await agreements_pool.release_agreement(agreement.id(), true);
@@ -646,7 +653,7 @@ export class Executor {
       }
       await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
       emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
-      await _act.stop();
+
       logger.debug(`Stopped worker related to agreement ${agreement.id()}.`);
       csp.putAsync(workers_done, true);
     }
@@ -654,7 +661,7 @@ export class Executor {
     async function worker_starter(): Promise<void> {
       function _start_worker(agreement: Agreement) {
         start_worker(agreement).catch(async (error) => {
-          logger.warn(`Worker for agreement ${agreement.id()} finished with error: ${error}`);
+          logger.warn(`Worker for agreement ${agreement.id()} failed, reason: ${error?.message}`);
           await agreements_pool.release_agreement(agreement.id(), false);
           activities.delete(agreement.id());
         });

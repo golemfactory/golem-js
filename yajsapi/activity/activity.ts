@@ -119,7 +119,7 @@ export class Activity {
         this.logger?.warn(`Got API Exception when destroying activity ${this.id}: ${error}`);
         throw error;
       });
-    this.logger?.debug("Activity ended");
+    this.logger?.debug(`Activity ${this.id} ended.`);
   }
 
   private async pollingBatch(batchId, startTime, timeout, cancellationToken): Promise<Readable> {
@@ -154,7 +154,7 @@ export class Activity {
             try {
               retryCount = await handleError(error, lastIndex, retryCount, maxRetries);
             } catch (error) {
-              return this.destroy(error);
+              return this.destroy(error?.message || error);
             }
           }
         }
@@ -212,7 +212,8 @@ export class Activity {
     }
     const { terminated, reason, errorMessage } = await this.isTerminated();
     if (terminated) {
-      this.logger?.warn(`Activity ${this.id} terminated by provider. Reason: ${reason}, Error: ${errorMessage}`);
+      const msg = (reason || "") + (errorMessage || "");
+      this.logger?.warn(`Activity ${this.id} terminated by provider. ${msg ? "Reason: " + msg : ""}`);
       throw error;
     }
     if (!this.isGsbError(error)) {
