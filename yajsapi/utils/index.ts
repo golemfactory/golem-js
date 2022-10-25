@@ -13,6 +13,7 @@ import Queue from "./queue";
 import range from "./range";
 import sleep from "./sleep";
 import { Lock } from "./lock";
+import { isBrowser } from "./runtimeContextChecker";
 
 export {
   applyMixins,
@@ -31,4 +32,5 @@ export {
   Queue,
   range,
   sleep,
+  isBrowser
 };

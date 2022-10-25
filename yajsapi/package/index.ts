@@ -1,6 +1,7 @@
 import axios from "axios";
 import { DemandBuilder } from "../props";
 import { VmPackageFormat, VmRequest } from "../props/inf";
+import { isBrowser } from "../utils";
 
 const FALLBACK_REPO_URL = "http://girepo.dev.golem.network:8000";
 const PUBLIC_DNS_URL = "https://dns.google/resolve?type=srv&name=";
@@ -84,17 +85,32 @@ export const resolve_repo_srv = async ({ repo_srv, fallback_url = FALLBACK_REPO_
     }
   }
 
-  async function _resolve_repo_srv() {
-    try {
+  async function _resolve_repo_srv_for_browser() {
       const { data } = await axios.get(`${PUBLIC_DNS_URL}${repo_srv}`);
 
-      const records = (data?.Answer || []).map(r => {
+      return (data?.Answer || []).map(r => {
         const [, , port, host] = r && r.data && r.data.split ? r.data.split(' ') : [];
         return (host && port) ? `${SCHEMA}://${host.substring(0, host.length-1)}:${port}` : null;
       }).filter(r => r);
+  }
+
+  function _resolve_repo_srv_for_node() {
+    return new Promise((resolve, reject) => {
+      import('node:dns').then((nodeDns) => {
+        nodeDns.resolveSrv(DEFAULT_REPO_SRV, (err, addresses) => {
+          if (err) reject(err);
+          resolve(addresses.map((a) => (a.name && a.port) ? `${SCHEMA}://${a.name}:${a.port}` : null))
+        });
+      }).catch((err) => reject(err));
+    });
+  }
+
+  async function _resolve_repo_srv() {
+    try {
+      const records = isBrowser ? await _resolve_repo_srv_for_browser() : await _resolve_repo_srv_for_node()
 
       while(records.length > 0) {
-        const url = records.splice(data.length * Math.random() | 0, 1)[0];
+        const url = records.splice(records.length * Math.random() | 0, 1)[0];
         if(await is_record_valid(url)) {
           return url
         }
@@ -103,7 +119,7 @@ export const resolve_repo_srv = async ({ repo_srv, fallback_url = FALLBACK_REPO_
       console.warn(`error occurred while trying to get SRV record : ${e}`);
     }
 
-    return null;
+    return null
   }
 
   const repo_url = await _resolve_repo_srv();
