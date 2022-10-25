@@ -28,6 +28,7 @@ type ExecutorOptions = {
   capabilities?: string[];
   logger?: Logger;
   logLevel?: string;
+  credentials?: { apiKey?: string; apiUrl?: string };
 };
 
 type ExecutorOptionsMixin = string | ExecutorOptions;

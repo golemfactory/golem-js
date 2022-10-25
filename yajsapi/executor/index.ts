@@ -144,6 +144,7 @@ export type ExecutorOpts = {
   network_address?: string;
   logger?: Logger;
   logLevel?: string;
+  credentials?: { apiKey?: string; apiUrl?: string };
 };
 
 export class SubmissionState {
@@ -202,6 +203,7 @@ export class Executor {
   private activities = new Map<string, Activity>();
   private beforeWorker?: Worker;
   private beforeWorkerDoneInActivity = new Set<string>();
+  private credentials?: { apiKey?: string; apiUrl?: string };
 
   private logger?: Logger;
 
@@ -222,6 +224,9 @@ export class Executor {
    * @param network_address network address for VPN
    * @param logger          optional custom logger
    * @param logLevel        optional log level for default logger
+   * @param credentials     optional params to set Yagna app key and base URL
+   * @param credentials.apiKey env variable equivalent: YAGNA_APPKEY
+   * @param credentials.apiUrl env variable equivalent: YAGNA_API_URL
    */
   constructor({
     task_package,
@@ -238,6 +243,7 @@ export class Executor {
     network_address,
     logger,
     logLevel,
+    credentials,
   }: ExecutorOpts) {
     this.logger = logger;
     if (!logger && !isBrowser) this.logger = winstonLogger;
@@ -261,7 +267,7 @@ export class Executor {
       `Using subnet: ${this._subnet}, network: ${this._payment_network}, driver: ${this._payment_driver}`
     );
     this._stream_output = false;
-    this._api_config = new rest.Configuration();
+    this._api_config = new rest.Configuration(this.credentials?.apiKey, this.credentials?.apiUrl);
     this._stack = new AsyncExitStack();
     this._task_package = task_package;
     this._conf = new _ExecutorConfig(max_workers, timeout);
@@ -311,6 +317,7 @@ export class Executor {
     this._chan_computation_done = csp.chan();
     this._active_computations = 0;
     this._network_address = network_address;
+    this.credentials = credentials;
   }
 
   submit_before(worker) {
