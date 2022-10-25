@@ -109,13 +109,13 @@ export class WorkContext {
       );
     }
     let timeout = false;
-    setTimeout(() => (timeout = true), 10000);
-    while (state !== ActivityStateStateEnum.Ready || !timeout) {
+    setTimeout(() => (timeout = true), 20000);
+    while (state !== ActivityStateStateEnum.Ready && !timeout) {
       await sleep(2);
       state = await this.activity.getState();
     }
     if (state !== ActivityStateStateEnum.Ready) {
-      throw new Error(`Activity ${this.activity.id} can't be ready`);
+      throw new Error(`Activity ${this.activity.id} cannot reach the Ready state. Current state: ${state}`);
     }
     if (worker) {
       await worker(this, null);

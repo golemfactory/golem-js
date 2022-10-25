@@ -338,9 +338,9 @@ export class Payment {
           "getInvoiceEvents"
         );
         for (const ev of events) {
-          self.logger?.debug(
-            `Received invoice event: ${JSON.stringify(ev)}, ` + `type: ${JSON.stringify(Object.getPrototypeOf(ev))}`
-          );
+          // self.logger?.debug(
+          //   `Received invoice event: ${JSON.stringify(ev)}, ` + `type: ${JSON.stringify(Object.getPrototypeOf(ev))}`
+          // );
           ts = dayjs(ev.eventDate);
           if (ev.eventType === "InvoiceReceivedEvent") {
             const invoice = await self.invoice(ev["invoiceId"]);
@@ -382,9 +382,9 @@ export class Payment {
           "getDebitNoteEvents"
         );
         for (const ev of events) {
-          self.logger?.debug(
-            `Received debit note event: ${JSON.stringify(ev)}, ` + `type: ${JSON.stringify(Object.getPrototypeOf(ev))}`
-          );
+          // self.logger?.debug(
+          //   `Received debit note event: ${JSON.stringify(ev)}, ` + `type: ${JSON.stringify(Object.getPrototypeOf(ev))}`
+          // );
           ts = dayjs(ev.eventDate);
           if (ev.eventType === "DebitNoteReceivedEvent") {
             const debit_note = await self.debit_note(ev["debitNoteId"]);

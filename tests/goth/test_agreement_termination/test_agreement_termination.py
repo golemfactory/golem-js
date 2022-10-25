@@ -20,7 +20,7 @@ async def assert_command_error(stream):
     """Assert that a worker failure is reported."""
 
     async for line in stream:
-        m = re.match(r".*Worker for agreement ([0-9a-f]+) finished with error.*", line)
+        m = re.match(r".*Worker for agreement ([0-9a-f]+) failed.*", line)
         if m:
             return m.group(1)
     raise AssertionError("Expected worker failure")
