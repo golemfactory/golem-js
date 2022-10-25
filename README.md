@@ -62,3 +62,6 @@ Call `-d` or `--debug` flag on your example script, e.g. `npm run ts:blender -- 
 
 ### Subnet
 Use the `--subnet-tag` option, e.g. `npm run ts:blender -- --subnet-tag YOUR_SUBNET`.
+
+
+test change to make a test PR
