@@ -28,10 +28,17 @@ const logColors = {
 winston.addColors(logColors);
 
 const logger = winston.createLogger(options);
+let logLevel;
 
 export const winstonLogger: Logger = {
-  ...logger,
+  level: logLevel,
+  debug: (msg) => logger.debug(msg),
+  info: (msg) => logger.info(msg),
+  log: (msg) => logger.log(msg),
+  warn: (msg) => logger.warn(msg),
+  error: (msg) => logger.error(msg),
   setLevel: (level: string) => {
+    logLevel = level;
     options.level = level;
     options.transports = [
       new winston.transports.Console({ level: level }),

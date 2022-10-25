@@ -295,7 +295,7 @@ export class Market {
     const create = async (): Promise<Subscription> => {
       try {
         const { data: sub_id } = await this._api.subscribeDemand(request, { timeout: 5000 });
-        return new Subscription(this._api, sub_id, this.logger);
+        return new Subscription(this._api, sub_id, null, this.logger);
       } catch (error) {
         this.logger?.error(`Error while subscribing: ${error}`);
         throw error;

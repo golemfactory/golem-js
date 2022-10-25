@@ -27,6 +27,7 @@ type ExecutorOptions = {
   cores?: number;
   capabilities?: string[];
   logger?: Logger;
+  logLevel?: string;
 };
 
 type ExecutorOptionsMixin = string | ExecutorOptions;

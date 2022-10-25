@@ -143,6 +143,7 @@ export type ExecutorOpts = {
   event_consumer?: Callable<[events.YaEvent], void>; //TODO not default event
   network_address?: string;
   logger?: Logger;
+  logLevel?: string;
 };
 
 export class SubmissionState {
@@ -220,6 +221,7 @@ export class Executor {
    * @param event_consumer  a callable that processes events related to the computation; by default it is a function that logs all events
    * @param network_address network address for VPN
    * @param logger          optional custom logger
+   * @param logLevel        optional log level for default logger
    */
   constructor({
     task_package,
@@ -235,9 +237,11 @@ export class Executor {
     event_consumer,
     network_address,
     logger,
+    logLevel,
   }: ExecutorOpts) {
     this.logger = logger;
     if (!logger && !isBrowser) this.logger = winstonLogger;
+    this.logger?.setLevel(logLevel || "info");
     this._subnet = subnet_tag ? subnet_tag : DEFAULT_SUBNET;
     this._payment_driver = payment_driver ? payment_driver.toLowerCase() : DEFAULT_DRIVER;
     this._payment_network = payment_network ? payment_network.toLowerCase() : DEFAULT_NETWORK;
@@ -612,7 +616,7 @@ export class Executor {
           emit(new events.ActivityCreated({ act_id: _act.id, agr_id: agreement.id() }));
         } else {
           _act = activities.get(agreement.id())!;
-          logger.debug(`Activity ${_act.id} reused for agreement ${agreement.id()}`);
+          logger?.debug(`Activity ${_act.id} reused for agreement ${agreement.id()}`);
         }
       } catch (error) {
         emit(new events.ActivityCreateFailed({ agr_id: agreement.id() }));

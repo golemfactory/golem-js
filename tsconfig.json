@@ -27,5 +27,5 @@
     "exclude": ["**/*.spec.ts"],
     "out": "docs"
   },
-  "exclude": ["dist", "node_modules", "examples", "cypress.config.ts"]
+  "exclude": ["dist", "node_modules", "examples", "tests", "cypress.config.ts"]
 }
