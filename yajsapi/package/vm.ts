@@ -1,5 +1,6 @@
 import { RuntimeType, InfVmKeys } from "../props/inf";
 import { Constraints, DEFAULT_REPO_SRV, Package, RepoOpts, VmPackage, resolve_repo_srv } from ".";
+import { Logger } from "../utils/logger";
 
 class _VmConstrains extends Constraints {
   constructor(
@@ -23,14 +24,10 @@ class _VmConstrains extends Constraints {
   }
 }
 
-export async function repo({
-  image_hash,
-  min_mem_gib = 0.5,
-  min_storage_gib = 2.0,
-  min_cpu_threads = 1,
-  cores = 1,
-  capabilities = [],
-}: RepoOpts): Promise<Package> {
+export async function repo(
+  { image_hash, min_mem_gib = 0.5, min_storage_gib = 2.0, min_cpu_threads = 1, cores = 1, capabilities = [] }: RepoOpts,
+  logger?: Logger
+): Promise<Package> {
   /*
     Builds reference to a demand decorator.
 
@@ -42,7 +39,7 @@ export async function repo({
     */
 
   return new VmPackage({
-    repo_url: await resolve_repo_srv({ repo_srv: DEFAULT_REPO_SRV }),
+    repo_url: await resolve_repo_srv({ repo_srv: DEFAULT_REPO_SRV, logger }),
     image_hash,
     constraints: new _VmConstrains(min_mem_gib, min_storage_gib, min_cpu_threads, cores, capabilities),
   });

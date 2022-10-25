@@ -1,12 +1,13 @@
-const { createExecutor, utils } = require("../../dist");
+const { createExecutor } = require("../../dist");
 const { program } = require("commander");
 
-async function main(fibo_n = 1, tasks_count = 1, subnet_tag, payment_driver, payment_network) {
+async function main(fibo_n = 1, tasks_count = 1, subnet_tag, payment_driver, payment_network, debug) {
   const executor = await createExecutor({
     package: "529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4",
     subnet_tag,
     payment_driver,
     payment_network,
+    logLevel: debug ? "debug" : "info",
   });
 
   const data = Array(tasks_count).fill(null);
@@ -26,7 +27,4 @@ program
   .option("-d, --debug", "output extra debugging");
 program.parse();
 const options = program.opts();
-if (options.debug) {
-  utils.changeLogLevel("debug");
-}
-main(options.fibonacciNumber, options.tasksCount, options.subnetTag, options.driver, options.network);
+main(options.fibonacciNumber, options.tasksCount, options.subnetTag, options.driver, options.network, options.debug);

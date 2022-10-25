@@ -75,7 +75,7 @@ export class VmPackage extends Package {
   }
 }
 
-export const resolve_repo_srv = async ({ repo_srv, fallback_url = FALLBACK_REPO_URL }) => {
+export const resolve_repo_srv = async ({ repo_srv, fallback_url = FALLBACK_REPO_URL, logger }) => {
   async function is_record_valid(url) {
     try {
       await axios.head(url);
@@ -86,47 +86,51 @@ export const resolve_repo_srv = async ({ repo_srv, fallback_url = FALLBACK_REPO_
   }
 
   async function _resolve_repo_srv_for_browser() {
-      const { data } = await axios.get(`${PUBLIC_DNS_URL}${repo_srv}`);
+    const { data } = await axios.get(`${PUBLIC_DNS_URL}${repo_srv}`);
 
-      return (data?.Answer || []).map(r => {
-        const [, , port, host] = r && r.data && r.data.split ? r.data.split(' ') : [];
-        return (host && port) ? `${SCHEMA}://${host.substring(0, host.length-1)}:${port}` : null;
-      }).filter(r => r);
+    return (data?.Answer || [])
+      .map((r) => {
+        const [, , port, host] = r && r.data && r.data.split ? r.data.split(" ") : [];
+        return host && port ? `${SCHEMA}://${host.substring(0, host.length - 1)}:${port}` : null;
+      })
+      .filter((r) => r);
   }
 
   function _resolve_repo_srv_for_node() {
     return new Promise((resolve, reject) => {
-      import('node:dns').then((nodeDns) => {
-        nodeDns.resolveSrv(DEFAULT_REPO_SRV, (err, addresses) => {
-          if (err) reject(err);
-          resolve(addresses.map((a) => (a.name && a.port) ? `${SCHEMA}://${a.name}:${a.port}` : null))
-        });
-      }).catch((err) => reject(err));
+      import("node:dns")
+        .then((nodeDns) => {
+          nodeDns.resolveSrv(DEFAULT_REPO_SRV, (err, addresses) => {
+            if (err) reject(err);
+            resolve(addresses.map((a) => (a.name && a.port ? `${SCHEMA}://${a.name}:${a.port}` : null)));
+          });
+        })
+        .catch((err) => reject(err));
     });
   }
 
   async function _resolve_repo_srv() {
     try {
-      const records = isBrowser ? await _resolve_repo_srv_for_browser() : await _resolve_repo_srv_for_node()
+      const records = isBrowser ? await _resolve_repo_srv_for_browser() : await _resolve_repo_srv_for_node();
 
-      while(records.length > 0) {
-        const url = records.splice(records.length * Math.random() | 0, 1)[0];
-        if(await is_record_valid(url)) {
-          return url
+      while (records.length > 0) {
+        const url = records.splice((records.length * Math.random()) | 0, 1)[0];
+        if (await is_record_valid(url)) {
+          return url;
         }
       }
     } catch (e) {
-      console.warn(`error occurred while trying to get SRV record : ${e}`);
+      logger?.warn(`error occurred while trying to get SRV record : ${e}`);
     }
 
-    return null
+    return null;
   }
 
   const repo_url = await _resolve_repo_srv();
   if (repo_url) {
-    console.debug(`Using image repository: ${repo_srv} -> ${repo_url}.`);
+    logger?.debug(`Using image repository: ${repo_srv} -> ${repo_url}.`);
     return repo_url;
   }
-  console.warn(`Problem resolving image repository: ${repo_srv}, falling back to ${fallback_url}.`);
+  logger?.warn(`Problem resolving image repository: ${repo_srv}, falling back to ${fallback_url}.`);
   return fallback_url;
 };

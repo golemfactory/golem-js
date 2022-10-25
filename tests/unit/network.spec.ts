@@ -1,10 +1,6 @@
 import test from "ava";
 import { Network } from "../../yajsapi/network";
 import { NetMock } from "../mock/rest";
-import logger from "../../yajsapi/utils/log";
-
-logger.transports.forEach((t) => (t.silent = true));
-
 const netApiMock = new NetMock();
 
 test("create network", async (t) => {
@@ -50,7 +46,15 @@ test("create network without mask", async (t) => {
 
 test("create network with custom parameters", async (t) => {
   netApiMock.setExpected("create_network", "77");
-  const network = await Network.create(netApiMock, "192.168.0.1", "owner_1", "192.168.0.7", "27", "192.168.0.2");
+  const network = await Network.create(
+    netApiMock,
+    "192.168.0.1",
+    "owner_1",
+    undefined,
+    "192.168.0.7",
+    "27",
+    "192.168.0.2"
+  );
   const { id, ip, mask, nodes } = network.get_network_info();
   t.deepEqual({ id, ip, mask }, { id: "77", ip: "192.168.0.0", mask: "255.255.255.224" });
   t.is(nodes["192.168.0.7"], "owner_1");

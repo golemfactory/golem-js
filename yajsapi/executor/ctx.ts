@@ -4,8 +4,9 @@
 import * as events from "./events";
 
 import { StorageProvider, Source, Destination } from "../storage";
-import { Callable, logger } from "../utils";
+import { Callable } from "../utils";
 import { NetworkNode } from "../network";
+import { Logger } from "../utils/logger";
 
 export class CommandContainer {
   private _commands;
@@ -301,13 +302,15 @@ export class WorkContext {
   private _emitter: Callable<[StorageEvent], void> | null;
   private _network_node?: NetworkNode;
   public provider_info: { provider_id: string; provider_name: string };
+  private logger?: Logger;
 
   constructor(
     ctx_id: string,
     storage: StorageProvider,
     emitter: Callable<[StorageEvent], void> | null = null,
     provider_info: { provider_id: string; provider_name: string },
-    network_node?: NetworkNode
+    network_node?: NetworkNode,
+    logger?: Logger
   ) {
     this._id = ctx_id;
     this._storage = storage;
@@ -316,6 +319,7 @@ export class WorkContext {
     this._emitter = emitter;
     this._network_node = network_node;
     this.provider_info = provider_info;
+    this.logger = logger;
   }
 
   get network_node() {
@@ -387,7 +391,7 @@ export class WorkContext {
   }
 
   log(args) {
-    logger.info(`${this._id}: ${args}`);
+    this.logger?.info(`${this._id}: ${args}`);
   }
 
   /**
