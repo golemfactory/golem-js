@@ -48,7 +48,6 @@
     "rewire": "^6.0.0",
     "secp256k1": "^4.0.2",
     "sgx-ias-js": "^0.2.2",
-    "srvclient": "^1.0.2",
     "timers-browserify": "^2.0.12",
     "tmp": "^0.2.1",
     "utf8": "~3.0.0",
