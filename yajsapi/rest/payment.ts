@@ -329,6 +329,7 @@ export class Payment {
           "getInvoiceEvents"
         );
         for (const ev of events) {
+          // TODO: temporary disabled until fix bug in https://github.com/golemfactory/yajsapi/issues/381
           // logger.debug(
           //   `Received invoice event: ${JSON.stringify(ev)}, ` + `type: ${JSON.stringify(Object.getPrototypeOf(ev))}`
           // );
@@ -373,6 +374,7 @@ export class Payment {
           "getDebitNoteEvents"
         );
         for (const ev of events) {
+          // TODO: temporary disabled until fix bug in https://github.com/golemfactory/yajsapi/issues/381
           // logger.debug(
           //   `Received debit note event: ${JSON.stringify(ev)}, ` + `type: ${JSON.stringify(Object.getPrototypeOf(ev))}`
           // );
