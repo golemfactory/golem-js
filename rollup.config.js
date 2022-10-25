@@ -1,24 +1,29 @@
-import path from "path";
-import commonjs from "@rollup/plugin-commonjs";
-import resolve from "@rollup/plugin-node-resolve";
-import json from "@rollup/plugin-json";
-import nodePolyfills from "rollup-plugin-node-polyfills";
-import injectProcessEnv from "rollup-plugin-inject-process-env";
+const path = require("path");
+const stdLibBrowser = require("node-stdlib-browser");
+const { default: resolve } = require("@rollup/plugin-node-resolve");
+const commonjs = require("@rollup/plugin-commonjs");
+const json = require("@rollup/plugin-json");
+const alias = require("@rollup/plugin-alias");
+const inject = require("@rollup/plugin-inject");
 
-export default {
-  input: path.resolve(__dirname, "./dist/index_web.js"),
+module.exports = {
+  input: path.resolve(__dirname, "./dist/yajsapi/index_browser.js"),
+  // TODO: tests es module format in browser
   output: {
     file: path.resolve(__dirname, "./examples/web/js/bundle.js"),
     format: "iife",
     name: "yajsapi",
   },
   plugins: [
-    resolve({ browser: true, preferBuiltins: false }),
+    alias({
+      entries: stdLibBrowser,
+    }),
+    resolve({ browser: true }),
     commonjs(),
-    nodePolyfills(),
     json(),
-    injectProcessEnv({
-      YAGNA_APPKEY: "xxx",
+    inject({
+      process: stdLibBrowser.process,
+      Buffer: [stdLibBrowser.buffer, "Buffer"],
     }),
   ],
 };
