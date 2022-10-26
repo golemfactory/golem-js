@@ -200,7 +200,6 @@ export class Executor {
   private activities = new Map<string, Activity>();
   private beforeWorker?: Worker;
   private beforeWorkerDoneInActivity = new Set<string>();
-
   private logger?: Logger;
 
   /**
@@ -263,7 +262,7 @@ export class Executor {
       `Using subnet: ${this._subnet}, network: ${this._payment_network}, driver: ${this._payment_driver}`
     );
     this._stream_output = false;
-    this._api_config = new rest.Configuration(this.credentials?.apiKey, this.credentials?.apiUrl);
+    this._api_config = new rest.Configuration(credentials?.apiKey, credentials?.apiUrl);
     this._stack = new AsyncExitStack();
     this._task_package = task_package;
     this._conf = new _ExecutorConfig(max_workers, timeout);
@@ -313,7 +312,6 @@ export class Executor {
     this._chan_computation_done = csp.chan();
     this._active_computations = 0;
     this._network_address = network_address;
-    this.credentials = credentials;
   }
 
   submit_before(worker) {
