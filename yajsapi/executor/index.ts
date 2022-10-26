@@ -242,7 +242,7 @@ export class Executor {
   }: ExecutorOpts) {
     this.logger = logger;
     if (!logger && !runtimeContextChecker.isBrowser) this.logger = winstonLogger;
-    this.logger?.setLevel(logLevel || "info");
+    this.logger?.setLevel && this.logger?.setLevel(logLevel || "info");
     this._subnet = subnet_tag ? subnet_tag : DEFAULT_SUBNET;
     this._payment_driver = payment_driver ? payment_driver.toLowerCase() : DEFAULT_DRIVER;
     this._payment_network = payment_network ? payment_network.toLowerCase() : DEFAULT_NETWORK;
