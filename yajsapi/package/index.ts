@@ -1,7 +1,7 @@
 import axios from "axios";
 import { DemandBuilder } from "../props";
 import { VmPackageFormat, VmRequest } from "../props/inf";
-import { isBrowser } from "../utils";
+import { runtimeContextChecker } from "../utils";
 
 const FALLBACK_REPO_URL = "http://girepo.dev.golem.network:8000";
 const PUBLIC_DNS_URL = "https://dns.google/resolve?type=srv&name=";
@@ -111,7 +111,9 @@ export const resolve_repo_srv = async ({ repo_srv, fallback_url = FALLBACK_REPO_
 
   async function _resolve_repo_srv() {
     try {
-      const records = isBrowser ? await _resolve_repo_srv_for_browser() : await _resolve_repo_srv_for_node();
+      const records = runtimeContextChecker.isBrowser
+        ? await _resolve_repo_srv_for_browser()
+        : await _resolve_repo_srv_for_node();
 
       while (records.length > 0) {
         const url = records.splice((records.length * Math.random()) | 0, 1)[0];
