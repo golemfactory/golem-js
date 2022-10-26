@@ -32,7 +32,7 @@
   "author": "Muhammed Tanrikulu <muhammed@golem.network>",
   "license": "LGPL-3.0",
   "engines": {
-    "node": ">=14.17.0"
+    "node": ">=14.18.0"
   },
   "dependencies": {
     "@rauschma/stringio": "^1.4.0",
