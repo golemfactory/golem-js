@@ -7,7 +7,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "build:browser": "rollup --config rollup.config.js",
+    "build:browser": "tsc && rollup --config rollup.config.js",
     "clean": "rimraf node_modules/ dist/ || echo 'Project is already clean'",
     "docs": "typedoc yajsapi/ --plugin none",
     "docs:md": "typedoc yajsapi/ --plugin typedoc-plugin-markdown",
