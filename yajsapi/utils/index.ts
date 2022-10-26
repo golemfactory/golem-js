@@ -12,8 +12,9 @@ import Queue from "./queue";
 import range from "./range";
 import sleep from "./sleep";
 import { Lock } from "./lock";
+import { Logger } from "./logger";
 import { winstonLogger } from "./winstonLogger";
-import { isBrowser } from "./runtimeContextChecker";
+import * as runtimeContextChecker from "./runtimeContextChecker";
 
 export {
   applyMixins,
@@ -30,6 +31,7 @@ export {
   Queue,
   range,
   sleep,
+  Logger,
   winstonLogger,
-  isBrowser,
+  runtimeContextChecker,
 };

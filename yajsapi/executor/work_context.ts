@@ -3,15 +3,14 @@ import { Command, Deploy, DownloadFile, Run, Script, Start, UploadFile } from ".
 import { StorageProvider } from "../storage/provider";
 import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity";
 import { Worker } from "./executor";
-import { sleep } from "../utils";
+import { sleep, Logger, runtimeContextChecker } from "../utils";
 import { Task } from "./task";
 import { Readable, Transform } from "stream";
 import { NetworkNode } from "../network";
-import { Logger } from "../utils/logger";
 
 class Batch {
   private script: Script;
-  constructor(private activity: Activity, private storageProvider: StorageProvider) {
+  constructor(private activity: Activity, private storageProvider?: StorageProvider, private logger?: Logger) {
     this.script = new Script([]);
   }
   run(...args: Array<string | string[]>) {
@@ -21,16 +20,19 @@ class Batch {
     return this;
   }
   uploadFile(src: string, dst: string) {
-    this.script.addCommand(new UploadFile(this.storageProvider, src, dst));
+    runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Upload File");
+    this.script.addCommand(new UploadFile(this.storageProvider!, src, dst));
     return this;
   }
   uploadJson(json: object, dst: string) {
+    runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Upload JSON");
     const src = Buffer.from(JSON.stringify(json), "utf-8");
-    this.script.addCommand(new UploadFile(this.storageProvider, src, dst));
+    this.script.addCommand(new UploadFile(this.storageProvider!, src, dst));
     return this;
   }
   downloadFile(src: string, dst: string) {
-    this.script.addCommand(new DownloadFile(this.storageProvider, src, dst));
+    runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Download File");
+    this.script.addCommand(new DownloadFile(this.storageProvider!, src, dst));
     return this;
   }
   async end(): Promise<Result[]> {
@@ -91,10 +93,10 @@ export class WorkContext {
   private resultRejected = false;
   constructor(
     private activity: Activity,
-    private storageProvider: StorageProvider,
     private nodeInfo: ProviderInfo,
     private task: Task<"D", "R">,
     private networkNode?: NetworkNode,
+    private storageProvider?: StorageProvider,
     private logger?: Logger
   ) {}
   async before(worker?: Worker): Promise<Result[] | void> {
@@ -127,17 +129,20 @@ export class WorkContext {
     return this.runOneCommand(command);
   }
   async uploadFile(src: string, dst: string): Promise<Result> {
-    return this.runOneCommand(new UploadFile(this.storageProvider, src, dst));
+    runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Upload File");
+    return this.runOneCommand(new UploadFile(this.storageProvider!, src, dst));
   }
   async uploadJson(json: object, dst: string): Promise<Result> {
+    runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Upload JSON");
     const src = Buffer.from(JSON.stringify(json), "utf-8");
-    return this.runOneCommand(new UploadFile(this.storageProvider, src, dst));
+    return this.runOneCommand(new UploadFile(this.storageProvider!, src, dst));
   }
   async downloadFile(src: string, dst: string): Promise<Result> {
-    return this.runOneCommand(new DownloadFile(this.storageProvider, src, dst));
+    runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Download File");
+    return this.runOneCommand(new DownloadFile(this.storageProvider!, src, dst));
   }
   beginBatch() {
-    return new Batch(this.activity, this.storageProvider);
+    return new Batch(this.activity, this.storageProvider, this.logger);
   }
   acceptResult(result: unknown) {
     if (!this.resultAccepted) this.task.accept_result(result as "R");

@@ -20,7 +20,6 @@ import { Activity, ActivityFactory } from "../activity";
 
 import * as csp from "js-csp";
 
-import * as gftp from "../storage/gftp";
 import {
   AsyncExitStack,
   asyncWith,
@@ -32,12 +31,13 @@ import {
   promisify,
   Queue,
   sleep,
+  Logger,
   winstonLogger,
-  isBrowser,
+  runtimeContextChecker,
 } from "../utils";
 
 import * as _vm from "../package/vm";
-import * as _sgx from "../package/sgx";
+
 import { Task, TaskStatus } from "./task";
 import { Consumer, SmartQueue } from "./smartq";
 import {
@@ -51,10 +51,7 @@ import axios from "axios";
 
 import { Worker } from "./executor";
 import { WorkContext } from "./work_context";
-import { GftpStorageProvider } from "../storage/gftp_provider";
-import { Logger } from "../utils/logger";
 
-// export const sgx = _sgx;
 export const vm = _vm;
 
 export { Task, TaskStatus };
@@ -203,7 +200,6 @@ export class Executor {
   private activities = new Map<string, Activity>();
   private beforeWorker?: Worker;
   private beforeWorkerDoneInActivity = new Set<string>();
-  private credentials?: { apiKey?: string; apiUrl?: string };
 
   private logger?: Logger;
 
@@ -246,7 +242,7 @@ export class Executor {
     credentials,
   }: ExecutorOpts) {
     this.logger = logger;
-    if (!logger && !isBrowser) this.logger = winstonLogger;
+    if (!logger && !runtimeContextChecker.isBrowser) this.logger = winstonLogger;
     this.logger?.setLevel(logLevel || "info");
     this._subnet = subnet_tag ? subnet_tag : DEFAULT_SUBNET;
     this._payment_driver = payment_driver ? payment_driver.toLowerCase() : DEFAULT_DRIVER;
@@ -297,11 +293,11 @@ export class Executor {
       if (cancellationToken && !cancellationToken.cancelled) {
         cancellationToken.cancel();
       }
-      // SIGNALS.forEach((event) => {
-      //   process.off(event, cancel);
-      // });
+      SIGNALS.forEach((event) => {
+        process?.off(event, cancel);
+      });
     }
-    // SIGNALS.forEach((event) => process.on(event, cancel));
+    SIGNALS.forEach((event) => process?.on(event, cancel));
 
     if (!event_consumer && this.logger) {
       event_consumer = logSummary(this.logger);
@@ -485,6 +481,7 @@ export class Executor {
     const beforeWorkerDoneInActivity = this.beforeWorkerDoneInActivity;
     const busyActivities = new Set();
     const logger = this.logger;
+    const gftp = runtimeContextChecker.isNode ? await import("../storage/gftp") : null;
 
     async function process_invoices(): Promise<void> {
       for await (const invoice of self._payment_api.incoming_invoices(paymentCancellationToken)) {
@@ -575,7 +572,9 @@ export class Executor {
       logger?.debug("Stopped processing debit notes.");
     }
 
-    const storage_manager = isBrowser ? null : await this._stack.enter_async_context(gftp.provider());
+    const storage_manager = runtimeContextChecker.isNode
+      ? await this._stack.enter_async_context(gftp?.provider())
+      : null;
 
     async function process_batches(
       agreement_id: string,
@@ -640,7 +639,11 @@ export class Executor {
       if (network) {
         network_node = await network.add_node(provider_id);
       }
-      const storageProvider = new GftpStorageProvider(storage_manager);
+      let storageProvider;
+      if (runtimeContextChecker.isNode) {
+        const { GftpStorageProvider } = await import("../storage/gftp_provider");
+        storageProvider = new GftpStorageProvider(storage_manager);
+      }
       await asyncWith(work_queue.new_consumer(), async (consumer) => {
         try {
           const tasks = task_emitter(consumer);
@@ -648,10 +651,10 @@ export class Executor {
           if (done) return;
           const new_work_context = new WorkContext(
             _act,
-            storageProvider,
             { providerId: provider_id, providerName: provider_name },
             task,
             network_node,
+            storageProvider,
             logger
           );
           let timeout = false;
