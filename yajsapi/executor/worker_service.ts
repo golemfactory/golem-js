@@ -1,7 +1,7 @@
 // TMP:
 let maxParallelTasks, WorkContext, sleep, events;
 
-class WorkerService {
+class TaskService {
   private isRunning;
   private agreementPool;
   private eventBus;
@@ -27,15 +27,15 @@ class WorkerService {
 
   private async startTask(task) {
     const agreement = await this.agreementPool.get();
-    this.eventBus.emit(new events.TaskStarted({ agr_id: agreement.id }));
+    this.eventBus.emit(new events.TaskStarted(agreement.id));
     let activity;
     if (!this.activities.has(agreement.id)) {
-      activity = this.activityFactory.create(agreement.id);
+      activity = await this.activityFactory.create(agreement.id);
       this.activities.set(agreement.id, activity.id);
-      this.eventBus.emit(new events.ActivityCreated({ act_id: activity.id, agr_id: agreement.id }));
+      this.eventBus.emit(new events.ActivityCreated(activity.id, agreement.id));
     } else {
       activity = this.activities.get(agreement.id);
-      this.eventBus.emit(new events.ActivityReused({ act_id: activity.id, agr_id: agreement.id }));
+      this.eventBus.emit(new events.ActivityReused(activity.id, agreement.id));
     }
     this.paymentsService.acceptDebitNotesFor(agreement.id);
     const workContext = new WorkContext(agreement, activity, task);
@@ -43,18 +43,17 @@ class WorkerService {
     await workContext.execute();
     this.paymentsService.acceptInvoicesFor(agreement.id);
     await this.agreementPool.releaseAgreement(agreement.id);
-    this.eventBus.emit(new events.TaskFinished({ task }));
+    this.eventBus.emit(new events.TaskFinished(task));
   }
 }
 
 // USAGE EXAMPLE:
-const workerService = new WorkerService();
+const taskService = new TaskService();
 
 // in executor init:
-workerService.run();
+taskService.run();
 
 // executor.run(task):
-workerService.add({ simple_task_1: true });
-workerService.add({ simple_task_2: true });
-workerService.add({ simple_task_3: true });
-
+taskService.add({ simple_task_1: true });
+taskService.add({ simple_task_2: true });
+taskService.add({ simple_task_3: true });
