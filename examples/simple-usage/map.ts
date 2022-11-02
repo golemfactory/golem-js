@@ -6,7 +6,6 @@ import { createExecutor } from "../../dist";
 
   const results = executor.map<string, string>(data, async (ctx, x) => {
     const res = await ctx.run(`echo "${x}"`);
-    await ctx.run(`echo "${res.stdout?.trim()}"`);
     return res.stdout?.trim();
   });
   const finalOutput: string[] = [];
