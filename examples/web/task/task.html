@@ -14,7 +14,7 @@
             <div class="column">
                 <div>
                     <label for="YAGNA_APPKEY">YAGNA_APPKEY: </label>
-                    <input id="YAGNA_APPKEY" type="text" value="xxxxxx"/>
+                    <input id="YAGNA_APPKEY" type="text" value="411aa8e620954a318093687757053b8d"/>
                 </div>
                 <div>
                     <label for="YAGNA_API_BASEPATH">YAGNA_API_BASEURL: </label>
@@ -55,10 +55,16 @@
             results_el.appendChild(li);
         }
         const logger = {
-            log: (msg) => appendLog(`[${new Date().toISOString()}] ${msg}`),
+            log: (msg) => {
+              console.log(msg);
+              appendLog(`[${new Date().toISOString()}] ${msg}`)
+            },
             warn: (msg) => appendLog(`[${new Date().toISOString()}] [warn] ${msg}`),
             debug: (msg) => appendLog(`[${new Date().toISOString()}] [debug] ${msg}`),
-            error: (msg) => appendLog(`[${new Date().toISOString()}] [error] ${msg}`),
+            error: (msg) => {
+              console.log(msg);
+              appendLog(`[${new Date().toISOString()}] [error] ${msg}`)
+            },
             info: (msg) => {
               console.log(msg);
               appendLog(`[${new Date().toISOString()}] [info] ${msg}`)

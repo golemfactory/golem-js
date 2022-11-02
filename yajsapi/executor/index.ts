@@ -51,6 +51,9 @@ import axios from "axios";
 
 import { Worker } from "./executor";
 import { WorkContext } from "./work_context";
+import { EventBus } from "./eventBus";
+import { TaskQueue } from "./taskQueue";
+import { TaskService } from "./task_service";
 
 export const vm = _vm;
 
@@ -735,9 +738,27 @@ export class Executor {
     const wait_until_done = loop.create_task(work_queue.wait_until_done.bind(work_queue));
     let get_offers_deadline = dayjs.utc() + this._conf.get_offers_timeout;
     let get_done_task: any = null;
-    const worker_starter_task = loop.create_task(worker_starter);
+
+    /* ---- START REFACROR TASK SERVICES --- */
+    const isRunning = true;
+    const eventBus = new EventBus();
+    const taskQueue = new TaskQueue();
+
+    const taskService = new TaskService(
+      self._api_config.app_key(),
+      isRunning,
+      taskQueue,
+      agreements_pool,
+      eventBus,
+      logger
+    );
+
+    await taskService.run();
+    /* ---- STOP REFACROR TASK SERVICES --- */
+
+    // const worker_starter_task = loop.create_task(worker_starter);
     const debit_notes_job = loop.create_task(process_debit_notes);
-    let services: any = [find_offers_task, worker_starter_task, process_invoices_job, wait_until_done, debit_notes_job];
+    let services: any = [find_offers_task, process_invoices_job, wait_until_done, debit_notes_job];
     try {
       while (services.indexOf(wait_until_done) > -1 || !done_queue.empty() || !this.isFinished) {
         if (cancellationToken.cancelled) {

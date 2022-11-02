@@ -4,7 +4,7 @@ import { StorageProvider } from "../storage/provider";
 import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity";
 import { Worker } from "./executor";
 import { sleep, Logger, runtimeContextChecker } from "../utils";
-import { Task } from "./task";
+import { Task } from "./task_new";
 import { Readable, Transform } from "stream";
 import { NetworkNode } from "../network";
 
@@ -88,18 +88,24 @@ export interface ProviderInfo {
   providerId: string;
 }
 
+export interface Agreement {
+  id: string;
+  getProviderInfo(): ProviderInfo;
+}
+
 export class WorkContext {
   private resultAccepted = false;
   private resultRejected = false;
   constructor(
+    private agreement: Agreement,
     private activity: Activity,
-    private nodeInfo: ProviderInfo,
-    private task: Task<"D", "R">,
-    private networkNode?: NetworkNode,
+    private task: Task,
     private storageProvider?: StorageProvider,
+    private networkNode?: NetworkNode,
     private logger?: Logger
   ) {}
-  async before(worker?: Worker): Promise<Result[] | void> {
+  async before(): Promise<Result[] | void> {
+    const worker = this.task.getInitWorker();
     let state = await this.activity.getState();
     if (state === ActivityStateStateEnum.Ready) {
       if (worker) await worker(this, null);
@@ -145,16 +151,16 @@ export class WorkContext {
     return new Batch(this.activity, this.storageProvider, this.logger);
   }
   acceptResult(result: unknown) {
-    if (!this.resultAccepted) this.task.accept_result(result as "R");
+    if (!this.resultAccepted) this.task.stop(result);
     this.resultAccepted = true;
   }
   rejectResult(msg: string) {
-    if (!this.resultRejected && !this.resultAccepted) this.task.reject_result(msg, true);
+    if (!this.resultRejected && !this.resultAccepted) this.task.stop(null, msg, true);
     this.resultRejected = true;
     this.resultAccepted = true;
   }
   log(msg: string) {
-    this.logger?.info(`[${this.nodeInfo.providerName}] ${msg}`);
+    this.logger?.info(`[${this.nodeInfo?.providerName}] ${msg}`);
   }
   getProviderInfo(): ProviderInfo {
     return this.nodeInfo;
