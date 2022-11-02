@@ -50,7 +50,7 @@ export default class TaskQueue<T extends StatusableTask> {
 
 
 // TODO consider coupling with Task object or just change generic to the Task object
-interface StatusableTask {
+export interface StatusableTask {
     isRetry(): boolean;
     isPending(): boolean;
     isDone(): boolean;

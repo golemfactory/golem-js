@@ -1,3 +1,5 @@
+import { StatusableTask } from '../../yajsapi/executor/taskqueue';
+
 export enum TaskState {
     New,
     Retry,
@@ -5,7 +7,7 @@ export enum TaskState {
     Done,
 }
 
-export default class TaskMock {
+export default class TaskMock implements StatusableTask {
     constructor(private results, private state: TaskState) {
     }
 
