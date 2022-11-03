@@ -5,15 +5,12 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 
 describe("#TaskService()", () => {
-    it("process new task in queue", async () => {
-        // TODO
-    });
+    // TODO
+    it("process new task in queue");
 
-    it("process only allowed number of tasks", async () => {
-        // TODO
-    });
+    // TODO
+    it("process only allowed number of tasks");
 
-    it("stop the service if it is interrupted by the user", async () => {
-        // TODO
-    });
+    // TODO
+    it("stop the service if it is interrupted by the user");
 });
