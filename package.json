@@ -13,7 +13,7 @@
     "docs:md": "typedoc yajsapi/ --plugin typedoc-plugin-markdown",
     "docs:clean": "rimraf docs/ && run-s handbook:clean",
     "test": "run-s build && node dist/index.js",
-    "test:unit": "nyc --silent --cache false ava tests/unit/*.spec.ts --verbose",
+    "test:unit": "nyc --silent --cache false ava tests/unit/legacy/*.spec.ts --verbose",
     "test:unit-mocha": "nyc --silent --cache false ts-mocha -p tsconfig.json tests/unit/**.test.ts",
     "test:cypress": "cypress run",
     "cov": "nyc --cache false --exclude tests ava tests/unit/*.spec.ts --verbose",
