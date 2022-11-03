@@ -33,6 +33,9 @@ export class Task<InputType = unknown, OutputType = unknown> implements Queueabl
   isQueueable(): boolean {
     return this.state === TaskState.New || this.state === TaskState.Retry;
   }
+  isRetry(): boolean {
+    return this.state === TaskState.New;
+  }
   getResults(): OutputType | undefined {
     return this.results;
   }

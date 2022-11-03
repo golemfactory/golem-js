@@ -1,7 +1,7 @@
 /**
  * @template T
  */
-export default class TaskQueue<T extends StatusableTask> {
+export default class TaskQueue<T extends QueueableTask> {
     protected itemsStack: Array<T> = [];
 
     /**
@@ -26,7 +26,7 @@ export default class TaskQueue<T extends StatusableTask> {
      * @throws {TaskNotEligibleError} - Throws exception if task is eligible for add
      */
     private _checkIfTaskIsEligibleForAdd(task: T) {
-        if(task.isNew() || task.isRetry()) {
+        if(task.isQueueable()) {
             return true;
         }
 
@@ -51,11 +51,9 @@ export default class TaskQueue<T extends StatusableTask> {
     }
 }
 
-
-// TODO consider coupling with Task object or just change generic to the Task object
-export interface StatusableTask {
+export interface QueueableTask {
+    isQueueable(): boolean;
     isRetry(): boolean;
-    isNew(): boolean;
 }
 
 export class TaskNotEligibleError extends Error {}

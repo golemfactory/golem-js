@@ -1,4 +1,4 @@
-import { StatusableTask } from '../../yajsapi/executor/taskqueue';
+import { QueueableTask } from '../../yajsapi/executor/taskqueue';
 
 export enum TaskState {
     New,
@@ -7,20 +7,12 @@ export enum TaskState {
     Done,
 }
 
-export default class TaskMock implements StatusableTask {
+export default class TaskMock implements QueueableTask {
     constructor(private results, private state: TaskState) {
     }
 
-    public isDone() {
-        return this.state == TaskState.Done;
-    }
-
-    public isNew() {
-        return this.state == TaskState.New;
-    }
-
-    public isPending() {
-        return this.state == TaskState.Pending;
+    public isQueueable() {
+        return this.state == TaskState.Retry || this.state == TaskState.New;
     }
 
     public getResults() {
