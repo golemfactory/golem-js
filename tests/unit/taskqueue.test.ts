@@ -8,46 +8,41 @@ describe('#TaskQueue()', function() {
         test_queue = new TaskQueue<TaskMock>();
     });
 
-    it('add() allow to add Task to the queue', done => {
+    it('add() allow to add Task to the queue', () => {
         const task = new TaskMock('taskA', TaskState.New);
         test_queue.add(task);
         expect(test_queue.length()).to.equal(1);
-        done();
     })
 
-    it('add() throws TaskIsPendingError if adding isPending Task', done => {
+    it('add() throws TaskIsPendingError if adding isPending Task', () => {
         const task = new TaskMock('taskA', TaskState.Pending);
         expect(() => {
             test_queue.add(task)
         }).to.throw(TaskNotEligibleError);
-        done();
     })
 
-    it('add() throws TaskIsDoneError if adding isDone Task', done => {
+    it('add() throws TaskIsDoneError if adding isDone Task', () => {
         const task = new TaskMock('taskA', TaskState.Done);
         expect(() => {
             test_queue.add(task)
         }).to.throw(TaskNotEligibleError);
-        done();
     })
 
-    it('get() should remove task form the queue', done => {
+    it('get() should remove task form the queue', () => {
         const task = new TaskMock('taskA', TaskState.New);
         test_queue.add(task)
         expect(test_queue.length()).to.equal(1)
         test_queue.get();
         expect(test_queue.length()).to.equal(0);
-        done();
     });
 
-    it('get() should return "undefined" when the queue is empty', done => {
+    it('get() should return "undefined" when the queue is empty', () => {
         new TaskMock('taskA', TaskState.New);
         expect(test_queue.length()).to.equal(0);
-        expect(test_queue.get()).to.equal(undefined);
-        done();
+        expect(test_queue.get()).to.be.undefined;
     });
 
-    it('add() new Task on the end of the queue', done => {
+    it('add() new Task on the end of the queue', () => {
         const tasksToAdd = ['A', 'B', 'C'].map(t => new TaskMock(`task${t}`, TaskState.New));
 
         // Add tree different tasks to the queue
@@ -57,11 +52,10 @@ describe('#TaskQueue()', function() {
         tasksToAdd.forEach(task => {
             const returned_task = test_queue.get();
             expect(returned_task).to.deep.equal(task)
-        })
-        done();
+        });
     });
 
-    it('add() isRetry Task on the beginning of the queue', done => {
+    it('add() isRetry Task on the beginning of the queue', () => {
         const tasksToAdd = ['A', 'B', 'C'].map(t => new TaskMock(`task${t}`, TaskState.Retry));
 
         // Add tree different tasks to the queue
@@ -72,11 +66,9 @@ describe('#TaskQueue()', function() {
             const returned_task = test_queue.get();
             expect(returned_task).to.deep.equal(task);
         });
-
-        done();
     });
 
-    it('length() should return correct number of items in the queue ', done => {
+    it('length() should return correct number of items in the queue ', () => {
         // Add 3 tasks to the queue
         test_queue.add(new TaskMock(`task`, TaskState.New))
         test_queue.add(new TaskMock(`task`, TaskState.New))
@@ -103,7 +95,5 @@ describe('#TaskQueue()', function() {
 
         // Check if still is eq 0
         expect(test_queue.length()).to.equal(0);
-
-        done();
     });
 });
