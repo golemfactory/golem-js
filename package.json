@@ -74,6 +74,7 @@
     "ava": "~4.2.0",
     "buffer": "^6.0.3",
     "chai": "^4.3.6",
+    "chai-as-promised": "^7.1.1",
     "cypress": "10.11.0",
     "eslint": "~8.22.0",
     "eslint-config-prettier": "^8.5.0",
