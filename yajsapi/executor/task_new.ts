@@ -1,5 +1,5 @@
 import { Worker } from "./executor";
-import { QueueableTask } from "./taskQueue";
+import { QueueableTask } from "./task_queue";
 
 export enum TaskState {
   New,

@@ -1,7 +1,7 @@
 /**
  * @template T
  */
-export default class TaskQueue<T extends QueueableTask> {
+export default class Task_queue<T extends QueueableTask> {
     protected itemsStack: Array<T> = [];
 
     /**

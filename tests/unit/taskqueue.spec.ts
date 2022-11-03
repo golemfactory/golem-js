@@ -1,17 +1,17 @@
 import test from "ava";
-import TaskQueue, { TaskNotEligibleError } from "../../yajsapi/executor/taskqueue";
+import Task_queue, { TaskNotEligibleError } from "../../yajsapi/executor/task_queue";
 import TaskMock, { TaskState } from "../mock/task_mock"
 
 
 test('add() allow to add Task to the queue', t => {
-    const test_queue = new TaskQueue();
+    const test_queue = new Task_queue();
     const task = new TaskMock('taskA', TaskState.New);
     test_queue.add(task)
     t.is(test_queue.length(), 1)
 })
 
 test('add() throws TaskIsPendingError if adding isPending Task', t => {
-    const test_queue = new TaskQueue();
+    const test_queue = new Task_queue();
     const task = new TaskMock('taskA', TaskState.Pending);
     t.throws(() => {
         test_queue.add(task)
@@ -19,7 +19,7 @@ test('add() throws TaskIsPendingError if adding isPending Task', t => {
 })
 
 test('add() throws TaskIsDoneError if adding isDone Task', t => {
-    const test_queue = new TaskQueue();
+    const test_queue = new Task_queue();
     const task = new TaskMock('taskA', TaskState.Done);
     t.throws(() => {
         test_queue.add(task)
@@ -27,7 +27,7 @@ test('add() throws TaskIsDoneError if adding isDone Task', t => {
 })
 
 test('get() should remove task form the queue', t => {
-    const test_queue = new TaskQueue();
+    const test_queue = new Task_queue();
     const task = new TaskMock('taskA', TaskState.New);
     test_queue.add(task)
     t.is(test_queue.length(), 1)
@@ -36,14 +36,14 @@ test('get() should remove task form the queue', t => {
 });
 
 test('get() should return "undefined" when the queue is empty', t => {
-    const test_queue = new TaskQueue();
+    const test_queue = new Task_queue();
     new TaskMock('taskA', TaskState.New);
     t.is(test_queue.length(), 0)
     t.is(test_queue.get(), undefined);
 });
 
 test('add() new Task on the end of the queue', t => {
-    const test_queue = new TaskQueue();
+    const test_queue = new Task_queue();
     const tasksToAdd = ['A', 'B', 'C'].map(t => new TaskMock(`task${t}`, TaskState.New));
 
 
@@ -58,7 +58,7 @@ test('add() new Task on the end of the queue', t => {
 });
 
 test('add() isRetry Task on the beginning of the queue', t => {
-    const test_queue = new TaskQueue();
+    const test_queue = new Task_queue();
     const tasksToAdd = ['A', 'B', 'C'].map(t => new TaskMock(`task${t}`, TaskState.Retry));
 
     // Add tree different tasks to the queue
@@ -73,7 +73,7 @@ test('add() isRetry Task on the beginning of the queue', t => {
 
 
 test('length() should return correct number of items in the queue ', t => {
-    const test_queue = new TaskQueue();
+    const test_queue = new Task_queue();
 
     // Add 3 tasks to the queue
     test_queue.add(new TaskMock(`task`, TaskState.New))
