@@ -1,11 +1,15 @@
+/**
+ * @template T
+ */
 export default class TaskQueue<T extends StatusableTask> {
     protected itemsStack: Array<T> = [];
 
     /**
      * Add tasks to the stack
-     * Task isRetry() will be added on the beginning of the task queue, otherwise will be added to the end of the queue
+     * @description Task isRetry() will be added on the beginning of the task queue,
+     * otherwise will be added to the end of the queue
      * @param {T} task
-     * @throws {TaskIsPendingError|TaskIsDoneError} - Throws exception if task is eligible for add
+     * @throws {TaskNotEligibleError} - Throws exception if task is eligible for add
      */
     add(task: T): void {
         this._checkIfTaskIsEligibleForAdd(task);
@@ -19,15 +23,14 @@ export default class TaskQueue<T extends StatusableTask> {
     /**
      * Check if task is eligible for add
      * @param task
-     * @throws {TaskIsPendingError|TaskIsDoneError} - Throws exception if task is eligible for add
+     * @throws {TaskNotEligibleError} - Throws exception if task is eligible for add
      */
     private _checkIfTaskIsEligibleForAdd(task: T) {
-        if(task.isDone())
-            throw new TaskIsDoneError();
-        if(task.isPending())
-            throw new TaskIsPendingError();
+        if(task.isNew() || task.isRetry()) {
+            return true;
+        }
 
-        return true;
+        throw new TaskNotEligibleError('You can not add a task that have state other than New or Retry.');
     }
 
     /**
@@ -52,20 +55,7 @@ export default class TaskQueue<T extends StatusableTask> {
 // TODO consider coupling with Task object or just change generic to the Task object
 export interface StatusableTask {
     isRetry(): boolean;
-    isPending(): boolean;
-    isDone(): boolean;
+    isNew(): boolean;
 }
 
-export abstract class TaskNotEligibleError extends Error {}
-
-export class TaskIsPendingError extends TaskNotEligibleError {
-    constructor() {
-        super('Given task is pending and can not be added to the TaskQueue');
-    }
-}
-
-export class TaskIsDoneError extends TaskNotEligibleError {
-    constructor() {
-        super('Given task is already done and can not be added to the TaskQueue');
-    }
-}
+export class TaskNotEligibleError extends Error {}
