@@ -4,7 +4,7 @@ import { Logger, sleep } from "../utils";
 import * as events from "./events";
 import { Agreement, WorkContext } from "./work_context";
 import { EventBus } from "./eventBus";
-import { TaskQueue } from "./taskQueue";
+import { TaskQueue } from "./task_queue";
 import { StorageProvider } from "../storage/provider";
 import { NetworkNode } from "../network";
 
