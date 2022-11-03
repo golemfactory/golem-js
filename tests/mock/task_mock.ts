@@ -11,12 +11,16 @@ export default class TaskMock implements StatusableTask {
     constructor(private results, private state: TaskState) {
     }
 
-    public isPending() {
-        return this.state == TaskState.Pending;
-    }
-
     public isDone() {
         return this.state == TaskState.Done;
+    }
+
+    public isNew() {
+        return this.state == TaskState.New;
+    }
+
+    public isPending() {
+        return this.state == TaskState.Pending;
     }
 
     public getResults() {

@@ -1,5 +1,5 @@
 import test from "ava";
-import TaskQueue, { TaskIsPendingError, TaskIsDoneError } from "../../yajsapi/executor/taskqueue";
+import TaskQueue, { TaskNotEligibleError } from "../../yajsapi/executor/taskqueue";
 import TaskMock, { TaskState } from "../mock/task_mock"
 
 
@@ -15,7 +15,7 @@ test('add() throws TaskIsPendingError if adding isPending Task', t => {
     const task = new TaskMock('taskA', TaskState.Pending);
     t.throws(() => {
         test_queue.add(task)
-    }, {instanceOf: TaskIsPendingError});
+    }, {instanceOf: TaskNotEligibleError});
 })
 
 test('add() throws TaskIsDoneError if adding isDone Task', t => {
@@ -23,7 +23,7 @@ test('add() throws TaskIsDoneError if adding isDone Task', t => {
     const task = new TaskMock('taskA', TaskState.Done);
     t.throws(() => {
         test_queue.add(task)
-    }, {instanceOf: TaskIsDoneError});
+    }, {instanceOf: TaskNotEligibleError});
 })
 
 test('get() should remove task form the queue', t => {
@@ -37,7 +37,7 @@ test('get() should remove task form the queue', t => {
 
 test('get() should return "undefined" when the queue is empty', t => {
     const test_queue = new TaskQueue();
-    const task = new TaskMock('taskA', TaskState.New);
+    new TaskMock('taskA', TaskState.New);
     t.is(test_queue.length(), 0)
     t.is(test_queue.get(), undefined);
 });
