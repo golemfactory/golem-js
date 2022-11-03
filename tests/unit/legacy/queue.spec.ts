@@ -1,6 +1,6 @@
 import test from "ava";
-import Queue from "../../yajsapi/utils/queue";
-import sleep from "../../yajsapi/utils/sleep";
+import Queue from "../../../yajsapi/utils/queue";
+import sleep from "../../../yajsapi/utils/sleep";
 
 let queue!: Queue<string>;
 
