@@ -83,16 +83,6 @@ class Batch {
   }
 }
 
-export interface ProviderInfo {
-  providerName: string;
-  providerId: string;
-}
-
-export interface Agreement {
-  id: string;
-  getProviderInfo(): ProviderInfo;
-}
-
 export class WorkContext {
   private resultAccepted = false;
   private resultRejected = false;

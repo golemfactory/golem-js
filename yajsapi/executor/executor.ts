@@ -33,10 +33,7 @@ type ExecutorOptions = {
 
 type ExecutorOptionsMixin = string | ExecutorOptions;
 
-export type Worker<InputType = unknown, OutputType = unknown> = (
-  ctx: WorkContext,
-  data: InputType
-) => Promise<OutputType | void>;
+export type Worker<InputType, OutputType> = (ctx: WorkContext, data: InputType) => Promise<OutputType | void>;
 
 const DEFAULT_OPTIONS = {
   max_workers: 5,
@@ -78,9 +75,9 @@ export class TaskExecutor {
     });
   }
 
-  beforeEach(worker: Worker) {
+  beforeEach(worker: Worker<unknown, unknown>) {
     if (!this.executor) throw new Error("Task executor not initialized");
-    this.executor.submit_before(worker);
+    this.executor.submit_init_worker(worker);
   }
 
   async run<OutputType = Result>(worker: Worker<undefined, OutputType>): Promise<OutputType> {

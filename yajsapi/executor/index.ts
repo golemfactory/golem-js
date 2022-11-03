@@ -1,7 +1,6 @@
 /* eslint @typescript-eslint/no-this-alias: 0 */
 /* eslint no-constant-condition: 0 */
 /* old executor */
-import bluebird, { TimeoutError } from "bluebird";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import duration from "dayjs/plugin/duration";
@@ -14,11 +13,9 @@ import { Network } from "../network";
 
 import * as rest from "../rest";
 import { Agreement, OfferProposal, Subscription } from "../rest/market";
-import { AgreementsPool } from "./agreements_pool";
+import { AgreementsPool } from "./agreements_pool_new";
 import { Allocation, DebitNote, Invoice } from "../rest/payment";
 import { Activity, ActivityFactory } from "../activity";
-
-import * as csp from "js-csp";
 
 import {
   AsyncExitStack,
@@ -29,17 +26,12 @@ import {
   eventLoop,
   logSummary,
   promisify,
-  Queue,
   sleep,
   Logger,
   winstonLogger,
   runtimeContextChecker,
 } from "../utils";
 
-import * as _vm from "../package/vm";
-
-import { Task, TaskStatus } from "./task";
-import { Consumer, SmartQueue } from "./smartq";
 import {
   DecreaseScoreForUnconfirmedAgreement,
   LeastExpensiveLinearPayuMS,
@@ -51,13 +43,10 @@ import axios from "axios";
 
 import { Worker } from "./executor";
 import { WorkContext } from "./work_context";
+import { Task } from "./task_new";
 import { EventBus } from "./eventBus";
-import { TaskQueue } from "./taskQueue";
+import Task_queue from "./taskQueue";
 import { TaskService } from "./task_service";
-
-export const vm = _vm;
-
-export { Task, TaskStatus };
 
 dayjs.extend(duration);
 dayjs.extend(utc);
@@ -196,14 +185,15 @@ export class Executor {
 
   private _network?: Network;
   private _network_address?: string;
-  private work_queue?: SmartQueue<Task<D, R>>;
-  private done_queue?: Queue<Task<D, R>>;
+  // private work_queue?: SmartQueue<Task<D, R>>;
+  // private done_queue?: Queue<Task<D, R>>;
   private isFinished = false;
   private agreements_to_pay = new Set<string>();
   private activities = new Map<string, Activity>();
-  private beforeWorker?: Worker;
+  private initWorker?: Worker<unknown, unknown>;
   private beforeWorkerDoneInActivity = new Set<string>();
   private logger?: Logger;
+  private taskQueue: Task_queue<Task> = new Task_queue<Task>();
 
   /**
    * Create new executor
@@ -317,8 +307,8 @@ export class Executor {
     this._network_address = network_address;
   }
 
-  submit_before(worker) {
-    this.beforeWorker = worker;
+  submit_init_worker(worker) {
+    this.initWorker = worker;
   }
 
   async _handle_proposal(state: SubmissionState, proposal: OfferProposal): Promise<events.ProposalEvent> {
@@ -360,7 +350,7 @@ export class Executor {
       await proposal.respond(state.builder.properties(), state.builder.constraints());
       return new events.ProposalResponded({ prop_id: proposal.id() });
     } else {
-      await state.agreements_pool.add_proposal(score, proposal);
+      await state.agreements_pool.addProposal(score, proposal);
       return new events.ProposalConfirmed({ prop_id: proposal.id() });
     }
   }
@@ -459,28 +449,20 @@ export class Executor {
 
     const agreements_pool = new AgreementsPool(emit, this.logger);
     this.state = new SubmissionState(builder, agreements_pool);
-    agreements_pool.cancellation_token = this.state.worker_cancellation_token;
+    // agreements_pool.cancellation_token = this.state.worker_cancellation_token;
     const activity_api = this._activity_api;
     const cancellationToken = this._cancellation_token;
     const paymentCancellationToken = this.state.payment_cancellation_token;
-    const done_queue: Queue<Task<D, R>> = new Queue([]);
-    this.done_queue = done_queue;
     const workers_done = csp.chan();
     const network = this._network;
-    this.work_queue = new SmartQueue([]);
-    const work_queue = this.work_queue;
 
     let workers: Set<any> = new Set();
-    let last_wid = 0;
     const self = this;
 
     const agreements_to_pay = this.agreements_to_pay;
     const agreements_accepting_debit_notes: Set<string> = new Set();
     const invoices: Map<string, Invoice> = new Map();
     let payment_closing = false;
-    const activities = this.activities;
-    const beforeWorkerDoneInActivity = this.beforeWorkerDoneInActivity;
-    const busyActivities = new Set();
     const logger = this.logger;
     const gftp = runtimeContextChecker.isNode ? await import("../storage/gftp") : null;
 
@@ -577,160 +559,145 @@ export class Executor {
       ? await this._stack.enter_async_context(gftp?.provider())
       : null;
 
-    async function process_batches(
-      agreement_id: string,
-      activity: Activity,
-      ctx: WorkContext,
-      worker: Worker,
-      task: Task<D, R>
-    ) {
-      /* TODO ctrl+c handling */
-      emit(
-        new events.TaskStarted({
-          agr_id: agreement_id,
-          task_id: task.id,
-          task_data: task.data(),
-        })
-      );
-      emit(new events.ScriptSent({ agr_id: agreement_id, task_id: task.id, cmds: [] }));
-      ctx.acceptResult(await worker(ctx, task.data()));
-      emit(new events.GettingResults({ agr_id: agreement_id, task_id: task.id }));
-      emit(new events.ScriptFinished({ agr_id: agreement_id, task_id: task.id }));
-      await accept_payment_for_agreement({ agreement_id: agreement_id, partial: true });
-      emit(new events.CheckingPayments());
-    }
+    // async function process_batches(
+    //   agreement_id: string,
+    //   activity: Activity,
+    //   ctx: WorkContext,
+    //   worker: Worker,
+    //   task: Task<D, R>
+    // ) {
+    //   /* TODO ctrl+c handling */
+    //   emit(
+    //     new events.TaskStarted({
+    //       agr_id: agreement_id,
+    //       task_id: task.id,
+    //       task_data: task.data(),
+    //     })
+    //   );
+    //   emit(new events.ScriptSent({ agr_id: agreement_id, task_id: task.id, cmds: [] }));
+    //   ctx.acceptResult(await worker(ctx, task.data()));
+    //   emit(new events.GettingResults({ agr_id: agreement_id, task_id: task.id }));
+    //   emit(new events.ScriptFinished({ agr_id: agreement_id, task_id: task.id }));
+    //   await accept_payment_for_agreement({ agreement_id: agreement_id, partial: true });
+    //   emit(new events.CheckingPayments());
+    // }
 
-    async function* task_emitter(consumer: Consumer<any>): AsyncGenerator<Task<D, R>> {
-      for await (const handle of consumer) {
-        if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
-          break;
-        }
-        yield Task.for_handle(handle, work_queue, emit);
-      }
-    }
+    // async function start_worker(agreement: Agreement): Promise<void> {
+    //   last_wid += 1;
+    //   emit(new events.WorkerStarted({ agr_id: agreement.id() }));
+    //   if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
+    //     return;
+    //   }
+    //   let _act: Activity;
+    //   try {
+    //     if (!activities.has(agreement.id())) {
+    //       _act = await activity_api.create(agreement.id(), { logger });
+    //       activities.set(agreement.id(), _act);
+    //       emit(new events.ActivityCreated({ act_id: _act.id, agr_id: agreement.id() }));
+    //     } else {
+    //       _act = activities.get(agreement.id())!;
+    //       logger?.debug(`Activity ${_act.id} reused for agreement ${agreement.id()}`);
+    //     }
+    //   } catch (error) {
+    //     emit(new events.ActivityCreateFailed({ agr_id: agreement.id() }));
+    //     emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error?.message }));
+    //     throw error;
+    //   }
+    //
+    //   agreements_accepting_debit_notes.add(agreement.id());
+    //   const agreement_details = await agreement.details();
+    //   const node_info = <NodeInfo>agreement_details.provider_view().extract(new NodeInfo());
+    //   const provider_name = node_info.name.value;
+    //   const provider_id = agreement_details.raw_details.offer.providerId;
+    //   let network_node;
+    //   if (network) {
+    //     network_node = await network.add_node(provider_id);
+    //   }
+    //   let storageProvider;
+    //   if (runtimeContextChecker.isNode) {
+    //     const { GftpStorageProvider } = await import("../storage/gftp_provider");
+    //     storageProvider = new GftpStorageProvider(storage_manager);
+    //   }
+    //   await asyncWith(work_queue.new_consumer(), async (consumer) => {
+    //     try {
+    //       const tasks = task_emitter(consumer);
+    //       const { done, value: task } = await tasks.next();
+    //       if (done) return;
+    //       const new_work_context = new WorkContext(
+    //         _act,
+    //         { providerId: provider_id, providerName: provider_name },
+    //         task,
+    //         network_node,
+    //         storageProvider,
+    //         logger
+    //       );
+    //       let timeout = false;
+    //       setTimeout(() => (timeout = true), 30000);
+    //       while (busyActivities.has(_act.id && !timeout)) {
+    //         logger?.info(`Waiting for activity ${_act.id} will be available`);
+    //         await sleep(2);
+    //       }
+    //       await new_work_context.before(beforeWorkerDoneInActivity.has(_act.id) ? undefined : self.initWorker);
+    //       beforeWorkerDoneInActivity.add(_act.id);
+    //       busyActivities.add(_act.id);
+    //       await process_batches(agreement.id(), _act, new_work_context, task.worker(), task);
+    //       busyActivities.delete(_act.id);
+    //       emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
+    //     } catch (error) {
+    //       activities.delete(agreement.id());
+    //       await _act.stop();
+    //       emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error?.message }));
+    //       throw error;
+    //     } finally {
+    //       await agreements_pool.releaseAgreement(agreement.id(), true);
+    //       await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
+    //     }
+    //   });
+    //   if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
+    //     return;
+    //   }
+    //   await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
+    //   emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
+    //
+    //   logger?.debug(`Stopped worker related to agreement ${agreement.id()}.`);
+    //   csp.putAsync(workers_done, true);
+    // }
 
-    async function start_worker(agreement: Agreement): Promise<void> {
-      last_wid += 1;
-      emit(new events.WorkerStarted({ agr_id: agreement.id() }));
-      if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
-        return;
-      }
-      let _act: Activity;
-      try {
-        if (!activities.has(agreement.id())) {
-          _act = await activity_api.create(agreement.id(), { logger });
-          activities.set(agreement.id(), _act);
-          emit(new events.ActivityCreated({ act_id: _act.id, agr_id: agreement.id() }));
-        } else {
-          _act = activities.get(agreement.id())!;
-          logger?.debug(`Activity ${_act.id} reused for agreement ${agreement.id()}`);
-        }
-      } catch (error) {
-        emit(new events.ActivityCreateFailed({ agr_id: agreement.id() }));
-        emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error?.message }));
-        throw error;
-      }
-
-      agreements_accepting_debit_notes.add(agreement.id());
-      const agreement_details = await agreement.details();
-      const node_info = <NodeInfo>agreement_details.provider_view().extract(new NodeInfo());
-      const provider_name = node_info.name.value;
-      const provider_id = agreement_details.raw_details.offer.providerId;
-      let network_node;
-      if (network) {
-        network_node = await network.add_node(provider_id);
-      }
-      let storageProvider;
-      if (runtimeContextChecker.isNode) {
-        const { GftpStorageProvider } = await import("../storage/gftp_provider");
-        storageProvider = new GftpStorageProvider(storage_manager);
-      }
-      await asyncWith(work_queue.new_consumer(), async (consumer) => {
-        try {
-          const tasks = task_emitter(consumer);
-          const { done, value: task } = await tasks.next();
-          if (done) return;
-          const new_work_context = new WorkContext(
-            _act,
-            { providerId: provider_id, providerName: provider_name },
-            task,
-            network_node,
-            storageProvider,
-            logger
-          );
-          let timeout = false;
-          setTimeout(() => (timeout = true), 30000);
-          while (busyActivities.has(_act.id && !timeout)) {
-            logger?.info(`Waiting for activity ${_act.id} will be available`);
-            await sleep(2);
-          }
-          await new_work_context.before(beforeWorkerDoneInActivity.has(_act.id) ? undefined : self.beforeWorker);
-          beforeWorkerDoneInActivity.add(_act.id);
-          busyActivities.add(_act.id);
-          await process_batches(agreement.id(), _act, new_work_context, task.worker(), task);
-          busyActivities.delete(_act.id);
-          emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
-        } catch (error) {
-          activities.delete(agreement.id());
-          await _act.stop();
-          emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error?.message }));
-          throw error;
-        } finally {
-          await agreements_pool.release_agreement(agreement.id(), true);
-          await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
-        }
-      });
-      if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
-        return;
-      }
-      await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
-      emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
-
-      logger?.debug(`Stopped worker related to agreement ${agreement.id()}.`);
-      csp.putAsync(workers_done, true);
-    }
-
-    async function worker_starter(): Promise<void> {
-      function _start_worker(agreement: Agreement) {
-        start_worker(agreement).catch(async (error) => {
-          logger?.warn(`Worker for agreement ${agreement.id()} failed, reason: ${error?.message}`);
-          await agreements_pool.release_agreement(agreement.id(), false);
-          activities.delete(agreement.id());
-        });
-      }
-      while (true) {
-        await sleep(2);
-        // await agreements_pool.cycle();
-        if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
-          break;
-        }
-        if (workers.size < self._conf.max_workers && work_queue.has_unassigned_items()) {
-          let new_task: any;
-          try {
-            if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
-              break;
-            }
-            const { task: new_task } = await agreements_pool.use_agreement((agreement: Agreement, _: any) =>
-              loop.create_task(_start_worker.bind(null, agreement))
-            );
-            if (new_task === undefined) {
-              continue;
-            }
-            workers.add(new_task);
-          } catch (error) {
-            if (new_task) new_task.cancel();
-            logger?.debug(`There was a problem during use_agreement: ${error}.`);
-          }
-        }
-      }
-      logger?.debug("Stopped starting new tasks on providers.");
-    }
-
-    async function promise_timeout(seconds: number) {
-      return bluebird.coroutine(function* (): any {
-        yield sleep(seconds);
-      })();
-    }
+    // async function worker_starter(): Promise<void> {
+    //   function _start_worker(agreement: Agreement) {
+    //     start_worker(agreement).catch(async (error) => {
+    //       logger?.warn(`Worker for agreement ${agreement.id()} failed, reason: ${error?.message}`);
+    //       await agreements_pool.release_agreement(agreement.id(), false);
+    //       activities.delete(agreement.id());
+    //     });
+    //   }
+    //   while (true) {
+    //     await sleep(2);
+    //     // await agreements_pool.cycle();
+    //     if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
+    //       break;
+    //     }
+    //     if (workers.size < self._conf.max_workers && work_queue.has_unassigned_items()) {
+    //       let new_task: any;
+    //       try {
+    //         if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
+    //           break;
+    //         }
+    //         const { task: new_task } = await agreements_pool.use_agreement((agreement: Agreement, _: any) =>
+    //           loop.create_task(_start_worker.bind(null, agreement))
+    //         );
+    //         if (new_task === undefined) {
+    //           continue;
+    //         }
+    //         workers.add(new_task);
+    //       } catch (error) {
+    //         if (new_task) new_task.cancel();
+    //         logger?.debug(`There was a problem during use_agreement: ${error}.`);
+    //       }
+    //     }
+    //   }
+    //   logger?.debug("Stopped starting new tasks on providers.");
+    // }
 
     const loop = eventLoop();
     const find_offers_task = loop.create_task(this.find_offers.bind(this, this.state, emit));
@@ -833,7 +800,7 @@ export class Executor {
           await activity.stop();
           activities.delete(agreementId);
         }
-        await agreements_pool.cycle();
+        // await agreements_pool.cycle();
         await agreements_pool.terminate_all({
           message: cancellationToken.cancelled ? "Work cancelled" : "Successfully finished all work",
           "golem.requestor.code": cancellationToken.cancelled ? "Cancelled" : "Success",
@@ -865,26 +832,14 @@ export class Executor {
 
   async submit_new_task<InputType, OutputType>(
     worker: Worker<InputType, OutputType>,
-    data?: unknown
-  ): Promise<OutputType> {
-    while (!this.done_queue && !this.work_queue) {
-      await sleep(2);
-      this.logger?.debug("Executor is not initialized");
-    }
-    const done_queue = this.done_queue;
-    function on_task_done(task: Task<D, R>, status: TaskStatus): void {
-      if (status === TaskStatus.ACCEPTED) done_queue!.put(task); //put_nowait
-    }
-    const task = new Task<D, R>(data as D, worker);
-    task._add_callback(on_task_done);
-    this.work_queue!.add(task);
-    // TODO: timeout
-    while (true) {
-      if (task.status() === TaskStatus.ACCEPTED) {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        return task.result() as OutputType;
-      }
+    data?: InputType
+  ): Promise<OutputType | undefined> {
+    const task = new Task<InputType, OutputType>(worker, data, this.initWorker);
+    this.taskQueue.add(task);
+    let timeout = false;
+    setTimeout(() => (timeout = true), 20000);
+    while (!timeout) {
+      if (task.isFinished()) return task.getResults();
       await sleep(2);
     }
   }

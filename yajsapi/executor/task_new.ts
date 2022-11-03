@@ -13,11 +13,14 @@ const MAX_RETRIES = 5;
 
 export class Task<InputType = unknown, OutputType = unknown> implements QueueableTask {
   private state = TaskState.New;
-  private data?: InputType;
   private results?: OutputType;
   private retriesCount = 0;
 
-  constructor(private worker: Worker, private initWorker?: Worker) {}
+  constructor(
+    private worker: Worker<InputType, OutputType>,
+    private data?: InputType,
+    private initWorker?: Worker<InputType, OutputType>
+  ) {}
   start() {
     this.state = TaskState.Pending;
   }
@@ -36,16 +39,19 @@ export class Task<InputType = unknown, OutputType = unknown> implements Queueabl
   isRetry(): boolean {
     return this.state === TaskState.New;
   }
+  isFinished(): boolean {
+    return this.state === TaskState.Done || this.state === TaskState.Rejected;
+  }
   getResults(): OutputType | undefined {
     return this.results;
   }
   getData(): InputType | undefined {
     return this.data;
   }
-  getWorker(): Worker {
+  getWorker(): Worker<InputType, OutputType> {
     return this.worker;
   }
-  getInitWorker(): Worker | undefined {
+  getInitWorker(): Worker<InputType, OutputType> | undefined {
     return this.initWorker;
   }
 }

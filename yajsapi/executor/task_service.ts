@@ -1,19 +1,14 @@
 import { ActivityFactory } from "../activity";
 import { Task } from "./task_new";
 import { Logger, sleep } from "../utils";
-import * as events from "./events";
-import { Agreement, WorkContext } from "./work_context";
+import { WorkContext } from "./work_context";
 import { EventBus } from "./eventBus";
-import { TaskQueue } from "./taskQueue";
+import { TaskQueue } from "./task_queue";
 import { StorageProvider } from "../storage/provider";
 import { NetworkNode } from "../network";
+import { AgreementPool } from "../../dist/executor/agreement_pool_new";
 
 const MAX_PARALLEL_TASKS = 5;
-
-interface AgreementPool {
-  get: () => Promise<Agreement>;
-  releaseAgreement: (agreementId: string) => Promise<void>;
-}
 
 export class TaskService {
   private activeTasks = new Set();
@@ -24,7 +19,7 @@ export class TaskService {
   constructor(
     apiKey: string,
     private isRunning: boolean,
-    private tasksQueue: TaskQueue,
+    private tasksQueue: TaskQueue<Task>,
     private agreementPool: AgreementPool,
     private eventBus: EventBus,
     private storageProvider?: StorageProvider,
@@ -45,6 +40,7 @@ export class TaskService {
   }
 
   private async startTask(task: Task) {
+    task.start();
     // this.eventBus.emit(new events.TaskStarted(agreement.id));
     const agreement = await this.agreementPool.get();
     try {
@@ -68,7 +64,7 @@ export class TaskService {
       task.stop(results);
     } catch (error) {
       task.stop(null, error);
-      if (task.isRetry()) this.tasksQueue.add(task);
+      if (task.isRetry()) this.tasksQueue.addToBegin(task);
       else throw new Error("Task has been rejected! " + error.toString());
     } finally {
       // this.eventBus.emit(new events.TaskFinished(task));
