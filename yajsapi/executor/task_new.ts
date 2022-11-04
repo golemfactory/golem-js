@@ -11,7 +11,7 @@ export enum TaskState {
 
 const MAX_RETRIES = 5;
 
-export class Task<InputType = unknown, OutputType = unknown> implements QueueableTask {
+export class Task<InputType, OutputType> implements QueueableTask {
   private state = TaskState.New;
   private results?: OutputType;
   private retriesCount = 0;
@@ -19,7 +19,7 @@ export class Task<InputType = unknown, OutputType = unknown> implements Queueabl
   constructor(
     private worker: Worker<InputType, OutputType>,
     private data?: InputType,
-    private initWorker?: Worker<InputType, OutputType>
+    private initWorker?: Worker<undefined, unknown>
   ) {}
   start() {
     this.state = TaskState.Pending;
@@ -51,7 +51,7 @@ export class Task<InputType = unknown, OutputType = unknown> implements Queueabl
   getWorker(): Worker<InputType, OutputType> {
     return this.worker;
   }
-  getInitWorker(): Worker<InputType, OutputType> | undefined {
+  getInitWorker(): Worker<undefined, unknown> | undefined {
     return this.initWorker;
   }
 }

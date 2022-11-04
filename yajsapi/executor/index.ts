@@ -12,8 +12,8 @@ import { Counter } from "../props/com";
 import { Network } from "../network";
 
 import * as rest from "../rest";
-import { Agreement, OfferProposal, Subscription } from "../rest/market";
-import { AgreementsPool } from "./agreements_pool_new";
+import { OfferProposal, Subscription } from "../rest/market";
+import { AgreementsPool } from "../market/agreements_pool_service";
 import { Allocation, DebitNote, Invoice } from "../rest/payment";
 import { Activity, ActivityFactory } from "../activity";
 
@@ -25,7 +25,6 @@ import {
   CancellationToken,
   eventLoop,
   logSummary,
-  promisify,
   sleep,
   Logger,
   winstonLogger,
@@ -42,11 +41,12 @@ import { Package } from "../package";
 import axios from "axios";
 
 import { Worker } from "./executor";
-import { WorkContext } from "./work_context";
 import { Task } from "./task_new";
-import { EventBus } from "./eventBus";
-import Task_queue from "./taskQueue";
+import { EventBus } from "./event_bus";
+import { TaskQueue } from "./task_queue";
 import { TaskService } from "./task_service";
+import { PaymentService } from "../payment/payment_service";
+import { NetworkService } from "../network/network_service";
 
 dayjs.extend(duration);
 dayjs.extend(utc);
@@ -188,12 +188,14 @@ export class Executor {
   // private work_queue?: SmartQueue<Task<D, R>>;
   // private done_queue?: Queue<Task<D, R>>;
   private isFinished = false;
+  private isRunning = false;
   private agreements_to_pay = new Set<string>();
   private activities = new Map<string, Activity>();
-  private initWorker?: Worker<unknown, unknown>;
-  private beforeWorkerDoneInActivity = new Set<string>();
+  private initWorker?: Worker<undefined, unknown>;
   private logger?: Logger;
-  private taskQueue: Task_queue<Task> = new Task_queue<Task>();
+  private taskQueue = new TaskQueue<Task<any, any>>();
+  private eventBus = new EventBus();
+  private networkService?: NetworkService;
 
   /**
    * Create new executor
@@ -300,10 +302,6 @@ export class Executor {
     // this.emit = <Callable<[events.YaEvent], void>>this._wrapped_consumer.async_call.bind(this._wrapped_consumer);
     // this.emit = () => null;
     this.emit = event_consumer;
-    // Each call to `submit()` will put an item in the channel.
-    // The channel can be used to wait until all calls to `submit()` are finished.
-    this._chan_computation_done = csp.chan();
-    this._active_computations = 0;
     this._network_address = network_address;
   }
 
@@ -361,10 +359,15 @@ export class Executor {
     emit: Callable<[events.YaEvent], void>
   ): Promise<void> {
     emit(new events.SubscriptionCreated({ sub_id: subscription.id() }));
-    const chan_offer_tokens = csp.chan();
+    // const chan_offer_tokens = csp.chan();
+    // const max_number_of_tasks = 5;
+    // for (let i = 0; i < max_number_of_tasks; ++i) {
+    //   csp.putAsync(chan_offer_tokens, true);
+    // }
+    const chan_offer_tokens: boolean[] = [];
     const max_number_of_tasks = 5;
     for (let i = 0; i < max_number_of_tasks; ++i) {
-      csp.putAsync(chan_offer_tokens, true);
+      chan_offer_tokens.push(true);
     }
     let _proposals;
     try {
@@ -386,11 +389,20 @@ export class Executor {
         } catch (error) {
           emit(new events.ProposalFailed({ prop_id: pr.id(), reason: error }));
         } finally {
-          csp.putAsync(chan_offer_tokens, true);
+          chan_offer_tokens.push(true);
+          // csp.putAsync(chan_offer_tokens, true);
         }
       };
       handler(proposal);
-      await promisify(csp.takeAsync)(chan_offer_tokens);
+
+      // eslint-disable-next-line no-async-promise-executor
+      await new Promise(async (res, rej) => {
+        setTimeout(() => rej(), 30000);
+        while (!chan_offer_tokens.length) await sleep(2);
+        chan_offer_tokens.pop();
+        res(true);
+      });
+      // await promisify(csp.takeAsync)(chan_offer_tokens);
     }
   }
 
@@ -447,16 +459,13 @@ export class Executor {
     await this._task_package.decorate_demand(builder);
     await this._strategy.decorate_demand(builder);
 
-    const agreements_pool = new AgreementsPool(emit, this.logger);
-    this.state = new SubmissionState(builder, agreements_pool);
+    const agreementsPool = new AgreementsPool(emit, this.logger);
+    this.state = new SubmissionState(builder, agreementsPool);
     // agreements_pool.cancellation_token = this.state.worker_cancellation_token;
     const activity_api = this._activity_api;
     const cancellationToken = this._cancellation_token;
     const paymentCancellationToken = this.state.payment_cancellation_token;
-    const workers_done = csp.chan();
     const network = this._network;
-
-    let workers: Set<any> = new Set();
     const self = this;
 
     const agreements_to_pay = this.agreements_to_pay;
@@ -555,187 +564,57 @@ export class Executor {
       logger?.debug("Stopped processing debit notes.");
     }
 
-    const storage_manager = runtimeContextChecker.isNode
-      ? await this._stack.enter_async_context(gftp?.provider())
-      : null;
+    const storageProvider = runtimeContextChecker.isNode ? gftp?.provider() : null;
 
-    // async function process_batches(
-    //   agreement_id: string,
-    //   activity: Activity,
-    //   ctx: WorkContext,
-    //   worker: Worker,
-    //   task: Task<D, R>
-    // ) {
-    //   /* TODO ctrl+c handling */
-    //   emit(
-    //     new events.TaskStarted({
-    //       agr_id: agreement_id,
-    //       task_id: task.id,
-    //       task_data: task.data(),
-    //     })
-    //   );
-    //   emit(new events.ScriptSent({ agr_id: agreement_id, task_id: task.id, cmds: [] }));
-    //   ctx.acceptResult(await worker(ctx, task.data()));
-    //   emit(new events.GettingResults({ agr_id: agreement_id, task_id: task.id }));
-    //   emit(new events.ScriptFinished({ agr_id: agreement_id, task_id: task.id }));
-    //   await accept_payment_for_agreement({ agreement_id: agreement_id, partial: true });
-    //   emit(new events.CheckingPayments());
-    // }
+    if (this._network_address) {
+      const net_client = await this._api_config.net();
+      // TODO: replace with a proper REST API client once ya-client and ya-ts-client are updated
+      // https://github.com/golemfactory/yajsapi/issues/290
+      const {
+        data: { identity },
+      } = await axios.get(this._api_config.__url + "/me", {
+        headers: { authorization: `Bearer ${net_client.accessToken}` },
+      });
+      this._network = await Network.create(this._net_api, this._network_address, identity, this.logger);
+      this.networkService = new NetworkService(
+        {
+          api: this._net_api,
+          address: this._network_address,
+          identity,
+        },
+        this.eventBus,
+        this.logger
+      );
+    }
 
-    // async function start_worker(agreement: Agreement): Promise<void> {
-    //   last_wid += 1;
-    //   emit(new events.WorkerStarted({ agr_id: agreement.id() }));
-    //   if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
-    //     return;
-    //   }
-    //   let _act: Activity;
-    //   try {
-    //     if (!activities.has(agreement.id())) {
-    //       _act = await activity_api.create(agreement.id(), { logger });
-    //       activities.set(agreement.id(), _act);
-    //       emit(new events.ActivityCreated({ act_id: _act.id, agr_id: agreement.id() }));
-    //     } else {
-    //       _act = activities.get(agreement.id())!;
-    //       logger?.debug(`Activity ${_act.id} reused for agreement ${agreement.id()}`);
-    //     }
-    //   } catch (error) {
-    //     emit(new events.ActivityCreateFailed({ agr_id: agreement.id() }));
-    //     emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error?.message }));
-    //     throw error;
-    //   }
-    //
-    //   agreements_accepting_debit_notes.add(agreement.id());
-    //   const agreement_details = await agreement.details();
-    //   const node_info = <NodeInfo>agreement_details.provider_view().extract(new NodeInfo());
-    //   const provider_name = node_info.name.value;
-    //   const provider_id = agreement_details.raw_details.offer.providerId;
-    //   let network_node;
-    //   if (network) {
-    //     network_node = await network.add_node(provider_id);
-    //   }
-    //   let storageProvider;
-    //   if (runtimeContextChecker.isNode) {
-    //     const { GftpStorageProvider } = await import("../storage/gftp_provider");
-    //     storageProvider = new GftpStorageProvider(storage_manager);
-    //   }
-    //   await asyncWith(work_queue.new_consumer(), async (consumer) => {
-    //     try {
-    //       const tasks = task_emitter(consumer);
-    //       const { done, value: task } = await tasks.next();
-    //       if (done) return;
-    //       const new_work_context = new WorkContext(
-    //         _act,
-    //         { providerId: provider_id, providerName: provider_name },
-    //         task,
-    //         network_node,
-    //         storageProvider,
-    //         logger
-    //       );
-    //       let timeout = false;
-    //       setTimeout(() => (timeout = true), 30000);
-    //       while (busyActivities.has(_act.id && !timeout)) {
-    //         logger?.info(`Waiting for activity ${_act.id} will be available`);
-    //         await sleep(2);
-    //       }
-    //       await new_work_context.before(beforeWorkerDoneInActivity.has(_act.id) ? undefined : self.initWorker);
-    //       beforeWorkerDoneInActivity.add(_act.id);
-    //       busyActivities.add(_act.id);
-    //       await process_batches(agreement.id(), _act, new_work_context, task.worker(), task);
-    //       busyActivities.delete(_act.id);
-    //       emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
-    //     } catch (error) {
-    //       activities.delete(agreement.id());
-    //       await _act.stop();
-    //       emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: error?.message }));
-    //       throw error;
-    //     } finally {
-    //       await agreements_pool.releaseAgreement(agreement.id(), true);
-    //       await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
-    //     }
-    //   });
-    //   if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
-    //     return;
-    //   }
-    //   await accept_payment_for_agreement({ agreement_id: agreement.id(), partial: false });
-    //   emit(new events.WorkerFinished({ agr_id: agreement.id(), exception: undefined }));
-    //
-    //   logger?.debug(`Stopped worker related to agreement ${agreement.id()}.`);
-    //   csp.putAsync(workers_done, true);
-    // }
-
-    // async function worker_starter(): Promise<void> {
-    //   function _start_worker(agreement: Agreement) {
-    //     start_worker(agreement).catch(async (error) => {
-    //       logger?.warn(`Worker for agreement ${agreement.id()} failed, reason: ${error?.message}`);
-    //       await agreements_pool.release_agreement(agreement.id(), false);
-    //       activities.delete(agreement.id());
-    //     });
-    //   }
-    //   while (true) {
-    //     await sleep(2);
-    //     // await agreements_pool.cycle();
-    //     if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
-    //       break;
-    //     }
-    //     if (workers.size < self._conf.max_workers && work_queue.has_unassigned_items()) {
-    //       let new_task: any;
-    //       try {
-    //         if ((<SubmissionState>self.state).worker_cancellation_token.cancelled) {
-    //           break;
-    //         }
-    //         const { task: new_task } = await agreements_pool.use_agreement((agreement: Agreement, _: any) =>
-    //           loop.create_task(_start_worker.bind(null, agreement))
-    //         );
-    //         if (new_task === undefined) {
-    //           continue;
-    //         }
-    //         workers.add(new_task);
-    //       } catch (error) {
-    //         if (new_task) new_task.cancel();
-    //         logger?.debug(`There was a problem during use_agreement: ${error}.`);
-    //       }
-    //     }
-    //   }
-    //   logger?.debug("Stopped starting new tasks on providers.");
-    // }
-
-    const loop = eventLoop();
-    const find_offers_task = loop.create_task(this.find_offers.bind(this, this.state, emit));
     const process_invoices_job = loop.create_task(process_invoices);
-    const wait_until_done = loop.create_task(work_queue.wait_until_done.bind(work_queue));
+    const debit_notes_job = loop.create_task(process_debit_notes);
     let get_offers_deadline = dayjs.utc() + this._conf.get_offers_timeout;
-    let get_done_task: any = null;
 
-    /* ---- START REFACROR TASK SERVICES --- */
-    const isRunning = true;
-    const eventBus = new EventBus();
-    const taskQueue = new TaskQueue();
+    const paymentService = new PaymentService(self.eventBus, logger);
+    paymentService["accept_payment_for_agreement"] = accept_payment_for_agreement;
 
+    self.isRunning = true;
     const taskService = new TaskService(
       self._api_config.app_key(),
-      isRunning,
-      taskQueue,
-      agreements_pool,
-      eventBus,
+      self.isRunning,
+      self.taskQueue,
+      agreementsPool,
+      paymentService,
+      self.eventBus,
+      storageProvider,
+      self.networkService,
       logger
     );
 
-    await taskService.run();
-    /* ---- STOP REFACROR TASK SERVICES --- */
-
-    // const worker_starter_task = loop.create_task(worker_starter);
-    const debit_notes_job = loop.create_task(process_debit_notes);
-    let services: any = [find_offers_task, process_invoices_job, wait_until_done, debit_notes_job];
     try {
-      while (services.indexOf(wait_until_done) > -1 || !done_queue.empty() || !this.isFinished) {
-        if (cancellationToken.cancelled) {
-          work_queue.close();
-          done_queue.close();
-          break;
-        }
+      this.find_offers(this.state, emit);
+      paymentService.run();
+      taskService.run();
+      while (this.isRunning) {
         const now = dayjs.utc();
         if (now > this._expires) {
-          throw new TimeoutError(`Task timeout exceeded. timeout=${this._conf.timeout}`);
+          throw new Error(`Task timeout exceeded. timeout=${this._conf.timeout}`);
         }
         if (now > get_offers_deadline && this.state.proposals_confirmed == 0) {
           emit(
@@ -746,34 +625,15 @@ export class Executor {
           );
           get_offers_deadline += this._conf.get_offers_timeout;
         }
-
-        if (!get_done_task) {
-          get_done_task = loop.create_task(done_queue.get.bind(done_queue));
-          services.push(get_done_task);
-        }
-
-        await bluebird.Promise.any([...services, ...workers, promise_timeout(10)]);
-
-        workers = new Set([...workers].filter((worker) => worker.isPending()));
-        services = services.filter((service) => service.isPending());
-        if (!get_done_task) throw "";
-        if (!get_done_task.isPending()) {
-          const res = await get_done_task;
-          if (!res) break;
-          if (services.indexOf(get_done_task) > -1) throw "";
-          get_done_task = null;
-        }
       }
       emit(new events.ComputationFinished());
     } catch (error) {
       if (error instanceof AsyncGeneratorBreak) {
-        work_queue.close();
-        done_queue.close();
+        this.isRunning = false;
         this.logger?.info("Break in the async for loop. Gracefully stopping all computations.");
       } else {
         this.logger?.error(`Computation Failed. Error: ${error}`);
       }
-      // TODO: implement ComputationFinished(error)
       emit(new events.ComputationFinished());
     } finally {
       if (cancellationToken.cancelled) {
@@ -783,25 +643,15 @@ export class Executor {
       if (!(<SubmissionState>self.state).worker_cancellation_token.cancelled)
         (<SubmissionState>self.state).worker_cancellation_token.cancel();
       try {
-        if (workers.size > 0) {
+        if (this.taskQueue.size() > 0) {
           emit(new events.CheckingPayments());
-          this.logger?.debug(`Waiting for ${workers.size} workers to stop...`);
-          for (let i = workers.size; i > 0; --i) {
-            await promisify(csp.takeAsync)(workers_done);
-            this.logger?.debug(`Waiting for workers to stop: ${workers.size - i + 1}/${workers.size} done.`);
-          }
-          emit(new events.CheckingPayments());
+          this.logger?.debug(`Waiting for ${this.taskQueue.size()} workers to stop...`);
         }
       } catch (error) {
         this.logger?.error(`Error while waiting for workers to finish: ${error}.`);
       }
       try {
-        for (const [agreementId, activity] of activities) {
-          await activity.stop();
-          activities.delete(agreementId);
-        }
-        // await agreements_pool.cycle();
-        await agreements_pool.terminate_all({
+        await agreementsPool.terminateAll({
           message: cancellationToken.cancelled ? "Work cancelled" : "Successfully finished all work",
           "golem.requestor.code": cancellationToken.cancelled ? "Cancelled" : "Success",
         });
@@ -812,7 +662,7 @@ export class Executor {
         this.logger?.debug(`Waiting for ${agreements_to_pay.size} invoices...`);
       }
       try {
-        await bluebird.Promise.all([process_invoices_job, debit_notes_job]).timeout(25000);
+        await Promise.all([process_invoices_job, debit_notes_job]);
       } catch (error) {
         this.logger?.warn(`Error while waiting for invoices: ${error}.`);
       }
@@ -835,7 +685,7 @@ export class Executor {
     data?: InputType
   ): Promise<OutputType | undefined> {
     const task = new Task<InputType, OutputType>(worker, data, this.initWorker);
-    this.taskQueue.add(task);
+    this.taskQueue.addToEnd(task);
     let timeout = false;
     setTimeout(() => (timeout = true), 20000);
     while (!timeout) {
@@ -922,17 +772,6 @@ export class Executor {
 
     await stack.enter_async_context(this._wrapped_consumer);
 
-    if (this._network_address) {
-      // TODO: replace with a proper REST API client once ya-client and ya-ts-client are updated
-      // https://github.com/golemfactory/yajsapi/issues/290
-      const {
-        data: { identity },
-      } = await axios.get(this._api_config.__url + "/me", {
-        headers: { authorization: `Bearer ${net_client.accessToken}` },
-      });
-      this._network = await Network.create(this._net_api, this._network_address, identity, this.logger);
-    }
-
     return this;
   }
 
@@ -942,12 +781,7 @@ export class Executor {
     this.logger?.debug("Executor is shutting down...");
     while (this._active_computations > 0) {
       this.logger?.debug(`Waiting for ${this._active_computations} computation(s)...`);
-      await promisify(csp.takeAsync)(this._chan_computation_done);
       this._active_computations -= 1;
-    }
-    for (const [agreementId, activity] of this.activities) {
-      await activity.stop();
-      this.logger?.debug(`Stop activity ${activity.id} for agreement ${agreementId}`);
     }
     let timeout = false;
     setTimeout(() => (timeout = true), 10000);

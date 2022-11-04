@@ -1,6 +1,6 @@
-import { Logger } from "../utils";
-import { EventBus } from "./eventBus";
-import { AgreementsPool as AgreementPoolOld } from "./agreements_pool";
+import { Logger, sleep } from "../utils";
+import { EventBus } from "../executor/event_bus";
+import { AgreementsPool as AgreementPoolOld } from "../executor/agreements_pool";
 import { Agreement, OfferProposal, TerminationReason } from "../rest/market";
 
 export class AgreementsPool {
@@ -9,7 +9,12 @@ export class AgreementsPool {
     this.agreementPoolOld = new AgreementPoolOld(eventBus, logger);
   }
   async get(): Promise<Agreement> {
-    return new Promise((res) => this.agreementPoolOld.use_agreement((agr) => res(agr)));
+    let agreement;
+    while (!agreement) {
+      await sleep(2);
+      await this.agreementPoolOld.use_agreement((agr) => (agreement = agr));
+    }
+    return agreement;
   }
   async releaseAgreement(agreementId: string) {
     await this.agreementPoolOld.release_agreement(agreementId);
@@ -19,5 +24,10 @@ export class AgreementsPool {
   }
   async addProposal(score: number, proposal: OfferProposal) {
     return this.agreementPoolOld.add_proposal(score, proposal);
+  }
+
+  // TODO: to refactor
+  rejected_last_agreement(provider_id: string): boolean {
+    return this.agreementPoolOld.rejected_last_agreement(provider_id);
   }
 }

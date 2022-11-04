@@ -2,14 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Task</title>
+    <title>WebRequestor</title>
     <script src="./../js/bundle.js"></script>
     <link rel="stylesheet" href="../css/main.css">
 </head>
 <body>
-    <h1>Task API</h1>
+    <h1>WebRequestor - Hello World</h1>
     <div class="container">
-        <div class="col-5">
+        <div class="col-6">
             <h3>Credentials</h3>
             <div class="column">
                 <div>
@@ -24,7 +24,7 @@
             <h3>Actions</h3>
             <div class="row vertical">
                 <div>
-                    <button onclick="run()">Run Task</button>
+                    <button onclick="run()">Echo Hello World</button>
                 </div>
             </div>
             <div class="results console">
@@ -32,7 +32,7 @@
                 <ul id="results"></ul>
             </div>
         </div>
-        <div class="col-7 border-left">
+        <div class="col-6 border-left">
             <div class="logs console">
                 <h3>Logs</h3>
                 <ul id="logs"></ul>
@@ -67,17 +67,12 @@
         async function run() {
             const apiKey = document.getElementById('YAGNA_APPKEY').value;
             const apiUrl = document.getElementById('YAGNA_API_BASEPATH').value;
-            console.log('creating executor...');
             const executor = await yajsapi
               .createExecutor({
                 credentials: { apiKey, apiUrl },
                 package:"9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
                 logger
               })
-              .catch(e => console.error(e));
-            console.log('executor created');
-            console.log({executor});
-            console.log('run command...');
             await executor
               .run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout))
               .catch(e => logger.error(e));

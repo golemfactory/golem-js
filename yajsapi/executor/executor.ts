@@ -1,11 +1,11 @@
 import { Package } from "../package";
 import { WorkContext } from "./work_context";
-import { Executor, vm } from "./";
+import { Executor } from "./";
 import { Result } from "../activity";
 import { MarketStrategy } from "./strategy";
-import { Callable, sleep } from "../utils";
+import { Callable, sleep, Logger } from "../utils";
 import * as events from "./events";
-import { Logger } from "../utils/logger";
+import * as vm from "../package/vm";
 
 type ExecutorOptions = {
   package: string | Package;
@@ -80,7 +80,7 @@ export class TaskExecutor {
     this.executor.submit_init_worker(worker);
   }
 
-  async run<OutputType = Result>(worker: Worker<undefined, OutputType>): Promise<OutputType> {
+  async run<OutputType = Result>(worker: Worker<undefined, OutputType>): Promise<OutputType | undefined> {
     if (!this.executor) throw new Error("Task executor is not initialized");
     return this.executor.submit_new_task<undefined, OutputType>(worker);
   }
@@ -94,7 +94,11 @@ export class TaskExecutor {
     const featureResults = inputs.map((value) => this.executor!.submit_new_task<InputType, OutputType>(worker, value));
     const results: OutputType[] = [];
     let resultsCount = 0;
-    featureResults.forEach((featureResult) => featureResult.then((res) => results.push(res)));
+    featureResults.forEach((featureResult) =>
+      featureResult.then((res) => {
+        if (res) results.push(res);
+      })
+    );
     return {
       [Symbol.asyncIterator](): AsyncIterator<OutputType | undefined> {
         return {

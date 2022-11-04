@@ -2,11 +2,16 @@ import { Activity, Result } from "../activity";
 import { Command, Deploy, DownloadFile, Run, Script, Start, UploadFile } from "../script";
 import { StorageProvider } from "../storage/provider";
 import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity";
-import { Worker } from "./executor";
 import { sleep, Logger, runtimeContextChecker } from "../utils";
 import { Task } from "./task_new";
 import { Readable, Transform } from "stream";
 import { NetworkNode } from "../network";
+import { Agreement } from "../rest/market";
+
+export interface ProviderInfo {
+  providerName: string;
+  providerId: string;
+}
 
 class Batch {
   private script: Script;
@@ -89,7 +94,8 @@ export class WorkContext {
   constructor(
     private agreement: Agreement,
     private activity: Activity,
-    private task: Task,
+    private task: Task<unknown, unknown>,
+    private nodeInfo: ProviderInfo,
     private storageProvider?: StorageProvider,
     private networkNode?: NetworkNode,
     private logger?: Logger
@@ -98,7 +104,7 @@ export class WorkContext {
     const worker = this.task.getInitWorker();
     let state = await this.activity.getState();
     if (state === ActivityStateStateEnum.Ready) {
-      if (worker) await worker(this, null);
+      if (worker) await worker(this, undefined);
       return;
     }
     if (state === ActivityStateStateEnum.Initialized) {
@@ -116,7 +122,7 @@ export class WorkContext {
       throw new Error(`Activity ${this.activity.id} cannot reach the Ready state. Current state: ${state}`);
     }
     if (worker) {
-      await worker(this, null);
+      await worker(this, undefined);
     }
   }
   async run(...args: Array<string | string[]>): Promise<Result> {
@@ -145,7 +151,7 @@ export class WorkContext {
     this.resultAccepted = true;
   }
   rejectResult(msg: string) {
-    if (!this.resultRejected && !this.resultAccepted) this.task.stop(null, msg, true);
+    if (!this.resultRejected && !this.resultAccepted) this.task.stop(null, new Error(msg), true);
     this.resultRejected = true;
     this.resultAccepted = true;
   }

@@ -2,11 +2,13 @@ import { ActivityFactory } from "../activity";
 import { Task } from "./task_new";
 import { Logger, sleep } from "../utils";
 import { WorkContext } from "./work_context";
-import { EventBus } from "./eventBus";
+import { EventBus } from "./event_bus";
 import { TaskQueue } from "./task_queue";
 import { StorageProvider } from "../storage/provider";
-import { NetworkNode } from "../network";
-import { AgreementPool } from "../../dist/executor/agreement_pool_new";
+import { AgreementsPool } from "../market/agreements_pool_service";
+import { PaymentService } from "../payment/payment_service";
+import { NetworkService } from "../network/network_service";
+import { NodeInfo } from "../props";
 
 const MAX_PARALLEL_TASKS = 5;
 
@@ -19,11 +21,12 @@ export class TaskService {
   constructor(
     apiKey: string,
     private isRunning: boolean,
-    private tasksQueue: TaskQueue<Task>,
-    private agreementPool: AgreementPool,
+    private tasksQueue: TaskQueue<Task<any, any>>,
+    private agreementsPool: AgreementsPool,
+    private paymentService: PaymentService,
     private eventBus: EventBus,
     private storageProvider?: StorageProvider,
-    private networkNode?: NetworkNode,
+    private networkService?: NetworkService,
     private logger?: Logger
   ) {
     this.activityFactory = new ActivityFactory(apiKey);
@@ -39,21 +42,41 @@ export class TaskService {
     }
   }
 
-  private async startTask(task: Task) {
+  private async startTask(task: Task<any, any>) {
     task.start();
     // this.eventBus.emit(new events.TaskStarted(agreement.id));
-    const agreement = await this.agreementPool.get();
+    const agreement = await this.agreementsPool.get();
+
+    let activity;
+    this.paymentService.acceptPayments(agreement.id()); // TODO: move it to payment service reactive for event TaskStarted
     try {
-      let activity;
-      if (!this.activities.has(agreement.id)) {
-        activity = await this.activityFactory.create(agreement.id);
-        this.activities.set(agreement.id, activity.id);
+      // TODO: move it to network service reactive for event NewProvider
+      const agreement_details = await agreement.details();
+      const nodeInfo = <NodeInfo>agreement_details.provider_view().extract(new NodeInfo());
+      const providerName = nodeInfo.name.value;
+      const providerId = agreement_details.raw_details.offer.providerId;
+      let networkNode;
+      if (this.networkService) {
+        networkNode = await this.networkService.addNode(providerId);
+      }
+
+      if (!this.activities.has(agreement.id())) {
+        activity = await this.activityFactory.create(agreement.id());
+        this.activities.set(agreement.id(), activity.id);
         // this.eventBus.emit(new events.ActivityCreated(activity.id, agreement.id));
       } else {
         activity = this.activities.get(agreement.id);
         // this.eventBus.emit(new events.ActivityReused(activity.id, agreement.id));
       }
-      const ctx = new WorkContext(agreement, activity, task, this.storageProvider, this.networkNode, this.logger);
+      const ctx = new WorkContext(
+        agreement,
+        activity,
+        task,
+        { providerId, providerName },
+        this.storageProvider,
+        networkNode,
+        this.logger
+      );
       const worker = task.getWorker();
       const data = task.getData();
       if (!this.initWorkersDone.has(activity.id)) {
@@ -64,11 +87,13 @@ export class TaskService {
       task.stop(results);
     } catch (error) {
       task.stop(null, error);
+      await activity.stop();
+      this.activities.delete(agreement.id());
       if (task.isRetry()) this.tasksQueue.addToBegin(task);
       else throw new Error("Task has been rejected! " + error.toString());
     } finally {
       // this.eventBus.emit(new events.TaskFinished(task));
-      await this.agreementPool.releaseAgreement(agreement.id);
+      await this.agreementsPool.releaseAgreement(agreement.id());
     }
   }
 }
