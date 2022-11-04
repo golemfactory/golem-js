@@ -1,6 +1,6 @@
 import test from "ava";
 import { performance } from "perf_hooks";
-import sleep from "../../yajsapi/utils/sleep";
+import sleep from "../../../yajsapi/utils/sleep";
 
 test("sleep", async t => {
     const t0 = performance.now();
