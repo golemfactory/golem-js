@@ -3,7 +3,7 @@ import { EventBus } from "../executor/event_bus";
 import { AgreementsPool as AgreementPoolOld } from "../executor/agreements_pool";
 import { Agreement, OfferProposal, TerminationReason } from "../rest/market";
 
-export class AgreementsPool {
+export class AgreementPoolService {
   private agreementPoolOld: AgreementPoolOld;
   constructor(private eventBus: EventBus, private logger?: Logger) {
     this.agreementPoolOld = new AgreementPoolOld(eventBus, logger);

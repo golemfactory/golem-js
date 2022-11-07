@@ -1,11 +1,12 @@
-import { Package } from "../package";
-import { WorkContext } from "./work_context";
-import { Executor } from "./";
+import { Package, repo } from "../package";
+import { MarketService, MarketStrategy } from "../market";
+import { AgreementPoolService } from "../agreement";
+import { TaskService } from "../task";
+import { PaymentService } from "../payment";
+import { NetworkService } from "../network";
+import { WorkContext } from "../work";
 import { Result } from "../activity";
-import { MarketStrategy } from "./strategy";
-import { Callable, sleep, Logger } from "../utils";
-import * as events from "./events";
-import * as vm from "../package/vm";
+import { sleep, Logger } from "../utils";
 
 type ExecutorOptions = {
   package: string | Package;
@@ -18,7 +19,7 @@ type ExecutorOptions = {
   network?: string;
   payment_driver?: string;
   payment_network?: string;
-  event_consumer?: Callable<[events.YaEvent], void>;
+  event_consumer?: "todo";
   network_address?: string;
   engine?: string;
   min_mem_gib?: number;
@@ -46,8 +47,13 @@ const DEFAULT_OPTIONS = {
 
 export class TaskExecutor {
   private executor?: Executor;
-  private options: ExecutorOptions;
-  private image_hash?: string;
+  private readonly options: ExecutorOptions;
+  private readonly image_hash?: string;
+  private marketService: MarketService;
+  private agreementPoolService: AgreementPoolService;
+  private taskService: TaskService;
+  private paymentService: PaymentService;
+  private networkService: NetworkService;
 
   constructor(options: ExecutorOptionsMixin) {
     if (typeof options === "string") {
@@ -130,7 +136,7 @@ export class TaskExecutor {
   }
 
   private async createPackage(image_hash: string): Promise<Package> {
-    return vm.repo({ ...this.options, image_hash });
+    return repo({ ...this.options, image_hash });
   }
 }
 

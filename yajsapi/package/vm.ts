@@ -1,6 +1,6 @@
 import { RuntimeType, InfVmKeys } from "../props/inf";
 import { Constraints, DEFAULT_REPO_SRV, Package, RepoOpts, VmPackage, resolve_repo_srv } from ".";
-import { Logger } from "../utils/logger";
+import { Logger } from "../utils";
 
 class _VmConstrains extends Constraints {
   constructor(
