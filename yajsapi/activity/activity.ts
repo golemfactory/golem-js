@@ -7,7 +7,7 @@ import { RequestorControlApi, RequestorStateApi } from "ya-ts-client/dist/ya-act
 import { yaActivity } from "ya-ts-client";
 import EventSource from "eventsource";
 import { Readable } from "stream";
-import { Logger } from "../utils/logger";
+import { Logger } from "../utils";
 import sleep from "../utils/sleep";
 import CancellationToken from "../utils/cancellationToken";
 

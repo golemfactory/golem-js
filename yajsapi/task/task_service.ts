@@ -1,14 +1,14 @@
 import { ActivityFactory } from "../activity";
-import { Task } from "./task_new";
+import { Task } from "./task";
 import { Logger, sleep } from "../utils";
-import { WorkContext } from "./work_context";
-import { EventBus } from "./event_bus";
+import { WorkContext } from "../work";
 import { TaskQueue } from "./task_queue";
 import { StorageProvider } from "../storage/provider";
-import { AgreementsPool } from "../market/agreements_pool_service";
-import { PaymentService } from "../payment/payment_service";
-import { NetworkService } from "../network/network_service";
+import { AgreementPoolService } from "../agreement";
+import { PaymentService } from "../payment";
+import { NetworkService } from "../network";
 import { NodeInfo } from "../props";
+import { EventBus } from "../events/event_bus";
 
 const MAX_PARALLEL_TASKS = 5;
 
@@ -17,14 +17,14 @@ export class TaskService {
   private activities = new Map();
   private activityFactory: ActivityFactory;
   private initWorkersDone: Set<string> = new Set();
+  private isRunning = false;
 
   constructor(
     apiKey: string,
-    private isRunning: boolean,
     private tasksQueue: TaskQueue<Task<any, any>>,
-    private agreementsPool: AgreementsPool,
-    private paymentService: PaymentService,
     private eventBus: EventBus,
+    private agreementPoolService: AgreementPoolService,
+    private paymentService: PaymentService,
     private storageProvider?: StorageProvider,
     private networkService?: NetworkService,
     private logger?: Logger
@@ -33,6 +33,8 @@ export class TaskService {
   }
 
   public async run() {
+    this.isRunning = true;
+    this.logger?.debug("Task Service started.");
     while (this.isRunning) {
       await sleep(2);
       if (this.activeTasks.size >= MAX_PARALLEL_TASKS) continue;
@@ -45,7 +47,7 @@ export class TaskService {
   private async startTask(task: Task<any, any>) {
     task.start();
     // this.eventBus.emit(new events.TaskStarted(agreement.id));
-    const agreement = await this.agreementsPool.get();
+    const agreement = await this.agreementPoolService.get();
 
     let activity;
     this.paymentService.acceptPayments(agreement.id()); // TODO: move it to payment service reactive for event TaskStarted
@@ -93,7 +95,12 @@ export class TaskService {
       else throw new Error("Task has been rejected! " + error.toString());
     } finally {
       // this.eventBus.emit(new events.TaskFinished(task));
-      await this.agreementsPool.releaseAgreement(agreement.id());
+      await this.agreementPoolService.releaseAgreement(agreement.id());
     }
+  }
+
+  async end() {
+    this.isRunning = false;
+    this.logger?.debug("Task Service stopped.");
   }
 }

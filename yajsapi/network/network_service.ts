@@ -14,4 +14,6 @@ export class NetworkService {
   public async addNode(nodeId: string, ip?: string) {
     return this.network?.add_node(nodeId, ip);
   }
+
+  async end() {}
 }

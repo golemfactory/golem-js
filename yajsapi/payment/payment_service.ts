@@ -20,4 +20,6 @@ export class PaymentService {
   async process_invoices() {
     // only reference mocked
   }
+
+  async end() {}
 }

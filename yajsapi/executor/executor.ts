@@ -1,12 +1,14 @@
 import { Package, repo } from "../package";
 import { MarketService, MarketStrategy } from "../market";
 import { AgreementPoolService } from "../agreement";
-import { TaskService } from "../task";
+import { Task, TaskQueue, TaskService } from "../task";
 import { PaymentService } from "../payment";
 import { NetworkService } from "../network";
 import { WorkContext } from "../work";
 import { Result } from "../activity";
-import { sleep, Logger } from "../utils";
+import { sleep, Logger, runtimeContextChecker, winstonLogger } from "../utils";
+import { EventBus } from "../events/event_bus";
+import { StorageProvider } from "../storage/provider";
 
 type ExecutorOptions = {
   package: string | Package;
@@ -46,7 +48,6 @@ const DEFAULT_OPTIONS = {
 };
 
 export class TaskExecutor {
-  private executor?: Executor;
   private readonly options: ExecutorOptions;
   private readonly image_hash?: string;
   private marketService: MarketService;
@@ -54,6 +55,11 @@ export class TaskExecutor {
   private taskService: TaskService;
   private paymentService: PaymentService;
   private networkService: NetworkService;
+  private initWorker?: Worker<unknown, unknown>;
+  private taskQueue: TaskQueue<Task<unknown, unknown>>;
+  private eventBus: EventBus;
+  private storageProvider?: StorageProvider;
+  private logger?: Logger;
 
   constructor(options: ExecutorOptionsMixin) {
     if (typeof options === "string") {
@@ -63,41 +69,58 @@ export class TaskExecutor {
     for (const key in typeof options === "object" ? { ...DEFAULT_OPTIONS, ...options } : DEFAULT_OPTIONS) {
       this.options[key] = options[key] ?? process.env?.[key.toUpperCase()] ?? DEFAULT_OPTIONS[key];
     }
+    this.eventBus = new EventBus();
+    this.taskQueue = new TaskQueue<Task<unknown, unknown>>();
+    this.marketService = new MarketService(this.yagnaOptions, this.eventBus, this.logger);
+    this.agreementPoolService = new AgreementPoolService();
+    this.networkService = new NetworkService();
+    this.paymentService = new PaymentService();
+    this.taskService = new TaskService(
+      this.options.credentials,
+      this.taskQueue,
+      this.eventBus,
+      this.agreementPoolService,
+      this.paymentService,
+      this.storageProvider,
+      this.networkService,
+      this.logger
+    );
   }
 
   async init() {
-    let task_package;
+    let taskPackage;
     if (this.image_hash) {
-      task_package = await this.createPackage(this.image_hash);
+      taskPackage = await this.createPackage(this.image_hash);
     } else if (typeof this.options.package === "string") {
-      task_package = await this.createPackage(this.options.package);
+      taskPackage = await this.createPackage(this.options.package);
     } else {
-      task_package = this.options.package;
+      taskPackage = this.options.package;
     }
-    this.executor = new Executor({ ...this.options, task_package });
-    await this.executor.ready();
-    this.executor.init().catch((error) => {
-      throw error;
-    });
+    this.logger = this.options.logger;
+    if (!this.options.logger && !runtimeContextChecker.isBrowser) this.logger = winstonLogger;
+    this.logger?.setLevel && this.logger?.setLevel(this.options.logLevel || "info");
+
+    await this.marketService.run(taskPackage);
+    await this.agreementPoolService.run();
+    await this.taskService.run();
+    await this.paymentService.run();
+    await this.networkService.run();
   }
 
   beforeEach(worker: Worker<unknown, unknown>) {
-    if (!this.executor) throw new Error("Task executor not initialized");
-    this.executor.submit_init_worker(worker);
+    this.initWorker = worker;
   }
 
   async run<OutputType = Result>(worker: Worker<undefined, OutputType>): Promise<OutputType | undefined> {
-    if (!this.executor) throw new Error("Task executor is not initialized");
-    return this.executor.submit_new_task<undefined, OutputType>(worker);
+    return this.submitNewTask<undefined, OutputType>(worker);
   }
 
   map<InputType, OutputType>(
     data: Iterable<InputType>,
     worker: Worker<InputType, OutputType>
   ): AsyncIterable<OutputType | undefined> {
-    if (!this.executor) throw new Error("Task executor is not initialized");
     const inputs = [...data];
-    const featureResults = inputs.map((value) => this.executor!.submit_new_task<InputType, OutputType>(worker, value));
+    const featureResults = inputs.map((value) => this.submitNewTask<InputType, OutputType>(worker, value));
     const results: OutputType[] = [];
     let resultsCount = 0;
     featureResults.forEach((featureResult) =>
@@ -127,16 +150,34 @@ export class TaskExecutor {
     data: Iterable<InputType>,
     worker: Worker<InputType, OutputType>
   ): Promise<void> {
-    if (!this.executor) throw new Error("Task executor is not initialized");
-    await Promise.all([...data].map((value) => this.executor!.submit_new_task<InputType, OutputType>(worker, value)));
+    await Promise.all([...data].map((value) => this.submitNewTask<InputType, OutputType>(worker, value)));
   }
 
   async end() {
-    await this.executor?.done();
+    await this.marketService.end();
+    await this.agreementPoolService.end();
+    await this.taskService.end();
+    await this.paymentService.end();
+    await this.networkService.end();
   }
 
   private async createPackage(image_hash: string): Promise<Package> {
     return repo({ ...this.options, image_hash });
+  }
+
+  private async submitNewTask<InputType, OutputType>(
+    worker: Worker<InputType, OutputType>,
+    data?: InputType
+  ): Promise<OutputType | undefined> {
+    const task = new Task<InputType, OutputType>(worker, data, this.initWorker);
+    this.taskQueue.addToEnd(task);
+    let timeout = false;
+    // todo: timeout to config..?
+    setTimeout(() => (timeout = true), 20000);
+    while (!timeout) {
+      if (task.isFinished()) return task.getResults();
+      await sleep(2);
+    }
   }
 }
 
