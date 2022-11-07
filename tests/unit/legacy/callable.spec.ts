@@ -1,5 +1,5 @@
 import anyTest, { Macro, TestFn } from 'ava';
-import Callable from "../../yajsapi/utils/callable";
+import Callable from "../../../yajsapi/utils/callable";
 
 const test = anyTest as TestFn<Callable<[string], string>>;
 

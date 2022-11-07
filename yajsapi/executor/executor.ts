@@ -1,10 +1,11 @@
 import { Package } from "../package";
 import { WorkContext } from "./work_context";
-import { Executor, vm } from "./";
+import { Executor } from "./";
 import { Result } from "../activity";
 import { MarketStrategy } from "./strategy";
-import { Callable, sleep } from "../utils";
+import { Callable, sleep, Logger } from "../utils";
 import * as events from "./events";
+import * as vm from "../package/vm";
 
 type ExecutorOptions = {
   package: string | Package;
@@ -25,14 +26,14 @@ type ExecutorOptions = {
   min_cpu_threads?: number;
   cores?: number;
   capabilities?: string[];
+  logger?: Logger;
+  logLevel?: string;
+  credentials?: { apiKey?: string; apiUrl?: string };
 };
 
 type ExecutorOptionsMixin = string | ExecutorOptions;
 
-export type Worker<InputType = unknown, OutputType = unknown> = (
-  ctx: WorkContext,
-  data: InputType
-) => Promise<OutputType | void>;
+export type Worker<InputType, OutputType> = (ctx: WorkContext, data: InputType) => Promise<OutputType | void>;
 
 const DEFAULT_OPTIONS = {
   max_workers: 5,
@@ -74,12 +75,12 @@ export class TaskExecutor {
     });
   }
 
-  beforeEach(worker: Worker) {
+  beforeEach(worker: Worker<unknown, unknown>) {
     if (!this.executor) throw new Error("Task executor not initialized");
-    this.executor.submit_before(worker);
+    this.executor.submit_init_worker(worker);
   }
 
-  async run<OutputType = Result>(worker: Worker<undefined, OutputType>): Promise<OutputType> {
+  async run<OutputType = Result>(worker: Worker<undefined, OutputType>): Promise<OutputType | undefined> {
     if (!this.executor) throw new Error("Task executor is not initialized");
     return this.executor.submit_new_task<undefined, OutputType>(worker);
   }
@@ -93,7 +94,11 @@ export class TaskExecutor {
     const featureResults = inputs.map((value) => this.executor!.submit_new_task<InputType, OutputType>(worker, value));
     const results: OutputType[] = [];
     let resultsCount = 0;
-    featureResults.forEach((featureResult) => featureResult.then((res) => results.push(res)));
+    featureResults.forEach((featureResult) =>
+      featureResult.then((res) => {
+        if (res) results.push(res);
+      })
+    );
     return {
       [Symbol.asyncIterator](): AsyncIterator<OutputType | undefined> {
         return {

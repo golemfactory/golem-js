@@ -1,4 +1,4 @@
-import { BatchResults, Executor, Task, sgx, vm } from "./executor";
+import { BatchResults, Executor, Task, vm } from "./executor";
 import { WorkContext, Work, ExecOptions } from "./executor/ctx";
 import { createExecutor } from "./executor/executor";
 import * as props from "./props";
@@ -21,7 +21,6 @@ export {
   Executor,
   ExecOptions,
   Task,
-  sgx,
   vm,
   Work,
   WorkContext,

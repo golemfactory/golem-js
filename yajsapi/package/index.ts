@@ -1,11 +1,12 @@
 import axios from "axios";
-import * as srv from "srvclient";
 import { DemandBuilder } from "../props";
 import { VmPackageFormat, VmRequest } from "../props/inf";
-import { logger } from "../utils";
+import { runtimeContextChecker } from "../utils";
 
 const FALLBACK_REPO_URL = "http://girepo.dev.golem.network:8000";
+const PUBLIC_DNS_URL = "https://dns.google/resolve?type=srv&name=";
 export const DEFAULT_REPO_SRV = "_girepo._tcp.dev.golem.network";
+const SCHEMA = "http";
 
 export type RepoOpts = {
   engine?: string;
@@ -74,37 +75,64 @@ export class VmPackage extends Package {
   }
 }
 
-export const resolve_repo_srv = async ({ repo_srv, fallback_url = FALLBACK_REPO_URL }) => {
-  async function _resolve_repo_srv() {
-    return new Promise((resolve, reject) => {
-      const verify_records = async function (err, records) {
-        if (!(Symbol.iterator in Object(records))) {
-          resolve(null);
-          return;
-        }
-        for (const record of records) {
-          const url = `http://${record.name}:${record.port}`;
-          try {
-            await axios.head(url);
-            resolve(url);
-          } catch (error) {
-            if (error.response != undefined) {
-              resolve(url);
-            }
-          }
-        }
-        resolve(null);
-      };
+export const resolve_repo_srv = async ({ repo_srv, fallback_url = FALLBACK_REPO_URL, logger }) => {
+  async function is_record_valid(url) {
+    try {
+      await axios.head(url);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
 
-      srv.getRandomTargets(repo_srv, verify_records);
+  async function _resolve_repo_srv_for_browser() {
+    const { data } = await axios.get(`${PUBLIC_DNS_URL}${repo_srv}`);
+
+    return (data?.Answer || [])
+      .map((r) => {
+        const [, , port, host] = r && r.data && r.data.split ? r.data.split(" ") : [];
+        return host && port ? `${SCHEMA}://${host.substring(0, host.length - 1)}:${port}` : null;
+      })
+      .filter((r) => r);
+  }
+
+  function _resolve_repo_srv_for_node() {
+    return new Promise((resolve, reject) => {
+      import("node:dns")
+        .then((nodeDns) => {
+          nodeDns.resolveSrv(DEFAULT_REPO_SRV, (err, addresses) => {
+            if (err) reject(err);
+            resolve(addresses.map((a) => (a.name && a.port ? `${SCHEMA}://${a.name}:${a.port}` : null)));
+          });
+        })
+        .catch((err) => reject(err));
     });
+  }
+
+  async function _resolve_repo_srv() {
+    try {
+      const records = runtimeContextChecker.isBrowser
+        ? await _resolve_repo_srv_for_browser()
+        : await _resolve_repo_srv_for_node();
+
+      while (records.length > 0) {
+        const url = records.splice((records.length * Math.random()) | 0, 1)[0];
+        if (await is_record_valid(url)) {
+          return url;
+        }
+      }
+    } catch (e) {
+      logger?.warn(`error occurred while trying to get SRV record : ${e}`);
+    }
+
+    return null;
   }
 
   const repo_url = await _resolve_repo_srv();
   if (repo_url) {
-    logger.debug(`Using image repository: ${repo_srv} -> ${repo_url}.`);
+    logger?.debug(`Using image repository: ${repo_srv} -> ${repo_url}.`);
     return repo_url;
   }
-  logger.warn(`Problem resolving image repository: ${repo_srv}, falling back to ${fallback_url}.`);
+  logger?.warn(`Problem resolving image repository: ${repo_srv}, falling back to ${fallback_url}.`);
   return fallback_url;
 };

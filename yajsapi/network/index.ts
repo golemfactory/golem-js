@@ -1,6 +1,6 @@
 import { Net } from "../rest";
 import { IPv4, IPv4Mask, IPv4Prefix, IPv4CidrRange } from "ip-num";
-import { logger } from "../utils";
+import { Logger } from "../utils/logger";
 
 /**
  * Describes a node in a VPN, mapping a Golem node id to an IP address
@@ -66,6 +66,7 @@ export class Network {
   private _gateway?: IPv4;
   private _nodes: Map<string, NetworkNode>;
   private network_id?: string;
+  private logger?: Logger;
 
   /**
    * Create a new VPN.
@@ -77,7 +78,15 @@ export class Network {
    * @param mask      optional netmask (only if not provided within the `ip` argument)
    * @param gateway   optional gateway address for the network
    */
-  constructor(net_api: Net, ip: string, owner_id: string, owner_ip?: string, mask?: string, gateway?: string) {
+  constructor(
+    net_api: Net,
+    ip: string,
+    owner_id: string,
+    owner_ip?: string,
+    mask?: string,
+    gateway?: string,
+    logger?: Logger
+  ) {
     this._net_api = net_api;
     this._ip_range = IPv4CidrRange.fromCidr(mask ? `${ip}/${mask}` : ip);
     this._ip_iterator = this._ip_range[Symbol.iterator]();
@@ -87,6 +96,7 @@ export class Network {
     this._owner_ip = owner_ip ? new IPv4(owner_ip) : this._next_address();
     this._gateway = gateway ? new IPv4(gateway) : undefined;
     this._nodes = new Map<string, NetworkNode>();
+    this.logger = logger;
   }
 
   toString() {
@@ -135,10 +145,10 @@ export class Network {
       await this._net_api.remove_network(this.network_id!);
     } catch (error) {
       if (error.status === 404)
-        logger.warn("Tried removing a network which doesn't exist. network_id=%s", this.network_id);
+        this.logger?.warn(`Tried removing a network which doesn't exist. network_id=${this.network_id}`);
       return false;
     }
-    logger.info("Removed network: " + this.toString());
+    this.logger?.info("Removed network: " + this.toString());
     return true;
   }
 
@@ -191,6 +201,7 @@ export class Network {
    * @param net_api   the mid-level binding used directly to perform calls to the REST API.
    * @param ip        the IP address of the network. May contain netmask, e.g. "192.168.0.0/24"
    * @param owner_id  the node ID of the owner of this VPN (the requestor)
+   * @parma logger    optional custom logger
    * @param owner_ip  the desired IP address of the requestor node within the newly-created network
    * @param mask      optional netmask (only if not provided within the `ip` argument)
    * @param gateway   optional gateway address for the network
@@ -199,17 +210,18 @@ export class Network {
     net_api: Net,
     ip: string,
     owner_id: string,
+    logger?: Logger,
     owner_ip?: string,
     mask?: string,
     gateway?: string
   ): Promise<Network> {
-    const network = new Network(net_api, ip, owner_id, owner_ip, mask, gateway);
+    const network = new Network(net_api, ip, owner_id, owner_ip, mask, gateway, logger);
     network.network_id = await net_api.create_network(
       network._ip.toString(),
       network._mask.toString(),
       network._gateway ? network._gateway.toString() : undefined
     );
-    logger.info("Created network: " + network.toString());
+    logger?.info("Created network: " + network.toString());
     await network._add_owner_address();
 
     return network;

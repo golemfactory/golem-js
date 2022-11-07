@@ -2,15 +2,20 @@ import { Activity, Result } from "../activity";
 import { Command, Deploy, DownloadFile, Run, Script, Start, UploadFile } from "../script";
 import { StorageProvider } from "../storage/provider";
 import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity";
-import { Worker } from "./executor";
-import { sleep, logger } from "../utils";
-import { Task } from "./task";
+import { sleep, Logger, runtimeContextChecker } from "../utils";
+import { Task } from "./task_new";
 import { Readable, Transform } from "stream";
 import { NetworkNode } from "../network";
+import { Agreement } from "../rest/market";
+
+export interface ProviderInfo {
+  providerName: string;
+  providerId: string;
+}
 
 class Batch {
   private script: Script;
-  constructor(private activity: Activity, private storageProvider: StorageProvider) {
+  constructor(private activity: Activity, private storageProvider?: StorageProvider, private logger?: Logger) {
     this.script = new Script([]);
   }
   run(...args: Array<string | string[]>) {
@@ -20,16 +25,19 @@ class Batch {
     return this;
   }
   uploadFile(src: string, dst: string) {
-    this.script.addCommand(new UploadFile(this.storageProvider, src, dst));
+    runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Upload File");
+    this.script.addCommand(new UploadFile(this.storageProvider!, src, dst));
     return this;
   }
   uploadJson(json: object, dst: string) {
+    runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Upload JSON");
     const src = Buffer.from(JSON.stringify(json), "utf-8");
-    this.script.addCommand(new UploadFile(this.storageProvider, src, dst));
+    this.script.addCommand(new UploadFile(this.storageProvider!, src, dst));
     return this;
   }
   downloadFile(src: string, dst: string) {
-    this.script.addCommand(new DownloadFile(this.storageProvider, src, dst));
+    runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Download File");
+    this.script.addCommand(new DownloadFile(this.storageProvider!, src, dst));
     return this;
   }
   async end(): Promise<Result[]> {
@@ -80,25 +88,23 @@ class Batch {
   }
 }
 
-export interface ProviderInfo {
-  providerName: string;
-  providerId: string;
-}
-
 export class WorkContext {
   private resultAccepted = false;
   private resultRejected = false;
   constructor(
+    private agreement: Agreement,
     private activity: Activity,
-    private storageProvider: StorageProvider,
+    private task: Task<unknown, unknown>,
     private nodeInfo: ProviderInfo,
-    private task: Task<"D", "R">,
-    private networkNode?: NetworkNode
+    private storageProvider?: StorageProvider,
+    private networkNode?: NetworkNode,
+    private logger?: Logger
   ) {}
-  async before(worker?: Worker): Promise<Result[] | void> {
+  async before(): Promise<Result[] | void> {
+    const worker = this.task.getInitWorker();
     let state = await this.activity.getState();
     if (state === ActivityStateStateEnum.Ready) {
-      if (worker) await worker(this, null);
+      if (worker) await worker(this, undefined);
       return;
     }
     if (state === ActivityStateStateEnum.Initialized) {
@@ -116,7 +122,7 @@ export class WorkContext {
       throw new Error(`Activity ${this.activity.id} cannot reach the Ready state. Current state: ${state}`);
     }
     if (worker) {
-      await worker(this, null);
+      await worker(this, undefined);
     }
   }
   async run(...args: Array<string | string[]>): Promise<Result> {
@@ -125,29 +131,32 @@ export class WorkContext {
     return this.runOneCommand(command);
   }
   async uploadFile(src: string, dst: string): Promise<Result> {
-    return this.runOneCommand(new UploadFile(this.storageProvider, src, dst));
+    runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Upload File");
+    return this.runOneCommand(new UploadFile(this.storageProvider!, src, dst));
   }
   async uploadJson(json: object, dst: string): Promise<Result> {
+    runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Upload JSON");
     const src = Buffer.from(JSON.stringify(json), "utf-8");
-    return this.runOneCommand(new UploadFile(this.storageProvider, src, dst));
+    return this.runOneCommand(new UploadFile(this.storageProvider!, src, dst));
   }
   async downloadFile(src: string, dst: string): Promise<Result> {
-    return this.runOneCommand(new DownloadFile(this.storageProvider, src, dst));
+    runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Download File");
+    return this.runOneCommand(new DownloadFile(this.storageProvider!, src, dst));
   }
   beginBatch() {
-    return new Batch(this.activity, this.storageProvider);
+    return new Batch(this.activity, this.storageProvider, this.logger);
   }
   acceptResult(result: unknown) {
-    if (!this.resultAccepted) this.task.accept_result(result as "R");
+    if (!this.resultAccepted) this.task.stop(result);
     this.resultAccepted = true;
   }
   rejectResult(msg: string) {
-    if (!this.resultRejected && !this.resultAccepted) this.task.reject_result(msg, true);
+    if (!this.resultRejected && !this.resultAccepted) this.task.stop(null, new Error(msg), true);
     this.resultRejected = true;
     this.resultAccepted = true;
   }
   log(msg: string) {
-    logger.info(`[${this.nodeInfo.providerName}] ${msg}`);
+    this.logger?.info(`[${this.nodeInfo?.providerName}] ${msg}`);
   }
   getProviderInfo(): ProviderInfo {
     return this.nodeInfo;

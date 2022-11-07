@@ -1,5 +1,4 @@
 const { utils, createExecutor } = require("../../../dist");
-const { logUtils, range } = utils;
 
 async function main() {
   const executor = await createExecutor({
@@ -12,7 +11,7 @@ async function main() {
     subnet_tag: "goth",
     driver: "erc20",
     network: "rinkeby",
-    event_consumer: logUtils.logSummary(),
+    logLevel: "debug",
   });
 
   await executor.run(async (ctx) => {
@@ -20,7 +19,7 @@ async function main() {
     await ctx.run("invalid_command");
   });
 
-  const results = await executor.map(range(0, 5), async (ctx) => ctx.run("/bin/sleep", ["1"]));
+  const results = await executor.map(utils.range(0, 5), async (ctx) => ctx.run("/bin/sleep", ["1"]));
 
   for await (let result of results) {
     console.log(`Task computed: ${result.index}`);
@@ -28,6 +27,4 @@ async function main() {
   console.log("All tasks computed");
   await executor.end();
 }
-
-utils.changeLogLevel("debug");
 main();

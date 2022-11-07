@@ -1,7 +1,7 @@
 import { RequestorControlApi } from "ya-ts-client/dist/ya-activity/api";
 import { yaActivity } from "ya-ts-client";
 import { Activity, ActivityOptions } from "./activity";
-import { createSecureActivity, SecureActivity } from "./secure";
+import { runtimeContextChecker } from "../utils";
 
 export class ActivityFactory {
   private readonly api: RequestorControlApi;
@@ -38,13 +38,14 @@ export class ActivityFactory {
    * @param options.taskPackage
    * @param secure defines if activity will be secure type
    */
-  public async create(
-    agreementId: string,
-    options?: ActivityOptions,
-    secure = false
-  ): Promise<Activity | SecureActivity> {
+  public async create(agreementId: string, options?: ActivityOptions, secure = false): Promise<Activity> {
     try {
-      return secure ? createSecureActivity(this.api, agreementId, options) : this.createActivity(agreementId, options);
+      if (secure) {
+        runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Secure Activity");
+        const { createSecureActivity } = await import("./secure");
+        return createSecureActivity(this.api, agreementId, options);
+      }
+      return this.createActivity(agreementId, options);
     } catch (error) {
       throw error?.response?.data?.message || error;
     }

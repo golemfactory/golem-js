@@ -1,5 +1,4 @@
 import bluebird from "bluebird";
-import logger from "./log";
 
 bluebird.Promise.config({ cancellation: true });
 
@@ -15,7 +14,7 @@ export default function get_event_loop() {
         }
         if (onCancel)
           onCancel(() => {
-            logger.warn("cancelled!");
+            console.warn("cancelled!");
             reject("cancelled!");
           });
       });
