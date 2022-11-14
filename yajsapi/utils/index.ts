@@ -5,5 +5,6 @@ import sleep from "./sleep";
 import { Logger } from "./logger";
 import { winstonLogger } from "./winstonLogger";
 import * as runtimeContextChecker from "./runtimeContextChecker";
+import getAllProperties from "./getAllProperties";
 
-export { CancellationToken, logSummary, range, sleep, Logger, winstonLogger, runtimeContextChecker };
+export { CancellationToken, logSummary, range, sleep, Logger, winstonLogger, runtimeContextChecker, getAllProperties };

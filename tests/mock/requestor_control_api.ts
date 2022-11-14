@@ -22,7 +22,7 @@ export class RequestorControlApiMock extends RequestorControlApi {
     stdout: "test_result",
     stderr: "",
     message: "",
-    isBatchFinished: false,
+    isBatchFinished: true,
   };
 
   constructor() {

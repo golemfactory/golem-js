@@ -16,7 +16,7 @@ export class TaskQueue<Task extends QueueableTask> {
     this.itemsStack.unshift(task);
   }
 
-  size(): number {
+  get size(): number {
     return this.itemsStack.length;
   }
 

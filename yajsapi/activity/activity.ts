@@ -135,9 +135,11 @@ export class Activity {
         while (!isBatchFinished) {
           if (startTime.valueOf() + (timeout || executeTimeout) <= new Date().valueOf()) {
             this.destroy(new Error(`Activity ${activityId} timeout.`));
+            break;
           }
           if (cancellationToken?.cancelled) {
             this.destroy(new Error(`Activity ${activityId} has been interrupted.`));
+            break;
           }
           try {
             const { data: results }: { data: Result[] } = await api.getExecBatchResults(activityId, batchId);

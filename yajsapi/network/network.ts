@@ -1,6 +1,6 @@
 import { Net } from "../rest";
 import { IPv4, IPv4Mask, IPv4Prefix, IPv4CidrRange } from "ip-num";
-import { Logger } from "../utils/logger";
+import { Logger } from "../utils";
 
 /**
  * Describes a node in a VPN, mapping a Golem node id to an IP address

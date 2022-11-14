@@ -12,7 +12,7 @@ export class GftpStorageProvider implements StorageProvider {
   }
 
   async init() {
-    this.gftpProvider.ready();
+    await this.gftpProvider.ready();
   }
 
   async receive(path: string): Promise<string> {

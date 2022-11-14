@@ -1,5 +1,5 @@
-import { Callable, sleep } from "../utils";
-import { Logger } from "../utils/logger";
+import { sleep } from "../utils";
+import { Logger } from "../utils";
 
 export function is_intermittent_error(e) {
   if (e.response && (e.response.status === 408 || e.response.status === 504)) {
@@ -18,8 +18,8 @@ export function is_intermittent_error(e) {
 }
 
 export async function suppress_exceptions(
-  condition: Callable<Error, boolean>,
-  block: Callable<void, any>,
+  condition,
+  block,
   function_name: string,
   report_exceptions = true,
   logger?: Logger
@@ -36,12 +36,12 @@ export async function suppress_exceptions(
 }
 
 export async function repeat_on_error(
-  block: Callable<void, any>,
+  block,
   function_name: string,
   max_tries = 5,
   max_duration_ms = 15000,
   interval_ms = 1000,
-  condition: Callable<Error, boolean> = is_intermittent_error,
+  condition = is_intermittent_error,
   logger?: Logger
 ) {
   const start_time = Date.now();

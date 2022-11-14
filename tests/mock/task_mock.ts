@@ -1,25 +1,24 @@
-import { QueueableTask } from '../../yajsapi/executor/task_queue';
+import { QueueableTask } from "../../yajsapi/task/task_queue";
 
 export enum TaskState {
-    New,
-    Retry,
-    Pending,
-    Done,
+  New,
+  Retry,
+  Pending,
+  Done,
 }
 
 export default class TaskMock implements QueueableTask {
-    constructor(private results, private state: TaskState) {
-    }
+  constructor(private results, private state: TaskState) {}
 
-    public isQueueable() {
-        return this.state == TaskState.Retry || this.state == TaskState.New;
-    }
+  public isQueueable() {
+    return this.state == TaskState.Retry || this.state == TaskState.New;
+  }
 
-    public getResults() {
-        return this.results;
-    }
+  public getResults() {
+    return this.results;
+  }
 
-    public isRetry() {
-        return this.state == TaskState.Retry;
-    }
+  public isRetry() {
+    return this.state == TaskState.Retry;
+  }
 }

@@ -7,7 +7,7 @@ import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import * as models from "ya-ts-client/dist/ya-market/src/models";
 import { Configuration } from "ya-ts-client/dist/ya-activity";
 import { suppress_exceptions, is_intermittent_error } from "./common";
-import { Logger } from "../utils/logger";
+import { Logger } from "../utils";
 
 dayjs.extend(utc);
 
