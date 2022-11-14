@@ -8,7 +8,7 @@ export class MarketService {
     private readonly logger?: Logger
   ) {}
   async run(taskPackage) {
-    // todo
+    this.logger?.info("The Market Service has started");
   }
 
   async end() {

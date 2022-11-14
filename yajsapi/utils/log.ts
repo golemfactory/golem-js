@@ -1,7 +1,6 @@
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
-import { Callable } from "./";
-import * as events from "../executor/events";
+import * as events from "../events/events";
 import { Logger } from "./logger";
 
 const REPORT_CONFIRMED_PROVIDERS_INTERVAL = 3000;
@@ -61,7 +60,7 @@ class ProviderInfo {
 class SummaryLogger {
   private logger: Logger;
 
-  private _wrapped_emitter: Callable<[events.YaEvent], void> | null;
+  private _wrapped_emitter;
 
   // Start time of the computation
   start_time!: number;
@@ -106,7 +105,7 @@ class SummaryLogger {
 
   time_waiting_for_proposals;
 
-  constructor(wrapped_emitter: Callable<[events.YaEvent], void> | null = null, logger: Logger) {
+  constructor(wrapped_emitter, logger: Logger) {
     this.logger = logger;
     this._wrapped_emitter = wrapped_emitter;
     this._reset();
@@ -323,10 +322,7 @@ class SummaryLogger {
   }
 }
 
-export default function logSummary(
-  logger: Logger,
-  wrapped_emitter?: Callable<[events.YaEvent], void> | null | undefined
-) {
+export default function logSummary(logger: Logger, wrapped_emitter) {
   const summary_logger = new SummaryLogger(wrapped_emitter, logger);
   return summary_logger.log.bind(summary_logger);
 }

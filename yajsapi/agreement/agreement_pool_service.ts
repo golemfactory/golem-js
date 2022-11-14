@@ -1,13 +1,19 @@
 import { Logger } from "../utils";
-import { Agreement, OfferProposal, TerminationReason } from "../rest/market";
+import { OfferProposal, TerminationReason } from "../rest/market";
+import { EventBus } from "../events/event_bus";
+import { Agreement } from "./agreement";
 
 export class AgreementPoolService {
-  constructor(private logger?: Logger) {}
+  constructor(
+    private readonly yagnaOptions: { apiKey?: string; apiUrl?: string },
+    private readonly eventBus: EventBus,
+    private readonly logger?: Logger
+  ) {}
   async run() {
-    this.logger?.info("Agreement Pool Service started");
+    this.logger?.info("The Agreement Pool Service has started");
   }
   async get(): Promise<Agreement> {
-    // todo
+    return new Agreement("todo", { providerId: "todo", providerName: "todo" });
   }
   async releaseAgreement(agreementId: string) {
     // todo
@@ -19,5 +25,7 @@ export class AgreementPoolService {
     // todo
   }
 
-  async end() {}
+  async end() {
+    // todo
+  }
 }

@@ -7,7 +7,6 @@ import { StorageProvider } from "../storage/provider";
 import { AgreementPoolService } from "../agreement";
 import { PaymentService } from "../payment";
 import { NetworkService } from "../network";
-import { NodeInfo } from "../props";
 import { EventBus } from "../events/event_bus";
 
 const MAX_PARALLEL_TASKS = 5;
@@ -34,7 +33,7 @@ export class TaskService {
 
   public async run() {
     this.isRunning = true;
-    this.logger?.debug("Task Service started.");
+    this.logger?.info("The Task Service has started");
     while (this.isRunning) {
       await sleep(2);
       if (this.activeTasks.size >= MAX_PARALLEL_TASKS) continue;
@@ -50,21 +49,19 @@ export class TaskService {
     const agreement = await this.agreementPoolService.get();
 
     let activity;
-    this.paymentService.acceptPayments(agreement.id()); // TODO: move it to payment service reactive for event TaskStarted
+    this.paymentService.acceptPayments(agreement.id); // TODO: move it to payment service reactive for event TaskStarted
     try {
       // TODO: move it to network service reactive for event NewProvider
-      const agreement_details = await agreement.details();
-      const nodeInfo = <NodeInfo>agreement_details.provider_view().extract(new NodeInfo());
-      const providerName = nodeInfo.name.value;
-      const providerId = agreement_details.raw_details.offer.providerId;
+      const providerName = agreement.providerInfo.providerName;
+      const providerId = agreement.providerInfo.providerId;
       let networkNode;
       if (this.networkService) {
         networkNode = await this.networkService.addNode(providerId);
       }
 
-      if (!this.activities.has(agreement.id())) {
-        activity = await this.activityFactory.create(agreement.id());
-        this.activities.set(agreement.id(), activity.id);
+      if (!this.activities.has(agreement.id)) {
+        activity = await this.activityFactory.create(agreement.id);
+        this.activities.set(agreement.id, activity.id);
         // this.eventBus.emit(new events.ActivityCreated(activity.id, agreement.id));
       } else {
         activity = this.activities.get(agreement.id);
@@ -89,13 +86,15 @@ export class TaskService {
       task.stop(results);
     } catch (error) {
       task.stop(null, error);
-      await activity.stop();
-      this.activities.delete(agreement.id());
-      if (task.isRetry()) this.tasksQueue.addToBegin(task);
-      else throw new Error("Task has been rejected! " + error.toString());
+      // await activity.stop().catch((actError) => this.logger?.error(actError));
+      this.activities.delete(agreement.id);
+      if (task.isRetry()) {
+        this.tasksQueue.addToBegin(task);
+        this.logger?.warn("Trying to execute the task again." + error.toString());
+      } else throw new Error("Task has been rejected! " + error.toString());
     } finally {
       // this.eventBus.emit(new events.TaskFinished(task));
-      await this.agreementPoolService.releaseAgreement(agreement.id());
+      await this.agreementPoolService.releaseAgreement(agreement.id);
     }
   }
 

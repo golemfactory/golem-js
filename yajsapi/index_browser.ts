@@ -1,6 +1,5 @@
-import { createExecutor } from "./executor/executor";
-
+import { createExecutor } from "./executor";
 import * as activity from "./activity";
-import * as script from "./script";
+import * as script from "./work";
 
 export { createExecutor, activity, script };

@@ -1,6 +1,5 @@
 /* eslint no-prototype-builtins: 0 */
 import { NodeInfo } from "../props";
-import applyMixins from "../utils/applyMixins";
 import { ExeScriptCommandResultResultEnum } from "ya-ts-client/dist/ya-activity/src/models";
 import { Result } from "../activity";
 
@@ -246,8 +245,6 @@ class TaskEvent extends YaEvent {
 
 interface EventGeneral extends AgreementEvent, TaskEvent {}
 class EventGeneral {}
-
-applyMixins(EventGeneral, [AgreementEvent, TaskEvent]);
 
 export class TaskStarted extends EventGeneral {
   task_data?: any;

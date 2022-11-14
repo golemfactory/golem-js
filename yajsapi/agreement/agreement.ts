@@ -4,12 +4,5 @@ export interface ProviderInfo {
 }
 
 export class Agreement {
-  constructor(public readonly id: string) {}
-  getProviderInfo(): ProviderInfo {
-    // TODO:
-    return {
-      providerName: "todo",
-      providerId: "todo",
-    };
-  }
+  constructor(public readonly id: string, public readonly providerInfo: ProviderInfo) {}
 }

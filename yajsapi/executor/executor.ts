@@ -10,7 +10,7 @@ import { sleep, Logger, runtimeContextChecker, winstonLogger } from "../utils";
 import { EventBus } from "../events/event_bus";
 import { StorageProvider } from "../storage/provider";
 
-type ExecutorOptions = {
+export type ExecutorOptions = {
   package: string | Package;
   max_workers?: number;
   timeout?: number | string;
@@ -34,7 +34,7 @@ type ExecutorOptions = {
   yagnaOptions?: { apiKey?: string; apiUrl?: string };
 };
 
-type ExecutorOptionsMixin = string | ExecutorOptions;
+export type ExecutorOptionsMixin = string | ExecutorOptions;
 
 export type YagnaOptions = {
   apiKey: string;
@@ -64,7 +64,7 @@ export class TaskExecutor {
   private paymentService: PaymentService;
   private networkService: NetworkService;
   private initWorker?: Worker<unknown, unknown>;
-  private taskQueue: TaskQueue<Task<unknown, unknown>>;
+  private taskQueue: TaskQueue<Task<any, any>>;
   private eventBus: EventBus;
   private storageProvider?: StorageProvider;
   private logger?: Logger;
@@ -81,10 +81,13 @@ export class TaskExecutor {
       apiKey: options?.["yagnaOptions"]?.["apiKey"] || process?.env?.["YAGNA_APPKEY"],
       apiUrl: options?.["yagnaOptions"]?.["apiUrl"] || process?.env?.["YAGNA_URL"] || DEFAULT_YAGNA_API_URL,
     };
+    this.logger = this.options.logger;
+    if (!this.options.logger && !runtimeContextChecker.isBrowser) this.logger = winstonLogger;
+    this.logger?.setLevel && this.logger?.setLevel(this.options.logLevel || "info");
     this.eventBus = new EventBus();
     this.taskQueue = new TaskQueue<Task<unknown, unknown>>();
     this.marketService = new MarketService(this.yagnaOptions, this.eventBus, this.logger);
-    this.agreementPoolService = new AgreementPoolService();
+    this.agreementPoolService = new AgreementPoolService(this.yagnaOptions, this.eventBus, this.logger);
     this.networkService = new NetworkService(this.yagnaOptions, this.eventBus, this.logger);
     this.paymentService = new PaymentService(this.yagnaOptions, this.eventBus, this.logger);
     this.taskService = new TaskService(
@@ -108,15 +111,14 @@ export class TaskExecutor {
     } else {
       taskPackage = this.options.package;
     }
-    this.logger = this.options.logger;
-    if (!this.options.logger && !runtimeContextChecker.isBrowser) this.logger = winstonLogger;
-    this.logger?.setLevel && this.logger?.setLevel(this.options.logLevel || "info");
 
-    await this.marketService.run(taskPackage);
-    await this.agreementPoolService.run();
-    await this.taskService.run();
-    await this.paymentService.run();
-    await this.networkService.run();
+    this.marketService.run(taskPackage);
+    this.agreementPoolService.run();
+    this.paymentService.run();
+    this.taskService.run();
+    if (this.options.network_address) {
+      this.networkService.run(this.options.network_address);
+    }
   }
 
   beforeEach(worker: Worker<unknown, unknown>) {
