@@ -20,7 +20,7 @@ export class TaskService {
   private isRunning = false;
 
   constructor(
-    apiKey: string,
+    yagnaOptions: { apiKey: string; apiUrl: string },
     private tasksQueue: TaskQueue<Task<any, any>>,
     private eventBus: EventBus,
     private agreementPoolService: AgreementPoolService,
@@ -29,7 +29,7 @@ export class TaskService {
     private networkService?: NetworkService,
     private logger?: Logger
   ) {
-    this.activityFactory = new ActivityFactory(apiKey);
+    this.activityFactory = new ActivityFactory(yagnaOptions.apiKey);
   }
 
   public async run() {

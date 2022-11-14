@@ -31,10 +31,15 @@ type ExecutorOptions = {
   capabilities?: string[];
   logger?: Logger;
   logLevel?: string;
-  credentials?: { apiKey?: string; apiUrl?: string };
+  yagnaOptions?: { apiKey?: string; apiUrl?: string };
 };
 
 type ExecutorOptionsMixin = string | ExecutorOptions;
+
+export type YagnaOptions = {
+  apiKey: string;
+  apiUrl: string;
+};
 
 export type Worker<InputType, OutputType> = (ctx: WorkContext, data: InputType) => Promise<OutputType | void>;
 
@@ -47,8 +52,11 @@ const DEFAULT_OPTIONS = {
   payment_network: "rinkeby",
 };
 
+const DEFAULT_YAGNA_API_URL = "http://127.0.0.1:7465";
+
 export class TaskExecutor {
   private readonly options: ExecutorOptions;
+  private readonly yagnaOptions: YagnaOptions;
   private readonly image_hash?: string;
   private marketService: MarketService;
   private agreementPoolService: AgreementPoolService;
@@ -69,14 +77,18 @@ export class TaskExecutor {
     for (const key in typeof options === "object" ? { ...DEFAULT_OPTIONS, ...options } : DEFAULT_OPTIONS) {
       this.options[key] = options[key] ?? process.env?.[key.toUpperCase()] ?? DEFAULT_OPTIONS[key];
     }
+    this.yagnaOptions = {
+      apiKey: options?.["yagnaOptions"]?.["apiKey"] || process?.env?.["YAGNA_APPKEY"],
+      apiUrl: options?.["yagnaOptions"]?.["apiUrl"] || process?.env?.["YAGNA_URL"] || DEFAULT_YAGNA_API_URL,
+    };
     this.eventBus = new EventBus();
     this.taskQueue = new TaskQueue<Task<unknown, unknown>>();
     this.marketService = new MarketService(this.yagnaOptions, this.eventBus, this.logger);
     this.agreementPoolService = new AgreementPoolService();
-    this.networkService = new NetworkService();
-    this.paymentService = new PaymentService();
+    this.networkService = new NetworkService(this.yagnaOptions, this.eventBus, this.logger);
+    this.paymentService = new PaymentService(this.yagnaOptions, this.eventBus, this.logger);
     this.taskService = new TaskService(
-      this.options.credentials,
+      this.yagnaOptions,
       this.taskQueue,
       this.eventBus,
       this.agreementPoolService,

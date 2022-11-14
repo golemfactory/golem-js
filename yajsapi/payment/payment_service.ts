@@ -1,8 +1,12 @@
-import { EventBus } from "../executor/event_bus";
+import { EventBus } from "../events/event_bus";
 import { Logger } from "../utils";
 
 export class PaymentService {
-  constructor(private eventBus: EventBus, logger?: Logger) {}
+  constructor(
+    private readonly yagnaOptions: { apiKey?: string; apiUrl?: string },
+    private readonly eventBus: EventBus,
+    private readonly logger?: Logger
+  ) {}
   async run() {
     this.process_debit_notes();
     this.process_invoices();

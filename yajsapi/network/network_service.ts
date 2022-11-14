@@ -1,6 +1,7 @@
-import { EventBus } from "../executor/event_bus";
+import { EventBus } from "../events/event_bus";
 import { Logger } from "../utils";
 import { Network } from "./index";
+import { YagnaOptions } from "../executor/executor";
 
 export class NetworkService {
   private network?: Network;
