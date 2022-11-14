@@ -1,3 +1,5 @@
 export interface MarketStrategy {
-  todo: true;
+  // todo
 }
+
+export class DefaultMarketStrategy implements MarketStrategy {}

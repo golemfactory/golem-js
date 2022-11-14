@@ -20,7 +20,7 @@ rewiremock.enable();
 import { StorageProviderMock } from "../mock/storage_provider";
 import { Activity, ActivityStateEnum, ActivityFactory } from "../../yajsapi/activity";
 import { CancellationToken } from "../../yajsapi/utils";
-import { Deploy, Start, Run, Terminate, UploadFile, DownloadFile, Script, Capture } from "../../yajsapi/script";
+import { Deploy, Start, Run, Terminate, UploadFile, DownloadFile, Script, Capture } from "../../yajsapi/work";
 
 describe("#Activity()", () => {
   before(() => {
@@ -37,7 +37,7 @@ describe("#Activity()", () => {
 
   it("create activity without credentials", () => {
     process.env.YAGNA_APPKEY = "";
-    expect(() => new Activity("test_id_0")).to.throw(Error, "Api key not defined")
+    expect(() => new Activity("test_id_0")).to.throw(Error, "Api key not defined");
     process.env.YAGNA_APPKEY = "test";
   });
 
@@ -50,14 +50,14 @@ describe("#Activity()", () => {
   it("execute commands on activity", async () => {
     const activity = new Activity("test_id");
     const streamResult = await activity.execute(new Deploy().toExeScriptRequest());
-    const {value: result} = await streamResult[Symbol.asyncIterator]().next();
+    const { value: result } = await streamResult[Symbol.asyncIterator]().next();
     expect(result.result).to.equal("Ok");
   });
 
   it("execute commands and get state", async () => {
     const activity = new Activity("test_id");
     const streamResult = await activity.execute(new Run("test_command").toExeScriptRequest());
-    const {value: result} = await streamResult[Symbol.asyncIterator]().next();
+    const { value: result } = await streamResult[Symbol.asyncIterator]().next();
     activity["stateApi"]["setExpected"]("getActivityState", [ActivityStateEnum.Ready, null]);
     const stateAfterRun = await activity.getState();
     expect(result.result).to.equal("Ok");
@@ -107,7 +107,14 @@ describe("#Activity()", () => {
       ["stdout", "test"],
       ["stdout", "test"],
     ]);
-    const expectedRunStdOuts = ["test", "test", "stdout_test_command_run_1", "stdout_test_command_run_2", "test", "test"];
+    const expectedRunStdOuts = [
+      "test",
+      "test",
+      "stdout_test_command_run_1",
+      "stdout_test_command_run_2",
+      "test",
+      "test",
+    ];
     await script.before();
     const results = await activity.execute(script.getExeScriptRequest());
     let resultCount = 0;
@@ -201,10 +208,9 @@ describe("#Activity()", () => {
     activity["api"]["setExpectedErrors"]([error, error, error]);
     return new Promise((res) => {
       results.on("error", (error) => {
-        expect(error.toString())
-          .to.equal(
-            "Command #0 getExecBatchResults error: GSB error: remote service at `test` error: GSB failure: Bad request: endpoint address not found"
-          );
+        expect(error.toString()).to.equal(
+          "Command #0 getExecBatchResults error: GSB error: remote service at `test` error: GSB failure: Bad request: endpoint address not found"
+        );
         return res();
       });
       results.on("data", () => null);
@@ -223,7 +229,10 @@ describe("#Activity()", () => {
       status: 500,
     };
     activity["api"]["setExpectedErrors"]([error, error, error]);
-    activity["stateApi"]["setExpected"]("getActivityState", [ActivityStateEnum.Terminated, ActivityStateEnum.Terminated]);
+    activity["stateApi"]["setExpected"]("getActivityState", [
+      ActivityStateEnum.Terminated,
+      ActivityStateEnum.Terminated,
+    ]);
     return new Promise((res) => {
       results.on("error", (error) => {
         expect(error.toString()).to.equal("GSB error: endpoint address not found. Terminated.");
@@ -259,8 +268,8 @@ describe("#Activity()", () => {
     const command1 = new Deploy();
     const command2 = new Start();
     const capture: Capture = {
-      stdout: {stream: {format: "string"}},
-      stderr: {stream: {format: "string"}},
+      stdout: { stream: { format: "string" } },
+      stderr: { stream: { format: "string" } },
     };
     const command3 = new Run("test_command1", null, null, capture);
     const command4 = new Terminate();
@@ -321,8 +330,8 @@ describe("#Activity()", () => {
     const command1 = new Deploy();
     const command2 = new Start();
     const capture: Capture = {
-      stdout: {stream: {format: "string"}},
-      stderr: {stream: {format: "string"}},
+      stdout: { stream: { format: "string" } },
+      stderr: { stream: { format: "string" } },
     };
     const command3 = new Run("test_command1", null, null, capture);
     const command4 = new Terminate();
@@ -331,7 +340,7 @@ describe("#Activity()", () => {
     const results = await activity.execute(script.getExeScriptRequest(), true, 800);
     return new Promise((res) => {
       results.on("error", (error) => {
-        expect(error.toString()).to.equal( "Error: Activity test_id_3 timeout.");
+        expect(error.toString()).to.equal("Error: Activity test_id_3 timeout.");
         return res();
       });
       results.on("data", () => null);
@@ -343,8 +352,8 @@ describe("#Activity()", () => {
     const command1 = new Deploy();
     const command2 = new Start();
     const capture: Capture = {
-      stdout: {stream: {format: "string"}},
-      stderr: {stream: {format: "string"}},
+      stdout: { stream: { format: "string" } },
+      stderr: { stream: { format: "string" } },
     };
     const command3 = new Run("test_command1", null, null, capture);
     const command4 = new Terminate();
@@ -367,8 +376,8 @@ describe("#Activity()", () => {
     const command1 = new Deploy();
     const command2 = new Start();
     const capture: Capture = {
-      stdout: {stream: {format: "string"}},
-      stderr: {stream: {format: "string"}},
+      stdout: { stream: { format: "string" } },
+      stderr: { stream: { format: "string" } },
     };
     const command3 = new Run("test_command1", null, null, capture);
     const command4 = new Terminate();
