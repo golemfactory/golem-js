@@ -1,13 +1,16 @@
-import { EventBus } from "../executor/event_bus";
+import { EventBus } from "../events/event_bus";
 import { Logger } from "../utils";
 import { Network } from "./index";
+import { YagnaOptions } from "../executor";
 
 export class NetworkService {
   private network?: Network;
-  constructor(private options, private eventBus: EventBus, private logger?: Logger) {}
+  constructor(private yagnaOptions: YagnaOptions, private eventBus: EventBus, private logger?: Logger) {}
 
-  async run() {
-    this.network = await Network.create(this.options.api, this.options.address, this.options.identity, this.logger);
+  async run(address: string) {
+    this.logger?.info("The Network Service has started");
+    // const api = {}
+    // this.network = await Network.create(api, address, this.options.identity, this.logger);
     this.eventBus.on("TODO - Agreement with new Provider", this.addNode.bind(this));
   }
 
@@ -15,5 +18,7 @@ export class NetworkService {
     return this.network?.add_node(nodeId, ip);
   }
 
-  async end() {}
+  async end() {
+    // todo
+  }
 }

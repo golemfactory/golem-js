@@ -2,7 +2,7 @@ import * as fs from "fs";
 import { Field } from "../props/base";
 import { INF_CORES, INF_RUNTIME, InfBase, RuntimeType } from "../props/inf";
 import { types } from "sgx-ias-js";
-import { Constraints, DEFAULT_REPO_SRV, Package, RepoOpts, VmPackage, resolve_repo_srv } from ".";
+import { Constraints, DEFAULT_REPO_SRV, Package, RepoOpts, VmPackage, resolve_repo_srv } from "./package";
 
 class _InfSgx extends InfBase {
   constructor(runtime: RuntimeType) {

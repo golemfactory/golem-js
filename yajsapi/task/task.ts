@@ -1,4 +1,4 @@
-import { Worker } from "./executor";
+import { Worker } from "../executor";
 import { QueueableTask } from "./task_queue";
 
 export enum TaskState {
@@ -37,7 +37,7 @@ export class Task<InputType, OutputType> implements QueueableTask {
     return this.state === TaskState.New || this.state === TaskState.Retry;
   }
   isRetry(): boolean {
-    return this.state === TaskState.New;
+    return this.state === TaskState.Retry;
   }
   isFinished(): boolean {
     return this.state === TaskState.Done || this.state === TaskState.Rejected;

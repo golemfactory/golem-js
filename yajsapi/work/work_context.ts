@@ -1,12 +1,12 @@
 import { Activity, Result } from "../activity";
-import { Command, Deploy, DownloadFile, Run, Script, Start, UploadFile } from "../script";
+import { Command, Deploy, DownloadFile, Run, Script, Start, UploadFile } from ".";
 import { StorageProvider } from "../storage/provider";
 import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity";
 import { sleep, Logger, runtimeContextChecker } from "../utils";
-import { Task } from "./task_new";
+import { Task } from "../task";
 import { Readable, Transform } from "stream";
 import { NetworkNode } from "../network";
-import { Agreement } from "../rest/market";
+import { Agreement } from "../agreement";
 
 export interface ProviderInfo {
   providerName: string;

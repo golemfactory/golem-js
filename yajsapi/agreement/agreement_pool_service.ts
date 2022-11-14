@@ -31,7 +31,14 @@ export class AgreementPoolService {
     terminated: []
   }
 
-  constructor(private eventBus: EventBus, private logger?: Logger) {
+  constructor(
+      private readonly yagnaOptions: { apiKey?: string; apiUrl?: string },
+      private eventBus: EventBus,
+      private logger?: Logger
+  ) { }
+
+  run() {
+    this.logger?.info("The Agreement Pool Service has started");
     this.registerEventListeners();
   }
 
