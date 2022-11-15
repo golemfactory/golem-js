@@ -1,82 +1,114 @@
 /* eslint @typescript-eslint/ban-ts-comment: 0 */
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import {
-  CreateActivityRequest,
-  CreateActivityResult,
-  ExeScriptCommandResult,
-  ExeScriptRequest,
-} from "ya-ts-client/dist/ya-activity/src/models";
+  Agreement as yaAgreement
+} from "ya-ts-client/dist/ya-market/src/models";
 import { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
-import { ExeScriptCommandResultResultEnum } from "ya-ts-client/dist/ya-activity/src/models/exe-script-command-result";
 import { AgreementProposal } from "ya-ts-client/dist/ya-market/src/models/agreement-proposal";
+import { AgreementStateEnum } from "ya-ts-client/dist/ya-market/src/models/agreement";
 
 const genRanHex = size => [...Array(size)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
 
+type MockOfferAgreementSet = {
+  proposal: AgreementProposal | {
+    timestamp: number,
+    providerId: string,
+    providerName: string
+  },
+  agreement: {
+    id: string,
+    timestamp: number,
+    validTo: number,
+    state: AgreementStateEnum
+  }
+}
+
+const _mockOfferAgreementSets: MockOfferAgreementSet[] = [];
+
 export class RequestorApiMock extends RequestorApi {
-  private expectedResults: ExeScriptCommandResult[] = [];
-  private mockedResults: ExeScriptCommandResult[] = [];
-  private expectedErrors: { message: string; status: number }[] = [];
-  private mockedErrors: { message: string; status: number }[] = [];
-  private exampleResult = {
-    index: 0,
-    eventDate: new Date().toISOString(),
-    result: "Ok" as ExeScriptCommandResultResultEnum,
-    stdout: "test_result",
-    stderr: "",
-    message: "",
-    isBatchFinished: false,
-  };
 
   constructor() {
     super();
   }
 
-  setExpectedResult(results) {
-    results.forEach((result, i) => {
-      this.expectedResults[i] = Object.assign({}, this.exampleResult);
-      this.expectedResults[i].index = i;
-      this.expectedResults[i][result[0]] = result[1];
-      if (i === results.length - 1) {
-        this.expectedResults[i].isBatchFinished = true;
+  private findIndexByAgreementId(id) {
+    return _mockOfferAgreementSets.findIndex((i) => i.agreement.id === id)
+  }
+
+  private _createAgreementUsingProposal(proposal) {
+    const id = genRanHex(64);
+    const set = {
+      proposal: {
+        ...proposal,
+        providerName: 'someProviderName_' + _mockOfferAgreementSets.length + 1,
+        providerId: (_mockOfferAgreementSets.length+1).toString(16),
+        timestamp: Date.now(),
+      },
+      agreement: {
+        id,
+        timestamp: Date.now(),
+        validTo: Date.now() + 10000,
+        state: AgreementStateEnum.Proposal
       }
-    });
+    }
+    _mockOfferAgreementSets.push(set);
+    return set;
   }
-  setExpectedErrors(errors) {
-    this.expectedErrors = errors;
-  }
+
   // @ts-ignore
   async createAgreement(
-    stringCreateActivityRequest: AgreementProposal,
+    createAgreementRequest: AgreementProposal,
     options?: AxiosRequestConfig
-  ): Promise<import("axios").AxiosResponse<string | CreateActivityResult>> {
-    return new Promise((res) => res({ data: genRanHex(64) } as AxiosResponse));
+  ): Promise<AxiosResponse<string>> {
+    const { agreement } = this._createAgreementUsingProposal(createAgreementRequest);
+    return new Promise((res) => res({ data: agreement.id } as AxiosResponse));
+  }
+
+  private _buildAgreementResponse(set) {
+    return {
+      "agreementId": set.agreement.id,
+      "demand": {
+        "properties": {},
+        "demandId": "11ed39f6246a4b4fbe4657cd69aa551f-3669d52b420b3ffc92e88e64a4936ca878ecf73b4922521331abcf44fc83fc3a",
+        "requestorId": "0xdc9b51c37a6f45a5fdc9af6ea04e00f7c64a2b6f",
+        "timestamp": (new Date(Date.now()).toISOString()).toString()
+      },
+      "offer": {
+        "properties": {
+          "golem.node.id.name": set.proposal.providerName
+        },
+        "offerId": set.proposal.proposalId,
+        "providerId": set.proposal.providerId,
+        "timestamp": (new Date(set.proposal.timestamp).toISOString()).toString()
+      },
+      "validTo": (new Date(set.agreement.validTo).toISOString()).toString(),
+      "state": set.agreement.state,
+      "timestamp": (new Date(set.agreement.timestamp).toISOString()).toString()
+    }
   }
 
   // @ts-ignore
   async getAgreement(
       agreementId: string,
       options?: AxiosRequestConfig
-  ): Promise<import("axios").AxiosResponse<string | CreateActivityResult>> {
-    return new Promise((res) => res({ data: {
-        "agreementId": agreementId,
-        "demand": {
-          "properties": {},
-          "demandId": "11ed39f6246a4b4fbe4657cd69aa551f-3669d52b420b3ffc92e88e64a4936ca878ecf73b4922521331abcf44fc83fc3a",
-          "requestorId": "0xdc9b51c37a6f45a5fdc9af6ea04e00f7c64a2b6f",
-          "timestamp": (new Date(Date.now()).toISOString()).toString()
-        },
-        "offer": {
-          "properties": {},
-          "offerId": "a37a34ca03844acea2cdcf1ae437e4f5-57d6f2c49abfc0de043dcd3fc47fa95f427e4821962deca23f228b443bd58fd5",
-          "providerId": "0xc6871fbc0f552a8b7ba0f2f777ca40026286bc56",
-          "timestamp": "2022-11-07T11:07:06.261723Z"
-        },
-        "validTo": (new Date(Date.now() + 10000).toISOString()).toString(),
-        "state": "Proposal",
-        "timestamp": (new Date(Date.now()).toISOString()).toString()
-      } } as AxiosResponse));
+  ): Promise<AxiosResponse<string | yaAgreement>|AxiosError<string>> {
+    const index = this.findIndexByAgreementId(agreementId);
+    if(index >= 0) {
+      const set = _mockOfferAgreementSets[index];
+      return new Promise((res) => res({
+        data: this._buildAgreementResponse(set)
+      } as AxiosResponse));
+    } else {
+      return new Promise((res, rej) => rej({
+        code: '404'
+      } as AxiosError<string>));
+    }
   }
 
+  // @ts-ignore
+  async terminateAgreement(agreementId: string) {
+
+  }
 
   // // @ts-ignore
   // async exec(

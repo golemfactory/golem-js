@@ -16,6 +16,8 @@ rewiremock.enable();
 
 import {Agreement, AgreementState, AgreementFactory, ProposalForAgreementInterface} from "../../yajsapi/agreement";
 
+import { Agreement as yaAgreement } from "ya-ts-client/dist/ya-market/src/models";
+import {Activity} from "../../yajsapi/activity";
 
 
 describe("#Agreement()", () => {
@@ -24,13 +26,35 @@ describe("#Agreement()", () => {
     process.env.YAGNA_API_BASEPATH = "http://127.0.0.1:7465/market-api/v1";
   });
 
-  it("create agreement", async () => {
+  it("create agreement using factory", async () => {
     const factory = new AgreementFactory();
     const agreement = await factory.create(new TestProposal("test_proposal_id"));
     expect(agreement).to.be.instanceof(Agreement);
     expect(agreement.getId()).to.be.lengthOf(64);
   });
-  //
+
+  it("create agreement using factory agreement have full details", async () => {
+    const factory = new AgreementFactory();
+    const agreement = await factory.create(new TestProposal("test_proposal_id"));
+    const agreementData = agreement.getAgreementData();
+    expect(agreementData).to.an('object'); // Maybe some better solution if implements `yaAgreement` interface
+  });
+
+  it("agreement have ProviderInfo", async () => {
+    const factory = new AgreementFactory();
+    const agreement = await factory.create(new TestProposal("test_proposal_id"));
+    const providerInfo = agreement.getProviderInfo();
+    expect(providerInfo.providerId).to.an('string');
+    expect(providerInfo.providerName).to.an('string');
+  });
+
+
+  it("terminate activity", async () => {
+    const factory = new AgreementFactory();
+    const agreement = await factory.create(new TestProposal("test_proposal_id"));
+    await agreement.terminate();
+  });
+
   // it("create agreement without credentials", async () => {
   //   process.env.YAGNA_APPKEY = "";
   //   expect(async() => {
@@ -39,7 +63,7 @@ describe("#Agreement()", () => {
   //   }).to.throw(Error, "Api key not defined")
   //   process.env.YAGNA_APPKEY = "test";
   // });
-  //
+
   // it("create activity without api base path", () => {
   //   process.env.YAGNA_API_BASEPATH = "";
   //   expect(async() => {
