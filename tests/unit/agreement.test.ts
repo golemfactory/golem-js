@@ -110,4 +110,8 @@ class TestProposal implements ProposalForAgreementInterface {
   isUsed(): boolean {
     return this.used;
   }
+
+  markAsUsed() {
+    this.used = true;
+  }
 }

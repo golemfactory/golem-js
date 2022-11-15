@@ -34,6 +34,8 @@ export class Agreement {
 
     private agreementData: yaAgreement | undefined;
 
+    private locked = false;
+
     constructor(public readonly id, private readonly configContainer: AgreementConfigContainer) {
         this.logger = configContainer.logger;
         this.api = configContainer.api;
@@ -72,5 +74,17 @@ export class Agreement {
             this.logger?.warn(`Can not terminate agreement: ${error}`);
             throw error;
         }
+    }
+
+    release() {
+        this.locked = false;
+    }
+
+    lock() {
+        this.locked = true;
+    }
+
+    isLocked() {
+        return this.locked;
     }
 }

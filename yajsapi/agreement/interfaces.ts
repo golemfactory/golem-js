@@ -3,4 +3,5 @@ export interface ProposalForAgreementInterface {
     getValidTo(): string;
     getScore(): number;
     isUsed(): boolean;
+    markAsUsed(): void;
 }
