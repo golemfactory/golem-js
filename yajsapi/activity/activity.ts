@@ -134,12 +134,10 @@ export class Activity {
       async read() {
         while (!isBatchFinished) {
           if (startTime.valueOf() + (timeout || executeTimeout) <= new Date().valueOf()) {
-            this.destroy(new Error(`Activity ${activityId} timeout.`));
-            break;
+            return this.destroy(new Error(`Activity ${activityId} timeout.`));
           }
           if (cancellationToken?.cancelled) {
-            this.destroy(new Error(`Activity ${activityId} has been interrupted.`));
-            break;
+            return this.destroy(new Error(`Activity ${activityId} has been interrupted.`));
           }
           try {
             const { data: results }: { data: Result[] } = await api.getExecBatchResults(activityId, batchId);
@@ -187,13 +185,13 @@ export class Activity {
       async read() {
         while (!isBatchFinished) {
           if (startTime.valueOf() + (timeout || executeTimeout) <= new Date().valueOf()) {
-            this.destroy(new Error(`Activity ${activityId} timeout.`));
+            return this.destroy(new Error(`Activity ${activityId} timeout.`));
           }
           if (cancellationToken?.cancelled) {
-            this.destroy(new Error(`Activity ${activityId} has been interrupted.`));
+            return this.destroy(new Error(`Activity ${activityId} has been interrupted.`));
           }
           if (errors.length) {
-            this.destroy(new Error(`GetExecBatchResults failed due to errors: ${JSON.stringify(errors)}`));
+            return this.destroy(new Error(`GetExecBatchResults failed due to errors: ${JSON.stringify(errors)}`));
           }
           if (results.length) {
             const result = results.shift();

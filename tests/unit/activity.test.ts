@@ -60,7 +60,6 @@ describe("#Activity()", () => {
     const { value: result } = await streamResult[Symbol.asyncIterator]().next();
     activity["stateApi"]["setExpected"]("getActivityState", [ActivityStateEnum.Ready, null]);
     const stateAfterRun = await activity.getState();
-    streamResult._destroy(null, () => null);
     expect(result.result).to.equal("Ok");
     expect(stateAfterRun).to.equal(ActivityStateEnum.Ready);
   });
@@ -248,18 +247,23 @@ describe("#Activity()", () => {
     const command1 = new Deploy();
     const command2 = new Start();
     const command3 = new Run("test_command1");
-    const script = new Script([command1, command2, command3]);
+    const command4 = new Run("test_command2");
+    const command5 = new Run("test_command3");
+    const script = new Script([command1, command2, command3, command4, command5]);
+    activity["api"]["setExpectedResult"]([
+      ["stdout", "test"],
+      ["stdout", "test"],
+      ["stdout", "stdout_test_command_run_1"],
+      ["stdout", "stdout_test_command_run_2"],
+      ["stdout", "stdout_test_command_run_3"],
+    ]);
     const results = await activity.execute(script.getExeScriptRequest(), false, 1);
-    const error = {
-      message: "Timeout error",
-      status: 408,
-    };
-    activity["api"]["setExpectedErrors"]([error, error]);
-    return new Promise((res) => {
+    return new Promise((res, rej) => {
       results.on("error", (error) => {
         expect(error.toString()).to.equal("Error: Activity test_id timeout.");
         return res();
       });
+      // results.on("end", () => rej());
       results.on("data", () => null);
     });
   });
@@ -327,7 +331,7 @@ describe("#Activity()", () => {
   });
 
   it("handle timeout error while streaming batch", async () => {
-    const activity = new Activity("test_id_3");
+    const activity = new Activity("test_id_3", { executeTimeout: 1 });
     const command1 = new Deploy();
     const command2 = new Start();
     const capture: Capture = {
@@ -339,11 +343,12 @@ describe("#Activity()", () => {
     const script = new Script([command1, command2, command3, command4]);
     await script.before();
     const results = await activity.execute(script.getExeScriptRequest(), true, 800);
-    return new Promise((res) => {
+    return new Promise((res, rej) => {
       results.on("error", (error) => {
         expect(error.toString()).to.equal("Error: Activity test_id_3 timeout.");
         return res();
       });
+      results.on("end", () => rej());
       results.on("data", () => null);
     });
   });

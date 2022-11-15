@@ -34,9 +34,7 @@ export class RequestorControlApiMock extends RequestorControlApi {
       this.expectedResults[i] = Object.assign({}, this.exampleResult);
       this.expectedResults[i].index = i;
       this.expectedResults[i][result[0]] = result[1];
-      if (i === results.length - 1) {
-        this.expectedResults[i].isBatchFinished = true;
-      }
+      this.expectedResults[i].isBatchFinished = i === results.length - 1;
     });
   }
   setExpectedErrors(errors) {
