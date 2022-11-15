@@ -18,30 +18,41 @@ import {Agreement, AgreementState, AgreementFactory, ProposalForAgreementInterfa
 
 import { Agreement as yaAgreement } from "ya-ts-client/dist/ya-market/src/models";
 import {Activity} from "../../yajsapi/activity";
+import {EventBus} from "../../yajsapi/events/event_bus";
+import {AgreementConfigContainer} from "../../yajsapi/agreement/agreement_config_container";
+import {winstonLogger} from "../../yajsapi/utils";
 
+
+
+process.env.YAGNA_APPKEY = "test";
+process.env.YAGNA_API_BASEPATH = "http://127.0.0.1:7465/market-api/v1";
+
+const eventBus = new EventBus();
+const configContainer = new AgreementConfigContainer(
+    { },
+    eventBus,
+    winstonLogger
+);
+const factory = new AgreementFactory(configContainer);
 
 describe("#Agreement()", () => {
   before(() => {
-    process.env.YAGNA_APPKEY = "test";
-    process.env.YAGNA_API_BASEPATH = "http://127.0.0.1:7465/market-api/v1";
+    //
   });
 
   it("create agreement using factory", async () => {
-    const factory = new AgreementFactory();
     const agreement = await factory.create(new TestProposal("test_proposal_id"));
     expect(agreement).to.be.instanceof(Agreement);
     expect(agreement.getId()).to.be.lengthOf(64);
   });
 
   it("create agreement using factory agreement have full details", async () => {
-    const factory = new AgreementFactory();
     const agreement = await factory.create(new TestProposal("test_proposal_id"));
     const agreementData = agreement.getAgreementData();
     expect(agreementData).to.an('object'); // Maybe some better solution if implements `yaAgreement` interface
   });
 
   it("agreement have ProviderInfo", async () => {
-    const factory = new AgreementFactory();
     const agreement = await factory.create(new TestProposal("test_proposal_id"));
     const providerInfo = agreement.getProviderInfo();
     expect(providerInfo.providerId).to.an('string');
@@ -50,7 +61,6 @@ describe("#Agreement()", () => {
 
 
   it("terminate activity", async () => {
-    const factory = new AgreementFactory();
     const agreement = await factory.create(new TestProposal("test_proposal_id"));
     await agreement.terminate();
   });
@@ -79,6 +89,8 @@ describe("#Agreement()", () => {
 
 
 class TestProposal implements ProposalForAgreementInterface {
+  private used = false;
+
   constructor(public readonly id, private score = 0) {
 
   }
@@ -93,5 +105,9 @@ class TestProposal implements ProposalForAgreementInterface {
 
   getValidTo(): string {
     return (new Date(Date.now() + 3000).toISOString()).toString();
+  }
+
+  isUsed(): boolean {
+    return this.used;
   }
 }
