@@ -2,6 +2,9 @@ import axios from "axios";
 import { DemandBuilder } from "../props";
 import { VmPackageFormat, VmRequest } from "../props/inf";
 import { runtimeContextChecker } from "../utils";
+import { MarketDecoration } from "ya-ts-client/dist/ya-payment/src/models";
+import dayjs from "dayjs";
+import { MarketProperty } from "ya-ts-client/dist/ya-payment/src/models/market-property";
 
 const FALLBACK_REPO_URL = "http://girepo.dev.golem.network:8000";
 const PUBLIC_DNS_URL = "https://dns.google/resolve?type=srv&name=";
@@ -43,6 +46,11 @@ export class Package {
   async decorate_demand(demand: DemandBuilder) {
     // Add package information to a Demand.
   }
+
+  async getDemandDecoration(): Promise<MarketDecoration> {
+    // TMP: the same as decorate demand
+    return {} as MarketDecoration;
+  }
 }
 
 export class VmPackage extends Package {
@@ -72,6 +80,29 @@ export class VmPackage extends Package {
     const image_url = await this.resolve_url();
     demand.ensure(this.constraints.toString());
     demand.add(new VmRequest(image_url, VmPackageFormat.GVMKIT_SQUASH));
+  }
+
+  async getDemandDecoration(): Promise<MarketDecoration> {
+    const imageUrl = await this.resolve_url();
+    const property: MarketProperty = { key: "", value: "" };
+    const m = new VmRequest(imageUrl, VmPackageFormat.GVMKIT_SQUASH);
+    // TODO: copy from DemandBuilder
+    const kv = m.keys();
+    for (const name of kv.names()) {
+      const prop_id = kv.get()[name];
+      let value = m[name].value;
+      if (value == null) continue;
+      if (dayjs.isDayjs(value)) value = value.valueOf();
+      else if (value instanceof Object) {
+        value = value.value;
+        if (!(value instanceof String || value instanceof Number || value instanceof Array)) throw Error("");
+      }
+      property[prop_id] = value;
+    }
+    return {
+      constraints: [this.constraints.toString()],
+      properties: [property],
+    };
   }
 }
 

@@ -9,8 +9,6 @@ import { RequestorApi as MarketApi, Configuration } from "ya-ts-client/dist/ya-m
 import { PaymentService } from "../payment";
 import { AgreementPoolService } from "../agreement";
 
-const SCORE_NEUTRAL = 1.0;
-
 export class MarketService {
   private api: MarketApi;
 
@@ -51,9 +49,9 @@ export class MarketService {
   }
 
   private async publishDemand(demand: Demand): Promise<Subscription> {
-    const offer = demand.getOffer();
-    const { data: subscriptionId } = await this.api.subscribeDemand(offer);
-    return new Subscription(subscriptionId);
+    const demandRequest = demand.getDemandRequest();
+    const { data: subscriptionId } = await this.api.subscribeDemand(demandRequest);
+    return new Subscription(subscriptionId, this.api);
   }
 
   private async processProposal(proposal: Proposal) {

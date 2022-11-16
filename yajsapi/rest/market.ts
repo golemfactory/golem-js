@@ -1,4 +1,3 @@
-/* eslint @typescript-eslint/ban-types: 0 */
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import { Model } from "../props";
