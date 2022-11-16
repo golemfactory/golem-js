@@ -184,6 +184,7 @@ export class OfferProposal {
     proposal.validTo = dayjs().add(timeout, "second").utc().format("YYYY-MM-DD HH:mm:ss.SSSSSSZ");
     const api: RequestorApi = this._subscription._api;
     const { data: agreement_id } = await api.createAgreement(proposal, { timeout: 3000 });
+    const a = api.collectAgreementEvents();
     return new Agreement(api, this._subscription, agreement_id, this.logger);
   }
 }

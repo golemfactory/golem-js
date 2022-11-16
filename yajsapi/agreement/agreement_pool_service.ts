@@ -1,7 +1,8 @@
 import { Logger } from "../utils";
-import { OfferProposal, TerminationReason } from "../rest/market";
+import { TerminationReason } from "../rest/market";
 import { EventBus } from "../events/event_bus";
 import { Agreement } from "./agreement";
+import { Offer } from "../market/offer";
 
 export class AgreementPoolService {
   constructor(
@@ -21,7 +22,7 @@ export class AgreementPoolService {
   async terminateAll(reason: TerminationReason) {
     // todo
   }
-  async addProposal(score: number, proposal: OfferProposal) {
+  addOffer(offer: Offer) {
     // todo
   }
 

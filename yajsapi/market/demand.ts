@@ -1,3 +1,7 @@
+import { MarketDecoration } from "ya-ts-client/dist/ya-payment/src/models";
+
 export class Demand {
-  // todo
+  constructor(decorations: MarketDecoration[]) {
+    // todo
+  }
 }

@@ -1,5 +1,3 @@
-import { PaymentService } from "./payment_service";
-import { Invoice } from "./invoice";
-import { DebitNote } from "./debit_note";
-
-export { PaymentService, Invoice, DebitNote };
+export { PaymentService } from "./payment_service";
+export { Invoice } from "./invoice";
+export { DebitNote } from "./debit_note";
