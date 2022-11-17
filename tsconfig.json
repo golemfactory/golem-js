@@ -12,6 +12,7 @@
     "noLib": false,
     "declaration": true,
     "useUnknownInCatchVariables": false,
+    "skipLibCheck": true,
     "lib": [
       "es2015",
       "es2016",

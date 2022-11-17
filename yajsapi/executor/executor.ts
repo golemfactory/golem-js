@@ -12,21 +12,18 @@ import { StorageProvider } from "../storage/provider";
 
 export type ExecutorOptions = {
   package: string | Package;
-  max_workers?: number;
+  maxWorkers: number;
   timeout?: number | string;
-  budget?: string;
+  budget: number;
   strategy?: MarketStrategy;
-  subnet_tag?: string;
-  driver?: string;
-  network?: string;
-  payment_driver?: string;
-  payment_network?: string;
-  event_consumer?: "todo";
-  network_address?: string;
+  subnetTag: string;
+  paymentDriver: string;
+  paymentNetwork: string;
+  networkAddress?: string;
   engine?: string;
-  min_mem_gib?: number;
-  min_storage_gib?: number;
-  min_cpu_threads?: number;
+  minMemGib?: number;
+  minStorageGib?: number;
+  minCpuThreads?: number;
   cores?: number;
   capabilities?: string[];
   logger?: Logger;
@@ -44,12 +41,11 @@ export type YagnaOptions = {
 export type Worker<InputType, OutputType> = (ctx: WorkContext, data: InputType) => Promise<OutputType | void>;
 
 const DEFAULT_OPTIONS = {
-  max_workers: 5,
-  budget: "1.0",
-  strategy: null,
-  subnet_tag: "devnet-beta",
-  payment_driver: "erc20",
-  payment_network: "rinkeby",
+  maxWorkers: 5,
+  budget: 1.0,
+  subnetTag: "devnet-beta",
+  paymentDriver: "erc20",
+  paymentNetwork: "rinkeby",
 };
 
 const DEFAULT_YAGNA_API_URL = "http://127.0.0.1:7465";
@@ -86,10 +82,22 @@ export class TaskExecutor {
     this.logger?.setLevel && this.logger?.setLevel(this.options.logLevel || "info");
     this.eventBus = new EventBus();
     this.taskQueue = new TaskQueue<Task<unknown, unknown>>();
-    this.marketService = new MarketService(this.yagnaOptions, this.eventBus, this.logger);
     this.agreementPoolService = new AgreementPoolService(this.yagnaOptions, this.eventBus, this.logger);
     this.networkService = new NetworkService(this.yagnaOptions, this.eventBus, this.logger);
     this.paymentService = new PaymentService(this.yagnaOptions, this.eventBus, this.logger);
+    this.marketService = new MarketService(
+      this.yagnaOptions,
+      {
+        budget: this.options.budget,
+        paymentDriver: this.options.paymentDriver,
+        paymentNetwork: this.options.paymentNetwork,
+      },
+      this.paymentService,
+      this.agreementPoolService,
+      this.eventBus,
+      this.logger,
+      this.options.strategy
+    );
     this.taskService = new TaskService(
       this.yagnaOptions,
       this.taskQueue,
@@ -116,8 +124,8 @@ export class TaskExecutor {
     this.agreementPoolService.run();
     this.paymentService.run();
     this.taskService.run();
-    if (this.options.network_address) {
-      this.networkService.run(this.options.network_address);
+    if (this.options.networkAddress) {
+      this.networkService.run(this.options.networkAddress);
     }
   }
 

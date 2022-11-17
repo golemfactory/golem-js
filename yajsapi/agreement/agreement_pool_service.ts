@@ -3,8 +3,9 @@ import { TerminationReason } from "../rest/market";
 import { EventBus } from "../events/event_bus";
 import { Agreement } from "./agreement";
 import { Offer } from "../market/offer";
+import { ComputationHistory } from "../market/strategy";
 
-export class AgreementPoolService {
+export class AgreementPoolService implements ComputationHistory {
   constructor(
     private readonly yagnaOptions: { apiKey?: string; apiUrl?: string },
     private readonly eventBus: EventBus,
@@ -24,6 +25,10 @@ export class AgreementPoolService {
   }
   addOffer(offer: Offer) {
     // todo
+  }
+
+  rejectedLastAgreement(providerId: string): boolean {
+    return false;
   }
 
   async end() {

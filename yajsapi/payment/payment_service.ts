@@ -57,4 +57,8 @@ export class PaymentService {
     const { data: newModel } = await this.api.createAllocation(model);
     return [new Allocation(this.api, newModel)];
   }
+
+  acceptPayments(id: string) {
+    // todo
+  }
 }

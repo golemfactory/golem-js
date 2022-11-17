@@ -2,10 +2,10 @@ import { Proposal as ProposalModel, ProposalAllOfStateEnum } from "ya-ts-client/
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 
 export class Offer {
-  protected proposalId: string;
-  protected issuerId: string;
-  protected properties: object;
-  protected constraints: string;
+  public readonly proposalId: string;
+  public readonly issuerId: string;
+  public readonly properties: object;
+  public readonly constraints: string;
   protected state: ProposalAllOfStateEnum;
   protected prevProposalId: string | undefined;
   protected timestamp: string;
@@ -37,6 +37,9 @@ export class Proposal extends Offer {
     await this.api.rejectProposalOffer(this.subscriptionId, this.proposalId, { message: { reason } });
   }
   async respond() {
-    await this.api.counterProposalDemand()
+    await this.api.counterProposalDemand(this.subscriptionId, this.proposalId, {
+      properties: this.properties,
+      constraints: this.constraints,
+    });
   }
 }

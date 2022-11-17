@@ -18,9 +18,9 @@ export class Subscription extends EventEmitter {
         for (const event of events as ProposalEvent[]) {
           if (event.eventType !== "ProposalEvent") continue;
           if (event.proposal.state === ProposalAllOfStateEnum.Initial) {
-            this.emit("proposal", new Proposal(event.proposal, this.api));
+            this.emit("proposal", new Proposal(this.subscriptionId, event.proposal, this.api));
           } else if (event.proposal.state === ProposalAllOfStateEnum.Draft) {
-            this.emit("offer", new Offer(event.proposal));
+            this.emit("offer", new Offer(this.subscriptionId, event.proposal));
           }
         }
         await sleep(2);

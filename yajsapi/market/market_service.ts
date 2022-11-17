@@ -11,17 +11,18 @@ import { AgreementPoolService } from "../agreement";
 
 export class MarketService {
   private api: MarketApi;
+  private marketStrategy: MarketStrategy;
 
   constructor(
     private readonly yagnaOptions: { apiKey?: string; basePath?: string },
     private readonly marketOptions: { budget: number; paymentNetwork: string; paymentDriver: string },
     private readonly paymentService: PaymentService,
     private readonly agreementPoolService: AgreementPoolService,
-    private readonly marketStrategy: MarketStrategy,
     private readonly eventBus: EventBus,
-    private readonly logger?: Logger
+    private readonly logger?: Logger,
+    marketStrategy?: MarketStrategy
   ) {
-    if (!this.marketStrategy) this.marketStrategy = new DefaultMarketStrategy();
+    this.marketStrategy = marketStrategy || new DefaultMarketStrategy(this.agreementPoolService);
     const apiConfig = new Configuration({
       apiKey: yagnaOptions.apiKey,
       basePath: yagnaOptions.basePath,
@@ -58,8 +59,13 @@ export class MarketService {
     this.eventBus.emit("NewProposal", proposal);
     const score = this.marketStrategy.scoreProposal(proposal);
     proposal.setScore(score);
-    if (proposal.isAcceptable()) await proposal.respond();
-    else proposal.reject();
+    if (proposal.isAcceptable()) {
+      await proposal.respond();
+      this.eventBus.emit("ProposalResponded");
+    } else {
+      await proposal.reject();
+      this.eventBus.emit("ProposalRejected");
+    }
   }
 
   private async processOffer(offer: Offer) {
