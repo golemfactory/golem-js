@@ -8,10 +8,10 @@ export class Offer {
   public readonly issuerId: string;
   public readonly properties: object;
   public readonly constraints: string;
-  protected state: ProposalAllOfStateEnum;
-  protected prevProposalId: string | undefined;
-  protected timestamp: string;
-  protected score = 0;
+  protected readonly state: ProposalAllOfStateEnum;
+  protected readonly prevProposalId: string | undefined;
+  protected readonly timestamp: string;
+  protected score?: number;
 
   constructor(protected readonly subscriptionId: string, model: ProposalModel, protected demand: Demand) {
     this.proposalId = model.proposalId;
@@ -40,7 +40,7 @@ export class Proposal extends Offer {
     this.score = score;
   }
   isAcceptable(): { result: boolean; reason?: string } {
-    if (this.score < SCORE_NEUTRAL) {
+    if ((this.score || 0) < SCORE_NEUTRAL) {
       return { result: false, reason: "Score too low" };
     }
     if (!this.getCommonPaymentPlatform()) {

@@ -7,11 +7,16 @@ import { Demand } from "./demand";
 
 export class Subscription extends EventEmitter {
   private isRunning = true;
-  constructor(public readonly subscriptionId: string, private demand: Demand, private api: RequestorApi) {
+  constructor(
+    public readonly subscriptionId: string,
+    private demand: Demand,
+    private allowedPlatforms: string[],
+    private api: RequestorApi
+  ) {
     super();
   }
 
-  async listenForNewProposalAndOffers(allowedPlatforms: string[]) {
+  async listenForNewProposalAndOffers() {
     // TODO: polling replace to long polling or websocket?
     while (this.isRunning) {
       try {
@@ -21,7 +26,7 @@ export class Subscription extends EventEmitter {
           if (event.proposal.state === ProposalAllOfStateEnum.Initial) {
             this.emit(
               "proposal",
-              new Proposal(this.subscriptionId, event.proposal, this.demand, this.api, allowedPlatforms)
+              new Proposal(this.subscriptionId, event.proposal, this.demand, this.api, this.allowedPlatforms)
             );
           } else if (event.proposal.state === ProposalAllOfStateEnum.Draft) {
             this.emit("offer", new Offer(this.subscriptionId, event.proposal, this.demand));

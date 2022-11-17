@@ -21,7 +21,7 @@ export type MarketOptions = {
 };
 
 export class MarketService {
-  private api: MarketApi;
+  private readonly api: MarketApi;
   private marketStrategy: MarketStrategy;
 
   constructor(
@@ -44,9 +44,9 @@ export class MarketService {
   async run(taskPackage: Package) {
     this.logger?.debug("Market Service has started");
     const demand = await this.createDemand(taskPackage);
-    const subscription = await this.publishDemand(demand);
     const allowedPlatforms = await this.paymentService.getAllocatedPaymentPlatform();
-    subscription.listenForNewProposalAndOffers(allowedPlatforms).catch((e) => {
+    const subscription = await this.publishDemand(demand, allowedPlatforms);
+    subscription.listenForNewProposalAndOffers().catch((e) => {
       throw new Error("Cannot getting new offers from market. " + e);
     });
     subscription.on("proposal", (proposal) => this.processProposal(proposal));
@@ -65,15 +65,15 @@ export class MarketService {
     return new Demand([baseDecoration, packageDecoration, marketDecoration, strategyDecoration]);
   }
 
-  private async publishDemand(demand: Demand): Promise<Subscription> {
+  private async publishDemand(demand: Demand, allowedPlatforms: string[]): Promise<Subscription> {
     const demandRequest = demand.getDemandRequest();
     const { data: subscriptionId } = await this.api.subscribeDemand(demandRequest);
-    this.logger?.debug(`Demand published on the market.`);
-    return new Subscription(subscriptionId, demand, this.api);
+    this.logger?.debug(`Demand published on the market`);
+    return new Subscription(subscriptionId, demand, allowedPlatforms, this.api);
   }
 
   private async processProposal(proposal: Proposal) {
-    this.logger?.debug(`A New proposal has been received (${proposal.proposalId}).`);
+    this.logger?.debug(`New proposal has been received (${proposal.proposalId})`);
     this.eventBus.emit("NewProposal", proposal);
     const score = this.marketStrategy.scoreProposal(proposal);
     proposal.setScore(score);
@@ -93,7 +93,7 @@ export class MarketService {
 
   private async processOffer(offer: Offer) {
     this.eventBus.emit("NewOffer", offer);
-    this.logger?.debug(`A New offer has been confirmed (${offer.proposalId}).`);
+    this.logger?.debug(`New offer has been confirmed (${offer.proposalId})`);
     this.agreementPoolService.addOffer(offer);
   }
 
