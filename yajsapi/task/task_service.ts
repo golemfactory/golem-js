@@ -8,6 +8,7 @@ import { AgreementPoolService } from "../agreement";
 import { PaymentService } from "../payment";
 import { NetworkService } from "../network";
 import { EventBus } from "../events/event_bus";
+import { YagnaOptions } from "../executor";
 
 const MAX_PARALLEL_TASKS = 5;
 
@@ -19,7 +20,7 @@ export class TaskService {
   private isRunning = false;
 
   constructor(
-    yagnaOptions: { apiKey: string; apiUrl: string },
+    yagnaOptions: YagnaOptions,
     private tasksQueue: TaskQueue<Task<any, any>>,
     private eventBus: EventBus,
     private agreementPoolService: AgreementPoolService,
@@ -33,7 +34,7 @@ export class TaskService {
 
   public async run() {
     this.isRunning = true;
-    this.logger?.info("The Task Service has started");
+    this.logger?.debug("Task Service has started");
     while (this.isRunning) {
       await sleep(2);
       if (this.activeTasks.size >= MAX_PARALLEL_TASKS) continue;

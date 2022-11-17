@@ -8,7 +8,7 @@ export class NetworkService {
   constructor(private yagnaOptions: YagnaOptions, private eventBus: EventBus, private logger?: Logger) {}
 
   async run(address: string) {
-    this.logger?.info("The Network Service has started");
+    this.logger?.debug("Network Service has started");
     // const api = {}
     // this.network = await Network.create(api, address, this.options.identity, this.logger);
     this.eventBus.on("TODO - Agreement with new Provider", this.addNode.bind(this));

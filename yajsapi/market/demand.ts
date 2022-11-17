@@ -12,14 +12,17 @@ export class Demand {
     }
   }
 
+  addProperty(key, value) {
+    this.properties[key] = value;
+  }
+
   getDemandRequest(): DemandOfferBase {
     let constraints: string;
     if (!this.constraints.length) constraints = "(&)";
     else if (this.constraints.length == 1) constraints = this.constraints[0];
     else constraints = `(&${this.constraints.join("\n\t")})`;
-    return {
-      constraints,
-      properties: this.properties,
-    };
+    const properties = {};
+    this.properties.forEach((prop) => (properties[prop.key] = prop.value));
+    return { constraints, properties };
   }
 }

@@ -1,9 +1,8 @@
 import axios from "axios";
 import { DemandBuilder } from "../props";
 import { VmPackageFormat, VmRequest } from "../props/inf";
-import { runtimeContextChecker } from "../utils";
+import { runtimeContextChecker, dayjs } from "../utils";
 import { MarketDecoration } from "ya-ts-client/dist/ya-payment/src/models";
-import dayjs from "dayjs";
 import { MarketProperty } from "ya-ts-client/dist/ya-payment/src/models/market-property";
 
 const FALLBACK_REPO_URL = "http://girepo.dev.golem.network:8000";
@@ -84,24 +83,10 @@ export class VmPackage extends Package {
 
   async getDemandDecoration(): Promise<MarketDecoration> {
     const imageUrl = await this.resolve_url();
-    const property: MarketProperty = { key: "", value: "" };
-    const m = new VmRequest(imageUrl, VmPackageFormat.GVMKIT_SQUASH);
-    // TODO: copy from DemandBuilder
-    const kv = m.keys();
-    for (const name of kv.names()) {
-      const prop_id = kv.get()[name];
-      let value = m[name].value;
-      if (value == null) continue;
-      if (dayjs.isDayjs(value)) value = value.valueOf();
-      else if (value instanceof Object) {
-        value = value.value;
-        if (!(value instanceof String || value instanceof Number || value instanceof Array)) throw Error("");
-      }
-      property[prop_id] = value;
-    }
+    const VmRequestProp = new VmRequest(imageUrl, VmPackageFormat.GVMKIT_SQUASH);
     return {
       constraints: [this.constraints.toString()],
-      properties: [property],
+      properties: VmRequestProp.properties(),
     };
   }
 }

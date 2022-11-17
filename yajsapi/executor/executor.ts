@@ -9,16 +9,17 @@ import { Result } from "../activity";
 import { sleep, Logger, runtimeContextChecker, winstonLogger } from "../utils";
 import { EventBus } from "../events/event_bus";
 import { StorageProvider } from "../storage/provider";
+import { DEFAULT_EXECUTOR_OPTIONS, DEFAULT_YAGNA_API_URL } from "./defaults";
 
 export type ExecutorOptions = {
   package: string | Package;
-  maxWorkers: number;
-  timeout?: number | string;
-  budget: number;
+  maxWorkers?: number;
+  timeout?: number;
+  budget?: number;
   strategy?: MarketStrategy;
-  subnetTag: string;
-  paymentDriver: string;
-  paymentNetwork: string;
+  subnetTag?: string;
+  paymentDriver?: string;
+  paymentNetwork?: string;
   networkAddress?: string;
   engine?: string;
   minMemGib?: number;
@@ -35,20 +36,10 @@ export type ExecutorOptionsMixin = string | ExecutorOptions;
 
 export type YagnaOptions = {
   apiKey: string;
-  apiUrl: string;
+  basePath: string;
 };
 
 export type Worker<InputType, OutputType> = (ctx: WorkContext, data: InputType) => Promise<OutputType | void>;
-
-const DEFAULT_OPTIONS = {
-  maxWorkers: 5,
-  budget: 1.0,
-  subnetTag: "devnet-beta",
-  paymentDriver: "erc20",
-  paymentNetwork: "rinkeby",
-};
-
-const DEFAULT_YAGNA_API_URL = "http://127.0.0.1:7465";
 
 export class TaskExecutor {
   private readonly options: ExecutorOptions;
@@ -70,12 +61,14 @@ export class TaskExecutor {
       this.image_hash = options;
     }
     this.options = {} as ExecutorOptions;
-    for (const key in typeof options === "object" ? { ...DEFAULT_OPTIONS, ...options } : DEFAULT_OPTIONS) {
-      this.options[key] = options[key] ?? process.env?.[key.toUpperCase()] ?? DEFAULT_OPTIONS[key];
+    for (const key in typeof options === "object"
+      ? { ...DEFAULT_EXECUTOR_OPTIONS, ...options }
+      : DEFAULT_EXECUTOR_OPTIONS) {
+      this.options[key] = options[key] ?? process.env?.[key.toUpperCase()] ?? DEFAULT_EXECUTOR_OPTIONS[key];
     }
     this.yagnaOptions = {
       apiKey: options?.["yagnaOptions"]?.["apiKey"] || process?.env?.["YAGNA_APPKEY"],
-      apiUrl: options?.["yagnaOptions"]?.["apiUrl"] || process?.env?.["YAGNA_URL"] || DEFAULT_YAGNA_API_URL,
+      basePath: options?.["yagnaOptions"]?.["basePath"] || process?.env?.["YAGNA_URL"] || DEFAULT_YAGNA_API_URL,
     };
     this.logger = this.options.logger;
     if (!this.options.logger && !runtimeContextChecker.isBrowser) this.logger = winstonLogger;
@@ -88,9 +81,11 @@ export class TaskExecutor {
     this.marketService = new MarketService(
       this.yagnaOptions,
       {
-        budget: this.options.budget,
-        paymentDriver: this.options.paymentDriver,
-        paymentNetwork: this.options.paymentNetwork,
+        budget: this.options.budget!,
+        paymentDriver: this.options.paymentDriver!,
+        paymentNetwork: this.options.paymentNetwork!,
+        subnetTag: this.options.subnetTag!,
+        timeout: this.options.timeout!,
       },
       this.paymentService,
       this.agreementPoolService,
@@ -113,20 +108,21 @@ export class TaskExecutor {
   async init() {
     let taskPackage;
     if (this.image_hash) {
-      taskPackage = await this.createPackage(this.image_hash);
+      taskPackage = await this.createPackage(this.image_hash).catch((e) => this.handleCriticalError(e));
     } else if (typeof this.options.package === "string") {
-      taskPackage = await this.createPackage(this.options.package);
+      taskPackage = await this.createPackage(this.options.package).catch((e) => this.handleCriticalError(e));
     } else {
       taskPackage = this.options.package;
     }
-
-    this.marketService.run(taskPackage);
-    this.agreementPoolService.run();
-    this.paymentService.run();
-    this.taskService.run();
+    this.logger?.debug("Initializing task executor services...");
+    this.marketService.run(taskPackage).catch((e) => this.handleCriticalError(e));
+    this.agreementPoolService.run().catch((e) => this.handleCriticalError(e));
+    this.paymentService.run().catch((e) => this.handleCriticalError(e));
+    // this.taskService.run().catch((e) => this.handleCriticalError(e));
     if (this.options.networkAddress) {
-      this.networkService.run(this.options.networkAddress);
+      this.networkService.run(this.options.networkAddress).catch((e) => this.handleCriticalError(e));
     }
+    this.logger?.info("Task Executor has started");
   }
 
   beforeEach(worker: Worker<unknown, unknown>) {
@@ -200,6 +196,12 @@ export class TaskExecutor {
       if (task.isFinished()) return task.getResults();
       await sleep(2);
     }
+  }
+
+  private handleCriticalError(e: Error) {
+    this.logger?.error(e.toString());
+    this.logger?.debug(e.stack);
+    process.exit(1);
   }
 }
 

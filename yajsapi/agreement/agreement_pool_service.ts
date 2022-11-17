@@ -12,7 +12,7 @@ export class AgreementPoolService implements ComputationHistory {
     private readonly logger?: Logger
   ) {}
   async run() {
-    this.logger?.info("The Agreement Pool Service has started");
+    this.logger?.debug("Agreement Pool Service has started");
   }
   async get(): Promise<Agreement> {
     return new Agreement("todo", { providerId: "todo", providerName: "todo" });
