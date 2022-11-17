@@ -70,7 +70,7 @@ const DEFAULT_EXECUTOR_TIMEOUT: number = dayjs
 
 const DEFAULT_NETWORK: string = process.env["YAGNA_PAYMENT_NETWORK"] || "rinkeby";
 const DEFAULT_DRIVER: string = process.env["YAGNA_PAYMENT_DRIVER"] || "erc20";
-const DEFAULT_SUBNET: string = process.env["YAGNA_SUBNET"] || "devnet-beta";
+const DEFAULT_SUBNET: string = process.env["YAGNA_SUBNET"] || "public";
 
 export class NoPaymentAccountError extends Error {
   //"The error raised if no payment account for the required driver/network is available."
