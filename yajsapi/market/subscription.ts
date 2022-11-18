@@ -16,7 +16,7 @@ export class Subscription extends EventEmitter {
     super();
   }
 
-  async listenForNewProposalAndOffers() {
+  async subscribe() {
     // TODO: polling replace to long polling or websocket?
     while (this.isRunning) {
       try {

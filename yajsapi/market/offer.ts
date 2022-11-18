@@ -2,16 +2,18 @@ import { Proposal as ProposalModel, ProposalAllOfStateEnum } from "ya-ts-client/
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import { SCORE_NEUTRAL } from "./strategy";
 import { Demand } from "./demand";
+import { AgreementProposal } from "../agreement/agreement_pool_service";
 
-export class Offer {
+export class Offer implements AgreementProposal {
   public readonly proposalId: string;
   public readonly issuerId: string;
   public readonly properties: object;
   public readonly constraints: string;
+  public readonly timestamp: string;
   protected readonly state: ProposalAllOfStateEnum;
   protected readonly prevProposalId: string | undefined;
-  protected readonly timestamp: string;
-  protected score?: number;
+  protected _score?: number;
+  private _isUsed = false;
 
   constructor(protected readonly subscriptionId: string, model: ProposalModel, protected demand: Demand) {
     this.proposalId = model.proposalId;
@@ -21,6 +23,18 @@ export class Offer {
     this.state = model.state;
     this.prevProposalId = model.prevProposalId;
     this.timestamp = model.timestamp;
+  }
+
+  get score(): number {
+    return this._score || 0;
+  }
+
+  get isUsed(): boolean {
+    return this._isUsed;
+  }
+
+  markAsUsed(): void {
+    this._isUsed = true;
   }
 }
 
@@ -37,7 +51,7 @@ export class Proposal extends Offer {
     if (commonPaymentPlatform) this.demand.addProperty("golem.com.payment.chosen-platform", commonPaymentPlatform);
   }
   setScore(score: number) {
-    this.score = score;
+    this._score = score;
   }
   isAcceptable(): { result: boolean; reason?: string } {
     if ((this.score || 0) < SCORE_NEUTRAL) {

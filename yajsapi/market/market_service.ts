@@ -43,11 +43,14 @@ export class MarketService {
   }
   async run(taskPackage: Package) {
     this.logger?.debug("Market Service has started");
-    const demand = await this.createDemand(taskPackage);
     const allowedPlatforms = await this.paymentService.getAllocatedPaymentPlatform();
-    const subscription = await this.publishDemand(demand, allowedPlatforms);
-    subscription.listenForNewProposalAndOffers().catch((e) => {
-      throw new Error("Cannot getting new offers from market. " + e);
+    const demand = await this.createDemand(taskPackage, allowedPlatforms);
+    const subscription = await demand.publish().catch((e) => {
+      throw new Error("Cannot publish demand. " + e);
+    });
+    this.logger?.debug(`Demand published on the market`);
+    subscription.subscribe().catch((e) => {
+      throw new Error("Cannot subscribe for new offers from market. " + e);
     });
     subscription.on("proposal", (proposal) => this.processProposal(proposal));
     subscription.on("offer", (offer) => this.processOffer(offer));
@@ -57,19 +60,17 @@ export class MarketService {
     // todo
   }
 
-  private async createDemand(taskPackage: Package): Promise<Demand> {
+  private async createDemand(taskPackage: Package, allowedPlatforms: string[]): Promise<Demand> {
     const baseDecoration = this.getBaseDecoration();
     const packageDecoration = await taskPackage.getDemandDecoration();
     const marketDecoration = await this.paymentService.getDemandDecoration(this.marketOptions);
     const strategyDecoration = this.marketStrategy.getDemandDecoration();
-    return new Demand([baseDecoration, packageDecoration, marketDecoration, strategyDecoration]);
-  }
-
-  private async publishDemand(demand: Demand, allowedPlatforms: string[]): Promise<Subscription> {
-    const demandRequest = demand.getDemandRequest();
-    const { data: subscriptionId } = await this.api.subscribeDemand(demandRequest);
-    this.logger?.debug(`Demand published on the market`);
-    return new Subscription(subscriptionId, demand, allowedPlatforms, this.api);
+    return new Demand(this.api, allowedPlatforms, [
+      baseDecoration,
+      packageDecoration,
+      marketDecoration,
+      strategyDecoration,
+    ]);
   }
 
   private async processProposal(proposal: Proposal) {
@@ -94,7 +95,7 @@ export class MarketService {
   private async processOffer(offer: Offer) {
     this.eventBus.emit("NewOffer", offer);
     this.logger?.debug(`New offer has been confirmed (${offer.proposalId})`);
-    this.agreementPoolService.addOffer(offer);
+    this.agreementPoolService.addProposal(offer);
   }
 
   private getBaseDecoration(): MarketDecoration {
