@@ -71,7 +71,7 @@ export class TaskExecutor {
       task_package: taskPackage,
       max_workers: this.options.maxWorkers,
       timeout: this.options.timeout,
-      budget: this.options.budget,
+      budget: this.options.budget?.toString(),
       strategy: this.options.strategy,
       subnet_tag: this.options.subnetTag,
       payment_driver: this.options.payment!.driver,
