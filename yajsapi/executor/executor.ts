@@ -10,7 +10,7 @@ type ExecutorOptions = {
   package: string | Package;
   maxWorkers?: number;
   timeout?: number;
-  budget?: string;
+  budget?: number;
   strategy?: MarketStrategy;
   subnetTag?: string;
   payment?: { driver?: string; network?: string };
