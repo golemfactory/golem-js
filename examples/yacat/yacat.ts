@@ -6,7 +6,7 @@ async function main(args) {
   const executor = await createExecutor({
     package: "055911c811e56da4d75ffc928361a78ed13077933ffa8320fb1ec2db",
     maxWorkers: args.numberOfProviders,
-    budget: "10",
+    budget: 10,
     subnetTag: args.subnetTag,
     payment: { driver: args.paymentDriver, network: args.paymentNetwork },
   });
