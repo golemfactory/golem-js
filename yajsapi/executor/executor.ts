@@ -8,21 +8,20 @@ import * as events from "./events";
 
 type ExecutorOptions = {
   package: string | Package;
-  max_workers?: number;
-  timeout?: number | string;
+  maxWorkers?: number;
+  timeout?: number;
   budget?: string;
   strategy?: MarketStrategy;
-  subnet_tag?: string;
+  subnetTag?: string;
   driver?: string;
   network?: string;
-  payment_driver?: string;
-  payment_network?: string;
-  event_consumer?: Callable<[events.YaEvent], void>;
-  network_address?: string;
+  payment: { driver: string; network: string };
+  eventConsumer?: Callable<[events.YaEvent], void>;
+  networkAddress?: string;
   engine?: string;
-  min_mem_gib?: number;
-  min_storage_gib?: number;
-  min_cpu_threads?: number;
+  minMemGib?: number;
+  minStorageGib?: number;
+  minCpuThreads?: number;
   cores?: number;
   capabilities?: string[];
 };
@@ -35,12 +34,11 @@ export type Worker<InputType = unknown, OutputType = unknown> = (
 ) => Promise<OutputType | void>;
 
 const DEFAULT_OPTIONS = {
-  max_workers: 5,
+  maxWorkers: 5,
   budget: "1.0",
   strategy: null,
-  subnet_tag: "devnet-beta",
-  payment_driver: "erc20",
-  payment_network: "rinkeby",
+  subnetTag: "devnet-beta",
+  payment: { driver: "erc20", network: "rinkeby" },
 };
 
 export class TaskExecutor {
@@ -53,8 +51,13 @@ export class TaskExecutor {
       this.image_hash = options;
     }
     this.options = {} as ExecutorOptions;
-    for (const key in typeof options === "object" ? { ...DEFAULT_OPTIONS, ...options } : DEFAULT_OPTIONS) {
-      this.options[key] = options[key] ?? process.env?.[key.toUpperCase()] ?? DEFAULT_OPTIONS[key];
+    for (const key in typeof options === "object"
+      ? { ...DEFAULT_OPTIONS, ...options }
+      : DEFAULT_OPTIONS) {
+      this.options[key] =
+        options[key] ??
+        process.env?.[key.toUpperCase()] ??
+        DEFAULT_OPTIONS[key];
     }
   }
 
@@ -67,7 +70,21 @@ export class TaskExecutor {
     } else {
       task_package = this.options.package;
     }
-    this.executor = new Executor({ ...this.options, task_package });
+    this.executor = new Executor({
+      task_package: this.options.package,
+      max_workers: this.options.maxWorkers,
+      timeout: this.options.
+      budget?: string; //number?
+      strategy?: MarketStrategy;
+      subnet_tag?: string;
+      driver?: string; // @deprecated
+      network?: string; // @deprecated
+      payment_driver?: string;
+      payment_network?: string;
+      event_consumer?: Callable<[events.YaEvent], void>; //TODO not default event
+      network_address?: string;
+      task_package
+    });
     await this.executor.ready();
     this.executor.init().catch((error) => {
       throw error;
@@ -79,7 +96,9 @@ export class TaskExecutor {
     this.executor.submit_before(worker);
   }
 
-  async run<OutputType = Result>(worker: Worker<undefined, OutputType>): Promise<OutputType> {
+  async run<OutputType = Result>(
+    worker: Worker<undefined, OutputType>
+  ): Promise<OutputType> {
     if (!this.executor) throw new Error("Task executor is not initialized");
     return this.executor.submit_new_task<undefined, OutputType>(worker);
   }
@@ -90,10 +109,14 @@ export class TaskExecutor {
   ): AsyncIterable<OutputType | undefined> {
     if (!this.executor) throw new Error("Task executor is not initialized");
     const inputs = [...data];
-    const featureResults = inputs.map((value) => this.executor!.submit_new_task<InputType, OutputType>(worker, value));
+    const featureResults = inputs.map((value) =>
+      this.executor!.submit_new_task<InputType, OutputType>(worker, value)
+    );
     const results: OutputType[] = [];
     let resultsCount = 0;
-    featureResults.forEach((featureResult) => featureResult.then((res) => results.push(res)));
+    featureResults.forEach((featureResult) =>
+      featureResult.then((res) => results.push(res))
+    );
     return {
       [Symbol.asyncIterator](): AsyncIterator<OutputType | undefined> {
         return {
@@ -117,7 +140,11 @@ export class TaskExecutor {
     worker: Worker<InputType, OutputType>
   ): Promise<void> {
     if (!this.executor) throw new Error("Task executor is not initialized");
-    await Promise.all([...data].map((value) => this.executor!.submit_new_task<InputType, OutputType>(worker, value)));
+    await Promise.all(
+      [...data].map((value) =>
+        this.executor!.submit_new_task<InputType, OutputType>(worker, value)
+      )
+    );
   }
 
   async end() {
