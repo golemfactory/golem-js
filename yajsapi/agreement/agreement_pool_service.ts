@@ -26,7 +26,7 @@ export class AgreementPoolService implements ComputationHistory {
 
   private proposals: AgreementProposal[] = [];
   private agreements = new Map<string, Agreement>();
-  private agreementsIdsToReuse: string[] = [];
+  private agreementIdsToReuse: string[] = [];
   private isServiceRunning = false;
 
   constructor(private readonly configContainer: AgreementConfigContainer) {
@@ -53,7 +53,7 @@ export class AgreementPoolService implements ComputationHistory {
   async releaseAgreement(agreementId: string, allowReuse: boolean) {
     const agreement = await this.agreements.get(agreementId);
     if (!agreement) throw new Error(`Agreement ${agreementId} cannot found in pool`);
-    if (allowReuse) this.agreementsIdsToReuse.unshift(agreementId);
+    if (allowReuse) this.agreementIdsToReuse.unshift(agreementId);
     else {
       await agreement.terminate();
       this.agreements.delete(agreementId);
@@ -68,8 +68,8 @@ export class AgreementPoolService implements ComputationHistory {
 
   private async getAvailableAgreement(): Promise<Agreement | undefined> {
     let readyAgreement;
-    while (!readyAgreement && this.agreementsIdsToReuse.length > 0) {
-      const availableAgreementId = this.agreementsIdsToReuse.pop();
+    while (!readyAgreement && this.agreementIdsToReuse.length > 0) {
+      const availableAgreementId = this.agreementIdsToReuse.pop();
       if (!availableAgreementId) continue;
       const availableAgreement = this.agreements.get(availableAgreementId);
       if (!availableAgreement) throw new Error(`Agreement ${availableAgreementId} cannot found in pool`);
