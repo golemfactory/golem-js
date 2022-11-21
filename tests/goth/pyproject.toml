@@ -23,7 +23,7 @@ python = "^3.8.0"
 pytest = "^6.2"
 pytest-asyncio = "^0.14"
 pytest-rerunfailures = "^10.1"
-goth = "0.11"
+goth = "0.13"
 
 [tool.poetry.dev-dependencies]
 black = "^20.8b1"
@@ -33,5 +33,7 @@ poethepoet = "^0.8.0"
 [tool.poe.tasks]
 codestyle = "black --check --diff ."
 goth-assets = "python -m goth create-assets assets"
-goth-tests = "pytest -svx . --reruns 3 --only-rerun AssertionError --only-rerun TimeoutError --only-rerun goth.runner.exceptions.TemporalAssertionError --only-rerun urllib.error.URLError --only-rerun goth.runner.exceptions.CommandError"
+goth-tests = "pytest -svx . --config-override docker-compose.build-environment.use-prerelease=true --config-path assets/goth-config-testing.yml --reruns 3 --only-rerun AssertionError --only-rerun TimeoutError --only-rerun goth.runner.exceptions.TemporalAssertionError --only-rerun urllib.error.URLError --only-rerun goth.runner.exceptions.CommandError"
+
+
 typecheck = "mypy ."

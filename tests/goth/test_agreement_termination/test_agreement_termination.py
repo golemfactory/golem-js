@@ -61,12 +61,13 @@ async def assert_all_tasks_computed(stream):
 async def test_agreement_termination(
     project_dir: Path,
     log_dir: Path,
+    goth_config_path,
     config_overrides,
 ) -> None:
 
     # This is the default configuration with 2 wasm/VM providers
     goth_config = load_yaml(
-        project_dir / "tests" / "goth" / "assets" / "goth-config.yml",
+        goth_config_path,
         config_overrides,
     )
     test_script_path = project_dir / "tests" / "goth" / "test_agreement_termination" / "requestor.js"
