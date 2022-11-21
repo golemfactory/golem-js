@@ -1,7 +1,7 @@
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
-import { Agreement, AgreementState } from "./agreement";
+import { Agreement } from "./agreement";
 import { AgreementConfigContainer } from "./agreement_config_container";
-import { Logger, sleep } from "../utils";
+import { Logger } from "../utils";
 import { AgreementProposal } from "./agreement_pool_service";
 
 export class AgreementFactory {
@@ -23,19 +23,7 @@ export class AgreementFactory {
         timeout: 3000,
       });
       const agreement = new Agreement(agreementId, this.configContainer);
-      let state = await agreement.getState();
-      if (state === AgreementState.Proposal) await agreement.confirm();
-      else {
-        let timeout = false;
-        setTimeout(() => (timeout = true), 10000);
-        while (state !== AgreementState.Approved && !timeout) {
-          state = await agreement.getState();
-          if (state !== AgreementState.Pending && state !== AgreementState.Proposal) {
-            throw new Error(`Agreement ${agreementId} cannot be approved. Current state: ${state}`);
-          }
-          await sleep(2);
-        }
-      }
+      await agreement.refreshDetails();
       return agreement;
     } catch (error) {
       throw error?.response?.data?.message || error;

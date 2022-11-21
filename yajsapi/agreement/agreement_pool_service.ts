@@ -1,6 +1,6 @@
 import { Logger } from "../utils";
 import { EventBus } from "../events/event_bus";
-import { Agreement, AgreementStateEnum } from "./agreement";
+import {Agreement, AgreementState, AgreementStateEnum} from "./agreement";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import sleep from "../utils/sleep";
 
@@ -94,6 +94,7 @@ export class AgreementPoolService implements ComputationHistory {
       try {
         const agreementFactory = new AgreementFactory(this.configContainer);
         agreement = await agreementFactory.create(proposal);
+        agreement = await this.waitForAgreementApproval(agreement);
       } catch (e) {
         this.logger?.error(`Could not create agreement form available proposal: ${e.message}`);
         // TODO: What we should do with used proposal in that case ?? unshift to begin ?
@@ -122,5 +123,22 @@ export class AgreementPoolService implements ComputationHistory {
         .terminate(reason)
         .catch((e) => this.logger?.warn(`Agreement ${agreement.id} cannot be terminated. ${e}`));
     }
+  }
+
+  private async waitForAgreementApproval(agreement) {
+    let state = await agreement.getState();
+    if (state === AgreementState.Proposal) await agreement.confirm();
+    else {
+      let timeout = false;
+      setTimeout(() => (timeout = true), 10000);
+      while (state !== AgreementState.Approved && !timeout) {
+        state = await agreement.getState();
+        if (state !== AgreementState.Pending && state !== AgreementState.Proposal) {
+          throw new Error(`Agreement ${agreement.getId()} cannot be approved. Current state: ${state}`);
+        }
+        await sleep(2);
+      }
+    }
+    return agreement;
   }
 }
