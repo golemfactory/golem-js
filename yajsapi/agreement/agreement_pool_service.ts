@@ -28,6 +28,7 @@ export class AgreementPoolService implements ComputationHistory {
   private agreements = new Map<string, Agreement>();
   private agreementIdsToReuse: string[] = [];
   private isServiceRunning = false;
+  private rejectedAgreementIdsByProviderId = new Map<string, Array<boolean>>();
 
   constructor(private readonly configContainer: AgreementConfigContainer) {
     this.logger = configContainer.logger;
@@ -70,16 +71,22 @@ export class AgreementPoolService implements ComputationHistory {
     let readyAgreement;
     while (!readyAgreement && this.agreementIdsToReuse.length > 0) {
       const availableAgreementId = this.agreementIdsToReuse.pop();
-      if (!availableAgreementId) continue;
+      if (!availableAgreementId)
+        continue;
+
       const availableAgreement = this.agreements.get(availableAgreementId);
-      if (!availableAgreement) throw new Error(`Agreement ${availableAgreementId} cannot found in pool`);
+      if (!availableAgreement)
+        throw new Error(`Agreement ${availableAgreementId} cannot found in pool`);
+
       const state = await availableAgreement.getState().catch((e) => {
         this.logger?.warn(`Cannot retrieve state of agreement ${availableAgreement.id}. ` + e);
       });
+
       if (state !== AgreementStateEnum.Approved) {
         this.logger?.debug(`Agreement ${availableAgreement.id} is no longer available. Current state: ${state}`);
         continue;
       }
+
       readyAgreement = availableAgreement;
     }
     return readyAgreement;
@@ -90,15 +97,25 @@ export class AgreementPoolService implements ComputationHistory {
     while (!agreement && this.isServiceRunning) {
       const proposal = await this.getAvailableProposal();
       if (!proposal) break;
+
       this.logger?.debug(`Creating agreement using proposal ID: ${proposal.proposalId}`);
       try {
         const agreementFactory = new AgreementFactory(this.configContainer);
         agreement = await agreementFactory.create(proposal);
         agreement = await this.waitForAgreementApproval(agreement);
+
+        const state = await agreement.getState();
+
+        this.flagAgreement(agreement);
+
+        if (state !== AgreementState.Approved) {
+          throw new Error(`Agreement ${agreement.getId()} cannot be approved. Current state: ${state}`);
+        }
       } catch (e) {
         this.logger?.error(`Could not create agreement form available proposal: ${e.message}`);
         // TODO: What we should do with used proposal in that case ?? unshift to begin ?
         await sleep(2);
+        agreement = null;
       }
     }
     this.agreements.set(agreement.id, agreement);
@@ -126,19 +143,34 @@ export class AgreementPoolService implements ComputationHistory {
   }
 
   private async waitForAgreementApproval(agreement) {
-    let state = await agreement.getState();
-    if (state === AgreementState.Proposal) await agreement.confirm();
-    else {
-      let timeout = false;
-      setTimeout(() => (timeout = true), 10000);
-      while (state !== AgreementState.Approved && !timeout) {
-        state = await agreement.getState();
-        if (state !== AgreementState.Pending && state !== AgreementState.Proposal) {
-          throw new Error(`Agreement ${agreement.getId()} cannot be approved. Current state: ${state}`);
-        }
-        await sleep(2);
-      }
+    const state = await agreement.getState();
+
+    if (state === AgreementState.Proposal) {
+      await agreement.confirm();
+    }
+
+    let timeout = false;
+    setTimeout(() => (timeout = true), 10000);
+    while (await agreement.isFinalState() && !timeout) {
+      await sleep(2);
     }
     return agreement;
+  }
+
+  private flagAgreement(agreement: Agreement) {
+    const providerId = agreement.getProviderInfo().providerId;
+    if(providerId) {
+      this.rejectedAgreementIdsByProviderId[providerId].push(agreement.getState() === AgreementState.Approved);
+    }
+  }
+
+  private isProviderLastAgreementRejected(providerId: string): boolean {
+    const providerAgreements = this.rejectedAgreementIdsByProviderId[providerId];
+
+    if(providerAgreements) {
+      return !!providerAgreements[providerAgreements.length - 1];
+    }
+
+    return false;
   }
 }

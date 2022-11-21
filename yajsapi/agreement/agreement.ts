@@ -44,9 +44,14 @@ export class Agreement {
     };
   }
 
-  async getState(): Promise<AgreementState> {
+  async getState(): Promise<AgreementStateEnum> {
     await this.refreshDetails();
     return this.agreementData!.state;
+  }
+
+  async isFinalState(): Promise<boolean> {
+    const state = await this.getState();
+    return (state !== AgreementStateEnum.Pending && state !== AgreementStateEnum.Proposal)
   }
 
   getAgreementData(): AgreementModel | undefined {

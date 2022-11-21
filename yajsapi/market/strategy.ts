@@ -8,7 +8,7 @@ export const SCORE_REJECTED = -1.0;
 export const SCORE_TRUSTED = 100.0;
 
 export interface ComputationHistory {
-  rejectedLastAgreement: (string) => boolean;
+  isProviderLastAgreementRejected: (providerId: string) => boolean;
 }
 
 export interface MarketStrategy {
