@@ -3,11 +3,12 @@ import math
 import os
 from pathlib import Path
 import re
+from typing import List
 
 import pytest
 
 from goth.assertions import EventStream
-from goth.configuration import load_yaml
+from goth.configuration import load_yaml, Override
 from goth.runner.log import configure_logging
 from goth.runner import Runner
 from goth.runner.probe import RequestorProbe
@@ -82,10 +83,12 @@ async def assert_all_invoices_accepted(output_lines: EventStream[str]):
 async def test_run_yacat(
     log_dir: Path,
     project_dir: Path,
+    goth_config_path: Path,
+    config_overrides: List[Override],
 ) -> None:
 
     # This is the default configuration with 2 wasm/VM providers
-    goth_config = load_yaml(Path(__file__).parent / "assets" / "goth-config.yml")
+    goth_config = load_yaml(goth_config_path, config_overrides)
 
     examples_dir = project_dir / "examples"
 

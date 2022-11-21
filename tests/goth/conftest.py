@@ -7,8 +7,19 @@ import pytest
 from goth.configuration import Override
 
 
+def _project_dir() -> Path:
+    package_dir = Path(__file__).parent.parent
+    return package_dir.parent.resolve()
+
+
 def pytest_addoption(parser):
     """Add optional parameters to pytest CLI invocations."""
+
+    parser.addoption(
+        "--config-path",
+        help="Path to the `goth-config.yml` file. (default: %(default)s)",
+        default=_project_dir() / "tests" / "goth" / "assets" / "goth-config.yml",
+    )
 
     parser.addoption(
         "--config-override",
@@ -46,3 +57,7 @@ def log_dir() -> Path:
     log_dir = base_dir / f"goth_{date_str}"
     log_dir.mkdir(parents=True)
     return log_dir
+
+@pytest.fixture(scope="session")
+def goth_config_path(request) -> Path:
+    return request.config.option.config_path
