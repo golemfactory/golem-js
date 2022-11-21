@@ -21,11 +21,10 @@ const blender_params = (frame) => ({
   OUTPUT_DIR: "/golem/output",
 });
 
-async function main(subnet_tag, payment_driver, payment_network) {
+async function main(subnetTag, driver, network) {
   const executor = await createExecutor({
-    subnet_tag,
-    payment_driver,
-    payment_network,
+    subnetTag,
+    payment: { driver, network },
     package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
   });
 

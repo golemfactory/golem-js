@@ -5,11 +5,10 @@ const logger = utils.logger;
 async function main(args) {
   const executor = await createExecutor({
     package: "055911c811e56da4d75ffc928361a78ed13077933ffa8320fb1ec2db",
-    max_workers: args.numberOfProviders,
+    maxWorkers: args.numberOfProviders,
     budget: "10",
-    subnet_tag: args.subnetTag,
-    payment_driver: args.paymentDriver,
-    payment_network: args.paymentNetwork,
+    subnetTag: args.subnetTag,
+    payment: { driver: args.paymentDriver, network: args.paymentNetwork },
   });
   const keyspace = await executor.run<number>(async (ctx) => {
     const result = await ctx.run(`hashcat --keyspace -a 3 ${args.mask} -m 400`);
