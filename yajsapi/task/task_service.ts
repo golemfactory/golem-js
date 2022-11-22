@@ -44,17 +44,22 @@ export class TaskService {
     }
   }
 
+  async end() {
+    this.isRunning = false;
+    this.logger?.debug("Task Service stopped.");
+  }
+
   private async startTask(task: Task<any, any>) {
     task.start();
     // this.eventBus.emit(new events.TaskStarted(agreement.id));
-    const agreement = await this.agreementPoolService.get();
+    const agreement = await this.agreementPoolService.getAgreement();
 
     let activity;
     this.paymentService.acceptPayments(agreement.id); // TODO: move it to payment service reactive for event TaskStarted
     try {
       // TODO: move it to network service reactive for event NewProvider
-      const providerName = agreement.providerInfo.providerName;
-      const providerId = agreement.providerInfo.providerId;
+      const providerName = agreement.getProviderInfo().providerName;
+      const providerId = agreement.getProviderInfo().providerId;
       let networkNode;
       if (this.networkService) {
         networkNode = await this.networkService.addNode(providerId);
@@ -62,6 +67,7 @@ export class TaskService {
 
       if (!this.activities.has(agreement.id)) {
         activity = await this.activityFactory.create(agreement.id);
+        this.logger?.debug(`Activity ${activity.id} created`);
         this.activities.set(agreement.id, activity.id);
         // this.eventBus.emit(new events.ActivityCreated(activity.id, agreement.id));
       } else {
@@ -89,18 +95,15 @@ export class TaskService {
       task.stop(null, error);
       // await activity.stop().catch((actError) => this.logger?.error(actError));
       this.activities.delete(agreement.id);
+      this.logger?.debug(`Activity ${activity.id} deleted`);
       if (task.isRetry()) {
         this.tasksQueue.addToBegin(task);
         this.logger?.warn("Trying to execute the task again." + error.toString());
-      } else throw new Error("Task has been rejected! " + error.toString());
-    } finally {
-      // this.eventBus.emit(new events.TaskFinished(task));
-      await this.agreementPoolService.releaseAgreement(agreement.id);
+      } else {
+        await this.agreementPoolService.releaseAgreement(agreement.id, false);
+        throw new Error("Task has been rejected! " + error.toString());
+      }
     }
-  }
-
-  async end() {
-    this.isRunning = false;
-    this.logger?.debug("Task Service stopped.");
+    await this.agreementPoolService.releaseAgreement(agreement.id, true);
   }
 }

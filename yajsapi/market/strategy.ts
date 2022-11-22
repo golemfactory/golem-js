@@ -129,7 +129,7 @@ export class DecreaseScoreForUnconfirmedAgreementMarketStrategy implements Marke
      then the base score is multiplied by `this._factor`. */
   scoreProposal(proposal: Proposal): number {
     let score = this.baseStrategy.scoreProposal(proposal);
-    if (this.computationHistory.rejectedLastAgreement(proposal.issuerId) && score > 0) {
+    if (this.computationHistory.isProviderLastAgreementRejected(proposal.issuerId) && score > 0) {
       score *= this.factor;
       this.logger?.debug(`Decreasing score for offer ${proposal.proposalId} from '${proposal.issuerId}'`);
     }

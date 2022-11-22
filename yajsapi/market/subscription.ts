@@ -39,7 +39,8 @@ export class Subscription extends EventEmitter {
     }
   }
 
-  async delete() {
-    // todo
+  async unsubscribe() {
+    this.isRunning = false;
+    await this.api.unsubscribeDemand(this.subscriptionId);
   }
 }

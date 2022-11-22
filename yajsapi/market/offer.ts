@@ -63,7 +63,8 @@ export class Proposal extends Offer {
     return { result: true };
   }
   async reject(reason = "no reason") {
-    await this.api.rejectProposalOffer(this.subscriptionId, this.proposalId, { message: { reason } }).catch((e) => {
+    // eslint-disable-next-line @typescript-eslint/ban-types
+    await this.api.rejectProposalOffer(this.subscriptionId, this.proposalId, { message: reason as {} }).catch((e) => {
       throw new Error(e?.response?.data?.message || e);
     });
   }

@@ -23,6 +23,7 @@ export type MarketOptions = {
 export class MarketService {
   private readonly api: MarketApi;
   private marketStrategy: MarketStrategy;
+  private subscription?: Subscription;
 
   constructor(
     private readonly yagnaOptions: YagnaOptions,
@@ -45,19 +46,21 @@ export class MarketService {
     this.logger?.debug("Market Service has started");
     const allowedPlatforms = await this.paymentService.getAllocatedPaymentPlatform();
     const demand = await this.createDemand(taskPackage, allowedPlatforms);
-    const subscription = await demand.publish().catch((e) => {
+    this.subscription = await demand.publish().catch((e) => {
       throw new Error("Cannot publish demand. " + e);
     });
     this.logger?.debug(`Demand published on the market`);
-    subscription.subscribe().catch((e) => {
+    this.subscription.subscribe().catch((e) => {
       throw new Error("Cannot subscribe for new offers from market. " + e);
     });
-    subscription.on("proposal", (proposal) => this.processProposal(proposal));
-    subscription.on("offer", (offer) => this.processOffer(offer));
+    this.subscription.on("proposal", (proposal) => this.processProposal(proposal));
+    this.subscription.on("offer", (offer) => this.processOffer(offer));
   }
 
   async end() {
-    // todo
+    await this.subscription?.unsubscribe()?.catch((e) => this.logger?.error(`Could not unsubscribe demand. ${e}`));
+    this.subscription?.removeAllListeners();
+    this.logger?.info("Market Service has been stopped");
   }
 
   private async createDemand(taskPackage: Package, allowedPlatforms: string[]): Promise<Demand> {

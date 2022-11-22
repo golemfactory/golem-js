@@ -10,6 +10,7 @@ import { sleep, Logger, runtimeContextChecker, winstonLogger } from "../utils";
 import { EventBus } from "../events/event_bus";
 import { StorageProvider } from "../storage/provider";
 import { DEFAULT_EXECUTOR_OPTIONS, DEFAULT_YAGNA_API_URL } from "./defaults";
+import { AgreementConfigContainer } from "../agreement/agreement_config_container";
 
 export type ExecutorOptions = {
   package: string | Package;
@@ -75,7 +76,12 @@ export class TaskExecutor {
     this.logger?.setLevel && this.logger?.setLevel(this.options.logLevel || "info");
     this.eventBus = new EventBus();
     this.taskQueue = new TaskQueue<Task<unknown, unknown>>();
-    this.agreementPoolService = new AgreementPoolService(this.yagnaOptions, this.eventBus, this.logger);
+    const agreementContainer = new AgreementConfigContainer(
+      { yagnaOptions: this.yagnaOptions },
+      this.eventBus,
+      this.logger
+    );
+    this.agreementPoolService = new AgreementPoolService(agreementContainer);
     this.networkService = new NetworkService(this.yagnaOptions, this.eventBus, this.logger);
     this.paymentService = new PaymentService(this.yagnaOptions, this.eventBus, this.logger);
     this.marketService = new MarketService(
@@ -118,11 +124,19 @@ export class TaskExecutor {
     this.marketService.run(taskPackage).catch((e) => this.handleCriticalError(e));
     this.agreementPoolService.run().catch((e) => this.handleCriticalError(e));
     this.paymentService.run().catch((e) => this.handleCriticalError(e));
-    // this.taskService.run().catch((e) => this.handleCriticalError(e));
+    this.taskService.run().catch((e) => this.handleCriticalError(e));
     if (this.options.networkAddress) {
       this.networkService.run(this.options.networkAddress).catch((e) => this.handleCriticalError(e));
     }
     this.logger?.info("Task Executor has started");
+  }
+
+  async end() {
+    await this.marketService.end();
+    await this.agreementPoolService.end();
+    await this.taskService.end();
+    await this.paymentService.end();
+    await this.networkService.end();
   }
 
   beforeEach(worker: Worker<unknown, unknown>) {
@@ -171,14 +185,6 @@ export class TaskExecutor {
     await Promise.all([...data].map((value) => this.submitNewTask<InputType, OutputType>(worker, value)));
   }
 
-  async end() {
-    await this.marketService.end();
-    await this.agreementPoolService.end();
-    await this.taskService.end();
-    await this.paymentService.end();
-    await this.networkService.end();
-  }
-
   private async createPackage(image_hash: string): Promise<Package> {
     return repo({ ...this.options, image_hash });
   }
@@ -191,7 +197,7 @@ export class TaskExecutor {
     this.taskQueue.addToEnd(task);
     let timeout = false;
     // todo: timeout to config..?
-    setTimeout(() => (timeout = true), 20000);
+    setTimeout(() => (timeout = true), 40000);
     while (!timeout) {
       if (task.isFinished()) return task.getResults();
       await sleep(2);

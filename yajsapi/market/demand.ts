@@ -28,7 +28,7 @@ export class Demand {
     return new Subscription(subscriptionId, this, this.allowedPlatforms, this.api);
   }
 
-  private getDemandRequest(): DemandOfferBase {
+  getDemandRequest(): DemandOfferBase {
     let constraints: string;
     if (!this.constraints.length) constraints = "(&)";
     else if (this.constraints.length == 1) constraints = this.constraints[0];

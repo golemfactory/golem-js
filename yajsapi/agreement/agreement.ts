@@ -2,11 +2,12 @@ import { Logger } from "../utils";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import { Agreement as AgreementModel, AgreementStateEnum } from "ya-ts-client/dist/ya-market/src/models";
 import { AgreementConfigContainer } from "./agreement_config_container";
+import { YagnaOptions } from "../executor";
 
 export { AgreementStateEnum };
 
 export interface AgreementOptions {
-  credentials?: { apiKey?: string; basePath?: string };
+  yagnaOptions?: YagnaOptions;
   requestTimeout?: number;
   executeTimeout?: number;
   eventPoolingInterval?: number;
@@ -16,7 +17,7 @@ export interface AgreementOptions {
 
 export interface ProviderInfo {
   providerName: string;
-  providerId: string | null;
+  providerId: string;
 }
 
 export class Agreement {
@@ -30,7 +31,16 @@ export class Agreement {
     this.logger = configContainer.logger;
     this.api = configContainer.api;
     this.requestTimeout = configContainer.options?.requestTimeout || 10000;
+    // this.refreshDetails()
+    //   .then((x) => {
+    //     this._providerId = x.id;
+    //   })
+    //   .catch((e) => {});
   }
+  //
+  // get providerId() {
+  //   return this._providerId;
+  // }
 
   async refreshDetails() {
     const { data } = await this.api.getAgreement(this.id, { timeout: this.requestTimeout });
@@ -39,8 +49,8 @@ export class Agreement {
 
   getProviderInfo(): ProviderInfo {
     return {
-      providerName: this.agreementData?.offer?.properties["golem.node.id.name"] || null,
-      providerId: this.agreementData?.offer?.providerId || null,
+      providerName: this.agreementData!.offer.properties["golem.node.id.name"],
+      providerId: this.agreementData!.offer.providerId,
     };
   }
 
@@ -51,7 +61,7 @@ export class Agreement {
 
   async isFinalState(): Promise<boolean> {
     const state = await this.getState();
-    return (state !== AgreementStateEnum.Pending && state !== AgreementStateEnum.Proposal)
+    return state !== AgreementStateEnum.Pending && state !== AgreementStateEnum.Proposal;
   }
 
   getAgreementData(): AgreementModel | undefined {
@@ -74,6 +84,7 @@ export class Agreement {
       return true;
     } catch (error) {
       this.logger?.error(`Cannot terminate agreement ${this.id}. ${error}`);
+      console.log(error.stack);
       throw error;
     }
   }
