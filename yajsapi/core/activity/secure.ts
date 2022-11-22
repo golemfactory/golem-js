@@ -1,6 +1,6 @@
 import { Activity, ActivityOptions } from "./activity";
-import { CryptoCtx, PrivateKey, PublicKey, rand_hex } from "../utils/crypto";
-import { SGX_CONFIG } from "../package/sgx";
+import { CryptoCtx, PrivateKey, PublicKey, rand_hex } from "../../utils/crypto";
+import { SGX_CONFIG } from "../../package/sgx";
 import { attest, types } from "sgx-ias-js/index";
 import * as utf8 from "utf8";
 import { Credentials } from "ya-ts-client/dist/ya-activity/src/models";

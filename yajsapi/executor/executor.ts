@@ -1,7 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 import { GftpStorageProvider } from "../storage/gftp_provider";
 
-const log = require("why-is-node-running"); // should be your first require
+// const log = require("why-is-node-running"); // should be your first require
 import { Package, repo } from "../package";
 import { MarketService, MarketStrategy } from "../market";
 import { AgreementPoolService } from "../agreement";
@@ -9,7 +9,7 @@ import { Task, TaskQueue, TaskService } from "../task";
 import { PaymentService } from "../payment";
 import { NetworkService } from "../network";
 import { WorkContext } from "../work";
-import { Result } from "../activity";
+import { Result } from "../core/activity";
 import { sleep, Logger, runtimeContextChecker, winstonLogger } from "../utils";
 import { EventBus } from "../events/event_bus";
 import { StorageProvider } from "../storage/provider";

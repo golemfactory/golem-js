@@ -5,9 +5,8 @@ import { ResourceCtx } from "./resource";
 import * as yap from "ya-ts-client/dist/ya-payment/src/models";
 import { Configuration } from "ya-ts-client/dist/ya-activity";
 import { RequestorApi } from "ya-ts-client/dist/ya-payment/api";
-import { sleep } from "../utils";
+import { logger, sleep } from "../utils";
 import { is_intermittent_error, repeat_on_error, suppress_exceptions } from "./common";
-import { Logger } from "../utils/logger";
 
 dayjs.extend(utc);
 
@@ -119,10 +118,6 @@ export class Allocation extends _Link {
   expires?: Date;
   //"Allocation expiration timestamp"
 
-  constructor(private logger?: Logger) {
-    super();
-  }
-
   async details(): Promise<AllocationDetails> {
     return await repeat_on_error(async () => {
       const allocationDetails = new AllocationDetails();
@@ -139,7 +134,7 @@ export class Allocation extends _Link {
         await this._api.releaseAllocation(this.id, { timeout: 7000 });
       }, "releaseAllocation");
     } catch (error) {
-      this.logger?.error(`Release allocation error: ${error}`);
+      logger.error(`Release allocation error: ${error}`);
     }
   }
 }
@@ -148,13 +143,11 @@ class _AllocationTask extends ResourceCtx<Allocation> {
   _api!: RequestorApi;
   model!: yap.Allocation;
   _id!: string | null;
-  logger?: Logger;
 
-  constructor(api, model, logger) {
+  constructor(api, model) {
     super();
     this._api = api;
     this.model = model;
-    this.logger = logger;
   }
 
   async ready() {
@@ -180,7 +173,7 @@ class _AllocationTask extends ResourceCtx<Allocation> {
       return _allocation;
     } catch (error) {
       const msg = error.response && error.response.data ? error.response.data.message : error.message;
-      this.logger?.error(
+      logger.error(
         `Payment allocation error (message: ${msg}). Please run "yagna payment status" to check your account.`
       );
       throw new Error(error);
@@ -192,7 +185,7 @@ class _AllocationTask extends ResourceCtx<Allocation> {
       try {
         await this._api.releaseAllocation(this._id, { timeout: 5000 });
       } catch (error) {
-        this.logger?.error(`Release allocation: ${error}`);
+        logger.error(`Release allocation: ${error}`);
       }
     }
   }
@@ -212,11 +205,9 @@ class yAllocation implements yap.Allocation {
 
 export class Payment {
   private _api!: RequestorApi;
-  private logger?: Logger;
 
-  constructor(cfg: Configuration, logger?: Logger) {
+  constructor(cfg: Configuration) {
     this._api = new RequestorApi(cfg);
-    this.logger = logger;
   }
 
   new_allocation(
@@ -243,7 +234,7 @@ export class Payment {
     _allocation!.spentAmount = "";
     _allocation!.remainingAmount = "";
     _allocation.timestamp = dayjs().utc().format("YYYY-MM-DDTHH:mm:ss.SSSSSSZ");
-    return new _AllocationTask(this._api, _allocation!, this.logger);
+    return new _AllocationTask(this._api, _allocation!);
   }
 
   async *allocations(): AsyncGenerator<Allocation> {
@@ -338,7 +329,8 @@ export class Payment {
           "getInvoiceEvents"
         );
         for (const ev of events) {
-          // self.logger?.debug(
+          // TODO: temporary disabled until fix bug in https://github.com/golemfactory/yajsapi/issues/381
+          // logger.debug(
           //   `Received invoice event: ${JSON.stringify(ev)}, ` + `type: ${JSON.stringify(Object.getPrototypeOf(ev))}`
           // );
           ts = dayjs(ev.eventDate);
@@ -382,7 +374,8 @@ export class Payment {
           "getDebitNoteEvents"
         );
         for (const ev of events) {
-          // self.logger?.debug(
+          // TODO: temporary disabled until fix bug in https://github.com/golemfactory/yajsapi/issues/381
+          // logger.debug(
           //   `Received debit note event: ${JSON.stringify(ev)}, ` + `type: ${JSON.stringify(Object.getPrototypeOf(ev))}`
           // );
           ts = dayjs(ev.eventDate);

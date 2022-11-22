@@ -1,10 +1,10 @@
 import { dayjs, Logger } from "../utils";
 import { EventBus } from "../events/event_bus";
 import { Package } from "../package";
-import { Demand } from "./demand";
-import { Subscription } from "./subscription";
+import { Demand } from "../core";
+import { Subscription } from "../core";
 import { DefaultMarketStrategy, MarketStrategy } from "./strategy";
-import { Offer, Proposal } from "./offer";
+import { Offer, Proposal } from "../core";
 import { RequestorApi as MarketApi, Configuration } from "ya-ts-client/dist/ya-market";
 import { PaymentService } from "../payment";
 import { AgreementPoolService } from "../agreement";

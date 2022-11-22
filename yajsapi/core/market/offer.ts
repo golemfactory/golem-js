@@ -1,8 +1,8 @@
 import { Proposal as ProposalModel, ProposalAllOfStateEnum } from "ya-ts-client/dist/ya-market/src/models";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
-import { SCORE_NEUTRAL } from "./strategy";
+import { SCORE_NEUTRAL } from "../../market/strategy";
 import { Demand } from "./demand";
-import { AgreementProposal } from "../agreement/agreement_pool_service";
+import { AgreementProposal } from "../../agreement/agreement_pool_service";
 
 export class Offer implements AgreementProposal {
   public readonly proposalId: string;

@@ -2,7 +2,7 @@ import EventEmitter from "events";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import { ProposalEvent, ProposalAllOfStateEnum } from "ya-ts-client/dist/ya-market/src/models";
 import { Offer, Proposal } from "./offer";
-import { sleep } from "../utils";
+import { sleep } from "../../utils";
 import { Demand } from "./demand";
 
 export class Subscription extends EventEmitter {

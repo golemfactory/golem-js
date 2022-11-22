@@ -1,12 +1,12 @@
+/* eslint @typescript-eslint/ban-types: 0 */
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import { Model } from "../props";
-import { sleep } from "../utils";
+import { logger, sleep } from "../utils";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import * as models from "ya-ts-client/dist/ya-market/src/models";
 import { Configuration } from "ya-ts-client/dist/ya-activity";
 import { suppress_exceptions, is_intermittent_error } from "./common";
-import { Logger } from "../utils";
 
 dayjs.extend(utc);
 
@@ -47,13 +47,11 @@ export class Agreement {
   private _api;
   private _subscription;
   private _id;
-  private logger?: Logger;
 
-  constructor(api: RequestorApi, subscription: Subscription, agreement_id: string, logger?: Logger) {
+  constructor(api: RequestorApi, subscription: Subscription, agreement_id: string) {
     this._api = api;
     this._subscription = subscription;
     this._id = agreement_id;
-    this.logger = logger;
   }
 
   id(): string {
@@ -69,14 +67,14 @@ export class Agreement {
     try {
       await this._api.confirmAgreement(this._id, undefined, { timeout: 16000 });
     } catch (error) {
-      this.logger?.debug(`confirmAgreement(${this._id}) raised ApiException ${error}`);
+      logger.debug(`confirmAgreement(${this._id}) raised ApiException ${error}`);
       return false;
     }
     try {
       const { data: msg } = await this._api.waitForApproval(this._id, 15, { timeout: 16000 });
       return true;
     } catch (error) {
-      this.logger?.debug(`waitForApproval(${this._id}) raised ApiException ${error}`);
+      logger.debug(`waitForApproval(${this._id}) raised ApiException ${error}`);
       return false;
     }
   }
@@ -84,15 +82,13 @@ export class Agreement {
   async terminate(reason: TerminationReason = { message: "Finished" }): Promise<boolean> {
     try {
       await this._api.terminateAgreement(this._id, reason, { timeout: 5000 });
-      this.logger?.debug(`Terminated agreement ${this._id}.`);
+      logger.debug(`Terminated agreement ${this._id}.`);
       return true;
     } catch (error) {
       if (error.response && error.response.status === 410) {
-        this.logger?.debug(
-          `terminateAgreement(${this._id}) raised ApiException: status = 410, message = ${error.message}`
-        );
+        logger.debug(`terminateAgreement(${this._id}) raised ApiException: status = 410, message = ${error.message}`);
       } else {
-        this.logger?.debug(`terminateAgreement(${this._id}) raised ApiException`);
+        logger.debug(`terminateAgreement(${this._id}) raised ApiException`);
       }
       return false;
     }
@@ -122,9 +118,8 @@ class mAgreementProposal implements models.AgreementProposal {
 export class OfferProposal {
   private _proposal!: models.ProposalEvent;
   private _subscription!: Subscription;
-  private logger?: Logger;
 
-  constructor(subscription: Subscription, proposal: models.ProposalEvent, logger?: Logger) {
+  constructor(subscription: Subscription, proposal: models.ProposalEvent) {
     this._proposal = proposal;
     this._subscription = subscription;
   }
@@ -158,7 +153,7 @@ export class OfferProposal {
         { timeout: 5000 }
       );
     } catch (e) {
-      this.logger?.debug(`Cannot reject offer ${this.id()}` + e.response.data.message);
+      logger.debug(`Cannot reject offer ${this.id()}` + e.response.data.message);
       throw e;
     }
   }
@@ -183,8 +178,7 @@ export class OfferProposal {
     proposal.validTo = dayjs().add(timeout, "second").utc().format("YYYY-MM-DD HH:mm:ss.SSSSSSZ");
     const api: RequestorApi = this._subscription._api;
     const { data: agreement_id } = await api.createAgreement(proposal, { timeout: 3000 });
-    const a = api.collectAgreementEvents();
-    return new Agreement(api, this._subscription, agreement_id, this.logger);
+    return new Agreement(api, this._subscription, agreement_id);
   }
 }
 
@@ -194,15 +188,13 @@ export class Subscription {
   private _open: boolean;
   private _deleted: boolean;
   private _details;
-  private logger?: Logger;
 
-  constructor(api: RequestorApi, subscription_id: string, _details: models.Demand | null = null, logger?: Logger) {
+  constructor(api: RequestorApi, subscription_id: string, _details: models.Demand | null = null) {
     this._api = api;
     this._id = subscription_id;
     this._open = true;
     this._deleted = false;
     this._details = _details;
-    this.logger = logger;
   }
 
   id() {
@@ -249,7 +241,7 @@ export class Subscription {
         for (const _proposal of proposals) {
           if (cancellationToken && cancellationToken.cancelled) return;
           if (_proposal.eventType === "ProposalEvent") {
-            yield new OfferProposal(this, _proposal as models.ProposalEvent, this.logger);
+            yield new OfferProposal(this, _proposal as models.ProposalEvent);
           }
         }
         if (!proposals.length) {
@@ -257,12 +249,12 @@ export class Subscription {
         }
       } catch (error) {
         if (error.response && error.response.status === 404) {
-          this.logger?.debug(`Offer unsubscribed or its subscription expired, subscription_id: ${this._id}`);
+          logger.debug(`Offer unsubscribed or its subscription expired, subscription_id: ${this._id}`);
           this._open = false;
           // Prevent calling `unsubscribe` which would result in API error for expired demand subscriptions
           this._deleted = true;
         } else {
-          this.logger?.error(`Error while collecting offers: ${error}`);
+          logger.error(`Error while collecting offers: ${error}`);
           throw error;
         }
       }
@@ -281,10 +273,8 @@ class mDemand implements models.Demand {
 
 export class Market {
   private _api: RequestorApi;
-  private logger?: Logger;
-  constructor(cfg: Configuration, logger?: Logger) {
+  constructor(cfg: Configuration) {
     this._api = new RequestorApi(cfg);
-    this.logger = logger;
   }
 
   subscribe(props: {}, constraints: string): Promise<Subscription> {
@@ -295,9 +285,9 @@ export class Market {
     const create = async (): Promise<Subscription> => {
       try {
         const { data: sub_id } = await this._api.subscribeDemand(request, { timeout: 5000 });
-        return new Subscription(this._api, sub_id, null, this.logger);
+        return new Subscription(this._api, sub_id);
       } catch (error) {
-        this.logger?.error(`Error while subscribing: ${error}`);
+        logger.error(`Error while subscribing: ${error}`);
         throw error;
       }
     };
@@ -309,10 +299,10 @@ export class Market {
     try {
       const { data: demands } = await this._api.getDemands({ timeout: 3000 });
       for (const demand of demands) {
-        yield new Subscription(this._api, demand.demandId as string, demand, this.logger);
+        yield new Subscription(this._api, demand.demandId as string, demand);
       }
     } catch (error) {
-      this.logger?.warn(`getDemands error: ${error}`);
+      logger.warn(`getDemands error: ${error}`);
     }
     return;
   }

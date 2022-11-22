@@ -1,7 +1,7 @@
 /* eslint no-prototype-builtins: 0 */
 import { NodeInfo } from "../props";
 import { ExeScriptCommandResultResultEnum } from "ya-ts-client/dist/ya-activity/src/models";
-import { Result } from "../activity";
+import { Result } from "../core/activity";
 
 type ExcInfo = Error;
 
