@@ -25,12 +25,12 @@ export class Task<InputType, OutputType> implements QueueableTask {
     this.state = TaskState.Pending;
   }
   stop(results?: OutputType, error?: Error, retry = true) {
-    if (results) {
-      this.state = TaskState.Done;
-      this.results = results;
-    } else if (error) {
+    if (error) {
       ++this.retriesCount;
       this.state = retry && this.retriesCount <= MAX_RETRIES ? TaskState.Retry : TaskState.Rejected;
+    } else {
+      this.state = TaskState.Done;
+      this.results = results;
     }
   }
   isQueueable(): boolean {

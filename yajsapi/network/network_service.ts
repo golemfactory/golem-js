@@ -11,7 +11,7 @@ export class NetworkService {
     this.logger?.debug("Network Service has started");
     // const api = {}
     // this.network = await Network.create(api, address, this.options.identity, this.logger);
-    this.eventBus.on("TODO - Agreement with new Provider", this.addNode.bind(this));
+    // this.eventBus.on("TODO - Agreement with new Provider", this.addNode.bind(this));
   }
 
   public async addNode(nodeId: string, ip?: string) {
@@ -19,6 +19,6 @@ export class NetworkService {
   }
 
   async end() {
-    // todo
+    this.logger?.debug("Network Service has been stopped");
   }
 }

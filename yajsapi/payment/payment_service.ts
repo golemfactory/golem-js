@@ -29,20 +29,18 @@ export class PaymentService {
     this.logger?.debug("Payment Service has started");
   }
 
-  async getDemandDecoration({
-    budget,
-    paymentNetwork,
-    paymentDriver,
-    timeout,
-  }: MarketOptions): Promise<MarketDecoration> {
+  async getDemandDecoration({ budget, payment, timeout, subnetTag }: MarketOptions): Promise<MarketDecoration> {
     const { data: existingAllocations } = await this.api.getAllocations().catch(() => ({ data: [] }));
     // TODO: how to filter existing allocations? by budget?
     const availableAllocations = existingAllocations.filter((a) => parseFloat(a.remainingAmount) >= budget);
     const allocations = availableAllocations.length
       ? availableAllocations
-      : await this.createAllocations(budget, paymentNetwork, paymentDriver, timeout);
+      : await this.createAllocations({ budget, payment, timeout, subnetTag });
     const allocationIds = allocations.map((a) => a.allocationId);
-    const { data: decorations } = await this.api.getDemandDecorations(allocationIds);
+    // TODO: bug rest api with joining ids
+    const { data: decorations } = await this.api.getDemandDecorations(allocationIds.slice(0, 1)).catch((e) => {
+      throw new Error(`Could not get demand decorations. ${e.response?.data || e}`);
+    });
     return decorations;
   }
 
@@ -60,24 +58,21 @@ export class PaymentService {
     const { data: models } = await this.api.getAllocations();
     const allocations = models.map((model) => new Allocation(this.api, model));
     for (const allocation of allocations) await allocation.releaseAllocation();
+    this.logger?.debug("All allocations has benn released");
+    this.logger?.debug("Payment service has been stopped");
   }
 
-  private async createAllocations(
-    budget,
-    paymentNetwork: string,
-    paymentDriver: string,
-    timeout?: number
-  ): Promise<Allocation[]> {
+  async createAllocations({ budget, payment, timeout }: MarketOptions): Promise<Allocation[]> {
     const { data: accounts } = await this.api.getRequestorAccounts().catch((e) => {
-      throw new Error("Requestor accounts cannot be retrieved. " + e);
+      throw new Error("Requestor accounts cannot be retrieved. " + e.response?.data?.message || e.response?.data || e);
     });
     const allocations: Allocation[] = [];
     for (const account of accounts) {
-      if (account.driver !== paymentDriver.toLowerCase() || account.network !== paymentNetwork.toLowerCase()) {
+      if (account.driver !== payment.driver.toLowerCase() || account.network !== payment.network.toLowerCase()) {
         this.logger?.debug(
           `Not using payment platform ${account.platform}, platform's driver/network ` +
             `${account.driver}/${account.network} is different than requested ` +
-            `driver/network ${paymentDriver}/${paymentNetwork}`
+            `driver/network ${payment.driver}/${payment.network}`
         );
         continue;
       }
@@ -97,10 +92,14 @@ export class PaymentService {
         allocationId: "",
       };
       const { data: newModel } = await this.api.createAllocation(model).catch((error) => {
-        throw new Error("Cannot create new allocation. " + error.toString());
+        throw new Error(
+          `Could not create new allocation. ${error.response?.data?.message || error.response?.data || error}`
+        );
       });
       allocations.push(new Allocation(this.api, newModel));
-      this.logger?.debug(`Allocation ${newModel.allocationId} has created using payment platform ${account.platform}`);
+      this.logger?.debug(
+        `Allocation ${newModel.allocationId} has been created using payment platform ${account.platform}`
+      );
     }
     return allocations;
   }

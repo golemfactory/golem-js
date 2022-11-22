@@ -113,11 +113,12 @@ export class WorkContext {
       );
     }
     let timeout = false;
-    setTimeout(() => (timeout = true), 20000);
+    const timeoutId = setTimeout(() => (timeout = true), 30000);
     while (state !== ActivityStateStateEnum.Ready && !timeout) {
       await sleep(2);
       state = await this.activity.getState();
     }
+    clearTimeout(timeoutId);
     if (state !== ActivityStateStateEnum.Ready) {
       throw new Error(`Activity ${this.activity.id} cannot reach the Ready state. Current state: ${state}`);
     }

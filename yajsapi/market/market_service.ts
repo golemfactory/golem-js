@@ -14,8 +14,7 @@ import { NodeInfo as NodeProp, Activity as ActivityProp, NodeInfoKeys } from "..
 
 export type MarketOptions = {
   budget: number;
-  paymentNetwork: string;
-  paymentDriver: string;
+  payment: { driver: string; network: string };
   subnetTag: string;
   timeout?: number;
 };
@@ -44,12 +43,15 @@ export class MarketService {
   }
   async run(taskPackage: Package) {
     this.logger?.debug("Market Service has started");
+    await this.paymentService.createAllocations(this.marketOptions).catch((e) => {
+      throw new Error(`Could not create allocation ${e}`);
+    });
     const allowedPlatforms = await this.paymentService.getAllocatedPaymentPlatform();
     const demand = await this.createDemand(taskPackage, allowedPlatforms);
     this.subscription = await demand.publish().catch((e) => {
       throw new Error("Cannot publish demand. " + e);
     });
-    this.logger?.debug(`Demand published on the market`);
+    this.logger?.info(`Demand published on the market`);
     this.subscription.subscribe().catch((e) => {
       throw new Error("Cannot subscribe for new offers from market. " + e);
     });
@@ -63,7 +65,7 @@ export class MarketService {
       this.subscription?.removeAllListeners();
       this.logger?.debug(`Subscription ${this.subscription.id} unsubscribed`);
     }
-    this.logger?.info("Market Service has been stopped");
+    this.logger?.debug("Market Service has been stopped");
   }
 
   private async createDemand(taskPackage: Package, allowedPlatforms: string[]): Promise<Demand> {
@@ -84,14 +86,15 @@ export class MarketService {
     this.eventBus.emit("NewProposal", proposal);
     const score = this.marketStrategy.scoreProposal(proposal);
     proposal.setScore(score);
+    this.logger?.debug(`Scored proposal ${proposal.proposalId}. Score: ${score}`);
     const { result: isAcceptable, reason } = proposal.isAcceptable();
     try {
       if (isAcceptable) {
         await proposal.respond();
-        this.eventBus.emit("ProposalResponded");
+        this.logger?.debug(`Proposal hes been responded (${proposal.proposalId})`);
       } else {
         await proposal.reject(reason);
-        this.eventBus.emit("ProposalRejected");
+        this.logger?.debug(`Proposal hes been rejected (${proposal.proposalId}). Reason: ${reason}`);
       }
     } catch (error) {
       this.logger?.error(error);

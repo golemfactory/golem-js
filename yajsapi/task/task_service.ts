@@ -46,7 +46,7 @@ export class TaskService {
 
   async end() {
     this.isRunning = false;
-    this.logger?.debug("Task Service stopped.");
+    this.logger?.debug("Task Service has been stopped");
   }
 
   private async startTask(task: Task<any, any>) {
@@ -93,16 +93,17 @@ export class TaskService {
       task.stop(results);
     } catch (error) {
       task.stop(null, error);
-      // await activity.stop().catch((actError) => this.logger?.error(actError));
-      this.activities.delete(agreement.id);
-      this.logger?.debug(`Activity ${activity.id} deleted`);
       if (task.isRetry()) {
         this.tasksQueue.addToBegin(task);
-        this.logger?.warn("Trying to execute the task again." + error.toString());
+        this.logger?.warn("The task execution failed. Trying to redo the task. " + error);
       } else {
         await this.agreementPoolService.releaseAgreement(agreement.id, false);
         throw new Error("Task has been rejected! " + error.toString());
       }
+    } finally {
+      await activity.stop().catch((actError) => this.logger?.error(actError));
+      this.activities.delete(agreement.id);
+      this.logger?.debug(`Activity ${activity.id} deleted`);
     }
     await this.agreementPoolService.releaseAgreement(agreement.id, true);
   }

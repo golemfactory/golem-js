@@ -4,11 +4,10 @@ import { program } from "commander";
 async function main(args) {
   const executor = await createExecutor({
     package: "055911c811e56da4d75ffc928361a78ed13077933ffa8320fb1ec2db",
-    max_workers: args.numberOfProviders,
-    budget: "10",
-    subnet_tag: args.subnetTag,
-    payment_driver: args.paymentDriver,
-    payment_network: args.paymentNetwork,
+    maxWorkers: args.numberOfProviders,
+    budget: 10,
+    subnetTag: args.subnetTag,
+    payment: { driver: args.paymentDriver, network: args.paymentNetwork },
     logLevel: args.debug ? "debug" : "info",
   });
   const keyspace = await executor.run<number>(async (ctx) => {

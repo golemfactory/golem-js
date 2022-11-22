@@ -6,8 +6,7 @@ export const DEFAULT_EXECUTOR_OPTIONS = {
   maxWorkers: 5,
   budget: 1.0,
   subnetTag: "devnet-beta",
-  paymentDriver: "erc20",
-  paymentNetwork: "rinkeby",
+  payment: { driver: "erc20", network: "rinkeby" },
   timeout: dayjs.duration({ minutes: 15 }).asMilliseconds(),
 };
 

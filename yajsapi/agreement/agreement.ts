@@ -78,13 +78,16 @@ export class Agreement {
     }
   }
 
-  async terminate(reason?: { [key: string]: object }) {
+  async terminate(reason?: { [key: string]: string }) {
     try {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore TODO: API binding BUG with reason type
       await this.api.terminateAgreement(this.id, reason);
-      return true;
+      this.logger?.debug(`Agreement ${this.id} terminated`);
     } catch (error) {
-      this.logger?.error(`Cannot terminate agreement ${this.id}. ${error}`);
-      console.log(error.stack);
+      this.logger?.error(
+        `Cannot terminate agreement ${this.id}. ${error.response?.data?.message || error.response?.data || error}`
+      );
       throw error;
     }
   }
