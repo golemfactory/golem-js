@@ -58,8 +58,11 @@ export class MarketService {
   }
 
   async end() {
-    await this.subscription?.unsubscribe()?.catch((e) => this.logger?.error(`Could not unsubscribe demand. ${e}`));
-    this.subscription?.removeAllListeners();
+    if (this.subscription) {
+      await this.subscription?.unsubscribe().catch((e) => this.logger?.error(`Could not unsubscribe demand. ${e}`));
+      this.subscription?.removeAllListeners();
+      this.logger?.debug(`Subscription ${this.subscription.id} unsubscribed`);
+    }
     this.logger?.info("Market Service has been stopped");
   }
 
