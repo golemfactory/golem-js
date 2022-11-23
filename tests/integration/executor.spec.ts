@@ -4,24 +4,30 @@ import { createExecutor } from "../../yajsapi";
 import { LoggerMock } from "../mock/logger";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
-const loggerMock = new LoggerMock();
+const logger = new LoggerMock();
 
-describe("#Executor()", () => {
+describe("Task Executor", () => {
   let gothProcess;
   before(async () => {
-    // run goth process
+    // TODO: run goth process
+  });
+  after(async () => {
+    // TODO: exit goth process
   });
   // TODO
-  it("run simple task", async () => {
-    const executor = await createExecutor({
-      package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
-      logLevel: "debug",
-      logger: loggerMock,
-      // subnetTag: "goth"
-    });
+  it("should run simple task", async () => {
+    const executor = await createExecutor("9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae");
     const result = await executor.run(async (ctx) => ctx.run("echo 'Hello World'"));
+    await executor.end();
 
     expect(result?.stdout).to.include("Hello World");
-    await executor.end();
-  }).timeout(30000);
+    expect(logger.outputs).to.include("Demand published on the market");
+    expect(logger.outputs).to.include("New proposal has been received");
+    expect(logger.outputs).to.include("Scored proposal");
+    expect(logger.outputs).to.include("Proposal hes been responded");
+    expect(logger.outputs).to.include("New offer proposal added to pool");
+    expect(logger.outputs).to.match(/Agreement .* created with provider/);
+    expect(logger.outputs).to.match(/Activity .* created/);
+    expect(logger.outputs).to.include("Task Executor has been stopped");
+  }).timeout(60000);
 });

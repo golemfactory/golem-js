@@ -1,16 +1,13 @@
-import { dayjs, Logger } from "../utils";
+import { Logger } from "../utils";
 import { EventBus } from "../events/event_bus";
 import { Package } from "../package";
 import { Demand } from "../core";
-import { Subscription } from "../core";
-import { DefaultMarketStrategy, MarketStrategy } from "./strategy";
+import { DefaultMarketStrategy, MarketStrategy, SCORE_NEUTRAL } from "./strategy";
 import { Offer, Proposal } from "../core";
 import { RequestorApi as MarketApi, Configuration } from "ya-ts-client/dist/ya-market";
 import { PaymentService } from "../payment";
 import { AgreementPoolService } from "../agreement";
 import { YagnaOptions } from "../executor";
-import { MarketDecoration } from "ya-ts-client/dist/ya-payment/src/models";
-import { NodeInfo as NodeProp, Activity as ActivityProp, NodeInfoKeys } from "../props";
 
 export type MarketOptions = {
   budget: number;
@@ -22,7 +19,7 @@ export type MarketOptions = {
 export class MarketService {
   private readonly api: MarketApi;
   private marketStrategy: MarketStrategy;
-  private subscription?: Subscription;
+  private demand?: Demand;
 
   constructor(
     private readonly yagnaOptions: YagnaOptions,
@@ -43,42 +40,26 @@ export class MarketService {
   }
   async run(taskPackage: Package) {
     this.logger?.debug("Market Service has started");
-    await this.paymentService.createAllocations(this.marketOptions).catch((e) => {
+    const allocations = await this.paymentService.createAllocations(this.marketOptions).catch((e) => {
       throw new Error(`Could not create allocation ${e}`);
     });
-    const allowedPlatforms = await this.paymentService.getAllocatedPaymentPlatform();
-    const demand = await this.createDemand(taskPackage, allowedPlatforms);
-    this.subscription = await demand.publish().catch((e) => {
-      throw new Error("Cannot publish demand. " + e);
+    this.demand = await Demand.create(taskPackage, allocations, {
+      subnetTag: this.marketOptions.subnetTag,
+      timeout: this.marketOptions.timeout,
+      yagnaOptions: this.yagnaOptions,
     });
-    this.logger?.info(`Demand published on the market`);
-    this.subscription.subscribe().catch((e) => {
-      throw new Error("Cannot subscribe for new offers from market. " + e);
-    });
-    this.subscription.on("proposal", (proposal) => this.processProposal(proposal));
-    this.subscription.on("offer", (offer) => this.processOffer(offer));
+    this.logger?.info("Demand published on the market");
+    this.demand.on("proposal", (proposal) => this.processProposal(proposal));
+    this.demand.on("offer", (offer) => this.processOffer(offer));
   }
 
   async end() {
-    if (this.subscription) {
-      await this.subscription?.unsubscribe().catch((e) => this.logger?.error(`Could not unsubscribe demand. ${e}`));
-      this.subscription?.removeAllListeners();
-      this.logger?.debug(`Subscription ${this.subscription.id} unsubscribed`);
+    if (this.demand) {
+      await this.demand?.unsubscribe().catch((e) => this.logger?.error(`Could not unsubscribe demand. ${e}`));
+      this.demand?.removeAllListeners();
+      this.logger?.debug(`Subscription ${this.demand.id} unsubscribed`);
     }
     this.logger?.debug("Market Service has been stopped");
-  }
-
-  private async createDemand(taskPackage: Package, allowedPlatforms: string[]): Promise<Demand> {
-    const baseDecoration = this.getBaseDecoration();
-    const packageDecoration = await taskPackage.getDemandDecoration();
-    const marketDecoration = await this.paymentService.getDemandDecoration(this.marketOptions);
-    const strategyDecoration = this.marketStrategy.getDemandDecoration();
-    return new Demand(this.api, allowedPlatforms, [
-      baseDecoration,
-      packageDecoration,
-      marketDecoration,
-      strategyDecoration,
-    ]);
   }
 
   private async processProposal(proposal: Proposal) {
@@ -87,14 +68,13 @@ export class MarketService {
     const score = this.marketStrategy.scoreProposal(proposal);
     proposal.setScore(score);
     this.logger?.debug(`Scored proposal ${proposal.proposalId}. Score: ${score}`);
-    const { result: isAcceptable, reason } = proposal.isAcceptable();
     try {
-      if (isAcceptable) {
+      if (proposal.score >= SCORE_NEUTRAL) {
         await proposal.respond();
         this.logger?.debug(`Proposal hes been responded (${proposal.proposalId})`);
       } else {
-        await proposal.reject(reason);
-        this.logger?.debug(`Proposal hes been rejected (${proposal.proposalId}). Reason: ${reason}`);
+        await proposal.reject("Score is to low");
+        this.logger?.debug(`Proposal hes been rejected (${proposal.proposalId}). Reason: Score is to low`);
       }
     } catch (error) {
       this.logger?.error(error);
@@ -105,16 +85,5 @@ export class MarketService {
     this.eventBus.emit("NewOffer", offer);
     this.logger?.debug(`New offer has been confirmed (${offer.proposalId})`);
     this.agreementPoolService.addProposal(offer);
-  }
-
-  private getBaseDecoration(): MarketDecoration {
-    const activityProp = new ActivityProp();
-    activityProp.expiration.value = dayjs().add(this.marketOptions.timeout!, "ms");
-    activityProp.multi_activity.value = true;
-    const nodeProp = new NodeProp(this.marketOptions.subnetTag);
-    return {
-      properties: [...activityProp.properties(), ...nodeProp.properties()],
-      constraints: [`(${NodeInfoKeys.subnet_tag}=${this.marketOptions.subnetTag})`],
-    };
   }
 }

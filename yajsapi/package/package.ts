@@ -38,14 +38,6 @@ export class Constraints {
 
 // Information on task package to be used for running tasks on providers.
 export class Package {
-  async resolve_url(self): Promise<void | string> {
-    // Return package URL.
-  }
-
-  async decorate_demand(demand: DemandBuilder) {
-    // Add package information to a Demand.
-  }
-
   async getDemandDecoration(): Promise<MarketDecoration> {
     // TMP: the same as decorate demand
     return {} as MarketDecoration;
@@ -75,11 +67,11 @@ export class VmPackage extends Package {
     return `hash:sha3:${image_hash}:${image_url}`;
   }
 
-  async decorate_demand(demand: DemandBuilder) {
-    const image_url = await this.resolve_url();
-    demand.ensure(this.constraints.toString());
-    demand.add(new VmRequest(image_url, VmPackageFormat.GVMKIT_SQUASH));
-  }
+  // async decorate_demand(demand: DemandBuilder) {
+  //   const image_url = await this.resolve_url();
+  //   demand.ensure(this.constraints.toString());
+  //   demand.add(new VmRequest(image_url, VmPackageFormat.GVMKIT_SQUASH));
+  // }
 
   async getDemandDecoration(): Promise<MarketDecoration> {
     const imageUrl = await this.resolve_url();

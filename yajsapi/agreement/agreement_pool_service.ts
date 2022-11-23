@@ -10,8 +10,6 @@ import { ComputationHistory } from "../market/strategy";
 
 export interface AgreementProposal {
   proposalId: string;
-  isUsed: boolean;
-  markAsUsed(): void;
 }
 
 // TODO: This is now in rest/market - think about a better place

@@ -32,7 +32,7 @@ export class GftpStorageProvider implements StorageProvider {
     await this.gftpProvider.release(urls);
   }
   async close() {
-    await this.gftpProvider.release(this.publishedUrls);
+    if (this.publishedUrls.length) await this.gftpProvider.release(this.publishedUrls);
     await this.gftpProvider.done();
   }
 }

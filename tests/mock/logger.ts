@@ -1,27 +1,30 @@
 import { Logger } from "../../yajsapi/utils";
 export class LoggerMock implements Logger {
   level = "debug";
-  private output?: string;
+  private _outputs = "";
 
-  getOutput() {
-    return this.output;
+  get outputs() {
+    return this._outputs;
+  }
+  clear() {
+    this._outputs = "";
   }
   debug(msg) {
-    this.output += msg;
+    this.log(msg);
   }
   error(msg) {
-    this.output += msg;
+    this.log(msg);
   }
   info(msg) {
-    this.output += msg;
-  }
-  log(msg) {
-    this.output += msg;
-  }
-  setLevel(level: string) {
-    this.level += level;
+    this.log(msg);
   }
   warn(msg) {
-    this.output += msg;
+    this.log(msg);
+  }
+  log(msg) {
+    this._outputs += `${msg}\n`;
+  }
+  setLevel(level: string) {
+    this.level = level;
   }
 }

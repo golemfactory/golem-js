@@ -1,4 +1,5 @@
-import { RequestorApi, Allocation as Model } from "ya-ts-client/dist/ya-payment";
+import { RequestorApi, Allocation as Model, MarketDecoration } from "ya-ts-client/dist/ya-payment";
+import { MarketOptions } from "../market/market_service";
 
 export class Allocation {
   public readonly allocationId: string = "";
@@ -16,5 +17,17 @@ export class Allocation {
 
   async releaseAllocation() {
     await this.api.releaseAllocation(this.allocationId);
+  }
+
+  async getDemandDecoration(): Promise<MarketDecoration> {
+    const { data: decorations } = await this.api.getDemandDecorations([this.allocationId]).catch((e) => {
+      throw new Error(`Could not get demand decorations. ${e.response?.data || e}`);
+    });
+    return decorations;
+  }
+
+  // TODO
+  static async create(): Promise<Allocation> {
+    return {} as Allocation;
   }
 }
