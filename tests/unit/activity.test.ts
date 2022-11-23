@@ -18,7 +18,7 @@ rewiremock("eventsource").with(EventSourceMock);
 rewiremock.enable();
 
 import { StorageProviderMock } from "../mock/storage_provider";
-import { Activity, ActivityStateEnum, ActivityFactory } from "../../yajsapi/activity";
+import { Activity, ActivityStateEnum, ActivityFactory } from "../../yajsapi/core/activity";
 import { CancellationToken } from "../../yajsapi/utils";
 import { Deploy, Start, Run, Terminate, UploadFile, DownloadFile, Script, Capture } from "../../yajsapi/work";
 

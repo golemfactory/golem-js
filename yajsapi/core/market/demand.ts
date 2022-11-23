@@ -1,11 +1,10 @@
-import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
+import { DemandOfferBase, ProposalAllOfStateEnum, ProposalEvent } from "ya-ts-client/dist/ya-market";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import { Package } from "../../package";
 import { Allocation } from "../../payment/allocation";
 import { YagnaOptions } from "../../executor";
 import { DemandFactory, createDemandRequest } from "./factory";
 import { MarketProperty } from "ya-ts-client/dist/ya-payment/src/models/";
-import { ProposalAllOfStateEnum, ProposalEvent } from "ya-ts-client/dist/ya-market/src/models";
 import { Offer } from "./offer";
 import { Proposal } from "./proposal";
 import { sleep } from "../../utils";
@@ -48,7 +47,7 @@ export class Demand extends EventEmitter {
         for (const event of events as ProposalEvent[]) {
           if (event.eventType !== "ProposalEvent") continue;
           if (event.proposal.state === ProposalAllOfStateEnum.Initial) {
-            const commonPaymentPlatforms = this.getCommonPaymentPlatforms();
+            const commonPaymentPlatforms = this.getCommonPaymentPlatforms(event.proposal.properties);
             this.properties["golem.com.payment.chosen-platform"] = commonPaymentPlatforms?.[0];
             const proposal = new Proposal(this.id, this.api, event.proposal, this.getDemandRequest());
             if (!commonPaymentPlatforms?.length) await proposal.reject("No common payments platform");
@@ -64,8 +63,8 @@ export class Demand extends EventEmitter {
     }
   }
 
-  private getCommonPaymentPlatforms(): string[] | undefined {
-    const providerPlatforms = Object.keys(this.properties)
+  private getCommonPaymentPlatforms(proposalProperties): string[] | undefined {
+    const providerPlatforms = Object.keys(proposalProperties)
       .filter((prop) => prop.startsWith("golem.com.payment.platform."))
       .map((prop) => prop.split(".")[4]) || ["NGNT"];
     return this.allowedPaymentPlatforms.filter((p) => providerPlatforms.includes(p));

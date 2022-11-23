@@ -1,13 +1,20 @@
 import { Allocation } from "../../yajsapi/payment/allocation";
-import { MarketDecoration } from "ya-ts-client/dist/ya-payment";
+import { MarketDecoration, RequestorApi, Allocation as Model } from "ya-ts-client/dist/ya-payment";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
 export const allocationMock: Allocation = {
+  timeout: "",
+  paymentPlatform: "",
+  address: "",
   allocationId: "test_id",
   makeDeposit: false,
   remainingAmount: "",
   spentAmount: "",
   timestamp: "",
   totalAmount: "",
+  model: {} as Model,
+  api: {} as RequestorApi,
   async getDemandDecoration(): Promise<MarketDecoration> {
     return Promise.resolve({
       properties: [
@@ -22,4 +29,7 @@ export const allocationMock: Allocation = {
   async releaseAllocation(): Promise<void> {
     return Promise.resolve(undefined);
   },
+  // async create(): Promise<Allocation> {
+  //   return {} as Allocation;
+  // },
 };

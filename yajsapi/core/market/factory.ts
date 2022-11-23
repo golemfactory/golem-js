@@ -6,8 +6,8 @@ import { MarketProperty } from "ya-ts-client/dist/ya-payment/src/models";
 import { Package } from "../../package";
 import { Allocation } from "../../payment/allocation";
 import { Demand, DemandOptions } from "./demand";
-import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import { Configuration } from "ya-ts-client/dist/ya-market";
+import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import { YagnaOptions } from "../../executor";
 
 const DEFAULT_TIMEOUT = 30000;
