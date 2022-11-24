@@ -3,13 +3,12 @@ import { RequestorApi } from "ya-ts-client/dist/ya-market/src/api/requestor-api"
 import { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 import { v4 as uuidv4 } from "uuid";
 import { DemandOfferBase, Event, ProposalEvent } from "ya-ts-client/dist/ya-market/src/models";
+import { offersDraft, offersInitial } from "./fixtures/offers";
 
 export class MarketApiMock extends RequestorApi {
-  private expectedOffers: ProposalEvent[] = [];
-  private mockedOffers: ProposalEvent[] = [];
-  private expectedErrors: { message: string; status: number }[] = [];
-  private mockedErrors: { message: string; status: number }[] = [];
-  private exampleOffer = {};
+  private expectedOffers?: ProposalEvent[];
+  private expectedError?: { message: string; status: number };
+  private exampleOffers = [...offersInitial, offersDraft];
 
   constructor() {
     super();
@@ -18,8 +17,8 @@ export class MarketApiMock extends RequestorApi {
   setExpectedOffers(offers) {
     return (this.expectedOffers = offers);
   }
-  setExpectedErrors(errors) {
-    this.expectedErrors = errors;
+  setExpectedError(error) {
+    this.expectedError = error;
   }
   // @ts-ignore
   async subscribeDemand(
@@ -35,21 +34,33 @@ export class MarketApiMock extends RequestorApi {
     maxEvents?: number,
     options?: AxiosRequestConfig
   ): Promise<import("axios").AxiosResponse<Event[]>> {
-    if (this.expectedErrors.length) {
-      const mockError = this.expectedErrors.shift();
-      const error = new Error(mockError!.message) as AxiosError;
+    if (this.expectedError) {
+      const error = new Error(this.expectedError.message) as AxiosError;
       error.response = {
-        data: { message: mockError!.message },
-        status: mockError!.status,
+        data: { message: this.expectedError.message },
+        status: this.expectedError.status,
       } as AxiosResponse;
       throw error;
     }
-    if (this.expectedOffers?.length) {
-      this.mockedOffers.push(this.expectedOffers?.shift() as ProposalEvent);
-    }
     await new Promise((res) => setTimeout(res, 100));
-    return new Promise((res) =>
-      res({ data: this.mockedOffers.length ? this.mockedOffers : [this.exampleOffer] } as AxiosResponse)
-    );
+    return new Promise((res) => res({ data: this.expectedOffers || this.exampleOffers } as AxiosResponse));
+  }
+  // @ts-ignore
+  unsubscribeDemand(
+    subscriptionId: string,
+    options?: AxiosRequestConfig
+  ): Promise<import("axios").AxiosResponse<void>> {
+    return new Promise((res) => res({ data: true } as AxiosResponse));
+  }
+  // @ts-ignore
+  rejectProposalOffer(
+    subscriptionId: string,
+    proposalId: string,
+    requestBody?: {
+      [key: string]: object;
+    },
+    options?: AxiosRequestConfig
+  ): Promise<import("axios").AxiosResponse<void>> {
+    return new Promise((res) => res({ data: true } as AxiosResponse));
   }
 }

@@ -1,5 +1,5 @@
 import { Logger } from "../../yajsapi/utils";
-export class LoggerMock implements Logger {
+class LoggerMock implements Logger {
   level = "debug";
   private _outputs = "";
 
@@ -28,3 +28,5 @@ export class LoggerMock implements Logger {
     this.level = level;
   }
 }
+
+export const logger = new LoggerMock();

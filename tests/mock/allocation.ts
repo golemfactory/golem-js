@@ -5,7 +5,7 @@ import { MarketDecoration, RequestorApi, Allocation as Model } from "ya-ts-clien
 // @ts-ignore
 export const allocationMock: Allocation = {
   timeout: "",
-  paymentPlatform: "",
+  paymentPlatform: "erc20-rinkeby-tglm",
   address: "",
   allocationId: "test_id",
   makeDeposit: false,

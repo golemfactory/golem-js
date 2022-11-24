@@ -1,6 +1,6 @@
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market/src/models";
 import { Activity as ActivityProp, NodeInfo as NodeProp, NodeInfoKeys } from "../../props";
-import { dayjs } from "../../utils";
+import { dayjs, Logger } from "../../utils";
 import { MarketDecoration } from "ya-ts-client/dist/ya-payment";
 import { MarketProperty } from "ya-ts-client/dist/ya-payment/src/models";
 import { Package } from "../../package";
@@ -18,15 +18,17 @@ export class DemandFactory {
   private subnetTag: string;
   private timeout: number;
   private yagnaOptions?: YagnaOptions;
+  private logger?: Logger;
 
   constructor(
     private taskPackage: Package,
     private allocations: Allocation[],
-    { subnetTag, timeout, yagnaOptions }: DemandOptions
+    { subnetTag, timeout, yagnaOptions, logger }: DemandOptions
   ) {
     this.timeout = timeout || DEFAULT_TIMEOUT;
     this.subnetTag = subnetTag;
     this.yagnaOptions = yagnaOptions;
+    this.logger = logger;
   }
 
   async create(): Promise<Demand> {
@@ -45,7 +47,14 @@ export class DemandFactory {
     const { data: demandId } = await api.subscribeDemand(demandRequest).catch((e) => {
       throw new Error(`Could not publish demand on the market. ${e.response?.data || e}`);
     });
-    return new Demand(demandId, api, this.properties, this.constraints, this.getAllowedPaymentsPlatforms());
+    return new Demand(
+      demandId,
+      api,
+      this.properties,
+      this.constraints,
+      this.getAllowedPaymentsPlatforms(),
+      this.logger
+    );
   }
 
   private async getDecorations(): Promise<MarketDecoration[]> {

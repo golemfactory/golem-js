@@ -1,14 +1,13 @@
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import { Demand, Allocation, Demand } from "../../yajsapi/core";
-import { LoggerMock } from "../mock/logger";
+import { logger } from "../mock/logger";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
-const logger = new LoggerMock();
 
 const subnetTag = "devnet-beta";
 
-describe("Core (mod-level) modules", () => {
+describe("Core (mid-level) modules", () => {
   let gothProcess;
   before(async () => {
     // TODO: run goth process
