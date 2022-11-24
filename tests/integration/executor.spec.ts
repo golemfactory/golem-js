@@ -21,13 +21,13 @@ describe("Task Executor", () => {
     await executor.end();
 
     expect(result?.stdout).to.include("Hello World");
-    expect(logger.outputs).to.include("Demand published on the market");
-    expect(logger.outputs).to.include("New proposal has been received");
-    expect(logger.outputs).to.include("Scored proposal");
-    expect(logger.outputs).to.include("Proposal hes been responded");
-    expect(logger.outputs).to.include("New offer proposal added to pool");
-    expect(logger.outputs).to.match(/Agreement .* created with provider/);
-    expect(logger.outputs).to.match(/Activity .* created/);
-    expect(logger.outputs).to.include("Task Executor has been stopped");
+    expect(logger.logs).to.include("Demand published on the market");
+    expect(logger.logs).to.include("New proposal has been received");
+    expect(logger.logs).to.include("Scored proposal");
+    expect(logger.logs).to.include("Proposal hes been responded");
+    expect(logger.logs).to.include("New offer proposal added to pool");
+    expect(logger.logs).to.match(/Agreement .* created with provider/);
+    expect(logger.logs).to.match(/Activity .* created/);
+    expect(logger.logs).to.include("Task Executor has been stopped");
   }).timeout(60000);
 });

@@ -3,19 +3,19 @@ import { RequestorApi } from "ya-ts-client/dist/ya-market/src/api/requestor-api"
 import { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 import { v4 as uuidv4 } from "uuid";
 import { DemandOfferBase, Event, ProposalEvent } from "ya-ts-client/dist/ya-market/src/models";
-import { offersDraft, offersInitial } from "./fixtures/offers";
+import { proposalsDraft, proposalsInitial } from "./fixtures/proposals";
 
 export class MarketApiMock extends RequestorApi {
-  private expectedOffers?: ProposalEvent[];
+  private expectedProposals?: ProposalEvent[];
   private expectedError?: { message: string; status: number };
-  private exampleOffers = [...offersInitial, offersDraft];
+  private exampleProposals = [...proposalsInitial, proposalsDraft];
 
   constructor() {
     super();
   }
 
-  setExpectedOffers(offers) {
-    return (this.expectedOffers = offers);
+  setExpectedProposals(proposals) {
+    return (this.expectedProposals = proposals);
   }
   setExpectedError(error) {
     this.expectedError = error;
@@ -42,8 +42,8 @@ export class MarketApiMock extends RequestorApi {
       } as AxiosResponse;
       throw error;
     }
-    await new Promise((res) => setTimeout(res, 100));
-    return new Promise((res) => res({ data: this.expectedOffers || this.exampleOffers } as AxiosResponse));
+    await new Promise((res) => setTimeout(res, 10));
+    return new Promise((res) => res({ data: this.expectedProposals || this.exampleProposals } as AxiosResponse));
   }
   // @ts-ignore
   unsubscribeDemand(
@@ -62,5 +62,14 @@ export class MarketApiMock extends RequestorApi {
     options?: AxiosRequestConfig
   ): Promise<import("axios").AxiosResponse<void>> {
     return new Promise((res) => res({ data: true } as AxiosResponse));
+  }
+  // @ts-ignore
+  counterProposalDemand(
+    subscriptionId: string,
+    proposalId: string,
+    demandOfferBase: DemandOfferBase,
+    options?: AxiosRequestConfig
+  ): Promise<import("axios").AxiosResponse<string>> {
+    return new Promise((res) => res({ data: proposalId } as AxiosResponse));
   }
 }

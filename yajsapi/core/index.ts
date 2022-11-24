@@ -1,6 +1,5 @@
-import { Demand } from "./market/demand";
-import { Offer } from "./market/offer";
+import { Demand, DemandEvent } from "./market/demand";
 import { Proposal } from "./market/proposal";
 import { Allocation } from "../payment/allocation";
 
-export { Demand, Offer, Proposal, Allocation };
+export { Demand, Proposal, Allocation, DemandEvent };

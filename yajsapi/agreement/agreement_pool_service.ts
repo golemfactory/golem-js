@@ -22,7 +22,7 @@ export class AgreementPoolService implements ComputationHistory {
   private eventPoolingInterval: number;
   private eventPoolingMaxEventsPerRequest: number;
 
-  private proposals: AgreementProposal[] = [];
+  private proposals: string[] = [];
   private agreements = new Map<string, Agreement>();
   private agreementIdsToReuse: string[] = [];
   private isServiceRunning = false;
@@ -43,9 +43,9 @@ export class AgreementPoolService implements ComputationHistory {
     this.logger?.debug("Agreement Pool Service has started");
   }
 
-  addProposal(proposal: AgreementProposal) {
-    this.logger?.debug(`New offer proposal added to pool (${proposal.proposalId})`);
-    this.proposals.push(proposal);
+  addProposal(proposalId: string) {
+    this.logger?.debug(`New offer proposal added to pool (${proposalId})`);
+    this.proposals.push(proposalId);
   }
 
   async getAgreement(): Promise<Agreement> {
@@ -107,13 +107,13 @@ export class AgreementPoolService implements ComputationHistory {
   private async createAgreement(): Promise<Agreement> {
     let agreement;
     while (!agreement && this.isServiceRunning) {
-      const proposal = await this.getAvailableProposal();
-      if (!proposal) break;
+      const proposalId = await this.getAvailableProposal();
+      if (!proposalId) break;
 
-      this.logger?.debug(`Creating agreement using proposal ID: ${proposal.proposalId}`);
+      this.logger?.debug(`Creating agreement using proposal ID: ${proposalId}`);
       try {
         const agreementFactory = new AgreementFactory(this.configContainer);
-        agreement = await agreementFactory.create(proposal);
+        agreement = await agreementFactory.create(proposalId);
         agreement = await this.waitForAgreementApproval(agreement);
 
         const state = await agreement.getState();

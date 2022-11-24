@@ -6,45 +6,38 @@ import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
-import { logger } from "../mock/logger";
-import { Demand, Proposal, Offer } from "../../yajsapi/core";
+import { LoggerMock } from "../mock/logger";
+import { Demand, Proposal, DemandEvent } from "../../yajsapi/core";
 import { allocationMock, packageMock } from "../mock";
-import { offersInitial, offersDraft } from "../mock/fixtures/offers";
+import { proposalsInitial, proposalsDraft } from "../mock/fixtures/proposals";
 
 const subnetTag = "testnet";
+const logger = new LoggerMock();
 
 describe("Demand", () => {
   it("should create and publish demand", async () => {
-    const demand = await Demand.create(packageMock, [allocationMock], { subnetTag });
+    const demand = await Demand.create(packageMock, [allocationMock], { subnetTag, logger });
     expect(demand).to.be.instanceof(Demand);
+    expect(logger.logs).to.be.match(/Demand .* created and published on the market/);
     await demand.unsubscribe();
   });
 
   it("should get proposal after publish demand", async () => {
     const demand = await Demand.create(packageMock, [allocationMock], { subnetTag });
-    demand["api"]["setExpectedOffers"](offersInitial);
-    const proposal = await new Promise((res) => demand.on("proposal", res));
+    demand["api"]["setExpectedProposals"](proposalsInitial);
+    const proposal = await new Promise((res) => demand.on(DemandEvent.ProposalReceived, res));
     expect(proposal).to.be.instanceof(Proposal);
     await demand.unsubscribe();
   });
 
   it("should get offer after publish demand and respond proposal", async () => {
     const demand = await Demand.create(packageMock, [allocationMock], { subnetTag });
-    demand["api"]["setExpectedOffers"](offersInitial);
+    demand["api"]["setExpectedProposals"](proposalsInitial);
     demand.on("proposal", (proposal) => proposal.respond());
-    demand["api"]["setExpectedOffers"](offersDraft);
-    const offer = await new Promise((res) => demand.on("offer", res));
-    expect(offer).to.be.instanceof(Offer);
-    await demand.unsubscribe();
-  });
-
-  it("should reject proposal which has no common payment platforms", async () => {
-    const demand = await Demand.create(packageMock, [allocationMock], { subnetTag, logger });
-    demand["api"]["setExpectedOffers"]([offersInitial[6]]);
-    await new Promise((res) => setTimeout(res, 100));
-    expect(logger.outputs).to.include(
-      `Proposal ${offersInitial[6].proposal.proposalId} rejected. Reason: No common payments platform`
-    );
+    demand["api"]["setExpectedProposals"](proposalsDraft);
+    const proposal: Proposal = await new Promise((res) => demand.on(DemandEvent.ProposalReceived, res));
+    expect(proposal).to.be.instanceof(Proposal);
+    expect(proposal.isDraft()).to.be.true;
     await demand.unsubscribe();
   });
 });

@@ -1,89 +1,102 @@
 import { Logger } from "../utils";
-import { EventBus } from "../events/event_bus";
 import { Package } from "../package";
 import { Demand } from "../core";
 import { DefaultMarketStrategy, MarketStrategy, SCORE_NEUTRAL } from "./strategy";
-import { Offer, Proposal } from "../core";
-import { RequestorApi as MarketApi, Configuration } from "ya-ts-client/dist/ya-market";
+import { Proposal, DemandEvent } from "../core";
 import { PaymentService } from "../payment";
 import { AgreementPoolService } from "../agreement";
 import { YagnaOptions } from "../executor";
 
 export type MarketOptions = {
-  budget: number;
-  payment: { driver: string; network: string };
-  subnetTag: string;
+  budget?: number;
+  payment?: { driver: string; network: string };
+  subnetTag?: string;
   timeout?: number;
+  yagnaOptions?: YagnaOptions;
 };
 
 export class MarketService {
-  private readonly api: MarketApi;
   private marketStrategy: MarketStrategy;
   private demand?: Demand;
+  private allowedPaymentPlatforms: string[] = [];
 
   constructor(
-    private readonly yagnaOptions: YagnaOptions,
-    private readonly marketOptions: MarketOptions,
     private readonly paymentService: PaymentService,
     private readonly agreementPoolService: AgreementPoolService,
-    private readonly eventBus: EventBus,
     private readonly logger?: Logger,
+    private readonly options?: MarketOptions,
     marketStrategy?: MarketStrategy
   ) {
     this.marketStrategy = marketStrategy || new DefaultMarketStrategy(this.agreementPoolService);
-    const apiConfig = new Configuration({
-      apiKey: yagnaOptions.apiKey,
-      basePath: yagnaOptions.basePath + "/market-api/v1",
-      accessToken: yagnaOptions.apiKey,
-    });
-    this.api = new MarketApi(apiConfig);
   }
   async run(taskPackage: Package) {
-    this.logger?.debug("Market Service has started");
-    const allocations = await this.paymentService.createAllocations(this.marketOptions).catch((e) => {
-      throw new Error(`Could not create allocation ${e}`);
-    });
+    const allocations = await this.paymentService
+      .createAllocations(this.options?.budget, this.options?.payment, this.options?.timeout)
+      .catch((e) => {
+        throw new Error(`Could not create allocation ${e}`);
+      });
+    for (const allocation of allocations) {
+      if (allocation.paymentPlatform) this.allowedPaymentPlatforms.push(allocation.paymentPlatform);
+    }
     this.demand = await Demand.create(taskPackage, allocations, {
-      subnetTag: this.marketOptions.subnetTag,
-      timeout: this.marketOptions.timeout,
-      yagnaOptions: this.yagnaOptions,
+      subnetTag: this.options?.subnetTag,
+      timeout: this.options?.timeout,
+      yagnaOptions: this.options?.yagnaOptions,
+      logger: this.logger,
     });
-    this.logger?.info("Demand published on the market");
-    this.demand.on("proposal", (proposal) => this.processProposal(proposal));
-    this.demand.on("offer", (offer) => this.processOffer(offer));
+    this.demand.on(DemandEvent.ProposalReceived, (proposal) => {
+      if (proposal.isInitial()) this.processInitialProposal(proposal);
+      else if (proposal.isDraft()) this.processDraftProposal(proposal);
+      else if (proposal.isExpired()) this.logger?.debug(`Proposal hes expired ${proposal.id}`);
+      else if (proposal.isRejected()) this.logger?.debug(`Proposal hes rejected ${proposal.id}`);
+    });
+    this.logger?.debug("Market Service has started");
   }
 
   async end() {
     if (this.demand) {
       await this.demand?.unsubscribe().catch((e) => this.logger?.error(`Could not unsubscribe demand. ${e}`));
       this.demand?.removeAllListeners();
-      this.logger?.debug(`Demand ${this.demand.id} unsubscribed`);
     }
     this.logger?.debug("Market Service has been stopped");
   }
 
-  private async processProposal(proposal: Proposal) {
+  private async processInitialProposal(proposal: Proposal) {
     this.logger?.debug(`New proposal has been received (${proposal.proposalId})`);
-    this.eventBus.emit("NewProposal", proposal);
     const score = this.marketStrategy.scoreProposal(proposal);
-    proposal.setScore(score);
+    proposal.score = score;
     this.logger?.debug(`Scored proposal ${proposal.proposalId}. Score: ${score}`);
     try {
-      if (proposal.score >= SCORE_NEUTRAL) {
-        await proposal.respond();
+      const { result: isProposalValid, reason } = this.isProposalValid(proposal);
+      if (isProposalValid) {
+        const chosenPlatform = this.getCommonPaymentPlatforms(proposal.properties)![0];
+        await proposal.respond(chosenPlatform);
         this.logger?.debug(`Proposal hes been responded (${proposal.proposalId})`);
       } else {
-        await proposal.reject("Score is to low");
-        this.logger?.debug(`Proposal hes been rejected (${proposal.proposalId}). Reason: Score is to low`);
+        await proposal.reject(reason);
+        this.logger?.debug(`Proposal hes been rejected (${proposal.proposalId}). Reason: ${reason}`);
       }
     } catch (error) {
       this.logger?.error(error);
     }
   }
 
-  private async processOffer(offer: Offer) {
-    this.eventBus.emit("NewOffer", offer);
-    this.logger?.debug(`New offer has been confirmed (${offer.proposalId})`);
-    this.agreementPoolService.addProposal(offer);
+  private isProposalValid(proposal: Proposal): { result: boolean; reason?: string } {
+    const commonPaymentPlatforms = this.getCommonPaymentPlatforms(proposal.properties);
+    if (!commonPaymentPlatforms?.length) return { result: false, reason: "No common payment platform" };
+    if (proposal.score && proposal.score < SCORE_NEUTRAL) return { result: false, reason: "Score is to low" };
+    return { result: true };
+  }
+
+  private async processDraftProposal(proposal: Proposal) {
+    this.logger?.debug(`Proposal has been confirmed (${proposal.proposalId})`);
+    this.agreementPoolService.addProposal(proposal.proposalId);
+  }
+
+  private getCommonPaymentPlatforms(proposalProperties): string[] | undefined {
+    const providerPlatforms = Object.keys(proposalProperties)
+      .filter((prop) => prop.startsWith("golem.com.payment.platform."))
+      .map((prop) => prop.split(".")[4]) || ["NGNT"];
+    return this.allowedPaymentPlatforms.filter((p) => providerPlatforms.includes(p));
   }
 }

@@ -1,20 +1,23 @@
-import { DemandOfferBase, ProposalAllOfStateEnum, ProposalEvent } from "ya-ts-client/dist/ya-market";
+import { DemandOfferBase, ProposalEvent } from "ya-ts-client/dist/ya-market";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import { Package } from "../../package";
 import { Allocation } from "../../payment/allocation";
 import { YagnaOptions } from "../../executor";
 import { DemandFactory, createDemandRequest } from "./factory";
 import { MarketProperty } from "ya-ts-client/dist/ya-payment/src/models/";
-import { Offer } from "./offer";
 import { Proposal } from "./proposal";
 import { Logger, sleep } from "../../utils";
 import EventEmitter from "events";
 
 export interface DemandOptions {
-  subnetTag: string;
+  subnetTag?: string;
   yagnaOptions?: YagnaOptions;
   timeout?: number;
   logger?: Logger;
+}
+
+export enum DemandEvent {
+  ProposalReceived = "ProposalReceived",
 }
 
 export class Demand extends EventEmitter {
@@ -30,16 +33,17 @@ export class Demand extends EventEmitter {
     private api: RequestorApi,
     private properties: Array<MarketProperty>,
     private constraints: Array<string>,
-    private allowedPaymentPlatforms: Array<string>,
     private logger?: Logger
   ) {
     super();
-    this.subscribe().catch();
+    this.subscribe().catch((e) => this.logger?.error(`Could not collect offers. ${e}`));
+    this.logger?.info(`Demand ${id} created and published on the market`);
   }
 
   async unsubscribe() {
     this.isRunning = false;
     await this.api.unsubscribeDemand(this.id);
+    this.logger?.debug(`Demand ${this.id} unsubscribed`);
   }
 
   private async subscribe() {
@@ -48,30 +52,14 @@ export class Demand extends EventEmitter {
         const { data: events } = await this.api.collectOffers(this.id, 3, 10);
         for (const event of events as ProposalEvent[]) {
           if (event.eventType !== "ProposalEvent") continue;
-          if (event.proposal.state === ProposalAllOfStateEnum.Initial) {
-            const commonPaymentPlatforms = this.getCommonPaymentPlatforms(event.proposal.properties);
-            this.properties["golem.com.payment.chosen-platform"] = commonPaymentPlatforms?.[0];
-            const proposal = new Proposal(this.id, this.api, event.proposal, this.getDemandRequest());
-            if (!commonPaymentPlatforms?.length) {
-              await proposal.reject("No common payments platform");
-              this.logger?.debug(`Proposal ${proposal.proposalId} rejected. Reason: No common payments platform`);
-            } else this.emit("proposal", proposal);
-          } else if (event.proposal.state === ProposalAllOfStateEnum.Draft) {
-            this.emit("offer", new Offer(this.id, event.proposal));
-          }
+          const proposal = new Proposal(this.id, this.api, event.proposal, this.getDemandRequest());
+          this.emit(DemandEvent.ProposalReceived, proposal);
         }
         await sleep(2);
       } catch (error) {
-        // TODO: error handling
+        this.logger?.warn(`Could not collect offers. ${error.response?.data?.message || error}`);
       }
     }
-  }
-
-  private getCommonPaymentPlatforms(proposalProperties): string[] | undefined {
-    const providerPlatforms = Object.keys(proposalProperties)
-      .filter((prop) => prop.startsWith("golem.com.payment.platform."))
-      .map((prop) => prop.split(".")[4]) || ["NGNT"];
-    return this.allowedPaymentPlatforms.filter((p) => providerPlatforms.includes(p));
   }
 
   private getDemandRequest(): DemandOfferBase {

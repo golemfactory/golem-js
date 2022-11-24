@@ -10,7 +10,10 @@ import { Configuration } from "ya-ts-client/dist/ya-market";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import { YagnaOptions } from "../../executor";
 
-const DEFAULT_TIMEOUT = 30000;
+const DEFAULT_OPTIONS = {
+  TIMEOUT: 30000,
+  SUBNET_TAG: "devnet-beta",
+};
 
 export class DemandFactory {
   private properties: Array<MarketProperty> = [];
@@ -25,8 +28,8 @@ export class DemandFactory {
     private allocations: Allocation[],
     { subnetTag, timeout, yagnaOptions, logger }: DemandOptions
   ) {
-    this.timeout = timeout || DEFAULT_TIMEOUT;
-    this.subnetTag = subnetTag;
+    this.timeout = timeout || DEFAULT_OPTIONS.TIMEOUT;
+    this.subnetTag = subnetTag || DEFAULT_OPTIONS.SUBNET_TAG;
     this.yagnaOptions = yagnaOptions;
     this.logger = logger;
   }
@@ -47,14 +50,7 @@ export class DemandFactory {
     const { data: demandId } = await api.subscribeDemand(demandRequest).catch((e) => {
       throw new Error(`Could not publish demand on the market. ${e.response?.data || e}`);
     });
-    return new Demand(
-      demandId,
-      api,
-      this.properties,
-      this.constraints,
-      this.getAllowedPaymentsPlatforms(),
-      this.logger
-    );
+    return new Demand(demandId, api, this.properties, this.constraints, this.logger);
   }
 
   private async getDecorations(): Promise<MarketDecoration[]> {
@@ -76,14 +72,6 @@ export class DemandFactory {
       properties: [...activityProp.properties(), ...nodeProp.properties()],
       constraints: [`(${NodeInfoKeys.subnet_tag}=${this.subnetTag})`],
     };
-  }
-
-  private getAllowedPaymentsPlatforms(): string[] {
-    const paymentPlatforms: string[] = [];
-    this.allocations.forEach((a) => {
-      if (a.paymentPlatform) paymentPlatforms.push(a.paymentPlatform);
-    });
-    return paymentPlatforms;
   }
 }
 

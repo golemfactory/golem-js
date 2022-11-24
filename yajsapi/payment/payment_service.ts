@@ -62,7 +62,15 @@ export class PaymentService {
     this.logger?.debug("Payment service has been stopped");
   }
 
-  async createAllocations({ budget, payment, timeout }: MarketOptions): Promise<Allocation[]> {
+  async createAllocations(
+    budget?,
+    payment?: { driver: string; network: string },
+    timeout?: number
+  ): Promise<Allocation[]> {
+    // TODO: defaults
+    if (!budget) budget = 1;
+    if (!payment) payment = { driver: "erc-20", network: "rinkeby" };
+    if (!timeout) timeout = 30000;
     const { data: accounts } = await this.api.getRequestorAccounts().catch((e) => {
       throw new Error("Requestor accounts cannot be retrieved. " + e.response?.data?.message || e.response?.data || e);
     });

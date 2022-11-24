@@ -1,4 +1,4 @@
-export const offersInitial = [
+export const proposalsInitial = [
   // 0
   {
     eventType: "ProposalEvent",
@@ -792,7 +792,7 @@ export const offersInitial = [
   },
 ];
 
-export const offersDraft = [
+export const proposalsDraft = [
   {
     eventType: "ProposalEvent",
     eventDate: "2022-11-24T08:22:40.471Z",
