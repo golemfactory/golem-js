@@ -329,9 +329,10 @@ export class Payment {
           "getInvoiceEvents"
         );
         for (const ev of events) {
-          logger.debug(
-            `Received invoice event: ${JSON.stringify(ev)}, ` + `type: ${JSON.stringify(Object.getPrototypeOf(ev))}`
-          );
+          // TODO: temporary disabled until fix bug in https://github.com/golemfactory/yajsapi/issues/381
+          // logger.debug(
+          //   `Received invoice event: ${JSON.stringify(ev)}, ` + `type: ${JSON.stringify(Object.getPrototypeOf(ev))}`
+          // );
           ts = dayjs(ev.eventDate);
           if (ev.eventType === "InvoiceReceivedEvent") {
             const invoice = await self.invoice(ev["invoiceId"]);
@@ -373,9 +374,10 @@ export class Payment {
           "getDebitNoteEvents"
         );
         for (const ev of events) {
-          logger.debug(
-            `Received debit note event: ${JSON.stringify(ev)}, ` + `type: ${JSON.stringify(Object.getPrototypeOf(ev))}`
-          );
+          // TODO: temporary disabled until fix bug in https://github.com/golemfactory/yajsapi/issues/381
+          // logger.debug(
+          //   `Received debit note event: ${JSON.stringify(ev)}, ` + `type: ${JSON.stringify(Object.getPrototypeOf(ev))}`
+          // );
           ts = dayjs(ev.eventDate);
           if (ev.eventType === "DebitNoteReceivedEvent") {
             const debit_note = await self.debit_note(ev["debitNoteId"]);

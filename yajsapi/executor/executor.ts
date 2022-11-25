@@ -1,0 +1,147 @@
+import { Package } from "../package";
+import { WorkContext } from "./work_context";
+import { Executor, vm } from "./";
+import { Result } from "../activity";
+import { MarketStrategy } from "./strategy";
+import { Callable, sleep } from "../utils";
+import * as events from "./events";
+
+type ExecutorOptions = {
+  package: string | Package;
+  maxWorkers?: number;
+  timeout?: number;
+  budget?: number;
+  strategy?: MarketStrategy;
+  subnetTag?: string;
+  payment?: { driver?: string; network?: string };
+  eventConsumer?: Callable<[events.YaEvent], void>;
+  networkAddress?: string;
+  engine?: string;
+  minMemGib?: number;
+  minStorageGib?: number;
+  minCpuThreads?: number;
+  cores?: number;
+  capabilities?: string[];
+};
+
+type ExecutorOptionsMixin = string | ExecutorOptions;
+
+export type Worker<InputType = unknown, OutputType = unknown> = (
+  ctx: WorkContext,
+  data: InputType
+) => Promise<OutputType | void>;
+
+const DEFAULT_OPTIONS = {
+  maxWorkers: 5,
+  budget: "1.0",
+  strategy: null,
+  subnetTag: "devnet-beta",
+  payment: { driver: "erc20", network: "rinkeby" },
+};
+
+export class TaskExecutor {
+  private executor?: Executor;
+  private options: ExecutorOptions;
+  private image_hash?: string;
+
+  constructor(options: ExecutorOptionsMixin) {
+    if (typeof options === "string") {
+      this.image_hash = options;
+    }
+    this.options = {} as ExecutorOptions;
+    for (const key in typeof options === "object" ? { ...DEFAULT_OPTIONS, ...options } : DEFAULT_OPTIONS) {
+      this.options[key] = options[key] ?? process.env?.[key.toUpperCase()] ?? DEFAULT_OPTIONS[key];
+    }
+    this.options.payment = {
+      driver: (options as ExecutorOptions)?.payment?.driver || DEFAULT_OPTIONS.payment.driver,
+      network: (options as ExecutorOptions)?.payment?.network || DEFAULT_OPTIONS.payment.network,
+    };
+  }
+
+  async init() {
+    let taskPackage;
+    if (this.image_hash) {
+      taskPackage = await this.createPackage(this.image_hash);
+    } else if (typeof this.options.package === "string") {
+      taskPackage = await this.createPackage(this.options.package);
+    } else {
+      taskPackage = this.options.package;
+    }
+    this.executor = new Executor({
+      task_package: taskPackage,
+      max_workers: this.options.maxWorkers,
+      timeout: this.options.timeout,
+      budget: this.options.budget?.toString(),
+      strategy: this.options.strategy,
+      subnet_tag: this.options.subnetTag,
+      payment_driver: this.options.payment!.driver,
+      payment_network: this.options.payment!.network,
+      event_consumer: this.options.eventConsumer,
+      network_address: this.options.networkAddress,
+    });
+    await this.executor.ready();
+    this.executor.init().catch((error) => {
+      throw error;
+    });
+  }
+
+  beforeEach(worker: Worker) {
+    if (!this.executor) throw new Error("Task executor not initialized");
+    this.executor.submit_before(worker);
+  }
+
+  async run<OutputType = Result>(worker: Worker<undefined, OutputType>): Promise<OutputType> {
+    if (!this.executor) throw new Error("Task executor is not initialized");
+    return this.executor.submit_new_task<undefined, OutputType>(worker);
+  }
+
+  map<InputType, OutputType>(
+    data: Iterable<InputType>,
+    worker: Worker<InputType, OutputType>
+  ): AsyncIterable<OutputType | undefined> {
+    if (!this.executor) throw new Error("Task executor is not initialized");
+    const inputs = [...data];
+    const featureResults = inputs.map((value) => this.executor!.submit_new_task<InputType, OutputType>(worker, value));
+    const results: OutputType[] = [];
+    let resultsCount = 0;
+    featureResults.forEach((featureResult) => featureResult.then((res) => results.push(res)));
+    return {
+      [Symbol.asyncIterator](): AsyncIterator<OutputType | undefined> {
+        return {
+          async next() {
+            if (resultsCount === inputs.length) {
+              return Promise.resolve({ done: true, value: undefined });
+            }
+            while (results.length === 0 && resultsCount < inputs.length) {
+              await sleep(100, true);
+            }
+            resultsCount += 1;
+            return Promise.resolve({ done: false, value: results.pop() });
+          },
+        };
+      },
+    };
+  }
+
+  async forEach<InputType, OutputType>(
+    data: Iterable<InputType>,
+    worker: Worker<InputType, OutputType>
+  ): Promise<void> {
+    if (!this.executor) throw new Error("Task executor is not initialized");
+    await Promise.all([...data].map((value) => this.executor!.submit_new_task<InputType, OutputType>(worker, value)));
+  }
+
+  async end() {
+    await this.executor?.done();
+  }
+
+  private async createPackage(image_hash: string): Promise<Package> {
+    return vm.repo({ ...this.options, image_hash });
+  }
+}
+
+export async function createExecutor(options: ExecutorOptionsMixin) {
+  const executor = new TaskExecutor(options);
+  await executor.init();
+  return executor;
+}

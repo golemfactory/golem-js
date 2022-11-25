@@ -179,7 +179,7 @@ test("handle some error", async (t) => {
   activity["api"]["setExpectedErrors"]([error, error, error]);
   return new Promise((res) => {
     results.on("error", (error) => {
-      t.is(error.toString(), "Error: Some undefined error");
+      t.is(error.toString(), "Some undefined error");
       return res();
     });
     results.on("data", () => null);
@@ -208,7 +208,7 @@ test("handle gsb error", async (t) => {
     results.on("error", (error) => {
       t.is(
         error.toString(),
-        "Error: Command #0 getExecBatchResults error: GSB error: remote service at `test` error: GSB failure: Bad request: endpoint address not found"
+        "Command #0 getExecBatchResults error: GSB error: remote service at `test` error: GSB failure: Bad request: endpoint address not found"
       );
       return res();
     });
@@ -231,7 +231,7 @@ test("handle termination error", async (t) => {
   activity["stateApi"]["setExpected"]("getActivityState", [ActivityStateEnum.Terminated, ActivityStateEnum.Terminated]);
   return new Promise((res) => {
     results.on("error", (error) => {
-      t.is(error.toString(), "Error: GSB error: endpoint address not found. Terminated.");
+      t.is(error.toString(), "GSB error: endpoint address not found. Terminated.");
       return res();
     });
     results.on("data", () => null);
