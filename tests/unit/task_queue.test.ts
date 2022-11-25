@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { TaskQueue, TaskNotEligibleError } from "../../yajsapi/task/task_queue";
+import { TaskQueue } from "../../yajsapi/task";
 import TaskMock, { TaskState } from "../mock/task_mock";
 
 describe("#TaskQueue()", function () {
@@ -18,14 +18,14 @@ describe("#TaskQueue()", function () {
     const task = new TaskMock("taskA", TaskState.Pending);
     expect(() => {
       test_queue.addToEnd(task);
-    }).to.throw(TaskNotEligibleError);
+    }).to.throw(Error);
   });
 
   it("add() throws TaskIsDoneError if adding isDone Task", () => {
     const task = new TaskMock("taskA", TaskState.Done);
     expect(() => {
       test_queue.addToEnd(task);
-    }).to.throw(TaskNotEligibleError);
+    }).to.throw(Error);
   });
 
   it("get() should remove task form the queue", () => {

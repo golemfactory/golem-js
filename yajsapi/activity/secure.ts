@@ -5,10 +5,11 @@ import { attest, types } from "sgx-ias-js/index";
 import * as utf8 from "utf8";
 import { Credentials } from "ya-ts-client/dist/ya-activity/src/models";
 import { yaActivity } from "ya-ts-client";
+import { RequestorControlApi, RequestorStateApi } from "ya-ts-client/dist/ya-activity/api";
 
 export async function createSecureActivity(
-  api,
   agreementId: string,
+  api: { control: RequestorControlApi; state: RequestorStateApi },
   options?: ActivityOptions
 ): Promise<SecureActivity> {
   if (!options?.taskPackage) {
@@ -18,7 +19,7 @@ export async function createSecureActivity(
   const publicKey = privateKey.publicKey();
   let cryptoCtx: CryptoCtx;
 
-  const { data: response } = await api.createActivity(
+  const { data: response } = await api.control.createActivity(
     {
       agreementId,
       requestorPubKey: publicKey.toString(),
@@ -68,21 +69,22 @@ export async function createSecureActivity(
       }
     }
   } catch (error) {
-    await api.destroyActivity(activityId, 10, { timeout: 11000 });
+    await api.control.destroyActivity(activityId, 10, { timeout: 11000 });
     throw error;
   }
 
-  return new SecureActivity(activityId, credentials.sgx, cryptoCtx);
+  return new SecureActivity(activityId, api, credentials, cryptoCtx);
 }
 
 export class SecureActivity extends Activity {
   constructor(
     public readonly id,
+    api,
     private credentials: Credentials,
     private cryptoCtx: CryptoCtx,
     protected readonly options?: ActivityOptions
   ) {
-    super(id, options);
+    super(id, api, options);
   }
   protected async send(script: yaActivity.ExeScriptRequest): Promise<string> {
     const secureRequest = {
@@ -94,7 +96,7 @@ export class SecureActivity extends Activity {
     const requestBuffer = Buffer.from(JSON.stringify(secureRequest));
     const encryptedRequest = this.cryptoCtx.encrypt(requestBuffer);
 
-    const { data: encryptedResponse } = await this.api.callEncrypted(this.id, "", {
+    const { data: encryptedResponse } = await this.api.control.callEncrypted(this.id, "", {
       responseType: "arraybuffer",
       headers: {
         "Content-Type": "application/octet-stream",

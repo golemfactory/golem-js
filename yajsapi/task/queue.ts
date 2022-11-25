@@ -1,7 +1,6 @@
 export interface QueueableTask {
   isQueueable(): boolean;
 }
-export class TaskNotEligibleError extends Error {}
 
 export class TaskQueue<Task extends QueueableTask> {
   protected itemsStack: Array<Task> = [];
@@ -25,6 +24,6 @@ export class TaskQueue<Task extends QueueableTask> {
   }
 
   private _checkIfTaskIsEligibleForAdd(task: Task) {
-    if (!task.isQueueable()) throw new TaskNotEligibleError("You cannot add a task that is not in the correct state");
+    if (!task.isQueueable()) throw new Error("You cannot add a task that is not in the correct state");
   }
 }

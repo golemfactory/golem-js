@@ -5,10 +5,9 @@ import { GftpStorageProvider } from "../storage/gftp_provider";
 import { Package, repo } from "../package";
 import { MarketService, MarketStrategy } from "../market";
 import { AgreementPoolService } from "../agreement";
-import { Task, TaskQueue, TaskService } from "../task";
+import { Task, TaskQueue, TaskService, WorkContext } from "../task";
 import { PaymentService } from "../payment";
 import { NetworkService } from "../network";
-import { WorkContext } from "../work";
 import { Result } from "../activity";
 import { sleep, Logger, runtimeContextChecker, winstonLogger } from "../utils";
 import { EventBus } from "../events/event_bus";
@@ -42,8 +41,6 @@ export type YagnaOptions = {
   apiKey: string;
   basePath: string;
 };
-
-export type Worker<InputType, OutputType> = (ctx: WorkContext, data: InputType) => Promise<OutputType | void>;
 
 export class TaskExecutor {
   private readonly options: ExecutorOptions;

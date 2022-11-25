@@ -24,6 +24,7 @@ export class Agreement {
   private readonly api: RequestorApi;
   private readonly logger?: Logger;
   private readonly requestTimeout: number;
+  public readonly provider: { id: string; name: string };
 
   private agreementData?: AgreementModel;
 
@@ -31,6 +32,7 @@ export class Agreement {
     this.logger = configContainer.logger;
     this.api = configContainer.api;
     this.requestTimeout = configContainer.options?.requestTimeout || 10000;
+    this.provider = { id: "todo", name: "todo" };
     // this.refreshDetails()
     //   .then((x) => {
     //     this._providerId = x.id;
