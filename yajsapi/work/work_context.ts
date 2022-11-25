@@ -108,9 +108,7 @@ export class WorkContext {
       return;
     }
     if (state === ActivityStateStateEnum.Initialized) {
-      await this.activity.execute(
-        new Script([new Deploy(this.networkNode?.get_deploy_args()), new Start()]).getExeScriptRequest()
-      );
+      await this.activity.execute(new Script([new Deploy(), new Start()]).getExeScriptRequest());
     }
     let timeout = false;
     const timeoutId = setTimeout(() => (timeout = true), 30000);
@@ -162,9 +160,9 @@ export class WorkContext {
   getProviderInfo(): ProviderInfo {
     return this.nodeInfo;
   }
-  getWebsocketUri(port: number) {
-    return this.networkNode?.get_websocket_uri(port);
-  }
+  // getWebsocketUri(port: number) {
+  //   // return this.networkNode?.get_websocket_uri(port);
+  // }
 
   private async runOneCommand(command: Command): Promise<Result> {
     const script = new Script([command]);

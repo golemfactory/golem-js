@@ -1,9 +1,7 @@
 import axios from "axios";
-import { DemandBuilder } from "../props";
 import { VmPackageFormat, VmRequest } from "../props/inf";
 import { runtimeContextChecker, dayjs } from "../utils";
 import { MarketDecoration } from "ya-ts-client/dist/ya-payment/src/models";
-import { MarketProperty } from "ya-ts-client/dist/ya-payment/src/models/market-property";
 
 const FALLBACK_REPO_URL = "http://girepo.dev.golem.network:8000";
 const PUBLIC_DNS_URL = "https://dns.google/resolve?type=srv&name=";

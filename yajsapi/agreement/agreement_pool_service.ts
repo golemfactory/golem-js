@@ -134,7 +134,7 @@ export class AgreementPoolService implements ComputationHistory {
     return agreement;
   }
 
-  private async getAvailableProposal(): Promise<AgreementProposal> {
+  private async getAvailableProposal(): Promise<string> {
     let proposal;
     while (!proposal && this.isServiceRunning) {
       proposal = this.proposals.pop();

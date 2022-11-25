@@ -92,17 +92,16 @@ export class TaskExecutor {
     this.networkService = new NetworkService(this.yagnaOptions, this.eventBus, this.logger);
     this.paymentService = new PaymentService(this.yagnaOptions, this.eventBus, this.logger);
     this.marketService = new MarketService(
-      this.yagnaOptions,
+      this.paymentService,
+      this.agreementPoolService,
+      this.logger,
       {
         budget: this.options.budget!,
         payment: { driver: this.options.payment!.driver!, network: this.options.payment!.network! },
         subnetTag: this.options.subnetTag!,
         timeout: this.options.timeout!,
+        yagnaOptions: this.yagnaOptions,
       },
-      this.paymentService,
-      this.agreementPoolService,
-      this.eventBus,
-      this.logger,
       this.options.strategy
     );
     this.storageProvider = new GftpStorageProvider();

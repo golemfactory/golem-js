@@ -32,7 +32,7 @@ export class PaymentService {
   async getDemandDecoration({ budget, payment, timeout, subnetTag }: MarketOptions): Promise<MarketDecoration> {
     const { data: existingAllocations } = await this.api.getAllocations().catch(() => ({ data: [] }));
     // TODO: how to filter existing allocations? by budget?
-    const availableAllocations = existingAllocations.filter((a) => parseFloat(a.remainingAmount) >= budget);
+    const availableAllocations = existingAllocations.filter((a) => parseFloat(a.remainingAmount) >= (budget || 1));
     const allocations = availableAllocations.length
       ? availableAllocations
       : await this.createAllocations({ budget, payment, timeout, subnetTag });
