@@ -125,6 +125,8 @@ export class AgreementPoolService implements ComputationHistory {
         this.logger?.error(`Could not create agreement form available proposal: ${e.message}`);
         // TODO: What we should do with used proposal in that case ?? unshift to begin ?
         await sleep(2);
+
+        // If id to go kill'em
         agreement = null;
       }
     }
