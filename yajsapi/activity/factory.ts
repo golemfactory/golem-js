@@ -1,7 +1,7 @@
 import { RequestorControlApi } from "ya-ts-client/dist/ya-activity/api";
 import { yaActivity } from "ya-ts-client";
 import { Activity, ActivityOptions } from "./activity";
-import { runtimeContextChecker } from "../../utils";
+import { runtimeContextChecker } from "../utils";
 
 export class ActivityFactory {
   private readonly api: RequestorControlApi;

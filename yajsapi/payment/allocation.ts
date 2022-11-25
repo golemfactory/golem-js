@@ -1,5 +1,5 @@
 import { RequestorApi, Allocation as Model, MarketDecoration } from "ya-ts-client/dist/ya-payment";
-import { MarketOptions } from "../market/market_service";
+import { MarketOptions } from "../market/service";
 
 export class Allocation {
   public readonly allocationId: string = "";

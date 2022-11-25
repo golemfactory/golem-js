@@ -1,12 +1,12 @@
 import { DemandOfferBase, ProposalEvent } from "ya-ts-client/dist/ya-market";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
-import { Package } from "../../package";
-import { Allocation } from "../../payment/allocation";
-import { YagnaOptions } from "../../executor";
+import { Package } from "../package";
+import { Allocation } from "../payment/allocation";
+import { YagnaOptions } from "../executor";
 import { DemandFactory, createDemandRequest } from "./factory";
 import { MarketProperty } from "ya-ts-client/dist/ya-payment/src/models/";
 import { Proposal } from "./proposal";
-import { Logger, sleep } from "../../utils";
+import { Logger, sleep } from "../utils";
 import EventEmitter from "events";
 
 export interface DemandOptions {

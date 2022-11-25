@@ -1,14 +1,14 @@
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market/src/models";
-import { Activity as ActivityProp, NodeInfo as NodeProp, NodeInfoKeys } from "../../props";
-import { dayjs, Logger } from "../../utils";
+import { Activity as ActivityProp, NodeInfo as NodeProp, NodeInfoKeys } from "../props";
+import { dayjs, Logger } from "../utils";
 import { MarketDecoration } from "ya-ts-client/dist/ya-payment";
 import { MarketProperty } from "ya-ts-client/dist/ya-payment/src/models";
-import { Package } from "../../package";
-import { Allocation } from "../../payment/allocation";
+import { Package } from "../package";
+import { Allocation } from "../payment/allocation";
 import { Demand, DemandOptions } from "./demand";
 import { Configuration } from "ya-ts-client/dist/ya-market";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
-import { YagnaOptions } from "../../executor";
+import { YagnaOptions } from "../executor";
 
 const DEFAULT_OPTIONS = {
   TIMEOUT: 30000,

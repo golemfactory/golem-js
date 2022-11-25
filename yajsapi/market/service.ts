@@ -1,8 +1,7 @@
 import { Logger } from "../utils";
 import { Package } from "../package";
-import { Demand } from "../core";
+import { Demand, Proposal, DemandEvent } from "./";
 import { DefaultMarketStrategy, MarketStrategy, SCORE_NEUTRAL } from "./strategy";
-import { Proposal, DemandEvent } from "../core";
 import { PaymentService } from "../payment";
 import { AgreementPoolService } from "../agreement";
 import { YagnaOptions } from "../executor";

@@ -1,4 +1,4 @@
-import { ActivityFactory } from "../core/activity";
+import { ActivityFactory } from "../activity";
 import { Task } from "./task";
 import { Logger, sleep } from "../utils";
 import { WorkContext } from "../work";

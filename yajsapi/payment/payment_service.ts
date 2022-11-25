@@ -7,7 +7,7 @@ import {
 import { Logger, dayjs } from "../utils";
 import { Allocation } from "./allocation";
 import { EventBus } from "../events/event_bus";
-import { MarketOptions } from "../market/market_service";
+import { MarketOptions } from "../market/service";
 import { DEFAULT_INVOICE_RECEIVE_TIMEOUT } from "../executor/defaults";
 
 export class PaymentService {

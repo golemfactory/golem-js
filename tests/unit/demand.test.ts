@@ -7,7 +7,7 @@ import chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 import { LoggerMock } from "../mock/logger";
-import { Demand, Proposal, DemandEvent } from "../../yajsapi/core";
+import { Demand, Proposal, DemandEvent } from "../../yajsapi/market";
 import { allocationMock, packageMock } from "../mock";
 import { proposalsInitial, proposalsDraft } from "../mock/fixtures/proposals";
 

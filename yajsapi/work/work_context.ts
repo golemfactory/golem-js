@@ -1,4 +1,4 @@
-import { Activity, Result } from "../core/activity";
+import { Activity, Result } from "../activity";
 import { Command, Deploy, DownloadFile, Run, Script, Start, UploadFile } from ".";
 import { StorageProvider } from "../storage/provider";
 import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity";

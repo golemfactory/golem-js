@@ -9,7 +9,7 @@ import { Task, TaskQueue, TaskService } from "../task";
 import { PaymentService } from "../payment";
 import { NetworkService } from "../network";
 import { WorkContext } from "../work";
-import { Result } from "../core/activity";
+import { Result } from "../activity";
 import { sleep, Logger, runtimeContextChecker, winstonLogger } from "../utils";
 import { EventBus } from "../events/event_bus";
 import { StorageProvider } from "../storage/provider";
