@@ -20,7 +20,7 @@ export class TaskService {
   private isRunning = false;
 
   constructor(
-    private tasksQueue: TaskQueue<Task<any, any>>,
+    private tasksQueue: TaskQueue<Task>,
     private agreementPoolService: AgreementPoolService,
     private paymentService: PaymentService,
     private logger?: Logger,

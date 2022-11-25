@@ -66,12 +66,12 @@ export class WorkContext {
   beginBatch() {
     return Batch.create(this.activity, this.storageProvider, this.logger);
   }
-  acceptResult(result: unknown) {
-    if (!this.resultAccepted) this.task.stop(result);
+  acceptResult(results: Result[]) {
+    if (!this.resultAccepted) this.task.stop(results);
     this.resultAccepted = true;
   }
   rejectResult(msg: string) {
-    if (!this.resultRejected && !this.resultAccepted) this.task.stop(null, new Error(msg), true);
+    if (!this.resultRejected && !this.resultAccepted) this.task.stop(undefined, new Error(msg), true);
     this.resultRejected = true;
     this.resultAccepted = true;
   }
