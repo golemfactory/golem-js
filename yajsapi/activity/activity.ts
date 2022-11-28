@@ -10,9 +10,14 @@ import { Readable } from "stream";
 import { Logger } from "../utils";
 import sleep from "../utils/sleep";
 import CancellationToken from "../utils/cancellationToken";
+import { Package } from "../package";
+import { Allocation } from "../payment/allocation";
+import { DemandFactory } from "../market/factory";
+import { DemandOptions } from "../market/demand";
+import { ActivityFactory } from "./factory";
 
 export interface ActivityOptions {
-  credentials?: { apiKey?: string; basePath?: string };
+  yagnaOptions?: { apiKey?: string; basePath?: string };
   requestTimeout?: number;
   executeTimeout?: number;
   exeBatchResultsFetchInterval?: number;
@@ -23,35 +28,34 @@ export interface ActivityOptions {
 export { ActivityStateEnum };
 
 export class Activity {
-  private readonly config: { apiKey: string; basePath: string };
-  protected readonly api: RequestorControlApi;
-  private readonly stateApi: RequestorStateApi;
   private readonly logger?: Logger;
   protected readonly requestTimeout: number;
   private readonly executeTimeout: number;
   private readonly exeBatchResultsFetchInterval: number;
 
   /**
-   * Create an Activity
-   * @param id - activity ID created by Activity Factory
+   * Create activity for given agreement ID
+   * @param agreementId
    * @param options - ActivityOptions
-   * @param options.credentials.apiKey - Yagna Api Key
-   * @param options.credentials.basePath - Yagna base path to Activity REST Api
+   * @param options.yagnaOptions.apiKey - Yagna Api Key
+   * @param options.yagnaOptions.basePath - Yagna base path to Activity REST Api
    * @param options.requestTimeout - timeout for sending and creating batch
    * @param options.executeTimeout - timeout for executing batch
    * @param options.exeBatchResultsFetchInterval - interval for fetching batch results while polling
    * @param options.logger - logger module
-   * @param options.taskPackage - required for create secure activity
+   * @param options.taskPackage
+   * @param secure - defines if activity will be secure type
    */
-  constructor(public readonly id, protected readonly options?: ActivityOptions) {
-    const apiKey = this.options?.credentials?.apiKey || process.env.YAGNA_APPKEY;
-    const basePath = this.options?.credentials?.basePath || process.env.YAGNA_API_BASEPATH;
-    if (!apiKey) throw new Error("Api key not defined");
-    if (!basePath) throw new Error("Api base path not defined");
-    this.config = { apiKey, basePath };
-    const apiConfig = new yaActivity.Configuration({ apiKey, basePath, accessToken: apiKey });
-    this.api = new RequestorControlApi(apiConfig);
-    this.stateApi = new RequestorStateApi(apiConfig);
+  static async create(agreementId: string, options?: ActivityOptions, secure = false): Promise<Activity> {
+    const factory = new ActivityFactory(agreementId, options);
+    return factory.create(secure);
+  }
+
+  constructor(
+    public readonly id,
+    protected readonly api: { control: RequestorControlApi; state: RequestorStateApi },
+    protected readonly options?: ActivityOptions
+  ) {
     this.requestTimeout = options?.requestTimeout || 10000;
     this.executeTimeout = options?.executeTimeout || 240000;
     this.exeBatchResultsFetchInterval = options?.exeBatchResultsFetchInterval || 3000;
@@ -99,7 +103,7 @@ export class Activity {
    */
   public async getState(): Promise<ActivityStateEnum> {
     try {
-      const { data } = await this.stateApi.getActivityState(this.id);
+      const { data } = await this.api.state.getActivityState(this.id);
       return data.state[0];
     } catch (error) {
       this.logger?.warn(`Cannot query activity state: ${error}`);
@@ -108,12 +112,12 @@ export class Activity {
   }
 
   protected async send(script: yaActivity.ExeScriptRequest): Promise<string> {
-    const { data: batchId } = await this.api.exec(this.id, script, { timeout: this.requestTimeout });
+    const { data: batchId } = await this.api.control.exec(this.id, script, { timeout: this.requestTimeout });
     return batchId;
   }
 
   private async end() {
-    await this.api
+    await this.api.control
       .destroyActivity(this.id, this.requestTimeout, { timeout: (this.requestTimeout + 1) * 1000 })
       .catch((error) => {
         this.logger?.warn(`Got API Exception when destroying activity ${this.id}: ${error}`);
@@ -140,7 +144,7 @@ export class Activity {
             return this.destroy(new Error(`Activity ${activityId} has been interrupted.`));
           }
           try {
-            const { data: results }: { data: Result[] } = await api.getExecBatchResults(activityId, batchId);
+            const { data: results }: { data: Result[] } = await api.control.getExecBatchResults(activityId, batchId);
             const newResults = results.slice(lastIndex + 1);
             if (Array.isArray(newResults) && newResults.length) {
               newResults.forEach((result) => {
@@ -164,10 +168,12 @@ export class Activity {
   }
 
   private async streamingBatch(batchId, batchSize, startTime, timeout, cancellationToken): Promise<Readable> {
-    const eventSource = new EventSource(`${this.config.basePath}/activity/${this.id}/exec/${batchId}`, {
+    const basePath = this.options?.yagnaOptions?.basePath || this.api.control["configuration"]?.basePath;
+    const apiKey = this.options?.yagnaOptions?.apiKey || this.api.control["configuration"]?.apiKey;
+    const eventSource = new EventSource(`${basePath}/activity/${this.id}/exec/${batchId}`, {
       headers: {
         Accept: "text/event-stream",
-        Authorization: `Bearer ${this.config.apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
     });
 
@@ -258,7 +264,7 @@ export class Activity {
 
   private async isTerminated(): Promise<{ terminated: boolean; reason?: string; errorMessage?: string }> {
     try {
-      const { data } = await this.stateApi.getActivityState(this.id);
+      const { data } = await this.api.state.getActivityState(this.id);
       return {
         terminated: data?.state?.[0] === ActivityStateEnum.Terminated,
         reason: data?.reason,

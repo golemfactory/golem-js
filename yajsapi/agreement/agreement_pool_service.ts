@@ -10,8 +10,6 @@ import { ComputationHistory } from "../market/strategy";
 
 export interface AgreementProposal {
   proposalId: string;
-  isUsed: boolean;
-  markAsUsed(): void;
 }
 
 // TODO: This is now in rest/market - think about a better place
@@ -24,11 +22,12 @@ export class AgreementPoolService implements ComputationHistory {
   private eventPoolingInterval: number;
   private eventPoolingMaxEventsPerRequest: number;
 
-  private proposals: AgreementProposal[] = [];
+  private proposals: string[] = [];
   private agreements = new Map<string, Agreement>();
   private agreementIdsToReuse: string[] = [];
   private isServiceRunning = false;
   private lastAgreementRejectedByProvider = new Map<string, boolean>();
+  private initialTime = 0;
 
   constructor(private readonly configContainer: AgreementConfigContainer) {
     this.logger = configContainer.logger;
@@ -39,13 +38,14 @@ export class AgreementPoolService implements ComputationHistory {
   }
 
   async run() {
-    this.logger?.info("The Agreement Pool Service has started");
     this.isServiceRunning = true;
+    this.initialTime = +new Date();
+    this.logger?.debug("Agreement Pool Service has started");
   }
 
-  addProposal(proposal: AgreementProposal) {
-    this.logger?.debug(`New offer proposal added to pool`);
-    this.proposals.push(proposal);
+  addProposal(proposalId: string) {
+    this.logger?.debug(`New offer proposal added to pool (${proposalId})`);
+    this.proposals.push(proposalId);
   }
 
   async getAgreement(): Promise<Agreement> {
@@ -60,19 +60,20 @@ export class AgreementPoolService implements ComputationHistory {
       await agreement.terminate();
       this.agreements.delete(agreementId);
     }
+    this.logger?.debug(`Agreement ${agreementId} has been released ${allowReuse ? "for reuse" : ""}`);
   }
 
   async end() {
     this.isServiceRunning = false;
-    await this.terminateAll();
-    this.logger?.info("The Agreement Pool Service has been stopped");
+    await this.terminateAll({ message: "All computations done" });
+    this.logger?.debug("Agreement Pool Service has been stopped");
   }
 
   isProviderLastAgreementRejected(providerId: string): boolean {
     return !!this.lastAgreementRejectedByProvider.get(providerId);
   }
 
-  async terminateAll(reason?: { [key: string]: object }) {
+  async terminateAll(reason?: { [key: string]: string }) {
     for (const agreement of this.agreements.values()) {
       await agreement
         .terminate(reason)
@@ -106,13 +107,13 @@ export class AgreementPoolService implements ComputationHistory {
   private async createAgreement(): Promise<Agreement> {
     let agreement;
     while (!agreement && this.isServiceRunning) {
-      const proposal = await this.getAvailableProposal();
-      if (!proposal) break;
+      const proposalId = await this.getAvailableProposal();
+      if (!proposalId) break;
 
-      this.logger?.debug(`Creating agreement using proposal ID: ${proposal.proposalId}`);
+      this.logger?.debug(`Creating agreement using proposal ID: ${proposalId}`);
       try {
         const agreementFactory = new AgreementFactory(this.configContainer);
-        agreement = await agreementFactory.create(proposal);
+        agreement = await agreementFactory.create(proposalId);
         agreement = await this.waitForAgreementApproval(agreement);
 
         const state = await agreement.getState();
@@ -131,16 +132,16 @@ export class AgreementPoolService implements ComputationHistory {
       }
     }
     this.agreements.set(agreement.id, agreement);
-    this.logger?.info(`Agreement ${agreement.id} created`);
+    this.logger?.debug(`Agreement ${agreement.id} created with provider ${agreement.getProviderInfo().providerName}`);
     return agreement;
   }
 
-  private async getAvailableProposal(): Promise<AgreementProposal> {
+  private async getAvailableProposal(): Promise<string> {
     let proposal;
     while (!proposal && this.isServiceRunning) {
       proposal = this.proposals.pop();
       if (!proposal) {
-        this.logger?.warn(`No offers have been collected from the market`);
+        if (+new Date() > this.initialTime + 10000) this.logger?.warn(`No offers have been collected from the market`);
         await sleep(10);
       }
     }
@@ -156,10 +157,11 @@ export class AgreementPoolService implements ComputationHistory {
     }
 
     let timeout = false;
-    setTimeout(() => (timeout = true), 10000);
+    const timeoutId = setTimeout(() => (timeout = true), 10000);
     while ((await agreement.isFinalState()) && !timeout) {
       await sleep(2);
     }
+    clearTimeout(timeoutId);
     return agreement;
   }
 }

@@ -1,9 +1,7 @@
 import axios from "axios";
-import { DemandBuilder } from "../props";
 import { VmPackageFormat, VmRequest } from "../props/inf";
 import { runtimeContextChecker, dayjs } from "../utils";
 import { MarketDecoration } from "ya-ts-client/dist/ya-payment/src/models";
-import { MarketProperty } from "ya-ts-client/dist/ya-payment/src/models/market-property";
 
 const FALLBACK_REPO_URL = "http://girepo.dev.golem.network:8000";
 const PUBLIC_DNS_URL = "https://dns.google/resolve?type=srv&name=";
@@ -38,14 +36,6 @@ export class Constraints {
 
 // Information on task package to be used for running tasks on providers.
 export class Package {
-  async resolve_url(self): Promise<void | string> {
-    // Return package URL.
-  }
-
-  async decorate_demand(demand: DemandBuilder) {
-    // Add package information to a Demand.
-  }
-
   async getDemandDecoration(): Promise<MarketDecoration> {
     // TMP: the same as decorate demand
     return {} as MarketDecoration;
@@ -75,11 +65,11 @@ export class VmPackage extends Package {
     return `hash:sha3:${image_hash}:${image_url}`;
   }
 
-  async decorate_demand(demand: DemandBuilder) {
-    const image_url = await this.resolve_url();
-    demand.ensure(this.constraints.toString());
-    demand.add(new VmRequest(image_url, VmPackageFormat.GVMKIT_SQUASH));
-  }
+  // async decorate_demand(demand: DemandBuilder) {
+  //   const image_url = await this.resolve_url();
+  //   demand.ensure(this.constraints.toString());
+  //   demand.add(new VmRequest(image_url, VmPackageFormat.GVMKIT_SQUASH));
+  // }
 
   async getDemandDecoration(): Promise<MarketDecoration> {
     const imageUrl = await this.resolve_url();

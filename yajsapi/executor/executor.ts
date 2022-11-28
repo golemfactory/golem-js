@@ -1,10 +1,13 @@
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+import { GftpStorageProvider } from "../storage/gftp_provider";
+
+// const log = require("why-is-node-running"); // should be your first require
 import { Package, repo } from "../package";
 import { MarketService, MarketStrategy } from "../market";
 import { AgreementPoolService } from "../agreement";
-import { Task, TaskQueue, TaskService } from "../task";
+import { Task, TaskQueue, TaskService, WorkContext } from "../task";
 import { PaymentService } from "../payment";
 import { NetworkService } from "../network";
-import { WorkContext } from "../work";
 import { Result } from "../activity";
 import { sleep, Logger, runtimeContextChecker, winstonLogger } from "../utils";
 import { EventBus } from "../events/event_bus";
@@ -19,8 +22,7 @@ export type ExecutorOptions = {
   budget?: number;
   strategy?: MarketStrategy;
   subnetTag?: string;
-  paymentDriver?: string;
-  paymentNetwork?: string;
+  payment?: { driver?: string; network?: string };
   networkAddress?: string;
   engine?: string;
   minMemGib?: number;
@@ -39,8 +41,6 @@ export type YagnaOptions = {
   apiKey: string;
   basePath: string;
 };
-
-export type Worker<InputType, OutputType> = (ctx: WorkContext, data: InputType) => Promise<OutputType | void>;
 
 export class TaskExecutor {
   private readonly options: ExecutorOptions;
@@ -67,6 +67,10 @@ export class TaskExecutor {
       : DEFAULT_EXECUTOR_OPTIONS) {
       this.options[key] = options[key] ?? process.env?.[key.toUpperCase()] ?? DEFAULT_EXECUTOR_OPTIONS[key];
     }
+    this.options.payment = {
+      driver: (options as ExecutorOptions)?.payment?.driver || DEFAULT_EXECUTOR_OPTIONS.payment.driver,
+      network: (options as ExecutorOptions)?.payment?.network || DEFAULT_EXECUTOR_OPTIONS.payment.network,
+    };
     this.yagnaOptions = {
       apiKey: options?.["yagnaOptions"]?.["apiKey"] || process?.env?.["YAGNA_APPKEY"],
       basePath: options?.["yagnaOptions"]?.["basePath"] || process?.env?.["YAGNA_URL"] || DEFAULT_YAGNA_API_URL,
@@ -85,20 +89,19 @@ export class TaskExecutor {
     this.networkService = new NetworkService(this.yagnaOptions, this.eventBus, this.logger);
     this.paymentService = new PaymentService(this.yagnaOptions, this.eventBus, this.logger);
     this.marketService = new MarketService(
-      this.yagnaOptions,
-      {
-        budget: this.options.budget!,
-        paymentDriver: this.options.paymentDriver!,
-        paymentNetwork: this.options.paymentNetwork!,
-        subnetTag: this.options.subnetTag!,
-        timeout: this.options.timeout!,
-      },
       this.paymentService,
       this.agreementPoolService,
-      this.eventBus,
       this.logger,
+      {
+        budget: this.options.budget!,
+        payment: { driver: this.options.payment!.driver!, network: this.options.payment!.network! },
+        subnetTag: this.options.subnetTag!,
+        timeout: this.options.timeout!,
+        yagnaOptions: this.yagnaOptions,
+      },
       this.options.strategy
     );
+    this.storageProvider = new GftpStorageProvider();
     this.taskService = new TaskService(
       this.yagnaOptions,
       this.taskQueue,
@@ -128,7 +131,9 @@ export class TaskExecutor {
     if (this.options.networkAddress) {
       this.networkService.run(this.options.networkAddress).catch((e) => this.handleCriticalError(e));
     }
-    this.logger?.info("Task Executor has started");
+    this.logger?.info(
+      `Task Executor has started using subnet ${this.options.subnetTag}, network: ${this.options.payment?.network}, driver: ${this.options.payment?.driver}`
+    );
   }
 
   async end() {
@@ -137,6 +142,9 @@ export class TaskExecutor {
     await this.taskService.end();
     await this.paymentService.end();
     await this.networkService.end();
+    this.storageProvider?.close();
+    this.logger?.info("Task Executor has been stopped");
+    // log();
   }
 
   beforeEach(worker: Worker<unknown, unknown>) {
@@ -196,10 +204,12 @@ export class TaskExecutor {
     const task = new Task<InputType, OutputType>(worker, data, this.initWorker);
     this.taskQueue.addToEnd(task);
     let timeout = false;
-    // todo: timeout to config..?
-    setTimeout(() => (timeout = true), 40000);
+    const timeoutId = setTimeout(() => (timeout = true), this.options.timeout);
     while (!timeout) {
-      if (task.isFinished()) return task.getResults();
+      if (task.isFinished()) {
+        clearTimeout(timeoutId);
+        return task.getResults();
+      }
       await sleep(2);
     }
   }
@@ -207,7 +217,15 @@ export class TaskExecutor {
   private handleCriticalError(e: Error) {
     this.logger?.error(e.toString());
     this.logger?.debug(e.stack);
-    process.exit(1);
+    this.logger?.warn("Trying to stop all services...");
+    this.end()
+      .catch((e) => {
+        this.logger?.error(e);
+        process.exit(2);
+      })
+      .then(() => {
+        process.exit(1);
+      });
   }
 }
 

@@ -1,11 +1,3 @@
-import chai from "chai";
-import chaiUuid from "chai-uuid";
-import chaiAsPromised from "chai-as-promised";
-chai.use(chaiUuid);
-chai.use(chaiAsPromised);
-
-const expect = chai.expect;
-
 import rewiremock from "rewiremock";
 import { RequestorControlApiMock } from "../mock/requestor_control_api";
 import { RequestorSateApiMock } from "../mock/requestor_state_api";
@@ -16,63 +8,60 @@ rewiremock("ya-ts-client/dist/ya-activity/api").with({
 });
 rewiremock("eventsource").with(EventSourceMock);
 rewiremock.enable();
-
+import chai, { expect } from "chai";
+import chaiUuid from "chai-uuid";
+import chaiAsPromised from "chai-as-promised";
+chai.use(chaiUuid);
+chai.use(chaiAsPromised);
 import { StorageProviderMock } from "../mock/storage_provider";
-import { Activity, ActivityStateEnum, ActivityFactory } from "../../yajsapi/activity";
+import { Activity, ActivityStateEnum } from "../../yajsapi/activity";
 import { CancellationToken } from "../../yajsapi/utils";
-import { Deploy, Start, Run, Terminate, UploadFile, DownloadFile, Script, Capture } from "../../yajsapi/work";
+import { Deploy, Start, Run, Terminate, UploadFile, DownloadFile, Script, Capture } from "../../yajsapi/script";
 
-describe("#Activity()", () => {
+describe("Activity", () => {
   before(() => {
     process.env.YAGNA_APPKEY = "test";
     process.env.YAGNA_API_BASEPATH = "http://127.0.0.1:7465/activity-api/v1";
   });
 
   it("create activity", async () => {
-    const factory = new ActivityFactory();
-    const activity = await factory.create("test_agreement_id");
+    const activity = await Activity.create("test_agreement_id");
     expect(activity).to.be.instanceof(Activity);
     expect(activity.id).to.be.a.guid();
   });
 
-  it("create activity without credentials", () => {
+  it("create activity without credentials", async () => {
     process.env.YAGNA_APPKEY = "";
-    expect(() => new Activity("test_id_0")).to.throw(Error, "Api key not defined");
+    await expect(Activity.create("test_id_0")).to.eventually.be.rejectedWith(Error, "Api key not defined");
     process.env.YAGNA_APPKEY = "test";
   });
 
-  it("create activity without api base path", () => {
-    process.env.YAGNA_API_BASEPATH = "";
-    expect(() => new Activity("test_id_0")).to.throw(Error, "Api base path not defined");
-    process.env.YAGNA_API_BASEPATH = "http://127.0.0.1:7465/activity-api/v1";
-  });
-
   it("execute commands on activity", async () => {
-    const activity = new Activity("test_id");
+    const activity = await Activity.create("test_id");
     const streamResult = await activity.execute(new Deploy().toExeScriptRequest());
     const { value: result } = await streamResult[Symbol.asyncIterator]().next();
     expect(result.result).to.equal("Ok");
   });
 
   it("execute commands and get state", async () => {
-    const activity = new Activity("test_id");
+    const activity = await Activity.create("test_id");
     const streamResult = await activity.execute(new Run("test_command").toExeScriptRequest());
     const { value: result } = await streamResult[Symbol.asyncIterator]().next();
-    activity["stateApi"]["setExpected"]("getActivityState", [ActivityStateEnum.Ready, null]);
+    activity["api"]["state"]["setExpected"]("getActivityState", [ActivityStateEnum.Ready, null]);
     const stateAfterRun = await activity.getState();
     expect(result.result).to.equal("Ok");
     expect(stateAfterRun).to.equal(ActivityStateEnum.Ready);
   });
 
   it("execute script and get results by iterator", async () => {
-    const activity = new Activity("test_id");
+    const activity = await Activity.create("test_id");
     const command1 = new Deploy();
     const command2 = new Start();
     const command3 = new Run("test_command1");
     const command4 = new Run("test_command2");
     const command5 = new Terminate();
-    const script = new Script([command1, command2, command3, command4, command5]);
-    activity["api"]["setExpectedResult"]([
+    const script = Script.create([command1, command2, command3, command4, command5]);
+    activity["api"]["control"]["setExpectedResult"]([
       ["stdout", "test"],
       ["stdout", "test"],
       ["stdout", "stdout_test_command_run_1"],
@@ -91,15 +80,15 @@ describe("#Activity()", () => {
   });
 
   it("execute script and get results by events", async () => {
-    const activity = new Activity("test_id");
+    const activity = await Activity.create("test_id");
     const command1 = new Deploy();
     const command2 = new Start();
     const command3 = new UploadFile(new StorageProviderMock(), "testSrc", "testDst");
     const command4 = new Run("test_command1");
     const command5 = new DownloadFile(new StorageProviderMock(), "testSrc", "testDst");
     const command6 = new Terminate();
-    const script = new Script([command1, command2, command3, command4, command5, command6]);
-    activity["api"]["setExpectedResult"]([
+    const script = Script.create([command1, command2, command3, command4, command5, command6]);
+    activity["api"]["control"]["setExpectedResult"]([
       ["stdout", "test"],
       ["stdout", "test"],
       ["stdout", "stdout_test_command_run_1"],
@@ -134,21 +123,21 @@ describe("#Activity()", () => {
   });
 
   it("cancel activity by cancellation token", async () => {
-    const activity = new Activity("test_id");
+    const activity = await Activity.create("test_id");
     const command1 = new Deploy();
     const command2 = new Start();
     const command3 = new Run("test_command1");
     const command4 = new Run("test_command2");
     const command5 = new Run("test_command3");
     const command6 = new Terminate();
-    const script = new Script([command1, command2, command3, command4, command5, command6]);
+    const script = Script.create([command1, command2, command3, command4, command5, command6]);
     await script.before();
     const cancellationToken = new CancellationToken();
     const results = await activity.execute(script.getExeScriptRequest(), undefined, undefined, cancellationToken);
     cancellationToken.cancel();
     return new Promise((res) => {
       results.on("error", (error) => {
-        expect(error.toString()).to.equal("Error: Activity test_id has been interrupted.");
+        expect(error.toString()).to.match(/Error: Activity .* has been interrupted/);
         return res();
       });
       results.on("data", () => null);
@@ -156,29 +145,32 @@ describe("#Activity()", () => {
   });
 
   it("get activity state", async () => {
-    const activity = new Activity("test_id");
-    activity["stateApi"]["setExpected"]("getActivityState", [ActivityStateEnum.Ready, ActivityStateEnum.Terminated]);
+    const activity = await Activity.create("test_id");
+    activity["api"]["state"]["setExpected"]("getActivityState", [
+      ActivityStateEnum.Ready,
+      ActivityStateEnum.Terminated,
+    ]);
     const state = await activity.getState();
     expect(state).to.equal(ActivityStateEnum.Ready);
   });
 
   it("stop activity", async () => {
-    const activity = new Activity("test_id");
+    const activity = await Activity.create("test_id");
     expect(await activity.stop()).to.be.true;
   });
 
   it("handle some error", async () => {
-    const activity = new Activity("test_id");
+    const activity = await Activity.create("test_id");
     const command1 = new Deploy();
     const command2 = new Start();
     const command3 = new Run("test_command1");
-    const script = new Script([command1, command2, command3]);
+    const script = Script.create([command1, command2, command3]);
     const results = await activity.execute(script.getExeScriptRequest());
     const error = {
       message: "Some undefined error",
       status: 400,
     };
-    activity["api"]["setExpectedErrors"]([error, error, error]);
+    activity["api"]["control"]["setExpectedErrors"]([error, error, error]);
     return new Promise((res) => {
       results.on("error", (error) => {
         expect(error.toString()).to.equal("Some undefined error");
@@ -189,7 +181,7 @@ describe("#Activity()", () => {
   });
 
   it("handle gsb error", async () => {
-    const activity = new Activity("test_id", {
+    const activity = await Activity.create("test_id", {
       exeBatchResultsFetchInterval: 10,
     });
     const command1 = new Deploy();
@@ -199,13 +191,13 @@ describe("#Activity()", () => {
     const command5 = new Run("test_command1");
     const command6 = new Run("test_command1");
     const command7 = new Run("test_command1");
-    const script = new Script([command1, command2, command3, command4, command5, command6, command7]);
+    const script = Script.create([command1, command2, command3, command4, command5, command6, command7]);
     const results = await activity.execute(script.getExeScriptRequest());
     const error = {
       message: "GSB error: remote service at `test` error: GSB failure: Bad request: endpoint address not found",
       status: 500,
     };
-    activity["api"]["setExpectedErrors"]([error, error, error]);
+    activity["api"]["control"]["setExpectedErrors"]([error, error, error]);
     return new Promise((res) => {
       results.on("error", (error) => {
         expect(error.toString()).to.equal(
@@ -218,18 +210,18 @@ describe("#Activity()", () => {
   });
 
   it("handle termination error", async () => {
-    const activity = new Activity("test_id");
+    const activity = await Activity.create("test_id");
     const command1 = new Deploy();
     const command2 = new Start();
     const command3 = new Run("test_command1");
-    const script = new Script([command1, command2, command3]);
+    const script = Script.create([command1, command2, command3]);
     const results = await activity.execute(script.getExeScriptRequest());
     const error = {
       message: "GSB error: endpoint address not found. Terminated.",
       status: 500,
     };
-    activity["api"]["setExpectedErrors"]([error, error, error]);
-    activity["stateApi"]["setExpected"]("getActivityState", [
+    activity["api"]["control"]["setExpectedErrors"]([error, error, error]);
+    activity["api"]["state"]["setExpected"]("getActivityState", [
       ActivityStateEnum.Terminated,
       ActivityStateEnum.Terminated,
     ]);
@@ -243,14 +235,14 @@ describe("#Activity()", () => {
   });
 
   it("handle timeout error", async () => {
-    const activity = new Activity("test_id");
+    const activity = await Activity.create("test_id");
     const command1 = new Deploy();
     const command2 = new Start();
     const command3 = new Run("test_command1");
     const command4 = new Run("test_command2");
     const command5 = new Run("test_command3");
-    const script = new Script([command1, command2, command3, command4, command5]);
-    activity["api"]["setExpectedResult"]([
+    const script = Script.create([command1, command2, command3, command4, command5]);
+    activity["api"]["control"]["setExpectedResult"]([
       ["stdout", "test"],
       ["stdout", "test"],
       ["stdout", "stdout_test_command_run_1"],
@@ -260,7 +252,7 @@ describe("#Activity()", () => {
     const results = await activity.execute(script.getExeScriptRequest(), false, 1);
     return new Promise((res, rej) => {
       results.on("error", (error) => {
-        expect(error.toString()).to.equal("Error: Activity test_id timeout.");
+        expect(error.toString()).to.match(/Error: Activity .* timeout/);
         return res();
       });
       // results.on("end", () => rej());
@@ -269,7 +261,7 @@ describe("#Activity()", () => {
   });
 
   it("execute script by streaming batch", async () => {
-    const activity = new Activity("test_id_2");
+    const activity = await Activity.create("test_id_2");
     const command1 = new Deploy();
     const command2 = new Start();
     const capture: Capture = {
@@ -278,7 +270,7 @@ describe("#Activity()", () => {
     };
     const command3 = new Run("test_command1", null, null, capture);
     const command4 = new Terminate();
-    const script = new Script([command1, command2, command3, command4]);
+    const script = Script.create([command1, command2, command3, command4]);
     const expectedEvents = [
       {
         type: "runtime",
@@ -331,7 +323,7 @@ describe("#Activity()", () => {
   });
 
   it("handle timeout error while streaming batch", async () => {
-    const activity = new Activity("test_id_3", { executeTimeout: 1 });
+    const activity = await Activity.create("test_id_3", { executeTimeout: 1 });
     const command1 = new Deploy();
     const command2 = new Start();
     const capture: Capture = {
@@ -340,12 +332,12 @@ describe("#Activity()", () => {
     };
     const command3 = new Run("test_command1", null, null, capture);
     const command4 = new Terminate();
-    const script = new Script([command1, command2, command3, command4]);
+    const script = Script.create([command1, command2, command3, command4]);
     await script.before();
     const results = await activity.execute(script.getExeScriptRequest(), true, 800);
     return new Promise((res, rej) => {
       results.on("error", (error) => {
-        expect(error.toString()).to.equal("Error: Activity test_id_3 timeout.");
+        expect(error.toString()).to.match(/Error: Activity .* timeout/);
         return res();
       });
       results.on("end", () => rej());
@@ -354,7 +346,7 @@ describe("#Activity()", () => {
   });
 
   it("cancel activity by cancellation token while streaming batch", async () => {
-    const activity = new Activity("test_id_3");
+    const activity = await Activity.create("test_id_3");
     const command1 = new Deploy();
     const command2 = new Start();
     const capture: Capture = {
@@ -363,14 +355,14 @@ describe("#Activity()", () => {
     };
     const command3 = new Run("test_command1", null, null, capture);
     const command4 = new Terminate();
-    const script = new Script([command1, command2, command3, command4]);
+    const script = Script.create([command1, command2, command3, command4]);
     await script.before();
     const cancellationToken = new CancellationToken();
     const results = await activity.execute(script.getExeScriptRequest(), true, undefined, cancellationToken);
     cancellationToken.cancel();
     return new Promise((res) => {
       results.on("error", (error) => {
-        expect(error.toString()).to.equal("Error: Activity test_id_3 has been interrupted.");
+        expect(error.toString()).to.match(/Error: Activity .* has been interrupted/);
         return res();
       });
       results.on("data", () => null);
@@ -378,7 +370,7 @@ describe("#Activity()", () => {
   });
 
   it("handle some error while streaming batch", async () => {
-    const activity = new Activity("test_id_5");
+    const activity = await Activity.create("test_id_5");
     const command1 = new Deploy();
     const command2 = new Start();
     const capture: Capture = {
@@ -387,7 +379,7 @@ describe("#Activity()", () => {
     };
     const command3 = new Run("test_command1", null, null, capture);
     const command4 = new Terminate();
-    const script = new Script([command1, command2, command3, command4]);
+    const script = Script.create([command1, command2, command3, command4]);
     const expectedErrors = [
       {
         type: "error",

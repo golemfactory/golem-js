@@ -1,4 +1,4 @@
-import { Proposal } from "./offer";
+import { Proposal } from "../market";
 import { MarketDecoration } from "ya-ts-client/dist/ya-payment/src/models";
 import { BillingScheme, ComLinear, Counter, PRICE_MODEL, PriceModel } from "../props/com";
 import { Logger } from "../utils";

@@ -13,10 +13,10 @@ export class AgreementFactory {
     this.api = configContainer.api;
   }
 
-  public async create(proposal: AgreementProposal): Promise<Agreement> {
+  public async create(proposalId: string): Promise<Agreement> {
     try {
       const agreementProposalRequest = {
-        proposalId: proposal.proposalId,
+        proposalId,
         validTo: dayjs().add(3600, "second").toISOString(),
       };
       const { data: agreementId } = await this.api.createAgreement(agreementProposalRequest, {
