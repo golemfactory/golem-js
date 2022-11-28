@@ -1,5 +1,5 @@
 import rewiremock from "rewiremock";
-import { MarketApiMock } from "../mock/market_api";
+import { MarketApiMock, setExpectedProposals } from "../mock/market_api";
 rewiremock("ya-ts-client/dist/ya-market/api").with({ RequestorApi: MarketApiMock });
 rewiremock.enable();
 import chai, { expect } from "chai";
@@ -29,7 +29,7 @@ describe("Market Service", () => {
   it("should respond initial proposal", async () => {
     const marketService = new MarketService(paymentServiceMock, agreementPoolServiceMock, logger);
     await marketService.run(packageMock);
-    marketService["demand"]?.["api"]["setExpectedProposals"](proposalsInitial);
+    setExpectedProposals(proposalsInitial);
     await logger.expectToInclude("Proposal hes been responded", 10);
     await marketService.end();
   });
@@ -37,7 +37,7 @@ describe("Market Service", () => {
   it("should add draft proposal to agreement pool", async () => {
     const marketService = new MarketService(paymentServiceMock, agreementPoolServiceMock, logger);
     await marketService.run(packageMock);
-    marketService["demand"]?.["api"]["setExpectedProposals"](proposalsDraft);
+    setExpectedProposals(proposalsDraft);
     await logger.expectToInclude("Proposal has been confirmed", 10);
     const addedProposalsIds = agreementPoolServiceMock["getProposalIds"]();
     expect(addedProposalsIds).to.deep.equal(proposalsDraft.map((p) => p.proposal.proposalId));
@@ -47,7 +47,7 @@ describe("Market Service", () => {
   it("should reject initial proposal without common payment platform", async () => {
     const marketService = new MarketService(paymentServiceMock, agreementPoolServiceMock, logger);
     await marketService.run(packageMock);
-    marketService["demand"]?.["api"]["setExpectedProposals"]([proposalsInitial[6]]);
+    setExpectedProposals([proposalsInitial[6]]);
     await logger.expectToMatch(/Proposal hes been rejected .* Reason: No common payment platform/, 10);
     await marketService.end();
   });
@@ -61,7 +61,7 @@ describe("Market Service", () => {
       marketStrategyAlwaysBan
     );
     await marketService.run(packageMock);
-    marketService["demand"]?.["api"]["setExpectedProposals"](proposalsInitial);
+    setExpectedProposals(proposalsInitial);
     await logger.expectToMatch(/Proposal hes been rejected .* Reason: Score is to low/, 10);
     await marketService.end();
   }).timeout(10000);

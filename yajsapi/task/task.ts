@@ -11,16 +11,20 @@ export enum TaskState {
 
 const MAX_RETRIES = 5;
 
-export class Task<InputType = unknown> implements QueueableTask {
+export class Task<InputType = unknown, OutputType = unknown> implements QueueableTask {
   private state = TaskState.New;
-  private results?: Result[];
+  private results?: OutputType;
   private retriesCount = 0;
 
-  constructor(private worker: Worker<InputType>, private data?: InputType, private initWorker?: Worker<undefined>) {}
+  constructor(
+    private worker: Worker<InputType, OutputType>,
+    private data?: InputType,
+    private initWorker?: Worker<undefined>
+  ) {}
   start() {
     this.state = TaskState.Pending;
   }
-  stop(results?: Result[], error?: Error, retry = true) {
+  stop(results?: OutputType, error?: Error, retry = true) {
     if (error) {
       ++this.retriesCount;
       this.state = retry && this.retriesCount <= MAX_RETRIES ? TaskState.Retry : TaskState.Rejected;
@@ -38,7 +42,7 @@ export class Task<InputType = unknown> implements QueueableTask {
   isFinished(): boolean {
     return this.state === TaskState.Done || this.state === TaskState.Rejected;
   }
-  getResults(): Result[] | undefined {
+  getResults(): OutputType | undefined {
     return this.results;
   }
   getData(): InputType | undefined {

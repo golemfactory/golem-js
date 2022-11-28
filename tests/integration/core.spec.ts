@@ -26,8 +26,13 @@ describe("Core (mid-level) modules", () => {
     const demand = await Demand.create(taskPackage, [allocation], { subnetTag });
     demand.on("proposal", (proposal) => proposal.respond());
     const offer = await new Promise((res) => demand.on("offer", res));
+
     const agreement = await Agreement.create(offer.id);
+    const { providerId, providerName } = agreement;
     await agreement.confirm();
+    const state = await agreement.getState();
+    await agreement.terminate("no reason");
+
     const activity = await Activity.create(agreement.id);
     const script = await Script.create(["echo 'Hello Golem'", "echo 'Hello World'"]);
     const exeScript = script.getExeScriptRequest();

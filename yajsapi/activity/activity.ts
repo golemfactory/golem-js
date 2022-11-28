@@ -10,10 +10,6 @@ import { Readable } from "stream";
 import { Logger } from "../utils";
 import sleep from "../utils/sleep";
 import CancellationToken from "../utils/cancellationToken";
-import { Package } from "../package";
-import { Allocation } from "../payment/allocation";
-import { DemandFactory } from "../market/factory";
-import { DemandOptions } from "../market/demand";
 import { ActivityFactory } from "./factory";
 
 export interface ActivityOptions {

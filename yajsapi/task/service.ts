@@ -1,5 +1,5 @@
 import { Task, WorkContext, TaskQueue } from "./";
-import { Logger } from "../utils";
+import { Logger, sleep } from "../utils";
 import { StorageProvider } from "../storage/provider";
 import { AgreementPoolService } from "../agreement";
 import { PaymentService } from "../payment";
@@ -15,12 +15,12 @@ export interface TaskOptions {
 
 export class TaskService {
   private activeTasks = new Set();
-  private activities = new Map();
+  private activities = new Map<string, string>();
   private initWorkersDone: Set<string> = new Set();
   private isRunning = false;
 
   constructor(
-    private tasksQueue: TaskQueue<Task>,
+    private tasksQueue: TaskQueue<Task<any, any>>,
     private agreementPoolService: AgreementPoolService,
     private paymentService: PaymentService,
     private logger?: Logger,
@@ -33,6 +33,7 @@ export class TaskService {
     this.isRunning = true;
     this.logger?.debug("Task Service has started");
     while (this.isRunning) {
+      await sleep(1);
       if (this.activeTasks.size >= MAX_PARALLEL_TASKS) continue;
       const task = this.tasksQueue.get();
       if (!task) continue;
@@ -45,42 +46,31 @@ export class TaskService {
     this.logger?.debug("Task Service has been stopped");
   }
 
-  private async startTask(task: Task<any, any>) {
+  private async startTask(task: Task) {
     task.start();
     const agreement = await this.agreementPoolService.getAgreement();
 
     let activity;
     this.paymentService.acceptPayments(agreement.id); // TODO: move it to payment service reactive for event TaskStarted
     try {
-      // TODO: move it to network service reactive for event NewProvider
-      const networkNode = await this.networkService?.addNode(agreement.provider.id);
-
       if (this.activities.has(agreement.id)) {
         activity = this.activities.get(agreement.id);
       } else {
-        activity = await Activity.create(agreement.id);
+        activity = await Activity.create(agreement.id, { logger: this.logger });
         this.activities.set(agreement.id, activity.id);
         this.logger?.debug(`Activity ${activity.id} created`);
       }
-      const ctx = new WorkContext(
-        agreement,
-        activity,
-        task,
-        agreement.provider,
-        this.storageProvider,
-        networkNode,
-        this.logger
-      );
+      const ctx = new WorkContext(agreement, activity, task, agreement.provider, this.storageProvider, this.logger);
       const worker = task.getWorker();
       const data = task.getData();
-      if (!this.initWorkersDone.has(activity.id)) {
+      if (task.getInitWorker() && !this.initWorkersDone.has(activity.id)) {
         await ctx.before();
         this.initWorkersDone.add(activity.id);
       }
       const results = await worker(ctx, data);
       task.stop(results);
     } catch (error) {
-      task.stop(null, error);
+      task.stop(undefined, error);
       if (task.isRetry()) {
         this.tasksQueue.addToBegin(task);
         this.logger?.warn("The task execution failed. Trying to redo the task. " + error);

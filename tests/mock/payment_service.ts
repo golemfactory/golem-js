@@ -1,4 +1,4 @@
-import { Allocation } from "../../yajsapi/core";
+import { Allocation } from "../../yajsapi/payment/allocation";
 import { PaymentService } from "../../yajsapi/payment";
 import { allocationMock } from "../mock";
 
@@ -11,5 +11,8 @@ export const paymentServiceMock: PaymentService = {
     timeout?: number
   ): Promise<Allocation[]> {
     return Promise.resolve([allocationMock]);
+  },
+  acceptPayments(id: string) {
+    return true;
   },
 };
