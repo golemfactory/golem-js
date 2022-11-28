@@ -1,30 +1,57 @@
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
-import { Agreement } from "./agreement";
-import { AgreementConfigContainer } from "./agreement_config_container";
+import { Agreement, AgreementOptions } from "./agreement";
 import { Logger, dayjs } from "../utils";
-import { AgreementProposal } from "./agreement_pool_service";
+import { Configuration } from "ya-ts-client/dist/ya-market";
+import { YagnaOptions } from "../executor";
+
+const DEFAULT_OPTIONS = {
+  REQUEST_TIMEOUT: 30000,
+  EXECUTE_TIMEOUT: 30000,
+  EVENT_POOLING_INT: 5,
+  EVENT_POOLING_MAX_EVENTS: 100,
+  SUBNET_TAG: "devnet-beta",
+};
 
 export class AgreementFactory {
-  private readonly api: RequestorApi;
   private logger?: Logger;
+  private yagnaOptions?: YagnaOptions;
+  private subnetTag?: string;
+  private requestTimeout?: number;
+  private executeTimeout?: number;
+  private eventPoolingInterval?: number;
+  private eventPoolingMaxEventsPerRequest?: number;
 
-  constructor(private readonly configContainer: AgreementConfigContainer) {
-    this.logger = configContainer.logger;
-    this.api = configContainer.api;
+  constructor({ subnetTag, requestTimeout, executeTimeout, eventPoolingInterval, eventPoolingMaxEventsPerRequest, yagnaOptions, logger }: AgreementOptions) {
+    this.requestTimeout = requestTimeout || DEFAULT_OPTIONS.REQUEST_TIMEOUT;
+    this.executeTimeout = executeTimeout || DEFAULT_OPTIONS.EXECUTE_TIMEOUT;
+    this.eventPoolingInterval = eventPoolingInterval || DEFAULT_OPTIONS.EVENT_POOLING_INT;
+    this.eventPoolingMaxEventsPerRequest = eventPoolingMaxEventsPerRequest || DEFAULT_OPTIONS.EVENT_POOLING_MAX_EVENTS;
+    this.subnetTag = subnetTag || DEFAULT_OPTIONS.SUBNET_TAG;
+    this.yagnaOptions = yagnaOptions;
+    this.logger = logger;
   }
 
-  public async create(proposalId: string): Promise<Agreement> {
+  async create(proposalId: string): Promise<Agreement> {
+    const api = new RequestorApi(
+        new Configuration({
+          apiKey: this.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY,
+          basePath: (this.yagnaOptions?.basePath || process.env.YAGNA_URL) + "/market-api/v1",
+          accessToken: this.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY,
+        })
+    );
     try {
       const agreementProposalRequest = {
         proposalId,
         validTo: dayjs().add(3600, "second").toISOString(),
       };
-      const { data: agreementId } = await this.api.createAgreement(agreementProposalRequest, {
+      const { data: agreementId } = await api.createAgreement(agreementProposalRequest, {
         timeout: 3000,
       });
-      const agreement = new Agreement(agreementId, this.configContainer);
-      await agreement.refreshDetails();
-      return agreement;
+      const { data } = await api.getAgreement(agreementId, { timeout: 3000 });
+      const providerName = data?.offer.properties["golem.node.id.name"] ?? null;
+      const providerId = data?.offer.providerId ?? null;
+
+      return new Agreement(agreementId, { id: providerId, name: providerName }, api);
     } catch (error) {
       throw error?.response?.data?.message || error;
     }

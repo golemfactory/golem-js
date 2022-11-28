@@ -1,12 +1,11 @@
 import { Logger } from "../utils";
-import { EventBus } from "../events/event_bus";
-import { Agreement, AgreementStateEnum } from "./agreement";
+import { Agreement, AgreementOptions, AgreementStateEnum } from "./agreement";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import sleep from "../utils/sleep";
 
 import { AgreementFactory } from "./factory";
-import { AgreementConfigContainer } from "./agreement_config_container";
 import { ComputationHistory } from "../market/strategy";
+import {Configuration} from "ya-ts-client/dist/ya-market";
 
 export interface AgreementProposal {
   proposalId: string;
@@ -17,7 +16,6 @@ export type TerminationReason = { message: string; "golem.requestor.code"?: stri
 
 export class AgreementPoolService implements ComputationHistory {
   private logger?: Logger;
-  private eventBus: EventBus;
   private api: RequestorApi;
   private eventPoolingInterval: number;
   private eventPoolingMaxEventsPerRequest: number;
@@ -29,12 +27,17 @@ export class AgreementPoolService implements ComputationHistory {
   private lastAgreementRejectedByProvider = new Map<string, boolean>();
   private initialTime = 0;
 
-  constructor(private readonly configContainer: AgreementConfigContainer) {
-    this.logger = configContainer.logger;
-    this.api = configContainer.api;
-    this.eventBus = configContainer.eventBus;
-    this.eventPoolingInterval = configContainer.options?.eventPoolingInterval || 10000;
-    this.eventPoolingMaxEventsPerRequest = configContainer.options?.eventPoolingMaxEventsPerRequest || 10;
+  constructor(private readonly agreementOptions: AgreementOptions) {
+    this.logger = agreementOptions.logger;
+    this.api = new RequestorApi(
+        new Configuration({
+          apiKey: agreementOptions.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY,
+          basePath: (agreementOptions.yagnaOptions?.basePath || process.env.YAGNA_URL) + "/market-api/v1",
+          accessToken: agreementOptions.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY,
+        })
+    );
+    this.eventPoolingInterval = agreementOptions?.eventPoolingInterval || 10000;
+    this.eventPoolingMaxEventsPerRequest = agreementOptions?.eventPoolingMaxEventsPerRequest || 10;
   }
 
   async run() {
@@ -112,7 +115,7 @@ export class AgreementPoolService implements ComputationHistory {
 
       this.logger?.debug(`Creating agreement using proposal ID: ${proposalId}`);
       try {
-        const agreementFactory = new AgreementFactory(this.configContainer);
+        const agreementFactory = new AgreementFactory(this.agreementOptions);
         agreement = await agreementFactory.create(proposalId);
         agreement = await this.waitForAgreementApproval(agreement);
 

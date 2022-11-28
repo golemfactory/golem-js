@@ -1,12 +1,13 @@
 import { Logger } from "../utils";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import { Agreement as AgreementModel, AgreementStateEnum } from "ya-ts-client/dist/ya-market/src/models";
-import { AgreementConfigContainer } from "./agreement_config_container";
 import { YagnaOptions } from "../executor";
+import { AgreementFactory } from "./factory";
 
 export { AgreementStateEnum };
 
 export interface AgreementOptions {
+  subnetTag?: string;
   yagnaOptions?: YagnaOptions;
   requestTimeout?: number;
   executeTimeout?: number;
@@ -22,49 +23,29 @@ export interface ProviderInfo {
 
 export class Agreement {
   private agreementData?: AgreementModel;
-  private requestTimeout = 10000;
+  private requestTimeout = 10000; // @TODO
 
   constructor(
     public readonly id,
     public readonly provider: { id: string; name: string },
     private readonly api: RequestorApi,
     private logger?: Logger
-  ) {
-    // this.refreshDetails()
-    //   .then((x) => {
-    //     this._providerId = x.id;
-    //   })
-    //   .catch((e) => {});
+  ) { }
+
+
+  static async create(proposalId: string, agreementOptions: AgreementOptions): Promise<Agreement> {
+    const factory = new AgreementFactory(agreementOptions);
+    return factory.create(proposalId)
   }
-  //
-  // get providerId() {
-  //   return this._providerId;
-  // }
 
   async refreshDetails() {
     const { data } = await this.api.getAgreement(this.id, { timeout: this.requestTimeout });
     this.agreementData = data;
   }
 
-  getProviderInfo(): ProviderInfo {
-    return {
-      providerName: this.agreementData!.offer.properties["golem.node.id.name"],
-      providerId: this.agreementData!.offer.providerId,
-    };
-  }
-
   async getState(): Promise<AgreementStateEnum> {
     await this.refreshDetails();
     return this.agreementData!.state;
-  }
-
-  async isFinalState(): Promise<boolean> {
-    const state = await this.getState();
-    return state !== AgreementStateEnum.Pending && state !== AgreementStateEnum.Proposal;
-  }
-
-  getAgreementData(): AgreementModel | undefined {
-    return this.agreementData;
   }
 
   async confirm() {
@@ -75,6 +56,11 @@ export class Agreement {
       this.logger?.error(`Cannot confirm agreement ${this.id}. ${error}`);
       throw error;
     }
+  }
+
+  async isFinalState(): Promise<boolean> {
+    const state = await this.getState();
+    return state !== AgreementStateEnum.Pending && state !== AgreementStateEnum.Proposal;
   }
 
   async terminate(reason?: { [key: string]: string }) {
