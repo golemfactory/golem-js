@@ -50,7 +50,7 @@ async function main(subnetTag, driver, network) {
 }
 
 program
-  .option("--subnet-tag <subnet>", "set subnet name, for example 'devnet-beta'")
+  .option("--subnet-tag <subnet>", "set subnet name, for example 'public'")
   .option("--payment-driver, --driver <driver>", "payment driver name, for example 'erc20'")
   .option("--payment-network, --network <network>", "network name, for example 'rinkeby'")
   .option("-d, --debug", "output extra debugging");

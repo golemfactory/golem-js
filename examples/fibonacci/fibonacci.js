@@ -19,7 +19,7 @@ async function main(fibo_n = 1, tasks_count = 1, subnetTag, driver, network) {
 program
   .requiredOption("-n, --fibonacci-number <n>", "fibonacci number", (val) => parseInt(val))
   .option("-c, --tasks-count <c>", "tasks count", (val) => parseInt(val))
-  .option("--subnet-tag <subnet>", "set subnet name, for example 'devnet-beta'")
+  .option("--subnet-tag <subnet>", "set subnet name, for example 'public'")
   .option("--payment-driver, --driver <driver>", "payment driver name, for example 'erc20'")
   .option("--payment-network, --network <network>", "network name, for example 'rinkeby'")
   .option("-d, --debug", "output extra debugging");
