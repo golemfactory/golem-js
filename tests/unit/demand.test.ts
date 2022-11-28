@@ -1,14 +1,13 @@
 import rewiremock from "rewiremock";
-import { MarketApiMock } from "../mock/market_api";
+import { MarketApiMock, setExpectedProposals } from "../mock/market_api";
 rewiremock("ya-ts-client/dist/ya-market/api").with({ RequestorApi: MarketApiMock });
 rewiremock.enable();
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
-import { LoggerMock } from "../mock/logger";
 import { Demand, Proposal, DemandEvent } from "../../yajsapi/market";
-import { allocationMock, packageMock } from "../mock";
+import { allocationMock, packageMock, LoggerMock } from "../mock";
 import { proposalsInitial, proposalsDraft } from "../mock/fixtures/proposals";
 
 const subnetTag = "testnet";
@@ -24,7 +23,7 @@ describe("Demand", () => {
 
   it("should get proposal after publish demand", async () => {
     const demand = await Demand.create(packageMock, [allocationMock], { subnetTag });
-    demand["api"]["setExpectedProposals"](proposalsInitial);
+    setExpectedProposals(proposalsInitial);
     const proposal = await new Promise((res) => demand.on(DemandEvent.ProposalReceived, res));
     expect(proposal).to.be.instanceof(Proposal);
     await demand.unsubscribe();
@@ -32,9 +31,9 @@ describe("Demand", () => {
 
   it("should get offer after publish demand and respond proposal", async () => {
     const demand = await Demand.create(packageMock, [allocationMock], { subnetTag });
-    demand["api"]["setExpectedProposals"](proposalsInitial);
+    setExpectedProposals(proposalsInitial);
     demand.on("proposal", (proposal) => proposal.respond());
-    demand["api"]["setExpectedProposals"](proposalsDraft);
+    setExpectedProposals(proposalsDraft);
     const proposal: Proposal = await new Promise((res) => demand.on(DemandEvent.ProposalReceived, res));
     expect(proposal).to.be.instanceof(Proposal);
     expect(proposal.isDraft()).to.be.true;

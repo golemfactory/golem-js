@@ -5,7 +5,7 @@ import { GftpStorageProvider } from "../storage/gftp_provider";
 import { Package, repo } from "../package";
 import { MarketService, MarketStrategy } from "../market";
 import { AgreementPoolService } from "../agreement";
-import { Task, TaskQueue, TaskService, WorkContext } from "../task";
+import { Task, TaskQueue, TaskService, Worker } from "../task";
 import { PaymentService } from "../payment";
 import { NetworkService } from "../network";
 import { Result } from "../activity";
@@ -103,14 +103,13 @@ export class TaskExecutor {
     );
     this.storageProvider = new GftpStorageProvider();
     this.taskService = new TaskService(
-      this.yagnaOptions,
       this.taskQueue,
-      this.eventBus,
       this.agreementPoolService,
       this.paymentService,
-      this.storageProvider,
+      this.logger,
+      { yagnaOptions: this.yagnaOptions },
       this.networkService,
-      this.logger
+      this.storageProvider
     );
   }
 
@@ -147,7 +146,7 @@ export class TaskExecutor {
     // log();
   }
 
-  beforeEach(worker: Worker<unknown, unknown>) {
+  beforeEach(worker: Worker) {
     this.initWorker = worker;
   }
 

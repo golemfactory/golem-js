@@ -4,10 +4,12 @@ import { StorageProvider } from "../storage/provider";
 import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity";
 import { sleep, Logger, runtimeContextChecker } from "../utils";
 import { Batch, Task } from "../task";
-import { NetworkNode } from "../network";
 import { Agreement } from "../agreement";
 
-export type Worker<InputType = unknown> = (ctx: WorkContext, data: InputType) => Promise<Result | void>;
+export type Worker<InputType = unknown, OutputType = unknown> = (
+  ctx: WorkContext,
+  data: InputType
+) => Promise<OutputType | undefined>;
 
 export class WorkContext {
   private resultAccepted = false;
@@ -16,9 +18,8 @@ export class WorkContext {
     private agreement: Agreement,
     private activity: Activity,
     private task: Task,
-    private provider: { name: string; id: string },
+    private provider: { name: string; id: string; networkConfig?: object },
     private storageProvider?: StorageProvider,
-    private networkNode?: NetworkNode,
     private logger?: Logger
   ) {}
   async before(): Promise<Result[] | void> {
@@ -29,7 +30,9 @@ export class WorkContext {
       return;
     }
     if (state === ActivityStateStateEnum.Initialized) {
-      await this.activity.execute(new Script([new Deploy(), new Start()]).getExeScriptRequest());
+      await this.activity.execute(
+        new Script([new Deploy(this.provider.networkConfig), new Start()]).getExeScriptRequest()
+      );
     }
     let timeout = false;
     const timeoutId = setTimeout(() => (timeout = true), 30000);

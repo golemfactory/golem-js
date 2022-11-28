@@ -1,6 +1,11 @@
 import rewiremock from "rewiremock";
-import { RequestorControlApiMock } from "../mock/requestor_control_api";
-import { RequestorSateApiMock } from "../mock/requestor_state_api";
+import {
+  RequestorControlApiMock,
+  RequestorSateApiMock,
+  setExpectedExeResults,
+  setExpectedErrors,
+  setExpectedStates,
+} from "../mock/activity_api";
 import EventSourceMock, { setExpectedErrorEvents, setExpectedEvents } from "../mock/event_source";
 rewiremock("ya-ts-client/dist/ya-activity/api").with({
   RequestorControlApi: RequestorControlApiMock,
@@ -15,11 +20,11 @@ chai.use(chaiUuid);
 chai.use(chaiAsPromised);
 import { StorageProviderMock } from "../mock/storage_provider";
 import { Activity, ActivityStateEnum } from "../../yajsapi/activity";
-import { CancellationToken } from "../../yajsapi/utils";
+import { CancellationToken, sleep } from "../../yajsapi/utils";
 import { Deploy, Start, Run, Terminate, UploadFile, DownloadFile, Script, Capture } from "../../yajsapi/script";
 
 describe("Activity", () => {
-  before(() => {
+  beforeEach(() => {
     process.env.YAGNA_APPKEY = "test";
     process.env.YAGNA_API_BASEPATH = "http://127.0.0.1:7465/activity-api/v1";
   });
@@ -32,7 +37,7 @@ describe("Activity", () => {
 
   it("create activity without credentials", async () => {
     process.env.YAGNA_APPKEY = "";
-    await expect(Activity.create("test_id_0")).to.eventually.be.rejectedWith(Error, "Api key not defined");
+    await expect(Activity.create("test_id_0")).to.be.rejectedWith("Api key not defined");
     process.env.YAGNA_APPKEY = "test";
   });
 
@@ -47,7 +52,7 @@ describe("Activity", () => {
     const activity = await Activity.create("test_id");
     const streamResult = await activity.execute(new Run("test_command").toExeScriptRequest());
     const { value: result } = await streamResult[Symbol.asyncIterator]().next();
-    activity["api"]["state"]["setExpected"]("getActivityState", [ActivityStateEnum.Ready, null]);
+    setExpectedStates([ActivityStateEnum.Ready, null]);
     const stateAfterRun = await activity.getState();
     expect(result.result).to.equal("Ok");
     expect(stateAfterRun).to.equal(ActivityStateEnum.Ready);
@@ -61,7 +66,7 @@ describe("Activity", () => {
     const command4 = new Run("test_command2");
     const command5 = new Terminate();
     const script = Script.create([command1, command2, command3, command4, command5]);
-    activity["api"]["control"]["setExpectedResult"]([
+    setExpectedExeResults([
       ["stdout", "test"],
       ["stdout", "test"],
       ["stdout", "stdout_test_command_run_1"],
@@ -88,7 +93,7 @@ describe("Activity", () => {
     const command5 = new DownloadFile(new StorageProviderMock(), "testSrc", "testDst");
     const command6 = new Terminate();
     const script = Script.create([command1, command2, command3, command4, command5, command6]);
-    activity["api"]["control"]["setExpectedResult"]([
+    setExpectedExeResults([
       ["stdout", "test"],
       ["stdout", "test"],
       ["stdout", "stdout_test_command_run_1"],
@@ -146,10 +151,7 @@ describe("Activity", () => {
 
   it("get activity state", async () => {
     const activity = await Activity.create("test_id");
-    activity["api"]["state"]["setExpected"]("getActivityState", [
-      ActivityStateEnum.Ready,
-      ActivityStateEnum.Terminated,
-    ]);
+    setExpectedStates([ActivityStateEnum.Ready, ActivityStateEnum.Terminated]);
     const state = await activity.getState();
     expect(state).to.equal(ActivityStateEnum.Ready);
   });
@@ -170,7 +172,7 @@ describe("Activity", () => {
       message: "Some undefined error",
       status: 400,
     };
-    activity["api"]["control"]["setExpectedErrors"]([error, error, error]);
+    setExpectedErrors([error, error, error]);
     return new Promise((res) => {
       results.on("error", (error) => {
         expect(error.toString()).to.equal("Some undefined error");
@@ -197,7 +199,7 @@ describe("Activity", () => {
       message: "GSB error: remote service at `test` error: GSB failure: Bad request: endpoint address not found",
       status: 500,
     };
-    activity["api"]["control"]["setExpectedErrors"]([error, error, error]);
+    setExpectedErrors([error, error, error]);
     return new Promise((res) => {
       results.on("error", (error) => {
         expect(error.toString()).to.equal(
@@ -220,11 +222,8 @@ describe("Activity", () => {
       message: "GSB error: endpoint address not found. Terminated.",
       status: 500,
     };
-    activity["api"]["control"]["setExpectedErrors"]([error, error, error]);
-    activity["api"]["state"]["setExpected"]("getActivityState", [
-      ActivityStateEnum.Terminated,
-      ActivityStateEnum.Terminated,
-    ]);
+    setExpectedErrors([error, error, error]);
+    setExpectedStates([ActivityStateEnum.Terminated, ActivityStateEnum.Terminated]);
     return new Promise((res) => {
       results.on("error", (error) => {
         expect(error.toString()).to.equal("GSB error: endpoint address not found. Terminated.");
@@ -242,7 +241,7 @@ describe("Activity", () => {
     const command4 = new Run("test_command2");
     const command5 = new Run("test_command3");
     const script = Script.create([command1, command2, command3, command4, command5]);
-    activity["api"]["control"]["setExpectedResult"]([
+    setExpectedErrors([
       ["stdout", "test"],
       ["stdout", "test"],
       ["stdout", "stdout_test_command_run_1"],
@@ -250,7 +249,8 @@ describe("Activity", () => {
       ["stdout", "stdout_test_command_run_3"],
     ]);
     const results = await activity.execute(script.getExeScriptRequest(), false, 1);
-    return new Promise((res, rej) => {
+    await sleep(10, true);
+    return new Promise((res) => {
       results.on("error", (error) => {
         expect(error.toString()).to.match(/Error: Activity .* timeout/);
         return res();
