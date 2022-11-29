@@ -6,6 +6,7 @@ import sleep from "../utils/sleep";
 import { AgreementFactory } from "./factory";
 import { ComputationHistory } from "../market/strategy";
 import { Configuration } from "ya-ts-client/dist/ya-market";
+import { AgreementServiceConfig } from "./config";
 
 export interface AgreementServiceOptions extends AgreementOptions {
   eventPoolingInterval?: number;
@@ -22,8 +23,7 @@ export type TerminationReason = { message: string; "golem.requestor.code"?: stri
 export class AgreementPoolService implements ComputationHistory {
   private logger?: Logger;
   private api: RequestorApi;
-  private eventPoolingInterval: number;
-  private eventPoolingMaxEventsPerRequest: number;
+  private config: AgreementServiceConfig;
 
   private proposals: string[] = [];
   private agreements = new Map<string, Agreement>();
@@ -33,16 +33,9 @@ export class AgreementPoolService implements ComputationHistory {
   private initialTime = 0;
 
   constructor(private readonly agreementServiceOptions: AgreementServiceOptions) {
+    this.config = new AgreementServiceConfig(agreementServiceOptions);
     this.logger = agreementServiceOptions.logger;
-    this.api = new RequestorApi(
-        new Configuration({
-          apiKey: agreementServiceOptions.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY,
-          basePath: (agreementServiceOptions.yagnaOptions?.basePath || process.env.YAGNA_URL) + "/market-api/v1",
-          accessToken: agreementServiceOptions.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY,
-        })
-    );
-    this.eventPoolingInterval = agreementServiceOptions?.eventPoolingInterval || 10000;
-    this.eventPoolingMaxEventsPerRequest = agreementServiceOptions?.eventPoolingMaxEventsPerRequest || 10;
+    this.api = new RequestorApi(new Configuration(this.config.yagnaOptions));
   }
 
   async run() {
@@ -120,7 +113,7 @@ export class AgreementPoolService implements ComputationHistory {
 
       this.logger?.debug(`Creating agreement using proposal ID: ${proposalId}`);
       try {
-        const agreementFactory = new AgreementFactory(this.agreementServiceOptions);
+        const agreementFactory = new AgreementFactory(this.config);
         agreement = await agreementFactory.create(proposalId);
         agreement = await this.waitForAgreementApproval(agreement);
 
@@ -165,7 +158,7 @@ export class AgreementPoolService implements ComputationHistory {
     }
 
     let timeout = false;
-    const timeoutId = setTimeout(() => (timeout = true), 10000);
+    const timeoutId = setTimeout(() => (timeout = true), this.config.waitingForApprovalTimeout);
     while ((await agreement.isFinalState()) && !timeout) {
       await sleep(2);
     }
