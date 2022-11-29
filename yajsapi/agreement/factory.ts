@@ -25,6 +25,7 @@ export class AgreementFactory {
       });
       const agreement = new Agreement(agreementId, api, this.config, this.logger);
       await agreement.refreshDetails();
+      this.logger?.info(`Agreement ${agreementId} created based on proposal ${proposalId}`);
       return agreement;
     } catch (error) {
       throw error?.response?.data?.message || error;

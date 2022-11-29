@@ -4,6 +4,8 @@ import { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 import { v4 as uuidv4 } from "uuid";
 import { DemandOfferBase, Event, ProposalEvent } from "ya-ts-client/dist/ya-market/src/models";
 import { proposalsDraft, proposalsInitial } from "./fixtures/proposals";
+import { AgreementProposal } from "ya-ts-client/dist/ya-market/src/models/agreement-proposal";
+import { agreementsApproved } from "./fixtures/agreements";
 
 let expectedProposals: ProposalEvent[] = [];
 export const setExpectedProposals = (proposals) => (expectedProposals = proposals);
@@ -16,6 +18,22 @@ export class MarketApiMock extends RequestorApi {
   constructor() {
     super();
   }
+  // @ts-ignore
+  async createAgreement(
+    createAgreementRequest: AgreementProposal,
+    options?: AxiosRequestConfig
+  ): Promise<AxiosResponse<string>> {
+    const agreementData = agreementsApproved[0];
+    return new Promise((res) => res({ data: agreementData.agreementId } as AxiosResponse));
+  }
+  // @ts-ignore
+  async getAgreement(agreementId: string, options?: AxiosRequestConfig): Promise<AxiosResponse<string>> {
+    const agreementData = agreementsApproved[0];
+    return new Promise((res) => res({ data: agreementData } as AxiosResponse));
+  }
+  // @ts-ignore
+  async terminateAgreement(agreementId: string) {}
+
   // @ts-ignore
   async subscribeDemand(
     demandOfferBase: DemandOfferBase,
