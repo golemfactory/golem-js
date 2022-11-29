@@ -16,11 +16,6 @@ export interface AgreementOptions {
   logger?: Logger;
 }
 
-export interface ProviderInfo {
-  providerName: string;
-  providerId: string;
-}
-
 export class Agreement {
   private agreementData?: AgreementModel;
   private requestTimeout = 10000; // @TODO

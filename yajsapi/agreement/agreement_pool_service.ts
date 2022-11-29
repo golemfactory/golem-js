@@ -5,7 +5,12 @@ import sleep from "../utils/sleep";
 
 import { AgreementFactory } from "./factory";
 import { ComputationHistory } from "../market/strategy";
-import {Configuration} from "ya-ts-client/dist/ya-market";
+import { Configuration } from "ya-ts-client/dist/ya-market";
+
+export interface AgreementServiceOptions extends AgreementOptions {
+  eventPoolingInterval?: number;
+  eventPoolingMaxEventsPerRequest?: number;
+}
 
 export interface AgreementProposal {
   proposalId: string;
@@ -27,17 +32,17 @@ export class AgreementPoolService implements ComputationHistory {
   private lastAgreementRejectedByProvider = new Map<string, boolean>();
   private initialTime = 0;
 
-  constructor(private readonly agreementOptions: AgreementOptions) {
-    this.logger = agreementOptions.logger;
+  constructor(private readonly agreementServiceOptions: AgreementServiceOptions) {
+    this.logger = agreementServiceOptions.logger;
     this.api = new RequestorApi(
         new Configuration({
-          apiKey: agreementOptions.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY,
-          basePath: (agreementOptions.yagnaOptions?.basePath || process.env.YAGNA_URL) + "/market-api/v1",
-          accessToken: agreementOptions.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY,
+          apiKey: agreementServiceOptions.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY,
+          basePath: (agreementServiceOptions.yagnaOptions?.basePath || process.env.YAGNA_URL) + "/market-api/v1",
+          accessToken: agreementServiceOptions.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY,
         })
     );
-    this.eventPoolingInterval = agreementOptions?.eventPoolingInterval || 10000;
-    this.eventPoolingMaxEventsPerRequest = agreementOptions?.eventPoolingMaxEventsPerRequest || 10;
+    this.eventPoolingInterval = agreementServiceOptions?.eventPoolingInterval || 10000;
+    this.eventPoolingMaxEventsPerRequest = agreementServiceOptions?.eventPoolingMaxEventsPerRequest || 10;
   }
 
   async run() {
@@ -115,7 +120,7 @@ export class AgreementPoolService implements ComputationHistory {
 
       this.logger?.debug(`Creating agreement using proposal ID: ${proposalId}`);
       try {
-        const agreementFactory = new AgreementFactory(this.agreementOptions);
+        const agreementFactory = new AgreementFactory(this.agreementServiceOptions);
         agreement = await agreementFactory.create(proposalId);
         agreement = await this.waitForAgreementApproval(agreement);
 

@@ -3,17 +3,10 @@ import { Agreement, AgreementOptions } from "./agreement";
 import { Logger, dayjs } from "../utils";
 import { Configuration } from "ya-ts-client/dist/ya-market";
 import { YagnaOptions } from "../executor";
-
-const DEFAULT_OPTIONS = {
-  REQUEST_TIMEOUT: 30000,
-  EXECUTE_TIMEOUT: 30000,
-  EVENT_POOLING_INT: 5,
-  EVENT_POOLING_MAX_EVENTS: 100,
-  SUBNET_TAG: "devnet-beta",
-};
+import { AgreementConfig } from "./config";
 
 export class AgreementFactory {
-  private logger?: Logger;
+  private options: AgreementConfig;
   private yagnaOptions?: YagnaOptions;
   private subnetTag?: string;
   private requestTimeout?: number;
@@ -21,23 +14,18 @@ export class AgreementFactory {
   private eventPoolingInterval?: number;
   private eventPoolingMaxEventsPerRequest?: number;
 
-  constructor({ subnetTag, requestTimeout, executeTimeout, eventPoolingInterval, eventPoolingMaxEventsPerRequest, yagnaOptions, logger }: AgreementOptions) {
-    this.requestTimeout = requestTimeout || DEFAULT_OPTIONS.REQUEST_TIMEOUT;
-    this.executeTimeout = executeTimeout || DEFAULT_OPTIONS.EXECUTE_TIMEOUT;
-    this.eventPoolingInterval = eventPoolingInterval || DEFAULT_OPTIONS.EVENT_POOLING_INT;
-    this.eventPoolingMaxEventsPerRequest = eventPoolingMaxEventsPerRequest || DEFAULT_OPTIONS.EVENT_POOLING_MAX_EVENTS;
-    this.subnetTag = subnetTag || DEFAULT_OPTIONS.SUBNET_TAG;
-    this.yagnaOptions = yagnaOptions;
+  constructor(agreementOptions: AgreementOptions) {
+    this.options = new AgreementConfig(agreementOptions);
     this.logger = logger;
   }
 
   async create(proposalId: string): Promise<Agreement> {
     const api = new RequestorApi(
-        new Configuration({
-          apiKey: this.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY,
-          basePath: (this.yagnaOptions?.basePath || process.env.YAGNA_URL) + "/market-api/v1",
-          accessToken: this.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY,
-        })
+      new Configuration({
+        apiKey: this.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY,
+        basePath: (this.yagnaOptions?.basePath || process.env.YAGNA_URL) + "/market-api/v1",
+        accessToken: this.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY,
+      })
     );
     try {
       const agreementProposalRequest = {
