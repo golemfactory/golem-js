@@ -4,50 +4,63 @@ import { StorageProvider } from "../storage/provider";
 import { AgreementPoolService } from "../agreement";
 import { PaymentService } from "../payment";
 import { NetworkService } from "../network";
-import { YagnaOptions } from "../executor";
-import { Activity } from "../activity";
+import { Activity, ActivityOptions } from "../activity";
+import { TaskConfig } from "./config";
 
-const MAX_PARALLEL_TASKS = 5;
-
-export interface TaskOptions {
-  yagnaOptions?: YagnaOptions;
+export interface TaskOptions extends ActivityOptions {
+  maxParallelTasks?: number;
+  taskRunningInterval?: number;
+  activityStateCheckingInterval?: number;
+  timeout?: number;
+  logger?: Logger;
+  storageProvider?: StorageProvider;
 }
 
 export class TaskService {
-  private activeTasks = new Set();
-  private activities = new Map<string, string>();
+  private activeTasksCount = 0;
+  private activities = new Map<string, Activity>();
   private initWorkersDone: Set<string> = new Set();
   private isRunning = false;
+  private logger?: Logger;
+  private options: TaskConfig;
 
   constructor(
-    private tasksQueue: TaskQueue<Task<any, any>>,
+    private tasksQueue: TaskQueue<Task<unknown, unknown>>,
     private agreementPoolService: AgreementPoolService,
     private paymentService: PaymentService,
-    private logger?: Logger,
-    options?: TaskOptions,
-    private networkService?: NetworkService,
-    private storageProvider?: StorageProvider
-  ) {}
+    private networkService: NetworkService,
+    options?: TaskOptions
+  ) {
+    this.options = new TaskConfig(options);
+    this.logger = options?.logger;
+  }
 
   public async run() {
     this.isRunning = true;
     this.logger?.debug("Task Service has started");
     while (this.isRunning) {
-      await sleep(1);
-      if (this.activeTasks.size >= MAX_PARALLEL_TASKS) continue;
+      if (this.activeTasksCount >= this.options.maxParallelTasks) {
+        await sleep(this.options.taskRunningInterval, true);
+        continue;
+      }
       const task = this.tasksQueue.get();
-      if (!task) continue;
+      if (!task) {
+        await sleep(this.options.taskRunningInterval, true);
+        continue;
+      }
       this.startTask(task).catch((error) => this.logger?.error(error));
     }
   }
 
   async end() {
     this.isRunning = false;
+    for (const activity of this.activities.values()) await activity.stop().catch((e) => this.logger?.error(e));
     this.logger?.debug("Task Service has been stopped");
   }
 
   private async startTask(task: Task) {
     task.start();
+    ++this.activeTasksCount;
     const agreement = await this.agreementPoolService.getAgreement();
 
     let activity;
@@ -57,15 +70,22 @@ export class TaskService {
         activity = this.activities.get(agreement.id);
       } else {
         activity = await Activity.create(agreement.id, { logger: this.logger });
-        this.activities.set(agreement.id, activity.id);
+        this.activities.set(agreement.id, activity);
         this.logger?.debug(`Activity ${activity.id} created`);
       }
-      const ctx = new WorkContext(agreement, activity, task, agreement.provider, this.storageProvider, this.logger);
+      const ctx = new WorkContext(agreement, activity, task, {
+        provider: agreement.provider,
+        storageProvider: this.options.storageProvider,
+        logger: this.logger,
+        activityStateCheckingInterval: this.options.activityStateCheckingInterval,
+        timeout: this.options.timeout,
+      });
       const worker = task.getWorker();
       const data = task.getData();
+      await ctx.before();
       if (task.getInitWorker() && !this.initWorkersDone.has(activity.id)) {
-        await ctx.before();
         this.initWorkersDone.add(activity.id);
+        this.logger?.debug(`Init worker done in activity ${activity.id}`);
       }
       const results = await worker(ctx, data);
       task.stop(results);
@@ -75,13 +95,13 @@ export class TaskService {
         this.tasksQueue.addToBegin(task);
         this.logger?.warn("The task execution failed. Trying to redo the task. " + error);
       } else {
+        await activity.stop().catch((actError) => this.logger?.error(actError));
+        this.activities.delete(agreement.id);
         await this.agreementPoolService.releaseAgreement(agreement.id, false);
         throw new Error("Task has been rejected! " + error.toString());
       }
     } finally {
-      await activity.stop().catch((actError) => this.logger?.error(actError));
-      this.activities.delete(agreement.id);
-      this.logger?.debug(`Activity ${activity.id} deleted`);
+      --this.activeTasksCount;
     }
     await this.agreementPoolService.releaseAgreement(agreement.id, true);
   }

@@ -11,6 +11,7 @@ import { Logger } from "../utils";
 import sleep from "../utils/sleep";
 import CancellationToken from "../utils/cancellationToken";
 import { ActivityFactory } from "./factory";
+import { ActivityConfig } from "./config";
 
 export interface ActivityOptions {
   yagnaOptions?: { apiKey?: string; basePath?: string };
@@ -25,9 +26,6 @@ export { ActivityStateEnum };
 
 export class Activity {
   private readonly logger?: Logger;
-  protected readonly requestTimeout: number;
-  private readonly executeTimeout: number;
-  private readonly exeBatchResultsFetchInterval: number;
 
   /**
    * Create activity for given agreement ID
@@ -47,14 +45,7 @@ export class Activity {
     return factory.create(secure);
   }
 
-  constructor(
-    public readonly id,
-    protected readonly api: { control: RequestorControlApi; state: RequestorStateApi },
-    protected readonly options?: ActivityOptions
-  ) {
-    this.requestTimeout = options?.requestTimeout || 10000;
-    this.executeTimeout = options?.executeTimeout || 240000;
-    this.exeBatchResultsFetchInterval = options?.exeBatchResultsFetchInterval || 3000;
+  constructor(public readonly id, protected readonly options: ActivityConfig) {
     this.logger = options?.logger;
   }
 
@@ -99,7 +90,7 @@ export class Activity {
    */
   public async getState(): Promise<ActivityStateEnum> {
     try {
-      const { data } = await this.api.state.getActivityState(this.id);
+      const { data } = await this.options.api.state.getActivityState(this.id);
       return data.state[0];
     } catch (error) {
       this.logger?.warn(`Cannot query activity state: ${error}`);
@@ -108,18 +99,20 @@ export class Activity {
   }
 
   protected async send(script: yaActivity.ExeScriptRequest): Promise<string> {
-    const { data: batchId } = await this.api.control.exec(this.id, script, { timeout: this.requestTimeout });
+    const { data: batchId } = await this.options.api.control.exec(this.id, script, {
+      timeout: this.options.requestTimeout,
+    });
     return batchId;
   }
 
   private async end() {
-    await this.api.control
-      .destroyActivity(this.id, this.requestTimeout, { timeout: (this.requestTimeout + 1) * 1000 })
+    await this.options.api.control
+      .destroyActivity(this.id, this.options.requestTimeout, { timeout: (this.options.requestTimeout + 1) * 1000 })
       .catch((error) => {
         this.logger?.warn(`Got API Exception when destroying activity ${this.id}: ${error}`);
         throw error;
       });
-    this.logger?.debug(`Activity ${this.id} ended.`);
+    this.logger?.debug(`Activity ${this.id} destroyed`);
   }
 
   private async pollingBatch(batchId, startTime, timeout, cancellationToken): Promise<Readable> {
@@ -127,7 +120,8 @@ export class Activity {
     let lastIndex;
     let retryCount = 0;
     const maxRetries = 3;
-    const { id: activityId, executeTimeout, api, exeBatchResultsFetchInterval } = this;
+    const activityId = this.id;
+    const { executeTimeout, api, exeBatchResultsFetchInterval } = this.options;
     const handleError = this.handleError.bind(this);
     return new Readable({
       objectMode: true,
@@ -164,8 +158,8 @@ export class Activity {
   }
 
   private async streamingBatch(batchId, batchSize, startTime, timeout, cancellationToken): Promise<Readable> {
-    const basePath = this.options?.yagnaOptions?.basePath || this.api.control["configuration"]?.basePath;
-    const apiKey = this.options?.yagnaOptions?.apiKey || this.api.control["configuration"]?.apiKey;
+    const basePath = this.options?.yagnaOptions?.basePath || this.options.api.control["configuration"]?.basePath;
+    const apiKey = this.options?.yagnaOptions?.apiKey || this.options.api.control["configuration"]?.apiKey;
     const eventSource = new EventSource(`${basePath}/activity/${this.id}/exec/${batchId}`, {
       headers: {
         Accept: "text/event-stream",
@@ -174,7 +168,8 @@ export class Activity {
     });
 
     let isBatchFinished = false;
-    const { id: activityId, executeTimeout } = this;
+    const activityId = this.id;
+    const executeTimeout = this.options.executeTimeout;
 
     const errors: object[] = [];
     eventSource.addEventListener("error", (error) => errors.push(error?.message || error));
@@ -224,7 +219,7 @@ export class Activity {
     ++retryCount;
     const failMsg = "getExecBatchResults failed due to GSB error";
     if (retryCount < maxRetries) {
-      this.logger?.debug(`${failMsg}, retrying in ${this.exeBatchResultsFetchInterval}.`);
+      this.logger?.debug(`${failMsg}, retrying in ${this.options.exeBatchResultsFetchInterval}.`);
       return retryCount;
     } else {
       this.logger?.debug(`${failMsg}, giving up after ${retryCount} attempts.`);
@@ -260,7 +255,7 @@ export class Activity {
 
   private async isTerminated(): Promise<{ terminated: boolean; reason?: string; errorMessage?: string }> {
     try {
-      const { data } = await this.api.state.getActivityState(this.id);
+      const { data } = await this.options.api.state.getActivityState(this.id);
       return {
         terminated: data?.state?.[0] === ActivityStateEnum.Terminated,
         reason: data?.reason,

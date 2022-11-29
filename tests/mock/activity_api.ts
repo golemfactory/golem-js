@@ -23,17 +23,22 @@ const exampleExeResult = {
   message: "",
   isBatchFinished: true,
 };
-const expectedExeResults: Result[] = [];
+let expectedExeResults: Result[] = [];
 export const setExpectedExeResults = (results) =>
   results.forEach((result, i) => {
     expectedExeResults[i] = Object.assign({}, exampleExeResult);
+    expectedExeResults[i] = Object.assign(expectedExeResults[i], result);
     expectedExeResults[i].index = i;
-    expectedExeResults[i][result[0]] = result[1];
     expectedExeResults[i].isBatchFinished = i === results.length - 1;
   });
 
 let expectedErrors: AxiosError[] = [];
 export const setExpectedErrors = (errors) => (expectedErrors = errors);
+
+export const clear = () => {
+  expectedExeResults = [];
+  expectedErrors = [];
+};
 
 export class RequestorControlApiMock extends RequestorControlApi {
   constructor() {
@@ -88,17 +93,21 @@ export class RequestorControlApiMock extends RequestorControlApi {
   }
 }
 
-let expectedStates: [ActivityStateStateEnum | null, ActivityStateStateEnum | null] = [
-  ActivityStateStateEnum.Initialized,
-  ActivityStateStateEnum.Ready,
-];
+let expectedStates = [];
 export const setExpectedStates = (states) => (expectedStates = states);
 
 export class RequestorSateApiMock extends RequestorStateApi {
-  private expectedResults = {
-    getActivityState: null,
-  };
-
+  private exampleStates = [
+    [ActivityStateStateEnum.Initialized, ActivityStateStateEnum.Ready],
+    [ActivityStateStateEnum.Ready, ActivityStateStateEnum.Ready],
+    [ActivityStateStateEnum.Ready, ActivityStateStateEnum.Ready],
+    [ActivityStateStateEnum.Ready, ActivityStateStateEnum.Ready],
+    [ActivityStateStateEnum.Ready, ActivityStateStateEnum.Ready],
+    [ActivityStateStateEnum.Ready, ActivityStateStateEnum.Ready],
+    [ActivityStateStateEnum.Ready, ActivityStateStateEnum.Ready],
+    [ActivityStateStateEnum.Ready, ActivityStateStateEnum.Ready],
+    [ActivityStateStateEnum.Ready, ActivityStateStateEnum.Ready],
+  ];
   constructor() {
     super();
   }
@@ -108,7 +117,7 @@ export class RequestorSateApiMock extends RequestorStateApi {
     return new Promise((res) =>
       res({
         data: {
-          state: expectedStates,
+          state: expectedStates.length ? expectedStates : this.exampleStates.shift(),
           reason: "test",
           errorMessage: "test",
         },

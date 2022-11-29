@@ -1,32 +1,28 @@
 import rewiremock from "rewiremock";
-import {
-  RequestorControlApiMock,
-  RequestorSateApiMock,
-  setExpectedExeResults,
-  setExpectedErrors,
-  setExpectedStates,
-} from "../mock/activity_api";
+import * as activityMock from "../mock/activity_api";
 import EventSourceMock, { setExpectedErrorEvents, setExpectedEvents } from "../mock/event_source";
 rewiremock("ya-ts-client/dist/ya-activity/api").with({
-  RequestorControlApi: RequestorControlApiMock,
-  RequestorStateApi: RequestorSateApiMock,
+  RequestorControlApi: activityMock.RequestorControlApiMock,
+  RequestorStateApi: activityMock.RequestorSateApiMock,
 });
 rewiremock("eventsource").with(EventSourceMock);
 rewiremock.enable();
 import chai, { expect } from "chai";
 import chaiUuid from "chai-uuid";
 import chaiAsPromised from "chai-as-promised";
-chai.use(chaiUuid);
-chai.use(chaiAsPromised);
 import { StorageProviderMock } from "../mock/storage_provider";
 import { Activity, ActivityStateEnum } from "../../yajsapi/activity";
 import { CancellationToken, sleep } from "../../yajsapi/utils";
 import { Deploy, Start, Run, Terminate, UploadFile, DownloadFile, Script, Capture } from "../../yajsapi/script";
 
+chai.use(chaiUuid);
+chai.use(chaiAsPromised);
+process.env.YAGNA_APPKEY = "test";
+process.env.YAGNA_API_BASEPATH = "http://127.0.0.1:7465/activity-api/v1";
+
 describe("Activity", () => {
   beforeEach(() => {
-    process.env.YAGNA_APPKEY = "test";
-    process.env.YAGNA_API_BASEPATH = "http://127.0.0.1:7465/activity-api/v1";
+    activityMock.clear();
   });
 
   it("create activity", async () => {
@@ -52,7 +48,7 @@ describe("Activity", () => {
     const activity = await Activity.create("test_id");
     const streamResult = await activity.execute(new Run("test_command").toExeScriptRequest());
     const { value: result } = await streamResult[Symbol.asyncIterator]().next();
-    setExpectedStates([ActivityStateEnum.Ready, null]);
+    activityMock.setExpectedStates([ActivityStateEnum.Ready, null]);
     const stateAfterRun = await activity.getState();
     expect(result.result).to.equal("Ok");
     expect(stateAfterRun).to.equal(ActivityStateEnum.Ready);
@@ -66,12 +62,12 @@ describe("Activity", () => {
     const command4 = new Run("test_command2");
     const command5 = new Terminate();
     const script = Script.create([command1, command2, command3, command4, command5]);
-    setExpectedExeResults([
-      ["stdout", "test"],
-      ["stdout", "test"],
-      ["stdout", "stdout_test_command_run_1"],
-      ["stdout", "stdout_test_command_run_2"],
-      ["stdout", "test"],
+    activityMock.setExpectedExeResults([
+      { stdout: "test" },
+      { stdout: "test" },
+      { stdout: "stdout_test_command_run_1" },
+      { stdout: "stdout_test_command_run_2" },
+      { stdout: "test" },
     ]);
     const expectedRunStdOuts = ["test", "test", "stdout_test_command_run_1", "stdout_test_command_run_2", "test"];
     await script.before();
@@ -93,13 +89,13 @@ describe("Activity", () => {
     const command5 = new DownloadFile(new StorageProviderMock(), "testSrc", "testDst");
     const command6 = new Terminate();
     const script = Script.create([command1, command2, command3, command4, command5, command6]);
-    setExpectedExeResults([
-      ["stdout", "test"],
-      ["stdout", "test"],
-      ["stdout", "stdout_test_command_run_1"],
-      ["stdout", "stdout_test_command_run_2"],
-      ["stdout", "test"],
-      ["stdout", "test"],
+    activityMock.setExpectedExeResults([
+      { stdout: "test" },
+      { stdout: "test" },
+      { stdout: "stdout_test_command_run_1" },
+      { stdout: "stdout_test_command_run_2" },
+      { stdout: "test" },
+      { stdout: "test" },
     ]);
     const expectedRunStdOuts = [
       "test",
@@ -151,7 +147,7 @@ describe("Activity", () => {
 
   it("get activity state", async () => {
     const activity = await Activity.create("test_id");
-    setExpectedStates([ActivityStateEnum.Ready, ActivityStateEnum.Terminated]);
+    activityMock.setExpectedStates([ActivityStateEnum.Ready, ActivityStateEnum.Terminated]);
     const state = await activity.getState();
     expect(state).to.equal(ActivityStateEnum.Ready);
   });
@@ -172,7 +168,7 @@ describe("Activity", () => {
       message: "Some undefined error",
       status: 400,
     };
-    setExpectedErrors([error, error, error]);
+    activityMock.setExpectedErrors([error, error, error]);
     return new Promise((res) => {
       results.on("error", (error) => {
         expect(error.toString()).to.equal("Some undefined error");
@@ -199,7 +195,7 @@ describe("Activity", () => {
       message: "GSB error: remote service at `test` error: GSB failure: Bad request: endpoint address not found",
       status: 500,
     };
-    setExpectedErrors([error, error, error]);
+    activityMock.setExpectedErrors([error, error, error]);
     return new Promise((res) => {
       results.on("error", (error) => {
         expect(error.toString()).to.equal(
@@ -222,8 +218,8 @@ describe("Activity", () => {
       message: "GSB error: endpoint address not found. Terminated.",
       status: 500,
     };
-    setExpectedErrors([error, error, error]);
-    setExpectedStates([ActivityStateEnum.Terminated, ActivityStateEnum.Terminated]);
+    activityMock.setExpectedErrors([error, error, error]);
+    activityMock.setExpectedStates([ActivityStateEnum.Terminated, ActivityStateEnum.Terminated]);
     return new Promise((res) => {
       results.on("error", (error) => {
         expect(error.toString()).to.equal("GSB error: endpoint address not found. Terminated.");
@@ -241,13 +237,6 @@ describe("Activity", () => {
     const command4 = new Run("test_command2");
     const command5 = new Run("test_command3");
     const script = Script.create([command1, command2, command3, command4, command5]);
-    setExpectedErrors([
-      ["stdout", "test"],
-      ["stdout", "test"],
-      ["stdout", "stdout_test_command_run_1"],
-      ["stdout", "stdout_test_command_run_2"],
-      ["stdout", "stdout_test_command_run_3"],
-    ]);
     const results = await activity.execute(script.getExeScriptRequest(), false, 1);
     await sleep(10, true);
     return new Promise((res) => {

@@ -42,6 +42,12 @@ export class Task<InputType = unknown, OutputType = unknown> implements Queueabl
   isFinished(): boolean {
     return this.state === TaskState.Done || this.state === TaskState.Rejected;
   }
+  isPending(): boolean {
+    return this.state === TaskState.Pending;
+  }
+  isNew(): boolean {
+    return this.state === TaskState.New;
+  }
   getResults(): OutputType | undefined {
     return this.results;
   }

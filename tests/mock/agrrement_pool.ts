@@ -21,6 +21,9 @@ export const agreementPoolServiceMock: AgreementPoolService = {
   isProviderLastAgreementRejected(providerId: string): boolean {
     return invalidProviderIds.includes(providerId);
   },
+  async releaseAgreement(agreementId: string, allowReuse = false) {
+    return undefined;
+  },
   // @ts-ignore
   getProposalIds() {
     return proposalIds;
