@@ -45,8 +45,8 @@ export class AgreementPoolService implements ComputationHistory {
   }
 
   addProposal(proposalId: string) {
-    this.logger?.debug(`New offer proposal added to pool (${proposalId})`);
     this.proposals.push(proposalId);
+    this.logger?.debug(`New offer proposal added to pool (${proposalId})`);
   }
 
   async getAgreement(): Promise<Agreement> {
