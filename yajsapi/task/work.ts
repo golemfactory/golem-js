@@ -3,25 +3,25 @@ import { Command, Deploy, DownloadFile, Run, Script, Start, UploadFile } from ".
 import { StorageProvider } from "../storage/provider";
 import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity";
 import { sleep, Logger, runtimeContextChecker } from "../utils";
-import { Batch, Task } from "../task";
-import { Agreement } from "../agreement";
+import { Batch } from "../task";
 
 export type Worker<InputType = unknown, OutputType = unknown> = (
   ctx: WorkContext,
-  data: InputType
+  data?: InputType
 ) => Promise<OutputType | undefined>;
 
 const DEFAULTS = {
-  TIMEOUT: 10000,
-  ACTIVITY_STATE_CHECKING_INTERVAL: 1000,
+  timeout: 10000,
+  activityStateCheckInterval: 1000,
 };
 
 export interface WorkOptions {
   timeout?: number;
   activityStateCheckingInterval?: number;
-  provider: { name: string; id: string; networkConfig?: object };
+  provider?: { name: string; id: string; networkConfig?: object };
   storageProvider?: StorageProvider;
   logger?: Logger;
+  initWorker?: Worker<undefined>;
 }
 
 export class WorkContext {
@@ -33,24 +33,17 @@ export class WorkContext {
   private resultAccepted = false;
   private resultRejected = false;
 
-  constructor(
-    private agreement: Agreement,
-    private activity: Activity,
-    private task: Task,
-    private options?: WorkOptions
-  ) {
-    this.timeout = options?.timeout || DEFAULTS.TIMEOUT;
+  constructor(private activity: Activity, private options?: WorkOptions) {
+    this.timeout = options?.timeout || DEFAULTS.timeout;
     this.logger = options?.logger;
-    this.activityStateCheckingInterval =
-      options?.activityStateCheckingInterval || DEFAULTS.ACTIVITY_STATE_CHECKING_INTERVAL;
+    this.activityStateCheckingInterval = options?.activityStateCheckingInterval || DEFAULTS.activityStateCheckInterval;
     this.provider = options?.provider;
     this.storageProvider = options?.storageProvider;
   }
   async before(): Promise<Result[] | void> {
-    const worker = this.task.getInitWorker();
     let state = await this.activity.getState();
     if (state === ActivityStateStateEnum.Ready) {
-      if (worker) await worker(this, undefined);
+      if (this.options?.initWorker) await this.options?.initWorker(this, undefined);
       return;
     }
     if (state === ActivityStateStateEnum.Initialized) {
@@ -68,9 +61,7 @@ export class WorkContext {
     if (state !== ActivityStateStateEnum.Ready) {
       throw new Error(`Activity ${this.activity.id} cannot reach the Ready state. Current state: ${state}`);
     }
-    if (worker) {
-      await worker(this, undefined);
-    }
+    if (this.options?.initWorker) await this.options?.initWorker(this, undefined);
   }
   async run(...args: Array<string | string[]>): Promise<Result> {
     const command =
@@ -93,14 +84,8 @@ export class WorkContext {
   beginBatch() {
     return Batch.create(this.activity, this.storageProvider, this.logger);
   }
-  acceptResult(results: Result[]) {
-    if (!this.resultAccepted) this.task.stop(results);
-    this.resultAccepted = true;
-  }
   rejectResult(msg: string) {
-    if (!this.resultRejected && !this.resultAccepted) this.task.stop(undefined, new Error(msg), true);
-    this.resultRejected = true;
-    this.resultAccepted = true;
+    throw new Error(`Work rejected by user. Reason: ${msg}`);
   }
 
   private async runOneCommand(command: Command): Promise<Result> {

@@ -73,17 +73,19 @@ export class TaskService {
         this.activities.set(agreement.id, activity);
         this.logger?.debug(`Activity ${activity.id} created`);
       }
-      const ctx = new WorkContext(agreement, activity, task, {
+      const initWorker = task.getInitWorker();
+      const worker = task.getWorker();
+      const data = task.getData();
+      const ctx = new WorkContext(activity, {
+        initWorker: initWorker,
         provider: agreement.provider,
         storageProvider: this.options.storageProvider,
         logger: this.logger,
         activityStateCheckingInterval: this.options.activityStateCheckingInterval,
         timeout: this.options.timeout,
       });
-      const worker = task.getWorker();
-      const data = task.getData();
       await ctx.before();
-      if (task.getInitWorker() && !this.initWorkersDone.has(activity.id)) {
+      if (initWorker && !this.initWorkersDone.has(activity.id)) {
         this.initWorkersDone.add(activity.id);
         this.logger?.debug(`Init worker done in activity ${activity.id}`);
       }
@@ -98,7 +100,7 @@ export class TaskService {
         await activity.stop().catch((actError) => this.logger?.error(actError));
         this.activities.delete(agreement.id);
         await this.agreementPoolService.releaseAgreement(agreement.id, false);
-        throw new Error("Task has been rejected! " + error.toString());
+        throw new Error("Task has been rejected! " + (error.message || error.toString()));
       }
     } finally {
       --this.activeTasksCount;
