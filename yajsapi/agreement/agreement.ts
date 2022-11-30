@@ -72,6 +72,7 @@ export class Agreement {
     try {
       await this.api.confirmAgreement(this.id);
       await this.api.waitForApproval(this.id, this.config.waitingForApprovalTimeout);
+      this.logger?.debug(`Agreement ${this.id} approved`);
     } catch (error) {
       this.logger?.error(`Cannot confirm agreement ${this.id}. ${error}`);
       throw error;
