@@ -106,9 +106,8 @@ export class TaskExecutor {
       this.taskQueue,
       this.agreementPoolService,
       this.paymentService,
-      { yagnaOptions: this.yagnaOptions, logger: this.logger },
       this.networkService,
-      this.storageProvider
+      { yagnaOptions: this.yagnaOptions, logger: this.logger, storageProvider: this.storageProvider }
     );
   }
 
