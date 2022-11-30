@@ -1,36 +1,11 @@
-import { BatchResults, Executor, Task, sgx, vm } from "./executor";
-import { WorkContext, Work, ExecOptions } from "./executor/ctx";
-import { createExecutor } from "./executor/executor";
-import * as props from "./props";
-import * as rest from "./rest";
-import * as storage from "./storage";
-import * as utils from "./utils";
-import * as network from "./network";
+import * as executor from "./executor";
+import * as task from "./task";
 import * as activity from "./activity";
-import * as script from "./script";
+import * as agreement from "./agreement";
+import * as market from "./market";
+import * as network from "./network";
+import * as payment from "./payment";
+import * as utils from "./utils";
+import { createExecutor } from "./executor";
 
-// For debug purposes, in case of unhandled rejection issues
-// detect the related async call with this
-//
-// process.on('unhandledRejection', (reason, p) => {
-//   console.log('Unhandled Rejection at: Promise', p, 'reason:', reason);
-// });
-
-export {
-  createExecutor,
-  Executor,
-  ExecOptions,
-  Task,
-  sgx,
-  vm,
-  Work,
-  WorkContext,
-  BatchResults,
-  props,
-  rest,
-  storage,
-  utils,
-  network,
-  activity,
-  script,
-};
+export { executor, task, activity, agreement, market, payment, network, utils, createExecutor };

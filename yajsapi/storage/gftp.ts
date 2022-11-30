@@ -1,12 +1,27 @@
 import { chomp, streamWrite, streamEnd, chunksToLinesAsync } from "@rauschma/stringio";
 import { spawn, ChildProcess } from "child_process";
 import { StorageProvider, Destination, Source, Content } from ".";
-import { AsyncExitStack, logger } from "../utils";
 
 import fs from "fs";
 import path from "path";
 import { v4 as uuid } from "uuid";
 import tmp from "tmp";
+import { Logger } from "../utils";
+
+class AsyncExitStack {
+  private _stack: any[] = [];
+  async enter_async_context(ctx) {
+    const _entered_ctx = await ctx.ready();
+    this._stack.push(ctx);
+    return _entered_ctx;
+  }
+
+  async aclose() {
+    for (let i = 0; i < this._stack.length; i++) {
+      await this._stack[i].done();
+    }
+  }
+}
 
 class PubLink {
   //"""GFTP linking information."""
@@ -23,6 +38,8 @@ let CommandStatus: string;
 class GftpDriver {
   private _proc;
   private _reader;
+
+  constructor(private logger?: Logger) {}
   //Protocol
   //"""Golem FTP service API.
 
@@ -88,7 +105,7 @@ class GftpDriver {
       return result;
     } catch (error) {
       const msg = `gftp error. query: ${query} value: ${valueStr} error: ${JSON.stringify(error)}`;
-      logger.error(msg);
+      this.logger?.error(msg);
       throw Error(error);
     }
   }
@@ -100,17 +117,19 @@ class GftpDriver {
   }
 }
 
-function service(debug = false) {
-  return new _Process(debug);
+function service(debug = false, logger?: Logger) {
+  return new _Process(debug, logger);
 }
 
 class _Process {
   _debug;
   _proc?;
+  logger?: Logger;
 
-  constructor(_debug = false) {
+  constructor(_debug = false, logger?: Logger) {
     this._debug = _debug;
     this._proc = null;
+    this.logger = logger;
   }
 
   async ready(): Promise<GftpDriver> {
@@ -119,7 +138,7 @@ class _Process {
       shell: true,
       env: env,
     });
-    const gftp = new GftpDriver();
+    const gftp = new GftpDriver(this.logger);
     gftp["_proc"] = this._proc;
     return gftp;
   }
@@ -146,7 +165,7 @@ class _Process {
     }
     p.kill();
     const ret_code = await p.signalCode;
-    logger.debug(`GFTP server closed, code=${ret_code}`);
+    this.logger?.debug(`GFTP server closed, code=${ret_code}`);
   }
 
   _log_debug(msg_dir: string, msg: string | Buffer) {
@@ -172,7 +191,7 @@ class _Process {
     try {
       msg = JSON.parse(msg);
     } catch (error) {
-      logger.error(`gftp error ${error} while parsing ${msg}`);
+      this.logger?.error(`gftp error ${error} while parsing ${msg}`);
       throw error;
     }
     return message.parse_response(msg);
@@ -244,19 +263,21 @@ class GftpProvider extends StorageProvider {
   _temp_dir?: string | null;
   __exit_stack;
   _process;
+  logger;
 
-  constructor(tmpdir: string | null = null) {
+  constructor(tmpdir: string | null = null, logger?: Logger) {
     super();
     this.__exit_stack = new AsyncExitStack();
     this._temp_dir = tmpdir || null;
     this._process = null;
+    this.logger = logger;
   }
 
   async ready(): Promise<StorageProvider> {
     this._temp_dir = tmp.dirSync().name;
     const _process = await this.__get_process();
     const _ver = await _process.version();
-    logger.info(`GFTP Version:${_ver}`);
+    this.logger?.info(`GFTP Version:${_ver}`);
     if (!_ver) throw Error("GFTP couldn't found.");
     return this as StorageProvider;
   }
@@ -275,7 +296,7 @@ class GftpProvider extends StorageProvider {
 
   async __get_process(): Promise<GftpDriver> {
     const _debug = !!process.env["DEBUG_GFTP"];
-    const _process = this._process || (await this.__exit_stack.enter_async_context(service(_debug)));
+    const _process = this._process || (await this.__exit_stack.enter_async_context(service(_debug, this.logger)));
     if (!this._process) this._process = _process;
     return _process;
   }
@@ -327,6 +348,6 @@ class GftpProvider extends StorageProvider {
   }
 }
 
-export function provider(): any {
-  return new GftpProvider();
+export function provider(logger?: Logger): any {
+  return new GftpProvider(null, logger);
 }

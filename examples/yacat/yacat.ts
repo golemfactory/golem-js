@@ -1,6 +1,5 @@
 import { createExecutor, utils } from "../../dist";
 import { program } from "commander";
-const logger = utils.logger;
 
 async function main(args) {
   const executor = await createExecutor({
@@ -9,6 +8,7 @@ async function main(args) {
     budget: 10,
     subnetTag: args.subnetTag,
     payment: { driver: args.paymentDriver, network: args.paymentNetwork },
+    logLevel: args.debug ? "debug" : "info",
   });
   const keyspace = await executor.run<number>(async (ctx) => {
     const result = await ctx.run(`hashcat --keyspace -a 3 ${args.mask} -m 400`);
@@ -16,7 +16,7 @@ async function main(args) {
   });
 
   if (!keyspace) throw new Error(`Cannot calculate keyspace`);
-  logger.info(`Keyspace size computed. Keyspace size = ${keyspace}.`);
+  console.log(`Keyspace size computed. Keyspace size = ${keyspace}.`);
   const step = Math.floor(keyspace / args.numberOfProviders + 1);
   const ranges = utils.range(0, keyspace, step);
 
@@ -38,8 +38,8 @@ async function main(args) {
       break;
     }
   }
-  if (!password) logger.warn("No password found");
-  else logger.info(`Password found: ${password}`);
+  if (!password) console.log("No password found");
+  else console.log(`Password found: ${password}`);
   await executor.end();
 }
 
@@ -53,7 +53,4 @@ program
   .requiredOption("--hash <hash>");
 program.parse();
 const options = program.opts();
-if (options.debug) {
-  utils.changeLogLevel("debug");
-}
 main(options).catch((e) => console.error(e));

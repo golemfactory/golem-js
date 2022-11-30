@@ -21,11 +21,13 @@ const blender_params = (frame) => ({
   OUTPUT_DIR: "/golem/output",
 });
 
-async function main(subnetTag, driver, network) {
+async function main(subnet_tag, payment_driver, payment_network, debug) {
   const executor = await createExecutor({
-    subnetTag,
-    payment: { driver, network },
+    subnet_tag,
+    payment_driver,
+    payment_network,
     package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+    logLevel: debug ? "debug" : "info",
   });
 
   executor.beforeEach(async (ctx) => {

@@ -2,14 +2,16 @@ import { createExecutor, utils } from "../../dist";
 import crypto from "crypto";
 import { program } from "commander";
 
-async function main(subnetTag, driver, network, count = 2, session_timeout = 10) {
+async function main(subnet_tag, payment_driver, payment_network, count = 2, session_timeout = 10, debug) {
   const executor = await createExecutor({
     package: "1e06505997e8bd1b9e1a00bd10d255fc6a390905e4d6840a22a79902",
     capabilities: ["vpn"],
-    networkAddress: "192.168.0.0/24",
-    maxWorkers: count,
-    subnetTag,
-    payment: { driver, network },
+    network_address: "192.168.0.0/24",
+    max_workers: count,
+    subnet_tag,
+    payment_driver,
+    payment_network,
+    logLevel: debug ? "debug" : "info",
   });
   const data = new Array(count).fill(null);
   const app_key = process.env["YAGNA_APPKEY"];
@@ -49,7 +51,4 @@ program
   .option("-d, --debug", "output extra debugging");
 program.parse();
 const options = program.opts();
-if (options.debug) {
-  utils.changeLogLevel("debug");
-}
-main(options.subnetTag, options.payment_driver, options.payment_network, options.count, options.timeout);
+main(options.subnetTag, options.payment_driver, options.payment_network, options.count, options.timeout, options.debug);
