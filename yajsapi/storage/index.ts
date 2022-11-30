@@ -1,5 +1,16 @@
-import { applyMixins } from "../utils";
 import fs from "fs";
+
+function applyMixins(derivedCtor: any, constructors: any[]) {
+  constructors.forEach((baseCtor) => {
+    Object.getOwnPropertyNames(baseCtor.prototype).forEach((name) => {
+      Object.defineProperty(
+        derivedCtor.prototype,
+        name,
+        Object.getOwnPropertyDescriptor(baseCtor.prototype, name) || ""
+      );
+    });
+  });
+}
 
 const _BUF_SIZE = 40960;
 

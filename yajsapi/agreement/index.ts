@@ -1,4 +1,5 @@
+import { Agreement, AgreementStateEnum, ProviderInfo } from "./agreement";
 import { AgreementPoolService } from "./agreement_pool_service";
-import { Agreement } from "./agreement";
+import { AgreementFactory } from "./factory";
 
-export { AgreementPoolService, Agreement };
+export { Agreement, AgreementFactory, AgreementPoolService, AgreementStateEnum, ProviderInfo };

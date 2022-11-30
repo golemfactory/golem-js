@@ -108,16 +108,15 @@ export class WorkContext {
       return;
     }
     if (state === ActivityStateStateEnum.Initialized) {
-      await this.activity.execute(
-        new Script([new Deploy(this.networkNode?.get_deploy_args()), new Start()]).getExeScriptRequest()
-      );
+      await this.activity.execute(new Script([new Deploy(), new Start()]).getExeScriptRequest());
     }
     let timeout = false;
-    setTimeout(() => (timeout = true), 20000);
+    const timeoutId = setTimeout(() => (timeout = true), 30000);
     while (state !== ActivityStateStateEnum.Ready && !timeout) {
       await sleep(2);
       state = await this.activity.getState();
     }
+    clearTimeout(timeoutId);
     if (state !== ActivityStateStateEnum.Ready) {
       throw new Error(`Activity ${this.activity.id} cannot reach the Ready state. Current state: ${state}`);
     }
@@ -161,9 +160,9 @@ export class WorkContext {
   getProviderInfo(): ProviderInfo {
     return this.nodeInfo;
   }
-  getWebsocketUri(port: number) {
-    return this.networkNode?.get_websocket_uri(port);
-  }
+  // getWebsocketUri(port: number) {
+  //   // return this.networkNode?.get_websocket_uri(port);
+  // }
 
   private async runOneCommand(command: Command): Promise<Result> {
     const script = new Script([command]);

@@ -12,13 +12,14 @@
     "noLib": false,
     "declaration": true,
     "useUnknownInCatchVariables": false,
+    "skipLibCheck": true,
     "lib": [
       "es2015",
       "es2016",
       "es2017",
       "es2018",
       "esnext",
-      "dom",
+      "dom"
     ],
     "outDir": "dist",
     "typeRoots": ["node_modules/@types"]

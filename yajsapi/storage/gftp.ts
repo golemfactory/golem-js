@@ -1,13 +1,27 @@
 import { chomp, streamWrite, streamEnd, chunksToLinesAsync } from "@rauschma/stringio";
 import { spawn, ChildProcess } from "child_process";
 import { StorageProvider, Destination, Source, Content } from ".";
-import { AsyncExitStack } from "../utils";
 
 import fs from "fs";
 import path from "path";
 import { v4 as uuid } from "uuid";
 import tmp from "tmp";
-import { Logger } from "../utils/logger";
+import { Logger } from "../utils";
+
+class AsyncExitStack {
+  private _stack: any[] = [];
+  async enter_async_context(ctx) {
+    const _entered_ctx = await ctx.ready();
+    this._stack.push(ctx);
+    return _entered_ctx;
+  }
+
+  async aclose() {
+    for (let i = 0; i < this._stack.length; i++) {
+      await this._stack[i].done();
+    }
+  }
+}
 
 class PubLink {
   //"""GFTP linking information."""

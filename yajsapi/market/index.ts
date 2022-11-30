@@ -1,4 +1,4 @@
-import { MarketService } from "./market_service";
-import { MarketStrategy } from "./strategy";
-
-export { MarketService, MarketStrategy };
+export { MarketService } from "./service";
+export { MarketStrategy } from "./strategy";
+export { Demand, DemandEvent } from "./demand";
+export { Proposal } from "./proposal";

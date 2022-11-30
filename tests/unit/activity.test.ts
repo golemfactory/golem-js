@@ -1,11 +1,3 @@
-import chai from "chai";
-import chaiUuid from "chai-uuid";
-import chaiAsPromised from "chai-as-promised";
-chai.use(chaiUuid);
-chai.use(chaiAsPromised);
-
-const expect = chai.expect;
-
 import rewiremock from "rewiremock";
 import { RequestorControlApiMock } from "../mock/requestor_control_api";
 import { RequestorSateApiMock } from "../mock/requestor_state_api";
@@ -16,7 +8,11 @@ rewiremock("ya-ts-client/dist/ya-activity/api").with({
 });
 rewiremock("eventsource").with(EventSourceMock);
 rewiremock.enable();
-
+import chai, { expect } from "chai";
+import chaiUuid from "chai-uuid";
+import chaiAsPromised from "chai-as-promised";
+chai.use(chaiUuid);
+chai.use(chaiAsPromised);
 import { StorageProviderMock } from "../mock/storage_provider";
 import { Activity, ActivityStateEnum, ActivityFactory } from "../../yajsapi/activity";
 import { CancellationToken } from "../../yajsapi/utils";

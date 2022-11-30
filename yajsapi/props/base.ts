@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import { getAllProperties } from "../utils";
+import { MarketProperty } from "ya-ts-client/dist/ya-payment/src/models/market-property";
 export function as_list(data: string | string[]): string[] {
   if (!(typeof data == "string")) return data;
   try {
@@ -100,6 +101,27 @@ class InvalidPropertiesError extends Error {
 export class Model {
   _custom_mapping(props: object, data: object) {
     // abstract
+  }
+
+  properties() {
+    const kv = this.keys();
+    const properties = [] as MarketProperty[];
+
+    for (const name of kv.names()) {
+      const key = kv.get()[name];
+      let value = this[name].value;
+      if (value == null) continue;
+      if (dayjs.isDayjs(value)) value = value.valueOf();
+      else if (value instanceof Object) {
+        value = value.value;
+        if (!(value instanceof String || value instanceof Number || value instanceof Array)) throw Error("");
+      }
+      properties.push({
+        key,
+        value,
+      });
+    }
+    return properties;
   }
 
   fields(cls): Field[] {
