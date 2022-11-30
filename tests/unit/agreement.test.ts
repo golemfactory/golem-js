@@ -15,36 +15,47 @@ const subnetTag = "testnet";
 const logger = new LoggerMock();
 
 describe("Agreement", () => {
-  it("should create agreement fo given proposal Id", async () => {
-    const agreement = await Agreement.create("test_proposal_id", { subnetTag, logger });
-    expect(agreement).to.be.instanceof(Agreement);
-    expect(agreement.id).to.be.lengthOf(64);
-    expect(logger.logs).to.be.match(/Agreement .* created based on proposal test_proposal_id/);
+  describe("create()", () => {
+    it("should create agreement for given proposal Id", async () => {
+      const agreement = await Agreement.create("test_proposal_id", { subnetTag, logger });
+      expect(agreement).to.be.instanceof(Agreement);
+      expect(agreement.id).to.be.lengthOf(64);
+      expect(logger.logs).to.be.match(/Agreement .* created based on proposal test_proposal_id/);
+    });
   });
 
-  it("should have provider data after create", async () => {
-    const agreement = await Agreement.create("test_proposal_id", { subnetTag, logger });
-    expect(agreement).to.be.instanceof(Agreement);
-    //@ts-ignore
-    expect(agreement.provider.id).to.an("string");
-    //@ts-ignore
-    expect(agreement.provider.name).to.an("string");
+  describe("provider", () => {
+    it("should be a instance ProviderInfo with provider details", async () => {
+      const agreement = await Agreement.create("test_proposal_id", { subnetTag, logger });
+      expect(agreement).to.be.instanceof(Agreement);
+      //@ts-ignore
+      expect(agreement.provider.id).to.an("string");
+      //@ts-ignore
+      expect(agreement.provider.name).to.an("string");
+    });
   });
 
-  it("should have state", async () => {
-    const agreement = await Agreement.create("test_proposal_id", { subnetTag, logger });
-    expect(await agreement.getState()).to.be.equal(AgreementStateEnum.Approved);
+  describe("getState()", () => {
+    it("should return state of agreement", async () => {
+      const agreement = await Agreement.create("test_proposal_id", { subnetTag, logger });
+      expect(await agreement.getState()).to.be.equal(AgreementStateEnum.Approved);
+    });
+    it("should throw en error if there is no state");
   });
 
-  it("should be terminable", async () => {
-    const agreement = await Agreement.create("test_proposal_id", { subnetTag, logger });
-    await agreement.terminate();
-    expect(logger.logs).to.be.match(/Agreement .* terminated/);
+  describe("terminate()", () => {
+    it("should terminate agreement", async () => {
+      const agreement = await Agreement.create("test_proposal_id", { subnetTag, logger });
+      await agreement.terminate();
+      expect(logger.logs).to.be.match(/Agreement .* terminated/);
+    });
   });
 
-  it("should be confirmable", async () => {
-    const agreement = await Agreement.create("test_proposal_id", { subnetTag, logger });
-    await agreement.confirm();
-    expect(logger.logs).to.be.match(/Agreement .* approved/);
+  describe("confirm()", () => {
+    it("should confirm agreement", async () => {
+      const agreement = await Agreement.create("test_proposal_id", { subnetTag, logger });
+      await agreement.confirm();
+      expect(logger.logs).to.be.match(/Agreement .* approved/);
+    });
   });
 });
