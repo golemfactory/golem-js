@@ -7,13 +7,18 @@ export class LoggerMock implements Logger {
   level = "debug";
   private _logs = "";
 
-  async expectToInclude(msg: string, timeout: number) {
-    await new Promise((res) => setTimeout(res, timeout));
+  async expectToInclude(msg: string, wait?: number) {
+    if (wait) await new Promise((res) => setTimeout(res, wait));
     return expect(this._logs).to.be.include(msg);
   }
-  async expectToMatch(msg: RegExp, timeout: number) {
-    await new Promise((res) => setTimeout(res, timeout));
+  async expectToMatch(msg: RegExp, wait?: number) {
+    if (wait) await new Promise((res) => setTimeout(res, wait));
     return expect(this._logs).to.be.match(msg);
+  }
+
+  async expectToNotMatch(msg: RegExp, wait?: number) {
+    if (wait) await new Promise((res) => setTimeout(res, wait));
+    return expect(this._logs).not.to.be.match(msg);
   }
 
   get logs() {

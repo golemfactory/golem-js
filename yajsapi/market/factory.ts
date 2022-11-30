@@ -1,56 +1,32 @@
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market/src/models";
 import { Activity as ActivityProp, NodeInfo as NodeProp, NodeInfoKeys } from "../props";
-import { dayjs, Logger } from "../utils";
+import { dayjs } from "../utils";
 import { MarketDecoration } from "ya-ts-client/dist/ya-payment";
 import { MarketProperty } from "ya-ts-client/dist/ya-payment/src/models";
 import { Package } from "../package";
 import { Allocation } from "../payment/allocation";
 import { Demand, DemandOptions } from "./demand";
-import { Configuration } from "ya-ts-client/dist/ya-market";
-import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
-import { YagnaOptions } from "../executor";
-
-const DEFAULT_OPTIONS = {
-  TIMEOUT: 30000,
-  SUBNET_TAG: "devnet-beta",
-};
+import { DemandConfig } from "./config";
 
 export class DemandFactory {
   private properties: Array<MarketProperty> = [];
   private constraints: Array<string> = [];
-  private subnetTag: string;
-  private timeout: number;
-  private yagnaOptions?: YagnaOptions;
-  private logger?: Logger;
+  private options: DemandConfig;
 
-  constructor(
-    private taskPackage: Package,
-    private allocations: Allocation[],
-    { subnetTag, timeout, yagnaOptions, logger }: DemandOptions
-  ) {
-    this.timeout = timeout || DEFAULT_OPTIONS.TIMEOUT;
-    this.subnetTag = subnetTag || DEFAULT_OPTIONS.SUBNET_TAG;
-    this.yagnaOptions = yagnaOptions;
-    this.logger = logger;
+  constructor(private taskPackage: Package, private allocations: Allocation[], options?: DemandOptions) {
+    this.options = new DemandConfig(options);
   }
 
   async create(): Promise<Demand> {
-    const api = new RequestorApi(
-      new Configuration({
-        apiKey: this.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY,
-        basePath: (this.yagnaOptions?.basePath || process.env.YAGNA_URL) + "/market-api/v1",
-        accessToken: this.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY,
-      })
-    );
     for (const decoration of await this.getDecorations()) {
       this.constraints.push(...decoration.constraints);
       this.properties.push(...decoration.properties);
     }
     const demandRequest = createDemandRequest(this.properties, this.constraints);
-    const { data: demandId } = await api.subscribeDemand(demandRequest).catch((e) => {
+    const { data: demandId } = await this.options.api.subscribeDemand(demandRequest).catch((e) => {
       throw new Error(`Could not publish demand on the market. ${e.response?.data || e}`);
     });
-    return new Demand(demandId, api, this.properties, this.constraints, this.logger);
+    return new Demand(demandId, this.properties, this.constraints, this.options);
   }
 
   private async getDecorations(): Promise<MarketDecoration[]> {
@@ -65,12 +41,12 @@ export class DemandFactory {
 
   private getBaseDecorations(): MarketDecoration {
     const activityProp = new ActivityProp();
-    activityProp.expiration.value = dayjs().add(this.timeout, "ms");
+    activityProp.expiration.value = dayjs().add(this.options.timeout, "ms");
     activityProp.multi_activity.value = true;
-    const nodeProp = new NodeProp(this.subnetTag);
+    const nodeProp = new NodeProp(this.options.subnetTag);
     return {
       properties: [...activityProp.properties(), ...nodeProp.properties()],
-      constraints: [`(${NodeInfoKeys.subnet_tag}=${this.subnetTag})`],
+      constraints: [`(${NodeInfoKeys.subnet_tag}=${this.options.subnetTag})`],
     };
   }
 }
