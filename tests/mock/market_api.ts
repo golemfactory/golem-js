@@ -6,6 +6,7 @@ import { DemandOfferBase, Event, ProposalEvent } from "ya-ts-client/dist/ya-mark
 import { proposalsDraft, proposalsInitial } from "./fixtures/proposals";
 import { AgreementProposal } from "ya-ts-client/dist/ya-market/src/models/agreement-proposal";
 import { agreementsApproved } from "./fixtures/agreements";
+import { sleep } from "../../yajsapi/utils";
 
 let expectedProposals: ProposalEvent[] = [];
 export const setExpectedProposals = (proposals) => (expectedProposals = proposals);
@@ -41,6 +42,7 @@ export class MarketApiMock extends RequestorApi {
   }
   // @ts-ignore
   async waitForApproval(agreementId: string): Promise<AxiosResponse<string>> {
+    await sleep(1);
     return new Promise((res) => res({} as AxiosResponse));
   }
 

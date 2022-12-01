@@ -55,13 +55,17 @@ export class AgreementPoolService implements ComputationHistory {
 
   async releaseAgreement(agreementId: string, allowReuse = false) {
     const agreement = await this.agreements.get(agreementId);
-    if (!agreement) throw new Error(`Agreement ${agreementId} cannot found in pool`);
-    if (allowReuse) this.agreementIdsToReuse.unshift(agreementId);
-    else {
+    if (!agreement) {
+      throw new Error(`Agreement ${agreementId} cannot found in pool`);
+    }
+    if (allowReuse) {
+      this.agreementIdsToReuse.unshift(agreementId);
+      this.logger?.debug(`Agreement ${agreementId} has been released for reuse`);
+    } else {
       await agreement.terminate();
       this.agreements.delete(agreementId);
+      this.logger?.debug(`Agreement ${agreementId} has been released and terminated`);
     }
-    this.logger?.debug(`Agreement ${agreementId} has been released ${allowReuse ? "for reuse" : ""}`);
   }
 
   async end() {
@@ -87,7 +91,6 @@ export class AgreementPoolService implements ComputationHistory {
     while (!readyAgreement && this.agreementIdsToReuse.length > 0) {
       const availableAgreementId = this.agreementIdsToReuse.pop();
       if (!availableAgreementId) continue;
-
       const availableAgreement = this.agreements.get(availableAgreementId);
       if (!availableAgreement) throw new Error(`Agreement ${availableAgreementId} cannot found in pool`);
 
@@ -116,9 +119,8 @@ export class AgreementPoolService implements ComputationHistory {
         const agreementFactory = new AgreementFactory(this.config);
         agreement = await agreementFactory.create(proposalId);
         agreement = await this.waitForAgreementApproval(agreement);
-
         const state = await agreement.getState();
-        this.lastAgreementRejectedByProvider.set(agreement.providerId, state === AgreementStateEnum.Rejected);
+        this.lastAgreementRejectedByProvider.set(agreement.provider.id, state === AgreementStateEnum.Rejected);
 
         if (state !== AgreementStateEnum.Approved) {
           throw new Error(`Agreement ${agreement.id} cannot be approved. Current state: ${state}`);
@@ -133,7 +135,7 @@ export class AgreementPoolService implements ComputationHistory {
       }
     }
     this.agreements.set(agreement.id, agreement);
-    this.logger?.debug(`Agreement ${agreement.id} created with provider ${agreement.getProviderInfo().providerName}`);
+    this.logger?.debug(`Agreement ${agreement.id} created with provider ${agreement.provider.name}`);
     return agreement;
   }
 
@@ -157,12 +159,18 @@ export class AgreementPoolService implements ComputationHistory {
       this.logger?.debug(`Agreement ${agreement.id} confirmed`);
     }
 
-    let timeout = false;
-    const timeoutId = setTimeout(() => (timeout = true), this.config.waitingForApprovalTimeout);
-    while ((await agreement.isFinalState()) && !timeout) {
-      await sleep(2);
-    }
-    clearTimeout(timeoutId);
+    /** Solution for support events in the future
+     * let timeout = false;
+     * const timeoutId = setTimeout(() => (timeout = true), this.config.waitingForApprovalTimeout);
+     * while ((await agreement.isFinalState()) && !timeout) {
+     *   await sleep(2);
+     * }
+     * clearTimeout(timeoutId);
+     **/
+
+    // Will throw an exception if the agreement will be not approved in specific timeout
+    await this.api.waitForApproval(agreement.id, this.config.waitingForApprovalTimeout);
+
     return agreement;
   }
 }
