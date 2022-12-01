@@ -74,6 +74,15 @@ export class MarketService {
   }
 
   private isProposalValid(proposal: Proposal): { result: boolean; reason?: string } {
+    // TODO: !!!!
+    // const timeout = proposal.props()[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP];
+    // if (timeout) {
+    //   if (timeout < DEBIT_NOTE_MIN_TIMEOUT) {
+    //     return await reject_proposal("Debit note acceptance timeout too short");
+    //   } else {
+    //     state.builder._properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout;
+    //   }
+    // }
     const commonPaymentPlatforms = this.getCommonPaymentPlatforms(proposal.properties);
     if (!commonPaymentPlatforms?.length) return { result: false, reason: "No common payment platform" };
     if (proposal.score && proposal.score < SCORE_NEUTRAL) return { result: false, reason: "Score is to low" };

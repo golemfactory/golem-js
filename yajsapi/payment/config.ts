@@ -1,0 +1,50 @@
+import { AllocationOptions } from "./allocation";
+import { Configuration } from "ya-ts-client/dist/ya-payment";
+import { RequestorApi } from "ya-ts-client/dist/ya-payment/api";
+import { Logger } from "../utils";
+
+const DEFAULTS = {
+  basePath: "http://127.0.0.1:7465/payment-api/v1",
+  budget: 1.0,
+  payment: { driver: "erc-20", network: "rinkeby" },
+  timeout: 20000,
+  allocationExpires: 1000 * 60 * 30, // 30 min
+  invoiceReceiveTimeout: 1000 * 60 * 5, // 5 min
+};
+
+abstract class BaseConfig {
+  public readonly timeout: number;
+  public readonly api: RequestorApi;
+  public readonly logger?: Logger;
+
+  protected constructor(options?: AllocationOptions) {
+    const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
+    if (!apiKey) throw new Error("Api key not defined");
+    const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_BASEPATH || DEFAULTS.basePath;
+    const apiConfig = new Configuration({ apiKey, basePath, accessToken: apiKey });
+    this.api = new RequestorApi(apiConfig);
+    this.timeout = options?.timeout || DEFAULTS.timeout;
+    this.logger = options?.logger;
+  }
+}
+
+export class AllocationConfig extends BaseConfig {
+  public readonly budget: number;
+  public readonly payment: { driver: string; network: string };
+  public readonly expires: number;
+  public readonly account: { address: string; platform: string };
+
+  constructor(options?: AllocationOptions) {
+    super(options);
+    if (!options || options?.account) throw new Error("Account option is required");
+    this.account = options.account;
+    this.budget = options?.budget || DEFAULTS.budget;
+    this.payment = {
+      driver: options?.payment?.driver || DEFAULTS.payment.driver,
+      network: options?.payment?.network || DEFAULTS.payment.network,
+    };
+    this.expires = options?.expires || DEFAULTS.allocationExpires;
+  }
+}
+
+export class InvoiceConfig {}

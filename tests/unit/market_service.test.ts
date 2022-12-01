@@ -7,7 +7,7 @@ import chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised);
 import { MarketService } from "../../yajsapi/market";
 import { agreementPoolServiceMock, packageMock, marketStrategyAlwaysBan, LoggerMock, allocationMock } from "../mock";
-import { proposalsInitial, proposalsDraft } from "../mock/fixtures/proposals";
+import { proposalsInitial, proposalsDraft } from "../mock/fixtures";
 
 const logger = new LoggerMock();
 
