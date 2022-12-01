@@ -36,6 +36,10 @@ export class MarketApiMock extends RequestorApi {
     return new Promise((res) => res({} as AxiosResponse));
   }
   // @ts-ignore
+  async terminateAgreement(agreementId: string): Promise<AxiosResponse<string>> {
+    return new Promise((res) => res({} as AxiosResponse));
+  }
+  // @ts-ignore
   async waitForApproval(agreementId: string): Promise<AxiosResponse<string>> {
     return new Promise((res) => res({} as AxiosResponse));
   }

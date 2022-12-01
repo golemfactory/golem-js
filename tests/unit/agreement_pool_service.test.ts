@@ -6,7 +6,6 @@ import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised);
 import { LoggerMock } from "../mock/logger";
-import { paymentServiceMock, agreementPoolServiceMock, packageMock, marketStrategyAlwaysBan } from "../mock";
 import { AgreementPoolService } from "../../yajsapi/agreement";
 
 const logger = new LoggerMock();
@@ -46,9 +45,11 @@ describe("Agreement Pool Service", () => {
     it("should not create agreement from proposal if any agreement is available");
   });
 
-  describe("isProviderLastAgreementRejected()");
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  describe("isProviderLastAgreementRejected()", () => {});
 
-  describe("terminateAll()");
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  describe("terminateAll()", () => {});
 
   describe("addProposal()", () => {
     it("should add proposal to pool", async () => {
