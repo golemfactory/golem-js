@@ -4,6 +4,7 @@ import { RequestorApi } from "ya-ts-client/dist/ya-payment/api";
 import { Logger } from "../utils";
 import { YagnaOptions } from "../executor";
 import { PaymentOptions } from "./service";
+import { InvoiceOptions } from "./invoice";
 
 const DEFAULTS = {
   basePath: "http://127.0.0.1:7465/payment-api/v1",
@@ -12,6 +13,10 @@ const DEFAULTS = {
   timeout: 20000,
   allocationExpires: 1000 * 60 * 30, // 30 min
   invoiceReceiveTimeout: 1000 * 60 * 5, // 5 min
+  maxInvoiceEvents: 10,
+  maxDebitNotesEvents: 10,
+  invoiceFetchingInterval: 2000,
+  debitNotesFetchingInterval: 2000,
 };
 
 export interface BasePaymentOptions {
@@ -44,8 +49,17 @@ abstract class BaseConfig {
 }
 
 export class PaymentConfig extends BaseConfig {
+  public readonly invoiceFetchingInterval: number;
+  public readonly debitNotesFetchingInterval: number;
+  public readonly maxInvoiceEvents: number;
+  public readonly maxDebitNotesEvents: number;
+
   constructor(options?: PaymentOptions) {
     super(options);
+    this.invoiceFetchingInterval = options?.invoiceFetchingInterval || DEFAULTS.invoiceFetchingInterval;
+    this.debitNotesFetchingInterval = options?.debitNotesFetchingInterval || DEFAULTS.debitNotesFetchingInterval;
+    this.maxInvoiceEvents = options?.maxInvoiceEvents || DEFAULTS.maxInvoiceEvents;
+    this.maxDebitNotesEvents = options?.maxDebitNotesEvents || DEFAULTS.maxDebitNotesEvents;
   }
 }
 
@@ -68,4 +82,8 @@ export class AllocationConfig extends BaseConfig {
   }
 }
 
-export class InvoiceConfig {}
+export class InvoiceConfig extends BaseConfig {
+  constructor(options?: InvoiceOptions) {
+    super(options);
+  }
+}

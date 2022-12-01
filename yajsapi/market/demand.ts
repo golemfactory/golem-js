@@ -15,6 +15,7 @@ export interface DemandOptions {
   timeout?: number;
   logger?: Logger;
   maxOfferEvents?: number;
+  offerFetchingInterval?: number;
 }
 
 export enum DemandEvent {
@@ -61,7 +62,7 @@ export class Demand extends EventEmitter {
           const proposal = new Proposal(this.id, this.options.api, event.proposal, this.getDemandRequest());
           this.emit(DemandEvent.ProposalReceived, proposal);
         }
-        await sleep(2);
+        await sleep(this.options.offerFetchingInterval, true);
       } catch (error) {
         this.logger?.warn(`Could not collect offers. ${error.response?.data?.message || error}`);
       }

@@ -8,6 +8,7 @@ const DEFAULTS = {
   subnetTag: "public",
   timeout: 20000,
   maxOfferEvents: 20,
+  offerFetchingInterval: 2000,
 };
 
 export class DemandConfig {
@@ -15,6 +16,7 @@ export class DemandConfig {
   public readonly timeout: number;
   public readonly subnetTag: string;
   public readonly maxOfferEvents: number;
+  public readonly offerFetchingInterval: number;
   public readonly logger?: Logger;
 
   constructor(options?: DemandOptions) {
@@ -25,6 +27,7 @@ export class DemandConfig {
     this.api = new RequestorApi(apiConfig);
     this.subnetTag = options?.subnetTag || DEFAULTS.subnetTag;
     this.timeout = options?.timeout || DEFAULTS.timeout;
+    this.offerFetchingInterval = options?.offerFetchingInterval || DEFAULTS.offerFetchingInterval;
     this.logger = options?.logger;
     this.maxOfferEvents = options?.maxOfferEvents || DEFAULTS.maxOfferEvents;
   }

@@ -104,6 +104,7 @@ export class TaskService {
       }
     } finally {
       --this.activeTasksCount;
+      this.paymentService.acceptPayments(agreement.id);
     }
     await this.agreementPoolService.releaseAgreement(agreement.id, true);
   }
