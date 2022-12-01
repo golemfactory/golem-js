@@ -35,7 +35,7 @@ const DEFAULT_OPTIONS = {
   maxWorkers: 5,
   budget: "1.0",
   strategy: null,
-  subnetTag: "devnet-beta",
+  subnetTag: "public",
   payment: { driver: "erc20", network: "rinkeby" },
 };
 
