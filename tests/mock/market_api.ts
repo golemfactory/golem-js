@@ -13,6 +13,11 @@ export const setExpectedProposals = (proposals) => (expectedProposals = proposal
 let expectedError: AxiosError;
 export const setExpectedError = (error) => (expectedError = error);
 
+let expectedProposals: ProposalEvent[] = [];
+export const setExpectedProposals = (proposals) => (expectedProposals = proposals);
+let expectedError: AxiosError;
+export const setExpectedError = (error) => (expectedError = error);
+
 export class MarketApiMock extends RequestorApi {
   private exampleProposals = [...proposalsInitial, proposalsDraft];
 
