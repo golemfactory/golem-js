@@ -2,6 +2,8 @@ import { AllocationOptions } from "./allocation";
 import { Configuration } from "ya-ts-client/dist/ya-payment";
 import { RequestorApi } from "ya-ts-client/dist/ya-payment/api";
 import { Logger } from "../utils";
+import { YagnaOptions } from "../executor";
+import { PaymentOptions } from "./service";
 
 const DEFAULTS = {
   basePath: "http://127.0.0.1:7465/payment-api/v1",
@@ -12,19 +14,38 @@ const DEFAULTS = {
   invoiceReceiveTimeout: 1000 * 60 * 5, // 5 min
 };
 
+export interface BasePaymentOptions {
+  yagnaOptions?: YagnaOptions;
+  budget?: number;
+  payment?: { driver?: string; network?: string };
+  logger?: Logger;
+  timeout?: number;
+}
+
 abstract class BaseConfig {
   public readonly timeout: number;
   public readonly api: RequestorApi;
   public readonly logger?: Logger;
+  public readonly payment: { driver: string; network: string };
 
-  protected constructor(options?: AllocationOptions) {
+  protected constructor(public readonly options?: BasePaymentOptions) {
     const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
     if (!apiKey) throw new Error("Api key not defined");
     const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_BASEPATH || DEFAULTS.basePath;
     const apiConfig = new Configuration({ apiKey, basePath, accessToken: apiKey });
     this.api = new RequestorApi(apiConfig);
     this.timeout = options?.timeout || DEFAULTS.timeout;
+    this.payment = {
+      driver: options?.payment?.driver || DEFAULTS.payment.driver,
+      network: options?.payment?.network || DEFAULTS.payment.network,
+    };
     this.logger = options?.logger;
+  }
+}
+
+export class PaymentConfig extends BaseConfig {
+  constructor(options?: PaymentOptions) {
+    super(options);
   }
 }
 
@@ -36,7 +57,7 @@ export class AllocationConfig extends BaseConfig {
 
   constructor(options?: AllocationOptions) {
     super(options);
-    if (!options || options?.account) throw new Error("Account option is required");
+    if (!options || !options?.account) throw new Error("Account option is required");
     this.account = options.account;
     this.budget = options?.budget || DEFAULTS.budget;
     this.payment = {

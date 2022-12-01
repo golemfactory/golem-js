@@ -3,7 +3,7 @@ import { RequestorApi } from "ya-ts-client/dist/ya-market/src/api/requestor-api"
 import { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 import { v4 as uuidv4 } from "uuid";
 import { DemandOfferBase, Event, ProposalEvent } from "ya-ts-client/dist/ya-market/src/models";
-import { proposalsDraft, proposalsInitial } from "./fixtures/proposals";
+import { proposalsDraft, proposalsInitial } from "../fixtures";
 
 let expectedProposals: ProposalEvent[] = [];
 export const setExpectedProposals = (proposals) => (expectedProposals = proposals);

@@ -1,5 +1,5 @@
-import { Allocation } from "../../yajsapi/payment/allocation";
-import { MarketDecoration, RequestorApi, Allocation as Model } from "ya-ts-client/dist/ya-payment";
+import { Allocation } from "../../../yajsapi/payment/allocation";
+import { MarketDecoration } from "ya-ts-client/dist/ya-payment";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -7,14 +7,9 @@ export const allocationMock: Allocation = {
   timeout: "",
   paymentPlatform: "erc20-rinkeby-tglm",
   address: "",
-  allocationId: "test_id",
-  makeDeposit: false,
-  remainingAmount: "",
-  spentAmount: "",
+  id: "test_id",
   timestamp: "",
   totalAmount: "",
-  model: {} as Model,
-  api: {} as RequestorApi,
   async getDemandDecoration(): Promise<MarketDecoration> {
     return Promise.resolve({
       properties: [
@@ -26,10 +21,7 @@ export const allocationMock: Allocation = {
       constraints: ["(golem.com.payment.platform.erc20-rinkeby-tglm.address=*)"],
     });
   },
-  async releaseAllocation(): Promise<void> {
+  async release(): Promise<void> {
     return Promise.resolve(undefined);
   },
-  // async create(): Promise<Allocation> {
-  //   return {} as Allocation;
-  // },
 };

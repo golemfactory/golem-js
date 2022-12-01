@@ -3,18 +3,12 @@ import { Package } from "../package";
 import { Demand, Proposal, DemandEvent } from "./";
 import { DefaultMarketStrategy, MarketStrategy, SCORE_NEUTRAL } from "./strategy";
 import { AgreementPoolService } from "../agreement";
-import { YagnaOptions } from "../executor";
 import { Allocation } from "../payment/allocation";
+import { DemandOptions } from "./demand";
 
-export type MarketOptions = {
-  budget?: number;
-  payment?: { driver: string; network: string };
-  subnetTag?: string;
-  timeout?: number;
-  yagnaOptions?: YagnaOptions;
+export interface MarketOptions extends DemandOptions {
   strategy?: MarketStrategy;
-  logger?: Logger;
-};
+}
 
 export class MarketService {
   private marketStrategy: MarketStrategy;
@@ -30,12 +24,7 @@ export class MarketService {
     for (const allocation of allocations) {
       if (allocation.paymentPlatform) this.allowedPaymentPlatforms.push(allocation.paymentPlatform);
     }
-    this.demand = await Demand.create(taskPackage, allocations, {
-      subnetTag: this.options?.subnetTag,
-      timeout: this.options?.timeout,
-      yagnaOptions: this.options?.yagnaOptions,
-      logger: this.options?.logger,
-    });
+    this.demand = await Demand.create(taskPackage, allocations, this.options);
     this.demand.on(DemandEvent.ProposalReceived, (proposal) => {
       if (proposal.isInitial()) this.processInitialProposal(proposal);
       else if (proposal.isDraft()) this.processDraftProposal(proposal);
@@ -62,6 +51,7 @@ export class MarketService {
       const { result: isProposalValid, reason } = this.isProposalValid(proposal);
       if (isProposalValid) {
         const chosenPlatform = this.getCommonPaymentPlatforms(proposal.properties)![0];
+        // TODO: timeout param for respond
         await proposal.respond(chosenPlatform);
         this.logger?.debug(`Proposal hes been responded (${proposal.proposalId})`);
       } else {

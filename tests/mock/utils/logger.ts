@@ -1,4 +1,4 @@
-import { Logger } from "../../yajsapi/utils";
+import { Logger } from "../../../yajsapi/utils";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised);

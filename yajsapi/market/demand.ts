@@ -25,7 +25,7 @@ export class Demand extends EventEmitter {
   private isRunning = true;
   private logger?: Logger;
 
-  static async create(taskPackage: Package, allocations: Allocation[], options: DemandOptions): Promise<Demand> {
+  static async create(taskPackage: Package, allocations: Allocation[], options?: DemandOptions): Promise<Demand> {
     const factory = new DemandFactory(taskPackage, allocations, options);
     return factory.create();
   }

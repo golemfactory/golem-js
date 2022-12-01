@@ -1,4 +1,4 @@
-import { Package } from "../../yajsapi/package";
+import { Package } from "../../../yajsapi/package";
 import { MarketDecoration } from "ya-ts-client/dist/ya-payment";
 
 export const packageMock: Package = {

@@ -1,5 +1,5 @@
 import rewiremock from "rewiremock";
-import * as activityMock from "../mock/activity_api";
+import * as activityMock from "../mock/rest/activity";
 rewiremock("ya-ts-client/dist/ya-activity/api").with({
   RequestorControlApi: activityMock.RequestorControlApiMock,
   RequestorStateApi: activityMock.RequestorSateApiMock,
