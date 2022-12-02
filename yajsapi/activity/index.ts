@@ -1,3 +1,2 @@
-export { Activity, ActivityStateEnum } from "./activity";
-export { ActivityFactory } from "./factory";
+export { Activity, ActivityStateEnum, ActivityOptions } from "./activity";
 export { Result } from "./results";

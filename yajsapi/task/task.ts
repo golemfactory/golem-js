@@ -1,5 +1,5 @@
-import { Worker } from "../executor";
-import { QueueableTask } from "./task_queue";
+import { QueueableTask, Worker } from "./";
+import { Result } from "../activity";
 
 export enum TaskState {
   New,
@@ -11,7 +11,7 @@ export enum TaskState {
 
 const MAX_RETRIES = 5;
 
-export class Task<InputType, OutputType> implements QueueableTask {
+export class Task<InputType = unknown, OutputType = unknown> implements QueueableTask {
   private state = TaskState.New;
   private results?: OutputType;
   private retriesCount = 0;
@@ -19,7 +19,7 @@ export class Task<InputType, OutputType> implements QueueableTask {
   constructor(
     private worker: Worker<InputType, OutputType>,
     private data?: InputType,
-    private initWorker?: Worker<undefined, unknown>
+    private initWorker?: Worker<undefined>
   ) {}
   start() {
     this.state = TaskState.Pending;
@@ -42,16 +42,25 @@ export class Task<InputType, OutputType> implements QueueableTask {
   isFinished(): boolean {
     return this.state === TaskState.Done || this.state === TaskState.Rejected;
   }
+  isRejected(): boolean {
+    return this.state === TaskState.Rejected;
+  }
+  isPending(): boolean {
+    return this.state === TaskState.Pending;
+  }
+  isNew(): boolean {
+    return this.state === TaskState.New;
+  }
   getResults(): OutputType | undefined {
     return this.results;
   }
   getData(): InputType | undefined {
     return this.data;
   }
-  getWorker(): Worker<InputType, OutputType> {
+  getWorker(): Worker<InputType> {
     return this.worker;
   }
-  getInitWorker(): Worker<undefined, unknown> | undefined {
+  getInitWorker(): Worker<undefined> | undefined {
     return this.initWorker;
   }
 }

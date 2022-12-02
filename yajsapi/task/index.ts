@@ -1,5 +1,5 @@
-import { TaskService } from "./task_service";
-import { Task } from "./task";
-import { TaskQueue } from "./task_queue";
-
-export { Task, TaskQueue, TaskService };
+export { TaskService } from "./service";
+export { Task } from "./task";
+export { TaskQueue, QueueableTask } from "./queue";
+export { WorkContext, Worker } from "./work";
+export { Batch } from "./batch";

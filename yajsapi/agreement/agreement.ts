@@ -21,16 +21,15 @@ export interface ProviderInfo {
 }
 
 export class Agreement {
-  private readonly api: RequestorApi;
-  private readonly logger?: Logger;
-  private readonly requestTimeout: number;
-
   private agreementData?: AgreementModel;
+  private requestTimeout = 10000;
 
-  constructor(public readonly id, private readonly configContainer: AgreementConfigContainer) {
-    this.logger = configContainer.logger;
-    this.api = configContainer.api;
-    this.requestTimeout = configContainer.options?.requestTimeout || 10000;
+  constructor(
+    public readonly id,
+    public readonly provider: { id: string; name: string },
+    private readonly api: RequestorApi,
+    private logger?: Logger
+  ) {
     // this.refreshDetails()
     //   .then((x) => {
     //     this._providerId = x.id;

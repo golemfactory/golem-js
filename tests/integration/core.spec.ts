@@ -1,9 +1,10 @@
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import { Demand, Allocation, Demand } from "../../yajsapi/core";
-import { logger } from "../mock/logger";
+import { LoggerMock } from "../mock/logger";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
+const logger = new LoggerMock();
 
 const subnetTag = "devnet-beta";
 
@@ -25,10 +26,15 @@ describe("Core (mid-level) modules", () => {
     const demand = await Demand.create(taskPackage, [allocation], { subnetTag });
     demand.on("proposal", (proposal) => proposal.respond());
     const offer = await new Promise((res) => demand.on("offer", res));
-    const agreement = await Agreement.create(offer);
+
+    const agreement = await Agreement.create(offer.id);
+    const { providerId, providerName } = agreement;
     await agreement.confirm();
-    const activity = await Activity.create(agreement);
-    const script = await Script.create("echo 'Hello World'");
+    const state = await agreement.getState();
+    await agreement.terminate("no reason");
+
+    const activity = await Activity.create(agreement.id);
+    const script = await Script.create(["echo 'Hello Golem'", "echo 'Hello World'"]);
     const exeScript = script.getExeScriptRequest();
     const results = await activity.execute(exeScript);
     expect(results).to.include({ stdout: "Hello World" });

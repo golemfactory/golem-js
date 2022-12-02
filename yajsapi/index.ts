@@ -1,5 +1,5 @@
 import * as executor from "./executor";
-import * as work from "./work";
+import * as task from "./task";
 import * as activity from "./activity";
 import * as agreement from "./agreement";
 import * as market from "./market";
@@ -8,4 +8,4 @@ import * as payment from "./payment";
 import * as utils from "./utils";
 import { createExecutor } from "./executor";
 
-export { executor, work, activity, agreement, market, payment, network, utils, createExecutor };
+export { executor, task, activity, agreement, market, payment, network, utils, createExecutor };
