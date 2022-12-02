@@ -31,9 +31,9 @@ export class ExecutorConfig {
     cores?: number;
     capabilities?: string[];
   };
-  readonly logger?: Logger;
   readonly logLevel: string;
   readonly yagnaOptions: { apiKey: string; basePath: string };
+  logger?: Logger;
 
   constructor(options: ExecutorOptions) {
     const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;

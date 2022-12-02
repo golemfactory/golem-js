@@ -54,11 +54,11 @@ export class TaskExecutor {
     this.options = new ExecutorConfig(
       typeof options === "string" ? { package: options } : (options as ExecutorOptions)
     );
+    if (!this.options.logger && !runtimeContextChecker.isBrowser) this.options.logger = winstonLogger;
+    this.options.logger?.setLevel && this.options.logger?.setLevel(this.options.logLevel);
     this.logger = this.options.logger;
-    if (!this.options.logger && !runtimeContextChecker.isBrowser) this.logger = winstonLogger;
-    this.logger?.setLevel && this.logger?.setLevel(this.options.logLevel);
     this.taskQueue = new TaskQueue<Task<any, any>>();
-    this.agreementPoolService = new AgreementPoolService();
+    this.agreementPoolService = new AgreementPoolService(this.options);
     this.networkService = new NetworkService(this.options);
     this.paymentService = new PaymentService(this.options);
     this.marketService = new MarketService(this.agreementPoolService, this.options);
@@ -76,7 +76,7 @@ export class TaskExecutor {
     const taskPackage =
       typeof this.options.package === "string" ? await this.createPackage(this.options.package) : this.options.package;
     this.logger?.debug("Initializing task executor services...");
-    const allocations = await this.paymentService.getAllocations();
+    const allocations = await this.paymentService.createAllocations();
     this.marketService.run(taskPackage, allocations).catch((e) => this.handleCriticalError(e));
     this.agreementPoolService.run().catch((e) => this.handleCriticalError(e));
     this.paymentService.run().catch((e) => this.handleCriticalError(e));

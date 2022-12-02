@@ -126,7 +126,7 @@ export class AgreementPoolService implements ComputationHistory {
           throw new Error(`Agreement ${agreement.id} cannot be approved. Current state: ${state}`);
         }
       } catch (e) {
-        this.logger?.error(`Could not create agreement form available proposal: ${e.message}`);
+        this.logger?.error(`Unable to create agreement form available proposal: ${e?.data?.message || e}`);
         // TODO: What we should do with used proposal in that case ?? unshift to begin ?
         await sleep(2);
 

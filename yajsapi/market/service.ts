@@ -80,8 +80,8 @@ export class MarketService {
   }
 
   private async processDraftProposal(proposal: Proposal) {
-    this.logger?.debug(`Proposal has been confirmed (${proposal.proposalId})`);
     this.agreementPoolService.addProposal(proposal.proposalId);
+    this.logger?.debug(`Proposal has been confirmed and added to agreement pool (${proposal.proposalId})`);
   }
 
   private getCommonPaymentPlatforms(proposalProperties): string[] | undefined {

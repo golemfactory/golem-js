@@ -2,9 +2,10 @@ import { DemandOptions } from "./demand";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import { Configuration } from "ya-ts-client/dist/ya-market";
 import { Logger } from "../utils";
+import base = Mocha.reporters.base;
 
 const DEFAULTS = {
-  basePath: "http://127.0.0.1:7465/market-api/v1",
+  basePath: "http://127.0.0.1:7465",
   subnetTag: "public",
   timeout: 20000,
   maxOfferEvents: 20,
@@ -23,7 +24,7 @@ export class DemandConfig {
     const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
     if (!apiKey) throw new Error("Api key not defined");
     const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_BASEPATH || DEFAULTS.basePath;
-    const apiConfig = new Configuration({ apiKey, basePath, accessToken: apiKey });
+    const apiConfig = new Configuration({ apiKey, basePath: `${basePath}/market-api/v1`, accessToken: apiKey });
     this.api = new RequestorApi(apiConfig);
     this.subnetTag = options?.subnetTag || DEFAULTS.subnetTag;
     this.timeout = options?.timeout || DEFAULTS.timeout;

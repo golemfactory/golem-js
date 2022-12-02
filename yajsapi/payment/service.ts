@@ -1,10 +1,10 @@
 import { Logger, sleep } from "../utils";
 import { Allocation, AllocationOptions } from "./allocation";
-import { PaymentConfig } from "./config";
+import { BasePaymentOptions, PaymentConfig } from "./config";
 import { Invoice } from "./invoice";
 import { DebitNote } from "./debit_note";
 
-export interface PaymentOptions extends AllocationOptions {
+export interface PaymentOptions extends BasePaymentOptions {
   invoiceFetchingInterval?: number;
   debitNotesFetchingInterval?: number;
   payingInterval?: number;
@@ -51,7 +51,7 @@ export class PaymentService {
 
   async createAllocations(): Promise<Allocation[]> {
     const { data: accounts } = await this.options.api.getRequestorAccounts().catch((e) => {
-      throw new Error("Requestor accounts cannot be retrieved. " + e.response?.data?.message || e.response?.data || e);
+      throw new Error("Unable to get requestor accounts" + e.response?.data?.message || e.response?.data || e);
     });
     for (const account of accounts) {
       if (
@@ -65,7 +65,6 @@ export class PaymentService {
         );
         continue;
       }
-      this.logger?.debug(`Creating allocation using payment platform ${account.platform}`);
       this.allocations.push(await Allocation.create({ ...this.options.options, account }));
     }
     return this.allocations;

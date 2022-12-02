@@ -5,7 +5,6 @@ import { Allocation as AllocationModel } from "ya-ts-client/dist/ya-payment/src/
 export interface AllocationOptions extends BasePaymentOptions {
   account: { address: string; platform: string };
   expires?: number;
-  invoiceReceiveTimeout?: number;
 }
 
 export class Allocation {
@@ -26,7 +25,7 @@ export class Allocation {
       paymentPlatform: config.account.platform,
       address: config.account.address,
       timestamp: now.toISOString(),
-      timeout: new Date(config.expires).toISOString(),
+      timeout: new Date(+now + config.expires).toISOString(),
       makeDeposit: false,
       remainingAmount: "",
       spentAmount: "",
@@ -72,7 +71,7 @@ export class Allocation {
 
   async getDemandDecoration(): Promise<MarketDecoration> {
     const { data: decoration } = await this.options.api.getDemandDecorations([this.id]).catch((e) => {
-      throw new Error(`Could not get demand decorations. ${e.response?.data || e}`);
+      throw new Error(`Unable to get demand decorations. ${e.response?.data?.message || e}`);
     });
     return decoration;
   }

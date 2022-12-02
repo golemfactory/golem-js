@@ -7,7 +7,7 @@ import { PaymentOptions } from "./service";
 import { InvoiceOptions } from "./invoice";
 
 const DEFAULTS = {
-  basePath: "http://127.0.0.1:7465/payment-api/v1",
+  basePath: "http://127.0.0.1:7465/",
   budget: 1.0,
   payment: { driver: "erc-20", network: "rinkeby" },
   timeout: 20000,
@@ -38,7 +38,7 @@ abstract class BaseConfig {
     const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
     if (!apiKey) throw new Error("Api key not defined");
     const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_BASEPATH || DEFAULTS.basePath;
-    const apiConfig = new Configuration({ apiKey, basePath, accessToken: apiKey });
+    const apiConfig = new Configuration({ apiKey, basePath: `${basePath}/payment-api/v1`, accessToken: apiKey });
     this.api = new RequestorApi(apiConfig);
     this.timeout = options?.timeout || DEFAULTS.timeout;
     this.payment = {
