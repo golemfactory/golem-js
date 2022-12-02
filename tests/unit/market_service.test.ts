@@ -5,9 +5,8 @@ rewiremock.enable();
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised);
-import { LoggerMock } from "../mock/logger";
 import { MarketService } from "../../yajsapi/market";
-import { paymentServiceMock, agreementPoolServiceMock, packageMock, marketStrategyAlwaysBan } from "../mock";
+import { agreementPoolServiceMock, packageMock, marketStrategyAlwaysBan, LoggerMock, allocationMock } from "../mock";
 import { proposalsInitial, proposalsDraft } from "../mock/fixtures/proposals";
 
 const logger = new LoggerMock();
@@ -18,8 +17,8 @@ describe("Market Service", () => {
   });
 
   it("should start service and publish demand", async () => {
-    const marketService = new MarketService(paymentServiceMock, agreementPoolServiceMock, logger);
-    await marketService.run(packageMock);
+    const marketService = new MarketService(agreementPoolServiceMock, { logger });
+    await marketService.run(packageMock, [allocationMock]);
     expect(logger.logs).to.include("Market Service has started");
     expect(logger.logs).to.match(/Demand .* published on the market/);
     await marketService.end();
@@ -27,16 +26,16 @@ describe("Market Service", () => {
   });
 
   it("should respond initial proposal", async () => {
-    const marketService = new MarketService(paymentServiceMock, agreementPoolServiceMock, logger);
-    await marketService.run(packageMock);
+    const marketService = new MarketService(agreementPoolServiceMock, { logger });
+    await marketService.run(packageMock, [allocationMock]);
     setExpectedProposals(proposalsInitial);
     await logger.expectToInclude("Proposal hes been responded", 10);
     await marketService.end();
   });
 
   it("should add draft proposal to agreement pool", async () => {
-    const marketService = new MarketService(paymentServiceMock, agreementPoolServiceMock, logger);
-    await marketService.run(packageMock);
+    const marketService = new MarketService(agreementPoolServiceMock, { logger });
+    await marketService.run(packageMock, [allocationMock]);
     setExpectedProposals(proposalsDraft);
     await logger.expectToInclude("Proposal has been confirmed", 10);
     const addedProposalsIds = agreementPoolServiceMock["getProposalIds"]();
@@ -45,24 +44,18 @@ describe("Market Service", () => {
   });
 
   it("should reject initial proposal without common payment platform", async () => {
-    const marketService = new MarketService(paymentServiceMock, agreementPoolServiceMock, logger);
-    await marketService.run(packageMock);
+    const marketService = new MarketService(agreementPoolServiceMock, { logger });
+    await marketService.run(packageMock, [allocationMock]);
     setExpectedProposals([proposalsInitial[6]]);
     await logger.expectToMatch(/Proposal hes been rejected .* Reason: No common payment platform/, 10);
     await marketService.end();
   });
 
   it("should reject initial proposal with to low score", async () => {
-    const marketService = new MarketService(
-      paymentServiceMock,
-      agreementPoolServiceMock,
-      logger,
-      undefined,
-      marketStrategyAlwaysBan
-    );
-    await marketService.run(packageMock);
+    const marketService = new MarketService(agreementPoolServiceMock, { logger, strategy: marketStrategyAlwaysBan });
+    await marketService.run(packageMock, [allocationMock]);
     setExpectedProposals(proposalsInitial);
     await logger.expectToMatch(/Proposal hes been rejected .* Reason: Score is to low/, 10);
     await marketService.end();
-  }).timeout(10000);
+  });
 });

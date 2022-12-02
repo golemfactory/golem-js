@@ -2,9 +2,9 @@ import { Logger } from "../utils";
 import { Package } from "../package";
 import { Demand, Proposal, DemandEvent } from "./";
 import { DefaultMarketStrategy, MarketStrategy, SCORE_NEUTRAL } from "./strategy";
-import { PaymentService } from "../payment";
 import { AgreementPoolService } from "../agreement";
 import { YagnaOptions } from "../executor";
+import { Allocation } from "../payment/allocation";
 
 export type MarketOptions = {
   budget?: number;
@@ -12,28 +12,21 @@ export type MarketOptions = {
   subnetTag?: string;
   timeout?: number;
   yagnaOptions?: YagnaOptions;
+  strategy?: MarketStrategy;
+  logger?: Logger;
 };
 
 export class MarketService {
   private marketStrategy: MarketStrategy;
   private demand?: Demand;
   private allowedPaymentPlatforms: string[] = [];
+  private logger: Logger | undefined;
 
-  constructor(
-    private readonly paymentService: PaymentService,
-    private readonly agreementPoolService: AgreementPoolService,
-    private readonly logger?: Logger,
-    private readonly options?: MarketOptions,
-    marketStrategy?: MarketStrategy
-  ) {
-    this.marketStrategy = marketStrategy || new DefaultMarketStrategy(this.agreementPoolService);
+  constructor(private readonly agreementPoolService: AgreementPoolService, private readonly options?: MarketOptions) {
+    this.marketStrategy = options?.strategy || new DefaultMarketStrategy(this.agreementPoolService);
+    this.logger = this.options?.logger;
   }
-  async run(taskPackage: Package) {
-    const allocations = await this.paymentService
-      .createAllocations(this.options?.budget, this.options?.payment, this.options?.timeout)
-      .catch((e) => {
-        throw new Error(`Could not create allocation ${e}`);
-      });
+  async run(taskPackage: Package, allocations: Allocation[]) {
     for (const allocation of allocations) {
       if (allocation.paymentPlatform) this.allowedPaymentPlatforms.push(allocation.paymentPlatform);
     }
@@ -41,7 +34,7 @@ export class MarketService {
       subnetTag: this.options?.subnetTag,
       timeout: this.options?.timeout,
       yagnaOptions: this.options?.yagnaOptions,
-      logger: this.logger,
+      logger: this.options?.logger,
     });
     this.demand.on(DemandEvent.ProposalReceived, (proposal) => {
       if (proposal.isInitial()) this.processInitialProposal(proposal);
