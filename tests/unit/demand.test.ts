@@ -31,14 +31,12 @@ describe("Demand", () => {
       await demand.unsubscribe();
     });
 
-    it("should get offer after publish demand and respond proposal", async () => {
+  describe("Processing", () => {
+    it("should get proposal after publish demand", async () => {
       const demand = await Demand.create(packageMock, [allocationMock], { subnetTag });
       setExpectedProposals(proposalsInitial);
-      demand.on("proposal", (proposal) => proposal.respond());
-      setExpectedProposals(proposalsDraft);
-      const proposal: Proposal = await new Promise((res) => demand.on(DemandEvent.ProposalReceived, res));
+      const proposal = await new Promise((res) => demand.on(DemandEvent.ProposalReceived, res));
       expect(proposal).to.be.instanceof(Proposal);
-      expect(proposal.isDraft()).to.be.true;
       await demand.unsubscribe();
     });
   });

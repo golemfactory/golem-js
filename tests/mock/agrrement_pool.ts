@@ -1,6 +1,6 @@
 /* eslint @typescript-eslint/ban-ts-comment: 0 */
 import { Agreement, AgreementPoolService } from "../../yajsapi/agreement";
-import { agreementsApproved } from "./fixtures/agreements";
+import { agreementsApproved } from "./fixtures";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import { AgreementConfig } from "../../yajsapi/agreement/config";
 
@@ -17,6 +17,9 @@ export const agreementPoolServiceMock: AgreementPoolService = {
   },
   isProviderLastAgreementRejected(providerId: string): boolean {
     return invalidProviderIds.includes(providerId);
+  },
+  async releaseAgreement(agreementId: string, allowReuse = false) {
+    return undefined;
   },
   // @ts-ignore
   getProposalIds() {

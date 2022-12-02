@@ -3,50 +3,65 @@ import { Command, Deploy, DownloadFile, Run, Script, Start, UploadFile } from ".
 import { StorageProvider } from "../storage/provider";
 import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity";
 import { sleep, Logger, runtimeContextChecker } from "../utils";
-import { Batch, Task } from "../task";
-import { Agreement } from "../agreement";
+import { Batch } from "../task";
 
 export type Worker<InputType = unknown, OutputType = unknown> = (
   ctx: WorkContext,
-  data: InputType
+  data?: InputType
 ) => Promise<OutputType | undefined>;
 
+const DEFAULTS = {
+  timeout: 10000,
+  activityStateCheckInterval: 1000,
+};
+
+export interface WorkOptions {
+  timeout?: number;
+  activityStateCheckingInterval?: number;
+  provider?: { name: string; id: string; networkConfig?: object };
+  storageProvider?: StorageProvider;
+  logger?: Logger;
+  initWorker?: Worker<undefined>;
+}
+
 export class WorkContext {
+  private readonly timeout: number;
+  private readonly logger?: Logger;
+  private readonly activityStateCheckingInterval: number;
+  private readonly provider?: { name: string; id: string; networkConfig?: object };
+  private readonly storageProvider?: StorageProvider;
   private resultAccepted = false;
   private resultRejected = false;
-  constructor(
-    private agreement: Agreement,
-    private activity: Activity,
-    private task: Task,
-    private provider: { name: string; id: string; networkConfig?: object },
-    private storageProvider?: StorageProvider,
-    private logger?: Logger
-  ) {}
+
+  constructor(private activity: Activity, private options?: WorkOptions) {
+    this.timeout = options?.timeout || DEFAULTS.timeout;
+    this.logger = options?.logger;
+    this.activityStateCheckingInterval = options?.activityStateCheckingInterval || DEFAULTS.activityStateCheckInterval;
+    this.provider = options?.provider;
+    this.storageProvider = options?.storageProvider;
+  }
   async before(): Promise<Result[] | void> {
-    const worker = this.task.getInitWorker();
     let state = await this.activity.getState();
     if (state === ActivityStateStateEnum.Ready) {
-      if (worker) await worker(this, undefined);
+      if (this.options?.initWorker) await this.options?.initWorker(this, undefined);
       return;
     }
     if (state === ActivityStateStateEnum.Initialized) {
       await this.activity.execute(
-        new Script([new Deploy(this.provider.networkConfig), new Start()]).getExeScriptRequest()
+        new Script([new Deploy(this.provider?.networkConfig), new Start()]).getExeScriptRequest()
       );
     }
     let timeout = false;
-    const timeoutId = setTimeout(() => (timeout = true), 30000);
+    const timeoutId = setTimeout(() => (timeout = true), this.timeout);
     while (state !== ActivityStateStateEnum.Ready && !timeout) {
-      await sleep(2);
+      await sleep(this.activityStateCheckingInterval, true);
       state = await this.activity.getState();
     }
     clearTimeout(timeoutId);
     if (state !== ActivityStateStateEnum.Ready) {
       throw new Error(`Activity ${this.activity.id} cannot reach the Ready state. Current state: ${state}`);
     }
-    if (worker) {
-      await worker(this, undefined);
-    }
+    if (this.options?.initWorker) await this.options?.initWorker(this, undefined);
   }
   async run(...args: Array<string | string[]>): Promise<Result> {
     const command =
@@ -69,24 +84,9 @@ export class WorkContext {
   beginBatch() {
     return Batch.create(this.activity, this.storageProvider, this.logger);
   }
-  acceptResult(results: Result[]) {
-    if (!this.resultAccepted) this.task.stop(results);
-    this.resultAccepted = true;
-  }
   rejectResult(msg: string) {
-    if (!this.resultRejected && !this.resultAccepted) this.task.stop(undefined, new Error(msg), true);
-    this.resultRejected = true;
-    this.resultAccepted = true;
+    throw new Error(`Work rejected by user. Reason: ${msg}`);
   }
-  log(msg: string) {
-    this.logger?.info(`[${this.provider?.name}] ${msg}`);
-  }
-  getProvider() {
-    return this.provider;
-  }
-  // getWebsocketUri(port: number) {
-  //   // return this.networkNode?.get_websocket_uri(port);
-  // }
 
   private async runOneCommand(command: Command): Promise<Result> {
     const script = new Script([command]);
@@ -100,7 +100,7 @@ export class WorkContext {
       const errorMessage = commandsErrors
         .map((err) => `Error: ${err.message}. Stdout: ${err.stdout?.trim()}. Stderr: ${err.stderr?.trim()}`)
         .join(". ");
-      this.rejectResult(`Task error on provider ${this.provider.name}. ${errorMessage}`);
+      this.rejectResult(`Task error on provider ${this.provider?.name || "'unknown'"}. ${errorMessage}`);
       throw new Error(errorMessage);
     }
     return allResults[0];

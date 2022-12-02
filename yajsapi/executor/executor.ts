@@ -79,7 +79,7 @@ export class TaskExecutor {
     if (!this.options.logger && !runtimeContextChecker.isBrowser) this.logger = winstonLogger;
     this.logger?.setLevel && this.logger?.setLevel(this.options.logLevel || "info");
     this.eventBus = new EventBus();
-    this.taskQueue = new TaskQueue<Task<unknown, unknown>>();
+    this.taskQueue = new TaskQueue<Task<any, any>>();
     const agreementContainer = new AgreementConfigContainer(
       { yagnaOptions: this.yagnaOptions },
       this.eventBus,
@@ -106,10 +106,8 @@ export class TaskExecutor {
       this.taskQueue,
       this.agreementPoolService,
       this.paymentService,
-      this.logger,
-      { yagnaOptions: this.yagnaOptions },
       this.networkService,
-      this.storageProvider
+      { yagnaOptions: this.yagnaOptions, logger: this.logger, storageProvider: this.storageProvider }
     );
   }
 

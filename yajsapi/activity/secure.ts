@@ -5,13 +5,9 @@ import { attest, types } from "sgx-ias-js/index";
 import * as utf8 from "utf8";
 import { Credentials } from "ya-ts-client/dist/ya-activity/src/models";
 import { yaActivity } from "ya-ts-client";
-import { RequestorControlApi, RequestorStateApi } from "ya-ts-client/dist/ya-activity/api";
+import { ActivityConfig } from "./config";
 
-export async function createSecureActivity(
-  agreementId: string,
-  api: { control: RequestorControlApi; state: RequestorStateApi },
-  options?: ActivityOptions
-): Promise<SecureActivity> {
+export async function createSecureActivity(agreementId: string, options?: ActivityConfig): Promise<SecureActivity> {
   if (!options?.taskPackage) {
     throw new Error("Task package option is required for create secure activity");
   }
@@ -19,7 +15,7 @@ export async function createSecureActivity(
   const publicKey = privateKey.publicKey();
   let cryptoCtx: CryptoCtx;
 
-  const { data: response } = await api.control.createActivity(
+  const { data: response } = await options.api.control.createActivity(
     {
       agreementId,
       requestorPubKey: publicKey.toString(),
@@ -69,34 +65,33 @@ export async function createSecureActivity(
       }
     }
   } catch (error) {
-    await api.control.destroyActivity(activityId, 10, { timeout: 11000 });
+    await options.api.control.destroyActivity(activityId, 10, { timeout: 11000 });
     throw error;
   }
 
-  return new SecureActivity(activityId, api, credentials, cryptoCtx);
+  return new SecureActivity(activityId, credentials, cryptoCtx, options);
 }
 
 export class SecureActivity extends Activity {
   constructor(
     public readonly id,
-    api,
     private credentials: Credentials,
     private cryptoCtx: CryptoCtx,
-    protected readonly options?: ActivityOptions
+    protected readonly options: ActivityConfig
   ) {
-    super(id, api, options);
+    super(id, options);
   }
   protected async send(script: yaActivity.ExeScriptRequest): Promise<string> {
     const secureRequest = {
       activityId: this.id,
       batchId: rand_hex(32),
       command: { exec: { exe_script: script } },
-      timeout: this.requestTimeout,
+      timeout: this.options.requestTimeout,
     };
     const requestBuffer = Buffer.from(JSON.stringify(secureRequest));
     const encryptedRequest = this.cryptoCtx.encrypt(requestBuffer);
 
-    const { data: encryptedResponse } = await this.api.control.callEncrypted(this.id, "", {
+    const { data: encryptedResponse } = await this.options.api.control.callEncrypted(this.id, "", {
       responseType: "arraybuffer",
       headers: {
         "Content-Type": "application/octet-stream",
