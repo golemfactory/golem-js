@@ -64,7 +64,6 @@ export class TaskService {
     const agreement = await this.agreementPoolService.getAgreement();
 
     let activity;
-    this.paymentService.acceptPayments(agreement.id); // TODO: move it to payment service reactive for event TaskStarted
     try {
       if (this.activities.has(agreement.id)) {
         activity = this.activities.get(agreement.id);
@@ -73,6 +72,7 @@ export class TaskService {
         this.activities.set(agreement.id, activity);
         this.logger?.debug(`Activity ${activity.id} created`);
       }
+      this.paymentService.acceptDebitNotes(agreement.id);
       const initWorker = task.getInitWorker();
       const worker = task.getWorker();
       const data = task.getData();
@@ -104,6 +104,7 @@ export class TaskService {
       }
     } finally {
       --this.activeTasksCount;
+      this.paymentService.acceptPayments(agreement.id);
     }
     await this.agreementPoolService.releaseAgreement(agreement.id, true);
   }

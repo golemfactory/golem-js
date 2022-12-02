@@ -1,5 +1,5 @@
 import rewiremock from "rewiremock";
-import { MarketApiMock, setExpectedProposals } from "../mock/market_api";
+import { MarketApiMock, setExpectedProposals } from "../mock/rest/market";
 rewiremock("ya-ts-client/dist/ya-market/api").with({ RequestorApi: MarketApiMock });
 rewiremock.enable();
 import chai from "chai";
@@ -8,7 +8,7 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 import { Demand, Proposal, DemandEvent } from "../../yajsapi/market";
 import { allocationMock, packageMock, LoggerMock } from "../mock";
-import { proposalsInitial, proposalsDraft } from "../mock/fixtures/proposals";
+import { proposalsInitial, proposalsDraft } from "../mock/fixtures";
 
 const subnetTag = "testnet";
 const logger = new LoggerMock();

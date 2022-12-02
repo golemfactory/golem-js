@@ -1,6 +1,6 @@
 import rewiremock from "rewiremock";
-import * as activityMock from "../mock/activity_api";
-import EventSourceMock, { setExpectedErrorEvents, setExpectedEvents } from "../mock/event_source";
+import * as activityMock from "../mock/rest/activity";
+import EventSourceMock, { setExpectedErrorEvents, setExpectedEvents } from "../mock/utils/event_source";
 rewiremock("ya-ts-client/dist/ya-activity/api").with({
   RequestorControlApi: activityMock.RequestorControlApiMock,
   RequestorStateApi: activityMock.RequestorSateApiMock,

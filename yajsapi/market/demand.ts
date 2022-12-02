@@ -15,6 +15,7 @@ export interface DemandOptions {
   timeout?: number;
   logger?: Logger;
   maxOfferEvents?: number;
+  offerFetchingInterval?: number;
 }
 
 export enum DemandEvent {
@@ -25,7 +26,7 @@ export class Demand extends EventEmitter {
   private isRunning = true;
   private logger?: Logger;
 
-  static async create(taskPackage: Package, allocations: Allocation[], options: DemandOptions): Promise<Demand> {
+  static async create(taskPackage: Package, allocations: Allocation[], options?: DemandOptions): Promise<Demand> {
     const factory = new DemandFactory(taskPackage, allocations, options);
     return factory.create();
   }
@@ -61,7 +62,7 @@ export class Demand extends EventEmitter {
           const proposal = new Proposal(this.id, this.options.api, event.proposal, this.getDemandRequest());
           this.emit(DemandEvent.ProposalReceived, proposal);
         }
-        await sleep(2);
+        await sleep(this.options.offerFetchingInterval, true);
       } catch (error) {
         this.logger?.warn(`Could not collect offers. ${error.response?.data?.message || error}`);
       }
