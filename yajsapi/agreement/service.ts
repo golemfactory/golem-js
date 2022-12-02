@@ -32,9 +32,9 @@ export class AgreementPoolService implements ComputationHistory {
   private lastAgreementRejectedByProvider = new Map<string, boolean>();
   private initialTime = 0;
 
-  constructor(private readonly agreementServiceOptions: AgreementServiceOptions) {
+  constructor(private readonly agreementServiceOptions?: AgreementServiceOptions) {
     this.config = new AgreementServiceConfig(agreementServiceOptions);
-    this.logger = agreementServiceOptions.logger;
+    this.logger = agreementServiceOptions?.logger;
     this.api = new RequestorApi(new Configuration(this.config.yagnaOptions));
   }
 

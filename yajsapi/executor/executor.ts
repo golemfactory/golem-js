@@ -1,7 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 import { GftpStorageProvider } from "../storage/gftp_provider";
-
-// const log = require("why-is-node-running"); // should be your first require
 import { Package, repo } from "../package";
 import { MarketService, MarketStrategy } from "../market";
 import { AgreementPoolService } from "../agreement";
@@ -10,10 +7,8 @@ import { PaymentService } from "../payment";
 import { NetworkService } from "../network";
 import { Result } from "../activity";
 import { sleep, Logger, runtimeContextChecker, winstonLogger } from "../utils";
-import { EventBus } from "../events/event_bus";
 import { StorageProvider } from "../storage/provider";
-import { DEFAULT_EXECUTOR_OPTIONS, DEFAULT_YAGNA_API_URL } from "./defaults";
-import { AgreementConfigContainer } from "../agreement/agreement_config_container";
+import { ExecutorConfig } from "./config";
 
 export type ExecutorOptions = {
   package: string | Package;
@@ -32,7 +27,7 @@ export type ExecutorOptions = {
   capabilities?: string[];
   logger?: Logger;
   logLevel?: string;
-  yagnaOptions?: { apiKey?: string; apiUrl?: string };
+  yagnaOptions?: YagnaOptions;
 };
 
 export type ExecutorOptionsMixin = string | ExecutorOptions;
@@ -43,9 +38,8 @@ export type YagnaOptions = {
 };
 
 export class TaskExecutor {
-  private readonly options: ExecutorOptions;
-  private readonly yagnaOptions: YagnaOptions;
-  private readonly image_hash?: string;
+  private readonly options: ExecutorConfig;
+  private readonly imageHash?: string;
   private marketService: MarketService;
   private agreementPoolService: AgreementPoolService;
   private taskService: TaskService;
@@ -53,68 +47,39 @@ export class TaskExecutor {
   private networkService: NetworkService;
   private initWorker?: Worker<unknown, unknown>;
   private taskQueue: TaskQueue<Task<any, any>>;
-  private eventBus: EventBus;
   private storageProvider?: StorageProvider;
   private logger?: Logger;
 
   constructor(options: ExecutorOptionsMixin) {
-    if (typeof options === "string") {
-      this.image_hash = options;
-    }
-    this.options = {} as ExecutorOptions;
-    for (const key in typeof options === "object"
-      ? { ...DEFAULT_EXECUTOR_OPTIONS, ...options }
-      : DEFAULT_EXECUTOR_OPTIONS) {
-      this.options[key] = options[key] ?? process.env?.[key.toUpperCase()] ?? DEFAULT_EXECUTOR_OPTIONS[key];
-    }
-    this.options.payment = {
-      driver: (options as ExecutorOptions)?.payment?.driver || DEFAULT_EXECUTOR_OPTIONS.payment.driver,
-      network: (options as ExecutorOptions)?.payment?.network || DEFAULT_EXECUTOR_OPTIONS.payment.network,
-    };
-    this.yagnaOptions = {
-      apiKey: options?.["yagnaOptions"]?.["apiKey"] || process?.env?.["YAGNA_APPKEY"],
-      basePath: options?.["yagnaOptions"]?.["basePath"] || process?.env?.["YAGNA_URL"] || DEFAULT_YAGNA_API_URL,
-    };
-    this.logger = this.options.logger;
+    this.options = new ExecutorConfig(
+      typeof options === "string" ? { package: options } : (options as ExecutorOptions)
+    );
+    const logger = (this.logger = this.options.logger);
     if (!this.options.logger && !runtimeContextChecker.isBrowser) this.logger = winstonLogger;
-    this.logger?.setLevel && this.logger?.setLevel(this.options.logLevel || "info");
-    this.eventBus = new EventBus();
+    this.logger?.setLevel && this.logger?.setLevel(this.options.logLevel);
     this.taskQueue = new TaskQueue<Task<any, any>>();
-    const agreementContainer = new AgreementConfigContainer(
-      { yagnaOptions: this.yagnaOptions },
-      this.eventBus,
-      this.logger
-    );
-    this.agreementPoolService = new AgreementPoolService(agreementContainer);
-    this.networkService = new NetworkService(this.yagnaOptions, this.eventBus, this.logger);
-    this.paymentService = new PaymentService(this.yagnaOptions, this.eventBus, this.logger);
-    this.marketService = new MarketService(
-      this.paymentService,
-      this.agreementPoolService,
-      this.logger,
-      {
-        budget: this.options.budget!,
-        payment: { driver: this.options.payment!.driver!, network: this.options.payment!.network! },
-        subnetTag: this.options.subnetTag!,
-        timeout: this.options.timeout!,
-        yagnaOptions: this.yagnaOptions,
-      },
-      this.options.strategy
-    );
+    this.agreementPoolService = new AgreementPoolService();
+    this.networkService = new NetworkService(this.options);
+    this.paymentService = new PaymentService(this.options);
+    this.marketService = new MarketService(this.agreementPoolService, this.options);
     this.storageProvider = new GftpStorageProvider();
     this.taskService = new TaskService(
       this.taskQueue,
       this.agreementPoolService,
       this.paymentService,
       this.networkService,
-      { yagnaOptions: this.yagnaOptions, logger: this.logger, storageProvider: this.storageProvider }
+      this.options
     );
+  }
+
+  private async createPackage(image_hash: string): Promise<Package> {
+    return repo({ ...this.options, image_hash });
   }
 
   async init() {
     let taskPackage;
-    if (this.image_hash) {
-      taskPackage = await this.createPackage(this.image_hash).catch((e) => this.handleCriticalError(e));
+    if (this.imageHash) {
+      taskPackage = await this.createPackage(this.imageHash).catch((e) => this.handleCriticalError(e));
     } else if (typeof this.options.package === "string") {
       taskPackage = await this.createPackage(this.options.package).catch((e) => this.handleCriticalError(e));
     } else {
@@ -188,10 +153,6 @@ export class TaskExecutor {
     worker: Worker<InputType, OutputType>
   ): Promise<void> {
     await Promise.all([...data].map((value) => this.submitNewTask<InputType, OutputType>(worker, value)));
-  }
-
-  private async createPackage(image_hash: string): Promise<Package> {
-    return repo({ ...this.options, image_hash });
   }
 
   private async submitNewTask<InputType, OutputType>(

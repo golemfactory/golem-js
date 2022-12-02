@@ -1,6 +1,6 @@
 import { YagnaOptions } from "../executor";
 import { AgreementOptions } from "./agreement";
-import { AgreementServiceOptions } from "./agreement_pool_service";
+import { AgreementServiceOptions } from "./service";
 
 const DEFAULT_OPTIONS = {
   WAITING_FOR_APPROVAL_TIMEOUT: 15,
@@ -18,29 +18,17 @@ export class AgreementConfig {
   public readonly executeTimeout: number;
   public readonly waitingForApprovalTimeout: number;
 
-  constructor({
-    subnetTag,
-    requestTimeout,
-    executeTimeout,
-    yagnaOptions,
-    waitingForApprovalTimeout,
-  }: AgreementOptions) {
-    const basePath = (yagnaOptions?.basePath || process.env.YAGNA_URL) + "/market-api/v1",
-      apiKey = yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
+  constructor(options?: AgreementOptions) {
+    const basePath = (options?.yagnaOptions?.basePath || process.env.YAGNA_URL) + "/market-api/v1",
+      apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
 
-    if (!basePath || !apiKey) {
-      throw new Error("No yagna Credentials provided");
-    }
+    if (!basePath || !apiKey) throw new Error("No yagna Credentials provided");
+    this.yagnaOptions = { basePath, apiKey };
 
-    this.yagnaOptions = {
-      basePath,
-      apiKey,
-    };
-
-    this.requestTimeout = requestTimeout || DEFAULT_OPTIONS.REQUEST_TIMEOUT;
-    this.executeTimeout = executeTimeout || DEFAULT_OPTIONS.EXECUTE_TIMEOUT;
-    this.waitingForApprovalTimeout = waitingForApprovalTimeout || DEFAULT_OPTIONS.WAITING_FOR_APPROVAL_TIMEOUT;
-    this.subnetTag = subnetTag || DEFAULT_OPTIONS.SUBNET_TAG;
+    this.requestTimeout = options?.requestTimeout || DEFAULT_OPTIONS.REQUEST_TIMEOUT;
+    this.executeTimeout = options?.executeTimeout || DEFAULT_OPTIONS.EXECUTE_TIMEOUT;
+    this.waitingForApprovalTimeout = options?.waitingForApprovalTimeout || DEFAULT_OPTIONS.WAITING_FOR_APPROVAL_TIMEOUT;
+    this.subnetTag = options?.subnetTag || DEFAULT_OPTIONS.SUBNET_TAG;
   }
 }
 
@@ -48,10 +36,10 @@ export class AgreementServiceConfig extends AgreementConfig {
   private eventPoolingInterval?: number;
   private eventPoolingMaxEventsPerRequest?: number;
 
-  constructor(options: AgreementServiceOptions) {
+  constructor(options?: AgreementServiceOptions) {
     super(options);
-    const { eventPoolingInterval, eventPoolingMaxEventsPerRequest } = options;
-    this.eventPoolingInterval = eventPoolingInterval || DEFAULT_OPTIONS.EVENT_POOLING_INT;
-    this.eventPoolingMaxEventsPerRequest = eventPoolingMaxEventsPerRequest || DEFAULT_OPTIONS.EVENT_POOLING_MAX_EVENTS;
+    this.eventPoolingInterval = options?.eventPoolingInterval || DEFAULT_OPTIONS.EVENT_POOLING_INT;
+    this.eventPoolingMaxEventsPerRequest =
+      options?.eventPoolingMaxEventsPerRequest || DEFAULT_OPTIONS.EVENT_POOLING_MAX_EVENTS;
   }
 }

@@ -3,9 +3,17 @@ import { Logger } from "../utils";
 import { Network } from "./index";
 import { YagnaOptions } from "../executor";
 
+export interface NetworkOptions {
+  yagnaOptions?: YagnaOptions;
+  logger?: Logger;
+}
 export class NetworkService {
   private network?: Network;
-  constructor(private yagnaOptions: YagnaOptions, private eventBus: EventBus, private logger?: Logger) {}
+  private logger?: Logger;
+
+  constructor(options?: NetworkOptions) {
+    this.logger = options?.logger;
+  }
 
   async run(address: string) {
     this.logger?.debug("Network Service has started");
