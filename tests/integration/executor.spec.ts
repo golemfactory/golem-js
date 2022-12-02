@@ -6,18 +6,21 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 const logger = new LoggerMock();
 
+
 describe("Task Executor", () => {
-  let gothProcess;
+  let apiKey, basePath, subnetTag;
   before(async () => {
-    // TODO: run goth process
+    ({ apiKey, basePath, subnet } = await goth.start());
   });
   after(async () => {
-    // TODO: exit goth process
+    await goth.end()
   });
-  // TODO
+
   it("should run simple task", async () => {
     const executor = await createExecutor({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+      yagnaOptions: { apiKey, basePath },
+      subnetTag,
       logger,
     });
     const result = await executor.run(async (ctx) => ctx.run("echo 'Hello World'"));
