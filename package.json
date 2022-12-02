@@ -29,7 +29,7 @@
   "license": "LGPL-3.0",
   "dependencies": {
     "@rauschma/stringio": "^1.4.0",
-    "@types/bluebird": "^3.5.33",
+    "@types/bluebird": "3.5.37",
     "axios": "^0.21.1",
     "bluebird": "^3.5.0",
     "commander": "^6.2.0",
