@@ -1,12 +1,17 @@
 import { Logger } from "../utils";
-import { EventBus } from "../events/event_bus";
-import { Agreement, AgreementStateEnum } from "./agreement";
+import { Agreement, AgreementOptions, AgreementStateEnum } from "./agreement";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import sleep from "../utils/sleep";
 
 import { AgreementFactory } from "./factory";
-import { AgreementConfigContainer } from "./agreement_config_container";
 import { ComputationHistory } from "../market/strategy";
+import { Configuration } from "ya-ts-client/dist/ya-market";
+import { AgreementServiceConfig } from "./config";
+
+export interface AgreementServiceOptions extends AgreementOptions {
+  eventPoolingInterval?: number;
+  eventPoolingMaxEventsPerRequest?: number;
+}
 
 export interface AgreementProposal {
   proposalId: string;
@@ -17,10 +22,8 @@ export type TerminationReason = { message: string; "golem.requestor.code"?: stri
 
 export class AgreementPoolService implements ComputationHistory {
   private logger?: Logger;
-  private eventBus: EventBus;
   private api: RequestorApi;
-  private eventPoolingInterval: number;
-  private eventPoolingMaxEventsPerRequest: number;
+  private config: AgreementServiceConfig;
 
   private proposals: string[] = [];
   private agreements = new Map<string, Agreement>();
@@ -29,12 +32,10 @@ export class AgreementPoolService implements ComputationHistory {
   private lastAgreementRejectedByProvider = new Map<string, boolean>();
   private initialTime = 0;
 
-  constructor(private readonly configContainer: AgreementConfigContainer) {
-    this.logger = configContainer.logger;
-    this.api = configContainer.api;
-    this.eventBus = configContainer.eventBus;
-    this.eventPoolingInterval = configContainer.options?.eventPoolingInterval || 10000;
-    this.eventPoolingMaxEventsPerRequest = configContainer.options?.eventPoolingMaxEventsPerRequest || 10;
+  constructor(private readonly agreementServiceOptions: AgreementServiceOptions) {
+    this.config = new AgreementServiceConfig(agreementServiceOptions);
+    this.logger = agreementServiceOptions.logger;
+    this.api = new RequestorApi(new Configuration(this.config.yagnaOptions));
   }
 
   async run() {
@@ -44,8 +45,8 @@ export class AgreementPoolService implements ComputationHistory {
   }
 
   addProposal(proposalId: string) {
-    this.logger?.debug(`New offer proposal added to pool (${proposalId})`);
     this.proposals.push(proposalId);
+    this.logger?.debug(`New offer proposal added to pool (${proposalId})`);
   }
 
   async getAgreement(): Promise<Agreement> {
@@ -54,13 +55,17 @@ export class AgreementPoolService implements ComputationHistory {
 
   async releaseAgreement(agreementId: string, allowReuse = false) {
     const agreement = await this.agreements.get(agreementId);
-    if (!agreement) throw new Error(`Agreement ${agreementId} cannot found in pool`);
-    if (allowReuse) this.agreementIdsToReuse.unshift(agreementId);
-    else {
+    if (!agreement) {
+      throw new Error(`Agreement ${agreementId} cannot found in pool`);
+    }
+    if (allowReuse) {
+      this.agreementIdsToReuse.unshift(agreementId);
+      this.logger?.debug(`Agreement ${agreementId} has been released for reuse`);
+    } else {
       await agreement.terminate();
       this.agreements.delete(agreementId);
+      this.logger?.debug(`Agreement ${agreementId} has been released and terminated`);
     }
-    this.logger?.debug(`Agreement ${agreementId} has been released ${allowReuse ? "for reuse" : ""}`);
   }
 
   async end() {
@@ -86,7 +91,6 @@ export class AgreementPoolService implements ComputationHistory {
     while (!readyAgreement && this.agreementIdsToReuse.length > 0) {
       const availableAgreementId = this.agreementIdsToReuse.pop();
       if (!availableAgreementId) continue;
-
       const availableAgreement = this.agreements.get(availableAgreementId);
       if (!availableAgreement) throw new Error(`Agreement ${availableAgreementId} cannot found in pool`);
 
@@ -112,12 +116,11 @@ export class AgreementPoolService implements ComputationHistory {
 
       this.logger?.debug(`Creating agreement using proposal ID: ${proposalId}`);
       try {
-        const agreementFactory = new AgreementFactory(this.configContainer);
+        const agreementFactory = new AgreementFactory(this.config);
         agreement = await agreementFactory.create(proposalId);
         agreement = await this.waitForAgreementApproval(agreement);
-
         const state = await agreement.getState();
-        this.lastAgreementRejectedByProvider.set(agreement.providerId, state === AgreementStateEnum.Rejected);
+        this.lastAgreementRejectedByProvider.set(agreement.provider.id, state === AgreementStateEnum.Rejected);
 
         if (state !== AgreementStateEnum.Approved) {
           throw new Error(`Agreement ${agreement.id} cannot be approved. Current state: ${state}`);
@@ -126,11 +129,13 @@ export class AgreementPoolService implements ComputationHistory {
         this.logger?.error(`Could not create agreement form available proposal: ${e.message}`);
         // TODO: What we should do with used proposal in that case ?? unshift to begin ?
         await sleep(2);
+
+        // If id to go kill'em
         agreement = null;
       }
     }
     this.agreements.set(agreement.id, agreement);
-    this.logger?.debug(`Agreement ${agreement.id} created with provider ${agreement.getProviderInfo().providerName}`);
+    this.logger?.debug(`Agreement ${agreement.id} created with provider ${agreement.provider.name}`);
     return agreement;
   }
 
@@ -154,12 +159,18 @@ export class AgreementPoolService implements ComputationHistory {
       this.logger?.debug(`Agreement ${agreement.id} confirmed`);
     }
 
-    let timeout = false;
-    const timeoutId = setTimeout(() => (timeout = true), 10000);
-    while ((await agreement.isFinalState()) && !timeout) {
-      await sleep(2);
-    }
-    clearTimeout(timeoutId);
+    /** Solution for support events in the future
+     * let timeout = false;
+     * const timeoutId = setTimeout(() => (timeout = true), this.config.waitingForApprovalTimeout);
+     * while ((await agreement.isFinalState()) && !timeout) {
+     *   await sleep(2);
+     * }
+     * clearTimeout(timeoutId);
+     **/
+
+    // Will throw an exception if the agreement will be not approved in specific timeout
+    await this.api.waitForApproval(agreement.id, this.config.waitingForApprovalTimeout);
+
     return agreement;
   }
 }
