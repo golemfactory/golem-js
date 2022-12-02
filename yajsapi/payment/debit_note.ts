@@ -12,6 +12,12 @@ export class DebitNote extends BaseNote<Model> {
   public readonly totalAmountDue: string;
   public readonly usageCounterVector?: object;
 
+  static async create(debitNoteId: string, options?: InvoiceOptions): Promise<DebitNote> {
+    const config = new InvoiceConfig(options);
+    const { data: model } = await config.api.getDebitNote(debitNoteId);
+    return new DebitNote(model, config);
+  }
+
   protected constructor(model: Model, protected options: InvoiceConfig) {
     super(model, options);
     this.id = model.debitNoteId;
@@ -20,8 +26,8 @@ export class DebitNote extends BaseNote<Model> {
     this.totalAmountDue = model.totalAmountDue;
     this.usageCounterVector = model.usageCounterVector;
   }
-  async accept(amount: number, allocationId: string) {
-    await this.options.api.acceptDebitNote(this.id, { totalAmountAccepted: amount.toString(), allocationId });
+  async accept(totalAmountAccepted: string, allocationId: string) {
+    await this.options.api.acceptDebitNote(this.id, { totalAmountAccepted, allocationId });
   }
   async reject(rejection: Rejection) {
     await this.options.api.rejectDebitNote(this.id, rejection);

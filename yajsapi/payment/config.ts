@@ -17,6 +17,7 @@ const DEFAULTS = {
   maxDebitNotesEvents: 10,
   invoiceFetchingInterval: 2000,
   debitNotesFetchingInterval: 2000,
+  payingInterval: 2000,
 };
 
 export interface BasePaymentOptions {
@@ -51,6 +52,7 @@ abstract class BaseConfig {
 export class PaymentConfig extends BaseConfig {
   public readonly invoiceFetchingInterval: number;
   public readonly debitNotesFetchingInterval: number;
+  public readonly payingInterval: number;
   public readonly maxInvoiceEvents: number;
   public readonly maxDebitNotesEvents: number;
 

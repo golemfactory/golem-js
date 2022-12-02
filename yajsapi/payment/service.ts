@@ -7,6 +7,7 @@ import { DebitNote } from "./debit_note";
 export interface PaymentOptions extends AllocationOptions {
   invoiceFetchingInterval?: number;
   debitNotesFetchingInterval?: number;
+  payingInterval?: number;
   maxInvoiceEvents?: number;
   maxDebitNotesEvents?: number;
 }
@@ -16,7 +17,8 @@ export class PaymentService {
   private options: PaymentConfig;
   private logger?: Logger;
   private allocations: Allocation[] = [];
-  private agreements: Set<string> = new Set();
+  private agreementsToPay: Set<string> = new Set();
+  private agreementsDebitNotes: Set<string> = new Set();
   private invoices: Map<string, Invoice> = new Map();
   private debitNotes: Map<string, DebitNote> = new Map();
   private lastInvoiceFetchingTime: string = new Date().toISOString();
@@ -70,18 +72,46 @@ export class PaymentService {
   }
 
   acceptPayments(agreementId: string) {
-    this.agreements.add(agreementId);
+    this.agreementsToPay.add(agreementId);
+  }
+
+  acceptDebitNotes(agreementId: string) {
+    this.agreementsDebitNotes.add(agreementId);
   }
 
   private async processInvoices() {
     while (this.isRunning) {
-      // TODO
+      for (const invoice of this.invoices.values()) {
+        if (!this.agreementsToPay.has(invoice.agreementId)) continue;
+        try {
+          const allocation = this.getAllocationForPayment(invoice);
+          await invoice.accept(invoice.amount, allocation.id);
+          this.invoices.delete(invoice.id);
+          this.agreementsDebitNotes.delete(invoice.agreementId);
+          this.agreementsToPay.delete(invoice.agreementId);
+          this.logger?.error(`Payment accepted for agreement ${invoice.agreementId}`);
+        } catch (error) {
+          this.logger?.error(`Payment failed for agreement ${invoice.agreementId}`);
+        }
+      }
+      await sleep(this.options.payingInterval, true);
     }
   }
 
   private async processDebitNotes() {
     while (this.isRunning) {
-      // TODO
+      for (const debitNote of this.debitNotes.values()) {
+        if (!this.agreementsDebitNotes.has(debitNote.agreementId)) continue;
+        try {
+          const allocation = this.getAllocationForPayment(debitNote);
+          await debitNote.accept(debitNote.totalAmountDue, allocation.id);
+          this.debitNotes.delete(debitNote.id);
+          this.logger?.error(`Debit Note accepted for agreement ${debitNote.agreementId}`);
+        } catch (error) {
+          this.logger?.error(`Payment Debit Note failed for agreement ${debitNote.agreementId}`);
+        }
+      }
+      await sleep(this.options.payingInterval, true);
     }
   }
 
@@ -117,5 +147,14 @@ export class PaymentService {
       }
       await sleep(this.options.debitNotesFetchingInterval, true);
     }
+  }
+
+  private getAllocationForPayment(paymentNote: Invoice | DebitNote): Allocation {
+    const allocation = this.allocations.find(
+      (allocation) =>
+        allocation.paymentPlatform === paymentNote.paymentPlatform && allocation.address === paymentNote.payerAddr
+    );
+    if (!allocation) throw new Error(`No allocation for ${paymentNote.paymentPlatform} ${paymentNote.payerAddr}`);
+    return allocation;
   }
 }

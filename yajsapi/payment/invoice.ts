@@ -25,13 +25,6 @@ export abstract class BaseNote<ModelType extends BaseModel> {
   public readonly paymentDueDate?: string;
   protected status: InvoiceStatus;
 
-  static async create(debitNoteId: string, options?: InvoiceOptions) {
-    const config = new InvoiceConfig(options);
-    const { data: model } = await config.api.getDebitNote(debitNoteId);
-    const { constructor } = Object.getPrototypeOf(this);
-    return new constructor(model, config)();
-  }
-
   protected constructor(model: ModelType, protected options: InvoiceConfig) {
     this.issuerId = model.issuerId;
     this.recipientId = model.recipientId;
@@ -46,7 +39,7 @@ export abstract class BaseNote<ModelType extends BaseModel> {
     await this.refreshStatus();
     return this.status;
   }
-  protected abstract accept(amount: number, allocationId: string): Promise<void>;
+  protected abstract accept(totalAmountAccepted: string, allocationId: string): Promise<void>;
   protected abstract reject(rejection: Rejection): Promise<void>;
   protected abstract refreshStatus(): Promise<void>;
 }
@@ -57,6 +50,12 @@ export class Invoice extends BaseNote<Model> {
   public readonly amount: string;
   public readonly timestamp: string;
   public readonly recipientId: string;
+
+  static async create(invoiceId: string, options?: InvoiceOptions): Promise<Invoice> {
+    const config = new InvoiceConfig(options);
+    const { data: model } = await config.api.getInvoice(invoiceId);
+    return new Invoice(model, config);
+  }
 
   protected constructor(model: Model, protected options: InvoiceConfig) {
     super(model, options);
@@ -70,8 +69,8 @@ export class Invoice extends BaseNote<Model> {
     await this.refreshStatus();
     return this.status;
   }
-  async accept(amount: number, allocationId: string) {
-    await this.options.api.acceptInvoice(this.id, { totalAmountAccepted: amount.toString(), allocationId });
+  async accept(totalAmountAccepted: string, allocationId: string) {
+    await this.options.api.acceptInvoice(this.id, { totalAmountAccepted, allocationId });
   }
   async reject(rejection: Rejection) {
     await this.options.api.rejectInvoice(this.id, rejection);
