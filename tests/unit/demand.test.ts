@@ -30,14 +30,5 @@ describe("Demand", () => {
       expect(proposal).to.be.instanceof(Proposal);
       await demand.unsubscribe();
     });
-
-  describe("Processing", () => {
-    it("should get proposal after publish demand", async () => {
-      const demand = await Demand.create(packageMock, [allocationMock], { subnetTag });
-      setExpectedProposals(proposalsInitial);
-      const proposal = await new Promise((res) => demand.on(DemandEvent.ProposalReceived, res));
-      expect(proposal).to.be.instanceof(Proposal);
-      await demand.unsubscribe();
-    });
   });
 });
