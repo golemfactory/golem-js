@@ -111,7 +111,7 @@ export class PaymentService {
       );
       for (const event of debitNotesEvents) {
         if (event.eventType !== "DebitNoteReceivedEvent") continue;
-        const debitNote = await DebitNote.create(event["invoiceId"], { ...this.options.options });
+        const debitNote = await DebitNote.create(event["debitNoteId"], { ...this.options.options });
         this.debitNotes.set(debitNote.id, debitNote);
         this.lastDebitNotesFetchingTime = event.eventDate;
       }
