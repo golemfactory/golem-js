@@ -62,6 +62,7 @@ export class PaymentConfig extends BaseConfig {
     this.debitNotesFetchingInterval = options?.debitNotesFetchingInterval || DEFAULTS.debitNotesFetchingInterval;
     this.maxInvoiceEvents = options?.maxInvoiceEvents || DEFAULTS.maxInvoiceEvents;
     this.maxDebitNotesEvents = options?.maxDebitNotesEvents || DEFAULTS.maxDebitNotesEvents;
+    this.payingInterval = options?.payingInterval || DEFAULTS.payingInterval;
   }
 }
 
