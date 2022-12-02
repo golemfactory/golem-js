@@ -54,7 +54,7 @@ export class TaskExecutor {
     this.options = new ExecutorConfig(
       typeof options === "string" ? { package: options } : (options as ExecutorOptions)
     );
-    const logger = (this.logger = this.options.logger);
+    this.logger = this.options.logger;
     if (!this.options.logger && !runtimeContextChecker.isBrowser) this.logger = winstonLogger;
     this.logger?.setLevel && this.logger?.setLevel(this.options.logLevel);
     this.taskQueue = new TaskQueue<Task<any, any>>();
@@ -72,21 +72,12 @@ export class TaskExecutor {
     );
   }
 
-  private async createPackage(image_hash: string): Promise<Package> {
-    return repo({ ...this.options, image_hash });
-  }
-
   async init() {
-    let taskPackage;
-    if (this.imageHash) {
-      taskPackage = await this.createPackage(this.imageHash).catch((e) => this.handleCriticalError(e));
-    } else if (typeof this.options.package === "string") {
-      taskPackage = await this.createPackage(this.options.package).catch((e) => this.handleCriticalError(e));
-    } else {
-      taskPackage = this.options.package;
-    }
+    const taskPackage =
+      typeof this.options.package === "string" ? await this.createPackage(this.options.package) : this.options.package;
     this.logger?.debug("Initializing task executor services...");
-    this.marketService.run(taskPackage).catch((e) => this.handleCriticalError(e));
+    const allocations = await this.paymentService.getAllocations();
+    this.marketService.run(taskPackage, allocations).catch((e) => this.handleCriticalError(e));
     this.agreementPoolService.run().catch((e) => this.handleCriticalError(e));
     this.paymentService.run().catch((e) => this.handleCriticalError(e));
     this.taskService.run().catch((e) => this.handleCriticalError(e));
@@ -106,7 +97,6 @@ export class TaskExecutor {
     await this.networkService.end();
     this.storageProvider?.close();
     this.logger?.info("Task Executor has been stopped");
-    // log();
   }
 
   beforeEach(worker: Worker) {
@@ -153,6 +143,10 @@ export class TaskExecutor {
     worker: Worker<InputType, OutputType>
   ): Promise<void> {
     await Promise.all([...data].map((value) => this.submitNewTask<InputType, OutputType>(worker, value)));
+  }
+
+  private async createPackage(image_hash: string): Promise<Package> {
+    return repo({ ...this.options, image_hash });
   }
 
   private async submitNewTask<InputType, OutputType>(
