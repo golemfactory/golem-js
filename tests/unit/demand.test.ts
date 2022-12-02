@@ -18,7 +18,7 @@ describe("Demand", () => {
     it("should create and publish demand", async () => {
       const demand = await Demand.create(packageMock, [allocationMock], { subnetTag, logger });
       expect(demand).to.be.instanceof(Demand);
-      expect(logger.logs).to.be.match(/Demand .* created and published on the market/);
+      expect(logger.logs).to.include("Demand published on the market");
       await demand.unsubscribe();
     });
   });

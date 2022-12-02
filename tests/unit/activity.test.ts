@@ -17,8 +17,6 @@ import { Deploy, Start, Run, Terminate, UploadFile, DownloadFile, Script, Captur
 
 chai.use(chaiUuid);
 chai.use(chaiAsPromised);
-process.env.YAGNA_APPKEY = "test";
-process.env.YAGNA_API_BASEPATH = "http://127.0.0.1:7465/activity-api/v1";
 
 describe("Activity", () => {
   beforeEach(() => {
@@ -30,12 +28,6 @@ describe("Activity", () => {
       const activity = await Activity.create("test_agreement_id");
       expect(activity).to.be.instanceof(Activity);
       expect(activity.id).to.be.a.guid();
-    });
-
-    it("should create activity without credentials", async () => {
-      process.env.YAGNA_APPKEY = "";
-      await expect(Activity.create("test_id_0")).to.be.rejectedWith("Api key not defined");
-      process.env.YAGNA_APPKEY = "test";
     });
   });
 

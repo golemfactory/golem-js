@@ -1,6 +1,6 @@
 /* eslint @typescript-eslint/ban-ts-comment: 0 */
 import rewiremock from "rewiremock";
-import { MarketApiMock } from "../mock/market_api";
+import { MarketApiMock } from "../mock/rest/market";
 rewiremock("ya-ts-client/dist/ya-market/api").with({ RequestorApi: MarketApiMock });
 rewiremock.enable();
 import chai from "chai";
@@ -15,12 +15,13 @@ const subnetTag = "testnet";
 const logger = new LoggerMock();
 
 describe("Agreement", () => {
+  beforeEach(() => logger.clear());
   describe("create()", () => {
     it("should create agreement for given proposal Id", async () => {
       const agreement = await Agreement.create("test_proposal_id", { subnetTag, logger });
       expect(agreement).to.be.instanceof(Agreement);
       expect(agreement.id).to.be.lengthOf(64);
-      expect(logger.logs).to.be.match(/Agreement .* created based on proposal test_proposal_id/);
+      expect(logger.logs).to.be.match(/Agreement .* created/);
     });
   });
 

@@ -40,7 +40,7 @@ export class Demand extends EventEmitter {
     super();
     this.logger = this.options.logger;
     this.subscribe().catch((e) => this.logger?.error(`Could not collect offers. ${e}`));
-    this.logger?.info(`Demand ${id} created and published on the market`);
+    this.logger?.info(`Demand published on the market`);
   }
 
   async unsubscribe() {
@@ -64,7 +64,7 @@ export class Demand extends EventEmitter {
         }
         await sleep(this.options.offerFetchingInterval, true);
       } catch (error) {
-        this.logger?.warn(`Could not collect offers. ${error.response?.data?.message || error}`);
+        if (this.isRunning) this.logger?.warn(`Could not collect offers. ${error.response?.data?.message || error}`);
       }
     }
   }

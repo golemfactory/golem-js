@@ -70,10 +70,18 @@ export class Invoice extends BaseNote<Model> {
     return this.status;
   }
   async accept(totalAmountAccepted: string, allocationId: string) {
-    await this.options.api.acceptInvoice(this.id, { totalAmountAccepted, allocationId });
+    try {
+      await this.options.api.acceptInvoice(this.id, { totalAmountAccepted, allocationId });
+    } catch (e) {
+      throw new Error(`Unable to accept invoice ${this.id} ${e?.response?.data?.message || e}`);
+    }
   }
   async reject(rejection: Rejection) {
-    await this.options.api.rejectInvoice(this.id, rejection);
+    try {
+      await this.options.api.rejectInvoice(this.id, rejection);
+    } catch (e) {
+      throw new Error(`Unable to reject invoice ${this.id} ${e?.response?.data?.message || e}`);
+    }
   }
   protected async refreshStatus() {
     const { data: model } = await this.options.api.getInvoice(this.id);

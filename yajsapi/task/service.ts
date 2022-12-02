@@ -62,7 +62,6 @@ export class TaskService {
     task.start();
     ++this.activeTasksCount;
     const agreement = await this.agreementPoolService.getAgreement();
-
     let activity;
     try {
       if (this.activities.has(agreement.id)) {
@@ -104,7 +103,7 @@ export class TaskService {
       }
     } finally {
       --this.activeTasksCount;
-      this.paymentService.acceptPayments(agreement.id);
+      this.paymentService.acceptPayments(agreement);
     }
     await this.agreementPoolService.releaseAgreement(agreement.id, true);
   }

@@ -2,7 +2,6 @@ import { DemandOptions } from "./demand";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import { Configuration } from "ya-ts-client/dist/ya-market";
 import { Logger } from "../utils";
-import base = Mocha.reporters.base;
 
 const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",

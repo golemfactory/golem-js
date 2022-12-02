@@ -27,10 +27,18 @@ export class DebitNote extends BaseNote<Model> {
     this.usageCounterVector = model.usageCounterVector;
   }
   async accept(totalAmountAccepted: string, allocationId: string) {
-    await this.options.api.acceptDebitNote(this.id, { totalAmountAccepted, allocationId });
+    try {
+      await this.options.api.acceptDebitNote(this.id, { totalAmountAccepted, allocationId });
+    } catch (e) {
+      throw new Error(`Unable to accept debit note ${this.id} ${e?.response?.data?.message || e}`);
+    }
   }
   async reject(rejection: Rejection) {
-    await this.options.api.rejectDebitNote(this.id, rejection);
+    try {
+      await this.options.api.rejectDebitNote(this.id, rejection);
+    } catch (e) {
+      throw new Error(`Unable to reject debit note ${this.id} ${e?.response?.data?.message || e}`);
+    }
   }
   protected async refreshStatus() {
     const { data: model } = await this.options.api.getDebitNote(this.id);

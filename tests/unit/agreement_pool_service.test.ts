@@ -1,11 +1,11 @@
 import rewiremock from "rewiremock";
-import { MarketApiMock, setExpectedProposals } from "../mock/market_api";
+import { MarketApiMock } from "../mock/rest/market";
 rewiremock("ya-ts-client/dist/ya-market/api").with({ RequestorApi: MarketApiMock });
 rewiremock.enable();
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised);
-import { LoggerMock } from "../mock/logger";
+import { LoggerMock } from "../mock";
 import { Agreement, AgreementPoolService } from "../../yajsapi/agreement";
 
 const logger = new LoggerMock();

@@ -20,7 +20,7 @@ describe("Market Service", () => {
     const marketService = new MarketService(agreementPoolServiceMock, { logger });
     await marketService.run(packageMock, [allocationMock]);
     expect(logger.logs).to.include("Market Service has started");
-    expect(logger.logs).to.match(/Demand .* published on the market/);
+    expect(logger.logs).to.include("Demand published on the market");
     await marketService.end();
     expect(logger.logs).to.include("Market Service has been stopped");
   });

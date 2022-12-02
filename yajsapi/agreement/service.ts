@@ -22,7 +22,6 @@ export type TerminationReason = { message: string; "golem.requestor.code"?: stri
 
 export class AgreementPoolService implements ComputationHistory {
   private logger?: Logger;
-  private api: RequestorApi;
   private config: AgreementServiceConfig;
 
   private proposals: string[] = [];
@@ -35,7 +34,6 @@ export class AgreementPoolService implements ComputationHistory {
   constructor(private readonly agreementServiceOptions?: AgreementServiceOptions) {
     this.config = new AgreementServiceConfig(agreementServiceOptions);
     this.logger = agreementServiceOptions?.logger;
-    this.api = new RequestorApi(new Configuration(this.config.yagnaOptions));
   }
 
   async run() {
@@ -95,7 +93,7 @@ export class AgreementPoolService implements ComputationHistory {
       if (!availableAgreement) throw new Error(`Agreement ${availableAgreementId} cannot found in pool`);
 
       const state = await availableAgreement.getState().catch((e) => {
-        this.logger?.warn(`Cannot retrieve state of agreement ${availableAgreement.id}. ` + e);
+        this.logger?.warn(`Unable to retrieve state of agreement ${availableAgreement.id}. ` + e);
       });
 
       if (state !== AgreementStateEnum.Approved) {
@@ -116,8 +114,7 @@ export class AgreementPoolService implements ComputationHistory {
 
       this.logger?.debug(`Creating agreement using proposal ID: ${proposalId}`);
       try {
-        const agreementFactory = new AgreementFactory(this.config);
-        agreement = await agreementFactory.create(proposalId);
+        agreement = await Agreement.create(proposalId, this.config.options);
         agreement = await this.waitForAgreementApproval(agreement);
         const state = await agreement.getState();
         this.lastAgreementRejectedByProvider.set(agreement.provider.id, state === AgreementStateEnum.Rejected);
@@ -169,7 +166,7 @@ export class AgreementPoolService implements ComputationHistory {
      **/
 
     // Will throw an exception if the agreement will be not approved in specific timeout
-    await this.api.waitForApproval(agreement.id, this.config.waitingForApprovalTimeout);
+    await this.config.api.waitForApproval(agreement.id, this.config.waitingForApprovalTimeout);
 
     return agreement;
   }

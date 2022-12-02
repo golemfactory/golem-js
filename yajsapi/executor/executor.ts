@@ -49,8 +49,10 @@ export class TaskExecutor {
   private taskQueue: TaskQueue<Task<any, any>>;
   private storageProvider?: StorageProvider;
   private logger?: Logger;
+  private startTime: number;
 
   constructor(options: ExecutorOptionsMixin) {
+    this.startTime = +new Date();
     this.options = new ExecutorConfig(
       typeof options === "string" ? { package: options } : (options as ExecutorOptions)
     );
@@ -93,10 +95,12 @@ export class TaskExecutor {
     await this.marketService.end();
     await this.agreementPoolService.end();
     await this.taskService.end();
-    await this.paymentService.end();
     await this.networkService.end();
+    await this.paymentService.end();
     this.storageProvider?.close();
-    this.logger?.info("Task Executor has been stopped");
+    const executionTime = (+new Date() - this.startTime) / 1000;
+    this.logger?.info(`Computation finished in ${executionTime.toFixed(1)}s`);
+    this.logger?.info("Task Executor has shut down");
   }
 
   beforeEach(worker: Worker) {
