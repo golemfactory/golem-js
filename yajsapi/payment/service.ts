@@ -66,6 +66,7 @@ export class PaymentService {
       }
       clearTimeout(timeoutId);
     }
+    this.isRunning = false;
     for (const allocation of this.allocations) await allocation.release();
     this.logger?.debug("All allocations has benn released");
     this.logger?.debug("Payment service has been stopped");
@@ -113,9 +114,9 @@ export class PaymentService {
           this.paidAgreements.add({ invoice, agreement });
           this.agreementsDebitNotes.delete(invoice.agreementId);
           this.agreementsToPay.delete(invoice.agreementId);
-          this.logger?.debug(`Payment accepted for agreement ${invoice.agreementId}`);
+          this.logger?.debug(`Invoice accepted for agreement ${invoice.agreementId}`);
         } catch (error) {
-          this.logger?.error(`Payment failed for agreement ${invoice.agreementId} ${error}`);
+          this.logger?.error(`Invoice failed for agreement ${invoice.agreementId} ${error}`);
         }
       }
       await sleep(this.options.payingInterval, true);
@@ -197,7 +198,7 @@ export class PaymentService {
         "Payment Status": "paid",
       });
     }
-    console.table(costs);
+    if (costs.length) console.table(costs);
     this.logger?.info(`Total paid: ${totalPaid}`);
   }
 }

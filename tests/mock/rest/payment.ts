@@ -1,12 +1,33 @@
 /* eslint @typescript-eslint/ban-ts-comment: 0 */
 import { RequestorApi } from "ya-ts-client/dist/ya-payment/src/api/requestor-api";
 import { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
-import { v4 as uuidv4 } from "uuid";
-import { Account, Allocation } from "ya-ts-client/dist/ya-payment/src/models";
-import { allocations } from "../fixtures";
+import {
+  Account,
+  Allocation,
+  DebitNoteEvent,
+  InvoiceEvent,
+  Invoice,
+  DebitNote,
+  Acceptance,
+} from "ya-ts-client/dist/ya-payment/src/models";
+import { allocations, accounts, debitNotesEvents, debitNotes, invoiceEvents, invoices } from "../fixtures";
+
+let expectedEvents: DebitNoteEvent[] | InvoiceEvent[] = [];
+let expectedInvoices: Invoice[] = [];
+let expectedDebitNotes: DebitNote[] = [];
+
+export const setExpectedEvents = (events) => (expectedEvents = events);
+export const setExpectedInvoices = (invoices) => (expectedInvoices = invoices);
+export const setExpectedDebitNotes = (debitNotes) => (expectedDebitNotes = debitNotes);
 
 let expectedError: AxiosError;
 export const setExpectedError = (error) => (expectedError = error);
+
+export const clear = () => {
+  expectedEvents = [];
+  expectedInvoices = [];
+  expectedDebitNotes = [];
+};
 
 export class PaymentApiMock extends RequestorApi {
   constructor() {
@@ -24,6 +45,60 @@ export class PaymentApiMock extends RequestorApi {
   }
   // @ts-ignore
   getRequestorAccounts(options?: AxiosRequestConfig): Promise<import("axios").AxiosResponse<Account[]>> {
-    return new Promise((res) => res({ data: [] } as AxiosResponse));
+    return new Promise((res) => res({ data: accounts } as AxiosResponse));
+  }
+  // @ts-ignore
+  releaseAllocation(allocationId: string, options?: AxiosRequestConfig): Promise<import("axios").AxiosResponse<void>> {
+    return Promise.resolve({} as AxiosResponse);
+  }
+
+  // @ts-ignore
+  getInvoiceEvents(
+    timeout?: number,
+    afterTimestamp?: string,
+    maxEvents?: number,
+    appSessionId?: string,
+    options?: AxiosRequestConfig
+  ): Promise<import("axios").AxiosResponse<InvoiceEvent[]>> {
+    return new Promise((res) => res({ data: expectedEvents } as AxiosResponse));
+  }
+
+  // @ts-ignore
+  getInvoice(invoiceId: string, options?: AxiosRequestConfig): Promise<import("axios").AxiosResponse<Invoice>> {
+    return new Promise((res) => res({ data: expectedInvoices[0] } as AxiosResponse));
+  }
+
+  // @ts-ignore
+  getDebitNoteEvents(
+    timeout?: number,
+    afterTimestamp?: string,
+    maxEvents?: number,
+    appSessionId?: string,
+    options?: AxiosRequestConfig
+  ): Promise<import("axios").AxiosResponse<DebitNoteEvent[]>> {
+    return new Promise((res) => res({ data: expectedEvents } as AxiosResponse));
+  }
+
+  // @ts-ignore
+  getDebitNote(debitNoteId: string, options?: AxiosRequestConfig): Promise<import("axios").AxiosResponse<DebitNote>> {
+    return new Promise((res) => res({ data: expectedDebitNotes[0] } as AxiosResponse));
+  }
+  // @ts-ignore
+  acceptInvoice(
+    invoiceId: string,
+    acceptance: Acceptance,
+    timeout?: number,
+    options?: AxiosRequestConfig
+  ): Promise<import("axios").AxiosResponse<void>> {
+    return new Promise((res) => res({} as AxiosResponse));
+  }
+  // @ts-ignore
+  acceptDebitNote(
+    debitNoteId: string,
+    acceptance: Acceptance,
+    timeout?: number,
+    options?: AxiosRequestConfig
+  ): Promise<import("axios").AxiosResponse<void>> {
+    return new Promise((res) => res({} as AxiosResponse));
   }
 }

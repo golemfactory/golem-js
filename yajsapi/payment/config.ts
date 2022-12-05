@@ -9,7 +9,7 @@ import { InvoiceOptions } from "./invoice";
 const DEFAULTS = {
   basePath: "http://127.0.0.1:7465/",
   budget: 1.0,
-  payment: { driver: "erc-20", network: "rinkeby" },
+  payment: { driver: "erc20", network: "rinkeby" },
   timeout: 20000,
   allocationExpires: 1000 * 60 * 30, // 30 min
   invoiceReceiveTimeout: 1000 * 60 * 5, // 5 min
