@@ -1,19 +1,16 @@
 /* eslint @typescript-eslint/ban-ts-comment: 0 */
 import { Agreement, AgreementPoolService } from "../../../yajsapi/agreement";
 import { agreementsApproved } from "../fixtures";
-import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
+import { AgreementConfig } from "../../../yajsapi/agreement/config";
 
 const proposalIds: string[] = [];
 const invalidProviderIds: string[] = [];
+const provider = { id: "test_provider_id", name: "Test Provider" };
 // @ts-ignore
 export const agreementPoolServiceMock: AgreementPoolService = {
   async getAgreement(): Promise<Agreement> {
     const agreementData = agreementsApproved[0];
-    return new Agreement(
-      agreementData.agreementId,
-      { id: agreementData.offer.providerId, name: "todo" },
-      {} as RequestorApi
-    );
+    return new Agreement(agreementData.agreementId, provider, new AgreementConfig());
   },
   addProposal: (proposalId: string) => {
     proposalIds.push(proposalId);
