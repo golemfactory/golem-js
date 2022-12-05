@@ -1,23 +1,26 @@
-import {spawn} from "child_process";
+import { ChildProcess, spawn } from "child_process";
 
 export class Goth {
-    async run() {
-        return new Promise((resolve, reject) => {
-            let log = '';
-            const result = spawn("python -m goth start ../assets/goth-config.yml", { encoding: "utf8" });
+  private process?: ChildProcess;
+  private controller: AbortController;
 
-            result.stdout.on('data', (data) => {
-                console.log(data);
-            });
-
-            result.stderr.on('data', reject);
-
-            result.on('close', () => {
-                console.log('Goth process exit');
-            });
-        })
-    }
-    async end() {
-
-    }
+  constructor(private readonly gothConfig) {
+    this.controller = new AbortController();
+  }
+  async start(): Promise<{ apiKey: string; basePath: string; subnetTag: string }> {
+    return new Promise((resolve, reject) => {
+      console.log("Starting goth process...");
+      const gothProcess = spawn("python", ["-m", "goth", "start", this.gothConfig], { signal: this.controller.signal });
+      gothProcess.stdout.on("data", (data) => {
+        console.log(data.toString());
+        const [apiKey, basePath, subnetTag] = data.toString().match(/todo_regex/);
+        if (!apiKey) resolve({ apiKey, basePath, subnetTag });
+      });
+      gothProcess.stderr.on("data", (error) => reject(error.toString()));
+      gothProcess.on("close", (code) => console.log(`Goth process exit with code ${code}`));
+    });
+  }
+  async end() {
+    this.controller.abort();
+  }
 }

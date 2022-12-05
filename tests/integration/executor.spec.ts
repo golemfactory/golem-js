@@ -2,18 +2,22 @@ import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import { createExecutor } from "../../yajsapi";
 import { LoggerMock } from "../mock";
+import { Goth } from "./goth";
+import { resolve } from "path";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 const logger = new LoggerMock();
+const gothConfig = resolve("../goth/assets/goth-config.yml");
+const goth = new Goth(gothConfig);
 
-
-describe("Task Executor", () => {
+describe("Task Executor", function () {
+  this.timeout(10000);
   let apiKey, basePath, subnetTag;
   before(async () => {
-    ({ apiKey, basePath, subnet } = await goth.start());
+    ({ apiKey, basePath, subnetTag } = await goth.start());
   });
   after(async () => {
-    await goth.end()
+    await goth.end();
   });
 
   it("should run simple task", async () => {
