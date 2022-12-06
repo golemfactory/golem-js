@@ -4,6 +4,7 @@ import { StorageProvider } from "../storage/provider";
 import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity";
 import { sleep, Logger, runtimeContextChecker } from "../utils";
 import { Batch } from "../task";
+import { NetworkNode } from "../network/node";
 
 export type Worker<InputType = unknown, OutputType = unknown> = (
   ctx: WorkContext,
@@ -20,6 +21,7 @@ export interface WorkOptions {
   activityStateCheckingInterval?: number;
   provider?: { name: string; id: string; networkConfig?: object };
   storageProvider?: StorageProvider;
+  networkNode?: NetworkNode;
   logger?: Logger;
   initWorker?: Worker<undefined>;
 }
@@ -30,8 +32,7 @@ export class WorkContext {
   private readonly activityStateCheckingInterval: number;
   private readonly provider?: { name: string; id: string; networkConfig?: object };
   private readonly storageProvider?: StorageProvider;
-  private resultAccepted = false;
-  private resultRejected = false;
+  private readonly networkNode?: NetworkNode;
 
   constructor(private activity: Activity, private options?: WorkOptions) {
     this.timeout = options?.timeout || DEFAULTS.timeout;
@@ -39,6 +40,7 @@ export class WorkContext {
     this.activityStateCheckingInterval = options?.activityStateCheckingInterval || DEFAULTS.activityStateCheckInterval;
     this.provider = options?.provider;
     this.storageProvider = options?.storageProvider;
+    this.networkNode = options?.networkNode;
   }
   async before(): Promise<Result[] | void> {
     let state = await this.activity.getState();
@@ -48,7 +50,7 @@ export class WorkContext {
     }
     if (state === ActivityStateStateEnum.Initialized) {
       await this.activity.execute(
-        new Script([new Deploy(this.provider?.networkConfig), new Start()]).getExeScriptRequest()
+        new Script([new Deploy(this.networkNode?.getNetworkConfig()), new Start()]).getExeScriptRequest()
       );
     }
     let timeout = false;
@@ -86,6 +88,10 @@ export class WorkContext {
   }
   rejectResult(msg: string) {
     throw new Error(`Work rejected by user. Reason: ${msg}`);
+  }
+  getWebsocketUri(port: number): string {
+    if (!this.networkNode) throw new Error("There is no network in this work context");
+    return this.networkNode?.getWebsocketUri(port);
   }
 
   private async runOneCommand(command: Command): Promise<Result> {
