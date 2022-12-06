@@ -28,7 +28,7 @@ export class TaskService {
     private tasksQueue: TaskQueue<Task<unknown, unknown>>,
     private agreementPoolService: AgreementPoolService,
     private paymentService: PaymentService,
-    private networkService: NetworkService,
+    private networkService?: NetworkService,
     options?: TaskOptions
   ) {
     this.options = new TaskConfig(options);

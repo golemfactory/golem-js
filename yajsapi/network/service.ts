@@ -2,17 +2,21 @@ import { Logger } from "../utils";
 import { Network } from "./index";
 import { NetworkOptions } from "./network";
 import { NetworkNode } from "./node";
+import { getIdentity } from "./identity";
+
+export type NetworkServiceOptions = Omit<NetworkOptions, "ownerId">;
 
 export class NetworkService {
   private network?: Network;
   private logger?: Logger;
 
-  constructor(private options: NetworkOptions) {
+  constructor(private options?: NetworkServiceOptions) {
     this.logger = options?.logger;
   }
 
-  async run() {
-    this.network = await Network.create(this.options);
+  async run(ownerId?: string) {
+    if (!ownerId) ownerId = await getIdentity(this.options);
+    this.network = await Network.create({ ...this.options, ownerId });
     this.logger?.debug("Network Service has started");
   }
 

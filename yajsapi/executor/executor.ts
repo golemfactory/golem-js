@@ -44,7 +44,7 @@ export class TaskExecutor {
   private agreementPoolService: AgreementPoolService;
   private taskService: TaskService;
   private paymentService: PaymentService;
-  private networkService: NetworkService;
+  private networkService?: NetworkService;
   private initWorker?: Worker<unknown, unknown>;
   private taskQueue: TaskQueue<Task<any, any>>;
   private storageProvider?: StorageProvider;
@@ -61,7 +61,7 @@ export class TaskExecutor {
     this.logger = this.options.logger;
     this.taskQueue = new TaskQueue<Task<any, any>>();
     this.agreementPoolService = new AgreementPoolService(this.options);
-    this.networkService = new NetworkService(this.options);
+    this.networkService = this.options.networkAddress ? new NetworkService(this.options) : undefined;
     this.paymentService = new PaymentService(this.options);
     this.marketService = new MarketService(this.agreementPoolService, this.options);
     this.storageProvider = new GftpStorageProvider();
@@ -70,7 +70,7 @@ export class TaskExecutor {
       this.agreementPoolService,
       this.paymentService,
       this.networkService,
-      this.options
+      { ...this.options, storageProvider: this.storageProvider }
     );
   }
 
@@ -83,9 +83,7 @@ export class TaskExecutor {
     this.agreementPoolService.run().catch((e) => this.handleCriticalError(e));
     this.paymentService.run().catch((e) => this.handleCriticalError(e));
     this.taskService.run().catch((e) => this.handleCriticalError(e));
-    if (this.options.networkAddress) {
-      this.networkService.run(this.options.networkAddress).catch((e) => this.handleCriticalError(e));
-    }
+    this.networkService?.run().catch((e) => this.handleCriticalError(e));
     this.logger?.info(
       `Task Executor has started using subnet ${this.options.subnetTag}, network: ${this.options.payment?.network}, driver: ${this.options.payment?.driver}`
     );
@@ -95,7 +93,7 @@ export class TaskExecutor {
     await this.marketService.end();
     await this.agreementPoolService.end();
     await this.taskService.end();
-    await this.networkService.end();
+    await this.networkService?.end();
     await this.paymentService.end();
     this.storageProvider?.close();
     const executionTime = (+new Date() - this.startTime) / 1000;
