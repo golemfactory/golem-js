@@ -26,9 +26,11 @@ export class DecorationsBuilder {
     } else {
       this.properties.push({ key, value });
     }
+    return this;
   }
   addConstraint(key: string, value: string | number, comparisonMethod = ComparisonMethod.Eq) {
     this.constraints.push({ key, value, comparisonMethod });
+    return this;
   }
   getDecorations() {
     return {
@@ -62,5 +64,6 @@ export class DecorationsBuilder {
         this.addConstraint(key, value, comparisonMethod);
       });
     }
+    return this;
   }
 }

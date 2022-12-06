@@ -13,10 +13,14 @@ describe("#DecorationsBuilder()", () => {
     });
     it("should replace already existing property", () => {
       const decorationsBuilder = new DecorationsBuilder();
-      decorationsBuilder.addProperty("key", "value");
-      decorationsBuilder.addProperty("key", "value2");
+      decorationsBuilder.addProperty("key", "value").addProperty("key", "value2");
       expect(decorationsBuilder.getDecorations().properties.length).to.equal(1);
       expect(decorationsBuilder.getDecorations().properties[0].value).to.equal("value2");
+    });
+    it("should provide fluent API", () => {
+      const decorationsBuilder = new DecorationsBuilder();
+      const flAPI = decorationsBuilder.addProperty("key", "value");
+      expect(flAPI).to.be.an.instanceof(DecorationsBuilder);
     });
   });
   describe("addConstraint()", () => {
@@ -50,6 +54,11 @@ describe("#DecorationsBuilder()", () => {
       decorationsBuilder.addConstraint("key", "value", ComparisonMethod.Eq);
       expect(decorationsBuilder.getDecorations().constraints.length).to.equal(1);
     });
+    it("should provide fluent API", () => {
+      const decorationsBuilder = new DecorationsBuilder();
+      const flAPI = decorationsBuilder.addConstraint("key", "value");
+      expect(flAPI).to.be.an.instanceof(DecorationsBuilder);
+    });
   });
   describe("addDecorations()", () => {
     it("should allow to parse constrain with =, >=, <=, >, <", async () => {
@@ -65,7 +74,7 @@ describe("#DecorationsBuilder()", () => {
       };
       const decorationsBuilder = new DecorationsBuilder();
       decorationsBuilder.addDecorations(decorations);
-      expect(decorationsBuilder.getDecorations().constraints.length).to.equal(1);
+      expect(decorationsBuilder.getDecorations().constraints.length).to.equal(5);
     });
 
     it("should allow to add decorations", () => {
@@ -78,18 +87,27 @@ describe("#DecorationsBuilder()", () => {
       expect(decorationsBuilder.getDecorations().constraints.length).to.equal(1);
       expect(decorationsBuilder.getDecorations().properties.length).to.equal(1);
     });
+    it("should provide fluent API", () => {
+      const decorations = {
+        properties: [{ key: "prop_key", value: "value" }],
+        constraints: ["some_constraint=some_value"],
+      };
+      const decorationsBuilder = new DecorationsBuilder();
+      const flAPI = decorationsBuilder.addDecorations(decorations);
+      expect(flAPI).to.be.an.instanceof(DecorationsBuilder);
+    });
   });
   describe("getDecorations()", () => {
     it("should return correct decoration", () => {
       const decorationsBuilder = new DecorationsBuilder();
-      decorationsBuilder.addConstraint("key", "value", ComparisonMethod.Eq);
-      decorationsBuilder.addConstraint("key", "value", ComparisonMethod.GtEq);
-      decorationsBuilder.addConstraint("key", "value", ComparisonMethod.LtEq);
-      decorationsBuilder.addConstraint("key", "value", ComparisonMethod.Gt);
-      decorationsBuilder.addConstraint("key", "value", ComparisonMethod.Lt);
-
-      decorationsBuilder.addProperty("key", "value");
-      decorationsBuilder.addProperty("key2", "value");
+      decorationsBuilder
+        .addConstraint("key", "value", ComparisonMethod.Eq)
+        .addConstraint("key", "value", ComparisonMethod.GtEq)
+        .addConstraint("key", "value", ComparisonMethod.LtEq)
+        .addConstraint("key", "value", ComparisonMethod.Gt)
+        .addConstraint("key", "value", ComparisonMethod.Lt)
+        .addProperty("key", "value")
+        .addProperty("key2", "value");
 
       expect(decorationsBuilder.getDecorations().constraints.length).to.equal(5);
       expect(decorationsBuilder.getDecorations().properties.length).to.equal(2);
