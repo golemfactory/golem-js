@@ -5,7 +5,7 @@ The JS/TS port of [yapapi, Golem's Python API](https://github.com/golemfactory/y
 
 ## Prerequisites
 
-- [node](https://nodejs.org/en/) >= v12.13.0
+- [node](https://nodejs.org/en/) >= v14.17.0
 - [yarn](https://classic.yarnpkg.com/en/docs/install/) >= v1.22.3
 <br/><br/>
 
@@ -31,18 +31,27 @@ _(not needed for running examples)_
 ### Installation
 - `cd examples`         will take you to examples folder
 - `yarn`                will install dependencies for the examples
+- `yarn build`          will build typescript examples
 - add `YAGNA_APPKEY` as environment variable; 
 ```
 export YAGNA_APPKEY=your_yagna_app_key_here
 ```
 
 ### When ready
-- `npm run js:hello`    will start hello world javascript example
-- `npm run js:blender`  will start blender javascript example
-- `npm run ts:blender`  will start blender typescript example
-- `npm run js:low`      will start javascript low level api example
-- `npm run ts:low`      will start typescript low level api example
-- `npm run ts:yacat`    will start typescript yacat example
+- `npm run js:hello`           will start hello world javascript example
+- `npm run ts:run`             will start an example of simple usage of the run method
+- `npm run ts:map`             will start an example of simple usage of the map method
+- `npm run ts:forEach`         will start an example of simple usage of the forEach method
+- `npm run ts:fileTransfer`    will start an example of simple usage of the fileTransfer command
+- `npm run ts:batchPromise`    will start an example of simple usage of the batch commands as promise
+- `npm run ts:batchStream`     will start an example of simple usage of the batch commands as stream
+- `npm run js:blender`         will start blender javascript example
+- `npm run ts:blender`         will start blender typescript example
+- `npm run js:low`             will start javascript low level api example
+- `npm run ts:low`             will start typescript low level api example
+- `npm run ts:yacat`           will start typescript yacat example
+- `npm run js:fibonacci`       will start nodejs example
+- `npm run ts:ssh`             will start javascript ssh example
 
 To run `yacat` using `npm`, special characters like `$` have to be escaped using `\`, e.g.:
 ```

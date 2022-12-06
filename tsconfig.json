@@ -11,6 +11,7 @@
     "sourceMap": true,
     "noLib": false,
     "declaration": true,
+    "useUnknownInCatchVariables": false,
     "lib": [
       "es2015",
       "es2016",
@@ -26,5 +27,5 @@
     "exclude": ["**/*.spec.ts"],
     "out": "docs"
   },
-  "exclude": ["dist", "node_modules", "examples", "tests"]
+  "exclude": ["dist", "node_modules", "examples", "tests", "cypress.config.ts"]
 }

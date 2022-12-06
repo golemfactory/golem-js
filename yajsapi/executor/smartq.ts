@@ -10,7 +10,7 @@ export class Handle<Item> {
   constructor({ data, consumer, ...rest }) {
     this._data = data;
     this._prev_consumers = new Set();
-    if (!!consumer) this._prev_consumers.add(consumer);
+    if (consumer) this._prev_consumers.add(consumer);
 
     this._consumer = consumer;
   }
@@ -37,14 +37,18 @@ export class SmartQueue<Item> {
   private __eof;
   private __done;
 
-  constructor(items: Array<Item>, retry_cnt: number = 2, ...rest) {
-    this._items = items;
+  constructor(items: Array<Item>, retry_cnt = 2, ...rest) {
+    this._items = items || [];
     this._rescheduled_items = new Set();
     this._in_progress = new Set();
 
     this.__new_items = csp.chan();
     this.__eof = csp.chan();
     this.__done = false;
+  }
+
+  add(item: Item) {
+    if (this._items) this._items.push(item);
   }
 
   close() {
@@ -64,9 +68,7 @@ export class SmartQueue<Item> {
 
   __have_data(): boolean {
     const have_data =
-      !!(this._items && this._items.length) ||
-      !!this._rescheduled_items.size ||
-      !!this._in_progress.size;
+      !!(this._items && this._items.length) || !!this._rescheduled_items.size || !!this._in_progress.size;
     return have_data;
   }
 
@@ -77,13 +79,10 @@ export class SmartQueue<Item> {
     return items[Symbol.iterator]().next().value;
   }
 
-  async *get(
-    consumer: Consumer<Item>,
-    callback: Function | null | undefined
-  ): AsyncGenerator<Handle<Item>> {
+  async *get(consumer: Consumer<Item>, callback: (handle) => void | null | undefined): AsyncGenerator<Handle<Item>> {
     while (this.__have_data()) {
       let handle = this.__find_rescheduled_item(consumer);
-      if (!!handle) {
+      if (handle) {
         this._rescheduled_items.delete(handle);
         this._in_progress.add(handle);
         handle.assign_consumer(consumer);
@@ -91,13 +90,17 @@ export class SmartQueue<Item> {
         yield handle;
       }
 
-      if (!!(this._items && this._items.length)) {
-        let next_elem = this._items.pop();
+      if (this._items && this._items.length) {
+        const next_elem = this._items.pop();
         if (!next_elem) {
           this._items = null;
           if (!this._rescheduled_items && !this._in_progress) {
             csp.putAsync(this.__new_items, true);
-            if (this.__done) { return; } else { throw new Error(); }
+            if (this.__done) {
+              return;
+            } else {
+              throw new Error();
+            }
           }
         } else {
           handle = new Handle({ data: next_elem, consumer: consumer });
@@ -133,10 +136,10 @@ export class SmartQueue<Item> {
 
   async reschedule_all(consumer: Consumer<Item>): Promise<void> {
     if (this.__done) return;
-    let handles = [...this._in_progress].map((handle) => {
+    const handles = [...this._in_progress].map((handle) => {
       if (handle.consumer() === consumer) return handle;
     });
-    for (let handle of handles) {
+    for (const handle of handles) {
       if (handle) {
         this._in_progress.delete(handle);
         this._rescheduled_items.add(handle);
@@ -160,7 +163,7 @@ export class SmartQueue<Item> {
   }
 
   has_unassigned_items(): boolean {
-    return !!(this._items && this._items.length) || !!this._rescheduled_items.size
+    return !!(this._items && this._items.length) || !!this._rescheduled_items.size;
   }
 }
 

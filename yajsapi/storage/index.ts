@@ -1,5 +1,5 @@
 import { applyMixins } from "../utils";
-const fs = require("fs");
+import fs from "fs";
 
 const _BUF_SIZE = 40960;
 
@@ -43,14 +43,15 @@ export class Destination {
   }
 
   async download_file(destination_file: string) {
-    let content = await this.download_stream();
-    var writableStream = fs.createWriteStream(destination_file, {
+    const content = await this.download_stream();
+    const writableStream = fs.createWriteStream(destination_file, {
       encoding: "binary",
     });
 
+    // eslint-disable-next-line no-async-promise-executor
     await new Promise(async (fulfill) => {
       writableStream.once("finish", fulfill);
-      for await (let chunk of content.stream) {
+      for await (const chunk of content.stream) {
         writableStream.write(chunk);
       }
       writableStream.end();
@@ -59,10 +60,7 @@ export class Destination {
 }
 
 export class InputStorageProvider {
-  async upload_stream(
-    length: number,
-    stream: AsyncGenerator<Buffer>
-  ): Promise<Source> {
+  async upload_stream(length: number, stream: AsyncGenerator<Buffer>): Promise<Source> {
     throw "NotImplementedError";
   }
 
@@ -75,7 +73,7 @@ export class InputStorageProvider {
   }
 
   async upload_file(path: string): Promise<Source> {
-    let file_size = fs.statSync(path)["size"];
+    const file_size = fs.statSync(path)["size"];
 
     async function* read_file() {
       const stream = fs.createReadStream(path, {
@@ -84,8 +82,8 @@ export class InputStorageProvider {
       });
       stream.once("end", () => {
         stream.destroy();
-      })
-      for await (let chunk of stream) {
+      });
+      for await (const chunk of stream) {
         yield chunk;
       }
     }
@@ -95,9 +93,7 @@ export class InputStorageProvider {
 }
 
 export class OutputStorageProvider {
-  async new_destination(
-    destination_file: string | null = null
-  ): Promise<Destination> {
+  async new_destination(destination_file: string | null = null): Promise<Destination> {
     /*
         Creates slot for receiving file.
 
@@ -111,9 +107,7 @@ export class OutputStorageProvider {
   }
 }
 
-export interface StorageProvider
-  extends InputStorageProvider,
-    OutputStorageProvider {}
+export interface StorageProvider extends InputStorageProvider, OutputStorageProvider {}
 export class StorageProvider {}
 
 applyMixins(StorageProvider, [InputStorageProvider, OutputStorageProvider]);
@@ -122,10 +116,7 @@ export class ComposedStorageProvider implements StorageProvider {
   private _input;
   private _output;
 
-  constructor(
-    input_storage: InputStorageProvider,
-    output_storage: OutputStorageProvider
-  ) {
+  constructor(input_storage: InputStorageProvider, output_storage: OutputStorageProvider) {
     this._input = input_storage;
     this._output = output_storage;
   }
@@ -133,10 +124,7 @@ export class ComposedStorageProvider implements StorageProvider {
     throw new Error("Method not implemented.");
   }
 
-  async upload_stream(
-    length: number,
-    stream: AsyncGenerator<Buffer>
-  ): Promise<Source> {
+  async upload_stream(length: number, stream: AsyncGenerator<Buffer>): Promise<Source> {
     return await this._input.upload_stream(length, stream);
   }
 
@@ -144,9 +132,7 @@ export class ComposedStorageProvider implements StorageProvider {
     return await this._input.upload_file(path);
   }
 
-  async new_destination(
-    destination_file: string | null = null
-  ): Promise<Destination> {
+  async new_destination(destination_file: string | null = null): Promise<Destination> {
     return await this._output.new_destination(destination_file);
   }
 }

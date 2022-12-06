@@ -46,7 +46,12 @@ async def assert_multiple_workers_run(agr_id, events):
 
 
 @pytest.mark.asyncio
-async def test_multiactivity_agreement(project_dir: Path, log_dir: Path, goth_config_path, config_overrides) -> None:
+async def test_multiactivity_agreement(
+    project_dir: Path,
+    log_dir: Path,
+    goth_config_path: Path,
+    config_overrides
+) -> None:
 
     configure_logging(log_dir)
 
@@ -56,10 +61,7 @@ async def test_multiactivity_agreement(project_dir: Path, log_dir: Path, goth_co
         {"name": "provider-1", "type": "VM-Wasm-Provider", "use-proxy": True},
     ]
     config_overrides.append(("nodes", nodes))
-    goth_config = goth.configuration.load_yaml(
-        goth_config_path,
-        config_overrides,
-    )
+    goth_config = goth.configuration.load_yaml(goth_config_path, config_overrides)
 
     runner = Runner(base_log_dir=log_dir, compose_config=goth_config.compose_config)
 
@@ -75,11 +77,11 @@ async def test_multiactivity_agreement(project_dir: Path, log_dir: Path, goth_co
 
             # Wait for agreement
             assertion = cmd_monitor.add_assertion(assert_agreement_created)
-            agr_id = await assertion.wait_for_result(timeout=120)
+            agr_id = await assertion.wait_for_result(timeout=300)
 
             # Wait for multiple workers run for the agreement
             assertion = cmd_monitor.add_assertion(
                 partial(assert_multiple_workers_run, agr_id),
                 name=f"assert_multiple_workers_run({agr_id})",
             )
-            await assertion.wait_for_result(timeout=120)
+            await assertion.wait_for_result(timeout=300)

@@ -1,17 +1,12 @@
-import {
-  chomp,
-  streamWrite,
-  streamEnd,
-  chunksToLinesAsync,
-} from "@rauschma/stringio";
+import { chomp, streamWrite, streamEnd, chunksToLinesAsync } from "@rauschma/stringio";
 import { spawn, ChildProcess } from "child_process";
 import { StorageProvider, Destination, Source, Content } from ".";
 import { AsyncExitStack, logger } from "../utils";
 
-const fs = require("fs");
-const path = require("path");
-const { v4: uuid } = require("uuid");
-const tmp = require("tmp");
+import fs from "fs";
+import path from "path";
+import { v4 as uuid } from "uuid";
+import tmp from "tmp";
 
 class PubLink {
   //"""GFTP linking information."""
@@ -56,6 +51,13 @@ class GftpDriver {
     return await this._jsonrpc("receive", { output_file });
   }
 
+  async close(urls: string[]): Promise<any> {
+    /*
+     * Stops exposing GFTP urls created by publish(files)
+     */
+    return await this._jsonrpc("close", { urls });
+  }
+
   // async upload(file: string, url: string) {
   //     pass
   // }
@@ -72,12 +74,12 @@ class GftpDriver {
     if (!this._reader) {
       this._reader = this._readStream(this._proc.stdout);
     }
-    let paramsStr = JSON.stringify(params);
-    let query = `{"jsonrpc": "2.0", "id": "1", "method": "${method}", "params": ${paramsStr}}\n`;
+    const paramsStr = JSON.stringify(params);
+    const query = `{"jsonrpc": "2.0", "id": "1", "method": "${method}", "params": ${paramsStr}}\n`;
     let valueStr = "";
     await streamWrite(this._proc.stdin, query);
     try {
-      let { value } = await this._reader.next();
+      const { value } = await this._reader.next();
       valueStr = JSON.stringify(value);
       const { result } = JSON.parse(value as string);
       if (result === undefined) {
@@ -106,20 +108,18 @@ class _Process {
   _debug;
   _proc?;
 
-  constructor(_debug: boolean = false) {
+  constructor(_debug = false) {
     this._debug = _debug;
     this._proc = null;
   }
 
   async ready(): Promise<GftpDriver> {
-    let env: NodeJS.ProcessEnv = this._debug
-      ? { ...process.env, RUST_LOG: "debug" }
-      : { ...process.env };
+    const env: NodeJS.ProcessEnv = this._debug ? { ...process.env, RUST_LOG: "debug" } : { ...process.env };
     this._proc = await spawn("gftp server", [], {
       shell: true,
       env: env,
     });
-    let gftp = new GftpDriver();
+    const gftp = new GftpDriver();
     gftp["_proc"] = this._proc;
     return gftp;
   }
@@ -131,7 +131,7 @@ class _Process {
 
   async _close() {
     if (!this._proc) return;
-    let p: ChildProcess = this._proc;
+    const p: ChildProcess = this._proc;
     this._proc = null;
 
     // with contextlib.suppress(Exception):
@@ -145,14 +145,14 @@ class _Process {
       // } catch (err) {}
     }
     p.kill();
-    let ret_code = await p.signalCode;
+    const ret_code = await p.signalCode;
     logger.debug(`GFTP server closed, code=${ret_code}`);
   }
 
   _log_debug(msg_dir: string, msg: string | Buffer) {
     if (this._debug) {
       if (msg instanceof Buffer) msg = msg.toString("utf-8");
-      let stderr = process.stderr;
+      const stderr = process.stderr;
       stderr.write(msg_dir == "in" ? "\n <= " : "\n => ");
       stderr.write(msg);
     }
@@ -162,8 +162,8 @@ class _Process {
     if (!this._proc) return;
     if (!this._proc.stdin) return;
     if (!this._proc.stdout) return;
-    let _message = message.serialize() + "\n";
-    let buffer = Buffer.from(_message, "utf-8");
+    const _message = message.serialize() + "\n";
+    const buffer = Buffer.from(_message, "utf-8");
     this._log_debug("out", _message);
     this._proc.stdin.write(buffer);
     await this._proc.stdin.drain();
@@ -180,7 +180,7 @@ class _Process {
 }
 
 function _temp_file(temp_dir: string): string {
-  let file_name = path.join(temp_dir, uuid().toString());
+  const file_name = path.join(temp_dir, uuid().toString());
   if (fs.existsSync(file_name)) fs.unlinkSync(file_name);
   return file_name;
 }
@@ -217,8 +217,8 @@ class GftpDestination extends Destination {
   }
 
   async download_stream(): Promise<Content> {
-    let file_path = this._link["file"];
-    let length = fs.statSync(file_path)["size"];
+    const file_path = this._link["file"];
+    const length = fs.statSync(file_path)["size"];
 
     async function* chunks(): AsyncGenerator<Buffer> {
       const stream = fs.createReadStream(file_path, {
@@ -228,7 +228,7 @@ class GftpDestination extends Destination {
       stream.once("end", () => {
         stream.destroy();
       });
-      for await (let chunk of stream) yield chunk;
+      for await (const chunk of stream) yield chunk;
     }
 
     return new Content(length, chunks());
@@ -254,8 +254,8 @@ class GftpProvider extends StorageProvider {
 
   async ready(): Promise<StorageProvider> {
     this._temp_dir = tmp.dirSync().name;
-    let _process = await this.__get_process();
-    let _ver = await _process.version();
+    const _process = await this.__get_process();
+    const _ver = await _process.version();
     logger.info(`GFTP Version:${_ver}`);
     if (!_ver) throw Error("GFTP couldn't found.");
     return this as StorageProvider;
@@ -267,65 +267,63 @@ class GftpProvider extends StorageProvider {
   }
 
   __new_file(): string {
-    let temp_dir: string = this._temp_dir || tmp.dirSync().name;
+    const temp_dir: string = this._temp_dir || tmp.dirSync().name;
     if (!this._temp_dir) this._temp_dir = temp_dir;
     const temp_file = _temp_file(temp_dir);
     return temp_file;
   }
 
   async __get_process(): Promise<GftpDriver> {
-    let _debug = !!process.env["DEBUG_GFTP"];
-    let _process =
-      this._process ||
-      (await this.__exit_stack.enter_async_context(service(_debug)));
+    const _debug = !!process.env["DEBUG_GFTP"];
+    const _process = this._process || (await this.__exit_stack.enter_async_context(service(_debug)));
     if (!this._process) this._process = _process;
     return _process;
   }
 
-  async upload_stream(
-    length: number,
-    stream: AsyncGenerator<Buffer>
-  ): Promise<Source> {
-    let file_name = this.__new_file();
-    let wStream = fs.createWriteStream(file_name, {
+  async upload_stream(length: number, stream: AsyncGenerator<Buffer>): Promise<Source> {
+    const file_name = this.__new_file();
+    const wStream = fs.createWriteStream(file_name, {
       encoding: "binary",
     });
+    // eslint-disable-next-line no-async-promise-executor
     await new Promise(async (fulfill) => {
       wStream.once("finish", fulfill);
-      for await (let chunk of stream) {
+      for await (const chunk of stream) {
         wStream.write(chunk);
       }
       wStream.end();
     });
-    let _process = await this.__get_process();
-    let links = await _process.publish([file_name.toString()]);
+    const _process = await this.__get_process();
+    const links = await _process.publish([file_name.toString()]);
     if (links.length !== 1) throw "invalid gftp publish response";
-    let link = links[0];
+    const link = links[0];
     return new GftpSource(length, link);
   }
 
   async upload_file(_path: string): Promise<Source> {
-    let _process = await this.__get_process();
-    let links = await _process.publish([_path.toString()]);
-    let length = fs.statSync(_path)["size"];
+    const _process = await this.__get_process();
+    const links = await _process.publish([_path.toString()]);
+    const length = fs.statSync(_path)["size"];
     if (links.length !== 1) throw "invalid gftp publish response";
     return new GftpSource(length, links[0]);
   }
 
-  async new_destination(
-    destination_file: string | null = null
-  ): Promise<Destination> {
-    if (destination_file) {
-      if (fs.existsSync(destination_file)) {
-        destination_file = null;
-      }
-    }
-    let output_file = destination_file
-      ? destination_file.toString()
-      : this.__new_file();
-    let _process = await this.__get_process();
-    let link = await _process.receive(output_file);
+  async new_destination(destination_file: string | null = null): Promise<Destination> {
+    // Temporary disable for checking new transfer approach (without after hook)
+    // if (destination_file) {
+    //   if (fs.existsSync(destination_file)) {
+    //     destination_file = null;
+    //   }
+    // }
+    const output_file = destination_file ? destination_file.toString() : this.__new_file();
+    const _process = await this.__get_process();
+    const link = await _process.receive(output_file);
     return new GftpDestination(_process, link);
+  }
+
+  async release(urls: string[]): Promise<void> {
+    const _process = await this.__get_process();
+    await _process.close(urls);
   }
 }
 

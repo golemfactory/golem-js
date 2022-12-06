@@ -2,39 +2,35 @@ import Bluebird from "bluebird";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import { props as yp, rest, utils } from "yajsapi";
-import { Subscription } from "yajsapi/dist/rest/market";
 import { program } from "commander";
 
 dayjs.extend(utc);
 
 const { Configuration, Market } = rest;
-const { asyncWith, CancellationToken } = utils;
+const { CancellationToken } = utils;
 const cancellationToken = new CancellationToken();
 
 async function list_offers(conf: rest.Configuration, subnetTag: string): Promise<void> {
-  let client = await conf.market();
-  let market_api = new Market(client);
-  let dbuild = new yp.DemandBuilder();
+  const client = await conf.market();
+  const market_api = new Market(client);
+  const dbuild = new yp.DemandBuilder();
 
-  let idx = new yp.NodeInfo(subnetTag);
+  const idx = new yp.NodeInfo(subnetTag);
   idx.name.value = "some scanning node";
   dbuild.add(idx);
 
-  let act = new yp.Activity();
+  const act = new yp.Activity();
   act.expiration.value = dayjs().utc().unix() * 1000;
   dbuild.add(act);
 
-  await asyncWith(
-    await market_api.subscribe(dbuild.properties(), dbuild.constraints()),
-    async (subscription: Subscription) => {
-      for await (let event of subscription.events(cancellationToken)) {
-        console.log(`Offer: ${event.id()}`);
-        console.log(`from ${event.issuer()}`);
-        console.log(`props ${JSON.stringify(event.props(), null, 4)}`);
-        console.log("\n\n");
-      }
-    }
-  );
+  const subscription = await market_api.subscribe(dbuild.properties(), dbuild.constraints());
+  for await (const event of subscription.events(cancellationToken)) {
+    console.log(`Offer: ${event.id()}`);
+    console.log(`from ${event.issuer()}`);
+    console.log(`props ${JSON.stringify(event.props(), null, 4)}`);
+    console.log("\n\n");
+  }
+  await subscription.delete();
   console.log("done");
 }
 
@@ -46,8 +42,9 @@ const promiseTimeout = (seconds: number): Promise<void> =>
     }, seconds * 1000)
   );
 
-program.option('--subnet-tag <subnet>', 'set subnet name', 'public');
+program.option("--subnet-tag <subnet>", "set subnet name", "public");
 program.parse(process.argv);
-console.log(`Using subnet: ${program.subnetTag}`);
+const options = program.opts();
+console.log(`Using subnet: ${options.subnetTag}`);
 
-Bluebird.Promise.any([list_offers(new Configuration(), program.subnetTag), promiseTimeout(4)]);
+Bluebird.Promise.any([list_offers(new Configuration(), options.subnetTag), promiseTimeout(4)]);

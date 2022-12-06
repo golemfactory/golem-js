@@ -18,5 +18,5 @@ test("promisify reject given fn", async (t) => {
   }
 
   const error = await t.throwsAsync(promisify(wantCb)(21));
-  t.is(error.message, "i am an error");
+  t.is(error!.message, "i am an error");
 });

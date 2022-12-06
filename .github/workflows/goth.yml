@@ -21,19 +21,17 @@ jobs:
       - name: Configure node.js
         uses: actions/setup-node@v1
         with:
-          node-version: '12.18.3'
+          node-version: '14.17.0'
 
       - name: Build yajsapi
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y build-essential
+          sudo apt-get install -y build-essential jq
           npm install
-          npm run-script build
+          npm run build
           cd examples
-          sed -i 's/"yajsapi": ".*"/"yajsapi": "\*"/' package.json
+          jq '.dependencies.yajsapi = "file:../"' <package.json >tmp.json && mv tmp.json package.json
           npm install
-          sed -i 's,require("yajsapi");,require("'$([ -f ../dist/index.js ] && echo "../../dist/index.js" || echo "../../dist/yajsapi/index.js")'");,' blender/blender.js
-          sed -i 's,from "yajsapi",from "../../yajsapi",' yacat/yacat.ts
 
       - name: Configure python
         uses: actions/setup-python@v2
@@ -51,6 +49,11 @@ jobs:
           cd tests/goth/
           poetry env use python3.8
           poetry install
+
+      - name: Install websocat
+        run: |
+          sudo wget https://github.com/vi/websocat/releases/download/v1.9.0/websocat_linux64 -O /usr/local/bin/websocat
+          sudo chmod +x /usr/local/bin/websocat
 
       - name: Disconnect Docker containers from default network
         continue-on-error: true
@@ -99,4 +102,4 @@ jobs:
         # all Python versions (https://github.com/python-poetry/poetry/issues/3208).
         run: |
           cd tests/goth/
-          poetry env remove python3.8 
+          poetry env remove python3.8

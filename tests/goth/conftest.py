@@ -6,7 +6,6 @@ import pytest
 
 from goth.configuration import Override
 
-
 def _project_dir() -> Path:
     package_dir = Path(__file__).parent.parent
     return package_dir.parent.resolve()
@@ -16,10 +15,10 @@ def pytest_addoption(parser):
     """Add optional parameters to pytest CLI invocations."""
 
     parser.addoption(
-        "--config-path",
-        help="Path to the `goth-config.yml` file. (default: %(default)s)",
-        default=_project_dir() / "tests" / "goth" / "assets" / "goth-config.yml",
-    )
+            "--config-path",
+            help="Path to the `goth-config.yml` file. (default: %(default)s)",
+            default=_project_dir() / "tests" / "goth" / "assets" / "goth-config.yml",
+        )
 
     parser.addoption(
         "--config-override",
@@ -28,6 +27,14 @@ def pytest_addoption(parser):
                 This argument may be used multiple times. \
                 Values must follow the convention: {yaml_path}={value}, e.g.: \
                 `docker-compose.build-environment.release-tag=0.6.`",
+    )
+
+    parser.addoption(
+        "--ssh-verify-connection",
+        action="store_true",
+        help="in the `test_run_ssh.py`, peform an actual SSH connection through "
+        "the exposed websocket. Requires both `ssh` and `websocket` binaries "
+        "to be available in the path.",
     )
 
 
@@ -43,6 +50,9 @@ def config_overrides(request) -> List[Override]:
     overrides: List[str] = request.config.option.config_override or []
     return cast(List[Override], [tuple(o.split("=", 1)) for o in overrides])
 
+@pytest.fixture
+def ssh_verify_connection(request):
+    return request.config.option.ssh_verify_connection
 
 @pytest.fixture(scope="session")
 def project_dir() -> Path:

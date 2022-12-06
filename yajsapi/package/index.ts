@@ -4,16 +4,17 @@ import { DemandBuilder } from "../props";
 import { VmPackageFormat, VmRequest } from "../props/inf";
 import { logger } from "../utils";
 
-
 const FALLBACK_REPO_URL = "http://girepo.dev.golem.network:8000";
 export const DEFAULT_REPO_SRV = "_girepo._tcp.dev.golem.network";
 
 export type RepoOpts = {
-  engine?: string,
+  engine?: string;
   image_hash: string;
-  min_mem_gib: number;
-  min_storage_gib: number;
+  min_mem_gib?: number;
+  min_storage_gib?: number;
   min_cpu_threads?: number;
+  cores?: number;
+  capabilities?: string[];
 };
 
 export class Constraints {
@@ -24,7 +25,7 @@ export class Constraints {
   }
 
   extend(items: string[]) {
-    this.inner.push.apply(this.inner, items);
+    this.inner.push(...items);
   }
 
   toString(): string {
@@ -34,11 +35,13 @@ export class Constraints {
 
 // Information on task package to be used for running tasks on providers.
 export class Package {
-  // Return package URL.
-  async resolve_url(self): Promise<void | string> {}
+  async resolve_url(self): Promise<void | string> {
+    // Return package URL.
+  }
 
-  // Add package information to a Demand.
-  async decorate_demand(demand: DemandBuilder) {}
+  async decorate_demand(demand: DemandBuilder) {
+    // Add package information to a Demand.
+  }
 }
 
 export class VmPackage extends Package {
@@ -56,12 +59,10 @@ export class VmPackage extends Package {
   }
 
   async resolve_url(): Promise<string> {
-    let resp = await axios.get(
-      `${this.repo_url}/image.${this.image_hash}.link`
-    );
+    const resp = await axios.get(`${this.repo_url}/image.${this.image_hash}.link`);
     if (resp.status != 200) throw Error(`Error: ${resp.status}`);
 
-    let image_url = await resp.data;
+    const image_url = await resp.data;
     const image_hash = this.image_hash;
     return `hash:sha3:${image_hash}:${image_url}`;
   }
@@ -73,19 +74,16 @@ export class VmPackage extends Package {
   }
 }
 
-export const resolve_repo_srv = async ({
-  repo_srv,
-  fallback_url = FALLBACK_REPO_URL,
-}) => {
+export const resolve_repo_srv = async ({ repo_srv, fallback_url = FALLBACK_REPO_URL }) => {
   async function _resolve_repo_srv() {
     return new Promise((resolve, reject) => {
-      let verify_records = async function (err, records) {
+      const verify_records = async function (err, records) {
         if (!(Symbol.iterator in Object(records))) {
           resolve(null);
           return;
         }
-        for (let record of records) {
-          let url = `http://${record.name}:${record.port}`;
+        for (const record of records) {
+          const url = `http://${record.name}:${record.port}`;
           try {
             await axios.head(url);
             resolve(url);

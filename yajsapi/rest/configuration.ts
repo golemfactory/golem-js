@@ -1,8 +1,8 @@
-import { yaActivity, yaMarket, yaPayment } from "ya-ts-client";
+import { yaActivity, yaMarket, yaPayment, yaNet } from "ya-ts-client";
 import { Agent as HttpAgent } from "http";
 import { Agent as HttpsAgent } from "https";
 
-const DEFAULT_YAGNA_API_URL: string = "http://127.0.0.1:7465";
+const DEFAULT_YAGNA_API_URL = "http://127.0.0.1:7465";
 
 class MissingConfiguration extends Error {
   constructor(key: string, description: string) {
@@ -12,7 +12,7 @@ class MissingConfiguration extends Error {
 }
 
 function env_or_fail(key: string, description: string): string {
-  let val = process.env[key];
+  const val = process.env[key];
   if (!val) throw new MissingConfiguration(key, description);
   return val;
 }
@@ -23,6 +23,7 @@ export class Configuration {
   private __market_url!: string;
   private __payment_url!: string;
   private __activity_url!: string;
+  private __net_url!: string;
   private __axios_opts!: object;
 
   constructor(
@@ -30,37 +31,20 @@ export class Configuration {
     url?: string,
     market_url?: string,
     payment_url?: string,
-    activity_url?: string
+    activity_url?: string,
+    net_url?: string
   ) {
-    this.__app_key =
-      app_key || env_or_fail("YAGNA_APPKEY", "API authentication token");
+    this.__app_key = app_key || env_or_fail("YAGNA_APPKEY", "API authentication token");
     this.__url = url || process.env["YAGNA_API_URL"] || DEFAULT_YAGNA_API_URL;
 
-    const resolve_url = (
-      given_url?: string,
-      env_val?: string,
-      prefix?: string
-    ): string => {
-      return (
-        given_url || process.env[env_val as string] || `${this.__url}${prefix}`
-      );
+    const resolve_url = (given_url?: string, env_val?: string, prefix?: string): string => {
+      return given_url || process.env[env_val as string] || `${this.__url}${prefix}`;
     };
 
-    this.__market_url = resolve_url(
-      market_url,
-      "YAGNA_MARKET_URL",
-      "/market-api/v1"
-    );
-    this.__payment_url = resolve_url(
-      payment_url,
-      "YAGNA_PAYMENT_URL",
-      "/payment-api/v1"
-    );
-    this.__activity_url = resolve_url(
-      activity_url,
-      "YAGNA_ACTIVITY_URL",
-      "/activity-api/v1"
-    );
+    this.__market_url = resolve_url(market_url, "YAGNA_MARKET_URL", "/market-api/v1");
+    this.__payment_url = resolve_url(payment_url, "YAGNA_PAYMENT_URL", "/payment-api/v1");
+    this.__activity_url = resolve_url(activity_url, "YAGNA_ACTIVITY_URL", "/activity-api/v1");
+    this.__net_url = resolve_url(activity_url, "YAGNA_NET_URL", "/net-api/v1");
 
     this.__axios_opts = {
       httpAgent: new HttpAgent({
@@ -88,8 +72,12 @@ export class Configuration {
     return this.__activity_url;
   }
 
+  net_url(): string {
+    return this.__net_url;
+  }
+
   market(): yaMarket.Configuration {
-    let cfg = new yaMarket.Configuration({
+    const cfg = new yaMarket.Configuration({
       apiKey: this.app_key() as string,
       basePath: this.__market_url,
       accessToken: this.app_key() as string,
@@ -99,7 +87,7 @@ export class Configuration {
   }
 
   payment(): yaPayment.Configuration {
-    let cfg = new yaPayment.Configuration({
+    const cfg = new yaPayment.Configuration({
       apiKey: this.app_key() as string,
       basePath: this.__payment_url,
       accessToken: this.app_key() as string,
@@ -109,9 +97,19 @@ export class Configuration {
   }
 
   activity(): yaActivity.Configuration {
-    let cfg = new yaActivity.Configuration({
+    const cfg = new yaActivity.Configuration({
       apiKey: this.app_key() as string,
       basePath: this.__activity_url,
+      accessToken: this.app_key() as string,
+      baseOptions: this.__axios_opts,
+    });
+    return cfg;
+  }
+
+  net(): yaNet.Configuration {
+    const cfg = new yaNet.Configuration({
+      apiKey: this.app_key() as string,
+      basePath: this.__net_url,
       accessToken: this.app_key() as string,
       baseOptions: this.__axios_opts,
     });
