@@ -1,4 +1,4 @@
-import { IPv4, IPv4Mask, IPv4Prefix, IPv4CidrRange } from "ip-num";
+import { IPv4, IPv4Mask, IPv4Prefix, IPv4CidrRange, AbstractIPNum } from "ip-num";
 import { Logger } from "../utils";
 import { YagnaOptions } from "../executor";
 import { NetworkConfig } from "./config";
@@ -30,7 +30,8 @@ export class NetworkError extends Error {}
  */
 export class Network {
   private readonly ip: IPv4;
-  private ipRange: IPv4CidrRange;
+  private readonly ipRange: IPv4CidrRange;
+  private ipIterator: Iterator<AbstractIPNum>;
   private mask: IPv4Mask;
   private ownerId: string;
   private ownerIp: IPv4;
@@ -60,7 +61,7 @@ export class Network {
         gateway: config.gateway,
       });
       const network = new Network(id!, config);
-      await network.addNode(config.ownerId, config.ownerIp).catch(async (e) => {
+      await network.addNode(network.ownerId, network.ownerIp.toString()).catch(async (e) => {
         await config.api.removeNetwork(id as string);
         throw e;
       });
@@ -71,8 +72,9 @@ export class Network {
     }
   }
 
-  private constructor(private id: string, public readonly config: NetworkConfig) {
-    this.ipRange = IPv4CidrRange.fromCidr(`${config.ip}/${config.mask}`);
+  private constructor(public readonly id: string, public readonly config: NetworkConfig) {
+    this.ipRange = IPv4CidrRange.fromCidr(config.mask ? `${config.ip}/${config.mask}` : config.ip);
+    this.ipIterator = this.ipRange[Symbol.iterator]();
     this.ip = this.nextAddress();
     this.mask = this.ipRange.getPrefix().toMask();
     this.ownerId = config.ownerId;
@@ -81,7 +83,7 @@ export class Network {
     this.logger = config.logger;
   }
 
-  private getNetworkInfo(): NetworkInfo {
+  getNetworkInfo(): NetworkInfo {
     return {
       id: this.id,
       ip: this.ip.toString(),
@@ -106,12 +108,13 @@ export class Network {
     } else {
       while (true) {
         ipv4 = this.nextAddress();
-        if (this.ensureIpUnique(ipv4)) break;
+        if (this.isIpUnique(ipv4)) break;
       }
     }
     const node = new NetworkNode(nodeId, ipv4, this.getNetworkInfo.bind(this), this.getUrl());
     this.nodes.set(nodeId, node);
     await this.config.api.addNode(this.id, { id: nodeId, ip: ipv4.toString() });
+    this.logger?.debug(`Node has added to the network. ID: ${nodeId}, IP: ${ipv4.toString()}`);
     return node;
   }
 
@@ -126,12 +129,12 @@ export class Network {
         this.logger?.warn(`Tried removing a network which doesn't exist. Network ID: ${this.id}`);
       return false;
     }
-    this.logger?.info(`Removed network: ID: ${this.id}, IP: ${this.ip}`);
+    this.logger?.info(`Network has removed: ID: ${this.id}, IP: ${this.ip}`);
     return true;
   }
 
   private nextAddress(): IPv4 {
-    const ip = this.ipRange[Symbol.iterator]().next().value;
+    const ip = this.ipIterator.next().value;
     if (!ip) throw new Error(`No more addresses available in ${this.ipRange.toCidrString()}`);
     return ip;
   }
@@ -144,16 +147,20 @@ export class Network {
     return true;
   }
 
-  private ensureIpUnique(ip: IPv4): boolean {
-    for (const node of this.nodes.values()) {
-      if (node.ip.isEquals(ip))
-        throw new NetworkError(`IP '${ip.toString()}' has already been assigned in this network.`);
-    }
-    return true;
+  private ensureIpUnique(ip: IPv4) {
+    if (!this.isIpUnique(ip))
+      throw new NetworkError(`IP '${ip.toString()}' has already been assigned in this network.`);
   }
 
   private ensureIdUnique(id: string) {
     if (this.nodes.has(id)) throw new NetworkError(`ID '${id}' has already been assigned in this network.`);
+  }
+
+  private isIpUnique(ip: IPv4): boolean {
+    for (const node of this.nodes.values()) {
+      if (node.ip.isEquals(ip)) return false;
+    }
+    return true;
   }
 
   private getUrl() {

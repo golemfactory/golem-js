@@ -17,7 +17,7 @@ export class NetworkService {
   }
 
   public async addNode(nodeId: string, ip?: string): Promise<NetworkNode> {
-    if (!this.network) throw new Error("There is no network");
+    if (!this.network) throw new Error("The service is not started and the network does not exist");
     return this.network.addNode(nodeId, ip);
   }
 
