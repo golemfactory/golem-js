@@ -1,2 +1,3 @@
-export { Network, NetworkError, NetworkNode } from "./network";
-export { NetworkService } from "./network_service";
+export { Network } from "./network";
+export { NetworkNode } from "./node";
+export { NetworkService } from "./service";

@@ -75,10 +75,12 @@ export class TaskService {
       const initWorker = task.getInitWorker();
       const worker = task.getWorker();
       const data = task.getData();
+      const networkNode = await this.networkService?.addNode(agreement.provider.id);
       const ctx = new WorkContext(activity, {
         initWorker: initWorker,
         provider: agreement.provider,
         storageProvider: this.options.storageProvider,
+        networkNode,
         logger: this.logger,
         activityStateCheckingInterval: this.options.activityStateCheckingInterval,
         timeout: this.options.timeout,
