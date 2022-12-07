@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { ComparisonMethod, DecorationsBuilder } from "../../yajsapi/market/decorations_builder";
+import { ComparisonOperator, DecorationsBuilder } from "../../yajsapi/market/decorations_builder";
 
 describe("#DecorationsBuilder()", () => {
   before(() => {
@@ -31,27 +31,27 @@ describe("#DecorationsBuilder()", () => {
     });
     it("should allow to add constrain with >=", () => {
       const decorationsBuilder = new DecorationsBuilder();
-      decorationsBuilder.addConstraint("key", "value", ComparisonMethod.GtEq);
+      decorationsBuilder.addConstraint("key", "value", ComparisonOperator.GtEq);
       expect(decorationsBuilder.getDecorations().constraints.length).to.equal(1);
     });
     it("should allow to add constrain with <=", () => {
       const decorationsBuilder = new DecorationsBuilder();
-      decorationsBuilder.addConstraint("key", "value", ComparisonMethod.LtEq);
+      decorationsBuilder.addConstraint("key", "value", ComparisonOperator.LtEq);
       expect(decorationsBuilder.getDecorations().constraints.length).to.equal(1);
     });
     it("should allow to add constrain with >", () => {
       const decorationsBuilder = new DecorationsBuilder();
-      decorationsBuilder.addConstraint("key", "value", ComparisonMethod.Gt);
+      decorationsBuilder.addConstraint("key", "value", ComparisonOperator.Gt);
       expect(decorationsBuilder.getDecorations().constraints.length).to.equal(1);
     });
     it("should allow to add constrain with <", () => {
       const decorationsBuilder = new DecorationsBuilder();
-      decorationsBuilder.addConstraint("key", "value", ComparisonMethod.Lt);
+      decorationsBuilder.addConstraint("key", "value", ComparisonOperator.Lt);
       expect(decorationsBuilder.getDecorations().constraints.length).to.equal(1);
     });
     it("should allow to add constrain with =", () => {
       const decorationsBuilder = new DecorationsBuilder();
-      decorationsBuilder.addConstraint("key", "value", ComparisonMethod.Eq);
+      decorationsBuilder.addConstraint("key", "value", ComparisonOperator.Eq);
       expect(decorationsBuilder.getDecorations().constraints.length).to.equal(1);
     });
     it("should provide fluent API", () => {
@@ -101,11 +101,11 @@ describe("#DecorationsBuilder()", () => {
     it("should return correct decoration", () => {
       const decorationsBuilder = new DecorationsBuilder();
       decorationsBuilder
-        .addConstraint("key", "value", ComparisonMethod.Eq)
-        .addConstraint("key", "value", ComparisonMethod.GtEq)
-        .addConstraint("key", "value", ComparisonMethod.LtEq)
-        .addConstraint("key", "value", ComparisonMethod.Gt)
-        .addConstraint("key", "value", ComparisonMethod.Lt)
+        .addConstraint("key", "value", ComparisonOperator.Eq)
+        .addConstraint("key", "value", ComparisonOperator.GtEq)
+        .addConstraint("key", "value", ComparisonOperator.LtEq)
+        .addConstraint("key", "value", ComparisonOperator.Gt)
+        .addConstraint("key", "value", ComparisonOperator.Lt)
         .addProperty("key", "value")
         .addProperty("key2", "value");
 

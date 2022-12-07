@@ -1,7 +1,6 @@
-import { MarketProperty } from "ya-ts-client/dist/ya-payment/src/models/market-property";
-import { MarketDecoration } from "ya-ts-client/dist/ya-payment/src/models/market-decoration";
+import { MarketProperty, MarketDecoration } from "ya-ts-client/dist/ya-payment/src/models";
 
-export enum ComparisonMethod {
+export enum ComparisonOperator {
   Eq = "=",
   Lt = "<",
   Gt = ">",
@@ -12,7 +11,7 @@ export enum ComparisonMethod {
 type Constraint = {
   key: string;
   value: string | number;
-  comparisonMethod: ComparisonMethod;
+  comparisonOperator: ComparisonOperator;
 };
 
 export class DecorationsBuilder {
@@ -28,25 +27,25 @@ export class DecorationsBuilder {
     }
     return this;
   }
-  addConstraint(key: string, value: string | number, comparisonMethod = ComparisonMethod.Eq) {
-    this.constraints.push({ key, value, comparisonMethod });
+  addConstraint(key: string, value: string | number, comparisonOperator = ComparisonOperator.Eq) {
+    this.constraints.push({ key, value, comparisonOperator });
     return this;
   }
   getDecorations() {
     return {
       properties: this.properties,
-      constraints: this.constraints.map((c) => c.key + c.comparisonMethod + c.value),
+      constraints: this.constraints.map((c) => c.key + c.comparisonOperator + c.value),
     };
   }
   private parseConstraint(constraint): Constraint {
-    for (const key in ComparisonMethod) {
-      const value = ComparisonMethod[key];
+    for (const key in ComparisonOperator) {
+      const value = ComparisonOperator[key];
       const parsedConstraint = constraint.split(value);
       if (parsedConstraint.length === 2) {
         return {
           key: parsedConstraint[0],
           value: parsedConstraint[1],
-          comparisonMethod: ComparisonMethod[key],
+          comparisonOperator: ComparisonOperator[key],
         };
       }
     }
@@ -60,8 +59,8 @@ export class DecorationsBuilder {
     }
     if (decorations.constraints) {
       decorations.constraints.forEach((cons) => {
-        const { key, value, comparisonMethod } = { ...this.parseConstraint(cons) };
-        this.addConstraint(key, value, comparisonMethod);
+        const { key, value, comparisonOperator } = { ...this.parseConstraint(cons) };
+        this.addConstraint(key, value, comparisonOperator);
       });
     }
     return this;
