@@ -3,8 +3,6 @@ import {
   ActivityStateStateEnum as ActivityStateEnum,
   ExeScriptRequest,
 } from "ya-ts-client/dist/ya-activity/src/models";
-import { RequestorControlApi, RequestorStateApi } from "ya-ts-client/dist/ya-activity/api";
-import { yaActivity } from "ya-ts-client";
 import EventSource from "eventsource";
 import { Readable } from "stream";
 import { Logger } from "../utils";
@@ -12,6 +10,7 @@ import sleep from "../utils/sleep";
 import CancellationToken from "../utils/cancellationToken";
 import { ActivityFactory } from "./factory";
 import { ActivityConfig } from "./config";
+import { Events } from "../events";
 
 export interface ActivityOptions {
   yagnaOptions?: { apiKey?: string; basePath?: string };
@@ -19,6 +18,7 @@ export interface ActivityOptions {
   executeTimeout?: number;
   exeBatchResultsFetchInterval?: number;
   logger?: Logger;
+  eventTarget?: EventTarget;
   taskPackage?: string;
 }
 
@@ -45,7 +45,7 @@ export class Activity {
     return factory.create(secure);
   }
 
-  constructor(public readonly id, protected readonly options: ActivityConfig) {
+  constructor(public readonly id, public readonly agreementId, protected readonly options: ActivityConfig) {
     this.logger = options?.logger;
   }
 
@@ -72,6 +72,10 @@ export class Activity {
       this.logger?.error(error);
       throw new Error(error?.response?.data?.message || error);
     }
+    this.logger?.debug(`Script sent. Batch ID: ${batchId}`);
+    this.options.eventTarget?.dispatchEvent(
+      new Events.ScriptSent({ activityId: this.id, agreementId: this.agreementId })
+    );
     return stream
       ? this.streamingBatch(batchId, batchSize, startTime, timeout, cancellationToken)
       : this.pollingBatch(batchId, startTime, timeout, cancellationToken);
@@ -98,7 +102,7 @@ export class Activity {
     }
   }
 
-  protected async send(script: yaActivity.ExeScriptRequest): Promise<string> {
+  protected async send(script: ExeScriptRequest): Promise<string> {
     const { data: batchId } = await this.options.api.control.exec(this.id, script, {
       timeout: this.options.requestTimeout,
     });
@@ -112,6 +116,7 @@ export class Activity {
         this.logger?.warn(`Got API Exception when destroying activity ${this.id}: ${error}`);
         throw error;
       });
+    this.options.eventTarget?.dispatchEvent(new Events.ActivityDestroyed(this));
     this.logger?.debug(`Activity ${this.id} destroyed`);
   }
 
@@ -120,8 +125,8 @@ export class Activity {
     let lastIndex;
     let retryCount = 0;
     const maxRetries = 3;
-    const activityId = this.id;
-    const { executeTimeout, api, exeBatchResultsFetchInterval } = this.options;
+    const { id: activityId, agreementId } = this;
+    const { executeTimeout, api, exeBatchResultsFetchInterval, eventTarget } = this.options;
     const handleError = this.handleError.bind(this);
     return new Readable({
       objectMode: true,
@@ -148,10 +153,12 @@ export class Activity {
             try {
               retryCount = await handleError(error, lastIndex, retryCount, maxRetries);
             } catch (error) {
+              eventTarget?.dispatchEvent(new Events.ScriptExecuted({ activityId, agreementId, success: false }));
               return this.destroy(error?.message || error);
             }
           }
         }
+        eventTarget?.dispatchEvent(new Events.ScriptExecuted({ activityId, agreementId, success: true }));
         this.push(null);
       },
     });

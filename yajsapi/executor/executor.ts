@@ -54,6 +54,7 @@ export class TaskExecutor {
   private storageProvider?: StorageProvider;
   private logger?: Logger;
   private startTime: number;
+  private lastTaskIndex = 0;
 
   constructor(options: ExecutorOptionsMixin) {
     this.startTime = +new Date();
@@ -113,7 +114,7 @@ export class TaskExecutor {
   }
 
   async run<OutputType = Result>(worker: Worker<undefined, OutputType>): Promise<OutputType | undefined> {
-    return this.submitNewTask<undefined, OutputType>(worker);
+    return this.addTaskToQueue<undefined, OutputType>(worker);
   }
 
   map<InputType, OutputType>(
@@ -121,7 +122,7 @@ export class TaskExecutor {
     worker: Worker<InputType, OutputType>
   ): AsyncIterable<OutputType | undefined> {
     const inputs = [...data];
-    const featureResults = inputs.map((value) => this.submitNewTask<InputType, OutputType>(worker, value));
+    const featureResults = inputs.map((value) => this.addTaskToQueue<InputType, OutputType>(worker, value));
     const results: OutputType[] = [];
     let resultsCount = 0;
     featureResults.forEach((featureResult) =>
@@ -151,18 +152,18 @@ export class TaskExecutor {
     data: Iterable<InputType>,
     worker: Worker<InputType, OutputType>
   ): Promise<void> {
-    await Promise.all([...data].map((value) => this.submitNewTask<InputType, OutputType>(worker, value)));
+    await Promise.all([...data].map((value) => this.addTaskToQueue<InputType, OutputType>(worker, value)));
   }
 
   private async createPackage(image_hash: string): Promise<Package> {
     return repo({ ...this.options, image_hash });
   }
 
-  private async submitNewTask<InputType, OutputType>(
+  private async addTaskToQueue<InputType, OutputType>(
     worker: Worker<InputType, OutputType>,
     data?: InputType
   ): Promise<OutputType | undefined> {
-    const task = new Task<InputType, OutputType>(worker, data, this.initWorker);
+    const task = new Task<InputType, OutputType>((++this.lastTaskIndex).toString(), worker, data, this.initWorker);
     this.taskQueue.addToEnd(task);
     let timeout = false;
     const timeoutId = setTimeout(() => (timeout = true), this.options.timeout);
@@ -171,7 +172,7 @@ export class TaskExecutor {
         clearTimeout(timeoutId);
         return task.getResults();
       }
-      await sleep(2);
+      await sleep(100, true);
     }
   }
 

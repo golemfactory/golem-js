@@ -1,9 +1,9 @@
 import { Logger } from "../utils";
-import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import { Agreement as AgreementModel, AgreementStateEnum } from "ya-ts-client/dist/ya-market/src/models";
 import { YagnaOptions } from "../executor";
 import { AgreementFactory } from "./factory";
 import { AgreementConfig } from "./config";
+import { Events } from "../events";
 
 export interface ProviderInfo {
   name: string;
@@ -19,14 +19,15 @@ export interface AgreementOptions {
   executeTimeout?: number;
   waitingForApprovalTimeout?: number;
   logger?: Logger;
+  eventTarget?: EventTarget;
 }
 
 export class Agreement {
   private agreementData?: AgreementModel;
   private logger?: Logger;
 
-  constructor(public readonly id, public readonly provider: ProviderInfo, private readonly config: AgreementConfig) {
-    this.logger = config.logger;
+  constructor(public readonly id, public readonly provider: ProviderInfo, private readonly options: AgreementConfig) {
+    this.logger = options.logger;
   }
 
   static async create(proposalId: string, agreementOptions?: AgreementOptions): Promise<Agreement> {
@@ -35,7 +36,7 @@ export class Agreement {
   }
 
   async refreshDetails() {
-    const { data } = await this.config.api.getAgreement(this.id, { timeout: this.config.requestTimeout });
+    const { data } = await this.options.api.getAgreement(this.id, { timeout: this.options.requestTimeout });
     this.agreementData = data;
   }
 
@@ -46,11 +47,14 @@ export class Agreement {
 
   async confirm() {
     try {
-      await this.config.api.confirmAgreement(this.id);
-      await this.config.api.waitForApproval(this.id, this.config.waitingForApprovalTimeout);
+      await this.options.api.confirmAgreement(this.id);
+      await this.options.api.waitForApproval(this.id, this.options.waitingForApprovalTimeout);
       this.logger?.debug(`Agreement ${this.id} approved`);
+      this.options.eventTarget?.dispatchEvent(
+        new Events.AgreementConfirmed({ id: this.id, providerId: this.provider.id })
+      );
     } catch (error) {
-      this.logger?.error(`Cannot confirm agreement ${this.id}. ${error}`);
+      this.logger?.error(`Unable to confirm agreement ${this.id}. ${error}`);
       throw error;
     }
   }
@@ -64,7 +68,10 @@ export class Agreement {
     try {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore TODO: API binding BUG with reason type
-      await this.config.api.terminateAgreement(this.id, reason);
+      await this.options.api.terminateAgreement(this.id, reason);
+      this.options.eventTarget?.dispatchEvent(
+        new Events.AgreementTerminated({ id: this.id, providerId: this.provider.id })
+      );
       this.logger?.debug(`Agreement ${this.id} terminated`);
     } catch (error) {
       throw new Error(

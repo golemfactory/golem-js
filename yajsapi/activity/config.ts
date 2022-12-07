@@ -18,6 +18,7 @@ export class ActivityConfig {
   public readonly exeBatchResultsFetchInterval: number;
   public readonly taskPackage?: string;
   public readonly logger?: Logger;
+  public readonly eventTarget?: EventTarget;
   public readonly yagnaOptions: YagnaOptions;
 
   constructor(options?: ActivityOptions) {
@@ -35,5 +36,6 @@ export class ActivityConfig {
     this.taskPackage = options?.taskPackage;
     this.logger = options?.logger;
     this.yagnaOptions = { apiKey, basePath };
+    this.eventTarget = options?.eventTarget;
   }
 }

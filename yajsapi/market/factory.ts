@@ -7,6 +7,7 @@ import { Package } from "../package";
 import { Allocation } from "../payment/allocation";
 import { Demand, DemandOptions } from "./demand";
 import { DemandConfig } from "./config";
+import * as events from "../events/events";
 
 export class DemandFactory {
   private properties: Array<MarketProperty> = [];
@@ -23,10 +24,14 @@ export class DemandFactory {
       this.properties.push(...decoration.properties);
     }
     const demandRequest = createDemandRequest(this.properties, this.constraints);
-    const { data: demandId } = await this.options.api.subscribeDemand(demandRequest).catch((e) => {
-      throw new Error(`Could not publish demand on the market. ${e.response?.data || e}`);
+    const { data: id } = await this.options.api.subscribeDemand(demandRequest).catch((e) => {
+      const reason = e.response?.data?.message || e.toString();
+      this.options.eventTarget?.dispatchEvent(new events.SubscriptionFailed({ reason }));
+      throw new Error(`Could not publish demand on the market. ${reason}`);
     });
-    return new Demand(demandId, this.properties, this.constraints, this.options);
+    this.options.eventTarget?.dispatchEvent(new events.SubscriptionCreated({ id }));
+    this.options.logger?.info(`Demand published on the market`);
+    return new Demand(id, this.properties, this.constraints, this.options);
   }
 
   private async getDecorations(): Promise<MarketDecoration[]> {

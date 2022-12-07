@@ -1,6 +1,7 @@
 import { Activity, ActivityOptions } from "./activity";
 import { runtimeContextChecker } from "../utils";
 import { ActivityConfig } from "./config";
+import { Events } from "../events";
 
 export class ActivityFactory {
   private readonly options: ActivityConfig;
@@ -40,7 +41,9 @@ export class ActivityFactory {
 
   private async createActivity(agreementId: string, options: ActivityConfig): Promise<Activity> {
     const { data } = await this.options.api.control.createActivity({ agreementId });
-    const activityId = typeof data == "string" ? data : data.activityId;
-    return new Activity(activityId, options);
+    const id = typeof data == "string" ? data : data.activityId;
+    this.options.logger?.debug(`Activity ${id} created`);
+    this.options.eventTarget?.dispatchEvent(new Events.ActivityCreated({ id, agreementId }));
+    return new Activity(id, agreementId, options);
   }
 }

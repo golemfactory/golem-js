@@ -60,9 +60,9 @@ export class LeastExpensiveLinearPayuMarketStrategy implements MarketStrategy {
 
   scoreProposal(proposal: Proposal): number {
     const linear: ComLinear = new ComLinear().from_properties(proposal.properties);
-    this.logger?.debug(`Scoring offer ${proposal.proposalId}, parameters: ${JSON.stringify(linear)}`);
+    this.logger?.debug(`Scoring offer ${proposal.id}, parameters: ${JSON.stringify(linear)}`);
     if (linear.scheme.value !== BillingScheme.PAYU) {
-      this.logger?.debug(`Rejected offer ${proposal.proposalId}: unsupported scheme '${linear.scheme.value}'`);
+      this.logger?.debug(`Rejected offer ${proposal.id}: unsupported scheme '${linear.scheme.value}'`);
       return SCORE_REJECTED;
     }
 
@@ -70,7 +70,7 @@ export class LeastExpensiveLinearPayuMarketStrategy implements MarketStrategy {
 
     for (const counter in linear.price_for) {
       if (!knownTimePrices.has(counter as Counter)) {
-        this.logger?.debug(`Rejected offer ${proposal.proposalId}: unsupported counter '${counter}'`);
+        this.logger?.debug(`Rejected offer ${proposal.id}: unsupported counter '${counter}'`);
         return SCORE_REJECTED;
       }
     }
@@ -78,27 +78,27 @@ export class LeastExpensiveLinearPayuMarketStrategy implements MarketStrategy {
     if (this.maxFixedPrice !== undefined) {
       if (linear.fixed_price > this.maxFixedPrice) {
         this.logger?.debug(
-          `Rejected offer ${proposal.proposalId}: fixed price higher than fixed price cap ${this.maxFixedPrice}.`
+          `Rejected offer ${proposal.id}: fixed price higher than fixed price cap ${this.maxFixedPrice}.`
         );
         return SCORE_REJECTED;
       }
     }
     if (linear.fixed_price < 0) {
-      this.logger?.debug(`Rejected offer ${proposal.proposalId}: negative fixed price`);
+      this.logger?.debug(`Rejected offer ${proposal.id}: negative fixed price`);
       return SCORE_REJECTED;
     }
     let expectedPrice = linear.fixed_price;
 
     for (const resource of knownTimePrices) {
       if (linear.price_for[resource] < 0) {
-        this.logger?.debug(`Rejected offer ${proposal.proposalId}: negative price for '${resource}'`);
+        this.logger?.debug(`Rejected offer ${proposal.id}: negative price for '${resource}'`);
         return SCORE_REJECTED;
       }
       if (this.maxPriceFor) {
         const maxPrice = this.maxPriceFor.get(resource as Counter);
         if (maxPrice !== undefined && linear.price_for[resource] > maxPrice) {
           this.logger?.debug(
-            `Rejected offer ${proposal.proposalId}: price for '${resource}' higher than price cap ${maxPrice}`
+            `Rejected offer ${proposal.id}: price for '${resource}' higher than price cap ${maxPrice}`
           );
           return SCORE_REJECTED;
         }
@@ -131,7 +131,7 @@ export class DecreaseScoreForUnconfirmedAgreementMarketStrategy implements Marke
     let score = this.baseStrategy.scoreProposal(proposal);
     if (this.computationHistory.isProviderLastAgreementRejected(proposal.issuerId) && score > 0) {
       score *= this.factor;
-      this.logger?.debug(`Decreasing score for offer ${proposal.proposalId} from '${proposal.issuerId}'`);
+      this.logger?.debug(`Decreasing score for offer ${proposal.id} from '${proposal.issuerId}'`);
     }
     return score;
   }

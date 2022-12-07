@@ -6,6 +6,7 @@ import { PaymentService } from "../payment";
 import { NetworkService } from "../network";
 import { Activity, ActivityOptions } from "../activity";
 import { TaskConfig } from "./config";
+import { Events } from "../events";
 
 export interface TaskOptions extends ActivityOptions {
   maxParallelTasks?: number;
@@ -60,6 +61,8 @@ export class TaskService {
 
   private async startTask(task: Task) {
     task.start();
+    this.logger?.debug(`Task started. ID: ${task.id}, Data: ${task.getData()}`);
+    this.options.eventTarget?.dispatchEvent(new Events.TaskStarted({ id: task.id, data: task.getData() }));
     ++this.activeTasksCount;
     const agreement = await this.agreementPoolService.getAgreement();
     let activity;
@@ -69,7 +72,6 @@ export class TaskService {
       } else {
         activity = await Activity.create(agreement.id, { logger: this.logger });
         this.activities.set(agreement.id, activity);
-        this.logger?.debug(`Activity ${activity.id} created`);
       }
       this.paymentService.acceptDebitNotes(agreement.id);
       const initWorker = task.getInitWorker();
@@ -92,16 +94,25 @@ export class TaskService {
       }
       const results = await worker(ctx, data);
       task.stop(results);
+      this.options.eventTarget?.dispatchEvent(new Events.TaskFinished({ id: task.id }));
+      this.logger?.debug(`Task ${task.id} finished`);
     } catch (error) {
       task.stop(undefined, error);
       if (task.isRetry()) {
         this.tasksQueue.addToBegin(task);
-        this.logger?.warn("The task execution failed. Trying to redo the task. " + error);
+        this.options.eventTarget?.dispatchEvent(
+          new Events.TaskRedone({ id: task.id, retriesCount: task.getRetriesCount() })
+        );
+        this.logger?.warn(
+          `The task execution failed. Trying to redo the task. Attempt ${task.getRetriesCount()} ${error}`
+        );
       } else {
         await activity.stop().catch((actError) => this.logger?.error(actError));
         this.activities.delete(agreement.id);
         await this.agreementPoolService.releaseAgreement(agreement.id, false);
-        throw new Error("Task has been rejected! " + (error.message || error.toString()));
+        const reason = error.message || error.toString();
+        this.options.eventTarget?.dispatchEvent(new Events.TaskRejected({ id: task.id, reason }));
+        throw new Error(`Task has been rejected! ${reason}`);
       }
     } finally {
       --this.activeTasksCount;

@@ -69,17 +69,18 @@ export async function createSecureActivity(agreementId: string, options?: Activi
     throw error;
   }
 
-  return new SecureActivity(activityId, credentials, cryptoCtx, options);
+  return new SecureActivity(activityId, agreementId, credentials, cryptoCtx, options);
 }
 
 export class SecureActivity extends Activity {
   constructor(
     public readonly id,
+    public readonly activityId,
     private credentials: Credentials,
     private cryptoCtx: CryptoCtx,
     protected readonly options: ActivityConfig
   ) {
-    super(id, options);
+    super(id, activityId, options);
   }
   protected async send(script: yaActivity.ExeScriptRequest): Promise<string> {
     const secureRequest = {

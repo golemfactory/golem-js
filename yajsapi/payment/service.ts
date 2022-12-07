@@ -3,6 +3,7 @@ import { Allocation } from "./allocation";
 import { BasePaymentOptions, PaymentConfig } from "./config";
 import { Invoice } from "./invoice";
 import { DebitNote } from "./debit_note";
+import { Events } from "../events";
 
 export interface PaymentOptions extends BasePaymentOptions {
   invoiceFetchingInterval?: number;
@@ -152,6 +153,7 @@ export class PaymentService {
         const invoice = await Invoice.create(event["invoiceId"], { ...this.options.options });
         this.invoicesToPay.set(invoice.id, invoice);
         this.lastInvoiceFetchingTime = event.eventDate;
+        this.options.eventTarget?.dispatchEvent(new Events.InvoiceReceived(invoice));
         this.logger?.debug(`New Invoice received for agreement ${invoice.agreementId}`);
       }
       await sleep(this.options.invoiceFetchingInterval, true);
@@ -170,6 +172,13 @@ export class PaymentService {
         const debitNote = await DebitNote.create(event["debitNoteId"], { ...this.options.options });
         this.debitNotesToPay.set(debitNote.id, debitNote);
         this.lastDebitNotesFetchingTime = event.eventDate;
+        this.options.eventTarget?.dispatchEvent(
+          new Events.DebitNoteReceived({
+            id: debitNote.id,
+            agreementId: debitNote.agreementId,
+            amount: debitNote.totalAmountDue,
+          })
+        );
         this.logger?.debug(`New Debit Note received for agreement ${debitNote.agreementId}`);
       }
       await sleep(this.options.debitNotesFetchingInterval, true);

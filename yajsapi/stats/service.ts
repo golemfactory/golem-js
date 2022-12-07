@@ -4,6 +4,7 @@ import { Logger } from "../utils";
 interface StatsOptions {
   eventTarget: EventTarget;
   logger?: Logger;
+  timeout: number;
 }
 
 export class StatsService {
@@ -34,6 +35,10 @@ export class StatsService {
   }
 
   getComputationsInfo() {
+    // todo
+  }
+
+  getTimes() {
     // todo
   }
 

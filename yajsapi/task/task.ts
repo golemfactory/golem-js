@@ -1,5 +1,4 @@
 import { QueueableTask, Worker } from "./";
-import { Result } from "../activity";
 
 export enum TaskState {
   New,
@@ -17,6 +16,7 @@ export class Task<InputType = unknown, OutputType = unknown> implements Queueabl
   private retriesCount = 0;
 
   constructor(
+    public readonly id: string,
     private worker: Worker<InputType, OutputType>,
     private data?: InputType,
     private initWorker?: Worker<undefined>
@@ -62,5 +62,8 @@ export class Task<InputType = unknown, OutputType = unknown> implements Queueabl
   }
   getInitWorker(): Worker<undefined> | undefined {
     return this.initWorker;
+  }
+  getRetriesCount(): number {
+    return this.retriesCount;
   }
 }

@@ -24,14 +24,16 @@ export interface BasePaymentOptions {
   yagnaOptions?: YagnaOptions;
   budget?: number;
   payment?: { driver?: string; network?: string };
-  logger?: Logger;
   timeout?: number;
+  logger?: Logger;
+  eventTarget?: EventTarget;
 }
 
 abstract class BaseConfig {
   public readonly timeout: number;
   public readonly api: RequestorApi;
   public readonly logger?: Logger;
+  public readonly eventTarget?: EventTarget;
   public readonly payment: { driver: string; network: string };
 
   protected constructor(public readonly options?: BasePaymentOptions) {
@@ -46,6 +48,7 @@ abstract class BaseConfig {
       network: options?.payment?.network || DEFAULTS.payment.network,
     };
     this.logger = options?.logger;
+    this.eventTarget = options?.eventTarget;
   }
 }
 

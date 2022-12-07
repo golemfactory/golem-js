@@ -1,5 +1,6 @@
 import { BasePaymentOptions, InvoiceConfig } from "./config";
 import { Invoice as Model, InvoiceStatus, Rejection } from "ya-ts-client/dist/ya-payment/src/models";
+import { Events } from "../events";
 
 export type InvoiceOptions = BasePaymentOptions;
 
@@ -73,14 +74,23 @@ export class Invoice extends BaseNote<Model> {
     try {
       await this.options.api.acceptInvoice(this.id, { totalAmountAccepted, allocationId });
     } catch (e) {
-      throw new Error(`Unable to accept invoice ${this.id} ${e?.response?.data?.message || e}`);
+      const reason = e?.response?.data?.message || e;
+      this.options.eventTarget?.dispatchEvent(
+        new Events.PaymentFailed({ id: this.id, agreementId: this.agreementId, reason })
+      );
+      throw new Error(`Unable to accept invoice ${this.id} ${reason}`);
     }
+    this.options.eventTarget?.dispatchEvent(new Events.PaymentAccepted(this));
   }
   async reject(rejection: Rejection) {
     try {
       await this.options.api.rejectInvoice(this.id, rejection);
     } catch (e) {
       throw new Error(`Unable to reject invoice ${this.id} ${e?.response?.data?.message || e}`);
+    } finally {
+      this.options.eventTarget?.dispatchEvent(
+        new Events.PaymentFailed({ id: this.id, agreementId: this.agreementId, reason: rejection.message })
+      );
     }
   }
   protected async refreshStatus() {

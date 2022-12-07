@@ -16,12 +16,13 @@ const DEFAULT_OPTIONS = {
 };
 
 export class AgreementConfig {
-  public readonly subnetTag: string;
-  public readonly requestTimeout: number;
-  public readonly executeTimeout: number;
-  public readonly waitingForApprovalTimeout: number;
-  public readonly api: RequestorApi;
-  public readonly logger?: Logger;
+  readonly subnetTag: string;
+  readonly requestTimeout: number;
+  readonly executeTimeout: number;
+  readonly waitingForApprovalTimeout: number;
+  readonly api: RequestorApi;
+  readonly logger?: Logger;
+  readonly eventTarget?: EventTarget;
 
   constructor(public readonly options?: AgreementOptions) {
     const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
@@ -33,8 +34,8 @@ export class AgreementConfig {
     this.executeTimeout = options?.executeTimeout || DEFAULT_OPTIONS.EXECUTE_TIMEOUT;
     this.waitingForApprovalTimeout = options?.waitingForApprovalTimeout || DEFAULT_OPTIONS.WAITING_FOR_APPROVAL_TIMEOUT;
     this.subnetTag = options?.subnetTag || DEFAULT_OPTIONS.SUBNET_TAG;
-
     this.logger = options?.logger;
+    this.eventTarget = options?.eventTarget;
   }
 }
 
