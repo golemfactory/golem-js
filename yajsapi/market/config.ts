@@ -18,6 +18,7 @@ export class DemandConfig {
   public readonly maxOfferEvents: number;
   public readonly offerFetchingInterval: number;
   public readonly logger?: Logger;
+  public readonly eventTarget?: EventTarget;
 
   constructor(options?: DemandOptions) {
     const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
@@ -30,5 +31,6 @@ export class DemandConfig {
     this.offerFetchingInterval = options?.offerFetchingInterval || DEFAULTS.offerFetchingInterval;
     this.logger = options?.logger;
     this.maxOfferEvents = options?.maxOfferEvents || DEFAULTS.maxOfferEvents;
+    this.eventTarget = options?.eventTarget;
   }
 }

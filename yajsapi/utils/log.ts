@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
-import * as events from "../events/events";
+import * as events from "../events/events_old";
 import { Logger } from "./logger";
 
 const REPORT_CONFIRMED_PROVIDERS_INTERVAL = 3000;

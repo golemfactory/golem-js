@@ -8,6 +8,7 @@ import { Proposal } from "./proposal";
 import { Logger, sleep } from "../utils";
 import EventEmitter from "events";
 import { DemandConfig } from "./config";
+import * as events from "../events/events";
 
 export interface DemandOptions {
   subnetTag?: string;
@@ -16,6 +17,7 @@ export interface DemandOptions {
   logger?: Logger;
   maxOfferEvents?: number;
   offerFetchingInterval?: number;
+  eventTarget?: EventTarget;
 }
 
 export enum DemandEvent {
@@ -40,6 +42,7 @@ export class Demand extends EventEmitter {
     super();
     this.logger = this.options.logger;
     this.subscribe().catch((e) => this.logger?.error(`Could not collect offers. ${e}`));
+    this.options.eventTarget?.dispatchEvent(new events.SubscriptionCreated({ id: this.id }));
     this.logger?.info(`Demand published on the market`);
   }
 

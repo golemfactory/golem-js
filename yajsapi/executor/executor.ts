@@ -9,6 +9,8 @@ import { Result } from "../activity";
 import { sleep, Logger, runtimeContextChecker, winstonLogger } from "../utils";
 import { StorageProvider } from "../storage/provider";
 import { ExecutorConfig } from "./config";
+import { EventBus, Events, EventType } from "../events";
+import { StatsService } from "../stats/service";
 
 export type ExecutorOptions = {
   package: string | Package;
@@ -28,6 +30,7 @@ export type ExecutorOptions = {
   logger?: Logger;
   logLevel?: string;
   yagnaOptions?: YagnaOptions;
+  eventTarget?: EventTarget;
 };
 
 export type ExecutorOptionsMixin = string | ExecutorOptions;
@@ -45,6 +48,7 @@ export class TaskExecutor {
   private taskService: TaskService;
   private paymentService: PaymentService;
   private networkService?: NetworkService;
+  private statsService: StatsService;
   private initWorker?: Worker<unknown, unknown>;
   private taskQueue: TaskQueue<Task<any, any>>;
   private storageProvider?: StorageProvider;
@@ -53,17 +57,15 @@ export class TaskExecutor {
 
   constructor(options: ExecutorOptionsMixin) {
     this.startTime = +new Date();
-    this.options = new ExecutorConfig(
-      typeof options === "string" ? { package: options } : (options as ExecutorOptions)
-    );
-    if (!this.options.logger && !runtimeContextChecker.isBrowser) this.options.logger = winstonLogger;
-    this.options.logger?.setLevel && this.options.logger?.setLevel(this.options.logLevel);
+    const configOptions: ExecutorOptions =
+      typeof options === "string" ? { package: options } : (options as ExecutorOptions);
+    this.options = new ExecutorConfig(configOptions);
     this.logger = this.options.logger;
     this.taskQueue = new TaskQueue<Task<any, any>>();
     this.agreementPoolService = new AgreementPoolService(this.options);
-    this.networkService = this.options.networkAddress ? new NetworkService(this.options) : undefined;
     this.paymentService = new PaymentService(this.options);
     this.marketService = new MarketService(this.agreementPoolService, this.options);
+    this.networkService = this.options.networkAddress ? new NetworkService(this.options) : undefined;
     this.storageProvider = new GftpStorageProvider();
     this.taskService = new TaskService(
       this.taskQueue,
@@ -72,6 +74,7 @@ export class TaskExecutor {
       this.networkService,
       { ...this.options, storageProvider: this.storageProvider }
     );
+    this.statsService = new StatsService(this.options);
   }
 
   async init() {
@@ -84,6 +87,8 @@ export class TaskExecutor {
     this.paymentService.run().catch((e) => this.handleCriticalError(e));
     this.taskService.run().catch((e) => this.handleCriticalError(e));
     this.networkService?.run().catch((e) => this.handleCriticalError(e));
+    this.statsService.run().catch((e) => this.handleCriticalError(e));
+    this.options.eventTarget.dispatchEvent(new Events.ComputationStarted({ startTime: this.startTime }));
     this.logger?.info(
       `Task Executor has started using subnet ${this.options.subnetTag}, network: ${this.options.payment?.network}, driver: ${this.options.payment?.driver}`
     );
@@ -96,8 +101,10 @@ export class TaskExecutor {
     await this.networkService?.end();
     await this.paymentService.end();
     this.storageProvider?.close();
-    const executionTime = (+new Date() - this.startTime) / 1000;
-    this.logger?.info(`Computation finished in ${executionTime.toFixed(1)}s`);
+    const stopTime = +new Date();
+    const duration = (stopTime - this.startTime) / 1000;
+    this.options.eventTarget?.dispatchEvent(new Events.ComputationFinished({ stopTime, duration }));
+    this.logger?.info(`Computation finished in ${duration.toFixed(1)}s`);
     this.logger?.info("Task Executor has shut down");
   }
 
@@ -169,6 +176,7 @@ export class TaskExecutor {
   }
 
   private handleCriticalError(e: Error) {
+    this.options.eventTarget?.dispatchEvent(new Events.ComputationFailed({ reason: e.message }));
     this.logger?.error(e.toString());
     this.logger?.debug(e.stack);
     this.logger?.warn("Trying to stop all services...");

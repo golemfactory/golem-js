@@ -1,8 +1,7 @@
 import { ExecutorOptions } from "./executor";
-import { Package, repo } from "../package";
+import { Package } from "../package";
 import { MarketStrategy } from "../market";
-import { Logger } from "../utils";
-import { DefaultMarketStrategy } from "../market/strategy";
+import { Logger, runtimeContextChecker, winstonLogger } from "../utils";
 
 const DEFAULTS = {
   maxWorkers: 5,
@@ -33,7 +32,8 @@ export class ExecutorConfig {
   };
   readonly logLevel: string;
   readonly yagnaOptions: { apiKey: string; basePath: string };
-  logger?: Logger;
+  readonly logger?: Logger;
+  readonly eventTarget: EventTarget;
 
   constructor(options: ExecutorOptions) {
     const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
@@ -59,7 +59,9 @@ export class ExecutorConfig {
       minCpuThreads: options.minCpuThreads,
       capabilities: options.capabilities,
     };
-    this.logger = options.logger;
+    this.logger = options.logger || !runtimeContextChecker.isBrowser ? winstonLogger : undefined;
     this.logLevel = options.logLevel || DEFAULTS.logLevel;
+    this.logger?.setLevel && this.logger?.setLevel(this.logLevel);
+    this.eventTarget = options.eventTarget || new EventTarget();
   }
 }
