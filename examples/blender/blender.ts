@@ -21,12 +21,13 @@ const blender_params = (frame) => ({
   OUTPUT_DIR: "/golem/output",
 });
 
-async function main(subnetTag: string, driver?: string, network?: string, debug?: boolean) {
+async function main(subnetTag: string, driver?: string, network?: string, debug?: boolean, maxParallelTasks?: number) {
   const executor = await createExecutor({
     subnetTag,
     payment: { driver, network },
     package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
     logLevel: debug ? "debug" : "info",
+    maxParallelTasks,
   });
 
   executor.beforeEach(async (ctx) => {
@@ -54,7 +55,8 @@ program
   .option("--subnet-tag <subnet>", "set subnet name, for example 'devnet-beta'")
   .option("--payment-driver, --driver <driver>", "payment driver name, for example 'erc20'")
   .option("--payment-network, --network <network>", "network name, for example 'rinkeby'")
-  .option("-d, --debug", "output extra debugging");
+  .option("-d, --debug", "output extra debugging")
+  .option("-t, --max-parallel-tasks <maxParallelTasks>", "max parallel tasks");
 program.parse();
 const options = program.opts();
-main(options.subnetTag, options.driver, options.network, options.debug);
+main(options.subnetTag, options.driver, options.network, options.debug, options.maxParallelTasks);

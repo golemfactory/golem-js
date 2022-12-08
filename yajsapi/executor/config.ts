@@ -4,18 +4,18 @@ import { MarketStrategy } from "../market";
 import { Logger, runtimeContextChecker, winstonLogger } from "../utils";
 
 const DEFAULTS = {
-  maxWorkers: 5,
+  maxParallelTasks: 5,
   budget: 1.0,
   subnetTag: "devnet-beta",
   payment: { driver: "erc20", network: "rinkeby" },
   timeout: 1000 * 60 * 15, // 15 min,
-  logLevel: "info",
+  logLevel: "debug",
   basePath: "http://127.0.0.1:7465",
 };
 
 export class ExecutorConfig {
   readonly package: Package | string;
-  readonly maxWorkers: number;
+  readonly maxParallelTasks: number;
   readonly timeout: number;
   readonly budget: number;
   readonly strategy?: MarketStrategy;
@@ -44,7 +44,7 @@ export class ExecutorConfig {
     };
     this.package = options.package;
     this.budget = options.budget || DEFAULTS.budget;
-    this.maxWorkers = options.maxWorkers || DEFAULTS.maxWorkers;
+    this.maxParallelTasks = options.maxParallelTasks || DEFAULTS.maxParallelTasks;
     this.timeout = options.timeout || DEFAULTS.timeout;
     this.subnetTag = options.subnetTag || DEFAULTS.subnetTag;
     this.payment = {

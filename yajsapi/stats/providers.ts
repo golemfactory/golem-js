@@ -15,6 +15,7 @@ export interface ProviderInfo {
 
 export class Providers {
   private providers = new Map<string, ProviderInfo>();
+  private agreements = new Map<string, { providerId: string; providerName: string; approved: boolean }>();
 
   getInfo(providerId: string): ProviderInfo {
     const info = this.providers.get(providerId);
@@ -29,8 +30,12 @@ export class Providers {
   addProposal(providerId: string, id: string, confirmed?: boolean) {
     // todo
   }
-  addAgreement(providerId: string, id: string, approved?: boolean) {
-    // todo
+  addAgreement(id: string, providerId: string, providerName: string) {
+    this.agreements.set(id, { providerId, providerName, approved: false });
+  }
+  confirmAgreement(id) {
+    const agreement = this.agreements.get(id);
+    agreement && (agreement.approved = true);
   }
   addActivity(providerId: string, id: string) {
     // todo
@@ -40,5 +45,13 @@ export class Providers {
   }
   addDebitNote(providerId: string, id: string, paid?: boolean) {
     // todo
+  }
+
+  getAllAgreements(): Array<{ providerId: string; providerName: string; approved: boolean; id: string }> {
+    return [...this.agreements].map(([id, data]) => ({ ...data, id }));
+  }
+
+  getProviderName(agreementId: string): string | undefined {
+    return this.agreements.get(agreementId)?.providerName;
   }
 }

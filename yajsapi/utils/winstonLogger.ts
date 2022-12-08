@@ -37,6 +37,7 @@ export const winstonLogger: Logger = {
   log: (msg) => logger.log(msg),
   warn: (msg) => logger.warn(msg),
   error: (msg) => logger.error(msg),
+  table: (object) => console.table(object),
   setLevel: (level: string) => {
     logLevel = level;
     options.level = level;

@@ -13,20 +13,19 @@ class CustomEvent<DataType> extends Event {
 }
 
 export abstract class BaseEvent<DataType> extends CustomEvent<DataType> {
-  readonly timestamp = +new Date();
-  constructor(data: DataType) {
+  constructor(data?: DataType) {
     super(EventType, { detail: data });
   }
 }
 
-export class ComputationStarted extends BaseEvent<{ startTime: number }> {}
-export class ComputationFinished extends BaseEvent<{ stopTime: number; duration: number }> {}
+export class ComputationStarted extends BaseEvent<undefined> {}
+export class ComputationFinished extends BaseEvent<undefined> {}
 export class ComputationFailed extends BaseEvent<{ reason?: string }> {}
-export class TaskStarted extends BaseEvent<{ id: string; data?: unknown }> {}
+export class TaskStarted extends BaseEvent<{ id: string; agreementId: string; activityId: string }> {}
 export class TaskRedone extends BaseEvent<{ id: string; retriesCount: number }> {}
 export class TaskRejected extends BaseEvent<{ id: string; reason?: string }> {}
 export class TaskFinished extends BaseEvent<{ id: string }> {}
-export class AllocationCreated extends BaseEvent<{ id: string }> {}
+export class AllocationCreated extends BaseEvent<{ id: string; amount: number; platform: string }> {}
 export class SubscriptionCreated extends BaseEvent<{ id: string }> {}
 export class SubscriptionFailed extends BaseEvent<{ reason?: string }> {}
 export class CollectFailed extends BaseEvent<{ id: string; reason?: string }> {}
@@ -34,13 +33,23 @@ export class ProposalReceived extends BaseEvent<{ id: string; providerId: string
 export class ProposalRejected extends BaseEvent<{ id: string; providerId: string; reason?: string }> {}
 export class ProposalResponded extends BaseEvent<{ id: string; providerId: string }> {}
 export class ProposalConfirmed extends BaseEvent<{ id: string; providerId: string }> {}
-export class AgreementCreated extends BaseEvent<{ id: string; providerId: string }> {}
+export class AgreementCreated extends BaseEvent<{ id: string; providerId: string; providerName: string }> {}
 export class AgreementConfirmed extends BaseEvent<{ id: string; providerId: string }> {}
 export class AgreementRejected extends BaseEvent<{ id: string; providerId: string; reason?: string }> {}
 export class AgreementTerminated extends BaseEvent<{ id: string; providerId: string; reason?: string }> {}
-export class InvoiceReceived extends BaseEvent<{ id: string; agreementId: string; amount: string }> {}
+export class InvoiceReceived extends BaseEvent<{
+  id: string;
+  providerId: string;
+  agreementId: string;
+  amount: string;
+}> {}
 export class DebitNoteReceived extends BaseEvent<{ id: string; agreementId: string; amount: string }> {}
-export class PaymentAccepted extends BaseEvent<{ id: string; agreementId: string; amount: string }> {}
+export class PaymentAccepted extends BaseEvent<{
+  id: string;
+  providerId: string;
+  agreementId: string;
+  amount: string;
+}> {}
 export class PaymentFailed extends BaseEvent<{ id: string; agreementId: string; reason?: string }> {}
 export class ActivityCreated extends BaseEvent<{ id: string; agreementId: string }> {}
 export class ActivityDestroyed extends BaseEvent<{ id: string; agreementId: string }> {}

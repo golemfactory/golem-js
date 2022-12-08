@@ -62,7 +62,6 @@ export class TaskService {
   private async startTask(task: Task) {
     task.start();
     this.logger?.debug(`Task started. ID: ${task.id}, Data: ${task.getData()}`);
-    this.options.eventTarget?.dispatchEvent(new Events.TaskStarted({ id: task.id, data: task.getData() }));
     ++this.activeTasksCount;
     const agreement = await this.agreementPoolService.getAgreement();
     let activity;
@@ -73,6 +72,9 @@ export class TaskService {
         activity = await Activity.create(agreement.id, { logger: this.logger });
         this.activities.set(agreement.id, activity);
       }
+      this.options.eventTarget?.dispatchEvent(
+        new Events.TaskStarted({ id: task.id, agreementId: agreement.id, activityId: activity.id })
+      );
       this.paymentService.acceptDebitNotes(agreement.id);
       const initWorker = task.getInitWorker();
       const worker = task.getWorker();
@@ -95,7 +97,7 @@ export class TaskService {
       const results = await worker(ctx, data);
       task.stop(results);
       this.options.eventTarget?.dispatchEvent(new Events.TaskFinished({ id: task.id }));
-      this.logger?.debug(`Task ${task.id} finished`);
+      this.logger?.debug(`Task ${task.id} finished. Task data: ${task.getData()}`);
     } catch (error) {
       task.stop(undefined, error);
       if (task.isRetry()) {
@@ -104,7 +106,7 @@ export class TaskService {
           new Events.TaskRedone({ id: task.id, retriesCount: task.getRetriesCount() })
         );
         this.logger?.warn(
-          `The task execution failed. Trying to redo the task. Attempt ${task.getRetriesCount()} ${error}`
+          `The task ${task.id} execution failed. Trying to redo the task. Attempt #${task.getRetriesCount()}. ${error}`
         );
       } else {
         await activity.stop().catch((actError) => this.logger?.error(actError));
@@ -112,7 +114,7 @@ export class TaskService {
         await this.agreementPoolService.releaseAgreement(agreement.id, false);
         const reason = error.message || error.toString();
         this.options.eventTarget?.dispatchEvent(new Events.TaskRejected({ id: task.id, reason }));
-        throw new Error(`Task has been rejected! ${reason}`);
+        throw new Error(`Task ${task.id} has been rejected! ${reason}`);
       }
     } finally {
       --this.activeTasksCount;

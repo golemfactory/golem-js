@@ -4,7 +4,7 @@ import { Logger } from "../utils";
 import { StorageProvider } from "../storage/provider";
 
 const DEFAULTS = {
-  maxParallelTasks: 2,
+  maxParallelTasks: 5,
   taskRunningInterval: 1000,
   timeout: 30000,
   activityStateCheckingInterval: 1000,

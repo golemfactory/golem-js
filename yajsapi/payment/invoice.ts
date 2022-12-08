@@ -17,7 +17,7 @@ interface BaseModel {
 
 export abstract class BaseNote<ModelType extends BaseModel> {
   public abstract readonly id: string;
-  public readonly issuerId: string;
+  public readonly providerId: string;
   public readonly recipientId: string;
   public readonly payeeAddr: string;
   public readonly payerAddr: string;
@@ -27,7 +27,7 @@ export abstract class BaseNote<ModelType extends BaseModel> {
   protected status: InvoiceStatus;
 
   protected constructor(model: ModelType, protected options: InvoiceConfig) {
-    this.issuerId = model.issuerId;
+    this.providerId = model.issuerId;
     this.recipientId = model.recipientId;
     this.payeeAddr = model.payeeAddr;
     this.payerAddr = model.payerAddr;

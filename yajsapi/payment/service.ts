@@ -18,14 +18,6 @@ interface AgreementPayable {
   provider: { id: string; name: string };
 }
 
-interface PaymentInfo {
-  Agreement: string;
-  "Provider Name": string;
-  "Tasks Computed": number;
-  Cost: string;
-  "Payment Status": "paid" | "unpaid" | "pending" | "no invoice";
-}
-
 export class PaymentService {
   private isRunning = false;
   private options: PaymentConfig;
@@ -61,9 +53,15 @@ export class PaymentService {
       this.logger?.debug("Waiting for all invoices to be paid...");
       let timeout = false;
       const timeoutId = setTimeout(() => (timeout = true), this.options.timeout);
+      let i = 0;
       while (this.isRunning && !timeout) {
         this.isRunning = this.agreementsToPay.size !== 0;
-        await sleep(1);
+        await sleep(2000, true);
+        i++;
+        if (i > 10) {
+          this.logger?.info(`Waiting for ${this.agreementsToPay.size} to be paid...`);
+          i = 0;
+        }
       }
       clearTimeout(timeoutId);
     }
@@ -71,12 +69,11 @@ export class PaymentService {
     for (const allocation of this.allocations) await allocation.release();
     this.logger?.debug("All allocations has benn released");
     this.logger?.debug("Payment service has been stopped");
-    this.printCost();
   }
 
   async createAllocations(): Promise<Allocation[]> {
     const { data: accounts } = await this.options.api.getRequestorAccounts().catch((e) => {
-      throw new Error("Unable to get requestor accounts " + e.response?.data?.message || e.response?.data || e);
+      throw new Error(`Unable to get requestor accounts ${e.response?.data?.message || e.response?.data || e}`);
     });
     for (const account of accounts) {
       if (
@@ -192,22 +189,5 @@ export class PaymentService {
     );
     if (!allocation) throw new Error(`No allocation for ${paymentNote.paymentPlatform} ${paymentNote.payerAddr}`);
     return allocation;
-  }
-
-  private printCost() {
-    const costs: PaymentInfo[] = [];
-    let totalPaid = 0.0;
-    for (const { agreement, invoice } of this.paidAgreements) {
-      totalPaid += parseFloat(invoice.amount);
-      costs.push({
-        Agreement: agreement.id.substring(0, 10),
-        "Provider Name": agreement.provider.name,
-        "Tasks Computed": invoice.activityIds?.length || 0,
-        Cost: invoice.amount,
-        "Payment Status": "paid",
-      });
-    }
-    if (costs.length) console.table(costs);
-    this.logger?.info(`Total paid: ${totalPaid}`);
   }
 }
