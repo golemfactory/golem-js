@@ -14,7 +14,6 @@ interface CostsInfo {
   Agreement: string;
   "Provider Name": string;
   "Task Computed": number;
-  Activities: number;
   Cost: number;
   "Payment Status": "paid" | "unpaid";
 }
@@ -59,7 +58,6 @@ export class StatsService {
         Agreement: agreement.id.substring(0, 10),
         "Provider Name": this.providers.getProviderName(agreement.id) || "unknown",
         "Task Computed": this.tasks.getComputedTasks(agreement.id),
-        Activities: this.tasks.getActivities(agreement.id).length,
         Cost: costs.amount,
         "Payment Status": costs.paid ? "paid" : "unpaid",
       };

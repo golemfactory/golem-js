@@ -1,13 +1,12 @@
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market/src/models";
-import { Activity as ActivityProp, NodeInfo as NodeProp, NodeInfoKeys } from "../props";
-import { dayjs } from "../utils";
 import { MarketDecoration } from "ya-ts-client/dist/ya-payment";
 import { MarketProperty } from "ya-ts-client/dist/ya-payment/src/models";
 import { Package } from "../package";
-import { Allocation } from "../payment/allocation";
+import { Allocation } from "../payment";
 import { Demand, DemandOptions } from "./demand";
 import { DemandConfig } from "./config";
 import * as events from "../events/events";
+import { DecorationsBuilder } from "./builder";
 
 export class DemandFactory {
   private properties: Array<MarketProperty> = [];
@@ -45,14 +44,12 @@ export class DemandFactory {
   }
 
   private getBaseDecorations(): MarketDecoration {
-    const activityProp = new ActivityProp();
-    activityProp.expiration.value = dayjs().add(this.options.timeout, "ms");
-    activityProp.multi_activity.value = true;
-    const nodeProp = new NodeProp(this.options.subnetTag);
-    return {
-      properties: [...activityProp.properties(), ...nodeProp.properties()],
-      constraints: [`(${NodeInfoKeys.subnet_tag}=${this.options.subnetTag})`],
-    };
+    return new DecorationsBuilder()
+      .addProperty("golem.srv.caps.multi-activity", "true")
+      .addProperty("golem.srv.comp.expiration", (Date.now() + this.options.timeout).toString())
+      .addProperty("golem.node.debug.subnet", this.options.subnetTag)
+      .addConstraint("golem.node.debug.subnet", this.options.subnetTag)
+      .getDecorations();
   }
 }
 

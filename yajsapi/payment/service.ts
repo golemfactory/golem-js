@@ -59,7 +59,7 @@ export class PaymentService {
         await sleep(2000, true);
         i++;
         if (i > 10) {
-          this.logger?.info(`Waiting for ${this.agreementsToPay.size} to be paid...`);
+          this.logger?.info(`Waiting for ${this.agreementsToPay.size} invoice to be paid...`);
           i = 0;
         }
       }
@@ -104,7 +104,11 @@ export class PaymentService {
     while (this.isRunning) {
       for (const invoice of this.invoicesToPay.values()) {
         const agreement = this.agreementsToPay.get(invoice.agreementId);
-        if (!agreement) continue;
+        if (!agreement) {
+          this.invoicesToPay.delete(invoice.id);
+          this.logger?.warn(`Agreement ${invoice.agreementId} has not been accepted to payment`);
+          continue;
+        }
         try {
           const allocation = this.getAllocationForPayment(invoice);
           await invoice.accept(invoice.amount, allocation.id);

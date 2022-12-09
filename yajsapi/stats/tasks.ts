@@ -25,8 +25,8 @@ export class Tasks {
     const task = this.tasks.get(id);
     if (!task) {
       this.tasks.set(id, {
-        agreements: new Set(agreementId),
-        activities: new Set(activityId),
+        agreements: new Set<string>().add(agreementId),
+        activities: new Set<string>().add(agreementId),
         retriesCount: 0,
         startTime: timestamp,
         stopTime: 0,

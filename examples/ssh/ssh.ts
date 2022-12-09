@@ -2,15 +2,14 @@ import { createExecutor, utils } from "../../dist";
 import crypto from "crypto";
 import { program } from "commander";
 
-async function main(subnet_tag, payment_driver, payment_network, count = 2, session_timeout = 10, debug) {
+async function main(subnetTag, driver, network, count = 2, session_timeout = 10, debug) {
   const executor = await createExecutor({
     package: "1e06505997e8bd1b9e1a00bd10d255fc6a390905e4d6840a22a79902",
     capabilities: ["vpn"],
-    network_address: "192.168.0.0/24",
-    max_workers: count,
-    subnet_tag,
-    payment_driver,
-    payment_network,
+    networkAddress: "192.168.0.0/24",
+    maxParallelTasks: count,
+    subnetTag,
+    payment: { driver, network },
     logLevel: debug ? "debug" : "info",
   });
   const data = new Array(count).fill(null);
@@ -27,7 +26,7 @@ async function main(subnet_tag, payment_driver, payment_network, count = 2, sess
       .catch((e) => console.error(e));
     if (!results) return;
     console.log("\n------------------------------------------");
-    console.log(`Connect via ssh to provider "${ctx.getProviderInfo().providerName}" with:`);
+    console.log(`Connect via ssh to provider "todo" with:`);
     console.log(
       `ssh -o ProxyCommand='websocat asyncstdio: ${ctx.getWebsocketUri(
         22
@@ -36,7 +35,6 @@ async function main(subnet_tag, payment_driver, payment_network, count = 2, sess
     console.log(`Password: ${password}`);
     console.log("------------------------------------------\n");
     await utils.sleep(session_timeout);
-    ctx.acceptResult("ok");
     console.log(`Task completed. Session SSH closed after ${session_timeout} secs timeout.`);
   });
   await executor.end();
@@ -47,7 +45,7 @@ program
   .option("--payment-driver <payment_driver>", "payment driver name, for example 'erc20'")
   .option("--payment-network <payment_network>", "network name, for example 'rinkeby'")
   .option("--task-count, --count <count>", "task count", (val) => parseInt(val))
-  .option("--session-timeout, --timeout <timeout>", "ssh session timeout (in seconds)", (val) => parseInt(val))
+  .option("-t, --timeout <timeout>", "ssh session timeout (in seconds)", (val) => parseInt(val))
   .option("-d, --debug", "output extra debugging");
 program.parse();
 const options = program.opts();

@@ -34,7 +34,7 @@ export class DecorationsBuilder {
   getDecorations() {
     return {
       properties: this.properties,
-      constraints: this.constraints.map((c) => c.key + c.comparisonOperator + c.value),
+      constraints: this.constraints.map((c) => `(${c.key + c.comparisonOperator + c.value})`),
     };
   }
   private parseConstraint(constraint): Constraint {

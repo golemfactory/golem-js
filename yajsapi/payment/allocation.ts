@@ -37,7 +37,13 @@ export class Allocation {
         `Could not create new allocation. ${error.response?.data?.message || error.response?.data || error}`
       );
     });
-    config.eventTarget?.dispatchEvent(new Events.AllocationCreated({ id: newModel.allocationId }));
+    config.eventTarget?.dispatchEvent(
+      new Events.AllocationCreated({
+        id: newModel.allocationId,
+        amount: parseFloat(newModel.totalAmount),
+        platform: newModel.paymentPlatform,
+      })
+    );
     config.logger?.debug(
       `Allocation ${newModel.allocationId} has been created using payment platform ${config.account.platform}`
     );
