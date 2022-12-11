@@ -1,4 +1,11 @@
-import { MarketProperty, MarketDecoration } from "ya-ts-client/dist/ya-payment/src/models";
+import { MarketProperty } from "ya-ts-client/dist/ya-payment/src/models";
+import { DemandOfferBase } from "ya-ts-client/dist/ya-market/src/models";
+
+// Fix invalid types
+export type MarketDecoration = {
+  properties: Array<{ key: string; value: string | number | boolean }>;
+  constraints: Array<string>;
+};
 
 export enum ComparisonOperator {
   Eq = "=",
@@ -15,10 +22,10 @@ type Constraint = {
 };
 
 export class DecorationsBuilder {
-  private properties: Array<MarketProperty> = [];
+  private properties: Array<MarketProperty | { key: string; value: string | number | boolean }> = [];
   private constraints: Array<Constraint> = [];
 
-  addProperty(key: string, value: string) {
+  addProperty(key: string, value: string | number | boolean) {
     const findIndex = this.properties.findIndex((prop) => prop.key === key);
     if (findIndex >= 0) {
       this.properties[findIndex] = { key, value };
@@ -31,16 +38,26 @@ export class DecorationsBuilder {
     this.constraints.push({ key, value, comparisonOperator });
     return this;
   }
-  getDecorations() {
+  getDecorations(): MarketDecoration {
     return {
       properties: this.properties,
       constraints: this.constraints.map((c) => `(${c.key + c.comparisonOperator + c.value})`),
     };
   }
+  getDemandRequest(): DemandOfferBase {
+    const decorations = this.getDecorations();
+    let constraints: string;
+    if (!decorations.constraints.length) constraints = "(&)";
+    else if (decorations.constraints.length == 1) constraints = decorations.constraints[0];
+    else constraints = `(&${decorations.constraints.join("\n\t")})`;
+    const properties = {};
+    decorations.properties.forEach((prop) => (properties[prop.key] = prop.value));
+    return { constraints, properties };
+  }
   private parseConstraint(constraint): Constraint {
     for (const key in ComparisonOperator) {
       const value = ComparisonOperator[key];
-      const parsedConstraint = constraint.split(value);
+      const parsedConstraint = constraint.slice(1, -1).split(value);
       if (parsedConstraint.length === 2) {
         return {
           key: parsedConstraint[0],
@@ -51,18 +68,22 @@ export class DecorationsBuilder {
     }
     throw new Error(`Unable to parse constraint "${constraint}"`);
   }
-  addDecorations(decorations: MarketDecoration) {
-    if (decorations.properties) {
-      decorations.properties.forEach((prop) => {
+  addDecoration(decoration: MarketDecoration) {
+    if (decoration.properties) {
+      decoration.properties.forEach((prop) => {
         this.addProperty(prop.key, prop.value);
       });
     }
-    if (decorations.constraints) {
-      decorations.constraints.forEach((cons) => {
+    if (decoration.constraints) {
+      decoration.constraints.forEach((cons) => {
         const { key, value, comparisonOperator } = { ...this.parseConstraint(cons) };
         this.addConstraint(key, value, comparisonOperator);
       });
     }
+    return this;
+  }
+  addDecorations(decorations: MarketDecoration[]) {
+    decorations.forEach((d) => this.addDecoration(d));
     return this;
   }
 }

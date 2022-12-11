@@ -1,11 +1,20 @@
-import { Activity, ActivityOptions } from "./activity";
+import { Activity } from "./activity";
 import { CryptoCtx, PrivateKey, PublicKey, rand_hex } from "../utils/crypto";
-import { SGX_CONFIG } from "../package/sgx";
 import { attest, types } from "sgx-ias-js/index";
 import * as utf8 from "utf8";
 import { Credentials } from "ya-ts-client/dist/ya-activity/src/models";
 import { yaActivity } from "ya-ts-client";
 import { ActivityConfig } from "./config";
+import { bytes } from "sgx-ias-js/src/types";
+import Bytes32 = bytes.Bytes32;
+
+const SGX_CONFIG = {
+  enableAttestation: true,
+  exeunitHashes: ["5edbb025714683961d4a2cb51b1d0a4ee8225a6ced167f29eb67f639313d9490"],
+  allowDebug: true,
+  allowOutdatedTcb: true,
+  maxEvidenceAge: 60,
+};
 
 export async function createSecureActivity(agreementId: string, options?: ActivityConfig): Promise<SecureActivity> {
   if (!options?.taskPackage) {
@@ -47,7 +56,9 @@ export async function createSecureActivity(agreementId: string, options?: Activi
         .data(types.parseHex(credentials.sgx.requestorPubKey))
         .data(types.parseHex(credentials.sgx.enclavePubKey))
         .data(new TextEncoder().encode(options.taskPackage)) // encode as utf-8 bytes
-        .mr_enclave_list(SGX_CONFIG.exeunitHashes)
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        .mr_enclave_list(SGX_CONFIG.exeunitHashes.map((h) => types.bytes.Bytes32.from(h)))
         .nonce(utf8.encode(activityId)) // encode as utf-8 string
         .max_age(SGX_CONFIG.maxEvidenceAge);
 

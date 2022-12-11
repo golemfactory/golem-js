@@ -1,5 +1,5 @@
 import { GftpStorageProvider } from "../storage/gftp_provider";
-import { Package, repo } from "../package";
+import { Package } from "../package";
 import { MarketService, MarketStrategy } from "../market";
 import { AgreementPoolService } from "../agreement";
 import { Task, TaskQueue, TaskService, Worker } from "../task";
@@ -25,7 +25,7 @@ export type ExecutorOptions = {
   minMemGib?: number;
   minStorageGib?: number;
   minCpuThreads?: number;
-  cores?: number;
+  minCpuCores?: number;
   capabilities?: string[];
   logger?: Logger;
   logLevel?: string;
@@ -152,8 +152,8 @@ export class TaskExecutor {
     await Promise.all([...data].map((value) => this.executeTask<InputType, OutputType>(worker, value)));
   }
 
-  private async createPackage(image_hash: string): Promise<Package> {
-    return repo({ ...this.options, image_hash });
+  private async createPackage(imageHash: string): Promise<Package> {
+    return Package.create({ ...this.options, imageHash });
   }
 
   private async executeTask<InputType, OutputType>(

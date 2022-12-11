@@ -1,13 +1,16 @@
-import { DemandOfferBase, ProposalEvent } from "ya-ts-client/dist/ya-market";
 import { Package } from "../package";
 import { Allocation } from "../payment";
 import { YagnaOptions } from "../executor";
-import { DemandFactory, createDemandRequest } from "./factory";
+import { DemandFactory } from "./factory";
+import { DecorationsBuilder } from "./builder";
 import { MarketProperty } from "ya-ts-client/dist/ya-payment/src/models/";
 import { Proposal } from "./proposal";
 import { Logger, sleep } from "../utils";
 import { DemandConfig } from "./config";
 import { Events } from "../events";
+import { MarketDecoration } from "ya-ts-client/dist/ya-payment";
+import { ProposalEvent } from "ya-ts-client/dist/ya-market/src/models";
+import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
 
 export interface DemandOptions {
   subnetTag?: string;
@@ -30,12 +33,7 @@ export class Demand extends EventTarget {
     return factory.create();
   }
 
-  constructor(
-    public readonly id,
-    private properties: Array<MarketProperty>,
-    private constraints: Array<string>,
-    private options: DemandConfig
-  ) {
+  constructor(public readonly id, private demandRequest: DemandOfferBase, private options: DemandConfig) {
     super();
     this.logger = this.options.logger;
     this.subscribe().catch((e) => this.logger?.error(e));
@@ -61,7 +59,7 @@ export class Demand extends EventTarget {
             this.id,
             this.options.api,
             event.proposal,
-            this.getDemandRequest(),
+            this.demandRequest,
             this.options.eventTarget
           );
           this.dispatchEvent(new DemandEvent(DemandEventType, proposal));
@@ -78,10 +76,6 @@ export class Demand extends EventTarget {
         }
       }
     }
-  }
-
-  private getDemandRequest(): DemandOfferBase {
-    return createDemandRequest(this.properties, this.constraints);
   }
 }
 
