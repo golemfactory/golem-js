@@ -34,7 +34,7 @@ async function main(subnetTag: string, driver?: string, network?: string, debug?
     await ctx.uploadFile(path.join(__dirname, "./cubes.blend"), "/golem/resource/scene.blend");
   });
 
-  const results = executor.map<number, string>(utils.range(0, 60, 10), async (ctx, frame) => {
+  const results = executor.map<number, string>([0, 10, 20, 30, 40, 50], async (ctx, frame) => {
     const result = await ctx
       .beginBatch()
       .uploadJson(blender_params(frame), "/golem/work/params.json")

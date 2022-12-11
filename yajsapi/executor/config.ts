@@ -9,7 +9,7 @@ const DEFAULTS = {
   subnetTag: "devnet-beta",
   payment: { driver: "erc20", network: "rinkeby" },
   timeout: 1000 * 60 * 15, // 15 min,
-  logLevel: "debug",
+  logLevel: "info",
   basePath: "http://127.0.0.1:7465",
 };
 
@@ -59,7 +59,7 @@ export class ExecutorConfig {
       minCpuThreads: options.minCpuThreads,
       capabilities: options.capabilities,
     };
-    this.logger = options.logger || !runtimeContextChecker.isBrowser ? winstonLogger : undefined;
+    this.logger = options.logger || (!runtimeContextChecker.isBrowser ? winstonLogger : undefined);
     this.logLevel = options.logLevel || DEFAULTS.logLevel;
     this.logger?.setLevel && this.logger?.setLevel(this.logLevel);
     this.eventTarget = options.eventTarget || new EventTarget();

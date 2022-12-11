@@ -64,7 +64,7 @@ export class Agreement {
     return state !== AgreementStateEnum.Pending && state !== AgreementStateEnum.Proposal;
   }
 
-  async terminate(reason?: { [key: string]: string }) {
+  async terminate(reason: { [key: string]: string } = { message: "Finished" }) {
     try {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore TODO: API binding BUG with reason type

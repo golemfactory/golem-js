@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebRequestor</title>
+    <script src="./../js/bundle.js"></script>
+    <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+    <h1>WebRequestor - Command</h1>
+    <div class="container">
+        <div class="col-6">
+            <h3>Credentials</h3>
+            <div class="column">
+                <div>
+                    <label for="YAGNA_APPKEY">YAGNA_APPKEY: </label>
+                    <input id="YAGNA_APPKEY" type="text" value="xxx"/>
+                </div>
+                <div>
+                    <label for="YAGNA_API_BASEPATH">YAGNA_API_BASEURL: </label>
+                    <input id="YAGNA_API_BASEPATH" type="text" value="http://127.0.0.1:7465" />
+                </div>
+            </div>
+            <h3>Actions</h3>
+            <div class="row commands">
+                <button onclick="init()">Start</button>
+                <button onclick="end()">Stop</button>
+            </div>
+            <label for="COMMAND">RUN SHELL COMMAND: </label>
+            <div class="row padding-0">
+                <input id="COMMAND" type="text" />
+                <button onclick="run()">Execute</button>
+            </div>
+            <div class="results console">
+                <h3>Results</h3>
+                <ul id="results"></ul>
+            </div>
+        </div>
+        <div class="col-6 border-left">
+            <div class="logs console">
+                <h3>Logs</h3>
+                <ul id="logs"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function appendLog(msg) {
+            const logs_el = document.getElementById('logs');
+            const li = document.createElement('li');
+            li.appendChild(document.createTextNode(msg));
+            logs_el.appendChild(li);
+        }
+        function appendResults(result) {
+            const results_el = document.getElementById('results');
+            const li = document.createElement('li');
+            li.appendChild(document.createTextNode(result));
+            results_el.appendChild(li);
+        }
+        const logger = {
+            log: (msg) => appendLog(`[${new Date().toISOString()}] ${msg}`),
+            warn: (msg) => appendLog(`[${new Date().toISOString()}] [warn] ${msg}`),
+            debug: (msg) => appendLog(`[${new Date().toISOString()}] [debug] ${msg}`),
+            // debug: (msg) => console.log(msg),
+            error: (msg) => appendLog(`[${new Date().toISOString()}] [error] ${msg}`),
+            info: (msg) => appendLog(`[${new Date().toISOString()}] [info] ${msg}`),
+            table: (msg) => appendLog(JSON.stringify(msg, null, "\t")),
+        }
+        let allocation, demand, agreement, activity;
+        async function init() {
+            const apiKey = document.getElementById('YAGNA_APPKEY').value;
+            const basePath = document.getElementById('YAGNA_API_BASEPATH').value;
+            const options = {
+              yagnaOptions: { apiKey, basePath },
+              imageHash:"9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+              logger,
+              subnetTag: "devnet-beta",
+              account: { platform: "erc20-rinkeby-tglm", address: "0x19ee20338a4c4bf8f6aebc79d9d3af2a01434119" }
+            }
+          const taskPackage = await yajsapi.Package.create(options);
+          allocation = await yajsapi.Allocation.create(options);
+          demand = await yajsapi.Demand.create(taskPackage, [allocation], options);
+          const offer = await new Promise((res) =>
+            demand.addEventListener(yajsapi.DemandEventType, async (event) => {
+              if (event.proposal.isInitial()) await event.proposal.respond(options.account.platform);
+              else if (event.proposal.isDraft()) res(event.proposal);
+            })
+          );
+          agreement = await yajsapi.Agreement.create(offer.id, options);
+          await agreement.confirm();
+          activity = await yajsapi.Activity.create(agreement.id, options);
+          const script = await yajsapi.Script.create([new yajsapi.Deploy(), new yajsapi.Start()]);
+          const exeScript = script.getExeScriptRequest();
+          await activity.execute(exeScript);
+        }
+        async function run() {
+          const command = document.getElementById('COMMAND').value
+          const script = await yajsapi.Script.create([new yajsapi.Run("/bin/sh", ["-c", command])]);
+          const exeScript = script.getExeScriptRequest();
+          const results = await activity.execute(exeScript);
+          results.on('data', result => appendResults(result.stdout))
+        }
+        async function end() {
+          await activity.stop();
+          await agreement.terminate();
+          await allocation.release();
+          await demand.unsubscribe();
+        }
+    </script>
+</body>
+</html>

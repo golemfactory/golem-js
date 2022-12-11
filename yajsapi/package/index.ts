@@ -1,3 +1,1 @@
-import { Package } from "./package";
-
-export { Package };
+export { Package, PackageOptions } from "./package";

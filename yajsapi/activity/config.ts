@@ -5,7 +5,7 @@ import { Logger } from "../utils";
 import { YagnaOptions } from "../executor";
 
 const DEFAULTS = {
-  basePath: "http://127.0.0.1:7465/activity-api/v1",
+  basePath: "http://127.0.0.1:7465",
   requestTimeout: 10000,
   executeTimeout: 30000,
   exeBatchResultsFetchInterval: 3000,
@@ -25,7 +25,11 @@ export class ActivityConfig {
     const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
     if (!apiKey) throw new Error("Api key not defined");
     const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_BASEPATH || DEFAULTS.basePath;
-    const apiConfig = new yaActivity.Configuration({ apiKey, basePath, accessToken: apiKey });
+    const apiConfig = new yaActivity.Configuration({
+      apiKey,
+      basePath: `${basePath}/activity-api/v1`,
+      accessToken: apiKey,
+    });
     this.api = {
       control: new RequestorControlApi(apiConfig),
       state: new RequestorStateApi(apiConfig),

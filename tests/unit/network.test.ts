@@ -8,7 +8,7 @@ import { Network } from "../../yajsapi/network";
 chai.use(chaiAsPromised);
 
 describe("Network", () => {
-  afterEach(() => clear());
+  beforeEach(() => clear());
 
   describe("Creating", () => {
     it("should create network", async () => {

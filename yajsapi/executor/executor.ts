@@ -1,4 +1,4 @@
-import { GftpStorageProvider } from "../storage/gftp_provider";
+// import { GftpStorageProvider } from "../storage/gftp_provider";
 import { Package } from "../package";
 import { MarketService, MarketStrategy } from "../market";
 import { AgreementPoolService } from "../agreement";
@@ -65,7 +65,7 @@ export class TaskExecutor {
     this.paymentService = new PaymentService(this.options);
     this.marketService = new MarketService(this.agreementPoolService, this.options);
     this.networkService = this.options.networkAddress ? new NetworkService(this.options) : undefined;
-    this.storageProvider = new GftpStorageProvider();
+    // this.storageProvider = new GftpStorageProvider();
     this.taskService = new TaskService(
       this.taskQueue,
       this.agreementPoolService,

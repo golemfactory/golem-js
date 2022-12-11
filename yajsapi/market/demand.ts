@@ -8,7 +8,6 @@ import { Proposal } from "./proposal";
 import { Logger, sleep } from "../utils";
 import { DemandConfig } from "./config";
 import { Events } from "../events";
-import { MarketDecoration } from "ya-ts-client/dist/ya-payment";
 import { ProposalEvent } from "ya-ts-client/dist/ya-market/src/models";
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
 
@@ -42,6 +41,7 @@ export class Demand extends EventTarget {
   async unsubscribe() {
     this.isRunning = false;
     await this.options.api.unsubscribeDemand(this.id);
+    this.removeEventListener(DemandEventType, null);
     this.logger?.debug(`Demand ${this.id} unsubscribed`);
   }
 

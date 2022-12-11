@@ -69,7 +69,7 @@ export class TaskService {
       if (this.activities.has(agreement.id)) {
         activity = this.activities.get(agreement.id);
       } else {
-        activity = await Activity.create(agreement.id, { logger: this.logger });
+        activity = await Activity.create(agreement.id, this.options);
         this.activities.set(agreement.id, activity);
       }
       this.options.eventTarget?.dispatchEvent(

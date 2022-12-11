@@ -1,5 +1,4 @@
 import { Activity, ActivityOptions } from "./activity";
-import { runtimeContextChecker } from "../utils";
 import { ActivityConfig } from "./config";
 import { Events } from "../events";
 
@@ -29,9 +28,7 @@ export class ActivityFactory {
   public async create(secure = false): Promise<Activity> {
     try {
       if (secure) {
-        runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Secure Activity");
-        const { createSecureActivity } = await import("./secure");
-        return createSecureActivity(this.agreementId, this.options);
+        throw new Error("Not implemented");
       }
       return this.createActivity(this.agreementId, this.options);
     } catch (error) {

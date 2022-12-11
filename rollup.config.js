@@ -5,6 +5,7 @@ const commonjs = require("@rollup/plugin-commonjs");
 const json = require("@rollup/plugin-json");
 const alias = require("@rollup/plugin-alias");
 const inject = require("@rollup/plugin-inject");
+const { uglify } = require("rollup-plugin-uglify");
 
 module.exports = {
   input: path.resolve(__dirname, "./dist/index_browser.js"),
@@ -14,16 +15,18 @@ module.exports = {
     format: "iife",
     name: "yajsapi",
   },
+  external: ["temp-dir", "child_process", "tmp", "@rauschma/stringio"],
   plugins: [
     alias({
       entries: stdLibBrowser,
     }),
-    resolve({ browser: true }),
+    resolve({ browser: true, preferBuiltins: true }),
     commonjs(),
     json(),
     inject({
       process: stdLibBrowser.process,
       Buffer: [stdLibBrowser.buffer, "Buffer"],
     }),
+    uglify(),
   ],
 };
