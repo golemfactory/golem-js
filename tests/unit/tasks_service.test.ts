@@ -23,7 +23,7 @@ describe("Task Service", () => {
   });
   it("should process new task in queue", async () => {
     const worker: Worker<null, Result> = async (ctx) => ctx.run("some_shell_command");
-    const task = new Task<null, Result>(worker);
+    const task = new Task<null, Result>("1", worker);
     queue.addToEnd(task);
     activityMock.setExpectedExeResults([{ stdout: "some_shell_results" }]);
     const service = new TaskService(queue, agreementPoolServiceMock, paymentServiceMock, networkServiceMock, {
@@ -42,9 +42,9 @@ describe("Task Service", () => {
 
   it("process only allowed number of tasks simultaneously", async () => {
     const worker: Worker = async (ctx) => ctx.run("some_shell_command");
-    const task1 = new Task(worker);
-    const task2 = new Task(worker);
-    const task3 = new Task(worker);
+    const task1 = new Task("1", worker);
+    const task2 = new Task("2", worker);
+    const task3 = new Task("3", worker);
     queue.addToEnd(task1);
     queue.addToEnd(task2);
     queue.addToEnd(task3);
@@ -62,7 +62,7 @@ describe("Task Service", () => {
 
   it("should retry task if it failed", async () => {
     const worker: Worker = async (ctx) => ctx.run("some_shell_command");
-    const task = new Task(worker);
+    const task = new Task("1", worker);
     queue.addToEnd(task);
     activityMock.setExpectedExeResults([
       { result: "Ok" }, // deploy command
@@ -75,7 +75,7 @@ describe("Task Service", () => {
       activityStateCheckingInterval: 100,
     });
     service.run().catch((e) => console.error(e));
-    await logger.expectToInclude("The task execution failed. Trying to redo the task.", 300);
+    await logger.expectToInclude("The task 1 execution failed. Trying to redo the task. Attempt #", 300);
     expect(task.isRetry()).to.be.true;
     await service.end();
   });
@@ -85,7 +85,7 @@ describe("Task Service", () => {
       const result = await ctx.run("some_shell_command");
       if (result.stdout === "invalid_value") ctx.rejectResult("Invalid value computed by provider");
     };
-    const task = new Task(worker);
+    const task = new Task("1", worker);
     queue.addToEnd(task);
     activityMock.setExpectedExeResults([{ result: "Ok", stdout: "invalid_value" }]);
     const service = new TaskService(queue, agreementPoolServiceMock, paymentServiceMock, networkServiceMock, {
@@ -95,7 +95,7 @@ describe("Task Service", () => {
     });
     service.run().catch((e) => console.error(e));
     await logger.expectToInclude(
-      "Error: Task has been rejected! Work rejected by user. Reason: Invalid value computed by provider",
+      "Error: Task 1 has been rejected! Work rejected by user. Reason: Invalid value computed by provider",
       800
     );
     expect(task.isFinished()).to.be.true;
@@ -104,7 +104,7 @@ describe("Task Service", () => {
 
   it("should reject task if it failed max attempts", async () => {
     const worker: Worker = async (ctx) => ctx.run("some_shell_command");
-    const task = new Task(worker);
+    const task = new Task("1", worker);
     queue.addToEnd(task);
     activityMock.setExpectedExeResults([{ stderr: "some_error", result: "Error" }]);
     const service = new TaskService(queue, agreementPoolServiceMock, paymentServiceMock, networkServiceMock, {
@@ -113,7 +113,7 @@ describe("Task Service", () => {
       activityStateCheckingInterval: 10,
     });
     service.run().catch((e) => console.error(e));
-    await logger.expectToInclude("Error: Task has been rejected!", 800);
+    await logger.expectToInclude("Error: Task 1 has been rejected!", 800);
     expect(task.isRejected()).to.be.true;
     await service.end();
   });
@@ -121,9 +121,9 @@ describe("Task Service", () => {
   it("should run init worker on each activity", async () => {
     const initWorker: Worker = async (ctx) => ctx.run("init_shell_command");
     const worker: Worker = async (ctx) => ctx.run("some_shell_command");
-    const task1 = new Task(worker, null, initWorker);
-    const task2 = new Task(worker, null, initWorker);
-    const task3 = new Task(worker, null, initWorker);
+    const task1 = new Task("1", worker, null, initWorker);
+    const task2 = new Task("2", worker, null, initWorker);
+    const task3 = new Task("3", worker, null, initWorker);
     queue.addToEnd(task1);
     queue.addToEnd(task2);
     queue.addToEnd(task3);
@@ -134,9 +134,9 @@ describe("Task Service", () => {
       maxParallelTasks: 2,
     });
     service.run().catch((e) => console.error(e));
-    await logger.expectToMatch(/Init worker done in activity.*\nInit worker done in activity/, 600);
+    await logger.expectToMatch(/Init worker done in activity.*\n.*\nInit worker done in activity/, 600);
     await logger.expectToNotMatch(
-      /Init worker done in activity.*\nInit worker done in activity.*\nInit worker done in activity/
+      /Init worker done in activity.*\n.*\nInit worker done in activity.*\n.*\nInit worker done in activity/
     );
     expect(task1.isFinished()).to.be.true;
     expect(task2.isFinished()).to.be.true;

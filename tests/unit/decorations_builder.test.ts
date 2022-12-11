@@ -62,7 +62,7 @@ describe("#DecorationsBuilder()", () => {
   });
   describe("addDecorations()", () => {
     it("should allow to parse constrain with =, >=, <=, >, <", async () => {
-      const decorations = {
+      const decoration = {
         constraints: [
           "some_constraint=some_value",
           "some_constraint>=some_value",
@@ -73,27 +73,27 @@ describe("#DecorationsBuilder()", () => {
         properties: [],
       };
       const decorationsBuilder = new DecorationsBuilder();
-      decorationsBuilder.addDecorations(decorations);
+      decorationsBuilder.addDecoration(decoration);
       expect(decorationsBuilder.getDecorations().constraints.length).to.equal(5);
     });
 
     it("should allow to add decorations", () => {
-      const decorations = {
+      const decoration = {
         properties: [{ key: "prop_key", value: "value" }],
         constraints: ["some_constraint=some_value"],
       };
       const decorationsBuilder = new DecorationsBuilder();
-      decorationsBuilder.addDecorations(decorations);
+      decorationsBuilder.addDecoration(decoration);
       expect(decorationsBuilder.getDecorations().constraints.length).to.equal(1);
       expect(decorationsBuilder.getDecorations().properties.length).to.equal(1);
     });
     it("should provide fluent API", () => {
-      const decorations = {
+      const decoration = {
         properties: [{ key: "prop_key", value: "value" }],
         constraints: ["some_constraint=some_value"],
       };
       const decorationsBuilder = new DecorationsBuilder();
-      const flAPI = decorationsBuilder.addDecorations(decorations);
+      const flAPI = decorationsBuilder.addDecoration(decoration);
       expect(flAPI).to.be.an.instanceof(DecorationsBuilder);
     });
   });
@@ -113,11 +113,11 @@ describe("#DecorationsBuilder()", () => {
       expect(decorationsBuilder.getDecorations().properties.length).to.equal(2);
 
       expect(decorationsBuilder.getDecorations().constraints).to.eql([
-        "key=value",
-        "key>=value",
-        "key<=value",
-        "key>value",
-        "key<value",
+        "(key=value)",
+        "(key>=value)",
+        "(key<=value)",
+        "(key>value)",
+        "(key<value)",
       ]);
 
       expect(decorationsBuilder.getDecorations().properties).to.eql([

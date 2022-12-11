@@ -50,7 +50,7 @@ export class WorkContext {
     }
     if (state === ActivityStateStateEnum.Initialized) {
       await this.activity.execute(
-        new Script([new Deploy(this.networkNode?.getNetworkConfig()), new Start()]).getExeScriptRequest()
+        new Script([new Deploy(this.networkNode?.getNetworkConfig?.()), new Start()]).getExeScriptRequest()
       );
     }
     let timeout = false;

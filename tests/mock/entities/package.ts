@@ -1,10 +1,12 @@
 import { Package } from "../../../yajsapi/package";
 import { MarketDecoration } from "ya-ts-client/dist/ya-payment";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
 export const packageMock: Package = {
   async getDemandDecoration(): Promise<MarketDecoration> {
     return Promise.resolve({
-      constraints: ["(&(golem.inf.mem.gib>=0.5)\n\t(golem.inf.storage.gib>=2)\n\t(golem.runtime.name=vm))"],
+      constraints: ["(golem.inf.mem.gib>=0.5)", "(golem.inf.storage.gib>=2)", "(golem.runtime.name=vm)"],
       properties: [
         {
           key: "golem.srv.comp.task_package",
