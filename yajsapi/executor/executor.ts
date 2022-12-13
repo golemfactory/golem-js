@@ -1,4 +1,4 @@
-// import { GftpStorageProvider } from "../storage/gftp_provider";
+import { GftpStorageProvider } from "../storage/gftp_provider";
 import { Package } from "../package";
 import { MarketService, MarketStrategy } from "../market";
 import { AgreementPoolService } from "../agreement";
@@ -6,7 +6,7 @@ import { Task, TaskQueue, TaskService, Worker } from "../task";
 import { PaymentService } from "../payment";
 import { NetworkService } from "../network";
 import { Result } from "../activity";
-import { sleep, Logger } from "../utils";
+import { sleep, Logger, runtimeContextChecker } from "../utils";
 import { StorageProvider } from "../storage/provider";
 import { ExecutorConfig } from "./config";
 import { Events } from "../events";
@@ -65,7 +65,7 @@ export class TaskExecutor {
     this.paymentService = new PaymentService(this.options);
     this.marketService = new MarketService(this.agreementPoolService, this.options);
     this.networkService = this.options.networkAddress ? new NetworkService(this.options) : undefined;
-    // this.storageProvider = new GftpStorageProvider();
+    this.storageProvider = runtimeContextChecker.isNode ? new GftpStorageProvider() : undefined;
     this.taskService = new TaskService(
       this.taskQueue,
       this.agreementPoolService,

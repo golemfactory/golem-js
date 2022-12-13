@@ -6,7 +6,7 @@ import { Configuration } from "ya-ts-client/dist/ya-market";
 import { Logger } from "../utils";
 
 const DEFAULT_OPTIONS = {
-  WAITING_FOR_APPROVAL_TIMEOUT: 15,
+  WAITING_FOR_APPROVAL_TIMEOUT: 60,
   REQUEST_TIMEOUT: 30000,
   EXECUTE_TIMEOUT: 30000,
   EVENT_POOLING_INT: 5,

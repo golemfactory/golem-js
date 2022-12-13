@@ -11,7 +11,6 @@ const logger = new LoggerMock();
 // const goth = new Goth(gothConfig);
 
 describe("Task Executor", function () {
-  let executor;
   let apiKey, basePath, subnetTag;
   before(async () => {
     // ({ apiKey, basePath, subnetTag } = await goth.start());

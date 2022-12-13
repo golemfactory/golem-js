@@ -5,7 +5,9 @@ import { Address, Network, Node } from "ya-ts-client/dist/ya-net/src/models";
 import { AxiosRequestConfig, AxiosResponse } from "axios";
 
 let error;
-export const setExpectedError = (e) => (error = e);
+export const setExpectedError = (e) => {
+  error = e;
+};
 export const clear = () => {
   error = null;
 };

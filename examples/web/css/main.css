@@ -19,6 +19,25 @@ h3 {
 .col-6 {
     width: 50%;
 }
+#options {
+    display: flex;
+}
+#options .row {
+    padding: 0;
+    padding-right: 6px;
+}
+.clear {
+    float: right;
+    margin-top: 47px;
+    margin-right: 29px;
+    font-size: 0.7rem;
+}
+.clear-results {
+    margin-top: 14px;
+}
+.clear:hover {
+    cursor: pointer;
+}
 .border-left {
     border-left: 1px solid #ddd;
     padding-left: 20px;
@@ -94,7 +113,7 @@ button:disabled{
     min-height: 30vh;
 }
 .commands button {
-    width: 120px;
+    width: 140px;
     margin: 0 30px 0 0;
 }
 #logs {

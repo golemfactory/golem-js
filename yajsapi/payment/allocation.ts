@@ -73,8 +73,9 @@ export class Allocation {
 
   async release() {
     await this.options.api.releaseAllocation(this.id).catch((e) => {
-      throw new Error(`Could not release allocation. ${e.response?.data || e}`);
+      throw new Error(`Could not release allocation. ${e.response?.data?.message || e}`);
     });
+    this.options?.logger?.debug(`Allocation ${this.id} has been released.`);
   }
 
   async getDemandDecoration(): Promise<MarketDecoration> {
