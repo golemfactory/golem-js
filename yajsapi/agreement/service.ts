@@ -142,6 +142,7 @@ export class AgreementPoolService implements ComputationHistory {
         await sleep(10);
       }
     }
+    this.initialTime = +new Date();
     return proposal;
   }
 

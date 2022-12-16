@@ -1,5 +1,5 @@
 import rewiremock from "rewiremock";
-import { NetworkApiMock, setExpectedError } from "../mock/rest/network";
+import { NetworkApiMock } from "../mock/rest/network";
 rewiremock("ya-ts-client/dist/ya-net/api").with({ RequestorApi: NetworkApiMock });
 rewiremock.enable();
 import chai, { expect } from "chai";

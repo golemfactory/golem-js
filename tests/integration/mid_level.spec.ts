@@ -14,23 +14,25 @@ import {
   Deploy,
   Result,
 } from "../../yajsapi/index_mid";
-import { LoggerMock } from "../mock";
+import { resolve } from "path";
 import { Proposal } from "../../yajsapi/market";
+import { Goth } from "./goth";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
-const logger = new LoggerMock();
+const gothConfig = resolve("../goth/assets/goth-config.yml");
+const goth = new Goth(gothConfig);
 
 const subnetTag = "devnet-beta";
 const account = { platform: "erc20-rinkeby-tglm", address: "0x19ee20338a4c4bf8f6aebc79d9d3af2a01434119" };
 
 describe("Mid-level modules", () => {
-  // let gothProcess;
-  // before(async () => {
-  //   // TODO: run goth process
-  // });
-  // after(async () => {
-  //   // TODO: stop goth process
-  // });
+  let apiKey, basePath, subnetTag;
+  before(async () => {
+    ({ apiKey, basePath, subnetTag } = await goth.start());
+  });
+  after(async () => {
+    await goth.end();
+  });
 
   it("should run simple script on provider", async () => {
     const taskPackage = await Package.create({ imageHash: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae" });
