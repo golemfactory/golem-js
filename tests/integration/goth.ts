@@ -10,6 +10,7 @@ export class Goth {
   async start(): Promise<{ apiKey: string; basePath: string; subnetTag: string }> {
     return new Promise((resolve, reject) => {
       console.log("Starting goth process...");
+      console.log("Run command: ", `python -m goth start ${this.gothConfig}`);
       const gothProcess = spawn("python", ["-m", "goth", "start", this.gothConfig], { signal: this.controller.signal });
       gothProcess.stdout.on("data", (data) => {
         console.log("[goth]" + data.toString());
