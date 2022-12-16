@@ -22,7 +22,7 @@ export class Goth {
         const subnetTag = results?.[3];
         if (!apiKey) resolve({ apiKey, basePath, subnetTag });
       });
-      gothProcess.stderr.on("data", (error) => reject(error.toString()));
+      gothProcess.stderr.on("data", (error) => reject(error));
       gothProcess.on("close", (code) => console.log(`Goth process exit with code ${code}`));
     });
   }
