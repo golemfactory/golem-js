@@ -33,6 +33,6 @@ module.exports = {
       process: stdLibBrowser.process,
     }),
     uglify(),
-    visualizer(),
+    // visualizer(),
   ],
 };

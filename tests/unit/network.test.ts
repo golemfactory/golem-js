@@ -1,5 +1,5 @@
 import rewiremock from "rewiremock";
-import { NetworkApiMock, setExpectedError, clear } from "../mock/rest/network";
+import { NetworkApiMock } from "../mock/rest/network";
 rewiremock("ya-ts-client/dist/ya-net/api").with({ RequestorApi: NetworkApiMock });
 rewiremock.enable();
 import chai, { expect } from "chai";
@@ -8,8 +8,6 @@ import { Network } from "../../yajsapi/network";
 chai.use(chaiAsPromised);
 
 describe("Network", () => {
-  afterEach(() => clear());
-
   describe("Creating", () => {
     it("should create network", async () => {
       const network = await Network.create({ ownerId: "test_owner_id" });
@@ -142,7 +140,7 @@ describe("Network", () => {
 
     it("should not remove network that doesn't exist", async () => {
       const network = await Network.create({ ownerId: "1", ip: "192.168.0.0/24" });
-      setExpectedError({ status: 404 });
+      network["config"]["api"]["setExpectedError"]({ status: 404 });
       expect(await network.remove()).to.be.false;
     });
   });
