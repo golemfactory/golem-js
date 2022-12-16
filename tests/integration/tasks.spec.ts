@@ -7,7 +7,7 @@ import { resolve } from "path";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 const logger = new LoggerMock();
-const gothConfig = resolve("../goth/assets/goth-config.yml");
+const gothConfig = resolve("../goth/assets/goth-config-testing.yml");
 const goth = new Goth(gothConfig);
 
 describe("Task Executor", function () {
