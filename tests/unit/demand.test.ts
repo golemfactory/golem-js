@@ -6,9 +6,9 @@ import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
-import { Demand, Proposal, DemandEvent } from "../../yajsapi/market";
+import { Demand, Proposal, DemandEventType, DemandEvent } from "../../yajsapi/market";
 import { allocationMock, packageMock, LoggerMock } from "../mock";
-import { proposalsInitial, proposalsDraft } from "../mock/fixtures";
+import { proposalsInitial } from "../mock/fixtures";
 
 const subnetTag = "testnet";
 const logger = new LoggerMock();
@@ -26,8 +26,10 @@ describe("Demand", () => {
     it("should get proposal after publish demand", async () => {
       const demand = await Demand.create(packageMock, [allocationMock], { subnetTag });
       setExpectedProposals(proposalsInitial);
-      const proposal = await new Promise((res) => demand.on(DemandEvent.ProposalReceived, res));
-      expect(proposal).to.be.instanceof(Proposal);
+      const event: DemandEvent = await new Promise((res) =>
+        demand.addEventListener(DemandEventType, (e) => res(e as DemandEvent))
+      );
+      expect(event.proposal).to.be.instanceof(Proposal);
       await demand.unsubscribe();
     });
   });

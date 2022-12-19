@@ -1,10 +1,10 @@
 import { Logger } from "../utils";
 import { Package } from "../package";
-import { Demand, Proposal, DemandEvent } from "./";
+import { Demand, Proposal, DemandEventType, DemandOptions } from "./";
 import { DefaultMarketStrategy, MarketStrategy, SCORE_NEUTRAL } from "./strategy";
 import { AgreementPoolService } from "../agreement";
-import { Allocation } from "../payment/allocation";
-import { DemandOptions } from "./demand";
+import { Allocation } from "../payment";
+import { DemandEvent } from "./demand";
 
 export interface MarketOptions extends DemandOptions {
   strategy?: MarketStrategy;
@@ -17,7 +17,7 @@ export class MarketService {
   private logger: Logger | undefined;
 
   constructor(private readonly agreementPoolService: AgreementPoolService, private readonly options?: MarketOptions) {
-    this.marketStrategy = options?.strategy || new DefaultMarketStrategy(this.agreementPoolService);
+    this.marketStrategy = options?.strategy || new DefaultMarketStrategy(this.agreementPoolService, this.logger);
     this.logger = this.options?.logger;
   }
   async run(taskPackage: Package, allocations: Allocation[]) {
@@ -25,7 +25,8 @@ export class MarketService {
       if (allocation.paymentPlatform) this.allowedPaymentPlatforms.push(allocation.paymentPlatform);
     }
     this.demand = await Demand.create(taskPackage, allocations, this.options);
-    this.demand.on(DemandEvent.ProposalReceived, (proposal) => {
+    this.demand.addEventListener(DemandEventType, (event) => {
+      const proposal = (event as DemandEvent).proposal;
       if (proposal.isInitial()) this.processInitialProposal(proposal);
       else if (proposal.isDraft()) this.processDraftProposal(proposal);
       else if (proposal.isExpired()) this.logger?.debug(`Proposal hes expired ${proposal.id}`);
@@ -36,27 +37,27 @@ export class MarketService {
 
   async end() {
     if (this.demand) {
-      this.demand.removeAllListeners();
+      this.demand.removeEventListener(DemandEventType, null);
       await this.demand.unsubscribe().catch((e) => this.logger?.error(`Could not unsubscribe demand. ${e}`));
     }
     this.logger?.debug("Market Service has been stopped");
   }
 
   private async processInitialProposal(proposal: Proposal) {
-    this.logger?.debug(`New proposal has been received (${proposal.proposalId})`);
+    this.logger?.debug(`New proposal has been received (${proposal.id})`);
     const score = this.marketStrategy.scoreProposal(proposal);
     proposal.score = score;
-    this.logger?.debug(`Scored proposal ${proposal.proposalId}. Score: ${score}`);
+    this.logger?.debug(`Scored proposal ${proposal.id}. Score: ${score}`);
     try {
       const { result: isProposalValid, reason } = this.isProposalValid(proposal);
       if (isProposalValid) {
         const chosenPlatform = this.getCommonPaymentPlatforms(proposal.properties)![0];
         // TODO: timeout param for respond
         await proposal.respond(chosenPlatform);
-        this.logger?.debug(`Proposal hes been responded (${proposal.proposalId})`);
+        this.logger?.debug(`Proposal hes been responded (${proposal.id})`);
       } else {
         await proposal.reject(reason);
-        this.logger?.debug(`Proposal hes been rejected (${proposal.proposalId}). Reason: ${reason}`);
+        this.logger?.debug(`Proposal hes been rejected (${proposal.id}). Reason: ${reason}`);
       }
     } catch (error) {
       this.logger?.error(error);
@@ -80,8 +81,8 @@ export class MarketService {
   }
 
   private async processDraftProposal(proposal: Proposal) {
-    this.agreementPoolService.addProposal(proposal.proposalId);
-    this.logger?.debug(`Proposal has been confirmed and added to agreement pool (${proposal.proposalId})`);
+    this.agreementPoolService.addProposal(proposal.id);
+    this.logger?.debug(`Proposal has been confirmed and added to agreement pool (${proposal.id})`);
   }
 
   private getCommonPaymentPlatforms(proposalProperties): string[] | undefined {

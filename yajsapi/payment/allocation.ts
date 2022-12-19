@@ -1,6 +1,7 @@
 import { Allocation as Model, MarketDecoration } from "ya-ts-client/dist/ya-payment";
 import { AllocationConfig, BasePaymentOptions } from "./config";
 import { Allocation as AllocationModel } from "ya-ts-client/dist/ya-payment/src/models/allocation";
+import { Events } from "../events";
 
 export interface AllocationOptions extends BasePaymentOptions {
   account: { address: string; platform: string };
@@ -36,6 +37,13 @@ export class Allocation {
         `Could not create new allocation. ${error.response?.data?.message || error.response?.data || error}`
       );
     });
+    config.eventTarget?.dispatchEvent(
+      new Events.AllocationCreated({
+        id: newModel.allocationId,
+        amount: parseFloat(newModel.totalAmount),
+        platform: newModel.paymentPlatform,
+      })
+    );
     config.logger?.debug(
       `Allocation ${newModel.allocationId} has been created using payment platform ${config.account.platform}`
     );
@@ -65,8 +73,9 @@ export class Allocation {
 
   async release() {
     await this.options.api.releaseAllocation(this.id).catch((e) => {
-      throw new Error(`Could not release allocation. ${e.response?.data || e}`);
+      throw new Error(`Could not release allocation. ${e.response?.data?.message || e}`);
     });
+    this.options?.logger?.debug(`Allocation ${this.id} has been released.`);
   }
 
   async getDemandDecoration(): Promise<MarketDecoration> {

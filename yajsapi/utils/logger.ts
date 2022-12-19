@@ -6,4 +6,5 @@ export interface Logger {
   warn(msg);
   error(msg);
   debug(msg);
+  table?(object);
 }

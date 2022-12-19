@@ -6,7 +6,7 @@ import { Logger } from "../utils";
 const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",
   subnetTag: "public",
-  timeout: 20000,
+  timeout: 1000 * 60 * 15, // 15 min,
   maxOfferEvents: 20,
   offerFetchingInterval: 2000,
 };
@@ -18,6 +18,7 @@ export class DemandConfig {
   public readonly maxOfferEvents: number;
   public readonly offerFetchingInterval: number;
   public readonly logger?: Logger;
+  public readonly eventTarget?: EventTarget;
 
   constructor(options?: DemandOptions) {
     const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
@@ -30,5 +31,6 @@ export class DemandConfig {
     this.offerFetchingInterval = options?.offerFetchingInterval || DEFAULTS.offerFetchingInterval;
     this.logger = options?.logger;
     this.maxOfferEvents = options?.maxOfferEvents || DEFAULTS.maxOfferEvents;
+    this.eventTarget = options?.eventTarget;
   }
 }

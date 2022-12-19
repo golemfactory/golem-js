@@ -1,7 +1,6 @@
 import winston from "winston";
 import { Logger } from "./logger";
 import path from "path";
-import dayjs from "dayjs";
 
 const { colorize, combine, timestamp, label, printf } = winston.format;
 const customFormat = printf(({ level, message, label, timestamp }) => {
@@ -37,13 +36,14 @@ export const winstonLogger: Logger = {
   log: (msg) => logger.log(msg),
   warn: (msg) => logger.warn(msg),
   error: (msg) => logger.error(msg),
+  table: (object) => console.table(object),
   setLevel: (level: string) => {
     logLevel = level;
     options.level = level;
     options.transports = [
       new winston.transports.Console({ level: level }),
       new winston.transports.File({
-        filename: path.join("logs", `yajsapi-${dayjs().format("YYYY-MM-DD_HH-mm-ss")}.log`),
+        filename: path.join("logs", `yajsapi-${new Date().toISOString()}.log`),
         level: "silly",
       }) as any,
       new winston.transports.File({

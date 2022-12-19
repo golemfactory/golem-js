@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>WebRequestor</title>
+    <title>WebRequestor Task API</title>
     <script src="./../js/bundle.js"></script>
     <link rel="stylesheet" href="../css/main.css">
 </head>
@@ -14,7 +14,7 @@
             <div class="column">
                 <div>
                     <label for="YAGNA_APPKEY">YAGNA_APPKEY: </label>
-                    <input id="YAGNA_APPKEY" type="text" value="xxxxxx"/>
+                    <input id="YAGNA_APPKEY" type="text" value="xxxx"/>
                 </div>
                 <div>
                     <label for="YAGNA_API_BASEPATH">YAGNA_API_BASEURL: </label>
@@ -54,27 +54,27 @@
             li.appendChild(document.createTextNode(result));
             results_el.appendChild(li);
         }
+
         const logger = {
             log: (msg) => appendLog(`[${new Date().toISOString()}] ${msg}`),
             warn: (msg) => appendLog(`[${new Date().toISOString()}] [warn] ${msg}`),
-            debug: (msg) => appendLog(`[${new Date().toISOString()}] [debug] ${msg}`),
+            // debug: (msg) => appendLog(`[${new Date().toISOString()}] [debug] ${msg}`),
+            debug: (msg) => console.log(msg),
             error: (msg) => appendLog(`[${new Date().toISOString()}] [error] ${msg}`),
-            info: (msg) => {
-              console.log(msg);
-              appendLog(`[${new Date().toISOString()}] [info] ${msg}`)
-            },
+            info: (msg) => appendLog(`[${new Date().toISOString()}] [info] ${msg}`),
+            table: (msg) => appendLog(JSON.stringify(msg, null, "\t")),
         }
         async function run() {
             const apiKey = document.getElementById('YAGNA_APPKEY').value;
-            const apiUrl = document.getElementById('YAGNA_API_BASEPATH').value;
+            const basePath = document.getElementById('YAGNA_API_BASEPATH').value;
             const executor = await yajsapi
               .createExecutor({
-                credentials: { apiKey, apiUrl },
+                yagnaOptions: { apiKey, basePath },
                 package:"9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
                 logger
               })
             await executor
-              .run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout))
+              .run(async (ctx) => appendResults((await ctx.run("echo 'Hello World'")).stdout))
               .catch(e => logger.error(e));
             await executor.end();
         }

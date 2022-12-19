@@ -1,5 +1,6 @@
 import { BasePaymentOptions, InvoiceConfig } from "./config";
 import { Invoice as Model, InvoiceStatus, Rejection } from "ya-ts-client/dist/ya-payment/src/models";
+import { Events } from "../events";
 
 export type InvoiceOptions = BasePaymentOptions;
 
@@ -16,7 +17,7 @@ interface BaseModel {
 
 export abstract class BaseNote<ModelType extends BaseModel> {
   public abstract readonly id: string;
-  public readonly issuerId: string;
+  public readonly providerId: string;
   public readonly recipientId: string;
   public readonly payeeAddr: string;
   public readonly payerAddr: string;
@@ -26,7 +27,7 @@ export abstract class BaseNote<ModelType extends BaseModel> {
   protected status: InvoiceStatus;
 
   protected constructor(model: ModelType, protected options: InvoiceConfig) {
-    this.issuerId = model.issuerId;
+    this.providerId = model.issuerId;
     this.recipientId = model.recipientId;
     this.payeeAddr = model.payeeAddr;
     this.payerAddr = model.payerAddr;
@@ -73,14 +74,23 @@ export class Invoice extends BaseNote<Model> {
     try {
       await this.options.api.acceptInvoice(this.id, { totalAmountAccepted, allocationId });
     } catch (e) {
-      throw new Error(`Unable to accept invoice ${this.id} ${e?.response?.data?.message || e}`);
+      const reason = e?.response?.data?.message || e;
+      this.options.eventTarget?.dispatchEvent(
+        new Events.PaymentFailed({ id: this.id, agreementId: this.agreementId, reason })
+      );
+      throw new Error(`Unable to accept invoice ${this.id} ${reason}`);
     }
+    this.options.eventTarget?.dispatchEvent(new Events.PaymentAccepted(this));
   }
   async reject(rejection: Rejection) {
     try {
       await this.options.api.rejectInvoice(this.id, rejection);
     } catch (e) {
       throw new Error(`Unable to reject invoice ${this.id} ${e?.response?.data?.message || e}`);
+    } finally {
+      this.options.eventTarget?.dispatchEvent(
+        new Events.PaymentFailed({ id: this.id, agreementId: this.agreementId, reason: rejection.message })
+      );
     }
   }
   protected async refreshStatus() {

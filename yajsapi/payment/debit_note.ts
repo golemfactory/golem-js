@@ -1,6 +1,7 @@
 import { BasePaymentOptions, InvoiceConfig } from "./config";
 import { DebitNote as Model, Rejection } from "ya-ts-client/dist/ya-payment/src/models";
 import { BaseNote } from "./invoice";
+import { Events } from "../events";
 
 export type InvoiceOptions = BasePaymentOptions;
 
@@ -30,6 +31,10 @@ export class DebitNote extends BaseNote<Model> {
     try {
       await this.options.api.acceptDebitNote(this.id, { totalAmountAccepted, allocationId });
     } catch (e) {
+      const reason = e?.response?.data?.message || e;
+      this.options.eventTarget?.dispatchEvent(
+        new Events.PaymentFailed({ id: this.id, agreementId: this.agreementId, reason })
+      );
       throw new Error(`Unable to accept debit note ${this.id} ${e?.response?.data?.message || e}`);
     }
   }
@@ -38,6 +43,10 @@ export class DebitNote extends BaseNote<Model> {
       await this.options.api.rejectDebitNote(this.id, rejection);
     } catch (e) {
       throw new Error(`Unable to reject debit note ${this.id} ${e?.response?.data?.message || e}`);
+    } finally {
+      this.options.eventTarget?.dispatchEvent(
+        new Events.PaymentFailed({ id: this.id, agreementId: this.agreementId, reason: rejection.message })
+      );
     }
   }
   protected async refreshStatus() {

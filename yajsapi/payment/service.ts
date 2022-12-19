@@ -3,6 +3,7 @@ import { Allocation } from "./allocation";
 import { BasePaymentOptions, PaymentConfig } from "./config";
 import { Invoice } from "./invoice";
 import { DebitNote } from "./debit_note";
+import { Events } from "../events";
 
 export interface PaymentOptions extends BasePaymentOptions {
   invoiceFetchingInterval?: number;
@@ -15,14 +16,6 @@ export interface PaymentOptions extends BasePaymentOptions {
 interface AgreementPayable {
   id: string;
   provider: { id: string; name: string };
-}
-
-interface PaymentInfo {
-  Agreement: string;
-  "Provider Name": string;
-  "Tasks Computed": number;
-  Cost: string;
-  "Payment Status": "paid" | "unpaid" | "pending" | "no invoice";
 }
 
 export class PaymentService {
@@ -60,9 +53,15 @@ export class PaymentService {
       this.logger?.debug("Waiting for all invoices to be paid...");
       let timeout = false;
       const timeoutId = setTimeout(() => (timeout = true), this.options.timeout);
+      let i = 0;
       while (this.isRunning && !timeout) {
         this.isRunning = this.agreementsToPay.size !== 0;
-        await sleep(1);
+        await sleep(2000, true);
+        i++;
+        if (i > 10) {
+          this.logger?.info(`Waiting for ${this.agreementsToPay.size} invoice to be paid...`);
+          i = 0;
+        }
       }
       clearTimeout(timeoutId);
     }
@@ -70,12 +69,11 @@ export class PaymentService {
     for (const allocation of this.allocations) await allocation.release();
     this.logger?.debug("All allocations has benn released");
     this.logger?.debug("Payment service has been stopped");
-    this.printCost();
   }
 
   async createAllocations(): Promise<Allocation[]> {
     const { data: accounts } = await this.options.api.getRequestorAccounts().catch((e) => {
-      throw new Error("Unable to get requestor accounts " + e.response?.data?.message || e.response?.data || e);
+      throw new Error(`Unable to get requestor accounts ${e.response?.data?.message || e.response?.data || e}`);
     });
     for (const account of accounts) {
       if (
@@ -106,7 +104,11 @@ export class PaymentService {
     while (this.isRunning) {
       for (const invoice of this.invoicesToPay.values()) {
         const agreement = this.agreementsToPay.get(invoice.agreementId);
-        if (!agreement) continue;
+        if (!agreement) {
+          this.invoicesToPay.delete(invoice.id);
+          this.logger?.warn(`Agreement ${invoice.agreementId} has not been accepted to payment`);
+          continue;
+        }
         try {
           const allocation = this.getAllocationForPayment(invoice);
           await invoice.accept(invoice.amount, allocation.id);
@@ -152,6 +154,7 @@ export class PaymentService {
         const invoice = await Invoice.create(event["invoiceId"], { ...this.options.options });
         this.invoicesToPay.set(invoice.id, invoice);
         this.lastInvoiceFetchingTime = event.eventDate;
+        this.options.eventTarget?.dispatchEvent(new Events.InvoiceReceived(invoice));
         this.logger?.debug(`New Invoice received for agreement ${invoice.agreementId}`);
       }
       await sleep(this.options.invoiceFetchingInterval, true);
@@ -170,6 +173,13 @@ export class PaymentService {
         const debitNote = await DebitNote.create(event["debitNoteId"], { ...this.options.options });
         this.debitNotesToPay.set(debitNote.id, debitNote);
         this.lastDebitNotesFetchingTime = event.eventDate;
+        this.options.eventTarget?.dispatchEvent(
+          new Events.DebitNoteReceived({
+            id: debitNote.id,
+            agreementId: debitNote.agreementId,
+            amount: debitNote.totalAmountDue,
+          })
+        );
         this.logger?.debug(`New Debit Note received for agreement ${debitNote.agreementId}`);
       }
       await sleep(this.options.debitNotesFetchingInterval, true);
@@ -183,22 +193,5 @@ export class PaymentService {
     );
     if (!allocation) throw new Error(`No allocation for ${paymentNote.paymentPlatform} ${paymentNote.payerAddr}`);
     return allocation;
-  }
-
-  private printCost() {
-    const costs: PaymentInfo[] = [];
-    let totalPaid = 0.0;
-    for (const { agreement, invoice } of this.paidAgreements) {
-      totalPaid += parseFloat(invoice.amount);
-      costs.push({
-        Agreement: agreement.id.substring(0, 10),
-        "Provider Name": agreement.provider.name,
-        "Tasks Computed": invoice.activityIds?.length || 0,
-        Cost: invoice.amount,
-        "Payment Status": "paid",
-      });
-    }
-    if (costs.length) console.table(costs);
-    this.logger?.info(`Total paid: ${totalPaid}`);
   }
 }

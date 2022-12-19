@@ -1,13 +1,14 @@
 import { Agreement, AgreementOptions } from "./agreement";
 import { Logger } from "../utils";
 import { AgreementConfig } from "./config";
+import { Events } from "../events";
 
 export class AgreementFactory {
   private readonly logger?: Logger;
-  private readonly config: AgreementConfig;
+  private readonly options: AgreementConfig;
 
   constructor(agreementOptions?: AgreementOptions) {
-    this.config = new AgreementConfig(agreementOptions);
+    this.options = new AgreementConfig(agreementOptions);
     this.logger = agreementOptions?.logger;
   }
 
@@ -17,16 +18,19 @@ export class AgreementFactory {
         proposalId,
         validTo: new Date(+new Date() + 3600).toISOString(),
       };
-      const { data: agreementId } = await this.config.api.createAgreement(agreementProposalRequest, {
-        timeout: this.config.requestTimeout,
+      const { data: agreementId } = await this.options.api.createAgreement(agreementProposalRequest, {
+        timeout: this.options.requestTimeout,
       });
-      const { data } = await this.config.api.getAgreement(agreementId);
+      const { data } = await this.options.api.getAgreement(agreementId);
       const provider = {
         name: data?.offer.properties["golem.node.id.name"],
         id: data?.offer.providerId,
       };
       if (!provider.id || !provider.name) throw new Error("Unable to get provider info");
-      const agreement = new Agreement(agreementId, provider, this.config);
+      const agreement = new Agreement(agreementId, provider, this.options);
+      this.options.eventTarget?.dispatchEvent(
+        new Events.AgreementCreated({ id: agreementId, providerId: provider.id, providerName: provider.name })
+      );
       this.logger?.info(`Agreement ${agreementId} created`);
       return agreement;
     } catch (error) {

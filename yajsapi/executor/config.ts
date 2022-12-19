@@ -1,11 +1,10 @@
 import { ExecutorOptions } from "./executor";
-import { Package, repo } from "../package";
+import { Package } from "../package";
 import { MarketStrategy } from "../market";
-import { Logger } from "../utils";
-import { DefaultMarketStrategy } from "../market/strategy";
+import { Logger, runtimeContextChecker, winstonLogger } from "../utils";
 
 const DEFAULTS = {
-  maxWorkers: 5,
+  maxParallelTasks: 5,
   budget: 1.0,
   subnetTag: "devnet-beta",
   payment: { driver: "erc20", network: "rinkeby" },
@@ -16,7 +15,7 @@ const DEFAULTS = {
 
 export class ExecutorConfig {
   readonly package: Package | string;
-  readonly maxWorkers: number;
+  readonly maxParallelTasks: number;
   readonly timeout: number;
   readonly budget: number;
   readonly strategy?: MarketStrategy;
@@ -33,7 +32,8 @@ export class ExecutorConfig {
   };
   readonly logLevel: string;
   readonly yagnaOptions: { apiKey: string; basePath: string };
-  logger?: Logger;
+  readonly logger?: Logger;
+  readonly eventTarget: EventTarget;
 
   constructor(options: ExecutorOptions) {
     const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
@@ -44,7 +44,7 @@ export class ExecutorConfig {
     };
     this.package = options.package;
     this.budget = options.budget || DEFAULTS.budget;
-    this.maxWorkers = options.maxWorkers || DEFAULTS.maxWorkers;
+    this.maxParallelTasks = options.maxParallelTasks || DEFAULTS.maxParallelTasks;
     this.timeout = options.timeout || DEFAULTS.timeout;
     this.subnetTag = options.subnetTag || DEFAULTS.subnetTag;
     this.payment = {
@@ -59,7 +59,9 @@ export class ExecutorConfig {
       minCpuThreads: options.minCpuThreads,
       capabilities: options.capabilities,
     };
-    this.logger = options.logger;
+    this.logger = options.logger || (!runtimeContextChecker.isBrowser ? winstonLogger : undefined);
     this.logLevel = options.logLevel || DEFAULTS.logLevel;
+    this.logger?.setLevel && this.logger?.setLevel(this.logLevel);
+    this.eventTarget = options.eventTarget || new EventTarget();
   }
 }

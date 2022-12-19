@@ -1,11 +1,8 @@
 import { Logger } from "../utils";
 import { Agreement, AgreementOptions, AgreementStateEnum } from "./agreement";
-import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import sleep from "../utils/sleep";
 
-import { AgreementFactory } from "./factory";
 import { ComputationHistory } from "../market/strategy";
-import { Configuration } from "ya-ts-client/dist/ya-market";
 import { AgreementServiceConfig } from "./config";
 
 export interface AgreementServiceOptions extends AgreementOptions {

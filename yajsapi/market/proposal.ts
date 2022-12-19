@@ -1,13 +1,14 @@
 import { Proposal as ProposalModel, ProposalAllOfStateEnum } from "ya-ts-client/dist/ya-market/src/models";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
+import { Events } from "../events";
 
 export class Proposal {
-  public readonly proposalId: string;
-  public readonly issuerId: string;
-  public readonly properties: object;
-  public readonly constraints: string;
-  public readonly timestamp: string;
+  readonly id: string;
+  readonly issuerId: string;
+  readonly properties: object;
+  readonly constraints: string;
+  readonly timestamp: string;
   private readonly state: ProposalAllOfStateEnum;
   private readonly prevProposalId: string | undefined;
   private _score: number | null = null;
@@ -16,9 +17,10 @@ export class Proposal {
     private readonly subscriptionId: string,
     private readonly api: RequestorApi,
     model: ProposalModel,
-    private readonly demandRequest: DemandOfferBase
+    private readonly demandRequest: DemandOfferBase,
+    private eventTarget?: EventTarget
   ) {
-    this.proposalId = model.proposalId;
+    this.id = model.proposalId;
     this.issuerId = model.issuerId;
     this.properties = model.properties;
     this.constraints = model.constraints;
@@ -53,15 +55,17 @@ export class Proposal {
 
   async reject(reason = "no reason") {
     // eslint-disable-next-line @typescript-eslint/ban-types
-    await this.api.rejectProposalOffer(this.subscriptionId, this.proposalId, { message: reason as {} }).catch((e) => {
+    await this.api.rejectProposalOffer(this.subscriptionId, this.id, { message: reason as {} }).catch((e) => {
       throw new Error(e?.response?.data?.message || e);
     });
+    this.eventTarget?.dispatchEvent(new Events.ProposalRejected({ id: this.id, providerId: this.issuerId }));
   }
 
   async respond(chosenPlatform) {
     this.demandRequest.properties["golem.com.payment.chosen-platform"] = chosenPlatform;
-    await this.api.counterProposalDemand(this.subscriptionId, this.proposalId, this.demandRequest).catch((e) => {
+    await this.api.counterProposalDemand(this.subscriptionId, this.id, this.demandRequest).catch((e) => {
       throw new Error(e?.response?.data?.message || e);
     });
+    this.eventTarget?.dispatchEvent(new Events.ProposalResponded({ id: this.id, providerId: this.issuerId }));
   }
 }

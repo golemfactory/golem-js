@@ -1,4 +1,4 @@
 export { MarketService } from "./service";
 export { MarketStrategy } from "./strategy";
-export { Demand, DemandEvent } from "./demand";
+export { Demand, DemandEventType, DemandOptions, DemandEvent } from "./demand";
 export { Proposal } from "./proposal";
