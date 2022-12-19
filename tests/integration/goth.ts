@@ -14,13 +14,13 @@ export class Goth {
       const gothProcess = spawn("python", ["-m", "goth", "start", this.gothConfig], { signal: this.controller.signal });
       gothProcess.stdout.on("data", (data) => {
         console.log("[goth]" + data.toString());
-        const regexp =
-          /YAGNA_APPKEY=(\w+) YAGNA_API_URL=(http:\/\/127\.0{0,3}\.0{0,3}.0{0,2}1:\d+).*YAGNA_SUBNET=(\w+)/g;
-        const results = Array.from(data?.toString()?.matchAll(regexp) || [])?.pop();
-        const apiKey = results?.[1];
-        const basePath = results?.[2];
-        const subnetTag = results?.[3];
-        if (!apiKey) resolve({ apiKey, basePath, subnetTag });
+        // const regexp =
+        //   /YAGNA_APPKEY=(\w+) YAGNA_API_URL=(http:\/\/127\.0{0,3}\.0{0,3}.0{0,2}1:\d+).*YAGNA_SUBNET=(\w+)/g;
+        // const results = Array.from(data?.toString()?.matchAll(regexp) || [])?.pop();
+        // const apiKey = results?.[1];
+        // const basePath = results?.[2];
+        // const subnetTag = results?.[3];
+        // if (!apiKey) resolve({ apiKey, basePath, subnetTag });
       });
       gothProcess.stderr.on("data", (error) => reject(error));
       gothProcess.on("close", (code) => console.log(`Goth process exit with code ${code}`));
