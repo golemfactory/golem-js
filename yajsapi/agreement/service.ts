@@ -45,7 +45,9 @@ export class AgreementPoolService implements ComputationHistory {
   }
 
   async getAgreement(): Promise<Agreement> {
-    return (await this.getAvailableAgreement()) || (await this.createAgreement());
+    let agreement: Agreement | undefined = undefined;
+    while (!agreement) agreement = (await this.getAvailableAgreement()) || (await this.createAgreement());
+    return agreement;
   }
 
   async releaseAgreement(agreementId: string, allowReuse = false) {
@@ -103,9 +105,11 @@ export class AgreementPoolService implements ComputationHistory {
     return readyAgreement;
   }
 
-  private async createAgreement(): Promise<Agreement> {
+  private async createAgreement(timeoutMs = 10000): Promise<Agreement | undefined> {
     let agreement;
-    while (!agreement && this.isServiceRunning) {
+    let timeout = false;
+    const timeoutId = setTimeout(() => (timeout = true), timeoutMs);
+    while (!agreement && this.isServiceRunning && !timeout) {
       const proposalId = await this.getAvailableProposal();
       if (!proposalId) break;
 
@@ -123,13 +127,17 @@ export class AgreementPoolService implements ComputationHistory {
         this.logger?.error(`Unable to create agreement form available proposal: ${e?.data?.message || e}`);
         // TODO: What we should do with used proposal in that case ?? unshift to begin ?
         await sleep(2);
-
         // If id to go kill'em
         agreement = null;
       }
     }
-    this.agreements.set(agreement.id, agreement);
-    this.logger?.debug(`Agreement ${agreement.id} created with provider ${agreement.provider.name}`);
+    if (agreement) {
+      clearTimeout(timeoutId);
+      this.agreements.set(agreement.id, agreement);
+      this.logger?.debug(`Agreement ${agreement.id} created with provider ${agreement.provider.name}`);
+    } else {
+      this.logger?.debug(`Agreement cannot be created due to no available offers from market`);
+    }
     return agreement;
   }
 
