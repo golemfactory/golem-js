@@ -6,14 +6,18 @@ import { Goth } from "./goth";
 import { resolve } from "path";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
-const logger = new LoggerMock();
+const logger = new LoggerMock(false);
 const gothConfig = resolve("../goth/assets/goth-config-testing.yml");
 const goth = new Goth(gothConfig);
 
 describe("Task Executor", function () {
   let apiKey, basePath, subnetTag;
-  before(async () => {
-    ({ apiKey, basePath, subnetTag } = await goth.start());
+  before(async function() {
+    this.timeout(60000);
+    ({ apiKey, basePath, subnetTag } = await goth.start().catch(e => {
+      console.error(e);
+      throw e;
+    }));
     logger.clear();
   });
   after(async () => {
