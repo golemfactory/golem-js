@@ -1,4 +1,3 @@
-import { YagnaOptions } from "../executor";
 import { AgreementOptions } from "./agreement";
 import { AgreementServiceOptions } from "./service";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
@@ -11,8 +10,9 @@ const DEFAULT_OPTIONS = {
   EXECUTE_TIMEOUT: 30000,
   EVENT_POOLING_INT: 5,
   EVENT_POOLING_MAX_EVENTS: 100,
-  SUBNET_TAG: "devnet-beta",
+  SUBNET_TAG: "public",
   basePath: "http://127.0.0.1:7465",
+  waitingForProposalTimout: 5000
 };
 
 export class AgreementConfig {
@@ -40,11 +40,13 @@ export class AgreementConfig {
 }
 
 export class AgreementServiceConfig extends AgreementConfig {
-  private eventPoolingInterval?: number;
-  private eventPoolingMaxEventsPerRequest?: number;
+  readonly eventPoolingInterval: number;
+  readonly eventPoolingMaxEventsPerRequest: number;
+  readonly waitingForProposalTimout: number;
 
   constructor(options?: AgreementServiceOptions) {
     super(options);
+    this.waitingForProposalTimout = options?.waitingForProposalTimout || DEFAULT_OPTIONS.waitingForProposalTimout;
     this.eventPoolingInterval = options?.eventPoolingInterval || DEFAULT_OPTIONS.EVENT_POOLING_INT;
     this.eventPoolingMaxEventsPerRequest =
       options?.eventPoolingMaxEventsPerRequest || DEFAULT_OPTIONS.EVENT_POOLING_MAX_EVENTS;

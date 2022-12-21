@@ -67,13 +67,14 @@ export class Demand extends EventTarget {
             new Events.ProposalReceived({ id: proposal.id, providerId: proposal.issuerId })
           );
         }
-        await sleep(this.options.offerFetchingInterval, true);
       } catch (error) {
         if (this.isRunning) {
           const reason = error.response?.data?.message || error;
           this.options.eventTarget?.dispatchEvent(new Events.CollectFailed({ id: this.id, reason }));
           this.logger?.warn(`Unable to collect offers. ${reason}`);
         }
+      } finally {
+        await sleep(this.options.offerFetchingInterval, true);
       }
     }
   }
