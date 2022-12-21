@@ -7,7 +7,6 @@ import { Payments } from "./payments";
 interface StatsOptions {
   eventTarget: EventTarget;
   logger?: Logger;
-  timeout: number;
 }
 
 interface CostsInfo {

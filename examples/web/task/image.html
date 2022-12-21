@@ -14,7 +14,7 @@
             <div class="column">
                 <div>
                     <label for="YAGNA_APPKEY">YAGNA_APPKEY: </label>
-                    <input id="YAGNA_APPKEY" type="text" value="xxxx"/>
+                    <input id="YAGNA_APPKEY" type="text" value="30c59fef7d8c4639b62d576bfb624e1a"/>
                 </div>
                 <div>
                     <label for="YAGNA_API_BASEPATH">YAGNA_API_BASEURL: </label>
@@ -57,6 +57,7 @@
         let activity;
         const encodedImg = document.getElementById("ENCODED_MEME_IMG");
         const imgInput = document.getElementById("MEME_IMG");
+        const textInput = document.getElementById("MEME_TEXT");
         const imgResult = document.getElementById("RESULT_MEME");
 
         imgInput.addEventListener("change", (e) => {
@@ -91,8 +92,9 @@
             logs_el.appendChild(li);
         }
         function setResponse(result) {
-            console.log(result)
-            imgResult.src = result;
+            const data = result.split(' ');
+            const src = 'data:image/png;base64,' + data[2];
+            imgResult.src = src;
         }
 
         const logger = {
@@ -104,21 +106,34 @@
             info: (msg) => appendLog(`[${new Date().toISOString()}] [info] ${msg}`),
             table: (msg) => appendLog(JSON.stringify(msg, null, "\t")),
         }
+
+        function chunkString(str, length) {
+            return str.match(new RegExp('.{1,' + length + '}', 'g'));
+        }
+
         async function run() {
             const apiKey = document.getElementById('YAGNA_APPKEY').value;
             const basePath = document.getElementById('YAGNA_API_BASEPATH').value;
 
-            setResponse(encodedImg.value)
-            // const executor = await yajsapi
-            //   .createExecutor({
-            //     yagnaOptions: { apiKey, basePath },
-            //     package:"9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
-            //     logger
-            //   })
-            // await executor
-            //   .run(async (ctx) => setResponse((await ctx.run("echo 'Hello World'")).stdout))
-            //   .catch(e => logger.error(e));
-            // await executor.end();
+
+            const chunkedImg = chunkString(encodedImg.value, 64000)
+
+            const executor = await yajsapi
+              .createExecutor({
+                yagnaOptions: { apiKey, basePath },
+                package:"6539a63fecfb4ce98bc838ab2de71c6f4d36e1ee5945fbd8f1165c48",
+                logger
+              })
+
+            for (const chunk of chunkedImg) {
+                await executor
+                    .run(async (ctx) => (await ctx.run(`echo "${chunk}" >> /golem/work/input_img.txt`)))
+            }
+
+            await executor
+              .run(async (ctx) => setResponse((await ctx.run(`/usr/bin/python3 /golem/work/task.py /golem/work/input_img.txt 130,180,"${textInput.value}"`)).stdout))
+              .catch(e => logger.error(e));
+            await executor.end();
         }
     </script>
 </body>
