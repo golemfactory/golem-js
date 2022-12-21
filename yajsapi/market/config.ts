@@ -8,7 +8,7 @@ const DEFAULTS = {
   subnetTag: "public",
   timeout: 1000 * 60 * 15, // 15 min,
   maxOfferEvents: 20,
-  offerFetchingInterval: 2000,
+  offerFetchingInterval: 10000,
 };
 
 export class DemandConfig {
