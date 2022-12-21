@@ -61,7 +61,7 @@ describe("Task Executor", function () {
     for await (const res of results) if (res) finalOutputs.push(res);
     expect(finalOutputs).to.have.members(data);
     await executor.end();
-  }).timeout(60000);
+  }).timeout(90000);
 
   it("should run simple tasks by forEach function", async () => {
     const executor = await createExecutor({

@@ -8,6 +8,7 @@ import { AgreementServiceConfig } from "./config";
 export interface AgreementServiceOptions extends AgreementOptions {
   eventPoolingInterval?: number;
   eventPoolingMaxEventsPerRequest?: number;
+  waitingForProposalTimout?: number;
 }
 
 export interface AgreementProposal {
@@ -45,7 +46,7 @@ export class AgreementPoolService implements ComputationHistory {
   }
 
   async getAgreement(): Promise<Agreement> {
-    let agreement: Agreement | undefined = undefined;
+    let agreement;
     while (!agreement) agreement = (await this.getAvailableAgreement()) || (await this.createAgreement());
     return agreement;
   }
@@ -105,14 +106,11 @@ export class AgreementPoolService implements ComputationHistory {
     return readyAgreement;
   }
 
-  private async createAgreement(timeoutMs = 10000): Promise<Agreement | undefined> {
+  private async createAgreement(): Promise<Agreement | undefined> {
     let agreement;
-    let timeout = false;
-    const timeoutId = setTimeout(() => (timeout = true), timeoutMs);
-    while (!agreement && this.isServiceRunning && !timeout) {
+    while (!agreement && this.isServiceRunning) {
       const proposalId = await this.getAvailableProposal();
       if (!proposalId) break;
-
       this.logger?.debug(`Creating agreement using proposal ID: ${proposalId}`);
       try {
         agreement = await Agreement.create(proposalId, this.config.options);
@@ -132,7 +130,6 @@ export class AgreementPoolService implements ComputationHistory {
       }
     }
     if (agreement) {
-      clearTimeout(timeoutId);
       this.agreements.set(agreement.id, agreement);
       this.logger?.debug(`Agreement ${agreement.id} created with provider ${agreement.provider.name}`);
     } else {
@@ -141,15 +138,18 @@ export class AgreementPoolService implements ComputationHistory {
     return agreement;
   }
 
-  private async getAvailableProposal(): Promise<string> {
+  private async getAvailableProposal(): Promise<string | undefined> {
     let proposal;
-    while (!proposal && this.isServiceRunning) {
+    let timeout = false;
+    const timeoutId = setTimeout(() => (timeout = true), this.config.waitingForProposalTimout);
+    while (!proposal && this.isServiceRunning && !timeout) {
       proposal = this.proposals.pop();
       if (!proposal) {
         if (+new Date() > this.initialTime + 10000) this.logger?.warn(`No offers have been collected from the market`);
         await sleep(10);
       }
     }
+    clearTimeout(timeoutId)
     this.initialTime = +new Date();
     return proposal;
   }
