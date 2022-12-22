@@ -56,7 +56,7 @@ export class StatsService {
       return {
         Agreement: agreement.id.substring(0, 10),
         "Provider Name": this.providers.getProviderName(agreement.id) || "unknown",
-        "Task Computed": this.tasks.getComputedTasks(agreement.id),
+        "Task Computed": this.tasks.getComputedTasksCountAgreementId(agreement.id),
         Cost: costs.amount,
         "Payment Status": costs.paid ? "paid" : "unpaid",
       };

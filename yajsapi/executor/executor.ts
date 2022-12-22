@@ -106,6 +106,13 @@ export class TaskExecutor {
     this.logger?.info("Task Executor has shut down");
   }
 
+  getStats() {
+    return {
+      computationsInfo: this.statsService.getComputationsInfo(),
+      allCosts: this.statsService.getAllCosts(),
+    };
+  }
+
   beforeEach(worker: Worker) {
     this.initWorker = worker;
   }
