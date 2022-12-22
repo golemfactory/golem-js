@@ -56,7 +56,7 @@ export class StatsService {
       return {
         Agreement: agreement.id.substring(0, 10),
         "Provider Name": this.providers.getProviderName(agreement.id) || "unknown",
-        "Task Computed": this.tasks.getComputedTasks(agreement.id),
+        "Task Computed": this.tasks.getComputedTasksCountAgreementId(agreement.id),
         Cost: costs.amount,
         "Payment Status": costs.paid ? "paid" : "unpaid",
       };
@@ -85,7 +85,7 @@ export class StatsService {
     } else if (event instanceof Events.TaskFinished) {
       this.tasks.stopTask(event.detail.id, event.timeStamp, true);
     } else if (event instanceof Events.AllocationCreated) {
-      this.payments.addAllocation(event.detail);
+      this.payments.addAllocation(event.detail.id, event.detail.amount, event.detail.platform);
     } else if (event instanceof Events.AgreementCreated) {
       this.providers.addAgreement(event.detail.id, event.detail.providerId, event.detail.providerName);
     } else if (event instanceof Events.AgreementConfirmed) {
