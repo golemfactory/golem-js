@@ -20,8 +20,8 @@ export class Payments {
   private invoices = new Set<{ id: string; providerId: string; agreementId: string; amount: number }>();
   private invoicesPaid = new Set<{ id: string; providerId: string; agreementId: string; amount: number }>();
 
-  addAllocation(allocation) {
-    this.allocations.add(allocation);
+  addAllocation(id, amount, platform) {
+    this.allocations.add({ id, amount, platform });
   }
 
   addProposal(id: string, providerId: string) {
