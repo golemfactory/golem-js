@@ -95,7 +95,7 @@ describe("Stats Service", () => {
       const spy = chai.spy.on(statsService.payments, "addAllocation");
       const event = new Events.AllocationCreated({ id: "id", amount: 100, platform: "platform" });
       eventTarget.dispatchEvent(event);
-      expect(spy).to.have.been.called.with.exactly({ id: "id", amount: 100, platform: "platform" });
+      expect(spy).to.have.been.called.with.exactly("id", 100, "platform");
     });
     it("should handle ProposalReceived and call Payments.addProposal()", async () => {
       const statsService = new StatsService(statServiceOptions);
