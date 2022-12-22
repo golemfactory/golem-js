@@ -109,7 +109,7 @@ export class TaskExecutor {
   getStats() {
     return {
       computationsInfo: this.statsService.getComputationsInfo(),
-      allCosts: this.statsService.getAllCosts(),
+      allCosts: this.statsService.getAllCosts() as object,
     };
   }
 
