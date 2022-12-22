@@ -18,6 +18,7 @@ const DEFAULTS = {
   invoiceFetchingInterval: 2000,
   debitNotesFetchingInterval: 2000,
   payingInterval: 2000,
+  requestTimeout: 10000
 };
 
 export interface BasePaymentOptions {
@@ -25,6 +26,7 @@ export interface BasePaymentOptions {
   budget?: number;
   payment?: { driver?: string; network?: string };
   timeout?: number;
+  requestTimeout?: number;
   logger?: Logger;
   eventTarget?: EventTarget;
 }
@@ -35,6 +37,7 @@ abstract class BaseConfig {
   public readonly logger?: Logger;
   public readonly eventTarget?: EventTarget;
   public readonly payment: { driver: string; network: string };
+  public readonly requestTimeout: number;
 
   protected constructor(public readonly options?: BasePaymentOptions) {
     const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
@@ -49,6 +52,7 @@ abstract class BaseConfig {
     };
     this.logger = options?.logger;
     this.eventTarget = options?.eventTarget;
+    this.requestTimeout = options?.requestTimeout || DEFAULTS.requestTimeout;
   }
 }
 

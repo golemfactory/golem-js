@@ -8,7 +8,7 @@ export class Goth {
   constructor(private readonly gothConfig) {
     this.controller = new AbortController();
   }
-  async start(): Promise<{ apiKey: string; basePath: string; subnetTag: string }> {
+  async start(): Promise<{ apiKey: string; basePath: string; subnetTag: string, gsbUrl: string }> {
     return new Promise((resolve, reject) => {
       const startTime = Date.now();
       console.log("Starting goth process...");
@@ -18,14 +18,19 @@ export class Goth {
       gothProcess.stderr.setEncoding('utf-8');
       gothProcess.stdout.on("data", (data) => {
         const regexp =
-            /YAGNA_APPKEY=(\w+) YAGNA_API_URL=(http:\/\/127\.0{0,3}\.0{0,3}.0{0,2}1:\d+).*YAGNA_SUBNET=(\w+)/g;
+            /YAGNA_APPKEY=(\w+) YAGNA_API_URL=(http:\/\/127\.0{0,3}\.0{0,3}.0{0,2}1:\d+) GSB_URL=(tcp:\/\/\d+\.\d+\.\d+\.\d+:\d+).*YAGNA_SUBNET=(\w+)/g;
         const results = Array.from(data?.toString()?.matchAll(regexp) || [])?.pop();
         const apiKey = results?.[1];
         const basePath = results?.[2];
-        const subnetTag = results?.[3];
+        const gsbUrl = results?.[3];
+        const subnetTag = results?.[4];
         if (apiKey) {
+          process.env['YAGNA_APPKEY'] = apiKey;
+          process.env['YAGNA_API_URL'] = basePath;
+          process.env['GSB_URL'] = gsbUrl;
+          process.env['YAGNA_SUBNET'] = subnetTag;
           console.log(`Goth has been successfully started in time ${(Date.now() - startTime)/ 1000} secs.`);
-          resolve({ apiKey, basePath, subnetTag });
+          resolve({ apiKey, basePath, subnetTag, gsbUrl });
         }
       });
       gothProcess.stderr.on("data", (data) => {
