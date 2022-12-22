@@ -7,7 +7,6 @@ import { Payments } from "./payments";
 interface StatsOptions {
   eventTarget: EventTarget;
   logger?: Logger;
-  timeout: number;
 }
 
 interface CostsInfo {
@@ -86,7 +85,7 @@ export class StatsService {
     } else if (event instanceof Events.TaskFinished) {
       this.tasks.stopTask(event.detail.id, event.timeStamp, true);
     } else if (event instanceof Events.AllocationCreated) {
-      this.payments.addAllocation(event.detail);
+      this.payments.addAllocation(event.detail); // TODO why is the detail object in constructor? Should not be attrs explicitly declared?
     } else if (event instanceof Events.AgreementCreated) {
       this.providers.addAgreement(event.detail.id, event.detail.providerId, event.detail.providerName);
     } else if (event instanceof Events.AgreementConfirmed) {

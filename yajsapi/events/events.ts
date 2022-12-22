@@ -41,14 +41,14 @@ export class InvoiceReceived extends BaseEvent<{
   id: string;
   providerId: string;
   agreementId: string;
-  amount: string;
+  amount: string; // TODO sure as string?
 }> {}
 export class DebitNoteReceived extends BaseEvent<{ id: string; agreementId: string; amount: string }> {}
 export class PaymentAccepted extends BaseEvent<{
   id: string;
   providerId: string;
   agreementId: string;
-  amount: string;
+  amount: string; // TODO sure as string?
 }> {}
 export class PaymentFailed extends BaseEvent<{ id: string; agreementId: string; reason?: string }> {}
 export class ActivityCreated extends BaseEvent<{ id: string; agreementId: string }> {}
