@@ -125,15 +125,17 @@
                 logger
               })
 
+
+            const batch = executor.beginBatch();
+
             for (const chunk of chunkedImg) {
-                await executor
-                    .run(async (ctx) => (await ctx.run(`echo "${chunk}" >> /golem/work/input_img.txt`)))
+                batch.run(`echo "${chunk}" >> /golem/work/input_img.txt`);
             }
 
-            await executor
+            await batch
               .run(async (ctx) => setResponse((await ctx.run(`/usr/bin/python3 /golem/work/task.py /golem/work/input_img.txt 130,180,"${textInput.value}"`)).stdout))
-              .catch(e => logger.error(e));
-            await executor.end();
+                .end()
+                .catch(e => logger.error(e));
         }
     </script>
 </body>
