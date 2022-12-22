@@ -57,7 +57,7 @@ export class Tasks {
       .filter((task) => task.agreements.has(agreementId))
       .flatMap((t) => [...t.activities]);
   }
-
+  // TODO: Why agreemenentId is in the arg?
   getAllTasks(agreementId: string): number {
     return [...this.tasks.values()].filter((task) => task.agreements.has(agreementId)).length;
   }
