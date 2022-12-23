@@ -160,7 +160,7 @@ describe("Work Context", () => {
       });
       const expectedStdout = [{ result: "Error", stderr: "error", message: "Some error occurred" }];
       activityMock.setExpectedExeResults(expectedStdout);
-      await expect(worker(ctx)).to.be.rejectedWith("Some error occurred. Stdout: test_result. Stderr: error");
+      await expect(worker(ctx)).to.be.rejectedWith(expectedStdout);
     });
 
     it("should catch error while executing batch as stream with invalid command", async () => {
