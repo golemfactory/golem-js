@@ -10,8 +10,8 @@ export class Goth {
   async start(): Promise<{ apiKey: string; basePath: string; subnetTag: string, gsbUrl: string }> {
     return new Promise((resolve, reject) => {
       const startTime = Date.now();
-      console.log("Starting goth process...");
-      console.log("Run command: ", `python -m goth start ${this.gothConfig}`);
+      console.log("\x1b[33mStarting goth process...\x1b[0m");
+      console.log("\x1b[33mRun command:\x1b[0m \x1b[36m", `python -m goth start ${this.gothConfig}`, '\x1b[0m');
       this.gothProcess = spawn("python", ["-m", "goth", "start", this.gothConfig], { env: { ...process.env, PYTHONUNBUFFERED: "1" } });
       this.gothProcess?.stdout?.setEncoding('utf-8');
       this.gothProcess?.stderr?.setEncoding('utf-8');
@@ -28,13 +28,13 @@ export class Goth {
           process.env['YAGNA_API_URL'] = basePath;
           process.env['GSB_URL'] = gsbUrl;
           process.env['YAGNA_SUBNET'] = subnetTag;
-          console.log(`Goth has been successfully started in time ${(Date.now() - startTime)/ 1000} secs.`);
+          console.log(`\x1b[33mGoth has been successfully started in ${((Date.now() - startTime)/ 1000).toFixed(0)} s.\n`);
           resolve({ apiKey, basePath, subnetTag, gsbUrl });
         }
       });
       this.gothProcess?.stderr?.on("data", (data) => {
         if (data.toString().match(/error/)) reject(data);
-        console.log("[goth] " + data.replace(/[\n\t\r]/g,""));
+        console.log("\x1b[33m[goth]\x1b[0m " + data.replace(/[\n\t\r]/g,""));
       });
       this.gothProcess.on("error", (error) => reject(error.toString()));
       this.gothProcess.on("close", (code) => reject(`Goth process exit with code ${code}`));
@@ -44,7 +44,7 @@ export class Goth {
   async end() {
     this.gothProcess?.kill('SIGINT');
     return new Promise((resolve) => {
-      this.gothProcess?.on("close", () => resolve(console.log(`Goth has been terminated`)));
+      this.gothProcess?.on("close", () => resolve(console.log(`\x1b[33mGoth has been terminated`)));
     });
   }
 }

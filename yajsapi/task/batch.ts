@@ -40,11 +40,11 @@ export class Batch {
     const allResults: Result[] = [];
     return new Promise((res, rej) => {
       results.on("data", (res) => {
+        allResults.push(res);
         if (res.result === "Error") {
           this.script.after();
-          return rej(`${res.message}. Stdout: ${res.stdout?.trim()}. Stderr: ${res.stderr?.trim()}`);
+          return rej(allResults);
         }
-        allResults.push(res);
       });
       results.on("end", () => {
         this.script.after();

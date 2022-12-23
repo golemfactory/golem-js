@@ -131,7 +131,7 @@ export class AgreementPoolService implements ComputationHistory {
     }
     if (agreement) {
       this.agreements.set(agreement.id, agreement);
-      this.logger?.debug(`Agreement ${agreement.id} assigned with provider ${agreement.provider.name}`);
+      this.logger?.debug(`Agreement ${agreement.id} signed with provider ${agreement.provider.name}`);
     } else {
       this.logger?.debug(`Agreement cannot be created due to no available offers from market`);
     }

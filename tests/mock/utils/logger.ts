@@ -42,10 +42,19 @@ export class LoggerMock implements Logger {
     this.log(msg, 'warn');
   }
   log(msg, level='info') {
-    if (!this.silent) console.log(`[test] ${new Date().toISOString()} [${level}] ${msg}`);
+    if (!this.silent) console.log(`\x1b[32m[test]\x1b[0m \x1b[36m${new Date().toISOString()}\x1b[0m ${this.levelColor(level)} ${msg}`);
     this._logs += `${msg}\n`;
   }
   setLevel(level: string) {
     this.level = level;
+  }
+
+  levelColor(level) {
+    switch (level) {
+      case 'warn': return `\x1b[33m[${level}]\x1b[0m`;
+      case 'info': return `\x1b[34m[${level}]\x1b[0m`;
+      case 'error': return `\x1b[31m[${level}]\x1b[0m`;
+      case 'debug': return `\x1b[35m[${level}]\x1b[0m`;
+    }
   }
 }

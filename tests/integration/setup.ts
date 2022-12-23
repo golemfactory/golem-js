@@ -15,3 +15,7 @@ after(async function () {
     this.timeout(60000);
     await goth.end();
 });
+
+beforeEach(function () {
+    console.log(`\n\n\tTrying to test: \x1b[32m${this.currentTest?.parent?.title} ${this.currentTest?.title} ...\n\n`)
+});
