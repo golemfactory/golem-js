@@ -17,13 +17,11 @@ import {
 import { resolve } from "path";
 import { Proposal } from "../../yajsapi/market";
 import { Goth } from "./goth";
+import { Accounts } from "../../yajsapi/payment/accounts";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 const gothConfig = resolve("../goth/assets/goth-config.yml");
 const goth = new Goth(gothConfig);
-
-const subnetTag = "devnet-beta";
-const account = { platform: "erc20-rinkeby-tglm", address: "0x19ee20338a4c4bf8f6aebc79d9d3af2a01434119" };
 
 describe("Mid-level modules", () => {
   let apiKey, basePath, subnetTag;
@@ -35,6 +33,8 @@ describe("Mid-level modules", () => {
   });
 
   it("should run simple script on provider", async () => {
+    const accounts = await (await Accounts.create()).list();
+    const account = accounts[0];
     const taskPackage = await Package.create({ imageHash: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae" });
     const allocation = await Allocation.create({ account });
     const demand = await Demand.create(taskPackage, [allocation], { subnetTag });

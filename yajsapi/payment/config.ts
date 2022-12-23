@@ -5,6 +5,7 @@ import { Logger } from "../utils";
 import { YagnaOptions } from "../executor";
 import { PaymentOptions } from "./service";
 import { InvoiceOptions } from "./invoice";
+import { AccountsOptions } from "./accounts";
 
 const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",
@@ -18,7 +19,7 @@ const DEFAULTS = {
   invoiceFetchingInterval: 2000,
   debitNotesFetchingInterval: 2000,
   payingInterval: 2000,
-  requestTimeout: 10000
+  requestTimeout: 10000,
 };
 
 export interface BasePaymentOptions {
@@ -94,6 +95,12 @@ export class AllocationConfig extends BaseConfig {
 
 export class InvoiceConfig extends BaseConfig {
   constructor(options?: InvoiceOptions) {
+    super(options);
+  }
+}
+
+export class AccountConfig extends BaseConfig {
+  constructor(options?: AccountsOptions) {
     super(options);
   }
 }
