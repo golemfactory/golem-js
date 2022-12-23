@@ -128,7 +128,7 @@ describe("Network", () => {
       const network = await Network.create({ ownerId: "1", ip: "192.168.0.0/24" });
       const node = await network.addNode("2");
       expect(node.getWebsocketUri(22)).to.deep.equal(
-        `ws://${process.env['YAGNA_BASE_URL'] || '127.0.0.1:7465'}/net-api/v1/net/${network.id}/tcp/192.168.0.2/22`
+        `ws://${process.env?.YAGNA_API_URL?.substring(7) || '127.0.0.1:7465'}/net-api/v1/net/${network.id}/tcp/192.168.0.2/22`
       );
     });
   });
