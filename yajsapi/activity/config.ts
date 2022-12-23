@@ -24,7 +24,7 @@ export class ActivityConfig {
   constructor(options?: ActivityOptions) {
     const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
     if (!apiKey) throw new Error("Api key not defined");
-    const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_BASEPATH || DEFAULTS.basePath;
+    const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_URL || DEFAULTS.basePath;
     const apiConfig = new yaActivity.Configuration({
       apiKey,
       basePath: `${basePath}/activity-api/v1`,

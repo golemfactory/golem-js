@@ -14,6 +14,7 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 let queue;
 const logger = new LoggerMock();
+process.env['YAGNA_APPKEY'] = 'test_key';
 
 describe("Task Service", () => {
   beforeEach(() => {

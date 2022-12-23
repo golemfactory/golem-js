@@ -43,7 +43,7 @@ abstract class BaseConfig {
   protected constructor(public readonly options?: BasePaymentOptions) {
     const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
     if (!apiKey) throw new Error("Api key not defined");
-    const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_BASEPATH || DEFAULTS.basePath;
+    const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_URL || DEFAULTS.basePath;
     const apiConfig = new Configuration({ apiKey, basePath: `${basePath}/payment-api/v1`, accessToken: apiKey });
     this.api = new RequestorApi(apiConfig);
     this.timeout = options?.timeout || DEFAULTS.timeout;

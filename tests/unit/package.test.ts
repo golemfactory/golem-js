@@ -7,6 +7,7 @@ import { LoggerMock } from "../mock";
 import { Package } from "../../yajsapi/package";
 
 const logger = new LoggerMock();
+process.env['YAGNA_APPKEY'] = 'test_key';
 
 describe("Package", () => {
   describe("create()", () => {

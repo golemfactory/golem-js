@@ -9,8 +9,6 @@ const expect = chai.expect;
 const logger = new LoggerMock(false);
 import path from "path";
 import { fileExistsSync } from "tsconfig-paths/lib/filesystem";
-const gothConfig = resolve("../goth/assets/goth-config-testing.yml");
-const goth = new Goth(gothConfig);
 
 const blender_params = (frame) => ({
     scene_file: "/golem/resource/scene.blend",
@@ -32,25 +30,10 @@ const blender_params = (frame) => ({
 });
 
 describe("Blender rendering", function () {
-  this.timeout(80000);
-    let apiKey, basePath, subnetTag, gsbUrl;
-    before(async function() {
-        this.timeout(60000);
-        ({ apiKey, basePath, subnetTag, gsbUrl } = await goth.start().catch(e => {
-            console.error(e);
-            throw e;
-        }));
-        logger.clear();
-    });
-    after(async () => {
-        await goth.end();
-    });
 
   it("should render images by blender", async () => {
     const executor = await createExecutor({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
-      yagnaOptions: { apiKey, basePath },
-      subnetTag,
       logger,
     });
     executor.beforeEach(async (ctx) => {
