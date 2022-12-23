@@ -1,4 +1,4 @@
-import { createExecutor } from "../../dist";
+import { createExecutor } from "../../yajsapi";
 import path from "path";
 import { readFileSync } from "fs";
 
