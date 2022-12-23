@@ -17,6 +17,7 @@ import { Deploy, Start, Run, Terminate, UploadFile, DownloadFile, Script, Captur
 
 chai.use(chaiUuid);
 chai.use(chaiAsPromised);
+process.env['YAGNA_APPKEY'] = 'test_key';
 
 describe("Activity", () => {
   beforeEach(() => {

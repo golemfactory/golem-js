@@ -1,22 +1,21 @@
-import { spawn } from "child_process";
+import {ChildProcess, spawn} from "child_process";
 import fs from "fs";
 import {Readable, Writable} from "stream";
 
 export class Goth {
-  private controller: AbortController;
+  private gothProcess?: ChildProcess;
 
   constructor(private readonly gothConfig) {
-    this.controller = new AbortController();
   }
   async start(): Promise<{ apiKey: string; basePath: string; subnetTag: string, gsbUrl: string }> {
     return new Promise((resolve, reject) => {
       const startTime = Date.now();
       console.log("Starting goth process...");
       console.log("Run command: ", `python -m goth start ${this.gothConfig}`);
-      const gothProcess = spawn("python", ["-m", "goth", "start", this.gothConfig], { signal: this.controller.signal, env: { ...process.env, PYTHONUNBUFFERED: "1" } });
-      gothProcess.stdout.setEncoding('utf-8');
-      gothProcess.stderr.setEncoding('utf-8');
-      gothProcess.stdout.on("data", (data) => {
+      this.gothProcess = spawn("python", ["-m", "goth", "start", this.gothConfig], { env: { ...process.env, PYTHONUNBUFFERED: "1" } });
+      this.gothProcess?.stdout?.setEncoding('utf-8');
+      this.gothProcess?.stderr?.setEncoding('utf-8');
+      this.gothProcess?.stdout?.on("data", (data) => {
         const regexp =
             /YAGNA_APPKEY=(\w+) YAGNA_API_URL=(http:\/\/127\.0{0,3}\.0{0,3}.0{0,2}1:\d+) GSB_URL=(tcp:\/\/\d+\.\d+\.\d+\.\d+:\d+).*YAGNA_SUBNET=(\w+)/g;
         const results = Array.from(data?.toString()?.matchAll(regexp) || [])?.pop();
@@ -33,17 +32,19 @@ export class Goth {
           resolve({ apiKey, basePath, subnetTag, gsbUrl });
         }
       });
-      gothProcess.stderr.on("data", (data) => {
+      this.gothProcess?.stderr?.on("data", (data) => {
         if (data.toString().match(/error/)) reject(data);
         console.log("[goth] " + data.replace(/[\n\t\r]/g,""));
       });
-      gothProcess.on("error", (error) => reject(error.toString()));
-      gothProcess.on("close", (code) => reject(`Goth process exit with code ${code}`));
-      gothProcess.on("exit", (code) => reject(`Goth process exit with code ${code}`));
+      this.gothProcess.on("error", (error) => reject(error.toString()));
+      this.gothProcess.on("close", (code) => reject(`Goth process exit with code ${code}`));
+      this.gothProcess.on("exit", (code) => reject(`Goth process exit with code ${code}`));
     });
   }
   async end() {
-    this.controller.abort();
-    console.log(`Goth has been terminated`);
+    this.gothProcess?.kill('SIGINT');
+    return new Promise((resolve) => {
+      this.gothProcess?.on("close", () => resolve(console.log(`Goth has been terminated`)));
+    });
   }
 }

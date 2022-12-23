@@ -27,7 +27,7 @@ export class AgreementConfig {
   constructor(public readonly options?: AgreementOptions) {
     const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
     if (!apiKey) throw new Error("Api key not defined");
-    const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_BASEPATH || DEFAULT_OPTIONS.basePath;
+    const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_URL || DEFAULT_OPTIONS.basePath;
     const apiConfig = new Configuration({ apiKey, basePath: `${basePath}/market-api/v1`, accessToken: apiKey });
     this.api = new RequestorApi(apiConfig);
     this.requestTimeout = options?.requestTimeout || DEFAULT_OPTIONS.REQUEST_TIMEOUT;

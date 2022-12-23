@@ -7,28 +7,17 @@ import { resolve } from "path";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 const logger = new LoggerMock(false);
-const gothConfig = resolve("../goth/assets/goth-config-testing.yml");
+const gothConfig = resolve("../goth/assets/goth-config.yml");
 const goth = new Goth(gothConfig);
 
 describe("Task Executor", function () {
-  let apiKey, basePath, subnetTag;
   before(async function() {
-    this.timeout(60000);
-    ({ apiKey, basePath, subnetTag } = await goth.start().catch(e => {
-      console.error(e);
-      throw e;
-    }));
     logger.clear();
-  });
-  after(async () => {
-    await goth.end();
   });
 
   it("should run simple task", async () => {
     const executor = await createExecutor({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
-      yagnaOptions: { apiKey, basePath },
-      subnetTag,
       logger,
     });
     const result = await executor.run(async (ctx) => ctx.run("echo 'Hello World'"));
@@ -48,8 +37,6 @@ describe("Task Executor", function () {
   it("should run simple tasks by map function", async () => {
     const executor = await createExecutor({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
-      yagnaOptions: { apiKey, basePath },
-      subnetTag,
       logger,
     });
     const data = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
@@ -66,8 +53,6 @@ describe("Task Executor", function () {
   it("should run simple tasks by forEach function", async () => {
     const executor = await createExecutor({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
-      yagnaOptions: { apiKey, basePath },
-      subnetTag,
       logger,
     });
     const data = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
@@ -81,8 +66,6 @@ describe("Task Executor", function () {
   it("should run simple batch script and get results as stream", async () => {
     const executor = await createExecutor({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
-      yagnaOptions: { apiKey, basePath },
-      subnetTag,
       logger,
     });
     const outputs: string[] = [];
@@ -113,8 +96,6 @@ describe("Task Executor", function () {
   it("should run simple batch script and catch error on stream", async () => {
     const executor = await createExecutor({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
-      yagnaOptions: { apiKey, basePath },
-      subnetTag,
       logger,
     });
     const outputs: string[] = [];
@@ -140,8 +121,6 @@ describe("Task Executor", function () {
   it("should run simple batch script and get results as promise", async () => {
     const executor = await createExecutor({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
-      yagnaOptions: { apiKey, basePath },
-      subnetTag,
       logger,
     });
     const outputs: string[] = [];

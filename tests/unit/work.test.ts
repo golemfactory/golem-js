@@ -15,6 +15,7 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 const logger = new LoggerMock();
 const storageProviderMock = new StorageProviderMock({ logger });
+process.env['YAGNA_APPKEY'] = 'test_key';
 
 describe("Work Context", () => {
   beforeEach(() => {

@@ -40,13 +40,13 @@ export class ExecutorConfig {
     if (!apiKey) throw new Error("Api key not defined");
     this.yagnaOptions = {
       apiKey,
-      basePath: options.yagnaOptions?.basePath || process.env.YAGNA_BASEPATH || DEFAULTS.basePath,
+      basePath: options.yagnaOptions?.basePath || process.env.YAGNA_API_URL || DEFAULTS.basePath,
     };
     this.package = options.package;
     this.budget = options.budget || DEFAULTS.budget;
     this.maxParallelTasks = options.maxParallelTasks || DEFAULTS.maxParallelTasks;
     this.timeout = options.timeout || DEFAULTS.timeout;
-    this.subnetTag = options.subnetTag || DEFAULTS.subnetTag;
+    this.subnetTag = options.subnetTag || process.env?.YAGNA_SUBNET || DEFAULTS.subnetTag;
     this.payment = {
       driver: options.payment?.driver || DEFAULTS.payment.driver,
       network: options.payment?.network || DEFAULTS.payment.network,
