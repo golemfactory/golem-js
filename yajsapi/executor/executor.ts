@@ -1,4 +1,3 @@
-import { GftpStorageProvider } from "../storage/gftp_provider";
 import { Package } from "../package";
 import { MarketService, MarketStrategy } from "../market";
 import { AgreementPoolService } from "../agreement";
@@ -7,7 +6,7 @@ import { PaymentService } from "../payment";
 import { NetworkService } from "../network";
 import { Result } from "../activity";
 import { sleep, Logger, runtimeContextChecker } from "../utils";
-import { StorageProvider } from "../storage/provider";
+import { StorageProvider, GftpStorageProvider } from "../storage/";
 import { ExecutorConfig } from "./config";
 import { Events } from "../events";
 import { StatsService } from "../stats/service";

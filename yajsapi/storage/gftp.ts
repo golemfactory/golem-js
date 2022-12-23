@@ -1,6 +1,6 @@
 import { StorageProvider } from "./provider";
 import { runtimeContextChecker } from "../utils";
-import { v4 as uuid } from "uuid";
+import { randomUUID } from "crypto";
 import path from "path";
 import fs from "fs";
 import tmp from "tmp";
@@ -15,18 +15,14 @@ export class GftpStorageProvider implements StorageProvider {
   private logger;
   private publishedUrls: string[] = [];
 
-  // Todo check if the param in constructor is needed
-  constructor(prov?) {
+  constructor() {
     if (runtimeContextChecker.isBrowser) {
       throw new Error(`File transfer by GFTP module is unsupported in the browser context.`);
     }
   }
 
   async init() {
-    this.gftpServerProcess = await spawn("gftp server", [], {
-      shell: true,
-      //env: env,
-    });
+    this.gftpServerProcess = await spawn("gftp server", [], { shell: true });
   }
 
   isInitiated() {
@@ -34,7 +30,7 @@ export class GftpStorageProvider implements StorageProvider {
   }
 
   private generateTempFileName(): string {
-    const file_name = path.join(TMP_DIR, uuid().toString());
+    const file_name = path.join(TMP_DIR, randomUUID().toString());
     if (fs.existsSync(file_name)) fs.unlinkSync(file_name);
     return file_name;
   }
@@ -51,7 +47,7 @@ export class GftpStorageProvider implements StorageProvider {
 
   async publish(src: string | Buffer): Promise<string> {
     if (typeof src !== "string" && !Buffer.isBuffer(src)) throw new Error("[StorageProvider] Unsupported source type");
-    const url = typeof src === "string" ? await this.upload_file(src) : await this.upload_bytes(src);
+    const url = typeof src === "string" ? await this.uploadFile(src) : await this.uploadBytes(src);
     this.publishedUrls.push(url);
     return url;
   }
@@ -66,12 +62,8 @@ export class GftpStorageProvider implements StorageProvider {
   }
 
   private async jsonrpc(method: string, params: object = {}) {
-    if (!this.isInitiated()) {
-      await this.init();
-    }
-    if (!this.reader) {
-      this.reader = this._readStream(this.getGftpServerProcess().stdout);
-    }
+    if (!this.isInitiated()) await this.init();
+    if (!this.reader) this.reader = this.readStream(this.getGftpServerProcess().stdout);
     const paramsStr = JSON.stringify(params);
     const query = `{"jsonrpc": "2.0", "id": "1", "method": "${method}", "params": ${paramsStr}}\n`;
     let valueStr = "";
@@ -80,9 +72,7 @@ export class GftpStorageProvider implements StorageProvider {
       const { value } = await this.reader.next();
       const { result } = JSON.parse(value as string);
       valueStr = value;
-      if (result === undefined) {
-        throw value;
-      }
+      if (result === undefined) throw value;
       return result;
     } catch (error) {
       const msg = `gftp error. query: ${query} value: ${valueStr} error: ${JSON.stringify(error)}`;
@@ -91,13 +81,13 @@ export class GftpStorageProvider implements StorageProvider {
     }
   }
 
-  async *_readStream(readable) {
+  async *readStream(readable) {
     for await (const line of chunksToLinesAsync(readable)) {
       yield chomp(line);
     }
   }
 
-  private async upload_stream(stream: AsyncGenerator<Buffer>): Promise<string> {
+  private async uploadStream(stream: AsyncGenerator<Buffer>): Promise<string> {
     const file_name = this.generateTempFileName();
     const wStream = fs.createWriteStream(file_name, {
       encoding: "binary",
@@ -115,15 +105,15 @@ export class GftpStorageProvider implements StorageProvider {
     return links[0]?.url;
   }
 
-  private async upload_bytes(data: Buffer): Promise<string> {
-    async function* _inner() {
-      yield data;
-    }
-
-    return await this.upload_stream(_inner());
+  private async uploadBytes(data: Buffer): Promise<string> {
+    return await this.uploadStream(
+      (async function* () {
+        yield data;
+      })()
+    );
   }
 
-  private async upload_file(file: string): Promise<string> {
+  private async uploadFile(file: string): Promise<string> {
     const links = await this.jsonrpc("publish", { files: [file.toString()] });
     return links[0]?.url;
   }
