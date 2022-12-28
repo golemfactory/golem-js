@@ -21,7 +21,7 @@ jobs:
       - name: Configure node.js
         uses: actions/setup-node@v1
         with:
-          node-version: '14.18.0'
+          node-version: '18.12.1'
 
       - name: Build yajsapi
         run: |
