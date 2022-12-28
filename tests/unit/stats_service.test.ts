@@ -1,13 +1,10 @@
 import { Events } from "../../yajsapi/events";
-ProviderInfo;
 
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import spies from "chai-spies";
 import { LoggerMock } from "../mock";
 import { StatsService } from "../../yajsapi/stats/service";
-import { ComputationFinished } from "../../yajsapi/events/events";
-import { ProviderInfo } from "../../yajsapi/stats/providers";
 chai.use(chaiAsPromised);
 chai.use(spies);
 const expect = chai.expect;
@@ -109,6 +106,17 @@ describe("Stats Service", () => {
       });
       eventTarget.dispatchEvent(event);
       expect(spy).to.have.been.called.with.exactly({ id: "id", providerId: "providerId" });
+    });
+    it("should handle ProposalReceived and call Provider.add()", async () => {
+      const statsService = new StatsService(statServiceOptions);
+      await statsService.run();
+      const spy = chai.spy.on(statsService.providers, "add");
+      const event = new Events.ProposalReceived({
+        id: "id",
+        providerId: "providerId",
+      });
+      eventTarget.dispatchEvent(event);
+      expect(spy).to.have.been.called.with.exactly({ id: "providerId" });
     });
     // Invoices
     it("should handle InvoiceReceived and call Invoice.add()", async () => {

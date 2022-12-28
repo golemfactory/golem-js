@@ -222,6 +222,62 @@ describe("Stats Module", () => {
         ])
       );
     });
+
+    it("should beforeAdd() should setup providerName as unknown by default", async () => {
+      const tests = new Providers();
+      tests.add({ id: "id" });
+      expect(tests.getAll()).to.deep.equal(
+        new Collection([
+          {
+            id: "id",
+            providerName: "unknown",
+          },
+        ])
+      );
+    });
+
+    it("should beforeAdd() should update providerName if provided", async () => {
+      const tests = new Providers();
+      tests.add({ id: "id" });
+      expect(tests.getAll()).to.deep.equal(
+        new Collection([
+          {
+            id: "id",
+            providerName: "unknown",
+          },
+        ])
+      );
+      tests.add({ id: "id", providerName: "providerName" });
+      expect(tests.getAll()).to.deep.equal(
+        new Collection([
+          {
+            id: "id",
+            providerName: "providerName",
+          },
+        ])
+      );
+    });
+    it("should beforeAdd() should use previous providerName if is not provided", async () => {
+      const tests = new Providers();
+      tests.add({ id: "id", providerName: "providerName" });
+      expect(tests.getAll()).to.deep.equal(
+        new Collection([
+          {
+            id: "id",
+            providerName: "providerName",
+          },
+        ])
+      );
+      tests.add({ id: "id" });
+      expect(tests.getAll()).to.deep.equal(
+        new Collection([
+          {
+            id: "id",
+            providerName: "providerName",
+          },
+        ])
+      );
+    });
   });
   describe("Tasks", () => {
     it("should beforeAdd() converts payload to TaskInfo", async () => {

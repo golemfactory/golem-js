@@ -15,14 +15,6 @@ interface StatsOptions {
   logger?: Logger;
 }
 
-interface CostsInfo {
-  Agreement: string;
-  "Provider Name": string;
-  "Task Computed": number;
-  Cost: number;
-  "Payment Status": "paid" | "unpaid";
-}
-
 export class StatsService {
   private eventTarget: EventTarget;
   private logger?: Logger;
@@ -60,34 +52,35 @@ export class StatsService {
     this.logger?.debug("Stats service has stopped");
   }
 
-  getProviderInfo(providerId: string) {
-    // todo
-  }
+  getStatsTree() {
+    return {
+      allocations: this.allocations.getAll().map((allocation) => allocation),
+      providers: this.providers.getAll().map((provider) => {
+        return {
+          ...provider,
+          proposals: this.proposals.getByProviderId(provider.id).map((proposal) => {
+            const agreement = this.agreements.getByProposalId(proposal.id);
 
-  getTaskInfo(taskId: string) {
-    // todo
-  }
-
-  getAllCosts(): CostsInfo[] {
-    return [];
-    // return this.providers.getAllAgreements().map((agreement) => {
-    //   const costs = this.payments.getCostsByAgreement(agreement.id);
-    //   return {
-    //     Agreement: agreement.id.substring(0, 10),
-    //     "Provider Name": this.providers.getProviderName(agreement.id) || "unknown",
-    //     "Task Computed": this.tasks.getComputedTasksCountAgreementId(agreement.id),
-    //     Cost: costs.amount,
-    //     "Payment Status": costs.paid ? "paid" : "unpaid",
-    //   };
-    // });
-  }
-
-  getComputationsInfo() {
-    // todo
-  }
-
-  getTimes() {
-    // todo
+            return {
+              ...proposal,
+              agreement: agreement
+                ? {
+                    ...agreement,
+                    activities: this.activities.getByAgreementId(agreement.id).map((activity) => {
+                      return {
+                        ...activity,
+                        task: this.tasks.getById(activity.taskId),
+                      };
+                    }),
+                    invoices: this.invoices.getByAgreementId(agreement.id).map((invoice) => invoice),
+                    payments: this.payments.getByAgreementId(agreement.id).map((payment) => payment),
+                  }
+                : null,
+            };
+          }),
+        };
+      }),
+    };
   }
 
   private handleEvents(event: BaseEvent<unknown>) {
@@ -114,7 +107,11 @@ export class StatsService {
     } else if (event instanceof Events.AllocationCreated) {
       this.allocations.add({ id: event.detail.id, amount: event.detail.amount, platform: event.detail.platform });
     } else if (event instanceof Events.AgreementCreated) {
-      this.agreements.add({ id: event.detail.id, providerId: event.detail.providerId });
+      this.agreements.add({
+        id: event.detail.id,
+        providerId: event.detail.providerId,
+        proposalId: event.detail.proposalId,
+      });
       this.providers.add({ id: event.detail.providerId, providerName: event.detail.providerName });
     } else if (event instanceof Events.AgreementConfirmed) {
       this.agreements.confirm(event.detail.id);
@@ -122,6 +119,7 @@ export class StatsService {
       this.agreements.reject(event.detail.id);
     } else if (event instanceof Events.ProposalReceived) {
       this.proposals.add({ id: event.detail.id, providerId: event.detail.providerId });
+      this.providers.add({ id: event.detail.providerId });
     } else if (event instanceof Events.InvoiceReceived) {
       this.invoices.add({
         id: event.detail.id,

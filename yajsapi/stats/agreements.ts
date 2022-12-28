@@ -9,12 +9,14 @@ export enum AgreementStatusEnum {
 export interface AgreementInfo {
   id: string;
   providerId: string;
+  proposalId: string;
   status: AgreementStatusEnum;
 }
 
 interface Payload {
   id: string;
   providerId: string;
+  proposalId: string;
 }
 
 export class Agreements extends AbstractAggregator<Payload, AgreementInfo> {
@@ -29,6 +31,9 @@ export class Agreements extends AbstractAggregator<Payload, AgreementInfo> {
   }
   getByProviderId(providerId: string) {
     return this.getByField("providerId", providerId);
+  }
+  getByProposalId(proposalId: string) {
+    return this.getByField("proposalId", proposalId).first();
   }
   getByStatus(status: AgreementStatusEnum) {
     return this.getByField("status", status);
