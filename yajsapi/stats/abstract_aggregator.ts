@@ -1,3 +1,5 @@
+import collect, { Collection } from "collect.js";
+
 export interface ItemInfo {
   id: string;
 }
@@ -12,12 +14,8 @@ export abstract class AbstractAggregator<T, R extends ItemInfo> {
   getById(id: string) {
     return this.items.get(id);
   }
-  protected getByField(field: string, value: string | number): R[] {
-    try {
-      return [...this.items.values()].filter((item: R) => item[field] === value);
-    } catch {
-      return [];
-    }
+  protected getByField(field: string, value: string | number): Collection<R> {
+    return this.getAll().where(field, "==", value);
   }
   protected updateItemInfo(id: string, data) {
     const item = this.items.get(id);
@@ -27,7 +25,7 @@ export abstract class AbstractAggregator<T, R extends ItemInfo> {
       ...data,
     });
   }
-  getAll() {
-    return [...this.items.values()];
+  getAll(): Collection<R> {
+    return collect([...this.items.values()]);
   }
 }
