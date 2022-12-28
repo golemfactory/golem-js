@@ -13,7 +13,7 @@ on:
 jobs:
   cypress-run:
     runs-on: ubuntu-latest
-    container: cypress/browsers:node18.12.1-chrome100-ff99-edge
+    container: cypress/browsers:node16.14.0-slim-chrome99-ff97
     steps:
       - name: Checkout
         uses: actions/checkout@v2
