@@ -54,32 +54,47 @@ export class StatsService {
 
   getStatsTree() {
     return {
-      allocations: this.allocations.getAll().map((allocation) => allocation),
-      providers: this.providers.getAll().map((provider) => {
-        return {
-          ...provider,
-          proposals: this.proposals.getByProviderId(provider.id).map((proposal) => {
-            const agreement = this.agreements.getByProposalId(proposal.id);
+      allocations: this.allocations
+        .getAll()
+        .map((allocation) => allocation)
+        .all(),
+      providers: this.providers
+        .getAll()
+        .map((provider) => {
+          return {
+            ...provider,
+            proposals: this.proposals
+              .getByProviderId(provider.id)
+              .map((proposal) => {
+                const agreement = this.agreements.getByProposalId(proposal.id);
 
-            return {
-              ...proposal,
-              agreement: agreement
-                ? {
-                    ...agreement,
-                    activities: this.activities.getByAgreementId(agreement.id).map((activity) => {
-                      return {
-                        ...activity,
-                        task: this.tasks.getById(activity.taskId),
-                      };
-                    }),
-                    invoices: this.invoices.getByAgreementId(agreement.id).map((invoice) => invoice),
-                    payments: this.payments.getByAgreementId(agreement.id).map((payment) => payment),
-                  }
-                : null,
-            };
-          }),
-        };
-      }),
+                return {
+                  ...proposal,
+                  agreement: agreement
+                    ? {
+                        ...agreement,
+                        activities: this.activities.getByAgreementId(agreement.id).map((activity) => {
+                          return {
+                            ...activity,
+                            task: this.tasks.getById(activity.taskId),
+                          };
+                        }),
+                        invoices: this.invoices
+                          .getByAgreementId(agreement.id)
+                          .map((invoice) => invoice)
+                          .all(),
+                        payments: this.payments
+                          .getByAgreementId(agreement.id)
+                          .map((payment) => payment)
+                          .all(),
+                      }
+                    : null,
+                };
+              })
+              .all(),
+          };
+        })
+        .all(),
     };
   }
 

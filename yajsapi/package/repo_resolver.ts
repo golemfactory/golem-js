@@ -54,7 +54,7 @@ export class RepoResolver {
   }
 
   private async resolveRepoUrlForBrowser() {
-    const { data } = await axios.get(`${PUBLIC_DNS_URL}${DEFAULT_REPO_SRV}`);
+    const { data } = await axios.get(`${PUBLIC_DNS_URL}${DEFAULT_REPO_SRV}`, { timeout: 5000 });
 
     return (data?.Answer || [])
       .map((r) => {

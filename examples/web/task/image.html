@@ -125,6 +125,10 @@
                 logger
               })
 
+            setInterval(() => {
+                console.log('STATS', executor.getStats())
+            }, 5000)
+
             for (const chunk of chunkedImg) {
                 await executor
                     .run(async (ctx) => (await ctx.run(`echo "${chunk}" >> /golem/work/input_img.txt`)))
