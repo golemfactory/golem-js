@@ -5,7 +5,7 @@ const commonjs = require("@rollup/plugin-commonjs");
 const json = require("@rollup/plugin-json");
 const alias = require("@rollup/plugin-alias");
 const inject = require("@rollup/plugin-inject");
-const { uglify } = require("rollup-plugin-uglify");
+const minify = require("rollup-plugin-minify");
 const { visualizer } = require("rollup-plugin-visualizer");
 
 module.exports = {
@@ -32,7 +32,7 @@ module.exports = {
     inject({
       process: stdLibBrowser.process,
     }),
-    uglify(),
+    minify(),
     // visualizer(),
   ],
 };
