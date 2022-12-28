@@ -27,4 +27,10 @@ export class Agreements extends AbstractAggregator<Payload, AgreementInfo> {
   reject(id: string) {
     this.updateItemInfo(id, { status: AgreementStatusEnum.Rejected });
   }
+  getByProviderId(providerId: string) {
+    return this.getByField("providerId", providerId);
+  }
+  getByStatus(status: AgreementStatusEnum) {
+    return this.getByField("status", status);
+  }
 }

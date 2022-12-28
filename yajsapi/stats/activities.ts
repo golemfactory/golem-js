@@ -16,4 +16,10 @@ export class Activities extends AbstractAggregator<Payload, ActivityInfo> {
   beforeAdd(payload): ActivityInfo {
     return payload;
   }
+  getByTaskId(taskId: string) {
+    return this.getByField("taskId", taskId);
+  }
+  getByAgreementId(agreementId: string) {
+    return this.getByField("agreementId", agreementId);
+  }
 }

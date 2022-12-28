@@ -20,4 +20,11 @@ export class Payments extends AbstractAggregator<Payload, PaymentInfo> {
       amount: parseFloat(payload.amount),
     };
   }
+  getByProviderId(providerId: string) {
+    return this.getByField("providerId", providerId);
+  }
+
+  getByAgreementId(agreementId: string) {
+    return this.getByField("agreementId", agreementId);
+  }
 }

@@ -1,5 +1,4 @@
 import { AbstractAggregator } from "./abstract_aggregator";
-import { Events } from "../events";
 
 export interface ProviderInfo {
   id: string;

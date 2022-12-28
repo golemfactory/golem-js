@@ -1,5 +1,4 @@
 import { AbstractAggregator, ItemInfo } from "./abstract_aggregator";
-import { Events } from "../events";
 
 export enum TaskStatusEnum {
   Pending = "pending",

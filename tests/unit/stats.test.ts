@@ -55,6 +55,20 @@ describe("Stats Module", () => {
         new Collection([{ id: "id", taskId: "taskId", agreementId: "agreementId" }])
       );
     });
+    it("should getByAgreementId() return Collection of ActivityInfo", async () => {
+      const tests = new Activities();
+      tests.add({ id: "id", taskId: "taskId", agreementId: "agreementId" });
+      tests.add({ id: "id2", taskId: "taskId2", agreementId: "agreementId2" });
+      tests.add({ id: "id3", taskId: "taskId3", agreementId: "agreementId3" });
+      expect(tests.getByAgreementId("agreementId").count()).to.equal(1);
+    });
+    it("should getByTaskId() return Collection of ActivityInfo", async () => {
+      const tests = new Activities();
+      tests.add({ id: "id", taskId: "taskId", agreementId: "agreementId" });
+      tests.add({ id: "id2", taskId: "taskId2", agreementId: "agreementId2" });
+      tests.add({ id: "id3", taskId: "taskId3", agreementId: "agreementId3" });
+      expect(tests.getByTaskId("taskId").count()).to.equal(1);
+    });
   });
   describe("Agreements", () => {
     it("should beforeAdd() converts payload to AgreementInfo", async () => {
@@ -86,6 +100,24 @@ describe("Stats Module", () => {
         new Collection([{ id: "id", providerId: "providerId", status: AgreementStatusEnum.Rejected }])
       );
     });
+    it("should getByProviderId() return filtered Collection of AgreementInfo", async () => {
+      const tests = new Agreements();
+      tests.add({ id: "id", providerId: "providerId" });
+      tests.add({ id: "id2", providerId: "providerId2" });
+      tests.add({ id: "id3", providerId: "providerId" });
+      expect(tests.getByProviderId("providerId").count()).to.equal(2);
+    });
+    it("should getByStatus() return filtered Collection of AgreementInfo", async () => {
+      const tests = new Agreements();
+      tests.add({ id: "id", providerId: "providerId" });
+      tests.reject("id");
+      tests.add({ id: "id2", providerId: "providerId2" });
+      tests.confirm("id2");
+      tests.add({ id: "id3", providerId: "providerId" });
+      expect(tests.getByStatus(AgreementStatusEnum.Rejected).count()).to.equal(1);
+      expect(tests.getByStatus(AgreementStatusEnum.Confirmed).count()).to.equal(1);
+      expect(tests.getByStatus(AgreementStatusEnum.Pending).count()).to.equal(1);
+    });
   });
   describe("Allocations", () => {
     it("should beforeAdd() converts payload to AllocationInfo", async () => {
@@ -109,6 +141,20 @@ describe("Stats Module", () => {
         ])
       );
     });
+    it("should getByProviderId() return filtered Collection of InvoiceInfo", async () => {
+      const tests = new Invoices();
+      tests.add({ id: "id", amount: "100", providerId: "providerId", agreementId: "agreementId" });
+      tests.add({ id: "id2", amount: "100", providerId: "providerId2", agreementId: "agreementId2" });
+      tests.add({ id: "id3", amount: "100", providerId: "providerId", agreementId: "agreementId3" });
+      expect(tests.getByProviderId("providerId").count()).to.equal(2);
+    });
+    it("should getByAgreementId() return filtered Collection of InvoiceInfo", async () => {
+      const tests = new Invoices();
+      tests.add({ id: "id", amount: "100", providerId: "providerId", agreementId: "agreementId" });
+      tests.add({ id: "id2", amount: "100", providerId: "providerId2", agreementId: "agreementId2" });
+      tests.add({ id: "id3", amount: "100", providerId: "providerId3", agreementId: "agreementId" });
+      expect(tests.getByAgreementId("agreementId").count()).to.equal(2);
+    });
   });
   describe("Payments", () => {
     it("should beforeAdd() converts payload to PaymentInfo", async () => {
@@ -125,6 +171,20 @@ describe("Stats Module", () => {
         ])
       );
     });
+    it("should getByProviderId() return filtered Collection of PaymentInfo", async () => {
+      const tests = new Payments();
+      tests.add({ id: "id", amount: "100", providerId: "providerId", agreementId: "agreementId" });
+      tests.add({ id: "id2", amount: "100", providerId: "providerId2", agreementId: "agreementId2" });
+      tests.add({ id: "id3", amount: "100", providerId: "providerId", agreementId: "agreementId3" });
+      expect(tests.getByProviderId("providerId").count()).to.equal(2);
+    });
+    it("should getByAgreementId() return filtered Collection of PaymentInfo", async () => {
+      const tests = new Payments();
+      tests.add({ id: "id", amount: "100", providerId: "providerId", agreementId: "agreementId" });
+      tests.add({ id: "id2", amount: "100", providerId: "providerId2", agreementId: "agreementId2" });
+      tests.add({ id: "id3", amount: "100", providerId: "providerId3", agreementId: "agreementId" });
+      expect(tests.getByAgreementId("agreementId").count()).to.equal(2);
+    });
   });
   describe("Proposals", () => {
     it("should beforeAdd() converts payload to ProposalInfo", async () => {
@@ -138,6 +198,15 @@ describe("Stats Module", () => {
           },
         ])
       );
+    });
+
+    it("should getByProviderId() return filtered Collection of ProposalInfo", async () => {
+      const tests = new Proposals();
+      tests.add({ id: "id", providerId: "providerId" });
+      tests.add({ id: "id2", providerId: "providerId2" });
+      tests.add({ id: "id3", providerId: "providerId" });
+      expect(tests.getByProviderId("providerId")).to.be.instanceof(Collection);
+      expect(tests.getByProviderId("providerId").count()).to.equal(2);
     });
   });
   describe("Providers", () => {

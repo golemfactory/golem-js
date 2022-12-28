@@ -1,5 +1,5 @@
-import { Events, EventType, BaseEvent } from "../../yajsapi/events";
-import { Tasks } from "../../yajsapi/stats/tasks";
+import { Events } from "../../yajsapi/events";
+ProviderInfo;
 
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
@@ -7,6 +7,7 @@ import spies from "chai-spies";
 import { LoggerMock } from "../mock";
 import { StatsService } from "../../yajsapi/stats/service";
 import { ComputationFinished } from "../../yajsapi/events/events";
+import { ProviderInfo } from "../../yajsapi/stats/providers";
 chai.use(chaiAsPromised);
 chai.use(spies);
 const expect = chai.expect;
