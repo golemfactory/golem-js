@@ -6,7 +6,7 @@ const json = require("@rollup/plugin-json");
 const alias = require("@rollup/plugin-alias");
 const inject = require("@rollup/plugin-inject");
 const minify = require("rollup-plugin-minify");
-const { visualizer } = require("rollup-plugin-visualizer");
+// const { visualizer } = require("rollup-plugin-visualizer");
 
 module.exports = {
   input: path.resolve(__dirname, "./dist/index_browser.js"),
