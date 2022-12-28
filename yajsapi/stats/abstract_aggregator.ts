@@ -32,4 +32,7 @@ export abstract class AbstractAggregator<T, R extends ItemInfo> {
       });
     }
   }
+  getAll() {
+    return [...this.items.values()];
+  }
 }
