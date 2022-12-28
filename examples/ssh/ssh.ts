@@ -41,7 +41,7 @@ async function main(subnetTag, driver, network, count = 2, session_timeout = 10,
 }
 
 program
-  .option("--subnet-tag <subnet>", "set subnet name, for example 'devnet-beta'")
+  .option("--subnet-tag <subnet>", "set subnet name, for example 'public'")
   .option("--payment-driver <payment_driver>", "payment driver name, for example 'erc20'")
   .option("--payment-network <payment_network>", "network name, for example 'rinkeby'")
   .option("--task-count, --count <count>", "task count", (val) => parseInt(val))
