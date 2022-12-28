@@ -1,5 +1,5 @@
 import { StorageProvider } from "./provider";
-import { runtimeContextChecker } from "../utils";
+import { Logger, runtimeContextChecker } from "../utils";
 import { randomUUID } from "crypto";
 import path from "path";
 import fs from "fs";
@@ -12,10 +12,9 @@ const TMP_DIR = tmp.dirSync().name;
 export class GftpStorageProvider implements StorageProvider {
   private gftpServerProcess;
   private reader;
-  private logger;
   private publishedUrls: string[] = [];
 
-  constructor() {
+  constructor(private logger?: Logger) {
     if (runtimeContextChecker.isBrowser) {
       throw new Error(`File transfer by GFTP module is unsupported in the browser context.`);
     }
