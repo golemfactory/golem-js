@@ -3,6 +3,11 @@ import { Logger } from "../utils";
 import { Providers } from "./providers";
 import { Tasks } from "./tasks";
 import { Payments } from "./payments";
+import { Agreements } from "./agreements";
+import { DebitNotes } from "./debit_notes";
+import { Invoices } from "./invoices";
+import { Proposals } from "./proposals";
+import { Allocations } from "./allocations";
 
 interface StatsOptions {
   eventTarget: EventTarget;
@@ -20,6 +25,11 @@ interface CostsInfo {
 export class StatsService {
   private eventTarget: EventTarget;
   private logger?: Logger;
+  private allocations: Allocations;
+  private agreements: Agreements;
+  //private debitNotes: DebitNotes;
+  private invoices: Invoices;
+  private proposals: Proposals;
   private providers: Providers;
   private payments: Payments;
   private tasks: Tasks;
@@ -27,6 +37,11 @@ export class StatsService {
   constructor(options: StatsOptions) {
     this.eventTarget = options.eventTarget;
     this.logger = options.logger;
+    this.allocations = new Allocations();
+    this.agreements = new Agreements();
+    //this.debitNotes = new DebitNotes();
+    this.invoices = new Invoices();
+    this.proposals = new Proposals();
     this.providers = new Providers();
     this.payments = new Payments();
     this.tasks = new Tasks();
@@ -51,16 +66,17 @@ export class StatsService {
   }
 
   getAllCosts(): CostsInfo[] {
-    return this.providers.getAllAgreements().map((agreement) => {
-      const costs = this.payments.getCostsByAgreement(agreement.id);
-      return {
-        Agreement: agreement.id.substring(0, 10),
-        "Provider Name": this.providers.getProviderName(agreement.id) || "unknown",
-        "Task Computed": this.tasks.getComputedTasksCountAgreementId(agreement.id),
-        Cost: costs.amount,
-        "Payment Status": costs.paid ? "paid" : "unpaid",
-      };
-    });
+    return [];
+    // return this.providers.getAllAgreements().map((agreement) => {
+    //   const costs = this.payments.getCostsByAgreement(agreement.id);
+    //   return {
+    //     Agreement: agreement.id.substring(0, 10),
+    //     "Provider Name": this.providers.getProviderName(agreement.id) || "unknown",
+    //     "Task Computed": this.tasks.getComputedTasksCountAgreementId(agreement.id),
+    //     Cost: costs.amount,
+    //     "Payment Status": costs.paid ? "paid" : "unpaid",
+    //   };
+    // });
   }
 
   getComputationsInfo() {
@@ -73,29 +89,32 @@ export class StatsService {
 
   private handleEvents(event: BaseEvent<unknown>) {
     if (event instanceof Events.ComputationStarted) {
-      this.tasks.addStartTime(event.timeStamp);
+      //this.tasks.addStartTime(event.timeStamp);
     } else if (event instanceof Events.ComputationFinished) {
-      this.tasks.addStopTime(event.timeStamp);
+      //this.tasks.addStopTime(event.timeStamp);
     } else if (event instanceof Events.TaskStarted) {
-      this.tasks.startTask(event.detail.id, event.detail.agreementId, event.detail.activityId, event.timeStamp);
+      this.tasks.add(event);
     } else if (event instanceof Events.TaskRedone) {
-      this.tasks.retryTask(event.detail.id, event.detail.retriesCount);
+      this.tasks.retry(event);
     } else if (event instanceof Events.TaskRejected) {
-      this.tasks.stopTask(event.detail.id, event.timeStamp, false, event.detail.reason);
+      this.tasks.reject(event);
     } else if (event instanceof Events.TaskFinished) {
-      this.tasks.stopTask(event.detail.id, event.timeStamp, true);
+      this.tasks.finish(event);
     } else if (event instanceof Events.AllocationCreated) {
-      this.payments.addAllocation(event.detail.id, event.detail.amount, event.detail.platform);
+      this.allocations.add(event);
     } else if (event instanceof Events.AgreementCreated) {
-      this.providers.addAgreement(event.detail.id, event.detail.providerId, event.detail.providerName);
+      this.agreements.add(event);
+      this.providers.add(event);
     } else if (event instanceof Events.AgreementConfirmed) {
-      this.providers.confirmAgreement(event.detail.id);
+      this.agreements.confirm(event);
+    } else if (event instanceof Events.AgreementRejected) {
+      this.agreements.reject(event);
     } else if (event instanceof Events.ProposalReceived) {
-      this.payments.addProposal(event.detail.id, event.detail.providerId);
+      this.proposals.add(event);
     } else if (event instanceof Events.InvoiceReceived) {
-      this.payments.addInvoice(event.detail.id, event.detail.providerId, event.detail.agreementId, event.detail.amount);
+      this.invoices.add(event);
     } else if (event instanceof Events.PaymentAccepted) {
-      this.payments.addPayment(event.detail.id, event.detail.providerId, event.detail.agreementId, event.detail.amount);
+      this.payments.add(event);
     }
   }
 }
