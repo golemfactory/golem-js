@@ -36,7 +36,9 @@ jobs:
       - name: Install goth
         run: |
           pip install goth
+          mkdir -p ../goth/assets
           python -m goth create-assets ../goth/assets/goth-config.yml
+          cat ../goth/assets/goth-config.yml
 
       - name: Install websocat
         run: |
