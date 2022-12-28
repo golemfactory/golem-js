@@ -12,7 +12,7 @@ import { spawn } from "child_process"
 
 describe("SSH connection", function () {
     // TODO
-  const sshConnectionCheck = false;
+  const sshConnectionCheck = true;
   it("should connect to provider via ssh", async () => {
       const executor = await createExecutor({
           package: "1e06505997e8bd1b9e1a00bd10d255fc6a390905e4d6840a22a79902",
@@ -45,17 +45,17 @@ describe("SSH connection", function () {
                 `root@${crypto.randomBytes(10).toString("hex")}`,
                 "uname -v",
             ]);
-            let error, stdout;
+            let error = '', stdout = '';
             processSsh.stdout?.setEncoding('utf-8');
             processSsh.stderr?.setEncoding('utf-8');
-            processSsh.stdout.on('data', data => (stdout = data));
-            processSsh.stderr.on('data', data => (error = data));
-            processSsh.on('error', (data) => (error = data));
+            processSsh.stdout.on('data', data => (stdout += data));
+            processSsh.stderr.on('data', data => (error += data));
+            processSsh.on('error', (data) => (error += data.toString()));
             processSsh.stdin?.write(password);
             processSsh.stdin?.end();
             await new Promise(res => setTimeout(res, 2000));
+            expect(error).to.equal('');
             expect(stdout).to.include('1-Alpine SMP');
-            expect(error).to.an('undefined');
         }
       });
       await executor.end();
