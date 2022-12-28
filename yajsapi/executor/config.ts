@@ -6,7 +6,7 @@ import { Logger, runtimeContextChecker, winstonLogger } from "../utils";
 const DEFAULTS = {
   maxParallelTasks: 5,
   budget: 1.0,
-  subnetTag: "devnet-beta",
+  subnetTag: "public",
   payment: { driver: "erc20", network: "rinkeby" },
   timeout: 1000 * 60 * 15, // 15 min,
   logLevel: "info",
