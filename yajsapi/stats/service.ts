@@ -8,6 +8,7 @@ import { DebitNotes } from "./debit_notes";
 import { Invoices } from "./invoices";
 import { Proposals } from "./proposals";
 import { Allocations } from "./allocations";
+import { Activities } from "./activities";
 
 interface StatsOptions {
   eventTarget: EventTarget;
@@ -27,6 +28,7 @@ export class StatsService {
   private logger?: Logger;
   private allocations: Allocations;
   private agreements: Agreements;
+  private activities: Activities;
   //private debitNotes: DebitNotes;
   private invoices: Invoices;
   private proposals: Proposals;
@@ -38,6 +40,7 @@ export class StatsService {
     this.eventTarget = options.eventTarget;
     this.logger = options.logger;
     this.allocations = new Allocations();
+    this.activities = new Activities();
     this.agreements = new Agreements();
     //this.debitNotes = new DebitNotes();
     this.invoices = new Invoices();
@@ -93,28 +96,46 @@ export class StatsService {
     } else if (event instanceof Events.ComputationFinished) {
       //this.tasks.addStopTime(event.timeStamp);
     } else if (event instanceof Events.TaskStarted) {
-      this.tasks.add(event);
+      this.activities.add({
+        id: event.detail.activityId,
+        taskId: event.detail.id,
+        agreementId: event.detail.agreementId,
+      });
+      this.tasks.add({
+        id: event.detail.id,
+        startTime: event.timeStamp,
+      });
     } else if (event instanceof Events.TaskRedone) {
-      this.tasks.retry(event);
+      this.tasks.retry(event.detail.id, event.detail.retriesCount);
     } else if (event instanceof Events.TaskRejected) {
-      this.tasks.reject(event);
+      this.tasks.reject(event.detail.id, event.timeStamp, event.detail.reason);
     } else if (event instanceof Events.TaskFinished) {
-      this.tasks.finish(event);
+      this.tasks.finish(event.detail.id, event.timeStamp);
     } else if (event instanceof Events.AllocationCreated) {
-      this.allocations.add(event);
+      this.allocations.add({ id: event.detail.id, amount: event.detail.amount, platform: event.detail.platform });
     } else if (event instanceof Events.AgreementCreated) {
-      this.agreements.add(event);
-      this.providers.add(event);
+      this.agreements.add({ id: event.detail.id, providerId: event.detail.providerId });
+      this.providers.add({ id: event.detail.providerId, providerName: event.detail.providerName });
     } else if (event instanceof Events.AgreementConfirmed) {
-      this.agreements.confirm(event);
+      this.agreements.confirm(event.detail.id);
     } else if (event instanceof Events.AgreementRejected) {
-      this.agreements.reject(event);
+      this.agreements.reject(event.detail.id);
     } else if (event instanceof Events.ProposalReceived) {
-      this.proposals.add(event);
+      this.proposals.add({ id: event.detail.id, providerId: event.detail.providerId });
     } else if (event instanceof Events.InvoiceReceived) {
-      this.invoices.add(event);
+      this.invoices.add({
+        id: event.detail.id,
+        providerId: event.detail.providerId,
+        agreementId: event.detail.agreementId,
+        amount: event.detail.amount,
+      });
     } else if (event instanceof Events.PaymentAccepted) {
-      this.payments.add(event);
+      this.payments.add({
+        id: event.detail.id,
+        providerId: event.detail.providerId,
+        agreementId: event.detail.agreementId,
+        amount: event.detail.amount,
+      });
     }
   }
 }

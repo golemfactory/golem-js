@@ -8,8 +8,6 @@ export enum TaskStatusEnum {
 }
 
 export interface TaskInfo extends ItemInfo {
-  agreementId: string;
-  activityId: string;
   startTime: number;
   stopTime: number;
   retriesCount: number;
@@ -17,26 +15,27 @@ export interface TaskInfo extends ItemInfo {
   status: TaskStatusEnum;
 }
 
-export class Tasks extends AbstractAggregator<Events.TaskStarted, TaskInfo> {
-  beforeAdd(event: Events.TaskStarted): TaskInfo {
+interface Payload {
+  id: string;
+  startTime: number;
+}
+
+export class Tasks extends AbstractAggregator<Payload, TaskInfo> {
+  beforeAdd(payload): TaskInfo {
     return {
-      ...event.detail,
-      startTime: event.timeStamp,
+      ...payload,
       stopTime: 0,
       retriesCount: 0,
       status: TaskStatusEnum.Pending,
     };
   }
-  retry(event: Events.TaskRedone) {
-    const { id, retriesCount } = event.detail;
+  retry(id: string, retriesCount: number) {
     this.updateItemInfo(id, { retriesCount });
   }
-  reject(event: Events.TaskRejected) {
-    const { id, reason } = event.detail;
-    this.updateItemInfo(id, { stopTime: event.timeStamp, reason: reason, status: TaskStatusEnum.Rejected });
+  reject(id: string, timeStamp: number, reason?: string) {
+    this.updateItemInfo(id, { stopTime: timeStamp, reason: reason, status: TaskStatusEnum.Rejected });
   }
-  finish(event: Events.TaskFinished) {
-    const { id } = event.detail;
-    this.updateItemInfo(id, { stopTime: event.timeStamp, status: TaskStatusEnum.Finished });
+  finish(id: string, timeStamp: number) {
+    this.updateItemInfo(id, { stopTime: timeStamp, status: TaskStatusEnum.Finished });
   }
 }

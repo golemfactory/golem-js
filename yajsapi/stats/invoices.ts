@@ -7,12 +7,18 @@ export interface InvoiceInfo {
   agreementId: string;
   amount: number;
 }
+interface Payload {
+  id: string;
+  providerId: string;
+  agreementId: string;
+  amount: string;
+}
 
-export class Invoices extends AbstractAggregator<Events.InvoiceReceived, InvoiceInfo> {
-  beforeAdd(event: Events.InvoiceReceived): InvoiceInfo {
+export class Invoices extends AbstractAggregator<Payload, InvoiceInfo> {
+  beforeAdd(payload): InvoiceInfo {
     return {
-      ...event.detail,
-      amount: parseFloat(event.detail.amount),
+      ...payload,
+      amount: parseFloat(payload.amount),
     };
   }
 }

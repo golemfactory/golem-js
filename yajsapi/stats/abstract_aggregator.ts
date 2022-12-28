@@ -4,7 +4,7 @@ export interface ItemInfo {
   id: string;
 }
 
-export abstract class AbstractAggregator<T extends BaseEvent<any>, R extends ItemInfo> {
+export abstract class AbstractAggregator<T, R extends ItemInfo> {
   protected items = new Map<string, R>();
   add(event: T) {
     const item = this.beforeAdd(event);

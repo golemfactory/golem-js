@@ -1,5 +1,4 @@
 import { AbstractAggregator } from "./abstract_aggregator";
-import { Events } from "../events";
 
 export interface AllocationInfo {
   id: string;
@@ -7,8 +6,14 @@ export interface AllocationInfo {
   platform?: string;
 }
 
-export class Allocations extends AbstractAggregator<Events.AllocationCreated, AllocationInfo> {
-  beforeAdd(item: Events.AllocationCreated): AllocationInfo {
-    return item.detail;
+interface Payload {
+  id: string;
+  amount: number;
+  platform?: string;
+}
+
+export class Allocations extends AbstractAggregator<Payload, AllocationInfo> {
+  beforeAdd(payload): AllocationInfo {
+    return payload;
   }
 }

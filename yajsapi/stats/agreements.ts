@@ -13,17 +13,19 @@ export interface AgreementInfo {
   status: AgreementStatusEnum;
 }
 
-export class Agreements extends AbstractAggregator<Events.AgreementCreated, AgreementInfo> {
-  beforeAdd(event: Events.AgreementCreated): AgreementInfo {
-    const { id, providerId } = event.detail;
-    return { id, providerId, status: AgreementStatusEnum.Pending };
+interface Payload {
+  id: string;
+  providerId: string;
+}
+
+export class Agreements extends AbstractAggregator<Payload, AgreementInfo> {
+  beforeAdd(payload): AgreementInfo {
+    return { ...payload, status: AgreementStatusEnum.Pending };
   }
-  confirm(event: Events.AgreementConfirmed) {
-    const { id } = event.detail;
+  confirm(id: string) {
     this.updateItemInfo(id, { status: AgreementStatusEnum.Confirmed });
   }
-  reject(event: Events.AgreementRejected) {
-    const { id } = event.detail;
+  reject(id: string) {
     this.updateItemInfo(id, { status: AgreementStatusEnum.Rejected });
   }
 }

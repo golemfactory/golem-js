@@ -1,5 +1,4 @@
 import { AbstractAggregator } from "./abstract_aggregator";
-import { Events } from "../events";
 
 export interface PaymentInfo {
   id: string;
@@ -7,12 +6,18 @@ export interface PaymentInfo {
   agreementId: string;
   amount: number;
 }
+interface Payload {
+  id: string;
+  providerId: string;
+  agreementId: string;
+  amount: string;
+}
 
-export class Payments extends AbstractAggregator<Events.PaymentAccepted, PaymentInfo> {
-  beforeAdd(event: Events.PaymentAccepted): PaymentInfo {
+export class Payments extends AbstractAggregator<Payload, PaymentInfo> {
+  beforeAdd(payload): PaymentInfo {
     return {
-      ...event.detail,
-      amount: parseFloat(event.detail.amount),
+      ...payload,
+      amount: parseFloat(payload.amount),
     };
   }
 }
