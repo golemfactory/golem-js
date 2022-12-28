@@ -1,5 +1,3 @@
-import { BaseEvent, Events } from "../events";
-
 export interface ItemInfo {
   id: string;
 }
@@ -22,15 +20,12 @@ export abstract class AbstractAggregator<T, R extends ItemInfo> {
     }
   }
   protected updateItemInfo(id: string, data) {
-    if (this.items.has(id)) {
-      const item = this.items.get(id);
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      this.items.set(id, {
-        ...item,
-        ...data,
-      });
-    }
+    const item = this.items.get(id);
+    if (!item) return;
+    this.items?.set(id, {
+      ...item,
+      ...data,
+    });
   }
   getAll() {
     return [...this.items.values()];
