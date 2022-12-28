@@ -26,29 +26,17 @@ jobs:
       - name: Build yajsapi
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y build-essential jq
           npm install
           npm run build
-          cd examples
-          jq '.dependencies.yajsapi = "file:../"' <package.json >tmp.json && mv tmp.json package.json
-          npm install
 
       - name: Configure python
         uses: actions/setup-python@v2
         with:
           python-version: '3.8.0'
 
-      - name: Configure poetry
-        uses: Gr1N/setup-poetry@v4
-        with:
-          poetry-version: 1.1.6
-          working-directory: 'tests/goth'
-
-      - name: Install dependencies
+      - name: Install goth
         run: |
-          cd tests/goth/
-          poetry env use python3.8
-          poetry install
+          pip install goth
 
       - name: Install websocat
         run: |
@@ -78,9 +66,7 @@ jobs:
         env:
           GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd tests/goth
-          poetry run poe goth-assets
-          poetry run poe goth-tests
+          npm run test
 
       - name: Upload test logs
         uses: actions/upload-artifact@v2
@@ -93,13 +79,3 @@ jobs:
       - name: Remove test logs
         if: always()
         run: rm -rf /tmp/goth-tests
-
-      # Only relevant for self-hosted runners
-      - name: Remove poetry virtual env
-        if: always()
-        # Python version below should agree with the version set up by this job.
-        # In future we'll be able to use the `--all` flag here to remove envs for
-        # all Python versions (https://github.com/python-poetry/poetry/issues/3208).
-        run: |
-          cd tests/goth/
-          poetry env remove python3.8

@@ -17,5 +17,5 @@ after(async function () {
 });
 
 beforeEach(function () {
-    console.log(`\n\n\tTrying to test: \x1b[32m${this.currentTest?.parent?.title} ${this.currentTest?.title} ...\n\n`)
+    console.log(`\n\n\xa0\xa0Trying to test: \x1b[32mIt ${this.currentTest?.title} ...\n\n`)
 });
