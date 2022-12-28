@@ -25,7 +25,6 @@ jobs:
 
       - name: Build yajsapi
         run: |
-          sudo apt-get update -y
           npm install
           npm run build
 
