@@ -73,12 +73,15 @@ export class StatsService {
                   agreement: agreement
                     ? {
                         ...agreement,
-                        activities: this.activities.getByAgreementId(agreement.id).map((activity) => {
-                          return {
-                            ...activity,
-                            task: this.tasks.getById(activity.taskId),
-                          };
-                        }),
+                        activities: this.activities
+                          .getByAgreementId(agreement.id)
+                          .map((activity) => {
+                            return {
+                              ...activity,
+                              task: this.tasks.getById(activity.taskId),
+                            };
+                          })
+                          .all(),
                         invoices: this.invoices
                           .getByAgreementId(agreement.id)
                           .map((invoice) => invoice)
