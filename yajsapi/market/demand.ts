@@ -48,11 +48,9 @@ export class Demand extends EventTarget {
   private async subscribe() {
     while (this.isRunning) {
       try {
-        const { data: events } = await this.options.api.collectOffers(
-          this.id,
-          this.options.timeout / 1000,
-          this.options.maxOfferEvents
-        );
+        const { data: events } = await this.options.api.collectOffers(this.id, 3, this.options.maxOfferEvents, {
+          timeout: 5000,
+        });
         for (const event of events as ProposalEvent[]) {
           if (event.eventType !== "ProposalEvent") continue;
           const proposal = new Proposal(

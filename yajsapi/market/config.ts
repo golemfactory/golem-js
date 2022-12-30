@@ -7,7 +7,7 @@ const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",
   subnetTag: "public",
   timeout: 1000 * 60 * 15, // 15 min,
-  maxOfferEvents: 20,
+  maxOfferEvents: 10,
   offerFetchingInterval: 15000,
 };
 
