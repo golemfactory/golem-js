@@ -63,7 +63,7 @@ describe("Task Executor", function () {
       const res = await ctx.run(`echo "${x}"`);
       expect(res?.stdout?.trim()).to.be.oneOf(data);
     });
-  }).timeout(60000);
+  }).timeout(80000);
 
   it("should run simple batch script and get results as stream", async () => {
     executor = await createExecutor({

@@ -41,13 +41,14 @@ describe("SSH connection", function () {
       expect(results?.[3]?.result).to.equal("Ok");
       expect(websocketUri).to.an("string");
       if (sshConnectionCheck) {
+        await new Promise((res) => setTimeout(res, 5000));
         const processSsh = spawn("ssh", [
           "-o",
           "UserKnownHostsFile=/dev/null",
           "-o",
           "StrictHostKeyChecking=no",
           "-o",
-          `ProxyCommand='/usr/local/bin/websocat asyncstdio: ${websocketUri} --binary -H=Authorization:"Bearer ${process.env.YAGNA_APPKEY}"'`,
+          `ProxyCommand='/usr/local/bin/websocat --binary -H=Authorization:"Bearer ${process.env.YAGNA_APPKEY}" asyncstdio: ${websocketUri}'`,
           `root@${crypto.randomBytes(10).toString("hex")}`,
           "uname -v",
         ]);
@@ -62,6 +63,6 @@ describe("SSH connection", function () {
       }
     });
     expect(error).to.equal("");
-    expect(stdout).to.include("1-Alpine SMP");
+    if (sshConnectionCheck) expect(stdout).to.include("1-Alpine SMP");
   }).timeout(180000);
 });
