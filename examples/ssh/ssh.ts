@@ -2,7 +2,7 @@ import { createExecutor, utils } from "../../dist";
 import crypto from "crypto";
 import { program } from "commander";
 
-async function main(subnetTag, driver, network, count = 2, session_timeout = 10, debug) {
+async function main(subnetTag, driver, network, count = 2, session_timeout = 100, debug) {
   const executor = await createExecutor({
     package: "1e06505997e8bd1b9e1a00bd10d255fc6a390905e4d6840a22a79902",
     capabilities: ["vpn"],

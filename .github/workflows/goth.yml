@@ -73,7 +73,7 @@ jobs:
 
       - name: TMP test
         if: always()
-        run: ls -Al /opt/actions-runner/_work/yajsapi/yajsapi/tests/integration
+        run: sudo find / -name output_0.png
 
       - name: Upload test logs
         uses: actions/upload-artifact@v2
