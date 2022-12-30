@@ -47,7 +47,8 @@ export class AgreementPoolService implements ComputationHistory {
 
   async getAgreement(): Promise<Agreement> {
     let agreement;
-    while (!agreement) agreement = (await this.getAvailableAgreement()) || (await this.createAgreement());
+    while (!agreement && this.isServiceRunning)
+      agreement = (await this.getAvailableAgreement()) || (await this.createAgreement());
     return agreement;
   }
 
@@ -149,7 +150,7 @@ export class AgreementPoolService implements ComputationHistory {
         await sleep(10);
       }
     }
-    clearTimeout(timeoutId)
+    clearTimeout(timeoutId);
     this.initialTime = +new Date();
     return proposal;
   }

@@ -8,7 +8,7 @@ const DEFAULTS = {
   budget: 1.0,
   subnetTag: "public",
   payment: { driver: "erc20", network: "rinkeby" },
-  timeout: 1000 * 60 * 15, // 15 min,
+  timeout: 1000 * 60 * 3, // 3 min,
   logLevel: "info",
   basePath: "http://127.0.0.1:7465",
 };

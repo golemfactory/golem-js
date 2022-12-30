@@ -37,7 +37,8 @@ describe("Mid-level modules", () => {
     const offer: Proposal = await new Promise((res) =>
       demand.addEventListener(DemandEventType, async (event) => {
         const proposalEvent = event as DemandEvent;
-        if (proposalEvent.proposal.isInitial()) await proposalEvent.proposal.respond(account.platform);
+        if (proposalEvent.proposal.isInitial())
+          await proposalEvent.proposal.respond(account.platform).catch((e) => null);
         else if (proposalEvent.proposal.isDraft()) res(proposalEvent.proposal);
       })
     );

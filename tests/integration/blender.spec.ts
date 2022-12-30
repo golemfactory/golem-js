@@ -11,26 +11,25 @@ import path from "path";
 import { fileExistsSync } from "tsconfig-paths/lib/filesystem";
 
 const blender_params = (frame) => ({
-    scene_file: "/golem/resource/scene.blend",
-    resolution: [400, 300],
-    use_compositing: false,
-    crops: [
-        {
-            outfilebasename: "out",
-            borders_x: [0.0, 1.0],
-            borders_y: [0.0, 1.0],
-        },
-    ],
-    samples: 100,
-    frames: [frame],
-    output_format: "PNG",
-    RESOURCES_DIR: "/golem/resources",
-    WORK_DIR: "/golem/work",
-    OUTPUT_DIR: "/golem/output",
+  scene_file: "/golem/resource/scene.blend",
+  resolution: [400, 300],
+  use_compositing: false,
+  crops: [
+    {
+      outfilebasename: "out",
+      borders_x: [0.0, 1.0],
+      borders_y: [0.0, 1.0],
+    },
+  ],
+  samples: 100,
+  frames: [frame],
+  output_format: "PNG",
+  RESOURCES_DIR: "/golem/resources",
+  WORK_DIR: "/golem/work",
+  OUTPUT_DIR: "/golem/output",
 });
 
 describe("Blender rendering", function () {
-
   it("should render images by blender", async () => {
     const executor = await createExecutor({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
@@ -55,7 +54,7 @@ describe("Blender rendering", function () {
     });
     const expectedResults = data.map((d) => `output_${d}.png`);
     for await (const result of results) expect(result).to.be.oneOf(expectedResults);
-    for (const file of expectedResults) expect(fileExistsSync(path.resolve(__dirname, file))).to.be.true;
+    for (const file of expectedResults) expect(fileExistsSync(path.join(__dirname, `./${file}`))).to.be.true;
     await executor.end();
-  }).timeout(180000);
+  }).timeout(190000);
 });
