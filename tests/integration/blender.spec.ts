@@ -55,7 +55,7 @@ describe("Blender rendering", function () {
           path.join(__dirname, `./output_${frame}.png`)
         )
         .end()
-        .catch((error) => console.error(error));
+        .catch((error) => ctx.rejectResult(error.toString()));
       return result ? `output_${frame}.png` : "";
     });
     const expectedResults = data.map((d) => `output_${d}.png`);
