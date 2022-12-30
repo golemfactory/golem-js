@@ -18,13 +18,13 @@ import { resolve } from "path";
 import { Proposal } from "../../yajsapi/market";
 import { Goth } from "./goth";
 import { Accounts } from "../../yajsapi/payment/accounts";
-import {LoggerMock} from "../mock";
+import { LoggerMock } from "../mock";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 const logger = new LoggerMock(false);
 
 describe("Mid-level modules", () => {
-  before(async function() {
+  before(async function () {
     logger.clear();
   });
 
@@ -33,7 +33,7 @@ describe("Mid-level modules", () => {
     const account = accounts[0];
     const taskPackage = await Package.create({ imageHash: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae" });
     const allocation = await Allocation.create({ account, logger });
-    const demand = await Demand.create(taskPackage, [allocation], { subnetTag: process.env['YAGNA_SUBNET'] || 'goth', logger });
+    const demand = await Demand.create(taskPackage, [allocation], { logger });
     const offer: Proposal = await new Promise((res) =>
       demand.addEventListener(DemandEventType, async (event) => {
         const proposalEvent = event as DemandEvent;
@@ -41,9 +41,9 @@ describe("Mid-level modules", () => {
         else if (proposalEvent.proposal.isDraft()) res(proposalEvent.proposal);
       })
     );
-    const agreement = await Agreement.create(offer.id, {logger});
+    const agreement = await Agreement.create(offer.id, { logger });
     await agreement.confirm();
-    const activity = await Activity.create(agreement.id, {logger});
+    const activity = await Activity.create(agreement.id, { logger });
     const script = await Script.create([new Deploy(), new Start(), new Run("/bin/sh", ["-c", "echo 'Hello Golem'"])]);
     const exeScript = script.getExeScriptRequest();
     const streamResult = await activity.execute(exeScript);

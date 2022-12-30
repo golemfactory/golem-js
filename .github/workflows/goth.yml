@@ -35,7 +35,7 @@ jobs:
         with:
           python-version: '3.8.0'
 
-      - name: Install yagna and goth
+      - name: Install goth
         run: |
           pip install goth
           rm -rf ../goth/assets

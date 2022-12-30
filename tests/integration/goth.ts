@@ -34,7 +34,6 @@ export class Goth {
           console.log(
             `\x1b[33mGoth has been successfully started in ${((Date.now() - startTime) / 1000).toFixed(0)}s.\n`
           );
-          console.log({ apiKey, basePath, subnetTag, gsbUrl, path });
           resolve({ apiKey, basePath, subnetTag, gsbUrl, path });
         }
       });

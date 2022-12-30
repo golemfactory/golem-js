@@ -20,6 +20,8 @@ describe("SSH connection", function () {
     });
     let websocketUri;
     const password = crypto.randomBytes(3).toString("hex");
+    let error = "",
+      stdout = "";
     await executor.run(async (ctx) => {
       websocketUri = ctx.getWebsocketUri(22);
       const results = await ctx
@@ -43,8 +45,6 @@ describe("SSH connection", function () {
           `root@${crypto.randomBytes(10).toString("hex")}`,
           "uname -v",
         ]);
-        let error = "",
-          stdout = "";
         processSsh.stdout?.setEncoding("utf-8");
         processSsh.stderr?.setEncoding("utf-8");
         processSsh.stdout.on("data", (data) => (stdout += data));
@@ -53,10 +53,10 @@ describe("SSH connection", function () {
         processSsh.stdin?.write(password);
         processSsh.stdin?.end();
         await new Promise((res) => setTimeout(res, 2000));
-        expect(error).to.equal("");
-        expect(stdout).to.include("1-Alpine SMP");
       }
     });
+    expect(error).to.equal("");
+    expect(stdout).to.include("1-Alpine SMP");
     await executor.end();
   }).timeout(180000);
 });

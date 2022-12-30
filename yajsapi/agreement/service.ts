@@ -27,7 +27,7 @@ export class AgreementPoolService implements ComputationHistory {
   private agreementIdsToReuse: string[] = [];
   private isServiceRunning = false;
   private lastAgreementRejectedByProvider = new Map<string, boolean>();
-  private initialTime = 0;
+  private initialTime = Date.now();
 
   constructor(private readonly agreementServiceOptions?: AgreementServiceOptions) {
     this.config = new AgreementServiceConfig(agreementServiceOptions);
