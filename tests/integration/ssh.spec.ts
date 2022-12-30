@@ -7,12 +7,18 @@ const expect = chai.expect;
 const logger = new LoggerMock(false);
 import crypto from "crypto";
 import { spawn } from "child_process";
+import { TaskExecutor } from "../../yajsapi/executor";
 
 describe("SSH connection", function () {
+  let executor: TaskExecutor;
+  afterEach(async function () {
+    this.timeout(60000);
+    await executor.end();
+  });
   // TODO
   const sshConnectionCheck = true;
   it("should connect to provider via ssh", async () => {
-    const executor = await createExecutor({
+    executor = await createExecutor({
       package: "1e06505997e8bd1b9e1a00bd10d255fc6a390905e4d6840a22a79902",
       capabilities: ["vpn"],
       networkAddress: "192.168.0.0/24",
@@ -57,6 +63,5 @@ describe("SSH connection", function () {
     });
     expect(error).to.equal("");
     expect(stdout).to.include("1-Alpine SMP");
-    await executor.end();
   }).timeout(180000);
 });

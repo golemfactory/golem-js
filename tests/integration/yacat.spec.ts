@@ -2,6 +2,7 @@ import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import { createExecutor } from "../../yajsapi";
 import { LoggerMock } from "../mock";
+import { TaskExecutor } from "../../yajsapi/executor";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 const logger = new LoggerMock(false);
@@ -13,10 +14,15 @@ const range = (start: number, end: number, step = 1): number[] => {
 };
 
 describe("Password cracking", function () {
+  let executor: TaskExecutor;
+  afterEach(async function () {
+    this.timeout(60000);
+    await executor.end();
+  });
   it("should crack password", async () => {
     const mask = "?a?a";
     const hash = "$P$5ZDzPE45CigTC6EY4cXbyJSLj/pGee0";
-    const executor = await createExecutor({
+    executor = await createExecutor({
       package: "055911c811e56da4d75ffc928361a78ed13077933ffa8320fb1ec2db",
       budget: 10,
       logger,
@@ -48,6 +54,5 @@ describe("Password cracking", function () {
       }
     }
     expect(password).to.equal("yo");
-    await executor.end();
   }).timeout(180000);
 });
