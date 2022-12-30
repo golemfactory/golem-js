@@ -72,6 +72,7 @@ jobs:
           npm run test:integration
 
       - name: TMP test
+        if: always()
         run: ls -Al yajsapi/tests/integration
 
       - name: Upload test logs

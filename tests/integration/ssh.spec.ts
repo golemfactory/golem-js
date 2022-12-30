@@ -47,7 +47,7 @@ describe("SSH connection", function () {
           "-o",
           "StrictHostKeyChecking=no",
           "-o",
-          `ProxyCommand='websocat asyncstdio: ${websocketUri} --binary -H=Authorization:"Bearer ${process.env.YAGNA_APPKEY}"'`,
+          `ProxyCommand='/usr/local/bin/websocat asyncstdio: ${websocketUri} --binary -H=Authorization:"Bearer ${process.env.YAGNA_APPKEY}"'`,
           `root@${crypto.randomBytes(10).toString("hex")}`,
           "uname -v",
         ]);
