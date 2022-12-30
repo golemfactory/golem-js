@@ -23,13 +23,13 @@ export class Goth {
         const apiKey = results?.[1];
         const basePath = results?.[2];
         const gsbUrl = results?.[3];
-        const path = results?.[4];
+        const path = results?.[4]?.split(":")?.shift();
         const subnetTag = results?.[5];
         if (apiKey) {
           process.env["YAGNA_APPKEY"] = apiKey;
           process.env["YAGNA_API_URL"] = basePath;
           process.env["GSB_URL"] = gsbUrl;
-          process.env["PATH"] = path;
+          process.env["PATH"] = `${path}:${process.env["PATH"]}`;
           process.env["YAGNA_SUBNET"] = subnetTag;
           console.log(
             `\x1b[33mGoth has been successfully started in ${((Date.now() - startTime) / 1000).toFixed(0)}s.\n`
