@@ -37,8 +37,6 @@ jobs:
 
       - name: Install yagna and goth
         run: |
-          curl -sSf https://join.golem.network/as-requestor | bash -
-          gftp --version
           pip install goth
           rm -rf ../goth/assets
           python -m goth create-assets ../goth/assets
