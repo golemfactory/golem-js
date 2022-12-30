@@ -6,14 +6,16 @@ import { Logger } from "../utils";
 const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",
   subnetTag: "public",
-  timeout: 1000 * 60 * 15, // 15 min,
+  timeout: 1000 * 60 * 3, // 15 min,
   maxOfferEvents: 10,
-  offerFetchingInterval: 15000,
+  offerFetchingInterval: 10000,
+  expiration: 1000 * 60 * 15
 };
 
 export class DemandConfig {
   public readonly api: RequestorApi;
   public readonly timeout: number;
+  public readonly expiration: number;
   public readonly subnetTag: string;
   public readonly maxOfferEvents: number;
   public readonly offerFetchingInterval: number;
@@ -28,6 +30,7 @@ export class DemandConfig {
     this.api = new RequestorApi(apiConfig);
     this.subnetTag = options?.subnetTag || process.env.YAGNA_SUBNET || DEFAULTS.subnetTag;
     this.timeout = options?.timeout || DEFAULTS.timeout;
+    this.expiration = options?.expiration || DEFAULTS.expiration;
     this.offerFetchingInterval = options?.offerFetchingInterval || DEFAULTS.offerFetchingInterval;
     this.logger = options?.logger;
     this.maxOfferEvents = options?.maxOfferEvents || DEFAULTS.maxOfferEvents;

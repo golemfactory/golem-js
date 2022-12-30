@@ -2,8 +2,6 @@ import { Package } from "../package";
 import { Allocation } from "../payment";
 import { YagnaOptions } from "../executor";
 import { DemandFactory } from "./factory";
-import { DecorationsBuilder } from "./builder";
-import { MarketProperty } from "ya-ts-client/dist/ya-payment/src/models/";
 import { Proposal } from "./proposal";
 import { Logger, sleep } from "../utils";
 import { DemandConfig } from "./config";
@@ -15,6 +13,7 @@ export interface DemandOptions {
   subnetTag?: string;
   yagnaOptions?: YagnaOptions;
   timeout?: number;
+  expiration?: number;
   logger?: Logger;
   maxOfferEvents?: number;
   offerFetchingInterval?: number;
@@ -52,7 +51,12 @@ export class Demand extends EventTarget {
           timeout: 5000,
         });
         for (const event of events as ProposalEvent[]) {
-          if (event.eventType !== "ProposalEvent") continue;
+          if (event.eventType === "ProposalRejectedEvent") {
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            this.logger?.warn(`Proposal rejected. Reason: ${event.reason?.message}`);
+            continue;
+          } else if (event.eventType !== "ProposalEvent") continue;
           const proposal = new Proposal(
             this.id,
             this.options.api,

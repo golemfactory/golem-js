@@ -38,7 +38,7 @@ export class DemandFactory {
   private getBaseDecorations(): MarketDecoration {
     return new DecorationsBuilder()
       .addProperty("golem.srv.caps.multi-activity", true)
-      .addProperty("golem.srv.comp.expiration", Date.now() + this.options.timeout)
+      .addProperty("golem.srv.comp.expiration", Date.now() + this.options.expiration)
       .addProperty("golem.node.debug.subnet", this.options.subnetTag)
       .addConstraint("golem.com.pricing.model", "linear")
       .addConstraint("golem.node.debug.subnet", this.options.subnetTag)

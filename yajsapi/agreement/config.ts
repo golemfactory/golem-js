@@ -12,7 +12,7 @@ const DEFAULT_OPTIONS = {
   EVENT_POOLING_MAX_EVENTS: 100,
   SUBNET_TAG: "public",
   basePath: "http://127.0.0.1:7465",
-  waitingForProposalTimout: 5000
+  waitingForProposalTimout: 10000
 };
 
 export class AgreementConfig {

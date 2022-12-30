@@ -146,7 +146,7 @@ export class AgreementPoolService implements ComputationHistory {
     while (!proposal && this.isServiceRunning && !timeout) {
       proposal = this.proposals.pop();
       if (!proposal) {
-        if (+new Date() > this.initialTime + 10000) this.logger?.warn(`No offers have been collected from the market`);
+        if (+new Date() > this.initialTime + 9000) this.logger?.warn(`No offers have been collected from the market`);
         await sleep(10);
       }
     }
