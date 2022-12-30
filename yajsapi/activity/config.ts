@@ -7,7 +7,7 @@ import { YagnaOptions } from "../executor";
 const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",
   requestTimeout: 10000,
-  executeTimeout: 30000,
+  executeTimeout: 60000,
   exeBatchResultsFetchInterval: 3000,
 };
 

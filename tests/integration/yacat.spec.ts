@@ -44,7 +44,7 @@ describe("Password cracking", function () {
         .end()
         .catch((err) => console.error(err));
       if (!results?.[1]?.stdout) return false;
-      return results?.[1]?.stdout.split(":")[1];
+      return results?.[1]?.stdout.split(":")?.[1]?.trim();
     });
     let password = "";
     for await (const result of results) {

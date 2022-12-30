@@ -70,6 +70,7 @@ jobs:
           GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           npm run test:integration
+          ls -Al yajsapi/tests/integration
 
       - name: Upload test logs
         uses: actions/upload-artifact@v2
