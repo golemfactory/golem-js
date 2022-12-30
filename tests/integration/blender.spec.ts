@@ -50,10 +50,7 @@ describe("Blender rendering", function () {
         .beginBatch()
         .uploadJson(blender_params(frame), "/golem/work/params.json")
         .run("/golem/entrypoints/run-blender.sh")
-        .downloadFile(
-          `/golem/output/out${frame?.toString().padStart(4, "0")}.png`,
-          path.join(__dirname, `./output_${frame}.png`)
-        )
+        .downloadFile(`/golem/output/out${frame?.toString().padStart(4, "0")}.png`, `output_${frame}.png`)
         .end()
         .catch((error) => ctx.rejectResult(error.toString()));
       return result ? `output_${frame}.png` : "";

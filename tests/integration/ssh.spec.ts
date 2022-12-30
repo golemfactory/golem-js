@@ -16,7 +16,7 @@ describe("SSH connection", function () {
     await executor.end();
   });
   // TODO
-  const sshConnectionCheck = true;
+  const sshConnectionCheck = false;
   it("should connect to provider via ssh", async () => {
     executor = await createExecutor({
       package: "1e06505997e8bd1b9e1a00bd10d255fc6a390905e4d6840a22a79902",

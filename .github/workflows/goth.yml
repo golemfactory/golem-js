@@ -73,7 +73,7 @@ jobs:
 
       - name: TMP test
         if: always()
-        run: sudo find / -name output_0.png
+        run: sudo find / -name output_0.png -printf "%T+ %p\n" | sort
 
       - name: Upload test logs
         uses: actions/upload-artifact@v2
