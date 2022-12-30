@@ -35,8 +35,10 @@ jobs:
         with:
           python-version: '3.8.0'
 
-      - name: Install goth
+      - name: Install yagna and goth
         run: |
+          curl -sSf https://join.golem.network/as-requestor | bash -
+          gftp --version
           pip install goth
           rm -rf ../goth/assets
           python -m goth create-assets ../goth/assets
@@ -69,7 +71,6 @@ jobs:
         env:
           GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gftp --version
           npm run test:integration
 
       - name: Upload test logs
