@@ -101,7 +101,7 @@ export class TaskExecutor {
     await this.paymentService.end();
     this.storageProvider?.close();
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFinished());
-    this.logger?.table?.(this.statsService.getStatsTree());
+    this.logger?.table?.(this.statsService.getAllCosts());
     await this.statsService.end();
     this.logger?.info("Task Executor has shut down");
   }

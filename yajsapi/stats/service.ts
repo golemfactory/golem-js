@@ -52,6 +52,25 @@ export class StatsService {
     this.logger?.debug("Stats service has stopped");
   }
 
+  getAllCosts() {
+    return this.agreements
+      .getAll()
+      .map((agreement) => {
+        const provider = this.providers.getById(agreement.providerId);
+        const activities = this.activities.getByAgreementId(agreement.id);
+        const invoices = this.invoices.getByAgreementId(agreement.id);
+        const payments = this.payments.getByAgreementId(agreement.id);
+        return {
+          Agreement: agreement.id.substring(0, 10),
+          "Provider Name": provider ? provider.providerName : "unknown",
+          "Task Computed": activities.count(),
+          Cost: invoices.sum("amount"),
+          "Payment Status": payments.count() > 0 ? "paid" : "unpaid",
+        };
+      })
+      .all();
+  }
+
   getStatsTree() {
     return {
       allocations: this.allocations
