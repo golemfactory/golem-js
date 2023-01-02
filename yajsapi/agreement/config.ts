@@ -11,7 +11,7 @@ const DEFAULT_OPTIONS = {
   EXECUTE_TIMEOUT: 30000,
   EVENT_POOLING_INT: 5,
   EVENT_POOLING_MAX_EVENTS: 100,
-  SUBNET_TAG: "devnet-beta",
+  SUBNET_TAG: "public",
   basePath: "http://127.0.0.1:7465",
 };
 

@@ -1,6 +1,7 @@
 import { AbstractAggregator } from "./abstract_aggregator";
+import { Events } from "../events";
 
-export interface PaymentInfo {
+export interface InvoiceInfo {
   id: string;
   providerId: string;
   agreementId: string;
@@ -13,8 +14,8 @@ interface Payload {
   amount: string;
 }
 
-export class Payments extends AbstractAggregator<Payload, PaymentInfo> {
-  beforeAdd(payload): PaymentInfo {
+export class Invoices extends AbstractAggregator<Payload, InvoiceInfo> {
+  beforeAdd(payload): InvoiceInfo {
     return {
       ...payload,
       amount: parseFloat(payload.amount),
@@ -23,7 +24,6 @@ export class Payments extends AbstractAggregator<Payload, PaymentInfo> {
   getByProviderId(providerId: string) {
     return this.getByField("providerId", providerId);
   }
-
   getByAgreementId(agreementId: string) {
     return this.getByField("agreementId", agreementId);
   }

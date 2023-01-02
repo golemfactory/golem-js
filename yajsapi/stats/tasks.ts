@@ -1,64 +1,40 @@
-interface TaskInfo {
-  startTime: number;
-  stopTime: number;
-  agreements: Set<string>;
-  activities: Set<string>;
-  retriesCount: number;
-  success: boolean;
-  reason?: string;
+import { AbstractAggregator, ItemInfo } from "./abstract_aggregator";
+
+export enum TaskStatusEnum {
+  Pending = "pending",
+  Finished = "finished",
+  Rejected = "rejected",
 }
 
-export class Tasks {
-  tasks = new Map<string, TaskInfo>();
-  startTime?: number;
-  stopTime?: number;
+export interface TaskInfo extends ItemInfo {
+  startTime: number;
+  stopTime: number;
+  retriesCount: number;
+  reason?: string;
+  status: TaskStatusEnum;
+}
 
-  addStartTime(timestamp: number) {
-    this.startTime = timestamp;
+interface Payload {
+  id: string;
+  startTime: number;
+}
+
+export class Tasks extends AbstractAggregator<Payload, TaskInfo> {
+  beforeAdd(payload): TaskInfo {
+    return {
+      ...payload,
+      stopTime: 0,
+      retriesCount: 0,
+      status: TaskStatusEnum.Pending,
+    };
   }
-
-  addStopTime(timestamp: number) {
-    this.stopTime = timestamp;
+  retry(id: string, retriesCount: number) {
+    this.updateItemInfo(id, { retriesCount });
   }
-
-  startTask(id: string, agreementId: string, activityId: string, timestamp: number) {
-    const task = this.tasks.get(id);
-    if (!task) {
-      this.tasks.set(id, {
-        agreements: new Set<string>().add(agreementId),
-        activities: new Set<string>().add(agreementId),
-        retriesCount: 0,
-        startTime: timestamp,
-        stopTime: 0,
-        success: false,
-      });
-    } else {
-      task.agreements.add(agreementId);
-      task.activities.add(activityId);
-    }
+  reject(id: string, timeStamp: number, reason?: string) {
+    this.updateItemInfo(id, { stopTime: timeStamp, reason: reason, status: TaskStatusEnum.Rejected });
   }
-
-  stopTask(id: string, timestamp: number, success: boolean, reason?: string) {
-    const task = this.tasks.get(id);
-    task && (task.stopTime = timestamp) && (task.success = success) && (task.reason = reason);
-  }
-
-  retryTask(id, retriesCount) {
-    const task = this.tasks.get(id);
-    task && (task.retriesCount = retriesCount);
-  }
-
-  getComputedTasks(agreementId: string): number {
-    return [...this.tasks.values()].filter((task) => task.agreements.has(agreementId) && task.success).length;
-  }
-
-  getActivities(agreementId: string): string[] {
-    return [...this.tasks.values()]
-      .filter((task) => task.agreements.has(agreementId))
-      .flatMap((t) => [...t.activities]);
-  }
-
-  getAllTasks(agreementId: string): number {
-    return [...this.tasks.values()].filter((task) => task.agreements.has(agreementId)).length;
+  finish(id: string, timeStamp: number) {
+    this.updateItemInfo(id, { stopTime: timeStamp, status: TaskStatusEnum.Finished });
   }
 }
