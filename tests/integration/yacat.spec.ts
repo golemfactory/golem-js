@@ -36,13 +36,11 @@ describe("Password cracking", function () {
     const step = Math.floor(keyspace / 3);
     const ranges = range(0, keyspace, step);
     const results = executor.map(ranges, async (ctx, skip) => {
-      console.log(`hashcat -a 3 -m 400 '${hash}' '${mask}' --skip=${skip} --limit=${skip! + step} -o pass.potfile`);
       const results = await ctx
         .beginBatch()
         .run(`hashcat -a 3 -m 400 '${hash}' '${mask}' --skip=${skip} --limit=${skip! + step} -o pass.potfile -D 1,2`)
         .run("cat pass.potfile")
         .end()
-        .catch((err) => console.error(err));
       if (!results?.[1]?.stdout) return false;
       return results?.[1]?.stdout.split(":")?.[1]?.trim();
     });
