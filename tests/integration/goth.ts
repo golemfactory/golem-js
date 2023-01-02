@@ -39,6 +39,10 @@ export class Goth {
       });
       this.gothProcess?.stderr?.on("data", (data) => {
         if (data.toString().match(/error/)) reject(data);
+        const regexp =/\[requestor\] Gftp volume ([a-zA-Z0-9\/_]*)/g
+        const results = Array.from(data?.toString()?.matchAll(regexp) || [])?.pop();
+        const gftpVolume = results?.[1];
+        if (gftpVolume) process.env["GOTH_GFTP_VOLUME"] = gftpVolume + '/out/';
         console.log("\x1b[33m[goth]\x1b[0m " + data.replace(/[\n\t\r]/g, ""));
       });
       this.gothProcess.on("error", (error) => reject(error.toString()));

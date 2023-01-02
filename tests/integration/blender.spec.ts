@@ -57,11 +57,6 @@ describe("Blender rendering", function () {
     });
     const expectedResults = data.map((d) => `output_${d}.png`);
     for await (const result of results) expect(result).to.be.oneOf(expectedResults);
-
-    for (const file of expectedResults) {
-      console.log(path.join(__dirname, `./${file}`));
-      //TODO:
-      // expect(fileExistsSync(path.join(__dirname, `./${file}`))).to.be.true;
-    }
+    for (const file of expectedResults) expect(fileExistsSync(`${process.env.GOTH_GFTP_VOLUME || ""}${file}`)).to.be.true;
   }).timeout(190000);
 });

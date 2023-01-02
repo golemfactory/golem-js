@@ -15,8 +15,6 @@ describe("SSH connection", function () {
     this.timeout(60000);
     await executor.end();
   });
-  // TODO
-  const sshConnectionCheck = false;
   it("should connect to provider via ssh", async () => {
     executor = await createExecutor({
       package: "1e06505997e8bd1b9e1a00bd10d255fc6a390905e4d6840a22a79902",
@@ -40,29 +38,25 @@ describe("SSH connection", function () {
         .catch((e) => console.error(e));
       expect(results?.[3]?.result).to.equal("Ok");
       expect(websocketUri).to.an("string");
-      if (sshConnectionCheck) {
-        await new Promise((res) => setTimeout(res, 5000));
-        const processSsh = spawn("ssh", [
-          "-o",
-          "UserKnownHostsFile=/dev/null",
-          "-o",
-          "StrictHostKeyChecking=no",
-          "-o",
-          `ProxyCommand='/usr/local/bin/websocat --binary -H=Authorization:"Bearer ${process.env.YAGNA_APPKEY}" asyncstdio: ${websocketUri}'`,
-          `root@${crypto.randomBytes(10).toString("hex")}`,
-          "uname -v",
-        ]);
-        processSsh.stdout?.setEncoding("utf-8");
-        processSsh.stderr?.setEncoding("utf-8");
-        processSsh.stdout.on("data", (data) => (stdout += data));
-        processSsh.stderr.on("data", (data) => (error += data));
-        processSsh.on("error", (data) => (error += data.toString()));
-        processSsh.stdin?.write(password);
-        processSsh.stdin?.end();
-        await new Promise((res) => setTimeout(res, 2000));
-      }
+      const processSsh = spawn("ssh", [
+        "-o",
+        "UserKnownHostsFile=/dev/null",
+        "-o",
+        "StrictHostKeyChecking=no",
+        "-o",
+        `ProxyCommand='/usr/local/bin/websocat --binary -H=Authorization:"Bearer ${process.env.YAGNA_APPKEY}" asyncstdio: ${websocketUri}'`,
+        `root@${crypto.randomBytes(10).toString("hex")}`,
+        "uname -v",
+      ], { shell: true });
+      processSsh.stdout?.setEncoding("utf-8");
+      processSsh.stderr?.setEncoding("utf-8");
+      processSsh.stdout.on("data", (data) => (stdout += data));
+      processSsh.stderr.on("data", (data) => (error += data));
+      processSsh.on("error", (data) => (error += data.toString()));
+      processSsh.stdin?.write(password + "\n");
+      processSsh.stdin?.end();
     });
     expect(error).to.equal("");
-    if (sshConnectionCheck) expect(stdout).to.include("1-Alpine SMP");
+    expect(stdout).to.include("1-Alpine SMP");
   }).timeout(180000);
 });

@@ -69,6 +69,7 @@ jobs:
         env:
           GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          sed -Ezi 's/(Requestor"\n.*use\-proxy:\s)(True)/\1False/m' ../goth/assets/goth-config.yml
           npm run test:integration
 
       - name: TMP test

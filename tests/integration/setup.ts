@@ -14,6 +14,7 @@ before(async function () {
 after(async function () {
   this.timeout(60000);
   await goth.end();
+  process.exit(1);
 });
 
 beforeEach(function () {
