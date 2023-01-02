@@ -1,6 +1,5 @@
 import { StorageProvider } from "./provider";
 import { runtimeContextChecker } from "../utils";
-import { randomUUID } from "crypto";
 import path from "path";
 import fs from "fs";
 import tmp from "tmp";
@@ -14,6 +13,7 @@ export class GftpStorageProvider implements StorageProvider {
   private reader;
   private logger;
   private publishedUrls: string[] = [];
+  private randomUUID;
 
   constructor() {
     if (runtimeContextChecker.isBrowser) {
@@ -22,6 +22,8 @@ export class GftpStorageProvider implements StorageProvider {
   }
 
   async init() {
+    const { randomUUID } = await import("crypto");
+    this.randomUUID = randomUUID;
     this.gftpServerProcess = await spawn("gftp server", [], { shell: true });
   }
 
@@ -30,7 +32,7 @@ export class GftpStorageProvider implements StorageProvider {
   }
 
   private generateTempFileName(): string {
-    const file_name = path.join(TMP_DIR, randomUUID().toString());
+    const file_name = path.join(TMP_DIR, this.randomUUID().toString());
     if (fs.existsSync(file_name)) fs.unlinkSync(file_name);
     return file_name;
   }

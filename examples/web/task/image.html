@@ -124,27 +124,35 @@
                 package:"6539a63fecfb4ce98bc838ab2de71c6f4d36e1ee5945fbd8f1165c48",
                 logger
               })
-
-            for (const chunk of chunkedImg) {
-                await executor
-                    .run(async (ctx) => (await ctx.run(`echo "${chunk}" >> /golem/work/input_img.txt`)))
-            }
-
-            await executor
-                .run(async (ctx) => setResponse((await ctx.run(`/usr/bin/python3 /golem/work/task.py /golem/work/input_img.txt 130,180,"${textInput.value}"`)).stdout))
-                .catch(e => logger.error(e));
-            await executor.end();
-
-            // const batch = executor.beginBatch();
             //
             // for (const chunk of chunkedImg) {
-            //     batch.run(`echo "${chunk}" >> /golem/work/input_img.txt`);
+            //     await executor
+            //         .run(async (ctx) => (await ctx.run(`echo "${chunk}" >> /golem/work/input_img.txt`)))
             // }
             //
-            // await batch
-            //   .run(async (ctx) => setResponse((await ctx.run(`/usr/bin/python3 /golem/work/task.py /golem/work/input_img.txt 130,180,"${textInput.value}"`)).stdout))
-            //     .end()
+            // await executor
+            //     .run(async (ctx) => setResponse((await ctx.run(`/usr/bin/python3 /golem/work/task.py /golem/work/input_img.txt 130,180,"${textInput.value}"`)).stdout))
             //     .catch(e => logger.error(e));
+            // await executor.end();
+
+
+            const batchResults = await executor
+                .run(async (ctx) => {
+                    const batch = ctx.beginBatch();
+                    let i = 0;
+                    for (const chunk of chunkedImg) {
+                        console.log(i++);
+                        batch.run(`echo "${chunk}" >> /golem/work/input_img.txt`);
+                    }
+                    batch.run(`/usr/bin/python3 /golem/work/task.py /golem/work/input_img.txt 130,180,"${textInput.value}"`)
+                    return batch.end();
+                })
+                .catch(e => logger.error(e));
+
+            await executor.end();
+
+            const result = batchResults.pop();
+            setResponse(result.stdout)
 
             console.log(executor.getStats())
         }
