@@ -13,12 +13,19 @@ import { ActivityConfig } from "./config";
 import { Events } from "../events";
 
 export interface ActivityOptions {
+  /** Yagna Api Key and Yagna base path to Activity REST Api */
   yagnaOptions?: { apiKey?: string; basePath?: string };
+  /** timeout for sending and creating batch */
   requestTimeout?: number;
+  /** timeout for executing batch */
   executeTimeout?: number;
+  /** interval for fetching batch results while polling */
   exeBatchResultsFetchInterval?: number;
+  /** Logger module */
   logger?: Logger;
+  /** Event Bus implements EventTarget  */
   eventTarget?: EventTarget;
+  /** taskPackage */
   taskPackage?: string;
 }
 
@@ -31,13 +38,6 @@ export class Activity {
    * Create activity for given agreement ID
    * @param agreementId
    * @param options - ActivityOptions
-   * @param options.yagnaOptions.apiKey - Yagna Api Key
-   * @param options.yagnaOptions.basePath - Yagna base path to Activity REST Api
-   * @param options.requestTimeout - timeout for sending and creating batch
-   * @param options.executeTimeout - timeout for executing batch
-   * @param options.exeBatchResultsFetchInterval - interval for fetching batch results while polling
-   * @param options.logger - logger module
-   * @param options.taskPackage
    * @param secure - defines if activity will be secure type
    */
   static async create(agreementId: string, options?: ActivityOptions, secure = false): Promise<Activity> {
@@ -83,6 +83,8 @@ export class Activity {
 
   /**
    * Stop and destroy activity
+   *
+   * @return true
    */
   public async stop(): Promise<boolean> {
     await this.end();
@@ -91,6 +93,9 @@ export class Activity {
 
   /**
    * Getting current state of activity
+   *
+   * @return state
+   * @throws Error when cannot query the state
    */
   public async getState(): Promise<ActivityStateEnum> {
     try {

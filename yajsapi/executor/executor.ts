@@ -40,7 +40,7 @@ export type ExecutorOptions = {
   minCpuCores?: number;
   /** TODO */
   capabilities?: string[];
-  /** Logger instance */
+  /** Logger module */
   logger?: Logger;
   /** TODO enum: debug, info, warn, error */
   logLevel?: string; // TODO: enum ?
