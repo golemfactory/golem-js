@@ -6,14 +6,14 @@ const gothConfig = resolve("../goth/assets/goth-config.yml");
 const goth = new Goth(gothConfig);
 
 before(async function () {
-  this.timeout(60000);
+  this.timeout(120000);
   await goth.start().catch((e) => {
     console.error(e);
     throw e;
   });
 });
 after(async function () {
-  this.timeout(60000);
+  this.timeout(120000);
   await goth.end();
   log();
 });
