@@ -16,22 +16,37 @@ export type ExecutorOptions = {
   package: string | Package;
   /** Number of maximum parallel running task on one TaskExecutor instance */
   maxParallelTasks?: number;
-  /** Timeout for execute one task */
+  /** Timeout for execute one task in ms */
   timeout?: number;
+  /** TODO */
   budget?: number;
+  /** Strategy used to choose best offer */
   strategy?: MarketStrategy;
+  /** Subnet Tag */
   subnetTag?: string;
+  /** TODO */
   payment?: { driver?: string; network?: string };
+  /** TODO */
   networkAddress?: string;
+  /** TODO */
   engine?: string;
+  /** Minimum required memory from provider instance in GB */
   minMemGib?: number;
+  /** Minimum required storage from provider instance in GB */
   minStorageGib?: number;
+  /** Minimum required CPU threads */
   minCpuThreads?: number;
+  /** Minimum required CPU cores */
   minCpuCores?: number;
+  /** TODO */
   capabilities?: string[];
+  /** Logger instance */
   logger?: Logger;
+  /** TODO enum: debug, info, warn, error */
   logLevel?: string; // TODO: enum ?
+  /** Yagna Options */
   yagnaOptions?: YagnaOptions;
+  /** Event Bus implements EventTarget  */
   eventTarget?: EventTarget;
 };
 
