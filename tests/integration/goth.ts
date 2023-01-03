@@ -9,8 +9,8 @@ export class Goth {
   async start(): Promise<{ apiKey: string; basePath: string; subnetTag: string; gsbUrl: string; path: string }> {
     return new Promise((resolve, reject) => {
       const startTime = Date.now();
-      console.log("\x1b[33mStarting goth process...\x1b[0m");
-      console.log("\x1b[33mRun command:\x1b[0m \x1b[36m", `python -m goth start ${this.gothConfig}`, "\x1b[0m");
+      console.log("\x1b[33mStarting goth process...");
+      console.log("\x1b[33mRun command:\x1b[0m \x1b[36m", `python -m goth start ${this.gothConfig}`);
       this.gothProcess = spawn("python", ["-m", "goth", "start", this.gothConfig], {
         env: { ...process.env, PYTHONUNBUFFERED: "1" },
       });
