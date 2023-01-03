@@ -7,11 +7,20 @@ export class AgreementFactory {
   private readonly logger?: Logger;
   private readonly options: AgreementConfig;
 
+  /**
+   * Create AgreementFactory
+   * @param agreementOptions - {@link AgreementOptions}
+   */
   constructor(agreementOptions?: AgreementOptions) {
     this.options = new AgreementConfig(agreementOptions);
     this.logger = agreementOptions?.logger;
   }
 
+  /**
+   * Create Agreement for given proposal ID
+   *
+   * @return Agreement
+   */
   async create(proposalId: string): Promise<Agreement> {
     try {
       const agreementProposalRequest = {

@@ -13,8 +13,12 @@ import { ActivityConfig } from "./config";
 import { Events } from "../events";
 
 export interface ActivityOptions {
-  /** Yagna Api Key and Yagna base path to Activity REST Api */
-  yagnaOptions?: { apiKey?: string; basePath?: string };
+  yagnaOptions?: {
+    /** Yagna Api Key */
+    apiKey?: string;
+    /** Yagna base path to Activity REST Api */
+    basePath?: string;
+  };
   /** timeout for sending and creating batch */
   requestTimeout?: number;
   /** timeout for executing batch */
@@ -37,8 +41,9 @@ export class Activity {
   /**
    * Create activity for given agreement ID
    * @param agreementId
-   * @param options - ActivityOptions
+   * @param options - {@link ActivityOptions}
    * @param secure - defines if activity will be secure type
+   * @return Activity
    */
   static async create(agreementId: string, options?: ActivityOptions, secure = false): Promise<Activity> {
     const factory = new ActivityFactory(agreementId, options);

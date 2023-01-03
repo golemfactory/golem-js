@@ -8,14 +8,7 @@ export class ActivityFactory {
   /**
    * Creating ActivityFactory
    * @param agreementId
-   * @param options - ActivityOptions
-   * @param options.yagnaOptions.apiKey - Yagna Api Key
-   * @param options.yagnaOptions.basePath - Yagna base path to Activity REST Api
-   * @param options.requestTimeout - timeout for sending and creating batch
-   * @param options.executeTimeout - timeout for executing batch
-   * @param options.exeBatchResultsFetchInterval - interval for fetching batch results while polling
-   * @param options.logger - logger module
-   * @param options.taskPackage
+   * @param options - {@link ActivityOptions}
    */
   constructor(private readonly agreementId: string, options?: ActivityOptions) {
     this.options = new ActivityConfig(options);
@@ -24,6 +17,8 @@ export class ActivityFactory {
   /**
    * Create activity for given agreement ID
    * @param secure defines if activity will be secure type
+   * @return {@link Activity}
+   * @throws {@link Error} if activity could not be created
    */
   public async create(secure = false): Promise<Activity> {
     try {

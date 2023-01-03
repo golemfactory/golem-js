@@ -33,21 +33,39 @@ export class AgreementPoolService implements ComputationHistory {
     this.logger = agreementServiceOptions?.logger;
   }
 
+  /**
+   * Start AgreementService
+   */
   async run() {
     this.isServiceRunning = true;
     this.initialTime = +new Date();
     this.logger?.debug("Agreement Pool Service has started");
   }
 
+  /**
+   * Add proposal for create agreement purposes
+   * @param proposalId
+   */
   addProposal(proposalId: string) {
     this.proposals.push(proposalId);
     this.logger?.debug(`New offer proposal added to pool (${proposalId})`);
   }
 
+  /**
+   * Get agreement ready for use
+   * @description Return available agreement from pool, or create a new one
+   * @return Agreement
+   */
   async getAgreement(): Promise<Agreement> {
     return (await this.getAvailableAgreement()) || (await this.createAgreement());
   }
 
+  /**
+   * Release or terminate agreement by ID
+   *
+   * @param agreementId
+   * @param allowReuse if false, terminate and remove from pool, if true, back to pool for further reuse
+   */
   async releaseAgreement(agreementId: string, allowReuse = false) {
     const agreement = await this.agreements.get(agreementId);
     if (!agreement) {
@@ -63,16 +81,27 @@ export class AgreementPoolService implements ComputationHistory {
     }
   }
 
+  /**
+   * Stop the service
+   */
   async end() {
     this.isServiceRunning = false;
     await this.terminateAll({ message: "All computations done" });
     this.logger?.debug("Agreement Pool Service has been stopped");
   }
 
+  /**
+   * Returns information if the last provider reject agreement
+   * @param boolean
+   */
   isProviderLastAgreementRejected(providerId: string): boolean {
     return !!this.lastAgreementRejectedByProvider.get(providerId);
   }
 
+  /**
+   * Terminate all agreements
+   * @param reason
+   */
   async terminateAll(reason?: { [key: string]: string }) {
     for (const agreement of this.agreements.values()) {
       await agreement
