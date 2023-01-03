@@ -23,7 +23,7 @@ module.exports = {
         { find: /winstonLogger$/, replacement: "." },
         { find: "eventsource", replacement: "." },
         { find: /src\/api\/provider-api$/, replacement: "." },
-        { find: /gftp_provider$/, replacement: "." },
+        { find: /gftp$/, replacement: "." },
       ],
     }),
     resolve({ browser: true, preferBuiltins: true }),
