@@ -12,8 +12,11 @@ import { Events } from "../events";
 import { StatsService } from "../stats/service";
 
 export type ExecutorOptions = {
+  /** Image hash as string, otherwise Package object */
   package: string | Package;
+  /** Number of maximum parallel running task on one TaskExecutor instance */
   maxParallelTasks?: number;
+  /** Timeout for execute one task */
   timeout?: number;
   budget?: number;
   strategy?: MarketStrategy;
@@ -27,7 +30,7 @@ export type ExecutorOptions = {
   minCpuCores?: number;
   capabilities?: string[];
   logger?: Logger;
-  logLevel?: string;
+  logLevel?: string; // TODO: enum ?
   yagnaOptions?: YagnaOptions;
   eventTarget?: EventTarget;
 };
@@ -41,7 +44,7 @@ export type YagnaOptions = {
 
 export class TaskExecutor {
   private readonly options: ExecutorConfig;
-  private readonly imageHash?: string;
+  private readonly imageHash?: string; // TODO: not used
   private marketService: MarketService;
   private agreementPoolService: AgreementPoolService;
   private taskService: TaskService;
@@ -54,6 +57,11 @@ export class TaskExecutor {
   private logger?: Logger;
   private lastTaskIndex = 0;
 
+  /**
+   * Create a new TaskExecutor object.
+   *
+   * @param options contains information needed to start executor, if string the imageHash is required, otherwise it should be a type of {@link ExecutorOptions}
+   */
   constructor(options: ExecutorOptionsMixin) {
     const configOptions: ExecutorOptions =
       typeof options === "string" ? { package: options } : (options as ExecutorOptions);
@@ -75,6 +83,11 @@ export class TaskExecutor {
     this.statsService = new StatsService(this.options);
   }
 
+  /**
+   * Initialize executor
+   *
+   * @description Method responsible initialize all executor services.
+   */
   async init() {
     const taskPackage =
       typeof this.options.package === "string" ? await this.createPackage(this.options.package) : this.options.package;
@@ -92,6 +105,11 @@ export class TaskExecutor {
     );
   }
 
+  /**
+   * End executor process
+   *
+   * @description Method responsible for stopping all executor services and shut down executor instance
+   */
   async end() {
     await this.marketService.end();
     await this.agreementPoolService.end();
@@ -105,18 +123,41 @@ export class TaskExecutor {
     this.logger?.info("Task Executor has shut down");
   }
 
+  /**
+   * Statistics of execution process
+   *
+   * @return array
+   */
   getStats() {
     return this.statsService.getStatsTree();
   }
 
+  /**
+   * Define worker function that will be runs before every each computation Task
+   *
+   * @param worker worker function
+   */
   beforeEach(worker: Worker) {
     this.initWorker = worker;
   }
 
+  /**
+   * Run task
+   *
+   * @param worker function that run task
+   * @return computed task
+   */
   async run<OutputType = Result>(worker: Worker<undefined, OutputType>): Promise<OutputType | undefined> {
     return this.executeTask<undefined, OutputType>(worker);
   }
 
+  /**
+   * Map iterable data to worker function and return computed Task result as AsyncIterable
+   *
+   * @param data Iterable data
+   * @param worker worker function
+   * @return AsyncIterable with results of computed tasks
+   */
   map<InputType, OutputType>(
     data: Iterable<InputType>,
     worker: Worker<InputType, OutputType>
@@ -148,6 +189,12 @@ export class TaskExecutor {
     };
   }
 
+  /**
+   * Iterates over given data and execute task using worker function
+   *
+   * @param data Iterable data
+   * @param worker Worker function
+   */
   async forEach<InputType, OutputType>(
     data: Iterable<InputType>,
     worker: Worker<InputType, OutputType>
@@ -192,6 +239,14 @@ export class TaskExecutor {
   }
 }
 
+/**
+ * Create a new Task Executor
+ *
+ * @description Factory Method that create and initialize an instance of the TaskExecutor
+ *
+ * @param options Task executor options
+ * @return TaskExecutor
+ */
 export async function createExecutor(options: ExecutorOptionsMixin) {
   const executor = new TaskExecutor(options);
   await executor.init();
