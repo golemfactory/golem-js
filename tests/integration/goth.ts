@@ -39,7 +39,7 @@ export class Goth {
       });
       this.gothProcess?.stderr?.on("data", (data) => {
         if (data.toString().match(/error/)) reject(data);
-        const regexp =/\[requestor\] Gftp volume ([a-zA-Z0-9\/_]*)/g
+        const regexp =/\[requestor] Gftp volume ([a-zA-Z0-9\/_]*)/g
         const results = Array.from(data?.toString()?.matchAll(regexp) || [])?.pop();
         const gftpVolume = results?.[1];
         if (gftpVolume) process.env["GOTH_GFTP_VOLUME"] = gftpVolume + '/out/';
@@ -51,6 +51,9 @@ export class Goth {
     });
   }
   async end() {
+    this.gothProcess?.stdout?.removeAllListeners();
+    this.gothProcess?.stderr?.removeAllListeners();
+    this.gothProcess?.removeAllListeners();
     this.gothProcess?.kill("SIGINT");
     return new Promise((resolve) => {
       this.gothProcess?.on("close", () => resolve(console.log(`\x1b[33mGoth has been terminated`)));
