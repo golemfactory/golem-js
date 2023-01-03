@@ -1,3 +1,4 @@
+import log from 'why-is-node-running'
 import { Goth } from "./goth";
 import { resolve } from "path";
 
@@ -14,7 +15,7 @@ before(async function () {
 after(async function () {
   this.timeout(60000);
   await goth.end();
-  process.exit(1);
+  log();
 });
 
 beforeEach(function () {

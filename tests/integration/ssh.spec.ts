@@ -6,8 +6,8 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 const logger = new LoggerMock(false);
 import crypto from "crypto";
-import { spawn } from "child_process";
 import { TaskExecutor } from "../../yajsapi/executor";
+import {spawn} from "child_process";
 
 describe("SSH connection", function () {
   let executor: TaskExecutor;
@@ -24,8 +24,8 @@ describe("SSH connection", function () {
     });
     let websocketUri;
     const password = crypto.randomBytes(3).toString("hex");
-    let error = "",
-      stdout = "";
+    let stdout = "";
+    let processSsh;
     await executor.run(async (ctx) => {
       websocketUri = ctx.getWebsocketUri(22);
       const results = await ctx
@@ -38,25 +38,21 @@ describe("SSH connection", function () {
         .catch((e) => console.error(e));
       expect(results?.[3]?.result).to.equal("Ok");
       expect(websocketUri).to.an("string");
-      const processSsh = spawn("ssh", [
+      processSsh = spawn(`sshpass -p ${password} ssh`, [
         "-o",
         "UserKnownHostsFile=/dev/null",
         "-o",
         "StrictHostKeyChecking=no",
         "-o",
-        `ProxyCommand='/usr/local/bin/websocat --binary -H=Authorization:"Bearer ${process.env.YAGNA_APPKEY}" asyncstdio: ${websocketUri}'`,
+        `ProxyCommand='websocat asyncstdio: ${websocketUri} --binary -H=Authorization:"Bearer ${process.env.YAGNA_APPKEY}"'`,
         `root@${crypto.randomBytes(10).toString("hex")}`,
         "uname -v",
       ], { shell: true });
-      processSsh.stdout?.setEncoding("utf-8");
-      processSsh.stderr?.setEncoding("utf-8");
-      processSsh.stdout.on("data", (data) => (stdout += data));
-      processSsh.stderr.on("data", (data) => (error += data));
-      processSsh.on("error", (data) => (error += data.toString()));
-      processSsh.stdin?.write(password + "\n");
-      processSsh.stdin?.end();
+      processSsh.stdout.on("data", (data) => stdout += data.toString());
     });
-    expect(error).to.equal("");
+    await new Promise(res => setTimeout(res, 3000));
     expect(stdout).to.include("1-Alpine SMP");
+    processSsh.kill();
+
   }).timeout(180000);
 });
