@@ -74,8 +74,10 @@ export class TaskExecutor {
 
   /**
    * Create a new TaskExecutor object.
+   * @description Use {@link TaskExecutor.create} for creating a task executor
    *
    * @param options - contains information needed to start executor, if string the imageHash is required, otherwise it should be a type of {@link ExecutorOptions}
+   * @ignore
    */
   constructor(options: ExecutorOptionsMixin) {
     const configOptions: ExecutorOptions =
