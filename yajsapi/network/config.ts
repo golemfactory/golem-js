@@ -21,7 +21,7 @@ export class NetworkConfig {
   constructor(options: NetworkOptions) {
     const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
     if (!apiKey) throw new Error("Api key not defined");
-    const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_BASEPATH || DEFAULTS.basePath;
+    const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_URL || DEFAULTS.basePath;
     this.apiUrl = `${basePath}/net-api/v1`;
     const apiConfig = new Configuration({ apiKey, basePath: this.apiUrl, accessToken: apiKey });
     this.api = new RequestorApi(apiConfig);

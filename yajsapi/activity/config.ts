@@ -7,7 +7,7 @@ import { YagnaOptions } from "../executor";
 const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",
   requestTimeout: 10000,
-  executeTimeout: 30000,
+  executeTimeout: 60000,
   exeBatchResultsFetchInterval: 3000,
 };
 
@@ -24,7 +24,7 @@ export class ActivityConfig {
   constructor(options?: ActivityOptions) {
     const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
     if (!apiKey) throw new Error("Api key not defined");
-    const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_BASEPATH || DEFAULTS.basePath;
+    const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_URL || DEFAULTS.basePath;
     const apiConfig = new yaActivity.Configuration({
       apiKey,
       basePath: `${basePath}/activity-api/v1`,

@@ -18,6 +18,7 @@ import { debitNotesEvents, debitNotes, invoices, invoiceEvents } from "../mock/f
 import { isUndefined } from "util";
 
 const logger = new LoggerMock();
+process.env['YAGNA_APPKEY'] = 'test_key';
 
 describe("Payment Service", () => {
   beforeEach(() => {

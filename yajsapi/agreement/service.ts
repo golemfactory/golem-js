@@ -8,6 +8,7 @@ import { AgreementServiceConfig } from "./config";
 export interface AgreementServiceOptions extends AgreementOptions {
   eventPoolingInterval?: number;
   eventPoolingMaxEventsPerRequest?: number;
+  waitingForProposalTimout?: number;
 }
 
 export interface AgreementProposal {
@@ -26,7 +27,7 @@ export class AgreementPoolService implements ComputationHistory {
   private agreementIdsToReuse: string[] = [];
   private isServiceRunning = false;
   private lastAgreementRejectedByProvider = new Map<string, boolean>();
-  private initialTime = 0;
+  private initialTime = Date.now();
 
   constructor(private readonly agreementServiceOptions?: AgreementServiceOptions) {
     this.config = new AgreementServiceConfig(agreementServiceOptions);
@@ -45,7 +46,10 @@ export class AgreementPoolService implements ComputationHistory {
   }
 
   async getAgreement(): Promise<Agreement> {
-    return (await this.getAvailableAgreement()) || (await this.createAgreement());
+    let agreement;
+    while (!agreement && this.isServiceRunning)
+      agreement = (await this.getAvailableAgreement()) || (await this.createAgreement());
+    return agreement;
   }
 
   async releaseAgreement(agreementId: string, allowReuse = false) {
@@ -103,12 +107,11 @@ export class AgreementPoolService implements ComputationHistory {
     return readyAgreement;
   }
 
-  private async createAgreement(): Promise<Agreement> {
+  private async createAgreement(): Promise<Agreement | undefined> {
     let agreement;
     while (!agreement && this.isServiceRunning) {
       const proposalId = await this.getAvailableProposal();
       if (!proposalId) break;
-
       this.logger?.debug(`Creating agreement using proposal ID: ${proposalId}`);
       try {
         agreement = await Agreement.create(proposalId, this.config.options);
@@ -123,25 +126,32 @@ export class AgreementPoolService implements ComputationHistory {
         this.logger?.error(`Unable to create agreement form available proposal: ${e?.data?.message || e}`);
         // TODO: What we should do with used proposal in that case ?? unshift to begin ?
         await sleep(2);
-
         // If id to go kill'em
         agreement = null;
       }
     }
-    this.agreements.set(agreement.id, agreement);
-    this.logger?.debug(`Agreement ${agreement.id} created with provider ${agreement.provider.name}`);
+    if (agreement) {
+      this.agreements.set(agreement.id, agreement);
+      this.logger?.debug(`Agreement ${agreement.id} signed with provider ${agreement.provider.name}`);
+    } else {
+      this.logger?.debug(`Agreement cannot be created due to no available offers from market`);
+    }
     return agreement;
   }
 
-  private async getAvailableProposal(): Promise<string> {
+  private async getAvailableProposal(): Promise<string | undefined> {
     let proposal;
-    while (!proposal && this.isServiceRunning) {
+    let timeout = false;
+    const timeoutId = setTimeout(() => (timeout = true), this.config.waitingForProposalTimout);
+    while (!proposal && this.isServiceRunning && !timeout) {
       proposal = this.proposals.pop();
       if (!proposal) {
-        if (+new Date() > this.initialTime + 10000) this.logger?.warn(`No offers have been collected from the market`);
+        if (+new Date() > this.initialTime + 9000) this.logger?.warn(`No offers have been collected from the market`);
         await sleep(10);
       }
     }
+    clearTimeout(timeoutId);
+    this.initialTime = +new Date();
     return proposal;
   }
 
