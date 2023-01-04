@@ -1,6 +1,5 @@
 import { StorageProvider } from "./provider";
 import { Logger, runtimeContextChecker } from "../utils";
-import { randomUUID } from "crypto";
 import path from "path";
 import fs from "fs";
 import tmp from "tmp";
@@ -12,15 +11,19 @@ const TMP_DIR = tmp.dirSync().name;
 export class GftpStorageProvider implements StorageProvider {
   private gftpServerProcess;
   private reader;
+  private logger;
   private publishedUrls: string[] = [];
+  private randomUUID;
 
-  constructor(private logger?: Logger) {
+  constructor() {
     if (runtimeContextChecker.isBrowser) {
       throw new Error(`File transfer by GFTP module is unsupported in the browser context.`);
     }
   }
 
   async init() {
+    const { randomUUID } = await import("crypto");
+    this.randomUUID = randomUUID;
     this.gftpServerProcess = await spawn("gftp server", [], { shell: true });
     this.gftpServerProcess.on("error", (error) => this.logger?.error(error));
     this.gftpServerProcess.stderr.on("error", (error) => this.logger?.error(error));
@@ -61,7 +64,6 @@ export class GftpStorageProvider implements StorageProvider {
     if (this.publishedUrls.length) await this.release(this.publishedUrls);
     const stream = this.getGftpServerProcess();
     if (stream) await streamEnd(this.getGftpServerProcess().stdin);
-    stream.kill();
   }
 
   private async jsonrpc(method: string, params: object = {}) {
