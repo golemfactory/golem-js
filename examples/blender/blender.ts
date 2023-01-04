@@ -1,4 +1,4 @@
-import { createExecutor, utils } from "../../dist";
+import { createExecutor } from "../../dist";
 import { program } from "commander";
 import path from "path";
 

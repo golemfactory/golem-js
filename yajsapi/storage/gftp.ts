@@ -11,19 +11,16 @@ const TMP_DIR = tmp.dirSync().name;
 export class GftpStorageProvider implements StorageProvider {
   private gftpServerProcess;
   private reader;
-  private logger;
   private publishedUrls: string[] = [];
   private randomUUID;
 
-  constructor() {
+  constructor(private logger?: Logger) {
     if (runtimeContextChecker.isBrowser) {
       throw new Error(`File transfer by GFTP module is unsupported in the browser context.`);
     }
   }
 
   async init() {
-    const { randomUUID } = await import("crypto");
-    this.randomUUID = randomUUID;
     this.gftpServerProcess = await spawn("gftp server", [], { shell: true });
     this.gftpServerProcess.on("error", (error) => this.logger?.error(error));
     this.gftpServerProcess.stderr.on("error", (error) => this.logger?.error(error));
@@ -33,7 +30,8 @@ export class GftpStorageProvider implements StorageProvider {
     return !!this.gftpServerProcess;
   }
 
-  private generateTempFileName(): string {
+  private async generateTempFileName(): Promise<string> {
+    const { randomUUID } = await import("crypto");
     const file_name = path.join(TMP_DIR, randomUUID().toString());
     if (fs.existsSync(file_name)) fs.unlinkSync(file_name);
     return file_name;
@@ -93,7 +91,7 @@ export class GftpStorageProvider implements StorageProvider {
   }
 
   private async uploadStream(stream: AsyncGenerator<Buffer>): Promise<string> {
-    const file_name = this.generateTempFileName();
+    const file_name = await this.generateTempFileName();
     const wStream = fs.createWriteStream(file_name, {
       encoding: "binary",
     });
