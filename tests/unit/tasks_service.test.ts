@@ -138,6 +138,7 @@ describe("Task Service", () => {
     await logger.expectToNotMatch(
       /Init worker done in activity.*\n.*\nInit worker done in activity.*\n.*\nInit worker done in activity/
     );
+    await new Promise((res) => setTimeout(res, 1000));
     expect(task1.isFinished()).to.be.true;
     expect(task2.isFinished()).to.be.true;
     expect(task3.isFinished()).to.be.true;
