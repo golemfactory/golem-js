@@ -1,4 +1,3 @@
-/* eslint @typescript-eslint/ban-ts-comment: 0 */
 import rewiremock from "rewiremock";
 import { MarketApiMock } from "../mock/rest/market";
 rewiremock("ya-ts-client/dist/ya-market/api").with({ RequestorApi: MarketApiMock });
@@ -13,6 +12,7 @@ import { AgreementStateEnum } from "ya-ts-client/dist/ya-market/src/models/agree
 
 const subnetTag = "testnet";
 const logger = new LoggerMock();
+process.env['YAGNA_APPKEY'] = 'test_key';
 
 describe("Agreement", () => {
   beforeEach(() => logger.clear());
@@ -29,9 +29,7 @@ describe("Agreement", () => {
     it("should be a instance ProviderInfo with provider details", async () => {
       const agreement = await Agreement.create("test_proposal_id", { subnetTag, logger });
       expect(agreement).to.be.instanceof(Agreement);
-      //@ts-ignore
       expect(agreement.provider.id).to.an("string");
-      //@ts-ignore
       expect(agreement.provider.name).to.an("string");
     });
   });

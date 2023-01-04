@@ -29,7 +29,12 @@ export class AgreementFactory {
       if (!provider.id || !provider.name) throw new Error("Unable to get provider info");
       const agreement = new Agreement(agreementId, provider, this.options);
       this.options.eventTarget?.dispatchEvent(
-        new Events.AgreementCreated({ id: agreementId, providerId: provider.id, providerName: provider.name })
+        new Events.AgreementCreated({
+          id: agreementId,
+          providerId: provider.id,
+          providerName: provider.name,
+          proposalId,
+        })
       );
       this.logger?.info(`Agreement ${agreementId} created`);
       return agreement;

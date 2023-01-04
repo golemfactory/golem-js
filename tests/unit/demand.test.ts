@@ -12,6 +12,7 @@ import { proposalsInitial } from "../mock/fixtures";
 
 const subnetTag = "testnet";
 const logger = new LoggerMock();
+process.env['YAGNA_APPKEY'] = 'test_key';
 
 describe("Demand", () => {
   describe("Creating", () => {

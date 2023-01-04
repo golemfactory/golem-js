@@ -64,7 +64,7 @@ export class TaskExecutor {
     this.paymentService = new PaymentService(this.options);
     this.marketService = new MarketService(this.agreementPoolService, this.options);
     this.networkService = this.options.networkAddress ? new NetworkService(this.options) : undefined;
-    this.storageProvider = runtimeContextChecker.isNode ? new GftpStorageProvider() : undefined;
+    this.storageProvider = runtimeContextChecker.isNode ? new GftpStorageProvider(this.logger) : undefined;
     this.taskService = new TaskService(
       this.taskQueue,
       this.agreementPoolService,
@@ -103,6 +103,10 @@ export class TaskExecutor {
     this.logger?.table?.(this.statsService.getAllCosts());
     await this.statsService.end();
     this.logger?.info("Task Executor has shut down");
+  }
+
+  getStats() {
+    return this.statsService.getStatsTree();
   }
 
   beforeEach(worker: Worker) {

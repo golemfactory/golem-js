@@ -5,8 +5,8 @@ const commonjs = require("@rollup/plugin-commonjs");
 const json = require("@rollup/plugin-json");
 const alias = require("@rollup/plugin-alias");
 const inject = require("@rollup/plugin-inject");
-const { uglify } = require("rollup-plugin-uglify");
-const { visualizer } = require("rollup-plugin-visualizer");
+const minify = require("rollup-plugin-minify");
+// const { visualizer } = require("rollup-plugin-visualizer");
 
 module.exports = {
   input: path.resolve(__dirname, "./dist/index_browser.js"),
@@ -23,7 +23,7 @@ module.exports = {
         { find: /winstonLogger$/, replacement: "." },
         { find: "eventsource", replacement: "." },
         { find: /src\/api\/provider-api$/, replacement: "." },
-        { find: /gftp_provider$/, replacement: "." },
+        { find: /gftp$/, replacement: "." },
       ],
     }),
     resolve({ browser: true, preferBuiltins: true }),
@@ -32,7 +32,7 @@ module.exports = {
     inject({
       process: stdLibBrowser.process,
     }),
-    uglify(),
-    visualizer(),
+    minify(),
+    // visualizer(),
   ],
 };

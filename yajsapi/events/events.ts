@@ -33,7 +33,12 @@ export class ProposalReceived extends BaseEvent<{ id: string; providerId: string
 export class ProposalRejected extends BaseEvent<{ id: string; providerId: string; reason?: string }> {}
 export class ProposalResponded extends BaseEvent<{ id: string; providerId: string }> {}
 export class ProposalConfirmed extends BaseEvent<{ id: string; providerId: string }> {}
-export class AgreementCreated extends BaseEvent<{ id: string; providerId: string; providerName: string }> {}
+export class AgreementCreated extends BaseEvent<{
+  id: string;
+  providerId: string;
+  providerName: string;
+  proposalId: string;
+}> {}
 export class AgreementConfirmed extends BaseEvent<{ id: string; providerId: string }> {}
 export class AgreementRejected extends BaseEvent<{ id: string; providerId: string; reason?: string }> {}
 export class AgreementTerminated extends BaseEvent<{ id: string; providerId: string; reason?: string }> {}

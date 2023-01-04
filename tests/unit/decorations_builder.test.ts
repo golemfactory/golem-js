@@ -3,7 +3,7 @@ import { ComparisonOperator, DecorationsBuilder } from "../../yajsapi/market/bui
 
 describe("#DecorationsBuilder()", () => {
   before(() => {
-    //
+    process.env['YAGNA_APPKEY'] = 'test_key';
   });
   describe("addProperty()", () => {
     it("should allow to add property", () => {
