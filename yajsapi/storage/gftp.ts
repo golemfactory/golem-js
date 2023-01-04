@@ -1,5 +1,5 @@
 import { StorageProvider } from "./provider";
-import { runtimeContextChecker } from "../utils";
+import { Logger, runtimeContextChecker } from "../utils";
 import path from "path";
 import fs from "fs";
 import tmp from "tmp";
@@ -25,6 +25,8 @@ export class GftpStorageProvider implements StorageProvider {
     const { randomUUID } = await import("crypto");
     this.randomUUID = randomUUID;
     this.gftpServerProcess = await spawn("gftp server", [], { shell: true });
+    this.gftpServerProcess.on("error", (error) => this.logger?.error(error));
+    this.gftpServerProcess.stderr.on("error", (error) => this.logger?.error(error));
   }
 
   isInitiated() {
@@ -32,7 +34,7 @@ export class GftpStorageProvider implements StorageProvider {
   }
 
   private generateTempFileName(): string {
-    const file_name = path.join(TMP_DIR, this.randomUUID().toString());
+    const file_name = path.join(TMP_DIR, randomUUID().toString());
     if (fs.existsSync(file_name)) fs.unlinkSync(file_name);
     return file_name;
   }
@@ -60,7 +62,8 @@ export class GftpStorageProvider implements StorageProvider {
 
   async close() {
     if (this.publishedUrls.length) await this.release(this.publishedUrls);
-    await streamEnd(this.getGftpServerProcess().stdin);
+    const stream = this.getGftpServerProcess();
+    if (stream) await streamEnd(this.getGftpServerProcess().stdin);
   }
 
   private async jsonrpc(method: string, params: object = {}) {

@@ -61,7 +61,7 @@ export class TaskService {
 
   private async startTask(task: Task) {
     task.start();
-    this.logger?.debug(`Task started. ID: ${task.id}, Data: ${task.getData()}`);
+    this.logger?.debug(`Starting task. ID: ${task.id}, Data: ${task.getData()}`);
     ++this.activeTasksCount;
     const agreement = await this.agreementPoolService.getAgreement();
     let activity;
@@ -75,6 +75,7 @@ export class TaskService {
       this.options.eventTarget?.dispatchEvent(
         new Events.TaskStarted({ id: task.id, agreementId: agreement.id, activityId: activity.id })
       );
+      this.logger?.debug(`Task started. ID: ${task.id}, Data: ${task.getData()}`);
       this.paymentService.acceptDebitNotes(agreement.id);
       const initWorker = task.getInitWorker();
       const worker = task.getWorker();

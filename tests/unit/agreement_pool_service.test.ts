@@ -9,6 +9,7 @@ import { LoggerMock } from "../mock";
 import { Agreement, AgreementPoolService } from "../../yajsapi/agreement";
 
 const logger = new LoggerMock();
+process.env['YAGNA_APPKEY'] = 'test_key';
 
 describe("Agreement Pool Service", () => {
   beforeEach(() => {

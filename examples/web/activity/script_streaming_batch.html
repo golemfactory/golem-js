@@ -107,8 +107,8 @@
             const appKey = document.getElementById('YAGNA_APPKEY').value;
             const basePath = document.getElementById('YAGNA_API_BASEPATH').value;
             const agreementId = document.getElementById('AGREEMENT_ID').value;
-            const factory = new yajsapi.activity.ActivityFactory(appKey, basePath);
-            activity = await factory.create(agreementId).catch(err => logger.error(err));
+            const yagnaOptions = { appKey, basePath };
+            activity = await yajsapi.activity.Activity.create(agreementId, yagnaOptions).catch(logger.error);
             if (activity) {
                 log(`Activity created. ID: ${activity.id}`);
                 enableActions();

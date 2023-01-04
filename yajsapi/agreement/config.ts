@@ -1,4 +1,3 @@
-import { YagnaOptions } from "../executor";
 import { AgreementOptions } from "./agreement";
 import { AgreementServiceOptions } from "./service";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
@@ -13,6 +12,7 @@ const DEFAULT_OPTIONS = {
   EVENT_POOLING_MAX_EVENTS: 100,
   SUBNET_TAG: "public",
   basePath: "http://127.0.0.1:7465",
+  waitingForProposalTimout: 10000
 };
 
 export class AgreementConfig {
@@ -27,7 +27,7 @@ export class AgreementConfig {
   constructor(public readonly options?: AgreementOptions) {
     const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
     if (!apiKey) throw new Error("Api key not defined");
-    const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_BASEPATH || DEFAULT_OPTIONS.basePath;
+    const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_URL || DEFAULT_OPTIONS.basePath;
     const apiConfig = new Configuration({ apiKey, basePath: `${basePath}/market-api/v1`, accessToken: apiKey });
     this.api = new RequestorApi(apiConfig);
     this.requestTimeout = options?.requestTimeout || DEFAULT_OPTIONS.REQUEST_TIMEOUT;
@@ -40,11 +40,13 @@ export class AgreementConfig {
 }
 
 export class AgreementServiceConfig extends AgreementConfig {
-  private eventPoolingInterval?: number;
-  private eventPoolingMaxEventsPerRequest?: number;
+  readonly eventPoolingInterval: number;
+  readonly eventPoolingMaxEventsPerRequest: number;
+  readonly waitingForProposalTimout: number;
 
   constructor(options?: AgreementServiceOptions) {
     super(options);
+    this.waitingForProposalTimout = options?.waitingForProposalTimout || DEFAULT_OPTIONS.waitingForProposalTimout;
     this.eventPoolingInterval = options?.eventPoolingInterval || DEFAULT_OPTIONS.EVENT_POOLING_INT;
     this.eventPoolingMaxEventsPerRequest =
       options?.eventPoolingMaxEventsPerRequest || DEFAULT_OPTIONS.EVENT_POOLING_MAX_EVENTS;

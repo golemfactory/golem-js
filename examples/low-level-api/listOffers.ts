@@ -42,7 +42,7 @@ const promiseTimeout = (seconds: number): Promise<void> =>
     }, seconds * 1000)
   );
 
-program.option("--subnet-tag <subnet>", "set subnet name", "devnet-beta");
+program.option("--subnet-tag <subnet>", "set subnet name", "public");
 program.parse(process.argv);
 const options = program.opts();
 console.log(`Using subnet: ${options.subnetTag}`);

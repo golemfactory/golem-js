@@ -65,7 +65,7 @@ export class Network {
         await config.api.removeNetwork(id as string);
         throw e;
       });
-      config.logger?.info(`Created network: ID: ${id}, IP: ${ip}, Mask: ${mask}`);
+      config.logger?.info(`Network created: ID: ${id}, IP: ${ip}, Mask: ${mask}`);
       return network;
     } catch (error) {
       throw new Error(`Unable to create network. ${error?.response?.data?.message || error}`);

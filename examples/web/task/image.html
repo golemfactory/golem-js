@@ -129,8 +129,8 @@
                     }
                     batch.run(`/usr/bin/python3 /golem/work/task.py /golem/work/input_img.txt 130,180,"${textInput.value}"`)
                     return batch.end();
-                })
-                .catch(e => logger.error(e));
+                }).catch(e => logger.error(e));
+
             await executor.end();
             const result = batchResults.pop();
             setResponse(result.stdout)
