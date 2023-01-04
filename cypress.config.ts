@@ -13,6 +13,7 @@ export default defineConfig({
   fixturesFolder: "tests/cypress/fixtures",
   videosFolder: ".cypress/video",
   experimentalInteractiveRunEvents: true,
+  chromeWebSecurity: false,
   e2e: {
     supportFile: "tests/cypress/support/e2e.ts",
     specPattern: "tests/cypress/ui/**/*.cy.ts",

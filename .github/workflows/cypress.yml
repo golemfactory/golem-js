@@ -3,11 +3,11 @@ name: Cypress
 on:
   push:
     branches:
-#tmp      - master
+      - master
       - b0.*
   pull_request:
     branches:
-#tmp      - master
+      - master
       - b0.*
 
 jobs:
@@ -21,6 +21,37 @@ jobs:
         run: |
           npm install
           npm run build
+
+      - name: Configure python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8.0'
+
+      - name: Install goth
+        run: |
+          pip install goth
+          rm -rf ../goth/assets
+          python -m goth create-assets ../goth/assets
+
+      - name: Disconnect Docker containers from default network
+        continue-on-error: true
+        # related to this issue: https://github.com/moby/moby/issues/23302
+        run: |
+          docker network inspect docker_default
+          sudo apt-get install -y jq
+          docker network inspect docker_default | jq ".[0].Containers | map(.Name)[]" | tee /dev/stderr | xargs --max-args 1 -- docker network disconnect -f docker_default
+
+      - name: Remove Docker containers
+        continue-on-error: true
+        run: docker rm -f $(docker ps -a -q)
+
+      - name: Restart Docker daemon
+        # related to this issue: https://github.com/moby/moby/issues/23302
+        run: sudo systemctl restart docker
+
+      - name: Log in to GitHub Docker repository
+        run: echo ${{ secrets.GITHUB_TOKEN }} | docker login docker.pkg.github.com -u ${{github.actor}} --password-stdin
+
       - name: Cypress run
         uses: cypress-io/github-action@v5
         with:
