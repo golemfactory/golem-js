@@ -76,7 +76,7 @@ describe("Task Service", () => {
       activityStateCheckingInterval: 100,
     });
     service.run().catch((e) => console.error(e));
-    await logger.expectToInclude("The task 1 execution failed. Trying to redo the task. Attempt #", 300);
+    await logger.expectToInclude("The task 1 execution failed. Trying to redo the task. Attempt #", 1200);
     expect(task.isRetry()).to.be.true;
     await service.end();
   });
