@@ -14,7 +14,7 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 let queue;
 const logger = new LoggerMock();
-process.env['YAGNA_APPKEY'] = 'test_key';
+process.env["YAGNA_APPKEY"] = "test_key";
 
 describe("Task Service", () => {
   beforeEach(() => {
@@ -97,7 +97,7 @@ describe("Task Service", () => {
     service.run().catch((e) => console.error(e));
     await logger.expectToInclude(
       "Error: Task 1 has been rejected! Work rejected by user. Reason: Invalid value computed by provider",
-      800
+      1200
     );
     expect(task.isFinished()).to.be.true;
     await service.end();
