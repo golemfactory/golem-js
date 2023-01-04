@@ -33,6 +33,7 @@ export interface BasePaymentOptions {
 }
 
 abstract class BaseConfig {
+  public readonly yagnaOptions?: YagnaOptions;
   public readonly timeout: number;
   public readonly api: RequestorApi;
   public readonly logger?: Logger;
@@ -41,6 +42,7 @@ abstract class BaseConfig {
   public readonly requestTimeout: number;
 
   protected constructor(public readonly options?: BasePaymentOptions) {
+    this.yagnaOptions = options?.yagnaOptions;
     const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
     if (!apiKey) throw new Error("Api key not defined");
     const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_URL || DEFAULTS.basePath;

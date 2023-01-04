@@ -16,7 +16,7 @@ export default defineConfig({
   e2e: {
     supportFile: "tests/cypress/support/e2e.ts",
     specPattern: "tests/cypress/ui/**/*.cy.ts",
-    setupNodeEvents(on) {
+    setupNodeEvents(on, config) {
       on("before:run", async () => {
         let bundle;
         try {
@@ -29,13 +29,16 @@ export default defineConfig({
         if (!bundle) throw new Error("Rollup bundle compilation error");
         await bundle.close();
         console.log("Browser bundle has been successfully compiled by rollup");
-        const { apiKey, basePath, subnetTag } = await goth.start();
-        Cypress.env("YAGNA_APPKEY", apiKey);
-        Cypress.env("YAGNA_API_BASEPATH", basePath);
-        Cypress.env("YAGNA_SUBNET", subnetTag);
       });
       on("after:run", async () => {
         await goth.end();
+      });
+      return new Promise(async (res, rej) => {
+        const { apiKey, basePath, subnetTag } = await goth.start();
+        config.env.YAGNA_APPKEY = apiKey;
+        config.env.YAGNA_API_BASEPATH = basePath;
+        config.env.YAGNA_SUBNET = subnetTag;
+        res(config);
       });
     },
   },

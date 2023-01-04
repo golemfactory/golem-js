@@ -10,21 +10,35 @@
     <h1>WebRequestor - Hello World</h1>
     <div class="container">
         <div class="col-6">
-            <h3>Credentials</h3>
-            <div class="column">
-                <div>
-                    <label for="YAGNA_APPKEY">YAGNA_APPKEY: </label>
-                    <input id="YAGNA_APPKEY" type="text" value="xxxx"/>
-                </div>
-                <div>
-                    <label for="YAGNA_API_BASEPATH">YAGNA_API_BASEURL: </label>
-                    <input id="YAGNA_API_BASEPATH" type="text" value="http://127.0.0.1:7465" />
+            <h3>Options</h3>
+            <div id="options">
+                <div class="col-12">
+                    <div class="row">
+                        <div>
+                            <label for="YAGNA_APPKEY">Yagna AppKey: </label>
+                            <input id="YAGNA_APPKEY" type="text" value="411aa8e620954a318093687757053b8d"/>
+                        </div>
+                        <div>
+                            <label for="YAGNA_API_BASEPATH">Yagna Api Url: </label>
+                            <input id="YAGNA_API_BASEPATH" type="text" value="http://127.0.0.1:7465" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div>
+                            <label for="IMAGE_HASH">Image Hash: </label>
+                            <input id="IMAGE_HASH" type="text" value="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae"/>
+                        </div>
+                        <div>
+                            <label for="SUBNET_TAG">Subnet Tag: </label>
+                            <input id="SUBNET_TAG" type="text" value="public" />
+                        </div>
+                    </div>
                 </div>
             </div>
             <h3>Actions</h3>
             <div class="row vertical">
                 <div>
-                    <button onclick="run()">Echo Hello World</button>
+                    <button id="echo" onclick="run()">Echo Hello World</button>
                 </div>
             </div>
             <div class="results console">
@@ -65,12 +79,16 @@
             table: (msg) => appendLog(JSON.stringify(msg, null, "\t")),
         }
         async function run() {
-            const apiKey = document.getElementById('YAGNA_APPKEY').value;
-            const basePath = document.getElementById('YAGNA_API_BASEPATH').value;
+          const apiKey = document.getElementById('YAGNA_APPKEY').value;
+          const basePath = document.getElementById('YAGNA_API_BASEPATH').value;
+          const subnetTag = document.getElementById('SUBNET_TAG').value;
+          const imageHash = document.getElementById('IMAGE_HASH').value;
+          console.log({ apiKey, basePath });
             const executor = await yajsapi
               .createExecutor({
                 yagnaOptions: { apiKey, basePath },
-                package:"9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+                package: imageHash,
+                subnetTag,
                 logger
               })
             await executor
