@@ -17,6 +17,11 @@ export interface AgreementProposal {
 // TODO: This is now in rest/market - think about a better place
 export type TerminationReason = { message: string; "golem.requestor.code"?: string };
 
+/**
+ * Agreement Pool Service
+ * @description Service used in {@link TaskExecutor}
+ * @ignore
+ */
 export class AgreementPoolService implements ComputationHistory {
   private logger?: Logger;
   private config: AgreementServiceConfig;

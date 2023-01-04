@@ -25,6 +25,7 @@
     "typeRoots": ["node_modules/@types"]
   },
   "typedocOptions": {
+    "entryPoints": ["yajsapi/index.ts"],
     "exclude": ["**/*.spec.ts"],
     "out": "docs"
   },

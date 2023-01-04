@@ -3,6 +3,11 @@ import { Logger } from "../utils";
 import { AgreementConfig } from "./config";
 import { Events } from "../events";
 
+/**
+ * AgreementFactory
+ * @description Use {@link Agreement.create} instead
+ * @ignore
+ */
 export class AgreementFactory {
   private readonly logger?: Logger;
   private readonly options: AgreementConfig;

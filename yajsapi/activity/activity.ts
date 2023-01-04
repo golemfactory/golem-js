@@ -39,7 +39,20 @@ export class Activity {
   private readonly logger?: Logger;
 
   /**
+   * Create activity instance
+   *
+   * @param id activity ID
+   * @param agreementId agreement ID
+   * @param options - {@link ActivityOptions}
+   * @ignore
+   */
+  constructor(public readonly id, public readonly agreementId, protected readonly options: ActivityConfig) {
+    this.logger = options?.logger;
+  }
+
+  /**
    * Create activity for given agreement ID
+   *
    * @param agreementId
    * @param options - {@link ActivityOptions}
    * @param secure - defines if activity will be secure type
@@ -50,12 +63,9 @@ export class Activity {
     return factory.create(secure);
   }
 
-  constructor(public readonly id, public readonly agreementId, protected readonly options: ActivityConfig) {
-    this.logger = options?.logger;
-  }
-
   /**
    * Execute script
+   *
    * @param script - exe script request
    * @param stream - define type of getting results from execution (polling or streaming)
    * @param timeout - execution timeout

@@ -27,17 +27,35 @@ export class Demand extends EventTarget {
   private isRunning = true;
   private logger?: Logger;
 
+  /**
+   * Create demand for given taskPackage
+   * @param taskPackage - {@link Package}
+   * @param allocations - {@link Allocation}
+   * @param options - {@link DemandOptions}
+   * @return Demand
+   */
   static async create(taskPackage: Package, allocations: Allocation[], options?: DemandOptions): Promise<Demand> {
     const factory = new DemandFactory(taskPackage, allocations, options);
     return factory.create();
   }
 
+  /**
+   * Create demand instance
+   *
+   * @param id - demand ID
+   * @param demandRequest - {@link DemandOfferBase}
+   * @param options - {@link DemandConfig}
+   * @ignore
+   */
   constructor(public readonly id, private demandRequest: DemandOfferBase, private options: DemandConfig) {
     super();
     this.logger = this.options.logger;
     this.subscribe().catch((e) => this.logger?.error(e));
   }
 
+  /**
+   * Unsubscribe demand
+   */
   async unsubscribe() {
     this.isRunning = false;
     await this.options.api.unsubscribeDemand(this.id);
@@ -81,6 +99,12 @@ export class Demand extends EventTarget {
 
 export class DemandEvent extends Event {
   readonly proposal: Proposal;
+
+  /**
+   * Create a new instance of DemandEvent
+   * @param type TODO:
+   * @param data TODO:
+   */
   constructor(type, data) {
     super(type, data);
     this.proposal = data;

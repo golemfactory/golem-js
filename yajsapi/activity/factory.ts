@@ -2,11 +2,17 @@ import { Activity, ActivityOptions } from "./activity";
 import { ActivityConfig } from "./config";
 import { Events } from "../events";
 
+/**
+ * Activity Factory
+ * @description Use {@link Activity.create} instead
+ * @ignore
+ */
 export class ActivityFactory {
   private readonly options: ActivityConfig;
 
   /**
    * Creating ActivityFactory
+   *
    * @param agreementId
    * @param options - {@link ActivityOptions}
    */
@@ -16,6 +22,7 @@ export class ActivityFactory {
 
   /**
    * Create activity for given agreement ID
+   *
    * @param secure defines if activity will be secure type
    * @return {@link Activity}
    * @throws {@link Error} if activity could not be created

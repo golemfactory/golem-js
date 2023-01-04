@@ -13,9 +13,19 @@ export class Proposal {
   private readonly prevProposalId: string | undefined;
   private _score: number | null = null;
 
+  /**
+   * Create proposal for given subscription ID
+   *
+   * @param subscriptionId - subscription ID
+   * @param api - {@link RequestorApi}
+   * @param model - {@link ProposalModel}
+   * @param demandRequest - {@link DemandOfferBase}
+   * @param eventTarget - {@link EventTarget}
+   * @ignore
+   */
   constructor(
     private readonly subscriptionId: string,
-    private readonly api: RequestorApi,
+    private readonly api: RequestorApi, // TODO: why API explicitly?
     model: ProposalModel,
     private readonly demandRequest: DemandOfferBase,
     private eventTarget?: EventTarget

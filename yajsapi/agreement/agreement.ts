@@ -32,13 +32,21 @@ export class Agreement {
   private agreementData?: AgreementModel;
   private logger?: Logger;
 
+  /**
+   * Create agreement instance
+   *
+   * @param id - agreement ID
+   * @param provider - {@link ProviderInfo}
+   * @param options - {@link AgreementConfig}
+   * @ignore
+   */
   constructor(public readonly id, public readonly provider: ProviderInfo, private readonly options: AgreementConfig) {
     this.logger = options.logger;
   }
 
   /**
    * Create agreement for given proposal ID
-   * @param proposalId
+   * @param proposalId - proposal ID
    * @param options - {@link AgreementOptions}
    * @return Agreement
    */
