@@ -97,7 +97,7 @@ describe("Task Service", () => {
     service.run().catch((e) => console.error(e));
     await logger.expectToInclude(
       "Error: Task 1 has been rejected! Work rejected by user. Reason: Invalid value computed by provider",
-      1200
+      1000
     );
     expect(task.isFinished()).to.be.true;
     await service.end();
@@ -114,7 +114,7 @@ describe("Task Service", () => {
       activityStateCheckingInterval: 10,
     });
     service.run().catch((e) => console.error(e));
-    await logger.expectToInclude("Error: Task 1 has been rejected!", 800);
+    await logger.expectToInclude("Error: Task 1 has been rejected!", 1000);
     expect(task.isRejected()).to.be.true;
     await service.end();
   });
