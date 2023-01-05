@@ -13,7 +13,7 @@ on:
 jobs:
   cypress-run:
     runs-on: ubuntu-latest
-    container: cypress/browsers:node16.14.0-slim-chrome99-ff97
+    container: cypress/browsers:node16.16.0-chrome105-ff99-edge
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -22,14 +22,13 @@ jobs:
           npm install
           npm run build
 
-#      - name: Configure python
-#        uses: actions/setup-python@v4
-#        with:
-#          python-version: '3.10.0'
+      - name: Configure python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10.0'
 
       - name: Install goth
         run: |
-          apt install python3.8 -y
           pip install goth
           rm -rf ../goth/assets
           python -m goth create-assets ../goth/assets
