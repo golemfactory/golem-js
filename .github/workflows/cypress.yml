@@ -29,7 +29,7 @@ jobs:
 
       - name: Install goth
         run: |
-          sudo apt install python3.8 -y
+          apt install python3.8 -y
           pip install goth
           rm -rf ../goth/assets
           python -m goth create-assets ../goth/assets
