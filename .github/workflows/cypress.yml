@@ -33,7 +33,7 @@ jobs:
           apt -y install python3 python3-pip
           pip install goth
           rm -rf ../goth/assets
-          python -m goth create-assets ../goth/assets
+          python3.9 -m goth create-assets ../goth/assets
 
       - name: Disconnect Docker containers from default network
         continue-on-error: true
