@@ -3,11 +3,11 @@ name: Unit Tests
 on:
   push:
     branches:
-      - master
+#      - master
       - b0.*
   pull_request:
     branches:
-      - master
+#      - master
       - b0.*
 
 jobs:
