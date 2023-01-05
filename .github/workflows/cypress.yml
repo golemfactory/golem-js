@@ -67,5 +67,5 @@ jobs:
           CYPRESS_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           install: false
-          start: npm run test:cypress
+          start: GITHUB_TOKEN=${{secrets.GITHUB_TOKEN}} npm run test:cypress
           env: GITHUB_TOKEN=${{secrets.GITHUB_TOKEN}}
