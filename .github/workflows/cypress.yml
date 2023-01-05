@@ -12,7 +12,7 @@ on:
 
 jobs:
   cypress-run:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     container: cypress/browsers:node16.14.0-slim-chrome99-ff97
     steps:
       - name: Checkout
@@ -26,6 +26,8 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.8.0'
+        env:
+          AGENT_TOOLSDIRECTORY: /opt/hostedtoolcache
 
       - name: Install goth
         run: |
