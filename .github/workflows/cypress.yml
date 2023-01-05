@@ -12,7 +12,7 @@ on:
 
 jobs:
   cypress-run:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     container: cypress/browsers:node16.14.0-slim-chrome99-ff97
     steps:
       - name: Checkout
@@ -23,7 +23,7 @@ jobs:
           npm run build
 
       - name: Configure python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: '3.8.0'
 
