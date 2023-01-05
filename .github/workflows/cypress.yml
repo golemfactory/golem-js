@@ -22,15 +22,14 @@ jobs:
           npm install
           npm run build
 
-      - name: Configure python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.8.0'
-        env:
-          AGENT_TOOLSDIRECTORY: /opt/hostedtoolcache
+#      - name: Configure python
+#        uses: actions/setup-python@v4
+#        with:
+#          python-version: '3.10.0'
 
       - name: Install goth
         run: |
+          sudo apt install python3.8 -y
           pip install goth
           rm -rf ../goth/assets
           python -m goth create-assets ../goth/assets
