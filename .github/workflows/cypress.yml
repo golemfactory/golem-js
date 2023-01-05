@@ -1,18 +1,17 @@
-name: Goth (PR and push)
+name: Cypress
 
 on:
   push:
     branches:
-#      - master
+      - master
       - b0.*
   pull_request:
     branches:
-#      - master
+      - master
       - b0.*
 
 jobs:
-  goth-tests:
-    name: Run integration tests
+  cypress-tests:
     runs-on: goth
     steps:
       - name: Checkout
