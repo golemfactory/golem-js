@@ -9,15 +9,26 @@ export interface AllocationOptions extends BasePaymentOptions {
 }
 
 export class Allocation {
+  /** Allocation ID */
   public readonly id: string;
+  /** Timestamp of creation */
   public readonly timestamp: string;
+  /** Timeout */
   public readonly timeout?: string;
+  /** Address of requestor */
   public readonly address: string;
+  /** Payment platform */
   public readonly paymentPlatform: string;
+  /** Total allocation Amount */
   public readonly totalAmount: string;
   private spentAmount: string;
   private remainingAmount: string;
 
+  /**
+   * Create allocation
+   *
+   * @param options - {@link AllocationOptions}
+   */
   static async create(options: AllocationOptions): Promise<Allocation> {
     const config = new AllocationConfig(options);
     const now = new Date();
@@ -50,6 +61,13 @@ export class Allocation {
     return new Allocation(config, newModel);
   }
 
+  /**
+   * Create allocation for given ya-ts-client allocation model
+   *
+   * @param options - {@link AllocationConfig}
+   * @param model - {@link Model}
+   * @ignore
+   */
   constructor(private options: AllocationConfig, model: Model) {
     this.id = model.allocationId;
     this.timeout = model.timeout;
@@ -62,15 +80,29 @@ export class Allocation {
     this.paymentPlatform = model.paymentPlatform;
   }
 
+  /**
+   * Returns remaining amount for allocation
+   *
+   * @return amount remaining
+   */
   async getRemainingAmount(): Promise<string> {
     await this.refresh();
     return this.remainingAmount;
   }
+
+  /**
+   * Returns already spent amount for allocation
+   *
+   * @return spent amount
+   */
   async getSpentAmount(): Promise<string> {
     await this.refresh();
     return this.spentAmount;
   }
 
+  /**
+   * Release allocation
+   */
   async release() {
     await this.options.api.releaseAllocation(this.id).catch((e) => {
       throw new Error(`Could not release allocation. ${e.response?.data?.message || e}`);
@@ -78,6 +110,11 @@ export class Allocation {
     this.options?.logger?.debug(`Allocation ${this.id} has been released.`);
   }
 
+  /**
+   * Returns Market ya-ts-client decoration
+   *
+   * @return {@link MarketDecoration}
+   */
   async getDemandDecoration(): Promise<MarketDecoration> {
     const { data: decoration } = await this.options.api.getDemandDecorations([this.id]).catch((e) => {
       throw new Error(`Unable to get demand decorations. ${e.response?.data?.message || e}`);

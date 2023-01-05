@@ -46,12 +46,23 @@ export abstract class BaseNote<ModelType extends BaseModel> {
 }
 
 export class Invoice extends BaseNote<Model> {
+  /** Invoice ID */
   public readonly id: string;
+  /** Activities IDs covered by this Invoice */
   public readonly activityIds?: string[];
+  /** Amount in the invoice */
   public readonly amount: string;
+  /** Invoice creation timestamp */
   public readonly timestamp: string;
+  /** Recipient ID */
   public readonly recipientId: string;
 
+  /**
+   * Create invoice using invoice ID
+   *
+   * @param invoiceId - Invoice ID
+   * @param options - {@link InvoiceOptions}
+   */
   static async create(invoiceId: string, options?: InvoiceOptions): Promise<Invoice> {
     const config = new InvoiceConfig(options);
     const { data: model } = await config.api.getInvoice(invoiceId);
@@ -66,10 +77,23 @@ export class Invoice extends BaseNote<Model> {
     this.timestamp = model.timestamp;
     this.recipientId = model.recipientId;
   }
+
+  /**
+   * Get Invoice Status
+   *
+   * @return {@link InvoiceStatus}
+   */
   async getStatus(): Promise<InvoiceStatus> {
     await this.refreshStatus();
     return this.status;
   }
+
+  /**
+   * Accept Invoice
+   *
+   * @param totalAmountAccepted
+   * @param allocationId
+   */
   async accept(totalAmountAccepted: string, allocationId: string) {
     try {
       await this.options.api.acceptInvoice(this.id, { totalAmountAccepted, allocationId });
@@ -82,6 +106,12 @@ export class Invoice extends BaseNote<Model> {
     }
     this.options.eventTarget?.dispatchEvent(new Events.PaymentAccepted(this));
   }
+
+  /**
+   * Reject Invoice
+   *
+   * @param rejection - ya-ts-client Rejection Model
+   */
   async reject(rejection: Rejection) {
     try {
       await this.options.api.rejectInvoice(this.id, rejection);
@@ -93,6 +123,7 @@ export class Invoice extends BaseNote<Model> {
       );
     }
   }
+
   protected async refreshStatus() {
     const { data: model } = await this.options.api.getInvoice(this.id);
     this.status = model.status;
