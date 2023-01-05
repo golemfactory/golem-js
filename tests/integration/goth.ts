@@ -8,6 +8,7 @@ export class Goth {
   constructor(private readonly gothConfig) {}
   async start(): Promise<{ apiKey: string; basePath: string; subnetTag: string; gsbUrl: string; path: string }> {
     return new Promise((resolve, reject) => {
+      console.log("ENV: ", process.env);
       const startTime = Date.now();
       console.log("\x1b[33mStarting goth process...");
       console.log("\x1b[33mRun command:\x1b[0m \x1b[36m", `python -m goth start ${this.gothConfig}`);
@@ -39,10 +40,10 @@ export class Goth {
       });
       this.gothProcess?.stderr?.on("data", (data) => {
         if (data.toString().match(/error/)) reject(data);
-        const regexp =/\[requestor] Gftp volume ([a-zA-Z0-9/_]*)/g
+        const regexp = /\[requestor] Gftp volume ([a-zA-Z0-9/_]*)/g;
         const results = Array.from(data?.toString()?.matchAll(regexp) || [])?.pop();
         const gftpVolume = results?.[1];
-        if (gftpVolume) process.env["GOTH_GFTP_VOLUME"] = gftpVolume + '/out/';
+        if (gftpVolume) process.env["GOTH_GFTP_VOLUME"] = gftpVolume + "/out/";
         console.log("\x1b[33m[goth]\x1b[0m " + data.replace(/[\n\t\r]/g, ""));
       });
       this.gothProcess.on("error", (error) => reject(error.toString()));
@@ -57,7 +58,7 @@ export class Goth {
         this.gothProcess?.stdout?.removeAllListeners();
         this.gothProcess?.stderr?.removeAllListeners();
         this.gothProcess?.removeAllListeners();
-        resolve(console.log(`\x1b[33mGoth has been terminated`))
+        resolve(console.log(`\x1b[33mGoth has been terminated`));
       });
     });
   }
