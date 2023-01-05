@@ -1,3 +1,7 @@
+/**
+ * TODO to remove
+ * @ignore
+ */
 export default class Token {
   private _parent;
   private _cancelled: boolean;

@@ -112,6 +112,7 @@ export class Invoice extends BaseNote<Model> {
    *
    * @param rejection - ya-ts-client Rejection Model
    */
+  // TODO:  change this to yajsapi Rejection type
   async reject(rejection: Rejection) {
     try {
       await this.options.api.rejectInvoice(this.id, rejection);

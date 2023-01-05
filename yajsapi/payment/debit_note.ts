@@ -57,6 +57,7 @@ export class DebitNote extends BaseNote<Model> {
    *
    * @param rejection - ya-ts-client Rejection
    */
+  // TODO:  change this to yajsapi Rejection type
   async reject(rejection: Rejection) {
     try {
       await this.options.api.rejectDebitNote(this.id, rejection);
