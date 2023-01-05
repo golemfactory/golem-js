@@ -62,8 +62,9 @@ jobs:
 
       - name: Cypress run
         uses: cypress-io/github-action@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CYPRESS_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           install: false
           start: npm run test:cypress
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
