@@ -8,7 +8,6 @@ export class Goth {
   constructor(private readonly gothConfig) {}
   async start(): Promise<{ apiKey: string; basePath: string; subnetTag: string; gsbUrl: string; path: string }> {
     return new Promise((resolve, reject) => {
-      console.log("ENV: ", process.env);
       const startTime = Date.now();
       console.log("\x1b[33mStarting goth process...");
       console.log("\x1b[33mRun command:\x1b[0m \x1b[36m", `python -m goth start ${this.gothConfig}`);

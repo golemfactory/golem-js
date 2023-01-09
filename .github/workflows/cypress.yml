@@ -60,12 +60,8 @@ jobs:
       - name: Log in to GitHub Docker repository
         run: echo ${{ secrets.GITHUB_TOKEN }} | docker login docker.pkg.github.com -u ${{github.actor}} --password-stdin
 
-      - name: Cypress run
-        uses: cypress-io/github-action@v5
+      - name: Run test suite
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CYPRESS_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          install: false
-          start: npm run test:cypress
-          env: GITHUB_TOKEN=${{secrets.GITHUB_TOKEN}}
+          GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm run test:cypress
