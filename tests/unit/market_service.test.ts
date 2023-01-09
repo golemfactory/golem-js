@@ -7,7 +7,6 @@ import { agreementPoolServiceMock, packageMock, marketStrategyAlwaysBan, LoggerM
 import { proposalsInitial, proposalsDraft } from "../mock/fixtures";
 
 const logger = new LoggerMock();
-process.env["YAGNA_APPKEY"] = "test_key";
 
 describe("Market Service", () => {
   beforeEach(() => {

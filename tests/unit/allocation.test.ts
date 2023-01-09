@@ -1,13 +1,9 @@
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
-chai.use(chaiAsPromised);
-const expect = chai.expect;
+import { expect } from "chai";
 import { LoggerMock } from "../mock";
-import { Allocation } from "../../yajsapi/payment/allocation";
+import { Allocation } from "../../yajsapi/payment/";
 
 const logger = new LoggerMock();
 const account = { address: "test_address", platform: "test_platform" };
-process.env["YAGNA_APPKEY"] = "test_key";
 
 describe("Allocation", () => {
   beforeEach(() => logger.clear());

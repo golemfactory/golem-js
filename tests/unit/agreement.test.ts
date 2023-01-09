@@ -1,14 +1,10 @@
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
-chai.use(chaiAsPromised);
-const expect = chai.expect;
+import { expect } from "chai";
 import { LoggerMock } from "../mock";
 import { Agreement } from "../../yajsapi/agreement";
 import { AgreementStateEnum } from "ya-ts-client/dist/ya-market/src/models/agreement";
 
 const subnetTag = "testnet";
 const logger = new LoggerMock();
-process.env["YAGNA_APPKEY"] = "test_key";
 
 describe("Agreement", () => {
   beforeEach(() => logger.clear());

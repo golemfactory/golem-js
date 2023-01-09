@@ -1,16 +1,10 @@
 import * as activityMock from "../mock/rest/activity";
 import { setExpectedErrorEvents, setExpectedEvents } from "../mock/utils/event_source";
-import chai, { expect } from "chai";
-import chaiUuid from "chai-uuid";
-import chaiAsPromised from "chai-as-promised";
+import { expect } from "chai";
 import { StorageProviderMock } from "../mock";
 import { Activity, ActivityStateEnum } from "../../yajsapi/activity";
 import { CancellationToken, sleep } from "../../yajsapi/utils";
 import { Deploy, Start, Run, Terminate, UploadFile, DownloadFile, Script, Capture } from "../../yajsapi/script";
-
-chai.use(chaiUuid);
-chai.use(chaiAsPromised);
-process.env["YAGNA_APPKEY"] = "test_key";
 
 describe("Activity", () => {
   beforeEach(() => {

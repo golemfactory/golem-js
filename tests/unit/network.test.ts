@@ -1,8 +1,5 @@
-import chai, { expect } from "chai";
-import chaiAsPromised from "chai-as-promised";
+import { expect } from "chai";
 import { Network } from "../../yajsapi/network";
-chai.use(chaiAsPromised);
-process.env["YAGNA_APPKEY"] = "test_key";
 
 describe("Network", () => {
   describe("Creating", () => {

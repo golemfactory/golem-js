@@ -1,11 +1,8 @@
-import chai, { expect } from "chai";
-import chaiAsPromised from "chai-as-promised";
-chai.use(chaiAsPromised);
+import { expect } from "chai";
 import { LoggerMock } from "../mock";
 import { Agreement, AgreementPoolService } from "../../yajsapi/agreement";
 
 const logger = new LoggerMock();
-process.env["YAGNA_APPKEY"] = "test_key";
 
 describe("Agreement Pool Service", () => {
   beforeEach(() => {

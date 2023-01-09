@@ -1,14 +1,11 @@
 import { setExpectedDebitNotes, setExpectedEvents, setExpectedInvoices, clear } from "../mock/rest/payment";
-import chai, { expect } from "chai";
-import chaiAsPromised from "chai-as-promised";
+import { expect } from "chai";
 import { LoggerMock } from "../mock";
 import { PaymentService, Allocation } from "../../yajsapi/payment";
 import { agreement } from "../mock/entities/agreement";
 import { debitNotesEvents, debitNotes, invoices, invoiceEvents } from "../mock/fixtures";
 
-chai.use(chaiAsPromised);
 const logger = new LoggerMock();
-process.env["YAGNA_APPKEY"] = "test_key";
 
 describe("Payment Service", () => {
   beforeEach(() => {

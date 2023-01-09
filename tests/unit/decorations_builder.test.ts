@@ -2,9 +2,6 @@ import { expect } from "chai";
 import { ComparisonOperator, DecorationsBuilder } from "../../yajsapi/market/builder";
 
 describe("#DecorationsBuilder()", () => {
-  before(() => {
-    process.env['YAGNA_APPKEY'] = 'test_key';
-  });
   describe("addProperty()", () => {
     it("should allow to add property", () => {
       const decorationsBuilder = new DecorationsBuilder();

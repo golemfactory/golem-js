@@ -1,20 +1,10 @@
-import rewiremock from "rewiremock";
 import * as activityMock from "../mock/rest/activity";
-rewiremock("ya-ts-client/dist/ya-activity/api").with({
-  RequestorControlApi: activityMock.RequestorControlApiMock,
-  RequestorStateApi: activityMock.RequestorSateApiMock,
-});
-rewiremock.enable();
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
+import { expect } from "chai";
 import { Task, TaskQueue, TaskService, Worker } from "../../yajsapi/task";
 import { agreementPoolServiceMock, paymentServiceMock, networkServiceMock, LoggerMock } from "../mock";
 import { Result } from "../../yajsapi/activity";
-chai.use(chaiAsPromised);
-const expect = chai.expect;
 let queue;
 const logger = new LoggerMock();
-process.env["YAGNA_APPKEY"] = "test_key";
 
 describe("Task Service", () => {
   beforeEach(() => {

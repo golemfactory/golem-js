@@ -1,10 +1,7 @@
-import chai, { expect } from "chai";
-import chaiAsPromised from "chai-as-promised";
+import { expect } from "chai";
 import { LoggerMock } from "../mock";
 import { NetworkService } from "../../yajsapi/network";
-chai.use(chaiAsPromised);
 const logger = new LoggerMock();
-process.env["YAGNA_APPKEY"] = "test_key";
 
 describe("Network Service", () => {
   beforeEach(() => {
