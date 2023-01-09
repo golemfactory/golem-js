@@ -65,3 +65,15 @@ jobs:
           GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           npm run test:cypress
+          
+            - name: Upload test logs
+        uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: goth-logs
+          path: .cypress
+
+      # Only relevant for self-hosted runners
+      - name: Remove test logs
+        if: always()
+        run: rm -rf .cypress
