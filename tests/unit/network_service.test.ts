@@ -1,15 +1,10 @@
-import rewiremock from "rewiremock";
-import { NetworkApiMock } from "../mock/rest/network";
-rewiremock("ya-ts-client/dist/ya-net/api").with({ RequestorApi: NetworkApiMock });
-rewiremock.enable();
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
-chai.use(chaiAsPromised);
 import { LoggerMock } from "../mock";
 import { NetworkService } from "../../yajsapi/network";
-
+chai.use(chaiAsPromised);
 const logger = new LoggerMock();
-process.env['YAGNA_APPKEY'] = 'test_key';
+process.env["YAGNA_APPKEY"] = "test_key";
 
 describe("Network Service", () => {
   beforeEach(() => {

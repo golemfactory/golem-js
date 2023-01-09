@@ -1,12 +1,8 @@
-import rewiremock from "rewiremock";
-import { NetworkApiMock } from "../mock/rest/network";
-rewiremock("ya-ts-client/dist/ya-net/api").with({ RequestorApi: NetworkApiMock });
-rewiremock.enable();
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import { Network } from "../../yajsapi/network";
 chai.use(chaiAsPromised);
-process.env['YAGNA_APPKEY'] = 'test_key';
+process.env["YAGNA_APPKEY"] = "test_key";
 
 describe("Network", () => {
   describe("Creating", () => {
@@ -128,7 +124,9 @@ describe("Network", () => {
       const network = await Network.create({ ownerId: "1", ip: "192.168.0.0/24" });
       const node = await network.addNode("2");
       expect(node.getWebsocketUri(22)).to.deep.equal(
-        `ws://${process.env?.YAGNA_API_URL?.substring(7) || '127.0.0.1:7465'}/net-api/v1/net/${network.id}/tcp/192.168.0.2/22`
+        `ws://${process.env?.YAGNA_API_URL?.substring(7) || "127.0.0.1:7465"}/net-api/v1/net/${
+          network.id
+        }/tcp/192.168.0.2/22`
       );
     });
   });

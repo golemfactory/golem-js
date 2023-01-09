@@ -12,7 +12,7 @@
     "docs": "typedoc yajsapi/ --plugin none",
     "docs:md": "typedoc yajsapi/ --plugin typedoc-plugin-markdown",
     "docs:clean": "rimraf docs/ && run-s handbook:clean",
-    "test": "ts-mocha --exit -p tsconfig.json --file tests/integration/setup.ts 'tests/+(unit|integration)/**.+(spec|test).ts'",
+    "test": "ts-mocha --exit -p tsconfig.json --file tests/integration/setup.ts --file tests/unit/setup.ts 'tests/+(unit|integration)/**.+(spec|test).ts'",
     "test:unit": "ts-mocha --file tests/unit/setup.ts --exit -p tsconfig.json tests/unit/**.test.ts",
     "test:integration": "ts-mocha --exit -p tsconfig.json --file tests/integration/setup.ts tests/integration/**.spec.ts",
     "test:cypress": "cypress run",

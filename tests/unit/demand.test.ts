@@ -1,7 +1,4 @@
-import rewiremock from "rewiremock";
-import { MarketApiMock, setExpectedProposals } from "../mock/rest/market";
-rewiremock("ya-ts-client/dist/ya-market/api").with({ RequestorApi: MarketApiMock });
-rewiremock.enable();
+import { setExpectedProposals } from "../mock/rest/market";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised);
@@ -12,7 +9,7 @@ import { proposalsInitial } from "../mock/fixtures";
 
 const subnetTag = "testnet";
 const logger = new LoggerMock();
-process.env['YAGNA_APPKEY'] = 'test_key';
+process.env["YAGNA_APPKEY"] = "test_key";
 
 describe("Demand", () => {
   describe("Creating", () => {
