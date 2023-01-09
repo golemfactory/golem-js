@@ -70,7 +70,7 @@ jobs:
         uses: actions/upload-artifact@v2
         if: always()
         with:
-          name: goth-logs
+          name: cypress-logs
           path: .cypress
 
       # Only relevant for self-hosted runners
