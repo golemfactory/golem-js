@@ -5,7 +5,6 @@ describe("Test TaskExecutor API", () => {
     cy.get("#YAGNA_API_BASEPATH").clear().type(Cypress.env("YAGNA_API_BASEPATH"));
     cy.get("#SUBNET_TAG").clear().type(Cypress.env("YAGNA_SUBNET"));
     cy.get("#echo").click();
-    cy.wait(20000);
     cy.get("#results").should("include.text", "Hello World");
   });
 });
