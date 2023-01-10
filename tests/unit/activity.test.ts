@@ -3,7 +3,7 @@ import { setExpectedErrorEvents, setExpectedEvents } from "../mock/utils/event_s
 import { expect } from "chai";
 import { StorageProviderMock } from "../mock";
 import { Activity, ActivityStateEnum } from "../../yajsapi/activity";
-import { CancellationToken, sleep } from "../../yajsapi/utils";
+import { sleep } from "../../yajsapi/utils";
 import { Deploy, Start, Run, Terminate, UploadFile, DownloadFile, Script, Capture } from "../../yajsapi/script";
 
 describe("Activity", () => {
@@ -179,7 +179,7 @@ describe("Activity", () => {
   });
 
   describe("Cancelling", () => {
-    it("should cancel activity by cancellation token", async () => {
+    it("should cancel activity", async () => {
       const activity = await Activity.create("test_id");
       const command1 = new Deploy();
       const command2 = new Start();
@@ -189,9 +189,8 @@ describe("Activity", () => {
       const command6 = new Terminate();
       const script = Script.create([command1, command2, command3, command4, command5, command6]);
       await script.before();
-      const cancellationToken = new CancellationToken();
-      const results = await activity.execute(script.getExeScriptRequest(), undefined, undefined, cancellationToken);
-      cancellationToken.cancel();
+      const results = await activity.execute(script.getExeScriptRequest(), undefined, undefined);
+      await activity.stop();
       return new Promise((res) => {
         results.on("error", (error) => {
           expect(error.toString()).to.match(/Error: Activity .* has been interrupted/);
@@ -201,7 +200,7 @@ describe("Activity", () => {
       });
     });
 
-    it("should cancel activity by cancellation token while streaming batch", async () => {
+    it("should cancel activity while streaming batch", async () => {
       const activity = await Activity.create("test_id_3");
       const command1 = new Deploy();
       const command2 = new Start();
@@ -213,9 +212,8 @@ describe("Activity", () => {
       const command4 = new Terminate();
       const script = Script.create([command1, command2, command3, command4]);
       await script.before();
-      const cancellationToken = new CancellationToken();
-      const results = await activity.execute(script.getExeScriptRequest(), true, undefined, cancellationToken);
-      cancellationToken.cancel();
+      const results = await activity.execute(script.getExeScriptRequest(), true, undefined);
+      await activity.stop();
       return new Promise((res) => {
         results.on("error", (error) => {
           expect(error.toString()).to.match(/Error: Activity .* has been interrupted/);
