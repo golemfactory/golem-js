@@ -1,11 +1,10 @@
 describe("Test Mid-level API", () => {
   it("should run mid-level api example", () => {
-    cy.log(Cypress.env() as any);
     cy.visit("/mid_level/command.html");
     cy.get("#YAGNA_APPKEY").clear().type(Cypress.env("YAGNA_APPKEY"));
     cy.get("#YAGNA_API_BASEPATH").clear().type(Cypress.env("YAGNA_API_BASEPATH"));
     cy.get("#SUBNET_TAG").clear().type(Cypress.env("YAGNA_SUBNET"));
-    cy.get("#createPackage").click();
+    cy.get("#createPackage").click().debug();
     cy.wait(500);
     cy.get("#logs").should("include.text", "Package created");
     cy.get("#createAllocation").click();
