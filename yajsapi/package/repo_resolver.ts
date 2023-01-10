@@ -22,7 +22,8 @@ export class RepoResolver {
       await axios.head(url, { timeout: TIMEOUT });
       return true;
     } catch (e) {
-      this.logger?.warn(`Unable to validate url ${url}. ${e?.message}`);
+      if (e?.response?.status > 200 && e?.response?.status < 500) return true;
+      this.logger?.warn(`Url ${url} is not responding. ${e?.message}`);
       return false;
     }
   }
