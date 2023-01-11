@@ -25,7 +25,7 @@ describe("Test Mid-level API", () => {
     cy.wait(3000);
     cy.get("#execute").click();
     cy.get("#logs").contains("Script sent");
-    cy.get("#results").contains("Hello Golem", { timeout: 90000 });
+    cy.get("#results").contains("Hello Golem", { timeout: 60000 });
     cy.get("#end").click();
     cy.get("#logs").contains(/Activity .* destroyed/);
     cy.get("#logs").contains(/Agreement .* terminated/);

@@ -13,7 +13,7 @@ export default defineConfig({
   fixturesFolder: "tests/cypress/fixtures",
   videosFolder: ".cypress/video",
   screenshotsFolder: ".cypress/screenshots",
-  defaultCommandTimeout: 30000,
+  defaultCommandTimeout: 60000,
   experimentalInteractiveRunEvents: true,
   chromeWebSecurity: false,
   e2e: {
