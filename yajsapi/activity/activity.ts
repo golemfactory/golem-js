@@ -7,7 +7,6 @@ import EventSource from "eventsource";
 import { Readable } from "stream";
 import { Logger } from "../utils";
 import sleep from "../utils/sleep";
-import CancellationToken from "../utils/cancellationToken";
 import { ActivityFactory } from "./factory";
 import { ActivityConfig } from "./config";
 import { Events } from "../events";
@@ -37,7 +36,7 @@ export { ActivityStateEnum };
 
 export class Activity {
   private readonly logger?: Logger;
-  private isRunning: boolean;
+  private isRunning = true;
 
   /**
    * Create activity instance

@@ -1,3 +1,4 @@
+import log from "why-is-node-running";
 import { Package } from "../package";
 import { MarketService, MarketStrategy } from "../market";
 import { AgreementPoolService } from "../agreement";
@@ -74,13 +75,27 @@ export class TaskExecutor {
   private isRunning = true;
 
   /**
+   * Create a new Task Executor
+   *
+   * @description Factory Method that create and initialize an instance of the TaskExecutor
+   *
+   * @param options Task executor options
+   * @return TaskExecutor
+   */
+  static async create(options: ExecutorOptionsMixin) {
+    const executor = new TaskExecutor(options);
+    await executor.init();
+    return executor;
+  }
+
+  /**
    * Create a new TaskExecutor object.
    * @description Use {@link TaskExecutor.create} for creating a task executor
    *
    * @param options - contains information needed to start executor, if string the imageHash is required, otherwise it should be a type of {@link ExecutorOptions}
    * @ignore
    */
-  constructor(options: ExecutorOptionsMixin) {
+  private constructor(options: ExecutorOptionsMixin) {
     const configOptions: ExecutorOptions =
       typeof options === "string" ? { package: options } : (options as ExecutorOptions);
     this.options = new ExecutorConfig(configOptions);
@@ -117,8 +132,7 @@ export class TaskExecutor {
     this.taskService.run().catch((e) => this.handleCriticalError(e));
     this.networkService?.run().catch((e) => this.handleCriticalError(e));
     this.statsService.run().catch((e) => this.handleCriticalError(e));
-    const terminatingSignals = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
-    terminatingSignals.forEach((event) => process.on(event, () => this.end(true)));
+    this.handleCancelEvent();
     this.options.eventTarget.dispatchEvent(new Events.ComputationStarted());
     this.logger?.info(
       `Task Executor has started using subnet ${this.options.subnetTag}, network: ${this.options.payment?.network}, driver: ${this.options.payment?.driver}`
@@ -130,8 +144,8 @@ export class TaskExecutor {
    *
    * @description Method responsible for stopping all executor services and shut down executor instance
    */
-  async end(interrupt = false) {
-    if (interrupt) this.logger?.warn("Executor has interrupted by the user. Stopping all tasks...");
+  async end() {
+    if (!this.isRunning) return;
     this.isRunning = false;
     await this.networkService?.end();
     await this.taskService.end();
@@ -140,9 +154,11 @@ export class TaskExecutor {
     await this.paymentService.end();
     this.storageProvider?.close();
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFinished());
-    this.logger?.table?.(this.statsService.getAllCosts());
+    const costs = this.statsService.getAllCosts();
+    costs ? this.logger?.table?.(costs) : this.logger?.info("No payments");
     await this.statsService.end();
     this.logger?.info("Task Executor has shut down");
+    process.exit(0);
   }
 
   /**
@@ -245,6 +261,7 @@ export class TaskExecutor {
       }
       await sleep(2000, true);
     }
+    clearTimeout(timeoutId);
   }
 
   private handleCriticalError(e: Error) {
@@ -252,27 +269,22 @@ export class TaskExecutor {
     this.logger?.error(e.toString());
     this.logger?.debug(e.stack);
     this.logger?.warn("Trying to stop all services...");
-    this.end()
-      .catch((e) => {
-        this.logger?.error(e);
-        process.exit(2);
-      })
-      .then(() => {
+    this.end().catch((e) => {
+      this.logger?.error(e);
+      process.exit(1);
+    });
+  }
+
+  private handleCancelEvent() {
+    const terminatingSignals = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
+    const cancel = () => {
+      terminatingSignals.forEach((event) => process.off(event, cancel));
+      this.logger?.warn("Executor has interrupted by the user. Stopping all tasks...");
+      this.end().catch((error) => {
+        this.logger?.error(error);
         process.exit(1);
       });
+    };
+    terminatingSignals.forEach((event) => process.on(event, cancel));
   }
-}
-
-/**
- * Create a new Task Executor
- *
- * @description Factory Method that create and initialize an instance of the TaskExecutor
- *
- * @param options Task executor options
- * @return TaskExecutor
- */
-export async function createExecutor(options: ExecutorOptionsMixin) {
-  const executor = new TaskExecutor(options);
-  await executor.init();
-  return executor;
 }

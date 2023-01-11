@@ -72,7 +72,7 @@ export class PaymentService {
       clearTimeout(timeoutId);
     }
     this.isRunning = false;
-    for (const allocation of this.allocations) await allocation.release();
+    for (const allocation of this.allocations) await allocation.release().catch((error) => this.logger?.warn(error));
     this.logger?.debug("All allocations has benn released");
     this.logger?.debug("Payment service has been stopped");
   }

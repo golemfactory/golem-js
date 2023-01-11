@@ -49,7 +49,7 @@ export class TaskService {
         await sleep(this.options.taskRunningInterval, true);
         continue;
       }
-      this.startTask(task).catch((error) => this.logger?.error(error));
+      this.startTask(task).catch((error) => this.isRunning && this.logger?.error(error));
     }
   }
 
@@ -89,6 +89,7 @@ export class TaskService {
         logger: this.logger,
         activityStateCheckingInterval: this.options.activityStateCheckingInterval,
         timeout: this.options.timeout,
+        isRunning: () => this.isRunning,
       });
       await ctx.before();
       if (initWorker && !this.initWorkersDone.has(activity.id)) {
@@ -101,7 +102,7 @@ export class TaskService {
       this.logger?.debug(`Task ${task.id} finished. Task data: ${task.getData()}`);
     } catch (error) {
       task.stop(undefined, error);
-      if (task.isRetry()) {
+      if (task.isRetry() && this.isRunning) {
         this.tasksQueue.addToBegin(task);
         this.options.eventTarget?.dispatchEvent(
           new Events.TaskRedone({ id: task.id, retriesCount: task.getRetriesCount() })

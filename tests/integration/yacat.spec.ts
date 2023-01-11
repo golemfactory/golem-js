@@ -1,8 +1,7 @@
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-import { createExecutor } from "../../yajsapi";
+import { TaskExecutor } from "../../yajsapi";
 import { LoggerMock } from "../mock";
-import { TaskExecutor } from "../../yajsapi/executor";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 const logger = new LoggerMock(false);
@@ -22,7 +21,7 @@ describe("Password cracking", function () {
   it("should crack password", async () => {
     const mask = "?a?a";
     const hash = "$P$5ZDzPE45CigTC6EY4cXbyJSLj/pGee0";
-    executor = await createExecutor({
+    executor = await TaskExecutor.create({
       package: "055911c811e56da4d75ffc928361a78ed13077933ffa8320fb1ec2db",
       budget: 10,
       logger,
@@ -40,7 +39,7 @@ describe("Password cracking", function () {
         .beginBatch()
         .run(`hashcat -a 3 -m 400 '${hash}' '${mask}' --skip=${skip} --limit=${skip! + step} -o pass.potfile -D 1,2`)
         .run("cat pass.potfile")
-        .end()
+        .end();
       if (!results?.[1]?.stdout) return false;
       return results?.[1]?.stdout.split(":")?.[1]?.trim();
     });

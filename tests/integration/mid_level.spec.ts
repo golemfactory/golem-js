@@ -1,5 +1,4 @@
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
+import { expect } from "chai";
 import {
   Demand,
   Allocation,
@@ -13,14 +12,10 @@ import {
   Start,
   Deploy,
   Result,
-} from "../../yajsapi/index_mid";
-import { resolve } from "path";
-import { Proposal } from "../../yajsapi/market";
-import { Goth } from "./goth";
-import { Accounts } from "../../yajsapi/payment/accounts";
+  Accounts,
+  Proposal,
+} from "../../yajsapi";
 import { LoggerMock } from "../mock";
-chai.use(chaiAsPromised);
-const expect = chai.expect;
 const logger = new LoggerMock(false);
 
 describe("Mid-level modules", () => {

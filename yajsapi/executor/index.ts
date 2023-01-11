@@ -1,1 +1,1 @@
-export { TaskExecutor, createExecutor, YagnaOptions, ExecutorOptions, ExecutorOptionsMixin } from "./executor";
+export { TaskExecutor, YagnaOptions, ExecutorOptions, ExecutorOptionsMixin } from "./executor";

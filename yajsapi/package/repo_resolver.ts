@@ -71,10 +71,9 @@ export class RepoResolver {
     return new Promise((resolve, reject) => {
       import("node:dns")
         .then((nodeDns) => {
-          const resolver = new nodeDns.Resolver({ timeout: TIMEOUT });
-          resolver.resolveSrv(DEFAULT_REPO_SRV, (err, addresses) => {
+          nodeDns.resolveSrv(DEFAULT_REPO_SRV, (err, addresses) => {
             if (err) reject(err);
-            resolve(addresses.map((a) => (a.name && a.port ? `${SCHEMA}://${a.name}:${a.port}` : null)));
+            resolve(addresses?.map((a) => (a.name && a.port ? `${SCHEMA}://${a.name}:${a.port}` : null)));
           });
         })
         .catch((err) => reject(err));
