@@ -2,7 +2,7 @@ import { createExecutor, utils } from "../../dist";
 import { program } from "commander";
 
 async function main(args) {
-  const executor = await createExecutor({
+  const executor = await TaskExecutor.create({
     package: "055911c811e56da4d75ffc928361a78ed13077933ffa8320fb1ec2db",
     maxWorkers: args.numberOfProviders,
     budget: 10,

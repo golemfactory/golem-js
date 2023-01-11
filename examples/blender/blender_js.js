@@ -22,7 +22,7 @@ const blender_params = (frame) => ({
 });
 
 async function main(subnet_tag, payment_driver, payment_network, debug) {
-  const executor = await createExecutor({
+  const executor = await TaskExecutor.create({
     subnet_tag,
     payment_driver,
     payment_network,

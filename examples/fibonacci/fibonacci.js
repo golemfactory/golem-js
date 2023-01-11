@@ -2,7 +2,7 @@ const { createExecutor } = require("../../dist");
 const { program } = require("commander");
 
 async function main(fibo_n = 1, tasks_count = 1, subnet_tag, payment_driver, payment_network, debug) {
-  const executor = await createExecutor({
+  const executor = await TaskExecutor.create({
     package: "529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4",
     subnet_tag,
     payment_driver,

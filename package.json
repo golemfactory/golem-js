@@ -44,7 +44,6 @@
     "collect.js": "^4.34.3",
     "eventsource": "^2.0.2",
     "ip-num": "^1.4.1",
-    "why-is-node-running": "^2.2.2",
     "winston": "^3.8.2",
     "ya-ts-client": "^0.5.3"
   },

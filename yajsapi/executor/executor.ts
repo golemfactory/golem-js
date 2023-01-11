@@ -1,4 +1,3 @@
-import log from "why-is-node-running";
 import { Package } from "../package";
 import { MarketService, MarketStrategy } from "../market";
 import { AgreementPoolService } from "../agreement";
@@ -158,7 +157,6 @@ export class TaskExecutor {
     costs ? this.logger?.table?.(costs) : this.logger?.info("No payments");
     await this.statsService.end();
     this.logger?.info("Task Executor has shut down");
-    process.exit(0);
   }
 
   /**
@@ -214,13 +212,13 @@ export class TaskExecutor {
       [Symbol.asyncIterator](): AsyncIterator<OutputType | undefined> {
         return {
           async next() {
-            if (!isRunning()) return Promise.reject("Task Executor is not running");
             if (resultsCount === inputs.length) {
               return Promise.resolve({ done: true, value: undefined });
             }
-            while (results.length === 0 && resultsCount < inputs.length) {
+            while (results.length === 0 && resultsCount < inputs.length && isRunning()) {
               await sleep(1000, true);
             }
+            if (!isRunning()) return Promise.resolve({ done: true, value: undefined });
             resultsCount += 1;
             return Promise.resolve({ done: false, value: results.pop() });
           },

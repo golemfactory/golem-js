@@ -1,4 +1,4 @@
-import { createExecutor } from "../../dist";
+import { TaskExecutor } from "../../dist";
 import { program } from "commander";
 import path from "path";
 
@@ -22,7 +22,7 @@ const blender_params = (frame) => ({
 });
 
 async function main(subnetTag: string, driver?: string, network?: string, debug?: boolean, maxParallelTasks?: number) {
-  const executor = await createExecutor({
+  const executor = await TaskExecutor.create({
     subnetTag,
     payment: { driver, network },
     package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
