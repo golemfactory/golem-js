@@ -1,4 +1,4 @@
-const { createExecutor, utils } = require("../../dist");
+const { TaskExecutor, utils } = require("../../dist");
 const path = require("path");
 const { program } = require("commander");
 

@@ -36,7 +36,7 @@ export default defineConfig({
       on("after:run", async () => {
         await goth.end();
       });
-      return new Promise(async (res, rej) => {
+      return new Promise(async (res) => {
         const { apiKey, basePath, subnetTag } = await goth.start();
         config.env.YAGNA_APPKEY = apiKey;
         config.env.YAGNA_API_BASEPATH = basePath;
