@@ -1,7 +1,7 @@
 import { defineConfig } from "cypress";
 import rollupConfig from "./rollup.config.js";
 import { rollup } from "rollup";
-import { Goth } from "./tests/integration/goth";
+import { Goth } from "./tests/goth/goth";
 import { resolve } from "path";
 
 const gothConfig = resolve("../goth/assets/goth-config.yml");
