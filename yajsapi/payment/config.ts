@@ -5,6 +5,7 @@ import { Logger } from "../utils";
 import { YagnaOptions } from "../executor";
 import { PaymentOptions } from "./service";
 import { InvoiceOptions } from "./invoice";
+import { AccountsOptions } from "./accounts";
 
 const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",
@@ -18,6 +19,7 @@ const DEFAULTS = {
   invoiceFetchingInterval: 2000,
   debitNotesFetchingInterval: 2000,
   payingInterval: 2000,
+  requestTimeout: 10000,
 };
 
 export interface BasePaymentOptions {
@@ -25,21 +27,25 @@ export interface BasePaymentOptions {
   budget?: number;
   payment?: { driver?: string; network?: string };
   timeout?: number;
+  requestTimeout?: number;
   logger?: Logger;
   eventTarget?: EventTarget;
 }
 
 abstract class BaseConfig {
+  public readonly yagnaOptions?: YagnaOptions;
   public readonly timeout: number;
   public readonly api: RequestorApi;
   public readonly logger?: Logger;
   public readonly eventTarget?: EventTarget;
   public readonly payment: { driver: string; network: string };
+  public readonly requestTimeout: number;
 
   protected constructor(public readonly options?: BasePaymentOptions) {
+    this.yagnaOptions = options?.yagnaOptions;
     const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
     if (!apiKey) throw new Error("Api key not defined");
-    const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_BASEPATH || DEFAULTS.basePath;
+    const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_URL || DEFAULTS.basePath;
     const apiConfig = new Configuration({ apiKey, basePath: `${basePath}/payment-api/v1`, accessToken: apiKey });
     this.api = new RequestorApi(apiConfig);
     this.timeout = options?.timeout || DEFAULTS.timeout;
@@ -49,6 +55,7 @@ abstract class BaseConfig {
     };
     this.logger = options?.logger;
     this.eventTarget = options?.eventTarget;
+    this.requestTimeout = options?.requestTimeout || DEFAULTS.requestTimeout;
   }
 }
 
@@ -90,6 +97,12 @@ export class AllocationConfig extends BaseConfig {
 
 export class InvoiceConfig extends BaseConfig {
   constructor(options?: InvoiceOptions) {
+    super(options);
+  }
+}
+
+export class AccountConfig extends BaseConfig {
+  constructor(options?: AccountsOptions) {
     super(options);
   }
 }

@@ -39,7 +39,7 @@
                     </div>
                     <div>
                         <label for="SUBNET_TAG">Subnet Tag: </label>
-                        <input id="SUBNET_TAG" type="text" value="devnet-beta" />
+                        <input id="SUBNET_TAG" type="text" value="public" />
                     </div>
                     <div class="row">
                         <div>
@@ -56,8 +56,8 @@
 
             <h3>Actions</h3>
             <div class="row commands">
-                <button onclick="createPackage()">Create Package</button>
-                <button onclick="createAllocation()">Create Allocation</button>
+                <button id="createPackage" onclick="createPackage()">Create Package</button>
+                <button id="createAllocation" onclick="createAllocation()">Create Allocation</button>
                 <button id="createDemand" disabled onclick="createDemand()">Create Demand</button>
                 <button id="respondProposal" disabled onclick="respondProposal()">Confirm Proposal</button>
             </div>
@@ -88,7 +88,7 @@
     </div>
 
     <script>
-        let options, taskPackage, allocation, demand, proposal, offer, agreement, activity;
+        let options, taskPackage, allocation, demand, proposals = [], offer, agreement, activity;
         function appendLog(msg) {
             const logs_el = document.getElementById('logs');
             const li = document.createElement('li');
@@ -128,7 +128,7 @@
         const endButton = document.getElementById("end");
         function enableButtons() {
           if (allocation && taskPackage) createDemandButton.removeAttribute('disabled');
-          if (proposal) respondProposalButton.removeAttribute('disabled');
+          if (proposals.length) respondProposalButton.removeAttribute('disabled');
           if (offer) createAgreementButton.removeAttribute('disabled');
           if (agreement) confirmAgreementButton.removeAttribute('disabled');
           if (agreement) createActivityButton.removeAttribute('disabled');
@@ -156,8 +156,7 @@
             yagnaOptions: { apiKey, basePath },
             imageHash, minCpuThreads,minStorageGib, minMemGib,
             logger,
-            subnetTag,
-            account: { platform: "erc20-rinkeby-tglm", address: "0x19ee20338a4c4bf8f6aebc79d9d3af2a01434119" }
+            subnetTag
           }
         }
         async function createPackage() {
@@ -168,6 +167,8 @@
         }
         async function createAllocation() {
           options = getOptions();
+          const accounts = await (await yajsapi.Accounts.create(options)).list();
+          options.account = accounts.find(account => account?.platform.indexOf('erc20') !== -1);
           allocation = await yajsapi.Allocation.create(options).catch(logger.error);
           enableButtons();
         }
@@ -175,7 +176,7 @@
           demand = await yajsapi.Demand.create(taskPackage, [allocation], options).catch(logger.error);
           demand.addEventListener(yajsapi.DemandEventType, async (event) => {
             if (event.proposal.isInitial()) {
-              proposal = event.proposal;
+              proposals.push(event.proposal);
               logger.debug(`New proposal has been received (${event.proposal.id.slice(0,10)})`);
               enableButtons();
             } else if (event.proposal.isDraft()) {
@@ -186,6 +187,8 @@
           })
         }
         async function respondProposal() {
+          const proposal = proposals.shift();
+          if (!proposal) return
           await proposal.respond(options.account.platform).catch(logger.error);
           enableButtons();
         }
@@ -212,6 +215,10 @@
           const exeScript = script.getExeScriptRequest();
           const results = await activity.execute(exeScript).catch(logger.error);
           results.on('data', result => {
+            if (result.stdout) appendResults(result.stdout);
+            if (result.stderr) appendResults(result.stderr);
+          })
+          results.on('error', result => {
             if (result.stdout) appendResults(result.stdout);
             if (result.stderr) appendResults(result.stderr);
           })

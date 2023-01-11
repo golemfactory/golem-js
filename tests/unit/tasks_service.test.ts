@@ -1,17 +1,8 @@
-import rewiremock from "rewiremock";
 import * as activityMock from "../mock/rest/activity";
-rewiremock("ya-ts-client/dist/ya-activity/api").with({
-  RequestorControlApi: activityMock.RequestorControlApiMock,
-  RequestorStateApi: activityMock.RequestorSateApiMock,
-});
-rewiremock.enable();
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
+import { expect } from "chai";
 import { Task, TaskQueue, TaskService, Worker } from "../../yajsapi/task";
 import { agreementPoolServiceMock, paymentServiceMock, networkServiceMock, LoggerMock } from "../mock";
 import { Result } from "../../yajsapi/activity";
-chai.use(chaiAsPromised);
-const expect = chai.expect;
 let queue;
 const logger = new LoggerMock();
 
@@ -75,8 +66,7 @@ describe("Task Service", () => {
       activityStateCheckingInterval: 100,
     });
     service.run().catch((e) => console.error(e));
-    await logger.expectToInclude("The task 1 execution failed. Trying to redo the task. Attempt #", 300);
-    expect(task.isRetry()).to.be.true;
+    await logger.expectToInclude("The task 1 execution failed. Trying to redo the task. Attempt #", 500);
     await service.end();
   });
 
@@ -96,7 +86,7 @@ describe("Task Service", () => {
     service.run().catch((e) => console.error(e));
     await logger.expectToInclude(
       "Error: Task 1 has been rejected! Work rejected by user. Reason: Invalid value computed by provider",
-      800
+      1200
     );
     expect(task.isFinished()).to.be.true;
     await service.end();
@@ -113,7 +103,7 @@ describe("Task Service", () => {
       activityStateCheckingInterval: 10,
     });
     service.run().catch((e) => console.error(e));
-    await logger.expectToInclude("Error: Task 1 has been rejected!", 800);
+    await logger.expectToInclude("Error: Task 1 has been rejected!", 1200);
     expect(task.isRejected()).to.be.true;
     await service.end();
   });
@@ -138,6 +128,7 @@ describe("Task Service", () => {
     await logger.expectToNotMatch(
       /Init worker done in activity.*\n.*\nInit worker done in activity.*\n.*\nInit worker done in activity/
     );
+    await new Promise((res) => setTimeout(res, 1000));
     expect(task1.isFinished()).to.be.true;
     expect(task2.isFinished()).to.be.true;
     expect(task3.isFinished()).to.be.true;

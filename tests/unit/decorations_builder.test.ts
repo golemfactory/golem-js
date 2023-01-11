@@ -2,9 +2,6 @@ import { expect } from "chai";
 import { ComparisonOperator, DecorationsBuilder } from "../../yajsapi/market/builder";
 
 describe("#DecorationsBuilder()", () => {
-  before(() => {
-    //
-  });
   describe("addProperty()", () => {
     it("should allow to add property", () => {
       const decorationsBuilder = new DecorationsBuilder();

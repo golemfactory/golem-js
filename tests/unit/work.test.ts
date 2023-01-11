@@ -1,18 +1,9 @@
-import rewiremock from "rewiremock";
 import * as activityMock from "../mock/rest/activity";
-rewiremock("ya-ts-client/dist/ya-activity/api").with({
-  RequestorControlApi: activityMock.RequestorControlApiMock,
-  RequestorStateApi: activityMock.RequestorSateApiMock,
-});
-rewiremock.enable();
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
+import { expect } from "chai";
 import { WorkContext, Worker } from "../../yajsapi/task";
 import { LoggerMock, StorageProviderMock } from "../mock";
 import { Activity, Result } from "../../yajsapi/activity";
 import { Readable } from "stream";
-chai.use(chaiAsPromised);
-const expect = chai.expect;
 const logger = new LoggerMock();
 const storageProviderMock = new StorageProviderMock({ logger });
 
@@ -159,7 +150,7 @@ describe("Work Context", () => {
       });
       const expectedStdout = [{ result: "Error", stderr: "error", message: "Some error occurred" }];
       activityMock.setExpectedExeResults(expectedStdout);
-      await expect(worker(ctx)).to.be.rejectedWith("Some error occurred. Stdout: test_result. Stderr: error");
+      await expect(worker(ctx)).to.be.rejectedWith(expectedStdout);
     });
 
     it("should catch error while executing batch as stream with invalid command", async () => {

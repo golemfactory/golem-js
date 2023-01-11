@@ -1,49 +1,26 @@
 import { defineConfig } from "cypress";
 import rollupConfig from "./rollup.config.js";
-import path from "path";
 import { rollup } from "rollup";
-import stdLibBrowser from "node-stdlib-browser";
-import alias from "@rollup/plugin-alias";
-import * as ts from "typescript";
+import { Goth } from "./tests/integration/goth";
+import { resolve } from "path";
 
-// Mock Yagna API
-rollupConfig.plugins[0] = alias({
-  entries: [
-    ...Object.keys(stdLibBrowser).map((k) => ({ find: k, replacement: stdLibBrowser[k] })),
-    { find: /ya-ts-client\/dist\/ya-activity\/api$/, replacement: "./dist/mock/activity_api.js" },
-    { find: "eventsource", replacement: "./dist/mock/event_source.js" },
-  ],
-});
-rollupConfig.output.file = path.resolve(__dirname, "./examples/web/js/bundle.js");
-
-function compileTSMocks() {
-  const options = {
-    target: ts.ScriptTarget.ESNext,
-    module: ts.ModuleKind.CommonJS,
-    moduleResolution: ts.ModuleResolutionKind.NodeJs,
-    outDir: "dist/mock",
-  };
-  const fileNames = [__dirname + "/tests/mock/activity_api.ts", __dirname + "/tests/mock/event_source.ts"];
-  const program = ts.createProgram(fileNames, options);
-  console.log("Trying to compile typescript mocks...");
-  const results = program.emit();
-  const allDiagnostics = ts.getPreEmitDiagnostics(program).concat(results.diagnostics);
-  if (allDiagnostics.length > 0) throw new Error(JSON.stringify(allDiagnostics));
-  console.log("Typescript has been successfully compiled");
-}
+const gothConfig = resolve("../goth/assets/goth-config.yml");
+const goth = new Goth(gothConfig);
 
 export default defineConfig({
   fileServerFolder: "examples/web",
   supportFolder: "tests/cypress/support",
   fixturesFolder: "tests/cypress/fixtures",
   videosFolder: ".cypress/video",
+  screenshotsFolder: ".cypress/screenshots",
+  defaultCommandTimeout: 30000,
   experimentalInteractiveRunEvents: true,
+  chromeWebSecurity: false,
   e2e: {
     supportFile: "tests/cypress/support/e2e.ts",
     specPattern: "tests/cypress/ui/**/*.cy.ts",
-    setupNodeEvents(on) {
+    setupNodeEvents(on, config) {
       on("before:run", async () => {
-        compileTSMocks();
         let bundle;
         try {
           console.log("Trying to compile bundle by rollup.js...");
@@ -55,6 +32,16 @@ export default defineConfig({
         if (!bundle) throw new Error("Rollup bundle compilation error");
         await bundle.close();
         console.log("Browser bundle has been successfully compiled by rollup");
+      });
+      on("after:run", async () => {
+        await goth.end();
+      });
+      return new Promise(async (res, rej) => {
+        const { apiKey, basePath, subnetTag } = await goth.start();
+        config.env.YAGNA_APPKEY = apiKey;
+        config.env.YAGNA_API_BASEPATH = basePath;
+        config.env.YAGNA_SUBNET = subnetTag;
+        res(config);
       });
     },
   },

@@ -1,13 +1,6 @@
-import rewiremock from "rewiremock";
-import { PaymentApiMock } from "../mock/rest/payment";
-rewiremock("ya-ts-client/dist/ya-payment/api").with({ RequestorApi: PaymentApiMock });
-rewiremock.enable();
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
-chai.use(chaiAsPromised);
-const expect = chai.expect;
+import { expect } from "chai";
 import { LoggerMock } from "../mock";
-import { Allocation } from "../../yajsapi/payment/allocation";
+import { Allocation } from "../../yajsapi/payment/";
 
 const logger = new LoggerMock();
 const account = { address: "test_address", platform: "test_platform" };

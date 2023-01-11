@@ -1,12 +1,11 @@
-/* eslint @typescript-eslint/ban-ts-comment: 0 */
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-chai.use(chaiAsPromised);
-const expect = chai.expect;
 import { LoggerMock } from "../mock";
 import { Package } from "../../yajsapi/package";
-
+chai.use(chaiAsPromised);
+const expect = chai.expect;
 const logger = new LoggerMock();
+process.env["YAGNA_APPKEY"] = "test_key";
 
 describe("Package", () => {
   describe("create()", () => {

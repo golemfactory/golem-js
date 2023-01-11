@@ -1,21 +1,9 @@
-import rewiremock from "rewiremock";
-import {
-  PaymentApiMock,
-  setExpectedDebitNotes,
-  setExpectedEvents,
-  setExpectedInvoices,
-  clear,
-} from "../mock/rest/payment";
-rewiremock("ya-ts-client/dist/ya-payment/api").with({ RequestorApi: PaymentApiMock });
-rewiremock.enable();
-import chai, { expect } from "chai";
-import chaiAsPromised from "chai-as-promised";
-chai.use(chaiAsPromised);
+import { setExpectedDebitNotes, setExpectedEvents, setExpectedInvoices, clear } from "../mock/rest/payment";
+import { expect } from "chai";
 import { LoggerMock } from "../mock";
 import { PaymentService, Allocation } from "../../yajsapi/payment";
 import { agreement } from "../mock/entities/agreement";
 import { debitNotesEvents, debitNotes, invoices, invoiceEvents } from "../mock/fixtures";
-import { isUndefined } from "util";
 
 const logger = new LoggerMock();
 

@@ -1,13 +1,6 @@
-import rewiremock from "rewiremock";
-import { NetworkApiMock, setExpectedError } from "../mock/rest/network";
-rewiremock("ya-ts-client/dist/ya-net/api").with({ RequestorApi: NetworkApiMock });
-rewiremock.enable();
-import chai, { expect } from "chai";
-import chaiAsPromised from "chai-as-promised";
-chai.use(chaiAsPromised);
+import { expect } from "chai";
 import { LoggerMock } from "../mock";
 import { NetworkService } from "../../yajsapi/network";
-
 const logger = new LoggerMock();
 
 describe("Network Service", () => {
@@ -19,7 +12,7 @@ describe("Network Service", () => {
     it("should start service and create network", async () => {
       const networkService = new NetworkService({ logger });
       await networkService.run("test_owner_id");
-      await logger.expectToMatch(/Created network: ID: .*, IP: 192.168.0.0, Mask: 255.255.255.0/, 10);
+      await logger.expectToMatch(/Network created: ID: .*, IP: 192.168.0.0, Mask: 255.255.255.0/, 10);
       await logger.expectToInclude("Network Service has started");
       await networkService.end();
     });

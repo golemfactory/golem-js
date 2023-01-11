@@ -35,9 +35,14 @@ export const setExpectedExeResults = (results) =>
 let expectedErrors: AxiosError[] = [];
 export const setExpectedErrors = (errors) => (expectedErrors = errors);
 
+
+let expectedStates = [];
+export const setExpectedStates = (states) => (expectedStates = states);
+
 export const clear = () => {
   expectedExeResults = [];
   expectedErrors = [];
+  expectedStates = [];
 };
 
 export class RequestorControlApiMock extends RequestorControlApi {
@@ -92,9 +97,6 @@ export class RequestorControlApiMock extends RequestorControlApi {
     return new Promise((res) => res({ data: null } as AxiosResponse));
   }
 }
-
-let expectedStates = [];
-export const setExpectedStates = (states) => (expectedStates = states);
 
 export class RequestorSateApiMock extends RequestorStateApi {
   private exampleStates = [

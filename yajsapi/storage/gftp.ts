@@ -1,6 +1,5 @@
 import { StorageProvider } from "./provider";
-import { runtimeContextChecker } from "../utils";
-import { randomUUID } from "crypto";
+import { Logger, runtimeContextChecker } from "../utils";
 import path from "path";
 import fs from "fs";
 import tmp from "tmp";
@@ -12,10 +11,10 @@ const TMP_DIR = tmp.dirSync().name;
 export class GftpStorageProvider implements StorageProvider {
   private gftpServerProcess;
   private reader;
-  private logger;
   private publishedUrls: string[] = [];
+  private randomUUID;
 
-  constructor() {
+  constructor(private logger?: Logger) {
     if (runtimeContextChecker.isBrowser) {
       throw new Error(`File transfer by GFTP module is unsupported in the browser context.`);
     }
@@ -23,13 +22,16 @@ export class GftpStorageProvider implements StorageProvider {
 
   async init() {
     this.gftpServerProcess = await spawn("gftp server", [], { shell: true });
+    this.gftpServerProcess.on("error", (error) => this.logger?.error(error));
+    this.gftpServerProcess.stderr.on("error", (error) => this.logger?.error(error));
   }
 
   isInitiated() {
     return !!this.gftpServerProcess;
   }
 
-  private generateTempFileName(): string {
+  private async generateTempFileName(): Promise<string> {
+    const { randomUUID } = await import("crypto");
     const file_name = path.join(TMP_DIR, randomUUID().toString());
     if (fs.existsSync(file_name)) fs.unlinkSync(file_name);
     return file_name;
@@ -58,7 +60,8 @@ export class GftpStorageProvider implements StorageProvider {
 
   async close() {
     if (this.publishedUrls.length) await this.release(this.publishedUrls);
-    await streamEnd(this.getGftpServerProcess().stdin);
+    const stream = this.getGftpServerProcess();
+    if (stream) await streamEnd(this.getGftpServerProcess().stdin);
   }
 
   private async jsonrpc(method: string, params: object = {}) {
@@ -88,7 +91,7 @@ export class GftpStorageProvider implements StorageProvider {
   }
 
   private async uploadStream(stream: AsyncGenerator<Buffer>): Promise<string> {
-    const file_name = this.generateTempFileName();
+    const file_name = await this.generateTempFileName();
     const wStream = fs.createWriteStream(file_name, {
       encoding: "binary",
     });

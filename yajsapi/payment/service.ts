@@ -4,6 +4,7 @@ import { BasePaymentOptions, PaymentConfig } from "./config";
 import { Invoice } from "./invoice";
 import { DebitNote } from "./debit_note";
 import { Events } from "../events";
+import { Accounts } from "./accounts";
 
 export interface PaymentOptions extends BasePaymentOptions {
   invoiceFetchingInterval?: number;
@@ -77,7 +78,7 @@ export class PaymentService {
   }
 
   async createAllocations(): Promise<Allocation[]> {
-    const { data: accounts } = await this.options.api.getRequestorAccounts().catch((e) => {
+    const accounts = await (await Accounts.create(this.options)).list().catch((e) => {
       throw new Error(`Unable to get requestor accounts ${e.response?.data?.message || e.response?.data || e}`);
     });
     for (const account of accounts) {
@@ -149,14 +150,18 @@ export class PaymentService {
 
   private async subscribeForInvoices() {
     while (this.isRunning) {
-      const { data: invoiceEvents } = await this.options.api.getInvoiceEvents(
-        this.options.timeout,
-        this.lastInvoiceFetchingTime,
-        this.options.maxInvoiceEvents
-      );
+      const { data: invoiceEvents } = await this.options.api
+        .getInvoiceEvents(
+          this.options.requestTimeout / 1000,
+          this.lastInvoiceFetchingTime,
+          this.options.maxInvoiceEvents
+        )
+        .catch((e) => this.logger?.error(`Unable to collect invoices. ${e?.response?.data?.message || e}`));
       for (const event of invoiceEvents) {
         if (event.eventType !== "InvoiceReceivedEvent") continue;
-        const invoice = await Invoice.create(event["invoiceId"], { ...this.options.options });
+        const invoice = await Invoice.create(event["invoiceId"], { ...this.options.options }).catch((e) =>
+          this.logger?.error(`Unable to create invoice ID: ${event["invoiceId"]}. ${e?.response?.data?.message || e}`)
+        );
         this.invoicesToPay.set(invoice.id, invoice);
         this.lastInvoiceFetchingTime = event.eventDate;
         this.options.eventTarget?.dispatchEvent(new Events.InvoiceReceived(invoice));
@@ -168,14 +173,20 @@ export class PaymentService {
 
   private async subscribeForDebitNotes() {
     while (this.isRunning) {
-      const { data: debitNotesEvents } = await this.options.api.getDebitNoteEvents(
-        this.options.timeout,
-        this.lastDebitNotesFetchingTime,
-        this.options.maxDebitNotesEvents
-      );
+      const { data: debitNotesEvents } = await this.options.api
+        .getDebitNoteEvents(
+          this.options.requestTimeout / 1000,
+          this.lastDebitNotesFetchingTime,
+          this.options.maxDebitNotesEvents
+        )
+        .catch((e) => this.logger?.error(`Unable to collect debit notes. ${e?.response?.data?.message || e}`));
       for (const event of debitNotesEvents) {
         if (event.eventType !== "DebitNoteReceivedEvent") continue;
-        const debitNote = await DebitNote.create(event["debitNoteId"], { ...this.options.options });
+        const debitNote = await DebitNote.create(event["debitNoteId"], { ...this.options.options }).catch((e) =>
+          this.logger?.error(
+            `Unable to create debit note ID: ${event["debitNoteId"]}. ${e?.response?.data?.message || e}`
+          )
+        );
         this.debitNotesToPay.set(debitNote.id, debitNote);
         this.lastDebitNotesFetchingTime = event.eventDate;
         this.options.eventTarget?.dispatchEvent(

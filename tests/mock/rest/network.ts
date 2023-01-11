@@ -4,17 +4,13 @@ import { v4 as uuidv4 } from "uuid";
 import { Address, Network, Node } from "ya-ts-client/dist/ya-net/src/models";
 import { AxiosRequestConfig, AxiosResponse } from "axios";
 
-let error;
-export const setExpectedError = (e) => {
-  error = e;
-};
-export const clear = () => {
-  error = null;
-};
-
 export class NetworkApiMock extends RequestorApi {
+  error;
   constructor() {
     super();
+  }
+  setExpectedError(e) {
+    this.error = e;
   }
   // @ts-ignore
   createNetwork(network: Network, options?: AxiosRequestConfig): Promise<import("axios").AxiosResponse<Network>> {
@@ -24,7 +20,7 @@ export class NetworkApiMock extends RequestorApi {
   }
   // @ts-ignore
   removeNetwork(networkId: string, options?: AxiosRequestConfig): Promise<import("axios").AxiosResponse<void>> {
-    if (error) return Promise.reject(error);
+    if (this.error) return Promise.reject(this.error);
     return new Promise((res) => res({ data: undefined } as AxiosResponse));
   }
   // @ts-ignore

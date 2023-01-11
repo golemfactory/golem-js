@@ -1,7 +1,4 @@
-import rewiremock from "rewiremock";
-import { MarketApiMock, setExpectedProposals } from "../mock/rest/market";
-rewiremock("ya-ts-client/dist/ya-market/api").with({ RequestorApi: MarketApiMock });
-rewiremock.enable();
+import { setExpectedProposals } from "../mock/rest/market";
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised);

@@ -73,20 +73,23 @@ describe("Stats Module", () => {
   describe("Agreements", () => {
     it("should beforeAdd() converts payload to AgreementInfo", async () => {
       const tests = new Agreements();
-      tests.add({ id: "id", providerId: "providerId" });
+      tests.add({ id: "id", providerId: "providerId", proposalId: "proposalId" });
       expect(tests.getAll()).to.deep.equal(
-        new Collection([{ id: "id", providerId: "providerId", status: AgreementStatusEnum.Pending }])
+        new Collection([
+          { id: "id", providerId: "providerId", proposalId: "proposalId", status: AgreementStatusEnum.Pending },
+        ])
       );
     });
     it("should confirm() flag AgreementInfo.status as confirmed ", async () => {
       const tests = new Agreements();
-      tests.add({ id: "id", providerId: "providerId" });
+      tests.add({ id: "id", providerId: "providerId", proposalId: "proposalId" });
       tests.confirm("id");
       expect(tests.getAll()).to.deep.equal(
         new Collection([
           {
             id: "id",
             providerId: "providerId",
+            proposalId: "proposalId",
             status: AgreementStatusEnum.Confirmed,
           },
         ])
@@ -94,26 +97,28 @@ describe("Stats Module", () => {
     });
     it("should reject() flag AgreementInfo.status as rejected ", async () => {
       const tests = new Agreements();
-      tests.add({ id: "id", providerId: "providerId" });
+      tests.add({ id: "id", providerId: "providerId", proposalId: "proposalId" });
       tests.reject("id");
       expect(tests.getAll()).to.deep.equal(
-        new Collection([{ id: "id", providerId: "providerId", status: AgreementStatusEnum.Rejected }])
+        new Collection([
+          { id: "id", providerId: "providerId", proposalId: "proposalId", status: AgreementStatusEnum.Rejected },
+        ])
       );
     });
     it("should getByProviderId() return filtered Collection of AgreementInfo", async () => {
       const tests = new Agreements();
-      tests.add({ id: "id", providerId: "providerId" });
-      tests.add({ id: "id2", providerId: "providerId2" });
-      tests.add({ id: "id3", providerId: "providerId" });
+      tests.add({ id: "id", providerId: "providerId", proposalId: "proposalId" });
+      tests.add({ id: "id2", providerId: "providerId2", proposalId: "proposalId" });
+      tests.add({ id: "id3", providerId: "providerId", proposalId: "proposalId" });
       expect(tests.getByProviderId("providerId").count()).to.equal(2);
     });
     it("should getByStatus() return filtered Collection of AgreementInfo", async () => {
       const tests = new Agreements();
-      tests.add({ id: "id", providerId: "providerId" });
+      tests.add({ id: "id", providerId: "providerId", proposalId: "proposalId" });
       tests.reject("id");
-      tests.add({ id: "id2", providerId: "providerId2" });
+      tests.add({ id: "id2", providerId: "providerId2", proposalId: "proposalId" });
       tests.confirm("id2");
-      tests.add({ id: "id3", providerId: "providerId" });
+      tests.add({ id: "id3", providerId: "providerId", proposalId: "proposalId" });
       expect(tests.getByStatus(AgreementStatusEnum.Rejected).count()).to.equal(1);
       expect(tests.getByStatus(AgreementStatusEnum.Confirmed).count()).to.equal(1);
       expect(tests.getByStatus(AgreementStatusEnum.Pending).count()).to.equal(1);
