@@ -26,6 +26,7 @@ export type ExecutorOptions = {
   minCpuThreads?: number;
   minCpuCores?: number;
   capabilities?: string[];
+  repoUrl?: string;
   logger?: Logger;
   logLevel?: string;
   yagnaOptions?: YagnaOptions;
@@ -156,7 +157,7 @@ export class TaskExecutor {
   }
 
   private async createPackage(imageHash: string): Promise<Package> {
-    return Package.create({ ...this.options, imageHash });
+    return Package.create({ ...this.options.packageOptions, imageHash });
   }
 
   private async executeTask<InputType, OutputType>(
