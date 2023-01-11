@@ -10,6 +10,11 @@ export interface MarketOptions extends DemandOptions {
   strategy?: MarketStrategy;
 }
 
+/**
+ * Market Service
+ * @description Service used in {@link TaskExecutor}
+ * @ignore
+ */
 export class MarketService {
   private marketStrategy: MarketStrategy;
   private demand?: Demand;

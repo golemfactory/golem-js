@@ -10,6 +10,11 @@ export enum TaskState {
 
 const MAX_RETRIES = 5;
 
+/**
+ * One computation unit.
+ *
+ * @description Represents one computation unit that will be run on the provider (e.g. rendering of one frame of an animation).
+ */
 export class Task<InputType = unknown, OutputType = unknown> implements QueueableTask {
   private state = TaskState.New;
   private results?: OutputType;

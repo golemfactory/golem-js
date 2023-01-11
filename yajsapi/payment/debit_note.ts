@@ -13,6 +13,12 @@ export class DebitNote extends BaseNote<Model> {
   public readonly totalAmountDue: string;
   public readonly usageCounterVector?: object;
 
+  /**
+   * Create Debit Note Model
+   *
+   * @param debitNoteId - debit note id
+   * @param options - {@link InvoiceOptions}
+   */
   static async create(debitNoteId: string, options?: InvoiceOptions): Promise<DebitNote> {
     const config = new InvoiceConfig(options);
     const { data: model } = await config.api.getDebitNote(debitNoteId);
@@ -27,6 +33,13 @@ export class DebitNote extends BaseNote<Model> {
     this.totalAmountDue = model.totalAmountDue;
     this.usageCounterVector = model.usageCounterVector;
   }
+
+  /**
+   * Accept Debit Note
+   *
+   * @param totalAmountAccepted
+   * @param allocationId
+   */
   async accept(totalAmountAccepted: string, allocationId: string) {
     try {
       await this.options.api.acceptDebitNote(this.id, { totalAmountAccepted, allocationId });
@@ -38,6 +51,13 @@ export class DebitNote extends BaseNote<Model> {
       throw new Error(`Unable to accept debit note ${this.id} ${e?.response?.data?.message || e}`);
     }
   }
+
+  /**
+   * Reject Debit Note
+   *
+   * @param rejection - ya-ts-client Rejection
+   */
+  // TODO:  change this to yajsapi Rejection type
   async reject(rejection: Rejection) {
     try {
       await this.options.api.rejectDebitNote(this.id, rejection);
@@ -49,6 +69,7 @@ export class DebitNote extends BaseNote<Model> {
       );
     }
   }
+
   protected async refreshStatus() {
     const { data: model } = await this.options.api.getDebitNote(this.id);
     this.status = model.status;

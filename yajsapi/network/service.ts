@@ -6,6 +6,11 @@ import { getIdentity } from "./identity";
 
 export type NetworkServiceOptions = Omit<NetworkOptions, "ownerId">;
 
+/**
+ * Network Service
+ * @description Service used in {@link TaskExecutor}
+ * @ignore
+ */
 export class NetworkService {
   private network?: Network;
   private logger?: Logger;

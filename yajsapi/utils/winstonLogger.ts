@@ -28,7 +28,10 @@ winston.addColors(logColors);
 
 const logger = winston.createLogger(options);
 let logLevel;
-
+/**
+ *
+ * @ignore
+ */
 export const winstonLogger: Logger = {
   level: logLevel,
   debug: (msg) => logger.debug(msg),

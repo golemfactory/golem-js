@@ -7,17 +7,29 @@ import EventSource from "eventsource";
 import { Readable } from "stream";
 import { Logger } from "../utils";
 import sleep from "../utils/sleep";
+import CancellationToken from "../utils/cancellationToken";
 import { ActivityFactory } from "./factory";
 import { ActivityConfig } from "./config";
 import { Events } from "../events";
 
 export interface ActivityOptions {
-  yagnaOptions?: { apiKey?: string; basePath?: string };
+  yagnaOptions?: {
+    /** Yagna Api Key */
+    apiKey?: string;
+    /** Yagna base path to Activity REST Api */
+    basePath?: string;
+  };
+  /** timeout for sending and creating batch */
   requestTimeout?: number;
+  /** timeout for executing batch */
   executeTimeout?: number;
+  /** interval for fetching batch results while polling */
   exeBatchResultsFetchInterval?: number;
+  /** Logger module */
   logger?: Logger;
+  /** Event Bus implements EventTarget  */
   eventTarget?: EventTarget;
+  /** taskPackage */
   taskPackage?: string;
 }
 
@@ -28,30 +40,33 @@ export class Activity {
   private isRunning: boolean;
 
   /**
+   * Create activity instance
+   *
+   * @param id activity ID
+   * @param agreementId agreement ID
+   * @param options - {@link ActivityOptions}
+   * @ignore
+   */
+  constructor(public readonly id, public readonly agreementId, protected readonly options: ActivityConfig) {
+    this.logger = options?.logger;
+  }
+
+  /**
    * Create activity for given agreement ID
+   *
    * @param agreementId
-   * @param options - ActivityOptions
-   * @param options.yagnaOptions.apiKey - Yagna Api Key
-   * @param options.yagnaOptions.basePath - Yagna base path to Activity REST Api
-   * @param options.requestTimeout - timeout for sending and creating batch
-   * @param options.executeTimeout - timeout for executing batch
-   * @param options.exeBatchResultsFetchInterval - interval for fetching batch results while polling
-   * @param options.logger - logger module
-   * @param options.taskPackage
+   * @param options - {@link ActivityOptions}
    * @param secure - defines if activity will be secure type
+   * @return Activity
    */
   static async create(agreementId: string, options?: ActivityOptions, secure = false): Promise<Activity> {
     const factory = new ActivityFactory(agreementId, options);
     return factory.create(secure);
   }
 
-  constructor(public readonly id, public readonly agreementId, protected readonly options: ActivityConfig) {
-    this.logger = options?.logger;
-    this.isRunning = true;
-  }
-
   /**
    * Execute script
+   *
    * @param script - exe script request
    * @param stream - define type of getting results from execution (polling or streaming)
    * @param timeout - execution timeout
@@ -78,6 +93,8 @@ export class Activity {
 
   /**
    * Stop and destroy activity
+   *
+   * @return boolean
    */
   public async stop(): Promise<boolean> {
     this.isRunning = false;
@@ -87,6 +104,9 @@ export class Activity {
 
   /**
    * Getting current state of activity
+   *
+   * @return state
+   * @throws Error when cannot query the state
    */
   public async getState(): Promise<ActivityStateEnum> {
     try {

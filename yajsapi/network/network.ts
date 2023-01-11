@@ -5,12 +5,19 @@ import { NetworkConfig } from "./config";
 import { NetworkNode } from "./node";
 
 export interface NetworkOptions {
+  /** the node ID of the owner of this VPN (the requestor) */
   ownerId: string;
+  /** {@link YagnaOptions} */
   yagnaOptions?: YagnaOptions;
+  /** the IP address of the network. May contain netmask, e.g. "192.168.0.0/24" */
   ip?: string;
+  /** the desired IP address of the requestor node within the newly-created network */
   ownerIp?: string;
+  /** optional netmask (only if not provided within the `ip` argument) */
   mask?: string;
+  /** optional gateway address for the network */
   gateway?: string;
+  /** optional custom logger module */
   logger?: Logger;
 }
 
@@ -42,12 +49,7 @@ export class Network {
   /**
    * Create a new VPN.
    *
-   * @param options.ip        the IP address of the network. May contain netmask, e.g. "192.168.0.0/24"
-   * @param options.ownerId   the node ID of the owner of this VPN (the requestor)
-   * @parma options.logger    optional custom logger
-   * @param options.ownerIp   the desired IP address of the requestor node within the newly-created network
-   * @param options.mask      optional netmask (only if not provided within the `ip` argument)
-   * @param options.gateway   optional gateway address for the network
+   * @param options - {@link NetworkOptions}
    */
   static async create(options: NetworkOptions): Promise<Network> {
     const config = new NetworkConfig(options);
@@ -83,6 +85,10 @@ export class Network {
     this.logger = config.logger;
   }
 
+  /**
+   * Get Network Information
+   * @return NetworkInfo
+   */
   getNetworkInfo(): NetworkInfo {
     return {
       id: this.id,

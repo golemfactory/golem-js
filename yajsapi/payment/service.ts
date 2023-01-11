@@ -19,6 +19,11 @@ interface AgreementPayable {
   provider: { id: string; name: string };
 }
 
+/**
+ * Payment Service
+ * @description Service used in {@link TaskExecutor}
+ * @ignore
+ */
 export class PaymentService {
   private isRunning = false;
   private options: PaymentConfig;
