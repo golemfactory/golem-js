@@ -79,9 +79,10 @@ export class AgreementPoolService implements ComputationHistory {
 
   async terminateAll(reason?: { [key: string]: string }) {
     for (const agreement of this.agreements.values()) {
-      await agreement
-        .terminate(reason)
-        .catch((e) => this.logger?.warn(`Agreement ${agreement.id} cannot be terminated. ${e}`));
+      if ((await agreement.getState()) !== AgreementStateEnum.Terminated)
+        await agreement
+          .terminate(reason)
+          .catch((e) => this.logger?.warn(`Agreement ${agreement.id} cannot be terminated. ${e}`));
     }
   }
 

@@ -53,6 +53,7 @@ export class TaskExecutor {
   private storageProvider?: StorageProvider;
   private logger?: Logger;
   private lastTaskIndex = 0;
+  private isRunning = true;
 
   constructor(options: ExecutorOptionsMixin) {
     const configOptions: ExecutorOptions =
@@ -86,17 +87,21 @@ export class TaskExecutor {
     this.taskService.run().catch((e) => this.handleCriticalError(e));
     this.networkService?.run().catch((e) => this.handleCriticalError(e));
     this.statsService.run().catch((e) => this.handleCriticalError(e));
+    const terminatingSignals = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
+    terminatingSignals.forEach((event) => process.on(event, () => this.end(true)));
     this.options.eventTarget.dispatchEvent(new Events.ComputationStarted());
     this.logger?.info(
       `Task Executor has started using subnet ${this.options.subnetTag}, network: ${this.options.payment?.network}, driver: ${this.options.payment?.driver}`
     );
   }
 
-  async end() {
-    await this.marketService.end();
-    await this.agreementPoolService.end();
-    await this.taskService.end();
+  async end(interrupt = false) {
+    if (interrupt) this.logger?.warn("Executor has interrupted by the user. Stopping all tasks...");
+    this.isRunning = false;
     await this.networkService?.end();
+    await this.taskService.end();
+    await this.agreementPoolService.end();
+    await this.marketService.end();
     await this.paymentService.end();
     this.storageProvider?.close();
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFinished());
@@ -130,10 +135,12 @@ export class TaskExecutor {
         if (res) results.push(res);
       })
     );
+    const isRunning = () => this.isRunning;
     return {
       [Symbol.asyncIterator](): AsyncIterator<OutputType | undefined> {
         return {
           async next() {
+            if (!isRunning()) return Promise.reject("Task Executor is not running");
             if (resultsCount === inputs.length) {
               return Promise.resolve({ done: true, value: undefined });
             }
@@ -167,7 +174,7 @@ export class TaskExecutor {
     this.taskQueue.addToEnd(task);
     let timeout = false;
     const timeoutId = setTimeout(() => (timeout = true), this.options.timeout);
-    while (!timeout) {
+    while (!timeout && this.isRunning) {
       if (task.isFinished()) {
         clearTimeout(timeoutId);
         return task.getResults();
