@@ -1,11 +1,7 @@
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
-import { createExecutor } from "../../yajsapi";
+import { expect } from "chai";
 import { LoggerMock } from "../mock";
 import { readFileSync } from "fs";
-import { TaskExecutor } from "../../yajsapi/executor";
-chai.use(chaiAsPromised);
-const expect = chai.expect;
+import { TaskExecutor } from "../../yajsapi/";
 const logger = new LoggerMock(false);
 
 describe("Task Executor", function () {
@@ -21,7 +17,7 @@ describe("Task Executor", function () {
   });
 
   it("should run simple task", async () => {
-    executor = await createExecutor({
+    executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
       logger,
     });
@@ -38,7 +34,7 @@ describe("Task Executor", function () {
   }).timeout(60000);
 
   it("should run simple tasks by map function", async () => {
-    executor = await createExecutor({
+    executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
       logger,
     });
@@ -53,7 +49,7 @@ describe("Task Executor", function () {
   }).timeout(90000);
 
   it("should run simple tasks by forEach function", async () => {
-    executor = await createExecutor({
+    executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
       logger,
     });
@@ -65,7 +61,7 @@ describe("Task Executor", function () {
   }).timeout(80000);
 
   it("should run simple batch script and get results as stream", async () => {
-    executor = await createExecutor({
+    executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
       logger,
     });
@@ -94,7 +90,7 @@ describe("Task Executor", function () {
   }).timeout(80000);
 
   it("should run simple batch script and catch error on stream", async () => {
-    executor = await createExecutor({
+    executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
       logger,
     });
@@ -119,7 +115,7 @@ describe("Task Executor", function () {
   }).timeout(80000);
 
   it("should run simple batch script and get results as promise", async () => {
-    executor = await createExecutor({
+    executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
       logger,
     });
@@ -144,7 +140,7 @@ describe("Task Executor", function () {
   }).timeout(60000);
 
   it("should run simple batch script and catch error on promise", async () => {
-    executor = await createExecutor({
+    executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
       logger,
     });
@@ -166,7 +162,7 @@ describe("Task Executor", function () {
   }).timeout(80000);
 
   it("should run transfer file", async () => {
-    executor = await createExecutor({
+    executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
       logger,
     });

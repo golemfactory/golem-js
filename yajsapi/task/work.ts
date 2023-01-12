@@ -4,7 +4,7 @@ import { StorageProvider } from "../storage/provider";
 import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity";
 import { sleep, Logger, runtimeContextChecker } from "../utils";
 import { Batch } from "../task";
-import { NetworkNode } from "../network/node";
+import { NetworkNode } from "../network";
 
 export type Worker<InputType = unknown, OutputType = unknown> = (
   ctx: WorkContext,
@@ -24,6 +24,7 @@ export interface WorkOptions {
   networkNode?: NetworkNode;
   logger?: Logger;
   initWorker?: Worker<undefined>;
+  isRunning: () => boolean;
 }
 
 export class WorkContext {
@@ -55,7 +56,7 @@ export class WorkContext {
     }
     let timeout = false;
     const timeoutId = setTimeout(() => (timeout = true), this.timeout);
-    while (state !== ActivityStateStateEnum.Ready && !timeout) {
+    while (state !== ActivityStateStateEnum.Ready && !timeout && this.options?.isRunning()) {
       await sleep(this.activityStateCheckingInterval, true);
       state = await this.activity.getState();
     }

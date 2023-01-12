@@ -114,8 +114,7 @@
             const basePath = document.getElementById('YAGNA_API_BASEPATH').value;
             const chunkedImg = chunkString(encodedImg.value, 64000)
 
-            const executor = await yajsapi
-              .createExecutor({
+            const executor = await yajsapi.TaskExecutor.create({
                 yagnaOptions: { apiKey, basePath },
                 package:"6539a63fecfb4ce98bc838ab2de71c6f4d36e1ee5945fbd8f1165c48",
                 logger

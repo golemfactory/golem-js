@@ -5,6 +5,7 @@ const FALLBACK_REPO_URL = "http://girepo.dev.golem.network:8000";
 const PUBLIC_DNS_URL = "https://dns.google/resolve?type=srv&name=";
 const DEFAULT_REPO_SRV = "_girepo._tcp.dev.golem.network";
 const SCHEMA = "http";
+const TIMEOUT = 10000;
 
 interface RepoResolverOptions {
   logger?: Logger;
@@ -18,9 +19,11 @@ export class RepoResolver {
   }
   private async isRecordValid(url) {
     try {
-      await axios.head(url);
+      await axios.head(url, { timeout: TIMEOUT });
       return true;
     } catch (e) {
+      if (e?.response?.status > 200 && e?.response?.status < 500) return true;
+      this.logger?.warn(`Url ${url} is not responding. ${e?.message}`);
       return false;
     }
   }
@@ -38,7 +41,7 @@ export class RepoResolver {
         }
       }
     } catch (e) {
-      this.logger?.warn(`error occurred while trying to get SRV record : ${e}`);
+      this.logger?.warn(`Error occurred while trying to get SRV record : ${e}`);
     }
     return null;
   }
@@ -70,7 +73,7 @@ export class RepoResolver {
         .then((nodeDns) => {
           nodeDns.resolveSrv(DEFAULT_REPO_SRV, (err, addresses) => {
             if (err) reject(err);
-            resolve(addresses.map((a) => (a.name && a.port ? `${SCHEMA}://${a.name}:${a.port}` : null)));
+            resolve(addresses?.map((a) => (a.name && a.port ? `${SCHEMA}://${a.name}:${a.port}` : null)));
           });
         })
         .catch((err) => reject(err));

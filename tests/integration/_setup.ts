@@ -1,6 +1,9 @@
-import { Goth } from "./goth";
+import { Goth } from "../goth/goth";
 import { resolve } from "path";
+import chai from "chai";
+import chaiAsPromised from "chai-as-promised";
 
+chai.use(chaiAsPromised);
 const gothConfig = resolve("../goth/assets/goth-config.yml");
 const goth = new Goth(gothConfig);
 

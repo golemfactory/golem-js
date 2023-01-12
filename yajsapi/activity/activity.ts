@@ -7,7 +7,6 @@ import EventSource from "eventsource";
 import { Readable } from "stream";
 import { Logger } from "../utils";
 import sleep from "../utils/sleep";
-import CancellationToken from "../utils/cancellationToken";
 import { ActivityFactory } from "./factory";
 import { ActivityConfig } from "./config";
 import { Events } from "../events";
@@ -37,6 +36,7 @@ export { ActivityStateEnum };
 
 export class Activity {
   private readonly logger?: Logger;
+  private isRunning = true;
 
   /**
    * Create activity instance
@@ -69,14 +69,8 @@ export class Activity {
    * @param script - exe script request
    * @param stream - define type of getting results from execution (polling or streaming)
    * @param timeout - execution timeout
-   * @param cancellationToken - token for interrupting activity
    */
-  public async execute(
-    script: ExeScriptRequest,
-    stream?: boolean,
-    timeout?: number,
-    cancellationToken?: CancellationToken
-  ): Promise<Readable> {
+  public async execute(script: ExeScriptRequest, stream?: boolean, timeout?: number): Promise<Readable> {
     let batchId, batchSize;
     let startTime = new Date();
     try {
@@ -92,16 +86,17 @@ export class Activity {
       new Events.ScriptSent({ activityId: this.id, agreementId: this.agreementId })
     );
     return stream
-      ? this.streamingBatch(batchId, batchSize, startTime, timeout, cancellationToken)
-      : this.pollingBatch(batchId, startTime, timeout, cancellationToken);
+      ? this.streamingBatch(batchId, batchSize, startTime, timeout)
+      : this.pollingBatch(batchId, startTime, timeout);
   }
 
   /**
    * Stop and destroy activity
    *
-   * @return true
+   * @return boolean
    */
   public async stop(): Promise<boolean> {
+    this.isRunning = false;
     await this.end();
     return true;
   }
@@ -140,12 +135,13 @@ export class Activity {
     this.logger?.debug(`Activity ${this.id} destroyed`);
   }
 
-  private async pollingBatch(batchId, startTime, timeout, cancellationToken): Promise<Readable> {
+  private async pollingBatch(batchId, startTime, timeout): Promise<Readable> {
     let isBatchFinished = false;
     let lastIndex;
     let retryCount = 0;
     const maxRetries = 3;
     const { id: activityId, agreementId } = this;
+    const isRunning = () => this.isRunning;
     const { executeTimeout, api, exeBatchResultsFetchInterval, eventTarget } = this.options;
     const handleError = this.handleError.bind(this);
     return new Readable({
@@ -155,7 +151,7 @@ export class Activity {
           if (startTime.valueOf() + (timeout || executeTimeout) <= new Date().valueOf()) {
             return this.destroy(new Error(`Activity ${activityId} timeout.`));
           }
-          if (cancellationToken?.cancelled) {
+          if (!isRunning()) {
             return this.destroy(new Error(`Activity ${activityId} has been interrupted.`));
           }
           try {
@@ -184,7 +180,7 @@ export class Activity {
     });
   }
 
-  private async streamingBatch(batchId, batchSize, startTime, timeout, cancellationToken): Promise<Readable> {
+  private async streamingBatch(batchId, batchSize, startTime, timeout): Promise<Readable> {
     const basePath = this.options?.yagnaOptions?.basePath || this.options.api.control["configuration"]?.basePath;
     const apiKey = this.options?.yagnaOptions?.apiKey || this.options.api.control["configuration"]?.apiKey;
     const eventSource = new EventSource(`${basePath}/activity/${this.id}/exec/${batchId}`, {
@@ -196,6 +192,7 @@ export class Activity {
 
     let isBatchFinished = false;
     const activityId = this.id;
+    const isRunning = () => this.isRunning;
     const executeTimeout = this.options.executeTimeout;
 
     const errors: object[] = [];
@@ -211,7 +208,7 @@ export class Activity {
           if (startTime.valueOf() + (timeout || executeTimeout) <= new Date().valueOf()) {
             return this.destroy(new Error(`Activity ${activityId} timeout.`));
           }
-          if (cancellationToken?.cancelled) {
+          if (!isRunning()) {
             return this.destroy(new Error(`Activity ${activityId} has been interrupted.`));
           }
           if (errors.length) {

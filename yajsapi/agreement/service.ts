@@ -66,6 +66,8 @@ export class AgreementPoolService implements ComputationHistory {
     let agreement;
     while (!agreement && this.isServiceRunning)
       agreement = (await this.getAvailableAgreement()) || (await this.createAgreement());
+    if (!agreement && !this.isServiceRunning)
+      throw new Error("Unable to get agreement. Agreement service is not running");
     return agreement;
   }
 
@@ -113,9 +115,10 @@ export class AgreementPoolService implements ComputationHistory {
    */
   async terminateAll(reason?: { [key: string]: string }) {
     for (const agreement of this.agreements.values()) {
-      await agreement
-        .terminate(reason)
-        .catch((e) => this.logger?.warn(`Agreement ${agreement.id} cannot be terminated. ${e}`));
+      if ((await agreement.getState()) !== AgreementStateEnum.Terminated)
+        await agreement
+          .terminate(reason)
+          .catch((e) => this.logger?.warn(`Agreement ${agreement.id} cannot be terminated. ${e}`));
     }
   }
 
@@ -168,7 +171,7 @@ export class AgreementPoolService implements ComputationHistory {
       this.agreements.set(agreement.id, agreement);
       this.logger?.debug(`Agreement ${agreement.id} signed with provider ${agreement.provider.name}`);
     } else {
-      this.logger?.debug(`Agreement cannot be created due to no available offers from market`);
+      this.isServiceRunning && this.logger?.debug(`Agreement cannot be created due to no available offers from market`);
     }
     return agreement;
   }

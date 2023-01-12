@@ -6,6 +6,7 @@ import { Activity, Result } from "../../yajsapi/activity";
 import { Readable } from "stream";
 const logger = new LoggerMock();
 const storageProviderMock = new StorageProviderMock({ logger });
+const isRunning = () => true;
 
 describe("Work Context", () => {
   beforeEach(() => {
@@ -17,7 +18,7 @@ describe("Work Context", () => {
     it("should execute run command", async () => {
       const activity = await Activity.create("test_agreement_id");
       const worker: Worker<null, Result> = async (ctx) => ctx.run("some_shell_command");
-      const ctx = new WorkContext(activity, { logger, activityStateCheckingInterval: 10 });
+      const ctx = new WorkContext(activity, { logger, activityStateCheckingInterval: 10, isRunning });
       await ctx.before();
       const results = await worker(ctx);
       expect(results?.stdout).to.equal("test_result");
@@ -30,6 +31,7 @@ describe("Work Context", () => {
         logger,
         activityStateCheckingInterval: 10,
         storageProvider: storageProviderMock,
+        isRunning,
       });
       await ctx.before();
       const results = await worker(ctx);
@@ -45,6 +47,7 @@ describe("Work Context", () => {
         logger,
         activityStateCheckingInterval: 10,
         storageProvider: storageProviderMock,
+        isRunning,
       });
       await ctx.before();
       const results = await worker(ctx);
@@ -60,6 +63,7 @@ describe("Work Context", () => {
         logger,
         activityStateCheckingInterval: 10,
         storageProvider: storageProviderMock,
+        isRunning,
       });
       await ctx.before();
       const results = await worker(ctx);
@@ -83,6 +87,7 @@ describe("Work Context", () => {
         logger,
         activityStateCheckingInterval: 10,
         storageProvider: storageProviderMock,
+        isRunning,
       });
       const expectedStdout = [
         { stdout: "ok_run" },
@@ -114,6 +119,7 @@ describe("Work Context", () => {
         logger,
         activityStateCheckingInterval: 10,
         storageProvider: storageProviderMock,
+        isRunning,
       });
       const expectedStdout = [
         { stdout: "ok_run" },
@@ -147,6 +153,7 @@ describe("Work Context", () => {
         logger,
         activityStateCheckingInterval: 10,
         storageProvider: storageProviderMock,
+        isRunning,
       });
       const expectedStdout = [{ result: "Error", stderr: "error", message: "Some error occurred" }];
       activityMock.setExpectedExeResults(expectedStdout);
@@ -160,6 +167,7 @@ describe("Work Context", () => {
         logger,
         activityStateCheckingInterval: 10,
         storageProvider: storageProviderMock,
+        isRunning,
       });
       const expectedStdout = [{ result: "Error", stderr: "error", message: "Some error occurred" }];
       activityMock.setExpectedExeResults(expectedStdout);

@@ -3,7 +3,7 @@ import path from "path";
 import { readFileSync } from "fs";
 
 (async function main() {
-  const executor = await createExecutor("9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae");
+  const executor = await TaskExecutor.create("9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae");
   await executor.run(async (ctx) => {
     await ctx.uploadJson({ test: "1234" }, "/golem/work/test.json");
     const res = await ctx.downloadFile("/golem/work/test.json", path.join(__dirname, "new_test.json"));

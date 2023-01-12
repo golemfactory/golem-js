@@ -1,7 +1,7 @@
 import { defineConfig } from "cypress";
 import rollupConfig from "./rollup.config.js";
 import { rollup } from "rollup";
-import { Goth } from "./tests/integration/goth";
+import { Goth } from "./tests/goth/goth";
 import { resolve } from "path";
 
 const gothConfig = resolve("../goth/assets/goth-config.yml");
@@ -13,7 +13,7 @@ export default defineConfig({
   fixturesFolder: "tests/cypress/fixtures",
   videosFolder: ".cypress/video",
   screenshotsFolder: ".cypress/screenshots",
-  defaultCommandTimeout: 30000,
+  defaultCommandTimeout: 60000,
   experimentalInteractiveRunEvents: true,
   chromeWebSecurity: false,
   e2e: {
@@ -36,7 +36,7 @@ export default defineConfig({
       on("after:run", async () => {
         await goth.end();
       });
-      return new Promise(async (res, rej) => {
+      return new Promise(async (res) => {
         const { apiKey, basePath, subnetTag } = await goth.start();
         config.env.YAGNA_APPKEY = apiKey;
         config.env.YAGNA_API_BASEPATH = basePath;

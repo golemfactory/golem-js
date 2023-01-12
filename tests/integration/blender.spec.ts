@@ -1,16 +1,10 @@
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
-import { createExecutor } from "../../yajsapi";
+import { expect } from "chai";
+import { TaskExecutor } from "../../yajsapi";
 import { LoggerMock } from "../mock";
-import { Goth } from "./goth";
-import { resolve } from "path";
-chai.use(chaiAsPromised);
-const expect = chai.expect;
-const logger = new LoggerMock(false);
 import path from "path";
 import { fileExistsSync } from "tsconfig-paths/lib/filesystem";
-import { TaskExecutor } from "../../yajsapi/executor";
 
+const logger = new LoggerMock(false);
 const blender_params = (frame) => ({
   scene_file: "/golem/resource/scene.blend",
   resolution: [400, 300],
@@ -37,7 +31,7 @@ describe("Blender rendering", function () {
     await executor.end();
   });
   it("should render images by blender", async () => {
-    executor = await createExecutor({
+    executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
       logger,
     });
@@ -57,6 +51,7 @@ describe("Blender rendering", function () {
     });
     const expectedResults = data.map((d) => `output_${d}.png`);
     for await (const result of results) expect(result).to.be.oneOf(expectedResults);
-    for (const file of expectedResults) expect(fileExistsSync(`${process.env.GOTH_GFTP_VOLUME || ""}${file}`)).to.be.true;
+    for (const file of expectedResults)
+      expect(fileExistsSync(`${process.env.GOTH_GFTP_VOLUME || ""}${file}`)).to.be.true;
   }).timeout(190000);
 });

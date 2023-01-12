@@ -1,11 +1,10 @@
-import * as executor from "./executor";
-import * as task from "./task";
-import * as activity from "./activity";
-import * as agreement from "./agreement";
-import * as market from "./market";
-import * as network from "./network";
-import * as payment from "./payment";
-import * as utils from "./utils";
-import { createExecutor } from "./executor";
+// High level API
+export { TaskExecutor } from "./executor";
 
-export { executor, task, activity, agreement, market, payment, network, utils, createExecutor };
+// Mid level API
+export { Activity, ActivityOptions, ActivityStateEnum, Result } from "./activity";
+export { Agreement, AgreementOptions, AgreementStateEnum } from "./agreement";
+export { Demand, DemandEvent, DemandEventType, DemandOptions, Proposal } from "./market";
+export { Package, PackageOptions } from "./package";
+export { Invoice, DebitNote, Allocation, Accounts } from "./payment";
+export { Script, Run, Deploy, Start } from "./script";

@@ -40,6 +40,8 @@ export type ExecutorOptions = {
   minCpuCores?: number;
   /** TODO */
   capabilities?: string[];
+  /** TODO */
+  repoUrl?: string;
   /** Logger module */
   logger?: Logger;
   /** TODO enum: debug, info, warn, error */
@@ -71,6 +73,21 @@ export class TaskExecutor {
   private storageProvider?: StorageProvider;
   private logger?: Logger;
   private lastTaskIndex = 0;
+  private isRunning = true;
+
+  /**
+   * Create a new Task Executor
+   *
+   * @description Factory Method that create and initialize an instance of the TaskExecutor
+   *
+   * @param options Task executor options
+   * @return TaskExecutor
+   */
+  static async create(options: ExecutorOptionsMixin) {
+    const executor = new TaskExecutor(options);
+    await executor.init();
+    return executor;
+  }
 
   /**
    * Create a new TaskExecutor object.
@@ -79,7 +96,7 @@ export class TaskExecutor {
    * @param options - contains information needed to start executor, if string the imageHash is required, otherwise it should be a type of {@link ExecutorOptions}
    * @ignore
    */
-  constructor(options: ExecutorOptionsMixin) {
+  private constructor(options: ExecutorOptionsMixin) {
     const configOptions: ExecutorOptions =
       typeof options === "string" ? { package: options } : (options as ExecutorOptions);
     this.options = new ExecutorConfig(configOptions);
@@ -116,6 +133,7 @@ export class TaskExecutor {
     this.taskService.run().catch((e) => this.handleCriticalError(e));
     this.networkService?.run().catch((e) => this.handleCriticalError(e));
     this.statsService.run().catch((e) => this.handleCriticalError(e));
+    this.handleCancelEvent();
     this.options.eventTarget.dispatchEvent(new Events.ComputationStarted());
     this.logger?.info(
       `Task Executor has started using subnet ${this.options.subnetTag}, network: ${this.options.payment?.network}, driver: ${this.options.payment?.driver}`
@@ -128,14 +146,17 @@ export class TaskExecutor {
    * @description Method responsible for stopping all executor services and shut down executor instance
    */
   async end() {
-    await this.marketService.end();
-    await this.agreementPoolService.end();
-    await this.taskService.end();
+    if (!this.isRunning) return;
+    this.isRunning = false;
     await this.networkService?.end();
+    await this.taskService.end();
+    await this.agreementPoolService.end();
+    await this.marketService.end();
     await this.paymentService.end();
     this.storageProvider?.close();
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFinished());
-    this.logger?.table?.(this.statsService.getAllCosts());
+    const costs = this.statsService.getAllCosts();
+    costs ? this.logger?.table?.(costs) : this.logger?.info("No payments");
     await this.statsService.end();
     this.logger?.info("Task Executor has shut down");
   }
@@ -188,6 +209,7 @@ export class TaskExecutor {
         if (res) results.push(res);
       })
     );
+    const isRunning = () => this.isRunning;
     return {
       [Symbol.asyncIterator](): AsyncIterator<OutputType | undefined> {
         return {
@@ -195,9 +217,10 @@ export class TaskExecutor {
             if (resultsCount === inputs.length) {
               return Promise.resolve({ done: true, value: undefined });
             }
-            while (results.length === 0 && resultsCount < inputs.length) {
+            while (results.length === 0 && resultsCount < inputs.length && isRunning()) {
               await sleep(1000, true);
             }
+            if (!isRunning()) return Promise.resolve({ done: true, value: undefined });
             resultsCount += 1;
             return Promise.resolve({ done: false, value: results.pop() });
           },
@@ -220,7 +243,7 @@ export class TaskExecutor {
   }
 
   private async createPackage(imageHash: string): Promise<Package> {
-    return Package.create({ ...this.options, imageHash });
+    return Package.create({ ...this.options.packageOptions, imageHash });
   }
 
   private async executeTask<InputType, OutputType>(
@@ -231,13 +254,14 @@ export class TaskExecutor {
     this.taskQueue.addToEnd(task);
     let timeout = false;
     const timeoutId = setTimeout(() => (timeout = true), this.options.timeout);
-    while (!timeout) {
+    while (!timeout && this.isRunning) {
       if (task.isFinished()) {
         clearTimeout(timeoutId);
         return task.getResults();
       }
       await sleep(2000, true);
     }
+    clearTimeout(timeoutId);
   }
 
   private handleCriticalError(e: Error) {
@@ -245,27 +269,22 @@ export class TaskExecutor {
     this.logger?.error(e.toString());
     this.logger?.debug(e.stack);
     this.logger?.warn("Trying to stop all services...");
-    this.end()
-      .catch((e) => {
-        this.logger?.error(e);
-        process.exit(2);
-      })
-      .then(() => {
+    this.end().catch((e) => {
+      this.logger?.error(e);
+      process.exit(1);
+    });
+  }
+
+  private handleCancelEvent() {
+    const terminatingSignals = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
+    const cancel = () => {
+      terminatingSignals.forEach((event) => process.off(event, cancel));
+      this.logger?.warn("Executor has interrupted by the user. Stopping all tasks...");
+      this.end().catch((error) => {
+        this.logger?.error(error);
         process.exit(1);
       });
+    };
+    terminatingSignals.forEach((event) => process.on(event, cancel));
   }
-}
-
-/**
- * Create a new Task Executor
- *
- * @description Factory Method that create and initialize an instance of the TaskExecutor
- *
- * @param options Task executor options
- * @return TaskExecutor
- */
-export async function createExecutor(options: ExecutorOptionsMixin) {
-  const executor = new TaskExecutor(options);
-  await executor.init();
-  return executor;
 }
