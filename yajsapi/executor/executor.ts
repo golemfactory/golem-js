@@ -40,6 +40,8 @@ export type ExecutorOptions = {
   minCpuCores?: number;
   /** TODO */
   capabilities?: string[];
+  /** TODO */
+  repoUrl?: string;
   /** Logger module */
   logger?: Logger;
   /** TODO enum: debug, info, warn, error */
@@ -241,7 +243,7 @@ export class TaskExecutor {
   }
 
   private async createPackage(imageHash: string): Promise<Package> {
-    return Package.create({ ...this.options, imageHash });
+    return Package.create({ ...this.options.packageOptions, imageHash });
   }
 
   private async executeTask<InputType, OutputType>(

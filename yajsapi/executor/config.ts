@@ -24,6 +24,7 @@ export class ExecutorConfig {
   readonly networkAddress?: string;
   readonly packageOptions: {
     engine?: string;
+    repoUrl?: string;
     minMemGib?: number;
     minStorageGib?: number;
     minCpuThreads?: number;
@@ -58,6 +59,7 @@ export class ExecutorConfig {
       minStorageGib: options.minStorageGib,
       minCpuThreads: options.minCpuThreads,
       capabilities: options.capabilities,
+      repoUrl: options.repoUrl,
     };
     this.logger = options.logger || (!runtimeContextChecker.isBrowser ? winstonLogger : undefined);
     this.logLevel = options.logLevel || DEFAULTS.logLevel;
