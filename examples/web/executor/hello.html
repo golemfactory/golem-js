@@ -83,7 +83,6 @@
           const basePath = document.getElementById('YAGNA_API_BASEPATH').value;
           const subnetTag = document.getElementById('SUBNET_TAG').value;
           const imageHash = document.getElementById('IMAGE_HASH').value;
-          console.log({ apiKey, basePath });
             const executor = await yajsapi.TaskExecutor.create({
                 yagnaOptions: { apiKey, basePath },
                 package: imageHash,
