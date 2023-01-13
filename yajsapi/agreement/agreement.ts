@@ -10,7 +10,7 @@ export interface ProviderInfo {
   id: string;
 }
 
-export declare enum AgreementStateEnum {
+export enum AgreementStateEnum {
   Proposal = "Proposal",
   Pending = "Pending",
   Cancelled = "Cancelled",

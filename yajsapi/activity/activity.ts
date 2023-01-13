@@ -7,7 +7,7 @@ import { ActivityFactory } from "./factory";
 import { ActivityConfig } from "./config";
 import { Events } from "../events";
 
-export declare enum ActivityStateEnum {
+export enum ActivityStateEnum {
   New = "New",
   Initialized = "Initialized",
   Deployed = "Deployed",

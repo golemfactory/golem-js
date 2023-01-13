@@ -10,7 +10,6 @@ import { StorageProvider, GftpStorageProvider } from "../storage/";
 import { ExecutorConfig } from "./config";
 import { Events } from "../events";
 import { StatsService } from "../stats/service";
-import { NetworkOptions } from "../network/network";
 import { TaskOptions } from "../task/service";
 import { BasePaymentOptions } from "../payment/config";
 import { NetworkServiceOptions } from "../network/service";
@@ -27,7 +26,8 @@ export type ExecutorOptions = {
   subnetTag?: string;
   /** Logger module */
   logger?: Logger;
-  logLevel?: LogLevel;
+  /** Log level: debug, info, warn, log, error */
+  logLevel?: LogLevel | string;
   /** Yagna Options */
   yagnaOptions?: YagnaOptions;
   /** Event Bus implements EventTarget  */
@@ -36,12 +36,11 @@ export type ExecutorOptions = {
   AgreementOptions &
   BasePaymentOptions &
   DemandOptions &
-  NetworkOptions &
-  PackageOptions &
+  Omit<PackageOptions, "imageHash"> &
   TaskOptions &
   NetworkServiceOptions &
   AgreementServiceOptions &
-  WorkOptions;
+  Omit<WorkOptions, "isRunning">;
 
 /**
  * Contains information needed to start executor, if string the imageHash is required, otherwise it should be a type of {@link ExecutorOptions}

@@ -1,4 +1,4 @@
-export declare enum RejectionReason {
+export enum RejectionReason {
   UnsolicitedService = "UNSOLICITED_SERVICE",
   BadService = "BAD_SERVICE",
   IncorrectAmount = "INCORRECT_AMOUNT",
