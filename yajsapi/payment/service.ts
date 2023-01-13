@@ -33,7 +33,7 @@ export class PaymentService {
   private agreementsDebitNotes: Set<string> = new Set();
   private invoicesToPay: Map<string, Invoice> = new Map();
   private debitNotesToPay: Map<string, DebitNote> = new Map();
-  private paidAgreements: Set<{ agreement: AgreementPayable; invoice: Invoice }> = new Set();
+  private paidAgreements: Set<{ agreement: AgreementPayable; invoice: Invoice }> = new Set(); //@TODO Warning: Contents of collection 'paidAgreements' are updated, but never queried
   private lastInvoiceFetchingTime: string = new Date().toISOString();
   private lastDebitNotesFetchingTime: string = new Date().toISOString();
 
@@ -58,7 +58,7 @@ export class PaymentService {
     if (this.agreementsToPay.size) {
       this.logger?.debug("Waiting for all invoices to be paid...");
       let timeout = false;
-      const timeoutId = setTimeout(() => (timeout = true), this.options.timeout);
+      const timeoutId = setTimeout(() => (timeout = true), this.options.paymentTimeout);
       let i = 0;
       while (this.isRunning && !timeout) {
         this.isRunning = this.agreementsToPay.size !== 0;
@@ -152,7 +152,7 @@ export class PaymentService {
     while (this.isRunning) {
       const { data: invoiceEvents } = await this.options.api
         .getInvoiceEvents(
-          this.options.requestTimeout / 1000,
+          this.options.paymentRequestTimeout / 1000,
           this.lastInvoiceFetchingTime,
           this.options.maxInvoiceEvents
         )
@@ -175,7 +175,7 @@ export class PaymentService {
     while (this.isRunning) {
       const { data: debitNotesEvents } = await this.options.api
         .getDebitNoteEvents(
-          this.options.requestTimeout / 1000,
+          this.options.paymentRequestTimeout / 1000,
           this.lastDebitNotesFetchingTime,
           this.options.maxDebitNotesEvents
         )

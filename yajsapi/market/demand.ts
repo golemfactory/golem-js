@@ -12,8 +12,8 @@ import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
 export interface DemandOptions {
   subnetTag?: string;
   yagnaOptions?: YagnaOptions;
-  timeout?: number;
-  expiration?: number;
+  marketTimeout?: number;
+  marketOfferExpiration?: number;
   logger?: Logger;
   maxOfferEvents?: number;
   offerFetchingInterval?: number;

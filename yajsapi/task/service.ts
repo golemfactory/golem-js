@@ -1,6 +1,6 @@
 import { Task, WorkContext, TaskQueue } from "./";
 import { Logger, sleep } from "../utils";
-import { StorageProvider } from "../storage/provider";
+import { StorageProvider } from "../storage";
 import { AgreementPoolService } from "../agreement";
 import { PaymentService } from "../payment";
 import { NetworkService } from "../network";
@@ -9,10 +9,11 @@ import { TaskConfig } from "./config";
 import { Events } from "../events";
 
 export interface TaskOptions extends ActivityOptions {
+  /** Number of maximum parallel running task on one TaskExecutor instance */
   maxParallelTasks?: number;
   taskRunningInterval?: number;
   activityStateCheckingInterval?: number;
-  timeout?: number;
+  taskTimeout?: number;
   logger?: Logger;
   storageProvider?: StorageProvider;
 }
@@ -88,7 +89,7 @@ export class TaskService {
         networkNode,
         logger: this.logger,
         activityStateCheckingInterval: this.options.activityStateCheckingInterval,
-        timeout: this.options.timeout,
+        workTimeout: this.options.taskTimeout,
         isRunning: () => this.isRunning,
       });
       await ctx.before();

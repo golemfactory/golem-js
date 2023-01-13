@@ -1,3 +1,9 @@
+export declare enum LogLevel {
+  debug = "debug",
+  info = "info",
+  warn = "warn",
+  error = "error",
+}
 export interface Logger {
   level: string;
   setLevel(level: string);

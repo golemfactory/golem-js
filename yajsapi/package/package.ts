@@ -5,14 +5,21 @@ import axios from "axios";
 import { PackageConfig } from "./config";
 
 export interface PackageOptions {
+  /** TODO */
+  engine?: string;
+  /** Minimum required memory from provider instance in GB */
+  minMemGib?: number;
+  /** Minimum required storage from provider instance in GB */
+  minStorageGib?: number;
+  /** Minimum required CPU threads */
+  minCpuThreads?: number;
+  /** Minimum required CPU cores */
+  minCpuCores?: number;
+  /** TODO */
+  capabilities?: string[];
+  /** TODO */
   imageHash: string;
   repoUrl?: string;
-  engine?: string;
-  minMemGib?: number;
-  minStorageGib?: number;
-  minCpuThreads?: number;
-  minCpuCores?: number;
-  capabilities?: string[];
   logger?: Logger;
 }
 

@@ -1,57 +1,51 @@
-import { Package } from "../package";
-import { MarketService, MarketStrategy } from "../market";
-import { AgreementPoolService } from "../agreement";
+import { Package, PackageOptions } from "../package";
+import { DemandOptions, MarketService } from "../market";
+import { AgreementOptions, AgreementPoolService } from "../agreement";
 import { Task, TaskQueue, TaskService, Worker } from "../task";
 import { PaymentService } from "../payment";
 import { NetworkService } from "../network";
-import { Result } from "../activity";
+import { ActivityOptions, Result } from "../activity";
 import { sleep, Logger, runtimeContextChecker } from "../utils";
 import { StorageProvider, GftpStorageProvider } from "../storage/";
 import { ExecutorConfig } from "./config";
 import { Events } from "../events";
 import { StatsService } from "../stats/service";
+import { NetworkOptions } from "../network/network";
+import { TaskOptions } from "../task/service";
+import { BasePaymentOptions } from "../payment/config";
+import { NetworkServiceOptions } from "../network/service";
+import { AgreementServiceOptions } from "../agreement/service";
+import { WorkOptions } from "../task/work";
+import { LogLevel } from "../utils/logger";
 
 export type ExecutorOptions = {
   /** Image hash as string, otherwise Package object */
   package: string | Package;
-  /** Number of maximum parallel running task on one TaskExecutor instance */
-  maxParallelTasks?: number;
   /** Timeout for execute one task in ms */
-  timeout?: number;
-  /** TODO */
-  budget?: number;
-  /** Strategy used to choose best offer */
-  strategy?: MarketStrategy;
+  executorTimeout?: number;
   /** Subnet Tag */
   subnetTag?: string;
-  /** TODO */
-  payment?: { driver?: string; network?: string };
-  /** TODO */
-  networkAddress?: string;
-  /** TODO */
-  engine?: string;
-  /** Minimum required memory from provider instance in GB */
-  minMemGib?: number;
-  /** Minimum required storage from provider instance in GB */
-  minStorageGib?: number;
-  /** Minimum required CPU threads */
-  minCpuThreads?: number;
-  /** Minimum required CPU cores */
-  minCpuCores?: number;
-  /** TODO */
-  capabilities?: string[];
-  /** TODO */
-  repoUrl?: string;
   /** Logger module */
   logger?: Logger;
-  /** TODO enum: debug, info, warn, error */
-  logLevel?: string; // TODO: enum ?
+  logLevel?: LogLevel;
   /** Yagna Options */
   yagnaOptions?: YagnaOptions;
   /** Event Bus implements EventTarget  */
   eventTarget?: EventTarget;
-};
+} & ActivityOptions &
+  AgreementOptions &
+  BasePaymentOptions &
+  DemandOptions &
+  NetworkOptions &
+  PackageOptions &
+  TaskOptions &
+  NetworkServiceOptions &
+  AgreementServiceOptions &
+  WorkOptions;
 
+/**
+ * Contains information needed to start executor, if string the imageHash is required, otherwise it should be a type of {@link ExecutorOptions}
+ */
 export type ExecutorOptionsMixin = string | ExecutorOptions;
 
 export type YagnaOptions = {
@@ -61,7 +55,6 @@ export type YagnaOptions = {
 
 export class TaskExecutor {
   private readonly options: ExecutorConfig;
-  private readonly imageHash?: string; // TODO: not used
   private marketService: MarketService;
   private agreementPoolService: AgreementPoolService;
   private taskService: TaskService;
@@ -97,16 +90,17 @@ export class TaskExecutor {
    * @ignore
    */
   private constructor(options: ExecutorOptionsMixin) {
-    const configOptions: ExecutorOptions =
-      typeof options === "string" ? { package: options } : (options as ExecutorOptions);
+    const configOptions: ExecutorOptions = (
+      typeof options === "string" ? { package: options } : options
+    ) as ExecutorOptions;
     this.options = new ExecutorConfig(configOptions);
     this.logger = this.options.logger;
     this.taskQueue = new TaskQueue<Task<any, any>>();
     this.agreementPoolService = new AgreementPoolService(this.options);
     this.paymentService = new PaymentService(this.options);
     this.marketService = new MarketService(this.agreementPoolService, this.options);
-    this.networkService = this.options.networkAddress ? new NetworkService(this.options) : undefined;
-    this.storageProvider = runtimeContextChecker.isNode ? new GftpStorageProvider(this.logger) : undefined;
+    this.networkService = this.options.networkIp ? new NetworkService(this.options) : undefined;
+    this.storageProvider = runtimeContextChecker.isNode ? new GftpStorageProvider() : undefined;
     this.taskService = new TaskService(
       this.taskQueue,
       this.agreementPoolService,
@@ -135,6 +129,7 @@ export class TaskExecutor {
     this.statsService.run().catch((e) => this.handleCriticalError(e));
     this.handleCancelEvent();
     this.options.eventTarget.dispatchEvent(new Events.ComputationStarted());
+    this.storageProvider = runtimeContextChecker.isNode ? new GftpStorageProvider() : undefined;
     this.logger?.info(
       `Task Executor has started using subnet ${this.options.subnetTag}, network: ${this.options.payment?.network}, driver: ${this.options.payment?.driver}`
     );
@@ -253,7 +248,7 @@ export class TaskExecutor {
     const task = new Task<InputType, OutputType>((++this.lastTaskIndex).toString(), worker, data, this.initWorker);
     this.taskQueue.addToEnd(task);
     let timeout = false;
-    const timeoutId = setTimeout(() => (timeout = true), this.options.timeout);
+    const timeoutId = setTimeout(() => (timeout = true), this.options.executorTimeout);
     while (!timeout && this.isRunning) {
       if (task.isFinished()) {
         clearTimeout(timeoutId);

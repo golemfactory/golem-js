@@ -6,17 +6,17 @@ import { NetworkNode } from "./node";
 
 export interface NetworkOptions {
   /** the node ID of the owner of this VPN (the requestor) */
-  ownerId: string;
+  networkOwnerId: string;
   /** {@link YagnaOptions} */
   yagnaOptions?: YagnaOptions;
   /** the IP address of the network. May contain netmask, e.g. "192.168.0.0/24" */
-  ip?: string;
+  networkIp?: string;
   /** the desired IP address of the requestor node within the newly-created network */
-  ownerIp?: string;
+  networkOwnerIp?: string;
   /** optional netmask (only if not provided within the `ip` argument) */
-  mask?: string;
+  networkMask?: string;
   /** optional gateway address for the network */
-  gateway?: string;
+  networkGateway?: string;
   /** optional custom logger module */
   logger?: Logger;
 }

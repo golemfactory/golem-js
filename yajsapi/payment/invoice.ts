@@ -1,6 +1,7 @@
 import { BasePaymentOptions, InvoiceConfig } from "./config";
-import { Invoice as Model, InvoiceStatus, Rejection } from "ya-ts-client/dist/ya-payment/src/models";
+import { Invoice as Model, InvoiceStatus } from "ya-ts-client/dist/ya-payment/src/models";
 import { Events } from "../events";
+import { Rejection } from "./rejection";
 
 export type InvoiceOptions = BasePaymentOptions;
 
@@ -110,9 +111,8 @@ export class Invoice extends BaseNote<Model> {
   /**
    * Reject Invoice
    *
-   * @param rejection - ya-ts-client Rejection Model
+   * @param rejection - {@link Rejection}
    */
-  // TODO:  change this to yajsapi Rejection type
   async reject(rejection: Rejection) {
     try {
       await this.options.api.rejectInvoice(this.id, rejection);

@@ -14,8 +14,8 @@ export class NetworkNode {
 
   /**
    * Generate a dictionary of arguments that are required for the appropriate
-   `Deploy` command of an exescript in order to pass the network configuration to the runtime
-   on the provider's end.
+   *`Deploy` command of an exescript in order to pass the network configuration to the runtime
+   * on the provider's end.
    */
   getNetworkConfig() {
     return {
