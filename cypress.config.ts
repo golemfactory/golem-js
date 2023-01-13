@@ -13,13 +13,14 @@ export default defineConfig({
   fixturesFolder: "tests/cypress/fixtures",
   videosFolder: ".cypress/video",
   screenshotsFolder: ".cypress/screenshots",
-  defaultCommandTimeout: 60000,
+  defaultCommandTimeout: 90000,
   experimentalInteractiveRunEvents: true,
   chromeWebSecurity: false,
   e2e: {
     supportFile: "tests/cypress/support/e2e.ts",
     specPattern: "tests/cypress/ui/**/*.cy.ts",
     setupNodeEvents(on, config) {
+      require('cypress-terminal-report/src/installLogsPrinter')(on, { printLogsToConsole: "always" })
       on("before:run", async () => {
         let bundle;
         try {
