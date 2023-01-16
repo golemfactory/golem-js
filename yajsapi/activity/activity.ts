@@ -289,7 +289,7 @@ export class Activity {
   private async isTerminated(): Promise<{ terminated: boolean; reason?: string; errorMessage?: string }> {
     try {
       const { data } = await this.options.api.state.getActivityState(this.id);
-      const state = ActivityStateEnum[data?.state?.[0]]; // TODO pls check @mgordel
+      const state = ActivityStateEnum[data?.state?.[0]];
       return {
         terminated: state === ActivityStateEnum.Terminated,
         reason: data?.reason,

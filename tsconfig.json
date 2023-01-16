@@ -25,20 +25,20 @@
     "typeRoots": ["node_modules/@types"]
   },
   "typedocOptions": {
-    "entryPoints": ["yajsapi/*"],
+    "entryPoints": ["yajsapi"],
     "exclude": ["**/*.spec.ts"],
     "out": "docs",
     "readme": "tutorial.md",
-    "entryPointStrategy": "resolve",
+//    "entryPointStrategy": "resolve",
     "excludePrivate": true,
-    "categorizeByGroup": false,
-    //"disableSources": true,
-    //"name": "yajsapi API reference",
-    "theme": "default",
+//    "categorizeByGroup": false,
+//    //"disableSources": true,
+    "name": "yajsapi API reference",
+//    "theme": "default",
 //    "categorizeByGroup": true,
-    //"mergeModulesRenameDefaults": true,
-    //"excludeExternals": true,
-    //"mergeModulesMergeMode": "module"
+//    //"mergeModulesRenameDefaults": true,
+//    //"excludeExternals": true,
+//    //"mergeModulesMergeMode": "module"
   },
   "exclude": ["dist", "node_modules", "examples", "tests", "cypress.config.ts"]
 }

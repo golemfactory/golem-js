@@ -21,13 +21,10 @@ export enum AgreementStateEnum {
 }
 
 export interface AgreementOptions {
-  /** subnet tag */
-  subnetTag?: string; // TODO check if it is used? maybe in service?
   /** yagnaOptions */
-  yagnaOptions?: YagnaOptions; // TODO check if it is used? maybe in service?
+  yagnaOptions?: YagnaOptions;
   /** timeout for create agreement and refresh details in ms */
   agreementRequestTimeout?: number;
-  agreementExecuteTimeout?: number; // TODO check if it is used? maybe in service?
   /** timeout for wait for provider approval after requestor confirmation in ms */
   agreementWaitingForApprovalTimeout?: number;
   /** Logger module */

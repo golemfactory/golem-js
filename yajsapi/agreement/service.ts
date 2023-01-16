@@ -15,9 +15,6 @@ export interface AgreementProposal {
   proposalId: string;
 }
 
-// TODO: This is now in rest/market - think about a better place
-export type TerminationReason = { message: string; "golem.requestor.code"?: string };
-
 /**
  * Agreement Pool Service
  * @description Service used in {@link TaskExecutor}
@@ -161,7 +158,7 @@ export class AgreementPoolService implements ComputationHistory {
         }
       } catch (e) {
         this.logger?.error(`Unable to create agreement form available proposal: ${e?.data?.message || e}`);
-        // TODO: What we should do with used proposal in that case ?? unshift to begin ?
+
         await sleep(2);
         // If id to go kill'em
         agreement = null;

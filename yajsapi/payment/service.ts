@@ -32,7 +32,7 @@ export class PaymentService {
   private agreementsDebitNotes: Set<string> = new Set();
   private invoicesToPay: Map<string, Invoice> = new Map();
   private debitNotesToPay: Map<string, DebitNote> = new Map();
-  private paidAgreements: Set<{ agreement: AgreementPayable; invoice: Invoice }> = new Set(); //@TODO Warning: Contents of collection 'paidAgreements' are updated, but never queried
+  private paidAgreements: Set<{ agreement: AgreementPayable; invoice: Invoice }> = new Set();
   private lastInvoiceFetchingTime: string = new Date().toISOString();
   private lastDebitNotesFetchingTime: string = new Date().toISOString();
 

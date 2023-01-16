@@ -104,8 +104,8 @@ export class DemandEvent extends Event {
 
   /**
    * Create a new instance of DemandEvent
-   * @param type TODO:
-   * @param data TODO:
+   * @param type A string with the name of the event:
+   * @param data object with proposal data:
    */
   constructor(type, data) {
     super(type, data);

@@ -5,10 +5,8 @@ import { Configuration } from "ya-ts-client/dist/ya-market";
 import { Logger } from "../utils";
 
 const DEFAULTS = {
-  subnetTag: "public",
   basePath: "http://127.0.0.1:7465",
   agreementRequestTimeout: 30000,
-  agreementExecuteTimeout: 30000,
   agreementEventPoolingInterval: 5,
   agreementEventPoolingMaxEventsPerRequest: 100,
   agreementWaitingForProposalTimout: 10000,
@@ -16,9 +14,7 @@ const DEFAULTS = {
 };
 
 export class AgreementConfig {
-  readonly subnetTag: string;
   readonly agreementRequestTimeout: number;
-  readonly agreementExecuteTimeout: number;
   readonly agreementWaitingForApprovalTimeout: number;
   readonly api: RequestorApi;
   readonly logger?: Logger;
@@ -31,10 +27,8 @@ export class AgreementConfig {
     const apiConfig = new Configuration({ apiKey, basePath: `${basePath}/market-api/v1`, accessToken: apiKey });
     this.api = new RequestorApi(apiConfig);
     this.agreementRequestTimeout = options?.agreementRequestTimeout || DEFAULTS.agreementRequestTimeout;
-    this.agreementExecuteTimeout = options?.agreementExecuteTimeout || DEFAULTS.agreementExecuteTimeout;
     this.agreementWaitingForApprovalTimeout =
       options?.agreementWaitingForApprovalTimeout || DEFAULTS.agreementWaitingForApprovalTimeout;
-    this.subnetTag = options?.subnetTag || DEFAULTS.subnetTag;
     this.logger = options?.logger;
     this.eventTarget = options?.eventTarget;
   }
