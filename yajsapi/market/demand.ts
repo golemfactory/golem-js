@@ -17,6 +17,7 @@ export interface DemandOptions {
   logger?: Logger;
   maxOfferEvents?: number;
   offerFetchingInterval?: number;
+  proposalTimeout?: number;
   eventTarget?: EventTarget;
 }
 

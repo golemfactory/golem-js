@@ -2,6 +2,7 @@ import { DemandOptions } from "./demand";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import { Configuration } from "ya-ts-client/dist/ya-market";
 import { Logger } from "../utils";
+import { MarketOptions } from "./service";
 
 const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",
@@ -9,7 +10,8 @@ const DEFAULTS = {
   timeout: 1000 * 60 * 3, // 15 min,
   maxOfferEvents: 10,
   offerFetchingInterval: 10000,
-  expiration: 1000 * 60 * 15
+  expiration: 1000 * 60 * 15,
+  debitNotesAcceptanceTimeout: 30,
 };
 
 export class DemandConfig {
@@ -19,6 +21,7 @@ export class DemandConfig {
   public readonly subnetTag: string;
   public readonly maxOfferEvents: number;
   public readonly offerFetchingInterval: number;
+  public readonly proposalTimeout?: number;
   public readonly logger?: Logger;
   public readonly eventTarget?: EventTarget;
 
@@ -35,5 +38,13 @@ export class DemandConfig {
     this.logger = options?.logger;
     this.maxOfferEvents = options?.maxOfferEvents || DEFAULTS.maxOfferEvents;
     this.eventTarget = options?.eventTarget;
+  }
+}
+
+export class MarketConfig extends DemandConfig {
+  readonly debitNotesAcceptanceTimeout: number;
+  constructor(options?: MarketOptions) {
+    super(options);
+    this.debitNotesAcceptanceTimeout = options?.debitNotesAcceptanceTimeout || DEFAULTS.debitNotesAcceptanceTimeout;
   }
 }

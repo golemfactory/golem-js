@@ -5,9 +5,11 @@ import { DefaultMarketStrategy, MarketStrategy, SCORE_NEUTRAL } from "./strategy
 import { AgreementPoolService } from "../agreement";
 import { Allocation } from "../payment";
 import { DemandEvent } from "./demand";
+import { MarketConfig } from "./config";
 
 export interface MarketOptions extends DemandOptions {
   strategy?: MarketStrategy;
+  debitNotesAcceptanceTimeout?: number;
 }
 
 /**
@@ -16,12 +18,14 @@ export interface MarketOptions extends DemandOptions {
  * @ignore
  */
 export class MarketService {
+  private readonly options: MarketConfig;
   private marketStrategy: MarketStrategy;
   private demand?: Demand;
   private allowedPaymentPlatforms: string[] = [];
   private logger: Logger | undefined;
 
-  constructor(private readonly agreementPoolService: AgreementPoolService, private readonly options?: MarketOptions) {
+  constructor(private readonly agreementPoolService: AgreementPoolService, options?: MarketOptions) {
+    this.options = new MarketConfig(options);
     this.marketStrategy = options?.strategy || new DefaultMarketStrategy(this.agreementPoolService, this.logger);
     this.logger = this.options?.logger;
   }
@@ -57,7 +61,6 @@ export class MarketService {
       const { result: isProposalValid, reason } = this.isProposalValid(proposal);
       if (isProposalValid) {
         const chosenPlatform = this.getCommonPaymentPlatforms(proposal.properties)![0];
-        // TODO: timeout param for respond
         await proposal.respond(chosenPlatform);
         this.logger?.debug(`Proposal hes been responded (${proposal.id})`);
       } else {
@@ -70,15 +73,9 @@ export class MarketService {
   }
 
   private isProposalValid(proposal: Proposal): { result: boolean; reason?: string } {
-    // TODO: !!!!
-    // const timeout = proposal.props()[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP];
-    // if (timeout) {
-    //   if (timeout < DEBIT_NOTE_MIN_TIMEOUT) {
-    //     return await reject_proposal("Debit note acceptance timeout too short");
-    //   } else {
-    //     state.builder._properties[DEBIT_NOTE_ACCEPTANCE_TIMEOUT_PROP] = timeout;
-    //   }
-    // }
+    const timeout = proposal.properties["golem.com.payment.debit-notes.accept-timeout?"];
+    if (timeout && timeout < this.options.debitNotesAcceptanceTimeout)
+      return { result: false, reason: "Debit note acceptance timeout too short" };
     const commonPaymentPlatforms = this.getCommonPaymentPlatforms(proposal.properties);
     if (!commonPaymentPlatforms?.length) return { result: false, reason: "No common payment platform" };
     if (proposal.score && proposal.score < SCORE_NEUTRAL) return { result: false, reason: "Score is to low" };
@@ -87,7 +84,9 @@ export class MarketService {
 
   private async processDraftProposal(proposal: Proposal) {
     this.agreementPoolService.addProposal(proposal.id);
-    this.logger?.debug(`Proposal has been confirmed with provider ${proposal.issuerId} and added to agreement pool (${proposal.id})`);
+    this.logger?.debug(
+      `Proposal has been confirmed with provider ${proposal.issuerId} and added to agreement pool (${proposal.id})`
+    );
   }
 
   private getCommonPaymentPlatforms(proposalProperties): string[] | undefined {
