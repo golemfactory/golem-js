@@ -122,9 +122,9 @@ export class PaymentService {
           this.paidAgreements.add({ invoice, agreement });
           this.agreementsDebitNotes.delete(invoice.agreementId);
           this.agreementsToPay.delete(invoice.agreementId);
-          this.logger?.debug(`Invoice accepted for agreement ${invoice.agreementId}`);
+          this.logger?.info(`Invoice accepted from ${agreement.provider.name}`);
         } catch (error) {
-          this.logger?.error(`Invoice failed for agreement ${invoice.agreementId} ${error}`);
+          this.logger?.error(`Invoice failed from ${agreement.provider.name}. ${error}`);
         }
       }
       await sleep(this.options.payingInterval, true);

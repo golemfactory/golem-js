@@ -73,9 +73,11 @@ export class Proposal {
 
   async respond(chosenPlatform) {
     this.demandRequest.properties["golem.com.payment.chosen-platform"] = chosenPlatform;
-    await this.api.counterProposalDemand(this.subscriptionId, this.id, this.demandRequest).catch((e) => {
-      throw new Error(e?.response?.data?.message || e);
-    });
+    await this.api
+      .counterProposalDemand(this.subscriptionId, this.id, this.demandRequest, { timeout: 20000 })
+      .catch((e) => {
+        throw new Error(e?.response?.data?.message || e);
+      });
     this.eventTarget?.dispatchEvent(new Events.ProposalResponded({ id: this.id, providerId: this.issuerId }));
   }
 }

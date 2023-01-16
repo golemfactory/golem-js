@@ -7,6 +7,7 @@ export enum TaskStatusEnum {
 }
 
 export interface TaskInfo extends ItemInfo {
+  agreementId: string;
   startTime: number;
   stopTime: number;
   retriesCount: number;
@@ -16,6 +17,7 @@ export interface TaskInfo extends ItemInfo {
 
 interface Payload {
   id: string;
+  agreementId: string;
   startTime: number;
 }
 
@@ -36,5 +38,8 @@ export class Tasks extends AbstractAggregator<Payload, TaskInfo> {
   }
   finish(id: string, timeStamp: number) {
     this.updateItemInfo(id, { stopTime: timeStamp, status: TaskStatusEnum.Finished });
+  }
+  getByAgreementId(agreementId: string) {
+    return this.getByField("agreementId", agreementId);
   }
 }

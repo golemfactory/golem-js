@@ -1,5 +1,5 @@
 import { ExeScriptRequest } from "ya-ts-client/dist/ya-activity/src/models";
-import { StorageProvider } from "../storage/provider";
+import { StorageProvider } from "../storage";
 
 export class Command {
   protected args: object;
@@ -43,7 +43,6 @@ type CaptureMode =
 type CapturePart = { head: number } | { tail: number } | { headTail: number };
 
 type CaptureFormat = "string" | "binary";
-
 
 export class Run extends Command {
   constructor(cmd: string, args?: string[] | null, env?: object | null, capture?: Capture) {

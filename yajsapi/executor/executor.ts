@@ -133,6 +133,7 @@ export class TaskExecutor {
     this.taskService.run().catch((e) => this.handleCriticalError(e));
     this.networkService?.run().catch((e) => this.handleCriticalError(e));
     this.statsService.run().catch((e) => this.handleCriticalError(e));
+    this.storageProvider?.init().catch((e) => this.handleCriticalError(e));
     this.handleCancelEvent();
     this.options.eventTarget.dispatchEvent(new Events.ComputationStarted());
     this.logger?.info(
@@ -155,8 +156,7 @@ export class TaskExecutor {
     await this.paymentService.end();
     this.storageProvider?.close();
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFinished());
-    const costs = this.statsService.getAllCosts();
-    costs ? this.logger?.table?.(costs) : this.logger?.info("No payments");
+    this.printStats();
     await this.statsService.end();
     this.logger?.info("Task Executor has shut down");
   }
@@ -286,5 +286,16 @@ export class TaskExecutor {
       });
     };
     terminatingSignals.forEach((event) => process.on(event, cancel));
+  }
+
+  private printStats() {
+    const costs = this.statsService.getAllCosts();
+    const costsSummary = this.statsService.getAllCostsSummary();
+    const duration = this.statsService.getComputationTime();
+    const providersCount = new Set(costsSummary.map((x) => x["Provider Name"])).size;
+    this.logger?.info(`Computation finished in ${duration}`);
+    this.logger?.info(`Negotiated ${costsSummary.length} agreements with ${providersCount} providers`);
+    if (costsSummary.length) this.logger?.table?.(costsSummary);
+    this.logger?.info(`Total Cost: ${costs.total} Total Paid: ${costs.paid}`);
   }
 }
