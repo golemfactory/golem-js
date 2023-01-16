@@ -69,8 +69,27 @@ export class TaskExecutor {
 
   /**
    * Create a new Task Executor
-   *
+   * @module High_Level
    * @description Factory Method that create and initialize an instance of the TaskExecutor
+   *
+   * @example **Simple usage of Task Executor**
+   *
+   * The executor can be created by passing appropriate initial parameters such as package, budget, subnet tag, payment driver, payment network etc.
+   * One required parameter is a package. This can be done in two ways. First by passing only package image hash, e.g.
+   * ```js
+   * const executor = await TaskExecutor.create("9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae");
+   * ```
+   *
+   * @example **Usage of Task Executor with custom parameters**
+   *
+   * Or by passing some optional parameters, e.g.
+   * ```js
+   * const executor = await TaskExecutor.create({
+   *   subnetTag: "public",
+   *   payment: { driver: "erc-20", network: "rinkeby" },
+   *   package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+   * });
+   * ```
    *
    * @param options Task executor options
    * @return TaskExecutor
@@ -86,7 +105,6 @@ export class TaskExecutor {
    * @description Use {@link TaskExecutor.create} for creating a task executor
    *
    * @param options - contains information needed to start executor, if string the imageHash is required, otherwise it should be a type of {@link ExecutorOptions}
-   * @ignore
    */
   private constructor(options: ExecutorOptionsMixin) {
     const configOptions: ExecutorOptions = (

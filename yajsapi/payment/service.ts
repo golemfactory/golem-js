@@ -22,7 +22,6 @@ interface AgreementPayable {
 /**
  * Payment Service
  * @description Service used in {@link TaskExecutor}
- * @ignore
  */
 export class PaymentService {
   private isRunning = false;

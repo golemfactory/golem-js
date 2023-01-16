@@ -21,7 +21,6 @@ export type TerminationReason = { message: string; "golem.requestor.code"?: stri
 /**
  * Agreement Pool Service
  * @description Service used in {@link TaskExecutor}
- * @ignore
  */
 export class AgreementPoolService implements ComputationHistory {
   private logger?: Logger;

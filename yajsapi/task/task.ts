@@ -14,7 +14,6 @@ const MAX_RETRIES = 5;
  * One computation unit.
  *
  * @description Represents one computation unit that will be run on the one provider machine (e.g. rendering of one frame of an animation).
- * @ignore
  */
 export class Task<InputType = unknown, OutputType = unknown> implements QueueableTask {
   private state = TaskState.New;

@@ -51,7 +51,6 @@ export class Activity {
    * @param id activity ID
    * @param agreementId agreement ID
    * @param options - {@link ActivityOptions}
-   * @ignore
    */
   constructor(public readonly id, public readonly agreementId, protected readonly options: ActivityConfig) {
     this.logger = options?.logger;

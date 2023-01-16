@@ -44,7 +44,6 @@ export class Demand extends EventTarget {
    * @param id - demand ID
    * @param demandRequest - {@link DemandOfferBase}
    * @param options - {@link DemandConfig}
-   * @ignore
    */
   constructor(public readonly id, private demandRequest: DemandOfferBase, private options: DemandConfig) {
     super();

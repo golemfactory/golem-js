@@ -9,7 +9,6 @@ export type NetworkServiceOptions = Omit<NetworkOptions, "networkOwnerId">;
 /**
  * Network Service
  * @description Service used in {@link TaskExecutor}
- * @ignore
  */
 export class NetworkService {
   private network?: Network;

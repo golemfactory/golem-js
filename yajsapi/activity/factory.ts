@@ -5,7 +5,6 @@ import { Events } from "../events";
 /**
  * Activity Factory
  * @description Use {@link Activity.create} instead
- * @ignore
  */
 export class ActivityFactory {
   private readonly options: ActivityConfig;
