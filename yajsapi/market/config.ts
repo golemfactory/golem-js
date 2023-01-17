@@ -3,6 +3,7 @@ import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import { Configuration } from "ya-ts-client/dist/ya-market";
 import { Logger } from "../utils";
 import { MarketOptions } from "./service";
+import { YagnaOptions } from "../executor";
 
 const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",
@@ -16,6 +17,7 @@ const DEFAULTS = {
 
 export class DemandConfig {
   public readonly api: RequestorApi;
+  public readonly yagnaOptions?: YagnaOptions;
   public readonly timeout: number;
   public readonly expiration: number;
   public readonly subnetTag: string;
@@ -30,6 +32,7 @@ export class DemandConfig {
     if (!apiKey) throw new Error("Api key not defined");
     const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_URL || DEFAULTS.basePath;
     const apiConfig = new Configuration({ apiKey, basePath: `${basePath}/market-api/v1`, accessToken: apiKey });
+    this.yagnaOptions = options?.yagnaOptions;
     this.api = new RequestorApi(apiConfig);
     this.subnetTag = options?.subnetTag || process.env.YAGNA_SUBNET || DEFAULTS.subnetTag;
     this.timeout = options?.timeout || DEFAULTS.timeout;
