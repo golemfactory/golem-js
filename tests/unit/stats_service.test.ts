@@ -57,7 +57,11 @@ describe("Stats Service", () => {
       const spy = chai.spy.on(statsService["tasks"], "add");
       const event = new Events.TaskStarted({ id: "taskId", agreementId: "agreementId", activityId: "activityId" });
       eventTarget.dispatchEvent(event);
-      expect(spy).to.have.been.called.with.exactly({ id: "taskId", startTime: event.timeStamp });
+      expect(spy).to.have.been.called.with.exactly({
+        id: "taskId",
+        startTime: event.timeStamp,
+        agreementId: "agreementId",
+      });
     });
     it("should handle TaskStarted and call Activities.add()", async () => {
       const spy = chai.spy.on(statsService["activities"], "add");
