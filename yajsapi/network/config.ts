@@ -5,7 +5,7 @@ import { Logger } from "../utils";
 
 const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",
-  ip: "192.168.0.0/24",
+  networkIp: "192.168.0.0/24",
 };
 
 export class NetworkConfig {
@@ -25,11 +25,11 @@ export class NetworkConfig {
     this.apiUrl = `${basePath}/net-api/v1`;
     const apiConfig = new Configuration({ apiKey, basePath: this.apiUrl, accessToken: apiKey });
     this.api = new RequestorApi(apiConfig);
-    this.ip = options?.ip || DEFAULTS.ip;
-    this.mask = options?.mask;
-    this.ownerId = options.ownerId;
-    this.ownerIp = options?.ownerIp;
-    this.gateway = options?.gateway;
+    this.ip = options?.networkIp || DEFAULTS.networkIp;
+    this.mask = options?.networkMask;
+    this.ownerId = options.networkOwnerId;
+    this.ownerIp = options?.networkOwnerIp;
+    this.gateway = options?.networkGateway;
     this.logger = options?.logger;
   }
 }

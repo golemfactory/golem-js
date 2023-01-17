@@ -66,7 +66,6 @@ export class Allocation {
    *
    * @param options - {@link AllocationConfig}
    * @param model - {@link Model}
-   * @ignore
    */
   constructor(private options: AllocationConfig, model: Model) {
     this.id = model.allocationId;

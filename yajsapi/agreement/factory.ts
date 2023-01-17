@@ -6,7 +6,6 @@ import { Events } from "../events";
 /**
  * AgreementFactory
  * @description Use {@link Agreement.create} instead
- * @ignore
  */
 export class AgreementFactory {
   private readonly logger?: Logger;
@@ -33,7 +32,7 @@ export class AgreementFactory {
         validTo: new Date(+new Date() + 3600).toISOString(),
       };
       const { data: agreementId } = await this.options.api.createAgreement(agreementProposalRequest, {
-        timeout: this.options.requestTimeout,
+        timeout: this.options.agreementRequestTimeout,
       });
       const { data } = await this.options.api.getAgreement(agreementId);
       const provider = {

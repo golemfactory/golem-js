@@ -5,14 +5,21 @@ import axios from "axios";
 import { PackageConfig } from "./config";
 
 export interface PackageOptions {
+  /** Type of engine required: vm, emscripten, sgx, sgx-js, sgx-wasm, sgx-wasi */
+  engine?: string;
+  /** Minimum required memory to execute application GB */
+  minMemGib?: number;
+  /** Minimum required disk storage to execute tasks in GB */
+  minStorageGib?: number;
+  /** Minimum required CPU threads */
+  minCpuThreads?: number;
+  /** Minimum required CPU cores */
+  minCpuCores?: number;
+  /** Required providers capabilities to run application */
+  capabilities?: string[];
+  /**  finds package by its contents hash */
   imageHash: string;
   repoUrl?: string;
-  engine?: string;
-  minMemGib?: number;
-  minStorageGib?: number;
-  minCpuThreads?: number;
-  minCpuCores?: number;
-  capabilities?: string[];
   logger?: Logger;
 }
 

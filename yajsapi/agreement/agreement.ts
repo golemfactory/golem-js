@@ -1,5 +1,5 @@
 import { Logger } from "../utils";
-import { Agreement as AgreementModel, AgreementStateEnum } from "ya-ts-client/dist/ya-market/src/models";
+import { Agreement as AgreementModel } from "ya-ts-client/dist/ya-market/src/models";
 import { YagnaOptions } from "../executor";
 import { AgreementFactory } from "./factory";
 import { AgreementConfig } from "./config";
@@ -10,18 +10,23 @@ export interface ProviderInfo {
   id: string;
 }
 
-export { AgreementStateEnum };
+export enum AgreementStateEnum {
+  Proposal = "Proposal",
+  Pending = "Pending",
+  Cancelled = "Cancelled",
+  Rejected = "Rejected",
+  Approved = "Approved",
+  Expired = "Expired",
+  Terminated = "Terminated",
+}
 
 export interface AgreementOptions {
-  /** subnet tag */
-  subnetTag?: string; // TODO check if it is used? maybe in service?
   /** yagnaOptions */
-  yagnaOptions?: YagnaOptions; // TODO check if it is used? maybe in service?
+  yagnaOptions?: YagnaOptions;
   /** timeout for create agreement and refresh details in ms */
-  requestTimeout?: number;
-  executeTimeout?: number; // TODO check if it is used? maybe in service?
+  agreementRequestTimeout?: number;
   /** timeout for wait for provider approval after requestor confirmation in ms */
-  waitingForApprovalTimeout?: number;
+  agreementWaitingForApprovalTimeout?: number;
   /** Logger module */
   logger?: Logger;
   /** Event Bus implements EventTarget  */
@@ -38,7 +43,6 @@ export class Agreement {
    * @param id - agreement ID
    * @param provider - {@link ProviderInfo}
    * @param options - {@link AgreementConfig}
-   * @ignore
    */
   constructor(public readonly id, public readonly provider: ProviderInfo, private readonly options: AgreementConfig) {
     this.logger = options.logger;
@@ -47,7 +51,7 @@ export class Agreement {
   /**
    * Create agreement for given proposal ID
    * @param proposalId - proposal ID
-   * @param options - {@link AgreementOptions}
+   * @param agreementOptions - {@link AgreementOptions}
    * @return Agreement
    */
   static async create(proposalId: string, agreementOptions?: AgreementOptions): Promise<Agreement> {
@@ -59,7 +63,7 @@ export class Agreement {
    * Refresh agreement details
    */
   async refreshDetails() {
-    const { data } = await this.options.api.getAgreement(this.id, { timeout: this.options.requestTimeout });
+    const { data } = await this.options.api.getAgreement(this.id, { timeout: this.options.agreementRequestTimeout });
     this.agreementData = data;
   }
 
@@ -80,7 +84,7 @@ export class Agreement {
   async confirm() {
     try {
       await this.options.api.confirmAgreement(this.id);
-      await this.options.api.waitForApproval(this.id, this.options.waitingForApprovalTimeout);
+      await this.options.api.waitForApproval(this.id, this.options.agreementWaitingForApprovalTimeout);
       this.logger?.debug(`Agreement ${this.id} approved`);
       this.options.eventTarget?.dispatchEvent(
         new Events.AgreementConfirmed({ id: this.id, providerId: this.provider.id })

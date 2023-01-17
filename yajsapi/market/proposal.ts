@@ -21,7 +21,6 @@ export class Proposal {
    * @param model - {@link ProposalModel}
    * @param demandRequest - {@link DemandOfferBase}
    * @param eventTarget - {@link EventTarget}
-   * @ignore
    */
   constructor(
     private readonly subscriptionId: string,

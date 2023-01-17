@@ -9,14 +9,13 @@ The new version of the Task API introduces a simplified interface for executing 
 The executor can be created by passing appropriate initial parameters such as package, budget, subnet tag, payment driver, payment network etc.
 One required parameter is a package. This can be done in two ways. First by passing only package image hash, e.g.
 ```js
-const executor = await createExecutor("9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae"); 
+const executor = await TaskExecutor.create("9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae"); 
 ```
 Or by passing some optional parameters, e.g.
 ```js
-const executor = await createExecutor({
-  subnet_tag: "devnet-beta",
-  payment_driver: "erc-20",
-  payment_network: "rinkeby",
+const executor = await TaskExecutor.create({
+  subnetTag: "public",
+  payment: { driver: "erc-20", network: "rinkeby" },
   package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
 });
 ```
@@ -25,14 +24,13 @@ const executor = await createExecutor({
 
 #### a) `run` method - to execute one worker function, e.g.
 ```js
-  const result = await executor.run((ctx) => ctx.run("echo 'Hello World!'"));
-  console.log(result.stdout)
+  await executor.run(async (providerCtx) => console.log((await providerCtx.run("echo 'Hello World'")).stdout));
 ```
 
 #### b) `map` - to get results for each element in iterable object, e.g.
 ```js
   const data = [1, 2, 3, 4, 5];
-  const results = executor.map(data, (ctx, item) => ctx.run(`echo "${item}"`));
+  const results = executor.map(data, (providerCtx, item) => providerCtx.run(`echo "${item}"`));
   for await (const result of results) console.log(result.stdout);
 ```
 In the `results` variable, we have an async iterable object, with each element accessible with the `for await` statement.
@@ -40,8 +38,8 @@ In the `results` variable, we have an async iterable object, with each element a
 #### c) `forEach` method - it is very similar to a map, but it does not return any value, e.g.
 ```js
   const data = [1, 2, 3, 4, 5];
-  await executor.forEach(data, async (ctx, item) => {
-      console.log((await ctx.run(`echo "${item}"`).stdout));
+  await executor.forEach(data, async (providerCtx, item) => {
+      console.log((await providerCtx.run(`echo "${item}"`).stdout));
   });
 ```
 
@@ -70,7 +68,7 @@ Single commands available to run on a provider:
 You can also compose particular commands into batches. For this, you should use `beginBatch`, e.g.
 
 ```js
-const res = await ctx
+const res = await providerCtx
    .beginBatch()
    .run('echo "Hello Golem"')
    .run('echo "Hello World"')
@@ -85,7 +83,7 @@ You can end the batch of commands by using the `end()` method shown above, meani
 You can also end this batch by `endStream()` to get a `Readable` stream, e.g.
 
 ```js
-const results = await ctx
+const results = await providerCtx
    .beginBatch()
    .run('echo "Hello Golem"')
    .run('echo "Hello World"')
@@ -103,11 +101,11 @@ There is a special method available in the executor object, that allows you to r
 This method takes as a parameter one worker function and runs it only once for each new provider activity. The following example demonstrates the use of this method.
 
 ```js
-  executor.beforeEach(async (ctx) => {
+  executor.beforeEach(async (providerCtx) => {
     await ctx.uploadFile("./params.txt", "/params.txt");
   });
 
-  await executor.forEach([1, 2, 3, 4, 5], async (ctx, item) => {
+  await executor.forEach([1, 2, 3, 4, 5], async (providerCtx, item) => {
      await ctx
        .beginBatch()
        .run(`/run_some_command.sh --input ${item}--params /input_params.txt --output /output.txt`)

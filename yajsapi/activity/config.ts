@@ -6,16 +6,16 @@ import { YagnaOptions } from "../executor";
 
 const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",
-  requestTimeout: 10000,
-  executeTimeout: 60000,
-  exeBatchResultsFetchInterval: 3000,
+  activityRequestTimeout: 10000,
+  activityExecuteTimeout: 60000,
+  activityExeBatchResultsFetchInterval: 3000,
 };
 
 export class ActivityConfig {
-  public readonly api: { control: RequestorControlApi; state: RequestorStateApi };
-  public readonly requestTimeout: number;
-  public readonly executeTimeout: number;
-  public readonly exeBatchResultsFetchInterval: number;
+  public readonly api: { control: RequestorControlApi; state: RequestorStateApi }; // TODO: do we like to left it like this?
+  public readonly activityRequestTimeout: number;
+  public readonly activityExecuteTimeout: number;
+  public readonly activityExeBatchResultsFetchInterval: number;
   public readonly taskPackage?: string;
   public readonly logger?: Logger;
   public readonly eventTarget?: EventTarget;
@@ -34,9 +34,10 @@ export class ActivityConfig {
       control: new RequestorControlApi(apiConfig),
       state: new RequestorStateApi(apiConfig),
     };
-    this.requestTimeout = options?.requestTimeout || DEFAULTS.requestTimeout;
-    this.executeTimeout = options?.executeTimeout || DEFAULTS.executeTimeout;
-    this.exeBatchResultsFetchInterval = options?.exeBatchResultsFetchInterval || DEFAULTS.exeBatchResultsFetchInterval;
+    this.activityRequestTimeout = options?.activityRequestTimeout || DEFAULTS.activityRequestTimeout;
+    this.activityExecuteTimeout = options?.activityExecuteTimeout || DEFAULTS.activityExecuteTimeout;
+    this.activityExeBatchResultsFetchInterval =
+      options?.activityExeBatchResultsFetchInterval || DEFAULTS.activityExeBatchResultsFetchInterval;
     this.taskPackage = options?.taskPackage;
     this.logger = options?.logger;
     this.yagnaOptions = { apiKey, basePath };

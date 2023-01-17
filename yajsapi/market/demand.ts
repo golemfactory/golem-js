@@ -12,8 +12,8 @@ import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
 export interface DemandOptions {
   subnetTag?: string;
   yagnaOptions?: YagnaOptions;
-  timeout?: number;
-  expiration?: number;
+  marketTimeout?: number;
+  marketOfferExpiration?: number;
   logger?: Logger;
   maxOfferEvents?: number;
   offerFetchingInterval?: number;
@@ -45,7 +45,6 @@ export class Demand extends EventTarget {
    * @param id - demand ID
    * @param demandRequest - {@link DemandOfferBase}
    * @param options - {@link DemandConfig}
-   * @ignore
    */
   constructor(public readonly id, private demandRequest: DemandOfferBase, private options: DemandConfig) {
     super();
@@ -106,8 +105,8 @@ export class DemandEvent extends Event {
 
   /**
    * Create a new instance of DemandEvent
-   * @param type TODO:
-   * @param data TODO:
+   * @param type A string with the name of the event:
+   * @param data object with proposal data:
    */
   constructor(type, data) {
     super(type, data);

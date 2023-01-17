@@ -1,7 +1,7 @@
 import { Activity, Result } from "../activity";
 import { Command, Deploy, DownloadFile, Run, Script, Start, UploadFile } from "../script";
-import { StorageProvider } from "../storage/provider";
-import { ActivityStateStateEnum } from "ya-ts-client/dist/ya-activity";
+import { StorageProvider } from "../storage";
+import { ActivityStateEnum } from "../activity";
 import { sleep, Logger, runtimeContextChecker } from "../utils";
 import { Batch } from "../task";
 import { NetworkNode } from "../network";
@@ -12,12 +12,12 @@ export type Worker<InputType = unknown, OutputType = unknown> = (
 ) => Promise<OutputType | undefined>;
 
 const DEFAULTS = {
-  timeout: 10000,
+  workTimeout: 10000,
   activityStateCheckInterval: 1000,
 };
 
 export interface WorkOptions {
-  timeout?: number;
+  workTimeout?: number;
   activityStateCheckingInterval?: number;
   provider?: { name: string; id: string; networkConfig?: object };
   storageProvider?: StorageProvider;
@@ -28,7 +28,7 @@ export interface WorkOptions {
 }
 
 export class WorkContext {
-  private readonly timeout: number;
+  private readonly workTimeout: number;
   private readonly logger?: Logger;
   private readonly activityStateCheckingInterval: number;
   private readonly provider?: { name: string; id: string; networkConfig?: object };
@@ -36,7 +36,7 @@ export class WorkContext {
   private readonly networkNode?: NetworkNode;
 
   constructor(private activity: Activity, private options?: WorkOptions) {
-    this.timeout = options?.timeout || DEFAULTS.timeout;
+    this.workTimeout = options?.workTimeout || DEFAULTS.workTimeout;
     this.logger = options?.logger;
     this.activityStateCheckingInterval = options?.activityStateCheckingInterval || DEFAULTS.activityStateCheckInterval;
     this.provider = options?.provider;
@@ -45,23 +45,23 @@ export class WorkContext {
   }
   async before(): Promise<Result[] | void> {
     let state = await this.activity.getState();
-    if (state === ActivityStateStateEnum.Ready) {
+    if (state === ActivityStateEnum.Ready) {
       if (this.options?.initWorker) await this.options?.initWorker(this, undefined);
       return;
     }
-    if (state === ActivityStateStateEnum.Initialized) {
+    if (state === ActivityStateEnum.Initialized) {
       await this.activity.execute(
         new Script([new Deploy(this.networkNode?.getNetworkConfig?.()), new Start()]).getExeScriptRequest()
       );
     }
     let timeout = false;
-    const timeoutId = setTimeout(() => (timeout = true), this.timeout);
-    while (state !== ActivityStateStateEnum.Ready && !timeout && this.options?.isRunning()) {
+    const timeoutId = setTimeout(() => (timeout = true), this.workTimeout);
+    while (state !== ActivityStateEnum.Ready && !timeout && this.options?.isRunning()) {
       await sleep(this.activityStateCheckingInterval, true);
       state = await this.activity.getState();
     }
     clearTimeout(timeoutId);
-    if (state !== ActivityStateStateEnum.Ready) {
+    if (state !== ActivityStateEnum.Ready) {
       throw new Error(`Activity ${this.activity.id} cannot reach the Ready state. Current state: ${state}`);
     }
     if (this.options?.initWorker) await this.options?.initWorker(this, undefined);

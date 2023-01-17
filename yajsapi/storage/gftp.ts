@@ -12,7 +12,6 @@ export class GftpStorageProvider implements StorageProvider {
   private gftpServerProcess;
   private reader;
   private publishedUrls: string[] = [];
-  private randomUUID;
 
   constructor(private logger?: Logger) {
     if (runtimeContextChecker.isBrowser) {
@@ -39,7 +38,6 @@ export class GftpStorageProvider implements StorageProvider {
   }
 
   private getGftpServerProcess() {
-    // TODO check if process is running
     return this.gftpServerProcess;
   }
 

@@ -31,7 +31,6 @@ describe("Agreement", () => {
       const agreement = await Agreement.create("test_proposal_id", { subnetTag, logger });
       expect(await agreement.getState()).to.be.equal(AgreementStateEnum.Approved);
     });
-    it("should throw en error if there is no state");
   });
 
   describe("terminate()", () => {

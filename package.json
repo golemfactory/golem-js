@@ -27,7 +27,7 @@
     "handbook:clean": "rimraf handbook/ handbook_gen/.env",
     "handbook:py": "python3 -m venv handbook_gen/.env && source handbook_gen/.env/bin/activate",
     "handbook:poetry": "pip install -U pip && pip install poetry && cd handbook_gen && poetry install",
-    "handbook:summary": "python handbook_gen/handbook_gen.py --overwrite",
+    "handbook:summary": "python3 handbook_gen/handbook_gen.py --overwrite",
     "handbook": "run-s docs:md && run-s handbook:py && run-s handbook:poetry && run-s handbook:summary"
   },
   "files": [
@@ -69,6 +69,7 @@
     "eslint-config-prettier": "^8.5.0",
     "mocha": "^10.1.0",
     "node-stdlib-browser": "^1.2.0",
+    "npm-run-all": "^4.1.5",
     "nyc": "^15.1.0",
     "prettier": "^2.7.1",
     "rewiremock": "^3.14.4",
@@ -79,7 +80,7 @@
     "tsconfig-paths": "^4.1.0",
     "tslint-config-prettier": "^1.18.0",
     "typedoc": "^0.23.21",
-    "typedoc-plugin-markdown": "^3.13.6",
+    "typedoc-plugin-markdown": "^3.14.0",
     "typescript": "^4.8.4"
   }
 }

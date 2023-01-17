@@ -4,12 +4,11 @@ import { NetworkOptions } from "./network";
 import { NetworkNode } from "./node";
 import { getIdentity } from "./identity";
 
-export type NetworkServiceOptions = Omit<NetworkOptions, "ownerId">;
+export type NetworkServiceOptions = Omit<NetworkOptions, "networkOwnerId">;
 
 /**
  * Network Service
  * @description Service used in {@link TaskExecutor}
- * @ignore
  */
 export class NetworkService {
   private network?: Network;
@@ -19,9 +18,9 @@ export class NetworkService {
     this.logger = options?.logger;
   }
 
-  async run(ownerId?: string) {
-    if (!ownerId) ownerId = await getIdentity(this.options);
-    this.network = await Network.create({ ...this.options, ownerId });
+  async run(networkOwnerId?: string) {
+    if (!networkOwnerId) networkOwnerId = await getIdentity(this.options);
+    this.network = await Network.create({ ...this.options, networkOwnerId });
     this.logger?.debug("Network Service has started");
   }
 

@@ -8,10 +8,10 @@ import { YagnaOptions } from "../executor";
 const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",
   subnetTag: "public",
-  timeout: 1000 * 60 * 3, // 15 min,
+  marketTimeout: 1000 * 60 * 3, // 3 min,
   maxOfferEvents: 10,
   offerFetchingInterval: 10000,
-  expiration: 1000 * 60 * 15,
+  marketOfferExpiration: 1000 * 60 * 15,
   debitNotesAcceptanceTimeout: 30,
 };
 
@@ -35,8 +35,8 @@ export class DemandConfig {
     this.yagnaOptions = options?.yagnaOptions;
     this.api = new RequestorApi(apiConfig);
     this.subnetTag = options?.subnetTag || process.env.YAGNA_SUBNET || DEFAULTS.subnetTag;
-    this.timeout = options?.timeout || DEFAULTS.timeout;
-    this.expiration = options?.expiration || DEFAULTS.expiration;
+    this.timeout = options?.marketTimeout || DEFAULTS.marketTimeout;
+    this.expiration = options?.marketOfferExpiration || DEFAULTS.marketOfferExpiration;
     this.offerFetchingInterval = options?.offerFetchingInterval || DEFAULTS.offerFetchingInterval;
     this.logger = options?.logger;
     this.maxOfferEvents = options?.maxOfferEvents || DEFAULTS.maxOfferEvents;

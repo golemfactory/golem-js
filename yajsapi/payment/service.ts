@@ -22,7 +22,6 @@ interface AgreementPayable {
 /**
  * Payment Service
  * @description Service used in {@link TaskExecutor}
- * @ignore
  */
 export class PaymentService {
   private isRunning = false;
@@ -58,7 +57,7 @@ export class PaymentService {
     if (this.agreementsToPay.size) {
       this.logger?.debug("Waiting for all invoices to be paid...");
       let timeout = false;
-      const timeoutId = setTimeout(() => (timeout = true), this.options.timeout);
+      const timeoutId = setTimeout(() => (timeout = true), this.options.paymentTimeout);
       let i = 0;
       while (this.isRunning && !timeout) {
         this.isRunning = this.agreementsToPay.size !== 0;
@@ -152,7 +151,7 @@ export class PaymentService {
     while (this.isRunning) {
       const { data: invoiceEvents } = await this.options.api
         .getInvoiceEvents(
-          this.options.requestTimeout / 1000,
+          this.options.paymentRequestTimeout / 1000,
           this.lastInvoiceFetchingTime,
           this.options.maxInvoiceEvents
         )
@@ -175,7 +174,7 @@ export class PaymentService {
     while (this.isRunning) {
       const { data: debitNotesEvents } = await this.options.api
         .getDebitNoteEvents(
-          this.options.requestTimeout / 1000,
+          this.options.paymentRequestTimeout / 1000,
           this.lastDebitNotesFetchingTime,
           this.options.maxDebitNotesEvents
         )

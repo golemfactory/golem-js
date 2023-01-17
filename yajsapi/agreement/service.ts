@@ -6,22 +6,18 @@ import { ComputationHistory } from "../market/strategy";
 import { AgreementServiceConfig } from "./config";
 
 export interface AgreementServiceOptions extends AgreementOptions {
-  eventPoolingInterval?: number;
-  eventPoolingMaxEventsPerRequest?: number;
-  waitingForProposalTimout?: number;
+  agreementEventPoolingInterval?: number;
+  agreementEventPoolingMaxEventsPerRequest?: number;
+  agreementWaitingForProposalTimout?: number;
 }
 
 export interface AgreementProposal {
   proposalId: string;
 }
 
-// TODO: This is now in rest/market - think about a better place
-export type TerminationReason = { message: string; "golem.requestor.code"?: string };
-
 /**
  * Agreement Pool Service
  * @description Service used in {@link TaskExecutor}
- * @ignore
  */
 export class AgreementPoolService implements ComputationHistory {
   private logger?: Logger;
@@ -103,7 +99,8 @@ export class AgreementPoolService implements ComputationHistory {
 
   /**
    * Returns information if the last provider reject agreement
-   * @param boolean
+   * @param providerId - provider ID
+   * @return boolean
    */
   isProviderLastAgreementRejected(providerId: string): boolean {
     return !!this.lastAgreementRejectedByProvider.get(providerId);
@@ -161,7 +158,7 @@ export class AgreementPoolService implements ComputationHistory {
         }
       } catch (e) {
         this.logger?.error(`Unable to create agreement form available proposal: ${e?.data?.message || e}`);
-        // TODO: What we should do with used proposal in that case ?? unshift to begin ?
+
         await sleep(2);
         // If id to go kill'em
         agreement = null;
@@ -179,7 +176,7 @@ export class AgreementPoolService implements ComputationHistory {
   private async getAvailableProposal(): Promise<string | undefined> {
     let proposal;
     let timeout = false;
-    const timeoutId = setTimeout(() => (timeout = true), this.config.waitingForProposalTimout);
+    const timeoutId = setTimeout(() => (timeout = true), this.config.agreementWaitingForProposalTimout);
     while (!proposal && this.isServiceRunning && !timeout) {
       proposal = this.proposals.pop();
       if (!proposal) {
@@ -210,7 +207,7 @@ export class AgreementPoolService implements ComputationHistory {
      **/
 
     // Will throw an exception if the agreement will be not approved in specific timeout
-    await this.config.api.waitForApproval(agreement.id, this.config.waitingForApprovalTimeout);
+    await this.config.api.waitForApproval(agreement.id, this.config.agreementWaitingForApprovalTimeout);
 
     return agreement;
   }

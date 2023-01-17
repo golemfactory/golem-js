@@ -11,7 +11,7 @@ const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",
   budget: 1.0,
   payment: { driver: "erc20", network: "rinkeby" },
-  timeout: 20000,
+  paymentTimeout: 20000,
   allocationExpires: 1000 * 60 * 30, // 30 min
   invoiceReceiveTimeout: 1000 * 60 * 5, // 5 min
   maxInvoiceEvents: 10,
@@ -19,27 +19,27 @@ const DEFAULTS = {
   invoiceFetchingInterval: 2000,
   debitNotesFetchingInterval: 2000,
   payingInterval: 2000,
-  requestTimeout: 10000,
+  paymentRequestTimeout: 10000,
 };
 
 export interface BasePaymentOptions {
   yagnaOptions?: YagnaOptions;
   budget?: number;
   payment?: { driver?: string; network?: string };
-  timeout?: number;
-  requestTimeout?: number;
+  paymentTimeout?: number;
+  paymentRequestTimeout?: number;
   logger?: Logger;
   eventTarget?: EventTarget;
 }
 
 abstract class BaseConfig {
   public readonly yagnaOptions?: YagnaOptions;
-  public readonly timeout: number;
+  public readonly paymentTimeout: number;
   public readonly api: RequestorApi;
   public readonly logger?: Logger;
   public readonly eventTarget?: EventTarget;
   public readonly payment: { driver: string; network: string };
-  public readonly requestTimeout: number;
+  public readonly paymentRequestTimeout: number;
 
   protected constructor(public readonly options?: BasePaymentOptions) {
     this.yagnaOptions = options?.yagnaOptions;
@@ -48,14 +48,14 @@ abstract class BaseConfig {
     const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_URL || DEFAULTS.basePath;
     const apiConfig = new Configuration({ apiKey, basePath: `${basePath}/payment-api/v1`, accessToken: apiKey });
     this.api = new RequestorApi(apiConfig);
-    this.timeout = options?.timeout || DEFAULTS.timeout;
+    this.paymentTimeout = options?.paymentTimeout || DEFAULTS.paymentTimeout;
     this.payment = {
       driver: options?.payment?.driver || DEFAULTS.payment.driver,
       network: options?.payment?.network || DEFAULTS.payment.network,
     };
     this.logger = options?.logger;
     this.eventTarget = options?.eventTarget;
-    this.requestTimeout = options?.requestTimeout || DEFAULTS.requestTimeout;
+    this.paymentRequestTimeout = options?.paymentRequestTimeout || DEFAULTS.paymentRequestTimeout;
   }
 }
 

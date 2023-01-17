@@ -8,6 +8,7 @@ import { DemandEvent } from "./demand";
 import { MarketConfig } from "./config";
 
 export interface MarketOptions extends DemandOptions {
+  /** Strategy used to choose best offer */
   strategy?: MarketStrategy;
   debitNotesAcceptanceTimeout?: number;
 }
@@ -15,7 +16,6 @@ export interface MarketOptions extends DemandOptions {
 /**
  * Market Service
  * @description Service used in {@link TaskExecutor}
- * @ignore
  */
 export class MarketService {
   private readonly options: MarketConfig;
