@@ -187,7 +187,7 @@
           })
         }
         async function respondProposal() {
-          const proposal = proposals.shift();
+          const proposal = proposals.pop();
           if (!proposal) return
           await proposal.respond(options.account.platform).catch(logger.error);
           enableButtons();
@@ -218,11 +218,13 @@
             if (result.stdout) appendResults(result.stdout);
             if (result.stderr) appendResults(result.stderr);
             if (result.message) appendResults(result.message);
+            console.error(result.message);
           })
           results.on('error', result => {
             if (result.stdout) appendResults(result.stdout);
             if (result.stderr) appendResults(result.stderr);
             if (result.message) appendResults(result.message);
+            console.error(result.message);
           })
         }
         async function end() {

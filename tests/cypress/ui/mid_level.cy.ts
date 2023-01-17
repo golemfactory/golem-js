@@ -12,6 +12,8 @@ describe("Test Mid-level API", () => {
     cy.get("#logs").contains("Demand published on the market");
     cy.get("#logs").contains("New proposal has been received");
     cy.get("#respondProposal").click();
+    cy.wait(2000);
+    cy.get("#respondProposal").click();
     cy.get("#logs").contains("New offer has been received");
     cy.get("#createAgreement").click();
     cy.get("#logs").contains(/Agreement .* created/);
@@ -20,7 +22,7 @@ describe("Test Mid-level API", () => {
     cy.get("#createActivity").click();
     cy.get("#logs").contains(/Activity .* created/);
     cy.get("#COMMAND").clear().type("echo 'Hello Golem'");
-    cy.wait(5000);
+    cy.wait(10000);
     cy.get("#execute").click();
     cy.get("#logs").contains("Script sent");
     cy.get("#results").contains("Hello Golem");
