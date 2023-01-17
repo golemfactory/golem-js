@@ -10,13 +10,13 @@ const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",
   payment: { driver: "erc20", network: "rinkeby" },
   maxParallelTasks: 5,
-  executorTimeout: 1000 * 60 * 3, // 3 min,
+  taskTimeout: 1000 * 60 * 3, // 3 min,
 };
 
 export class ExecutorConfig {
   readonly package: Package | string;
   readonly maxParallelTasks: number;
-  readonly executorTimeout: number;
+  readonly taskTimeout: number;
   readonly budget: number;
   readonly strategy?: MarketStrategy;
   readonly subnetTag: string;
@@ -46,7 +46,7 @@ export class ExecutorConfig {
     this.package = options.package;
     this.budget = options.budget || DEFAULTS.budget;
     this.maxParallelTasks = options.maxParallelTasks || DEFAULTS.maxParallelTasks;
-    this.executorTimeout = options.executorTimeout || DEFAULTS.executorTimeout;
+    this.taskTimeout = options.taskTimeout || DEFAULTS.taskTimeout;
     this.subnetTag = options.subnetTag || process.env?.YAGNA_SUBNET || DEFAULTS.subnetTag;
     this.payment = {
       driver: options.payment?.driver || DEFAULTS.payment.driver,

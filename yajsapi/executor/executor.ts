@@ -21,7 +21,7 @@ export type ExecutorOptions = {
   /** Image hash as string, otherwise Package object */
   package: string | Package;
   /** Timeout for execute one task in ms */
-  executorTimeout?: number;
+  taskTimeout?: number;
   /** Subnet Tag */
   subnetTag?: string;
   /** Logger module */
@@ -265,7 +265,7 @@ export class TaskExecutor {
     const task = new Task<InputType, OutputType>((++this.lastTaskIndex).toString(), worker, data, this.initWorker);
     this.taskQueue.addToEnd(task);
     let timeout = false;
-    const timeoutId = setTimeout(() => (timeout = true), this.options.executorTimeout);
+    const timeoutId = setTimeout(() => (timeout = true), this.options.taskTimeout);
     while (!timeout && this.isRunning) {
       if (task.isFinished()) {
         clearTimeout(timeoutId);
