@@ -187,7 +187,7 @@
           })
         }
         async function respondProposal() {
-          const proposal = proposals.pop();
+          const proposal = proposals.shift();
           if (!proposal) return
           await proposal.respond(options.account.platform).catch(logger.error);
           enableButtons();
