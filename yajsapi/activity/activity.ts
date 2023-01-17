@@ -148,6 +148,7 @@ export class Activity {
       objectMode: true,
       async read() {
         while (!isBatchFinished) {
+          console.log('Activity fetching START ------------------------------------')
           if (startTime.valueOf() + (timeout || executeTimeout) <= new Date().valueOf()) {
             return this.destroy(new Error(`Activity ${activityId} timeout.`));
           }
@@ -161,10 +162,12 @@ export class Activity {
               newResults.forEach((result) => {
                 this.push(result);
                 isBatchFinished = result.isBatchFinished || false;
+                console.log('Activity fetching PUSH ------------------------------------', {isBatchFinished})
                 lastIndex = result.index;
               });
             }
-            await sleep(exeBatchResultsFetchInterval, true);
+            console.log('Activity fetching SLEEP ------------------------------------')
+            if (!isBatchFinished) await sleep(exeBatchResultsFetchInterval, true);
           } catch (error) {
             try {
               retryCount = await handleError(error, lastIndex, retryCount, maxRetries);
@@ -174,6 +177,7 @@ export class Activity {
             }
           }
         }
+        console.log('Activity fetching END ------------------------------------')
         eventTarget?.dispatchEvent(new Events.ScriptExecuted({ activityId, agreementId, success: true }));
         this.push(null);
       },
