@@ -15,7 +15,7 @@ describe("SSH connection", function () {
     executor = await TaskExecutor.create({
       package: "1e06505997e8bd1b9e1a00bd10d255fc6a390905e4d6840a22a79902",
       capabilities: ["vpn"],
-      networkAddress: "192.168.0.0/24",
+      networkIp: "192.168.0.0/24",
       logger,
     });
     let websocketUri;
