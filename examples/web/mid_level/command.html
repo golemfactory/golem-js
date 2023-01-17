@@ -213,28 +213,17 @@
           const command = document.getElementById('COMMAND').value
           const script = await yajsapi.Script.create([new yajsapi.Run("/bin/sh", ["-c", command])]);
           const exeScript = script.getExeScriptRequest();
-          console.log('---------------------- EXECUTE ----------------')
           const results = await activity.execute(exeScript).catch(logger.error);
-          return new Promise(async res => {
-            console.log('---------------------- GETTING RESULTS  ----------------')
-            for await (const result of results) {
-              console.log('---------------------- PUSH RESULTS  ----------------' + JSON.stringify(result))
-              if (result.stdout) appendResults(result.stdout);
-              if (result.stderr) appendResults(result.stderr);
-            }
-            results.on('error', result => {
-              if (result.stdout) appendResults(result.stdout);
-              if (result.stderr) appendResults(result.stderr);
-            });
-            console.log('---------------------- END RESULTS  ----------------')
-            res();
+          results.on('data', result => {
+            if (result.stdout) appendResults(result.stdout);
+            if (result.stderr) appendResults(result.stderr);
+            if (result.message) appendResults(result.message);
           })
-
-          // results.on('data', result => {
-          //   if (result.stdout) appendResults(result.stdout);
-          //   if (result.stderr) appendResults(result.stderr);
-          // })
-
+          results.on('error', result => {
+            if (result.stdout) appendResults(result.stdout);
+            if (result.stderr) appendResults(result.stderr);
+            if (result.message) appendResults(result.message);
+          })
         }
         async function end() {
           await activity.stop().catch(logger.error);
