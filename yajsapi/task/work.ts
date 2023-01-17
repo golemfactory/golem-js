@@ -100,7 +100,12 @@ export class WorkContext {
     await script.before();
     const results = await this.activity.execute(script.getExeScriptRequest());
     const allResults: Result[] = [];
-    for await (const result of results) allResults.push(result);
+    console.log("---------------------------- WORK CONTEXT GETTING RESULT START ------------------");
+    for await (const result of results) {
+      console.log("---------------------------- WORK CONTEXT PUSH RESULT ------", { result });
+      allResults.push(result);
+    }
+    console.log("---------------------------- WORK CONTEXT GETTING RESULT END  ------------------");
     const commandsErrors = allResults.filter((res) => res.result === "Error");
     await script.after();
     if (commandsErrors.length) {
@@ -110,6 +115,7 @@ export class WorkContext {
       this.rejectResult(`Task error on provider ${this.provider?.name || "'unknown'"}. ${errorMessage}`);
       throw new Error(errorMessage);
     }
+    console.log("---------------------------- WORK CONTEXT RETURN  ------------------");
     return allResults[0];
   }
 }
