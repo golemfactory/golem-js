@@ -173,7 +173,7 @@ export class Activity {
                 lastIndex = result.index;
               });
             }
-            await sleep(activityExeBatchResultsFetchInterval, true);
+            if (!isBatchFinished) await sleep(activityExeBatchResultsFetchInterval, true);
           } catch (error) {
             try {
               retryCount = await handleError(error, lastIndex, retryCount, maxRetries);

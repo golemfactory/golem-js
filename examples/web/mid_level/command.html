@@ -112,8 +112,8 @@
         const logger = {
             log: (msg) => appendLog(`[${new Date().toISOString()}] ${msg}`),
             warn: (msg) => appendLog(`[${new Date().toISOString()}] [warn] ${msg}`),
-            debug: (msg) => appendLog(`[${new Date().toISOString()}] [debug] ${msg}`),
-            // debug: (msg) => console.log(msg),
+            // debug: (msg) => appendLog(`[${new Date().toISOString()}] [debug] ${msg}`),
+            debug: (msg) => console.log(msg),
             error: (error) => appendLog(`[${new Date().toISOString()}] [error] ${error?.response?.data?.message || error}`),
             info: (msg) => appendLog(`[${new Date().toISOString()}] [info] ${msg}`),
             table: (msg) => appendLog(JSON.stringify(msg, null, "\t")),
