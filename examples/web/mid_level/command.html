@@ -214,10 +214,14 @@
           const script = await yajsapi.Script.create([new yajsapi.Run("/bin/sh", ["-c", command])]);
           const exeScript = script.getExeScriptRequest();
           const results = await activity.execute(exeScript).catch(logger.error);
-          results.on('data', result => {
+          for await (const result of results) {
             if (result.stdout) appendResults(result.stdout);
             if (result.stderr) appendResults(result.stderr);
-          })
+          }
+          // results.on('data', result => {
+          //   if (result.stdout) appendResults(result.stdout);
+          //   if (result.stderr) appendResults(result.stderr);
+          // })
           results.on('error', result => {
             if (result.stdout) appendResults(result.stdout);
             if (result.stderr) appendResults(result.stderr);
