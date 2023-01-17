@@ -16,7 +16,6 @@ describe("Agreement Pool Service", () => {
       expect(logger.logs).to.include("Agreement Pool Service has started");
       await agreementService.end();
     });
-    it("what should do if service is running already?");
   });
   describe("end()", () => {
     it("should stop service", async () => {
@@ -25,9 +24,7 @@ describe("Agreement Pool Service", () => {
       await agreementService.end();
       expect(logger.logs).to.include("Agreement Pool Service has been stopped");
     });
-    it("what should do if service is not running anymore?");
   });
-
   describe("getAvailableAgreement()", () => {
     it("should create and return agreement from available proposal pool", async () => {
       const agreementService = new AgreementPoolService({ logger });
@@ -36,7 +33,6 @@ describe("Agreement Pool Service", () => {
       const agreement = await agreementService.getAgreement();
       expect(agreement).to.be.instanceof(Agreement);
     }).timeout(5000);
-
     it("should return agreement if is available in the pool", async () => {
       const agreementService = new AgreementPoolService({ logger });
       await agreementService.run();
@@ -48,13 +44,6 @@ describe("Agreement Pool Service", () => {
     }).timeout(5000);
     it("should not create agreement from proposal if any agreement is available");
   });
-
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  describe("isProviderLastAgreementRejected()", () => {});
-
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  describe("terminateAll()", () => {});
-
   describe("releaseAgreement()", () => {
     it("should return agreement to the pool if flag reuse if on", async () => {
       const agreementService = new AgreementPoolService({ logger });
