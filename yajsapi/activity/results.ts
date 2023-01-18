@@ -1,15 +1,15 @@
 export interface Result {
-  /** Index of result activity */
+  /** Index of script command */
   index: number;
-  /** Event date */
+  /** The datetime of the event on which the result was received */
   eventDate: string;
   /** If is success */
   result?: "Ok" | "Error";
-  /** process stdout */
+  /** stdout of script command */
   stdout?: string;
-  /** process stderr */
+  /** stderr of script command */
   stderr?: string;
-  /** result message */
+  /** an error message if the result is not successful */
   message?: string;
   /** Is batch of already finished */
   isBatchFinished?: boolean;

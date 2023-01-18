@@ -12,7 +12,7 @@ const DEFAULTS = {
 };
 
 export class ActivityConfig {
-  public readonly api: { control: RequestorControlApi; state: RequestorStateApi }; // TODO: do we like to left it like this?
+  public readonly api: { control: RequestorControlApi; state: RequestorStateApi };
   public readonly activityRequestTimeout: number;
   public readonly activityExecuteTimeout: number;
   public readonly activityExeBatchResultsFetchInterval: number;
