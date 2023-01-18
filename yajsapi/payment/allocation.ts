@@ -3,11 +3,17 @@ import { AllocationConfig, BasePaymentOptions } from "./config";
 import { Allocation as AllocationModel } from "ya-ts-client/dist/ya-payment/src/models/allocation";
 import { Events } from "../events";
 
+/**
+ * @category Mid-level
+ */
 export interface AllocationOptions extends BasePaymentOptions {
   account: { address: string; platform: string };
   expires?: number;
 }
 
+/**
+ * @category Mid-level
+ */
 export class Allocation {
   /** Allocation ID */
   public readonly id: string;

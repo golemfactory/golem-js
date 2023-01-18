@@ -7,6 +7,9 @@ import { ActivityFactory } from "./factory";
 import { ActivityConfig } from "./config";
 import { Events } from "../events";
 
+/**
+ * @category Mid-level
+ */
 export enum ActivityStateEnum {
   New = "New",
   Initialized = "Initialized",
@@ -20,6 +23,9 @@ export interface ExeScriptRequest {
   text: string;
 }
 
+/**
+ * @category Mid-level
+ */
 export interface ActivityOptions {
   yagnaOptions?: {
     /** Yagna Api Key */
@@ -37,10 +43,11 @@ export interface ActivityOptions {
   logger?: Logger;
   /** Event Bus implements EventTarget  */
   eventTarget?: EventTarget;
-  /** taskPackage */
-  taskPackage?: string;
 }
 
+/**
+ * @category Mid-level
+ */
 export class Activity {
   private readonly logger?: Logger;
   private isRunning = true;
@@ -51,6 +58,7 @@ export class Activity {
    * @param id activity ID
    * @param agreementId agreement ID
    * @param options - {@link ActivityOptions}
+   * @hidden
    */
   constructor(public readonly id, public readonly agreementId, protected readonly options: ActivityConfig) {
     this.logger = options?.logger;

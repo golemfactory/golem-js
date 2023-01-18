@@ -9,6 +9,9 @@ import { Events } from "../events";
 import { ProposalEvent } from "ya-ts-client/dist/ya-market/src/models";
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
 
+/**
+ * @category Mid-level
+ */
 export interface DemandOptions {
   subnetTag?: string;
   yagnaOptions?: YagnaOptions;
@@ -21,8 +24,14 @@ export interface DemandOptions {
   eventTarget?: EventTarget;
 }
 
+/**
+ * @category Mid-level
+ */
 export const DemandEventType = "ProposalReceived";
 
+/**
+ * @category Mid-level
+ */
 export class Demand extends EventTarget {
   private isRunning = true;
   private logger?: Logger;
@@ -100,6 +109,9 @@ export class Demand extends EventTarget {
   }
 }
 
+/**
+ * @category Mid-level
+ */
 export class DemandEvent extends Event {
   readonly proposal: Proposal;
 

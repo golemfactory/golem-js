@@ -217,14 +217,18 @@
           results.on('data', result => {
             if (result.stdout) appendResults(result.stdout);
             if (result.stderr) appendResults(result.stderr);
-            if (result.message) appendResults(result.message);
-            console.error(result.message);
+            if (result.message) {
+              appendResults(result.message);
+              console.error(message)
+            }
           })
           results.on('error', result => {
             if (result.stdout) appendResults(result.stdout);
             if (result.stderr) appendResults(result.stderr);
-            if (result.message) appendResults(result.message);
-            console.error(result.message);
+            if (result.message) {
+              appendResults(result.message);
+              console.error(message)
+            }
           })
         }
         async function end() {

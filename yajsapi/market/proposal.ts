@@ -3,6 +3,9 @@ import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
 import { Events } from "../events";
 
+/**
+ * @category Mid-level
+ */
 export class Proposal {
   readonly id: string;
   readonly issuerId: string;
@@ -24,7 +27,7 @@ export class Proposal {
    */
   constructor(
     private readonly subscriptionId: string,
-    private readonly api: RequestorApi, // TODO: why API explicitly?
+    private readonly api: RequestorApi,
     model: ProposalModel,
     private readonly demandRequest: DemandOfferBase,
     private eventTarget?: EventTarget

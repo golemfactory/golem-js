@@ -16,7 +16,6 @@ export class ActivityConfig {
   public readonly activityRequestTimeout: number;
   public readonly activityExecuteTimeout: number;
   public readonly activityExeBatchResultsFetchInterval: number;
-  public readonly taskPackage?: string;
   public readonly logger?: Logger;
   public readonly eventTarget?: EventTarget;
   public readonly yagnaOptions: YagnaOptions;
@@ -38,7 +37,6 @@ export class ActivityConfig {
     this.activityExecuteTimeout = options?.activityExecuteTimeout || DEFAULTS.activityExecuteTimeout;
     this.activityExeBatchResultsFetchInterval =
       options?.activityExeBatchResultsFetchInterval || DEFAULTS.activityExeBatchResultsFetchInterval;
-    this.taskPackage = options?.taskPackage;
     this.logger = options?.logger;
     this.yagnaOptions = { apiKey, basePath };
     this.eventTarget = options?.eventTarget;

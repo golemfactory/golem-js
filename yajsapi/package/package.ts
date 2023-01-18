@@ -4,6 +4,9 @@ import { Logger } from "../utils";
 import axios from "axios";
 import { PackageConfig } from "./config";
 
+/**
+ * @category Mid-level
+ */
 export interface PackageOptions {
   /** Type of engine required: vm, emscripten, sgx, sgx-js, sgx-wasm, sgx-wasi */
   engine?: string;
@@ -23,6 +26,9 @@ export interface PackageOptions {
   logger?: Logger;
 }
 
+/**
+ * @category Mid-level
+ */
 export class Package {
   private logger?: Logger;
 

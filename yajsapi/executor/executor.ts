@@ -17,6 +17,9 @@ import { AgreementServiceOptions } from "../agreement/service";
 import { WorkOptions } from "../task/work";
 import { LogLevel } from "../utils/logger";
 
+/**
+ * @category High-level
+ */
 export type ExecutorOptions = {
   /** Image hash as string, otherwise Package object */
   package: string | Package;
@@ -52,6 +55,9 @@ export type YagnaOptions = {
   basePath: string;
 };
 
+/**
+ * @category High-level
+ */
 export class TaskExecutor {
   private readonly options: ExecutorConfig;
   private marketService: MarketService;
@@ -69,7 +75,7 @@ export class TaskExecutor {
 
   /**
    * Create a new Task Executor
-   * @module High_Level
+   * @category High-level
    * @description Factory Method that create and initialize an instance of the TaskExecutor
    *
    * @example **Simple usage of Task Executor**

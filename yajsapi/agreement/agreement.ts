@@ -5,11 +5,17 @@ import { AgreementFactory } from "./factory";
 import { AgreementConfig } from "./config";
 import { Events } from "../events";
 
+/**
+ * @category Mid-level
+ */
 export interface ProviderInfo {
   name: string;
   id: string;
 }
 
+/**
+ * @category Mid-level
+ */
 export enum AgreementStateEnum {
   Proposal = "Proposal",
   Pending = "Pending",
@@ -20,6 +26,9 @@ export enum AgreementStateEnum {
   Terminated = "Terminated",
 }
 
+/**
+ * @category Mid-level
+ */
 export interface AgreementOptions {
   /** yagnaOptions */
   yagnaOptions?: YagnaOptions;
@@ -32,7 +41,9 @@ export interface AgreementOptions {
   /** Event Bus implements EventTarget  */
   eventTarget?: EventTarget;
 }
-
+/**
+ * @category Mid-level
+ */
 export class Agreement {
   private agreementData?: AgreementModel;
   private logger?: Logger;

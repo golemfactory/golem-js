@@ -3,6 +3,9 @@ import { AccountConfig, BasePaymentOptions } from "./config";
 
 export type AccountsOptions = BasePaymentOptions;
 
+/**
+ * @category Mid-level
+ */
 export class Accounts {
   static async create(options?: AccountsOptions): Promise<Accounts> {
     return new Accounts(new AccountConfig(options));

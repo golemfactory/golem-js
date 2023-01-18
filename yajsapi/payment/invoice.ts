@@ -46,6 +46,9 @@ export abstract class BaseNote<ModelType extends BaseModel> {
   protected abstract refreshStatus(): Promise<void>;
 }
 
+/**
+ * @category Mid-level
+ */
 export class Invoice extends BaseNote<Model> {
   /** Invoice ID */
   public readonly id: string;

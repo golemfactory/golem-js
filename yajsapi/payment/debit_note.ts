@@ -6,6 +6,9 @@ import { Rejection } from "./rejection";
 
 export type InvoiceOptions = BasePaymentOptions;
 
+/**
+ * @category Mid-level
+ */
 export class DebitNote extends BaseNote<Model> {
   public readonly id: string;
   public readonly previousDebitNoteId?: string;
