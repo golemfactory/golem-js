@@ -20,7 +20,7 @@ async def assert_command_error(stream):
     """Assert that a worker failure is reported."""
 
     async for line in stream:
-        m = re.match(r".*Worker for agreement ([0-9a-f]+) finished with error.*", line)
+        m = re.match(r".*Worker for agreement ([0-9a-f]+) failed.*", line)
         if m:
             return m.group(1)
     raise AssertionError("Expected worker failure")
@@ -61,14 +61,11 @@ async def assert_all_tasks_computed(stream):
 async def test_agreement_termination(
     project_dir: Path,
     log_dir: Path,
+    goth_config_path: Path,
     config_overrides,
 ) -> None:
 
-    # This is the default configuration with 2 wasm/VM providers
-    goth_config = load_yaml(
-        project_dir / "tests" / "goth" / "assets" / "goth-config.yml",
-        config_overrides,
-    )
+    goth_config = load_yaml(goth_config_path, config_overrides)
     test_script_path = project_dir / "tests" / "goth" / "test_agreement_termination" / "requestor.js"
 
     configure_logging(log_dir)
@@ -95,5 +92,5 @@ async def test_agreement_termination(
             await assertion.wait_for_result(timeout=120)
 
             # Wait for executor shutdown
-            await cmd_monitor.wait_for_pattern(".*Shutdown complete.*", timeout=120)
+            await cmd_monitor.wait_for_pattern(".*Executor has shut down.*", timeout=120)
             logger.info("Requestor script finished")

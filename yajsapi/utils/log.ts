@@ -233,11 +233,15 @@ class SummaryLogger {
     } else if (eventName === events.AgreementConfirmed.name) {
       logger.info(`Agreement confirmed by provider '${this.agreement_provider_info[event["agr_id"]].name}'`);
       this.confirmed_agreements.add(event["agr_id"]);
+    } else if (eventName === events.ActivityCreated.name) {
+      logger.debug(`Activity ${event["act_id"]} created for agreement ${event["agr_id"]}`);
     } else if (eventName === events.TaskStarted.name) {
       this.task_data[event["task_id"]] = event["task_data"];
       logger.debug(`Task started for agreement ${event["agr_id"]}`);
     } else if (eventName === events.TaskAccepted.name) {
       logger.debug(`Task accepted, task_id=${event["task_id"]}`);
+    } else if (eventName === events.TaskRejected.name) {
+      logger.warn(`Task rejected, task_id=${event["task_id"]}, reason: ${event["reason"]}`);
     } else if (eventName === events.ScriptSent.name) {
       const provider_info = this.agreement_provider_info[event["agr_id"]];
       logger.info(

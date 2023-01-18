@@ -38,13 +38,17 @@ export class SmartQueue<Item> {
   private __done;
 
   constructor(items: Array<Item>, retry_cnt = 2, ...rest) {
-    this._items = items;
+    this._items = items || [];
     this._rescheduled_items = new Set();
     this._in_progress = new Set();
 
     this.__new_items = csp.chan();
     this.__eof = csp.chan();
     this.__done = false;
+  }
+
+  add(item: Item) {
+    if (this._items) this._items.push(item);
   }
 
   close() {

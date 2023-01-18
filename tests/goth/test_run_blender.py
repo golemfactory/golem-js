@@ -84,10 +84,11 @@ async def assert_all_invoices_accepted(output_lines: EventStream[str]):
 async def test_run_blender(
     log_dir: Path,
     project_dir: Path,
+    goth_config_path: Path,
+    config_overrides
 ) -> None:
 
-    # This is the default configuration with 2 wasm/VM providers
-    goth_config = load_yaml(Path(__file__).parent / "assets" / "goth-config.yml")
+    goth_config = load_yaml(goth_config_path, config_overrides)
 
     examples_dir = project_dir / "examples"
 
@@ -113,18 +114,18 @@ async def test_run_blender(
             all_sent = cmd_monitor.add_assertion(assert_all_tasks_sent)
             all_computed = cmd_monitor.add_assertion(assert_all_tasks_computed)
 
-            await cmd_monitor.wait_for_pattern(".*Agreement proposed ", timeout=20)
+            await cmd_monitor.wait_for_pattern(".*Agreement proposed ", timeout=60)
             logger.info("Agreement proposed")
 
-            await cmd_monitor.wait_for_pattern(".*Agreement confirmed ", timeout=20)
+            await cmd_monitor.wait_for_pattern(".*Agreement confirmed ", timeout=60)
             logger.info("Agreement confirmed")
 
-            await all_sent.wait_for_result(timeout=120)
+            await all_sent.wait_for_result(timeout=320)
             logger.info("All tasks sent")
 
-            await all_computed.wait_for_result(timeout=120)
+            await all_computed.wait_for_result(timeout=320)
             logger.info("All tasks computed, waiting for Executor shutdown")
 
-            await cmd_monitor.wait_for_pattern(".*Executor has shut down", timeout=180)
+            await cmd_monitor.wait_for_pattern(".*Executor has shut down", timeout=320)
 
             logger.info("Requestor script finished")

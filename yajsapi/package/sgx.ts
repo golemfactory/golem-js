@@ -101,7 +101,7 @@ export async function repo({ engine, image_hash, min_mem_gib, min_storage_gib }:
   return new VmPackage({
     repo_url: await resolve_repo_srv({ repo_srv: DEFAULT_REPO_SRV }),
     image_hash,
-    constraints: new _SgxConstrains(runtime, min_mem_gib, min_storage_gib),
+    constraints: new _SgxConstrains(runtime, min_mem_gib || 1, min_storage_gib || 1),
     secure,
   });
 }

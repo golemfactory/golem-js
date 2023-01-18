@@ -1,7 +1,7 @@
 import test from "ava";
-import { Network } from "../yajsapi/network";
-import { NetMock } from "./mock/rest";
-import logger from "../yajsapi/utils/log";
+import { Network } from "../../yajsapi/network";
+import { NetMock } from "../mock/rest";
+import logger from "../../yajsapi/utils/log";
 
 logger.transports.forEach((t) => (t.silent = true));
 

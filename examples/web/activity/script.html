@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Activity module - Script</title>
+    <script src="./../js/bundle.js"></script>
+    <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+    <h1>Activity module - Script</h1>
+    <div class="container">
+        <div class="col-6">
+            <h3>Credentials</h3>
+            <div class="row">
+                <div>
+                    <label for="YAGNA_APPKEY">YAGNA_APPKEY: </label>
+                    <input id="YAGNA_APPKEY" type="text" value=""/>
+                </div>
+                <div>
+                    <label for="YAGNA_API_BASEPATH">YAGNA_API_BASEURL: </label>
+                    <input id="YAGNA_API_BASEPATH" type="text" value="http://127.0.0.1:7465/activity-api/v1" />
+                </div>
+            </div>
+            <h3>Actions</h3>
+            <div class="row vertical">
+                <div>
+                    <label for="AGREEMENT_ID">AGREEMENT_ID: </label>
+                    <div class="row padding-0">
+                        <input id="AGREEMENT_ID" type="text" />
+                        <button onclick="createActivity()">Create Activity</button>
+                        <button disabled onclick="destroyActivity()">Destroy Activity</button>
+                    </div>
+                </div>
+            </div>
+            <div class="row vertical">
+                <div>
+                    <label for="COMMAND">RUN SHELL COMMAND: </label>
+                    <div class="row padding-0">
+                        <input id="COMMAND" type="text" />
+                        <button onclick="addToScript()">Add to script</button>
+                    </div>
+                </div>
+            </div>
+            <div class="script console">
+                <h3>Script
+                    <span>
+                        <button onclick="getState()">Get state</button>
+                        <button onclick="clearScript()">Clear</button>
+                        <button id="execute" disabled onclick="executeScript()">Execute</button>
+                    </span>
+                </h3>
+                <ul id="script"></ul>
+
+            </div>
+        </div>
+        <div class="col-6 border-left">
+            <div class="logs console">
+                <h3>Logs</h3>
+                <ul id="logs"></ul>
+            </div>
+            <div class="results console">
+                <h3>Results</h3>
+                <ul id="results"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var activity;
+        let commands = [
+            new yajsapi.script.Deploy(),
+            new yajsapi.script.Start(),
+            new yajsapi.script.Terminate()
+        ];
+        refreshScript();
+        function log(msg) {
+            const logs_el = document.getElementById('logs');
+            const li = document.createElement('li');
+            li.appendChild(document.createTextNode(`[${new Date().toISOString()}] ${msg}`));
+            logs_el.appendChild(li);
+        }
+        function appendResults(result) {
+            const results_el = document.getElementById('results');
+            const li = document.createElement('pre');
+            li.appendChild(document.createTextNode(result));
+            results_el.appendChild(li);
+        }
+        function refreshScript() {
+            const script_el = document.getElementById('script');
+            while (script_el.firstChild) script_el.removeChild(script_el.firstChild);
+            commands.forEach(command => {
+                const pre = document.createElement('pre');
+                const cmdText = JSON.parse(JSON.stringify(command.toJson()));
+                Object.keys(cmdText).forEach(key => (delete cmdText[key]?.capture));
+                pre.innerHTML = JSON.stringify(cmdText, null, 2);
+                script_el.appendChild(pre)
+            })
+        }
+        function clearScript() {
+            commands = [
+                new yajsapi.script.Deploy(),
+                new yajsapi.script.Start(),
+                new yajsapi.script.Terminate()
+            ];
+            refreshScript();
+        }
+        async function createActivity() {
+            const appKey = document.getElementById('YAGNA_APPKEY').value;
+            const basePath = document.getElementById('YAGNA_API_BASEPATH').value;
+            const agreementId = document.getElementById('AGREEMENT_ID').value;
+            const factory = new yajsapi.activity.ActivityFactory(appKey, basePath);
+            activity = await factory.create(agreementId).catch(err => logger.error(err));
+            if (activity) {
+                log(`Activity created. ID: ${activity.id}`);
+                enableActions();
+            }
+        }
+        async function destroyActivity() {
+            if (!activity) {
+                logger.error('Activity not created');
+                return;
+            }
+            const result = await activity.stop().catch(e => logger.error(e));
+            if (result) {
+                logger.log('Activity has been destroyed');
+            } else {
+                logger.error('Activity cannot destroy.');
+            }
+        }
+        async function addToScript() {
+            const bashCommand = document.getElementById('COMMAND').value
+            const runCommand = new yajsapi.script.Run("/bin/sh", ["-c", bashCommand]);
+            commands.splice(commands.length - 1, 0, runCommand);
+            refreshScript();
+            document.getElementById('COMMAND').value = "";
+        }
+        async function executeScript() {
+            if (!activity) {
+                logger.error('Activity not created');
+                return;
+            }
+            const script = new yajsapi.script.Script(commands);
+            const results = await activity.execute(script.getExeScriptRequest()).catch(err => logger.error(err));
+            results.on('data', (result) => {
+                if (result.stdout) appendResults('[stdout] ' + result.stdout);
+                if (result.stderr) appendResults('[stderr] ' + result.stderr);
+                if (result.result === 'Ok') {
+                    log(`Command #${result.index} has been executed`);
+                } else {
+                    log(result.message || `Command Run Error`);
+                }
+            });
+            results.on('end', () => {
+                log('All script commands has been executed');
+            })
+
+        }
+        async function getState() {
+            if (!activity) {
+                logger.error('Activity not created');
+                return;
+            }
+            const state = await activity.getState().catch(err => logger.error(err));
+            log(`Activity State: ${state}`);
+        }
+        function enableActions() {
+            const disabled =  document.querySelectorAll("input:disabled, button:disabled");
+            disabled.forEach(el => el.removeAttribute('disabled'));
+        }
+        const logger = {
+            log: (msg) => log(msg),
+            warn: (msg) => log('[warn] ' + msg),
+            debug: (msg) => log('[debug] ' + msg),
+            error: (msg) => log('[error] ' + msg),
+        }
+    </script>
+</body>
+</html>
