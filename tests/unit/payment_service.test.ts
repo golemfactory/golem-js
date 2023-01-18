@@ -49,7 +49,8 @@ describe("Payment Service", () => {
       await paymentService.createAllocations();
       await paymentService.run();
       paymentService.acceptPayments(agreement);
-      await logger.expectToInclude(`Invoice accepted for agreement ${agreement.id}`, 100);
+      await new Promise((res) => setTimeout(res, 200));
+      await logger.expectToInclude(`Invoice accepted from ${agreement.provider.name}`, 100);
       await paymentService.end();
     });
 

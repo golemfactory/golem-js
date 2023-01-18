@@ -66,7 +66,7 @@ describe("Task Service", () => {
       activityStateCheckingInterval: 100,
     });
     service.run().catch((e) => console.error(e));
-    await logger.expectToInclude("The task 1 execution failed. Trying to redo the task. Attempt #", 500);
+    await logger.expectToInclude("Task 1 execution failed. Trying to redo the task. Attempt #", 500);
     await service.end();
   });
 
@@ -134,7 +134,4 @@ describe("Task Service", () => {
     expect(task3.isFinished()).to.be.true;
     await service.end();
   }).timeout(5000);
-
-  // TODO
-  it("stop the service if it is interrupted by the user");
 });

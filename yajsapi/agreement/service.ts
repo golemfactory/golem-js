@@ -166,7 +166,7 @@ export class AgreementPoolService implements ComputationHistory {
     }
     if (agreement) {
       this.agreements.set(agreement.id, agreement);
-      this.logger?.debug(`Agreement ${agreement.id} signed with provider ${agreement.provider.name}`);
+      this.logger?.info(`Agreement confirmed by provider ${agreement.provider.name}`);
     } else {
       this.isServiceRunning && this.logger?.debug(`Agreement cannot be created due to no available offers from market`);
     }
@@ -194,7 +194,7 @@ export class AgreementPoolService implements ComputationHistory {
 
     if (state === AgreementStateEnum.Proposal) {
       await agreement.confirm();
-      this.logger?.debug(`Agreement ${agreement.id} confirmed`);
+      this.logger?.info(`Agreement proposed to provider '${agreement.provider.name}'`);
     }
 
     /** Solution for support events in the future

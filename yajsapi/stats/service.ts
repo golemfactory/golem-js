@@ -4,11 +4,11 @@ import { Providers } from "./providers";
 import { Tasks } from "./tasks";
 import { Payments } from "./payments";
 import { Agreements } from "./agreements";
-import { DebitNotes } from "./debit_notes";
 import { Invoices } from "./invoices";
 import { Proposals } from "./proposals";
 import { Allocations } from "./allocations";
 import { Activities } from "./activities";
+import { Times } from "./times";
 
 interface StatsOptions {
   eventTarget: EventTarget;
@@ -21,12 +21,12 @@ export class StatsService {
   private allocations: Allocations;
   private agreements: Agreements;
   private activities: Activities;
-  //private debitNotes: DebitNotes;
   private invoices: Invoices;
   private proposals: Proposals;
   private providers: Providers;
   private payments: Payments;
   private tasks: Tasks;
+  private times: Times;
 
   constructor(options: StatsOptions) {
     this.eventTarget = options.eventTarget;
@@ -34,12 +34,12 @@ export class StatsService {
     this.allocations = new Allocations();
     this.activities = new Activities();
     this.agreements = new Agreements();
-    //this.debitNotes = new DebitNotes();
     this.invoices = new Invoices();
     this.proposals = new Proposals();
     this.providers = new Providers();
     this.payments = new Payments();
     this.tasks = new Tasks();
+    this.times = new Times();
   }
 
   async run() {
@@ -52,23 +52,42 @@ export class StatsService {
     this.logger?.debug("Stats service has stopped");
   }
 
-  getAllCosts() {
+  getAllCostsSummary() {
     return this.agreements
       .getAll()
       .map((agreement) => {
         const provider = this.providers.getById(agreement.providerId);
-        const activities = this.activities.getByAgreementId(agreement.id);
+        const tasks = this.tasks.getByAgreementId(agreement.id);
         const invoices = this.invoices.getByAgreementId(agreement.id);
         const payments = this.payments.getByAgreementId(agreement.id);
         return {
           Agreement: agreement.id.substring(0, 10),
           "Provider Name": provider ? provider.providerName : "unknown",
-          "Task Computed": activities.count(),
+          "Task Computed": tasks.where("status", "finished").count(),
           Cost: invoices.sum("amount"),
           "Payment Status": payments.count() > 0 ? "paid" : "unpaid",
         };
       })
       .all();
+  }
+
+  getAllCosts() {
+    const costs = { total: 0, paid: 0 };
+    this.agreements
+      .getAll()
+      .all()
+      .forEach((agreement) => {
+        const invoices = this.invoices.getByAgreementId(agreement.id);
+        const payments = this.payments.getByAgreementId(agreement.id);
+        costs.total += invoices.sum("amount") as number;
+        costs.paid += payments.count() > 0 ? (invoices.sum("amount") as number) : 0;
+      });
+    return costs;
+  }
+
+  getComputationTime(): string {
+    const duration = this.times.getById("all")?.duration;
+    return `${duration ? (duration / 1000).toFixed(1) : 0}s`;
   }
 
   getStatsTree() {
@@ -122,9 +141,9 @@ export class StatsService {
 
   private handleEvents(event: BaseEvent<unknown>) {
     if (event instanceof Events.ComputationStarted) {
-      //this.tasks.addStartTime(event.timeStamp);
+      this.times.add({ id: "all", startTime: event.timeStamp });
     } else if (event instanceof Events.ComputationFinished) {
-      //this.tasks.addStopTime(event.timeStamp);
+      this.times.stop({ id: "all", stopTime: event.timeStamp });
     } else if (event instanceof Events.TaskStarted) {
       this.activities.add({
         id: event.detail.activityId,
@@ -134,6 +153,7 @@ export class StatsService {
       this.tasks.add({
         id: event.detail.id,
         startTime: event.timeStamp,
+        agreementId: event.detail.agreementId,
       });
     } else if (event instanceof Events.TaskRedone) {
       this.tasks.retry(event.detail.id, event.detail.retriesCount);

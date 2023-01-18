@@ -42,7 +42,6 @@ describe("Agreement Pool Service", () => {
       const agreement2 = await agreementService.getAgreement();
       expect(agreement1).to.deep.equal(agreement2);
     }).timeout(5000);
-    it("should not create agreement from proposal if any agreement is available");
   });
   describe("releaseAgreement()", () => {
     it("should return agreement to the pool if flag reuse if on", async () => {

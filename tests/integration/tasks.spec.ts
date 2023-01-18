@@ -29,7 +29,7 @@ describe("Task Executor", function () {
     expect(logger.logs).to.include("Scored proposal");
     expect(logger.logs).to.include("Proposal hes been responded");
     expect(logger.logs).to.include("New offer proposal added to pool");
-    expect(logger.logs).to.match(/Agreement .* signed with provider/);
+    expect(logger.logs).to.match(/Agreement confirmed by provider/);
     expect(logger.logs).to.match(/Activity .* created/);
   }).timeout(60000);
 
@@ -82,7 +82,7 @@ describe("Task Executor", function () {
         executor.end();
         expect(e).to.be.undefined;
       });
-    await logger.expectToInclude("Task 1 finished", 5000);
+    await logger.expectToInclude("Task 1 computed by provider", 5000);
     expect(outputs[0]).to.equal("Hello Golem");
     expect(outputs[1]).to.equal("Hello World");
     expect(outputs[2]).to.equal("OK");
@@ -107,7 +107,7 @@ describe("Task Executor", function () {
       .catch((e) => {
         expect(e).to.be.undefined;
       });
-    await logger.expectToInclude("Task 1 finished", 5000);
+    await logger.expectToInclude("Task 1 computed by provider", 5000);
     expect(outputs[0]).to.equal("Hello Golem");
     expect(expectedError).to.equal(
       "Error: ExeScript command exited with code 127. Stdout: undefined. Stderr: sh: 1: invalid_command: not found"

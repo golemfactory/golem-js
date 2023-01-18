@@ -90,6 +90,7 @@
     <script>
         let options, taskPackage, allocation, demand, proposals = [], offer, agreement, activity;
         function appendLog(msg) {
+            console.log(msg);
             const logs_el = document.getElementById('logs');
             const li = document.createElement('li');
             li.appendChild(document.createTextNode(msg));
@@ -113,7 +114,6 @@
             log: (msg) => appendLog(`[${new Date().toISOString()}] ${msg}`),
             warn: (msg) => appendLog(`[${new Date().toISOString()}] [warn] ${msg}`),
             debug: (msg) => appendLog(`[${new Date().toISOString()}] [debug] ${msg}`),
-            // debug: (msg) => console.log(msg),
             error: (error) => appendLog(`[${new Date().toISOString()}] [error] ${error?.response?.data?.message || error}`),
             info: (msg) => appendLog(`[${new Date().toISOString()}] [info] ${msg}`),
             table: (msg) => appendLog(JSON.stringify(msg, null, "\t")),
@@ -217,10 +217,14 @@
           results.on('data', result => {
             if (result.stdout) appendResults(result.stdout);
             if (result.stderr) appendResults(result.stderr);
+            if (result.message) appendResults(result.message);
+            console.error(result.message);
           })
           results.on('error', result => {
             if (result.stdout) appendResults(result.stdout);
             if (result.stderr) appendResults(result.stderr);
+            if (result.message) appendResults(result.message);
+            console.error(result.message);
           })
         }
         async function end() {
