@@ -33,6 +33,11 @@ export interface AgreementOptions {
   eventTarget?: EventTarget;
 }
 
+/**
+ * Agreement
+ *
+ * @description Agreement represents the contract with provider. Agreement could be reusable after finish one activity to start another one.
+ */
 export class Agreement {
   private agreementData?: AgreementModel;
   private logger?: Logger;

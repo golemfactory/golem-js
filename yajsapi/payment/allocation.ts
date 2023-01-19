@@ -8,6 +8,11 @@ export interface AllocationOptions extends BasePaymentOptions {
   expires?: number;
 }
 
+/**
+ * Allocations
+ *
+ * @description Represent allocation of coins on the account for a given job
+ */
 export class Allocation {
   /** Allocation ID */
   public readonly id: string;

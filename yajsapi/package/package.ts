@@ -23,6 +23,11 @@ export interface PackageOptions {
   logger?: Logger;
 }
 
+/**
+ * Package
+ *
+ * @description represents package for computation. Includes image hash, and requirements for computation like min memory, cpu, storage capabilities etc.
+ */
 export class Package {
   private logger?: Logger;
 

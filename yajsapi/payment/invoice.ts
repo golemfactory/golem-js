@@ -46,6 +46,11 @@ export abstract class BaseNote<ModelType extends BaseModel> {
   protected abstract refreshStatus(): Promise<void>;
 }
 
+/**
+ * Invoice
+ *
+ * @description Invoice setted by provider for finished jobs
+ */
 export class Invoice extends BaseNote<Model> {
   /** Invoice ID */
   public readonly id: string;

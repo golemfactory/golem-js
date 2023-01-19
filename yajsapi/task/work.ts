@@ -27,6 +27,11 @@ export interface WorkOptions {
   isRunning: () => boolean;
 }
 
+/**
+ * Work Context
+ *
+ * @description
+ */
 export class WorkContext {
   private readonly workTimeout: number;
   private readonly logger?: Logger;

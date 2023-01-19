@@ -23,6 +23,12 @@ export interface DemandOptions {
 
 export const DemandEventType = "ProposalReceived";
 
+/**
+ * Demand
+ *
+ * @description Demand represents market demand for calculation. For demand Yagna will answer with providers proposals.
+ * Demand extends EventTarget, it is possible to listen to receive Proposals information
+ */
 export class Demand extends EventTarget {
   private isRunning = true;
   private logger?: Logger;

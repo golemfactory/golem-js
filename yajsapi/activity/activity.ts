@@ -41,6 +41,11 @@ export interface ActivityOptions {
   taskPackage?: string;
 }
 
+/**
+ * Activity
+ *
+ * @description Activity represents one job using signed agreement with provider.
+ */
 export class Activity {
   private readonly logger?: Logger;
   private isRunning = true;
