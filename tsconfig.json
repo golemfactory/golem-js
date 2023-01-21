@@ -27,14 +27,15 @@
   "typedocOptions": {
     "entryPoints": ["yajsapi"],
     "exclude": ["**/*.spec.ts"],
+    "entryPointStrategy": "Expand",
     "out": "docs",
-    "readme": "README.md",
+    "readme": "tutorial.md",
     "sort": "static-first",
     "excludePrivate": true,
     "name": "yajsapi API reference",
     "categorizeByGroup": true,
     "mergeModulesRenameDefaults": true,
-    "excludeExternals": true,
+    "excludeExternals": false,
     "mergeModulesMergeMode": "module-category",
     "theme": "hierarchy"
   },

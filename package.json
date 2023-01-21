@@ -9,8 +9,8 @@
     "build": "tsc",
     "build:browser": "tsc && rollup --config rollup.config.js",
     "clean": "rimraf node_modules/ dist/ || echo 'Project is already clean'",
-    "docs": "typedoc yajsapi/ --plugin typedoc-plugin-merge-modules --plugin typedoc-theme-hierarchy",
-    "docs:md": "typedoc yajsapi/ --plugin typedoc-plugin-merge-modules --plugin typedoc-plugin-markdown --theme default",
+    "docs": "typedoc yajsapi/ --plugin typedoc-plugin-merge-modules --plugin typedoc-theme-hierarchy --plugin typedoc-plugin-remove-references",
+    "docs:md": "typedoc yajsapi/ --plugin typedoc-plugin-markdown",
     "docs:clean": "rimraf docs/ && run-s handbook:clean",
     "test": "ts-mocha --exit -p tsconfig.json --file tests/integration/_setup.ts --file tests/unit/_setup.ts 'tests/+(unit|integration)/**.+(spec|test).ts'",
     "test:unit": "ts-mocha --file tests/unit/_setup.ts --exit -p tsconfig.json tests/unit/**.test.ts",
@@ -23,7 +23,12 @@
     "cov:all:html": "nyc --reporter=html --cache false ts-mocha --exit -p tsconfig.json --file tests/integration/_setup.ts 'tests/+(unit|integration)/**.+(spec|test).ts'",
     "cov:lcov": "nyc  --reporter=lcov --cache false ts-mocha --exit -p tsconfig.json --file tests/integration/_setup.ts tests/unit/**.test.ts",
     "lint": "eslint .",
-    "format": "prettier yajsapi/"
+    "format": "prettier yajsapi/",
+    "handbook:clean": "rimraf handbook/ handbook_gen/.env",
+    "handbook:py": "python3 -m venv handbook_gen/.env && source handbook_gen/.env/bin/activate",
+    "handbook:poetry": "pip install -U pip && pip install poetry && cd handbook_gen && poetry install",
+    "handbook:summary": "python3 handbook_gen/handbook_gen.py --overwrite",
+    "handbook": "run-s docs:md && run-s handbook:py && run-s handbook:poetry && run-s handbook:summary"
   },
   "files": [
     "dist"
@@ -73,10 +78,11 @@
     "ts-mocha": "^10.0.0",
     "tsconfig-paths": "^4.1.0",
     "tslint-config-prettier": "^1.18.0",
-    "typedoc": "^0.23.24",
+    "typedoc": "^0.23.21",
     "typedoc-plugin-markdown": "^3.14.0",
     "typedoc-plugin-merge-modules": "^4.0.1",
     "typedoc-theme-hierarchy": "^3.0.2",
+    "typedoc-plugin-remove-references": "^0.0.6",
     "typescript": "^4.8.4"
   }
 }
