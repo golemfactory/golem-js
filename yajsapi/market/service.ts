@@ -16,6 +16,7 @@ export interface MarketOptions extends DemandOptions {
 /**
  * Market Service
  * @description Service used in {@link TaskExecutor}
+ * @internal
  */
 export class MarketService {
   private readonly options: MarketConfig;

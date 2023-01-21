@@ -26,8 +26,8 @@
   },
   "typedocOptions": {
     "entryPoints": ["yajsapi"],
-    "exclude": ["**/*.spec.ts"],
-    "entryPointStrategy": "Expand",
+    "exclude": ["**/*.spec.ts","yajsapi/stats/*.ts"],
+    "entryPointStrategy": "expand",
     "out": "docs",
     "readme": "tutorial.md",
     "sort": "static-first",
@@ -35,9 +35,10 @@
     "name": "yajsapi API reference",
     "categorizeByGroup": true,
     "mergeModulesRenameDefaults": true,
-    "excludeExternals": false,
+    "excludeExternals": true,
+    "excludeInternal": true,
     "mergeModulesMergeMode": "module-category",
-    "theme": "hierarchy"
+    //"theme": "hierarchy"
   },
   "exclude": ["dist", "node_modules", "examples", "tests", "cypress.config.ts"]
 }

@@ -5,7 +5,7 @@ import { Rejection } from "./rejection";
 
 export type InvoiceOptions = BasePaymentOptions;
 
-interface BaseModel {
+export interface BaseModel {
   issuerId: string;
   recipientId: string;
   payeeAddr: string;

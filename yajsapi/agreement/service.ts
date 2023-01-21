@@ -18,6 +18,7 @@ export interface AgreementProposal {
 /**
  * Agreement Pool Service
  * @description Service used in {@link TaskExecutor}
+ * @hidden
  */
 export class AgreementPoolService implements ComputationHistory {
   private logger?: Logger;
