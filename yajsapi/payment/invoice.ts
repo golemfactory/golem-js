@@ -47,9 +47,7 @@ export abstract class BaseNote<ModelType extends BaseModel> {
 }
 
 /**
- * Invoice
- *
- * @description Invoice setted by provider for finished jobs
+ * @category Mid-level
  */
 export class Invoice extends BaseNote<Model> {
   /** Invoice ID */

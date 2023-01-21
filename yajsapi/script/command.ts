@@ -1,6 +1,9 @@
 import { ExeScriptRequest } from "ya-ts-client/dist/ya-activity/src/models";
 import { StorageProvider } from "../storage";
 
+/**
+ * @category Mid-level
+ */
 export class Command {
   protected args: object;
   constructor(private commandName: string, args?: object) {
@@ -22,11 +25,18 @@ export class Command {
   }
 }
 
+/**
+ * @category Mid-level
+ */
 export class Deploy extends Command {
   constructor(args?: object) {
     super("deploy", args);
   }
 }
+
+/**
+ * @category Mid-level
+ */
 export class Start extends Command {
   constructor(args?: object) {
     super("start", args);
@@ -44,6 +54,9 @@ type CapturePart = { head: number } | { tail: number } | { headTail: number };
 
 type CaptureFormat = "string" | "binary";
 
+/**
+ * @category Mid-level
+ */
 export class Run extends Command {
   constructor(cmd: string, args?: string[] | null, env?: object | null, capture?: Capture) {
     const captureOpt = capture || {
@@ -64,12 +77,18 @@ export class Terminate extends Command {
   }
 }
 
+/**
+ * @category Mid-level
+ */
 export class Transfer extends Command {
   constructor(protected from?: string, protected to?: string, args?: object) {
     super("transfer", { from, to, args });
   }
 }
 
+/**
+ * @category Mid-level
+ */
 export class UploadFile extends Transfer {
   constructor(private storageProvider: StorageProvider, private src: string | Buffer, private dstPath: string) {
     super();
@@ -83,6 +102,9 @@ export class UploadFile extends Transfer {
   }
 }
 
+/**
+ * @category Mid-level
+ */
 export class DownloadFile extends Transfer {
   constructor(private storageProvider: StorageProvider, private srcPath: string, private dstPath: string) {
     super();

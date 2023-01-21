@@ -4,6 +4,9 @@ import { Logger } from "../utils";
 import axios from "axios";
 import { PackageConfig } from "./config";
 
+/**
+ * @category Mid-level
+ */
 export interface PackageOptions {
   /** Type of engine required: vm, emscripten, sgx, sgx-js, sgx-wasm, sgx-wasi */
   engine?: string;
@@ -23,11 +26,6 @@ export interface PackageOptions {
   logger?: Logger;
 }
 
-/**
- * Package
- *
- * @description represents package for computation. Includes image hash, and requirements for computation like min memory, cpu, storage capabilities etc.
- */
 export class Package {
   private logger?: Logger;
 

@@ -1,3 +1,6 @@
+/**
+ * @category Mid-level
+ */
 export interface Result {
   /** Index of script command */
   index: number;

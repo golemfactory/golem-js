@@ -4,10 +4,7 @@ import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
 import { Events } from "../events";
 
 /**
- * Proposal
- *
- * @description Represents proposals from providers for given demand.
- * Allows to interact with received proposals - reject or respond is possible.
+ * @category Mid-level
  */
 export class Proposal {
   readonly id: string;

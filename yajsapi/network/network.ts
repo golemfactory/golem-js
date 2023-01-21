@@ -4,6 +4,9 @@ import { YagnaOptions } from "../executor";
 import { NetworkConfig } from "./config";
 import { NetworkNode } from "./node";
 
+/**
+ * @category Mid-level
+ */
 export interface NetworkOptions {
   /** the node ID of the owner of this VPN (the requestor) */
   networkOwnerId: string;
@@ -32,7 +35,7 @@ export class NetworkError extends Error {}
 
 /**
  * Network
- *
+ * @category Mid-level
  * @description Describes a VPN created between the requestor and the provider nodes within Golem Network.
  */
 export class Network {

@@ -9,6 +9,9 @@ import { Events } from "../events";
 import { ProposalEvent } from "ya-ts-client/dist/ya-market/src/models";
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
 
+/**
+ * @category Mid-level
+ */
 export interface DemandOptions {
   subnetTag?: string;
   yagnaOptions?: YagnaOptions;
@@ -23,12 +26,6 @@ export interface DemandOptions {
 
 export const DemandEventType = "ProposalReceived";
 
-/**
- * Demand
- *
- * @description Demand represents market demand for calculation. For demand Yagna will answer with providers proposals.
- * Demand extends EventTarget, it is possible to listen to receive Proposals information
- */
 export class Demand extends EventTarget {
   private isRunning = true;
   private logger?: Logger;
@@ -106,6 +103,9 @@ export class Demand extends EventTarget {
   }
 }
 
+/**
+ * @category Mid-level
+ */
 export class DemandEvent extends Event {
   readonly proposal: Proposal;
 

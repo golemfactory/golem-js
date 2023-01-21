@@ -10,7 +10,6 @@ const minify = require("rollup-plugin-minify");
 
 module.exports = {
   input: path.resolve(__dirname, "./dist/index.js"),
-  // TODO: tests es module format in browser
   output: {
     file: path.resolve(__dirname, "./examples/web/js/bundle.js"),
     format: "iife",
