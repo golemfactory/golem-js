@@ -33,11 +33,11 @@
     "sort": "static-first",
     "excludePrivate": true,
     "name": "yajsapi API reference",
-    "categorizeByGroup": true,
-    "mergeModulesRenameDefaults": true,
+    "categorizeByGroup": false,
+    //"mergeModulesRenameDefaults": true,
     "excludeExternals": true,
     "excludeInternal": true,
-    "mergeModulesMergeMode": "module-category",
+    //"mergeModulesMergeMode": "module-category",
     //"theme": "hierarchy"
   },
   "exclude": ["dist", "node_modules", "examples", "tests", "cypress.config.ts"]
