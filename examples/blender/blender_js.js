@@ -1,4 +1,4 @@
-const { TaskExecutor, utils } = require("../../dist");
+const { TaskExecutor } = require("yajsapi");
 const path = require("path");
 const { program } = require("commander");
 
@@ -34,7 +34,7 @@ async function main(subnet_tag, payment_driver, payment_network, debug) {
     await ctx.uploadFile(path.join(__dirname, "./cubes.blend"), "/golem/resource/scene.blend");
   });
 
-  const results = executor.map(utils.range(0, 60, 10), async (ctx, frame) => {
+  const results = executor.map([0, 10, 20, 30, 40, 50], async (ctx, frame) => {
     const result = await ctx
       .beginBatch()
       .uploadJson(blender_params(frame), "/golem/work/params.json")
@@ -58,7 +58,4 @@ program
   .option("-d, --debug", "output extra debugging");
 program.parse();
 const options = program.opts();
-if (options.debug) {
-  utils.changeLogLevel("debug");
-}
-main(options.subnetTag, options.driver, options.network);
+main(options.subnetTag, options.driver, options.network, options.debug);
