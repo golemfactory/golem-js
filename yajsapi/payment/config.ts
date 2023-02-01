@@ -107,7 +107,7 @@ export class AccountConfig extends BaseConfig {
     if (!apiKey) throw new Error("Api key not defined");
     const yagnaOptions: YagnaOptions = {
       apiKey,
-      basePath: options?.yagnaOptions?.basePath || DEFAULTS.basePath,
+      basePath: options?.yagnaOptions?.basePath || process.env.YAGNA_API_URL || DEFAULTS.basePath,
     };
     super({ ...options, yagnaOptions });
   }
