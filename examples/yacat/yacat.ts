@@ -1,10 +1,9 @@
-import { createExecutor, utils } from "../../dist";
+import { TaskExecutor } from "../../dist";
 import { program } from "commander";
-
 async function main(args) {
   const executor = await TaskExecutor.create({
     package: "055911c811e56da4d75ffc928361a78ed13077933ffa8320fb1ec2db",
-    maxWorkers: args.numberOfProviders,
+    maxParallelTasks: args.numberOfProviders,
     budget: 10,
     subnetTag: args.subnetTag,
     payment: { driver: args.paymentDriver, network: args.paymentNetwork },
@@ -18,9 +17,9 @@ async function main(args) {
   if (!keyspace) throw new Error(`Cannot calculate keyspace`);
   console.log(`Keyspace size computed. Keyspace size = ${keyspace}.`);
   const step = Math.floor(keyspace / args.numberOfProviders + 1);
-  const ranges = utils.range(0, keyspace, step);
+  const range = [...Array(Math.floor(keyspace / step)).keys()].map((i) => i + step);
 
-  const results = executor.map(ranges, async (ctx, skip) => {
+  const results = executor.map(range, async (ctx, skip = 0) => {
     const results = await ctx
       .beginBatch()
       .run(`hashcat -a 3 -m 400 '${args.hash}' '${args.mask}' --skip=${skip} --limit=${skip + step} -o pass.potfile`)

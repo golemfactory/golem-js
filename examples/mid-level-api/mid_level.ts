@@ -1,20 +1,28 @@
-import { Package } from "../../yajsapi/package";
-import { Allocation } from "../../yajsapi/payment";
-import { Demand, DemandEvent, DemandEventType, Proposal } from "../../yajsapi/market";
-import { Agreement } from "../../yajsapi/agreement";
-import { Activity, Result } from "../../yajsapi/activity";
-import { Deploy, Run, Script, Start } from "../../yajsapi/script";
+import {
+  Package,
+  Accounts,
+  Allocation,
+  Demand,
+  DemandEvent,
+  DemandEventType,
+  Proposal,
+  Agreement,
+  Activity,
+  Result,
+  Deploy,
+  Run,
+  Script,
+  Start,
+} from "../../yajsapi/";
 import { ConsoleLogger } from "../../yajsapi/utils";
-
-const subnetTag = "devnet-beta";
-const account = { platform: "erc20-rinkeby-tglm", address: "0x19ee20338a4c4bf8f6aebc79d9d3af2a01434119" };
-const imageHash = "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae";
-const logger = new ConsoleLogger();
-
 async function main() {
-  const taskPackage = await Package.create({ imageHash });
+  const logger = new ConsoleLogger();
+  const taskPackage = await Package.create({ imageHash: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae" });
+  const accounts = await (await Accounts.create()).list();
+  const account = accounts.find((account) => account?.platform.indexOf("erc20") !== -1);
+  if (!account) throw new Error("There is no available account");
   const allocation = await Allocation.create({ account, logger });
-  const demand = await Demand.create(taskPackage, [allocation], { subnetTag, logger });
+  const demand = await Demand.create(taskPackage, [allocation], { logger });
   const offer: Proposal = await new Promise((res) =>
     demand.addEventListener(DemandEventType, async (event) => {
       const proposalEvent = event as DemandEvent;

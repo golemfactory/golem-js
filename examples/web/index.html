@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Golem App</title>
+    <script src="./js/bundle.js"></script>
+</head>
+<body>
+<button onclick="run()">Run</button>
+<div class="container">
+    <div>
+        <p>Results</p>
+        <pre id="results"></pre>
+    </div>
+    <div>
+        <p>Logs</p>
+        <pre id="logs"></pre>
+    </div>
+</div>
+<script>
+function appendResults(result) {
+  const results = document.getElementById('results');
+  const div = document.createElement('div');
+  div.appendChild(document.createTextNode(result));
+  results.appendChild(div);
+}
+function appendLog(msg, level = 'info') {
+  const logs = document.getElementById('logs');
+  const div = document.createElement('div');
+  div.appendChild(document.createTextNode(`[${new Date().toISOString()}] [${level}] ${msg}`));
+  logs.appendChild(div);
+}
+const logger = {
+  log: (msg) => appendLog(msg),
+  warn: (msg) => appendLog(msg, 'warn'),
+  debug: (msg) => appendLog(msg, 'debug'),
+  error: (msg) => appendLog(msg, 'error'),
+  info: (msg) => appendLog(msg, 'info'),
+  table: (msg) => appendLog(JSON.stringify(msg, null, "\t")),
+}
+async function run() {
+  const executor = await yajsapi.TaskExecutor.create({
+    package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+    yagnaOptions: { apiKey: '411aa8e620954a318093687757053b8d' },
+    logger
+  }).catch(e => logger.error(e));
+  await executor
+    .run(async (ctx) => appendResults((await ctx.run("echo 'Hello World'")).stdout))
+    .catch(e => logger.error(e));
+  await executor.end();
+}
+</script>
+</body>
+</html>

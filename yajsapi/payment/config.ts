@@ -103,6 +103,12 @@ export class InvoiceConfig extends BaseConfig {
 
 export class AccountConfig extends BaseConfig {
   constructor(options?: AccountsOptions) {
-    super(options);
+    const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
+    if (!apiKey) throw new Error("Api key not defined");
+    const yagnaOptions: YagnaOptions = {
+      apiKey,
+      basePath: options?.yagnaOptions?.basePath || DEFAULTS.basePath,
+    };
+    super({ ...options, yagnaOptions });
   }
 }

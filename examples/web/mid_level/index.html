@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Golem App</title>
+</head>
+<body>
+<div class="container">
+  <div>
+    <p>Actions</p>
+    <button id="createPackage" onclick="createPackage()">Create Package</button>
+    <button id="createAllocation" onclick="createAllocation()">Create Allocation</button>
+    <button id="createDemand" onclick="createDemand()">Create Demand</button>
+    <button id="respondProposal" onclick="respondProposal()">Confirm Proposal</button>
+    <button id="createAgreement" onclick="createAgreement()">Create Agreement</button>
+    <button id="confirmAgreement" onclick="confirmAgreement()">Confirm Agreement</button>
+    <button id="createActivity"  onclick="createActivity()">Create Activity</button>
+    <span>
+      <label for="command">Run: </label>
+      <span class="row padding-0">
+        <input id="command" type="text" />
+        <button id="execute" onclick="run()">Execute</button>
+      </span>
+    </span>
+  </div>
+  <div>
+    <p>Results</p>
+    <pre id="results"></pre>
+  </div>
+  <div>
+    <p>Logs</p>
+    <pre id="logs"></pre>
+  </div>
+</div>
+<script></script>
+</body>
+</html>
+
+
+
