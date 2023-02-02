@@ -69,9 +69,9 @@ For a comprehensive API reference, please refer to [our official API reference p
 
 ### Usage
 
-gif 1
+![](./docs/assets/hello.gif)
 
-gif2
+![](./docs/assets/hello_web.gif)
 
 Tutorial (link)
 
