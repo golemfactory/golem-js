@@ -35,12 +35,65 @@ yarn add yajsapi
 
 ### Building
 
+To build a library available to the nodejs environment:
+
+```bash
+npm run build
+```
+
+or
+
+```bash
+yarn build
+```
+
+This will generate production code in the `dist/` directory ready to be used in your nodejs applications.
+
+To build a browser runnable library:
+
+```bash
+npm run build:browser
+```
+
+or 
+
+```bash
+yarn build:browser
+```
+
+Then include `dist/yajsapi.min.js` in your html file.
+
 ### API Reference
 
 For a comprehensive API reference, please refer to [our official API reference page](https://handbook.golem.network/yajsapi/).
 
 ### Usage
 
+gif 1
+
+gif2
+
+Tutorial (link)
+
 ### Testing
 
-### Contributting
+### Running unit tests
+
+```bash
+npm run test:unit
+```
+
+or
+
+```bash
+yarn test:unit
+```
+
+### Running integration tests
+
+#### Nodejs
+
+#### Cypress
+
+### Contributing
+  - todo
