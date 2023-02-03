@@ -8,6 +8,11 @@ import { spawn } from "child_process";
 
 const TMP_DIR = tmp.dirSync().name;
 
+/**
+ * GFTP Storage Provide
+ *
+ * @description
+ */
 export class GftpStorageProvider implements StorageProvider {
   private gftpServerProcess;
   private reader;

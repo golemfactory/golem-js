@@ -43,11 +43,10 @@ export interface ActivityOptions {
   logger?: Logger;
   /** Event Bus implements EventTarget  */
   eventTarget?: EventTarget;
+  /** taskPackage */
+  taskPackage?: string;
 }
 
-/**
- * @category Mid-level
- */
 export class Activity {
   private readonly logger?: Logger;
   private isRunning = true;

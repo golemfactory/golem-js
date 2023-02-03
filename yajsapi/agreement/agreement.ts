@@ -54,6 +54,7 @@ export class Agreement {
    * @param id - agreement ID
    * @param provider - {@link ProviderInfo}
    * @param options - {@link AgreementConfig}
+   * @hidden
    */
   constructor(public readonly id, public readonly provider: ProviderInfo, private readonly options: AgreementConfig) {
     this.logger = options.logger;

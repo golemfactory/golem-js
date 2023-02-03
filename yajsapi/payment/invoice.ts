@@ -5,7 +5,7 @@ import { Rejection } from "./rejection";
 
 export type InvoiceOptions = BasePaymentOptions;
 
-interface BaseModel {
+export interface BaseModel {
   issuerId: string;
   recipientId: string;
   payeeAddr: string;
@@ -73,6 +73,13 @@ export class Invoice extends BaseNote<Model> {
     return new Invoice(model, config);
   }
 
+  /**
+   *
+   * @param model
+   * @param options
+   * @protected
+   * @hidden
+   */
   protected constructor(model: Model, protected options: InvoiceConfig) {
     super(model, options);
     this.id = model.invoiceId;

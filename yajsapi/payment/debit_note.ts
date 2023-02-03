@@ -29,6 +29,13 @@ export class DebitNote extends BaseNote<Model> {
     return new DebitNote(model, config);
   }
 
+  /**
+   *
+   * @param model
+   * @param options
+   * @protected
+   * @hidden
+   */
   protected constructor(model: Model, protected options: InvoiceConfig) {
     super(model, options);
     this.id = model.debitNoteId;

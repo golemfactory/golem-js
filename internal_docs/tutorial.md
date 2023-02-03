@@ -1,8 +1,8 @@
-# New Task API
+# Tutorial - How to get started fast
+
+## High-Level API
 
 The new version of the Task API introduces a simplified interface for executing commands in the Golem network.
-
-## The basic algorithm
 
 ### 1. Creating an Executor instance
 

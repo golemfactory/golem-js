@@ -18,6 +18,9 @@ export interface TaskOptions extends ActivityOptions {
   storageProvider?: StorageProvider;
 }
 
+/**
+ * @internal
+ */
 export class TaskService {
   private activeTasksCount = 0;
   private activities = new Map<string, Activity>();

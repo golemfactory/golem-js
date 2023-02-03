@@ -13,6 +13,9 @@ const DEFAULTS = {
   agreementWaitingForApprovalTimeout: 60,
 };
 
+/**
+ * @internal
+ */
 export class AgreementConfig {
   readonly agreementRequestTimeout: number;
   readonly agreementWaitingForApprovalTimeout: number;
@@ -34,6 +37,9 @@ export class AgreementConfig {
   }
 }
 
+/**
+ * @internal
+ */
 export class AgreementServiceConfig extends AgreementConfig {
   readonly agreementEventPoolingInterval: number;
   readonly agreementEventPoolingMaxEventsPerRequest: number;

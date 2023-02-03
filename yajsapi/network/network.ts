@@ -77,6 +77,13 @@ export class Network {
     }
   }
 
+  /**
+   *
+   * @param id
+   * @param config
+   * @private
+   * @hidden
+   */
   private constructor(public readonly id: string, public readonly config: NetworkConfig) {
     this.ipRange = IPv4CidrRange.fromCidr(config.mask ? `${config.ip}/${config.mask}` : config.ip);
     this.ipIterator = this.ipRange[Symbol.iterator]();

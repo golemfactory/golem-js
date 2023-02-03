@@ -15,6 +15,9 @@ const DEFAULTS = {
   debitNotesAcceptanceTimeout: 30,
 };
 
+/**
+ * @internal
+ */
 export class DemandConfig {
   public readonly api: RequestorApi;
   public readonly yagnaOptions?: YagnaOptions;
@@ -44,6 +47,9 @@ export class DemandConfig {
   }
 }
 
+/**
+ * @internal
+ */
 export class MarketConfig extends DemandConfig {
   readonly debitNotesAcceptanceTimeout: number;
   constructor(options?: MarketOptions) {

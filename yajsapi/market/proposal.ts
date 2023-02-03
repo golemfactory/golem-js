@@ -27,7 +27,7 @@ export class Proposal {
    */
   constructor(
     private readonly subscriptionId: string,
-    private readonly api: RequestorApi,
+    private readonly api: RequestorApi, // TODO: why API explicitly?
     model: ProposalModel,
     private readonly demandRequest: DemandOfferBase,
     private eventTarget?: EventTarget

@@ -15,6 +15,9 @@ export enum PackageFormat {
   GVMKIT_SQUASH = "gvmkit-squash",
 }
 
+/**
+ * @internal
+ */
 export class PackageConfig {
   readonly packageFormat: string;
   readonly imageHash: string;

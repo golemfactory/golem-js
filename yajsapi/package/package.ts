@@ -26,9 +26,6 @@ export interface PackageOptions {
   logger?: Logger;
 }
 
-/**
- * @category Mid-level
- */
 export class Package {
   private logger?: Logger;
 

@@ -24,14 +24,8 @@ export interface DemandOptions {
   eventTarget?: EventTarget;
 }
 
-/**
- * @category Mid-level
- */
 export const DemandEventType = "ProposalReceived";
 
-/**
- * @category Mid-level
- */
 export class Demand extends EventTarget {
   private isRunning = true;
   private logger?: Logger;
@@ -54,6 +48,7 @@ export class Demand extends EventTarget {
    * @param id - demand ID
    * @param demandRequest - {@link DemandOfferBase}
    * @param options - {@link DemandConfig}
+   * @hidden
    */
   constructor(public readonly id, private demandRequest: DemandOfferBase, private options: DemandConfig) {
     super();
