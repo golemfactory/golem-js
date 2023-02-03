@@ -42,6 +42,7 @@ export interface AgreementOptions {
   eventTarget?: EventTarget;
 }
 /**
+ * Agreement module - an object representing the contract between the requestor and the provider.
  * @category Mid-level
  */
 export class Agreement {
@@ -49,8 +50,6 @@ export class Agreement {
   private logger?: Logger;
 
   /**
-   * Create agreement instance
-   *
    * @param id - agreement ID
    * @param provider - {@link ProviderInfo}
    * @param options - {@link AgreementConfig}

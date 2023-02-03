@@ -1,3 +1,6 @@
+/**
+ * Global Event Type with which all API events will be emitted. It should be used on all listeners that would like to handle events.
+ */
 export const EventType = "GolemEvent";
 
 // Temporary polyfill

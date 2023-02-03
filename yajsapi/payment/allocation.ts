@@ -12,6 +12,7 @@ export interface AllocationOptions extends BasePaymentOptions {
 }
 
 /**
+ * Allocation module - an object represents a designated sum of money reserved for the purpose of making some particular payments. Allocations are currently purely virtual objects. An Allocation is connected to a payment account (wallet) specified by address and payment platform field.
  * @category Mid-level
  */
 export class Allocation {
@@ -68,8 +69,6 @@ export class Allocation {
   }
 
   /**
-   * Create allocation for given ya-ts-client allocation model
-   *
    * @param options - {@link AllocationConfig}
    * @param model - {@link Model}
    * @hidden

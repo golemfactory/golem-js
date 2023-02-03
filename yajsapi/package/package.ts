@@ -26,6 +26,10 @@ export interface PackageOptions {
   logger?: Logger;
 }
 
+/**
+ * Package module - an object for descriptions of the payload required by the requestor.
+ * @category Mid-level
+ */
 export class Package {
   private logger?: Logger;
 

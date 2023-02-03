@@ -19,6 +19,9 @@ export enum ActivityStateEnum {
   Terminated = "Terminated",
 }
 
+/**
+ * @category Mid-level
+ */
 export interface ExeScriptRequest {
   text: string;
 }
@@ -43,17 +46,18 @@ export interface ActivityOptions {
   logger?: Logger;
   /** Event Bus implements EventTarget  */
   eventTarget?: EventTarget;
-  /** taskPackage */
-  taskPackage?: string;
 }
 
+/**
+ * Activity module - an object representing the runtime environment on the provider in accordance with the `Package` specification.
+ * As part of a given activity, it is possible to execute exe script commands and capture their results.
+ * @category Mid-level
+ */
 export class Activity {
   private readonly logger?: Logger;
   private isRunning = true;
 
   /**
-   * Create activity instance
-   *
    * @param id activity ID
    * @param agreementId agreement ID
    * @param options - {@link ActivityOptions}

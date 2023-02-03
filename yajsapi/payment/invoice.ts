@@ -5,6 +5,9 @@ import { Rejection } from "./rejection";
 
 export type InvoiceOptions = BasePaymentOptions;
 
+/**
+ * @category Mid-level
+ */
 export interface BaseModel {
   issuerId: string;
   recipientId: string;
@@ -16,6 +19,9 @@ export interface BaseModel {
   status: InvoiceStatus;
 }
 
+/**
+ * @category Mid-level
+ */
 export abstract class BaseNote<ModelType extends BaseModel> {
   public abstract readonly id: string;
   public readonly providerId: string;
@@ -47,6 +53,7 @@ export abstract class BaseNote<ModelType extends BaseModel> {
 }
 
 /**
+ * An Invoice is an artifact issued by the Provider to the Requestor, in the context of a specific Agreement. It indicates the total Amount owed by the Requestor in this Agreement. No further Debit Notes shall be issued after the Invoice is issued. The issue of Invoice signals the Termination of the Agreement (if it hasn't been terminated already). No Activity execution is allowed after the Invoice is issued.
  * @category Mid-level
  */
 export class Invoice extends BaseNote<Model> {
@@ -74,7 +81,6 @@ export class Invoice extends BaseNote<Model> {
   }
 
   /**
-   *
    * @param model
    * @param options
    * @protected

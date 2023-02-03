@@ -7,6 +7,9 @@ import { Allocation } from "../payment";
 import { DemandEvent } from "./demand";
 import { MarketConfig } from "./config";
 
+/**
+ * @internal
+ */
 export interface MarketOptions extends DemandOptions {
   /** Strategy used to choose best offer */
   strategy?: MarketStrategy;

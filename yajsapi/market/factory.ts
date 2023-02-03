@@ -6,8 +6,7 @@ import * as events from "../events/events";
 import { DecorationsBuilder, MarketDecoration } from "./builder";
 
 /**
- * DemandFactory
- * @description Use {@link Demand.create} instead
+ * @internal
  */
 export class DemandFactory {
   private options: DemandConfig;

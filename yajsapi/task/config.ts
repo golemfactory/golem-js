@@ -10,6 +10,9 @@ const DEFAULTS = {
   activityStateCheckingInterval: 1000,
 };
 
+/**
+ * @internal
+ */
 export class TaskConfig extends ActivityConfig {
   public readonly maxParallelTasks: number;
   public readonly taskRunningInterval: number;

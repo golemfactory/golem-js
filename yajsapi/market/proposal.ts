@@ -4,6 +4,7 @@ import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
 import { Events } from "../events";
 
 /**
+ * Proposal module - an object representing an offer in the state of a proposal from the provider.
  * @category Mid-level
  */
 export class Proposal {
@@ -73,7 +74,7 @@ export class Proposal {
     this.eventTarget?.dispatchEvent(new Events.ProposalRejected({ id: this.id, providerId: this.issuerId }));
   }
 
-  async respond(chosenPlatform) {
+  async respond(chosenPlatform: string) {
     this.demandRequest.properties["golem.com.payment.chosen-platform"] = chosenPlatform;
     await this.api
       .counterProposalDemand(this.subscriptionId, this.id, this.demandRequest, { timeout: 20000 })

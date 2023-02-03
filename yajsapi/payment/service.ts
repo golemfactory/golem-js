@@ -6,6 +6,9 @@ import { DebitNote } from "./debit_note";
 import { Events } from "../events";
 import { Accounts } from "./accounts";
 
+/**
+ * @internal
+ */
 export interface PaymentOptions extends BasePaymentOptions {
   invoiceFetchingInterval?: number;
   debitNotesFetchingInterval?: number;

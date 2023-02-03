@@ -13,6 +13,9 @@ const DEFAULTS = {
   taskTimeout: 1000 * 60 * 3, // 3 min,
 };
 
+/**
+ * @internal
+ */
 export class ExecutorConfig {
   readonly package: Package | string;
   readonly maxParallelTasks: number;

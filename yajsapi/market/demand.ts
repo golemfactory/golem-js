@@ -24,14 +24,24 @@ export interface DemandOptions {
   eventTarget?: EventTarget;
 }
 
+/**
+ * Event type with which all offers and proposals coming from the market will be emitted.
+ * @category Mid-level
+ */
 export const DemandEventType = "ProposalReceived";
 
+/**
+ * Demand module - an object which can be considered an "open" or public Demand, as it is not directed at a specific Provider, but rather is sent to the market so that the matching mechanism implementation can associate relevant Offers.
+ * It is a special entity type because it inherits from the `EventTarget` class. Therefore, after creating it, you can add listeners to it, which will listen to offers from the market on an event of a specific type: `DemandEventType`.
+ * @category Mid-level
+ */
 export class Demand extends EventTarget {
   private isRunning = true;
   private logger?: Logger;
 
   /**
    * Create demand for given taskPackage
+   * Note: it is an "atomic" operation, ie. as soon as Demand is created, the subscription is published on the market.
    * @param taskPackage - {@link Package}
    * @param allocations - {@link Allocation}
    * @param options - {@link DemandOptions}
@@ -43,8 +53,6 @@ export class Demand extends EventTarget {
   }
 
   /**
-   * Create demand instance
-   *
    * @param id - demand ID
    * @param demandRequest - {@link DemandOfferBase}
    * @param options - {@link DemandConfig}
@@ -57,7 +65,7 @@ export class Demand extends EventTarget {
   }
 
   /**
-   * Unsubscribe demand
+   * Unsubscribe demand from the market
    */
   async unsubscribe() {
     this.isRunning = false;

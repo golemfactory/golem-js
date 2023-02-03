@@ -31,7 +31,9 @@ export interface BasePaymentOptions {
   logger?: Logger;
   eventTarget?: EventTarget;
 }
-
+/**
+ * @internal
+ */
 abstract class BaseConfig {
   public readonly yagnaOptions?: YagnaOptions;
   public readonly paymentTimeout: number;
@@ -58,7 +60,9 @@ abstract class BaseConfig {
     this.paymentRequestTimeout = options?.paymentRequestTimeout || DEFAULTS.paymentRequestTimeout;
   }
 }
-
+/**
+ * @internal
+ */
 export class PaymentConfig extends BaseConfig {
   public readonly invoiceFetchingInterval: number;
   public readonly debitNotesFetchingInterval: number;
@@ -75,7 +79,9 @@ export class PaymentConfig extends BaseConfig {
     this.payingInterval = options?.payingInterval || DEFAULTS.payingInterval;
   }
 }
-
+/**
+ * @internal
+ */
 export class AllocationConfig extends BaseConfig {
   public readonly budget: number;
   public readonly payment: { driver: string; network: string };
@@ -94,7 +100,9 @@ export class AllocationConfig extends BaseConfig {
     this.expires = options?.expires || DEFAULTS.allocationExpires;
   }
 }
-
+/**
+ * @internal
+ */
 export class InvoiceConfig extends BaseConfig {
   constructor(options?: InvoiceOptions) {
     super(options);
