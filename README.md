@@ -107,7 +107,7 @@ yarn test:unit
 
 ### Running integration tests
 
-Both test cases for the nodejs environment and the browser (cypress) require preparation of a test environment of the golem network with providers and all the necessary infrastructure. [Goth](https://github.com/golemfactory/goth) framework is used for this purpose..
+Both test cases for the nodejs environment and the browser (cypress) require preparation of a test environment of the golem network with providers and all the necessary infrastructure. [Goth](https://github.com/golemfactory/goth) framework is used for this purpose.
 
 To enable integration testing, you need to ensure that `python -m goth` is executable. Therefore, you must first install [Goth](https://github.com/golemfactory/goth) according to the instructions described in the readme of the project.
 
@@ -157,3 +157,6 @@ yarn format
     * [Run first task on Golem](https://handbook.golem.network/requestor-tutorials/flash-tutorial-of-requestor-development/run-first-task-on-golem)
 * Have a look at the most important concepts behind any Golem application: [Golem application fundamentals](https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals)
 * Learn about preparing your own Docker-like images for the [VM runtime](https://handbook.golem.network/requestor-tutorials/vm-runtime)
+* Write your own app with JavaScript API:
+    * [High-level API](https://handbook.golem.network/todo1)
+    * [Mid-level API](https://handbook.golem.network/todo2)
