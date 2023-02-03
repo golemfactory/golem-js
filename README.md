@@ -82,10 +82,10 @@ import { TaskExecutor } from "yajsapi";
 ```
 
 #### Node.js context
-![](docs/assets/hello_nodejs.gif)
+![](doc/assets/hello_nodejs.gif)
 
 #### Web Browser context
-![](docs/assets/hello_web.gif)
+![](doc/assets/hello_web.gif)
 
 For more detailed usage examples and tutorials, see the [Java Script API section of the Handbook](https://handbook.golem.network/yajsapi/)
 
