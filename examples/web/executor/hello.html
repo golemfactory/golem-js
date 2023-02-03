@@ -78,7 +78,7 @@
             table: (msg) => appendLog(JSON.stringify(msg, null, "\t")),
         }
         async function run() {
-          const apiKey = '411aa8e620954a318093687757053b8d';
+          const apiKey = document.getElementById('YAGNA_APPKEY').value;
           const basePath = document.getElementById('YAGNA_API_BASEPATH').value;
           const subnetTag = document.getElementById('SUBNET_TAG').value;
           const imageHash = document.getElementById('IMAGE_HASH').value;
