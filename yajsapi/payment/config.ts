@@ -1,5 +1,5 @@
 import { AllocationOptions } from "./allocation.js";
-import { Configuration } from "ya-ts-client/dist/ya-payment";
+import { Configuration } from "ya-ts-client/dist/ya-payment/index.js";
 import { RequestorApi } from "ya-ts-client/dist/ya-payment/api.js";
 import { Logger } from "../utils/index.js";
 import { YagnaOptions } from "../executor/index.js";

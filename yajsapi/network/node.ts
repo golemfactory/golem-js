@@ -1,4 +1,4 @@
-import { IPv4 } from "ip-num/index.js";
+import { IPv4 } from "ip-num";
 import { NetworkInfo } from "./network.js";
 
 /**

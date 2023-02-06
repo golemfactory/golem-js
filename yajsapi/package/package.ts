@@ -1,7 +1,7 @@
 import { ComparisonOperator, DecorationsBuilder, MarketDecoration } from "../market/builder.js";
 import { RepoResolver } from "./repo_resolver.js";
 import { Logger } from "../utils/index.js";
-import axios from "axios/index.js";
+import axios from "axios";
 import { PackageConfig } from "./config.js";
 
 /**

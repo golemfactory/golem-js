@@ -1,4 +1,4 @@
-import axios from "axios/index.js";
+import axios from "axios";
 import { Logger, runtimeContextChecker } from "../utils/index.js";
 
 const FALLBACK_REPO_URL = "http://girepo.dev.golem.network:8000";

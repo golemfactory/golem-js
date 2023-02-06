@@ -123,7 +123,7 @@ export class TaskExecutor {
     this.paymentService = new PaymentService(this.options);
     this.marketService = new MarketService(this.agreementPoolService, this.options);
     this.networkService = this.options.networkIp ? new NetworkService(this.options) : undefined;
-    this.storageProvider = runtimeContextChecker.isNode ? new GftpStorageProvider() : undefined;
+    this.storageProvider = runtimeContextChecker.isNode ? new GftpStorageProvider(this.logger) : undefined;
     this.taskService = new TaskService(
       this.taskQueue,
       this.agreementPoolService,
@@ -153,7 +153,6 @@ export class TaskExecutor {
     this.storageProvider?.init().catch((e) => this.handleCriticalError(e));
     this.handleCancelEvent();
     this.options.eventTarget.dispatchEvent(new Events.ComputationStarted());
-    this.storageProvider = runtimeContextChecker.isNode ? new GftpStorageProvider() : undefined;
     this.logger?.info(
       `Task Executor has started using subnet ${this.options.subnetTag}, network: ${this.options.payment?.network}, driver: ${this.options.payment?.driver}`
     );
@@ -280,6 +279,7 @@ export class TaskExecutor {
       await sleep(2000, true);
     }
     clearTimeout(timeoutId);
+    if (timeout) this.logger?.warn(`Task ${task.id} timeout.`);
   }
 
   private handleCriticalError(e: Error) {

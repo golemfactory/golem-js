@@ -1,4 +1,4 @@
-import winston from "winston/index.js";
+import winston from "winston";
 import { Logger } from "./logger.js";
 import path from "path";
 
