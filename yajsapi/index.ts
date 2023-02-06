@@ -1,10 +1,10 @@
 // High level API
-export { TaskExecutor } from "./executor";
+export { TaskExecutor } from "./executor/index.js";
 
 // Mid level API
-export { Activity, ActivityOptions, ActivityStateEnum, Result } from "./activity";
-export { Agreement, AgreementOptions, AgreementStateEnum } from "./agreement";
-export { Demand, DemandEvent, DemandEventType, DemandOptions, Proposal } from "./market";
-export { Package, PackageOptions } from "./package";
-export { Invoice, DebitNote, Allocation, Accounts } from "./payment";
-export { Script, Run, Deploy, Start } from "./script";
+export { Activity, ActivityOptions, ActivityStateEnum, Result } from "./activity/index.js";
+export { Agreement, AgreementOptions, AgreementStateEnum } from "./agreement/index.js";
+export { Demand, DemandEvent, DemandEventType, DemandOptions, Proposal } from "./market/index.js";
+export { Package, PackageOptions } from "./package/index.js";
+export { Invoice, DebitNote, Allocation, Accounts } from "./payment/index.js";
+export { Script, Run, Deploy, Start } from "./script/index.js";

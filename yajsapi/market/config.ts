@@ -1,9 +1,9 @@
-import { DemandOptions } from "./demand";
-import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
-import { Configuration } from "ya-ts-client/dist/ya-market";
-import { Logger } from "../utils";
-import { MarketOptions } from "./service";
-import { YagnaOptions } from "../executor";
+import { DemandOptions } from "./demand.js";
+import { RequestorApi } from "ya-ts-client/dist/ya-market/api.js";
+import { Configuration } from "ya-ts-client/dist/ya-market/index.js";
+import { Logger } from "../utils/index.js";
+import { MarketOptions } from "./service.js";
+import { YagnaOptions } from "../executor/index.js";
 
 const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",

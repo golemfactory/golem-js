@@ -1,6 +1,6 @@
-import { Proposal } from "../market";
-import { MarketDecoration } from "ya-ts-client/dist/ya-payment/src/models";
-import { Logger } from "../utils";
+import { Proposal } from "./index.js";
+import { MarketDecoration } from "ya-ts-client/dist/ya-payment/src/models/index.js";
+import { Logger } from "../utils/index.js";
 
 export const SCORE_NEUTRAL = 0.0;
 export const SCORE_REJECTED = -1.0;

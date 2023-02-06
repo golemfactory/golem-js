@@ -1,12 +1,12 @@
-import { Task, WorkContext, TaskQueue } from "./";
-import { Logger, sleep } from "../utils";
-import { StorageProvider } from "../storage";
-import { AgreementPoolService } from "../agreement";
-import { PaymentService } from "../payment";
-import { NetworkService } from "../network";
-import { Activity, ActivityOptions } from "../activity";
-import { TaskConfig } from "./config";
-import { Events } from "../events";
+import { Task, WorkContext, TaskQueue } from './index.js';
+import { Logger, sleep } from '../utils/index.js';
+import { StorageProvider } from '../storage/index.js';
+import { AgreementPoolService } from '../agreement/index.js';
+import { PaymentService } from '../payment/index.js';
+import { NetworkService } from '../network/index.js';
+import { Activity, ActivityOptions } from '../activity/index.js';
+import { TaskConfig } from './config.js';
+import { Events } from '../events/index.js';
 
 export interface TaskOptions extends ActivityOptions {
   /** Number of maximum parallel running task on one TaskExecutor instance */

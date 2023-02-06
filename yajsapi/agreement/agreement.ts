@@ -1,9 +1,9 @@
-import { Logger } from "../utils";
-import { Agreement as AgreementModel } from "ya-ts-client/dist/ya-market/src/models";
-import { YagnaOptions } from "../executor";
-import { AgreementFactory } from "./factory";
-import { AgreementConfig } from "./config";
-import { Events } from "../events";
+import { Logger } from "../utils/index.js";
+import { Agreement as AgreementModel } from "ya-ts-client/dist/ya-market/src/models/index.js";
+import { YagnaOptions } from "../executor/index.js";
+import { AgreementFactory } from "./factory.js";
+import { AgreementConfig } from "./config.js";
+import { Events } from "../events/index.js";
 
 /**
  * @category Mid-level

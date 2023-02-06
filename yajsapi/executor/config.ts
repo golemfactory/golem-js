@@ -1,7 +1,7 @@
-import { ExecutorOptions } from "./executor";
-import { Package } from "../package";
-import { MarketStrategy } from "../market";
-import { Logger, runtimeContextChecker, winstonLogger } from "../utils";
+import { ExecutorOptions } from './executor.js';
+import { Package } from '../package/index.js';
+import { MarketStrategy } from '../market/index.js';
+import { Logger, runtimeContextChecker, winstonLogger } from '../utils/index.js';
 
 const DEFAULTS = {
   budget: 1.0,

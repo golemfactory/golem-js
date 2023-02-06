@@ -1,5 +1,5 @@
-import winston from "winston";
-import { Logger } from "./logger";
+import winston from "winston/index.js";
+import { Logger } from "./logger.js";
 import path from "path";
 
 const { colorize, combine, timestamp, label, printf } = winston.format;

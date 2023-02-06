@@ -1,8 +1,8 @@
-import { ActivityOptions } from "./activity";
-import { yaActivity } from "ya-ts-client";
-import { RequestorControlApi, RequestorStateApi } from "ya-ts-client/dist/ya-activity/api";
-import { Logger } from "../utils";
-import { YagnaOptions } from "../executor";
+import { ActivityOptions } from "./activity.js";
+import { yaActivity } from "ya-ts-client/index.js";
+import { RequestorControlApi, RequestorStateApi } from "ya-ts-client/dist/ya-activity/api.js";
+import { Logger } from "../utils/index.js";
+import { YagnaOptions } from "../executor/index.js";
 
 const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",

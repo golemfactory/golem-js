@@ -1,2 +1,2 @@
-export * as Events from "./events";
-export { EventType, BaseEvent } from "./events";
+export * as Events from './events.js';
+export { EventType, BaseEvent } from './events.js';

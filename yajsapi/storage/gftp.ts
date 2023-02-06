@@ -1,9 +1,9 @@
-import { StorageProvider } from "./provider";
-import { Logger, runtimeContextChecker } from "../utils";
+import { StorageProvider } from "./provider.js";
+import { Logger, runtimeContextChecker } from "../utils/index.js";
 import path from "path";
 import fs from "fs";
-import tmp from "tmp";
-import { chomp, chunksToLinesAsync, streamEnd, streamWrite } from "@rauschma/stringio";
+import tmp from "tmp/lib/tmp.js";
+import { chomp, chunksToLinesAsync, streamEnd, streamWrite } from "@rauschma/stringio/dist/src/index.js";
 import { spawn } from "child_process";
 
 const TMP_DIR = tmp.dirSync().name;

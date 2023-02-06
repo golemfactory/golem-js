@@ -1,2 +1,2 @@
-export { Script } from "./script";
-export { Command, Run, Deploy, Start, Transfer, Terminate, UploadFile, DownloadFile, Capture } from "./command";
+export { Script } from './script.js';
+export { Command, Run, Deploy, Start, Transfer, Terminate, UploadFile, DownloadFile, Capture } from './command.js';

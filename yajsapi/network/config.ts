@@ -1,7 +1,7 @@
-import { NetworkOptions } from "./network";
-import { RequestorApi } from "ya-ts-client/dist/ya-net/api";
-import { Configuration } from "ya-ts-client/dist/ya-payment";
-import { Logger } from "../utils";
+import { NetworkOptions } from "./network.js";
+import { RequestorApi } from "ya-ts-client/dist/ya-net/api.js";
+import { Configuration } from "ya-ts-client/dist/ya-payment/index.js";
+import { Logger } from "../utils/index.js";
 
 const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",

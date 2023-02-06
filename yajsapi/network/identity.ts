@@ -1,7 +1,7 @@
 // TODO: replace with a proper REST API client once ya-client and ya-ts-client are updated
 // https://github.com/golemfactory/yajsapi/issues/290
-import axios from "axios";
-import { YagnaOptions } from "../executor";
+import axios from "axios/index.js";
+import { YagnaOptions } from "../executor/index.js";
 
 export const getIdentity = async (options?: { yagnaOptions?: YagnaOptions }): Promise<string> => {
   const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;

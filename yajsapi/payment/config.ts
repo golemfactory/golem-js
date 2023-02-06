@@ -1,11 +1,11 @@
-import { AllocationOptions } from "./allocation";
+import { AllocationOptions } from "./allocation.js";
 import { Configuration } from "ya-ts-client/dist/ya-payment";
-import { RequestorApi } from "ya-ts-client/dist/ya-payment/api";
-import { Logger } from "../utils";
-import { YagnaOptions } from "../executor";
-import { PaymentOptions } from "./service";
-import { InvoiceOptions } from "./invoice";
-import { AccountsOptions } from "./accounts";
+import { RequestorApi } from "ya-ts-client/dist/ya-payment/api.js";
+import { Logger } from "../utils/index.js";
+import { YagnaOptions } from "../executor/index.js";
+import { PaymentOptions } from "./service.js";
+import { InvoiceOptions } from "./invoice.js";
+import { AccountsOptions } from "./accounts.js";
 
 const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",

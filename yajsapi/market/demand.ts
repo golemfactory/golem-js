@@ -1,13 +1,13 @@
-import { Package } from "../package";
-import { Allocation } from "../payment";
-import { YagnaOptions } from "../executor";
-import { DemandFactory } from "./factory";
-import { Proposal } from "./proposal";
-import { Logger, sleep } from "../utils";
-import { DemandConfig } from "./config";
-import { Events } from "../events";
-import { ProposalEvent } from "ya-ts-client/dist/ya-market/src/models";
-import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
+import { Package } from "../package/index.js";
+import { Allocation } from "../payment/index.js";
+import { YagnaOptions } from "../executor/index.js";
+import { DemandFactory } from "./factory.js";
+import { Proposal } from "./proposal.js";
+import { Logger, sleep } from "../utils/index.js";
+import { DemandConfig } from "./config.js";
+import { Events } from "../events/index.js";
+import { ProposalEvent } from "ya-ts-client/dist/ya-market/src/models/index.js";
+import { DemandOfferBase } from "ya-ts-client/dist/ya-market/index.js";
 
 /**
  * @category Mid-level

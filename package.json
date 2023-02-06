@@ -33,6 +33,7 @@
   "engines": {
     "node": ">=16.0.0"
   },
+  "type": "module",
   "dependencies": {
     "@rauschma/stringio": "^1.4.0",
     "axios": "^1.1.3",
