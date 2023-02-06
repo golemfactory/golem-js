@@ -37,6 +37,7 @@ function capitalizeFirstLetter(string) {
   }
 
   logStream.end("");
+  console.info("🪄 GitBook summary successfully generated");
 })().catch((e) => {
   console.error(e.message);
 });
