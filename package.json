@@ -10,7 +10,7 @@
     "build:browser": "tsc && rollup --config rollup.config.js",
     "clean": "rimraf node_modules/ dist/ || echo 'Project is already clean'",
     "docs": "typedoc yajsapi/ --plugin ./typedoc-clear-references.js --plugin typedoc-theme-hierarchy  --theme hierarchy",
-    "docs:md": "typedoc yajsapi/ --plugin typedoc-plugin-markdown --plugin ./typedoc-clear-references.js --hideBreadcrumbs true ",
+    "docs:md": "typedoc yajsapi/ --plugin typedoc-plugin-markdown --plugin ./typedoc-clear-references.js --hideBreadcrumbs true && node summary-generator.js",
     "docs:clean": "rimraf docs/ && run-s handbook:clean",
     "test": "ts-mocha --exit -p tsconfig.json --file tests/integration/_setup.ts --file tests/unit/_setup.ts 'tests/+(unit|integration)/**.+(spec|test).ts'",
     "test:unit": "ts-mocha --file tests/unit/_setup.ts --exit -p tsconfig.json tests/unit/**.test.ts",
