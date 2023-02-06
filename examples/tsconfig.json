@@ -1,16 +1,15 @@
 {
     "compilerOptions": {
-      "module": "commonjs",
-      "noImplicitAny": false,
-      "suppressImplicitAnyIndexErrors": true,
-      "useUnknownInCatchVariables": false,
+      "module": "esnext",
       "target": "esnext",
       "strict": true,
+      "noImplicitAny": false,
       "esModuleInterop": true,
       "moduleResolution": "node",
       "removeComments": true,
       "sourceMap": true,
       "noLib": false,
+      "skipLibCheck": true,
       "declaration": true,
       "lib": [
         "es2015",
@@ -23,5 +22,9 @@
       "outDir": "dist",
       "typeRoots": ["node_modules/@types"]
     },
-    "exclude": ["dist", "node_modules"]
+    "exclude": ["dist", "node_modules"],
+    "ts-node": {
+      "esm": true,
+      "experimentalSpecifierResolution": "node"
+    }
   }

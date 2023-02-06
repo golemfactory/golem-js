@@ -2,19 +2,20 @@
     "name": "yajsapi_examples",
     "version": "0.7.0",
     "description": "NodeJS API Examples for Next Golem",
+    "type": "module",
     "repository": "https://github.com/golemfactory/yajsapi",
     "scripts": {
         "build": "tsc",
         "js:hello": "node ./hello-world/hello.js",
-        "ts:run": "ts-node-script ./simple-usage/run.ts",
-        "ts:map": "ts-node-script ./simple-usage/map.js",
-        "ts:forEarch": "ts-node-script ./simple-usage/forEach.ts.js",
-        "ts:fileTransfer": "ts-node-script ./simple-usage/fileTransfer.ts",
-        "ts:batchPromise": "ts-node-script ./simple-usage/batchPromise.ts",
-        "ts:batchStream": "ts-node-script ./simple-usage/batchStream.ts",
+        "ts:run": "ts-node ./simple-usage/run.ts",
+        "ts:map": "ts-node ./simple-usage/map.js",
+        "ts:forEarch": "ts-node ./simple-usage/forEach.ts.js",
+        "ts:fileTransfer": "ts-node ./simple-usage/fileTransfer.ts",
+        "ts:batchPromise": "ts-node ./simple-usage/batchPromise.ts",
+        "ts:batchStream": "ts-node ./simple-usage/batchStream.ts",
         "js:blender": "node ./blender/blender_js.js",
-        "ts:blender": "ts-node-script ./blender/blender.ts",
-        "ts:yacat": "ts-node-script ./yacat/yacat.ts",
+        "ts:blender": "ts-node ./blender/blender.ts",
+        "ts:yacat": "ts-node ./yacat/yacat.ts",
         "js:fibonacci": "node ./fibonacci/fibonacci.js",
         "ts:ssh": "ts-node ./ssh/ssh.ts"
     },
@@ -29,7 +30,6 @@
         "yajsapi": "file:../"
     },
     "devDependencies": {
-        "@digitak/tsc-esm": "^3.1.4",
         "@types/node": "18",
         "typescript": "^4.6.3"
     }
