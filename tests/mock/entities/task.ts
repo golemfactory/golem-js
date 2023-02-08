@@ -1,4 +1,4 @@
-import { QueueableTask } from "../../../yajsapi/task";
+import { QueueableTask } from "../../../yajsapi/task/index.js";
 
 export enum TaskState {
   New,

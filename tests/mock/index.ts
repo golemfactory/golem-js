@@ -1,8 +1,8 @@
-export { allocationMock } from "./entities/allocation";
-export { packageMock } from "./entities/package";
-export { paymentServiceMock } from "./services/payment";
-export { agreementPoolServiceMock } from "./services/agrrement_pool";
-export { marketStrategyAlwaysBan } from "./services/market_startegy";
-export { networkServiceMock } from "./services/network";
-export { StorageProviderMock } from "./entities/storage_provider";
-export { LoggerMock } from "./utils/logger";
+export { allocationMock } from "./entities/allocation.js";
+export { packageMock } from "./entities/package.js";
+export { paymentServiceMock } from "./services/payment.js";
+export { agreementPoolServiceMock } from "./services/agrrement_pool.js";
+export { marketStrategyAlwaysBan } from "./services/market_startegy.js";
+export { networkServiceMock } from "./services/network.js";
+export { StorageProviderMock } from "./entities/storage_provider.js";
+export { LoggerMock } from "./utils/logger.js";

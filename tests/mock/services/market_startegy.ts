@@ -1,5 +1,4 @@
-import { MarketStrategy } from "../../../yajsapi/market";
-import { Proposal } from "../../../yajsapi/market";
+import { MarketStrategy, Proposal } from "../../../yajsapi/market/index.js";
 import { MarketDecoration } from "ya-ts-client/dist/ya-payment/src/models";
 
 export const marketStrategyAlwaysBan: MarketStrategy = {

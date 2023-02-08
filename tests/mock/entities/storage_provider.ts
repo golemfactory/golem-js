@@ -1,4 +1,4 @@
-import { StorageProvider } from "../../../yajsapi/storage/";
+import { StorageProvider } from "../../../yajsapi/storage/index.js";
 import { Logger } from "../../../yajsapi/utils";
 
 export class StorageProviderMock implements StorageProvider {
