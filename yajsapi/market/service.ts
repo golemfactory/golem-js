@@ -7,6 +7,9 @@ import { Allocation } from '../payment/index.js';
 import { DemandEvent } from './demand.js';
 import { MarketConfig } from './config.js';
 
+/**
+ * @internal
+ */
 export interface MarketOptions extends DemandOptions {
   /** Strategy used to choose best offer */
   strategy?: MarketStrategy;
@@ -16,6 +19,7 @@ export interface MarketOptions extends DemandOptions {
 /**
  * Market Service
  * @description Service used in {@link TaskExecutor}
+ * @internal
  */
 export class MarketService {
   private readonly options: MarketConfig;

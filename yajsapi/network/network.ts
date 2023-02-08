@@ -34,9 +34,8 @@ export interface NetworkInfo {
 export class NetworkError extends Error {}
 
 /**
- * Network
+ * Network module - an object represents VPN created between the requestor and the provider nodes within Golem Network.
  * @category Mid-level
- * @description Describes a VPN created between the requestor and the provider nodes within Golem Network.
  */
 export class Network {
   private readonly ip: IPv4;
@@ -77,6 +76,12 @@ export class Network {
     }
   }
 
+  /**
+   * @param id
+   * @param config
+   * @private
+   * @hidden
+   */
   private constructor(public readonly id: string, public readonly config: NetworkConfig) {
     this.ipRange = IPv4CidrRange.fromCidr(config.mask ? `${config.ip}/${config.mask}` : config.ip);
     this.ipIterator = this.ipRange[Symbol.iterator]();

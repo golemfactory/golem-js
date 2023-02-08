@@ -7,6 +7,7 @@ import { Rejection } from './rejection.js';
 export type InvoiceOptions = BasePaymentOptions;
 
 /**
+ * A Debit Note is an artifact issued by the Provider to the Requestor, in the context of a specific Activity. It is a notification of Total Amount Due incurred by the Activity until the moment the Debit Note is issued. This is expected to be used as trigger for payment in upfront-payment or pay-as-you-go scenarios. NOTE: Only Debit Notes with non-null paymentDueDate are expected to trigger payments. NOTE: Debit Notes flag the current Total Amount Due, which is accumulated from the start of Activity. Debit Notes are expected to trigger payments, therefore payment amount for the newly received Debit Note is expected to be determined by difference of Total Payments for the Agreement vs Total Amount Due.
  * @category Mid-level
  */
 export class DebitNote extends BaseNote<Model> {
@@ -29,6 +30,13 @@ export class DebitNote extends BaseNote<Model> {
     return new DebitNote(model, config);
   }
 
+  /**
+   *
+   * @param model
+   * @param options
+   * @protected
+   * @hidden
+   */
   protected constructor(model: Model, protected options: InvoiceConfig) {
     super(model, options);
     this.id = model.debitNoteId;

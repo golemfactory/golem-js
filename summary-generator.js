@@ -26,7 +26,7 @@ function capitalizeFirstLetter(string) {
     .map((d) => d.name);
 
   for (let type of types) {
-    logStream.write(`\n* ${capitalizeFirstLetter(type)}:`);
+    logStream.write(`\n* ${capitalizeFirstLetter(type)}`);
 
     const files = fs.readdirSync(path.join(directoryPath, type), { withFileTypes: true }).map((f) => f.name);
 

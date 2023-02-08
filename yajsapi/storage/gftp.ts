@@ -3,6 +3,11 @@ import { Logger, runtimeContextChecker } from "../utils/index.js";
 import path from "path";
 import fs from "fs";
 
+/**
+ * GFTP Storage Provide
+ *
+ * @description
+ */
 export class GftpStorageProvider implements StorageProvider {
   private gftpServerProcess;
   private publishedUrls: string[] = [];

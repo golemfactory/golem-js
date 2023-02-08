@@ -1,7 +1,10 @@
-import { Account } from "ya-ts-client/dist/ya-payment/src/models/index.js";
-import { AccountConfig, BasePaymentOptions } from "./config.js";
-import { YagnaOptions } from "../executor/index.js";
+import { Account } from "ya-ts-client/dist/ya-payment/src/models";
+import { AccountConfig, BasePaymentOptions } from "./config";
+import { YagnaOptions } from "../executor";
 
+/**
+ * @category Mid-level
+ */
 export interface AccountsOptions extends Omit<BasePaymentOptions, "yagnaOptions"> {
   yagnaOptions?: {
     apiKey: string;
@@ -10,6 +13,7 @@ export interface AccountsOptions extends Omit<BasePaymentOptions, "yagnaOptions"
 }
 
 /**
+ * Accounts module - an object that provides information about the requestor's accounts.
  * @category Mid-level
  */
 export class Accounts {

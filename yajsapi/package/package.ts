@@ -27,6 +27,7 @@ export interface PackageOptions {
 }
 
 /**
+ * Package module - an object for descriptions of the payload required by the requestor.
  * @category Mid-level
  */
 export class Package {

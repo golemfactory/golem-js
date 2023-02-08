@@ -1,6 +1,9 @@
 import { Logger } from '../utils/index.js';
 import { PackageOptions } from './package.js';
 
+/**
+ * @internal
+ */
 export const DEFAULTS = {
   engine: "vm",
   minMemGib: 0.5,
@@ -10,11 +13,17 @@ export const DEFAULTS = {
   capabilities: [],
 };
 
+/**
+ * @internal
+ */
 export enum PackageFormat {
   UNKNOWN = "",
   GVMKIT_SQUASH = "gvmkit-squash",
 }
 
+/**
+ * @internal
+ */
 export class PackageConfig {
   readonly packageFormat: string;
   readonly imageHash: string;

@@ -5,6 +5,7 @@ import { Events } from '../events/index.js';
 /**
  * Activity Factory
  * @description Use {@link Activity.create} instead
+ * @internal
  */
 export class ActivityFactory {
   private readonly options: ActivityConfig;

@@ -1,7 +1,13 @@
+/**
+ * @internal
+ */
 export interface QueueableTask {
   isQueueable(): boolean;
 }
 
+/**
+ * @internal
+ */
 export class TaskQueue<Task extends QueueableTask> {
   protected itemsStack: Array<Task> = [];
 

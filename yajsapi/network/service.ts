@@ -4,11 +4,15 @@ import { NetworkOptions } from './network.js';
 import { NetworkNode } from './node.js';
 import { getIdentity } from './identity.js';
 
+/**
+ * @internal
+ */
 export type NetworkServiceOptions = Omit<NetworkOptions, "networkOwnerId">;
 
 /**
  * Network Service
  * @description Service used in {@link TaskExecutor}
+ * @internal
  */
 export class NetworkService {
   private network?: Network;

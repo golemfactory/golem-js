@@ -1,5 +1,8 @@
 import { Logger } from './logger.js';
 
+/**
+ * Helper class implements simple logger prints all messages to console
+ */
 export class ConsoleLogger implements Logger {
   level = "debug";
 

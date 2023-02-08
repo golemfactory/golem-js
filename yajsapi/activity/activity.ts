@@ -19,6 +19,9 @@ export enum ActivityStateEnum {
   Terminated = "Terminated",
 }
 
+/**
+ * @category Mid-level
+ */
 export interface ExeScriptRequest {
   text: string;
 }
@@ -46,6 +49,8 @@ export interface ActivityOptions {
 }
 
 /**
+ * Activity module - an object representing the runtime environment on the provider in accordance with the `Package` specification.
+ * As part of a given activity, it is possible to execute exe script commands and capture their results.
  * @category Mid-level
  */
 export class Activity {
@@ -53,8 +58,6 @@ export class Activity {
   private isRunning = true;
 
   /**
-   * Create activity instance
-   *
    * @param id activity ID
    * @param agreementId agreement ID
    * @param options - {@link ActivityOptions}

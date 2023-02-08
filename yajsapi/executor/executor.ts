@@ -47,15 +47,20 @@ export type ExecutorOptions = {
 
 /**
  * Contains information needed to start executor, if string the imageHash is required, otherwise it should be a type of {@link ExecutorOptions}
+ * @category High-level
  */
 export type ExecutorOptionsMixin = string | ExecutorOptions;
 
+/**
+ * @category High-level
+ */
 export type YagnaOptions = {
   apiKey: string;
   basePath: string;
 };
 
 /**
+ * A high-level module for defining and executing tasks in the golem network
  * @category High-level
  */
 export class TaskExecutor {
@@ -159,9 +164,7 @@ export class TaskExecutor {
   }
 
   /**
-   * End executor process
-   *
-   * @description Method responsible for stopping all executor services and shut down executor instance
+   * Stop all executor services and shut down executor instance
    */
   async end() {
     if (!this.isRunning) return;
@@ -188,19 +191,37 @@ export class TaskExecutor {
   }
 
   /**
-   * Define worker function that will be runs before every each computation Task
+   * Define worker function that will be runs before every each computation Task, within the same activity.
    *
-   * @param worker worker function
+   * @param worker worker function - task
+   * @example
+   * ```typescript
+   * executor.beforeEach(async (ctx) => {
+   *   await ctx.uploadFile("./params.txt", "/params.txt");
+   * });
+   *
+   * await executor.forEach([1, 2, 3, 4, 5], async (ctx, item) => {
+   *    await ctx
+   *      .beginBatch()
+   *      .run(`/run_some_command.sh --input ${item} --params /input_params.txt --output /output.txt`)
+   *      .downloadFile("/output.txt", "./output.txt")
+   *      .end();
+   * });
+   * ```
    */
   beforeEach(worker: Worker) {
     this.initWorker = worker;
   }
 
   /**
-   * Run task
+   * Run task - allows to execute a single worker function on the Golem network with a single provider.
    *
    * @param worker function that run task
-   * @return computed task
+   * @return result of task computation
+   * @example
+   * ```typescript
+   * await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
+   * ```
    */
   async run<OutputType = Result>(worker: Worker<undefined, OutputType>): Promise<OutputType | undefined> {
     return this.executeTask<undefined, OutputType>(worker);
@@ -212,6 +233,12 @@ export class TaskExecutor {
    * @param data Iterable data
    * @param worker worker function
    * @return AsyncIterable with results of computed tasks
+   * @example
+   * ```typescript
+   * const data = [1, 2, 3, 4, 5];
+   * const results = executor.map(data, (ctx, item) => providerCtx.ctx(`echo "${item}"`));
+   * for await (const result of results) console.log(result.stdout);
+   * ```
    */
   map<InputType, OutputType>(
     data: Iterable<InputType>,
@@ -251,6 +278,13 @@ export class TaskExecutor {
    *
    * @param data Iterable data
    * @param worker Worker function
+   * @example
+   * ```typescript
+   * const data = [1, 2, 3, 4, 5];
+   * await executor.forEach(data, async (ctx, item) => {
+   *     console.log((await ctx.run(`echo "${item}"`).stdout));
+   * });
+   * ```
    */
   async forEach<InputType, OutputType>(
     data: Iterable<InputType>,

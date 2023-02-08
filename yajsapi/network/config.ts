@@ -8,6 +8,9 @@ const DEFAULTS = {
   networkIp: "192.168.0.0/24",
 };
 
+/**
+ * @internal
+ */
 export class NetworkConfig {
   public readonly api: RequestorApi;
   public readonly mask?: string;

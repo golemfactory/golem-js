@@ -7,10 +7,16 @@ const DEFAULT_REPO_SRV = "_girepo._tcp.dev.golem.network";
 const SCHEMA = "http";
 const TIMEOUT = 10000;
 
-interface RepoResolverOptions {
+/**
+ * @internal
+ */
+export interface RepoResolverOptions {
   logger?: Logger;
 }
 
+/**
+ * @internal
+ */
 export class RepoResolver {
   private constructor(private logger?: Logger) {}
 

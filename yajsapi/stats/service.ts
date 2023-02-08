@@ -15,6 +15,9 @@ interface StatsOptions {
   logger?: Logger;
 }
 
+/**
+ * @internal
+ */
 export class StatsService {
   private eventTarget: EventTarget;
   private logger?: Logger;

@@ -1,12 +1,18 @@
 import { MarketProperty } from "ya-ts-client/dist/ya-payment/src/models/index.js";
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market/src/models/index.js";
 
-// Fix invalid types
+/**
+ * Properties and constraints to be added to a market object (i.e. a demand or an offer).
+ * @category Mid-level
+ */
 export type MarketDecoration = {
   properties: Array<{ key: string; value: string | number | boolean }>;
   constraints: Array<string>;
 };
 
+/**
+ * @category Mid-level
+ */
 export enum ComparisonOperator {
   Eq = "=",
   Lt = "<",
@@ -21,6 +27,10 @@ type Constraint = {
   comparisonOperator: ComparisonOperator;
 };
 
+/**
+ * A helper class for creating market decorations for `Demand` published on the market.
+ * @category Mid-level
+ */
 export class DecorationsBuilder {
   private properties: Array<MarketProperty | { key: string; value: string | number | boolean }> = [];
   private constraints: Array<Constraint> = [];

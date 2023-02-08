@@ -6,6 +6,7 @@ import { Events } from '../events/index.js';
 /**
  * AgreementFactory
  * @description Use {@link Agreement.create} instead
+ * @internal
  */
 export class AgreementFactory {
   private readonly logger?: Logger;

@@ -11,6 +11,9 @@ const DEFAULTS = {
   activityExeBatchResultsFetchInterval: 3000,
 };
 
+/**
+ * @internal
+ */
 export class ActivityConfig {
   public readonly api: { control: RequestorControlApi; state: RequestorStateApi };
   public readonly activityRequestTimeout: number;

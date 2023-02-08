@@ -6,6 +6,9 @@ import { DebitNote } from './debit_note.js';
 import { Events } from '../events/index.js';
 import { Accounts } from './accounts.js';
 
+/**
+ * @internal
+ */
 export interface PaymentOptions extends BasePaymentOptions {
   invoiceFetchingInterval?: number;
   debitNotesFetchingInterval?: number;
@@ -22,6 +25,7 @@ interface AgreementPayable {
 /**
  * Payment Service
  * @description Service used in {@link TaskExecutor}
+ * @internal
  */
 export class PaymentService {
   private isRunning = false;

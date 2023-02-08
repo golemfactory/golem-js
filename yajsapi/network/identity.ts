@@ -3,6 +3,11 @@
 import axios from "axios";
 import { YagnaOptions } from "../executor/index.js";
 
+/**
+ * A helper function to get the requestor's ID
+ * @param options
+ * @return requestorId
+ */
 export const getIdentity = async (options?: { yagnaOptions?: YagnaOptions }): Promise<string> => {
   const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
   if (!apiKey) throw new Error("Api key not defined");

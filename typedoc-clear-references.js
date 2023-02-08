@@ -8,7 +8,7 @@ function load({ application }) {
       context.project.removeReflection(reflection);
     }
     for (const reflection of context.project.getReflectionsByKind(typedoc.ReflectionKind.Module)) {
-      if (reflection.children.length === 0) {
+      if (reflection.children.length == 0) {
         context.project.removeReflection(reflection);
       }
     }
