@@ -31,13 +31,10 @@
     "readme": "tutorial.md",
     "sort": "static-first",
     "excludePrivate": true,
-    "name": "yajsapi API reference",
+    "name": "JavaScript API reference",
     "categorizeByGroup": false,
-    //"mergeModulesRenameDefaults": true,
     "excludeExternals": true,
-    "excludeInternal": true,
-    //"mergeModulesMergeMode": "module-category",
-    //"theme": "hierarchy"
+    "excludeInternal": true
   },
   "exclude": ["dist", "node_modules", "examples", "tests", "cypress.config.ts"]
 }

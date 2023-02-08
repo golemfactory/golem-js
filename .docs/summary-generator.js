@@ -1,7 +1,7 @@
 const path = require("path");
 const fs = require("fs");
 const docsDir = "docs";
-const directoryPath = path.join(__dirname, docsDir);
+const directoryPath = path.join(__dirname, "..", docsDir);
 
 async function prepareDocAnchor(type, file) {
   const filePath = path.join(directoryPath, type, file);

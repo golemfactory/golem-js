@@ -10,9 +10,8 @@
   "unpkg": "dist/yajsapi.min.js",
   "scripts": {
     "build": "tsc && rollup --config rollup.config.js",
-    "clean": "rimraf node_modules/ dist/ || echo 'Project is already clean'",
     "docs": "typedoc yajsapi/ --plugin typedoc-plugin-merge-modules --plugin typedoc-theme-hierarchy",
-    "docs:md": "typedoc yajsapi/ --plugin typedoc-plugin-merge-modules --plugin typedoc-plugin-markdown --theme default",
+    "docs:md": "typedoc yajsapi/ --plugin typedoc-plugin-markdown --plugin ./.docs/typedoc-clear-references.js --hideBreadcrumbs true && node ./.docs/summary-generator.js",
     "test": "ts-mocha --exit -p tsconfig.json --file tests/integration/_setup.ts --file tests/unit/_setup.ts 'tests/+(unit|integration)/**.+(spec|test).ts'",
     "test:unit": "ts-mocha --file tests/unit/_setup.ts --exit -p tsconfig.json tests/unit/**.test.ts",
     "test:integration": "ts-mocha --exit -p tsconfig.json --file tests/integration/_setup.ts tests/integration/**.spec.ts",
