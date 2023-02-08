@@ -25,17 +25,19 @@
   },
   "typedocOptions": {
     "entryPoints": ["yajsapi"],
-    "exclude": ["**/*.spec.ts"],
+    "exclude": ["**/*.spec.ts","yajsapi/stats/*.ts"],
+    "entryPointStrategy": "expand",
     "out": "docs",
-    "readme": "README.md",
+    "readme": "tutorial.md",
     "sort": "static-first",
     "excludePrivate": true,
     "name": "yajsapi API reference",
-    "categorizeByGroup": true,
-    "mergeModulesRenameDefaults": true,
+    "categorizeByGroup": false,
+    //"mergeModulesRenameDefaults": true,
     "excludeExternals": true,
-    "mergeModulesMergeMode": "module-category",
-    "theme": "hierarchy"
+    "excludeInternal": true,
+    //"mergeModulesMergeMode": "module-category",
+    //"theme": "hierarchy"
   },
   "exclude": ["dist", "node_modules", "examples", "tests", "cypress.config.ts"]
 }
