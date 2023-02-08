@@ -76,7 +76,11 @@ export class TaskService {
       this.options.eventTarget?.dispatchEvent(
         new Events.TaskStarted({ id: task.id, agreementId: agreement.id, activityId: activity.id })
       );
-      this.logger?.info(`Task ${task.id} sent to provider ${agreement.provider.name}. Data: ${task.getData()}`);
+      this.logger?.info(
+        `Task ${task.id} sent to provider ${agreement.provider.name}.${
+          task.getData() ? " Data: " + task.getData() : ""
+        }`
+      );
       this.paymentService.acceptDebitNotes(agreement.id);
       const initWorker = task.getInitWorker();
       const worker = task.getWorker();
@@ -100,7 +104,11 @@ export class TaskService {
       const results = await worker(ctx, data);
       task.stop(results);
       this.options.eventTarget?.dispatchEvent(new Events.TaskFinished({ id: task.id }));
-      this.logger?.info(`Task ${task.id} computed by provider ${agreement.provider.name}. Data: ${task.getData()}`);
+      this.logger?.info(
+        `Task ${task.id} computed by provider ${agreement.provider.name}.${
+          task.getData() ? " Data: " + task.getData() : ""
+        }`
+      );
     } catch (error) {
       task.stop(undefined, error);
       if (task.isRetry() && this.isRunning) {
