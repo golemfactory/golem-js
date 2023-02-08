@@ -248,7 +248,7 @@ describe("Activity", () => {
 
     it("should handle gsb error", async () => {
       const activity = await Activity.create("test_id", {
-        exeBatchResultsFetchInterval: 10,
+        activityExeBatchResultsFetchInterval: 10,
       });
       const command1 = new Deploy();
       const command2 = new Start();
@@ -318,7 +318,7 @@ describe("Activity", () => {
     });
 
     it("should handle timeout error while streaming batch", async () => {
-      const activity = await Activity.create("test_id_3", { executeTimeout: 1 });
+      const activity = await Activity.create("test_id_3", { activityExecuteTimeout: 1 });
       const command1 = new Deploy();
       const command2 = new Start();
       const capture: Capture = {

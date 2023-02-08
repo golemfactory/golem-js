@@ -18,4 +18,5 @@ import chaiAsPromised from "chai-as-promised";
 import chaiUuid from "chai-uuid";
 chai.use(chaiAsPromised);
 chai.use(chaiUuid);
+rewiremock.overrideEntryPoint(module);
 rewiremock.enable();
