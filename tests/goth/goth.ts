@@ -1,6 +1,4 @@
 import { ChildProcess, spawn } from "child_process";
-import fs from "fs";
-import { Readable, Writable } from "stream";
 
 export class Goth {
   private gothProcess?: ChildProcess;
