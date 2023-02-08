@@ -14,8 +14,8 @@ import {
   Result,
   Accounts,
   Proposal,
-} from "../../yajsapi";
-import { LoggerMock } from "../mock";
+} from "../../yajsapi/index.js";
+import { LoggerMock } from "../mock/index.js";
 const logger = new LoggerMock(false);
 
 describe("Mid-level modules", () => {

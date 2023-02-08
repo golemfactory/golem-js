@@ -1,8 +1,8 @@
 import { expect } from "chai";
-import { TaskExecutor } from "../../yajsapi";
-import { LoggerMock } from "../mock";
+import { TaskExecutor } from "../../yajsapi/index.js";
+import { LoggerMock } from "../mock/index.js";
 import path from "path";
-import { fileExistsSync } from "tsconfig-paths/lib/filesystem";
+import { fileExistsSync } from "tsconfig-paths/lib/filesystem.js";
 
 const logger = new LoggerMock(false);
 const blender_params = (frame) => ({

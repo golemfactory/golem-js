@@ -1,7 +1,7 @@
 import { expect } from "chai";
-import { LoggerMock } from "../mock";
+import { LoggerMock } from "../mock/index.js";
 import crypto from "crypto";
-import { TaskExecutor } from "../../yajsapi";
+import { TaskExecutor } from "../../yajsapi/index.js";
 import { spawn } from "child_process";
 const logger = new LoggerMock(false);
 

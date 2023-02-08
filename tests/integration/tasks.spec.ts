@@ -1,7 +1,7 @@
 import { expect } from "chai";
-import { LoggerMock } from "../mock";
+import { LoggerMock } from "../mock/index.js";
 import { readFileSync } from "fs";
-import { TaskExecutor } from "../../yajsapi/";
+import { TaskExecutor } from "../../yajsapi/index.js";
 const logger = new LoggerMock(false);
 
 describe("Task Executor", function () {
