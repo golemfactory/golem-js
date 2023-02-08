@@ -2,39 +2,259 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Golem App</title>
+    <title>WebRequestor - Mid-Level API</title>
+    <link rel="stylesheet" href="../css/main.css">
 </head>
 <body>
-<div class="container">
-  <div>
-    <p>Actions</p>
-    <button id="createPackage" onclick="createPackage()">Create Package</button>
-    <button id="createAllocation" onclick="createAllocation()">Create Allocation</button>
-    <button id="createDemand" onclick="createDemand()">Create Demand</button>
-    <button id="respondProposal" onclick="respondProposal()">Confirm Proposal</button>
-    <button id="createAgreement" onclick="createAgreement()">Create Agreement</button>
-    <button id="confirmAgreement" onclick="confirmAgreement()">Confirm Agreement</button>
-    <button id="createActivity"  onclick="createActivity()">Create Activity</button>
-    <span>
-      <label for="command">Run: </label>
-      <span class="row padding-0">
-        <input id="command" type="text" />
-        <button id="execute" onclick="run()">Execute</button>
-      </span>
-    </span>
-  </div>
-  <div>
-    <p>Results</p>
-    <pre id="results"></pre>
-  </div>
-  <div>
-    <p>Logs</p>
-    <pre id="logs"></pre>
-  </div>
-</div>
-<script></script>
+    <h1>WebRequestor - Mid Level API</h1>
+    <div class="container">
+        <div class="col-6">
+            <h3>Options</h3>
+            <div id="options">
+                <div class="col-6">
+                    <div>
+                        <label for="YAGNA_APPKEY">Yagna AppKey: </label>
+                        <input id="YAGNA_APPKEY" type="text" value="411aa8e620954a318093687757053b8d"/>
+                    </div>
+                    <div>
+                        <label for="YAGNA_API_BASEPATH">Yagna Api Url: </label>
+                        <input id="YAGNA_API_BASEPATH" type="text" value="http://127.0.0.1:7465" />
+                    </div>
+                    <div class="row">
+                        <div>
+                            <label for="MIN_MEM_GIB">Min Mem Gib: </label>
+                            <input id="MIN_MEM_GIB" type="number" value="0.5" />
+                        </div>
+                        <div>
+                            <label for="MIN_CPU">Min CPU threads: </label>
+                            <input id="MIN_CPU" type="number" value="1" />
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div>
+                        <label for="IMAGE_HASH">Image Hash: </label>
+                        <input id="IMAGE_HASH" type="text" value="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae"/>
+                    </div>
+                    <div>
+                        <label for="SUBNET_TAG">Subnet Tag: </label>
+                        <input id="SUBNET_TAG" type="text" value="public" />
+                    </div>
+                    <div class="row">
+                        <div>
+                            <label for="MIN_STORAGE_GIB">Min Storage Gib: </label>
+                            <input id="MIN_STORAGE_GIB" type="number" value="2" />
+                        </div>
+                        <div>
+                            <label for="BUDGET">Budget: </label>
+                            <input id="BUDGET" type="number" value="1" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h3>Actions</h3>
+            <div class="row commands">
+                <button id="createPackage" onclick="createPackage()">Create Package</button>
+                <button id="createAllocation" onclick="createAllocation()">Create Allocation</button>
+                <button id="createDemand" disabled onclick="createDemand()">Create Demand</button>
+                <button id="respondProposal" disabled onclick="respondProposal()">Confirm Proposal</button>
+            </div>
+            <div class="row commands">
+                <button id="createAgreement" disabled onclick="createAgreement()">Create Agreement</button>
+                <button id="confirmAgreement" disabled onclick="confirmAgreement()">Confirm Agreement</button>
+                <button id="createActivity" disabled onclick="createActivity()">Create Activity</button>
+                <button id="end" disabled onclick="end()">Terminate all</button>
+            </div>
+            <label for="COMMAND">RUN SHELL COMMAND: </label>
+            <div class="row padding-0">
+                <input id="COMMAND" type="text" />
+                <button id="execute" disabled onclick="run()">Execute</button>
+            </div>
+            <div class="results console">
+                <span class="clear clear-results" onclick="clearResults()">clear</span>
+                <h3>Results</h3>
+                <ul id="results"></ul>
+            </div>
+        </div>
+        <div class="col-6 border-left">
+            <div class="logs console">
+                <span class="clear" onclick="clearLogs()">clear</span>
+                <h3>Logs</h3>
+                <ul id="logs"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as yajsapi from '/yajsapi.min.js';
+        let options, taskPackage, allocation, demand, proposals = [], offer, agreement, activity;
+        function appendLog(msg) {
+            console.log(msg);
+            const logs_el = document.getElementById('logs');
+            const li = document.createElement('li');
+            li.appendChild(document.createTextNode(msg));
+            logs_el.appendChild(li);
+        }
+        function clearLogs() {
+          const logs = document.getElementById('logs');
+          logs.textContent = ''
+        }
+        function appendResults(result) {
+            const results_el = document.getElementById('results');
+            const li = document.createElement('li');
+            li.appendChild(document.createTextNode(result));
+            results_el.appendChild(li);
+        }
+        function clearResults() {
+          const results = document.getElementById('results');
+          results.textContent = ''
+        }
+        const logger = {
+            log: (msg) => appendLog(`[${new Date().toISOString()}] ${msg}`),
+            warn: (msg) => appendLog(`[${new Date().toISOString()}] [warn] ${msg}`),
+            debug: (msg) => appendLog(`[${new Date().toISOString()}] [debug] ${msg}`),
+            error: (error) => appendLog(`[${new Date().toISOString()}] [error] ${error?.response?.data?.message || error}`),
+            info: (msg) => appendLog(`[${new Date().toISOString()}] [info] ${msg}`),
+            table: (msg) => appendLog(JSON.stringify(msg, null, "\t")),
+        }
+
+        const createDemandButton = document.getElementById("createDemand");
+        const respondProposalButton = document.getElementById("respondProposal");
+        const createAgreementButton = document.getElementById("createAgreement");
+        const confirmAgreementButton = document.getElementById("confirmAgreement");
+        const createActivityButton = document.getElementById("createActivity");
+        const executeButton = document.getElementById("execute");
+        const endButton = document.getElementById("end");
+        function enableButtons() {
+          if (allocation && taskPackage) createDemandButton.removeAttribute('disabled');
+          if (proposals.length) respondProposalButton.removeAttribute('disabled');
+          if (offer) createAgreementButton.removeAttribute('disabled');
+          if (agreement) confirmAgreementButton.removeAttribute('disabled');
+          if (agreement) createActivityButton.removeAttribute('disabled');
+          if (activity) executeButton.removeAttribute('disabled');
+          if (activity || agreement || allocation) endButton.removeAttribute('disabled');
+        }
+        function disableButtons() {
+          createDemandButton.setAttribute('disabled', "");
+          respondProposalButton.setAttribute('disabled', "");
+          createAgreementButton.setAttribute('disabled', "");
+          confirmAgreementButton.setAttribute('disabled', "");
+          createActivityButton.setAttribute('disabled', "");
+          executeButton.setAttribute('disabled', "");
+          endButton.setAttribute('disabled', "");
+        }
+        function getOptions() {
+          const apiKey = document.getElementById('YAGNA_APPKEY').value;
+          const basePath = document.getElementById('YAGNA_API_BASEPATH').value;
+          const imageHash = document.getElementById('IMAGE_HASH').value;
+          const minMemGib = document.getElementById('MIN_MEM_GIB').value;
+          const minStorageGib = document.getElementById('MIN_STORAGE_GIB').value;
+          const minCpuThreads = document.getElementById('MIN_CPU').value;
+          const subnetTag = document.getElementById('SUBNET_TAG').value;
+          return  {
+            yagnaOptions: { apiKey, basePath },
+            imageHash, minCpuThreads,minStorageGib, minMemGib,
+            logger,
+            subnetTag
+          }
+        }
+        async function createPackage() {
+          options = getOptions();
+          taskPackage = await yajsapi.Package.create(options);
+          enableButtons();
+          logger.info('Package created');
+        }
+        async function createAllocation() {
+          options = getOptions();
+          const accounts = await (await yajsapi.Accounts.create(options)).list();
+          options.account = accounts.find(account => account?.platform.indexOf('erc20') !== -1);
+          allocation = await yajsapi.Allocation.create(options).catch(logger.error);
+          enableButtons();
+        }
+        async function createDemand() {
+          demand = await yajsapi.Demand.create(taskPackage, [allocation], options).catch(logger.error);
+          demand.addEventListener(yajsapi.DemandEventType, async (event) => {
+            if (event.proposal.isInitial()) {
+              proposals.push(event.proposal);
+              logger.debug(`New proposal has been received (${event.proposal.id.slice(0,10)})`);
+              enableButtons();
+            } else if (event.proposal.isDraft()) {
+              offer = event.proposal;
+              logger.debug(`New offer has been received (${event.proposal.id.slice(0,10)})`);
+              enableButtons();
+            }
+          })
+        }
+        async function respondProposal() {
+          const proposal = proposals.shift();
+          if (!proposal) return
+          await proposal.respond(options.account.platform).catch(logger.error);
+          enableButtons();
+        }
+        async function createAgreement() {
+          agreement = await yajsapi.Agreement.create(offer.id, options).catch(logger.error);
+          enableButtons();
+        }
+        async function confirmAgreement() {
+          await agreement.confirm().catch(logger.error);
+          enableButtons();
+        }
+        async function createActivity() {
+          const state = await agreement.getState().catch(logger.error)
+          if (state !== 'Approved') return logger.error(`Agreement is not approved. Current state: ${state}`)
+          activity = await yajsapi.Activity.create(agreement.id, options).catch(logger.error);
+          const script = await yajsapi.Script.create([new yajsapi.Deploy(), new yajsapi.Start()]);
+          const exeScript = script.getExeScriptRequest();
+          await activity.execute(exeScript).catch(logger.error);
+          enableButtons();
+        }
+        async function run() {
+          const command = document.getElementById('COMMAND').value
+          const script = await yajsapi.Script.create([new yajsapi.Run("/bin/sh", ["-c", command])]);
+          const exeScript = script.getExeScriptRequest();
+          const results = await activity.execute(exeScript).catch(logger.error);
+          results.on('data', result => {
+            if (result.stdout) appendResults(result.stdout);
+            if (result.stderr) appendResults(result.stderr);
+            if (result.message) {
+              appendResults(result.message);
+              console.error(message)
+            }
+          })
+          results.on('error', result => {
+            if (result.stdout) appendResults(result.stdout);
+            if (result.stderr) appendResults(result.stderr);
+            if (result.message) {
+              appendResults(result.message);
+              console.error(message)
+            }
+          })
+        }
+        async function end() {
+          await activity.stop().catch(logger.error);
+          await agreement.terminate().catch(logger.error);
+          await allocation.release().catch(logger.error);
+          await demand.unsubscribe().catch(logger.error);
+          taskPackage = null;
+          activity = null;
+          agreement = null;
+          allocation = null;
+          demand = null;
+          offer = null;
+          disableButtons()
+        }
+        window.createPackage = createPackage;
+        window.createAllocation = createAllocation;
+        window.createDemand = createDemand;
+        window.respondProposal = respondProposal;
+        window.createAgreement = createAgreement;
+        window.confirmAgreement = confirmAgreement;
+        window.createActivity = createActivity;
+        window.run = run;
+        window.end = end;
+        window.clearLogs = clearLogs;
+        window.clearResults = clearResults;
+    </script>
 </body>
 </html>
-
-
-

@@ -1,6 +1,5 @@
 import { TaskExecutor } from "yajsapi";
 import { program } from "commander";
-import path from "path";
 
 const blender_params = (frame) => ({
   scene_file: "/golem/resource/scene.blend",

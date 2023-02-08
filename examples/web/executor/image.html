@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <title>WebRequestor Task API</title>
-    <script src="./../js/bundle.js"></script>
     <link rel="stylesheet" href="../css/main.css">
 </head>
 <body>
@@ -53,7 +52,9 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        import { TaskExecutor } from "/yajsapi.min.js";
+
         let activity;
         const encodedImg = document.getElementById("ENCODED_MEME_IMG");
         const imgInput = document.getElementById("MEME_IMG");
@@ -114,7 +115,7 @@
             const basePath = document.getElementById('YAGNA_API_BASEPATH').value;
             const chunkedImg = chunkString(encodedImg.value, 64000)
 
-            const executor = await yajsapi.TaskExecutor.create({
+            const executor = await TaskExecutor.create({
                 yagnaOptions: { apiKey, basePath },
                 package:"6539a63fecfb4ce98bc838ab2de71c6f4d36e1ee5945fbd8f1165c48",
                 logger
@@ -134,6 +135,7 @@
             const result = batchResults.pop();
             setResponse(result.stdout)
         }
+        window.run = run;
     </script>
 </body>
 </html>

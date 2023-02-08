@@ -2,10 +2,6 @@ import { StorageProvider } from "./provider.js";
 import { Logger, runtimeContextChecker } from "../utils/index.js";
 import path from "path";
 import fs from "fs";
-import tmp from "tmp/lib/tmp.js";
-import { spawn } from "child_process";
-
-const TMP_DIR = tmp.dirSync().name;
 
 export class GftpStorageProvider implements StorageProvider {
   private gftpServerProcess;
@@ -18,6 +14,7 @@ export class GftpStorageProvider implements StorageProvider {
   }
 
   async init() {
+    const { spawn } = await import("child_process");
     this.gftpServerProcess = await spawn("gftp server", [], { shell: true });
     this.gftpServerProcess.stdin.setEncoding("utf-8");
     this.gftpServerProcess.stdout.setEncoding("utf-8");
@@ -28,7 +25,8 @@ export class GftpStorageProvider implements StorageProvider {
 
   private async generateTempFileName(): Promise<string> {
     const { randomUUID } = await import("crypto");
-    const file_name = path.join(TMP_DIR, randomUUID().toString());
+    const tmp = await import("tmp/lib/tmp.js");
+    const file_name = path.join(tmp.dirSync().name, randomUUID().toString());
     if (fs.existsSync(file_name)) fs.unlinkSync(file_name);
     return file_name;
   }

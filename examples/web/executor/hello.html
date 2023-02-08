@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>WebRequestor Task API</title>
-    <script src="./../js/bundle.js"></script>
+<!--    <script type="module" src="./../js/yajsapi.min.js"></script>-->
     <link rel="stylesheet" href="../css/main.css">
 </head>
 <body>
@@ -54,15 +54,16 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        import { TaskExecutor } from "/yajsapi.min.js"
         let activity;
-        function appendLog(msg) {
+        export function appendLog(msg) {
             const logs_el = document.getElementById('logs');
             const li = document.createElement('li');
             li.appendChild(document.createTextNode(msg));
             logs_el.appendChild(li);
         }
-        function appendResults(result) {
+        export function appendResults(result) {
             const results_el = document.getElementById('results');
             const li = document.createElement('li');
             li.appendChild(document.createTextNode(result));
@@ -83,7 +84,7 @@
           const basePath = document.getElementById('YAGNA_API_BASEPATH').value;
           const subnetTag = document.getElementById('SUBNET_TAG').value;
           const imageHash = document.getElementById('IMAGE_HASH').value;
-            const executor = await yajsapi.TaskExecutor.create({
+            const executor = await TaskExecutor.create({
                 yagnaOptions: { apiKey, basePath },
                 package: imageHash,
                 subnetTag,
@@ -94,6 +95,7 @@
               .catch(e => logger.error(e));
             await executor.end();
         }
+        window.run = run;
     </script>
 </body>
 </html>
