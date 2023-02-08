@@ -112,7 +112,7 @@ It is recommended to run unit tests and static code analysis before committing c
 
 ```bash
 yarn lint
-# or
+# and
 yarn format
 ```
 
