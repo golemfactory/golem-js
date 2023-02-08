@@ -1,10 +1,10 @@
-import { Activity, Result } from "../activity";
-import { Command, Deploy, DownloadFile, Run, Script, Start, UploadFile } from "../script";
-import { StorageProvider } from "../storage";
-import { ActivityStateEnum } from "../activity";
-import { sleep, Logger, runtimeContextChecker } from "../utils";
-import { Batch } from "../task";
-import { NetworkNode } from "../network";
+import { Activity, Result } from '../activity/index.js';
+import { Command, Deploy, DownloadFile, Run, Script, Start, UploadFile } from '../script/index.js';
+import { StorageProvider } from '../storage/index.js';
+import { ActivityStateEnum } from '../activity/index.js';
+import { sleep, Logger, runtimeContextChecker } from '../utils/index.js';
+import { Batch } from './index.js';
+import { NetworkNode } from '../network/index.js';
 
 export type Worker<InputType = unknown, OutputType = unknown> = (
   ctx: WorkContext,

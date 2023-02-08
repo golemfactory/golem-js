@@ -1,5 +1,5 @@
-import { MarketProperty } from "ya-ts-client/dist/ya-payment/src/models";
-import { DemandOfferBase } from "ya-ts-client/dist/ya-market/src/models";
+import { MarketProperty } from "ya-ts-client/dist/ya-payment/src/models/index.js";
+import { DemandOfferBase } from "ya-ts-client/dist/ya-market/src/models/index.js";
 
 // Fix invalid types
 export type MarketDecoration = {

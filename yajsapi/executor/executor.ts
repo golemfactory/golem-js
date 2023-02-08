@@ -1,21 +1,21 @@
-import { Package, PackageOptions } from "../package";
-import { DemandOptions, MarketService } from "../market";
-import { AgreementOptions, AgreementPoolService } from "../agreement";
-import { Task, TaskQueue, TaskService, Worker } from "../task";
-import { PaymentService } from "../payment";
-import { NetworkService } from "../network";
-import { ActivityOptions, Result } from "../activity";
-import { sleep, Logger, runtimeContextChecker } from "../utils";
-import { StorageProvider, GftpStorageProvider } from "../storage/";
-import { ExecutorConfig } from "./config";
-import { Events } from "../events";
-import { StatsService } from "../stats/service";
-import { TaskOptions } from "../task/service";
-import { BasePaymentOptions } from "../payment/config";
-import { NetworkServiceOptions } from "../network/service";
-import { AgreementServiceOptions } from "../agreement/service";
-import { WorkOptions } from "../task/work";
-import { LogLevel } from "../utils/logger";
+import { Package, PackageOptions } from "../package/index.js";
+import { DemandOptions, MarketService } from "../market/index.js";
+import { AgreementOptions, AgreementPoolService } from "../agreement/index.js";
+import { Task, TaskQueue, TaskService, Worker } from "../task/index.js";
+import { PaymentService } from "../payment/index.js";
+import { NetworkService } from "../network/index.js";
+import { ActivityOptions, Result } from "../activity/index.js";
+import { sleep, Logger, runtimeContextChecker } from "../utils/index.js";
+import { StorageProvider, GftpStorageProvider } from "../storage/index.js";
+import { ExecutorConfig } from "./config.js";
+import { Events } from "../events/index.js";
+import { StatsService } from "../stats/service.js";
+import { TaskOptions } from "../task/service.js";
+import { BasePaymentOptions } from "../payment/config.js";
+import { NetworkServiceOptions } from "../network/service.js";
+import { AgreementServiceOptions } from "../agreement/service.js";
+import { WorkOptions } from "../task/work.js";
+import { LogLevel } from "../utils/logger.js";
 
 /**
  * @category High-level
@@ -123,7 +123,7 @@ export class TaskExecutor {
     this.paymentService = new PaymentService(this.options);
     this.marketService = new MarketService(this.agreementPoolService, this.options);
     this.networkService = this.options.networkIp ? new NetworkService(this.options) : undefined;
-    this.storageProvider = runtimeContextChecker.isNode ? new GftpStorageProvider() : undefined;
+    this.storageProvider = runtimeContextChecker.isNode ? new GftpStorageProvider(this.logger) : undefined;
     this.taskService = new TaskService(
       this.taskQueue,
       this.agreementPoolService,
@@ -153,7 +153,6 @@ export class TaskExecutor {
     this.storageProvider?.init().catch((e) => this.handleCriticalError(e));
     this.handleCancelEvent();
     this.options.eventTarget.dispatchEvent(new Events.ComputationStarted());
-    this.storageProvider = runtimeContextChecker.isNode ? new GftpStorageProvider() : undefined;
     this.logger?.info(
       `Task Executor has started using subnet ${this.options.subnetTag}, network: ${this.options.payment?.network}, driver: ${this.options.payment?.driver}`
     );
@@ -280,6 +279,7 @@ export class TaskExecutor {
       await sleep(2000, true);
     }
     clearTimeout(timeoutId);
+    if (timeout) this.logger?.warn(`Task ${task.id} timeout.`);
   }
 
   private handleCriticalError(e: Error) {

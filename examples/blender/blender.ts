@@ -1,6 +1,5 @@
-import { TaskExecutor } from "../../dist";
+import { TaskExecutor } from "yajsapi";
 import { program } from "commander";
-import path from "path";
 
 const blender_params = (frame) => ({
   scene_file: "/golem/resource/scene.blend",
@@ -31,7 +30,7 @@ async function main(subnetTag: string, driver?: string, network?: string, debug?
   });
 
   executor.beforeEach(async (ctx) => {
-    await ctx.uploadFile(path.join(__dirname, "./cubes.blend"), "/golem/resource/scene.blend");
+    await ctx.uploadFile("./cubes.blend", "/golem/resource/scene.blend");
   });
 
   const results = executor.map<number, string>([0, 10, 20, 30, 40, 50], async (ctx, frame) => {
@@ -39,10 +38,7 @@ async function main(subnetTag: string, driver?: string, network?: string, debug?
       .beginBatch()
       .uploadJson(blender_params(frame), "/golem/work/params.json")
       .run("/golem/entrypoints/run-blender.sh")
-      .downloadFile(
-        `/golem/output/out${frame?.toString().padStart(4, "0")}.png`,
-        path.join(__dirname, `./output_${frame}.png`)
-      )
+      .downloadFile(`/golem/output/out${frame?.toString().padStart(4, "0")}.png`, `./output_${frame}.png`)
       .end()
       .catch((error) => console.error(error));
     return result ? `output_${frame}.png` : "";

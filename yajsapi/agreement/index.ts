@@ -1,3 +1,3 @@
-export { Agreement, AgreementOptions, AgreementStateEnum, ProviderInfo } from "./agreement";
-export { AgreementPoolService } from "./service";
-export { AgreementFactory } from "./factory";
+export { Agreement, AgreementOptions, AgreementStateEnum, ProviderInfo } from "./agreement.js";
+export { AgreementPoolService } from "./service.js";
+export { AgreementFactory } from "./factory.js";

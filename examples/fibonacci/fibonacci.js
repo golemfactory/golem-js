@@ -1,5 +1,5 @@
-const { TaskExecutor } = require("../../dist");
-const { program } = require("commander");
+import { TaskExecutor } from "yajsapi";
+import { program } from "commander";
 
 async function main(fibo_n = 1, tasks_count = 1, subnet_tag, payment_driver, payment_network, debug) {
   const executor = await TaskExecutor.create({

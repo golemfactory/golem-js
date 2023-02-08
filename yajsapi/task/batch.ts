@@ -1,7 +1,7 @@
-import { DownloadFile, Run, Script, UploadFile } from "../script";
-import { Activity, Result } from "../activity";
-import { StorageProvider } from "../storage/provider";
-import { Logger, runtimeContextChecker } from "../utils";
+import { DownloadFile, Run, Script, UploadFile } from '../script/index.js';
+import { Activity, Result } from '../activity/index.js';
+import { StorageProvider } from '../storage/provider.js';
+import { Logger, runtimeContextChecker } from '../utils/index.js';
 import { Readable, Transform } from "stream";
 
 export class Batch {

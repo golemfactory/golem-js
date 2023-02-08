@@ -1,5 +1,5 @@
-import { ExeScriptRequest } from "ya-ts-client/dist/ya-activity/src/models";
-import { Command, Deploy, Run, Start } from "./command";
+import { ExeScriptRequest } from "ya-ts-client/dist/ya-activity/src/models/index.js";
+import { Command, Deploy, Run, Start } from "./command.js";
 
 /**
  * @category Mid-level

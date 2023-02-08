@@ -1,9 +1,9 @@
-import { Logger } from "../utils";
-import { Agreement, AgreementOptions, AgreementStateEnum } from "./agreement";
-import sleep from "../utils/sleep";
+import { Logger } from '../utils/index.js';
+import { Agreement, AgreementOptions, AgreementStateEnum } from './agreement.js';
+import sleep from '../utils/sleep.js';
 
-import { ComputationHistory } from "../market/strategy";
-import { AgreementServiceConfig } from "./config";
+import { ComputationHistory } from '../market/strategy.js';
+import { AgreementServiceConfig } from './config.js';
 
 export interface AgreementServiceOptions extends AgreementOptions {
   agreementEventPoolingInterval?: number;

@@ -13,8 +13,8 @@ import {
   Run,
   Script,
   Start,
-} from "../../yajsapi/";
-import { ConsoleLogger } from "../../yajsapi/utils";
+  ConsoleLogger,
+} from "yajsapi";
 async function main() {
   const logger = new ConsoleLogger();
   const taskPackage = await Package.create({ imageHash: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae" });
@@ -26,7 +26,8 @@ async function main() {
   const offer: Proposal = await new Promise((res) =>
     demand.addEventListener(DemandEventType, async (event) => {
       const proposalEvent = event as DemandEvent;
-      if (proposalEvent.proposal.isInitial()) await proposalEvent.proposal.respond(account.platform);
+      if (proposalEvent.proposal.isInitial())
+        await proposalEvent.proposal.respond(account.platform).catch((e) => logger.error(e));
       else if (proposalEvent.proposal.isDraft()) res(proposalEvent.proposal);
     })
   );

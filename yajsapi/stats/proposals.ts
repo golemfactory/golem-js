@@ -1,4 +1,4 @@
-import { AbstractAggregator } from "./abstract_aggregator";
+import { AbstractAggregator } from './abstract_aggregator.js';
 
 export interface ProposalInfo {
   id: string;

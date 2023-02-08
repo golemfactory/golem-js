@@ -1,11 +1,11 @@
-import { Logger } from "../utils";
-import { Package } from "../package";
-import { Demand, Proposal, DemandEventType, DemandOptions } from "./";
-import { DefaultMarketStrategy, MarketStrategy, SCORE_NEUTRAL } from "./strategy";
-import { AgreementPoolService } from "../agreement";
-import { Allocation } from "../payment";
-import { DemandEvent } from "./demand";
-import { MarketConfig } from "./config";
+import { Logger } from '../utils/index.js';
+import { Package } from '../package/index.js';
+import { Demand, Proposal, DemandEventType, DemandOptions } from './index.js';
+import { DefaultMarketStrategy, MarketStrategy, SCORE_NEUTRAL } from './strategy.js';
+import { AgreementPoolService } from '../agreement/index.js';
+import { Allocation } from '../payment/index.js';
+import { DemandEvent } from './demand.js';
+import { MarketConfig } from './config.js';
 
 export interface MarketOptions extends DemandOptions {
   /** Strategy used to choose best offer */

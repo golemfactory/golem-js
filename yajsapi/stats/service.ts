@@ -1,14 +1,14 @@
-import { Events, EventType, BaseEvent } from "../events";
-import { Logger } from "../utils";
-import { Providers } from "./providers";
-import { Tasks } from "./tasks";
-import { Payments } from "./payments";
-import { Agreements } from "./agreements";
-import { Invoices } from "./invoices";
-import { Proposals } from "./proposals";
-import { Allocations } from "./allocations";
-import { Activities } from "./activities";
-import { Times } from "./times";
+import { Events, EventType, BaseEvent } from '../events/index.js';
+import { Logger } from '../utils/index.js';
+import { Providers } from './providers.js';
+import { Tasks } from './tasks.js';
+import { Payments } from './payments.js';
+import { Agreements } from './agreements.js';
+import { Invoices } from './invoices.js';
+import { Proposals } from './proposals.js';
+import { Allocations } from './allocations.js';
+import { Activities } from './activities.js';
+import { Times } from './times.js';
 
 interface StatsOptions {
   eventTarget: EventTarget;

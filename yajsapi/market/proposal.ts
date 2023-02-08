@@ -1,7 +1,7 @@
-import { Proposal as ProposalModel, ProposalAllOfStateEnum } from "ya-ts-client/dist/ya-market/src/models";
-import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
-import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
-import { Events } from "../events";
+import { Proposal as ProposalModel, ProposalAllOfStateEnum } from "ya-ts-client/dist/ya-market/src/models/index.js";
+import { RequestorApi } from "ya-ts-client/dist/ya-market/api.js";
+import { DemandOfferBase } from "ya-ts-client/dist/ya-market/index.js";
+import { Events } from "../events/index.js";
 
 /**
  * @category Mid-level

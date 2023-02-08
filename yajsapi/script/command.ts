@@ -1,5 +1,5 @@
-import { ExeScriptRequest } from "ya-ts-client/dist/ya-activity/src/models";
-import { StorageProvider } from "../storage";
+import { ExeScriptRequest } from "ya-ts-client/dist/ya-activity/src/models/index.js";
+import { StorageProvider } from "../storage/index.js";
 
 /**
  * @category Mid-level

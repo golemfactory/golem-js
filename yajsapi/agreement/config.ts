@@ -1,8 +1,8 @@
-import { AgreementOptions } from "./agreement";
-import { AgreementServiceOptions } from "./service";
-import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
-import { Configuration } from "ya-ts-client/dist/ya-market";
-import { Logger } from "../utils";
+import { AgreementOptions } from "./agreement.js";
+import { AgreementServiceOptions } from "./service.js";
+import { RequestorApi } from "ya-ts-client/dist/ya-market/api.js";
+import { Configuration } from "ya-ts-client/dist/ya-market/index.js";
+import { Logger } from "../utils/index.js";
 
 const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",

@@ -1,19 +1,19 @@
-import { createExecutor, utils } from "../../dist";
-import crypto from "crypto";
+import { TaskExecutor } from "yajsapi";
 import { program } from "commander";
+import crypto from "crypto";
 
-async function main(subnetTag, driver, network, count = 2, session_timeout = 100, debug) {
+async function main(subnetTag, driver, network, count = 2, sessionTimeout = 100, debug) {
   const executor = await TaskExecutor.create({
     package: "1e06505997e8bd1b9e1a00bd10d255fc6a390905e4d6840a22a79902",
     capabilities: ["vpn"],
-    networkAddress: "192.168.0.0/24",
+    networkIp: "192.168.0.0/24",
     maxParallelTasks: count,
     subnetTag,
     payment: { driver, network },
     logLevel: debug ? "debug" : "info",
   });
   const data = new Array(count).fill(null);
-  const app_key = process.env["YAGNA_APPKEY"];
+  const appKey = process.env["YAGNA_APPKEY"];
   await executor.forEach(data, async (ctx) => {
     const password = crypto.randomBytes(3).toString("hex");
     const results = await ctx
@@ -30,12 +30,12 @@ async function main(subnetTag, driver, network, count = 2, session_timeout = 100
     console.log(
       `ssh -o ProxyCommand='websocat asyncstdio: ${ctx.getWebsocketUri(
         22
-      )} --binary -H=Authorization:"Bearer ${app_key}"' root@${crypto.randomBytes(10).toString("hex")}`
+      )} --binary -H=Authorization:"Bearer ${appKey}"' root@${crypto.randomBytes(10).toString("hex")}`
     );
     console.log(`Password: ${password}`);
     console.log("------------------------------------------\n");
-    await utils.sleep(session_timeout);
-    console.log(`Task completed. Session SSH closed after ${session_timeout} secs timeout.`);
+    await new Promise((res) => setTimeout(res, sessionTimeout));
+    console.log(`Task completed. Session SSH closed after ${sessionTimeout} secs timeout.`);
   });
   await executor.end();
 }

@@ -1,6 +1,6 @@
-import { Activity, ActivityOptions } from "./activity";
-import { ActivityConfig } from "./config";
-import { Events } from "../events";
+import { Activity, ActivityOptions } from './activity.js';
+import { ActivityConfig } from './config.js';
+import { Events } from '../events/index.js';
 
 /**
  * Activity Factory

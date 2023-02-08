@@ -1,37 +1,36 @@
-const path = require("path");
-const stdLibBrowser = require("node-stdlib-browser");
-const { default: resolve } = require("@rollup/plugin-node-resolve");
-const commonjs = require("@rollup/plugin-commonjs");
-const json = require("@rollup/plugin-json");
-const alias = require("@rollup/plugin-alias");
-const inject = require("@rollup/plugin-inject");
-const minify = require("rollup-plugin-minify");
-// const { visualizer } = require("rollup-plugin-visualizer");
+import stdLibBrowser from "node-stdlib-browser";
+import { nodeResolve } from "@rollup/plugin-node-resolve";
+import commonjs from "@rollup/plugin-commonjs";
+import json from "@rollup/plugin-json";
+import alias from "@rollup/plugin-alias";
+import inject from "@rollup/plugin-inject";
+import terser from "@rollup/plugin-terser";
+import { visualizer } from "rollup-plugin-visualizer";
 
-module.exports = {
-  input: path.resolve(__dirname, "./dist/index.js"),
+export default {
+  input: "dist/index.js",
   output: {
-    file: path.resolve(__dirname, "./examples/web/js/bundle.js"),
-    format: "iife",
+    inlineDynamicImports: true,
+    file: "dist/yajsapi.min.js",
     name: "yajsapi",
   },
   plugins: [
     alias({
       entries: [
         ...Object.keys(stdLibBrowser).map((k) => ({ find: k, replacement: stdLibBrowser[k] })),
-        { find: /winstonLogger$/, replacement: "." },
-        { find: "eventsource", replacement: "." },
+        { find: /\.\/winstonLogger.js/, replacement: "tests/mock/utils/empty.js" },
+        { find: /eventsource\/lib\/eventsource.js/, replacement: "tests/mock/utils/empty_default.js" },
         { find: /src\/api\/provider-api$/, replacement: "." },
-        { find: /gftp$/, replacement: "." },
+        { find: /\.\/gftp.js/, replacement: "tests/mock/utils/empty.js" },
       ],
     }),
-    resolve({ browser: true, preferBuiltins: true }),
+    nodeResolve({ browser: true, preferBuiltins: false, dedupe: [] }),
     commonjs(),
-    json(),
     inject({
       process: stdLibBrowser.process,
     }),
-    minify(),
-    // visualizer(),
+    json(),
+    terser(),
+    visualizer(),
   ],
 };

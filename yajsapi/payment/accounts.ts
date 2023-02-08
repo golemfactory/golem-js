@@ -1,6 +1,6 @@
-import { Account } from "ya-ts-client/dist/ya-payment/src/models";
-import { AccountConfig, BasePaymentOptions } from "./config";
-import { YagnaOptions } from "../executor";
+import { Account } from "ya-ts-client/dist/ya-payment/src/models/index.js";
+import { AccountConfig, BasePaymentOptions } from "./config.js";
+import { YagnaOptions } from "../executor/index.js";
 
 export interface AccountsOptions extends Omit<BasePaymentOptions, "yagnaOptions"> {
   yagnaOptions?: {

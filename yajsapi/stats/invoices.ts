@@ -1,5 +1,5 @@
-import { AbstractAggregator } from "./abstract_aggregator";
-import { Events } from "../events";
+import { AbstractAggregator } from './abstract_aggregator.js';
+import { Events } from '../events/index.js';
 
 export interface InvoiceInfo {
   id: string;
