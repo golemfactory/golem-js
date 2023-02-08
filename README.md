@@ -39,29 +39,12 @@ To build a library available to the nodejs environment:
 
 ```bash
 npm run build
-```
-
-or
-
-```bash
+# or
 yarn build
 ```
 
-This will generate production code in the `dist/` directory ready to be used in your nodejs applications.
+This will generate production code in the `dist/` directory ready to be used in your nodejs or browser applications.
 
-To build a browser runnable library:
-
-```bash
-npm run build:browser
-```
-
-or 
-
-```bash
-yarn build:browser
-```
-
-Then include `dist/yajsapi.min.js` in your html file.
 
 ### API Reference
 
@@ -82,10 +65,10 @@ import { TaskExecutor } from "yajsapi";
 ```
 
 #### Node.js context
-![](docs/assets/hello_nodejs.gif)
+![hello_nodejs](https://user-images.githubusercontent.com/26308335/217530331-fb059b9c-6ece-4790-881e-d6d60f9ef368.gif)
 
 #### Web Browser context
-![](docs/assets/hello_web.gif)
+![hello_web](https://user-images.githubusercontent.com/26308335/217530424-a1dd4487-f95f-43e6-a91b-7106b6f30802.gif)
 
 For more detailed usage examples and tutorials, see the [Java Script API section of the Handbook](https://handbook.golem.network/yajsapi/)
 
@@ -97,11 +80,7 @@ To run unit tests, you can simply execute the command:
 
 ```bash
 npm run test:unit
-```
-
-or
-
-```bash
+# or
 yarn test:unit
 ```
 
@@ -115,11 +94,7 @@ To enable integration testing, you need to ensure that `python -m goth` is execu
 
 ```bash
 npm run test:integration
-```
-
-or
-
-```bash
+# or
 yarn test:integration
 ```
 
@@ -127,11 +102,7 @@ yarn test:integration
 
 ```bash
 npm run test:cypress
-```
-
-or
-
-```bash
+# or
 yarn test:cypress
 ```
 
@@ -141,11 +112,7 @@ It is recommended to run unit tests and static code analysis before committing c
 
 ```bash
 yarn lint
-```
-
-and
-
-```bash
+# or
 yarn format
 ```
 
