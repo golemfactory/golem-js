@@ -45,6 +45,7 @@ jobs:
           pip install goth
           rm -rf ../goth/assets
           python -m goth create-assets ../goth/assets
+          sed -Ezi 's/(use\-proxy:\s)(True)/\1False/mg' ../goth/assets/goth-config.yml
 
       - name: Disconnect Docker containers from default network
         continue-on-error: true

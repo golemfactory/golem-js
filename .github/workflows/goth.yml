@@ -3,11 +3,11 @@ name: Goth (PR and push)
 on:
   push:
     branches:
-#      - master
+      - master
       - b0.*
   pull_request:
     branches:
-#      - master
+      - master
       - b0.*
 
 jobs:
@@ -40,7 +40,7 @@ jobs:
           pip install goth
           rm -rf ../goth/assets
           python -m goth create-assets ../goth/assets
-          sed -Ezi 's/(Requestor"\n.*use\-proxy:\s)(True)/\1False/m' ../goth/assets/goth-config.yml
+          sed -Ezi 's/(use\-proxy:\s)(True)/\1False/mg' ../goth/assets/goth-config.yml
 
       - name: Install websocat and sshpass
         run: |
