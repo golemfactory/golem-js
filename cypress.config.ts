@@ -17,10 +17,11 @@ export default defineConfig({
   experimentalInteractiveRunEvents: true,
   chromeWebSecurity: false,
   e2e: {
+    baseUrl: "http://localhost:3000",
     supportFile: "tests/cypress/support/e2e.ts",
     specPattern: "tests/cypress/ui/**/*.cy.ts",
     setupNodeEvents(on, config) {
-      require('cypress-terminal-report/src/installLogsPrinter')(on, { printLogsToConsole: "always" })
+      // require("cypress-terminal-report/src/installLogsPrinter")(on, { printLogsToConsole: "always" });
       on("before:run", async () => {
         let bundle;
         try {

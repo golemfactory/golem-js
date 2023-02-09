@@ -4,7 +4,7 @@ import fs from "fs";
 const server = http.createServer((req, res) => {
   if (req.url === "/") {
     res.writeHead(200, { "content-type": "text/html" });
-    fs.createReadStream("index.html").pipe(res);
+    fs.createReadStream("./index.html").pipe(res);
   } else if (req.url === "/hello") {
     res.writeHead(200, { "content-type": "text/html" });
     fs.createReadStream("executor/hello.html").pipe(res);

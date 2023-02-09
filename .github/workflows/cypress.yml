@@ -65,6 +65,12 @@ jobs:
       - name: Log in to GitHub Docker repository
         run: echo ${{ secrets.GITHUB_TOKEN }} | docker login docker.pkg.github.com -u ${{github.actor}} --password-stdin
 
+      - name: Run web server
+        run: |
+          cd examples/web
+          node app.mjs &
+          curl -I http://localhost:3000
+
       - name: Run test suite
         env:
           GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}

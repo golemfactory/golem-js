@@ -1,6 +1,6 @@
 describe("Test Mid-level API", () => {
   it("should run mid-level api example", () => {
-    cy.visit("/mid_level/command.html");
+    cy.visit("/mid");
     cy.get("#YAGNA_APPKEY").clear().type(Cypress.env("YAGNA_APPKEY"));
     cy.get("#YAGNA_API_BASEPATH").clear().type(Cypress.env("YAGNA_API_BASEPATH"));
     cy.get("#SUBNET_TAG").clear().type(Cypress.env("YAGNA_SUBNET"));
