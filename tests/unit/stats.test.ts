@@ -287,7 +287,7 @@ describe("Stats Module", () => {
   describe("Tasks", () => {
     it("should beforeAdd() converts payload to TaskInfo", async () => {
       const tests = new Tasks();
-      tests.add({ id: "id", startTime: 100 });
+      tests.add({ agreementId: "test_id", id: "id", startTime: 100 });
       expect(tests.getAll()).to.deep.equal(
         new Collection([
           {
@@ -302,7 +302,7 @@ describe("Stats Module", () => {
     });
     it("should retry() should setup TaskInfo.retriesCount", async () => {
       const tests = new Tasks();
-      tests.add({ id: "id", startTime: 100 });
+      tests.add({ agreementId: "test_id", id: "id", startTime: 100 });
       tests.retry("id", 1);
       expect(tests.getAll()).to.deep.equal(
         new Collection([
@@ -318,7 +318,7 @@ describe("Stats Module", () => {
     });
     it("should reject() should setup TaskInfo.status as Rejected, stopTime and reason", async () => {
       const tests = new Tasks();
-      tests.add({ id: "id", startTime: 100 });
+      tests.add({ agreementId: "test_id", id: "id", startTime: 100 });
       tests.reject("id", 200, "reason");
       expect(tests.getAll()).to.deep.equal(
         new Collection([
@@ -335,7 +335,7 @@ describe("Stats Module", () => {
     });
     it("should finish() should setup TaskInfo.status as Finished, and stopTime", async () => {
       const tests = new Tasks();
-      tests.add({ id: "id", startTime: 100 });
+      tests.add({ agreementId: "test_id", id: "id", startTime: 100 });
       tests.finish("id", 200);
       expect(tests.getAll()).to.deep.equal(
         new Collection([

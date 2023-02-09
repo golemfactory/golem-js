@@ -1,11 +1,11 @@
 /* eslint @typescript-eslint/ban-ts-comment: 0 */
-import { RequestorApi } from "ya-ts-client/dist/ya-market/src/api/requestor-api";
-import { AgreementProposal } from "ya-ts-client/dist/ya-market/src/models";
+import { RequestorApi } from "ya-ts-client/dist/ya-market/src/api/requestor-api.js";
+import { AgreementProposal } from "ya-ts-client/dist/ya-market/src/models/index.js";
 import { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 import { v4 as uuidv4 } from "uuid";
-import { DemandOfferBase, Event, ProposalEvent } from "ya-ts-client/dist/ya-market/src/models";
-import { agreementsApproved, proposalsDraft, proposalsInitial } from "../fixtures/";
-import { sleep } from "../../../yajsapi/utils";
+import { DemandOfferBase, Event, ProposalEvent } from "ya-ts-client/dist/ya-market/src/models/index.js";
+import { agreementsApproved, proposalsDraft, proposalsInitial } from "../fixtures/index.js";
+import { sleep } from "../../../yajsapi/utils/index.js";
 
 let expectedProposals: ProposalEvent[] = [];
 export const setExpectedProposals = (proposals) => (expectedProposals = proposals);

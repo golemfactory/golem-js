@@ -1,5 +1,5 @@
 /* eslint @typescript-eslint/ban-ts-comment: 0 */
-import { RequestorControlApi } from "ya-ts-client/dist/ya-activity/src/api/requestor-control-api";
+import { RequestorControlApi } from "ya-ts-client/dist/ya-activity/src/api/requestor-control-api.js";
 import {
   ActivityState,
   ActivityStateStateEnum,
@@ -7,12 +7,12 @@ import {
   CreateActivityResult,
   ExeScriptCommandResult,
   ExeScriptRequest,
-} from "ya-ts-client/dist/ya-activity/src/models";
+} from "ya-ts-client/dist/ya-activity/src/models/index.js";
 import { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 import { v4 as uuidv4 } from "uuid";
-import { ExeScriptCommandResultResultEnum } from "ya-ts-client/dist/ya-activity/src/models/exe-script-command-result";
-import { RequestorStateApi } from "ya-ts-client/dist/ya-activity/src/api/requestor-state-api";
-import { Result } from "../../../yajsapi/activity";
+import { ExeScriptCommandResultResultEnum } from "ya-ts-client/dist/ya-activity/src/models/exe-script-command-result.js";
+import { RequestorStateApi } from "ya-ts-client/dist/ya-activity/src/api/requestor-state-api.js";
+import { Result } from "../../../yajsapi/activity/index.js";
 
 const exampleExeResult = {
   index: 0,
@@ -34,7 +34,6 @@ export const setExpectedExeResults = (results) =>
 
 let expectedErrors: AxiosError[] = [];
 export const setExpectedErrors = (errors) => (expectedErrors = errors);
-
 
 let expectedStates = [];
 export const setExpectedStates = (states) => (expectedStates = states);
