@@ -1,13 +1,13 @@
 import { expect } from "chai";
-import { AbstractAggregator } from "../../yajsapi/stats/abstract_aggregator";
-import { Activities } from "../../yajsapi/stats/activities";
-import { Agreements, AgreementStatusEnum } from "../../yajsapi/stats/agreements";
-import { Allocations } from "../../yajsapi/stats/allocations";
-import { Invoices } from "../../yajsapi/stats/invoices";
-import { Payments } from "../../yajsapi/stats/payments";
-import { Proposals } from "../../yajsapi/stats/proposals";
-import { Providers } from "../../yajsapi/stats/providers";
-import { Tasks, TaskStatusEnum } from "../../yajsapi/stats/tasks";
+import { AbstractAggregator } from "../../yajsapi/stats/abstract_aggregator.js";
+import { Activities } from "../../yajsapi/stats/activities.js";
+import { Agreements, AgreementStatusEnum } from "../../yajsapi/stats/agreements.js";
+import { Allocations } from "../../yajsapi/stats/allocations.js";
+import { Invoices } from "../../yajsapi/stats/invoices.js";
+import { Payments } from "../../yajsapi/stats/payments.js";
+import { Proposals } from "../../yajsapi/stats/proposals.js";
+import { Providers } from "../../yajsapi/stats/providers.js";
+import { Tasks, TaskStatusEnum } from "../../yajsapi/stats/tasks.js";
 import { Collection } from "collect.js";
 
 describe("Stats Module", () => {
@@ -292,6 +292,7 @@ describe("Stats Module", () => {
         new Collection([
           {
             id: "id",
+            agreementId: "test_id",
             startTime: 100,
             stopTime: 0,
             retriesCount: 0,
@@ -307,6 +308,7 @@ describe("Stats Module", () => {
       expect(tests.getAll()).to.deep.equal(
         new Collection([
           {
+            agreementId: "test_id",
             id: "id",
             startTime: 100,
             stopTime: 0,
@@ -324,6 +326,7 @@ describe("Stats Module", () => {
         new Collection([
           {
             id: "id",
+            agreementId: "test_id",
             startTime: 100,
             stopTime: 200,
             retriesCount: 0,
@@ -341,6 +344,7 @@ describe("Stats Module", () => {
         new Collection([
           {
             id: "id",
+            agreementId: "test_id",
             startTime: 100,
             stopTime: 200,
             retriesCount: 0,

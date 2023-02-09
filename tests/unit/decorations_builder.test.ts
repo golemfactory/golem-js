@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { ComparisonOperator, DecorationsBuilder } from "../../yajsapi/market/builder";
+import { ComparisonOperator, DecorationsBuilder } from "../../yajsapi/market/builder.js";
 
 describe("#DecorationsBuilder()", () => {
   describe("addProperty()", () => {

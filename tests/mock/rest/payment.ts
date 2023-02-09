@@ -12,21 +12,21 @@ import {
 } from "ya-ts-client/dist/ya-payment/src/models/index.js";
 import { allocations, accounts, debitNotesEvents, debitNotes, invoiceEvents, invoices } from "../fixtures/index.js";
 
-let expectedEvents: DebitNoteEvent[] | InvoiceEvent[] = [];
-let expectedInvoices: Invoice[] = [];
-let expectedDebitNotes: DebitNote[] = [];
+global.expectedEvents = [];
+global.expectedInvoices = [];
+global.expectedDebitNotes = [];
 
-export const setExpectedEvents = (events) => (expectedEvents = events);
-export const setExpectedInvoices = (invoices) => (expectedInvoices = invoices);
-export const setExpectedDebitNotes = (debitNotes) => (expectedDebitNotes = debitNotes);
+export const setExpectedEvents = (events) => (global.expectedEvents = events);
+export const setExpectedInvoices = (invoices) => (global.expectedInvoices = invoices);
+export const setExpectedDebitNotes = (debitNotes) => (global.expectedDebitNotes = debitNotes);
 
-let expectedError: AxiosError;
-export const setExpectedError = (error) => (expectedError = error);
+global.expectedError;
+export const setExpectedError = (error) => (global.expectedError = error);
 
 export const clear = () => {
-  expectedEvents = [];
-  expectedInvoices = [];
-  expectedDebitNotes = [];
+  global.expectedEvents = [];
+  global.expectedInvoices = [];
+  global.expectedDebitNotes = [];
 };
 
 export class PaymentApiMock extends RequestorApi {
@@ -60,12 +60,12 @@ export class PaymentApiMock extends RequestorApi {
     appSessionId?: string,
     options?: AxiosRequestConfig
   ): Promise<import("axios").AxiosResponse<InvoiceEvent[]>> {
-    return new Promise((res) => res({ data: expectedEvents } as AxiosResponse));
+    return new Promise((res) => res({ data: global.expectedEvents } as AxiosResponse));
   }
 
   // @ts-ignore
   getInvoice(invoiceId: string, options?: AxiosRequestConfig): Promise<import("axios").AxiosResponse<Invoice>> {
-    return new Promise((res) => res({ data: expectedInvoices[0] } as AxiosResponse));
+    return new Promise((res) => res({ data: global.expectedInvoices[0] } as AxiosResponse));
   }
 
   // @ts-ignore
@@ -76,12 +76,12 @@ export class PaymentApiMock extends RequestorApi {
     appSessionId?: string,
     options?: AxiosRequestConfig
   ): Promise<import("axios").AxiosResponse<DebitNoteEvent[]>> {
-    return new Promise((res) => res({ data: expectedEvents } as AxiosResponse));
+    return new Promise((res) => res({ data: global.expectedEvents } as AxiosResponse));
   }
 
   // @ts-ignore
   getDebitNote(debitNoteId: string, options?: AxiosRequestConfig): Promise<import("axios").AxiosResponse<DebitNote>> {
-    return new Promise((res) => res({ data: expectedDebitNotes[0] } as AxiosResponse));
+    return new Promise((res) => res({ data: global.expectedDebitNotes[0] } as AxiosResponse));
   }
   // @ts-ignore
   acceptInvoice(

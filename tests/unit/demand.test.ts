@@ -1,9 +1,9 @@
-import { setExpectedProposals } from "../mock/rest/market";
+import { setExpectedProposals } from "../mock/rest/market.js";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-import { Demand, Proposal, DemandEventType, DemandEvent } from "../../yajsapi/market";
-import { allocationMock, packageMock, LoggerMock } from "../mock";
-import { proposalsInitial } from "../mock/fixtures";
+import { Demand, Proposal, DemandEventType, DemandEvent } from "../../yajsapi/market/index.js";
+import { allocationMock, packageMock, LoggerMock } from "../mock/index.js";
+import { proposalsInitial } from "../mock/fixtures/index.js";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;

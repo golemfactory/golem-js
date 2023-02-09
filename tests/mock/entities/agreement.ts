@@ -1,5 +1,5 @@
 import { Agreement } from "../../../yajsapi/agreement/index.js";
-import { AgreementStateEnum } from "ya-ts-client/dist/ya-market/src/models";
+import { AgreementStateEnum } from "ya-ts-client/dist/ya-market/src/models/index.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore

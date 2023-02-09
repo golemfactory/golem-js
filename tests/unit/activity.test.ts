@@ -1,10 +1,19 @@
-import * as activityMock from "../mock/rest/activity";
-import { setExpectedErrorEvents, setExpectedEvents } from "../mock/utils/event_source";
+import * as activityMock from "../mock/rest/activity.js";
+import { setExpectedErrorEvents, setExpectedEvents } from "../mock/utils/event_source.js";
 import { expect } from "chai";
-import { StorageProviderMock } from "../mock";
-import { Activity, ActivityStateEnum } from "../../yajsapi/activity";
-import { sleep } from "../../yajsapi/utils";
-import { Deploy, Start, Run, Terminate, UploadFile, DownloadFile, Script, Capture } from "../../yajsapi/script";
+import { StorageProviderMock } from "../mock/index.js";
+import { Activity, ActivityStateEnum } from "../../yajsapi/activity/index.js";
+import { sleep } from "../../yajsapi/utils/index.js";
+import {
+  Deploy,
+  Start,
+  Run,
+  Terminate,
+  UploadFile,
+  DownloadFile,
+  Script,
+  Capture,
+} from "../../yajsapi/script/index.js";
 
 describe("Activity", () => {
   beforeEach(() => {

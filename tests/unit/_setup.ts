@@ -7,7 +7,6 @@ import { MarketApiMock } from "../mock/rest/market.js";
 import EventSourceMock from "../mock/utils/event_source.js";
 import { PaymentApiMock } from "../mock/rest/payment.js";
 import { NetworkApiMock } from "../mock/rest/network.js";
-
 await quibble.esm("ya-ts-client/dist/ya-payment/api.js", { RequestorApi: PaymentApiMock });
 await quibble.esm("ya-ts-client/dist/ya-net/api.js", { RequestorApi: NetworkApiMock });
 await quibble.esm("ya-ts-client/dist/ya-market/api.js", { RequestorApi: MarketApiMock });

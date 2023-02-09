@@ -7,10 +7,10 @@ import { DemandOfferBase, Event, ProposalEvent } from "ya-ts-client/dist/ya-mark
 import { agreementsApproved, proposalsDraft, proposalsInitial } from "../fixtures/index.js";
 import { sleep } from "../../../yajsapi/utils/index.js";
 
-let expectedProposals: ProposalEvent[] = [];
-export const setExpectedProposals = (proposals) => (expectedProposals = proposals);
-let expectedError: AxiosError;
-export const setExpectedError = (error) => (expectedError = error);
+global.expectedProposals = [];
+export const setExpectedProposals = (proposals) => (global.expectedProposals = proposals);
+global.expectedError;
+export const setExpectedError = (error) => (global.expectedError = error);
 
 export class MarketApiMock extends RequestorApi {
   private exampleProposals = [...proposalsInitial, proposalsDraft];
@@ -59,16 +59,16 @@ export class MarketApiMock extends RequestorApi {
     maxEvents?: number,
     options?: AxiosRequestConfig
   ): Promise<import("axios").AxiosResponse<Event[]>> {
-    if (expectedError) {
-      const error = new Error(expectedError.message) as AxiosError;
+    if (global.expectedError) {
+      const error = new Error(global.expectedError.message) as AxiosError;
       error.response = {
-        data: { message: expectedError.message },
-        status: expectedError.status,
+        data: { message: global.expectedError.message },
+        status: global.expectedError.status,
       } as AxiosResponse;
       throw error;
     }
     await new Promise((res) => setTimeout(res, 10));
-    return new Promise((res) => res({ data: expectedProposals || this.exampleProposals } as AxiosResponse));
+    return new Promise((res) => res({ data: global.expectedProposals || this.exampleProposals } as AxiosResponse));
   }
   // @ts-ignore
   unsubscribeDemand(

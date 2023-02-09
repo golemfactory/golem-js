@@ -1,10 +1,14 @@
-import { setExpectedProposals } from "../mock/rest/market";
-import chai, { expect } from "chai";
-import chaiAsPromised from "chai-as-promised";
-chai.use(chaiAsPromised);
-import { MarketService } from "../../yajsapi/market";
-import { agreementPoolServiceMock, packageMock, marketStrategyAlwaysBan, LoggerMock, allocationMock } from "../mock";
-import { proposalsInitial, proposalsDraft } from "../mock/fixtures";
+import { setExpectedProposals } from "../mock/rest/market.js";
+import { expect } from "chai";
+import { MarketService } from "../../yajsapi/market/index.js";
+import {
+  agreementPoolServiceMock,
+  packageMock,
+  marketStrategyAlwaysBan,
+  LoggerMock,
+  allocationMock,
+} from "../mock/index.js";
+import { proposalsInitial, proposalsDraft } from "../mock/fixtures/index.js";
 
 const logger = new LoggerMock();
 

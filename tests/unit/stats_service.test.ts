@@ -1,9 +1,9 @@
-import { Events } from "../../yajsapi/events";
+import { Events } from "../../yajsapi/events/index.js";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import spies from "chai-spies";
-import { LoggerMock } from "../mock";
-import { StatsService } from "../../yajsapi/stats/service";
+import { LoggerMock } from "../mock/index.js";
+import { StatsService } from "../../yajsapi/stats/service.js";
 import { setMaxListeners } from "events";
 chai.use(chaiAsPromised);
 chai.use(spies);

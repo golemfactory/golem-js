@@ -1,5 +1,5 @@
-const events: Map<string, object[]> = new Map();
-const errorEvents: Map<string, object[]> = new Map();
+global.events = new Map();
+global.errorEvents = new Map();
 
 export default class EventSourceMock {
   private activityId: string;
@@ -10,7 +10,7 @@ export default class EventSourceMock {
   addEventListener(eventName, callback) {
     if (eventName === "runtime") {
       const runtimeInterval = setInterval(() => {
-        const mockEvents = events.get(this.activityId) || [];
+        const mockEvents = global.events.get(this.activityId) || [];
         if (mockEvents.length) {
           callback(mockEvents.shift());
         } else {
@@ -20,7 +20,7 @@ export default class EventSourceMock {
     }
     if (eventName === "error") {
       const errorInterval = setInterval(() => {
-        const mockEvents = errorEvents.get(this.activityId) || [];
+        const mockEvents = global.errorEvents.get(this.activityId) || [];
         if (mockEvents.length) {
           callback(mockEvents.shift());
         } else {
@@ -32,23 +32,15 @@ export default class EventSourceMock {
 }
 
 export const setExpectedEvents = (activityId, expectedEvents) => {
-  events.set(
+  global.events.set(
     activityId,
     expectedEvents.map((e) => JSON.parse(JSON.stringify(e)))
   );
 };
 
 export const setExpectedErrorEvents = (activityId, expectedErrors) => {
-  errorEvents.set(
+  global.errorEvents.set(
     activityId,
     expectedErrors.map((e) => JSON.parse(JSON.stringify(e)))
   );
 };
-
-const isBrowser = new Function("try {return this===window;}catch(e){ return false;}");
-if (isBrowser()) {
-  window["eventSourceMock"] = {
-    setExpectedEvents,
-    setExpectedErrorEvents,
-  };
-}

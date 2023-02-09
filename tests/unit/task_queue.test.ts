@@ -1,6 +1,6 @@
 import { expect } from "chai";
-import { TaskQueue } from "../../yajsapi/task";
-import TaskMock, { TaskState } from "../mock/entities/task";
+import { TaskQueue } from "../../yajsapi/task/index.js";
+import TaskMock, { TaskState } from "../mock/entities/task.js";
 
 describe("Task Queue", function () {
   let test_queue: TaskQueue<TaskMock>;

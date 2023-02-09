@@ -23,25 +23,25 @@ const exampleExeResult = {
   message: "",
   isBatchFinished: true,
 };
-let expectedExeResults: Result[] = [];
+global.expectedExeResults = [];
 export const setExpectedExeResults = (results) =>
   results.forEach((result, i) => {
-    expectedExeResults[i] = Object.assign({}, exampleExeResult);
-    expectedExeResults[i] = Object.assign(expectedExeResults[i], result);
-    expectedExeResults[i].index = i;
-    expectedExeResults[i].isBatchFinished = i === results.length - 1;
+    global.expectedExeResults[i] = Object.assign({}, exampleExeResult);
+    global.expectedExeResults[i] = Object.assign(global.expectedExeResults[i], result);
+    global.expectedExeResults[i].index = i;
+    global.expectedExeResults[i].isBatchFinished = i === results.length - 1;
   });
 
-let expectedErrors: AxiosError[] = [];
-export const setExpectedErrors = (errors) => (expectedErrors = errors);
+global.expectedErrors = [];
+export const setExpectedErrors = (errors) => (global.expectedErrors = errors);
 
-let expectedStates = [];
-export const setExpectedStates = (states) => (expectedStates = states);
+global.expectedStates = [];
+export const setExpectedStates = (states) => (global.expectedStates = states);
 
 export const clear = () => {
-  expectedExeResults = [];
-  expectedErrors = [];
-  expectedStates = [];
+  global.expectedExeResults = [];
+  global.expectedErrors = [];
+  global.expectedStates = [];
 };
 
 export class RequestorControlApiMock extends RequestorControlApi {
@@ -72,8 +72,8 @@ export class RequestorControlApiMock extends RequestorControlApi {
     timeout?: number,
     options?: AxiosRequestConfig
   ): Promise<AxiosResponse<ExeScriptCommandResult[]>> {
-    if (expectedErrors.length) {
-      const mockError = expectedErrors.shift();
+    if (global.expectedErrors.length) {
+      const mockError = global.expectedErrors.shift();
       const error = new Error(mockError!.message) as AxiosError;
       error.response = {
         data: { message: mockError!.message },
@@ -83,7 +83,7 @@ export class RequestorControlApiMock extends RequestorControlApi {
     }
     await new Promise((res) => setTimeout(res, 100));
     return new Promise((res) =>
-      res({ data: expectedExeResults?.length ? expectedExeResults : [exampleExeResult] } as AxiosResponse)
+      res({ data: global.expectedExeResults?.length ? global.expectedExeResults : [exampleExeResult] } as AxiosResponse)
     );
   }
 
@@ -118,7 +118,7 @@ export class RequestorSateApiMock extends RequestorStateApi {
     return new Promise((res) =>
       res({
         data: {
-          state: expectedStates.length ? expectedStates : this.exampleStates.shift(),
+          state: global.expectedStates.length ? global.expectedStates : this.exampleStates.shift(),
           reason: "test",
           errorMessage: "test",
         },

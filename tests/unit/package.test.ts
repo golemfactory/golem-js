@@ -1,11 +1,7 @@
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
-import { LoggerMock } from "../mock";
-import { Package } from "../../yajsapi/package";
-chai.use(chaiAsPromised);
-const expect = chai.expect;
+import { expect } from "chai";
+import { LoggerMock } from "../mock/index.js";
+import { Package } from "../../yajsapi/package/index.js";
 const logger = new LoggerMock();
-process.env["YAGNA_APPKEY"] = "test_key";
 
 describe("Package", () => {
   describe("create()", () => {
