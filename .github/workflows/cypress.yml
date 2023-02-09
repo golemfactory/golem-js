@@ -69,7 +69,6 @@ jobs:
         run: |
           cd examples/web
           node app.mjs &
-          curl -I http://localhost:3000
 
       - name: Run test suite
         env:
