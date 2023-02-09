@@ -22,19 +22,6 @@ export default defineConfig({
     specPattern: "tests/cypress/ui/**/*.cy.ts",
     setupNodeEvents(on, config) {
       // require("cypress-terminal-report/src/installLogsPrinter")(on, { printLogsToConsole: "always" });
-      on("before:run", async () => {
-        let bundle;
-        try {
-          console.log("Trying to compile bundle by rollup.js...");
-          bundle = await rollup(rollupConfig);
-          await bundle.write(rollupConfig.output);
-        } catch (error) {
-          console.error(error);
-        }
-        if (!bundle) throw new Error("Rollup bundle compilation error");
-        await bundle.close();
-        console.log("Browser bundle has been successfully compiled by rollup");
-      });
       on("after:run", async () => {
         await goth.end();
       });

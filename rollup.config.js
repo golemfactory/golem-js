@@ -33,4 +33,7 @@ export default {
     terser(),
     visualizer(),
   ],
+  onwarn: (warning) => {
+    if (warning.code !== "CIRCULAR_DEPENDENCY") console.error(`(!) ${warning.message}`);
+  },
 };
