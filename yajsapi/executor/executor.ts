@@ -323,21 +323,21 @@ export class TaskExecutor {
     this.logger?.warn("Trying to stop all services...");
     this.end().catch((e) => {
       this.logger?.error(e);
-      process.exit(1);
+      process?.exit(1);
     });
   }
 
   private handleCancelEvent() {
     const terminatingSignals = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
     const cancel = () => {
-      terminatingSignals.forEach((event) => process.off(event, cancel));
+      terminatingSignals.forEach((event) => process?.off(event, cancel));
       this.logger?.warn("Executor has interrupted by the user. Stopping all tasks...");
       this.end().catch((error) => {
         this.logger?.error(error);
-        process.exit(1);
+        process?.exit(1);
       });
     };
-    terminatingSignals.forEach((event) => process.on(event, cancel));
+    terminatingSignals.forEach((event) => process?.on(event, cancel));
   }
 
   private printStats() {
