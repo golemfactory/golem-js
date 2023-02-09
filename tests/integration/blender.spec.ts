@@ -36,7 +36,7 @@ describe("Blender rendering", function () {
       logger,
     });
     executor.beforeEach(async (ctx) => {
-      await ctx.uploadFile(path.join(__dirname, "../mock/fixtures/cubes.blend"), "/golem/resource/scene.blend");
+      await ctx.uploadFile("../mock/fixtures/cubes.blend", "/golem/resource/scene.blend");
     });
     const data = [0, 10, 20, 30, 40, 50];
     const results = executor.map<number, string>(data, async (ctx, frame) => {

@@ -1,10 +1,9 @@
-import stdLibBrowser from "node-stdlib-browser";
 import { nodeResolve } from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
 import json from "@rollup/plugin-json";
 import alias from "@rollup/plugin-alias";
-import inject from "@rollup/plugin-inject";
 import terser from "@rollup/plugin-terser";
+import nodePolyfills from "rollup-plugin-polyfill-node";
 import { visualizer } from "rollup-plugin-visualizer";
 
 export default {
@@ -17,18 +16,15 @@ export default {
   plugins: [
     alias({
       entries: [
-        ...Object.keys(stdLibBrowser).map((k) => ({ find: k, replacement: stdLibBrowser[k] })),
         { find: /\.\/winstonLogger.js/, replacement: "tests/mock/utils/empty.js" },
         { find: /eventsource\/lib\/eventsource.js/, replacement: "tests/mock/utils/empty_default.js" },
         { find: /src\/api\/provider-api$/, replacement: "." },
         { find: /\.\/gftp.js/, replacement: "tests/mock/utils/empty.js" },
       ],
     }),
-    nodeResolve({ browser: true, preferBuiltins: false, dedupe: [] }),
+    nodeResolve({ browser: true, preferBuiltins: false }),
     commonjs(),
-    inject({
-      process: stdLibBrowser.process,
-    }),
+    nodePolyfills(),
     json(),
     terser(),
     visualizer(),
