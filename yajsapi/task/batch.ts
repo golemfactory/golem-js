@@ -1,7 +1,7 @@
 import { DownloadFile, Run, Script, UploadFile } from "../script/index.js";
 import { Activity, Result } from "../activity/index.js";
 import { StorageProvider } from "../storage/provider.js";
-import { Logger, runtimeContextChecker } from "../utils/index.js";
+import { Logger, runtimeContextChecker, sleep } from "../utils/index.js";
 import { Readable, Transform } from "stream";
 
 export class Batch {
@@ -36,6 +36,7 @@ export class Batch {
   }
   async end(): Promise<Result[]> {
     await this.script.before();
+    await sleep(100, true);
     const results = await this.activity.execute(this.script.getExeScriptRequest());
     const allResults: Result[] = [];
     return new Promise((res, rej) => {

@@ -1,6 +1,5 @@
-import { TaskExecutor } from "yajsapi";
+import { TaskExecutor } from "../../dist";
 import { program } from "commander";
-import path from "path";
 
 const blender_params = (frame) => ({
   scene_file: "/golem/resource/scene.blend",
@@ -39,7 +38,10 @@ async function main(subnetTag: string, driver?: string, network?: string, debug?
       .beginBatch()
       .uploadJson(blender_params(frame), "/golem/work/params.json")
       .run("/golem/entrypoints/run-blender.sh")
-      .downloadFile(`/golem/output/out${frame?.toString().padStart(4, "0")}.png`, `./output_${frame}.png`)
+      .downloadFile(
+        `/golem/output/out${frame?.toString().padStart(4, "0")}.png`,
+        new URL(`./output_${frame}.png`, import.meta.url).pathname
+      )
       .end()
       .catch((error) => console.error(error));
     return result ? `output_${frame}.png` : "";

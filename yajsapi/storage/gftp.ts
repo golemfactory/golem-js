@@ -63,7 +63,7 @@ export class GftpStorageProvider implements StorageProvider {
     const query = `{"jsonrpc": "2.0", "id": "1", "method": "${method}", "params": ${paramsStr}}\n`;
     this.gftpServerProcess.stdin.write(query);
     return new Promise((res, rej) =>
-      this.gftpServerProcess.stdout.on("data", (data) => {
+      this.gftpServerProcess.stdout.once("data", (data) => {
         try {
           res(JSON.parse(data)?.result);
         } catch (e) {

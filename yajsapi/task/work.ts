@@ -103,6 +103,7 @@ export class WorkContext {
   private async runOneCommand(command: Command): Promise<Result> {
     const script = new Script([command]);
     await script.before();
+    await sleep(100, true);
     const results = await this.activity.execute(script.getExeScriptRequest());
     const allResults: Result[] = [];
     for await (const result of results) allResults.push(result);
