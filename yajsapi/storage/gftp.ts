@@ -25,6 +25,7 @@ export class GftpStorageProvider implements StorageProvider {
     this.gftpServerProcess.stdout.setEncoding("utf-8");
     this.gftpServerProcess.on("error", (error) => this.logger?.error(error));
     this.gftpServerProcess.stderr.on("error", (error) => this.logger?.error(error));
+    this.gftpServerProcess.stdout.on("error", (error) => this.logger?.error(error));
     this.logger?.info(`GFTP Version: ${await this.jsonRpc("version")}`);
   }
 
@@ -100,6 +101,7 @@ export class GftpStorageProvider implements StorageProvider {
 
   private async uploadFile(file: string): Promise<string> {
     const links = await this.jsonRpc("publish", { files: [file.toString()] });
-    return links[0]?.url;
+    if (!links || !links?.[0].url) throw new Error(`[Gftp] Unable to upload file ${file}`);
+    return links[0].url;
   }
 }

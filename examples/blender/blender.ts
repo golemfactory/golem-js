@@ -1,5 +1,6 @@
 import { TaskExecutor } from "yajsapi";
 import { program } from "commander";
+import path from "path";
 
 const blender_params = (frame) => ({
   scene_file: "/golem/resource/scene.blend",
@@ -30,7 +31,7 @@ async function main(subnetTag: string, driver?: string, network?: string, debug?
   });
 
   executor.beforeEach(async (ctx) => {
-    await ctx.uploadFile("./cubes.blend", "/golem/resource/scene.blend");
+    await ctx.uploadFile(new URL("./cubes.blend", import.meta.url).pathname, "/golem/resource/scene.blend");
   });
 
   const results = executor.map<number, string>([0, 10, 20, 30, 40, 50], async (ctx, frame) => {
