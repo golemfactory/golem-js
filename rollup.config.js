@@ -4,7 +4,7 @@ import json from "@rollup/plugin-json";
 import alias from "@rollup/plugin-alias";
 import terser from "@rollup/plugin-terser";
 import nodePolyfills from "rollup-plugin-polyfill-node";
-import { visualizer } from "rollup-plugin-visualizer";
+// import { visualizer } from "rollup-plugin-visualizer";
 
 export default {
   input: "dist/index.js",
@@ -26,8 +26,8 @@ export default {
     commonjs(),
     nodePolyfills(),
     json(),
-    // terser(),
-    visualizer(),
+    terser(),
+    // visualizer(),
   ],
   onwarn: (warning) => {
     if (warning.code !== "CIRCULAR_DEPENDENCY") console.error(`(!) ${warning.message}`);
