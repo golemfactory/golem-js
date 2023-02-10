@@ -75,7 +75,7 @@ export class RepoResolver {
 
   private async resolveRepoUrlForNode() {
     return new Promise((resolve, reject) => {
-      import("node:dns")
+      import("dns")
         .then((nodeDns) => {
           nodeDns.resolveSrv(DEFAULT_REPO_SRV, (err, addresses) => {
             if (err) reject(err);

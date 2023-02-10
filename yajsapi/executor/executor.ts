@@ -156,7 +156,7 @@ export class TaskExecutor {
     this.networkService?.run().catch((e) => this.handleCriticalError(e));
     this.statsService.run().catch((e) => this.handleCriticalError(e));
     this.storageProvider?.init().catch((e) => this.handleCriticalError(e));
-    this.handleCancelEvent();
+    if (runtimeContextChecker.isNode) this.handleCancelEvent();
     this.options.eventTarget.dispatchEvent(new Events.ComputationStarted());
     this.logger?.info(
       `Task Executor has started using subnet ${this.options.subnetTag}, network: ${this.options.payment?.network}, driver: ${this.options.payment?.driver}`
@@ -330,14 +330,14 @@ export class TaskExecutor {
   private handleCancelEvent() {
     const terminatingSignals = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
     const cancel = () => {
-      terminatingSignals.forEach((event) => process?.off(event, cancel));
+      terminatingSignals.forEach((event) => process.off(event, cancel));
       this.logger?.warn("Executor has interrupted by the user. Stopping all tasks...");
       this.end().catch((error) => {
         this.logger?.error(error);
-        process?.exit(1);
+        process.exit(1);
       });
     };
-    terminatingSignals.forEach((event) => process?.on(event, cancel));
+    terminatingSignals.forEach((event) => process.on(event, cancel));
   }
 
   private printStats() {
