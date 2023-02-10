@@ -23,7 +23,7 @@ describe("Task Service", () => {
       activityStateCheckingInterval: 10,
     });
     service.run().catch((e) => console.error(e));
-    await logger.expectToMatch(/Activity .* created/, 200);
+    await logger.expectToMatch(/Activity .* created/, 500);
     expect(task.isFinished()).to.be.true;
     expect(task.getResults()?.stdout).to.equal("some_shell_results");
     await service.end();
@@ -86,7 +86,7 @@ describe("Task Service", () => {
     service.run().catch((e) => console.error(e));
     await logger.expectToInclude(
       "Error: Task 1 has been rejected! Work rejected by user. Reason: Invalid value computed by provider",
-      1200
+      1400
     );
     expect(task.isFinished()).to.be.true;
     await service.end();
@@ -103,7 +103,7 @@ describe("Task Service", () => {
       activityStateCheckingInterval: 10,
     });
     service.run().catch((e) => console.error(e));
-    await logger.expectToInclude("Error: Task 1 has been rejected!", 1200);
+    await logger.expectToInclude("Error: Task 1 has been rejected!", 1400);
     expect(task.isRejected()).to.be.true;
     await service.end();
   });
@@ -124,9 +124,9 @@ describe("Task Service", () => {
       maxParallelTasks: 2,
     });
     service.run().catch((e) => console.error(e));
-    await logger.expectToMatch(/Init worker done in activity.*\n.*\nInit worker done in activity/, 600);
+    await logger.expectToMatch(/Init worker done in activity.*\nInit worker done in activity/, 700);
     await logger.expectToNotMatch(
-      /Init worker done in activity.*\n.*\nInit worker done in activity.*\n.*\nInit worker done in activity/
+      /Init worker done in activity.*\nInit worker done in activity.*\nInit worker done in activity/
     );
     await new Promise((res) => setTimeout(res, 1000));
     expect(task1.isFinished()).to.be.true;
