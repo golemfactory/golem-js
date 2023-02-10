@@ -16,13 +16,14 @@ export default {
   plugins: [
     alias({
       entries: [
+        { find: "stream", replacement: "stream-browserify" },
         { find: /\.\/winstonLogger.js/, replacement: "tests/mock/utils/empty.js" },
         { find: /eventsource\/lib\/eventsource.js/, replacement: "tests/mock/utils/empty_default.js" },
         { find: /src\/api\/provider-api$/, replacement: "." },
         { find: /\.\/gftp.js/, replacement: "tests/mock/utils/empty.js" },
       ],
     }),
-    nodeResolve({ browser: true, preferBuiltins: false }),
+    nodeResolve({ browser: true, preferBuiltins: true }),
     commonjs(),
     nodePolyfills(),
     json(),
