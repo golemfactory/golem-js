@@ -1,5 +1,5 @@
-import { StorageProvider } from "./provider";
-import { Logger, runtimeContextChecker } from "../utils";
+import { StorageProvider } from "./provider.js";
+import { Logger, runtimeContextChecker } from "../utils/index.js";
 import path from "path";
 import fs from "fs";
 import { chomp, chunksToLinesAsync, streamEnd, streamWrite } from "@rauschma/stringio";
