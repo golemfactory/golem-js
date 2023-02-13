@@ -14,7 +14,7 @@ await quibble.esm("ya-ts-client/dist/ya-activity/api.js", {
   RequestorControlApi: RequestorControlApiMock,
   RequestorStateApi: RequestorSateApiMock,
 });
-await quibble.esm("eventsource", EventSourceMock, EventSourceMock);
+await quibble.esm("eventsource", null, EventSourceMock);
 
 process.env["YAGNA_APPKEY"] = "test_key";
 chai.use(chaiAsPromised);
