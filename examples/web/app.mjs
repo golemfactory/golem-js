@@ -4,22 +4,22 @@ import fs from "fs";
 const server = http.createServer((req, res) => {
   if (req.url === "/") {
     res.writeHead(200, { "content-type": "text/html" });
-    fs.createReadStream("./index.html").pipe(res);
+    fs.createReadStream(new URL("./index.html", import.meta.url).pathname).pipe(res);
   } else if (req.url === "/hello") {
     res.writeHead(200, { "content-type": "text/html" });
-    fs.createReadStream("executor/hello.html").pipe(res);
+    fs.createReadStream(new URL("executor/hello.html", import.meta.url).pathname).pipe(res);
   } else if (req.url === "/image") {
     res.writeHead(200, { "content-type": "text/html" });
-    fs.createReadStream("executor/image.html").pipe(res);
+    fs.createReadStream(new URL("executor/image.html", import.meta.url).pathname).pipe(res);
   } else if (req.url === "/mid") {
     res.writeHead(200, { "content-type": "text/html" });
-    fs.createReadStream("mid_level/index.html").pipe(res);
+    fs.createReadStream(new URL("mid_level/index.html", import.meta.url).pathname).pipe(res);
   } else if (req.url === "/yajsapi.min.js") {
     res.writeHead(200, { "content-type": "text/javascript" });
-    fs.createReadStream("../../dist/yajsapi.min.js").pipe(res);
+    fs.createReadStream(new URL("../../dist/yajsapi.min.js", import.meta.url).pathname).pipe(res);
   } else if (req.url === "/css/main.css") {
     res.writeHead(200, { "content-type": "text/css" });
-    fs.createReadStream("css/main.css").pipe(res);
+    fs.createReadStream(new URL("css/main.css", import.meta.url).pathname).pipe(res);
   }
 });
 
