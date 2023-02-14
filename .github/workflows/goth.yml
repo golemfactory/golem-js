@@ -36,7 +36,7 @@ jobs:
       - name: Configure python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.9'
+          python-version: '3.8'
 
       - name: Configure poetry
         uses: Gr1N/setup-poetry@v8
@@ -47,7 +47,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd tests/goth/
-          poetry env use python3.9
+          poetry env use python3.8
           poetry install
 
       - name: Install websocat
