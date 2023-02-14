@@ -84,7 +84,7 @@ export class Demand extends EventTarget {
           if (event.eventType === "ProposalRejectedEvent") {
             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
             // @ts-ignore
-            this.logger?.warn(`Proposal rejected. Reason: ${event.reason?.message}`);
+            this.logger?.debug(`Proposal rejected. Reason: ${event.reason?.message}`);
             continue;
           } else if (event.eventType !== "ProposalEvent") continue;
           const proposal = new Proposal(
