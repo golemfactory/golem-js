@@ -33,10 +33,10 @@ export interface WorkOptions {
  * @description
  */
 export class WorkContext {
+  public readonly provider?: { name: string; id: string; networkConfig?: object };
   private readonly workTimeout: number;
   private readonly logger?: Logger;
   private readonly activityStateCheckingInterval: number;
-  private readonly provider?: { name: string; id: string; networkConfig?: object };
   private readonly storageProvider?: StorageProvider;
   private readonly networkNode?: NetworkNode;
 

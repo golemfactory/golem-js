@@ -26,7 +26,7 @@ async function main(subnetTag, driver, network, count = 2, sessionTimeout = 100,
       .catch((e) => console.error(e));
     if (!results) return;
     console.log("\n------------------------------------------");
-    console.log(`Connect via ssh to provider "todo" with:`);
+    console.log(`Connect via ssh to provider "${ctx.provider?.name}" with:`);
     console.log(
       `ssh -o ProxyCommand='websocat asyncstdio: ${ctx.getWebsocketUri(
         22
