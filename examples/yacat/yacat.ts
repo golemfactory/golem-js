@@ -15,9 +15,9 @@ async function main(args) {
   });
 
   if (!keyspace) throw new Error(`Cannot calculate keyspace`);
-  console.log(`Keyspace size computed. Keyspace size = ${keyspace}.`);
   const step = Math.floor(keyspace / args.numberOfProviders + 1);
   const range = [...Array(Math.floor(keyspace / step)).keys()].map((i) => i + step);
+  console.log(`Keyspace size computed. Keyspace size = ${keyspace}. Tasks = ${range.length}`);
 
   const results = executor.map(range, async (ctx, skip = 0) => {
     const results = await ctx

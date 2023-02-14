@@ -7,7 +7,6 @@ import { TaskExecutor } from "yajsapi";
       .beginBatch()
       .run('echo "Hello Golem"')
       .run('echo "Hello World"')
-      .run("error_command")
       .end()
       .catch((error) => console.log(error));
     res?.map(({ stdout }) => console.log(stdout));

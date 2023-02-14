@@ -34,7 +34,7 @@ async function main(subnetTag, driver, network, count = 2, sessionTimeout = 100,
     );
     console.log(`Password: ${password}`);
     console.log("------------------------------------------\n");
-    await new Promise((res) => setTimeout(res, sessionTimeout));
+    await new Promise((res) => setTimeout(res, sessionTimeout * 1000));
     console.log(`Task completed. Session SSH closed after ${sessionTimeout} secs timeout.`);
   });
   await executor.end();
