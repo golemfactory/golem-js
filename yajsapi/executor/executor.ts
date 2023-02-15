@@ -248,10 +248,13 @@ export class TaskExecutor {
     const featureResults = inputs.map((value) => this.executeTask<InputType, OutputType>(worker, value));
     const results: OutputType[] = [];
     let resultsCount = 0;
+    let error = false;
     featureResults.forEach((featureResult) =>
-      featureResult.then((res) => {
-        if (res) results.push(res);
-      })
+      featureResult
+        .then((res) => {
+          if (typeof res !== "undefined") results.push(res);
+        })
+        .catch((err) => (error = err))
     );
     const isRunning = () => this.isRunning;
     return {
@@ -261,10 +264,11 @@ export class TaskExecutor {
             if (resultsCount === inputs.length) {
               return Promise.resolve({ done: true, value: undefined });
             }
-            while (results.length === 0 && resultsCount < inputs.length && isRunning()) {
+            while (results.length === 0 && resultsCount < inputs.length && isRunning() && !error) {
               await sleep(1000, true);
             }
             if (!isRunning()) return Promise.resolve({ done: true, value: undefined });
+            if (error) return Promise.reject(error);
             resultsCount += 1;
             return Promise.resolve({ done: false, value: results.pop() });
           },
@@ -313,7 +317,7 @@ export class TaskExecutor {
       await sleep(2000, true);
     }
     clearTimeout(timeoutId);
-    if (timeout) this.logger?.warn(`Task ${task.id} timeout.`);
+    if (timeout) task.stop(undefined, new Error(`Task ${task.id} timeout.`));
   }
 
   private handleCriticalError(e: Error) {

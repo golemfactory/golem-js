@@ -1,7 +1,7 @@
-import { ExecutorOptions } from './executor.js';
-import { Package } from '../package/index.js';
-import { MarketStrategy } from '../market/index.js';
-import { Logger, runtimeContextChecker, winstonLogger } from '../utils/index.js';
+import { ExecutorOptions } from "./executor.js";
+import { Package } from "../package/index.js";
+import { MarketStrategy } from "../market/index.js";
+import { Logger, runtimeContextChecker, winstonLogger } from "../utils/index.js";
 
 const DEFAULTS = {
   budget: 1.0,
@@ -40,6 +40,8 @@ export class ExecutorConfig {
   readonly eventTarget: EventTarget;
 
   constructor(options: ExecutorOptions) {
+    Object.keys(options).forEach((key) => (this[key] = options[key]));
+    this["activityExecuteTimeout"] = options.taskTimeout;
     const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
     if (!apiKey) throw new Error("Api key not defined");
     this.yagnaOptions = {
