@@ -1,9 +1,9 @@
-import { Logger } from '../utils/index.js';
-import { Agreement, AgreementOptions, AgreementStateEnum } from './agreement.js';
-import sleep from '../utils/sleep.js';
+import { Logger } from "../utils/index.js";
+import { Agreement, AgreementOptions, AgreementStateEnum } from "./agreement.js";
+import sleep from "../utils/sleep.js";
 
-import { ComputationHistory } from '../market/strategy.js';
-import { AgreementServiceConfig } from './config.js';
+import { ComputationHistory } from "../market/strategy.js";
+import { AgreementServiceConfig } from "./config.js";
 
 export interface AgreementServiceOptions extends AgreementOptions {
   agreementEventPoolingInterval?: number;
@@ -159,9 +159,7 @@ export class AgreementPoolService implements ComputationHistory {
         }
       } catch (e) {
         this.logger?.error(`Unable to create agreement form available proposal: ${e?.data?.message || e}`);
-
         await sleep(2);
-        // If id to go kill'em
         agreement = null;
       }
     }
@@ -195,7 +193,7 @@ export class AgreementPoolService implements ComputationHistory {
 
     if (state === AgreementStateEnum.Proposal) {
       await agreement.confirm();
-      this.logger?.info(`Agreement proposed to provider '${agreement.provider.name}'`);
+      this.logger?.debug(`Agreement proposed to provider '${agreement.provider.name}'`);
     }
 
     /** Solution for support events in the future

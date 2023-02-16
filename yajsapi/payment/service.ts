@@ -1,10 +1,10 @@
-import { Logger, sleep } from '../utils/index.js';
-import { Allocation } from './allocation.js';
-import { BasePaymentOptions, PaymentConfig } from './config.js';
-import { Invoice } from './invoice.js';
-import { DebitNote } from './debit_note.js';
-import { Events } from '../events/index.js';
-import { Accounts } from './accounts.js';
+import { Logger, sleep } from "../utils/index.js";
+import { Allocation } from "./allocation.js";
+import { BasePaymentOptions, PaymentConfig } from "./config.js";
+import { Invoice } from "./invoice.js";
+import { DebitNote } from "./debit_note.js";
+import { Events } from "../events/index.js";
+import { Accounts } from "./accounts.js";
 
 /**
  * @internal
@@ -115,7 +115,7 @@ export class PaymentService {
         const agreement = this.agreementsToPay.get(invoice.agreementId);
         if (!agreement) {
           this.invoicesToPay.delete(invoice.id);
-          this.logger?.warn(`Agreement ${invoice.agreementId} has not been accepted to payment`);
+          this.logger?.debug(`Agreement ${invoice.agreementId} has not been accepted to payment`);
           continue;
         }
         try {

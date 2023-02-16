@@ -1,7 +1,7 @@
-import { Agreement, AgreementOptions } from './agreement.js';
-import { Logger } from '../utils/index.js';
-import { AgreementConfig } from './config.js';
-import { Events } from '../events/index.js';
+import { Agreement, AgreementOptions } from "./agreement.js";
+import { Logger } from "../utils/index.js";
+import { AgreementConfig } from "./config.js";
+import { Events } from "../events/index.js";
 
 /**
  * AgreementFactory
@@ -50,7 +50,7 @@ export class AgreementFactory {
           proposalId,
         })
       );
-      this.logger?.info(`Agreement ${agreementId} created`);
+      this.logger?.debug(`Agreement ${agreementId} created`);
       return agreement;
     } catch (error) {
       throw new Error(`Unable to create agreement ${error?.response?.data?.message || error?.response?.data || error}`);

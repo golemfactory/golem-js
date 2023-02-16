@@ -1,4 +1,4 @@
-import { QueueableTask, Worker } from './index.js';
+import { QueueableTask, Worker } from "./index.js";
 
 export enum TaskState {
   New,
@@ -18,6 +18,7 @@ const MAX_RETRIES = 5;
 export class Task<InputType = unknown, OutputType = unknown> implements QueueableTask {
   private state = TaskState.New;
   private results?: OutputType;
+  private error?: Error;
   private retriesCount = 0;
 
   constructor(
@@ -34,6 +35,7 @@ export class Task<InputType = unknown, OutputType = unknown> implements Queueabl
     if (error) {
       ++this.retriesCount;
       this.state = retry && this.retriesCount <= MAX_RETRIES ? TaskState.Retry : TaskState.Rejected;
+      this.error = error;
     } else {
       this.state = TaskState.Done;
       this.results = results;
@@ -71,5 +73,8 @@ export class Task<InputType = unknown, OutputType = unknown> implements Queueabl
   }
   getRetriesCount(): number {
     return this.retriesCount;
+  }
+  getError(): Error | undefined {
+    return this.error;
   }
 }

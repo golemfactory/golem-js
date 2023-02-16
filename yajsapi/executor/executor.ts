@@ -159,7 +159,7 @@ export class TaskExecutor {
     if (runtimeContextChecker.isNode) this.handleCancelEvent();
     this.options.eventTarget.dispatchEvent(new Events.ComputationStarted());
     this.logger?.info(
-      `Task Executor has started using subnet ${this.options.subnetTag}, network: ${this.options.payment?.network}, driver: ${this.options.payment?.driver}`
+      `Task Executor has started using subnet: ${this.options.subnetTag}, network: ${this.options.payment?.network}, driver: ${this.options.payment?.driver}`
     );
   }
 
@@ -224,7 +224,11 @@ export class TaskExecutor {
    * ```
    */
   async run<OutputType = Result>(worker: Worker<undefined, OutputType>): Promise<OutputType | undefined> {
-    return this.executeTask<undefined, OutputType>(worker);
+    try {
+      return this.executeTask<undefined, OutputType>(worker);
+    } catch (e) {
+      await this.handleCriticalError(e);
+    }
   }
 
   /**
@@ -248,13 +252,12 @@ export class TaskExecutor {
     const featureResults = inputs.map((value) => this.executeTask<InputType, OutputType>(worker, value));
     const results: OutputType[] = [];
     let resultsCount = 0;
-    let error = false;
     featureResults.forEach((featureResult) =>
       featureResult
         .then((res) => {
           if (typeof res !== "undefined") results.push(res);
         })
-        .catch((err) => (error = err))
+        .catch((e) => this.handleCriticalError(e))
     );
     const isRunning = () => this.isRunning;
     return {
@@ -264,11 +267,10 @@ export class TaskExecutor {
             if (resultsCount === inputs.length) {
               return Promise.resolve({ done: true, value: undefined });
             }
-            while (results.length === 0 && resultsCount < inputs.length && isRunning() && !error) {
+            while (results.length === 0 && resultsCount < inputs.length && isRunning()) {
               await sleep(1000, true);
             }
             if (!isRunning()) return Promise.resolve({ done: true, value: undefined });
-            if (error) return Promise.reject(error);
             resultsCount += 1;
             return Promise.resolve({ done: false, value: results.pop() });
           },
@@ -294,7 +296,9 @@ export class TaskExecutor {
     data: Iterable<InputType>,
     worker: Worker<InputType, OutputType>
   ): Promise<void> {
-    await Promise.all([...data].map((value) => this.executeTask<InputType, OutputType>(worker, value)));
+    await Promise.all([...data].map((value) => this.executeTask<InputType, OutputType>(worker, value))).catch((e) =>
+      this.handleCriticalError(e)
+    );
   }
 
   private async createPackage(imageHash: string): Promise<Package> {
@@ -312,12 +316,13 @@ export class TaskExecutor {
     while (!timeout && this.isRunning) {
       if (task.isFinished()) {
         clearTimeout(timeoutId);
+        if (task.isRejected()) throw task.getError();
         return task.getResults();
       }
+      if (timeout) task.stop(undefined, new Error(`Task ${task.id} timeout.`));
       await sleep(2000, true);
     }
     clearTimeout(timeoutId);
-    if (timeout) task.stop(undefined, new Error(`Task ${task.id} timeout.`));
   }
 
   private handleCriticalError(e: Error) {
@@ -333,10 +338,10 @@ export class TaskExecutor {
 
   private handleCancelEvent() {
     const terminatingSignals = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
-    const cancel = () => {
+    const cancel = async () => {
       terminatingSignals.forEach((event) => process.off(event, cancel));
       this.logger?.warn("Executor has interrupted by the user. Stopping all tasks...");
-      this.end().catch((error) => {
+      await this.end().catch((error) => {
         this.logger?.error(error);
         process.exit(1);
       });
