@@ -145,6 +145,7 @@ describe("Task Executor", function () {
       logger,
     });
     let results;
+    let error;
     await executor
       .run(async (ctx) => {
         results = await ctx
@@ -152,13 +153,12 @@ describe("Task Executor", function () {
           .run('echo "Hello Golem"')
           .run("invalid_command")
           .end()
-          .catch((error) => error);
+          .catch((err) => (error = err));
       })
       .catch((e) => {
         expect(e).to.be.undefined;
       });
-    expect(results?.[0]?.stdout?.trim()).to.equal("Hello Golem");
-    expect(results?.[1]?.stderr?.trim()).to.equal("sh: 1: invalid_command: not found");
+    expect(error).to.equal("sh: 1: invalid_command: not found");
   }).timeout(80000);
 
   it("should run transfer file", async () => {
