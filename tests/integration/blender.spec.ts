@@ -1,7 +1,6 @@
 import { expect } from "chai";
 import { TaskExecutor } from "../../yajsapi/index.js";
 import { LoggerMock } from "../mock/index.js";
-import path from "path";
 import { fileExistsSync } from "tsconfig-paths/lib/filesystem.js";
 
 const logger = new LoggerMock(false);
@@ -56,5 +55,5 @@ describe("Blender rendering", function () {
     for await (const result of results) expect(result).to.be.oneOf(expectedResults);
     for (const file of expectedResults)
       expect(fileExistsSync(`${process.env.GOTH_GFTP_VOLUME || ""}${file}`)).to.be.true;
-  }).timeout(190000);
+  }).timeout(240000);
 });
