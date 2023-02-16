@@ -1,11 +1,11 @@
-import { Logger } from '../utils/index.js';
-import { Package } from '../package/index.js';
-import { Demand, Proposal, DemandEventType, DemandOptions } from './index.js';
-import { DefaultMarketStrategy, MarketStrategy, SCORE_NEUTRAL } from './strategy.js';
-import { AgreementPoolService } from '../agreement/index.js';
-import { Allocation } from '../payment/index.js';
-import { DemandEvent } from './demand.js';
-import { MarketConfig } from './config.js';
+import { Logger } from "../utils/index.js";
+import { Package } from "../package/index.js";
+import { Demand, Proposal, DemandEventType, DemandOptions } from "./index.js";
+import { DefaultMarketStrategy, MarketStrategy, SCORE_NEUTRAL } from "./strategy.js";
+import { AgreementPoolService } from "../agreement/index.js";
+import { Allocation } from "../payment/index.js";
+import { DemandEvent } from "./demand.js";
+import { MarketConfig } from "./config.js";
 
 /**
  * @internal
@@ -65,7 +65,7 @@ export class MarketService {
       const { result: isProposalValid, reason } = this.isProposalValid(proposal);
       if (isProposalValid) {
         const chosenPlatform = this.getCommonPaymentPlatforms(proposal.properties)![0];
-        await proposal.respond(chosenPlatform);
+        await proposal.respond(chosenPlatform).catch((e) => this.logger?.debug(e));
         this.logger?.debug(`Proposal hes been responded (${proposal.id})`);
       } else {
         await proposal.reject(reason);

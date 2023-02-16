@@ -1,7 +1,7 @@
-import { TaskOptions } from './service.js';
-import { ActivityConfig } from '../activity/config.js';
-import { Logger } from '../utils/index.js';
-import { StorageProvider } from '../storage/index.js';
+import { TaskOptions } from "./service.js";
+import { ActivityConfig } from "../activity/config.js";
+import { Logger } from "../utils/index.js";
+import { StorageProvider } from "../storage/index.js";
 
 const DEFAULTS = {
   maxParallelTasks: 5,

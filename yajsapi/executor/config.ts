@@ -1,7 +1,7 @@
-import { ExecutorOptions } from "./executor.js";
-import { Package } from "../package/index.js";
-import { MarketStrategy } from "../market/index.js";
-import { Logger, runtimeContextChecker, winstonLogger } from "../utils/index.js";
+import { ExecutorOptions } from './executor.js';
+import { Package } from '../package/index.js';
+import { MarketStrategy } from '../market/index.js';
+import { Logger, runtimeContextChecker, winstonLogger } from '../utils/index.js';
 
 const DEFAULTS = {
   budget: 1.0,
@@ -40,26 +40,19 @@ export class ExecutorConfig {
   readonly eventTarget: EventTarget;
 
   constructor(options: ExecutorOptions) {
-    const processEnv = !runtimeContextChecker.isBrowser
-      ? process
-      : {
-          env: {
-            YAGNA_APPKEY: null,
-            YAGNA_API_URL: null,
-            YAGNA_SUBNET: null,
-          },
-        };
-    const apiKey = options?.yagnaOptions?.apiKey || processEnv.env.YAGNA_APPKEY;
+    Object.keys(options).forEach((key) => (this[key] = options[key]));
+    this["activityExecuteTimeout"] = options.taskTimeout;
+    const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
     if (!apiKey) throw new Error("Api key not defined");
     this.yagnaOptions = {
       apiKey,
-      basePath: options.yagnaOptions?.basePath || processEnv.env.YAGNA_API_URL || DEFAULTS.basePath,
+      basePath: options.yagnaOptions?.basePath || process.env.YAGNA_API_URL || DEFAULTS.basePath,
     };
     this.package = options.package;
     this.budget = options.budget || DEFAULTS.budget;
     this.maxParallelTasks = options.maxParallelTasks || DEFAULTS.maxParallelTasks;
     this.taskTimeout = options.taskTimeout || DEFAULTS.taskTimeout;
-    this.subnetTag = options.subnetTag || processEnv.env?.YAGNA_SUBNET || DEFAULTS.subnetTag;
+    this.subnetTag = options.subnetTag || process.env?.YAGNA_SUBNET || DEFAULTS.subnetTag;
     this.payment = {
       driver: options.payment?.driver || DEFAULTS.payment.driver,
       network: options.payment?.network || DEFAULTS.payment.network,
