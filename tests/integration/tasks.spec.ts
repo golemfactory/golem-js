@@ -158,7 +158,7 @@ describe("Task Executor", function () {
       .catch((e) => {
         expect(e).to.be.undefined;
       });
-    expect(error).to.equal("sh: 1: invalid_command: not found");
+    expect(error).to.equal("Error: ExeScript command exited with code 127");
   }).timeout(80000);
 
   it("should run transfer file", async () => {
