@@ -44,6 +44,7 @@ export default defineComponent({
     const layout = {
       labelCol: { span: 8 },
       wrapperCol: { span: 16 },
+      layout: "vertical",
     };
 
     const validateMessages = {

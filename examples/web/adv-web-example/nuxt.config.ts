@@ -1,7 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  plugins: ["@/plugins/antd"],
-  modules: ["nuxt-monaco-editor"],
+  plugins: [],
+  modules: ["nuxt-monaco-editor", "@element-plus/nuxt"],
   monacoEditor: {
     // These are default values:
     dest: "_monaco",
@@ -9,5 +9,8 @@ export default defineNuxtConfig({
     componentName: {
       codeEditor: "monaco-editor",
     },
+  },
+  elementPlus: {
+    /** Options */
   },
 });
