@@ -8,6 +8,9 @@
       <NuxtLink v-slot="{ navigate }" to="/advanced" custom>
         <el-button type="success" @click="navigate">Advanced way</el-button>
       </NuxtLink>
+      <NuxtLink v-slot="{ navigate }" to="/wrapper-test" custom>
+        <el-button type="danger" @click="navigate">YaJSAPI</el-button>
+      </NuxtLink>
     </div>
   </el-card>
 </template>
