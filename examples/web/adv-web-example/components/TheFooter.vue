@@ -9,8 +9,6 @@
 .el-footer {
   background: var(--el-color-primary);
   font-size: 0.8rem;
-  position: absolute;
-  bottom: 0;
   width: 100vw;
 }
 .footer-row {

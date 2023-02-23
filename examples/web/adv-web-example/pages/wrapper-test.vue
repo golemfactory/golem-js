@@ -1,8 +1,6 @@
 <template>
-  <el-card>
-    <h1>Wrapper JaYaApi wrapper test</h1>
-    <div><YaJsApiWrapper /></div>
-  </el-card>
+  <h1>Wrapper JaYaApi wrapper test</h1>
+  <div><YaJsApiWrapper /></div>
 </template>
 <script>
 import YaJsApiWrapper from "../components/YaJsApiWrapper";

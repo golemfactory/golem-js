@@ -20,7 +20,7 @@ export default defineNuxtConfig({
     },
   },
 
-  plugins: ["@/plugins/yajsapi.js"],
+  plugins: [],
   modules: ["nuxt-monaco-editor", "@element-plus/nuxt"],
   monacoEditor: {
     // These are default values:
