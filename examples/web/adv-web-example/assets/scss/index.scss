@@ -1,0 +1,19 @@
+html,
+body,
+#app {
+  margin: 0;
+  padding: 0;
+  font-family: "Noto Sans", serif;
+  background: #0e263c;
+  color: #d1d1d1;
+}
+
+a {
+  color: #7fadd5;
+  text-decoration: none;
+  &:hover {
+    color: #3e81b0;
+  }
+}
+
+
