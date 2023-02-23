@@ -9,6 +9,7 @@ export const EventType = "GolemEvent";
 // https://github.com/nodejs/node/issues/40678
 class CustomEvent<DataType> extends Event {
   readonly detail: DataType;
+
   constructor(type, data) {
     super(type, data);
     this.detail = data.detail;

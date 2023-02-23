@@ -1,23 +1,20 @@
-import { Events, EventType, BaseEvent } from '../events/index.js';
-import { Logger } from '../utils/index.js';
-import { Providers } from './providers.js';
-import { Tasks } from './tasks.js';
-import { Payments } from './payments.js';
-import { Agreements } from './agreements.js';
-import { Invoices } from './invoices.js';
-import { Proposals } from './proposals.js';
-import { Allocations } from './allocations.js';
-import { Activities } from './activities.js';
-import { Times } from './times.js';
+import { Events, EventType, BaseEvent } from "../events/index.js";
+import { Logger } from "../utils/index.js";
+import { Providers } from "./providers.js";
+import { Tasks } from "./tasks.js";
+import { Payments } from "./payments.js";
+import { Agreements } from "./agreements.js";
+import { Invoices } from "./invoices.js";
+import { Proposals } from "./proposals.js";
+import { Allocations } from "./allocations.js";
+import { Activities } from "./activities.js";
+import { Times } from "./times.js";
 
 interface StatsOptions {
   eventTarget: EventTarget;
   logger?: Logger;
 }
 
-/**
- * @internal
- */
 export class StatsService {
   private eventTarget: EventTarget;
   private logger?: Logger;
