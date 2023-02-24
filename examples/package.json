@@ -30,6 +30,7 @@
         "yajsapi": "file:.."
     },
     "devDependencies": {
+        "@nuxtjs/google-fonts": "^2.0.0",
         "@types/node": "18",
         "typescript": "^4.6.3"
     }
