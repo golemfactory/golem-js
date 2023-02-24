@@ -35,7 +35,7 @@ export class SubscriptionFailed extends BaseEvent<{ reason?: string }> {}
 export class CollectFailed extends BaseEvent<{ id: string; reason?: string }> {}
 export class ProposalReceived extends BaseEvent<{ id: string; providerId: string }> {}
 export class ProposalRejected extends BaseEvent<{ id: string; providerId: string; reason?: string }> {}
-export class ProposalResponded extends BaseEvent<{ id: string; providerId: string }> {}
+export class ProposalResponded extends BaseEvent<{ id: string; providerId: string; counterProposalId: string }> {}
 export class ProposalConfirmed extends BaseEvent<{ id: string; providerId: string }> {}
 export class AgreementCreated extends BaseEvent<{
   id: string;

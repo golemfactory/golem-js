@@ -5,7 +5,7 @@
         <span>Accounts and Allocation</span>
       </div>
     </template>
-    <el-table :data="accounts" border table-layout="auto" v-if="!theAllocation">
+    <el-table :data="accounts" border table-layout="auto" v-if="!theAllocation" size="small">
       <el-table-column label="Platform">
         <template #default="scope">
           {{ scope.row.address }}<br />

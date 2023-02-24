@@ -2,9 +2,7 @@
   <div>
     <h2>Mid API Example</h2>
     <ElementsPackage :yaOptions="yaOptions" @created="(p) => extendYaTask({ package: p })" />
-
     <ElementsAllocation :yaOptions="yaOptions" @created="(a) => extendYaTask({ allocation: a })" />
-
     <ElementsDemand :yaOptions="yaOptions" :yaTask="yaTask" />
   </div>
 </template>
