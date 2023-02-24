@@ -4,19 +4,21 @@
     <video class="script" src="~/assets/video/script.mp4" autoplay loop></video>
     <div class="buttons">
       <NuxtLink v-slot="{ navigate }" to="/task" custom>
-        <el-button size="large" class="btn-task" @click="navigate"><span>Just RUN<br/><i>(Task API)</i></span></el-button>
+        <el-button size="large" class="btn-task" @click="navigate"
+          ><span>Just RUN<br /><i>(Task API)</i></span></el-button
+        >
       </NuxtLink>
-      <NuxtLink v-slot="{ navigate }" to="/mid" custom>
-        <el-button size="large" class="btn-mid" plain @click="navigate"><span>Set and control each step manually<br/><i>(Mid-level API)</i></span></el-button>
+      <NuxtLink v-slot="{ navigate }" to="/mid-api" custom>
+        <el-button size="large" class="btn-mid" plain @click="navigate"
+          ><span>Set and control each step manually<br /><i>(Mid-level API)</i></span></el-button
+        >
       </NuxtLink>
     </div>
-
   </div>
-
 </template>
 <script>
 export default {
-  name: "Home"
+  name: "Home",
 };
 </script>
 
@@ -33,7 +35,6 @@ h1 {
   line-height: 3.5rem;
   text-align: center;
   a {
-
   }
 }
 .script {
@@ -52,7 +53,7 @@ h1 {
     height: 70px;
     i {
       font-style: italic;
-      font-size: .7rem;
+      font-size: 0.7rem;
     }
   }
   .btn-task {
