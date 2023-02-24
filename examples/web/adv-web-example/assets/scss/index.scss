@@ -3,14 +3,17 @@ body,
 #app {
   margin: 0;
   padding: 0;
-}
-
-html.dark {
-  background: #222;
-  color: white;
+  font-family: "Noto Sans", serif;
+  background: #0e263c;
+  color: #d1d1d1;
 }
 
 a {
-  font-weight: 400;
-  color: var(--el-color-primary);
+  color: #7fadd5;
+  text-decoration: none;
+  &:hover {
+    color: #3e81b0;
+  }
 }
+
+
