@@ -11,3 +11,9 @@ export { Script, Run, Deploy, Start } from "./script/index.js";
 
 // Utils
 export { ConsoleLogger, Logger } from "./utils/index.js";
+
+// Events
+export { Events, BaseEvent, EventType } from "./events/index.js";
+
+// StatsService
+export { StatsService } from "./stats/service.js";

@@ -19,6 +19,7 @@ export default defineNuxtConfig({
       "Noto+Sans": true,
     },
   },
+  plugins: [],
   monacoEditor: {
     // These are default values:
     dest: "_monaco",
