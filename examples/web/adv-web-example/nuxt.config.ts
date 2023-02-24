@@ -19,9 +19,7 @@ export default defineNuxtConfig({
       "Noto+Sans": true,
     },
   },
-
   plugins: [],
-  modules: ["nuxt-monaco-editor", "@element-plus/nuxt"],
   monacoEditor: {
     // These are default values:
     dest: "_monaco",
