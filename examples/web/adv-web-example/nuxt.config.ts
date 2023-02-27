@@ -19,13 +19,13 @@ export default defineNuxtConfig({
       "Noto+Sans": true,
     },
   },
-  // monacoEditor: {
-  //   dest: "_monaco",
-  //   locale: "en",
-  //   componentName: {
-  //     codeEditor: "monaco-editor",
-  //   },
-  // },
+  monacoEditor: {
+    dest: "_monaco",
+    locale: "en",
+    componentName: {
+      codeEditor: "MonacoEditor",
+    },
+  },
   elementPlus: {
     icon: "ElIcon",
     importStyle: "scss",

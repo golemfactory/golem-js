@@ -6,7 +6,7 @@
 </template>
 <style>
 .el-header {
-  background: var(--el-color-primary);
+  background: var(--el-bg-color-overlay);
 }
 .header {
   height: 100%;

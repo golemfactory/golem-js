@@ -38,6 +38,7 @@ export const DemandEventType = "ProposalReceived";
 export class Demand extends EventTarget {
   private isRunning = true;
   private logger?: Logger;
+  private initialProposals: Proposal[] = [];
 
   /**
    * Create demand for given taskPackage
@@ -89,11 +90,13 @@ export class Demand extends EventTarget {
           } else if (event.eventType !== "ProposalEvent") continue;
           const proposal = new Proposal(
             this.id,
+            event.proposal.state === "Draft" ? this.findParentProposal(event.proposal.prevProposalId) : null,
             this.options.api,
             event.proposal,
             this.demandRequest,
             this.options.eventTarget
           );
+          this.initialProposals.push(proposal);
           this.dispatchEvent(new DemandEvent(DemandEventType, proposal));
           this.options.eventTarget?.dispatchEvent(
             new Events.ProposalReceived({ id: proposal.id, providerId: proposal.issuerId })
@@ -109,6 +112,14 @@ export class Demand extends EventTarget {
         await sleep(this.options.offerFetchingInterval, true);
       }
     }
+  }
+
+  private findParentProposal(prevProposalId?: string): string | null {
+    if (!prevProposalId) return null;
+    for (const proposal of this.initialProposals) {
+      if (proposal.counteringProposalId === prevProposalId) return proposal.id;
+    }
+    return null;
   }
 }
 
