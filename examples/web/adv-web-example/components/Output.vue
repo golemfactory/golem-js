@@ -3,7 +3,7 @@
 </template>
 <script setup>
 defineProps({
-  output: String
+  output: String,
 })
 </script>
 <style scoped lang="scss">
@@ -12,5 +12,8 @@ defineProps({
   color: #dddddd;
   min-height: 200px;
   padding: 10px;
+}
+.logs {
+  font-size: 0.6rem;
 }
 </style>

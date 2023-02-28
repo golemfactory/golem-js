@@ -2,7 +2,7 @@
   <el-row :gutter="40">
     <el-col :span="10">
       <Options :options="options" />
-      <el-button class="btn-run" size="small" type="success">Run</el-button>
+      <el-button class="btn-run" size="small" type="success" @click="run">Run</el-button>
       <el-tabs class="editor-tabs" v-model="codeTab">
         <el-tab-pane label="Your Code" name="code">
           <MonacoEditor class="editor" v-model="code" lang="javascript" :options="monacoOptions"/>
@@ -17,20 +17,12 @@
           <Output :output="stderr"></Output>
         </el-tab-pane>
         <el-tab-pane label="Logs" name="logs">
-          <Output :output="logs"></Output>
+          <Output :output="logs" class="logs"></Output>
         </el-tab-pane>
       </el-tabs>
     </el-col>
     <el-col :span="14">
-      <el-steps :active="2" align-center>
-        <el-step title="Demand" description="Publish demand on the market" />
-        <el-step title="Offer" description="Choose best offer" />
-        <el-step title="Agreement" description="Confirm agreement with provider" />
-        <el-step title="Activity" description="Run your scripts" />
-        <el-step title="Payment" description="Accept payments" />
-      </el-steps>
-
-      <br/>
+      <Steps :step="step"/>
       <br/>
       <el-tabs v-model="activeSteps" class="results-tabs">
         <el-tab-pane label="Offers" name="offers">
@@ -55,7 +47,7 @@
 </template>
 
 <script setup>
-import { TaskExecutor, DemandEventType } from "../../../dist/";
+import { TaskExecutor, EventType } from "../../../../dist/yajsapi.min.js";
 import Stats from "~/components/Stats.vue";
 import Options from "~/components/Options.vue";
 
@@ -78,8 +70,7 @@ const options = reactive({
   taskTimeout: 120,
   offerTimeout: 120,
   offerInterval: 2,
-  resultInterval: 2,
-  eventTarget
+  resultInterval: 2
 });
 
 const activeResults = ref('output');
@@ -93,17 +84,50 @@ const code = ref('const message = "Hello World from Golem Network !!!";\n' +
   '}\n' +
   'console.log(task());');
 
-const stdout = "Hello World";
-const stderr = "No errors";
-const logs = "No logs (todo)";
+const stdout = ref(">");
+const stderr = ref("No errors");
+const logs = ref("No logs (todo)");
+const step = ref("");
 
-eventTarget.addEventListener(DemandEventType, (event) => {
-  console.log(event);
+eventTarget.addEventListener(EventType, (event) => {
+  console.log(event.name);
+  if (event.name === 'ComputationStarted') step.value = 'demand';
+  else if (event.name === 'SubscriptionCreated') step.value = 'offer';
+  else if (event.name === 'AgreementCreated') step.value = 'agreement';
+  else if (event.name === 'ActivityCreated') step.value = 'activity';
+  else if (event.name === 'PaymentAccepted') step.value = 'payment';
+  else if (event.name === 'ComputationFinished') step.value = 'end';
 })
 
+const appendLog = (msg) => {
+  logs.value += msg + "\n";
+}
+
+const logger = {
+  log: (msg) => appendLog(`[${new Date().toLocaleTimeString()}] ${msg}`),
+  warn: (msg) => appendLog(`[${new Date().toLocaleTimeString()}] [warn] ${msg}`),
+  debug: (msg) => appendLog(`[${new Date().toLocaleTimeString()}] [debug] ${msg}`),
+  error: (error) => {
+    appendLog(`[${new Date().toLocaleTimeString()}] [error] ${error?.response?.data?.message || error}`);
+    stderr.value += error?.response?.data?.message || error
+  },
+  info: (msg) => appendLog(`[${new Date().toLocaleTimeString()}] [info] ${msg}`)
+}
+
 const run = async () => {
-  const executor = await TaskExecutor.create({ package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae", eventTarget});
-  await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
+  logs.value = '';
+  stdout.value = '';
+  stderr.value = '';
+  console.log(code.value);
+  const executor = await TaskExecutor.create({
+    package: "529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4",
+    eventTarget,
+    logger,
+    yagnaOptions: {
+      basePath: 'http://127.0.0.1:7465',
+      apiKey: '411aa8e620954a318093687757053b8d'
+    }});
+  await executor.run(async (ctx) => (stdout.value += ((await ctx.run("/usr/local/bin/node", ["-e", code.value])).stdout)));
   await executor.end();
 }
 
