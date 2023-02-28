@@ -3,7 +3,7 @@ import { RequestorApi } from "ya-ts-client/dist/ya-market/api.js";
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market/index.js";
 import { Events } from "../events/index.js";
 
-export interface ProposalMetadata {
+export interface ProposalDetails {
   transfer_protocol: string;
   cpu_brand: string;
   cpu_capabilities: string[];
@@ -59,7 +59,7 @@ export class Proposal {
     this.counteringProposalId = null;
   }
 
-  get metadata(): ProposalMetadata {
+  get details(): ProposalDetails {
     return {
       transfer_protocol: this.properties["golem.activity.caps.transfer.protocol"],
       cpu_brand: this.properties["golem.inf.cpu.brand"],

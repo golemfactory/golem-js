@@ -1,4 +1,5 @@
-import { ProposalMetadata } from "../market/proposal";
+import { ProposalDetails } from "../market/proposal";
+import { PackageDetails } from "../package/package";
 
 /**
  * Global Event Type with which all API events will be emitted. It should be used on all listeners that would like to handle events.
@@ -36,10 +37,11 @@ export class AllocationCreated extends BaseEvent<{ id: string; amount: number; p
 export class SubscriptionCreated extends BaseEvent<{ id: string }> {}
 export class SubscriptionFailed extends BaseEvent<{ reason?: string }> {}
 export class CollectFailed extends BaseEvent<{ id: string; reason?: string }> {}
-export class ProposalReceived extends BaseEvent<{ id: string; providerId: string; metadata: ProposalMetadata }> {}
+export class ProposalReceived extends BaseEvent<{ id: string; providerId: string; details: ProposalDetails }> {}
 export class ProposalRejected extends BaseEvent<{ id: string; providerId: string; reason?: string }> {}
 export class ProposalResponded extends BaseEvent<{ id: string; providerId: string; parentId: string | null }> {}
 export class ProposalConfirmed extends BaseEvent<{ id: string; providerId: string }> {}
+export class PackageCreated extends BaseEvent<{ imageHash: string; details: PackageDetails }> {}
 export class AgreementCreated extends BaseEvent<{
   id: string;
   providerId: string;

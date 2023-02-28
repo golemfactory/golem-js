@@ -100,7 +100,7 @@ export class Demand extends EventTarget {
             new Events.ProposalReceived({
               id: proposal.id,
               providerId: proposal.issuerId,
-              metadata: proposal.metadata,
+              details: proposal.details,
             })
           );
         }
