@@ -9,10 +9,11 @@ export const EventType = "GolemEvent";
 // https://github.com/nodejs/node/issues/40678
 class CustomEvent<DataType> extends Event {
   readonly detail: DataType;
-
+  readonly name: string;
   constructor(type, data) {
     super(type, data);
     this.detail = data.detail;
+    this.name = this.constructor.name;
   }
 }
 
@@ -20,6 +21,20 @@ export abstract class BaseEvent<DataType> extends CustomEvent<DataType> {
   constructor(data?: DataType) {
     super(EventType, { detail: data });
   }
+}
+
+interface ProposalProperties {
+  transfer_protocol: string;
+  cpu_brand: string;
+  cpu_capabilities: string[];
+  cpu_cores: number;
+  cpu_threads: number;
+  mem: number;
+  storage: number;
+  provider_name: string;
+  public_net: boolean;
+  runtime_capabilities: string[];
+  runtime_name: string;
 }
 
 export class ComputationStarted extends BaseEvent<undefined> {}
@@ -33,9 +48,9 @@ export class AllocationCreated extends BaseEvent<{ id: string; amount: number; p
 export class SubscriptionCreated extends BaseEvent<{ id: string }> {}
 export class SubscriptionFailed extends BaseEvent<{ reason?: string }> {}
 export class CollectFailed extends BaseEvent<{ id: string; reason?: string }> {}
-export class ProposalReceived extends BaseEvent<{ id: string; providerId: string }> {}
+export class ProposalReceived extends BaseEvent<{ id: string; providerId: string; properties: ProposalProperties }> {}
 export class ProposalRejected extends BaseEvent<{ id: string; providerId: string; reason?: string }> {}
-export class ProposalResponded extends BaseEvent<{ id: string; providerId: string; counterProposalId: string }> {}
+export class ProposalResponded extends BaseEvent<{ id: string; providerId: string; parentId: string | null }> {}
 export class ProposalConfirmed extends BaseEvent<{ id: string; providerId: string }> {}
 export class AgreementCreated extends BaseEvent<{
   id: string;

@@ -8,11 +8,12 @@ import { Events } from "../events/index.js";
  * @category Mid-level
  */
 export class Proposal {
-  readonly id: string;
+  id: string;
   readonly issuerId: string;
   readonly properties: object;
   readonly constraints: string;
   readonly timestamp: string;
+  counteringProposalId: string | null;
   private readonly state: ProposalAllOfStateEnum;
   private readonly prevProposalId: string | undefined;
   private _score: number | null = null;
@@ -21,6 +22,7 @@ export class Proposal {
    * Create proposal for given subscription ID
    *
    * @param subscriptionId - subscription ID
+   * @param parentId - Previous proposal ID with Initial state
    * @param api - {@link RequestorApi}
    * @param model - {@link ProposalModel}
    * @param demandRequest - {@link DemandOfferBase}
@@ -28,6 +30,7 @@ export class Proposal {
    */
   constructor(
     private readonly subscriptionId: string,
+    private readonly parentId: string | null,
     private readonly api: RequestorApi, // TODO: why API explicitly?
     model: ProposalModel,
     private readonly demandRequest: DemandOfferBase,
@@ -40,6 +43,7 @@ export class Proposal {
     this.state = model.state;
     this.prevProposalId = model.prevProposalId;
     this.timestamp = model.timestamp;
+    this.counteringProposalId = null;
   }
 
   set score(score: number | null) {
@@ -76,14 +80,15 @@ export class Proposal {
 
   async respond(chosenPlatform: string) {
     this.demandRequest.properties["golem.com.payment.chosen-platform"] = chosenPlatform;
-    const { data: counterProposalId } = await this.api
+    const { data: proposalId } = await this.api
       .counterProposalDemand(this.subscriptionId, this.id, this.demandRequest, { timeout: 20000 })
       .catch((e) => {
         throw new Error(e?.response?.data?.message || e);
       });
+    this.counteringProposalId = proposalId;
     this.eventTarget?.dispatchEvent(
-      new Events.ProposalResponded({ id: this.id, providerId: this.issuerId, counterProposalId })
+      new Events.ProposalResponded({ id: this.id, providerId: this.issuerId, parentId: this.parentId })
     );
-    return counterProposalId;
+    return proposalId;
   }
 }

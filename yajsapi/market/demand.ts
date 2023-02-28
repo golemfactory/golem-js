@@ -75,6 +75,22 @@ export class Demand extends EventTarget {
   }
 
   private async subscribe() {
+    const parseProperties = (model) => {
+      return {
+        transfer_protocol: model.properties["golem.activity.caps.transfer.protocol"],
+        cpu_brand: model.properties["golem.inf.cpu.brand"],
+        cpu_capabilities: model.properties["golem.inf.cpu.capabilities"],
+        cpu_cores: model.properties["golem.inf.cpu.cores"],
+        cpu_threads: model.properties["golem.inf.cpu.threads"],
+        mem: model.properties["golem.inf.mem.gib"],
+        storage: model.properties["golem.inf.storage.gib"],
+        provider_name: model.properties["golem.node.id.name"],
+        public_net: model.properties["golem.node.net.is-public"],
+        runtime_capabilities: model.properties["golem.runtime.capabilities"],
+        runtime_name: model.properties["golem.runtime.name"],
+      };
+    };
+
     while (this.isRunning) {
       try {
         const { data: events } = await this.options.api.collectOffers(this.id, 3, this.options.maxOfferEvents, {
@@ -89,6 +105,7 @@ export class Demand extends EventTarget {
           } else if (event.eventType !== "ProposalEvent") continue;
           const proposal = new Proposal(
             this.id,
+            null,
             this.options.api,
             event.proposal,
             this.demandRequest,
@@ -96,7 +113,11 @@ export class Demand extends EventTarget {
           );
           this.dispatchEvent(new DemandEvent(DemandEventType, proposal));
           this.options.eventTarget?.dispatchEvent(
-            new Events.ProposalReceived({ id: proposal.id, providerId: proposal.issuerId })
+            new Events.ProposalReceived({
+              id: proposal.id,
+              providerId: proposal.issuerId,
+              properties: parseProperties(proposal),
+            })
           );
         }
       } catch (error) {
