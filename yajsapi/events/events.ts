@@ -1,3 +1,5 @@
+import { ProposalMetadata } from "../market/proposal";
+
 /**
  * Global Event Type with which all API events will be emitted. It should be used on all listeners that would like to handle events.
  */
@@ -23,20 +25,6 @@ export abstract class BaseEvent<DataType> extends CustomEvent<DataType> {
   }
 }
 
-interface ProposalProperties {
-  transfer_protocol: string;
-  cpu_brand: string;
-  cpu_capabilities: string[];
-  cpu_cores: number;
-  cpu_threads: number;
-  mem: number;
-  storage: number;
-  provider_name: string;
-  public_net: boolean;
-  runtime_capabilities: string[];
-  runtime_name: string;
-}
-
 export class ComputationStarted extends BaseEvent<undefined> {}
 export class ComputationFinished extends BaseEvent<undefined> {}
 export class ComputationFailed extends BaseEvent<{ reason?: string }> {}
@@ -48,7 +36,7 @@ export class AllocationCreated extends BaseEvent<{ id: string; amount: number; p
 export class SubscriptionCreated extends BaseEvent<{ id: string }> {}
 export class SubscriptionFailed extends BaseEvent<{ reason?: string }> {}
 export class CollectFailed extends BaseEvent<{ id: string; reason?: string }> {}
-export class ProposalReceived extends BaseEvent<{ id: string; providerId: string; properties: ProposalProperties }> {}
+export class ProposalReceived extends BaseEvent<{ id: string; providerId: string; metadata: ProposalMetadata }> {}
 export class ProposalRejected extends BaseEvent<{ id: string; providerId: string; reason?: string }> {}
 export class ProposalResponded extends BaseEvent<{ id: string; providerId: string; parentId: string | null }> {}
 export class ProposalConfirmed extends BaseEvent<{ id: string; providerId: string }> {}

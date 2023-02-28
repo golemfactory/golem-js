@@ -3,6 +3,19 @@ import { RequestorApi } from "ya-ts-client/dist/ya-market/api.js";
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market/index.js";
 import { Events } from "../events/index.js";
 
+export interface ProposalMetadata {
+  transfer_protocol: string;
+  cpu_brand: string;
+  cpu_capabilities: string[];
+  cpu_cores: number;
+  cpu_threads: number;
+  mem: number;
+  storage: number;
+  provider_name: string;
+  public_net: boolean;
+  runtime_capabilities: string[];
+  runtime_name: string;
+}
 /**
  * Proposal module - an object representing an offer in the state of a proposal from the provider.
  * @category Mid-level
@@ -44,6 +57,22 @@ export class Proposal {
     this.prevProposalId = model.prevProposalId;
     this.timestamp = model.timestamp;
     this.counteringProposalId = null;
+  }
+
+  get metadata(): ProposalMetadata {
+    return {
+      transfer_protocol: this.properties["golem.activity.caps.transfer.protocol"],
+      cpu_brand: this.properties["golem.inf.cpu.brand"],
+      cpu_capabilities: this.properties["golem.inf.cpu.capabilities"],
+      cpu_cores: this.properties["golem.inf.cpu.cores"],
+      cpu_threads: this.properties["golem.inf.cpu.threads"],
+      mem: this.properties["golem.inf.mem.gib"],
+      storage: this.properties["golem.inf.storage.gib"],
+      provider_name: this.properties["golem.node.id.name"],
+      public_net: this.properties["golem.node.net.is-public"],
+      runtime_capabilities: this.properties["golem.runtime.capabilities"],
+      runtime_name: this.properties["golem.runtime.name"],
+    };
   }
 
   set score(score: number | null) {
