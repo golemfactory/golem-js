@@ -14,6 +14,10 @@ import {
   Script,
   Start,
   ConsoleLogger,
+  Payments,
+  PaymentEventType,
+  InvoiceEvent,
+  DebitNoteEvent,
 } from "yajsapi";
 async function main() {
   const logger = new ConsoleLogger();
@@ -31,9 +35,17 @@ async function main() {
       else if (proposalEvent.proposal.isDraft()) res(proposalEvent.proposal);
     })
   );
+  const payments = await Payments.create({ logger });
+  const processPayment = (event) => {
+    if (event instanceof InvoiceEvent && event.invoice.agreementId == agreement.id)
+      event.invoice.accept(event.invoice.amount, allocation.id).catch((e) => logger.warn(e));
+    if (event instanceof DebitNoteEvent)
+      event.debitNote.accept(event.debitNote.totalAmountDue, allocation.id).catch((e) => logger.warn(e));
+  };
+  payments.addEventListener(PaymentEventType, processPayment);
   const agreement = await Agreement.create(offer.id, { logger });
   await agreement.confirm();
-  const activity = await Activity.create(agreement.id, { logger });
+  const activity = await Activity.create(agreement.id, { logger, activityExecuteTimeout: 120_000 });
   const script = await Script.create([new Deploy(), new Start(), new Run("/bin/sh", ["-c", "echo 'Hello Golem'"])]);
   const exeScript = script.getExeScriptRequest();
   const streamResult = await activity.execute(exeScript);
@@ -42,8 +54,13 @@ async function main() {
   console.log(results[2].stdout);
   await activity.stop();
   await agreement.terminate();
-  await allocation.release();
   await demand.unsubscribe();
+  // waiting for payments...
+  setTimeout(async () => {
+    await allocation.release();
+    await payments.unsubscribe();
+    payments.removeEventListener(PaymentEventType, processPayment);
+  }, 3000);
 }
 main().catch((e) => {
   console.error(e);
