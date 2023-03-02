@@ -38,6 +38,7 @@ export const DemandEventType = "ProposalReceived";
 export class Demand extends EventTarget {
   private isRunning = true;
   private logger?: Logger;
+  private proposalReferences: ProposalReference[] = [];
 
   /**
    * Create demand for given taskPackage
@@ -74,6 +75,19 @@ export class Demand extends EventTarget {
     this.logger?.debug(`Demand ${this.id} unsubscribed`);
   }
 
+  private findParentProposal(prevProposalId?: string): string | null {
+    console.log(this.proposalReferences);
+    if (!prevProposalId) return null;
+    for (const proposal of this.proposalReferences) {
+      if (proposal.counteringProposalId === prevProposalId) return proposal.id;
+    }
+    return null;
+  }
+
+  private setCounteringProposalReference(id: string, counteringProposalId: string): void {
+    this.proposalReferences.push(new ProposalReference(id, counteringProposalId));
+  }
+
   private async subscribe() {
     while (this.isRunning) {
       try {
@@ -89,7 +103,8 @@ export class Demand extends EventTarget {
           } else if (event.eventType !== "ProposalEvent") continue;
           const proposal = new Proposal(
             this.id,
-            null,
+            event.proposal.state === "Draft" ? this.findParentProposal(event.proposal.prevProposalId) : null,
+            this.setCounteringProposalReference,
             this.options.api,
             event.proposal,
             this.demandRequest,
@@ -132,4 +147,8 @@ export class DemandEvent extends Event {
     super(type, data);
     this.proposal = data;
   }
+}
+
+class ProposalReference {
+  constructor(readonly id: string, readonly counteringProposalId: string) {}
 }
