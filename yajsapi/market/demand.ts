@@ -99,7 +99,11 @@ export class Demand extends EventTarget {
           this.initialProposals.push(proposal);
           this.dispatchEvent(new DemandEvent(DemandEventType, proposal));
           this.options.eventTarget?.dispatchEvent(
-            new Events.ProposalReceived({ id: proposal.id, providerId: proposal.issuerId })
+            new Events.ProposalReceived({
+              id: proposal.id,
+              providerId: proposal.issuerId,
+              details: proposal.details,
+            })
           );
         }
       } catch (error) {
