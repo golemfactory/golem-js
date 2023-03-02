@@ -26,13 +26,7 @@
       <br/>
       <el-tabs v-model="activeSteps" class="results-tabs">
         <el-tab-pane label="Offers" name="offers">
-          <el-table :data="offers" style="width: 100%">
-            <el-table-column prop="date" label="Date" width="180" />
-            <el-table-column prop="cpu" label="CPU" width="180" />
-            <el-table-column prop="mem" label="Mem (Gb)" width="180" />
-            <el-table-column prop="storage" label="Storage (Gb)" width="180" />
-            <el-table-column prop="state" label="State" />
-          </el-table>
+          <Offers />
         </el-tab-pane>
         <el-tab-pane label="Agreements" name="agreements">Agreements</el-tab-pane>
         <el-tab-pane label="Activities" name="activities">Activities</el-tab-pane>
@@ -50,6 +44,8 @@
 import { TaskExecutor, EventType } from "../../../../dist/yajsapi.min.js";
 import Stats from "~/components/Stats.vue";
 import Options from "~/components/Options.vue";
+import Offers from "~/components/Offers.vue";
+import { useOffersStore } from '~/store/offers'
 
 const monacoOptions = {
   theme: 'vs-dark',
@@ -88,11 +84,13 @@ const stdout = ref(">");
 const stderr = ref("No errors");
 const logs = ref("No logs (todo)");
 const step = ref("");
+const offersStore = useOffersStore();
+const { addOffer } = offersStore;
 
 eventTarget.addEventListener(EventType, (event) => {
-  console.log(event.name);
   if (event.name === 'ComputationStarted') step.value = 'demand';
   else if (event.name === 'SubscriptionCreated') step.value = 'offer';
+  else if (event.name === 'ProposalReceived') addOffer(event.details);
   else if (event.name === 'AgreementCreated') step.value = 'agreement';
   else if (event.name === 'ActivityCreated') step.value = 'activity';
   else if (event.name === 'PaymentAccepted') step.value = 'payment';
@@ -118,7 +116,6 @@ const run = async () => {
   logs.value = '';
   stdout.value = '';
   stderr.value = '';
-  console.log(code.value);
   const executor = await TaskExecutor.create({
     package: "529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4",
     eventTarget,
@@ -131,50 +128,7 @@ const run = async () => {
   await executor.end();
 }
 
-const offers = [
-  {
-    date: '24.02.2023 10:23:32',
-    cpu: 'Intel i5 Core12',
-    mem: '4 Gib',
-    storage: '2 Tib',
-    state: 'draft'
-  },
-  {
-    date: '24.02.2023 10:23:32',
-    cpu: 'Intel i5 Core12',
-    mem: '4 Gib',
-    storage: '2 Tib',
-    state: 'draft'
-  },
-  {
-    date: '24.02.2023 10:23:32',
-    cpu: 'Intel i5 Core12',
-    mem: '4 Gib',
-    storage: '2 Tib',
-    state: 'draft'
-  },
-  {
-    date: '24.02.2023 10:23:32',
-    cpu: 'Intel i5 Core12',
-    mem: '4 Gib',
-    storage: '2 Tib',
-    state: 'draft'
-  },
-  {
-    date: '24.02.2023 10:23:32',
-    cpu: 'Intel i5 Core12',
-    mem: '4 Gib',
-    storage: '2 Tib',
-    state: 'draft'
-  },
-  {
-    date: '24.02.2023 10:23:32',
-    cpu: 'Intel i5 Core12',
-    mem: '4 Gib',
-    storage: '2 Tib',
-    state: 'draft'
-  }
-]
+
 </script>
 
 <style scoped lang="scss">
