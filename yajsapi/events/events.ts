@@ -9,10 +9,11 @@ export const EventType = "GolemEvent";
 // https://github.com/nodejs/node/issues/40678
 class CustomEvent<DataType> extends Event {
   readonly detail: DataType;
-
+  readonly name: string;
   constructor(type, data) {
     super(type, data);
     this.detail = data.detail;
+    this.name = this.constructor.name;
   }
 }
 
@@ -35,7 +36,7 @@ export class SubscriptionFailed extends BaseEvent<{ reason?: string }> {}
 export class CollectFailed extends BaseEvent<{ id: string; reason?: string }> {}
 export class ProposalReceived extends BaseEvent<{ id: string; providerId: string }> {}
 export class ProposalRejected extends BaseEvent<{ id: string; providerId: string; reason?: string }> {}
-export class ProposalResponded extends BaseEvent<{ id: string; providerId: string }> {}
+export class ProposalResponded extends BaseEvent<{ id: string; providerId: string; parentId: string | null }> {}
 export class ProposalConfirmed extends BaseEvent<{ id: string; providerId: string }> {}
 export class AgreementCreated extends BaseEvent<{
   id: string;

@@ -11,7 +11,7 @@ export default defineNuxtConfig({
 
   // css
   css: ["~/assets/scss/index.scss"],
-  modules: ["nuxt-monaco-editor", "@element-plus/nuxt", "@nuxtjs/google-fonts"],
+  modules: ["nuxt-monaco-editor", "@element-plus/nuxt", "@nuxtjs/google-fonts", "@pinia/nuxt"],
   googleFonts: {
     download: true,
     inject: true,
@@ -21,11 +21,10 @@ export default defineNuxtConfig({
   },
   plugins: [],
   monacoEditor: {
-    // These are default values:
     dest: "_monaco",
     locale: "en",
     componentName: {
-      codeEditor: "monaco-editor",
+      codeEditor: "MonacoEditor",
     },
   },
   elementPlus: {

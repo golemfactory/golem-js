@@ -7,8 +7,11 @@
 
 <style>
 .el-footer {
-  background: var(--el-color-primary);
+  background: var(--el-bg-color-overlay);
   font-size: 0.8rem;
+  /*position: absolute;*/
+  /*bottom: 0;*/
+  margin-top: 20px;
   width: 100vw;
 }
 .footer-row {
