@@ -17,7 +17,7 @@ export const useOffersStore = defineStore({
     },
   },
   getters: {
-    offers: (state) => state.offers,
+    allOffers: (state) => state.offers,
     offer: (state, id) => state.offers.find((offer) => offer.id === id),
   },
 });

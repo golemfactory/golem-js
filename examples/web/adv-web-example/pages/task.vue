@@ -90,7 +90,7 @@ const { addOffer } = offersStore;
 eventTarget.addEventListener(EventType, (event) => {
   if (event.name === 'ComputationStarted') step.value = 'demand';
   else if (event.name === 'SubscriptionCreated') step.value = 'offer';
-  else if (event.name === 'ProposalReceived') addOffer(event.details);
+  else if (event.name === 'ProposalReceived') addOffer(event.detail);
   else if (event.name === 'AgreementCreated') step.value = 'agreement';
   else if (event.name === 'ActivityCreated') step.value = 'activity';
   else if (event.name === 'PaymentAccepted') step.value = 'payment';
