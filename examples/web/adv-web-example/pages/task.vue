@@ -10,7 +10,7 @@
       </el-tabs>
 
       <el-tabs v-model="activeResults" class="results-tabs">
-        <el-tab-pane label="Output" name="output">
+        <el-tab-pane v-loading="loading" label="Output" name="output">
           <Output :output="stdout"></Output>
         </el-tab-pane>
         <el-tab-pane label="Errors" name="errors">
@@ -23,18 +23,14 @@
     </el-col>
     <el-col :span="14">
       <Steps :step="step"/>
-      <br/>
-      <el-tabs v-model="activeSteps" class="results-tabs">
+      <el-tabs v-model="activeSteps" class="entities-tabs">
         <el-tab-pane label="Offers" name="offers">
-          <Offers />
+          <Offers :actions="false"/>
         </el-tab-pane>
         <el-tab-pane label="Agreements" name="agreements">Agreements</el-tab-pane>
         <el-tab-pane label="Activities" name="activities">Activities</el-tab-pane>
         <el-tab-pane label="Payments" name="payments">Payments</el-tab-pane>
       </el-tabs>
-      <br/>
-      <br/>
-      <br/>
       <Stats/>
     </el-col>
   </el-row>
@@ -84,17 +80,50 @@ const stdout = ref(">");
 const stderr = ref("No errors");
 const logs = ref("No logs (todo)");
 const step = ref("");
+const loading = ref(false);
 const offersStore = useOffersStore();
 const { addOffer } = offersStore;
 
 eventTarget.addEventListener(EventType, (event) => {
   if (event.name === 'ComputationStarted') step.value = 'demand';
   else if (event.name === 'SubscriptionCreated') step.value = 'offer';
-  else if (event.name === 'ProposalReceived') addOffer(event.detail);
+  else if (event.name === 'ProposalReceived') addOffer(parseOfferFormEvent(event));
+  else if (event.name === 'ProposalRejected') addOffer(parseOfferFormErrorEvent(event, 'Rejected'));
+  else if (event.name === 'ProposalFailed') addOffer(parseOfferFormErrorEvent(event, 'Failed'));
+  else if (event.name === 'AgreementCreated') {
+    console.log(event);
+    addOffer(parseOfferFormAgreementEvent(event));
+  }
   else if (event.name === 'AgreementCreated') step.value = 'agreement';
   else if (event.name === 'ActivityCreated') step.value = 'activity';
   else if (event.name === 'PaymentAccepted') step.value = 'payment';
   else if (event.name === 'ComputationFinished') step.value = 'end';
+})
+
+const parseOfferFormEvent = (event) => ({
+  id: event.detail.id,
+  timestamp: event.timestamp,
+  provider: event.detail.details.provider_name,
+  cpu: event.detail.details.cpu_brand,
+  cores: event.detail.details.cpu_cores,
+  threads: event.detail.details.cpu_threads,
+  storage: Number(event.detail.details.storage).toFixed(0),
+  memory: Number(event.detail.details.mem).toFixed(0),
+  state: event.detail.details.state,
+  parent: event.detail.parentId,
+  reason: event.detail.reason
+});
+const parseOfferFormErrorEvent = (event, state) => ({
+  id: event.detail.id,
+  timestamp: event.timestamp,
+  parent: event.detail.parentId,
+  reason: event.detail.reason,
+  state
+})
+const parseOfferFormAgreementEvent = (event) => ({
+  timestamp: event.timestamp,
+  parent: event.detail.proposalId,
+  state: 'Confirmed'
 })
 
 const appendLog = (msg) => {
@@ -113,6 +142,7 @@ const logger = {
 }
 
 const run = async () => {
+  loading.value = true;
   logs.value = '';
   stdout.value = '';
   stderr.value = '';
@@ -124,7 +154,10 @@ const run = async () => {
       basePath: 'http://127.0.0.1:7465',
       apiKey: '411aa8e620954a318093687757053b8d'
     }});
-  await executor.run(async (ctx) => (stdout.value += ((await ctx.run("/usr/local/bin/node", ["-e", code.value])).stdout)));
+  await executor.run(async (ctx) => {
+    loading.value = false;
+    stdout.value += ((await ctx.run("/usr/local/bin/node", ["-e", code.value])).stdout)
+  });
   await executor.end();
 }
 
@@ -142,5 +175,9 @@ const run = async () => {
   height: 200px;
   width: 100%;
   margin: 0;
+}
+.entities-tabs {
+  margin-top: 10px;
+  margin-bottom: 30px;
 }
 </style>

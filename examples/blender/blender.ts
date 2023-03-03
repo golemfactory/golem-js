@@ -1,4 +1,4 @@
-import { TaskExecutor } from "yajsapi";
+import { TaskExecutor } from "../../dist/index.js";
 import { program } from "commander";
 
 const blender_params = (frame) => ({

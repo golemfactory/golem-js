@@ -6,7 +6,7 @@ import { Proposal } from "./proposal.js";
 import { Logger, sleep } from "../utils/index.js";
 import { DemandConfig } from "./config.js";
 import { Events } from "../events/index.js";
-import { ProposalEvent } from "ya-ts-client/dist/ya-market/src/models/index.js";
+import { ProposalEvent, ProposalRejectedEvent } from "ya-ts-client/dist/ya-market/src/models/index.js";
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market/index.js";
 
 /**
@@ -81,11 +81,17 @@ export class Demand extends EventTarget {
         const { data: events } = await this.options.api.collectOffers(this.id, 3, this.options.maxOfferEvents, {
           timeout: 5000,
         });
-        for (const event of events as ProposalEvent[]) {
+        for (const event of events as Array<ProposalEvent & ProposalRejectedEvent>) {
           if (event.eventType === "ProposalRejectedEvent") {
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-ignore
             this.logger?.debug(`Proposal rejected. Reason: ${event.reason?.message}`);
+            this.options.eventTarget?.dispatchEvent(
+              new Events.ProposalRejected({
+                id: event.proposal.proposalId,
+                providerId: event.proposal.issuerId,
+                parentId: event.proposal.proposalId,
+                reason: event.reason?.message,
+              })
+            );
             continue;
           } else if (event.eventType !== "ProposalEvent") continue;
           const proposal = new Proposal(
@@ -102,6 +108,7 @@ export class Demand extends EventTarget {
             new Events.ProposalReceived({
               id: proposal.id,
               providerId: proposal.issuerId,
+              parentId: this.findParentProposal(event.proposal.prevProposalId),
               details: proposal.details,
             })
           );

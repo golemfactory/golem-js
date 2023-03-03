@@ -13,7 +13,6 @@ const props = defineProps({
   step: String
 });
 watch(() => props.step, (step) => {
-  console.log(step);
   if (step === 'demand') currentStep.value = 0;
   else if (step === 'offer') currentStep.value = 1;
   else if (step === 'agreement') currentStep.value = 2;

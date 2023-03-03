@@ -15,6 +15,7 @@ export interface ProposalDetails {
   public_net: boolean;
   runtime_capabilities: string[];
   runtime_name: string;
+  state: ProposalAllOfStateEnum;
 }
 /**
  * Proposal module - an object representing an offer in the state of a proposal from the provider.
@@ -72,6 +73,7 @@ export class Proposal {
       public_net: this.properties["golem.node.net.is-public"],
       runtime_capabilities: this.properties["golem.runtime.capabilities"],
       runtime_name: this.properties["golem.runtime.name"],
+      state: this.state,
     };
   }
 
@@ -104,7 +106,14 @@ export class Proposal {
     await this.api.rejectProposalOffer(this.subscriptionId, this.id, { message: reason as {} }).catch((e) => {
       throw new Error(e?.response?.data?.message || e);
     });
-    this.eventTarget?.dispatchEvent(new Events.ProposalRejected({ id: this.id, providerId: this.issuerId }));
+    this.eventTarget?.dispatchEvent(
+      new Events.ProposalRejected({
+        id: this.id,
+        providerId: this.issuerId,
+        parentId: this.parentId,
+        reason,
+      })
+    );
   }
 
   async respond(chosenPlatform: string) {
@@ -112,7 +121,16 @@ export class Proposal {
     const { data: proposalId } = await this.api
       .counterProposalDemand(this.subscriptionId, this.id, this.demandRequest, { timeout: 20000 })
       .catch((e) => {
-        throw new Error(e?.response?.data?.message || e);
+        const reason = e?.response?.data?.message || e.toString();
+        this.eventTarget?.dispatchEvent(
+          new Events.ProposalFailed({
+            id: this.id,
+            providerId: this.issuerId,
+            parentId: this.id,
+            reason,
+          })
+        );
+        throw new Error(reason);
       });
     this.counteringProposalId = proposalId;
     this.eventTarget?.dispatchEvent(

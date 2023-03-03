@@ -17,7 +17,6 @@ export {
   DebitNoteEvent,
 } from "./payment/index.js";
 export { Script, Run, Deploy, Start } from "./script/index.js";
-export { EventType } from "./events/events.js";
 
 // Utils
 export { ConsoleLogger, Logger } from "./utils/index.js";

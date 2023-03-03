@@ -13,10 +13,12 @@ export const EventType = "GolemEvent";
 class CustomEvent<DataType> extends Event {
   readonly detail: DataType;
   readonly name: string;
+  readonly timestamp: number;
   constructor(type, data) {
     super(type, data);
     this.detail = data.detail;
     this.name = this.constructor.name;
+    this.timestamp = new Date().valueOf();
   }
 }
 
@@ -37,10 +39,25 @@ export class AllocationCreated extends BaseEvent<{ id: string; amount: number; p
 export class SubscriptionCreated extends BaseEvent<{ id: string }> {}
 export class SubscriptionFailed extends BaseEvent<{ reason?: string }> {}
 export class CollectFailed extends BaseEvent<{ id: string; reason?: string }> {}
-export class ProposalReceived extends BaseEvent<{ id: string; providerId: string; details: ProposalDetails }> {}
-export class ProposalRejected extends BaseEvent<{ id: string; providerId: string; reason?: string }> {}
+export class ProposalReceived extends BaseEvent<{
+  id: string;
+  providerId: string;
+  parentId: string | null;
+  details: ProposalDetails;
+}> {}
+export class ProposalRejected extends BaseEvent<{
+  id: string;
+  providerId: string;
+  reason?: string;
+  parentId: string | null;
+}> {}
 export class ProposalResponded extends BaseEvent<{ id: string; providerId: string; parentId: string | null }> {}
-export class ProposalConfirmed extends BaseEvent<{ id: string; providerId: string }> {}
+export class ProposalFailed extends BaseEvent<{
+  id: string;
+  providerId: string;
+  parentId: string | null;
+  reason?: string;
+}> {}
 export class PackageCreated extends BaseEvent<{ imageHash: string; details: PackageDetails }> {}
 export class AgreementCreated extends BaseEvent<{
   id: string;

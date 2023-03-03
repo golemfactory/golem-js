@@ -9,11 +9,14 @@ export const useOffersStore = defineStore({
   },
   actions: {
     addOffer(offer) {
-      console.log(offer);
-      this.offers.push(offer);
-    },
-    update(offer) {
-      // todo
+      let prefix = "_";
+      if (offer.state === "Draft") prefix = "b";
+      if (offer.state === "Confirmed") prefix = "c";
+      offer.time = prefix + new Date(offer.timestamp).toISOString().substring(11, 19);
+      if (offer.parent) {
+        const old = this.offers.find((item) => item.id === offer.parent);
+        Object.assign(old, offer);
+      } else this.offers.push(offer);
     },
   },
   getters: {
