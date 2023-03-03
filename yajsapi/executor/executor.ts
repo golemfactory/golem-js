@@ -255,7 +255,7 @@ export class TaskExecutor {
     featureResults.forEach((featureResult) =>
       featureResult
         .then((res) => {
-          if (typeof res !== "undefined") results.push(res);
+          results.push(res as OutputType);
         })
         .catch((e) => this.handleCriticalError(e))
     );
@@ -319,17 +319,21 @@ export class TaskExecutor {
         if (task.isRejected()) throw task.getError();
         return task.getResults();
       }
-      if (timeout) task.stop(undefined, new Error(`Task ${task.id} timeout.`));
       await sleep(2000, true);
     }
     clearTimeout(timeoutId);
+    if (timeout) {
+      const error =  new Error(`Task ${task.id} timeout.`)
+      task.stop(undefined, error);
+      throw error;
+    }
   }
 
   private handleCriticalError(e: Error) {
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFailed({ reason: e.toString() }));
     this.logger?.error(e.toString());
     this.logger?.debug(e.stack);
-    this.logger?.warn("Trying to stop all services...");
+    if (this.isRunning) this.logger?.warn("Trying to stop all services...");
     this.end().catch((e) => {
       this.logger?.error(e);
       process?.exit(1);
