@@ -24,16 +24,15 @@
     <el-col :span="14">
       <Steps :step="step"/>
       <el-tabs v-model="activeSteps" class="entities-tabs">
-        <el-tab-pane label="Offers" name="offers">
-          <Offers :actions="false"/>
-        </el-tab-pane>
-        <el-tab-pane label="Agreements" name="agreements">Agreements</el-tab-pane>
-        <el-tab-pane label="Activities" name="activities">Activities</el-tab-pane>
-        <el-tab-pane label="Payments" name="payments">Payments</el-tab-pane>
+        <el-tab-pane label="Offers" name="offers"><Offers :actions="false" /></el-tab-pane>
+        <el-tab-pane label="Agreements" name="agreements"><Agreements :actions="false"/></el-tab-pane>
+        <el-tab-pane label="Activities" name="activities"><Activities :actions="false"/></el-tab-pane>
+        <el-tab-pane label="Payments" name="payments"><Payments :actions="false"/></el-tab-pane>
       </el-tabs>
       <Stats/>
     </el-col>
   </el-row>
+  <Offer offer-drawer="offerDrawer" offer="offer"/>
 </template>
 
 <script setup>
@@ -42,6 +41,9 @@ import Stats from "~/components/Stats.vue";
 import Options from "~/components/Options.vue";
 import Offers from "~/components/Offers.vue";
 import { useOffersStore } from '~/store/offers'
+import { useAgreementsStore } from '~/store/agreements'
+import { useActivitiesStore } from '~/store/activities'
+import { usePaymentsStore } from '~/store/payments'
 
 const monacoOptions = {
   theme: 'vs-dark',
@@ -82,48 +84,78 @@ const logs = ref("No logs (todo)");
 const step = ref("");
 const loading = ref(false);
 const offersStore = useOffersStore();
+const agreementsStore = useAgreementsStore();
+const activitiesStore = useActivitiesStore();
+const paymentsStore = usePaymentsStore();
 const { addOffer } = offersStore;
+const { addAgreement, updateAgreement } = agreementsStore;
+const { addActivity, updateActivity, addScript } = activitiesStore;
+const { addPayment, updatePayment } = paymentsStore;
 
 eventTarget.addEventListener(EventType, (event) => {
   if (event.name === 'ComputationStarted') step.value = 'demand';
   else if (event.name === 'SubscriptionCreated') step.value = 'offer';
-  else if (event.name === 'ProposalReceived') addOffer(parseOfferFormEvent(event));
-  else if (event.name === 'ProposalRejected') addOffer(parseOfferFormErrorEvent(event, 'Rejected'));
-  else if (event.name === 'ProposalFailed') addOffer(parseOfferFormErrorEvent(event, 'Failed'));
+  else if (event.name === 'ProposalReceived') addOffer(parseOfferFromEvent(event));
+  else if (event.name === 'ProposalRejected') addOffer(parseOfferFromErrorEvent(event, 'Rejected'));
+  else if (event.name === 'ProposalFailed') addOffer(parseOfferFromErrorEvent(event, 'Failed'));
   else if (event.name === 'AgreementCreated') {
-    console.log(event);
     addOffer(parseOfferFormAgreementEvent(event));
+    addAgreement(parseAgreementFromEvent(event, 'Proposal'));
+    step.value = 'agreement';
   }
-  else if (event.name === 'AgreementCreated') step.value = 'agreement';
-  else if (event.name === 'ActivityCreated') step.value = 'activity';
-  else if (event.name === 'PaymentAccepted') step.value = 'payment';
+  else if (event.name === 'AgreementConfirmed') updateAgreement(parseAgreementFromEvent(event, 'Approved'));
+  else if (event.name === 'AgreementTerminated') updateAgreement(parseAgreementFromEvent(event, 'Terminated'));
+  else if (event.name === 'ActivityCreated') {
+    addActivity(parseActivityFromEvent(event, 'New'))
+    step.value = 'activity';
+  }
+  else if (event.name === 'ActivityStateChanged') updateActivity(parseActivityFromEvent(event))
+  else if (event.name === 'ScriptExecuted') addScript(event.detail.activityId)
+  else if (event.name === 'ActivityDestroyed') updateActivity(parseActivityFromEvent(event, 'Terminated'))
+  else if (event.name === 'InvoiceReceived') addPayment(parsePaymentsFromEvent(event, 'invoice', 'Received'))
+  else if (event.name === 'DebitNoteReceived') addPayment(parsePaymentsFromEvent(event, 'debit-note', 'Received'))
+  else if (event.name === 'PaymentAccepted') {
+    step.value = 'payment';
+    updatePayment(parsePaymentsFromEvent(event, 'invoice', 'Accepted'))
+  }
+  else if (event.name === 'DebitNoteAccepted') updatePayment(parsePaymentsFromEvent(event, 'debit-note', 'Accepted'))
+  else if (event.name === 'PaymentRejected') updatePayment(parsePaymentsFromEvent(event, 'invoice', 'Rejected'))
+  else if (event.name === 'DebitNoteRejected') updatePayment(parsePaymentsFromEvent(event, 'debit-note', 'Rejected'))
   else if (event.name === 'ComputationFinished') step.value = 'end';
 })
 
-const parseOfferFormEvent = (event) => ({
-  id: event.detail.id,
+const parseOfferFromEvent = (event) => ({
+  ...event.detail,
+  ...event.detail.details,
+  detail: undefined,
   timestamp: event.timestamp,
-  provider: event.detail.details.provider_name,
-  cpu: event.detail.details.cpu_brand,
-  cores: event.detail.details.cpu_cores,
-  threads: event.detail.details.cpu_threads,
-  storage: Number(event.detail.details.storage).toFixed(0),
-  memory: Number(event.detail.details.mem).toFixed(0),
-  state: event.detail.details.state,
-  parent: event.detail.parentId,
-  reason: event.detail.reason
 });
-const parseOfferFormErrorEvent = (event, state) => ({
-  id: event.detail.id,
+const parseOfferFromErrorEvent = (event, state) => ({
+  ...event.detail,
+  ...event.detail.details,
   timestamp: event.timestamp,
-  parent: event.detail.parentId,
-  reason: event.detail.reason,
   state
 })
 const parseOfferFormAgreementEvent = (event) => ({
   timestamp: event.timestamp,
-  parent: event.detail.proposalId,
+  parentId: event.detail.proposalId,
   state: 'Confirmed'
+})
+const parseAgreementFromEvent = (event, state) => ({
+  ...event.detail,
+  state,
+  timestamp: event.timestamp,
+})
+const parseActivityFromEvent = (event, state) => ({
+  state,
+  ...event.detail,
+  timestamp: event.timestamp,
+})
+const parsePaymentsFromEvent = (event, type, state) => ({
+  type,
+  state,
+  ...event.detail,
+  timestamp: event.timestamp,
 })
 
 const appendLog = (msg) => {

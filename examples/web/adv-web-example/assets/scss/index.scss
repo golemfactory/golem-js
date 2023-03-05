@@ -10,7 +10,35 @@ body,
 }
 .el-table {
   font-size: 0.8rem !important;
+  thead {
+    font-size: 0.7rem !important;
+  }
+  .el-table__body-wrapper tr td.el-table-fixed-column--right {
+    background: transparent;
+  }
+  th.el-table__cell {
+    background: var(--el-bg-color-page);
+  }
 }
+.el-drawer {
+  background: var(--el-bg-color-page);
+  .el-drawer__header {
+    margin-bottom: 0;
+    padding-bottom: 20px;
+    font-size: 1.2rem;
+    background: var(--el-bg-color-overlay);
+    span {
+      font-size: 1.1rem;
+    }
+  }
+  .el-result__extra {
+    width: 100%;
+  }
+  .el-descriptions__body .el-descriptions__table.is-bordered .el-descriptions__cell {
+    font-size: 0.8rem;
+  }
+}
+
 
 //a {
 //  color: #7fadd5;

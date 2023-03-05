@@ -4,17 +4,17 @@ import { DemandOfferBase } from "ya-ts-client/dist/ya-market/index.js";
 import { Events } from "../events/index.js";
 
 export interface ProposalDetails {
-  transfer_protocol: string;
-  cpu_brand: string;
-  cpu_capabilities: string[];
-  cpu_cores: number;
-  cpu_threads: number;
-  mem: number;
+  transferProtocol: string;
+  cpuBrand: string;
+  cpuCapabilities: string[];
+  cpuCores: number;
+  cpuThreads: number;
+  memory: number;
   storage: number;
-  provider_name: string;
-  public_net: boolean;
-  runtime_capabilities: string[];
-  runtime_name: string;
+  providerName: string;
+  publicNet: boolean;
+  runtimeCapabilities: string[];
+  runtimeName: string;
   state: ProposalAllOfStateEnum;
 }
 /**
@@ -62,17 +62,17 @@ export class Proposal {
 
   get details(): ProposalDetails {
     return {
-      transfer_protocol: this.properties["golem.activity.caps.transfer.protocol"],
-      cpu_brand: this.properties["golem.inf.cpu.brand"],
-      cpu_capabilities: this.properties["golem.inf.cpu.capabilities"],
-      cpu_cores: this.properties["golem.inf.cpu.cores"],
-      cpu_threads: this.properties["golem.inf.cpu.threads"],
-      mem: this.properties["golem.inf.mem.gib"],
+      transferProtocol: this.properties["golem.activity.caps.transfer.protocol"],
+      cpuBrand: this.properties["golem.inf.cpu.brand"],
+      cpuCapabilities: this.properties["golem.inf.cpu.capabilities"],
+      cpuCores: this.properties["golem.inf.cpu.cores"],
+      cpuThreads: this.properties["golem.inf.cpu.threads"],
+      memory: this.properties["golem.inf.mem.gib"],
       storage: this.properties["golem.inf.storage.gib"],
-      provider_name: this.properties["golem.node.id.name"],
-      public_net: this.properties["golem.node.net.is-public"],
-      runtime_capabilities: this.properties["golem.runtime.capabilities"],
-      runtime_name: this.properties["golem.runtime.name"],
+      providerName: this.properties["golem.node.id.name"],
+      publicNet: this.properties["golem.node.net.is-public"],
+      runtimeCapabilities: this.properties["golem.runtime.capabilities"],
+      runtimeName: this.properties["golem.runtime.name"],
       state: this.state,
     };
   }

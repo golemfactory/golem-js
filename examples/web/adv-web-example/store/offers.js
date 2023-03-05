@@ -5,22 +5,28 @@ export const useOffersStore = defineStore({
   state: () => {
     return {
       offers: [],
+      drawer: false,
+      drawerOfferId: null,
     };
   },
   actions: {
     addOffer(offer) {
-      let prefix = "_";
-      if (offer.state === "Draft") prefix = "b";
-      if (offer.state === "Confirmed") prefix = "c";
-      offer.time = prefix + new Date(offer.timestamp).toISOString().substring(11, 19);
-      if (offer.parent) {
-        const old = this.offers.find((item) => item.id === offer.parent);
+      if (offer.parentId) {
+        const old = this.offers.find((item) => item.id === offer.parentId);
         Object.assign(old, offer);
       } else this.offers.push(offer);
+      offer.memory = parseInt(offer.memory);
+      offer.storage = parseInt(offer.storage);
+      offer.cpuCores = parseInt(offer.cpuCores);
+      offer.cpuThreads = parseInt(offer.cpuThreads);
+      offer.time = new Date(offer.timestamp).toISOString().substring(11, 19);
+    },
+    showOffer(id) {
+      this.drawer = true;
+      this.drawerOfferId = id;
     },
   },
   getters: {
-    allOffers: (state) => state.offers,
-    offer: (state, id) => state.offers.find((offer) => offer.id === id),
+    drawerOffer: (state) => state.offers.find((offer) => offer.id === state.drawerOfferId),
   },
 });

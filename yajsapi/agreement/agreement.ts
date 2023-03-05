@@ -78,6 +78,10 @@ export class Agreement {
     this.agreementData = data;
   }
 
+  get validTo() {
+    return this.agreementData?.validTo;
+  }
+
   /**
    * Return agreement state
    * @return state

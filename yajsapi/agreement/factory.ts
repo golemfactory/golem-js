@@ -47,6 +47,7 @@ export class AgreementFactory {
           id: agreementId,
           providerId: provider.id,
           providerName: provider.name,
+          validTo: agreement.validTo,
           proposalId,
         })
       );

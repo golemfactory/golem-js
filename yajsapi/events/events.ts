@@ -64,6 +64,7 @@ export class AgreementCreated extends BaseEvent<{
   providerId: string;
   providerName: string;
   proposalId: string;
+  validTo?: string;
 }> {}
 export class AgreementConfirmed extends BaseEvent<{ id: string; providerId: string }> {}
 export class AgreementRejected extends BaseEvent<{ id: string; providerId: string; reason?: string }> {}
@@ -85,8 +86,15 @@ export class PaymentAccepted extends BaseEvent<{
   agreementId: string;
   amount: string; // It is coming as a string
 }> {}
+export class DebitNoteAccepted extends BaseEvent<{
+  id: string;
+  providerId: string;
+  agreementId: string;
+  amount: string; // It is coming as a string
+}> {}
 export class PaymentFailed extends BaseEvent<{ id: string; agreementId: string; reason?: string }> {}
 export class ActivityCreated extends BaseEvent<{ id: string; agreementId: string }> {}
 export class ActivityDestroyed extends BaseEvent<{ id: string; agreementId: string }> {}
+export class ActivityStateChanged extends BaseEvent<{ id: string; state: string }> {}
 export class ScriptSent extends BaseEvent<{ activityId: string; agreementId: string }> {}
 export class ScriptExecuted extends BaseEvent<{ activityId: string; agreementId: string; success: boolean }> {}
