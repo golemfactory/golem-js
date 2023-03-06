@@ -146,6 +146,7 @@ export class TaskExecutor {
    * @description Method responsible initialize all executor services.
    */
   async init() {
+    if (this.logger) this.logger.info("cccc");
     const taskPackage =
       typeof this.options.package === "string" ? await this.createPackage(this.options.package) : this.options.package;
     this.logger?.debug("Initializing task executor services...");

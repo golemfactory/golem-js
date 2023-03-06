@@ -116,6 +116,7 @@ export class Proposal {
       .catch((e) => {
         throw new Error(e?.response?.data?.message || e);
       });
+
     if (this.setCounteringProposalReference) {
       this.setCounteringProposalReference(this.id, counteringProposalId);
     }

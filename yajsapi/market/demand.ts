@@ -76,10 +76,11 @@ export class Demand extends EventTarget {
   }
 
   private findParentProposal(prevProposalId?: string): string | null {
-    console.log(this.proposalReferences);
     if (!prevProposalId) return null;
     for (const proposal of this.proposalReferences) {
-      if (proposal.counteringProposalId === prevProposalId) return proposal.id;
+      if (proposal.counteringProposalId === prevProposalId) {
+        return proposal.id;
+      }
     }
     return null;
   }
@@ -104,7 +105,7 @@ export class Demand extends EventTarget {
           const proposal = new Proposal(
             this.id,
             event.proposal.state === "Draft" ? this.findParentProposal(event.proposal.prevProposalId) : null,
-            this.setCounteringProposalReference,
+            this.setCounteringProposalReference.bind(this),
             this.options.api,
             event.proposal,
             this.demandRequest,
@@ -114,6 +115,7 @@ export class Demand extends EventTarget {
           this.options.eventTarget?.dispatchEvent(
             new Events.ProposalReceived({
               id: proposal.id,
+              parentId: proposal.parentId,
               providerId: proposal.issuerId,
               details: proposal.details,
             })
