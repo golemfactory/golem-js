@@ -9,7 +9,7 @@
         </el-tooltip>
       </template>
     </el-table-column>
-    <el-table-column prop="cpuCores" label="Cores" width="80" sortable/>
+    <el-table-column v-if="!actions" prop="cpuCores" label="Cores" width="80" sortable/>
     <el-table-column prop="memory" label="Mem (Gb)" width="105" sortable/>
     <el-table-column prop="storage" label="Stor (Gb)" width="100" sortable/>
     <el-table-column prop="state" label="State" sortable width="100">
@@ -21,27 +21,48 @@
         </el-tooltip>
       </template>
     </el-table-column>
-    <el-table-column label="Actions" width="80" fixed="right" align="center">
+    <el-table-column class="actions" label="Actions" :width="actions ? 160 : 80" fixed="right" align="center">
       <template #default="scope">
-        <el-button title="Show full offer" size="small" plain @click="show(scope.row.id)"><el-icon><Document /></el-icon></el-button>
-        <el-button v-if="actions" size="small" plain type="success" @click="respond(scope.row.id)">Respond</el-button>
         <el-button
-          v-if="actions"
-          plain
+          title="Show full offer"
+          size="small"
+          @click="show(scope.row.id)">
+          <el-icon><Document /></el-icon>
+        </el-button>
+        <el-button
+          title="Respond"
+          v-if="actions && (scope.row.state==='Initial' || scope.row.state==='Failed')"
+          size="small"
+          type="success"
+          @click="respond(scope.row.id)">
+          <el-icon><Check /></el-icon></el-button>
+        <el-button
+          title="Reject"
+          v-if="actions && (scope.row.state==='Initial' || scope.row.state==='Failed')"
           size="small"
           type="danger"
-          @click="reject(scope.row.id)">Reject</el-button>
+          @click="reject(scope.row.id)">
+          <el-icon><Close /></el-icon>
+        </el-button>
+        <el-button
+          title="Reject"
+          v-if="actions && scope.row.state==='Draft'"
+          size="small"
+          type="warning"
+          @click="confirm(scope.row.id)">
+          Confirm
+        </el-button>
       </template>
     </el-table-column>
   </el-table>
 </template>
 <script setup>
-import { Document } from "@element-plus/icons-vue"
+import { Document, Check, Close } from "@element-plus/icons-vue"
 import { useOffersStore } from "~/store/offers";
 import { storeToRefs } from "pinia";
 const offerStore = useOffersStore();
 const { offers } = storeToRefs(offerStore);
-
+const emit = defineEmits(['respond', 'reject', 'confirm'])
 defineProps({
   actions: Boolean
 })
@@ -52,15 +73,10 @@ const getStateType = (state) => {
   if (state === 'Confirmed') return 'success';
 }
 
-const respond = (id) => {
-  //todo
-}
-const reject = (id) => {
-  //todo
-}
-const show = (id) => {
-  offerStore.showOffer(id)
-}
+const respond = (id) => emit('respond', id)
+const reject = (id) => emit('reject', id)
+const confirm = (id) => emit('confirm', id)
+const show = (id) => offerStore.showOffer(id)
 
 </script>
 <style scoped lang="scss">
@@ -70,5 +86,10 @@ const show = (id) => {
 }
 .tag-state {
   width: 70px;
+}
+.actions {
+  .el-button {
+    margin: 0;
+  }
 }
 </style>

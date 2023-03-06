@@ -5,7 +5,7 @@
       <el-button class="btn-run" size="small" type="success" @click="run">Run</el-button>
       <el-tabs class="editor-tabs" v-model="codeTab">
         <el-tab-pane label="Your Code" name="code">
-          <MonacoEditor class="editor" v-model="code" lang="javascript" :options="monacoOptions" />
+          <MonacoEditor class="editor" v-model="code" lang="javascript" :options="monacoOptions"/>
         </el-tab-pane>
       </el-tabs>
 
@@ -22,41 +22,37 @@
       </el-tabs>
     </el-col>
     <el-col :span="14">
-      <Steps :step="step" />
+      <Steps :step="step"/>
       <el-tabs v-model="activeSteps" class="entities-tabs">
         <el-tab-pane label="Offers" name="offers"><Offers :actions="false" /></el-tab-pane>
-        <el-tab-pane label="Agreements" name="agreements"><Agreements :actions="false" /></el-tab-pane>
-        <el-tab-pane label="Activities" name="activities"><Activities :actions="false" /></el-tab-pane>
-        <el-tab-pane label="Payments" name="payments"><Payments :actions="false" /></el-tab-pane>
+        <el-tab-pane label="Agreements" name="agreements"><Agreements :actions="false"/></el-tab-pane>
+        <el-tab-pane label="Activities" name="activities"><Activities :actions="false"/></el-tab-pane>
+        <el-tab-pane label="Payments" name="payments"><Payments :actions="false"/></el-tab-pane>
       </el-tabs>
-      <Stats />
+      <Stats/>
     </el-col>
   </el-row>
-  <Offer offer-drawer="offerDrawer" offer="offer" />
+  <Offer offer-drawer="offerDrawer" offer="offer"/>
 </template>
 
 <script setup>
-import { TaskExecutor, EventType } from "../../../../dist/yajsapi.min.js";
+import { TaskExecutor } from "../../../../dist/yajsapi.min.js";
 import Stats from "~/components/Stats.vue";
 import Options from "~/components/Options.vue";
 import Offers from "~/components/Offers.vue";
-import { useOffersStore } from "~/store/offers";
-import { useAgreementsStore } from "~/store/agreements";
-import { useActivitiesStore } from "~/store/activities";
-import { usePaymentsStore } from "~/store/payments";
+const { $eventTarget: eventTarget } = useNuxtApp()
 
 const monacoOptions = {
-  theme: "vs-dark",
+  theme: 'vs-dark',
   minimap: {
-    enabled: false,
-  },
-};
+    enabled: false
+  }
+}
 
-const eventTarget = new EventTarget();
 const options = reactive({
-  image: "529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4",
-  apiUrl: "http://127.0.0.1:7465",
-  subnet: "public",
+  image: '529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4',
+  apiUrl: 'http://127.0.0.1:7465',
+  subnet: 'public',
   budget: 1,
   minStorage: 1,
   minCpu: 2,
@@ -64,33 +60,24 @@ const options = reactive({
   taskTimeout: 120,
   offerTimeout: 120,
   offerInterval: 2,
-  resultInterval: 2,
+  resultInterval: 2
 });
 
-const activeResults = ref("output");
-const activeSteps = ref("offers");
-const codeTab = ref("code");
-const code = ref(
-  'const message = "Hello World from Golem Network !!!";\n' +
-    "console.log(message);\n\n" +
-    "const task = () => {\n" +
-    "    // do some computations on remote machine\n" +
-    '    return "results";\n' +
-    "}\n" +
-    "console.log(task());"
-);
+const activeResults = ref('output');
+const activeEntity = ref('offers');
+const codeTab = ref('code');
+const code = ref('const message = "Hello World from Golem Network !!!";\n' +
+  'console.log(message);\n\n' +
+  'const task = () => {\n' +
+  '    // do some computations on remote machine\n' +
+  '    return "results";\n' +
+  '}\n' +
+  'console.log(task());');
 
 const stdout = ref(">");
 const stderr = ref("No errors");
 const logs = ref("No logs (todo)");
-const step = ref("");
 const loading = ref(false);
-const offersStore = useOffersStore();
-const agreementsStore = useAgreementsStore();
-const activitiesStore = useActivitiesStore();
-const paymentsStore = usePaymentsStore();
-
-const { $eventTarget } = useNuxtApp();
 
 const appendLog = (msg) => {
   logs.value += msg + "\n";
@@ -109,9 +96,9 @@ const logger = {
 
 const run = async () => {
   loading.value = true;
-  logs.value = "";
-  stdout.value = "";
-  stderr.value = "";
+  logs.value = '';
+  stdout.value = '';
+  stderr.value = '';
   const executor = await TaskExecutor.create({
     package: "529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4",
     eventTarget: $eventTarget,

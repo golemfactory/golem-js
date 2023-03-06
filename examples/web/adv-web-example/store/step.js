@@ -4,7 +4,7 @@ export const useStepStore = defineStore({
   id: "step-store",
   state: () => {
     return {
-      step: [],
+      step: null,
     };
   },
   actions: {

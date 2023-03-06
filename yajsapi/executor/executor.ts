@@ -16,7 +16,6 @@ import { NetworkServiceOptions } from "../network/service.js";
 import { AgreementServiceOptions } from "../agreement/service.js";
 import { WorkOptions } from "../task/work.js";
 import { LogLevel } from "../utils/logger.js";
-import { PackageCreated } from "../events/events";
 
 /**
  * @category High-level

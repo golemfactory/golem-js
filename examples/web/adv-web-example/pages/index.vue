@@ -8,7 +8,7 @@
           ><span>Just RUN<br /><i>(Task API)</i></span></el-button
         >
       </NuxtLink>
-      <NuxtLink v-slot="{ navigate }" to="/mid-api" custom>
+      <NuxtLink v-slot="{ navigate }" to="/mid" custom>
         <el-button size="large" class="btn-mid" plain @click="navigate"
           ><span>Set and control each step manually<br /><i>(Mid-level API)</i></span></el-button
         >
