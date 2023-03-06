@@ -78,10 +78,6 @@ export class Agreement {
     this.agreementData = data;
   }
 
-  get validTo() {
-    return this.agreementData?.validTo;
-  }
-
   /**
    * Return agreement state
    * @return state
@@ -106,6 +102,9 @@ export class Agreement {
       );
     } catch (error) {
       this.logger?.error(`Unable to confirm agreement ${this.id}. ${error}`);
+      this.options.eventTarget?.dispatchEvent(
+        new Events.AgreementRejected({ id: this.id, providerId: this.provider.id, reason: error.toString() })
+      );
       throw error;
     }
   }

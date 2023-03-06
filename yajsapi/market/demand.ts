@@ -86,9 +86,8 @@ export class Demand extends EventTarget {
             this.logger?.debug(`Proposal rejected. Reason: ${event.reason?.message}`);
             this.options.eventTarget?.dispatchEvent(
               new Events.ProposalRejected({
-                id: event.proposal.proposalId,
-                providerId: event.proposal.issuerId,
-                parentId: event.proposal.proposalId,
+                id: event.proposalId,
+                parentId: this.findParentProposal(event.proposalId),
                 reason: event.reason?.message,
               })
             );

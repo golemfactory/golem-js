@@ -66,7 +66,7 @@ const show = (id) => {
 <style scoped lang="scss">
 .offers {
   width: 100%;
-  height: 360px;
+  height: 370px;
 }
 .tag-state {
   width: 70px;

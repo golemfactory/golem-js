@@ -14,7 +14,7 @@
         <el-link @click="showOffer(scope.row.proposalId)">{{scope.row.proposalId.substring(0, 12)+'...'}}</el-link>
       </template>
     </el-table-column>
-    <el-table-column prop="validTo" label="Valid to" width="135" sortable />
+    <el-table-column prop="validTo" label="Valid to" width="150" sortable />
     <el-table-column prop="state" label="State" sortable width="110">
       <template #default="scope">
         <el-tooltip :disabled="!scope.row.reason" :content="scope.row.reason" placement="top" effect="light">
@@ -51,7 +51,7 @@ defineProps({
 
 const getStateType = (state) => {
   if (state === 'Cancelled' || state === 'Expired') return 'warning';
-  if (state === 'Rejected' || state === 'Terminated') return 'error';
+  if (state === 'Rejected' || state === 'Terminated') return 'danger';
   if (state === 'Approved') return 'success';
 }
 

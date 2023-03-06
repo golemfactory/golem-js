@@ -19,7 +19,7 @@ export const useOffersStore = defineStore({
       offer.storage = parseInt(offer.storage);
       offer.cpuCores = parseInt(offer.cpuCores);
       offer.cpuThreads = parseInt(offer.cpuThreads);
-      offer.time = new Date(offer.timestamp).toISOString().substring(11, 19);
+      offer.time = new Date(offer.timestamp).toLocaleTimeString();
     },
     showOffer(id) {
       this.drawer = true;

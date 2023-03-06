@@ -1,5 +1,7 @@
 <template>
-  <pre class="output">{{output}}</pre>
+  <el-scrollbar height="200px">
+    <pre class="output">{{output}}</pre>
+  </el-scrollbar>
 </template>
 <script setup>
 defineProps({
@@ -12,6 +14,8 @@ defineProps({
   color: #dddddd;
   min-height: 200px;
   padding: 10px;
+  word-wrap: break-word;
+  word-break: break-all;
 }
 .logs {
   font-size: 0.6rem;

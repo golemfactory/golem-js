@@ -13,20 +13,26 @@ export const useActivitiesStore = defineStore({
     addActivity(activity) {
       const agreement = agreementStore.getAgreement(activity.agreementId);
       activity.providerName = agreement.providerName;
-      activity.time = new Date(activity.timestamp).toISOString().substring(11, 19);
+      activity.time = new Date(activity.timestamp).toLocaleTimeString();
       activity.scripts = 0;
+      activity.duration = 0;
       this.activities.push(activity);
     },
     updateActivity(activity) {
       const old = this.activities.find((act) => act.id === activity.id);
       Object.assign(old, activity);
     },
-    addScript(id) {
+    startScript(id) {
+      const activity = this.activities.find((act) => act.id === id);
+      activity.startScript = +new Date() / 1000;
+    },
+    stopScript(id) {
       const activity = this.activities.find((act) => act.id === id);
       activity.scripts += 1;
+      activity.duration += +new Date() / 1000 - activity.startScript;
     },
   },
   getters: {
-    getActivity: (state) => (id) => state.activities.find((activity) => activity.id === id),
+    totalTime: (state) => Number(state.activities.reduce((t, { duration }) => t + duration, 0)?.toFixed?.(1)),
   },
 });

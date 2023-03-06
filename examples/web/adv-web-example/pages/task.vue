@@ -89,7 +89,7 @@ const activitiesStore = useActivitiesStore();
 const paymentsStore = usePaymentsStore();
 const { addOffer } = offersStore;
 const { addAgreement, updateAgreement } = agreementsStore;
-const { addActivity, updateActivity, addScript } = activitiesStore;
+const { addActivity, updateActivity, startScript, stopScript } = activitiesStore;
 const { addPayment, updatePayment } = paymentsStore;
 
 eventTarget.addEventListener(EventType, (event) => {
@@ -110,7 +110,8 @@ eventTarget.addEventListener(EventType, (event) => {
     step.value = 'activity';
   }
   else if (event.name === 'ActivityStateChanged') updateActivity(parseActivityFromEvent(event))
-  else if (event.name === 'ScriptExecuted') addScript(event.detail.activityId)
+  else if (event.name === 'ScriptSent') startScript(event.detail.activityId);
+  else if (event.name === 'ScriptExecuted') stopScript(event.detail.activityId);
   else if (event.name === 'ActivityDestroyed') updateActivity(parseActivityFromEvent(event, 'Terminated'))
   else if (event.name === 'InvoiceReceived') addPayment(parsePaymentsFromEvent(event, 'invoice', 'Received'))
   else if (event.name === 'DebitNoteReceived') addPayment(parsePaymentsFromEvent(event, 'debit-note', 'Received'))

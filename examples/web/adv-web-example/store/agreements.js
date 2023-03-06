@@ -9,7 +9,8 @@ export const useAgreementsStore = defineStore({
   },
   actions: {
     addAgreement(agreement) {
-      agreement.time = new Date(agreement.timestamp).toISOString().substring(11, 19);
+      agreement.time = new Date(agreement.timestamp).toLocaleTimeString();
+      agreement.validTo = new Date(agreement.validTo).toLocaleString();
       this.agreements.push(agreement);
     },
     updateAgreement(agreement) {

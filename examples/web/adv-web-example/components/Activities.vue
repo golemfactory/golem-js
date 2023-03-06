@@ -2,21 +2,26 @@
   <el-table class="activities" :data="activities" :default-sort="{ prop: 'time', order: 'descending' }">
     <el-table-column prop="time" label="Time" sortable />
     <el-table-column prop="providerName" label="Provider" sortable width="140"/>
-    <el-table-column prop="id" label="ID" sortable width="200">
+    <el-table-column prop="id" label="ID" sortable width="140">
       <template #default="scope">
         <el-tooltip :content="scope.row.id" placement="left" effect="light">
-          {{ scope.row.id.substring(0, 20)+"..." }}
+          {{ scope.row.id.substring(0, 10)+"..." }}
         </el-tooltip>
       </template>
     </el-table-column>
-    <el-table-column prop="agreementId" label="Agreement" sortable width="200">
+    <el-table-column prop="agreementId" label="Agreement" sortable width="140">
       <template #default="scope">
         <el-tooltip :content="scope.row.agreementId" placement="left" effect="light">
-            {{ scope.row.agreementId.substring(0, 20)+"..." }}
+            {{ scope.row.agreementId.substring(0, 10)+"..." }}
         </el-tooltip>
       </template>
     </el-table-column>
     <el-table-column prop="scripts" label="Scripts" sortable width="88"/>
+    <el-table-column prop="duration" label="Duration" sortable width="100">
+      <template #default="scope">
+        {{ scope.row.duration.toFixed(3) }} s
+      </template>
+    </el-table-column>
     <el-table-column prop="state" label="State" sortable width="100">
       <template #default="scope">
         <el-tooltip :disabled="!scope.row.reason" :content="scope.row.reason" placement="top" effect="light">
@@ -50,7 +55,7 @@ defineProps({
 
 const getStateType = (state) => {
   if (state === 'Initialized' || state === 'Deployed') return 'warning';
-  if (state === 'Unresponsive' || state === 'Terminated') return 'error';
+  if (state === 'Unresponsive' || state === 'Terminated') return 'danger';
   if (state === 'Ready') return 'success';
 }
 

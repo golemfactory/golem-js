@@ -30,7 +30,7 @@ export class AgreementFactory {
     try {
       const agreementProposalRequest = {
         proposalId,
-        validTo: new Date(+new Date() + 3600).toISOString(),
+        validTo: new Date(+new Date() + 3600 * 1000).toISOString(),
       };
       const { data: agreementId } = await this.options.api.createAgreement(agreementProposalRequest, {
         timeout: this.options.agreementRequestTimeout,
@@ -47,7 +47,7 @@ export class AgreementFactory {
           id: agreementId,
           providerId: provider.id,
           providerName: provider.name,
-          validTo: agreement.validTo,
+          validTo: data?.validTo,
           proposalId,
         })
       );

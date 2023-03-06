@@ -47,7 +47,7 @@ export class ProposalReceived extends BaseEvent<{
 }> {}
 export class ProposalRejected extends BaseEvent<{
   id: string;
-  providerId: string;
+  providerId?: string;
   reason?: string;
   parentId: string | null;
 }> {}
