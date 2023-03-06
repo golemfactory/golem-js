@@ -42,6 +42,8 @@
     "eventsource": "^2.0.2",
     "ip-num": "^1.4.1",
     "pinia": "^2.0.33",
+    "pino": "^8.11.0",
+    "pino-pretty": "^9.4.0",
     "winston": "^3.8.2",
     "ya-ts-client": "^0.5.3"
   },
