@@ -1,6 +1,5 @@
 import { defineStore } from "pinia";
 import { useAgreementsStore } from "~/store/agreements";
-const agreementStore = useAgreementsStore();
 
 export const usePaymentsStore = defineStore({
   id: "payments-store",
@@ -11,6 +10,7 @@ export const usePaymentsStore = defineStore({
   },
   actions: {
     addPayment(payment) {
+      const agreementStore = useAgreementsStore();
       const agreement = agreementStore.getAgreement(payment.agreementId);
       payment.providerName = agreement.providerName;
       payment.amount = Number(payment.amount);

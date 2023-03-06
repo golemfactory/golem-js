@@ -1,6 +1,5 @@
 import { defineStore } from "pinia";
 import { useAgreementsStore } from "~/store/agreements";
-const agreementStore = useAgreementsStore();
 
 export const useActivitiesStore = defineStore({
   id: "activities-store",
@@ -11,6 +10,7 @@ export const useActivitiesStore = defineStore({
   },
   actions: {
     addActivity(activity) {
+      const agreementStore = useAgreementsStore();
       const agreement = agreementStore.getAgreement(activity.agreementId);
       activity.providerName = agreement.providerName;
       activity.time = new Date(activity.timestamp).toLocaleTimeString();

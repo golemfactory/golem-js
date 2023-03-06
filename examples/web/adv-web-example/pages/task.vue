@@ -22,7 +22,7 @@
       </el-tabs>
     </el-col>
     <el-col :span="14">
-      <Steps :step="step"/>
+      <Steps />
       <el-tabs v-model="activeSteps" class="entities-tabs">
         <el-tab-pane label="Offers" name="offers"><Offers :actions="false" /></el-tab-pane>
         <el-tab-pane label="Agreements" name="agreements"><Agreements :actions="false"/></el-tab-pane>
@@ -45,6 +45,8 @@ import { useAgreementsStore } from '~/store/agreements'
 import { useActivitiesStore } from '~/store/activities'
 import { usePaymentsStore } from '~/store/payments'
 
+const { $eventTarget: eventTarget } = useNuxtApp()
+
 const monacoOptions = {
   theme: 'vs-dark',
   minimap: {
@@ -52,7 +54,6 @@ const monacoOptions = {
   }
 }
 
-const eventTarget = new EventTarget();
 const options = reactive({
   image: '529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4',
   apiUrl: 'http://127.0.0.1:7465',
