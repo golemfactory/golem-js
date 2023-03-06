@@ -20,7 +20,7 @@
   </el-card>
 </template>
 <script setup>
-import { Package } from "yajsapi";
+import { Package } from "../../../../../dist/yajsapi.min.js";
 
 const props = defineProps({
   yaOptions: Object,

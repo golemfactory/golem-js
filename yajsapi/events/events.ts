@@ -42,12 +42,12 @@ export class CollectFailed extends BaseEvent<{ id: string; reason?: string }> {}
 export class ProposalReceived extends BaseEvent<{
   id: string;
   providerId: string;
-  parentId: string;
+  parentId: string | null;
   details: ProposalDetails;
 }> {}
 export class ProposalRejected extends BaseEvent<{
   id: string;
-  providerId: string;
+  providerId?: string;
   reason?: string;
   parentId: string | null;
 }> {}

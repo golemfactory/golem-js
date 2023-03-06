@@ -14,7 +14,7 @@
   </el-card>
 </template>
 <script setup>
-import { StatsService } from "yajsapi";
+import { StatsService } from "../../../../../dist/yajsapi.min.js";
 
 const props = defineProps({
   yaJsEventTarget: EventTarget,

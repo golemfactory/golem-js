@@ -59,7 +59,7 @@
   </el-card>
 </template>
 <script setup>
-import { Demand, DemandEventType } from "yajsapi";
+import { Demand, DemandEventType } from "../../../../../dist/yajsapi.min.js";
 
 const props = defineProps({
   yaTask: Object,

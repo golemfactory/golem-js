@@ -95,10 +95,8 @@ export class Demand extends EventTarget {
         const { data: events } = await this.options.api.collectOffers(this.id, 3, this.options.maxOfferEvents, {
           timeout: 5000,
         });
-        for (const event of events as ProposalEvent[]) {
+        for (const event of events as Array<ProposalEvent & ProposalRejectedEvent>) {
           if (event.eventType === "ProposalRejectedEvent") {
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-ignore
             this.logger?.debug(`Proposal rejected. Reason: ${event.reason?.message}`);
             this.options.eventTarget?.dispatchEvent(
               new Events.ProposalRejected({
@@ -122,7 +120,7 @@ export class Demand extends EventTarget {
           this.options.eventTarget?.dispatchEvent(
             new Events.ProposalReceived({
               id: proposal.id,
-              parentId: proposal.parentId,
+              parentId: this.findParentProposal(event.proposal.prevProposalId),
               providerId: proposal.issuerId,
               details: proposal.details,
             })

@@ -39,7 +39,7 @@
   </el-card>
 </template>
 <script setup>
-import { Accounts, Allocation } from "yajsapi";
+import { Accounts, Allocation } from "../../../../../dist/yajsapi.min.js";
 
 const props = defineProps({
   yaOptions: Object,
