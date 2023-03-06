@@ -37,6 +37,7 @@ export class Proposal {
    *
    * @param subscriptionId - subscription ID
    * @param parentId - Previous proposal ID with Initial state
+   * @param setCounteringProposalReference
    * @param api - {@link RequestorApi}
    * @param model - {@link ProposalModel}
    * @param demandRequest - {@link DemandOfferBase}
@@ -45,6 +46,7 @@ export class Proposal {
   constructor(
     private readonly subscriptionId: string,
     private readonly parentId: string | null,
+    private readonly setCounteringProposalReference: (id: string, parentId: string) => void | null,
     private readonly api: RequestorApi, // TODO: why API explicitly?
     model: ProposalModel,
     private readonly demandRequest: DemandOfferBase,
@@ -118,7 +120,7 @@ export class Proposal {
 
   async respond(chosenPlatform: string) {
     this.demandRequest.properties["golem.com.payment.chosen-platform"] = chosenPlatform;
-    const { data: proposalId } = await this.api
+    const { data: counteringProposalId } = await this.api
       .counterProposalDemand(this.subscriptionId, this.id, this.demandRequest, { timeout: 20000 })
       .catch((e) => {
         const reason = e?.response?.data?.message || e.toString();
@@ -132,9 +134,17 @@ export class Proposal {
         );
         throw new Error(reason);
       });
-    this.counteringProposalId = proposalId;
+
+    if (this.setCounteringProposalReference) {
+      this.setCounteringProposalReference(this.id, counteringProposalId);
+    }
     this.eventTarget?.dispatchEvent(
-      new Events.ProposalResponded({ id: this.id, providerId: this.issuerId, parentId: this.parentId })
+      new Events.ProposalResponded({
+        id: this.id,
+        providerId: this.issuerId,
+        counteringProposalId: counteringProposalId,
+      })
     );
+    return counteringProposalId;
   }
 }

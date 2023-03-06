@@ -38,7 +38,7 @@ export const DemandEventType = "ProposalReceived";
 export class Demand extends EventTarget {
   private isRunning = true;
   private logger?: Logger;
-  private initialProposals: Proposal[] = [];
+  private proposalReferences: ProposalReference[] = [];
 
   /**
    * Create demand for given taskPackage
@@ -75,14 +75,30 @@ export class Demand extends EventTarget {
     this.logger?.debug(`Demand ${this.id} unsubscribed`);
   }
 
+  private findParentProposal(prevProposalId?: string): string | null {
+    if (!prevProposalId) return null;
+    for (const proposal of this.proposalReferences) {
+      if (proposal.counteringProposalId === prevProposalId) {
+        return proposal.id;
+      }
+    }
+    return null;
+  }
+
+  private setCounteringProposalReference(id: string, counteringProposalId: string): void {
+    this.proposalReferences.push(new ProposalReference(id, counteringProposalId));
+  }
+
   private async subscribe() {
     while (this.isRunning) {
       try {
         const { data: events } = await this.options.api.collectOffers(this.id, 3, this.options.maxOfferEvents, {
           timeout: 5000,
         });
-        for (const event of events as Array<ProposalEvent & ProposalRejectedEvent>) {
+        for (const event of events as ProposalEvent[]) {
           if (event.eventType === "ProposalRejectedEvent") {
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
             this.logger?.debug(`Proposal rejected. Reason: ${event.reason?.message}`);
             this.options.eventTarget?.dispatchEvent(
               new Events.ProposalRejected({
@@ -96,18 +112,18 @@ export class Demand extends EventTarget {
           const proposal = new Proposal(
             this.id,
             event.proposal.state === "Draft" ? this.findParentProposal(event.proposal.prevProposalId) : null,
+            this.setCounteringProposalReference.bind(this),
             this.options.api,
             event.proposal,
             this.demandRequest,
             this.options.eventTarget
           );
-          this.initialProposals.push(proposal);
           this.dispatchEvent(new DemandEvent(DemandEventType, proposal));
           this.options.eventTarget?.dispatchEvent(
             new Events.ProposalReceived({
               id: proposal.id,
+              parentId: proposal.parentId,
               providerId: proposal.issuerId,
-              parentId: this.findParentProposal(event.proposal.prevProposalId),
               details: proposal.details,
             })
           );
@@ -122,14 +138,6 @@ export class Demand extends EventTarget {
         await sleep(this.options.offerFetchingInterval, true);
       }
     }
-  }
-
-  private findParentProposal(prevProposalId?: string): string | null {
-    if (!prevProposalId) return null;
-    for (const proposal of this.initialProposals) {
-      if (proposal.counteringProposalId === prevProposalId) return proposal.id;
-    }
-    return null;
   }
 }
 
@@ -148,4 +156,8 @@ export class DemandEvent extends Event {
     super(type, data);
     this.proposal = data;
   }
+}
+
+class ProposalReference {
+  constructor(readonly id: string, readonly counteringProposalId: string) {}
 }

@@ -42,22 +42,27 @@ export class CollectFailed extends BaseEvent<{ id: string; reason?: string }> {}
 export class ProposalReceived extends BaseEvent<{
   id: string;
   providerId: string;
-  parentId: string | null;
+  parentId: string;
   details: ProposalDetails;
 }> {}
 export class ProposalRejected extends BaseEvent<{
   id: string;
-  providerId?: string;
+  providerId: string;
   reason?: string;
   parentId: string | null;
 }> {}
-export class ProposalResponded extends BaseEvent<{ id: string; providerId: string; parentId: string | null }> {}
+export class ProposalResponded extends BaseEvent<{
+  id: string;
+  providerId: string;
+  counteringProposalId: string;
+}> {}
 export class ProposalFailed extends BaseEvent<{
   id: string;
   providerId: string;
   parentId: string | null;
   reason?: string;
 }> {}
+export class ProposalConfirmed extends BaseEvent<{ id: string; providerId: string }> {}
 export class PackageCreated extends BaseEvent<{ imageHash: string; details: PackageDetails }> {}
 export class AgreementCreated extends BaseEvent<{
   id: string;
