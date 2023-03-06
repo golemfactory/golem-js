@@ -25,7 +25,7 @@
       <el-tabs v-model="activeEntity" class="entities-tabs">
         <el-tab-pane label="Demands" name="demands"><Demands :actions="true" /></el-tab-pane>
         <el-tab-pane label="Offers" name="offers">
-          <Offers @respond="respondOffer" @reject="rejectOffer" :actions="true" />
+          <Offers @respond="respondOffer" @reject="rejectOffer" @confirm="createAgreement" :actions="true" />
         </el-tab-pane>
         <el-tab-pane label="Agreements" name="agreements"><Agreements :actions="true"/></el-tab-pane>
         <el-tab-pane label="Activities" name="activities"><Activities :actions="true"/></el-tab-pane>
@@ -38,7 +38,7 @@
 </template>
 
 <script setup>
-import { Accounts, Allocation, Demand, Package, DemandEventType } from "../../../../dist/yajsapi.min.js";
+import { Accounts, Allocation, Demand, Package, DemandEventType, Agreement } from "../../../../dist/yajsapi.min.js";
 import Stats from "~/components/Stats.vue";
 import Options from "~/components/Options.vue";
 import Offers from "~/components/Offers.vue";
@@ -136,6 +136,11 @@ const rejectOffer = async (id) => {
   const proposal = proposals.get(id);
   await proposal.respond();
   console.log('REJECT', id);
+}
+
+const createAgreement = async (offerId) => {
+  const agreement = await Agreement.create(offerId, tmpOptions)
+  agreements.set(agreement.id, agreement);
 }
 </script>
 
