@@ -1,8 +1,8 @@
 <template>
   <el-row :gutter="40">
     <el-col :span="10">
-      <Options :options="options" />
-      <el-button class="btn-run" size="small" type="success" @click="run">Run</el-button>
+      <Options :options=demandOptions />
+      <el-button class="btn-run" size="small" type="success" @click="createDemand">Create Demand</el-button>
       <el-tabs class="editor-tabs" v-model="codeTab">
         <el-tab-pane label="Your Code" name="code">
           <MonacoEditor class="editor" v-model="code" lang="javascript" :options="monacoOptions"/>
@@ -23,11 +23,13 @@
     <el-col :span="14">
       <Steps />
       <el-tabs v-model="activeEntity" class="entities-tabs">
-        <el-tab-pane label="Demands" name="demmsnds"><Demands :actions="false" /></el-tab-pane>
-        <el-tab-pane label="Offers" name="offers"><Offers :actions="false" /></el-tab-pane>
-        <el-tab-pane label="Agreements" name="agreements"><Agreements :actions="false"/></el-tab-pane>
-        <el-tab-pane label="Activities" name="activities"><Activities :actions="false"/></el-tab-pane>
-        <el-tab-pane label="Payments" name="payments"><Payments :actions="false"/></el-tab-pane>
+        <el-tab-pane label="Demands" name="demands"><Demands :actions="true" /></el-tab-pane>
+        <el-tab-pane label="Offers" name="offers">
+          <Offers @respond="respondOffer" @reject="rejectOffer" :actions="true" />
+        </el-tab-pane>
+        <el-tab-pane label="Agreements" name="agreements"><Agreements :actions="true"/></el-tab-pane>
+        <el-tab-pane label="Activities" name="activities"><Activities :actions="true"/></el-tab-pane>
+        <el-tab-pane label="Payments" name="payments"><Payments :actions="true"/></el-tab-pane>
       </el-tabs>
       <Stats/>
     </el-col>
@@ -36,7 +38,7 @@
 </template>
 
 <script setup>
-import { TaskExecutor } from "../../../../dist/yajsapi.min.js";
+import { Accounts, Allocation, Demand, Package, DemandEventType } from "../../../../dist/yajsapi.min.js";
 import Stats from "~/components/Stats.vue";
 import Options from "~/components/Options.vue";
 import Offers from "~/components/Offers.vue";
@@ -49,19 +51,10 @@ const monacoOptions = {
   }
 }
 
-const options = reactive({
-  image: '529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4',
-  apiUrl: 'http://127.0.0.1:7465',
-  subnet: 'public',
-  budget: 1,
-  minStorage: 1,
-  minCpu: 2,
-  minMem: 1,
-  taskTimeout: 120,
-  offerTimeout: 120,
-  offerInterval: 2,
-  resultInterval: 2
-});
+const demandOptions = reactive({});
+const agreementOptions = reactive({});
+const activityOptions = reactive({});
+const paymentOptions = reactive({});
 
 const activeResults = ref('output');
 const activeEntity = ref('offers');
@@ -93,25 +86,56 @@ const logger = {
   },
   info: (msg) => appendLog(`[${new Date().toLocaleTimeString()}] [info] ${msg}`)
 }
+const accounts = new Map();
+const allocations = new Map();
+const demands = new Map();
+const proposals = new Map();
+const offers = new Map();
+const agreements = new Map();
+const activities = new Map();
+const debitNotes = new Map();
+const invoices = new Map();
 
-const run = async () => {
-  loading.value = true;
-  logs.value = '';
-  stdout.value = '';
-  stderr.value = '';
-  const executor = await TaskExecutor.create({
-    package: "529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4",
-    eventTarget,
-    logger,
-    yagnaOptions: {
-      basePath: 'http://127.0.0.1:7465',
-      apiKey: '411aa8e620954a318093687757053b8d'
-    }});
-  await executor.run(async (ctx) => {
-    loading.value = false;
-    stdout.value += ((await ctx.run("/usr/local/bin/node", ["-e", code.value])).stdout)
-  });
-  await executor.end();
+const tmpOptions = {
+  yagnaOptions: {
+    basePath: 'http://127.0.0.1:7465',
+    apiKey: '411aa8e620954a318093687757053b8d'
+  },
+  imageHash: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+  logger,
+  subnetTag: 'public',
+  eventTarget
+}
+
+let platform;
+
+const createDemand = async () => {
+  const taskPackage = await Package.create(tmpOptions);
+  const accounts = await (await Accounts.create(tmpOptions)).list();
+  const account = accounts.find((account) => account?.platform.indexOf("erc20") !== -1);
+  if (!account) throw new Error("There is no available account");
+  platform = account.platform;
+  const allocation = await Allocation.create({ ...tmpOptions, account });
+  const demand = await Demand.create(taskPackage, [allocation], tmpOptions);
+  demands.set(demand.id, demand);
+  demand.addEventListener(DemandEventType, async (event) => {
+    if (event.proposal.isInitial()) {
+      proposals.set(event.proposal.id, event.proposal);
+    } else if (event.proposal.isDraft()) {
+      offers.set(event.proposal.id, event.proposal);
+    }
+  })
+}
+const respondOffer = async (id) => {
+  console.log({platform});
+  const proposal = proposals.get(id);
+  await proposal.respond(platform);
+  console.log('RESPONSE', id);
+}
+const rejectOffer = async (id) => {
+  const proposal = proposals.get(id);
+  await proposal.respond();
+  console.log('REJECT', id);
 }
 </script>
 

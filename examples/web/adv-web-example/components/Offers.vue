@@ -41,7 +41,7 @@ import { useOffersStore } from "~/store/offers";
 import { storeToRefs } from "pinia";
 const offerStore = useOffersStore();
 const { offers } = storeToRefs(offerStore);
-
+const emit = defineEmits(['respond', 'reject'])
 defineProps({
   actions: Boolean
 })
@@ -52,15 +52,9 @@ const getStateType = (state) => {
   if (state === 'Confirmed') return 'success';
 }
 
-const respond = (id) => {
-  //todo
-}
-const reject = (id) => {
-  //todo
-}
-const show = (id) => {
-  offerStore.showOffer(id)
-}
+const respond = (id) => emit('respond', id)
+const reject = (id) => emit('reject', id)
+const show = (id) => offerStore.showOffer(id)
 
 </script>
 <style scoped lang="scss">
