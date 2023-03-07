@@ -1,7 +1,6 @@
 import { pino } from "pino";
 import PinoPretty from "pino-pretty";
 import { Logger } from "./logger.js";
-import path from "path";
 
 const logger = pino({
   transport: {

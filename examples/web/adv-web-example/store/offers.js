@@ -25,6 +25,26 @@ export const useOffersStore = defineStore({
       this.drawer = true;
       this.drawerOfferId = id;
     },
+    addOfferFromEvent: (event) =>
+      useOffersStore().addOffer({
+        ...event.detail,
+        ...event.detail.details,
+        detail: undefined,
+        timestamp: event.timestamp,
+      }),
+    addOfferFromErrorEvent: (event, state) =>
+      useOffersStore().addOffer({
+        ...event.detail,
+        ...event.detail.details,
+        timestamp: event.timestamp,
+        state,
+      }),
+    addOfferFormAgreementEvent: (event) =>
+      useOffersStore().addOffer({
+        timestamp: event.timestamp,
+        parentId: event.detail.proposalId,
+        state: "Confirmed",
+      }),
   },
   getters: {
     drawerOffer: (state) => state.offers.find((offer) => offer.id === state.drawerOfferId),

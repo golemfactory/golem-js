@@ -1,13 +1,10 @@
 <template>
   <el-row :gutter="40">
-    <el-col :span="10">
-      <Options :options="options" />
+    <el-col :span="10" style="position: relative">
+      <Options />
       <el-button class="btn-run" size="small" type="success" @click="run">Run</el-button>
-      <el-tabs class="editor-tabs" v-model="codeTab">
-        <el-tab-pane label="Your Code" name="code">
-          <MonacoEditor class="editor" v-model="code" lang="javascript" :options="monacoOptions"/>
-        </el-tab-pane>
-      </el-tabs>
+
+      <ElementsCodeEditor />
 
       <el-tabs v-model="activeResults" class="results-tabs">
         <el-tab-pane v-loading="loading" label="Output" name="output">
@@ -22,95 +19,39 @@
       </el-tabs>
     </el-col>
     <el-col :span="14">
-      <Steps :step="step"/>
-      <el-tabs v-model="activeSteps" class="entities-tabs">
+      <Steps />
+      <el-tabs v-model="activeEntity" class="entities-tabs">
         <el-tab-pane label="Offers" name="offers"><Offers :actions="false" /></el-tab-pane>
-        <el-tab-pane label="Agreements" name="agreements"><Agreements :actions="false"/></el-tab-pane>
-        <el-tab-pane label="Activities" name="activities"><Activities :actions="false"/></el-tab-pane>
-        <el-tab-pane label="Payments" name="payments"><Payments :actions="false"/></el-tab-pane>
+        <el-tab-pane label="Agreements" name="agreements"><Agreements :actions="false" /></el-tab-pane>
+        <el-tab-pane label="Activities" name="activities"><Activities :actions="false" /></el-tab-pane>
+        <el-tab-pane label="Payments" name="payments"><Payments :actions="false" /></el-tab-pane>
       </el-tabs>
-      <Stats/>
+      <Stats />
     </el-col>
   </el-row>
-  <Offer offer-drawer="offerDrawer" offer="offer"/>
+  <Offer offer-drawer="offerDrawer" offer="offer" />
 </template>
 
 <script setup>
 import { TaskExecutor } from "../../../../dist/yajsapi.min.js";
-import Stats from "~/components/Stats.vue";
-import Options from "~/components/Options.vue";
-import Offers from "~/components/Offers.vue";
-const { $eventTarget: eventTarget } = useNuxtApp()
+const { $eventTarget: eventTarget, $logger: logger } = useNuxtApp();
 
-const monacoOptions = {
-  theme: 'vs-dark',
-  minimap: {
-    enabled: false
-  }
-}
+import { useConfigStore } from "~/store/config";
+const configStore = useConfigStore();
+const { stdout, stderr, logs, code } = configStore;
 
-const options = reactive({
-  image: '529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4',
-  apiUrl: 'http://127.0.0.1:7465',
-  subnet: 'public',
-  budget: 1,
-  minStorage: 1,
-  minCpu: 2,
-  minMem: 1,
-  taskTimeout: 120,
-  offerTimeout: 120,
-  offerInterval: 2,
-  resultInterval: 2
-});
+const activeResults = ref("output");
+const activeEntity = ref("offers");
 
-const activeResults = ref('output');
-const activeEntity = ref('offers');
-const codeTab = ref('code');
-const code = ref('const message = "Hello World from Golem Network !!!";\n' +
-  'console.log(message);\n\n' +
-  'const task = () => {\n' +
-  '    // do some computations on remote machine\n' +
-  '    return "results";\n' +
-  '}\n' +
-  'console.log(task());');
-
-const stdout = ref(">");
-const stderr = ref("No errors");
-const logs = ref("No logs (todo)");
 const loading = ref(false);
 
-const appendLog = (msg) => {
-  logs.value += msg + "\n";
-};
-
-const logger = {
-  log: (msg) => appendLog(`[${new Date().toLocaleTimeString()}] ${msg}`),
-  warn: (msg) => appendLog(`[${new Date().toLocaleTimeString()}] [warn] ${msg}`),
-  debug: (msg) => appendLog(`[${new Date().toLocaleTimeString()}] [debug] ${msg}`),
-  error: (error) => {
-    appendLog(`[${new Date().toLocaleTimeString()}] [error] ${error?.response?.data?.message || error}`);
-    stderr.value += error?.response?.data?.message || error;
-  },
-  info: (msg) => appendLog(`[${new Date().toLocaleTimeString()}] [info] ${msg}`),
-};
-
 const run = async () => {
+  const options = configStore.options;
   loading.value = true;
-  logs.value = '';
-  stdout.value = '';
-  stderr.value = '';
-  const executor = await TaskExecutor.create({
-    package: "529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4",
-    eventTarget: $eventTarget,
-    logger,
-    yagnaOptions: {
-      basePath: "http://127.0.0.1:7465",
-      apiKey: "30c59fef7d8c4639b62d576bfb624e1a",
-    },
-  });
+  const executor = await TaskExecutor.create({ ...options, eventTarget, logger: console });
   await executor.run(async (ctx) => {
     loading.value = false;
-    stdout.value += (await ctx.run("/usr/local/bin/node", ["-e", code.value])).stdout;
+    stdout.value += (await ctx.run("/usr/local/bin/node", ["-e", code])).stdout;
   });
   await executor.end();
 };
@@ -119,14 +60,9 @@ const run = async () => {
 <style scoped lang="scss">
 .btn-run {
   position: absolute;
-  left: calc(40% - 45px);
+  right: 0;
   margin-top: 10px;
   z-index: 999;
-}
-.editor {
-  height: 200px;
-  width: 100%;
-  margin: 0;
 }
 .entities-tabs {
   margin-top: 10px;
