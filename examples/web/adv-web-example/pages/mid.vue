@@ -19,7 +19,7 @@
     <el-col :span="14">
       <Steps />
       <el-tabs v-model="activeEntityTab" class="entities-tabs">
-        <el-tab-pane label="Demands" name="demands"></el-tab-pane>
+        <el-tab-pane label="Demand" name="demand"><Demands :actions="true" /></el-tab-pane>
         <el-tab-pane label="Offers" name="offers"><Offers :actions="true" /></el-tab-pane>
         <el-tab-pane label="Agreements" name="agreements"><Agreements :actions="true" /></el-tab-pane>
         <el-tab-pane label="Activities" name="activities"><Activities :actions="true" /></el-tab-pane>
@@ -39,20 +39,11 @@ const configStore = useConfigStore();
 const { stdout, stderr, logs, code } = configStore;
 
 const activeResultsTab = ref("output");
-const activeEntityTab = ref("offers");
+const activeEntityTab = ref("demand");
 
 const loading = ref(false);
-
-let platform;
 </script>
-
 <style scoped lang="scss">
-.btn-run {
-  position: absolute;
-  right: 0;
-  margin-top: 10px;
-  z-index: 999;
-}
 .entities-tabs {
   margin-top: 10px;
   margin-bottom: 30px;
