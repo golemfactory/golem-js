@@ -1,5 +1,5 @@
 <template>
-  <el-table class="offers" :data="offersStore.offers" :default-sort="{ prop: 'state', order: 'ascending' }">
+  <el-table class="offers" :data="offersStore.getAll" :default-sort="{ prop: 'state', order: 'ascending' }">
     <el-table-column prop="time" label="Time" sortable />
     <el-table-column prop="providerName" label="Provider" width="135" sortable />
     <el-table-column prop="cpuBrand" label="CPU" sortable width="120">
@@ -15,7 +15,7 @@
     <el-table-column prop="state" label="State" sortable width="100">
       <template #default="scope">
         <el-tooltip :disabled="!scope.row.reason" :content="scope.row.reason" placement="top" effect="light">
-          <el-tag class="tag-state" :type="getStateType(scope.row.state)">
+          <el-tag class="tag-state" :type="getStateType(scope.row.state)" v-loading="scope.row.isProcessing">
             {{ scope.row.state }}
           </el-tag>
         </el-tooltip>
@@ -32,6 +32,7 @@
           size="small"
           type="success"
           @click="respond(scope.row.id)"
+          :disabled="scope.row.isProcessing"
         >
           <el-icon><Check /></el-icon
         ></el-button>
@@ -41,15 +42,17 @@
           size="small"
           type="danger"
           @click="reject(scope.row.id)"
+          :disabled="scope.row.isProcessing"
         >
           <el-icon><Close /></el-icon>
         </el-button>
         <el-button
-          title="Reject"
+          title="Confirm"
           v-if="actions && scope.row.state === 'Draft'"
           size="small"
           type="warning"
-          @click="confirm(scope.row.id)"
+          @click="createAgreement(scope.row.id)"
+          :disabled="scope.row.isProcessing"
         >
           Confirm
         </el-button>
@@ -71,7 +74,9 @@ defineProps({
   actions: Boolean,
 });
 
-const show = (id) => offersStore.showOffer(id);
+const actions = computed(() => configStore.activeControlActions);
+
+const show = (id) => offersStore.show(id);
 
 const getStateType = (state) => {
   if (state === "Draft") return "warning";
@@ -81,18 +86,27 @@ const getStateType = (state) => {
 };
 
 const respond = async (id) => {
-  await proposalsStore.respondById(id);
-  console.log("RESPONSE", id);
+  try {
+    await proposalsStore.respondById(id);
+  } catch (e) {
+    console.error(e.message);
+  }
 };
 const reject = async (id) => {
-  await proposalsStore.rejectById(id);
-  console.log("REJECT", id);
+  try {
+    await proposalsStore.rejectById(id);
+  } catch (e) {
+    console.error(e.message);
+  }
 };
 
-const createAgreement = async (offerId) => {
-  const options = { ...configStore.options, logger, eventTarget };
-  const agreement = await Agreement.create(offerId, options);
-  console.log("agreement", agreement);
+const createAgreement = async (id) => {
+  try {
+    const options = { ...configStore.options, logger, eventTarget };
+    const agreement = await Agreement.create(id, options);
+  } catch (e) {
+    console.error(e.message);
+  }
 };
 </script>
 <style scoped lang="scss">

@@ -19,11 +19,11 @@
     <el-col :span="14">
       <Steps />
       <el-tabs v-model="activeEntityTab" class="entities-tabs">
-        <el-tab-pane label="Demand" name="demand"><Demands :actions="true" /></el-tab-pane>
-        <el-tab-pane label="Offers" name="offers"><Offers :actions="true" /></el-tab-pane>
-        <el-tab-pane label="Agreements" name="agreements"><Agreements :actions="true" /></el-tab-pane>
-        <el-tab-pane label="Activities" name="activities"><Activities :actions="true" /></el-tab-pane>
-        <el-tab-pane label="Payments" name="payments"><Payments :actions="true" /></el-tab-pane>
+        <el-tab-pane label="Demand" name="demand"><Demands /></el-tab-pane>
+        <el-tab-pane label="Offers" name="offers"><Offers /></el-tab-pane>
+        <el-tab-pane label="Agreements" name="agreements"><Agreements /></el-tab-pane>
+        <el-tab-pane label="Activities" name="activities"><Activities /></el-tab-pane>
+        <el-tab-pane label="Payments" name="payments"><Payments /></el-tab-pane>
       </el-tabs>
       <Stats />
     </el-col>

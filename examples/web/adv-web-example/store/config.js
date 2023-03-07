@@ -20,6 +20,7 @@ export const useConfigStore = defineStore("options", () => {
       minStorageGib: 1,
       minMemGib: 1,
     },
+    activeControlActions: false,
     stdout: ">",
     stderr: "No errors",
     logs: "No logs",

@@ -14,8 +14,6 @@ export default defineNuxtPlugin((nuxtApp) => {
   const paymentsStore = usePaymentsStore(nuxtApp.$pinia);
   const configStore = useConfigStore(nuxtApp.$pinia);
   eventTarget.addEventListener(EventType, (event) => {
-    console.log(event.name, event);
-    // TODO: ProposalResponded
     switch (event.name) {
       case "ComputationStarted":
         configStore.currentStep = 0;
@@ -23,17 +21,21 @@ export default defineNuxtPlugin((nuxtApp) => {
       case "SubscriptionCreated":
         configStore.currentStep = 1;
         break;
+      case "ProposalResponded":
+        offersStore.setProcessingStatusById(event.detail.id, true);
+        break;
       case "ProposalReceived":
-        offersStore.addOfferFromEvent(event);
+        offersStore.addFromEvent(event);
         break;
       case "ProposalRejected":
-        offersStore.addOfferFromErrorEvent(event, "Rejected");
+        offersStore.addFromErrorEvent(event, "Rejected");
         break;
       case "ProposalFailed":
-        offersStore.addOfferFromErrorEvent(event, "Failed");
+        offersStore.addFromErrorEvent(event, "Failed");
         break;
       case "AgreementCreated":
-        offersStore.addOfferFormAgreementEvent(event);
+        console.log("AgreementCreated", event);
+        offersStore.addFromAgreementEvent(event);
         agreementsStore.addAgreement(parseAgreementFromEvent(event, "Proposal"));
         configStore.currentStep = 2;
         break;

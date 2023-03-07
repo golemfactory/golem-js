@@ -19,7 +19,7 @@ export default defineNuxtPlugin((nuxtApp) => {
   };
   return {
     provide: {
-      logger,
+      logger: console,
     },
   };
 });

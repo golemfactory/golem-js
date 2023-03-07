@@ -21,10 +21,10 @@
     <el-col :span="14">
       <Steps />
       <el-tabs v-model="activeEntity" class="entities-tabs">
-        <el-tab-pane label="Offers" name="offers"><Offers :actions="false" /></el-tab-pane>
-        <el-tab-pane label="Agreements" name="agreements"><Agreements :actions="false" /></el-tab-pane>
-        <el-tab-pane label="Activities" name="activities"><Activities :actions="false" /></el-tab-pane>
-        <el-tab-pane label="Payments" name="payments"><Payments :actions="false" /></el-tab-pane>
+        <el-tab-pane label="Offers" name="offers"><Offers /></el-tab-pane>
+        <el-tab-pane label="Agreements" name="agreements"><Agreements /></el-tab-pane>
+        <el-tab-pane label="Activities" name="activities"><Activities /></el-tab-pane>
+        <el-tab-pane label="Payments" name="payments"><Payments /></el-tab-pane>
       </el-tabs>
       <Stats />
     </el-col>
@@ -46,6 +46,8 @@ const activeEntity = ref("offers");
 const loading = ref(false);
 
 const run = async () => {
+  configStore.activeControlActions = false;
+
   const options = configStore.options;
   loading.value = true;
   const executor = await TaskExecutor.create({ ...options, eventTarget, logger: console });

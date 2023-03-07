@@ -1,10 +1,10 @@
 <template>
-  <el-drawer class="drawer-offer" v-model="drawer" title="Offer">
-    <h3><label>Provider:</label> {{offer.providerName}}</h3>
+  <el-drawer class="drawer-offer" v-model="drawerOfferId" v-if="offer" title="Offer">
+    <h3><label>Provider:</label> {{ offer.providerName }}</h3>
     <h4>
       <label>ID: </label>
       <el-tooltip :content="offer.id" placement="bottom" effect="light">
-        {{ offer?.id?.substring(0, 40)+"..." }}
+        {{ offer?.id?.substring(0, 40) + "..." }}
       </el-tooltip>
     </h4>
     <el-result
@@ -14,70 +14,85 @@
       class="drawer-result"
     >
       <template class="error-box" v-if="offer.reason" #extra>
-        <div class="error-message">{{offer.reason}}</div>
+        <div class="error-message">{{ offer.reason }}</div>
       </template>
     </el-result>
     <el-row justify="space-between" class="time-state">
       <el-tag class="tag-time" effect="plain">
-        <el-icon size="small"><Clock /></el-icon> {{new Date(offer?.timestamp).toLocaleString() }}
+        <el-icon size="small"><Clock /></el-icon> {{ new Date(offer?.timestamp).toLocaleString() }}
       </el-tag>
       <el-tag class="tag-state" :type="getStateType(offer?.state)">
-        {{offer?.state}}
+        {{ offer?.state }}
       </el-tag>
     </el-row>
-    <el-descriptions
-      title="Properties"
-      :column="1"
-      :border="true"
-    >
-      <el-descriptions-item label="CPU Brand">{{offer.cpuBrand}}</el-descriptions-item>
-      <el-descriptions-item label="CPU Cores">{{offer.cpuCores}}</el-descriptions-item>
-      <el-descriptions-item label="CPU Threads">{{offer.cpuThreads}}</el-descriptions-item>
-      <el-descriptions-item label="Memory">{{offer.memory}} GB</el-descriptions-item>
-      <el-descriptions-item label="Storage">{{offer.storage}} GB</el-descriptions-item>
-      <el-descriptions-item label="Runtime">{{offer.runtimeName}}</el-descriptions-item>
-      <el-descriptions-item label="Public Net">{{offer.publicNet}}</el-descriptions-item>
-      <el-descriptions-item label="Transfer Protocol">{{offer?.transferProtocol?.join(", ")}}</el-descriptions-item>
-      <el-descriptions-item label="Runtime Capabilities ">{{offer?.runtimeCapabilities?.join(", ")}}</el-descriptions-item>
-      <el-descriptions-item label="CPU Capabilities ">{{offer?.cpuCapabilities?.join(", ")}}</el-descriptions-item>
+    <el-descriptions title="Properties" :column="1" :border="true">
+      <el-descriptions-item label="CPU Brand">{{ offer.cpuBrand }}</el-descriptions-item>
+      <el-descriptions-item label="CPU Cores">{{ offer.cpuCores }}</el-descriptions-item>
+      <el-descriptions-item label="CPU Threads">{{ offer.cpuThreads }}</el-descriptions-item>
+      <el-descriptions-item label="Memory">{{ offer.memory }} GB</el-descriptions-item>
+      <el-descriptions-item label="Storage">{{ offer.storage }} GB</el-descriptions-item>
+      <el-descriptions-item label="Runtime">{{ offer.runtimeName }}</el-descriptions-item>
+      <el-descriptions-item label="Public Net">{{ offer.publicNet }}</el-descriptions-item>
+      <el-descriptions-item label="Transfer Protocol">{{ offer?.transferProtocol?.join(", ") }}</el-descriptions-item>
+      <el-descriptions-item label="Runtime Capabilities ">{{
+        offer?.runtimeCapabilities?.join(", ")
+      }}</el-descriptions-item>
+      <el-descriptions-item label="CPU Capabilities ">{{ offer?.cpuCapabilities?.join(", ") }}</el-descriptions-item>
     </el-descriptions>
     <template #footer v-if="actions">
       <div class="drawer-footer">
-        <el-button type="danger" @click="reject"><el-icon><CircleClose /></el-icon> Reject</el-button>
-        <el-button type="success" @click="confirm"><el-icon><CircleCheck /></el-icon> Respond</el-button>
+        <el-button type="danger" @click="reject"
+          ><el-icon><CircleClose /></el-icon> Reject</el-button
+        >
+        <el-button type="success" @click="confirm"
+          ><el-icon><CircleCheck /></el-icon> Respond</el-button
+        >
       </div>
     </template>
   </el-drawer>
 </template>
 <script setup>
-import { Clock, CircleClose, CircleCheck } from "@element-plus/icons-vue"
+import { Clock, CircleClose, CircleCheck } from "@element-plus/icons-vue";
 import { useOffersStore } from "~/store/offers";
+import { useConfigStore } from "~/store/config";
+import { useProposalsStore } from "~/store/proposals";
 import { storeToRefs } from "pinia";
 const offerStore = useOffersStore();
-const { drawerOffer: offer, drawer } = storeToRefs(offerStore);
-const props = defineProps({
-  actions: Boolean
-});
+const proposalsStore = useProposalsStore();
+const configStore = useConfigStore();
+const { drawerOffer: offer, drawerOfferId } = storeToRefs(offerStore);
+
+const actions = configStore.activeControlActions;
+
+const respond = async (id) => {
+  await proposalsStore.respondById(id);
+  console.log("RESPONSE", id);
+};
+const reject = async (id) => {
+  await proposalsStore.rejectById(id);
+  console.log("REJECT", id);
+};
+
 const getStateType = (state) => {
-  if (state === 'Draft') return 'warning';
-  if (state === 'Rejected') return 'danger';
-  if (state === 'Failed') return 'danger';
-  if (state === 'Confirmed') return 'success';
-}
+  if (state === "Draft") return "warning";
+  if (state === "Rejected") return "danger";
+  if (state === "Failed") return "danger";
+  if (state === "Confirmed") return "success";
+};
 const getOfferIcon = (state) => {
-  if (state === 'Initial') return 'info';
-  if (state === 'Draft') return 'warning';
-  if (state === 'Rejected') return 'error';
-  if (state === 'Failed') return 'error';
-  if (state === 'Confirmed') return 'success';
-}
+  if (state === "Initial") return "info";
+  if (state === "Draft") return "warning";
+  if (state === "Rejected") return "error";
+  if (state === "Failed") return "error";
+  if (state === "Confirmed") return "success";
+};
 const getOfferSubtitle = (state) => {
-  if (state === 'Initial') return 'Offer has been responded. Waiting for draft...';
-  if (state === 'Draft') return 'Offer is in draft state. Waiting for confirmation...';
-  if (state === 'Rejected') return 'Offer has been rejected by provider.';
-  if (state === 'Failed') return 'Something went wrong...';
-  if (state === 'Confirmed') return 'Offer is confirmed. Waiting for agreement...';
-}
+  if (state === "Initial") return "Offer has been responded. Waiting for draft...";
+  if (state === "Draft") return "Offer is in draft state. Waiting for confirmation...";
+  if (state === "Rejected") return "Offer has been rejected by provider.";
+  if (state === "Failed") return "Something went wrong...";
+  if (state === "Confirmed") return "Offer is confirmed. Waiting for agreement...";
+};
 </script>
 <style scoped lang="scss">
 .el-drawer.drawer-offer {

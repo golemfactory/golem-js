@@ -1,52 +1,56 @@
 import { defineStore } from "pinia";
 
-export const useOffersStore = defineStore({
-  id: "offers-store",
-  state: () => {
-    return {
-      offers: [],
-      drawer: false,
-      drawerOfferId: null,
-    };
-  },
+const parseAttributes = (offer) => {
+  if (offer.memory) offer.memory = parseInt(offer.memory);
+  if (offer.storage) offer.storage = parseInt(offer.storage);
+  if (offer.cpuCores) offer.cpuCores = parseInt(offer.cpuCores);
+  if (offer.cpuThreads) offer.cpuThreads = parseInt(offer.cpuThreads);
+  if (offer.timestamp) offer.time = new Date(offer.timestamp).toLocaleTimeString();
+  offer.isProcessing = false;
+  return offer;
+};
+
+export const useOffersStore = defineStore("offers-store", {
+  state: () => ({
+    offers: new Map(),
+    drawerOfferId: false,
+  }),
   actions: {
-    addOffer(offer) {
-      if (offer.parentId) {
-        const old = this.offers.find((item) => item.id === offer.parentId);
-        Object.assign(old, offer);
-      } else this.offers.push(offer);
-      offer.memory = parseInt(offer.memory);
-      offer.storage = parseInt(offer.storage);
-      offer.cpuCores = parseInt(offer.cpuCores);
-      offer.cpuThreads = parseInt(offer.cpuThreads);
-      offer.time = new Date(offer.timestamp).toLocaleTimeString();
+    add(newOffer) {
+      const parentId = newOffer.parentId ? newOffer.parentId : newOffer.id;
+      const offer = this.offers.get(parentId) || {};
+      this.offers.set(parentId, Object.assign(offer, parseAttributes(newOffer)));
     },
-    showOffer(id) {
-      this.drawer = true;
+    setProcessingStatusById(id, isProcessing = true) {
+      const offer = this.offers.get(id);
+      offer.isProcessing = isProcessing;
+    },
+    show(id) {
       this.drawerOfferId = id;
     },
-    addOfferFromEvent: (event) =>
-      useOffersStore().addOffer({
+    addFromEvent: (event) =>
+      useOffersStore().add({
         ...event.detail,
         ...event.detail.details,
         detail: undefined,
         timestamp: event.timestamp,
       }),
-    addOfferFromErrorEvent: (event, state) =>
-      useOffersStore().addOffer({
+    addFromErrorEvent: (event, state) =>
+      useOffersStore().add({
         ...event.detail,
         ...event.detail.details,
         timestamp: event.timestamp,
         state,
       }),
-    addOfferFormAgreementEvent: (event) =>
-      useOffersStore().addOffer({
+    addFromAgreementEvent: (event) =>
+      useOffersStore().add({
         timestamp: event.timestamp,
         parentId: event.detail.proposalId,
         state: "Confirmed",
       }),
   },
   getters: {
-    drawerOffer: (state) => state.offers.find((offer) => offer.id === state.drawerOfferId),
+    drawer: (state) => state.offers.get(state.drawerOfferId),
+    getAll: (state) => [...state.offers].map(([, v]) => v),
   },
 });

@@ -23,6 +23,7 @@ const createDemand = async () => {
   loading.value = true;
   const options = { ...configStore.options, logger, eventTarget };
 
+  configStore.activeControlActions = true;
   try {
     // 1. Create package
     const taskPackage = await Package.create(options);
