@@ -224,11 +224,10 @@ export class TaskExecutor {
    * ```
    */
   async run<OutputType = Result>(worker: Worker<undefined, OutputType>): Promise<OutputType | undefined> {
-    try {
-      return this.executeTask<undefined, OutputType>(worker);
-    } catch (e) {
+    return this.executeTask<undefined, OutputType>(worker).catch(async (e) => {
       await this.handleCriticalError(e);
-    }
+      return undefined;
+    });
   }
 
   /**
@@ -323,7 +322,7 @@ export class TaskExecutor {
     }
     clearTimeout(timeoutId);
     if (timeout) {
-      const error =  new Error(`Task ${task.id} timeout.`)
+      const error = new Error(`Task ${task.id} timeout.`);
       task.stop(undefined, error);
       throw error;
     }
@@ -333,7 +332,7 @@ export class TaskExecutor {
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFailed({ reason: e.toString() }));
     this.logger?.error(e.toString());
     this.logger?.debug(e.stack);
-    if (this.isRunning) this.logger?.warn("Trying to stop all services...");
+    if (this.isRunning) this.logger?.warn("Trying to stop executor...");
     this.end().catch((e) => {
       this.logger?.error(e);
       process?.exit(1);

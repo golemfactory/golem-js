@@ -1,3 +1,3 @@
 export const GftpStorageProvider = {};
-export const winstonLogger = {};
+export const pinoLogger = {};
 export const EventSource = {};
