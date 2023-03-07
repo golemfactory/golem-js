@@ -1,36 +1,22 @@
-import { BatchResults, Executor, Task, sgx, vm } from "./executor";
-import { WorkContext, Work, ExecOptions } from "./executor/ctx";
-import { createExecutor } from "./executor/executor";
-import * as props from "./props";
-import * as rest from "./rest";
-import * as storage from "./storage";
-import * as utils from "./utils";
-import * as network from "./network";
-import * as activity from "./activity";
-import * as script from "./script";
+// High level API
+export { TaskExecutor } from "./executor/index.js";
 
-// For debug purposes, in case of unhandled rejection issues
-// detect the related async call with this
-//
-// process.on('unhandledRejection', (reason, p) => {
-//   console.log('Unhandled Rejection at: Promise', p, 'reason:', reason);
-// });
-
+// Mid level API
+export { Activity, ActivityOptions, ActivityStateEnum, Result } from "./activity/index.js";
+export { Agreement, AgreementOptions, AgreementStateEnum } from "./agreement/index.js";
+export { Demand, DemandEvent, DemandEventType, DemandOptions, Proposal } from "./market/index.js";
+export { Package, PackageOptions } from "./package/index.js";
 export {
-  createExecutor,
-  Executor,
-  ExecOptions,
-  Task,
-  sgx,
-  vm,
-  Work,
-  WorkContext,
-  BatchResults,
-  props,
-  rest,
-  storage,
-  utils,
-  network,
-  activity,
-  script,
-};
+  Invoice,
+  DebitNote,
+  Allocation,
+  Accounts,
+  Payments,
+  PaymentEventType,
+  InvoiceEvent,
+  DebitNoteEvent,
+} from "./payment/index.js";
+export { Script, Run, Deploy, Start } from "./script/index.js";
+
+// Utils
+export { ConsoleLogger, Logger } from "./utils/index.js";

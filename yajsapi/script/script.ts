@@ -1,9 +1,15 @@
-import { ExeScriptRequest } from "ya-ts-client/dist/ya-activity/src/models";
-import { Command } from "./command";
+import { ExeScriptRequest } from "ya-ts-client/dist/ya-activity/src/models/index.js";
+import { Command, Deploy, Run, Start } from "./command.js";
 
+/**
+ * @category Mid-level
+ */
 export class Script {
+  static create(commands?: Command[]): Script {
+    return new Script(commands);
+  }
   constructor(private commands: Command[] = []) {}
-  addCommand(command: Command) {
+  add(command: Command) {
     this.commands.push(command);
   }
   async before() {
@@ -13,7 +19,7 @@ export class Script {
     for (const cmd of this.commands) await cmd.after();
   }
   getExeScriptRequest(): ExeScriptRequest {
-    if (!this.commands.length) throw new Error("No commands yet");
+    if (!this.commands.length) throw new Error("There are no commands in the script");
     return { text: JSON.stringify(this.commands.map((cmd) => cmd.toJson())) };
   }
 }

@@ -1,44 +1,36 @@
 {
-    "name": "yajsapi_examples",
-    "version": "0.1.1",
+    "name": "yajsapi-examples",
+    "version": "0.7.0",
     "description": "NodeJS API Examples for Next Golem",
+    "type": "module",
     "repository": "https://github.com/golemfactory/yajsapi",
     "scripts": {
-        "clean": "rimraf node_modules/ yarn.lock dist/",
-        "copy-files": "copyfiles blender/cubes.blend dist/examples",
-        "build": "rimraf dist/ && tsc && run-s copy-files",
-        "js:hello": "node ./hello-world/hello.js",
-        "ts:run": "ts-node-script ./simple-usage/run.ts",
-        "ts:map": "ts-node-script ./simple-usage/map.js",
-        "ts:forEarch": "ts-node-script ./simple-usage/forEach.ts.js",
-        "ts:fileTransfer": "ts-node-script ./simple-usage/fileTransfer.ts",
-        "ts:batchPromise": "ts-node-script ./simple-usage/batchPromise.ts",
-        "ts:batchStream": "ts-node-script ./simple-usage/batchStream.ts",
-        "js:blender": "node ./blender/blender_js.js",
-        "ts:blender": "ts-node-script ./blender/blender.ts",
-        "js:low": "node ./low-level-api/listOffers_js.js",
-        "ts:low": "ts-node-script ./low-level-api/listOffers.ts",
-        "ts:yacat": "ts-node-script ./yacat/yacat.ts",
-        "js:fibonacci": "node ./fibonacci/fibonacci.js",
-        "ts:ssh": "ts-node ./ssh/ssh.ts"
+        "hello": "node ./hello-world/hello.mjs",
+        "run": "ts-node ./simple-usage/run.ts",
+        "map": "ts-node ./simple-usage/map.ts",
+        "forEach": "ts-node ./simple-usage/forEach.ts",
+        "fileTransfer": "ts-node ./simple-usage/fileTransfer.ts",
+        "batchPromise": "ts-node ./simple-usage/batchPromise.ts",
+        "batchStream": "ts-node ./simple-usage/batchStream.ts",
+        "blender": "ts-node ./blender/blender.ts",
+        "yacat": "ts-node ./yacat/yacat.ts",
+        "fibonacci": "node ./fibonacci/fibonacci.js",
+        "ssh": "ts-node ./ssh/ssh.ts",
+        "mid-level": "ts-node ./mid-level-api/hello.ts",
+        "web": "node ./web/app.mjs"
     },
-    "author": "Muhammed Tanrikulu <muhammed@golem.network>",
+    "author": "GolemFactory <contact@golem.network>",
     "license": "LGPL-3.0",
     "engines": {
-        "node": ">=14.17.0"
+        "node": ">=16.19.0"
     },
     "dependencies": {
-        "bluebird": "^3.7.2",
         "commander": "^9.1.0",
-        "dayjs": "~1.9.1",
         "ts-node": "^10.7.0",
-        "yajsapi": "file:../"
+        "yajsapi": "file:.."
     },
     "devDependencies": {
-        "@types/node": "14",
-        "copyfiles": "^2.4.1",
-        "npm-run-all": "^4.1.5",
-        "rimraf": "^3.0.2",
+        "@types/node": "18",
         "typescript": "^4.6.3"
     }
 }

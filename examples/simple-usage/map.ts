@@ -1,7 +1,7 @@
-import { createExecutor } from "../../dist";
+import { TaskExecutor } from "yajsapi";
 
 (async function main() {
-  const executor = await createExecutor("9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae");
+  const executor = await TaskExecutor.create("9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae");
   const data = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
 
   const results = executor.map<string, string>(data, async (ctx, x) => {

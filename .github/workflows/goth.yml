@@ -16,44 +16,37 @@ jobs:
     runs-on: goth
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Configure node.js
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
-          node-version: '14.17.0'
+          node-version: '16.19.0'
 
       - name: Build yajsapi
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y build-essential jq
+          sudo apt-get install -y build-essential
           npm install
           npm run build
-          cd examples
-          jq '.dependencies.yajsapi = "file:../"' <package.json >tmp.json && mv tmp.json package.json
-          npm install
 
       - name: Configure python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.8'
+          python-version: '3.9'
 
-      - name: Configure poetry
-        uses: Gr1N/setup-poetry@v8
-        with:
-          poetry-version: 1.2.2
-          working-directory: 'tests/goth'
-
-      - name: Install dependencies
+      - name: Install goth
         run: |
-          cd tests/goth/
-          poetry env use python3.8
-          poetry install
+          pip install goth
+          rm -rf ../goth/assets
+          python -m goth create-assets ../goth/assets
+          sed -Ezi 's/(use\-proxy:\s)(True)/\1False/mg' ../goth/assets/goth-config.yml
 
-      - name: Install websocat
+      - name: Install websocat and sshpass
         run: |
           sudo wget https://github.com/vi/websocat/releases/download/v1.9.0/websocat_linux64 -O /usr/local/bin/websocat
           sudo chmod +x /usr/local/bin/websocat
+          sudo apt-get install sshpass
 
       - name: Disconnect Docker containers from default network
         continue-on-error: true
@@ -78,9 +71,7 @@ jobs:
         env:
           GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd tests/goth
-          poetry run poe goth-assets
-          poetry run poe goth-tests
+          npm run test:integration
 
       - name: Upload test logs
         uses: actions/upload-artifact@v2
@@ -93,13 +84,3 @@ jobs:
       - name: Remove test logs
         if: always()
         run: rm -rf /tmp/goth-tests
-
-      # Only relevant for self-hosted runners
-      - name: Remove poetry virtual env
-        if: always()
-        # Python version below should agree with the version set up by this job.
-        # In future we'll be able to use the `--all` flag here to remove envs for
-        # all Python versions (https://github.com/python-poetry/poetry/issues/3208).
-        run: |
-          cd tests/goth/
-          poetry env remove python3.8

@@ -1,6 +1,3 @@
-import { Activity, ActivityStateEnum } from "./activity";
-import { ActivityFactory } from "./factory";
-import { Result } from "./results";
-
-export { ActivityFactory, Activity, Result, ActivityStateEnum };
-
+export { Activity, ActivityStateEnum, ActivityOptions } from "./activity.js";
+export { Result } from "./results.js";
+export { ActivityConfig } from "./config.js";

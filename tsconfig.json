@@ -1,8 +1,7 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "esnext",
     "noImplicitAny": false,
-    "suppressImplicitAnyIndexErrors": true,
     "target": "esnext",
     "strict": true,
     "esModuleInterop": true,
@@ -12,20 +11,30 @@
     "noLib": false,
     "declaration": true,
     "useUnknownInCatchVariables": false,
+    "skipLibCheck": true,
     "lib": [
       "es2015",
       "es2016",
       "es2017",
       "es2018",
       "esnext",
-      "dom",
+      "dom"
     ],
     "outDir": "dist",
     "typeRoots": ["node_modules/@types"]
   },
   "typedocOptions": {
-    "exclude": ["**/*.spec.ts"],
-    "out": "docs"
+    "entryPoints": ["yajsapi"],
+    "exclude": ["**/*.spec.ts","yajsapi/stats/*.ts"],
+    "entryPointStrategy": "expand",
+    "out": "docs",
+    "readme": "tutorial.md",
+    "sort": "static-first",
+    "excludePrivate": true,
+    "name": "JavaScript API reference",
+    "categorizeByGroup": false,
+    "excludeExternals": true,
+    "excludeInternal": true
   },
   "exclude": ["dist", "node_modules", "examples", "tests", "cypress.config.ts"]
 }

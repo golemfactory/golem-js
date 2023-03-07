@@ -1,14 +1,17 @@
-import { createExecutor, utils } from "../../dist";
+import { TaskExecutor } from "yajsapi";
 import { program } from "commander";
-const logger = utils.logger;
 
 async function main(args) {
-  const executor = await createExecutor({
+  const executor = await TaskExecutor.create({
     package: "055911c811e56da4d75ffc928361a78ed13077933ffa8320fb1ec2db",
-    maxWorkers: args.numberOfProviders,
+    maxParallelTasks: args.numberOfProviders,
+    minMemGib: 0.5,
+    minStorageGib: 2,
     budget: 10,
     subnetTag: args.subnetTag,
+    taskTimeout: 180_000,
     payment: { driver: args.paymentDriver, network: args.paymentNetwork },
+    logLevel: args.debug ? "debug" : "info",
   });
   const keyspace = await executor.run<number>(async (ctx) => {
     const result = await ctx.run(`hashcat --keyspace -a 3 ${args.mask} -m 400`);
@@ -16,17 +19,20 @@ async function main(args) {
   });
 
   if (!keyspace) throw new Error(`Cannot calculate keyspace`);
-  logger.info(`Keyspace size computed. Keyspace size = ${keyspace}.`);
-  const step = Math.floor(keyspace / args.numberOfProviders + 1);
-  const ranges = utils.range(0, keyspace, step);
+  const step = Math.floor(keyspace / args.numberOfProviders);
+  const range = [...Array(Math.floor(keyspace / step)).keys()].map((i) => i * step);
+  console.log(`Keyspace size computed. Keyspace size = ${keyspace}. Tasks to compute = ${range.length}`);
 
-  const results = executor.map(ranges, async (ctx, skip) => {
+  const results = executor.map(range, async (ctx, skip) => {
     const results = await ctx
       .beginBatch()
-      .run(`hashcat -a 3 -m 400 '${args.hash}' '${args.mask}' --skip=${skip} --limit=${skip + step} -o pass.potfile`)
-      .run("cat pass.potfile")
-      .end()
-      .catch((err) => console.error(err));
+      .run(
+        `hashcat -a 3 -m 400 '${args.hash}' '${args.mask}' --skip=${skip} --limit=${
+          skip! + step
+        } -o pass.potfile || true`
+      )
+      .run("cat pass.potfile || true")
+      .end();
     if (!results?.[1]?.stdout) return false;
     return results?.[1]?.stdout.split(":")[1];
   });
@@ -38,8 +44,8 @@ async function main(args) {
       break;
     }
   }
-  if (!password) logger.warn("No password found");
-  else logger.info(`Password found: ${password}`);
+  if (!password) console.log("No password found");
+  else console.log(`Password found: ${password}`);
   await executor.end();
 }
 
@@ -48,12 +54,9 @@ program
   .option("--payment-driver, --driver <driver>", "payment driver name, for example 'erc20'")
   .option("--payment-network, --network <network>", "network name, for example 'rinkeby'")
   .option("-d, --debug", "output extra debugging")
-  .option("--number-of-providers <number_of_providers>", "number of providers", (value) => parseInt(value), 3)
+  .option("--number-of-providers <number_of_providers>", "number of providers", (value) => parseInt(value), 2)
   .option("--mask <mask>")
   .requiredOption("--hash <hash>");
 program.parse();
 const options = program.opts();
-if (options.debug) {
-  utils.changeLogLevel("debug");
-}
 main(options).catch((e) => console.error(e));
