@@ -21,11 +21,11 @@ export default defineNuxtPlugin((nuxtApp) => {
       case "SubscriptionCreated":
         configStore.currentStep = 1;
         break;
-      case "ProposalResponded":
-        offersStore.setProcessingStatusById(event.detail.id, true);
-        break;
       case "ProposalReceived":
         offersStore.addFromEvent(event);
+        break;
+      case "ProposalResponded":
+        offersStore.setProcessingStatusById(event.detail.id, true);
         break;
       case "ProposalRejected":
         offersStore.addFromErrorEvent(event, "Rejected");
@@ -34,13 +34,21 @@ export default defineNuxtPlugin((nuxtApp) => {
         offersStore.addFromErrorEvent(event, "Failed");
         break;
       case "AgreementCreated":
-        console.log("AgreementCreated", event);
         offersStore.addFromAgreementEvent(event);
-        agreementsStore.addAgreement(parseAgreementFromEvent(event, "Proposal"));
+        agreementsStore.addFromEvent(event);
         configStore.currentStep = 2;
         break;
       case "AgreementConfirmed":
-        agreementsStore.updateAgreement(parseAgreementFromEvent(event, "Approved"));
+        agreementsStore.updateFromEvent(event, "Approved");
+        break;
+      case "AgreementRejected":
+        agreementsStore.updateAgreement(event, "Rejected");
+        break;
+      case "AgreementTerminated":
+        agreementsStore.updateAgreement(event, "Rejected");
+        break;
+      case "AgreementExpired":
+        agreementsStore.updateAgreement(event, "Rejected");
         break;
       case "ActivityCreated":
         activitiesStore.addActivity(parseActivityFromEvent(event, "New"));
@@ -82,11 +90,6 @@ export default defineNuxtPlugin((nuxtApp) => {
     }
   });
 
-  const parseAgreementFromEvent = (event, state) => ({
-    ...event.detail,
-    state,
-    timestamp: event.timestamp,
-  });
   const parseActivityFromEvent = (event, state) => ({
     state,
     ...event.detail,

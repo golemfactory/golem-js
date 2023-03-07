@@ -3,23 +3,22 @@ import { useConfigStore } from "~/store/config.js";
 
 export default defineNuxtPlugin((nuxtApp) => {
   const configStore = useConfigStore(nuxtApp.$pinia);
-  const appendLog = (msg) => {
-    configStore.logs += msg + "\n";
+  const appendLog = (msg, type) => {
+    configStore.logs += `[${new Date().toLocaleTimeString()}] ${type ? "[" + type + "] " : ""}${msg}\n`;
   };
-
   const logger = {
-    log: (msg) => appendLog(`[${new Date().toLocaleTimeString()}] ${msg}`),
-    warn: (msg) => appendLog(`[${new Date().toLocaleTimeString()}] [warn] ${msg}`),
-    debug: (msg) => appendLog(`[${new Date().toLocaleTimeString()}] [debug] ${msg}`),
+    log: (msg) => appendLog(msg),
+    info: (msg) => appendLog(msg, "info"),
+    warn: (msg) => appendLog(msg, "warn"),
+    debug: (msg) => appendLog(msg, "debug"),
     error: (error) => {
-      appendLog(`[${new Date().toLocaleTimeString()}] [error] ${error?.response?.data?.message || error}`);
+      appendLog(error?.response?.data?.message || error, "error");
       configStore.stderr += error?.response?.data?.message || error;
     },
-    info: (msg) => appendLog(`[${new Date().toLocaleTimeString()}] [info] ${msg}`),
   };
   return {
     provide: {
-      logger: console,
+      logger,
     },
   };
 });

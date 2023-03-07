@@ -1,4 +1,5 @@
 import { defineStore } from "pinia";
+import { useDemandStore } from "~/store/demand";
 
 export const useProposalsStore = defineStore("proposals", {
   state: () => ({
@@ -10,16 +11,15 @@ export const useProposalsStore = defineStore("proposals", {
     },
     getById(id) {
       const proposal = this.proposals.get(id);
-      if (!proposal) {
-        throw new Error(`Proposal ${proposal.id} not found`);
-      }
+      if (!proposal) throw new Error(`Proposal ${id} not found`);
       return proposal;
     },
     async respondById(id) {
-      return await useProposalsStore().getById(id).respond();
+      const demandStore = useDemandStore();
+      return await this.getById(id).respond(demandStore.account);
     },
     async rejectById(id) {
-      return await useProposalsStore().getById(id).reject();
+      return await this.getById(id).reject();
     },
   },
 });

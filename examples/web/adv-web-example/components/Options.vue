@@ -3,7 +3,7 @@
     <el-tabs v-model="activeTab" class="options-tabs">
       <el-tab-pane label="Image" name="base">
         <el-form-item label="Image:">
-          <el-select v-model="options.imageHash">
+          <el-select v-model="options.package">
             <el-option
               v-for="item in images"
               :key="item.value"

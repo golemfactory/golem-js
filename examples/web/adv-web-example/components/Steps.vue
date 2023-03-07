@@ -1,5 +1,5 @@
 <template>
-  <el-steps :active="currentStep" align-center finish-status="success">
+  <el-steps :active="configStore.currentStep" align-center finish-status="success">
     <el-step title="Demand" description="Publish demand on the market" />
     <el-step title="Offer" description="Choose the best offer" />
     <el-step title="Agreement" description="Confirm agreement with provider" />
@@ -9,6 +9,6 @@
 </template>
 <script setup>
 import { useConfigStore } from "~/store/config";
-const { currentStep } = useConfigStore();
+const configStore = useConfigStore();
 </script>
 <style scoped lang="scss"></style>

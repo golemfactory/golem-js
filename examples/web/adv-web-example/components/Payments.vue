@@ -1,5 +1,5 @@
 <template>
-  <el-table class="payments" :data="payments" :default-sort="{ prop: 'time', order: 'descending' }">
+  <el-table class="payments" :data="paymentsStore.getAll" :default-sort="{ prop: 'time', order: 'descending' }">
     <el-table-column prop="time" label="Time" sortable width="150"/>
     <el-table-column prop="type" label="Type" sortable width="150">
       <template #default="scope">

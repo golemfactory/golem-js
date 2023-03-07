@@ -41,12 +41,12 @@
     </el-descriptions>
     <template #footer v-if="actions">
       <div class="drawer-footer">
-        <el-button type="danger" @click="reject"
-          ><el-icon><CircleClose /></el-icon> Reject</el-button
-        >
-        <el-button type="success" @click="confirm"
-          ><el-icon><CircleCheck /></el-icon> Respond</el-button
-        >
+        <el-button type="danger" @click="reject">
+          <el-icon><CircleClose /></el-icon> Reject
+        </el-button>
+        <el-button type="success" @click="respond">
+          <el-icon><CircleCheck /></el-icon> Respond
+        </el-button>
       </div>
     </template>
   </el-drawer>
@@ -64,14 +64,9 @@ const { drawerOffer: offer, drawerOfferId } = storeToRefs(offerStore);
 
 const actions = configStore.activeControlActions;
 
-const respond = async (id) => {
-  await proposalsStore.respondById(id);
-  console.log("RESPONSE", id);
-};
-const reject = async (id) => {
-  await proposalsStore.rejectById(id);
-  console.log("REJECT", id);
-};
+const respond = async (id) => proposalsStore.respondById(id);
+const reject = async (id) => await proposalsStore.rejectById(id);
+
 
 const getStateType = (state) => {
   if (state === "Draft") return "warning";
