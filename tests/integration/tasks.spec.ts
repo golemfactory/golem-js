@@ -27,7 +27,7 @@ describe("Task Executor", function () {
     expect(logger.logs).to.include("Demand published on the market");
     expect(logger.logs).to.include("New proposal has been received");
     expect(logger.logs).to.include("Scored proposal");
-    expect(logger.logs).to.include("Proposal hes been responded");
+    expect(logger.logs).to.include("Proposal has been responded");
     expect(logger.logs).to.include("New offer proposal added to pool");
     expect(logger.logs).to.match(/Agreement confirmed by provider/);
     expect(logger.logs).to.match(/Activity .* created/);

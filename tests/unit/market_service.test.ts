@@ -30,7 +30,7 @@ describe("Market Service", () => {
     const marketService = new MarketService(agreementPoolServiceMock, { logger });
     await marketService.run(packageMock, [allocationMock]);
     setExpectedProposals(proposalsInitial);
-    await logger.expectToInclude("Proposal hes been responded", 10);
+    await logger.expectToInclude("Proposal has been responded", 10);
     await marketService.end();
   });
 
@@ -48,7 +48,7 @@ describe("Market Service", () => {
     const marketService = new MarketService(agreementPoolServiceMock, { logger });
     await marketService.run(packageMock, [allocationMock]);
     setExpectedProposals([proposalsInitial[6]]);
-    await logger.expectToMatch(/Proposal hes been rejected .* Reason: No common payment platform/, 10);
+    await logger.expectToMatch(/Proposal has been rejected .* Reason: No common payment platform/, 10);
     await marketService.end();
   });
 
@@ -56,7 +56,7 @@ describe("Market Service", () => {
     const marketService = new MarketService(agreementPoolServiceMock, { logger, strategy: marketStrategyAlwaysBan });
     await marketService.run(packageMock, [allocationMock]);
     setExpectedProposals(proposalsInitial);
-    await logger.expectToMatch(/Proposal hes been rejected .* Reason: Score is to low/, 10);
+    await logger.expectToMatch(/Proposal has been rejected .* Reason: Score is to low/, 10);
     await marketService.end();
   });
 });
