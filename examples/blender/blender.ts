@@ -1,5 +1,7 @@
 import { TaskExecutor } from "../../dist/index.js";
 import { program } from "commander";
+import { fileURLToPath } from "url";
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 const blender_params = (frame) => ({
   scene_file: "/golem/resource/scene.blend",
@@ -30,7 +32,7 @@ async function main(subnetTag: string, driver?: string, network?: string, debug?
   });
 
   executor.beforeEach(async (ctx) => {
-    await ctx.uploadFile(new URL("./cubes.blend", import.meta.url).pathname, "/golem/resource/scene.blend");
+    await ctx.uploadFile(`${__dirname}/cubes.blend`, "/golem/resource/scene.blend");
   });
 
   const results = executor.map<number, string>([0, 10, 20, 30, 40, 50], async (ctx, frame) => {
@@ -40,11 +42,11 @@ async function main(subnetTag: string, driver?: string, network?: string, debug?
       .run("/golem/entrypoints/run-blender.sh")
       .downloadFile(
         `/golem/output/out${frame?.toString().padStart(4, "0")}.png`,
-        new URL(`./output_${frame}.png`, import.meta.url).pathname
+        `${__dirname}/output_${frame}.png`
       )
       .end()
-      .catch((error) => console.error(error));
-    return result ? `output_${frame}.png` : "";
+      .catch(e => console.error(e))
+    return result?.length ? `output_${frame}.png` : '';
   });
   for await (const result of results) console.log(result);
   await executor.end();

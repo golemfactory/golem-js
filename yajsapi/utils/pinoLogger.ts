@@ -1,5 +1,4 @@
 import { pino } from "pino";
-import PinoPretty from "pino-pretty";
 import { Logger } from "./logger.js";
 
 const logger = pino({
@@ -7,6 +6,7 @@ const logger = pino({
     target: "pino-pretty",
     options: {
       colorize: true,
+      ignore: "pid,hostname",
     },
   },
 });
