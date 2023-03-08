@@ -14,8 +14,7 @@ export const useMidLevelStore = defineStore("mid-level", {
     proposals: new Map(),
     agreements: new Map(),
     activities: new Map(),
-    debitNotes: new Map(),
-    invoices: new Map(),
+    notes: new Map(),
   }),
   actions: {
     addProposal(proposal) {
@@ -104,21 +103,22 @@ export const useMidLevelStore = defineStore("mid-level", {
       }
       return allResults[0];
     },
-    addDebitNote(debitNote) {
-      this.debitNotes.set(debitNote.id, debitNote);
+    addNote(note) {
+      this.notes.set(note.id, note);
     },
-    getDebitNoteById(id) {
-      const debitNote = this.debitNotes.get(id);
-      if (!debitNote) throw new Error(`DebitNote ${id} not found`);
-      return debitNote;
+    getNoteById(id) {
+      const note = this.notes.get(id);
+      if (!note) throw new Error(`Note ${id} not found`);
+      return note;
     },
-    addInvoice(invoice) {
-      this.invoices.set(invoice.id, invoice);
+    async confirmNoteById(id) {
+      const note = this.getNoteById(id);
+      console.log(note);
+      await note.accept();
     },
-    getInvoiceById(id) {
-      const invoice = this.invoices.get(id);
-      if (!invoice) throw new Error(`Invoice ${id} not found`);
-      return invoice;
+    async rejectNoteById(id) {
+      const note = this.getNoteById(id);
+      await note.reject();
     },
   },
 });

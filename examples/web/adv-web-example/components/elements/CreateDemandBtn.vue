@@ -59,14 +59,7 @@ const createDemand = async () => {
     // 5. Create payment and listen for new debit notes and invoices
     const payments = await Payments.create(options);
     payments.addEventListener(PaymentEventType, async (event) => {
-      if (event instanceof InvoiceEvent) {
-        //useMidLevelStore().addInvoice(event.invoice);
-        console.log("invoice", event.invoice);
-      } else if (event instanceof DebitNoteEvent) {
-        //useMidLevelStore().addDebitNote(event.debitNote);
-        console.log("debitNote", event.debitNote);
-      }
-      console.log("Payment", event);
+      useMidLevelStore().addNote(event.invoice);
     });
   } catch (e) {
     throw new Error("Error occurred when creating demand", e.message);

@@ -43,9 +43,7 @@ const getStateType = (state) => {
   if (state === "Accepted") return "success";
 };
 
-const accept = (id) => {
-  //todo
-};
+const accept = (id) => {};
 const reject = (id) => {
   //todo
 };
