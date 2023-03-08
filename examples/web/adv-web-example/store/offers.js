@@ -2,7 +2,7 @@ import { defineStore } from "pinia";
 
 const parseAttributes = (offer) => {
   if (offer.storage) offer.storage = parseInt(offer.storage);
-  if (offer.memory) offer.storage = parseInt(offer.memory);
+  if (offer.memory) offer.memory = parseInt(offer.memory);
   if (offer.cpuCores) offer.cpuCores = parseInt(offer.cpuCores);
   if (offer.cpuThreads) offer.cpuThreads = parseInt(offer.cpuThreads);
   if (offer.timestamp) offer.time = new Date(offer.timestamp).toLocaleTimeString();

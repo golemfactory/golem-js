@@ -1,7 +1,7 @@
 <template>
   <el-row :gutter="40">
     <el-col :span="10" style="position: relative">
-      <Options />
+      <OptionsMid />
       <ElementsCreateDemandBtn />
       <ElementsCodeEditor />
       <el-tabs v-model="activeResultsTab" class="results-tabs">
