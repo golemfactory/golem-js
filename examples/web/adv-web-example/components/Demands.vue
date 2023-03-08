@@ -54,7 +54,7 @@ const show = async (id) => {
 };
 </script>
 <style scoped lang="scss">
-.agreements {
+.demands {
   width: 100%;
   height: 360px;
 }
