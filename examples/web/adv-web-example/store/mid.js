@@ -99,13 +99,6 @@ export const useMidLevelStore = defineStore("mid-level", {
       const results = await activity.execute(exeScript);
       const allResults = [];
       for await (const result of results) allResults.push(result);
-      const commandsErrors = allResults.filter((res) => res.result === "Error");
-      if (commandsErrors.length) {
-        const errorMessage = commandsErrors
-          .map((err) => `Error: ${err.message}. Stdout: ${err.stdout?.trim()}. Stderr: ${err.stderr?.trim()}`)
-          .join(". ");
-        throw new Error(errorMessage);
-      }
       return allResults[0];
     },
     addNote(note) {

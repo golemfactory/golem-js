@@ -97,7 +97,8 @@ const start = async (id) => {
 const runScript = async (id) => {
   const command = configStore.code;
   const result = await midLevelStore.runScript(id, command);
-  configStore.stdout += result.stdout;
+  if (configStore.stdout) configStore.stdout += result.stdout;
+  if (configStore.stderr) configStore.stderr += result.stderr;
 };
 const stop = async (id) => {
   await midLevelStore.stopActivity(id);
