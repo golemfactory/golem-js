@@ -10,7 +10,8 @@ export default defineNuxtPlugin((nuxtApp) => {
     log: (msg) => appendLog(msg),
     info: (msg) => appendLog(msg, "info"),
     warn: (msg) => appendLog(msg, "warn"),
-    debug: (msg) => appendLog(msg, "debug"),
+    // debug: (msg) => appendLog(msg, "debug"),
+    debug: () => null,
     error: (error) => {
       appendLog(error?.response?.data?.message || error, "error");
       configStore.stderr += error?.response?.data?.message || error;

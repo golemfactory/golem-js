@@ -1,5 +1,5 @@
 <template>
-  <el-scrollbar height="200px">
+  <el-scrollbar height="250px">
     <pre class="output">{{configStore.stdout}}</pre>
   </el-scrollbar>
 </template>

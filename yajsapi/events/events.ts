@@ -1,5 +1,6 @@
 import { ProposalDetails } from "../market/proposal";
 import { PackageDetails } from "../package/package";
+import { DemandDetails } from "../market/demand";
 
 /**
  * Global Event Type with which all API events will be emitted. It should be used on all listeners that would like to handle events.
@@ -36,8 +37,9 @@ export class TaskRedone extends BaseEvent<{ id: string; retriesCount: number }> 
 export class TaskRejected extends BaseEvent<{ id: string; reason?: string }> {}
 export class TaskFinished extends BaseEvent<{ id: string }> {}
 export class AllocationCreated extends BaseEvent<{ id: string; amount: number; platform?: string }> {}
-export class SubscriptionCreated extends BaseEvent<{ id: string }> {}
-export class SubscriptionFailed extends BaseEvent<{ reason?: string }> {}
+export class DemandSubscribed extends BaseEvent<{ id: string; details: DemandDetails }> {}
+export class DemandFailed extends BaseEvent<{ reason?: string }> {}
+export class DemandUnsubscribed extends BaseEvent<{ id: string }> {}
 export class CollectFailed extends BaseEvent<{ id: string; reason?: string }> {}
 export class ProposalReceived extends BaseEvent<{
   id: string;

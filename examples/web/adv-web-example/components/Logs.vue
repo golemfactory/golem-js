@@ -1,5 +1,5 @@
 <template>
-  <el-scrollbar height="200px">
+  <el-scrollbar height="250px">
     <pre class="logs">{{configStore.logs}}</pre>
   </el-scrollbar>
 </template>
@@ -13,8 +13,12 @@ const configStore = useConfigStore();
   color: #dddddd;
   min-height: 200px;
   padding: 10px;
-  word-wrap: break-word;
   word-break: break-all;
-  font-size: 0.6rem;
+  font-size: 0.7rem;
+  white-space: pre-wrap;       /* css-3 */
+  white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+  white-space: -pre-wrap;      /* Opera 4-6 */
+  white-space: -o-pre-wrap;    /* Opera 7 */
+  word-wrap: break-word;
 }
 </style>
