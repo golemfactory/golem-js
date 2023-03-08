@@ -67,19 +67,16 @@ const createDemand = async () => {
   loading.value = false;
 };
 const terminateAll = async () => {
-  const activityPromises = [...midLevelStore.activities].map((activity) => activity.stop());
+  const activityPromises = [...midLevelStore.activities].map(([, activity]) => activity.stop());
   await Promise.all(activityPromises);
-  const agreementPromises = [...midLevelStore.activities].map((agreement) => agreement.terminate());
+  const agreementPromises = [...midLevelStore.agreements].map(([, agreement]) => agreement.terminate());
   await Promise.all(agreementPromises);
 
-  midLevelStore.demand.removeEventListener(DemandEventType);
   midLevelStore.demand.unsubscribe();
   setTimeout(async () => {
     midLevelStore.allocation.release();
     midLevelStore.payments.unsubscribe();
-    midLevelStore.payments.removeEventListener(PaymentEventType);
-
-    midLevelStore.$reset();
+    //midLevelStore.$reset();
   }, 3000);
 };
 </script>
