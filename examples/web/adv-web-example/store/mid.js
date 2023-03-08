@@ -4,18 +4,23 @@ import {
   Deploy as YaDeploy,
   Start as YaStart,
   Run as YaRun,
+  DebitNote,
 } from "../../../../dist/yajsapi.min.js";
-import { useDemandStore } from "~/store/demand";
 
 const sleep = (time, inMs = false) => new Promise((resolve) => setTimeout(resolve, time * (inMs ? 1 : 1000)));
 
 export const useMidLevelStore = defineStore("mid-level", {
   state: () => ({
+    allocation: null,
+    demand: null,
+    taskPackage: null,
+    account: null,
+    allocationId: null,
+    payments: null,
     proposals: new Map(),
     agreements: new Map(),
     activities: new Map(),
-    debitNotes: new Map(),
-    invoices: new Map(),
+    notes: new Map(),
   }),
   actions: {
     addProposal(proposal) {
@@ -27,8 +32,7 @@ export const useMidLevelStore = defineStore("mid-level", {
       return proposal;
     },
     async respondProposalById(id) {
-      const demandStore = useDemandStore();
-      return await this.getProposalById(id).respond(demandStore.account);
+      return await this.getProposalById(id).respond(this.account);
     },
     async rejectProposalById(id) {
       return await this.getProposalById(id).reject();
@@ -95,30 +99,28 @@ export const useMidLevelStore = defineStore("mid-level", {
       const results = await activity.execute(exeScript);
       const allResults = [];
       for await (const result of results) allResults.push(result);
-      const commandsErrors = allResults.filter((res) => res.result === "Error");
-      if (commandsErrors.length) {
-        const errorMessage = commandsErrors
-          .map((err) => `Error: ${err.message}. Stdout: ${err.stdout?.trim()}. Stderr: ${err.stderr?.trim()}`)
-          .join(". ");
-        throw new Error(errorMessage);
-      }
       return allResults[0];
     },
-    addDebitNote(debitNote) {
-      this.debitNotes.set(debitNote.id, debitNote);
+    addNote(note) {
+      this.notes.set(note.id, note);
     },
-    getDebitNoteById(id) {
-      const debitNote = this.debitNotes.get(id);
-      if (!debitNote) throw new Error(`DebitNote ${id} not found`);
-      return debitNote;
+    getNoteById(id) {
+      const note = this.notes.get(id);
+      if (!note) throw new Error(`Note ${id} not found`);
+      return note;
     },
-    addInvoice(invoice) {
-      this.invoices.set(invoice.id, invoice);
+    async confirmNoteById(id) {
+      const note = this.getNoteById(id);
+      const amountDue = note instanceof DebitNote ? note.totalAmountDue : note.amount;
+      console.log(amountDue, this.allocationId);
+      await note.accept(amountDue, this.allocationId);
     },
-    getInvoiceById(id) {
-      const invoice = this.invoices.get(id);
-      if (!invoice) throw new Error(`Invoice ${id} not found`);
-      return invoice;
+    async rejectNoteById(id) {
+      const note = this.getNoteById(id);
+      await note.reject({
+        rejectionReason: "BAD_SERVICE",
+        totalAmountAccepted: "0",
+      });
     },
   },
 });

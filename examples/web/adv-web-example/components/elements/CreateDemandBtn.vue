@@ -1,6 +1,6 @@
 <template>
-  <el-button class="btn-run" size="small" type="warning" v-if="demandStore.demand" disabled>
-    Demand crated successfully
+  <el-button class="btn-run" size="small" type="danger" @click="terminateAll" v-if="midLevelStore.demand">
+    Terminate all
   </el-button>
   <el-button class="btn-run" size="small" type="success" @click="createDemand" v-loading="loading" v-else>
     Create Demand
@@ -10,7 +10,6 @@
 const { $eventTarget: eventTarget, $logger: logger } = useNuxtApp();
 import { useConfigStore } from "~/store/config";
 import { useMidLevelStore } from "~/store/mid";
-import { useDemandStore } from "~/store/demand";
 
 import {
   Accounts,
@@ -25,7 +24,7 @@ import {
 } from "../../../../../dist/yajsapi.min.js";
 
 const configStore = useConfigStore();
-const demandStore = useDemandStore();
+const midLevelStore = useMidLevelStore();
 
 const loading = ref(false);
 
@@ -37,41 +36,51 @@ const createDemand = async () => {
   try {
     // 1. Create package
     const taskPackage = await Package.create(options);
-    demandStore.taskPackage = taskPackage;
+    midLevelStore.taskPackage = taskPackage;
 
     // 2. For the example purpose chose any account  with platform erc20
     const accounts = await (await Accounts.create(options)).list();
     const account = accounts.find((account) => account?.platform.indexOf("erc20") !== -1);
     if (!account) throw new Error("There is no available account");
-    demandStore.account = account;
+    midLevelStore.account = account;
 
     // 3. Create allocation on this account
     const allocation = await Allocation.create({ ...options, account });
-    demandStore.allocation = allocation;
+    midLevelStore.allocation = allocation;
+    midLevelStore.allocationId = allocation.id;
 
     // 4. Create demand and listen for new proposal from the market
-    const demand = await Demand.create(taskPackage, [allocation], options);
-    demand.addEventListener(DemandEventType, async (event) => {
-      useMidLevelStore().addProposal(event.proposal);
+    midLevelStore.demand = await Demand.create(taskPackage, [allocation], options);
+    midLevelStore.demand.addEventListener(DemandEventType, async (event) => {
+      midLevelStore.addProposal(event.proposal);
     });
-    demandStore.demand = demand;
 
     // 5. Create payment and listen for new debit notes and invoices
-    const payments = await Payments.create(options);
-    payments.addEventListener(PaymentEventType, async (event) => {
-      if (event instanceof InvoiceEvent) {
-        //useMidLevelStore().addInvoice(event.invoice);
-        console.log("invoice", event.invoice);
-      } else if (event instanceof DebitNoteEvent) {
-        //useMidLevelStore().addDebitNote(event.debitNote);
-        console.log("debitNote", event.debitNote);
-      }
-      console.log("Payment", event);
+    midLevelStore.payments = await Payments.create(options);
+    midLevelStore.payments.addEventListener(PaymentEventType, async (event) => {
+      if (event instanceof InvoiceEvent) midLevelStore.addNote(event.invoice);
+      else if (event instanceof DebitNoteEvent) midLevelStore.addNote(event.debitNote);
     });
   } catch (e) {
-    throw new Error("Error occurred when creating demand", e.message);
+    throw new Error(`Error occurred when creating demand: ${e.message}`);
   }
   loading.value = false;
+};
+const terminateAll = async () => {
+  const activityPromises = [...midLevelStore.activities].map((activity) => activity.stop());
+  await Promise.all(activityPromises);
+  const agreementPromises = [...midLevelStore.activities].map((agreement) => agreement.terminate());
+  await Promise.all(agreementPromises);
+
+  midLevelStore.demand.removeEventListener(DemandEventType);
+  midLevelStore.demand.unsubscribe();
+  setTimeout(async () => {
+    midLevelStore.allocation.release();
+    midLevelStore.payments.unsubscribe();
+    midLevelStore.payments.removeEventListener(PaymentEventType);
+
+    midLevelStore.$reset();
+  }, 3000);
 };
 </script>
 <style scoped lang="scss">

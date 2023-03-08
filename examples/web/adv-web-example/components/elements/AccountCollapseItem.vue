@@ -25,9 +25,9 @@
 <script setup>
 import { CircleCheck, Loading } from "@element-plus/icons-vue";
 import { storeToRefs } from "pinia";
-import { useDemandStore } from "~/store/demand";
-const demandStore = useDemandStore();
-const { account } = storeToRefs(demandStore);
+import { useMidLevelStore } from "~/store/mid";
+const midLevelStore = useMidLevelStore();
+const { account } = storeToRefs(midLevelStore);
 </script>
 <style scoped lang="scss">
 .success-icon,

@@ -1,7 +1,7 @@
 <template>
   <el-table class="payments" :data="paymentsStore.getAll" :default-sort="{ prop: 'time', order: 'descending' }">
     <el-table-column prop="time" label="Time" sortable width="80" />
-    <el-table-column prop="type" label="Type" sortable width="100" >
+    <el-table-column prop="type" label="Type" sortable width="100">
       <template #default="scope">
         <el-tag class="tag-state" :type="scope.row.type === 'invoice' ? '' : 'warning'">
           {{ scope.row.type }}
@@ -21,8 +21,22 @@
     </el-table-column>
     <el-table-column label="Actions" width="200" fixed="right" align="center" v-if="actions">
       <template #default="scope">
-        <el-button v-if="actions" size="small" plain type="success" @click="accept(scope.row.id)">Accept</el-button>
-        <el-button v-if="actions" plain size="small" type="danger" @click="reject(scope.row.id)">Reject</el-button>
+        <el-button
+          v-if="actions && scope.row.state === 'Received'"
+          size="small"
+          plain
+          type="success"
+          @click="accept(scope.row.id)"
+          >Accept</el-button
+        >
+        <el-button
+          v-if="actions && scope.row.state === 'Received'"
+          plain
+          size="small"
+          type="danger"
+          @click="reject(scope.row.id)"
+          >Reject</el-button
+        >
       </template>
     </el-table-column>
   </el-table>
@@ -31,11 +45,14 @@
 const { $eventTarget: eventTarget, $logger: logger } = useNuxtApp();
 import { usePaymentsStore } from "~/store/payments";
 import { useConfigStore } from "~/store/config";
+import { useMidLevelStore } from "~/store/mid";
+
 import { storeToRefs } from "pinia";
 const paymentsStore = usePaymentsStore();
-const { payments } = storeToRefs(paymentsStore);
 const configStore = useConfigStore();
+const midLevelStore = useMidLevelStore();
 
+const { payments } = storeToRefs(paymentsStore);
 const actions = computed(() => configStore.activeControlActions);
 
 const getStateType = (state) => {
@@ -43,11 +60,11 @@ const getStateType = (state) => {
   if (state === "Accepted") return "success";
 };
 
-const accept = (id) => {
-  //todo
+const accept = async (id) => {
+  await midLevelStore.confirmNoteById(id);
 };
-const reject = (id) => {
-  //todo
+const reject = async (id) => {
+  await midLevelStore.rejectNoteById(id);
 };
 </script>
 <style scoped lang="scss">
