@@ -26,6 +26,7 @@ import {
 
 const configStore = useConfigStore();
 const demandStore = useDemandStore();
+const midLevelStore = useMidLevelStore();
 
 const loading = ref(false);
 
@@ -48,18 +49,20 @@ const createDemand = async () => {
     // 3. Create allocation on this account
     const allocation = await Allocation.create({ ...options, account });
     demandStore.allocation = allocation;
+    midLevelStore.setAllocationId(allocation.id);
 
     // 4. Create demand and listen for new proposal from the market
     const demand = await Demand.create(taskPackage, [allocation], options);
     demand.addEventListener(DemandEventType, async (event) => {
-      useMidLevelStore().addProposal(event.proposal);
+      midLevelStore.addProposal(event.proposal);
     });
     demandStore.demand = demand;
 
     // 5. Create payment and listen for new debit notes and invoices
     const payments = await Payments.create(options);
     payments.addEventListener(PaymentEventType, async (event) => {
-      useMidLevelStore().addNote(event.invoice);
+      if (event instanceof InvoiceEvent) midLevelStore.addNote(event.invoice);
+      else if (event instanceof DebitNoteEvent) midLevelStore.addNote(event.debitNote);
     });
   } catch (e) {
     throw new Error("Error occurred when creating demand", e.message);

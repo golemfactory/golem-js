@@ -4,6 +4,7 @@ import {
   Deploy as YaDeploy,
   Start as YaStart,
   Run as YaRun,
+  DebitNote,
 } from "../../../../dist/yajsapi.min.js";
 import { useDemandStore } from "~/store/demand";
 
@@ -11,12 +12,16 @@ const sleep = (time, inMs = false) => new Promise((resolve) => setTimeout(resolv
 
 export const useMidLevelStore = defineStore("mid-level", {
   state: () => ({
+    allocationId: null,
     proposals: new Map(),
     agreements: new Map(),
     activities: new Map(),
     notes: new Map(),
   }),
   actions: {
+    setAllocationId(allocationId) {
+      this.allocationId = allocationId;
+    },
     addProposal(proposal) {
       this.proposals.set(proposal.id, proposal);
     },
@@ -113,12 +118,16 @@ export const useMidLevelStore = defineStore("mid-level", {
     },
     async confirmNoteById(id) {
       const note = this.getNoteById(id);
-      console.log(note);
-      await note.accept();
+      const amountDue = note instanceof DebitNote ? note.totalAmountDue : note.amount;
+      console.log(amountDue, this.allocationId);
+      await note.accept(amountDue, this.allocationId);
     },
     async rejectNoteById(id) {
       const note = this.getNoteById(id);
-      await note.reject();
+      await note.reject({
+        rejectionReason: "BAD_SERVICE",
+        totalAmountAccepted: "0",
+      });
     },
   },
 });
