@@ -43,13 +43,13 @@ export default defineNuxtPlugin((nuxtApp) => {
         agreementsStore.updateFromEvent(event, "Approved");
         break;
       case "AgreementRejected":
-        agreementsStore.update(event, "Rejected");
+        agreementsStore.updateFromEvent(event, "Rejected");
         break;
       case "AgreementTerminated":
-        agreementsStore.update(event, "Rejected");
+        agreementsStore.updateFromEvent(event, "Rejected");
         break;
       case "AgreementExpired":
-        agreementsStore.update(event, "Rejected");
+        agreementsStore.updateFromEvent(event, "Rejected");
         break;
       case "ActivityCreated":
         activitiesStore.addActivity(parseActivityFromEvent(event, "New"));

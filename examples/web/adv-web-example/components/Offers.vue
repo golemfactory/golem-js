@@ -28,7 +28,7 @@
         </el-button>
         <el-button
           title="Respond"
-          v-if="actions && (scope.row.state === 'Initial' || scope.row.state === 'Failed')"
+          v-if="actions && scope.row.state === 'Initial'"
           size="small"
           type="success"
           @click="respond(scope.row.id)"
@@ -38,7 +38,7 @@
         ></el-button>
         <el-button
           title="Reject"
-          v-if="actions && (scope.row.state === 'Initial' || scope.row.state === 'Failed')"
+          v-if="actions && scope.row.state === 'Initial'"
           size="small"
           type="danger"
           @click="reject(scope.row.id)"
@@ -66,9 +66,9 @@ import { Agreement } from "../../../../dist/yajsapi.min.js";
 import { Document, Check, Close } from "@element-plus/icons-vue";
 import { useOffersStore } from "~/store/offers";
 import { useConfigStore } from "~/store/config";
-import { useProposalsStore } from "~/store/proposals";
+import { useMidLevelStore } from "~/store/mid";
 const offersStore = useOffersStore();
-const proposalsStore = useProposalsStore();
+const midLevelStore = useMidLevelStore();
 const configStore = useConfigStore();
 
 const actions = computed(() => configStore.activeControlActions);
@@ -84,14 +84,14 @@ const getStateType = (state) => {
 
 const respond = async (id) => {
   try {
-    await proposalsStore.respondById(id);
+    await midLevelStore.respondProposalById(id);
   } catch (e) {
     console.error(e.message);
   }
 };
 const reject = async (id) => {
   try {
-    await proposalsStore.rejectById(id);
+    await midLevelStore.rejectProposalById(id);
   } catch (e) {
     console.error(e.message);
   }
@@ -101,6 +101,7 @@ const createAgreement = async (id) => {
   try {
     const options = { ...configStore.options, logger, eventTarget };
     const agreement = await Agreement.create(id, options);
+    midLevelStore.addAgreement(agreement);
   } catch (e) {
     console.error(e.message);
   }

@@ -24,22 +24,59 @@
         </el-tooltip>
       </template>
     </el-table-column>
-    <el-table-column label="Actions" width="80" fixed="right" align="center" v-if="0">
+    <el-table-column label="Actions" :width="actions ? 120 : 80" fixed="right" align="center" v-if="actions">
       <template #default="scope">
-        <el-button size="small" plain type="success" @click="respond(scope.row.id)">Respond</el-button>
-        <el-button plain size="small" type="danger" @click="reject(scope.row.id)">Reject</el-button>
+        <el-button
+          title="Confirm"
+          v-if="actions && scope.row.state === 'Initial'"
+          size="small"
+          type="success"
+          @click="confirm(scope.row.id)"
+          :disabled="scope.row.isProcessing"
+        >
+          <el-icon><Check /></el-icon>
+        </el-button>
+        <el-button
+          title="Create activity"
+          v-if="actions && scope.row.state === 'Approved'"
+          size="small"
+          type="warning"
+          @click="createActivity(scope.row.id)"
+          :disabled="scope.row.isProcessing"
+        >
+          <el-icon><Setting /></el-icon>
+        </el-button>
+        <el-button
+          title="Terminate"
+          v-if="(actions && scope.row.state === 'Initial') || scope.row.state === 'Approved'"
+          size="small"
+          type="danger"
+          @click="terminate(scope.row.id)"
+          :disabled="scope.row.isProcessing"
+        >
+          <el-icon><Close /></el-icon>
+        </el-button>
       </template>
     </el-table-column>
   </el-table>
 </template>
 <script setup>
+const { $eventTarget: eventTarget, $logger: logger } = useNuxtApp();
+import { Activity } from "../../../../dist/yajsapi.min.js";
+import { Setting, Check, Close } from "@element-plus/icons-vue";
 import { useOffersStore } from "~/store/offers";
+import { useConfigStore } from "~/store/config";
 import { useAgreementsStore } from "~/store/agreements";
+import { useMidLevelStore } from "~/store/mid";
 import { storeToRefs } from "pinia";
 const agreementStore = useAgreementsStore();
 const offerStore = useOffersStore();
+const configStore = useConfigStore();
+const midLevelStore = useMidLevelStore();
 const { agreements } = storeToRefs(agreementStore);
 const agreement = ref({});
+
+const actions = computed(() => configStore.activeControlActions);
 
 const getStateType = (state) => {
   if (state === "Cancelled" || state === "Expired") return "warning";
@@ -47,12 +84,30 @@ const getStateType = (state) => {
   if (state === "Approved") return "success";
 };
 
-const respond = (id) => {
-  //todo
+const confirm = async (id) => {
+  try {
+    await midLevelStore.confirmAgreementById(id);
+  } catch (e) {
+    console.error(e.message);
+  }
 };
-const reject = (id) => {
-  //todo
+const terminate = async (id) => {
+  try {
+    await midLevelStore.terminateAgreementById(id);
+  } catch (e) {
+    console.error(e.message);
+  }
 };
+const createActivity = async (id) => {
+  try {
+    const options = { ...configStore.options, logger, eventTarget };
+    const activity = await Activity.create(id, options);
+    await midLevelStore.addActivity(activity);
+  } catch (e) {
+    console.error(e.message);
+  }
+};
+
 const showOffer = (id) => {
   offerStore.showOffer(id);
 };

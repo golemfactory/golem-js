@@ -9,7 +9,7 @@
 <script setup>
 const { $eventTarget: eventTarget, $logger: logger } = useNuxtApp();
 import { useConfigStore } from "~/store/config";
-import { useProposalsStore } from "~/store/proposals";
+import { useMidLevelStore } from "~/store/mid";
 import { useDemandStore } from "~/store/demand";
 
 import { Accounts, Allocation, Demand, Package, DemandEventType } from "../../../../../dist/yajsapi.min.js";
@@ -42,7 +42,7 @@ const createDemand = async () => {
     // 4. Create demand and listen for new proposal from the market
     const demand = await Demand.create(taskPackage, [allocation], options);
     demand.addEventListener(DemandEventType, async (event) => {
-      useProposalsStore().add(event.proposal);
+      useMidLevelStore().addProposal(event.proposal);
     });
     demandStore.demand = demand;
   } catch (e) {

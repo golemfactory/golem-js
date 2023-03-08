@@ -11,6 +11,7 @@ export const useAgreementsStore = defineStore({
     addFromEvent: (event) =>
       useAgreementsStore().add({
         ...event.detail,
+        state: "Initial",
         time: new Date(event.timestamp).toLocaleTimeString(),
         validTo: new Date(event.detail.validTo).toLocaleString(),
       }),
@@ -26,12 +27,6 @@ export const useAgreementsStore = defineStore({
     update(agreement) {
       const old = this.agreements.find((agr) => agr.id === agreement.id);
       Object.assign(old, agreement);
-    },
-    confirmAgreement() {
-      // todo
-    },
-    rejectAgreement() {
-      // todo
     },
   },
   getters: {

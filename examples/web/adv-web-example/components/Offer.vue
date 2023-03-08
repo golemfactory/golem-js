@@ -55,18 +55,17 @@
 import { Clock, CircleClose, CircleCheck } from "@element-plus/icons-vue";
 import { useOffersStore } from "~/store/offers";
 import { useConfigStore } from "~/store/config";
-import { useProposalsStore } from "~/store/proposals";
+import { useMidLevelStore } from "~/store/mid";
 import { storeToRefs } from "pinia";
 const offerStore = useOffersStore();
-const proposalsStore = useProposalsStore();
+const midLevelStore = useMidLevelStore();
 const configStore = useConfigStore();
 const { drawerOffer: offer, drawerOfferId } = storeToRefs(offerStore);
 
 const actions = configStore.activeControlActions;
 
-const respond = async (id) => proposalsStore.respondById(id);
-const reject = async (id) => await proposalsStore.rejectById(id);
-
+const respond = async (id) => midLevelStore.respondProposalById(id);
+const reject = async (id) => await midLevelStore.rejectProposalById(id);
 
 const getStateType = (state) => {
   if (state === "Draft") return "warning";
