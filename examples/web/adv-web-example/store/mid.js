@@ -6,22 +6,23 @@ import {
   Run as YaRun,
   DebitNote,
 } from "../../../../dist/yajsapi.min.js";
-import { useDemandStore } from "~/store/demand";
 
 const sleep = (time, inMs = false) => new Promise((resolve) => setTimeout(resolve, time * (inMs ? 1 : 1000)));
 
 export const useMidLevelStore = defineStore("mid-level", {
   state: () => ({
+    allocation: null,
+    demand: null,
+    taskPackage: null,
+    account: null,
     allocationId: null,
+    payments: null,
     proposals: new Map(),
     agreements: new Map(),
     activities: new Map(),
     notes: new Map(),
   }),
   actions: {
-    setAllocationId(allocationId) {
-      this.allocationId = allocationId;
-    },
     addProposal(proposal) {
       this.proposals.set(proposal.id, proposal);
     },
@@ -31,8 +32,7 @@ export const useMidLevelStore = defineStore("mid-level", {
       return proposal;
     },
     async respondProposalById(id) {
-      const demandStore = useDemandStore();
-      return await this.getProposalById(id).respond(demandStore.account);
+      return await this.getProposalById(id).respond(this.account);
     },
     async rejectProposalById(id) {
       return await this.getProposalById(id).reject();

@@ -18,10 +18,10 @@
 </template>
 <script setup>
 import { CircleCheck, Loading } from "@element-plus/icons-vue";
-import { useDemandStore } from "~/store/demand";
 import { storeToRefs } from "pinia";
-const demandStore = useDemandStore();
-const { demand } = storeToRefs(demandStore);
+import { useMidLevelStore } from "~/store/mid";
+const midLevelStore = useMidLevelStore();
+const { demand } = storeToRefs(midLevelStore);
 </script>
 <style scoped lang="scss">
 .success-icon,
