@@ -38,7 +38,7 @@
         </el-button>
         <el-button
           title="Create activity"
-          v-if="actions && scope.row.state === 'Approved'"
+          v-if="actions && scope.row.state === 'Approved' && !getAgreementsIdsWithActiveActivity.includes(scope.row.id)"
           size="small"
           type="warning"
           @click="createActivity(scope.row.id)"
@@ -67,13 +67,17 @@ import { Finished, Check, Close } from "@element-plus/icons-vue";
 import { useOffersStore } from "~/store/offers";
 import { useConfigStore } from "~/store/config";
 import { useAgreementsStore } from "~/store/agreements";
+import { useActivitiesStore } from "~/store/activities";
 import { useMidLevelStore } from "~/store/mid";
 import { storeToRefs } from "pinia";
 const agreementStore = useAgreementsStore();
+const activitiesStore = useActivitiesStore();
 const offerStore = useOffersStore();
 const configStore = useConfigStore();
 const midLevelStore = useMidLevelStore();
 const { agreements } = storeToRefs(agreementStore);
+const { getAgreementsIdsWithActiveActivity } = storeToRefs(activitiesStore);
+
 const agreement = ref({});
 
 const actions = computed(() => configStore.activeControlActions);

@@ -17,6 +17,7 @@ export const useActivitiesStore = defineStore({
       activity.time = new Date(activity.timestamp).toLocaleTimeString();
       activity.scripts = 0;
       activity.duration = 0;
+      console.log(activity);
       this.activities.push(activity);
     },
     updateActivity(activity) {
@@ -33,6 +34,15 @@ export const useActivitiesStore = defineStore({
       activity.duration += +new Date() / 1000 - activity.startScript;
       this.totalTime += activity.duration;
       console.log(this.totalTime);
+    },
+  },
+  getters: {
+    getAgreementsIdsWithActiveActivity() {
+      return [
+        ...new Set(
+          this.activities.filter((activity) => activity.state !== "Terminated").map((activity) => activity.agreementId)
+        ),
+      ];
     },
   },
 });
