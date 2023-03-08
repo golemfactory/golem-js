@@ -92,7 +92,9 @@ const start = async (id) => {
 };
 
 const runScript = async (id) => {
-  await midLevelStore.runScript(id, "echo 'abc'");
+  const command = configStore.code;
+  const result = await midLevelStore.runScript(id, command);
+  configStore.stdout += result.stdout;
 };
 const reject = (id) => {
   //todo

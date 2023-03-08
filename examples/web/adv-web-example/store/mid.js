@@ -81,11 +81,20 @@ export const useMidLevelStore = defineStore("mid-level", {
     },
     async runScript(id, command) {
       const activity = this.getActivityById(id);
-      const script = await yaScript.create([new yaRun("/bin/sh", ["-c", command])]);
+      const script = await yaScript.create([new yaRun("/usr/local/bin/node", ["-e", command])]);
       const exeScript = script.getExeScriptRequest();
-      const results = await activity.execute(exeScript).catch(console.error);
-      console.log(results);
+      const results = await activity.execute(exeScript);
+      const allResults = [];
+      for await (const result of results) allResults.push(result);
+      const commandsErrors = allResults.filter((res) => res.result === "Error");
+      if (commandsErrors.length) {
+        const errorMessage = commandsErrors
+          .map((err) => `Error: ${err.message}. Stdout: ${err.stdout?.trim()}. Stderr: ${err.stderr?.trim()}`)
+          .join(". ");
+        throw new Error(errorMessage);
+      }
       await this.monitorActivity(id);
+      return allResults[0];
     },
   },
 });
