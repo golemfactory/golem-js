@@ -1,9 +1,9 @@
 import { defineStore } from "pinia";
 import {
-  Script as yaScript,
-  Deploy as yaDeploy,
-  Start as yaStart,
-  Run as yaRun,
+  Script as YaScript,
+  Deploy as YaDeploy,
+  Start as YaStart,
+  Run as YaRun,
 } from "../../../../dist/yajsapi.min.js";
 import { useDemandStore } from "~/store/demand";
 
@@ -14,6 +14,8 @@ export const useMidLevelStore = defineStore("mid-level", {
     proposals: new Map(),
     agreements: new Map(),
     activities: new Map(),
+    debitNotes: new Map(),
+    invoices: new Map(),
   }),
   actions: {
     addProposal(proposal) {
@@ -69,14 +71,14 @@ export const useMidLevelStore = defineStore("mid-level", {
     },
     async deployActivity(id) {
       const activity = this.getActivityById(id);
-      const script = await yaScript.create([new yaDeploy()]);
+      const script = await YaScript.create([new YaDeploy()]);
       const exeScript = script.getExeScriptRequest();
       await activity.execute(exeScript).catch(console.error);
       await this.monitorActivity(id, "Deployed");
     },
     async startActivity(id) {
       const activity = this.getActivityById(id);
-      const script = await yaScript.create([new yaStart()]);
+      const script = await YaScript.create([new YaStart()]);
       const exeScript = script.getExeScriptRequest();
       await activity.execute(exeScript).catch(console.error);
       await this.monitorActivity(id, "Ready");
@@ -88,7 +90,7 @@ export const useMidLevelStore = defineStore("mid-level", {
     },
     async runScript(id, command) {
       const activity = this.getActivityById(id);
-      const script = await yaScript.create([new yaRun("/usr/local/bin/node", ["-e", command])]);
+      const script = await YaScript.create([new YaRun("/usr/local/bin/node", ["-e", command])]);
       const exeScript = script.getExeScriptRequest();
       const results = await activity.execute(exeScript);
       const allResults = [];
@@ -101,6 +103,22 @@ export const useMidLevelStore = defineStore("mid-level", {
         throw new Error(errorMessage);
       }
       return allResults[0];
+    },
+    addDebitNote(debitNote) {
+      this.debitNotes.set(debitNote.id, debitNote);
+    },
+    getDebitNoteById(id) {
+      const debitNote = this.debitNotes.get(id);
+      if (!debitNote) throw new Error(`DebitNote ${id} not found`);
+      return debitNote;
+    },
+    addInvoice(invoice) {
+      this.invoices.set(invoice.id, invoice);
+    },
+    getInvoiceById(id) {
+      const invoice = this.invoices.get(id);
+      if (!invoice) throw new Error(`Invoice ${id} not found`);
+      return invoice;
     },
   },
 });
