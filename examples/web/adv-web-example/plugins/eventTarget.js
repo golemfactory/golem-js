@@ -34,9 +34,8 @@ export default defineNuxtPlugin((nuxtApp) => {
         offersStore.addFromErrorEvent(event, "Failed");
         break;
       case "AgreementCreated":
-        console.log("AgreementCreated", event);
         offersStore.addFromAgreementEvent(event);
-        agreementsStore.addAgreement(parseAgreementFromEvent(event, "Proposal"));
+        agreementsStore.addAgreement(a);
         configStore.currentStep = 2;
         break;
       case "AgreementConfirmed":

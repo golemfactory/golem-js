@@ -5,7 +5,7 @@
     <el-table-column prop="cpuBrand" label="CPU" sortable width="120">
       <template #default="scope">
         <el-tooltip :content="scope.row.cpuBrand" placement="right" effect="light">
-          {{ scope.row.cpuBrand.substring(0, 13) + "..." }}
+          {{ scope.row.cpuBrand?.substring(0, 13) + "..." }}
         </el-tooltip>
       </template>
     </el-table-column>

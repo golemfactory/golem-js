@@ -42,12 +42,17 @@ export const useOffersStore = defineStore("offers-store", {
         timestamp: event.timestamp,
         state,
       }),
-    addFromAgreementEvent: (event) =>
+    addFromAgreementEvent: (event) => {
+      console.log(event);
+      //let a = parseAgreementFromEvent(event, "Proposal");
+      //console.log("AgreementCreated", a);
+
       useOffersStore().add({
         timestamp: event.timestamp,
         parentId: event.detail.proposalId,
         state: "Confirmed",
-      }),
+      });
+    },
   },
   getters: {
     drawer: (state) => state.offers.get(state.drawerOfferId),
