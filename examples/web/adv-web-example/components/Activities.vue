@@ -1,26 +1,24 @@
 <template>
   <el-table class="activities" :data="activities" :default-sort="{ prop: 'time', order: 'descending' }">
     <el-table-column prop="time" label="Time" sortable />
-    <el-table-column prop="providerName" label="Provider" sortable width="140"/>
+    <el-table-column prop="providerName" label="Provider" sortable width="140" />
     <el-table-column prop="id" label="ID" sortable width="140">
       <template #default="scope">
         <el-tooltip :content="scope.row.id" placement="left" effect="light">
-          {{ scope.row.id.substring(0, 10)+"..." }}
+          {{ scope.row.id.substring(0, 10) + "..." }}
         </el-tooltip>
       </template>
     </el-table-column>
     <el-table-column prop="agreementId" label="Agreement" sortable width="140">
       <template #default="scope">
         <el-tooltip :content="scope.row.agreementId" placement="left" effect="light">
-            {{ scope.row.agreementId.substring(0, 10)+"..." }}
+          {{ scope.row.agreementId.substring(0, 10) + "..." }}
         </el-tooltip>
       </template>
     </el-table-column>
-    <el-table-column prop="scripts" label="Scripts" sortable width="88"/>
+    <el-table-column prop="scripts" label="Scripts" sortable width="88" />
     <el-table-column prop="duration" label="Duration" sortable width="100">
-      <template #default="scope">
-        {{ scope.row.duration.toFixed(3) }} s
-      </template>
+      <template #default="scope"> {{ scope.row.duration.toFixed(3) }} s </template>
     </el-table-column>
     <el-table-column prop="state" label="State" sortable width="100">
       <template #default="scope">
@@ -31,41 +29,74 @@
         </el-tooltip>
       </template>
     </el-table-column>
-    <el-table-column label="Actions" width="80" fixed="right" align="center" v-if="actions" >
+    <el-table-column label="Actions" width="80" fixed="right" align="center" v-if="actions">
       <template #default="scope">
-        <el-button v-if="actions" size="small" plain type="success" @click="respond(scope.row.id)">Respond</el-button>
         <el-button
-          v-if="actions"
-          plain
+          v-if="actions && scope.row.state === 'New'"
           size="small"
-          type="danger"
-          @click="reject(scope.row.id)">Reject</el-button>
+          plain
+          type="success"
+          @click="deploy(scope.row.id)"
+        >
+          Deploy
+        </el-button>
+        <el-button
+          v-if="actions && scope.row.state === 'Deployed'"
+          size="small"
+          plain
+          type="success"
+          @click="start(scope.row.id)"
+        >
+          Start
+        </el-button>
+        <el-button
+          v-if="actions && scope.row.state === 'Ready'"
+          size="small"
+          plain
+          type="success"
+          @click="runScript(scope.row.id)"
+        >
+          Run Script
+        </el-button>
+        <el-button v-if="actions" plain size="small" type="danger" @click="reject(scope.row.id)">Reject</el-button>
       </template>
     </el-table-column>
   </el-table>
 </template>
 <script setup>
+const { $eventTarget: eventTarget, $logger: logger } = useNuxtApp();
 import { useActivitiesStore } from "~/store/activities";
+import { useMidLevelStore } from "~/store/mid";
+import { useConfigStore } from "~/store/config";
+const configStore = useConfigStore();
 import { storeToRefs } from "pinia";
 const activitiesStore = useActivitiesStore();
 const { activities } = storeToRefs(activitiesStore);
-defineProps({
-  actions: Boolean
-})
+const actions = computed(() => configStore.activeControlActions);
+const midLevelStore = useMidLevelStore();
 
 const getStateType = (state) => {
-  if (state === 'Initialized' || state === 'Deployed') return 'warning';
-  if (state === 'Unresponsive' || state === 'Terminated') return 'danger';
-  if (state === 'Ready') return 'success';
-}
+  if (state === "Initialized" || state === "Deployed") return "warning";
+  if (state === "Unresponsive" || state === "Terminated") return "danger";
+  if (state === "Ready") return "success";
+};
 
-const respond = (id) => {
-  //todo
-}
+const sleep = (time, inMs = false) => new Promise((resolve) => setTimeout(resolve, time * (inMs ? 1 : 1000)));
+
+const deploy = async (id) => {
+  await midLevelStore.deployActivity(id);
+};
+
+const start = async (id) => {
+  await midLevelStore.startActivity(id);
+};
+
+const runScript = async (id) => {
+  await midLevelStore.runScript(id, "echo 'abc'");
+};
 const reject = (id) => {
   //todo
-}
-
+};
 </script>
 <style scoped lang="scss">
 .activities {
