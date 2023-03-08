@@ -57,7 +57,10 @@ export class Payments extends EventTarget {
           this.lastInvoiceFetchingTime,
           this.options.maxInvoiceEvents
         )
-        .catch((e) => this.logger?.error(`Unable to collect invoices. ${e?.response?.data?.message || e}`));
+        .catch((e) => {
+          this.logger?.error(`Unable to collect invoices. ${e?.response?.data?.message || e}`);
+          return { data: [] };
+        });
       for (const event of invoiceEvents) {
         if (event.eventType !== "InvoiceReceivedEvent") continue;
         const invoice = await Invoice.create(event["invoiceId"], { ...this.options.options }).catch((e) =>

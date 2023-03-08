@@ -35,11 +35,20 @@ export default defineNuxtPlugin((nuxtApp) => {
         break;
       case "AgreementCreated":
         offersStore.addFromAgreementEvent(event);
-        agreementsStore.addAgreement(a);
+        agreementsStore.addFromEvent(event);
         configStore.currentStep = 2;
         break;
       case "AgreementConfirmed":
-        agreementsStore.updateAgreement(parseAgreementFromEvent(event, "Approved"));
+        agreementsStore.updateFromEvent(event, "Approved");
+        break;
+      case "AgreementRejected":
+        agreementsStore.updateAgreement(event, "Rejected");
+        break;
+      case "AgreementTerminated":
+        agreementsStore.updateAgreement(event, "Rejected");
+        break;
+      case "AgreementExpired":
+        agreementsStore.updateAgreement(event, "Rejected");
         break;
       case "ActivityCreated":
         activitiesStore.addActivity(parseActivityFromEvent(event, "New"));
@@ -81,11 +90,6 @@ export default defineNuxtPlugin((nuxtApp) => {
     }
   });
 
-  const parseAgreementFromEvent = (event, state) => ({
-    ...event.detail,
-    state,
-    timestamp: event.timestamp,
-  });
   const parseActivityFromEvent = (event, state) => ({
     state,
     ...event.detail,

@@ -5,7 +5,7 @@ export const usePaymentsStore = defineStore({
   id: "payments-store",
   state: () => {
     return {
-      payments: [],
+      payments: new Map(),
     };
   },
   actions: {
@@ -15,18 +15,24 @@ export const usePaymentsStore = defineStore({
       payment.providerName = agreement.providerName;
       payment.amount = Number(payment.amount);
       payment.time = new Date(payment.timestamp).toLocaleTimeString();
-      this.payments.push(payment);
+      this.payments.set(payment.id, payment);
+    },
+    getById(id) {
+      const payment = usePaymentsStore().payments.get(id);
+      if (!payment) throw new Error(`Payment ${id} not found`);
+      return payment;
     },
     updatePayment(payment) {
-      const old = this.payments.find((pay) => pay.id === payment.id);
+      const old = this.getById(payment.id);
       old.amount = Number(old.amount);
       Object.assign(old, payment);
     },
   },
   getters: {
+    getAll: (state) => Array.from(state.payments.values()),
     totalCost: (state) =>
       Number(
-        state.payments
+        Array.from(state.payments.values())
           .filter((pay) => pay.type === "invoice")
           .reduce((t, { amount }) => t + amount, 0)
           ?.toFixed(8)

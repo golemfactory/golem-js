@@ -8,14 +8,30 @@ export const useAgreementsStore = defineStore({
     };
   },
   actions: {
-    addAgreement(agreement) {
-      agreement.time = new Date(agreement.timestamp).toLocaleTimeString();
-      agreement.validTo = new Date(agreement.validTo).toLocaleString();
+    addFromEvent: (event) =>
+      useAgreementsStore().add({
+        ...event.detail,
+        time: new Date(event.timestamp).toLocaleTimeString(),
+        validTo: new Date(event.detail.validTo).toLocaleString(),
+      }),
+    updateFromEvent: (event, state) =>
+      useAgreementsStore().update({
+        ...event.detail,
+        state,
+        time: new Date(event.timestamp).toLocaleTimeString(),
+      }),
+    add(agreement) {
       this.agreements.push(agreement);
     },
-    updateAgreement(agreement) {
+    update(agreement) {
       const old = this.agreements.find((agr) => agr.id === agreement.id);
       Object.assign(old, agreement);
+    },
+    confirmAgreement() {
+      // todo
+    },
+    rejectAgreement() {
+      // todo
     },
   },
   getters: {

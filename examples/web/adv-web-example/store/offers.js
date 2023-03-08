@@ -1,8 +1,8 @@
 import { defineStore } from "pinia";
 
 const parseAttributes = (offer) => {
-  if (offer.memory) offer.memory = parseInt(offer.memory);
   if (offer.storage) offer.storage = parseInt(offer.storage);
+  if (offer.memory) offer.storage = parseInt(offer.memory);
   if (offer.cpuCores) offer.cpuCores = parseInt(offer.cpuCores);
   if (offer.cpuThreads) offer.cpuThreads = parseInt(offer.cpuThreads);
   if (offer.timestamp) offer.time = new Date(offer.timestamp).toLocaleTimeString();
@@ -12,17 +12,21 @@ const parseAttributes = (offer) => {
 
 export const useOffersStore = defineStore("offers-store", {
   state: () => ({
-    offers: new Map(),
+    offers: [],
     drawerOfferId: false,
   }),
   actions: {
     add(newOffer) {
-      const parentId = newOffer.parentId ? newOffer.parentId : newOffer.id;
-      const offer = this.offers.get(parentId) || {};
-      this.offers.set(parentId, Object.assign(offer, parseAttributes(newOffer)));
+      if (newOffer.parentId) {
+        const oldOffer = this.offers.find((offer) => offer.id === newOffer.parentId);
+        if (!oldOffer) throw new Error(`There is no initial offer ${newOffer.parentId}`);
+        Object.assign(oldOffer, parseAttributes(newOffer));
+      } else {
+        this.offers.push(parseAttributes(newOffer));
+      }
     },
     setProcessingStatusById(id, isProcessing = true) {
-      const offer = this.offers.get(id);
+      const offer = this.offers.find((offer) => offer.id === id);
       offer.isProcessing = isProcessing;
     },
     show(id) {
@@ -32,7 +36,6 @@ export const useOffersStore = defineStore("offers-store", {
       useOffersStore().add({
         ...event.detail,
         ...event.detail.details,
-        detail: undefined,
         timestamp: event.timestamp,
       }),
     addFromErrorEvent: (event, state) =>
@@ -55,7 +58,6 @@ export const useOffersStore = defineStore("offers-store", {
     },
   },
   getters: {
-    drawer: (state) => state.offers.get(state.drawerOfferId),
-    getAll: (state) => [...state.offers].map(([, v]) => v),
+    drawerOffer: (state) => state.offers.find((offer) => offer.id === state.drawerOfferId),
   },
 });

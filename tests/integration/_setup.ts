@@ -8,11 +8,11 @@ const gothConfig = resolve("../goth/assets/goth-config.yml");
 const goth = new Goth(gothConfig);
 
 before(async function () {
-  this.timeout(120000);
+  this.timeout(180000);
   await goth.start();
 });
 after(async function () {
-  this.timeout(120000);
+  this.timeout(180000);
   await goth.end();
 });
 
