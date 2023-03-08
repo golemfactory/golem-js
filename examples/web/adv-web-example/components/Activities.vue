@@ -58,13 +58,16 @@
         >
           Run Script
         </el-button>
-        <el-button v-if="actions" plain size="small" type="danger" @click="reject(scope.row.id)">Reject</el-button>
+        <el-button v-if="actions" plain size="small" type="danger" @click="stop(scope.row.id)">
+          <el-icon><Close /></el-icon>
+        </el-button>
       </template>
     </el-table-column>
   </el-table>
 </template>
 <script setup>
 const { $eventTarget: eventTarget, $logger: logger } = useNuxtApp();
+import { Close } from "@element-plus/icons-vue";
 import { useActivitiesStore } from "~/store/activities";
 import { useMidLevelStore } from "~/store/mid";
 import { useConfigStore } from "~/store/config";
@@ -96,8 +99,8 @@ const runScript = async (id) => {
   const result = await midLevelStore.runScript(id, command);
   configStore.stdout += result.stdout;
 };
-const reject = (id) => {
-  //todo
+const stop = async (id) => {
+  await midLevelStore.stopActivity(id);
 };
 </script>
 <style scoped lang="scss">

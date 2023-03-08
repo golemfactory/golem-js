@@ -53,31 +53,38 @@ export const useMidLevelStore = defineStore("mid-level", {
       if (!activity) throw new Error(`Activity ${id} not found`);
       return activity;
     },
-    async monitorActivity(id, timeoutTime = 10000) {
+    async monitorActivity(id, expectedState, timeoutTime = 10000) {
       const activity = this.getActivityById(id);
-      let state = activity.state;
+      let state = await activity.getState();
+      console.log(`monitorActivity`, state);
       let timeout = false;
       const timeoutId = setTimeout(() => (timeout = true), timeoutTime);
-      while (state !== "Ready" && !timeout) {
+      while (state !== expectedState && !timeout) {
+        console.log(`monitorActivity`, state);
         await sleep(1000, true);
         state = await activity.getState();
-        console.log(state);
       }
       clearTimeout(timeoutId);
+      return state;
     },
     async deployActivity(id) {
       const activity = this.getActivityById(id);
       const script = await yaScript.create([new yaDeploy()]);
       const exeScript = script.getExeScriptRequest();
       await activity.execute(exeScript).catch(console.error);
-      await this.monitorActivity(id);
+      await this.monitorActivity(id, "Deployed");
     },
     async startActivity(id) {
       const activity = this.getActivityById(id);
       const script = await yaScript.create([new yaStart()]);
       const exeScript = script.getExeScriptRequest();
       await activity.execute(exeScript).catch(console.error);
-      await this.monitorActivity(id);
+      await this.monitorActivity(id, "Ready");
+    },
+    async stopActivity(id) {
+      const activity = this.getActivityById(id);
+      await activity.stop().catch(console.error);
+      await this.monitorActivity(id, "Terminated");
     },
     async runScript(id, command) {
       const activity = this.getActivityById(id);
@@ -93,7 +100,6 @@ export const useMidLevelStore = defineStore("mid-level", {
           .join(". ");
         throw new Error(errorMessage);
       }
-      await this.monitorActivity(id);
       return allResults[0];
     },
   },

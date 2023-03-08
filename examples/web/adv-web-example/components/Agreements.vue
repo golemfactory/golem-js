@@ -28,7 +28,7 @@
       <template #default="scope">
         <el-button
           title="Confirm"
-          v-if="actions && scope.row.state === 'Initial'"
+          v-if="actions && scope.row.state === 'Proposal'"
           size="small"
           type="success"
           @click="confirm(scope.row.id)"
@@ -48,7 +48,7 @@
         </el-button>
         <el-button
           title="Terminate"
-          v-if="(actions && scope.row.state === 'Initial') || scope.row.state === 'Approved'"
+          v-if="(actions && scope.row.state === 'Proposal') || scope.row.state === 'Approved'"
           size="small"
           type="danger"
           @click="terminate(scope.row.id)"
