@@ -109,7 +109,7 @@ const createActivity = async (id) => {
 };
 
 const showOffer = (id) => {
-  offerStore.showOffer(id);
+  offerStore.show(id);
 };
 </script>
 <style scoped lang="scss">

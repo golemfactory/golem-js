@@ -32,6 +32,9 @@ export const useOffersStore = defineStore("offers-store", {
     show(id) {
       this.drawerOfferId = id;
     },
+    end() {
+      this.offers.forEach((offer) => offer && (offer.isProcessing = false));
+    },
     addFromEvent: (event) =>
       useOffersStore().add({
         ...event.detail,
@@ -46,10 +49,6 @@ export const useOffersStore = defineStore("offers-store", {
         state,
       }),
     addFromAgreementEvent: (event) => {
-      console.log(event);
-      //let a = parseAgreementFromEvent(event, "Proposal");
-      //console.log("AgreementCreated", a);
-
       useOffersStore().add({
         timestamp: event.timestamp,
         parentId: event.detail.proposalId,

@@ -12,7 +12,7 @@ export const usePaymentsStore = defineStore({
     addPayment(payment) {
       const agreementStore = useAgreementsStore();
       const agreement = agreementStore.getAgreement(payment.agreementId);
-      payment.providerName = agreement.providerName;
+      payment.providerName = agreement?.providerName;
       payment.amount = Number(payment.amount);
       payment.time = new Date(payment.timestamp).toLocaleTimeString();
       this.payments.set(payment.id, payment);
@@ -24,18 +24,16 @@ export const usePaymentsStore = defineStore({
     },
     updatePayment(payment) {
       const old = this.getById(payment.id);
-      old.amount = Number(old.amount);
+      payment.amount = Number(old.amount);
+      payment.time = new Date(payment.timestamp).toLocaleTimeString();
       Object.assign(old, payment);
     },
   },
   getters: {
     getAll: (state) => Array.from(state.payments.values()),
     totalCost: (state) =>
-      Number(
-        Array.from(state.payments.values())
-          .filter((pay) => pay.type === "invoice")
-          .reduce((t, { amount }) => t + amount, 0)
-          ?.toFixed(8)
-      ),
+      Array.from(state.payments.values())
+        .filter((pay) => pay.type === "invoice")
+        .reduce((t, { amount }) => t + amount, 0),
   },
 });

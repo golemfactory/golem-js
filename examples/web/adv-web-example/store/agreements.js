@@ -11,7 +11,7 @@ export const useAgreementsStore = defineStore({
     addFromEvent: (event) =>
       useAgreementsStore().add({
         ...event.detail,
-        state: "Initial",
+        state: "Proposal",
         time: new Date(event.timestamp).toLocaleTimeString(),
         validTo: new Date(event.detail.validTo).toLocaleString(),
       }),
