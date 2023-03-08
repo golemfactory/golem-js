@@ -1,6 +1,7 @@
 import { defineNuxtPlugin } from "#app";
 import { EventType } from "../../../../dist/yajsapi.min.js";
 import { useOffersStore } from "~/store/offers.js";
+import { useDemandsStore } from "~/store/demands.js";
 import { useAgreementsStore } from "~/store/agreements.js";
 import { useActivitiesStore } from "~/store/activities.js";
 import { usePaymentsStore } from "~/store/payments.js";
@@ -9,6 +10,7 @@ import { useConfigStore } from "~/store/config.js";
 export default defineNuxtPlugin((nuxtApp) => {
   const eventTarget = new EventTarget();
   const offersStore = useOffersStore(nuxtApp.$pinia);
+  const demandsStore = useDemandsStore(nuxtApp.$pinia);
   const agreementsStore = useAgreementsStore(nuxtApp.$pinia);
   const activitiesStore = useActivitiesStore(nuxtApp.$pinia);
   const paymentsStore = usePaymentsStore(nuxtApp.$pinia);
@@ -18,8 +20,15 @@ export default defineNuxtPlugin((nuxtApp) => {
       case "ComputationStarted":
         configStore.currentStep = 0;
         break;
-      case "SubscriptionCreated":
+      case "DemandSubscribed":
         configStore.currentStep = 1;
+        demandsStore.add(event);
+        break;
+      case "DemandFailed":
+        demandsStore.fail(event);
+        break;
+      case "DemandUnsubscribed":
+        demandsStore.unsubscribe(event);
         break;
       case "ProposalResponded":
         offersStore.setProcessingStatusById(event.detail.id, true);

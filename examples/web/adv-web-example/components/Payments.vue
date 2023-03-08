@@ -9,7 +9,7 @@
       </template>
     </el-table-column>
     <el-table-column prop="providerName" label="Provider" sortable width="150" />
-    <el-table-column prop="amount" label="Amount" sortable width="180" />
+    <el-table-column prop="amount" label="Amount" sortable min-width="180"/>
     <el-table-column prop="state" label="State" sortable width="100">
       <template #default="scope">
         <el-tooltip :disabled="!scope.row.reason" :content="scope.row.reason" placement="top" effect="light">

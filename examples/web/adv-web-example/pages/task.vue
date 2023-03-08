@@ -13,6 +13,7 @@
     <el-col :span="14">
       <Steps />
       <el-tabs v-model="activeEntity" class="entities-tabs">
+        <el-tab-pane label="Demands" name="demands"><Demands /></el-tab-pane>
         <el-tab-pane label="Offers" name="offers"><Offers /></el-tab-pane>
         <el-tab-pane label="Agreements" name="agreements"><Agreements /></el-tab-pane>
         <el-tab-pane label="Activities" name="activities"><Activities /></el-tab-pane>

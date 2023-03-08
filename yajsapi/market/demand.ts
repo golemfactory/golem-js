@@ -8,7 +8,12 @@ import { DemandConfig } from "./config.js";
 import { Events } from "../events/index.js";
 import { ProposalEvent, ProposalRejectedEvent } from "ya-ts-client/dist/ya-market/src/models/index.js";
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market/index.js";
+import * as events from "../events/events";
 
+export interface DemandDetails {
+  properties: Array<{ key: string; value: string | number | boolean }>;
+  constraints: Array<string>;
+}
 /**
  * @category Mid-level
  */
@@ -59,7 +64,7 @@ export class Demand extends EventTarget {
    * @param options - {@link DemandConfig}
    * @hidden
    */
-  constructor(public readonly id, private demandRequest: DemandOfferBase, private options: DemandConfig) {
+  constructor(public readonly id: string, private demandRequest: DemandOfferBase, private options: DemandConfig) {
     super();
     this.logger = this.options.logger;
     this.subscribe().catch((e) => this.logger?.error(e));
@@ -71,6 +76,7 @@ export class Demand extends EventTarget {
   async unsubscribe() {
     this.isRunning = false;
     await this.options.api.unsubscribeDemand(this.id);
+    this.options.eventTarget?.dispatchEvent(new events.DemandUnsubscribed({ id: this.id }));
     this.removeEventListener(DemandEventType, null);
     this.logger?.debug(`Demand ${this.id} unsubscribed`);
   }
