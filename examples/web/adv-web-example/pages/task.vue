@@ -1,7 +1,7 @@
 <template>
   <el-row :gutter="40">
     <el-col :span="10" style="position: relative">
-      <Options />
+      <OptionsTask/>
       <el-button class="btn-run" size="small" type="success" @click="run">Run</el-button>
       <ElementsCodeEditor />
       <el-tabs v-model="activeResults" class="results-tabs">
@@ -51,7 +51,7 @@ const run = async () => {
 <style scoped lang="scss">
 .btn-run {
   position: absolute;
-  right: 0;
+  right: 20px;
   margin-top: 10px;
   z-index: 999;
 }

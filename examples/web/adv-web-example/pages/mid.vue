@@ -1,19 +1,13 @@
 <template>
   <el-row :gutter="40">
     <el-col :span="10" style="position: relative">
-      <Options />
+      <OptionsMid />
       <ElementsCreateDemandBtn />
       <ElementsCodeEditor />
       <el-tabs v-model="activeResultsTab" class="results-tabs">
-        <el-tab-pane v-loading="loading" label="Output" name="output">
-          <Output :output="stdout"></Output>
-        </el-tab-pane>
-        <el-tab-pane label="Errors" name="errors">
-          <Output :output="stderr"></Output>
-        </el-tab-pane>
-        <el-tab-pane label="Logs" name="logs">
-          <Output :output="logs" class="logs"></Output>
-        </el-tab-pane>
+        <el-tab-pane v-loading="loading" label="Output" name="output"><Output /></el-tab-pane>
+        <el-tab-pane label="Errors" name="errors"><Errors /></el-tab-pane>
+        <el-tab-pane label="Logs" name="logs"><Logs /></el-tab-pane>
       </el-tabs>
     </el-col>
     <el-col :span="14">

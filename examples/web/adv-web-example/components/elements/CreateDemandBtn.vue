@@ -67,3 +67,11 @@ const createDemand = async () => {
   loading.value = false;
 };
 </script>
+<style scoped lang="scss">
+.btn-run {
+  position: absolute;
+  right: 20px;
+  margin-top: 10px;
+  z-index: 999;
+}
+</style>

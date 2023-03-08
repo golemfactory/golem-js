@@ -2,7 +2,7 @@
   <el-table class="agreements" :data="agreements" :default-sort="{ prop: 'time', order: 'descending' }">
     <el-table-column prop="time" label="Time" sortable />
     <el-table-column prop="providerName" label="Provider" sortable width="140" />
-    <el-table-column prop="id" label="ID" sortable width="150">
+    <el-table-column v-if="!actions" prop="id" label="ID" sortable width="150">
       <template #default="scope">
         <el-tooltip :content="scope.row.id" placement="left" effect="light">
           {{ scope.row.id.substring(0, 12) + "..." }}
@@ -44,7 +44,7 @@
           @click="createActivity(scope.row.id)"
           :disabled="scope.row.isProcessing"
         >
-          <el-icon><Setting /></el-icon>
+          <el-icon><Finished /></el-icon>
         </el-button>
         <el-button
           title="Terminate"
@@ -63,7 +63,7 @@
 <script setup>
 const { $eventTarget: eventTarget, $logger: logger } = useNuxtApp();
 import { Activity } from "../../../../dist/yajsapi.min.js";
-import { Setting, Check, Close } from "@element-plus/icons-vue";
+import { Finished, Check, Close } from "@element-plus/icons-vue";
 import { useOffersStore } from "~/store/offers";
 import { useConfigStore } from "~/store/config";
 import { useAgreementsStore } from "~/store/agreements";
