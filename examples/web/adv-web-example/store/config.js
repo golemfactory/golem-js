@@ -4,9 +4,9 @@ import { defineStore } from "pinia";
 export const useConfigStore = defineStore("options", () => {
   return {
     options: {
-      package: "529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4",
+      imageHash: "529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4",
       yagnaOptions: {
-        apiKey: "411aa8e620954a318093687757053b8d",
+        apiKey: "30c59fef7d8c4639b62d576bfb624e1a",
         basePath: "http://127.0.0.1:7465",
       },
       taskTimeout: 180_000,

@@ -14,6 +14,7 @@ export default defineNuxtPlugin((nuxtApp) => {
   const paymentsStore = usePaymentsStore(nuxtApp.$pinia);
   const configStore = useConfigStore(nuxtApp.$pinia);
   eventTarget.addEventListener(EventType, (event) => {
+    console.log(event.name);
     switch (event.name) {
       case "ComputationStarted":
         configStore.currentStep = 0;

@@ -24,10 +24,10 @@
         </el-tooltip>
       </template>
     </el-table-column>
-    <el-table-column label="Actions" width="80" fixed="right" align="center" v-if="actions">
+    <el-table-column label="Actions" width="80" fixed="right" align="center" v-if="0">
       <template #default="scope">
-        <el-button v-if="actions" size="small" plain type="success" @click="respond(scope.row.id)">Respond</el-button>
-        <el-button v-if="actions" plain size="small" type="danger" @click="reject(scope.row.id)">Reject</el-button>
+        <el-button size="small" plain type="success" @click="respond(scope.row.id)">Respond</el-button>
+        <el-button plain size="small" type="danger" @click="reject(scope.row.id)">Reject</el-button>
       </template>
     </el-table-column>
   </el-table>
