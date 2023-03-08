@@ -33,9 +33,6 @@ export const useAgreementsStore = defineStore({
     rejectAgreement() {
       // todo
     },
-    updateAgreement() {
-      // todo
-    },
   },
   getters: {
     getAgreement: (state) => (id) => state.agreements.find((agreement) => agreement.id === id),

@@ -77,7 +77,7 @@ const show = (id) => offersStore.show(id);
 
 const getStateType = (state) => {
   if (state === "Draft") return "warning";
-  if (state === "Rejected") return "error";
+  if (state === "Rejected") return "danger";
   if (state === "Failed") return "danger";
   if (state === "Confirmed") return "success";
 };
