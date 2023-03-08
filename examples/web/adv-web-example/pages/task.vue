@@ -51,7 +51,7 @@ const run = async () => {
 <style scoped lang="scss">
 .btn-run {
   position: absolute;
-  right: 0;
+  right: 20px;
   margin-top: 10px;
   z-index: 999;
 }

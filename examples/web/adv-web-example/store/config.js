@@ -35,8 +35,8 @@ export const useConfigStore = defineStore("options", () => {
     },
     activeControlActions: false,
     stdout: "",
-    stderr: "No errors",
-    logs: "No logs",
+    stderr: "",
+    logs: "",
     currentStep: 0,
     code:
       'const message = "Hello World from Golem Network !!!";\n' +

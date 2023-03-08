@@ -2,7 +2,7 @@
   <el-table class="activities" :data="activities" :default-sort="{ prop: 'time', order: 'descending' }">
     <el-table-column prop="time" label="Time" sortable />
     <el-table-column prop="providerName" label="Provider" sortable width="140" />
-    <el-table-column prop="id" label="ID" sortable width="140">
+    <el-table-column v-if="!actions" prop="id" label="ID" sortable width="140">
       <template #default="scope">
         <el-tooltip :content="scope.row.id" placement="left" effect="light">
           {{ scope.row.id.substring(0, 10) + "..." }}
@@ -29,13 +29,13 @@
         </el-tooltip>
       </template>
     </el-table-column>
-    <el-table-column label="Actions" width="80" fixed="right" align="center" v-if="actions">
+    <el-table-column label="Actions" width="140" fixed="right" align="center" v-if="actions">
       <template #default="scope">
         <el-button
-          v-if="actions && scope.row.state === 'New'"
+          v-if="actions && scope.row.state === 'Initialised'"
           size="small"
           plain
-          type="success"
+          type="warning"
           @click="deploy(scope.row.id)"
         >
           Deploy
@@ -56,7 +56,7 @@
           type="success"
           @click="runScript(scope.row.id)"
         >
-          Run Script
+          Run
         </el-button>
         <el-button v-if="actions" plain size="small" type="danger" @click="stop(scope.row.id)">
           <el-icon><Close /></el-icon>
