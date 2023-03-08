@@ -14,7 +14,6 @@ export default defineNuxtPlugin((nuxtApp) => {
   const paymentsStore = usePaymentsStore(nuxtApp.$pinia);
   const configStore = useConfigStore(nuxtApp.$pinia);
   eventTarget.addEventListener(EventType, (event) => {
-    console.log(event.name);
     switch (event.name) {
       case "ComputationStarted":
         configStore.currentStep = 0;
@@ -46,10 +45,10 @@ export default defineNuxtPlugin((nuxtApp) => {
         agreementsStore.updateFromEvent(event, "Rejected");
         break;
       case "AgreementTerminated":
-        agreementsStore.updateFromEvent(event, "Rejected");
+        agreementsStore.updateFromEvent(event, "Terminated");
         break;
       case "AgreementExpired":
-        agreementsStore.updateFromEvent(event, "Rejected");
+        agreementsStore.updateFromEvent(event, "Expired");
         break;
       case "ActivityCreated":
         activitiesStore.addActivity(parseActivityFromEvent(event, "New"));
@@ -57,6 +56,9 @@ export default defineNuxtPlugin((nuxtApp) => {
         break;
       case "ActivityStateChanged":
         activitiesStore.updateActivity(parseActivityFromEvent(event));
+        break;
+      case "ActivityDestroyed":
+        activitiesStore.updateActivity(parseActivityFromEvent(event, "Terminated"));
         break;
       case "ScriptSent":
         activitiesStore.startScript(event.detail.activityId);
@@ -85,9 +87,8 @@ export default defineNuxtPlugin((nuxtApp) => {
         break;
       case "ComputationFinished":
         configStore.currentStep = 5;
+        offersStore.end();
         break;
-      default:
-        console.log("NOT SUPPORTED EVENT: ", event.name);
     }
   });
 

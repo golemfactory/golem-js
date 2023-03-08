@@ -2,7 +2,7 @@
   <el-row :gutter="16" class="stats">
     <el-col :span="8">
       <div class="statistic-card">
-        <el-statistic :value="agreements.length">
+        <el-statistic :value="agreementsStore.agreements.length">
           <template #title>
             <div style="display: inline-flex; align-items: center">
               <el-icon style="margin-right: 10px" :size="22">
@@ -16,7 +16,7 @@
     </el-col>
     <el-col :span="8">
       <div class="statistic-card">
-        <el-statistic :value="totalCost">
+        <el-statistic :value="paymentsStore.totalCost"  :precision="8">
           <template #title>
             <div style="display: inline-flex; align-items: center">
               <el-icon style="margin-right: 10px" :size="22">
@@ -30,7 +30,7 @@
     </el-col>
     <el-col :span="8">
       <div class="statistic-card">
-        <el-statistic :value="totalTime">
+        <el-statistic :value="totalTime" :precision="3">
           <template #title>
             <div style="display: inline-flex; align-items: center">
               <el-icon style="margin-right: 10px" :size="22">
@@ -54,9 +54,7 @@ import { storeToRefs } from "pinia";
 const agreementsStore = useAgreementsStore();
 const activitiesStore = useActivitiesStore();
 const paymentsStore = usePaymentsStore();
-const { agreements } = storeToRefs(agreementsStore);
-const { totalTime } = storeToRefs(activitiesStore);
-const { totalCost } = storeToRefs(paymentsStore);
+const { totalTime } = storeToRefs(activitiesStore)
 </script>
 <style scoped lang="scss">
 .stats {

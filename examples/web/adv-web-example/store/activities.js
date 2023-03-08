@@ -6,6 +6,7 @@ export const useActivitiesStore = defineStore({
   state: () => {
     return {
       activities: [],
+      totalTime: 0,
     };
   },
   actions: {
@@ -30,9 +31,8 @@ export const useActivitiesStore = defineStore({
       const activity = this.activities.find((act) => act.id === id);
       activity.scripts += 1;
       activity.duration += +new Date() / 1000 - activity.startScript;
+      this.totalTime += activity.duration;
+      console.log(this.totalTime);
     },
-  },
-  getters: {
-    totalTime: (state) => Number(state.activities.reduce((t, { duration }) => t + duration, 0)?.toFixed?.(1)),
   },
 });
