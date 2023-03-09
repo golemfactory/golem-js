@@ -56,27 +56,25 @@ const activeResults = ref("output");
 const activeEntity = ref("offers");
 const isRunning = ref(false);
 let executor;
+configStore.title = ' - Task API';
 
 const start = async () => {
-  isRunning.value = true;
   configStore.activeControlActions = false;
   const options = configStore.options;
   executor = await TaskExecutor.create({ ...options, package: options.imageHash, eventTarget, logger });
-};
+  isRunning.value = true;
+}
 const run = async () => {
   configStore.stdoutLoading = true;
-  console.log(configStore.command(), [configStore.commandArg(), configStore.code]);
-  await executor
-    .run(async (ctx) => {
-      const result = await ctx.run(configStore.command(), [configStore.commandArg(), configStore.code]);
-      if (result.stdout) configStore.stdout += result.stdout;
-      if (result.stderr) configStore.stdout += result.stderr;
-      configStore.stdoutLoading = false;
-    })
-    .catch((e) => {
-      isRunning.value = false;
-      throw e;
-    });
+  await executor.run(async (ctx) => {
+    const result = await ctx.run(configStore.command(), [configStore.commandArg(), configStore.code]);
+    if (result.stdout) configStore.stdout += result.stdout;
+    if (result.stderr) configStore.stdout += result.stderr;
+    configStore.stdoutLoading = false;
+  }).catch(e => {
+    isRunning.value = false;
+    throw e;
+  });
   configStore.stdoutLoading = false;
 };
 const stop = async () => {
@@ -93,7 +91,6 @@ const resetAll = () => {
   paymentsStore.$reset();
 };
 </script>
-
 <style scoped lang="scss">
 .btn-holders {
   position: absolute;
