@@ -50,7 +50,7 @@
         </el-button>
         <el-button
           title="Terminate"
-          v-if="(actions && scope.row.state === 'Proposal') || scope.row.state === 'Approved'"
+          v-if="actions && scope.row.state === 'Approved'"
           size="small"
           type="danger"
           @click="midLevelStore.terminateAgreementById(scope.row.id)"
