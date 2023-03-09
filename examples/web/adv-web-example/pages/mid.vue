@@ -36,6 +36,7 @@ const activeResultsTab = ref("output");
 const activeEntityTab = ref("demand");
 
 const loading = ref(false);
+configStore.title = ' - Mid-level API';
 </script>
 <style scoped lang="scss">
 .entities-tabs {

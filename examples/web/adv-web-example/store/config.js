@@ -103,6 +103,7 @@ export const useConfigStore = defineStore("options", () => {
     currentStep: 0,
     code: "",
     exampleCode,
+    title: "",
     monacoEditorOptions: {
       theme: "vs-dark",
       minimap: {

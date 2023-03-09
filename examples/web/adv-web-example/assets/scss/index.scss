@@ -42,6 +42,17 @@ body,
   --el-loading-spinner-size: 18px;
   --el-mask-color: rgba(0, 0, 0, 0.4);
 }
+.options-tabs {
+  .el-form-item__label {
+    font-size: 0.7rem !important;
+  }
+}
+.el-notification__title {
+  text-align: left;
+}
+.el-notification__content {
+  text-align: left;
+}
 
 
 

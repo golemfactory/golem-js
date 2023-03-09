@@ -1,9 +1,13 @@
 <template>
   <el-row class="header" fill="true">
     <img class="logo" src="~/assets/img/logo.svg" alt="img" />
-    <div class="title lineH-left">JS API Web Requestor</div>
+    <div class="title lineH-left">JS API Web Requestor {{configStore.title}}</div>
   </el-row>
 </template>
+<script setup>
+import { useConfigStore } from "~/store/config.js";
+const configStore = useConfigStore();
+</script>
 <style>
 .el-header {
   background: var(--el-bg-color-overlay);

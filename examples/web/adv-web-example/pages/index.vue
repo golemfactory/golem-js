@@ -17,10 +17,10 @@
     </div>
   </div>
 </template>
-<script>
-export default {
-  name: "Home",
-};
+<script setup>
+import { useConfigStore } from "~/store/config.js";
+const configStore = useConfigStore();
+configStore.title = '';
 </script>
 
 <style scoped lang="scss">
