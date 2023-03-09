@@ -1,6 +1,6 @@
 <template>
   <el-table class="demands" :data="demandsStore.demands" :default-sort="{ prop: 'time', order: 'descending' }">
-    <el-table-column prop="time" label="Time" sortable width="80"/>
+    <el-table-column prop="time" label="Time" sortable width="80" />
     <el-table-column prop="id" label="ID" sortable width="175">
       <template #default="scope">
         <el-tooltip :content="scope.row.id" placement="left" effect="light">
@@ -15,7 +15,7 @@
         </el-tooltip>
       </template>
     </el-table-column>
-    <el-table-column prop="subnet" label="Subnet" sortable width="110"/>
+    <el-table-column prop="subnet" label="Subnet" sortable width="110" />
     <el-table-column prop="state" label="State" sortable width="110">
       <template #default="scope">
         <el-tooltip :disabled="!scope.row.reason" :content="scope.row.reason" placement="top" effect="light">
@@ -27,10 +27,16 @@
     </el-table-column>
     <el-table-column label="Actions" :width="120" fixed="right" align="center">
       <template #default="scope">
-        <el-button title="Show full demand" size="small" @click="show(scope.row.id)">
+        <el-button title="Show full demand" size="small" @click="demandsStore.show(scope.row.id)">
           <el-icon><Document /></el-icon>
         </el-button>
-        <el-button title="Unsubscribe" size="small" v-if="scope.row.state==='Subscribed'" type="danger" @click="unsubscribe(scope.row.id)">
+        <el-button
+          title="Unsubscribe"
+          size="small"
+          v-if="scope.row.state === 'Subscribed'"
+          type="danger"
+          @click="midLevelStore.unsubscribeDemand(scope.row.id)"
+        >
           <el-icon><Close /></el-icon>
         </el-button>
       </template>
@@ -53,9 +59,6 @@ const getStateType = (state) => {
   if (state === "Failed") return "danger";
   if (state === "Unsubscribed") return "danger";
 };
-
-const show = (id) => demandsStore.show(id);
-const unsubscribe = () => midLevelStore.unsubscribeDemand();
 </script>
 <style scoped lang="scss">
 .demands {
