@@ -21,8 +21,17 @@ export const useMidLevelStore = defineStore("mid-level", {
     agreements: new Map(),
     activities: new Map(),
     notes: new Map(),
+    isRunning: false,
   }),
   actions: {
+    async unsubscribeDemand() {
+      await this.demand?.unsubscribe();
+      setTimeout(async () => {
+        this.allocation.release();
+        this.payments.unsubscribe();
+      }, 3000);
+      this.isRunning = false;
+    },
     addProposal(proposal) {
       this.proposals.set(proposal.id, proposal);
     },
@@ -92,13 +101,14 @@ export const useMidLevelStore = defineStore("mid-level", {
       await activity.stop().catch(console.error);
       await this.monitorActivity(id, "Terminated");
     },
-    async runScript(id, command) {
+    async runScript(id, command, arg, code) {
       const activity = this.getActivityById(id);
-      const script = await YaScript.create([new YaRun("/usr/local/bin/node", ["-e", command])]);
+      const script = await YaScript.create([new YaRun(command, [arg, code])]);
       const exeScript = script.getExeScriptRequest();
       const results = await activity.execute(exeScript);
       const allResults = [];
       for await (const result of results) allResults.push(result);
+      console.log(allResults);
       return allResults[0];
     },
     addNote(note) {

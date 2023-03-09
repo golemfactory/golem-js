@@ -12,6 +12,7 @@ export const usePaymentsStore = defineStore({
     addPayment(payment) {
       const agreementStore = useAgreementsStore();
       const agreement = agreementStore.getAgreement(payment.agreementId);
+      if (!agreement) return;
       payment.providerName = agreement?.providerName;
       payment.amount = Number(payment.amount);
       payment.time = new Date(payment.timestamp).toLocaleTimeString();

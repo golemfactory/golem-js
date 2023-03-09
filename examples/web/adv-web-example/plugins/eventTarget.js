@@ -60,7 +60,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         agreementsStore.updateFromEvent(event, "Expired");
         break;
       case "ActivityCreated":
-        activitiesStore.addActivity(parseActivityFromEvent(event, "Initialised"));
+        activitiesStore.addActivity(parseActivityFromEvent(event, "Initialized"));
         configStore.currentStep = 3;
         break;
       case "ActivityStateChanged":

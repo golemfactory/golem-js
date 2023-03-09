@@ -6,16 +6,17 @@ export default defineNuxtPlugin((nuxtApp) => {
   const appendLog = (msg, type) => {
     configStore.logs += `[${new Date().toLocaleTimeString()}] ${type ? "[" + type + "] " : ""}${msg}\n`;
   };
+  let level = "info";
   const logger = {
     log: (msg) => appendLog(msg),
     info: (msg) => appendLog(msg, "info"),
     warn: (msg) => appendLog(msg, "warn"),
-    // debug: (msg) => appendLog(msg, "debug"),
-    debug: () => null,
+    debug: (msg) => (level === "debug" ? appendLog(msg, "debug") : null),
     error: (error) => {
       appendLog(error?.response?.data?.message || error, "error");
       configStore.stderr += error?.response?.data?.message || error;
     },
+    setLevel: (lvl) => (level = lvl),
   };
   return {
     provide: {

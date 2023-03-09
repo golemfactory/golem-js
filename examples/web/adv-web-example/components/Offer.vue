@@ -39,12 +39,12 @@
       }}</el-descriptions-item>
       <el-descriptions-item label="CPU Capabilities ">{{ offer?.cpuCapabilities?.join(", ") }}</el-descriptions-item>
     </el-descriptions>
-    <template #footer v-if="actions">
+    <template #footer v-if="configStore.activeControlActions && offer.state === 'Initial'">
       <div class="drawer-footer">
-        <el-button type="danger" @click="reject">
+        <el-button type="danger" @click="reject(offer.id)">
           <el-icon><CircleClose /></el-icon> Reject
         </el-button>
-        <el-button type="success" @click="respond">
+        <el-button type="success" @click="respond(offer.id)">
           <el-icon><CircleCheck /></el-icon> Respond
         </el-button>
       </div>
@@ -61,8 +61,6 @@ const offerStore = useOffersStore();
 const midLevelStore = useMidLevelStore();
 const configStore = useConfigStore();
 const { drawerOffer: offer, drawerOfferId } = storeToRefs(offerStore);
-
-const actions = configStore.activeControlActions;
 
 const respond = async (id) => midLevelStore.respondProposalById(id);
 const reject = async (id) => await midLevelStore.rejectProposalById(id);
@@ -81,11 +79,11 @@ const getOfferIcon = (state) => {
   if (state === "Confirmed") return "success";
 };
 const getOfferSubtitle = (state) => {
-  if (state === "Initial") return "Offer has been responded. Waiting for draft...";
-  if (state === "Draft") return "Offer is in draft state. Waiting for confirmation...";
+  if (state === "Initial") return "Offer has been responded. Waiting for provider response.";
+  if (state === "Draft") return "Offer is in draft state. You can now confirm it.";
   if (state === "Rejected") return "Offer has been rejected by provider.";
   if (state === "Failed") return "Something went wrong...";
-  if (state === "Confirmed") return "Offer is confirmed. Waiting for agreement...";
+  if (state === "Confirmed") return "Offer is confirmed. You can now create a draft agreement.";
 };
 </script>
 <style scoped lang="scss">

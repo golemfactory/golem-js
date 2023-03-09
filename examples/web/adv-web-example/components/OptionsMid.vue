@@ -19,9 +19,9 @@
         <el-row :gutter="10">
           <el-col :span="12">
             <el-form-item label="Image:">
-              <el-select v-model="options.image">
+              <el-select v-model="options.imageHash">
                 <el-option
-                  v-for="item in images"
+                  v-for="item in configStore.images"
                   :key="item.value"
                   :label="item.label"
                   :value="item.value"
@@ -62,8 +62,8 @@
         </el-row>
         <el-row :gutter="10">
           <el-col :span="12">
-            <el-form-item label="Offer interval (s)">
-              <el-input-number v-model="options.offerInterval" />
+            <el-form-item label="Offer interval (ms)">
+              <el-input-number v-model="options.offerFetchingInterval" />
             </el-form-item>
           </el-col>
           <el-col :span="12">

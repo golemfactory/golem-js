@@ -33,7 +33,6 @@ export const useActivitiesStore = defineStore({
       activity.scripts += 1;
       activity.duration += +new Date() / 1000 - activity.startScript;
       this.totalTime += activity.duration;
-      console.log(this.totalTime);
     },
   },
   getters: {

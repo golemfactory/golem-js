@@ -5,9 +5,9 @@
         <el-row :gutter="20">
           <el-col :span="10">
             <el-form-item label="Image:">
-              <el-select v-model="options.image">
+              <el-select v-model="options.imageHash">
                 <el-option
-                  v-for="item in images"
+                  v-for="item in configStore.images"
                   :key="item.value"
                   :label="item.label"
                   :value="item.value"
@@ -97,25 +97,6 @@ const configStore = useConfigStore();
 const options = configStore.options;
 const activeTab = ref("base");
 
-const images = [
-  {
-    value: "xxxxx",
-    label: "Node.js 14.19",
-  },
-  {
-    value: "yyyyy",
-    label: "Node.js 16.12",
-  },
-  {
-    value: "529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4",
-    label: "Node.js 18.14",
-  },
-  {
-    value: "todo",
-    label: "Custom - Dockerfile (not yet implemented)",
-    disabled: true,
-  },
-];
 </script>
 <style lang="scss">
 .options-tabs {

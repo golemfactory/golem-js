@@ -32,7 +32,7 @@
     <el-table-column label="Actions" width="140" fixed="right" align="center" v-if="actions">
       <template #default="scope">
         <el-button
-          v-if="actions && scope.row.state === 'Initialised'"
+          v-if="actions && scope.row.state === 'Initialized'"
           size="small"
           plain
           type="warning"
@@ -58,7 +58,7 @@
         >
           Run
         </el-button>
-        <el-button v-if="actions" plain size="small" type="danger" @click="stop(scope.row.id)">
+        <el-button v-if="actions && scope.row.state !== 'Terminated'" plain size="small" type="danger" @click="stop(scope.row.id)">
           <el-icon><Close /></el-icon>
         </el-button>
       </template>
@@ -79,7 +79,7 @@ const actions = computed(() => configStore.activeControlActions);
 const midLevelStore = useMidLevelStore();
 
 const getStateType = (state) => {
-  if (state === "Initialized" || state === "Deployed") return "warning";
+  if (state === "Deployed") return "warning";
   if (state === "Unresponsive" || state === "Terminated") return "danger";
   if (state === "Ready") return "success";
 };
@@ -95,11 +95,9 @@ const start = async (id) => {
 };
 
 const runScript = async (id) => {
-  const command = configStore.code;
-  const result = await midLevelStore.runScript(id, command);
-  console.log(result.stdout);
-  if (configStore.stdout) configStore.stdout += result.stdout;
-  if (configStore.stderr) configStore.stderr += result.stderr;
+  const result = await midLevelStore.runScript(id, configStore.command(), configStore.commandArg(), configStore.code);
+  if (result.stdout) configStore.stdout += result.stdout;
+  if (result.stderr) configStore.stdout += result.stderr;
 };
 const stop = async (id) => {
   await midLevelStore.stopActivity(id);
@@ -108,7 +106,7 @@ const stop = async (id) => {
 <style scoped lang="scss">
 .activities {
   width: 100%;
-  height: 360px;
+  height: 370px;
 }
 .tag-state {
   width: 80px;

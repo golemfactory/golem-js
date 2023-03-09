@@ -4,11 +4,13 @@ export const useDemandsStore = defineStore("demands-store", {
   state: () => {
     return {
       demands: [],
+      drawerDemandId: false,
     };
   },
   actions: {
     add(event) {
       this.demands.push({
+        ...event,
         ...event.detail,
         ...event.detail.details,
         detail: undefined,
@@ -20,7 +22,6 @@ export const useDemandsStore = defineStore("demands-store", {
           (prop) => prop.key === "golem.com.payment.platform.erc20-rinkeby-tglm.address"
         )?.value,
       });
-      console.log(this.demands[0]);
     },
     unsubscribe(event) {
       const demand = this.demands.find((demand) => demand.id === event.detail.id);
@@ -32,5 +33,11 @@ export const useDemandsStore = defineStore("demands-store", {
       demand.state = "Failed";
       demand.time = new Date(event.timestamp).toLocaleTimeString();
     },
+    show(id) {
+      this.drawerDemandId = id;
+    },
+  },
+  getters: {
+    drawerDemand: (state) => state.demands.find((demand) => demand.id === state.drawerDemandId),
   },
 });

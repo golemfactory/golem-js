@@ -1,5 +1,5 @@
 <template>
-  <el-scrollbar height="250px">
+  <el-scrollbar v-loading="configStore.stdoutLoading" height="230px">
     <pre class="output">{{configStore.stdout}}</pre>
   </el-scrollbar>
 </template>
