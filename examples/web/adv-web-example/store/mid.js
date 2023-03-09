@@ -10,6 +10,7 @@ import {
 } from "../../../../dist/yajsapi.min.js";
 import { useAgreementsStore } from "~/store/agreements";
 import { useConfigStore } from "~/store/config";
+import { useActivitiesStore } from "~/store/activities";
 
 const sleep = (time, inMs = false) => new Promise((resolve) => setTimeout(resolve, time * (inMs ? 1 : 1000)));
 
@@ -76,8 +77,10 @@ export const useMidLevelStore = defineStore("mid-level", {
       return result;
     },
     async createActivityFromAgreement(id) {
+      useActivitiesStore().setActivityStatusById(id, true);
       const activity = await YaActivity.create(id, this.options);
       await this.addActivity(activity);
+      useActivitiesStore().setActivityStatusById(id, false);
     },
     addActivity(activity) {
       this.activities.set(activity.id, activity);
@@ -100,32 +103,48 @@ export const useMidLevelStore = defineStore("mid-level", {
       return state;
     },
     async deployActivity(id) {
+      useActivitiesStore().setActivityStatusById(id, true);
       const activity = this.getActivityById(id);
       const script = await YaScript.create([new YaDeploy()]);
       const exeScript = script.getExeScriptRequest();
       await activity.execute(exeScript).catch(console.error);
       await this.monitorActivity(id, "Deployed");
+      useActivitiesStore().setActivityStatusById(id, false);
     },
     async startActivity(id) {
+      useActivitiesStore().setActivityStatusById(id, true);
       const activity = this.getActivityById(id);
       const script = await YaScript.create([new YaStart()]);
       const exeScript = script.getExeScriptRequest();
       await activity.execute(exeScript).catch(console.error);
       await this.monitorActivity(id, "Ready");
+      useActivitiesStore().setActivityStatusById(id, false);
     },
     async stopActivity(id) {
+      useActivitiesStore().setActivityStatusById(id, true);
       const activity = this.getActivityById(id);
       await activity.stop().catch(console.error);
       await this.monitorActivity(id, "Terminated");
+      useActivitiesStore().setActivityStatusById(id, false);
     },
-    async runScript(id, command, arg, code) {
+    async runScript(id) {
+      useActivitiesStore().setActivityStatusById(id, true);
+      const configStore = useConfigStore();
+      const command = configStore.command(),
+        arg = configStore.commandArg(),
+        code = configStore.code;
+
       const activity = this.getActivityById(id);
       const script = await YaScript.create([new YaRun(command, [arg, code])]);
       const exeScript = script.getExeScriptRequest();
       const results = await activity.execute(exeScript);
       const allResults = [];
       for await (const result of results) allResults.push(result);
-      return allResults[0];
+      const result = allResults[0];
+
+      if (result.stdout) configStore.stdout += result.stdout;
+      if (result.stderr) configStore.stdout += result.stderr;
+      useActivitiesStore().setActivityStatusById(id, false);
     },
     addNote(note) {
       this.notes.set(note.id, note);

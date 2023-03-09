@@ -26,7 +26,7 @@ export const useActivitiesStore = defineStore({
     },
     setActivityStatusById(id, isProcessing = true) {
       const activity = this.activities.find((activity) => activity.id === id);
-      activity.isProcessing = isProcessing;
+      if (activity) activity.isProcessing = isProcessing;
     },
     startScript(id) {
       const activity = this.activities.find((act) => act.id === id);

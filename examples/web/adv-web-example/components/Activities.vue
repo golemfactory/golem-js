@@ -23,7 +23,7 @@
     <el-table-column prop="state" label="State" sortable width="100">
       <template #default="scope">
         <el-tooltip :disabled="!scope.row.reason" :content="scope.row.reason" placement="top" effect="light">
-          <el-tag class="tag-state" :type="getStateType(scope.row.state)">
+          <el-tag class="tag-state" :type="getStateType(scope.row.state)" v-loading="scope.row.isProcessing">
             {{ scope.row.state }}
           </el-tag>
         </el-tooltip>
@@ -36,7 +36,8 @@
           size="small"
           plain
           type="warning"
-          @click="deploy(scope.row.id)"
+          @click="midLevelStore.deployActivity(scope.row.id)"
+          :disabled="scope.row.isProcessing"
         >
           Deploy
         </el-button>
@@ -45,7 +46,8 @@
           size="small"
           plain
           type="success"
-          @click="start(scope.row.id)"
+          @click="midLevelStore.startActivity(scope.row.id)"
+          :disabled="scope.row.isProcessing"
         >
           Start
         </el-button>
@@ -54,11 +56,19 @@
           size="small"
           plain
           type="success"
-          @click="runScript(scope.row.id)"
+          @click="midLevelStore.runScript(scope.row.id)"
+          :disabled="scope.row.isProcessing"
         >
           Run
         </el-button>
-        <el-button v-if="actions && scope.row.state !== 'Terminated'" plain size="small" type="danger" @click="stop(scope.row.id)">
+        <el-button
+          v-if="actions && scope.row.state !== 'Terminated'"
+          plain
+          size="small"
+          type="danger"
+          @click="midLevelStore.stopActivity(scope.row.id)"
+          :disabled="scope.row.isProcessing"
+        >
           <el-icon><Close /></el-icon>
         </el-button>
       </template>
@@ -82,25 +92,6 @@ const getStateType = (state) => {
   if (state === "Deployed") return "warning";
   if (state === "Unresponsive" || state === "Terminated") return "danger";
   if (state === "Ready") return "success";
-};
-
-const sleep = (time, inMs = false) => new Promise((resolve) => setTimeout(resolve, time * (inMs ? 1 : 1000)));
-
-const deploy = async (id) => {
-  await midLevelStore.deployActivity(id);
-};
-
-const start = async (id) => {
-  await midLevelStore.startActivity(id);
-};
-
-const runScript = async (id) => {
-  const result = await midLevelStore.runScript(id, configStore.command(), configStore.commandArg(), configStore.code);
-  if (result.stdout) configStore.stdout += result.stdout;
-  if (result.stderr) configStore.stdout += result.stderr;
-};
-const stop = async (id) => {
-  await midLevelStore.stopActivity(id);
 };
 </script>
 <style scoped lang="scss">

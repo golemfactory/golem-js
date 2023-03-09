@@ -62,7 +62,6 @@
 </template>
 <script setup>
 const { $eventTarget: eventTarget, $logger: logger } = useNuxtApp();
-import { Agreement } from "../../../../dist/yajsapi.min.js";
 import { Document, Check, Close } from "@element-plus/icons-vue";
 import { useOffersStore } from "~/store/offers";
 import { useConfigStore } from "~/store/config";
