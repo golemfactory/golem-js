@@ -6,6 +6,7 @@ import {
   Run as YaRun,
   DebitNote,
   Activity as YaActivity,
+  Agreement as YaAgreement,
 } from "../../../../dist/yajsapi.min.js";
 import { useAgreementsStore } from "~/store/agreements";
 import { useConfigStore } from "~/store/config";
@@ -57,6 +58,10 @@ export const useMidLevelStore = defineStore("mid-level", {
       const agreement = this.agreements.get(id);
       if (!agreement) throw new Error(`Agreement ${id} not found`);
       return agreement;
+    },
+    async createAgreementForProposal(id) {
+      const agreement = await YaAgreement.create(id, this.options);
+      this.addAgreement(agreement);
     },
     async confirmAgreementById(id) {
       useAgreementsStore().setAgreementStatusById(id, true);

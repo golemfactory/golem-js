@@ -23,7 +23,7 @@
     </el-table-column>
     <el-table-column class="actions" label="Actions" :width="actions ? 160 : 80" fixed="right" align="center">
       <template #default="scope">
-        <el-button title="Show full offer" size="small" @click="show(scope.row.id)">
+        <el-button title="Show full offer" size="small" @click="offersStore.show(scope.row.id)">
           <el-icon><Document /></el-icon>
         </el-button>
         <el-button
@@ -31,7 +31,7 @@
           v-if="actions && scope.row.state === 'Initial'"
           size="small"
           type="success"
-          @click="respond(scope.row.id)"
+          @click="midLevelStore.respondProposalById(scope.row.id)"
           :disabled="scope.row.isProcessing"
         >
           <el-icon><Check /></el-icon
@@ -41,7 +41,7 @@
           v-if="actions && scope.row.state === 'Initial'"
           size="small"
           type="danger"
-          @click="reject(scope.row.id)"
+          @click="midLevelStore.rejectProposalById(scope.row.id)"
           :disabled="scope.row.isProcessing"
         >
           <el-icon><Close /></el-icon>
@@ -51,7 +51,7 @@
           v-if="actions && scope.row.state === 'Draft'"
           size="small"
           type="warning"
-          @click="createAgreement(scope.row.id)"
+          @click="midLevelStore.createAgreementForProposal(scope.row.id)"
           :disabled="scope.row.isProcessing"
         >
           Confirm
@@ -73,38 +73,11 @@ const configStore = useConfigStore();
 
 const actions = computed(() => configStore.activeControlActions);
 
-const show = (id) => offersStore.show(id);
-
 const getStateType = (state) => {
   if (state === "Draft") return "warning";
   if (state === "Rejected") return "danger";
   if (state === "Failed") return "danger";
   if (state === "Confirmed") return "success";
-};
-
-const respond = async (id) => {
-  try {
-    await midLevelStore.respondProposalById(id);
-  } catch (e) {
-    console.error(e.message);
-  }
-};
-const reject = async (id) => {
-  try {
-    await midLevelStore.rejectProposalById(id);
-  } catch (e) {
-    console.error(e.message);
-  }
-};
-
-const createAgreement = async (id) => {
-  try {
-    const options = { ...configStore.options, logger, eventTarget };
-    const agreement = await Agreement.create(id, options);
-    midLevelStore.addAgreement(agreement);
-  } catch (e) {
-    console.error(e.message);
-  }
 };
 </script>
 <style scoped lang="scss">
