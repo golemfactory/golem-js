@@ -11,6 +11,7 @@ import {
 import { useAgreementsStore } from "~/store/agreements";
 import { useConfigStore } from "~/store/config";
 import { useActivitiesStore } from "~/store/activities";
+import { usePaymentsStore } from "~/store/payments";
 
 const sleep = (time, inMs = false) => new Promise((resolve) => setTimeout(resolve, time * (inMs ? 1 : 1000)));
 
@@ -155,17 +156,20 @@ export const useMidLevelStore = defineStore("mid-level", {
       return note;
     },
     async confirmNoteById(id) {
+      usePaymentsStore().setPaymentStatusById(id, true);
       const note = this.getNoteById(id);
       const amountDue = note instanceof DebitNote ? note.totalAmountDue : note.amount;
-      console.log(amountDue, this.allocationId);
       await note.accept(amountDue, this.allocationId);
+      usePaymentsStore().setPaymentStatusById(id, false);
     },
     async rejectNoteById(id) {
+      usePaymentsStore().setPaymentStatusById(id, true);
       const note = this.getNoteById(id);
       await note.reject({
         rejectionReason: "BAD_SERVICE",
         totalAmountAccepted: "0",
       });
+      usePaymentsStore().setPaymentStatusById(id, false);
     },
   },
 });
