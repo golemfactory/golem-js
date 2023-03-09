@@ -37,15 +37,11 @@ body,
     font-size: 0.8rem;
   }
 }
-
-
-//a {
-//  color: #7fadd5;
-//  text-decoration: none;
-//  &:hover {
-//    color: #3e81b0;
-//  }
-//}
+.tag-state {
+  width: 70px;
+  --el-loading-spinner-size: 18px;
+  --el-mask-color: rgba(0, 0, 0, 0.4);
+}
 
 
 

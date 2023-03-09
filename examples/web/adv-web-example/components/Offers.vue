@@ -84,11 +84,6 @@ const getStateType = (state) => {
   width: 100%;
   height: 370px;
 }
-.tag-state {
-  width: 70px;
-  --el-loading-spinner-size: 18px;
-  --el-mask-color: rgba(0, 0, 0, 0.4);
-}
 .actions {
   .el-button {
     margin: 0;
