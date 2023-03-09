@@ -1,6 +1,6 @@
 <template>
   <div class="btn-holders">
-    <el-button class="btn-reset" size="small" type="warning" @click="resetAll" v-if="!midLevelStore.isRunning">
+    <el-button class="btn-reset" plain size="small" @click="resetAll" v-if="!midLevelStore.isRunning">
       Reset
     </el-button>
     <el-button class="btn-run" size="small" type="danger" @click="terminateAll" v-if="midLevelStore.isRunning">
