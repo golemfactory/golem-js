@@ -210,8 +210,9 @@ export const useMidLevelStore = defineStore("mid-level", {
       try {
         const note = this.getNoteById(id);
         await note.reject({
-          rejectionReason: "BAD_SERVICE",
+          rejectionReason: "UNSOLICITED_SERVICE",
           totalAmountAccepted: "0",
+          message: "No message",
         });
       } catch (e) {
         usePaymentsStore().setPaymentStatusById(id, false);
