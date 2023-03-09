@@ -67,21 +67,36 @@ export const useMidLevelStore = defineStore("mid-level", {
     },
     async confirmAgreementById(id) {
       useAgreementsStore().setAgreementStatusById(id, true);
-      const result = await this.getAgreementById(id).confirm();
-      useAgreementsStore().setAgreementStatusById(id, false);
-      return result;
+      try {
+        const result = await this.getAgreementById(id).confirm();
+        useAgreementsStore().setAgreementStatusById(id, false);
+        return result;
+      } catch (e) {
+        useAgreementsStore().setAgreementStatusById(id, false);
+        throw e;
+      }
     },
     async terminateAgreementById(id) {
       useAgreementsStore().setAgreementStatusById(id, true);
-      const result = await this.getAgreementById(id).terminate();
-      useAgreementsStore().setAgreementStatusById(id, false);
-      return result;
+      try {
+        const result = await this.getAgreementById(id).terminate();
+        useAgreementsStore().setAgreementStatusById(id, false);
+        return result;
+      } catch (e) {
+        useAgreementsStore().setAgreementStatusById(id, false);
+        throw e;
+      }
     },
     async createActivityFromAgreement(id) {
       useAgreementsStore().setAgreementStatusById(id, true);
-      const activity = await YaActivity.create(id, this.options);
-      await this.addActivity(activity);
-      useAgreementsStore().setAgreementStatusById(id, false);
+      try {
+        const activity = await YaActivity.create(id, this.options);
+        await this.addActivity(activity);
+        useAgreementsStore().setAgreementStatusById(id, false);
+      } catch (e) {
+        useAgreementsStore().setAgreementStatusById(id, false);
+        throw e;
+      }
     },
     addActivity(activity) {
       this.activities.set(activity.id, activity);
@@ -105,47 +120,70 @@ export const useMidLevelStore = defineStore("mid-level", {
     },
     async deployActivity(id) {
       useActivitiesStore().setActivityStatusById(id, true);
-      const activity = this.getActivityById(id);
-      const script = await YaScript.create([new YaDeploy()]);
-      const exeScript = script.getExeScriptRequest();
-      await activity.execute(exeScript).catch(console.error);
-      await this.monitorActivity(id, "Deployed");
-      useActivitiesStore().setActivityStatusById(id, false);
+      try {
+        const activity = this.getActivityById(id);
+        const script = await YaScript.create([new YaDeploy()]);
+        const exeScript = script.getExeScriptRequest();
+        await activity.execute(exeScript).catch(console.error);
+        await this.monitorActivity(id, "Deployed");
+        useActivitiesStore().setActivityStatusById(id, false);
+      } catch (e) {
+        useActivitiesStore().setActivityStatusById(id, false);
+        throw e;
+      }
     },
     async startActivity(id) {
       useActivitiesStore().setActivityStatusById(id, true);
-      const activity = this.getActivityById(id);
-      const script = await YaScript.create([new YaStart()]);
-      const exeScript = script.getExeScriptRequest();
-      await activity.execute(exeScript).catch(console.error);
-      await this.monitorActivity(id, "Ready");
-      useActivitiesStore().setActivityStatusById(id, false);
+      try {
+        const activity = this.getActivityById(id);
+        const script = await YaScript.create([new YaStart()]);
+        const exeScript = script.getExeScriptRequest();
+        await activity.execute(exeScript).catch(console.error);
+        await this.monitorActivity(id, "Ready");
+        useActivitiesStore().setActivityStatusById(id, false);
+      } catch (e) {
+        useActivitiesStore().setActivityStatusById(id, false);
+        throw e;
+      }
     },
     async stopActivity(id) {
       useActivitiesStore().setActivityStatusById(id, true);
-      const activity = this.getActivityById(id);
-      await activity.stop().catch(console.error);
-      await this.monitorActivity(id, "Terminated");
-      useActivitiesStore().setActivityStatusById(id, false);
+      try {
+        useActivitiesStore().setActivityStatusById(id, true);
+        const activity = this.getActivityById(id);
+        await activity.stop().catch(console.error);
+        await this.monitorActivity(id, "Terminated");
+        useActivitiesStore().setActivityStatusById(id, false);
+      } catch (e) {
+        useActivitiesStore().setActivityStatusById(id, false);
+        throw e;
+      }
     },
     async runScript(id) {
       useActivitiesStore().setActivityStatusById(id, true);
-      const configStore = useConfigStore();
-      const command = configStore.command(),
-        arg = configStore.commandArg(),
-        code = configStore.code;
+      try {
+        const configStore = useConfigStore();
+        const command = configStore.command(),
+          arg = configStore.commandArg(),
+          code = configStore.code;
 
-      const activity = this.getActivityById(id);
-      const script = await YaScript.create([new YaRun(command, [arg, code])]);
-      const exeScript = script.getExeScriptRequest();
-      const results = await activity.execute(exeScript);
-      const allResults = [];
-      for await (const result of results) allResults.push(result);
-      const result = allResults[0];
+        const activity = this.getActivityById(id);
+        const script = await YaScript.create([new YaRun(command, [arg, code])]);
+        const exeScript = script.getExeScriptRequest();
+        const results = await activity.execute(exeScript);
+        const allResults = [];
+        for await (const result of results) allResults.push(result);
+        const result = allResults[0];
 
-      if (result.stdout) configStore.stdout += result.stdout;
-      if (result.stderr) configStore.stdout += result.stderr;
-      useActivitiesStore().setActivityStatusById(id, false);
+        if (result.stdout) configStore.stdout += result.stdout;
+        if (result.stderr) configStore.stdout += result.stderr;
+
+        useActivitiesStore().setActivityStatusById(id, false);
+        return result;
+      } catch (e) {
+        useActivitiesStore().setActivityStatusById(id, false);
+        throw e;
+      }
     },
     addNote(note) {
       this.notes.set(note.id, note);
@@ -157,19 +195,28 @@ export const useMidLevelStore = defineStore("mid-level", {
     },
     async confirmNoteById(id) {
       usePaymentsStore().setPaymentStatusById(id, true);
-      const note = this.getNoteById(id);
-      const amountDue = note instanceof DebitNote ? note.totalAmountDue : note.amount;
-      await note.accept(amountDue, this.allocationId);
-      usePaymentsStore().setPaymentStatusById(id, false);
+      try {
+        const note = this.getNoteById(id);
+        const amountDue = note instanceof DebitNote ? note.totalAmountDue : note.amount;
+        await note.accept(amountDue, this.allocationId);
+        usePaymentsStore().setPaymentStatusById(id, false);
+      } catch (e) {
+        usePaymentsStore().setPaymentStatusById(id, false);
+        throw e;
+      }
     },
     async rejectNoteById(id) {
       usePaymentsStore().setPaymentStatusById(id, true);
-      const note = this.getNoteById(id);
-      await note.reject({
-        rejectionReason: "BAD_SERVICE",
-        totalAmountAccepted: "0",
-      });
-      usePaymentsStore().setPaymentStatusById(id, false);
+      try {
+        const note = this.getNoteById(id);
+        await note.reject({
+          rejectionReason: "BAD_SERVICE",
+          totalAmountAccepted: "0",
+        });
+      } catch (e) {
+        usePaymentsStore().setPaymentStatusById(id, false);
+        throw e;
+      }
     },
   },
 });
