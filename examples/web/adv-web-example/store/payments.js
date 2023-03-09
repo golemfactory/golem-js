@@ -16,6 +16,7 @@ export const usePaymentsStore = defineStore({
       payment.providerName = agreement?.providerName;
       payment.amount = Number(payment.amount);
       payment.time = new Date(payment.timestamp).toLocaleTimeString();
+      payment.isProcessing = false;
       this.payments.set(payment.id, payment);
     },
     getById(id) {
@@ -28,6 +29,13 @@ export const usePaymentsStore = defineStore({
       payment.amount = Number(old.amount);
       payment.time = new Date(payment.timestamp).toLocaleTimeString();
       Object.assign(old, payment);
+    },
+    setPaymentStatusById(id, isProcessing = true) {
+      try {
+        const payment = this.payments.get(id);
+        payment.isProcessing = isProcessing;
+        this.payments.set(id, payment);
+      } catch (e) {}
     },
   },
   getters: {

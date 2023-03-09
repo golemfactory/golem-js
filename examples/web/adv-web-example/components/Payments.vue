@@ -9,11 +9,11 @@
       </template>
     </el-table-column>
     <el-table-column prop="providerName" label="Provider" sortable width="150" />
-    <el-table-column prop="amount" label="Amount" sortable min-width="180"/>
+    <el-table-column prop="amount" label="Amount" sortable min-width="180" />
     <el-table-column prop="state" label="State" sortable width="100">
       <template #default="scope">
         <el-tooltip :disabled="!scope.row.reason" :content="scope.row.reason" placement="top" effect="light">
-          <el-tag class="tag-state" :type="getStateType(scope.row.state)">
+          <el-tag class="tag-state" :type="getStateType(scope.row.state)" v-loading="scope.row.isProcessing">
             {{ scope.row.state }}
           </el-tag>
         </el-tooltip>
@@ -26,7 +26,8 @@
           size="small"
           plain
           type="success"
-          @click="accept(scope.row.id)"
+          @click="midLevelStore.confirmNoteById(scope.row.id)"
+          :disabled="scope.row.isProcessing"
           >Accept</el-button
         >
         <el-button
@@ -34,7 +35,8 @@
           plain
           size="small"
           type="danger"
-          @click="reject(scope.row.id)"
+          @click="midLevelStore.rejectNoteById(scope.row.id)"
+          :disabled="scope.row.isProcessing"
           >Reject</el-button
         >
       </template>
@@ -58,13 +60,6 @@ const actions = computed(() => configStore.activeControlActions);
 const getStateType = (state) => {
   if (state === "Rejected") return "error";
   if (state === "Accepted") return "success";
-};
-
-const accept = async (id) => {
-  await midLevelStore.confirmNoteById(id);
-};
-const reject = async (id) => {
-  await midLevelStore.rejectNoteById(id);
 };
 </script>
 <style scoped lang="scss">

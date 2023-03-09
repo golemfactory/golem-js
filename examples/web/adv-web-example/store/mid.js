@@ -77,10 +77,10 @@ export const useMidLevelStore = defineStore("mid-level", {
       return result;
     },
     async createActivityFromAgreement(id) {
-      useActivitiesStore().setActivityStatusById(id, true);
+      useAgreementsStore().setAgreementStatusById(id, true);
       const activity = await YaActivity.create(id, this.options);
       await this.addActivity(activity);
-      useActivitiesStore().setActivityStatusById(id, false);
+      useAgreementsStore().setAgreementStatusById(id, false);
     },
     addActivity(activity) {
       this.activities.set(activity.id, activity);
