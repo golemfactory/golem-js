@@ -71,11 +71,9 @@ export const useMidLevelStore = defineStore("mid-level", {
     async monitorActivity(id, expectedState, timeoutTime = 10000) {
       const activity = this.getActivityById(id);
       let state = await activity.getState();
-      console.log(`monitorActivity`, state);
       let timeout = false;
       const timeoutId = setTimeout(() => (timeout = true), timeoutTime);
       while (state !== expectedState && !timeout) {
-        console.log(`monitorActivity`, state);
         await sleep(1000, true);
         state = await activity.getState();
       }
@@ -108,7 +106,6 @@ export const useMidLevelStore = defineStore("mid-level", {
       const results = await activity.execute(exeScript);
       const allResults = [];
       for await (const result of results) allResults.push(result);
-      console.log(allResults);
       return allResults[0];
     },
     addNote(note) {
