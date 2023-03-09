@@ -1,6 +1,7 @@
 <template>
   <div class="home">
-    <h1>Run JavaScript code<br />on the <NuxtLink to="https://golem.network">Golem Network</NuxtLink></h1>
+    <h1>Run code on the <NuxtLink to="https://golem.network">Golem Network</NuxtLink></h1>
+    <h5>Run code without provisioning or managing infrastructure. Simply write and execute code on distributed Golem Network.</h5>
     <video class="script" src="~/assets/video/script.mp4" autoplay loop></video>
     <div class="buttons">
       <NuxtLink v-slot="{ navigate }" to="/task" custom>
@@ -28,14 +29,23 @@ export default {
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  min-height: calc(100vh - 170px);
 }
 h1 {
-  margin: 30px 0;
   font-size: 2.8rem;
   line-height: 3.5rem;
   text-align: center;
+  margin: 30px 0 0px;
+
   a {
+    color: #75afe1;
+    text-decoration: none;
   }
+}
+h5 {
+  margin-bottom: 60px;
+  font-size: 1rem;
+  font-weight: 100;
 }
 .script {
   height: 300px;
