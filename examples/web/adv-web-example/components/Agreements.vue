@@ -115,7 +115,7 @@ const showOffer = (id) => {
 <style scoped lang="scss">
 .agreements {
   width: 100%;
-  height: 360px;
+  height: 370px;
 }
 .tag-state {
   width: 80px;

@@ -2,11 +2,12 @@
   <el-row :gutter="40">
     <el-col :span="10" style="position: relative">
       <OptionsTask/>
-      <el-button class="btn-run" size="small" type="success" @click="run">Run</el-button>
+      <el-button class="btn-start" size="small" type="warning" :disabled="isRunning" @click="start">Start</el-button>
+      <el-button class="btn-run" size="small" type="success" :disabled="!isRunning"  @click="run">Run</el-button>
+      <el-button class="btn-stop" size="small" type="danger" :disabled="!isRunning"  @click="stop">Stop</el-button>
       <ElementsCodeEditor />
       <el-tabs v-model="activeResults" class="results-tabs">
-        <el-tab-pane v-loading="loading" label="Output" name="output"><Output /></el-tab-pane>
-        <el-tab-pane label="Errors" name="errors"><Errors /></el-tab-pane>
+        <el-tab-pane label="Output" name="output"><Output /></el-tab-pane>
         <el-tab-pane label="Logs" name="logs"><Logs /></el-tab-pane>
       </el-tabs>
     </el-col>
@@ -23,6 +24,7 @@
     </el-col>
   </el-row>
   <Offer />
+  <Demand />
 </template>
 
 <script setup>
@@ -34,23 +36,49 @@ const configStore = useConfigStore();
 
 const activeResults = ref("output");
 const activeEntity = ref("offers");
-const loading = ref(false);
+const isRunning = ref(false);
+let executor;
 
-const run = async () => {
+const start = async () => {
+  isRunning.value = true;
   configStore.activeControlActions = false;
   const options = configStore.options;
-  loading.value = true;
-  const executor = await TaskExecutor.create({ ...options, package: options.imageHash, eventTarget, logger });
+  executor = await TaskExecutor.create({ ...options, package: options.imageHash, eventTarget, logger });
+}
+const run = async () => {
+  configStore.stdoutLoading = true;
+  console.log(configStore.command(), [configStore.commandArg(), configStore.code]);
   await executor.run(async (ctx) => {
-    configStore.stdout += (await ctx.run("/usr/local/bin/node", ["-e", configStore.code])).stdout;
-    loading.value = false;
+    const result = await ctx.run(configStore.command(), [configStore.commandArg(), configStore.code]);
+    if (result.stdout) configStore.stdout += result.stdout;
+    if (result.stderr) configStore.stdout += result.stderr;
+    configStore.stdoutLoading = false;
+  }).catch(e => {
+    isRunning.value = false;
+    throw e;
   });
-  await executor.end();
+  configStore.stdoutLoading = false;
 };
+const stop = async () => {
+  await executor.end();
+  isRunning.value =false;
+}
 </script>
 
 <style scoped lang="scss">
+.btn-start {
+  position: absolute;
+  right: 136px;
+  margin-top: 10px;
+  z-index: 999;
+}
 .btn-run {
+  position: absolute;
+  right: 80px;
+  margin-top: 10px;
+  z-index: 999;
+}
+.btn-stop {
   position: absolute;
   right: 20px;
   margin-top: 10px;

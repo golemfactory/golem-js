@@ -1,17 +1,17 @@
 <template>
   <el-table class="demands" :data="demandsStore.demands" :default-sort="{ prop: 'time', order: 'descending' }">
     <el-table-column prop="time" label="Time" sortable width="80"/>
-    <el-table-column prop="id" label="ID" sortable width="185">
+    <el-table-column prop="id" label="ID" sortable width="175">
       <template #default="scope">
         <el-tooltip :content="scope.row.id" placement="left" effect="light">
-          {{ scope.row.id.substring(0, 20) + "..." }}
+          {{ scope.row.id.substring(0, 18) + "..." }}
         </el-tooltip>
       </template>
     </el-table-column>
-    <el-table-column prop="account" label="Account" sortable width="240">
+    <el-table-column prop="account" label="Account" sortable width="220">
       <template #default="scope">
         <el-tooltip :content="scope.row.account" placement="left" effect="light">
-          {{ scope.row.account.substring(0, 25) + "..." }}
+          {{ scope.row.account.substring(0, 20) + "..." }}
         </el-tooltip>
       </template>
     </el-table-column>
@@ -25,10 +25,13 @@
         </el-tooltip>
       </template>
     </el-table-column>
-    <el-table-column label="Actions" :width="80" fixed="right" align="center">
+    <el-table-column label="Actions" :width="120" fixed="right" align="center">
       <template #default="scope">
         <el-button title="Show full demand" size="small" @click="show(scope.row.id)">
           <el-icon><Document /></el-icon>
+        </el-button>
+        <el-button title="Unsubscribe" size="small" v-if="scope.row.state==='Subscribed'" type="danger" @click="unsubscribe(scope.row.id)">
+          <el-icon><Close /></el-icon>
         </el-button>
       </template>
     </el-table-column>
@@ -38,8 +41,10 @@
 import { Document, Close } from "@element-plus/icons-vue";
 import { useDemandsStore } from "~/store/demands";
 import { useConfigStore } from "~/store/config.js";
+import { useMidLevelStore } from "~/store/mid";
 const configStore = useConfigStore();
 const demandsStore = useDemandsStore();
+const midLevelStore = useMidLevelStore();
 
 const actions = computed(() => configStore.activeControlActions);
 
@@ -49,14 +54,13 @@ const getStateType = (state) => {
   if (state === "Unsubscribed") return "danger";
 };
 
-const show = async (id) => {
-
-};
+const show = (id) => demandsStore.show(id);
+const unsubscribe = () => midLevelStore.unsubscribeDemand();
 </script>
 <style scoped lang="scss">
 .demands {
   width: 100%;
-  height: 360px;
+  height: 370px;
 }
 .tag-state {
   width: 90px;

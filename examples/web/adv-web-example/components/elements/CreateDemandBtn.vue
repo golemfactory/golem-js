@@ -1,5 +1,5 @@
 <template>
-  <el-button class="btn-run" size="small" type="danger" @click="terminateAll" v-if="midLevelStore.demand">
+  <el-button class="btn-run" size="small" type="danger" @click="terminateAll" v-if="midLevelStore.isRunning">
     Terminate all
   </el-button>
   <el-button class="btn-run" size="small" type="success" @click="createDemand" v-loading="loading" v-else>
@@ -26,6 +26,7 @@ import {
 const configStore = useConfigStore();
 const midLevelStore = useMidLevelStore();
 
+logger.setLevel('debug');
 const loading = ref(false);
 
 const createDemand = async () => {
@@ -61,6 +62,7 @@ const createDemand = async () => {
       if (event instanceof InvoiceEvent) midLevelStore.addNote(event.invoice);
       else if (event instanceof DebitNoteEvent) midLevelStore.addNote(event.debitNote);
     });
+    midLevelStore.isRunning = true;
   } catch (e) {
     throw new Error(`Error occurred when creating demand: ${e.message}`);
   }
@@ -68,16 +70,22 @@ const createDemand = async () => {
 };
 const terminateAll = async () => {
   const activityPromises = [...midLevelStore.activities].map(([, activity]) => activity.stop());
-  await Promise.all(activityPromises);
+  await Promise.all(activityPromises).catch(e => {
+    console.error(e)
+  });
   const agreementPromises = [...midLevelStore.agreements].map(([, agreement]) => agreement.terminate());
-  await Promise.all(agreementPromises);
+  await Promise.all(agreementPromises).catch(e => {
+    console.error(e)
+  });
 
   midLevelStore.demand.unsubscribe();
+  midLevelStore.isRunning = false;
   setTimeout(async () => {
     midLevelStore.allocation.release();
     midLevelStore.payments.unsubscribe();
     //midLevelStore.$reset();
   }, 3000);
+  configStore.currentStep = 0
 };
 </script>
 <style scoped lang="scss">
@@ -86,5 +94,7 @@ const terminateAll = async () => {
   right: 20px;
   margin-top: 10px;
   z-index: 999;
+  --el-loading-spinner-size: 22px;
+  --el-mask-color: rgba(0, 0, 0, 0.4);
 }
 </style>

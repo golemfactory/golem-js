@@ -70,7 +70,7 @@ const reject = async (id) => {
 <style scoped lang="scss">
 .payments {
   width: 100%;
-  height: 360px;
+  height: 370px;
 }
 .tag-state {
   width: 70px;

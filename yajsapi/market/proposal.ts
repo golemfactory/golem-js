@@ -112,7 +112,7 @@ export class Proposal {
       new Events.ProposalRejected({
         id: this.id,
         providerId: this.issuerId,
-        parentId: this.parentId,
+        parentId: this.id,
         reason,
       })
     );

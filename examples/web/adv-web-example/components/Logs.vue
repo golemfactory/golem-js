@@ -1,5 +1,5 @@
 <template>
-  <el-scrollbar height="250px">
+  <el-scrollbar height="220px">
     <pre class="logs">{{configStore.logs}}</pre>
   </el-scrollbar>
 </template>

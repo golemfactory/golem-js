@@ -6,14 +6,13 @@
       <ElementsCodeEditor />
       <el-tabs v-model="activeResultsTab" class="results-tabs">
         <el-tab-pane v-loading="loading" label="Output" name="output"><Output /></el-tab-pane>
-        <el-tab-pane label="Errors" name="errors"><Errors /></el-tab-pane>
         <el-tab-pane label="Logs" name="logs"><Logs /></el-tab-pane>
       </el-tabs>
     </el-col>
     <el-col :span="14">
       <Steps />
       <el-tabs v-model="activeEntityTab" class="entities-tabs">
-        <el-tab-pane label="Demand" name="demand"><Demands /></el-tab-pane>
+        <el-tab-pane label="Demands" name="demand"><Demands /></el-tab-pane>
         <el-tab-pane label="Offers" name="offers"><Offers /></el-tab-pane>
         <el-tab-pane label="Agreements" name="agreements"><Agreements /></el-tab-pane>
         <el-tab-pane label="Activities" name="activities"><Activities /></el-tab-pane>
@@ -22,7 +21,8 @@
       <Stats />
     </el-col>
   </el-row>
-  <Offer offer-drawer="offerDrawer" offer="offer" />
+  <Offer/>
+  <Demand />
 </template>
 
 <script setup>
