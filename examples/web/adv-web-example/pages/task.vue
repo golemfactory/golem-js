@@ -3,7 +3,7 @@
     <el-col :span="10" style="position: relative">
       <OptionsTask />
       <div class="btn-holders">
-        <el-button class="btn-reset" size="small" type="warning" :disabled="isRunning" @click="resetAll">
+        <el-button class="btn-reset" plain size="small" :disabled="isRunning" @click="resetAll">
           Reset
         </el-button>
         <el-button class="btn-start" size="small" type="warning" :disabled="isRunning" @click="start">Start</el-button>
