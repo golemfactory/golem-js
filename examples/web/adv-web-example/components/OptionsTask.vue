@@ -5,7 +5,7 @@
         <el-row :gutter="20">
           <el-col :span="10">
             <el-form-item label="Image:">
-              <el-select v-model="options.imageHash">
+              <el-select v-model="options.imageHash" @change="imageChanged">
                 <el-option
                   v-for="item in configStore.images"
                   :key="item.value"
@@ -97,6 +97,9 @@ const configStore = useConfigStore();
 const options = configStore.options;
 const activeTab = ref("base");
 
+const imageChanged = (newValue) => {
+  configStore.determinateLang(newValue);
+};
 </script>
 <style lang="scss">
 .options-tabs {

@@ -19,7 +19,7 @@
         <el-row :gutter="10">
           <el-col :span="12">
             <el-form-item label="Image:">
-              <el-select v-model="options.imageHash">
+              <el-select v-model="options.imageHash" @change="imageChanged">
                 <el-option
                   v-for="item in configStore.images"
                   :key="item.value"
@@ -166,23 +166,7 @@ const configStore = useConfigStore();
 const options = configStore.options;
 const activeTab = ref("yagna");
 
-const images = [
-  {
-    value: "xxxxx",
-    label: "Node.js 14.19",
-  },
-  {
-    value: "yyyyy",
-    label: "Node.js 16.12",
-  },
-  {
-    value: "529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4",
-    label: "Node.js 18.14",
-  },
-  {
-    value: "zzzzz222",
-    label: "Custom - Dockerfile (not yet implemented)",
-    disabled: true,
-  },
-];
+const imageChanged = (newValue) => {
+  configStore.determinateLang(newValue);
+};
 </script>
