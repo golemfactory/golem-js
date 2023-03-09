@@ -5,7 +5,10 @@ import {
   Start as YaStart,
   Run as YaRun,
   DebitNote,
+  Activity as YaActivity,
 } from "../../../../dist/yajsapi.min.js";
+import { useAgreementsStore } from "~/store/agreements";
+import { useConfigStore } from "~/store/config";
 
 const sleep = (time, inMs = false) => new Promise((resolve) => setTimeout(resolve, time * (inMs ? 1 : 1000)));
 
@@ -21,6 +24,7 @@ export const useMidLevelStore = defineStore("mid-level", {
     agreements: new Map(),
     activities: new Map(),
     notes: new Map(),
+    options: null,
     isRunning: false,
   }),
   actions: {
@@ -55,10 +59,20 @@ export const useMidLevelStore = defineStore("mid-level", {
       return agreement;
     },
     async confirmAgreementById(id) {
-      return await this.getAgreementById(id).confirm();
+      useAgreementsStore().setAgreementStatusById(id, true);
+      const result = await this.getAgreementById(id).confirm();
+      useAgreementsStore().setAgreementStatusById(id, false);
+      return result;
     },
     async terminateAgreementById(id) {
-      return await this.getAgreementById(id).terminate();
+      useAgreementsStore().setAgreementStatusById(id, true);
+      const result = await this.getAgreementById(id).terminate();
+      useAgreementsStore().setAgreementStatusById(id, false);
+      return result;
+    },
+    async createActivityFromAgreement(id) {
+      const activity = await YaActivity.create(id, this.options);
+      await this.addActivity(activity);
     },
     addActivity(activity) {
       this.activities.set(activity.id, activity);

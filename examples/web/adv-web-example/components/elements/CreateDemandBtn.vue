@@ -26,7 +26,7 @@ import {
 const configStore = useConfigStore();
 const midLevelStore = useMidLevelStore();
 
-logger.setLevel('debug');
+logger.setLevel("debug");
 const loading = ref(false);
 
 const createDemand = async () => {
@@ -35,6 +35,9 @@ const createDemand = async () => {
 
   configStore.activeControlActions = true;
   try {
+    // 0. Set option for actions runned from the store
+    midLevelStore.options = options;
+
     // 1. Create package
     const taskPackage = await Package.create(options);
     midLevelStore.taskPackage = taskPackage;
@@ -70,12 +73,12 @@ const createDemand = async () => {
 };
 const terminateAll = async () => {
   const activityPromises = [...midLevelStore.activities].map(([, activity]) => activity.stop());
-  await Promise.all(activityPromises).catch(e => {
-    console.error(e)
+  await Promise.all(activityPromises).catch((e) => {
+    console.error(e);
   });
   const agreementPromises = [...midLevelStore.agreements].map(([, agreement]) => agreement.terminate());
-  await Promise.all(agreementPromises).catch(e => {
-    console.error(e)
+  await Promise.all(agreementPromises).catch((e) => {
+    console.error(e);
   });
 
   midLevelStore.demand.unsubscribe();
@@ -85,7 +88,7 @@ const terminateAll = async () => {
     midLevelStore.payments.unsubscribe();
     //midLevelStore.$reset();
   }, 3000);
-  configStore.currentStep = 0
+  configStore.currentStep = 0;
 };
 </script>
 <style scoped lang="scss">

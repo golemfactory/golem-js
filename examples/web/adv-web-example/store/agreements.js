@@ -22,11 +22,15 @@ export const useAgreementsStore = defineStore({
         time: new Date(event.timestamp).toLocaleTimeString(),
       }),
     add(agreement) {
-      this.agreements.push(agreement);
+      this.agreements.push({ ...agreement, isProcessing: false });
     },
     update(agreement) {
       const old = this.agreements.find((agr) => agr.id === agreement.id);
       Object.assign(old, agreement);
+    },
+    setAgreementStatusById(id, isProcessing = true) {
+      const agreement = this.agreements.find((agreement) => agreement.id === id);
+      agreement.isProcessing = isProcessing;
     },
   },
   getters: {

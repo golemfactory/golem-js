@@ -17,12 +17,16 @@ export const useActivitiesStore = defineStore({
       activity.time = new Date(activity.timestamp).toLocaleTimeString();
       activity.scripts = 0;
       activity.duration = 0;
-      console.log(activity);
+      activity.isProcessing = false;
       this.activities.push(activity);
     },
     updateActivity(activity) {
       const old = this.activities.find((act) => act.id === activity.id);
       Object.assign(old, activity);
+    },
+    setActivityStatusById(id, isProcessing = true) {
+      const activity = this.activities.find((activity) => activity.id === id);
+      activity.isProcessing = isProcessing;
     },
     startScript(id) {
       const activity = this.activities.find((act) => act.id === id);
