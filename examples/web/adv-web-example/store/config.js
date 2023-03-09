@@ -1,6 +1,36 @@
 import { defineStore } from "pinia";
 // import { ref } from "vue";
 
+const initStore = {
+  imageHash: "3ddb225352af0c2f44dfa9d5b59b4f197670aac73bdd323d137751dc",
+  yagnaOptions: {
+    apiKey: "30c59fef7d8c4639b62d576bfb624e1a",
+    basePath: "http://127.0.0.1:7465",
+  },
+  taskTimeout: 1000 * 60 * 3,
+  marketOfferExpiration: 1000 * 60 * 15,
+  offerFetchingInterval: 2_000,
+  budget: 1,
+  subnetTag: "public",
+  minCpuThreads: 1,
+  minStorageGib: 1,
+  minMemGib: 1,
+  agreementRequestTimeout: 30000,
+  agreementWaitingForApprovalTimeout: 10000,
+  activityRequestTimeout: 10000,
+  activityExecuteTimeout: 60000,
+  activityExeBatchResultsFetchInterval: 3_000,
+  payment: { driver: "erc20", network: "rinkeby" },
+  paymentTimeout: 20000,
+  allocationExpires: 1000 * 60 * 30,
+  maxInvoiceEvents: 10,
+  maxDebitNotesEvents: 10,
+  invoiceFetchingInterval: 2000,
+  debitNotesFetchingInterval: 2000,
+  paymentRequestTimeout: 10000,
+  expires: 1000 * 60 * 30,
+};
+
 export const useConfigStore = defineStore("options", () => {
   const pythonImages = [
     "e1d53511476b7eb7e6798399a163e164e2acb0eed84e8ecd87b1b282",
@@ -41,35 +71,9 @@ export const useConfigStore = defineStore("options", () => {
       disabled: true,
     },
   ];
-  const options = ref({
-    imageHash: "3ddb225352af0c2f44dfa9d5b59b4f197670aac73bdd323d137751dc",
-    yagnaOptions: {
-      apiKey: "411aa8e620954a318093687757053b8d",
-      basePath: "http://127.0.0.1:7465",
-    },
-    taskTimeout: 1000 * 60 * 3,
-    marketOfferExpiration: 1000 * 60 * 15,
-    offerFetchingInterval: 2_000,
-    budget: 1,
-    subnetTag: "public",
-    minCpuThreads: 1,
-    minStorageGib: 1,
-    minMemGib: 1,
-    agreementRequestTimeout: 30000,
-    agreementWaitingForApprovalTimeout: 10000,
-    activityRequestTimeout: 10000,
-    activityExecuteTimeout: 60000,
-    activityExeBatchResultsFetchInterval: 3_000,
-    payment: { driver: "erc20", network: "rinkeby" },
-    paymentTimeout: 20000,
-    allocationExpires: 1000 * 60 * 30,
-    maxInvoiceEvents: 10,
-    maxDebitNotesEvents: 10,
-    invoiceFetchingInterval: 2000,
-    debitNotesFetchingInterval: 2000,
-    paymentRequestTimeout: 10000,
-    expires: 1000 * 60 * 30,
-  });
+  const $reset = () => (options.value = initStore);
+
+  const options = ref(initStore);
   const command = () =>
     pythonImages.includes(options.value.imageHash) ? "/usr/local/bin/python3" : "/usr/local/bin/node";
   const commandArg = () => (pythonImages.includes(options.value.imageHash) ? "-c" : "-e");
@@ -90,6 +94,7 @@ export const useConfigStore = defineStore("options", () => {
         '    return "results"\n\n' +
         "print(task())";
   return {
+    $reset,
     images,
     options,
     command,

@@ -1,15 +1,25 @@
 <template>
-  <el-button class="btn-run" size="small" type="danger" @click="terminateAll" v-if="midLevelStore.isRunning">
-    Terminate all
-  </el-button>
-  <el-button class="btn-run" size="small" type="success" @click="createDemand" v-loading="loading" v-else>
-    Create Demand
-  </el-button>
+  <div class="btn-holders">
+    <el-button class="btn-reset" size="small" type="warning" @click="resetAll" v-if="!midLevelStore.isRunning">
+      Reset
+    </el-button>
+    <el-button class="btn-run" size="small" type="danger" @click="terminateAll" v-if="midLevelStore.isRunning">
+      Terminate all
+    </el-button>
+    <el-button class="btn-run" size="small" type="success" @click="createDemand" v-loading="loading" v-else>
+      Create Demand
+    </el-button>
+  </div>
 </template>
 <script setup>
 const { $eventTarget: eventTarget, $logger: logger } = useNuxtApp();
+import { useActivitiesStore } from "~/store/activities";
+import { useAgreementsStore } from "~/store/agreements";
 import { useConfigStore } from "~/store/config";
+import { useDemandsStore } from "~/store/demands";
 import { useMidLevelStore } from "~/store/mid";
+import { useOffersStore } from "~/store/offers";
+import { usePaymentsStore } from "~/store/payments";
 
 import {
   Accounts,
@@ -23,8 +33,13 @@ import {
   Payments,
 } from "../../../../../dist/yajsapi.min.js";
 
+const activitiesLevelStore = useActivitiesStore();
+const agreementsLevelStore = useAgreementsStore();
 const configStore = useConfigStore();
+const demandsStore = useDemandsStore();
 const midLevelStore = useMidLevelStore();
+const offersStore = useOffersStore();
+const paymentsStore = usePaymentsStore();
 
 logger.setLevel("debug");
 const loading = ref(false);
@@ -90,13 +105,29 @@ const terminateAll = async () => {
   }, 3000);
   configStore.currentStep = 0;
 };
+
+const resetAll = () => {
+  activitiesLevelStore.$reset();
+  agreementsLevelStore.$reset();
+  configStore.$reset();
+  demandsStore.$reset();
+  midLevelStore.$reset();
+  offersStore.$reset();
+  paymentsStore.$reset();
+};
 </script>
 <style scoped lang="scss">
-.btn-run {
+.btn-holders {
   position: absolute;
   right: 20px;
   margin-top: 10px;
   z-index: 999;
+}
+.btn-run {
+  --el-loading-spinner-size: 22px;
+  --el-mask-color: rgba(0, 0, 0, 0.4);
+}
+.btn-reset {
   --el-loading-spinner-size: 22px;
   --el-mask-color: rgba(0, 0, 0, 0.4);
 }
