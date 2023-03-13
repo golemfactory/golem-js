@@ -16,11 +16,7 @@
     "nuxt": "^3.2.2",
     "nuxt-monaco-editor": "^1.1.4",
     "sass": "^1.58.3",
-    "sass-loader": "^13.2.0"
-  },
-  "dependencies": {
-    "@element-plus/icons-vue": "^2.0.10",
-    "@pinia/nuxt": "^0.4.7",
-    "pinia": "^2.0.32"
+    "sass-loader": "^13.2.0",
+    "@element-plus/icons-vue": "^2.0.10"
   }
 }
