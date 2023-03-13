@@ -1,8 +1,8 @@
-import { BasePaymentOptions, InvoiceConfig } from './config.js';
+import { BasePaymentOptions, InvoiceConfig } from "./config.js";
 import { DebitNote as Model } from "ya-ts-client/dist/ya-payment/src/models";
-import { BaseNote } from './invoice.js';
-import { Events } from '../events/index.js';
-import { Rejection } from './rejection.js';
+import { BaseNote } from "./invoice.js";
+import { Events } from "../events/index.js";
+import { Rejection } from "./rejection.js";
 
 export type InvoiceOptions = BasePaymentOptions;
 
@@ -62,6 +62,7 @@ export class DebitNote extends BaseNote<Model> {
       );
       throw new Error(`Unable to accept debit note ${this.id} ${e?.response?.data?.message || e}`);
     }
+    this.options.eventTarget?.dispatchEvent(new Events.DebitNoteAccepted({ ...this, amount: totalAmountAccepted }));
   }
 
   /**

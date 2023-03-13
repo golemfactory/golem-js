@@ -19,6 +19,7 @@
     "sass-loader": "^13.2.0"
   },
   "dependencies": {
+    "@element-plus/icons-vue": "^2.0.10",
     "@pinia/nuxt": "^0.4.7",
     "pinia": "^2.0.32"
   }

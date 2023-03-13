@@ -56,6 +56,7 @@ export interface ActivityOptions {
 export class Activity {
   private readonly logger?: Logger;
   private isRunning = true;
+  private currentState: ActivityStateEnum = ActivityStateEnum.New;
 
   /**
    * @param id activity ID
@@ -128,6 +129,12 @@ export class Activity {
     try {
       const { data } = await this.options.api.state.getActivityState(this.id);
       const state = data.state[0];
+      if (this.currentState !== ActivityStateEnum[state]) {
+        this.options.eventTarget?.dispatchEvent(
+          new Events.ActivityStateChanged({ id: this.id, state: ActivityStateEnum[state] })
+        );
+        this.currentState = ActivityStateEnum[state];
+      }
       return ActivityStateEnum[state];
     } catch (error) {
       this.logger?.warn(`Cannot query activity state: ${error}`);

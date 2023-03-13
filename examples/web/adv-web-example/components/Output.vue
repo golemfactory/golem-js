@@ -1,10 +1,11 @@
 <template>
-  <pre class="output">{{output}}</pre>
+  <el-scrollbar v-loading="configStore.stdoutLoading" height="230px">
+    <pre class="output">{{configStore.stdout}}</pre>
+  </el-scrollbar>
 </template>
 <script setup>
-defineProps({
-  output: String,
-})
+import { useConfigStore } from "~/store/config";
+const configStore = useConfigStore();
 </script>
 <style scoped lang="scss">
 .output {
@@ -12,6 +13,8 @@ defineProps({
   color: #dddddd;
   min-height: 200px;
   padding: 10px;
+  word-wrap: break-word;
+  word-break: break-all;
 }
 .logs {
   font-size: 0.6rem;
