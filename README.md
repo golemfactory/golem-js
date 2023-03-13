@@ -65,7 +65,7 @@ import { TaskExecutor } from "yajsapi";
 ```
 
 #### Node.js context
-![hello_nodejs](https://user-images.githubusercontent.com/26308335/224718155-58f00703-7e7a-4716-8982-4d8b9552550b.gif)
+![hello_nodejs](https://user-images.githubusercontent.com/26308335/224719560-b4b01ebf-a15f-4187-b43a-d4f7bf767c70.gif)
 
 #### Web Browser context
 ![hello_web](https://user-images.githubusercontent.com/26308335/217530424-a1dd4487-f95f-43e6-a91b-7106b6f30802.gif)
