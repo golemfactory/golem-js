@@ -1,3 +1,6 @@
+### Advanced Web Example
+An example of using Golem JS API demonstrating the possibility of executing your own code (JS/Python) in a serverless application on the Golem network.
+
 # Nuxt 3 Minimal Starter
 
 Look at the [Nuxt 3 documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
