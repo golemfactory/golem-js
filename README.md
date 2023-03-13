@@ -70,7 +70,7 @@ import { TaskExecutor } from "yajsapi";
 #### Web Browser context
 ![hello_web](https://user-images.githubusercontent.com/26308335/217530424-a1dd4487-f95f-43e6-a91b-7106b6f30802.gif)
 
-For more detailed usage examples and tutorials, see the [Java Script API section of the Handbook](https://handbook.golem.network/yajsapi/)
+For more detailed usage examples and tutorials, see the [Java Script API section of the Handbook](https://docs.golem.network/)
 
 ### Testing
 
@@ -121,9 +121,9 @@ yarn format
 * [Golem](https://golem.network), a global, open-source, decentralized supercomputer that anyone can access.
 * Learn what you need to know to set-up your Golem requestor node:
     * [Requestor development: a quick primer](https://handbook.golem.network/requestor-tutorials/flash-tutorial-of-requestor-development)
-    * [Run first task on Golem](https://handbook.golem.network/requestor-tutorials/flash-tutorial-of-requestor-development/run-first-task-on-golem)
+    * [Quick start] ()
 * Have a look at the most important concepts behind any Golem application: [Golem application fundamentals](https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals)
 * Learn about preparing your own Docker-like images for the [VM runtime](https://handbook.golem.network/requestor-tutorials/vm-runtime)
 * Write your own app with JavaScript API:
-    * [High-level API](https://handbook.golem.network/todo1)
-    * [Mid-level API](https://handbook.golem.network/todo2)
+    * TODO1
+    * TODO2
