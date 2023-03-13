@@ -12,7 +12,7 @@ export default defineNuxtConfig({
 
   // css
   css: ["~/assets/scss/index.scss"],
-  modules: ["nuxt-monaco-editor", "@element-plus/nuxt", "@nuxtjs/google-fonts"],
+  modules: ["nuxt-monaco-editor", "@element-plus/nuxt", "@nuxtjs/google-fonts", "@pinia/nuxt"],
   googleFonts: {
     download: true,
     inject: true,
