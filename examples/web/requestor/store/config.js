@@ -5,7 +5,7 @@ export const useConfigStore = defineStore("config", {
     options: {
       imageHash: "3ddb225352af0c2f44dfa9d5b59b4f197670aac73bdd323d137751dc",
       yagnaOptions: {
-        apiKey: "30c59fef7d8c4639b62d576bfb624e1a",
+        apiKey: "",
         basePath: "http://127.0.0.1:7465",
       },
       taskTimeout: 1000 * 60 * 3,
