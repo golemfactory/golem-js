@@ -34,6 +34,9 @@ export default defineNuxtConfig({
     themes: ["dark"],
   },
   vite: {
+    esbuild: {
+      keepNames: true,
+    },
     css: {
       preprocessorOptions: {
         scss: {
