@@ -163,8 +163,8 @@ export const useMidLevelStore = defineStore("mid-level", {
       useActivitiesStore().setActivityStatusById(id, true);
       try {
         const configStore = useConfigStore();
-        const command = configStore.command(),
-          arg = configStore.commandArg(),
+        const command = configStore.command,
+          arg = configStore.commandArg,
           code = configStore.code;
 
         const activity = this.getActivityById(id);

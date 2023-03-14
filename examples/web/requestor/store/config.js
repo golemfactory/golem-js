@@ -99,6 +99,9 @@ export const useConfigStore = defineStore("config", {
     command() {
       return this.pythonImages.includes(this.options.imageHash) ? "/usr/local/bin/python3" : "/usr/local/bin/node";
     },
+    commandArg() {
+      return this.pythonImages.includes(this.options.imageHash) ? "-c" : "-e";
+    },
     exampleCode() {
       return this.lang === "javascript"
         ? 'const message = "Hello World from Golem Network !!!";\n' +

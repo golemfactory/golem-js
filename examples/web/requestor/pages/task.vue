@@ -67,7 +67,7 @@ const start = async () => {
 const run = async () => {
   configStore.stdoutLoading = true;
   await executor.run(async (ctx) => {
-    const result = await ctx.run(configStore.command(), [configStore.commandArg(), configStore.code]);
+    const result = await ctx.run(configStore.command, [configStore.commandArg, configStore.code]);
     if (result.stdout) configStore.stdout += result.stdout;
     if (result.stderr) configStore.stdout += result.stderr;
     configStore.stdoutLoading = false;
