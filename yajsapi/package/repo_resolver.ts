@@ -1,10 +1,10 @@
 import axios from "axios";
 import { Logger, runtimeContextChecker } from "../utils/index.js";
 
-const FALLBACK_REPO_URL = "http://girepo.dev.golem.network:8000";
+const FALLBACK_REPO_URL = "https://girepo.new.golem.network/";
 const PUBLIC_DNS_URL = "https://dns.google/resolve?type=srv&name=";
 const DEFAULT_REPO_SRV = "_girepo._tcp.dev.golem.network";
-const SCHEMA = "http";
+const SCHEMA = "https";
 const TIMEOUT = 10000;
 
 /**
