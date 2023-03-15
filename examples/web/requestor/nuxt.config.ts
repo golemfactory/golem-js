@@ -1,7 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   ssr: false,
-  dark: true,
   app: {
     // head
     head: {
@@ -13,13 +12,16 @@ export default defineNuxtConfig({
 
   // css
   css: ["~/assets/scss/index.scss"],
-  modules: ["nuxt-monaco-editor", "@element-plus/nuxt", "@nuxtjs/google-fonts", "@pinia/nuxt"],
+  modules: ["nuxt-monaco-editor", "@element-plus/nuxt", "@nuxtjs/google-fonts", "@pinia/nuxt", "@nuxtjs/color-mode"],
   googleFonts: {
     download: true,
     inject: true,
     families: {
       "Noto+Sans": true,
     },
+  },
+  colorMode: {
+    preference: "dark",
   },
   plugins: [],
   monacoEditor: {

@@ -7,6 +7,9 @@ body,
   background: var(--el-bg-color-page);
   --el-font-size-base: 0.8rem;
 }
+main.el-main {
+  min-height: calc(100vh - 130px);
+}
 .el-table {
   font-size: 0.8rem !important;
   thead {
