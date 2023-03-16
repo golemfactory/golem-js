@@ -46,10 +46,6 @@ yarn build
 This will generate production code in the `dist/` directory ready to be used in your nodejs or browser applications.
 
 
-### API Reference
-
-For a comprehensive API reference, please refer to [our official API reference page](https://docs.golem.network/creators/javascript/docs/).
-
 ### Usage
 
 Hello World
