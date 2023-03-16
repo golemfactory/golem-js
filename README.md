@@ -16,7 +16,7 @@
 
 ## Golem application development
 
-For a detailed introduction to using Golem and yajsapi to run your tasks on Golem and a guide to Golem Network application development in general, [please consult our handbook](https://handbook.golem.network/requestor-tutorials/flash-tutorial-of-requestor-development).
+For a detailed introduction to using Golem and yajsapi to run your tasks on Golem [please consult our quickstart section](https://docs.golem.network/creators/javascript/quickstart/).
 
 ### Installation
 
@@ -121,9 +121,9 @@ yarn format
 * [Golem](https://golem.network), a global, open-source, decentralized supercomputer that anyone can access.
 * Learn what you need to know to set-up your Golem requestor node:
     * [Requestor development: a quick primer](https://handbook.golem.network/requestor-tutorials/flash-tutorial-of-requestor-development)
-    * [Quick start] (https://docs.golem.network/creators/javascript/quickstart/)
+    * [Quick start](https://docs.golem.network/creators/javascript/quickstart/)
 * Have a look at the most important concepts behind any Golem application: [Golem application fundamentals](https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals)
 * Learn about preparing your own Docker-like images for the [VM runtime](https://handbook.golem.network/requestor-tutorials/vm-runtime)
 * Write your own app with JavaScript API:
-    * [High-level API] (https://docs.golem.network/creators/javascript/high-level/task-model/)
-    * [Mid-level API] (https://docs.golem.network/creators/javascript/mid-level/)
+    * [High-level API](https://docs.golem.network/creators/javascript/high-level/task-model/)
+    * [Mid-level API](https://docs.golem.network/creators/javascript/mid-level/)
