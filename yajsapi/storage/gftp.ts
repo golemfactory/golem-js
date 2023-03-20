@@ -20,7 +20,7 @@ export class GftpStorageProvider implements StorageProvider {
     this.gftpServerProcess = await spawn("gftp server", [], { shell: true });
     this.gftpServerProcess.on("error", (error) => this.logger?.error(error));
     this.gftpServerProcess.stderr.on("error", (error) => this.logger?.error(error));
-    this.logger?.info(`GFTP Version: ${await this.jsonrpc("version")}`);
+    this.logger?.info(`GftpStorageProvider GFTP Version: ${await this.jsonrpc("version")}`);
   }
 
   isInitiated() {

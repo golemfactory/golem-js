@@ -2,6 +2,7 @@ import { ExecutorOptions } from "./executor.js";
 import { Package } from "../package/index.js";
 import { MarketStrategy } from "../market/index.js";
 import { Logger, runtimeContextChecker, pinoLogger } from "../utils/index.js";
+import { StorageProvider, GftpStorageProvider } from "../storage/index.js";
 
 const DEFAULTS = {
   budget: 1.0,
@@ -38,6 +39,7 @@ export class ExecutorConfig {
   readonly yagnaOptions: { apiKey: string; basePath: string };
   readonly logger?: Logger;
   readonly eventTarget: EventTarget;
+  readonly storageProvider: StorageProvider
 
   constructor(options: ExecutorOptions) {
     const processEnv = !runtimeContextChecker.isBrowser
@@ -80,5 +82,6 @@ export class ExecutorConfig {
     this.logLevel = options.logLevel || DEFAULTS.logLevel;
     this.logger?.setLevel && this.logger?.setLevel(this.logLevel);
     this.eventTarget = options.eventTarget || new EventTarget();
+    this.storageProvider = options.storageProvider || new GftpStorageProvider(this.logger);
   }
 }

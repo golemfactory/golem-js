@@ -118,4 +118,8 @@ export class WorkContext {
     }
     return allResults[0];
   }
+
+  activityId(): string {
+    return this.activity.id;
+  }
 }

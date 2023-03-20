@@ -128,7 +128,7 @@ export class TaskExecutor {
     this.paymentService = new PaymentService(this.options);
     this.marketService = new MarketService(this.agreementPoolService, this.options);
     this.networkService = this.options.networkIp ? new NetworkService(this.options) : undefined;
-    this.storageProvider = runtimeContextChecker.isNode ? new GftpStorageProvider(this.logger) : undefined;
+    this.storageProvider = runtimeContextChecker.isNode ? this.options.storageProvider : undefined;
     this.taskService = new TaskService(
       this.taskQueue,
       this.agreementPoolService,
