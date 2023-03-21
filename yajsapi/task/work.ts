@@ -1,5 +1,5 @@
 import { Activity, Result } from "../activity/index.js";
-import { Command, Deploy, DownloadFile, Run, Script, Start, UploadFile } from "../script/index.js";
+import { Command, Deploy, DownloadFile, Run, Script, Start, Transfer, UploadFile } from "../script/index.js";
 import { StorageProvider } from "../storage/index.js";
 import { ActivityStateEnum } from "../activity/index.js";
 import { sleep, Logger, runtimeContextChecker } from "../utils/index.js";
@@ -25,6 +25,7 @@ export interface WorkOptions {
   logger?: Logger;
   initWorker?: Worker<undefined>;
   isRunning: () => boolean;
+  maxTaskRetries?: number;
 }
 
 /**
@@ -79,6 +80,9 @@ export class WorkContext {
   async uploadFile(src: string, dst: string): Promise<Result> {
     runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Upload File");
     return this.runOneCommand(new UploadFile(this.storageProvider!, src, dst));
+  }
+  async transfer(src: string, dst: string): Promise<Result> {
+    return this.runOneCommand(new Transfer(src, dst));
   }
   async uploadJson(json: object, dst: string): Promise<Result> {
     runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Upload JSON");

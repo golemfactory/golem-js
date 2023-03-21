@@ -16,7 +16,7 @@ export {
   InvoiceEvent,
   DebitNoteEvent,
 } from "./payment/index.js";
-export { Script, Run, Deploy, Start } from "./script/index.js";
+export { Script, Run, Deploy, Start, Transfer, UploadFile, DownloadFile } from "./script/index.js";
 
 // Utils
 export { ConsoleLogger, Logger } from "./utils/index.js";

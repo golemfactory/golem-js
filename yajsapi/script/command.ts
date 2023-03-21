@@ -97,9 +97,6 @@ export class UploadFile extends Transfer {
   async before() {
     this.args["from"] = await this.storageProvider.publish(this.src);
   }
-  async after() {
-    await this.storageProvider.release([this.args["from"]]);
-  }
 }
 
 /**

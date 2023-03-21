@@ -10,7 +10,8 @@ const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",
   payment: { driver: "erc20", network: "rinkeby" },
   maxParallelTasks: 5,
-  taskTimeout: 1000 * 60 * 3, // 3 min,
+  taskTimeout: 1000 * 60 * 10, // 10 min,
+  maxTaskRetries: 5,
 };
 
 /**
@@ -38,6 +39,7 @@ export class ExecutorConfig {
   readonly yagnaOptions: { apiKey: string; basePath: string };
   readonly logger?: Logger;
   readonly eventTarget: EventTarget;
+  readonly maxTaskRetries: number;
 
   constructor(options: ExecutorOptions) {
     const processEnv = !runtimeContextChecker.isBrowser
@@ -80,5 +82,6 @@ export class ExecutorConfig {
     this.logLevel = options.logLevel || DEFAULTS.logLevel;
     this.logger?.setLevel && this.logger?.setLevel(this.logLevel);
     this.eventTarget = options.eventTarget || new EventTarget();
+    this.maxTaskRetries = options.maxTaskRetries || DEFAULTS.maxTaskRetries;
   }
 }
