@@ -18,8 +18,7 @@ import {
   PaymentEventType,
   InvoiceEvent,
   DebitNoteEvent,
-  Transfer,
-} from "../../dist";
+} from "yajsapi";
 async function main() {
   const logger = new ConsoleLogger();
   const taskPackage = await Package.create({ imageHash: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae" });
@@ -47,17 +46,12 @@ async function main() {
   const agreement = await Agreement.create(offer.id, { logger });
   await agreement.confirm();
   const activity = await Activity.create(agreement.id, { logger, activityExecuteTimeout: 120_000 });
-  const script = await Script.create([
-    new Deploy(),
-    new Start(),
-    new Transfer("http://data.pr4e.org/cover3.jpg", "/golem/work/image.jpg"),
-    new Run("/bin/sh", ["-c", "ls -Al /golem/work/"]),
-  ]);
+  const script = await Script.create([new Deploy(), new Start(), new Run("/bin/sh", ["-c", "echo 'Hello Golem'"])]);
   const exeScript = script.getExeScriptRequest();
   const streamResult = await activity.execute(exeScript);
   const results: Result[] = [];
   for await (const result of streamResult) results.push(result);
-  console.log(results);
+  console.log(results[2].stdout);
   await activity.stop();
   await agreement.terminate();
   await demand.unsubscribe();
