@@ -1,5 +1,5 @@
 import { Activity, Result } from "../activity/index.js";
-import { Command, Deploy, DownloadFile, Run, Script, Start, Transfer, UploadFile } from "../script/index.js";
+import { Command, Deploy, DownloadFile, Run, Script, Start, UploadFile } from "../script/index.js";
 import { StorageProvider } from "../storage/index.js";
 import { ActivityStateEnum } from "../activity/index.js";
 import { sleep, Logger, runtimeContextChecker } from "../utils/index.js";
