@@ -25,7 +25,6 @@ export interface WorkOptions {
   logger?: Logger;
   initWorker?: Worker<undefined>;
   isRunning: () => boolean;
-  maxTaskRetries?: number;
 }
 
 /**
@@ -80,9 +79,6 @@ export class WorkContext {
   async uploadFile(src: string, dst: string): Promise<Result> {
     runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Upload File");
     return this.runOneCommand(new UploadFile(this.storageProvider!, src, dst));
-  }
-  async transfer(src: string, dst: string): Promise<Result> {
-    return this.runOneCommand(new Transfer(src, dst));
   }
   async uploadJson(json: object, dst: string): Promise<Result> {
     runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Upload JSON");
