@@ -48,6 +48,10 @@ export class Task<InputType = unknown, OutputType = unknown> implements Queueabl
   isRetry(): boolean {
     return this.state === TaskState.Retry;
   }
+
+  isDone(): boolean {
+    return this.state === TaskState.Done;
+  }
   isFinished(): boolean {
     return this.state === TaskState.Done || this.state === TaskState.Rejected;
   }
