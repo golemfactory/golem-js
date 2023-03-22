@@ -19,4 +19,4 @@ export {
 export { Script, Run, Deploy, Start } from "./script/index.js";
 
 // Utils
-export { ConsoleLogger, Logger } from "./utils/index.js";
+export { ConsoleLogger, Logger, createDefaultLogger, createJSONLogger, createNullLogger } from "./utils/index.js";

@@ -17,7 +17,8 @@
         "fibonacci": "node ./fibonacci/fibonacci.js",
         "ssh": "ts-node ./ssh/ssh.ts",
         "mid-level": "ts-node ./mid-level-api/hello.ts",
-        "web": "node ./web/app.mjs"
+        "web": "node ./web/app.mjs",
+        "logger-hello": "node ./logger-hello/logger.mjs"
     },
     "author": "GolemFactory <contact@golem.network>",
     "license": "LGPL-3.0",
