@@ -6,7 +6,7 @@ import { PaymentService } from "../payment/index.js";
 import { NetworkService } from "../network/index.js";
 import { ActivityOptions, Result } from "../activity/index.js";
 import { sleep, Logger, runtimeContextChecker } from "../utils/index.js";
-import { StorageProvider, GftpStorageProvider } from "../storage/index.js";
+import { StorageProvider } from "../storage/index.js";
 import { ExecutorConfig } from "./config.js";
 import { Events } from "../events/index.js";
 import { StatsService } from "../stats/service.js";
@@ -176,7 +176,7 @@ export class TaskExecutor {
     await this.agreementPoolService.end();
     await this.marketService.end();
     await this.paymentService.end();
-    this.storageProvider?.close();
+    if (!this.options.preserveStorageProvider) this.storageProvider?.close();
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFinished());
     this.printStats();
     await this.statsService.end();
