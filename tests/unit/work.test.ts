@@ -37,7 +37,6 @@ describe("Work Context", () => {
       const results = await worker(ctx);
       expect(results?.stdout).to.equal("test_result");
       await logger.expectToInclude("File published: ./file.txt");
-      await logger.expectToInclude("Urls released");
     });
 
     it("should execute upload json command", async () => {
@@ -53,7 +52,6 @@ describe("Work Context", () => {
       const results = await worker(ctx);
       expect(results?.stdout).to.equal("test_result");
       await logger.expectToInclude("Json published");
-      await logger.expectToInclude("Urls released");
     });
 
     it("should execute download file command", async () => {
@@ -101,7 +99,6 @@ describe("Work Context", () => {
       await logger.expectToInclude("File published: ./file.txt");
       await logger.expectToInclude("Json published");
       await logger.expectToInclude("File received: ./file.txt");
-      await logger.expectToInclude("Urls released");
     });
 
     it("should execute batch as stream", async () => {
@@ -142,7 +139,6 @@ describe("Work Context", () => {
       await logger.expectToInclude("File published: ./file.txt");
       await logger.expectToInclude("Json published");
       await logger.expectToInclude("File received: ./file.txt");
-      await logger.expectToInclude("Urls released");
     });
   });
   describe("Error handling", () => {

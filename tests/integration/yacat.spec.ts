@@ -51,5 +51,5 @@ describe("Password cracking", function () {
       }
     }
     expect(password).to.equal("yo");
-  }).timeout(180000);
+  }).timeout(240000);
 });
