@@ -7,7 +7,7 @@ import { YagnaOptions } from "../executor/index.js";
 const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",
   activityRequestTimeout: 10000,
-  activityExecuteTimeout: 60000,
+  activityExecuteTimeout: 1000 * 60 * 5, // 5 min,
   activityExeBatchResultsFetchInterval: 3000,
 };
 

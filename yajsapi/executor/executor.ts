@@ -35,6 +35,8 @@ export type ExecutorOptions = {
   yagnaOptions?: YagnaOptions;
   /** Event Bus implements EventTarget  */
   eventTarget?: EventTarget;
+  /** The maximum number of retries when the job failed on the provider */
+  maxTaskRetries?: number;
 } & ActivityOptions &
   AgreementOptions &
   BasePaymentOptions &
@@ -308,7 +310,13 @@ export class TaskExecutor {
     worker: Worker<InputType, OutputType>,
     data?: InputType
   ): Promise<OutputType | undefined> {
-    const task = new Task<InputType, OutputType>((++this.lastTaskIndex).toString(), worker, data, this.initWorker);
+    const task = new Task<InputType, OutputType>(
+      (++this.lastTaskIndex).toString(),
+      worker,
+      data,
+      this.initWorker,
+      this.options.maxTaskRetries
+    );
     this.taskQueue.addToEnd(task);
     let timeout = false;
     const timeoutId = setTimeout(() => (timeout = true), this.options.taskTimeout);
