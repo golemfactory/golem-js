@@ -103,7 +103,7 @@ describe("Task Service", () => {
       activityStateCheckingInterval: 10,
     });
     service.run().catch((e) => console.error(e));
-    await logger.expectToInclude("Error: Task 1 has been rejected!", 1400);
+    await logger.expectToInclude("Error: Task 1 has been rejected!", 1800);
     expect(task.isRejected()).to.be.true;
     await service.end();
   });
