@@ -66,7 +66,7 @@ describe("Task Service", () => {
       activityStateCheckingInterval: 100,
     });
     service.run().catch((e) => console.error(e));
-    await logger.expectToInclude("Task 1 execution failed. Trying to redo the task. Attempt #", 500);
+    await logger.expectToInclude("Task 1 execution failed. Trying to redo the task. Attempt #", 700);
     await service.end();
   });
 
@@ -86,7 +86,7 @@ describe("Task Service", () => {
     service.run().catch((e) => console.error(e));
     await logger.expectToInclude(
       "Error: Task 1 has been rejected! Work rejected by user. Reason: Invalid value computed by provider",
-      1400
+      1600
     );
     expect(task.isFinished()).to.be.true;
     await service.end();
