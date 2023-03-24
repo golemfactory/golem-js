@@ -59,9 +59,6 @@ export class PaymentService {
   async end() {
     if (this.agreementsToPay.size) {
       this.logger?.debug("Waiting for all invoices to be paid...");
-      this.logger?.info(`There are ${this.invoicesToPay.size} invoices to be paid... and ${this.agreementsDebitNotes.size} debit notes to be agreed...`)
-      this.logger?.info(`Using ${this.allocations.length} allocations...`)
-      this.logger?.info(`For ${this.agreementsToPay.size} agreements...`)
       let timeout = false;
       const timeoutId = setTimeout(() => (timeout = true), this.options.paymentTimeout);
       let i = 0;
@@ -70,7 +67,7 @@ export class PaymentService {
         await sleep(2000, true);
         i++;
         if (i > 10) {
-          this.logger?.info(`Waiting for ${this.agreementsToPay.size} agreement to be paid...`);
+          this.logger?.info(`Waiting for ${this.agreementsToPay.size} agreements to be paid...`);
           i = 0;
         }
       }
@@ -105,9 +102,6 @@ export class PaymentService {
       }
       this.allocations.push(await Allocation.create({ ...this.options.options, account }));
     }
-
-    this.logger?.debug(`Allocations created: ${this.allocations.length}`);
-
     return this.allocations;
   }
 
@@ -131,7 +125,7 @@ export class PaymentService {
         const agreement = this.agreementsToPay.get(invoice.agreementId);
         if (!agreement) {
           this.invoicesToPay.delete(invoice.id);
-          this.logger?.info(`Agreement ${invoice.agreementId} has not been accepted to payment`);
+          this.logger?.debug(`Agreement ${invoice.agreementId} has not been accepted to payment`);
           continue;
         }
         try {
@@ -153,7 +147,6 @@ export class PaymentService {
   private async processDebitNotes() {
     while (this.isRunning) {
       for (const debitNote of this.debitNotesToPay.values()) {
-        this.logger?.info(`Processing Debit Note for agreement ${debitNote.agreementId}`);
         if (!this.agreementsDebitNotes.has(debitNote.agreementId)) continue;
         try {
           const allocation = this.getAllocationForPayment(debitNote);
@@ -164,7 +157,7 @@ export class PaymentService {
           }
 
           this.debitNotesToPay.delete(debitNote.id);
-          this.logger?.info(`Debit Note accepted for agreement ${debitNote.agreementId}`);
+          this.logger?.debug(`Debit Note accepted for agreement ${debitNote.agreementId}`);
         } catch (error) {
           this.logger?.error(`Payment Debit Note failed for agreement ${debitNote.agreementId} ${error}`);
         }
@@ -176,20 +169,20 @@ export class PaymentService {
   private async subscribePayments(event) {
     if (event instanceof InvoiceEvent) {
       if (this.agreementsToPay.has(event.invoice.agreementId)) {
-        this.logger?.info(`Invoice event received for ${event.invoice.amount} and agreement ${event.invoice.agreementId}`)
+        this.logger?.debug(`Invoice event received for ${event.invoice.amount} and agreement ${event.invoice.agreementId}`)
         this.invoicesToPay.set(event.invoice.id, event.invoice)
       }
       else {
-        this.logger?.info(`Invoice event received for ${event.invoice.amount} and agreement ${event.invoice.agreementId} but agreement is not accepted for payment`)
+        this.logger?.debug(`Invoice event received for ${event.invoice.amount} and agreement ${event.invoice.agreementId} but agreement is not accepted for payment`)
       }
-    };
+    }
     if (event instanceof DebitNoteEvent) {
       if (this.agreementsDebitNotes.has(event.debitNote.agreementId)) {
-        this.logger?.info(`Debit Note event received for ${event.debitNote.totalAmountDue} and agreement ${event.debitNote.agreementId}`)
+        this.logger?.debug(`Debit Note event received for ${event.debitNote.totalAmountDue} and agreement ${event.debitNote.agreementId}`)
         this.debitNotesToPay.set(event.debitNote.id, event.debitNote)
       }
       else {
-        this.logger?.info(`Debit Note event received for ${event.debitNote.totalAmountDue} and agreement ${event.debitNote.agreementId} but agreement is not accepted for payment`)
+        this.logger?.debug(`Debit Note event received for ${event.debitNote.totalAmountDue} and agreement ${event.debitNote.agreementId} but agreement is not accepted for payment`)
       }
     }
   }

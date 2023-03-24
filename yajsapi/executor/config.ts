@@ -41,6 +41,7 @@ export class ExecutorConfig {
   readonly logger?: Logger;
   readonly eventTarget: EventTarget;
   readonly storageProvider: StorageProvider
+  readonly preserveStorageProvider: boolean;
   readonly maxTaskRetries: number;
 
   constructor(options: ExecutorOptions) {
@@ -85,6 +86,7 @@ export class ExecutorConfig {
     this.logger?.setLevel && this.logger?.setLevel(this.logLevel);
     this.eventTarget = options.eventTarget || new EventTarget();
     this.storageProvider = options.storageProvider || new GftpStorageProvider(this.logger);
+    this.preserveStorageProvider = options.storageProvider !== undefined;
     this.maxTaskRetries = options.maxTaskRetries || DEFAULTS.maxTaskRetries;
   }
 }
