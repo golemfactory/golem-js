@@ -1,4 +1,4 @@
-import { TaskExecutor, createJSONLogger, createNullLogger, createDefaultLogger } from "yajsapi";
+import { TaskExecutor, createJSONLogger, createNullLogger, createDefaultLogger } from "dist/index.js";
 import { program, Option } from "commander";
 
 // Create command-line configuration.
