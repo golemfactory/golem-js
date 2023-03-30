@@ -1,14 +1,14 @@
-import { Events, EventType, BaseEvent } from '../events/index.js';
-import { Logger } from '../utils/index.js';
-import { Providers } from './providers.js';
-import { Tasks } from './tasks.js';
-import { Payments } from './payments.js';
-import { Agreements } from './agreements.js';
-import { Invoices } from './invoices.js';
-import { Proposals } from './proposals.js';
-import { Allocations } from './allocations.js';
-import { Activities } from './activities.js';
-import { Times } from './times.js';
+import { Events, EventType, BaseEvent } from "../events/index.js";
+import { Logger } from "../utils/index.js";
+import { Providers } from "./providers.js";
+import { Tasks } from "./tasks.js";
+import { Payments } from "./payments.js";
+import { Agreements } from "./agreements.js";
+import { Invoices } from "./invoices.js";
+import { Proposals } from "./proposals.js";
+import { Allocations } from "./allocations.js";
+import { Activities } from "./activities.js";
+import { Times } from "./times.js";
 
 interface StatsOptions {
   eventTarget: EventTarget;
@@ -108,7 +108,6 @@ export class StatsService {
               .getByProviderId(provider.id)
               .map((proposal) => {
                 const agreement = this.agreements.getByProposalId(proposal.id);
-
                 return {
                   ...proposal,
                   agreement: agreement
@@ -139,6 +138,23 @@ export class StatsService {
           };
         })
         .all(),
+      agreements: this.agreements
+        .getAll()
+        .map((agreement) => {
+          const provider = this.providers.getById(agreement.providerId);
+          const tasks = this.tasks.getByAgreementId(agreement.id);
+          const invoices = this.invoices.getByAgreementId(agreement.id);
+          const payments = this.payments.getByAgreementId(agreement.id);
+          return {
+            agreementId: agreement.id,
+            provider,
+            tasks: tasks.where("status", "finished").count(),
+            cost: invoices.sum("amount"),
+            paymentStatus: payments.count() > 0 ? "paid" : "unpaid",
+          };
+        })
+        .all(),
+      costs: this.getAllCosts(),
     };
   }
 

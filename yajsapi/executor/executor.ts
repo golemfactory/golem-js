@@ -16,6 +16,7 @@ import { NetworkServiceOptions } from "../network/service.js";
 import { AgreementServiceOptions } from "../agreement/service.js";
 import { WorkOptions } from "../task/work.js";
 import { LogLevel } from "../utils/logger.js";
+const terminatingSignals = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
 
 /**
  * @category High-level
@@ -39,6 +40,8 @@ export type ExecutorOptions = {
   maxTaskRetries?: number;
 
   storageProvider?: StorageProvider;
+
+  isSubprocess?: boolean;
 } & ActivityOptions &
   AgreementOptions &
   BasePaymentOptions &
@@ -161,7 +164,7 @@ export class TaskExecutor {
     this.networkService?.run().catch((e) => this.handleCriticalError(e));
     this.statsService.run().catch((e) => this.handleCriticalError(e));
     this.storageProvider?.init().catch((e) => this.handleCriticalError(e));
-    if (runtimeContextChecker.isNode) this.handleCancelEvent();
+    if (runtimeContextChecker.isNode && !this.options.isSubprocess) this.handleCancelEvent();
     this.options.eventTarget.dispatchEvent(new Events.ComputationStarted());
     this.logger?.info(
       `Task Executor has started using subnet: ${this.options.subnetTag}, network: ${this.options.payment?.network}, driver: ${this.options.payment?.driver}`
@@ -172,6 +175,7 @@ export class TaskExecutor {
    * Stop all executor services and shut down executor instance
    */
   async end() {
+    this.removeCancelEvent();
     if (!this.isRunning) return;
     this.isRunning = false;
     await this.networkService?.end();
@@ -351,16 +355,19 @@ export class TaskExecutor {
   }
 
   private handleCancelEvent() {
-    const terminatingSignals = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
-    const cancel = async () => {
-      terminatingSignals.forEach((event) => process.off(event, cancel));
-      this.logger?.warn("Executor has interrupted by the user. Stopping all tasks...");
-      await this.end().catch((error) => {
-        this.logger?.error(error);
-        process.exit(1);
-      });
-    };
-    terminatingSignals.forEach((event) => process.on(event, cancel));
+    terminatingSignals.forEach((event) => process.on(event, this.cancel.bind(this)));
+  }
+
+  private removeCancelEvent() {
+    terminatingSignals.forEach((event) => process.off(event, this.cancel.bind(this)));
+  }
+
+  private async cancel() {
+    this.logger?.warn("Executor has interrupted by the user. Stopping all tasks...");
+    await this.end().catch((error) => {
+      this.logger?.error(error);
+      process.exit(1);
+    });
   }
 
   private printStats() {
