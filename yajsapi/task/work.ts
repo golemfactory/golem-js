@@ -34,6 +34,7 @@ export interface WorkOptions {
  */
 export class WorkContext {
   public readonly provider?: { name: string; id: string; networkConfig?: object };
+  public readonly activityId: string;
   private readonly workTimeout: number;
   private readonly logger?: Logger;
   private readonly activityStateCheckingInterval: number;
@@ -41,6 +42,7 @@ export class WorkContext {
   private readonly networkNode?: NetworkNode;
 
   constructor(private activity: Activity, private options?: WorkOptions) {
+    this.activityId = this.activity.id;
     this.workTimeout = options?.workTimeout || DEFAULTS.workTimeout;
     this.logger = options?.logger;
     this.activityStateCheckingInterval = options?.activityStateCheckingInterval || DEFAULTS.activityStateCheckInterval;

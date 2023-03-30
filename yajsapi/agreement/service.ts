@@ -158,7 +158,7 @@ export class AgreementPoolService implements ComputationHistory {
           throw new Error(`Agreement ${agreement.id} cannot be approved. Current state: ${state}`);
         }
       } catch (e) {
-        this.logger?.error(`Unable to create agreement form available proposal: ${e?.data?.message || e}`);
+        this.logger?.debug(`Unable to create agreement form available proposal: ${e?.data?.message || e}`);
         await sleep(2);
         agreement = null;
       }

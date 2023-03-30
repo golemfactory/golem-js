@@ -37,6 +37,8 @@ export type ExecutorOptions = {
   eventTarget?: EventTarget;
   /** The maximum number of retries when the job failed on the provider */
   maxTaskRetries?: number;
+
+  storageProvider?: StorageProvider;
 } & ActivityOptions &
   AgreementOptions &
   BasePaymentOptions &
@@ -79,6 +81,7 @@ export class TaskExecutor {
   private logger?: Logger;
   private lastTaskIndex = 0;
   private isRunning = true;
+  private configOptions: ExecutorOptions;
 
   /**
    * Create a new Task Executor
@@ -120,17 +123,17 @@ export class TaskExecutor {
    * @param options - contains information needed to start executor, if string the imageHash is required, otherwise it should be a type of {@link ExecutorOptions}
    */
   private constructor(options: ExecutorOptionsMixin) {
-    const configOptions: ExecutorOptions = (
-      typeof options === "string" ? { package: options } : options
-    ) as ExecutorOptions;
-    this.options = new ExecutorConfig(configOptions);
+    this.configOptions = (typeof options === "string" ? { package: options } : options) as ExecutorOptions;
+    this.options = new ExecutorConfig(this.configOptions);
     this.logger = this.options.logger;
     this.taskQueue = new TaskQueue<Task<any, any>>();
     this.agreementPoolService = new AgreementPoolService(this.options);
     this.paymentService = new PaymentService(this.options);
     this.marketService = new MarketService(this.agreementPoolService, this.options);
     this.networkService = this.options.networkIp ? new NetworkService(this.options) : undefined;
-    this.storageProvider = runtimeContextChecker.isNode ? new GftpStorageProvider(this.logger) : undefined;
+    this.storageProvider = runtimeContextChecker.isNode
+      ? this.configOptions.storageProvider || new GftpStorageProvider(this.logger)
+      : undefined;
     this.taskService = new TaskService(
       this.taskQueue,
       this.agreementPoolService,
@@ -176,7 +179,7 @@ export class TaskExecutor {
     await this.agreementPoolService.end();
     await this.marketService.end();
     await this.paymentService.end();
-    this.storageProvider?.close();
+    if (!this.configOptions.storageProvider) this.storageProvider?.close();
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFinished());
     this.printStats();
     await this.statsService.end();
@@ -331,7 +334,7 @@ export class TaskExecutor {
     clearTimeout(timeoutId);
     if (timeout) {
       const error = new Error(`Task ${task.id} timeout.`);
-      task.stop(undefined, error);
+      task.stop(undefined, error, true);
       throw error;
     }
   }
