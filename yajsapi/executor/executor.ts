@@ -352,6 +352,7 @@ export class TaskExecutor {
       this.logger?.error(e);
       process?.exit(1);
     });
+    throw e;
   }
 
   private handleCancelEvent() {

@@ -12,7 +12,7 @@ const DEFAULTS = {
   budget: 1.0,
   payment: { driver: "erc20", network: "rinkeby" },
   paymentTimeout: 20000,
-  allocationExpires: 1000 * 60 * 30, // 30 min
+  allocationExpires: 1000 * 60 * 60, // 60 min
   invoiceReceiveTimeout: 1000 * 60 * 5, // 5 min
   maxInvoiceEvents: 10,
   maxDebitNotesEvents: 10,
