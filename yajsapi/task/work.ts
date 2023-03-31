@@ -53,7 +53,7 @@ export class WorkContext {
     this.networkNode = options?.networkNode;
   }
   async before(): Promise<Result[] | void> {
-    let state = await this.activity.getState();
+    let state = await this.activity.getState().catch((e) => this.logger?.debug(e));
     if (state === ActivityStateEnum.Ready) {
       if (this.options?.initWorker) await this.options?.initWorker(this, undefined);
       return;
@@ -67,7 +67,7 @@ export class WorkContext {
     const timeoutId = setTimeout(() => (timeout = true), this.workTimeout);
     while (state !== ActivityStateEnum.Ready && !timeout && this.options?.isRunning()) {
       await sleep(this.activityStateCheckingInterval, true);
-      state = await this.activity.getState();
+      state = await this.activity.getState().catch((e) => this.logger?.debug(e));
     }
     clearTimeout(timeoutId);
     if (state !== ActivityStateEnum.Ready) {
