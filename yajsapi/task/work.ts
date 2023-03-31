@@ -12,12 +12,12 @@ export type Worker<InputType = unknown, OutputType = unknown> = (
 ) => Promise<OutputType | undefined>;
 
 const DEFAULTS = {
-  workTimeout: 10000,
+  activityPreparingTimeout: 20000,
   activityStateCheckInterval: 1000,
 };
 
 export interface WorkOptions {
-  workTimeout?: number;
+  activityPreparingTimeout?: number;
   activityStateCheckingInterval?: number;
   provider?: { name: string; id: string; networkConfig?: object };
   storageProvider?: StorageProvider;
@@ -36,7 +36,7 @@ export class WorkContext {
   public readonly provider?: { name: string; id: string; networkConfig?: object };
   public readonly agreementId: string;
   public readonly activityId: string;
-  private readonly workTimeout: number;
+  private readonly activityPreparingTimeout: number;
   private readonly logger?: Logger;
   private readonly activityStateCheckingInterval: number;
   private readonly storageProvider?: StorageProvider;
@@ -45,7 +45,7 @@ export class WorkContext {
   constructor(private activity: Activity, private options?: WorkOptions) {
     this.agreementId = this.activity.agreementId;
     this.activityId = this.activity.id;
-    this.workTimeout = options?.workTimeout || DEFAULTS.workTimeout;
+    this.activityPreparingTimeout = options?.activityPreparingTimeout || DEFAULTS.activityPreparingTimeout;
     this.logger = options?.logger;
     this.activityStateCheckingInterval = options?.activityStateCheckingInterval || DEFAULTS.activityStateCheckInterval;
     this.provider = options?.provider;
@@ -64,10 +64,10 @@ export class WorkContext {
       );
     }
     let timeout = false;
-    const timeoutId = setTimeout(() => (timeout = true), this.workTimeout);
+    const timeoutId = setTimeout(() => (timeout = true), this.activityPreparingTimeout);
     while (state !== ActivityStateEnum.Ready && !timeout && this.options?.isRunning()) {
       await sleep(this.activityStateCheckingInterval, true);
-      state = await this.activity.getState().catch((e) => this.logger?.debug(e));
+      state = await this.activity.getState().catch((e) => this.logger?.warn(`${e} Provider: ${this.provider?.name}`));
     }
     clearTimeout(timeoutId);
     if (state !== ActivityStateEnum.Ready) {

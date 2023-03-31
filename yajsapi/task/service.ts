@@ -96,7 +96,6 @@ export class TaskService {
         networkNode,
         logger: this.logger,
         activityStateCheckingInterval: this.options.activityStateCheckingInterval,
-        workTimeout: this.options.taskTimeout,
         isRunning: () => this.isRunning,
       });
       await ctx.before();
@@ -127,7 +126,7 @@ export class TaskService {
         this.options.eventTarget?.dispatchEvent(new Events.TaskRejected({ id: task.id, reason }));
         throw new Error(`Task ${task.id} has been rejected! ${reason}`);
       }
-      await activity?.stop().catch((actError) => this.logger?.error(actError));
+      await activity?.stop().catch((actError) => this.logger?.debug(actError));
       this.activities.delete(agreement.id);
     } finally {
       --this.activeTasksCount;
