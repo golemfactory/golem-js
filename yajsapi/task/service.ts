@@ -127,7 +127,7 @@ export class TaskService {
         this.options.eventTarget?.dispatchEvent(new Events.TaskRejected({ id: task.id, reason }));
         throw new Error(`Task ${task.id} has been rejected! ${reason}`);
       }
-      await activity.stop().catch((actError) => this.logger?.error(actError));
+      await activity?.stop().catch((actError) => this.logger?.error(actError));
       this.activities.delete(agreement.id);
     } finally {
       --this.activeTasksCount;
