@@ -116,14 +116,22 @@ export class TaskService {
       if (task.isRetry() && this.isRunning) {
         this.tasksQueue.addToBegin(task);
         this.options.eventTarget?.dispatchEvent(
-          new Events.TaskRedone({ id: task.id, retriesCount: task.getRetriesCount() })
+          new Events.TaskRedone({
+            id: task.id,
+            providerId: agreement.provider.id,
+            agreementId: agreement.id,
+            retriesCount: task.getRetriesCount(),
+            reason: error.toString(),
+          })
         );
         this.logger?.warn(
           `Task ${task.id} execution failed. Trying to redo the task. Attempt #${task.getRetriesCount()}. ${error}`
         );
       } else {
         const reason = error.message || error.toString();
-        this.options.eventTarget?.dispatchEvent(new Events.TaskRejected({ id: task.id, reason }));
+        this.options.eventTarget?.dispatchEvent(
+          new Events.TaskRejected({ id: task.id, providerId: agreement.provider.id, agreementId: agreement.id, reason })
+        );
         throw new Error(`Task ${task.id} has been rejected! ${reason}`);
       }
       await activity?.stop().catch((actError) => this.logger?.debug(actError));

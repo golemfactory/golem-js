@@ -25,8 +25,14 @@ export class ComputationStarted extends BaseEvent<undefined> {}
 export class ComputationFinished extends BaseEvent<undefined> {}
 export class ComputationFailed extends BaseEvent<{ reason?: string }> {}
 export class TaskStarted extends BaseEvent<{ id: string; agreementId: string; activityId: string }> {}
-export class TaskRedone extends BaseEvent<{ id: string; retriesCount: number }> {}
-export class TaskRejected extends BaseEvent<{ id: string; reason?: string }> {}
+export class TaskRedone extends BaseEvent<{
+  id: string;
+  agreementId: string;
+  providerId: string;
+  retriesCount: number;
+  reason?: string;
+}> {}
+export class TaskRejected extends BaseEvent<{ id: string; agreementId: string; providerId: string; reason?: string }> {}
 export class TaskFinished extends BaseEvent<{ id: string }> {}
 export class AllocationCreated extends BaseEvent<{ id: string; amount: number; platform?: string }> {}
 export class SubscriptionCreated extends BaseEvent<{ id: string }> {}
