@@ -136,6 +136,7 @@ export class PaymentService {
       if (!this.invoicesToPay.has(invoice.id)) return;
       const allocation = this.getAllocationForPayment(invoice);
       await invoice.accept(invoice.amount, allocation.id);
+      this.invoicesToPay.delete(invoice.id);
       this.logger?.info(`Invoice accepted from provider ${invoice.providerId}`);
     } catch (error) {
       this.logger?.error(`Invoice failed from provider ${invoice.providerId}. ${error}`);
@@ -147,6 +148,7 @@ export class PaymentService {
       if (!this.debitNotesToPay.has(debitNote.id)) return;
       const allocation = this.getAllocationForPayment(debitNote);
       await debitNote.accept(debitNote.totalAmountDue, allocation.id);
+      this.debitNotesToPay.delete(debitNote.id);
       this.logger?.debug(`Debit Note accepted for agreement ${debitNote.agreementId}`);
     } catch (error) {
       this.logger?.error(`Payment Debit Note failed for agreement ${debitNote.agreementId} ${error}`);
