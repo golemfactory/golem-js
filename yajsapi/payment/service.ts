@@ -134,9 +134,18 @@ export class PaymentService {
   private async processInvoice(invoice: Invoice) {
     try {
       if (!this.invoicesToPay.has(invoice.id)) return;
+      const agreement = this.agreementsToPay.get(invoice.agreementId);
+      if (!agreement) {
+        this.invoicesToPay.delete(invoice.id);
+        this.logger?.debug(`Agreement ${invoice.agreementId} has not been accepted to payment`);
+        return;
+      }
       const allocation = this.getAllocationForPayment(invoice);
       await invoice.accept(invoice.amount, allocation.id);
       this.invoicesToPay.delete(invoice.id);
+      this.paidAgreements.add({ invoice, agreement });
+      this.agreementsDebitNotes.delete(invoice.agreementId);
+      this.agreementsToPay.delete(invoice.agreementId);
       this.logger?.info(`Invoice accepted from provider ${invoice.providerId}`);
     } catch (error) {
       this.logger?.error(`Invoice failed from provider ${invoice.providerId}. ${error}`);
