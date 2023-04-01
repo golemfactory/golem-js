@@ -35,6 +35,7 @@ export class PaymentService {
   private agreementsToPay: Map<string, AgreementPayable> = new Map();
   private agreementsDebitNotes: Set<string> = new Set();
   private paidAgreements: Set<{ agreement: AgreementPayable; invoice: Invoice }> = new Set();
+  private paidDebitNotes: Set<string> = new Set();
   private payments?: Payments;
 
   constructor(options?: PaymentOptions) {
@@ -122,8 +123,10 @@ export class PaymentService {
 
   private async processDebitNote(debitNote: DebitNote) {
     try {
+      if (this.paidDebitNotes.has(debitNote.id)) return;
       const allocation = this.getAllocationForPayment(debitNote);
       await debitNote.accept(debitNote.totalAmountDue, allocation.id);
+      this.paidDebitNotes.add(debitNote.id);
       this.logger?.debug(`Debit Note accepted for agreement ${debitNote.agreementId}`);
     } catch (error) {
       this.logger?.error(`Payment Debit Note failed for agreement ${debitNote.agreementId} ${error}`);
