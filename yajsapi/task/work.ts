@@ -27,6 +27,10 @@ export interface WorkOptions {
   isRunning: () => boolean;
 }
 
+interface CommandOptions {
+  timeout?: number;
+}
+
 /**
  * Work Context
  *
@@ -75,23 +79,25 @@ export class WorkContext {
     }
     if (this.options?.initWorker) await this.options?.initWorker(this, undefined);
   }
-  async run(...args: Array<string | string[]>): Promise<Result> {
+  async run(...args: Array<string | string[] | CommandOptions>): Promise<Result> {
     const command =
       args.length === 1 ? new Run("/bin/sh", ["-c", <string>args[0]]) : new Run(<string>args[0], <string[]>args[1]);
-    return this.runOneCommand(command);
+    const options: CommandOptions | undefined =
+      typeof args?.[1] === "object" ? <CommandOptions>args?.[1] : <CommandOptions>args?.[2];
+    return this.runOneCommand(command, options);
   }
-  async uploadFile(src: string, dst: string): Promise<Result> {
+  async uploadFile(src: string, dst: string, options?: CommandOptions): Promise<Result> {
     runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Upload File");
-    return this.runOneCommand(new UploadFile(this.storageProvider!, src, dst));
+    return this.runOneCommand(new UploadFile(this.storageProvider!, src, dst), options);
   }
-  async uploadJson(json: object, dst: string): Promise<Result> {
+  async uploadJson(json: object, dst: string, options?: CommandOptions): Promise<Result> {
     runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Upload JSON");
     const src = Buffer.from(JSON.stringify(json), "utf-8");
-    return this.runOneCommand(new UploadFile(this.storageProvider!, src, dst));
+    return this.runOneCommand(new UploadFile(this.storageProvider!, src, dst), options);
   }
-  async downloadFile(src: string, dst: string): Promise<Result> {
+  async downloadFile(src: string, dst: string, options?: CommandOptions): Promise<Result> {
     runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Download File");
-    return this.runOneCommand(new DownloadFile(this.storageProvider!, src, dst));
+    return this.runOneCommand(new DownloadFile(this.storageProvider!, src, dst), options);
   }
   beginBatch() {
     return Batch.create(this.activity, this.storageProvider, this.logger);
@@ -104,11 +110,11 @@ export class WorkContext {
     return this.networkNode?.getWebsocketUri(port);
   }
 
-  private async runOneCommand(command: Command): Promise<Result> {
+  private async runOneCommand(command: Command, options?: CommandOptions): Promise<Result> {
     const script = new Script([command]);
     await script.before();
     await sleep(100, true);
-    const results = await this.activity.execute(script.getExeScriptRequest());
+    const results = await this.activity.execute(script.getExeScriptRequest(), false, options?.timeout);
     const allResults: Result[] = [];
     for await (const result of results) allResults.push(result);
     const commandsErrors = allResults.filter((res) => res.result === "Error");

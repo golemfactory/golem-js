@@ -42,6 +42,8 @@ export type ExecutorOptions = {
   storageProvider?: StorageProvider;
 
   isSubprocess?: boolean;
+
+  activityPreparingTimeout?: number;
 } & ActivityOptions &
   AgreementOptions &
   BasePaymentOptions &
