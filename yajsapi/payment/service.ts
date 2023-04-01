@@ -133,6 +133,7 @@ export class PaymentService {
 
   private async processInvoice(invoice: Invoice) {
     try {
+      if (!this.invoicesToPay.has(invoice.id)) return;
       const allocation = this.getAllocationForPayment(invoice);
       await invoice.accept(invoice.amount, allocation.id);
       this.logger?.info(`Invoice accepted from provider ${invoice.providerId}`);
@@ -143,6 +144,7 @@ export class PaymentService {
 
   private async processDebitNote(debitNote: DebitNote) {
     try {
+      if (!this.debitNotesToPay.has(debitNote.id)) return;
       const allocation = this.getAllocationForPayment(debitNote);
       await debitNote.accept(debitNote.totalAmountDue, allocation.id);
       this.logger?.debug(`Debit Note accepted for agreement ${debitNote.agreementId}`);
