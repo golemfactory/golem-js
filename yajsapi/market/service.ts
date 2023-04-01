@@ -68,8 +68,7 @@ export class MarketService {
         await proposal.respond(chosenPlatform).catch((e) => this.logger?.debug(e));
         this.logger?.debug(`Proposal has been responded (${proposal.id})`);
       } else {
-        await proposal.reject(reason);
-        this.logger?.debug(`Proposal has been rejected (${proposal.id}). Reason: ${reason}`);
+        this.logger?.warn(`Proposal has been rejected (${proposal.id}). Reason: ${reason}`);
       }
     } catch (error) {
       this.logger?.error(error);

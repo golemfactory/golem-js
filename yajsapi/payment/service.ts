@@ -34,8 +34,6 @@ export class PaymentService {
   private allocations: Allocation[] = [];
   private agreementsToPay: Map<string, AgreementPayable> = new Map();
   private agreementsDebitNotes: Set<string> = new Set();
-  private invoicesToPay: Map<string, Invoice> = new Map();
-  private debitNotesToPay: Map<string, DebitNote> = new Map();
   private paidAgreements: Set<{ agreement: AgreementPayable; invoice: Invoice }> = new Set();
   private payments?: Payments;
 
@@ -47,8 +45,6 @@ export class PaymentService {
     this.isRunning = true;
     this.payments = await Payments.create(this.options);
     this.payments.addEventListener(PaymentEventType, this.subscribePayments.bind(this));
-    // this.processInvoices().catch((error) => this.logger?.error(error));
-    // this.processDebitNotes().catch((error) => this.logger?.error(error));
     this.logger?.debug("Payment Service has started");
   }
 
@@ -106,43 +102,15 @@ export class PaymentService {
     this.agreementsDebitNotes.add(agreementId);
   }
 
-  private async processInvoices() {
-    while (this.isRunning) {
-      for (const invoice of this.invoicesToPay.values()) {
-        const agreement = this.agreementsToPay.get(invoice.agreementId);
-        if (!agreement) {
-          this.invoicesToPay.delete(invoice.id);
-          this.logger?.debug(`Agreement ${invoice.agreementId} has not been accepted to payment`);
-          continue;
-        }
-        try {
-          const allocation = this.getAllocationForPayment(invoice);
-          await invoice.accept(invoice.amount, allocation.id);
-          this.invoicesToPay.delete(invoice.id);
-          this.paidAgreements.add({ invoice, agreement });
-          this.agreementsDebitNotes.delete(invoice.agreementId);
-          this.agreementsToPay.delete(invoice.agreementId);
-          this.logger?.info(`Invoice accepted from ${agreement.provider.name}`);
-        } catch (error) {
-          this.logger?.error(`Invoice failed from ${agreement.provider.name}. ${error}`);
-        }
-      }
-      await sleep(this.options.payingInterval, true);
-    }
-  }
-
   private async processInvoice(invoice: Invoice) {
     try {
-      if (!this.invoicesToPay.has(invoice.id)) return;
       const agreement = this.agreementsToPay.get(invoice.agreementId);
       if (!agreement) {
-        this.invoicesToPay.delete(invoice.id);
         this.logger?.debug(`Agreement ${invoice.agreementId} has not been accepted to payment`);
         return;
       }
       const allocation = this.getAllocationForPayment(invoice);
       await invoice.accept(invoice.amount, allocation.id);
-      this.invoicesToPay.delete(invoice.id);
       this.paidAgreements.add({ invoice, agreement });
       this.agreementsDebitNotes.delete(invoice.agreementId);
       this.agreementsToPay.delete(invoice.agreementId);
@@ -154,10 +122,8 @@ export class PaymentService {
 
   private async processDebitNote(debitNote: DebitNote) {
     try {
-      if (!this.debitNotesToPay.has(debitNote.id)) return;
       const allocation = this.getAllocationForPayment(debitNote);
       await debitNote.accept(debitNote.totalAmountDue, allocation.id);
-      this.debitNotesToPay.delete(debitNote.id);
       this.logger?.debug(`Debit Note accepted for agreement ${debitNote.agreementId}`);
     } catch (error) {
       this.logger?.error(`Payment Debit Note failed for agreement ${debitNote.agreementId} ${error}`);
