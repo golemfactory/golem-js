@@ -12,7 +12,7 @@ export type Worker<InputType = unknown, OutputType = unknown> = (
 ) => Promise<OutputType | undefined>;
 
 const DEFAULTS = {
-  activityPreparingTimeout: 20000,
+  activityPreparingTimeout: 300000,
   activityStateCheckInterval: 1000,
 };
 
