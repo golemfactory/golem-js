@@ -47,8 +47,8 @@ export class PaymentService {
     this.isRunning = true;
     this.payments = await Payments.create(this.options);
     this.payments.addEventListener(PaymentEventType, this.subscribePayments.bind(this));
-    this.processInvoices().catch((error) => this.logger?.error(error));
-    this.processDebitNotes().catch((error) => this.logger?.error(error));
+    // this.processInvoices().catch((error) => this.logger?.error(error));
+    // this.processDebitNotes().catch((error) => this.logger?.error(error));
     this.logger?.debug("Payment Service has started");
   }
 
@@ -131,26 +131,29 @@ export class PaymentService {
     }
   }
 
-  private async processDebitNotes() {
-    while (this.isRunning) {
-      for (const debitNote of this.debitNotesToPay.values()) {
-        if (!this.agreementsDebitNotes.has(debitNote.agreementId)) continue;
-        try {
-          const allocation = this.getAllocationForPayment(debitNote);
-          await debitNote.accept(debitNote.totalAmountDue, allocation.id);
-          this.debitNotesToPay.delete(debitNote.id);
-          this.logger?.debug(`Debit Note accepted for agreement ${debitNote.agreementId}`);
-        } catch (error) {
-          this.logger?.error(`Payment Debit Note failed for agreement ${debitNote.agreementId} ${error}`);
-        }
-      }
-      await sleep(this.options.payingInterval, true);
+  private async processInvoice(invoice: Invoice) {
+    try {
+      const allocation = this.getAllocationForPayment(invoice);
+      await invoice.accept(invoice.amount, allocation.id);
+      this.logger?.info(`Invoice accepted from provider ${invoice.providerId}`);
+    } catch (error) {
+      this.logger?.error(`Invoice failed from provider ${invoice.providerId}. ${error}`);
+    }
+  }
+
+  private async processDebitNote(debitNote: DebitNote) {
+    try {
+      const allocation = this.getAllocationForPayment(debitNote);
+      await debitNote.accept(debitNote.totalAmountDue, allocation.id);
+      this.logger?.debug(`Debit Note accepted for agreement ${debitNote.agreementId}`);
+    } catch (error) {
+      this.logger?.error(`Payment Debit Note failed for agreement ${debitNote.agreementId} ${error}`);
     }
   }
 
   private async subscribePayments(event) {
-    if (event instanceof InvoiceEvent) this.invoicesToPay.set(event.invoice.id, event.invoice);
-    if (event instanceof DebitNoteEvent) this.debitNotesToPay.set(event.debitNote.id, event.debitNote);
+    if (event instanceof InvoiceEvent) this.processInvoice(event.invoice).then();
+    if (event instanceof DebitNoteEvent) this.processDebitNote(event.debitNote).then();
   }
 
   private getAllocationForPayment(paymentNote: Invoice | DebitNote): Allocation {

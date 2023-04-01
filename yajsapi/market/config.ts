@@ -4,6 +4,7 @@ import { Configuration } from "ya-ts-client/dist/ya-market/index.js";
 import { Logger } from "../utils/index.js";
 import { MarketOptions } from "./service.js";
 import { YagnaOptions } from "../executor/index.js";
+import { Agent } from "http";
 
 const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",
@@ -34,7 +35,12 @@ export class DemandConfig {
     const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
     if (!apiKey) throw new Error("Api key not defined");
     const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_URL || DEFAULTS.basePath;
-    const apiConfig = new Configuration({ apiKey, basePath: `${basePath}/market-api/v1`, accessToken: apiKey });
+    const apiConfig = new Configuration({
+      apiKey,
+      basePath: `${basePath}/market-api/v1`,
+      accessToken: apiKey,
+      baseOptions: { httpAgent: new Agent({ keepAlive: true }) },
+    });
     this.yagnaOptions = options?.yagnaOptions;
     this.api = new RequestorApi(apiConfig);
     this.subnetTag = options?.subnetTag || process.env.YAGNA_SUBNET || DEFAULTS.subnetTag;

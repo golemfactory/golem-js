@@ -132,6 +132,6 @@ export class TaskService {
       --this.activeTasksCount;
       this.paymentService.acceptPayments(agreement);
     }
-    await this.agreementPoolService.releaseAgreement(agreement.id, task.isDone());
+    await this.agreementPoolService.releaseAgreement(agreement.id, task.isDone()).catch((e) => this.logger?.debug(e));
   }
 }
