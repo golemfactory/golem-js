@@ -9,9 +9,13 @@ export const EventType = "GolemEvent";
 // https://github.com/nodejs/node/issues/40678
 class CustomEvent<DataType> extends Event {
   readonly detail: DataType;
+  readonly name: string;
+  readonly timestamp: number;
   constructor(type, data) {
     super(type, data);
     this.detail = data.detail;
+    this.name = this.constructor.name;
+    this.timestamp = new Date().valueOf();
   }
 }
 
@@ -28,11 +32,20 @@ export class TaskStarted extends BaseEvent<{ id: string; agreementId: string; ac
 export class TaskRedone extends BaseEvent<{
   id: string;
   agreementId: string;
+  activityId: string;
   providerId: string;
+  providerName: string;
   retriesCount: number;
   reason?: string;
 }> {}
-export class TaskRejected extends BaseEvent<{ id: string; agreementId: string; providerId: string; reason?: string }> {}
+export class TaskRejected extends BaseEvent<{
+  id: string;
+  agreementId: string;
+  activityId: string;
+  providerId: string;
+  providerName: string;
+  reason?: string;
+}> {}
 export class TaskFinished extends BaseEvent<{ id: string }> {}
 export class AllocationCreated extends BaseEvent<{ id: string; amount: number; platform?: string }> {}
 export class SubscriptionCreated extends BaseEvent<{ id: string }> {}

@@ -51,7 +51,7 @@ export class PaymentService {
 
   async end() {
     if (this.agreementsToPay.size) {
-      this.logger?.debug("Waiting for all invoices to be paid...");
+      this.logger?.info(`Waiting for all invoices to be paid. Unpaid agreements: ${this.agreementsToPay.size}`);
       let timeout = false;
       const timeoutId = setTimeout(() => (timeout = true), this.options.paymentTimeout);
       let i = 0;
@@ -129,7 +129,7 @@ export class PaymentService {
       this.paidDebitNotes.add(debitNote.id);
       this.logger?.debug(`Debit Note accepted for agreement ${debitNote.agreementId}`);
     } catch (error) {
-      this.logger?.error(`Payment Debit Note failed for agreement ${debitNote.agreementId} ${error}`);
+      this.logger?.debug(`Payment Debit Note failed for agreement ${debitNote.agreementId} ${error}`);
     }
   }
 

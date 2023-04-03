@@ -1,5 +1,6 @@
 // High level API
 export { TaskExecutor, ExecutorOptions } from "./executor/index.js";
+export { StorageProvider, GftpStorageProvider } from "./storage/index.js";
 
 // Mid level API
 export { Activity, ActivityOptions, ActivityStateEnum, Result } from "./activity/index.js";
@@ -20,4 +21,6 @@ export { Script, Run, Deploy, Start, Transfer, UploadFile, DownloadFile } from "
 
 // Utils
 export { ConsoleLogger, Logger } from "./utils/index.js";
-export { StorageProvider, GftpStorageProvider } from "./storage/index.js";
+
+// Events
+export { Events, BaseEvent, EventType } from "./events/index.js";

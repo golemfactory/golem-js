@@ -12,7 +12,7 @@ const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",
   budget: 1.0,
   payment: { driver: "erc20", network: "rinkeby" },
-  paymentTimeout: 20000,
+  paymentTimeout: 1000 * 60 * 2, // 2 min
   allocationExpires: 1000 * 60 * 60, // 60 min
   invoiceReceiveTimeout: 1000 * 60 * 5, // 5 min
   maxInvoiceEvents: 10,

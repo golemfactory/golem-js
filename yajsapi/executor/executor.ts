@@ -365,12 +365,18 @@ export class TaskExecutor {
     terminatingSignals.forEach((event) => process.off(event, this.cancel.bind(this)));
   }
 
-  private async cancel() {
-    this.logger?.warn("Executor has interrupted by the user. Stopping all tasks...");
-    await this.end().catch((error) => {
-      this.logger?.error(error);
-      process.exit(1);
-    });
+  public async cancel(reason?: string) {
+    const message = `Executor has interrupted by the user. Reason: ${reason}.`;
+    this.logger?.warn(`${message}. Stopping all tasks...`);
+    await this.end()
+      .then(() => {
+        if (this.options.isSubprocess) throw new Error(message);
+        else process.exit(0);
+      })
+      .catch((error) => {
+        this.logger?.error(error);
+        !this.options.isSubprocess && process.exit(1);
+      });
   }
 
   private printStats() {

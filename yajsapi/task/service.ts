@@ -113,24 +113,33 @@ export class TaskService {
       );
     } catch (error) {
       task.stop(undefined, error);
+      const reason = error.message || error.toString();
       if (task.isRetry() && this.isRunning) {
         this.tasksQueue.addToBegin(task);
         this.options.eventTarget?.dispatchEvent(
           new Events.TaskRedone({
             id: task.id,
-            providerId: agreement.provider.id,
+            activityId: activity.id,
             agreementId: agreement.id,
+            providerId: agreement.provider.id,
+            providerName: agreement.provider.name,
             retriesCount: task.getRetriesCount(),
-            reason: error.toString(),
+            reason,
           })
         );
         this.logger?.warn(
-          `Task ${task.id} execution failed. Trying to redo the task. Attempt #${task.getRetriesCount()}. ${error}`
+          `Task ${task.id} execution failed. Trying to redo the task. Attempt #${task.getRetriesCount()}. ${reason}`
         );
       } else {
-        const reason = error.message || error.toString();
         this.options.eventTarget?.dispatchEvent(
-          new Events.TaskRejected({ id: task.id, providerId: agreement.provider.id, agreementId: agreement.id, reason })
+          new Events.TaskRejected({
+            id: task.id,
+            agreementId: agreement.id,
+            activityId: activity.id,
+            providerId: agreement.provider.id,
+            providerName: agreement.provider.name,
+            reason,
+          })
         );
         throw new Error(`Task ${task.id} has been rejected! ${reason}`);
       }
