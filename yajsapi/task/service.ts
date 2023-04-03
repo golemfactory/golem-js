@@ -125,7 +125,7 @@ export class TaskService {
         this.options.eventTarget?.dispatchEvent(
           new Events.TaskRedone({
             id: task.id,
-            activityId: activity.id,
+            activityId: activity?.id,
             agreementId: agreement.id,
             providerId: agreement.provider.id,
             providerName: agreement.provider.name,
