@@ -103,7 +103,7 @@ export class WorkContext {
     return Batch.create(this.activity, this.storageProvider, this.logger);
   }
   rejectResult(msg: string) {
-    throw new Error(`Work rejected by user. Reason: ${msg}`);
+    throw new Error(`Work rejected. Reason: ${msg}`);
   }
   getWebsocketUri(port: number): string {
     if (!this.networkNode) throw new Error("There is no network in this work context");
