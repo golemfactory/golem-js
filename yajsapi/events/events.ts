@@ -28,7 +28,13 @@ export abstract class BaseEvent<DataType> extends CustomEvent<DataType> {
 export class ComputationStarted extends BaseEvent<undefined> {}
 export class ComputationFinished extends BaseEvent<undefined> {}
 export class ComputationFailed extends BaseEvent<{ reason?: string }> {}
-export class TaskStarted extends BaseEvent<{ id: string; agreementId: string; activityId: string }> {}
+export class TaskStarted extends BaseEvent<{
+  id: string;
+  agreementId: string;
+  activityId: string;
+  providerId: string;
+  providerName: string;
+}> {}
 export class TaskRedone extends BaseEvent<{
   id: string;
   agreementId: string;

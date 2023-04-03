@@ -77,7 +77,13 @@ export class TaskService {
         this.activities.set(agreement.id, activity);
       }
       this.options.eventTarget?.dispatchEvent(
-        new Events.TaskStarted({ id: task.id, agreementId: agreement.id, activityId: activity.id })
+        new Events.TaskStarted({
+          id: task.id,
+          agreementId: agreement.id,
+          activityId: activity.id,
+          providerId: agreement.provider.id,
+          providerName: agreement.provider.name,
+        })
       );
       this.logger?.info(
         `Task ${task.id} sent to provider ${agreement.provider.name}.${
