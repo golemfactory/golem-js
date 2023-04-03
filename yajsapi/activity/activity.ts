@@ -258,9 +258,9 @@ export class Activity {
       this.logger?.warn(`Activity ${this.id} terminated by provider. ${msg ? "Reason: " + msg : ""}`);
       throw error;
     }
-    // if (!this.isGsbError(error)) {
-    //   throw error;
-    // }
+    if (!this.isGsbError(error)) {
+      throw error;
+    }
     ++retryCount;
     const failMsg = "getExecBatchResults failed due to GSB error";
     if (retryCount < maxRetries) {

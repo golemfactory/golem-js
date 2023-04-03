@@ -119,7 +119,7 @@ export class TaskService {
       );
     } catch (error) {
       task.stop(undefined, error);
-      const reason = error.message || error.toString();
+      const reason = error?.response?.data?.message || error.message || error.toString();
       if (task.isRetry() && this.isRunning) {
         this.tasksQueue.addToBegin(task);
         this.options.eventTarget?.dispatchEvent(
