@@ -159,7 +159,7 @@ export class Activity {
     let isBatchFinished = false;
     let lastIndex;
     let retryCount = 0;
-    const maxRetries = 3;
+    const maxRetries = 5;
     const { id: activityId, agreementId } = this;
     const isRunning = () => this.isRunning;
     const { activityExecuteTimeout, api, activityExeBatchResultsFetchInterval, eventTarget } = this.options;
@@ -176,6 +176,7 @@ export class Activity {
           }
           try {
             const { data: results }: { data: Result[] } = await api.control.getExecBatchResults(activityId, batchId);
+            retryCount = 0;
             const newResults = results.slice(lastIndex + 1);
             if (Array.isArray(newResults) && newResults.length) {
               newResults.forEach((result) => {
@@ -257,9 +258,9 @@ export class Activity {
       this.logger?.warn(`Activity ${this.id} terminated by provider. ${msg ? "Reason: " + msg : ""}`);
       throw error;
     }
-    if (!this.isGsbError(error)) {
-      throw error;
-    }
+    // if (!this.isGsbError(error)) {
+    //   throw error;
+    // }
     ++retryCount;
     const failMsg = "getExecBatchResults failed due to GSB error";
     if (retryCount < maxRetries) {

@@ -7,7 +7,7 @@ import { Agent } from "http";
 
 const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",
-  activityRequestTimeout: 10000,
+  activityRequestTimeout: 20000,
   activityExecuteTimeout: 1000 * 60 * 5, // 5 min,
   activityExeBatchResultsFetchInterval: 3000,
 };
