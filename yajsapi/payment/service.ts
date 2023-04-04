@@ -40,7 +40,7 @@ export class PaymentService {
 
   constructor(options?: PaymentOptions) {
     this.options = new PaymentConfig(options);
-    this.logger = this.options.logger;
+    // this.logger = this.options.logger;
   }
   async run() {
     this.isRunning = true;
@@ -115,7 +115,7 @@ export class PaymentService {
       this.paidAgreements.add({ invoice, agreement });
       this.agreementsDebitNotes.delete(invoice.agreementId);
       this.agreementsToPay.delete(invoice.agreementId);
-      this.logger?.info(`Invoice accepted from provider ${invoice.providerId}`);
+      this.logger?.info(`Invoice accepted from provider ${agreement.provider.name}`);
     } catch (error) {
       this.logger?.error(`Invoice failed from provider ${invoice.providerId}. ${error}`);
     }

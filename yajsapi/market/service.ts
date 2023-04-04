@@ -31,7 +31,7 @@ export class MarketService {
   constructor(private readonly agreementPoolService: AgreementPoolService, options?: MarketOptions) {
     this.options = new MarketConfig(options);
     this.marketStrategy = options?.strategy || new DefaultMarketStrategy(this.agreementPoolService, this.logger);
-    this.logger = this.options?.logger;
+    // this.logger = this.options?.logger;
   }
   async run(taskPackage: Package, allocations: Allocation[]) {
     for (const allocation of allocations) {
@@ -68,7 +68,7 @@ export class MarketService {
         await proposal.respond(chosenPlatform).catch((e) => this.logger?.debug(e));
         this.logger?.debug(`Proposal has been responded (${proposal.id})`);
       } else {
-        this.logger?.warn(`Proposal has been rejected (${proposal.id}). Reason: ${reason}`);
+        this.logger?.debug(`Proposal has been rejected (${proposal.id}). Reason: ${reason}`);
       }
     } catch (error) {
       this.logger?.error(error);

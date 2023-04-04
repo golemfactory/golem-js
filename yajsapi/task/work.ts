@@ -130,7 +130,14 @@ export class WorkContext {
       );
     });
     const allResults: Result[] = [];
-    for await (const result of results) allResults.push(result);
+    await new Promise((res, rej) => {
+      results.on("data", (data) => allResults.push(data));
+      results.on("error", (error) =>
+        rej(`Task error on provider while getting results ${this.provider?.name}. ${error}`)
+      );
+      results.on("close", () => res(true));
+    });
+    // for await (const result of results) allResults.push(result);
     const commandsErrors = allResults.filter((res) => res.result === "Error");
     await script.after();
     if (commandsErrors.length) {
