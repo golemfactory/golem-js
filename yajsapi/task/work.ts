@@ -65,7 +65,7 @@ export class WorkContext {
       return;
     }
     if (state === ActivityStateEnum.Initialized) {
-      await this.activity
+      const result = await this.activity
         .execute(
           new Script([new Deploy(this.networkNode?.getNetworkConfig?.()), new Start()]).getExeScriptRequest(),
           undefined,
@@ -74,9 +74,14 @@ export class WorkContext {
         .catch((e) => {
           throw new Error(`Unable to deploy activity. ${e}`);
         });
+      await new Promise((res, rej) => {
+        result.on("data", () => null);
+        result.on("close", res);
+        result.on("error", rej);
+      });
     }
     let timeout = false;
-    const timeoutId = setTimeout(() => (timeout = true), 5_000);
+    const timeoutId = setTimeout(() => (timeout = true), this.activityPreparingTimeout);
     while (state !== ActivityStateEnum.Ready && !timeout && this.options?.isRunning()) {
       await sleep(this.activityStateCheckingInterval, true);
       state = await this.activity.getState().catch((e) => this.logger?.warn(`${e} Provider: ${this.provider?.name}`));
