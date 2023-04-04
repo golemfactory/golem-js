@@ -1,5 +1,5 @@
 import { Activity, Result } from "../activity/index.js";
-import { Command, Deploy, DownloadFile, Run, Script, Start, UploadFile } from "../script/index.js";
+import { Capture, Command, Deploy, DownloadFile, Run, Script, Start, UploadFile } from "../script/index.js";
 import { StorageProvider } from "../storage/index.js";
 import { ActivityStateEnum } from "../activity/index.js";
 import { sleep, Logger, runtimeContextChecker } from "../utils/index.js";
@@ -29,6 +29,8 @@ export interface WorkOptions {
 
 interface CommandOptions {
   timeout?: number;
+  env?: object;
+  capture?: Capture;
 }
 
 /**
@@ -64,13 +66,17 @@ export class WorkContext {
     }
     if (state === ActivityStateEnum.Initialized) {
       await this.activity
-        .execute(new Script([new Deploy(this.networkNode?.getNetworkConfig?.()), new Start()]).getExeScriptRequest())
+        .execute(
+          new Script([new Deploy(this.networkNode?.getNetworkConfig?.()), new Start()]).getExeScriptRequest(),
+          undefined,
+          this.activityPreparingTimeout
+        )
         .catch((e) => {
           throw new Error(`Unable to deploy activity. ${e}`);
         });
     }
     let timeout = false;
-    const timeoutId = setTimeout(() => (timeout = true), this.activityPreparingTimeout);
+    const timeoutId = setTimeout(() => (timeout = true), 5_000);
     while (state !== ActivityStateEnum.Ready && !timeout && this.options?.isRunning()) {
       await sleep(this.activityStateCheckingInterval, true);
       state = await this.activity.getState().catch((e) => this.logger?.warn(`${e} Provider: ${this.provider?.name}`));
@@ -82,10 +88,13 @@ export class WorkContext {
     if (this.options?.initWorker) await this.options?.initWorker(this, undefined);
   }
   async run(...args: Array<string | string[] | CommandOptions>): Promise<Result> {
-    const command =
-      args.length === 1 ? new Run("/bin/sh", ["-c", <string>args[0]]) : new Run(<string>args[0], <string[]>args[1]);
     const options: CommandOptions | undefined =
       typeof args?.[1] === "object" ? <CommandOptions>args?.[1] : <CommandOptions>args?.[2];
+    const command =
+      args.length === 1
+        ? new Run("/bin/sh", ["-c", <string>args[0]], options?.env, options?.capture)
+        : new Run(<string>args[0], <string[]>args[1], options?.env, options?.capture);
+
     return this.runOneCommand(command, options);
   }
   async uploadFile(src: string, dst: string, options?: CommandOptions): Promise<Result> {
@@ -130,14 +139,14 @@ export class WorkContext {
       );
     });
     const allResults: Result[] = [];
-    await new Promise((res, rej) => {
-      results.on("data", (data) => allResults.push(data));
-      results.on("error", (error) =>
-        rej(`Task error on provider while getting results ${this.provider?.name}. ${error}`)
-      );
-      results.on("close", () => res(true));
-    });
-    // for await (const result of results) allResults.push(result);
+    // await new Promise((res, rej) => {
+    //   results.on("data", (data) => allResults.push(data));
+    //   results.on("error", (error) =>
+    //     rej(`Task error on provider while getting results ${this.provider?.name}. ${error}`)
+    //   );
+    //   results.on("close", () => res(true));
+    // });
+    for await (const result of results) allResults.push(result);
     const commandsErrors = allResults.filter((res) => res.result === "Error");
     await script.after();
     if (commandsErrors.length) {

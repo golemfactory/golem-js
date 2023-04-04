@@ -31,7 +31,7 @@ export class MarketService {
   constructor(private readonly agreementPoolService: AgreementPoolService, options?: MarketOptions) {
     this.options = new MarketConfig(options);
     this.marketStrategy = options?.strategy || new DefaultMarketStrategy(this.agreementPoolService, this.logger);
-    // this.logger = this.options?.logger;
+    this.logger = this.options?.logger;
   }
   async run(taskPackage: Package, allocations: Allocation[]) {
     for (const allocation of allocations) {

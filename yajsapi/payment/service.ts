@@ -40,7 +40,7 @@ export class PaymentService {
 
   constructor(options?: PaymentOptions) {
     this.options = new PaymentConfig(options);
-    // this.logger = this.options.logger;
+    this.logger = this.options.logger;
   }
   async run() {
     this.isRunning = true;
