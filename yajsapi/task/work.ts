@@ -63,9 +63,11 @@ export class WorkContext {
       return;
     }
     if (state === ActivityStateEnum.Initialized) {
-      await this.activity.execute(
-        new Script([new Deploy(this.networkNode?.getNetworkConfig?.()), new Start()]).getExeScriptRequest()
-      );
+      await this.activity
+        .execute(new Script([new Deploy(this.networkNode?.getNetworkConfig?.()), new Start()]).getExeScriptRequest())
+        .catch((e) => {
+          throw new Error(`Unable to deploy activity. ${e}`);
+        });
     }
     let timeout = false;
     const timeoutId = setTimeout(() => (timeout = true), this.activityPreparingTimeout);
@@ -112,9 +114,21 @@ export class WorkContext {
 
   private async runOneCommand(command: Command, options?: CommandOptions): Promise<Result> {
     const script = new Script([command]);
-    await script.before();
+    await script.before().catch((e) => {
+      throw new Error(
+        `Script initialization failed for command: ${JSON.stringify(command.toJson())}. ${
+          e?.response?.data?.message || e?.message || e
+        }`
+      );
+    });
     await sleep(100, true);
-    const results = await this.activity.execute(script.getExeScriptRequest(), false, options?.timeout);
+    const results = await this.activity.execute(script.getExeScriptRequest(), false, options?.timeout).catch((e) => {
+      throw new Error(
+        `Script execution failed for command: ${JSON.stringify(command.toJson())}. ${
+          e?.response?.data?.message || e?.message || e
+        }`
+      );
+    });
     const allResults: Result[] = [];
     for await (const result of results) allResults.push(result);
     const commandsErrors = allResults.filter((res) => res.result === "Error");
