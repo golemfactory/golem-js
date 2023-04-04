@@ -12,7 +12,7 @@ export type Worker<InputType = unknown, OutputType = unknown> = (
 ) => Promise<OutputType | undefined>;
 
 const DEFAULTS = {
-  activityPreparingTimeout: 300000,
+  activityPreparingTimeout: 300_000,
   activityStateCheckInterval: 1000,
 };
 
@@ -74,19 +74,20 @@ export class WorkContext {
         .catch((e) => {
           throw new Error(`Unable to deploy activity. ${e}`);
         });
-      await new Promise((res, rej) => {
-        result.on("data", () => null);
-        result.on("close", res);
-        result.on("error", rej);
-      });
+      let timeoutId;
+      await Promise.race([
+        new Promise(
+          (res, rej) => (timeoutId = setTimeout(() => rej("Preparing activity timeout"), this.activityPreparingTimeout))
+        ),
+        new Promise((res, rej) => {
+          result.on("data", () => null);
+          result.on("close", res);
+          result.on("error", rej);
+        }),
+      ]).finally(() => clearTimeout(timeoutId));
     }
-    let timeout = false;
-    const timeoutId = setTimeout(() => (timeout = true), this.activityPreparingTimeout);
-    while (state !== ActivityStateEnum.Ready && !timeout && this.options?.isRunning()) {
-      await sleep(this.activityStateCheckingInterval, true);
-      state = await this.activity.getState().catch((e) => this.logger?.warn(`${e} Provider: ${this.provider?.name}`));
-    }
-    clearTimeout(timeoutId);
+    await sleep(this.activityStateCheckingInterval, true);
+    state = await this.activity.getState().catch((e) => this.logger?.warn(`${e} Provider: ${this.provider?.name}`));
     if (state !== ActivityStateEnum.Ready) {
       throw new Error(`Activity ${this.activity.id} cannot reach the Ready state. Current state: ${state}`);
     }
