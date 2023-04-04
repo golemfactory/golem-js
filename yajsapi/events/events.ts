@@ -79,6 +79,7 @@ export class InvoiceReceived extends BaseEvent<{
 export class DebitNoteReceived extends BaseEvent<{
   id: string;
   agreementId: string;
+  activityId: string;
   amount: string; // It is coming as a string
 }> {}
 export class PaymentAccepted extends BaseEvent<{

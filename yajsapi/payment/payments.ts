@@ -102,6 +102,7 @@ export class Payments extends EventTarget {
           new Events.DebitNoteReceived({
             id: debitNote.id,
             agreementId: debitNote.agreementId,
+            activityId: debitNote.activityId,
             amount: debitNote.totalAmountDue,
           })
         );
