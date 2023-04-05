@@ -13,7 +13,6 @@ const DEFAULTS = {
   maxParallelTasks: 5,
   taskTimeout: 1000 * 60 * 10, // 10 min,
   maxTaskRetries: 5,
-  activityPreparingTimeout: 1000 * 60 * 5, // 5 min
 };
 
 /**
@@ -44,7 +43,6 @@ export class ExecutorConfig {
   readonly maxTaskRetries: number;
   readonly activityExecuteTimeout?: number;
   readonly isSubprocess: boolean;
-  readonly activityPreparingTimeout: number;
 
   constructor(options: ExecutorOptions & ActivityOptions) {
     const processEnv = !runtimeContextChecker.isBrowser
@@ -88,6 +86,5 @@ export class ExecutorConfig {
     this.eventTarget = options.eventTarget || new EventTarget();
     this.maxTaskRetries = options.maxTaskRetries || DEFAULTS.maxTaskRetries;
     this.isSubprocess = options.isSubprocess ?? false;
-    this.activityPreparingTimeout = options.activityPreparingTimeout || DEFAULTS.activityPreparingTimeout;
   }
 }

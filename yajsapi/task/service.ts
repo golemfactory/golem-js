@@ -13,6 +13,7 @@ export interface TaskOptions extends ActivityOptions {
   maxParallelTasks?: number;
   taskRunningInterval?: number;
   activityStateCheckingInterval?: number;
+  activityPreparingTimeout?: number;
   taskTimeout?: number;
   logger?: Logger;
   storageProvider?: StorageProvider;
@@ -101,6 +102,7 @@ export class TaskService {
         storageProvider: this.options.storageProvider,
         networkNode,
         logger: this.logger,
+        activityPreparingTimeout: this.options.activityPreparingTimeout,
         activityStateCheckingInterval: this.options.activityStateCheckingInterval,
         isRunning: () => this.isRunning,
       });
