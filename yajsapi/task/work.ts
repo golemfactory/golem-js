@@ -127,6 +127,10 @@ export class WorkContext {
     return this.networkNode?.getWebsocketUri(port);
   }
 
+  async getState(): Promise<ActivityStateEnum> {
+    return this.activity.getState();
+  }
+
   private async runOneCommand(command: Command, options?: CommandOptions): Promise<Result> {
     const script = new Script([command]);
     await script.before().catch((e) => {
