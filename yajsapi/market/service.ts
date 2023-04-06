@@ -6,6 +6,7 @@ import { AgreementPoolService } from "../agreement/index.js";
 import { Allocation } from "../payment/index.js";
 import { DemandEvent } from "./demand.js";
 import { MarketConfig } from "./config.js";
+import { sleep } from "../utils/index.js";
 
 /**
  * @internal
@@ -26,7 +27,10 @@ export class MarketService {
   private marketStrategy: MarketStrategy;
   private demand?: Demand;
   private allowedPaymentPlatforms: string[] = [];
-  private logger: Logger | undefined;
+  private logger?: Logger;
+  private taskPackage?: Package;
+  private allocations?: Allocation[];
+  private maxResubscribeRetries = 5;
 
   constructor(private readonly agreementPoolService: AgreementPoolService, options?: MarketOptions) {
     this.options = new MarketConfig(options);
@@ -34,26 +38,56 @@ export class MarketService {
     this.logger = this.options?.logger;
   }
   async run(taskPackage: Package, allocations: Allocation[]) {
+    this.taskPackage = taskPackage;
+    this.allocations = allocations;
     for (const allocation of allocations) {
       if (allocation.paymentPlatform) this.allowedPaymentPlatforms.push(allocation.paymentPlatform);
     }
-    this.demand = await Demand.create(taskPackage, allocations, this.options);
-    this.demand.addEventListener(DemandEventType, (event) => {
-      const proposal = (event as DemandEvent).proposal;
-      if (proposal.isInitial()) this.processInitialProposal(proposal);
-      else if (proposal.isDraft()) this.processDraftProposal(proposal);
-      else if (proposal.isExpired()) this.logger?.debug(`Proposal hes expired ${proposal.id}`);
-      else if (proposal.isRejected()) this.logger?.debug(`Proposal hes rejected ${proposal.id}`);
-    });
+    await this.createDemand();
     this.logger?.debug("Market Service has started");
   }
 
   async end() {
     if (this.demand) {
-      this.demand.removeEventListener(DemandEventType, null);
+      this.demand.removeEventListener(DemandEventType, this.demandEventListener.bind(this));
       await this.demand.unsubscribe().catch((e) => this.logger?.error(`Could not unsubscribe demand. ${e}`));
     }
     this.logger?.debug("Market Service has been stopped");
+  }
+
+  private async createDemand(): Promise<true> {
+    if (!this.taskPackage) throw new Error("There is no defined Task Package");
+    if (!this.allocations) throw new Error("There is no defined Allocations");
+    this.demand = await Demand.create(this.taskPackage, this.allocations, this.options);
+    this.demand.addEventListener(DemandEventType, this.demandEventListener.bind(this));
+    this.logger?.debug(`New demand has been created (${this.demand.id})`);
+    return true;
+  }
+
+  private demandEventListener(event: Event) {
+    const proposal = (event as DemandEvent).proposal;
+    if (proposal.isInitial()) this.processInitialProposal(proposal);
+    else if (proposal.isDraft()) this.processDraftProposal(proposal);
+    else if (proposal.isExpired()) this.logger?.debug(`Proposal hes expired ${proposal.id}`);
+    else if (proposal.isRejected()) this.logger?.debug(`Proposal hes rejected ${proposal.id}`);
+    if ((event as DemandEvent).error) {
+      this.logger?.error("Subscription expired. Trying to subscribe a new one...");
+      this.resubscribeDemand().then();
+    }
+  }
+
+  private async resubscribeDemand() {
+    if (this.demand) {
+      this.demand.removeEventListener(DemandEventType, this.demandEventListener.bind(this));
+      await this.demand.unsubscribe().catch((e) => this.logger?.error(`Could not unsubscribe demand. ${e}`));
+    }
+    let attempt = 1;
+    let success = false;
+    while (!success && attempt <= this.maxResubscribeRetries) {
+      success = await this.createDemand().catch((e) => this.logger?.error(`Could not resubscribe demand. ${e}`));
+      ++attempt;
+      await sleep(20);
+    }
   }
 
   private async processInitialProposal(proposal: Proposal) {
