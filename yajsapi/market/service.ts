@@ -65,7 +65,9 @@ export class MarketService {
       const { result: isProposalValid, reason } = this.isProposalValid(proposal);
       if (isProposalValid) {
         const chosenPlatform = this.getCommonPaymentPlatforms(proposal.properties)![0];
-        await proposal.respond(chosenPlatform).catch((e) => this.logger?.debug(e));
+        await proposal
+          .respond(chosenPlatform)
+          .catch((e) => this.logger?.debug(`Unable to respond proposal ${proposal.id}. ${e}`));
         this.logger?.debug(`Proposal has been responded (${proposal.id})`);
       } else {
         this.logger?.debug(`Proposal has been rejected (${proposal.id}). Reason: ${reason}`);

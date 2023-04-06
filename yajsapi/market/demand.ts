@@ -69,7 +69,7 @@ export class Demand extends EventTarget {
    */
   async unsubscribe() {
     this.isRunning = false;
-    await this.options.api.unsubscribeDemand(this.id);
+    await this.options.api.unsubscribeDemand(this.id).catch((e) => this.logger?.debug(e));
     this.removeEventListener(DemandEventType, null);
     this.logger?.debug(`Demand ${this.id} unsubscribed`);
   }
@@ -104,14 +104,13 @@ export class Demand extends EventTarget {
           const reason = error.response?.data?.message || error;
           this.options.eventTarget?.dispatchEvent(new Events.CollectFailed({ id: this.id, reason }));
           this.logger?.warn(`Unable to collect offers. ${reason}`);
-          // TODO: debug when subscription expired? status code ?
-          console.debug({ error });
-          // TODO: ...
-          if (error.status === 400) {
-            this.dispatchEvent(
-              new DemandEvent(DemandEventType, undefined, new Error(`Subscription expired. ${reason}`))
-            );
-          }
+          // TODO: test
+          // if (error.response?.status === 404) {
+          //   this.dispatchEvent(
+          //     new DemandEvent(DemandEventType, undefined, new Error(`Subscription expired. ${reason}`))
+          //   );
+          //   this.unsubscribe().then();
+          // }
         }
       } finally {
         await sleep(this.options.offerFetchingInterval, true);
