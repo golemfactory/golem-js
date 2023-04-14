@@ -27,7 +27,7 @@ export default {
     commonjs(),
     nodePolyfills(),
     json(),
-    terser(),
+    //terser(),
     // visualizer(),
   ],
   onwarn: (warning) => {
