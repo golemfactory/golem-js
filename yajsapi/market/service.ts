@@ -66,14 +66,15 @@ export class MarketService {
 
   private demandEventListener(event: Event) {
     const proposal = (event as DemandEvent).proposal;
+    if ((event as DemandEvent).error) {
+      this.logger?.error("Subscription expired. Trying to subscribe a new one...");
+      this.resubscribeDemand().then();
+      return;
+    }
     if (proposal.isInitial()) this.processInitialProposal(proposal);
     else if (proposal.isDraft()) this.processDraftProposal(proposal);
     else if (proposal.isExpired()) this.logger?.debug(`Proposal hes expired ${proposal.id}`);
     else if (proposal.isRejected()) this.logger?.debug(`Proposal hes rejected ${proposal.id}`);
-    if ((event as DemandEvent).error) {
-      this.logger?.error("Subscription expired. Trying to subscribe a new one...");
-      this.resubscribeDemand().then();
-    }
   }
 
   private async resubscribeDemand() {
