@@ -1,3 +1,5 @@
+import Bottleneck from "bottleneck";
+
 import { Logger } from "../utils/index.js";
 import { Agreement, AgreementOptions, AgreementStateEnum } from "./agreement.js";
 import sleep from "../utils/sleep.js";
@@ -36,10 +38,15 @@ export class AgreementPoolService implements ComputationHistory {
 
   private isServiceRunning = false;
   private initialTime = Date.now();
+  private limiter: Bottleneck;
 
   constructor(private readonly agreementServiceOptions?: AgreementServiceOptions) {
     this.config = new AgreementServiceConfig(agreementServiceOptions);
     this.logger = agreementServiceOptions?.logger;
+
+    this.limiter = new Bottleneck({
+      maxConcurrent: 1,
+    });
   }
 
   /**
@@ -102,6 +109,9 @@ export class AgreementPoolService implements ComputationHistory {
     let agreement;
     while (!agreement && this.isServiceRunning) {
       agreement = await this.getAgreementFormPool();
+      if (!agreement) {
+        await sleep(2);
+      }
     }
 
     if (!agreement && !this.isServiceRunning) {
@@ -111,26 +121,35 @@ export class AgreementPoolService implements ComputationHistory {
     return agreement;
   }
 
-  private async getAgreementFormPool(): Promise<Agreement | undefined> {
-    const pool = Array.from(this.pool).filter((entry) => {
-      return entry;
-      // Wywalamy nieprawidłowe stany
-    });
+  private cleanupPool() {
+    // console.log(Array.from(this.pool));
+    //     .filter((entry) => {
+    //   return entry;
+    //   // Wywalamy nieprawidłowe stany
+    // });
+  }
 
-    if (pool.length === 0) {
+  private async getAgreementFormPool(): Promise<Agreement | undefined> {
+    this.cleanupPool();
+
+    if (this.pool.size === 0) {
       this.logger?.debug(`Agreement cannot be created due to no available candidates in pool`);
-      await sleep(2);
       return;
     }
 
-    let candidate = await this.config.marketStrategy.getBestAgreementCandidate(pool);
+    let candidate = await this.limiter.schedule(() => {
+      const pool = Array.from(this.pool);
+      return this.config.marketStrategy.getBestAgreementCandidate(pool);
+    });
     this.pool.delete(candidate);
 
-    if (!candidate.agreement) {
+    if (candidate && !candidate?.agreement) {
       candidate = await this.createAgreement(candidate);
     }
 
-    return candidate.agreement;
+    // console.log("candidate", candidate?.agreement?.getAgreementData);
+
+    return candidate?.agreement;
   }
 
   /**
@@ -159,11 +178,7 @@ export class AgreementPoolService implements ComputationHistory {
     try {
       candidate.agreement = await Agreement.create(candidate.proposal.id, this.config.options);
       candidate.agreement = await this.waitForAgreementApproval(candidate.agreement);
-
       const state = await candidate.agreement.getState();
-      if ((candidate.agreement.provider.id, state === AgreementStateEnum.Rejected)) {
-        await this.config.marketStrategy.setAgreementRejectedByProvider(candidate.agreement);
-      }
 
       if (state !== AgreementStateEnum.Approved) {
         throw new Error(`Agreement ${candidate.agreement.id} cannot be approved. Current state: ${state}`);
@@ -186,8 +201,12 @@ export class AgreementPoolService implements ComputationHistory {
       await agreement.confirm();
       this.logger?.debug(`Agreement proposed to provider '${agreement.provider.name}'`);
     }
-    await this.config.api.waitForApproval(agreement.id, this.config.agreementWaitingForApprovalTimeout);
-
+    try {
+      console.log("trying with timeout: ", this.config.agreementWaitingForApprovalTimeout);
+      await this.config.api.waitForApproval(agreement.id, this.config.agreementWaitingForApprovalTimeout);
+    } catch (e) {
+      console.error("waitForAgreementApproval", e);
+    }
     return agreement;
   }
 

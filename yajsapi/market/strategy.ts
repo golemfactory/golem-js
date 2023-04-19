@@ -22,7 +22,6 @@ export interface ComputationHistory {
 export interface MarketStrategy {
   checkProposal(proposal: Proposal): Promise<boolean>;
   getBestAgreementCandidate(candidates: AgreementCandidate[]): Promise<AgreementCandidate>;
-  setAgreementRejectedByProvider(candidate: AgreementCandidate);
 }
 
 export class DummyMarketStrategy implements MarketStrategy {
@@ -33,10 +32,6 @@ export class DummyMarketStrategy implements MarketStrategy {
 
   async getBestAgreementCandidate(candidates: AgreementCandidate[]): Promise<AgreementCandidate> {
     return candidates[0];
-  }
-
-  async setAgreementRejectedByProvider(candidate: AgreementCandidate) {
-    // do nothing
   }
 }
 
