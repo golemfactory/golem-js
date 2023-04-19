@@ -4,7 +4,7 @@ import { Logger } from "../utils/index.js";
 import { Agreement, AgreementOptions, AgreementStateEnum } from "./agreement.js";
 import sleep from "../utils/sleep.js";
 
-import { ComputationHistory, MarketStrategy } from "../market/strategy.js";
+import { MarketStrategy } from "../market/strategy.js";
 import { AgreementServiceConfig } from "./config.js";
 import { Proposal } from "../market/proposal.js";
 
@@ -29,7 +29,7 @@ export interface AgreementProposal {
  * @description Service used in {@link TaskExecutor}
  * @hidden
  */
-export class AgreementPoolService implements ComputationHistory {
+export class AgreementPoolService {
   private logger?: Logger;
   private config: AgreementServiceConfig;
 
