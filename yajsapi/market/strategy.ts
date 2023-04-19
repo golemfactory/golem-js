@@ -1,7 +1,7 @@
 import { Proposal } from "./index.js";
 import { MarketDecoration } from "ya-ts-client/dist/ya-payment/src/models/index.js";
 import { Logger } from "../utils/index.js";
-import { AgreementCandidate } from "../agreement/service.js";
+import { AgreementCandidate, ProposalDTO } from "../agreement/service.js";
 
 export const SCORE_NEUTRAL = 0.0;
 export const SCORE_REJECTED = -1.0;
@@ -20,13 +20,13 @@ export interface ComputationHistory {
 }
 
 export interface MarketStrategy {
-  checkProposal(proposal: Proposal): Promise<boolean>;
+  checkProposal(proposal: ProposalDTO): Promise<boolean>;
   getBestAgreementCandidate(candidates: AgreementCandidate[]): Promise<AgreementCandidate>;
 }
 
 export class DummyMarketStrategy implements MarketStrategy {
   constructor(readonly logger?: Logger) {}
-  async checkProposal(proposal: Proposal): Promise<boolean> {
+  async checkProposal(proposal: ProposalDTO): Promise<boolean> {
     return Promise.resolve(true);
   }
 

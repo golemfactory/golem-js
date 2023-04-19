@@ -7,10 +7,22 @@ import sleep from "../utils/sleep.js";
 import { ComputationHistory, MarketStrategy } from "../market/strategy.js";
 import { AgreementServiceConfig } from "./config.js";
 import { Proposal } from "../market/proposal.js";
+import { agreement } from "../../tests/mock/entities/agreement";
+
+export interface AgreementDTO {
+  id: string;
+  provider: { id: string; name: string };
+}
+export interface ProposalDTO {
+  id: string;
+  issuerId: string;
+  properties: object;
+  constraints: string;
+}
 
 export class AgreementCandidate {
-  agreement?: Agreement;
-  constructor(readonly proposal: Proposal) {}
+  agreement?: AgreementDTO;
+  constructor(readonly proposal: ProposalDTO) {}
 }
 
 export interface AgreementServiceOptions extends AgreementOptions {
@@ -34,7 +46,9 @@ export class AgreementPoolService implements ComputationHistory {
   private config: AgreementServiceConfig;
 
   private pool = new Set<AgreementCandidate>();
-  private candidateMap = new Map<Agreement, AgreementCandidate>();
+  private candidateMap = new Map<string, AgreementCandidate>();
+  private agreements = new Map<string, Agreement>();
+  private proposals = new Map<string, Proposal>();
 
   private isServiceRunning = false;
   private initialTime = Date.now();
@@ -63,7 +77,13 @@ export class AgreementPoolService implements ComputationHistory {
    * @param proposal Proposal
    */
   async addProposal(proposal: Proposal) {
-    if (!(await this.config.marketStrategy.checkProposal(proposal))) {
+    const proposalDTO: ProposalDTO = {
+      id: proposal.id,
+      issuerId: proposal.issuerId,
+      properties: proposal.properties,
+      constraints: proposal.constraints,
+    };
+    if (!(await this.config.marketStrategy.checkProposal(proposalDTO))) {
       this.logger?.info("Proposal has been rejected by market strategy");
       return;
     }
@@ -79,12 +99,12 @@ export class AgreementPoolService implements ComputationHistory {
    */
   async releaseAgreement(agreement: Agreement, allowReuse: boolean) {
     if (allowReuse) {
-      const candidate = this.candidateMap.get(agreement);
+      const candidate = this.candidateMap.get(agreement.id);
       if (candidate) {
         this.pool.add(candidate);
         this.logger?.debug(`Agreement ${agreement.id} has been released for reuse`);
       } else {
-        this.logger?.debug(`Agreement ${agreement.id} has been released for but not added to poo for reuse`);
+        this.logger?.debug(`Agreement ${agreement.id} has been released for but not added to pool for reuse`);
       }
     } else {
       this.logger?.debug(`Agreement ${agreement.id} has been released and removed from pool`);
@@ -125,17 +145,22 @@ export class AgreementPoolService implements ComputationHistory {
       return;
     }
 
-    let candidate = await this.limiter.schedule(() => {
+    // Limit concurrency to 1
+    const candidate = await this.limiter.schedule(() => {
       const pool = Array.from(this.pool);
       return this.config.marketStrategy.getBestAgreementCandidate(pool);
     });
     this.pool.delete(candidate);
 
-    if (candidate && !candidate?.agreement) {
-      candidate = await this.createAgreement(candidate);
+    // If agreement is created return agreement
+    if (candidate?.agreement?.id) {
+      return this.agreements.get(candidate?.agreement?.id);
     }
 
-    return candidate?.agreement;
+    // If agreement is not created, then create agreement and return new agreement
+    if (candidate && !candidate?.agreement) {
+      return await this.createAgreement(candidate);
+    }
   }
 
   /**
@@ -153,8 +178,9 @@ export class AgreementPoolService implements ComputationHistory {
    */
   async terminateAll(reason?: { [key: string]: string }) {
     this.logger?.info(`Terminate all agreements was called`);
-    for (const [agreement] of Array.from(this.candidateMap)) {
-      if ((await agreement.getState()) !== AgreementStateEnum.Terminated)
+    for (const [agreementId] of Array.from(this.candidateMap)) {
+      const agreement = this.agreements.get(agreementId);
+      if (agreement && (await agreement.getState()) !== AgreementStateEnum.Terminated)
         await agreement
           .terminate(reason)
           .catch((e) => this.logger?.warn(`Agreement ${agreement.id} cannot be terminated. ${e}`));
@@ -163,17 +189,25 @@ export class AgreementPoolService implements ComputationHistory {
 
   async createAgreement(candidate) {
     try {
-      candidate.agreement = await Agreement.create(candidate.proposal.id, this.config.options);
-      candidate.agreement = await this.waitForAgreementApproval(candidate.agreement);
-      const state = await candidate.agreement.getState();
+      let agreement = await Agreement.create(candidate.proposal.id, this.config.options);
+      agreement = await this.waitForAgreementApproval(agreement);
+      const state = await agreement.getState();
 
       if (state !== AgreementStateEnum.Approved) {
-        throw new Error(`Agreement ${candidate.agreement.id} cannot be approved. Current state: ${state}`);
+        throw new Error(`Agreement ${agreement.id} cannot be approved. Current state: ${state}`);
       }
-      this.logger?.info(`Agreement confirmed by provider ${candidate.agreement.provider.name}`);
-      this.candidateMap.set(candidate.agreement, candidate);
+      this.logger?.info(`Agreement confirmed by provider ${agreement.provider.name}`);
 
-      return candidate;
+      this.agreements.set(agreement.id, agreement);
+
+      candidate.agreement = {
+        id: agreement.id,
+        provider: { id: agreement.provider.id, name: agreement.provider.name },
+      };
+
+      this.candidateMap.set(agreement.id, candidate);
+
+      return agreement;
     } catch (e) {
       this.logger?.error(`Unable to create agreement form available proposal: ${e?.data?.message || e}`);
       await sleep(2);
