@@ -79,24 +79,16 @@ export class AgreementPoolService implements ComputationHistory {
    */
   async releaseAgreement(agreement: Agreement, allowReuse: boolean) {
     if (allowReuse) {
-      this.logger?.debug(`Agreement ${agreement.id} has been released for reuse`);
-      // Agreement to candidate
-      //this.pool.add(candidate);
+      const candidate = this.candidateMap.get(agreement);
+      if (candidate) {
+        this.pool.add(candidate);
+        this.logger?.debug(`Agreement ${agreement.id} has been released for reuse`);
+      } else {
+        this.logger?.debug(`Agreement ${agreement.id} has been released for but not added to poo for reuse`);
+      }
     } else {
       this.logger?.debug(`Agreement ${agreement.id} has been released and removed from pool`);
     }
-    // const agreement = await this.agreements.get(agreementId);
-    // if (!agreement) {
-    //   throw new Error(`Agreement ${agreementId} cannot found in pool`);
-    // }
-    // if (allowReuse) {
-    //   this.agreementIdsToReuse.unshift(agreementId);
-    //   this.logger?.debug(`Agreement ${agreementId} has been released for reuse`);
-    // } else {
-    //   await agreement.terminate();
-    //   this.agreements.delete(agreementId);
-    //   this.logger?.debug(`Agreement ${agreementId} has been released and terminated`);
-    // }
   }
 
   /**
@@ -143,8 +135,6 @@ export class AgreementPoolService implements ComputationHistory {
       candidate = await this.createAgreement(candidate);
     }
 
-    // console.log("candidate", candidate?.agreement?.getAgreementData);
-
     return candidate?.agreement;
   }
 
@@ -162,12 +152,13 @@ export class AgreementPoolService implements ComputationHistory {
    * @param reason
    */
   async terminateAll(reason?: { [key: string]: string }) {
-    // for (const agreement of this.agreements.values()) {
-    //   if ((await agreement.getState()) !== AgreementStateEnum.Terminated)
-    //     await agreement
-    //       .terminate(reason)
-    //       .catch((e) => this.logger?.warn(`Agreement ${agreement.id} cannot be terminated. ${e}`));
-    // }
+    this.logger?.info(`Terminate all agreements was called`);
+    for (const [agreement] of Array.from(this.candidateMap)) {
+      if ((await agreement.getState()) !== AgreementStateEnum.Terminated)
+        await agreement
+          .terminate(reason)
+          .catch((e) => this.logger?.warn(`Agreement ${agreement.id} cannot be terminated. ${e}`));
+    }
   }
 
   async createAgreement(candidate) {
