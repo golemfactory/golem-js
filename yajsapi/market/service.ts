@@ -1,7 +1,7 @@
 import { Logger } from "../utils/index.js";
 import { Package } from "../package/index.js";
 import { Demand, Proposal, DemandEventType, DemandOptions } from "./index.js";
-import { DefaultMarketStrategy, MarketStrategy, SCORE_NEUTRAL } from "./strategy.js";
+import { DummyMarketStrategy, MarketStrategy } from "./strategy.js";
 import { AgreementPoolService } from "../agreement/index.js";
 import { Allocation } from "../payment/index.js";
 import { DemandEvent } from "./demand.js";
@@ -34,7 +34,7 @@ export class MarketService {
 
   constructor(private readonly agreementPoolService: AgreementPoolService, options?: MarketOptions) {
     this.options = new MarketConfig(options);
-    this.marketStrategy = options?.strategy || new DefaultMarketStrategy(this.agreementPoolService, this.logger);
+    this.marketStrategy = options?.strategy || new DummyMarketStrategy(this.logger);
     this.logger = this.options?.logger;
   }
   async run(taskPackage: Package, allocations: Allocation[]) {
@@ -93,9 +93,6 @@ export class MarketService {
 
   private async processInitialProposal(proposal: Proposal) {
     this.logger?.debug(`New proposal has been received (${proposal.id})`);
-    const score = this.marketStrategy.scoreProposal(proposal);
-    proposal.score = score;
-    this.logger?.debug(`Scored proposal ${proposal.id}. Score: ${score}`);
     try {
       const { result: isProposalValid, reason } = this.isProposalValid(proposal);
       if (isProposalValid) {
@@ -118,12 +115,11 @@ export class MarketService {
       return { result: false, reason: "Debit note acceptance timeout too short" };
     const commonPaymentPlatforms = this.getCommonPaymentPlatforms(proposal.properties);
     if (!commonPaymentPlatforms?.length) return { result: false, reason: "No common payment platform" };
-    if (proposal.score && proposal.score < SCORE_NEUTRAL) return { result: false, reason: "Score is to low" };
     return { result: true };
   }
 
   private async processDraftProposal(proposal: Proposal) {
-    this.agreementPoolService.addProposal(proposal.id);
+    this.agreementPoolService.addProposal(proposal);
     this.logger?.debug(
       `Proposal has been confirmed with provider ${proposal.issuerId} and added to agreement pool (${proposal.id})`
     );

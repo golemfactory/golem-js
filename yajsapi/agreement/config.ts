@@ -4,6 +4,7 @@ import { RequestorApi } from "ya-ts-client/dist/ya-market/api.js";
 import { Configuration } from "ya-ts-client/dist/ya-market/index.js";
 import { Logger } from "../utils/index.js";
 import { Agent } from "http";
+import { MarketStrategy, DummyMarketStrategy } from "../market/strategy.js";
 
 const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",
@@ -12,6 +13,7 @@ const DEFAULTS = {
   agreementEventPoolingMaxEventsPerRequest: 100,
   agreementWaitingForProposalTimout: 10000,
   agreementWaitingForApprovalTimeout: 60,
+  marketStrategy: new DummyMarketStrategy(),
 };
 
 /**
@@ -50,6 +52,7 @@ export class AgreementServiceConfig extends AgreementConfig {
   readonly agreementEventPoolingInterval: number;
   readonly agreementEventPoolingMaxEventsPerRequest: number;
   readonly agreementWaitingForProposalTimout: number;
+  readonly marketStrategy: MarketStrategy;
 
   constructor(options?: AgreementServiceOptions) {
     super(options);
@@ -59,5 +62,6 @@ export class AgreementServiceConfig extends AgreementConfig {
       options?.agreementEventPoolingInterval || DEFAULTS.agreementEventPoolingInterval;
     this.agreementEventPoolingMaxEventsPerRequest =
       options?.agreementEventPoolingMaxEventsPerRequest || DEFAULTS.agreementEventPoolingMaxEventsPerRequest;
+    this.marketStrategy = options?.marketStrategy || DEFAULTS.marketStrategy;
   }
 }
