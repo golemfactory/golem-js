@@ -3,6 +3,7 @@ import { Package } from "../package/index.js";
 import { MarketStrategy } from "../market/index.js";
 import { Logger, runtimeContextChecker, pinoLogger } from "../utils/index.js";
 import { ActivityOptions } from "../activity";
+import { DummyMarketStrategy } from "../market/strategy.js";
 
 const DEFAULTS = {
   budget: 1.0,
@@ -13,6 +14,7 @@ const DEFAULTS = {
   maxParallelTasks: 5,
   taskTimeout: 1000 * 60 * 10, // 10 min,
   maxTaskRetries: 5,
+  strategy: new DummyMarketStrategy(),
 };
 
 /**
@@ -86,5 +88,6 @@ export class ExecutorConfig {
     this.eventTarget = options.eventTarget || new EventTarget();
     this.maxTaskRetries = options.maxTaskRetries || DEFAULTS.maxTaskRetries;
     this.isSubprocess = options.isSubprocess ?? false;
+    this.strategy = options?.strategy || DEFAULTS.strategy;
   }
 }

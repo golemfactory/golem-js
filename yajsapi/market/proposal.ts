@@ -15,7 +15,6 @@ export class Proposal {
   readonly timestamp: string;
   private readonly state: ProposalAllOfStateEnum;
   private readonly prevProposalId: string | undefined;
-  private _score: number | null = null;
 
   /**
    * Create proposal for given subscription ID
@@ -40,14 +39,6 @@ export class Proposal {
     this.state = model.state;
     this.prevProposalId = model.prevProposalId;
     this.timestamp = model.timestamp;
-  }
-
-  set score(score: number | null) {
-    this._score = score;
-  }
-
-  get score(): number | null {
-    return this._score;
   }
 
   isInitial(): boolean {

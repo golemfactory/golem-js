@@ -7,7 +7,6 @@ import sleep from "../utils/sleep.js";
 import { MarketStrategy } from "../market/strategy.js";
 import { AgreementServiceConfig } from "./config.js";
 import { Proposal } from "../market/proposal.js";
-import { agreement } from "../../tests/mock/entities/agreement";
 
 export interface AgreementDTO {
   id: string;
@@ -26,7 +25,7 @@ export class AgreementCandidate {
 }
 
 export interface AgreementServiceOptions extends AgreementOptions {
-  marketStrategy?: MarketStrategy;
+  strategy?: MarketStrategy;
   agreementEventPoolingInterval?: number;
   agreementEventPoolingMaxEventsPerRequest?: number;
   agreementWaitingForProposalTimout?: number;
@@ -77,17 +76,7 @@ export class AgreementPoolService {
    * @param proposal Proposal
    */
   async addProposal(proposal: Proposal) {
-    const proposalDTO: ProposalDTO = {
-      id: proposal.id,
-      issuerId: proposal.issuerId,
-      properties: proposal.properties,
-      constraints: proposal.constraints,
-    };
-    if (!(await this.config.marketStrategy.checkProposal(proposalDTO))) {
-      this.logger?.info("Proposal has been rejected by market strategy");
-      return;
-    }
-    this.logger?.info(`New proposal added to pool (${proposal.id})`);
+    this.logger?.debug(`New proposal added to pool (${proposal.id})`);
     this.pool.add(new AgreementCandidate(proposal));
   }
 
@@ -133,8 +122,8 @@ export class AgreementPoolService {
   }
 
   private cleanupPool() {
-    const toCleanup = Array.from(this.pool).filter((e) => !!e.agreement);
-    console.log("cleanupPool", toCleanup);
+    // const toCleanup = Array.from(this.pool).filter((e) => !!e.agreement);
+    // console.log("cleanupPool", toCleanup);
   }
 
   private async getAgreementFormPool(): Promise<Agreement | undefined> {
@@ -148,7 +137,7 @@ export class AgreementPoolService {
     // Limit concurrency to 1
     const candidate = await this.limiter.schedule(() => {
       const pool = Array.from(this.pool);
-      return this.config.marketStrategy.getBestAgreementCandidate(pool);
+      return this.config.strategy.getBestAgreementCandidate(pool);
     });
     this.pool.delete(candidate);
 

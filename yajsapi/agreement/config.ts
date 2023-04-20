@@ -13,7 +13,7 @@ const DEFAULTS = {
   agreementEventPoolingMaxEventsPerRequest: 100,
   agreementWaitingForProposalTimout: 10000,
   agreementWaitingForApprovalTimeout: 60,
-  marketStrategy: new DummyMarketStrategy(),
+  strategy: new DummyMarketStrategy(),
 };
 
 /**
@@ -52,7 +52,7 @@ export class AgreementServiceConfig extends AgreementConfig {
   readonly agreementEventPoolingInterval: number;
   readonly agreementEventPoolingMaxEventsPerRequest: number;
   readonly agreementWaitingForProposalTimout: number;
-  readonly marketStrategy: MarketStrategy;
+  readonly strategy: MarketStrategy;
 
   constructor(options?: AgreementServiceOptions) {
     super(options);
@@ -62,6 +62,6 @@ export class AgreementServiceConfig extends AgreementConfig {
       options?.agreementEventPoolingInterval || DEFAULTS.agreementEventPoolingInterval;
     this.agreementEventPoolingMaxEventsPerRequest =
       options?.agreementEventPoolingMaxEventsPerRequest || DEFAULTS.agreementEventPoolingMaxEventsPerRequest;
-    this.marketStrategy = options?.marketStrategy || DEFAULTS.marketStrategy;
+    this.strategy = options?.strategy || DEFAULTS.strategy;
   }
 }

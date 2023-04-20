@@ -1,5 +1,5 @@
 import { Package, PackageOptions } from "../package/index.js";
-import { DemandOptions, MarketService } from "../market/index.js";
+import { DemandOptions, MarketService, MarketStrategy } from "../market/index.js";
 import { AgreementOptions, AgreementPoolService } from "../agreement/index.js";
 import { Task, TaskQueue, TaskService, Worker } from "../task/index.js";
 import { PaymentService } from "../payment/index.js";
@@ -44,6 +44,7 @@ export type ExecutorOptions = {
   isSubprocess?: boolean;
 
   activityPreparingTimeout?: number;
+  strategy?: MarketStrategy;
 } & ActivityOptions &
   AgreementOptions &
   BasePaymentOptions &

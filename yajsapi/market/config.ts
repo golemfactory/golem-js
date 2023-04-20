@@ -5,6 +5,7 @@ import { Logger } from "../utils/index.js";
 import { MarketOptions } from "./service.js";
 import { YagnaOptions } from "../executor/index.js";
 import { Agent } from "http";
+import { DummyMarketStrategy, MarketStrategy } from "./strategy.js";
 
 const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",
@@ -14,6 +15,7 @@ const DEFAULTS = {
   offerFetchingInterval: 10000,
   marketOfferExpiration: 1000 * 60 * 30, // 30 min
   debitNotesAcceptanceTimeout: 30,
+  marketStrategy: new DummyMarketStrategy(),
 };
 
 /**
@@ -58,8 +60,10 @@ export class DemandConfig {
  */
 export class MarketConfig extends DemandConfig {
   readonly debitNotesAcceptanceTimeout: number;
+  readonly strategy: MarketStrategy;
   constructor(options?: MarketOptions) {
     super(options);
     this.debitNotesAcceptanceTimeout = options?.debitNotesAcceptanceTimeout || DEFAULTS.debitNotesAcceptanceTimeout;
+    this.strategy = options?.strategy || DEFAULTS.marketStrategy;
   }
 }

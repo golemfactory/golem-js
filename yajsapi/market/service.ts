@@ -24,7 +24,6 @@ export interface MarketOptions extends DemandOptions {
  */
 export class MarketService {
   private readonly options: MarketConfig;
-  private marketStrategy: MarketStrategy;
   private demand?: Demand;
   private allowedPaymentPlatforms: string[] = [];
   private logger?: Logger;
@@ -34,7 +33,6 @@ export class MarketService {
 
   constructor(private readonly agreementPoolService: AgreementPoolService, options?: MarketOptions) {
     this.options = new MarketConfig(options);
-    this.marketStrategy = options?.strategy || new DummyMarketStrategy(this.logger);
     this.logger = this.options?.logger;
   }
   async run(taskPackage: Package, allocations: Allocation[]) {
@@ -115,6 +113,8 @@ export class MarketService {
       return { result: false, reason: "Debit note acceptance timeout too short" };
     const commonPaymentPlatforms = this.getCommonPaymentPlatforms(proposal.properties);
     if (!commonPaymentPlatforms?.length) return { result: false, reason: "No common payment platform" };
+    if (this.options.strategy && !this.options.strategy.checkProposal(proposal))
+      return { result: false, reason: "Proposal rejected by Market Strategy" };
     return { result: true };
   }
 
