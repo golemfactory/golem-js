@@ -199,7 +199,7 @@ export class AgreementPoolService {
 
       return agreement;
     } catch (e) {
-      this.logger?.error(`Unable to create agreement form available proposal: ${e?.data?.message || e}`);
+      this.logger?.debug(`Unable to create agreement form available proposal: ${e?.data?.message || e}`);
       await sleep(2);
       return;
     }
