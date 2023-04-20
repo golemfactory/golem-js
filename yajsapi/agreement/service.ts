@@ -167,7 +167,7 @@ export class AgreementPoolService {
    * @param reason
    */
   async terminateAll(reason?: { [key: string]: string }) {
-    this.logger?.info(`Terminate all agreements was called`);
+    this.logger?.debug(`Terminate all agreements was called`);
     for (const [agreementId] of Array.from(this.candidateMap)) {
       const agreement = this.agreements.get(agreementId);
       if (agreement && (await agreement.getState()) !== AgreementStateEnum.Terminated)
