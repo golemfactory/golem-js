@@ -20,10 +20,15 @@ export class DemandFactory {
     const demandRequest = new DecorationsBuilder().addDecorations(decorations).getDemandRequest();
     const { data: id } = await this.options.api.subscribeDemand(demandRequest).catch((e) => {
       const reason = e.response?.data?.message || e.toString();
-      this.options.eventTarget?.dispatchEvent(new events.SubscriptionFailed({ reason }));
+      this.options.eventTarget?.dispatchEvent(new events.DemandFailed({ reason }));
       throw new Error(`Could not publish demand on the market. ${reason}`);
     });
-    this.options.eventTarget?.dispatchEvent(new events.SubscriptionCreated({ id }));
+    this.options.eventTarget?.dispatchEvent(
+      new events.DemandSubscribed({
+        id,
+        details: new DecorationsBuilder().addDecorations(decorations).getDecorations(),
+      })
+    );
     this.options.logger?.info(`Demand published on the market`);
     return new Demand(id, demandRequest, this.options);
   }

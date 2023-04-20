@@ -6,9 +6,14 @@ import { Proposal } from "./proposal.js";
 import { Logger, sleep } from "../utils/index.js";
 import { DemandConfig } from "./config.js";
 import { Events } from "../events/index.js";
-import { ProposalEvent } from "ya-ts-client/dist/ya-market/src/models/index.js";
+import { ProposalEvent, ProposalRejectedEvent } from "ya-ts-client/dist/ya-market/src/models/index.js";
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market/index.js";
+import * as events from "../events/events.js";
 
+export interface DemandDetails {
+  properties: Array<{ key: string; value: string | number | boolean }>;
+  constraints: Array<string>;
+}
 /**
  * @category Mid-level
  */
@@ -38,6 +43,7 @@ export const DemandEventType = "ProposalReceived";
 export class Demand extends EventTarget {
   private isRunning = true;
   private logger?: Logger;
+  private proposalReferences: ProposalReference[] = [];
 
   /**
    * Create demand for given taskPackage
@@ -58,7 +64,7 @@ export class Demand extends EventTarget {
    * @param options - {@link DemandConfig}
    * @hidden
    */
-  constructor(public readonly id, private demandRequest: DemandOfferBase, private options: DemandConfig) {
+  constructor(public readonly id: string, private demandRequest: DemandOfferBase, private options: DemandConfig) {
     super();
     this.logger = this.options.logger;
     this.subscribe().catch((e) => this.logger?.error(e));
@@ -69,9 +75,24 @@ export class Demand extends EventTarget {
    */
   async unsubscribe() {
     this.isRunning = false;
-    await this.options.api.unsubscribeDemand(this.id).catch((e) => this.logger?.debug(e));
+    await this.options.api.unsubscribeDemand(this.id);
+    this.options.eventTarget?.dispatchEvent(new events.DemandUnsubscribed({ id: this.id }));
     this.removeEventListener(DemandEventType, null);
     this.logger?.debug(`Demand ${this.id} unsubscribed`);
+  }
+
+  private findParentProposal(prevProposalId?: string): string | null {
+    if (!prevProposalId) return null;
+    for (const proposal of this.proposalReferences) {
+      if (proposal.counteringProposalId === prevProposalId) {
+        return proposal.id;
+      }
+    }
+    return null;
+  }
+
+  private setCounteringProposalReference(id: string, counteringProposalId: string): void {
+    this.proposalReferences.push(new ProposalReference(id, counteringProposalId));
   }
 
   private async subscribe() {
@@ -80,15 +101,22 @@ export class Demand extends EventTarget {
         const { data: events } = await this.options.api.collectOffers(this.id, 3, this.options.maxOfferEvents, {
           timeout: 5000,
         });
-        for (const event of events as ProposalEvent[]) {
+        for (const event of events as Array<ProposalEvent & ProposalRejectedEvent>) {
           if (event.eventType === "ProposalRejectedEvent") {
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-ignore
             this.logger?.debug(`Proposal rejected. Reason: ${event.reason?.message}`);
+            this.options.eventTarget?.dispatchEvent(
+              new Events.ProposalRejected({
+                id: event.proposalId,
+                parentId: this.findParentProposal(event.proposalId),
+                reason: event.reason?.message,
+              })
+            );
             continue;
           } else if (event.eventType !== "ProposalEvent") continue;
           const proposal = new Proposal(
             this.id,
+            event.proposal.state === "Draft" ? this.findParentProposal(event.proposal.prevProposalId) : null,
+            this.setCounteringProposalReference.bind(this),
             this.options.api,
             event.proposal,
             this.demandRequest,
@@ -96,7 +124,12 @@ export class Demand extends EventTarget {
           );
           this.dispatchEvent(new DemandEvent(DemandEventType, proposal));
           this.options.eventTarget?.dispatchEvent(
-            new Events.ProposalReceived({ id: proposal.id, providerId: proposal.issuerId })
+            new Events.ProposalReceived({
+              id: proposal.id,
+              parentId: this.findParentProposal(event.proposal.prevProposalId),
+              providerId: proposal.issuerId,
+              details: proposal.details,
+            })
           );
         }
       } catch (error) {
@@ -136,4 +169,8 @@ export class DemandEvent extends Event {
     this.proposal = data;
     this.error = error;
   }
+}
+
+class ProposalReference {
+  constructor(readonly id: string, readonly counteringProposalId: string) {}
 }

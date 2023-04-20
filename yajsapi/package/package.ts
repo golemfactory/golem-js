@@ -26,6 +26,16 @@ export interface PackageOptions {
   logger?: Logger;
 }
 
+export interface PackageDetails {
+  minMemGib: number;
+  minStorageGib: number;
+  minCpuThreads: number;
+  minCpuCores: number;
+  engine: string;
+  capabilities: string[];
+  imageHash: string;
+}
+
 /**
  * Package module - an object for descriptions of the payload required by the requestor.
  * @category Mid-level
@@ -76,5 +86,17 @@ export class Package {
 
     const imageUrl = await response.data;
     return `hash:sha3:${this.options.imageHash}:${imageUrl}`;
+  }
+
+  get details(): PackageDetails {
+    return {
+      minMemGib: this.options.minMemGib,
+      minStorageGib: this.options.minStorageGib,
+      minCpuThreads: this.options.minCpuThreads,
+      minCpuCores: this.options.minCpuCores,
+      engine: this.options.engine,
+      capabilities: this.options.capabilities,
+      imageHash: this.options.imageHash,
+    };
   }
 }

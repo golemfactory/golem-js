@@ -15,6 +15,7 @@ export interface AgreementDTO {
 export interface ProposalDTO {
   id: string;
   issuerId: string;
+  provider: { id: string; name: string };
   properties: object;
   constraints: string;
 }
@@ -76,7 +77,7 @@ export class AgreementPoolService {
    * @param proposal Proposal
    */
   async addProposal(proposal: Proposal) {
-    this.logger?.debug(`New proposal added to pool (${proposal.id})`);
+    this.logger?.debug(`New proposal added to pool from provider (${proposal.provider.name})`);
     this.pool.add(new AgreementCandidate(proposal));
   }
 
