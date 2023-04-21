@@ -74,54 +74,45 @@ describe("Agreement Pool Service", () => {
     }).timeout(5000);
   });
   describe("releaseAgreement()", () => {
-    it.skip("should return agreement to the pool if flag reuse if on", async () => {
+    it("should return agreement to the pool if flag reuse if on", async () => {
       const agreementService = new AgreementPoolService({ logger });
       await agreementService.run();
-      // await agreementService.addProposal("proposal_id");
-      // const agreement = await agreementService.getAgreement();
-      // await agreementService.releaseAgreement(agreement.id, true);
-      // expect(logger.logs).to.include(`Agreement ${agreement.id} has been released for reuse`);
+      await agreementService.addProposal(createProposal("proposal-id"));
+      const agreement = await agreementService.getAgreement();
+      await agreementService.releaseAgreement(agreement, true);
+      expect(logger.logs).to.include(`Agreement ${agreement.id} has been released for reuse`);
     }).timeout(5000);
 
-    it.skip("should terminate agreement if flag reuse if off", async () => {
+    it("should terminate agreement if flag reuse if off", async () => {
       const agreementService = new AgreementPoolService({ logger });
       await agreementService.run();
-      // await agreementService.addProposal("proposal_id");
-      // const agreement = await agreementService.getAgreement();
-      // await agreementService.releaseAgreement(agreement.id, false);
-      // expect(logger.logs).to.include(`Agreement ${agreement.id} has been released and terminated`);
+      await agreementService.addProposal(createProposal("proposal-id"));
+      const agreement = await agreementService.getAgreement();
+      await agreementService.releaseAgreement(agreement, false);
+      expect(logger.logs).to.include(`Agreement ${agreement.id} has been released and terminated`);
+      expect(logger.logs).to.include(`Agreement ${agreement.id} terminated`);
     }).timeout(5000);
 
-    it.skip("should throw an exception if there is no agreement with given id", async () => {
+    it("should throw an exception if there is no agreement with given id", async () => {
       const agreementService = new AgreementPoolService({ logger });
       await agreementService.run();
-      // await agreementService.addProposal("proposal_id");
-      // const agreement = await agreementService.getAgreement();
-      // await expect(agreementService.releaseAgreement("not-known-id", false)).to.be.rejectedWith(
-      //   `Agreement not-known-id cannot found in pool`
-      // );
-    }).timeout(5000);
-
-    it.skip("should throw an exception if there is no agreement with given id", async () => {
-      const agreementService = new AgreementPoolService({ logger });
-      await agreementService.run();
-      // await agreementService.addProposal("proposal_id");
-      // const agreement = await agreementService.getAgreement();
-      // await expect(agreementService.releaseAgreement("not-known-id", false)).to.be.rejectedWith(
-      //   `Agreement not-known-id cannot found in pool`
-      // );
+      await agreementService.addProposal(createProposal("proposal-id"));
+      const agreement = await agreementService.getAgreement();
+      await expect(agreementService.releaseAgreement({ id: "not-known-id" } as Agreement, false)).to.be.rejectedWith(
+        `Agreement not-known-id cannot found in pool`
+      );
     }).timeout(5000);
   });
 
   describe("addProposal()", () => {
-    it.skip("should add proposal to pool", async () => {
+    it("should add proposal to pool", async () => {
       const agreementService = new AgreementPoolService({ logger });
       await agreementService.run();
-      //
-      // await agreementService.addProposal("proposal_id");
-      // expect(logger.logs).to.match(/New offer proposal added to pool .*/);
-      //
-      // await agreementService.end();
+
+      await agreementService.addProposal(createProposal("proposal-id"));
+      expect(logger.logs).to.match(/New proposal added to pool from provider .*/);
+
+      await agreementService.end();
     });
   });
 });

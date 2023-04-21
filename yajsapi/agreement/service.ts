@@ -97,7 +97,8 @@ export class AgreementPoolService {
         this.logger?.debug(`Agreement ${agreement.id} has been released for but not added to pool for reuse`);
       }
     } else {
-      this.logger?.debug(`Agreement ${agreement.id} has been released and removed from pool`);
+      await agreement.terminate();
+      this.logger?.debug(`Agreement ${agreement.id} has been released and terminated`);
     }
   }
 
