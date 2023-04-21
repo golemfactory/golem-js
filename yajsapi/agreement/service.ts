@@ -7,7 +7,6 @@ import sleep from "../utils/sleep.js";
 import { ComputationHistory, MarketStrategy } from "../market/strategy.js";
 import { AgreementServiceConfig } from "./config.js";
 import { Proposal } from "../market/proposal.js";
-import { agreement } from "../../tests/mock/entities/agreement";
 
 export interface AgreementDTO {
   id: string;
@@ -48,7 +47,6 @@ export class AgreementPoolService implements ComputationHistory {
   private pool = new Set<AgreementCandidate>();
   private candidateMap = new Map<string, AgreementCandidate>();
   private agreements = new Map<string, Agreement>();
-  private proposals = new Map<string, Proposal>();
 
   private isServiceRunning = false;
   private initialTime = Date.now();
@@ -83,12 +81,14 @@ export class AgreementPoolService implements ComputationHistory {
       properties: proposal.properties,
       constraints: proposal.constraints,
     };
+
     if (!(await this.config.marketStrategy.checkProposal(proposalDTO))) {
       this.logger?.info("Proposal has been rejected by market strategy");
       return;
     }
+
     this.logger?.info(`New proposal added to pool (${proposal.id})`);
-    this.pool.add(new AgreementCandidate(proposal));
+    this.pool.add(new AgreementCandidate(proposalDTO));
   }
 
   /**
@@ -134,7 +134,6 @@ export class AgreementPoolService implements ComputationHistory {
 
   private cleanupPool() {
     const toCleanup = Array.from(this.pool).filter((e) => !!e.agreement);
-    console.log("cleanupPool", toCleanup);
   }
 
   private async getAgreementFormPool(): Promise<Agreement | undefined> {
@@ -189,25 +188,18 @@ export class AgreementPoolService implements ComputationHistory {
 
   async createAgreement(candidate) {
     try {
-      let agreement = await Agreement.create(candidate.proposal.id, this.config.options);
-      agreement = await this.waitForAgreementApproval(agreement);
-      const state = await agreement.getState();
+      candidate.agreement = await Agreement.create(candidate.proposal.id, this.config.options);
+      candidate.agreement = await this.waitForAgreementApproval(candidate.agreement);
+      const state = await candidate.agreement.getState();
 
       if (state !== AgreementStateEnum.Approved) {
-        throw new Error(`Agreement ${agreement.id} cannot be approved. Current state: ${state}`);
+        throw new Error(`Agreement ${candidate.agreement.id} cannot be approved. Current state: ${state}`);
       }
-      this.logger?.info(`Agreement confirmed by provider ${agreement.provider.name}`);
+      this.logger?.info(`Agreement confirmed by provider ${candidate.agreement.provider.name}`);
+      this.agreements.set(candidate.agreement.id, candidate.agreement);
+      this.candidateMap.set(candidate.agreement.id, candidate);
 
-      this.agreements.set(agreement.id, agreement);
-
-      candidate.agreement = {
-        id: agreement.id,
-        provider: { id: agreement.provider.id, name: agreement.provider.name },
-      };
-
-      this.candidateMap.set(agreement.id, candidate);
-
-      return agreement;
+      return candidate.agreement;
     } catch (e) {
       this.logger?.error(`Unable to create agreement form available proposal: ${e?.data?.message || e}`);
       await sleep(2);
