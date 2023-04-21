@@ -130,7 +130,7 @@ export class AgreementPoolService {
     this.cleanupPool();
 
     if (this.pool.size === 0) {
-      this.logger?.debug(`Agreement cannot be created due to no available candidates in pool`);
+      this.logger?.info(`Agreement cannot be created due to no available candidates in pool`);
       return;
     }
 
