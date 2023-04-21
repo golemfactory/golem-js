@@ -93,12 +93,17 @@ export class AgreementPoolService {
       if (candidate) {
         this.pool.add(candidate);
         this.logger?.debug(`Agreement ${agreement.id} has been released for reuse`);
+        return;
       } else {
-        this.logger?.debug(`Agreement ${agreement.id} has been released for but not added to pool for reuse`);
+        this.logger?.warn(`Agreement ${agreement.id} not found in the pool`);
       }
     } else {
+      this.logger?.debug(`Agreement ${agreement.id} has been released and will be terminated`);
+    }
+    try {
       await agreement.terminate();
-      this.logger?.debug(`Agreement ${agreement.id} has been released and terminated`);
+    } catch (e) {
+      this.logger?.warn(`Unable to terminate agreement ${agreement.id}: ${e.message}`);
     }
   }
 

@@ -89,18 +89,17 @@ describe("Agreement Pool Service", () => {
       await agreementService.addProposal(createProposal("proposal-id"));
       const agreement = await agreementService.getAgreement();
       await agreementService.releaseAgreement(agreement, false);
-      expect(logger.logs).to.include(`Agreement ${agreement.id} has been released and terminated`);
+      expect(logger.logs).to.include(`Agreement ${agreement.id} has been released and will be terminated`);
       expect(logger.logs).to.include(`Agreement ${agreement.id} terminated`);
     }).timeout(5000);
 
-    it("should throw an exception if there is no agreement with given id", async () => {
+    it("should warn if there is no agreement with given id", async () => {
       const agreementService = new AgreementPoolService({ logger });
       await agreementService.run();
       await agreementService.addProposal(createProposal("proposal-id"));
       const agreement = await agreementService.getAgreement();
-      await expect(agreementService.releaseAgreement({ id: "not-known-id" } as Agreement, false)).to.be.rejectedWith(
-        `Agreement not-known-id cannot found in pool`
-      );
+      await agreementService.releaseAgreement({ id: "not-known-id" } as Agreement, true);
+      expect(logger.logs).to.include(`Agreement not-known-id not found in the pool`);
     }).timeout(5000);
   });
 
