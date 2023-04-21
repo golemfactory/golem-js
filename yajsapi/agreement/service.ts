@@ -7,7 +7,6 @@ import sleep from "../utils/sleep.js";
 import { MarketStrategy } from "../market/strategy.js";
 import { AgreementServiceConfig } from "./config.js";
 import { Proposal } from "../market/proposal.js";
-import { agreement } from "../../tests/mock/entities/agreement";
 
 export interface AgreementDTO {
   id: string;
@@ -127,19 +126,26 @@ export class AgreementPoolService {
   }
 
   private async getAgreementFormPool(): Promise<Agreement | undefined> {
-    this.cleanupPool();
+    // Limit concurrency to 1
+    const candidate = await this.limiter.schedule(async () => {
+      this.cleanupPool();
 
-    if (this.pool.size === 0) {
-      this.logger?.info(`Agreement cannot be created due to no available candidates in pool`);
+      if (this.pool.size === 0) {
+        this.logger?.info(`Agreement cannot be created due to no available candidates in pool`);
+        return;
+      }
+
+      const pool = Array.from(this.pool);
+      const bestCandidate = await this.config.strategy.getBestAgreementCandidate(pool);
+      this.pool.delete(bestCandidate);
+
+      return bestCandidate;
+    });
+
+    // If agreement is created return agreement
+    if (!candidate) {
       return;
     }
-
-    // Limit concurrency to 1
-    const candidate = await this.limiter.schedule(() => {
-      const pool = Array.from(this.pool);
-      return this.config.strategy.getBestAgreementCandidate(pool);
-    });
-    this.pool.delete(candidate);
 
     // If agreement is created return agreement
     if (candidate?.agreement?.id) {
