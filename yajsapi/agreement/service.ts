@@ -89,6 +89,7 @@ export class AgreementPoolService {
   async releaseAgreement(agreement: Agreement, allowReuse: boolean) {
     if (allowReuse) {
       const candidate = this.candidateMap.get(agreement.id);
+
       if (candidate) {
         this.pool.add(candidate);
         this.logger?.debug(`Agreement ${agreement.id} has been released for reuse`);

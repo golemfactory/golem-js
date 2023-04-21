@@ -1,8 +1,37 @@
 import { expect } from "chai";
 import { LoggerMock } from "../mock/index.js";
 import { Agreement, AgreementPoolService } from "../../yajsapi/agreement/index.js";
+import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
+import { Proposal as ProposalModel } from "ya-ts-client/dist/ya-market/src/models/proposal";
+import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
+import { Proposal } from "../../yajsapi/market/proposal.js";
 
 const logger = new LoggerMock();
+
+const createProposal = (id) => {
+  return new Proposal(
+    id,
+    null,
+    () => {},
+    {} as RequestorApi,
+    {
+      properties: {
+        "golem.activity.caps.transfer.protocol": "protocol",
+        "golem.inf.cpu.brand": "cpu_brand",
+        "golem.inf.cpu.capabilities": "cpu_capabilities",
+        "golem.inf.cpu.cores": "cpu_cores",
+        "golem.inf.cpu.threads": "cpu_threads",
+        "golem.inf.mem.gib": "mem_gib",
+        "golem.inf.storage.gib": "storage_gib",
+        "golem.node.id.name": "node_id_name",
+        "golem.node.net.is-public": true,
+        "golem.runtime.capabilities": ["a", "b", "c"],
+        "golem.runtime.name": "runtime_name",
+      },
+    } as ProposalModel,
+    {} as DemandOfferBase
+  );
+};
 
 describe("Agreement Pool Service", () => {
   beforeEach(() => {
@@ -26,21 +55,22 @@ describe("Agreement Pool Service", () => {
     });
   });
   describe("getAvailableAgreement()", () => {
-    it.skip("should create and return agreement from available proposal pool", async () => {
+    it("should create and return agreement from available proposal pool", async () => {
       const agreementService = new AgreementPoolService({ logger });
       await agreementService.run();
-      // await agreementService.addProposal("proposal_id");
-      // const agreement = await agreementService.getAgreement();
-      // expect(agreement).to.be.instanceof(Agreement);
+
+      await agreementService.addProposal(createProposal("proposal-id"));
+      const agreement = await agreementService.getAgreement();
+      expect(agreement).to.be.instanceof(Agreement);
     }).timeout(5000);
-    it.skip("should return agreement if is available in the pool", async () => {
+    it("should return agreement if is available in the pool", async () => {
       const agreementService = new AgreementPoolService({ logger });
       await agreementService.run();
-      // await agreementService.addProposal("proposal_id");
-      // const agreement1 = await agreementService.getAgreement();
-      // await agreementService.releaseAgreement(agreement1.id, true);
-      // const agreement2 = await agreementService.getAgreement();
-      // expect(agreement1).to.deep.equal(agreement2);
+      await agreementService.addProposal(createProposal("proposal-id"));
+      const agreement1 = await agreementService.getAgreement();
+      await agreementService.releaseAgreement(agreement1, true);
+      const agreement2 = await agreementService.getAgreement();
+      expect(agreement1).to.deep.equal(agreement2);
     }).timeout(5000);
   });
   describe("releaseAgreement()", () => {
