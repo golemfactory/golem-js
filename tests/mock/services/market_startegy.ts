@@ -1,11 +1,12 @@
 import { MarketStrategy, Proposal } from "../../../yajsapi/market/index.js";
 import { MarketDecoration } from "ya-ts-client/dist/ya-payment/src/models";
+import { AgreementCandidate, ProposalDTO } from "../../../yajsapi/agreement/service";
 
 export const marketStrategyAlwaysBan: MarketStrategy = {
-  scoreProposal(proposal: Proposal): number {
-    return -1;
+  async checkProposal(proposal: ProposalDTO): Promise<boolean> {
+    return true;
   },
-  getDemandDecoration(): MarketDecoration {
-    return {} as MarketDecoration;
+  async getBestAgreementCandidate(candidates: AgreementCandidate[]): Promise<AgreementCandidate> {
+    return candidates[0];
   },
 };
