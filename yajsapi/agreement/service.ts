@@ -142,7 +142,7 @@ export class AgreementPoolService {
       return bestCandidate;
     });
 
-    // If agreement is created return agreement
+    // If candidate is not present, return empty
     if (!candidate) {
       return;
     }
