@@ -18,6 +18,8 @@ export default {
       entries: [
         { find: "stream", replacement: "stream-browserify" },
         { find: /\.\/pinoLogger.js/, replacement: "tests/mock/utils/empty.js" },
+        { find: /bottleneck\/lib\/RedisConnection.js/, replacement: "tests/mock/utils/empty_default.js" },
+        { find: /bottleneck\/lib\/IORedisConnection.js/, replacement: "tests/mock/utils/empty_default.js" },
         { find: /eventsource\/lib\/eventsource.js/, replacement: "tests/mock/utils/empty_default.js" },
         { find: /src\/api\/provider-api$/, replacement: "." },
         { find: /\.\/gftp.js/, replacement: "tests/mock/utils/empty.js" },
