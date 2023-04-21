@@ -3,10 +3,11 @@ import { yaActivity } from "ya-ts-client/index.js";
 import { RequestorControlApi, RequestorStateApi } from "ya-ts-client/dist/ya-activity/api.js";
 import { Logger } from "../utils/index.js";
 import { YagnaOptions } from "../executor/index.js";
+import { Agent } from "http";
 
 const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",
-  activityRequestTimeout: 10000,
+  activityRequestTimeout: 20000,
   activityExecuteTimeout: 1000 * 60 * 5, // 5 min,
   activityExeBatchResultsFetchInterval: 3000,
 };
@@ -31,6 +32,7 @@ export class ActivityConfig {
       apiKey,
       basePath: `${basePath}/activity-api/v1`,
       accessToken: apiKey,
+      baseOptions: { httpAgent: new Agent({ keepAlive: true }) },
     });
     this.api = {
       control: new RequestorControlApi(apiConfig),

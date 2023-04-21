@@ -9,6 +9,7 @@ export class GftpStorageProvider implements StorageProvider {
   private gftpServerProcess;
   private reader;
   private publishedUrls: string[] = [];
+  private isInitialized = false;
 
   constructor(private logger?: Logger) {
     if (runtimeContextChecker.isBrowser) {
@@ -17,10 +18,12 @@ export class GftpStorageProvider implements StorageProvider {
   }
 
   async init() {
+    if (this.isInitialized) return;
     this.gftpServerProcess = await spawn("gftp server", [], { shell: true });
     this.gftpServerProcess.on("error", (error) => this.logger?.error(error));
     this.gftpServerProcess.stderr.on("error", (error) => this.logger?.error(error));
     this.logger?.info(`GFTP Version: ${await this.jsonrpc("version")}`);
+    this.isInitialized = true;
   }
 
   isInitiated() {

@@ -6,13 +6,14 @@ import { YagnaOptions } from "../executor/index.js";
 import { PaymentOptions } from "./service.js";
 import { InvoiceOptions } from "./invoice.js";
 import { AccountsOptions } from "./accounts.js";
+import { Agent } from "http";
 
 const DEFAULTS = {
   basePath: "http://127.0.0.1:7465",
   budget: 1.0,
   payment: { driver: "erc20", network: "rinkeby" },
-  paymentTimeout: 20000,
-  allocationExpires: 1000 * 60 * 30, // 30 min
+  paymentTimeout: 1000 * 60 * 2, // 2 min
+  allocationExpires: 1000 * 60 * 60, // 60 min
   invoiceReceiveTimeout: 1000 * 60 * 5, // 5 min
   maxInvoiceEvents: 10,
   maxDebitNotesEvents: 10,
@@ -48,7 +49,12 @@ abstract class BaseConfig {
     const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
     if (!apiKey) throw new Error("Api key not defined");
     const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_URL || DEFAULTS.basePath;
-    const apiConfig = new Configuration({ apiKey, basePath: `${basePath}/payment-api/v1`, accessToken: apiKey });
+    const apiConfig = new Configuration({
+      apiKey,
+      basePath: `${basePath}/payment-api/v1`,
+      accessToken: apiKey,
+      baseOptions: { httpAgent: new Agent({ keepAlive: true }) },
+    });
     this.api = new RequestorApi(apiConfig);
     this.paymentTimeout = options?.paymentTimeout || DEFAULTS.paymentTimeout;
     this.payment = {

@@ -13,6 +13,7 @@ export interface TaskOptions extends ActivityOptions {
   maxParallelTasks?: number;
   taskRunningInterval?: number;
   activityStateCheckingInterval?: number;
+  activityPreparingTimeout?: number;
   taskTimeout?: number;
   logger?: Logger;
   storageProvider?: StorageProvider;
@@ -77,7 +78,13 @@ export class TaskService {
         this.activities.set(agreement.id, activity);
       }
       this.options.eventTarget?.dispatchEvent(
-        new Events.TaskStarted({ id: task.id, agreementId: agreement.id, activityId: activity.id })
+        new Events.TaskStarted({
+          id: task.id,
+          agreementId: agreement.id,
+          activityId: activity.id,
+          providerId: agreement.provider.id,
+          providerName: agreement.provider.name,
+        })
       );
       this.logger?.info(
         `Task ${task.id} sent to provider ${agreement.provider.name}.${
@@ -90,13 +97,13 @@ export class TaskService {
       const data = task.getData();
       const networkNode = await this.networkService?.addNode(agreement.provider.id);
       const ctx = new WorkContext(activity, {
-        initWorker: initWorker,
+        initWorker: this.initWorkersDone.has(activity.id) ? undefined : initWorker,
         provider: agreement.provider,
         storageProvider: this.options.storageProvider,
         networkNode,
         logger: this.logger,
+        activityPreparingTimeout: this.options.activityPreparingTimeout,
         activityStateCheckingInterval: this.options.activityStateCheckingInterval,
-        workTimeout: this.options.taskTimeout,
         isRunning: () => this.isRunning,
       });
       await ctx.before();
@@ -114,25 +121,42 @@ export class TaskService {
       );
     } catch (error) {
       task.stop(undefined, error);
+      const reason = error?.response?.data?.message || error.message || error.toString();
       if (task.isRetry() && this.isRunning) {
         this.tasksQueue.addToBegin(task);
         this.options.eventTarget?.dispatchEvent(
-          new Events.TaskRedone({ id: task.id, retriesCount: task.getRetriesCount() })
+          new Events.TaskRedone({
+            id: task.id,
+            activityId: activity?.id,
+            agreementId: agreement.id,
+            providerId: agreement.provider.id,
+            providerName: agreement.provider.name,
+            retriesCount: task.getRetriesCount(),
+            reason,
+          })
         );
         this.logger?.warn(
-          `Task ${task.id} execution failed. Trying to redo the task. Attempt #${task.getRetriesCount()}. ${error}`
+          `Task ${task.id} execution failed. Trying to redo the task. Attempt #${task.getRetriesCount()}. ${reason}`
         );
       } else {
-        const reason = error.message || error.toString();
-        this.options.eventTarget?.dispatchEvent(new Events.TaskRejected({ id: task.id, reason }));
+        this.options.eventTarget?.dispatchEvent(
+          new Events.TaskRejected({
+            id: task.id,
+            agreementId: agreement.id,
+            activityId: activity.id,
+            providerId: agreement.provider.id,
+            providerName: agreement.provider.name,
+            reason,
+          })
+        );
         throw new Error(`Task ${task.id} has been rejected! ${reason}`);
       }
-      await activity.stop().catch((actError) => this.logger?.error(actError));
+      await activity?.stop().catch((actError) => this.logger?.debug(actError));
       this.activities.delete(agreement.id);
     } finally {
       --this.activeTasksCount;
       this.paymentService.acceptPayments(agreement);
     }
-    await this.agreementPoolService.releaseAgreement(agreement.id, task.isDone());
+    await this.agreementPoolService.releaseAgreement(agreement.id, task.isDone()).catch((e) => this.logger?.debug(e));
   }
 }

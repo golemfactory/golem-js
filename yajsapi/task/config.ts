@@ -8,6 +8,7 @@ const DEFAULTS = {
   taskRunningInterval: 1000,
   taskTimeout: 30000,
   activityStateCheckingInterval: 1000,
+  activityPreparingTimeout: 1000 * 60 * 5, // 5min
 };
 
 /**
@@ -18,6 +19,7 @@ export class TaskConfig extends ActivityConfig {
   public readonly taskRunningInterval: number;
   public readonly taskTimeout: number;
   public readonly activityStateCheckingInterval: number;
+  public readonly activityPreparingTimeout: number;
   public readonly storageProvider?: StorageProvider;
   public readonly logger?: Logger;
 
@@ -30,5 +32,6 @@ export class TaskConfig extends ActivityConfig {
       options?.activityStateCheckingInterval || DEFAULTS.activityStateCheckingInterval;
     this.logger = options?.logger;
     this.storageProvider = options?.storageProvider;
+    this.activityPreparingTimeout = options?.activityPreparingTimeout || DEFAULTS.activityPreparingTimeout;
   }
 }

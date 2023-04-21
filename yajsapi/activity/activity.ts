@@ -95,8 +95,8 @@ export class Activity {
       startTime = new Date();
       batchSize = JSON.parse(script.text).length;
     } catch (error) {
-      this.logger?.error(error);
-      throw new Error(error?.response?.data?.message || error);
+      this.logger?.error(error?.response?.data?.message || error.message || error);
+      throw new Error(error);
     }
     this.logger?.debug(`Script sent. Batch ID: ${batchId}`);
     this.options.eventTarget?.dispatchEvent(
@@ -159,7 +159,7 @@ export class Activity {
     let isBatchFinished = false;
     let lastIndex;
     let retryCount = 0;
-    const maxRetries = 3;
+    const maxRetries = 5;
     const { id: activityId, agreementId } = this;
     const isRunning = () => this.isRunning;
     const { activityExecuteTimeout, api, activityExeBatchResultsFetchInterval, eventTarget } = this.options;
@@ -176,6 +176,7 @@ export class Activity {
           }
           try {
             const { data: results }: { data: Result[] } = await api.control.getExecBatchResults(activityId, batchId);
+            retryCount = 0;
             const newResults = results.slice(lastIndex + 1);
             if (Array.isArray(newResults) && newResults.length) {
               newResults.forEach((result) => {
@@ -257,19 +258,19 @@ export class Activity {
       this.logger?.warn(`Activity ${this.id} terminated by provider. ${msg ? "Reason: " + msg : ""}`);
       throw error;
     }
-    if (!this.isGsbError(error)) {
-      throw error;
-    }
+    // if (!this.isGsbError(error)) {
+    //   throw error;
+    // }
     ++retryCount;
-    const failMsg = "getExecBatchResults failed due to GSB error";
+    const failMsg = "There was an error retrieving activity results. ";
+    const errorMsg = error?.response?.data?.message || error?.message || error;
     if (retryCount < maxRetries) {
       this.logger?.debug(`${failMsg}, retrying in ${this.options.activityExeBatchResultsFetchInterval}.`);
       return retryCount;
     } else {
-      this.logger?.debug(`${failMsg}, giving up after ${retryCount} attempts.`);
+      this.logger?.error(`${failMsg}, giving up after ${retryCount} attempts. ${errorMsg}`);
     }
-    const msg = error?.response?.data?.message || error;
-    throw new Error(`Command #${cmdIndex || 0} getExecBatchResults error: ${msg}`);
+    throw new Error(`Command #${cmdIndex || 0} getExecBatchResults error: ${errorMsg}`);
   }
 
   private isTimeoutError(error) {

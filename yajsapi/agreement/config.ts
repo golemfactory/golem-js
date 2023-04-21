@@ -3,6 +3,7 @@ import { AgreementServiceOptions } from "./service.js";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api.js";
 import { Configuration } from "ya-ts-client/dist/ya-market/index.js";
 import { Logger } from "../utils/index.js";
+import { Agent } from "http";
 import { MarketStrategy, DummyMarketStrategy } from "../market/strategy.js";
 
 const DEFAULTS = {
@@ -12,7 +13,7 @@ const DEFAULTS = {
   agreementEventPoolingMaxEventsPerRequest: 100,
   agreementWaitingForProposalTimout: 10000,
   agreementWaitingForApprovalTimeout: 60,
-  marketStrategy: new DummyMarketStrategy(),
+  strategy: new DummyMarketStrategy(),
 };
 
 /**
@@ -29,7 +30,12 @@ export class AgreementConfig {
     const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
     if (!apiKey) throw new Error("Api key not defined");
     const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_URL || DEFAULTS.basePath;
-    const apiConfig = new Configuration({ apiKey, basePath: `${basePath}/market-api/v1`, accessToken: apiKey });
+    const apiConfig = new Configuration({
+      apiKey,
+      basePath: `${basePath}/market-api/v1`,
+      accessToken: apiKey,
+      baseOptions: { httpAgent: new Agent({ keepAlive: true }) },
+    });
     this.api = new RequestorApi(apiConfig);
     this.agreementRequestTimeout = options?.agreementRequestTimeout || DEFAULTS.agreementRequestTimeout;
     this.agreementWaitingForApprovalTimeout =
@@ -46,7 +52,7 @@ export class AgreementServiceConfig extends AgreementConfig {
   readonly agreementEventPoolingInterval: number;
   readonly agreementEventPoolingMaxEventsPerRequest: number;
   readonly agreementWaitingForProposalTimout: number;
-  readonly marketStrategy: MarketStrategy;
+  readonly strategy: MarketStrategy;
 
   constructor(options?: AgreementServiceOptions) {
     super(options);
@@ -56,6 +62,6 @@ export class AgreementServiceConfig extends AgreementConfig {
       options?.agreementEventPoolingInterval || DEFAULTS.agreementEventPoolingInterval;
     this.agreementEventPoolingMaxEventsPerRequest =
       options?.agreementEventPoolingMaxEventsPerRequest || DEFAULTS.agreementEventPoolingMaxEventsPerRequest;
-    this.marketStrategy = options?.marketStrategy || DEFAULTS.marketStrategy;
+    this.strategy = options?.strategy || DEFAULTS.strategy;
   }
 }

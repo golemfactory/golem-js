@@ -1,5 +1,5 @@
 import { Package, PackageOptions } from "../package/index.js";
-import { DemandOptions, MarketService } from "../market/index.js";
+import { DemandOptions, MarketService, MarketStrategy } from "../market/index.js";
 import { AgreementOptions, AgreementPoolService } from "../agreement/index.js";
 import { Task, TaskQueue, TaskService, Worker } from "../task/index.js";
 import { PaymentService } from "../payment/index.js";
@@ -16,6 +16,7 @@ import { NetworkServiceOptions } from "../network/service.js";
 import { AgreementServiceOptions } from "../agreement/service.js";
 import { WorkOptions } from "../task/work.js";
 import { LogLevel } from "../utils/logger.js";
+const terminatingSignals = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
 
 /**
  * @category High-level
@@ -37,6 +38,13 @@ export type ExecutorOptions = {
   eventTarget?: EventTarget;
   /** The maximum number of retries when the job failed on the provider */
   maxTaskRetries?: number;
+
+  storageProvider?: StorageProvider;
+
+  isSubprocess?: boolean;
+
+  activityPreparingTimeout?: number;
+  strategy?: MarketStrategy;
 } & ActivityOptions &
   AgreementOptions &
   BasePaymentOptions &
@@ -79,6 +87,7 @@ export class TaskExecutor {
   private logger?: Logger;
   private lastTaskIndex = 0;
   private isRunning = true;
+  private configOptions: ExecutorOptions;
 
   /**
    * Create a new Task Executor
@@ -120,17 +129,17 @@ export class TaskExecutor {
    * @param options - contains information needed to start executor, if string the imageHash is required, otherwise it should be a type of {@link ExecutorOptions}
    */
   private constructor(options: ExecutorOptionsMixin) {
-    const configOptions: ExecutorOptions = (
-      typeof options === "string" ? { package: options } : options
-    ) as ExecutorOptions;
-    this.options = new ExecutorConfig(configOptions);
+    this.configOptions = (typeof options === "string" ? { package: options } : options) as ExecutorOptions;
+    this.options = new ExecutorConfig(this.configOptions);
     this.logger = this.options.logger;
     this.taskQueue = new TaskQueue<Task<any, any>>();
     this.agreementPoolService = new AgreementPoolService(this.options);
     this.paymentService = new PaymentService(this.options);
     this.marketService = new MarketService(this.agreementPoolService, this.options);
     this.networkService = this.options.networkIp ? new NetworkService(this.options) : undefined;
-    this.storageProvider = runtimeContextChecker.isNode ? new GftpStorageProvider(this.logger) : undefined;
+    this.storageProvider = runtimeContextChecker.isNode
+      ? this.configOptions.storageProvider || new GftpStorageProvider(this.logger)
+      : undefined;
     this.taskService = new TaskService(
       this.taskQueue,
       this.agreementPoolService,
@@ -158,7 +167,7 @@ export class TaskExecutor {
     this.networkService?.run().catch((e) => this.handleCriticalError(e));
     this.statsService.run().catch((e) => this.handleCriticalError(e));
     this.storageProvider?.init().catch((e) => this.handleCriticalError(e));
-    if (runtimeContextChecker.isNode) this.handleCancelEvent();
+    if (runtimeContextChecker.isNode && !this.options.isSubprocess) this.handleCancelEvent();
     this.options.eventTarget.dispatchEvent(new Events.ComputationStarted());
     this.logger?.info(
       `Task Executor has started using subnet: ${this.options.subnetTag}, network: ${this.options.payment?.network}, driver: ${this.options.payment?.driver}`
@@ -169,6 +178,7 @@ export class TaskExecutor {
    * Stop all executor services and shut down executor instance
    */
   async end() {
+    this.removeCancelEvent();
     if (!this.isRunning) return;
     this.isRunning = false;
     await this.networkService?.end();
@@ -176,7 +186,7 @@ export class TaskExecutor {
     await this.agreementPoolService.end();
     await this.marketService.end();
     await this.paymentService.end();
-    this.storageProvider?.close();
+    if (!this.configOptions.storageProvider) this.storageProvider?.close();
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFinished());
     this.printStats();
     await this.statsService.end();
@@ -331,7 +341,7 @@ export class TaskExecutor {
     clearTimeout(timeoutId);
     if (timeout) {
       const error = new Error(`Task ${task.id} timeout.`);
-      task.stop(undefined, error);
+      task.stop(undefined, error, true);
       throw error;
     }
   }
@@ -345,19 +355,29 @@ export class TaskExecutor {
       this.logger?.error(e);
       process?.exit(1);
     });
+    throw e;
   }
 
   private handleCancelEvent() {
-    const terminatingSignals = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
-    const cancel = async () => {
-      terminatingSignals.forEach((event) => process.off(event, cancel));
-      this.logger?.warn("Executor has interrupted by the user. Stopping all tasks...");
-      await this.end().catch((error) => {
+    terminatingSignals.forEach((event) => process.on(event, this.cancel.bind(this)));
+  }
+
+  private removeCancelEvent() {
+    terminatingSignals.forEach((event) => process.off(event, this.cancel.bind(this)));
+  }
+
+  public async cancel(reason?: string) {
+    const message = `Executor has interrupted by the user. Reason: ${reason}.`;
+    this.logger?.warn(`${message}. Stopping all tasks...`);
+    await this.end()
+      .then(() => {
+        if (this.options.isSubprocess) throw new Error(message);
+        else process.exit(0);
+      })
+      .catch((error) => {
         this.logger?.error(error);
-        process.exit(1);
+        !this.options.isSubprocess && process.exit(1);
       });
-    };
-    terminatingSignals.forEach((event) => process.on(event, cancel));
   }
 
   private printStats() {
