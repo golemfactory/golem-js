@@ -92,7 +92,7 @@ export class MarketService {
   private async processInitialProposal(proposal: Proposal) {
     this.logger?.debug(`New proposal has been received (${proposal.id})`);
     try {
-      const { result: isProposalValid, reason } = this.isProposalValid(proposal);
+      const { result: isProposalValid, reason } = await this.isProposalValid(proposal);
       if (isProposalValid) {
         const chosenPlatform = this.getCommonPaymentPlatforms(proposal.properties)![0];
         await proposal
@@ -107,13 +107,13 @@ export class MarketService {
     }
   }
 
-  private isProposalValid(proposal: Proposal): { result: boolean; reason?: string } {
+  private async isProposalValid(proposal: Proposal): Promise<{ result: boolean; reason?: string }> {
     const timeout = proposal.properties["golem.com.payment.debit-notes.accept-timeout?"];
     if (timeout && timeout < this.options.debitNotesAcceptanceTimeout)
       return { result: false, reason: "Debit note acceptance timeout too short" };
     const commonPaymentPlatforms = this.getCommonPaymentPlatforms(proposal.properties);
     if (!commonPaymentPlatforms?.length) return { result: false, reason: "No common payment platform" };
-    if (this.options.strategy && !this.options.strategy.checkProposal(proposal))
+    if (this.options.strategy && !(await this.options.strategy.checkProposal(proposal)))
       return { result: false, reason: "Proposal rejected by Market Strategy" };
     return { result: true };
   }

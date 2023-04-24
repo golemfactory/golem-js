@@ -4,7 +4,7 @@ import { AgreementCandidate, ProposalDTO } from "../../../yajsapi/agreement/serv
 
 export const marketStrategyAlwaysBan: MarketStrategy = {
   async checkProposal(proposal: ProposalDTO): Promise<boolean> {
-    return true;
+    return false;
   },
   async getBestAgreementCandidate(candidates: AgreementCandidate[]): Promise<AgreementCandidate> {
     return candidates[0];

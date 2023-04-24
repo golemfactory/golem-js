@@ -8,7 +8,12 @@ import {
   LoggerMock,
   allocationMock,
 } from "../mock/index.js";
-import { proposalsInitial, proposalsDraft } from "../mock/fixtures/index.js";
+import {
+  proposalsInitial,
+  proposalsDraft,
+  proposalsWrongPaymentPlatform,
+  proposalsShortDebitNoteTimeout,
+} from "../mock/fixtures/index.js";
 
 const logger = new LoggerMock();
 
@@ -39,8 +44,8 @@ describe("Market Service", () => {
     await marketService.run(packageMock, [allocationMock]);
     setExpectedProposals(proposalsDraft);
     await logger.expectToInclude("Proposal has been confirmed", 10);
-    const addedProposalsIds = agreementPoolServiceMock["getProposalIds"]();
-    expect(addedProposalsIds).to.deep.equal(proposalsDraft.map((p) => p.proposal.proposalId));
+    const addedProposalsIds = agreementPoolServiceMock["getProposals"]().map((p) => p.id);
+    expect(addedProposalsIds).to.eql(proposalsDraft.map((p) => p.proposal.proposalId));
     await marketService.end();
   });
 
@@ -52,11 +57,26 @@ describe("Market Service", () => {
     await marketService.end();
   });
 
-  it("should reject initial proposal with to low score", async () => {
+  it("should reject when no common payment platform", async () => {
+    const marketService = new MarketService(agreementPoolServiceMock, { logger });
+    await marketService.run(packageMock, [allocationMock]);
+    setExpectedProposals(proposalsWrongPaymentPlatform);
+    await logger.expectToMatch(/No common payment platform/, 10);
+    await marketService.end();
+  });
+  it("should reject initial proposal when debit note acceptance timeout too short", async () => {
+    const marketService = new MarketService(agreementPoolServiceMock, { logger });
+    await marketService.run(packageMock, [allocationMock]);
+    setExpectedProposals(proposalsShortDebitNoteTimeout);
+    await logger.expectToMatch(/Debit note acceptance timeout too short/, 10);
+    await marketService.end();
+  });
+  it("should reject when proposal rejected by Market Strategy", async () => {
     const marketService = new MarketService(agreementPoolServiceMock, { logger, strategy: marketStrategyAlwaysBan });
     await marketService.run(packageMock, [allocationMock]);
     setExpectedProposals(proposalsInitial);
-    await logger.expectToMatch(/Proposal has been rejected .* Reason: Score is to low/, 10);
+    console.log(logger.logs);
+    await logger.expectToMatch(/Proposal rejected by Market Strategy/, 10);
     await marketService.end();
   });
 });
