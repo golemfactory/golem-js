@@ -75,7 +75,6 @@ describe("Market Service", () => {
     const marketService = new MarketService(agreementPoolServiceMock, { logger, strategy: marketStrategyAlwaysBan });
     await marketService.run(packageMock, [allocationMock]);
     setExpectedProposals(proposalsInitial);
-    console.log(logger.logs);
     await logger.expectToMatch(/Proposal rejected by Market Strategy/, 10);
     await marketService.end();
   });
