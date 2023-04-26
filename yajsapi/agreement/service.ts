@@ -86,24 +86,28 @@ export class AgreementPoolService {
    * @param agreement Agreement
    * @param allowReuse if false, terminate and remove from pool, if true, back to pool for further reuse
    */
-  async releaseAgreement(agreement: Agreement, allowReuse: boolean) {
+  async releaseAgreement(agreementId: string, allowReuse: boolean) {
     if (allowReuse) {
-      const candidate = this.candidateMap.get(agreement.id);
-
+      const candidate = this.candidateMap.get(agreementId);
       if (candidate) {
         this.pool.add(candidate);
-        this.logger?.debug(`Agreement ${agreement.id} has been released for reuse`);
+        this.logger?.debug(`Agreement ${agreementId} has been released for reuse`);
         return;
       } else {
-        this.logger?.warn(`Agreement ${agreement.id} not found in the pool`);
+        this.logger?.warn(`Agreement ${agreementId} not found in the pool`);
       }
     } else {
-      this.logger?.debug(`Agreement ${agreement.id} has been released and will be terminated`);
-    }
-    try {
-      await agreement.terminate();
-    } catch (e) {
-      this.logger?.warn(`Unable to terminate agreement ${agreement.id}: ${e.message}`);
+      const agreement = this.agreements.get(agreementId);
+      if (!agreement) {
+        this.logger?.warn(`Agreement ${agreementId} not found in the pool`);
+        return;
+      }
+      this.logger?.debug(`Agreement ${agreementId} has been released and will be terminated`);
+      try {
+        await agreement.terminate();
+      } catch (e) {
+        this.logger?.warn(`Unable to terminate agreement ${agreement.id}: ${e.message}`);
+      }
     }
   }
 
