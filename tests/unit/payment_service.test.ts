@@ -50,7 +50,7 @@ describe("Payment Service", () => {
       await paymentService.run();
       paymentService.acceptPayments(agreement);
       await new Promise((res) => setTimeout(res, 200));
-      await logger.expectToInclude(`Invoice accepted from ${agreement.provider.name}`, 100);
+      await logger.expectToInclude(`Invoice accepted from provider ${agreement.provider.name}`, 100);
       await paymentService.end();
     });
 
