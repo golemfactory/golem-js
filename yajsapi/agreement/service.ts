@@ -89,14 +89,21 @@ export class AgreementPoolService {
   async releaseAgreement(agreement: Agreement, allowReuse: boolean) {
     if (allowReuse) {
       const candidate = this.candidateMap.get(agreement.id);
+
       if (candidate) {
         this.pool.add(candidate);
         this.logger?.debug(`Agreement ${agreement.id} has been released for reuse`);
+        return;
       } else {
-        this.logger?.debug(`Agreement ${agreement.id} has been released for but not added to pool for reuse`);
+        this.logger?.warn(`Agreement ${agreement.id} not found in the pool`);
       }
     } else {
-      this.logger?.debug(`Agreement ${agreement.id} has been released and removed from pool`);
+      this.logger?.debug(`Agreement ${agreement.id} has been released and will be terminated`);
+    }
+    try {
+      await agreement.terminate();
+    } catch (e) {
+      this.logger?.warn(`Unable to terminate agreement ${agreement.id}: ${e.message}`);
     }
   }
 
