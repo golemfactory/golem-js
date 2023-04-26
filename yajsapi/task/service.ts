@@ -92,6 +92,7 @@ export class TaskService {
         }`
       );
       this.paymentService.acceptDebitNotes(agreement.id);
+      this.paymentService.acceptPayments(agreement);
       const initWorker = task.getInitWorker();
       const worker = task.getWorker();
       const data = task.getData();
@@ -155,7 +156,6 @@ export class TaskService {
       this.activities.delete(agreement.id);
     } finally {
       --this.activeTasksCount;
-      this.paymentService.acceptPayments(agreement);
     }
     await this.agreementPoolService.releaseAgreement(agreement.id, task.isDone()).catch((e) => this.logger?.debug(e));
   }
