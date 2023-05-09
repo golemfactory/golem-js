@@ -15,8 +15,8 @@ const DEFAULTS = {
   paymentTimeout: 1000 * 60 * 2, // 2 min
   allocationExpires: 1000 * 60 * 60, // 60 min
   invoiceReceiveTimeout: 1000 * 60 * 5, // 5 min
-  maxInvoiceEvents: 100,
-  maxDebitNotesEvents: 10,
+  maxInvoiceEvents: 500,
+  maxDebitNotesEvents: 500,
   invoiceFetchingInterval: 2000,
   debitNotesFetchingInterval: 2000,
   payingInterval: 2000,
