@@ -21,8 +21,19 @@ export interface PackageOptions {
   /** Required providers capabilities to run application */
   capabilities?: string[];
   /**  finds package by its contents hash */
-  imageHash: string;
+  imageHash?: string;
+  /** The address of the repository where the images are shared **/
   repoUrl?: string;
+  /** Manifest - base64 encoded Computation Payload Manifest
+   https://handbook.golem.network/requestor-tutorials/vm-runtime/computation-payload-manifest **/
+  manifest?: string;
+  /** Signature of base64 encoded Computation Payload Manifest **/
+  manifestSig?: string;
+  /** Algorithm of manifest signature, e.g. "sha256" **/
+  manifestSigAlgorithm?: string;
+  /** Certificate - base64 encoded public certificate (DER or PEM) matching key used to generate signature **/
+  manifestCert?: string;
+  /** Custom logger **/
   logger?: Logger;
 }
 
@@ -51,10 +62,11 @@ export class Package {
       .addConstraint("golem.inf.mem.gib", this.options.minMemGib.toString(), ComparisonOperator.GtEq)
       .addConstraint("golem.inf.storage.gib", this.options.minStorageGib.toString(), ComparisonOperator.GtEq)
       .addConstraint("golem.runtime.name", this.options.engine)
-      // .addConstraint("golem.inf.cpu.cores", this.options.minCpuCores.toString(), ComparisonOperator.GtEq)
+      .addConstraint("golem.inf.cpu.cores", this.options.minCpuCores.toString(), ComparisonOperator.GtEq)
       .addConstraint("golem.inf.cpu.threads", this.options.minCpuThreads.toString(), ComparisonOperator.GtEq);
     if (this.options.capabilities.length)
       builder.addConstraint("golem.runtime.capabilities", this.options.capabilities.join(","));
+    this.addManifestDecorations(builder);
     return builder.getDecorations();
   }
 
@@ -73,8 +85,18 @@ export class Package {
       this.logger?.error(`Unable to resolve task package url: Response ` + response.status);
       throw Error(`Error: ${response.status}`);
     }
-
     const imageUrl = await response.data;
     return `hash:sha3:${this.options.imageHash}:${imageUrl}`;
+  }
+
+  private addManifestDecorations(builder: DecorationsBuilder): void {
+    if (!this.options.manifest) return;
+    if (!this.options.manifestSig || !this.options.manifestSigAlgorithm || !this.options.manifestCert)
+      throw new Error("If you want to use manifest, you need to define signature, algorithm and certificate");
+    builder
+      .addProperty("golem.srv.comp.payload", this.options.manifest)
+      .addProperty("golem.srv.comp.payload.sig", this.options.manifestSig)
+      .addProperty("manifest_sig_algorithm", this.options.manifestSigAlgorithm)
+      .addProperty("manifest_cert", this.options.manifestCert);
   }
 }

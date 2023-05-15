@@ -22,7 +22,7 @@ import { LogLevel } from "../utils/logger.js";
  */
 export type ExecutorOptions = {
   /** Image hash as string, otherwise Package object */
-  package: string | Package;
+  package?: string | Package;
   /** Timeout for execute one task in ms */
   taskTimeout?: number;
   /** Subnet Tag */
@@ -148,7 +148,9 @@ export class TaskExecutor {
    */
   async init() {
     const taskPackage =
-      typeof this.options.package === "string" ? await this.createPackage(this.options.package) : this.options.package;
+      typeof this.options.package === "string" || this.options.packageOptions.manifest
+        ? await this.createPackage(this.options.package as string | undefined)
+        : (this.options.package as Package);
     this.logger?.debug("Initializing task executor services...");
     const allocations = await this.paymentService.createAllocations();
     this.marketService.run(taskPackage, allocations).catch((e) => this.handleCriticalError(e));
@@ -302,7 +304,7 @@ export class TaskExecutor {
     );
   }
 
-  private async createPackage(imageHash: string): Promise<Package> {
+  private async createPackage(imageHash?: string): Promise<Package> {
     return Package.create({ ...this.options.packageOptions, imageHash });
   }
 

@@ -1,5 +1,5 @@
 import { ExecutorOptions } from "./executor.js";
-import { Package } from "../package/index.js";
+import { Package, PackageOptions } from "../package/index.js";
 import { MarketStrategy } from "../market/index.js";
 import { Logger, runtimeContextChecker, pinoLogger } from "../utils/index.js";
 
@@ -18,7 +18,7 @@ const DEFAULTS = {
  * @internal
  */
 export class ExecutorConfig {
-  readonly package: Package | string;
+  readonly package?: Package | string;
   readonly maxParallelTasks: number;
   readonly taskTimeout: number;
   readonly budget: number;
@@ -26,15 +26,7 @@ export class ExecutorConfig {
   readonly subnetTag: string;
   readonly payment: { driver: string; network: string };
   readonly networkIp?: string;
-  readonly packageOptions: {
-    engine?: string;
-    repoUrl?: string;
-    minMemGib?: number;
-    minStorageGib?: number;
-    minCpuThreads?: number;
-    cores?: number;
-    capabilities?: string[];
-  };
+  readonly packageOptions: Omit<PackageOptions, "imageHash">;
   readonly logLevel: string;
   readonly yagnaOptions: { apiKey: string; basePath: string };
   readonly logger?: Logger;
@@ -61,6 +53,18 @@ export class ExecutorConfig {
       basePath: options.yagnaOptions?.basePath || processEnv.env.YAGNA_API_URL || DEFAULTS.basePath,
     };
     this.package = options.package;
+    this.packageOptions = {
+      engine: options.engine,
+      minMemGib: options.minMemGib,
+      minStorageGib: options.minStorageGib,
+      minCpuThreads: options.minCpuThreads,
+      capabilities: options.capabilities,
+      repoUrl: options.repoUrl,
+      manifest: options.manifest,
+      manifestSig: options.manifestSig,
+      manifestSigAlgorithm: options.manifestSigAlgorithm,
+      manifestCert: options.manifestCert,
+    };
     this.budget = options.budget || DEFAULTS.budget;
     this.maxParallelTasks = options.maxParallelTasks || DEFAULTS.maxParallelTasks;
     this.taskTimeout = options.taskTimeout || DEFAULTS.taskTimeout;
@@ -70,14 +74,6 @@ export class ExecutorConfig {
       network: options.payment?.network || DEFAULTS.payment.network,
     };
     this.networkIp = options.networkIp;
-    this.packageOptions = {
-      engine: options.engine,
-      minMemGib: options.minMemGib,
-      minStorageGib: options.minStorageGib,
-      minCpuThreads: options.minCpuThreads,
-      capabilities: options.capabilities,
-      repoUrl: options.repoUrl,
-    };
     this.logger = options.logger || (!runtimeContextChecker.isBrowser ? pinoLogger : undefined);
     this.logLevel = options.logLevel || DEFAULTS.logLevel;
     this.logger?.setLevel && this.logger?.setLevel(this.logLevel);
