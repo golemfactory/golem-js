@@ -54,16 +54,18 @@ export class Package {
   }
 
   async getDemandDecoration(): Promise<MarketDecoration> {
-    const taskPackage = await this.resolveTaskPackageUrl();
     const builder = new DecorationsBuilder();
     builder
-      .addProperty("golem.srv.comp.task_package", taskPackage)
       .addProperty("golem.srv.comp.vm.package_format", this.options.packageFormat)
       .addConstraint("golem.inf.mem.gib", this.options.minMemGib.toString(), ComparisonOperator.GtEq)
       .addConstraint("golem.inf.storage.gib", this.options.minStorageGib.toString(), ComparisonOperator.GtEq)
       .addConstraint("golem.runtime.name", this.options.engine)
       .addConstraint("golem.inf.cpu.cores", this.options.minCpuCores.toString(), ComparisonOperator.GtEq)
       .addConstraint("golem.inf.cpu.threads", this.options.minCpuThreads.toString(), ComparisonOperator.GtEq);
+    if (this.options.imageHash) {
+      const taskPackage = await this.resolveTaskPackageUrl();
+      builder.addProperty("golem.srv.comp.task_package", taskPackage);
+    }
     if (this.options.capabilities.length)
       builder.addConstraint("golem.runtime.capabilities", this.options.capabilities.join(","));
     this.addManifestDecorations(builder);
