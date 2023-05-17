@@ -11,15 +11,13 @@ import { readFileSync } from "fs";
     subnetTag: "public",
   });
   await executor.run(async (ctx) => {
-    const results = await ctx.run(
+    const result = await ctx.run(
       "GOLEM_PRICE=`curl -X 'GET' \
-                'https://api.coingecko.com/api/v3/simple/price?ids=golem&vs_currencies=usd' \
-                -H 'accept: application/json' | jq .golem.usd`; \
-            echo ---; \
-            echo \"Golem price: $GOLEM_PRICE USD\"; \
-            echo ---;"
+          'https://api.coingecko.com/api/v3/simple/price?ids=golem&vs_currencies=usd' \
+          -H 'accept: application/json' | jq .golem.usd`; \
+      echo \"Golem price: $GOLEM_PRICE USD\";"
     );
-    console.log(results);
+    console.log(result.stdout);
   });
   await executor.end();
 })();

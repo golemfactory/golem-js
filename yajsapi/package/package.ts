@@ -67,7 +67,7 @@ export class Package {
       builder.addProperty("golem.srv.comp.task_package", taskPackage);
     }
     if (this.options.capabilities.length)
-      builder.addConstraint("golem.runtime.capabilities", this.options.capabilities.join(","));
+      this.options.capabilities.forEach((cap) => builder.addConstraint("golem.runtime.capabilities", cap));
     this.addManifestDecorations(builder);
     return builder.getDecorations();
   }
@@ -93,12 +93,10 @@ export class Package {
 
   private addManifestDecorations(builder: DecorationsBuilder): void {
     if (!this.options.manifest) return;
-    if (!this.options.manifestSig || !this.options.manifestSigAlgorithm || !this.options.manifestCert)
-      throw new Error("If you want to use manifest, you need to define signature, algorithm and certificate");
-    builder
-      .addProperty("golem.srv.comp.payload", this.options.manifest)
-      .addProperty("golem.srv.comp.payload.sig", this.options.manifestSig)
-      .addProperty("golem.srv.comp.payload.sig.algorithm", this.options.manifestSigAlgorithm)
-      .addProperty("golem.srv.comp.payload.cert", this.options.manifestCert);
+    builder.addProperty("golem.srv.comp.payload", this.options.manifest);
+    if (this.options.manifestSig) builder.addProperty("golem.srv.comp.payload.sig", this.options.manifestSig);
+    if (this.options.manifestSigAlgorithm)
+      builder.addProperty("golem.srv.comp.payload.sig.algorithm", this.options.manifestSigAlgorithm);
+    if (this.options.manifestCert) builder.addProperty("golem.srv.comp.payload.cert", this.options.manifestCert);
   }
 }
