@@ -23,6 +23,7 @@ export class DemandFactory {
       this.options.eventTarget?.dispatchEvent(new events.SubscriptionFailed({ reason }));
       throw new Error(`Could not publish demand on the market. ${reason}`);
     });
+    console.log(demandRequest);
     this.options.eventTarget?.dispatchEvent(new events.SubscriptionCreated({ id }));
     this.options.logger?.info(`Demand published on the market`);
     return new Demand(id, demandRequest, this.options);

@@ -98,7 +98,7 @@ export class Package {
     builder
       .addProperty("golem.srv.comp.payload", this.options.manifest)
       .addProperty("golem.srv.comp.payload.sig", this.options.manifestSig)
-      .addProperty("manifest_sig_algorithm", this.options.manifestSigAlgorithm)
-      .addProperty("manifest_cert", this.options.manifestCert);
+      .addProperty("golem.srv.comp.payload.sig.algorithm", this.options.manifestSigAlgorithm)
+      .addProperty("golem.srv.comp.payload.cert", this.options.manifestCert);
   }
 }

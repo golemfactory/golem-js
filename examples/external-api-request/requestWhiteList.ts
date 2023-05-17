@@ -3,9 +3,9 @@ import { readFileSync } from "fs";
 
 (async function main() {
   const executor = await TaskExecutor.create({
-    manifest: Buffer.from(readFileSync("manifest.json", "utf-8")).toString("base64"),
+    manifest: readFileSync("manifest.json", "utf-8"),
     manifestSig: readFileSync("manifest.json.base64.sign.sha256.base64", "utf-8"),
-    manifestCert: readFileSync("golem-manifest.crt.pem.base64", "utf-8"),
+    manifestCert: readFileSync("cert.chain.pem.base64", "utf-8"),
     manifestSigAlgorithm: "sha256",
     capabilities: ["inet", "manifest-support"],
     subnetTag: "public",
