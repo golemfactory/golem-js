@@ -178,7 +178,7 @@ export class TaskExecutor {
    * Stop all executor services and shut down executor instance
    */
   async end() {
-    this.removeCancelEvent();
+    if (runtimeContextChecker.isNode && !this.options.isSubprocess) this.removeCancelEvent();
     if (!this.isRunning) return;
     this.isRunning = false;
     await this.networkService?.end();

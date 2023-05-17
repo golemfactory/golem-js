@@ -79,11 +79,11 @@ export class WorkContext {
         new Promise(
           (res, rej) => (timeoutId = setTimeout(() => rej("Preparing activity timeout"), this.activityPreparingTimeout))
         ),
-        new Promise((res, rej) => {
-          result.on("data", () => null);
-          result.on("close", res);
-          result.on("error", rej);
-        }),
+        (async () => {
+          for await (const res of result) {
+            if (res.result === "Error") throw new Error(`Preparing activity failed. Error: ${res.message}`);
+          }
+        })(),
       ]).finally(() => clearTimeout(timeoutId));
     }
     await sleep(this.activityStateCheckingInterval, true);
@@ -149,13 +149,6 @@ export class WorkContext {
       );
     });
     const allResults: Result[] = [];
-    // await new Promise((res, rej) => {
-    //   results.on("data", (data) => allResults.push(data));
-    //   results.on("error", (error) =>
-    //     rej(`Task error on provider while getting results ${this.provider?.name}. ${error}`)
-    //   );
-    //   results.on("close", () => res(true));
-    // });
     for await (const result of results) allResults.push(result);
     const commandsErrors = allResults.filter((res) => res.result === "Error");
     await script.after();
