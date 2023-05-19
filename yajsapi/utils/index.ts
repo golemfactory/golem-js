@@ -5,3 +5,4 @@ import { ConsoleLogger } from "./consoleLogger.js";
 import * as runtimeContextChecker from "./runtimeContextChecker.js";
 
 export { sleep, Logger, runtimeContextChecker, pinoLogger, ConsoleLogger };
+export { EnvUtils } from "./env.js";

@@ -55,8 +55,8 @@ export type ExecutorOptionsMixin = string | ExecutorOptions;
  * @category High-level
  */
 export type YagnaOptions = {
-  apiKey: string;
-  basePath: string;
+  apiKey?: string;
+  basePath?: string;
 };
 
 /**
