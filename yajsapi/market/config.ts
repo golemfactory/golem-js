@@ -36,7 +36,7 @@ export class DemandConfig {
     const apiConfig = new Configuration({ apiKey, basePath: `${basePath}/market-api/v1`, accessToken: apiKey });
     this.yagnaOptions = options?.yagnaOptions;
     this.api = new RequestorApi(apiConfig);
-    this.subnetTag = options?.subnetTag || (typeof process !== 'undefined' ? process.env.YAGNA_SUBNET : '') || DEFAULTS.subnetTag;
+    this.subnetTag = options?.subnetTag || EnvUtils.getYagnaSubnet() || DEFAULTS.subnetTag;
     this.timeout = options?.marketTimeout || DEFAULTS.marketTimeout;
     this.expiration = options?.marketOfferExpiration || DEFAULTS.marketOfferExpiration;
     this.offerFetchingInterval = options?.offerFetchingInterval || DEFAULTS.offerFetchingInterval;

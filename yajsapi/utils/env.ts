@@ -11,4 +11,8 @@ export class EnvUtils {
   static getYagnaAppKey(): string {
     return typeof process !== "undefined" ? process.env.YAGNA_APPKEY ?? "" : "";
   }
+
+  static getYagnaSubnet(): string {
+    return typeof process !== "undefined" ? process.env.YAGNA_SUBNET ?? "public" : "public"
+  }
 }
