@@ -1,12 +1,11 @@
 import { DemandOptions } from "./demand.js";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api.js";
 import { Configuration } from "ya-ts-client/dist/ya-market/index.js";
-import { Logger } from "../utils/index.js";
+import { EnvUtils, Logger } from "../utils/index.js";
 import { MarketOptions } from "./service.js";
 import { YagnaOptions } from "../executor/index.js";
 
 const DEFAULTS = {
-  basePath: "http://127.0.0.1:7465",
   subnetTag: "public",
   marketTimeout: 1000 * 60 * 3, // 3 min,
   maxOfferEvents: 10,
@@ -31,13 +30,13 @@ export class DemandConfig {
   public readonly eventTarget?: EventTarget;
 
   constructor(options?: DemandOptions) {
-    const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
+    const apiKey = options?.yagnaOptions?.apiKey || EnvUtils.getYagnaAppKey();
     if (!apiKey) throw new Error("Api key not defined");
-    const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_URL || DEFAULTS.basePath;
+    const basePath = options?.yagnaOptions?.basePath || EnvUtils.getYagnaApiUrl()
     const apiConfig = new Configuration({ apiKey, basePath: `${basePath}/market-api/v1`, accessToken: apiKey });
     this.yagnaOptions = options?.yagnaOptions;
     this.api = new RequestorApi(apiConfig);
-    this.subnetTag = options?.subnetTag || process.env.YAGNA_SUBNET || DEFAULTS.subnetTag;
+    this.subnetTag = options?.subnetTag || EnvUtils.getYagnaSubnet() || DEFAULTS.subnetTag;
     this.timeout = options?.marketTimeout || DEFAULTS.marketTimeout;
     this.expiration = options?.marketOfferExpiration || DEFAULTS.marketOfferExpiration;
     this.offerFetchingInterval = options?.offerFetchingInterval || DEFAULTS.offerFetchingInterval;
