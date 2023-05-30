@@ -41,11 +41,13 @@ describe("Mid-level modules", () => {
     await agreement.confirm();
     const activity = await Activity.create(agreement.id, { logger });
     const script = await Script.create([new Deploy(), new Start(), new Run("/bin/sh", ["-c", "echo 'Hello Golem'"])]);
+    await script.before();
     const exeScript = script.getExeScriptRequest();
     const streamResult = await activity.execute(exeScript);
     const results: Result[] = [];
     for await (const result of streamResult) results.push(result);
     expect(results[2]).to.include({ stdout: "Hello Golem\n" });
+    await script.after();
     await activity.stop();
     await agreement.terminate();
     await allocation.release();
