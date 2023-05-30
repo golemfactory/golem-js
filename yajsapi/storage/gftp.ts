@@ -17,9 +17,11 @@ export class GftpStorageProvider implements StorageProvider {
   }
 
   async init() {
-    this.gftpServerProcess = await spawn("gftp server", [], { shell: true });
+    this.gftpServerProcess = spawn("gftp server", [], { shell: true });
+    this.gftpServerProcess?.stdout?.setEncoding("utf-8");
+    this.gftpServerProcess?.stderr?.setEncoding("utf-8");
     this.gftpServerProcess.on("error", (error) => this.logger?.error(error));
-    this.gftpServerProcess.stderr.on("error", (error) => this.logger?.error(error));
+    this.gftpServerProcess.stderr.on("data", (data) => this.logger?.error(`GFTP Error: ${data}`));
     this.logger?.info(`GFTP Version: ${await this.jsonrpc("version")}`);
   }
 
@@ -70,14 +72,13 @@ export class GftpStorageProvider implements StorageProvider {
     await streamWrite(this.getGftpServerProcess().stdin, query);
     try {
       const { value } = await this.reader.next();
+      if (!value) throw "Unable to get GFTP command result";
       const { result } = JSON.parse(value as string);
       valueStr = value;
       if (result === undefined) throw value;
       return result;
     } catch (error) {
-      const msg = `gftp error. query: ${query} value: ${valueStr} error: ${JSON.stringify(error)}`;
-      this.logger?.error(msg);
-      throw Error(error);
+      throw Error(`GFTP error. query: ${query} value: ${valueStr} error: ${JSON.stringify(error)}`);
     }
   }
 
