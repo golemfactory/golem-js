@@ -47,11 +47,13 @@ async function main() {
   await agreement.confirm();
   const activity = await Activity.create(agreement.id, { logger, activityExecuteTimeout: 120_000 });
   const script = await Script.create([new Deploy(), new Start(), new Run("/bin/sh", ["-c", "echo 'Hello Golem'"])]);
+  await script.before();
   const exeScript = script.getExeScriptRequest();
   const streamResult = await activity.execute(exeScript);
   const results: Result[] = [];
   for await (const result of streamResult) results.push(result);
   console.log(results[2].stdout);
+  await script.after();
   await activity.stop();
   await agreement.terminate();
   await demand.unsubscribe();
