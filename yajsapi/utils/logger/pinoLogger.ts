@@ -1,7 +1,7 @@
-import { Logger, LogLevel } from "./logger.js";
+import { Logger, LogLevel } from "./logger";
 import { DestinationStream, LoggerOptions, pino } from "pino";
 
-export function createPinoLogger(optionsOrStream?: LoggerOptions | DestinationStream): Logger {
+export function pinoLogger(optionsOrStream?: LoggerOptions | DestinationStream): Logger {
   const logger = pino(optionsOrStream);
   return {
     level: logger.level as LogLevel,

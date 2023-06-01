@@ -1,7 +1,7 @@
-import { createPinoLogger } from "./createPinoLogger.js";
+import { pinoLogger } from "./pinoLogger";
 
-export function createDefaultLogger(filename?: string) {
-  return createPinoLogger({
+export function defaultLogger(filename?: string) {
+  return pinoLogger({
     transport: {
       target: "pino-pretty",
       options: {

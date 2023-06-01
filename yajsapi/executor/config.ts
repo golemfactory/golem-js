@@ -1,7 +1,7 @@
 import { ExecutorOptions } from "./executor.js";
 import { Package } from "../package/index.js";
 import { MarketStrategy } from "../market/index.js";
-import { Logger, runtimeContextChecker, pinoLogger } from "../utils/index.js";
+import { Logger, runtimeContextChecker, defaultLogger } from "../utils/index.js";
 
 const DEFAULTS = {
   budget: 1.0,
@@ -76,7 +76,7 @@ export class ExecutorConfig {
       capabilities: options.capabilities,
       repoUrl: options.repoUrl,
     };
-    this.logger = options.logger || (!runtimeContextChecker.isBrowser ? pinoLogger : undefined);
+    this.logger = options.logger || (!runtimeContextChecker.isBrowser ? defaultLogger() : undefined);
     this.logLevel = options.logLevel || DEFAULTS.logLevel;
     this.logger?.setLevel && this.logger?.setLevel(this.logLevel);
     this.eventTarget = options.eventTarget || new EventTarget();

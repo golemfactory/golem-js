@@ -1,16 +1,11 @@
-import { TaskExecutor, createJSONLogger, createNullLogger, createDefaultLogger } from "dist/index.js";
+import { TaskExecutor, jsonLogger, nullLogger, defaultLogger } from "yajsapi";
 import { program, Option } from "commander";
 
 // Create command-line configuration.
 program
-  .addOption(
-    new Option("-l, --log <type>", "Set logger to use")
-      .default("text")
-      .choices(["text", "json", "null"])
-  )
+  .addOption(new Option("-l, --log <type>", "Set logger to use").default("text").choices(["text", "json", "null"]))
   .option("-d, --debug", "output extra debugging")
-  .option("-o, --output <file>", "log output file")
-;
+  .option("-o, --output <file>", "log output file");
 
 // Parse command-line arguments.
 program.parse();
@@ -19,11 +14,11 @@ const options = program.opts();
 // Create logger based on configuration.
 function createLogger(options) {
   if (options.log === "text") {
-    return createDefaultLogger(options?.output);
+    return defaultLogger(options?.output);
   } else if (options.log === "json") {
-    return createJSONLogger(options?.output);
+    return jsonLogger(options?.output);
   } else {
-    return createNullLogger();
+    return nullLogger();
   }
 }
 
