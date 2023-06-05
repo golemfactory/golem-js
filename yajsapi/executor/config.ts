@@ -1,7 +1,7 @@
 import { ExecutorOptions } from "./executor.js";
 import { Package, PackageOptions } from "../package/index.js";
 import { MarketStrategy } from "../market/index.js";
-import { Logger, runtimeContextChecker, pinoLogger } from "../utils/index.js";
+import { Logger, runtimeContextChecker, defaultLogger } from "../utils/index.js";
 
 const DEFAULTS = {
   budget: 1.0,
@@ -74,7 +74,15 @@ export class ExecutorConfig {
       network: options.payment?.network || DEFAULTS.payment.network,
     };
     this.networkIp = options.networkIp;
-    this.logger = options.logger || (!runtimeContextChecker.isBrowser ? pinoLogger : undefined);
+    this.packageOptions = {
+      engine: options.engine,
+      minMemGib: options.minMemGib,
+      minStorageGib: options.minStorageGib,
+      minCpuThreads: options.minCpuThreads,
+      capabilities: options.capabilities,
+      repoUrl: options.repoUrl,
+    };
+    this.logger = options.logger || (!runtimeContextChecker.isBrowser ? defaultLogger() : undefined);
     this.logLevel = options.logLevel || DEFAULTS.logLevel;
     this.logger?.setLevel && this.logger?.setLevel(this.logLevel);
     this.eventTarget = options.eventTarget || new EventTarget();
