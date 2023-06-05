@@ -1,6 +1,6 @@
-import { Logger } from "./logger.js";
+import { Logger } from "./logger";
 
-export function createNullLogger(): Logger {
+export function nullLogger(): Logger {
   const nullFunc = () => {
     // Do nothing.
   };
@@ -14,5 +14,5 @@ export function createNullLogger(): Logger {
     error: nullFunc,
     table: nullFunc,
     setLevel: nullFunc,
-  }
+  };
 }
