@@ -22,7 +22,7 @@ import { LogLevel } from "../utils/logger/logger.js";
  */
 export type ExecutorOptions = {
   /** Image hash as string, otherwise Package object */
-  package: string | Package;
+  package?: string | Package;
   /** Timeout for execute one task in ms */
   taskTimeout?: number;
   /** Subnet Tag */
@@ -35,6 +35,8 @@ export type ExecutorOptions = {
   yagnaOptions?: YagnaOptions;
   /** Event Bus implements EventTarget  */
   eventTarget?: EventTarget;
+  /** The maximum number of retries when the job failed on the provider */
+  maxTaskRetries?: number;
 } & ActivityOptions &
   AgreementOptions &
   BasePaymentOptions &
@@ -146,7 +148,9 @@ export class TaskExecutor {
    */
   async init() {
     const taskPackage =
-      typeof this.options.package === "string" ? await this.createPackage(this.options.package) : this.options.package;
+      typeof this.options.package === "string" || this.options.packageOptions.manifest
+        ? await this.createPackage(this.options.package as string | undefined)
+        : (this.options.package as Package);
     this.logger?.debug("Initializing task executor services...");
     const allocations = await this.paymentService.createAllocations();
     this.marketService.run(taskPackage, allocations).catch((e) => this.handleCriticalError(e));
@@ -300,7 +304,7 @@ export class TaskExecutor {
     );
   }
 
-  private async createPackage(imageHash: string): Promise<Package> {
+  private async createPackage(imageHash?: string): Promise<Package> {
     return Package.create({ ...this.options.packageOptions, imageHash });
   }
 
@@ -308,7 +312,13 @@ export class TaskExecutor {
     worker: Worker<InputType, OutputType>,
     data?: InputType
   ): Promise<OutputType | undefined> {
-    const task = new Task<InputType, OutputType>((++this.lastTaskIndex).toString(), worker, data, this.initWorker);
+    const task = new Task<InputType, OutputType>(
+      (++this.lastTaskIndex).toString(),
+      worker,
+      data,
+      this.initWorker,
+      this.options.maxTaskRetries
+    );
     this.taskQueue.addToEnd(task);
     let timeout = false;
     const timeoutId = setTimeout(() => (timeout = true), this.options.taskTimeout);
@@ -331,7 +341,6 @@ export class TaskExecutor {
   private handleCriticalError(e: Error) {
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFailed({ reason: e.toString() }));
     this.logger?.error(e.toString());
-    this.logger?.debug(e.stack);
     if (this.isRunning) this.logger?.warn("Trying to stop executor...");
     this.end().catch((e) => {
       this.logger?.error(e);
