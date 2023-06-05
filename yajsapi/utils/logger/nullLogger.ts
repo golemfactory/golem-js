@@ -1,4 +1,4 @@
-import { Logger } from "./logger";
+import { Logger } from "./logger.js";
 
 export function nullLogger(): Logger {
   const nullFunc = () => {

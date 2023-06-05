@@ -1,4 +1,4 @@
-import { Logger, LogLevel } from "./logger";
+import { Logger, LogLevel } from "./logger.js";
 import { DestinationStream, LoggerOptions, pino } from "pino";
 
 export function pinoLogger(optionsOrStream?: LoggerOptions | DestinationStream): Logger {
