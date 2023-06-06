@@ -15,7 +15,7 @@ const server = http.createServer((req, res) => {
     fs.createReadStream(`${__dirname}executor/image.html`).pipe(res);
   } else if (req.url === "/mid") {
     res.writeHead(200, { "content-type": "text/html" });
-    fs.createReadStream(`${__dirname}/mid-level/index.html`).pipe(res);
+    fs.createReadStream(`${__dirname}/mid_level/index.html`).pipe(res);
   } else if (req.url === "/yajsapi.min.js") {
     res.writeHead(200, { "content-type": "text/javascript" });
     fs.createReadStream(`${__dirname}/../../dist/yajsapi.min.js`).pipe(res);

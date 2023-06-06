@@ -5,6 +5,7 @@ import spies from "chai-spies";
 import { LoggerMock } from "../mock/index.js";
 import { StatsService } from "../../yajsapi/stats/service.js";
 import { setMaxListeners } from "events";
+import { ProposalDetails } from "../../yajsapi/market/proposal";
 chai.use(chaiAsPromised);
 chai.use(spies);
 const expect = chai.expect;
@@ -101,6 +102,8 @@ describe("Stats Service", () => {
       const event = new Events.ProposalReceived({
         id: "id",
         providerId: "providerId",
+        parentId: null,
+        details: {} as ProposalDetails,
       });
       eventTarget.dispatchEvent(event);
       expect(spy).to.have.been.called.with.exactly({ id: "id", providerId: "providerId" });
@@ -110,6 +113,8 @@ describe("Stats Service", () => {
       const event = new Events.ProposalReceived({
         id: "id",
         providerId: "providerId",
+        parentId: null,
+        details: {} as ProposalDetails,
       });
       eventTarget.dispatchEvent(event);
       expect(spy).to.have.been.called.with.exactly({ id: "providerId" });

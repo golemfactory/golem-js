@@ -123,17 +123,16 @@ export class TaskService {
           `Task ${task.id} execution failed. Trying to redo the task. Attempt #${task.getRetriesCount()}. ${error}`
         );
       } else {
-        await activity.stop().catch((actError) => this.logger?.error(actError));
-        this.activities.delete(agreement.id);
-        await this.agreementPoolService.releaseAgreement(agreement.id, false);
         const reason = error.message || error.toString();
         this.options.eventTarget?.dispatchEvent(new Events.TaskRejected({ id: task.id, reason }));
         throw new Error(`Task ${task.id} has been rejected! ${reason}`);
       }
+      await activity.stop().catch((actError) => this.logger?.error(actError));
+      this.activities.delete(agreement.id);
     } finally {
       --this.activeTasksCount;
       this.paymentService.acceptPayments(agreement);
     }
-    await this.agreementPoolService.releaseAgreement(agreement.id, true);
+    await this.agreementPoolService.releaseAgreement(agreement.id, task.isDone());
   }
 }

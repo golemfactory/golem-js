@@ -25,7 +25,8 @@ export class Task<InputType = unknown, OutputType = unknown> implements Queueabl
     public readonly id: string,
     private worker: Worker<InputType, OutputType>,
     private data?: InputType,
-    private initWorker?: Worker<undefined>
+    private initWorker?: Worker<undefined>,
+    private maxTaskRetries: number = MAX_RETRIES
   ) {}
 
   start() {
@@ -34,7 +35,7 @@ export class Task<InputType = unknown, OutputType = unknown> implements Queueabl
   stop(results?: OutputType, error?: Error, retry = true) {
     if (error) {
       ++this.retriesCount;
-      this.state = retry && this.retriesCount <= MAX_RETRIES ? TaskState.Retry : TaskState.Rejected;
+      this.state = retry && this.retriesCount <= this.maxTaskRetries ? TaskState.Retry : TaskState.Rejected;
       this.error = error;
     } else {
       this.state = TaskState.Done;
@@ -46,6 +47,10 @@ export class Task<InputType = unknown, OutputType = unknown> implements Queueabl
   }
   isRetry(): boolean {
     return this.state === TaskState.Retry;
+  }
+
+  isDone(): boolean {
+    return this.state === TaskState.Done;
   }
   isFinished(): boolean {
     return this.state === TaskState.Done || this.state === TaskState.Rejected;

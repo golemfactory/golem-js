@@ -1,8 +1,8 @@
-import { BasePaymentOptions, InvoiceConfig } from "./config.js";
+import { BasePaymentOptions, InvoiceConfig } from './config.js';
 import { DebitNote as Model } from "ya-ts-client/dist/ya-payment/src/models";
-import { BaseNote } from "./invoice.js";
-import { Events } from "../events/index.js";
-import { Rejection } from "./rejection.js";
+import { BaseNote } from './invoice.js';
+import { Events } from '../events/index.js';
+import { Rejection } from './rejection.js';
 
 export type InvoiceOptions = BasePaymentOptions;
 

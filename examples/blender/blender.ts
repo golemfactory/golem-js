@@ -1,4 +1,4 @@
-import { TaskExecutor } from "../../dist/index.js";
+import { TaskExecutor } from "yajsapi";
 import { program } from "commander";
 import { fileURLToPath } from "url";
 const __dirname = fileURLToPath(new URL('.', import.meta.url));

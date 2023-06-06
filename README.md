@@ -16,7 +16,7 @@
 
 ## Golem application development
 
-For a detailed introduction to using Golem and yajsapi to run your tasks on Golem and a guide to Golem Network application development in general, [please consult our handbook](https://handbook.golem.network/requestor-tutorials/flash-tutorial-of-requestor-development).
+For a detailed introduction to using Golem and yajsapi to run your tasks on Golem [please consult our quickstart section](https://docs.golem.network/creators/javascript/quickstart/).
 
 ### Installation
 
@@ -46,10 +46,6 @@ yarn build
 This will generate production code in the `dist/` directory ready to be used in your nodejs or browser applications.
 
 
-### API Reference
-
-For a comprehensive API reference, please refer to [our official API reference page](https://handbook.golem.network/yajsapi/docs).
-
 ### Usage
 
 Hello World
@@ -65,12 +61,12 @@ import { TaskExecutor } from "yajsapi";
 ```
 
 #### Node.js context
-![hello_nodejs](https://user-images.githubusercontent.com/26308335/217530331-fb059b9c-6ece-4790-881e-d6d60f9ef368.gif)
+![hello_nodejs](https://user-images.githubusercontent.com/26308335/224720742-1ca115e2-e207-41a7-9537-ffa4ece11406.gif)
 
 #### Web Browser context
 ![hello_web](https://user-images.githubusercontent.com/26308335/217530424-a1dd4487-f95f-43e6-a91b-7106b6f30802.gif)
 
-For more detailed usage examples and tutorials, see the [Java Script API section of the Handbook](https://handbook.golem.network/yajsapi/)
+For more detailed usage examples and tutorials, see the [Java Script API section of the Golem Network Docs](https://docs.golem.network/creators/javascript/)
 
 ### Testing
 
@@ -121,9 +117,9 @@ yarn format
 * [Golem](https://golem.network), a global, open-source, decentralized supercomputer that anyone can access.
 * Learn what you need to know to set-up your Golem requestor node:
     * [Requestor development: a quick primer](https://handbook.golem.network/requestor-tutorials/flash-tutorial-of-requestor-development)
-    * [Run first task on Golem](https://handbook.golem.network/requestor-tutorials/flash-tutorial-of-requestor-development/run-first-task-on-golem)
+    * [Quick start](https://docs.golem.network/creators/javascript/quickstart/)
 * Have a look at the most important concepts behind any Golem application: [Golem application fundamentals](https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals)
 * Learn about preparing your own Docker-like images for the [VM runtime](https://handbook.golem.network/requestor-tutorials/vm-runtime)
 * Write your own app with JavaScript API:
-    * [High-level API](https://handbook.golem.network/todo1)
-    * [Mid-level API](https://handbook.golem.network/todo2)
+    * [High-level API](https://docs.golem.network/creators/javascript/high-level/task-model/)
+    * [Mid-level API](https://docs.golem.network/creators/javascript/mid-level/)

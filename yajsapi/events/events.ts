@@ -65,7 +65,7 @@ export class ProposalFailed extends BaseEvent<{
   reason?: string;
 }> {}
 export class ProposalConfirmed extends BaseEvent<{ id: string; providerId: string }> {}
-export class PackageCreated extends BaseEvent<{ imageHash: string; details: PackageDetails }> {}
+export class PackageCreated extends BaseEvent<{ imageHash?: string; details: PackageDetails }> {}
 export class AgreementCreated extends BaseEvent<{
   id: string;
   providerId: string;

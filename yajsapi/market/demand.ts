@@ -8,12 +8,13 @@ import { DemandConfig } from "./config.js";
 import { Events } from "../events/index.js";
 import { ProposalEvent, ProposalRejectedEvent } from "ya-ts-client/dist/ya-market/src/models/index.js";
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market/index.js";
-import * as events from "../events/events";
+import * as events from "../events/events.js";
 
 export interface DemandDetails {
   properties: Array<{ key: string; value: string | number | boolean }>;
   constraints: Array<string>;
 }
+
 /**
  * @category Mid-level
  */
