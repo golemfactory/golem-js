@@ -8,7 +8,7 @@ const DEFAULTS = {
   subnetTag: "public",
   logLevel: "info",
   basePath: "http://127.0.0.1:7465",
-  payment: { driver: "erc20", network: "rinkeby" },
+  payment: { driver: "erc20", network: "goerli" },
   maxParallelTasks: 5,
   taskTimeout: 1000 * 60 * 3, // 3 min,
 };
