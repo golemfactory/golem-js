@@ -20,3 +20,6 @@ export { Script, Run, Deploy, Start, Transfer, UploadFile, DownloadFile } from "
 
 // Utils
 export { Logger, jsonLogger, nullLogger, consoleLogger, pinoLogger, defaultLogger } from "./utils/index.js";
+
+// Events
+export { Events, BaseEvent, EventType } from "./events/index.js";

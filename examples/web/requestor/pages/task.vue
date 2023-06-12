@@ -3,9 +3,7 @@
     <el-col :span="10" style="position: relative">
       <OptionsTask />
       <div class="btn-holders">
-        <el-button class="btn-reset" plain size="small" :disabled="isRunning" @click="resetAll">
-          Reset
-        </el-button>
+        <el-button class="btn-reset" plain size="small" :disabled="isRunning" @click="resetAll"> Reset </el-button>
         <el-button class="btn-start" size="small" type="warning" :disabled="isRunning" @click="start">Start</el-button>
         <el-button class="btn-run" size="small" type="success" :disabled="!isRunning" @click="run">Run</el-button>
         <el-button class="btn-stop" size="small" type="danger" :disabled="!isRunning" @click="stop">Stop</el-button>
@@ -56,25 +54,27 @@ const activeResults = ref("output");
 const activeEntity = ref("offers");
 const isRunning = ref(false);
 let executor;
-configStore.title = ' - Task API';
+configStore.title = " - Task API";
 
 const start = async () => {
   configStore.activeControlActions = false;
   const options = configStore.options;
   executor = await TaskExecutor.create({ ...options, package: options.imageHash, eventTarget, logger });
   isRunning.value = true;
-}
+};
 const run = async () => {
   configStore.stdoutLoading = true;
-  await executor.run(async (ctx) => {
-    const result = await ctx.run(configStore.command, [configStore.commandArg, configStore.code]);
-    if (result.stdout) configStore.stdout += result.stdout;
-    if (result.stderr) configStore.stdout += result.stderr;
-    configStore.stdoutLoading = false;
-  }).catch(e => {
-    isRunning.value = false;
-    throw e;
-  });
+  await executor
+    .run(async (ctx) => {
+      const result = await ctx.run(configStore.command, [configStore.commandArg, configStore.code]);
+      if (result.stdout) configStore.stdout += result.stdout;
+      if (result.stderr) configStore.stdout += result.stderr;
+      configStore.stdoutLoading = false;
+    })
+    .catch((e) => {
+      isRunning.value = false;
+      throw e;
+    });
   configStore.stdoutLoading = false;
 };
 const stop = async () => {
@@ -97,12 +97,6 @@ const resetAll = () => {
   right: 20px;
   margin-top: 10px;
   z-index: 999;
-}
-.btn-start {
-}
-.btn-run {
-}
-.btn-stop {
 }
 .entities-tabs {
   margin-top: 10px;

@@ -7,3 +7,7 @@
     </el-container>
   </div>
 </template>
+<script setup>
+import { useDark } from "@vueuse/core";
+useDark();
+</script>
