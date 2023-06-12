@@ -1,5 +1,5 @@
-import { Logger } from '../utils/index.js';
-import { PackageOptions } from './package.js';
+import { Logger } from "../utils/index.js";
+import { PackageOptions } from "./package.js";
 
 /**
  * @internal
@@ -24,9 +24,11 @@ export enum PackageFormat {
 /**
  * @internal
  */
+
 export class PackageConfig {
   readonly packageFormat: string;
-  readonly imageHash: string;
+  readonly imageHash?: string;
+  readonly imageTag?: string;
   readonly repoUrl?: string;
   readonly engine: string;
   readonly minMemGib: number;
@@ -39,6 +41,7 @@ export class PackageConfig {
   constructor(options: PackageOptions) {
     this.packageFormat = PackageFormat.GVMKIT_SQUASH;
     this.imageHash = options.imageHash;
+    this.imageTag = options.imageTag;
     this.repoUrl = options.repoUrl;
     this.engine = options.engine || DEFAULTS.engine;
     this.minMemGib = options.minMemGib || DEFAULTS.minMemGib;

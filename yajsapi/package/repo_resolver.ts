@@ -74,6 +74,11 @@ export class RepoResolver {
   }
 
   private async resolveRepoUrlForNode() {
+    //to be able to run against other server ( like stage registry )
+    if (process.env.REPO_URL) {
+      return [process.env.REPO_URL];
+    }
+
     return new Promise((resolve, reject) => {
       import("dns")
         .then((nodeDns) => {

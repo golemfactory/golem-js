@@ -300,10 +300,9 @@ export class TaskExecutor {
     );
   }
 
-  private async createPackage(imageHash: string): Promise<Package> {
-    return Package.create({ ...this.options.packageOptions, imageHash });
+  private async createPackage(imageHashOrTag: string): Promise<Package> {
+    return Package.create({ ...this.options.packageOptions, ...Package.getImageIndentifire(imageHashOrTag) });
   }
-
   private async executeTask<InputType, OutputType>(
     worker: Worker<InputType, OutputType>,
     data?: InputType
