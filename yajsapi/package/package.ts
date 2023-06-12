@@ -46,7 +46,7 @@ export class Package {
     return new Package(config);
   }
 
-  static getImageIndentifire(
+  static getImageIdentifier(
     str: string
   ): RequireAtLeastOne<{ imageHash: string; imageTag: string }, "imageHash" | "imageTag"> {
     const tagRegex = /^(.*?)\/(.*?):(.*)$/;
