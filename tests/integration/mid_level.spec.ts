@@ -25,7 +25,8 @@ describe("Mid-level modules", () => {
 
   it("should run simple script on provider", async () => {
     const accounts = await (await Accounts.create()).list();
-    const account = accounts[0];
+    const account = accounts.find((account) => account?.platform.indexOf("erc20-rinkeby") !== -1);
+    if (!account) throw new Error("There is no requestor account supporting rinkeby platform");
     const taskPackage = await Package.create({ imageHash: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae" });
     const allocation = await Allocation.create({ account, logger, payment: { network: "rinkeby" } });
     const demand = await Demand.create(taskPackage, [allocation], { logger });

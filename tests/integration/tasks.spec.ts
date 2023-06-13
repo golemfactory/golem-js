@@ -37,6 +37,7 @@ describe("Task Executor", function () {
   it("should run simple tasks by map function", async () => {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+      payment: { network: "rinkeby" },
       logger,
     });
     const data = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
