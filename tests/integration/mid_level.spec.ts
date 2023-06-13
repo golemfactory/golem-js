@@ -27,7 +27,7 @@ describe("Mid-level modules", () => {
     const accounts = await (await Accounts.create()).list();
     const account = accounts[0];
     const taskPackage = await Package.create({ imageHash: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae" });
-    const allocation = await Allocation.create({ account, logger, payment: { network: "rinkeby " } });
+    const allocation = await Allocation.create({ account, logger, payment: { network: "rinkeby" } });
     const demand = await Demand.create(taskPackage, [allocation], { logger });
     const offer: Proposal = await new Promise((res) =>
       demand.addEventListener(DemandEventType, async (event) => {

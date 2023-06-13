@@ -33,7 +33,7 @@ describe("Blender rendering", function () {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
       logger,
-      payment: { network: "rinkeby " },
+      payment: { network: "rinkeby" },
     });
     executor.beforeEach(async (ctx) => {
       await ctx.uploadFile(
