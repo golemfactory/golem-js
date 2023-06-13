@@ -158,9 +158,11 @@
           const minStorageGib = document.getElementById('MIN_STORAGE_GIB').value;
           const minCpuThreads = document.getElementById('MIN_CPU').value;
           const subnetTag = document.getElementById('SUBNET_TAG').value;
+          const network = document.getElementById('PAYMENT_NETWORK').value;
           return  {
             yagnaOptions: { apiKey, basePath },
             imageHash, minCpuThreads,minStorageGib, minMemGib,
+            payment: { network },
             logger,
             subnetTag
           }

@@ -117,11 +117,13 @@
         async function run() {
             const apiKey = document.getElementById('YAGNA_APPKEY').value;
             const basePath = document.getElementById('YAGNA_API_BASEPATH').value;
+            const network = document.getElementById('PAYMENT_NETWORK').value;
             const chunkedImg = chunkString(encodedImg.value, 64000)
 
             const executor = await TaskExecutor.create({
                 yagnaOptions: { apiKey, basePath },
                 package:"6539a63fecfb4ce98bc838ab2de71c6f4d36e1ee5945fbd8f1165c48",
+                payment: { network },
                 logger
               })
 
