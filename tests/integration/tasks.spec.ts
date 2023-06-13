@@ -19,6 +19,7 @@ describe("Task Executor", function () {
   it("should run simple task", async () => {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+      payment: { network: "rinkeby " },
       logger,
     });
     const result = await executor.run(async (ctx) => ctx.run("echo 'Hello World'"));
@@ -51,6 +52,7 @@ describe("Task Executor", function () {
   it("should run simple tasks by forEach function", async () => {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+      payment: { network: "rinkeby " },
       logger,
     });
     const data = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
@@ -63,6 +65,7 @@ describe("Task Executor", function () {
   it("should run simple batch script and get results as stream", async () => {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+      payment: { network: "rinkeby " },
       logger,
     });
     const outputs: string[] = [];
@@ -92,6 +95,7 @@ describe("Task Executor", function () {
   it("should run simple batch script and catch error on stream", async () => {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+      payment: { network: "rinkeby " },
       logger,
     });
     const outputs: string[] = [];
@@ -117,6 +121,7 @@ describe("Task Executor", function () {
   it("should run simple batch script and get results as promise", async () => {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+      payment: { network: "rinkeby " },
       logger,
     });
     const outputs: string[] = [];
@@ -142,6 +147,7 @@ describe("Task Executor", function () {
   it("should run simple batch script and catch error on promise", async () => {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+      payment: { network: "rinkeby " },
       logger,
     });
     let results;
@@ -164,6 +170,7 @@ describe("Task Executor", function () {
   it("should run transfer file", async () => {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+      payment: { network: "rinkeby " },
       logger,
     });
     const result = await executor.run(async (ctx) => {
