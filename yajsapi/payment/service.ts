@@ -97,7 +97,7 @@ export class PaymentService {
     }
     if (!this.allocations.length) {
       throw new Error(
-        `Unable to create allocation for driver/network ${this.options.payment.driver}/${this.options.payment.network}`
+        `Unable to create allocation for driver/network ${this.options.payment.driver}/${this.options.payment.network}. There is no requestor account supporting this platform.`
       );
     }
     return this.allocations;
