@@ -353,7 +353,7 @@ export class TaskExecutor {
     if (this.isRunning) this.logger?.warn("Trying to stop executor...");
     this.end().catch((e) => {
       this.logger?.error(e);
-      process?.exit(1);
+      !this.options.isSubprocess && process?.exit(1);
     });
     throw e;
   }
