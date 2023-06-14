@@ -355,7 +355,7 @@ export class TaskExecutor {
       this.logger?.error(e);
       !this.options.isSubprocess && process?.exit(1);
     });
-    throw e;
+    // throw e;
   }
 
   private handleCancelEvent() {
