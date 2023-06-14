@@ -1,11 +1,11 @@
 <template>
   <el-table class="offers" :data="offersStore.offers" :default-sort="{ prop: 'state', order: 'ascending' }">
-    <el-table-column prop="time" label="Time" sortable />
-    <el-table-column prop="providerName" label="Provider" width="135" sortable />
-    <el-table-column prop="cpuBrand" label="CPU" sortable width="120">
+    <el-table-column prop="time" label="Time" width="130" sortable />
+    <el-table-column prop="providerName" label="Provider" min-width="135" sortable />
+    <el-table-column prop="cpuBrand" label="CPU" sortable min-width="120">
       <template #default="scope">
         <el-tooltip :content="scope.row?.cpuBrand" placement="right" effect="light">
-          {{ scope.row?.cpuBrand?.substring(0, 13) + "..." }}
+          {{ isWideScreen ? scope.row?.cpuBrand : scope.row?.cpuBrand?.substring(0, 13) + "..." }}
         </el-tooltip>
       </template>
     </el-table-column>
@@ -78,11 +78,13 @@ const getStateType = (state) => {
   if (state === "Failed") return "danger";
   if (state === "Confirmed") return "success";
 };
+const isWideScreen = () => window.innerWidth > 1400;
 </script>
 <style scoped lang="scss">
 .offers {
   width: 100%;
-  height: 370px;
+  min-height: 370px;
+  height: 60vh;
 }
 .actions {
   .el-button {

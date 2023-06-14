@@ -8,8 +8,8 @@
         </el-tag>
       </template>
     </el-table-column>
-    <el-table-column prop="providerName" label="Provider" sortable width="150" />
-    <el-table-column prop="amount" label="Amount" sortable min-width="180" />
+    <el-table-column prop="providerName" label="Provider" sortable min-width="150" />
+    <el-table-column prop="amount" label="Amount" sortable min-width="180" width="200" />
     <el-table-column prop="state" label="State" sortable width="100">
       <template #default="scope">
         <el-tooltip :disabled="!scope.row.reason" :content="scope.row.reason" placement="top" effect="light">
@@ -65,7 +65,8 @@ const getStateType = (state) => {
 <style scoped lang="scss">
 .payments {
   width: 100%;
-  height: 370px;
+  min-height: 370px;
+  height: 60vh;
 }
 .tag-state {
   width: 70px;

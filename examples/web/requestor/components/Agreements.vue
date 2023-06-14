@@ -1,8 +1,8 @@
 <template>
   <el-table class="agreements" :data="agreements" :default-sort="{ prop: 'time', order: 'descending' }">
     <el-table-column prop="time" label="Time" sortable />
-    <el-table-column prop="providerName" label="Provider" sortable width="140" />
-    <el-table-column v-if="!actions" prop="id" label="ID" sortable width="150">
+    <el-table-column prop="providerName" label="Provider" sortable min-width="140" />
+    <el-table-column v-if="!actions" prop="id" label="ID" sortable min-width="150">
       <template #default="scope">
         <el-tooltip :content="scope.row.id" placement="left" effect="light">
           {{ scope.row.id.substring(0, 12) + "..." }}
@@ -91,7 +91,8 @@ const getStateType = (state) => {
 <style scoped lang="scss">
 .agreements {
   width: 100%;
-  height: 370px;
+  min-height: 370px;
+  height: 60vh;
 }
 .tag-state {
   width: 80px;

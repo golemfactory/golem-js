@@ -1,6 +1,6 @@
 <template>
-  <el-scrollbar v-loading="configStore.stdoutLoading" height="230px">
-    <pre class="output">{{configStore.stdout}}</pre>
+  <el-scrollbar v-loading="configStore.stdoutLoading">
+    <pre class="output">{{ configStore.stdout }}</pre>
   </el-scrollbar>
 </template>
 <script setup>
@@ -12,6 +12,7 @@ const configStore = useConfigStore();
   background: #0d1822;
   color: #dddddd;
   min-height: 200px;
+  height: 32vh;
   padding: 10px;
   word-wrap: break-word;
   word-break: break-all;

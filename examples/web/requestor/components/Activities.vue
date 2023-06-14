@@ -2,10 +2,10 @@
   <el-table class="activities" :data="activities" :default-sort="{ prop: 'time', order: 'descending' }">
     <el-table-column prop="time" label="Time" sortable />
     <el-table-column prop="providerName" label="Provider" sortable width="140" />
-    <el-table-column v-if="!actions" prop="id" label="ID" sortable width="140">
+    <el-table-column v-if="!actions" prop="id" label="ID" sortable min-width="140">
       <template #default="scope">
         <el-tooltip :content="scope.row.id" placement="left" effect="light">
-          {{ scope.row.id.substring(0, 10) + "..." }}
+          {{ isWideScreen ? scope.row.id : scope.row.id.substring(0, 10) + "..." }}
         </el-tooltip>
       </template>
     </el-table-column>
@@ -93,11 +93,13 @@ const getStateType = (state) => {
   if (state === "Unresponsive" || state === "Terminated") return "danger";
   if (state === "Ready") return "success";
 };
+const isWideScreen = () => window.innerWidth > 1400;
 </script>
 <style scoped lang="scss">
 .activities {
   width: 100%;
-  height: 370px;
+  min-height: 370px;
+  height: 60vh;
 }
 .tag-state {
   width: 80px;

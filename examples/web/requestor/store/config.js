@@ -21,7 +21,7 @@ export const useConfigStore = defineStore("config", {
       activityRequestTimeout: 10000,
       activityExecuteTimeout: 60000,
       activityExeBatchResultsFetchInterval: 3_000,
-      payment: { driver: "erc20", network: "rinkeby" },
+      payment: { driver: "erc20", network: "goerli" },
       paymentTimeout: 20000,
       allocationExpires: 1000 * 60 * 30,
       maxInvoiceEvents: 10,

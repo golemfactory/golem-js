@@ -101,5 +101,6 @@ const resetAll = () => {
 .entities-tabs {
   margin-top: 10px;
   margin-bottom: 30px;
+  height: 67vh;
 }
 </style>

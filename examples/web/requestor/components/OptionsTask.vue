@@ -27,14 +27,21 @@
     <el-tab-pane label="Additional options" name="additional">
       <el-form label-position="right" label-width="125px">
         <el-row :gutter="10">
-          <el-col :span="12">
+          <el-col :span="24">
             <el-form-item label="Yagna Api Url:">
               <el-input v-model="options.yagnaOptions.basePath" />
             </el-form-item>
           </el-col>
+        </el-row>
+        <el-row :gutter="10">
           <el-col :span="12">
             <el-form-item label="Subnet:">
               <el-input v-model="options.subnetTag" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="Network:">
+              <el-input v-model="options.payment.network" />
             </el-form-item>
           </el-col>
         </el-row>

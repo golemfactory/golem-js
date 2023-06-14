@@ -1,10 +1,10 @@
 <template>
   <el-table class="demands" :data="demandsStore.demands" :default-sort="{ prop: 'time', order: 'descending' }">
     <el-table-column prop="time" label="Time" sortable width="80" />
-    <el-table-column prop="id" label="ID" sortable width="175">
+    <el-table-column prop="id" label="ID" sortable min-width="175">
       <template #default="scope">
         <el-tooltip :content="scope.row.id" placement="left" effect="light">
-          {{ scope.row.id.substring(0, 18) + "..." }}
+          {{ isWideScreen ? scope.row.id : scope.row.id.substring(0, 18) + "..." }}
         </el-tooltip>
       </template>
     </el-table-column>
@@ -59,11 +59,13 @@ const getStateType = (state) => {
   if (state === "Failed") return "danger";
   if (state === "Unsubscribed") return "danger";
 };
+const isWideScreen = () => window.innerWidth > 1400;
 </script>
 <style scoped lang="scss">
 .demands {
   width: 100%;
-  height: 370px;
+  min-height: 370px;
+  height: 60vh;
 }
 .tag-state {
   width: 90px;
