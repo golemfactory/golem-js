@@ -35,7 +35,9 @@ export const usePaymentsStore = defineStore({
         const payment = this.payments.get(id);
         payment.isProcessing = isProcessing;
         this.payments.set(id, payment);
-      } catch (e) {}
+      } catch (e) {
+        // nothing to do
+      }
     },
   },
   getters: {
