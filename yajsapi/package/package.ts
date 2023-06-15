@@ -3,7 +3,7 @@ import { RepoResolver } from "./repo_resolver.js";
 import { Logger } from "../utils/index.js";
 import axios from "axios";
 import { PackageConfig } from "./config.js";
-import { RequireAtLeastOne } from "type-fest";
+import { RequireAtLeastOne, RequireExactlyOne } from "type-fest";
 /**
  * @category Mid-level
  */
@@ -90,29 +90,25 @@ export class Package {
     return repoURL;
   }
 
-  private async getImageHashFromTag(tag: string): Promise<string> {
+  private async resolveTaskPackageUrl(): Promise<string> {
     const repoUrl = await this.getRepoUrl();
-    const url = `${repoUrl}/v1/image/info?tag=${tag}`;
+
+    //TODO : in future this should be argument on getImageProviderLink
+
+    const isHttps = process.env.YAJSAPI_USE_HTTPS_LINK ?? false;
+    const isDev = process.env.GOLEM_DEV_MODE;
+
+    const hash = this.options.imageHash;
+    const tag = this.options.imageTag;
+    const url = `${repoUrl}/v1/image/info?${isDev ? "dev=true" : ""}${tag ? `tag=${tag}` : `hash=${hash}`}`;
+
     const response = await axios.get(url);
     if (response.status != 200) {
       this.logger?.error(`Unable to resolve package hash from tag: Response ` + response.status);
       throw Error(`Error: ${response.status}`);
     }
-    return response.data.sha3;
-  }
-  private async resolveTaskPackageUrl(): Promise<string> {
-    const repoUrl = await this.getRepoUrl();
-    let hash = this.options.imageHash;
-    if (!this.options.imageHash && this.options.imageTag) {
-      hash = await this.getImageHashFromTag(this.options.imageTag);
-    }
 
-    const response = await axios.get(`${repoUrl}/image.${hash}.link`);
-    if (response.status != 200) {
-      this.logger?.error(`Unable to resolve task package url: Response ` + response.status);
-      throw Error(`Error: ${response.status}`);
-    }
-    const imageUrl = await response.data;
+    const imageUrl = isHttps ? response.data.https : response.data.http;
     return `hash:sha3:${hash}:${imageUrl}`;
   }
 }
