@@ -113,6 +113,6 @@ export class Package {
       throw Error(`Error: ${response.status}`);
     }
     const imageUrl = await response.data;
-    return `hash:sha3:${this.options.imageHash}:${imageUrl}`;
+    return `hash:sha3:${hash}:${imageUrl}`;
   }
 }
