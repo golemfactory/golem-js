@@ -4,12 +4,7 @@ import { AccountConfig, BasePaymentOptions } from "./config.js";
 /**
  * @category Mid-level
  */
-export interface AccountsOptions extends Omit<BasePaymentOptions, "yagnaOptions"> {
-  yagnaOptions?: {
-    apiKey: string;
-    basePath?: string;
-  };
-}
+export type AccountsOptions = BasePaymentOptions
 
 /**
  * Accounts module - an object that provides information about the requestor's accounts.

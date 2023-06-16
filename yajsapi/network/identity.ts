@@ -2,6 +2,7 @@
 // https://github.com/golemfactory/yajsapi/issues/290
 import axios from "axios";
 import { YagnaOptions } from "../executor/index.js";
+import { EnvUtils } from "../utils/index.js";
 
 /**
  * A helper function to get the requestor's ID
@@ -9,9 +10,9 @@ import { YagnaOptions } from "../executor/index.js";
  * @return requestorId
  */
 export const getIdentity = async (options?: { yagnaOptions?: YagnaOptions }): Promise<string> => {
-  const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
+  const apiKey = options?.yagnaOptions?.apiKey || EnvUtils.getYagnaAppKey();
   if (!apiKey) throw new Error("Api key not defined");
-  const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_URL || "http://127.0.0.1:7465";
+  const basePath = options?.yagnaOptions?.basePath || EnvUtils.getYagnaApiUrl();
   const apiUrl = `${basePath}/me`;
   const {
     data: { identity },

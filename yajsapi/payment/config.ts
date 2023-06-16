@@ -1,16 +1,14 @@
 import { AllocationOptions } from "./allocation.js";
 import { Configuration } from "ya-ts-client/dist/ya-payment/index.js";
 import { RequestorApi } from "ya-ts-client/dist/ya-payment/api.js";
-import { Logger } from "../utils/index.js";
+import { EnvUtils, Logger } from "../utils/index.js";
 import { YagnaOptions } from "../executor/index.js";
 import { PaymentOptions } from "./service.js";
 import { InvoiceOptions } from "./invoice.js";
-import { AccountsOptions } from "./accounts.js";
 
 const DEFAULTS = {
-  basePath: "http://127.0.0.1:7465",
   budget: 1.0,
-  payment: { driver: "erc20", network: "rinkeby" },
+  payment: { driver: "erc20", network: "goerli" },
   paymentTimeout: 20000,
   allocationExpires: 1000 * 60 * 30, // 30 min
   invoiceReceiveTimeout: 1000 * 60 * 5, // 5 min
@@ -43,11 +41,11 @@ abstract class BaseConfig {
   public readonly payment: { driver: string; network: string };
   public readonly paymentRequestTimeout: number;
 
-  protected constructor(public readonly options?: BasePaymentOptions) {
+  constructor(public readonly options?: BasePaymentOptions) {
     this.yagnaOptions = options?.yagnaOptions;
-    const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
+    const apiKey = options?.yagnaOptions?.apiKey || EnvUtils.getYagnaAppKey();
     if (!apiKey) throw new Error("Api key not defined");
-    const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_URL || DEFAULTS.basePath;
+    const basePath = options?.yagnaOptions?.basePath || EnvUtils.getYagnaApiUrl();
     const apiConfig = new Configuration({ apiKey, basePath: `${basePath}/payment-api/v1`, accessToken: apiKey });
     this.api = new RequestorApi(apiConfig);
     this.paymentTimeout = options?.paymentTimeout || DEFAULTS.paymentTimeout;
@@ -109,14 +107,4 @@ export class InvoiceConfig extends BaseConfig {
   }
 }
 
-export class AccountConfig extends BaseConfig {
-  constructor(options?: AccountsOptions) {
-    const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
-    if (!apiKey) throw new Error("Api key not defined");
-    const yagnaOptions: YagnaOptions = {
-      apiKey,
-      basePath: options?.yagnaOptions?.basePath || process.env.YAGNA_API_URL || DEFAULTS.basePath,
-    };
-    super({ ...options, yagnaOptions });
-  }
-}
+export class AccountConfig extends BaseConfig {}
