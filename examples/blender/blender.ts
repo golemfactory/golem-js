@@ -1,7 +1,7 @@
 import { TaskExecutor } from "yajsapi";
 import { program } from "commander";
 import { fileURLToPath } from "url";
-const __dirname = fileURLToPath(new URL('.', import.meta.url));
+const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
 const blender_params = (frame) => ({
   scene_file: "/golem/resource/scene.blend",
@@ -40,13 +40,10 @@ async function main(subnetTag: string, driver?: string, network?: string, debug?
       .beginBatch()
       .uploadJson(blender_params(frame), "/golem/work/params.json")
       .run("/golem/entrypoints/run-blender.sh")
-      .downloadFile(
-        `/golem/output/out${frame?.toString().padStart(4, "0")}.png`,
-        `${__dirname}/output_${frame}.png`
-      )
+      .downloadFile(`/golem/output/out${frame?.toString().padStart(4, "0")}.png`, `${__dirname}/output_${frame}.png`)
       .end()
-      .catch(e => console.error(e))
-    return result?.length ? `output_${frame}.png` : '';
+      .catch((e) => console.error(e));
+    return result?.length ? `output_${frame}.png` : "";
   });
   for await (const result of results) console.log(result);
   await executor.end();
@@ -55,7 +52,7 @@ async function main(subnetTag: string, driver?: string, network?: string, debug?
 program
   .option("--subnet-tag <subnet>", "set subnet name, for example 'public'")
   .option("--payment-driver, --driver <driver>", "payment driver name, for example 'erc20'")
-  .option("--payment-network, --network <network>", "network name, for example 'rinkeby'")
+  .option("--payment-network, --network <network>", "network name, for example 'goerli'")
   .option("-d, --debug", "output extra debugging")
   .option("-t, --max-parallel-tasks <maxParallelTasks>", "max parallel tasks");
 program.parse();

@@ -8,7 +8,7 @@ import { InvoiceOptions } from "./invoice.js";
 
 const DEFAULTS = {
   budget: 1.0,
-  payment: { driver: "erc20", network: "rinkeby" },
+  payment: { driver: "erc20", network: "goerli" },
   paymentTimeout: 20000,
   allocationExpires: 1000 * 60 * 30, // 30 min
   invoiceReceiveTimeout: 1000 * 60 * 5, // 5 min
@@ -107,5 +107,4 @@ export class InvoiceConfig extends BaseConfig {
   }
 }
 
-export class AccountConfig extends BaseConfig {
-}
+export class AccountConfig extends BaseConfig {}
