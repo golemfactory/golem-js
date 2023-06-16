@@ -32,6 +32,10 @@
                             <label for="SUBNET_TAG">Subnet Tag: </label>
                             <input id="SUBNET_TAG" type="text" value="public" />
                         </div>
+                        <div>
+                            <label for="PAYMENT_NETWORK">Payment Network: </label>
+                            <input id="PAYMENT_NETWORK" type="text" value="goerli" />
+                        </div>
                     </div>
                 </div>
             </div>
@@ -83,10 +87,12 @@
           const basePath = document.getElementById('YAGNA_API_BASEPATH').value;
           const subnetTag = document.getElementById('SUBNET_TAG').value;
           const imageHash = document.getElementById('IMAGE_HASH').value;
+          const network = document.getElementById('PAYMENT_NETWORK').value;
             const executor = await TaskExecutor.create({
                 yagnaOptions: { apiKey, basePath },
                 package: imageHash,
                 subnetTag,
+                payment: { network },
                 logger
               })
             await executor

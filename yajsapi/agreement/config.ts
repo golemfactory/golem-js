@@ -2,10 +2,9 @@ import { AgreementOptions } from "./agreement.js";
 import { AgreementServiceOptions } from "./service.js";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api.js";
 import { Configuration } from "ya-ts-client/dist/ya-market/index.js";
-import { Logger } from "../utils/index.js";
+import { EnvUtils, Logger } from "../utils/index.js";
 
 const DEFAULTS = {
-  basePath: "http://127.0.0.1:7465",
   agreementRequestTimeout: 30000,
   agreementEventPoolingInterval: 5,
   agreementEventPoolingMaxEventsPerRequest: 100,
@@ -24,9 +23,9 @@ export class AgreementConfig {
   readonly eventTarget?: EventTarget;
 
   constructor(public readonly options?: AgreementOptions) {
-    const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
+    const apiKey = options?.yagnaOptions?.apiKey || EnvUtils.getYagnaAppKey();
     if (!apiKey) throw new Error("Api key not defined");
-    const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_URL || DEFAULTS.basePath;
+    const basePath = options?.yagnaOptions?.basePath || EnvUtils.getYagnaApiUrl();
     const apiConfig = new Configuration({ apiKey, basePath: `${basePath}/market-api/v1`, accessToken: apiKey });
     this.api = new RequestorApi(apiConfig);
     this.agreementRequestTimeout = options?.agreementRequestTimeout || DEFAULTS.agreementRequestTimeout;

@@ -8,3 +8,4 @@ import { nullLogger } from "./logger/nullLogger.js";
 import { defaultLogger } from "./logger/defaultLogger.js";
 
 export { sleep, Logger, runtimeContextChecker, pinoLogger, consoleLogger, jsonLogger, nullLogger, defaultLogger };
+export { EnvUtils } from "./env.js";
