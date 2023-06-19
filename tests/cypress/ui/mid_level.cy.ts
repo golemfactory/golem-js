@@ -4,6 +4,7 @@ describe("Test Mid-level API", () => {
     cy.get("#YAGNA_APPKEY").clear().type(Cypress.env("YAGNA_APPKEY"));
     cy.get("#YAGNA_API_BASEPATH").clear().type(Cypress.env("YAGNA_API_BASEPATH"));
     cy.get("#SUBNET_TAG").clear().type(Cypress.env("YAGNA_SUBNET"));
+    cy.get("#PAYMENT_NETWORK").clear().type("rinkeby");
     cy.get("#createPackage").click().debug();
     cy.get("#logs").contains("Package created");
     cy.get("#createAllocation").click();

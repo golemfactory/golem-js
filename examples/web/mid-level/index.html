@@ -50,6 +50,12 @@
                             <input id="BUDGET" type="number" value="1" />
                         </div>
                     </div>
+                    <div class="row">
+                        <div>
+                            <label for="PAYMENT_NETWORK">Payment Network: </label>
+                            <input id="PAYMENT_NETWORK" type="text" value="goerli" />
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -152,9 +158,11 @@
           const minStorageGib = document.getElementById('MIN_STORAGE_GIB').value;
           const minCpuThreads = document.getElementById('MIN_CPU').value;
           const subnetTag = document.getElementById('SUBNET_TAG').value;
+          const network = document.getElementById('PAYMENT_NETWORK').value;
           return  {
             yagnaOptions: { apiKey, basePath },
             imageHash, minCpuThreads,minStorageGib, minMemGib,
+            payment: { network },
             logger,
             subnetTag
           }
@@ -168,7 +176,7 @@
         async function createAllocation() {
           options = getOptions();
           const accounts = await (await yajsapi.Accounts.create(options)).list();
-          options.account = accounts.find(account => account?.platform.indexOf('erc20') !== -1);
+          options.account = accounts.find(account => account?.platform.indexOf('erc20-rinkeby') !== -1);
           allocation = await yajsapi.Allocation.create(options).catch(logger.error);
           enableButtons();
         }
