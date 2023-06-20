@@ -39,7 +39,7 @@ export type ExecutorOptions = {
   AgreementOptions &
   BasePaymentOptions &
   DemandOptions &
-  Omit<PackageOptions, "imageHash"> &
+  Omit<PackageOptions, "imageHash" | "imageTag"> &
   TaskOptions &
   NetworkServiceOptions &
   AgreementServiceOptions &

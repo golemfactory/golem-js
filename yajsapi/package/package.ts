@@ -1,9 +1,9 @@
 import { ComparisonOperator, DecorationsBuilder, MarketDecoration } from "../market/builder.js";
-import { RepoResolver } from "./repo_resolver.js";
 import { Logger } from "../utils/index.js";
 import axios from "axios";
 import { PackageConfig } from "./config.js";
-import { RequireAtLeastOne, RequireExactlyOne } from "type-fest";
+import { RequireAtLeastOne } from "type-fest";
+
 /**
  * @category Mid-level
  */
@@ -38,7 +38,7 @@ export class Package {
   private logger?: Logger;
 
   private constructor(private options: PackageConfig) {
-    this.logger = options.logger;
+    // this.logger = pinoLoggerFactory();
   }
 
   static create(options: PackageOptions): Package {
@@ -82,25 +82,28 @@ export class Package {
   }
 
   private async getRepoUrl(): Promise<string> {
-    if (this.options.repoUrl) {
-      return this.options.repoUrl;
+    if (process?.env.YAJSAPI_REPO_URL) {
+      return process.env.YAJSAPI_REPO_URL;
     }
-    const repoResolver = RepoResolver.create({ logger: this.logger });
-    const repoURL = await repoResolver.getRepoUrl();
-    return repoURL;
+    return this.options.repoUrl;
   }
 
   private async resolveTaskPackageUrl(): Promise<string> {
     const repoUrl = await this.getRepoUrl();
 
-    //TODO : in future this should be argument on getImageProviderLink
+    //TODO : in future this should be passed probably through config
 
     const isHttps = process.env.YAJSAPI_USE_HTTPS_LINK ?? false;
+
+    // ? Should we prefix all env variables with YAJSAPI_ or not?
+    // with YAJSAPI we stay consistent but GOLEM is more general and can be used
+    // for other projects as well (yapapi e.g. )
+
     const isDev = process.env.GOLEM_DEV_MODE;
 
-    const hash = this.options.imageHash;
+    let hash = this.options.imageHash;
     const tag = this.options.imageTag;
-    const url = `${repoUrl}/v1/image/info?${isDev ? "dev=true" : ""}${tag ? `tag=${tag}` : `hash=${hash}`}`;
+    const url = `${repoUrl}/v1/image/info?${isDev ? "dev=true" : "count=true"}&${tag ? `tag=${tag}` : `hash=${hash}`}`;
 
     const response = await axios.get(url);
     if (response.status != 200) {
@@ -109,6 +112,7 @@ export class Package {
     }
 
     const imageUrl = isHttps ? response.data.https : response.data.http;
+    hash = response.data.sha3;
     return `hash:sha3:${hash}:${imageUrl}`;
   }
 }

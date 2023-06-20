@@ -1,17 +1,19 @@
 import { Logger } from "../utils/index.js";
 import { PackageOptions } from "./package.js";
+import { GLOBAL_DEFAULTS } from "../config/defaults.js";
 
 /**
  * @internal
  */
-export const DEFAULTS = {
+export const DEFAULTS = Object.freeze({
+  ...GLOBAL_DEFAULTS,
   engine: "vm",
   minMemGib: 0.5,
   minStorageGib: 2,
   minCpuThreads: 1,
   minCpuCores: 1,
   capabilities: [],
-};
+});
 
 /**
  * @internal
@@ -29,7 +31,7 @@ export class PackageConfig {
   readonly packageFormat: string;
   readonly imageHash?: string;
   readonly imageTag?: string;
-  readonly repoUrl?: string;
+  readonly repoUrl: string;
   readonly engine: string;
   readonly minMemGib: number;
   readonly minStorageGib: number;
@@ -42,7 +44,7 @@ export class PackageConfig {
     this.packageFormat = PackageFormat.GVMKIT_SQUASH;
     this.imageHash = options.imageHash;
     this.imageTag = options.imageTag;
-    this.repoUrl = options.repoUrl;
+    this.repoUrl = options.repoUrl || DEFAULTS.repoUrl;
     this.engine = options.engine || DEFAULTS.engine;
     this.minMemGib = options.minMemGib || DEFAULTS.minMemGib;
     this.minStorageGib = options.minStorageGib || DEFAULTS.minStorageGib;

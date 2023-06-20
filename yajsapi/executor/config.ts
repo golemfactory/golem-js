@@ -2,16 +2,17 @@ import { ExecutorOptions } from "./executor.js";
 import { Package } from "../package/index.js";
 import { MarketStrategy } from "../market/index.js";
 import { Logger, runtimeContextChecker, pinoLogger } from "../utils/index.js";
+import { GLOBAL_DEFAULTS } from "../config/defaults.js";
 
-const DEFAULTS = {
+const DEFAULTS = Object.freeze({
+  ...GLOBAL_DEFAULTS,
   budget: 1.0,
   subnetTag: "public",
   logLevel: "info",
   basePath: "http://127.0.0.1:7465",
-  payment: { driver: "erc20", network: "goerli" },
   maxParallelTasks: 5,
   taskTimeout: 1000 * 60 * 3, // 3 min,
-};
+});
 
 /**
  * @internal
