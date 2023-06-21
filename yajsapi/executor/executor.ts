@@ -305,7 +305,9 @@ export class TaskExecutor {
   }
 
   private async createPackage(imageHash?: string): Promise<Package> {
-    return Package.create({ ...this.options.packageOptions, imageHash });
+    const packageInstance = Package.create({ ...this.options.packageOptions, imageHash });
+    this.options.eventTarget.dispatchEvent(new Events.PackageCreated({ imageHash, details: packageInstance.details }));
+    return packageInstance;
   }
 
   private async executeTask<InputType, OutputType>(
