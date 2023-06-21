@@ -1,4 +1,4 @@
-//TODO : remove as legacy
+// ? This file is legacy, we should remove it or refactor it
 
 import axios from "axios";
 import { Logger, runtimeContextChecker } from "../utils/index.js";

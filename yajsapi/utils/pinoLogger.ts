@@ -28,7 +28,8 @@ export const pinoLogger: Logger = {
   },
 };
 
-//I think its better to have the factory instead of singleton pinoLogger
+//  I left this here as I use it during development to avoid global logger
+// ? Isnt it better general approach ?
 
 export function pinoLoggerFactory<Options extends LoggerOptions>({
   level,

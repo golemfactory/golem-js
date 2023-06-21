@@ -38,10 +38,11 @@ export class Package {
   private logger?: Logger;
 
   private constructor(private options: PackageConfig) {
-    // this.logger = pinoLoggerFactory();
+    this.logger = options.logger;
   }
 
   static create(options: PackageOptions): Package {
+    // ? : Dependency Injection could be useful
     const config = new PackageConfig(options);
     return new Package(config);
   }
@@ -89,6 +90,7 @@ export class Package {
   }
 
   private async resolveTaskPackageUrl(): Promise<string> {
+    // ? : Dependency Injection could be useful
     const repoUrl = await this.getRepoUrl();
 
     //TODO : in future this should be passed probably through config
@@ -103,6 +105,7 @@ export class Package {
 
     let hash = this.options.imageHash;
     const tag = this.options.imageTag;
+
     const url = `${repoUrl}/v1/image/info?${isDev ? "dev=true" : "count=true"}&${tag ? `tag=${tag}` : `hash=${hash}`}`;
 
     const response = await axios.get(url);

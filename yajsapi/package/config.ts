@@ -27,6 +27,7 @@ export enum PackageFormat {
  * @internal
  */
 
+// ? Isnt it just a merge of object literals and no need to have a class here
 export class PackageConfig {
   readonly packageFormat: string;
   readonly imageHash?: string;
