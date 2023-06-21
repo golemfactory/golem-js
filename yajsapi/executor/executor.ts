@@ -15,7 +15,7 @@ import { BasePaymentOptions } from "../payment/config.js";
 import { NetworkServiceOptions } from "../network/service.js";
 import { AgreementServiceOptions } from "../agreement/service.js";
 import { WorkOptions } from "../task/work.js";
-import { LogLevel } from "../utils/logger.js";
+import { LogLevel } from "../utils/logger/logger.js";
 
 /**
  * @category High-level
@@ -57,8 +57,8 @@ export type ExecutorOptionsMixin = string | ExecutorOptions;
  * @category High-level
  */
 export type YagnaOptions = {
-  apiKey: string;
-  basePath: string;
+  apiKey?: string;
+  basePath?: string;
 };
 
 /**
@@ -305,7 +305,9 @@ export class TaskExecutor {
   }
 
   private async createPackage(imageHash?: string): Promise<Package> {
-    return Package.create({ ...this.options.packageOptions, imageHash });
+    const packageInstance = Package.create({ ...this.options.packageOptions, imageHash });
+    this.options.eventTarget.dispatchEvent(new Events.PackageCreated({ imageHash, details: packageInstance.details }));
+    return packageInstance;
   }
 
   private async executeTask<InputType, OutputType>(

@@ -23,8 +23,9 @@ describe("Payment Service", () => {
 
     it("should not creating allocations if there are no available accounts", async () => {
       const paymentService = new PaymentService({ payment: { network: "test2", driver: "test2" } });
-      const allocations = await paymentService.createAllocations();
-      expect(allocations.length).to.equal(0);
+      await expect(paymentService.createAllocations()).to.be.rejectedWith(
+        "Unable to create allocation for driver/network test2/test2. There is no requestor account supporting this platform."
+      );
       await paymentService.end();
     });
 

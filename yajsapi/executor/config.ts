@@ -1,14 +1,14 @@
 import { ExecutorOptions } from "./executor.js";
 import { Package, PackageOptions } from "../package/index.js";
 import { MarketStrategy } from "../market/index.js";
-import { Logger, runtimeContextChecker, pinoLogger } from "../utils/index.js";
+import { Logger, runtimeContextChecker, defaultLogger } from "../utils/index.js";
 
 const DEFAULTS = {
   budget: 1.0,
   subnetTag: "public",
   logLevel: "info",
   basePath: "http://127.0.0.1:7465",
-  payment: { driver: "erc20", network: "rinkeby" },
+  payment: { driver: "erc20", network: "goerli" },
   maxParallelTasks: 5,
   taskTimeout: 1000 * 60 * 10, // 10 min,
   maxTaskRetries: 5,
@@ -74,7 +74,15 @@ export class ExecutorConfig {
       network: options.payment?.network || DEFAULTS.payment.network,
     };
     this.networkIp = options.networkIp;
-    this.logger = options.logger || (!runtimeContextChecker.isBrowser ? pinoLogger : undefined);
+    this.packageOptions = {
+      engine: options.engine,
+      minMemGib: options.minMemGib,
+      minStorageGib: options.minStorageGib,
+      minCpuThreads: options.minCpuThreads,
+      capabilities: options.capabilities,
+      repoUrl: options.repoUrl,
+    };
+    this.logger = options.logger || (!runtimeContextChecker.isBrowser ? defaultLogger() : undefined);
     this.logLevel = options.logLevel || DEFAULTS.logLevel;
     this.logger?.setLevel && this.logger?.setLevel(this.logLevel);
     this.eventTarget = options.eventTarget || new EventTarget();

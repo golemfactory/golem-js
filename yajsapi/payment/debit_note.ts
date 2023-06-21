@@ -62,6 +62,7 @@ export class DebitNote extends BaseNote<Model> {
       );
       throw new Error(`Unable to accept debit note ${this.id} ${e?.response?.data?.message || e}`);
     }
+    this.options.eventTarget?.dispatchEvent(new Events.DebitNoteAccepted({ ...this, amount: totalAmountAccepted }));
   }
 
   /**
