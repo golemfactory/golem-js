@@ -131,12 +131,15 @@ export class Package {
 
     const url = `${repoUrl}/v1/image/info?${isDev ? "dev=true" : "count=true"}&${tag ? `tag=${tag}` : `hash=${hash}`}`;
 
-    const response = await axios.get(url);
+    const response = await axios.get(url, {
+      //always give reponse instead of throwing error
+      // ? this should probably go to general config
+      validateStatus: () => true,
+    });
     if (response.status != 200) {
-      this.logger?.error(`Unable to resolve package hash from tag: Response ` + response.status);
-      throw Error(`Error: ${response.status}`);
+      this.logger?.error(`Unable to get image Url of  ${tag || hash} from ${repoUrl}`);
+      throw Error(`${response.data}`);
     }
-
     const imageUrl = isHttps ? response.data.https : response.data.http;
     hash = response.data.sha3;
     return `hash:sha3:${hash}:${imageUrl}`;
