@@ -2,6 +2,7 @@
 /node_modules
 /examples/logs
 /examples/node_modules
+/examples/adv-web-example/node_modules
 /tests/web/node_modules/
 
 #Outputs
@@ -24,3 +25,6 @@ package-lock.json
 #IDE
 .idea
 *.DS_Store
+
+#Nuxt
+/examples/adv-web-example/.nuxt

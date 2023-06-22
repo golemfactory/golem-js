@@ -27,7 +27,7 @@ export enum PackageFormat {
  * @internal
  */
 
-// ? Isnt it just a merge of object literals and no need to have a class here
+// ? Isn't it just a merge of object literals and no need to have a class here
 export class PackageConfig {
   readonly packageFormat: string;
   readonly imageHash?: string;
@@ -39,9 +39,14 @@ export class PackageConfig {
   readonly minCpuThreads: number;
   readonly minCpuCores: number;
   readonly capabilities: string[];
+  readonly manifest?: string;
+  readonly manifestSig?: string;
+  readonly manifestSigAlgorithm?: string;
+  readonly manifestCert?: string;
   readonly logger?: Logger;
 
   constructor(options: PackageOptions) {
+    if (!options.imageHash && !options.manifest) throw new Error("You must define a package or manifest option");
     this.packageFormat = PackageFormat.GVMKIT_SQUASH;
     this.imageHash = options.imageHash;
     this.imageTag = options.imageTag;
@@ -52,6 +57,10 @@ export class PackageConfig {
     this.minCpuThreads = options.minCpuThreads || DEFAULTS.minCpuThreads;
     this.minCpuCores = options.minCpuCores || DEFAULTS.minCpuCores;
     this.capabilities = options.capabilities || DEFAULTS.capabilities;
+    this.manifest = options.manifest;
+    this.manifestSig = options.manifestSig;
+    this.manifestSigAlgorithm = options.manifestSigAlgorithm;
+    this.manifestCert = options.manifestCert;
     this.logger = options.logger;
   }
 }

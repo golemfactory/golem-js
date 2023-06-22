@@ -12,6 +12,7 @@
         "fileTransfer": "ts-node ./simple-usage/fileTransfer.ts",
         "batchPromise": "ts-node ./simple-usage/batchPromise.ts",
         "batchStream": "ts-node ./simple-usage/batchStream.ts",
+        "logger-hello": "ts-node simple-usage/logger.ts",
         "blender": "ts-node ./blender/blender.ts",
         "yacat": "ts-node ./yacat/yacat.ts",
         "fibonacci": "node ./fibonacci/fibonacci.js",

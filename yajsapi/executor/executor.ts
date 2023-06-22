@@ -15,14 +15,15 @@ import { BasePaymentOptions } from "../payment/config.js";
 import { NetworkServiceOptions } from "../network/service.js";
 import { AgreementServiceOptions } from "../agreement/service.js";
 import { WorkOptions } from "../task/work.js";
-import { LogLevel } from "../utils/logger.js";
+import { LogLevel } from "../utils/logger/logger.js";
+import { RequireAtLeastOne } from "type-fest";
 
 /**
  * @category High-level
  */
 export type ExecutorOptions = {
   /** Image hash as string, otherwise Package object */
-  package: string | Package;
+  package?: string | Package;
   /** Timeout for execute one task in ms */
   taskTimeout?: number;
   /** Subnet Tag */
@@ -35,6 +36,8 @@ export type ExecutorOptions = {
   yagnaOptions?: YagnaOptions;
   /** Event Bus implements EventTarget  */
   eventTarget?: EventTarget;
+  /** The maximum number of retries when the job failed on the provider */
+  maxTaskRetries?: number;
 } & ActivityOptions &
   AgreementOptions &
   BasePaymentOptions &
@@ -145,8 +148,26 @@ export class TaskExecutor {
    * @description Method responsible initialize all executor services.
    */
   async init() {
-    const taskPackage =
-      typeof this.options.package === "string" ? await this.createPackage(this.options.package) : this.options.package;
+    const manifest = this.options.packageOptions.manifest;
+    const packageReference = this.options.package;
+    let taskPackage: Package;
+
+    if (manifest) {
+      taskPackage = await this.createPackage({
+        manifest,
+      });
+    } else {
+      if (packageReference) {
+        if (typeof packageReference === "string") {
+          taskPackage = await this.createPackage(Package.getImageIdentifier(packageReference));
+        } else {
+          taskPackage = packageReference;
+        }
+      } else {
+        throw new Error("No package or manifest provided");
+      }
+    }
+
     this.logger?.debug("Initializing task executor services...");
     const allocations = await this.paymentService.createAllocations();
     this.marketService.run(taskPackage, allocations).catch((e) => this.handleCriticalError(e));
@@ -300,14 +321,31 @@ export class TaskExecutor {
     );
   }
 
-  private async createPackage(imageHashOrTag: string): Promise<Package> {
-    return Package.create({ ...this.options.packageOptions, ...Package.getImageIdentifier(imageHashOrTag) });
+  private async createPackage(
+    packageReference: RequireAtLeastOne<
+      { imageHash: string; manifest: string; imageTag: string },
+      "manifest" | "imageTag" | "imageHash"
+    >
+  ): Promise<Package> {
+    const packageInstance = Package.create({ ...this.options.packageOptions, ...packageReference });
+
+    this.options.eventTarget.dispatchEvent(
+      new Events.PackageCreated({ packageReference, details: packageInstance.details })
+    );
+
+    return packageInstance;
   }
   private async executeTask<InputType, OutputType>(
     worker: Worker<InputType, OutputType>,
     data?: InputType
   ): Promise<OutputType | undefined> {
-    const task = new Task<InputType, OutputType>((++this.lastTaskIndex).toString(), worker, data, this.initWorker);
+    const task = new Task<InputType, OutputType>(
+      (++this.lastTaskIndex).toString(),
+      worker,
+      data,
+      this.initWorker,
+      this.options.maxTaskRetries
+    );
     this.taskQueue.addToEnd(task);
     let timeout = false;
     const timeoutId = setTimeout(() => (timeout = true), this.options.taskTimeout);
@@ -330,7 +368,6 @@ export class TaskExecutor {
   private handleCriticalError(e: Error) {
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFailed({ reason: e.toString() }));
     this.logger?.error(e.toString());
-    this.logger?.debug(e.stack);
     if (this.isRunning) this.logger?.warn("Trying to stop executor...");
     this.end().catch((e) => {
       this.logger?.error(e);
