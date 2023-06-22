@@ -1,11 +1,10 @@
 import { NetworkOptions } from "./network.js";
 import { RequestorApi } from "ya-ts-client/dist/ya-net/api.js";
 import { Configuration } from "ya-ts-client/dist/ya-payment/index.js";
-import { Logger } from "../utils/index.js";
 import { Agent } from "http";
+import { EnvUtils, Logger } from "../utils/index.js";
 
 const DEFAULTS = {
-  basePath: "http://127.0.0.1:7465",
   networkIp: "192.168.0.0/24",
 };
 
@@ -23,9 +22,9 @@ export class NetworkConfig {
   public readonly apiUrl: string;
 
   constructor(options: NetworkOptions) {
-    const apiKey = options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
+    const apiKey = options?.yagnaOptions?.apiKey || EnvUtils.getYagnaAppKey();
     if (!apiKey) throw new Error("Api key not defined");
-    const basePath = options?.yagnaOptions?.basePath || process.env.YAGNA_API_URL || DEFAULTS.basePath;
+    const basePath = options?.yagnaOptions?.basePath || EnvUtils.getYagnaApiUrl();
     this.apiUrl = `${basePath}/net-api/v1`;
     const apiConfig = new Configuration({
       apiKey,

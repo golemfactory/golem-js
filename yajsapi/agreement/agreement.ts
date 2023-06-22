@@ -93,12 +93,20 @@ export class Agreement {
    * @throws Error if the agreement will be rejected by provider or failed to confirm
    */
   async confirm() {
-    await this.options.api.confirmAgreement(this.id);
-    await this.options.api.waitForApproval(this.id, this.options.agreementWaitingForApprovalTimeout);
-    this.logger?.debug(`Agreement ${this.id} approved`);
-    this.options.eventTarget?.dispatchEvent(
-      new Events.AgreementConfirmed({ id: this.id, providerId: this.provider.id })
-    );
+    try {
+      await this.options.api.confirmAgreement(this.id);
+      await this.options.api.waitForApproval(this.id, this.options.agreementWaitingForApprovalTimeout);
+      this.logger?.debug(`Agreement ${this.id} approved`);
+      this.options.eventTarget?.dispatchEvent(
+        new Events.AgreementConfirmed({ id: this.id, providerId: this.provider.id })
+      );
+    } catch (error) {
+      this.logger?.error(`Unable to confirm agreement ${this.id}. ${error}`);
+      this.options.eventTarget?.dispatchEvent(
+        new Events.AgreementRejected({ id: this.id, providerId: this.provider.id, reason: error.toString() })
+      );
+      throw error;
+    }
   }
 
   /**

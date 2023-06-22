@@ -56,6 +56,7 @@ export interface ActivityOptions {
 export class Activity {
   private readonly logger?: Logger;
   private isRunning = true;
+  private currentState: ActivityStateEnum = ActivityStateEnum.New;
 
   /**
    * @param id activity ID
@@ -128,6 +129,12 @@ export class Activity {
     try {
       const { data } = await this.options.api.state.getActivityState(this.id);
       const state = data.state[0];
+      if (this.currentState !== ActivityStateEnum[state]) {
+        this.options.eventTarget?.dispatchEvent(
+          new Events.ActivityStateChanged({ id: this.id, state: ActivityStateEnum[state] })
+        );
+        this.currentState = ActivityStateEnum[state];
+      }
       return ActivityStateEnum[state];
     } catch (error) {
       this.logger?.warn(`Cannot query activity state: ${error}`);
@@ -258,17 +265,14 @@ export class Activity {
       this.logger?.warn(`Activity ${this.id} terminated by provider. ${msg ? "Reason: " + msg : ""}`);
       throw error;
     }
-    // if (!this.isGsbError(error)) {
-    //   throw error;
-    // }
     ++retryCount;
     const failMsg = "There was an error retrieving activity results. ";
     const errorMsg = error?.response?.data?.message || error?.message || error;
     if (retryCount < maxRetries) {
-      this.logger?.debug(`${failMsg}, retrying in ${this.options.activityExeBatchResultsFetchInterval}.`);
+      this.logger?.debug(`${failMsg} Retrying in ${this.options.activityExeBatchResultsFetchInterval}.`);
       return retryCount;
     } else {
-      this.logger?.error(`${failMsg}, giving up after ${retryCount} attempts. ${errorMsg}`);
+      this.logger?.error(`${failMsg} Giving up after ${retryCount} attempts. ${errorMsg}`);
     }
     throw new Error(`Command #${cmdIndex || 0} getExecBatchResults error: ${errorMsg}`);
   }

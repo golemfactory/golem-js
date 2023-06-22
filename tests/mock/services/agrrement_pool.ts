@@ -16,7 +16,7 @@ export const agreementPoolServiceMock: AgreementPoolService = {
   async addProposal(proposal: Proposal) {
     proposals.push(proposal);
   },
-  async releaseAgreement(agreement: Agreement, allowReuse: boolean) {
+  async releaseAgreement(agreementId: string, allowReuse: boolean) {
     return undefined;
   },
   // @ts-ignore

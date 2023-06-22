@@ -47,7 +47,7 @@ export class Proposal {
     private readonly subscriptionId: string,
     private readonly parentId: string | null,
     private readonly setCounteringProposalReference: (id: string, parentId: string) => void | null,
-    private readonly api: RequestorApi, // TODO: why API explicitly?
+    private readonly api: RequestorApi,
     model: ProposalModel,
     private readonly demandRequest: DemandOfferBase,
     private eventTarget?: EventTarget

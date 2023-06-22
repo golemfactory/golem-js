@@ -15,15 +15,15 @@ import { BasePaymentOptions } from "../payment/config.js";
 import { NetworkServiceOptions } from "../network/service.js";
 import { AgreementServiceOptions } from "../agreement/service.js";
 import { WorkOptions } from "../task/work.js";
-import { LogLevel } from "../utils/logger.js";
-const terminatingSignals = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
+import { LogLevel } from "../utils/logger/logger.js";
 
+const terminatingSignals = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
 /**
  * @category High-level
  */
 export type ExecutorOptions = {
   /** Image hash as string, otherwise Package object */
-  package: string | Package;
+  package?: string | Package;
   /** Timeout for execute one task in ms */
   taskTimeout?: number;
   /** Subnet Tag */
@@ -38,12 +38,13 @@ export type ExecutorOptions = {
   eventTarget?: EventTarget;
   /** The maximum number of retries when the job failed on the provider */
   maxTaskRetries?: number;
-
+  /** Custom Storage Provider used for transfer files */
   storageProvider?: StorageProvider;
-
+  /** Flag to determine is executor running as subprocess. All signals and process commands will be disabled */
   isSubprocess?: boolean;
-
+  /** Timeout for preparing activity - creating and deploy commands */
   activityPreparingTimeout?: number;
+  /** Strategy used for negotiating offers and selecting the best procider */
   strategy?: MarketStrategy;
 } & ActivityOptions &
   AgreementOptions &
@@ -65,8 +66,8 @@ export type ExecutorOptionsMixin = string | ExecutorOptions;
  * @category High-level
  */
 export type YagnaOptions = {
-  apiKey: string;
-  basePath: string;
+  apiKey?: string;
+  basePath?: string;
 };
 
 /**
@@ -157,7 +158,9 @@ export class TaskExecutor {
    */
   async init() {
     const taskPackage =
-      typeof this.options.package === "string" ? await this.createPackage(this.options.package) : this.options.package;
+      typeof this.options.package === "string" || this.options.packageOptions.manifest
+        ? await this.createPackage(this.options.package as string | undefined)
+        : (this.options.package as Package);
     this.logger?.debug("Initializing task executor services...");
     const allocations = await this.paymentService.createAllocations();
     this.marketService.run(taskPackage, allocations).catch((e) => this.handleCriticalError(e));
@@ -312,8 +315,10 @@ export class TaskExecutor {
     );
   }
 
-  private async createPackage(imageHash: string): Promise<Package> {
-    return Package.create({ ...this.options.packageOptions, imageHash });
+  private async createPackage(imageHash?: string): Promise<Package> {
+    const packageInstance = Package.create({ ...this.options.packageOptions, imageHash });
+    this.options.eventTarget.dispatchEvent(new Events.PackageCreated({ imageHash, details: packageInstance.details }));
+    return packageInstance;
   }
 
   private async executeTask<InputType, OutputType>(
@@ -349,13 +354,11 @@ export class TaskExecutor {
   private handleCriticalError(e: Error) {
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFailed({ reason: e.toString() }));
     this.logger?.error(e.toString());
-    this.logger?.debug(e.stack);
     if (this.isRunning) this.logger?.warn("Trying to stop executor...");
     this.end().catch((e) => {
       this.logger?.error(e);
       !this.options.isSubprocess && process?.exit(1);
     });
-    // throw e;
   }
 
   private handleCancelEvent() {

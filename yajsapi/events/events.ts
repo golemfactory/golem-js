@@ -29,9 +29,35 @@ export abstract class BaseEvent<DataType> extends CustomEvent<DataType> {
   }
 }
 
+
 export class ComputationStarted extends BaseEvent<undefined> {}
 export class ComputationFinished extends BaseEvent<undefined> {}
 export class ComputationFailed extends BaseEvent<{ reason?: string }> {}
+export class TaskStarted extends BaseEvent<{
+  id: string;
+  agreementId: string;
+  activityId: string;
+  providerId: string;
+  providerName: string;
+}> {}
+export class TaskRedone extends BaseEvent<{
+  id: string;
+  agreementId: string;
+  activityId: string;
+  providerId: string;
+  providerName: string;
+  retriesCount: number;
+  reason?: string;
+}> {}
+export class TaskRejected extends BaseEvent<{
+  id: string;
+  agreementId: string;
+  activityId: string;
+  providerId: string;
+  providerName: string;
+  reason?: string;
+}> {}
+export class TaskFinished extends BaseEvent<{ id: string }> {}
 export class AllocationCreated extends BaseEvent<{ id: string; amount: number; platform?: string }> {}
 export class DemandSubscribed extends BaseEvent<{ id: string; details: DemandDetails }> {}
 export class DemandFailed extends BaseEvent<{ reason?: string }> {}
@@ -61,32 +87,7 @@ export class ProposalFailed extends BaseEvent<{
   reason?: string;
 }> {}
 export class ProposalConfirmed extends BaseEvent<{ id: string; providerId: string }> {}
-export class TaskStarted extends BaseEvent<{
-  id: string;
-  agreementId: string;
-  activityId: string;
-  providerId: string;
-  providerName: string;
-}> {}
-export class TaskRedone extends BaseEvent<{
-  id: string;
-  agreementId: string;
-  activityId: string;
-  providerId: string;
-  providerName: string;
-  retriesCount: number;
-  reason?: string;
-}> {}
-export class TaskRejected extends BaseEvent<{
-  id: string;
-  agreementId: string;
-  activityId: string;
-  providerId: string;
-  providerName: string;
-  reason?: string;
-}> {}
-export class TaskFinished extends BaseEvent<{ id: string }> {}
-export class PackageCreated extends BaseEvent<{ imageHash: string; details: PackageDetails }> {}
+export class PackageCreated extends BaseEvent<{ imageHash?: string; details: PackageDetails }> {}
 export class AgreementCreated extends BaseEvent<{
   id: string;
   providerId: string;

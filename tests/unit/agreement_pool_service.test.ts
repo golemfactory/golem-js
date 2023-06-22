@@ -68,7 +68,7 @@ describe("Agreement Pool Service", () => {
       await agreementService.run();
       await agreementService.addProposal(createProposal("proposal-id"));
       const agreement1 = await agreementService.getAgreement();
-      await agreementService.releaseAgreement(agreement1, true);
+      await agreementService.releaseAgreement(agreement1.id, true);
       const agreement2 = await agreementService.getAgreement();
       expect(agreement1).to.deep.equal(agreement2);
     }).timeout(5000);
@@ -79,7 +79,7 @@ describe("Agreement Pool Service", () => {
       await agreementService.run();
       await agreementService.addProposal(createProposal("proposal-id"));
       const agreement = await agreementService.getAgreement();
-      await agreementService.releaseAgreement(agreement, true);
+      await agreementService.releaseAgreement(agreement.id, true);
       expect(logger.logs).to.include(`Agreement ${agreement.id} has been released for reuse`);
     }).timeout(5000);
 
@@ -88,7 +88,7 @@ describe("Agreement Pool Service", () => {
       await agreementService.run();
       await agreementService.addProposal(createProposal("proposal-id"));
       const agreement = await agreementService.getAgreement();
-      await agreementService.releaseAgreement(agreement, false);
+      await agreementService.releaseAgreement(agreement.id, false);
       expect(logger.logs).to.include(`Agreement ${agreement.id} has been released and will be terminated`);
       expect(logger.logs).to.include(`Agreement ${agreement.id} terminated`);
     }).timeout(5000);
@@ -98,7 +98,7 @@ describe("Agreement Pool Service", () => {
       await agreementService.run();
       await agreementService.addProposal(createProposal("proposal-id"));
       const agreement = await agreementService.getAgreement();
-      await agreementService.releaseAgreement({ id: "not-known-id" } as Agreement, true);
+      await agreementService.releaseAgreement("not-known-id", true);
       expect(logger.logs).to.include(`Agreement not-known-id not found in the pool`);
     }).timeout(5000);
   });

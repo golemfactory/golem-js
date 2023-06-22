@@ -20,6 +20,10 @@
                     <input id="YAGNA_API_BASEPATH" type="text" value="http://127.0.0.1:7465" />
                 </div>
                 <div>
+                    <label for="PAYMENT_NETWORK">Payment Network: </label>
+                    <input id="PAYMENT_NETWORK" type="text" value="goerli" />
+                </div>
+                <div>
                     <label for="MEME_TEXT">Meme Text: </label>
                     <input id="MEME_TEXT" type="text" value="some meme text" />
                 </div>
@@ -113,11 +117,13 @@
         async function run() {
             const apiKey = document.getElementById('YAGNA_APPKEY').value;
             const basePath = document.getElementById('YAGNA_API_BASEPATH').value;
+            const network = document.getElementById('PAYMENT_NETWORK').value;
             const chunkedImg = chunkString(encodedImg.value, 64000)
 
             const executor = await TaskExecutor.create({
                 yagnaOptions: { apiKey, basePath },
                 package:"6539a63fecfb4ce98bc838ab2de71c6f4d36e1ee5945fbd8f1165c48",
+                payment: { network },
                 logger
               })
 

@@ -11,7 +11,7 @@
   "scripts": {
     "build": "tsc && rollup --config rollup.config.js",
     "docs": "typedoc yajsapi/ --plugin typedoc-plugin-merge-modules --plugin typedoc-theme-hierarchy",
-    "docs:md": "typedoc yajsapi/ --plugin typedoc-plugin-markdown --plugin ./.docs/typedoc-clear-references.js --hideBreadcrumbs true && node ./.docs/summary-generator.js",
+    "docs:md": "typedoc yajsapi/ --plugin typedoc-plugin-markdown --plugin .docs/typedoc-clear-references.cjs --hideBreadcrumbs true && node .docs/summary-generator.cjs",
     "test": "ts-mocha --exit -p tsconfig.json --file tests/integration/_setup.ts --file tests/unit/_setup.ts 'tests/+(unit|integration)/**.+(spec|test).ts'",
     "test:unit": "ts-mocha -p tsconfig.json --file tests/unit/_setup.ts --exit tests/unit/**.test.ts",
     "test:integration": "ts-mocha --exit -p tsconfig.json --file tests/integration/_setup.ts tests/integration/**.spec.ts",
@@ -78,10 +78,10 @@
     "ts-node": "^10.9.1",
     "tsconfig-paths": "^4.1.0",
     "tslint-config-prettier": "^1.18.0",
-    "typedoc": "^0.23.24",
+    "typedoc": "^0.24.0",
     "typedoc-plugin-markdown": "^3.14.0",
     "typedoc-plugin-merge-modules": "^4.0.1",
-    "typedoc-theme-hierarchy": "^3.0.2",
+    "typedoc-theme-hierarchy": "3.2.0",
     "typescript": "^4.8.4",
     "webpack": "^5.75.0"
   }
