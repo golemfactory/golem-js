@@ -44,7 +44,7 @@ export type ExecutorOptions = {
   isSubprocess?: boolean;
   /** Timeout for preparing activity - creating and deploy commands */
   activityPreparingTimeout?: number;
-  /** Strategy used for negotiating offers and selecting the best procider */
+  /** Strategy used for negotiating offers and selecting the best provider */
   strategy?: MarketStrategy;
 } & ActivityOptions &
   AgreementOptions &
@@ -83,7 +83,7 @@ export class TaskExecutor {
   private networkService?: NetworkService;
   private statsService: StatsService;
   private initWorker?: Worker<unknown, unknown>;
-  private taskQueue: TaskQueue<Task<any, any>>;
+  private taskQueue: TaskQueue<Task<unknown, unknown>>;
   private storageProvider?: StorageProvider;
   private logger?: Logger;
   private lastTaskIndex = 0;
@@ -332,7 +332,7 @@ export class TaskExecutor {
       this.initWorker,
       this.options.maxTaskRetries
     );
-    this.taskQueue.addToEnd(task);
+    this.taskQueue.addToEnd(task as Task<unknown, unknown>);
     let timeout = false;
     const timeoutId = setTimeout(() => (timeout = true), this.options.taskTimeout);
     while (!timeout && this.isRunning) {
