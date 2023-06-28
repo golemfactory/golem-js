@@ -70,7 +70,7 @@ export class PaymentService {
     this.payments?.unsubscribe().catch((error) => this.logger?.warn(error));
     this.payments?.removeEventListener(PaymentEventType, this.subscribePayments.bind(this));
     for (const allocation of this.allocations) await allocation.release().catch((error) => this.logger?.warn(error));
-    this.logger?.info("All allocations has benn released");
+    this.logger?.info("All allocations has been released");
     this.logger?.debug("Payment service has been stopped");
   }
 

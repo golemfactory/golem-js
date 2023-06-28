@@ -33,7 +33,7 @@ describe("Payment Service", () => {
       const paymentService = new PaymentService({ logger });
       await paymentService.createAllocations();
       await paymentService.end();
-      expect(logger.logs).to.include("All allocations has benn released");
+      expect(logger.logs).to.include("All allocations has been released");
     });
   });
 
