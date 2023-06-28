@@ -8,12 +8,15 @@ import { DemandEvent } from "./demand.js";
 import { MarketConfig } from "./config.js";
 import { sleep } from "../utils/index.js";
 
+export type ProposalFilter = (proposal: Proposal) => Promise<boolean>;
+export type ProposalMaps = (proposal: Proposal) => Promise<Proposal>;
+
 /**
  * @internal
  */
 export interface MarketOptions extends DemandOptions {
-  /** Strategy used to choose best offer */
-  strategy?: MarketStrategy;
+  filters?: ProposalFilter[];
+  maps?: ProposalMaps[];
   debitNotesAcceptanceTimeout?: number;
 }
 
