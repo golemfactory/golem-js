@@ -1,5 +1,5 @@
 import { ComparisonOperator, DecorationsBuilder, MarketDecoration } from "../market/builder.js";
-import { Logger } from "../utils/index.js";
+import { EnvUtils, Logger } from "../utils/index.js";
 import axios from "axios";
 import { PackageConfig } from "./config.js";
 import { RequireAtLeastOne } from "type-fest";
@@ -34,7 +34,6 @@ export type PackageOptions = RequireAtLeastOne<
     manifestSigAlgorithm?: string;
     /** Certificate - base64 encoded public certificate (DER or PEM) matching key used to generate signature **/
     manifestCert?: string;
-    repoUrl?: string;
     logger?: Logger;
   },
   "imageHash" | "imageTag" | "manifest"
@@ -105,16 +104,8 @@ export class Package {
     return builder.getDecorations();
   }
 
-  private async getRepoUrl(): Promise<string> {
-    if (process?.env.YAJSAPI_REPO_URL) {
-      return process.env.YAJSAPI_REPO_URL;
-    }
-    return this.options.repoUrl;
-  }
-
   private async resolveTaskPackageUrl(): Promise<string> {
-    // ? : Dependency Injection could be useful
-    const repoUrl = await this.getRepoUrl();
+    const repoUrl = EnvUtils.getRepoUrl();
 
     //TODO : in future this should be passed probably through config
 

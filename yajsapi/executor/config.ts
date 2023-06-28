@@ -2,10 +2,9 @@ import { ExecutorOptions } from "./executor.js";
 import { Package, PackageOptions } from "../package/index.js";
 import { MarketStrategy } from "../market/index.js";
 import { Logger, runtimeContextChecker, defaultLogger } from "../utils/index.js";
-import { GLOBAL_DEFAULTS } from "../config/defaults.js";
 
 const DEFAULTS = Object.freeze({
-  ...GLOBAL_DEFAULTS,
+  payment: { driver: "erc20", network: "goerli" },
   budget: 1.0,
   subnetTag: "public",
   logLevel: "info",
@@ -60,7 +59,6 @@ export class ExecutorConfig {
       minStorageGib: options.minStorageGib,
       minCpuThreads: options.minCpuThreads,
       capabilities: options.capabilities,
-      repoUrl: options.repoUrl,
       manifest: options.manifest,
       manifestSig: options.manifestSig,
       manifestSigAlgorithm: options.manifestSigAlgorithm,
@@ -81,7 +79,6 @@ export class ExecutorConfig {
       minStorageGib: options.minStorageGib,
       minCpuThreads: options.minCpuThreads,
       capabilities: options.capabilities,
-      repoUrl: options.repoUrl,
     };
     this.logger = options.logger || (!runtimeContextChecker.isBrowser ? defaultLogger() : undefined);
     this.logLevel = options.logLevel || DEFAULTS.logLevel;
