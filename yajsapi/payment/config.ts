@@ -5,10 +5,9 @@ import { EnvUtils, Logger } from "../utils/index.js";
 import { YagnaOptions } from "../executor/index.js";
 import { PaymentOptions } from "./service.js";
 import { InvoiceOptions } from "./invoice.js";
-import { GLOBAL_DEFAULTS } from "../config/defaults.js";
 
 const DEFAULTS = Object.freeze({
-  ...GLOBAL_DEFAULTS,
+  payment: { network: "goerli", driver: "erc20" },
   budget: 1.0,
   paymentTimeout: 20000,
   allocationExpires: 1000 * 60 * 30, // 30 min
