@@ -1,8 +1,8 @@
 import { ProposalDetails } from "../market/proposal";
 import { PackageDetails } from "../package/package";
 import { DemandDetails } from "../market/demand";
-import { RequireAtLeastOne } from "type-fest";
 
+import { RequireAtLeastOne } from "../types/RequireAtLeastOne";
 /**
  * Global Event Type with which all API events will be emitted. It should be used on all listeners that would like to handle events.
  */

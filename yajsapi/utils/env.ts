@@ -1,4 +1,3 @@
-// ? why those are functions ?
 import { isNode } from "./runtimeContextChecker";
 
 export const EnvUtils = {

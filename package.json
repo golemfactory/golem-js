@@ -42,7 +42,6 @@
     "ip-num": "^1.4.1",
     "pino": "^8.11.0",
     "pino-pretty": "^9.4.0",
-    "type-fest": "^3.11.1",
     "ya-ts-client": "^0.5.3"
   },
   "devDependencies": {

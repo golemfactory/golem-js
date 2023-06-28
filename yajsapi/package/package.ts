@@ -2,8 +2,7 @@ import { ComparisonOperator, DecorationsBuilder, MarketDecoration } from "../mar
 import { EnvUtils, Logger } from "../utils/index.js";
 import axios from "axios";
 import { PackageConfig } from "./config.js";
-import { RequireAtLeastOne } from "type-fest";
-
+import { RequireAtLeastOne } from "../types/RequireAtLeastOne.js";
 /**
  * @category Mid-level
  */
