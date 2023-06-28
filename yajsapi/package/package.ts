@@ -2,7 +2,7 @@ import { ComparisonOperator, DecorationsBuilder, MarketDecoration } from "../mar
 import { EnvUtils, Logger } from "../utils/index.js";
 import axios from "axios";
 import { PackageConfig } from "./config.js";
-import { RequireAtLeastOne } from "../types/RequireAtLeastOne.js";
+import { RequireAtLeastOne } from "../utils/types.js";
 /**
  * @category Mid-level
  */
@@ -22,11 +22,11 @@ export type PackageOptions = RequireAtLeastOne<
     /** Required providers capabilities to run application */
     capabilities?: string[];
     /**  finds package by its contents hash */
-    imageHash: string;
+    imageHash?: string;
     /**  finds package by registry tag  */
 
-    imageTag: string;
-    manifest: string;
+    imageTag?: string;
+    manifest?: string;
     /** Signature of base64 encoded Computation Payload Manifest **/
     manifestSig?: string;
     /** Algorithm of manifest signature, e.g. "sha256" **/

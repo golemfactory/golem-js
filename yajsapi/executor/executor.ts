@@ -16,7 +16,7 @@ import { NetworkServiceOptions } from "../network/service.js";
 import { AgreementServiceOptions } from "../agreement/service.js";
 import { WorkOptions } from "../task/work.js";
 import { LogLevel } from "../utils/logger/logger.js";
-import { RequireAtLeastOne } from "../types/RequireAtLeastOne";
+import { RequireAtLeastOne } from "../utils/types.js";
 
 /**
  * @category High-level
