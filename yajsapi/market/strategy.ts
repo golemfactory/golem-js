@@ -1,18 +1,15 @@
-import { Logger } from "../utils/index.js";
-import { AgreementCandidate, ProposalDTO } from "../agreement/service.js";
+import { ProposalDTO } from "./proposal";
 
-export interface MarketStrategy {
-  checkProposal(proposal: ProposalDTO): Promise<boolean>;
-  getBestAgreementCandidate(candidates: AgreementCandidate[]): Promise<AgreementCandidate>;
-}
+export const AcceptAllProposalFilter = () => async () => true;
 
-export class DummyMarketStrategy implements MarketStrategy {
-  constructor(readonly logger?: Logger) {}
-  async checkProposal(proposal: ProposalDTO): Promise<boolean> {
-    return Promise.resolve(true);
-  }
+export const BlackListProposalIdsFilter = (blackListIds: string[]) => async (proposal: ProposalDTO) =>
+  !blackListIds.includes(proposal.issuerId);
 
-  async getBestAgreementCandidate(candidates: AgreementCandidate[]): Promise<AgreementCandidate> {
-    return candidates[0];
-  }
-}
+export const BlackListProposalNamesFilter = (regexp: RegExp) => async (proposal: ProposalDTO) =>
+  !proposal.provider.name.match(regexp);
+
+export const WhiteListProposalIdsFilter = (whiteListIds: string[]) => async (proposal: ProposalDTO) =>
+  whiteListIds.includes(proposal.issuerId);
+
+export const WhiteListProposalNamesFilter = (regexp: RegExp) => async (proposal: ProposalDTO) =>
+  proposal.provider.name.match(regexp);

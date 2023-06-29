@@ -1,10 +1,10 @@
 import { AgreementOptions } from "./agreement.js";
-import { AgreementServiceOptions } from "./service.js";
+import { AgreementSelector, AgreementServiceOptions } from "./service.js";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api.js";
 import { Configuration } from "ya-ts-client/dist/ya-market/index.js";
 import { EnvUtils, Logger } from "../utils/index.js";
+import { RandomAgreementSelectorWithPriorityForExistingOnes } from "./strategy.js";
 import { Agent } from "http";
-import { MarketStrategy, DummyMarketStrategy } from "../market/strategy.js";
 
 const DEFAULTS = {
   agreementRequestTimeout: 30000,
@@ -12,7 +12,7 @@ const DEFAULTS = {
   agreementEventPoolingMaxEventsPerRequest: 100,
   agreementWaitingForProposalTimout: 10000,
   agreementWaitingForApprovalTimeout: 60,
-  strategy: new DummyMarketStrategy(),
+  agreementSelector: RandomAgreementSelectorWithPriorityForExistingOnes(),
 };
 
 /**
@@ -51,16 +51,16 @@ export class AgreementServiceConfig extends AgreementConfig {
   readonly agreementEventPoolingInterval: number;
   readonly agreementEventPoolingMaxEventsPerRequest: number;
   readonly agreementWaitingForProposalTimout: number;
-  readonly strategy: MarketStrategy;
+  readonly agreementSelector: AgreementSelector;
 
   constructor(options?: AgreementServiceOptions) {
     super(options);
     this.agreementWaitingForProposalTimout =
-      options?.agreementWaitingForProposalTimout || DEFAULTS.agreementWaitingForProposalTimout;
+      options?.agreementWaitingForProposalTimout ?? DEFAULTS.agreementWaitingForProposalTimout;
     this.agreementEventPoolingInterval =
-      options?.agreementEventPoolingInterval || DEFAULTS.agreementEventPoolingInterval;
+      options?.agreementEventPoolingInterval ?? DEFAULTS.agreementEventPoolingInterval;
     this.agreementEventPoolingMaxEventsPerRequest =
-      options?.agreementEventPoolingMaxEventsPerRequest || DEFAULTS.agreementEventPoolingMaxEventsPerRequest;
-    this.strategy = options?.strategy || DEFAULTS.strategy;
+      options?.agreementEventPoolingMaxEventsPerRequest ?? DEFAULTS.agreementEventPoolingMaxEventsPerRequest;
+    this.agreementSelector = options?.agreementSelector ?? DEFAULTS.agreementSelector;
   }
 }

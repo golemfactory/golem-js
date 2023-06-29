@@ -2,10 +2,10 @@ import { DemandOptions } from "./demand.js";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api.js";
 import { Configuration } from "ya-ts-client/dist/ya-market/index.js";
 import { EnvUtils, Logger } from "../utils/index.js";
-import { MarketOptions } from "./service.js";
+import { MarketOptions, ProposalFilter } from "./service.js";
 import { YagnaOptions } from "../executor/index.js";
 import { Agent } from "http";
-import { DummyMarketStrategy, MarketStrategy } from "./strategy.js";
+import { AcceptAllProposalFilter } from "./strategy.js";
 
 const DEFAULTS = {
   subnetTag: "public",
@@ -14,7 +14,7 @@ const DEFAULTS = {
   offerFetchingInterval: 10000,
   marketOfferExpiration: 1000 * 60 * 30, // 30 min
   debitNotesAcceptanceTimeout: 30,
-  marketStrategy: new DummyMarketStrategy(),
+  proposalFilter: AcceptAllProposalFilter(),
 };
 
 /**
@@ -35,8 +35,8 @@ export class DemandConfig {
   constructor(options?: DemandOptions) {
     const apiKey = options?.yagnaOptions?.apiKey || EnvUtils.getYagnaAppKey();
     if (!apiKey) throw new Error("Api key not defined");
-    const basePath = options?.yagnaOptions?.basePath || EnvUtils.getYagnaApiUrl()
-   const apiConfig = new Configuration({
+    const basePath = options?.yagnaOptions?.basePath || EnvUtils.getYagnaApiUrl();
+    const apiConfig = new Configuration({
       apiKey,
       basePath: `${basePath}/market-api/v1`,
       accessToken: apiKey,
@@ -59,10 +59,10 @@ export class DemandConfig {
  */
 export class MarketConfig extends DemandConfig {
   readonly debitNotesAcceptanceTimeout: number;
-  readonly strategy: MarketStrategy;
+  public readonly proposalFilter: ProposalFilter;
   constructor(options?: MarketOptions) {
     super(options);
     this.debitNotesAcceptanceTimeout = options?.debitNotesAcceptanceTimeout || DEFAULTS.debitNotesAcceptanceTimeout;
-    this.strategy = options?.strategy || DEFAULTS.marketStrategy;
+    this.proposalFilter = options?.proposalFilter ?? DEFAULTS.proposalFilter;
   }
 }

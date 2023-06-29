@@ -1,23 +1,13 @@
 import Bottleneck from "bottleneck";
-
 import { Logger } from "../utils/index.js";
 import { Agreement, AgreementOptions, AgreementStateEnum } from "./agreement.js";
-import sleep from "../utils/sleep.js";
-
-import { MarketStrategy } from "../market/strategy.js";
 import { AgreementServiceConfig } from "./config.js";
-import { Proposal } from "../market/proposal.js";
+import { Proposal, ProposalDTO } from "../market/proposal.js";
+import sleep from "../utils/sleep.js";
 
 export interface AgreementDTO {
   id: string;
   provider: { id: string; name: string };
-}
-export interface ProposalDTO {
-  id: string;
-  issuerId: string;
-  provider: { id: string; name: string };
-  properties: object;
-  constraints: string;
 }
 
 export class AgreementCandidate {
@@ -25,8 +15,10 @@ export class AgreementCandidate {
   constructor(readonly proposal: ProposalDTO) {}
 }
 
+export type AgreementSelector = (candidates: AgreementCandidate[]) => Promise<AgreementCandidate>;
+
 export interface AgreementServiceOptions extends AgreementOptions {
-  strategy?: MarketStrategy;
+  agreementSelector?: AgreementSelector;
   agreementEventPoolingInterval?: number;
   agreementEventPoolingMaxEventsPerRequest?: number;
   agreementWaitingForProposalTimout?: number;
@@ -140,16 +132,10 @@ export class AgreementPoolService {
     // Limit concurrency to 1
     const candidate = await this.limiter.schedule(async () => {
       this.cleanupPool();
-
-      if (this.pool.size === 0) {
-        // this.logger?.debug(`Agreement cannot be created due to no available candidates in pool`);
-        return;
-      }
-
-      const pool = Array.from(this.pool);
-      const bestCandidate = await this.config.strategy.getBestAgreementCandidate(pool);
+      if (this.pool.size === 0) return;
+      const candidates = Array.from(this.pool);
+      const bestCandidate = await this.config.agreementSelector(candidates);
       this.pool.delete(bestCandidate);
-
       return bestCandidate;
     });
 

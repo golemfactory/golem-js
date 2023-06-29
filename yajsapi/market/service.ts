@@ -1,22 +1,19 @@
 import { Logger } from "../utils/index.js";
 import { Package } from "../package/index.js";
-import { Demand, Proposal, DemandEventType, DemandOptions } from "./index.js";
-import { DummyMarketStrategy, MarketStrategy } from "./strategy.js";
+import { Demand, Proposal, DemandEventType, DemandOptions, ProposalDTO } from "./index.js";
 import { AgreementPoolService } from "../agreement/index.js";
 import { Allocation } from "../payment/index.js";
 import { DemandEvent } from "./demand.js";
 import { MarketConfig } from "./config.js";
 import { sleep } from "../utils/index.js";
 
-export type ProposalFilter = (proposal: Proposal) => Promise<boolean>;
-export type ProposalMaps = (proposal: Proposal) => Promise<Proposal>;
+export type ProposalFilter = (proposal: ProposalDTO) => Promise<boolean>;
 
 /**
  * @internal
  */
 export interface MarketOptions extends DemandOptions {
-  filters?: ProposalFilter[];
-  maps?: ProposalMaps[];
+  proposalFilter?: ProposalFilter;
   debitNotesAcceptanceTimeout?: number;
 }
 
@@ -116,8 +113,8 @@ export class MarketService {
       return { result: false, reason: "Debit note acceptance timeout too short" };
     const commonPaymentPlatforms = this.getCommonPaymentPlatforms(proposal.properties);
     if (!commonPaymentPlatforms?.length) return { result: false, reason: "No common payment platform" };
-    if (this.options.strategy && !(await this.options.strategy.checkProposal(proposal)))
-      return { result: false, reason: "Proposal rejected by Market Strategy" };
+    if (await this.options.proposalFilter(proposal))
+      return { result: false, reason: "Proposal rejected by Proposal Filter" };
     return { result: true };
   }
 

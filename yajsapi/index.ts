@@ -4,8 +4,14 @@ export { StorageProvider, GftpStorageProvider } from "./storage/index.js";
 
 // Mid level API
 export { Activity, ActivityOptions, ActivityStateEnum, Result } from "./activity/index.js";
-export { Agreement, AgreementOptions, AgreementStateEnum } from "./agreement/index.js";
-export { Demand, DemandEvent, DemandEventType, DemandOptions, Proposal } from "./market/index.js";
+export {
+  Agreement,
+  AgreementOptions,
+  AgreementStateEnum,
+  AgreementCandidate,
+  AgreementSelectors,
+} from "./agreement/index.js";
+export { Demand, DemandEvent, DemandEventType, DemandOptions, Proposal, ProposalFilters } from "./market/index.js";
 export { Package, PackageOptions } from "./package/index.js";
 export {
   Invoice,

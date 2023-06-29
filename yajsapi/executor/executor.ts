@@ -1,5 +1,5 @@
 import { Package, PackageOptions } from "../package/index.js";
-import { DemandOptions, MarketService, MarketStrategy } from "../market/index.js";
+import { MarketService } from "../market/index.js";
 import { AgreementOptions, AgreementPoolService } from "../agreement/index.js";
 import { Task, TaskQueue, TaskService, Worker } from "../task/index.js";
 import { PaymentService } from "../payment/index.js";
@@ -16,6 +16,7 @@ import { NetworkServiceOptions } from "../network/service.js";
 import { AgreementServiceOptions } from "../agreement/service.js";
 import { WorkOptions } from "../task/work.js";
 import { LogLevel } from "../utils/logger/logger.js";
+import { MarketOptions } from "../market/service";
 
 const terminatingSignals = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
 /**
@@ -44,12 +45,10 @@ export type ExecutorOptions = {
   isSubprocess?: boolean;
   /** Timeout for preparing activity - creating and deploy commands */
   activityPreparingTimeout?: number;
-  /** Strategy used for negotiating offers and selecting the best provider */
-  strategy?: MarketStrategy;
-} & ActivityOptions &
+} & MarketOptions &
+  ActivityOptions &
   AgreementOptions &
   BasePaymentOptions &
-  DemandOptions &
   Omit<PackageOptions, "imageHash"> &
   TaskOptions &
   NetworkServiceOptions &
