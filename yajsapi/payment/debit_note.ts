@@ -92,7 +92,8 @@ export class DebitNote extends BaseNote<Model> {
    */
   async reject(rejection: Rejection) {
     try {
-      await this.options.api.rejectDebitNote(this.id, rejection);
+      // TODO: not implemented by yagna - 501 returned
+      // await this.options.api.rejectDebitNote(this.id, rejection);
     } catch (e) {
       throw new Error(`Unable to reject debit note ${this.id} ${e?.response?.data?.message || e}`);
     } finally {
