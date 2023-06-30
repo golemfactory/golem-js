@@ -125,8 +125,6 @@ export class PaymentService {
         const allocation = this.getAllocationForPayment(invoice);
         await invoice.accept(invoice.amount, allocation.id);
         this.paidAgreements.add({ invoice, agreement });
-        this.agreementsDebitNotes.delete(invoice.agreementId);
-        this.agreementsToPay.delete(invoice.agreementId);
         this.logger?.info(`Invoice accepted from provider ${agreement.provider.name}`);
       } else {
         const reason = {
@@ -139,6 +137,8 @@ export class PaymentService {
           `Invoice has been rejected for provider ${agreement.provider.name}. Reason: ${reason.message}`
         );
       }
+      this.agreementsDebitNotes.delete(invoice.agreementId);
+      this.agreementsToPay.delete(invoice.agreementId);
     } catch (error) {
       this.logger?.error(`Invoice failed from provider ${invoice.providerId}. ${error}`);
     }
@@ -160,7 +160,7 @@ export class PaymentService {
         };
         await debitNote.reject(reason);
         this.logger?.warn(
-          `DebitNote has been rejected for agreement ${debitNote.agreementId} . Reason: ${reason.message}`
+          `DebitNote has been rejected for agreement ${debitNote.agreementId}. Reason: ${reason.message}`
         );
       }
     } catch (error) {
