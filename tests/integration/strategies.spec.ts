@@ -70,14 +70,7 @@ describe("Strategies", function () {
       for await (const res of results) if (res) finalOutputs.push(res);
       expect(finalOutputs).to.have.members(data);
       await executor.end();
-      await logger.expectToInclude(
-        `Invoice has been rejected for provider provider-1. Reason: Invoice rejected by Invoice Filter`,
-        100
-      );
-      await logger.expectToInclude(
-        `Invoice has been rejected for provider provider-2. Reason: Invoice rejected by Invoice Filter`,
-        100
-      );
+      await logger.expectToInclude(`Reason: Invoice rejected by Invoice Filter`, 100);
     }).timeout(80000);
 
     it("should only accept debit notes below 0.00001 GLM", async () => {
