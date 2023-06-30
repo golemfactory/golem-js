@@ -5,6 +5,9 @@ import { LoggerMock } from "../mock/index.js";
 const logger = new LoggerMock(false);
 
 describe("Strategies", function () {
+  beforeEach(function () {
+    logger.clear();
+  });
   describe("Proposals", () => {
     it("should filtered providers by black list names", async () => {
       const executor = await TaskExecutor.create({
