@@ -161,9 +161,9 @@ export class Invoice extends BaseNote<Model> {
    */
   async reject(rejection: Rejection) {
     try {
-      await this.options.api.rejectInvoice(this.id, rejection);
+      // TODO: not implemented by yagna !!!!
+      // await this.options.api.rejectInvoice(this.id, rejection);
     } catch (e) {
-      console.log(e);
       throw new Error(`Unable to reject invoice ${this.id} ${e?.response?.data?.message || e}`);
     } finally {
       this.options.eventTarget?.dispatchEvent(
