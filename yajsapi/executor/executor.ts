@@ -2,7 +2,7 @@ import { Package, PackageOptions } from "../package/index.js";
 import { MarketService } from "../market/index.js";
 import { AgreementOptions, AgreementPoolService } from "../agreement/index.js";
 import { Task, TaskQueue, TaskService, Worker } from "../task/index.js";
-import { PaymentService } from "../payment/index.js";
+import { PaymentService, PaymentOptions } from "../payment/index.js";
 import { NetworkService } from "../network/index.js";
 import { ActivityOptions, Result } from "../activity/index.js";
 import { sleep, Logger, runtimeContextChecker } from "../utils/index.js";
@@ -11,7 +11,6 @@ import { ExecutorConfig } from "./config.js";
 import { Events } from "../events/index.js";
 import { StatsService } from "../stats/service.js";
 import { TaskOptions } from "../task/service.js";
-import { BasePaymentOptions } from "../payment/config.js";
 import { NetworkServiceOptions } from "../network/service.js";
 import { AgreementServiceOptions } from "../agreement/service.js";
 import { WorkOptions } from "../task/work.js";
@@ -48,7 +47,7 @@ export type ExecutorOptions = {
 } & MarketOptions &
   ActivityOptions &
   AgreementOptions &
-  BasePaymentOptions &
+  PaymentOptions &
   Omit<PackageOptions, "imageHash"> &
   TaskOptions &
   NetworkServiceOptions &
