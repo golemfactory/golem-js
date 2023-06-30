@@ -5,9 +5,8 @@ import { EnvUtils, Logger } from "../utils/index.js";
 import { YagnaOptions } from "../executor/index.js";
 import { DebitNoteFilter, InvoiceFilter, PaymentOptions } from "./service.js";
 import { InvoiceOptions } from "./invoice.js";
-import { AccountsOptions } from "./accounts.js";
+import { AcceptAllDebitNotesFilter, AcceptAllInvoicesFilter } from "./strategy.js";
 import { Agent } from "http";
-import { AcceptAllDebitNotesFilter, AcceptAllInvoicesFilter } from "./strategy";
 
 const DEFAULTS = {
   budget: 1.0,

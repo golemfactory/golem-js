@@ -22,6 +22,7 @@ export {
   PaymentEventType,
   InvoiceEvent,
   DebitNoteEvent,
+  PaymentFilters,
 } from "./payment/index.js";
 export { Script, Run, Deploy, Start, Transfer, UploadFile, DownloadFile } from "./script/index.js";
 

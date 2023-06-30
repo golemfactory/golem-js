@@ -113,7 +113,7 @@ export class MarketService {
       return { result: false, reason: "Debit note acceptance timeout too short" };
     const commonPaymentPlatforms = this.getCommonPaymentPlatforms(proposal.properties);
     if (!commonPaymentPlatforms?.length) return { result: false, reason: "No common payment platform" };
-    if (await this.options.proposalFilter(proposal))
+    if (!(await this.options.proposalFilter(proposal)))
       return { result: false, reason: "Proposal rejected by Proposal Filter" };
     return { result: true };
   }

@@ -5,3 +5,4 @@ export { Allocation } from "./allocation.js";
 export { Accounts } from "./accounts.js";
 export { Payments, PaymentEventType, InvoiceEvent, DebitNoteEvent } from "./payments.js";
 export { Rejection, RejectionReason } from "./rejection.js";
+export * as PaymentFilters from "./strategy.js";

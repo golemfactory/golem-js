@@ -12,4 +12,4 @@ export const WhiteListProposalIdsFilter = (whiteListIds: string[]) => async (pro
   whiteListIds.includes(proposal.issuerId);
 
 export const WhiteListProposalNamesFilter = (regexp: RegExp) => async (proposal: ProposalDTO) =>
-  proposal.provider.name.match(regexp);
+  !!proposal.provider.name.match(regexp);

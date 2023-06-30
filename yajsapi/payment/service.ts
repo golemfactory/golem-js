@@ -5,7 +5,7 @@ import { Invoice, InvoiceDTO } from "./invoice.js";
 import { DebitNote, DebitNoteDTO } from "./debit_note.js";
 import { Accounts } from "./accounts.js";
 import { Payments, PaymentEventType, DebitNoteEvent, InvoiceEvent } from "./payments.js";
-import { RejectionReason } from "./rejection";
+import { RejectionReason } from "./rejection.js";
 
 /**
  * @internal
@@ -16,8 +16,8 @@ export interface PaymentOptions extends BasePaymentOptions {
   payingInterval?: number;
   maxInvoiceEvents?: number;
   maxDebitNotesEvents?: number;
-  debitNotesFilter?: (debitNote: DebitNote) => Promise<boolean>;
-  invoiceFilter?: (invoice: Invoice) => Promise<boolean>;
+  debitNotesFilter?: DebitNoteFilter;
+  invoiceFilter?: InvoiceFilter;
 }
 
 export type DebitNoteFilter = (debitNote: DebitNoteDTO) => Promise<boolean>;

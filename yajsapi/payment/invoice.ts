@@ -8,6 +8,7 @@ export type InvoiceOptions = BasePaymentOptions;
 export interface InvoiceDTO {
   id: string;
   providerId: string;
+  timestamp: string;
   activityIds?: string[];
   agreementId: string;
   paymentDueDate?: string;
@@ -23,8 +24,6 @@ export interface InvoiceDTO {
  */
 export interface BaseModel {
   issuerId: string;
-  amount: string;
-  timestamp: string;
   recipientId: string;
   payeeAddr: string;
   payerAddr: string;
@@ -114,6 +113,7 @@ export class Invoice extends BaseNote<Model> {
     return {
       id: this.id,
       providerId: this.providerId,
+      timestamp: this.timestamp,
       activityIds: this.activityIds,
       agreementId: this.agreementId,
       paymentDueDate: this.paymentDueDate,
