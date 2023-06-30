@@ -1,10 +1,19 @@
-import { BasePaymentOptions, InvoiceConfig } from './config.js';
+import { BasePaymentOptions, InvoiceConfig } from "./config.js";
 import { DebitNote as Model } from "ya-ts-client/dist/ya-payment/src/models";
-import { BaseNote } from './invoice.js';
-import { Events } from '../events/index.js';
-import { Rejection } from './rejection.js';
+import { BaseNote } from "./invoice.js";
+import { Events } from "../events/index.js";
+import { Rejection } from "./rejection.js";
 
 export type InvoiceOptions = BasePaymentOptions;
+
+export interface DebitNoteDTO {
+  id: string;
+  timestamp: string;
+  activityId: string;
+  agreementId: string;
+  totalAmountDue: number;
+  usageCounterVector?: object;
+}
 
 /**
  * A Debit Note is an artifact issued by the Provider to the Requestor, in the context of a specific Activity. It is a notification of Total Amount Due incurred by the Activity until the moment the Debit Note is issued. This is expected to be used as trigger for payment in upfront-payment or pay-as-you-go scenarios. NOTE: Only Debit Notes with non-null paymentDueDate are expected to trigger payments. NOTE: Debit Notes flag the current Total Amount Due, which is accumulated from the start of Activity. Debit Notes are expected to trigger payments, therefore payment amount for the newly received Debit Note is expected to be determined by difference of Total Payments for the Agreement vs Total Amount Due.
@@ -44,6 +53,17 @@ export class DebitNote extends BaseNote<Model> {
     this.activityId = model.activityId;
     this.totalAmountDue = model.totalAmountDue;
     this.usageCounterVector = model.usageCounterVector;
+  }
+
+  get dto(): DebitNoteDTO {
+    return {
+      id: this.id,
+      timestamp: this.timestamp,
+      activityId: this.activityId,
+      agreementId: this.agreementId,
+      totalAmountDue: Number(this.totalAmountDue),
+      usageCounterVector: this.usageCounterVector,
+    };
   }
 
   /**

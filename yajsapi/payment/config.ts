@@ -3,10 +3,11 @@ import { Configuration } from "ya-ts-client/dist/ya-payment/index.js";
 import { RequestorApi } from "ya-ts-client/dist/ya-payment/api.js";
 import { EnvUtils, Logger } from "../utils/index.js";
 import { YagnaOptions } from "../executor/index.js";
-import { PaymentOptions } from "./service.js";
+import { DebitNoteFilter, InvoiceFilter, PaymentOptions } from "./service.js";
 import { InvoiceOptions } from "./invoice.js";
 import { AccountsOptions } from "./accounts.js";
 import { Agent } from "http";
+import { AcceptAllDebitNotesFilter, AcceptAllInvoicesFilter } from "./strategy";
 
 const DEFAULTS = {
   budget: 1.0,
@@ -20,6 +21,8 @@ const DEFAULTS = {
   debitNotesFetchingInterval: 2000,
   payingInterval: 2000,
   paymentRequestTimeout: 10000,
+  debitNoteFilter: AcceptAllDebitNotesFilter(),
+  invoiceFilter: AcceptAllInvoicesFilter(),
 };
 
 export interface BasePaymentOptions {
@@ -74,14 +77,18 @@ export class PaymentConfig extends BaseConfig {
   public readonly payingInterval: number;
   public readonly maxInvoiceEvents: number;
   public readonly maxDebitNotesEvents: number;
+  public readonly debitNoteFilter: DebitNoteFilter;
+  public readonly invoiceFilter: InvoiceFilter;
 
   constructor(options?: PaymentOptions) {
     super(options);
-    this.invoiceFetchingInterval = options?.invoiceFetchingInterval || DEFAULTS.invoiceFetchingInterval;
-    this.debitNotesFetchingInterval = options?.debitNotesFetchingInterval || DEFAULTS.debitNotesFetchingInterval;
-    this.maxInvoiceEvents = options?.maxInvoiceEvents || DEFAULTS.maxInvoiceEvents;
-    this.maxDebitNotesEvents = options?.maxDebitNotesEvents || DEFAULTS.maxDebitNotesEvents;
-    this.payingInterval = options?.payingInterval || DEFAULTS.payingInterval;
+    this.invoiceFetchingInterval = options?.invoiceFetchingInterval ?? DEFAULTS.invoiceFetchingInterval;
+    this.debitNotesFetchingInterval = options?.debitNotesFetchingInterval ?? DEFAULTS.debitNotesFetchingInterval;
+    this.maxInvoiceEvents = options?.maxInvoiceEvents ?? DEFAULTS.maxInvoiceEvents;
+    this.maxDebitNotesEvents = options?.maxDebitNotesEvents ?? DEFAULTS.maxDebitNotesEvents;
+    this.payingInterval = options?.payingInterval ?? DEFAULTS.payingInterval;
+    this.debitNoteFilter = options?.debitNotesFilter ?? DEFAULTS.debitNoteFilter;
+    this.invoiceFilter = options?.invoiceFilter ?? DEFAULTS.invoiceFilter;
   }
 }
 /**

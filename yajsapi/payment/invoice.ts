@@ -5,11 +5,26 @@ import { Rejection } from "./rejection.js";
 
 export type InvoiceOptions = BasePaymentOptions;
 
+export interface InvoiceDTO {
+  id: string;
+  providerId: string;
+  activityIds?: string[];
+  agreementId: string;
+  paymentDueDate?: string;
+  status: string;
+  payeeAddr: string;
+  payerAddr: string;
+  paymentPlatform: string;
+  amount: number;
+}
+
 /**
  * @category Mid-level
  */
 export interface BaseModel {
   issuerId: string;
+  amount: string;
+  timestamp: string;
   recipientId: string;
   payeeAddr: string;
   payerAddr: string;
@@ -93,6 +108,21 @@ export class Invoice extends BaseNote<Model> {
     this.amount = model.amount;
     this.timestamp = model.timestamp;
     this.recipientId = model.recipientId;
+  }
+
+  get dto(): InvoiceDTO {
+    return {
+      id: this.id,
+      providerId: this.providerId,
+      activityIds: this.activityIds,
+      agreementId: this.agreementId,
+      paymentDueDate: this.paymentDueDate,
+      status: this.status,
+      payeeAddr: this.payeeAddr,
+      payerAddr: this.payerAddr,
+      paymentPlatform: this.paymentPlatform,
+      amount: Number(this.amount),
+    };
   }
 
   /**
