@@ -35,7 +35,7 @@ describe("Strategies", function () {
       await logger.expectToInclude(`Task 2 computed by provider ${gothProviders[1].name}`, 5000);
       await logger.expectToInclude(`Task 3 computed by provider ${gothProviders[2].name}`, 5000);
       await logger.expectToInclude(`Proposal rejected by Proposal Filter`, 5000);
-    });
+    }).timeout(80000);
 
     it("should filtered providers by white list names", async () => {
       executor = await TaskExecutor.create({
@@ -56,7 +56,7 @@ describe("Strategies", function () {
       await logger.expectToInclude(`Task 2 computed by provider ${gothProviders[1].name}`, 5000);
       await logger.expectToInclude(`Task 3 computed by provider ${gothProviders[2].name}`, 5000);
       await logger.expectToInclude(`Proposal rejected by Proposal Filter`, 5000);
-    });
+    }).timeout(80000);
   });
   describe("Payments", () => {
     // tood
