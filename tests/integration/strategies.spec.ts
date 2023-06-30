@@ -4,11 +4,6 @@ import { LoggerMock } from "../mock/index.js";
 
 const logger = new LoggerMock(false);
 
-const gothProviders = [
-  { id: "", name: "provider-1" },
-  { id: "", name: "provider-2" },
-];
-
 describe("Strategies", function () {
   let executor: TaskExecutor;
   afterEach(async function () {
@@ -31,10 +26,10 @@ describe("Strategies", function () {
       const finalOutputs: string[] = [];
       for await (const res of results) if (res) finalOutputs.push(res);
       expect(finalOutputs).to.have.members(data);
-      await logger.expectToInclude(`Task 1 computed by provider ${gothProviders[0].name}`, 5000);
-      await logger.expectToInclude(`Task 2 computed by provider ${gothProviders[1].name}`, 5000);
-      await logger.expectToInclude(`Task 3 computed by provider ${gothProviders[2].name}`, 5000);
       await logger.expectToInclude(`Proposal rejected by Proposal Filter`, 5000);
+      await logger.expectToInclude(`Task 1 computed by provider provider-1`, 5000);
+      await logger.expectToInclude(`Task 2 computed by provider provider-1`, 5000);
+      await logger.expectToInclude(`Task 3 computed by provider provider-1`, 5000);
     }).timeout(80000);
 
     it("should filtered providers by white list names", async () => {
@@ -52,10 +47,10 @@ describe("Strategies", function () {
       const finalOutputs: string[] = [];
       for await (const res of results) if (res) finalOutputs.push(res);
       expect(finalOutputs).to.have.members(data);
-      await logger.expectToInclude(`Task 1 computed by provider ${gothProviders[0].name}`, 5000);
-      await logger.expectToInclude(`Task 2 computed by provider ${gothProviders[1].name}`, 5000);
-      await logger.expectToInclude(`Task 3 computed by provider ${gothProviders[2].name}`, 5000);
       await logger.expectToInclude(`Proposal rejected by Proposal Filter`, 5000);
+      await logger.expectToInclude(`Task 1 computed by provider provider-1`, 5000);
+      await logger.expectToInclude(`Task 2 computed by provider provider-1`, 5000);
+      await logger.expectToInclude(`Task 3 computed by provider provider-1`, 5000);
     }).timeout(80000);
   });
   describe("Payments", () => {
