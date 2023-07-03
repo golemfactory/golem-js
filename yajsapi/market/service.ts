@@ -13,7 +13,9 @@ export type ProposalFilter = (proposal: ProposalDTO) => Promise<boolean>;
  * @internal
  */
 export interface MarketOptions extends DemandOptions {
+  /** A custom filter that checks every proposal coming from the market */
   proposalFilter?: ProposalFilter;
+  /** Maximum time for debit note acceptance*/
   debitNotesAcceptanceTimeout?: number;
 }
 

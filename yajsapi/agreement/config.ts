@@ -8,9 +8,6 @@ import { Agent } from "http";
 
 const DEFAULTS = {
   agreementRequestTimeout: 30000,
-  agreementEventPoolingInterval: 5,
-  agreementEventPoolingMaxEventsPerRequest: 100,
-  agreementWaitingForProposalTimout: 10000,
   agreementWaitingForApprovalTimeout: 60,
   agreementSelector: RandomAgreementSelectorWithPriorityForExistingOnes(),
 };
@@ -48,19 +45,10 @@ export class AgreementConfig {
  * @internal
  */
 export class AgreementServiceConfig extends AgreementConfig {
-  readonly agreementEventPoolingInterval: number;
-  readonly agreementEventPoolingMaxEventsPerRequest: number;
-  readonly agreementWaitingForProposalTimout: number;
   readonly agreementSelector: AgreementSelector;
 
   constructor(options?: AgreementServiceOptions) {
     super(options);
-    this.agreementWaitingForProposalTimout =
-      options?.agreementWaitingForProposalTimout ?? DEFAULTS.agreementWaitingForProposalTimout;
-    this.agreementEventPoolingInterval =
-      options?.agreementEventPoolingInterval ?? DEFAULTS.agreementEventPoolingInterval;
-    this.agreementEventPoolingMaxEventsPerRequest =
-      options?.agreementEventPoolingMaxEventsPerRequest ?? DEFAULTS.agreementEventPoolingMaxEventsPerRequest;
     this.agreementSelector = options?.agreementSelector ?? DEFAULTS.agreementSelector;
   }
 }

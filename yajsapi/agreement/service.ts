@@ -18,14 +18,8 @@ export class AgreementCandidate {
 export type AgreementSelector = (candidates: AgreementCandidate[]) => Promise<AgreementCandidate>;
 
 export interface AgreementServiceOptions extends AgreementOptions {
+  /** The selector used when choosing a provider from a pool of existing offers (from the market or already used before) */
   agreementSelector?: AgreementSelector;
-  agreementEventPoolingInterval?: number;
-  agreementEventPoolingMaxEventsPerRequest?: number;
-  agreementWaitingForProposalTimout?: number;
-}
-
-export interface AgreementProposal {
-  proposalId: string;
 }
 
 /**

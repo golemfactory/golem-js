@@ -1,8 +1,10 @@
 import { AgreementCandidate } from "./service";
 
+/** Default selector that selects a random provider from the pool */
 export const RandomAgreementSelector = () => async (candidates: AgreementCandidate[]) =>
   candidates[Math.floor(Math.random() * candidates.length)];
 
+/** Selector selecting a random provider from the pool, but giving priority to those who already have a confirmed agreement and deployed activity */
 export const RandomAgreementSelectorWithPriorityForExistingOnes = () => async (candidates: AgreementCandidate[]) => {
   const existingAgreements = candidates.filter((c) => !c.agreement);
   return existingAgreements.length
@@ -10,6 +12,7 @@ export const RandomAgreementSelectorWithPriorityForExistingOnes = () => async (c
     : candidates[Math.floor(Math.random() * candidates.length)];
 };
 
+/** Selector selecting the provider according to the provided list of scores */
 export const BestAgreementSelector =
   (scores: { [providerId: string]: number }) => async (candidates: AgreementCandidate[]) => {
     candidates.sort((a, b) =>
