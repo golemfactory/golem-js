@@ -11,7 +11,15 @@ export {
   AgreementCandidate,
   AgreementSelectors,
 } from "./agreement/index.js";
-export { Demand, DemandEvent, DemandEventType, DemandOptions, Proposal, ProposalFilters } from "./market/index.js";
+export {
+  Demand,
+  DemandEvent,
+  DemandEventType,
+  DemandOptions,
+  Proposal,
+  ProposalFilters,
+  ProposalDTO,
+} from "./market/index.js";
 export { Package, PackageOptions } from "./package/index.js";
 export {
   Invoice,
