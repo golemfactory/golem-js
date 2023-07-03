@@ -44,7 +44,8 @@ export class PackageConfig {
   readonly logger?: Logger;
 
   constructor(options: PackageOptions) {
-    if (!options.imageHash && !options.manifest) throw new Error("You must define a package or manifest option");
+    if (!options.imageHash && !options.manifest && !options.imageTag)
+      throw new Error("You must define a package or manifest option");
     this.packageFormat = PackageFormat.GVMKIT_SQUASH;
     this.imageHash = options.imageHash;
     this.imageTag = options.imageTag;
