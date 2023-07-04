@@ -120,7 +120,7 @@ describe("Payment Service", () => {
         invoiceFetchingInterval: 10,
         debitNotesFetchingInterval: 10,
         payingInterval: 10,
-        debitNotesFilter: PaymentFilters.AcceptMaxAmountDebitNoteFilter(0.00001),
+        debitNotesFilter: PaymentFilters.acceptMaxAmountDebitNoteFilter(0.00001),
       });
       setExpectedEvents(debitNotesEvents);
       setExpectedDebitNotes(debitNotes);
@@ -140,7 +140,7 @@ describe("Payment Service", () => {
         invoiceFetchingInterval: 10,
         debitNotesFetchingInterval: 10,
         payingInterval: 10,
-        invoiceFilter: PaymentFilters.AcceptMaxAmountInvoiceFilter(0.00001),
+        invoiceFilter: PaymentFilters.acceptMaxAmountInvoiceFilter(0.00001),
       });
       setExpectedEvents(invoiceEvents);
       setExpectedInvoices(invoices);
@@ -161,7 +161,7 @@ describe("Payment Service", () => {
         invoiceFetchingInterval: 10,
         debitNotesFetchingInterval: 10,
         payingInterval: 10,
-        debitNotesFilter: PaymentFilters.AcceptMaxAmountDebitNoteFilter(7),
+        debitNotesFilter: PaymentFilters.acceptMaxAmountDebitNoteFilter(7),
       });
       setExpectedEvents(debitNotesEvents);
       setExpectedDebitNotes(debitNotes);
@@ -178,7 +178,7 @@ describe("Payment Service", () => {
         invoiceFetchingInterval: 10,
         debitNotesFetchingInterval: 10,
         payingInterval: 10,
-        invoiceFilter: PaymentFilters.AcceptMaxAmountInvoiceFilter(7),
+        invoiceFilter: PaymentFilters.acceptMaxAmountInvoiceFilter(7),
       });
       setExpectedEvents(invoiceEvents);
       setExpectedInvoices(invoices);
