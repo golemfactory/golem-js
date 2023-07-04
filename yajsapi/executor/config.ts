@@ -1,8 +1,6 @@
 import { ExecutorOptions } from "./executor.js";
 import { Package, PackageOptions } from "../package/index.js";
-import { MarketStrategy } from "../market/index.js";
 import { ActivityOptions } from "../activity";
-import { DummyMarketStrategy } from "../market/strategy.js";
 import { Logger, runtimeContextChecker, defaultLogger } from "../utils/index.js";
 
 const DEFAULTS = {
@@ -14,7 +12,6 @@ const DEFAULTS = {
   maxParallelTasks: 5,
   taskTimeout: 1000 * 60 * 10, // 10 min,
   maxTaskRetries: 5,
-  strategy: new DummyMarketStrategy(),
 };
 
 /**
@@ -25,7 +22,6 @@ export class ExecutorConfig {
   readonly maxParallelTasks: number;
   readonly taskTimeout: number;
   readonly budget: number;
-  readonly strategy?: MarketStrategy;
   readonly subnetTag: string;
   readonly payment: { driver: string; network: string };
   readonly networkIp?: string;
@@ -92,6 +88,5 @@ export class ExecutorConfig {
     this.eventTarget = options.eventTarget || new EventTarget();
     this.maxTaskRetries = options.maxTaskRetries || DEFAULTS.maxTaskRetries;
     this.isSubprocess = options.isSubprocess ?? false;
-    this.strategy = options?.strategy || DEFAULTS.strategy;
   }
 }

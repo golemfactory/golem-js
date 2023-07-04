@@ -5,6 +5,20 @@ import { Rejection } from "./rejection.js";
 
 export type InvoiceOptions = BasePaymentOptions;
 
+export interface InvoiceDTO {
+  id: string;
+  providerId: string;
+  timestamp: string;
+  activityIds?: string[];
+  agreementId: string;
+  paymentDueDate?: string;
+  status: string;
+  payeeAddr: string;
+  payerAddr: string;
+  paymentPlatform: string;
+  amount: number;
+}
+
 /**
  * @category Mid-level
  */
@@ -95,6 +109,22 @@ export class Invoice extends BaseNote<Model> {
     this.recipientId = model.recipientId;
   }
 
+  get dto(): InvoiceDTO {
+    return {
+      id: this.id,
+      providerId: this.providerId,
+      timestamp: this.timestamp,
+      activityIds: this.activityIds,
+      agreementId: this.agreementId,
+      paymentDueDate: this.paymentDueDate,
+      status: this.status,
+      payeeAddr: this.payeeAddr,
+      payerAddr: this.payerAddr,
+      paymentPlatform: this.paymentPlatform,
+      amount: Number(this.amount),
+    };
+  }
+
   /**
    * Get Invoice Status
    *
@@ -131,7 +161,8 @@ export class Invoice extends BaseNote<Model> {
    */
   async reject(rejection: Rejection) {
     try {
-      await this.options.api.rejectInvoice(this.id, rejection);
+      // TODO: not implemented by yagna !!!!
+      // await this.options.api.rejectInvoice(this.id, rejection);
     } catch (e) {
       throw new Error(`Unable to reject invoice ${this.id} ${e?.response?.data?.message || e}`);
     } finally {

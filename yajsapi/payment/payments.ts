@@ -70,7 +70,7 @@ export class Payments extends EventTarget {
         this.dispatchEvent(new InvoiceEvent(PaymentEventType, invoice));
         this.lastInvoiceFetchingTime = event.eventDate;
         this.options.eventTarget?.dispatchEvent(new Events.InvoiceReceived(invoice));
-        this.logger?.debug(`New Invoice received for agreement ${invoice.agreementId}`);
+        this.logger?.debug(`New Invoice received for agreement ${invoice.agreementId}. Amount: ${invoice.amount}`);
       }
       await sleep(this.options.invoiceFetchingInterval, true);
     }
@@ -106,7 +106,9 @@ export class Payments extends EventTarget {
             amount: debitNote.totalAmountDue,
           })
         );
-        this.logger?.debug(`New Debit Note received for agreement ${debitNote.agreementId}`);
+        this.logger?.debug(
+          `New Debit Note received for agreement ${debitNote.agreementId}. Amount: ${debitNote.totalAmountDue}`
+        );
       }
       await sleep(this.options.debitNotesFetchingInterval, true);
     }

@@ -17,6 +17,15 @@ export interface ProposalDetails {
   runtimeName: string;
   state: ProposalAllOfStateEnum;
 }
+
+export interface ProposalDTO {
+  id: string;
+  issuerId: string;
+  provider: { id: string; name: string };
+  properties: object;
+  constraints: string;
+}
+
 /**
  * Proposal module - an object representing an offer in the state of a proposal from the provider.
  * @category Mid-level
@@ -77,6 +86,15 @@ export class Proposal {
       runtimeCapabilities: this.properties["golem.runtime.capabilities"],
       runtimeName: this.properties["golem.runtime.name"],
       state: this.state,
+    };
+  }
+  get dto(): ProposalDTO {
+    return {
+      id: this.id,
+      issuerId: this.issuerId,
+      provider: this.provider,
+      properties: this.properties,
+      constraints: this.constraints,
     };
   }
 

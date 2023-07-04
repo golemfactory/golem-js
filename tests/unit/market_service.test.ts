@@ -1,13 +1,7 @@
 import { setExpectedProposals } from "../mock/rest/market.js";
 import { expect } from "chai";
-import { MarketService } from "../../yajsapi/market/index.js";
-import {
-  agreementPoolServiceMock,
-  packageMock,
-  marketStrategyAlwaysBan,
-  LoggerMock,
-  allocationMock,
-} from "../mock/index.js";
+import { MarketService, ProposalFilters } from "../../yajsapi/market/index.js";
+import { agreementPoolServiceMock, packageMock, LoggerMock, allocationMock } from "../mock/index.js";
 import {
   proposalsInitial,
   proposalsDraft,
@@ -71,11 +65,75 @@ describe("Market Service", () => {
     await logger.expectToMatch(/Debit note acceptance timeout too short/, 10);
     await marketService.end();
   });
-  it("should reject when proposal rejected by Market Strategy", async () => {
-    const marketService = new MarketService(agreementPoolServiceMock, { logger, strategy: marketStrategyAlwaysBan });
+  it("should reject when proposal rejected by Proposal Filter", async () => {
+    const proposalAlwaysBanFilter = () => Promise.resolve(false);
+    const marketService = new MarketService(agreementPoolServiceMock, {
+      logger,
+      proposalFilter: proposalAlwaysBanFilter,
+    });
     await marketService.run(packageMock, [allocationMock]);
     setExpectedProposals(proposalsInitial);
-    await logger.expectToMatch(/Proposal rejected by Market Strategy/, 10);
+    await logger.expectToMatch(/Proposal rejected by Proposal Filter/, 10);
+    await marketService.end();
+  });
+  it("should reject when proposal rejected by BlackListIds Proposal Filter", async () => {
+    const marketService = new MarketService(agreementPoolServiceMock, {
+      logger,
+      proposalFilter: ProposalFilters.BlackListProposalIdsFilter(["0xee8993fe1dcff6b131d3fd759c6b3ddcb82d1655"]),
+    });
+    await marketService.run(packageMock, [allocationMock]);
+    setExpectedProposals(proposalsInitial);
+    await logger.expectToMatch(/Proposal rejected by Proposal Filter/, 10);
+    await marketService.end();
+  });
+  it("should reject when proposal rejected by BlackListNames Proposal Filter", async () => {
+    const marketService = new MarketService(agreementPoolServiceMock, {
+      logger,
+      proposalFilter: ProposalFilters.BlackListProposalNamesFilter(/golem2004/),
+    });
+    await marketService.run(packageMock, [allocationMock]);
+    setExpectedProposals(proposalsInitial);
+    await logger.expectToMatch(/Proposal rejected by Proposal Filter/, 10);
+    await marketService.end();
+  });
+  it("should reject when proposal rejected by WhiteListIds Proposal Filter", async () => {
+    const marketService = new MarketService(agreementPoolServiceMock, {
+      logger,
+      proposalFilter: ProposalFilters.WhiteListProposalIdsFilter(["0x123455"]),
+    });
+    await marketService.run(packageMock, [allocationMock]);
+    setExpectedProposals(proposalsInitial);
+    await logger.expectToMatch(/Proposal rejected by Proposal Filter/, 10);
+    await marketService.end();
+  });
+  it("should reject when proposal rejected by WhiteListNames Proposal Filter", async () => {
+    const marketService = new MarketService(agreementPoolServiceMock, {
+      logger,
+      proposalFilter: ProposalFilters.WhiteListProposalNamesFilter(/abcdefg/),
+    });
+    await marketService.run(packageMock, [allocationMock]);
+    setExpectedProposals(proposalsInitial);
+    await logger.expectToMatch(/Proposal rejected by Proposal Filter/, 10);
+    await marketService.end();
+  });
+  it("should respond when provider id is whitelisted by WhiteListIds Proposal Filter", async () => {
+    const marketService = new MarketService(agreementPoolServiceMock, {
+      logger,
+      proposalFilter: ProposalFilters.WhiteListProposalIdsFilter(["0xee8993fe1dcff6b131d3fd759c6b3ddcb82d1655"]),
+    });
+    await marketService.run(packageMock, [allocationMock]);
+    setExpectedProposals(proposalsInitial);
+    await logger.expectToMatch(/Proposal has been responded/, 10);
+    await marketService.end();
+  });
+  it("should respond when provider name is whitelisted by WhiteListNames Proposal Filter", async () => {
+    const marketService = new MarketService(agreementPoolServiceMock, {
+      logger,
+      proposalFilter: ProposalFilters.WhiteListProposalNamesFilter(/golem2004/),
+    });
+    await marketService.run(packageMock, [allocationMock]);
+    setExpectedProposals(proposalsInitial);
+    await logger.expectToMatch(/Proposal has been responded/, 10);
     await marketService.end();
   });
 });

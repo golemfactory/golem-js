@@ -11,11 +11,14 @@ export class LoggerMock implements Logger {
 
   async expectToInclude(msg: string, wait?: number) {
     if (wait) await new Promise((res) => setTimeout(res, wait));
-    return expect(this._logs).to.be.include(msg);
+    return expect(this._logs).to.be.include(
+      msg,
+      `Logs do not include message: ${msg}. Current logs:\n\n${this._logs}\n\n`
+    );
   }
   async expectToMatch(msg: RegExp, wait?: number) {
     if (wait) await new Promise((res) => setTimeout(res, wait));
-    return expect(this._logs).to.be.match(msg);
+    return expect(this._logs).to.be.match(msg, `Logs do not match message: ${msg}. Current logs:\n\n${this._logs}\n\n`);
   }
 
   async expectToNotMatch(msg: RegExp, wait?: number) {
