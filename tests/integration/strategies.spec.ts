@@ -13,7 +13,7 @@ describe("Strategies", function () {
       const executor = await TaskExecutor.create({
         package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         payment: { network: "rinkeby" },
-        proposalFilter: ProposalFilters.blackListProposalNamesFilter(/provider-2/),
+        proposalFilter: ProposalFilters.blackListProposalRegexpFilter(/provider-2/),
         logger,
       });
       const data = ["one", "two", "three"];
@@ -35,7 +35,7 @@ describe("Strategies", function () {
       const executor = await TaskExecutor.create({
         package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         payment: { network: "rinkeby" },
-        proposalFilter: ProposalFilters.whiteListProposalNamesFilter(/provider-2/),
+        proposalFilter: ProposalFilters.whiteListProposalRegexpFilter(/provider-2/),
         logger,
       });
       const data = ["one", "two", "three"];
