@@ -1,7 +1,8 @@
 import { TaskExecutor, ProposalDTO } from "yajsapi";
 
 /**
- * Custom proposal / provider filter
+ * Example demonstrating how to write a custom proposal filter.
+ * In this case the proposal must include VPN access and must not be from "bad-provider"
  */
 const myFilter = async (proposal: ProposalDTO) => {
   return (

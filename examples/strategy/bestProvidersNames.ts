@@ -1,8 +1,8 @@
 import { TaskExecutor, AgreementCandidate } from "yajsapi";
 
 /**
- * A simple ranking of providers represents by the map: providerName -> score
- * A higher score rewards the provider
+ * Example demonstrating how to write a selector which choose the best provider based on scores provided as object: [providerName]: score
+ * A higher score rewards the provider.
  */
 const scores = {
   "provider-1": 100,

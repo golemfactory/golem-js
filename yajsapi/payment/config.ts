@@ -5,7 +5,7 @@ import { EnvUtils, Logger } from "../utils/index.js";
 import { YagnaOptions } from "../executor/index.js";
 import { DebitNoteFilter, InvoiceFilter, PaymentOptions } from "./service.js";
 import { InvoiceOptions } from "./invoice.js";
-import { AcceptAllDebitNotesFilter, AcceptAllInvoicesFilter } from "./strategy.js";
+import { acceptAllDebitNotesFilter, acceptAllInvoicesFilter } from "./strategy.js";
 import { Agent } from "http";
 
 const DEFAULTS = {
@@ -20,8 +20,8 @@ const DEFAULTS = {
   debitNotesFetchingInterval: 2000,
   payingInterval: 2000,
   paymentRequestTimeout: 10000,
-  debitNoteFilter: AcceptAllDebitNotesFilter(),
-  invoiceFilter: AcceptAllInvoicesFilter(),
+  debitNoteFilter: acceptAllDebitNotesFilter(),
+  invoiceFilter: acceptAllInvoicesFilter(),
 };
 
 export interface BasePaymentOptions {

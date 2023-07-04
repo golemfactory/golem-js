@@ -13,7 +13,7 @@ describe("Strategies", function () {
       const executor = await TaskExecutor.create({
         package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         payment: { network: "rinkeby" },
-        proposalFilter: ProposalFilters.BlackListProposalNamesFilter(/provider-2/),
+        proposalFilter: ProposalFilters.blackListProposalNamesFilter(/provider-2/),
         logger,
       });
       const data = ["one", "two", "three"];
@@ -35,7 +35,7 @@ describe("Strategies", function () {
       const executor = await TaskExecutor.create({
         package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         payment: { network: "rinkeby" },
-        proposalFilter: ProposalFilters.WhiteListProposalNamesFilter(/provider-2/),
+        proposalFilter: ProposalFilters.whiteListProposalNamesFilter(/provider-2/),
         logger,
       });
       const data = ["one", "two", "three"];
@@ -58,7 +58,7 @@ describe("Strategies", function () {
       const executor = await TaskExecutor.create({
         package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         payment: { network: "rinkeby" },
-        invoiceFilter: PaymentFilters.AcceptMaxAmountInvoiceFilter(0.00001),
+        invoiceFilter: PaymentFilters.acceptMaxAmountInvoiceFilter(0.00001),
         logger,
       });
       const data = ["one", "two"];
@@ -77,7 +77,7 @@ describe("Strategies", function () {
       const executor = await TaskExecutor.create({
         package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         payment: { network: "rinkeby" },
-        debitNotesFilter: PaymentFilters.AcceptMaxAmountDebitNoteFilter(0.00001),
+        debitNotesFilter: PaymentFilters.acceptMaxAmountDebitNoteFilter(0.00001),
         logger,
       });
       const data = ["one", "two"];

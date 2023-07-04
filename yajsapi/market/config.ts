@@ -5,7 +5,7 @@ import { EnvUtils, Logger } from "../utils/index.js";
 import { MarketOptions, ProposalFilter } from "./service.js";
 import { YagnaOptions } from "../executor/index.js";
 import { Agent } from "http";
-import { AcceptAllProposalFilter } from "./strategy.js";
+import { acceptAllProposalFilter } from "./strategy.js";
 
 const DEFAULTS = {
   subnetTag: "public",
@@ -14,7 +14,7 @@ const DEFAULTS = {
   offerFetchingInterval: 10000,
   marketOfferExpiration: 1000 * 60 * 30, // 30 min
   debitNotesAcceptanceTimeout: 30,
-  proposalFilter: AcceptAllProposalFilter(),
+  proposalFilter: acceptAllProposalFilter(),
 };
 
 /**

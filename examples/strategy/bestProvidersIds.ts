@@ -1,8 +1,9 @@
 import { TaskExecutor, AgreementSelectors } from "yajsapi";
 
 /**
- * A simple ranking of providers represents by the map: providerId -> score
- * A higher score rewards the provider
+ * Example demonstrating how to use predefined selector `bestAgreementSelector`,
+ * which choose the best provider based on scores provided as object: [providerId]: score
+ * A higher score rewards the provider.
  */
 const scores = {
   "0x79bcfdc92af492c9b15ce9f690c3ccae53437179": 100,
@@ -13,7 +14,7 @@ const scores = {
 (async function main() {
   const executor = await TaskExecutor.create({
     package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
-    agreementSelector: AgreementSelectors.BestAgreementSelector(scores),
+    agreementSelector: AgreementSelectors.bestAgreementSelector(scores),
   });
   await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
   await executor.end();
