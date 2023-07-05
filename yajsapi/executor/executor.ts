@@ -16,6 +16,7 @@ import { AgreementServiceOptions } from "../agreement/service.js";
 import { WorkOptions } from "../task/work.js";
 import { LogLevel } from "../utils/logger/logger.js";
 import { MarketOptions } from "../market/service";
+import { RequireAtLeastOne } from "../utils/types.js";
 
 const terminatingSignals = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
 /**
@@ -48,7 +49,8 @@ export type ExecutorOptions = {
   ActivityOptions &
   AgreementOptions &
   PaymentOptions &
-  Omit<PackageOptions, "imageHash"> &
+  DemandOptions &
+  Omit<PackageOptions, "imageHash" | "imageTag"> &
   TaskOptions &
   NetworkServiceOptions &
   AgreementServiceOptions &
@@ -155,10 +157,26 @@ export class TaskExecutor {
    * @description Method responsible initialize all executor services.
    */
   async init() {
-    const taskPackage =
-      typeof this.options.package === "string" || this.options.packageOptions.manifest
-        ? await this.createPackage(this.options.package as string | undefined)
-        : (this.options.package as Package);
+    const manifest = this.options.packageOptions.manifest;
+    const packageReference = this.options.package;
+    let taskPackage: Package;
+
+    if (manifest) {
+      taskPackage = await this.createPackage({
+        manifest,
+      });
+    } else {
+      if (packageReference) {
+        if (typeof packageReference === "string") {
+          taskPackage = await this.createPackage(Package.getImageIdentifier(packageReference));
+        } else {
+          taskPackage = packageReference;
+        }
+      } else {
+        throw new Error("No package or manifest provided");
+      }
+    }
+
     this.logger?.debug("Initializing task executor services...");
     const allocations = await this.paymentService.createAllocations();
     this.marketService.run(taskPackage, allocations).catch((e) => this.handleCriticalError(e));
@@ -313,9 +331,18 @@ export class TaskExecutor {
     );
   }
 
-  private async createPackage(imageHash?: string): Promise<Package> {
-    const packageInstance = Package.create({ ...this.options.packageOptions, imageHash });
-    this.options.eventTarget.dispatchEvent(new Events.PackageCreated({ imageHash, details: packageInstance.details }));
+  private async createPackage(
+    packageReference: RequireAtLeastOne<
+      { imageHash: string; manifest: string; imageTag: string },
+      "manifest" | "imageTag" | "imageHash"
+    >
+  ): Promise<Package> {
+    const packageInstance = Package.create({ ...this.options.packageOptions, ...packageReference });
+
+    this.options.eventTarget.dispatchEvent(
+      new Events.PackageCreated({ packageReference, details: packageInstance.details })
+    );
+
     return packageInstance;
   }
 

@@ -8,9 +8,10 @@ import { InvoiceOptions } from "./invoice.js";
 import { acceptAllDebitNotesFilter, acceptAllInvoicesFilter } from "./strategy.js";
 import { Agent } from "http";
 
-const DEFAULTS = {
+const DEFAULTS = Object.freeze({
+  payment: { network: "goerli", driver: "erc20" },
   budget: 1.0,
-  payment: { driver: "erc20", network: "goerli" },
+  paymentTimeout: 20000,
   paymentTimeout: 1000 * 60 * 2, // 2 min
   allocationExpires: 1000 * 60 * 60, // 60 min
   invoiceReceiveTimeout: 1000 * 60 * 5, // 5 min
@@ -21,8 +22,8 @@ const DEFAULTS = {
   payingInterval: 2000,
   paymentRequestTimeout: 10000,
   debitNoteFilter: acceptAllDebitNotesFilter(),
-  invoiceFilter: acceptAllInvoicesFilter(),
-};
+  invoiceFilter: acceptAllInvoicesFilter()
+});
 
 export interface BasePaymentOptions {
   yagnaOptions?: YagnaOptions;

@@ -2,6 +2,7 @@ import { ProposalDetails } from "../market/proposal";
 import { PackageDetails } from "../package/package";
 import { DemandDetails } from "../market/demand";
 
+import { RequireAtLeastOne } from "../utils/types.js";
 /**
  * Global Event Type with which all API events will be emitted. It should be used on all listeners that would like to handle events.
  */
@@ -87,7 +88,14 @@ export class ProposalFailed extends BaseEvent<{
   reason?: string;
 }> {}
 export class ProposalConfirmed extends BaseEvent<{ id: string; providerId: string }> {}
-export class PackageCreated extends BaseEvent<{ imageHash?: string; details: PackageDetails }> {}
+export class PackageCreated extends BaseEvent<{
+  packageReference: RequireAtLeastOne<{
+    imageHash: string;
+    imageTag: string;
+    manifest: string;
+  }>;
+  details: PackageDetails;
+}> {}
 export class AgreementCreated extends BaseEvent<{
   id: string;
   providerId: string;

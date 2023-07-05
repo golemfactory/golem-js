@@ -3,16 +3,16 @@ import { Package, PackageOptions } from "../package/index.js";
 import { ActivityOptions } from "../activity";
 import { Logger, runtimeContextChecker, defaultLogger } from "../utils/index.js";
 
-const DEFAULTS = {
+const DEFAULTS = Object.freeze({
+  payment: { driver: "erc20", network: "goerli" },
   budget: 1.0,
   subnetTag: "public",
   logLevel: "info",
   basePath: "http://127.0.0.1:7465",
-  payment: { driver: "erc20", network: "goerli" },
   maxParallelTasks: 5,
   taskTimeout: 1000 * 60 * 10, // 10 min,
   maxTaskRetries: 5,
-};
+});
 
 /**
  * @internal
@@ -25,7 +25,7 @@ export class ExecutorConfig {
   readonly subnetTag: string;
   readonly payment: { driver: string; network: string };
   readonly networkIp?: string;
-  readonly packageOptions: Omit<PackageOptions, "imageHash">;
+  readonly packageOptions: Omit<PackageOptions, "imageHash" | "imageTag">;
   readonly logLevel: string;
   readonly yagnaOptions: { apiKey: string; basePath: string };
   readonly logger?: Logger;
@@ -59,7 +59,6 @@ export class ExecutorConfig {
       minStorageGib: options.minStorageGib,
       minCpuThreads: options.minCpuThreads,
       capabilities: options.capabilities,
-      repoUrl: options.repoUrl,
       manifest: options.manifest,
       manifestSig: options.manifestSig,
       manifestSigAlgorithm: options.manifestSigAlgorithm,
@@ -80,7 +79,6 @@ export class ExecutorConfig {
       minStorageGib: options.minStorageGib,
       minCpuThreads: options.minCpuThreads,
       capabilities: options.capabilities,
-      repoUrl: options.repoUrl,
     };
     this.logger = options.logger || (!runtimeContextChecker.isBrowser ? defaultLogger() : undefined);
     this.logLevel = options.logLevel || DEFAULTS.logLevel;
