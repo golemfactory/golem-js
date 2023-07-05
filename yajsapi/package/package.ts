@@ -111,7 +111,7 @@ export class Package {
 
     // ? Should we prefix all env variables with YAJSAPI_ or not?
     // with YAJSAPI we stay consistent but GOLEM is more general and can be used
-    // for other projects as well (yapapi e.g. )
+    // for other projects as well (yapapi e.g.)
 
     const isDev = EnvUtils.isDevMode();
 
