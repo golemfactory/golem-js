@@ -18,4 +18,7 @@ export const EnvUtils = {
       ? process?.env.YAJSAPI_REPO_URL ?? "https://registry.golem.network"
       : "https://registry.golem.network";
   },
+  isDevMode(): boolean {
+    return isNode ? process?.env.GOLEM_DEV_MODE === "true" : false;
+  },
 };
