@@ -1,5 +1,5 @@
 import { Package, PackageOptions } from "../package/index.js";
-import { MarketService } from "../market/index.js";
+import { MarketService, DemandOptions } from "../market/index.js";
 import { AgreementOptions, AgreementPoolService } from "../agreement/index.js";
 import { Task, TaskQueue, TaskService, Worker } from "../task/index.js";
 import { PaymentService, PaymentOptions } from "../payment/index.js";
