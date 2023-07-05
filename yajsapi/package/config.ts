@@ -4,14 +4,15 @@ import { PackageOptions } from "./package.js";
 /**
  * @internal
  */
-export const DEFAULTS = {
+export const DEFAULTS = Object.freeze({
+  payment: { driver: "erc20", network: "goerli" },
   engine: "vm",
   minMemGib: 0.5,
   minStorageGib: 2,
   minCpuThreads: 1,
   minCpuCores: 1,
   capabilities: [],
-};
+});
 
 /**
  * @internal
@@ -24,10 +25,12 @@ export enum PackageFormat {
 /**
  * @internal
  */
+
+// ? Isn't it just a merge of object literals and no need to have a class here
 export class PackageConfig {
   readonly packageFormat: string;
   readonly imageHash?: string;
-  readonly repoUrl?: string;
+  readonly imageTag?: string;
   readonly engine: string;
   readonly minMemGib: number;
   readonly minStorageGib: number;
@@ -41,10 +44,11 @@ export class PackageConfig {
   readonly logger?: Logger;
 
   constructor(options: PackageOptions) {
-    if (!options.imageHash && !options.manifest) throw new Error("You must define a package or manifest option");
+    if (!options.imageHash && !options.manifest && !options.imageTag)
+      throw new Error("You must define a package or manifest option");
     this.packageFormat = PackageFormat.GVMKIT_SQUASH;
     this.imageHash = options.imageHash;
-    this.repoUrl = options.repoUrl;
+    this.imageTag = options.imageTag;
     this.engine = options.engine || DEFAULTS.engine;
     this.minMemGib = options.minMemGib || DEFAULTS.minMemGib;
     this.minStorageGib = options.minStorageGib || DEFAULTS.minStorageGib;

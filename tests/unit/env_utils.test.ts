@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { EnvUtils } from "../../yajsapi/utils/index.js";
 
 describe("EnvUtils", () => {
-  describe('getYagnaApiUrl()', () => {
+  describe("getYagnaApiUrl()", () => {
     describe("with env", () => {
       let oldUrl: string | undefined;
 
@@ -12,7 +12,7 @@ describe("EnvUtils", () => {
       });
 
       afterEach(() => {
-        if (typeof oldUrl === 'undefined') {
+        if (typeof oldUrl === "undefined") {
           delete process.env.YAGNA_API_URL;
         } else {
           process.env.YAGNA_API_URL = oldUrl;
@@ -29,7 +29,7 @@ describe("EnvUtils", () => {
       });
     });
 
-    describe('without env', () => {
+    describe("without env", () => {
       let process: NodeJS.Process | undefined;
 
       beforeEach(() => {
@@ -47,7 +47,7 @@ describe("EnvUtils", () => {
     });
   });
 
-  describe('getYagnaAppKey()', () => {
+  describe("getYagnaAppKey()", () => {
     describe("with env", () => {
       let oldKey: string | undefined;
 
@@ -57,7 +57,7 @@ describe("EnvUtils", () => {
       });
 
       afterEach(() => {
-        if (typeof oldKey === 'undefined') {
+        if (typeof oldKey === "undefined") {
           delete process.env.YAGNA_APPKEY;
         } else {
           process.env.YAGNA_APPKEY = oldKey;
@@ -74,7 +74,7 @@ describe("EnvUtils", () => {
       });
     });
 
-    describe('without env', () => {
+    describe("without env", () => {
       let process: NodeJS.Process | undefined;
 
       beforeEach(() => {

@@ -1,41 +1,42 @@
 import { ComparisonOperator, DecorationsBuilder, MarketDecoration } from "../market/builder.js";
-import { RepoResolver } from "./repo_resolver.js";
-import { Logger } from "../utils/index.js";
+import { EnvUtils, Logger } from "../utils/index.js";
 import axios from "axios";
 import { PackageConfig } from "./config.js";
-
+import { RequireAtLeastOne } from "../utils/types.js";
 /**
  * @category Mid-level
  */
-export interface PackageOptions {
-  /** Type of engine required: vm, emscripten, sgx, sgx-js, sgx-wasm, sgx-wasi */
-  engine?: string;
-  /** Minimum required memory to execute application GB */
-  minMemGib?: number;
-  /** Minimum required disk storage to execute tasks in GB */
-  minStorageGib?: number;
-  /** Minimum required CPU threads */
-  minCpuThreads?: number;
-  /** Minimum required CPU cores */
-  minCpuCores?: number;
-  /** Required providers capabilities to run application */
-  capabilities?: string[];
-  /**  finds package by its contents hash */
-  imageHash?: string;
-  /** The address of the repository where the images are shared **/
-  repoUrl?: string;
-  /** Manifest - base64 encoded Computation Payload Manifest
-   https://handbook.golem.network/requestor-tutorials/vm-runtime/computation-payload-manifest **/
-  manifest?: string;
-  /** Signature of base64 encoded Computation Payload Manifest **/
-  manifestSig?: string;
-  /** Algorithm of manifest signature, e.g. "sha256" **/
-  manifestSigAlgorithm?: string;
-  /** Certificate - base64 encoded public certificate (DER or PEM) matching key used to generate signature **/
-  manifestCert?: string;
-  /** Custom logger **/
-  logger?: Logger;
-}
+
+export type PackageOptions = RequireAtLeastOne<
+  {
+    /** Type of engine required: vm, emscripten, sgx, sgx-js, sgx-wasm, sgx-wasi */
+    engine?: string;
+    /** Minimum required memory to execute application GB */
+    minMemGib?: number;
+    /** Minimum required disk storage to execute tasks in GB */
+    minStorageGib?: number;
+    /** Minimum required CPU threads */
+    minCpuThreads?: number;
+    /** Minimum required CPU cores */
+    minCpuCores?: number;
+    /** Required providers capabilities to run application */
+    capabilities?: string[];
+    /**  finds package by its contents hash */
+    imageHash?: string;
+    /**  finds package by registry tag  */
+
+    imageTag?: string;
+    manifest?: string;
+    /** Signature of base64 encoded Computation Payload Manifest **/
+    manifestSig?: string;
+    /** Algorithm of manifest signature, e.g. "sha256" **/
+    manifestSigAlgorithm?: string;
+    /** Certificate - base64 encoded public certificate (DER or PEM) matching key used to generate signature **/
+    manifestCert?: string;
+    logger?: Logger;
+  },
+  "imageHash" | "imageTag" | "manifest"
+>;
 
 export interface PackageDetails {
   minMemGib: number;
@@ -59,8 +60,28 @@ export class Package {
   }
 
   static create(options: PackageOptions): Package {
+    // ? : Dependency Injection could be useful
     const config = new PackageConfig(options);
     return new Package(config);
+  }
+
+  static getImageIdentifier(
+    str: string
+  ): RequireAtLeastOne<{ imageHash: string; imageTag: string }, "imageHash" | "imageTag"> {
+    const tagRegex = /^(.*?)\/(.*?):(.*)$/;
+    if (tagRegex.test(str)) {
+      return {
+        imageTag: str,
+      };
+    }
+
+    return {
+      imageHash: str,
+    };
+  }
+
+  static GetHashFromTag(tag: string): string {
+    return tag.split(":")[1];
   }
 
   async getDemandDecoration(): Promise<MarketDecoration> {
@@ -72,7 +93,7 @@ export class Package {
       .addConstraint("golem.runtime.name", this.options.engine)
       .addConstraint("golem.inf.cpu.cores", this.options.minCpuCores.toString(), ComparisonOperator.GtEq)
       .addConstraint("golem.inf.cpu.threads", this.options.minCpuThreads.toString(), ComparisonOperator.GtEq);
-    if (this.options.imageHash) {
+    if (this.options.imageHash || this.options.imageTag) {
       const taskPackage = await this.resolveTaskPackageUrl();
       builder.addProperty("golem.srv.comp.task_package", taskPackage);
     }
@@ -82,23 +103,35 @@ export class Package {
     return builder.getDecorations();
   }
 
-  private async getRepoUrl(): Promise<string> {
-    if (this.options.repoUrl) {
-      return this.options.repoUrl;
-    }
-    const repoResolver = RepoResolver.create({ logger: this.logger });
-    return await repoResolver.getRepoUrl();
-  }
-
   private async resolveTaskPackageUrl(): Promise<string> {
-    const repoUrl = await this.getRepoUrl();
-    const response = await axios.get(`${repoUrl}/image.${this.options.imageHash}.link`);
+    const repoUrl = EnvUtils.getRepoUrl();
+
+    //TODO : in future this should be passed probably through config
+    const isHttps = false;
+
+    // ? Should we prefix all env variables with YAJSAPI_ or not?
+    // with YAJSAPI we stay consistent but GOLEM is more general and can be used
+    // for other projects as well (yapapi e.g.)
+
+    const isDev = EnvUtils.isDevMode();
+
+    let hash = this.options.imageHash;
+    const tag = this.options.imageTag;
+
+    const url = `${repoUrl}/v1/image/info?${isDev ? "dev=true" : "count=true"}&${tag ? `tag=${tag}` : `hash=${hash}`}`;
+
+    const response = await axios.get(url, {
+      //always give reponse instead of throwing error
+      // ? this should probably go to general config
+      validateStatus: () => true,
+    });
     if (response.status != 200) {
-      this.logger?.error(`Unable to resolve task package url: Response ` + response.status);
-      throw Error(`Error: ${response.status}`);
+      this.logger?.error(`Unable to get image Url of  ${tag || hash} from ${repoUrl}`);
+      throw Error(`${response.data}`);
     }
-    const imageUrl = await response.data;
-    return `hash:sha3:${this.options.imageHash}:${imageUrl}`;
+    const imageUrl = isHttps ? response.data.https : response.data.http;
+    hash = response.data.sha3;
+    return `hash:sha3:${hash}:${imageUrl}`;
   }
 
   private addManifestDecorations(builder: DecorationsBuilder): void {

@@ -1,18 +1,24 @@
-export class EnvUtils {
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  private constructor() {
+import { isNode } from "./runtimeContextChecker.js";
 
-  }
+export const EnvUtils = {
+  getYagnaApiUrl(): string {
+    return (isNode ? process?.env.YAGNA_API_URL : "") || "http://127.0.0.1:7465";
+  },
 
-  static getYagnaApiUrl(): string {
-    return (typeof process !== "undefined" ? process.env.YAGNA_API_URL : "") || "http://127.0.0.1:7465";
-  }
+  getYagnaAppKey(): string {
+    return isNode ? process?.env.YAGNA_APPKEY ?? "" : "";
+  },
 
-  static getYagnaAppKey(): string {
-    return typeof process !== "undefined" ? process.env.YAGNA_APPKEY ?? "" : "";
-  }
+  getYagnaSubnet(): string {
+    return isNode ? process?.env.YAGNA_SUBNET ?? "public" : "public";
+  },
 
-  static getYagnaSubnet(): string {
-    return typeof process !== "undefined" ? process.env.YAGNA_SUBNET ?? "public" : "public"
-  }
-}
+  getRepoUrl(): string {
+    return isNode
+      ? process?.env.YAJSAPI_REPO_URL ?? "https://registry.golem.network"
+      : "https://registry.golem.network";
+  },
+  isDevMode(): boolean {
+    return isNode ? process?.env.GOLEM_DEV_MODE === "true" : false;
+  },
+};
