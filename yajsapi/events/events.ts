@@ -30,12 +30,34 @@ export abstract class BaseEvent<DataType> extends CustomEvent<DataType> {
   }
 }
 
+
 export class ComputationStarted extends BaseEvent<undefined> {}
 export class ComputationFinished extends BaseEvent<undefined> {}
 export class ComputationFailed extends BaseEvent<{ reason?: string }> {}
-export class TaskStarted extends BaseEvent<{ id: string; agreementId: string; activityId: string }> {}
-export class TaskRedone extends BaseEvent<{ id: string; retriesCount: number }> {}
-export class TaskRejected extends BaseEvent<{ id: string; reason?: string }> {}
+export class TaskStarted extends BaseEvent<{
+  id: string;
+  agreementId: string;
+  activityId: string;
+  providerId: string;
+  providerName: string;
+}> {}
+export class TaskRedone extends BaseEvent<{
+  id: string;
+  agreementId: string;
+  activityId: string;
+  providerId: string;
+  providerName: string;
+  retriesCount: number;
+  reason?: string;
+}> {}
+export class TaskRejected extends BaseEvent<{
+  id: string;
+  agreementId: string;
+  activityId: string;
+  providerId: string;
+  providerName: string;
+  reason?: string;
+}> {}
 export class TaskFinished extends BaseEvent<{ id: string }> {}
 export class AllocationCreated extends BaseEvent<{ id: string; amount: number; platform?: string }> {}
 export class DemandSubscribed extends BaseEvent<{ id: string; details: DemandDetails }> {}
@@ -93,6 +115,7 @@ export class InvoiceReceived extends BaseEvent<{
 export class DebitNoteReceived extends BaseEvent<{
   id: string;
   agreementId: string;
+  activityId: string;
   amount: string; // It is coming as a string
 }> {}
 export class PaymentAccepted extends BaseEvent<{

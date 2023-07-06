@@ -37,26 +37,15 @@ describe("Stats Service", () => {
   });
   describe("Handling Events", () => {
     //Tasks
-    // it("should handle ComputationStarted and call Tasks.addStartTime()", async () => {
-    //   const statsService = new StatsService(statServiceOptions);
-    //   await statsService.run();
-    //   const spy = chai.spy.on(statsService.tasks, "addStartTime");
-    //   const event = new Events.ComputationStarted();
-    //   eventTarget.dispatchEvent(event);
-    //   expect(spy).to.have.been.called.with.exactly(event.timeStamp);
-    // });
-    // it("should handle ComputationFinished and call Tasks.addStopTime()", async () => {
-    //   const statsService = new StatsService(statServiceOptions);
-    //   await statsService.run();
-    //   const spy = chai.spy.on(statsService.tasks, "addStopTime");
-    //   const event = new Events.ComputationFinished();
-    //   eventTarget.dispatchEvent(event);
-    //   expect(spy).to.have.been.called.with.exactly(event.timeStamp);
-    // });
-    // it("should handle ComputationFailed and call Tasks. ?");
     it("should handle TaskStarted and call Tasks.add()", async () => {
       const spy = chai.spy.on(statsService["tasks"], "add");
-      const event = new Events.TaskStarted({ id: "taskId", agreementId: "agreementId", activityId: "activityId" });
+      const event = new Events.TaskStarted({
+        id: "taskId",
+        agreementId: "agreementId",
+        activityId: "activityId",
+        providerId: "providerId",
+        providerName: "providerName",
+      });
       eventTarget.dispatchEvent(event);
       expect(spy).to.have.been.called.with.exactly({
         id: "taskId",
@@ -66,19 +55,41 @@ describe("Stats Service", () => {
     });
     it("should handle TaskStarted and call Activities.add()", async () => {
       const spy = chai.spy.on(statsService["activities"], "add");
-      const event = new Events.TaskStarted({ id: "taskId", agreementId: "agreementId", activityId: "activityId" });
+      const event = new Events.TaskStarted({
+        id: "taskId",
+        agreementId: "agreementId",
+        activityId: "activityId",
+        providerId: "providerId",
+        providerName: "providerName",
+      });
       eventTarget.dispatchEvent(event);
       expect(spy).to.have.been.called.with.exactly({ id: "activityId", taskId: "taskId", agreementId: "agreementId" });
     });
     it("should handle TaskRedone and call Tasks.retry()", async () => {
       const spy = chai.spy.on(statsService["tasks"], "retry");
-      const event = new Events.TaskRedone({ id: "id", retriesCount: 1 });
+      const event = new Events.TaskRedone({
+        id: "id",
+        agreementId: "agreementId",
+        retriesCount: 1,
+        activityId: "activityId",
+        providerId: "providerId",
+        providerName: "providerName",
+        reason: "reason",
+      });
       eventTarget.dispatchEvent(event);
       expect(spy).to.have.been.called.with.exactly("id", 1);
     });
     it("should handle TaskRejected and call Tasks.reject()", async () => {
       const spy = chai.spy.on(statsService["tasks"], "reject");
-      const event = new Events.TaskRejected({ id: "id", reason: "reason" });
+      const event = new Events.TaskRejected({
+        id: "id",
+        agreementId: "agreementId",
+        activityId: "activityId",
+        providerId: "providerId",
+        providerName: "providerName",
+        reason: "reason",
+      });
+
       eventTarget.dispatchEvent(event);
       expect(spy).to.have.been.called.with.exactly("id", event.timeStamp, "reason");
     });

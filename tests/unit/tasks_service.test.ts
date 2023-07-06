@@ -75,7 +75,7 @@ describe("Task Service", () => {
       const result = await ctx.run("some_shell_command");
       if (result.stdout === "invalid_value") ctx.rejectResult("Invalid value computed by provider");
     };
-    const task = new Task("1", worker);
+    const task = new Task("1", worker, undefined, undefined, 2);
     queue.addToEnd(task);
     activityMock.setExpectedExeResults([{ result: "Ok", stdout: "invalid_value" }]);
     const service = new TaskService(queue, agreementPoolServiceMock, paymentServiceMock, networkServiceMock, {
@@ -85,8 +85,8 @@ describe("Task Service", () => {
     });
     service.run().catch((e) => console.error(e));
     await logger.expectToInclude(
-      "Error: Task 1 has been rejected! Work rejected by user. Reason: Invalid value computed by provider",
-      1600
+      "Error: Task 1 has been rejected! Work rejected. Reason: Invalid value computed by provider",
+      1500
     );
     expect(task.isFinished()).to.be.true;
     await service.end();

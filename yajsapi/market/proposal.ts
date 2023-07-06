@@ -17,20 +17,29 @@ export interface ProposalDetails {
   runtimeName: string;
   state: ProposalAllOfStateEnum;
 }
+
+export interface ProposalDTO {
+  id: string;
+  issuerId: string;
+  provider: { id: string; name: string };
+  properties: object;
+  constraints: string;
+}
+
 /**
  * Proposal module - an object representing an offer in the state of a proposal from the provider.
  * @category Mid-level
  */
 export class Proposal {
-  readonly id: string;
+  id: string;
   readonly issuerId: string;
+  readonly provider: { id: string; name: string };
   readonly properties: object;
   readonly constraints: string;
   readonly timestamp: string;
   counteringProposalId: string | null;
   private readonly state: ProposalAllOfStateEnum;
   private readonly prevProposalId: string | undefined;
-  private _score: number | null = null;
 
   /**
    * Create proposal for given subscription ID
@@ -60,6 +69,7 @@ export class Proposal {
     this.prevProposalId = model.prevProposalId;
     this.timestamp = model.timestamp;
     this.counteringProposalId = null;
+    this.provider = { id: this.issuerId, name: this.details.providerName };
   }
 
   get details(): ProposalDetails {
@@ -78,13 +88,14 @@ export class Proposal {
       state: this.state,
     };
   }
-
-  set score(score: number | null) {
-    this._score = score;
-  }
-
-  get score(): number | null {
-    return this._score;
+  get dto(): ProposalDTO {
+    return {
+      id: this.id,
+      issuerId: this.issuerId,
+      provider: this.provider,
+      properties: this.properties,
+      constraints: this.constraints,
+    };
   }
 
   isInitial(): boolean {

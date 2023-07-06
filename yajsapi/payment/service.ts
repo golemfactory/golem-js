@@ -1,21 +1,34 @@
 import { Logger, sleep } from "../utils/index.js";
 import { Allocation } from "./allocation.js";
 import { BasePaymentOptions, PaymentConfig } from "./config.js";
-import { Invoice } from "./invoice.js";
-import { DebitNote } from "./debit_note.js";
+import { Invoice, InvoiceDTO } from "./invoice.js";
+import { DebitNote, DebitNoteDTO } from "./debit_note.js";
 import { Accounts } from "./accounts.js";
 import { Payments, PaymentEventType, DebitNoteEvent, InvoiceEvent } from "./payments.js";
+import { RejectionReason } from "./rejection.js";
 
 /**
  * @internal
  */
 export interface PaymentOptions extends BasePaymentOptions {
+  /** Interval for checking new invoices */
   invoiceFetchingInterval?: number;
+  /** Interval for checking new debit notes */
   debitNotesFetchingInterval?: number;
+  /** Interval for processing payments */
   payingInterval?: number;
+  /** Maximum number of invoice events per one fetching */
   maxInvoiceEvents?: number;
+  /** Maximum number of debit notes events per one fetching */
   maxDebitNotesEvents?: number;
+  /** A custom filter that checks every debit notes coming from providers */
+  debitNotesFilter?: DebitNoteFilter;
+  /** A custom filter that checks every invoices coming from providers */
+  invoiceFilter?: InvoiceFilter;
 }
+
+export type DebitNoteFilter = (debitNote: DebitNoteDTO) => Promise<boolean>;
+export type InvoiceFilter = (invoice: InvoiceDTO) => Promise<boolean>;
 
 interface AgreementPayable {
   id: string;
@@ -34,9 +47,8 @@ export class PaymentService {
   private allocations: Allocation[] = [];
   private agreementsToPay: Map<string, AgreementPayable> = new Map();
   private agreementsDebitNotes: Set<string> = new Set();
-  private invoicesToPay: Map<string, Invoice> = new Map();
-  private debitNotesToPay: Map<string, DebitNote> = new Map();
   private paidAgreements: Set<{ agreement: AgreementPayable; invoice: Invoice }> = new Set();
+  private paidDebitNotes: Set<string> = new Set();
   private payments?: Payments;
 
   constructor(options?: PaymentOptions) {
@@ -47,14 +59,12 @@ export class PaymentService {
     this.isRunning = true;
     this.payments = await Payments.create(this.options);
     this.payments.addEventListener(PaymentEventType, this.subscribePayments.bind(this));
-    this.processInvoices().catch((error) => this.logger?.error(error));
-    this.processDebitNotes().catch((error) => this.logger?.error(error));
     this.logger?.debug("Payment Service has started");
   }
 
   async end() {
     if (this.agreementsToPay.size) {
-      this.logger?.debug("Waiting for all invoices to be paid...");
+      this.logger?.info(`Waiting for all invoices to be paid. Unpaid agreements: ${this.agreementsToPay.size}`);
       let timeout = false;
       const timeoutId = setTimeout(() => (timeout = true), this.options.paymentTimeout);
       let i = 0;
@@ -73,7 +83,7 @@ export class PaymentService {
     this.payments?.unsubscribe().catch((error) => this.logger?.warn(error));
     this.payments?.removeEventListener(PaymentEventType, this.subscribePayments.bind(this));
     for (const allocation of this.allocations) await allocation.release().catch((error) => this.logger?.warn(error));
-    this.logger?.debug("All allocations has benn released");
+    this.logger?.info("All allocations has been released");
     this.logger?.debug("Payment service has been stopped");
   }
 
@@ -111,51 +121,63 @@ export class PaymentService {
     this.agreementsDebitNotes.add(agreementId);
   }
 
-  private async processInvoices() {
-    while (this.isRunning) {
-      for (const invoice of this.invoicesToPay.values()) {
-        const agreement = this.agreementsToPay.get(invoice.agreementId);
-        if (!agreement) {
-          this.invoicesToPay.delete(invoice.id);
-          this.logger?.debug(`Agreement ${invoice.agreementId} has not been accepted to payment`);
-          continue;
-        }
-        try {
-          const allocation = this.getAllocationForPayment(invoice);
-          await invoice.accept(invoice.amount, allocation.id);
-          this.invoicesToPay.delete(invoice.id);
-          this.paidAgreements.add({ invoice, agreement });
-          this.agreementsDebitNotes.delete(invoice.agreementId);
-          this.agreementsToPay.delete(invoice.agreementId);
-          this.logger?.info(`Invoice accepted from ${agreement.provider.name}`);
-        } catch (error) {
-          this.logger?.error(`Invoice failed from ${agreement.provider.name}. ${error}`);
-        }
+  private async processInvoice(invoice: Invoice) {
+    try {
+      const agreement = this.agreementsToPay.get(invoice.agreementId);
+      if (!agreement) {
+        this.logger?.debug(`Agreement ${invoice.agreementId} has not been accepted to payment`);
+        return;
       }
-      await sleep(this.options.payingInterval, true);
+      if (await this.options.invoiceFilter(invoice.dto)) {
+        const allocation = this.getAllocationForPayment(invoice);
+        await invoice.accept(invoice.amount, allocation.id);
+        this.paidAgreements.add({ invoice, agreement });
+        this.logger?.info(`Invoice accepted from provider ${agreement.provider.name}`);
+      } else {
+        const reason = {
+          rejectionReason: RejectionReason.IncorrectAmount,
+          totalAmountAccepted: "0",
+          message: "Invoice rejected by Invoice Filter",
+        };
+        await invoice.reject(reason);
+        this.logger?.warn(
+          `Invoice has been rejected for provider ${agreement.provider.name}. Reason: ${reason.message}`
+        );
+      }
+      this.agreementsDebitNotes.delete(invoice.agreementId);
+      this.agreementsToPay.delete(invoice.agreementId);
+    } catch (error) {
+      this.logger?.error(`Invoice failed from provider ${invoice.providerId}. ${error}`);
     }
   }
 
-  private async processDebitNotes() {
-    while (this.isRunning) {
-      for (const debitNote of this.debitNotesToPay.values()) {
-        if (!this.agreementsDebitNotes.has(debitNote.agreementId)) continue;
-        try {
-          const allocation = this.getAllocationForPayment(debitNote);
-          await debitNote.accept(debitNote.totalAmountDue, allocation.id);
-          this.debitNotesToPay.delete(debitNote.id);
-          this.logger?.debug(`Debit Note accepted for agreement ${debitNote.agreementId}`);
-        } catch (error) {
-          this.logger?.error(`Payment Debit Note failed for agreement ${debitNote.agreementId} ${error}`);
-        }
+  private async processDebitNote(debitNote: DebitNote) {
+    try {
+      if (this.paidDebitNotes.has(debitNote.id)) return;
+      if (await this.options.debitNoteFilter(debitNote.dto)) {
+        const allocation = this.getAllocationForPayment(debitNote);
+        await debitNote.accept(debitNote.totalAmountDue, allocation.id);
+        this.paidDebitNotes.add(debitNote.id);
+        this.logger?.debug(`Debit Note accepted for agreement ${debitNote.agreementId}`);
+      } else {
+        const reason = {
+          rejectionReason: RejectionReason.IncorrectAmount,
+          totalAmountAccepted: "0",
+          message: "DebitNote rejected by DebitNote Filter",
+        };
+        await debitNote.reject(reason);
+        this.logger?.warn(
+          `DebitNote has been rejected for agreement ${debitNote.agreementId}. Reason: ${reason.message}`
+        );
       }
-      await sleep(this.options.payingInterval, true);
+    } catch (error) {
+      this.logger?.debug(`Payment Debit Note failed for agreement ${debitNote.agreementId} ${error}`);
     }
   }
 
   private async subscribePayments(event) {
-    if (event instanceof InvoiceEvent) this.invoicesToPay.set(event.invoice.id, event.invoice);
-    if (event instanceof DebitNoteEvent) this.debitNotesToPay.set(event.debitNote.id, event.debitNote);
+    if (event instanceof InvoiceEvent) this.processInvoice(event.invoice).then();
+    if (event instanceof DebitNoteEvent) this.processDebitNote(event.debitNote).then();
   }
 
   private getAllocationForPayment(paymentNote: Invoice | DebitNote): Allocation {

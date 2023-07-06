@@ -66,10 +66,11 @@ export class Payments extends EventTarget {
         const invoice = await Invoice.create(event["invoiceId"], { ...this.options.options }).catch((e) =>
           this.logger?.error(`Unable to create invoice ID: ${event["invoiceId"]}. ${e?.response?.data?.message || e}`)
         );
+        if (!invoice) continue;
         this.dispatchEvent(new InvoiceEvent(PaymentEventType, invoice));
         this.lastInvoiceFetchingTime = event.eventDate;
         this.options.eventTarget?.dispatchEvent(new Events.InvoiceReceived(invoice));
-        this.logger?.debug(`New Invoice received for agreement ${invoice.agreementId}`);
+        this.logger?.debug(`New Invoice received for agreement ${invoice.agreementId}. Amount: ${invoice.amount}`);
       }
       await sleep(this.options.invoiceFetchingInterval, true);
     }
@@ -94,16 +95,20 @@ export class Payments extends EventTarget {
             `Unable to create debit note ID: ${event["debitNoteId"]}. ${e?.response?.data?.message || e}`
           )
         );
+        if (!debitNote) continue;
         this.dispatchEvent(new DebitNoteEvent(PaymentEventType, debitNote));
         this.lastDebitNotesFetchingTime = event.eventDate;
         this.options.eventTarget?.dispatchEvent(
           new Events.DebitNoteReceived({
             id: debitNote.id,
             agreementId: debitNote.agreementId,
+            activityId: debitNote.activityId,
             amount: debitNote.totalAmountDue,
           })
         );
-        this.logger?.debug(`New Debit Note received for agreement ${debitNote.agreementId}`);
+        this.logger?.debug(
+          `New Debit Note received for agreement ${debitNote.agreementId}. Amount: ${debitNote.totalAmountDue}`
+        );
       }
       await sleep(this.options.debitNotesFetchingInterval, true);
     }

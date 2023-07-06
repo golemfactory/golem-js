@@ -1,6 +1,7 @@
 import { NetworkOptions } from "./network.js";
 import { RequestorApi } from "ya-ts-client/dist/ya-net/api.js";
 import { Configuration } from "ya-ts-client/dist/ya-payment/index.js";
+import { Agent } from "http";
 import { EnvUtils, Logger } from "../utils/index.js";
 
 const DEFAULTS = {
@@ -24,9 +25,13 @@ export class NetworkConfig {
     const apiKey = options?.yagnaOptions?.apiKey || EnvUtils.getYagnaAppKey();
     if (!apiKey) throw new Error("Api key not defined");
     const basePath = options?.yagnaOptions?.basePath || EnvUtils.getYagnaApiUrl();
-    console.log('basePath', JSON.stringify(basePath));
     this.apiUrl = `${basePath}/net-api/v1`;
-    const apiConfig = new Configuration({ apiKey, basePath: this.apiUrl, accessToken: apiKey });
+    const apiConfig = new Configuration({
+      apiKey,
+      basePath: this.apiUrl,
+      accessToken: apiKey,
+      baseOptions: { httpAgent: new Agent({ keepAlive: true }) },
+    });
     this.api = new RequestorApi(apiConfig);
     this.ip = options?.networkIp || DEFAULTS.networkIp;
     this.mask = options?.networkMask;

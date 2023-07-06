@@ -1,10 +1,25 @@
 // High level API
-export { TaskExecutor } from "./executor/index.js";
+export { TaskExecutor, ExecutorOptions } from "./executor/index.js";
+export { StorageProvider, GftpStorageProvider } from "./storage/index.js";
 
 // Mid level API
 export { Activity, ActivityOptions, ActivityStateEnum, Result } from "./activity/index.js";
-export { Agreement, AgreementOptions, AgreementStateEnum } from "./agreement/index.js";
-export { Demand, DemandEvent, DemandEventType, DemandOptions, Proposal } from "./market/index.js";
+export {
+  Agreement,
+  AgreementOptions,
+  AgreementStateEnum,
+  AgreementCandidate,
+  AgreementSelectors,
+} from "./agreement/index.js";
+export {
+  Demand,
+  DemandEvent,
+  DemandEventType,
+  DemandOptions,
+  Proposal,
+  ProposalFilters,
+  ProposalDTO,
+} from "./market/index.js";
 export { Package, PackageOptions } from "./package/index.js";
 export {
   Invoice,
@@ -15,6 +30,7 @@ export {
   PaymentEventType,
   InvoiceEvent,
   DebitNoteEvent,
+  PaymentFilters,
 } from "./payment/index.js";
 export { Script, Run, Deploy, Start, Transfer, UploadFile, DownloadFile } from "./script/index.js";
 

@@ -11,6 +11,7 @@ import {
   Acceptance,
 } from "ya-ts-client/dist/ya-payment/src/models/index.js";
 import { allocations, accounts, debitNotesEvents, debitNotes, invoiceEvents, invoices } from "../fixtures/index.js";
+import { Rejection } from "ya-ts-client/dist/ya-payment/src/models";
 
 global.expectedEvents = [];
 global.expectedInvoices = [];
@@ -96,6 +97,25 @@ export class PaymentApiMock extends RequestorApi {
   acceptDebitNote(
     debitNoteId: string,
     acceptance: Acceptance,
+    timeout?: number,
+    options?: AxiosRequestConfig
+  ): Promise<import("axios").AxiosResponse<void>> {
+    return new Promise((res) => res({} as AxiosResponse));
+  }
+  // @ts-ignore
+  rejectDebitNote(
+    debitNoteId: string,
+    rejection: Rejection,
+    timeout?: number,
+    options?: AxiosRequestConfig
+  ): Promise<import("axios").AxiosResponse<void>> {
+    return new Promise((res) => res({} as AxiosResponse));
+  }
+
+  // @ts-ignore
+  rejectInvoice(
+    invoiceId: string,
+    rejection: Rejection,
     timeout?: number,
     options?: AxiosRequestConfig
   ): Promise<import("axios").AxiosResponse<void>> {

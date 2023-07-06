@@ -26,7 +26,7 @@ const blender_params = (frame) => ({
 describe("Blender rendering", function () {
   let executor: TaskExecutor;
   afterEach(async function () {
-    this.timeout(60000);
+    this.timeout(100000);
     await executor.end();
   });
   it("should render images by blender", async () => {

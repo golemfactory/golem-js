@@ -2,8 +2,9 @@
 import { Agreement, AgreementPoolService } from "../../../yajsapi/agreement/index.js";
 import { agreementsApproved } from "../fixtures/index.js";
 import { AgreementConfig } from "../../../yajsapi/agreement/config.js";
+import { Proposal } from "../../../yajsapi";
 
-const proposalIds: string[] = [];
+const proposals: Proposal[] = [];
 const invalidProviderIds: string[] = [];
 const provider = { id: "test_provider_id", name: "Test Provider" };
 // @ts-ignore
@@ -12,18 +13,15 @@ export const agreementPoolServiceMock: AgreementPoolService = {
     const agreementData = agreementsApproved[0];
     return new Agreement(agreementData.agreementId, provider, new AgreementConfig());
   },
-  addProposal: (proposalId: string) => {
-    proposalIds.push(proposalId);
+  async addProposal(proposal: Proposal) {
+    proposals.push(proposal);
   },
-  isProviderLastAgreementRejected(providerId: string): boolean {
-    return invalidProviderIds.includes(providerId);
-  },
-  async releaseAgreement(agreementId: string, allowReuse = false) {
+  async releaseAgreement(agreementId: string, allowReuse: boolean) {
     return undefined;
   },
   // @ts-ignore
-  getProposalIds() {
-    return proposalIds;
+  getProposals() {
+    return proposals;
   },
   setInvalidProvider(providerId) {
     invalidProviderIds.push(providerId);

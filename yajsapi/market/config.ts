@@ -2,8 +2,10 @@ import { DemandOptions } from "./demand.js";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api.js";
 import { Configuration } from "ya-ts-client/dist/ya-market/index.js";
 import { EnvUtils, Logger } from "../utils/index.js";
-import { MarketOptions } from "./service.js";
+import { MarketOptions, ProposalFilter } from "./service.js";
 import { YagnaOptions } from "../executor/index.js";
+import { Agent } from "http";
+import { acceptAllProposalFilter } from "./strategy.js";
 
 const DEFAULTS = {
   subnetTag: "public",
@@ -12,6 +14,7 @@ const DEFAULTS = {
   offerFetchingInterval: 10000,
   marketOfferExpiration: 1000 * 60 * 30, // 30 min
   debitNotesAcceptanceTimeout: 30,
+  proposalFilter: acceptAllProposalFilter(),
 };
 
 /**
@@ -32,8 +35,13 @@ export class DemandConfig {
   constructor(options?: DemandOptions) {
     const apiKey = options?.yagnaOptions?.apiKey || EnvUtils.getYagnaAppKey();
     if (!apiKey) throw new Error("Api key not defined");
-    const basePath = options?.yagnaOptions?.basePath || EnvUtils.getYagnaApiUrl()
-    const apiConfig = new Configuration({ apiKey, basePath: `${basePath}/market-api/v1`, accessToken: apiKey });
+    const basePath = options?.yagnaOptions?.basePath || EnvUtils.getYagnaApiUrl();
+    const apiConfig = new Configuration({
+      apiKey,
+      basePath: `${basePath}/market-api/v1`,
+      accessToken: apiKey,
+      baseOptions: { httpAgent: new Agent({ keepAlive: true }) },
+    });
     this.yagnaOptions = options?.yagnaOptions;
     this.api = new RequestorApi(apiConfig);
     this.subnetTag = options?.subnetTag || EnvUtils.getYagnaSubnet() || DEFAULTS.subnetTag;
@@ -51,8 +59,10 @@ export class DemandConfig {
  */
 export class MarketConfig extends DemandConfig {
   readonly debitNotesAcceptanceTimeout: number;
+  public readonly proposalFilter: ProposalFilter;
   constructor(options?: MarketOptions) {
     super(options);
     this.debitNotesAcceptanceTimeout = options?.debitNotesAcceptanceTimeout || DEFAULTS.debitNotesAcceptanceTimeout;
+    this.proposalFilter = options?.proposalFilter ?? DEFAULTS.proposalFilter;
   }
 }

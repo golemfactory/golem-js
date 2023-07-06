@@ -1,5 +1,5 @@
 import { Activity, Result } from "../activity/index.js";
-import { Command, Deploy, DownloadFile, Run, Script, Start, UploadFile } from "../script/index.js";
+import { Capture, Command, Deploy, DownloadFile, Run, Script, Start, UploadFile } from "../script/index.js";
 import { StorageProvider } from "../storage/index.js";
 import { ActivityStateEnum } from "../activity/index.js";
 import { sleep, Logger, runtimeContextChecker } from "../utils/index.js";
@@ -12,12 +12,12 @@ export type Worker<InputType = unknown, OutputType = unknown> = (
 ) => Promise<OutputType | undefined>;
 
 const DEFAULTS = {
-  workTimeout: 10000,
+  activityPreparingTimeout: 300_000,
   activityStateCheckInterval: 1000,
 };
 
 export interface WorkOptions {
-  workTimeout?: number;
+  activityPreparingTimeout?: number;
   activityStateCheckingInterval?: number;
   provider?: { name: string; id: string; networkConfig?: object };
   storageProvider?: StorageProvider;
@@ -27,6 +27,12 @@ export interface WorkOptions {
   isRunning: () => boolean;
 }
 
+interface CommandOptions {
+  timeout?: number;
+  env?: object;
+  capture?: Capture;
+}
+
 /**
  * Work Context
  *
@@ -34,14 +40,18 @@ export interface WorkOptions {
  */
 export class WorkContext {
   public readonly provider?: { name: string; id: string; networkConfig?: object };
-  private readonly workTimeout: number;
+  public readonly agreementId: string;
+  public readonly activityId: string;
+  private readonly activityPreparingTimeout: number;
   private readonly logger?: Logger;
   private readonly activityStateCheckingInterval: number;
   private readonly storageProvider?: StorageProvider;
   private readonly networkNode?: NetworkNode;
 
   constructor(private activity: Activity, private options?: WorkOptions) {
-    this.workTimeout = options?.workTimeout || DEFAULTS.workTimeout;
+    this.agreementId = this.activity.agreementId;
+    this.activityId = this.activity.id;
+    this.activityPreparingTimeout = options?.activityPreparingTimeout || DEFAULTS.activityPreparingTimeout;
     this.logger = options?.logger;
     this.activityStateCheckingInterval = options?.activityStateCheckingInterval || DEFAULTS.activityStateCheckInterval;
     this.provider = options?.provider;
@@ -49,62 +59,95 @@ export class WorkContext {
     this.networkNode = options?.networkNode;
   }
   async before(): Promise<Result[] | void> {
-    let state = await this.activity.getState();
+    let state = await this.activity.getState().catch((e) => this.logger?.debug(e));
     if (state === ActivityStateEnum.Ready) {
       if (this.options?.initWorker) await this.options?.initWorker(this, undefined);
       return;
     }
     if (state === ActivityStateEnum.Initialized) {
-      await this.activity.execute(
-        new Script([new Deploy(this.networkNode?.getNetworkConfig?.()), new Start()]).getExeScriptRequest()
-      );
+      const result = await this.activity
+        .execute(
+          new Script([new Deploy(this.networkNode?.getNetworkConfig?.()), new Start()]).getExeScriptRequest(),
+          undefined,
+          this.activityPreparingTimeout
+        )
+        .catch((e) => {
+          throw new Error(`Unable to deploy activity. ${e}`);
+        });
+      let timeoutId;
+      await Promise.race([
+        new Promise(
+          (res, rej) => (timeoutId = setTimeout(() => rej("Preparing activity timeout"), this.activityPreparingTimeout))
+        ),
+        (async () => {
+          for await (const res of result) {
+            if (res.result === "Error") throw new Error(`Preparing activity failed. Error: ${res.message}`);
+          }
+        })(),
+      ]).finally(() => clearTimeout(timeoutId));
     }
-    let timeout = false;
-    const timeoutId = setTimeout(() => (timeout = true), this.workTimeout);
-    while (state !== ActivityStateEnum.Ready && !timeout && this.options?.isRunning()) {
-      await sleep(this.activityStateCheckingInterval, true);
-      state = await this.activity.getState();
-    }
-    clearTimeout(timeoutId);
+    await sleep(this.activityStateCheckingInterval, true);
+    state = await this.activity.getState().catch((e) => this.logger?.warn(`${e} Provider: ${this.provider?.name}`));
     if (state !== ActivityStateEnum.Ready) {
       throw new Error(`Activity ${this.activity.id} cannot reach the Ready state. Current state: ${state}`);
     }
     if (this.options?.initWorker) await this.options?.initWorker(this, undefined);
   }
-  async run(...args: Array<string | string[]>): Promise<Result> {
+  async run(...args: Array<string | string[] | CommandOptions>): Promise<Result> {
+    const options: CommandOptions | undefined =
+      typeof args?.[1] === "object" ? <CommandOptions>args?.[1] : <CommandOptions>args?.[2];
     const command =
-      args.length === 1 ? new Run("/bin/sh", ["-c", <string>args[0]]) : new Run(<string>args[0], <string[]>args[1]);
-    return this.runOneCommand(command);
+      args.length === 1
+        ? new Run("/bin/sh", ["-c", <string>args[0]], options?.env, options?.capture)
+        : new Run(<string>args[0], <string[]>args[1], options?.env, options?.capture);
+
+    return this.runOneCommand(command, options);
   }
-  async uploadFile(src: string, dst: string): Promise<Result> {
+  async uploadFile(src: string, dst: string, options?: CommandOptions): Promise<Result> {
     runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Upload File");
-    return this.runOneCommand(new UploadFile(this.storageProvider!, src, dst));
+    return this.runOneCommand(new UploadFile(this.storageProvider!, src, dst), options);
   }
-  async uploadJson(json: object, dst: string): Promise<Result> {
+  async uploadJson(json: object, dst: string, options?: CommandOptions): Promise<Result> {
     runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Upload JSON");
     const src = Buffer.from(JSON.stringify(json), "utf-8");
-    return this.runOneCommand(new UploadFile(this.storageProvider!, src, dst));
+    return this.runOneCommand(new UploadFile(this.storageProvider!, src, dst), options);
   }
-  async downloadFile(src: string, dst: string): Promise<Result> {
+  async downloadFile(src: string, dst: string, options?: CommandOptions): Promise<Result> {
     runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Download File");
-    return this.runOneCommand(new DownloadFile(this.storageProvider!, src, dst));
+    return this.runOneCommand(new DownloadFile(this.storageProvider!, src, dst), options);
   }
   beginBatch() {
     return Batch.create(this.activity, this.storageProvider, this.logger);
   }
   rejectResult(msg: string) {
-    throw new Error(`Work rejected by user. Reason: ${msg}`);
+    throw new Error(`Work rejected. Reason: ${msg}`);
   }
   getWebsocketUri(port: number): string {
     if (!this.networkNode) throw new Error("There is no network in this work context");
     return this.networkNode?.getWebsocketUri(port);
   }
 
-  private async runOneCommand(command: Command): Promise<Result> {
+  async getState(): Promise<ActivityStateEnum> {
+    return this.activity.getState();
+  }
+
+  private async runOneCommand(command: Command, options?: CommandOptions): Promise<Result> {
     const script = new Script([command]);
-    await script.before();
+    await script.before().catch((e) => {
+      throw new Error(
+        `Script initialization failed for command: ${JSON.stringify(command.toJson())}. ${
+          e?.response?.data?.message || e?.message || e
+        }`
+      );
+    });
     await sleep(100, true);
-    const results = await this.activity.execute(script.getExeScriptRequest());
+    const results = await this.activity.execute(script.getExeScriptRequest(), false, options?.timeout).catch((e) => {
+      throw new Error(
+        `Script execution failed for command: ${JSON.stringify(command.toJson())}. ${
+          e?.response?.data?.message || e?.message || e
+        }`
+      );
+    });
     const allResults: Result[] = [];
     for await (const result of results) allResults.push(result);
     const commandsErrors = allResults.filter((res) => res.result === "Error");

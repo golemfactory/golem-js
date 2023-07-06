@@ -1,6 +1,6 @@
-import { Activity, ActivityOptions } from './activity.js';
-import { ActivityConfig } from './config.js';
-import { Events } from '../events/index.js';
+import { Activity, ActivityOptions } from "./activity.js";
+import { ActivityConfig } from "./config.js";
+import { Events } from "../events/index.js";
 
 /**
  * Activity Factory
@@ -34,7 +34,9 @@ export class ActivityFactory {
       }
       return this.createActivity(this.agreementId, this.options);
     } catch (error) {
-      throw error?.response?.data?.message || error;
+      const msg = `Unable to create activity: ${error?.response?.data?.message || error}`;
+      this.options.logger?.error(msg);
+      throw new Error(msg);
     }
   }
 

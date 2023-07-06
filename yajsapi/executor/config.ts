@@ -1,6 +1,6 @@
 import { ExecutorOptions } from "./executor.js";
 import { Package, PackageOptions } from "../package/index.js";
-import { MarketStrategy } from "../market/index.js";
+import { ActivityOptions } from "../activity";
 import { Logger, runtimeContextChecker, defaultLogger } from "../utils/index.js";
 
 const DEFAULTS = Object.freeze({
@@ -22,7 +22,6 @@ export class ExecutorConfig {
   readonly maxParallelTasks: number;
   readonly taskTimeout: number;
   readonly budget: number;
-  readonly strategy?: MarketStrategy;
   readonly subnetTag: string;
   readonly payment: { driver: string; network: string };
   readonly networkIp?: string;
@@ -32,8 +31,10 @@ export class ExecutorConfig {
   readonly logger?: Logger;
   readonly eventTarget: EventTarget;
   readonly maxTaskRetries: number;
+  readonly activityExecuteTimeout?: number;
+  readonly isSubprocess: boolean;
 
-  constructor(options: ExecutorOptions) {
+  constructor(options: ExecutorOptions & ActivityOptions) {
     const processEnv = !runtimeContextChecker.isBrowser
       ? process
       : {
@@ -44,8 +45,7 @@ export class ExecutorConfig {
           },
         };
     Object.keys(options).forEach((key) => (this[key] = options[key]));
-    this["activityExecuteTimeout"] = options.taskTimeout;
-
+    this.activityExecuteTimeout = options.activityExecuteTimeout || options.taskTimeout;
     const apiKey = options?.yagnaOptions?.apiKey || processEnv.env.YAGNA_APPKEY;
     if (!apiKey) throw new Error("Api key not defined");
     this.yagnaOptions = {
@@ -85,5 +85,6 @@ export class ExecutorConfig {
     this.logger?.setLevel && this.logger?.setLevel(this.logLevel);
     this.eventTarget = options.eventTarget || new EventTarget();
     this.maxTaskRetries = options.maxTaskRetries || DEFAULTS.maxTaskRetries;
+    this.isSubprocess = options.isSubprocess ?? false;
   }
 }

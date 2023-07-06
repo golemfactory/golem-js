@@ -245,13 +245,13 @@ describe("Activity", () => {
         message: "Some undefined error",
         status: 400,
       };
-      activityMock.setExpectedErrors([error, error, error]);
+      activityMock.setExpectedErrors([error, error, error, error, error, error]);
       return new Promise((res) => {
         results.on("error", (error) => {
-          expect(error.toString()).to.equal("Some undefined error");
+          expect(error.toString()).to.equal("Command #0 getExecBatchResults error: Some undefined error");
           return res();
         });
-        results.on("data", () => null);
+        results.on("data", (data) => null);
       });
     });
 
@@ -272,7 +272,7 @@ describe("Activity", () => {
         message: "GSB error: remote service at `test` error: GSB failure: Bad request: endpoint address not found",
         status: 500,
       };
-      activityMock.setExpectedErrors([error, error, error]);
+      activityMock.setExpectedErrors([error, error, error, error, error, error]);
       return new Promise((res) => {
         results.on("error", (error) => {
           expect(error.toString()).to.equal(

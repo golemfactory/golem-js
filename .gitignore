@@ -25,6 +25,7 @@ package-lock.json
 #IDE
 .idea
 *.DS_Store
+.vscode
 
 #Nuxt
 /examples/adv-web-example/.nuxt
