@@ -18,6 +18,18 @@ export interface Result {
   isBatchFinished?: boolean;
 }
 
+export interface ResultOkData<T> extends Result {
+  result: "Ok";
+  data: T;
+}
+
+export interface ResultErrorData<T> extends Result {
+  result: "Error" | undefined;
+  data?: T;
+}
+
+export type ResultData<T> = ResultOkData<T> | ResultErrorData<T>;
+
 export interface StreamingBatchEvent {
   batch_id: string;
   index: number;

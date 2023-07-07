@@ -1,10 +1,22 @@
 import { Activity, Result } from "../activity/index.js";
-import { Capture, Command, Deploy, DownloadFile, Run, Script, Start, UploadFile } from "../script/index.js";
-import { StorageProvider } from "../storage/index.js";
+import {
+  Capture,
+  Command,
+  Deploy,
+  DownloadData,
+  DownloadFile,
+  Run,
+  Script,
+  Start,
+  UploadData,
+  UploadFile
+} from "../script/index.js";
+import { NullStorageProvider, StorageProvider } from "../storage/index.js";
 import { ActivityStateEnum } from "../activity/index.js";
-import { sleep, Logger, runtimeContextChecker } from "../utils/index.js";
+import { sleep, Logger } from "../utils/index.js";
 import { Batch } from "./index.js";
 import { NetworkNode } from "../network/index.js";
+import { ResultData } from "../activity/results.js";
 
 export type Worker<InputType = unknown, OutputType = unknown> = (
   ctx: WorkContext,
@@ -45,7 +57,7 @@ export class WorkContext {
   private readonly activityPreparingTimeout: number;
   private readonly logger?: Logger;
   private readonly activityStateCheckingInterval: number;
-  private readonly storageProvider?: StorageProvider;
+  private readonly storageProvider: StorageProvider;
   private readonly networkNode?: NetworkNode;
 
   constructor(private activity: Activity, private options?: WorkOptions) {
@@ -55,7 +67,7 @@ export class WorkContext {
     this.logger = options?.logger;
     this.activityStateCheckingInterval = options?.activityStateCheckingInterval || DEFAULTS.activityStateCheckInterval;
     this.provider = options?.provider;
-    this.storageProvider = options?.storageProvider;
+    this.storageProvider = options?.storageProvider ?? new NullStorageProvider();
     this.networkNode = options?.networkNode;
   }
   async before(): Promise<Result[] | void> {
@@ -104,18 +116,41 @@ export class WorkContext {
     return this.runOneCommand(command, options);
   }
   async uploadFile(src: string, dst: string, options?: CommandOptions): Promise<Result> {
-    runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Upload File");
-    return this.runOneCommand(new UploadFile(this.storageProvider!, src, dst), options);
+    return this.runOneCommand(new UploadFile(this.storageProvider, src, dst), options);
   }
-  async uploadJson(json: object, dst: string, options?: CommandOptions): Promise<Result> {
-    runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Upload JSON");
-    const src = Buffer.from(JSON.stringify(json), "utf-8");
-    return this.runOneCommand(new UploadFile(this.storageProvider!, src, dst), options);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  uploadJson(json: any, dst: string, options?: CommandOptions): Promise<Result> {
+    const src = new TextEncoder().encode(JSON.stringify(json));
+    return this.runOneCommand(new UploadData(this.storageProvider, src, dst), options);
   }
-  async downloadFile(src: string, dst: string, options?: CommandOptions): Promise<Result> {
-    runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Download File");
-    return this.runOneCommand(new DownloadFile(this.storageProvider!, src, dst), options);
+  uploadData(data: Uint8Array, dst: string, options?: CommandOptions): Promise<Result> {
+    return this.runOneCommand(new UploadData(this.storageProvider, data, dst), options);
   }
+  downloadFile(src: string, dst: string, options?: CommandOptions): Promise<Result> {
+    return this.runOneCommand(new DownloadFile(this.storageProvider, src, dst), options);
+  }
+
+  downloadData(src: string, options?: CommandOptions): Promise<ResultData<Uint8Array>> {
+    return this.runOneCommand(new DownloadData(this.storageProvider, src), options);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async downloadJson(src: string, options?: CommandOptions): Promise<ResultData<any>> {
+    const result = await this.downloadData(src, options);
+    if (result.result !== "Ok") {
+      return {
+        ...result,
+        data: undefined
+      };
+    }
+
+    return {
+      ...result,
+      data: JSON.parse(new TextDecoder().decode(result.data))
+    };
+  }
+
   beginBatch() {
     return Batch.create(this.activity, this.storageProvider, this.logger);
   }
@@ -131,7 +166,7 @@ export class WorkContext {
     return this.activity.getState();
   }
 
-  private async runOneCommand(command: Command, options?: CommandOptions): Promise<Result> {
+  private async runOneCommand<R extends Result = Result>(command: Command, options?: CommandOptions): Promise<R> {
     const script = new Script([command]);
     await script.before().catch((e) => {
       throw new Error(
@@ -148,15 +183,16 @@ export class WorkContext {
         }`
       );
     });
-    const allResults: Result[] = [];
+    let allResults: R[] = [];
     for await (const result of results) allResults.push(result);
+    allResults = await script.after(allResults) as R[];
     const commandsErrors = allResults.filter((res) => res.result === "Error");
-    await script.after();
     if (commandsErrors.length) {
       const errorMessage = commandsErrors
         .map((err) => `Error: ${err.message}. Stdout: ${err.stdout?.trim()}. Stderr: ${err.stderr?.trim()}`)
         .join(". ");
       this.rejectResult(`Task error on provider ${this.provider?.name || "'unknown'"}. ${errorMessage}`);
+
       throw new Error(errorMessage);
     }
     return allResults[0];
