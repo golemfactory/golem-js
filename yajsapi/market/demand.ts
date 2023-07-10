@@ -141,7 +141,7 @@ export class Demand extends EventTarget {
             this.dispatchEvent(
               new DemandEvent(DemandEventType, undefined, new Error(`Subscription expired. ${reason}`))
             );
-            this.unsubscribe().then();
+            this.unsubscribe().catch((e) => this.logger?.debug(e));
           }
         }
       } finally {
