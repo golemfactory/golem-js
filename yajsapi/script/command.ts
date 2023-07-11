@@ -1,10 +1,9 @@
 import { ExeScriptRequest } from "ya-ts-client/dist/ya-activity/src/models/index.js";
 import { StorageProvider } from "../storage/index.js";
-import { Result } from "../activity";
-import { ResultData } from "../activity/results";
+import { Result, ResultState } from "../activity/index.js";
 
 const EmptyErrorResult: Result = {
-  result: "Error",
+  result: ResultState.ERROR,
   eventDate: new Date().toISOString(),
   index: -1,
   message: "No result due to error"
@@ -13,7 +12,7 @@ const EmptyErrorResult: Result = {
 /**
  * @category Mid-level
  */
-export class Command {
+export class Command<T = void> {
   protected args: object;
 
   constructor(private commandName: string, args?: object) {
@@ -48,8 +47,8 @@ export class Command {
    *
    * @param result
    */
-  async after(result?: Result): Promise<Result> {
-    return result ?? EmptyErrorResult;
+  async after(result?: Result): Promise<Result<T>> {
+    return (result ?? EmptyErrorResult) as Result<T>;
   }
 }
 
@@ -109,7 +108,7 @@ export class Terminate extends Command {
 /**
  * @category Mid-level
  */
-export class Transfer extends Command {
+export class Transfer<T = void> extends Command<T> {
   constructor(protected from?: string, protected to?: string, args?: object) {
     super("transfer", { from, to, args });
   }
@@ -175,7 +174,7 @@ export class DownloadFile extends Transfer {
 /**
  * @category Mid-level
  */
-export class DownloadData extends Transfer {
+export class DownloadData extends Transfer<Uint8Array> {
   private chunks: Uint8Array[] = [];
 
   constructor(
@@ -193,9 +192,9 @@ export class DownloadData extends Transfer {
     });
   }
 
-  async after(result: Result): Promise<ResultData<Uint8Array>> {
+  async after(result: Result): Promise<Result<Uint8Array>> {
     await this.storageProvider.release([this.args["to"]]);
-    if (result.result === "Ok") {
+    if (result.result === ResultState.OK) {
       return {
         ...result,
         data: this.combineChunks(),
@@ -204,7 +203,8 @@ export class DownloadData extends Transfer {
 
     return {
       ...result,
-      result: "Error",
+      result: ResultState.ERROR,
+      data: undefined
     };
   }
 

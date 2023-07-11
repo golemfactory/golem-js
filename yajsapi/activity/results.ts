@@ -1,13 +1,18 @@
+export enum ResultState {
+  OK = "Ok",
+  ERROR = "Error",
+}
+
 /**
  * @category Mid-level
  */
-export interface Result {
+export interface Result<T = void> {
   /** Index of script command */
   index: number;
   /** The datetime of the event on which the result was received */
   eventDate: string;
   /** If is success */
-  result?: "Ok" | "Error";
+  result: ResultState;
   /** stdout of script command */
   stdout?: string;
   /** stderr of script command */
@@ -16,19 +21,8 @@ export interface Result {
   message?: string;
   /** Is batch of already finished */
   isBatchFinished?: boolean;
-}
-
-export interface ResultOkData<T> extends Result {
-  result: "Ok";
-  data: T;
-}
-
-export interface ResultErrorData<T> extends Result {
-  result: "Error" | undefined;
   data?: T;
 }
-
-export type ResultData<T> = ResultOkData<T> | ResultErrorData<T>;
 
 export interface StreamingBatchEvent {
   batch_id: string;

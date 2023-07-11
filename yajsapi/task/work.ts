@@ -16,7 +16,6 @@ import { ActivityStateEnum } from "../activity/index.js";
 import { sleep, Logger } from "../utils/index.js";
 import { Batch } from "./index.js";
 import { NetworkNode } from "../network/index.js";
-import { ResultData } from "../activity/results.js";
 
 export type Worker<InputType = unknown, OutputType = unknown> = (
   ctx: WorkContext,
@@ -131,12 +130,12 @@ export class WorkContext {
     return this.runOneCommand(new DownloadFile(this.storageProvider, src, dst), options);
   }
 
-  downloadData(src: string, options?: CommandOptions): Promise<ResultData<Uint8Array>> {
+  downloadData(src: string, options?: CommandOptions): Promise<Result<Uint8Array>> {
     return this.runOneCommand(new DownloadData(this.storageProvider, src), options);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async downloadJson(src: string, options?: CommandOptions): Promise<ResultData<any>> {
+  async downloadJson(src: string, options?: CommandOptions): Promise<Result<any>> {
     const result = await this.downloadData(src, options);
     if (result.result !== "Ok") {
       return {
@@ -166,7 +165,7 @@ export class WorkContext {
     return this.activity.getState();
   }
 
-  private async runOneCommand<R extends Result = Result>(command: Command, options?: CommandOptions): Promise<R> {
+  private async runOneCommand<T>(command: Command<T>, options?: CommandOptions): Promise<Result<T>> {
     const script = new Script([command]);
     await script.before().catch((e) => {
       throw new Error(
@@ -183,9 +182,9 @@ export class WorkContext {
         }`
       );
     });
-    let allResults: R[] = [];
+    let allResults: Result<T>[] = [];
     for await (const result of results) allResults.push(result);
-    allResults = await script.after(allResults) as R[];
+    allResults = await script.after(allResults) as Result<T>[];
     const commandsErrors = allResults.filter((res) => res.result === "Error");
     if (commandsErrors.length) {
       const errorMessage = commandsErrors

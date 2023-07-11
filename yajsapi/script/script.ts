@@ -9,14 +9,18 @@ export class Script {
   static create(commands?: Command[]): Script {
     return new Script(commands);
   }
-  constructor(private commands: Command[] = []) {}
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  constructor(private commands: Command<any>[] = []) {}
   add(command: Command) {
     this.commands.push(command);
   }
   async before() {
     await Promise.all(this.commands.map((cmd) => cmd.before()));
   }
-  async after(results: Result[]): Promise<Result[]> {
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async after(results: Result<any>[]): Promise<Result<any>[]> {
     // Call after() for each command mapping its result.
     return Promise.all(this.commands.map((command, i) => command.after(results[i])));
   }
