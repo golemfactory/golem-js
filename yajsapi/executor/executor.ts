@@ -19,9 +19,7 @@ import { MarketOptions } from "../market/service";
 import { RequireAtLeastOne } from "../utils/types.js";
 
 const terminatingSignals = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
-/**
- * @category High-level
- */
+
 export type ExecutorOptions = {
   /** Image hash as string, otherwise Package object */
   package?: string | Package;
@@ -58,13 +56,9 @@ export type ExecutorOptions = {
 
 /**
  * Contains information needed to start executor, if string the imageHash is required, otherwise it should be a type of {@link ExecutorOptions}
- * @category High-level
  */
 export type ExecutorOptionsMixin = string | ExecutorOptions;
 
-/**
- * @category High-level
- */
 export type YagnaOptions = {
   apiKey?: string;
   basePath?: string;
@@ -72,7 +66,6 @@ export type YagnaOptions = {
 
 /**
  * A high-level module for defining and executing tasks in the golem network
- * @category High-level
  */
 export class TaskExecutor {
   private readonly options: ExecutorConfig;
@@ -92,7 +85,6 @@ export class TaskExecutor {
 
   /**
    * Create a new Task Executor
-   * @category High-level
    * @description Factory Method that create and initialize an instance of the TaskExecutor
    *
    * @example **Simple usage of Task Executor**

@@ -1,5 +1,5 @@
 /**
- * @category Mid-level
+ * @hidden
  */
 export interface Result {
   /** Index of script command */

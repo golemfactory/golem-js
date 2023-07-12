@@ -28,7 +28,7 @@ export interface ProposalDTO {
 
 /**
  * Proposal module - an object representing an offer in the state of a proposal from the provider.
- * @category Mid-level
+ * @hidden
  */
 export class Proposal {
   id: string;

@@ -6,7 +6,7 @@ import { AgreementConfig } from "./config.js";
 import { Events } from "../events/index.js";
 
 /**
- * @category Mid-level
+ * @hidden
  */
 export interface ProviderInfo {
   name: string;
@@ -14,7 +14,7 @@ export interface ProviderInfo {
 }
 
 /**
- * @category Mid-level
+ * @hidden
  */
 export enum AgreementStateEnum {
   Proposal = "Proposal",
@@ -27,7 +27,7 @@ export enum AgreementStateEnum {
 }
 
 /**
- * @category Mid-level
+ * @hidden
  */
 export interface AgreementOptions {
   /** yagnaOptions */
@@ -43,7 +43,7 @@ export interface AgreementOptions {
 }
 /**
  * Agreement module - an object representing the contract between the requestor and the provider.
- * @category Mid-level
+ * @hidden
  */
 export class Agreement {
   private agreementData?: AgreementModel;
