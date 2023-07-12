@@ -6,13 +6,13 @@ const EmptyErrorResult: Result = {
   result: ResultState.ERROR,
   eventDate: new Date().toISOString(),
   index: -1,
-  message: "No result due to error"
+  message: "No result due to error",
 };
 
 /**
  * @category Mid-level
  */
-export class Command<T = void> {
+export class Command<T = unknown> {
   protected args: object;
 
   constructor(private commandName: string, args?: object) {
@@ -108,7 +108,7 @@ export class Terminate extends Command {
 /**
  * @category Mid-level
  */
-export class Transfer<T = void> extends Command<T> {
+export class Transfer<T = unknown> extends Command<T> {
   constructor(protected from?: string, protected to?: string, args?: object) {
     super("transfer", { from, to, args });
   }
@@ -177,10 +177,7 @@ export class DownloadFile extends Transfer {
 export class DownloadData extends Transfer<Uint8Array> {
   private chunks: Uint8Array[] = [];
 
-  constructor(
-    private storageProvider: StorageProvider,
-    private srcPath: string,
-  ) {
+  constructor(private storageProvider: StorageProvider, private srcPath: string) {
     super();
     this.args = { from: `container:${srcPath}` };
   }
@@ -204,7 +201,7 @@ export class DownloadData extends Transfer<Uint8Array> {
     return {
       ...result,
       result: ResultState.ERROR,
-      data: undefined
+      data: undefined,
     };
   }
 

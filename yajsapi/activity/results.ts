@@ -6,7 +6,7 @@ export enum ResultState {
 /**
  * @category Mid-level
  */
-export interface Result<T = void> {
+export interface Result<T = unknown> {
   /** Index of script command */
   index: number;
   /** The datetime of the event on which the result was received */
