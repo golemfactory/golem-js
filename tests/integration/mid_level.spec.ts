@@ -48,7 +48,7 @@ describe("Mid-level modules", () => {
     const results: Result[] = [];
     for await (const result of streamResult) results.push(result);
     expect(results[2]).to.include({ stdout: "Hello Golem\n" });
-    await script.after();
+    await script.after(results);
     await activity.stop();
     await agreement.terminate();
     await allocation.release();

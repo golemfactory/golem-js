@@ -1,4 +1,4 @@
-import { StorageProvider } from "./provider.js";
+import { StorageProvider, StorageProviderDataCallback } from "./provider.js";
 import { Logger, runtimeContextChecker } from "../utils/index.js";
 import path from "path";
 import fs from "fs";
@@ -8,7 +8,13 @@ import { spawn } from "child_process";
 export class GftpStorageProvider implements StorageProvider {
   private gftpServerProcess;
   private reader;
-  private publishedUrls: string[] = [];
+
+  /**
+   * All published URLs to be release on close().
+   * @private
+   */
+  private publishedUrls = new Set<string>();
+
   private isInitialized = false;
 
   constructor(private logger?: Logger) {
@@ -44,24 +50,51 @@ export class GftpStorageProvider implements StorageProvider {
     return this.gftpServerProcess;
   }
 
-  async receive(path: string): Promise<string> {
+  async receiveFile(path: string): Promise<string> {
     const { url } = await this.jsonrpc("receive", { output_file: path });
     return url;
   }
 
-  async publish(src: string | Buffer): Promise<string> {
-    if (typeof src !== "string" && !Buffer.isBuffer(src)) throw new Error("[StorageProvider] Unsupported source type");
-    const url = typeof src === "string" ? await this.uploadFile(src) : await this.uploadBytes(src);
-    this.publishedUrls.push(url);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  receiveData(callback: StorageProviderDataCallback): Promise<string> {
+    throw new Error("receiveData is not implemented in GftpStorageProvider");
+  }
+
+  async publishFile(src: string): Promise<string> {
+    const url = await this.uploadFile(src);
+    this.publishedUrls.add(url);
     return url;
   }
 
-  async release(urls: string[]): Promise<void> {
-    return await this.jsonrpc("close", { urls });
+  async publishData(src: Uint8Array): Promise<string> {
+    let url: string;
+    if (Buffer.isBuffer(src)) {
+      url = await this.uploadBytes(src);
+    } else {
+      url = await this.uploadBytes(Buffer.from(src));
+    }
+
+    this.publishedUrls.add(url);
+    return url;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  release(urls: string[]): Promise<void> {
+    // NOTE: Due to GFTP's handling of file Ids (hashes), all files with same content will share IDs, so releasing
+    // one might break transfer of another one. Therefore, we release all files on close().
+    return Promise.resolve(undefined);
+  }
+
+  private async releaseAll(): Promise<void> {
+    if (!this.publishedUrls.size) {
+      return;
+    }
+
+    await this.jsonrpc("close", { urls: Array.from(this.publishedUrls) });
   }
 
   async close() {
-    if (this.publishedUrls.length) await this.release(this.publishedUrls);
+    await this.releaseAll();
     const stream = this.getGftpServerProcess();
     if (stream) await streamEnd(this.getGftpServerProcess().stdin);
   }
@@ -85,13 +118,14 @@ export class GftpStorageProvider implements StorageProvider {
     }
   }
 
-  async *readStream(readable) {
+  async* readStream(readable) {
     for await (const line of chunksToLinesAsync(readable)) {
       yield chomp(line);
     }
   }
 
   private async uploadStream(stream: AsyncGenerator<Buffer>): Promise<string> {
+    // FIXME: temp file is never deleted.
     const file_name = await this.generateTempFileName();
     const wStream = fs.createWriteStream(file_name, {
       encoding: "binary",

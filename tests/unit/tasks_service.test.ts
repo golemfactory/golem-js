@@ -77,7 +77,9 @@ describe("Task Service", () => {
     };
     const task = new Task("1", worker, undefined, undefined, 2);
     queue.addToEnd(task);
-    activityMock.setExpectedExeResults([{ result: "Ok", stdout: "invalid_value" }]);
+    activityMock.setExpectedExeResults([
+      { result: "Ok", stdout: "invalid_value" },
+    ]);
     const service = new TaskService(queue, agreementPoolServiceMock, paymentServiceMock, networkServiceMock, {
       logger,
       taskRunningInterval: 10,

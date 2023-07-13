@@ -68,7 +68,7 @@ describe("Activity", () => {
         expect(result.result).to.equal("Ok");
         expect(result.stdout).to.equal(expectedRunStdOuts.shift());
       }
-      await script.after();
+      await script.after([]);
       await activity.stop();
     });
 
@@ -107,7 +107,7 @@ describe("Activity", () => {
           ++resultCount;
         });
         results.on("end", async () => {
-          await script.after();
+          await script.after([]);
           await activity.stop();
           expect(resultCount).to.equal(6);
           return res();
@@ -173,7 +173,7 @@ describe("Activity", () => {
         if (result.index === 2 && result.stdout) expectedStdout = result.stdout;
       }
       expect(expectedStdout).to.equal("test");
-      await script.after();
+      await script.after([]);
       await activity.stop();
     });
   });

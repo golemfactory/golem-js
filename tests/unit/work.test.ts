@@ -51,7 +51,7 @@ describe("Work Context", () => {
       await ctx.before();
       const results = await worker(ctx);
       expect(results?.stdout).to.equal("test_result");
-      await logger.expectToInclude("Json published");
+      await logger.expectToInclude("Data published");
     });
 
     it("should execute download file command", async () => {
@@ -97,7 +97,7 @@ describe("Work Context", () => {
       const results = await worker(ctx);
       expect(results?.map((r) => r.stdout)).to.deep.equal(expectedStdout.map((s) => s.stdout));
       await logger.expectToInclude("File published: ./file.txt");
-      await logger.expectToInclude("Json published");
+      await logger.expectToInclude("Data published");
       await logger.expectToInclude("File received: ./file.txt");
     });
 
@@ -137,7 +137,7 @@ describe("Work Context", () => {
         results?.on("end", res);
       });
       await logger.expectToInclude("File published: ./file.txt");
-      await logger.expectToInclude("Json published");
+      await logger.expectToInclude("Data published");
       await logger.expectToInclude("File received: ./file.txt");
     });
   });
