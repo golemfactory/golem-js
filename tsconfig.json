@@ -28,7 +28,6 @@
     "exclude": ["**/*.spec.ts","yajsapi/stats/*.ts"],
     "entryPointStrategy": "expand",
     "out": "docs",
-    "readme": "tutorial.md",
     "sort": "static-first",
     "excludePrivate": true,
     "name": "JavaScript API reference",
