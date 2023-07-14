@@ -60,7 +60,8 @@ export class TaskService {
 
   async end() {
     this.isRunning = false;
-    for (const activity of this.activities.values()) await activity.stop().catch((e) => this.logger?.error(e));
+    for (const activity of this.activities.values())
+      await activity.stop().catch((e) => this.logger?.warn(e.toString()));
     this.logger?.debug("Task Service has been stopped");
   }
 

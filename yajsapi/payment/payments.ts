@@ -116,7 +116,7 @@ export class Payments extends EventTarget {
 }
 
 /**
- * @category Mid-level
+ * @hidden
  */
 export class InvoiceEvent extends Event {
   readonly invoice: Invoice;
@@ -133,7 +133,7 @@ export class InvoiceEvent extends Event {
 }
 
 /**
- * @category Mid-level
+ * @hidden
  */
 export class DebitNoteEvent extends Event {
   readonly debitNote: DebitNote;

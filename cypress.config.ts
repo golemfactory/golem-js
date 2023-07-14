@@ -1,6 +1,4 @@
 import { defineConfig } from "cypress";
-import rollupConfig from "./rollup.config.js";
-import { rollup } from "rollup";
 import { Goth } from "./tests/goth/goth";
 import { resolve } from "path";
 

@@ -20,7 +20,7 @@ export interface InvoiceDTO {
 }
 
 /**
- * @category Mid-level
+ * @hidden
  */
 export interface BaseModel {
   issuerId: string;
@@ -34,7 +34,7 @@ export interface BaseModel {
 }
 
 /**
- * @category Mid-level
+ * @hidden
  */
 export abstract class BaseNote<ModelType extends BaseModel> {
   public abstract readonly id: string;
@@ -68,7 +68,7 @@ export abstract class BaseNote<ModelType extends BaseModel> {
 
 /**
  * An Invoice is an artifact issued by the Provider to the Requestor, in the context of a specific Agreement. It indicates the total Amount owed by the Requestor in this Agreement. No further Debit Notes shall be issued after the Invoice is issued. The issue of Invoice signals the Termination of the Agreement (if it hasn't been terminated already). No Activity execution is allowed after the Invoice is issued.
- * @category Mid-level
+ * @hidden
  */
 export class Invoice extends BaseNote<Model> {
   /** Invoice ID */

@@ -19,9 +19,7 @@ import { MarketOptions } from "../market/service";
 import { RequireAtLeastOne } from "../utils/types.js";
 
 const terminatingSignals = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
-/**
- * @category High-level
- */
+
 export type ExecutorOptions = {
   /** Image hash as string, otherwise Package object */
   package?: string | Package;
@@ -58,13 +56,9 @@ export type ExecutorOptions = {
 
 /**
  * Contains information needed to start executor, if string the imageHash is required, otherwise it should be a type of {@link ExecutorOptions}
- * @category High-level
  */
 export type ExecutorOptionsMixin = string | ExecutorOptions;
 
-/**
- * @category High-level
- */
 export type YagnaOptions = {
   apiKey?: string;
   basePath?: string;
@@ -72,7 +66,6 @@ export type YagnaOptions = {
 
 /**
  * A high-level module for defining and executing tasks in the golem network
- * @category High-level
  */
 export class TaskExecutor {
   private readonly options: ExecutorConfig;
@@ -89,10 +82,10 @@ export class TaskExecutor {
   private lastTaskIndex = 0;
   private isRunning = true;
   private configOptions: ExecutorOptions;
+  private isCanceled = false;
 
   /**
    * Create a new Task Executor
-   * @category High-level
    * @description Factory Method that create and initialize an instance of the TaskExecutor
    *
    * @example **Simple usage of Task Executor**
@@ -200,16 +193,17 @@ export class TaskExecutor {
     if (runtimeContextChecker.isNode && !this.options.isSubprocess) this.removeCancelEvent();
     if (!this.isRunning) return;
     this.isRunning = false;
+    if (!this.configOptions.storageProvider) this.storageProvider?.close();
     await this.networkService?.end();
     await this.taskService.end();
     await this.agreementPoolService.end();
     await this.marketService.end();
     await this.paymentService.end();
-    if (!this.configOptions.storageProvider) this.storageProvider?.close();
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFinished());
     this.printStats();
     await this.statsService.end();
     this.logger?.info("Task Executor has shut down");
+    if (runtimeContextChecker.isNode && !this.options.isSubprocess) process.exit(0);
   }
 
   /**
@@ -382,7 +376,7 @@ export class TaskExecutor {
     if (this.isRunning) this.logger?.warn("Trying to stop executor...");
     this.end().catch((e) => {
       this.logger?.error(e);
-      !this.options.isSubprocess && process?.exit(1);
+      if (runtimeContextChecker.isNode && !this.options.isSubprocess) process?.exit(1);
     });
   }
 
@@ -395,16 +389,19 @@ export class TaskExecutor {
   }
 
   public async cancel(reason?: string) {
+    if (this.isCanceled) return;
+    if (runtimeContextChecker.isNode && !this.options.isSubprocess) this.removeCancelEvent();
     const message = `Executor has interrupted by the user. Reason: ${reason}.`;
     this.logger?.warn(`${message}. Stopping all tasks...`);
+    this.isCanceled = true;
     await this.end()
       .then(() => {
         if (this.options.isSubprocess) throw new Error(message);
-        else process.exit(0);
+        else if (runtimeContextChecker.isNode) process.exit(0);
       })
       .catch((error) => {
         this.logger?.error(error);
-        !this.options.isSubprocess && process.exit(1);
+        if (runtimeContextChecker.isNode && !this.options.isSubprocess) process.exit(1);
       });
   }
 

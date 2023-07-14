@@ -8,7 +8,7 @@ import { ActivityConfig } from "./config.js";
 import { Events } from "../events/index.js";
 
 /**
- * @category Mid-level
+ * @hidden
  */
 export enum ActivityStateEnum {
   New = "New",
@@ -20,14 +20,14 @@ export enum ActivityStateEnum {
 }
 
 /**
- * @category Mid-level
+ * @hidden
  */
 export interface ExeScriptRequest {
   text: string;
 }
 
 /**
- * @category Mid-level
+ * @hidden
  */
 export interface ActivityOptions {
   yagnaOptions?: {
@@ -51,7 +51,7 @@ export interface ActivityOptions {
 /**
  * Activity module - an object representing the runtime environment on the provider in accordance with the `Package` specification.
  * As part of a given activity, it is possible to execute exe script commands and capture their results.
- * @category Mid-level
+ * @hidden
  */
 export class Activity {
   private readonly logger?: Logger;
@@ -155,8 +155,7 @@ export class Activity {
         timeout: (this.options.activityRequestTimeout + 1) * 1000,
       })
       .catch((error) => {
-        this.logger?.warn(`Got API Exception when destroying activity ${this.id}: ${error}`);
-        throw error;
+        throw new Error(`Got API Exception when destroying activity ${this.id}: ${error.message || error.toString()}`);
       });
     this.options.eventTarget?.dispatchEvent(new Events.ActivityDestroyed(this));
     this.logger?.debug(`Activity ${this.id} destroyed`);

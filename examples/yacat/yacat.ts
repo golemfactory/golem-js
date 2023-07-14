@@ -9,7 +9,7 @@ async function main(args) {
     minStorageGib: 2,
     budget: 10,
     subnetTag: args.subnetTag,
-    taskTimeout: 180_000,
+    taskTimeout: 1000 * 60 * 8, // 8 min
     payment: { driver: args.paymentDriver, network: args.paymentNetwork },
     logLevel: args.debug ? "debug" : "info",
   });

@@ -2,7 +2,7 @@ import { ExeScriptRequest } from "ya-ts-client/dist/ya-activity/src/models/index
 import { Command, Deploy, Run, Start } from "./command.js";
 
 /**
- * @category Mid-level
+ * @hidden
  */
 export class Script {
   static create(commands?: Command[]): Script {
