@@ -101,7 +101,7 @@ export class Agreement {
         new Events.AgreementConfirmed({ id: this.id, providerId: this.provider.id })
       );
     } catch (error) {
-      this.logger?.error(`Unable to confirm agreement ${this.id}. ${error}`);
+      this.logger?.debug(`Unable to confirm agreement with provider ${this.provider.name}. ${error}`);
       this.options.eventTarget?.dispatchEvent(
         new Events.AgreementRejected({ id: this.id, providerId: this.provider.id, reason: error.toString() })
       );

@@ -155,7 +155,7 @@ export class Activity {
         timeout: (this.options.activityRequestTimeout + 1) * 1000,
       })
       .catch((error) => {
-        throw new Error(`Got API Exception when destroying activity ${this.id}: ${error}`);
+        throw new Error(`Got API Exception when destroying activity ${this.id}: ${error.message || error.toString()}`);
       });
     this.options.eventTarget?.dispatchEvent(new Events.ActivityDestroyed(this));
     this.logger?.debug(`Activity ${this.id} destroyed`);

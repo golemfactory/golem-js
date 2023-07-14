@@ -82,6 +82,7 @@ export class TaskExecutor {
   private lastTaskIndex = 0;
   private isRunning = true;
   private configOptions: ExecutorOptions;
+  private isCanceled = false;
 
   /**
    * Create a new Task Executor
@@ -192,16 +193,17 @@ export class TaskExecutor {
     if (runtimeContextChecker.isNode && !this.options.isSubprocess) this.removeCancelEvent();
     if (!this.isRunning) return;
     this.isRunning = false;
+    if (!this.configOptions.storageProvider) this.storageProvider?.close();
     await this.networkService?.end();
     await this.taskService.end();
     await this.agreementPoolService.end();
     await this.marketService.end();
     await this.paymentService.end();
-    if (!this.configOptions.storageProvider) this.storageProvider?.close();
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFinished());
     this.printStats();
     await this.statsService.end();
     this.logger?.info("Task Executor has shut down");
+    !this.options.isSubprocess && process.exit(0);
   }
 
   /**
@@ -387,8 +389,11 @@ export class TaskExecutor {
   }
 
   public async cancel(reason?: string) {
+    if (this.isCanceled) return;
+    if (runtimeContextChecker.isNode && !this.options.isSubprocess) this.removeCancelEvent();
     const message = `Executor has interrupted by the user. Reason: ${reason}.`;
     this.logger?.warn(`${message}. Stopping all tasks...`);
+    this.isCanceled = true;
     await this.end()
       .then(() => {
         if (this.options.isSubprocess) throw new Error(message);

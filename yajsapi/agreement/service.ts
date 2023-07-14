@@ -110,22 +110,15 @@ export class AgreementPoolService {
         await sleep(2);
       }
     }
-
     if (!agreement && !this.isServiceRunning) {
       throw new Error("Unable to get agreement. Agreement service is not running");
     }
-
     return agreement;
-  }
-
-  private cleanupPool() {
-    const toCleanup = Array.from(this.pool).filter((e) => !!e.agreement);
   }
 
   private async getAgreementFormPool(): Promise<Agreement | undefined> {
     // Limit concurrency to 1
     const candidate = await this.limiter.schedule(async () => {
-      this.cleanupPool();
       if (this.pool.size === 0) return;
       const candidates = Array.from(this.pool);
       const bestCandidate = await this.config.agreementSelector(candidates);

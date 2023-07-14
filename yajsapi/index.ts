@@ -6,4 +6,4 @@ export { ProposalFilters, ProposalDTO } from "./market/index.js";
 export { Package, PackageOptions } from "./package/index.js";
 export { PaymentFilters } from "./payment/index.js";
 export { Events, BaseEvent, EventType } from "./events/index.js";
-export { Logger, jsonLogger, nullLogger, consoleLogger, pinoLogger, defaultLogger } from "./utils/index.js";
+export { Logger, LogLevel, jsonLogger, nullLogger, consoleLogger, pinoLogger, defaultLogger } from "./utils/index.js";
