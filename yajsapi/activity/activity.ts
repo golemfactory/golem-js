@@ -199,7 +199,7 @@ export class Activity {
               retryCount = await handleError(error, lastIndex, retryCount, maxRetries);
             } catch (error) {
               eventTarget?.dispatchEvent(new Events.ScriptExecuted({ activityId, agreementId, success: false }));
-              return this.destroy(error?.message || error);
+              return this.destroy(new Error(`Unable to get activity results. ${error?.message || error}`));
             }
           }
         }
