@@ -41,7 +41,6 @@
     "collect.js": "^4.34.3",
     "eventsource": "^2.0.2",
     "ip-num": "^1.4.1",
-    "p-limit": "^4.0.0",
     "pino": "^8.11.0",
     "pino-pretty": "^9.4.0",
     "ya-ts-client": "^0.5.3"
