@@ -193,11 +193,9 @@ export class TaskExecutor {
     if (runtimeContextChecker.isNode && !this.options.isSubprocess) this.removeCancelEvent();
     if (!this.isRunning) return;
     this.isRunning = false;
-    if (!this.configOptions.storageProvider) this.storageProvider?.close();
+    if (!this.configOptions.storageProvider) await this.storageProvider?.close();
     await this.networkService?.end();
-    await this.taskService.end();
-    await this.agreementPoolService.end();
-    await this.marketService.end();
+    await Promise.all([this.taskService.end(), this.agreementPoolService.end(), this.marketService.end()]);
     await this.paymentService.end();
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFinished());
     this.printStats();
