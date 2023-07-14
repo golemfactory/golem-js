@@ -156,9 +156,7 @@ export class Activity {
       })
       .catch((error) => {
         throw new Error(
-          `Got API Exception when destroying activity ${this.id}: ${
-            error?.response?.data?.message || error?.message || error
-          }`
+          `Unable to destroy activity ${this.id}. ${error?.response?.data?.message || error?.message || error}`
         );
       });
     this.options.eventTarget?.dispatchEvent(new Events.ActivityDestroyed(this));
