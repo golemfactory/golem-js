@@ -203,7 +203,7 @@ export class TaskExecutor {
     this.printStats();
     await this.statsService.end();
     this.logger?.info("Task Executor has shut down");
-    !this.options.isSubprocess && process.exit(0);
+    if (runtimeContextChecker.isNode && !this.options.isSubprocess) process.exit(0);
   }
 
   /**

@@ -8,7 +8,7 @@ const DEFAULTS = {
   taskRunningInterval: 1000,
   taskTimeout: 30000,
   activityStateCheckingInterval: 2000,
-  activityPreparingTimeout: 1000 * 60 * 2, // 2 min
+  activityPreparingTimeout: 1000 * 60 * 4, // 2 min
 };
 
 /**
