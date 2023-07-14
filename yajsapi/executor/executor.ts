@@ -376,7 +376,7 @@ export class TaskExecutor {
     if (this.isRunning) this.logger?.warn("Trying to stop executor...");
     this.end().catch((e) => {
       this.logger?.error(e);
-      !this.options.isSubprocess && process?.exit(1);
+      if (runtimeContextChecker.isNode && !this.options.isSubprocess) process?.exit(1);
     });
   }
 
@@ -397,11 +397,11 @@ export class TaskExecutor {
     await this.end()
       .then(() => {
         if (this.options.isSubprocess) throw new Error(message);
-        else process.exit(0);
+        else if (runtimeContextChecker.isNode) process.exit(0);
       })
       .catch((error) => {
         this.logger?.error(error);
-        !this.options.isSubprocess && process.exit(1);
+        if (runtimeContextChecker.isNode && !this.options.isSubprocess) process.exit(1);
       });
   }
 
