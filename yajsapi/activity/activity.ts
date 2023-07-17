@@ -137,7 +137,7 @@ export class Activity {
       }
       return ActivityStateEnum[state];
     } catch (error) {
-      this.logger?.warn(`Cannot query activity state: ${error}`);
+      this.logger?.warn(`Cannot query activity state: ${error?.response?.data?.message || error?.message || error}`);
       throw error;
     }
   }
@@ -151,11 +151,13 @@ export class Activity {
 
   private async end() {
     await this.options.api.control
-      .destroyActivity(this.id, this.options.activityRequestTimeout, {
-        timeout: (this.options.activityRequestTimeout + 1) * 1000,
+      .destroyActivity(this.id, this.options.activityRequestTimeout / 1000, {
+        timeout: this.options.activityRequestTimeout + 1000,
       })
       .catch((error) => {
-        throw new Error(`Got API Exception when destroying activity ${this.id}: ${error.message || error.toString()}`);
+        throw new Error(
+          `Unable to destroy activity ${this.id}. ${error?.response?.data?.message || error?.message || error}`
+        );
       });
     this.options.eventTarget?.dispatchEvent(new Events.ActivityDestroyed(this));
     this.logger?.debug(`Activity ${this.id} destroyed`);
@@ -197,7 +199,7 @@ export class Activity {
               retryCount = await handleError(error, lastIndex, retryCount, maxRetries);
             } catch (error) {
               eventTarget?.dispatchEvent(new Events.ScriptExecuted({ activityId, agreementId, success: false }));
-              return this.destroy(error?.message || error);
+              return this.destroy(new Error(`Unable to get activity results. ${error?.message || error}`));
             }
           }
         }

@@ -156,14 +156,17 @@ export class AgreementPoolService {
    * @param reason
    */
   async terminateAll(reason?: { [key: string]: string }) {
-    this.logger?.debug(`Terminate all agreements was called`);
-    for (const [agreementId] of Array.from(this.candidateMap)) {
-      const agreement = this.agreements.get(agreementId);
-      if (agreement && (await agreement.getState()) !== AgreementStateEnum.Terminated)
-        await agreement
+    const agreementsToTerminate = Array.from(this.candidateMap)
+      .map(([agreementId]) => this.agreements.get(agreementId))
+      .filter((a) => a !== undefined) as Agreement[];
+    this.logger?.debug(`Trying to terminate all agreements.... Size: ${agreementsToTerminate.length}`);
+    await Promise.all(
+      agreementsToTerminate.map((agreement) =>
+        agreement
           .terminate(reason)
-          .catch((e) => this.logger?.warn(`Agreement ${agreement.id} cannot be terminated. ${e}`));
-    }
+          .catch((e) => this.logger?.warn(`Agreement ${agreement.id} cannot be terminated. ${e}`))
+      )
+    );
   }
 
   async createAgreement(candidate) {

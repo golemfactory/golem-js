@@ -61,9 +61,10 @@ export class GftpStorageProvider implements StorageProvider {
   }
 
   async close() {
-    if (this.publishedUrls.length) await this.release(this.publishedUrls);
+    if (this.publishedUrls.length) await this.release(this.publishedUrls).catch((e) => this.logger?.warn(e));
     const stream = this.getGftpServerProcess();
-    if (stream) await streamEnd(this.getGftpServerProcess().stdin);
+    if (stream) await streamEnd(this.getGftpServerProcess().stdin).catch((e) => this.logger?.warn(e));
+    this.logger?.debug(`Gftp Storage Provider has been stopped`);
   }
 
   private async jsonrpc(method: string, params: object = {}) {
