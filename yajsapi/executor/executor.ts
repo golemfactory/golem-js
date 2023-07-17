@@ -130,7 +130,7 @@ export class TaskExecutor {
     this.configOptions = (typeof options === "string" ? { package: options } : options) as ExecutorOptions;
     this.options = new ExecutorConfig(this.configOptions);
     this.logger = this.options.logger;
-    this.taskQueue = new TaskQueue<Task<any, any>>();
+    this.taskQueue = new TaskQueue<Task<unknown, unknown>>();
     this.agreementPoolService = new AgreementPoolService(this.options);
     this.paymentService = new PaymentService(this.options);
     this.marketService = new MarketService(this.agreementPoolService, this.options);

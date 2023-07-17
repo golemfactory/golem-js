@@ -1,5 +1,5 @@
 import { ExeScriptRequest } from "ya-ts-client/dist/ya-activity/src/models/index.js";
-import { Command, Deploy, Run, Start } from "./command.js";
+import { Command } from "./command.js";
 
 /**
  * @hidden
