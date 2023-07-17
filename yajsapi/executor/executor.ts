@@ -21,7 +21,7 @@ import { RequireAtLeastOne } from "../utils/types.js";
 const terminatingSignals = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
 
 export type ExecutorOptions = {
-  /** Image hash as string, otherwise Package object */
+  /** Image hash or image tag as string, otherwise Package object */
   package?: string | Package;
   /** Timeout for execute one task in ms */
   taskTimeout?: number;
@@ -91,9 +91,13 @@ export class TaskExecutor {
    * @example **Simple usage of Task Executor**
    *
    * The executor can be created by passing appropriate initial parameters such as package, budget, subnet tag, payment driver, payment network etc.
-   * One required parameter is a package. This can be done in two ways. First by passing only package image hash, e.g.
+   * One required parameter is a package. This can be done in two ways. First by passing only package image hash or image tag, e.g.
    * ```js
    * const executor = await TaskExecutor.create("9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae");
+   * ```
+   * or
+   * ```js
+   * const executor = await TaskExecutor.create("golem/alpine:3.18.2");
    * ```
    *
    * @example **Usage of Task Executor with custom parameters**
@@ -103,7 +107,7 @@ export class TaskExecutor {
    * const executor = await TaskExecutor.create({
    *   subnetTag: "public",
    *   payment: { driver: "erc-20", network: "rinkeby" },
-   *   package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+   *   package: "golem/alpine:3.18.2",
    * });
    * ```
    *
