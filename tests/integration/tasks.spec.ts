@@ -34,6 +34,23 @@ describe("Task Executor", function () {
     expect(logger.logs).to.match(/Activity .* created/);
   }).timeout(60000);
 
+  it("should run simple task using package tag", async () => {
+    executor = await TaskExecutor.create({
+      package: "golem/alpine:3.18.2",
+      payment: { network: "rinkeby" },
+      logger,
+    });
+    const result = await executor.run(async (ctx) => ctx.run("echo 'Hello World'"));
+
+    expect(result?.stdout).to.include("Hello World");
+    expect(logger.logs).to.include("Demand published on the market");
+    expect(logger.logs).to.include("New proposal has been received");
+    expect(logger.logs).to.include("Proposal has been responded");
+    expect(logger.logs).to.include("New proposal added to pool");
+    expect(logger.logs).to.match(/Agreement confirmed by provider/);
+    expect(logger.logs).to.match(/Activity .* created/);
+  }).timeout(60000);
+
   it("should run simple tasks by map function", async () => {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
