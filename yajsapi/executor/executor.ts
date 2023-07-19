@@ -6,7 +6,7 @@ import { PaymentService, PaymentOptions } from "../payment/index.js";
 import { NetworkService } from "../network/index.js";
 import { ActivityOptions, Result } from "../activity/index.js";
 import { sleep, Logger, runtimeContextChecker } from "../utils/index.js";
-import { StorageProvider, GftpStorageProvider, NullStorageProvider } from "../storage/index.js";
+import { StorageProvider, GftpStorageProvider, NullStorageProvider, WebSocketBrowserStorageProvider } from "../storage/index.js";
 import { ExecutorConfig } from "./config.js";
 import { Events } from "../events/index.js";
 import { StatsService } from "../stats/service.js";
@@ -138,9 +138,24 @@ export class TaskExecutor {
     this.paymentService = new PaymentService(this.options);
     this.marketService = new MarketService(this.agreementPoolService, this.options);
     this.networkService = this.options.networkIp ? new NetworkService(this.options) : undefined;
-    this.storageProvider = runtimeContextChecker.isNode
-      ? this.configOptions.storageProvider ?? new GftpStorageProvider(this.logger)
-      : new NullStorageProvider();
+
+    // Initialize storage provider.
+    if (this.configOptions.storageProvider) {
+      this.storageProvider = this.configOptions.storageProvider;
+    } else if (runtimeContextChecker.isNode) {
+      this.storageProvider = new GftpStorageProvider(this.logger);
+    } else if (runtimeContextChecker.isBrowser) {
+      this.storageProvider = new WebSocketBrowserStorageProvider({
+        yagnaOptions: {
+          apiKey: this.options.yagnaOptions.apiKey,
+          basePath: this.options.yagnaOptions.basePath,
+        },
+        logger: this.logger,
+      })
+    } else {
+      this.storageProvider = new NullStorageProvider();
+    }
+
     this.taskService = new TaskService(
       this.taskQueue,
       this.agreementPoolService,
