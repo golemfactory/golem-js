@@ -1,6 +1,12 @@
 // High level API
 export { TaskExecutor, ExecutorOptions } from "./executor/index.js";
-export { StorageProvider, GftpStorageProvider } from "./storage/index.js";
+export {
+  StorageProvider,
+  GftpStorageProvider,
+  NullStorageProvider,
+  WebSocketBrowserStorageProvider,
+  WebSocketStorageProviderOptions
+} from "./storage/index.js";
 
 // Mid level API
 export { Activity, ActivityOptions, ActivityStateEnum, Result } from "./activity/index.js";
