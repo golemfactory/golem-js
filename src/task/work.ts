@@ -20,7 +20,7 @@ import { NetworkNode } from "../network";
 export type Worker<InputType = unknown, OutputType = unknown> = (
   ctx: WorkContext,
   data?: InputType,
-) => Promise<OutputType | undefined>;
+) => Promise<OutputType>;
 
 const DEFAULTS = {
   activityPreparingTimeout: 300_000,
