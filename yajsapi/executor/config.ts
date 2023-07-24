@@ -84,7 +84,7 @@ export class ExecutorConfig {
     this.logLevel = options.logLevel || DEFAULTS.logLevel;
     this.logger?.setLevel && this.logger?.setLevel(this.logLevel);
     this.eventTarget = options.eventTarget || new EventTarget();
-    this.maxTaskRetries = options.maxTaskRetries || DEFAULTS.maxTaskRetries;
+    this.maxTaskRetries = options.maxTaskRetries ?? DEFAULTS.maxTaskRetries;
     this.isSubprocess = options.isSubprocess ?? false;
   }
 }

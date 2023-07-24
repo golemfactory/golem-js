@@ -15,6 +15,7 @@
 /examples/yacat/*.txt
 /examples/yacat/*.hash
 /examples/yacat/*.potfile
+/docs
 logs/
 .cypress
 

@@ -6,7 +6,7 @@ import { PaymentService, PaymentOptions } from "../payment/index.js";
 import { NetworkService } from "../network/index.js";
 import { ActivityOptions, Result } from "../activity/index.js";
 import { sleep, Logger, runtimeContextChecker } from "../utils/index.js";
-import { StorageProvider, GftpStorageProvider } from "../storage/index.js";
+import { StorageProvider, GftpStorageProvider, NullStorageProvider } from "../storage/index.js";
 import { ExecutorConfig } from "./config.js";
 import { Events } from "../events/index.js";
 import { StatsService } from "../stats/service.js";
@@ -136,8 +136,8 @@ export class TaskExecutor {
     this.marketService = new MarketService(this.agreementPoolService, this.options);
     this.networkService = this.options.networkIp ? new NetworkService(this.options) : undefined;
     this.storageProvider = runtimeContextChecker.isNode
-      ? this.configOptions.storageProvider || new GftpStorageProvider(this.logger)
-      : undefined;
+      ? this.configOptions.storageProvider ?? new GftpStorageProvider(this.logger)
+      : new NullStorageProvider();
     this.taskService = new TaskService(
       this.taskQueue,
       this.agreementPoolService,

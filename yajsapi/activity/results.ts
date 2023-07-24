@@ -1,13 +1,18 @@
+export enum ResultState {
+  OK = "Ok",
+  ERROR = "Error",
+}
+
 /**
  * @hidden
  */
-export interface Result {
+export interface Result<T = unknown> {
   /** Index of script command */
   index: number;
   /** The datetime of the event on which the result was received */
   eventDate: string;
   /** If is success */
-  result?: "Ok" | "Error";
+  result: ResultState;
   /** stdout of script command */
   stdout?: string;
   /** stderr of script command */
@@ -16,6 +21,7 @@ export interface Result {
   message?: string;
   /** Is batch of already finished */
   isBatchFinished?: boolean;
+  data?: T;
 }
 
 export interface StreamingBatchEvent {
