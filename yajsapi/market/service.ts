@@ -55,7 +55,7 @@ export class MarketService {
       this.demand.removeEventListener(DemandEventType, this.demandEventListener.bind(this));
       await this.demand.unsubscribe().catch((e) => this.logger?.error(`Could not unsubscribe demand. ${e}`));
     }
-    this.options.httpAgent.destroy();
+    this.options.httpAgent?.destroy();
     this.logger?.debug("Market Service has been stopped");
   }
 

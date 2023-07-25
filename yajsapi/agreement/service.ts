@@ -149,6 +149,7 @@ export class AgreementPoolService {
     this.isServiceRunning = false;
     await this.terminateAll({ message: "All computations done" });
     this.config.httpAgent.destroy();
+    this.config.httpAgent.removeAllListeners();
     this.logger?.debug("Agreement Pool Service has been stopped");
   }
 
