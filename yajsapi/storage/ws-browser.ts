@@ -98,8 +98,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
   }
 
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  publishFile(srcPath: string): Promise<string> {
+  publishFile(): Promise<string> {
     throw new Error("Not implemented");
   }
 
@@ -125,8 +124,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
     return fileInfo.url;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  receiveFile(destPath: string): Promise<string> {
+  receiveFile(): Promise<string> {
     throw new Error("Not implemented");
   }
 
