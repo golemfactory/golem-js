@@ -10,9 +10,10 @@ import {
 } from "ya-ts-client/dist/ya-activity/src/models/index.js";
 import { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 import { v4 as uuidv4 } from "uuid";
-import { ExeScriptCommandResultResultEnum } from "ya-ts-client/dist/ya-activity/src/models/exe-script-command-result.js";
+import {
+  ExeScriptCommandResultResultEnum
+} from "ya-ts-client/dist/ya-activity/src/models/exe-script-command-result.js";
 import { RequestorStateApi } from "ya-ts-client/dist/ya-activity/src/api/requestor-state-api.js";
-import { Result } from "../../../yajsapi/activity/index.js";
 
 const exampleExeResult = {
   index: 0,
