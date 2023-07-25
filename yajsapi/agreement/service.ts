@@ -148,6 +148,7 @@ export class AgreementPoolService {
   async end() {
     this.isServiceRunning = false;
     await this.terminateAll({ message: "All computations done" });
+    this.config.httpAgent.destroy();
     this.logger?.debug("Agreement Pool Service has been stopped");
   }
 
@@ -164,8 +165,8 @@ export class AgreementPoolService {
       agreementsToTerminate.map((agreement) =>
         agreement
           .terminate(reason)
-          .catch((e) => this.logger?.warn(`Agreement ${agreement.id} cannot be terminated. ${e}`))
-      )
+          .catch((e) => this.logger?.warn(`Agreement ${agreement.id} cannot be terminated. ${e}`)),
+      ),
     );
   }
 

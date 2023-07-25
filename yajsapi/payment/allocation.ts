@@ -52,7 +52,7 @@ export class Allocation {
     };
     const { data: newModel } = await config.api.createAllocation(model).catch((error) => {
       throw new Error(
-        `Could not create new allocation. ${error.response?.data?.message || error.response?.data || error}`
+        `Could not create new allocation. ${error.response?.data?.message || error.response?.data || error}`,
       );
     });
     config.eventTarget?.dispatchEvent(
@@ -60,10 +60,10 @@ export class Allocation {
         id: newModel.allocationId,
         amount: parseFloat(newModel.totalAmount),
         platform: newModel.paymentPlatform,
-      })
+      }),
     );
     config.logger?.debug(
-      `Allocation ${newModel.allocationId} has been created using payment platform ${config.account.platform}`
+      `Allocation ${newModel.allocationId} has been created using payment platform ${config.account.platform}`,
     );
     return new Allocation(config, newModel);
   }
@@ -73,7 +73,10 @@ export class Allocation {
    * @param model - {@link Model}
    * @hidden
    */
-  constructor(private options: AllocationConfig, model: Model) {
+  constructor(
+    private options: AllocationConfig,
+    model: Model,
+  ) {
     this.id = model.allocationId;
     this.timeout = model.timeout;
     this.timestamp = model.timestamp;
@@ -109,9 +112,12 @@ export class Allocation {
    * Release allocation
    */
   async release() {
-    await this.options.api.releaseAllocation(this.id).catch((e) => {
-      throw new Error(`Could not release allocation. ${e.response?.data?.message || e}`);
-    });
+    await this.options.api
+      .releaseAllocation(this.id)
+      .catch((e) => {
+        throw new Error(`Could not release allocation. ${e.response?.data?.message || e}`);
+      })
+      .finally(() => this.options.httpAgent.destroy());
     this.options?.logger?.debug(`Allocation ${this.id} has been released.`);
   }
 

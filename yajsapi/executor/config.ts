@@ -32,7 +32,6 @@ export class ExecutorConfig {
   readonly eventTarget: EventTarget;
   readonly maxTaskRetries: number;
   readonly activityExecuteTimeout?: number;
-  readonly isSubprocess: boolean;
 
   constructor(options: ExecutorOptions & ActivityOptions) {
     const processEnv = !runtimeContextChecker.isBrowser
@@ -85,6 +84,5 @@ export class ExecutorConfig {
     this.logger?.setLevel && this.logger?.setLevel(this.logLevel);
     this.eventTarget = options.eventTarget || new EventTarget();
     this.maxTaskRetries = options.maxTaskRetries || DEFAULTS.maxTaskRetries;
-    this.isSubprocess = options.isSubprocess ?? false;
   }
 }
