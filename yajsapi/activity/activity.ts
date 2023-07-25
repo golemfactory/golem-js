@@ -64,7 +64,11 @@ export class Activity {
    * @param options - {@link ActivityOptions}
    * @hidden
    */
-  constructor(public readonly id, public readonly agreementId, protected readonly options: ActivityConfig) {
+  constructor(
+    public readonly id,
+    public readonly agreementId,
+    protected readonly options: ActivityConfig,
+  ) {
     this.logger = options?.logger;
   }
 
@@ -101,7 +105,7 @@ export class Activity {
     }
     this.logger?.debug(`Script sent. Batch ID: ${batchId}`);
     this.options.eventTarget?.dispatchEvent(
-      new Events.ScriptSent({ activityId: this.id, agreementId: this.agreementId })
+      new Events.ScriptSent({ activityId: this.id, agreementId: this.agreementId }),
     );
     return stream
       ? this.streamingBatch(batchId, batchSize, startTime, timeout)
@@ -131,7 +135,7 @@ export class Activity {
       const state = data.state[0];
       if (this.currentState !== ActivityStateEnum[state]) {
         this.options.eventTarget?.dispatchEvent(
-          new Events.ActivityStateChanged({ id: this.id, state: ActivityStateEnum[state] })
+          new Events.ActivityStateChanged({ id: this.id, state: ActivityStateEnum[state] }),
         );
         this.currentState = ActivityStateEnum[state];
       }
@@ -156,10 +160,11 @@ export class Activity {
       })
       .catch((error) => {
         throw new Error(
-          `Unable to destroy activity ${this.id}. ${error?.response?.data?.message || error?.message || error}`
+          `Unable to destroy activity ${this.id}. ${error?.response?.data?.message || error?.message || error}`,
         );
       });
     this.options.eventTarget?.dispatchEvent(new Events.ActivityDestroyed(this));
+    this.options.httpAgent.destroy();
     this.logger?.debug(`Activity ${this.id} destroyed`);
   }
 

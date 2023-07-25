@@ -44,17 +44,19 @@ abstract class BaseConfig {
   public readonly eventTarget?: EventTarget;
   public readonly payment: { driver: string; network: string };
   public readonly paymentRequestTimeout: number;
+  public readonly httpAgent: Agent;
 
   constructor(public readonly options?: BasePaymentOptions) {
     this.yagnaOptions = options?.yagnaOptions;
     const apiKey = options?.yagnaOptions?.apiKey || EnvUtils.getYagnaAppKey();
     if (!apiKey) throw new Error("Api key not defined");
     const basePath = options?.yagnaOptions?.basePath || EnvUtils.getYagnaApiUrl();
+    this.httpAgent = new Agent({ keepAlive: true });
     const apiConfig = new Configuration({
       apiKey,
       basePath: `${basePath}/payment-api/v1`,
       accessToken: apiKey,
-      baseOptions: { httpAgent: new Agent({ keepAlive: true }) },
+      baseOptions: { httpAgent: this.httpAgent },
     });
     this.api = new RequestorApi(apiConfig);
     this.paymentTimeout = options?.paymentTimeout || DEFAULTS.paymentTimeout;

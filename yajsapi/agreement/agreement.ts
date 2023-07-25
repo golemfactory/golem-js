@@ -55,7 +55,11 @@ export class Agreement {
    * @param options - {@link AgreementConfig}
    * @hidden
    */
-  constructor(public readonly id, public readonly provider: ProviderInfo, private readonly options: AgreementConfig) {
+  constructor(
+    public readonly id,
+    public readonly provider: ProviderInfo,
+    private readonly options: AgreementConfig,
+  ) {
     this.logger = options.logger;
   }
 
@@ -98,12 +102,12 @@ export class Agreement {
       await this.options.api.waitForApproval(this.id, this.options.agreementWaitingForApprovalTimeout);
       this.logger?.debug(`Agreement ${this.id} approved`);
       this.options.eventTarget?.dispatchEvent(
-        new Events.AgreementConfirmed({ id: this.id, providerId: this.provider.id })
+        new Events.AgreementConfirmed({ id: this.id, providerId: this.provider.id }),
       );
     } catch (error) {
       this.logger?.debug(`Unable to confirm agreement with provider ${this.provider.name}. ${error}`);
       this.options.eventTarget?.dispatchEvent(
-        new Events.AgreementRejected({ id: this.id, providerId: this.provider.id, reason: error.toString() })
+        new Events.AgreementRejected({ id: this.id, providerId: this.provider.id, reason: error.toString() }),
       );
       throw error;
     }
@@ -133,13 +137,15 @@ export class Agreement {
           timeout: this.options.agreementRequestTimeout,
         });
       this.options.eventTarget?.dispatchEvent(
-        new Events.AgreementTerminated({ id: this.id, providerId: this.provider.id })
+        new Events.AgreementTerminated({ id: this.id, providerId: this.provider.id }),
       );
       this.logger?.debug(`Agreement ${this.id} terminated`);
     } catch (error) {
       throw new Error(
-        `Unable to terminate agreement ${this.id}. ${error.response?.data?.message || error.response?.data || error}`
+        `Unable to terminate agreement ${this.id}. ${error.response?.data?.message || error.response?.data || error}`,
       );
+    } finally {
+      this.options.httpAgent.destroy();
     }
   }
 }
