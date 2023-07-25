@@ -120,6 +120,4 @@ yarn format
     * [Quick start](https://docs.golem.network/creators/javascript/quickstart/)
 * Have a look at the most important concepts behind any Golem application: [Golem application fundamentals](https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals)
 * Learn about preparing your own Docker-like images for the [VM runtime](https://handbook.golem.network/requestor-tutorials/vm-runtime)
-* Write your own app with JavaScript API:
-    * [High-level API](https://docs.golem.network/creators/javascript/high-level/task-model/)
-    * [Mid-level API](https://docs.golem.network/creators/javascript/mid-level/)
+* Write your own app with [JavaScript API](https://docs.golem.network/creators/javascript/high-level/task-model/)

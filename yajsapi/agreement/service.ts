@@ -110,22 +110,15 @@ export class AgreementPoolService {
         await sleep(2);
       }
     }
-
     if (!agreement && !this.isServiceRunning) {
       throw new Error("Unable to get agreement. Agreement service is not running");
     }
-
     return agreement;
-  }
-
-  private cleanupPool() {
-    const toCleanup = Array.from(this.pool).filter((e) => !!e.agreement);
   }
 
   private async getAgreementFormPool(): Promise<Agreement | undefined> {
     // Limit concurrency to 1
     const candidate = await this.limiter.schedule(async () => {
-      this.cleanupPool();
       if (this.pool.size === 0) return;
       const candidates = Array.from(this.pool);
       const bestCandidate = await this.config.agreementSelector(candidates);
@@ -163,14 +156,17 @@ export class AgreementPoolService {
    * @param reason
    */
   async terminateAll(reason?: { [key: string]: string }) {
-    this.logger?.debug(`Terminate all agreements was called`);
-    for (const [agreementId] of Array.from(this.candidateMap)) {
-      const agreement = this.agreements.get(agreementId);
-      if (agreement && (await agreement.getState()) !== AgreementStateEnum.Terminated)
-        await agreement
+    const agreementsToTerminate = Array.from(this.candidateMap)
+      .map(([agreementId]) => this.agreements.get(agreementId))
+      .filter((a) => a !== undefined) as Agreement[];
+    this.logger?.debug(`Trying to terminate all agreements.... Size: ${agreementsToTerminate.length}`);
+    await Promise.all(
+      agreementsToTerminate.map((agreement) =>
+        agreement
           .terminate(reason)
-          .catch((e) => this.logger?.warn(`Agreement ${agreement.id} cannot be terminated. ${e}`));
-    }
+          .catch((e) => this.logger?.warn(`Agreement ${agreement.id} cannot be terminated. ${e}`))
+      )
+    );
   }
 
   async createAgreement(candidate) {

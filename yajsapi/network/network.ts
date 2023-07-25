@@ -5,7 +5,7 @@ import { NetworkConfig } from "./config.js";
 import { NetworkNode } from "./node.js";
 
 /**
- * @category Mid-level
+ * @hidden
  */
 export interface NetworkOptions {
   /** the node ID of the owner of this VPN (the requestor) */
@@ -35,7 +35,7 @@ export class NetworkError extends Error {}
 
 /**
  * Network module - an object represents VPN created between the requestor and the provider nodes within Golem Network.
- * @category Mid-level
+ * @hidden
  */
 export class Network {
   private readonly ip: IPv4;

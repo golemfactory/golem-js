@@ -8,7 +8,7 @@ import { ActivityConfig } from "./config.js";
 import { Events } from "../events/index.js";
 
 /**
- * @category Mid-level
+ * @hidden
  */
 export enum ActivityStateEnum {
   New = "New",
@@ -20,14 +20,14 @@ export enum ActivityStateEnum {
 }
 
 /**
- * @category Mid-level
+ * @hidden
  */
 export interface ExeScriptRequest {
   text: string;
 }
 
 /**
- * @category Mid-level
+ * @hidden
  */
 export interface ActivityOptions {
   yagnaOptions?: {
@@ -51,7 +51,7 @@ export interface ActivityOptions {
 /**
  * Activity module - an object representing the runtime environment on the provider in accordance with the `Package` specification.
  * As part of a given activity, it is possible to execute exe script commands and capture their results.
- * @category Mid-level
+ * @hidden
  */
 export class Activity {
   private readonly logger?: Logger;
@@ -137,7 +137,7 @@ export class Activity {
       }
       return ActivityStateEnum[state];
     } catch (error) {
-      this.logger?.warn(`Cannot query activity state: ${error}`);
+      this.logger?.warn(`Cannot query activity state: ${error?.response?.data?.message || error?.message || error}`);
       throw error;
     }
   }
@@ -151,12 +151,13 @@ export class Activity {
 
   private async end() {
     await this.options.api.control
-      .destroyActivity(this.id, this.options.activityRequestTimeout, {
-        timeout: (this.options.activityRequestTimeout + 1) * 1000,
+      .destroyActivity(this.id, this.options.activityRequestTimeout / 1000, {
+        timeout: this.options.activityRequestTimeout + 1000,
       })
       .catch((error) => {
-        this.logger?.warn(`Got API Exception when destroying activity ${this.id}: ${error}`);
-        throw error;
+        throw new Error(
+          `Unable to destroy activity ${this.id}. ${error?.response?.data?.message || error?.message || error}`
+        );
       });
     this.options.eventTarget?.dispatchEvent(new Events.ActivityDestroyed(this));
     this.logger?.debug(`Activity ${this.id} destroyed`);
@@ -201,7 +202,7 @@ export class Activity {
               retryCount = await handleError(error, lastIndex, retryCount, maxRetries);
             } catch (error) {
               eventTarget?.dispatchEvent(new Events.ScriptExecuted({ activityId, agreementId, success: false }));
-              return this.destroy(error?.message || error);
+              return this.destroy(new Error(`Unable to get activity results. ${error?.message || error}`));
             }
           }
         }

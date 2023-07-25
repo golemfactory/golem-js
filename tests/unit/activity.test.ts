@@ -248,7 +248,9 @@ describe("Activity", () => {
       activityMock.setExpectedErrors([error, error, error, error, error, error]);
       return new Promise((res) => {
         results.on("error", (error) => {
-          expect(error.toString()).to.equal("Command #0 getExecBatchResults error: Some undefined error");
+          expect(error.toString()).to.equal(
+            "Error: Unable to get activity results. Command #0 getExecBatchResults error: Some undefined error"
+          );
           return res();
         });
         results.on("data", (data) => null);
@@ -276,7 +278,7 @@ describe("Activity", () => {
       return new Promise((res) => {
         results.on("error", (error) => {
           expect(error.toString()).to.equal(
-            "Command #0 getExecBatchResults error: GSB error: remote service at `test` error: GSB failure: Bad request: endpoint address not found"
+            "Error: Unable to get activity results. Command #0 getExecBatchResults error: GSB error: remote service at `test` error: GSB failure: Bad request: endpoint address not found"
           );
           return res();
         });
@@ -299,7 +301,9 @@ describe("Activity", () => {
       activityMock.setExpectedStates([ActivityStateEnum.Terminated, ActivityStateEnum.Terminated]);
       return new Promise((res) => {
         results.on("error", (error) => {
-          expect(error.toString()).to.equal("GSB error: endpoint address not found. Terminated.");
+          expect(error.toString()).to.equal(
+            "Error: Unable to get activity results. GSB error: endpoint address not found. Terminated."
+          );
           return res();
         });
         results.on("data", () => null);

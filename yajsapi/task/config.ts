@@ -7,8 +7,8 @@ const DEFAULTS = {
   maxParallelTasks: 5,
   taskRunningInterval: 1000,
   taskTimeout: 30000,
-  activityStateCheckingInterval: 1000,
-  activityPreparingTimeout: 1000 * 60 * 5, // 5min
+  activityStateCheckingInterval: 2000,
+  activityPreparingTimeout: 1000 * 60 * 4, // 2 min
 };
 
 /**

@@ -3,7 +3,7 @@ import { Command } from "./command.js";
 import { Result } from "../activity";
 
 /**
- * @category Mid-level
+ * @hidden
  */
 export class Script {
   static create(commands?: Command<unknown>[]): Script {
