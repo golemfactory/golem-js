@@ -8,7 +8,7 @@ import { Agent } from "http";
 
 const DEFAULTS = {
   agreementRequestTimeout: 30000,
-  agreementWaitingForApprovalTimeout: 60,
+  agreementWaitingForApprovalTimeout: 30,
   agreementSelector: randomAgreementSelector(),
 };
 
