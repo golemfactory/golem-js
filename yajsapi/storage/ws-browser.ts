@@ -5,13 +5,12 @@ import { getIdentity } from "../network/identity";
 import * as jsSha3 from "js-sha3";
 import { Logger, nullLogger } from "../utils";
 
-
 export interface WebSocketStorageProviderOptions {
   yagnaOptions: {
     apiKey: string;
     basePath: string;
   };
-  logger?: Logger
+  logger?: Logger;
 }
 
 interface GsbRequest<T> {
@@ -24,11 +23,11 @@ interface GetMetadataRequest extends GsbRequest<void> {
   component: "GetMetadata";
 }
 
-interface GetChunkRequest extends GsbRequest<{ offset: number, size: number }> {
+interface GetChunkRequest extends GsbRequest<{ offset: number; size: number }> {
   component: "GetChunk";
 }
 
-type UploadChunkChunk = { offset: number, content: Uint8Array }
+type UploadChunkChunk = { offset: number; content: Uint8Array };
 type UploadChunkPayload = {
   chunk: UploadChunkChunk;
 };
@@ -38,7 +37,7 @@ interface UploadChunkRequest extends GsbRequest<UploadChunkPayload> {
 }
 
 interface UploadFinishedRequest extends GsbRequest<{ hash: string }> {
-  component: "UploadFinished"
+  component: "UploadFinished";
 }
 
 type GsbRequestPublishUnion = GetMetadataRequest | GetChunkRequest;
@@ -47,12 +46,12 @@ type GsbRequestReceiveUnion = UploadFinishedRequest | UploadChunkRequest;
 type ServiceInfo = {
   url: URL;
   serviceId: string;
-}
+};
 
 type GftpFileInfo = {
   id: string;
   url: string;
-}
+};
 
 /**
  * Storage provider that uses GFTP over WebSockets.
@@ -90,13 +89,16 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
           offset: req.payload.offset,
         });
       } else {
-        this.logger.warn(`[WebSocketBrowserStorageProvider] Unsupported message in publishData(): ${(req as GsbRequest<void>).component}`);
+        this.logger.warn(
+          `[WebSocketBrowserStorageProvider] Unsupported message in publishData(): ${
+            (req as GsbRequest<void>).component
+          }`,
+        );
       }
     });
 
     return fileInfo.url;
   }
-
 
   async publishFile(): Promise<string> {
     throw new Error("Not implemented");
@@ -117,7 +119,11 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
         const result = this.completeReceive(req.payload.hash, data);
         callback(result);
       } else {
-        this.logger.warn(`[WebSocketBrowserStorageProvider] Unsupported message in receiveData(): ${(req as GsbRequest<void>).component}`);
+        this.logger.warn(
+          `[WebSocketBrowserStorageProvider] Unsupported message in receiveData(): ${
+            (req as GsbRequest<void>).component
+          }`,
+        );
       }
     });
 
@@ -132,7 +138,9 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
     urls.forEach((url) => {
       const serviceId = this.services.get(url);
       if (serviceId) {
-        this.deleteService(serviceId).catch(e => this.logger.warn(`[WebSocketBrowserStorageProvider] Failed to delete service ${serviceId}: ${e}`));
+        this.deleteService(serviceId).catch((e) =>
+          this.logger.warn(`[WebSocketBrowserStorageProvider] Failed to delete service ${serviceId}: ${e}`),
+        );
       }
       this.services.delete(url);
     });
@@ -141,12 +149,12 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
   private async createFileInfo(): Promise<GftpFileInfo> {
     const id = v4();
     const me = await getIdentity({
-      yagnaOptions: this.options.yagnaOptions
+      yagnaOptions: this.options.yagnaOptions,
     });
 
     return {
       id,
-      url: `gftp://${me}/${id}`
+      url: `gftp://${me}/${id}`,
     };
   }
 
@@ -165,13 +173,13 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
     const resp = await fetch(new URL("/gsb-api/v1/services", yagnaOptions.basePath), {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${yagnaOptions.apiKey}`,
+        Authorization: `Bearer ${yagnaOptions.apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
         listen: {
           on: `/public/gftp/${fileInfo.id}`,
-          components
+          components,
         },
       }),
     });
@@ -194,7 +202,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
     const resp = await fetch(new URL(`/gsb-api/v1/services/${id}`, yagnaOptions.basePath), {
       method: "DELETE",
       headers: {
-        "Authorization": `Bearer ${yagnaOptions.apiKey}`,
+        Authorization: `Bearer ${yagnaOptions.apiKey}`,
         "Content-Type": "application/json",
       },
     });
@@ -205,10 +213,12 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
   }
 
   private respond(ws: WebSocket, id: string, payload: unknown) {
-    ws.send(encode({
-      id,
-      payload
-    }));
+    ws.send(
+      encode({
+        id,
+        payload,
+      }),
+    );
   }
 
   private completeReceive(hash: string, data: UploadChunkChunk[]): Uint8Array {

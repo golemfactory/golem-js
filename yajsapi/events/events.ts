@@ -30,7 +30,6 @@ export abstract class BaseEvent<DataType> extends CustomEvent<DataType> {
   }
 }
 
-
 export class ComputationStarted extends BaseEvent<undefined> {}
 export class ComputationFinished extends BaseEvent<undefined> {}
 export class ComputationFailed extends BaseEvent<{ reason?: string }> {}

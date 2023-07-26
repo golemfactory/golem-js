@@ -20,7 +20,8 @@
     "test:integration:no-goth": "jest tests/integration/**.spec.ts --testTimeout=180000 --runInBand --forceExit",
     "test:cypress": "cypress run",
     "lint": "eslint .",
-    "format": "prettier yajsapi/"
+    "format": "prettier -w .",
+    "format:check": "prettier -c ."
   },
   "files": [
     "dist"

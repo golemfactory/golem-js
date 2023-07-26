@@ -29,7 +29,7 @@ async function main(args) {
       .run(
         `hashcat -a 3 -m 400 '${args.hash}' '${args.mask}' --skip=${skip} --limit=${
           skip! + step
-        } -o pass.potfile || true`
+        } -o pass.potfile || true`,
       )
       .run("cat pass.potfile || true")
       .end();

@@ -40,8 +40,10 @@ export class Goth {
           const settings = { apiKey, basePath, subnetTag, gsbUrl, path };
 
           console.log(
-            `\x1b[33mGoth has been successfully started in ${((Date.now() - startTime) / 1000).toFixed(0)}s. Resulting settings:`,
-            settings
+            `\x1b[33mGoth has been successfully started in ${((Date.now() - startTime) / 1000).toFixed(
+              0,
+            )}s. Resulting settings:`,
+            settings,
           );
 
           resolve(settings);

@@ -1,4 +1,4 @@
-import { AbstractAggregator } from './abstract_aggregator';
+import { AbstractAggregator } from "./abstract_aggregator";
 
 export enum AgreementStatusEnum {
   Pending = "pending",

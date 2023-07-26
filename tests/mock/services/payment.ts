@@ -9,7 +9,7 @@ export const paymentServiceMock: PaymentService = {
   async createAllocations(
     budget?,
     payment?: { driver: string; network: string },
-    timeout?: number
+    timeout?: number,
   ): Promise<Allocation[]> {
     return Promise.resolve([allocationMock]);
   },

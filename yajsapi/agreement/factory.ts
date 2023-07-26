@@ -49,7 +49,7 @@ export class AgreementFactory {
           providerName: provider.name,
           validTo: data?.validTo,
           proposalId,
-        })
+        }),
       );
       this.logger?.debug(`Agreement ${agreementId} created`);
       return agreement;

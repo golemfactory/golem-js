@@ -40,7 +40,7 @@ export class PaymentApiMock extends RequestorApi {
     allocation: Allocation,
     afterTimestamp?: string,
     maxItems?: number,
-    options?: AxiosRequestConfig
+    options?: AxiosRequestConfig,
   ): Promise<import("axios").AxiosResponse<Allocation>> {
     return new Promise((res) => res({ data: { ...allocations[0], ...allocation } } as AxiosResponse));
   }
@@ -59,7 +59,7 @@ export class PaymentApiMock extends RequestorApi {
     afterTimestamp?: string,
     maxEvents?: number,
     appSessionId?: string,
-    options?: AxiosRequestConfig
+    options?: AxiosRequestConfig,
   ): Promise<import("axios").AxiosResponse<InvoiceEvent[]>> {
     return new Promise((res) => res({ data: global.expectedEvents } as AxiosResponse));
   }
@@ -75,7 +75,7 @@ export class PaymentApiMock extends RequestorApi {
     afterTimestamp?: string,
     maxEvents?: number,
     appSessionId?: string,
-    options?: AxiosRequestConfig
+    options?: AxiosRequestConfig,
   ): Promise<import("axios").AxiosResponse<DebitNoteEvent[]>> {
     return new Promise((res) => res({ data: global.expectedEvents } as AxiosResponse));
   }
@@ -89,7 +89,7 @@ export class PaymentApiMock extends RequestorApi {
     invoiceId: string,
     acceptance: Acceptance,
     timeout?: number,
-    options?: AxiosRequestConfig
+    options?: AxiosRequestConfig,
   ): Promise<import("axios").AxiosResponse<void>> {
     return new Promise((res) => res({} as AxiosResponse));
   }
@@ -98,7 +98,7 @@ export class PaymentApiMock extends RequestorApi {
     debitNoteId: string,
     acceptance: Acceptance,
     timeout?: number,
-    options?: AxiosRequestConfig
+    options?: AxiosRequestConfig,
   ): Promise<import("axios").AxiosResponse<void>> {
     return new Promise((res) => res({} as AxiosResponse));
   }
@@ -107,7 +107,7 @@ export class PaymentApiMock extends RequestorApi {
     debitNoteId: string,
     rejection: Rejection,
     timeout?: number,
-    options?: AxiosRequestConfig
+    options?: AxiosRequestConfig,
   ): Promise<import("axios").AxiosResponse<void>> {
     return new Promise((res) => res({} as AxiosResponse));
   }
@@ -117,7 +117,7 @@ export class PaymentApiMock extends RequestorApi {
     invoiceId: string,
     rejection: Rejection,
     timeout?: number,
-    options?: AxiosRequestConfig
+    options?: AxiosRequestConfig,
   ): Promise<import("axios").AxiosResponse<void>> {
     return new Promise((res) => res({} as AxiosResponse));
   }

@@ -10,9 +10,7 @@ import {
 } from "ya-ts-client/dist/ya-activity/src/models";
 import { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 import { v4 as uuidv4 } from "uuid";
-import {
-  ExeScriptCommandResultResultEnum
-} from "ya-ts-client/dist/ya-activity/src/models/exe-script-command-result";
+import { ExeScriptCommandResultResultEnum } from "ya-ts-client/dist/ya-activity/src/models/exe-script-command-result";
 import { RequestorStateApi } from "ya-ts-client/dist/ya-activity/src/api/requestor-state-api";
 
 const exampleExeResult = {
@@ -53,7 +51,7 @@ export class RequestorControlApiMock extends RequestorControlApi {
   async createActivity(
     stringCreateActivityRequest: string | CreateActivityRequest,
     timeout?: number,
-    options?: AxiosRequestConfig
+    options?: AxiosRequestConfig,
   ): Promise<import("axios").AxiosResponse<string | CreateActivityResult>> {
     return new Promise((res) => res({ data: { activityId: uuidv4() } } as AxiosResponse));
   }
@@ -61,7 +59,7 @@ export class RequestorControlApiMock extends RequestorControlApi {
   async exec(
     activityId: string,
     script: ExeScriptRequest,
-    options?: AxiosRequestConfig
+    options?: AxiosRequestConfig,
   ): Promise<AxiosResponse<string>> {
     return new Promise((res) => res({ data: uuidv4() } as AxiosResponse));
   }
@@ -71,7 +69,7 @@ export class RequestorControlApiMock extends RequestorControlApi {
     batchId: string,
     commandIndex?: number,
     timeout?: number,
-    options?: AxiosRequestConfig
+    options?: AxiosRequestConfig,
   ): Promise<AxiosResponse<ExeScriptCommandResult[]>> {
     if (global.expectedErrors.length) {
       const mockError = global.expectedErrors.shift();
@@ -84,7 +82,9 @@ export class RequestorControlApiMock extends RequestorControlApi {
     }
     await new Promise((res) => setTimeout(res, 100));
     return new Promise((res) =>
-      res({ data: global.expectedExeResults?.length ? global.expectedExeResults : [exampleExeResult] } as AxiosResponse)
+      res({
+        data: global.expectedExeResults?.length ? global.expectedExeResults : [exampleExeResult],
+      } as AxiosResponse),
     );
   }
 
@@ -92,7 +92,7 @@ export class RequestorControlApiMock extends RequestorControlApi {
   async destroyActivity(
     activityId: string,
     timeout?: number,
-    options?: AxiosRequestConfig
+    options?: AxiosRequestConfig,
   ): Promise<import("axios").AxiosResponse<void>> {
     return new Promise((res) => res({ data: null } as AxiosResponse));
   }
@@ -123,7 +123,7 @@ export class RequestorSateApiMock extends RequestorStateApi {
           reason: "test",
           errorMessage: "test",
         },
-      } as AxiosResponse)
+      } as AxiosResponse),
     );
   }
 }

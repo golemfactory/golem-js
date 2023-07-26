@@ -15,7 +15,7 @@ export class NetworkApiMock extends RequestorApi {
   // @ts-ignore
   createNetwork(network: Network, options?: AxiosRequestConfig): Promise<import("axios").AxiosResponse<Network>> {
     return new Promise((res) =>
-      res({ data: { id: uuidv4(), ip: "192.168.0.0", mask: "255.255.255.0" } } as AxiosResponse)
+      res({ data: { id: uuidv4(), ip: "192.168.0.0", mask: "255.255.255.0" } } as AxiosResponse),
     );
   }
   // @ts-ignore
@@ -27,7 +27,7 @@ export class NetworkApiMock extends RequestorApi {
   addAddress(
     networkId: string,
     address: Address,
-    options?: AxiosRequestConfig
+    options?: AxiosRequestConfig,
   ): Promise<import("axios").AxiosResponse<void>> {
     return new Promise((res) => res({ data: undefined } as AxiosResponse));
   }

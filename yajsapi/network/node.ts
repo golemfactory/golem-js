@@ -9,7 +9,7 @@ export class NetworkNode {
     public readonly id,
     public readonly ip: IPv4,
     private getNetworkInfo: () => NetworkInfo,
-    private apiUrl: string
+    private apiUrl: string,
   ) {}
 
   /**
