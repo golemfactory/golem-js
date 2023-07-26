@@ -395,14 +395,7 @@ export class TaskExecutor {
     const message = `Executor has interrupted by the user. Reason: ${reason}.`;
     this.logger?.warn(`${message}. Stopping all tasks...`);
     this.isCanceled = true;
-    await this.end()
-      .then(() => {
-        if (runtimeContextChecker.isNode && terminatingSignals.includes(reason || "")) process.exit(0);
-      })
-      .catch((error) => {
-        this.logger?.error(error);
-        if (runtimeContextChecker.isNode && terminatingSignals.includes(reason || "")) process.exit(1);
-      });
+    await this.end().catch((error) => this.logger?.error(error));
   }
 
   private printStats() {
