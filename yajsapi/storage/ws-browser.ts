@@ -134,7 +134,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
       if (serviceId) {
         this.deleteService(serviceId).catch(e => this.logger.warn(`[WebSocketBrowserStorageProvider] Failed to delete service ${serviceId}: ${e}`));
       }
-      this.services.delete(url)
+      this.services.delete(url);
     });
   }
 
@@ -151,17 +151,16 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
   }
 
   private async createSocket(fileInfo: GftpFileInfo, components: string[]): Promise<WebSocket> {
-    const service = await this.createService(fileInfo.id, components);
-    const ws = new WebSocket(service.url, ["gsb+flexbuffers"]);
+    const service = await this.createService(fileInfo, components);
+    const ws = new WebSocket(service.url); // NOTE: protocol set to ["gsb+flexbuffers"] causes CORS error everywhere except Firefox
     ws.addEventListener("error", () => {
       this.logger.error(`[WebSocketBrowserStorageProvider] Socket Error (${fileInfo.id})`);
     });
     ws.binaryType = "arraybuffer";
-    this.services.set(fileInfo.url, service.serviceId);
     return ws;
   }
 
-  private async createService(id: string, components: string[]): Promise<ServiceInfo> {
+  private async createService(fileInfo: GftpFileInfo, components: string[]): Promise<ServiceInfo> {
     const yagnaOptions = this.options.yagnaOptions;
     const resp = await fetch(new URL("/gsb-api/v1/services", yagnaOptions.basePath), {
       method: "POST",
@@ -171,7 +170,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
       },
       body: JSON.stringify({
         listen: {
-          on: `/public/gftp/${id}`,
+          on: `/public/gftp/${fileInfo.id}`,
           components
         },
       }),
@@ -185,7 +184,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
     const messages_link = `/gsb-api/v1/services/${body.servicesId}?authToken=${yagnaOptions.apiKey}`;
     const url = new URL(messages_link, this.options.yagnaOptions.basePath);
     url.protocol = "ws:";
-    this.services.set(url.toString(), body.servicesId);
+    this.services.set(fileInfo.url, body.servicesId);
 
     return { url, serviceId: body.servicesId };
   }
