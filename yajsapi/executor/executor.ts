@@ -386,7 +386,7 @@ export class TaskExecutor {
   }
 
   private removeCancelEvent() {
-    terminatingSignals.forEach((event) => process.removeListener(event, () => this.cancel(event)));
+    terminatingSignals.forEach((event) => process.removeAllListeners(event));
   }
 
   public async cancel(reason?: string) {
