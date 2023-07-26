@@ -19,4 +19,5 @@ jobs:
       - name: Run ESLint
         run: |
           yarn install
+          yarn format:check
           yarn lint
