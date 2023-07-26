@@ -146,7 +146,7 @@ export class Network {
         this.logger?.warn(`Tried removing a network which doesn't exist. Network ID: ${this.id}`);
       return false;
     } finally {
-      this.config.httpAgent.destroy();
+      this.config.httpAgent.destroy?.();
     }
     this.logger?.info(`Network has removed: ID: ${this.id}, IP: ${this.ip}`);
     return true;

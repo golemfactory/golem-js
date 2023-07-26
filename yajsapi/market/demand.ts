@@ -81,7 +81,7 @@ export class Demand extends EventTarget {
     this.isRunning = false;
     await this.options.api.unsubscribeDemand(this.id);
     this.options.eventTarget?.dispatchEvent(new events.DemandUnsubscribed({ id: this.id }));
-    this.options.httpAgent.destroy();
+    this.options.httpAgent.destroy?.();
     this.logger?.debug(`Demand ${this.id} unsubscribed`);
   }
 

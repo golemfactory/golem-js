@@ -164,7 +164,7 @@ export class Activity {
         );
       });
     this.options.eventTarget?.dispatchEvent(new Events.ActivityDestroyed(this));
-    this.options.httpAgent.destroy();
+    this.options.httpAgent.destroy?.();
     this.logger?.debug(`Activity ${this.id} destroyed`);
   }
 
@@ -191,7 +191,10 @@ export class Activity {
             // This will ignore "incompatibility" between ExeScriptCommandResultResultEnum and ResultState, which both
             // contain exactly the same entries, however TSC refuses to compile it as it assumes the former is dynamicaly
             // computed.
-            const { data: results }: { data: Result[] } = await api.control.getExecBatchResults(activityId, batchId) as unknown as { data: Result[] }
+            const { data: results }: { data: Result[] } = (await api.control.getExecBatchResults(
+              activityId,
+              batchId,
+            )) as unknown as { data: Result[] };
             retryCount = 0;
             const newResults = results.slice(lastIndex + 1);
             if (Array.isArray(newResults) && newResults.length) {

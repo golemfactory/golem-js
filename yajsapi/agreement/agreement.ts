@@ -145,7 +145,7 @@ export class Agreement {
         `Unable to terminate agreement ${this.id}. ${error.response?.data?.message || error.response?.data || error}`,
       );
     } finally {
-      this.options.httpAgent.destroy();
+      this.options.httpAgent.destroy?.();
     }
   }
 }

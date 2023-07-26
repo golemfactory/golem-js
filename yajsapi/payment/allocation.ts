@@ -117,7 +117,7 @@ export class Allocation {
       .catch((e) => {
         throw new Error(`Could not release allocation. ${e.response?.data?.message || e}`);
       })
-      .finally(() => this.options.httpAgent.destroy());
+      .finally(() => this.options.httpAgent.destroy?.());
     this.options?.logger?.debug(`Allocation ${this.id} has been released.`);
   }
 
