@@ -3,7 +3,7 @@ import { Logger, runtimeContextChecker } from "../utils";
 import path from "path";
 import fs from "fs";
 import { chomp, chunksToLinesAsync, streamEnd, streamWrite } from "@rauschma/stringio";
-import { spawn } from "child_process";
+import cp from "child_process";
 
 export class GftpStorageProvider implements StorageProvider {
   private gftpServerProcess;
@@ -25,7 +25,7 @@ export class GftpStorageProvider implements StorageProvider {
 
   async init() {
     if (this.isInitialized) return;
-    this.gftpServerProcess = await spawn("gftp server", [], { shell: true });
+    this.gftpServerProcess = await cp.spawn("gftp server", [], { shell: true });
     this.gftpServerProcess?.stdout?.setEncoding("utf-8");
     this.gftpServerProcess?.stderr?.setEncoding("utf-8");
     this.gftpServerProcess.on("error", (error) => this.logger?.error(error));
