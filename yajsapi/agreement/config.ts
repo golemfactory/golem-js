@@ -21,7 +21,7 @@ export class AgreementConfig {
   readonly api: RequestorApi;
   readonly logger?: Logger;
   readonly eventTarget?: EventTarget;
-  private readonly httpAgent: Agent;
+  readonly httpAgent: Agent;
 
   constructor(public readonly options?: AgreementOptions) {
     const apiKey = options?.yagnaOptions?.apiKey || EnvUtils.getYagnaAppKey();
