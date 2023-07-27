@@ -1,11 +1,11 @@
-import { Logger } from "../utils/index.js";
-import { Package } from "../package/index.js";
-import { Demand, Proposal, DemandEventType, DemandOptions, ProposalDTO } from "./index.js";
-import { AgreementPoolService } from "../agreement/index.js";
-import { Allocation } from "../payment/index.js";
-import { DemandEvent } from "./demand.js";
-import { MarketConfig } from "./config.js";
-import { sleep } from "../utils/index.js";
+import { Logger } from "../utils";
+import { Package } from "../package";
+import { Demand, Proposal, DemandEventType, DemandOptions, ProposalDTO } from ".";
+import { AgreementPoolService } from "../agreement";
+import { Allocation } from "../payment";
+import { DemandEvent } from "./demand";
+import { MarketConfig } from "./config";
+import { sleep } from "../utils";
 
 export type ProposalFilter = (proposal: ProposalDTO) => Promise<boolean>;
 

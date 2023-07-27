@@ -1,5 +1,5 @@
-import { Logger } from "../utils/index.js";
-import { PackageOptions } from "./package.js";
+import { Logger } from "../utils";
+import { PackageOptions } from "./package";
 
 /**
  * @internal

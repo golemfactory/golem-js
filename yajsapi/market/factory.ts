@@ -1,9 +1,9 @@
-import { Package } from "../package/index.js";
-import { Allocation } from "../payment/index.js";
-import { Demand, DemandOptions } from "./demand.js";
-import { DemandConfig } from "./config.js";
-import * as events from "../events/events.js";
-import { DecorationsBuilder, MarketDecoration } from "./builder.js";
+import { Package } from "../package";
+import { Allocation } from "../payment";
+import { Demand, DemandOptions } from "./demand";
+import { DemandConfig } from "./config";
+import * as events from "../events/events";
+import { DecorationsBuilder, MarketDecoration } from "./builder";
 
 /**
  * @internal

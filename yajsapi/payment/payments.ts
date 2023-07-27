@@ -1,8 +1,8 @@
-import { BasePaymentOptions, PaymentConfig } from "./config.js";
-import { Logger, sleep } from "../utils/index.js";
-import { Invoice } from "./invoice.js";
-import { DebitNote } from "./debit_note.js";
-import { Events } from "../events/index.js";
+import { BasePaymentOptions, PaymentConfig } from "./config";
+import { Logger, sleep } from "../utils";
+import { Invoice } from "./invoice";
+import { DebitNote } from "./debit_note";
+import { Events } from "../events";
 
 export interface PaymentOptions extends BasePaymentOptions {
   invoiceFetchingInterval?: number;

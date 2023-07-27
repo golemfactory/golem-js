@@ -1,5 +1,5 @@
 import { IPv4 } from "ip-num";
-import { NetworkInfo } from "./network.js";
+import { NetworkInfo } from "./network";
 
 /**
  * Describes a node in a VPN, mapping a Golem node id to an IP address

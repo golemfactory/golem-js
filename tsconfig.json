@@ -2,7 +2,7 @@
   "compilerOptions": {
     "module": "esnext",
     "noImplicitAny": false,
-    "target": "esnext",
+    "target": "es2016",
     "strict": true,
     "esModuleInterop": true,
     "moduleResolution": "node",
@@ -11,6 +11,7 @@
     "noLib": false,
     "declaration": true,
     "useUnknownInCatchVariables": false,
+    "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "lib": [
       "es2015",

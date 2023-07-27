@@ -1,9 +1,9 @@
-import { DownloadFile, Run, Script, UploadFile } from "../script/index.js";
-import { Activity, Result } from "../activity/index.js";
-import { StorageProvider } from "../storage/provider.js";
-import { Logger, sleep } from "../utils/index.js";
+import { DownloadFile, Run, Script, UploadFile } from "../script";
+import { Activity, Result } from "../activity";
+import { StorageProvider } from "../storage/provider";
+import { Logger, sleep } from "../utils";
 import { Readable, Transform } from "stream";
-import { UploadData } from "../script/command.js";
+import { UploadData } from "../script/command";
 
 export class Batch {
   private script: Script;

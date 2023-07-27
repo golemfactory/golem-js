@@ -1,4 +1,4 @@
-import { isNode } from "./runtimeContextChecker.js";
+import { isNode } from "./runtimeContextChecker";
 
 export const EnvUtils = {
   getYagnaApiUrl(): string {
