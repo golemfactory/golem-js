@@ -43,6 +43,7 @@
     "ip-num": "^1.4.1",
     "pino": "^8.11.0",
     "pino-pretty": "^10.0.1",
+    "tmp": "^0.2.1",
     "ya-ts-client": "^0.5.3"
   },
   "devDependencies": {
