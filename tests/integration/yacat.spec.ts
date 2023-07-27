@@ -15,8 +15,7 @@ const range = (start: number, end: number, step = 1): number[] => {
 describe("Password cracking", function () {
   let executor: TaskExecutor;
   afterEach(async function () {
-    this.timeout(60000);
-    await executor.end();
+        await executor.end();
   });
   it("should crack password", async () => {
     const mask = "?a?a";
@@ -52,5 +51,5 @@ describe("Password cracking", function () {
       }
     }
     expect(password).to.equal("yo");
-  }).timeout(240000);
+  });
 });

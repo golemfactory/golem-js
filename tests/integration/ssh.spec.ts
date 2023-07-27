@@ -8,8 +8,7 @@ const logger = new LoggerMock(false);
 describe("SSH connection", function () {
   let executor: TaskExecutor;
   afterEach(async function () {
-    this.timeout(60000);
-    await executor.end();
+        await executor.end();
   });
   it("should connect to provider via ssh", async () => {
     executor = await TaskExecutor.create({
@@ -54,5 +53,5 @@ describe("SSH connection", function () {
     await new Promise((res) => setTimeout(res, 3000));
     expect(stdout).to.include("1-Alpine SMP");
     processSsh.kill();
-  }).timeout(180000);
+  });
 });

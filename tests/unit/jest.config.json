@@ -2,6 +2,6 @@
   "preset": "ts-jest",
   "testEnvironment": "node",
   "setupFiles": [
-    "<rootDir>/tests/unit/_setup-jest.ts"
+    "<rootDir>/_setup.ts"
   ]
 }

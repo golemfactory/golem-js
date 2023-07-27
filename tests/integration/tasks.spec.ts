@@ -11,8 +11,7 @@ describe("Task Executor", function () {
   });
 
   afterEach(async function () {
-    this.timeout(60000);
-    logger.clear();
+        logger.clear();
     await executor?.end();
   });
 
@@ -31,7 +30,7 @@ describe("Task Executor", function () {
     expect(logger.logs).to.include("New proposal added to pool");
     expect(logger.logs).to.match(/Agreement confirmed by provider/);
     expect(logger.logs).to.match(/Activity .* created/);
-  }).timeout(60000);
+  });
 
   it("should run simple task using package tag", async () => {
     executor = await TaskExecutor.create({
@@ -48,7 +47,7 @@ describe("Task Executor", function () {
     expect(logger.logs).to.include("New proposal added to pool");
     expect(logger.logs).to.match(/Agreement confirmed by provider/);
     expect(logger.logs).to.match(/Activity .* created/);
-  }).timeout(60000);
+  });
 
   it("should run simple tasks by map function", async () => {
     executor = await TaskExecutor.create({
@@ -64,7 +63,7 @@ describe("Task Executor", function () {
     const finalOutputs: string[] = [];
     for await (const res of results) if (res) finalOutputs.push(res);
     expect(finalOutputs).to.have.members(data);
-  }).timeout(90000);
+  });
 
   it("should run simple tasks by forEach function", async () => {
     executor = await TaskExecutor.create({
@@ -77,7 +76,7 @@ describe("Task Executor", function () {
       const res = await ctx.run(`echo "${x}"`);
       expect(res?.stdout?.trim()).to.be.oneOf(data);
     });
-  }).timeout(80000);
+  });
 
   it("should run simple batch script and get results as stream", async () => {
     executor = await TaskExecutor.create({
@@ -107,7 +106,7 @@ describe("Task Executor", function () {
     expect(outputs[1]).to.equal("Hello World");
     expect(outputs[2]).to.equal("OK");
     expect(onEnd).to.equal("END");
-  }).timeout(80000);
+  });
 
   it("should run simple batch script and catch error on stream", async () => {
     executor = await TaskExecutor.create({
@@ -133,7 +132,7 @@ describe("Task Executor", function () {
     expect(expectedError).to.equal(
       "Error: ExeScript command exited with code 127. Stdout: undefined. Stderr: sh: 1: invalid_command: not found",
     );
-  }).timeout(80000);
+  });
 
   it("should run simple batch script and get results as promise", async () => {
     executor = await TaskExecutor.create({
@@ -159,7 +158,7 @@ describe("Task Executor", function () {
     expect(outputs[0]).to.equal("Hello Golem");
     expect(outputs[1]).to.equal("Hello World");
     expect(outputs[2]).to.equal("OK");
-  }).timeout(60000);
+  });
 
   it("should run simple batch script and catch error on promise", async () => {
     executor = await TaskExecutor.create({
@@ -182,7 +181,7 @@ describe("Task Executor", function () {
         expect(e).to.be.undefined;
       });
     expect(error).to.equal("Error: ExeScript command exited with code 127");
-  }).timeout(80000);
+  });
 
   it("should run transfer file", async () => {
     executor = await TaskExecutor.create({
@@ -197,5 +196,5 @@ describe("Task Executor", function () {
     });
     expect(result).to.equal("Ok");
     expect(readFileSync(`${process.env.GOTH_GFTP_VOLUME || ""}new_test.json`, "utf-8")).to.equal('{"test":"1234"}');
-  }).timeout(60000);
+  });
 });

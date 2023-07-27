@@ -29,7 +29,7 @@ describe("Strategies", function () {
       await logger.expectToInclude(`Task 2 computed by provider provider-1`, 5000);
       await logger.expectToInclude(`Task 3 computed by provider provider-1`, 5000);
       await executor.end();
-    }).timeout(80000);
+    });
 
     it("should filtered providers by white list names", async () => {
       const executor = await TaskExecutor.create({
@@ -51,7 +51,7 @@ describe("Strategies", function () {
       await logger.expectToInclude(`Task 2 computed by provider provider-2`, 5000);
       await logger.expectToInclude(`Task 3 computed by provider provider-2`, 5000);
       await executor.end();
-    }).timeout(80000);
+    });
   });
   describe("Payments", () => {
     it("should only accept invoices below 0.00001 GLM", async () => {
@@ -71,7 +71,7 @@ describe("Strategies", function () {
       expect(finalOutputs).to.have.members(data);
       await executor.end();
       await logger.expectToInclude(`Reason: Invoice rejected by Invoice Filter`, 100);
-    }).timeout(80000);
+    });
 
     it("should only accept debit notes below 0.00001 GLM", async () => {
       const executor = await TaskExecutor.create({
@@ -90,6 +90,6 @@ describe("Strategies", function () {
       expect(finalOutputs).to.have.members(data);
       await executor.end();
       await logger.expectToInclude(`DebitNote rejected by DebitNote Filter`, 100);
-    }).timeout(80000);
+    });
   });
 });

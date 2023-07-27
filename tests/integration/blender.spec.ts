@@ -26,7 +26,6 @@ const blender_params = (frame) => ({
 describe("Blender rendering", function () {
   let executor: TaskExecutor;
   afterEach(async function () {
-    this.timeout(100000);
     await executor.end();
   });
   it("should render images by blender", async () => {
@@ -56,5 +55,5 @@ describe("Blender rendering", function () {
     for await (const result of results) expect(result).to.be.oneOf(expectedResults);
     for (const file of expectedResults)
       expect(fileExistsSync(`${process.env.GOTH_GFTP_VOLUME || ""}${file}`)).to.be.true;
-  }).timeout(240000);
+  });
 });
