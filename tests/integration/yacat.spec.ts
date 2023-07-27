@@ -1,9 +1,5 @@
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
-import { TaskExecutor } from "../../yajsapi/index.js";
-import { LoggerMock } from "../mock/index.js";
-chai.use(chaiAsPromised);
-const expect = chai.expect;
+import { TaskExecutor } from "../../yajsapi";
+import { LoggerMock } from "../mock";
 const logger = new LoggerMock(false);
 
 const range = (start: number, end: number, step = 1): number[] => {
@@ -15,7 +11,6 @@ const range = (start: number, end: number, step = 1): number[] => {
 describe("Password cracking", function () {
   let executor: TaskExecutor;
   afterEach(async function () {
-    this.timeout(60000);
     await executor.end();
   });
   it("should crack password", async () => {
@@ -31,7 +26,7 @@ describe("Password cracking", function () {
       const result = await ctx.run(`hashcat --keyspace -a 3 ${mask} -m 400`);
       return parseInt(result.stdout || "");
     });
-    expect(keyspace).to.equal(95);
+    expect(keyspace).toEqual(95);
     if (!keyspace) return;
     const step = Math.floor(keyspace / 3);
     const ranges = range(0, keyspace, step);
@@ -51,6 +46,6 @@ describe("Password cracking", function () {
         break;
       }
     }
-    expect(password).to.equal("yo");
-  }).timeout(240000);
+    expect(password).toEqual("yo");
+  });
 });

@@ -30,3 +30,6 @@ package-lock.json
 
 #Nuxt
 /examples/adv-web-example/.nuxt
+
+#Goth
+tests/goth/assets/

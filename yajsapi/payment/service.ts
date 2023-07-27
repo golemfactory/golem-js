@@ -1,11 +1,11 @@
-import { Logger, sleep } from "../utils/index.js";
-import { Allocation } from "./allocation.js";
-import { BasePaymentOptions, PaymentConfig } from "./config.js";
-import { Invoice, InvoiceDTO } from "./invoice.js";
-import { DebitNote, DebitNoteDTO } from "./debit_note.js";
-import { Accounts } from "./accounts.js";
-import { Payments, PaymentEventType, DebitNoteEvent, InvoiceEvent } from "./payments.js";
-import { RejectionReason } from "./rejection.js";
+import { Logger, sleep } from "../utils";
+import { Allocation } from "./allocation";
+import { BasePaymentOptions, PaymentConfig } from "./config";
+import { Invoice, InvoiceDTO } from "./invoice";
+import { DebitNote, DebitNoteDTO } from "./debit_note";
+import { Accounts } from "./accounts";
+import { Payments, PaymentEventType, DebitNoteEvent, InvoiceEvent } from "./payments";
+import { RejectionReason } from "./rejection";
 
 /**
  * @internal

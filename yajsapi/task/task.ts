@@ -1,4 +1,4 @@
-import { QueueableTask, Worker } from "./index.js";
+import { QueueableTask, Worker } from ".";
 
 export enum TaskState {
   New,

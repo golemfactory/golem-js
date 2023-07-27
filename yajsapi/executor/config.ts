@@ -1,7 +1,7 @@
-import { ExecutorOptions } from "./executor.js";
-import { Package, PackageOptions } from "../package/index.js";
+import { ExecutorOptions } from "./executor";
+import { Package, PackageOptions } from "../package";
 import { ActivityOptions } from "../activity";
-import { Logger, LogLevel, runtimeContextChecker, defaultLogger } from "../utils/index.js";
+import { Logger, LogLevel, runtimeContextChecker, defaultLogger } from "../utils";
 
 const DEFAULTS = Object.freeze({
   payment: { driver: "erc20", network: "goerli" },

@@ -1,8 +1,7 @@
-import * as activityMock from "../mock/rest/activity.js";
-import { expect } from "chai";
-import { Task, TaskQueue, TaskService, Worker } from "../../yajsapi/task/index.js";
-import { agreementPoolServiceMock, paymentServiceMock, networkServiceMock, LoggerMock } from "../mock/index.js";
-import { Result } from "../../yajsapi/activity/index.js";
+import * as activityMock from "../mock/rest/activity";
+import { Task, TaskQueue, TaskService, Worker } from "../../yajsapi/task";
+import { agreementPoolServiceMock, paymentServiceMock, networkServiceMock, LoggerMock } from "../mock";
+import { Result } from "../../yajsapi/activity";
 let queue;
 const logger = new LoggerMock();
 
@@ -24,8 +23,8 @@ describe("Task Service", () => {
     });
     service.run().catch((e) => console.error(e));
     await logger.expectToMatch(/Activity .* created/, 500);
-    expect(task.isFinished()).to.be.true;
-    expect(task.getResults()?.stdout).to.equal("some_shell_results");
+    expect(task.isFinished()).toEqual(true);
+    expect(task.getResults()?.stdout).toEqual("some_shell_results");
     await service.end();
     await logger.expectToMatch(/Activity .* destroyed/, 1);
     await logger.expectToInclude("Task Service has been stopped", 1);
@@ -44,10 +43,10 @@ describe("Task Service", () => {
       maxParallelTasks: 2,
     });
     service.run().catch((e) => console.error(e));
-    expect(task1.isPending()).to.be.true;
-    expect(task2.isPending()).to.be.true;
-    expect(task3.isPending()).to.be.false;
-    expect(task3.isNew()).to.be.true;
+    expect(task1.isPending()).toEqual(true);
+    expect(task2.isPending()).toEqual(true);
+    expect(task3.isPending()).toEqual(false);
+    expect(task3.isNew()).toEqual(true);
     await service.end();
   });
 
@@ -90,7 +89,7 @@ describe("Task Service", () => {
       "Error: Task 1 has been rejected! Work rejected. Reason: Invalid value computed by provider",
       1500
     );
-    expect(task.isFinished()).to.be.true;
+    expect(task.isFinished()).toEqual(true);
     await service.end();
   });
 
@@ -106,7 +105,7 @@ describe("Task Service", () => {
     });
     service.run().catch((e) => console.error(e));
     await logger.expectToInclude("Error: Task 1 has been rejected!", 1800);
-    expect(task.isRejected()).to.be.true;
+    expect(task.isRejected()).toEqual(true);
     await service.end();
   });
 
@@ -131,9 +130,9 @@ describe("Task Service", () => {
       /Init worker done in activity.*\nInit worker done in activity.*\nInit worker done in activity/
     );
     await new Promise((res) => setTimeout(res, 1000));
-    expect(task1.isFinished()).to.be.true;
-    expect(task2.isFinished()).to.be.true;
-    expect(task3.isFinished()).to.be.true;
+    expect(task1.isFinished()).toEqual(true);
+    expect(task2.isFinished()).toEqual(true);
+    expect(task3.isFinished()).toEqual(true);
     await service.end();
-  }).timeout(5000);
+  });
 });

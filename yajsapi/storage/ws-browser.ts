@@ -1,9 +1,9 @@
 import { StorageProvider, StorageProviderDataCallback } from "./provider";
 import { v4 } from "uuid";
-import { encode, toObject } from "flatbuffers/js/flexbuffers.js";
-import { getIdentity } from "../network/identity.js";
+import { encode, toObject } from "flatbuffers/js/flexbuffers";
+import { getIdentity } from "../network/identity";
 import * as jsSha3 from "js-sha3";
-import { Logger, nullLogger } from "../utils/index.js";
+import { Logger, nullLogger } from "../utils";
 
 
 export interface WebSocketStorageProviderOptions {

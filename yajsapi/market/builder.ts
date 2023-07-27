@@ -1,5 +1,5 @@
-import { MarketProperty } from "ya-ts-client/dist/ya-payment/src/models/index.js";
-import { DemandOfferBase } from "ya-ts-client/dist/ya-market/src/models/index.js";
+import { MarketProperty } from "ya-ts-client/dist/ya-payment/src/models";
+import { DemandOfferBase } from "ya-ts-client/dist/ya-market/src/models";
 
 /**
  * Properties and constraints to be added to a market object (i.e. a demand or an offer).

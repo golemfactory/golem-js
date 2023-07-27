@@ -1,8 +1,8 @@
 import { IPv4, IPv4Mask, IPv4Prefix, IPv4CidrRange, AbstractIPNum } from "ip-num";
-import { Logger } from "../utils/index.js";
-import { YagnaOptions } from "../executor/index.js";
-import { NetworkConfig } from "./config.js";
-import { NetworkNode } from "./node.js";
+import { Logger } from "../utils";
+import { YagnaOptions } from "../executor";
+import { NetworkConfig } from "./config";
+import { NetworkNode } from "./node";
 
 /**
  * @hidden

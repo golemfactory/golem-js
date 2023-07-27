@@ -1,1 +1,1 @@
-export { TaskExecutor, YagnaOptions, ExecutorOptions, ExecutorOptionsMixin } from "./executor.js";
+export { TaskExecutor, YagnaOptions, ExecutorOptions, ExecutorOptionsMixin } from "./executor";

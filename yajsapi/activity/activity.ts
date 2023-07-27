@@ -1,11 +1,11 @@
-import { Result, StreamingBatchEvent } from "./results.js";
-import EventSource from "eventsource/lib/eventsource.js";
+import { Result, StreamingBatchEvent } from "./results";
+import EventSource from "eventsource/lib/eventsource";
 import { Readable } from "stream";
-import { Logger } from "../utils/index.js";
-import sleep from "../utils/sleep.js";
-import { ActivityFactory } from "./factory.js";
-import { ActivityConfig } from "./config.js";
-import { Events } from "../events/index.js";
+import { Logger } from "../utils";
+import sleep from "../utils/sleep";
+import { ActivityFactory } from "./factory";
+import { ActivityConfig } from "./config";
+import { Events } from "../events";
 
 /**
  * @hidden

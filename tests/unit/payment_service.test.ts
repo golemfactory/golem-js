@@ -1,9 +1,8 @@
-import { setExpectedDebitNotes, setExpectedEvents, setExpectedInvoices, clear } from "../mock/rest/payment.js";
-import { expect } from "chai";
-import { LoggerMock } from "../mock/index.js";
-import { PaymentService, Allocation, PaymentFilters } from "../../yajsapi/payment/index.js";
-import { agreement } from "../mock/entities/agreement.js";
-import { debitNotesEvents, debitNotes, invoices, invoiceEvents } from "../mock/fixtures/index.js";
+import { setExpectedDebitNotes, setExpectedEvents, setExpectedInvoices, clear } from "../mock/rest/payment";
+import { LoggerMock } from "../mock";
+import { PaymentService, Allocation, PaymentFilters } from "../../yajsapi/payment";
+import { agreement } from "../mock/entities/agreement";
+import { debitNotesEvents, debitNotes, invoices, invoiceEvents } from "../mock/fixtures";
 
 const logger = new LoggerMock();
 
@@ -17,13 +16,13 @@ describe("Payment Service", () => {
     it("should creating allocations for available accounts", async () => {
       const paymentService = new PaymentService();
       const allocations = await paymentService.createAllocations();
-      expect(allocations[0]).to.be.instanceof(Allocation);
+      expect(allocations[0]).toBeInstanceOf(Allocation);
       await paymentService.end();
     });
 
     it("should not creating allocations if there are no available accounts", async () => {
       const paymentService = new PaymentService({ payment: { network: "test2", driver: "test2" } });
-      await expect(paymentService.createAllocations()).to.be.rejectedWith(
+      await expect(paymentService.createAllocations()).rejects.toThrow(
         "Unable to create allocation for driver/network test2/test2. There is no requestor account supporting this platform."
       );
       await paymentService.end();
@@ -33,7 +32,7 @@ describe("Payment Service", () => {
       const paymentService = new PaymentService({ logger });
       await paymentService.createAllocations();
       await paymentService.end();
-      expect(logger.logs).to.include("All allocations has been released");
+      expect(logger.logs).toContain("All allocations has been released");
     });
   });
 

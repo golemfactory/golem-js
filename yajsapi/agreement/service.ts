@@ -1,9 +1,9 @@
 import Bottleneck from "bottleneck";
-import { Logger } from "../utils/index.js";
-import { Agreement, AgreementOptions, AgreementStateEnum } from "./agreement.js";
-import { AgreementServiceConfig } from "./config.js";
-import { Proposal, ProposalDTO } from "../market/proposal.js";
-import sleep from "../utils/sleep.js";
+import { Logger } from "../utils";
+import { Agreement, AgreementOptions, AgreementStateEnum } from "./agreement";
+import { AgreementServiceConfig } from "./config";
+import { Proposal, ProposalDTO } from "../market/proposal";
+import sleep from "../utils/sleep";
 
 export interface AgreementDTO {
   id: string;

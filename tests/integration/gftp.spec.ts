@@ -1,14 +1,12 @@
-import { expect } from "chai";
-import { TaskExecutor } from "../../yajsapi/index.js";
-import { LoggerMock } from "../mock/index.js";
-import { fileExistsSync } from "tsconfig-paths/lib/filesystem.js";
+import { TaskExecutor } from "../../yajsapi";
+import { LoggerMock } from "../mock";
+import { fileExistsSync } from "tsconfig-paths/lib/filesystem";
 
 const logger = new LoggerMock(false);
 
 describe("GFTP transfers", function () {
   let executor: TaskExecutor;
   afterEach(async function () {
-    this.timeout(60000);
     await executor.end();
   });
   it("should upload and download big files simultaneously", async () => {
@@ -18,10 +16,7 @@ describe("GFTP transfers", function () {
       logger,
     });
     executor.beforeEach(async (ctx) => {
-      await ctx.uploadFile(
-        new URL("../mock/fixtures/eiffel.blend", import.meta.url).pathname,
-        "/golem/resource/eiffel.blend",
-      );
+      await ctx.uploadFile(new URL("../mock/fixtures/eiffel.blend").pathname, "/golem/resource/eiffel.blend");
     });
     const data = [0, 1, 2, 3, 4, 5];
     const results = executor.map<number, string>(data, async (ctx, frame) => {
@@ -34,8 +29,8 @@ describe("GFTP transfers", function () {
       return result ? `copy_${frame}.blend` : "";
     });
     const expectedResults = data.map((d) => `copy_${d}.blend`);
-    for await (const result of results) expect(result).to.be.oneOf(expectedResults);
+    for await (const result of results) expect(expectedResults).toContain(result);
     for (const file of expectedResults)
-      expect(fileExistsSync(`${process.env.GOTH_GFTP_VOLUME || ""}${file}`)).to.be.true;
-  }).timeout(240000);
+      expect(fileExistsSync(`${process.env.GOTH_GFTP_VOLUME || ""}${file}`)).toEqual(true);
+  });
 });

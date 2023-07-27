@@ -1,8 +1,8 @@
-import { Logger } from '../utils/index.js';
-import { Network } from './index.js';
-import { NetworkOptions } from './network.js';
-import { NetworkNode } from './node.js';
-import { getIdentity } from './identity.js';
+import { Logger } from '../utils/index';
+import { Network } from './index';
+import { NetworkOptions } from './network';
+import { NetworkNode } from './node';
+import { getIdentity } from './identity';
 
 /**
  * @internal
