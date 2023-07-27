@@ -1,12 +1,8 @@
 import { setExpectedProposals } from "../mock/rest/market";
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
 import { Demand, Proposal, DemandEventType, DemandEvent } from "../../yajsapi/market";
 import { allocationMock, packageMock, LoggerMock } from "../mock";
 import { proposalsInitial } from "../mock/fixtures";
 
-chai.use(chaiAsPromised);
-const expect = chai.expect;
 const subnetTag = "testnet";
 const logger = new LoggerMock();
 
@@ -14,8 +10,8 @@ describe("Demand", () => {
   describe("Creating", () => {
     it("should create and publish demand", async () => {
       const demand = await Demand.create(packageMock, [allocationMock], { subnetTag, logger });
-      expect(demand).to.be.instanceof(Demand);
-      expect(logger.logs).to.include("Demand published on the market");
+      expect(demand).toBeInstanceOf(Demand);
+      expect(logger.logs).toContain("Demand published on the market");
       await demand.unsubscribe();
     });
   });
@@ -26,7 +22,7 @@ describe("Demand", () => {
       const event: DemandEvent = await new Promise((res) =>
         demand.addEventListener(DemandEventType, (e) => res(e as DemandEvent))
       );
-      expect(event.proposal).to.be.instanceof(Proposal);
+      expect(event.proposal).toBeInstanceOf(Proposal);
       await demand.unsubscribe();
     });
   });

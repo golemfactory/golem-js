@@ -1,5 +1,4 @@
 import { setExpectedProposals } from "../mock/rest/market";
-import { expect } from "chai";
 import { MarketService, ProposalFilters } from "../../yajsapi/market";
 import { agreementPoolServiceMock, packageMock, LoggerMock, allocationMock } from "../mock";
 import {
@@ -19,10 +18,10 @@ describe("Market Service", () => {
   it("should start service and publish demand", async () => {
     const marketService = new MarketService(agreementPoolServiceMock, { logger });
     await marketService.run(packageMock, [allocationMock]);
-    expect(logger.logs).to.include("Market Service has started");
-    expect(logger.logs).to.include("Demand published on the market");
+    expect(logger.logs).toContain("Market Service has started");
+    expect(logger.logs).toContain("Demand published on the market");
     await marketService.end();
-    expect(logger.logs).to.include("Market Service has been stopped");
+    expect(logger.logs).toContain("Market Service has been stopped");
   });
 
   it("should respond initial proposal", async () => {
@@ -39,7 +38,7 @@ describe("Market Service", () => {
     setExpectedProposals(proposalsDraft);
     await logger.expectToInclude("Proposal has been confirmed", 10);
     const addedProposalsIds = agreementPoolServiceMock["getProposals"]().map((p) => p.id);
-    expect(addedProposalsIds).to.eql(proposalsDraft.map((p) => p.proposal.proposalId));
+    expect(addedProposalsIds).toEqual(proposalsDraft.map((p) => p.proposal.proposalId));
     await marketService.end();
   });
 
