@@ -1,4 +1,4 @@
-import { Goth } from "../goth/goth.js";
+import { Goth } from "../goth/goth";
 import { resolve } from "path";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";

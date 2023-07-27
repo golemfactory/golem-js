@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { Network } from "../../yajsapi/network/index.js";
+import { Network } from "../../yajsapi/network";
 
 describe("Network", () => {
   describe("Creating", () => {

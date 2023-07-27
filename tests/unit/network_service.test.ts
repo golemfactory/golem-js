@@ -1,6 +1,6 @@
 import { expect } from "chai";
-import { LoggerMock } from "../mock/index.js";
-import { NetworkService } from "../../yajsapi/network/index.js";
+import { LoggerMock } from "../mock";
+import { NetworkService } from "../../yajsapi/network";
 const logger = new LoggerMock();
 
 describe("Network Service", () => {

@@ -1,8 +1,8 @@
-import * as activityMock from "../mock/rest/activity.js";
+import * as activityMock from "../mock/rest/activity";
 import { expect } from "chai";
-import { WorkContext, Worker } from "../../yajsapi/task/index.js";
-import { LoggerMock, StorageProviderMock } from "../mock/index.js";
-import { Activity, Result } from "../../yajsapi/activity/index.js";
+import { WorkContext, Worker } from "../../yajsapi/task";
+import { LoggerMock, StorageProviderMock } from "../mock";
+import { Activity, Result } from "../../yajsapi/activity";
 import { Readable } from "stream";
 const logger = new LoggerMock();
 const storageProviderMock = new StorageProviderMock({ logger });

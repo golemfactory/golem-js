@@ -1,7 +1,7 @@
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-import { TaskExecutor } from "../../yajsapi/index.js";
-import { LoggerMock } from "../mock/index.js";
+import { TaskExecutor } from "../../yajsapi";
+import { LoggerMock } from "../mock";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 const logger = new LoggerMock(false);

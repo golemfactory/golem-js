@@ -1,7 +1,7 @@
 import { expect } from "chai";
-import { TaskExecutor } from "../../yajsapi/index.js";
-import { LoggerMock } from "../mock/index.js";
-import { fileExistsSync } from "tsconfig-paths/lib/filesystem.js";
+import { TaskExecutor } from "../../yajsapi";
+import { LoggerMock } from "../mock";
+import { fileExistsSync } from "tsconfig-paths/lib/filesystem";
 
 const logger = new LoggerMock(false);
 

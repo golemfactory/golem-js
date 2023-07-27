@@ -1,6 +1,6 @@
 import { expect } from "chai";
-import { TaskExecutor, ProposalFilters, PaymentFilters } from "../../yajsapi/index.js";
-import { LoggerMock } from "../mock/index.js";
+import { TaskExecutor, ProposalFilters, PaymentFilters } from "../../yajsapi";
+import { LoggerMock } from "../mock";
 
 const logger = new LoggerMock(false);
 

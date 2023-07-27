@@ -1,6 +1,6 @@
 import { expect } from "chai";
-import { LoggerMock } from "../mock/index.js";
-import { Package } from "../../yajsapi/package/index.js";
+import { LoggerMock } from "../mock";
+import { Package } from "../../yajsapi/package";
 const logger = new LoggerMock();
 
 describe("Package", () => {

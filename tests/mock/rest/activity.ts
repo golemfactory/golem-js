@@ -1,5 +1,5 @@
 /* eslint @typescript-eslint/ban-ts-comment: 0 */
-import { RequestorControlApi } from "ya-ts-client/dist/ya-activity/src/api/requestor-control-api.js";
+import { RequestorControlApi } from "ya-ts-client/dist/ya-activity/src/api/requestor-control-api";
 import {
   ActivityState,
   ActivityStateStateEnum,
@@ -7,13 +7,13 @@ import {
   CreateActivityResult,
   ExeScriptCommandResult,
   ExeScriptRequest,
-} from "ya-ts-client/dist/ya-activity/src/models/index.js";
+} from "ya-ts-client/dist/ya-activity/src/models";
 import { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 import { v4 as uuidv4 } from "uuid";
 import {
   ExeScriptCommandResultResultEnum
-} from "ya-ts-client/dist/ya-activity/src/models/exe-script-command-result.js";
-import { RequestorStateApi } from "ya-ts-client/dist/ya-activity/src/api/requestor-state-api.js";
+} from "ya-ts-client/dist/ya-activity/src/models/exe-script-command-result";
+import { RequestorStateApi } from "ya-ts-client/dist/ya-activity/src/api/requestor-state-api";
 
 const exampleExeResult = {
   index: 0,

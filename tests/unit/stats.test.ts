@@ -1,14 +1,14 @@
 import { expect } from "chai";
-import { AbstractAggregator } from "../../yajsapi/stats/abstract_aggregator.js";
-import { Activities } from "../../yajsapi/stats/activities.js";
-import { Agreements, AgreementStatusEnum } from "../../yajsapi/stats/agreements.js";
-import { Allocations } from "../../yajsapi/stats/allocations.js";
-import { Invoices } from "../../yajsapi/stats/invoices.js";
-import { Payments } from "../../yajsapi/stats/payments.js";
-import { Proposals } from "../../yajsapi/stats/proposals.js";
-import { Providers } from "../../yajsapi/stats/providers.js";
-import { Tasks, TaskStatusEnum } from "../../yajsapi/stats/tasks.js";
-import { Collection } from "collect.js";
+import { AbstractAggregator } from "../../yajsapi/stats/abstract_aggregator";
+import { Activities } from "../../yajsapi/stats/activities";
+import { Agreements, AgreementStatusEnum } from "../../yajsapi/stats/agreements";
+import { Allocations } from "../../yajsapi/stats/allocations";
+import { Invoices } from "../../yajsapi/stats/invoices";
+import { Payments } from "../../yajsapi/stats/payments";
+import { Proposals } from "../../yajsapi/stats/proposals";
+import { Providers } from "../../yajsapi/stats/providers";
+import { Tasks, TaskStatusEnum } from "../../yajsapi/stats/tasks";
+import { Collection } from "collect";
 
 describe("Stats Module", () => {
   describe("Abstract Aggregator", () => {

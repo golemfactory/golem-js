@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { EnvUtils } from "../../yajsapi/utils/index.js";
+import { EnvUtils } from "../../yajsapi/utils";
 
 describe("EnvUtils", () => {
   describe("getYagnaApiUrl()", () => {

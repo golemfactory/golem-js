@@ -1,13 +1,13 @@
-import { setExpectedProposals } from "../mock/rest/market.js";
+import { setExpectedProposals } from "../mock/rest/market";
 import { expect } from "chai";
-import { MarketService, ProposalFilters } from "../../yajsapi/market/index.js";
-import { agreementPoolServiceMock, packageMock, LoggerMock, allocationMock } from "../mock/index.js";
+import { MarketService, ProposalFilters } from "../../yajsapi/market";
+import { agreementPoolServiceMock, packageMock, LoggerMock, allocationMock } from "../mock";
 import {
   proposalsInitial,
   proposalsDraft,
   proposalsWrongPaymentPlatform,
   proposalsShortDebitNoteTimeout,
-} from "../mock/fixtures/index.js";
+} from "../mock/fixtures";
 
 const logger = new LoggerMock();
 

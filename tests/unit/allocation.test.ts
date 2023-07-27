@@ -1,6 +1,6 @@
 import { expect } from "chai";
-import { LoggerMock } from "../mock/index.js";
-import { Allocation } from "../../yajsapi/payment/index.js";
+import { LoggerMock } from "../mock";
+import { Allocation } from "../../yajsapi/payment";
 
 const logger = new LoggerMock();
 const account = { address: "test_address", platform: "test_platform" };

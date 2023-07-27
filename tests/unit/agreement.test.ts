@@ -1,7 +1,7 @@
 import { expect } from "chai";
-import { LoggerMock } from "../mock/index.js";
-import { Agreement } from "../../yajsapi/agreement/index.js";
-import { AgreementStateEnum } from "ya-ts-client/dist/ya-market/src/models/agreement.js";
+import { LoggerMock } from "../mock";
+import { Agreement } from "../../yajsapi/agreement";
+import { AgreementStateEnum } from "ya-ts-client/dist/ya-market/src/models/agreement";
 
 const logger = new LoggerMock();
 

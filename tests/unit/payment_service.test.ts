@@ -1,9 +1,9 @@
-import { setExpectedDebitNotes, setExpectedEvents, setExpectedInvoices, clear } from "../mock/rest/payment.js";
+import { setExpectedDebitNotes, setExpectedEvents, setExpectedInvoices, clear } from "../mock/rest/payment";
 import { expect } from "chai";
-import { LoggerMock } from "../mock/index.js";
-import { PaymentService, Allocation, PaymentFilters } from "../../yajsapi/payment/index.js";
-import { agreement } from "../mock/entities/agreement.js";
-import { debitNotesEvents, debitNotes, invoices, invoiceEvents } from "../mock/fixtures/index.js";
+import { LoggerMock } from "../mock";
+import { PaymentService, Allocation, PaymentFilters } from "../../yajsapi/payment";
+import { agreement } from "../mock/entities/agreement";
+import { debitNotesEvents, debitNotes, invoices, invoiceEvents } from "../mock/fixtures";
 
 const logger = new LoggerMock();
 
