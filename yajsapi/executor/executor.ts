@@ -390,12 +390,16 @@ export class TaskExecutor {
   }
 
   public async cancel(reason?: string) {
-    if (this.isCanceled) return;
-    if (runtimeContextChecker.isNode) this.removeCancelEvent();
-    const message = `Executor has interrupted by the user. Reason: ${reason}.`;
-    this.logger?.warn(`${message}. Stopping all tasks...`);
-    this.isCanceled = true;
-    await this.end().catch((error) => this.logger?.error(error));
+    try {
+      if (this.isCanceled) return;
+      if (runtimeContextChecker.isNode) this.removeCancelEvent();
+      const message = `Executor has interrupted by the user. Reason: ${reason}.`;
+      this.logger?.warn(`${message}. Stopping all tasks...`);
+      this.isCanceled = true;
+      await this.end();
+    } catch (error) {
+      this.logger?.error(`Error while cancelling the executor. ${error}`);
+    }
   }
 
   private printStats() {
