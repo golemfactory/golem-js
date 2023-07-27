@@ -1,4 +1,4 @@
-import { AbstractAggregator, ItemInfo } from './abstract_aggregator.js';
+import { AbstractAggregator, ItemInfo } from './abstract_aggregator';
 
 export enum TaskStatusEnum {
   Pending = "pending",
