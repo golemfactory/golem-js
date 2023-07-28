@@ -1,4 +1,4 @@
-import { TaskExecutor } from "../../dist";
+import { TaskExecutor } from "yajsapi";
 import { readFileSync } from "fs";
 
 (async function main() {

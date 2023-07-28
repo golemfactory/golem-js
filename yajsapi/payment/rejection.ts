@@ -1,5 +1,5 @@
 /**
- * @category Mid-level
+ * @hidden
  */
 export enum RejectionReason {
   UnsolicitedService = "UNSOLICITED_SERVICE",
@@ -8,7 +8,7 @@ export enum RejectionReason {
 }
 
 /**
- * @category Mid-level
+ * @hidden
  */
 export interface Rejection {
   rejectionReason: RejectionReason;

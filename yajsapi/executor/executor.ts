@@ -19,11 +19,9 @@ import { MarketOptions } from "../market/service";
 import { RequireAtLeastOne } from "../utils/types.js";
 
 const terminatingSignals = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
-/**
- * @category High-level
- */
+
 export type ExecutorOptions = {
-  /** Image hash as string, otherwise Package object */
+  /** Image hash or image tag as string, otherwise Package object */
   package?: string | Package;
   /** Timeout for execute one task in ms */
   taskTimeout?: number;
@@ -58,13 +56,9 @@ export type ExecutorOptions = {
 
 /**
  * Contains information needed to start executor, if string the imageHash is required, otherwise it should be a type of {@link ExecutorOptions}
- * @category High-level
  */
 export type ExecutorOptionsMixin = string | ExecutorOptions;
 
-/**
- * @category High-level
- */
 export type YagnaOptions = {
   apiKey?: string;
   basePath?: string;
@@ -72,7 +66,6 @@ export type YagnaOptions = {
 
 /**
  * A high-level module for defining and executing tasks in the golem network
- * @category High-level
  */
 export class TaskExecutor {
   private readonly options: ExecutorConfig;
@@ -89,18 +82,22 @@ export class TaskExecutor {
   private lastTaskIndex = 0;
   private isRunning = true;
   private configOptions: ExecutorOptions;
+  private isCanceled = false;
 
   /**
    * Create a new Task Executor
-   * @category High-level
    * @description Factory Method that create and initialize an instance of the TaskExecutor
    *
    * @example **Simple usage of Task Executor**
    *
    * The executor can be created by passing appropriate initial parameters such as package, budget, subnet tag, payment driver, payment network etc.
-   * One required parameter is a package. This can be done in two ways. First by passing only package image hash, e.g.
+   * One required parameter is a package. This can be done in two ways. First by passing only package image hash or image tag, e.g.
    * ```js
    * const executor = await TaskExecutor.create("9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae");
+   * ```
+   * or
+   * ```js
+   * const executor = await TaskExecutor.create("golem/alpine:3.18.2");
    * ```
    *
    * @example **Usage of Task Executor with custom parameters**
@@ -110,7 +107,7 @@ export class TaskExecutor {
    * const executor = await TaskExecutor.create({
    *   subnetTag: "public",
    *   payment: { driver: "erc-20", network: "rinkeby" },
-   *   package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+   *   package: "golem/alpine:3.18.2",
    * });
    * ```
    *
@@ -133,7 +130,7 @@ export class TaskExecutor {
     this.configOptions = (typeof options === "string" ? { package: options } : options) as ExecutorOptions;
     this.options = new ExecutorConfig(this.configOptions);
     this.logger = this.options.logger;
-    this.taskQueue = new TaskQueue<Task<any, any>>();
+    this.taskQueue = new TaskQueue<Task<unknown, unknown>>();
     this.agreementPoolService = new AgreementPoolService(this.options);
     this.paymentService = new PaymentService(this.options);
     this.marketService = new MarketService(this.agreementPoolService, this.options);
@@ -215,16 +212,15 @@ export class TaskExecutor {
     if (runtimeContextChecker.isNode && !this.options.isSubprocess) this.removeCancelEvent();
     if (!this.isRunning) return;
     this.isRunning = false;
+    if (!this.configOptions.storageProvider) await this.storageProvider?.close();
     await this.networkService?.end();
-    await this.taskService.end();
-    await this.agreementPoolService.end();
-    await this.marketService.end();
+    await Promise.all([this.taskService.end(), this.agreementPoolService.end(), this.marketService.end()]);
     await this.paymentService.end();
-    if (!this.configOptions.storageProvider) this.storageProvider?.close();
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFinished());
     this.printStats();
     await this.statsService.end();
     this.logger?.info("Task Executor has shut down");
+    if (runtimeContextChecker.isNode && !this.options.isSubprocess) process.exit(0);
   }
 
   /**
@@ -397,7 +393,7 @@ export class TaskExecutor {
     if (this.isRunning) this.logger?.warn("Trying to stop executor...");
     this.end().catch((e) => {
       this.logger?.error(e);
-      !this.options.isSubprocess && process?.exit(1);
+      if (runtimeContextChecker.isNode && !this.options.isSubprocess) process?.exit(1);
     });
   }
 
@@ -410,16 +406,19 @@ export class TaskExecutor {
   }
 
   public async cancel(reason?: string) {
+    if (this.isCanceled) return;
+    if (runtimeContextChecker.isNode && !this.options.isSubprocess) this.removeCancelEvent();
     const message = `Executor has interrupted by the user. Reason: ${reason}.`;
     this.logger?.warn(`${message}. Stopping all tasks...`);
+    this.isCanceled = true;
     await this.end()
       .then(() => {
         if (this.options.isSubprocess) throw new Error(message);
-        else process.exit(0);
+        else if (runtimeContextChecker.isNode) process.exit(0);
       })
       .catch((error) => {
         this.logger?.error(error);
-        !this.options.isSubprocess && process.exit(1);
+        if (runtimeContextChecker.isNode && !this.options.isSubprocess) process.exit(1);
       });
   }
 

@@ -4,7 +4,7 @@ import { Allocation as AllocationModel } from "ya-ts-client/dist/ya-payment/src/
 import { Events } from "../events/index.js";
 
 /**
- * @category Mid-level
+ * @hidden
  */
 export interface AllocationOptions extends BasePaymentOptions {
   account: { address: string; platform: string };
@@ -13,7 +13,7 @@ export interface AllocationOptions extends BasePaymentOptions {
 
 /**
  * Allocation module - an object represents a designated sum of money reserved for the purpose of making some particular payments. Allocations are currently purely virtual objects. An Allocation is connected to a payment account (wallet) specified by address and payment platform field.
- * @category Mid-level
+ * @hidden
  */
 export class Allocation {
   /** Allocation ID */

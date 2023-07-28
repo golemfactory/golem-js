@@ -6,7 +6,7 @@ import { AgreementConfig } from "./config.js";
 import { Events } from "../events/index.js";
 
 /**
- * @category Mid-level
+ * @hidden
  */
 export interface ProviderInfo {
   name: string;
@@ -14,7 +14,7 @@ export interface ProviderInfo {
 }
 
 /**
- * @category Mid-level
+ * @hidden
  */
 export enum AgreementStateEnum {
   Proposal = "Proposal",
@@ -27,7 +27,7 @@ export enum AgreementStateEnum {
 }
 
 /**
- * @category Mid-level
+ * @hidden
  */
 export interface AgreementOptions {
   /** yagnaOptions */
@@ -43,7 +43,7 @@ export interface AgreementOptions {
 }
 /**
  * Agreement module - an object representing the contract between the requestor and the provider.
- * @category Mid-level
+ * @hidden
  */
 export class Agreement {
   private agreementData?: AgreementModel;
@@ -101,7 +101,7 @@ export class Agreement {
         new Events.AgreementConfirmed({ id: this.id, providerId: this.provider.id })
       );
     } catch (error) {
-      this.logger?.error(`Unable to confirm agreement ${this.id}. ${error}`);
+      this.logger?.debug(`Unable to confirm agreement with provider ${this.provider.name}. ${error}`);
       this.options.eventTarget?.dispatchEvent(
         new Events.AgreementRejected({ id: this.id, providerId: this.provider.id, reason: error.toString() })
       );
@@ -129,7 +129,9 @@ export class Agreement {
       if ((await this.getState()) !== AgreementStateEnum.Terminated)
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore TODO: API binding BUG with reason type
-        await this.options.api.terminateAgreement(this.id, reason);
+        await this.options.api.terminateAgreement(this.id, reason, {
+          timeout: this.options.agreementRequestTimeout,
+        });
       this.options.eventTarget?.dispatchEvent(
         new Events.AgreementTerminated({ id: this.id, providerId: this.provider.id })
       );

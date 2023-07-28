@@ -1,17 +1,17 @@
 import { ExecutorOptions } from "./executor.js";
 import { Package, PackageOptions } from "../package/index.js";
 import { ActivityOptions } from "../activity";
-import { Logger, runtimeContextChecker, defaultLogger } from "../utils/index.js";
+import { Logger, LogLevel, runtimeContextChecker, defaultLogger } from "../utils/index.js";
 
 const DEFAULTS = Object.freeze({
   payment: { driver: "erc20", network: "goerli" },
   budget: 1.0,
   subnetTag: "public",
-  logLevel: "info",
+  logLevel: LogLevel.info,
   basePath: "http://127.0.0.1:7465",
   maxParallelTasks: 5,
-  taskTimeout: 1000 * 60 * 10, // 10 min,
-  maxTaskRetries: 5,
+  taskTimeout: 1000 * 60 * 5, // 5 min,
+  maxTaskRetries: 3,
 });
 
 /**
