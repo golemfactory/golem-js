@@ -17,7 +17,7 @@
         "yacat": "ts-node ./yacat/yacat.ts",
         "fibonacci": "node ./fibonacci/fibonacci.js",
         "ssh": "ts-node ./ssh/ssh.ts",
-        "mid-level": "ts-node ./mid-level-api/hello.ts",
+        "tag": "ts-node ./simple-usage/tag.ts",
         "web": "node ./web/app.mjs"
     },
     "author": "GolemFactory <contact@golem.network>",

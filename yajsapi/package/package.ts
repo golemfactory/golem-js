@@ -4,7 +4,7 @@ import axios from "axios";
 import { PackageConfig } from "./config.js";
 import { RequireAtLeastOne } from "../utils/types.js";
 /**
- * @category Mid-level
+ * @hidden
  */
 
 export type PackageOptions = RequireAtLeastOne<
@@ -50,7 +50,7 @@ export interface PackageDetails {
 
 /**
  * Package module - an object for descriptions of the payload required by the requestor.
- * @category Mid-level
+ * @hidden
  */
 export class Package {
   private logger?: Logger;

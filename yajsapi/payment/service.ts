@@ -70,7 +70,7 @@ export class PaymentService {
       let i = 0;
       while (this.isRunning && !timeout) {
         this.isRunning = this.agreementsToPay.size !== 0;
-        await sleep(2000, true);
+        await sleep(2);
         i++;
         if (i > 10) {
           this.logger?.info(`Waiting for ${this.agreementsToPay.size} invoice to be paid...`);

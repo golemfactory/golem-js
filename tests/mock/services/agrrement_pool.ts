@@ -2,7 +2,7 @@
 import { Agreement, AgreementPoolService } from "../../../yajsapi/agreement/index.js";
 import { agreementsApproved } from "../fixtures/index.js";
 import { AgreementConfig } from "../../../yajsapi/agreement/config.js";
-import { Proposal } from "../../../yajsapi";
+import { Proposal } from "../../../yajsapi/market/index.js";
 
 const proposals: Proposal[] = [];
 const invalidProviderIds: string[] = [];

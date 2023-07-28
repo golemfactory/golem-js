@@ -4,7 +4,7 @@ export enum ResultState {
 }
 
 /**
- * @category Mid-level
+ * @hidden
  */
 export interface Result<T = unknown> {
   /** Index of script command */

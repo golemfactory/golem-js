@@ -15,7 +15,7 @@ export interface DemandDetails {
   constraints: Array<string>;
 }
 /**
- * @category Mid-level
+ * @hidden
  */
 export interface DemandOptions {
   subnetTag?: string;
@@ -31,14 +31,14 @@ export interface DemandOptions {
 
 /**
  * Event type with which all offers and proposals coming from the market will be emitted.
- * @category Mid-level
+ * @hidden
  */
 export const DemandEventType = "ProposalReceived";
 
 /**
  * Demand module - an object which can be considered an "open" or public Demand, as it is not directed at a specific Provider, but rather is sent to the market so that the matching mechanism implementation can associate relevant Offers.
  * It is a special entity type because it inherits from the `EventTarget` class. Therefore, after creating it, you can add listeners to it, which will listen to offers from the market on an event of a specific type: `DemandEventType`.
- * @category Mid-level
+ * @hidden
  */
 export class Demand extends EventTarget {
   private isRunning = true;
@@ -141,7 +141,6 @@ export class Demand extends EventTarget {
             this.dispatchEvent(
               new DemandEvent(DemandEventType, undefined, new Error(`Subscription expired. ${reason}`))
             );
-            this.unsubscribe().then();
           }
         }
       } finally {
@@ -152,7 +151,7 @@ export class Demand extends EventTarget {
 }
 
 /**
- * @category Mid-level
+ * @hidden
  */
 export class DemandEvent extends Event {
   readonly proposal: Proposal;

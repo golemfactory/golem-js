@@ -14,6 +14,7 @@ describe("Strategies", function () {
         package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         payment: { network: "rinkeby" },
         proposalFilter: ProposalFilters.blackListProposalRegexpFilter(/provider-2/),
+        isSubprocess: true,
         logger,
       });
       const data = ["one", "two", "three"];
@@ -36,6 +37,7 @@ describe("Strategies", function () {
         package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         payment: { network: "rinkeby" },
         proposalFilter: ProposalFilters.whiteListProposalRegexpFilter(/provider-2/),
+        isSubprocess: true,
         logger,
       });
       const data = ["one", "two", "three"];
@@ -59,6 +61,7 @@ describe("Strategies", function () {
         package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         payment: { network: "rinkeby" },
         invoiceFilter: PaymentFilters.acceptMaxAmountInvoiceFilter(0.00001),
+        isSubprocess: true,
         logger,
       });
       const data = ["one", "two"];
@@ -78,6 +81,7 @@ describe("Strategies", function () {
         package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
         payment: { network: "rinkeby" },
         debitNotesFilter: PaymentFilters.acceptMaxAmountDebitNoteFilter(0.00001),
+        isSubprocess: true,
         logger,
       });
       const data = ["one", "two"];
