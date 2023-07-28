@@ -8,7 +8,7 @@ describe("Test TaskExecutor API", () => {
     cy.fixture("golem.png", { encoding: null }).as("imageFile");
     cy.get("#MEME_IMG").selectFile("@imageFile");
     cy.get("#RUN").click();
-    cy.get("#RESULT_MEME").should("include.src", "data:image/png;base64,todo", { timeout: 60000 });
+    cy.get("#RESULT_MEME").should("have.attr", "src", "data:image/png;base64,todo", { timeout: 60000 });
     cy.get("#logs").contains("computed by provider");
     cy.get("#logs").contains("Task Executor has shut down");
   });
