@@ -1,5 +1,5 @@
 describe("Test TaskExecutor API", () => {
-  it("should run hello world example", () => {
+  it("should run transfer file example", () => {
     cy.visit("/image");
     cy.get("#YAGNA_APPKEY").clear().type(Cypress.env("YAGNA_APPKEY"));
     cy.get("#YAGNA_API_BASEPATH").clear().type(Cypress.env("YAGNA_API_BASEPATH"));

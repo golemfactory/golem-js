@@ -136,7 +136,7 @@
       }).catch(e => logger.error(e));
 
     await executor.end();
-    setResponse(result.data);
+    if (result?.data) setResponse(result.data);
   }
   window.run = run;
 </script>
