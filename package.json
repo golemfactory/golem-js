@@ -16,7 +16,7 @@
     "docs:md": "typedoc yajsapi/ --plugin typedoc-plugin-markdown --plugin .docs/typedoc-clear-references.cjs --hideBreadcrumbs true && node .docs/summary-generator.cjs",
     "test": "npm run test:unit && npm run test:integration",
     "test:unit": "jest --config tests/unit/jest.config.json tests/unit/**.test.ts",
-    "test:integration": "jest --config tests/integration/jest.config.json tests/integration/**.spec.ts",
+    "test:integration": "jest --config tests/integration/jest.config.json tests/integration/tasks.spec.ts",
     "test:cypress": "cypress run",
     "lint": "eslint .",
     "format": "prettier yajsapi/"

@@ -147,9 +147,8 @@ describe("Task Executor", function () {
           .run('echo "Hello Golem"')
           .run('echo "Hello World"')
           .run('echo "OK"')
-          .end()
-          .catch((e) => expect(e).toBeUndefined());
-        results.map((r) => outputs.push(r?.stdout?.trim()));
+          .end();
+        results.map((r) => outputs.push(r?.stdout?.trim() ?? "Missing STDOUT!"));
       })
       .catch((e) => {
         expect(e).toBeUndefined();

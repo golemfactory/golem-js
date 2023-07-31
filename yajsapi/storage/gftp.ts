@@ -25,7 +25,7 @@ export class GftpStorageProvider implements StorageProvider {
 
   async init() {
     if (this.isInitialized) return;
-    this.gftpServerProcess = await cp.spawn("gftp server", [], { shell: true });
+    this.gftpServerProcess = cp.spawn("gftp server", [], { shell: true });
     this.gftpServerProcess?.stdout?.setEncoding("utf-8");
     this.gftpServerProcess?.stderr?.setEncoding("utf-8");
     this.gftpServerProcess.on("error", (error) => this.logger?.error(error));
