@@ -83,6 +83,7 @@ export class PaymentService {
     this.payments?.unsubscribe().catch((error) => this.logger?.warn(error));
     this.payments?.removeEventListener(PaymentEventType, this.subscribePayments.bind(this));
     for (const allocation of this.allocations) await allocation.release().catch((error) => this.logger?.warn(error));
+    this.options.httpAgent.destroy?.();
     this.logger?.info("All allocations has been released");
     this.logger?.debug("Payment service has been stopped");
   }
@@ -99,7 +100,7 @@ export class PaymentService {
         this.logger?.debug(
           `Not using payment platform ${account.platform}, platform's driver/network ` +
             `${account.driver}/${account.network} is different than requested ` +
-            `driver/network ${this.options.payment.driver}/${this.options.payment.network}`
+            `driver/network ${this.options.payment.driver}/${this.options.payment.network}`,
         );
         continue;
       }
@@ -107,7 +108,7 @@ export class PaymentService {
     }
     if (!this.allocations.length) {
       throw new Error(
-        `Unable to create allocation for driver/network ${this.options.payment.driver}/${this.options.payment.network}. There is no requestor account supporting this platform.`
+        `Unable to create allocation for driver/network ${this.options.payment.driver}/${this.options.payment.network}. There is no requestor account supporting this platform.`,
       );
     }
     return this.allocations;
@@ -141,7 +142,7 @@ export class PaymentService {
         };
         await invoice.reject(reason);
         this.logger?.warn(
-          `Invoice has been rejected for provider ${agreement.provider.name}. Reason: ${reason.message}`
+          `Invoice has been rejected for provider ${agreement.provider.name}. Reason: ${reason.message}`,
         );
       }
       this.agreementsDebitNotes.delete(invoice.agreementId);
@@ -167,7 +168,7 @@ export class PaymentService {
         };
         await debitNote.reject(reason);
         this.logger?.warn(
-          `DebitNote has been rejected for agreement ${debitNote.agreementId}. Reason: ${reason.message}`
+          `DebitNote has been rejected for agreement ${debitNote.agreementId}. Reason: ${reason.message}`,
         );
       }
     } catch (error) {
@@ -183,7 +184,7 @@ export class PaymentService {
   private getAllocationForPayment(paymentNote: Invoice | DebitNote): Allocation {
     const allocation = this.allocations.find(
       (allocation) =>
-        allocation.paymentPlatform === paymentNote.paymentPlatform && allocation.address === paymentNote.payerAddr
+        allocation.paymentPlatform === paymentNote.paymentPlatform && allocation.address === paymentNote.payerAddr,
     );
     if (!allocation) throw new Error(`No allocation for ${paymentNote.paymentPlatform} ${paymentNote.payerAddr}`);
     return allocation;

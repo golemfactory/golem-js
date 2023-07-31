@@ -39,7 +39,10 @@ export type ExecutorOptions = {
   maxTaskRetries?: number;
   /** Custom Storage Provider used for transfer files */
   storageProvider?: StorageProvider;
-  /** Flag to determine is executor running as subprocess. All signals and process commands will be disabled */
+  /**
+   * @deprecated this parameter will be removed in the next version.
+   * Currently has no effect on executor termination.
+   */
   isSubprocess?: boolean;
   /** Timeout for preparing activity - creating and deploy commands */
   activityPreparingTimeout?: number;
@@ -158,7 +161,7 @@ export class TaskExecutor {
       this.agreementPoolService,
       this.paymentService,
       this.networkService,
-      { ...this.options, storageProvider: this.storageProvider }
+      { ...this.options, storageProvider: this.storageProvider },
     );
     this.statsService = new StatsService(this.options);
   }
@@ -198,10 +201,10 @@ export class TaskExecutor {
     this.networkService?.run().catch((e) => this.handleCriticalError(e));
     this.statsService.run().catch((e) => this.handleCriticalError(e));
     this.storageProvider?.init().catch((e) => this.handleCriticalError(e));
-    if (runtimeContextChecker.isNode && !this.options.isSubprocess) this.handleCancelEvent();
+    if (runtimeContextChecker.isNode) this.handleCancelEvent();
     this.options.eventTarget.dispatchEvent(new Events.ComputationStarted());
     this.logger?.info(
-      `Task Executor has started using subnet: ${this.options.subnetTag}, network: ${this.options.payment?.network}, driver: ${this.options.payment?.driver}`
+      `Task Executor has started using subnet: ${this.options.subnetTag}, network: ${this.options.payment?.network}, driver: ${this.options.payment?.driver}`,
     );
   }
 
@@ -209,7 +212,7 @@ export class TaskExecutor {
    * Stop all executor services and shut down executor instance
    */
   async end() {
-    if (runtimeContextChecker.isNode && !this.options.isSubprocess) this.removeCancelEvent();
+    if (runtimeContextChecker.isNode) this.removeCancelEvent();
     if (!this.isRunning) return;
     this.isRunning = false;
     if (!this.configOptions.storageProvider) await this.storageProvider?.close();
@@ -220,7 +223,6 @@ export class TaskExecutor {
     this.printStats();
     await this.statsService.end();
     this.logger?.info("Task Executor has shut down");
-    if (runtimeContextChecker.isNode && !this.options.isSubprocess) process.exit(0);
   }
 
   /**
@@ -287,7 +289,7 @@ export class TaskExecutor {
    */
   map<InputType, OutputType>(
     data: Iterable<InputType>,
-    worker: Worker<InputType, OutputType>
+    worker: Worker<InputType, OutputType>,
   ): AsyncIterable<OutputType | undefined> {
     const inputs = [...data];
     const featureResults = inputs.map((value) => this.executeTask<InputType, OutputType>(worker, value));
@@ -298,7 +300,7 @@ export class TaskExecutor {
         .then((res) => {
           results.push(res as OutputType);
         })
-        .catch((e) => this.handleCriticalError(e))
+        .catch((e) => this.handleCriticalError(e)),
     );
     const isRunning = () => this.isRunning;
     return {
@@ -335,10 +337,10 @@ export class TaskExecutor {
    */
   async forEach<InputType, OutputType>(
     data: Iterable<InputType>,
-    worker: Worker<InputType, OutputType>
+    worker: Worker<InputType, OutputType>,
   ): Promise<void> {
     await Promise.all([...data].map((value) => this.executeTask<InputType, OutputType>(worker, value))).catch((e) =>
-      this.handleCriticalError(e)
+      this.handleCriticalError(e),
     );
   }
 
@@ -346,12 +348,12 @@ export class TaskExecutor {
     packageReference: RequireAtLeastOne<
       { imageHash: string; manifest: string; imageTag: string },
       "manifest" | "imageTag" | "imageHash"
-    >
+    >,
   ): Promise<Package> {
     const packageInstance = Package.create({ ...this.options.packageOptions, ...packageReference });
 
     this.options.eventTarget.dispatchEvent(
-      new Events.PackageCreated({ packageReference, details: packageInstance.details })
+      new Events.PackageCreated({ packageReference, details: packageInstance.details }),
     );
 
     return packageInstance;
@@ -359,14 +361,14 @@ export class TaskExecutor {
 
   private async executeTask<InputType, OutputType>(
     worker: Worker<InputType, OutputType>,
-    data?: InputType
+    data?: InputType,
   ): Promise<OutputType | undefined> {
     const task = new Task<InputType, OutputType>(
       (++this.lastTaskIndex).toString(),
       worker,
       data,
       this.initWorker,
-      this.options.maxTaskRetries
+      this.options.maxTaskRetries,
     );
     this.taskQueue.addToEnd(task as Task<unknown, unknown>);
     let timeout = false;
@@ -391,35 +393,28 @@ export class TaskExecutor {
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFailed({ reason: e.toString() }));
     this.logger?.error(e.toString());
     if (this.isRunning) this.logger?.warn("Trying to stop executor...");
-    this.end().catch((e) => {
-      this.logger?.error(e);
-      if (runtimeContextChecker.isNode && !this.options.isSubprocess) process?.exit(1);
-    });
+    this.end().catch((e) => this.logger?.error(e));
   }
 
   private handleCancelEvent() {
-    terminatingSignals.forEach((event) => process.on(event, this.cancel.bind(this)));
+    terminatingSignals.forEach((event) => process.on(event, () => this.cancel(event)));
   }
 
   private removeCancelEvent() {
-    terminatingSignals.forEach((event) => process.off(event, this.cancel.bind(this)));
+    terminatingSignals.forEach((event) => process.removeAllListeners(event));
   }
 
   public async cancel(reason?: string) {
-    if (this.isCanceled) return;
-    if (runtimeContextChecker.isNode && !this.options.isSubprocess) this.removeCancelEvent();
-    const message = `Executor has interrupted by the user. Reason: ${reason}.`;
-    this.logger?.warn(`${message}. Stopping all tasks...`);
-    this.isCanceled = true;
-    await this.end()
-      .then(() => {
-        if (this.options.isSubprocess) throw new Error(message);
-        else if (runtimeContextChecker.isNode) process.exit(0);
-      })
-      .catch((error) => {
-        this.logger?.error(error);
-        if (runtimeContextChecker.isNode && !this.options.isSubprocess) process.exit(1);
-      });
+    try {
+      if (this.isCanceled) return;
+      if (runtimeContextChecker.isNode) this.removeCancelEvent();
+      const message = `Executor has interrupted by the user. Reason: ${reason}.`;
+      this.logger?.warn(`${message}. Stopping all tasks...`);
+      this.isCanceled = true;
+      await this.end();
+    } catch (error) {
+      this.logger?.error(`Error while cancelling the executor. ${error}`);
+    }
   }
 
   private printStats() {

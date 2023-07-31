@@ -20,17 +20,19 @@ export class NetworkConfig {
   public readonly gateway?: string;
   public readonly logger?: Logger;
   public readonly apiUrl: string;
+  public readonly httpAgent: Agent;
 
   constructor(options: NetworkOptions) {
     const apiKey = options?.yagnaOptions?.apiKey || EnvUtils.getYagnaAppKey();
     if (!apiKey) throw new Error("Api key not defined");
     const basePath = options?.yagnaOptions?.basePath || EnvUtils.getYagnaApiUrl();
     this.apiUrl = `${basePath}/net-api/v1`;
+    this.httpAgent = new Agent({ keepAlive: true });
     const apiConfig = new Configuration({
       apiKey,
       basePath: this.apiUrl,
       accessToken: apiKey,
-      baseOptions: { httpAgent: new Agent({ keepAlive: true }) },
+      baseOptions: { httpAgent: this.httpAgent },
     });
     this.api = new RequestorApi(apiConfig);
     this.ip = options?.networkIp || DEFAULTS.networkIp;

@@ -64,7 +64,11 @@ export class Demand extends EventTarget {
    * @param options - {@link DemandConfig}
    * @hidden
    */
-  constructor(public readonly id: string, private demandRequest: DemandOfferBase, private options: DemandConfig) {
+  constructor(
+    public readonly id: string,
+    private demandRequest: DemandOfferBase,
+    private options: DemandConfig,
+  ) {
     super();
     this.logger = this.options.logger;
     this.subscribe().catch((e) => this.logger?.error(e));
@@ -77,7 +81,7 @@ export class Demand extends EventTarget {
     this.isRunning = false;
     await this.options.api.unsubscribeDemand(this.id);
     this.options.eventTarget?.dispatchEvent(new events.DemandUnsubscribed({ id: this.id }));
-    this.removeEventListener(DemandEventType, null);
+    this.options.httpAgent.destroy?.();
     this.logger?.debug(`Demand ${this.id} unsubscribed`);
   }
 
@@ -109,7 +113,7 @@ export class Demand extends EventTarget {
                 id: event.proposalId,
                 parentId: this.findParentProposal(event.proposalId),
                 reason: event.reason?.message,
-              })
+              }),
             );
             continue;
           } else if (event.eventType !== "ProposalEvent") continue;
@@ -120,7 +124,7 @@ export class Demand extends EventTarget {
             this.options.api,
             event.proposal,
             this.demandRequest,
-            this.options.eventTarget
+            this.options.eventTarget,
           );
           this.dispatchEvent(new DemandEvent(DemandEventType, proposal));
           this.options.eventTarget?.dispatchEvent(
@@ -129,7 +133,7 @@ export class Demand extends EventTarget {
               parentId: this.findParentProposal(event.proposal.prevProposalId),
               providerId: proposal.issuerId,
               details: proposal.details,
-            })
+            }),
           );
         }
       } catch (error) {
@@ -139,7 +143,7 @@ export class Demand extends EventTarget {
           this.logger?.warn(`Unable to collect offers. ${reason}`);
           if (error.response?.status === 404) {
             this.dispatchEvent(
-              new DemandEvent(DemandEventType, undefined, new Error(`Subscription expired. ${reason}`))
+              new DemandEvent(DemandEventType, undefined, new Error(`Subscription expired. ${reason}`)),
             );
           }
         }
@@ -171,5 +175,8 @@ export class DemandEvent extends Event {
 }
 
 class ProposalReference {
-  constructor(readonly id: string, readonly counteringProposalId: string) {}
+  constructor(
+    readonly id: string,
+    readonly counteringProposalId: string,
+  ) {}
 }
