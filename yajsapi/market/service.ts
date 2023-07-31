@@ -33,7 +33,10 @@ export class MarketService {
   private allocations?: Allocation[];
   private maxResubscribeRetries = 5;
 
-  constructor(private readonly agreementPoolService: AgreementPoolService, options?: MarketOptions) {
+  constructor(
+    private readonly agreementPoolService: AgreementPoolService,
+    options?: MarketOptions,
+  ) {
     this.options = new MarketConfig(options);
     this.logger = this.options?.logger;
   }
@@ -52,6 +55,7 @@ export class MarketService {
       this.demand.removeEventListener(DemandEventType, this.demandEventListener.bind(this));
       await this.demand.unsubscribe().catch((e) => this.logger?.error(`Could not unsubscribe demand. ${e}`));
     }
+    this.options.httpAgent.destroy?.();
     this.logger?.debug("Market Service has been stopped");
   }
 
@@ -123,7 +127,7 @@ export class MarketService {
   private async processDraftProposal(proposal: Proposal) {
     this.agreementPoolService.addProposal(proposal);
     this.logger?.debug(
-      `Proposal has been confirmed with provider ${proposal.issuerId} and added to agreement pool (${proposal.id})`
+      `Proposal has been confirmed with provider ${proposal.issuerId} and added to agreement pool (${proposal.id})`,
     );
   }
 

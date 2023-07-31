@@ -18,7 +18,6 @@ describe("SSH connection", function () {
       networkIp: "192.168.0.0/24",
       logger,
       payment: { network: "rinkeby" },
-      isSubprocess: true,
     });
     let websocketUri;
     const password = crypto.randomBytes(3).toString("hex");
@@ -48,7 +47,7 @@ describe("SSH connection", function () {
           `root@${crypto.randomBytes(10).toString("hex")}`,
           "uname -v",
         ],
-        { shell: true }
+        { shell: true },
       );
       processSsh.stdout.on("data", (data) => (stdout += data.toString()));
     });

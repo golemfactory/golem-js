@@ -25,7 +25,6 @@ describe("Password cracking", function () {
       package: "055911c811e56da4d75ffc928361a78ed13077933ffa8320fb1ec2db",
       payment: { network: "rinkeby" },
       budget: 10,
-      isSubprocess: true,
       logger,
     });
     const keyspace = await executor.run<number>(async (ctx) => {
