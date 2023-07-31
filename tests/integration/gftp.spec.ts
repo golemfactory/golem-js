@@ -15,13 +15,12 @@ describe("GFTP transfers", function () {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
       payment: { network: "rinkeby" },
-      isSubprocess: true,
       logger,
     });
     executor.beforeEach(async (ctx) => {
       await ctx.uploadFile(
         new URL("../mock/fixtures/eiffel.blend", import.meta.url).pathname,
-        "/golem/resource/eiffel.blend"
+        "/golem/resource/eiffel.blend",
       );
     });
     const data = [0, 1, 2, 3, 4, 5];

@@ -31,16 +31,18 @@ export class DemandConfig {
   public readonly proposalTimeout?: number;
   public readonly logger?: Logger;
   public readonly eventTarget?: EventTarget;
+  public readonly httpAgent: Agent;
 
   constructor(options?: DemandOptions) {
     const apiKey = options?.yagnaOptions?.apiKey || EnvUtils.getYagnaAppKey();
     if (!apiKey) throw new Error("Api key not defined");
     const basePath = options?.yagnaOptions?.basePath || EnvUtils.getYagnaApiUrl();
+    this.httpAgent = new Agent({ keepAlive: true });
     const apiConfig = new Configuration({
       apiKey,
       basePath: `${basePath}/market-api/v1`,
       accessToken: apiKey,
-      baseOptions: { httpAgent: new Agent({ keepAlive: true }) },
+      baseOptions: { httpAgent: this.httpAgent },
     });
     this.yagnaOptions = options?.yagnaOptions;
     this.api = new RequestorApi(apiConfig);

@@ -22,16 +22,18 @@ export class ActivityConfig {
   public readonly logger?: Logger;
   public readonly eventTarget?: EventTarget;
   public readonly yagnaOptions: YagnaOptions;
+  public readonly httpAgent: Agent;
 
   constructor(options?: ActivityOptions) {
     const apiKey = options?.yagnaOptions?.apiKey || EnvUtils.getYagnaAppKey();
     if (!apiKey) throw new Error("Api key not defined");
     const basePath = options?.yagnaOptions?.basePath || EnvUtils.getYagnaApiUrl();
+    this.httpAgent = new Agent({ keepAlive: true });
     const apiConfig = new yaActivity.Configuration({
       apiKey,
       basePath: `${basePath}/activity-api/v1`,
       accessToken: apiKey,
-      baseOptions: { httpAgent: new Agent({ keepAlive: true }) },
+      baseOptions: { httpAgent: this.httpAgent },
     });
     this.api = {
       control: new RequestorControlApi(apiConfig),
