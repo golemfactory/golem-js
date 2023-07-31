@@ -1,5 +1,11 @@
 export { TaskExecutor, ExecutorOptions } from "./executor/index.js";
-export { StorageProvider, GftpStorageProvider } from "./storage/index.js";
+export {
+  StorageProvider,
+  GftpStorageProvider,
+  NullStorageProvider,
+  WebSocketBrowserStorageProvider,
+  WebSocketStorageProviderOptions
+} from "./storage/index.js";
 export { ActivityStateEnum, Result } from "./activity/index.js";
 export { AgreementCandidate, AgreementSelectors } from "./agreement/index.js";
 export { ProposalFilters, ProposalDTO } from "./market/index.js";
