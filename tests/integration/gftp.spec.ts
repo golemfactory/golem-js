@@ -18,6 +18,7 @@ describe("GFTP transfers", function () {
     });
     executor.beforeEach(async (ctx) => {
       await ctx.uploadFile(
+        // @ts-ignore Intended ignore for `import.meta.url` issue {@link https://github.com/kulshekhar/ts-jest/issues/3888}
         new URL("../mock/fixtures/eiffel.blend", import.meta.url).pathname,
         "/golem/resource/eiffel.blend",
       );
