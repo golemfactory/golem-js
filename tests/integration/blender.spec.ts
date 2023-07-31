@@ -1,10 +1,9 @@
-import { expect } from "chai";
 import { TaskExecutor } from "../../yajsapi";
 import { LoggerMock } from "../mock";
 import { fileExistsSync } from "tsconfig-paths/lib/filesystem";
 
 const logger = new LoggerMock(false);
-const blender_params = (frame) => ({
+const blenderParams = (frame) => ({
   scene_file: "/golem/resource/scene.blend",
   resolution: [400, 300],
   use_compositing: false,
@@ -35,17 +34,13 @@ describe("Blender rendering", function () {
       payment: { network: "rinkeby" },
     });
     executor.beforeEach(async (ctx) => {
-      await ctx.uploadFile(
-        // @ts-ignore Intended ignore for `import.meta.url` issue {@link https://github.com/kulshekhar/ts-jest/issues/3888}
-        new URL("../mock/fixtures/cubes.blend", import.meta.url).pathname,
-        "/golem/resource/scene.blend",
-      );
+      await ctx.uploadFile(new URL("../mock/fixtures/cubes.blend").pathname, "/golem/resource/scene.blend");
     });
     const data = [0, 10, 20, 30, 40, 50];
     const results = executor.map<number, string>(data, async (ctx, frame) => {
       const result = await ctx
         .beginBatch()
-        .uploadJson(blender_params(frame), "/golem/work/params.json")
+        .uploadJson(blenderParams(frame), "/golem/work/params.json")
         .run("/golem/entrypoints/run-blender.sh")
         .downloadFile(`/golem/output/out${frame?.toString().padStart(4, "0")}.png`, `output_${frame}.png`)
         .end()
@@ -53,8 +48,8 @@ describe("Blender rendering", function () {
       return result ? `output_${frame}.png` : "";
     });
     const expectedResults = data.map((d) => `output_${d}.png`);
-    for await (const result of results) expect(result).to.be.oneOf(expectedResults);
+    for await (const result of results) expect(expectedResults).toContain(result);
     for (const file of expectedResults)
-      expect(fileExistsSync(`${process.env.GOTH_GFTP_VOLUME || ""}${file}`)).to.be.true;
+      expect(fileExistsSync(`${process.env.GOTH_GFTP_VOLUME || ""}${file}`)).toEqual(true);
   });
 });

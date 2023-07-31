@@ -1,4 +1,3 @@
-import { expect } from "chai";
 import { TaskExecutor, ProposalFilters, PaymentFilters } from "../../yajsapi";
 import { LoggerMock } from "../mock";
 
@@ -23,7 +22,7 @@ describe("Strategies", function () {
       });
       const finalOutputs: string[] = [];
       for await (const res of results) if (res) finalOutputs.push(res);
-      expect(finalOutputs).to.have.members(data);
+      expect(finalOutputs).toEqual(expect.arrayContaining([data]));
       await logger.expectToInclude(`Proposal rejected by Proposal Filter`, 5000);
       await logger.expectToInclude(`Task 1 computed by provider provider-1`, 5000);
       await logger.expectToInclude(`Task 2 computed by provider provider-1`, 5000);
@@ -45,7 +44,7 @@ describe("Strategies", function () {
       });
       const finalOutputs: string[] = [];
       for await (const res of results) if (res) finalOutputs.push(res);
-      expect(finalOutputs).to.have.members(data);
+      expect(finalOutputs).toEqual(expect.arrayContaining([data]));
       await logger.expectToInclude(`Proposal rejected by Proposal Filter`, 5000);
       await logger.expectToInclude(`Task 1 computed by provider provider-2`, 5000);
       await logger.expectToInclude(`Task 2 computed by provider provider-2`, 5000);
@@ -68,7 +67,7 @@ describe("Strategies", function () {
       });
       const finalOutputs: string[] = [];
       for await (const res of results) if (res) finalOutputs.push(res);
-      expect(finalOutputs).to.have.members(data);
+      expect(finalOutputs).toEqual(expect.arrayContaining([data]));
       await executor.end();
       await logger.expectToInclude(`Reason: Invoice rejected by Invoice Filter`, 100);
     });
@@ -87,7 +86,7 @@ describe("Strategies", function () {
       });
       const finalOutputs: string[] = [];
       for await (const res of results) if (res) finalOutputs.push(res);
-      expect(finalOutputs).to.have.members(data);
+      expect(finalOutputs).toEqual(expect.arrayContaining([data]));
       await executor.end();
       await logger.expectToInclude(`DebitNote rejected by DebitNote Filter`, 100);
     });

@@ -1,4 +1,3 @@
-import { expect } from "chai";
 import { LoggerMock } from "../mock";
 import { readFileSync } from "fs";
 import { TaskExecutor } from "../../yajsapi";
@@ -11,7 +10,7 @@ describe("Task Executor", function () {
   });
 
   afterEach(async function () {
-        logger.clear();
+    logger.clear();
     await executor?.end();
   });
 
@@ -23,13 +22,13 @@ describe("Task Executor", function () {
     });
     const result = await executor.run(async (ctx) => ctx.run("echo 'Hello World'"));
 
-    expect(result?.stdout).to.include("Hello World");
-    expect(logger.logs).to.include("Demand published on the market");
-    expect(logger.logs).to.include("New proposal has been received");
-    expect(logger.logs).to.include("Proposal has been responded");
-    expect(logger.logs).to.include("New proposal added to pool");
-    expect(logger.logs).to.match(/Agreement confirmed by provider/);
-    expect(logger.logs).to.match(/Activity .* created/);
+    expect(result?.stdout).toContain("Hello World");
+    expect(logger.logs).toContain("Demand published on the market");
+    expect(logger.logs).toContain("New proposal has been received");
+    expect(logger.logs).toContain("Proposal has been responded");
+    expect(logger.logs).toContain("New proposal added to pool");
+    expect(logger.logs).toMatch(/Agreement confirmed by provider/);
+    expect(logger.logs).toMatch(/Activity .* created/);
   });
 
   it("should run simple task using package tag", async () => {
@@ -40,13 +39,13 @@ describe("Task Executor", function () {
     });
     const result = await executor.run(async (ctx) => ctx.run("echo 'Hello World'"));
 
-    expect(result?.stdout).to.include("Hello World");
-    expect(logger.logs).to.include("Demand published on the market");
-    expect(logger.logs).to.include("New proposal has been received");
-    expect(logger.logs).to.include("Proposal has been responded");
-    expect(logger.logs).to.include("New proposal added to pool");
-    expect(logger.logs).to.match(/Agreement confirmed by provider/);
-    expect(logger.logs).to.match(/Activity .* created/);
+    expect(result?.stdout).toContain("Hello World");
+    expect(logger.logs).toContain("Demand published on the market");
+    expect(logger.logs).toContain("New proposal has been received");
+    expect(logger.logs).toContain("Proposal has been responded");
+    expect(logger.logs).toContain("New proposal added to pool");
+    expect(logger.logs).toMatch(/Agreement confirmed by provider/);
+    expect(logger.logs).toMatch(/Activity .* created/);
   });
 
   it("should run simple tasks by map function", async () => {
@@ -62,7 +61,7 @@ describe("Task Executor", function () {
     });
     const finalOutputs: string[] = [];
     for await (const res of results) if (res) finalOutputs.push(res);
-    expect(finalOutputs).to.have.members(data);
+    expect(finalOutputs).toEqual(expect.arrayContaining([data]));
   });
 
   it("should run simple tasks by forEach function", async () => {
@@ -74,7 +73,7 @@ describe("Task Executor", function () {
     const data = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
     await executor.forEach(data, async (ctx, x) => {
       const res = await ctx.run(`echo "${x}"`);
-      expect(res?.stdout?.trim()).to.be.oneOf(data);
+      expect(data).toContain(res?.stdout?.trim());
     });
   });
 
@@ -99,13 +98,13 @@ describe("Task Executor", function () {
       })
       .catch((e) => {
         executor.end();
-        expect(e).to.be.undefined;
+        expect(e).toBeUndefined();
       });
     await logger.expectToInclude("Task 1 computed by provider", 5000);
-    expect(outputs[0]).to.equal("Hello Golem");
-    expect(outputs[1]).to.equal("Hello World");
-    expect(outputs[2]).to.equal("OK");
-    expect(onEnd).to.equal("END");
+    expect(outputs[0]).toEqual("Hello Golem");
+    expect(outputs[1]).toEqual("Hello World");
+    expect(outputs[2]).toEqual("OK");
+    expect(onEnd).toEqual("END");
   });
 
   it("should run simple batch script and catch error on stream", async () => {
@@ -125,11 +124,11 @@ describe("Task Executor", function () {
         });
       })
       .catch((e) => {
-        expect(e).to.be.undefined;
+        expect(e).toBeUndefined();
       });
     await logger.expectToInclude("Task 1 computed by provider", 5000);
-    expect(outputs[0]).to.equal("Hello Golem");
-    expect(expectedError).to.equal(
+    expect(outputs[0]).toEqual("Hello Golem");
+    expect(expectedError).toEqual(
       "Error: ExeScript command exited with code 127. Stdout: undefined. Stderr: sh: 1: invalid_command: not found",
     );
   });
@@ -149,15 +148,15 @@ describe("Task Executor", function () {
           .run('echo "Hello World"')
           .run('echo "OK"')
           .end()
-          .catch((e) => expect(e).to.be.undefined);
+          .catch((e) => expect(e).toBeUndefined());
         results.map((r) => outputs.push(r?.stdout?.trim()));
       })
       .catch((e) => {
-        expect(e).to.be.undefined;
+        expect(e).toBeUndefined();
       });
-    expect(outputs[0]).to.equal("Hello Golem");
-    expect(outputs[1]).to.equal("Hello World");
-    expect(outputs[2]).to.equal("OK");
+    expect(outputs[0]).toEqual("Hello Golem");
+    expect(outputs[1]).toEqual("Hello World");
+    expect(outputs[2]).toEqual("OK");
   });
 
   it("should run simple batch script and catch error on promise", async () => {
@@ -178,9 +177,9 @@ describe("Task Executor", function () {
           .catch((err) => (error = err));
       })
       .catch((e) => {
-        expect(e).to.be.undefined;
+        expect(e).toBeUndefined();
       });
-    expect(error).to.equal("Error: ExeScript command exited with code 127");
+    expect(error).toEqual("Error: ExeScript command exited with code 127");
   });
 
   it("should run transfer file", async () => {
@@ -194,7 +193,7 @@ describe("Task Executor", function () {
       const res = await ctx.downloadFile("/golem/work/test.json", "new_test.json");
       return res?.result;
     });
-    expect(result).to.equal("Ok");
-    expect(readFileSync(`${process.env.GOTH_GFTP_VOLUME || ""}new_test.json`, "utf-8")).to.equal('{"test":"1234"}');
+    expect(result).toEqual("Ok");
+    expect(readFileSync(`${process.env.GOTH_GFTP_VOLUME || ""}new_test.json`, "utf-8")).toEqual('{"test":"1234"}');
   });
 });

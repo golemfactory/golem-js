@@ -1,4 +1,3 @@
-import { expect } from "chai";
 import { LoggerMock } from "../mock";
 import crypto from "crypto";
 import { TaskExecutor } from "../../yajsapi";
@@ -8,7 +7,7 @@ const logger = new LoggerMock(false);
 describe("SSH connection", function () {
   let executor: TaskExecutor;
   afterEach(async function () {
-        await executor.end();
+    await executor.end();
   });
   it("should connect to provider via ssh", async () => {
     executor = await TaskExecutor.create({
@@ -32,8 +31,8 @@ describe("SSH connection", function () {
         .run("/usr/sbin/sshd")
         .end()
         .catch((e) => console.error(e));
-      expect(results?.[3]?.result).to.equal("Ok");
-      expect(websocketUri).to.an("string");
+      expect(results?.[3]?.result).toEqual("Ok");
+      expect(websocketUri).toEqual(expect.any(String));
       processSsh = spawn(
         `sshpass -p ${password} ssh`,
         [
@@ -51,7 +50,7 @@ describe("SSH connection", function () {
       processSsh.stdout.on("data", (data) => (stdout += data.toString()));
     });
     await new Promise((res) => setTimeout(res, 3000));
-    expect(stdout).to.include("1-Alpine SMP");
+    expect(stdout).toContain("1-Alpine SMP");
     processSsh.kill();
   });
 });
