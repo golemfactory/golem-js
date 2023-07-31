@@ -20,7 +20,6 @@ describe("Task Executor", function () {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
       payment: { network: "rinkeby" },
-      isSubprocess: true,
       logger,
     });
     const result = await executor.run(async (ctx) => ctx.run("echo 'Hello World'"));
@@ -55,7 +54,6 @@ describe("Task Executor", function () {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
       payment: { network: "rinkeby" },
-      isSubprocess: true,
       logger,
     });
     const data = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
@@ -72,7 +70,6 @@ describe("Task Executor", function () {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
       payment: { network: "rinkeby" },
-      isSubprocess: true,
       logger,
     });
     const data = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
@@ -86,7 +83,6 @@ describe("Task Executor", function () {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
       payment: { network: "rinkeby" },
-      isSubprocess: true,
       logger,
     });
     const outputs: string[] = [];
@@ -117,7 +113,6 @@ describe("Task Executor", function () {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
       payment: { network: "rinkeby" },
-      isSubprocess: true,
       logger,
     });
     const outputs: string[] = [];
@@ -136,7 +131,7 @@ describe("Task Executor", function () {
     await logger.expectToInclude("Task 1 computed by provider", 5000);
     expect(outputs[0]).to.equal("Hello Golem");
     expect(expectedError).to.equal(
-      "Error: ExeScript command exited with code 127. Stdout: undefined. Stderr: sh: 1: invalid_command: not found"
+      "Error: ExeScript command exited with code 127. Stdout: undefined. Stderr: sh: 1: invalid_command: not found",
     );
   }).timeout(80000);
 
@@ -144,7 +139,6 @@ describe("Task Executor", function () {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
       payment: { network: "rinkeby" },
-      isSubprocess: true,
       logger,
     });
     const outputs: string[] = [];
@@ -171,7 +165,6 @@ describe("Task Executor", function () {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
       payment: { network: "rinkeby" },
-      isSubprocess: true,
       logger,
     });
     let results;
@@ -195,7 +188,6 @@ describe("Task Executor", function () {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
       payment: { network: "rinkeby" },
-      isSubprocess: true,
       logger,
     });
     const result = await executor.run(async (ctx) => {

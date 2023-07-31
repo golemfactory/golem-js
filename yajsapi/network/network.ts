@@ -82,7 +82,10 @@ export class Network {
    * @private
    * @hidden
    */
-  private constructor(public readonly id: string, public readonly config: NetworkConfig) {
+  private constructor(
+    public readonly id: string,
+    public readonly config: NetworkConfig,
+  ) {
     this.ipRange = IPv4CidrRange.fromCidr(config.mask ? `${config.ip}/${config.mask}` : config.ip);
     this.ipIterator = this.ipRange[Symbol.iterator]();
     this.ip = this.nextAddress();
@@ -142,6 +145,8 @@ export class Network {
       if (error.status === 404)
         this.logger?.warn(`Tried removing a network which doesn't exist. Network ID: ${this.id}`);
       return false;
+    } finally {
+      this.config.httpAgent.destroy?.();
     }
     this.logger?.info(`Network has removed: ID: ${this.id}, IP: ${this.ip}`);
     return true;
@@ -156,7 +161,7 @@ export class Network {
   private ensureIpInNetwork(ip: IPv4): boolean {
     if (!this.ipRange.contains(new IPv4CidrRange(ip, new IPv4Prefix(BigInt(this.mask.prefix)))))
       throw new NetworkError(
-        `The given IP ('${ip.toString()}') address must belong to the network ('${this.ipRange.toCidrString()}').`
+        `The given IP ('${ip.toString()}') address must belong to the network ('${this.ipRange.toCidrString()}').`,
       );
     return true;
   }
