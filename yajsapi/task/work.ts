@@ -9,7 +9,7 @@ import {
   Script,
   Start,
   UploadData,
-  UploadFile
+  UploadFile,
 } from "../script/index.js";
 import { NullStorageProvider, StorageProvider } from "../storage/index.js";
 import { ActivityStateEnum } from "../activity/index.js";
@@ -19,7 +19,7 @@ import { NetworkNode } from "../network/index.js";
 
 export type Worker<InputType = unknown, OutputType = unknown> = (
   ctx: WorkContext,
-  data?: InputType
+  data?: InputType,
 ) => Promise<OutputType | undefined>;
 
 const DEFAULTS = {
@@ -59,7 +59,10 @@ export class WorkContext {
   private readonly storageProvider: StorageProvider;
   private readonly networkNode?: NetworkNode;
 
-  constructor(private activity: Activity, private options?: WorkOptions) {
+  constructor(
+    private activity: Activity,
+    private options?: WorkOptions,
+  ) {
     this.agreementId = this.activity.agreementId;
     this.activityId = this.activity.id;
     this.activityPreparingTimeout = options?.activityPreparingTimeout || DEFAULTS.activityPreparingTimeout;
@@ -80,7 +83,7 @@ export class WorkContext {
         .execute(
           new Script([new Deploy(this.networkNode?.getNetworkConfig?.()), new Start()]).getExeScriptRequest(),
           undefined,
-          this.activityPreparingTimeout
+          this.activityPreparingTimeout,
         )
         .catch((e) => {
           throw new Error(`Unable to deploy activity. ${e}`);
@@ -88,7 +91,8 @@ export class WorkContext {
       let timeoutId;
       await Promise.race([
         new Promise(
-          (res, rej) => (timeoutId = setTimeout(() => rej("Preparing activity timeout"), this.activityPreparingTimeout))
+          (res, rej) =>
+            (timeoutId = setTimeout(() => rej("Preparing activity timeout"), this.activityPreparingTimeout)),
         ),
         (async () => {
           for await (const res of result) {
@@ -140,13 +144,13 @@ export class WorkContext {
     if (result.result !== "Ok") {
       return {
         ...result,
-        data: undefined
+        data: undefined,
       };
     }
 
     return {
       ...result,
-      data: JSON.parse(new TextDecoder().decode(result.data))
+      data: JSON.parse(new TextDecoder().decode(result.data)),
     };
   }
 
@@ -171,7 +175,7 @@ export class WorkContext {
       throw new Error(
         `Script initialization failed for command: ${JSON.stringify(command.toJson())}. ${
           e?.response?.data?.message || e?.message || e
-        }`
+        }`,
       );
     });
     await sleep(100, true);
@@ -179,20 +183,18 @@ export class WorkContext {
       throw new Error(
         `Script execution failed for command: ${JSON.stringify(command.toJson())}. ${
           e?.response?.data?.message || e?.message || e
-        }`
+        }`,
       );
     });
     let allResults: Result<T>[] = [];
     for await (const result of results) allResults.push(result);
-    allResults = await script.after(allResults) as Result<T>[];
+    allResults = (await script.after(allResults)) as Result<T>[];
     const commandsErrors = allResults.filter((res) => res.result === "Error");
     if (commandsErrors.length) {
       const errorMessage = commandsErrors
         .map((err) => `Error: ${err.message}. Stdout: ${err.stdout?.trim()}. Stderr: ${err.stderr?.trim()}`)
         .join(". ");
-      this.rejectResult(`Task error on provider ${this.provider?.name || "'unknown'"}. ${errorMessage}`);
-
-      throw new Error(errorMessage);
+      this.logger?.warn(`Task error on provider ${this.provider?.name || "'unknown'"}. ${errorMessage}`);
     }
     return allResults[0];
   }
