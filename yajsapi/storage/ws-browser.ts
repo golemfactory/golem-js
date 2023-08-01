@@ -98,7 +98,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
   }
 
 
-  publishFile(): Promise<string> {
+  async publishFile(): Promise<string> {
     throw new Error("Not implemented");
   }
 
@@ -124,7 +124,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
     return fileInfo.url;
   }
 
-  receiveFile(): Promise<string> {
+  async receiveFile(): Promise<string> {
     throw new Error("Not implemented");
   }
 
@@ -152,7 +152,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
 
   private async createSocket(fileInfo: GftpFileInfo, components: string[]): Promise<WebSocket> {
     const service = await this.createService(fileInfo, components);
-    const ws = new WebSocket(service.url); // NOTE: protocol set to ["gsb+flexbuffers"] causes CORS error everywhere except Firefox
+    const ws = new WebSocket(service.url, ["gsb+flexbuffers"]);
     ws.addEventListener("error", () => {
       this.logger.error(`[WebSocketBrowserStorageProvider] Socket Error (${fileInfo.id})`);
     });

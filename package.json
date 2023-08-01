@@ -15,7 +15,7 @@
     "docs": "typedoc yajsapi/ --plugin typedoc-plugin-merge-modules --plugin typedoc-theme-hierarchy",
     "docs:md": "typedoc yajsapi/ --plugin typedoc-plugin-markdown --plugin .docs/typedoc-clear-references.cjs --hideBreadcrumbs true && node .docs/summary-generator.cjs",
     "test": "npm run test:unit && npm run test:integration",
-    "test:unit": "jest --config tests/unit/jest.config.json tests/unit/**.test.ts",
+    "test:unit": "jest --config tests/unit/jest.config.json",
     "test:integration": "jest --config tests/integration/jest.config.json tests/integration/tasks.spec.ts",
     "test:cypress": "cypress run",
     "lint": "eslint .",
@@ -31,6 +31,7 @@
   },
   "dependencies": {
     "@rauschma/stringio": "^1.4.0",
+    "@types/eventsource": "^1.1.11",
     "axios": "^1.1.3",
     "bottleneck": "^2.19.5",
     "collect.js": "^4.34.3",
@@ -41,8 +42,8 @@
     "pino": "^8.11.0",
     "pino-pretty": "^10.0.1",
     "tmp": "^0.2.1",
-    "uuid": "^9.0.0",
     "ts-jest": "^29.1.1",
+    "uuid": "^9.0.0",
     "ya-ts-client": "^0.5.3"
   },
   "devDependencies": {
