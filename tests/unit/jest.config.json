@@ -3,5 +3,13 @@
   "testEnvironment": "node",
   "setupFiles": [
     "<rootDir>/_setup.ts"
+  ],
+  "roots": [
+    "../../yajsapi",
+    "./"
+  ],
+  "testMatch": [
+    "**/*.test.ts",
+    "**/*.spec.ts"
   ]
 }
