@@ -1,9 +1,8 @@
 const path = require("path");
 const fs = require("fs");
-const docsDir = "docs";
-const directoryPath = path.join(__dirname, "..", docsDir);
 
-async function prepareDocAnchor(type, file) {
+async function prepareDocAnchor(docsDir, type, file) {
+  const directoryPath = path.join(docsDir);
   const filePath = path.join(directoryPath, type, file);
   const fileContent = await fs.readFileSync(filePath, "utf-8");
   const firstLine = (fileContent.match(/(^.*)/) || [])[1] || "";
@@ -18,7 +17,9 @@ function capitalizeFirstLetter(string) {
 }
 
 (async () => {
-  const logStream = fs.createWriteStream(path.join(directoryPath, "overview.md"), { flags: "w" });
+  const docsDir = "docs";
+  const directoryPath = path.join(__dirname, "..", docsDir);
+  const logStream = fs.createWriteStream(path.join(process.argv[2], "overview.md"), { flags: "w" });
 
   const types = fs
     .readdirSync(directoryPath, { withFileTypes: true })
@@ -31,7 +32,7 @@ function capitalizeFirstLetter(string) {
     const files = fs.readdirSync(path.join(directoryPath, type), { withFileTypes: true }).map((f) => f.name);
 
     for (let file of files) {
-      const doc = await prepareDocAnchor(type, file);
+      const doc = await prepareDocAnchor(docsDir, type, file);
       logStream.write(`\n\t* [${doc.title}](${doc.link})`);
     }
   }
