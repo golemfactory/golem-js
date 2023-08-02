@@ -17,9 +17,9 @@ function capitalizeFirstLetter(string) {
 }
 
 (async () => {
-  const docsDir = "docs";
+  const docsDir = process.argv[2] || "docs";
   const directoryPath = path.join(__dirname, "..", docsDir);
-  const logStream = fs.createWriteStream(path.join(process.argv[2], "overview.md"), { flags: "w" });
+  const logStream = fs.createWriteStream(path.join(process.argv[3], "overview.md"), { flags: "w" });
 
   const types = fs
     .readdirSync(directoryPath, { withFileTypes: true })
