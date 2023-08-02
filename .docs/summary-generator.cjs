@@ -8,7 +8,7 @@ async function prepareDocAnchor(type, file) {
   const fileContent = await fs.readFileSync(filePath, "utf-8");
   const firstLine = (fileContent.match(/(^.*)/) || [])[1] || "";
   return {
-    link: `${docsDir}/${type}/${file}`,
+    link: `${type}/${file.replace(".md", "")}`,
     title: firstLine.substring(firstLine.indexOf(":") + 2),
   };
 }
@@ -18,7 +18,7 @@ function capitalizeFirstLetter(string) {
 }
 
 (async () => {
-  const logStream = fs.createWriteStream(path.join(directoryPath, ".SUMMARY.md"), { flags: "w" });
+  const logStream = fs.createWriteStream(path.join(directoryPath, "overview.md"), { flags: "w" });
 
   const types = fs
     .readdirSync(directoryPath, { withFileTypes: true })
