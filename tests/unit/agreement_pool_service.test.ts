@@ -28,7 +28,7 @@ const createProposal = (id) => {
         "golem.runtime.name": "runtime_name",
       },
     } as ProposalModel,
-    {} as DemandOfferBase
+    {} as DemandOfferBase,
   );
 };
 

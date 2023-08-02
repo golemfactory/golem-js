@@ -1,6 +1,7 @@
 import { TaskExecutor } from "../../yajsapi";
 import { LoggerMock } from "../mock";
 import { fileExistsSync } from "tsconfig-paths/lib/filesystem";
+import fs from "fs";
 
 const logger = new LoggerMock(false);
 const blenderParams = (frame) => ({
@@ -23,20 +24,19 @@ const blenderParams = (frame) => ({
 });
 
 describe("Blender rendering", function () {
-  let executor: TaskExecutor;
-  afterEach(async function () {
-    await executor.end();
-  });
   it("should render images by blender", async () => {
-    executor = await TaskExecutor.create({
+    const executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
       logger,
-      payment: { network: "rinkeby" },
     });
+
     executor.beforeEach(async (ctx) => {
-      await ctx.uploadFile(new URL("../mock/fixtures/cubes.blend").pathname, "/golem/resource/scene.blend");
+      const sourcePath = fs.realpathSync(__dirname + "/../mock/fixtures/cubes.blend");
+      await ctx.uploadFile(sourcePath, "/golem/resource/scene.blend");
     });
+
     const data = [0, 10, 20, 30, 40, 50];
+
     const results = executor.map<number, string>(data, async (ctx, frame) => {
       const result = await ctx
         .beginBatch()
@@ -47,9 +47,17 @@ describe("Blender rendering", function () {
         .catch((error) => ctx.rejectResult(error.toString()));
       return result ? `output_${frame}.png` : "";
     });
+
     const expectedResults = data.map((d) => `output_${d}.png`);
-    for await (const result of results) expect(expectedResults).toContain(result);
-    for (const file of expectedResults)
+
+    for await (const result of results) {
+      expect(expectedResults).toContain(result);
+    }
+
+    for (const file of expectedResults) {
       expect(fileExistsSync(`${process.env.GOTH_GFTP_VOLUME || ""}${file}`)).toEqual(true);
+    }
+
+    await executor.end();
   });
 });

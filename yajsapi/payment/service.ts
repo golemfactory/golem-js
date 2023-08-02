@@ -42,7 +42,7 @@ interface AgreementPayable {
  */
 export class PaymentService {
   private isRunning = false;
-  private options: PaymentConfig;
+  public readonly options: PaymentConfig;
   private logger?: Logger;
   private allocations: Allocation[] = [];
   private agreementsToPay: Map<string, AgreementPayable> = new Map();

@@ -50,9 +50,7 @@ describe("Stats Module", () => {
     it("should beforeAdd() converts payload to ActivityInfo", async () => {
       const tests = new Activities();
       tests.add({ id: "id", taskId: "taskId", agreementId: "agreementId" });
-      expect(tests.getAll()).toEqual(
-        new Collection([{ id: "id", taskId: "taskId", agreementId: "agreementId" }])
-      );
+      expect(tests.getAll()).toEqual(new Collection([{ id: "id", taskId: "taskId", agreementId: "agreementId" }]));
     });
     it("should getByAgreementId() return Collection of ActivityInfo", async () => {
       const tests = new Activities();
@@ -76,7 +74,7 @@ describe("Stats Module", () => {
       expect(tests.getAll()).toEqual(
         new Collection([
           { id: "id", providerId: "providerId", proposalId: "proposalId", status: AgreementStatusEnum.Pending },
-        ])
+        ]),
       );
     });
     it("should confirm() flag AgreementInfo.status as confirmed ", async () => {
@@ -91,7 +89,7 @@ describe("Stats Module", () => {
             proposalId: "proposalId",
             status: AgreementStatusEnum.Confirmed,
           },
-        ])
+        ]),
       );
     });
     it("should reject() flag AgreementInfo.status as rejected ", async () => {
@@ -101,7 +99,7 @@ describe("Stats Module", () => {
       expect(tests.getAll()).toEqual(
         new Collection([
           { id: "id", providerId: "providerId", proposalId: "proposalId", status: AgreementStatusEnum.Rejected },
-        ])
+        ]),
       );
     });
     it("should getByProviderId() return filtered Collection of AgreementInfo", async () => {
@@ -142,7 +140,7 @@ describe("Stats Module", () => {
             providerId: "providerId",
             agreementId: "agreementId",
           },
-        ])
+        ]),
       );
     });
     it("should getByProviderId() return filtered Collection of InvoiceInfo", async () => {
@@ -172,7 +170,7 @@ describe("Stats Module", () => {
             providerId: "providerId",
             agreementId: "agreementId",
           },
-        ])
+        ]),
       );
     });
     it("should getByProviderId() return filtered Collection of PaymentInfo", async () => {
@@ -200,7 +198,7 @@ describe("Stats Module", () => {
             id: "id",
             providerId: "providerId",
           },
-        ])
+        ]),
       );
     });
 
@@ -223,7 +221,7 @@ describe("Stats Module", () => {
             id: "id",
             providerName: "providerName",
           },
-        ])
+        ]),
       );
     });
 
@@ -236,7 +234,7 @@ describe("Stats Module", () => {
             id: "id",
             providerName: "unknown",
           },
-        ])
+        ]),
       );
     });
 
@@ -249,7 +247,7 @@ describe("Stats Module", () => {
             id: "id",
             providerName: "unknown",
           },
-        ])
+        ]),
       );
       tests.add({ id: "id", providerName: "providerName" });
       expect(tests.getAll()).toEqual(
@@ -258,7 +256,7 @@ describe("Stats Module", () => {
             id: "id",
             providerName: "providerName",
           },
-        ])
+        ]),
       );
     });
     it("should beforeAdd() should use previous providerName if is not provided", async () => {
@@ -270,7 +268,7 @@ describe("Stats Module", () => {
             id: "id",
             providerName: "providerName",
           },
-        ])
+        ]),
       );
       tests.add({ id: "id" });
       expect(tests.getAll()).toEqual(
@@ -279,7 +277,7 @@ describe("Stats Module", () => {
             id: "id",
             providerName: "providerName",
           },
-        ])
+        ]),
       );
     });
   });
@@ -297,7 +295,7 @@ describe("Stats Module", () => {
             retriesCount: 0,
             status: TaskStatusEnum.Pending,
           },
-        ])
+        ]),
       );
     });
     it("should retry() should setup TaskInfo.retriesCount", async () => {
@@ -314,7 +312,7 @@ describe("Stats Module", () => {
             retriesCount: 1,
             status: TaskStatusEnum.Pending,
           },
-        ])
+        ]),
       );
     });
     it("should reject() should setup TaskInfo.status as Rejected, stopTime and reason", async () => {
@@ -332,7 +330,7 @@ describe("Stats Module", () => {
             status: TaskStatusEnum.Rejected,
             reason: "reason",
           },
-        ])
+        ]),
       );
     });
     it("should finish() should setup TaskInfo.status as Finished, and stopTime", async () => {
@@ -349,7 +347,7 @@ describe("Stats Module", () => {
             retriesCount: 0,
             status: TaskStatusEnum.Finished,
           },
-        ])
+        ]),
       );
     });
   });

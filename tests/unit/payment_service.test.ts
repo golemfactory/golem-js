@@ -23,7 +23,7 @@ describe("Payment Service", () => {
     it("should not creating allocations if there are no available accounts", async () => {
       const paymentService = new PaymentService({ payment: { network: "test2", driver: "test2" } });
       await expect(paymentService.createAllocations()).rejects.toThrow(
-        "Unable to create allocation for driver/network test2/test2. There is no requestor account supporting this platform."
+        "Unable to create allocation for driver/network test2/test2. There is no requestor account supporting this platform.",
       );
       await paymentService.end();
     });
@@ -86,7 +86,7 @@ describe("Payment Service", () => {
       await paymentService.acceptDebitNotes(agreement.id);
       await logger.expectToInclude(
         `DebitNote has been rejected for agreement ${agreement.id}. Reason: DebitNote rejected by DebitNote Filter`,
-        100
+        100,
       );
       await paymentService.end();
     });
@@ -108,7 +108,7 @@ describe("Payment Service", () => {
       await new Promise((res) => setTimeout(res, 200));
       await logger.expectToInclude(
         `Invoice has been rejected for provider ${agreement.provider.name}. Reason: Invoice rejected by Invoice Filter`,
-        100
+        100,
       );
       await paymentService.end();
     });
@@ -128,7 +128,7 @@ describe("Payment Service", () => {
       await paymentService.acceptDebitNotes(agreement.id);
       await logger.expectToInclude(
         `DebitNote has been rejected for agreement ${agreement.id}. Reason: DebitNote rejected by DebitNote Filter`,
-        100
+        100,
       );
       await paymentService.end();
     });
@@ -149,7 +149,7 @@ describe("Payment Service", () => {
       await new Promise((res) => setTimeout(res, 200));
       await logger.expectToInclude(
         `Invoice has been rejected for provider ${agreement.provider.name}. Reason: Invoice rejected by Invoice Filter`,
-        100
+        100,
       );
       await paymentService.end();
     });

@@ -20,7 +20,7 @@ describe("Demand", () => {
       const demand = await Demand.create(packageMock, [allocationMock], { subnetTag });
       setExpectedProposals(proposalsInitial);
       const event: DemandEvent = await new Promise((res) =>
-        demand.addEventListener(DemandEventType, (e) => res(e as DemandEvent))
+        demand.addEventListener(DemandEventType, (e) => res(e as DemandEvent)),
       );
       expect(event.proposal).toBeInstanceOf(Proposal);
       await demand.unsubscribe();

@@ -18,6 +18,11 @@ export const EnvUtils = {
       ? process?.env.YAJSAPI_REPO_URL ?? "https://registry.golem.network"
       : "https://registry.golem.network";
   },
+
+  getPaymentNetwork(): string {
+    return isNode ? (process.env.PAYMENT_NETWORK ??  "goerli") : "goerli";
+  },
+
   isDevMode(): boolean {
     return isNode ? process?.env.GOLEM_DEV_MODE === "true" : false;
   },

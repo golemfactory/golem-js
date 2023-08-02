@@ -1,16 +1,15 @@
 import { Goth } from "../goth/goth";
 import { resolve } from "path";
 
-const gothConfig = resolve("../goth/assets/goth-config.yml");
+const timeoutPromise = (seconds: number) =>
+  new Promise((_resolve, reject) => {
+    setTimeout(() => reject(new Error(`The timeout was reached and the racing promise has rejected after ${seconds} seconds`)), seconds * 1000);
+  });
 
-jest.setTimeout(180 * 1000);
+export default async function setUpGoth() {
+  const gothConfig = resolve("../goth/assets/goth-config.yml");
+  globalThis.__GOTH = new Goth(gothConfig);
 
-const goth = new Goth(gothConfig);
-
-beforeAll(async function () {
-  await goth.start();
-});
-
-afterAll(async function () {
-  await goth.end();
-});
+  // Start Goth, but don't wait for an eternity
+  return await Promise.race([globalThis.__GOTH.start(), timeoutPromise(60)]);
+}

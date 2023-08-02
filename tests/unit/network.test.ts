@@ -79,14 +79,14 @@ describe("Network", () => {
       const network = await Network.create({ networkOwnerId: "1", networkIp: "192.168.0.0/24" });
       await network.addNode("2", "192.168.0.3");
       await expect(network.addNode("3", "192.168.0.3")).rejects.toThrow(
-        "IP '192.168.0.3' has already been assigned in this network"
+        "IP '192.168.0.3' has already been assigned in this network",
       );
     });
 
     it("should not add node with address outside the network range", async () => {
       const network = await Network.create({ networkOwnerId: "1", networkIp: "192.168.0.0/24" });
       await expect(network.addNode("2", "192.168.2.2")).rejects.toThrow(
-        "The given IP ('192.168.2.2') address must belong to the network ('192.168.0.0/24')"
+        "The given IP ('192.168.2.2') address must belong to the network ('192.168.0.0/24')",
       );
     });
 
@@ -122,7 +122,7 @@ describe("Network", () => {
       expect(node.getWebsocketUri(22)).toEqual(
         `ws://${process.env?.YAGNA_API_URL?.substring(7) || "127.0.0.1:7465"}/net-api/v1/net/${
           network.id
-        }/tcp/192.168.0.2/22`
+        }/tcp/192.168.0.2/22`,
       );
     });
   });

@@ -151,7 +151,7 @@ export class TaskExecutor {
           basePath: this.options.yagnaOptions.basePath,
         },
         logger: this.logger,
-      })
+      });
     } else {
       this.storageProvider = new NullStorageProvider();
     }
@@ -204,7 +204,7 @@ export class TaskExecutor {
     if (runtimeContextChecker.isNode) this.handleCancelEvent();
     this.options.eventTarget.dispatchEvent(new Events.ComputationStarted());
     this.logger?.info(
-      `Task Executor has started using subnet: ${this.options.subnetTag}, network: ${this.options.payment?.network}, driver: ${this.options.payment?.driver}`,
+      `Task Executor has started using subnet: ${this.options.subnetTag}, network: ${this.paymentService.options.payment.network}, driver: ${this.paymentService.options.payment.driver}`,
     );
   }
 

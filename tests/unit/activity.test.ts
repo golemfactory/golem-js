@@ -3,16 +3,7 @@ import { setExpectedErrorEvents, setExpectedEvents } from "../mock/utils/event_s
 import { StorageProviderMock } from "../mock";
 import { Activity, ActivityStateEnum } from "../../yajsapi/activity";
 import { sleep } from "../../yajsapi/utils";
-import {
-  Deploy,
-  Start,
-  Run,
-  Terminate,
-  UploadFile,
-  DownloadFile,
-  Script,
-  Capture,
-} from "../../yajsapi/script";
+import { Deploy, Start, Run, Terminate, UploadFile, DownloadFile, Script, Capture } from "../../yajsapi/script";
 
 describe("Activity", () => {
   beforeEach(() => {
@@ -23,7 +14,8 @@ describe("Activity", () => {
     it("should create activity", async () => {
       const activity = await Activity.create("test_agreement_id");
       expect(activity).toBeInstanceOf(Activity);
-      const GUID_REGEX = /^(?:\{{0,1}(?:[0-9a-fA-F]){8}-(?:[0-9a-fA-F]){4}-(?:[0-9a-fA-F]){4}-(?:[0-9a-fA-F]){4}-(?:[0-9a-fA-F]){12}\}{0,1})$/;
+      const GUID_REGEX =
+        /^(?:\{{0,1}(?:[0-9a-fA-F]){8}-(?:[0-9a-fA-F]){4}-(?:[0-9a-fA-F]){4}-(?:[0-9a-fA-F]){4}-(?:[0-9a-fA-F]){12}\}{0,1})$/;
       expect(activity.id).toMatch(GUID_REGEX);
     });
   });
@@ -249,7 +241,7 @@ describe("Activity", () => {
       return new Promise<void>((res) => {
         results.on("error", (error) => {
           expect(error.toString()).toEqual(
-            "Error: Unable to get activity results. Command #0 getExecBatchResults error: Some undefined error"
+            "Error: Unable to get activity results. Command #0 getExecBatchResults error: Some undefined error",
           );
           return res();
         });
@@ -278,7 +270,7 @@ describe("Activity", () => {
       return new Promise<void>((res) => {
         results.on("error", (error) => {
           expect(error.toString()).toEqual(
-            "Error: Unable to get activity results. Command #0 getExecBatchResults error: GSB error: remote service at `test` error: GSB failure: Bad request: endpoint address not found"
+            "Error: Unable to get activity results. Command #0 getExecBatchResults error: GSB error: remote service at `test` error: GSB failure: Bad request: endpoint address not found",
           );
           return res();
         });
@@ -302,7 +294,7 @@ describe("Activity", () => {
       return new Promise<void>((res) => {
         results.on("error", (error) => {
           expect(error.toString()).toEqual(
-            "Error: Unable to get activity results. GSB error: endpoint address not found. Terminated."
+            "Error: Unable to get activity results. GSB error: endpoint address not found. Terminated.",
           );
           return res();
         });
@@ -375,9 +367,7 @@ describe("Activity", () => {
       const results = await activity.execute(script.getExeScriptRequest(), true);
       return new Promise<void>((res) => {
         results.on("error", (error) => {
-          expect(error.toString()).toEqual(
-            'Error: GetExecBatchResults failed due to errors: ["Some undefined error"]'
-          );
+          expect(error.toString()).toEqual('Error: GetExecBatchResults failed due to errors: ["Some undefined error"]');
           return res();
         });
         results.on("data", () => null);

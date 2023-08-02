@@ -76,9 +76,7 @@ describe("Task Service", () => {
     };
     const task = new Task("1", worker, undefined, undefined, 2);
     queue.addToEnd(task);
-    activityMock.setExpectedExeResults([
-      { result: "Ok", stdout: "invalid_value" },
-    ]);
+    activityMock.setExpectedExeResults([{ result: "Ok", stdout: "invalid_value" }]);
     const service = new TaskService(queue, agreementPoolServiceMock, paymentServiceMock, networkServiceMock, {
       logger,
       taskRunningInterval: 10,
@@ -87,7 +85,7 @@ describe("Task Service", () => {
     service.run().catch((e) => console.error(e));
     await logger.expectToInclude(
       "Error: Task 1 has been rejected! Work rejected. Reason: Invalid value computed by provider",
-      1500
+      1500,
     );
     expect(task.isFinished()).toEqual(true);
     await service.end();
@@ -127,7 +125,7 @@ describe("Task Service", () => {
     service.run().catch((e) => console.error(e));
     await logger.expectToMatch(/Init worker done in activity.*\nInit worker done in activity/, 700);
     await logger.expectToNotMatch(
-      /Init worker done in activity.*\nInit worker done in activity.*\nInit worker done in activity/
+      /Init worker done in activity.*\nInit worker done in activity.*\nInit worker done in activity/,
     );
     await new Promise((res) => setTimeout(res, 1000));
     expect(task1.isFinished()).toEqual(true);

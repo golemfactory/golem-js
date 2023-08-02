@@ -1,33 +1,33 @@
-import { consoleLogger } from "../utils";
-import { WebSocketBrowserStorageProvider, WebSocketStorageProviderOptions } from "./ws-browser";
+import { consoleLogger } from "../../yajsapi/utils";
+import { WebSocketBrowserStorageProvider, WebSocketStorageProviderOptions } from "../../yajsapi/storage/ws-browser";
 import { encode, toObject } from "flatbuffers/js/flexbuffers";
-import { LoggerMock } from "../../tests/mock";
+import { LoggerMock } from "../mock";
 import * as jsSha3 from "js-sha3";
 
 /* eslint-disable  @typescript-eslint/no-explicit-any */
 
-jest.mock("../network/identity", () => ({
-  getIdentity: jest.fn().mockResolvedValue("ME")
+jest.mock("../../yajsapi/network/identity", () => ({
+  getIdentity: jest.fn().mockResolvedValue("ME"),
 }));
 
 jest.mock("uuid", () => ({ v4: () => "uuid" }));
 
-type UploadChunkChunk = { offset: number, content: Uint8Array }
+type UploadChunkChunk = { offset: number; content: Uint8Array };
 
 describe("WebSocketBrowserStorageProvider", () => {
   let logger: LoggerMock;
   const opts: WebSocketStorageProviderOptions = {
     yagnaOptions: {
       apiKey: "ApiKey",
-      basePath: "http://yagna"
-    }
+      basePath: "http://yagna",
+    },
   };
 
-
-  const createProvider = () => new WebSocketBrowserStorageProvider({
-    ...opts,
-    logger
-  });
+  const createProvider = () =>
+    new WebSocketBrowserStorageProvider({
+      ...opts,
+      logger,
+    });
   let provider: WebSocketBrowserStorageProvider;
   let fetch: jest.SpyInstance;
 
@@ -72,17 +72,17 @@ describe("WebSocketBrowserStorageProvider", () => {
       const provider = createProvider();
       await expect(provider.init()).resolves.toBeUndefined();
     });
-  })
+  });
 
   describe("publishData()", () => {
     let socket: EventTarget;
-    let fileInfo: { id: string, url: string };
+    let fileInfo: { id: string; url: string };
 
     beforeEach(async () => {
       socket = new EventTarget();
       fileInfo = {
         id: "10",
-        url: "http://localhost:8080"
+        url: "http://localhost:8080",
       };
 
       jest.spyOn(provider as any, "createFileInfo").mockImplementation(() => Promise.resolve(fileInfo));
@@ -98,20 +98,19 @@ describe("WebSocketBrowserStorageProvider", () => {
     describe("socket", () => {
       it("should register message handler", async () => {
         jest.spyOn(socket, "addEventListener").mockImplementation((type) => {
-          expect(type).toEqual('message');
+          expect(type).toEqual("message");
         });
         await provider["publishData"](new Uint8Array(0));
         expect(socket.addEventListener).toHaveBeenCalled();
       });
 
       it("should handle GetMetadata message", async () => {
-        const buffer = new TextEncoder().encode('Hello World');
+        const buffer = new TextEncoder().encode("Hello World");
         const packet = {
           id: "foo",
           component: "GetMetadata",
-        }
+        };
         const spy1 = jest.spyOn(provider as any, "respond").mockImplementation((ws, id, data: any) => {
-          console.log(data);
           expect(ws).toBe(socket);
           expect(id).toBe(packet.id);
           expect(data.fileSize).toBe(buffer.length);
@@ -123,20 +122,19 @@ describe("WebSocketBrowserStorageProvider", () => {
       });
 
       it("should handle GetChunk message", async () => {
-        const buffer = new TextEncoder().encode('Hello World');
+        const buffer = new TextEncoder().encode("Hello World");
         const packet = {
           id: "foo",
           component: "GetChunk",
           payload: {
             offset: 6,
-            size: 5
-          }
-        }
+            size: 5,
+          },
+        };
         const spy1 = jest.spyOn(provider as any, "respond").mockImplementation((ws, id, data: any) => {
-          console.log(data);
           expect(ws).toBe(socket);
           expect(id).toBe(packet.id);
-          expect(new TextDecoder().decode(data.content)).toBe('World');
+          expect(new TextDecoder().decode(data.content)).toBe("World");
         });
 
         await provider["publishData"](buffer);
@@ -148,7 +146,7 @@ describe("WebSocketBrowserStorageProvider", () => {
         const data = {
           id: "foo",
           component: "Foo",
-        }
+        };
 
         await provider["publishData"](new Uint8Array(0));
         const spy1 = jest.spyOn(provider as any, "respond").mockReturnThis();
@@ -167,13 +165,13 @@ describe("WebSocketBrowserStorageProvider", () => {
 
   describe("receiveData()", () => {
     let socket: EventTarget;
-    let fileInfo: { id: string, url: string };
+    let fileInfo: { id: string; url: string };
 
     beforeEach(async () => {
       socket = new EventTarget();
       fileInfo = {
         id: "10",
-        url: "http://localhost:8080"
+        url: "http://localhost:8080",
       };
 
       jest.spyOn(provider as any, "createFileInfo").mockImplementation(() => Promise.resolve(fileInfo));
@@ -181,8 +179,7 @@ describe("WebSocketBrowserStorageProvider", () => {
     });
 
     it("should create socket and return GFTP URL", async () => {
-      const result = await provider["receiveData"](() => {
-      });
+      const result = await provider["receiveData"](() => {});
       expect(result).toBe(fileInfo.url);
       expect(provider["createSocket"]).toHaveBeenCalledWith(fileInfo, ["UploadChunk", "UploadFinished"]);
     });
@@ -190,10 +187,9 @@ describe("WebSocketBrowserStorageProvider", () => {
     describe("socket", () => {
       it("should register message handler", async () => {
         jest.spyOn(socket, "addEventListener").mockImplementation((type) => {
-          expect(type).toEqual('message');
+          expect(type).toEqual("message");
         });
-        await provider["receiveData"](() => {
-        });
+        await provider["receiveData"](() => {});
         expect(socket.addEventListener).toHaveBeenCalled();
       });
 
@@ -203,9 +199,9 @@ describe("WebSocketBrowserStorageProvider", () => {
           id: "foo",
           component: "UploadChunk",
           payload: {
-            chunk: Uint8Array.from([1, 2, 3, 4])
-          }
-        }
+            chunk: Uint8Array.from([1, 2, 3, 4]),
+          },
+        };
 
         await provider["receiveData"](callback);
         const spy1 = jest.spyOn(provider as any, "respond").mockReturnThis();
@@ -222,9 +218,9 @@ describe("WebSocketBrowserStorageProvider", () => {
           id: "foo",
           component: "UploadFinished",
           payload: {
-            hash: "bar"
-          }
-        }
+            hash: "bar",
+          },
+        };
         const result = "AwesomeResult";
 
         await provider["receiveData"](callback);
@@ -241,7 +237,7 @@ describe("WebSocketBrowserStorageProvider", () => {
         const data = {
           id: "foo",
           component: "Foo",
-        }
+        };
 
         await provider["receiveData"](callback);
         const spy1 = jest.spyOn(provider as any, "respond").mockReturnThis();
@@ -276,21 +272,23 @@ describe("WebSocketBrowserStorageProvider", () => {
         expect(init.headers!["Authorization"]).toBe(`Bearer ${opts.yagnaOptions.apiKey}`);
         return Promise.resolve({
           status: 201,
-          json: () => Promise.resolve(data)
+          json: () => Promise.resolve(data),
         });
       });
 
       const result = await provider["createService"]({ id: "foo", url: "" }, []);
       expect(fetch).toHaveBeenCalled();
       expect(result.serviceId).toEqual("ID");
-      expect(result.url.toString()).toEqual(`ws://yagna/gsb-api/v1/services/${data.servicesId}?authToken=${opts.yagnaOptions.apiKey}`)
+      expect(result.url.toString()).toEqual(
+        `ws://yagna/gsb-api/v1/services/${data.servicesId}?authToken=${opts.yagnaOptions.apiKey}`,
+      );
     });
 
     it("should record the service for later release", async () => {
       const data = { servicesId: "ID" };
       fetch.mockResolvedValue({
         status: 201,
-        json: () => Promise.resolve(data)
+        json: () => Promise.resolve(data),
       });
 
       await provider["createService"]({ id: "foo", url: "/file" }, []);
@@ -344,7 +342,7 @@ describe("WebSocketBrowserStorageProvider", () => {
           const content = toObject(data.buffer) as any;
           expect(content.id).toEqual(id);
           expect(content.payload).toEqual(payload);
-        })
+        }),
       };
 
       provider["respond"](socket as unknown as WebSocket, id, payload);
@@ -357,7 +355,7 @@ describe("WebSocketBrowserStorageProvider", () => {
       const msg = "Hello World";
       const chunk: UploadChunkChunk = {
         offset: 0,
-        content: new TextEncoder().encode(msg)
+        content: new TextEncoder().encode(msg),
       };
       const hashHex = jsSha3.sha3_256(chunk.content);
 
@@ -368,14 +366,15 @@ describe("WebSocketBrowserStorageProvider", () => {
     it("should handle multiple chunk receive with in-order chunks", () => {
       const msg1 = "Hello World";
       const msg2 = ", how are you?";
-      const chunks: UploadChunkChunk[] = [{
-        offset: 0,
-        content: new TextEncoder().encode(msg1)
-      },
+      const chunks: UploadChunkChunk[] = [
+        {
+          offset: 0,
+          content: new TextEncoder().encode(msg1),
+        },
         {
           offset: msg1.length,
-          content: new TextEncoder().encode(msg2)
-        }
+          content: new TextEncoder().encode(msg2),
+        },
       ];
       const hashHex = jsSha3.sha3_256(msg1 + msg2);
 
@@ -389,11 +388,11 @@ describe("WebSocketBrowserStorageProvider", () => {
       const chunks: UploadChunkChunk[] = [
         {
           offset: msg1.length,
-          content: new TextEncoder().encode(msg2)
+          content: new TextEncoder().encode(msg2),
         },
         {
           offset: 0,
-          content: new TextEncoder().encode(msg1)
+          content: new TextEncoder().encode(msg1),
         },
       ];
       const hashHex = jsSha3.sha3_256(msg1 + msg2);
@@ -406,10 +405,10 @@ describe("WebSocketBrowserStorageProvider", () => {
       const msg = "Hello World";
       const chunk: UploadChunkChunk = {
         offset: 0,
-        content: new TextEncoder().encode(msg)
+        content: new TextEncoder().encode(msg),
       };
       expect(() => {
-        provider["completeReceive"]('invalid-hash', [chunk]);
+        provider["completeReceive"]("invalid-hash", [chunk]);
       }).toThrow();
     });
   });

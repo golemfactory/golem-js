@@ -35,7 +35,7 @@ export class TaskService {
     private agreementPoolService: AgreementPoolService,
     private paymentService: PaymentService,
     private networkService?: NetworkService,
-    options?: TaskOptions
+    options?: TaskOptions,
   ) {
     this.options = new TaskConfig(options);
     this.logger = options?.logger;
@@ -62,7 +62,7 @@ export class TaskService {
     this.isRunning = false;
     this.logger?.debug(`Trying to stop all activities. Size: ${this.activities.size}`);
     await Promise.all(
-      [...this.activities.values()].map((activity) => activity.stop().catch((e) => this.logger?.warn(e.toString())))
+      [...this.activities.values()].map((activity) => activity.stop().catch((e) => this.logger?.warn(e.toString()))),
     );
     this.logger?.debug("Task Service has been stopped");
   }
@@ -87,12 +87,12 @@ export class TaskService {
           activityId: activity.id,
           providerId: agreement.provider.id,
           providerName: agreement.provider.name,
-        })
+        }),
       );
       this.logger?.info(
         `Task ${task.id} sent to provider ${agreement.provider.name}.${
           task.getData() ? " Data: " + task.getData() : ""
-        }`
+        }`,
       );
       this.paymentService.acceptDebitNotes(agreement.id);
       this.paymentService.acceptPayments(agreement);
@@ -121,11 +121,12 @@ export class TaskService {
       this.logger?.info(
         `Task ${task.id} computed by provider ${agreement.provider.name}.${
           task.getData() ? " Data: " + task.getData() : ""
-        }`
+        }`,
       );
     } catch (error) {
       task.stop(undefined, error);
       const reason = error?.response?.data?.message || error.message || error.toString();
+      this.logger?.warn(`Starting task failed due to this issue: ${reason}`);
       if (task.isRetry() && this.isRunning) {
         this.tasksQueue.addToBegin(task);
         this.options.eventTarget?.dispatchEvent(
@@ -137,10 +138,10 @@ export class TaskService {
             providerName: agreement.provider.name,
             retriesCount: task.getRetriesCount(),
             reason,
-          })
+          }),
         );
         this.logger?.warn(
-          `Task ${task.id} execution failed. Trying to redo the task. Attempt #${task.getRetriesCount()}. ${reason}`
+          `Task ${task.id} execution failed. Trying to redo the task. Attempt #${task.getRetriesCount()}. ${reason}`,
         );
       } else {
         this.options.eventTarget?.dispatchEvent(
@@ -151,7 +152,7 @@ export class TaskService {
             providerId: agreement.provider.id,
             providerName: agreement.provider.name,
             reason,
-          })
+          }),
         );
         throw new Error(`Task ${task.id} has been rejected! ${reason}`);
       }

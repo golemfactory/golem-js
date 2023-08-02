@@ -15,7 +15,7 @@ describe("Allocation", () => {
 
     it("should not create allocation with empty account parameters", async () => {
       await expect(Allocation.create({ account: { address: "", platform: "" } })).rejects.toThrow(
-        "Account address and payment platform are required"
+        "Account address and payment platform are required",
       );
     });
   });
