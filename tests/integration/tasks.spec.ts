@@ -33,6 +33,21 @@ describe("Task Executor", function () {
     expect(logger.logs).to.match(/Activity .* created/);
   }).timeout(60000);
 
+  it("should run simple task and get error for invalid command", async () => {
+    executor = await TaskExecutor.create({
+      package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+      payment: { network: "rinkeby" },
+      logger,
+    });
+    const result1 = await executor.run(async (ctx) => ctx.run("echo 'Hello World'"));
+    const result2 = await executor.run(async (ctx) => ctx.run("invalid-command"));
+
+    expect(result1?.stdout).to.include("Hello World");
+    expect(result2?.result).to.equal("Error");
+    expect(result2?.stderr).to.include("sh: 1: invalid-command: not found");
+    expect(result2?.message).to.equal("ExeScript command exited with code 127");
+  }).timeout(60000);
+
   it("should run simple task using package tag", async () => {
     executor = await TaskExecutor.create({
       package: "golem/alpine:3.18.2",
