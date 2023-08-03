@@ -1,5 +1,5 @@
 import { Result, StreamingBatchEvent } from "./results";
-import EventSource from "eventsource/lib/eventsource";
+import EventSource from "eventsource";
 import { Readable } from "stream";
 import { Logger } from "../utils";
 import sleep from "../utils/sleep";
@@ -236,7 +236,7 @@ export class Activity {
     const activityExecuteTimeout = this.options.activityExecuteTimeout;
 
     const errors: object[] = [];
-    eventSource.addEventListener("error", (error) => errors.push(error?.message || error));
+    eventSource.addEventListener("error", (error) => errors.push(error.data ?? error));
 
     const results: Result[] = [];
     eventSource.addEventListener("runtime", (event) => results.push(this.parseEventToResult(event.data, batchSize)));
