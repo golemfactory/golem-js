@@ -1,4 +1,5 @@
-import { QueueableTask, Worker } from ".";
+import { QueueableTask } from "./queue";
+import { Worker } from "./work";
 
 export enum TaskState {
   New,
@@ -26,7 +27,7 @@ export class Task<InputType = unknown, OutputType = unknown> implements Queueabl
     private worker: Worker<InputType, OutputType>,
     private data?: InputType,
     private initWorker?: Worker<undefined>,
-    private maxTaskRetries: number = MAX_RETRIES
+    private maxTaskRetries: number = MAX_RETRIES,
   ) {}
 
   start() {

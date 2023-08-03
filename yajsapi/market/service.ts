@@ -1,11 +1,10 @@
-import { Logger } from "../utils";
+import { Logger, sleep } from "../utils";
 import { Package } from "../package";
-import { Demand, Proposal, DemandEventType, DemandOptions, ProposalDTO } from ".";
+import { ProposalDTO } from "./proposal";
 import { AgreementPoolService } from "../agreement";
 import { Allocation } from "../payment";
-import { DemandEvent } from "./demand";
+import { Demand, DemandEvent, DemandEventType, DemandOptions } from "./demand";
 import { MarketConfig } from "./config";
-import { sleep } from "../utils";
 
 export type ProposalFilter = (proposal: ProposalDTO) => Promise<boolean>;
 
@@ -40,6 +39,7 @@ export class MarketService {
     this.options = new MarketConfig(options);
     this.logger = this.options?.logger;
   }
+
   async run(taskPackage: Package, allocations: Allocation[]) {
     this.taskPackage = taskPackage;
     this.allocations = allocations;

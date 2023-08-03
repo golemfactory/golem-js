@@ -14,7 +14,7 @@ import {
 import { NullStorageProvider, StorageProvider } from "../storage";
 import { ActivityStateEnum } from "../activity";
 import { sleep, Logger } from "../utils";
-import { Batch } from ".";
+import { Batch } from "./batch";
 import { NetworkNode } from "../network";
 
 export type Worker<InputType = unknown, OutputType = unknown> = (

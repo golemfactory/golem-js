@@ -1,4 +1,6 @@
-import { Task, WorkContext, TaskQueue } from ".";
+import { Task } from "./task";
+import { TaskQueue } from "./queue";
+import { WorkContext } from "./work";
 import { Logger, sleep } from "../utils";
 import { StorageProvider } from "../storage";
 import { AgreementPoolService } from "../agreement";
