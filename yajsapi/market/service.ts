@@ -1,6 +1,6 @@
 import { Logger, sleep } from "../utils";
 import { Package } from "../package";
-import { ProposalDTO } from "./proposal";
+import { Proposal, ProposalDTO } from "./proposal";
 import { AgreementPoolService } from "../agreement";
 import { Allocation } from "../payment";
 import { Demand, DemandEvent, DemandEventType, DemandOptions } from "./demand";
