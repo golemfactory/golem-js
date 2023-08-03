@@ -29,12 +29,24 @@ describe("WebSocketBrowserStorageProvider", () => {
       logger,
     });
   let provider: WebSocketBrowserStorageProvider;
-  let fetch: jest.SpyInstance;
+
+  const originalFetch = global.fetch;
+  const mockFetch = jest.fn();
 
   beforeEach(() => {
     logger = new LoggerMock();
     provider = createProvider();
-    fetch = jest.spyOn(global, "fetch");
+
+    jest.clearAllMocks();
+    // jest.resetAllMocks();
+  });
+
+  beforeAll(() => {
+    global.fetch = mockFetch;
+  });
+
+  afterAll(() => {
+    global.fetch = originalFetch;
   });
 
   describe("constructor", () => {
@@ -267,7 +279,7 @@ describe("WebSocketBrowserStorageProvider", () => {
   describe("createService()", () => {
     it("should create service and return service info", async () => {
       const data = { servicesId: "ID" };
-      fetch.mockImplementation((url, init: RequestInit) => {
+      mockFetch.mockImplementation((url, init: RequestInit) => {
         expect(url.toString()).toEqual(`${opts.yagnaOptions.basePath}/gsb-api/v1/services`);
         expect(init.headers!["Authorization"]).toBe(`Bearer ${opts.yagnaOptions.apiKey}`);
         return Promise.resolve({
@@ -277,7 +289,7 @@ describe("WebSocketBrowserStorageProvider", () => {
       });
 
       const result = await provider["createService"]({ id: "foo", url: "" }, []);
-      expect(fetch).toHaveBeenCalled();
+      expect(mockFetch).toHaveBeenCalled();
       expect(result.serviceId).toEqual("ID");
       expect(result.url.toString()).toEqual(
         `ws://yagna/gsb-api/v1/services/${data.servicesId}?authToken=${opts.yagnaOptions.apiKey}`,
@@ -286,50 +298,50 @@ describe("WebSocketBrowserStorageProvider", () => {
 
     it("should record the service for later release", async () => {
       const data = { servicesId: "ID" };
-      fetch.mockResolvedValue({
+      mockFetch.mockResolvedValue({
         status: 201,
         json: () => Promise.resolve(data),
       });
 
       await provider["createService"]({ id: "foo", url: "/file" }, []);
-      expect(fetch).toHaveBeenCalled();
+      expect(mockFetch).toHaveBeenCalled();
       expect(provider["services"].size).toBe(1);
       expect(provider["services"].get("/file")).toEqual(data.servicesId);
     });
 
     it("should throw when service creation fails", async () => {
-      fetch.mockResolvedValue({
+      mockFetch.mockResolvedValue({
         status: 404,
       });
 
       await expect(() => {
         return provider["createService"]({ id: "foo", url: "/file" }, []);
       }).rejects.toThrow();
-      expect(fetch).toHaveBeenCalled();
+      expect(mockFetch).toHaveBeenCalled();
     });
   });
 
   describe("deleteService()", () => {
     it("should call delete service API", async () => {
-      fetch.mockImplementation((url, init: RequestInit) => {
+      mockFetch.mockImplementation((url, init: RequestInit) => {
         expect(url.toString()).toEqual(`${opts.yagnaOptions.basePath}/gsb-api/v1/services/Foo`);
         expect(init.headers!["Authorization"]).toBe(`Bearer ${opts.yagnaOptions.apiKey}`);
         return Promise.resolve({ status: 200 });
       });
 
       await provider["deleteService"]("Foo");
-      expect(fetch).toHaveBeenCalled();
+      expect(mockFetch).toHaveBeenCalled();
     });
 
     it("should throw when delete API fails", async () => {
-      fetch.mockResolvedValue({
+      mockFetch.mockResolvedValue({
         status: 404,
       });
 
       await expect(() => {
         return provider["deleteService"]("Foo");
       }).rejects.toThrow();
-      expect(fetch).toHaveBeenCalled();
+      expect(mockFetch).toHaveBeenCalled();
     });
   });
 

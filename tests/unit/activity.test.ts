@@ -356,10 +356,12 @@ describe("Activity", () => {
       const command3 = new Run("test_command1", null, null, capture);
       const command4 = new Terminate();
       const script = Script.create([command1, command2, command3, command4]);
-      const expectedErrors = [
+      const expectedErrors: Partial<MessageEvent>[] = [
         {
-          type: "error",
-          message: "Some undefined error",
+          data: {
+            type: "error",
+            message: "Some undefined error",
+          },
         },
       ];
       setExpectedErrorEvents(activity.id, expectedErrors);
