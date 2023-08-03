@@ -9,6 +9,8 @@ on:
     branches:
       - master
       - b0.*
+  # Allows triggering the workflow manually
+  workflow_dispatch:
 
 jobs:
   goth-tests:
