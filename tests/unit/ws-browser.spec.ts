@@ -38,7 +38,6 @@ describe("WebSocketBrowserStorageProvider", () => {
     provider = createProvider();
 
     jest.clearAllMocks();
-    // jest.resetAllMocks();
   });
 
   beforeAll(() => {

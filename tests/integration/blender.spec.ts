@@ -1,6 +1,5 @@
 import { TaskExecutor } from "../../yajsapi";
 import { LoggerMock } from "../mock";
-import { fileExistsSync } from "tsconfig-paths/lib/filesystem";
 import fs from "fs";
 
 const logger = new LoggerMock(false);
@@ -55,7 +54,7 @@ describe("Blender rendering", function () {
     }
 
     for (const file of expectedResults) {
-      expect(fileExistsSync(`${process.env.GOTH_GFTP_VOLUME || ""}${file}`)).toEqual(true);
+      expect(fs.existsSync(`${process.env.GOTH_GFTP_VOLUME || ""}${file}`)).toEqual(true);
     }
 
     await executor.end();
