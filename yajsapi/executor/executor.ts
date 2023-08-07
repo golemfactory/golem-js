@@ -1,10 +1,10 @@
 import { Package, PackageOptions } from "../package/index.js";
-import { MarketService, DemandOptions } from "../market/index.js";
-import { AgreementOptions, AgreementPoolService } from "../agreement/index.js";
+import { MarketService } from "../market/index.js";
+import { AgreementPoolService } from "../agreement/index.js";
 import { Task, TaskQueue, TaskService, Worker } from "../task/index.js";
 import { PaymentService, PaymentOptions } from "../payment/index.js";
 import { NetworkService } from "../network/index.js";
-import { ActivityOptions, Result } from "../activity/index.js";
+import { Result } from "../activity/index.js";
 import { sleep, Logger, runtimeContextChecker } from "../utils/index.js";
 import { StorageProvider, GftpStorageProvider } from "../storage/index.js";
 import { ExecutorConfig } from "./config.js";
