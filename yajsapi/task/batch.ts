@@ -12,13 +12,17 @@ export class Batch {
     return new Batch(activity, storageProvider, logger);
   }
 
-  constructor(private activity: Activity, private storageProvider: StorageProvider, private logger?: Logger) {
+  constructor(
+    private activity: Activity,
+    private storageProvider: StorageProvider,
+    private logger?: Logger,
+  ) {
     this.script = new Script([]);
   }
 
   run(...args: Array<string | string[]>): Batch {
     this.script.add(
-      args.length === 1 ? new Run("/bin/sh", ["-c", <string>args[0]]) : new Run(<string>args[0], <string[]>args[1])
+      args.length === 1 ? new Run("/bin/sh", ["-c", <string>args[0]]) : new Run(<string>args[0], <string[]>args[1]),
     );
     return this;
   }
@@ -59,13 +63,15 @@ export class Batch {
       });
 
       results.on("end", () => {
-        this.script.after(allResults)
-          .then(results => resolve(results))
-          .catch(error => reject(error));
+        this.script
+          .after(allResults)
+          .then((results) => resolve(results))
+          .catch((error) => reject(error));
       });
 
       results.on("error", (error) => {
-        this.script.after(allResults)
+        this.script
+          .after(allResults)
           .then(() => reject(error))
           .catch(() => reject(error)); // Return original error, as it might be more important.
       });

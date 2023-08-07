@@ -60,7 +60,7 @@ abstract class BaseConfig {
     this.paymentTimeout = options?.paymentTimeout || DEFAULTS.paymentTimeout;
     this.payment = {
       driver: options?.payment?.driver || DEFAULTS.payment.driver,
-      network: options?.payment?.network || EnvUtils.getPaymentNetwork() ||DEFAULTS.payment.network,
+      network: options?.payment?.network || EnvUtils.getPaymentNetwork() || DEFAULTS.payment.network,
     };
     this.logger = options?.logger;
     this.eventTarget = options?.eventTarget;

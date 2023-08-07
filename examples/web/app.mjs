@@ -1,7 +1,7 @@
 import http from "http";
 import fs from "fs";
 import { fileURLToPath } from "url";
-const __dirname = fileURLToPath(new URL('.', import.meta.url));
+const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
 const server = http.createServer((req, res) => {
   if (req.url === "/") {

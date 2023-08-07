@@ -34,13 +34,13 @@ export default class EventSourceMock {
 export const setExpectedEvents = (activityId, expectedEvents) => {
   global.events.set(
     activityId,
-    expectedEvents.map((e) => JSON.parse(JSON.stringify(e)))
+    expectedEvents.map((e) => JSON.parse(JSON.stringify(e))),
   );
 };
 
 export const setExpectedErrorEvents = (activityId, expectedErrors) => {
   global.errorEvents.set(
     activityId,
-    expectedErrors.map((e) => JSON.parse(JSON.stringify(e)))
+    expectedErrors.map((e) => JSON.parse(JSON.stringify(e))),
   );
 };

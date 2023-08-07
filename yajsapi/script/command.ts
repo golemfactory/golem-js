@@ -15,7 +15,10 @@ const EmptyErrorResult: Result = {
 export class Command<T = unknown> {
   protected args: object;
 
-  constructor(private commandName: string, args?: object) {
+  constructor(
+    private commandName: string,
+    args?: object,
+  ) {
     this.args = args || {};
   }
 
@@ -109,7 +112,11 @@ export class Terminate extends Command {
  * @hidden
  */
 export class Transfer<T = unknown> extends Command<T> {
-  constructor(protected from?: string, protected to?: string, args?: object) {
+  constructor(
+    protected from?: string,
+    protected to?: string,
+    args?: object,
+  ) {
     super("transfer", { from, to, args });
   }
 }
@@ -118,7 +125,11 @@ export class Transfer<T = unknown> extends Command<T> {
  * @hidden
  */
 export class UploadFile extends Transfer {
-  constructor(private storageProvider: StorageProvider, private src: string, private dstPath: string) {
+  constructor(
+    private storageProvider: StorageProvider,
+    private src: string,
+    private dstPath: string,
+  ) {
     super();
     this.args["to"] = `container:${dstPath}`;
   }
@@ -137,7 +148,11 @@ export class UploadFile extends Transfer {
  * @category Mid-level
  */
 export class UploadData extends Transfer {
-  constructor(private storageProvider: StorageProvider, private src: Uint8Array, private dstPath: string) {
+  constructor(
+    private storageProvider: StorageProvider,
+    private src: Uint8Array,
+    private dstPath: string,
+  ) {
     super();
     this.args["to"] = `container:${dstPath}`;
   }
@@ -156,7 +171,11 @@ export class UploadData extends Transfer {
  * @hidden
  */
 export class DownloadFile extends Transfer {
-  constructor(private storageProvider: StorageProvider, private srcPath: string, private dstPath: string) {
+  constructor(
+    private storageProvider: StorageProvider,
+    private srcPath: string,
+    private dstPath: string,
+  ) {
     super();
     this.args = { from: `container:${srcPath}` };
   }
@@ -177,7 +196,10 @@ export class DownloadFile extends Transfer {
 export class DownloadData extends Transfer<Uint8Array> {
   private chunks: Uint8Array[] = [];
 
-  constructor(private storageProvider: StorageProvider, private srcPath: string) {
+  constructor(
+    private storageProvider: StorageProvider,
+    private srcPath: string,
+  ) {
     super();
     this.args = { from: `container:${srcPath}` };
   }

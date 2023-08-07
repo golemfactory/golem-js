@@ -59,7 +59,7 @@ export class Proposal {
     private readonly api: RequestorApi,
     model: ProposalModel,
     private readonly demandRequest: DemandOfferBase,
-    private eventTarget?: EventTarget
+    private eventTarget?: EventTarget,
   ) {
     this.id = model.proposalId;
     this.issuerId = model.issuerId;
@@ -125,7 +125,7 @@ export class Proposal {
         providerId: this.issuerId,
         parentId: this.id,
         reason,
-      })
+      }),
     );
   }
 
@@ -141,7 +141,7 @@ export class Proposal {
             providerId: this.issuerId,
             parentId: this.id,
             reason,
-          })
+          }),
         );
         throw new Error(reason);
       });
@@ -154,7 +154,7 @@ export class Proposal {
         id: this.id,
         providerId: this.issuerId,
         counteringProposalId: counteringProposalId,
-      })
+      }),
     );
     return counteringProposalId;
   }

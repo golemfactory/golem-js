@@ -11,7 +11,11 @@ import { DecorationsBuilder, MarketDecoration } from "./builder";
 export class DemandFactory {
   private options: DemandConfig;
 
-  constructor(private taskPackage: Package, private allocations: Allocation[], options?: DemandOptions) {
+  constructor(
+    private taskPackage: Package,
+    private allocations: Allocation[],
+    options?: DemandOptions,
+  ) {
     this.options = new DemandConfig(options);
   }
 
@@ -27,7 +31,7 @@ export class DemandFactory {
       new events.DemandSubscribed({
         id,
         details: new DecorationsBuilder().addDecorations(decorations).getDecorations(),
-      })
+      }),
     );
     this.options.logger?.info(`Demand published on the market`);
     return new Demand(id, demandRequest, this.options);

@@ -1,4 +1,4 @@
-name: Lint
+name: Code style & lint
 
 on:
   push:
@@ -16,7 +16,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Run ESLint
+      - name: Check code style and lint
         run: |
           yarn install
+          yarn format:check
           yarn lint
