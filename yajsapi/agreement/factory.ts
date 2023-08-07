@@ -1,7 +1,7 @@
-import { Agreement, AgreementOptions } from "./agreement.js";
-import { Logger } from "../utils/index.js";
-import { AgreementConfig } from "./config.js";
-import { Events } from "../events/index.js";
+import { Agreement, AgreementOptions } from "./agreement";
+import { Logger } from "../utils";
+import { AgreementConfig } from "./config";
+import { Events } from "../events";
 
 /**
  * AgreementFactory

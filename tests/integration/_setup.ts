@@ -1,21 +1,15 @@
-import { Goth } from "../goth/goth.js";
+import { Goth } from "../goth/goth";
 import { resolve } from "path";
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
 
-chai.use(chaiAsPromised);
-const gothConfig = resolve("../goth/assets/goth-config.yml");
-const goth = new Goth(gothConfig);
+const timeoutPromise = (seconds: number) =>
+  new Promise((_resolve, reject) => {
+    setTimeout(() => reject(new Error(`The timeout was reached and the racing promise has rejected after ${seconds} seconds`)), seconds * 1000);
+  });
 
-before(async function () {
-  this.timeout(180000);
-  await goth.start();
-});
-after(async function () {
-  this.timeout(180000);
-  await goth.end();
-});
+export default async function setUpGoth() {
+  const gothConfig = resolve("../goth/assets/goth-config.yml");
+  globalThis.__GOTH = new Goth(gothConfig);
 
-beforeEach(function () {
-  console.log(`\n\n\xa0\xa0Trying to test: \x1b[32mIt ${this.currentTest?.title} ...\n\n`);
-});
+  // Start Goth, but don't wait for an eternity
+  return await Promise.race([globalThis.__GOTH.start(), timeoutPromise(60)]);
+}

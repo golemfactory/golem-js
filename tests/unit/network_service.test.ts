@@ -1,6 +1,5 @@
-import { expect } from "chai";
-import { LoggerMock } from "../mock/index.js";
-import { NetworkService } from "../../yajsapi/network/index.js";
+import { LoggerMock } from "../mock";
+import { NetworkService } from "../../yajsapi/network";
 const logger = new LoggerMock();
 
 describe("Network Service", () => {
@@ -30,7 +29,7 @@ describe("Network Service", () => {
     it("should not add node if the service is not started", async () => {
       const networkService = new NetworkService({ logger });
       const result = networkService.addNode("provider_2");
-      await expect(result).to.be.rejectedWith("The service is not started and the network does not exist");
+      await expect(result).rejects.toThrow("The service is not started and the network does not exist");
     });
   });
 
