@@ -46,13 +46,10 @@ export type ExecutorOptions = {
   isSubprocess?: boolean;
   /** Timeout for preparing activity - creating and deploy commands */
   activityPreparingTimeout?: number;
-} & MarketOptions &
-  ActivityOptions &
-  AgreementOptions &
-  PaymentOptions &
-  DemandOptions &
-  Omit<PackageOptions, "imageHash" | "imageTag"> &
+} & Omit<PackageOptions, "imageHash" | "imageTag"> &
+  MarketOptions &
   TaskOptions &
+  PaymentOptions &
   NetworkServiceOptions &
   AgreementServiceOptions &
   Omit<WorkOptions, "isRunning">;
