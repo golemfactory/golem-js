@@ -1,5 +1,5 @@
 import { BasePaymentOptions, PaymentConfig } from "./config";
-import { Logger, sleep } from "../utils";
+import { Logger } from "../utils";
 import { Invoice } from "./invoice";
 import { DebitNote } from "./debit_note";
 import { Events } from "../events";
