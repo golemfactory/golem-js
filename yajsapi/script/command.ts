@@ -1,6 +1,6 @@
-import { ExeScriptRequest } from "ya-ts-client/dist/ya-activity/src/models/index.js";
-import { StorageProvider } from "../storage/index.js";
-import { Result, ResultState } from "../activity/index.js";
+import { ExeScriptRequest } from "ya-ts-client/dist/ya-activity/src/models";
+import { StorageProvider } from "../storage";
+import { Result, ResultState } from "../activity";
 
 const EmptyErrorResult: Result = {
   result: ResultState.ERROR,

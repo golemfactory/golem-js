@@ -1,4 +1,4 @@
-import { Logger } from "./logger.js";
+import { Logger } from "./logger";
 /**
  * Helper function implements simple logger prints all messages to console
  */

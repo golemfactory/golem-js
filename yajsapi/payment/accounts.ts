@@ -1,5 +1,5 @@
 import { Account } from "ya-ts-client/dist/ya-payment/src/models";
-import { AccountConfig, BasePaymentOptions } from "./config.js";
+import { AccountConfig, BasePaymentOptions } from "./config";
 
 /**
  * @hidden

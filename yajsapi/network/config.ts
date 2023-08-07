@@ -1,8 +1,8 @@
-import { NetworkOptions } from "./network.js";
-import { RequestorApi } from "ya-ts-client/dist/ya-net/api.js";
-import { Configuration } from "ya-ts-client/dist/ya-payment/index.js";
+import { NetworkOptions } from "./network";
+import { RequestorApi } from "ya-ts-client/dist/ya-net/api";
+import { Configuration } from "ya-ts-client/dist/ya-payment";
 import { Agent } from "http";
-import { EnvUtils, Logger } from "../utils/index.js";
+import { EnvUtils, Logger } from "../utils";
 
 const DEFAULTS = {
   networkIp: "192.168.0.0/24",

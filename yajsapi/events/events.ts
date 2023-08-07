@@ -2,7 +2,7 @@ import { ProposalDetails } from "../market/proposal";
 import { PackageDetails } from "../package/package";
 import { DemandDetails } from "../market/demand";
 
-import { RequireAtLeastOne } from "../utils/types.js";
+import { RequireAtLeastOne } from "../utils/types";
 /**
  * Global Event Type with which all API events will be emitted. It should be used on all listeners that would like to handle events.
  */

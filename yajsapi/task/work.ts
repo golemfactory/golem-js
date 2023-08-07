@@ -1,4 +1,4 @@
-import { Activity, Result } from "../activity/index.js";
+import { Activity, Result } from "../activity";
 import {
   Capture,
   Command,
@@ -10,12 +10,12 @@ import {
   Start,
   UploadData,
   UploadFile,
-} from "../script/index.js";
-import { NullStorageProvider, StorageProvider } from "../storage/index.js";
-import { ActivityStateEnum } from "../activity/index.js";
-import { sleep, Logger } from "../utils/index.js";
-import { Batch } from "./index.js";
-import { NetworkNode } from "../network/index.js";
+} from "../script";
+import { NullStorageProvider, StorageProvider } from "../storage";
+import { ActivityStateEnum } from "../activity";
+import { sleep, Logger } from "../utils";
+import { Batch } from "./batch";
+import { NetworkNode } from "../network";
 
 export type Worker<InputType = unknown, OutputType = unknown> = (
   ctx: WorkContext,

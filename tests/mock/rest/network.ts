@@ -1,7 +1,7 @@
 /* eslint @typescript-eslint/ban-ts-comment: 0 */
-import { RequestorApi } from "ya-ts-client/dist/ya-net/src/api/requestor-api.js";
+import { RequestorApi } from "ya-ts-client/dist/ya-net/src/api/requestor-api";
 import { v4 as uuidv4 } from "uuid";
-import { Address, Network, Node } from "ya-ts-client/dist/ya-net/src/models/index.js";
+import { Address, Network, Node } from "ya-ts-client/dist/ya-net/src/models";
 import { AxiosRequestConfig, AxiosResponse } from "axios";
 
 export class NetworkApiMock extends RequestorApi {

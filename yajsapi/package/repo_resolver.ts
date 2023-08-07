@@ -1,7 +1,7 @@
 // ? This file is legacy, we should remove it or refactor it
 
 // import axios from "axios";
-// import { Logger, runtimeContextChecker } from "../utils/index.js";
+// import { Logger, runtimeContextChecker } from "../utils";
 
 // const FALLBACK_REPO_URL = "https://girepo.dev.golem.network";
 // // const PUBLIC_DNS_URL = "https://dns.google/resolve?type=srv&name=";

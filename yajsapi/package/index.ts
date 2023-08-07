@@ -1,1 +1,1 @@
-export { Package, PackageOptions } from "./package.js";
+export { Package, PackageOptions } from "./package";

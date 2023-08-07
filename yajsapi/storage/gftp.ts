@@ -1,9 +1,9 @@
-import { StorageProvider, StorageProviderDataCallback } from "./provider.js";
-import { Logger, runtimeContextChecker } from "../utils/index.js";
+import { StorageProvider, StorageProviderDataCallback } from "./provider";
+import { Logger, runtimeContextChecker } from "../utils";
 import path from "path";
 import fs from "fs";
 import { chomp, chunksToLinesAsync, streamEnd, streamWrite } from "@rauschma/stringio";
-import { spawn } from "child_process";
+import cp from "child_process";
 
 export class GftpStorageProvider implements StorageProvider {
   private gftpServerProcess;
@@ -24,14 +24,38 @@ export class GftpStorageProvider implements StorageProvider {
   }
 
   async init() {
-    if (this.isInitialized) return;
-    this.gftpServerProcess = await spawn("gftp server", [], { shell: true });
-    this.gftpServerProcess?.stdout?.setEncoding("utf-8");
-    this.gftpServerProcess?.stderr?.setEncoding("utf-8");
-    this.gftpServerProcess.on("error", (error) => this.logger?.error(error));
-    this.gftpServerProcess.stderr.on("data", (data) => this.logger?.error(`GFTP Error: ${data}`));
+    if (this.isInitialized) {
+      this.logger?.warn("GFTP init attempted even though it was already ready - check the logic of your application");
+      return;
+    }
+
+    await this.startGftpServer();
     this.logger?.info(`GFTP Version: ${await this.jsonrpc("version")}`);
-    this.isInitialized = true;
+  }
+
+  private startGftpServer(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.logger?.debug("Starting GFTP server");
+
+      this.gftpServerProcess = cp.spawn("gftp", ["server"]);
+
+      this.gftpServerProcess.on("spawn", () => {
+        this.logger?.info("GFTP server spawned");
+        this.isInitialized = true;
+        resolve();
+      });
+
+      this.gftpServerProcess.on("error", (error) => {
+        this.logger?.error("Error while spawning GFTP server" + error);
+        reject(error);
+      });
+
+      this.gftpServerProcess?.stdout?.setEncoding("utf-8");
+      this.gftpServerProcess?.stderr?.setEncoding("utf-8");
+
+      this.gftpServerProcess.stdout.on("data", (data) => this.logger?.debug(`GFTP server stdout: ${data}`));
+      this.gftpServerProcess.stderr.on("data", (data) => this.logger?.error(`GFTP server stderr: ${data}`));
+    });
   }
 
   isInitiated() {
@@ -114,11 +138,13 @@ export class GftpStorageProvider implements StorageProvider {
       if (result === undefined) throw value;
       return result;
     } catch (error) {
-      throw Error(`GFTP error. query: ${query} value: ${valueStr} error: ${JSON.stringify(error)}`);
+      throw Error(
+        `Error while obtaining response to JSONRPC. query: ${query} value: ${valueStr} error: ${JSON.stringify(error)}`,
+      );
     }
   }
 
-  async* readStream(readable) {
+  async *readStream(readable) {
     for await (const line of chunksToLinesAsync(readable)) {
       yield chomp(line);
     }
@@ -147,7 +173,7 @@ export class GftpStorageProvider implements StorageProvider {
     return await this.uploadStream(
       (async function* () {
         yield data;
-      })()
+      })(),
     );
   }
 
