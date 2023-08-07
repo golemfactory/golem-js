@@ -3,7 +3,7 @@ import { Allocation } from "../payment/index.js";
 import { YagnaOptions } from "../executor/index.js";
 import { DemandFactory } from "./factory.js";
 import { Proposal } from "./proposal.js";
-import { Logger, sleep } from "../utils/index.js";
+import { Logger } from "../utils/index.js";
 import { DemandConfig } from "./config.js";
 import { Events } from "../events/index.js";
 import { ProposalEvent, ProposalRejectedEvent } from "ya-ts-client/dist/ya-market/src/models/index.js";
@@ -102,9 +102,14 @@ export class Demand extends EventTarget {
   private async subscribe() {
     while (this.isRunning) {
       try {
-        const { data: events } = await this.options.api.collectOffers(this.id, 3, this.options.maxOfferEvents, {
-          timeout: 5000,
-        });
+        const { data: events } = await this.options.api.collectOffers(
+          this.id,
+          this.options.offerFetchingInterval / 1000,
+          this.options.maxOfferEvents,
+          {
+            timeout: this.options.offerFetchingInterval + 1000,
+          },
+        );
         for (const event of events as Array<ProposalEvent & ProposalRejectedEvent>) {
           if (event.eventType === "ProposalRejectedEvent") {
             this.logger?.debug(`Proposal rejected. Reason: ${event.reason?.message}`);
@@ -147,8 +152,6 @@ export class Demand extends EventTarget {
             );
           }
         }
-      } finally {
-        await sleep(this.options.offerFetchingInterval, true);
       }
     }
   }

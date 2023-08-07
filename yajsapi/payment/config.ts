@@ -16,10 +16,9 @@ const DEFAULTS = Object.freeze({
   invoiceReceiveTimeout: 1000 * 60 * 5, // 5 min
   maxInvoiceEvents: 500,
   maxDebitNotesEvents: 500,
-  invoiceFetchingInterval: 2000,
-  debitNotesFetchingInterval: 2000,
+  invoiceFetchingInterval: 20000,
+  debitNotesFetchingInterval: 20000,
   payingInterval: 2000,
-  paymentRequestTimeout: 10000,
   debitNoteFilter: acceptAllDebitNotesFilter(),
   invoiceFilter: acceptAllInvoicesFilter(),
 });
@@ -43,7 +42,6 @@ abstract class BaseConfig {
   public readonly logger?: Logger;
   public readonly eventTarget?: EventTarget;
   public readonly payment: { driver: string; network: string };
-  public readonly paymentRequestTimeout: number;
   public readonly httpAgent: Agent;
 
   constructor(public readonly options?: BasePaymentOptions) {
@@ -66,7 +64,6 @@ abstract class BaseConfig {
     };
     this.logger = options?.logger;
     this.eventTarget = options?.eventTarget;
-    this.paymentRequestTimeout = options?.paymentRequestTimeout || DEFAULTS.paymentRequestTimeout;
   }
 }
 /**

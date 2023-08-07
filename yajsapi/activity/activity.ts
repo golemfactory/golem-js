@@ -194,6 +194,11 @@ export class Activity {
             const { data: results }: { data: Result[] } = (await api.control.getExecBatchResults(
               activityId,
               batchId,
+              undefined,
+              activityExecuteTimeout / 1000,
+              {
+                timeout: activityExecuteTimeout + 1000,
+              },
             )) as unknown as { data: Result[] };
             retryCount = 0;
             const newResults = results.slice(lastIndex + 1);
@@ -204,7 +209,6 @@ export class Activity {
                 lastIndex = result.index;
               });
             }
-            if (!isBatchFinished) await sleep(activityExeBatchResultsFetchInterval, true);
           } catch (error) {
             try {
               retryCount = await handleError(error, lastIndex, retryCount, maxRetries);
