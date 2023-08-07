@@ -15,7 +15,7 @@ import { readFileSync } from "fs";
       "GOLEM_PRICE=`curl -X 'GET' \
           'https://api.coingecko.com/api/v3/simple/price?ids=golem&vs_currencies=usd' \
           -H 'accept: application/json' | jq .golem.usd`; \
-      echo \"Golem price: $GOLEM_PRICE USD\";"
+      echo \"Golem price: $GOLEM_PRICE USD\";",
     );
     console.log(result.stdout);
   });

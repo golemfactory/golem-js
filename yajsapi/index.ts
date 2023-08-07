@@ -4,7 +4,7 @@ export {
   GftpStorageProvider,
   NullStorageProvider,
   WebSocketBrowserStorageProvider,
-  WebSocketStorageProviderOptions
+  WebSocketStorageProviderOptions,
 } from "./storage";
 export { ActivityStateEnum, Result } from "./activity";
 export { AgreementCandidate, AgreementSelectors } from "./agreement";

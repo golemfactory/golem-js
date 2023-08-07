@@ -16,7 +16,10 @@ export class ActivityFactory {
    * @param agreementId
    * @param options - {@link ActivityOptions}
    */
-  constructor(private readonly agreementId: string, options?: ActivityOptions) {
+  constructor(
+    private readonly agreementId: string,
+    options?: ActivityOptions,
+  ) {
     this.options = new ActivityConfig(options);
   }
 

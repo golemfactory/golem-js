@@ -21,7 +21,7 @@ export class MarketApiMock extends RequestorApi {
   // @ts-ignore
   async createAgreement(
     createAgreementRequest: AgreementProposal,
-    options?: AxiosRequestConfig
+    options?: AxiosRequestConfig,
   ): Promise<AxiosResponse<string>> {
     const agreementData = agreementsApproved[0];
     return new Promise((res) => res({ data: agreementData.agreementId } as AxiosResponse));
@@ -48,7 +48,7 @@ export class MarketApiMock extends RequestorApi {
   // @ts-ignore
   async subscribeDemand(
     demandOfferBase: DemandOfferBase,
-    options?: AxiosRequestConfig
+    options?: AxiosRequestConfig,
   ): Promise<import("axios").AxiosResponse<string>> {
     return new Promise((res) => res({ data: uuidv4() } as AxiosResponse));
   }
@@ -57,7 +57,7 @@ export class MarketApiMock extends RequestorApi {
     subscriptionId: string,
     timeout?: number,
     maxEvents?: number,
-    options?: AxiosRequestConfig
+    options?: AxiosRequestConfig,
   ): Promise<import("axios").AxiosResponse<Event[]>> {
     if (global.expectedError) {
       const error = new Error(global.expectedError.message) as AxiosError;
@@ -73,7 +73,7 @@ export class MarketApiMock extends RequestorApi {
   // @ts-ignore
   unsubscribeDemand(
     subscriptionId: string,
-    options?: AxiosRequestConfig
+    options?: AxiosRequestConfig,
   ): Promise<import("axios").AxiosResponse<void>> {
     return new Promise((res) => res({ data: true } as AxiosResponse));
   }
@@ -84,7 +84,7 @@ export class MarketApiMock extends RequestorApi {
     requestBody?: {
       [key: string]: object;
     },
-    options?: AxiosRequestConfig
+    options?: AxiosRequestConfig,
   ): Promise<import("axios").AxiosResponse<void>> {
     return new Promise((res) => res({ data: true } as AxiosResponse));
   }
@@ -93,7 +93,7 @@ export class MarketApiMock extends RequestorApi {
     subscriptionId: string,
     proposalId: string,
     demandOfferBase: DemandOfferBase,
-    options?: AxiosRequestConfig
+    options?: AxiosRequestConfig,
   ): Promise<import("axios").AxiosResponse<string>> {
     return new Promise((res) => res({ data: proposalId } as AxiosResponse));
   }

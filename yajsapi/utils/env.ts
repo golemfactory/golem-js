@@ -20,7 +20,7 @@ export const EnvUtils = {
   },
 
   getPaymentNetwork(): string {
-    return isNode ? (process.env.PAYMENT_NETWORK ??  "goerli") : "goerli";
+    return isNode ? process.env.PAYMENT_NETWORK ?? "goerli" : "goerli";
   },
 
   isDevMode(): boolean {

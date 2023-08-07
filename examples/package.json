@@ -1,37 +1,37 @@
 {
-    "name": "yajsapi-examples",
-    "version": "0.7.0",
-    "description": "NodeJS API Examples for Next Golem",
-    "type": "module",
-    "repository": "https://github.com/golemfactory/yajsapi",
-    "scripts": {
-        "hello": "node ./hello-world/hello.mjs",
-        "run": "ts-node ./simple-usage/run.ts",
-        "map": "ts-node ./simple-usage/map.ts",
-        "forEach": "ts-node ./simple-usage/forEach.ts",
-        "fileTransfer": "ts-node ./simple-usage/fileTransfer.ts",
-        "batchPromise": "ts-node ./simple-usage/batchPromise.ts",
-        "batchStream": "ts-node ./simple-usage/batchStream.ts",
-        "logger-hello": "ts-node simple-usage/logger.ts",
-        "blender": "ts-node ./blender/blender.ts",
-        "yacat": "ts-node ./yacat/yacat.ts",
-        "fibonacci": "node ./fibonacci/fibonacci.js",
-        "ssh": "ts-node ./ssh/ssh.ts",
-        "tag": "ts-node ./simple-usage/tag.ts",
-        "web": "node ./web/app.mjs"
-    },
-    "author": "GolemFactory <contact@golem.network>",
-    "license": "LGPL-3.0",
-    "engines": {
-        "node": ">=16.19.0"
-    },
-    "dependencies": {
-        "commander": "^9.1.0",
-        "ts-node": "^10.7.0",
-        "yajsapi": "file:.."
-    },
-    "devDependencies": {
-        "@types/node": "18",
-        "typescript": "^4.6.3"
-    }
+  "name": "yajsapi-examples",
+  "version": "0.7.0",
+  "description": "NodeJS API Examples for Next Golem",
+  "type": "module",
+  "repository": "https://github.com/golemfactory/yajsapi",
+  "scripts": {
+    "hello": "node ./hello-world/hello.mjs",
+    "run": "ts-node ./simple-usage/run.ts",
+    "map": "ts-node ./simple-usage/map.ts",
+    "forEach": "ts-node ./simple-usage/forEach.ts",
+    "fileTransfer": "ts-node ./simple-usage/fileTransfer.ts",
+    "batchPromise": "ts-node ./simple-usage/batchPromise.ts",
+    "batchStream": "ts-node ./simple-usage/batchStream.ts",
+    "logger-hello": "ts-node simple-usage/logger.ts",
+    "blender": "ts-node ./blender/blender.ts",
+    "yacat": "ts-node ./yacat/yacat.ts",
+    "fibonacci": "node ./fibonacci/fibonacci.js",
+    "ssh": "ts-node ./ssh/ssh.ts",
+    "tag": "ts-node ./simple-usage/tag.ts",
+    "web": "node ./web/app.mjs"
+  },
+  "author": "GolemFactory <contact@golem.network>",
+  "license": "LGPL-3.0",
+  "engines": {
+    "node": ">=16.19.0"
+  },
+  "dependencies": {
+    "commander": "^9.1.0",
+    "ts-node": "^10.7.0",
+    "yajsapi": "file:.."
+  },
+  "devDependencies": {
+    "@types/node": "18",
+    "typescript": "^4.6.3"
+  }
 }

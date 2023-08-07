@@ -1,8 +1,8 @@
-import { Logger } from '../utils/index';
-import { Network } from './index';
-import { NetworkOptions } from './network';
-import { NetworkNode } from './node';
-import { getIdentity } from './identity';
+import { Logger } from "../utils/index";
+import { Network } from "./index";
+import { NetworkOptions } from "./network";
+import { NetworkNode } from "./node";
+import { getIdentity } from "./identity";
 
 /**
  * @internal

@@ -43,5 +43,4 @@ export class NullStorageProvider implements StorageProvider {
   release(urls: string[]): Promise<void> {
     return Promise.resolve(undefined);
   }
-
 }

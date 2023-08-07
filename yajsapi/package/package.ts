@@ -66,7 +66,7 @@ export class Package {
   }
 
   static getImageIdentifier(
-    str: string
+    str: string,
   ): RequireAtLeastOne<{ imageHash: string; imageTag: string }, "imageHash" | "imageTag"> {
     const tagRegex = /^(.*?)\/(.*?):(.*)$/;
     if (tagRegex.test(str)) {

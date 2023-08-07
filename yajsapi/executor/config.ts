@@ -1,7 +1,7 @@
 import { ExecutorOptions } from "./executor";
 import { Package, PackageOptions } from "../package";
 import { ActivityOptions } from "../activity";
-import {Logger, LogLevel, runtimeContextChecker, defaultLogger} from "../utils";
+import { Logger, LogLevel, runtimeContextChecker, defaultLogger } from "../utils";
 
 const DEFAULTS = Object.freeze({
   payment: { driver: "erc20", network: "goerli" },

@@ -8,7 +8,10 @@ export enum TaskState {
 }
 
 export default class TaskMock implements QueueableTask {
-  constructor(private results, private state: TaskState) {}
+  constructor(
+    private results,
+    private state: TaskState,
+  ) {}
 
   public isQueueable() {
     return this.state == TaskState.Retry || this.state == TaskState.New;
