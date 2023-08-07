@@ -107,7 +107,7 @@ export class Demand extends EventTarget {
           this.options.offerFetchingInterval / 1000,
           this.options.maxOfferEvents,
           {
-            timeout: this.options.offerFetchingInterval + 1000,
+            timeout: 0,
           },
         );
         for (const event of events as Array<ProposalEvent & ProposalRejectedEvent>) {

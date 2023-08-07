@@ -1,5 +1,5 @@
 import { BasePaymentOptions, PaymentConfig } from "./config";
-import { Logger, sleep } from "../utils";
+import { Logger } from "../utils";
 import { Invoice } from "./invoice";
 import { DebitNote } from "./debit_note";
 import { Events } from "../events";
@@ -21,7 +21,7 @@ export class Payments extends EventTarget {
   private lastInvoiceFetchingTime: string = new Date().toISOString();
   private lastDebitNotesFetchingTime: string = new Date().toISOString();
   static async create(options?: PaymentOptions) {
-    return new Payments(new PaymentConfig(options));
+    return new Payments(options);
   }
 
   constructor(options?: PaymentOptions) {
@@ -36,16 +36,16 @@ export class Payments extends EventTarget {
    */
   async unsubscribe() {
     this.isRunning = false;
-    this.removeEventListener(PaymentEventType, null);
+    this.options.httpAgent.destroy?.();
     this.logger?.debug(`Payments unsubscribed`);
   }
 
   private async subscribe() {
     this.subscribeForInvoices().catch(
-      (e) => this.logger?.error(`Unable to collect invoices. ${e?.response?.data?.message || e}`),
+      (e) => this.logger?.debug(`Unable to collect invoices. ${e?.response?.data?.message || e}`),
     );
     this.subscribeForDebitNotes().catch(
-      (e) => this.logger?.error(`Unable to collect debit notes. ${e?.response?.data?.message || e}`),
+      (e) => this.logger?.debug(`Unable to collect debit notes. ${e?.response?.data?.message || e}`),
     );
   }
 
@@ -57,7 +57,7 @@ export class Payments extends EventTarget {
           this.lastInvoiceFetchingTime,
           this.options.maxInvoiceEvents,
           undefined,
-          { timeout: this.options.invoiceFetchingInterval + 1000 },
+          { timeout: 0 },
         )
         .catch((e) => {
           this.logger?.error(`Unable to collect invoices. ${e?.response?.data?.message || e}`);
@@ -88,7 +88,7 @@ export class Payments extends EventTarget {
           this.lastDebitNotesFetchingTime,
           this.options.maxDebitNotesEvents,
           undefined,
-          { timeout: this.options.debitNotesFetchingInterval + 1000 },
+          { timeout: 0 },
         )
         .catch((e) => {
           this.logger?.error(`Unable to collect debit notes. ${e?.response?.data?.message || e}`);

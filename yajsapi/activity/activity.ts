@@ -175,7 +175,7 @@ export class Activity {
     const maxRetries = 5;
     const { id: activityId, agreementId } = this;
     const isRunning = () => this.isRunning;
-    const { activityExecuteTimeout, api, activityExeBatchResultsFetchInterval, eventTarget } = this.options;
+    const { activityExecuteTimeout, api, eventTarget } = this.options;
     const handleError = this.handleError.bind(this);
     return new Readable({
       objectMode: true,
@@ -197,7 +197,7 @@ export class Activity {
               undefined,
               activityExecuteTimeout / 1000,
               {
-                timeout: activityExecuteTimeout + 1000,
+                timeout: 0,
               },
             )) as unknown as { data: Result[] };
             retryCount = 0;
