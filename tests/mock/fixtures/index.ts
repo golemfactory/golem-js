@@ -1,11 +1,11 @@
-export { agreementsApproved } from "./agreements.js";
-export { allocations } from "./allocations.js";
+export { agreementsApproved } from "./agreements";
+export { allocations } from "./allocations";
 export {
   proposalsInitial,
   proposalsDraft,
   proposalsWrongPaymentPlatform,
   proposalsShortDebitNoteTimeout,
-} from "./proposals.js";
-export { accounts } from "./accounts.js";
-export { invoiceEvents, invoices } from "./invoices.js";
-export { debitNotes, debitNotesEvents } from "./debit_notes.js";
+} from "./proposals";
+export { accounts } from "./accounts";
+export { invoiceEvents, invoices } from "./invoices";
+export { debitNotes, debitNotesEvents } from "./debit_notes";

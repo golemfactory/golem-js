@@ -1,5 +1,5 @@
-import { Logger } from "./logger.js";
-import { pinoLogger } from "./pinoLogger.js";
+import { Logger } from "./logger";
+import { pinoLogger } from "./pinoLogger";
 
 /**
  * Create a logger that writes a JSON object for every log line.

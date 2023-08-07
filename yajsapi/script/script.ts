@@ -1,5 +1,5 @@
-import { ExeScriptRequest } from "ya-ts-client/dist/ya-activity/src/models/index.js";
-import { Command } from "./command.js";
+import { ExeScriptRequest } from "ya-ts-client/dist/ya-activity/src/models";
+import { Command } from "./command";
 import { Result } from "../activity";
 
 /**

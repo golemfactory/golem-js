@@ -1,5 +1,5 @@
-export { Agreement, AgreementOptions, AgreementStateEnum, ProviderInfo } from "./agreement.js";
-export { AgreementPoolService, AgreementCandidate, AgreementSelector } from "./service.js";
-export { AgreementFactory } from "./factory.js";
-export { AgreementConfig } from "./config.js";
-export * as AgreementSelectors from "./strategy.js";
+export { Agreement, AgreementOptions, AgreementStateEnum, ProviderInfo } from "./agreement";
+export { AgreementPoolService, AgreementCandidate, AgreementSelector } from "./service";
+export { AgreementFactory } from "./factory";
+export { AgreementConfig } from "./config";
+export * as AgreementSelectors from "./strategy";

@@ -1,5 +1,5 @@
 /* eslint @typescript-eslint/ban-ts-comment: 0 */
-import { RequestorApi } from "ya-ts-client/dist/ya-payment/src/api/requestor-api.js";
+import { RequestorApi } from "ya-ts-client/dist/ya-payment/src/api/requestor-api";
 import { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 import {
   Account,
@@ -9,8 +9,8 @@ import {
   Invoice,
   DebitNote,
   Acceptance,
-} from "ya-ts-client/dist/ya-payment/src/models/index.js";
-import { allocations, accounts, debitNotesEvents, debitNotes, invoiceEvents, invoices } from "../fixtures/index.js";
+} from "ya-ts-client/dist/ya-payment/src/models";
+import { allocations, accounts, debitNotesEvents, debitNotes, invoiceEvents, invoices } from "../fixtures";
 import { Rejection } from "ya-ts-client/dist/ya-payment/src/models";
 
 global.expectedEvents = [];
