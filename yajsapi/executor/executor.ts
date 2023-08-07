@@ -109,7 +109,7 @@ export class TaskExecutor {
    * ```js
    * const executor = await TaskExecutor.create({
    *   subnetTag: "public",
-   *   payment: { driver: "erc-20", network: "rinkeby" },
+   *   payment: { driver: "erc-20", network: "goerli" },
    *   package: "golem/alpine:3.18.2",
    * });
    * ```
@@ -268,7 +268,7 @@ export class TaskExecutor {
    * @example
    * ```typescript
    * const data = [1, 2, 3, 4, 5];
-   * const results = executor.map(data, (ctx, item) => providerCtx.ctx(`echo "${item}"`));
+   * const results = executor.map(data, async (ctx, item) => ctx.run(`echo "${item}"`));
    * for await (const result of results) console.log(result.stdout);
    * ```
    */
@@ -316,7 +316,7 @@ export class TaskExecutor {
    * ```typescript
    * const data = [1, 2, 3, 4, 5];
    * await executor.forEach(data, async (ctx, item) => {
-   *     console.log((await ctx.run(`echo "${item}"`).stdout));
+   *     console.log((await ctx.run(`echo "${item}"`)).stdout);
    * });
    * ```
    */
