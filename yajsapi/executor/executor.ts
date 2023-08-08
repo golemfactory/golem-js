@@ -265,7 +265,7 @@ export class TaskExecutor {
    * @example
    * ```typescript
    * const data = [1, 2, 3, 4, 5];
-   * const results = executor.map(data, async (ctx, item) => ctx.run(`echo "${item}"`));
+   * const results = executor.map(data, (ctx, item) => ctx.run(`echo "${item}"`));
    * for await (const result of results) console.log(result.stdout);
    * ```
    */
