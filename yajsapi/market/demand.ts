@@ -3,7 +3,7 @@ import { Allocation } from "../payment";
 import { YagnaOptions } from "../executor";
 import { DemandFactory } from "./factory";
 import { Proposal } from "./proposal";
-import { Logger } from "../utils";
+import { Logger, sleep } from "../utils";
 import { DemandConfig } from "./config";
 import { Events } from "../events";
 import { ProposalEvent, ProposalRejectedEvent } from "ya-ts-client/dist/ya-market/src/models";
@@ -146,11 +146,17 @@ export class Demand extends EventTarget {
           const reason = error.response?.data?.message || error;
           this.options.eventTarget?.dispatchEvent(new Events.CollectFailed({ id: this.id, reason }));
           this.logger?.warn(`Unable to collect offers. ${reason}`);
-          if (error.response?.status === 404) {
+          if (error.code === "ECONNREFUSED" || error.response?.status === 404) {
             this.dispatchEvent(
-              new DemandEvent(DemandEventType, undefined, new Error(`Subscription expired. ${reason}`)),
+              new DemandEvent(
+                DemandEventType,
+                undefined,
+                new Error(`${error.code === "ECONNREFUSED" ? "Yagna connection error." : "Demand expired."} ${reason}`),
+              ),
             );
+            break;
           }
+          await sleep(2);
         }
       }
     }

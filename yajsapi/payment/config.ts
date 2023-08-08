@@ -11,7 +11,7 @@ import { Agent } from "http";
 const DEFAULTS = Object.freeze({
   payment: { network: "goerli", driver: "erc20" },
   budget: 1.0,
-  paymentTimeout: 1000 * 60 * 2, // 2 min
+  paymentTimeout: 1000 * 60, // 1 min
   allocationExpires: 1000 * 60 * 60, // 60 min
   invoiceReceiveTimeout: 1000 * 60 * 5, // 5 min
   maxInvoiceEvents: 500,
