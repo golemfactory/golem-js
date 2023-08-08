@@ -1,4 +1,5 @@
 {
   "extends": "../tsconfig.json",
-  "include": ["../yajsapi", "../tests"]
+  "include": ["**/*.spec.ts", "**/*.test.ts"],
+  "types": ["jest"]
 }
