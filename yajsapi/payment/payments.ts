@@ -7,7 +7,6 @@ import { Events } from "../events";
 export interface PaymentOptions extends BasePaymentOptions {
   invoiceFetchingInterval?: number;
   debitNotesFetchingInterval?: number;
-  payingInterval?: number;
   maxInvoiceEvents?: number;
   maxDebitNotesEvents?: number;
 }
@@ -59,10 +58,7 @@ export class Payments extends EventTarget {
           undefined,
           { timeout: 0 },
         )
-        .catch((e) => {
-          this.logger?.error(`Unable to collect invoices. ${e?.response?.data?.message || e}`);
-          return { data: [] };
-        });
+        .catch(() => ({ data: [] }));
       for (const event of invoiceEvents) {
         if (event.eventType !== "InvoiceReceivedEvent") continue;
         const invoice = await Invoice.create(event["invoiceId"], { ...this.options.options }).catch(
@@ -90,10 +86,7 @@ export class Payments extends EventTarget {
           undefined,
           { timeout: 0 },
         )
-        .catch((e) => {
-          this.logger?.error(`Unable to collect debit notes. ${e?.response?.data?.message || e}`);
-          return { data: [] };
-        });
+        .catch(() => ({ data: [] }));
       for (const event of debitNotesEvents) {
         if (event.eventType !== "DebitNoteReceivedEvent") continue;
         const debitNote = await DebitNote.create(event["debitNoteId"], { ...this.options.options }).catch(

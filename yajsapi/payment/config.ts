@@ -18,7 +18,6 @@ const DEFAULTS = Object.freeze({
   maxDebitNotesEvents: 500,
   invoiceFetchingInterval: 20000,
   debitNotesFetchingInterval: 20000,
-  payingInterval: 2000,
   debitNoteFilter: acceptAllDebitNotesFilter(),
   invoiceFilter: acceptAllInvoicesFilter(),
 });
@@ -72,7 +71,6 @@ abstract class BaseConfig {
 export class PaymentConfig extends BaseConfig {
   public readonly invoiceFetchingInterval: number;
   public readonly debitNotesFetchingInterval: number;
-  public readonly payingInterval: number;
   public readonly maxInvoiceEvents: number;
   public readonly maxDebitNotesEvents: number;
   public readonly debitNoteFilter: DebitNoteFilter;
@@ -84,7 +82,6 @@ export class PaymentConfig extends BaseConfig {
     this.debitNotesFetchingInterval = options?.debitNotesFetchingInterval ?? DEFAULTS.debitNotesFetchingInterval;
     this.maxInvoiceEvents = options?.maxInvoiceEvents ?? DEFAULTS.maxInvoiceEvents;
     this.maxDebitNotesEvents = options?.maxDebitNotesEvents ?? DEFAULTS.maxDebitNotesEvents;
-    this.payingInterval = options?.payingInterval ?? DEFAULTS.payingInterval;
     this.debitNoteFilter = options?.debitNotesFilter ?? DEFAULTS.debitNoteFilter;
     this.invoiceFilter = options?.invoiceFilter ?? DEFAULTS.invoiceFilter;
   }

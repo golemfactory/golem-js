@@ -40,16 +40,14 @@ describe("Payment Service", () => {
     it("should accept and process invoice for agreement", async () => {
       const paymentService = new PaymentService({
         logger,
-        invoiceFetchingInterval: 10,
-        debitNotesFetchingInterval: 10,
-        payingInterval: 10,
+        paymentTimeout: 100,
       });
       setExpectedEvents(invoiceEvents);
       setExpectedInvoices(invoices);
       await paymentService.createAllocations();
       await paymentService.run();
       paymentService.acceptPayments(agreement);
-      await new Promise((res) => setTimeout(res, 200));
+      // await new Promise((res) => setTimeout(res, 200));
       await logger.expectToInclude(`Invoice accepted from provider ${agreement.provider.name}`, 100);
       await paymentService.end();
     });
@@ -57,9 +55,6 @@ describe("Payment Service", () => {
     it("should accept and process debit note for agreement", async () => {
       const paymentService = new PaymentService({
         logger,
-        invoiceFetchingInterval: 10,
-        debitNotesFetchingInterval: 10,
-        payingInterval: 10,
       });
       setExpectedEvents(debitNotesEvents);
       setExpectedDebitNotes(debitNotes);
@@ -74,9 +69,6 @@ describe("Payment Service", () => {
       const alwaysRejectDebitNoteFilter = async () => false;
       const paymentService = new PaymentService({
         logger,
-        invoiceFetchingInterval: 10,
-        debitNotesFetchingInterval: 10,
-        payingInterval: 10,
         debitNotesFilter: alwaysRejectDebitNoteFilter,
       });
       setExpectedEvents(debitNotesEvents);
@@ -95,9 +87,6 @@ describe("Payment Service", () => {
       const alwaysRejectInvoiceFilter = async () => false;
       const paymentService = new PaymentService({
         logger,
-        invoiceFetchingInterval: 10,
-        debitNotesFetchingInterval: 10,
-        payingInterval: 10,
         invoiceFilter: alwaysRejectInvoiceFilter,
       });
       setExpectedEvents(invoiceEvents);
@@ -116,9 +105,6 @@ describe("Payment Service", () => {
     it("should reject when debit note rejected by DebitNoteMaxAmount Filter", async () => {
       const paymentService = new PaymentService({
         logger,
-        invoiceFetchingInterval: 10,
-        debitNotesFetchingInterval: 10,
-        payingInterval: 10,
         debitNotesFilter: PaymentFilters.acceptMaxAmountDebitNoteFilter(0.00001),
       });
       setExpectedEvents(debitNotesEvents);
@@ -136,9 +122,6 @@ describe("Payment Service", () => {
     it("should reject when invoice rejected by MaxAmountInvoice Filter", async () => {
       const paymentService = new PaymentService({
         logger,
-        invoiceFetchingInterval: 10,
-        debitNotesFetchingInterval: 10,
-        payingInterval: 10,
         invoiceFilter: PaymentFilters.acceptMaxAmountInvoiceFilter(0.00001),
       });
       setExpectedEvents(invoiceEvents);
@@ -157,9 +140,6 @@ describe("Payment Service", () => {
     it("should accept when debit note filtered by DebitNoteMaxAmount Filter", async () => {
       const paymentService = new PaymentService({
         logger,
-        invoiceFetchingInterval: 10,
-        debitNotesFetchingInterval: 10,
-        payingInterval: 10,
         debitNotesFilter: PaymentFilters.acceptMaxAmountDebitNoteFilter(7),
       });
       setExpectedEvents(debitNotesEvents);
@@ -174,9 +154,6 @@ describe("Payment Service", () => {
     it("should accept when invoice filtered by MaxAmountInvoice Filter", async () => {
       const paymentService = new PaymentService({
         logger,
-        invoiceFetchingInterval: 10,
-        debitNotesFetchingInterval: 10,
-        payingInterval: 10,
         invoiceFilter: PaymentFilters.acceptMaxAmountInvoiceFilter(7),
       });
       setExpectedEvents(invoiceEvents);
