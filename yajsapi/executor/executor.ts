@@ -1,10 +1,10 @@
 import { Package, PackageOptions } from "../package/index.js";
-import { MarketService, DemandOptions } from "../market/index.js";
-import { AgreementOptions, AgreementPoolService } from "../agreement/index.js";
+import { MarketService } from "../market/index.js";
+import { AgreementPoolService } from "../agreement/index.js";
 import { Task, TaskQueue, TaskService, Worker } from "../task/index.js";
 import { PaymentService, PaymentOptions } from "../payment/index.js";
 import { NetworkService } from "../network/index.js";
-import { ActivityOptions, Result } from "../activity/index.js";
+import { Result } from "../activity/index.js";
 import { sleep, Logger, runtimeContextChecker } from "../utils/index.js";
 import { StorageProvider, GftpStorageProvider } from "../storage/index.js";
 import { ExecutorConfig } from "./config.js";
@@ -46,13 +46,10 @@ export type ExecutorOptions = {
   isSubprocess?: boolean;
   /** Timeout for preparing activity - creating and deploy commands */
   activityPreparingTimeout?: number;
-} & MarketOptions &
-  ActivityOptions &
-  AgreementOptions &
-  PaymentOptions &
-  DemandOptions &
-  Omit<PackageOptions, "imageHash" | "imageTag"> &
+} & Omit<PackageOptions, "imageHash" | "imageTag"> &
+  MarketOptions &
   TaskOptions &
+  PaymentOptions &
   NetworkServiceOptions &
   AgreementServiceOptions &
   Omit<WorkOptions, "isRunning">;
@@ -109,7 +106,7 @@ export class TaskExecutor {
    * ```js
    * const executor = await TaskExecutor.create({
    *   subnetTag: "public",
-   *   payment: { driver: "erc-20", network: "rinkeby" },
+   *   payment: { driver: "erc-20", network: "goerli" },
    *   package: "golem/alpine:3.18.2",
    * });
    * ```
@@ -268,7 +265,7 @@ export class TaskExecutor {
    * @example
    * ```typescript
    * const data = [1, 2, 3, 4, 5];
-   * const results = executor.map(data, (ctx, item) => providerCtx.ctx(`echo "${item}"`));
+   * const results = executor.map(data, (ctx, item) => ctx.run(`echo "${item}"`));
    * for await (const result of results) console.log(result.stdout);
    * ```
    */
@@ -316,7 +313,7 @@ export class TaskExecutor {
    * ```typescript
    * const data = [1, 2, 3, 4, 5];
    * await executor.forEach(data, async (ctx, item) => {
-   *     console.log((await ctx.run(`echo "${item}"`).stdout));
+   *     console.log((await ctx.run(`echo "${item}"`)).stdout);
    * });
    * ```
    */

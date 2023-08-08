@@ -7,9 +7,6 @@ import { Accounts } from "./accounts.js";
 import { Payments, PaymentEventType, DebitNoteEvent, InvoiceEvent } from "./payments.js";
 import { RejectionReason } from "./rejection.js";
 
-/**
- * @internal
- */
 export interface PaymentOptions extends BasePaymentOptions {
   /** Interval for checking new invoices */
   invoiceFetchingInterval?: number;

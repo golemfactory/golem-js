@@ -1,12 +1,9 @@
-import { Logger } from '../utils/index.js';
-import { Network } from './index.js';
-import { NetworkOptions } from './network.js';
-import { NetworkNode } from './node.js';
-import { getIdentity } from './identity.js';
+import { Logger } from "../utils/index.js";
+import { Network } from "./index.js";
+import { NetworkOptions } from "./network.js";
+import { NetworkNode } from "./node.js";
+import { getIdentity } from "./identity.js";
 
-/**
- * @internal
- */
 export type NetworkServiceOptions = Omit<NetworkOptions, "networkOwnerId">;
 
 /**

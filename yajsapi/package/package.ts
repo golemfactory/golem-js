@@ -3,9 +3,6 @@ import { EnvUtils, Logger } from "../utils/index.js";
 import axios from "axios";
 import { PackageConfig } from "./config.js";
 import { RequireAtLeastOne } from "../utils/types.js";
-/**
- * @hidden
- */
 
 export type PackageOptions = RequireAtLeastOne<
   {
@@ -24,7 +21,6 @@ export type PackageOptions = RequireAtLeastOne<
     /**  finds package by its contents hash */
     imageHash?: string;
     /**  finds package by registry tag  */
-
     imageTag?: string;
     manifest?: string;
     /** Signature of base64 encoded Computation Payload Manifest **/
@@ -50,7 +46,6 @@ export interface PackageDetails {
 
 /**
  * Package module - an object for descriptions of the payload required by the requestor.
- * @hidden
  */
 export class Package {
   private logger?: Logger;
@@ -66,7 +61,7 @@ export class Package {
   }
 
   static getImageIdentifier(
-    str: string
+    str: string,
   ): RequireAtLeastOne<{ imageHash: string; imageTag: string }, "imageHash" | "imageTag"> {
     const tagRegex = /^(.*?)\/(.*?):(.*)$/;
     if (tagRegex.test(str)) {
