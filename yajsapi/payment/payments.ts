@@ -74,7 +74,7 @@ export class Payments extends EventTarget {
         }
       } catch (error) {
         const reason = error.response?.data?.message || error;
-        this.logger?.warn(`Unable to get invoices. ${reason}`);
+        this.logger?.debug(`Unable to get invoices. ${reason}`);
         await sleep(2);
       }
     }
