@@ -193,7 +193,7 @@ export class TaskExecutor {
     }
 
     this.logger?.debug("Initializing task executor services...");
-    const allocations = await this.paymentService.createAllocations();
+    const allocations = await this.paymentService.createAllocation();
     this.marketService.run(taskPackage, allocations).catch((e) => this.handleCriticalError(e));
     this.agreementPoolService.run().catch((e) => this.handleCriticalError(e));
     this.paymentService.run().catch((e) => this.handleCriticalError(e));
