@@ -6,6 +6,6 @@ export {
   proposalsWrongPaymentPlatform,
   proposalsShortDebitNoteTimeout,
 } from "./proposals";
-export { accounts } from "./accounts";
+export { identity } from "./identity";
 export { invoiceEvents, invoices } from "./invoices";
 export { debitNotes, debitNotesEvents } from "./debit_notes";

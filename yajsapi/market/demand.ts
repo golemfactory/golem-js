@@ -53,8 +53,8 @@ export class Demand extends EventTarget {
    * @param options - {@link DemandOptions}
    * @return Demand
    */
-  static async create(taskPackage: Package, allocations: Allocation[], options?: DemandOptions): Promise<Demand> {
-    const factory = new DemandFactory(taskPackage, allocations, options);
+  static async create(taskPackage: Package, allocation: Allocation, options?: DemandOptions): Promise<Demand> {
+    const factory = new DemandFactory(taskPackage, allocation, options);
     return factory.create();
   }
 

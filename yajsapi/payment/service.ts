@@ -83,7 +83,7 @@ export class PaymentService {
     this.payments?.removeEventListener(PaymentEventType, this.subscribePayments.bind(this));
     await this.allocation?.release().catch((error) => this.logger?.warn(error));
     this.options.httpAgent.destroy?.();
-    this.logger?.info("All allocations has been released");
+    this.logger?.info("Allocation has been released");
     this.logger?.debug("Payment service has been stopped");
   }
 
