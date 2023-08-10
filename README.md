@@ -3,7 +3,7 @@
 ![GitHub](https://img.shields.io/github/license/golemfactory/golem-js)
 ![npm](https://img.shields.io/npm/v/@golem-sdk/golem-js)
 ![node-current](https://img.shields.io/node/v/@golem-sdk/golem-js)
-![npm type definitions](https://img.shields.io/npm/types/@golem-sdk/core)
+![npm type definitions](https://img.shields.io/npm/types/@golem-sdk/golem-js)
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/golemfactory/golem-js/goth.yml)
 [![GitHub issues](https://img.shields.io/github/issues/golemfactory/golem-js)](https://github.com/golemfactory/golem-js/issues)
 ![Discord](https://img.shields.io/discord/684703559954333727?style=flat&logo=discord)
