@@ -4,10 +4,7 @@
   "env": {
     "node": true
   },
-  "extends": [
-    "eslint:recommended",
-    "prettier"
-  ],
+  "extends": ["eslint:recommended", "prettier"],
   "rules": {
     "no-constant-condition": [
       "error",
@@ -19,17 +16,12 @@
   "overrides": [
     {
       "files": ["**/*.ts"],
-      "extends": [
-        "plugin:@typescript-eslint/eslint-recommended",
-        "plugin:@typescript-eslint/recommended"
-      ],
+      "extends": ["plugin:@typescript-eslint/eslint-recommended", "plugin:@typescript-eslint/recommended"],
       "plugins": ["@typescript-eslint"]
     },
     {
       "files": ["**/*.js"],
-      "extends": [
-        "eslint:recommended"
-      ]
+      "extends": ["eslint:recommended"]
     }
   ],
   "ignorePatterns": ["dist/", "handbook_gen/", "docs/", "bundle.js", "tests", "*.config.ts"]

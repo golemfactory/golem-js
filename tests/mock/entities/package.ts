@@ -1,5 +1,5 @@
-import { Package } from "../../../yajsapi/package/index.js";
-import { MarketDecoration } from "ya-ts-client/dist/ya-payment/index.js";
+import { Package } from "../../../src/package";
+import { MarketDecoration } from "ya-ts-client/dist/ya-payment";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore

@@ -1,4 +1,4 @@
-import { TaskExecutor, AgreementCandidate } from "yajsapi";
+import { TaskExecutor, AgreementCandidate } from "@golem-sdk/golem-js";
 
 /**
  * Example demonstrating how to write a selector which choose the best provider based on scores provided as object: [providerName]: score
@@ -13,7 +13,7 @@ const scores = {
 const bestProviderSelector =
   (scores: { [providerName: string]: number }) => async (candidates: AgreementCandidate[]) => {
     candidates.sort((a, b) =>
-      (scores?.[a.proposal.provider.name] || 0) >= (scores?.[b.proposal.provider.name] || 0) ? 1 : -1
+      (scores?.[a.proposal.provider.name] || 0) >= (scores?.[b.proposal.provider.name] || 0) ? 1 : -1,
     );
     return candidates[0];
   };

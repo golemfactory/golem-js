@@ -1,10 +1,9 @@
-import { expect } from "chai";
-import { LoggerMock } from "../mock/index.js";
-import { Agreement, AgreementPoolService } from "../../yajsapi/agreement/index.js";
+import { LoggerMock } from "../mock";
+import { Agreement, AgreementPoolService } from "../../src/agreement";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import { Proposal as ProposalModel } from "ya-ts-client/dist/ya-market/src/models/proposal";
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
-import { Proposal } from "../../yajsapi/market/proposal.js";
+import { Proposal } from "../../src/market/proposal";
 
 const logger = new LoggerMock();
 
@@ -29,7 +28,7 @@ const createProposal = (id) => {
         "golem.runtime.name": "runtime_name",
       },
     } as ProposalModel,
-    {} as DemandOfferBase
+    {} as DemandOfferBase,
   );
 };
 
@@ -42,7 +41,7 @@ describe("Agreement Pool Service", () => {
     it("should start service", async () => {
       const agreementService = new AgreementPoolService({ logger });
       await agreementService.run();
-      expect(logger.logs).to.include("Agreement Pool Service has started");
+      expect(logger.logs).toContain("Agreement Pool Service has started");
       await agreementService.end();
     });
   });
@@ -51,7 +50,7 @@ describe("Agreement Pool Service", () => {
       const agreementService = new AgreementPoolService({ logger });
       await agreementService.run();
       await agreementService.end();
-      expect(logger.logs).to.include("Agreement Pool Service has been stopped");
+      expect(logger.logs).toContain("Agreement Pool Service has been stopped");
     });
   });
   describe("getAvailableAgreement()", () => {
@@ -61,8 +60,8 @@ describe("Agreement Pool Service", () => {
 
       await agreementService.addProposal(createProposal("proposal-id"));
       const agreement = await agreementService.getAgreement();
-      expect(agreement).to.be.instanceof(Agreement);
-    }).timeout(5000);
+      expect(agreement).toBeInstanceOf(Agreement);
+    });
     it("should return agreement if is available in the pool", async () => {
       const agreementService = new AgreementPoolService({ logger });
       await agreementService.run();
@@ -70,8 +69,8 @@ describe("Agreement Pool Service", () => {
       const agreement1 = await agreementService.getAgreement();
       await agreementService.releaseAgreement(agreement1.id, true);
       const agreement2 = await agreementService.getAgreement();
-      expect(agreement1).to.deep.equal(agreement2);
-    }).timeout(5000);
+      expect(agreement1).toEqual(agreement2);
+    });
   });
   describe("releaseAgreement()", () => {
     it("should return agreement to the pool if flag reuse if on", async () => {
@@ -80,8 +79,8 @@ describe("Agreement Pool Service", () => {
       await agreementService.addProposal(createProposal("proposal-id"));
       const agreement = await agreementService.getAgreement();
       await agreementService.releaseAgreement(agreement.id, true);
-      expect(logger.logs).to.include(`Agreement ${agreement.id} has been released for reuse`);
-    }).timeout(5000);
+      expect(logger.logs).toContain(`Agreement ${agreement.id} has been released for reuse`);
+    });
 
     it("should terminate agreement if flag reuse if off", async () => {
       const agreementService = new AgreementPoolService({ logger });
@@ -89,9 +88,9 @@ describe("Agreement Pool Service", () => {
       await agreementService.addProposal(createProposal("proposal-id"));
       const agreement = await agreementService.getAgreement();
       await agreementService.releaseAgreement(agreement.id, false);
-      expect(logger.logs).to.include(`Agreement ${agreement.id} has been released and will be terminated`);
-      expect(logger.logs).to.include(`Agreement ${agreement.id} terminated`);
-    }).timeout(5000);
+      expect(logger.logs).toContain(`Agreement ${agreement.id} has been released and will be terminated`);
+      expect(logger.logs).toContain(`Agreement ${agreement.id} terminated`);
+    });
 
     it("should warn if there is no agreement with given id", async () => {
       const agreementService = new AgreementPoolService({ logger });
@@ -99,8 +98,8 @@ describe("Agreement Pool Service", () => {
       await agreementService.addProposal(createProposal("proposal-id"));
       const agreement = await agreementService.getAgreement();
       await agreementService.releaseAgreement("not-known-id", true);
-      expect(logger.logs).to.include(`Agreement not-known-id not found in the pool`);
-    }).timeout(5000);
+      expect(logger.logs).toContain(`Agreement not-known-id not found in the pool`);
+    });
   });
 
   describe("addProposal()", () => {
@@ -109,7 +108,7 @@ describe("Agreement Pool Service", () => {
       await agreementService.run();
 
       await agreementService.addProposal(createProposal("proposal-id"));
-      expect(logger.logs).to.match(/New proposal added to pool from provider .*/);
+      expect(logger.logs).toMatch(/New proposal added to pool from provider .*/);
 
       await agreementService.end();
     });

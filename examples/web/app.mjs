@@ -1,7 +1,7 @@
 import http from "http";
 import fs from "fs";
 import { fileURLToPath } from "url";
-const __dirname = fileURLToPath(new URL('.', import.meta.url));
+const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
 const server = http.createServer((req, res) => {
   if (req.url === "/") {
@@ -13,9 +13,9 @@ const server = http.createServer((req, res) => {
   } else if (req.url === "/image") {
     res.writeHead(200, { "content-type": "text/html" });
     fs.createReadStream(`${__dirname}/image.html`).pipe(res);
-  } else if (req.url === "/yajsapi.min.js") {
+  } else if (req.url === "/golem-js.min.js") {
     res.writeHead(200, { "content-type": "text/javascript" });
-    fs.createReadStream(`${__dirname}/../../dist/yajsapi.min.js`).pipe(res);
+    fs.createReadStream(`${__dirname}/../../dist/golem-js.min.js`).pipe(res);
   } else if (req.url === "/css/main.css") {
     res.writeHead(200, { "content-type": "text/css" });
     fs.createReadStream(`${__dirname}/css/main.css`).pipe(res);

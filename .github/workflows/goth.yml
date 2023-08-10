@@ -9,6 +9,8 @@ on:
     branches:
       - master
       - b0.*
+  # Allows triggering the workflow manually
+  workflow_dispatch:
 
 jobs:
   goth-tests:
@@ -21,9 +23,9 @@ jobs:
       - name: Configure node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '16.19.0'
+          node-version: "16.19.0"
 
-      - name: Build yajsapi
+      - name: Build golem-js
         run: |
           sudo apt-get update -y
           sudo apt-get install -y build-essential
@@ -33,7 +35,7 @@ jobs:
       - name: Configure python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: "3.9"
 
       - name: Install goth
         run: |
@@ -77,8 +79,8 @@ jobs:
         uses: actions/upload-artifact@v2
         if: always()
         with:
-           name: goth-logs
-           path: /tmp/goth-tests
+          name: goth-logs
+          path: /tmp/goth-tests
 
       # Only relevant for self-hosted runners
       - name: Remove test logs

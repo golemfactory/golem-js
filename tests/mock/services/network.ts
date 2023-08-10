@@ -1,4 +1,4 @@
-import { NetworkNode, NetworkService } from "../../../yajsapi/network/index.js";
+import { NetworkNode, NetworkService } from "../../../src/network";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore

@@ -1,19 +1,9 @@
-import * as activityMock from "../mock/rest/activity.js";
-import { setExpectedErrorEvents, setExpectedEvents } from "../mock/utils/event_source.js";
-import { expect } from "chai";
-import { StorageProviderMock } from "../mock/index.js";
-import { Activity, ActivityStateEnum } from "../../yajsapi/activity/index.js";
-import { sleep } from "../../yajsapi/utils/index.js";
-import {
-  Deploy,
-  Start,
-  Run,
-  Terminate,
-  UploadFile,
-  DownloadFile,
-  Script,
-  Capture,
-} from "../../yajsapi/script/index.js";
+import * as activityMock from "../mock/rest/activity";
+import { setExpectedErrorEvents, setExpectedEvents } from "../mock/utils/event_source";
+import { StorageProviderMock } from "../mock";
+import { Activity, ActivityStateEnum } from "../../src/activity";
+import { sleep } from "../../src/utils";
+import { Deploy, Start, Run, Terminate, UploadFile, DownloadFile, Script, Capture } from "../../src/script";
 
 describe("Activity", () => {
   beforeEach(() => {
@@ -23,8 +13,10 @@ describe("Activity", () => {
   describe("Creating", () => {
     it("should create activity", async () => {
       const activity = await Activity.create("test_agreement_id");
-      expect(activity).to.be.instanceof(Activity);
-      expect(activity.id).to.be.a.guid();
+      expect(activity).toBeInstanceOf(Activity);
+      const GUID_REGEX =
+        /^(?:\{{0,1}(?:[0-9a-fA-F]){8}-(?:[0-9a-fA-F]){4}-(?:[0-9a-fA-F]){4}-(?:[0-9a-fA-F]){4}-(?:[0-9a-fA-F]){12}\}{0,1})$/;
+      expect(activity.id).toMatch(GUID_REGEX);
     });
   });
 
@@ -33,7 +25,7 @@ describe("Activity", () => {
       const activity = await Activity.create("test_id");
       const streamResult = await activity.execute(new Deploy().toExeScriptRequest());
       const { value: result } = await streamResult[Symbol.asyncIterator]().next();
-      expect(result.result).to.equal("Ok");
+      expect(result.result).toEqual("Ok");
     });
 
     it("should execute commands and get state", async () => {
@@ -42,8 +34,8 @@ describe("Activity", () => {
       const { value: result } = await streamResult[Symbol.asyncIterator]().next();
       activityMock.setExpectedStates([ActivityStateEnum.Ready, null]);
       const stateAfterRun = await activity.getState();
-      expect(result.result).to.equal("Ok");
-      expect(stateAfterRun).to.equal(ActivityStateEnum.Ready);
+      expect(result.result).toEqual("Ok");
+      expect(stateAfterRun).toEqual(ActivityStateEnum.Ready);
     });
 
     it("should execute script and get results by iterator", async () => {
@@ -65,10 +57,10 @@ describe("Activity", () => {
       await script.before();
       const results = await activity.execute(script.getExeScriptRequest());
       for await (const result of results) {
-        expect(result.result).to.equal("Ok");
-        expect(result.stdout).to.equal(expectedRunStdOuts.shift());
+        expect(result.result).toEqual("Ok");
+        expect(result.stdout).toEqual(expectedRunStdOuts.shift());
       }
-      await script.after();
+      await script.after([]);
       await activity.stop();
     });
 
@@ -100,16 +92,16 @@ describe("Activity", () => {
       await script.before();
       const results = await activity.execute(script.getExeScriptRequest());
       let resultCount = 0;
-      return new Promise((res) => {
+      return new Promise<void>((res) => {
         results.on("data", (result) => {
-          expect(result.result).to.equal("Ok");
-          expect(result.stdout).to.equal(expectedRunStdOuts.shift());
+          expect(result.result).toEqual("Ok");
+          expect(result.stdout).toEqual(expectedRunStdOuts.shift());
           ++resultCount;
         });
         results.on("end", async () => {
-          await script.after();
+          await script.after([]);
           await activity.stop();
-          expect(resultCount).to.equal(6);
+          expect(resultCount).toEqual(6);
           return res();
         });
       });
@@ -169,11 +161,11 @@ describe("Activity", () => {
       const results = await activity.execute(script.getExeScriptRequest(), true);
       let expectedStdout;
       for await (const result of results) {
-        expect(result).to.have.property("index");
+        expect(result).toHaveProperty("index");
         if (result.index === 2 && result.stdout) expectedStdout = result.stdout;
       }
-      expect(expectedStdout).to.equal("test");
-      await script.after();
+      expect(expectedStdout).toEqual("test");
+      await script.after([]);
       await activity.stop();
     });
   });
@@ -183,7 +175,7 @@ describe("Activity", () => {
       const activity = await Activity.create("test_id");
       activityMock.setExpectedStates([ActivityStateEnum.Ready, ActivityStateEnum.Terminated]);
       const state = await activity.getState();
-      expect(state).to.equal(ActivityStateEnum.Ready);
+      expect(state).toEqual(ActivityStateEnum.Ready);
     });
   });
 
@@ -200,9 +192,9 @@ describe("Activity", () => {
       await script.before();
       const results = await activity.execute(script.getExeScriptRequest(), undefined, undefined);
       await activity.stop();
-      return new Promise((res) => {
+      return new Promise<void>((res) => {
         results.on("error", (error) => {
-          expect(error.toString()).to.match(/Error: Activity .* has been interrupted/);
+          expect(error.toString()).toMatch(/Error: Activity .* has been interrupted/);
           return res();
         });
         results.on("data", () => null);
@@ -223,9 +215,9 @@ describe("Activity", () => {
       await script.before();
       const results = await activity.execute(script.getExeScriptRequest(), true, undefined);
       await activity.stop();
-      return new Promise((res) => {
+      return new Promise<void>((res) => {
         results.on("error", (error) => {
-          expect(error.toString()).to.match(/Error: Activity .* has been interrupted/);
+          expect(error.toString()).toMatch(/Error: Activity .* has been interrupted/);
           return res();
         });
         results.on("data", () => null);
@@ -246,10 +238,10 @@ describe("Activity", () => {
         status: 400,
       };
       activityMock.setExpectedErrors([error, error, error, error, error, error]);
-      return new Promise((res) => {
+      return new Promise<void>((res) => {
         results.on("error", (error) => {
-          expect(error.toString()).to.equal(
-            "Error: Unable to get activity results. Command #0 getExecBatchResults error: Some undefined error"
+          expect(error.toString()).toEqual(
+            "Error: Unable to get activity results. Command #0 getExecBatchResults error: Some undefined error",
           );
           return res();
         });
@@ -275,10 +267,10 @@ describe("Activity", () => {
         status: 500,
       };
       activityMock.setExpectedErrors([error, error, error, error, error, error]);
-      return new Promise((res) => {
+      return new Promise<void>((res) => {
         results.on("error", (error) => {
-          expect(error.toString()).to.equal(
-            "Error: Unable to get activity results. Command #0 getExecBatchResults error: GSB error: remote service at `test` error: GSB failure: Bad request: endpoint address not found"
+          expect(error.toString()).toEqual(
+            "Error: Unable to get activity results. Command #0 getExecBatchResults error: GSB error: remote service at `test` error: GSB failure: Bad request: endpoint address not found",
           );
           return res();
         });
@@ -299,10 +291,10 @@ describe("Activity", () => {
       };
       activityMock.setExpectedErrors([error, error, error]);
       activityMock.setExpectedStates([ActivityStateEnum.Terminated, ActivityStateEnum.Terminated]);
-      return new Promise((res) => {
+      return new Promise<void>((res) => {
         results.on("error", (error) => {
-          expect(error.toString()).to.equal(
-            "Error: Unable to get activity results. GSB error: endpoint address not found. Terminated."
+          expect(error.toString()).toEqual(
+            "Error: Unable to get activity results. GSB error: endpoint address not found. Terminated.",
           );
           return res();
         });
@@ -320,9 +312,9 @@ describe("Activity", () => {
       const script = Script.create([command1, command2, command3, command4, command5]);
       const results = await activity.execute(script.getExeScriptRequest(), false, 1);
       await sleep(10, true);
-      return new Promise((res) => {
+      return new Promise<void>((res) => {
         results.on("error", (error) => {
-          expect(error.toString()).to.match(/Error: Activity .* timeout/);
+          expect(error.toString()).toMatch(/Error: Activity .* timeout/);
           return res();
         });
         // results.on("end", () => rej());
@@ -343,9 +335,9 @@ describe("Activity", () => {
       const script = Script.create([command1, command2, command3, command4]);
       await script.before();
       const results = await activity.execute(script.getExeScriptRequest(), true, 800);
-      return new Promise((res, rej) => {
+      return new Promise<void>((res, rej) => {
         results.on("error", (error) => {
-          expect(error.toString()).to.match(/Error: Activity .* timeout/);
+          expect(error.toString()).toMatch(/Error: Activity .* timeout/);
           return res();
         });
         results.on("end", () => rej());
@@ -364,20 +356,20 @@ describe("Activity", () => {
       const command3 = new Run("test_command1", null, null, capture);
       const command4 = new Terminate();
       const script = Script.create([command1, command2, command3, command4]);
-      const expectedErrors = [
+      const expectedErrors: Partial<MessageEvent>[] = [
         {
-          type: "error",
-          message: "Some undefined error",
+          data: {
+            type: "error",
+            message: "Some undefined error",
+          },
         },
       ];
       setExpectedErrorEvents(activity.id, expectedErrors);
       await script.before();
       const results = await activity.execute(script.getExeScriptRequest(), true);
-      return new Promise((res) => {
+      return new Promise<void>((res) => {
         results.on("error", (error) => {
-          expect(error.toString()).to.equal(
-            'Error: GetExecBatchResults failed due to errors: ["Some undefined error"]'
-          );
+          expect(error.toString()).toEqual('Error: GetExecBatchResults failed due to errors: ["Some undefined error"]');
           return res();
         });
         results.on("data", () => null);
@@ -388,7 +380,7 @@ describe("Activity", () => {
   describe("Destroying", () => {
     it("should stop activity", async () => {
       const activity = await Activity.create("test_id");
-      expect(await activity.stop()).to.be.true;
+      expect(await activity.stop()).toEqual(true);
     });
   });
 });

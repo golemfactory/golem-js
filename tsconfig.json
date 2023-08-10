@@ -2,7 +2,7 @@
   "compilerOptions": {
     "module": "esnext",
     "noImplicitAny": false,
-    "target": "esnext",
+    "target": "es2018",
     "strict": true,
     "esModuleInterop": true,
     "moduleResolution": "node",
@@ -11,21 +11,15 @@
     "noLib": false,
     "declaration": true,
     "useUnknownInCatchVariables": false,
+    "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
-    "lib": [
-      "es2015",
-      "es2016",
-      "es2017",
-      "es2018",
-      "esnext",
-      "dom"
-    ],
+    "lib": ["es2015", "es2016", "es2017", "es2018", "esnext", "dom"],
     "outDir": "dist",
     "typeRoots": ["node_modules/@types"]
   },
   "typedocOptions": {
-    "entryPoints": ["yajsapi"],
-    "exclude": ["**/*.spec.ts","yajsapi/stats/*.ts"],
+    "entryPoints": ["src"],
+    "exclude": ["**/*.spec.ts", "src/stats/*.ts"],
     "entryPointStrategy": "expand",
     "out": "docs",
     "sort": "static-first",
@@ -37,5 +31,3 @@
   },
   "exclude": ["dist", "node_modules", "examples", "tests", "cypress.config.ts"]
 }
-
-

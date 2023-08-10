@@ -20,7 +20,7 @@ jobs:
       - name: Configure node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '16.19.0'
+          node-version: "16.19.0"
 
       - name: Install browsers and graphic environment
         run: |
@@ -30,7 +30,7 @@ jobs:
           wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
           sudo apt install -y ./google-chrome-stable_current_amd64.deb
 
-      - name: Build yajsapi
+      - name: Build golem-js
         run: |
           npm install
           npm run build
@@ -38,7 +38,7 @@ jobs:
       - name: Configure python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: "3.9"
 
       - name: Install goth
         run: |
@@ -46,6 +46,7 @@ jobs:
           rm -rf ../goth/assets
           python -m goth create-assets ../goth/assets
           sed -Ezi 's/(use\-proxy:\s)(True)/\1False/mg' ../goth/assets/goth-config.yml
+          sed -Ezi 's/(use\-prerelease:\s)(false)/\1true\n    release-tag: "0.13.0-rc10"/mg' ../goth/assets/goth-config.yml
 
       - name: Disconnect Docker containers from default network
         continue-on-error: true

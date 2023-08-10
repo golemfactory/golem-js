@@ -1,5 +1,4 @@
-import { expect } from "chai";
-import { EnvUtils } from "../../yajsapi/utils/index.js";
+import { EnvUtils } from "../../src/utils";
 
 describe("EnvUtils", () => {
   describe("getYagnaApiUrl()", () => {
@@ -20,12 +19,12 @@ describe("EnvUtils", () => {
       });
 
       it("should use process.env if available", () => {
-        expect(EnvUtils.getYagnaApiUrl()).to.equal("TEST");
+        expect(EnvUtils.getYagnaApiUrl()).toEqual("TEST");
       });
 
       it("should return default if env is missing", () => {
         delete process.env.YAGNA_API_URL;
-        expect(EnvUtils.getYagnaApiUrl()).to.equal("http://127.0.0.1:7465");
+        expect(EnvUtils.getYagnaApiUrl()).toEqual("http://127.0.0.1:7465");
       });
     });
 
@@ -42,7 +41,7 @@ describe("EnvUtils", () => {
       });
 
       it("should return default value", () => {
-        expect(EnvUtils.getYagnaApiUrl()).to.equal("http://127.0.0.1:7465");
+        expect(EnvUtils.getYagnaApiUrl()).toEqual("http://127.0.0.1:7465");
       });
     });
   });
@@ -65,12 +64,12 @@ describe("EnvUtils", () => {
       });
 
       it("should use process.env if available", () => {
-        expect(EnvUtils.getYagnaAppKey()).to.equal("TEST");
+        expect(EnvUtils.getYagnaAppKey()).toEqual("TEST");
       });
 
       it("should return empty string if var is missing", () => {
         delete process.env.YAGNA_APPKEY;
-        expect(EnvUtils.getYagnaAppKey()).to.equal("");
+        expect(EnvUtils.getYagnaAppKey()).toEqual("");
       });
     });
 
@@ -87,7 +86,7 @@ describe("EnvUtils", () => {
       });
 
       it("should return empty string", () => {
-        expect(EnvUtils.getYagnaAppKey()).to.equal("");
+        expect(EnvUtils.getYagnaAppKey()).toEqual("");
       });
     });
   });

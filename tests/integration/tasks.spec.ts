@@ -1,7 +1,6 @@
-import { expect } from "chai";
-import { LoggerMock } from "../mock/index.js";
+import { LoggerMock } from "../mock";
 import { readFileSync } from "fs";
-import { TaskExecutor } from "../../yajsapi/index.js";
+import { TaskExecutor } from "../../src";
 const logger = new LoggerMock(false);
 
 describe("Task Executor", function () {
@@ -11,7 +10,6 @@ describe("Task Executor", function () {
   });
 
   afterEach(async function () {
-    this.timeout(60000);
     logger.clear();
     await executor?.end();
   });
@@ -19,43 +17,52 @@ describe("Task Executor", function () {
   it("should run simple task", async () => {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
-      payment: { network: "rinkeby" },
-      isSubprocess: true,
       logger,
     });
     const result = await executor.run(async (ctx) => ctx.run("echo 'Hello World'"));
 
-    expect(result?.stdout).to.include("Hello World");
-    expect(logger.logs).to.include("Demand published on the market");
-    expect(logger.logs).to.include("New proposal has been received");
-    expect(logger.logs).to.include("Proposal has been responded");
-    expect(logger.logs).to.include("New proposal added to pool");
-    expect(logger.logs).to.match(/Agreement confirmed by provider/);
-    expect(logger.logs).to.match(/Activity .* created/);
-  }).timeout(60000);
+    expect(result?.stdout).toContain("Hello World");
+    expect(logger.logs).toContain("Demand published on the market");
+    expect(logger.logs).toContain("New proposal has been received");
+    expect(logger.logs).toContain("Proposal has been responded");
+    expect(logger.logs).toContain("New proposal added to pool");
+    expect(logger.logs).toMatch(/Agreement confirmed by provider/);
+    expect(logger.logs).toMatch(/Activity .* created/);
+  });
+
+  it("should run simple task and get error for invalid command", async () => {
+    executor = await TaskExecutor.create({
+      package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+      logger,
+    });
+    const result1 = await executor.run(async (ctx) => ctx.run("echo 'Hello World'"));
+    const result2 = await executor.run(async (ctx) => ctx.run("invalid-command"));
+
+    expect(result1?.stdout).toContain("Hello World");
+    expect(result2?.result).toEqual("Error");
+    expect(result2?.stderr).toContain("sh: 1: invalid-command: not found");
+    expect(result2?.message).toEqual("ExeScript command exited with code 127");
+  });
 
   it("should run simple task using package tag", async () => {
     executor = await TaskExecutor.create({
       package: "golem/alpine:3.18.2",
-      payment: { network: "rinkeby" },
       logger,
     });
     const result = await executor.run(async (ctx) => ctx.run("echo 'Hello World'"));
 
-    expect(result?.stdout).to.include("Hello World");
-    expect(logger.logs).to.include("Demand published on the market");
-    expect(logger.logs).to.include("New proposal has been received");
-    expect(logger.logs).to.include("Proposal has been responded");
-    expect(logger.logs).to.include("New proposal added to pool");
-    expect(logger.logs).to.match(/Agreement confirmed by provider/);
-    expect(logger.logs).to.match(/Activity .* created/);
-  }).timeout(60000);
+    expect(result?.stdout).toContain("Hello World");
+    expect(logger.logs).toContain("Demand published on the market");
+    expect(logger.logs).toContain("New proposal has been received");
+    expect(logger.logs).toContain("Proposal has been responded");
+    expect(logger.logs).toContain("New proposal added to pool");
+    expect(logger.logs).toMatch(/Agreement confirmed by provider/);
+    expect(logger.logs).toMatch(/Activity .* created/);
+  });
 
   it("should run simple tasks by map function", async () => {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
-      payment: { network: "rinkeby" },
-      isSubprocess: true,
       logger,
     });
     const data = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
@@ -65,28 +72,24 @@ describe("Task Executor", function () {
     });
     const finalOutputs: string[] = [];
     for await (const res of results) if (res) finalOutputs.push(res);
-    expect(finalOutputs).to.have.members(data);
-  }).timeout(90000);
+    expect(finalOutputs).toEqual(expect.arrayContaining(data));
+  });
 
   it("should run simple tasks by forEach function", async () => {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
-      payment: { network: "rinkeby" },
-      isSubprocess: true,
       logger,
     });
     const data = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
     await executor.forEach(data, async (ctx, x) => {
       const res = await ctx.run(`echo "${x}"`);
-      expect(res?.stdout?.trim()).to.be.oneOf(data);
+      expect(data).toContain(res?.stdout?.trim());
     });
-  }).timeout(80000);
+  });
 
   it("should run simple batch script and get results as stream", async () => {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
-      payment: { network: "rinkeby" },
-      isSubprocess: true,
       logger,
     });
     const outputs: string[] = [];
@@ -104,20 +107,18 @@ describe("Task Executor", function () {
       })
       .catch((e) => {
         executor.end();
-        expect(e).to.be.undefined;
+        expect(e).toBeUndefined();
       });
     await logger.expectToInclude("Task 1 computed by provider", 5000);
-    expect(outputs[0]).to.equal("Hello Golem");
-    expect(outputs[1]).to.equal("Hello World");
-    expect(outputs[2]).to.equal("OK");
-    expect(onEnd).to.equal("END");
-  }).timeout(80000);
+    expect(outputs[0]).toEqual("Hello Golem");
+    expect(outputs[1]).toEqual("Hello World");
+    expect(outputs[2]).toEqual("OK");
+    expect(onEnd).toEqual("END");
+  });
 
   it("should run simple batch script and catch error on stream", async () => {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
-      payment: { network: "rinkeby" },
-      isSubprocess: true,
       logger,
     });
     const outputs: string[] = [];
@@ -131,20 +132,18 @@ describe("Task Executor", function () {
         });
       })
       .catch((e) => {
-        expect(e).to.be.undefined;
+        expect(e).toBeUndefined();
       });
     await logger.expectToInclude("Task 1 computed by provider", 5000);
-    expect(outputs[0]).to.equal("Hello Golem");
-    expect(expectedError).to.equal(
-      "Error: ExeScript command exited with code 127. Stdout: undefined. Stderr: sh: 1: invalid_command: not found"
+    expect(outputs[0]).toEqual("Hello Golem");
+    expect(expectedError).toEqual(
+      "Error: ExeScript command exited with code 127. Stdout: undefined. Stderr: sh: 1: invalid_command: not found",
     );
-  }).timeout(80000);
+  });
 
   it("should run simple batch script and get results as promise", async () => {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
-      payment: { network: "rinkeby" },
-      isSubprocess: true,
       logger,
     });
     const outputs: string[] = [];
@@ -155,23 +154,20 @@ describe("Task Executor", function () {
           .run('echo "Hello Golem"')
           .run('echo "Hello World"')
           .run('echo "OK"')
-          .end()
-          .catch((e) => expect(e).to.be.undefined);
-        results.map((r) => outputs.push(r?.stdout?.trim()));
+          .end();
+        results.map((r) => outputs.push(r?.stdout?.trim() ?? "Missing STDOUT!"));
       })
       .catch((e) => {
-        expect(e).to.be.undefined;
+        expect(e).toBeUndefined();
       });
-    expect(outputs[0]).to.equal("Hello Golem");
-    expect(outputs[1]).to.equal("Hello World");
-    expect(outputs[2]).to.equal("OK");
-  }).timeout(60000);
+    expect(outputs[0]).toEqual("Hello Golem");
+    expect(outputs[1]).toEqual("Hello World");
+    expect(outputs[2]).toEqual("OK");
+  });
 
   it("should run simple batch script and catch error on promise", async () => {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
-      payment: { network: "rinkeby" },
-      isSubprocess: true,
       logger,
     });
     let results;
@@ -186,16 +182,14 @@ describe("Task Executor", function () {
           .catch((err) => (error = err));
       })
       .catch((e) => {
-        expect(e).to.be.undefined;
+        expect(e).toBeUndefined();
       });
-    expect(error).to.equal("Error: ExeScript command exited with code 127");
-  }).timeout(80000);
+    expect(error).toEqual("Error: ExeScript command exited with code 127");
+  });
 
   it("should run transfer file", async () => {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
-      payment: { network: "rinkeby" },
-      isSubprocess: true,
       logger,
     });
     const result = await executor.run(async (ctx) => {
@@ -203,7 +197,7 @@ describe("Task Executor", function () {
       const res = await ctx.downloadFile("/golem/work/test.json", "new_test.json");
       return res?.result;
     });
-    expect(result).to.equal("Ok");
-    expect(readFileSync(`${process.env.GOTH_GFTP_VOLUME || ""}new_test.json`, "utf-8")).to.equal('{"test":"1234"}');
-  }).timeout(60000);
+    expect(result).toEqual("Ok");
+    expect(readFileSync(`${process.env.GOTH_GFTP_VOLUME || ""}new_test.json`, "utf-8")).toEqual('{"test":"1234"}');
+  });
 });

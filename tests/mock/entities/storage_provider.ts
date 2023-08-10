@@ -1,5 +1,6 @@
-import { StorageProvider } from "../../../yajsapi/storage/index.js";
-import { Logger } from "../../../yajsapi/utils/index.js";
+import { StorageProvider } from "../../../src/storage";
+import { Logger } from "../../../src/utils";
+import { StorageProviderDataCallback } from "../../../src/storage/provider";
 
 export class StorageProviderMock implements StorageProvider {
   private logger?: Logger;
@@ -8,8 +9,13 @@ export class StorageProviderMock implements StorageProvider {
     this.logger = options?.logger;
   }
 
-  receive(path: string): Promise<string> {
+  receiveFile(path: string): Promise<string> {
     this.logger?.debug(`File received: ${path}`);
+    return Promise.resolve("");
+  }
+
+  receiveData(callback: StorageProviderDataCallback): Promise<string> {
+    this.logger?.debug(`Data received`);
     return Promise.resolve("");
   }
 
@@ -23,9 +29,13 @@ export class StorageProviderMock implements StorageProvider {
     return Promise.resolve(undefined);
   }
 
-  publish(src: string | Buffer): Promise<string> {
-    if (typeof src === "string") this.logger?.debug(`File published: ${src}`);
-    else this.logger?.debug(`Json published: ${src}`);
+  publishFile(src: string): Promise<string> {
+    this.logger?.debug(`File published: ${src}`);
+    return Promise.resolve("");
+  }
+
+  publishData(data: Uint8Array): Promise<string> {
+    this.logger?.debug(`Data published: ${data}`);
     return Promise.resolve("");
   }
 
