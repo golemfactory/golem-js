@@ -1,6 +1,6 @@
-import { identity } from "../fixtures/identity";
+import { TEST_IDENTITY } from "../fixtures/identity";
 export default {
   getIdentity: async (): Promise<string> => {
-    return identity;
+    return TEST_IDENTITY;
   },
 };

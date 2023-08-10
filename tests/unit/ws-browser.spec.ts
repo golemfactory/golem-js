@@ -1,9 +1,8 @@
-import { consoleLogger } from "../../yajsapi/utils";
-import { WebSocketBrowserStorageProvider, WebSocketStorageProviderOptions } from "../../yajsapi/storage/ws-browser";
+import { consoleLogger, WebSocketBrowserStorageProvider, WebSocketStorageProviderOptions } from "../../yajsapi";
 import { encode, toObject } from "flatbuffers/js/flexbuffers";
 import { LoggerMock } from "../mock";
 import * as jsSha3 from "js-sha3";
-import { identity } from "../mock/fixtures/identity";
+import { TEST_IDENTITY } from "../mock/fixtures";
 
 jest.mock("uuid", () => ({ v4: () => "uuid" }));
 
@@ -266,7 +265,7 @@ describe("WebSocketBrowserStorageProvider", () => {
     it("should return file info", async () => {
       const result = await provider["createFileInfo"]();
       expect(result.id).toBe("uuid");
-      expect(result.url).toBe(`gftp://${identity}/uuid`);
+      expect(result.url).toBe(`gftp://${TEST_IDENTITY}/uuid`);
     });
   });
 
