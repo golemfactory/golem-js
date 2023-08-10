@@ -1,4 +1,4 @@
-import { TaskExecutor, AgreementCandidate } from "yajsapi";
+import { TaskExecutor, AgreementCandidate } from "@golem-sdk/golem-js";
 
 /**
  * Example demonstrating how to write a selector which choose the best provider based on scores provided as object: [providerName]: score

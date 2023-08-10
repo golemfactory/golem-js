@@ -15,7 +15,7 @@ export const EnvUtils = {
 
   getRepoUrl(): string {
     return isNode
-      ? process?.env.YAJSAPI_REPO_URL ?? "https://registry.golem.network"
+      ? process?.env.GOLEM_REGISTRY_URL ?? "https://registry.golem.network"
       : "https://registry.golem.network";
   },
 

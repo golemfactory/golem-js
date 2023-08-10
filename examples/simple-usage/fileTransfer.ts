@@ -1,4 +1,4 @@
-import { TaskExecutor } from "yajsapi";
+import { TaskExecutor } from "@golem-sdk/golem-js";
 import { readFileSync } from "fs";
 
 (async function main() {

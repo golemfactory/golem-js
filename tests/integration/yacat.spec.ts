@@ -1,4 +1,4 @@
-import { TaskExecutor } from "../../yajsapi";
+import { TaskExecutor } from "../../src";
 import { LoggerMock } from "../mock";
 const logger = new LoggerMock(false);
 

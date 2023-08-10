@@ -1,8 +1,8 @@
 /* eslint @typescript-eslint/ban-ts-comment: 0 */
-import { Agreement, AgreementPoolService } from "../../../yajsapi/agreement";
+import { Agreement, AgreementPoolService } from "../../../src/agreement";
 import { agreementsApproved } from "../fixtures";
-import { AgreementConfig } from "../../../yajsapi/agreement/config";
-import { Proposal } from "../../../yajsapi/market";
+import { AgreementConfig } from "../../../src/agreement/config";
+import { Proposal } from "../../../src/market";
 
 const proposals: Proposal[] = [];
 const invalidProviderIds: string[] = [];
