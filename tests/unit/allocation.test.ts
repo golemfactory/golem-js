@@ -1,5 +1,5 @@
 import { LoggerMock } from "../mock";
-import { Allocation } from "../../yajsapi/payment";
+import { Allocation } from "../../src/payment";
 
 const logger = new LoggerMock();
 const account = { address: "test_address", platform: "test_platform" };

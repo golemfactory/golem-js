@@ -1,9 +1,9 @@
 {
-  "name": "yajsapi-examples",
-  "version": "0.7.0",
+  "name": "golem-js-examples",
+  "version": "0.0.0",
   "description": "NodeJS API Examples for Next Golem",
   "type": "module",
-  "repository": "https://github.com/golemfactory/yajsapi",
+  "repository": "https://github.com/golemfactory/golem-js",
   "scripts": {
     "hello": "node ./hello-world/hello.mjs",
     "run": "ts-node ./simple-usage/run.ts",
@@ -28,7 +28,7 @@
   "dependencies": {
     "commander": "^9.1.0",
     "ts-node": "^10.7.0",
-    "yajsapi": "file:.."
+    "@golem-sdk/golem-js": "file:.."
   },
   "devDependencies": {
     "@types/node": "18",

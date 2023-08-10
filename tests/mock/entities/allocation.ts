@@ -1,4 +1,4 @@
-import { Allocation } from "../../../yajsapi/payment/allocation";
+import { Allocation } from "../../../src/payment/allocation";
 import { MarketDecoration } from "ya-ts-client/dist/ya-payment";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment

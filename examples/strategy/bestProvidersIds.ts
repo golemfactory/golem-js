@@ -1,4 +1,4 @@
-import { TaskExecutor, AgreementSelectors } from "yajsapi";
+import { TaskExecutor, AgreementSelectors } from "@golem-sdk/golem-js";
 
 /**
  * Example demonstrating how to use predefined selector `bestAgreementSelector`,

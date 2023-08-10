@@ -1,6 +1,6 @@
-import { StorageProvider } from "../../../yajsapi/storage";
-import { Logger } from "../../../yajsapi/utils";
-import { StorageProviderDataCallback } from "../../../yajsapi/storage/provider";
+import { StorageProvider } from "../../../src/storage";
+import { Logger } from "../../../src/utils";
+import { StorageProviderDataCallback } from "../../../src/storage/provider";
 
 export class StorageProviderMock implements StorageProvider {
   private logger?: Logger;
