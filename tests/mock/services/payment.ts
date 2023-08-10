@@ -1,7 +1,7 @@
-import { Allocation } from "../../../yajsapi/payment/allocation";
-import { PaymentService } from "../../../yajsapi/payment";
+import { Allocation } from "../../../src/payment/allocation";
+import { PaymentService } from "../../../src/payment";
 import { allocationMock } from "../../mock";
-import { Agreement } from "../../../yajsapi/agreement";
+import { Agreement } from "../../../src/agreement";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore

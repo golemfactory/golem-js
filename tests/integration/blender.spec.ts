@@ -1,4 +1,4 @@
-import { TaskExecutor } from "../../yajsapi";
+import { TaskExecutor } from "../../src";
 import { LoggerMock } from "../mock";
 import fs from "fs";
 

@@ -1,4 +1,4 @@
-import { TaskExecutor, jsonLogger, nullLogger, defaultLogger } from "yajsapi";
+import { TaskExecutor, jsonLogger, nullLogger, defaultLogger } from "@golem-sdk/golem-js";
 import { program, Option } from "commander";
 
 // Create command-line configuration.

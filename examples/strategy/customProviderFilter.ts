@@ -1,4 +1,4 @@
-import { TaskExecutor, ProposalDTO } from "yajsapi";
+import { TaskExecutor, ProposalDTO } from "@golem-sdk/golem-js";
 
 /**
  * Example demonstrating how to write a custom proposal filter.

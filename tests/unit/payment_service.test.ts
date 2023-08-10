@@ -1,6 +1,6 @@
 import { setExpectedDebitNotes, setExpectedEvents, setExpectedInvoices, clear } from "../mock/rest/payment";
 import { LoggerMock } from "../mock";
-import { PaymentService, Allocation, PaymentFilters } from "../../yajsapi/payment";
+import { PaymentService, Allocation, PaymentFilters } from "../../src/payment";
 import { agreement } from "../mock/entities/agreement";
 import { debitNotesEvents, debitNotes, invoices, invoiceEvents } from "../mock/fixtures";
 

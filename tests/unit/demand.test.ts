@@ -1,5 +1,5 @@
 import { setExpectedProposals } from "../mock/rest/market";
-import { Demand, Proposal, DemandEventType, DemandEvent } from "../../yajsapi/market";
+import { Demand, Proposal, DemandEventType, DemandEvent } from "../../src/market";
 import { allocationMock, packageMock, LoggerMock } from "../mock";
 import { proposalsInitial } from "../mock/fixtures";
 

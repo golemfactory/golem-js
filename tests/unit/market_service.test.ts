@@ -1,5 +1,5 @@
 import { setExpectedProposals } from "../mock/rest/market";
-import { MarketService, ProposalFilters } from "../../yajsapi/market";
+import { MarketService, ProposalFilters } from "../../src/market";
 import { agreementPoolServiceMock, packageMock, LoggerMock, allocationMock } from "../mock";
 import {
   proposalsInitial,

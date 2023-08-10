@@ -1,6 +1,6 @@
 import { LoggerMock } from "../mock";
 import { readFileSync } from "fs";
-import { TaskExecutor } from "../../yajsapi";
+import { TaskExecutor } from "../../src";
 const logger = new LoggerMock(false);
 
 describe("Task Executor", function () {

@@ -1,6 +1,6 @@
 import { LoggerMock } from "../mock";
 import crypto from "crypto";
-import { TaskExecutor } from "../../yajsapi";
+import { TaskExecutor } from "../../src";
 import { spawn } from "child_process";
 const logger = new LoggerMock(false);
 

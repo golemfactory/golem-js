@@ -1,4 +1,4 @@
-import { TaskExecutor, PaymentFilters } from "yajsapi";
+import { TaskExecutor, PaymentFilters } from "@golem-sdk/golem-js";
 
 /**
  * Example demonstrating how to use the predefined payment filter `acceptMaxAmountInvoiceFilter`,
