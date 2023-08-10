@@ -17,11 +17,11 @@ import ignore from "rollup-plugin-ignore";
 export default [
   // Browser
   {
-    input: "yajsapi/index.ts",
+    input: "src/index.ts",
     output: {
       inlineDynamicImports: true,
       file: pkg.browser,
-      name: "yajsapi",
+      name: "GolemJs",
       sourcemap: true,
       format: "es",
     },
@@ -47,7 +47,7 @@ export default [
   },
   // NodeJS
   {
-    input: "yajsapi/index.ts",
+    input: "src/index.ts",
     output: [
       { file: pkg.main, format: "cjs", sourcemap: true },
       { file: pkg.module, format: "es", sourcemap: true },

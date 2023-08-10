@@ -1,5 +1,5 @@
 import { LoggerMock } from "../mock";
-import { Agreement } from "../../yajsapi/agreement";
+import { Agreement } from "../../src/agreement";
 import { AgreementStateEnum } from "ya-ts-client/dist/ya-market/src/models/agreement";
 
 const logger = new LoggerMock();

@@ -1,4 +1,4 @@
-import { TaskQueue } from "../../yajsapi/task";
+import { TaskQueue } from "../../src/task";
 import TaskMock, { TaskState } from "../mock/entities/task";
 
 describe("Task Queue", function () {

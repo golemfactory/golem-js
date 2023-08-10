@@ -1,4 +1,4 @@
-import { Logger } from "../../../yajsapi";
+import { Logger } from "../../../src";
 
 export class LoggerMock implements Logger {
   level = "debug";
