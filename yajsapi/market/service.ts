@@ -56,8 +56,7 @@ export class MarketService {
   }
 
   private async createDemand(): Promise<true> {
-    if (!this.taskPackage) throw new Error("There is no defined Task Package");
-    if (!this.allocation) throw new Error("There is no defined Allocation");
+    if (!this.taskPackage || !this.allocation) throw new Error("The service has not been started correctly.");
     this.demand = await Demand.create(this.taskPackage, this.allocation, this.options);
     this.demand.addEventListener(DemandEventType, this.demandEventListener.bind(this));
     this.logger?.debug(`New demand has been created (${this.demand.id})`);
@@ -92,11 +91,12 @@ export class MarketService {
   }
 
   private async processInitialProposal(proposal: Proposal) {
+    if (!this.allocation) throw new Error("The service has not been started correctly.");
     this.logger?.debug(`New proposal has been received (${proposal.id})`);
     try {
       const { result: isProposalValid, reason } = await this.isProposalValid(proposal);
       if (isProposalValid) {
-        const chosenPlatform = this.allocation!.paymentPlatform;
+        const chosenPlatform = this.allocation.paymentPlatform;
         await proposal
           .respond(chosenPlatform)
           .catch((e) => this.logger?.debug(`Unable to respond proposal ${proposal.id}. ${e}`));
@@ -110,11 +110,11 @@ export class MarketService {
   }
 
   private async isProposalValid(proposal: Proposal): Promise<{ result: boolean; reason?: string }> {
+    if (!this.allocation) throw new Error("The service has not been started correctly.");
     const timeout = proposal.properties["golem.com.payment.debit-notes.accept-timeout?"];
     if (timeout && timeout < this.options.debitNotesAcceptanceTimeout)
       return { result: false, reason: "Debit note acceptance timeout too short" };
-    const providerPaymentPlatforms = this.getProviderPaymentPlatforms(proposal.properties);
-    if (!providerPaymentPlatforms.includes(this.allocation!.paymentPlatform))
+    if (!proposal.hasPaymentPlatform(this.allocation.paymentPlatform))
       return { result: false, reason: "No common payment platform" };
     if (!(await this.options.proposalFilter(proposal)))
       return { result: false, reason: "Proposal rejected by Proposal Filter" };
@@ -125,14 +125,6 @@ export class MarketService {
     this.agreementPoolService.addProposal(proposal);
     this.logger?.debug(
       `Proposal has been confirmed with provider ${proposal.issuerId} and added to agreement pool (${proposal.id})`,
-    );
-  }
-
-  private getProviderPaymentPlatforms(proposalProperties): string[] {
-    return (
-      Object.keys(proposalProperties)
-        .filter((prop) => prop.startsWith("golem.com.payment.platform."))
-        .map((prop) => prop.split(".")[4]) || ["NGNT"]
     );
   }
 }

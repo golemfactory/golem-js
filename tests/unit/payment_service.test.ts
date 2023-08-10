@@ -20,11 +20,12 @@ describe("Payment Service", () => {
       await paymentService.end();
     });
 
-    it("should release all created allocations when service stopped", async () => {
+    it("should release created allocation when service stopped", async () => {
       const paymentService = new PaymentService({ logger });
-      await paymentService.createAllocation();
+      const allocation = await paymentService.createAllocation();
+      const releaseSpy = jest.spyOn(allocation, "release");
       await paymentService.end();
-      expect(logger.logs).toContain("Allocation has been released");
+      expect(releaseSpy).toHaveBeenCalled();
     });
   });
 
