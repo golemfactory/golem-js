@@ -1,8 +1,8 @@
-import { Events } from "../../yajsapi/events";
+import { Events } from "../../src/events";
 import { LoggerMock } from "../mock";
-import { StatsService } from "../../yajsapi/stats/service";
+import { StatsService } from "../../src/stats/service";
 import { setMaxListeners } from "events";
-import { ProposalDetails } from "../../yajsapi/market/proposal";
+import { ProposalDetails } from "../../src/market/proposal";
 const logger = new LoggerMock();
 const eventTarget = new EventTarget();
 const statServiceOptions = { logger, eventTarget };

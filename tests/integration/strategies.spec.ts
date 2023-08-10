@@ -1,4 +1,4 @@
-import { TaskExecutor, ProposalFilters, PaymentFilters } from "../../yajsapi";
+import { TaskExecutor, ProposalFilters, PaymentFilters } from "../../src";
 import { LoggerMock } from "../mock";
 
 const logger = new LoggerMock(false);

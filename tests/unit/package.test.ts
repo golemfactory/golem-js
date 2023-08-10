@@ -1,5 +1,5 @@
 import { LoggerMock } from "../mock";
-import { Package } from "../../yajsapi/package";
+import { Package } from "../../src/package";
 const logger = new LoggerMock();
 
 describe("Package", () => {

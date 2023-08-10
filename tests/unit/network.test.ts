@@ -1,4 +1,4 @@
-import { Network } from "../../yajsapi/network";
+import { Network } from "../../src/network";
 
 describe("Network", () => {
   describe("Creating", () => {

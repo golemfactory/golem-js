@@ -109,10 +109,6 @@ export class Package {
     //TODO : in future this should be passed probably through config
     const isHttps = false;
 
-    // ? Should we prefix all env variables with YAJSAPI_ or not?
-    // with YAJSAPI we stay consistent but GOLEM is more general and can be used
-    // for other projects as well (yapapi e.g.)
-
     const isDev = EnvUtils.isDevMode();
 
     let hash = this.options.imageHash;

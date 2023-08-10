@@ -1,7 +1,7 @@
 import * as activityMock from "../mock/rest/activity";
-import { Task, TaskQueue, TaskService, Worker } from "../../yajsapi/task";
+import { Task, TaskQueue, TaskService, Worker } from "../../src/task";
 import { agreementPoolServiceMock, paymentServiceMock, networkServiceMock, LoggerMock } from "../mock";
-import { Result } from "../../yajsapi/activity";
+import { Result } from "../../src/activity";
 let queue;
 const logger = new LoggerMock();
 

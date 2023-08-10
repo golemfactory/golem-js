@@ -1,12 +1,12 @@
-import { AbstractAggregator } from "../../yajsapi/stats/abstract_aggregator";
-import { Activities } from "../../yajsapi/stats/activities";
-import { Agreements, AgreementStatusEnum } from "../../yajsapi/stats/agreements";
-import { Allocations } from "../../yajsapi/stats/allocations";
-import { Invoices } from "../../yajsapi/stats/invoices";
-import { Payments } from "../../yajsapi/stats/payments";
-import { Proposals } from "../../yajsapi/stats/proposals";
-import { Providers } from "../../yajsapi/stats/providers";
-import { Tasks, TaskStatusEnum } from "../../yajsapi/stats/tasks";
+import { AbstractAggregator } from "../../src/stats/abstract_aggregator";
+import { Activities } from "../../src/stats/activities";
+import { Agreements, AgreementStatusEnum } from "../../src/stats/agreements";
+import { Allocations } from "../../src/stats/allocations";
+import { Invoices } from "../../src/stats/invoices";
+import { Payments } from "../../src/stats/payments";
+import { Proposals } from "../../src/stats/proposals";
+import { Providers } from "../../src/stats/providers";
+import { Tasks, TaskStatusEnum } from "../../src/stats/tasks";
 import { Collection } from "collect.js";
 
 describe("Stats Module", () => {

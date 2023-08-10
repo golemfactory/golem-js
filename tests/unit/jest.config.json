@@ -2,6 +2,6 @@
   "preset": "ts-jest",
   "testEnvironment": "node",
   "setupFiles": ["<rootDir>/_setup.ts"],
-  "roots": ["../../yajsapi", "./"],
+  "roots": ["../../src", "./"],
   "testMatch": ["**/*.test.ts", "**/*.spec.ts"]
 }
