@@ -1,6 +1,6 @@
 {
   "name": "@golem-sdk/golem-js",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "description": "NodeJS and WebBrowser SDK for building apps running on Golem Network",
   "repository": "https://github.com/golemfactory/golem-js",
   "keywords": [
