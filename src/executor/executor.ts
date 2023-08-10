@@ -1,11 +1,11 @@
 import { Package, PackageOptions } from "../package";
-import { MarketService, DemandOptions } from "../market";
-import { AgreementOptions, AgreementPoolService } from "../agreement";
+import { MarketService } from "../market";
+import { AgreementPoolService } from "../agreement";
 import { Task, TaskQueue, TaskService, Worker } from "../task";
 import { PaymentService, PaymentOptions } from "../payment";
 import { NetworkService } from "../network";
-import { ActivityOptions, Result } from "../activity";
-import { sleep, Logger, runtimeContextChecker } from "../utils";
+import { Result } from "../activity";
+import { sleep, Logger, LogLevel, runtimeContextChecker } from "../utils";
 import { StorageProvider, GftpStorageProvider, NullStorageProvider, WebSocketBrowserStorageProvider } from "../storage";
 import { ExecutorConfig } from "./config";
 import { Events } from "../events";
@@ -14,7 +14,6 @@ import { TaskOptions } from "../task/service";
 import { NetworkServiceOptions } from "../network/service";
 import { AgreementServiceOptions } from "../agreement/service";
 import { WorkOptions } from "../task/work";
-import { LogLevel } from "../utils/logger/logger";
 import { MarketOptions } from "../market/service";
 import { RequireAtLeastOne } from "../utils/types";
 
