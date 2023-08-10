@@ -1,5 +1,5 @@
-export { TaskService } from './service.js';
-export { Task } from './task.js';
-export { TaskQueue, QueueableTask } from './queue.js';
-export { WorkContext, Worker } from './work.js';
-export { Batch } from './batch.js';
+export { TaskService } from "./service";
+export { Task } from "./task";
+export { TaskQueue, QueueableTask } from "./queue";
+export { WorkContext, Worker } from "./work";
+export { Batch } from "./batch";

@@ -1,11 +1,10 @@
-import { Logger } from "../utils/index.js";
-import { Package } from "../package/index.js";
-import { Demand, Proposal, DemandEventType, DemandOptions, ProposalDTO } from "./index.js";
-import { AgreementPoolService } from "../agreement/index.js";
-import { Allocation } from "../payment/index.js";
-import { DemandEvent } from "./demand.js";
-import { MarketConfig } from "./config.js";
-import { sleep } from "../utils/index.js";
+import { Logger, sleep } from "../utils";
+import { Package } from "../package";
+import { Proposal, ProposalDTO } from "./proposal";
+import { AgreementPoolService } from "../agreement";
+import { Allocation } from "../payment";
+import { Demand, DemandEvent, DemandEventType, DemandOptions } from "./demand";
+import { MarketConfig } from "./config";
 
 export type ProposalFilter = (proposal: ProposalDTO) => Promise<boolean>;
 
@@ -37,6 +36,7 @@ export class MarketService {
     this.options = new MarketConfig(options);
     this.logger = this.options?.logger;
   }
+
   async run(taskPackage: Package, allocations: Allocation[]) {
     this.taskPackage = taskPackage;
     this.allocations = allocations;

@@ -29,8 +29,8 @@ async function main(subnetTag, driver, network, count = 2, sessionTimeout = 100,
     console.log(`Connect via ssh to provider "${ctx.provider?.name}" with:`);
     console.log(
       `ssh -o ProxyCommand='websocat asyncstdio: ${ctx.getWebsocketUri(
-        22
-      )} --binary -H=Authorization:"Bearer ${appKey}"' root@${crypto.randomBytes(10).toString("hex")}`
+        22,
+      )} --binary -H=Authorization:"Bearer ${appKey}"' root@${crypto.randomBytes(10).toString("hex")}`,
     );
     console.log(`Password: ${password}`);
     console.log("------------------------------------------\n");

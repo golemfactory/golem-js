@@ -1,7 +1,7 @@
-import { Proposal as ProposalModel, ProposalAllOfStateEnum } from "ya-ts-client/dist/ya-market/src/models/index.js";
-import { RequestorApi } from "ya-ts-client/dist/ya-market/api.js";
-import { DemandOfferBase } from "ya-ts-client/dist/ya-market/index.js";
-import { Events } from "../events/index.js";
+import { Proposal as ProposalModel, ProposalAllOfStateEnum } from "ya-ts-client/dist/ya-market/src/models";
+import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
+import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
+import { Events } from "../events";
 
 export interface ProposalDetails {
   transferProtocol: string;
@@ -59,7 +59,7 @@ export class Proposal {
     private readonly api: RequestorApi,
     model: ProposalModel,
     private readonly demandRequest: DemandOfferBase,
-    private eventTarget?: EventTarget
+    private eventTarget?: EventTarget,
   ) {
     this.id = model.proposalId;
     this.issuerId = model.issuerId;
@@ -125,7 +125,7 @@ export class Proposal {
         providerId: this.issuerId,
         parentId: this.id,
         reason,
-      })
+      }),
     );
   }
 
@@ -141,7 +141,7 @@ export class Proposal {
             providerId: this.issuerId,
             parentId: this.id,
             reason,
-          })
+          }),
         );
         throw new Error(reason);
       });
@@ -154,7 +154,7 @@ export class Proposal {
         id: this.id,
         providerId: this.issuerId,
         counteringProposalId: counteringProposalId,
-      })
+      }),
     );
     return counteringProposalId;
   }

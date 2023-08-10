@@ -1,8 +1,8 @@
 // TODO: replace with a proper REST API client once ya-client and ya-ts-client are updated
 // https://github.com/golemfactory/yajsapi/issues/290
 import axios from "axios";
-import { YagnaOptions } from "../executor/index.js";
-import { EnvUtils } from "../utils/index.js";
+import { YagnaOptions } from "../executor";
+import { EnvUtils } from "../utils";
 
 /**
  * A helper function to get the requestor's ID

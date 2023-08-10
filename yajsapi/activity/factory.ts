@@ -1,6 +1,6 @@
-import { Activity, ActivityOptions } from "./activity.js";
-import { ActivityConfig } from "./config.js";
-import { Events } from "../events/index.js";
+import { Activity, ActivityOptions } from "./activity";
+import { ActivityConfig } from "./config";
+import { Events } from "../events";
 
 /**
  * Activity Factory
@@ -16,7 +16,10 @@ export class ActivityFactory {
    * @param agreementId
    * @param options - {@link ActivityOptions}
    */
-  constructor(private readonly agreementId: string, options?: ActivityOptions) {
+  constructor(
+    private readonly agreementId: string,
+    options?: ActivityOptions,
+  ) {
     this.options = new ActivityConfig(options);
   }
 

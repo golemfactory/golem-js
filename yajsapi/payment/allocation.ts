@@ -1,7 +1,7 @@
-import { Allocation as Model, MarketDecoration } from "ya-ts-client/dist/ya-payment/index.js";
-import { AllocationConfig, BasePaymentOptions } from "./config.js";
-import { Allocation as AllocationModel } from "ya-ts-client/dist/ya-payment/src/models/allocation.js";
-import { Events } from "../events/index.js";
+import { Allocation as Model, MarketDecoration } from "ya-ts-client/dist/ya-payment";
+import { AllocationConfig, BasePaymentOptions } from "./config";
+import { Allocation as AllocationModel } from "ya-ts-client/dist/ya-payment/src/models/allocation";
+import { Events } from "../events";
 
 /**
  * @hidden

@@ -1,153 +1,152 @@
 body {
-    font-family: -apple-system, system-ui, "Segoe UI", "Liberation Sans", sans-serif;
+  font-family: -apple-system, system-ui, "Segoe UI", "Liberation Sans", sans-serif;
 }
 h1 {
-    font-size: 1.7rem;
-    padding: 10px;
-    margin: 0;
+  font-size: 1.7rem;
+  padding: 10px;
+  margin: 0;
 }
 h3 {
-    border-bottom: 1px solid #ddd;
-    font-size: 1rem;
-    padding: 6px;
-    margin-right: 25px;
+  border-bottom: 1px solid #ddd;
+  font-size: 1rem;
+  padding: 6px;
+  margin-right: 25px;
 }
 .container {
-    display: flex;
-    padding: 0 10px;
+  display: flex;
+  padding: 0 10px;
 }
 .col-6 {
-    width: 50%;
+  width: 50%;
 }
 #options {
-    display: flex;
+  display: flex;
 }
 #options .row {
-    padding: 0;
-    padding-right: 6px;
+  padding: 0;
+  padding-right: 6px;
 }
 .clear {
-    float: right;
-    margin-top: 47px;
-    margin-right: 29px;
-    font-size: 0.7rem;
+  float: right;
+  margin-top: 47px;
+  margin-right: 29px;
+  font-size: 0.7rem;
 }
 .clear-results {
-    margin-top: 14px;
+  margin-top: 14px;
 }
 .clear:hover {
-    cursor: pointer;
+  cursor: pointer;
 }
 .border-left {
-    border-left: 1px solid #ddd;
-    padding-left: 20px;
+  border-left: 1px solid #ddd;
+  padding-left: 20px;
 }
 
 label {
-    font-style: italic;
-    font-size: 0.7rem;
-    margin: 0;
-    padding-right: 2rem;
-    box-sizing: content-box;
+  font-style: italic;
+  font-size: 0.7rem;
+  margin: 0;
+  padding-right: 2rem;
+  box-sizing: content-box;
 }
 input {
-    width: 95%;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    box-sizing: border-box;
-    resize: vertical;
-    margin: 0;
-    padding: 5px;
-    height: 35px;
+  width: 95%;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+  resize: vertical;
+  margin: 0;
+  padding: 5px;
+  height: 35px;
 }
 button {
-    background-color: #064779;
-    border: 1px solid transparent;
-    border-radius: 3px;
-    box-shadow: rgba(255, 255, 255, .4) 0 1px 0 0 inset;
-    box-sizing: border-box;
-    color: #fff;
-    cursor: pointer;
-    display: inline-block;
-    font-family: -apple-system, system-ui, "Segoe UI", "Liberation Sans", sans-serif;
-    font-size: 13px;
-    font-weight: 400;
-    line-height: 1.15385;
-    margin: 0 10px;
-    outline: none;
-    padding: 8px .8em;
-    position: relative;
-    text-align: center;
-    text-decoration: none;
-    user-select: none;
-    -webkit-user-select: none;
-    touch-action: manipulation;
-    vertical-align: baseline;
-    white-space: nowrap;
+  background-color: #064779;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  box-shadow: rgba(255, 255, 255, 0.4) 0 1px 0 0 inset;
+  box-sizing: border-box;
+  color: #fff;
+  cursor: pointer;
+  display: inline-block;
+  font-family: -apple-system, system-ui, "Segoe UI", "Liberation Sans", sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.15385;
+  margin: 0 10px;
+  outline: none;
+  padding: 8px 0.8em;
+  position: relative;
+  text-align: center;
+  text-decoration: none;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  vertical-align: baseline;
+  white-space: nowrap;
 }
-button:hover{
-    background-color: #07c;
+button:hover {
+  background-color: #07c;
 }
-button:disabled{
-    background-color: #ddd;
-    cursor: default;
+button:disabled {
+  background-color: #ddd;
+  cursor: default;
 }
 .row {
-    display: flex;
-    padding: 8px;
+  display: flex;
+  padding: 8px;
 }
 .vertical {
-    flex-direction: column;
+  flex-direction: column;
 }
 .padding-0 {
-    padding: 0;
+  padding: 0;
 }
 .logs {
-    min-height: 30vh;
-    white-space: pre-line;
+  min-height: 30vh;
+  white-space: pre-line;
 }
 .events {
-    min-height: 20vh;
+  min-height: 20vh;
 }
 .results {
-    min-height: 30vh;
+  min-height: 30vh;
 }
 .commands button {
-    width: 140px;
-    margin: 0 30px 0 0;
+  width: 140px;
+  margin: 0 30px 0 0;
 }
 #logs {
-    white-space: pre-line;
+  white-space: pre-line;
 }
 #results li {
-    font-size: 3rem;
+  font-size: 3rem;
 }
 .console ul {
-    list-style: none;
-    font-family: monospace;
-    padding: 0;
-    font-size: 0.82rem;
-    white-space: pre;
+  list-style: none;
+  font-family: monospace;
+  padding: 0;
+  font-size: 0.82rem;
+  white-space: pre;
 }
 
 .script h3 {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    padding-right: 0;
-    margin-right: 20px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding-right: 0;
+  margin-right: 20px;
 }
 
 .script #execute {
-    margin-right: 0;
-    width: 120px;
-
+  margin-right: 0;
+  width: 120px;
 }
 
 .script ul {
-    padding-left: 20px;
+  padding-left: 20px;
 }
 
 .small {
-    width: 120px;
+  width: 120px;
 }

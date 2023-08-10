@@ -1,11 +1,11 @@
-import { AllocationOptions } from "./allocation.js";
-import { Configuration } from "ya-ts-client/dist/ya-payment/index.js";
-import { RequestorApi } from "ya-ts-client/dist/ya-payment/api.js";
-import { EnvUtils, Logger } from "../utils/index.js";
-import { YagnaOptions } from "../executor/index.js";
-import { DebitNoteFilter, InvoiceFilter, PaymentOptions } from "./service.js";
-import { InvoiceOptions } from "./invoice.js";
-import { acceptAllDebitNotesFilter, acceptAllInvoicesFilter } from "./strategy.js";
+import { AllocationOptions } from "./allocation";
+import { Configuration } from "ya-ts-client/dist/ya-payment";
+import { RequestorApi } from "ya-ts-client/dist/ya-payment/api";
+import { EnvUtils, Logger } from "../utils";
+import { YagnaOptions } from "../executor";
+import { DebitNoteFilter, InvoiceFilter, PaymentOptions } from "./service";
+import { InvoiceOptions } from "./invoice";
+import { acceptAllDebitNotesFilter, acceptAllInvoicesFilter } from "./strategy";
 import { Agent } from "http";
 
 const DEFAULTS = Object.freeze({
@@ -62,7 +62,7 @@ abstract class BaseConfig {
     this.paymentTimeout = options?.paymentTimeout || DEFAULTS.paymentTimeout;
     this.payment = {
       driver: options?.payment?.driver || DEFAULTS.payment.driver,
-      network: options?.payment?.network || DEFAULTS.payment.network,
+      network: options?.payment?.network || EnvUtils.getPaymentNetwork() || DEFAULTS.payment.network,
     };
     this.logger = options?.logger;
     this.eventTarget = options?.eventTarget;

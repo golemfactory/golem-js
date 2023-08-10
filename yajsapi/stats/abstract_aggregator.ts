@@ -1,4 +1,4 @@
-import collect, { Collection } from "collect.js/dist/index.js";
+import collect, { Collection } from "collect.js";
 
 export interface ItemInfo {
   id: string;

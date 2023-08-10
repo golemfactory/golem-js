@@ -16,7 +16,7 @@ export const randomAgreementSelectorWithPriorityForExistingOnes = () => async (c
 export const bestAgreementSelector =
   (scores: { [providerId: string]: number }) => async (candidates: AgreementCandidate[]) => {
     candidates.sort((a, b) =>
-      (scores?.[a.proposal.provider.id] || 0) >= (scores?.[b.proposal.provider.id] || 0) ? 1 : -1
+      (scores?.[a.proposal.provider.id] || 0) >= (scores?.[b.proposal.provider.id] || 0) ? 1 : -1,
     );
     return candidates[0];
   };

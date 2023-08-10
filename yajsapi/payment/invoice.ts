@@ -1,7 +1,7 @@
-import { BasePaymentOptions, InvoiceConfig } from "./config.js";
-import { Invoice as Model, InvoiceStatus } from "ya-ts-client/dist/ya-payment/src/models/index.js";
-import { Events } from "../events/index.js";
-import { Rejection } from "./rejection.js";
+import { BasePaymentOptions, InvoiceConfig } from "./config";
+import { Invoice as Model, InvoiceStatus } from "ya-ts-client/dist/ya-payment/src/models";
+import { Events } from "../events";
+import { Rejection } from "./rejection";
 
 export type InvoiceOptions = BasePaymentOptions;
 
@@ -47,7 +47,10 @@ export abstract class BaseNote<ModelType extends BaseModel> {
   public readonly paymentDueDate?: string;
   protected status: InvoiceStatus;
 
-  protected constructor(model: ModelType, protected options: InvoiceConfig) {
+  protected constructor(
+    model: ModelType,
+    protected options: InvoiceConfig,
+  ) {
     this.providerId = model.issuerId;
     this.recipientId = model.recipientId;
     this.payeeAddr = model.payeeAddr;
@@ -100,7 +103,10 @@ export class Invoice extends BaseNote<Model> {
    * @protected
    * @hidden
    */
-  protected constructor(model: Model, protected options: InvoiceConfig) {
+  protected constructor(
+    model: Model,
+    protected options: InvoiceConfig,
+  ) {
     super(model, options);
     this.id = model.invoiceId;
     this.activityIds = model.activityIds;
@@ -147,7 +153,7 @@ export class Invoice extends BaseNote<Model> {
     } catch (e) {
       const reason = e?.response?.data?.message || e;
       this.options.eventTarget?.dispatchEvent(
-        new Events.PaymentFailed({ id: this.id, agreementId: this.agreementId, reason })
+        new Events.PaymentFailed({ id: this.id, agreementId: this.agreementId, reason }),
       );
       throw new Error(`Unable to accept invoice ${this.id} ${reason}`);
     }
@@ -167,7 +173,7 @@ export class Invoice extends BaseNote<Model> {
       throw new Error(`Unable to reject invoice ${this.id} ${e?.response?.data?.message || e}`);
     } finally {
       this.options.eventTarget?.dispatchEvent(
-        new Events.PaymentFailed({ id: this.id, agreementId: this.agreementId, reason: rejection.message })
+        new Events.PaymentFailed({ id: this.id, agreementId: this.agreementId, reason: rejection.message }),
       );
     }
   }

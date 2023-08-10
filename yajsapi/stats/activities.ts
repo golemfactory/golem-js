@@ -1,4 +1,4 @@
-import { AbstractAggregator } from './abstract_aggregator.js';
+import { AbstractAggregator } from "./abstract_aggregator";
 
 export interface ActivityInfo {
   id: string;

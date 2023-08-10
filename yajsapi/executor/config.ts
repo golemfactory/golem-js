@@ -1,7 +1,7 @@
-import { ExecutorOptions } from "./executor.js";
-import { Package, PackageOptions } from "../package/index.js";
+import { ExecutorOptions } from "./executor";
+import { Package, PackageOptions } from "../package";
 import { ActivityOptions } from "../activity";
-import { Logger, LogLevel, runtimeContextChecker, defaultLogger } from "../utils/index.js";
+import { Logger, LogLevel, runtimeContextChecker, defaultLogger } from "../utils";
 
 const DEFAULTS = Object.freeze({
   payment: { driver: "erc20", network: "goerli" },
@@ -23,7 +23,6 @@ export class ExecutorConfig {
   readonly taskTimeout: number;
   readonly budget: number;
   readonly subnetTag: string;
-  readonly payment: { driver: string; network: string };
   readonly networkIp?: string;
   readonly packageOptions: Omit<PackageOptions, "imageHash" | "imageTag">;
   readonly logLevel: string;
@@ -67,10 +66,6 @@ export class ExecutorConfig {
     this.maxParallelTasks = options.maxParallelTasks || DEFAULTS.maxParallelTasks;
     this.taskTimeout = options.taskTimeout || DEFAULTS.taskTimeout;
     this.subnetTag = options.subnetTag || processEnv.env?.YAGNA_SUBNET || DEFAULTS.subnetTag;
-    this.payment = {
-      driver: options.payment?.driver || DEFAULTS.payment.driver,
-      network: options.payment?.network || DEFAULTS.payment.network,
-    };
     this.networkIp = options.networkIp;
     this.packageOptions = {
       engine: options.engine,
@@ -83,6 +78,6 @@ export class ExecutorConfig {
     this.logLevel = options.logLevel || DEFAULTS.logLevel;
     this.logger?.setLevel && this.logger?.setLevel(this.logLevel);
     this.eventTarget = options.eventTarget || new EventTarget();
-    this.maxTaskRetries = options.maxTaskRetries || DEFAULTS.maxTaskRetries;
+    this.maxTaskRetries = options.maxTaskRetries ?? DEFAULTS.maxTaskRetries;
   }
 }

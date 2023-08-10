@@ -1,8 +1,8 @@
-import { BasePaymentOptions, InvoiceConfig } from "./config.js";
+import { BasePaymentOptions, InvoiceConfig } from "./config";
 import { DebitNote as Model } from "ya-ts-client/dist/ya-payment/src/models";
-import { BaseNote } from "./invoice.js";
-import { Events } from "../events/index.js";
-import { Rejection } from "./rejection.js";
+import { BaseNote } from "./invoice";
+import { Events } from "../events";
+import { Rejection } from "./rejection";
 
 export type InvoiceOptions = BasePaymentOptions;
 
@@ -46,7 +46,10 @@ export class DebitNote extends BaseNote<Model> {
    * @protected
    * @hidden
    */
-  protected constructor(model: Model, protected options: InvoiceConfig) {
+  protected constructor(
+    model: Model,
+    protected options: InvoiceConfig,
+  ) {
     super(model, options);
     this.id = model.debitNoteId;
     this.timestamp = model.timestamp;
@@ -78,7 +81,7 @@ export class DebitNote extends BaseNote<Model> {
     } catch (e) {
       const reason = e?.response?.data?.message || e;
       this.options.eventTarget?.dispatchEvent(
-        new Events.PaymentFailed({ id: this.id, agreementId: this.agreementId, reason })
+        new Events.PaymentFailed({ id: this.id, agreementId: this.agreementId, reason }),
       );
       throw new Error(`Unable to accept debit note ${this.id} ${e?.response?.data?.message || e}`);
     }
@@ -98,7 +101,7 @@ export class DebitNote extends BaseNote<Model> {
       throw new Error(`Unable to reject debit note ${this.id} ${e?.response?.data?.message || e}`);
     } finally {
       this.options.eventTarget?.dispatchEvent(
-        new Events.PaymentFailed({ id: this.id, agreementId: this.agreementId, reason: rejection.message })
+        new Events.PaymentFailed({ id: this.id, agreementId: this.agreementId, reason: rejection.message }),
       );
     }
   }

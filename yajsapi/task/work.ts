@@ -1,14 +1,25 @@
-import { Activity, Result } from "../activity/index.js";
-import { Capture, Command, Deploy, DownloadFile, Run, Script, Start, UploadFile } from "../script/index.js";
-import { StorageProvider } from "../storage/index.js";
-import { ActivityStateEnum } from "../activity/index.js";
-import { sleep, Logger, runtimeContextChecker } from "../utils/index.js";
-import { Batch } from "./index.js";
-import { NetworkNode } from "../network/index.js";
+import { Activity, Result } from "../activity";
+import {
+  Capture,
+  Command,
+  Deploy,
+  DownloadData,
+  DownloadFile,
+  Run,
+  Script,
+  Start,
+  UploadData,
+  UploadFile,
+} from "../script";
+import { NullStorageProvider, StorageProvider } from "../storage";
+import { ActivityStateEnum } from "../activity";
+import { sleep, Logger } from "../utils";
+import { Batch } from "./batch";
+import { NetworkNode } from "../network";
 
 export type Worker<InputType = unknown, OutputType = unknown> = (
   ctx: WorkContext,
-  data?: InputType
+  data?: InputType,
 ) => Promise<OutputType | undefined>;
 
 const DEFAULTS = {
@@ -45,17 +56,20 @@ export class WorkContext {
   private readonly activityPreparingTimeout: number;
   private readonly logger?: Logger;
   private readonly activityStateCheckingInterval: number;
-  private readonly storageProvider?: StorageProvider;
+  private readonly storageProvider: StorageProvider;
   private readonly networkNode?: NetworkNode;
 
-  constructor(private activity: Activity, private options?: WorkOptions) {
+  constructor(
+    private activity: Activity,
+    private options?: WorkOptions,
+  ) {
     this.agreementId = this.activity.agreementId;
     this.activityId = this.activity.id;
     this.activityPreparingTimeout = options?.activityPreparingTimeout || DEFAULTS.activityPreparingTimeout;
     this.logger = options?.logger;
     this.activityStateCheckingInterval = options?.activityStateCheckingInterval || DEFAULTS.activityStateCheckInterval;
     this.provider = options?.provider;
-    this.storageProvider = options?.storageProvider;
+    this.storageProvider = options?.storageProvider ?? new NullStorageProvider();
     this.networkNode = options?.networkNode;
   }
   async before(): Promise<Result[] | void> {
@@ -69,7 +83,7 @@ export class WorkContext {
         .execute(
           new Script([new Deploy(this.networkNode?.getNetworkConfig?.()), new Start()]).getExeScriptRequest(),
           undefined,
-          this.activityPreparingTimeout
+          this.activityPreparingTimeout,
         )
         .catch((e) => {
           throw new Error(`Unable to deploy activity. ${e}`);
@@ -77,7 +91,8 @@ export class WorkContext {
       let timeoutId;
       await Promise.race([
         new Promise(
-          (res, rej) => (timeoutId = setTimeout(() => rej("Preparing activity timeout"), this.activityPreparingTimeout))
+          (res, rej) =>
+            (timeoutId = setTimeout(() => rej("Preparing activity timeout"), this.activityPreparingTimeout)),
         ),
         (async () => {
           for await (const res of result) {
@@ -104,18 +119,41 @@ export class WorkContext {
     return this.runOneCommand(command, options);
   }
   async uploadFile(src: string, dst: string, options?: CommandOptions): Promise<Result> {
-    runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Upload File");
-    return this.runOneCommand(new UploadFile(this.storageProvider!, src, dst), options);
+    return this.runOneCommand(new UploadFile(this.storageProvider, src, dst), options);
   }
-  async uploadJson(json: object, dst: string, options?: CommandOptions): Promise<Result> {
-    runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Upload JSON");
-    const src = Buffer.from(JSON.stringify(json), "utf-8");
-    return this.runOneCommand(new UploadFile(this.storageProvider!, src, dst), options);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  uploadJson(json: any, dst: string, options?: CommandOptions): Promise<Result> {
+    const src = new TextEncoder().encode(JSON.stringify(json));
+    return this.runOneCommand(new UploadData(this.storageProvider, src, dst), options);
   }
-  async downloadFile(src: string, dst: string, options?: CommandOptions): Promise<Result> {
-    runtimeContextChecker.checkAndThrowUnsupportedInBrowserError("Download File");
-    return this.runOneCommand(new DownloadFile(this.storageProvider!, src, dst), options);
+  uploadData(data: Uint8Array, dst: string, options?: CommandOptions): Promise<Result> {
+    return this.runOneCommand(new UploadData(this.storageProvider, data, dst), options);
   }
+  downloadFile(src: string, dst: string, options?: CommandOptions): Promise<Result> {
+    return this.runOneCommand(new DownloadFile(this.storageProvider, src, dst), options);
+  }
+
+  downloadData(src: string, options?: CommandOptions): Promise<Result<Uint8Array>> {
+    return this.runOneCommand(new DownloadData(this.storageProvider, src), options);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async downloadJson(src: string, options?: CommandOptions): Promise<Result<any>> {
+    const result = await this.downloadData(src, options);
+    if (result.result !== "Ok") {
+      return {
+        ...result,
+        data: undefined,
+      };
+    }
+
+    return {
+      ...result,
+      data: JSON.parse(new TextDecoder().decode(result.data)),
+    };
+  }
+
   beginBatch() {
     return Batch.create(this.activity, this.storageProvider, this.logger);
   }
@@ -131,13 +169,13 @@ export class WorkContext {
     return this.activity.getState();
   }
 
-  private async runOneCommand(command: Command, options?: CommandOptions): Promise<Result> {
+  private async runOneCommand<T>(command: Command<T>, options?: CommandOptions): Promise<Result<T>> {
     const script = new Script([command]);
     await script.before().catch((e) => {
       throw new Error(
         `Script initialization failed for command: ${JSON.stringify(command.toJson())}. ${
           e?.response?.data?.message || e?.message || e
-        }`
+        }`,
       );
     });
     await sleep(100, true);
@@ -145,19 +183,18 @@ export class WorkContext {
       throw new Error(
         `Script execution failed for command: ${JSON.stringify(command.toJson())}. ${
           e?.response?.data?.message || e?.message || e
-        }`
+        }`,
       );
     });
-    const allResults: Result[] = [];
+    let allResults: Result<T>[] = [];
     for await (const result of results) allResults.push(result);
+    allResults = (await script.after(allResults)) as Result<T>[];
     const commandsErrors = allResults.filter((res) => res.result === "Error");
-    await script.after();
     if (commandsErrors.length) {
       const errorMessage = commandsErrors
         .map((err) => `Error: ${err.message}. Stdout: ${err.stdout?.trim()}. Stderr: ${err.stderr?.trim()}`)
         .join(". ");
-      this.rejectResult(`Task error on provider ${this.provider?.name || "'unknown'"}. ${errorMessage}`);
-      throw new Error(errorMessage);
+      this.logger?.warn(`Task error on provider ${this.provider?.name || "'unknown'"}. ${errorMessage}`);
     }
     return allResults[0];
   }

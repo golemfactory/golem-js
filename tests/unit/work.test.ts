@@ -1,8 +1,7 @@
-import * as activityMock from "../mock/rest/activity.js";
-import { expect } from "chai";
-import { WorkContext, Worker } from "../../yajsapi/task/index.js";
-import { LoggerMock, StorageProviderMock } from "../mock/index.js";
-import { Activity, Result } from "../../yajsapi/activity/index.js";
+import * as activityMock from "../mock/rest/activity";
+import { WorkContext, Worker } from "../../yajsapi/task";
+import { LoggerMock, StorageProviderMock } from "../mock";
+import { Activity, Result } from "../../yajsapi/activity";
 import { Readable } from "stream";
 const logger = new LoggerMock();
 const storageProviderMock = new StorageProviderMock({ logger });
@@ -21,7 +20,7 @@ describe("Work Context", () => {
       const ctx = new WorkContext(activity, { logger, activityStateCheckingInterval: 10, isRunning });
       await ctx.before();
       const results = await worker(ctx);
-      expect(results?.stdout).to.equal("test_result");
+      expect(results?.stdout).toEqual("test_result");
     });
 
     it("should execute upload file command", async () => {
@@ -35,7 +34,7 @@ describe("Work Context", () => {
       });
       await ctx.before();
       const results = await worker(ctx);
-      expect(results?.stdout).to.equal("test_result");
+      expect(results?.stdout).toEqual("test_result");
       await logger.expectToInclude("File published: ./file.txt");
     });
 
@@ -50,8 +49,8 @@ describe("Work Context", () => {
       });
       await ctx.before();
       const results = await worker(ctx);
-      expect(results?.stdout).to.equal("test_result");
-      await logger.expectToInclude("Json published");
+      expect(results?.stdout).toEqual("test_result");
+      await logger.expectToInclude("Data published");
     });
 
     it("should execute download file command", async () => {
@@ -65,7 +64,7 @@ describe("Work Context", () => {
       });
       await ctx.before();
       const results = await worker(ctx);
-      expect(results?.stdout).to.equal("test_result");
+      expect(results?.stdout).toEqual("test_result");
       await logger.expectToInclude("File received: ./file.txt");
     });
   });
@@ -95,9 +94,9 @@ describe("Work Context", () => {
       ];
       activityMock.setExpectedExeResults(expectedStdout);
       const results = await worker(ctx);
-      expect(results?.map((r) => r.stdout)).to.deep.equal(expectedStdout.map((s) => s.stdout));
+      expect(results?.map((r) => r.stdout)).toEqual(expectedStdout.map((s) => s.stdout));
       await logger.expectToInclude("File published: ./file.txt");
-      await logger.expectToInclude("Json published");
+      await logger.expectToInclude("Data published");
       await logger.expectToInclude("File received: ./file.txt");
     });
 
@@ -129,7 +128,7 @@ describe("Work Context", () => {
       await new Promise((res, rej) => {
         results?.on("data", (result) => {
           try {
-            expect(result.stdout).to.equal(expectedStdout?.shift()?.stdout);
+            expect(result.stdout).toEqual(expectedStdout?.shift()?.stdout);
           } catch (e) {
             rej(e);
           }
@@ -137,7 +136,7 @@ describe("Work Context", () => {
         results?.on("end", res);
       });
       await logger.expectToInclude("File published: ./file.txt");
-      await logger.expectToInclude("Json published");
+      await logger.expectToInclude("Data published");
       await logger.expectToInclude("File received: ./file.txt");
     });
   });
@@ -153,7 +152,13 @@ describe("Work Context", () => {
       });
       const expectedStdout = [{ result: "Error", stderr: "error", message: "Some error occurred" }];
       activityMock.setExpectedExeResults(expectedStdout);
-      await expect(worker(ctx)).to.be.rejectedWith(expectedStdout);
+      let expectedError;
+      try {
+        await worker(ctx);
+      } catch (err) {
+        expectedError = err;
+      }
+      expect(expectedError).toEqual(`Error: ${expectedStdout[0].message}`);
     });
 
     it("should catch error while executing batch as stream with invalid command", async () => {
@@ -171,7 +176,7 @@ describe("Work Context", () => {
       await new Promise((res, rej) => {
         results?.on("error", (error) => {
           try {
-            expect(error.message).to.equal("Some error occurred. Stdout: test_result. Stderr: error");
+            expect(error.message).toEqual("Some error occurred. Stdout: test_result. Stderr: error");
           } catch (e) {
             rej(e);
           }

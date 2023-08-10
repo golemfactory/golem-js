@@ -1,9 +1,9 @@
-import { AgreementOptions } from "./agreement.js";
-import { AgreementSelector, AgreementServiceOptions } from "./service.js";
-import { RequestorApi } from "ya-ts-client/dist/ya-market/api.js";
-import { Configuration } from "ya-ts-client/dist/ya-market/index.js";
-import { EnvUtils, Logger } from "../utils/index.js";
-import { randomAgreementSelector } from "./strategy.js";
+import { AgreementOptions } from "./agreement";
+import { AgreementSelector, AgreementServiceOptions } from "./service";
+import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
+import { Configuration } from "ya-ts-client/dist/ya-market";
+import { EnvUtils, Logger } from "../utils";
+import { randomAgreementSelector } from "./strategy";
 import { Agent } from "http";
 
 const DEFAULTS = {

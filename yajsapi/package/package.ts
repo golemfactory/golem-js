@@ -1,8 +1,11 @@
-import { ComparisonOperator, DecorationsBuilder, MarketDecoration } from "../market/builder.js";
-import { EnvUtils, Logger } from "../utils/index.js";
+import { ComparisonOperator, DecorationsBuilder, MarketDecoration } from "../market/builder";
+import { EnvUtils, Logger } from "../utils";
 import axios from "axios";
-import { PackageConfig } from "./config.js";
-import { RequireAtLeastOne } from "../utils/types.js";
+import { PackageConfig } from "./config";
+import { RequireAtLeastOne } from "../utils/types";
+/**
+ * @hidden
+ */
 
 export type PackageOptions = RequireAtLeastOne<
   {

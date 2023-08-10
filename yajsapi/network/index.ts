@@ -1,3 +1,3 @@
-export { Network } from './network.js';
-export { NetworkNode } from './node.js';
-export { NetworkService } from './service.js';
+export { Network } from "./network";
+export { NetworkNode } from "./node";
+export { NetworkService } from "./service";

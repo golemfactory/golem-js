@@ -1,11 +1,11 @@
-import { DemandOptions } from "./demand.js";
-import { RequestorApi } from "ya-ts-client/dist/ya-market/api.js";
-import { Configuration } from "ya-ts-client/dist/ya-market/index.js";
-import { EnvUtils, Logger } from "../utils/index.js";
-import { MarketOptions, ProposalFilter } from "./service.js";
-import { YagnaOptions } from "../executor/index.js";
+import { DemandOptions } from "./demand";
+import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
+import { Configuration } from "ya-ts-client/dist/ya-market";
+import { EnvUtils, Logger } from "../utils";
+import { MarketOptions, ProposalFilter } from "./service";
+import { YagnaOptions } from "../executor";
 import { Agent } from "http";
-import { acceptAllProposalFilter } from "./strategy.js";
+import { acceptAllProposalFilter } from "./strategy";
 
 const DEFAULTS = {
   subnetTag: "public",

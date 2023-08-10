@@ -1,4 +1,4 @@
-import { pinoLogger } from "./pinoLogger.js";
+import { pinoLogger } from "./pinoLogger";
 
 export function defaultLogger(filename?: string) {
   return pinoLogger({
