@@ -44,7 +44,6 @@
   },
   "dependencies": {
     "@rauschma/stringio": "^1.4.0",
-    "@types/eventsource": "^1.1.11",
     "axios": "^1.1.3",
     "bottleneck": "^2.19.5",
     "collect.js": "^4.34.3",
@@ -55,7 +54,6 @@
     "pino": "^8.11.0",
     "pino-pretty": "^10.0.1",
     "tmp": "^0.2.1",
-    "ts-jest": "^29.1.1",
     "uuid": "^9.0.0",
     "ya-ts-client": "^0.5.3"
   },
@@ -71,6 +69,7 @@
     "@types/uuid": "^9.0.2",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
+    "@types/eventsource": "^1.1.11",
     "buffer": "^6.0.3",
     "cypress": "12.17.1",
     "eslint": "~8.45.0",
