@@ -13,7 +13,7 @@ describe("Payment Service", () => {
   });
 
   describe("Allocations", () => {
-    it("should creating allocations for available accounts", async () => {
+    it("should create allocation", async () => {
       const paymentService = new PaymentService();
       const allocation = await paymentService.createAllocation();
       expect(allocation).toBeInstanceOf(Allocation);
