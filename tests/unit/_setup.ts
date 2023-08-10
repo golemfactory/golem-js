@@ -18,7 +18,7 @@ jest.mock("ya-ts-client/dist/ya-activity/api", () => ({
   RequestorControlApi: RequestorControlApiMock,
   RequestorStateApi: RequestorSateApiMock,
 }));
-jest.mock("../../yajsapi/network/identity", () => IdentityMock);
+jest.mock("../../src/network/identity", () => IdentityMock);
 
 jest.mock("eventsource", () => EventSourceMock);
 

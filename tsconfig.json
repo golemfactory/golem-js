@@ -29,5 +29,5 @@
     "excludeExternals": true,
     "excludeInternal": true
   },
-  "include": ["yajsapi"]
+  "include": ["src"]
 }

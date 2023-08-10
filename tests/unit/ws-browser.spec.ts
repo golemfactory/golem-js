@@ -1,4 +1,4 @@
-import { consoleLogger, WebSocketBrowserStorageProvider, WebSocketStorageProviderOptions } from "../../yajsapi";
+import { consoleLogger, WebSocketBrowserStorageProvider, WebSocketStorageProviderOptions } from "../../src";
 import { encode, toObject } from "flatbuffers/js/flexbuffers";
 import { LoggerMock } from "../mock";
 import * as jsSha3 from "js-sha3";
