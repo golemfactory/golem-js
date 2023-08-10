@@ -12,7 +12,7 @@ import {
 } from "ya-ts-client/dist/ya-payment/src/models";
 import { allocations, accounts, debitNotesEvents, debitNotes, invoiceEvents, invoices } from "../fixtures";
 import { Rejection } from "ya-ts-client/dist/ya-payment/src/models";
-import { sleep } from "../../../yajsapi/utils";
+import { sleep } from "../../../src/utils";
 
 global.expectedEvents = [];
 global.expectedInvoices = [];

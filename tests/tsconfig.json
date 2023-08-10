@@ -1,5 +1,6 @@
 {
   "extends": "../tsconfig.json",
-  "include": ["**/*.spec.ts", "**/*.test.ts"],
+  "include": ["."],
+  "exclude": ["./cypress"],
   "types": ["jest"]
 }
