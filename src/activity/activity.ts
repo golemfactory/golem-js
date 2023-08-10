@@ -26,9 +26,6 @@ export interface ExeScriptRequest {
   text: string;
 }
 
-/**
- * @hidden
- */
 export interface ActivityOptions {
   yagnaOptions?: {
     /** Yagna Api Key */

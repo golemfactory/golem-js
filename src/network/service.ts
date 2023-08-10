@@ -4,9 +4,6 @@ import { NetworkOptions } from "./network";
 import { NetworkNode } from "./node";
 import { getIdentity } from "./identity";
 
-/**
- * @internal
- */
 export type NetworkServiceOptions = Omit<NetworkOptions, "networkOwnerId">;
 
 /**
