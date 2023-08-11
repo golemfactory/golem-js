@@ -3,10 +3,14 @@ name: Lint, Build, Test, Release
 on:
   push:
     branches:
+      # Regular release channels
       - master
       - next
       - beta
       - alpha
+      # Support, hotfix branches like: 1.0.x or 1.x
+      - "+([0-9])?(.{+([0-9]),x}).x"
+      # Development, testing
       - feature/JST-70/automate-releases
 
   # Allows triggering the workflow manually
@@ -90,6 +94,7 @@ jobs:
           rm -rf ../goth/assets
           python -m goth create-assets ../goth/assets
           sed -Ezi 's/(use\-proxy:\s)(True)/\1False/mg' ../goth/assets/goth-config.yml
+          sed -Ezi 's/(use\-prerelease:\s)(false)/\1true\n    release-tag: "0.13.0-rc10"/mg' ../goth/assets/goth-config.yml
 
       - name: Disconnect Docker containers from default network
         continue-on-error: true
