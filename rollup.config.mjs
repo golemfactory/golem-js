@@ -43,6 +43,15 @@ export default [
       json(), // Required because one our dependencies (bottleneck) loads its own 'version.json'
       typescript({ tsconfig: "./tsconfig.json" }),
       terser({ keep_classnames: true }),
+      {
+        // Temporary workaround  https://github.com/rollup/rollup/issues/4213
+        closeBundle() {
+          if (!process.env.ROLLUP_WATCH) {
+            setTimeout(() => process.exit(0));
+          }
+        },
+        name: "force-close",
+      },
     ],
   },
   // NodeJS
