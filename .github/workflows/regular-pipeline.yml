@@ -13,6 +13,7 @@ on:
 
 jobs:
   regular-checks:
+    name: Build and unit-test on supported platforms and NodeJS versions
     strategy:
       matrix:
         node-version: [16.x, 18.x, 19.x, 20.x]
@@ -34,3 +35,4 @@ jobs:
           npm run format:check
           npm run lint
           npm run test:unit
+          npm run build

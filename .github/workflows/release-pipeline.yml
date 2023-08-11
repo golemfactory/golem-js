@@ -18,6 +18,7 @@ permissions:
 
 jobs:
   regular-checks:
+    name: Build and unit-test on supported platforms and NodeJS versions
     strategy:
       matrix:
         node-version: [16.x, 18.x, 19.x, 20.x]
@@ -42,6 +43,7 @@ jobs:
           npm run build
 
   run-integration-and-e2e-tests:
+    name: Run integration and E2E tests
     needs: regular-checks
     runs-on: goth
     steps:
@@ -114,7 +116,7 @@ jobs:
         env:
           GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          npm run test:integration
+          npm run test:e2e
 
       - name: Upload test logs
         uses: actions/upload-artifact@v2
@@ -155,7 +157,7 @@ jobs:
       #endregion
 
   release:
-    name: Release
+    name: Release the SDK to NPM and GitHub
     needs: run-integration-and-e2e-tests
     runs-on: ubuntu-latest
     permissions:
