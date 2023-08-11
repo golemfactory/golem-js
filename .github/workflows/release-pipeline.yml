@@ -7,6 +7,7 @@ on:
       - next
       - beta
       - alpha
+      - feature/JST-70/automate-releases
 
   # Allows triggering the workflow manually
   workflow_dispatch:
@@ -38,6 +39,7 @@ jobs:
           npm run format:check
           npm run lint
           npm run test:unit
+          npm run build
 
   run-integration-and-e2e-tests:
     needs: regular-checks
@@ -185,4 +187,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npx semantic-release
+        run: npx semantic-release --dry-run
