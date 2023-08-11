@@ -29,5 +29,5 @@
     "excludeExternals": true,
     "excludeInternal": true
   },
-  "exclude": ["dist", "node_modules", "examples", "tests", "cypress.config.ts"]
+  "include": ["src"]
 }

@@ -10,7 +10,7 @@ import {
   DebitNote,
   Acceptance,
 } from "ya-ts-client/dist/ya-payment/src/models";
-import { allocations, accounts, debitNotesEvents, debitNotes, invoiceEvents, invoices } from "../fixtures";
+import { allocations, debitNotesEvents, debitNotes, invoiceEvents, invoices } from "../fixtures";
 import { Rejection } from "ya-ts-client/dist/ya-payment/src/models";
 
 global.expectedEvents = [];
@@ -43,10 +43,6 @@ export class PaymentApiMock extends RequestorApi {
     options?: AxiosRequestConfig,
   ): Promise<import("axios").AxiosResponse<Allocation>> {
     return new Promise((res) => res({ data: { ...allocations[0], ...allocation } } as AxiosResponse));
-  }
-  // @ts-ignore
-  getRequestorAccounts(options?: AxiosRequestConfig): Promise<import("axios").AxiosResponse<Account[]>> {
-    return new Promise((res) => res({ data: accounts } as AxiosResponse));
   }
   // @ts-ignore
   releaseAllocation(allocationId: string, options?: AxiosRequestConfig): Promise<import("axios").AxiosResponse<void>> {

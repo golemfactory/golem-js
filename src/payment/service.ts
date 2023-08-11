@@ -3,9 +3,9 @@ import { Allocation } from "./allocation";
 import { BasePaymentOptions, PaymentConfig } from "./config";
 import { Invoice, InvoiceDTO } from "./invoice";
 import { DebitNote, DebitNoteDTO } from "./debit_note";
-import { Accounts } from "./accounts";
 import { Payments, PaymentEventType, DebitNoteEvent, InvoiceEvent } from "./payments";
 import { RejectionReason } from "./rejection";
+import { getIdentity } from "../network/identity";
 
 export interface PaymentOptions extends BasePaymentOptions {
   /** Interval for checking new invoices */
@@ -41,10 +41,9 @@ export class PaymentService {
   private isRunning = false;
   public readonly options: PaymentConfig;
   private logger?: Logger;
-  private allocations: Allocation[] = [];
+  private allocation?: Allocation;
   private agreementsToPay: Map<string, AgreementPayable> = new Map();
   private agreementsDebitNotes: Set<string> = new Set();
-  private paidAgreements: Set<{ agreement: AgreementPayable; invoice: Invoice }> = new Set();
   private paidDebitNotes: Set<string> = new Set();
   private payments?: Payments;
 
@@ -79,36 +78,25 @@ export class PaymentService {
     this.isRunning = false;
     this.payments?.unsubscribe().catch((error) => this.logger?.warn(error));
     this.payments?.removeEventListener(PaymentEventType, this.subscribePayments.bind(this));
-    for (const allocation of this.allocations) await allocation.release().catch((error) => this.logger?.warn(error));
+    await this.allocation?.release().catch((error) => this.logger?.warn(error));
     this.options.httpAgent.destroy?.();
-    this.logger?.info("All allocations has been released");
+    this.logger?.info("Allocation has been released");
     this.logger?.debug("Payment service has been stopped");
   }
 
-  async createAllocations(): Promise<Allocation[]> {
-    const accounts = await (await Accounts.create(this.options)).list().catch((e) => {
-      throw new Error(`Unable to get requestor accounts ${e.response?.data?.message || e.response?.data || e}`);
-    });
-    for (const account of accounts) {
-      if (
-        account.driver !== this.options.payment.driver.toLowerCase() ||
-        account.network !== this.options.payment.network.toLowerCase()
-      ) {
-        this.logger?.debug(
-          `Not using payment platform ${account.platform}, platform's driver/network ` +
-            `${account.driver}/${account.network} is different than requested ` +
-            `driver/network ${this.options.payment.driver}/${this.options.payment.network}`,
-        );
-        continue;
-      }
-      this.allocations.push(await Allocation.create({ ...this.options.options, account }));
-    }
-    if (!this.allocations.length) {
+  async createAllocation(): Promise<Allocation> {
+    try {
+      const account = {
+        platform: this.getPaymentPlatform(),
+        address: await this.getPaymentAddress(),
+      };
+      this.allocation = await Allocation.create({ ...this.options.options, account });
+      return this.allocation;
+    } catch (error) {
       throw new Error(
-        `Unable to create allocation for driver/network ${this.options.payment.driver}/${this.options.payment.network}. There is no requestor account supporting this platform.`,
+        `Unable to create allocation for driver/network ${this.options.payment.driver}/${this.options.payment.network}. ${error}`,
       );
     }
-    return this.allocations;
   }
 
   acceptPayments(agreement: AgreementPayable) {
@@ -127,9 +115,7 @@ export class PaymentService {
         return;
       }
       if (await this.options.invoiceFilter(invoice.dto)) {
-        const allocation = this.getAllocationForPayment(invoice);
-        await invoice.accept(invoice.amount, allocation.id);
-        this.paidAgreements.add({ invoice, agreement });
+        await invoice.accept(invoice.amount, this.allocation!.id);
         this.logger?.info(`Invoice accepted from provider ${agreement.provider.name}`);
       } else {
         const reason = {
@@ -153,8 +139,7 @@ export class PaymentService {
     try {
       if (this.paidDebitNotes.has(debitNote.id)) return;
       if (await this.options.debitNoteFilter(debitNote.dto)) {
-        const allocation = this.getAllocationForPayment(debitNote);
-        await debitNote.accept(debitNote.totalAmountDue, allocation.id);
+        await debitNote.accept(debitNote.totalAmountDue, this.allocation!.id);
         this.paidDebitNotes.add(debitNote.id);
         this.logger?.debug(`Debit Note accepted for agreement ${debitNote.agreementId}`);
       } else {
@@ -178,12 +163,13 @@ export class PaymentService {
     if (event instanceof DebitNoteEvent) this.processDebitNote(event.debitNote).then();
   }
 
-  private getAllocationForPayment(paymentNote: Invoice | DebitNote): Allocation {
-    const allocation = this.allocations.find(
-      (allocation) =>
-        allocation.paymentPlatform === paymentNote.paymentPlatform && allocation.address === paymentNote.payerAddr,
-    );
-    if (!allocation) throw new Error(`No allocation for ${paymentNote.paymentPlatform} ${paymentNote.payerAddr}`);
-    return allocation;
+  private getPaymentPlatform(): string {
+    const mainnets = ["polygon", "mainnet"];
+    const token = mainnets.includes(this.options.payment.network) ? "glm" : "tglm";
+    return `${this.options.payment.driver}-${this.options.payment.network}-${token}`;
+  }
+
+  private async getPaymentAddress(): Promise<string> {
+    return getIdentity(this.options);
   }
 }

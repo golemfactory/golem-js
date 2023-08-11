@@ -1,20 +1,15 @@
-name: Goth (PR and push)
+name: Nightly Cypress Tests
 
 on:
-  push:
-    branches:
-      - master
-      - b0.*
-  pull_request:
-    branches:
-      - master
-      - b0.*
+  schedule:
+    # run this workflow every day at 3:00 AM UTC
+    - cron: "0 3 * * *"
+
   # Allows triggering the workflow manually
   workflow_dispatch:
 
 jobs:
-  goth-tests:
-    name: Run integration tests
+  cypress-tests:
     runs-on: goth
     steps:
       - name: Checkout
@@ -23,12 +18,18 @@ jobs:
       - name: Configure node.js
         uses: actions/setup-node@v3
         with:
-          node-version: "16.19.0"
+          node-version: 16
 
-      - name: Build golem-js
+      - name: Install browsers and graphic environment
         run: |
           sudo apt-get update -y
           sudo apt-get install -y build-essential
+          sudo apt-get install -y libgtk2.0-0 libgtk-3-0 libgbm-dev libnotify-dev libgconf-2-4 libnss3 libxss1 libasound2 libxtst6 xauth xvfb
+          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo apt install -y ./google-chrome-stable_current_amd64.deb
+
+      - name: Build the SDK
+        run: |
           npm install
           npm run build
 
@@ -43,12 +44,7 @@ jobs:
           rm -rf ../goth/assets
           python -m goth create-assets ../goth/assets
           sed -Ezi 's/(use\-proxy:\s)(True)/\1False/mg' ../goth/assets/goth-config.yml
-
-      - name: Install websocat and sshpass
-        run: |
-          sudo wget https://github.com/vi/websocat/releases/download/v1.9.0/websocat_linux64 -O /usr/local/bin/websocat
-          sudo chmod +x /usr/local/bin/websocat
-          sudo apt-get install sshpass
+          sed -Ezi 's/(use\-prerelease:\s)(false)/\1true\n    release-tag: "0.13.0-rc10"/mg' ../goth/assets/goth-config.yml
 
       - name: Disconnect Docker containers from default network
         continue-on-error: true
@@ -69,20 +65,25 @@ jobs:
       - name: Log in to GitHub Docker repository
         run: echo ${{ secrets.GITHUB_TOKEN }} | docker login docker.pkg.github.com -u ${{github.actor}} --password-stdin
 
+      - name: Run web server
+        run: |
+          cd examples/web
+          node app.mjs &
+
       - name: Run test suite
         env:
           GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          npm run test:integration
+          npm run test:cypress -- --browser chrome
 
       - name: Upload test logs
         uses: actions/upload-artifact@v2
         if: always()
         with:
-          name: goth-logs
-          path: /tmp/goth-tests
+          name: cypress-logs
+          path: .cypress
 
       # Only relevant for self-hosted runners
       - name: Remove test logs
         if: always()
-        run: rm -rf /tmp/goth-tests
+        run: rm -rf .cypress
