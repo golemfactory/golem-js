@@ -3,7 +3,7 @@
 ![GitHub](https://img.shields.io/github/license/golemfactory/golem-js)
 ![npm](https://img.shields.io/npm/v/@golem-sdk/golem-js)
 ![node-current](https://img.shields.io/node/v/@golem-sdk/golem-js)
-![npm type definitions](https://img.shields.io/npm/types/@golem-sdk/core)
+![npm type definitions](https://img.shields.io/npm/types/@golem-sdk/golem-js)
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/golemfactory/golem-js/goth.yml)
 [![GitHub issues](https://img.shields.io/github/issues/golemfactory/golem-js)](https://github.com/golemfactory/golem-js/issues)
 ![Discord](https://img.shields.io/discord/684703559954333727?style=flat&logo=discord)
@@ -36,7 +36,7 @@ yarn add @golem-sdk/golem-js
 
 ### Building
 
-To build a library available to the nodejs environment:
+To build a library available to the NodeJS environment:
 
 ```bash
 npm run build
@@ -86,14 +86,14 @@ yarn test:unit
 
 Both test cases for the NodeJS environment and the browser (cypress) require preparation of a test environment of the Golem Network with providers and all the necessary infrastructure. [Goth](https://github.com/golemfactory/goth) framework is used for this purpose.
 
-To enable integration testing, you need to ensure that `python -m goth` is executable. Therefore, you must first install [Goth](https://github.com/golemfactory/goth) according to the instructions described in the readme of the project.
+To enable E2E testing, you need to ensure that `python -m goth` is executable. Therefore, you must first install [Goth](https://github.com/golemfactory/goth) according to the instructions described in the readme of the project.
 
 #### NodeJS
 
 ```bash
-npm run test:integration
+npm run test:e2e
 # or
-yarn test:integration
+yarn test:e2e
 ```
 
 #### Cypress
