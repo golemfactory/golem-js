@@ -1,17 +1,18 @@
-name: Unit Tests
+name: Lint, Build, Test
 
 on:
-  push:
-    branches:
-      - master
-      - b0.*
   pull_request:
     branches:
       - master
-      - b0.*
+      - next
+      - beta
+      - alpha
+
+  # Allows triggering the workflow manually
+  workflow_dispatch:
 
 jobs:
-  build:
+  regular-checks:
     strategy:
       matrix:
         node-version: [16.x, 18.x, 19.x, 20.x]
@@ -21,10 +22,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - name: Unit tests for Node.js ${{ matrix.node-version }}
+
+      - name: Fast pipeline for NodeJS ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-      - run: yarn install
-      - run: yarn build
-      - run: yarn test:unit
+        run: |
+          npm install
+          npm run format:check
+          npm run lint
+          npm run test:unit
+          npm run build

@@ -1,35 +1,14 @@
-name: Goth nightly
+name: Nightly E2E Tests
 
 on:
   schedule:
     # run this workflow every day at 2:00 AM UTC
     - cron: "0 2 * * *"
 
-jobs:
-  #  prepare-matrix:
-  #    name: Prepare matrix JSON
-  #    runs-on: ubuntu-latest
-  #    outputs:
-  #      matrix-json: ${{ steps.get-matrix.outputs.matrix }}
-  #    steps:
-  #      - name: Checkout
-  #        uses: actions/checkout@v2
-  #        with:
-  #          fetch-depth: 0
-  #
-  #      # finds branches with names matching the release branch convention (e.g. release/v0.7) and returns one with highest version
-  #      - name: Get latest stable branch
-  #        id: latest-stable
-  #        # second sed expression removes leading whitespaces and '*' characters (git uses it to indicate the current branch)
-  #        run: |
-  #          branch=$(git branch -a | sed -e 's:remotes/origin/::' -e 's:^[ \t*]*::' | grep -E '^b[0-9]+(\.[0-9]+)+$' | sort -Vr | head -1)
-  #          echo "::set-output name=branch::$branch"
-  #
-  #      # prepares JSON object representing strategy matrix which contains two 'branch' variants: master and latest stable
-  #      - name: Get matrix JSON
-  #        id: get-matrix
-  #        run: echo "::set-output name=matrix::{\"include\":[{\"branch\":\"master\"},{\"branch\":\"${{ steps.latest-stable.outputs.branch }}\"}]}"
+  # Allows triggering the workflow manually
+  workflow_dispatch:
 
+jobs:
   prepare-matrix-master-only:
     name: Prepare matrix JSON
     runs-on: ubuntu-latest
@@ -55,7 +34,7 @@ jobs:
       - name: Configure node.js
         uses: actions/setup-node@v3
         with:
-          node-version: "16.19.0"
+          node-version: 16
 
       - name: Build golem-js
         run: |
