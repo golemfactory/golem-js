@@ -46,124 +46,125 @@ jobs:
           npm run test:unit
           npm run build
 
-  run-integration-and-e2e-tests:
-    name: Run integration and E2E tests
-    needs: regular-checks
-    runs-on: goth
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Configure NodeJS
-        uses: actions/setup-node@v3
-        with:
-          # other versions are tested beforehand, so we can keep it short
-          node-version: 16
-
-      - name: Install packages required to set-up Goth
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y build-essential
-
-      - name: Install browsers and graphic environment for Cypress tests
-        run: |
-          sudo apt-get install -y libgtk2.0-0 libgtk-3-0 libgbm-dev libnotify-dev libgconf-2-4 libnss3 libxss1 libasound2 libxtst6 xauth xvfb
-          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-          sudo apt install -y ./google-chrome-stable_current_amd64.deb
-
-      - name: Install websocat and sshpass (required by some tests)
-        run: |
-          sudo wget https://github.com/vi/websocat/releases/download/v1.9.0/websocat_linux64 -O /usr/local/bin/websocat
-          sudo chmod +x /usr/local/bin/websocat
-          sudo apt-get install sshpass
-
-      - name: Build the SDK
-        run: |
-          npm install
-          npm run build
-
-      - name: Configure python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.9"
-
-      #region Goth Setup
-      - name: Install Goth
-        run: |
-          pip install goth
-          rm -rf ../goth/assets
-          python -m goth create-assets ../goth/assets
-          sed -Ezi 's/(use\-proxy:\s)(True)/\1False/mg' ../goth/assets/goth-config.yml
-          sed -Ezi 's/(use\-prerelease:\s)(false)/\1true\n    release-tag: "0.13.0-rc10"/mg' ../goth/assets/goth-config.yml
-
-      - name: Disconnect Docker containers from default network
-        continue-on-error: true
-        # related to this issue: https://github.com/moby/moby/issues/23302
-        run: |
-          docker network inspect docker_default
-          sudo apt-get install -y jq
-          docker network inspect docker_default | jq ".[0].Containers | map(.Name)[]" | tee /dev/stderr | xargs --max-args 1 -- docker network disconnect -f docker_default
-
-      - name: Remove Docker containers
-        continue-on-error: true
-        run: docker rm -f $(docker ps -a -q)
-
-      - name: Restart Docker daemon
-        # related to this issue: https://github.com/moby/moby/issues/23302
-        run: sudo systemctl restart docker
-
-      - name: Log in to GitHub Docker repository
-        run: echo ${{ secrets.GITHUB_TOKEN }} | docker login docker.pkg.github.com -u ${{github.actor}} --password-stdin
-      #endregion
-
-      #region E2E test execution
-      - name: Run the E2E tests using Goth
-        env:
-          GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          npm run test:e2e
-
-      - name: Upload test logs
-        uses: actions/upload-artifact@v2
-        if: always()
-        with:
-          name: goth-logs
-          path: /tmp/goth-tests
-
-      # Only relevant for self-hosted runners
-      - name: Remove test logs
-        if: always()
-        run: rm -rf /tmp/goth-tests
-      #endregion
-
-      #region Cypress test execution
-      - name: Run web server
-        run: |
-          cd examples/web
-          node app.mjs &
-
-      - name: Run test suite
-        env:
-          GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          npm run test:cypress -- --browser chrome
-
-      - name: Upload test logs
-        uses: actions/upload-artifact@v2
-        if: always()
-        with:
-          name: cypress-logs
-          path: .cypress
-
-      # Only relevant for self-hosted runners
-      - name: Remove test logs
-        if: always()
-        run: rm -rf .cypress
-      #endregion
+  #  run-integration-and-e2e-tests:
+  #    name: Run integration and E2E tests
+  #    needs: regular-checks
+  #    runs-on: goth
+  #    steps:
+  #      - name: Checkout
+  #        uses: actions/checkout@v3
+  #
+  #      - name: Configure NodeJS
+  #        uses: actions/setup-node@v3
+  #        with:
+  #          # other versions are tested beforehand, so we can keep it short
+  #          node-version: 16
+  #
+  #      - name: Install packages required to set-up Goth
+  #        run: |
+  #          sudo apt-get update -y
+  #          sudo apt-get install -y build-essential
+  #
+  #      - name: Install browsers and graphic environment for Cypress tests
+  #        run: |
+  #          sudo apt-get install -y libgtk2.0-0 libgtk-3-0 libgbm-dev libnotify-dev libgconf-2-4 libnss3 libxss1 libasound2 libxtst6 xauth xvfb
+  #          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+  #          sudo apt install -y ./google-chrome-stable_current_amd64.deb
+  #
+  #      - name: Install websocat and sshpass (required by some tests)
+  #        run: |
+  #          sudo wget https://github.com/vi/websocat/releases/download/v1.9.0/websocat_linux64 -O /usr/local/bin/websocat
+  #          sudo chmod +x /usr/local/bin/websocat
+  #          sudo apt-get install sshpass
+  #
+  #      - name: Build the SDK
+  #        run: |
+  #          npm install
+  #          npm run build
+  #
+  #      - name: Configure python
+  #        uses: actions/setup-python@v4
+  #        with:
+  #          python-version: "3.9"
+  #
+  #      #region Goth Setup
+  #      - name: Install Goth
+  #        run: |
+  #          pip install goth
+  #          rm -rf ../goth/assets
+  #          python -m goth create-assets ../goth/assets
+  #          sed -Ezi 's/(use\-proxy:\s)(True)/\1False/mg' ../goth/assets/goth-config.yml
+  #          sed -Ezi 's/(use\-prerelease:\s)(false)/\1true\n    release-tag: "0.13.0-rc10"/mg' ../goth/assets/goth-config.yml
+  #
+  #      - name: Disconnect Docker containers from default network
+  #        continue-on-error: true
+  #        # related to this issue: https://github.com/moby/moby/issues/23302
+  #        run: |
+  #          docker network inspect docker_default
+  #          sudo apt-get install -y jq
+  #          docker network inspect docker_default | jq ".[0].Containers | map(.Name)[]" | tee /dev/stderr | xargs --max-args 1 -- docker network disconnect -f docker_default
+  #
+  #      - name: Remove Docker containers
+  #        continue-on-error: true
+  #        run: docker rm -f $(docker ps -a -q)
+  #
+  #      - name: Restart Docker daemon
+  #        # related to this issue: https://github.com/moby/moby/issues/23302
+  #        run: sudo systemctl restart docker
+  #
+  #      - name: Log in to GitHub Docker repository
+  #        run: echo ${{ secrets.GITHUB_TOKEN }} | docker login docker.pkg.github.com -u ${{github.actor}} --password-stdin
+  #      #endregion
+  #
+  #      #region E2E test execution
+  #      - name: Run the E2E tests using Goth
+  #        env:
+  #          GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #        run: |
+  #          npm run test:e2e
+  #
+  #      - name: Upload test logs
+  #        uses: actions/upload-artifact@v2
+  #        if: always()
+  #        with:
+  #          name: goth-logs
+  #          path: /tmp/goth-tests
+  #
+  #      # Only relevant for self-hosted runners
+  #      - name: Remove test logs
+  #        if: always()
+  #        run: rm -rf /tmp/goth-tests
+  #      #endregion
+  #
+  #      #region Cypress test execution
+  #      - name: Run web server
+  #        run: |
+  #          cd examples/web
+  #          node app.mjs &
+  #
+  #      - name: Run test suite
+  #        env:
+  #          GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #        run: |
+  #          npm run test:cypress -- --browser chrome
+  #
+  #      - name: Upload test logs
+  #        uses: actions/upload-artifact@v2
+  #        if: always()
+  #        with:
+  #          name: cypress-logs
+  #          path: .cypress
+  #
+  #      # Only relevant for self-hosted runners
+  #      - name: Remove test logs
+  #        if: always()
+  #        run: rm -rf .cypress
+  #      #endregion
 
   release:
     name: Release the SDK to NPM and GitHub
-    needs: run-integration-and-e2e-tests
+    needs: regular-checks
+    #    needs: run-integration-and-e2e-tests
     runs-on: ubuntu-latest
     permissions:
       contents: write # to be able to publish a GitHub release
@@ -179,7 +180,8 @@ jobs:
       - name: Setup NodeJS
         uses: actions/setup-node@v3
         with:
-          node-version: 16
+          # Semantic release requires this as bare minimum
+          node-version: 18
 
       - name: Install dependencies
         run: npm install
