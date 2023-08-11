@@ -66,7 +66,7 @@ describe("Task Executor", function () {
       logger,
     });
     const data = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
-    const results = executor.map<string, string>(data, async (ctx, x) => {
+    const results = executor.map<string, string | undefined>(data, async (ctx, x) => {
       const res = await ctx.run(`echo "${x}"`);
       return res.stdout?.trim();
     });

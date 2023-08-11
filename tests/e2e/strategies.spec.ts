@@ -15,7 +15,7 @@ describe("Strategies", function () {
         logger,
       });
       const data = ["one", "two", "three"];
-      const results = executor.map<string, string>(data, async (ctx, x) => {
+      const results = executor.map<string, string | undefined>(data, async (ctx, x) => {
         const res = await ctx.run(`echo "${x}"`);
         return res.stdout?.trim();
       });
@@ -36,7 +36,7 @@ describe("Strategies", function () {
         logger,
       });
       const data = ["one", "two", "three"];
-      const results = executor.map<string, string>(data, async (ctx, x) => {
+      const results = executor.map<string, string | undefined>(data, async (ctx, x) => {
         const res = await ctx.run(`echo "${x}"`);
         return res.stdout?.trim();
       });
@@ -58,7 +58,7 @@ describe("Strategies", function () {
         logger,
       });
       const data = ["one", "two"];
-      const results = executor.map<string, string>(data, async (ctx, x) => {
+      const results = executor.map<string, string | undefined>(data, async (ctx, x) => {
         const res = await ctx.run(`echo "${x}"`);
         return res.stdout?.trim();
       });
@@ -76,7 +76,7 @@ describe("Strategies", function () {
         logger,
       });
       const data = ["one", "two"];
-      const results = executor.map<string, string>(data, async (ctx, x) => {
+      const results = executor.map<string, string | undefined>(data, async (ctx, x) => {
         const res = await ctx.run(`echo "${x}"`);
         return res.stdout?.trim();
       });
