@@ -9,7 +9,7 @@ on:
       - beta
       - alpha
       # Support, hotfix branches like: 1.0.x or 1.x
-      - "+([0-9])?(.{+([0-9]),x}).x"
+      - '([0-9]+)(\.([0-9]+))?\.x'
 
   # Allows triggering the workflow manually
   workflow_dispatch:
