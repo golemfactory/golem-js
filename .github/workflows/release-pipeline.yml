@@ -27,16 +27,17 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Fast pipeline for NodeJS ${{ matrix.node-version }}
+      - name: Setup NodeJS ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
+
+      - name: Perform regular checks
         run: |
           npm install
           npm run format:check
           npm run lint
           npm run test:unit
-          npm run build
 
   run-integration-and-e2e-tests:
     needs: regular-checks
