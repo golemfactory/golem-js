@@ -13,7 +13,7 @@ export class DemandFactory {
 
   constructor(
     private taskPackage: Package,
-    private allocations: Allocation[],
+    private allocation: Allocation,
     options?: DemandOptions,
   ) {
     this.options = new DemandConfig(options);
@@ -39,12 +39,9 @@ export class DemandFactory {
 
   private async getDecorations(): Promise<MarketDecoration[]> {
     const taskDecorations = await this.taskPackage.getDemandDecoration();
-    const allocationDecorations: MarketDecoration[] = [];
-    for (const allocation of this.allocations) {
-      allocationDecorations.push(await allocation.getDemandDecoration());
-    }
+    const allocationDecoration = await this.allocation.getDemandDecoration();
     const baseDecoration = this.getBaseDecorations();
-    return [taskDecorations, ...allocationDecorations, baseDecoration];
+    return [taskDecorations, allocationDecoration, baseDecoration];
   }
 
   private getBaseDecorations(): MarketDecoration {

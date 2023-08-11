@@ -63,7 +63,7 @@ export class Allocation {
       }),
     );
     config.logger?.debug(
-      `Allocation ${newModel.allocationId} has been created using payment platform ${config.account.platform}`,
+      `Allocation ${newModel.allocationId} has been created for addrress ${config.account.address} using payment platform ${config.account.platform}`,
     );
     return new Allocation(config, newModel);
   }

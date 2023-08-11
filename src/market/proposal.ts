@@ -158,4 +158,16 @@ export class Proposal {
     );
     return counteringProposalId;
   }
+
+  hasPaymentPlatform(paymentPlatform: string): boolean {
+    return this.getProviderPaymentPlatforms().includes(paymentPlatform);
+  }
+
+  private getProviderPaymentPlatforms(): string[] {
+    return (
+      Object.keys(this.properties)
+        .filter((prop) => prop.startsWith("golem.com.payment.platform."))
+        .map((prop) => prop.split(".")[4]) || []
+    );
+  }
 }
