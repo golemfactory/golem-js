@@ -24,7 +24,6 @@ export type PackageOptions = RequireAtLeastOne<
     /**  finds package by its contents hash */
     imageHash?: string;
     /**  finds package by registry tag  */
-
     imageTag?: string;
     manifest?: string;
     /** Signature of base64 encoded Computation Payload Manifest **/
@@ -50,7 +49,6 @@ export interface PackageDetails {
 
 /**
  * Package module - an object for descriptions of the payload required by the requestor.
- * @hidden
  */
 export class Package {
   private logger?: Logger;
@@ -108,10 +106,6 @@ export class Package {
 
     //TODO : in future this should be passed probably through config
     const isHttps = false;
-
-    // ? Should we prefix all env variables with YAJSAPI_ or not?
-    // with YAJSAPI we stay consistent but GOLEM is more general and can be used
-    // for other projects as well (yapapi e.g.)
 
     const isDev = EnvUtils.isDevMode();
 

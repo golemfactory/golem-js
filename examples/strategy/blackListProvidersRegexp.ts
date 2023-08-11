@@ -1,4 +1,4 @@
-import { TaskExecutor, ProposalFilters } from "yajsapi";
+import { TaskExecutor, ProposalFilters } from "@golem-sdk/golem-js";
 
 /**
  * Example demonstrating how to use the predefined selector `blackListProposalRegexpFilter`,

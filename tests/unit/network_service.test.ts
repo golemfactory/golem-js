@@ -1,5 +1,5 @@
 import { LoggerMock } from "../mock";
-import { NetworkService } from "../../yajsapi/network";
+import { NetworkService } from "../../src/network";
 const logger = new LoggerMock();
 
 describe("Network Service", () => {

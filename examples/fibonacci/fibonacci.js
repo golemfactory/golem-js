@@ -1,4 +1,4 @@
-import { TaskExecutor } from "yajsapi";
+import { TaskExecutor } from "@golem-sdk/golem-js";
 import { program } from "commander";
 
 async function main(fiboN = 1, tasksCount = 1, subnetTag, driver, network, debug) {

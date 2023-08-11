@@ -1,12 +1,12 @@
-import { consoleLogger } from "../../yajsapi/utils";
-import { WebSocketBrowserStorageProvider, WebSocketStorageProviderOptions } from "../../yajsapi/storage/ws-browser";
+import { consoleLogger } from "../../src/utils";
+import { WebSocketBrowserStorageProvider, WebSocketStorageProviderOptions } from "../../src/storage/ws-browser";
 import { encode, toObject } from "flatbuffers/js/flexbuffers";
 import { LoggerMock } from "../mock";
 import * as jsSha3 from "js-sha3";
 
 /* eslint-disable  @typescript-eslint/no-explicit-any */
 
-jest.mock("../../yajsapi/network/identity", () => ({
+jest.mock("../../src/network/identity", () => ({
   getIdentity: jest.fn().mockResolvedValue("ME"),
 }));
 
