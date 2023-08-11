@@ -24,7 +24,6 @@ export type PackageOptions = RequireAtLeastOne<
     /**  finds package by its contents hash */
     imageHash?: string;
     /**  finds package by registry tag  */
-
     imageTag?: string;
     manifest?: string;
     /** Signature of base64 encoded Computation Payload Manifest **/
@@ -50,7 +49,6 @@ export interface PackageDetails {
 
 /**
  * Package module - an object for descriptions of the payload required by the requestor.
- * @hidden
  */
 export class Package {
   private logger?: Logger;

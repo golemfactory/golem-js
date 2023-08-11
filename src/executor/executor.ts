@@ -1,11 +1,11 @@
 import { Package, PackageOptions } from "../package";
-import { MarketService, DemandOptions } from "../market";
-import { AgreementOptions, AgreementPoolService } from "../agreement";
+import { MarketService } from "../market";
+import { AgreementPoolService } from "../agreement";
 import { Task, TaskQueue, TaskService, Worker } from "../task";
 import { PaymentService, PaymentOptions } from "../payment";
 import { NetworkService } from "../network";
-import { ActivityOptions, Result } from "../activity";
-import { sleep, Logger, runtimeContextChecker } from "../utils";
+import { Result } from "../activity";
+import { sleep, Logger, LogLevel, runtimeContextChecker } from "../utils";
 import { StorageProvider, GftpStorageProvider, NullStorageProvider, WebSocketBrowserStorageProvider } from "../storage";
 import { ExecutorConfig } from "./config";
 import { Events } from "../events";
@@ -14,7 +14,6 @@ import { TaskOptions } from "../task/service";
 import { NetworkServiceOptions } from "../network/service";
 import { AgreementServiceOptions } from "../agreement/service";
 import { WorkOptions } from "../task/work";
-import { LogLevel } from "../utils/logger/logger";
 import { MarketOptions } from "../market/service";
 import { RequireAtLeastOne } from "../utils/types";
 
@@ -46,13 +45,10 @@ export type ExecutorOptions = {
   isSubprocess?: boolean;
   /** Timeout for preparing activity - creating and deploy commands */
   activityPreparingTimeout?: number;
-} & MarketOptions &
-  ActivityOptions &
-  AgreementOptions &
-  PaymentOptions &
-  DemandOptions &
-  Omit<PackageOptions, "imageHash" | "imageTag"> &
+} & Omit<PackageOptions, "imageHash" | "imageTag"> &
+  MarketOptions &
   TaskOptions &
+  PaymentOptions &
   NetworkServiceOptions &
   AgreementServiceOptions &
   Omit<WorkOptions, "isRunning">;
@@ -109,7 +105,7 @@ export class TaskExecutor {
    * ```js
    * const executor = await TaskExecutor.create({
    *   subnetTag: "public",
-   *   payment: { driver: "erc-20", network: "rinkeby" },
+   *   payment: { driver: "erc-20", network: "goerli" },
    *   package: "golem/alpine:3.18.2",
    * });
    * ```
@@ -283,7 +279,7 @@ export class TaskExecutor {
    * @example
    * ```typescript
    * const data = [1, 2, 3, 4, 5];
-   * const results = executor.map(data, (ctx, item) => providerCtx.ctx(`echo "${item}"`));
+   * const results = executor.map(data, (ctx, item) => ctx.run(`echo "${item}"`));
    * for await (const result of results) console.log(result.stdout);
    * ```
    */
@@ -331,7 +327,7 @@ export class TaskExecutor {
    * ```typescript
    * const data = [1, 2, 3, 4, 5];
    * await executor.forEach(data, async (ctx, item) => {
-   *     console.log((await ctx.run(`echo "${item}"`).stdout));
+   *     console.log((await ctx.run(`echo "${item}"`)).stdout);
    * });
    * ```
    */
