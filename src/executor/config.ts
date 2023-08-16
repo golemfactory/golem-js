@@ -12,6 +12,7 @@ const DEFAULTS = Object.freeze({
   maxParallelTasks: 5,
   taskTimeout: 1000 * 60 * 5, // 5 min,
   maxTaskRetries: 3,
+  enableLogging: true,
 });
 
 /**
@@ -68,7 +69,13 @@ export class ExecutorConfig {
     this.taskTimeout = options.taskTimeout || DEFAULTS.taskTimeout;
     this.subnetTag = options.subnetTag || processEnv.env?.YAGNA_SUBNET || DEFAULTS.subnetTag;
     this.networkIp = options.networkIp;
-    this.logger = options.logger || (!runtimeContextChecker.isBrowser ? defaultLogger() : undefined);
+    this.logger = (() => {
+      const isLoggingEnabled = options.enableLogging ?? DEFAULTS.enableLogging;
+      if (!isLoggingEnabled) return undefined;
+      if (options.logger) return options.logger;
+      if (!runtimeContextChecker.isBrowser) return defaultLogger();
+      return undefined;
+    })();
     this.logLevel = options.logLevel || DEFAULTS.logLevel;
     this.logger?.setLevel && this.logger?.setLevel(this.logLevel);
     this.eventTarget = options.eventTarget || new EventTarget();
