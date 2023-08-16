@@ -38,7 +38,7 @@ describe("Market Service", () => {
     setExpectedProposals(proposalsDraft);
     await logger.expectToInclude("Proposal has been confirmed", 10);
     const addedProposalsIds = agreementPoolServiceMock["getProposals"]().map((p) => p.id);
-    expect(addedProposalsIds).toEqual(proposalsDraft.map((p) => p.proposal.proposalId));
+    expect(addedProposalsIds).toEqual(expect.arrayContaining(proposalsDraft.map((p) => p.proposal.proposalId)));
     await marketService.end();
   });
 

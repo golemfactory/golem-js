@@ -8,7 +8,7 @@ import { Agent } from "http";
 const DEFAULTS = {
   activityRequestTimeout: 10000,
   activityExecuteTimeout: 1000 * 60 * 5, // 5 min,
-  activityExeBatchResultsFetchInterval: 3000,
+  activityExeBatchResultsFetchInterval: 20000,
 };
 
 /**
