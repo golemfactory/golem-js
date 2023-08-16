@@ -8,7 +8,7 @@ const DEFAULTS = {
   subnetTag: "public",
   marketTimeout: 1000 * 60 * 3, // 3 min,
   maxOfferEvents: 10,
-  offerFetchingInterval: 10000,
+  offerFetchingInterval: 20000,
   marketOfferExpiration: 1000 * 60 * 30, // 30 min
   debitNotesAcceptanceTimeout: 30,
   proposalFilter: acceptAllProposalFilter(),

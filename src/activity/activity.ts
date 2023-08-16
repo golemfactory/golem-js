@@ -173,7 +173,7 @@ export class Activity {
     const maxRetries = 5;
     const { id: activityId, agreementId } = this;
     const isRunning = () => this.isRunning;
-    const { activityExecuteTimeout, activityExeBatchResultsFetchInterval, eventTarget } = this.options;
+    const { activityExecuteTimeout, eventTarget } = this.options;
     const api = this.yagnaApi.activity;
     const handleError = this.handleError.bind(this);
     return new Readable({
@@ -193,6 +193,11 @@ export class Activity {
             const { data: results }: { data: Result[] } = (await api.control.getExecBatchResults(
               activityId,
               batchId,
+              undefined,
+              activityExecuteTimeout / 1000,
+              {
+                timeout: 0,
+              },
             )) as unknown as { data: Result[] };
             retryCount = 0;
             const newResults = results.slice(lastIndex + 1);
@@ -203,7 +208,6 @@ export class Activity {
                 lastIndex = result.index;
               });
             }
-            if (!isBatchFinished) await sleep(activityExeBatchResultsFetchInterval, true);
           } catch (error) {
             try {
               retryCount = await handleError(error, lastIndex, retryCount, maxRetries);
