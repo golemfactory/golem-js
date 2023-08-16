@@ -66,7 +66,7 @@ export class Payments extends EventTarget {
         });
       for (const event of invoiceEvents) {
         if (event.eventType !== "InvoiceReceivedEvent") continue;
-        const invoice = await Invoice.create(event["invoiceId"], this.yagnaApi, { ...this.options.options }).catch(
+        const invoice = await Invoice.create(event["invoiceId"], this.yagnaApi, { ...this.options }).catch(
           (e) =>
             this.logger?.error(
               `Unable to create invoice ID: ${event["invoiceId"]}. ${e?.response?.data?.message || e}`,
@@ -96,7 +96,7 @@ export class Payments extends EventTarget {
         });
       for (const event of debitNotesEvents) {
         if (event.eventType !== "DebitNoteReceivedEvent") continue;
-        const debitNote = await DebitNote.create(event["debitNoteId"], this.yagnaApi, this.options.options).catch(
+        const debitNote = await DebitNote.create(event["debitNoteId"], this.yagnaApi, this.options).catch(
           (e) =>
             this.logger?.error(
               `Unable to create debit note ID: ${event["debitNoteId"]}. ${e?.response?.data?.message || e}`,

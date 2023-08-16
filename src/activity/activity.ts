@@ -28,7 +28,6 @@ export interface ExeScriptRequest {
 }
 
 export interface ActivityOptions {
-  yagnaApi: YagnaApi;
   /** timeout for sending and creating batch */
   activityRequestTimeout?: number;
   /** timeout for executing batch */

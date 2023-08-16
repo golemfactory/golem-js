@@ -36,7 +36,7 @@ export class DemandFactory {
       }),
     );
     this.options.logger?.info(`Demand published on the market`);
-    return new Demand(id, demandRequest, this.options);
+    return new Demand(id, demandRequest, this.yagnaApi, this.options);
   }
 
   private async getDecorations(): Promise<MarketDecoration[]> {

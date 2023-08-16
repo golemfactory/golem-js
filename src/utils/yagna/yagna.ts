@@ -41,6 +41,10 @@ export class Yagna {
     this.api = this.createApi();
   }
 
+  getApi(): YagnaApi {
+    return this.api;
+  }
+
   async connect(): Promise<YagnaApi> {
     await this.api.identity.getIdentity();
     return this.api;
