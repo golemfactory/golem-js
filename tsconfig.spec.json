@@ -17,17 +17,6 @@
     "outDir": "dist",
     "typeRoots": ["node_modules/@types"]
   },
-  "typedocOptions": {
-    "entryPoints": ["yajsapi"],
-    "exclude": ["**/*.spec.ts", "yajsapi/stats/*.ts"],
-    "entryPointStrategy": "expand",
-    "out": "docs",
-    "sort": "static-first",
-    "excludePrivate": true,
-    "name": "JavaScript API reference",
-    "categorizeByGroup": false,
-    "excludeExternals": true,
-    "excludeInternal": true
-  },
-  "exclude": ["dist", "node_modules", "examples", "tests", "cypress.config.ts", "**/*.spec.ts"]
+  "exclude": ["dist", "node_modules", "examples", "cypress.config.ts"],
+  "include": ["yajsapi/**/*.spec.ts", "tests/unit/**/*.test.ts", "tests/unit/**/*.spec.ts"]
 }

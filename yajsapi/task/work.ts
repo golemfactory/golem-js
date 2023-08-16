@@ -1,4 +1,4 @@
-import { Activity, Result } from "../activity";
+import { Activity, ActivityStateEnum, Result, ResultState } from "../activity";
 import {
   Capture,
   Command,
@@ -12,8 +12,7 @@ import {
   UploadFile,
 } from "../script";
 import { NullStorageProvider, StorageProvider } from "../storage";
-import { ActivityStateEnum } from "../activity";
-import { sleep, Logger } from "../utils";
+import { Logger, sleep } from "../utils";
 import { Batch } from "./batch";
 import { NetworkNode } from "../network";
 
@@ -108,16 +107,34 @@ export class WorkContext {
     }
     if (this.options?.initWorker) await this.options?.initWorker(this, undefined);
   }
-  async run(...args: Array<string | string[] | CommandOptions>): Promise<Result> {
-    const options: CommandOptions | undefined =
-      typeof args?.[1] === "object" ? <CommandOptions>args?.[1] : <CommandOptions>args?.[2];
-    const command =
-      args.length === 1
-        ? new Run("/bin/sh", ["-c", <string>args[0]], options?.env, options?.capture)
-        : new Run(<string>args[0], <string[]>args[1], options?.env, options?.capture);
 
-    return this.runOneCommand(command, options);
+  /**
+   * Execute a command on provider using a shell (/bin/sh).
+   *
+   * @param commandLine Shell command to execute.
+   * @param options Additional run options.
+   */
+  async run(commandLine: string, options?: CommandOptions): Promise<Result>;
+
+  /**
+   * Execute an executable on provider.
+   *
+   * @param executable Executable to run.
+   * @param args Executable arguments.
+   * @param options Additional run options.
+   */
+  async run(executable: string, args: string[], options?: CommandOptions): Promise<Result>;
+  async run(exeOrCmd: string, argsOrOptions?: string[] | CommandOptions, options?: CommandOptions): Promise<Result> {
+    const isArray = Array.isArray(argsOrOptions);
+
+    const run = isArray
+      ? new Run(exeOrCmd, argsOrOptions as string[], options?.env, options?.capture)
+      : new Run("/bin/sh", ["-c", exeOrCmd], argsOrOptions?.env, argsOrOptions?.capture);
+    const runOptions = isArray ? options : (argsOrOptions as CommandOptions);
+
+    return this.runOneCommand(run, runOptions);
   }
+
   async uploadFile(src: string, dst: string, options?: CommandOptions): Promise<Result> {
     return this.runOneCommand(new UploadFile(this.storageProvider, src, dst), options);
   }
@@ -127,9 +144,11 @@ export class WorkContext {
     const src = new TextEncoder().encode(JSON.stringify(json));
     return this.runOneCommand(new UploadData(this.storageProvider, src, dst), options);
   }
+
   uploadData(data: Uint8Array, dst: string, options?: CommandOptions): Promise<Result> {
     return this.runOneCommand(new UploadData(this.storageProvider, data, dst), options);
   }
+
   downloadFile(src: string, dst: string, options?: CommandOptions): Promise<Result> {
     return this.runOneCommand(new DownloadFile(this.storageProvider, src, dst), options);
   }
@@ -141,7 +160,7 @@ export class WorkContext {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async downloadJson(src: string, options?: CommandOptions): Promise<Result<any>> {
     const result = await this.downloadData(src, options);
-    if (result.result !== "Ok") {
+    if (result.result !== ResultState.OK) {
       return {
         ...result,
         data: undefined,
@@ -157,9 +176,14 @@ export class WorkContext {
   beginBatch() {
     return Batch.create(this.activity, this.storageProvider, this.logger);
   }
+
+  /**
+   * @Deprecated This function is only used to throw errors from unit tests. It should be removed.
+   */
   rejectResult(msg: string) {
     throw new Error(`Work rejected. Reason: ${msg}`);
   }
+
   getWebsocketUri(port: number): string {
     if (!this.networkNode) throw new Error("There is no network in this work context");
     return this.networkNode?.getWebsocketUri(port);
@@ -170,6 +194,7 @@ export class WorkContext {
   }
 
   private async runOneCommand<T>(command: Command<T>, options?: CommandOptions): Promise<Result<T>> {
+    // Initialize script.
     const script = new Script([command]);
     await script.before().catch((e) => {
       throw new Error(
@@ -179,6 +204,8 @@ export class WorkContext {
       );
     });
     await sleep(100, true);
+
+    // Send script.
     const results = await this.activity.execute(script.getExeScriptRequest(), false, options?.timeout).catch((e) => {
       throw new Error(
         `Script execution failed for command: ${JSON.stringify(command.toJson())}. ${
@@ -186,9 +213,13 @@ export class WorkContext {
         }`,
       );
     });
+
+    // Process result.
     let allResults: Result<T>[] = [];
     for await (const result of results) allResults.push(result);
     allResults = (await script.after(allResults)) as Result<T>[];
+
+    // Handle errors.
     const commandsErrors = allResults.filter((res) => res.result === "Error");
     if (commandsErrors.length) {
       const errorMessage = commandsErrors
@@ -196,6 +227,7 @@ export class WorkContext {
         .join(". ");
       this.logger?.warn(`Task error on provider ${this.provider?.name || "'unknown'"}. ${errorMessage}`);
     }
+
     return allResults[0];
   }
 }
