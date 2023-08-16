@@ -1,6 +1,6 @@
-import { Activity, ActivityConfig, ActivityStateEnum, Result, ResultState } from "../../yajsapi/activity";
-import { Events, nullLogger } from "../../yajsapi";
-import { ExeScriptRequest } from "../../yajsapi/activity/activity";
+import { Activity, ActivityConfig, ActivityStateEnum, Result, ResultState } from "../../src/activity";
+import { Events, nullLogger } from "../../src";
+import { ExeScriptRequest } from "../../src/activity/activity";
 import { Readable } from "stream";
 
 export class ActivityMock extends Activity {

@@ -1,4 +1,4 @@
-import { ComparisonOperator, DecorationsBuilder } from "../../yajsapi/market/builder";
+import { ComparisonOperator, DecorationsBuilder } from "../../src/market/builder";
 
 describe("#DecorationsBuilder()", () => {
   describe("addProperty()", () => {

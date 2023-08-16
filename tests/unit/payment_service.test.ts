@@ -1,6 +1,6 @@
 import { setExpectedDebitNotes, setExpectedEvents, setExpectedInvoices, clear } from "../mock/rest/payment";
 import { LoggerMock } from "../mock";
-import { PaymentService, Allocation, PaymentFilters } from "../../yajsapi/payment";
+import { PaymentService, Allocation, PaymentFilters } from "../../src/payment";
 import { agreement } from "../mock/entities/agreement";
 import { debitNotesEvents, debitNotes, invoices, invoiceEvents } from "../mock/fixtures";
 
@@ -13,26 +13,19 @@ describe("Payment Service", () => {
   });
 
   describe("Allocations", () => {
-    it("should creating allocations for available accounts", async () => {
+    it("should create allocation", async () => {
       const paymentService = new PaymentService();
-      const allocations = await paymentService.createAllocations();
-      expect(allocations[0]).toBeInstanceOf(Allocation);
+      const allocation = await paymentService.createAllocation();
+      expect(allocation).toBeInstanceOf(Allocation);
       await paymentService.end();
     });
 
-    it("should not creating allocations if there are no available accounts", async () => {
-      const paymentService = new PaymentService({ payment: { network: "test2", driver: "test2" } });
-      await expect(paymentService.createAllocations()).rejects.toThrow(
-        "Unable to create allocation for driver/network test2/test2. There is no requestor account supporting this platform.",
-      );
-      await paymentService.end();
-    });
-
-    it("should release all created allocations when service stopped", async () => {
+    it("should release created allocation when service stopped", async () => {
       const paymentService = new PaymentService({ logger });
-      await paymentService.createAllocations();
+      const allocation = await paymentService.createAllocation();
+      const releaseSpy = jest.spyOn(allocation, "release");
       await paymentService.end();
-      expect(logger.logs).toContain("All allocations has been released");
+      expect(releaseSpy).toHaveBeenCalled();
     });
   });
 
@@ -46,7 +39,7 @@ describe("Payment Service", () => {
       });
       setExpectedEvents(invoiceEvents);
       setExpectedInvoices(invoices);
-      await paymentService.createAllocations();
+      await paymentService.createAllocation();
       await paymentService.run();
       paymentService.acceptPayments(agreement);
       await new Promise((res) => setTimeout(res, 200));
@@ -63,7 +56,7 @@ describe("Payment Service", () => {
       });
       setExpectedEvents(debitNotesEvents);
       setExpectedDebitNotes(debitNotes);
-      await paymentService.createAllocations();
+      await paymentService.createAllocation();
       await paymentService.run();
       await paymentService.acceptDebitNotes(agreement.id);
       await logger.expectToInclude(`Debit Note accepted for agreement ${agreement.id}`, 100);
@@ -81,7 +74,7 @@ describe("Payment Service", () => {
       });
       setExpectedEvents(debitNotesEvents);
       setExpectedDebitNotes(debitNotes);
-      await paymentService.createAllocations();
+      await paymentService.createAllocation();
       await paymentService.run();
       await paymentService.acceptDebitNotes(agreement.id);
       await logger.expectToInclude(
@@ -102,7 +95,7 @@ describe("Payment Service", () => {
       });
       setExpectedEvents(invoiceEvents);
       setExpectedInvoices(invoices);
-      await paymentService.createAllocations();
+      await paymentService.createAllocation();
       await paymentService.run();
       paymentService.acceptPayments(agreement);
       await new Promise((res) => setTimeout(res, 200));
@@ -123,7 +116,7 @@ describe("Payment Service", () => {
       });
       setExpectedEvents(debitNotesEvents);
       setExpectedDebitNotes(debitNotes);
-      await paymentService.createAllocations();
+      await paymentService.createAllocation();
       await paymentService.run();
       await paymentService.acceptDebitNotes(agreement.id);
       await logger.expectToInclude(
@@ -143,7 +136,7 @@ describe("Payment Service", () => {
       });
       setExpectedEvents(invoiceEvents);
       setExpectedInvoices(invoices);
-      await paymentService.createAllocations();
+      await paymentService.createAllocation();
       await paymentService.run();
       paymentService.acceptPayments(agreement);
       await new Promise((res) => setTimeout(res, 200));
@@ -164,7 +157,7 @@ describe("Payment Service", () => {
       });
       setExpectedEvents(debitNotesEvents);
       setExpectedDebitNotes(debitNotes);
-      await paymentService.createAllocations();
+      await paymentService.createAllocation();
       await paymentService.run();
       await paymentService.acceptDebitNotes(agreement.id);
       await logger.expectToInclude(`Debit Note accepted for agreement ${agreement.id}`, 100);
@@ -181,7 +174,7 @@ describe("Payment Service", () => {
       });
       setExpectedEvents(invoiceEvents);
       setExpectedInvoices(invoices);
-      await paymentService.createAllocations();
+      await paymentService.createAllocation();
       await paymentService.run();
       paymentService.acceptPayments(agreement);
       await new Promise((res) => setTimeout(res, 200));

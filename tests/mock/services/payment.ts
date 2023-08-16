@@ -1,17 +1,17 @@
-import { Allocation } from "../../../yajsapi/payment/allocation";
-import { PaymentService } from "../../../yajsapi/payment";
+import { Allocation } from "../../../src/payment/allocation";
+import { PaymentService } from "../../../src/payment";
 import { allocationMock } from "../../mock";
-import { Agreement } from "../../../yajsapi/agreement";
+import { Agreement } from "../../../src/agreement";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 export const paymentServiceMock: PaymentService = {
-  async createAllocations(
+  async createAllocation(
     budget?,
     payment?: { driver: string; network: string },
     timeout?: number,
-  ): Promise<Allocation[]> {
-    return Promise.resolve([allocationMock]);
+  ): Promise<Allocation> {
+    return Promise.resolve(allocationMock);
   },
   acceptPayments(agreement: Agreement) {
     return true;

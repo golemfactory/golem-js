@@ -17,11 +17,11 @@ import ignore from "rollup-plugin-ignore";
 export default [
   // Browser
   {
-    input: "yajsapi/index.ts",
+    input: "src/index.ts",
     output: {
       inlineDynamicImports: true,
       file: pkg.browser,
-      name: "yajsapi",
+      name: "GolemJs",
       sourcemap: true,
       format: "es",
     },
@@ -43,11 +43,20 @@ export default [
       json(), // Required because one our dependencies (bottleneck) loads its own 'version.json'
       typescript({ tsconfig: "./tsconfig.json" }),
       terser({ keep_classnames: true }),
+      {
+        // Temporary workaround  https://github.com/rollup/rollup/issues/4213
+        closeBundle() {
+          if (!process.env.ROLLUP_WATCH) {
+            setTimeout(() => process.exit(0));
+          }
+        },
+        name: "force-close",
+      },
     ],
   },
   // NodeJS
   {
-    input: "yajsapi/index.ts",
+    input: "src/index.ts",
     output: [
       { file: pkg.main, format: "cjs", sourcemap: true },
       { file: pkg.module, format: "es", sourcemap: true },
