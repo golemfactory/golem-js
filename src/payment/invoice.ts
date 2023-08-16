@@ -2,6 +2,7 @@ import { BasePaymentOptions, InvoiceConfig } from "./config";
 import { Invoice as Model, InvoiceStatus } from "ya-ts-client/dist/ya-payment/src/models";
 import { Events } from "../events";
 import { Rejection } from "./rejection";
+import { YagnaApi } from "../utils";
 
 export type InvoiceOptions = BasePaymentOptions;
 
@@ -89,22 +90,25 @@ export class Invoice extends BaseNote<Model> {
    * Create invoice using invoice ID
    *
    * @param invoiceId - Invoice ID
+   * @param yagnaApi - {@link YagnaApi}
    * @param options - {@link InvoiceOptions}
    */
-  static async create(invoiceId: string, options?: InvoiceOptions): Promise<Invoice> {
+  static async create(invoiceId: string, yagnaApi: YagnaApi, options?: InvoiceOptions): Promise<Invoice> {
     const config = new InvoiceConfig(options);
-    const { data: model } = await config.api.getInvoice(invoiceId);
-    return new Invoice(model, config);
+    const { data: model } = await yagnaApi.payment.getInvoice(invoiceId);
+    return new Invoice(model, yagnaApi, config);
   }
 
   /**
    * @param model
+   * @param yagnaApi
    * @param options
    * @protected
    * @hidden
    */
   protected constructor(
     model: Model,
+    protected yagnaApi: YagnaApi,
     protected options: InvoiceConfig,
   ) {
     super(model, options);
@@ -149,7 +153,7 @@ export class Invoice extends BaseNote<Model> {
    */
   async accept(totalAmountAccepted: string, allocationId: string) {
     try {
-      await this.options.api.acceptInvoice(this.id, { totalAmountAccepted, allocationId });
+      await this.yagnaApi.payment.acceptInvoice(this.id, { totalAmountAccepted, allocationId });
     } catch (e) {
       const reason = e?.response?.data?.message || e;
       this.options.eventTarget?.dispatchEvent(
@@ -168,7 +172,7 @@ export class Invoice extends BaseNote<Model> {
   async reject(rejection: Rejection) {
     try {
       // TODO: not implemented by yagna !!!!
-      // await this.options.api.rejectInvoice(this.id, rejection);
+      // await this.yagnaApi.payment.rejectInvoice(this.id, rejection);
     } catch (e) {
       throw new Error(`Unable to reject invoice ${this.id} ${e?.response?.data?.message || e}`);
     } finally {
@@ -179,7 +183,7 @@ export class Invoice extends BaseNote<Model> {
   }
 
   protected async refreshStatus() {
-    const { data: model } = await this.options.api.getInvoice(this.id);
+    const { data: model } = await this.yagnaApi.payment.getInvoice(this.id);
     this.status = model.status;
   }
 }

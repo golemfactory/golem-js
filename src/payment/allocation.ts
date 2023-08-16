@@ -2,6 +2,7 @@ import { Allocation as Model, MarketDecoration } from "ya-ts-client/dist/ya-paym
 import { AllocationConfig, BasePaymentOptions } from "./config";
 import { Allocation as AllocationModel } from "ya-ts-client/dist/ya-payment/src/models/allocation";
 import { Events } from "../events";
+import { YagnaApi } from "../utils";
 
 /**
  * @hidden
@@ -34,9 +35,10 @@ export class Allocation {
   /**
    * Create allocation
    *
+   * @param yagnaApi - {@link YagnaApi}
    * @param options - {@link AllocationOptions}
    */
-  static async create(options: AllocationOptions): Promise<Allocation> {
+  static async create(yagnaApi: YagnaApi, options: AllocationOptions): Promise<Allocation> {
     const config = new AllocationConfig(options);
     const now = new Date();
     const model: AllocationModel = {
@@ -50,7 +52,7 @@ export class Allocation {
       spentAmount: "",
       allocationId: "",
     };
-    const { data: newModel } = await config.api.createAllocation(model).catch((error) => {
+    const { data: newModel } = await yagnaApi.payment.createAllocation(model).catch((error) => {
       throw new Error(
         `Could not create new allocation. ${error.response?.data?.message || error.response?.data || error}`,
       );
@@ -65,16 +67,18 @@ export class Allocation {
     config.logger?.debug(
       `Allocation ${newModel.allocationId} has been created for addrress ${config.account.address} using payment platform ${config.account.platform}`,
     );
-    return new Allocation(config, newModel);
+    return new Allocation(yagnaApi, config, newModel);
   }
 
   /**
+   * @param yagnaApi - {@link YagnaApi}
    * @param options - {@link AllocationConfig}
    * @param model - {@link Model}
    * @hidden
    */
   constructor(
-    private options: AllocationConfig,
+    private readonly yagnaApi: YagnaApi,
+    private readonly options: AllocationConfig,
     model: Model,
   ) {
     this.id = model.allocationId;
@@ -112,12 +116,9 @@ export class Allocation {
    * Release allocation
    */
   async release() {
-    await this.options.api
-      .releaseAllocation(this.id)
-      .catch((e) => {
-        throw new Error(`Could not release allocation. ${e.response?.data?.message || e}`);
-      })
-      .finally(() => this.options.httpAgent.destroy?.());
+    await this.yagnaApi.payment.releaseAllocation(this.id).catch((e) => {
+      throw new Error(`Could not release allocation. ${e.response?.data?.message || e}`);
+    });
     this.options?.logger?.debug(`Allocation ${this.id} has been released.`);
   }
 
@@ -127,14 +128,14 @@ export class Allocation {
    * @return {@link MarketDecoration}
    */
   async getDemandDecoration(): Promise<MarketDecoration> {
-    const { data: decoration } = await this.options.api.getDemandDecorations([this.id]).catch((e) => {
+    const { data: decoration } = await this.yagnaApi.payment.getDemandDecorations([this.id]).catch((e) => {
       throw new Error(`Unable to get demand decorations. ${e.response?.data?.message || e}`);
     });
     return decoration;
   }
 
   private async refresh() {
-    const { data } = await this.options.api.getAllocation(this.id).catch((e) => {
+    const { data } = await this.yagnaApi.payment.getAllocation(this.id).catch((e) => {
       throw new Error(`Could not get allocation data. ${e.response?.data || e}`);
     });
     this.remainingAmount = data.remainingAmount;

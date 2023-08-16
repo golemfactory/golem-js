@@ -3,6 +3,7 @@ import { Logger } from "../utils";
 import { YagnaOptions } from "../executor";
 import { NetworkConfig } from "./config";
 import { NetworkNode } from "./node";
+import { YagnaApi } from "../utils/yagna/yagna";
 
 /**
  * @hidden
@@ -53,20 +54,20 @@ export class Network {
    *
    * @param options - {@link NetworkOptions}
    */
-  static async create(options: NetworkOptions): Promise<Network> {
+  static async create(yagnaApi: YagnaApi, options: NetworkOptions): Promise<Network> {
     const config = new NetworkConfig(options);
     try {
       const {
         data: { id, ip, mask },
-      } = await config.api.createNetwork({
+      } = await yagnaApi.net.createNetwork({
         id: config.ownerId,
         ip: config.ip,
         mask: config.mask,
         gateway: config.gateway,
       });
-      const network = new Network(id!, config);
+      const network = new Network(id!, yagnaApi, config);
       await network.addNode(network.ownerId, network.ownerIp.toString()).catch(async (e) => {
-        await config.api.removeNetwork(id as string);
+        await yagnaApi.net.removeNetwork(id as string);
         throw e;
       });
       config.logger?.info(`Network created: ID: ${id}, IP: ${ip}, Mask: ${mask}`);
@@ -78,12 +79,14 @@ export class Network {
 
   /**
    * @param id
+   * @param yagnaApi
    * @param config
    * @private
    * @hidden
    */
   private constructor(
     public readonly id: string,
+    private readonly yagnaApi: YagnaApi,
     public readonly config: NetworkConfig,
   ) {
     this.ipRange = IPv4CidrRange.fromCidr(config.mask ? `${config.ip}/${config.mask}` : config.ip);
@@ -130,7 +133,7 @@ export class Network {
     }
     const node = new NetworkNode(nodeId, ipv4, this.getNetworkInfo.bind(this), this.getUrl());
     this.nodes.set(nodeId, node);
-    await this.config.api.addNode(this.id, { id: nodeId, ip: ipv4.toString() });
+    await this.yagnaApi.net.addNode(this.id, { id: nodeId, ip: ipv4.toString() });
     this.logger?.debug(`Node has added to the network. ID: ${nodeId}, IP: ${ipv4.toString()}`);
     return node;
   }
@@ -140,13 +143,11 @@ export class Network {
    */
   async remove(): Promise<boolean> {
     try {
-      await this.config.api.removeNetwork(this.id);
+      await this.yagnaApi.net.removeNetwork(this.id);
     } catch (error) {
       if (error.status === 404)
         this.logger?.warn(`Tried removing a network which doesn't exist. Network ID: ${this.id}`);
       return false;
-    } finally {
-      this.config.httpAgent.destroy?.();
     }
     this.logger?.info(`Network has removed: ID: ${this.id}, IP: ${this.ip}`);
     return true;
@@ -183,6 +184,6 @@ export class Network {
   }
 
   private getUrl() {
-    return this.config.apiUrl;
+    return this.yagnaApi.net["basePath"];
   }
 }

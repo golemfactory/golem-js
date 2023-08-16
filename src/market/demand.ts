@@ -9,6 +9,7 @@ import { Events } from "../events";
 import { ProposalEvent, ProposalRejectedEvent } from "ya-ts-client/dist/ya-market/src/models";
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
 import * as events from "../events/events";
+import { YagnaApi } from "../utils/yagna/yagna";
 
 export interface DemandDetails {
   properties: Array<{ key: string; value: string | number | boolean }>;
@@ -49,24 +50,32 @@ export class Demand extends EventTarget {
    * Create demand for given taskPackage
    * Note: it is an "atomic" operation, ie. as soon as Demand is created, the subscription is published on the market.
    * @param taskPackage - {@link Package}
-   * @param allocations - {@link Allocation}
+   * @param allocation - {@link Allocation}
+   * @param yagnaApi - {@link YagnaApi}
    * @param options - {@link DemandOptions}
    * @return Demand
    */
-  static async create(taskPackage: Package, allocation: Allocation, options?: DemandOptions): Promise<Demand> {
-    const factory = new DemandFactory(taskPackage, allocation, options);
+  static async create(
+    taskPackage: Package,
+    allocation: Allocation,
+    yagnaApi: YagnaApi,
+    options?: DemandOptions,
+  ): Promise<Demand> {
+    const factory = new DemandFactory(taskPackage, allocation, yagnaApi, options);
     return factory.create();
   }
 
   /**
    * @param id - demand ID
    * @param demandRequest - {@link DemandOfferBase}
+   * @param yagnaApi - {@link YagnaApi}
    * @param options - {@link DemandConfig}
    * @hidden
    */
   constructor(
     public readonly id: string,
     private demandRequest: DemandOfferBase,
+    private yagnaApi: YagnaApi,
     private options: DemandConfig,
   ) {
     super();
@@ -79,9 +88,8 @@ export class Demand extends EventTarget {
    */
   async unsubscribe() {
     this.isRunning = false;
-    await this.options.api.unsubscribeDemand(this.id);
+    await this.yagnaApi.market.unsubscribeDemand(this.id);
     this.options.eventTarget?.dispatchEvent(new events.DemandUnsubscribed({ id: this.id }));
-    this.options.httpAgent.destroy?.();
     this.logger?.debug(`Demand ${this.id} unsubscribed`);
   }
 
@@ -102,7 +110,7 @@ export class Demand extends EventTarget {
   private async subscribe() {
     while (this.isRunning) {
       try {
-        const { data: events } = await this.options.api.collectOffers(this.id, 3, this.options.maxOfferEvents, {
+        const { data: events } = await this.yagnaApi.market.collectOffers(this.id, 3, this.options.maxOfferEvents, {
           timeout: 5000,
         });
         for (const event of events as Array<ProposalEvent & ProposalRejectedEvent>) {
@@ -121,7 +129,7 @@ export class Demand extends EventTarget {
             this.id,
             event.proposal.state === "Draft" ? this.findParentProposal(event.proposal.prevProposalId) : null,
             this.setCounteringProposalReference.bind(this),
-            this.options.api,
+            this.yagnaApi.market,
             event.proposal,
             this.demandRequest,
             this.options.eventTarget,

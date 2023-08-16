@@ -1,6 +1,7 @@
 import { Activity, ActivityOptions } from "./activity";
 import { ActivityConfig } from "./config";
 import { Events } from "../events";
+import { YagnaApi } from "../utils/yagna/yagna";
 
 /**
  * Activity Factory
@@ -14,10 +15,12 @@ export class ActivityFactory {
    * Creating ActivityFactory
    *
    * @param agreementId
+   * @param yagnaApi
    * @param options - {@link ActivityOptions}
    */
   constructor(
     private readonly agreementId: string,
+    private readonly yagnaApi: YagnaApi,
     options?: ActivityOptions,
   ) {
     this.options = new ActivityConfig(options);
@@ -35,7 +38,7 @@ export class ActivityFactory {
       if (secure) {
         throw new Error("Not implemented");
       }
-      return this.createActivity(this.agreementId, this.options);
+      return this.createActivity();
     } catch (error) {
       const msg = `Unable to create activity: ${error?.response?.data?.message || error}`;
       this.options.logger?.error(msg);
@@ -43,11 +46,11 @@ export class ActivityFactory {
     }
   }
 
-  private async createActivity(agreementId: string, options: ActivityConfig): Promise<Activity> {
-    const { data } = await this.options.api.control.createActivity({ agreementId });
+  private async createActivity(): Promise<Activity> {
+    const { data } = await this.yagnaApi.activity.control.createActivity({ agreementId: this.agreementId });
     const id = typeof data == "string" ? data : data.activityId;
     this.options.logger?.debug(`Activity ${id} created`);
-    this.options.eventTarget?.dispatchEvent(new Events.ActivityCreated({ id, agreementId }));
-    return new Activity(id, agreementId, options);
+    this.options.eventTarget?.dispatchEvent(new Events.ActivityCreated({ id, agreementId: this.agreementId }));
+    return new Activity(id, this.agreementId, this.yagnaApi, this.options);
   }
 }

@@ -3,9 +3,10 @@ import { RequestorApi as MarketRequestorApi } from "ya-ts-client/dist/ya-market/
 import { RequestorApi as NetworkRequestorApi } from "ya-ts-client/dist/ya-net/api";
 import { RequestorApi as PaymentRequestorApi } from "ya-ts-client/dist/ya-payment/api";
 import { RequestorApi as IdentityRequestorApi } from "./identity";
+import { RequestorApi as GsbRequestorApi } from "./gsb";
 import { Agent } from "http";
 import { Configuration } from "ya-ts-client/dist/ya-payment";
-import { EnvUtils } from "./env";
+import { EnvUtils } from "../env";
 import { AxiosError } from "axios";
 
 export type YagnaApi = {
@@ -14,6 +15,8 @@ export type YagnaApi = {
   net: NetworkRequestorApi;
   payment: PaymentRequestorApi;
   identity: IdentityRequestorApi;
+  gsb: GsbRequestorApi;
+  yagnaOptions: YagnaOptions;
 };
 
 export type YagnaOptions = {
@@ -23,13 +26,12 @@ export type YagnaOptions = {
 
 const CONNECTIONS_ERROR_CODES = ["ECONNREFUSED"];
 
-export class YagnaConnection {
+export class Yagna {
   private readonly httpAgent: Agent;
   private readonly controller: AbortController;
   private readonly apiKey: string;
   private readonly apiBaseUrl: string;
   private readonly api: YagnaApi;
-  private identity?: string;
   constructor(options?: YagnaOptions) {
     this.httpAgent = new Agent({ keepAlive: true });
     this.controller = new AbortController();
@@ -40,19 +42,13 @@ export class YagnaConnection {
   }
 
   async connect(): Promise<YagnaApi> {
-    const { data } = await this.api.identity.getIdentity();
-    this.identity = data.identity;
+    await this.api.identity.getIdentity();
     return this.api;
   }
 
   async end(): Promise<void> {
     this.controller.abort();
     this.httpAgent.destroy?.();
-  }
-
-  getIdentity(): string {
-    if (!this.identity) throw new Error("Yagna is not connected");
-    return this.identity;
   }
 
   private createApi(): YagnaApi {
@@ -66,6 +62,11 @@ export class YagnaConnection {
       net: new NetworkRequestorApi(apiConfig, this.getApiUrl("network")),
       payment: new PaymentRequestorApi(apiConfig, this.getApiUrl("payment")),
       identity: new IdentityRequestorApi(apiConfig, this.getApiUrl()),
+      gsb: new GsbRequestorApi(apiConfig, this.getApiUrl("gsb")),
+      yagnaOptions: {
+        apiKey: this.apiKey,
+        basePath: this.apiBaseUrl,
+      },
     };
     this.addErrorHandler(api);
     return api;
@@ -97,7 +98,7 @@ export class YagnaConnection {
   }
 
   private addErrorHandler(api: YagnaApi) {
-    // Ugly solution until Yagna binding is refactored,
+    // Ugly solution until Yagna binding is refactored or replaced,
     // and it will be possible to pass interceptors as the config params
     api.net["axios"].interceptors.response.use(undefined, this.errorHandler.bind(this));
     api.market["axios"].interceptors.response.use(undefined, this.errorHandler.bind(this));

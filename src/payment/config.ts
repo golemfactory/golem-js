@@ -1,12 +1,9 @@
 import { AllocationOptions } from "./allocation";
-import { Configuration } from "ya-ts-client/dist/ya-payment";
-import { RequestorApi } from "ya-ts-client/dist/ya-payment/api";
 import { EnvUtils, Logger } from "../utils";
 import { YagnaOptions } from "../executor";
 import { DebitNoteFilter, InvoiceFilter, PaymentOptions } from "./service";
 import { InvoiceOptions } from "./invoice";
 import { acceptAllDebitNotesFilter, acceptAllInvoicesFilter } from "./strategy";
-import { Agent } from "http";
 
 const DEFAULTS = Object.freeze({
   payment: { network: "goerli", driver: "erc20" },
@@ -37,28 +34,13 @@ export interface BasePaymentOptions {
  * @internal
  */
 abstract class BaseConfig {
-  public readonly yagnaOptions?: YagnaOptions;
   public readonly paymentTimeout: number;
-  public readonly api: RequestorApi;
   public readonly logger?: Logger;
   public readonly eventTarget?: EventTarget;
   public readonly payment: { driver: string; network: string };
   public readonly paymentRequestTimeout: number;
-  public readonly httpAgent: Agent;
 
-  constructor(public readonly options?: BasePaymentOptions) {
-    this.yagnaOptions = options?.yagnaOptions;
-    const apiKey = options?.yagnaOptions?.apiKey || EnvUtils.getYagnaAppKey();
-    if (!apiKey) throw new Error("Api key not defined");
-    const basePath = options?.yagnaOptions?.basePath || EnvUtils.getYagnaApiUrl();
-    this.httpAgent = new Agent({ keepAlive: true });
-    const apiConfig = new Configuration({
-      apiKey,
-      basePath: `${basePath}/payment-api/v1`,
-      accessToken: apiKey,
-      baseOptions: { httpAgent: this.httpAgent },
-    });
-    this.api = new RequestorApi(apiConfig);
+  constructor(options?: BasePaymentOptions) {
     this.paymentTimeout = options?.paymentTimeout || DEFAULTS.paymentTimeout;
     this.payment = {
       driver: options?.payment?.driver || DEFAULTS.payment.driver,
@@ -121,5 +103,3 @@ export class InvoiceConfig extends BaseConfig {
     super(options);
   }
 }
-
-export class AccountConfig extends BaseConfig {}
