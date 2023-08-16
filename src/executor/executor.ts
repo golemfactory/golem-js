@@ -30,6 +30,8 @@ export type ExecutorOptions = {
   logger?: Logger;
   /** Log level: debug, info, warn, log, error */
   logLevel?: LogLevel | string;
+  /** Set to `false` to completely disable logging (even if a logger is provided) */
+  enableLogging?: boolean;
   /** Yagna Options */
   yagnaOptions?: YagnaOptions;
   /** Event Bus implements EventTarget  */
