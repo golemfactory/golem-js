@@ -10,8 +10,9 @@ import {
   DebitNote,
   Acceptance,
 } from "ya-ts-client/dist/ya-payment/src/models";
-import { allocations, accounts, debitNotesEvents, debitNotes, invoiceEvents, invoices } from "../fixtures";
+import { allocations, debitNotesEvents, debitNotes, invoiceEvents, invoices } from "../fixtures";
 import { Rejection } from "ya-ts-client/dist/ya-payment/src/models";
+import { sleep } from "../../../src/utils";
 
 global.expectedEvents = [];
 global.expectedInvoices = [];
@@ -45,10 +46,6 @@ export class PaymentApiMock extends RequestorApi {
     return new Promise((res) => res({ data: { ...allocations[0], ...allocation } } as AxiosResponse));
   }
   // @ts-ignore
-  getRequestorAccounts(options?: AxiosRequestConfig): Promise<import("axios").AxiosResponse<Account[]>> {
-    return new Promise((res) => res({ data: accounts } as AxiosResponse));
-  }
-  // @ts-ignore
   releaseAllocation(allocationId: string, options?: AxiosRequestConfig): Promise<import("axios").AxiosResponse<void>> {
     return Promise.resolve({} as AxiosResponse);
   }
@@ -61,7 +58,10 @@ export class PaymentApiMock extends RequestorApi {
     appSessionId?: string,
     options?: AxiosRequestConfig,
   ): Promise<import("axios").AxiosResponse<InvoiceEvent[]>> {
-    return new Promise((res) => res({ data: global.expectedEvents } as AxiosResponse));
+    return new Promise(async (res) => {
+      await sleep(100, true);
+      res({ data: global.expectedEvents } as AxiosResponse);
+    });
   }
 
   // @ts-ignore
@@ -77,7 +77,10 @@ export class PaymentApiMock extends RequestorApi {
     appSessionId?: string,
     options?: AxiosRequestConfig,
   ): Promise<import("axios").AxiosResponse<DebitNoteEvent[]>> {
-    return new Promise((res) => res({ data: global.expectedEvents } as AxiosResponse));
+    return new Promise(async (res) => {
+      await sleep(100, true);
+      res({ data: global.expectedEvents } as AxiosResponse);
+    });
   }
 
   // @ts-ignore

@@ -1,7 +1,7 @@
 global.events = new Map();
 global.errorEvents = new Map();
 
-export default class EventSourceMock {
+export class EventSourceMock {
   private activityId: string;
   constructor(url) {
     const chunks = url?.split("/");

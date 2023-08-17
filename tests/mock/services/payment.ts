@@ -6,12 +6,12 @@ import { Agreement } from "../../../src/agreement";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 export const paymentServiceMock: PaymentService = {
-  async createAllocations(
+  async createAllocation(
     budget?,
     payment?: { driver: string; network: string },
     timeout?: number,
-  ): Promise<Allocation[]> {
-    return Promise.resolve([allocationMock]);
+  ): Promise<Allocation> {
+    return Promise.resolve(allocationMock);
   },
   acceptPayments(agreement: Agreement) {
     return true;

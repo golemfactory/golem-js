@@ -23,10 +23,9 @@ export interface MarketOptions extends DemandOptions {
 export class MarketService {
   private readonly options: MarketConfig;
   private demand?: Demand;
-  private allowedPaymentPlatforms: string[] = [];
+  private allocation?: Allocation;
   private logger?: Logger;
   private taskPackage?: Package;
-  private allocations?: Allocation[];
   private maxResubscribeRetries = 5;
 
   constructor(
@@ -37,12 +36,9 @@ export class MarketService {
     this.logger = this.options?.logger;
   }
 
-  async run(taskPackage: Package, allocations: Allocation[]) {
+  async run(taskPackage: Package, allocation: Allocation) {
     this.taskPackage = taskPackage;
-    this.allocations = allocations;
-    for (const allocation of allocations) {
-      if (allocation.paymentPlatform) this.allowedPaymentPlatforms.push(allocation.paymentPlatform);
-    }
+    this.allocation = allocation;
     await this.createDemand();
     this.logger?.debug("Market Service has started");
   }
@@ -57,9 +53,8 @@ export class MarketService {
   }
 
   private async createDemand(): Promise<true> {
-    if (!this.taskPackage) throw new Error("There is no defined Task Package");
-    if (!this.allocations) throw new Error("There is no defined Allocations");
-    this.demand = await Demand.create(this.taskPackage, this.allocations, this.options);
+    if (!this.taskPackage || !this.allocation) throw new Error("The service has not been started correctly.");
+    this.demand = await Demand.create(this.taskPackage, this.allocation, this.options);
     this.demand.addEventListener(DemandEventType, this.demandEventListener.bind(this));
     this.logger?.debug(`New demand has been created (${this.demand.id})`);
     return true;
@@ -67,8 +62,9 @@ export class MarketService {
 
   private demandEventListener(event: Event) {
     const proposal = (event as DemandEvent).proposal;
-    if ((event as DemandEvent).error) {
-      this.logger?.error("Subscription expired. Trying to subscribe a new one...");
+    const error = (event as DemandEvent).error;
+    if (error) {
+      this.logger?.error("Subscription failed. Trying to subscribe a new one...");
       this.resubscribeDemand().catch((e) => this.logger?.warn(e));
       return;
     }
@@ -93,11 +89,12 @@ export class MarketService {
   }
 
   private async processInitialProposal(proposal: Proposal) {
+    if (!this.allocation) throw new Error("The service has not been started correctly.");
     this.logger?.debug(`New proposal has been received (${proposal.id})`);
     try {
       const { result: isProposalValid, reason } = await this.isProposalValid(proposal);
       if (isProposalValid) {
-        const chosenPlatform = this.getCommonPaymentPlatforms(proposal.properties)![0];
+        const chosenPlatform = this.allocation.paymentPlatform;
         await proposal
           .respond(chosenPlatform)
           .catch((e) => this.logger?.debug(`Unable to respond proposal ${proposal.id}. ${e}`));
@@ -111,11 +108,12 @@ export class MarketService {
   }
 
   private async isProposalValid(proposal: Proposal): Promise<{ result: boolean; reason?: string }> {
+    if (!this.allocation) throw new Error("The service has not been started correctly.");
     const timeout = proposal.properties["golem.com.payment.debit-notes.accept-timeout?"];
     if (timeout && timeout < this.options.debitNotesAcceptanceTimeout)
       return { result: false, reason: "Debit note acceptance timeout too short" };
-    const commonPaymentPlatforms = this.getCommonPaymentPlatforms(proposal.properties);
-    if (!commonPaymentPlatforms?.length) return { result: false, reason: "No common payment platform" };
+    if (!proposal.hasPaymentPlatform(this.allocation.paymentPlatform))
+      return { result: false, reason: "No common payment platform" };
     if (!(await this.options.proposalFilter(proposal)))
       return { result: false, reason: "Proposal rejected by Proposal Filter" };
     return { result: true };
@@ -126,12 +124,5 @@ export class MarketService {
     this.logger?.debug(
       `Proposal has been confirmed with provider ${proposal.issuerId} and added to agreement pool (${proposal.id})`,
     );
-  }
-
-  private getCommonPaymentPlatforms(proposalProperties): string[] | undefined {
-    const providerPlatforms = Object.keys(proposalProperties)
-      .filter((prop) => prop.startsWith("golem.com.payment.platform."))
-      .map((prop) => prop.split(".")[4]) || ["NGNT"];
-    return this.allowedPaymentPlatforms.filter((p) => providerPlatforms.includes(p));
   }
 }

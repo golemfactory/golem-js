@@ -7,7 +7,6 @@ import { Events } from "../events";
 export interface PaymentOptions extends BasePaymentOptions {
   invoiceFetchingInterval?: number;
   debitNotesFetchingInterval?: number;
-  payingInterval?: number;
   maxInvoiceEvents?: number;
   maxDebitNotesEvents?: number;
 }
@@ -21,7 +20,7 @@ export class Payments extends EventTarget {
   private lastInvoiceFetchingTime: string = new Date().toISOString();
   private lastDebitNotesFetchingTime: string = new Date().toISOString();
   static async create(options?: PaymentOptions) {
-    return new Payments(new PaymentConfig(options));
+    return new Payments(options);
   }
 
   constructor(options?: PaymentOptions) {
@@ -36,85 +35,91 @@ export class Payments extends EventTarget {
    */
   async unsubscribe() {
     this.isRunning = false;
-    this.removeEventListener(PaymentEventType, null);
+    this.options.httpAgent.destroy?.();
     this.logger?.debug(`Payments unsubscribed`);
   }
 
   private async subscribe() {
     this.subscribeForInvoices().catch(
-      (e) => this.logger?.error(`Unable to collect invoices. ${e?.response?.data?.message || e}`),
+      (e) => this.logger?.debug(`Unable to collect invoices. ${e?.response?.data?.message || e}`),
     );
     this.subscribeForDebitNotes().catch(
-      (e) => this.logger?.error(`Unable to collect debit notes. ${e?.response?.data?.message || e}`),
+      (e) => this.logger?.debug(`Unable to collect debit notes. ${e?.response?.data?.message || e}`),
     );
   }
 
   private async subscribeForInvoices() {
     while (this.isRunning) {
-      const { data: invoiceEvents } = await this.options.api
-        .getInvoiceEvents(
-          this.options.paymentRequestTimeout / 1000,
+      try {
+        const { data: invoiceEvents } = await this.options.api.getInvoiceEvents(
+          this.options.invoiceFetchingInterval / 1000,
           this.lastInvoiceFetchingTime,
           this.options.maxInvoiceEvents,
-        )
-        .catch((e) => {
-          this.logger?.error(`Unable to collect invoices. ${e?.response?.data?.message || e}`);
-          return { data: [] };
-        });
-      for (const event of invoiceEvents) {
-        if (event.eventType !== "InvoiceReceivedEvent") continue;
-        const invoice = await Invoice.create(event["invoiceId"], { ...this.options.options }).catch(
-          (e) =>
-            this.logger?.error(
-              `Unable to create invoice ID: ${event["invoiceId"]}. ${e?.response?.data?.message || e}`,
-            ),
+          undefined,
+          { timeout: 0 },
         );
-        if (!invoice) continue;
-        this.dispatchEvent(new InvoiceEvent(PaymentEventType, invoice));
-        this.lastInvoiceFetchingTime = event.eventDate;
-        this.options.eventTarget?.dispatchEvent(new Events.InvoiceReceived(invoice));
-        this.logger?.debug(`New Invoice received for agreement ${invoice.agreementId}. Amount: ${invoice.amount}`);
+        for (const event of invoiceEvents) {
+          if (event.eventType !== "InvoiceReceivedEvent") continue;
+          const invoice = await Invoice.create(event["invoiceId"], { ...this.options.options }).catch(
+            (e) =>
+              this.logger?.error(
+                `Unable to create invoice ID: ${event["invoiceId"]}. ${e?.response?.data?.message || e}`,
+              ),
+          );
+          if (!invoice) continue;
+          this.dispatchEvent(new InvoiceEvent(PaymentEventType, invoice));
+          this.lastInvoiceFetchingTime = event.eventDate;
+          this.options.eventTarget?.dispatchEvent(new Events.InvoiceReceived(invoice));
+          this.logger?.debug(`New Invoice received for agreement ${invoice.agreementId}. Amount: ${invoice.amount}`);
+        }
+      } catch (error) {
+        const reason = error.response?.data?.message || error;
+        this.logger?.debug(`Unable to get invoices. ${reason}`);
+        await sleep(2);
       }
-      await sleep(this.options.invoiceFetchingInterval, true);
     }
   }
 
   private async subscribeForDebitNotes() {
     while (this.isRunning) {
-      const { data: debitNotesEvents } = await this.options.api
-        .getDebitNoteEvents(
-          this.options.paymentRequestTimeout / 1000,
-          this.lastDebitNotesFetchingTime,
-          this.options.maxDebitNotesEvents,
-        )
-        .catch((e) => {
-          this.logger?.error(`Unable to collect debit notes. ${e?.response?.data?.message || e}`);
-          return { data: [] };
-        });
-      for (const event of debitNotesEvents) {
-        if (event.eventType !== "DebitNoteReceivedEvent") continue;
-        const debitNote = await DebitNote.create(event["debitNoteId"], { ...this.options.options }).catch(
-          (e) =>
-            this.logger?.error(
-              `Unable to create debit note ID: ${event["debitNoteId"]}. ${e?.response?.data?.message || e}`,
-            ),
-        );
-        if (!debitNote) continue;
-        this.dispatchEvent(new DebitNoteEvent(PaymentEventType, debitNote));
-        this.lastDebitNotesFetchingTime = event.eventDate;
-        this.options.eventTarget?.dispatchEvent(
-          new Events.DebitNoteReceived({
-            id: debitNote.id,
-            agreementId: debitNote.agreementId,
-            activityId: debitNote.activityId,
-            amount: debitNote.totalAmountDue,
-          }),
-        );
-        this.logger?.debug(
-          `New Debit Note received for agreement ${debitNote.agreementId}. Amount: ${debitNote.totalAmountDue}`,
-        );
+      try {
+        const { data: debitNotesEvents } = await this.options.api
+          .getDebitNoteEvents(
+            this.options.debitNotesFetchingInterval / 1000,
+            this.lastDebitNotesFetchingTime,
+            this.options.maxDebitNotesEvents,
+            undefined,
+            { timeout: 0 },
+          )
+          .catch(() => ({ data: [] }));
+        for (const event of debitNotesEvents) {
+          if (event.eventType !== "DebitNoteReceivedEvent") continue;
+          const debitNote = await DebitNote.create(event["debitNoteId"], { ...this.options.options }).catch(
+            (e) =>
+              this.logger?.error(
+                `Unable to create debit note ID: ${event["debitNoteId"]}. ${e?.response?.data?.message || e}`,
+              ),
+          );
+          if (!debitNote) continue;
+          this.dispatchEvent(new DebitNoteEvent(PaymentEventType, debitNote));
+          this.lastDebitNotesFetchingTime = event.eventDate;
+          this.options.eventTarget?.dispatchEvent(
+            new Events.DebitNoteReceived({
+              id: debitNote.id,
+              agreementId: debitNote.agreementId,
+              activityId: debitNote.activityId,
+              amount: debitNote.totalAmountDue,
+            }),
+          );
+          this.logger?.debug(
+            `New Debit Note received for agreement ${debitNote.agreementId}. Amount: ${debitNote.totalAmountDue}`,
+          );
+        }
+      } catch (error) {
+        const reason = error.response?.data?.message || error;
+        this.logger?.debug(`Unable to get debit notes. ${reason}`);
+        await sleep(2);
       }
-      await sleep(this.options.debitNotesFetchingInterval, true);
     }
   }
 }

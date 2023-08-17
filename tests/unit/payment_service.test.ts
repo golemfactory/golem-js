@@ -13,26 +13,19 @@ describe("Payment Service", () => {
   });
 
   describe("Allocations", () => {
-    it("should creating allocations for available accounts", async () => {
+    it("should create allocation", async () => {
       const paymentService = new PaymentService();
-      const allocations = await paymentService.createAllocations();
-      expect(allocations[0]).toBeInstanceOf(Allocation);
+      const allocation = await paymentService.createAllocation();
+      expect(allocation).toBeInstanceOf(Allocation);
       await paymentService.end();
     });
 
-    it("should not creating allocations if there are no available accounts", async () => {
-      const paymentService = new PaymentService({ payment: { network: "test2", driver: "test2" } });
-      await expect(paymentService.createAllocations()).rejects.toThrow(
-        "Unable to create allocation for driver/network test2/test2. There is no requestor account supporting this platform.",
-      );
-      await paymentService.end();
-    });
-
-    it("should release all created allocations when service stopped", async () => {
+    it("should release created allocation when service stopped", async () => {
       const paymentService = new PaymentService({ logger });
-      await paymentService.createAllocations();
+      const allocation = await paymentService.createAllocation();
+      const releaseSpy = jest.spyOn(allocation, "release");
       await paymentService.end();
-      expect(logger.logs).toContain("All allocations has been released");
+      expect(releaseSpy).toHaveBeenCalled();
     });
   });
 
@@ -40,16 +33,14 @@ describe("Payment Service", () => {
     it("should accept and process invoice for agreement", async () => {
       const paymentService = new PaymentService({
         logger,
-        invoiceFetchingInterval: 10,
-        debitNotesFetchingInterval: 10,
-        payingInterval: 10,
+        paymentTimeout: 100,
       });
       setExpectedEvents(invoiceEvents);
       setExpectedInvoices(invoices);
-      await paymentService.createAllocations();
+      await paymentService.createAllocation();
       await paymentService.run();
       paymentService.acceptPayments(agreement);
-      await new Promise((res) => setTimeout(res, 200));
+      // await new Promise((res) => setTimeout(res, 200));
       await logger.expectToInclude(`Invoice accepted from provider ${agreement.provider.name}`, 100);
       await paymentService.end();
     });
@@ -57,13 +48,10 @@ describe("Payment Service", () => {
     it("should accept and process debit note for agreement", async () => {
       const paymentService = new PaymentService({
         logger,
-        invoiceFetchingInterval: 10,
-        debitNotesFetchingInterval: 10,
-        payingInterval: 10,
       });
       setExpectedEvents(debitNotesEvents);
       setExpectedDebitNotes(debitNotes);
-      await paymentService.createAllocations();
+      await paymentService.createAllocation();
       await paymentService.run();
       await paymentService.acceptDebitNotes(agreement.id);
       await logger.expectToInclude(`Debit Note accepted for agreement ${agreement.id}`, 100);
@@ -74,14 +62,11 @@ describe("Payment Service", () => {
       const alwaysRejectDebitNoteFilter = async () => false;
       const paymentService = new PaymentService({
         logger,
-        invoiceFetchingInterval: 10,
-        debitNotesFetchingInterval: 10,
-        payingInterval: 10,
         debitNotesFilter: alwaysRejectDebitNoteFilter,
       });
       setExpectedEvents(debitNotesEvents);
       setExpectedDebitNotes(debitNotes);
-      await paymentService.createAllocations();
+      await paymentService.createAllocation();
       await paymentService.run();
       await paymentService.acceptDebitNotes(agreement.id);
       await logger.expectToInclude(
@@ -95,14 +80,11 @@ describe("Payment Service", () => {
       const alwaysRejectInvoiceFilter = async () => false;
       const paymentService = new PaymentService({
         logger,
-        invoiceFetchingInterval: 10,
-        debitNotesFetchingInterval: 10,
-        payingInterval: 10,
         invoiceFilter: alwaysRejectInvoiceFilter,
       });
       setExpectedEvents(invoiceEvents);
       setExpectedInvoices(invoices);
-      await paymentService.createAllocations();
+      await paymentService.createAllocation();
       await paymentService.run();
       paymentService.acceptPayments(agreement);
       await new Promise((res) => setTimeout(res, 200));
@@ -116,14 +98,11 @@ describe("Payment Service", () => {
     it("should reject when debit note rejected by DebitNoteMaxAmount Filter", async () => {
       const paymentService = new PaymentService({
         logger,
-        invoiceFetchingInterval: 10,
-        debitNotesFetchingInterval: 10,
-        payingInterval: 10,
         debitNotesFilter: PaymentFilters.acceptMaxAmountDebitNoteFilter(0.00001),
       });
       setExpectedEvents(debitNotesEvents);
       setExpectedDebitNotes(debitNotes);
-      await paymentService.createAllocations();
+      await paymentService.createAllocation();
       await paymentService.run();
       await paymentService.acceptDebitNotes(agreement.id);
       await logger.expectToInclude(
@@ -136,14 +115,11 @@ describe("Payment Service", () => {
     it("should reject when invoice rejected by MaxAmountInvoice Filter", async () => {
       const paymentService = new PaymentService({
         logger,
-        invoiceFetchingInterval: 10,
-        debitNotesFetchingInterval: 10,
-        payingInterval: 10,
         invoiceFilter: PaymentFilters.acceptMaxAmountInvoiceFilter(0.00001),
       });
       setExpectedEvents(invoiceEvents);
       setExpectedInvoices(invoices);
-      await paymentService.createAllocations();
+      await paymentService.createAllocation();
       await paymentService.run();
       paymentService.acceptPayments(agreement);
       await new Promise((res) => setTimeout(res, 200));
@@ -157,14 +133,11 @@ describe("Payment Service", () => {
     it("should accept when debit note filtered by DebitNoteMaxAmount Filter", async () => {
       const paymentService = new PaymentService({
         logger,
-        invoiceFetchingInterval: 10,
-        debitNotesFetchingInterval: 10,
-        payingInterval: 10,
         debitNotesFilter: PaymentFilters.acceptMaxAmountDebitNoteFilter(7),
       });
       setExpectedEvents(debitNotesEvents);
       setExpectedDebitNotes(debitNotes);
-      await paymentService.createAllocations();
+      await paymentService.createAllocation();
       await paymentService.run();
       await paymentService.acceptDebitNotes(agreement.id);
       await logger.expectToInclude(`Debit Note accepted for agreement ${agreement.id}`, 100);
@@ -174,14 +147,11 @@ describe("Payment Service", () => {
     it("should accept when invoice filtered by MaxAmountInvoice Filter", async () => {
       const paymentService = new PaymentService({
         logger,
-        invoiceFetchingInterval: 10,
-        debitNotesFetchingInterval: 10,
-        payingInterval: 10,
         invoiceFilter: PaymentFilters.acceptMaxAmountInvoiceFilter(7),
       });
       setExpectedEvents(invoiceEvents);
       setExpectedInvoices(invoices);
-      await paymentService.createAllocations();
+      await paymentService.createAllocation();
       await paymentService.run();
       paymentService.acceptPayments(agreement);
       await new Promise((res) => setTimeout(res, 200));
