@@ -3,7 +3,7 @@ import { RequestorApi } from "ya-ts-client/dist/ya-market/src/api/requestor-api"
 import { AgreementProposal } from "ya-ts-client/dist/ya-market/src/models";
 import { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 import { v4 as uuidv4 } from "uuid";
-import { DemandOfferBase, Event, ProposalEvent } from "ya-ts-client/dist/ya-market/src/models";
+import { DemandOfferBase, Event } from "ya-ts-client/dist/ya-market/src/models";
 import { agreementsApproved, proposalsDraft, proposalsInitial } from "../fixtures";
 import { sleep } from "../../../src/utils";
 

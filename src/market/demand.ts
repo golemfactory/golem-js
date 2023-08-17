@@ -102,9 +102,14 @@ export class Demand extends EventTarget {
   private async subscribe() {
     while (this.isRunning) {
       try {
-        const { data: events } = await this.options.api.collectOffers(this.id, 3, this.options.maxOfferEvents, {
-          timeout: 5000,
-        });
+        const { data: events } = await this.options.api.collectOffers(
+          this.id,
+          this.options.offerFetchingInterval / 1000,
+          this.options.maxOfferEvents,
+          {
+            timeout: 0,
+          },
+        );
         for (const event of events as Array<ProposalEvent & ProposalRejectedEvent>) {
           if (event.eventType === "ProposalRejectedEvent") {
             this.logger?.debug(`Proposal rejected. Reason: ${event.reason?.message}`);
@@ -141,14 +146,18 @@ export class Demand extends EventTarget {
           const reason = error.response?.data?.message || error;
           this.options.eventTarget?.dispatchEvent(new Events.CollectFailed({ id: this.id, reason }));
           this.logger?.warn(`Unable to collect offers. ${reason}`);
-          if (error.response?.status === 404) {
+          if (error.code === "ECONNREFUSED" || error.response?.status === 404) {
             this.dispatchEvent(
-              new DemandEvent(DemandEventType, undefined, new Error(`Subscription expired. ${reason}`)),
+              new DemandEvent(
+                DemandEventType,
+                undefined,
+                new Error(`${error.code === "ECONNREFUSED" ? "Yagna connection error." : "Demand expired."} ${reason}`),
+              ),
             );
+            break;
           }
+          await sleep(2);
         }
-      } finally {
-        await sleep(this.options.offerFetchingInterval, true);
       }
     }
   }

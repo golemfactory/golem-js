@@ -11,15 +11,13 @@ import { Agent } from "http";
 const DEFAULTS = Object.freeze({
   payment: { network: "goerli", driver: "erc20" },
   budget: 1.0,
-  paymentTimeout: 1000 * 60 * 2, // 2 min
+  paymentTimeout: 1000 * 60, // 1 min
   allocationExpires: 1000 * 60 * 60, // 60 min
   invoiceReceiveTimeout: 1000 * 60 * 5, // 5 min
   maxInvoiceEvents: 500,
   maxDebitNotesEvents: 500,
-  invoiceFetchingInterval: 2000,
-  debitNotesFetchingInterval: 2000,
-  payingInterval: 2000,
-  paymentRequestTimeout: 10000,
+  invoiceFetchingInterval: 20000,
+  debitNotesFetchingInterval: 20000,
   debitNoteFilter: acceptAllDebitNotesFilter(),
   invoiceFilter: acceptAllInvoicesFilter(),
 });
@@ -43,7 +41,6 @@ abstract class BaseConfig {
   public readonly logger?: Logger;
   public readonly eventTarget?: EventTarget;
   public readonly payment: { driver: string; network: string };
-  public readonly paymentRequestTimeout: number;
   public readonly httpAgent: Agent;
 
   constructor(public readonly options?: BasePaymentOptions) {
@@ -66,7 +63,6 @@ abstract class BaseConfig {
     };
     this.logger = options?.logger;
     this.eventTarget = options?.eventTarget;
-    this.paymentRequestTimeout = options?.paymentRequestTimeout || DEFAULTS.paymentRequestTimeout;
   }
 }
 /**
@@ -75,7 +71,6 @@ abstract class BaseConfig {
 export class PaymentConfig extends BaseConfig {
   public readonly invoiceFetchingInterval: number;
   public readonly debitNotesFetchingInterval: number;
-  public readonly payingInterval: number;
   public readonly maxInvoiceEvents: number;
   public readonly maxDebitNotesEvents: number;
   public readonly debitNoteFilter: DebitNoteFilter;
@@ -87,7 +82,6 @@ export class PaymentConfig extends BaseConfig {
     this.debitNotesFetchingInterval = options?.debitNotesFetchingInterval ?? DEFAULTS.debitNotesFetchingInterval;
     this.maxInvoiceEvents = options?.maxInvoiceEvents ?? DEFAULTS.maxInvoiceEvents;
     this.maxDebitNotesEvents = options?.maxDebitNotesEvents ?? DEFAULTS.maxDebitNotesEvents;
-    this.payingInterval = options?.payingInterval ?? DEFAULTS.payingInterval;
     this.debitNoteFilter = options?.debitNotesFilter ?? DEFAULTS.debitNoteFilter;
     this.invoiceFilter = options?.invoiceFilter ?? DEFAULTS.invoiceFilter;
   }
