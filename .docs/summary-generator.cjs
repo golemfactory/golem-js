@@ -2,9 +2,8 @@ const path = require("path");
 const fs = require("fs");
 
 async function prepareDocAnchor(docsDir, type, file) {
-  const directoryPath = path.join(docsDir);
-  const filePath = path.join(directoryPath, type, file);
-  const fileContent = await fs.readFileSync(filePath, "utf-8");
+  const filePath = path.join(docsDir, type, file);
+  const fileContent = fs.readFileSync(filePath, "utf-8");
   const firstLine = (fileContent.match(/(^.*)/) || [])[1] || "";
   return {
     link: `${type}/${file.replace(".md", "")}`,
@@ -19,7 +18,7 @@ function capitalizeFirstLetter(string) {
 (async () => {
   const docsDir = process.argv[2] || "docs";
   const directoryPath = path.join(__dirname, "..", docsDir);
-  const logStream = fs.createWriteStream(path.join(process.argv[3], "overview.md"), { flags: "w" });
+  const logStream = fs.createWriteStream(path.join(process.argv[3] || docsDir, "overview.md"), { flags: "w" });
 
   const types = fs
     .readdirSync(directoryPath, { withFileTypes: true })
