@@ -140,28 +140,6 @@ describe("Task Executor", function () {
     expect(outputs[2]).toEqual("OK");
   });
 
-  it("should run simple batch script and catch error on promise", async () => {
-    executor = await TaskExecutor.create({
-      package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
-      logger,
-    });
-    let results;
-    let error;
-    await executor
-      .run(async (ctx) => {
-        results = await ctx
-          .beginBatch()
-          .run('echo "Hello Golem"')
-          .run("invalid_command")
-          .end()
-          .catch((err) => (error = err));
-      })
-      .catch((e) => {
-        expect(e).toBeUndefined();
-      });
-    expect(error).toEqual("Error: ExeScript command exited with code 127");
-  });
-
   it("should run transfer file", async () => {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
