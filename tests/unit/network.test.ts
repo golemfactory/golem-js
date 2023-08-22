@@ -122,7 +122,7 @@ describe("Network", () => {
       const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/24" });
       const node = await network.addNode("2");
       expect(node.getWebsocketUri(22)).toEqual(
-        `ws://${process.env?.YAGNA_API_URL?.substring(7) || "127.0.0.1:7465"}/net-api/v1/net/${
+        `ws://${process.env?.YAGNA_API_URL?.substring(7) || "localhost"}/net-api/v1/net/${
           network.id
         }/tcp/192.168.0.2/22`,
       );
@@ -137,7 +137,7 @@ describe("Network", () => {
 
     it("should not remove network that doesn't exist", async () => {
       const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/24" });
-      network["config"]["api"]["setExpectedError"]({ status: 404 });
+      network["yagnaApi"]["net"]["setExpectedError"]({ status: 404 });
       expect(await network.remove()).toEqual(false);
     });
   });

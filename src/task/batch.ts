@@ -48,18 +48,19 @@ export class Batch {
     return this;
   }
 
+  /**
+   * Executes the batch of commands added via {@link run} returning result for each of the steps.
+   *
+   * In case any of the commands will fail, the execution of the batch will be interrupted by the Provider.
+   */
   async end(): Promise<Result[]> {
     await this.script.before();
     await sleep(100, true);
     const results = await this.activity.execute(this.script.getExeScriptRequest());
     const allResults: Result[] = [];
     return new Promise((resolve, reject) => {
-      results.on("data", (result) => {
-        allResults.push(result);
-        if (result.result === "Error") {
-          this.script.after(allResults).catch();
-          return reject(`Error: ${result.message}`);
-        }
+      results.on("data", (res) => {
+        allResults.push(res);
       });
 
       results.on("end", () => {

@@ -111,7 +111,6 @@ export class TaskService {
         logger: this.logger,
         activityPreparingTimeout: this.options.activityPreparingTimeout,
         activityStateCheckingInterval: this.options.activityStateCheckingInterval,
-        isRunning: () => this.isRunning,
       });
       await ctx.before();
       if (initWorker && !this.initWorkersDone.has(activity.id)) {
