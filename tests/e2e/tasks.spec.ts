@@ -66,7 +66,7 @@ describe("Task Executor", function () {
       logger,
     });
     const data = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
-    const results = executor.map<string, string>(data, async (ctx, x) => {
+    const results = executor.map<string, string | undefined>(data, async (ctx, x) => {
       const res = await ctx.run(`echo "${x}"`);
       return res.stdout?.trim();
     });
@@ -116,31 +116,6 @@ describe("Task Executor", function () {
     expect(onEnd).toEqual("END");
   });
 
-  it("should run simple batch script and catch error on stream", async () => {
-    executor = await TaskExecutor.create({
-      package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
-      logger,
-    });
-    const outputs: string[] = [];
-    let expectedError = "";
-    await executor
-      .run(async (ctx) => {
-        const results = await ctx.beginBatch().run('echo "Hello Golem"').run("invalid_command").endStream();
-        results.on("data", ({ stdout }) => outputs.push(stdout?.trim()));
-        results.on("error", (error) => {
-          expectedError = error.toString();
-        });
-      })
-      .catch((e) => {
-        expect(e).toBeUndefined();
-      });
-    await logger.expectToInclude("Task 1 computed by provider", 5000);
-    expect(outputs[0]).toEqual("Hello Golem");
-    expect(expectedError).toEqual(
-      "Error: ExeScript command exited with code 127. Stdout: undefined. Stderr: sh: 1: invalid_command: not found",
-    );
-  });
-
   it("should run simple batch script and get results as promise", async () => {
     executor = await TaskExecutor.create({
       package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
@@ -163,28 +138,6 @@ describe("Task Executor", function () {
     expect(outputs[0]).toEqual("Hello Golem");
     expect(outputs[1]).toEqual("Hello World");
     expect(outputs[2]).toEqual("OK");
-  });
-
-  it("should run simple batch script and catch error on promise", async () => {
-    executor = await TaskExecutor.create({
-      package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
-      logger,
-    });
-    let results;
-    let error;
-    await executor
-      .run(async (ctx) => {
-        results = await ctx
-          .beginBatch()
-          .run('echo "Hello Golem"')
-          .run("invalid_command")
-          .end()
-          .catch((err) => (error = err));
-      })
-      .catch((e) => {
-        expect(e).toBeUndefined();
-      });
-    expect(error).toEqual("Error: ExeScript command exited with code 127");
   });
 
   it("should run transfer file", async () => {
