@@ -15,9 +15,6 @@ export const setExpectedError = (error) => (global.expectedError = error);
 export class MarketApiMock extends RequestorApi {
   private exampleProposals = [...proposalsInitial, proposalsDraft];
 
-  constructor() {
-    super();
-  }
   // @ts-ignore
   async createAgreement(
     createAgreementRequest: AgreementProposal,

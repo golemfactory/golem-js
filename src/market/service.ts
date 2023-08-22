@@ -78,7 +78,7 @@ export class MarketService {
   private async resubscribeDemand() {
     if (this.demand) {
       this.demand.removeEventListener(DemandEventType, this.demandEventListener.bind(this));
-      await this.demand.unsubscribe().catch((e) => this.logger?.error(`Could not unsubscribe demand. ${e}`));
+      await this.demand.unsubscribe().catch((e) => this.logger?.debug(`Could not unsubscribe demand. ${e}`));
     }
     let attempt = 1;
     let success = false;

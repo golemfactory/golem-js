@@ -3,13 +3,12 @@ import { Allocation } from "../payment";
 import { YagnaOptions } from "../executor";
 import { DemandFactory } from "./factory";
 import { Proposal } from "./proposal";
-import { Logger, sleep } from "../utils";
+import { Logger, sleep, YagnaApi } from "../utils";
 import { DemandConfig } from "./config";
 import { Events } from "../events";
 import { ProposalEvent, ProposalRejectedEvent } from "ya-ts-client/dist/ya-market/src/models";
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
 import * as events from "../events/events";
-import { YagnaApi } from "../utils/yagna/yagna";
 
 export interface DemandDetails {
   properties: Array<{ key: string; value: string | number | boolean }>;

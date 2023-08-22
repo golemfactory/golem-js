@@ -29,8 +29,8 @@ const CONNECTIONS_ERROR_CODES = ["ECONNREFUSED"];
 export class Yagna {
   private readonly httpAgent: Agent;
   private readonly controller: AbortController;
-  private readonly apiKey: string;
-  private readonly apiBaseUrl: string;
+  protected readonly apiKey: string;
+  protected readonly apiBaseUrl: string;
   private readonly api: YagnaApi;
   constructor(options?: YagnaOptions) {
     this.httpAgent = new Agent({ keepAlive: true });
@@ -45,9 +45,8 @@ export class Yagna {
     return this.api;
   }
 
-  async connect(): Promise<YagnaApi> {
+  async connect(): Promise<void> {
     await this.api.identity.getIdentity();
-    return this.api;
   }
 
   async end(): Promise<void> {
@@ -55,7 +54,7 @@ export class Yagna {
     this.httpAgent.destroy?.();
   }
 
-  private createApi(): YagnaApi {
+  protected createApi(): YagnaApi {
     const apiConfig = this.getApiConfig();
     const api = {
       market: new MarketRequestorApi(apiConfig, this.getApiUrl("market")),
@@ -76,7 +75,7 @@ export class Yagna {
     return api;
   }
 
-  private getApiConfig(): Configuration {
+  protected getApiConfig(): Configuration {
     return new Configuration({
       apiKey: this.apiKey,
       accessToken: this.apiKey,
@@ -87,13 +86,12 @@ export class Yagna {
     });
   }
 
-  private getApiUrl(apiName?: string): string {
+  protected getApiUrl(apiName?: string): string {
     return apiName ? `${this.apiBaseUrl}/${apiName}-api/v1` : this.apiBaseUrl;
   }
 
-  private errorHandler(error: AxiosError): Promise<AxiosError> {
+  protected errorHandler(error: AxiosError): Promise<AxiosError> {
     if (CONNECTIONS_ERROR_CODES.includes(error.code || "")) {
-      console.log(error.toString());
       return Promise.reject(
         `No connection to Yagna. Make sure the service is running at the address ${this.apiBaseUrl}`,
       );
@@ -101,7 +99,7 @@ export class Yagna {
     return Promise.reject(error);
   }
 
-  private addErrorHandler(api: YagnaApi) {
+  protected addErrorHandler(api: YagnaApi) {
     // Ugly solution until Yagna binding is refactored or replaced,
     // and it will be possible to pass interceptors as the config params
     api.net["axios"].interceptors.response.use(undefined, this.errorHandler.bind(this));

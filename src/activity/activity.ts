@@ -224,8 +224,8 @@ export class Activity {
   }
 
   private async streamingBatch(batchId, batchSize, startTime, timeout): Promise<Readable> {
-    const basePath = this.yagnaApi.activity.control["configuration"]?.basePath;
-    const apiKey = this.yagnaApi.activity.control["configuration"]?.apiKey;
+    const basePath = this.yagnaApi.yagnaOptions.basePath;
+    const apiKey = this.yagnaApi.yagnaOptions.apiKey;
     const eventSource = new EventSource(`${basePath}/activity/${this.id}/exec/${batchId}`, {
       headers: {
         Accept: "text/event-stream",
@@ -281,13 +281,13 @@ export class Activity {
       throw error;
     }
     ++retryCount;
-    const failMsg = "There was an error retrieving activity results. ";
+    const failMsg = "There was an error retrieving activity results.";
     const errorMsg = error?.response?.data?.message || error?.message || error;
     if (retryCount < maxRetries) {
       this.logger?.debug(`${failMsg} Retrying in ${this.options.activityExeBatchResultsFetchInterval}.`);
       return retryCount;
     } else {
-      this.logger?.error(`${failMsg} Giving up after ${retryCount} attempts. ${errorMsg}`);
+      this.logger?.warn(`${failMsg} Giving up after ${retryCount} attempts. ${errorMsg}`);
     }
     throw new Error(`Command #${cmdIndex || 0} getExecBatchResults error: ${errorMsg}`);
   }

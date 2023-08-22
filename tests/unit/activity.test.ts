@@ -4,15 +4,17 @@ import { StorageProviderMock } from "../mock";
 import { Activity, ActivityStateEnum } from "../../src/activity";
 import { sleep } from "../../src/utils";
 import { Deploy, Start, Run, Terminate, UploadFile, DownloadFile, Script, Capture } from "../../src/script";
+import { YagnaMock } from "../mock/rest/yagna";
 
 describe("Activity", () => {
+  const yagnaApi = new YagnaMock().getApi();
   beforeEach(() => {
     activityMock.clear();
   });
 
   describe("Creating", () => {
     it("should create activity", async () => {
-      const activity = await Activity.create("test_agreement_id");
+      const activity = await Activity.create("test_agreement_id", yagnaApi);
       expect(activity).toBeInstanceOf(Activity);
       const GUID_REGEX =
         /^(?:\{{0,1}(?:[0-9a-fA-F]){8}-(?:[0-9a-fA-F]){4}-(?:[0-9a-fA-F]){4}-(?:[0-9a-fA-F]){4}-(?:[0-9a-fA-F]){12}\}{0,1})$/;

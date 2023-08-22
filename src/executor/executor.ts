@@ -166,6 +166,12 @@ export class TaskExecutor {
    * @description Method responsible initialize all executor services.
    */
   async init() {
+    try {
+      await this.yagna.connect();
+    } catch (error) {
+      this.logger?.error(error);
+      throw error;
+    }
     const manifest = this.options.packageOptions.manifest;
     const packageReference = this.options.package;
     let taskPackage: Package;
@@ -182,7 +188,9 @@ export class TaskExecutor {
           taskPackage = packageReference;
         }
       } else {
-        throw new Error("No package or manifest provided");
+        const error = new Error("No package or manifest provided");
+        this.logger?.error(error);
+        throw error;
       }
     }
 
@@ -213,6 +221,7 @@ export class TaskExecutor {
     await this.networkService?.end();
     await Promise.all([this.taskService.end(), this.agreementPoolService.end(), this.marketService.end()]);
     await this.paymentService.end();
+    await this.yagna.end();
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFinished());
     this.printStats();
     await this.statsService.end();
