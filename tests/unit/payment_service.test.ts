@@ -3,8 +3,10 @@ import { LoggerMock } from "../mock";
 import { PaymentService, Allocation, PaymentFilters } from "../../src/payment";
 import { agreement } from "../mock/entities/agreement";
 import { debitNotesEvents, debitNotes, invoices, invoiceEvents } from "../mock/fixtures";
+import { YagnaMock } from "../mock/rest/yagna";
 
 const logger = new LoggerMock();
+const yagnaApi = new YagnaMock().getApi();
 
 describe("Payment Service", () => {
   beforeEach(() => {
@@ -14,14 +16,14 @@ describe("Payment Service", () => {
 
   describe("Allocations", () => {
     it("should create allocation", async () => {
-      const paymentService = new PaymentService();
+      const paymentService = new PaymentService(yagnaApi);
       const allocation = await paymentService.createAllocation();
       expect(allocation).toBeInstanceOf(Allocation);
       await paymentService.end();
     });
 
     it("should release created allocation when service stopped", async () => {
-      const paymentService = new PaymentService({ logger });
+      const paymentService = new PaymentService(yagnaApi, { logger });
       const allocation = await paymentService.createAllocation();
       const releaseSpy = jest.spyOn(allocation, "release");
       await paymentService.end();
@@ -31,7 +33,7 @@ describe("Payment Service", () => {
 
   describe("Processing payments", () => {
     it("should accept and process invoice for agreement", async () => {
-      const paymentService = new PaymentService({
+      const paymentService = new PaymentService(yagnaApi, {
         logger,
         paymentTimeout: 100,
       });
@@ -46,7 +48,7 @@ describe("Payment Service", () => {
     });
 
     it("should accept and process debit note for agreement", async () => {
-      const paymentService = new PaymentService({
+      const paymentService = new PaymentService(yagnaApi, {
         logger,
       });
       setExpectedEvents(debitNotesEvents);
@@ -60,7 +62,7 @@ describe("Payment Service", () => {
 
     it("should reject when debit note rejected by DebitNote Filter", async () => {
       const alwaysRejectDebitNoteFilter = async () => false;
-      const paymentService = new PaymentService({
+      const paymentService = new PaymentService(yagnaApi, {
         logger,
         debitNotesFilter: alwaysRejectDebitNoteFilter,
       });
@@ -78,7 +80,7 @@ describe("Payment Service", () => {
 
     it("should reject when invoice rejected by Invoice Filter", async () => {
       const alwaysRejectInvoiceFilter = async () => false;
-      const paymentService = new PaymentService({
+      const paymentService = new PaymentService(yagnaApi, {
         logger,
         invoiceFilter: alwaysRejectInvoiceFilter,
       });
@@ -96,7 +98,7 @@ describe("Payment Service", () => {
     });
 
     it("should reject when debit note rejected by DebitNoteMaxAmount Filter", async () => {
-      const paymentService = new PaymentService({
+      const paymentService = new PaymentService(yagnaApi, {
         logger,
         debitNotesFilter: PaymentFilters.acceptMaxAmountDebitNoteFilter(0.00001),
       });
@@ -113,7 +115,7 @@ describe("Payment Service", () => {
     });
 
     it("should reject when invoice rejected by MaxAmountInvoice Filter", async () => {
-      const paymentService = new PaymentService({
+      const paymentService = new PaymentService(yagnaApi, {
         logger,
         invoiceFilter: PaymentFilters.acceptMaxAmountInvoiceFilter(0.00001),
       });
@@ -131,7 +133,7 @@ describe("Payment Service", () => {
     });
 
     it("should accept when debit note filtered by DebitNoteMaxAmount Filter", async () => {
-      const paymentService = new PaymentService({
+      const paymentService = new PaymentService(yagnaApi, {
         logger,
         debitNotesFilter: PaymentFilters.acceptMaxAmountDebitNoteFilter(7),
       });
@@ -145,7 +147,7 @@ describe("Payment Service", () => {
     });
 
     it("should accept when invoice filtered by MaxAmountInvoice Filter", async () => {
-      const paymentService = new PaymentService({
+      const paymentService = new PaymentService(yagnaApi, {
         logger,
         invoiceFilter: PaymentFilters.acceptMaxAmountInvoiceFilter(7),
       });

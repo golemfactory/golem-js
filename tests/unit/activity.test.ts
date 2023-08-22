@@ -24,14 +24,14 @@ describe("Activity", () => {
 
   describe("Executing", () => {
     it("should execute commands on activity", async () => {
-      const activity = await Activity.create("test_id");
+      const activity = await Activity.create("test_id", yagnaApi);
       const streamResult = await activity.execute(new Deploy().toExeScriptRequest());
       const { value: result } = await streamResult[Symbol.asyncIterator]().next();
       expect(result.result).toEqual("Ok");
     });
 
     it("should execute commands and get state", async () => {
-      const activity = await Activity.create("test_id");
+      const activity = await Activity.create("test_id", yagnaApi);
       const streamResult = await activity.execute(new Run("test_command").toExeScriptRequest());
       const { value: result } = await streamResult[Symbol.asyncIterator]().next();
       activityMock.setExpectedStates([ActivityStateEnum.Ready, null]);
@@ -41,7 +41,7 @@ describe("Activity", () => {
     });
 
     it("should execute script and get results by iterator", async () => {
-      const activity = await Activity.create("test_id");
+      const activity = await Activity.create("test_id", yagnaApi);
       const command1 = new Deploy();
       const command2 = new Start();
       const command3 = new Run("test_command1");
@@ -67,7 +67,7 @@ describe("Activity", () => {
     });
 
     it("should execute script and get results by events", async () => {
-      const activity = await Activity.create("test_id");
+      const activity = await Activity.create("test_id", yagnaApi);
       const command1 = new Deploy();
       const command2 = new Start();
       const command3 = new UploadFile(new StorageProviderMock(), "testSrc", "testDst");
@@ -110,7 +110,7 @@ describe("Activity", () => {
     });
 
     it("should execute script by streaming batch", async () => {
-      const activity = await Activity.create("test_id_2");
+      const activity = await Activity.create("test_id_2", yagnaApi);
       const command1 = new Deploy();
       const command2 = new Start();
       const capture: Capture = {
@@ -174,7 +174,7 @@ describe("Activity", () => {
 
   describe("Getting state", () => {
     it("should get activity state", async () => {
-      const activity = await Activity.create("test_id");
+      const activity = await Activity.create("test_id", yagnaApi);
       activityMock.setExpectedStates([ActivityStateEnum.Ready, ActivityStateEnum.Terminated]);
       const state = await activity.getState();
       expect(state).toEqual(ActivityStateEnum.Ready);
@@ -183,7 +183,7 @@ describe("Activity", () => {
 
   describe("Cancelling", () => {
     it("should cancel activity", async () => {
-      const activity = await Activity.create("test_id");
+      const activity = await Activity.create("test_id", yagnaApi);
       const command1 = new Deploy();
       const command2 = new Start();
       const command3 = new Run("test_command1");
@@ -204,7 +204,7 @@ describe("Activity", () => {
     });
 
     it("should cancel activity while streaming batch", async () => {
-      const activity = await Activity.create("test_id_3");
+      const activity = await Activity.create("test_id_3", yagnaApi);
       const command1 = new Deploy();
       const command2 = new Start();
       const capture: Capture = {
@@ -229,7 +229,7 @@ describe("Activity", () => {
 
   describe("Error handling", () => {
     it("should handle some error", async () => {
-      const activity = await Activity.create("test_id");
+      const activity = await Activity.create("test_id", yagnaApi);
       const command1 = new Deploy();
       const command2 = new Start();
       const command3 = new Run("test_command1");
@@ -252,7 +252,7 @@ describe("Activity", () => {
     });
 
     it("should handle gsb error", async () => {
-      const activity = await Activity.create("test_id", {
+      const activity = await Activity.create("test_id", yagnaApi, {
         activityExeBatchResultsFetchInterval: 10,
       });
       const command1 = new Deploy();
@@ -281,7 +281,7 @@ describe("Activity", () => {
     });
 
     it("should handle termination error", async () => {
-      const activity = await Activity.create("test_id");
+      const activity = await Activity.create("test_id", yagnaApi);
       const command1 = new Deploy();
       const command2 = new Start();
       const command3 = new Run("test_command1");
@@ -305,7 +305,7 @@ describe("Activity", () => {
     });
 
     it("should handle timeout error", async () => {
-      const activity = await Activity.create("test_id");
+      const activity = await Activity.create("test_id", yagnaApi);
       const command1 = new Deploy();
       const command2 = new Start();
       const command3 = new Run("test_command1");
@@ -325,7 +325,7 @@ describe("Activity", () => {
     });
 
     it("should handle timeout error while streaming batch", async () => {
-      const activity = await Activity.create("test_id_3", { activityExecuteTimeout: 1 });
+      const activity = await Activity.create("test_id_3", yagnaApi, { activityExecuteTimeout: 1 });
       const command1 = new Deploy();
       const command2 = new Start();
       const capture: Capture = {
@@ -348,7 +348,7 @@ describe("Activity", () => {
     });
 
     it("should handle some error while streaming batch", async () => {
-      const activity = await Activity.create("test_id_5");
+      const activity = await Activity.create("test_id_5", yagnaApi);
       const command1 = new Deploy();
       const command2 = new Start();
       const capture: Capture = {
@@ -381,7 +381,7 @@ describe("Activity", () => {
 
   describe("Destroying", () => {
     it("should stop activity", async () => {
-      const activity = await Activity.create("test_id");
+      const activity = await Activity.create("test_id", yagnaApi);
       expect(await activity.stop()).toEqual(true);
     });
   });

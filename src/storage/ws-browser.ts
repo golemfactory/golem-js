@@ -146,7 +146,8 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
 
   private async createFileInfo(): Promise<GftpFileInfo> {
     const id = v4();
-    const me = await this.yagnaApi.identity.getIdentity();
+    const { data } = await this.yagnaApi.identity.getIdentity();
+    const me = data.identity;
 
     return {
       id,

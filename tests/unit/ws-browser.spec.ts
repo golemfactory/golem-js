@@ -1,6 +1,6 @@
 import { consoleLogger, WebSocketBrowserStorageProvider, WebSocketStorageProviderOptions } from "../../src";
 import { encode, toObject } from "flatbuffers/js/flexbuffers";
-import { LoggerMock } from "../mock";
+import { LoggerMock, YagnaMock } from "../mock";
 import * as jsSha3 from "js-sha3";
 import { TEST_IDENTITY } from "../mock/fixtures";
 
@@ -10,16 +10,10 @@ type UploadChunkChunk = { offset: number; content: Uint8Array };
 
 describe("WebSocketBrowserStorageProvider", () => {
   let logger: LoggerMock;
-  const opts: WebSocketStorageProviderOptions = {
-    yagnaOptions: {
-      apiKey: "ApiKey",
-      basePath: "http://yagna",
-    },
-  };
+  const yagnaApi = new YagnaMock().getApi();
 
   const createProvider = () =>
-    new WebSocketBrowserStorageProvider({
-      ...opts,
+    new WebSocketBrowserStorageProvider(yagnaApi, {
       logger,
     });
   let provider: WebSocketBrowserStorageProvider;
@@ -30,7 +24,6 @@ describe("WebSocketBrowserStorageProvider", () => {
   beforeEach(() => {
     logger = new LoggerMock();
     provider = createProvider();
-
     jest.clearAllMocks();
   });
 
@@ -44,13 +37,13 @@ describe("WebSocketBrowserStorageProvider", () => {
 
   describe("constructor", () => {
     it("should create default logger", () => {
-      const provider = new WebSocketBrowserStorageProvider({ ...opts });
+      const provider = new WebSocketBrowserStorageProvider(yagnaApi, {});
       expect(provider["logger"]).toBeDefined();
     });
 
     it("should use provided logger", () => {
       const logger = consoleLogger();
-      const provider = new WebSocketBrowserStorageProvider({ ...opts, logger });
+      const provider = new WebSocketBrowserStorageProvider(yagnaApi, { logger });
       expect(provider["logger"]).toBe(logger);
     });
   });
@@ -273,8 +266,8 @@ describe("WebSocketBrowserStorageProvider", () => {
     it("should create service and return service info", async () => {
       const data = { servicesId: "ID" };
       mockFetch.mockImplementation((url, init: RequestInit) => {
-        expect(url.toString()).toEqual(`${opts.yagnaOptions.basePath}/gsb-api/v1/services`);
-        expect(init.headers!["Authorization"]).toBe(`Bearer ${opts.yagnaOptions.apiKey}`);
+        expect(url.toString()).toEqual(`${yagnaApi.yagnaOptions.basePath}/gsb-api/v1/services`);
+        expect(init.headers!["Authorization"]).toBe(`Bearer ${yagnaApi.yagnaOptions.apiKey}`);
         return Promise.resolve({
           status: 201,
           json: () => Promise.resolve(data),
@@ -285,7 +278,7 @@ describe("WebSocketBrowserStorageProvider", () => {
       expect(mockFetch).toHaveBeenCalled();
       expect(result.serviceId).toEqual("ID");
       expect(result.url.toString()).toEqual(
-        `ws://yagna/gsb-api/v1/services/${data.servicesId}?authToken=${opts.yagnaOptions.apiKey}`,
+        `ws://yagna/gsb-api/v1/services/${data.servicesId}?authToken=${yagnaApi.yagnaOptions.apiKey}`,
       );
     });
 
@@ -317,8 +310,8 @@ describe("WebSocketBrowserStorageProvider", () => {
   describe("deleteService()", () => {
     it("should call delete service API", async () => {
       mockFetch.mockImplementation((url, init: RequestInit) => {
-        expect(url.toString()).toEqual(`${opts.yagnaOptions.basePath}/gsb-api/v1/services/Foo`);
-        expect(init.headers!["Authorization"]).toBe(`Bearer ${opts.yagnaOptions.apiKey}`);
+        expect(url.toString()).toEqual(`${yagnaApi.yagnaOptions.basePath}/gsb-api/v1/services/Foo`);
+        expect(init.headers!["Authorization"]).toBe(`Bearer ${yagnaApi.yagnaOptions.apiKey}`);
         return Promise.resolve({ status: 200 });
       });
 

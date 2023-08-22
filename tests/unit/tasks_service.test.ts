@@ -1,9 +1,10 @@
 import * as activityMock from "../mock/rest/activity";
 import { Task, TaskQueue, TaskService, Worker } from "../../src/task";
-import { agreementPoolServiceMock, paymentServiceMock, networkServiceMock, LoggerMock } from "../mock";
-import { Result } from "../../src/activity";
+import { agreementPoolServiceMock, paymentServiceMock, networkServiceMock, LoggerMock, YagnaMock } from "../mock";
+import { Result } from "../../src";
 let queue;
 const logger = new LoggerMock();
+const yagnaApi = new YagnaMock().getApi();
 
 describe("Task Service", () => {
   beforeEach(() => {
@@ -16,7 +17,7 @@ describe("Task Service", () => {
     const task = new Task<null, Result>("1", worker);
     queue.addToEnd(task);
     activityMock.setExpectedExeResults([{ stdout: "some_shell_results" }]);
-    const service = new TaskService(queue, agreementPoolServiceMock, paymentServiceMock, networkServiceMock, {
+    const service = new TaskService(yagnaApi, queue, agreementPoolServiceMock, paymentServiceMock, networkServiceMock, {
       logger,
       taskRunningInterval: 10,
       activityStateCheckingInterval: 10,
@@ -38,7 +39,7 @@ describe("Task Service", () => {
     queue.addToEnd(task1);
     queue.addToEnd(task2);
     queue.addToEnd(task3);
-    const service = new TaskService(queue, agreementPoolServiceMock, paymentServiceMock, networkServiceMock, {
+    const service = new TaskService(yagnaApi, queue, agreementPoolServiceMock, paymentServiceMock, networkServiceMock, {
       logger,
       maxParallelTasks: 2,
     });
@@ -59,7 +60,7 @@ describe("Task Service", () => {
       { result: "Ok" }, // start command
       { stderr: "some_error", result: "Error" }, // run command
     ]);
-    const service = new TaskService(queue, agreementPoolServiceMock, paymentServiceMock, networkServiceMock, {
+    const service = new TaskService(yagnaApi, queue, agreementPoolServiceMock, paymentServiceMock, networkServiceMock, {
       logger,
       taskRunningInterval: 100,
       activityStateCheckingInterval: 100,
@@ -77,7 +78,7 @@ describe("Task Service", () => {
     const task = new Task("1", worker, undefined, undefined, 2);
     queue.addToEnd(task);
     activityMock.setExpectedExeResults([{ result: "Ok", stdout: "invalid_value" }]);
-    const service = new TaskService(queue, agreementPoolServiceMock, paymentServiceMock, networkServiceMock, {
+    const service = new TaskService(yagnaApi, queue, agreementPoolServiceMock, paymentServiceMock, networkServiceMock, {
       logger,
       taskRunningInterval: 10,
       activityStateCheckingInterval: 10,
@@ -96,7 +97,7 @@ describe("Task Service", () => {
     const task = new Task("1", worker);
     queue.addToEnd(task);
     activityMock.setExpectedExeResults([{ stderr: "some_error", result: "Error" }]);
-    const service = new TaskService(queue, agreementPoolServiceMock, paymentServiceMock, networkServiceMock, {
+    const service = new TaskService(yagnaApi, queue, agreementPoolServiceMock, paymentServiceMock, networkServiceMock, {
       logger,
       taskRunningInterval: 10,
       activityStateCheckingInterval: 10,
@@ -116,7 +117,7 @@ describe("Task Service", () => {
     queue.addToEnd(task1);
     queue.addToEnd(task2);
     queue.addToEnd(task3);
-    const service = new TaskService(queue, agreementPoolServiceMock, paymentServiceMock, networkServiceMock, {
+    const service = new TaskService(yagnaApi, queue, agreementPoolServiceMock, paymentServiceMock, networkServiceMock, {
       logger,
       taskRunningInterval: 10,
       activityStateCheckingInterval: 10,
