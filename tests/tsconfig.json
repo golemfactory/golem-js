@@ -2,5 +2,7 @@
   "extends": "../tsconfig.json",
   "include": ["."],
   "exclude": ["./cypress"],
-  "types": ["jest"]
+  "compilerOptions": {
+    "types": ["jest"]
+  }
 }
