@@ -47,7 +47,7 @@ export default [
         // Temporary workaround  https://github.com/rollup/rollup/issues/4213
         closeBundle() {
           if (!process.env.ROLLUP_WATCH) {
-            setTimeout(() => process.exit(0));
+            setTimeout(() => process.exit(0), 5_000);
           }
         },
         name: "force-close",
