@@ -20,10 +20,27 @@ export class Batch {
     this.script = new Script([]);
   }
 
-  run(...args: Array<string | string[]>): Batch {
-    this.script.add(
-      args.length === 1 ? new Run("/bin/sh", ["-c", <string>args[0]]) : new Run(<string>args[0], <string[]>args[1]),
-    );
+  /**
+   * Execute a command on provider using a shell (/bin/sh).
+   *
+   * @param commandLine Shell command to execute.
+   */
+  run(commandLine: string): Batch;
+
+  /**
+   * Execute an executable on provider.
+   *
+   * @param executable Executable to run.
+   * @param args Executable arguments.
+   */
+  run(executable: string, args: string[]): Batch;
+
+  run(executableOrCommand: string, executableArgs?: string[]): Batch {
+    if (executableArgs) {
+      this.script.add(new Run(executableOrCommand, executableArgs));
+    } else {
+      this.script.add(new Run("/bin/sh", ["-c", executableOrCommand]));
+    }
     return this;
   }
 
