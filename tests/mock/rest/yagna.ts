@@ -11,6 +11,9 @@ import { GsbApiMock } from "./gsb";
 jest.mock("eventsource", () => EventSourceMock);
 
 export class YagnaMock extends Yagna {
+  constructor() {
+    super({ apiKey: "test_api_key" });
+  }
   protected createApi(): YagnaApi {
     return {
       // @ts-ignore
