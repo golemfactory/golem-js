@@ -1,6 +1,5 @@
-import { LoggerMock } from "../mock";
+import { LoggerMock, YagnaMock } from "../mock";
 import { Allocation } from "../../src/payment";
-import { YagnaMock } from "../mock/rest/yagna";
 
 const logger = new LoggerMock();
 const account = { address: "test_address", platform: "test_platform" };

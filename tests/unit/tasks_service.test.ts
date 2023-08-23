@@ -1,7 +1,7 @@
 import * as activityMock from "../mock/rest/activity";
 import { Task, TaskQueue, TaskService, Worker } from "../../src/task";
 import { agreementPoolServiceMock, paymentServiceMock, networkServiceMock, LoggerMock, YagnaMock } from "../mock";
-import { ActivityStateEnum, Result } from "../../src";
+import { Result } from "../../src";
 let queue;
 const logger = new LoggerMock();
 

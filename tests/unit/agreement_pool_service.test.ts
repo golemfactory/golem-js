@@ -1,10 +1,9 @@
-import { LoggerMock } from "../mock";
+import { LoggerMock, YagnaMock } from "../mock";
 import { Agreement, AgreementPoolService } from "../../src/agreement";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import { Proposal as ProposalModel } from "ya-ts-client/dist/ya-market/src/models/proposal";
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
 import { Proposal } from "../../src/market";
-import { YagnaMock } from "../mock/rest/yagna";
 
 const logger = new LoggerMock();
 const yagnaApi = new YagnaMock().getApi();

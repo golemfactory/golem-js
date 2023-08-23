@@ -1,5 +1,5 @@
 import { Network } from "../../src/network";
-import { YagnaMock } from "../mock/rest/yagna";
+import { YagnaMock } from "../mock";
 const yagnaApi = new YagnaMock().getApi();
 
 describe("Network", () => {

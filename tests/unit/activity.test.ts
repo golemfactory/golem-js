@@ -1,10 +1,9 @@
 import * as activityMock from "../mock/rest/activity";
 import { setExpectedErrorEvents, setExpectedEvents } from "../mock/utils/event_source";
-import { StorageProviderMock } from "../mock";
+import { StorageProviderMock, YagnaMock } from "../mock";
 import { Activity, ActivityStateEnum } from "../../src/activity";
 import { sleep } from "../../src/utils";
 import { Deploy, Start, Run, Terminate, UploadFile, DownloadFile, Script, Capture } from "../../src/script";
-import { YagnaMock } from "../mock/rest/yagna";
 
 describe("Activity", () => {
   const yagnaApi = new YagnaMock().getApi();

@@ -1,13 +1,12 @@
 import { setExpectedProposals } from "../mock/rest/market";
 import { MarketService, ProposalFilters } from "../../src/market";
-import { agreementPoolServiceMock, packageMock, LoggerMock, allocationMock } from "../mock";
+import { agreementPoolServiceMock, packageMock, LoggerMock, allocationMock, YagnaMock } from "../mock";
 import {
   proposalsInitial,
   proposalsDraft,
   proposalsWrongPaymentPlatform,
   proposalsShortDebitNoteTimeout,
 } from "../mock/fixtures";
-import { YagnaMock } from "../mock/rest/yagna";
 
 const logger = new LoggerMock();
 const yagnaApi = new YagnaMock().getApi();

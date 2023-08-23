@@ -18,21 +18,10 @@ describe("WebSocketBrowserStorageProvider", () => {
     });
   let provider: WebSocketBrowserStorageProvider;
 
-  const originalFetch = global.fetch;
-  const mockFetch = jest.fn();
-
   beforeEach(() => {
     logger = new LoggerMock();
     provider = createProvider();
     jest.clearAllMocks();
-  });
-
-  beforeAll(() => {
-    global.fetch = mockFetch;
-  });
-
-  afterAll(() => {
-    global.fetch = originalFetch;
   });
 
   describe("constructor", () => {
@@ -265,69 +254,70 @@ describe("WebSocketBrowserStorageProvider", () => {
   describe("createService()", () => {
     it("should create service and return service info", async () => {
       const data = { servicesId: "ID" };
-      mockFetch.mockImplementation((url, init: RequestInit) => {
-        expect(url.toString()).toEqual(`${yagnaApi.yagnaOptions.basePath}/gsb-api/v1/services`);
-        expect(init.headers!["Authorization"]).toBe(`Bearer ${yagnaApi.yagnaOptions.apiKey}`);
+      yagnaApi.gsb.createService = jest.fn().mockImplementation(() => {
         return Promise.resolve({
           status: 201,
-          json: () => Promise.resolve(data),
+          data: { serviceId: "ID" },
         });
       });
 
       const result = await provider["createService"]({ id: "foo", url: "" }, []);
-      expect(mockFetch).toHaveBeenCalled();
+      expect(yagnaApi.gsb.createService).toHaveBeenCalled();
       expect(result.serviceId).toEqual("ID");
       expect(result.url.toString()).toEqual(
-        `ws://yagna/gsb-api/v1/services/${data.servicesId}?authToken=${yagnaApi.yagnaOptions.apiKey}`,
+        `ws://127.0.0.1:7465/gsb-api/v1/services/${data.servicesId}?authToken=${yagnaApi.yagnaOptions.apiKey}`,
       );
     });
 
     it("should record the service for later release", async () => {
       const data = { servicesId: "ID" };
-      mockFetch.mockResolvedValue({
-        status: 201,
-        json: () => Promise.resolve(data),
+      yagnaApi.gsb.createService = jest.fn().mockImplementation(() => {
+        return Promise.resolve({
+          status: 201,
+          data: { serviceId: "ID" },
+        });
       });
-
       await provider["createService"]({ id: "foo", url: "/file" }, []);
-      expect(mockFetch).toHaveBeenCalled();
+      expect(yagnaApi.gsb.createService).toHaveBeenCalled();
       expect(provider["services"].size).toBe(1);
       expect(provider["services"].get("/file")).toEqual(data.servicesId);
     });
 
     it("should throw when service creation fails", async () => {
-      mockFetch.mockResolvedValue({
-        status: 404,
+      yagnaApi.gsb.createService = jest.fn().mockImplementation(() => {
+        return Promise.resolve({
+          status: 404,
+        });
       });
-
       await expect(() => {
         return provider["createService"]({ id: "foo", url: "/file" }, []);
       }).rejects.toThrow();
-      expect(mockFetch).toHaveBeenCalled();
+      expect(yagnaApi.gsb.createService).toHaveBeenCalled();
     });
   });
 
   describe("deleteService()", () => {
     it("should call delete service API", async () => {
-      mockFetch.mockImplementation((url, init: RequestInit) => {
-        expect(url.toString()).toEqual(`${yagnaApi.yagnaOptions.basePath}/gsb-api/v1/services/Foo`);
-        expect(init.headers!["Authorization"]).toBe(`Bearer ${yagnaApi.yagnaOptions.apiKey}`);
-        return Promise.resolve({ status: 200 });
+      yagnaApi.gsb.deleteService = jest.fn().mockImplementation(() => {
+        return Promise.resolve({
+          status: 200,
+        });
       });
-
       await provider["deleteService"]("Foo");
-      expect(mockFetch).toHaveBeenCalled();
+      expect(yagnaApi.gsb.deleteService).toHaveBeenCalled();
     });
 
     it("should throw when delete API fails", async () => {
-      mockFetch.mockResolvedValue({
-        status: 404,
+      yagnaApi.gsb.deleteService = jest.fn().mockImplementation(() => {
+        return Promise.resolve({
+          status: 404,
+        });
       });
 
       await expect(() => {
         return provider["deleteService"]("Foo");
       }).rejects.toThrow();
-      expect(mockFetch).toHaveBeenCalled();
+      expect(yagnaApi.gsb.deleteService).toHaveBeenCalled();
     });
   });
 

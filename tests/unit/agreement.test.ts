@@ -1,7 +1,6 @@
-import { LoggerMock } from "../mock";
+import { LoggerMock, YagnaMock } from "../mock";
 import { Agreement } from "../../src/agreement";
 import { AgreementStateEnum } from "ya-ts-client/dist/ya-market/src/models/agreement";
-import { YagnaMock } from "../mock/rest/yagna";
 
 const logger = new LoggerMock();
 const yagnaApi = new YagnaMock().getApi();
