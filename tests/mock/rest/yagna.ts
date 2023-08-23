@@ -10,7 +10,6 @@ import { GsbApiMock } from "./gsb";
 
 jest.mock("eventsource", () => EventSourceMock);
 
-process.env["YAGNA_APPKEY"] = "test_key";
 export class YagnaMock extends Yagna {
   protected createApi(): YagnaApi {
     return {
