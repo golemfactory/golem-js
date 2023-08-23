@@ -15,7 +15,7 @@ export class ActivityFactory {
    * Creating ActivityFactory
    *
    * @param agreementId
-   * @param yagnaApi
+   * @param yagnaApi - {@link YagnaApi}
    * @param options - {@link ActivityOptions}
    */
   constructor(

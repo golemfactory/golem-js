@@ -53,6 +53,7 @@ export class Activity {
   /**
    * @param id activity ID
    * @param agreementId agreement ID
+   * @param yagnaApi - {@link YagnaApi}
    * @param options - {@link ActivityOptions}
    * @hidden
    */

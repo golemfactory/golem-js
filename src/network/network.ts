@@ -52,6 +52,7 @@ export class Network {
   /**
    * Create a new VPN.
    *
+   * @param yagnaApi - {@link YagnaApi}
    * @param options - {@link NetworkOptions}
    */
   static async create(yagnaApi: YagnaApi, options: NetworkOptions): Promise<Network> {

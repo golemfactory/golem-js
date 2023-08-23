@@ -15,6 +15,7 @@ export class AgreementFactory {
 
   /**
    * Create AgreementFactory
+   * @param yagnaApi - {@link YagnaApi}
    * @param agreementOptions - {@link AgreementOptions}
    */
   constructor(

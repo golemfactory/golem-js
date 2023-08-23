@@ -53,8 +53,8 @@ export class Agreement {
   /**
    * @param id - agreement ID
    * @param provider - {@link ProviderInfo}
+   * @param yagnaApi - {@link YagnaApi}
    * @param options - {@link AgreementConfig}
-   * @param yagnaApi
    * @hidden
    */
   constructor(
