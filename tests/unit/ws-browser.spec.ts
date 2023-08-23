@@ -3,6 +3,7 @@ import { encode, toObject } from "flatbuffers/js/flexbuffers";
 import { LoggerMock, YagnaMock } from "../mock";
 import * as jsSha3 from "js-sha3";
 import { TEST_IDENTITY } from "../mock/fixtures";
+import { AxiosResponse } from "axios";
 
 jest.mock("uuid", () => ({ v4: () => "uuid" }));
 
@@ -254,11 +255,11 @@ describe("WebSocketBrowserStorageProvider", () => {
   describe("createService()", () => {
     it("should create service and return service info", async () => {
       const data = { servicesId: "ID" };
-      yagnaApi.gsb.createService = jest.fn().mockImplementation(() => {
+      jest.spyOn(yagnaApi.gsb, "createService").mockImplementation((fileInfo, components) => {
         return Promise.resolve({
           status: 201,
           data: { serviceId: "ID" },
-        });
+        } as AxiosResponse);
       });
 
       const result = await provider["createService"]({ id: "foo", url: "" }, []);
@@ -271,11 +272,11 @@ describe("WebSocketBrowserStorageProvider", () => {
 
     it("should record the service for later release", async () => {
       const data = { servicesId: "ID" };
-      yagnaApi.gsb.createService = jest.fn().mockImplementation(() => {
+      jest.spyOn(yagnaApi.gsb, "createService").mockImplementation((fileInfo, components) => {
         return Promise.resolve({
           status: 201,
           data: { serviceId: "ID" },
-        });
+        } as AxiosResponse);
       });
       await provider["createService"]({ id: "foo", url: "/file" }, []);
       expect(yagnaApi.gsb.createService).toHaveBeenCalled();
@@ -284,10 +285,10 @@ describe("WebSocketBrowserStorageProvider", () => {
     });
 
     it("should throw when service creation fails", async () => {
-      yagnaApi.gsb.createService = jest.fn().mockImplementation(() => {
+      jest.spyOn(yagnaApi.gsb, "createService").mockImplementation((fileInfo, components) => {
         return Promise.resolve({
           status: 404,
-        });
+        } as AxiosResponse);
       });
       await expect(() => {
         return provider["createService"]({ id: "foo", url: "/file" }, []);
@@ -298,20 +299,20 @@ describe("WebSocketBrowserStorageProvider", () => {
 
   describe("deleteService()", () => {
     it("should call delete service API", async () => {
-      yagnaApi.gsb.deleteService = jest.fn().mockImplementation(() => {
+      jest.spyOn(yagnaApi.gsb, "deleteService").mockImplementation((id) => {
         return Promise.resolve({
           status: 200,
-        });
+        } as AxiosResponse);
       });
       await provider["deleteService"]("Foo");
       expect(yagnaApi.gsb.deleteService).toHaveBeenCalled();
     });
 
     it("should throw when delete API fails", async () => {
-      yagnaApi.gsb.deleteService = jest.fn().mockImplementation(() => {
+      jest.spyOn(yagnaApi.gsb, "deleteService").mockImplementation((id) => {
         return Promise.resolve({
           status: 404,
-        });
+        } as AxiosResponse);
       });
 
       await expect(() => {
