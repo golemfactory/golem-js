@@ -14,5 +14,5 @@ export default async function setUpGoth() {
   globalThis.__GOTH = new Goth(gothConfig);
 
   // Start Goth, but don't wait for an eternity
-  return await Promise.race([globalThis.__GOTH.start(), timeoutPromise(60)]);
+  return await Promise.race([globalThis.__GOTH.start(), timeoutPromise(180)]);
 }
