@@ -62,7 +62,7 @@ export class Yagna {
         control: new RequestorControlApi(apiConfig, this.getApiUrl("activity")),
         state: new RequestorStateApi(apiConfig, this.getApiUrl("activity")),
       },
-      net: new NetworkRequestorApi(apiConfig, this.getApiUrl("network")),
+      net: new NetworkRequestorApi(apiConfig, this.getApiUrl("net")),
       payment: new PaymentRequestorApi(apiConfig, this.getApiUrl("payment")),
       identity: new IdentityRequestorApi(apiConfig, this.getApiUrl()),
       gsb: new GsbRequestorApi(apiConfig, this.getApiUrl("gsb")),
