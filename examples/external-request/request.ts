@@ -10,7 +10,6 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
     // manifestCert: readFileSync(`${__dirname}/golem-manifest.crt.pem.base64`, "utf-8"),
     // manifestSigAlgorithm: "sha256",
     capabilities: ["inet", "manifest-support"],
-    subnetTag: "public",
   });
   await executor.run(async (ctx) => {
     const result = await ctx.run(
