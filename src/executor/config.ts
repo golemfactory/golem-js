@@ -56,6 +56,7 @@ export class ExecutorConfig {
       minMemGib: options.minMemGib,
       minStorageGib: options.minStorageGib,
       minCpuThreads: options.minCpuThreads,
+      minCpuCores: options.minCpuCores,
       capabilities: options.capabilities,
       manifest: options.manifest,
       manifestSig: options.manifestSig,
@@ -67,13 +68,6 @@ export class ExecutorConfig {
     this.taskTimeout = options.taskTimeout || DEFAULTS.taskTimeout;
     this.subnetTag = options.subnetTag || processEnv.env?.YAGNA_SUBNET || DEFAULTS.subnetTag;
     this.networkIp = options.networkIp;
-    this.packageOptions = {
-      engine: options.engine,
-      minMemGib: options.minMemGib,
-      minStorageGib: options.minStorageGib,
-      minCpuThreads: options.minCpuThreads,
-      capabilities: options.capabilities,
-    };
     this.logger = options.logger || (!runtimeContextChecker.isBrowser ? defaultLogger() : undefined);
     this.logLevel = options.logLevel || DEFAULTS.logLevel;
     this.logger?.setLevel && this.logger?.setLevel(this.logLevel);
