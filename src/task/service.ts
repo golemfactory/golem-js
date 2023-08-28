@@ -1,4 +1,3 @@
-import { Task } from "./task";
 import { TaskQueue } from "./queue";
 import { WorkContext } from "./work";
 import { Logger, sleep, YagnaApi } from "../utils";
@@ -9,6 +8,7 @@ import { NetworkService } from "../network";
 import { Activity, ActivityOptions } from "../activity";
 import { TaskConfig } from "./config";
 import { Events } from "../events";
+import { Task } from "./task";
 
 export interface TaskOptions extends ActivityOptions {
   /** Number of maximum parallel running task on one TaskExecutor instance */
@@ -154,6 +154,7 @@ export class TaskService {
             reason,
           }),
         );
+        task.cleanup();
         throw new Error(`Task ${task.id} has been rejected! ${reason}`);
       }
       await activity.stop().catch((actError) => this.logger?.debug(actError));

@@ -1,87 +1,107 @@
 import { TaskExecutor } from "../executor/executor";
-import { JobOnGolem, JobOnGolemConfig } from "./job_on_golem";
-import { InMemoryJobStorage, JobStorage } from "./job_storage";
-import { v4 } from "uuid";
+import { PackageOptions } from "../package";
+import { Worker } from "../task";
+import { Job } from "../job";
 
 export interface GolemNetworkConfig {
-  jobStorage?: JobStorage;
   image?: string;
+  demand?: Pick<PackageOptions, "minMemGib" | "minStorageGib" | "minCpuThreads" | "minCpuCores" | "capabilities">;
   enableLogging?: boolean;
-  beforeEachJob?: JobOnGolemConfig["jobDescription"];
+  beforeEachJob?: Worker<unknown, unknown>;
 }
-
+/**
+ * The starting point for using Golem Network.
+ *
+ * @description The GolemNetwork class is the best way to get started with developing on Golem Network. It provides a simple interface for creating jobs and running tasks.
+ * @example
+ * ```typescript
+ * import { GolemNetwork } from "@golem-sdk/golem-js";
+ * const network = new GolemNetwork();
+ * network.init().then(() => {
+ *  // network is ready to use
+ *  const result = await network.runTask(async (ctx) => {
+ *   // do some work
+ *   return (await ctx.run("echo 'Hello from Golem'")).stdout;
+ *  });
+ *  console.log(result);
+ * });
+ *```
+ */
 export class GolemNetwork {
-  private readonly jobStorage: JobStorage;
   private readonly image: string;
   private readonly enableLogging: boolean;
-  private readonly beforeEachJob: JobOnGolemConfig["jobDescription"];
-  private executor: TaskExecutor | null = null;
+  private readonly beforeEachJob: Worker<unknown, unknown>;
+  private readonly demand: GolemNetworkConfig["demand"];
+  private _executor: TaskExecutor | null = null;
 
-  constructor(config: GolemNetworkConfig) {
-    this.jobStorage = config.jobStorage || new InMemoryJobStorage();
+  constructor(config: GolemNetworkConfig = {}) {
     this.image = config.image || "golem/alpine:3.18.2";
     this.enableLogging = config.enableLogging || false;
     this.beforeEachJob = config.beforeEachJob || (async () => {});
+    this.demand = config.demand || {};
+  }
+
+  private get executor() {
+    if (this._executor === null) {
+      throw new Error("GolemNetwork not initialized, please run init() first");
+    }
+    return this._executor;
   }
 
   public isInitialized() {
-    return this.executor !== null;
+    return this._executor !== null;
   }
 
   public async init() {
-    this.executor = await TaskExecutor.create({
+    this._executor = await TaskExecutor.create({
       package: this.image,
       enableLogging: this.enableLogging,
+      ...this.demand,
     });
   }
 
-  private async createJob({ jobId, jobDescription }: Omit<JobOnGolemConfig, "executor">) {
-    if (this.executor === null) {
-      throw new Error("GolemNetwork not initialized, please run init() first");
-    }
-    const job = new JobOnGolem({
-      jobId,
-      jobDescription: async (ctx) => {
-        await this.beforeEachJob(ctx);
-        return jobDescription(ctx);
-      },
-      executor: this.executor,
+  /**
+   * Create a job on Golem Network.
+   *
+   * @description Create a job on Golem Network. You can use the job object to fetch the job status, results and errors. For more information see {@link Job}
+   * @param worker Worker function to run
+   * @returns Job object
+   * @example
+   * ```typescript
+   * const job = await network.createJob(async (ctx) => {
+   * // do some work
+   * return (await ctx.run("echo 'Hello from Golem'")).stdout;
+   * });
+   * console.log(job.id);
+   * const status = await job.fetchState();
+   * console.log(status);
+   * ```
+   */
+  public async createJob<Output = unknown>(worker: Worker<unknown, Output>) {
+    return this.executor.createJob(async (ctx) => {
+      await this.beforeEachJob(ctx);
+      return worker(ctx);
     });
-    return job;
   }
 
-  public async runJob({ jobDescription }: Pick<JobOnGolemConfig, "jobDescription">) {
-    const jobId = v4();
-    const job = await this.createJob({ jobId, jobDescription });
-    job.on("statusChange", async (status) => {
-      await this.jobStorage.setJobStatus(jobId, status);
-    });
-    job.on("success", async (result) => {
-      await this.jobStorage.setJobResult(jobId, result);
-    });
-    job.on("fail", async (error) => {
-      await this.jobStorage.setJobResult(jobId, error);
-    });
-    job.start();
-    return jobId;
+  public getJobById(id: string) {
+    return this.executor.getJobById(id);
   }
 
-  public async getJobStatus(jobId: string) {
-    const status = await this.jobStorage.getJobStatus(jobId);
-    if (status === null) {
-      throw new Error(`Job ${jobId} not found`);
-    }
-    return status;
-  }
-
-  public async getJobResult(jobId: string) {
-    const result = await this.jobStorage.getJobResult(jobId);
-    return result;
+  /**
+   * Run a task on Golem Network.
+   *
+   * @description The runTask method is the simplest way to run some code on Golem Network. Simply call `runTask` and await the promise to get your result.
+   * @param worker Worker function to run
+   * @returns Worker function result
+   */
+  public async runTask<Output = unknown>(worker: Worker<undefined, Output>) {
+    return this.executor.run<Output>(worker);
   }
 
   public async close() {
-    if (this.executor !== null) {
-      await this.executor.end();
+    if (this._executor !== null) {
+      await this._executor.end();
     }
   }
 }

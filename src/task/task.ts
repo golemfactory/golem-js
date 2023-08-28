@@ -2,11 +2,11 @@ import { QueueableTask } from "./queue";
 import { Worker } from "./work";
 
 export enum TaskState {
-  New,
-  Retry,
-  Pending,
-  Done,
-  Rejected,
+  New = "new",
+  Retry = "retry",
+  Pending = "pending",
+  Done = "done",
+  Rejected = "rejected",
 }
 
 const MAX_RETRIES = 5;
@@ -21,6 +21,7 @@ export class Task<InputType = unknown, OutputType = unknown> implements Queueabl
   private results?: OutputType;
   private error?: Error;
   private retriesCount = 0;
+  private listeners = new Set<(state: TaskState) => void>();
 
   constructor(
     public readonly id: string,
@@ -30,8 +31,17 @@ export class Task<InputType = unknown, OutputType = unknown> implements Queueabl
     private maxTaskRetries: number = MAX_RETRIES,
   ) {}
 
+  onStateChange(listener: (state: TaskState) => void) {
+    this.listeners.add(listener);
+  }
+  cleanup() {
+    // prevent memory leaks
+    this.listeners.clear();
+  }
+
   start() {
     this.state = TaskState.Pending;
+    this.listeners.forEach((listener) => listener(this.state));
   }
   stop(results?: OutputType, error?: Error, retry = true) {
     if (error) {
@@ -42,6 +52,7 @@ export class Task<InputType = unknown, OutputType = unknown> implements Queueabl
       this.state = TaskState.Done;
       this.results = results;
     }
+    this.listeners.forEach((listener) => listener(this.state));
   }
   isQueueable(): boolean {
     return this.state === TaskState.New || this.state === TaskState.Retry;
@@ -49,7 +60,6 @@ export class Task<InputType = unknown, OutputType = unknown> implements Queueabl
   isRetry(): boolean {
     return this.state === TaskState.Retry;
   }
-
   isDone(): boolean {
     return this.state === TaskState.Done;
   }
