@@ -389,7 +389,7 @@ export class TaskExecutor {
   }
 
   /**
-   * Start a new job without waiting for the result. The job can be retrieved later using {@link TaskExecutor.fetchJob}. The job's status is stored in the {@link JobStorage} provided in the {@link ExecutorOptions} (in-memory by default). For distributed environments, it is recommended to use a form of storage that is accessible from all nodes (e.g. a database).
+   * Start a new job without waiting for the result. The job can be retrieved later using {@link TaskExecutor.getJobById}. The job's status is stored in the {@link JobStorage} provided in the {@link ExecutorOptions} (in-memory by default). For distributed environments, it is recommended to use a form of storage that is accessible from all nodes (e.g. a database).
    *
    * @param Worker worker function
    * @returns Job object
