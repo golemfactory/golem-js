@@ -1,6 +1,9 @@
 import { TaskExecutor } from "../executor/executor";
 import { PackageOptions } from "../package";
 import { Worker } from "../task";
+
+// import for typedoc
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Job } from "../job";
 
 export interface GolemNetworkConfig {
@@ -63,7 +66,7 @@ export class GolemNetwork {
   /**
    * Create a job on Golem Network.
    *
-   * @description Create a job on Golem Network. You can use the job object to fetch the job status, results and errors. For more information see {@link Job}
+   * @description Create a job on Golem Network. You can use the job object to fetch the job status, results and errors. For more information see {@link Job}.
    * @param worker Worker function to run
    * @returns Job object
    * @example
