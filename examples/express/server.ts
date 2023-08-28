@@ -1,5 +1,5 @@
 import express from "express";
-import { GolemNetwork } from "@golem-sdk/golem-js";
+import { GolemNetwork, Job, JobState } from "@golem-sdk/golem-js";
 import { getBlenderParams } from "./blenderUtils";
 import { fileURLToPath } from "url";
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
@@ -15,6 +15,13 @@ const network = new GolemNetwork({
   // let's use one of ready-to-go images created by the Golem team
   // if you want to use your own image take a look at https://handbook.golem.network/requestor-tutorials/vm-runtime
   image: "golem/blender:latest",
+  // let's make sure the provider has enough resources to render our scene
+  demand: {
+    minMemGib: 1,
+    minStorageGib: 2,
+    minCpuThreads: 1,
+    minCpuCores: 1,
+  },
   // upload the scene file before each job
   beforeEachJob: async (workContext) => {
     await workContext.uploadFile(`${__dirname}/cubes.blend`, "/golem/resource/scene.blend");
@@ -43,22 +50,20 @@ app.post("/render-scene", async (req, res) => {
     return;
   }
 
-  const jobId = await network.runJob({
-    jobDescription: async (workContext) => {
-      const fileName = `output_${frame}.png`;
-      const result = await workContext
-        .beginBatch()
-        .uploadJson(getBlenderParams(frame), "/golem/work/params.json")
-        .run("/golem/entrypoints/run-blender.sh")
-        .downloadFile(`/golem/output/out${frame.toString().padStart(4, "0")}.png`, `public/${fileName}`)
-        .end();
-      if (!result?.length) {
-        throw new Error("Something went wrong, no result");
-      }
-      return fileName;
-    },
+  const job = await network.createJob(async (workContext) => {
+    const fileName = `output_${frame}.png`;
+    const result = await workContext
+      .beginBatch()
+      .uploadJson(getBlenderParams(frame), "/golem/work/params.json")
+      .run("/golem/entrypoints/run-blender.sh")
+      .downloadFile(`/golem/output/out${frame.toString().padStart(4, "0")}.png`, `public/${fileName}`)
+      .end();
+    if (!result?.length) {
+      throw new Error("Something went wrong, no result");
+    }
+    return fileName;
   });
-  return res.json({ jobId });
+  return res.json({ jobId: job.id });
 });
 
 app.get("/job-status/:jobId", async (req, res) => {
@@ -67,9 +72,11 @@ app.get("/job-status/:jobId", async (req, res) => {
     res.status(400).send("please specify jobId in the request path");
     return;
   }
-  let status;
+  let job: Job<string>;
+  let status: JobState;
   try {
-    status = await network.getJobStatus(jobId);
+    job = network.getJobById(jobId) as Job<string>;
+    status = await job.fetchState();
   } catch (error) {
     res.status(404).send("job not found");
     return;
@@ -83,23 +90,25 @@ app.get("/job-result/:jobId", async (req, res) => {
     res.status(400).send("please specify jobId in the request path");
     return;
   }
-  let status;
+  let job: Job<string>;
+  let status: JobState;
   try {
-    status = await network.getJobStatus(jobId);
+    job = network.getJobById(jobId) as Job<string>;
+    status = await job.fetchState();
   } catch (error) {
     res.status(404).send("job not found");
     return;
   }
-  if (status === "running") {
+  if ([JobState.New, JobState.Pending].includes(status)) {
     res.status(400).send("job is still running, check again later!");
     return;
   }
-  if (status === "failed") {
+  if (status === JobState.Rejected) {
     res.status(400).send("job failed, check logs for more details");
     return;
   }
 
-  const result = await network.getJobResult(jobId);
+  const result = await job.fetchResults();
   return res.json("Job completed successfully! See your result at http://localhost:3001/results/" + result);
 });
 

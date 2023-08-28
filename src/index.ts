@@ -13,4 +13,5 @@ export { Package, PackageOptions } from "./package";
 export { PaymentFilters } from "./payment";
 export { Events, BaseEvent, EventType } from "./events";
 export { Logger, LogLevel, jsonLogger, nullLogger, consoleLogger, pinoLogger, defaultLogger } from "./utils";
+export { Job, JobStorage, JobState } from "./job";
 export { GolemNetwork, GolemNetworkConfig } from "./golem_network";
