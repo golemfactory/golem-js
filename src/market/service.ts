@@ -1,12 +1,12 @@
 import { Logger, sleep } from "../utils";
 import { Package } from "../package";
-import { Proposal, ProposalDTO } from "./proposal";
+import { Proposal } from "./proposal";
 import { AgreementPoolService } from "../agreement";
 import { Allocation } from "../payment";
 import { Demand, DemandEvent, DemandEventType, DemandOptions } from "./demand";
 import { MarketConfig } from "./config";
 
-export type ProposalFilter = (proposal: ProposalDTO) => Promise<boolean>;
+export type ProposalFilter = (proposal: Proposal) => Promise<boolean>;
 
 export interface MarketOptions extends DemandOptions {
   /** A custom filter that checks every proposal coming from the market */
@@ -120,7 +120,7 @@ export class MarketService {
   }
 
   private async processDraftProposal(proposal: Proposal) {
-    this.agreementPoolService.addProposal(proposal);
+    await this.agreementPoolService.addProposal(proposal);
     this.logger?.debug(
       `Proposal has been confirmed with provider ${proposal.issuerId} and added to agreement pool (${proposal.id})`,
     );
