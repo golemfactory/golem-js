@@ -63,7 +63,7 @@ const executor = await TaskExecutor.create({
 With both _Requestor_ and _Provider_ yagna nodes and `ya-provider` running in the background run:
 
 ```sh
-ts-node request.ts
+npm run external-request
 ```
 
 (keep in mind to set `YAGNA_APPKEY` env variable pointing to the local _Requestor_ node)
