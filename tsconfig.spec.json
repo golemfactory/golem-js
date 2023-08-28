@@ -18,5 +18,5 @@
     "typeRoots": ["node_modules/@types"]
   },
   "exclude": ["dist", "node_modules", "examples", "cypress.config.ts"],
-  "include": ["yajsapi/**/*.spec.ts", "tests/unit/**/*.test.ts", "tests/unit/**/*.spec.ts"]
+  "include": ["src/**/*.spec.ts", "tests/unit/**/*.test.ts", "tests/unit/**/*.spec.ts"]
 }
