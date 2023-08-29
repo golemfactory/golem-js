@@ -172,7 +172,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
       throw new Error(`Invalid response: ${resp.status}`);
     }
 
-    const servicesId = resp.data.serviceId;
+    const servicesId = resp.data.servicesId;
     const messages_link = `/gsb-api/v1/services/${servicesId}?authToken=${this.yagnaApi.yagnaOptions.apiKey}`;
     const url = new URL(messages_link, this.yagnaApi.yagnaOptions.basePath);
     url.protocol = "ws:";
