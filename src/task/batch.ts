@@ -73,7 +73,14 @@ export class Batch {
   async end(): Promise<Result[]> {
     await this.script.before();
     await sleep(100, true);
-    const results = await this.activity.execute(this.script.getExeScriptRequest());
+    let results: Readable;
+    try {
+      results = await this.activity.execute(this.script.getExeScriptRequest());
+    } catch (error) {
+      // the original error is more important than the one from after()
+      await this.script.after([]).catch();
+      throw error;
+    }
     const allResults: Result[] = [];
     return new Promise((resolve, reject) => {
       results.on("data", (res) => {
@@ -99,7 +106,14 @@ export class Batch {
   async endStream(): Promise<Readable> {
     const script = this.script;
     await script.before();
-    const results = await this.activity.execute(this.script.getExeScriptRequest());
+    let results: Readable;
+    try {
+      results = await this.activity.execute(this.script.getExeScriptRequest());
+    } catch (error) {
+      // the original error is more important than the one from after()
+      await script.after([]).catch();
+      throw error;
+    }
     const decodedResults: Result[] = [];
     const errorResultHandler = new Transform({
       objectMode: true,

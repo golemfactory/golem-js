@@ -112,8 +112,7 @@ describe("Batch", () => {
       expect(spy).toHaveBeenCalled();
     });
 
-    // FIXME: Not working due to bug: JST-250
-    xit("should call script.after() on execute error", async () => {
+    it("should call script.after() on execute error", async () => {
       const spy = jest.spyOn(batch["script"], "after");
       jest.spyOn(activity, "execute").mockRejectedValue(new Error("ERROR"));
 
@@ -187,8 +186,7 @@ describe("Batch", () => {
       expect(spy).toHaveBeenCalled();
     });
 
-    // FIXME: Not working due to bug: JST-250
-    xit("should call script.after() on execute error", async () => {
+    it("should call script.after() on execute error", async () => {
       const spy = jest.spyOn(batch["script"], "after");
       jest.spyOn(activity, "execute").mockRejectedValue(new Error("ERROR"));
 
