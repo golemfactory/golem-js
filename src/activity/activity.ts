@@ -1,4 +1,4 @@
-import { Result, StreamingBatchEvent } from "./results";
+import { Result, ResultState, StreamingBatchEvent } from "./results";
 import EventSource from "eventsource";
 import { Readable } from "stream";
 import { Logger } from "../utils";
@@ -188,7 +188,7 @@ export class Activity {
             // This will ignore "incompatibility" between ExeScriptCommandResultResultEnum and ResultState, which both
             // contain exactly the same entries, however TSC refuses to compile it as it assumes the former is dynamicaly
             // computed.
-            const { data: results }: { data: Result[] } = (await api.control.getExecBatchResults(
+            const { data: rawExecBachResults } = await api.control.getExecBatchResults(
               activityId,
               batchId,
               undefined,
@@ -196,9 +196,10 @@ export class Activity {
               {
                 timeout: 0,
               },
-            )) as unknown as { data: Result[] };
+            );
+            // TODO: Map ExeUnitResult to our Result, and not type cast
             retryCount = 0;
-            const newResults = results.slice(lastIndex + 1);
+            const newResults = rawExecBachResults.map((rawResult) => new Result(rawResult)).slice(lastIndex + 1);
             if (Array.isArray(newResults) && newResults.length) {
               newResults.forEach((result) => {
                 this.push(result);
@@ -333,15 +334,19 @@ export class Activity {
   private parseEventToResult(msg: string, batchSize: number): Result {
     try {
       const event: StreamingBatchEvent = JSON.parse(msg);
-      return {
+      return new Result({
         index: event.index,
         eventDate: event.timestamp,
-        result: event?.kind?.finished ? (event?.kind?.finished?.return_code === 0 ? "Ok" : "Error") : undefined,
+        result: event?.kind?.finished
+          ? event?.kind?.finished?.return_code === 0
+            ? ResultState.Ok
+            : ResultState.Error
+          : ResultState.Error,
         stdout: event?.kind?.stdout,
         stderr: event?.kind?.stderr,
         message: event?.kind?.finished?.message,
         isBatchFinished: event.index + 1 >= batchSize && Boolean(event?.kind?.finished),
-      } as Result;
+      });
     } catch (error) {
       throw new Error(`Cannot parse ${msg} as StreamingBatchEvent`);
     }

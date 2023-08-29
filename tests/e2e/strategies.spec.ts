@@ -17,7 +17,7 @@ describe("Strategies", function () {
       const data = ["one", "two", "three"];
       const results = executor.map<string, string | undefined>(data, async (ctx, x) => {
         const res = await ctx.run(`echo "${x}"`);
-        return res.stdout?.trim();
+        return res.getOutputAsJson();
       });
       const finalOutputs: string[] = [];
       for await (const res of results) if (res) finalOutputs.push(res);
@@ -38,7 +38,7 @@ describe("Strategies", function () {
       const data = ["one", "two", "three"];
       const results = executor.map<string, string | undefined>(data, async (ctx, x) => {
         const res = await ctx.run(`echo "${x}"`);
-        return res.stdout?.trim();
+        return res.getOutputAsJson();
       });
       const finalOutputs: string[] = [];
       for await (const res of results) if (res) finalOutputs.push(res);
@@ -60,7 +60,7 @@ describe("Strategies", function () {
       const data = ["one", "two"];
       const results = executor.map<string, string | undefined>(data, async (ctx, x) => {
         const res = await ctx.run(`echo "${x}"`);
-        return res.stdout?.trim();
+        return res.getOutputAsJson();
       });
       const finalOutputs: string[] = [];
       for await (const res of results) if (res) finalOutputs.push(res);
@@ -78,7 +78,7 @@ describe("Strategies", function () {
       const data = ["one", "two"];
       const results = executor.map<string, string | undefined>(data, async (ctx, x) => {
         const res = await ctx.run(`echo "${x}"`);
-        return res.stdout?.trim();
+        return res.getOutputAsJson();
       });
       const finalOutputs: string[] = [];
       for await (const res of results) if (res) finalOutputs.push(res);

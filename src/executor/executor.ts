@@ -265,7 +265,7 @@ export class TaskExecutor {
    */
   async run<OutputType = Result>(worker: Worker<undefined, OutputType>): Promise<OutputType | undefined> {
     return this.executeTask<undefined, OutputType>(worker).catch(async (e) => {
-      await this.handleCriticalError(e);
+      this.handleCriticalError(e);
       return undefined;
     });
   }

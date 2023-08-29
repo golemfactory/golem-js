@@ -119,7 +119,7 @@ describe("Work Context", () => {
         });
 
         const result = await context.downloadJson("/golem/file.txt");
-        expect(result.result).toEqual(ResultState.OK);
+        expect(result.result).toEqual(ResultState.Ok);
         expect(result.data).toEqual(json);
       });
     });
@@ -152,15 +152,15 @@ describe("Work Context", () => {
         jest.spyOn(Script.prototype, "before").mockResolvedValue(undefined);
         activity.mockResults([ActivityMock.createResult({ stdout: "SUCCESS" })]);
         const result = await context["runOneCommand"](new Run("test"));
-        expect(result.result).toEqual(ResultState.OK);
+        expect(result.result).toEqual(ResultState.Ok);
         expect(result.stdout).toEqual("SUCCESS");
       });
 
       it("should handle error result", async () => {
         jest.spyOn(Script.prototype, "before").mockResolvedValue(undefined);
-        activity.mockResults([ActivityMock.createResult({ result: ResultState.ERROR, stdout: "FAILURE" })]);
+        activity.mockResults([ActivityMock.createResult({ result: ResultState.Error, stdout: "FAILURE" })]);
         const result = await context["runOneCommand"](new Run("test"));
-        expect(result.result).toEqual(ResultState.ERROR);
+        expect(result.result).toEqual(ResultState.Error);
         expect(result.stdout).toEqual("FAILURE");
         await logger.expectToInclude("Task error on provider");
       });

@@ -9,12 +9,12 @@ export class ActivityMock extends Activity {
   private results: (Result | Error)[] = [];
 
   static createResult(props?: Partial<Result>): Result {
-    return {
-      result: ResultState.OK,
+    return new Result({
+      result: ResultState.Ok,
       index: 1,
       eventDate: new Date().toISOString(),
       ...props,
-    };
+    });
   }
 
   constructor(id?: string, agreementId?: string, options?: ActivityConfig) {
