@@ -1,5 +1,5 @@
 import { Batch, WorkContext } from "./index";
-import { LoggerMock } from "../../tests/mock";
+import { LoggerMock, YagnaMock } from "../../tests/mock";
 import { ActivityStateEnum, ResultState } from "../activity";
 import { DownloadData, DownloadFile, Run, Script, UploadData, UploadFile } from "../script";
 import { ActivityMock } from "../../tests/mock/activity.mock";
@@ -13,10 +13,9 @@ describe("Work Context", () => {
 
   beforeEach(() => {
     logger.clear();
-    activity = new ActivityMock();
+    activity = new ActivityMock("test_id", "test_id", new YagnaMock().getApi());
     context = new WorkContext(activity, {
       logger: logger,
-      isRunning: jest.fn(),
     });
   });
 

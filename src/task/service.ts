@@ -1,7 +1,7 @@
 import { Task } from "./task";
 import { TaskQueue } from "./queue";
 import { WorkContext } from "./work";
-import { Logger, sleep } from "../utils";
+import { Logger, sleep, YagnaApi } from "../utils";
 import { StorageProvider } from "../storage";
 import { AgreementPoolService } from "../agreement";
 import { PaymentService } from "../payment";
@@ -33,6 +33,7 @@ export class TaskService {
   private options: TaskConfig;
 
   constructor(
+    private yagnaApi: YagnaApi,
     private tasksQueue: TaskQueue<Task<unknown, unknown>>,
     private agreementPoolService: AgreementPoolService,
     private paymentService: PaymentService,
@@ -79,7 +80,7 @@ export class TaskService {
       if (this.activities.has(agreement.id)) {
         activity = this.activities.get(agreement.id);
       } else {
-        activity = await Activity.create(agreement.id, this.options);
+        activity = await Activity.create(agreement.id, this.yagnaApi, this.options);
         this.activities.set(agreement.id, activity);
       }
       this.options.eventTarget?.dispatchEvent(
@@ -110,7 +111,6 @@ export class TaskService {
         logger: this.logger,
         activityPreparingTimeout: this.options.activityPreparingTimeout,
         activityStateCheckingInterval: this.options.activityStateCheckingInterval,
-        isRunning: () => this.isRunning,
       });
       await ctx.before();
       if (initWorker && !this.initWorkersDone.has(activity.id)) {

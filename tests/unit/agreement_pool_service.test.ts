@@ -1,11 +1,12 @@
-import { LoggerMock } from "../mock";
+import { LoggerMock, YagnaMock } from "../mock";
 import { Agreement, AgreementPoolService } from "../../src/agreement";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import { Proposal as ProposalModel } from "ya-ts-client/dist/ya-market/src/models/proposal";
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
-import { Proposal } from "../../src/market/proposal";
+import { Proposal } from "../../src/market";
 
 const logger = new LoggerMock();
+const yagnaApi = new YagnaMock().getApi();
 
 const createProposal = (id) => {
   return new Proposal(
@@ -39,7 +40,7 @@ describe("Agreement Pool Service", () => {
 
   describe("run()", () => {
     it("should start service", async () => {
-      const agreementService = new AgreementPoolService({ logger });
+      const agreementService = new AgreementPoolService(yagnaApi, { logger });
       await agreementService.run();
       expect(logger.logs).toContain("Agreement Pool Service has started");
       await agreementService.end();
@@ -47,7 +48,7 @@ describe("Agreement Pool Service", () => {
   });
   describe("end()", () => {
     it("should stop service", async () => {
-      const agreementService = new AgreementPoolService({ logger });
+      const agreementService = new AgreementPoolService(yagnaApi, { logger });
       await agreementService.run();
       await agreementService.end();
       expect(logger.logs).toContain("Agreement Pool Service has been stopped");
@@ -55,7 +56,7 @@ describe("Agreement Pool Service", () => {
   });
   describe("getAvailableAgreement()", () => {
     it("should create and return agreement from available proposal pool", async () => {
-      const agreementService = new AgreementPoolService({ logger });
+      const agreementService = new AgreementPoolService(yagnaApi, { logger });
       await agreementService.run();
 
       await agreementService.addProposal(createProposal("proposal-id"));
@@ -63,7 +64,7 @@ describe("Agreement Pool Service", () => {
       expect(agreement).toBeInstanceOf(Agreement);
     });
     it("should return agreement if is available in the pool", async () => {
-      const agreementService = new AgreementPoolService({ logger });
+      const agreementService = new AgreementPoolService(yagnaApi, { logger });
       await agreementService.run();
       await agreementService.addProposal(createProposal("proposal-id"));
       const agreement1 = await agreementService.getAgreement();
@@ -74,7 +75,7 @@ describe("Agreement Pool Service", () => {
   });
   describe("releaseAgreement()", () => {
     it("should return agreement to the pool if flag reuse if on", async () => {
-      const agreementService = new AgreementPoolService({ logger });
+      const agreementService = new AgreementPoolService(yagnaApi, { logger });
       await agreementService.run();
       await agreementService.addProposal(createProposal("proposal-id"));
       const agreement = await agreementService.getAgreement();
@@ -83,7 +84,7 @@ describe("Agreement Pool Service", () => {
     });
 
     it("should terminate agreement if flag reuse if off", async () => {
-      const agreementService = new AgreementPoolService({ logger });
+      const agreementService = new AgreementPoolService(yagnaApi, { logger });
       await agreementService.run();
       await agreementService.addProposal(createProposal("proposal-id"));
       const agreement = await agreementService.getAgreement();
@@ -93,7 +94,7 @@ describe("Agreement Pool Service", () => {
     });
 
     it("should warn if there is no agreement with given id", async () => {
-      const agreementService = new AgreementPoolService({ logger });
+      const agreementService = new AgreementPoolService(yagnaApi, { logger });
       await agreementService.run();
       await agreementService.addProposal(createProposal("proposal-id"));
       const agreement = await agreementService.getAgreement();
@@ -104,7 +105,7 @@ describe("Agreement Pool Service", () => {
 
   describe("addProposal()", () => {
     it("should add proposal to pool", async () => {
-      const agreementService = new AgreementPoolService({ logger });
+      const agreementService = new AgreementPoolService(yagnaApi, { logger });
       await agreementService.run();
 
       await agreementService.addProposal(createProposal("proposal-id"));
