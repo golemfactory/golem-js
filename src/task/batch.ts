@@ -2,7 +2,7 @@ import { DownloadFile, Run, Script, UploadFile } from "../script";
 import { Activity, Result } from "../activity";
 import { StorageProvider } from "../storage/provider";
 import { Logger, sleep } from "../utils";
-import { Readable, Transform } from "stream";
+import { Readable, Transform, pipeline } from "stream";
 import { UploadData } from "../script/command";
 
 export class Batch {
@@ -132,11 +132,9 @@ export class Batch {
         }
       },
     });
-    results.on("end", () => this.script.after(decodedResults).catch());
-    results.on("error", (error) => {
+    const resultsWithErrorHandling = pipeline(results, errorResultHandler, () => {
       script.after(decodedResults).catch();
-      results.destroy(error);
     });
-    return results.pipe(errorResultHandler);
+    return resultsWithErrorHandling;
   }
 }
