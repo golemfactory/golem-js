@@ -19,7 +19,7 @@ interface GsbRequestorApi {
 export class RequestorApi extends BaseAPI implements GsbRequestorApi {
   async createService(fileInfo: GftpFileInfo, components: string[]): Promise<AxiosResponse<ServiceModel>> {
     return this.axios.post(
-      `${this.basePath}services`,
+      `${this.basePath}/services`,
       {
         listen: {
           on: `/public/gftp/${fileInfo.id}`,
