@@ -258,7 +258,7 @@ describe("WebSocketBrowserStorageProvider", () => {
       jest.spyOn(yagnaApi.gsb, "createService").mockImplementation((fileInfo, components) => {
         return Promise.resolve({
           status: 201,
-          data: { serviceId: "ID" },
+          data: { servicesId: "ID" },
         } as AxiosResponse);
       });
 
@@ -275,7 +275,7 @@ describe("WebSocketBrowserStorageProvider", () => {
       jest.spyOn(yagnaApi.gsb, "createService").mockImplementation((fileInfo, components) => {
         return Promise.resolve({
           status: 201,
-          data: { serviceId: "ID" },
+          data: { servicesId: "ID" },
         } as AxiosResponse);
       });
       await provider["createService"]({ id: "foo", url: "/file" }, []);

@@ -3,7 +3,7 @@ import { AxiosPromise, AxiosRequestConfig, AxiosResponse } from "axios";
 import { BaseAPI } from "ya-ts-client/dist/ya-net/base";
 
 export type ServiceModel = {
-  serviceId: string;
+  servicesId: string;
 };
 
 export type GftpFileInfo = {
