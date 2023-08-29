@@ -34,7 +34,6 @@ export interface WorkOptions {
   networkNode?: NetworkNode;
   logger?: Logger;
   initWorker?: Worker<undefined>;
-  isRunning: () => boolean;
 }
 
 interface CommandOptions {

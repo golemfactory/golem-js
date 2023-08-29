@@ -15,3 +15,4 @@ export { Events, BaseEvent, EventType } from "./events";
 export { Logger, LogLevel, jsonLogger, nullLogger, consoleLogger, pinoLogger, defaultLogger } from "./utils";
 export { Job, JobStorage, JobState } from "./job";
 export { GolemNetwork, GolemNetworkConfig } from "./golem_network";
+export { Yagna } from "./utils/yagna/yagna";

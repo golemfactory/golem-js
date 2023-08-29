@@ -2,8 +2,9 @@ import Bottleneck from "bottleneck";
 import { Logger } from "../utils";
 import { Agreement, AgreementOptions, AgreementStateEnum } from "./agreement";
 import { AgreementServiceConfig } from "./config";
-import { Proposal, ProposalDTO } from "../market/proposal";
+import { Proposal, ProposalDTO } from "../market";
 import sleep from "../utils/sleep";
+import { YagnaApi } from "../utils/yagna/yagna";
 
 export interface AgreementDTO {
   id: string;
@@ -36,10 +37,12 @@ export class AgreementPoolService {
   private agreements = new Map<string, Agreement>();
 
   private isServiceRunning = false;
-  private initialTime = Date.now();
   private limiter: Bottleneck;
 
-  constructor(private readonly agreementServiceOptions?: AgreementServiceOptions) {
+  constructor(
+    private readonly yagnaApi: YagnaApi,
+    agreementServiceOptions?: AgreementServiceOptions,
+  ) {
     this.config = new AgreementServiceConfig(agreementServiceOptions);
     this.logger = agreementServiceOptions?.logger;
 
@@ -53,7 +56,6 @@ export class AgreementPoolService {
    */
   async run() {
     this.isServiceRunning = true;
-    this.initialTime = +new Date();
     this.logger?.debug("Agreement Pool Service has started");
   }
 
@@ -148,7 +150,6 @@ export class AgreementPoolService {
   async end() {
     this.isServiceRunning = false;
     await this.terminateAll({ message: "All computations done" });
-    this.config.httpAgent.destroy?.();
     this.logger?.debug("Agreement Pool Service has been stopped");
   }
 
@@ -172,7 +173,7 @@ export class AgreementPoolService {
 
   async createAgreement(candidate) {
     try {
-      let agreement = await Agreement.create(candidate.proposal.id, this.config.options);
+      let agreement = await Agreement.create(candidate.proposal.id, this.yagnaApi, this.config.options);
       agreement = await this.waitForAgreementApproval(agreement);
       const state = await agreement.getState();
 
@@ -206,7 +207,7 @@ export class AgreementPoolService {
       this.logger?.debug(`Agreement proposed to provider '${agreement.provider.name}'`);
     }
 
-    await this.config.api.waitForApproval(agreement.id, this.config.agreementWaitingForApprovalTimeout);
+    await this.yagnaApi.market.waitForApproval(agreement.id, this.config.agreementWaitingForApprovalTimeout);
     return agreement;
   }
 }

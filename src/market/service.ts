@@ -5,6 +5,7 @@ import { AgreementPoolService } from "../agreement";
 import { Allocation } from "../payment";
 import { Demand, DemandEvent, DemandEventType, DemandOptions } from "./demand";
 import { MarketConfig } from "./config";
+import { YagnaApi } from "../utils/yagna/yagna";
 
 export type ProposalFilter = (proposal: ProposalDTO) => Promise<boolean>;
 
@@ -30,6 +31,7 @@ export class MarketService {
 
   constructor(
     private readonly agreementPoolService: AgreementPoolService,
+    private readonly yagnaApi: YagnaApi,
     options?: MarketOptions,
   ) {
     this.options = new MarketConfig(options);
@@ -48,13 +50,12 @@ export class MarketService {
       this.demand.removeEventListener(DemandEventType, this.demandEventListener.bind(this));
       await this.demand.unsubscribe().catch((e) => this.logger?.error(`Could not unsubscribe demand. ${e}`));
     }
-    this.options.httpAgent.destroy?.();
     this.logger?.debug("Market Service has been stopped");
   }
 
   private async createDemand(): Promise<true> {
     if (!this.taskPackage || !this.allocation) throw new Error("The service has not been started correctly.");
-    this.demand = await Demand.create(this.taskPackage, this.allocation, this.options);
+    this.demand = await Demand.create(this.taskPackage, this.allocation, this.yagnaApi, this.options);
     this.demand.addEventListener(DemandEventType, this.demandEventListener.bind(this));
     this.logger?.debug(`New demand has been created (${this.demand.id})`);
     return true;
@@ -77,7 +78,7 @@ export class MarketService {
   private async resubscribeDemand() {
     if (this.demand) {
       this.demand.removeEventListener(DemandEventType, this.demandEventListener.bind(this));
-      await this.demand.unsubscribe().catch((e) => this.logger?.error(`Could not unsubscribe demand. ${e}`));
+      await this.demand.unsubscribe().catch((e) => this.logger?.debug(`Could not unsubscribe demand. ${e}`));
     }
     let attempt = 1;
     let success = false;

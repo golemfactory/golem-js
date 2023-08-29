@@ -5,7 +5,7 @@ import { Task, TaskQueue, TaskService, Worker } from "../task";
 import { PaymentService, PaymentOptions } from "../payment";
 import { NetworkService } from "../network";
 import { Result } from "../activity";
-import { sleep, Logger, LogLevel, runtimeContextChecker } from "../utils";
+import { sleep, Logger, LogLevel, runtimeContextChecker, Yagna } from "../utils";
 import { StorageProvider, GftpStorageProvider, NullStorageProvider, WebSocketBrowserStorageProvider } from "../storage";
 import { ExecutorConfig } from "./config";
 import { Events } from "../events";
@@ -91,6 +91,7 @@ export class TaskExecutor {
   private isRunning = true;
   private configOptions: ExecutorOptions;
   private isCanceled = false;
+  private yagna: Yagna;
 
   /**
    * Create a new Task Executor
@@ -138,11 +139,13 @@ export class TaskExecutor {
     this.configOptions = (typeof options === "string" ? { package: options } : options) as ExecutorOptions;
     this.options = new ExecutorConfig(this.configOptions);
     this.logger = this.options.logger;
+    this.yagna = new Yagna(this.configOptions.yagnaOptions);
+    const yagnaApi = this.yagna.getApi();
     this.taskQueue = new TaskQueue<Task<unknown, unknown>>();
-    this.agreementPoolService = new AgreementPoolService(this.options);
-    this.paymentService = new PaymentService(this.options);
-    this.marketService = new MarketService(this.agreementPoolService, this.options);
-    this.networkService = this.options.networkIp ? new NetworkService(this.options) : undefined;
+    this.agreementPoolService = new AgreementPoolService(yagnaApi, this.options);
+    this.paymentService = new PaymentService(yagnaApi, this.options);
+    this.marketService = new MarketService(this.agreementPoolService, yagnaApi, this.options);
+    this.networkService = this.options.networkIp ? new NetworkService(yagnaApi, this.options) : undefined;
 
     // Initialize storage provider.
     if (this.configOptions.storageProvider) {
@@ -150,18 +153,13 @@ export class TaskExecutor {
     } else if (runtimeContextChecker.isNode) {
       this.storageProvider = new GftpStorageProvider(this.logger);
     } else if (runtimeContextChecker.isBrowser) {
-      this.storageProvider = new WebSocketBrowserStorageProvider({
-        yagnaOptions: {
-          apiKey: this.options.yagnaOptions.apiKey,
-          basePath: this.options.yagnaOptions.basePath,
-        },
-        logger: this.logger,
-      });
+      this.storageProvider = new WebSocketBrowserStorageProvider(yagnaApi, this.options);
     } else {
       this.storageProvider = new NullStorageProvider();
     }
 
     this.taskService = new TaskService(
+      this.yagna.getApi(),
       this.taskQueue,
       this.agreementPoolService,
       this.paymentService,
@@ -177,6 +175,12 @@ export class TaskExecutor {
    * @description Method responsible initialize all executor services.
    */
   async init() {
+    try {
+      await this.yagna.connect();
+    } catch (error) {
+      this.logger?.error(error);
+      throw error;
+    }
     const manifest = this.options.packageOptions.manifest;
     const packageReference = this.options.package;
     let taskPackage: Package;
@@ -193,7 +197,9 @@ export class TaskExecutor {
           taskPackage = packageReference;
         }
       } else {
-        throw new Error("No package or manifest provided");
+        const error = new Error("No package or manifest provided");
+        this.logger?.error(error);
+        throw error;
       }
     }
 
@@ -224,6 +230,7 @@ export class TaskExecutor {
     await this.networkService?.end();
     await Promise.all([this.taskService.end(), this.agreementPoolService.end(), this.marketService.end()]);
     await this.paymentService.end();
+    await this.yagna.end();
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFinished());
     this.printStats();
     await this.statsService.end();

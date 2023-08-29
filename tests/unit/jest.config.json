@@ -1,7 +1,6 @@
 {
   "preset": "ts-jest",
   "testEnvironment": "node",
-  "setupFiles": ["<rootDir>/_setup.ts"],
   "roots": ["../../src", "./"],
   "testMatch": ["**/*.test.ts", "**/*.spec.ts"]
 }

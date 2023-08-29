@@ -1,7 +1,7 @@
 import * as activityMock from "../mock/rest/activity";
 import { Task, TaskQueue, TaskService, Worker } from "../../src/task";
-import { agreementPoolServiceMock, paymentServiceMock, networkServiceMock, LoggerMock } from "../mock";
-import { Result } from "../../src/activity";
+import { agreementPoolServiceMock, paymentServiceMock, networkServiceMock, LoggerMock, YagnaMock } from "../mock";
+import { Result } from "../../src";
 let queue;
 const logger = new LoggerMock();
 
@@ -16,11 +16,18 @@ describe("Task Service", () => {
     const task = new Task<null, Result>("1", worker);
     queue.addToEnd(task);
     activityMock.setExpectedExeResults([{ stdout: "some_shell_results" }]);
-    const service = new TaskService(queue, agreementPoolServiceMock, paymentServiceMock, networkServiceMock, {
-      logger,
-      taskRunningInterval: 10,
-      activityStateCheckingInterval: 10,
-    });
+    const service = new TaskService(
+      new YagnaMock().getApi(),
+      queue,
+      agreementPoolServiceMock,
+      paymentServiceMock,
+      networkServiceMock,
+      {
+        logger,
+        taskRunningInterval: 10,
+        activityStateCheckingInterval: 10,
+      },
+    );
     service.run().catch((e) => console.error(e));
     await logger.expectToMatch(/Activity .* created/, 500);
     expect(task.isFinished()).toEqual(true);
@@ -38,10 +45,17 @@ describe("Task Service", () => {
     queue.addToEnd(task1);
     queue.addToEnd(task2);
     queue.addToEnd(task3);
-    const service = new TaskService(queue, agreementPoolServiceMock, paymentServiceMock, networkServiceMock, {
-      logger,
-      maxParallelTasks: 2,
-    });
+    const service = new TaskService(
+      new YagnaMock().getApi(),
+      queue,
+      agreementPoolServiceMock,
+      paymentServiceMock,
+      networkServiceMock,
+      {
+        logger,
+        maxParallelTasks: 2,
+      },
+    );
     service.run().catch((e) => console.error(e));
     expect(task1.isPending()).toEqual(true);
     expect(task2.isPending()).toEqual(true);
@@ -54,16 +68,19 @@ describe("Task Service", () => {
     const worker: Worker = async (ctx) => ctx.run("some_shell_command");
     const task = new Task("1", worker);
     queue.addToEnd(task);
-    activityMock.setExpectedExeResults([
-      { result: "Ok" }, // deploy command
-      { result: "Ok" }, // start command
-      { stderr: "some_error", result: "Error" }, // run command
-    ]);
-    const service = new TaskService(queue, agreementPoolServiceMock, paymentServiceMock, networkServiceMock, {
-      logger,
-      taskRunningInterval: 100,
-      activityStateCheckingInterval: 100,
-    });
+    activityMock.setExpectedErrors([new Error(), new Error(), new Error(), new Error(), new Error()]);
+    const service = new TaskService(
+      new YagnaMock().getApi(),
+      queue,
+      agreementPoolServiceMock,
+      paymentServiceMock,
+      networkServiceMock,
+      {
+        logger,
+        taskRunningInterval: 100,
+        activityStateCheckingInterval: 100,
+      },
+    );
     service.run().catch((e) => console.error(e));
     await logger.expectToInclude("Task 1 execution failed. Trying to redo the task. Attempt #", 700);
     await service.end();
@@ -77,11 +94,18 @@ describe("Task Service", () => {
     const task = new Task("1", worker, undefined, undefined, 2);
     queue.addToEnd(task);
     activityMock.setExpectedExeResults([{ result: "Ok", stdout: "invalid_value" }]);
-    const service = new TaskService(queue, agreementPoolServiceMock, paymentServiceMock, networkServiceMock, {
-      logger,
-      taskRunningInterval: 10,
-      activityStateCheckingInterval: 10,
-    });
+    const service = new TaskService(
+      new YagnaMock().getApi(),
+      queue,
+      agreementPoolServiceMock,
+      paymentServiceMock,
+      networkServiceMock,
+      {
+        logger,
+        taskRunningInterval: 10,
+        activityStateCheckingInterval: 10,
+      },
+    );
     service.run().catch((e) => console.error(e));
     await logger.expectToInclude(
       "Error: Task 1 has been rejected! Work rejected. Reason: Invalid value computed by provider",
@@ -93,14 +117,21 @@ describe("Task Service", () => {
 
   it("should reject task if it failed max attempts", async () => {
     const worker: Worker = async (ctx) => ctx.run("some_shell_command");
-    const task = new Task("1", worker);
+    const task = new Task("1", worker, undefined, undefined, 1);
     queue.addToEnd(task);
-    activityMock.setExpectedExeResults([{ stderr: "some_error", result: "Error" }]);
-    const service = new TaskService(queue, agreementPoolServiceMock, paymentServiceMock, networkServiceMock, {
-      logger,
-      taskRunningInterval: 10,
-      activityStateCheckingInterval: 10,
-    });
+    activityMock.setExpectedErrors(new Array(20).fill(new Error()));
+    const service = new TaskService(
+      new YagnaMock().getApi(),
+      queue,
+      agreementPoolServiceMock,
+      paymentServiceMock,
+      networkServiceMock,
+      {
+        logger,
+        taskRunningInterval: 10,
+        activityStateCheckingInterval: 10,
+      },
+    );
     service.run().catch((e) => console.error(e));
     await logger.expectToInclude("Error: Task 1 has been rejected!", 1800);
     expect(task.isRejected()).toEqual(true);
@@ -116,16 +147,23 @@ describe("Task Service", () => {
     queue.addToEnd(task1);
     queue.addToEnd(task2);
     queue.addToEnd(task3);
-    const service = new TaskService(queue, agreementPoolServiceMock, paymentServiceMock, networkServiceMock, {
-      logger,
-      taskRunningInterval: 10,
-      activityStateCheckingInterval: 10,
-      maxParallelTasks: 2,
-    });
+    const service = new TaskService(
+      new YagnaMock().getApi(),
+      queue,
+      agreementPoolServiceMock,
+      paymentServiceMock,
+      networkServiceMock,
+      {
+        logger,
+        taskRunningInterval: 10,
+        activityStateCheckingInterval: 10,
+        maxParallelTasks: 2,
+      },
+    );
     service.run().catch((e) => console.error(e));
-    await logger.expectToMatch(/Init worker done in activity.*\nInit worker done in activity/, 700);
+    await logger.expectToMatch(/Init worker done in activity((.|\n)*)Init worker done in activity/, 700);
     await logger.expectToNotMatch(
-      /Init worker done in activity.*\nInit worker done in activity.*\nInit worker done in activity/,
+      /Init worker done in activity.*\nInit worker done in activity((.|\n)*)Init worker done in activity/,
     );
     await new Promise((res) => setTimeout(res, 1000));
     expect(task1.isFinished()).toEqual(true);

@@ -1,5 +1,5 @@
 import { LoggerMock } from "../mock";
-import { Package } from "../../src/package";
+import { Package } from "../../src";
 const logger = new LoggerMock();
 
 describe("Package", () => {

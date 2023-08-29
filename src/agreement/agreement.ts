@@ -4,6 +4,7 @@ import { YagnaOptions } from "../executor";
 import { AgreementFactory } from "./factory";
 import { AgreementConfig } from "./config";
 import { Events } from "../events";
+import { YagnaApi } from "../utils/yagna/yagna";
 
 /**
  * @hidden
@@ -52,12 +53,14 @@ export class Agreement {
   /**
    * @param id - agreement ID
    * @param provider - {@link ProviderInfo}
+   * @param yagnaApi - {@link YagnaApi}
    * @param options - {@link AgreementConfig}
    * @hidden
    */
   constructor(
     public readonly id,
     public readonly provider: ProviderInfo,
+    private readonly yagnaApi: YagnaApi,
     private readonly options: AgreementConfig,
   ) {
     this.logger = options.logger;
@@ -66,11 +69,12 @@ export class Agreement {
   /**
    * Create agreement for given proposal ID
    * @param proposalId - proposal ID
+   * @param yagnaApi
    * @param agreementOptions - {@link AgreementOptions}
    * @return Agreement
    */
-  static async create(proposalId: string, agreementOptions?: AgreementOptions): Promise<Agreement> {
-    const factory = new AgreementFactory(agreementOptions);
+  static async create(proposalId: string, yagnaApi: YagnaApi, agreementOptions?: AgreementOptions): Promise<Agreement> {
+    const factory = new AgreementFactory(yagnaApi, agreementOptions);
     return factory.create(proposalId);
   }
 
@@ -78,7 +82,9 @@ export class Agreement {
    * Refresh agreement details
    */
   async refreshDetails() {
-    const { data } = await this.options.api.getAgreement(this.id, { timeout: this.options.agreementRequestTimeout });
+    const { data } = await this.yagnaApi.market.getAgreement(this.id, {
+      timeout: this.options.agreementRequestTimeout,
+    });
     this.agreementData = data;
   }
 
@@ -98,8 +104,8 @@ export class Agreement {
    */
   async confirm() {
     try {
-      await this.options.api.confirmAgreement(this.id);
-      await this.options.api.waitForApproval(this.id, this.options.agreementWaitingForApprovalTimeout);
+      await this.yagnaApi.market.confirmAgreement(this.id);
+      await this.yagnaApi.market.waitForApproval(this.id, this.options.agreementWaitingForApprovalTimeout);
       this.logger?.debug(`Agreement ${this.id} approved`);
       this.options.eventTarget?.dispatchEvent(
         new Events.AgreementConfirmed({ id: this.id, providerId: this.provider.id }),
@@ -133,7 +139,7 @@ export class Agreement {
       if ((await this.getState()) !== AgreementStateEnum.Terminated)
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore TODO: API binding BUG with reason type
-        await this.options.api.terminateAgreement(this.id, reason, {
+        await this.yagnaApi.market.terminateAgreement(this.id, reason, {
           timeout: this.options.agreementRequestTimeout,
         });
       this.options.eventTarget?.dispatchEvent(
@@ -144,8 +150,6 @@ export class Agreement {
       throw new Error(
         `Unable to terminate agreement ${this.id}. ${error.response?.data?.message || error.response?.data || error}`,
       );
-    } finally {
-      this.options.httpAgent.destroy?.();
     }
   }
 }
