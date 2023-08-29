@@ -16,6 +16,7 @@
     "blender": "ts-node ./blender/blender.ts",
     "yacat": "ts-node ./yacat/yacat.ts",
     "fibonacci": "node ./fibonacci/fibonacci.js",
+    "external-request": "ts-node ./external-request/request.ts",
     "ssh": "ts-node ./ssh/ssh.ts",
     "tag": "ts-node ./simple-usage/tag.ts",
     "web": "node ./web/app.mjs"
