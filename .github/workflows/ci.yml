@@ -39,3 +39,4 @@ jobs:
           npm run lint
           npm run test:unit
           npm run build
+          npm run lint:ts:examples
