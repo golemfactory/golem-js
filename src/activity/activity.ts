@@ -197,7 +197,6 @@ export class Activity {
                 timeout: 0,
               },
             );
-            // TODO: Map ExeUnitResult to our Result, and not type cast
             retryCount = 0;
             const newResults = rawExecBachResults.map((rawResult) => new Result(rawResult)).slice(lastIndex + 1);
             if (Array.isArray(newResults) && newResults.length) {
