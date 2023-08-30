@@ -63,14 +63,6 @@ export interface ProposalDetails {
   state: ProposalAllOfStateEnum;
 }
 
-export interface ProposalDTO {
-  id: string;
-  issuerId: string;
-  provider: { id: string; name: string };
-  properties: ProposalProperties;
-  constraints: string;
-}
-
 /**
  * Proposal module - an object representing an offer in the state of a proposal from the provider.
  * @hidden
@@ -183,16 +175,6 @@ export class Proposal {
     if (priceVector.length < usageVector.length) {
       throw new Error("Broken proposal: the `golem.com.pricing.model.linear.coeffs` should contain 3 price values");
     }
-  }
-
-  get dto(): ProposalDTO {
-    return {
-      id: this.id,
-      issuerId: this.issuerId,
-      provider: this.provider,
-      properties: this.properties,
-      constraints: this.constraints,
-    };
   }
 
   isInitial(): boolean {

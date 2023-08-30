@@ -56,7 +56,7 @@ export type ExecutorOptions = {
 /**
  * Contains information needed to start executor, if string the imageHash is required, otherwise it should be a type of {@link ExecutorOptions}
  */
-export type ExecutorOptionsMixin = string | (ExecutorOptions & MarketOptions);
+export type ExecutorOptionsMixin = string | ExecutorOptions;
 
 export type YagnaOptions = {
   apiKey?: string;

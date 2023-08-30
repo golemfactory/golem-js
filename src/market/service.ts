@@ -6,7 +6,7 @@ import { Allocation } from "../payment";
 import { Demand, DemandEvent, DemandEventType, DemandOptions } from "./demand";
 import { MarketConfig } from "./config";
 
-export type ProposalFilter = (proposal: Proposal) => Promise<boolean>;
+export type ProposalFilter = (proposal: Proposal) => Promise<boolean> | boolean;
 
 export interface MarketOptions extends DemandOptions {
   /** A custom filter that checks every proposal coming from the market */
