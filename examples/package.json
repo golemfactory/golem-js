@@ -19,7 +19,8 @@
     "external-request": "ts-node ./external-request/request.ts",
     "ssh": "ts-node ./ssh/ssh.ts",
     "tag": "ts-node ./simple-usage/tag.ts",
-    "web": "node ./web/app.mjs"
+    "web": "node ./web/app.mjs",
+    "lint:ts": "tsc --project tsconfig.json --noEmit"
   },
   "author": "GolemFactory <contact@golem.network>",
   "license": "LGPL-3.0",

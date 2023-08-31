@@ -39,3 +39,5 @@ jobs:
           npm run lint
           npm run test:unit
           npm run build
+          npm install --prefix examples
+          npm run --prefix examples lint:ts

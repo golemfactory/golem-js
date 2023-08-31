@@ -3,9 +3,6 @@ import { EnvUtils, Logger } from "../utils";
 import axios from "axios";
 import { PackageConfig } from "./config";
 import { RequireAtLeastOne } from "../utils/types";
-/**
- * @hidden
- */
 
 export type PackageOptions = RequireAtLeastOne<
   {

@@ -3,7 +3,7 @@ import { TaskQueue } from "./queue";
 import { WorkContext } from "./work";
 import { Logger, sleep, YagnaApi } from "../utils";
 import { StorageProvider } from "../storage";
-import { AgreementPoolService } from "../agreement";
+import { Agreement, AgreementPoolService } from "../agreement";
 import { PaymentService } from "../payment";
 import { NetworkService } from "../network";
 import { Activity, ActivityOptions } from "../activity";
@@ -74,15 +74,11 @@ export class TaskService {
     task.start();
     this.logger?.debug(`Starting task. ID: ${task.id}, Data: ${task.getData()}`);
     ++this.activeTasksCount;
+
     const agreement = await this.agreementPoolService.getAgreement();
-    let activity;
+    const activity = await this.getOrCreateActivity(agreement);
+
     try {
-      if (this.activities.has(agreement.id)) {
-        activity = this.activities.get(agreement.id);
-      } else {
-        activity = await Activity.create(agreement.id, this.yagnaApi, this.options);
-        this.activities.set(agreement.id, activity);
-      }
       this.options.eventTarget?.dispatchEvent(
         new Events.TaskStarted({
           id: task.id,
@@ -92,11 +88,13 @@ export class TaskService {
           providerName: agreement.provider.name,
         }),
       );
+
       this.logger?.info(
         `Task ${task.id} sent to provider ${agreement.provider.name}.${
           task.getData() ? " Data: " + task.getData() : ""
         }`,
       );
+
       this.paymentService.acceptDebitNotes(agreement.id);
       this.paymentService.acceptPayments(agreement);
       const initWorker = task.getInitWorker();
@@ -134,7 +132,7 @@ export class TaskService {
         this.options.eventTarget?.dispatchEvent(
           new Events.TaskRedone({
             id: task.id,
-            activityId: activity?.id,
+            activityId: activity.id,
             agreementId: agreement.id,
             providerId: agreement.provider.id,
             providerName: agreement.provider.name,
@@ -158,11 +156,22 @@ export class TaskService {
         );
         throw new Error(`Task ${task.id} has been rejected! ${reason}`);
       }
-      await activity?.stop().catch((actError) => this.logger?.debug(actError));
+      await activity.stop().catch((actError) => this.logger?.debug(actError));
       this.activities.delete(agreement.id);
     } finally {
       --this.activeTasksCount;
     }
     await this.agreementPoolService.releaseAgreement(agreement.id, task.isDone()).catch((e) => this.logger?.debug(e));
+  }
+
+  private async getOrCreateActivity(agreement: Agreement) {
+    const previous = this.activities.get(agreement.id);
+    if (previous) {
+      return previous;
+    } else {
+      const activity = await Activity.create(agreement.id, this.yagnaApi, this.options);
+      this.activities.set(agreement.id, activity);
+      return activity;
+    }
   }
 }

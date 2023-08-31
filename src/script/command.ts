@@ -2,12 +2,12 @@ import { ExeScriptRequest } from "ya-ts-client/dist/ya-activity/src/models";
 import { StorageProvider } from "../storage";
 import { Result, ResultState } from "../activity";
 
-const EmptyErrorResult: Result = {
-  result: ResultState.ERROR,
+const EmptyErrorResult = new Result({
+  result: ResultState.Error,
   eventDate: new Date().toISOString(),
   index: -1,
   message: "No result due to error",
-};
+});
 
 /**
  * @hidden
@@ -50,8 +50,8 @@ export class Command<T = unknown> {
    *
    * @param result
    */
-  async after(result?: Result): Promise<Result<T>> {
-    return (result ?? EmptyErrorResult) as Result<T>;
+  async after(result?: Result<T>): Promise<Result<T>> {
+    return result ?? EmptyErrorResult;
   }
 }
 
@@ -77,7 +77,7 @@ export type Capture = {
   stdout?: CaptureMode;
   stderr?: CaptureMode;
 };
-type CaptureMode =
+export type CaptureMode =
   | { atEnd: { part?: CapturePart; format?: CaptureFormat } }
   | { stream: { limit?: number; format?: CaptureFormat } };
 type CapturePart = { head: number } | { tail: number } | { headTail: number };
@@ -213,18 +213,18 @@ export class DownloadData extends Transfer<Uint8Array> {
 
   async after(result: Result): Promise<Result<Uint8Array>> {
     await this.storageProvider.release([this.args["to"]]);
-    if (result.result === ResultState.OK) {
-      return {
+    if (result.result === ResultState.Ok) {
+      return new Result<Uint8Array>({
         ...result,
         data: this.combineChunks(),
-      };
+      });
     }
 
-    return {
+    return new Result<Uint8Array>({
       ...result,
-      result: ResultState.ERROR,
+      result: ResultState.Error,
       data: undefined,
-    };
+    });
   }
 
   private combineChunks(): Uint8Array {

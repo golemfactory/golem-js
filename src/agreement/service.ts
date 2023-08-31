@@ -2,7 +2,7 @@ import Bottleneck from "bottleneck";
 import { Logger } from "../utils";
 import { Agreement, AgreementOptions, AgreementStateEnum } from "./agreement";
 import { AgreementServiceConfig } from "./config";
-import { Proposal, ProposalDTO } from "../market";
+import { Proposal } from "../market";
 import sleep from "../utils/sleep";
 import { YagnaApi } from "../utils/yagna/yagna";
 
@@ -13,7 +13,7 @@ export interface AgreementDTO {
 
 export class AgreementCandidate {
   agreement?: AgreementDTO;
-  constructor(readonly proposal: ProposalDTO) {}
+  constructor(readonly proposal: Proposal) {}
 }
 
 export type AgreementSelector = (candidates: AgreementCandidate[]) => Promise<AgreementCandidate>;

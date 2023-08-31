@@ -6,11 +6,11 @@ import { Result } from "../activity";
  * @hidden
  */
 export class Script {
-  static create(commands?: Command<unknown>[]): Script {
+  static create(commands?: Command[]): Script {
     return new Script(commands);
   }
 
-  constructor(private commands: Command<unknown>[] = []) {}
+  constructor(private commands: Command[] = []) {}
   add(command: Command) {
     this.commands.push(command);
   }
@@ -18,7 +18,7 @@ export class Script {
     await Promise.all(this.commands.map((cmd) => cmd.before()));
   }
 
-  async after(results: Result<unknown>[]): Promise<Result<unknown>[]> {
+  async after(results: Result[]): Promise<Result[]> {
     // Call after() for each command mapping its result.
     return Promise.all(this.commands.map((command, i) => command.after(results[i])));
   }

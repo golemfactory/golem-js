@@ -36,7 +36,7 @@ export interface WorkOptions {
   initWorker?: Worker<undefined>;
 }
 
-interface CommandOptions {
+export interface CommandOptions {
   timeout?: number;
   env?: object;
   capture?: Capture;
@@ -157,19 +157,19 @@ export class WorkContext {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async downloadJson(src: string, options?: CommandOptions): Promise<Result<any>> {
+  async downloadJson(src: string, options?: CommandOptions): Promise<Result> {
     const result = await this.downloadData(src, options);
-    if (result.result !== ResultState.OK) {
-      return {
+    if (result.result !== ResultState.Ok) {
+      return new Result({
         ...result,
         data: undefined,
-      };
+      });
     }
 
-    return {
+    return new Result({
       ...result,
       data: JSON.parse(new TextDecoder().decode(result.data)),
-    };
+    });
   }
 
   beginBatch() {
@@ -216,13 +216,16 @@ export class WorkContext {
     // Process result.
     let allResults: Result<T>[] = [];
     for await (const result of results) allResults.push(result);
-    allResults = (await script.after(allResults)) as Result<T>[];
+    allResults = await script.after(allResults);
 
     // Handle errors.
     const commandsErrors = allResults.filter((res) => res.result === "Error");
     if (commandsErrors.length) {
       const errorMessage = commandsErrors
-        .map((err) => `Error: ${err.message}. Stdout: ${err.stdout?.trim()}. Stderr: ${err.stderr?.trim()}`)
+        .map(
+          (err) =>
+            `Error: ${err.message}. Stdout: ${err.stdout?.toString().trim()}. Stderr: ${err.stderr?.toString().trim()}`,
+        )
         .join(". ");
       this.logger?.warn(`Task error on provider ${this.provider?.name || "'unknown'"}. ${errorMessage}`);
     }
