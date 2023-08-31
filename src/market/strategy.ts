@@ -27,7 +27,7 @@ export const whiteListProposalNamesFilter = (whiteListNames: string[]) => async 
 export const whiteListProposalRegexpFilter = (regexp: RegExp) => async (proposal: Proposal) =>
   !!proposal.provider.name.match(regexp);
 
-type PriceLimits = {
+export type PriceLimits = {
   start: number;
   cpuPerSec: number;
   envPerSec: number;

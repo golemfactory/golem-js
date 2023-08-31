@@ -3,7 +3,6 @@ import { DemandOfferBase } from "ya-ts-client/dist/ya-market/src/models";
 
 /**
  * Properties and constraints to be added to a market object (i.e. a demand or an offer).
- * @hidden
  */
 export type MarketDecoration = {
   properties: Array<{ key: string; value: string | number | boolean }>;

@@ -7,9 +7,6 @@ import { ActivityFactory } from "./factory";
 import { ActivityConfig } from "./config";
 import { Events } from "../events";
 
-/**
- * @hidden
- */
 export enum ActivityStateEnum {
   New = "New",
   Initialized = "Initialized",
@@ -19,9 +16,6 @@ export enum ActivityStateEnum {
   Terminated = "Terminated",
 }
 
-/**
- * @hidden
- */
 export interface ExeScriptRequest {
   text: string;
 }
@@ -48,7 +42,6 @@ export interface ActivityOptions {
 /**
  * Activity module - an object representing the runtime environment on the provider in accordance with the `Package` specification.
  * As part of a given activity, it is possible to execute exe script commands and capture their results.
- * @hidden
  */
 export class Activity {
   private readonly logger?: Logger;

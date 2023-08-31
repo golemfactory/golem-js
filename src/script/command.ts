@@ -77,7 +77,7 @@ export type Capture = {
   stdout?: CaptureMode;
   stderr?: CaptureMode;
 };
-type CaptureMode =
+export type CaptureMode =
   | { atEnd: { part?: CapturePart; format?: CaptureFormat } }
   | { stream: { limit?: number; format?: CaptureFormat } };
 type CapturePart = { head: number } | { tail: number } | { headTail: number };

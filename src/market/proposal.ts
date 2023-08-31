@@ -3,7 +3,7 @@ import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
 import { Events } from "../events";
 
-type PricingInfo = {
+export type PricingInfo = {
   cpuSec: number;
   envSec: number;
   start: number;
@@ -65,7 +65,6 @@ export interface ProposalDetails {
 
 /**
  * Proposal module - an object representing an offer in the state of a proposal from the provider.
- * @hidden
  */
 export class Proposal {
   id: string;

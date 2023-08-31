@@ -2,9 +2,6 @@ import { ExeScriptCommandResultResultEnum } from "ya-ts-client/dist/ya-activity/
 
 export import ResultState = ExeScriptCommandResultResultEnum;
 
-/**
- * @hidden
- */
 // FIXME: Make the `data` field Uint8Array and update the rest of the code
 // eslint-disable-next-line
 export interface ResultData<T = any> {
@@ -73,7 +70,7 @@ export interface StreamingBatchEvent {
   kind: RuntimeEventKind;
 }
 
-interface RuntimeEventKind {
+export interface RuntimeEventKind {
   started?: RuntimeEventStarted;
   stdout?: string | ArrayBuffer;
   stderr?: string | ArrayBuffer;

@@ -37,7 +37,7 @@ export interface WorkOptions {
   isRunning: () => boolean;
 }
 
-interface CommandOptions {
+export interface CommandOptions {
   timeout?: number;
   env?: object;
   capture?: Capture;
