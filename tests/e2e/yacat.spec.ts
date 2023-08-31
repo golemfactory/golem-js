@@ -23,7 +23,7 @@ describe("Password cracking", function () {
     });
     const keyspace = await executor.run<number>(async (ctx) => {
       const result = await ctx.run(`hashcat --keyspace -a 3 ${mask} -m 400`);
-      return parseInt(result.stdout || "");
+      return parseInt(result.stdout?.toString() || "");
     });
     expect(keyspace).toEqual(95);
     if (!keyspace) return;
@@ -36,7 +36,7 @@ describe("Password cracking", function () {
         .run("cat pass.potfile")
         .end();
       if (!results?.[1]?.stdout) return false;
-      return results?.[1]?.stdout.split(":")?.[1]?.trim();
+      return results?.[1]?.stdout.toString().split(":")?.[1]?.trim();
     });
     let password = "";
     for await (const result of results) {

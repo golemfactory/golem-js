@@ -1,10 +1,10 @@
-import { TaskExecutor, ProposalDTO } from "@golem-sdk/golem-js";
+import { ProposalFilter, TaskExecutor } from "@golem-sdk/golem-js";
 
 /**
  * Example demonstrating how to write a custom proposal filter.
  * In this case the proposal must include VPN access and must not be from "bad-provider"
  */
-const myFilter = async (proposal: ProposalDTO) => {
+const myFilter: ProposalFilter = async (proposal) => {
   return (
     proposal.provider.name !== "bad-provider" || !proposal.properties["golem.runtime.capabilities"]?.includes("vpn")
   );

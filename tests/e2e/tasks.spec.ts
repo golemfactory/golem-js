@@ -68,7 +68,7 @@ describe("Task Executor", function () {
     const data = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
     const results = executor.map<string, string | undefined>(data, async (ctx, x) => {
       const res = await ctx.run(`echo "${x}"`);
-      return res.stdout?.trim();
+      return res.stdout?.toString().trim();
     });
     const finalOutputs: string[] = [];
     for await (const res of results) if (res) finalOutputs.push(res);
@@ -83,7 +83,7 @@ describe("Task Executor", function () {
     const data = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
     await executor.forEach(data, async (ctx, x) => {
       const res = await ctx.run(`echo "${x}"`);
-      expect(data).toContain(res?.stdout?.trim());
+      expect(data).toContain(res?.stdout?.toString().trim());
     });
   });
 
@@ -102,7 +102,7 @@ describe("Task Executor", function () {
           .run('echo "Hello World"')
           .run('echo "OK"')
           .endStream();
-        results.on("data", ({ stdout }) => outputs.push(stdout?.trim()));
+        results.on("data", ({ stdout }) => outputs.push(stdout.toString().trim()));
         results.on("close", () => (onEnd = "END"));
       })
       .catch((e) => {
@@ -130,7 +130,7 @@ describe("Task Executor", function () {
           .run('echo "Hello World"')
           .run('echo "OK"')
           .end();
-        results.map((r) => outputs.push(r?.stdout?.trim() ?? "Missing STDOUT!"));
+        results.map((r) => outputs.push(r?.stdout?.toString().trim() ?? "Missing STDOUT!"));
       })
       .catch((e) => {
         expect(e).toBeUndefined();

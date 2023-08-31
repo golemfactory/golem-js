@@ -1,35 +1,44 @@
+jest.mock("ya-ts-client/dist/ya-market/api");
+
 import { LoggerMock } from "../mock";
 import { Agreement, AgreementPoolService } from "../../src/agreement";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import { Proposal as ProposalModel } from "ya-ts-client/dist/ya-market/src/models/proposal";
-import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
+import { ProposalAllOfStateEnum } from "ya-ts-client/dist/ya-market";
 import { Proposal } from "../../src/market/proposal";
 
 const logger = new LoggerMock();
+const mockAPI = new RequestorApi();
+const mockSetCounteringProposalReference = jest.fn();
 
 const createProposal = (id) => {
-  return new Proposal(
-    id,
-    null,
-    () => {},
-    {} as RequestorApi,
-    {
-      properties: {
-        "golem.activity.caps.transfer.protocol": "protocol",
-        "golem.inf.cpu.brand": "cpu_brand",
-        "golem.inf.cpu.capabilities": "cpu_capabilities",
-        "golem.inf.cpu.cores": "cpu_cores",
-        "golem.inf.cpu.threads": "cpu_threads",
-        "golem.inf.mem.gib": "mem_gib",
-        "golem.inf.storage.gib": "storage_gib",
-        "golem.node.id.name": "node_id_name",
-        "golem.node.net.is-public": true,
-        "golem.runtime.capabilities": ["a", "b", "c"],
-        "golem.runtime.name": "runtime_name",
-      },
-    } as ProposalModel,
-    {} as DemandOfferBase,
-  );
+  const model: ProposalModel = {
+    constraints: "",
+    issuerId: "",
+    proposalId: "",
+    state: ProposalAllOfStateEnum.Initial,
+    timestamp: "",
+    properties: {
+      "golem.activity.caps.transfer.protocol": "protocol",
+      "golem.inf.cpu.brand": "cpu_brand",
+      "golem.inf.cpu.capabilities": "cpu_capabilities",
+      "golem.inf.cpu.cores": "cpu_cores",
+      "golem.inf.cpu.threads": "cpu_threads",
+      "golem.inf.mem.gib": "mem_gib",
+      "golem.inf.storage.gib": "storage_gib",
+      "golem.node.id.name": "node_id_name",
+      "golem.node.net.is-public": true,
+      "golem.runtime.capabilities": ["a", "b", "c"],
+      "golem.runtime.name": "runtime_name",
+      "golem.com.usage.vector": ["golem.usage.duration_sec", "golem.usage.cpu_sec"],
+      "golem.com.pricing.model.linear.coeffs": [0.1, 0.2, 0.0],
+    },
+  };
+
+  return new Proposal(id, null, mockSetCounteringProposalReference, mockAPI, model, {
+    constraints: "",
+    properties: {},
+  });
 };
 
 describe("Agreement Pool Service", () => {

@@ -7,7 +7,7 @@ const DEFAULTS = Object.freeze({
   payment: { driver: "erc20", network: "goerli" },
   budget: 1.0,
   subnetTag: "public",
-  logLevel: LogLevel.info,
+  logLevel: LogLevel.Info,
   basePath: "http://127.0.0.1:7465",
   maxParallelTasks: 5,
   taskTimeout: 1000 * 60 * 5, // 5 min,

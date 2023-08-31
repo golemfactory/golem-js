@@ -15,7 +15,7 @@ async function main(args) {
   });
   const keyspace = await executor.run<number>(async (ctx) => {
     const result = await ctx.run(`hashcat --keyspace -a 3 ${args.mask} -m 400`);
-    return parseInt(result.stdout || "");
+    return parseInt(result.stdout?.toString().trim() || "");
   });
 
   if (!keyspace) throw new Error(`Cannot calculate keyspace`);
@@ -34,7 +34,7 @@ async function main(args) {
       .run("cat pass.potfile || true")
       .end();
     if (!results?.[1]?.stdout) return false;
-    return results?.[1]?.stdout.split(":")[1];
+    return results?.[1]?.stdout.toString().trim().split(":")[1];
   });
 
   let password = "";
