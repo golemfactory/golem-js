@@ -9,7 +9,17 @@ export enum TaskState {
   Rejected,
 }
 
-const MAX_RETRIES = 5;
+export type TaskOptions = {
+  /** maximum number of retries if task failed due to provider reason, default = 5 */
+  maxRetries?: number;
+  /** timeout in ms for task execution, including retries, default = 300_000 (5min) */
+  timeout?: number;
+};
+
+const DEFAULTS = {
+  MAX_RETRIES: 5,
+  TIMEOUT: 1000 * 60 * 5,
+};
 
 /**
  * One computation unit.
@@ -21,22 +31,30 @@ export class Task<InputType = unknown, OutputType = unknown> implements Queueabl
   private results?: OutputType;
   private error?: Error;
   private retriesCount = 0;
+  private timeoutId?: NodeJS.Timeout;
+  private readonly timeout: number;
+  private readonly maxRetries: number;
 
   constructor(
     public readonly id: string,
     private worker: Worker<InputType, OutputType>,
     private data?: InputType,
     private initWorker?: Worker<undefined>,
-    private maxTaskRetries: number = MAX_RETRIES,
-  ) {}
+    options?: TaskOptions,
+  ) {
+    this.timeout = options?.timeout ?? DEFAULTS.TIMEOUT;
+    this.maxRetries = options?.maxRetries ?? DEFAULTS.MAX_RETRIES;
+  }
 
   start() {
     this.state = TaskState.Pending;
+    this.timeoutId = setTimeout(() => this.stop(undefined, new Error(`Task ${this.id} timeout`), false), this.timeout);
   }
   stop(results?: OutputType, error?: Error, retry = true) {
+    clearTimeout(this.timeoutId);
     if (error) {
       ++this.retriesCount;
-      this.state = retry && this.retriesCount <= this.maxTaskRetries ? TaskState.Retry : TaskState.Rejected;
+      this.state = retry && this.retriesCount <= this.maxRetries ? TaskState.Retry : TaskState.Rejected;
       this.error = error;
     } else {
       this.state = TaskState.Done;

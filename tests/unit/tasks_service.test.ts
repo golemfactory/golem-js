@@ -74,7 +74,7 @@ describe("Task Service", () => {
       const result = await ctx.run("some_shell_command");
       if (result.stdout === "invalid_value") ctx.rejectResult("Invalid value computed by provider");
     };
-    const task = new Task("1", worker, undefined, undefined, 2);
+    const task = new Task("1", worker, undefined, undefined, { maxRetries: 2 });
     queue.addToEnd(task);
     activityMock.setExpectedExeResults([{ result: "Ok", stdout: "invalid_value" }]);
     const service = new TaskService(queue, agreementPoolServiceMock, paymentServiceMock, networkServiceMock, {
