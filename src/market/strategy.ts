@@ -26,3 +26,24 @@ export const whiteListProposalNamesFilter = (whiteListNames: string[]) => async 
 /** Proposal filter that only allows offers from a provider whose name match to the regexp */
 export const whiteListProposalRegexpFilter = (regexp: RegExp) => async (proposal: Proposal) =>
   !!proposal.provider.name.match(regexp);
+
+type PriceLimits = {
+  start: number;
+  cpuPerSec: number;
+  envPerSec: number;
+};
+
+/**
+ * Proposal filter only allowing offers that do not exceed the defined usage
+ *
+ * @param priceLimits.start The maximum start price in GLM
+ * @param priceLimits.cpuPerSec The maximum price for CPU usage in GLM/s
+ * @param priceLimits.envPerSec The maximum price for the duration of the activity in GLM/s
+ */
+export const limitPriceFilter = (priceLimits: PriceLimits) => async (proposal: Proposal) => {
+  return (
+    proposal.pricing.cpuSec < priceLimits.cpuPerSec &&
+    proposal.pricing.envSec <= priceLimits.envPerSec &&
+    proposal.pricing.start <= priceLimits.start
+  );
+};
