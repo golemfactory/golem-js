@@ -86,7 +86,7 @@ export class Activity {
    * @param timeout - execution timeout
    */
   public async execute(script: ExeScriptRequest, stream?: boolean, timeout?: number): Promise<Readable> {
-    let batchId, batchSize;
+    let batchId: string, batchSize: number;
     let startTime = new Date();
     try {
       batchId = await this.send(script);
@@ -162,7 +162,7 @@ export class Activity {
 
   private async pollingBatch(batchId, startTime, timeout): Promise<Readable> {
     let isBatchFinished = false;
-    let lastIndex;
+    let lastIndex: number;
     let retryCount = 0;
     const maxRetries = 5;
     const { id: activityId, agreementId } = this;

@@ -112,8 +112,7 @@ describe("Batch", () => {
       expect(spy).toHaveBeenCalled();
     });
 
-    // FIXME: Not working due to bug: JST-250
-    xit("should call script.after() on execute error", async () => {
+    it("should call script.after() on execute error", async () => {
       const spy = jest.spyOn(batch["script"], "after");
       jest.spyOn(activity, "execute").mockRejectedValue(new Error("ERROR"));
 
@@ -168,8 +167,7 @@ describe("Batch", () => {
       expect(spy).toHaveBeenCalled();
     });
 
-    // FIXME: Not working due to bug: JST-252
-    xit("should call script.after() on result stream error", async () => {
+    it("should call script.after() on result stream error", async () => {
       const spy = jest.spyOn(batch["script"], "after");
       activity.mockResultFailure("FAILURE");
 
@@ -187,8 +185,7 @@ describe("Batch", () => {
       expect(spy).toHaveBeenCalled();
     });
 
-    // FIXME: Not working due to bug: JST-250
-    xit("should call script.after() on execute error", async () => {
+    it("should call script.after() on execute error", async () => {
       const spy = jest.spyOn(batch["script"], "after");
       jest.spyOn(activity, "execute").mockRejectedValue(new Error("ERROR"));
 
@@ -200,6 +197,21 @@ describe("Batch", () => {
       }).rejects.toThrowError("ERROR");
 
       expect(spy).toHaveBeenCalled();
+    });
+
+    it("should destroy the stream on result stream error", async () => {
+      activity.mockResultFailure("FAILURE");
+      const stream = await batch.endStream();
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        for await (const r of stream) {
+          /* empty */
+        }
+        fail("Expected to throw");
+      } catch (e) {
+        /* empty */
+      }
+      expect(stream.destroyed).toBe(true);
     });
   });
 });
