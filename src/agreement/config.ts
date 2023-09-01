@@ -1,11 +1,7 @@
 import { AgreementOptions } from "./agreement";
 import { AgreementSelector, AgreementServiceOptions } from "./service";
-import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
-import { Configuration } from "ya-ts-client/dist/ya-market";
-import { EnvUtils, Logger } from "../utils";
-import { randomAgreementSelectorWithPriorityForExistingOnes } from "./strategy";
-import { Agent } from "http";
 import { Logger } from "../utils";
+import { randomAgreementSelectorWithPriorityForExistingOnes } from "./strategy";
 
 const DEFAULTS = {
   agreementRequestTimeout: 30000,
