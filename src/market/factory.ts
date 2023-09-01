@@ -4,6 +4,7 @@ import { Demand, DemandOptions } from "./demand";
 import { DemandConfig } from "./config";
 import * as events from "../events/events";
 import { DecorationsBuilder, MarketDecoration } from "./builder";
+import { YagnaApi } from "../utils/yagna/yagna";
 
 /**
  * @internal
@@ -12,8 +13,9 @@ export class DemandFactory {
   private options: DemandConfig;
 
   constructor(
-    private taskPackage: Package,
-    private allocation: Allocation,
+    private readonly taskPackage: Package,
+    private readonly allocation: Allocation,
+    private readonly yagnaApi: YagnaApi,
     options?: DemandOptions,
   ) {
     this.options = new DemandConfig(options);
@@ -22,7 +24,7 @@ export class DemandFactory {
   async create(): Promise<Demand> {
     const decorations = await this.getDecorations();
     const demandRequest = new DecorationsBuilder().addDecorations(decorations).getDemandRequest();
-    const { data: id } = await this.options.api.subscribeDemand(demandRequest).catch((e) => {
+    const { data: id } = await this.yagnaApi.market.subscribeDemand(demandRequest).catch((e) => {
       const reason = e.response?.data?.message || e.toString();
       this.options.eventTarget?.dispatchEvent(new events.DemandFailed({ reason }));
       throw new Error(`Could not publish demand on the market. ${reason}`);
@@ -34,7 +36,7 @@ export class DemandFactory {
       }),
     );
     this.options.logger?.info(`Demand published on the market`);
-    return new Demand(id, demandRequest, this.options);
+    return new Demand(id, demandRequest, this.yagnaApi, this.options);
   }
 
   private async getDecorations(): Promise<MarketDecoration[]> {

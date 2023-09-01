@@ -2,7 +2,7 @@ import { DownloadFile, Run, UploadData, UploadFile } from "../script";
 import { Batch } from "./batch";
 import { NullStorageProvider } from "../storage";
 import { ActivityMock } from "../../tests/mock/activity.mock";
-import { LoggerMock } from "../../tests/mock";
+import { LoggerMock, YagnaMock } from "../../tests/mock";
 import { Result } from "../activity";
 
 describe("Batch", () => {
@@ -10,7 +10,7 @@ describe("Batch", () => {
   let batch: Batch;
 
   beforeEach(() => {
-    activity = new ActivityMock();
+    activity = new ActivityMock("test_id", "test_id", new YagnaMock().getApi());
     batch = new Batch(activity, new NullStorageProvider(), new LoggerMock());
   });
 

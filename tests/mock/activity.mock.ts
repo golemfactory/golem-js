@@ -2,6 +2,7 @@ import { Activity, ActivityConfig, ActivityStateEnum, Result, ResultState } from
 import { Events, nullLogger } from "../../src";
 import { ExeScriptRequest } from "../../src/activity/activity";
 import { Readable } from "stream";
+import { YagnaApi } from "../../src/utils";
 
 export class ActivityMock extends Activity {
   private _currentState: ActivityStateEnum = ActivityStateEnum.Ready;
@@ -17,8 +18,8 @@ export class ActivityMock extends Activity {
     });
   }
 
-  constructor(id?: string, agreementId?: string, options?: ActivityConfig) {
-    super(id, agreementId, (options ?? { logger: nullLogger() }) as unknown as ActivityConfig);
+  constructor(id: string, agreementId: string, yagnaApi: YagnaApi, options?: ActivityConfig) {
+    super(id, agreementId, yagnaApi, (options ?? { logger: nullLogger() }) as unknown as ActivityConfig);
   }
 
   async execute(script: ExeScriptRequest, stream?: boolean, timeout?: number): Promise<Readable> {

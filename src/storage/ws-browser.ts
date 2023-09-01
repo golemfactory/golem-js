@@ -1,15 +1,10 @@
 import { StorageProvider, StorageProviderDataCallback } from "./provider";
 import { v4 } from "uuid";
 import { encode, toObject } from "flatbuffers/js/flexbuffers";
-import { getIdentity } from "../network/identity";
 import * as jsSha3 from "js-sha3";
-import { Logger, nullLogger } from "../utils";
+import { Logger, nullLogger, YagnaApi } from "../utils";
 
 export interface WebSocketStorageProviderOptions {
-  yagnaOptions: {
-    apiKey: string;
-    basePath: string;
-  };
   logger?: Logger;
 }
 
@@ -63,7 +58,10 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
   private services = new Map<string, string>();
   private logger: Logger;
 
-  constructor(private readonly options: WebSocketStorageProviderOptions) {
+  constructor(
+    private readonly yagnaApi: YagnaApi,
+    private readonly options: WebSocketStorageProviderOptions,
+  ) {
     this.logger = options.logger ?? nullLogger();
   }
 
@@ -148,9 +146,8 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
 
   private async createFileInfo(): Promise<GftpFileInfo> {
     const id = v4();
-    const me = await getIdentity({
-      yagnaOptions: this.options.yagnaOptions,
-    });
+    const { data } = await this.yagnaApi.identity.getIdentity();
+    const me = data.identity;
 
     return {
       id,
@@ -169,44 +166,23 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
   }
 
   private async createService(fileInfo: GftpFileInfo, components: string[]): Promise<ServiceInfo> {
-    const yagnaOptions = this.options.yagnaOptions;
-    const resp = await fetch(new URL("/gsb-api/v1/services", yagnaOptions.basePath), {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${yagnaOptions.apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        listen: {
-          on: `/public/gftp/${fileInfo.id}`,
-          components,
-        },
-      }),
-    });
+    const resp = await this.yagnaApi.gsb.createService(fileInfo, components);
 
     if (resp.status !== 201) {
       throw new Error(`Invalid response: ${resp.status}`);
     }
 
-    const body = await resp.json();
-    const messages_link = `/gsb-api/v1/services/${body.servicesId}?authToken=${yagnaOptions.apiKey}`;
-    const url = new URL(messages_link, this.options.yagnaOptions.basePath);
+    const servicesId = resp.data.servicesId;
+    const messages_link = `/gsb-api/v1/services/${servicesId}?authToken=${this.yagnaApi.yagnaOptions.apiKey}`;
+    const url = new URL(messages_link, this.yagnaApi.yagnaOptions.basePath);
     url.protocol = "ws:";
-    this.services.set(fileInfo.url, body.servicesId);
+    this.services.set(fileInfo.url, servicesId);
 
-    return { url, serviceId: body.servicesId };
+    return { url, serviceId: servicesId };
   }
 
   private async deleteService(id: string): Promise<void> {
-    const yagnaOptions = this.options.yagnaOptions;
-    const resp = await fetch(new URL(`/gsb-api/v1/services/${id}`, yagnaOptions.basePath), {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${yagnaOptions.apiKey}`,
-        "Content-Type": "application/json",
-      },
-    });
-
+    const resp = await this.yagnaApi.gsb.deleteService(id);
     if (resp.status !== 200) {
       throw new Error(`Invalid response: ${resp.status}`);
     }

@@ -2,6 +2,7 @@ import { Agreement, AgreementOptions } from "./agreement";
 import { Logger } from "../utils";
 import { AgreementConfig } from "./config";
 import { Events } from "../events";
+import { YagnaApi } from "../utils/yagna/yagna";
 
 /**
  * AgreementFactory
@@ -14,9 +15,13 @@ export class AgreementFactory {
 
   /**
    * Create AgreementFactory
+   * @param yagnaApi - {@link YagnaApi}
    * @param agreementOptions - {@link AgreementOptions}
    */
-  constructor(agreementOptions?: AgreementOptions) {
+  constructor(
+    private readonly yagnaApi: YagnaApi,
+    agreementOptions?: AgreementOptions,
+  ) {
     this.options = new AgreementConfig(agreementOptions);
     this.logger = agreementOptions?.logger;
   }
@@ -32,16 +37,16 @@ export class AgreementFactory {
         proposalId,
         validTo: new Date(+new Date() + 3600 * 1000).toISOString(),
       };
-      const { data: agreementId } = await this.options.api.createAgreement(agreementProposalRequest, {
+      const { data: agreementId } = await this.yagnaApi.market.createAgreement(agreementProposalRequest, {
         timeout: this.options.agreementRequestTimeout,
       });
-      const { data } = await this.options.api.getAgreement(agreementId);
+      const { data } = await this.yagnaApi.market.getAgreement(agreementId);
       const provider = {
         name: data?.offer.properties["golem.node.id.name"],
         id: data?.offer.providerId,
       };
       if (!provider.id || !provider.name) throw new Error("Unable to get provider info");
-      const agreement = new Agreement(agreementId, provider, this.options);
+      const agreement = new Agreement(agreementId, provider, this.yagnaApi, this.options);
       this.options.eventTarget?.dispatchEvent(
         new Events.AgreementCreated({
           id: agreementId,
