@@ -23,7 +23,7 @@
     "build": "rollup -c",
     "dev": "rollup -c -w",
     "docs": "typedoc src/ --plugin typedoc-plugin-merge-modules --plugin typedoc-theme-hierarchy",
-    "docs:md": "typedoc src/ --plugin typedoc-plugin-markdown --plugin .docs/typedoc-clear-references.cjs --hideBreadcrumbs true && node .docs/summary-generator.cjs",
+    "docs:md": "typedoc src/ --plugin typedoc-plugin-markdown --plugin .docs/typedoc-frontmatter-theme.cjs --hideBreadcrumbs true && node .docs/summary-generator.cjs",
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "jest --config tests/unit/jest.config.json",
     "test:e2e": "jest --config tests/e2e/jest.config.json tests/e2e/**.spec.ts --runInBand --forceExit",
