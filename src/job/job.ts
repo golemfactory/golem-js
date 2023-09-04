@@ -10,8 +10,10 @@ export class Job<Output = unknown> {
   constructor(
     public readonly id: string,
     private jobStorage: JobStorage,
-  ) {
-    this.saveState(JobState.New);
+  ) {}
+
+  async saveInitialState(): Promise<void> {
+    await this.saveState(JobState.New);
   }
 
   async saveState(state: JobState, results?: Output, error?: Error): Promise<void> {

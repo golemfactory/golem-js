@@ -1,4 +1,4 @@
-import { TaskExecutor } from "../executor/executor";
+import { TaskExecutor } from "../executor";
 import { PackageOptions } from "../package";
 import { Worker } from "../task";
 
@@ -61,6 +61,9 @@ export class GolemNetwork {
       enableLogging: this.enableLogging,
       ...this.demand,
     });
+    if (this.beforeEachJob) {
+      this.executor.beforeEach(this.beforeEachJob);
+    }
   }
 
   /**
@@ -81,10 +84,7 @@ export class GolemNetwork {
    * ```
    */
   public async createJob<Output = unknown>(worker: Worker<unknown, Output>) {
-    return this.executor.createJob(async (ctx) => {
-      await this.beforeEachJob(ctx);
-      return worker(ctx);
-    });
+    return this.executor.createJob(worker);
   }
 
   public getJobById(id: string) {
