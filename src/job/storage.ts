@@ -7,8 +7,8 @@ export type SerializedJob<OutputType = unknown> = {
 };
 
 export interface JobStorage {
-  setJob(taskId: string, state: JobState, results?: unknown, error?: Error): Promise<void>;
-  getJob(taskId: string): Promise<SerializedJob | null>;
+  setJob(jobId: string, state: JobState, results?: unknown, error?: Error): Promise<void>;
+  getJob(jobId: string): Promise<SerializedJob | null>;
 }
 
 export class InMemoryJobStorage implements JobStorage {
@@ -18,9 +18,9 @@ export class InMemoryJobStorage implements JobStorage {
     this.jobs.set(jobId, { state, results, error: error?.message });
   }
 
-  async getJob(taskId: string): Promise<SerializedJob | null> {
-    const task = this.jobs.get(taskId);
-    if (!task) return null;
-    return task;
+  async getJob(jobId: string): Promise<SerializedJob | null> {
+    const job = this.jobs.get(jobId);
+    if (!job) return null;
+    return job;
   }
 }

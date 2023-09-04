@@ -66,7 +66,7 @@ app.post("/render-scene", async (req, res) => {
   return res.json({ jobId: job.id });
 });
 
-app.get("/job-status/:jobId", async (req, res) => {
+app.get("/job/:jobId/status", async (req, res) => {
   const jobId = req.params.jobId;
   if (!jobId) {
     res.status(400).send("please specify jobId in the request path");
@@ -84,7 +84,7 @@ app.get("/job-status/:jobId", async (req, res) => {
   return res.json({ status });
 });
 
-app.get("/job-result/:jobId", async (req, res) => {
+app.get("/job/:jobId/result", async (req, res) => {
   const jobId = req.params.jobId;
   if (!jobId) {
     res.status(400).send("please specify jobId in the request path");
@@ -123,5 +123,5 @@ process.on("SIGINT", async () => {
 
 // Test your app in command line:
 // curl -X POST -H "Content-Type: application/json" -d '{"frame": 0}' http://localhost:3001/render-scene
-// curl -X GET http://localhost:3001/job-status/<jobId>
-// curl -X GET http://localhost:3001/job-result/<jobId>
+// curl -X GET http://localhost:3001/job/<jobId>/status
+// curl -X GET http://localhost:3001/job/<jobId>/result
