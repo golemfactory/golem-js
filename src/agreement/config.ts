@@ -1,12 +1,12 @@
 import { AgreementOptions } from "./agreement";
 import { AgreementSelector, AgreementServiceOptions } from "./service";
 import { Logger } from "../utils";
-import { randomAgreementSelector } from "./strategy";
+import { randomAgreementSelectorWithPriorityForExistingOnes } from "./strategy";
 
 const DEFAULTS = {
   agreementRequestTimeout: 30000,
   agreementWaitingForApprovalTimeout: 60,
-  agreementSelector: randomAgreementSelector(),
+  agreementSelector: randomAgreementSelectorWithPriorityForExistingOnes(),
 };
 
 /**

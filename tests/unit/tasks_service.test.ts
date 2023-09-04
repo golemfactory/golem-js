@@ -91,7 +91,7 @@ describe("Task Service", () => {
       const result = await ctx.run("some_shell_command");
       if (result.stdout === "invalid_value") ctx.rejectResult("Invalid value computed by provider");
     };
-    const task = new Task("1", worker, undefined, undefined, 2);
+    const task = new Task("1", worker, undefined, undefined, { maxRetries: 2 });
     queue.addToEnd(task);
     activityMock.setExpectedExeResults([{ result: "Ok", stdout: "invalid_value" }]);
     const service = new TaskService(
@@ -117,7 +117,7 @@ describe("Task Service", () => {
 
   it("should reject task if it failed max attempts", async () => {
     const worker: Worker = async (ctx) => ctx.run("some_shell_command");
-    const task = new Task("1", worker, undefined, undefined, 1);
+    const task = new Task("1", worker, undefined, undefined, { maxRetries: 1 });
     queue.addToEnd(task);
     activityMock.setExpectedErrors(new Array(20).fill(new Error()));
     const service = new TaskService(
