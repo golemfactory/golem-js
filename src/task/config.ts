@@ -1,4 +1,4 @@
-import { TaskOptions } from "./service";
+import { TaskServiceOptions } from "./service";
 import { ActivityConfig } from "../activity/config";
 import { Logger } from "../utils";
 import { StorageProvider } from "../storage";
@@ -23,7 +23,7 @@ export class TaskConfig extends ActivityConfig {
   public readonly storageProvider?: StorageProvider;
   public readonly logger?: Logger;
 
-  constructor(options?: TaskOptions) {
+  constructor(options?: TaskServiceOptions) {
     super(options);
     this.maxParallelTasks = options?.maxParallelTasks || DEFAULTS.maxParallelTasks;
     this.taskRunningInterval = options?.taskRunningInterval || DEFAULTS.taskRunningInterval;

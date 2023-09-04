@@ -1,7 +1,7 @@
 import { Package, PackageOptions } from "../package";
 import { MarketService } from "../market";
 import { AgreementPoolService } from "../agreement";
-import { Task, TaskQueue, TaskService, Worker } from "../task";
+import { Task, TaskQueue, TaskService, Worker, TaskOptions } from "../task";
 import { PaymentService, PaymentOptions } from "../payment";
 import { NetworkService } from "../network";
 import { Result } from "../activity";
@@ -10,7 +10,7 @@ import { StorageProvider, GftpStorageProvider, NullStorageProvider, WebSocketBro
 import { ExecutorConfig } from "./config";
 import { Events } from "../events";
 import { StatsService } from "../stats/service";
-import { TaskOptions } from "../task/service";
+import { TaskServiceOptions } from "../task/service";
 import { NetworkServiceOptions } from "../network/service";
 import { AgreementServiceOptions } from "../agreement/service";
 import { WorkOptions } from "../task/work";
@@ -56,7 +56,7 @@ export type ExecutorOptions = {
   jobStorage?: JobStorage;
 } & Omit<PackageOptions, "imageHash" | "imageTag"> &
   MarketOptions &
-  TaskOptions &
+  TaskServiceOptions &
   PaymentOptions &
   NetworkServiceOptions &
   AgreementServiceOptions &
@@ -273,14 +273,18 @@ export class TaskExecutor {
    * Run task - allows to execute a single worker function on the Golem network with a single provider.
    *
    * @param worker function that run task
+   * @param options task options
    * @return result of task computation
    * @example
    * ```typescript
    * await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
    * ```
    */
-  async run<OutputType = Result>(worker: Worker<undefined, OutputType>): Promise<OutputType | undefined> {
-    return this.executeTask<undefined, OutputType>(worker).catch(async (e) => {
+  async run<OutputType = Result>(
+    worker: Worker<undefined, OutputType>,
+    options?: TaskOptions,
+  ): Promise<OutputType | undefined> {
+    return this.executeTask<undefined, OutputType>(worker, undefined, options).catch(async (e) => {
       this.handleCriticalError(e);
       return undefined;
     });
@@ -374,30 +378,19 @@ export class TaskExecutor {
   private async executeTask<InputType, OutputType>(
     worker: Worker<InputType, OutputType>,
     data?: InputType,
+    options?: TaskOptions,
   ): Promise<OutputType | undefined> {
-    const task = new Task<InputType, OutputType>(
-      (++this.lastTaskIndex).toString(),
-      worker,
-      data,
-      this.initWorker,
-      this.options.maxTaskRetries,
-    );
+    const task = new Task<InputType, OutputType>((++this.lastTaskIndex).toString(), worker, data, this.initWorker, {
+      maxRetries: options?.maxRetries ?? this.options.maxTaskRetries,
+      timeout: options?.timeout ?? this.options.taskTimeout,
+    });
     this.taskQueue.addToEnd(task as Task<unknown, unknown>);
-    let timeout = false;
-    const timeoutId = setTimeout(() => (timeout = true), this.options.taskTimeout);
-    while (!timeout && this.isRunning) {
+    while (this.isRunning) {
       if (task.isFinished()) {
-        clearTimeout(timeoutId);
         if (task.isRejected()) throw task.getError();
         return task.getResults();
       }
       await sleep(2000, true);
-    }
-    clearTimeout(timeoutId);
-    if (timeout) {
-      const error = new Error(`Task ${task.id} timeout.`);
-      task.stop(undefined, error, true);
-      throw error;
     }
   }
 
@@ -427,13 +420,10 @@ export class TaskExecutor {
     const job = new Job<OutputType>(jobId, this.options.jobStorage);
     await job.saveInitialState();
 
-    const task = new Task(
-      (++this.lastTaskIndex).toString(),
-      worker,
-      undefined,
-      this.initWorker,
-      this.options.maxTaskRetries,
-    );
+    const task = new Task((++this.lastTaskIndex).toString(), worker, undefined, this.initWorker, {
+      maxRetries: this.options.maxTaskRetries,
+      timeout: this.options.taskTimeout,
+    });
     task.onStateChange((taskState) => {
       job.saveState(taskState, task.getResults(), task.getError());
     });
