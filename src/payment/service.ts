@@ -1,11 +1,10 @@
-import { Logger, sleep } from "../utils";
+import { Logger, sleep, YagnaApi } from "../utils";
 import { Allocation } from "./allocation";
 import { BasePaymentOptions, PaymentConfig } from "./config";
 import { Invoice, InvoiceDTO } from "./invoice";
 import { DebitNote, DebitNoteDTO } from "./debit_note";
 import { Payments, PaymentEventType, DebitNoteEvent, InvoiceEvent } from "./payments";
 import { RejectionReason } from "./rejection";
-import { getIdentity } from "../network/identity";
 
 export interface PaymentOptions extends BasePaymentOptions {
   /** Interval for checking new invoices */
@@ -45,13 +44,16 @@ export class PaymentService {
   private paidDebitNotes: Set<string> = new Set();
   private payments?: Payments;
 
-  constructor(options?: PaymentOptions) {
+  constructor(
+    private readonly yagnaApi: YagnaApi,
+    options?: PaymentOptions,
+  ) {
     this.options = new PaymentConfig(options);
     this.logger = this.options.logger;
   }
   async run() {
     this.isRunning = true;
-    this.payments = await Payments.create(this.options);
+    this.payments = await Payments.create(this.yagnaApi, this.options);
     this.payments.addEventListener(PaymentEventType, this.subscribePayments.bind(this));
     this.logger?.debug("Payment Service has started");
   }
@@ -77,7 +79,6 @@ export class PaymentService {
     this.payments?.unsubscribe().catch((error) => this.logger?.warn(error));
     this.payments?.removeEventListener(PaymentEventType, this.subscribePayments.bind(this));
     await this.allocation?.release().catch((error) => this.logger?.warn(error));
-    this.options.httpAgent.destroy?.();
     this.logger?.info("Allocation has been released");
     this.logger?.debug("Payment service has been stopped");
   }
@@ -88,7 +89,7 @@ export class PaymentService {
         platform: this.getPaymentPlatform(),
         address: await this.getPaymentAddress(),
       };
-      this.allocation = await Allocation.create({ ...this.options.options, account });
+      this.allocation = await Allocation.create(this.yagnaApi, { ...this.options, account });
       return this.allocation;
     } catch (error) {
       throw new Error(
@@ -168,6 +169,7 @@ export class PaymentService {
   }
 
   private async getPaymentAddress(): Promise<string> {
-    return getIdentity(this.options);
+    const { data } = await this.yagnaApi.identity.getIdentity();
+    return data.identity;
   }
 }

@@ -1,16 +1,16 @@
 import { Package, PackageOptions } from "../package";
 import { MarketService } from "../market";
 import { AgreementPoolService } from "../agreement";
-import { Task, TaskQueue, TaskService, Worker } from "../task";
+import { Task, TaskQueue, TaskService, Worker, TaskOptions } from "../task";
 import { PaymentService, PaymentOptions } from "../payment";
 import { NetworkService } from "../network";
 import { Result } from "../activity";
-import { sleep, Logger, LogLevel, runtimeContextChecker } from "../utils";
+import { sleep, Logger, LogLevel, runtimeContextChecker, Yagna } from "../utils";
 import { StorageProvider, GftpStorageProvider, NullStorageProvider, WebSocketBrowserStorageProvider } from "../storage";
 import { ExecutorConfig } from "./config";
 import { Events } from "../events";
 import { StatsService } from "../stats/service";
-import { TaskOptions } from "../task/service";
+import { TaskServiceOptions } from "../task/service";
 import { NetworkServiceOptions } from "../network/service";
 import { AgreementServiceOptions } from "../agreement/service";
 import { WorkOptions } from "../task/work";
@@ -47,7 +47,7 @@ export type ExecutorOptions = {
   activityPreparingTimeout?: number;
 } & Omit<PackageOptions, "imageHash" | "imageTag"> &
   MarketOptions &
-  TaskOptions &
+  TaskServiceOptions &
   PaymentOptions &
   NetworkServiceOptions &
   AgreementServiceOptions &
@@ -82,6 +82,7 @@ export class TaskExecutor {
   private isRunning = true;
   private configOptions: ExecutorOptions;
   private isCanceled = false;
+  private yagna: Yagna;
 
   /**
    * Create a new Task Executor
@@ -129,11 +130,13 @@ export class TaskExecutor {
     this.configOptions = (typeof options === "string" ? { package: options } : options) as ExecutorOptions;
     this.options = new ExecutorConfig(this.configOptions);
     this.logger = this.options.logger;
+    this.yagna = new Yagna(this.configOptions.yagnaOptions);
+    const yagnaApi = this.yagna.getApi();
     this.taskQueue = new TaskQueue<Task<unknown, unknown>>();
-    this.agreementPoolService = new AgreementPoolService(this.options);
-    this.paymentService = new PaymentService(this.options);
-    this.marketService = new MarketService(this.agreementPoolService, this.options);
-    this.networkService = this.options.networkIp ? new NetworkService(this.options) : undefined;
+    this.agreementPoolService = new AgreementPoolService(yagnaApi, this.options);
+    this.paymentService = new PaymentService(yagnaApi, this.options);
+    this.marketService = new MarketService(this.agreementPoolService, yagnaApi, this.options);
+    this.networkService = this.options.networkIp ? new NetworkService(yagnaApi, this.options) : undefined;
 
     // Initialize storage provider.
     if (this.configOptions.storageProvider) {
@@ -141,18 +144,13 @@ export class TaskExecutor {
     } else if (runtimeContextChecker.isNode) {
       this.storageProvider = new GftpStorageProvider(this.logger);
     } else if (runtimeContextChecker.isBrowser) {
-      this.storageProvider = new WebSocketBrowserStorageProvider({
-        yagnaOptions: {
-          apiKey: this.options.yagnaOptions.apiKey,
-          basePath: this.options.yagnaOptions.basePath,
-        },
-        logger: this.logger,
-      });
+      this.storageProvider = new WebSocketBrowserStorageProvider(yagnaApi, this.options);
     } else {
       this.storageProvider = new NullStorageProvider();
     }
 
     this.taskService = new TaskService(
+      this.yagna.getApi(),
       this.taskQueue,
       this.agreementPoolService,
       this.paymentService,
@@ -168,6 +166,12 @@ export class TaskExecutor {
    * @description Method responsible initialize all executor services.
    */
   async init() {
+    try {
+      await this.yagna.connect();
+    } catch (error) {
+      this.logger?.error(error);
+      throw error;
+    }
     const manifest = this.options.packageOptions.manifest;
     const packageReference = this.options.package;
     let taskPackage: Package;
@@ -184,7 +188,9 @@ export class TaskExecutor {
           taskPackage = packageReference;
         }
       } else {
-        throw new Error("No package or manifest provided");
+        const error = new Error("No package or manifest provided");
+        this.logger?.error(error);
+        throw error;
       }
     }
 
@@ -215,6 +221,7 @@ export class TaskExecutor {
     await this.networkService?.end();
     await Promise.all([this.taskService.end(), this.agreementPoolService.end(), this.marketService.end()]);
     await this.paymentService.end();
+    await this.yagna.end();
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFinished());
     this.printStats();
     await this.statsService.end();
@@ -257,14 +264,18 @@ export class TaskExecutor {
    * Run task - allows to execute a single worker function on the Golem network with a single provider.
    *
    * @param worker function that run task
+   * @param options task options
    * @return result of task computation
    * @example
    * ```typescript
    * await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
    * ```
    */
-  async run<OutputType = Result>(worker: Worker<undefined, OutputType>): Promise<OutputType | undefined> {
-    return this.executeTask<undefined, OutputType>(worker).catch(async (e) => {
+  async run<OutputType = Result>(
+    worker: Worker<undefined, OutputType>,
+    options?: TaskOptions,
+  ): Promise<OutputType | undefined> {
+    return this.executeTask<undefined, OutputType>(worker, undefined, options).catch(async (e) => {
       this.handleCriticalError(e);
       return undefined;
     });
@@ -358,30 +369,19 @@ export class TaskExecutor {
   private async executeTask<InputType, OutputType>(
     worker: Worker<InputType, OutputType>,
     data?: InputType,
+    options?: TaskOptions,
   ): Promise<OutputType | undefined> {
-    const task = new Task<InputType, OutputType>(
-      (++this.lastTaskIndex).toString(),
-      worker,
-      data,
-      this.initWorker,
-      this.options.maxTaskRetries,
-    );
+    const task = new Task<InputType, OutputType>((++this.lastTaskIndex).toString(), worker, data, this.initWorker, {
+      maxRetries: options?.maxRetries ?? this.options.maxTaskRetries,
+      timeout: options?.timeout ?? this.options.taskTimeout,
+    });
     this.taskQueue.addToEnd(task as Task<unknown, unknown>);
-    let timeout = false;
-    const timeoutId = setTimeout(() => (timeout = true), this.options.taskTimeout);
-    while (!timeout && this.isRunning) {
+    while (this.isRunning) {
       if (task.isFinished()) {
-        clearTimeout(timeoutId);
         if (task.isRejected()) throw task.getError();
         return task.getResults();
       }
       await sleep(2000, true);
-    }
-    clearTimeout(timeoutId);
-    if (timeout) {
-      const error = new Error(`Task ${task.id} timeout.`);
-      task.stop(undefined, error, true);
-      throw error;
     }
   }
 

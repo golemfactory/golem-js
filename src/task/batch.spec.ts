@@ -2,7 +2,7 @@ import { DownloadFile, Run, UploadData, UploadFile } from "../script";
 import { Batch } from "./batch";
 import { NullStorageProvider } from "../storage";
 import { ActivityMock } from "../../tests/mock/activity.mock";
-import { LoggerMock } from "../../tests/mock";
+import { LoggerMock, YagnaMock } from "../../tests/mock";
 import { Result } from "../activity";
 
 describe("Batch", () => {
@@ -10,7 +10,7 @@ describe("Batch", () => {
   let batch: Batch;
 
   beforeEach(() => {
-    activity = new ActivityMock();
+    activity = new ActivityMock("test_id", "test_id", new YagnaMock().getApi());
     batch = new Batch(activity, new NullStorageProvider(), new LoggerMock());
   });
 
@@ -112,8 +112,7 @@ describe("Batch", () => {
       expect(spy).toHaveBeenCalled();
     });
 
-    // FIXME: Not working due to bug: JST-250
-    xit("should call script.after() on execute error", async () => {
+    it("should call script.after() on execute error", async () => {
       const spy = jest.spyOn(batch["script"], "after");
       jest.spyOn(activity, "execute").mockRejectedValue(new Error("ERROR"));
 
@@ -168,8 +167,7 @@ describe("Batch", () => {
       expect(spy).toHaveBeenCalled();
     });
 
-    // FIXME: Not working due to bug: JST-252
-    xit("should call script.after() on result stream error", async () => {
+    it("should call script.after() on result stream error", async () => {
       const spy = jest.spyOn(batch["script"], "after");
       activity.mockResultFailure("FAILURE");
 
@@ -187,8 +185,7 @@ describe("Batch", () => {
       expect(spy).toHaveBeenCalled();
     });
 
-    // FIXME: Not working due to bug: JST-250
-    xit("should call script.after() on execute error", async () => {
+    it("should call script.after() on execute error", async () => {
       const spy = jest.spyOn(batch["script"], "after");
       jest.spyOn(activity, "execute").mockRejectedValue(new Error("ERROR"));
 
@@ -200,6 +197,21 @@ describe("Batch", () => {
       }).rejects.toThrowError("ERROR");
 
       expect(spy).toHaveBeenCalled();
+    });
+
+    it("should destroy the stream on result stream error", async () => {
+      activity.mockResultFailure("FAILURE");
+      const stream = await batch.endStream();
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        for await (const r of stream) {
+          /* empty */
+        }
+        fail("Expected to throw");
+      } catch (e) {
+        /* empty */
+      }
+      expect(stream.destroyed).toBe(true);
     });
   });
 });

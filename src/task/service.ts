@@ -1,7 +1,7 @@
 import { Task } from "./task";
 import { TaskQueue } from "./queue";
 import { WorkContext } from "./work";
-import { Logger, sleep } from "../utils";
+import { Logger, sleep, YagnaApi } from "../utils";
 import { StorageProvider } from "../storage";
 import { Agreement, AgreementPoolService } from "../agreement";
 import { PaymentService } from "../payment";
@@ -10,7 +10,7 @@ import { Activity, ActivityOptions } from "../activity";
 import { TaskConfig } from "./config";
 import { Events } from "../events";
 
-export interface TaskOptions extends ActivityOptions {
+export interface TaskServiceOptions extends ActivityOptions {
   /** Number of maximum parallel running task on one TaskExecutor instance */
   maxParallelTasks?: number;
   taskRunningInterval?: number;
@@ -33,11 +33,12 @@ export class TaskService {
   private options: TaskConfig;
 
   constructor(
+    private yagnaApi: YagnaApi,
     private tasksQueue: TaskQueue<Task<unknown, unknown>>,
     private agreementPoolService: AgreementPoolService,
     private paymentService: PaymentService,
     private networkService?: NetworkService,
-    options?: TaskOptions,
+    options?: TaskServiceOptions,
   ) {
     this.options = new TaskConfig(options);
     this.logger = options?.logger;
@@ -108,7 +109,6 @@ export class TaskService {
         logger: this.logger,
         activityPreparingTimeout: this.options.activityPreparingTimeout,
         activityStateCheckingInterval: this.options.activityStateCheckingInterval,
-        isRunning: () => this.isRunning,
       });
       await ctx.before();
       if (initWorker && !this.initWorkersDone.has(activity.id)) {
@@ -169,7 +169,7 @@ export class TaskService {
     if (previous) {
       return previous;
     } else {
-      const activity = await Activity.create(agreement.id, this.options);
+      const activity = await Activity.create(agreement.id, this.yagnaApi, this.options);
       this.activities.set(agreement.id, activity);
       return activity;
     }

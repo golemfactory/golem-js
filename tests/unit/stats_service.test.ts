@@ -2,7 +2,7 @@ import { Events } from "../../src/events";
 import { LoggerMock } from "../mock";
 import { StatsService } from "../../src/stats/service";
 import { setMaxListeners } from "events";
-import { ProposalDetails } from "../../src/market/proposal";
+import { ProposalDetails } from "../../src/market";
 const logger = new LoggerMock();
 const eventTarget = new EventTarget();
 const statServiceOptions = { logger, eventTarget };

@@ -2,7 +2,7 @@ import { DownloadFile, Run, Script, UploadFile } from "../script";
 import { Activity, Result } from "../activity";
 import { StorageProvider } from "../storage/provider";
 import { Logger, sleep } from "../utils";
-import { Readable, Transform } from "stream";
+import { Readable, Transform, pipeline } from "stream";
 import { UploadData } from "../script/command";
 
 export class Batch {
@@ -73,7 +73,14 @@ export class Batch {
   async end(): Promise<Result[]> {
     await this.script.before();
     await sleep(100, true);
-    const results = await this.activity.execute(this.script.getExeScriptRequest());
+    let results: Readable;
+    try {
+      results = await this.activity.execute(this.script.getExeScriptRequest());
+    } catch (error) {
+      // the original error is more important than the one from after()
+      await this.script.after([]).catch();
+      throw error;
+    }
     const allResults: Result[] = [];
     return new Promise((resolve, reject) => {
       results.on("data", (res) => {
@@ -99,7 +106,14 @@ export class Batch {
   async endStream(): Promise<Readable> {
     const script = this.script;
     await script.before();
-    const results = await this.activity.execute(this.script.getExeScriptRequest());
+    let results: Readable;
+    try {
+      results = await this.activity.execute(this.script.getExeScriptRequest());
+    } catch (error) {
+      // the original error is more important than the one from after()
+      await script.after([]).catch();
+      throw error;
+    }
     const decodedResults: Result[] = [];
     const errorResultHandler = new Transform({
       objectMode: true,
@@ -118,11 +132,9 @@ export class Batch {
         }
       },
     });
-    results.on("end", () => this.script.after(decodedResults).catch());
-    results.on("error", (error) => {
+    const resultsWithErrorHandling = pipeline(results, errorResultHandler, () => {
       script.after(decodedResults).catch();
-      results.destroy(error);
     });
-    return results.pipe(errorResultHandler);
+    return resultsWithErrorHandling;
   }
 }

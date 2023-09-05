@@ -6,6 +6,7 @@ import sleep from "../utils/sleep";
 import { ActivityFactory } from "./factory";
 import { ActivityConfig } from "./config";
 import { Events } from "../events";
+import { YagnaApi } from "../utils/yagna/yagna";
 
 export enum ActivityStateEnum {
   New = "New",
@@ -21,12 +22,6 @@ export interface ExeScriptRequest {
 }
 
 export interface ActivityOptions {
-  yagnaOptions?: {
-    /** Yagna Api Key */
-    apiKey?: string;
-    /** Yagna base path to Activity REST Api */
-    basePath?: string;
-  };
   /** timeout for sending and creating batch */
   activityRequestTimeout?: number;
   /** timeout for executing batch */
@@ -51,12 +46,14 @@ export class Activity {
   /**
    * @param id activity ID
    * @param agreementId agreement ID
+   * @param yagnaApi - {@link YagnaApi}
    * @param options - {@link ActivityOptions}
    * @hidden
    */
   constructor(
     public readonly id,
     public readonly agreementId,
+    protected readonly yagnaApi: YagnaApi,
     protected readonly options: ActivityConfig,
   ) {
     this.logger = options?.logger;
@@ -66,12 +63,18 @@ export class Activity {
    * Create activity for given agreement ID
    *
    * @param agreementId
+   * @param yagnaApi
    * @param options - {@link ActivityOptions}
    * @param secure - defines if activity will be secure type
    * @return Activity
    */
-  static async create(agreementId: string, options?: ActivityOptions, secure = false): Promise<Activity> {
-    const factory = new ActivityFactory(agreementId, options);
+  static async create(
+    agreementId: string,
+    yagnaApi: YagnaApi,
+    options?: ActivityOptions,
+    secure = false,
+  ): Promise<Activity> {
+    const factory = new ActivityFactory(agreementId, yagnaApi, options);
     return factory.create(secure);
   }
 
@@ -83,7 +86,7 @@ export class Activity {
    * @param timeout - execution timeout
    */
   public async execute(script: ExeScriptRequest, stream?: boolean, timeout?: number): Promise<Readable> {
-    let batchId, batchSize;
+    let batchId: string, batchSize: number;
     let startTime = new Date();
     try {
       batchId = await this.send(script);
@@ -121,7 +124,7 @@ export class Activity {
    */
   public async getState(): Promise<ActivityStateEnum> {
     try {
-      const { data } = await this.options.api.state.getActivityState(this.id);
+      const { data } = await this.yagnaApi.activity.state.getActivityState(this.id);
       const state = data.state[0];
       if (this.currentState !== ActivityStateEnum[state]) {
         this.options.eventTarget?.dispatchEvent(
@@ -137,14 +140,14 @@ export class Activity {
   }
 
   protected async send(script: ExeScriptRequest): Promise<string> {
-    const { data: batchId } = await this.options.api.control.exec(this.id, script, {
+    const { data: batchId } = await this.yagnaApi.activity.control.exec(this.id, script, {
       timeout: this.options.activityRequestTimeout,
     });
     return batchId;
   }
 
   private async end() {
-    await this.options.api.control
+    await this.yagnaApi.activity.control
       .destroyActivity(this.id, this.options.activityRequestTimeout / 1000, {
         timeout: this.options.activityRequestTimeout + 1000,
       })
@@ -154,18 +157,18 @@ export class Activity {
         );
       });
     this.options.eventTarget?.dispatchEvent(new Events.ActivityDestroyed(this));
-    this.options.httpAgent.destroy?.();
     this.logger?.debug(`Activity ${this.id} destroyed`);
   }
 
   private async pollingBatch(batchId, startTime, timeout): Promise<Readable> {
     let isBatchFinished = false;
-    let lastIndex;
+    let lastIndex: number;
     let retryCount = 0;
     const maxRetries = 5;
     const { id: activityId, agreementId } = this;
     const isRunning = () => this.isRunning;
-    const { activityExecuteTimeout, api, eventTarget } = this.options;
+    const { activityExecuteTimeout, eventTarget } = this.options;
+    const api = this.yagnaApi.activity;
     const handleError = this.handleError.bind(this);
     return new Readable({
       objectMode: true,
@@ -215,8 +218,8 @@ export class Activity {
   }
 
   private async streamingBatch(batchId, batchSize, startTime, timeout): Promise<Readable> {
-    const basePath = this.options?.yagnaOptions?.basePath || this.options.api.control["configuration"]?.basePath;
-    const apiKey = this.options?.yagnaOptions?.apiKey || this.options.api.control["configuration"]?.apiKey;
+    const basePath = this.yagnaApi.yagnaOptions.basePath;
+    const apiKey = this.yagnaApi.yagnaOptions.apiKey;
     const eventSource = new EventSource(`${basePath}/activity/${this.id}/exec/${batchId}`, {
       headers: {
         Accept: "text/event-stream",
@@ -272,13 +275,13 @@ export class Activity {
       throw error;
     }
     ++retryCount;
-    const failMsg = "There was an error retrieving activity results. ";
+    const failMsg = "There was an error retrieving activity results.";
     const errorMsg = error?.response?.data?.message || error?.message || error;
     if (retryCount < maxRetries) {
       this.logger?.debug(`${failMsg} Retrying in ${this.options.activityExeBatchResultsFetchInterval}.`);
       return retryCount;
     } else {
-      this.logger?.error(`${failMsg} Giving up after ${retryCount} attempts. ${errorMsg}`);
+      this.logger?.warn(`${failMsg} Giving up after ${retryCount} attempts. ${errorMsg}`);
     }
     throw new Error(`Command #${cmdIndex || 0} getExecBatchResults error: ${errorMsg}`);
   }
@@ -310,7 +313,7 @@ export class Activity {
 
   private async isTerminated(): Promise<{ terminated: boolean; reason?: string; errorMessage?: string }> {
     try {
-      const { data } = await this.options.api.state.getActivityState(this.id);
+      const { data } = await this.yagnaApi.activity.state.getActivityState(this.id);
       const state = ActivityStateEnum[data?.state?.[0]];
       return {
         terminated: state === ActivityStateEnum.Terminated,

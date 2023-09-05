@@ -1,5 +1,5 @@
 import { BasePaymentOptions, PaymentConfig } from "./config";
-import { Logger, sleep } from "../utils";
+import { Logger, sleep, YagnaApi } from "../utils";
 import { Invoice } from "./invoice";
 import { DebitNote } from "./debit_note";
 import { Events } from "../events";
@@ -19,11 +19,14 @@ export class Payments extends EventTarget {
   private logger?: Logger;
   private lastInvoiceFetchingTime: string = new Date().toISOString();
   private lastDebitNotesFetchingTime: string = new Date().toISOString();
-  static async create(options?: PaymentOptions) {
-    return new Payments(options);
+  static async create(yagnaApi: YagnaApi, options?: PaymentOptions) {
+    return new Payments(yagnaApi, new PaymentConfig(options));
   }
 
-  constructor(options?: PaymentOptions) {
+  constructor(
+    private readonly yagnaApi: YagnaApi,
+    options?: PaymentOptions,
+  ) {
     super();
     this.options = new PaymentConfig(options);
     this.logger = this.options.logger;
@@ -35,7 +38,6 @@ export class Payments extends EventTarget {
    */
   async unsubscribe() {
     this.isRunning = false;
-    this.options.httpAgent.destroy?.();
     this.logger?.debug(`Payments unsubscribed`);
   }
 
@@ -51,7 +53,7 @@ export class Payments extends EventTarget {
   private async subscribeForInvoices() {
     while (this.isRunning) {
       try {
-        const { data: invoiceEvents } = await this.options.api.getInvoiceEvents(
+        const { data: invoiceEvents } = await this.yagnaApi.payment.getInvoiceEvents(
           this.options.invoiceFetchingInterval / 1000,
           this.lastInvoiceFetchingTime,
           this.options.maxInvoiceEvents,
@@ -60,7 +62,7 @@ export class Payments extends EventTarget {
         );
         for (const event of invoiceEvents) {
           if (event.eventType !== "InvoiceReceivedEvent") continue;
-          const invoice = await Invoice.create(event["invoiceId"], { ...this.options.options }).catch(
+          const invoice = await Invoice.create(event["invoiceId"], this.yagnaApi, { ...this.options }).catch(
             (e) =>
               this.logger?.error(
                 `Unable to create invoice ID: ${event["invoiceId"]}. ${e?.response?.data?.message || e}`,
@@ -83,7 +85,7 @@ export class Payments extends EventTarget {
   private async subscribeForDebitNotes() {
     while (this.isRunning) {
       try {
-        const { data: debitNotesEvents } = await this.options.api
+        const { data: debitNotesEvents } = await this.yagnaApi.payment
           .getDebitNoteEvents(
             this.options.debitNotesFetchingInterval / 1000,
             this.lastDebitNotesFetchingTime,
@@ -94,7 +96,7 @@ export class Payments extends EventTarget {
           .catch(() => ({ data: [] }));
         for (const event of debitNotesEvents) {
           if (event.eventType !== "DebitNoteReceivedEvent") continue;
-          const debitNote = await DebitNote.create(event["debitNoteId"], { ...this.options.options }).catch(
+          const debitNote = await DebitNote.create(event["debitNoteId"], this.yagnaApi, { ...this.options }).catch(
             (e) =>
               this.logger?.error(
                 `Unable to create debit note ID: ${event["debitNoteId"]}. ${e?.response?.data?.message || e}`,
