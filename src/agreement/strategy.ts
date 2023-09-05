@@ -6,7 +6,7 @@ export const randomAgreementSelector = () => async (candidates: AgreementCandida
 
 /** Selector selecting a random provider from the pool, but giving priority to those who already have a confirmed agreement and deployed activity */
 export const randomAgreementSelectorWithPriorityForExistingOnes = () => async (candidates: AgreementCandidate[]) => {
-  const existingAgreements = candidates.filter((c) => !c.agreement);
+  const existingAgreements = candidates.filter((c) => c.agreement);
   return existingAgreements.length
     ? existingAgreements[Math.floor(Math.random() * existingAgreements.length)]
     : candidates[Math.floor(Math.random() * candidates.length)];
