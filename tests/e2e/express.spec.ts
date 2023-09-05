@@ -1,4 +1,4 @@
-import express, { Express } from "express";
+import express from "express";
 import { GolemNetwork, Job, JobState } from "../../src";
 import supertest from "supertest";
 import fs from "fs";
@@ -62,12 +62,12 @@ describe("Express", function () {
       }
 
       const job = await network.createJob(async (workContext) => {
-        const fileName = `output_${frame}.png`;
+        const fileName = `EXPRESS_SPEC_output_${frame}.png`;
         const result = await workContext
           .beginBatch()
           .uploadJson(blenderParams(frame), "/golem/work/params.json")
           .run("/golem/entrypoints/run-blender.sh")
-          .downloadFile(`/golem/output/out${frame.toString().padStart(4, "0")}.png`, `public/${fileName}`)
+          .downloadFile(`/golem/output/out${frame.toString().padStart(4, "0")}.png`, fileName)
           .end();
         if (!result?.length) {
           throw new Error("Something went wrong, no result");
@@ -158,8 +158,8 @@ describe("Express", function () {
     const resultResponse = await supertest(app).get(`/job/${jobId}/result`);
     expect(resultResponse.status).toEqual(200);
     expect(resultResponse.body).toEqual(
-      "Job completed successfully! See your result at http://localhost:3001/results/output_0.png",
+      "Job completed successfully! See your result at http://localhost:3001/results/EXPRESS_SPEC_output_0.png",
     );
-    expect(fs.existsSync(`${process.env.GOTH_GFTP_VOLUME || ""}public/output_0.png`)).toEqual(true);
+    expect(fs.existsSync(`${process.env.GOTH_GFTP_VOLUME || ""}EXPRESS_SPEC_output_0.png`)).toEqual(true);
   });
 });
