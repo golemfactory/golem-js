@@ -2,10 +2,6 @@ import { TaskExecutor } from "../executor";
 import { PackageOptions } from "../package";
 import { Worker } from "../task";
 
-// import for typedoc
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Job } from "../job";
-
 export interface GolemNetworkConfig {
   image?: string;
   demand?: Pick<PackageOptions, "minMemGib" | "minStorageGib" | "minCpuThreads" | "minCpuCores" | "capabilities">;
