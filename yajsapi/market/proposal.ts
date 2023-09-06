@@ -17,6 +17,13 @@ export interface ProposalDetails {
   runtimeName: string;
   state: ProposalAllOfStateEnum;
 }
+
+export type PricingInfo = {
+  cpuSec: number;
+  envSec: number;
+  start: number;
+};
+
 /**
  * Proposal module - an object representing an offer in the state of a proposal from the provider.
  * @category Mid-level
@@ -50,7 +57,7 @@ export class Proposal {
     private readonly api: RequestorApi, // TODO: why API explicitly?
     model: ProposalModel,
     private readonly demandRequest: DemandOfferBase,
-    private eventTarget?: EventTarget
+    private eventTarget?: EventTarget,
   ) {
     this.id = model.proposalId;
     this.issuerId = model.issuerId;
@@ -77,6 +84,24 @@ export class Proposal {
       runtimeCapabilities: this.properties["golem.runtime.capabilities"],
       runtimeName: this.properties["golem.runtime.name"],
       state: this.state,
+    };
+  }
+
+  get pricing(): PricingInfo {
+    const usageVector = this.properties["golem.com.usage.vector"];
+    const priceVector = this.properties["golem.com.pricing.model.linear.coeffs"];
+
+    const envIdx = usageVector.findIndex((ele) => ele === "golem.usage.duration_sec");
+    const cpuIdx = usageVector.findIndex((ele) => ele === "golem.usage.cpu_sec");
+
+    const envSec = priceVector[envIdx] ?? 0.0;
+    const cpuSec = priceVector[cpuIdx] ?? 0.0;
+    const start = priceVector[priceVector.length - 1];
+
+    return {
+      cpuSec,
+      envSec,
+      start,
     };
   }
 
@@ -107,7 +132,7 @@ export class Proposal {
         providerId: this.issuerId,
         parentId: this.id,
         reason,
-      })
+      }),
     );
   }
 
@@ -123,7 +148,7 @@ export class Proposal {
             providerId: this.issuerId,
             parentId: this.id,
             reason,
-          })
+          }),
         );
         throw new Error(reason);
       });
@@ -136,7 +161,7 @@ export class Proposal {
         id: this.id,
         providerId: this.issuerId,
         counteringProposalId: counteringProposalId,
-      })
+      }),
     );
     return counteringProposalId;
   }
