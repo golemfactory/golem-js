@@ -380,7 +380,7 @@ export class TaskExecutor {
     data?: InputType,
     options?: TaskOptions,
   ): Promise<OutputType | undefined> {
-    const task = new Task<InputType, OutputType>(v4(), worker, data, this.initWorker, {
+    const task = new Task<InputType, OutputType>((++this.lastTaskIndex).toString(), worker, data, this.initWorker, {
       maxRetries: options?.maxRetries ?? this.options.maxTaskRetries,
       timeout: options?.timeout ?? this.options.taskTimeout,
     });
