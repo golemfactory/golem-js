@@ -1,7 +1,7 @@
 import { TaskExecutor } from "@golem-sdk/golem-js";
 
 (async function main() {
-  const executor = await TaskExecutor.create("9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae");
+  const executor = await TaskExecutor.create("golem/alpine:3.18.2");
   await executor.run(async (ctx) => {
     const results = await ctx.beginBatch().run('echo "Hello Golem"').run('echo "Hello World"').endStream();
     results.on("data", ({ stdout }) => console.log(stdout));

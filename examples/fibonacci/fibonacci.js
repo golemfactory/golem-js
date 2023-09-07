@@ -3,7 +3,7 @@ import { program } from "commander";
 
 async function main(fiboN = 1, tasksCount = 1, subnetTag, driver, network, debug) {
   const executor = await TaskExecutor.create({
-    package: "529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4",
+    package: "golem/js-fibonacci:18-alpine",
     subnetTag,
     payment: { driver, network },
     logLevel: debug ? "debug" : "info",

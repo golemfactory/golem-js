@@ -25,8 +25,8 @@
             </div>
             <div class="row">
               <div>
-                <label for="IMAGE_HASH">Image Hash: </label>
-                <input id="IMAGE_HASH" type="text" value="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae" />
+                <label for="IMAGE_TAG">Image Tag: </label>
+                <input id="IMAGE_TAG" type="text" value="golem/alpine:3.18.2" />
               </div>
               <div>
                 <label for="SUBNET_TAG">Subnet Tag: </label>
@@ -86,11 +86,11 @@
         const apiKey = document.getElementById("YAGNA_APPKEY").value;
         const basePath = document.getElementById("YAGNA_API_BASEPATH").value;
         const subnetTag = document.getElementById("SUBNET_TAG").value;
-        const imageHash = document.getElementById("IMAGE_HASH").value;
+        const imageTag = document.getElementById("IMAGE_TAG").value;
         const network = document.getElementById("PAYMENT_NETWORK").value;
         const executor = await TaskExecutor.create({
           yagnaOptions: { apiKey, basePath },
-          package: imageHash,
+          package: imageTag,
           subnetTag,
           payment: { network },
           logger,
