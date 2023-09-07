@@ -13,7 +13,7 @@ const whiteListIds = [
 
 (async function main() {
   const executor = await TaskExecutor.create({
-    package: "golem/alpine:3.18.2",
+    package: "golem/alpine:latest",
     proposalFilter: ProposalFilters.whiteListProposalIdsFilter(whiteListIds),
   });
   await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));

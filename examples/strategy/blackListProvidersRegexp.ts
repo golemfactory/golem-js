@@ -7,7 +7,7 @@ import { TaskExecutor, ProposalFilters } from "@golem-sdk/golem-js";
 
 (async function main() {
   const executor = await TaskExecutor.create({
-    package: "golem/alpine:3.18.2",
+    package: "golem/alpine:latest",
     proposalFilter: ProposalFilters.blackListProposalRegexpFilter(/bad-provider*./),
   });
   await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));

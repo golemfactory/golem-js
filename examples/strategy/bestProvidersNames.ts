@@ -20,7 +20,7 @@ const bestProviderSelector =
 
 (async function main() {
   const executor = await TaskExecutor.create({
-    package: "golem/alpine:3.18.2",
+    package: "golem/alpine:latest",
     agreementSelector: bestProviderSelector(scores),
   });
   await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));

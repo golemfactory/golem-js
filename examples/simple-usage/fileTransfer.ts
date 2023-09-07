@@ -2,7 +2,7 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
 import { readFileSync } from "fs";
 
 (async function main() {
-  const executor = await TaskExecutor.create("golem/alpine:3.18.2");
+  const executor = await TaskExecutor.create("golem/alpine:latest");
   await executor.run(async (ctx) => {
     await ctx.uploadJson({ test: "1234" }, "/golem/work/test.json");
     const res = await ctx.downloadFile("/golem/work/test.json", "new_test.json");

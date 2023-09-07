@@ -6,7 +6,7 @@ import { TaskExecutor, PaymentFilters } from "@golem-sdk/golem-js";
  */
 (async function main() {
   const executor = await TaskExecutor.create({
-    package: "golem/alpine:3.18.2",
+    package: "golem/alpine:latest",
     invoiceFilter: PaymentFilters.acceptMaxAmountInvoiceFilter(0.00001),
   });
   await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));

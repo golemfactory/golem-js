@@ -7,7 +7,7 @@ const logger = new LoggerMock();
 describe("GFTP transfers", function () {
   it("should upload and download big files simultaneously", async () => {
     const executor = await TaskExecutor.create({
-      package: "golem/alpine:3.18.2",
+      package: "golem/alpine:latest",
       logger,
     });
 

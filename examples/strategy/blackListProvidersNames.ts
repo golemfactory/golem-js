@@ -9,7 +9,7 @@ const blackListProvidersNames = ["provider-1", "golem-provider", "super-provider
 
 (async function main() {
   const executor = await TaskExecutor.create({
-    package: "golem/alpine:3.18.2",
+    package: "golem/alpine:latest",
     proposalFilter: ProposalFilters.blackListProposalNamesFilter(blackListProvidersNames),
   });
   await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));

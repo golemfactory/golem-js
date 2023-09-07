@@ -12,7 +12,7 @@ const myFilter: ProposalFilter = async (proposal) => {
 
 (async function main() {
   const executor = await TaskExecutor.create({
-    package: "golem/alpine:3.18.2",
+    package: "golem/alpine:latest",
     proposalFilter: myFilter,
   });
   await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
