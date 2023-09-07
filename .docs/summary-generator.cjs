@@ -1,18 +1,31 @@
 const path = require("path");
 const fs = require("fs");
+const fetchTitle = /title: ["'](.*)["']/;
 
 async function prepareDocAnchor(docsDir, type, file) {
   const filePath = path.join(docsDir, type, file);
   const fileContent = fs.readFileSync(filePath, "utf-8");
-  const firstLine = (fileContent.match(/(^.*)/) || [])[1] || "";
+  const titleMatch = fetchTitle.exec(fileContent);
+
+  let title = "";
+  if (titleMatch) {
+    title = titleMatch[1]
+      .replace(` ${capitalizeFirstLetter(type)} `, " ")
+      .replace(" - golem-js API Reference", "")
+      .replace("Class ", "")
+      .replace("Interface ", "")
+      .replace("Module ", "")
+      .replace("Enum ", "");
+  }
+
   return {
     link: `${type}/${file.replace(".md", "")}`,
-    title: firstLine.substring(firstLine.indexOf(":") + 2),
+    title,
   };
 }
 
 function capitalizeFirstLetter(string) {
-  return string.charAt(0).toUpperCase() + string.slice(1);
+  return string[0].toUpperCase() + string.slice(1);
 }
 
 (async () => {
@@ -27,12 +40,10 @@ function capitalizeFirstLetter(string) {
 
   for (let type of types) {
     logStream.write(`\n* ${capitalizeFirstLetter(type)}`);
-
     const files = fs.readdirSync(path.join(directoryPath, type), { withFileTypes: true }).map((f) => f.name);
-
-    for (let file of files) {
+    for await (let file of files) {
       const doc = await prepareDocAnchor(docsDir, type, file);
-      logStream.write(`\n\t* [${doc.title}](${doc.link})`);
+      if (doc.title) logStream.write(`\n\t* [${doc.title}](${doc.link})`);
     }
   }
 
