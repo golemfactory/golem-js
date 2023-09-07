@@ -10,7 +10,7 @@ describe("Strategies", function () {
   describe("Proposals", () => {
     it("should filtered providers by black list names", async () => {
       const executor = await TaskExecutor.create({
-        package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+        package: "golem/alpine:latest",
         proposalFilter: ProposalFilters.blackListProposalRegexpFilter(/provider-2/),
         logger,
       });
@@ -31,7 +31,7 @@ describe("Strategies", function () {
 
     it("should filtered providers by white list names", async () => {
       const executor = await TaskExecutor.create({
-        package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+        package: "golem/alpine:latest",
         proposalFilter: ProposalFilters.whiteListProposalRegexpFilter(/provider-2/),
         logger,
       });
@@ -53,7 +53,7 @@ describe("Strategies", function () {
   describe("Payments", () => {
     it("should only accept invoices below 0.00001 GLM", async () => {
       const executor = await TaskExecutor.create({
-        package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+        package: "golem/alpine:latest",
         invoiceFilter: PaymentFilters.acceptMaxAmountInvoiceFilter(0.00001),
         logger,
       });
@@ -71,7 +71,7 @@ describe("Strategies", function () {
 
     it("should only accept debit notes below 0.00001 GLM", async () => {
       const executor = await TaskExecutor.create({
-        package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+        package: "golem/alpine:latest",
         debitNotesFilter: PaymentFilters.acceptMaxAmountDebitNoteFilter(0.00001),
         logger,
       });

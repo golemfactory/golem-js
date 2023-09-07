@@ -24,7 +24,7 @@ function createLogger(options) {
 
 (async function main(options) {
   const executor = await TaskExecutor.create({
-    package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+    package: "golem/alpine:latest",
     logger: createLogger(options),
     logLevel: options.debug ? "debug" : "info",
   });

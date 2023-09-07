@@ -17,7 +17,7 @@ describe("Password cracking", function () {
     const mask = "?a?a";
     const hash = "$P$5ZDzPE45CigTC6EY4cXbyJSLj/pGee0";
     executor = await TaskExecutor.create({
-      package: "055911c811e56da4d75ffc928361a78ed13077933ffa8320fb1ec2db",
+      package: "golem/examples-hashcat:legacy",
       budget: 10,
       logger,
     });
