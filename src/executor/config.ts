@@ -2,6 +2,7 @@ import { ExecutorOptions } from "./executor";
 import { Package, PackageOptions } from "../package";
 import { ActivityOptions } from "../activity";
 import { Logger, LogLevel, runtimeContextChecker, defaultLogger } from "../utils";
+import { InMemoryJobStorage, JobStorage } from "../job/storage";
 
 const DEFAULTS = Object.freeze({
   payment: { driver: "erc20", network: "goerli" },
@@ -12,6 +13,7 @@ const DEFAULTS = Object.freeze({
   maxParallelTasks: 5,
   taskTimeout: 1000 * 60 * 5, // 5 min,
   maxTaskRetries: 3,
+  enableLogging: true,
 });
 
 /**
@@ -31,6 +33,7 @@ export class ExecutorConfig {
   readonly eventTarget: EventTarget;
   readonly maxTaskRetries: number;
   readonly activityExecuteTimeout?: number;
+  readonly jobStorage: JobStorage;
 
   constructor(options: ExecutorOptions & ActivityOptions) {
     const processEnv = !runtimeContextChecker.isBrowser
@@ -68,10 +71,17 @@ export class ExecutorConfig {
     this.taskTimeout = options.taskTimeout || DEFAULTS.taskTimeout;
     this.subnetTag = options.subnetTag || processEnv.env?.YAGNA_SUBNET || DEFAULTS.subnetTag;
     this.networkIp = options.networkIp;
-    this.logger = options.logger || (!runtimeContextChecker.isBrowser ? defaultLogger() : undefined);
+    this.logger = (() => {
+      const isLoggingEnabled = options.enableLogging ?? DEFAULTS.enableLogging;
+      if (!isLoggingEnabled) return undefined;
+      if (options.logger) return options.logger;
+      if (!runtimeContextChecker.isBrowser) return defaultLogger();
+      return undefined;
+    })();
     this.logLevel = options.logLevel || DEFAULTS.logLevel;
     this.logger?.setLevel && this.logger?.setLevel(this.logLevel);
     this.eventTarget = options.eventTarget || new EventTarget();
     this.maxTaskRetries = options.maxTaskRetries ?? DEFAULTS.maxTaskRetries;
+    this.jobStorage = options.jobStorage || new InMemoryJobStorage();
   }
 }
