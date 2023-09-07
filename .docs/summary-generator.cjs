@@ -5,50 +5,51 @@ const fetchTitle = /title: ["'](.*)["']/;
 async function prepareDocAnchor(docsDir, type, file) {
   const filePath = path.join(docsDir, type, file);
   const fileContent = fs.readFileSync(filePath, "utf-8");
-  const titleMatch = fetchTitle.exec(fileContent);
 
-  let title = "";
-  if (titleMatch) {
-    title = titleMatch[1]
-      .replace(` ${capitalizeFirstLetter(type)} `, " ")
+  if (fetchTitle.test(fileContent)) {
+    const title = fetchTitle
+      .exec(fileContent)[1]
+      .replace(` ${type[0].toUpperCase() + type.slice(1)} `, " ")
       .replace(" - golem-js API Reference", "")
-      .replace("Class ", "")
-      .replace("Interface ", "")
-      .replace("Module ", "")
-      .replace("Enum ", "");
+      .replace(/^(Class|Interface|Module|Enum)\s+/, "");
+
+    return {
+      link: `${type}/${file.replace(".md", "")}`,
+      title,
+    };
   }
-
-  return {
-    link: `${type}/${file.replace(".md", "")}`,
-    title,
-  };
-}
-
-function capitalizeFirstLetter(string) {
-  return string[0].toUpperCase() + string.slice(1);
 }
 
 (async () => {
   const docsDir = process.argv[2] || "docs";
   const directoryPath = path.join(__dirname, "..", docsDir);
-  const logStream = fs.createWriteStream(path.join(process.argv[3] || docsDir, "overview.md"), { flags: "w" });
+  const logFilePath = path.join(process.argv[3] || docsDir, "overview.md");
+  const logStream = fs.createWriteStream(logFilePath, { flags: "w" });
 
   const types = fs
     .readdirSync(directoryPath, { withFileTypes: true })
     .filter((i) => i.isDirectory())
     .map((d) => d.name);
 
-  for (let type of types) {
-    logStream.write(`\n* ${capitalizeFirstLetter(type)}`);
+  logStream.write(`---
+title: golem-js API reference overview
+description: Dive into the content overview of the Golem-JS API reference.
+type: reference
+---
+`);
+
+  for (const type of types) {
+    logStream.write(`\n* ${type[0].toUpperCase() + type.slice(1)}`);
     const files = fs.readdirSync(path.join(directoryPath, type), { withFileTypes: true }).map((f) => f.name);
-    for await (let file of files) {
+
+    for (const file of files) {
       const doc = await prepareDocAnchor(docsDir, type, file);
-      if (doc.title) logStream.write(`\n\t* [${doc.title}](${doc.link})`);
+      if (doc && doc.title) logStream.write(`\n\t* [${doc.title}](${doc.link})`);
     }
   }
 
-  logStream.end("");
+  logStream.end();
   console.info("🪄 GitBook summary successfully generated");
 })().catch((e) => {
-  console.error(e.message);
+  fs.appendFileSync("error.log", e.message + "\n");
 });
