@@ -1,3 +1,6 @@
+# Sensitive details
+.env
+
 #Node modules
 /node_modules
 /examples/logs
