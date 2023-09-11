@@ -1,12 +1,15 @@
-import { TaskExecutor } from "../executor";
+import { TaskExecutor, YagnaOptions } from "../executor";
+import { JobStorage } from "../job";
 import { PackageOptions } from "../package";
 import { Worker } from "../task";
 
 export interface GolemNetworkConfig {
   image?: string;
+  yagnaOptions?: YagnaOptions;
   demand?: Pick<PackageOptions, "minMemGib" | "minStorageGib" | "minCpuThreads" | "minCpuCores" | "capabilities">;
   enableLogging?: boolean;
   beforeEachJob?: Worker<unknown, unknown>;
+  jobStorage?: JobStorage;
 }
 /**
  * The starting point for using Golem Network.
@@ -27,18 +30,9 @@ export interface GolemNetworkConfig {
  *```
  */
 export class GolemNetwork {
-  private readonly image: string;
-  private readonly enableLogging: boolean;
-  private readonly beforeEachJob: Worker<unknown, unknown>;
-  private readonly demand: GolemNetworkConfig["demand"];
   private _executor: TaskExecutor | null = null;
 
-  constructor(config: GolemNetworkConfig = {}) {
-    this.image = config.image || "golem/alpine:3.18.2";
-    this.enableLogging = config.enableLogging || false;
-    this.beforeEachJob = config.beforeEachJob || (async () => {});
-    this.demand = config.demand || {};
-  }
+  constructor(private readonly config: GolemNetworkConfig) {}
 
   private get executor() {
     if (this._executor === null) {
@@ -53,12 +47,14 @@ export class GolemNetwork {
 
   public async init() {
     this._executor = await TaskExecutor.create({
-      package: this.image,
-      enableLogging: this.enableLogging,
-      ...this.demand,
+      package: this.config.image ?? "golem/alpine:3.18.2",
+      enableLogging: this.config.enableLogging ?? false,
+      yagnaOptions: this.config.yagnaOptions,
+      jobStorage: this.config.jobStorage,
+      ...(this.config.demand ?? {}),
     });
-    if (this.beforeEachJob) {
-      this.executor.beforeEach(this.beforeEachJob);
+    if (this.config.beforeEachJob) {
+      this.executor.beforeEach(this.config.beforeEachJob);
     }
   }
 
