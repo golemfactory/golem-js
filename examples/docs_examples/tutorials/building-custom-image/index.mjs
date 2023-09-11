@@ -1,10 +1,21 @@
-import { TaskExecutor } from "yajsapi";
-(async () => {
-const executor = await TaskExecutor.create({ package: "28704b5186fb46099b6138e6f1db814a631f6963da456492476d0db9" });
-await executor.run(async (ctx) => {
-    await ctx.uploadFile("image_description.txt", "/golem/work/image_description.txt");
-    var result = (await ctx.run('cat image_description.txt')).stdout;
-    console.log(result);
-});
-await executor.end();
-})();
+import { TaskExecutor } from '@golem-sdk/golem-js'
+
+;(async () => {
+  const executor = await TaskExecutor.create({
+    package: '8b238595299444d0733b41095f27fadd819a71d29002b614c665b27c',
+    yagnaOptions: { apiKey: 'try_golem' },
+  })
+
+  const result = await executor.run(async (ctx) => {
+    console.log(
+      'Description.txt: ',
+      (await ctx.run('cat /golem/info/description.txt')).stdout
+    )
+    console.log(
+      '/golem/work content: ',
+      (await ctx.run('ls /golem/work')).stdout
+    )
+  })
+
+  await executor.end()
+})()

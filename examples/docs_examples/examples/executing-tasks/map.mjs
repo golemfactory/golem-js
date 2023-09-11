@@ -1,4 +1,4 @@
-import { TaskExecutor } from "yajsapi";
+import { TaskExecutor } from "@golem-sdk/golem-js";
 
 (async () => {
   const executor = await TaskExecutor.create({
@@ -6,14 +6,13 @@ import { TaskExecutor } from "yajsapi";
     yagnaOptions: { apiKey: 'try_golem' }
   });
 
-
  const data = [1, 2, 3, 4, 5];
 
- await executor.forEach(data, async (ctx, item) => {
-  console.log((await ctx.run(`echo "${item}"`)).stdout);
-});
+ const results = executor.map(data, (ctx, item) => ctx.run(`echo "${item}"`));
 
+ for await (const result of results) console.log(result.stdout);
+   
  await executor.end(); 
-
-
+    
+  
 })();

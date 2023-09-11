@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Golem JSON App</title>
+    <script type="module">
+      import { TaskExecutor } from "https://unpkg.com/@golem-sdk/golem-js";
+
+      function appendResults(result) {
+        const results = document.getElementById('results');
+        const div = document.createElement('div');
+        div.appendChild(document.createTextNode(result));
+        results.appendChild(div);
+      }
+      function appendLog(msg, level = 'info') {
+        const logs = document.getElementById('logs');
+        const div = document.createElement('div');
+        div.appendChild(document.createTextNode(`[${new Date().toISOString()}] [${level}] ${msg}`));
+        logs.appendChild(div);
+      }
+      const logger = {
+        log: (msg) => appendLog(msg),
+        warn: (msg) => appendLog(msg, 'warn'),
+        debug: (msg) => 0, //appendLog(msg, 'debug'),
+        error: (msg) => appendLog(msg, 'error'),
+        info: (msg) => appendLog(msg, 'info'),
+        table: (msg) => appendLog(JSON.stringify(msg, null, "\t")),
+      }
+      async function run() {
+        const executor = await TaskExecutor.create({
+          package: "dcd99a5904bebf7ca655a833b73cc42b67fd40b4a111572e3d2007c3",
+          yagnaOptions: { apiKey: 'try_golem' },
+          logger
+        }).catch(e => logger.error(e));
+
+        await executor.run(async (ctx) => {
+          // Upload test JSON object
+          await ctx.uploadJson({ "input": "Hello World" }, '/golem/work/input.json');
+          // Modify sent JSON to replace the input key with output
+          await ctx.run("cat /golem/work/input.json | sed s/input/output/ > /golem/work/output.json");
+          // Download the JSON object.
+          const output = await ctx.downloadJson('/golem/work/output.json');
+          appendResults(JSON.stringify(output.data.output, null, "\t"));
+        }).catch(e => logger.error(e));
+        await executor.end();
+      }
+      document.getElementById('echo').onclick = run;
+
+    </script>
+
+</head>
+<body>
+    <h1>JSON upload and download</h1>    
+<div class="container">
+    <div class="col-6">
+        <h3>Actions</h3>
+        <div class="row vertical">
+          <div>
+            <button id="echo" onclick="run()">Run</button>
+          </div>
+        </div>
+        <div class="results console">
+          <h3>Results</h3>
+          <ul id="results"></ul>
+        </div>
+      </div>
+      <div class="col-6 border-left">
+        <div class="logs console">
+          <h3>Logs</h3>
+          <ul id="logs"></ul>
+        </div>
+      </div>
+</div>
+</body>
+</html>

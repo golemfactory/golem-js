@@ -1,4 +1,4 @@
-import { TaskExecutor } from "yajsapi";
+import { TaskExecutor } from "@golem-sdk/golem-js";
 
 (async () => {
   const executor = await TaskExecutor.create({
@@ -8,7 +8,7 @@ import { TaskExecutor } from "yajsapi";
 
 
   const result = await executor.run(async (ctx) => {
-
+     
      const res = await ctx
        .beginBatch()
        .uploadFile("./worker.mjs", "/golem/input/worker.mjs")
@@ -20,9 +20,9 @@ import { TaskExecutor } from "yajsapi";
        for await (const chunk of res) {
         chunk.index == 2 ? console.log(chunk.stdout) : '';
        }
-
+    
   });
 
   await executor.end();
-
+ 
 })();

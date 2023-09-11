@@ -1,29 +1,30 @@
-import { TaskExecutor } from "yajsapi";
+import { TaskExecutor } from "@golem-sdk/golem-js";
 
 (async () => {
   const executor = await TaskExecutor.create({
     package: "529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4",    
     yagnaOptions: { apiKey: 'try_golem' }, 
-    taskOptions: {maxParallelTasks: 3}
-  });
+    maxParallelTasks: 3,
+    }
+  );
 
   executor.beforeEach(async (ctx) => {
     console.log(ctx.provider.name + ' is downloading action_log file');
     await ctx.uploadFile("./action_log.txt", "/golem/input/action_log.txt");
-
+    
   });
 
   await executor.forEach([1, 2, 3, 4, 5], async (ctx, item) => {
-
+     
      await ctx
        .beginBatch()
        .run(`echo `+ `'processing item: ` + item + `' >> /golem/input/action_log.txt`)
        .downloadFile("/golem/input/action_log.txt", "./output_"+ctx.provider.name+".txt")
        .end();
-
+       
   });
 
   await executor.end();
-
-
+    
+  
 })();

@@ -1,4 +1,5 @@
-import { TaskExecutor } from "yajsapi";
+
+import { TaskExecutor } from "@golem-sdk/golem-js";
 
 (async function main() {
   const executor = await TaskExecutor.create({

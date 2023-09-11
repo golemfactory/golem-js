@@ -1,9 +1,8 @@
-import { TaskExecutor, ProposalFilters } from "yajsapi";
-//import { ProposalFilters } from "yajsapi/dist/market/strategy";
+import { TaskExecutor, ProposalFilters } from "@golem-sdk/golem-js";
 
 /**
  * Example demonstrating how to use the predefined filter `whiteListProposalIdsFilter`,
- * which only allows offers from a provider whose id is in the array
+ * which only allows offers from a provider whose ID is in the array
  */
 
 const whiteListIds = [
