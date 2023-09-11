@@ -1,5 +1,4 @@
-import { TaskExecutor } from "yajsapi";
-import * as fs from 'fs';
+import { TaskExecutor } from "@golem-sdk/golem-js";
 
 
 (async () => {
@@ -8,30 +7,20 @@ import * as fs from 'fs';
     yagnaOptions: { apiKey: 'try_golem' }
   });
 
-//const buff = fs.readFileSync('worker.mjs'); 
-//const hash = createHash('md5').update(buff).digest('hex');
-
-  await executor.run(async (ctx) => {
-
+  const output = await executor.run(async (ctx) => {
+     
     // Upload test JSON object
-    await ctx.uploadJson({ "input": "Hello World" }, '/golem/input/input.json');
 
-    // failes after this command
+     await ctx.uploadJson({ "input": "Hello World" }, '/golem/work/input.json');
 
-    // Modify sent JSON to replace the input key with output
-    //await ctx.run("cat /golem/input/input.json | sed s/input/output/ > /golem/work/output.json");
-
-    // Download the JSON object.
-    //const output = await ctx.downloadJson('/golem/work/output.json');
-
-    //const res  = await ctx.run(`node -e "const crypto = require('node:crypto'); const fs = require('fs'); const buff = fs.readFileSync('/golem/input/worker.mjs'); const hash = crypto.createHash('md5').update(buff).digest('hex'); console.log(hash); "`).catch((error) => console.error(error));
-
+    // Read the content of the JSON object.
+    return await ctx.run('cat /golem/work/input.json');
+    
+   
   });
 
-  //const buff = fs.readFileSync('output.json'); 
-  //console.log(buff);
+  console.log(output.stdout);
 
   await executor.end();
-
+ 
 })();
-
