@@ -4,11 +4,34 @@ import { PackageOptions } from "../package";
 import { Worker } from "../task";
 
 export interface GolemNetworkConfig {
+  /**
+   * Image that will be uploaded to the provider and used to run the task. Defaults to `golem/alpine:3.18.2`.
+   */
   image?: string;
+  /**
+   * Yagna options. See {@link YagnaOptions} for more information.
+   */
   yagnaOptions?: YagnaOptions;
+  /**
+   * Minimum hardware requirements for the provider. The available options are:
+   * - `minMemGib` - minimum required RAM in GiB
+   * - `minStorageGib` - minimum required storage in GiB
+   * - `minCpuThreads` - minimum required CPU threads
+   * - `minCpuCores` - minimum required CPU cores
+   * - `capabilities` - required provider capabilities
+   */
   demand?: Pick<PackageOptions, "minMemGib" | "minStorageGib" | "minCpuThreads" | "minCpuCores" | "capabilities">;
+  /**
+   * If you want to see logs from the Golem node set this to true. Defaults to `false`.
+   */
   enableLogging?: boolean;
+  /**
+   * Function that will be run before each job. You can use it to set up the environment for your job. For example, you can upload a file to the provider.
+   */
   beforeEachJob?: Worker<unknown, unknown>;
+  /**
+   * Job storage. By default Golem Network uses a simple in-memory storage for job statuses and results. In a real application you should use some persistent storage (e.g. a database). See {@link JobStorage} for more information.
+   */
   jobStorage?: JobStorage;
 }
 /**
