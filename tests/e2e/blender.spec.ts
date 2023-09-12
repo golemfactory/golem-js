@@ -25,7 +25,7 @@ const blenderParams = (frame) => ({
 describe("Blender rendering", function () {
   it("should render images by blender", async () => {
     const executor = await TaskExecutor.create({
-      package: "golem/blender:latest",
+      package: "golem-examples/blender:2.80",
       logger,
     });
 

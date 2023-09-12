@@ -11,7 +11,7 @@ describe("SSH connection", function () {
   });
   it("should connect to provider via ssh", async () => {
     executor = await TaskExecutor.create({
-      package: "golem/examples-ssh:latest",
+      package: "golem-examples/ssh:latest",
       capabilities: ["vpn"],
       networkIp: "192.168.0.0/24",
       logger,

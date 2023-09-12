@@ -4,7 +4,7 @@ import crypto from "crypto";
 
 async function main(subnetTag, driver, network, count = 2, sessionTimeout = 100, debug) {
   const executor = await TaskExecutor.create({
-    package: "golem/examples-ssh:latest",
+    package: "golem-examples/ssh:latest",
     capabilities: ["vpn"],
     networkIp: "192.168.0.0/24",
     maxParallelTasks: count,
