@@ -5,7 +5,7 @@ import { Worker } from "../task";
 
 export interface GolemNetworkConfig {
   /**
-   * Image that will be uploaded to the provider and used to run the task. Defaults to `golem/alpine:3.18.2`.
+   * Image that will be uploaded to the provider and used to run the task. Defaults to `golem/alpine:latest`.
    */
   image?: string;
   /**
@@ -70,7 +70,7 @@ export class GolemNetwork {
 
   public async init() {
     this._executor = await TaskExecutor.create({
-      package: this.config.image ?? "golem/alpine:3.18.2",
+      package: this.config.image ?? "golem/alpine:latest",
       enableLogging: this.config.enableLogging ?? false,
       yagnaOptions: this.config.yagnaOptions,
       jobStorage: this.config.jobStorage,
