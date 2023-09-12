@@ -215,7 +215,7 @@ export class TaskExecutor {
     if (runtimeContextChecker.isNode) this.handleCancelEvent();
     this.options.eventTarget.dispatchEvent(new Events.ComputationStarted());
     this.logger?.info(
-      `Task Executor has started using subnet: ${this.options.subnetTag}, network: ${this.paymentService.options.payment.network}, driver: ${this.paymentService.options.payment.driver}`,
+      `Task Executor has started using subnet: ${this.options.subnetTag}, network: ${this.paymentService.config.payment.network}, driver: ${this.paymentService.config.payment.driver}`,
     );
   }
 

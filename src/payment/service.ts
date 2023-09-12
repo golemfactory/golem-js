@@ -36,7 +36,7 @@ interface AgreementPayable {
  */
 export class PaymentService {
   private isRunning = false;
-  public readonly options: PaymentConfig;
+  public readonly config: PaymentConfig;
   private logger?: Logger;
   private allocation?: Allocation;
   private agreementsToPay: Map<string, AgreementPayable> = new Map();
@@ -48,12 +48,12 @@ export class PaymentService {
     private readonly yagnaApi: YagnaApi,
     options?: PaymentOptions,
   ) {
-    this.options = new PaymentConfig(options);
-    this.logger = this.options.logger;
+    this.config = new PaymentConfig(options);
+    this.logger = this.config.logger;
   }
   async run() {
     this.isRunning = true;
-    this.payments = await Payments.create(this.yagnaApi, this.options);
+    this.payments = await Payments.create(this.yagnaApi, this.config.options);
     this.payments.addEventListener(PaymentEventType, this.subscribePayments.bind(this));
     this.logger?.debug("Payment Service has started");
   }
@@ -62,7 +62,7 @@ export class PaymentService {
     if (this.agreementsToPay.size) {
       this.logger?.info(`Waiting for all invoices to be paid. Unpaid agreements: ${this.agreementsToPay.size}`);
       let timeout = false;
-      const timeoutId = setTimeout(() => (timeout = true), this.options.paymentTimeout);
+      const timeoutId = setTimeout(() => (timeout = true), this.config.paymentTimeout);
       let i = 0;
       while (this.isRunning && !timeout) {
         this.isRunning = this.agreementsToPay.size !== 0;
@@ -89,11 +89,11 @@ export class PaymentService {
         platform: this.getPaymentPlatform(),
         address: await this.getPaymentAddress(),
       };
-      this.allocation = await Allocation.create(this.yagnaApi, { ...this.options, account });
+      this.allocation = await Allocation.create(this.yagnaApi, { ...this.config.options, account });
       return this.allocation;
     } catch (error) {
       throw new Error(
-        `Unable to create allocation for driver/network ${this.options.payment.driver}/${this.options.payment.network}. ${error}`,
+        `Unable to create allocation for driver/network ${this.config.payment.driver}/${this.config.payment.network}. ${error}`,
       );
     }
   }
@@ -113,7 +113,7 @@ export class PaymentService {
         this.logger?.debug(`Agreement ${invoice.agreementId} has not been accepted to payment`);
         return;
       }
-      if (await this.options.invoiceFilter(invoice.dto)) {
+      if (await this.config.invoiceFilter(invoice.dto)) {
         await invoice.accept(invoice.amount, this.allocation!.id);
         this.logger?.info(`Invoice accepted from provider ${agreement.provider.name}`);
       } else {
@@ -137,7 +137,7 @@ export class PaymentService {
   private async processDebitNote(debitNote: DebitNote) {
     try {
       if (this.paidDebitNotes.has(debitNote.id)) return;
-      if (await this.options.debitNoteFilter(debitNote.dto)) {
+      if (await this.config.debitNoteFilter(debitNote.dto)) {
         await debitNote.accept(debitNote.totalAmountDue, this.allocation!.id);
         this.paidDebitNotes.add(debitNote.id);
         this.logger?.debug(`Debit Note accepted for agreement ${debitNote.agreementId}`);
@@ -164,8 +164,8 @@ export class PaymentService {
 
   private getPaymentPlatform(): string {
     const mainnets = ["polygon", "mainnet"];
-    const token = mainnets.includes(this.options.payment.network) ? "glm" : "tglm";
-    return `${this.options.payment.driver}-${this.options.payment.network}-${token}`;
+    const token = mainnets.includes(this.config.payment.network) ? "glm" : "tglm";
+    return `${this.config.payment.driver}-${this.config.payment.network}-${token}`;
   }
 
   private async getPaymentAddress(): Promise<string> {
