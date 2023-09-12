@@ -3,7 +3,7 @@ import { program } from "commander";
 
 async function main(args) {
   const executor = await TaskExecutor.create({
-    package: "golem/examples-hashcat:legacy",
+    package: "golem-examples/hashcat:latest",
     maxParallelTasks: args.numberOfProviders,
     minMemGib: 0.5,
     minStorageGib: 2,
