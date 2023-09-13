@@ -36,8 +36,10 @@ abstract class BaseConfig {
   public readonly logger?: Logger;
   public readonly eventTarget?: EventTarget;
   public readonly payment: { driver: string; network: string };
+  public readonly options?: BasePaymentOptions;
 
   constructor(options?: BasePaymentOptions) {
+    this.options = options;
     this.paymentTimeout = options?.paymentTimeout || DEFAULTS.paymentTimeout;
     this.payment = {
       driver: options?.payment?.driver || DEFAULTS.payment.driver,
