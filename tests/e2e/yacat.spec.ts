@@ -34,9 +34,10 @@ describe("Password cracking", function () {
       const results = executor.map(ranges, async (ctx, skip) => {
         const results = await ctx
           .beginBatch()
-          .run(`hashcat -a 3 -m 400 '${hash}' '${mask}' --skip=${skip} --limit=${skip! + step} -o pass.potfile -D 1,2`)
+          .run(`hashcat -a 3 -m 400 '${hash}' '${mask}' --skip=${skip} --limit=${skip! + step} -o pass.potfile`)
           .run("cat pass.potfile")
           .end();
+        console.log({ results });
         if (!results?.[1]?.stdout) return false;
         return results?.[1]?.stdout.toString().split(":")?.[1]?.trim();
       });
