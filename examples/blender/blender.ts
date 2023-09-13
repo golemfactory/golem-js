@@ -26,7 +26,7 @@ async function main(subnetTag: string, driver?: string, network?: string, debug?
   const executor = await TaskExecutor.create({
     subnetTag,
     payment: { driver, network },
-    package: "golem-examples/blender:2.80",
+    package: "golem/blender:latest",
     logLevel: debug ? "debug" : "info",
     maxParallelTasks,
   });
