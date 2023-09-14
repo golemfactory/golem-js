@@ -40,7 +40,7 @@ describe("Task Executor", function () {
 
     expect(result1?.stdout).toContain("Hello World");
     expect(result2?.result).toEqual("Error");
-    expect(result2?.stderr).toContain("sh: 1: invalid-command: not found");
+    expect(result2?.stderr).toContain("sh: invalid-command: not found");
     expect(result2?.message).toEqual("ExeScript command exited with code 127");
   });
 

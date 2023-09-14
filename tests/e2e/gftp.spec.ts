@@ -13,7 +13,7 @@ describe("GFTP transfers", function () {
 
     executor.beforeEach(async (ctx) => {
       const sourcePath = fs.realpathSync(__dirname + "/../mock/fixtures/eiffel.blend");
-      await ctx.uploadFile(sourcePath, "/golem/resource/eiffel.blend");
+      await ctx.uploadFile(sourcePath, "/golem/work/eiffel.blend");
     });
 
     const data = [0, 1, 2, 3, 4, 5];
@@ -21,8 +21,8 @@ describe("GFTP transfers", function () {
     const results = executor.map(data, async (ctx, frame) => {
       const result = await ctx
         .beginBatch()
-        .run("ls -Alh /golem/resource/eiffel.blend")
-        .downloadFile(`/golem/resource/eiffel.blend`, `copy_${frame}.blend`)
+        .run("ls -Alh /golem/work/eiffel.blend")
+        .downloadFile(`/golem/work/eiffel.blend`, `copy_${frame}.blend`)
         .end()
         .catch((error) => ctx.rejectResult(error.toString()));
       return result ? `copy_${frame}.blend` : "";
