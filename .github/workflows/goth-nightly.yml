@@ -55,7 +55,6 @@ jobs:
           python -m goth create-assets ../goth/assets
           sed -Ezi 's/(use\-proxy:\s)(True)/\1False/mg' ../goth/assets/goth-config.yml
           sed -Ezi 's/(use\-prerelease:\s)(false)/\1true\n    release-tag: "0.13.0-rc10"/mg' ../goth/assets/goth-config.yml
-          sed -Ezi 's/("mem_gib":\s)(1)/\12/mg' ../goth/assets/provider/hardware.json
 
       - name: Install websocat and sshpass
         run: |
