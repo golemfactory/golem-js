@@ -34,7 +34,7 @@ jobs:
       - name: Configure node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: 18
 
       - name: Build golem-js
         run: |
@@ -54,6 +54,7 @@ jobs:
           rm -rf ../goth/assets
           python -m goth create-assets ../goth/assets
           sed -Ezi 's/(use\-proxy:\s)(True)/\1False/mg' ../goth/assets/goth-config.yml
+          sed -Ezi 's/(use\-prerelease:\s)(false)/\1true\n    release-tag: "0.13.0-rc10"/mg' ../goth/assets/goth-config.yml
 
       - name: Install websocat and sshpass
         run: |
