@@ -20,6 +20,7 @@ describe("Password cracking", function () {
       package: "golem/examples-hashcat:latest",
       budget: 10,
       logger,
+      maxParallelTasks: 2,
     });
     const keyspace = await executor.run<number>(async (ctx) => {
       const result = await ctx.run(`hashcat --keyspace -a 3 ${mask} -m 400`);
@@ -35,6 +36,7 @@ describe("Password cracking", function () {
         .run(`hashcat -a 3 -m 400 '${hash}' '${mask}' --skip=${skip} --limit=${skip! + step} -o pass.potfile`)
         .run("cat pass.potfile")
         .end();
+      expect(results?.[0]?.stderr).toBeFalsy();
       if (!results?.[1]?.stdout) return false;
       return results?.[1]?.stdout.toString().split(":")?.[1]?.trim();
     });
