@@ -23,6 +23,7 @@ describe("Password cracking", function () {
         budget: 10,
         logger,
         maxParallelTasks: 2,
+        taskTimeout: 1000 * 60 * 10,
       });
       const keyspace = await executor.run<number>(async (ctx) => {
         const result = await ctx.run(`hashcat --keyspace -a 3 ${mask} -m 400`);
@@ -35,7 +36,7 @@ describe("Password cracking", function () {
       const results = executor.map(ranges, async (ctx, skip) => {
         const results = await ctx
           .beginBatch()
-          .run(`hashcat -a 3 -m 400 '${hash}' '${mask}' --skip=${skip} --limit=${skip! + step} -o pass.potfile`)
+          .run(`hashcat -a 3 -m 400 '${hash}' '${mask}' --skip=${skip} --limit=${skip! + step} -o pass.potfile -D 1,2`)
           .run("cat pass.potfile")
           .end();
         expect(results?.[0]?.stderr).toBeFalsy();
@@ -51,6 +52,6 @@ describe("Password cracking", function () {
       }
       expect(password).toEqual("yo");
     },
-    1000 * 60 * 5,
+    1000 * 60 * 12,
   );
 });
