@@ -16,7 +16,7 @@ describe("Task Executor", function () {
 
   it("should run simple task", async () => {
     executor = await TaskExecutor.create({
-      package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+      package: "golem/alpine:latest",
       logger,
     });
     const result = await executor.run(async (ctx) => ctx.run("echo 'Hello World'"));
@@ -32,7 +32,7 @@ describe("Task Executor", function () {
 
   it("should run simple task and get error for invalid command", async () => {
     executor = await TaskExecutor.create({
-      package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+      package: "golem/alpine:latest",
       logger,
     });
     const result1 = await executor.run(async (ctx) => ctx.run("echo 'Hello World'"));
@@ -40,13 +40,13 @@ describe("Task Executor", function () {
 
     expect(result1?.stdout).toContain("Hello World");
     expect(result2?.result).toEqual("Error");
-    expect(result2?.stderr).toContain("sh: 1: invalid-command: not found");
+    expect(result2?.stderr).toContain("sh: invalid-command: not found");
     expect(result2?.message).toEqual("ExeScript command exited with code 127");
   });
 
   it("should run simple task using package tag", async () => {
     executor = await TaskExecutor.create({
-      package: "golem/alpine:3.18.2",
+      package: "golem/alpine:latest",
       logger,
     });
     const result = await executor.run(async (ctx) => ctx.run("echo 'Hello World'"));
@@ -62,7 +62,7 @@ describe("Task Executor", function () {
 
   it("should run simple tasks by map function", async () => {
     executor = await TaskExecutor.create({
-      package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+      package: "golem/alpine:latest",
       logger,
     });
     const data = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
@@ -77,7 +77,7 @@ describe("Task Executor", function () {
 
   it("should run simple tasks by forEach function", async () => {
     executor = await TaskExecutor.create({
-      package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+      package: "golem/alpine:latest",
       logger,
     });
     const data = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
@@ -89,7 +89,7 @@ describe("Task Executor", function () {
 
   it("should run simple batch script and get results as stream", async () => {
     executor = await TaskExecutor.create({
-      package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+      package: "golem/alpine:latest",
       logger,
     });
     const outputs: string[] = [];
@@ -118,7 +118,7 @@ describe("Task Executor", function () {
 
   it("should run simple batch script and get results as promise", async () => {
     executor = await TaskExecutor.create({
-      package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+      package: "golem/alpine:latest",
       logger,
     });
     const outputs: string[] = [];
@@ -142,7 +142,7 @@ describe("Task Executor", function () {
 
   it("should run transfer file", async () => {
     executor = await TaskExecutor.create({
-      package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+      package: "golem/alpine:latest",
       logger,
     });
     const result = await executor.run(async (ctx) => {

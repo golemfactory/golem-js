@@ -1,12 +1,38 @@
-import { TaskExecutor } from "../executor";
+import { TaskExecutor, YagnaOptions } from "../executor";
+import { JobStorage } from "../job";
 import { PackageOptions } from "../package";
 import { Worker } from "../task";
 
 export interface GolemNetworkConfig {
+  /**
+   * Image that will be uploaded to the provider and used to run the task. Defaults to `golem/alpine:latest`.
+   */
   image?: string;
+  /**
+   * Yagna options. See {@link YagnaOptions} for more information.
+   */
+  yagnaOptions?: YagnaOptions;
+  /**
+   * Minimum hardware requirements for the provider. The available options are:
+   * - `minMemGib` - minimum required RAM in GiB
+   * - `minStorageGib` - minimum required storage in GiB
+   * - `minCpuThreads` - minimum required CPU threads
+   * - `minCpuCores` - minimum required CPU cores
+   * - `capabilities` - required provider capabilities
+   */
   demand?: Pick<PackageOptions, "minMemGib" | "minStorageGib" | "minCpuThreads" | "minCpuCores" | "capabilities">;
+  /**
+   * If you want to see logs from the Golem node set this to true. Defaults to `false`.
+   */
   enableLogging?: boolean;
+  /**
+   * Function that will be run before each job. You can use it to set up the environment for your job. For example, you can upload a file to the provider.
+   */
   beforeEachJob?: Worker<unknown, unknown>;
+  /**
+   * Job storage. By default Golem Network uses a simple in-memory storage for job statuses and results. In a real application you should use some persistent storage (e.g. a database). See {@link JobStorage} for more information.
+   */
+  jobStorage?: JobStorage;
 }
 /**
  * The starting point for using Golem Network.
@@ -27,18 +53,9 @@ export interface GolemNetworkConfig {
  *```
  */
 export class GolemNetwork {
-  private readonly image: string;
-  private readonly enableLogging: boolean;
-  private readonly beforeEachJob: Worker<unknown, unknown>;
-  private readonly demand: GolemNetworkConfig["demand"];
   private _executor: TaskExecutor | null = null;
 
-  constructor(config: GolemNetworkConfig = {}) {
-    this.image = config.image || "golem/alpine:3.18.2";
-    this.enableLogging = config.enableLogging || false;
-    this.beforeEachJob = config.beforeEachJob || (async () => {});
-    this.demand = config.demand || {};
-  }
+  constructor(private readonly config: GolemNetworkConfig) {}
 
   private get executor() {
     if (this._executor === null) {
@@ -53,12 +70,14 @@ export class GolemNetwork {
 
   public async init() {
     this._executor = await TaskExecutor.create({
-      package: this.image,
-      enableLogging: this.enableLogging,
-      ...this.demand,
+      package: this.config.image ?? "golem/alpine:latest",
+      enableLogging: this.config.enableLogging ?? false,
+      yagnaOptions: this.config.yagnaOptions,
+      jobStorage: this.config.jobStorage,
+      ...(this.config.demand ?? {}),
     });
-    if (this.beforeEachJob) {
-      this.executor.beforeEach(this.beforeEachJob);
+    if (this.config.beforeEachJob) {
+      this.executor.beforeEach(this.config.beforeEachJob);
     }
   }
 

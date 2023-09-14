@@ -1,4 +1,4 @@
-FROM dizcza/docker-hashcat:intel-cpu
-
-VOLUME /golem/input /golem/output
-WORKDIR /golem/entrypoint
+FROM ubuntu
+WORKDIR /golem/work
+RUN apt-get update
+RUN apt-get install -y hashcat
