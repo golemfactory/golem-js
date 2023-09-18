@@ -1,8 +1,12 @@
 import { spawn } from "child_process";
-import { dirname, basename } from "path";
+import { dirname, basename, resolve } from "path";
+import { Goth } from "../goth/goth";
+
+const gothConfig = resolve("../goth/assets/goth-config.yml");
+const goth = new Goth(gothConfig);
 
 const examples = [
-  { cmd: "node", path: "docs-examples/examples/composing-tasks/batch-end.mjs" },
+  { cmd: "node", path: "examples/docs-examples/examples/composing-tasks/batch-end.mjs" },
   { cmd: "node", path: "docs-examples/examples/composing-tasks/batch-endstream-chunks.mjs" },
   { cmd: "node", path: "docs-examples/examples/composing-tasks/batch-endstream-forawait.mjs" },
   { cmd: "node", path: "docs-examples/examples/composing-tasks/multiple-run-prosaic.mjs" },
@@ -25,7 +29,7 @@ async function test(cmd, path, args = [], timeout = 120) {
   const spawnedExample = spawn(cmd, [file, ...args], { stdio: "inherit", cwd });
   const testPromise = new Promise((res, rej) => {
     spawnedExample.on("close", (code, signal) => {
-      if (code === 0) return res();
+      if (code === 0) return res(true);
       rej(`Example test exited with code ${code} by signal ${signal}`);
     });
   });
@@ -33,6 +37,8 @@ async function test(cmd, path, args = [], timeout = 120) {
 }
 
 async function testAll(examples) {
+  const { apiKey } = await goth.start();
+  console.log(`Goth started with APIKEY:`, apiKey);
   try {
     for (const example of examples) {
       console.log(`Starting test for example ${example.path}`);
@@ -44,4 +50,5 @@ async function testAll(examples) {
   }
   process.exit(0);
 }
-await testAll(examples);
+
+testAll(examples).then();

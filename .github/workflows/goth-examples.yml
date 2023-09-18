@@ -85,8 +85,7 @@ jobs:
         env:
           GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd examples
-          node test.mjs
+          python -m goth start ../goth/assets/goth-config.yml
 
       - name: Upload test logs
         uses: actions/upload-artifact@v2
