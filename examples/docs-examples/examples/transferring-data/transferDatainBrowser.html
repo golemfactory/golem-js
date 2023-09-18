@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>WebRequestor Task API</title>
+  </head>
+  <body>
+    <h1>WebRequestor - Meme Example</h1>
+    <div class="container">
+      <div class="col-6">
+        <h3>Input data</h3>
+        <div class="column">
+          <div>
+            <label for="MEME_TEXT">Meme Text: </label>
+            <input id="MEME_TEXT" type="text" value="some meme text" />
+          </div>
+          <div>
+            <label for="MEME_IMG">Meme Image: </label>
+            <input type="file" id="MEME_IMG" accept="image/*" />
+          </div>
+        </div>
+        <h3>Actions</h3>
+        <div class="row vertical">
+          <div>
+            <button id="RUN" onclick="run()">Generate meme</button>
+          </div>
+        </div>
+        <div class="results console">
+          <h3>Result Meme</h3>
+          <img style="width: 100%" alt="" id="RESULT_MEME" />
+        </div>
+      </div>
+      <div class="col-6 border-left">
+        <div class="logs console">
+          <h3>Logs</h3>
+          <ul id="logs"></ul>
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      import { TaskExecutor } from "https://unpkg.com/@golem-sdk/golem-js";
+
+      let activity;
+      const imgInput = document.getElementById("MEME_IMG");
+      const textInput = document.getElementById("MEME_TEXT");
+      const imgResult = document.getElementById("RESULT_MEME");
+      let urlObject;
+
+      function readFile(file) {
+        return new Promise((resolve, reject) => {
+          const fileReader = new FileReader();
+          fileReader.readAsArrayBuffer(file);
+
+          fileReader.onload = () => {
+            resolve(new Uint8Array(fileReader.result));
+          };
+
+          fileReader.onerror = (error) => {
+            reject(error);
+          };
+        });
+      }
+
+      function appendLog(msg) {
+        const logs_el = document.getElementById("logs");
+        const li = document.createElement("li");
+        li.appendChild(document.createTextNode(msg));
+        logs_el.appendChild(li);
+      }
+      function setResponse(result) {
+        if (urlObject) {
+          URL.revokeObjectURL(urlObject);
+        }
+        urlObject = URL.createObjectURL(new Blob([result], { type: "image/jpeg" }));
+        imgResult.src = urlObject;
+      }
+
+      const logger = {
+        log: (msg) => appendLog(`[${new Date().toISOString()}] ${msg}`),
+        warn: (msg) => appendLog(`[${new Date().toISOString()}] [warn] ${msg}`),
+        debug: (msg) => appendLog(`[${new Date().toISOString()}] [debug] ${msg}`),
+        error: (msg) => appendLog(`[${new Date().toISOString()}] [error] ${msg}`),
+        info: (msg) => appendLog(`[${new Date().toISOString()}] [info] ${msg}`),
+        table: (msg) => appendLog(JSON.stringify(msg, null, "\t")),
+      };
+
+      async function run() {
+        if (!imgInput.files.length) {
+          alert("Please select an image file");
+          return;
+        }
+
+        const fileData = await readFile(imgInput.files[0]);
+        const extension = imgInput.files[0].name.split(".").pop();
+        const inputImage = `/golem/input/input.${extension}`;
+        const outputImage = `/golem/output/output.jpeg`;
+        const text = textInput.value.replace(/'/g, `'\\''`);
+
+        const executor = await TaskExecutor.create({
+          yagnaOptions: { apiKey: "try_golem" },
+          package: "7faa6a327c0a568fb3ad18ed1adf91a7493a445fc0dc640ab3d2eab0",
+          logger,
+        });
+
+        const result = await executor
+          .run(async (ctx) => {
+            await ctx.uploadData(fileData, inputImage);
+            await ctx.run(
+              `convert ${inputImage} -background Khaki -pointsize 50 label:'${text}' -gravity Center -append ${outputImage}`,
+            );
+            return await ctx.downloadData(outputImage);
+          })
+          .catch((e) => logger.error(e));
+
+        await executor.end();
+        if (result?.data) setResponse(result.data);
+      }
+      window.run = run;
+    </script>
+  </body>
+</html>
