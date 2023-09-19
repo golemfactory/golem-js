@@ -38,6 +38,7 @@ async function examplesTest(cmd: string, path: string, args: string[] = [], time
   spawnedExample.stdout?.setEncoding("utf-8");
   const testPromise = new Promise((res, rej) => {
     spawnedExample.stdout?.on("data", (data: string) => {
+      console.log(data.replace(/[\n\t\r]/g, ""));
       if (criticalLogsRegexp.some((regexp) => data.match(regexp))) {
         return rej(`Example test "${file}" failed.`);
       }
@@ -51,6 +52,7 @@ async function examplesTest(cmd: string, path: string, args: string[] = [], time
 }
 
 async function testAll(examples: Example[]) {
+  let exitCode = 0;
   await Promise.race([goth.start(), timeoutPromise(180)]);
   try {
     for (const example of examples) {
@@ -59,12 +61,12 @@ async function testAll(examples: Example[]) {
     }
   } catch (error) {
     console.error(error);
-    process.exit(1);
+    exitCode = 1;
   } finally {
     await goth.end().catch((error) => console.error(error));
     spawnedExamples.forEach((example) => example?.kill());
   }
-  process.exit(0);
+  process.exit(exitCode);
 }
 
 testAll(examples).then();
