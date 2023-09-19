@@ -56,7 +56,7 @@ async function testAll(examples: Example[]) {
   await Promise.race([goth.start(), timeoutPromise(180)]);
   try {
     for (const example of examples) {
-      console.log(`Starting test for example ${example.path}`);
+      console.log(`\n---- Starting test for example ${example.path} ----\n`);
       await examplesTest(example.cmd, example.path, example.args);
     }
   } catch (error) {
