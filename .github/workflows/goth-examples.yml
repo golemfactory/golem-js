@@ -42,6 +42,7 @@ jobs:
           sudo apt-get install -y build-essential
           npm install
           npm run build
+          npm install ts-node
 
       - name: Configure python
         uses: actions/setup-python@v4
@@ -86,7 +87,7 @@ jobs:
         env:
           GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          python -m goth start ../goth/assets/goth-config.yml
+          npm run test:examples
 
       - name: Upload test logs
         uses: actions/upload-artifact@v2

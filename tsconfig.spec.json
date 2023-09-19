@@ -18,5 +18,11 @@
     "typeRoots": ["node_modules/@types"]
   },
   "exclude": ["dist", "node_modules", "examples", "cypress.config.ts"],
-  "include": ["src/**/*.spec.ts", "tests/unit/**/*.test.ts", "tests/unit/**/*.spec.ts"]
+  "include": ["src/**/*.spec.ts", "tests/unit/**/*.test.ts", "tests/unit/**/*.spec.ts"],
+  "ts-node": {
+    "esm": true,
+    "compilerOptions": {
+      "module": "nodenext"
+    }
+  }
 }
