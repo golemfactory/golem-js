@@ -11,7 +11,7 @@ type Example = {
   args?: string[];
   timeout?: number;
 };
-
+// examples
 const examples: Example[] = [
   { cmd: "node", path: "examples/docs-examples/examples/composing-tasks/batch-end.mjs" },
   { cmd: "node", path: "docs-examples/examples/composing-tasks/batch-endstream-chunks.mjs" },
