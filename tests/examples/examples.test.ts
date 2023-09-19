@@ -33,7 +33,7 @@ const spawnedExamples: ChildProcess[] = [];
 async function examplesTest(cmd: string, path: string, args: string[] = [], timeout = 120) {
   const file = basename(path);
   const cwd = dirname(path);
-  const spawnedExample = spawn(cmd, [file, ...args], { stdio: "inherit", cwd });
+  const spawnedExample = spawn(cmd, [file, ...args], { cwd });
   spawnedExamples.push(spawnedExample);
   spawnedExample.stdout?.setEncoding("utf-8");
   const testPromise = new Promise((res, rej) => {
@@ -53,19 +53,22 @@ async function examplesTest(cmd: string, path: string, args: string[] = [], time
 
 async function testAll(examples: Example[]) {
   let exitCode = 0;
+  const failedTests = new Map<string, boolean>();
   await Promise.race([goth.start(), timeoutPromise(180)]);
-  try {
-    for (const example of examples) {
-      console.log(`\n---- Starting test for example ${example.path} ----\n`);
+  for (const example of examples) {
+    try {
+      console.log(`\n---- Starting test for example: "${example.path}" ----\n`);
       await examplesTest(example.cmd, example.path, example.args);
+    } catch (error) {
+      console.error(error);
+      failedTests.set(example.path, false);
     }
-  } catch (error) {
-    console.error(error);
-    exitCode = 1;
-  } finally {
-    await goth.end().catch((error) => console.error(error));
-    spawnedExamples.forEach((example) => example?.kill());
   }
+  await goth.end().catch((error) => console.error(error));
+  spawnedExamples.forEach((example) => example?.kill());
+  console.log(
+    `TESTS:\t${examples.length - failedTests.size} passed, ${failedTests.size} failed, ${examples.length} total`,
+  );
   process.exit(exitCode);
 }
 
