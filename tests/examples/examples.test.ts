@@ -52,7 +52,6 @@ async function examplesTest(cmd: string, path: string, args: string[] = [], time
 }
 
 async function testAll(examples: Example[]) {
-  let exitCode = 0;
   const failedTests = new Map<string, boolean>();
   await Promise.race([goth.start(), timeoutPromise(180)]);
   for (const example of examples) {
@@ -69,7 +68,7 @@ async function testAll(examples: Example[]) {
   console.log(
     `TESTS:\t${examples.length - failedTests.size} passed, ${failedTests.size} failed, ${examples.length} total`,
   );
-  process.exit(exitCode);
+  process.exit(failedTests.size > 0 ? 1 : 0);
 }
 
 testAll(examples).then();
