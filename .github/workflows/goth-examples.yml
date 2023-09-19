@@ -1,12 +1,12 @@
 name: Nightly Examples Tests
 
 on:
-  push:
-    branches:
-      - "test/JST-363/example-tests"
-
   # Allows triggering the workflow manually
   workflow_dispatch:
+
+  push:
+    branches:
+      - "test/JST-363/*"
 
 jobs:
   prepare-matrix-master-only:
