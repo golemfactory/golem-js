@@ -1,4 +1,4 @@
-name: Nightly Examples Tests
+name: Nightly Example Tests
 
 on:
   # Allows triggering the workflow manually
@@ -6,7 +6,7 @@ on:
 
   push:
     branches:
-      - "test/JST-363/*"
+      - "test/JST-363/example-tests"
 
 jobs:
   prepare-matrix-master-only:
