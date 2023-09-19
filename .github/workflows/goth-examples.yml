@@ -56,7 +56,7 @@ jobs:
           rm -rf ../goth/assets
           python -m goth create-assets ../goth/assets
           sed -Ezi 's/(use\-proxy:\s)(True)/\1False/mg' ../goth/assets/goth-config.yml
-          sed -i '/^    router:/a \ \ \ \ \ \ \ \ environment:\n \ \ \ \ \ \ \ \ \ \ - YAGNA_AUTOCONF_APPKEY=try_golem' ../goth/assets/docker/docker-compose.yml
+          sed -i '/^ENTRYPOINT/i ENV YAGNA_AUTOCONF_APPKEY=try_golem' ../goth/assets/docker/yagna-goth-deb.Dockerfile
 
       - name: Install websocat and sshpass
         run: |
