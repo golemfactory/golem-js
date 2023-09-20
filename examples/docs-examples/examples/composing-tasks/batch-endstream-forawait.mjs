@@ -16,7 +16,7 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
       .endStream();
 
     for await (const chunk of res) {
-      chunk.index == 2 ? console.log(chunk.stdout) : "";
+      console.log(chunk.stdout);
     }
   });
 
