@@ -9,7 +9,7 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
   const result = await executor.run(async (ctx) => {
     const res = await ctx
       .beginBatch()
-      .uploadFile("./worker222.mjs", "/golem/input/worker.mjs")
+      .uploadFile("./worker.mjs", "/golem/input/worker.mjs")
       .run("node /golem/input/worker.mjs > /golem/input/output.txt")
       .run("cat /golem/input/output.txt")
       .downloadFile("/golem/input/output.txt", "./output.txt")
