@@ -29,9 +29,6 @@ async function test(cmd: string, path: string, args: string[] = [], timeout = 18
   const timeoutId = setTimeout(() => {
     error = `Test timeout was reached after ${timeout} seconds.`;
     spawnedExample.kill();
-    // for some reason the process doesn't exit after kill, it does so after I type enter
-    spawnedExample.stdin.write("\n");
-    spawnedExample.stdin.end();
   }, timeout * 1000);
   return new Promise((res, rej) => {
     spawnedExample.stdout?.on("data", (data: string) => {
@@ -39,8 +36,10 @@ async function test(cmd: string, path: string, args: string[] = [], timeout = 18
       if (criticalLogsRegExp.some((regexp) => data.match(regexp))) {
         error = `A critical error occurred during the test.`;
         spawnedExample.kill();
-        spawnedExample.stdin.write("\n");
-        spawnedExample.stdin.end();
+      }
+      // for some reason, sometimes the process doesn't exit after Executor shut down
+      if (data.indexOf("Task Executor has shut down") !== -1) {
+        spawnedExample.kill("SIGKILL");
       }
     });
     spawnedExample.on("close", (code) => {
