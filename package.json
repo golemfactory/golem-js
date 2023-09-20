@@ -30,6 +30,7 @@
     "test:e2e:no-goth": "jest tests/e2e/**.spec.ts --testTimeout=180000 --runInBand --forceExit",
     "test:cypress": "cypress run",
     "test:examples": "ts-node --project ./tsconfig.spec.json tests/examples/examples.test.ts",
+    "test:examples:no-goth": "ts-node --project ./tsconfig.spec.json tests/examples/examples.test.ts --no-goth",
     "lint": "npm run lint:ts && npm run lint:ts:tests && npm run lint:eslint",
     "lint:ts": "tsc --project tsconfig.json --noEmit",
     "lint:ts:tests": "tsc --project tests/tsconfig.json --noEmit",
