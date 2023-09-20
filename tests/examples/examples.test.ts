@@ -25,21 +25,19 @@ async function test(cmd: string, path: string, args: string[] = [], timeout = 18
   const cwd = dirname(path);
   const spawnedExample = spawn(cmd, [file, ...args], { cwd });
   spawnedExample.stdout?.setEncoding("utf-8");
-  const timeoutId = setTimeout(() => {
-    spawnedExample.kill("SIGABRT");
-  }, timeout * 1000);
+  const timeoutId = setTimeout(() => spawnedExample.kill("SIGINT"), timeout * 1000);
   return new Promise((res, rej) => {
     spawnedExample.stdout?.on("data", (data: string) => {
       console.log(data.trim());
       if (criticalLogsRegExp.some((regexp) => data.match(regexp))) {
-        spawnedExample.kill("SIGKILL");
+        spawnedExample.kill("SIGTERM");
       }
     });
     spawnedExample.on("close", (code, signal) => {
       if (signal === null) return res(true);
       let errorMsg = "";
-      if (signal === "SIGABRT") errorMsg = `Test timeout was reached after ${timeout} seconds.`;
-      if (signal === "SIGKILL") errorMsg = `A critical error occurred during the test.`;
+      if (signal === "SIGINT") errorMsg = `Test timeout was reached after ${timeout} seconds.`;
+      if (signal === "SIGTERM") errorMsg = `A critical error occurred during the test.`;
       rej(`Test example "${file}" failed. ${errorMsg}`);
     });
   }).finally(() => {
