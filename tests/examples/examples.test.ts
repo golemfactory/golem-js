@@ -1,11 +1,15 @@
-import { ChildProcess, spawn } from "child_process";
+import { spawn } from "child_process";
 import { dirname, basename, resolve } from "path";
 import { Goth } from "../goth/goth";
 import chalk from "chalk";
+import examples from "./examples.json";
 
 const noGoth = process.argv[2] === "--no-goth";
 const gothConfig = resolve("../goth/assets/goth-config.yml");
+const gothStartingTimeout = 180;
 const goth = new Goth(gothConfig);
+
+const criticalLogsRegExp = [/Task timeot/, /Task *. has been rejected/, /ERROR: TypeError/];
 
 type Example = {
   cmd: string;
@@ -14,64 +18,59 @@ type Example = {
   timeout?: number;
 };
 
-const examples: Example[] = [
-  { cmd: "node", path: "examples/docs-examples/examples/composing-tasks/batch-end.mjs" },
-  { cmd: "node", path: "examples/docs-examples/examples/composing-tasks/batch-endstream-chunks.mjs" },
-  { cmd: "node", path: "examples/docs-examples/examples/composing-tasks/batch-endstream-forawait.mjs" },
-  { cmd: "node", path: "examples/docs-examples/examples/composing-tasks/multiple-run-prosaic.mjs" },
-  { cmd: "node", path: "examples/docs-examples/examples/composing-tasks/singleCommand.mjs" },
-];
-
-const criticalLogsRegExp = [/Task timeot/, /Task *. has been rejected/, /ERROR: TypeError/];
-
-const timeoutPromise = (seconds: number) =>
-  new Promise((res, rej) =>
-    setTimeout(
-      () => rej(new Error(`The timeout was reached and the racing promise has rejected after ${seconds} seconds`)),
-      seconds * 1000,
-    ),
-  );
-const spawnedExamples: ChildProcess[] = [];
-async function examplesTest(cmd: string, path: string, args: string[] = [], timeout = 120) {
+async function test(cmd: string, path: string, args: string[] = [], timeout = 180) {
   const file = basename(path);
   const cwd = dirname(path);
   const spawnedExample = spawn(cmd, [file, ...args], { cwd });
-  spawnedExamples.push(spawnedExample);
   spawnedExample.stdout?.setEncoding("utf-8");
-  const testPromise = new Promise((res, rej) => {
+  const timeoutId = setTimeout(() => spawnedExample.kill("SIGUSR1"), timeout * 1000);
+  return new Promise((res, rej) => {
     spawnedExample.stdout?.on("data", (data: string) => {
       console.log(data.trim());
       if (criticalLogsRegExp.some((regexp) => data.match(regexp))) {
-        return rej(`Example test "${file}" failed.`);
+        spawnedExample.kill("SIGUSR2");
       }
     });
     spawnedExample.on("close", (code, signal) => {
-      if (code === 0) return res(true);
-      rej(`Example test "${file}" exited with code ${code} by signal ${signal}`);
+      if (code === 0 && signal === null) return res(true);
+      let errorMsg = "";
+      if (signal === "SIGUSR1") errorMsg = `Test timeout was reached after ${timeout} seconds.`;
+      if (signal === "SIGUSR2") errorMsg = `A critical error occurred during the test.`;
+      rej(`Test example "${file}" failed. ${errorMsg}`);
     });
+  }).finally(() => {
+    clearTimeout(timeoutId);
+    spawnedExample.kill();
   });
-  return Promise.race([timeoutPromise(timeout), testPromise]);
 }
 
 async function testAll(examples: Example[]) {
   const failedTests = new Set<string>();
-  if (!noGoth) await Promise.race([goth.start(), timeoutPromise(180)]);
+  if (!noGoth)
+    await Promise.race([
+      goth.start(),
+      new Promise((res, rej) =>
+        setTimeout(
+          () => rej(new Error(`The Goth starting timeout was reached after ${gothStartingTimeout} seconds`)),
+          gothStartingTimeout * 1000,
+        ),
+      ),
+    ]);
   for (const example of examples) {
     try {
-      console.log(chalk.yellow(`\n---- Starting test for example: "${example.path}" ----\n`));
-      await examplesTest(example.cmd, example.path, example.args);
+      console.log(chalk.yellow(`\n---- Starting test: "${example.path}" ----\n`));
+      await test(example.cmd, example.path, example.args);
     } catch (error) {
-      console.error(chalk.bgRed.white("FAIL"), chalk.red(error));
+      console.error(chalk.bgRed.white(" FAIL "), chalk.red(error));
       failedTests.add(example.path);
     }
   }
   if (!noGoth) await goth.end().catch((error) => console.error(error));
-  spawnedExamples.forEach((example) => example?.kill());
   console.log(
     chalk.bold.yellow("\n\nTESTS RESULTS: "),
-    chalk.bgGreen.black(`  ${examples.length - failedTests.size} PASSED  `),
-    chalk.bgRed.black(`  ${failedTests.size} FAILED  `),
-    chalk.bgCyan.black(`  ${examples.length} TOTAL   `),
+    chalk.bgGreen.black(`  ${examples.length - failedTests.size} passed  `),
+    chalk.bgRed.black(`  ${failedTests.size} failed  `),
+    chalk.bgCyan.black(`  ${examples.length} total   `),
   );
   console.log(chalk.red("\nFailed tests:"));
   failedTests.forEach((test) => console.log(chalk.red(`\t- ${test}`)));
