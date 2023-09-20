@@ -25,24 +25,28 @@ async function test(cmd: string, path: string, args: string[] = [], timeout = 18
   const cwd = dirname(path);
   const spawnedExample = spawn(cmd, [file, ...args], { cwd });
   spawnedExample.stdout?.setEncoding("utf-8");
-  const timeoutId = setTimeout(() => spawnedExample.kill("SIGINT"), timeout * 1000);
+  let error = "";
+  const timeoutId = setTimeout(() => {
+    error = `Test timeout was reached after ${timeout} seconds.`;
+    spawnedExample.kill("SIGTERM");
+    spawnedExample.kill("SIGKILL");
+  }, timeout * 1000);
   return new Promise((res, rej) => {
     spawnedExample.stdout?.on("data", (data: string) => {
       console.log(data.trim());
       if (criticalLogsRegExp.some((regexp) => data.match(regexp))) {
+        error = `A critical error occurred during the test.`;
         spawnedExample.kill("SIGTERM");
+        spawnedExample.kill("SIGKILL");
       }
     });
-    spawnedExample.on("close", (code, signal) => {
-      if (signal === null) return res(true);
-      let errorMsg = "";
-      if (signal === "SIGINT") errorMsg = `Test timeout was reached after ${timeout} seconds.`;
-      if (signal === "SIGTERM") errorMsg = `A critical error occurred during the test.`;
-      rej(`Test example "${file}" failed. ${errorMsg}`);
+    spawnedExample.on("close", (code) => {
+      if (!error && code === 0) return res(true);
+      rej(`Test example "${file}" failed. ${error}`);
     });
   }).finally(() => {
     clearTimeout(timeoutId);
-    spawnedExample.kill();
+    spawnedExample.kill("SIGKILL");
   });
 }
 

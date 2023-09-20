@@ -27,7 +27,7 @@
   { "cmd": "node", "path": "examples/docs-examples/examples/transferring-data/upload-file.mjs" },
   { "cmd": "node", "path": "examples/docs-examples/examples/transferring-data/upload-json.mjs" },
 
-  { "cmd": "node", "path": "examples/docs-examples/examples/using-app-key/index.mjs" },
+  { "cmd": "node", "path": "examples/docs-examples/examples/using-app-keys/index.mjs" },
 
   { "cmd": "node", "path": "examples/docs-examples/examples/working-with-images/hash.mjs" },
   { "cmd": "node", "path": "examples/docs-examples/examples/working-with-images/tag.mjs" },
