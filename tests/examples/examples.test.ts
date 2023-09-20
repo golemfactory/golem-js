@@ -25,6 +25,7 @@ async function test(cmd: string, path: string, args: string[] = [], timeout = 18
   const cwd = dirname(path);
   const spawnedExample = spawn(cmd, [file, ...args], { cwd });
   spawnedExample.stdout?.setEncoding("utf-8");
+  spawnedExample.stderr?.setEncoding("utf-8");
   let error = "";
   const timeoutId = setTimeout(() => {
     error = `Test timeout was reached after ${timeout} seconds.`;
