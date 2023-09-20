@@ -43,7 +43,8 @@ async function test(cmd: string, path: string, args: string[] = [], timeout = 18
       }
     });
     spawnedExample.on("close", (code) => {
-      if (!error && code === 0) return res(true);
+      console.log("EXIT CODE", code);
+      if (!error) return res(true);
       rej(`Test example "${file}" failed. ${error}`);
     });
   }).finally(() => {

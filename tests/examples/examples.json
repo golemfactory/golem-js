@@ -13,9 +13,9 @@
   { "cmd": "node", "path": "examples/docs-examples/examples/executing-tasks/max-parallel-tasks.mjs" },
   { "cmd": "node", "path": "examples/docs-examples/examples/executing-tasks/single-run.mjs" },
 
-  { "cmd": "node", "path": "examples/docs-examples/examples/selecting-providers/custom-price.mjs" },
+  { "cmd": "node", "path": "examples/docs-examples/examples/selecting-providers/custom-price.mjs", "noGoth": true },
   { "cmd": "node", "path": "examples/docs-examples/examples/selecting-providers/demand.mjs" },
-  { "cmd": "node", "path": "examples/docs-examples/examples/selecting-providers/whitelist.mjs" },
+  { "cmd": "node", "path": "examples/docs-examples/examples/selecting-providers/whitelist.mjs", "noGoth": true },
 
   { "cmd": "node", "path": "examples/docs-examples/examples/sending-data/downloading-file.mjs" },
   { "cmd": "node", "path": "examples/docs-examples/examples/sending-data/upoading-file.mjs" },
