@@ -58,10 +58,10 @@ async function testAll(examples: Example[]) {
   if (!noGoth) await Promise.race([goth.start(), timeoutPromise(180)]);
   for (const example of examples) {
     try {
-      console.log(chalk.yellow(`\n---- Starting test for example: "${example.path} ----"\n`));
+      console.log(chalk.yellow(`\n---- Starting test for example: "${example.path}" ----\n`));
       await examplesTest(example.cmd, example.path, example.args);
     } catch (error) {
-      console.error(chalk.red(error));
+      console.error(chalk.bgRed.white("FAIL"), chalk.red(error));
       failedTests.add(example.path);
     }
   }
@@ -69,11 +69,11 @@ async function testAll(examples: Example[]) {
   spawnedExamples.forEach((example) => example?.kill());
   console.log(
     chalk.bold.yellow("\n\nTESTS RESULTS: "),
-    chalk.bgGreen.black(`\t${examples.length - failedTests.size} passed\t`),
-    chalk.bgRed.black(`\t${failedTests.size} failed\t`),
-    chalk.bgCyan.black(`\t${examples.length} total\t\n`),
+    chalk.bgGreen.black(`  ${examples.length - failedTests.size} PASSED  `),
+    chalk.bgRed.black(`  ${failedTests.size} FAILED  `),
+    chalk.bgCyan.black(`  ${examples.length} TOTAL   `),
   );
-  console.log(chalk.red("Failed tests:"));
+  console.log(chalk.red("\nFailed tests:"));
   failedTests.forEach((test) => console.log(chalk.red(`\t- ${test}`)));
   process.exit(failedTests.size > 0 ? 1 : 0);
 }
