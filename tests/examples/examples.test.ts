@@ -28,16 +28,19 @@ async function test(cmd: string, path: string, args: string[] = [], timeout = 18
   let error = "";
   const timeoutId = setTimeout(() => {
     error = `Test timeout was reached after ${timeout} seconds.`;
-    spawnedExample.kill("SIGTERM");
-    spawnedExample.kill("SIGKILL");
+    spawnedExample.kill();
+    // for some reason the process doesn't exit after kill, it does so after I type enter
+    spawnedExample.stdin.write("\n");
+    spawnedExample.stdin.end();
   }, timeout * 1000);
   return new Promise((res, rej) => {
     spawnedExample.stdout?.on("data", (data: string) => {
       console.log(data.trim());
       if (criticalLogsRegExp.some((regexp) => data.match(regexp))) {
         error = `A critical error occurred during the test.`;
-        spawnedExample.kill("SIGTERM");
-        spawnedExample.kill("SIGKILL");
+        spawnedExample.kill();
+        spawnedExample.stdin.write("\n");
+        spawnedExample.stdin.end();
       }
     });
     spawnedExample.on("close", (code) => {
@@ -66,8 +69,9 @@ async function testAll(examples: Example[]) {
     try {
       console.log(chalk.yellow(`\n---- Starting test: "${example.path}" ----\n`));
       await test(example.cmd, example.path, example.args, example.timeout);
+      console.log(chalk.bgGreen.white(" PASS "), chalk.green(example.path));
     } catch (error) {
-      console.error(chalk.bgRed.white(" FAIL "), chalk.red(error));
+      console.log(chalk.bgRed.white(" FAIL "), chalk.red(error));
       failedTests.add(example.path);
     }
   }
