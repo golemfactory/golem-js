@@ -42,9 +42,9 @@ async function test(cmd: string, path: string, args: string[] = [], timeout = 18
         spawnedExample.kill("SIGKILL");
       }
     });
+    spawnedExample.stderr?.on("data", (data: string) => console.log(data.trim()));
     spawnedExample.on("close", (code) => {
-      console.log("EXIT CODE", code);
-      if (!error) return res(true);
+      if (!error && !code) return res(true);
       rej(`Test example "${file}" failed. ${error}`);
     });
   }).finally(() => {
