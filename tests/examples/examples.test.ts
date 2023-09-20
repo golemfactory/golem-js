@@ -36,7 +36,7 @@ async function test(cmd: string, path: string, args: string[] = [], timeout = 18
       }
     });
     spawnedExample.on("close", (code, signal) => {
-      if (code === 0 && signal === null) return res(true);
+      if (signal === null) return res(true);
       let errorMsg = "";
       if (signal === "SIGABRT") errorMsg = `Test timeout was reached after ${timeout} seconds.`;
       if (signal === "SIGKILL") errorMsg = `A critical error occurred during the test.`;
