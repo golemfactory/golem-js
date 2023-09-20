@@ -1,6 +1,7 @@
 import { ChildProcess, spawn } from "child_process";
 import { dirname, basename, resolve } from "path";
 import { Goth } from "../goth/goth";
+import chalk from "chalk";
 
 const gothConfig = resolve("../goth/assets/goth-config.yml");
 const goth = new Goth(gothConfig);
@@ -38,7 +39,7 @@ async function examplesTest(cmd: string, path: string, args: string[] = [], time
   spawnedExample.stdout?.setEncoding("utf-8");
   const testPromise = new Promise((res, rej) => {
     spawnedExample.stdout?.on("data", (data: string) => {
-      console.log(data.replace("\n", ""));
+      console.log(chalk.cyanBright("[test]"), data.trim());
       if (criticalLogsRegexp.some((regexp) => data.match(regexp))) {
         return rej(`Example test "${file}" failed.`);
       }
@@ -56,17 +57,20 @@ async function testAll(examples: Example[]) {
   await Promise.race([goth.start(), timeoutPromise(180)]);
   for (const example of examples) {
     try {
-      console.log(`\n---- Starting test for example: "${example.path}" ----\n`);
+      console.log(chalk.yellow(`\n\tStarting test for example: "${example.path}"\n`));
       await examplesTest(example.cmd, example.path, example.args);
     } catch (error) {
-      console.error(error);
+      console.error(chalk.red(error));
       failedTests.set(example.path, false);
     }
   }
   await goth.end().catch((error) => console.error(error));
   spawnedExamples.forEach((example) => example?.kill());
   console.log(
-    `\n\nTESTS: ${examples.length - failedTests.size} passed, ${failedTests.size} failed, ${examples.length} total`,
+    chalk.cyan("\n\nTESTS RESULTS: "),
+    chalk.bgGreen(`${examples.length - failedTests.size} passed`),
+    chalk.bgRed(`${failedTests.size} failed`),
+    chalk.bgYellow(`${examples.length} total`),
   );
   process.exit(failedTests.size > 0 ? 1 : 0);
 }
