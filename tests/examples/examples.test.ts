@@ -9,8 +9,8 @@ const gothConfig = resolve("../goth/assets/goth-config.yml");
 const gothStartingTimeout = 180;
 const goth = new Goth(gothConfig);
 
-const examples = !noGoth ? testExamples.filter((e) => !e?.noGoth) : testExamples;
-const criticalLogsRegExp = [/Task timeot/, /Task *. has been rejected/, /ERROR: TypeError/];
+const examples = !noGoth ? testExamples.filter((e) => !e?.noGoth && !e.skip) : testExamples.filter((e) => !e.skip);
+const criticalLogsRegExp = [/Task *. timeot/, /Task *. has been rejected/, /ERROR: TypeError/];
 
 type Example = {
   cmd: string;
@@ -18,6 +18,7 @@ type Example = {
   args?: string[];
   timeout?: number;
   noGoth?: boolean;
+  skip?: boolean;
 };
 
 async function test(cmd: string, path: string, args: string[] = [], timeout = 180) {
