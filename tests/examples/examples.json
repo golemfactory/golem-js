@@ -18,10 +18,10 @@
   { "cmd": "node", "path": "examples/docs-examples/examples/selecting-providers/whitelist.mjs", "noGoth": true },
 
   { "cmd": "node", "path": "examples/docs-examples/examples/sending-data/downloading-file.mjs" },
-  { "cmd": "node", "path": "examples/docs-examples/examples/sending-data/upoading-file.mjs" },
+  { "cmd": "node", "path": "examples/docs-examples/examples/sending-data/uploading-file.mjs" },
   { "cmd": "node", "path": "examples/docs-examples/examples/sending-data/uploading-json.mjs" },
 
-  { "cmd": "node", "path": "examples/docs-examples/examples/switching-to-mainnet/run-on-polygon.mjs" },
+  { "cmd": "node", "path": "examples/docs-examples/examples/switching-to-mainnet/run-on-polygon.mjs", "noGoth": true },
 
   { "cmd": "node", "path": "examples/docs-examples/examples/transferring-data/download-file.mjs" },
   { "cmd": "node", "path": "examples/docs-examples/examples/transferring-data/upload-file.mjs" },

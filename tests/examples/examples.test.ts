@@ -10,7 +10,7 @@ const gothStartingTimeout = 180;
 const goth = new Goth(gothConfig);
 
 const examples = !noGoth ? testExamples.filter((e) => !e?.noGoth) : testExamples;
-const criticalLogsRegExp = [/Task *. timeot/, /Task *. has been rejected/, /ERROR: TypeError/];
+const criticalLogsRegExp = [/Task *. timeot/, /Task *. has been rejected/, /ERROR: TypeError/, /ERROR: Error/];
 
 type Example = {
   cmd: string;
@@ -86,7 +86,7 @@ async function testAll(examples: Example[]) {
   if (!noGoth) await goth.end().catch((error) => console.error(error));
   console.log(
     chalk.bold.yellow("\n\nTESTS RESULTS: "),
-    chalk.bgGreen.black(`  ${examples.length - failedTests.size} passed  `),
+    chalk.bgGreen.black(`  ${examples.length - failedTests.size - skippedTests.size} passed  `),
     chalk.bgRed.black(`  ${failedTests.size} failed  `),
     skippedTests.size ? chalk.bgYellow.black(`  ${skippedTests.size} skipped  `) : "",
     chalk.bgCyan.black(`  ${examples.length} total  `),
