@@ -94,7 +94,7 @@ async function testAll(examples: Example[]) {
   console.log(chalk.red("\nFailed tests:"));
   failedTests.forEach((test) => console.log(chalk.red(`\t- ${test}`)));
   console.log(chalk.yellow("\nSkipped tests:"));
-  failedTests.forEach((test) => console.log(chalk.yellow(`\t- ${test}`)));
+  skippedTests.forEach((test) => console.log(chalk.yellow(`\t- ${test}`)));
   process.exit(failedTests.size > 0 ? 1 : 0);
 }
 
