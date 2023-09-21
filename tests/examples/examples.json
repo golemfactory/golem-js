@@ -49,7 +49,7 @@
   {
     "cmd": "node",
     "path": "examples/docs-examples/tutorials/running-parallel-tasks/index.mjs",
-    "args": ["--mask", "'?a?a'", "--hash", "'$P$5ZDzPE45CigTC6EY4cXbyJSLj/pGee0'"],
+    "args": ["--mask", "?a?a", "--hash", "$P$5ZDzPE45CigTC6EY4cXbyJSLj/pGee0"],
     "timeout": 500
   }
 ]
