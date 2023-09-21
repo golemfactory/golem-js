@@ -57,6 +57,7 @@ async function test(cmd: string, path: string, args: string[] = [], timeout = 18
 
 async function testAll(examples: Example[]) {
   const failedTests = new Set<string>();
+  const skippedTests = new Set<string>();
   if (!noGoth)
     await Promise.race([
       goth.start(),
@@ -70,6 +71,11 @@ async function testAll(examples: Example[]) {
   for (const example of examples) {
     try {
       console.log(chalk.yellow(`\n---- Starting test: "${example.path}" ----\n`));
+      if (example?.skip) {
+        console.log(chalk.bgYellow.white(" SKIP "), chalk.yellow(`The test was skipped`));
+        skippedTests.add(example.path);
+        continue;
+      }
       await test(example.cmd, example.path, example.args, example.timeout);
       console.log(chalk.bgGreen.white(" PASS "), chalk.green(example.path));
     } catch (error) {
@@ -82,10 +88,13 @@ async function testAll(examples: Example[]) {
     chalk.bold.yellow("\n\nTESTS RESULTS: "),
     chalk.bgGreen.black(`  ${examples.length - failedTests.size} passed  `),
     chalk.bgRed.black(`  ${failedTests.size} failed  `),
+    skippedTests.size ? chalk.bgYellow.black(`  ${skippedTests.size} skipped  `) : "",
     chalk.bgCyan.black(`  ${examples.length} total  `),
   );
   console.log(chalk.red("\nFailed tests:"));
   failedTests.forEach((test) => console.log(chalk.red(`\t- ${test}`)));
+  console.log(chalk.yellow("\nSkipped tests:"));
+  failedTests.forEach((test) => console.log(chalk.yellow(`\t- ${test}`)));
   process.exit(failedTests.size > 0 ? 1 : 0);
 }
 
