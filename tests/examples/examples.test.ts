@@ -9,7 +9,7 @@ const gothConfig = resolve("../goth/assets/goth-config.yml");
 const gothStartingTimeout = 180;
 const goth = new Goth(gothConfig);
 
-const examples = !noGoth ? testExamples.filter((e) => !e?.noGoth && !e.skip) : testExamples.filter((e) => !e.skip);
+const examples = !noGoth ? testExamples.filter((e) => !e?.noGoth) : testExamples;
 const criticalLogsRegExp = [/Task *. timeot/, /Task *. has been rejected/, /ERROR: TypeError/];
 
 type Example = {
@@ -21,7 +21,7 @@ type Example = {
   skip?: boolean;
 };
 
-async function test(cmd: string, path: string, args: string[] = [], timeout = 180) {
+async function test(cmd: string, path: string, args: string[] = [], timeout = 120) {
   const file = basename(path);
   const cwd = dirname(path);
   const spawnedExample = spawn(cmd, [file, ...args], { cwd });
@@ -72,12 +72,12 @@ async function testAll(examples: Example[]) {
     try {
       console.log(chalk.yellow(`\n---- Starting test: "${example.path}" ----\n`));
       if (example?.skip) {
-        console.log(chalk.bgYellow.white(" SKIP "), chalk.yellow(`The test was skipped`));
+        console.log(chalk.bgYellow.black(" SKIP "), chalk.yellowBright(example.path));
         skippedTests.add(example.path);
-        continue;
+      } else {
+        await test(example.cmd, example.path, example.args, example.timeout);
+        console.log(chalk.bgGreen.white(" PASS "), chalk.green(example.path));
       }
-      await test(example.cmd, example.path, example.args, example.timeout);
-      console.log(chalk.bgGreen.white(" PASS "), chalk.green(example.path));
     } catch (error) {
       console.log(chalk.bgRed.white(" FAIL "), chalk.red(error));
       failedTests.add(example.path);
