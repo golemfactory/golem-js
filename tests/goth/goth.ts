@@ -34,6 +34,8 @@ export class Goth {
           process.env["GSB_URL"] = gsbUrl;
           process.env["PATH"] = `${path}:${process.env["PATH"]}`;
           process.env["YAGNA_SUBNET"] = subnetTag;
+          // Note: rinkeby is a test network which is dead, but our goth runners exist on a custom deployment of this network
+          process.env["PAYMENT_NETWORK"] = "rinkeby";
 
           const settings = { apiKey, basePath, subnetTag, gsbUrl, path };
 
