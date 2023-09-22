@@ -68,6 +68,8 @@ async function testAll(examples: Example[]) {
         ),
       ),
     ]);
+  // For debugging CI Goth, wait before starting tests
+  await new Promise((res) => setTimeout(res, 10_000));
   for (const example of examples) {
     try {
       console.log(chalk.yellow(`\n---- Starting test: "${example.path}" ----\n`));
