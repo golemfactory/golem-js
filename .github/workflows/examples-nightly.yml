@@ -8,6 +8,10 @@ on:
   # Allows triggering the workflow manually
   workflow_dispatch:
 
+  push:
+    branches:
+      - "test/JST-363/example-tests"
+
 jobs:
   prepare-matrix-master-only:
     name: Prepare matrix JSON
