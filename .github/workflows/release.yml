@@ -161,6 +161,26 @@ jobs:
         run: rm -rf .cypress
       #endregion
 
+      #region Examples test execution
+      - name: Run the Examples tests using Goth
+        env:
+          GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm run test:examples
+
+      - name: Upload test logs
+        uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: goth-logs
+          path: /tmp/goth-tests
+
+      # Only relevant for self-hosted runners
+      - name: Remove test logs
+        if: always()
+        run: rm -rf /tmp/goth-tests
+      #endregion
+
   release:
     name: Release the SDK to NPM and GitHub
     needs: run-integration-and-e2e-tests
