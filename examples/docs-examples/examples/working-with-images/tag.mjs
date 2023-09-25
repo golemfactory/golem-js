@@ -2,7 +2,7 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
 
 (async () => {
   const executor = await TaskExecutor.create({
-    package: "golem/my_example:latest",
+    package: "golem/alpine:latest",
     yagnaOptions: { appKey: "try_golem" },
   });
 

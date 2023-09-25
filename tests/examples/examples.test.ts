@@ -10,7 +10,7 @@ const gothStartingTimeout = 180;
 const goth = new Goth(gothConfig);
 
 const examples = !noGoth ? testExamples.filter((e) => !e?.noGoth) : testExamples;
-const criticalLogsRegExp = [/Task *. timeot/g, /Task *. has been rejected/g, /ERROR: TypeError/g, /ERROR: Error/g];
+const criticalLogsRegExp = [/Task *. timeot/, /Task *. has been rejected/, /ERROR: TypeError/, /ERROR: Error/gim];
 
 type Example = {
   cmd: string;
@@ -35,12 +35,16 @@ async function test(cmd: string, path: string, args: string[] = [], timeout = 12
   return new Promise((res, rej) => {
     spawnedExample.stdout?.on("data", (data: string) => {
       console.log(data.trim());
-      if (criticalLogsRegExp.some((regexp) => data.match(regexp))) {
+      const logWithoutColours = data.replace(
+        /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g,
+        "",
+      );
+      if (criticalLogsRegExp.some((regexp) => logWithoutColours.match(regexp))) {
         error = `A critical error occurred during the test.`;
         spawnedExample.kill();
       }
       // for some reason, sometimes the process doesn't exit after Executor shut down
-      if (data.indexOf("Task Executor has shut down") !== -1) {
+      if (logWithoutColours.indexOf("Task Executor has shut down") !== -1) {
         spawnedExample.kill("SIGKILL");
       }
     });
