@@ -114,7 +114,7 @@ export class GftpStorageProvider implements StorageProvider {
       return;
     }
 
-    await this.jsonrpc("close", { urls: Array.from(this.publishedUrls) });
+    await this.jsonrpc("close", { urls: Array.from(this.publishedUrls).filter((url) => !!url) });
   }
 
   async close() {
