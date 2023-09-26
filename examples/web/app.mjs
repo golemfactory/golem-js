@@ -27,6 +27,9 @@ const server = http.createServer((req, res) => {
   } else if (req.url === "/docs-quickstart") {
     res.writeHead(200, { "content-type": "text/html" });
     fs.createReadStream(`${__dirname}/../docs-examples/quickstarts/web-quickstart/index.html`).pipe(res);
+  } else if (req.url === "/requestor.mjs") {
+    res.writeHead(200, { "content-type": "text/javascript" });
+    fs.createReadStream(`${__dirname}/../docs-examples/quickstarts/web-quickstart/requestor.mjs`).pipe(res);
   } else if (req.url === "/golem-js.min.js") {
     res.writeHead(200, { "content-type": "text/javascript" });
     fs.createReadStream(`${__dirname}/../../dist/golem-js.min.js`).pipe(res);
