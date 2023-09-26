@@ -8,6 +8,17 @@
     <h1>WebRequestor - Meme Example</h1>
     <div class="container">
       <div class="col-6">
+        <h3>Options</h3>
+        <div class="column">
+          <div>
+            <label for="YAGNA_API_BASEPATH">YAGNA_API_BASEURL: </label>
+            <input id="YAGNA_API_BASEPATH" type="text" value="http://127.0.0.1:7465" />
+          </div>
+          <div>
+            <label for="SUBNET_TAG">Subnet Tag: </label>
+            <input id="SUBNET_TAG" type="text" value="public" />
+          </div>
+        </div>
         <h3>Input data</h3>
         <div class="column">
           <div>
@@ -98,8 +109,9 @@
         const text = textInput.value.replace(/'/g, `'\\''`);
 
         const executor = await TaskExecutor.create({
-          yagnaOptions: { apiKey: "try_golem" },
           package: "7faa6a327c0a568fb3ad18ed1adf91a7493a445fc0dc640ab3d2eab0",
+          yagnaOptions: { apiKey: "try_golem", basePath: document.getElementById("YAGNA_API_BASEPATH").value },
+          subnetTag: document.getElementById("SUBNET_TAG").value,
           logger,
         });
 

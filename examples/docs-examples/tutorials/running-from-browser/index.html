@@ -8,6 +8,17 @@
     <h1>WebRequestor - Hello World</h1>
     <div class="container">
       <div class="col-6">
+        <h3>Options</h3>
+        <div class="column">
+          <div>
+            <label for="YAGNA_API_BASEPATH">YAGNA_API_BASEURL: </label>
+            <input id="YAGNA_API_BASEPATH" type="text" value="http://127.0.0.1:7465" />
+          </div>
+          <div>
+            <label for="SUBNET_TAG">Subnet Tag: </label>
+            <input id="SUBNET_TAG" type="text" value="public" />
+          </div>
+        </div>
         <h3>Actions</h3>
         <div class="row vertical">
           <div>
@@ -53,8 +64,9 @@
       };
       async function run() {
         const executor = await TaskExecutor.create({
-          yagnaOptions: { apiKey: "try_golem" },
           package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+          yagnaOptions: { apiKey: "try_golem", basePath: document.getElementById("YAGNA_API_BASEPATH").value },
+          subnetTag: document.getElementById("SUBNET_TAG").value,
           logger,
         });
         await executor
