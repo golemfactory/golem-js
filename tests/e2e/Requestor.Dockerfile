@@ -18,9 +18,9 @@ RUN apt-get update -q \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir ${YA_DIR_INSTALLER} \
     && cd ${YA_DIR_INSTALLER} \
-    && wget -q "https://github.com/golemfactory/yagna/releases/download/v${YA_CORE_VERSION}/golem-requestor-linux_aarch64-v${YA_CORE_VERSION}.tar.gz" \
-    && tar -zxvf golem-requestor-linux_aarch64-v${YA_CORE_VERSION}.tar.gz \
-    && find golem-requestor-linux_aarch64-v${YA_CORE_VERSION} -executable -type f -exec cp {} ${YA_DIR_BIN} \; \
+    && wget -q "https://github.com/golemfactory/yagna/releases/download/v${YA_CORE_VERSION}/golem-requestor-linux-v${YA_CORE_VERSION}.tar.gz" \
+    && tar -zxvf golem-requestor-linux-v${YA_CORE_VERSION}.tar.gz \
+    && find golem-requestor-linux-v${YA_CORE_VERSION} -executable -type f -exec cp {} ${YA_DIR_BIN} \; \
     && rm -Rf ${YA_DIR_INSTALLER}
 
 COPY ./start-requestor.sh /start-requestor.sh
