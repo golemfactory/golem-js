@@ -2,7 +2,7 @@ name: Nightly E2E Tests
 
 on:
   schedule:
-    # run this workflow every day at 2:00 AM UTC
+    # run this workflow every day at 1:00 AM UTC
     - cron: "0 1 * * *"
 
   # Allows triggering the workflow manually
