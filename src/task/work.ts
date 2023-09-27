@@ -8,6 +8,7 @@ import {
   Run,
   Script,
   Start,
+  Transfer,
   UploadData,
   UploadFile,
 } from "../script";
@@ -134,6 +135,17 @@ export class WorkContext {
     return this.runOneCommand(run, runOptions);
   }
 
+  /**
+   * Generic transfer command, requires the user to provide a publicly readable transfer source
+   *
+   * @param from - publicly available resource for reading. Supported protocols: file, http, ftp or gftp
+   * @param to - file path
+   * @param options Additional run options.
+   */
+  async transfer(from: string, to: string, options?: CommandOptions): Promise<Result> {
+    return this.runOneCommand(new Transfer(from, to), options);
+  }
+
   async uploadFile(src: string, dst: string, options?: CommandOptions): Promise<Result> {
     return this.runOneCommand(new UploadFile(this.storageProvider, src, dst), options);
   }
@@ -185,7 +197,12 @@ export class WorkContext {
 
   getWebsocketUri(port: number): string {
     if (!this.networkNode) throw new Error("There is no network in this work context");
-    return this.networkNode?.getWebsocketUri(port);
+    return this.networkNode.getWebsocketUri(port);
+  }
+
+  getIp(): string {
+    if (!this.networkNode) throw new Error("There is no network in this work context");
+    return this.networkNode.ip.toString();
   }
 
   async getState(): Promise<ActivityStateEnum> {

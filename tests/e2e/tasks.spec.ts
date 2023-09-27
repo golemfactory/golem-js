@@ -1,6 +1,7 @@
 import { LoggerMock } from "../mock";
 import { readFileSync } from "fs";
 import { TaskExecutor } from "../../src";
+import fs from "fs";
 const logger = new LoggerMock(false);
 
 describe("Task Executor", function () {
@@ -152,5 +153,31 @@ describe("Task Executor", function () {
     });
     expect(result).toEqual("Ok");
     expect(readFileSync(`${process.env.GOTH_GFTP_VOLUME || ""}new_test.json`, "utf-8")).toEqual('{"test":"1234"}');
+  });
+
+  it("should run transfer file via http", async () => {
+    executor = await TaskExecutor.create({
+      package: "golem/alpine:latest",
+      logger,
+    });
+    const result = await executor.run(async (ctx) => {
+      const res = await ctx.transfer(
+        "http://registry.golem.network/download/a2bb9119476179fac36149723c3ad4474d8d135e8d2d2308eb79907a6fc74dfa",
+        "/golem/work/alpine.gvmi",
+      );
+      return res.result;
+    });
+    expect(result).toEqual("Ok");
+  });
+
+  it("should get ip address", async () => {
+    executor = await TaskExecutor.create({
+      package: "golem/alpine:latest",
+      capabilities: ["vpn"],
+      networkIp: "192.168.0.0/24",
+      logger,
+    });
+    const result = await executor.run(async (ctx) => ctx.getIp());
+    expect(["192.168.0.2", "192.168.0.3"]).toContain(result);
   });
 });
