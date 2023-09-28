@@ -81,6 +81,8 @@ jobs:
         run: |
           npm install
           npm run build
+          npm install --prefix examples
+          npm install ts-node
 
       - name: Configure python
         uses: actions/setup-python@v4
