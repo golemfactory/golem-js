@@ -10,9 +10,6 @@ const range = (start: number, end: number, step = 1): number[] => {
 
 describe("Password cracking", function () {
   let executor: TaskExecutor;
-  afterEach(async function () {
-    await executor.end();
-  });
   it(
     "should crack password",
     async () => {
@@ -54,6 +51,7 @@ describe("Password cracking", function () {
         }
       }
       expect(password).toEqual("yo");
+      await executor.end();
     },
     1000 * 60 * 5,
   );

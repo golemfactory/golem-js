@@ -6,9 +6,6 @@ const logger = new LoggerMock(false);
 
 describe("SSH connection", function () {
   let executor: TaskExecutor;
-  afterEach(async function () {
-    await executor.end();
-  });
   it("should connect to provider via ssh", async () => {
     executor = await TaskExecutor.create({
       package: "golem/examples-ssh:latest",
@@ -51,5 +48,6 @@ describe("SSH connection", function () {
     await new Promise((res) => setTimeout(res, 3000));
     expect(stdout).toContain("1-Alpine SMP");
     processSsh.kill();
+    await executor.end();
   });
 });

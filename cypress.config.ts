@@ -14,6 +14,7 @@ export default defineConfig({
   defaultCommandTimeout: 90000,
   experimentalInteractiveRunEvents: true,
   chromeWebSecurity: false,
+  video: true,
   e2e: {
     baseUrl: "http://localhost:3000",
     supportFile: "tests/cypress/support/e2e.ts",

@@ -1,9 +1,9 @@
-name: Nightly E2E Tests
+name: Nightly Examples Tests
 
 on:
   schedule:
-    # run this workflow every day at 1:00 AM UTC
-    - cron: "0 1 * * *"
+    # run this workflow every day at 1:30 AM UTC
+    - cron: "30 1 * * *"
 
   # Allows triggering the workflow manually
   workflow_dispatch:
@@ -26,7 +26,7 @@ jobs:
     strategy:
       matrix: ${{ fromJson(needs.prepare-matrix-master-only.outputs.matrix-json) }}
       fail-fast: false
-    name: Run integration tests (nightly) on ${{ matrix.branch }}
+    name: Run example tests (nightly) on ${{ matrix.branch }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -42,6 +42,8 @@ jobs:
           sudo apt-get install -y build-essential
           npm install
           npm run build
+          npm install --prefix examples
+          npm install ts-node
 
       - name: Configure python
         uses: actions/setup-python@v4
@@ -50,17 +52,12 @@ jobs:
 
       - name: Install goth
         run: |
-          pip install goth
+          pip install goth>=0.15.3
           rm -rf ../goth/assets
           python -m goth create-assets ../goth/assets
           sed -Ezi 's/(use\-proxy:\s)(True)/\1False/mg' ../goth/assets/goth-config.yml
-          sed -Ezi 's/(use\-prerelease:\s)(false)/\1true\n    release-tag: "0.13.0-rc10"/mg' ../goth/assets/goth-config.yml
-
-      - name: Install websocat and sshpass
-        run: |
-          sudo wget https://github.com/vi/websocat/releases/download/v1.9.0/websocat_linux64 -O /usr/local/bin/websocat
-          sudo chmod +x /usr/local/bin/websocat
-          sudo apt-get install sshpass
+          sed -Ezi 's/(use\-prerelease:\s)(false)/\1true\n    release-tag: "0.13.0-rc21"/mg' ../goth/assets/goth-config.yml
+          sed -i '/^ENTRYPOINT/i ENV YAGNA_AUTOCONF_APPKEY=try_golem' ../goth/assets/docker/yagna-goth-deb.Dockerfile
 
       - name: Cleanup Docker
         if: always()
@@ -75,7 +72,7 @@ jobs:
         env:
           GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          npm run test:e2e
+          npm run test:examples
 
       - name: Upload test logs
         uses: actions/upload-artifact@v2
