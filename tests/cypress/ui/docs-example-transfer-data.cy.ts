@@ -1,7 +1,6 @@
-describe("Test TaskExecutor API", () => {
-  it("should run transfer file example", () => {
-    cy.visit("/image");
-    cy.get("#YAGNA_APPKEY").clear().type(Cypress.env("YAGNA_APPKEY"));
+describe("Docs Examples Transfer Data", () => {
+  it("should transfer image file to provider", () => {
+    cy.visit("/docs-example-transfer-data");
     cy.get("#YAGNA_API_BASEPATH").clear().type(Cypress.env("YAGNA_API_BASEPATH"));
     cy.get("#SUBNET_TAG").clear().type(Cypress.env("YAGNA_SUBNET"));
     cy.fixture("golem.png", { encoding: null }).as("imageFile");

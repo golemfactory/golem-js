@@ -110,11 +110,11 @@ export class GftpStorageProvider implements StorageProvider {
   }
 
   private async releaseAll(): Promise<void> {
-    if (!this.publishedUrls.size) {
+    const urls = Array.from(this.publishedUrls).filter((url) => !!url);
+    if (!urls.length) {
       return;
     }
-
-    await this.jsonrpc("close", { urls: Array.from(this.publishedUrls) });
+    await this.jsonrpc("close", { urls });
   }
 
   async close() {

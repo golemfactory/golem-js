@@ -3,6 +3,7 @@
   "include": ["."],
   "exclude": ["./cypress"],
   "compilerOptions": {
-    "types": ["jest"]
+    "types": ["jest"],
+    "resolveJsonModule": true
   }
 }
