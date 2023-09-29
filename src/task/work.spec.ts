@@ -190,7 +190,7 @@ describe("Work Context", () => {
 
   describe("getWebsocketUri()", () => {
     it("should throw error if there is no network node", () => {
-      expect(context["networkNode"]).toBeUndefined();
+      expect(() => context.getIp()).toThrow(new Error("There is no network in this work context"));
     });
 
     it("should return websocket URI", () => {
@@ -205,7 +205,7 @@ describe("Work Context", () => {
 
   describe("getIp()", () => {
     it("should throw error if there is no network node", () => {
-      expect(context["networkNode"]).toBeUndefined();
+      expect(() => context.getIp()).toThrow(new Error("There is no network in this work context"));
     });
 
     it("should return ip address of provider vpn network node", () => {
