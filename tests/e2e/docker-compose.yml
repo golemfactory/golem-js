@@ -6,6 +6,8 @@ services:
       dockerfile: Provider.Dockerfile
     image: provider:latest
     restart: always
+    deploy:
+      replicas: 3
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /root/.local/share/yagna/
@@ -26,6 +28,8 @@ services:
       dockerfile: Provider.Dockerfile
     image: provider:latest
     restart: always
+    deploy:
+      replicas: 3
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /root/.local/share/yagna/
@@ -49,13 +53,13 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /root/.local/share/yagna/
-    ports:
-      - 7465:7465
-      - 7464:7464
+      - ../../:/golem-js
     environment:
       - YAGNA_AUTOCONF_APPKEY=e2e-test
       - YAGNA_API_URL=http://0.0.0.0:7465
       - GSB_URL=tcp://0.0.0.0:7464
+      - YAGNA_SUBNET=notpublic
+      - YAGNA_APPKEY=e2e-test
 
     healthcheck:
       test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:7465 | grep -q 401"]
