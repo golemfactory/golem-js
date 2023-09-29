@@ -34,6 +34,7 @@ jobs:
           npm run build
 
       - name: Configure python
+        continue-on-error: true
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
