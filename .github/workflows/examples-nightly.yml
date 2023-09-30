@@ -21,7 +21,7 @@ jobs:
         run: echo "::set-output name=matrix::{\"include\":[{\"branch\":\"master\"}]}"
 
   goth-tests:
-    runs-on: [goth2, ubuntu-22.10]
+    runs-on: goth2
     needs: prepare-matrix-master-only
     strategy:
       matrix: ${{ fromJson(needs.prepare-matrix-master-only.outputs.matrix-json) }}
@@ -57,6 +57,7 @@ jobs:
           rm -rf ../goth/assets
           python -m goth create-assets ../goth/assets
           sed -Ezi 's/(use\-proxy:\s)(True)/\1False/mg' ../goth/assets/goth-config.yml
+          sed -Ezi 's/(use\-prerelease:\s)(false)/\1true\n    release-tag: "0.13.0-rc21"/mg' ../goth/assets/goth-config.yml
           sed -i '/^ENTRYPOINT/i ENV YAGNA_AUTOCONF_APPKEY=try_golem' ../goth/assets/docker/yagna-goth-deb.Dockerfile
 
       - name: Cleanup Docker
