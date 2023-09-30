@@ -16,7 +16,7 @@ const myFilter = async (proposal) => {
   else {
     costData.shift();
     let averageProposedCost = costData.reduce((part, x) => part + x, 0) / 10;
-    if (proposedCost <= averageProposedCost) decision = true;
+    if (proposedCost <= 1.2 * averageProposedCost) decision = true;
     if (decision) {
       console.log(proposedCost, averageProposedCost);
     }
