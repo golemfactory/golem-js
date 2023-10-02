@@ -4,7 +4,6 @@ describe("Test TaskExecutor API", () => {
     cy.get("#YAGNA_APPKEY").clear().type(Cypress.env("YAGNA_APPKEY"));
     cy.get("#YAGNA_API_BASEPATH").clear().type(Cypress.env("YAGNA_API_BASEPATH"));
     cy.get("#SUBNET_TAG").clear().type(Cypress.env("YAGNA_SUBNET"));
-    cy.get("#PAYMENT_NETWORK").clear().type("rinkeby");
     cy.fixture("golem.png", { encoding: null }).as("imageFile");
     cy.get("#MEME_IMG").selectFile("@imageFile");
     cy.get("#RUN").click();
