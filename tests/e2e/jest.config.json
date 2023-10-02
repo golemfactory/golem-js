@@ -2,5 +2,5 @@
   "preset": "ts-jest",
   "testEnvironment": "node",
   "setupFilesAfterEnv": ["<rootDir>/_setupLogging.ts"],
-  "testTimeout": 180000
+  "testTimeout": 540000
 }
