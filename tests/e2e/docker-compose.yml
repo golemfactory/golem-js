@@ -55,11 +55,11 @@ services:
       - /root/.local/share/yagna/
       - ../../:/golem-js
     environment:
-      - YAGNA_AUTOCONF_APPKEY=e2e-test
+      - YAGNA_AUTOCONF_APPKEY=try_golem
       - YAGNA_API_URL=http://0.0.0.0:7465
       - GSB_URL=tcp://0.0.0.0:7464
       - YAGNA_SUBNET=${YAGNA_SUBNET:-golemjstest}
-      - YAGNA_APPKEY=e2e-test
+      - YAGNA_APPKEY=try_golem
 
     healthcheck:
       test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:7465 | grep -q 401"]

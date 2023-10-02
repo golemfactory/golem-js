@@ -12,6 +12,7 @@ RUN apt-get update -q \
     ca-certificates \
     xz-utils \
     curl \
+    sshpass \
     python3 \
     && apt-get remove --purge -y \
     && apt-get clean -y \
