@@ -4,11 +4,10 @@ get_funds_from_faucet() {
     echo "Sending request to the faucet"
     yagna payment fund
 }
-
 # echo "Starting Yagna in the background to get funds from the faucet"
 echo "Starting Yagna"
 # yagna service run >/dev/null 2>&1 &
-yagna service run 
+yagna service run --api-allow-origin="*"
 # sleep 1
 
 # PID=$(pgrep -f "yagna service run")
