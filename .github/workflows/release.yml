@@ -73,13 +73,16 @@ jobs:
           npm install --prefix examples
           npm install ts-node
 
+      - name: Use random string for subnet
+        run: export YAGNA_SUBNET=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 8 ; echo '')
+
       - name: Build the docker containers
         # Use a random string to avoid other providers on the same subnet which might cause tests to fail because it expects only providers named provider-1 and provider-2
-        run: YAGNA_SUBNET=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 8 ; echo '') docker compose -f tests/e2e/docker-compose.yml build
+        run: docker compose -f tests/e2e/docker-compose.yml build
 
       - name: Start the docker containers
         # Use a random string to avoid other providers on the same subnet which might cause tests to fail because it expects only providers named provider-1 and provider-2
-        run: YAGNA_SUBNET=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 8 ; echo '') docker compose -f tests/e2e/docker-compose.yml up -d
+        run: docker compose -f tests/e2e/docker-compose.yml up -d
 
       - name: Fund the requestor
         run: sleep 4 && docker exec -t e2e-requestor-1 /bin/sh -c "yagna payment fund"
