@@ -21,7 +21,7 @@ services:
       start_period: 40s
     environment:
       - NODE_NAME=provider-1
-      - SUBNET=notpublic
+      - SUBNET=${YAGNA_SUBNET:-golemjstest}
   provider-2:
     build:
       context: .
@@ -43,7 +43,7 @@ services:
       start_period: 40s
     environment:
       - NODE_NAME=provider-2
-      - SUBNET=notpublic
+      - SUBNET=${YAGNA_SUBNET:-golemjstest}
   requestor:
     build:
       context: .
@@ -58,7 +58,7 @@ services:
       - YAGNA_AUTOCONF_APPKEY=e2e-test
       - YAGNA_API_URL=http://0.0.0.0:7465
       - GSB_URL=tcp://0.0.0.0:7464
-      - YAGNA_SUBNET=notpublic
+      - YAGNA_SUBNET=${YAGNA_SUBNET:-golemjstest}
       - YAGNA_APPKEY=e2e-test
 
     healthcheck:
