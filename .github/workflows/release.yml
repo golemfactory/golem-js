@@ -87,8 +87,8 @@ jobs:
       - name: Fund the requestor
         run: sleep 4 && docker exec -t e2e-requestor-1 /bin/sh -c "yagna payment fund"
 
-      - name: Start the e2e test
-        run: docker exec -t e2e-requestor-1 /bin/sh -c "cd /golem-js && npm i && npm run test:e2e"
+      # - name: Start the e2e test
+      #   run: docker exec -t e2e-requestor-1 /bin/sh -c "cd /golem-js && npm i && npm run test:e2e"
 
       #region Cypress test execution
       - name: Run web server

@@ -1,9 +1,4 @@
 import { defineConfig } from "cypress";
-import { Goth } from "./tests/goth/goth";
-import { resolve } from "path";
-
-const gothConfig = resolve("../goth/assets/goth-config.yml");
-const goth = new Goth(gothConfig);
 
 export default defineConfig({
   fileServerFolder: "examples/web",
@@ -20,14 +15,10 @@ export default defineConfig({
     supportFile: "tests/cypress/support/e2e.ts",
     specPattern: "tests/cypress/ui/**/*.cy.ts",
     setupNodeEvents(on, config) {
-      on("after:run", async () => {
-        await goth.end();
-      });
       return new Promise(async (res) => {
-        const { apiKey, basePath, subnetTag } = await goth.start();
-        config.env.YAGNA_APPKEY = apiKey;
-        config.env.YAGNA_API_BASEPATH = basePath;
-        config.env.YAGNA_SUBNET = subnetTag;
+        config.env.YAGNA_APPKEY = process.env.YAGNA_APPKEY;
+        config.env.YAGNA_API_BASEPATH = process.env.YAGNA_API_URL;
+        config.env.YAGNA_SUBNET = process.env.YAGNA_SUBNET;
         res(config);
       });
     },
