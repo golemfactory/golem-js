@@ -4,6 +4,11 @@ get_funds_from_faucet() {
     echo "Sending request to the faucet"
     yagna payment fund
 }
+
+cd /golem-js
+npm i
+npm run build
+
 # echo "Starting Yagna in the background to get funds from the faucet"
 echo "Starting Yagna"
 # yagna service run >/dev/null 2>&1 &
