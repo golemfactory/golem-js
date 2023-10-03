@@ -31,11 +31,11 @@ RUN apt-get update -q \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir ${YA_DIR_INSTALLER} \
     && cd ${YA_DIR_INSTALLER} \
-    && wget -q "https://github.com/golemfactory/yagna/releases/download/pre-rel-v${YA_CORE_VERSION}/golem-requestor-linux_aarch64-pre-rel-v${YA_CORE_VERSION}.tar.gz" \
-    && tar -zxvf golem-requestor-linux_aarch64-pre-rel-v${YA_CORE_VERSION}.tar.gz \
-    && find golem-requestor-linux_aarch64-pre-rel-v${YA_CORE_VERSION} -executable -type f -exec cp {} ${YA_DIR_BIN} \; \
+    && wget -q "https://github.com/golemfactory/yagna/releases/download/pre-rel-v${YA_CORE_VERSION}/golem-requestor-linux-pre-rel-v${YA_CORE_VERSION}.tar.gz" \
+    && tar -zxvf golem-requestor-linux-pre-rel-v${YA_CORE_VERSION}.tar.gz \
+    && find golem-requestor-linux-pre-rel-v${YA_CORE_VERSION} -executable -type f -exec cp {} ${YA_DIR_BIN} \; \
     && rm -Rf ${YA_DIR_INSTALLER} \
-    && wget -O ${YA_DIR_BIN}/websocat "https://github.com/vi/websocat/releases/download/v1.12.0/websocat_max.aarch64-unknown-linux-musl" \
+    && wget -O ${YA_DIR_BIN}/websocat "https://github.com/vi/websocat/releases/download/v1.12.0/websocat_max.x86_64-unknown-linux-musl" \
     && chmod +x ${YA_DIR_BIN}/websocat
 
 
