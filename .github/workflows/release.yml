@@ -57,7 +57,7 @@ jobs:
 
       - name: Start the docker containers
         # Use a random string to avoid other providers on the same subnet which might cause tests to fail because it expects only providers named provider-1 and provider-2
-        run: docker compose -f tests/e2e/docker-compose.yml up -d
+        run: docker compose -f tests/e2e/docker-compose.yml down && docker compose -f tests/e2e/docker-compose.yml up -d
 
       - name: Fund the requestor
         run: sleep 4 && docker exec -t e2e-requestor-1 /bin/sh -c "yagna payment fund"
