@@ -81,7 +81,7 @@ jobs:
       #     docker exec -t e2e-requestor-1 /bin/sh -c "cd /golem-js &&  npm run test:cypress -- --browser chromium"
       - name: Run the Examples tests
         run: |
-          docker exec -t e2e-requestor-1 /bin/sh -c "cd /golem-js && npm install -g typescript && npm install -g ts-node && npm i && npm run build && npm run test:examples"
+          docker exec -t e2e-requestor-1 /bin/sh -c "cd /golem-js && npm i -g && npm run build && npm run test:examples"
       # - name: Upload test logs
       #   uses: actions/upload-artifact@v2
       #   if: always()
