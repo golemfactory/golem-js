@@ -1,3 +1,10 @@
+/**
+ * Helps to obtain a whitelist of providers which were health-tested.
+ *
+ * Important: This helper requires internet access to function properly.
+ *
+ * @return An array with Golem Node IDs of the whitelisted providers. In case of any issues, it will return an empty whitelist.
+ */
 export async function getHealthyProvidersWhiteList(): Promise<string[]> {
   try {
     const response = await fetch("https://provider-health.golem.network/v1/provider-whitelist");
