@@ -60,14 +60,14 @@ jobs:
         run: docker compose -f tests/e2e/docker-compose.yml down && docker compose -f tests/e2e/docker-compose.yml up -d
 
       - name: Fund the requestor
-        run: sleep 30 && docker exec -t e2e-requestor-1 /bin/sh -c "yagna payment fund"
+        run: sleep 4 && docker exec -t e2e-requestor-1 /bin/sh -c "yagna payment fund"
 
       - name: Install and build the SDK in the docker container
         run: |
-          docker exec -t e2e-requestor-1 /bin/sh -c "cd /golem-js && npm ci && npm run build && ./node_modules/.bin/cypress install"
+          docker exec -t e2e-requestor-1 /bin/sh -c "cd /golem-js && npm i && npm run build && ./node_modules/.bin/cypress install"
 
       # - name: Start the e2e test
-      #   run: docker exec -t e2e-requestor-1 /bin/sh -c "cd /golem-js && npm run test:e2e"
+      #   run: docker exec -t e2e-requestor-1 /bin/sh -c "cd /golem-js && npm i && npm run test:e2e"
 
       #region Cypress test execution
       - name: Run web server
@@ -81,7 +81,7 @@ jobs:
       #     docker exec -t e2e-requestor-1 /bin/sh -c "cd /golem-js &&  npm run test:cypress -- --browser chromium"
       - name: Run the Examples tests
         run: |
-          docker exec -t e2e-requestor-1 /bin/sh -c "cd /golem-js && npm run test:examples"
+          docker exec -t e2e-requestor-1 /bin/sh -c "cd /golem-js && npm install --prefix examples && npm install ts-node && npm run test:examples"
       # - name: Upload test logs
       #   uses: actions/upload-artifact@v2
       #   if: always()
