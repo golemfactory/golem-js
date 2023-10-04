@@ -54,6 +54,8 @@ export type ExecutorOptions = {
    * For more details see {@link JobStorage}. Defaults to a simple in-memory storage.
    */
   jobStorage?: JobStorage;
+  /** Timeout for waiting for at least one offer from the market  */
+  startupTimeout?: number;
 } & Omit<PackageOptions, "imageHash" | "imageTag"> &
   MarketOptions &
   TaskServiceOptions &
@@ -91,7 +93,9 @@ export class TaskExecutor {
   private isRunning = true;
   private configOptions: ExecutorOptions;
   private isCanceled = false;
+  private startupTimeoutId?: NodeJS.Timeout;
   private yagna: Yagna;
+  private startupTimeoutError = false;
 
   /**
    * Create a new Task Executor
@@ -226,6 +230,7 @@ export class TaskExecutor {
     if (runtimeContextChecker.isNode) this.removeCancelEvent();
     if (!this.isRunning) return;
     this.isRunning = false;
+    clearTimeout(this.startupTimeoutId);
     if (!this.configOptions.storageProvider) await this.storageProvider?.close();
     await this.networkService?.end();
     await Promise.all([this.taskService.end(), this.agreementPoolService.end(), this.marketService.end()]);
@@ -385,10 +390,28 @@ export class TaskExecutor {
       timeout: options?.timeout ?? this.options.taskTimeout,
     });
     this.taskQueue.addToEnd(task as Task<unknown, unknown>);
+    if (!this.startupTimeoutError && !this.startupTimeoutId) {
+      this.startupTimeoutId = setTimeout(
+        () => (this.startupTimeoutError = this.marketService.getProposalsCount().confirmed === 0),
+        this.options.startupTimeout,
+      );
+    }
     while (this.isRunning) {
       if (task.isFinished()) {
         if (task.isRejected()) throw task.getError();
         return task.getResults();
+      }
+      if (this.startupTimeoutError) {
+        const proposalsCount = this.marketService.getProposalsCount();
+        const hint =
+          proposalsCount.initial === 0 && proposalsCount.confirmed === 0
+            ? "Check your demand if it's not too restrictive or restart yagna."
+            : proposalsCount.initial === proposalsCount.rejected
+            ? "All off proposals got rejected."
+            : "Check your proposal filters if they are not too restrictive.";
+        throw new Error(
+          `Could not start any work on Golem. Processed ${proposalsCount.initial} initial proposals from yagna, filters accepted ${proposalsCount.confirmed}. ${hint}`,
+        );
       }
       await sleep(2000, true);
     }
