@@ -8,7 +8,7 @@ export {
 } from "./storage";
 export { ActivityStateEnum, Result } from "./activity";
 export { AgreementCandidate, AgreementSelectors } from "./agreement";
-export { ProposalFilters, ProposalFilter } from "./market";
+export { ProposalFilters, ProposalFilter, Helpers } from "./market";
 export { Package, PackageOptions } from "./package";
 export { PaymentFilters } from "./payment";
 export { Events, BaseEvent, EventType } from "./events";
