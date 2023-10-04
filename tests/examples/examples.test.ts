@@ -13,6 +13,8 @@ type Example = {
   skip?: boolean;
 };
 
+const exitOnError = process.argv.includes("--exitOnError");
+
 async function test(cmd: string, path: string, args: string[] = [], timeout = 360) {
   const file = basename(path);
   const cwd = dirname(path);
@@ -66,6 +68,10 @@ async function testAll(examples: Example[]) {
       }
     } catch (error) {
       console.log(chalk.bgRed.white(" FAIL "), chalk.red(error));
+      if (exitOnError) {
+        console.log(chalk.bold.red(`\nExiting due to error in: "${example.path}"\n`));
+        process.exit(1);
+      }
       failedTests.add(example.path);
     }
   }
