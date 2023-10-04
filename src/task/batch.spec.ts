@@ -1,4 +1,4 @@
-import { DownloadFile, Run, UploadData, UploadFile } from "../script";
+import { DownloadFile, Run, Transfer, UploadData, UploadFile } from "../script";
 import { Batch } from "./batch";
 import { NullStorageProvider } from "../storage";
 import { ActivityMock } from "../../tests/mock/activity.mock";
@@ -25,6 +25,16 @@ describe("Batch", () => {
       it("should accept executable", async () => {
         expect(batch.run("/bin/bash", ["-c", "echo Hello"])).toBe(batch);
         expect(batch["script"]["commands"][0]).toBeInstanceOf(Run);
+      });
+    });
+
+    describe("transfer()", () => {
+      it("should add transfer file command", async () => {
+        expect(batch.transfer("http://golem.network/test.txt", "/golem/file.txt")).toBe(batch);
+        const cmd = batch["script"]["commands"][0] as Transfer;
+        expect(cmd).toBeInstanceOf(Transfer);
+        expect(cmd["from"]).toBe("http://golem.network/test.txt");
+        expect(cmd["to"]).toBe("/golem/file.txt");
       });
     });
 

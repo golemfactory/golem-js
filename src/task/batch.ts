@@ -1,4 +1,4 @@
-import { DownloadFile, Run, Script, UploadFile } from "../script";
+import { DownloadFile, Run, Script, Transfer, UploadFile } from "../script";
 import { Activity, Result } from "../activity";
 import { StorageProvider } from "../storage/provider";
 import { Logger, sleep } from "../utils";
@@ -41,6 +41,11 @@ export class Batch {
     } else {
       this.script.add(new Run("/bin/sh", ["-c", executableOrCommand]));
     }
+    return this;
+  }
+
+  transfer(from: string, to: string): Batch {
+    this.script.add(new Transfer(from, to));
     return this;
   }
 
