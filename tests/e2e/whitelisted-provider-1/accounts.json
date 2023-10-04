@@ -1,0 +1,4 @@
+[
+  { "driver": "erc20", "address": "0x33fdd9e94c6d48eb66a85b282fd0c7e8d8de4563", "send": false, "receive": true },
+  { "driver": "zksync", "address": "0x33fdd9e94c6d48eb66a85b282fd0c7e8d8de4563", "send": false, "receive": true }
+]

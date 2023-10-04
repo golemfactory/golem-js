@@ -10,8 +10,8 @@ const whiteListIds = [
   "0xd79f83f1108d1fcbe0cf57e13b452305eb38a325",
   "0x677c5476f3b0e1f03d5c3abd2e2e2231e36fddde",
   "0x06c03165aaa676680b9d02c1f3ee846c3806fec7",
-  "0x17ec8597ff92c3f44523bdc65bf0f1be632917ff", // goth provider-1:
-  "0x63fc2ad3d021a4d7e64323529a55a9442c444da0", // goth provider-2:
+  "0x33fdd9e94c6d48eb66a85b282fd0c7e8d8de4563", // whitelisted-provider-1:
+  "0x51514593e3f21634e9c72597d2b9ad3d52f4e39d", // whitelisted-provider-2:
 ];
 console.log("Will accept only proposals from:");
 for (let i = 0; i < whiteListIds.length; i++) {

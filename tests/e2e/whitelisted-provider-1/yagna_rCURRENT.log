@@ -1,0 +1,77 @@
+[2023-10-04T09:01:47.313+0000 INFO  yagna] Starting yagna service! Version: 0.12.2 (8efd8657 2023-06-06 build #296).
+[2023-10-04T09:01:47.329+0000 INFO  yagna] Data directory: /root/.local/share/yagna
+[2023-10-04T09:01:47.341+0000 INFO  actix_server::builder] starting 5 workers
+[2023-10-04T09:01:47.343+0000 INFO  ya_persistence::executor] using database at: /root/.local/share/yagna/yagna.db
+[2023-10-04T09:01:47.377+0000 INFO  ya_persistence::executor] using database at: /root/.local/share/yagna/activity.db
+[2023-10-04T09:01:47.390+0000 INFO  ya_persistence::executor] using database at: /root/.local/share/yagna/payment.db
+[2023-10-04T09:01:47.401+0000 INFO  ya_persistence::executor] using database at: /root/.local/share/yagna/market.db
+[2023-10-04T09:01:47.409+0000 INFO  ya_persistence::executor] using database at: file:market?mode=memory&cache=shared
+[2023-10-04T09:01:47.417+0000 INFO  yagna] Db GSB service successfully activated
+[2023-10-04T09:01:47.453+0000 INFO  actix_server::server] Actix runtime found; starting in Actix runtime
+[2023-10-04T09:01:47.459+0000 INFO  ya_identity::service::identity] generating new default identity
+[2023-10-04T09:01:47.515+0000 INFO  ya_identity::service::identity] using default identity: 0x33fdd9e94c6d48eb66a85b282fd0c7e8d8de4563
+[2023-10-04T09:01:47.557+0000 INFO  ya_service_bus::remote_router] trying to connect to: /tmp/yagna.sock
+[2023-10-04T09:01:47.566+0000 INFO  yagna] Identity GSB service successfully activated
+[2023-10-04T09:01:47.569+0000 INFO  ya_metrics::pusher] Metrics pusher started
+[2023-10-04T09:01:47.571+0000 INFO  yagna] Metrics GSB service successfully activated
+[2023-10-04T09:01:47.583+0000 INFO  ya_service_bus::connection] started connection to gsb
+[2023-10-04T09:01:47.705+0000 INFO  ya_metrics::pusher] Starting metrics pusher
+[2023-10-04T09:01:48.048+0000 INFO  ya_version::github] Stored currently running Yagna release Version 0.12.2 'v0.12.2 #295' released 2023-06-06 to DB
+[2023-10-04T09:01:48.382+0000 WARN  ya_version::github] New Yagna Version 0.12.3 'v0.12.3 #309' released 2023-08-01 is available! Update via `curl -sSf https://join.golem.network/as-provider | bash -` or `curl -sSf https://join.golem.network/as-requestor | bash -`
+[2023-10-04T09:01:48.385+0000 INFO  yagna] Version GSB service successfully activated
+[2023-10-04T09:01:48.397+0000 INFO  ya_net::hybrid::service] Hybrid NET - Using default identity as network id: 0x33fdd9e94c6d48eb66a85b282fd0c7e8d8de4563
+[2023-10-04T09:01:48.400+0000 INFO  ya_net::hybrid::service] Starting network (hybrid) with identity: 0x33fdd9e94c6d48eb66a85b282fd0c7e8d8de4563
+[2023-10-04T09:01:48.438+0000 INFO  ya_net::hybrid::service] Hybrid NET relay server configured on url: udp://yacn2.dev.golem.network:7477
+[2023-10-04T09:01:48.478+0000 INFO  ya_relay_core::udp_stream] Server listening on: 0.0.0.0:11500
+[2023-10-04T09:01:48.484+0000 INFO  ya_relay_client::session_manager] Initializing session with NET relay server at: 52.48.158.112:7477
+[2023-10-04T09:01:48.616+0000 INFO  ya_relay_client::session_manager] Established session 9a044b9d96850cebd4442ffca13ae565 with NET relay server (52.48.158.112:7477)
+[2023-10-04T09:01:48.619+0000 INFO  ya_relay_client::session] [9a044b9d96850cebd4442ffca13ae565] registering endpoints.
+[2023-10-04T09:01:50.657+0000 INFO  ya_relay_client::session] [9a044b9d96850cebd4442ffca13ae565] endpoints registration finished.
+[2023-10-04T09:01:50.684+0000 INFO  ya_service_bus::remote_router] trying to connect to: /tmp/yagna.sock
+[2023-10-04T09:01:50.689+0000 INFO  ya_service_bus::connection] started connection to gsb
+[2023-10-04T09:01:50.693+0000 INFO  yagna] Net GSB service successfully activated
+[2023-10-04T09:01:50.773+0000 INFO  ya_market::protocol::discovery] Discovery protocol version: mk1
+[2023-10-04T09:01:50.801+0000 INFO  ya_market::protocol::negotiation::provider] Negotiation (Provider) protocol version: mk1
+[2023-10-04T09:01:50.814+0000 INFO  ya_market::protocol::negotiation::requestor] Negotiation (Requestor) protocol version: mk1
+[2023-10-04T09:01:50.818+0000 INFO  yagna] Market GSB service successfully activated
+[2023-10-04T09:01:50.848+0000 INFO  yagna] Activity GSB service successfully activated
+[2023-10-04T09:01:50.918+0000 INFO  yagna] Payment GSB service successfully activated
+[2023-10-04T09:01:50.919+0000 INFO  yagna] SgxDriver GSB service successfully activated
+[2023-10-04T09:01:50.919+0000 INFO  ya_persistence::executor] using database at: /root/.local/share/yagna/erc20-driver.db
+[2023-10-04T09:01:50.969+0000 INFO  ya_payment::processor] Checking for allocations to be released...
+[2023-10-04T09:01:50.970+0000 INFO  ya_payment::processor] No allocations to be released.
+[2023-10-04T09:01:50.975+0000 INFO  ya_erc20_driver::service] Successfully connected Erc20Service to gsb.
+[2023-10-04T09:01:50.975+0000 INFO  ya_persistence::executor] using database at: /root/.local/share/yagna/zksync-driver.db
+[2023-10-04T09:01:51.015+0000 INFO  ya_zksync_driver::service] Successfully connected ZksyncService to gsb.
+[2023-10-04T09:01:51.179+0000 INFO  ya_erc20_driver::driver::cli] Initialised payment account. mode=RECV, address=0x33fdd9e94c6d48eb66a85b282fd0c7e8d8de4563, driver=erc20, network=rinkeby, token=tGLM
+[2023-10-04T09:01:51.182+0000 INFO  ya_zksync_driver::driver] Initialised payment account. mode=RECV, address=0x33fdd9e94c6d48eb66a85b282fd0c7e8d8de4563, driver=zksync, network=rinkeby, token=tGLM
+[2023-10-04T09:01:51.210+0000 INFO  yagna::extension] No extensions selected for autostart
+[2023-10-04T09:01:51.211+0000 INFO  actix_server::builder] starting 5 workers
+[2023-10-04T09:01:51.211+0000 INFO  actix_server::server] Actix runtime found; starting in Actix runtime
+[2023-10-04T09:01:51.236+0000 INFO  yagna] Http server thread started on: 127.0.0.1:7465
+[2023-10-04T09:01:51.278+0000 INFO  ya_relay_client::session_manager] All attempts to establish direct session with node [0x0d7b81ffcfe94cca04839dc24962b3ce78982d63] failed
+[2023-10-04T09:01:51.279+0000 INFO  ya_relay_client::session_manager] Using relay Server to forward packets to [0x0d7b81ffcfe94cca04839dc24962b3ce78982d63] (slot 1280)
+[2023-10-04T09:01:51.284+0000 INFO  ya_relay_client::session_manager] Initializing p2p session with Node: [0x35a132ebdd0fee670ce432a83f77c4ef58facebe], address: 82.78.191.26:11508
+[2023-10-04T09:01:51.295+0000 INFO  ya_relay_client::session_manager] All attempts to establish direct session with node [0x3365c30b054c56d1c605c5a9ba90ef3c8f8f4393] failed
+[2023-10-04T09:01:51.301+0000 INFO  ya_relay_client::session_manager] Using relay Server to forward packets to [0x3365c30b054c56d1c605c5a9ba90ef3c8f8f4393] (slot 105)
+[2023-10-04T09:01:51.301+0000 INFO  ya_relay_client::session_manager] All attempts to establish direct session with node [0x190d6a40ceafdffd40b9956a215153ec7898afd3] failed
+[2023-10-04T09:01:51.302+0000 INFO  ya_relay_client::session_manager] Using relay Server to forward packets to [0x190d6a40ceafdffd40b9956a215153ec7898afd3] (slot 1412)
+[2023-10-04T09:01:51.302+0000 INFO  ya_relay_client::session_manager] All attempts to establish direct session with node [0x653bc8451669fb5762780a0cf664671a591a5132] failed
+[2023-10-04T09:01:51.303+0000 INFO  ya_relay_client::session_manager] Using relay Server to forward packets to [0x653bc8451669fb5762780a0cf664671a591a5132] (slot 1355)
+[2023-10-04T09:01:51.303+0000 INFO  ya_relay_client::session_manager] Initializing p2p session with Node: [0x23cd7a8e2e191e5f07ec60507be1866af8c9934d], address: 82.78.191.26:11549
+[2023-10-04T09:01:51.315+0000 INFO  ya_relay_client::session_manager] All attempts to establish direct session with node [0x93739a434cbcdc092ee3d11caa62ddfec2997224] failed
+[2023-10-04T09:01:51.316+0000 INFO  ya_relay_client::session_manager] Using relay Server to forward packets to [0x93739a434cbcdc092ee3d11caa62ddfec2997224] (slot 398)
+[2023-10-04T09:01:51.316+0000 INFO  ya_relay_client::session_manager] All attempts to establish direct session with node [0xd1ddd368cf7edf3ba6ba77471905e323f64748e1] failed
+[2023-10-04T09:01:51.317+0000 INFO  ya_relay_client::session_manager] Using relay Server to forward packets to [0xd1ddd368cf7edf3ba6ba77471905e323f64748e1] (slot 937)
+[2023-10-04T09:01:51.317+0000 INFO  ya_relay_client::session_manager] Initializing p2p session with Node: [0x535f83f9cd640d6e2790aeab7e2956c7f3cea391], address: 82.78.191.26:11506
+[2023-10-04T09:01:51.318+0000 INFO  ya_relay_client::session_manager] All attempts to establish direct session with node [0xf94c61f09fa9179aff2e07363f9f55e6d2c65463] failed
+[2023-10-04T09:01:51.318+0000 INFO  ya_relay_client::session_manager] Using relay Server to forward packets to [0xf94c61f09fa9179aff2e07363f9f55e6d2c65463] (slot 270)
+[2023-10-04T09:01:51.327+0000 INFO  yagna] Http server thread started on: 127.0.0.1:7465
+[2023-10-04T09:01:51.347+0000 INFO  yagna] Http server thread started on: 127.0.0.1:7465
+[2023-10-04T09:01:51.374+0000 INFO  yagna] Http server thread started on: 127.0.0.1:7465
+[2023-10-04T09:01:51.400+0000 INFO  yagna] Http server thread started on: 127.0.0.1:7465
+[2023-10-04T09:01:51.594+0000 INFO  ya_relay_client::session_manager] Established P2P session 8ab024b908ea60c4baa169005b5faedc with node [0x35a132ebdd0fee670ce432a83f77c4ef58facebe] (82.78.191.26:11508)
+[2023-10-04T09:01:51.772+0000 INFO  ya_relay_client::session_manager] Established P2P session 29b8522c49f1878748f9d6a83b34a197 with node [0x535f83f9cd640d6e2790aeab7e2956c7f3cea391] (82.78.191.26:11506)
+[2023-10-04T09:01:51.778+0000 INFO  ya_erc20_driver::driver::cli] Initialised payment account. mode=RECV, address=0x797ce3aa8dc255d13e48f31a6b23fe18b5924940, driver=erc20, network=rinkeby, token=tGLM
+[2023-10-04T09:01:51.819+0000 INFO  ya_relay_client::session_manager] Established P2P session 720493ac96ce1a3048aec098a0251dcd with node [0x23cd7a8e2e191e5f07ec60507be1866af8c9934d] (82.78.191.26:11549)
+[2023-10-04T09:02:22.553+0000 INFO  ya_erc20_driver::driver::cli] Initialised payment account. mode=RECV, address=0x797ce3aa8dc255d13e48f31a6b23fe18b5924940, driver=erc20, network=goerli, token=tGLM
