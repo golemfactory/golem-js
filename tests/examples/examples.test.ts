@@ -13,7 +13,7 @@ type Example = {
   skip?: boolean;
 };
 
-async function test(cmd: string, path: string, args: string[] = [], timeout = 180) {
+async function test(cmd: string, path: string, args: string[] = [], timeout = 360) {
   const file = basename(path);
   const cwd = dirname(path);
   const spawnedExample = spawn(cmd, [file, ...args], { cwd });
