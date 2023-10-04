@@ -60,7 +60,8 @@ jobs:
         run: docker compose -f tests/e2e/docker-compose.yml down && docker compose -f tests/e2e/docker-compose.yml up -d
 
       - name: Fund the requestor
-        run: sleep 4 && docker exec -t e2e-requestor-1 /bin/sh -c "yagna payment fund"
+        # Use a funding script which will retry funding the requestor 3 times, else it exits with error. The faucet is not reliable and sometimes fails to fund the requestor, thus the retry.
+        run: sleep 4 && docker exec -t e2e-requestor-1 /bin/sh -c "/golem-js/tests/e2e/fund-requestor.sh"
 
       - name: Install and build the SDK in the docker container
         run: |
