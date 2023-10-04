@@ -131,6 +131,11 @@ export class PaymentService {
       this.agreementsToPay.delete(invoice.agreementId);
     } catch (error) {
       this.logger?.error(`Invoice failed from provider ${invoice.providerId}. ${error}`);
+    } finally {
+      // Until we implement a re-acceptance mechanism for unsuccessful acceptances,
+      // we no longer have to wait for the invoice during an unsuccessful attempt.
+      this.agreementsDebitNotes.delete(invoice.agreementId);
+      this.agreementsToPay.delete(invoice.agreementId);
     }
   }
 
