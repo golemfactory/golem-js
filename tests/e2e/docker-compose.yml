@@ -62,7 +62,7 @@ services:
       retries: 1
       start_period: 40s
     environment:
-      - NODE_NAME=whitelisted-provider-2
+      - NODE_NAME=provider-2
       - SUBNET=${YAGNA_SUBNET:-golemjstest}
   whitelisted-provider-1:
     build:
@@ -82,7 +82,7 @@ services:
       retries: 1
       start_period: 40s
     environment:
-      - NODE_NAME=whitelisted-provider-1
+      - NODE_NAME=provider-1
       - SUBNET=${YAGNA_SUBNET:-golemjstest}
   requestor:
     build:
