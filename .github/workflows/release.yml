@@ -1,7 +1,7 @@
 name: Release Pipeline
 
 on:
-  pull_request:
+  push:
     branches:
       # Regular release channels
       - master
@@ -82,17 +82,13 @@ jobs:
       - name: Run the Examples tests
         run: |
           docker exec -t e2e-requestor-1 /bin/sh -c "cd /golem-js && npm install --prefix examples && npm install ts-node && npm run test:examples -- --exitOnError"
-      # - name: Upload test logs
-      #   uses: actions/upload-artifact@v2
-      #   if: always()
-      #   with:
-      #     name: cypress-logs
-      #     path: .cypress
 
-      # # Only relevant for self-hosted runners
-      # - name: Remove test logs
-      #   if: always()
-      #   run: rm -rf .cypress
+      - name: Upload test logs
+        uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: cypress-logs
+          path: .cypress
       #endregion
 
       #region Examples test execution
@@ -116,38 +112,38 @@ jobs:
           docker system prune -af
       #endregion
 
-  # release:
-  #   name: Release the SDK to NPM and GitHub
-  #   needs: run-integration-and-e2e-tests
-  #   runs-on: ubuntu-latest
-  #   permissions:
-  #     contents: write # to be able to publish a GitHub release
-  #     issues: write # to be able to comment on released issues
-  #     pull-requests: write # to be able to comment on released pull requests
-  #     id-token: write # to enable use of OIDC for npm provenance
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v3
-  #       with:
-  #         fetch-depth: 0
+  release:
+    name: Release the SDK to NPM and GitHub
+    needs: run-integration-and-e2e-tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # to be able to publish a GitHub release
+      issues: write # to be able to comment on released issues
+      pull-requests: write # to be able to comment on released pull requests
+      id-token: write # to enable use of OIDC for npm provenance
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-  #     - name: Setup NodeJS
-  #       uses: actions/setup-node@v3
-  #       with:
-  #         # Semantic release requires this as bare minimum
-  #         node-version: 18
+      - name: Setup NodeJS
+        uses: actions/setup-node@v3
+        with:
+          # Semantic release requires this as bare minimum
+          node-version: 18
 
-  #     - name: Install dependencies
-  #       run: npm install
+      - name: Install dependencies
+        run: npm install
 
-  #     - name: Verify the integrity of provenance attestations and registry signatures for installed dependencies
-  #       run: npm audit signatures
+      - name: Verify the integrity of provenance attestations and registry signatures for installed dependencies
+        run: npm audit signatures
 
-  #     - name: Build the SDK for release
-  #       run: npm run build
+      - name: Build the SDK for release
+        run: npm run build
 
-  #     - name: Release
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #         NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-  #       run: npx semantic-release
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npx semantic-release
