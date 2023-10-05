@@ -44,15 +44,15 @@ jobs:
 
       - name: Fund the requestor
         # Use a funding script which will retry funding the requestor 3 times, else it exits with error. The faucet is not reliable and sometimes fails to fund the requestor, thus the retry.
-        run: sleep 4 && docker exec -t e2e-requestor-1 /bin/sh -c "/golem-js/tests/docker/fund-requestor.sh"
+        run: sleep 4 && docker exec -t docker-requestor-1 /bin/sh -c "/golem-js/tests/docker/fund-requestor.sh"
 
       - name: Install and build the SDK in the docker container
         run: |
-          docker exec -t e2e-requestor-1 /bin/sh -c "cd /golem-js && npm i && npm run build"
+          docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm i && npm run build"
 
       - name: Run the Examples tests
         run: |
-          docker exec -t e2e-requestor-1 /bin/sh -c "cd /golem-js && npm install --prefix examples && npm install ts-node && npm run test:examples -- --exitOnError"
+          docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm install --prefix examples && npm install ts-node && npm run test:examples -- --exitOnError"
 
       - name: Cleanup Docker
         if: always()

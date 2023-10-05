@@ -28,19 +28,19 @@ jobs:
 
       - name: Fund the requestor
         # Use a funding script which will retry funding the requestor 3 times, else it exits with error. The faucet is not reliable and sometimes fails to fund the requestor, thus the retry.
-        run: sleep 4 && docker exec -t e2e-requestor-1 /bin/sh -c "/golem-js/tests/docker/fund-requestor.sh"
+        run: sleep 4 && docker exec -t docker-requestor-1 /bin/sh -c "/golem-js/tests/docker/fund-requestor.sh"
 
       - name: Install and build the SDK in the docker container
         run: |
-          docker exec -t e2e-requestor-1 /bin/sh -c "cd /golem-js && npm i && npm run build && ./node_modules/.bin/cypress install"
+          docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm i && npm run build && ./node_modules/.bin/cypress install"
 
       - name: Run web server
         run: |
-          docker exec -t -d e2e-requestor-1 /bin/sh -c "cd /golem-js/examples/web && node app.mjs"
+          docker exec -t -d docker-requestor-1 /bin/sh -c "cd /golem-js/examples/web && node app.mjs"
 
       - name: Run test suite
         run: |
-          docker exec -t e2e-requestor-1 /bin/sh -c "cd /golem-js &&  npm run test:cypress -- --browser chromium"
+          docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js &&  npm run test:cypress -- --browser chromium"
 
       - name: Upload test logs
         uses: actions/upload-artifact@v2
