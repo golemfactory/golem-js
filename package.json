@@ -27,7 +27,6 @@
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "jest --config tests/unit/jest.config.json",
     "test:e2e": "jest --config tests/e2e/jest.config.json tests/e2e/**.spec.ts --runInBand --forceExit",
-    "test:e2e:no-goth": "jest tests/e2e/**.spec.ts --testTimeout=180000 --runInBand --forceExit",
     "test:cypress": "cypress run",
     "test:examples": "ts-node --project tsconfig.spec.json tests/examples/examples.test.ts",
     "lint": "npm run lint:ts && npm run lint:ts:tests && npm run lint:eslint",
