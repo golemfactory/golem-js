@@ -44,46 +44,6 @@ services:
     environment:
       - NODE_NAME=provider-2
       - SUBNET=${YAGNA_SUBNET:-golemjstest}
-  whitelisted-provider-2:
-    build:
-      context: .
-      dockerfile: Provider.Dockerfile
-    image: provider:latest
-    restart: always
-    volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - ./whitelisted-provider-2:/root/.local/share/yagna/
-    devices:
-      - /dev/kvm:/dev/kvm
-    healthcheck:
-      test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:7465 | grep -q 401"]
-      interval: 10s
-      timeout: 5s
-      retries: 1
-      start_period: 40s
-    environment:
-      - NODE_NAME=provider-2
-      - SUBNET=${YAGNA_SUBNET:-golemjstest}
-  whitelisted-provider-1:
-    build:
-      context: .
-      dockerfile: Provider.Dockerfile
-    image: provider:latest
-    restart: always
-    devices:
-      - /dev/kvm:/dev/kvm
-    volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - ./whitelisted-provider-1:/root/.local/share/yagna/
-    healthcheck:
-      test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:7465 | grep -q 401"]
-      interval: 10s
-      timeout: 5s
-      retries: 1
-      start_period: 40s
-    environment:
-      - NODE_NAME=provider-1
-      - SUBNET=${YAGNA_SUBNET:-golemjstest}
   requestor:
     build:
       context: .
