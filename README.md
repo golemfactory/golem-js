@@ -131,7 +131,7 @@ First, build the Docker containers using the `docker-compose.yml` file located u
 
 Execute this command to build the Docker containers:
 
-    docker compose -f tests/e2e/docker-compose.yml build
+    docker compose -f tests/docker/docker-compose.yml build
 
 ##### Start Docker Containers
 
@@ -139,13 +139,13 @@ Then, launch the Docker containers you've just built using the same `docker-comp
 
 Execute this command to start the Docker containers:
 
-    docker compose -f tests/e2e/docker-compose.yml down && docker compose -f tests/e2e/docker-compose.yml up -d
+    docker compose -f tests/docker/docker-compose.yml down && docker compose -f tests/docker/docker-compose.yml up -d
 
 ##### Fund the Requestor
 
 The next step is to fund the requestor.
 
-    docker exec -t e2e-requestor-1 /bin/sh -c "/golem-js/tests/e2e/fund-requestor.sh"
+    docker exec -t e2e-requestor-1 /bin/sh -c "/golem-js/tests/docker/fund-requestor.sh"
 
 ##### Install and Build the SDK
 
