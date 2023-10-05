@@ -54,7 +54,14 @@ export type ExecutorOptions = {
    * For more details see {@link JobStorage}. Defaults to a simple in-memory storage.
    */
   jobStorage?: JobStorage;
-  /** Timeout for waiting for at least one offer from the market  */
+  /**
+   * Timeout for waiting for at least one offer from the market.
+   * This parameter (set to 30 sec by default) will throw an error when executing `TaskExecutor.run`
+   * if no offer from the market is accepted before this time.
+   * You can set a slightly higher time in a situation where your parameters such as proposalFilter
+   * or minimum hardware requirements are quite restrictive and finding a suitable provider
+   * that meets these criteria may take a bit longer.
+   * */
   startupTimeout?: number;
 } & Omit<PackageOptions, "imageHash" | "imageTag"> &
   MarketOptions &

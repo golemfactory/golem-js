@@ -29,7 +29,6 @@ export class MarketService {
   private maxResubscribeRetries = 5;
   private proposalsCount = {
     initial: 0,
-    filtered: 0,
     confirmed: 0,
     rejected: 0,
   };
@@ -67,7 +66,6 @@ export class MarketService {
     this.demand.addEventListener(DemandEventType, this.demandEventListener.bind(this));
     this.proposalsCount = {
       initial: 0,
-      filtered: 0,
       confirmed: 0,
       rejected: 0,
     };
@@ -117,7 +115,6 @@ export class MarketService {
         await proposal
           .respond(chosenPlatform)
           .catch((e) => this.logger?.debug(`Unable to respond proposal ${proposal.id}. ${e}`));
-        this.proposalsCount.filtered++;
         this.logger?.debug(`Proposal has been responded (${proposal.id})`);
       } else {
         this.proposalsCount.rejected++;

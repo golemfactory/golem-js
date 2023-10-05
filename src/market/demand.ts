@@ -27,7 +27,6 @@ export interface DemandOptions {
   offerFetchingInterval?: number;
   proposalTimeout?: number;
   eventTarget?: EventTarget;
-  startupTimeout?: number;
 }
 
 /**
