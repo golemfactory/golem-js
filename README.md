@@ -127,7 +127,7 @@ Follow these steps to prepare your test environment:
 
 ##### Build Docker Containers
 
-First, build the Docker containers using the `docker-compose.yml` file located under `tests/e2e`.
+First, build the Docker containers using the `docker-compose.yml` file located under `tests/docker`.
 
 Execute this command to build the Docker containers:
 
