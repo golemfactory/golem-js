@@ -1,7 +1,7 @@
 name: Release Pipeline
 
 on:
-  push:
+  pull_request:
     branches:
       # Regular release channels
       - master
@@ -67,14 +67,14 @@ jobs:
 
       - name: Fund the requestor
         # Use a funding script which will retry funding the requestor 3 times, else it exits with error. The faucet is not reliable and sometimes fails to fund the requestor, thus the retry.
-        run: sleep 4 && docker exec -t docker-requestor-1 /bin/sh -c "/golem-js/tests/docker/fund-requestor.sh"
+        run: sleep 4 && docker exec -t docker-requestor-1 /bin/sh -c "/golem-js/tests/docker/fundRequestor.sh"
 
       - name: Install and build the SDK in the docker container
         run: |
-          docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm i && npm run build && ./node_modules/.bin/cypress install"
+          docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm i && npm run build && ./node_modules/.bin/cypress install && npm install --prefix examples && npm install ts-node"
 
       - name: Start the e2e test
-        run: docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm i && npm run test:e2e"
+        run: docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm run test:e2e"
 
       #region Cypress test execution
       - name: Run web server
@@ -87,7 +87,7 @@ jobs:
 
       - name: Run the Examples tests
         run: |
-          docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm install --prefix examples && npm install ts-node && npm run test:examples -- --exitOnError"
+          docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm run test:examples -- --exitOnError"
 
       - name: Upload test logs
         uses: actions/upload-artifact@v2
@@ -102,38 +102,38 @@ jobs:
           c=$(docker ps -q) && [[ $c ]] && docker kill $c
           docker system prune -af
 
-  release:
-    name: Release the SDK to NPM and GitHub
-    needs: run-integration-and-e2e-tests
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write # to be able to publish a GitHub release
-      issues: write # to be able to comment on released issues
-      pull-requests: write # to be able to comment on released pull requests
-      id-token: write # to enable use of OIDC for npm provenance
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+  # release:
+  #   name: Release the SDK to NPM and GitHub
+  #   needs: run-integration-and-e2e-tests
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: write # to be able to publish a GitHub release
+  #     issues: write # to be able to comment on released issues
+  #     pull-requests: write # to be able to comment on released pull requests
+  #     id-token: write # to enable use of OIDC for npm provenance
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v3
+  #       with:
+  #         fetch-depth: 0
 
-      - name: Setup NodeJS
-        uses: actions/setup-node@v3
-        with:
-          # Semantic release requires this as bare minimum
-          node-version: 18
+  #     - name: Setup NodeJS
+  #       uses: actions/setup-node@v3
+  #       with:
+  #         # Semantic release requires this as bare minimum
+  #         node-version: 18
 
-      - name: Install dependencies
-        run: npm install
+  #     - name: Install dependencies
+  #       run: npm install
 
-      - name: Verify the integrity of provenance attestations and registry signatures for installed dependencies
-        run: npm audit signatures
+  #     - name: Verify the integrity of provenance attestations and registry signatures for installed dependencies
+  #       run: npm audit signatures
 
-      - name: Build the SDK for release
-        run: npm run build
+  #     - name: Build the SDK for release
+  #       run: npm run build
 
-      - name: Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npx semantic-release
+  #     - name: Release
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+  #       run: npx semantic-release

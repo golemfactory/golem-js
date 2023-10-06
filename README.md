@@ -145,7 +145,7 @@ Execute this command to start the Docker containers:
 
 The next step is to fund the requestor.
 
-    docker exec -t docker-requestor-1 /bin/sh -c "/golem-js/tests/docker/fund-requestor.sh"
+    docker exec -t docker-requestor-1 /bin/sh -c "/golem-js/tests/docker/fundRequestor.sh"
 
 ##### Install and Build the SDK
 

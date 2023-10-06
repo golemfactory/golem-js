@@ -5,7 +5,7 @@ import { TaskExecutor, ProposalFilters } from "@golem-sdk/golem-js";
  * which only allows offers from a provider whose name is in the array
  */
 
-const whiteListNames = ["provider-2"];
+const whiteListNames = ["provider-2", "fractal_01_3.h", "sharkoon_379_0.h", "fractal_01_1.h", "sharkoon_379_1.h"];
 console.log("Will accept only proposals from:");
 for (let i = 0; i < whiteListNames.length; i++) {
   console.log(whiteListNames[i]);

@@ -39,6 +39,6 @@ RUN apt-get update -q \
     && chmod +x ${YA_DIR_BIN}/websocat
 
 
-COPY ./start-requestor.sh /start-requestor.sh
+COPY ./startRequestor.sh /startRequestor.sh
 
-CMD ["bash", "-c", "/start-requestor.sh"]
+CMD ["bash", "-c", "/startRequestor.sh"]

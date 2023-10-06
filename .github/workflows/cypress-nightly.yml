@@ -28,7 +28,7 @@ jobs:
 
       - name: Fund the requestor
         # Use a funding script which will retry funding the requestor 3 times, else it exits with error. The faucet is not reliable and sometimes fails to fund the requestor, thus the retry.
-        run: sleep 4 && docker exec -t docker-requestor-1 /bin/sh -c "/golem-js/tests/docker/fund-requestor.sh"
+        run: sleep 4 && docker exec -t docker-requestor-1 /bin/sh -c "/golem-js/tests/docker/fundRequestor.sh"
 
       - name: Install and build the SDK in the docker container
         run: |

@@ -36,6 +36,6 @@ RUN apt-get update -q \
     && cp -R ya-runtime-wasi-linux-v${YA_WASI_VERSION}/* ${YA_DIR_PLUGINS} \
     && cp -R ya-runtime-vm-linux-v${YA_VM_VERSION}/* ${YA_DIR_PLUGINS} \
     && rm -Rf ${YA_DIR_INSTALLER}
-COPY ./configure-provider.py /configure-provider.py
+COPY ./configureProvider.py /configureProvider.py
 
-CMD ["bash", "-c", "python3 /configure-provider.py && golemsp run --payment-network testnet"]
+CMD ["bash", "-c", "python3 /configureProvider.py && golemsp run --payment-network testnet"]
