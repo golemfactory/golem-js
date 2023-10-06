@@ -10,63 +10,37 @@ on:
 
 jobs:
   cypress-tests:
-    runs-on: [goth2, ubuntu-22.10]
+    runs-on: goth2
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Configure node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
+      - name: Use random string for subnet
+        run: echo "YAGNA_SUBNET=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 8 ; echo '')" >> $GITHUB_ENV
 
-      - name: Install browsers and graphic environment
+      - name: Build the docker containers
+        # Use a random string to avoid other providers on the same subnet which might cause tests to fail because it expects only providers named provider-1 and provider-2
+        run: docker compose -f tests/docker/docker-compose.yml build
+
+      - name: Start the docker containers
+        # Use a random string to avoid other providers on the same subnet which might cause tests to fail because it expects only providers named provider-1 and provider-2
+        run: docker compose -f tests/docker/docker-compose.yml down && docker compose -f tests/docker/docker-compose.yml up -d
+
+      - name: Fund the requestor
+        # Use a funding script which will retry funding the requestor 3 times, else it exits with error. The faucet is not reliable and sometimes fails to fund the requestor, thus the retry.
+        run: sleep 4 && docker exec -t docker-requestor-1 /bin/sh -c "/golem-js/tests/docker/fundRequestor.sh"
+
+      - name: Install and build the SDK in the docker container
         run: |
-          sudo apt-get update -y
-          sudo apt-get install -y build-essential
-          sudo apt-get install -y libgtk2.0-0 libgtk-3-0 libgbm-dev libnotify-dev libgconf-2-4 libnss3 libxss1 libasound2 libxtst6 xauth xvfb
-          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-          sudo apt install --allow-downgrades -y ./google-chrome-stable_current_amd64.deb
-
-      - name: Build the SDK
-        run: |
-          npm install
-          npm run build
-
-      - name: Configure python
-        continue-on-error: true
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
-
-      - name: Install goth
-        run: |
-          pip install goth
-          rm -rf ../goth/assets
-          python -m goth create-assets ../goth/assets
-          sed -Ezi 's/(use\-proxy:\s)(True)/\1False/mg' ../goth/assets/goth-config.yml
-          sed -Ezi 's/(use\-prerelease:\s)(false)/\1true\n    release-tag: "0.13.0-rc10"/mg' ../goth/assets/goth-config.yml
-          sed -i '/^ENTRYPOINT/i ENV YAGNA_AUTOCONF_APPKEY=try_golem' ../goth/assets/docker/yagna-goth-deb.Dockerfile
-
-      - name: Cleanup Docker
-        if: always()
-        run: |
-          c=$(docker ps -q) && [[ $c ]] && docker kill $c
-          docker system prune -af
-
-      - name: Log in to GitHub Docker repository
-        run: echo ${{ secrets.GITHUB_TOKEN }} | docker login docker.pkg.github.com -u ${{github.actor}} --password-stdin
+          docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm i && npm run build && ./node_modules/.bin/cypress install"
 
       - name: Run web server
         run: |
-          cd examples/web
-          node app.mjs &
+          docker exec -t -d docker-requestor-1 /bin/sh -c "cd /golem-js/examples/web && node app.mjs"
 
       - name: Run test suite
-        env:
-          GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          npm run test:cypress -- --browser chrome
+          docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js &&  npm run test:cypress -- --browser chromium"
 
       - name: Upload test logs
         uses: actions/upload-artifact@v2
@@ -74,11 +48,6 @@ jobs:
         with:
           name: cypress-logs
           path: .cypress
-
-      # Only relevant for self-hosted runners
-      - name: Remove test logs
-        if: always()
-        run: rm -rf .cypress
 
       - name: Cleanup Docker
         if: always()
