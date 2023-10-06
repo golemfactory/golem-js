@@ -1,7 +1,7 @@
 name: Release Pipeline
 
 on:
-  pull_request:
+  push:
     branches:
       # Regular release channels
       - master
