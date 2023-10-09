@@ -23,7 +23,7 @@ jobs:
     name: Build and unit-test on supported platforms and NodeJS versions
     strategy:
       matrix:
-        node-version: [16.x, 18.x, 20.x]
+        node-version: [18.x, 20.x]
         os: [ubuntu-latest, windows-latest, macos-latest]
 
     runs-on: ${{ matrix.os }}
@@ -58,7 +58,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           # other versions are tested beforehand, so we can keep it short
-          node-version: 16
+          node-version: 18
 
       - name: Install packages required to set-up Goth
         run: |
