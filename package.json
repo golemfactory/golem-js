@@ -43,10 +43,9 @@
   "author": "GolemFactory <contact@golem.network>",
   "license": "LGPL-3.0",
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18.0.0"
   },
   "dependencies": {
-    "@rauschma/stringio": "^1.4.0",
     "axios": "^1.1.3",
     "bottleneck": "^2.19.5",
     "collect.js": "^4.34.3",
