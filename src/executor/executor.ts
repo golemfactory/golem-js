@@ -500,7 +500,6 @@ export class TaskExecutor {
    * Sets a timeout for waiting for offers from the market.
    * If at least one offer is not confirmed during the set timeout,
    * a critical error will be reported and the entire process will be interrupted.
-   * @private
    */
   private setStartupTimeout() {
     this.startupTimeoutId = setTimeout(() => {
