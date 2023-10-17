@@ -54,7 +54,10 @@ export default [
       { file: pkg.main, format: "cjs", sourcemap: true },
       { file: pkg.module, format: "es", sourcemap: true },
     ],
-    plugins: [typescript({ tsconfig: "./tsconfig.json" }), filesize({ reporter: [sizeValidator, "boxen"] })],
+    plugins: [
+      typescript({ tsconfig: "./tsconfig.json", exclude: ["**/__tests__", "**/*.test.ts"] }),
+      filesize({ reporter: [sizeValidator, "boxen"] }),
+    ],
   },
 ];
 
