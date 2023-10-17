@@ -102,7 +102,6 @@ export class TaskExecutor {
   private isCanceled = false;
   private startupTimeoutId?: NodeJS.Timeout;
   private yagna: Yagna;
-  private startupTimeoutError = false;
 
   /**
    * Create a new Task Executor
@@ -216,7 +215,10 @@ export class TaskExecutor {
 
     this.logger?.debug("Initializing task executor services...");
     const allocations = await this.paymentService.createAllocation();
-    this.marketService.run(taskPackage, allocations).catch((e) => this.handleCriticalError(e));
+    this.marketService
+      .run(taskPackage, allocations)
+      .then(() => this.setStartupTimeout())
+      .catch((e) => this.handleCriticalError(e));
     this.agreementPoolService.run().catch((e) => this.handleCriticalError(e));
     this.paymentService.run().catch((e) => this.handleCriticalError(e));
     this.taskService.run().catch((e) => this.handleCriticalError(e));
@@ -397,28 +399,10 @@ export class TaskExecutor {
       timeout: options?.timeout ?? this.options.taskTimeout,
     });
     this.taskQueue.addToEnd(task as Task<unknown, unknown>);
-    if (!this.startupTimeoutError && !this.startupTimeoutId) {
-      this.startupTimeoutId = setTimeout(
-        () => (this.startupTimeoutError = this.marketService.getProposalsCount().confirmed === 0),
-        this.options.startupTimeout,
-      );
-    }
     while (this.isRunning) {
       if (task.isFinished()) {
         if (task.isRejected()) throw task.getError();
         return task.getResults();
-      }
-      if (this.startupTimeoutError) {
-        const proposalsCount = this.marketService.getProposalsCount();
-        const hint =
-          proposalsCount.initial === 0 && proposalsCount.confirmed === 0
-            ? "Check your demand if it's not too restrictive or restart yagna."
-            : proposalsCount.initial === proposalsCount.rejected
-            ? "All off proposals got rejected."
-            : "Check your proposal filters if they are not too restrictive.";
-        throw new Error(
-          `Could not start any work on Golem. Processed ${proposalsCount.initial} initial proposals from yagna, filters accepted ${proposalsCount.confirmed}. ${hint}`,
-        );
       }
       await sleep(2000, true);
     }
@@ -509,5 +493,30 @@ export class TaskExecutor {
     this.logger?.info(`Negotiated ${costsSummary.length} agreements with ${providersCount} providers`);
     if (costsSummary.length) this.logger?.table?.(costsSummary);
     this.logger?.info(`Total Cost: ${costs.total} Total Paid: ${costs.paid}`);
+  }
+
+  /**
+   * Sets a timeout for waiting for offers from the market.
+   * If at least one offer is not confirmed during the set timeout,
+   * a critical error will be reported and the entire process will be interrupted.
+   * @private
+   */
+  private setStartupTimeout() {
+    this.startupTimeoutId = setTimeout(() => {
+      const proposalsCount = this.marketService.getProposalsCount();
+      if (proposalsCount.confirmed === 0) {
+        const hint =
+          proposalsCount.initial === 0 && proposalsCount.confirmed === 0
+            ? "Check your demand if it's not too restrictive or restart yagna."
+            : proposalsCount.initial === proposalsCount.rejected
+            ? "All off proposals got rejected."
+            : "Check your proposal filters if they are not too restrictive.";
+        this.handleCriticalError(
+          new Error(
+            `Could not start any work on Golem. Processed ${proposalsCount.initial} initial proposals from yagna, filters accepted ${proposalsCount.confirmed}. ${hint}`,
+          ),
+        );
+      }
+    }, this.options.startupTimeout);
   }
 }
