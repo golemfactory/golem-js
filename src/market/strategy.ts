@@ -42,7 +42,7 @@ export type PriceLimits = {
  */
 export const limitPriceFilter = (priceLimits: PriceLimits) => async (proposal: Proposal) => {
   return (
-    proposal.pricing.cpuSec < priceLimits.cpuPerSec &&
+    proposal.pricing.cpuSec <= priceLimits.cpuPerSec &&
     proposal.pricing.envSec <= priceLimits.envPerSec &&
     proposal.pricing.start <= priceLimits.start
   );

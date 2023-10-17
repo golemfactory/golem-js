@@ -215,16 +215,17 @@ export class TaskExecutor {
 
     this.logger?.debug("Initializing task executor services...");
     const allocations = await this.paymentService.createAllocation();
-    this.marketService
-      .run(taskPackage, allocations)
-      .then(() => this.setStartupTimeout())
-      .catch((e) => this.handleCriticalError(e));
     this.agreementPoolService.run().catch((e) => this.handleCriticalError(e));
     this.paymentService.run().catch((e) => this.handleCriticalError(e));
+    await Promise.all([
+      this.marketService.run(taskPackage, allocations).then(() => this.setStartupTimeout()),
+      this.agreementPoolService.run(),
+      this.paymentService.run(),
+      this.networkService?.run(),
+      this.statsService.run(),
+      this.storageProvider?.init(),
+    ]).catch((e) => this.handleCriticalError(e));
     this.taskService.run().catch((e) => this.handleCriticalError(e));
-    this.networkService?.run().catch((e) => this.handleCriticalError(e));
-    this.statsService.run().catch((e) => this.handleCriticalError(e));
-    this.storageProvider?.init().catch((e) => this.handleCriticalError(e));
     if (runtimeContextChecker.isNode) this.handleCancelEvent();
     this.options.eventTarget.dispatchEvent(new Events.ComputationStarted());
     this.logger?.info(
