@@ -1,13 +1,13 @@
-import { StorageProvider, StorageProviderDataCallback } from "./provider";
+import { StorageProvider } from "./provider";
 import { Logger, runtimeContextChecker } from "../utils";
 import path from "path";
 import fs from "fs";
-import { chomp, chunksToLinesAsync, streamEnd, streamWrite } from "@rauschma/stringio";
 import cp from "child_process";
+import readline from "node:readline/promises";
 
 export class GftpStorageProvider implements StorageProvider {
-  private gftpServerProcess;
-  private reader;
+  private gftpServerProcess?: cp.ChildProcess;
+  private readline?: readline.Interface;
 
   /**
    * All published URLs to be release on close().
@@ -52,9 +52,9 @@ export class GftpStorageProvider implements StorageProvider {
 
       this.gftpServerProcess?.stdout?.setEncoding("utf-8");
       this.gftpServerProcess?.stderr?.setEncoding("utf-8");
-
-      this.gftpServerProcess.stdout.on("data", (data) => this.logger?.debug(`GFTP server stdout: ${data}`));
-      this.gftpServerProcess.stderr.on("data", (data) => this.logger?.error(`GFTP server stderr: ${data}`));
+      if (this.gftpServerProcess?.stdout && this.gftpServerProcess?.stdin) {
+        this.readline = readline.createInterface(this.gftpServerProcess.stdout, this.gftpServerProcess.stdin);
+      }
     });
   }
 
@@ -70,17 +70,12 @@ export class GftpStorageProvider implements StorageProvider {
     return file_name;
   }
 
-  private getGftpServerProcess() {
-    return this.gftpServerProcess;
-  }
-
   async receiveFile(path: string): Promise<string> {
     const { url } = await this.jsonrpc("receive", { output_file: path });
     return url;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  receiveData(callback: StorageProviderDataCallback): Promise<string> {
+  receiveData(): Promise<string> {
     throw new Error("receiveData is not implemented in GftpStorageProvider");
   }
 
@@ -102,8 +97,7 @@ export class GftpStorageProvider implements StorageProvider {
     return url;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  release(urls: string[]): Promise<void> {
+  release(): Promise<void> {
     // NOTE: Due to GFTP's handling of file Ids (hashes), all files with same content will share IDs, so releasing
     // one might break transfer of another one. Therefore, we release all files on close().
     return Promise.resolve(undefined);
@@ -119,21 +113,19 @@ export class GftpStorageProvider implements StorageProvider {
 
   async close() {
     await this.releaseAll();
-    const stream = this.getGftpServerProcess();
-    if (stream) await streamEnd(this.getGftpServerProcess().stdin);
+    this.readline?.close();
+    this.gftpServerProcess?.kill();
   }
 
   private async jsonrpc(method: string, params: object = {}) {
     if (!this.isInitiated()) await this.init();
-    if (!this.reader) this.reader = this.readStream(this.getGftpServerProcess().stdout);
     const paramsStr = JSON.stringify(params);
     const query = `{"jsonrpc": "2.0", "id": "1", "method": "${method}", "params": ${paramsStr}}\n`;
     let valueStr = "";
-    await streamWrite(this.getGftpServerProcess().stdin, query);
     try {
-      const { value } = await this.reader.next();
+      const value = await this.readline?.question(query);
       if (!value) throw "Unable to get GFTP command result";
-      const { result } = JSON.parse(value as string);
+      const { result } = JSON.parse(value);
       valueStr = value;
       if (result === undefined) throw value;
       return result;
@@ -141,12 +133,6 @@ export class GftpStorageProvider implements StorageProvider {
       throw Error(
         `Error while obtaining response to JSONRPC. query: ${query} value: ${valueStr} error: ${JSON.stringify(error)}`,
       );
-    }
-  }
-
-  async *readStream(readable) {
-    for await (const line of chunksToLinesAsync(readable)) {
-      yield chomp(line);
     }
   }
 
