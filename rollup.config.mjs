@@ -27,15 +27,18 @@ export default [
       format: "es",
     },
     plugins: [
-      ignore(["tmp", "pino", "eventsource"]),
+      ignore(["tmp", "pino", "eventsource", "node:readline/promises"]),
       alias({
         entries: [
+          // { find: "GolemWorker", replacement: "GolemWorkerBrowser" },
           { find: "stream", replacement: "stream-browserify" },
           { find: /RedisDatastore/, replacement: "tests/mock/utils/empty_default.js" },
           { find: /IORedisConnection/, replacement: "tests/mock/utils/empty_default.js" },
           { find: /RedisConnection/, replacement: "tests/mock/utils/empty_default.js" },
           { find: /src\/api\/provider-api$/, replacement: "." },
           { find: /\.\/gftp.js/, replacement: "tests/mock/utils/empty.js" },
+          { find: /worker-node/, replacement: "tests/mock/utils/empty.js" },
+          { find: /GftpStorageProvider/, replacement: "tests/mock/utils/empty.js" },
         ],
       }),
       nodeResolve({ browser: true, preferBuiltins: true }),

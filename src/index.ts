@@ -16,3 +16,6 @@ export { Logger, LogLevel, jsonLogger, nullLogger, consoleLogger, pinoLogger, de
 export { Yagna } from "./utils/yagna/yagna";
 export { Job, JobStorage, JobState } from "./job";
 export { GolemNetwork, GolemNetworkConfig } from "./golem_network";
+
+export { GolemWorker } from "./worker/worker";
+export { GolemRuntime, RuntimeOptions } from "./worker/runtime";
