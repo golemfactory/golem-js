@@ -215,8 +215,6 @@ export class TaskExecutor {
 
     this.logger?.debug("Initializing task executor services...");
     const allocations = await this.paymentService.createAllocation();
-    this.agreementPoolService.run().catch((e) => this.handleCriticalError(e));
-    this.paymentService.run().catch((e) => this.handleCriticalError(e));
     await Promise.all([
       this.marketService.run(taskPackage, allocations).then(() => this.setStartupTimeout()),
       this.agreementPoolService.run(),
