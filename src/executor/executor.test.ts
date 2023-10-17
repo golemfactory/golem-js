@@ -3,6 +3,7 @@ import { AgreementPoolService } from "../agreement/";
 import { TaskService } from "../task/";
 import { TaskExecutor } from "./executor";
 import { sleep } from "../utils";
+import { LoggerMock } from "../../tests/mock";
 
 jest.mock("../market/service");
 jest.mock("../agreement/service");
@@ -29,18 +30,21 @@ jest.mock("../payment/service", () => {
 });
 
 describe("Task Executor", () => {
+  const logger = new LoggerMock();
+  const yagnaOptions = { apiKey: "test" };
   beforeEach(() => {
     jest.clearAllMocks();
+    logger.clear();
   });
 
   describe("init()", () => {
     it("should run all set services", async () => {
-      const executor = await TaskExecutor.create({ package: "test" });
+      const executor = await TaskExecutor.create({ package: "test", logger, yagnaOptions });
       expect(serviceRunSpy).toHaveBeenCalledTimes(4);
       expect(executor).toBeDefined();
     });
     it("should handle a critical error if startup timeout is reached", async () => {
-      const executor = await TaskExecutor.create({ package: "test", startupTimeout: 0 });
+      const executor = await TaskExecutor.create({ package: "test", startupTimeout: 0, logger, yagnaOptions });
       jest
         .spyOn(MarketService.prototype, "getProposalsCount")
         .mockImplementation(() => ({ confirmed: 0, initial: 0, rejected: 0 }));
