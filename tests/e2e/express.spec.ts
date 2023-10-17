@@ -29,7 +29,7 @@ describe("Express", function () {
       image: "golem/blender:latest",
       demand: {
         minMemGib: 1,
-        minStorageGib: 2,
+        minStorageGib: 1,
         minCpuThreads: 1,
         minCpuCores: 1,
       },
@@ -39,7 +39,7 @@ describe("Express", function () {
           "/golem/resource/scene.blend",
         );
       },
-      enableLogging: false,
+      enableLogging: true,
     });
     await network.init();
   });
@@ -160,6 +160,6 @@ describe("Express", function () {
     expect(resultResponse.body).toEqual(
       "Job completed successfully! See your result at http://localhost:3001/results/EXPRESS_SPEC_output_0.png",
     );
-    expect(fs.existsSync(`${process.env.GOTH_GFTP_VOLUME || ""}EXPRESS_SPEC_output_0.png`)).toEqual(true);
+    expect(fs.existsSync(`EXPRESS_SPEC_output_0.png`)).toEqual(true);
   });
 });

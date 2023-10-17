@@ -54,7 +54,7 @@ describe("Blender rendering", function () {
     }
 
     for (const file of expectedResults) {
-      expect(fs.existsSync(`${process.env.GOTH_GFTP_VOLUME || ""}${file}`)).toEqual(true);
+      expect(fs.existsSync(file)).toEqual(true);
     }
 
     await executor.end();

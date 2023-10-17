@@ -2,7 +2,7 @@ import { TaskExecutor } from "../../src";
 import { LoggerMock } from "../mock";
 import fs from "fs";
 
-const logger = new LoggerMock();
+const logger = new LoggerMock(false);
 
 describe("GFTP transfers", function () {
   it("should upload and download big files simultaneously", async () => {
@@ -35,8 +35,7 @@ describe("GFTP transfers", function () {
     }
 
     for (const file of expectedResults) {
-      const path = `${process.env.GOTH_GFTP_VOLUME || ""}${file}`;
-      expect(fs.existsSync(path)).toEqual(true);
+      expect(fs.existsSync(file)).toEqual(true);
     }
 
     await executor.end();
