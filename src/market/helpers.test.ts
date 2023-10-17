@@ -30,13 +30,13 @@ describe("Market Helpers", () => {
         // Given
         const mockResponse = imock<Response>(MockPropertyPolicy.StubAsProperty);
         when(mockResponse.ok).thenReturn(false);
+        when(mockResponse.text()).thenResolve("{error:'test'}");
         mockFetch.mockResolvedValue(instance(mockResponse));
 
-        // When
-        const data = await getHealthyProvidersWhiteList();
-
-        // Then
-        expect(data).toEqual([]);
+        // When, Then
+        await expect(() => getHealthyProvidersWhiteList()).rejects.toThrow(
+          "Failed to download healthy provider whitelist due to an error: Error: Request to download healthy provider whitelist failed: {error:'test'}",
+        );
       });
 
       test("If the implementation will throw any kind of error, then it will return an empty array", async () => {
@@ -45,11 +45,10 @@ describe("Market Helpers", () => {
           throw new Error("Something went wrong really bad!");
         });
 
-        // When
-        const data = await getHealthyProvidersWhiteList();
-
-        // Then
-        expect(data).toEqual([]);
+        // When, Then
+        await expect(() => getHealthyProvidersWhiteList()).rejects.toThrow(
+          "Failed to download healthy provider whitelist due to an error: Error: Something went wrong really bad!",
+        );
       });
     });
   });

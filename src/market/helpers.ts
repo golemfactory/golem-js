@@ -3,7 +3,7 @@
  *
  * Important: This helper requires internet access to function properly.
  *
- * @return An array with Golem Node IDs of the whitelisted providers. In case of any issues, it will return an empty whitelist.
+ * @return An array with Golem Node IDs of the whitelisted providers.
  */
 export async function getHealthyProvidersWhiteList(): Promise<string[]> {
   try {
@@ -13,13 +13,10 @@ export async function getHealthyProvidersWhiteList(): Promise<string[]> {
       return response.json();
     } else {
       const body = await response.text();
-      console.error("Request to download healthy provider whitelist failed.", body);
 
-      return [];
+      throw new Error(`Request to download healthy provider whitelist failed: ${body}`);
     }
   } catch (err) {
-    console.error("Failed to download healthy provider whitelist due to an error", err);
-
-    return [];
+    throw new Error(`Failed to download healthy provider whitelist due to an error: ${err}`);
   }
 }
