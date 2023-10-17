@@ -24,6 +24,7 @@ jest.mock("../payment/service", () => {
         config: { payment: { network: "test" } },
         createAllocation: jest.fn(),
         run: serviceRunSpy,
+        end: jest.fn(),
       };
     }),
   };
@@ -42,6 +43,7 @@ describe("Task Executor", () => {
       const executor = await TaskExecutor.create({ package: "test", logger, yagnaOptions });
       expect(serviceRunSpy).toHaveBeenCalledTimes(4);
       expect(executor).toBeDefined();
+      await executor.end();
     });
     it("should handle a critical error if startup timeout is reached", async () => {
       const executor = await TaskExecutor.create({ package: "test", startupTimeout: 0, logger, yagnaOptions });
@@ -56,6 +58,7 @@ describe("Task Executor", () => {
       });
       await sleep(10, true);
       expect(handleErrorSpy).toHaveBeenCalled();
+      await executor.end();
     });
   });
 });
