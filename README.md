@@ -4,24 +4,25 @@
 
 <!-- TOC -->
 
-- [Golem JavaScript API](#golem-javascript-api)
-  - [Table of contents](#table-of-contents)
-  - [What's Golem and `golem-js`?](#whats-golem-and-golem-js)
-  - [Golem application development](#golem-application-development)
-    - [Installation](#installation)
-    - [Building](#building)
-    - [Usage](#usage)
-      - [Node.js context](#nodejs-context)
-      - [Web Browser context](#web-browser-context)
-    - [Testing](#testing)
-    - [Running unit tests](#running-unit-tests)
-    - [Running E2E tests](#running-e2e-tests)
-      - [NodeJS](#execute-the-e2e-tests)
-      - [Cypress](#execute-the-cypress-tests)
-    - [Contributing](#contributing)
-  - [Controlling interactions and costs](#controlling-interactions-and-costs)
-  - [See also](#see-also)
-  <!-- TOC -->
+- [Table of contents](#table-of-contents)
+- [What's Golem and `golem-js`?](#whats-golem-and-golem-js)
+- [Golem application development](#golem-application-development)
+  - [Installation](#installation)
+  - [Building](#building)
+  - [Usage](#usage)
+    - [Node.js context](#nodejs-context)
+    - [Web Browser context](#web-browser-context)
+  - [Testing](#testing)
+  - [Running unit tests](#running-unit-tests)
+  - [Running E2E tests](#running-e2e-tests)
+    - [NodeJS](#execute-the-e2e-tests)
+    - [Cypress](#execute-the-cypress-tests)
+  - [Contributing](#contributing)
+- [Controlling interactions and costs](#controlling-interactions-and-costs)
+  - [Limit price limits to filter out offers that are too expensive](#limit-price-limits-to-filter-out-offers-that-are-too-expensive)
+  - [Work with reliable providers](#work-with-reliable-providers)
+- [See also](#see-also)
+<!-- TOC -->
 
 ![GitHub](https://img.shields.io/github/license/golemfactory/golem-js)
 ![npm](https://img.shields.io/npm/v/@golem-sdk/golem-js)
@@ -200,7 +201,9 @@ that they define. As a Requestor, you might want to:
   like to avoid
 
 To make this easy, we provided you with a set of predefined market proposal filters, which you can combine to implement
-your own market strategy. For example:
+your own market strategy.
+
+### Limit price limits to filter out offers that are too expensive
 
 ```typescript
 import { TaskExecutor, ProposalFilters } from "@golem-sdk/golem-js";
@@ -225,6 +228,41 @@ const executor = await TaskExecutor.create({
 ```
 
 To learn more about other filters, please check the [API reference of the market/strategy module](https://docs.golem.network/docs/golem-js/reference/modules/market_strategy)
+
+### Work with reliable providers
+
+The `getHealthyProvidersWhiteList` helper will provide you with a list of Provider ID's that were checked with basic health-checks. Using this whitelist will increase the chance of working with a reliable provider. Please note, that you can also build up your own list of favourite providers and use it in a similar fashion.
+
+```typescript
+import { TaskExecutor, ProposalFilters, MarketHelpers } from "@golem-sdk/golem-js";
+
+// Prepare the price filter
+const acceptablePrice = ProposalFilters.limitPriceFilter({
+  start: 1,
+  cpuPerSec: 1 / 3600,
+  envPerSec: 1 / 3600,
+});
+
+// Collect the whitelist
+const verifiedProviders = await MarketHelpers.getHealthyProvidersWhiteList();
+
+// Prepare the whitelist filter
+const whiteList = ProposalFilters.whiteListProposalIdsFilter(verifiedProviders);
+
+const executor = await TaskExecutor.create({
+  // What do you want to run
+  package: "golem/alpine:3.18.2",
+
+  // How much you wish to spend
+  budget: 0.5,
+  proposalFilter: async (proposal) => (await acceptablePrice(proposal)) && (await whiteList(proposal)),
+
+  // Where you want to spend
+  payment: {
+    network: "polygon",
+  },
+});
+```
 
 ## See also
 
