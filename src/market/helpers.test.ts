@@ -26,7 +26,7 @@ describe("Market Helpers", () => {
     });
 
     describe("Negative cases", () => {
-      test("If the request will be made, but will not be a successful one, it will return an empty array", async () => {
+      test("It throws an error when the response from the API will not be a successful one (fetch -> response.ok)", async () => {
         // Given
         const mockResponse = imock<Response>(MockPropertyPolicy.StubAsProperty);
         when(mockResponse.ok).thenReturn(false);
@@ -39,7 +39,7 @@ describe("Market Helpers", () => {
         );
       });
 
-      test("If the implementation will throw any kind of error, then it will return an empty array", async () => {
+      test("It throws an error when executing of fetch will fail for any reason", async () => {
         // Given
         mockFetch.mockImplementation(() => {
           throw new Error("Something went wrong really bad!");
