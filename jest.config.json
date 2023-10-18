@@ -1,5 +1,4 @@
 {
   "preset": "ts-jest",
-  "testEnvironment": "node",
-  "reporters": [["github-actions", { "silent": false }], "default"]
+  "testEnvironment": "node"
 }

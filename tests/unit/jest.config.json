@@ -2,6 +2,5 @@
   "preset": "ts-jest",
   "testEnvironment": "node",
   "roots": ["../../src", "./"],
-  "testMatch": ["**/*.test.ts", "**/*.spec.ts"],
-  "reporters": [["github-actions", { "silent": false }], "default"]
+  "testMatch": ["**/*.test.ts", "**/*.spec.ts"]
 }
