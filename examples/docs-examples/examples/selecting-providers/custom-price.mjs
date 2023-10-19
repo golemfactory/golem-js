@@ -31,6 +31,7 @@ const myFilter = async (proposal) => {
     package: "9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
     proposalFilter: myFilter,
     yagnaOptions: { apiKey: "try_golem" },
+    startupTimeout: 60_000,
   });
   await executor.run(async (ctx) =>
     console.log((await ctx.run(`echo "This task is run on ${ctx.provider.id}"`)).stdout, ctx.provider.id),

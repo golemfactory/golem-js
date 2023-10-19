@@ -51,7 +51,7 @@ jobs:
           docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm i && npm run build"
 
       - name: Start the e2e test
-        run: docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm i && npm run test:e2e -- --verbose"
+        run: docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm i && npm run test:e2e -- --reporters github-actions --reporters summary"
 
       - name: Cleanup Docker
         if: always()
