@@ -102,7 +102,7 @@
     "typedoc": "^0.25.1",
     "typedoc-plugin-markdown": "^3.14.0",
     "typedoc-plugin-merge-modules": "^5.0.1",
-    "typedoc-theme-hierarchy": "4.1.1",
+    "typedoc-theme-hierarchy": "4.1.2",
     "typescript": "^5.1.6",
     "webpack": "^5.75.0"
   }
