@@ -3,11 +3,9 @@ import { Logger, runtimeContextChecker } from "../utils";
 import path from "path";
 import fs from "fs";
 import cp from "child_process";
-import readline from "node:readline/promises";
 
 export class GftpStorageProvider implements StorageProvider {
   private gftpServerProcess?: cp.ChildProcess;
-  private readline?: readline.Interface;
 
   /**
    * All published URLs to be release on close().
@@ -53,9 +51,7 @@ export class GftpStorageProvider implements StorageProvider {
 
       this.gftpServerProcess?.stdout?.setEncoding("utf-8");
       this.gftpServerProcess?.stderr?.setEncoding("utf-8");
-      if (this.gftpServerProcess?.stdout && this.gftpServerProcess?.stdin) {
-        this.readline = readline.createInterface(this.gftpServerProcess.stdout, this.gftpServerProcess.stdin);
-      }
+      this.reader = this.gftpServerProcess?.stdout?.iterator();
     });
   }
 
@@ -114,13 +110,11 @@ export class GftpStorageProvider implements StorageProvider {
 
   async close() {
     await this.releaseAll();
-    this.readline?.close();
     this.gftpServerProcess?.kill();
   }
 
   private async jsonrpc(method: string, params: object = {}) {
     if (!this.isInitiated()) await this.init();
-    if (!this.reader) this.reader = this.gftpServerProcess?.stdout?.iterator();
     const paramsStr = JSON.stringify(params);
     const query = `{"jsonrpc": "2.0", "id": "1", "method": "${method}", "params": ${paramsStr}}\n`;
     let valueStr = "";

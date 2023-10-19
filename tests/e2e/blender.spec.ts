@@ -23,40 +23,44 @@ const blenderParams = (frame) => ({
 });
 
 describe("Blender rendering", function () {
-  it("should render images by blender", async () => {
-    const executor = await TaskExecutor.create({
-      package: "golem/blender:latest",
-      logger,
-    });
+  it(
+    "should render images by blender",
+    async () => {
+      const executor = await TaskExecutor.create({
+        package: "golem/blender:latest",
+        logger,
+      });
 
-    executor.beforeEach(async (ctx) => {
-      const sourcePath = fs.realpathSync(__dirname + "/../mock/fixtures/cubes.blend");
-      await ctx.uploadFile(sourcePath, "/golem/resource/scene.blend");
-    });
+      executor.beforeEach(async (ctx) => {
+        const sourcePath = fs.realpathSync(__dirname + "/../mock/fixtures/cubes.blend");
+        await ctx.uploadFile(sourcePath, "/golem/resource/scene.blend");
+      });
 
-    const data = [0, 10, 20, 30, 40, 50];
+      const data = [0, 10, 20, 30, 40, 50];
 
-    const results = executor.map<number, string>(data, async (ctx, frame) => {
-      const result = await ctx
-        .beginBatch()
-        .uploadJson(blenderParams(frame), "/golem/work/params.json")
-        .run("/golem/entrypoints/run-blender.sh")
-        .downloadFile(`/golem/output/out${frame?.toString().padStart(4, "0")}.png`, `output_${frame}.png`)
-        .end()
-        .catch((error) => console.error(error.toString()));
-      return result ? `output_${frame}.png` : "";
-    });
+      const results = executor.map<number, string>(data, async (ctx, frame) => {
+        const result = await ctx
+          .beginBatch()
+          .uploadJson(blenderParams(frame), "/golem/work/params.json")
+          .run("/golem/entrypoints/run-blender.sh")
+          .downloadFile(`/golem/output/out${frame?.toString().padStart(4, "0")}.png`, `output_${frame}.png`)
+          .end()
+          .catch((error) => console.error(error.toString()));
+        return result ? `output_${frame}.png` : "";
+      });
 
-    const expectedResults = data.map((d) => `output_${d}.png`);
+      const expectedResults = data.map((d) => `output_${d}.png`);
 
-    for await (const result of results) {
-      expect(expectedResults).toContain(result);
-    }
+      for await (const result of results) {
+        expect(expectedResults).toContain(result);
+      }
 
-    for (const file of expectedResults) {
-      expect(fs.existsSync(`${process.env.GOTH_GFTP_VOLUME || ""}${file}`)).toEqual(true);
-    }
+      for (const file of expectedResults) {
+        expect(fs.existsSync(`${process.env.GOTH_GFTP_VOLUME || ""}${file}`)).toEqual(true);
+      }
 
-    await executor.end();
-  });
+      await executor.end();
+    },
+    1000 * 240,
+  );
 });
