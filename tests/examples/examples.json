@@ -1,4 +1,5 @@
 [
+  { "cmd": "node", "path": "examples/docs-examples/quickstarts/retrievable-task/task.mjs", "noGoth": true },
   { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/batch-end.mjs", "noGoth": true },
   {
     "cmd": "node",
