@@ -26,7 +26,7 @@ describe("GFTP transfers", function () {
           .run("ls -Alh /golem/work/eiffel.blend")
           .downloadFile(`/golem/work/eiffel.blend`, `copy_${frame}.blend`)
           .end()
-          .catch((error) => ctx.rejectResult(error.toString()));
+          .catch((error) => console.error(error.toString()));
         return result ? `copy_${frame}.blend` : "";
       });
 

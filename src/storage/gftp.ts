@@ -1,5 +1,5 @@
 import { StorageProvider } from "./provider";
-import { Logger, runtimeContextChecker } from "../utils";
+import { Logger, runtimeContextChecker, sleep } from "../utils";
 import path from "path";
 import fs from "fs";
 import cp from "child_process";
@@ -15,6 +15,11 @@ export class GftpStorageProvider implements StorageProvider {
 
   private isInitialized = false;
   private reader?: AsyncIterableIterator<string>;
+  /**
+   * lock against parallel writing to stdin in gftp process
+   * @private
+   */
+  private lock = false;
 
   constructor(private logger?: Logger) {
     if (runtimeContextChecker.isBrowser) {
@@ -115,6 +120,8 @@ export class GftpStorageProvider implements StorageProvider {
 
   private async jsonrpc(method: string, params: object = {}) {
     if (!this.isInitiated()) await this.init();
+    while (this.lock) await sleep(100, true);
+    this.lock = true;
     const paramsStr = JSON.stringify(params);
     const query = `{"jsonrpc": "2.0", "id": "1", "method": "${method}", "params": ${paramsStr}}\n`;
     let valueStr = "";
@@ -130,6 +137,8 @@ export class GftpStorageProvider implements StorageProvider {
       throw Error(
         `Error while obtaining response to JSONRPC. query: ${query} value: ${valueStr} error: ${JSON.stringify(error)}`,
       );
+    } finally {
+      this.lock = false;
     }
   }
 
