@@ -63,7 +63,7 @@ export type ExecutorOptions = {
    * Note: If you decide to set this to `true`, you will be responsible for proper shutdown of task executor.
    */
   skipProcessSignals?: boolean;
-  /*
+  /**
    * Timeout for waiting for at least one offer from the market.
    * This parameter (set to 30 sec by default) will throw an error when executing `TaskExecutor.run`
    * if no offer from the market is accepted before this time.
