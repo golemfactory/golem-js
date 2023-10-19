@@ -16,6 +16,7 @@ export class GftpStorageProvider implements StorageProvider {
   private publishedUrls = new Set<string>();
 
   private isInitialized = false;
+  private reader?: AsyncIterableIterator<string>;
 
   constructor(private logger?: Logger) {
     if (runtimeContextChecker.isBrowser) {
@@ -119,11 +120,13 @@ export class GftpStorageProvider implements StorageProvider {
 
   private async jsonrpc(method: string, params: object = {}) {
     if (!this.isInitiated()) await this.init();
+    if (!this.reader) this.reader = this.gftpServerProcess?.stdout?.iterator();
     const paramsStr = JSON.stringify(params);
     const query = `{"jsonrpc": "2.0", "id": "1", "method": "${method}", "params": ${paramsStr}}\n`;
     let valueStr = "";
     try {
-      const value = await this.readline?.question(query);
+      this.gftpServerProcess?.stdin?.write(query);
+      const value = (await this.reader?.next())?.value;
       if (!value) throw "Unable to get GFTP command result";
       const { result } = JSON.parse(value);
       valueStr = value;
