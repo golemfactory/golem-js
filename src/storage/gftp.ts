@@ -1,13 +1,11 @@
 import { StorageProvider } from "./provider";
-import { Logger, runtimeContextChecker } from "../utils";
+import { Logger, runtimeContextChecker, sleep } from "../utils";
 import path from "path";
 import fs from "fs";
 import cp from "child_process";
-import readline from "node:readline/promises";
 
 export class GftpStorageProvider implements StorageProvider {
   private gftpServerProcess?: cp.ChildProcess;
-  private readline?: readline.Interface;
 
   /**
    * All published URLs to be release on close().
@@ -16,6 +14,12 @@ export class GftpStorageProvider implements StorageProvider {
   private publishedUrls = new Set<string>();
 
   private isInitialized = false;
+  private reader?: AsyncIterableIterator<string>;
+  /**
+   * lock against parallel writing to stdin in gftp process
+   * @private
+   */
+  private lock = false;
 
   constructor(private logger?: Logger) {
     if (runtimeContextChecker.isBrowser) {
@@ -52,9 +56,7 @@ export class GftpStorageProvider implements StorageProvider {
 
       this.gftpServerProcess?.stdout?.setEncoding("utf-8");
       this.gftpServerProcess?.stderr?.setEncoding("utf-8");
-      if (this.gftpServerProcess?.stdout && this.gftpServerProcess?.stdin) {
-        this.readline = readline.createInterface(this.gftpServerProcess.stdout, this.gftpServerProcess.stdin);
-      }
+      this.reader = this.gftpServerProcess?.stdout?.iterator();
     });
   }
 
@@ -113,17 +115,19 @@ export class GftpStorageProvider implements StorageProvider {
 
   async close() {
     await this.releaseAll();
-    this.readline?.close();
     this.gftpServerProcess?.kill();
   }
 
   private async jsonrpc(method: string, params: object = {}) {
     if (!this.isInitiated()) await this.init();
+    while (this.lock) await sleep(100, true);
+    this.lock = true;
     const paramsStr = JSON.stringify(params);
     const query = `{"jsonrpc": "2.0", "id": "1", "method": "${method}", "params": ${paramsStr}}\n`;
     let valueStr = "";
     try {
-      const value = await this.readline?.question(query);
+      this.gftpServerProcess?.stdin?.write(query);
+      const value = (await this.reader?.next())?.value;
       if (!value) throw "Unable to get GFTP command result";
       const { result } = JSON.parse(value);
       valueStr = value;
@@ -133,6 +137,8 @@ export class GftpStorageProvider implements StorageProvider {
       throw Error(
         `Error while obtaining response to JSONRPC. query: ${query} value: ${valueStr} error: ${JSON.stringify(error)}`,
       );
+    } finally {
+      this.lock = false;
     }
   }
 

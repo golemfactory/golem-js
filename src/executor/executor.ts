@@ -54,6 +54,15 @@ export type ExecutorOptions = {
    * For more details see {@link JobStorage}. Defaults to a simple in-memory storage.
    */
   jobStorage?: JobStorage;
+  /**
+   * Timeout for waiting for at least one offer from the market.
+   * This parameter (set to 30 sec by default) will throw an error when executing `TaskExecutor.run`
+   * if no offer from the market is accepted before this time.
+   * You can set a slightly higher time in a situation where your parameters such as proposalFilter
+   * or minimum hardware requirements are quite restrictive and finding a suitable provider
+   * that meets these criteria may take a bit longer.
+   * */
+  startupTimeout?: number;
 } & Omit<PackageOptions, "imageHash" | "imageTag"> &
   MarketOptions &
   TaskServiceOptions &
@@ -91,6 +100,7 @@ export class TaskExecutor {
   private isRunning = true;
   private configOptions: ExecutorOptions;
   private isCanceled = false;
+  private startupTimeoutId?: NodeJS.Timeout;
   private yagna: Yagna;
 
   /**
@@ -206,7 +216,7 @@ export class TaskExecutor {
     this.logger?.debug("Initializing task executor services...");
     const allocations = await this.paymentService.createAllocation();
     await Promise.all([
-      this.marketService.run(taskPackage, allocations),
+      this.marketService.run(taskPackage, allocations).then(() => this.setStartupTimeout()),
       this.agreementPoolService.run(),
       this.paymentService.run(),
       this.networkService?.run(),
@@ -228,6 +238,7 @@ export class TaskExecutor {
     if (runtimeContextChecker.isNode) this.removeCancelEvent();
     if (!this.isRunning) return;
     this.isRunning = false;
+    clearTimeout(this.startupTimeoutId);
     if (!this.configOptions.storageProvider) await this.storageProvider?.close();
     await this.networkService?.end();
     await Promise.all([this.taskService.end(), this.agreementPoolService.end(), this.marketService.end()]);
@@ -481,5 +492,29 @@ export class TaskExecutor {
     this.logger?.info(`Negotiated ${costsSummary.length} agreements with ${providersCount} providers`);
     if (costsSummary.length) this.logger?.table?.(costsSummary);
     this.logger?.info(`Total Cost: ${costs.total} Total Paid: ${costs.paid}`);
+  }
+
+  /**
+   * Sets a timeout for waiting for offers from the market.
+   * If at least one offer is not confirmed during the set timeout,
+   * a critical error will be reported and the entire process will be interrupted.
+   */
+  private setStartupTimeout() {
+    this.startupTimeoutId = setTimeout(() => {
+      const proposalsCount = this.marketService.getProposalsCount();
+      if (proposalsCount.confirmed === 0) {
+        const hint =
+          proposalsCount.initial === 0 && proposalsCount.confirmed === 0
+            ? "Check your demand if it's not too restrictive or restart yagna."
+            : proposalsCount.initial === proposalsCount.rejected
+            ? "All off proposals got rejected."
+            : "Check your proposal filters if they are not too restrictive.";
+        this.handleCriticalError(
+          new Error(
+            `Could not start any work on Golem. Processed ${proposalsCount.initial} initial proposals from yagna, filters accepted ${proposalsCount.confirmed}. ${hint}`,
+          ),
+        );
+      }
+    }, this.options.startupTimeout);
   }
 }
