@@ -260,6 +260,7 @@ export class TaskExecutor {
    */
   end(): Promise<void> {
     if (this.isRunning) {
+      this.isRunning = false;
       this.endPromise = this.doEnd();
     }
 
@@ -271,7 +272,6 @@ export class TaskExecutor {
    * @private
    */
   private async doEnd() {
-    this.isRunning = false;
     if (runtimeContextChecker.isNode) this.removeSignalHandlers();
     clearTimeout(this.startupTimeoutId);
     if (!this.configOptions.storageProvider) await this.storageProvider?.close();

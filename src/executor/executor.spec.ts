@@ -69,7 +69,7 @@ describe("Task Executor", () => {
       // Implementation details: the same promise is always used, so it's safe to call end() multiple times.
       const executor = await TaskExecutor.create({ package: "test", startupTimeout: 0, logger, yagnaOptions });
       const p = Promise.resolve();
-      jest.spyOn(executor as any, "doEnd").mockReturnValue(p);
+      const spy = jest.spyOn(executor as any, "doEnd").mockReturnValue(p);
 
       const r1 = executor.end();
       expect(r1).toBeDefined();
@@ -82,6 +82,7 @@ describe("Task Executor", () => {
 
       const r3 = executor.end();
       expect(r3).toStrictEqual(r1);
+      expect(spy).toHaveBeenCalledTimes(1);
     });
   });
 });
