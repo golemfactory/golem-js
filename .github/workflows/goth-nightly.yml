@@ -21,7 +21,7 @@ jobs:
         run: echo "::set-output name=matrix::{\"include\":[{\"branch\":\"master\"}]}"
 
   goth-tests:
-    runs-on: [goth2, ubuntu-22.10]
+    runs-on: goth2
     needs: prepare-matrix-master-only
     strategy:
       matrix: ${{ fromJson(needs.prepare-matrix-master-only.outputs.matrix-json) }}
@@ -31,64 +31,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Configure node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
+      - name: Use random string for subnet
+        run: echo "YAGNA_SUBNET=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 8 ; echo '')" >> $GITHUB_ENV
 
-      - name: Build golem-js
+      - name: Build the docker containers
+        # Use a random string to avoid other providers on the same subnet which might cause tests to fail because it expects only providers named provider-1 and provider-2
+        run: docker compose -f tests/docker/docker-compose.yml build
+
+      - name: Start the docker containers
+        # Use a random string to avoid other providers on the same subnet which might cause tests to fail because it expects only providers named provider-1 and provider-2
+        run: docker compose -f tests/docker/docker-compose.yml down && docker compose -f tests/docker/docker-compose.yml up -d
+
+      - name: Fund the requestor
+        # Use a funding script which will retry funding the requestor 3 times, else it exits with error. The faucet is not reliable and sometimes fails to fund the requestor, thus the retry.
+        run: sleep 10 && docker exec -t docker-requestor-1 /bin/sh -c "/golem-js/tests/docker/fundRequestor.sh"
+
+      - name: Install and build the SDK in the docker container
         run: |
-          sudo apt-get update -y
-          sudo apt-get install -y build-essential
-          npm install
-          npm run build
+          docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm i && npm run build"
 
-      - name: Configure python
-        continue-on-error: true
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
-
-      - name: Install goth
-        run: |
-          pip install goth
-          rm -rf ../goth/assets
-          python -m goth create-assets ../goth/assets
-          sed -Ezi 's/(use\-proxy:\s)(True)/\1False/mg' ../goth/assets/goth-config.yml
-          sed -Ezi 's/(use\-prerelease:\s)(false)/\1true\n    release-tag: "0.13.0-rc10"/mg' ../goth/assets/goth-config.yml
-
-      - name: Install websocat and sshpass
-        run: |
-          sudo wget https://github.com/vi/websocat/releases/download/v1.9.0/websocat_linux64 -O /usr/local/bin/websocat
-          sudo chmod +x /usr/local/bin/websocat
-          sudo apt-get install sshpass
-
-      - name: Cleanup Docker
-        if: always()
-        run: |
-          c=$(docker ps -q) && [[ $c ]] && docker kill $c
-          docker system prune -af
-
-      - name: Log in to GitHub Docker repository
-        run: echo ${{ secrets.GITHUB_TOKEN }} | docker login docker.pkg.github.com -u ${{github.actor}} --password-stdin
-
-      - name: Run test suite
-        env:
-          GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          npm run test:e2e
-
-      - name: Upload test logs
-        uses: actions/upload-artifact@v2
-        if: always()
-        with:
-          name: goth-logs
-          path: /tmp/goth-tests
-
-      # Only relevant for self-hosted runners
-      - name: Remove test logs
-        if: always()
-        run: rm -rf /tmp/goth-tests
+      - name: Start the e2e test
+        run: docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm i && npm run test:e2e -- --reporters github-actions --reporters summary"
 
       - name: Cleanup Docker
         if: always()

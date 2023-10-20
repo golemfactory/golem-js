@@ -4,24 +4,25 @@
 
 <!-- TOC -->
 
-- [Golem JavaScript API](#golem-javascript-api)
-  - [Table of contents](#table-of-contents)
-  - [What's Golem and `golem-js`?](#whats-golem-and-golem-js)
-  - [Golem application development](#golem-application-development)
-    - [Installation](#installation)
-    - [Building](#building)
-    - [Usage](#usage)
-      - [Node.js context](#nodejs-context)
-      - [Web Browser context](#web-browser-context)
-    - [Testing](#testing)
-    - [Running unit tests](#running-unit-tests)
-    - [Running E2E tests](#running-e2e-tests)
-      - [NodeJS](#nodejs)
-      - [Cypress](#cypress)
-    - [Contributing](#contributing)
-  - [Controlling interactions and costs](#controlling-interactions-and-costs)
-  - [See also](#see-also)
-  <!-- TOC -->
+- [Table of contents](#table-of-contents)
+- [What's Golem and `golem-js`?](#whats-golem-and-golem-js)
+- [Golem application development](#golem-application-development)
+  - [Installation](#installation)
+  - [Building](#building)
+  - [Usage](#usage)
+    - [Node.js context](#nodejs-context)
+    - [Web Browser context](#web-browser-context)
+  - [Testing](#testing)
+  - [Running unit tests](#running-unit-tests)
+  - [Running E2E tests](#running-e2e-tests)
+    - [NodeJS](#execute-the-e2e-tests)
+    - [Cypress](#execute-the-cypress-tests)
+  - [Contributing](#contributing)
+- [Controlling interactions and costs](#controlling-interactions-and-costs)
+  - [Limit price limits to filter out offers that are too expensive](#limit-price-limits-to-filter-out-offers-that-are-too-expensive)
+  - [Work with reliable providers](#work-with-reliable-providers)
+- [See also](#see-also)
+<!-- TOC -->
 
 ![GitHub](https://img.shields.io/github/license/golemfactory/golem-js)
 ![npm](https://img.shields.io/npm/v/@golem-sdk/golem-js)
@@ -114,27 +115,69 @@ yarn test:unit
 ### Running E2E tests
 
 Both test cases for the NodeJS environment and the browser (cypress) require preparation of a test environment of the
-Golem Network with Providers and all the necessary infrastructure. [Goth](https://github.com/golemfactory/goth)
-framework is used for this purpose.
+Golem Network with Providers and all the necessary infrastructure.
 
-To enable E2E testing, you need to ensure that `python -m goth` is executable. Therefore, you must first
-install [Goth](https://github.com/golemfactory/goth) according to the instructions described in the readme of the
-project.
+#### Prerequisites
 
-#### NodeJS
+1. Ensure you have `docker` and `docker-compose` installed in your system.
+2. Your Linux environment should have nested virtualization enabled.
 
-```bash
-npm run test:e2e
-# or
-yarn test:e2e
+#### Test Environment Preparation
+
+Follow these steps to prepare your test environment:
+
+##### Build Docker Containers
+
+First, build the Docker containers using the `docker-compose.yml` file located under `tests/docker`.
+
+Execute this command to build the Docker containers:
+
+    docker-compose -f tests/docker/docker-compose.yml build
+
+##### Start Docker Containers
+
+Then, launch the Docker containers you've just built using the same `docker-compose.yml` file.
+
+Execute this command to start the Docker containers:
+
+    docker-compose -f tests/docker/docker-compose.yml down && docker-compose -f tests/docker/docker-compose.yml up -d
+
+##### Fund the Requestor
+
+The next step is to fund the requestor.
+
+    docker exec -t docker_requestor_1 /bin/sh -c "/golem-js/tests/docker/fundRequestor.sh"
+
+##### Install and Build the SDK
+
+Finally, install and build the golem-js SDK in the Docker container
+
+Run this chain of commands to install and build the SDK and prepare cypress.
+
+```docker
+docker exec -t docker_requestor_1 /bin/sh -c "cd /golem-js && npm i && npm run build && ./node_modules/.bin/cypress install"
 ```
 
-#### Cypress
+#### Execute the E2E Tests
 
-```bash
-npm run test:cypress
-# or
-yarn test:cypress
+With your test environment set up, you can now initiate the E2E tests. Run the following command to start:
+
+```docker
+docker exec -t docker_requestor_1 /bin/sh -c "cd /golem-js && npm run test:e2e"
+```
+
+#### Execute the cypress Tests
+
+First make sure that the webserver that's used for testing is running, by running the command
+
+```docker
+docker exec -t -d docker_requestor_1 /bin/sh -c "cd /golem-js/examples/web && node app.mjs"
+```
+
+Now you're ready to start the cypress tests by running the command
+
+```docker
+docker exec -t docker_requestor_1 /bin/sh -c "cd /golem-js && npm run test:cypress -- --browser chromium"
 ```
 
 ### Contributing
@@ -158,7 +201,9 @@ that they define. As a Requestor, you might want to:
   like to avoid
 
 To make this easy, we provided you with a set of predefined market proposal filters, which you can combine to implement
-your own market strategy. For example:
+your own market strategy.
+
+### Limit price limits to filter out offers that are too expensive
 
 ```typescript
 import { TaskExecutor, ProposalFilters } from "@golem-sdk/golem-js";
@@ -183,6 +228,41 @@ const executor = await TaskExecutor.create({
 ```
 
 To learn more about other filters, please check the [API reference of the market/strategy module](https://docs.golem.network/docs/golem-js/reference/modules/market_strategy)
+
+### Work with reliable providers
+
+The `getHealthyProvidersWhiteList` helper will provide you with a list of Provider ID's that were checked with basic health-checks. Using this whitelist will increase the chance of working with a reliable provider. Please note, that you can also build up your own list of favourite providers and use it in a similar fashion.
+
+```typescript
+import { TaskExecutor, ProposalFilters, MarketHelpers } from "@golem-sdk/golem-js";
+
+// Prepare the price filter
+const acceptablePrice = ProposalFilters.limitPriceFilter({
+  start: 1,
+  cpuPerSec: 1 / 3600,
+  envPerSec: 1 / 3600,
+});
+
+// Collect the whitelist
+const verifiedProviders = await MarketHelpers.getHealthyProvidersWhiteList();
+
+// Prepare the whitelist filter
+const whiteList = ProposalFilters.whiteListProposalIdsFilter(verifiedProviders);
+
+const executor = await TaskExecutor.create({
+  // What do you want to run
+  package: "golem/alpine:3.18.2",
+
+  // How much you wish to spend
+  budget: 0.5,
+  proposalFilter: async (proposal) => (await acceptablePrice(proposal)) && (await whiteList(proposal)),
+
+  // Where you want to spend
+  payment: {
+    network: "polygon",
+  },
+});
+```
 
 ## See also
 

@@ -29,7 +29,7 @@ describe("Express", function () {
       image: "golem/blender:latest",
       demand: {
         minMemGib: 1,
-        minStorageGib: 2,
+        minStorageGib: 1,
         minCpuThreads: 1,
         minCpuCores: 1,
       },
@@ -39,7 +39,7 @@ describe("Express", function () {
           "/golem/resource/scene.blend",
         );
       },
-      enableLogging: false,
+      enableLogging: true,
     });
     await network.init();
   });
@@ -126,40 +126,44 @@ describe("Express", function () {
     return app;
   };
 
-  it("starts the express server", async function () {
-    const app = getServer();
-    app.get("/network-status", (req, res) => {
-      res.json({ isInitialized: network.isInitialized() });
-    });
+  it(
+    "starts the express server",
+    async function () {
+      const app = getServer();
+      app.get("/network-status", (req, res) => {
+        res.json({ isInitialized: network.isInitialized() });
+      });
 
-    const response = await supertest(app).post("/render-scene").send({ frame: 0 });
-    expect(response.status).toEqual(200);
-    expect(response.body.jobId).toBeDefined();
+      const response = await supertest(app).post("/render-scene").send({ frame: 0 });
+      expect(response.status).toEqual(200);
+      expect(response.body.jobId).toBeDefined();
 
-    const jobId = response.body.jobId;
-    let statusResponse = await supertest(app).get(`/job/${jobId}/status`);
-    expect(statusResponse.status).toEqual(200);
-    expect(statusResponse.body.status).toEqual(JobState.New);
+      const jobId = response.body.jobId;
+      let statusResponse = await supertest(app).get(`/job/${jobId}/status`);
+      expect(statusResponse.status).toEqual(200);
+      expect(statusResponse.body.status).toEqual(JobState.New);
 
-    await new Promise((resolve) => {
-      const interval = setInterval(async () => {
-        const statusResponse = await supertest(app).get(`/job/${jobId}/status`);
-        if (statusResponse.body.status === JobState.Done) {
-          clearInterval(interval);
-          resolve(undefined);
-        }
-      }, 500);
-    });
+      await new Promise((resolve) => {
+        const interval = setInterval(async () => {
+          const statusResponse = await supertest(app).get(`/job/${jobId}/status`);
+          if (statusResponse.body.status === JobState.Done) {
+            clearInterval(interval);
+            resolve(undefined);
+          }
+        }, 500);
+      });
 
-    statusResponse = await supertest(app).get(`/job/${jobId}/status`);
-    expect(statusResponse.status).toEqual(200);
-    expect(statusResponse.body.status).toEqual(JobState.Done);
+      statusResponse = await supertest(app).get(`/job/${jobId}/status`);
+      expect(statusResponse.status).toEqual(200);
+      expect(statusResponse.body.status).toEqual(JobState.Done);
 
-    const resultResponse = await supertest(app).get(`/job/${jobId}/result`);
-    expect(resultResponse.status).toEqual(200);
-    expect(resultResponse.body).toEqual(
-      "Job completed successfully! See your result at http://localhost:3001/results/EXPRESS_SPEC_output_0.png",
-    );
-    expect(fs.existsSync(`${process.env.GOTH_GFTP_VOLUME || ""}EXPRESS_SPEC_output_0.png`)).toEqual(true);
-  });
+      const resultResponse = await supertest(app).get(`/job/${jobId}/result`);
+      expect(resultResponse.status).toEqual(200);
+      expect(resultResponse.body).toEqual(
+        "Job completed successfully! See your result at http://localhost:3001/results/EXPRESS_SPEC_output_0.png",
+      );
+      expect(fs.existsSync(`EXPRESS_SPEC_output_0.png`)).toEqual(true);
+    },
+    1000 * 240,
+  );
 });
