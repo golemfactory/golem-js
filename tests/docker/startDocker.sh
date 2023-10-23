@@ -11,16 +11,16 @@ compose_file="tests/docker/docker-compose.yml"
 
 # Function to bring up the services
 start_services() {
-    docker-compose -f $compose_file up -d
+    docker compose -f $compose_file up -d
 }
 
-# Loop to attempt 'docker-compose down' with retries
+# Loop to attempt 'docker compose down' with retries
 while [ $attempt -lt $max_attempts ]; do
     # Increment the attempt counter
     ((attempt=attempt+1))
 
     # Try to bring down the services
-    docker-compose -f $compose_file down
+    docker compose -f $compose_file down
 
     # Check if the command succeeded
     if [ $? -eq 0 ]; then
