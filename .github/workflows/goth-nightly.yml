@@ -40,7 +40,7 @@ jobs:
 
       - name: Start the docker containers
         # Use a random string to avoid other providers on the same subnet which might cause tests to fail because it expects only providers named provider-1 and provider-2
-        run: /manageDocker.sh
+        run: tests/docker/startDocker.sh
 
       - name: Fund the requestor
         # Use a funding script which will retry funding the requestor 3 times, else it exits with error. The faucet is not reliable and sometimes fails to fund the requestor, thus the retry.
