@@ -5,6 +5,8 @@ import { TaskExecutor } from "./executor";
 import { sleep } from "../utils";
 import { LoggerMock } from "../../tests/mock";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 jest.mock("../market/service");
 jest.mock("../agreement/service");
 jest.mock("../network/service");
@@ -59,6 +61,28 @@ describe("Task Executor", () => {
       await sleep(10, true);
       expect(handleErrorSpy).toHaveBeenCalled();
       await executor.end();
+    });
+  });
+
+  describe("end()", () => {
+    it("should allow multiple calls", async () => {
+      // Implementation details: the same promise is always used, so it's safe to call end() multiple times.
+      const executor = await TaskExecutor.create({ package: "test", startupTimeout: 0, logger, yagnaOptions });
+      const p = Promise.resolve();
+      const spy = jest.spyOn(executor as any, "doEnd").mockReturnValue(p);
+
+      const r1 = executor.end();
+      expect(r1).toBeDefined();
+      expect(r1).toStrictEqual(p);
+
+      const r2 = executor.end();
+      expect(r1).toStrictEqual(r2);
+
+      await r1;
+
+      const r3 = executor.end();
+      expect(r3).toStrictEqual(r1);
+      expect(spy).toHaveBeenCalledTimes(1);
     });
   });
 });

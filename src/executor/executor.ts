@@ -112,7 +112,18 @@ export class TaskExecutor {
   private startupTimeoutId?: NodeJS.Timeout;
   private yagna: Yagna;
 
+  /**
+   * Signal handler reference, needed to remove handlers on exit.
+   * @param signal
+   */
   private signalHandler = (signal: string) => this.cancel(signal);
+
+  /**
+   * End promise.
+   * This will be set by call to end() method.
+   * It will be resolved when the executor is fully stopped.
+   */
+  private endPromise?: Promise<void>;
 
   /**
    * Create a new Task Executor
@@ -243,12 +254,25 @@ export class TaskExecutor {
   }
 
   /**
-   * Stop all executor services and shut down executor instance
+   * Stop all executor services and shut down executor instance.
+   *
+   * You can call this method multiple times, it will resolve only once the executor is shutdown.
    */
-  async end() {
+  end(): Promise<void> {
+    if (this.isRunning) {
+      this.isRunning = false;
+      this.endPromise = this.doEnd();
+    }
+
+    return this.endPromise!;
+  }
+
+  /**
+   * Perform everything needed to cleanly shut down the executor.
+   * @private
+   */
+  private async doEnd() {
     if (runtimeContextChecker.isNode) this.removeSignalHandlers();
-    if (!this.isRunning) return;
-    this.isRunning = false;
     clearTimeout(this.startupTimeoutId);
     if (!this.configOptions.storageProvider) await this.storageProvider?.close();
     await this.networkService?.end();
