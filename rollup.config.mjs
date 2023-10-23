@@ -45,7 +45,7 @@ export default [
       commonjs(),
       nodePolyfills(),
       json(), // Required because one our dependencies (bottleneck) loads its own 'version.json'
-      typescript({ tsconfig: "./tsconfig.json" }),
+      typescript({ tsconfig: "./tsconfig.json", exclude: ["**/__tests__", "**/*.test.ts"] }),
       terser({ keep_classnames: true }),
       filesize({ reporter: [sizeValidator, "boxen"] }),
     ],
@@ -57,7 +57,10 @@ export default [
       { file: pkg.main, format: "cjs", sourcemap: true },
       { file: pkg.module, format: "es", sourcemap: true },
     ],
-    plugins: [typescript({ tsconfig: "./tsconfig.json" }), filesize({ reporter: [sizeValidator, "boxen"] })],
+    plugins: [
+      typescript({ tsconfig: "./tsconfig.json", exclude: ["**/__tests__", "**/*.test.ts"] }),
+      filesize({ reporter: [sizeValidator, "boxen"] }),
+    ],
   },
 ];
 

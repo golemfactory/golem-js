@@ -1,11 +1,10 @@
-import { Logger, sleep } from "../utils";
+import { YagnaApi, Logger, sleep } from "../utils";
 import { Package } from "../package";
 import { Proposal } from "./proposal";
 import { AgreementPoolService } from "../agreement";
 import { Allocation } from "../payment";
 import { Demand, DemandEvent, DemandEventType, DemandOptions } from "./demand";
 import { MarketConfig } from "./config";
-import { YagnaApi } from "../utils/yagna/yagna";
 
 export type ProposalFilter = (proposal: Proposal) => Promise<boolean> | boolean;
 
@@ -28,6 +27,11 @@ export class MarketService {
   private logger?: Logger;
   private taskPackage?: Package;
   private maxResubscribeRetries = 5;
+  private proposalsCount = {
+    initial: 0,
+    confirmed: 0,
+    rejected: 0,
+  };
 
   constructor(
     private readonly agreementPoolService: AgreementPoolService,
@@ -53,10 +57,18 @@ export class MarketService {
     this.logger?.debug("Market Service has been stopped");
   }
 
+  getProposalsCount() {
+    return this.proposalsCount;
+  }
   private async createDemand(): Promise<true> {
     if (!this.taskPackage || !this.allocation) throw new Error("The service has not been started correctly.");
     this.demand = await Demand.create(this.taskPackage, this.allocation, this.yagnaApi, this.options);
     this.demand.addEventListener(DemandEventType, this.demandEventListener.bind(this));
+    this.proposalsCount = {
+      initial: 0,
+      confirmed: 0,
+      rejected: 0,
+    };
     this.logger?.debug(`New demand has been created (${this.demand.id})`);
     return true;
   }
@@ -72,7 +84,10 @@ export class MarketService {
     if (proposal.isInitial()) this.processInitialProposal(proposal);
     else if (proposal.isDraft()) this.processDraftProposal(proposal);
     else if (proposal.isExpired()) this.logger?.debug(`Proposal hes expired ${proposal.id}`);
-    else if (proposal.isRejected()) this.logger?.debug(`Proposal hes rejected ${proposal.id}`);
+    else if (proposal.isRejected()) {
+      this.proposalsCount.rejected++;
+      this.logger?.debug(`Proposal hes rejected ${proposal.id}`);
+    }
   }
 
   private async resubscribeDemand() {
@@ -92,6 +107,7 @@ export class MarketService {
   private async processInitialProposal(proposal: Proposal) {
     if (!this.allocation) throw new Error("The service has not been started correctly.");
     this.logger?.debug(`New proposal has been received (${proposal.id})`);
+    this.proposalsCount.initial++;
     try {
       const { result: isProposalValid, reason } = await this.isProposalValid(proposal);
       if (isProposalValid) {
@@ -101,6 +117,7 @@ export class MarketService {
           .catch((e) => this.logger?.debug(`Unable to respond proposal ${proposal.id}. ${e}`));
         this.logger?.debug(`Proposal has been responded (${proposal.id})`);
       } else {
+        this.proposalsCount.rejected++;
         this.logger?.debug(`Proposal has been rejected (${proposal.id}). Reason: ${reason}`);
       }
     } catch (error) {
@@ -122,6 +139,7 @@ export class MarketService {
 
   private async processDraftProposal(proposal: Proposal) {
     await this.agreementPoolService.addProposal(proposal);
+    this.proposalsCount.confirmed++;
     this.logger?.debug(
       `Proposal has been confirmed with provider ${proposal.issuerId} and added to agreement pool (${proposal.id})`,
     );

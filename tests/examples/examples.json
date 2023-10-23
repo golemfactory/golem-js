@@ -1,4 +1,5 @@
 [
+  { "cmd": "node", "path": "examples/docs-examples/quickstarts/retrievable-task/task.mjs", "noGoth": true },
   { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/batch-end.mjs", "noGoth": true },
   {
     "cmd": "node",
@@ -14,6 +15,7 @@
   { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/single-command.mjs" },
   { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/single-command.cjs" },
   { "cmd": "ts-node", "path": "examples/docs-examples/examples/composing-tasks/single-command.ts" },
+  { "cmd": "ts-node", "path": "examples/docs-examples/examples/composing-tasks/alert-code.mjs" },
 
   { "cmd": "node", "path": "examples/docs-examples/examples/executing-tasks/before-each.mjs" },
   { "cmd": "node", "path": "examples/docs-examples/examples/executing-tasks/foreach.mjs" },

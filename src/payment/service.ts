@@ -76,7 +76,7 @@ export class PaymentService {
       clearTimeout(timeoutId);
     }
     this.isRunning = false;
-    this.payments?.unsubscribe().catch((error) => this.logger?.warn(error));
+    await this.payments?.unsubscribe().catch((error) => this.logger?.warn(error));
     this.payments?.removeEventListener(PaymentEventType, this.subscribePayments.bind(this));
     await this.allocation?.release().catch((error) => this.logger?.warn(error));
     this.logger?.info("Allocation has been released");
