@@ -40,5 +40,6 @@ RUN apt-get update -q \
 
 
 COPY ./startRequestor.sh /startRequestor.sh
+COPY ./manageDocker.sh /manageDocker.sh
 
 CMD ["bash", "-c", "/startRequestor.sh"]
