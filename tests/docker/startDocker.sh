@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Restart docker first as it may be in a bad state.
+sudo service docker restart
 # Maximum number of attempts to bring down the Docker Compose
 max_attempts=5
 
