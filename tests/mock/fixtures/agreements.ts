@@ -3,8 +3,8 @@ export const agreementsApproved = [
     agreementId: "b9ef6f5feb7fa9e5eb226a5ca2b658823242451fa28b08df9e063943018cc883",
     demand: {
       properties: {
-        "golem.com.payment.chosen-platform": "erc20-rinkeby-tglm",
-        "golem.com.payment.platform.erc20-rinkeby-tglm.address": "0x19ee20338a4c4bf8f6aebc79d9d3af2a01434119",
+        "golem.com.payment.chosen-platform": "erc20next-rinkeby-tglm",
+        "golem.com.payment.platform.erc20next-rinkeby-tglm.address": "0x19ee20338a4c4bf8f6aebc79d9d3af2a01434119",
         "golem.node.debug.subnet": "devnet-beta",
         "golem.srv.caps.multi-activity": true,
         "golem.srv.comp.expiration": 1669632825572,
@@ -13,7 +13,7 @@ export const agreementsApproved = [
         "golem.srv.comp.vm.package_format": "gvmkit-squash",
       },
       constraints:
-        "(&(&(golem.inf.mem.gib>=0.5)\n\t(golem.inf.storage.gib>=2)\n\t(golem.runtime.name=vm))\n\t(golem.com.payment.platform.erc20-rinkeby-tglm.address=*)\n\t(golem.node.debug.subnet=devnet-beta))",
+        "(&(&(golem.inf.mem.gib>=0.5)\n\t(golem.inf.storage.gib>=2)\n\t(golem.runtime.name=vm))\n\t(golem.com.payment.platform.erc20next-rinkeby-tglm.address=*)\n\t(golem.node.debug.subnet=devnet-beta))",
       demandId: "f8a7f2ac2e034123b59fdd45993ccb0e-7b25faa576ea7696a27775b6058470fedbfe9b4f86fc808de4a12ddffdef4811",
       requestorId: "0x19ee20338a4c4bf8f6aebc79d9d3af2a01434119",
       timestamp: "2022-11-28T10:38:57.369763Z",
@@ -21,9 +21,9 @@ export const agreementsApproved = [
     offer: {
       properties: {
         "golem.activity.caps.transfer.protocol": ["gftp", "http", "https"],
-        "golem.com.payment.platform.erc20-goerli-tglm.address": "0x6e7f25ca8ab5a043d91d102116cc97c2654403f0",
-        "golem.com.payment.platform.erc20-mumbai-tglm.address": "0x6e7f25ca8ab5a043d91d102116cc97c2654403f0",
-        "golem.com.payment.platform.erc20-rinkeby-tglm.address": "0x6e7f25ca8ab5a043d91d102116cc97c2654403f0",
+        "golem.com.payment.platform.erc20next-goerli-tglm.address": "0x6e7f25ca8ab5a043d91d102116cc97c2654403f0",
+        "golem.com.payment.platform.erc20next-mumbai-tglm.address": "0x6e7f25ca8ab5a043d91d102116cc97c2654403f0",
+        "golem.com.payment.platform.erc20next-rinkeby-tglm.address": "0x6e7f25ca8ab5a043d91d102116cc97c2654403f0",
         "golem.com.payment.platform.zksync-rinkeby-tglm.address": "0x6e7f25ca8ab5a043d91d102116cc97c2654403f0",
         "golem.com.pricing.model": "linear",
         "golem.com.pricing.model.linear.coeffs": [0.0001, 0.00005, 0],

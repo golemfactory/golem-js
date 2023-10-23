@@ -21,7 +21,7 @@ program
   .requiredOption("-n, --fibonacci-number <n>", "fibonacci number", (val) => parseInt(val))
   .option("-c, --tasks-count <c>", "tasks count", (val) => parseInt(val))
   .option("--subnet-tag <subnet>", "set subnet name, for example 'public'")
-  .option("--payment-driver, --driver <driver>", "payment driver name, for example 'erc20'")
+  .option("--payment-driver, --driver <driver>", "payment driver name, for example 'erc20next'")
   .option("--payment-network, --network <network>", "network name, for example 'goerli'")
   .option("-d, --debug", "output extra debugging");
 program.parse();

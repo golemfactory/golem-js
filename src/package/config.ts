@@ -5,7 +5,7 @@ import { PackageOptions } from "./package";
  * @internal
  */
 export const DEFAULTS = Object.freeze({
-  payment: { driver: "erc20", network: "goerli" },
+  payment: { driver: "erc20next", network: "goerli" },
   engine: "vm",
   minMemGib: 0.5,
   minStorageGib: 2,

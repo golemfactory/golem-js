@@ -51,7 +51,7 @@ async function main(subnetTag: string, driver?: string, network?: string, debug?
 
 program
   .option("--subnet-tag <subnet>", "set subnet name, for example 'public'")
-  .option("--payment-driver, --driver <driver>", "payment driver name, for example 'erc20'")
+  .option("--payment-driver, --driver <driver>", "payment driver name, for example 'erc20next'")
   .option("--payment-network, --network <network>", "network name, for example 'goerli'")
   .option("-d, --debug", "output extra debugging")
   .option("-t, --max-parallel-tasks <maxParallelTasks>", "max parallel tasks");

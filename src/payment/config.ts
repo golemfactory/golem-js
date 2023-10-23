@@ -6,7 +6,7 @@ import { InvoiceOptions } from "./invoice";
 import { acceptAllDebitNotesFilter, acceptAllInvoicesFilter } from "./strategy";
 
 const DEFAULTS = Object.freeze({
-  payment: { network: "goerli", driver: "erc20" },
+  payment: { network: "goerli", driver: "erc20next" },
   budget: 1.0,
   paymentTimeout: 1000 * 60, // 1 min
   allocationExpires: 1000 * 60 * 60, // 60 min

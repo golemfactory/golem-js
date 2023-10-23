@@ -12,13 +12,13 @@ export type PricingInfo = {
 export type ProposalProperties = Record<string, string | number | string[] | number[] | boolean> & {
   "golem.activity.caps.transfer.protocol": string[];
   "golem.com.payment.debit-notes.accept-timeout?": number;
-  "golem.com.payment.platform.erc20-polygon-glm.address"?: string;
-  "golem.com.payment.platform.erc20-goerli-tglm.address"?: string;
-  "golem.com.payment.platform.erc20-mumbai-tglm.address"?: string;
+  "golem.com.payment.platform.erc20next-polygon-glm.address"?: string;
+  "golem.com.payment.platform.erc20next-goerli-tglm.address"?: string;
+  "golem.com.payment.platform.erc20next-mumbai-tglm.address"?: string;
   /**
    * @deprecated rinkeby is no longer supported, use other test networks instead
    */
-  "golem.com.payment.platform.erc20-rinkeby-tglm.address"?: string;
+  "golem.com.payment.platform.erc20next-rinkeby-tglm.address"?: string;
   /**
    * @deprecated rinkeby is no longer supported, use other test networks instead
    */

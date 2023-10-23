@@ -5,7 +5,7 @@ import { Logger, LogLevel, runtimeContextChecker, defaultLogger } from "../utils
 import { InMemoryJobStorage, JobStorage } from "../job/storage";
 
 const DEFAULTS = Object.freeze({
-  payment: { driver: "erc20", network: "goerli" },
+  payment: { driver: "erc20next", network: "goerli" },
   budget: 1.0,
   subnetTag: "public",
   logLevel: LogLevel.Info,

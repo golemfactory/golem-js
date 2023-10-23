@@ -2,7 +2,7 @@ export const allocations = [
   {
     allocationId: "70000034-020b-40a0-8adc-404be7440beb",
     address: "0x19ee20338a4c4bf8f6aebc79d9d3af2a01434119",
-    paymentPlatform: "erc20-goerli-tglm",
+    paymentPlatform: "erc20next-goerli-tglm",
     totalAmount: "1",
     spentAmount: "0",
     remainingAmount: "1",
