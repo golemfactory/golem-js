@@ -55,15 +55,15 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Use random string for subnet
+        # Use a random string to avoid other providers on the same subnet which might cause tests to fail because it expects only providers named provider-1 and provider-2
         run: echo "YAGNA_SUBNET=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 8 ; echo '')" >> $GITHUB_ENV
 
       - name: Build the docker containers
-        # Use a random string to avoid other providers on the same subnet which might cause tests to fail because it expects only providers named provider-1 and provider-2
         run: docker compose -f tests/docker/docker-compose.yml build
 
       - name: Start the docker containers
-        # Use a random string to avoid other providers on the same subnet which might cause tests to fail because it expects only providers named provider-1 and provider-2
-        run: tests/docker/startDocker.sh
+        # Restart docker to avoid issues with the docker compose down due to improper cleanup of the previous run.
+        run: sudo service docker restart && docker compose -f tests/docker/docker-compose.yml down && docker compose -f tests/docker/docker-compose.yml up -d
 
       - name: Fund the requestor
         # Use a funding script which will retry funding the requestor 3 times, else it exits with error. The faucet is not reliable and sometimes fails to fund the requestor, thus the retry.
