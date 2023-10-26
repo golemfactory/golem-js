@@ -54,10 +54,15 @@ export class GolemWorkerNode extends EventEmitter {
     this.golemRuntime.end().catch((error) => console.error(error));
   }
   private async startWorkerProxy(ctx: WorkContext) {
+    console.log("starting proxy");
     await ctx.uploadFile("./proxy.mjs", "/golem/work/proxy.mjs");
     await ctx.uploadFile("./polyfill.cjs", "/golem/work/polyfill.cjs");
     await ctx.uploadFile(`${this.scriptURL}`, "/golem/work/worker.js");
-    await ctx.run("node /golem/work/proxy.mjs &");
+    await ctx.run("node /golem/work/proxy.mjs >> /golem/work/log.txt");
+    // const logStream = await ctx.runAsStream("tail -f /golem/work/log.txt");
+    // logStream.on("data", (data) => console.log(`[LOG] ${data?.json}`));
+    // logStream.on("error", (error) => console.log(`ErrorL: ${error}`));
+    // logStream.on("end", () => console.log("END"));
     console.log(new Date().toISOString(), "CTX STARTED");
   }
 

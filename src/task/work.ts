@@ -16,6 +16,7 @@ import { NullStorageProvider, StorageProvider } from "../storage";
 import { Logger, sleep } from "../utils";
 import { Batch } from "./batch";
 import { NetworkNode } from "../network";
+import { Readable } from "stream";
 
 export type Worker<InputType = unknown, OutputType = unknown> = (
   ctx: WorkContext,
@@ -133,6 +134,45 @@ export class WorkContext {
     const runOptions = isArray ? options : (argsOrOptions as CommandOptions);
 
     return this.runOneCommand(run, runOptions);
+  }
+
+  /**
+   * Execute an executable on provider and return Promise of ReadableStream
+   * that streams the stdout and stderr of the command while it is being executed.
+   *
+   * @param commandLine Shell command to execute.
+   * @param options Additional run options.
+   */
+  async runAsStream(commandLine: string, options?: Omit<CommandOptions, "capture">): Promise<Readable>;
+  /**
+   * @param executable Executable to run.
+   * @param args Executable arguments.
+   * @param options Additional run options.
+   */
+  async runAsStream(executable: string, args: string[], options?: Omit<CommandOptions, "capture">): Promise<Readable>;
+  async runAsStream(
+    exeOrCmd: string,
+    argsOrOptions?: string[] | Omit<CommandOptions, "capture">,
+    options?: Omit<CommandOptions, "capture">,
+  ): Promise<Readable> {
+    const isArray = Array.isArray(argsOrOptions);
+    const capture: Capture = {
+      stdout: { stream: { format: "string" } },
+      stderr: { stream: { format: "string" } },
+    };
+    const run = isArray
+      ? new Run(exeOrCmd, argsOrOptions as string[], options?.env, capture)
+      : new Run("/bin/sh", ["-c", exeOrCmd], argsOrOptions?.env, capture);
+    const script = new Script([run]);
+    // In this case, the script consists only of the run command,
+    // so we skip the execution of script.before and script.after
+    return this.activity.execute(script.getExeScriptRequest(), true, options?.timeout).catch((e) => {
+      throw new Error(
+        `Script execution failed for command: ${JSON.stringify(run.toJson())}. ${
+          e?.response?.data?.message || e?.message || e
+        }`,
+      );
+    });
   }
 
   /**

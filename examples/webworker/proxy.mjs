@@ -1,20 +1,22 @@
 import { createServer } from "net";
 import { Worker } from "worker_threads";
+import fs from "fs";
 
 const server = createServer({
   keepAlive: true,
   noDelay: true,
 });
+
+const myLogFileStream = fs.createWriteStream("/golem/work/log.txt");
+
+process.stdout.write = process.stderr.write = myLogFileStream.write.bind(myLogFileStream);
 server.on("connection", (socket) => {
-  const worker = new Worker("./worker2.js", { execArgv: ["-r", "./polyfill.cjs"] });
+  const worker = new Worker("/golem/work/worker.js", { execArgv: ["-r", "/golem/work/polyfill.cjs"] });
   worker.on("message", (msg) => socket.write(`${msg}\r\n`));
-  worker.on("error", (err) => socket.write(`${err}\r\n`));
-  socket.on("data", function (data) {
-    worker.postMessage([2, 3]);
-    // socket.write(`MSG FROM PROXY: ${data}\r\n`);
-    return 1;
-  });
+  worker.on("error", (err) => socket.write(`ERROR: ${err}\r\n`));
+  socket.on("data", (data) => worker.postMessage(deserializer(data)));
   socket.once("close", () => worker.terminate());
+  socket.on("error", (error) => console.error(error));
 });
 server.listen(6000);
 
