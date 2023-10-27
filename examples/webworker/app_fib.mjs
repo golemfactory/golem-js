@@ -11,7 +11,7 @@ process.setMaxListeners(length + 3);
 let completedWorkers = new Set();
 
 const workers = Array.from({ length }, (_, i) => {
-  const worker = new Worker("./worker_fib.js", { enableLogging: true });
+  const worker = new Worker("./worker_fib.js");
   worker.on("message", (msg) => {
     console.log(`[worker-${i}]`, msg);
     completedWorkers.add(i);
