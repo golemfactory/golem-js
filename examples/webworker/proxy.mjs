@@ -1,22 +1,28 @@
 import { createServer } from "net";
 import { Worker } from "worker_threads";
-import fs from "fs";
 
 const server = createServer({
   keepAlive: true,
   noDelay: true,
 });
 
-const myLogFileStream = fs.createWriteStream("/golem/work/log.txt");
-
-process.stdout.write = process.stderr.write = myLogFileStream.write.bind(myLogFileStream);
+const worker = new Worker("/golem/work/worker.mjs", { execArgv: ["-r", "/golem/work/polyfill.cjs"] });
 server.on("connection", (socket) => {
-  const worker = new Worker("/golem/work/worker.js", { execArgv: ["-r", "/golem/work/polyfill.cjs"] });
-  worker.on("message", (msg) => socket.write(`${msg}\r\n`));
-  worker.on("error", (err) => socket.write(`ERROR: ${err}\r\n`));
-  socket.on("data", (data) => worker.postMessage(deserializer(data)));
-  socket.once("close", () => worker.terminate());
-  socket.on("error", (error) => console.error(error));
+  try {
+    // const origStdWrite = process.stdout.write;
+    // process.stdout.write = process.stderr.write = socket.write.bind(socket);
+    worker.on("message", (msg) => socket.write(`${msg}\r\n`));
+    worker.on("error", (error) => console.error(error));
+    socket.on("data", (data) => worker.postMessage(deserializer(data)));
+    socket.on("error", (error) => console.error(error));
+    socket.once("close", () => {
+      worker.terminate().then();
+      // process.stdout.write = process.stderr.write = origStdWrite;
+    });
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
 });
 server.listen(6000);
 
@@ -25,6 +31,6 @@ function deserializer(data) {
     const msg = Buffer.from(data).toString();
     return JSON.parse(msg);
   } catch (e) {
-    return msg;
+    return data;
   }
 }

@@ -8,11 +8,11 @@ import { Package, PackageOptions } from "../package";
 import { WorkContext } from "../task";
 import { Activity, ActivityOptions } from "../activity";
 import { NetworkService, NetworkServiceOptions } from "../network";
-import { consoleLogger } from "../utils";
+import { defaultLogger, Logger, nullLogger } from "../utils";
 import { isBrowser } from "../utils/runtimeContextChecker";
 import { WebSocketBrowserStorageProvider, GftpStorageProvider, StorageProvider } from "../storage";
 
-export type RuntimeOptions = { storageProvider?: StorageProvider } & YagnaOptions &
+export type RuntimeOptions = { storageProvider?: StorageProvider; enableLogging?: boolean } & YagnaOptions &
   MarketOptions &
   AgreementServiceOptions &
   PaymentOptions &
@@ -28,10 +28,10 @@ export class GolemRuntime {
   private readonly paymentService: PaymentService;
   private readonly networkService: NetworkService;
   private activity?: Activity;
+  private logger: Logger;
   constructor(options?: RuntimeOptions) {
-    const logger = consoleLogger();
-    logger.debug = () => null;
-    this.options = { logger, imageTag: "golem/node:20-alpine", capabilities: ["vpn"], ...options };
+    this.logger = options?.logger || options?.enableLogging ? defaultLogger() : nullLogger();
+    this.options = { logger: this.logger, imageTag: "golem/node:20-alpine", capabilities: ["vpn"], ...options };
     this.yagna = new Yagna(this.options.yagnaOptions);
     const yagnaApi = this.yagna.getApi();
     this.agreementService = new AgreementPoolService(yagnaApi, this.options);
@@ -55,21 +55,20 @@ export class GolemRuntime {
       return this.createWorkContext(agreement);
     } catch (error) {
       // TODO
-      console.error(error);
+      this.logger.error(error);
       throw error;
     }
   }
 
   async end() {
     try {
-      await this.marketService.end();
       await this.activity?.stop?.();
       await this.agreementService.end();
       await this.networkService.end();
       await this.paymentService.end();
     } catch (error) {
       // TODO
-      console.error(error);
+      this.logger.error(error);
       throw error;
     }
   }
@@ -90,7 +89,7 @@ export class GolemRuntime {
       return ctx;
     } catch (error) {
       // TODO
-      console.error(error);
+      this.logger.error(error);
       throw error;
     }
   }

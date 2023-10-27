@@ -143,14 +143,14 @@ export class WorkContext {
    * @param commandLine Shell command to execute.
    * @param options Additional run options.
    */
-  async runAsStream(commandLine: string, options?: Omit<CommandOptions, "capture">): Promise<Readable>;
+  async runAndStream(commandLine: string, options?: Omit<CommandOptions, "capture">): Promise<Readable>;
   /**
    * @param executable Executable to run.
    * @param args Executable arguments.
    * @param options Additional run options.
    */
-  async runAsStream(executable: string, args: string[], options?: Omit<CommandOptions, "capture">): Promise<Readable>;
-  async runAsStream(
+  async runAndStream(executable: string, args: string[], options?: Omit<CommandOptions, "capture">): Promise<Readable>;
+  async runAndStream(
     exeOrCmd: string,
     argsOrOptions?: string[] | Omit<CommandOptions, "capture">,
     options?: Omit<CommandOptions, "capture">,
