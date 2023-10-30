@@ -7,6 +7,7 @@
   "scripts": {
     "hello": "node ./hello-world/hello.mjs",
     "run": "ts-node ./simple-usage/run.ts",
+    "runStream": "ts-node ./simple-usage/runStream.ts",
     "map": "ts-node ./simple-usage/map.ts",
     "forEach": "ts-node ./simple-usage/forEach.ts",
     "fileTransfer": "ts-node ./simple-usage/fileTransfer.ts",
