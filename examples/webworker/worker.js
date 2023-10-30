@@ -6,7 +6,6 @@ parentPort.addEventListener("message", (e) => {
   const b = Number(e.data[1]);
   if (isNaN(a) || isNaN(b)) {
     parentPort.postMessage("Invalid numbers");
-    4;
   } else {
     console.log("Posting message back to main script");
     parentPort.postMessage(`${a} + ${b} = ${a + b}`);

@@ -1,9 +1,8 @@
 import { Worker } from "@golem-sdk/golem-js";
-// import { Worker } from "worker_threads";
 import os from "os";
 
-const min = 40;
-const max = 50;
+const min = 30;
+const max = 45;
 const length = os.cpus().length;
 const dataSet = Array.from({ length }, () => Math.floor(Math.random() * (max - min + 1) + min));
 
