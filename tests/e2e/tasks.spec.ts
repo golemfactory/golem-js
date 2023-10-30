@@ -186,12 +186,13 @@ describe("Task Executor", function () {
       package: "golem/alpine:latest",
       logger,
     });
-    const streamOfResults = await executor.run(async (ctx) => ctx.runAndStream("echo 'Hello World'"));
-    expect(streamOfResults).toBeDefined();
-    for await (const result of streamOfResults!) {
-      expect(result.stdout).toContain("Hello World");
-      expect(result.result).toContain("Ok");
-    }
+    await executor.run(async (ctx) => {
+      const streamOfResults = await ctx.runAndStream("echo 'Hello World'");
+      for await (const result of streamOfResults) {
+        expect(result.stdout).toContain("Hello World");
+        expect(result.result).toContain("Ok");
+      }
+    });
     expect(logger.logs).toContain("Demand published on the market");
     expect(logger.logs).toContain("New proposal has been received");
     expect(logger.logs).toContain("Proposal has been responded");
