@@ -12,7 +12,10 @@ import { defaultLogger, Logger, nullLogger } from "../utils";
 import { isBrowser } from "../utils/runtimeContextChecker";
 import { WebSocketBrowserStorageProvider, GftpStorageProvider, StorageProvider } from "../storage";
 
-export type RuntimeOptions = { storageProvider?: StorageProvider; enableLogging?: boolean } & YagnaOptions &
+export type RuntimeOptions = {
+  storageProvider?: StorageProvider;
+  enableLogging?: boolean;
+} & YagnaOptions &
   MarketOptions &
   AgreementServiceOptions &
   PaymentOptions &

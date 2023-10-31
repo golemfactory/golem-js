@@ -21,6 +21,8 @@ export class GolemWorkerNode extends EventEmitter {
     this.options.logger = this.logger;
     this.addListener("message", (ev) => this["onmessage"]?.(ev));
     this.addListener("error", (ev) => this["onerror"]?.(ev));
+    // TODO: change to official golem image
+    this.options.imageTag = "mgordel/worker:latest";
     this.golemRuntime = new GolemRuntime(this.options);
     this.golemRuntime
       .init()
@@ -61,16 +63,16 @@ export class GolemWorkerNode extends EventEmitter {
     return this.golemRuntime.end();
   }
   private async startWorkerProxy(ctx: WorkContext) {
-    await ctx.uploadFile("./proxy.mjs", "/golem/work/proxy.mjs");
-    await ctx.uploadFile("./polyfill.cjs", "/golem/work/polyfill.cjs");
     await ctx.uploadFile(`${this.scriptURL}`, "/golem/work/worker.mjs");
-    // await ctx.run("node /golem/work/proxy.mjs &");
     const results = await ctx.runAndStream("node /golem/work/proxy.mjs");
 
     results.on("error", (error) => this.logger.debug(error));
     await new Promise((res, rej) => {
       const timeoutId = setTimeout(() => rej(new Error("Worker Proxy startup timed out")), 10_000);
       results.on("data", (data) => {
+        // consider another way to check if the proxy is ready.
+        // For now, after a successful start,  proxy write the following message
+        // to the console: "worker proxy started"
         if (data.stdout && data.stdout.trim() === "worker proxy started") {
           clearTimeout(timeoutId);
           return res(true);
@@ -82,6 +84,9 @@ export class GolemWorkerNode extends EventEmitter {
     this.logger.debug(`Worker Proxy started on provider ${ctx.provider?.name}`);
   }
 
+  /**
+   * A very primitive json serializer, for testing and checking other edge cases...
+   */
   private serializer(message: unknown) {
     if (typeof message !== "string") return JSON.stringify(message);
     return message;
