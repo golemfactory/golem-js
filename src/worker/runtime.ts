@@ -34,7 +34,7 @@ export class GolemRuntime {
   private logger: Logger;
   constructor(options?: RuntimeOptions) {
     this.logger = options?.logger || options?.enableLogging ? defaultLogger() : nullLogger();
-    this.options = { logger: this.logger, imageTag: "golem/node:20-alpine", capabilities: ["vpn"], ...options };
+    this.options = { logger: this.logger, imageTag: "mgordel/worker:latest", capabilities: ["vpn"], ...options };
     this.yagna = new Yagna(this.options.yagnaOptions);
     const yagnaApi = this.yagna.getApi();
     this.agreementService = new AgreementPoolService(yagnaApi, this.options);

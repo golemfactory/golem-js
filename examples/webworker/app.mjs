@@ -1,3 +1,4 @@
+// import { Worker } from "worker_threads";
 import { Worker } from "@golem-sdk/golem-js";
 
 const worker = new Worker("./worker.js", { enableLogging: true });

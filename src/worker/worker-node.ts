@@ -4,7 +4,7 @@ import WebSocket from "ws";
 import { EventEmitter } from "node:events";
 import { defaultLogger, Logger, nullLogger } from "../utils";
 
-export type GolemWorkerOptions = WorkerOptions & RuntimeOptions;
+export type GolemWorkerOptions = { startupTimeout: 30_000 } & WorkerOptions & RuntimeOptions;
 
 export class GolemWorkerNode extends EventEmitter {
   private readonly golemRuntime: GolemRuntime;
@@ -64,11 +64,13 @@ export class GolemWorkerNode extends EventEmitter {
   }
   private async startWorkerProxy(ctx: WorkContext) {
     await ctx.uploadFile(`${this.scriptURL}`, "/golem/work/worker.mjs");
+    const results1 = await ctx.run("ls -Al /golem/work");
+    const results2 = await ctx.run("node /golem/work/proxy.mjs &");
+    console.log({ results1, results2 });
     const results = await ctx.runAndStream("node /golem/work/proxy.mjs");
-
     results.on("error", (error) => this.logger.debug(error));
     await new Promise((res, rej) => {
-      const timeoutId = setTimeout(() => rej(new Error("Worker Proxy startup timed out")), 10_000);
+      const timeoutId = setTimeout(() => rej(new Error("Worker Proxy startup timed out")), 60_000);
       results.on("data", (data) => {
         // consider another way to check if the proxy is ready.
         // For now, after a successful start,  proxy write the following message

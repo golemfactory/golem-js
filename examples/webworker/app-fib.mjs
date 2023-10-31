@@ -1,3 +1,4 @@
+// import { Worker } from "worker_threads";
 import { Worker } from "@golem-sdk/golem-js";
 import os from "os";
 
@@ -10,7 +11,7 @@ process.setMaxListeners(length + 3);
 let completedWorkers = new Set();
 
 const workers = Array.from({ length }, (_, i) => {
-  const worker = new Worker("./worker_fib.js");
+  const worker = new Worker("./worker-fib.js");
   worker.on("message", (msg) => {
     console.log(`[worker-${i}]`, msg);
     completedWorkers.add(i);
