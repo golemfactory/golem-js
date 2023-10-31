@@ -9,7 +9,7 @@ describe("Golem Workers", function () {
   it("run js script file on GolemWorker", async () => {
     let expectedMessage = "";
     let isOnline = false;
-    const worker = new Worker(path.resolve(__dirname, "../mocks/fixtures/worker.js"), { logger });
+    const worker = new Worker(path.resolve(__dirname, "../mock/fixtures/worker.js"), { logger });
     worker.on("message", (msg) => (expectedMessage = msg));
     worker.on("online", () => (isOnline = true));
     await sleep(20);
