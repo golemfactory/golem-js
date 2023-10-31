@@ -33,7 +33,7 @@ export class GolemRuntime {
   private activity?: Activity;
   private logger: Logger;
   constructor(options?: RuntimeOptions) {
-    this.logger = options?.logger || options?.enableLogging ? defaultLogger() : nullLogger();
+    this.logger = options?.logger || (options?.enableLogging ? defaultLogger() : nullLogger());
     this.options = {
       logger: this.logger,
       capabilities: ["vpn"],

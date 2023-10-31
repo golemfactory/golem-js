@@ -11,8 +11,8 @@ describe("Golem Workers", function () {
     let isOnline = false;
     const worker = new Worker(path.resolve("../mocks/fixtures/worker.js"), { logger, enableLogging: true });
     worker.on("message", (msg) => (expectedMessage = msg));
-    worker.on("online", () => (isOnline = true));
     await sleep(20);
+    worker.on("online", () => (isOnline = true));
     expect(isOnline).toBe(true);
     worker.postMessage([5, 7]);
     await sleep(5);

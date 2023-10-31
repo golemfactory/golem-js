@@ -17,7 +17,7 @@ export class GolemWorkerNode extends EventEmitter {
   ) {
     super();
     this.options = options || ({} as GolemWorkerOptions);
-    this.logger = options?.logger || options?.enableLogging ? defaultLogger() : nullLogger();
+    this.logger = options?.logger || (options?.enableLogging ? defaultLogger() : nullLogger());
     this.options.logger = this.logger;
     this.options.startupTimeout = options?.startupTimeout ?? 20_000;
     this.addListener("message", (ev) => this["onmessage"]?.(ev));
