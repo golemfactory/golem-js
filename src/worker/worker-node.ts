@@ -4,7 +4,7 @@ import WebSocket from "ws";
 import { EventEmitter } from "node:events";
 import { defaultLogger, Logger, nullLogger } from "../utils";
 
-export type GolemWorkerOptions = { startupTimeout: 30_000 } & WorkerOptions & RuntimeOptions;
+export type GolemWorkerOptions = { startupTimeout?: number } & WorkerOptions & RuntimeOptions;
 
 export class GolemWorkerNode extends EventEmitter {
   private readonly golemRuntime: GolemRuntime;
@@ -19,6 +19,7 @@ export class GolemWorkerNode extends EventEmitter {
     this.options = options || ({} as GolemWorkerOptions);
     this.logger = options?.logger || options?.enableLogging ? defaultLogger() : nullLogger();
     this.options.logger = this.logger;
+    this.options.startupTimeout = options?.startupTimeout ?? 20_000;
     this.addListener("message", (ev) => this["onmessage"]?.(ev));
     this.addListener("error", (ev) => this["onerror"]?.(ev));
     // TODO: change to official golem image
@@ -64,13 +65,13 @@ export class GolemWorkerNode extends EventEmitter {
   }
   private async startWorkerProxy(ctx: WorkContext) {
     await ctx.uploadFile(`${this.scriptURL}`, "/golem/work/worker.mjs");
-    const results = await ctx.runAndStream("node /golem/work/proxy.mjs");
+    const results = await ctx.runAndStream("node /golem/proxy/proxy.mjs");
     results.on("error", (error) => this.logger.debug(error));
     await new Promise((res, rej) => {
-      const timeoutId = setTimeout(() => rej(new Error("Worker Proxy startup timed out")), 60_000);
+      const timeoutId = setTimeout(() => rej(new Error("Worker Proxy startup timed out")), this.options.startupTimeout);
       results.on("data", (data) => {
         // consider another way to check if the proxy is ready.
-        // For now, after a successful start,  proxy write the following message
+        // For now, after a successful start, proxy write the following message
         // to the console: "worker proxy started"
         if (data.stdout && data.stdout.trim() === "worker proxy started") {
           clearTimeout(timeoutId);
@@ -84,7 +85,7 @@ export class GolemWorkerNode extends EventEmitter {
   }
 
   /**
-   * A very primitive json serializer, for testing and checking other edge cases...
+   * A very primitive json serializer, requires testing and verification on other edge cases...
    */
   private serializer(message: unknown) {
     if (typeof message !== "string") return JSON.stringify(message);

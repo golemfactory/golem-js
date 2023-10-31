@@ -6,7 +6,7 @@ const server = createServer({
   noDelay: true,
 });
 
-const worker = new Worker("/golem/work/worker.mjs", { execArgv: ["-r", "/golem/work/polyfill.cjs"] });
+const worker = new Worker("/golem/proxy/worker.mjs", { execArgv: ["-r", "/golem/proxy/polyfill.cjs"] });
 
 server.on("connection", (socket) => {
   try {

@@ -4,7 +4,7 @@ import { PaymentOptions, PaymentService } from "../payment";
 import { MarketOptions } from "../market/service";
 import { AgreementServiceOptions } from "../agreement/service";
 import { Yagna, YagnaOptions } from "../utils/yagna/yagna";
-import { Package, PackageOptions } from "../package";
+import { Package, AllPackageOptions } from "../package";
 import { WorkContext } from "../task";
 import { Activity, ActivityOptions } from "../activity";
 import { NetworkService, NetworkServiceOptions } from "../network";
@@ -20,7 +20,7 @@ export type RuntimeOptions = {
   AgreementServiceOptions &
   PaymentOptions &
   NetworkServiceOptions &
-  PackageOptions &
+  AllPackageOptions &
   ActivityOptions;
 
 export class GolemRuntime {
@@ -34,7 +34,11 @@ export class GolemRuntime {
   private logger: Logger;
   constructor(options?: RuntimeOptions) {
     this.logger = options?.logger || options?.enableLogging ? defaultLogger() : nullLogger();
-    this.options = { logger: this.logger, imageTag: "mgordel/worker:latest", capabilities: ["vpn"], ...options };
+    this.options = {
+      logger: this.logger,
+      capabilities: ["vpn"],
+      ...options,
+    };
     this.yagna = new Yagna(this.options.yagnaOptions);
     const yagnaApi = this.yagna.getApi();
     this.agreementService = new AgreementPoolService(yagnaApi, this.options);
@@ -46,7 +50,10 @@ export class GolemRuntime {
   async init(): Promise<WorkContext> {
     try {
       await this.yagna.connect();
-      const taskPackage = Package.create(this.options);
+      const taskPackage = Package.create({
+        imageTag: "mgordel/worker:latest",
+        ...this.options,
+      });
       const allocation = await this.paymentService.createAllocation();
       await this.marketService.run(taskPackage, allocation);
       await this.agreementService.run();
@@ -57,7 +64,6 @@ export class GolemRuntime {
       await this.marketService.end();
       return this.createWorkContext(agreement);
     } catch (error) {
-      // TODO
       this.logger.error(error);
       throw error;
     }
@@ -70,7 +76,6 @@ export class GolemRuntime {
       await this.networkService.end();
       await this.paymentService.end();
     } catch (error) {
-      // TODO
       this.logger.error(error);
       throw error;
     }
@@ -91,7 +96,6 @@ export class GolemRuntime {
       await ctx.before();
       return ctx;
     } catch (error) {
-      // TODO
       this.logger.error(error);
       throw error;
     }

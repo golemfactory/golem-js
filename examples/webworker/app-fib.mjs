@@ -3,7 +3,7 @@ import { Worker } from "@golem-sdk/golem-js";
 import os from "os";
 
 const min = 30;
-const max = 45;
+const max = 42;
 const length = os.cpus().length;
 const dataSet = Array.from({ length }, () => Math.floor(Math.random() * (max - min + 1) + min));
 

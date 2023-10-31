@@ -17,6 +17,11 @@ export class GolemWorkerBrowser extends EventTarget {
       .catch((error) => this.dispatchEvent(new ErrorEvent(error)));
   }
 
+  on(eventName: string | symbol, listener: (...args: unknown[]) => void): this {
+    this.addEventListener(eventName as string, listener);
+    return this;
+  }
+
   async init(ctx: WorkContext) {
     console.log(" -------- INIT ---------");
     await this.startWorkerProxy(ctx);
