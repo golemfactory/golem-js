@@ -190,8 +190,8 @@ describe("Task Executor", function () {
       // for some reason we do not receive events for very simple commands,
       // it is probably related to a bug where the command ends and the event does not have time to be triggered or handled
       // after creating the EventSource connection to yagna... to investigate.
-      // for now, sleep 1 has been added, which solves the problem temporarily
-      const streamOfResults = await ctx.runAndStream("sleep 1 && echo 'Hello World'");
+      // for now, sleep 2 has been added, which solves the problem temporarily
+      const streamOfResults = await ctx.runAndStream("sleep 2 && echo 'Hello World'");
       for await (const result of streamOfResults) {
         expect(result.stdout).toContain("Hello World");
         expect(result.result).toContain("Ok");
