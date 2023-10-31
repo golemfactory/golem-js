@@ -19,7 +19,8 @@ describe("Golem Workers", function () {
     await worker.terminate();
     expect(expectedMessage).toBe(`5 + 7 = 12`);
     logger.expectToMatch(/Network created/);
-    logger.expectToMatch(/Agreement confirmed/);
-    logger.expectToMatch(/Allocation has been released/);
+    logger.expectToMatch(/Worker Proxy started/);
+    logger.expectToMatch(/Websocket opened on/);
+    logger.expectToMatch(/Websocket closed/);
   });
 });
