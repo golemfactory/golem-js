@@ -64,9 +64,6 @@ export class GolemWorkerNode extends EventEmitter {
   }
   private async startWorkerProxy(ctx: WorkContext) {
     await ctx.uploadFile(`${this.scriptURL}`, "/golem/work/worker.mjs");
-    const results1 = await ctx.run("ls -Al /golem/work");
-    const results2 = await ctx.run("node /golem/work/proxy.mjs &");
-    console.log({ results1, results2 });
     const results = await ctx.runAndStream("node /golem/work/proxy.mjs");
     results.on("error", (error) => this.logger.debug(error));
     await new Promise((res, rej) => {
