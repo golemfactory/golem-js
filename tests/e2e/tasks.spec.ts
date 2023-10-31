@@ -180,4 +180,24 @@ describe("Task Executor", function () {
     const result = await executor.run(async (ctx) => ctx.getIp());
     expect(["192.168.0.2", "192.168.0.3"]).toContain(result);
   });
+
+  it("should run simple task and get results as stream", async () => {
+    executor = await TaskExecutor.create({
+      package: "golem/alpine:latest",
+      logger,
+    });
+    await executor.run(async (ctx) => {
+      const streamOfResults = await ctx.runAndStream("echo 'Hello World'");
+      for await (const result of streamOfResults) {
+        expect(result.stdout).toContain("Hello World");
+        expect(result.result).toContain("Ok");
+      }
+    });
+    expect(logger.logs).toContain("Demand published on the market");
+    expect(logger.logs).toContain("New proposal has been received");
+    expect(logger.logs).toContain("Proposal has been responded");
+    expect(logger.logs).toContain("New proposal added to pool");
+    expect(logger.logs).toMatch(/Agreement confirmed by provider/);
+    expect(logger.logs).toMatch(/Activity .* created/);
+  });
 });

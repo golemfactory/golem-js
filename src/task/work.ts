@@ -138,7 +138,8 @@ export class WorkContext {
 
   /**
    * Execute an executable on provider and return Promise of ReadableStream
-   * that streams the stdout and stderr of the command while it is being executed.
+   * that streams Result objects containing the stdout and stderr of the command
+   * while it is being executed.
    *
    * @param commandLine Shell command to execute.
    * @param options Additional run options.
