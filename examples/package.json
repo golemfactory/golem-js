@@ -20,6 +20,7 @@
     "external-request": "ts-node ./external-request/request.ts",
     "ssh": "ts-node ./ssh/ssh.ts",
     "tag": "ts-node ./simple-usage/tag.ts",
+    "webworker-node": "node ./webworker/app.mjs",
     "web": "node ./web/app.mjs",
     "server": "ts-node ./express/server.ts",
     "lint:ts": "tsc --project tsconfig.json --noEmit"
