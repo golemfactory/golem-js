@@ -1,7 +1,6 @@
 import { LoggerMock } from "../mock";
 import { readFileSync } from "fs";
-import { TaskExecutor } from "../../src";
-import fs from "fs";
+import { Result, TaskExecutor } from "../../src";
 const logger = new LoggerMock(false);
 
 describe("Task Executor", function () {
@@ -186,17 +185,17 @@ describe("Task Executor", function () {
       package: "golem/alpine:latest",
       logger,
     });
+    const results: Result[] = [];
     await executor.run(async (ctx) => {
       // for some reason we do not receive events for very simple commands,
       // it is probably related to a bug where the command ends and the event does not have time to be triggered or handled
       // after creating the EventSource connection to yagna... to investigate.
-      // for now, sleep 2 has been added, which solves the problem temporarily
-      const streamOfResults = await ctx.runAndStream("sleep 2 && echo 'Hello World'");
-      for await (const result of streamOfResults) {
-        expect(result.stdout).toContain("Hello World");
-        expect(result.result).toContain("Ok");
-      }
+      // for now, sleep 1 has been added, which solves the problem temporarily
+      const streamOfResults = await ctx.runAndStream("sleep 1 && echo 'Hello World'");
+      for await (const result of streamOfResults) results.push(result);
     });
+    expect(results[0].stdout).toContain("Hello World");
+    expect(results[0].result).toContain("Ok");
     expect(logger.logs).toContain("Demand published on the market");
     expect(logger.logs).toContain("New proposal has been received");
     expect(logger.logs).toContain("Proposal has been responded");
