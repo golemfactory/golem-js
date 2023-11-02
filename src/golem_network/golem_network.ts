@@ -53,7 +53,9 @@ export class GolemNetwork {
 
   public async createJob<Output = unknown>() {
     const jobId = v4();
-    return new Job<Output>(jobId, this.yagna.getApi());
+    const job = new Job<Output>(jobId, this.yagna.getApi());
+    this.jobs.set(jobId, job);
+    return job;
   }
 
   public getJobById(id: string) {
@@ -61,6 +63,8 @@ export class GolemNetwork {
   }
 
   public async close() {
-    this.yagna.end();
+    const pendingJobs = Array.from(this.jobs.values()).filter((job) => job.isRunning);
+    await Promise.all(pendingJobs.map((job) => job.cancel()));
+    await this.yagna.end();
   }
 }

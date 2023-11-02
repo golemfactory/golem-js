@@ -4,24 +4,26 @@ const golem = new GolemNetwork({});
 
 async function main() {
   await golem.init();
-  const job = await golem.createJob();
+
+  const job = await golem.createJob<string>();
+  console.log("Job object created, status is ", job.state);
 
   job.eventTarget.addEventListener("started", () => {
-    console.log("Job started");
+    console.log("Job started event emitted");
   });
   job.eventTarget.addEventListener("success", () => {
-    console.log("Job success");
+    console.log("Job success event emitted");
   });
   job.eventTarget.addEventListener("error", () => {
-    console.log("Job error");
+    console.log("Job error event emitted");
   });
   job.eventTarget.addEventListener("ended", () => {
-    console.log("Job ended");
+    console.log("Job ended event emitted");
   });
 
-  job.run(
+  job.startWork(
     async (ctx) => {
-      return (await ctx.run("echo 'Hello from Golem'")).stdout;
+      return String((await ctx.run("echo -n 'Hello Golem!'")).stdout);
     },
     {
       package: {
@@ -30,22 +32,19 @@ async function main() {
     },
   );
 
-  console.log({
-    state: job.state,
-    isRunning: job.isRunning,
-  });
+  console.log("Job started, status is ", job.state);
 
   const result = await job.waitForResult();
-  console.log(result);
+  console.log("Job finished, result is ", result);
 
   // later
 
   const sameJobAgain = golem.getJobById(job.id);
 
-  console.log({
-    state: sameJobAgain!.state,
-    isRunning: sameJobAgain!.isRunning,
-  });
+  console.log("Retrieved job object, result is ", sameJobAgain!.results);
+
+  await golem.close();
+  console.log("Golem network closed");
 }
 
 main().catch((error) => {

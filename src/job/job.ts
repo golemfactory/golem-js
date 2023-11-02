@@ -46,7 +46,7 @@ export class Job<Output = unknown> {
     return this._isRunning;
   }
 
-  async run(workOnGolem: Worker<undefined, Output>, options: RunJobOptions) {
+  async startWork(workOnGolem: Worker<undefined, Output>, options: RunJobOptions) {
     if (this.isRunning) {
       throw new Error(`Job ${this.id} is already running`);
     }
@@ -97,13 +97,13 @@ export class Job<Output = unknown> {
       this.eventTarget.dispatchEvent(new Event("started"));
       await workContext.before();
       const results = await workOnGolem(workContext);
-      this.eventTarget.dispatchEvent(new Event("success"));
       this.results = results;
       this.state = JobState.Done;
+      this.eventTarget.dispatchEvent(new Event("success"));
     } catch (error) {
-      this.eventTarget.dispatchEvent(new Event("error"));
       this.error = error;
       this.state = JobState.Rejected;
+      this.eventTarget.dispatchEvent(new Event("error"));
     } finally {
       this._isRunning = false;
       await Promise.all([agreementService.end(), networkService.end(), paymentService.end(), marketService.end()]);
@@ -128,7 +128,7 @@ export class Job<Output = unknown> {
     if (this.state === JobState.Rejected) {
       throw this.error;
     }
-    await new Promise((resolve, reject) => {
+    return new Promise((resolve, reject) => {
       this.eventTarget.addEventListener("success", () => {
         resolve(this.results);
       });
