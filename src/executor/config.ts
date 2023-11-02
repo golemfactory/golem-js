@@ -2,7 +2,6 @@ import { ExecutorOptions } from "./executor";
 import { Package, PackageOptions } from "../package";
 import { ActivityOptions } from "../activity";
 import { Logger, LogLevel, runtimeContextChecker, defaultLogger } from "../utils";
-import { InMemoryJobStorage, JobStorage } from "../job/storage";
 
 const DEFAULTS = Object.freeze({
   payment: { driver: "erc20", network: "goerli" },
@@ -34,7 +33,6 @@ export class ExecutorConfig {
   readonly eventTarget: EventTarget;
   readonly maxTaskRetries: number;
   readonly activityExecuteTimeout?: number;
-  readonly jobStorage: JobStorage;
   readonly startupTimeout: number;
 
   constructor(options: ExecutorOptions & ActivityOptions) {
@@ -84,7 +82,6 @@ export class ExecutorConfig {
     this.logger?.setLevel && this.logger?.setLevel(this.logLevel);
     this.eventTarget = options.eventTarget || new EventTarget();
     this.maxTaskRetries = options.maxTaskRetries ?? DEFAULTS.maxTaskRetries;
-    this.jobStorage = options.jobStorage || new InMemoryJobStorage();
     this.startupTimeout = options.startupTimeout ?? DEFAULTS.startupTimeout;
   }
 }

@@ -16,8 +16,6 @@ import { AgreementServiceOptions } from "../agreement/service";
 import { WorkOptions } from "../task/work";
 import { MarketOptions } from "../market/service";
 import { RequireAtLeastOne } from "../utils/types";
-import { v4 } from "uuid";
-import { JobStorage, Job } from "../job";
 
 const terminatingSignals = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
 
@@ -49,11 +47,6 @@ export type ExecutorOptions = {
   isSubprocess?: boolean;
   /** Timeout for preparing activity - creating and deploy commands */
   activityPreparingTimeout?: number;
-  /**
-   * Storage for task state and results. Especially useful in a distributed environment.
-   * For more details see {@link JobStorage}. Defaults to a simple in-memory storage.
-   */
-  jobStorage?: JobStorage;
   /**
    * Do not install signal handlers for SIGINT, SIGTERM, SIGBREAK, SIGHUP.
    *
@@ -440,54 +433,6 @@ export class TaskExecutor {
       }
       await sleep(2000, true);
     }
-  }
-
-  /**
-   * Start a new job without waiting for the result. The job can be retrieved later using {@link TaskExecutor.getJobById}. The job's status is stored in the {@link JobStorage} provided in the {@link ExecutorOptions} (in-memory by default). For distributed environments, it is recommended to use a form of storage that is accessible from all nodes (e.g. a database).
-   *
-   * @param worker Worker function to be executed
-   * @returns Job object
-   * @example **Simple usage of createJob**
-   * ```typescript
-   * const job = executor.createJob(async (ctx) => {
-   *  return (await ctx.run("echo 'Hello World'")).stdout;
-   * });
-   * // save job.id somewhere
-   *
-   * // later...
-   * const job = await executor.fetchJob(jobId);
-   * const status = await job.fetchState();
-   * const results = await job.fetchResults();
-   * const error = await job.fetchError();
-   * ```
-   */
-  public async createJob<InputType = unknown, OutputType = unknown>(
-    worker: Worker<InputType, OutputType>,
-  ): Promise<Job<OutputType>> {
-    const jobId = v4();
-    const job = new Job<OutputType>(jobId, this.options.jobStorage);
-    await job.saveInitialState();
-
-    const task = new Task(jobId, worker, undefined, this.initWorker, {
-      maxRetries: this.options.maxTaskRetries,
-      timeout: this.options.taskTimeout,
-    });
-    task.onStateChange((taskState) => {
-      job.saveState(taskState, task.getResults(), task.getError());
-    });
-    this.taskQueue.addToEnd(task as Task<unknown, unknown>);
-
-    return job;
-  }
-
-  /**
-   * Retrieve a job by its ID. The job's status is stored in the {@link JobStorage} provided in the {@link ExecutorOptions} (in-memory by default). Use {@link Job.fetchState}, {@link Job.fetchResults} and {@link Job.fetchError} to get the job's status.
-   *
-   * @param jobId Job ID
-   * @returns Job object.
-   */
-  public getJobById(jobId: string): Job {
-    return new Job(jobId, this.options.jobStorage);
   }
 
   private handleCriticalError(e: Error) {
