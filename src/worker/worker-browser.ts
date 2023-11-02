@@ -1,54 +1,38 @@
-import { RuntimeOptions, GolemRuntime } from "./runtime";
+import { GolemWorker } from "./worker";
 import { WorkContext } from "../task";
 
-export type GolemWorkerOptions = WorkerOptions & RuntimeOptions;
-export class GolemWorkerBrowser extends EventTarget {
-  private readonly golemRuntime: GolemRuntime;
+export class GolemWorkerBrowser extends GolemWorker {
   private socket?: WebSocket;
-  constructor(
-    private scriptURL: string | URL,
-    options?: GolemWorkerOptions,
-  ) {
-    super();
-    this.golemRuntime = new GolemRuntime(options);
-    this.golemRuntime
-      .init()
-      .then((ctx) => this.init(ctx))
-      .catch((error) => this.dispatchEvent(new ErrorEvent(error)));
-  }
 
-  on(eventName: string | symbol, listener: (...args: unknown[]) => void): this {
-    this.addEventListener(eventName as string, listener);
-    return this;
-  }
-
-  async init(ctx: WorkContext) {
-    console.log(" -------- INIT ---------");
-    await this.startWorkerProxy(ctx);
-    const websocketUri = ctx.getWebsocketUri(6000);
-
-    console.log(" -------- WS CONNECTED ---------");
+  protected async startWebsocket(ctx: WorkContext) {
+    const websocketUri = `${ctx.getWebsocketUri(6000)}?authToken=${this.options?.yagnaOptions?.apiKey}`;
     this.socket = new WebSocket(websocketUri);
-    this.socket.onmessage = (ev) => this.dispatchEvent(ev);
-    this.socket.onerror = (ev) => this.dispatchEvent(ev);
+    this.socket.onmessage = (ev) => this.emit("message", ev.data.toString().trim());
+    this.socket.onerror = (er) => this.emit("error", er);
+    this.socket.onclose = (ev) => this.logger.debug(`Websocket closed. Code: ${ev.code}`);
+    return new Promise<void>((res, rej) => {
+      const timeoutId = setTimeout(rej, this.options.websocketConnectionTimeout);
+      this.socket!.onopen = () => {
+        this.logger.debug(`Websocket opened on provider ${ctx.provider?.name}`);
+        this.emit("online");
+        clearTimeout(timeoutId);
+        res();
+      };
+    });
   }
 
-  postMessage(message: unknown) {
-    if (!this.socket?.OPEN) {
-      console.log("Worker runtime is not ready yet");
+  public postMessage(message: unknown): void {
+    if (this.socket?.readyState !== WebSocket.OPEN) {
+      this.logger.log("Worker runtime is not ready. Current state: " + this.socket?.readyState);
       return;
     }
-    this.socket.send(message as string);
+    this.socket.send(this.serializer(message));
   }
 
-  terminate() {
-    this.golemRuntime.end().catch((error) => console.error(error));
-  }
-  private async startWorkerProxy(ctx: WorkContext) {
-    console.log("start ctx upload", ctx);
-    await ctx.uploadFile("./proxy.mjs", "/golem/work/proxy.mjs");
-    await ctx.uploadFile("./polyfill.js", "/golem/work/polyfill.js");
-    await ctx.uploadFile(`${this.scriptURL}`, "/golem/work/worker.js");
-    await ctx.run("node /golem/work/proxy.mjs &");
+  protected async uploadWorkerFile(ctx: WorkContext) {
+    const response = await fetch(this.scriptURL);
+    console.log(response.json());
+    const data = new Uint8Array(await response.arrayBuffer());
+    await ctx.uploadData(data, "/golem/work/worker.mjs");
   }
 }

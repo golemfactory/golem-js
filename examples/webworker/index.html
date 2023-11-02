@@ -1,53 +1,80 @@
 <!doctype html>
 <html>
   <body>
-    <p>(Native) Count numbers: <output id="result"></output></p>
-    <p>(Golem) Count numbers: <output id="result_golem"></output></p>
-    <button onclick="startWorker()">Start Worker</button>
-    <button onclick="stopWorker()">Stop Worker</button>
-    <button onclick="startGolemWorker()">Start Golem Worker</button>
-    <button onclick="stopGolemWorker()">Stop Golem Worker</button>
+    <fieldset>
+      <legend>Select Webworker implementation:</legend>
+      <div>
+        <input type="radio" id="local" name="workerType" value="local" checked />
+        <label for="local">Local (native browser)</label>
+      </div>
+      <div>
+        <input type="radio" id="golem" name="workerType" value="golem" />
+        <label for="golem">Golem (golem network)</label>
+        <input type="text" id="key" name="key" value="***" />
+        <label for="key">Yagna App Key</label>
+      </div>
+    </fieldset>
+    <div>
+      <button id="startWorker">Start Worker</button>
+      <button id="stopWorker">Stop Worker</button>
+    </div>
+
+    <div id="inputs" aria-disabled="true">
+      <label for="input">Input: </label>
+      <input type="text" id="input" name="input" />
+      <button id="post">ok</button>
+    </div>
+
+    <h4>Results</h4>
+    <div id="results"></div>
+
+    <h4>Logs</h4>
+    <div id="logs"></div>
 
     <script type="module">
-      import { GolemWorker } from "../../dist/golem-js.min.js";
-      let worker, golemWorker;
-      window.startWorker = function startWorker() {
-        if (typeof Worker !== "undefined") {
-          if (typeof worker == "undefined") {
-            worker = new Worker("worker.js");
-          }
-          worker.onmessage = function (event) {
-            document.getElementById("result").innerHTML = event.data;
-          };
-        } else {
-          document.getElementById("result").innerHTML = "Sorry! No Web Worker support.";
-        }
+      import { Worker as GolemWorker } from "../../dist/golem-js.min.js";
+      let worker;
+      const logger = {
+        log: (msg) => appendLog(`[${new Date().toISOString()}] ${msg}`),
+        warn: (msg) => appendLog(`[${new Date().toISOString()}] [warn] ${msg}`),
+        debug: (msg) => appendLog(`[${new Date().toISOString()}] [debug] ${msg}`),
+        error: (msg) => appendLog(`[${new Date().toISOString()}] [error] ${msg}`),
+        info: (msg) => appendLog(`[${new Date().toISOString()}] [info] ${msg}`),
+        table: (msg) => appendLog(JSON.stringify(msg, null, "\t")),
       };
-      window.stopWorker = function stopWorker() {
+      function startWorker() {
+        const workerType = document.querySelector('input[name="workerType"]:checked');
+        const apiKey = document.querySelector('input[name="key"]').value;
+        worker =
+          workerType.value === "golem"
+            ? new GolemWorker("webworker.js", { yagnaOptions: { apiKey }, logger })
+            : new Worker("webworker.js");
+        worker.onmessage = (evt) => appendResults(`[worker] ${evt.data}`);
+        worker.onerror = (error) => appendResults(`[worker:error] ${error}`);
+      }
+      function post() {
+        const msg = document.querySelector("#input").value.toString().split(",");
+        worker.postMessage(msg);
+      }
+      function stopWorker() {
         worker.terminate();
         worker = undefined;
-      };
-
-      window.startGolemWorker = function startGolemWorker() {
-        console.log();
-        if (typeof GolemWorker.default.GolemWorker !== "undefined") {
-          if (typeof golemWorker == "undefined") {
-            golemWorker = new GolemWorker.default.GolemWorker("worker.js", {
-              yagnaOptions: { apiKey: "64ed8ebb2f5749e683f1f0c6518169da" },
-            });
-          }
-          golemWorker.onmessage = function (event) {
-            document.getElementById("result_golem").innerHTML = event.data;
-          };
-        } else {
-          document.getElementById("result_golem").innerHTML = "Sorry! No Web Worker support.";
-        }
-      };
-
-      window.stopGolemWorker = function stopGolemWorker() {
-        golemWorker.terminate();
-        golemWorker = undefined;
-      };
+      }
+      export function appendResults(result) {
+        const results_el = document.getElementById("results");
+        const li = document.createElement("li");
+        li.appendChild(document.createTextNode(result));
+        results_el.appendChild(li);
+      }
+      function appendLog(msg) {
+        const logs_el = document.getElementById("logs");
+        const li = document.createElement("li");
+        li.appendChild(document.createTextNode(msg));
+        logs_el.appendChild(li);
+      }
+      document.querySelector("#startWorker").addEventListener("click", startWorker);
+      document.querySelector("#stopWorker").addEventListener("click", stopWorker);
+      document.querySelector("#post").addEventListener("click", post);
     </script>
   </body>
 </html>
