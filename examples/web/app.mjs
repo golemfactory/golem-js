@@ -13,6 +13,9 @@ const server = http.createServer((req, res) => {
   } else if (req.url === "/image") {
     res.writeHead(200, { "content-type": "text/html" });
     fs.createReadStream(`${__dirname}/image.html`).pipe(res);
+  } else if (req.url === "/worker") {
+    res.writeHead(200, { "content-type": "text/html" });
+    fs.createReadStream(`${__dirname}/worker.html`).pipe(res);
   } else if (req.url === "/docs-example-transfer-data") {
     res.writeHead(200, { "content-type": "text/html" });
     fs.createReadStream(`${__dirname}/../docs-examples/examples/transferring-data/transfer-data-in-browser.html`).pipe(
@@ -35,6 +38,9 @@ const server = http.createServer((req, res) => {
   } else if (req.url === "/golem-js.min.js") {
     res.writeHead(200, { "content-type": "text/javascript" });
     fs.createReadStream(`${__dirname}/../../dist/golem-js.min.js`).pipe(res);
+  } else if (req.url === "/worker.js") {
+    res.writeHead(200, { "content-type": "text/javascript" });
+    fs.createReadStream(`${__dirname}/worker.js`).pipe(res);
   } else if (req.url === "/css/main.css") {
     res.writeHead(200, { "content-type": "text/css" });
     fs.createReadStream(`${__dirname}/css/main.css`).pipe(res);

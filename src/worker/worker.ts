@@ -22,7 +22,7 @@ export abstract class GolemWorker extends EventEmitter {
     this.options = options || ({} as GolemWorkerOptions);
     this.logger = options?.logger || (options?.enableLogging ? defaultLogger() : nullLogger());
     this.options.logger = this.logger;
-    this.options.startupTimeout = options?.startupTimeout ?? 20_000;
+    this.options.startupTimeout = options?.startupTimeout ?? 60_000;
     this.options.websocketConnectionTimeout = options?.websocketConnectionTimeout ?? 10_000;
     this.addListener("message", (ev) => this["onmessage"]?.(ev));
     this.addListener("error", (ev) => this["onerror"]?.(ev));
@@ -39,6 +39,8 @@ export abstract class GolemWorker extends EventEmitter {
     try {
       await this.startWorkerProxy(ctx);
       await this.startWebsocket(ctx);
+      this.emit("online");
+      this.logger.info("Golem Worker started");
     } catch (error) {
       this.emit("error", error);
     }
@@ -48,10 +50,7 @@ export abstract class GolemWorker extends EventEmitter {
     return this.golemRuntime.end();
   }
   private async startWorkerProxy(ctx: WorkContext) {
-    console.log("uploading...");
     await this.uploadWorkerFile(ctx);
-    console.log(await ctx.run("ls -Al /golem/work/"));
-    console.log(2222);
     const results = await ctx.runAndStream("node /golem/proxy/proxy.mjs");
     results.on("error", (error) => this.logger.debug(error));
     await new Promise((res, rej) => {

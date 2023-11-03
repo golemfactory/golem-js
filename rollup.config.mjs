@@ -27,10 +27,9 @@ export default [
       format: "es",
     },
     plugins: [
-      ignore(["tmp", "pino", "eventsource", "node:readline/promises"]),
+      ignore(["tmp", "pino", "node:readline/promises"]),
       alias({
         entries: [
-          // { find: "GolemWorker", replacement: "GolemWorkerBrowser" },
           { find: "stream", replacement: "stream-browserify" },
           { find: /RedisDatastore/, replacement: "tests/mock/utils/empty_default.js" },
           { find: /IORedisConnection/, replacement: "tests/mock/utils/empty_default.js" },

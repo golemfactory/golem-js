@@ -23,7 +23,6 @@ export class GolemWorkerNode extends GolemWorker {
       this.socket!.onopen = () => {
         intervalId = setInterval(() => this.socket!.ping(), 50e3);
         this.logger.debug(`Websocket opened on provider ${ctx.provider?.name}`);
-        this.emit("online");
         clearTimeout(timeoutId);
         res();
       };
