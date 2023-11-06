@@ -8,7 +8,9 @@ export class RemoteProcess {
   private streamError?: Error;
   private defaultTimeout = 20_000;
   constructor(private streamOfActivityResults: Readable) {
-    this.streamOfActivityResults.on("data", (data) => (this.lastResult = data));
+    this.streamOfActivityResults.on("data", (data) => {
+      this.lastResult = data;
+    });
     this.streamOfActivityResults.on("error", (error) => (this.streamError = error));
     const { stdout, stderr } = this.transformResultsStream();
     this.stdout = stdout;
@@ -21,14 +23,16 @@ export class RemoteProcess {
         () => rej(new Error("The waiting time for the final result has been exceeded")),
         timeout ?? this.defaultTimeout,
       );
-      this.streamOfActivityResults.on("close", () => {
+      const end = () => {
         clearTimeout(timeoutId);
         if (this.lastResult) {
           res(this.lastResult);
         } else {
           rej(new Error(`An error occurred while retrieving the results. ${this.streamError}`));
         }
-      });
+      };
+      if (this.streamOfActivityResults.closed) return end();
+      this.streamOfActivityResults.on("close", () => end());
     });
   }
 
@@ -36,13 +40,13 @@ export class RemoteProcess {
     const stdoutTransform = new Transform({
       objectMode: true,
       transform(chunk, encoding, callback) {
-        callback(null, chunk?.stdout ?? null);
+        callback(null, chunk?.stdout);
       },
     });
     const stderrTransform = new Transform({
       objectMode: true,
       transform(chunk, encoding, callback) {
-        callback(null, chunk?.stderr ?? null);
+        callback(null, chunk?.stderr);
       },
     });
     return {
