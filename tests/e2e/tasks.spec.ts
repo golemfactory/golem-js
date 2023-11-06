@@ -180,22 +180,22 @@ describe("Task Executor", function () {
     expect(["192.168.0.2", "192.168.0.3"]).toContain(result);
   });
 
-  it("should run simple task and get results as stream", async () => {
+  it("should run simple by spawn command as external process", async () => {
     executor = await TaskExecutor.create({
       package: "golem/alpine:latest",
       logger,
     });
-    const results: Result[] = [];
-    await executor.run(async (ctx) => {
-      // for some reason we do not receive events for very simple commands,
-      // it is probably related to a bug where the command ends and the event does not have time to be triggered or handled
-      // after creating the EventSource connection to yagna... to investigate.
-      // for now, sleep 1 has been added, which solves the problem temporarily
-      const streamOfResults = await ctx.runAndStream("sleep 1 && echo 'Hello World'");
-      for await (const result of streamOfResults) results.push(result);
+    let stdout = "";
+    let stderr = "";
+    const finalResult = await executor.run(async (ctx) => {
+      const remoteProcess = await ctx.spawn("sleep 1 && echo 'Hello World' && echo 'Hello Golem' >&2");
+      remoteProcess.stdout.on("data", (data) => (stdout += data.trim()));
+      remoteProcess.stderr.on("data", (data) => (stderr += data.trim()));
+      return remoteProcess.waitForExit();
     });
-    expect(results[0].stdout).toContain("Hello World");
-    expect(results[0].result).toContain("Ok");
+    expect(stdout).toContain("Hello World");
+    expect(stderr).toContain("Hello World");
+    expect(finalResult?.result).toContain("Ok");
     expect(logger.logs).toContain("Demand published on the market");
     expect(logger.logs).toContain("New proposal has been received");
     expect(logger.logs).toContain("Proposal has been responded");

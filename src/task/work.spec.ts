@@ -46,17 +46,6 @@ describe("Work Context", () => {
       });
     });
 
-    describe("runAndStream()", () => {
-      it("should execute runAndStream command", async () => {
-        const expectedResult = ActivityMock.createResult({ stdout: "Ok" });
-        activity.mockResults([expectedResult]);
-        const streamOfResults = await context.runAndStream("rm -rf");
-        for await (const result of streamOfResults) {
-          expect(result).toBe(expectedResult);
-        }
-      });
-    });
-
     describe("transfer()", () => {
       it("should execute transfer command", async () => {
         const result = ActivityMock.createResult({ stdout: "Ok" });
