@@ -9,11 +9,11 @@ const DEFAULTS = {
  */
 export class RemoteProcess {
   /**
-   * Returns a stream connected to stdout from provider process
+   * Stream connected to stdout from provider process
    */
   readonly stdout: Readable;
   /**
-   * Returns a stream connected to stderr from provider process
+   * Stream connected to stderr from provider process
    */
   readonly stderr: Readable;
   private lastResult?: Result;

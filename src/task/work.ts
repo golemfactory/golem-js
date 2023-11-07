@@ -137,7 +137,7 @@ export class WorkContext {
   }
 
   /**
-   * Execute an executable on provider and return RemoteProcess object
+   * Spawn an executable on provider and return {@link RemoteProcess} object
    * that contain stdout and stderr as Readable
    *
    * @param commandLine Shell command to execute.
@@ -164,7 +164,7 @@ export class WorkContext {
       ? new Run(exeOrCmd, argsOrOptions as string[], options?.env, capture)
       : new Run("/bin/sh", ["-c", exeOrCmd], argsOrOptions?.env, capture);
     const script = new Script([run]);
-    // In this case, the script consists only of the run command,
+    // In this case, the script consists only of one run command,
     // so we skip the execution of script.before and script.after
     const streamOfActivityResults = await this.activity
       .execute(script.getExeScriptRequest(), true, options?.timeout)
