@@ -339,10 +339,7 @@ export class TaskExecutor {
     worker: Worker<undefined, OutputType>,
     options?: TaskOptions,
   ): Promise<OutputType | undefined> {
-    return this.executeTask<undefined, OutputType>(worker, undefined, options).catch(async (e) => {
-      this.handleCriticalError(e);
-      return undefined;
-    });
+    return this.executeTask<undefined, OutputType>(worker, undefined, options);
   }
 
   /**

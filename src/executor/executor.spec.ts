@@ -1,6 +1,6 @@
 import { MarketService } from "../market/";
 import { AgreementPoolService } from "../agreement/";
-import { TaskService } from "../task/";
+import { Task, TaskService } from "../task/";
 import { TaskExecutor } from "./executor";
 import { sleep } from "../utils";
 import { LoggerMock } from "../../tests/mock";
@@ -89,6 +89,47 @@ describe("Task Executor", () => {
       expect(loggerWarnSpy).toHaveBeenCalledWith(
         "Could not start any work on Golem. Processed 0 initial proposals from yagna, filters accepted 0. Check your demand if it's not too restrictive or restart yagna.",
       );
+      await executor.end();
+    });
+  });
+
+  describe("run()", () => {
+    it("should run all tasks even if some fail", async () => {
+      const executor = await TaskExecutor.create({ package: "test", logger, yagnaOptions });
+
+      jest.spyOn(Task.prototype, "isFinished").mockImplementation(() => true);
+      const onErrorSpy = jest.fn();
+      const executorEndSpy = jest.spyOn(executor as any, "doEnd");
+
+      const rejectedSpy = jest.spyOn(Task.prototype, "isRejected");
+      const resultsSpy = jest.spyOn(Task.prototype, "getResults");
+      const errorSpy = jest.spyOn(Task.prototype, "getError");
+
+      rejectedSpy.mockImplementationOnce(() => false);
+      resultsSpy.mockImplementationOnce(() => "result 1");
+      const result1 = await executor.run(() => Promise.resolve());
+
+      try {
+        rejectedSpy.mockImplementationOnce(() => true);
+        errorSpy.mockImplementationOnce(() => new Error("test"));
+        await executor.run(() => Promise.resolve());
+      } catch (e) {
+        onErrorSpy(e);
+      }
+
+      rejectedSpy.mockImplementationOnce(() => false);
+      resultsSpy.mockImplementationOnce(() => "result 3");
+      const result3 = await executor.run(() => Promise.resolve());
+
+      expect(result1).toEqual("result 1");
+      expect(onErrorSpy).toHaveBeenCalledWith(new Error("test"));
+      expect(result3).toEqual("result 3");
+
+      expect(rejectedSpy).toHaveBeenCalledTimes(3);
+      expect(resultsSpy).toHaveBeenCalledTimes(2);
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      expect(executorEndSpy).toHaveBeenCalledTimes(0);
+
       await executor.end();
     });
   });
