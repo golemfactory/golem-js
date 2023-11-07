@@ -194,7 +194,7 @@ describe("Task Executor", function () {
       return remoteProcess.waitForExit();
     });
     expect(stdout).toContain("Hello World");
-    expect(stderr).toContain("Hello World");
+    expect(stderr).toContain("Hello Golem");
     expect(finalResult?.result).toContain("Ok");
     expect(logger.logs).toContain("Demand published on the market");
     expect(logger.logs).toContain("New proposal has been received");
