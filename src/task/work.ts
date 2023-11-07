@@ -16,7 +16,7 @@ import { NullStorageProvider, StorageProvider } from "../storage";
 import { Logger, sleep } from "../utils";
 import { Batch } from "./batch";
 import { NetworkNode } from "../network";
-import { RemoteProcess } from "./spawn";
+import { RemoteProcess } from "./process";
 
 export type Worker<InputType = unknown, OutputType = unknown> = (
   ctx: WorkContext,
@@ -138,7 +138,7 @@ export class WorkContext {
 
   /**
    * Execute an executable on provider and return RemoteProcess object
-   * that contain stdout and stderr Readable
+   * that contain stdout and stderr as Readable
    *
    * @param commandLine Shell command to execute.
    * @param options Additional run options.

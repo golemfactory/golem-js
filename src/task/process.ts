@@ -1,27 +1,40 @@
 import { Readable, Transform } from "stream";
 import { Result } from "../activity";
 
+const DEFAULTS = {
+  exitWaitingTimeout: 20_000,
+};
+/**
+ * RemoteProcess class representing the process spawned on the provider by {@link WorkContext.spawn}
+ */
 export class RemoteProcess {
+  /**
+   * Returns a stream connected to stdout from provider process
+   */
   readonly stdout: Readable;
+  /**
+   * Returns a stream connected to stderr from provider process
+   */
   readonly stderr: Readable;
   private lastResult?: Result;
   private streamError?: Error;
-  private defaultTimeout = 20_000;
   constructor(private streamOfActivityResults: Readable) {
-    this.streamOfActivityResults.on("data", (data) => {
-      this.lastResult = data;
-    });
+    this.streamOfActivityResults.on("data", (data) => (this.lastResult = data));
     this.streamOfActivityResults.on("error", (error) => (this.streamError = error));
     const { stdout, stderr } = this.transformResultsStream();
     this.stdout = stdout;
     this.stderr = stderr;
   }
 
+  /**
+   * Waits for the process to complete and returns the last part of the command's results as a {@link Result} object
+   * @param timeout - maximum waiting time for the final result (default: 20 sec)
+   */
   waitForExit(timeout?: number): Promise<Result> {
     return new Promise((res, rej) => {
       const timeoutId = setTimeout(
         () => rej(new Error("The waiting time for the final result has been exceeded")),
-        timeout ?? this.defaultTimeout,
+        timeout ?? DEFAULTS.exitWaitingTimeout,
       );
       const end = () => {
         clearTimeout(timeoutId);
@@ -32,26 +45,21 @@ export class RemoteProcess {
         }
       };
       if (this.streamOfActivityResults.closed) return end();
-      this.streamOfActivityResults.on("close", () => end());
+      this.streamOfActivityResults.on("close", end);
     });
   }
 
   private transformResultsStream(): { stdout: Readable; stderr: Readable } {
-    const stdoutTransform = new Transform({
-      objectMode: true,
-      transform(chunk, encoding, callback) {
-        callback(null, chunk?.stdout);
-      },
-    });
-    const stderrTransform = new Transform({
-      objectMode: true,
-      transform(chunk, encoding, callback) {
-        callback(null, chunk?.stderr);
-      },
-    });
+    const transform = (std: string) =>
+      new Transform({
+        objectMode: true,
+        transform(chunk, encoding, callback) {
+          callback(null, chunk?.[std]);
+        },
+      });
     return {
-      stdout: this.streamOfActivityResults.pipe(stdoutTransform),
-      stderr: this.streamOfActivityResults.pipe(stderrTransform),
+      stdout: this.streamOfActivityResults.pipe(transform("stdout")),
+      stderr: this.streamOfActivityResults.pipe(transform("stderr")),
     };
   }
 }

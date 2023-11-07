@@ -321,6 +321,8 @@ export class Activity {
   private parseEventToResult(msg: string, batchSize: number): Result {
     try {
       const event: StreamingBatchEvent = JSON.parse(msg);
+      // StreamingBatchEvent has a slightly more extensive structure,
+      // including a return code that could be added to the Result entity... (?)
       return new Result({
         index: event.index,
         eventDate: event.timestamp,

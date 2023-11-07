@@ -48,17 +48,17 @@ describe("Work Context", () => {
 
     describe("spawn()", () => {
       it("should execute spawn command", async () => {
-        const expectedResult = ActivityMock.createResult({ stdout: "Ok", stderr: "Error", isBatchFinished: true });
+        const expectedResult = ActivityMock.createResult({ stdout: "Output", stderr: "Error", isBatchFinished: true });
         activity.mockResults([expectedResult]);
         const remoteProcess = await context.spawn("rm -rf");
         for await (const result of remoteProcess.stdout) {
-          expect(result).toBe("Ok");
+          expect(result).toBe("Output");
         }
         for await (const result of remoteProcess.stderr) {
           expect(result).toBe("Error");
         }
         const finalResult = await remoteProcess.waitForExit();
-        expect(finalResult.result).toBe("Ok");
+        expect(finalResult.result).toBe(ResultState.Ok);
       });
     });
 
