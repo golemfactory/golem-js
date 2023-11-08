@@ -98,7 +98,6 @@ describe("Task Executor", () => {
       const executor = await TaskExecutor.create({ package: "test", logger, yagnaOptions });
 
       jest.spyOn(Task.prototype, "isFinished").mockImplementation(() => true);
-      const onErrorSpy = jest.fn();
       const executorEndSpy = jest.spyOn(executor as any, "doEnd");
 
       const rejectedSpy = jest.spyOn(Task.prototype, "isRejected");
@@ -107,23 +106,15 @@ describe("Task Executor", () => {
 
       rejectedSpy.mockImplementationOnce(() => false);
       resultsSpy.mockImplementationOnce(() => "result 1");
-      const result1 = await executor.run(() => Promise.resolve());
+      await expect(executor.run(() => Promise.resolve())).resolves.toEqual("result 1");
 
-      try {
-        rejectedSpy.mockImplementationOnce(() => true);
-        errorSpy.mockImplementationOnce(() => new Error("test"));
-        await executor.run(() => Promise.resolve());
-      } catch (e) {
-        onErrorSpy(e);
-      }
+      rejectedSpy.mockImplementationOnce(() => true);
+      errorSpy.mockImplementationOnce(() => new Error("error 1"));
+      await expect(executor.run(() => Promise.resolve())).rejects.toThrow("error 1");
 
       rejectedSpy.mockImplementationOnce(() => false);
-      resultsSpy.mockImplementationOnce(() => "result 3");
-      const result3 = await executor.run(() => Promise.resolve());
-
-      expect(result1).toEqual("result 1");
-      expect(onErrorSpy).toHaveBeenCalledWith(new Error("test"));
-      expect(result3).toEqual("result 3");
+      resultsSpy.mockImplementationOnce(() => "result 2");
+      await expect(executor.run(() => Promise.resolve())).resolves.toEqual("result 2");
 
       expect(rejectedSpy).toHaveBeenCalledTimes(3);
       expect(resultsSpy).toHaveBeenCalledTimes(2);
