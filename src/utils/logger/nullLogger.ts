@@ -12,7 +12,6 @@ export function nullLogger(): Logger {
     log: nullFunc,
     warn: nullFunc,
     error: nullFunc,
-    table: nullFunc,
     setLevel: nullFunc,
   };
 }

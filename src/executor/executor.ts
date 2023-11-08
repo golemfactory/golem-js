@@ -538,7 +538,11 @@ export class TaskExecutor {
     const providersCount = new Set(costsSummary.map((x) => x["Provider Name"])).size;
     this.logger?.info(`Computation finished in ${duration}`);
     this.logger?.info(`Negotiated ${costsSummary.length} agreements with ${providersCount} providers`);
-    if (costsSummary.length) this.logger?.table?.(costsSummary);
+    costsSummary.forEach((cost) => {
+      this.logger?.info(
+        `Agreement ${cost["Agreement"]} with ${cost["Provider Name"]} computed ${cost["Task Computed"]} task(s) for ${cost["Cost"]} GLM (${cost["Payment Status"]})`,
+      );
+    });
     this.logger?.info(`Total Cost: ${costs.total} Total Paid: ${costs.paid}`);
   }
 
