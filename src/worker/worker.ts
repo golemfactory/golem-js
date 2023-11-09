@@ -1,20 +1,25 @@
 import { EventEmitter } from "events";
-import { GolemRuntime, RuntimeOptions } from "./runtime";
 import { defaultLogger, Logger, nullLogger } from "../utils";
 import { WorkContext } from "../task";
+import { YagnaOptions } from "../utils/yagna/yagna";
 
-export type GolemWorkerOptions = { startupTimeout?: number; websocketConnectionTimeout?: number } & WorkerOptions &
-  RuntimeOptions;
+export type GolemWorkerOptions = {
+  startupTimeout?: number;
+  websocketConnectionTimeout?: number;
+  logger?: Logger;
+  enableLogging?: boolean;
+  yagna: YagnaOptions;
+} & WorkerOptions;
 
 export abstract class GolemWorker extends EventEmitter {
   protected readonly options: GolemWorkerOptions;
   protected readonly logger: Logger;
-  private readonly golemRuntime: GolemRuntime;
 
   protected abstract startWebsocket(ctx: WorkContext): Promise<void>;
   protected abstract uploadWorkerFile(ctx: WorkContext): Promise<void>;
   public abstract postMessage(message: unknown): void;
   constructor(
+    public readonly ctx: WorkContext,
     protected scriptURL: string | URL,
     options?: GolemWorkerOptions,
   ) {
@@ -26,13 +31,7 @@ export abstract class GolemWorker extends EventEmitter {
     this.options.websocketConnectionTimeout = options?.websocketConnectionTimeout ?? 10_000;
     this.addListener("message", (ev) => this["onmessage"]?.(ev));
     this.addListener("error", (ev) => this["onerror"]?.(ev));
-    // TODO: change to official golem image
-    this.options.imageTag = "mgordel/worker:latest";
-    this.golemRuntime = new GolemRuntime(this.options);
-    this.golemRuntime
-      .init()
-      .then((ctx) => this.init(ctx))
-      .catch((error) => this.emit("error", error));
+    this.init(ctx).catch((error) => this.emit("error", error));
   }
 
   async init(ctx: WorkContext) {
@@ -46,8 +45,8 @@ export abstract class GolemWorker extends EventEmitter {
     }
   }
 
-  async terminate() {
-    return this.golemRuntime.end();
+  terminate() {
+    this.emit("end");
   }
   private async startWorkerProxy(ctx: WorkContext) {
     await this.uploadWorkerFile(ctx);

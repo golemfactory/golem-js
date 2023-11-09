@@ -60,10 +60,10 @@ export class WorkContext {
   private readonly networkNode?: NetworkNode;
 
   constructor(
-    private activity: Activity,
+    public readonly activity: Activity,
     private options?: WorkOptions,
   ) {
-    this.agreementId = this.activity.agreementId;
+    this.agreementId = this.activity.agreement.id;
     this.activityId = this.activity.id;
     this.activityPreparingTimeout = options?.activityPreparingTimeout || DEFAULTS.activityPreparingTimeout;
     this.logger = options?.logger;

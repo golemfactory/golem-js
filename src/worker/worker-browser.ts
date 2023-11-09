@@ -5,7 +5,7 @@ export class GolemWorkerBrowser extends GolemWorker {
   private socket?: WebSocket;
 
   protected async startWebsocket(ctx: WorkContext) {
-    const websocketUri = `${ctx.getWebsocketUri(6000)}?authToken=${this.options?.yagnaOptions?.apiKey}`;
+    const websocketUri = `${ctx.getWebsocketUri(6000)}?authToken=${this.options?.yagna?.apiKey}`;
     this.socket = new WebSocket(websocketUri);
     this.socket.onmessage = async (ev) => {
       const data = ev.data instanceof Blob ? await ev.data.text() : ev.data.toString();

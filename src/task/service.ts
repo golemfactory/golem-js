@@ -170,7 +170,7 @@ export class TaskService {
     if (previous) {
       return previous;
     } else {
-      const activity = await Activity.create(agreement.id, this.yagnaApi, this.options);
+      const activity = await Activity.create(agreement, this.yagnaApi, this.options);
       this.activities.set(agreement.id, activity);
       return activity;
     }

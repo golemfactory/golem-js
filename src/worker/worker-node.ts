@@ -7,7 +7,7 @@ export class GolemWorkerNode extends GolemWorker {
   private socket?: WebSocket;
   protected async startWebsocket(ctx: WorkContext) {
     const websocketUri = ctx.getWebsocketUri(6000);
-    const apiKey = this.options?.yagnaOptions?.apiKey || process.env.YAGNA_APPKEY;
+    const apiKey = this.options.yagna.apiKey || process.env.YAGNA_APPKEY;
     this.socket = new WebSocket(websocketUri, {
       headers: { authorization: `Bearer ${apiKey}` },
     });

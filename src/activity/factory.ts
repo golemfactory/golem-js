@@ -1,7 +1,8 @@
 import { Activity, ActivityOptions } from "./activity";
 import { ActivityConfig } from "./config";
 import { Events } from "../events";
-import { YagnaApi } from "../utils/yagna/yagna";
+import { YagnaApi } from "../utils";
+import { Agreement } from "../agreement";
 
 /**
  * Activity Factory
@@ -14,12 +15,12 @@ export class ActivityFactory {
   /**
    * Creating ActivityFactory
    *
-   * @param agreementId
+   * @param agreement - {@link Agreement}
    * @param yagnaApi - {@link YagnaApi}
    * @param options - {@link ActivityOptions}
    */
   constructor(
-    private readonly agreementId: string,
+    private readonly agreement: Agreement,
     private readonly yagnaApi: YagnaApi,
     options?: ActivityOptions,
   ) {
@@ -47,10 +48,10 @@ export class ActivityFactory {
   }
 
   private async createActivity(): Promise<Activity> {
-    const { data } = await this.yagnaApi.activity.control.createActivity({ agreementId: this.agreementId });
+    const { data } = await this.yagnaApi.activity.control.createActivity({ agreementId: this.agreement.id });
     const id = typeof data == "string" ? data : data.activityId;
     this.options.logger?.debug(`Activity ${id} created`);
-    this.options.eventTarget?.dispatchEvent(new Events.ActivityCreated({ id, agreementId: this.agreementId }));
-    return new Activity(id, this.agreementId, this.yagnaApi, this.options);
+    this.options.eventTarget?.dispatchEvent(new Events.ActivityCreated({ id, agreementId: this.agreement.id }));
+    return new Activity(id, this.agreement, this.yagnaApi, this.options);
   }
 }

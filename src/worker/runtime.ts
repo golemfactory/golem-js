@@ -1,27 +1,32 @@
 import { MarketService } from "../market";
-import { Agreement, AgreementPoolService } from "../agreement";
+import { AgreementPoolService } from "../agreement";
 import { PaymentOptions, PaymentService } from "../payment";
 import { MarketOptions } from "../market/service";
 import { AgreementServiceOptions } from "../agreement/service";
 import { Yagna, YagnaOptions } from "../utils/yagna/yagna";
-import { Package, AllPackageOptions } from "../package";
+import { Package, AllPackageOptions, PackageOptions } from "../package";
 import { WorkContext } from "../task";
-import { Activity, ActivityOptions } from "../activity";
-import { NetworkService, NetworkServiceOptions } from "../network";
+import { Activity } from "../activity";
+import { NetworkService } from "../network";
 import { defaultLogger, Logger, nullLogger } from "../utils";
 import { isBrowser } from "../utils/runtimeContextChecker";
 import { WebSocketBrowserStorageProvider, GftpStorageProvider, StorageProvider } from "../storage";
+import { NetworkOptions } from "../network/network";
+import { GolemWorker, GolemWorkerOptions } from "./worker";
+import { GolemWorkerBrowser } from "./worker-browser";
+import { GolemWorkerNode } from "./worker-node";
+import { ActivityPoolService } from "../activity/service";
 
 export type RuntimeOptions = {
+  yagna?: YagnaOptions;
+  market?: MarketOptions & AllPackageOptions;
+  agreement?: AgreementServiceOptions;
+  network?: NetworkOptions;
+  payment?: PaymentOptions;
   storageProvider?: StorageProvider;
   enableLogging?: boolean;
-} & YagnaOptions &
-  MarketOptions &
-  AgreementServiceOptions &
-  PaymentOptions &
-  NetworkServiceOptions &
-  AllPackageOptions &
-  ActivityOptions;
+  logger?: Logger;
+};
 
 export class GolemRuntime {
   private readonly options: RuntimeOptions;
@@ -30,48 +35,71 @@ export class GolemRuntime {
   private readonly agreementService: AgreementPoolService;
   private readonly paymentService: PaymentService;
   private readonly networkService: NetworkService;
-  private activity?: Activity;
+  private readonly activityService: ActivityPoolService;
   private logger: Logger;
   constructor(options?: RuntimeOptions) {
     this.logger = options?.logger || (options?.enableLogging ? defaultLogger() : nullLogger());
-    this.options = {
-      logger: this.logger,
-      capabilities: ["vpn"],
-      ...options,
-    };
-    this.yagna = new Yagna(this.options.yagnaOptions);
+    this.options = this.prepareOptions(options);
+    this.yagna = new Yagna(this.options.yagna);
     const yagnaApi = this.yagna.getApi();
-    this.agreementService = new AgreementPoolService(yagnaApi, this.options);
-    this.marketService = new MarketService(this.agreementService, yagnaApi, this.options);
-    this.networkService = new NetworkService(yagnaApi, this.options);
-    this.paymentService = new PaymentService(yagnaApi, this.options);
+    this.agreementService = new AgreementPoolService(yagnaApi, this.options.agreement);
+    this.marketService = new MarketService(this.agreementService, yagnaApi, this.options.market);
+    this.networkService = new NetworkService(yagnaApi, this.options.network);
+    this.paymentService = new PaymentService(yagnaApi, this.options.payment);
+    this.activityService = new ActivityPoolService(yagnaApi, this.agreementService, this.paymentService);
   }
 
-  async init(): Promise<WorkContext> {
+  async init() {
     try {
       await this.yagna.connect();
-      const taskPackage = Package.create({
-        imageTag: "mgordel/worker:latest",
-        ...this.options,
-      });
+      const taskPackage = Package.create(this.options.market as PackageOptions);
       const allocation = await this.paymentService.createAllocation();
       await this.marketService.run(taskPackage, allocation);
       await this.agreementService.run();
       await this.paymentService.run();
       await this.networkService.run();
-      const agreement = await this.agreementService.getAgreement();
-      this.paymentService.acceptPayments(agreement);
-      await this.marketService.end();
-      return this.createWorkContext(agreement);
+      await this.activityService.run();
     } catch (error) {
-      this.logger.error(error);
+      this.logger.error(`Runtime initialization error. ${error}`);
       throw error;
     }
   }
 
+  /**
+   *  TODO
+   * @param scriptURL
+   * @param options
+   */
+  async startWorker(scriptURL: string | URL, options?: GolemWorkerOptions): Promise<GolemWorker> {
+    const Worker = isBrowser ? GolemWorkerBrowser : GolemWorkerNode;
+    const activity = await this.activityService.getActivity();
+    const ctx = await this.createWorkContext(activity);
+    const worker = new Worker(ctx, scriptURL, { ...this.options, ...options } as GolemWorkerOptions);
+    this.logger.info(`GolemWorker has been started on provider ${activity.agreement.provider.name}`);
+    return worker;
+  }
+
+  async terminateWorker(worker: GolemWorker) {
+    try {
+      // not implemented
+      // this.networkService.removeNode(worker.ctx.provider.id);
+      await this.activityService.releaseActivity(worker.ctx.activity, true);
+    } catch (error) {
+      this.logger.warn(`Errors occurred while terminating worker. ${error}`);
+    } finally {
+      worker.terminate();
+      this.logger.info(`GolemWorker has been terminated`);
+    }
+  }
+
+  async endMarket() {
+    await this.marketService.end();
+  }
+
   async end() {
     try {
-      await this.activity?.stop?.();
+      // await this.marketService.end();
+      await this.activityService.end();
       await this.agreementService.end();
       await this.networkService.end();
       await this.paymentService.end();
@@ -81,15 +109,14 @@ export class GolemRuntime {
     }
   }
 
-  private async createWorkContext(agreement: Agreement): Promise<WorkContext> {
+  private async createWorkContext(activity: Activity): Promise<WorkContext> {
     try {
-      this.activity = await Activity.create(agreement.id, this.yagna.getApi(), this.options);
-      const networkNode = await this.networkService.addNode(agreement.provider.id);
+      const networkNode = await this.networkService.addNode(activity.agreement.provider.id);
       const storageProvider = isBrowser
         ? new WebSocketBrowserStorageProvider(this.yagna.getApi(), {})
         : new GftpStorageProvider();
-      const ctx = new WorkContext(this.activity, {
-        provider: agreement.provider,
+      const ctx = new WorkContext(activity, {
+        provider: activity.agreement.provider,
         networkNode,
         storageProvider,
       });
@@ -99,5 +126,30 @@ export class GolemRuntime {
       this.logger.error(error);
       throw error;
     }
+  }
+
+  private prepareOptions(options?: RuntimeOptions) {
+    return {
+      market: {
+        logger: this.logger,
+        // TODO: change to official golem image
+        imageTag: "mgordel/worker:latest",
+        ...options?.market,
+        capabilities: options?.market?.capabilities ? [...options.market.capabilities, "vpn"] : ["vpn"],
+      } as MarketOptions & AllPackageOptions,
+      agreement: {
+        logger: this.logger,
+        ...options?.agreement,
+      },
+      network: {
+        logger: this.logger,
+        networkOwnerId: "",
+        ...options?.network,
+      },
+      payment: {
+        logger: this.logger,
+        ...options?.payment,
+      },
+    };
   }
 }
