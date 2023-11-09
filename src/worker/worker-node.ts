@@ -12,7 +12,7 @@ export class GolemWorkerNode extends GolemWorker {
       headers: { authorization: `Bearer ${apiKey}` },
     });
     let intervalId;
-    this.socket.onmessage = (ev) => this.emit("message", ev.data.toString().trim());
+    this.socket.onmessage = (ev) => this.emit("message", this.deserializer(ev.data));
     this.socket.onerror = (er) => this.emit("error", er.error);
     this.socket.onclose = (ev) => {
       clearInterval(intervalId);
@@ -39,5 +39,6 @@ export class GolemWorkerNode extends GolemWorker {
 
   protected async uploadWorkerFile(ctx: WorkContext) {
     await ctx.uploadFile(`${this.scriptURL}`, "/golem/work/worker.mjs");
+    await ctx.run("cp /golem/work/worker.mjs /golem/proxy/worker.mjs");
   }
 }

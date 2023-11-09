@@ -73,8 +73,20 @@ export abstract class GolemWorker extends EventEmitter {
   /**
    * A very primitive json serializer, requires testing and verification on other edge cases...
    */
-  protected serializer(message: unknown) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  protected serializer(message: any) {
     if (typeof message !== "string") return JSON.stringify(message);
     return message;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  protected deserializer(data: any) {
+    try {
+      const msg = Buffer.from(data).toString();
+      return JSON.parse(msg);
+    } catch (e) {
+      this.logger.error(`Unable to deserialize data from worker. Data: ${data}. ${e}`);
+      throw e;
+    }
   }
 }
