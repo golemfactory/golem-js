@@ -180,7 +180,7 @@ describe("Task Executor", function () {
     expect(["192.168.0.2", "192.168.0.3"]).toContain(result);
   });
 
-  it("should run simple by spawn command as external process", async () => {
+  it("should spawn command as external process", async () => {
     executor = await TaskExecutor.create({
       package: "golem/alpine:latest",
       logger,
