@@ -10,11 +10,12 @@ class ModifiedHugoTheme extends HugoTheme {
 
   onHugoPageEnd(page) {
     const yamlVars = {
-      title: `${typedoc.ReflectionKind[page.model.kind]} ${this.getPageTitle(page)} - golem-js API Reference`,
+      title: `${typedoc.ReflectionKind[page.model.kind]} ${this.getPageTitle(page)}`,
+      pageTitle: `${typedoc.ReflectionKind[page.model.kind]} ${this.getPageTitle(page)} - golem-js API Reference`,
       description: `Explore the detailed API reference documentation for the ${
         typedoc.ReflectionKind[page.model.kind]
       } ${this.getPageTitle(page)} within the golem-js SDK for the Golem Network.`,
-      type: "reference",
+      type: "JS API Reference",
     };
     page.contents && (page.contents = this.prependYAML(page.contents, yamlVars));
   }
@@ -31,7 +32,7 @@ class ModifiedHugoTheme extends HugoTheme {
     return (
       "---\n" +
       Object.entries(yamlVars)
-        .map(([key, value]) => `${key}: "${value}"`)
+        .map(([key, value]) => `${key}: ${value}`)
         .join("\n") +
       "\n---\n" +
       contents
