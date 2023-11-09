@@ -27,21 +27,23 @@ export class RemoteProcess {
   }
 
   /**
-   * Waits for the process to complete and returns the last part of the command's results as a {@link Result} object
-   * @param timeout - maximum waiting time for the final result (default: 20 sec)
+   * Waits for the process to complete and returns the last part of the command's results as a {@link Result} object.
+   * If the timeout is reached, the return promise will be rejected.
+   * @param timeout - maximum waiting time im ms for the final result (default: 20_000)
    */
   waitForExit(timeout?: number): Promise<Result> {
-    return new Promise((res, rej) => {
+    return new Promise((resolve, reject) => {
+      const timeoutInMs = timeout ?? DEFAULTS.exitWaitingTimeout;
       const timeoutId = setTimeout(
-        () => rej(new Error("The waiting time for the final result has been exceeded")),
-        timeout ?? DEFAULTS.exitWaitingTimeout,
+        () => reject(new Error(`The waiting time (${timeoutInMs} ms) for the final result has been exceeded`)),
+        timeoutInMs,
       );
       const end = () => {
         clearTimeout(timeoutId);
         if (this.lastResult) {
-          res(this.lastResult);
+          resolve(this.lastResult);
         } else {
-          rej(new Error(`An error occurred while retrieving the results. ${this.streamError}`));
+          reject(new Error(`An error occurred while retrieving the results. ${this.streamError}`));
         }
       };
       if (this.streamOfActivityResults.closed) return end();
