@@ -20,7 +20,6 @@ const logger = {
   debug: (msg) => appendLog(msg, "debug"),
   error: (msg) => appendLog(msg, "error"),
   info: (msg) => appendLog(msg, "info"),
-  table: (msg) => appendLog(JSON.stringify(msg, null, "\t")),
 };
 
 async function run() {

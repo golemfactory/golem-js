@@ -12,7 +12,6 @@ export function consoleLogger(): Logger {
     log: (msg: string) => print("log", msg),
     setLevel: (lvl: string) => (level = lvl),
     warn: (msg) => print("warn", msg),
-    table: (obj) => console.table(obj),
     level,
   };
 }
