@@ -71,7 +71,7 @@ export abstract class GolemWorker extends EventEmitter {
   }
 
   /**
-   * A very primitive json serializer, requires testing and verification on other edge cases...
+   * A very primitive json serializer
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   protected serializer(message: any) {

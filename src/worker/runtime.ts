@@ -71,7 +71,8 @@ export class GolemRuntime {
   }
 
   /**
-   *  TODO
+   * Spawn a new Golem Worker.
+   * Creates a new worker runtime environment on the available provider using the GolemRuntime pool.
    * @param scriptURL
    * @param options
    */
@@ -84,6 +85,10 @@ export class GolemRuntime {
     return worker;
   }
 
+  /**
+   * Terminate GolemWorker. Clears the runtime on the provider and returns it back to the GolemRuntime pool.
+   * @param worker
+   */
   async terminateWorker(worker: GolemWorker) {
     try {
       // not implemented
@@ -97,13 +102,12 @@ export class GolemRuntime {
     }
   }
 
-  async endMarket() {
-    await this.marketService.end();
-  }
-
+  /**
+   * Terminates Golem's resources and processes all payments.
+   */
   async end() {
     try {
-      // await this.marketService.end();
+      await this.marketService.end();
       await this.activityService.end();
       await this.agreementService.end();
       await this.networkService.end();
