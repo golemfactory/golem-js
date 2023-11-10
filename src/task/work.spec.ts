@@ -47,14 +47,19 @@ describe("Work Context", () => {
       });
     });
 
-    describe("runAndStream()", () => {
-      it("should execute runAndStream command", async () => {
-        const expectedResult = ActivityMock.createResult({ stdout: "Ok" });
+    describe("spawn()", () => {
+      it("should execute spawn command", async () => {
+        const expectedResult = ActivityMock.createResult({ stdout: "Output", stderr: "Error", isBatchFinished: true });
         activity.mockResults([expectedResult]);
-        const streamOfResults = await context.runAndStream("rm -rf");
-        for await (const result of streamOfResults) {
-          expect(result).toBe(expectedResult);
+        const remoteProcess = await context.spawn("rm -rf");
+        for await (const result of remoteProcess.stdout) {
+          expect(result).toBe("Output");
         }
+        for await (const result of remoteProcess.stderr) {
+          expect(result).toBe("Error");
+        }
+        const finalResult = await remoteProcess.waitForExit();
+        expect(finalResult.result).toBe(ResultState.Ok);
       });
     });
 
