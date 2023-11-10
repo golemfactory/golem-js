@@ -339,6 +339,18 @@ export class TaskExecutor {
   }
 
   /**
+   * @deprecated This method is marked for removal in a future release. Migrate your code by using `Array.map` and `Promise.all` instead.
+   * @example
+   * ```typescript
+   * const data = [1, 2, 3, 4, 5];
+   * const resultsPromises = data.map((item) =>
+   *   executor.run((ctx) => {
+   *     console.log((await ctx.run(`echo "${item}"`)).stdout);
+   *   })
+   * );
+   * await Promise.all(resultsPromises);
+   * ```
+   *
    * Map iterable data to worker function and return computed Task result as AsyncIterable
    *
    * @param data Iterable data
@@ -387,6 +399,19 @@ export class TaskExecutor {
   }
 
   /**
+   * @deprecated This method is marked for removal in a future release.
+   * Migrate your code by using `Array.map` and `Promise.all` instead.
+   * @example
+   * ```typescript
+   * const data = [1, 2, 3, 4, 5];
+   * const resultsPromises = data.map((item) =>
+   *   executor.run((ctx) => {
+   *     console.log((await ctx.run(`echo "${item}"`)).stdout);
+   *   }),
+   * );
+   * await Promise.all(resultsPromises);
+   * ```
+   *
    * Iterates over given data and execute task using worker function
    *
    * @param data Iterable data
