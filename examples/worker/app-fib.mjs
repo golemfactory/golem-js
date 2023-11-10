@@ -4,8 +4,7 @@ import os from "os";
 
 const min = 30;
 const max = 42;
-// const length = os.cpus().length;
-const length = 4;
+const length = os.cpus().length;
 const dataSet = Array.from({ length }, () => Math.floor(Math.random() * (max - min + 1) + min));
 
 process.setMaxListeners(length + 3);
@@ -16,7 +15,10 @@ const golemRuntime = new GolemRuntime({
 });
 await golemRuntime.init();
 
-const workers = await Promise.all(
+console.log(`Calculating the fibo number for a set: ${dataSet}\n`);
+const startTime = new Date().valueOf();
+
+Promise.all(
   Array.from({ length }, (_, i) => {
     // const worker = new Worker("./worker-fib.js");
     return golemRuntime.startWorker("./worker-fib.js").then((worker) => {
@@ -26,6 +28,7 @@ const workers = await Promise.all(
         if (completedWorkers.size === length) {
           const stopTime = new Date().valueOf();
           console.log(`\nComputation finished in ${((stopTime - startTime) / 1000).toFixed(0)} sec`);
+          golemRuntime.end().then(() => process.exit(0));
         }
         golemRuntime.terminateWorker(worker).then();
       });
@@ -40,8 +43,6 @@ const workers = await Promise.all(
       return worker;
     });
   }),
-);
+).catch(console.error);
 
-console.log(`Calculating the fibo number for a set: ${dataSet}\n`);
-const startTime = new Date().valueOf();
 process.once("SIGINT", () => golemRuntime.end());

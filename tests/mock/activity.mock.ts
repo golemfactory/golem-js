@@ -19,8 +19,8 @@ export class ActivityMock extends Activity {
     });
   }
 
-  constructor(agreement: Agreement, agreementId: string, yagnaApi: YagnaApi, options?: ActivityConfig) {
-    super(agreement, agreementId, yagnaApi, (options ?? { logger: nullLogger() }) as unknown as ActivityConfig);
+  constructor(id: string, agreement: Agreement, yagnaApi: YagnaApi, options?: ActivityConfig) {
+    super(id, agreement, yagnaApi, (options ?? { logger: nullLogger() }) as unknown as ActivityConfig);
   }
 
   async execute(script: ExeScriptRequest, stream?: boolean, timeout?: number): Promise<Readable> {

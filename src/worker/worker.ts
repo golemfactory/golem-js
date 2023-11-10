@@ -51,20 +51,19 @@ export abstract class GolemWorker extends EventEmitter {
   }
   private async startWorkerProxy(ctx: WorkContext) {
     await this.uploadWorkerFile(ctx);
-    const results = await ctx.runAndStream("node /golem/proxy/proxy.mjs");
-    results.on("error", (error) => this.logger.debug(error));
+    const process = await ctx.spawn("node /golem/proxy/proxy.mjs");
+    process.stderr.on("data", (data) => console.error(data));
     await new Promise((res, rej) => {
       const timeoutId = setTimeout(() => rej(new Error("Worker Proxy startup timed out")), this.options.startupTimeout);
-      results.on("data", (data) => {
+      process.stdout.on("data", (data) => {
         // consider another way to check if the proxy is ready.
         // For now, after a successful start, proxy write the following message
         // to the console: "worker proxy started"
-        if (data.stdout && data.stdout.trim() === "worker proxy started") {
+        if (data && data.trim() === "worker proxy started") {
           clearTimeout(timeoutId);
           return res(true);
         }
-        if (data.stdout) console.log(data.stdout.trim());
-        if (data.stderr) console.log(data.stderr.trim());
+        if (data) console.log(data.trim());
       });
     });
     this.logger.debug(`Worker Proxy started on provider ${ctx.provider?.name}`);

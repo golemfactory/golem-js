@@ -11,7 +11,7 @@ describe("Batch", () => {
   let batch: Batch;
 
   beforeEach(() => {
-    activity = new ActivityMock(agreement, "test_id", new YagnaMock().getApi());
+    activity = new ActivityMock("test_id", agreement, new YagnaMock().getApi());
     batch = new Batch(activity, new NullStorageProvider(), new LoggerMock());
   });
 

@@ -14,7 +14,7 @@ describe("Work Context", () => {
 
   beforeEach(() => {
     logger.clear();
-    activity = new ActivityMock(agreement, "test_id", new YagnaMock().getApi());
+    activity = new ActivityMock("test_id", agreement, new YagnaMock().getApi());
     context = new WorkContext(activity, {
       logger: logger,
     });

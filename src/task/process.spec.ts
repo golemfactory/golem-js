@@ -3,11 +3,12 @@ import { ActivityMock } from "../../tests/mock/activity.mock";
 import { YagnaMock } from "../../tests/mock";
 import { Run, Script } from "../script";
 import { ResultState } from "../activity";
+import { agreement } from "../../tests/mock/entities/agreement";
 
 describe("RemoteProcess", () => {
   let activity: ActivityMock;
   beforeEach(() => {
-    activity = new ActivityMock("test_id", "test_id", new YagnaMock().getApi());
+    activity = new ActivityMock("test_id", agreement, new YagnaMock().getApi());
   });
 
   it("should create remote process", async () => {
