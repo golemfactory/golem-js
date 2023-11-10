@@ -40,5 +40,6 @@ export class GolemWorkerBrowser extends GolemWorker {
     const response = await fetch(workerUrl);
     const data = new Uint8Array(await response.arrayBuffer());
     await ctx.uploadData(data, "/golem/work/worker.mjs");
+    await ctx.run("cp /golem/work/worker.mjs /golem/proxy/worker.mjs");
   }
 }

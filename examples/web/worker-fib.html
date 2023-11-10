@@ -1,0 +1,158 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Golem Workers</title>
+    <link rel="stylesheet" href="css/main.css" />
+  </head>
+  <body>
+    <h1>Golem Workers</h1>
+    <div class="container">
+      <div class="col-6">
+        <h3>Select Worker implementation</h3>
+        <div id="options">
+          <div class="col-12">
+            <div class="fieldset">
+              <div>
+                <div class="inline">
+                  <label for="key"> Yagna App Key</label>
+                  <input type="text" id="key" name="key" value="" />
+                </div>
+                <div class="inline">
+                  <button id="initRuntime">Init GolemRuntime</button>
+                  <button id="stopRuntime">Stop GolemRuntime</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <h3>Actions</h3>
+        <div class="row inline">
+          <div id="inputs" class="inline">
+            <div class="inline">
+              <label style="width: 60px" for="size">Set size</label>
+              <input type="number" style="width: 60px" id="size" name="size" value="8" />
+            </div>
+            <button id="generate" style="margin-right: 100px">Generate</button>
+          </div>
+          <button id="startWorker">Start Workers</button>
+        </div>
+        <div class="set console">
+          <h3>Set</h3>
+          <pre id="set" style="font-size: 1.3rem">[]</pre>
+        </div>
+        <div class="results console" style="display: flex">
+          <div class="col-6">
+            <h3>Results Local</h3>
+            <ul id="results-local" style="font-size: 1.3rem"></ul>
+          </div>
+          <div class="col-6">
+            <h3>Results Golem</h3>
+            <ul id="results-golem" style="font-size: 1.3rem"></ul>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 border-left">
+        <div class="logs console">
+          <h3>Logs</h3>
+          <ul id="logs"></ul>
+        </div>
+      </div>
+    </div>
+    <script type="module">
+      import { GolemRuntime } from "/golem-js.min.js";
+      let worker;
+      let golemRuntime;
+      let dataSet = [];
+      let completedWorkers = new Set();
+      const logger = {
+        log: (msg) => appendLog(`[${new Date().toISOString()}] ${msg}`),
+        warn: (msg) => appendLog(`[${new Date().toISOString()}] [warn] ${msg}`),
+        debug: (msg) => null,
+        error: (msg) => appendLog(`[${new Date().toISOString()}] [error] ${msg}`),
+        info: (msg) => appendLog(`[${new Date().toISOString()}] [info] ${msg}`),
+        table: (msg) => appendLog(JSON.stringify(msg, null, "\t")),
+      };
+
+      function initRuntime() {
+        const apiKey = document.querySelector('input[name="key"]').value;
+        golemRuntime = new GolemRuntime({ yagna: { apiKey }, logger });
+        golemRuntime.init();
+      }
+
+      function stopRuntime() {
+        golemRuntime.end();
+      }
+      async function startWorker() {
+        const startTime = new Date().valueOf();
+        // const workerType = document.querySelector('input[name="workerType"]:checked');
+        const length = Number(document.querySelector("#size").value);
+        await Promise.all(
+          Array.from({ length }, (_, i) => {
+            appendLog(`[${new Date().toISOString()}] [info] Starting Golem Worker-${i}`);
+            golemRuntime.startWorker("worker-fib.js").then((worker) => {
+              worker.on("message", (msg) => {
+                appendResults("golem", `[worker-${i}]`, msg);
+                completedWorkers.add(i);
+                if (completedWorkers.size === length) {
+                  const stopTime = new Date().valueOf();
+                  appendResults("golem", `\nComputation finished in ${((stopTime - startTime) / 1000).toFixed(0)} sec`);
+                }
+                golemRuntime.terminateWorker(worker).then();
+              });
+              worker.on("error", (error) => {
+                completedWorkers.add(i);
+                appendResults("golem", `[worker-${i}:error] ${error}`);
+                golemRuntime.terminateWorker(worker).then();
+              });
+              worker.on("online", () => {
+                worker.postMessage(dataSet[i]);
+              });
+              return worker;
+            });
+            const localWorker = new Worker("worker-fib.js");
+            localWorker.onmessage = (msg) => {
+              appendResults("local", `[worker-${i}] ${msg.data}`);
+              completedWorkers.add(i);
+              if (completedWorkers.size === length) {
+                const stopTime = new Date().valueOf();
+                appendResults("local", `\nComputation finished in ${((stopTime - startTime) / 1000).toFixed(0)} sec`);
+              }
+              localWorker.terminate();
+            };
+            localWorker.onerror = (error) => {
+              completedWorkers.add(i);
+              appendResults("local", `[worker-${i}]`, error);
+              localWorker.terminate();
+            };
+            localWorker.postMessage(dataSet[i]);
+          }),
+        );
+      }
+      function generate() {
+        const length = Number(document.querySelector("#size").value);
+        const min = 30;
+        const max = 42;
+        dataSet = Array.from({ length }, () => Math.floor(Math.random() * (max - min + 1) + min));
+        document.querySelector("#set").innerHTML = `[${dataSet.toString()}]`;
+      }
+      export function appendResults(type, result) {
+        const results_el = document.getElementById(`results-${type}`);
+        const li = document.createElement("li");
+        li.appendChild(document.createTextNode(result));
+        results_el.appendChild(li);
+      }
+      function appendLog(msg) {
+        const logs_el = document.getElementById("logs");
+        const li = document.createElement("li");
+        li.appendChild(document.createTextNode(msg));
+        logs_el.appendChild(li);
+      }
+      document.querySelector("#initRuntime").addEventListener("click", initRuntime);
+      document.querySelector("#stopRuntime").addEventListener("click", stopRuntime);
+      document.querySelector("#startWorker").addEventListener("click", startWorker);
+      document.querySelector("#generate").addEventListener("click", generate);
+      generate();
+    </script>
+  </body>
+</html>

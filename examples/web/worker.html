@@ -26,6 +26,10 @@
                   <label for="key"> Yagna App Key</label>
                   <input type="text" id="key" name="key" value="" />
                 </div>
+                <div class="inline">
+                  <button id="initRuntime">Init Runtime</button>
+                  <button id="stopRuntime">Stop Runtime</button>
+                </div>
               </div>
             </div>
           </div>
@@ -55,8 +59,9 @@
       </div>
     </div>
     <script type="module">
-      import { Worker as GolemWorker } from "/golem-js.min.js";
+      import { GolemRuntime } from "/golem-js.min.js";
       let worker;
+      let golemRuntime;
       const logger = {
         log: (msg) => appendLog(`[${new Date().toISOString()}] ${msg}`),
         warn: (msg) => appendLog(`[${new Date().toISOString()}] [warn] ${msg}`),
@@ -65,13 +70,19 @@
         info: (msg) => appendLog(`[${new Date().toISOString()}] [info] ${msg}`),
         table: (msg) => appendLog(JSON.stringify(msg, null, "\t")),
       };
-      function startWorker() {
-        const workerType = document.querySelector('input[name="workerType"]:checked');
+
+      function initRuntime() {
         const apiKey = document.querySelector('input[name="key"]').value;
-        worker =
-          workerType.value === "golem"
-            ? new GolemWorker("worker.js", { yagnaOptions: { apiKey }, logger })
-            : new Worker("worker.js");
+        golemRuntime = new GolemRuntime({ yagna: { apiKey }, logger });
+        golemRuntime.init();
+      }
+
+      function stopRuntime() {
+        golemRuntime.end();
+      }
+      async function startWorker() {
+        const workerType = document.querySelector('input[name="workerType"]:checked');
+        worker = workerType.value === "golem" ? await golemRuntime.startWorker("worker.js") : new Worker("worker.js");
         worker.onmessage = (evt) => appendResults(`[worker] ${evt.data}`);
         worker.onerror = (error) => appendResults(`[worker:error] ${error}`);
       }
@@ -95,6 +106,8 @@
         li.appendChild(document.createTextNode(msg));
         logs_el.appendChild(li);
       }
+      document.querySelector("#initRuntime").addEventListener("click", initRuntime);
+      document.querySelector("#stopRuntime").addEventListener("click", stopRuntime);
       document.querySelector("#startWorker").addEventListener("click", startWorker);
       document.querySelector("#stopWorker").addEventListener("click", stopWorker);
       document.querySelector("#post").addEventListener("click", post);

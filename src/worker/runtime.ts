@@ -46,7 +46,9 @@ export class GolemRuntime {
     this.marketService = new MarketService(this.agreementService, yagnaApi, this.options.market);
     this.networkService = new NetworkService(yagnaApi, this.options.network);
     this.paymentService = new PaymentService(yagnaApi, this.options.payment);
-    this.activityService = new ActivityPoolService(yagnaApi, this.agreementService, this.paymentService);
+    this.activityService = new ActivityPoolService(yagnaApi, this.agreementService, this.paymentService, {
+      logger: this.logger,
+    });
   }
 
   async init() {
@@ -59,6 +61,9 @@ export class GolemRuntime {
       await this.paymentService.run();
       await this.networkService.run();
       await this.activityService.run();
+      this.logger?.info(
+        `Golem Runtime has started using subnet: ${this.options.market?.subnetTag}, network: ${this.paymentService.config.payment.network}, driver: ${this.paymentService.config.payment.driver}`,
+      );
     } catch (error) {
       this.logger.error(`Runtime initialization error. ${error}`);
       throw error;
@@ -130,7 +135,9 @@ export class GolemRuntime {
 
   private prepareOptions(options?: RuntimeOptions) {
     return {
+      ...options,
       market: {
+        subnetTag: "public",
         logger: this.logger,
         // TODO: change to official golem image
         imageTag: "mgordel/worker:latest",

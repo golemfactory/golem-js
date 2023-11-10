@@ -129,6 +129,7 @@
           payment: { network },
           subnetTag,
           logger,
+          startupTimeout: 120_000,
         });
 
         const result = await executor

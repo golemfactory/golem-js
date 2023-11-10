@@ -41,6 +41,7 @@ export abstract class GolemWorker extends EventEmitter {
       this.emit("online");
       this.logger.info("Golem Worker started");
     } catch (error) {
+      this.logger.error(`Golem Worker initialization error. ${error}`);
       this.emit("error", error);
     }
   }
