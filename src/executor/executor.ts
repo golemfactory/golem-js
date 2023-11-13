@@ -343,12 +343,12 @@ export class TaskExecutor {
    * @example
    * ```typescript
    * const data = [1, 2, 3, 4, 5];
-   * const resultsPromises = data.map((item) =>
+   * const futureResults = data.map((item) =>
    *   executor.run((ctx) => {
    *     console.log((await ctx.run(`echo "${item}"`)).stdout);
    *   })
    * );
-   * await Promise.all(resultsPromises);
+   * const results = await Promise.all(futureResults);
    * ```
    *
    * Map iterable data to worker function and return computed Task result as AsyncIterable
@@ -404,12 +404,12 @@ export class TaskExecutor {
    * @example
    * ```typescript
    * const data = [1, 2, 3, 4, 5];
-   * const resultsPromises = data.map((item) =>
+   * const futureResults = data.map((item) =>
    *   executor.run((ctx) => {
    *     console.log((await ctx.run(`echo "${item}"`)).stdout);
    *   }),
    * );
-   * await Promise.all(resultsPromises);
+   * await Promise.all(futureResults);
    * ```
    *
    * Iterates over given data and execute task using worker function
