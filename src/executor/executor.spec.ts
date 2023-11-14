@@ -91,6 +91,8 @@ describe("Task Executor", () => {
       );
       await executor.end();
     });
+
+    // TODO: test the "initialized" event, once init() is public and create() is deprecated.
   });
 
   describe("run()", () => {
@@ -144,6 +146,32 @@ describe("Task Executor", () => {
       const r3 = executor.end();
       expect(r3).toStrictEqual(r1);
       expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it('it should emit "end" and "ended" events', async () => {
+      const executor = await TaskExecutor.create({ package: "test", startupTimeout: 0, logger, yagnaOptions });
+      let terminated = false;
+      let terminating = false;
+
+      executor.events.on("terminating", () => {
+        expect(terminating).toBe(false);
+        expect(terminated).toBe(false);
+        terminating = true;
+      });
+
+      executor.events.on("terminated", () => {
+        expect(terminating).toBe(true);
+        expect(terminated).toBe(false);
+        terminated = true;
+      });
+
+      await executor.end();
+      // Second call shouldn't generate new events.
+      await executor.end();
+
+      // Both events should have been fired.
+      expect(terminating).toBe(true);
+      expect(terminated).toBe(true);
     });
   });
 });

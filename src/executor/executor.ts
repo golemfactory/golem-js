@@ -18,6 +18,8 @@ import { MarketOptions } from "../market/service";
 import { RequireAtLeastOne } from "../utils/types";
 import { v4 } from "uuid";
 import { JobStorage, Job } from "../job";
+import { TaskExecutorEventsDict } from "./events";
+import { EventEmitter } from "eventemitter3";
 
 const terminatingSignals = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
 
@@ -101,6 +103,12 @@ export type YagnaOptions = {
  * A high-level module for defining and executing tasks in the golem network
  */
 export class TaskExecutor {
+  /**
+   * EventEmitter2 instance emitting TaskExecutor events.
+   * @see TaskExecutorEventsDict for available events.
+   */
+  readonly events: EventEmitter<TaskExecutorEventsDict> = new EventEmitter();
+
   private readonly options: ExecutorConfig;
   private marketService: MarketService;
   private agreementPoolService: AgreementPoolService;
@@ -258,6 +266,7 @@ export class TaskExecutor {
     this.logger?.info(
       `Task Executor has started using subnet: ${this.options.subnetTag}, network: ${this.paymentService.config.payment.network}, driver: ${this.paymentService.config.payment.driver}`,
     );
+    this.events.emit("initialized");
   }
 
   /**
@@ -279,6 +288,7 @@ export class TaskExecutor {
    * @private
    */
   private async doEnd() {
+    this.events.emit("terminating");
     if (runtimeContextChecker.isNode) this.removeSignalHandlers();
     clearTimeout(this.startupTimeoutId);
     if (!this.configOptions.storageProvider) await this.storageProvider?.close();
@@ -290,6 +300,7 @@ export class TaskExecutor {
     this.printStats();
     await this.statsService.end();
     this.logger?.info("Task Executor has shut down");
+    this.events.emit("terminated");
   }
 
   /**
