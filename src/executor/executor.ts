@@ -339,6 +339,18 @@ export class TaskExecutor {
   }
 
   /**
+   * @deprecated This method is marked for removal in a future release. Migrate your code by using `Array.map` and `Promise.all` instead.
+   * @example
+   * ```typescript
+   * const data = [1, 2, 3, 4, 5];
+   * const futureResults = data.map((item) =>
+   *   executor.run((ctx) => {
+   *     console.log((await ctx.run(`echo "${item}"`)).stdout);
+   *   })
+   * );
+   * const results = await Promise.all(futureResults);
+   * ```
+   *
    * Map iterable data to worker function and return computed Task result as AsyncIterable
    *
    * @param data Iterable data
@@ -387,6 +399,19 @@ export class TaskExecutor {
   }
 
   /**
+   * @deprecated This method is marked for removal in a future release.
+   * Migrate your code by using `Array.map` and `Promise.all` instead.
+   * @example
+   * ```typescript
+   * const data = [1, 2, 3, 4, 5];
+   * const futureResults = data.map((item) =>
+   *   executor.run((ctx) => {
+   *     console.log((await ctx.run(`echo "${item}"`)).stdout);
+   *   }),
+   * );
+   * await Promise.all(futureResults);
+   * ```
+   *
    * Iterates over given data and execute task using worker function
    *
    * @param data Iterable data
@@ -548,8 +573,8 @@ export class TaskExecutor {
           proposalsCount.initial === 0 && proposalsCount.confirmed === 0
             ? "Check your demand if it's not too restrictive or restart yagna."
             : proposalsCount.initial === proposalsCount.rejected
-            ? "All off proposals got rejected."
-            : "Check your proposal filters if they are not too restrictive.";
+              ? "All off proposals got rejected."
+              : "Check your proposal filters if they are not too restrictive.";
         this.handleCriticalError(
           new Error(
             `Could not start any work on Golem. Processed ${proposalsCount.initial} initial proposals from yagna, filters accepted ${proposalsCount.confirmed}. ${hint}`,
