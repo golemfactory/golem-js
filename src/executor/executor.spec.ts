@@ -53,7 +53,7 @@ describe("Task Executor", () => {
         .spyOn(MarketService.prototype, "getProposalsCount")
         .mockImplementation(() => ({ confirmed: 0, initial: 0, rejected: 0 }));
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const handleErrorSpy = jest.spyOn(executor as any, "handleCriticalError").mockImplementation((error) => {
+      const handleErrorSpy = jest.spyOn(executor as any, "logCriticalError").mockImplementation((error) => {
         expect((error as Error).message).toEqual(
           "Could not start any work on Golem. Processed 0 initial proposals from yagna, filters accepted 0. Check your demand if it's not too restrictive or restart yagna.",
         );
