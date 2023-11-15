@@ -12,16 +12,24 @@ async function main(fiboN = 1, tasksCount = 1, subnetTag, driver, network, debug
   const runningTasks = [];
   for (let i = 0; i < tasksCount; i++) {
     runningTasks.push(
-      executor.run(async (ctx) => {
-        const result = await ctx.run("/usr/local/bin/node", ["/golem/work/fibo.js", fiboN.toString()]);
-        console.log(result.stdout);
-      }),
+      executor
+        .run(async (ctx) => {
+          const result = await ctx.run("/usr/local/bin/node", ["/golem/work/fibo.js", fiboN.toString()]);
+          console.log(result.stdout);
+        })
+        .catch((error) => {
+          console.error("Task execution error:", error);
+        }),
     );
   }
 
-  await Promise.all(runningTasks);
-  await executor.end();
+  try {
+    await Promise.all(runningTasks);
+  } finally {
+    await executor.end();
+  }
 }
+
 program
   .requiredOption("-n, --fibonacci-number <n>", "fibonacci number", (val) => parseInt(val))
   .option("-c, --tasks-count <c>", "tasks count", (val) => parseInt(val))

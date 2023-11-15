@@ -14,16 +14,20 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
 
   const inputs = [1, 2, 3, 4, 5];
 
-  const futureResults = inputs.map(async (item) => {
-    return await executor.run(async (ctx) => {
-      await ctx
-        .beginBatch()
-        .run(`echo ` + `'processing item: ` + item + `' >> /golem/input/action_log.txt`)
-        .downloadFile("/golem/input/action_log.txt", "./output_" + ctx.provider.name + ".txt")
-        .end();
+  try {
+    const futureResults = inputs.map(async (item) => {
+      return await executor.run(async (ctx) => {
+        await ctx
+          .beginBatch()
+          .run(`echo 'processing item: ${item}' >> /golem/input/action_log.txt`)
+          .downloadFile("/golem/input/action_log.txt", `./output_${ctx.provider.name}.txt`)
+          .end();
+      });
     });
-  });
-  await Promise.all(futureResults);
-
-  await executor.end();
+    await Promise.all(futureResults);
+  } catch (error) {
+    console.error("A critical error occurred:", error);
+  } finally {
+    await executor.end();
+  }
 })();

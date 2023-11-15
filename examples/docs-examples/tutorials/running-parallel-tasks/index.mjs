@@ -8,48 +8,54 @@ async function main(args) {
     yagnaOptions: { apiKey: `try_golem` },
   });
 
-  const keyspace = await executor.run(async (ctx) => {
-    const result = await ctx.run(`hashcat --keyspace -a 3 ${args.mask} -m 400`);
-    return parseInt(result.stdout || "");
-  });
-
-  if (!keyspace) throw new Error(`Cannot calculate keyspace`);
-
-  console.log(`Keyspace size computed. Keyspace size = ${keyspace}.`);
-  const step = Math.floor(keyspace / args.numberOfProviders + 1);
-  const range = [...Array(Math.floor(keyspace / step) + 1).keys()].map((i) => i * step);
-
-  const futureResults = range.map(async (skip = 0) => {
-    return executor.run(async (ctx) => {
-      const results = await ctx
-        .beginBatch()
-        .run(
-          `hashcat -a 3 -m 400 '${args.hash}' '${args.mask}' --skip=${skip} --limit=${Math.min(
-            keyspace,
-            skip + step,
-          )} -o pass.potfile`,
-        )
-        .run("cat pass.potfile")
-        .end()
-        .catch((err) => console.error(err));
-      if (!results?.[1]?.stdout) return false;
-      return results?.[1]?.stdout.toString().split(":")[1];
+  try {
+    const keyspace = await executor.run(async (ctx) => {
+      const result = await ctx.run(`hashcat --keyspace -a 3 ${args.mask} -m 400`);
+      return parseInt(result.stdout || "");
     });
-  });
 
-  const results = await Promise.all(futureResults);
+    if (!keyspace) throw new Error(`Cannot calculate keyspace`);
 
-  let password = "";
-  for (const result of results) {
-    if (result) {
-      password = result;
-      break;
+    console.log(`Keyspace size computed. Keyspace size = ${keyspace}.`);
+    const step = Math.floor(keyspace / args.numberOfProviders + 1);
+    const range = [...Array(Math.floor(keyspace / step) + 1).keys()].map((i) => i * step);
+
+    const futureResults = range.map(async (skip = 0) => {
+      return executor
+        .run(async (ctx) => {
+          const results = await ctx
+            .beginBatch()
+            .run(
+              `hashcat -a 3 -m 400 '${args.hash}' '${args.mask}' --skip=${skip} --limit=${Math.min(
+                keyspace,
+                skip + step,
+              )} -o pass.potfile`,
+            )
+            .run("cat pass.potfile")
+            .end();
+          if (!results?.[1]?.stdout) return false;
+          return results?.[1]?.stdout.toString().split(":")[1];
+        })
+        .catch((err) => console.error(err));
+    });
+
+    const results = await Promise.all(futureResults);
+
+    let password = "";
+    for (const result of results) {
+      if (result) {
+        password = result;
+        break;
+      }
     }
-  }
 
-  if (!password) console.log("No password found");
-  else console.log(`Password found: ${password}`);
-  await executor.end();
+    if (!password) console.log("No password found");
+    else console.log(`Password found: ${password}`);
+  } catch (e) {
+    console.error(e);
+  } finally {
+    await executor.end();
+  }
 }
 
 program

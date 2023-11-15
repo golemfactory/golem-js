@@ -13,43 +13,48 @@ async function main(args) {
     payment: { driver: args.paymentDriver, network: args.paymentNetwork },
     logLevel: args.debug ? "debug" : "info",
   });
-  const keyspace = await executor.run<number>(async (ctx) => {
-    const result = await ctx.run(`hashcat --keyspace -a 3 ${args.mask} -m 400`);
-    return parseInt(result.stdout?.toString().trim() || "");
-  });
 
-  if (!keyspace) throw new Error(`Cannot calculate keyspace`);
-  const step = Math.floor(keyspace / args.numberOfProviders);
-  const range = [...Array(Math.floor(keyspace / step)).keys()].map((i) => i * step);
-  console.log(`Keyspace size computed. Keyspace size = ${keyspace}. Tasks to compute = ${range.length}`);
+  try {
+    const keyspace = await executor.run<number>(async (ctx) => {
+      const result = await ctx.run(`hashcat --keyspace -a 3 ${args.mask} -m 400`);
+      return parseInt(result.stdout?.toString().trim() || "");
+    });
 
-  const futureResults = range.map((skip) =>
-    executor.run(async (ctx) => {
-      const results = await ctx
-        .beginBatch()
-        .run(
-          `hashcat -a 3 -m 400 '${args.hash}' '${args.mask}' --skip=${skip} --limit=${
-            skip! + step
-          } -o pass.potfile || true`,
-        )
-        .run("cat pass.potfile || true")
-        .end();
-      if (!results?.[1]?.stdout) return false;
-      return results?.[1]?.stdout.toString().trim().split(":")[1];
-    }),
-  );
-  const results = await Promise.all(futureResults);
+    if (!keyspace) throw new Error(`Cannot calculate keyspace`);
+    const step = Math.floor(keyspace / args.numberOfProviders);
+    const range = [...Array(Math.floor(keyspace / step)).keys()].map((i) => i * step);
+    console.log(`Keyspace size computed. Keyspace size = ${keyspace}. Tasks to compute = ${range.length}`);
 
-  let password = "";
-  for await (const result of results) {
-    if (result) {
-      password = result;
-      break;
+    const futureResults = range.map((skip) =>
+      executor.run(async (ctx) => {
+        const results = await ctx
+          .beginBatch()
+          .run(
+            `hashcat -a 3 -m 400 '${args.hash}' '${args.mask}' --skip=${skip} --limit=${
+              skip + step
+            } -o pass.potfile || true`,
+          )
+          .run("cat pass.potfile || true")
+          .end();
+        if (!results?.[1]?.stdout) return false;
+        return results?.[1]?.stdout.toString().trim().split(":")[1];
+      }),
+    );
+    const results = await Promise.all(futureResults);
+
+    let password = "";
+    for (const result of results) {
+      if (result) {
+        password = result;
+        break;
+      }
     }
+    console.log(password ? `Password found: ${password}` : "No password found");
+  } catch (error) {
+    console.error("An error occurred:", error);
+  } finally {
+    await executor.end();
   }
-  if (!password) console.log("No password found");
-  else console.log(`Password found: ${password}`);
-  await executor.end();
 }
 
 program

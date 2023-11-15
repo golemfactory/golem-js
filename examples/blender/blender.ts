@@ -21,7 +21,6 @@ const blender_params = (frame) => ({
   WORK_DIR: "/golem/work",
   OUTPUT_DIR: "/golem/output",
 });
-
 async function main(subnetTag: string, driver?: string, network?: string, debug?: boolean, maxParallelTasks?: number) {
   const executor = await TaskExecutor.create({
     subnetTag,
@@ -31,26 +30,32 @@ async function main(subnetTag: string, driver?: string, network?: string, debug?
     maxParallelTasks,
   });
 
-  executor.beforeEach(async (ctx) => {
-    await ctx.uploadFile(`${__dirname}/cubes.blend`, "/golem/resource/scene.blend");
-  });
+  try {
+    executor.beforeEach(async (ctx) => {
+      await ctx.uploadFile(`${__dirname}/cubes.blend`, "/golem/resource/scene.blend");
+    });
 
-  const futureResults = [0, 10, 20, 30, 40, 50].map((frame) =>
-    executor.run(async (ctx) => {
-      const result = await ctx
-        .beginBatch()
-        .uploadJson(blender_params(frame), "/golem/work/params.json")
-        .run("/golem/entrypoints/run-blender.sh")
-        .downloadFile(`/golem/output/out${frame?.toString().padStart(4, "0")}.png`, `${__dirname}/output_${frame}.png`)
-        .end()
-        .catch((e) => console.error(e));
-      return result?.length ? `output_${frame}.png` : "";
-    }),
-  );
-  const results = await Promise.all(futureResults);
-  results.forEach((result) => console.log(result));
-
-  await executor.end();
+    const futureResults = [0, 10, 20, 30, 40, 50].map((frame) =>
+      executor.run(async (ctx) => {
+        const result = await ctx
+          .beginBatch()
+          .uploadJson(blender_params(frame), "/golem/work/params.json")
+          .run("/golem/entrypoints/run-blender.sh")
+          .downloadFile(
+            `/golem/output/out${frame?.toString().padStart(4, "0")}.png`,
+            `${__dirname}/output_${frame}.png`,
+          )
+          .end();
+        return result?.length ? `output_${frame}.png` : "";
+      }),
+    );
+    const results = await Promise.all(futureResults);
+    results.forEach((result) => console.log(result));
+  } catch (err) {
+    console.error(err);
+  } finally {
+    await executor.end();
+  }
 }
 
 program

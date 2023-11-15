@@ -244,8 +244,8 @@ export class TaskExecutor {
       this.networkService?.run(),
       this.statsService.run(),
       this.storageProvider?.init(),
-    ]).catch((e) => this.handleCriticalError(e));
-    this.taskService.run().catch((e) => this.handleCriticalError(e));
+    ]).catch((e) => this.logCriticalError(e));
+    this.taskService.run().catch((e) => this.logCriticalError(e));
     if (runtimeContextChecker.isNode) this.installSignalHandlers();
     this.options.eventTarget.dispatchEvent(new Events.ComputationStarted());
     this.logger?.info(
@@ -333,7 +333,7 @@ export class TaskExecutor {
     options?: TaskOptions,
   ): Promise<OutputType | undefined> {
     return this.executeTask<undefined, OutputType>(worker, undefined, options).catch(async (e) => {
-      this.handleCriticalError(e);
+      this.logCriticalError(e);
       return undefined;
     });
   }
@@ -376,7 +376,7 @@ export class TaskExecutor {
         .then((res) => {
           results.push(res as OutputType);
         })
-        .catch((e) => this.handleCriticalError(e)),
+        .catch((e) => this.logCriticalError(e)),
     );
     const isRunning = () => this.isRunning;
     return {
@@ -429,7 +429,7 @@ export class TaskExecutor {
     worker: Worker<InputType, OutputType>,
   ): Promise<void> {
     await Promise.all([...data].map((value) => this.executeTask<InputType, OutputType>(worker, value))).catch((e) =>
-      this.handleCriticalError(e),
+      this.logCriticalError(e),
     );
   }
 
@@ -452,7 +452,7 @@ export class TaskExecutor {
     worker: Worker<InputType, OutputType>,
     data?: InputType,
     options?: TaskOptions,
-  ): Promise<OutputType | undefined> {
+  ): Promise<OutputType> {
     const task = new Task<InputType, OutputType>((++this.lastTaskIndex).toString(), worker, data, this.initWorker, {
       maxRetries: options?.maxRetries ?? this.options.maxTaskRetries,
       timeout: options?.timeout ?? this.options.taskTimeout,
@@ -460,11 +460,17 @@ export class TaskExecutor {
     this.taskQueue.addToEnd(task as Task<unknown, unknown>);
     while (this.isRunning) {
       if (task.isFinished()) {
-        if (task.isRejected()) throw task.getError();
-        return task.getResults();
+        if (task.isRejected()) {
+          const error = task.getError()!;
+          this.options.eventTarget?.dispatchEvent(new Events.ComputationFailed({ reason: error.toString() }));
+          throw error;
+        }
+        return task.getResults()!;
       }
+
       await sleep(2000, true);
     }
+    throw new Error("Executor is no longer running");
   }
 
   /**
@@ -515,11 +521,9 @@ export class TaskExecutor {
     return new Job(jobId, this.options.jobStorage);
   }
 
-  private handleCriticalError(e: Error) {
+  private logCriticalError(e: Error) {
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFailed({ reason: e.toString() }));
     this.logger?.error(e.toString());
-    if (this.isRunning) this.logger?.warn("Trying to stop executor...");
-    this.end().catch((e) => this.logger?.error(e));
   }
 
   private installSignalHandlers() {
@@ -575,7 +579,7 @@ export class TaskExecutor {
             : proposalsCount.initial === proposalsCount.rejected
               ? "All off proposals got rejected."
               : "Check your proposal filters if they are not too restrictive.";
-        this.handleCriticalError(
+        this.logCriticalError(
           new Error(
             `Could not start any work on Golem. Processed ${proposalsCount.initial} initial proposals from yagna, filters accepted ${proposalsCount.confirmed}. ${hint}`,
           ),

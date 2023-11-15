@@ -18,31 +18,38 @@ async function main(subnetTag, driver, network, count = 2, sessionTimeout = 100,
     runningTasks.push(
       executor.run(async (ctx) => {
         const password = crypto.randomBytes(3).toString("hex");
-        const results = await ctx
-          .beginBatch()
-          .run("syslogd")
-          .run("ssh-keygen -A")
-          .run(`echo -e "${password}\n${password}" | passwd`)
-          .run("/usr/sbin/sshd")
-          .end()
-          .catch((e) => console.error(e));
-        if (!results) return;
-        console.log("\n------------------------------------------");
-        console.log(`Connect via ssh to provider "${ctx.provider?.name}" with:`);
-        console.log(
-          `ssh -o ProxyCommand='websocat asyncstdio: ${ctx.getWebsocketUri(
-            22,
-          )} --binary -H=Authorization:"Bearer ${appKey}"' root@${crypto.randomBytes(10).toString("hex")}`,
-        );
-        console.log(`Password: ${password}`);
-        console.log("------------------------------------------\n");
-        await new Promise((res) => setTimeout(res, sessionTimeout * 1000));
-        console.log(`Task completed. Session SSH closed after ${sessionTimeout} secs timeout.`);
+        try {
+          const results = await ctx
+            .beginBatch()
+            .run("syslogd")
+            .run("ssh-keygen -A")
+            .run(`echo -e "${password}\n${password}" | passwd`)
+            .run("/usr/sbin/sshd")
+            .end();
+          if (!results) return;
+
+          console.log("\n------------------------------------------");
+          console.log(`Connect via ssh to provider "${ctx.provider?.name}" with:`);
+          console.log(
+            `ssh -o ProxyCommand='websocat asyncstdio: ${ctx.getWebsocketUri(
+              22,
+            )} --binary -H=Authorization:"Bearer ${appKey}"' root@${crypto.randomBytes(10).toString("hex")}`,
+          );
+          console.log(`Password: ${password}`);
+          console.log("------------------------------------------\n");
+          await new Promise((res) => setTimeout(res, sessionTimeout * 1000));
+          console.log(`Task completed. Session SSH closed after ${sessionTimeout} secs timeout.`);
+        } catch (e) {
+          console.error(e);
+        }
       }),
     );
   }
-  await Promise.all(runningTasks);
-  await executor.end();
+  try {
+    await Promise.all(runningTasks);
+  } finally {
+    await executor.end();
+  }
 }
 
 program
