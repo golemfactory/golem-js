@@ -60,7 +60,7 @@
     "ya-ts-client": "^0.5.3"
   },
   "devDependencies": {
-    "@commitlint/cli": "^17.8.1",
+    "@commitlint/cli": "^18.4.1",
     "@commitlint/config-conventional": "^18.4.0",
     "@johanblumenberg/ts-mockito": "^1.0.40",
     "@rollup/plugin-alias": "^5.0.1",
