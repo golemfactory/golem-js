@@ -12,10 +12,10 @@ const myFilter = async (proposal) => {
   let counterIdx = usageVector.findIndex((ele) => ele === "golem.usage.duration_sec");
   let proposedCost = proposal.properties["golem.com.pricing.model.linear.coeffs"][counterIdx];
   costData.push(proposedCost);
-  if (costData.length < 11) return false;
+  if (costData.length < 6) return false;
   else {
     costData.shift();
-    let averageProposedCost = costData.reduce((part, x) => part + x, 0) / 10;
+    let averageProposedCost = costData.reduce((part, x) => part + x, 0) / 5;
     if (proposedCost <= 1.2 * averageProposedCost) decision = true;
     if (decision) {
       console.log(proposedCost, averageProposedCost);
