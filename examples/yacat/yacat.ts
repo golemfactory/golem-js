@@ -23,19 +23,22 @@ async function main(args) {
   const range = [...Array(Math.floor(keyspace / step)).keys()].map((i) => i * step);
   console.log(`Keyspace size computed. Keyspace size = ${keyspace}. Tasks to compute = ${range.length}`);
 
-  const results = executor.map(range, async (ctx, skip) => {
-    const results = await ctx
-      .beginBatch()
-      .run(
-        `hashcat -a 3 -m 400 '${args.hash}' '${args.mask}' --skip=${skip} --limit=${
-          skip! + step
-        } -o pass.potfile || true`,
-      )
-      .run("cat pass.potfile || true")
-      .end();
-    if (!results?.[1]?.stdout) return false;
-    return results?.[1]?.stdout.toString().trim().split(":")[1];
-  });
+  const futureResults = range.map((skip) =>
+    executor.run(async (ctx) => {
+      const results = await ctx
+        .beginBatch()
+        .run(
+          `hashcat -a 3 -m 400 '${args.hash}' '${args.mask}' --skip=${skip} --limit=${
+            skip! + step
+          } -o pass.potfile || true`,
+        )
+        .run("cat pass.potfile || true")
+        .end();
+      if (!results?.[1]?.stdout) return false;
+      return results?.[1]?.stdout.toString().trim().split(":")[1];
+    }),
+  );
+  const results = await Promise.all(futureResults);
 
   let password = "";
   for await (const result of results) {

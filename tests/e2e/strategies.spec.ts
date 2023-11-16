@@ -15,12 +15,13 @@ describe("Strategies", function () {
         logger,
       });
       const data = ["one", "two", "three"];
-      const results = executor.map<string, string | undefined>(data, async (ctx, x) => {
-        const res = await ctx.run(`echo "${x}"`);
-        return res.stdout?.toString().trim();
-      });
-      const finalOutputs: string[] = [];
-      for await (const res of results) if (res) finalOutputs.push(res);
+      const futureResults = data.map((x) =>
+        executor.run(async (ctx) => {
+          const res = await ctx.run(`echo "${x}"`);
+          return res.stdout?.toString().trim();
+        }),
+      );
+      const finalOutputs = (await Promise.all(futureResults)).filter((x) => !!x);
       expect(finalOutputs).toEqual(expect.arrayContaining(data));
       await logger.expectToInclude(`Proposal rejected by Proposal Filter`, 5000);
       await logger.expectToInclude(`Task 1 computed by provider provider-1`, 5000);
@@ -36,12 +37,13 @@ describe("Strategies", function () {
         logger,
       });
       const data = ["one", "two", "three"];
-      const results = executor.map<string, string | undefined>(data, async (ctx, x) => {
-        const res = await ctx.run(`echo "${x}"`);
-        return res.stdout?.toString().trim();
-      });
-      const finalOutputs: string[] = [];
-      for await (const res of results) if (res) finalOutputs.push(res);
+      const futureResults = data.map((x) =>
+        executor.run(async (ctx) => {
+          const res = await ctx.run(`echo "${x}"`);
+          return res.stdout?.toString().trim();
+        }),
+      );
+      const finalOutputs = (await Promise.all(futureResults)).filter((x) => !!x);
       expect(finalOutputs).toEqual(expect.arrayContaining(data));
       await logger.expectToInclude(`Proposal rejected by Proposal Filter`, 5000);
       await logger.expectToInclude(`Task 1 computed by provider provider-2`, 5000);
@@ -58,12 +60,14 @@ describe("Strategies", function () {
         logger,
       });
       const data = ["one", "two"];
-      const results = executor.map<string, string | undefined>(data, async (ctx, x) => {
-        const res = await ctx.run(`echo "${x}"`);
-        return res.stdout?.toString().trim();
-      });
-      const finalOutputs: string[] = [];
-      for await (const res of results) if (res) finalOutputs.push(res);
+      const futureResults = data.map((x) =>
+        executor.run(async (ctx) => {
+          const res = await ctx.run(`echo "${x}"`);
+          return res.stdout?.toString().trim();
+        }),
+      );
+      const finalOutputs = (await Promise.all(futureResults)).filter((x) => !!x);
+
       expect(finalOutputs).toEqual(expect.arrayContaining(data));
       await executor.end();
       await logger.expectToInclude(`Reason: Invoice rejected by Invoice Filter`, 100);
@@ -76,12 +80,14 @@ describe("Strategies", function () {
         logger,
       });
       const data = ["one", "two"];
-      const results = executor.map<string, string | undefined>(data, async (ctx, x) => {
-        const res = await ctx.run(`echo "${x}"`);
-        return res.stdout?.toString().trim();
-      });
-      const finalOutputs: string[] = [];
-      for await (const res of results) if (res) finalOutputs.push(res);
+      const futureResults = data.map((x) =>
+        executor.run(async (ctx) => {
+          const res = await ctx.run(`echo "${x}"`);
+          return res.stdout?.toString().trim();
+        }),
+      );
+      const finalOutputs = (await Promise.all(futureResults)).filter((x) => !!x);
+
       expect(finalOutputs).toEqual(expect.arrayContaining(data));
       await executor.end();
       await logger.expectToInclude(`DebitNote rejected by DebitNote Filter`, 100);

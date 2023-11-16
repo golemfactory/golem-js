@@ -67,12 +67,13 @@ describe("Task Executor", function () {
       logger,
     });
     const data = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
-    const results = executor.map<string, string | undefined>(data, async (ctx, x) => {
-      const res = await ctx.run(`echo "${x}"`);
-      return res.stdout?.toString().trim();
-    });
-    const finalOutputs: string[] = [];
-    for await (const res of results) if (res) finalOutputs.push(res);
+    const futureResults = data.map((x) =>
+      executor.run(async (ctx) => {
+        const res = await ctx.run(`echo "${x}"`);
+        return res.stdout?.toString().trim();
+      }),
+    );
+    const finalOutputs = (await Promise.all(futureResults)).filter((x) => !!x);
     expect(finalOutputs).toEqual(expect.arrayContaining(data));
   });
 
