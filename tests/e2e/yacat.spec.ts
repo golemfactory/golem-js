@@ -34,28 +34,27 @@ describe("Password cracking", function () {
       if (!keyspace) return;
       const step = Math.floor(keyspace / 3);
       const ranges = range(0, keyspace, step);
-      const futureResults = ranges.map((skip) =>
-        executor.run(async (ctx) => {
-          const results = await ctx
+
+      const findPasswordInRange = async (skip: number) => {
+        const password = await executor.run(async (ctx) => {
+          const [, potfileResult] = await ctx
             .beginBatch()
             .run(
-              `hashcat -a 3 -m 400 '${hash}' '${mask}' --skip=${skip} --limit=${skip! + step} -o pass.potfile -D 1,2`,
+              `hashcat -a 3 -m 400 '${hash}' '${mask}' --skip=${skip} --limit=${skip + step} -o pass.potfile || true`,
             )
-            .run("cat pass.potfile")
+            .run("cat pass.potfile || true")
             .end();
-          if (!results?.[1]?.stdout) return false;
-          return results?.[1]?.stdout.toString().split(":")?.[1]?.trim();
-        }),
-      );
-      const results = await Promise.all(futureResults);
-      let password = "";
-      for (const result of results) {
-        if (result) {
-          password = result;
-          break;
+          if (!potfileResult.stdout) return false;
+          // potfile format is: hash:password
+          return potfileResult.stdout.toString().trim().split(":")[1];
+        });
+        if (!password) {
+          throw new Error(`Cannot find password in range ${skip} - ${skip + step}`);
         }
-      }
-      expect(password).toEqual("yo");
+        return password;
+      };
+
+      await expect(Promise.any(ranges.map(findPasswordInRange))).resolves.toEqual("yo");
       await executor.end();
     },
     1000 * 60 * 5,
