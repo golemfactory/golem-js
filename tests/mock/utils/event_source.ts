@@ -29,6 +29,9 @@ export class EventSourceMock {
       }, 100);
     }
   }
+  close() {
+    // empty mock
+  }
 }
 
 export const setExpectedEvents = (activityId, expectedEvents) => {

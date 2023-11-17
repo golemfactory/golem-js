@@ -23,7 +23,6 @@ logs/
 .cypress
 
 #Lock files
-package-lock.json
 *.lock
 
 #IDE

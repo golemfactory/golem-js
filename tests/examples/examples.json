@@ -1,11 +1,21 @@
 [
-  { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/batch-end.mjs" },
-  { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/batch-endstream-chunks.mjs" },
-  { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/batch-endstream-forawait.mjs" },
+  { "cmd": "node", "path": "examples/docs-examples/quickstarts/retrievable-task/task.mjs", "noGoth": true },
+  { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/batch-end.mjs", "noGoth": true },
+  {
+    "cmd": "node",
+    "path": "examples/docs-examples/examples/composing-tasks/batch-endstream-chunks.mjs",
+    "noGoth": true
+  },
+  {
+    "cmd": "node",
+    "path": "examples/docs-examples/examples/composing-tasks/batch-endstream-forawait.mjs",
+    "noGoth": true
+  },
   { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/multiple-run-prosaic.mjs" },
   { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/single-command.mjs" },
   { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/single-command.cjs" },
   { "cmd": "ts-node", "path": "examples/docs-examples/examples/composing-tasks/single-command.ts" },
+  { "cmd": "ts-node", "path": "examples/docs-examples/examples/composing-tasks/alert-code.mjs" },
 
   { "cmd": "node", "path": "examples/docs-examples/examples/executing-tasks/before-each.mjs" },
   { "cmd": "node", "path": "examples/docs-examples/examples/executing-tasks/foreach.mjs" },
@@ -15,13 +25,11 @@
 
   { "cmd": "node", "path": "examples/docs-examples/examples/selecting-providers/custom-price.mjs", "noGoth": true },
   { "cmd": "node", "path": "examples/docs-examples/examples/selecting-providers/demand.mjs" },
-  { "cmd": "node", "path": "examples/docs-examples/examples/selecting-providers/whitelist.mjs", "noGoth": true },
+  { "cmd": "node", "path": "examples/docs-examples/examples/selecting-providers/whitelist.mjs" },
 
   { "cmd": "node", "path": "examples/docs-examples/examples/sending-data/downloading-file.mjs" },
   { "cmd": "node", "path": "examples/docs-examples/examples/sending-data/uploading-file.mjs" },
   { "cmd": "node", "path": "examples/docs-examples/examples/sending-data/uploading-json.mjs" },
-
-  { "cmd": "node", "path": "examples/docs-examples/examples/switching-to-mainnet/run-on-polygon.mjs", "noGoth": true },
 
   { "cmd": "node", "path": "examples/docs-examples/examples/transferring-data/download-file.mjs" },
   { "cmd": "node", "path": "examples/docs-examples/examples/transferring-data/upload-file.mjs" },
@@ -33,7 +41,11 @@
   { "cmd": "node", "path": "examples/docs-examples/examples/working-with-images/tag.mjs" },
 
   { "cmd": "node", "path": "examples/docs-examples/examples/working-with-results/multi-command-end.mjs" },
-  { "cmd": "node", "path": "examples/docs-examples/examples/working-with-results/multi-command-endstream.mjs" },
+  {
+    "cmd": "node",
+    "path": "examples/docs-examples/examples/working-with-results/multi-command-endstream.mjs",
+    "noGoth": true
+  },
   {
     "cmd": "node",
     "path": "examples/docs-examples/examples/working-with-results/multi-command-fail.mjs",
@@ -51,6 +63,6 @@
     "cmd": "node",
     "path": "examples/docs-examples/tutorials/running-parallel-tasks/index.mjs",
     "args": ["--mask", "?a?a", "--hash", "$P$5ZDzPE45CigTC6EY4cXbyJSLj/pGee0"],
-    "timeout": 500
+    "timeout": 1000
   }
 ]

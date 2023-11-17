@@ -19,33 +19,35 @@ async function main(args) {
   const step = Math.floor(keyspace / args.numberOfProviders + 1);
   const range = [...Array(Math.floor(keyspace / step) + 1).keys()].map((i) => i * step);
 
-  const results = executor.map(range, async (ctx, skip = 0) => {
-    const results = await ctx
-      .beginBatch()
-      .run(
-        `hashcat -a 3 -m 400 '${args.hash}' '${args.mask}' --skip=${skip} --limit=${Math.min(
-          keyspace,
-          skip + step,
-        )} -o pass.potfile`,
-      )
-      .run("cat pass.potfile")
-      .end()
-      .catch((err) => console.error(err));
-    if (!results?.[1]?.stdout) return false;
-    return results?.[1]?.stdout.toString().split(":")[1];
-  });
-
-  let password = "";
-  for await (const result of results) {
-    if (result) {
-      password = result;
-      break;
+  const findPasswordInRange = async (skip) => {
+    const password = await executor.run(async (ctx) => {
+      const [, potfileResult] = await ctx
+        .beginBatch()
+        .run(
+          `hashcat -a 3 -m 400 '${args.hash}' '${args.mask}' --skip=${skip} --limit=${
+            skip + step
+          } -o pass.potfile || true`,
+        )
+        .run("cat pass.potfile || true")
+        .end();
+      if (!potfileResult.stdout) return false;
+      // potfile format is: hash:password
+      return potfileResult.stdout.toString().trim().split(":")[1];
+    });
+    if (!password) {
+      throw new Error(`Cannot find password in range ${skip} - ${skip + step}`);
     }
-  }
+    return password;
+  };
 
-  if (!password) console.log("No password found");
-  else console.log(`Password found: ${password}`);
-  await executor.end();
+  try {
+    const password = await Promise.any(range.map(findPasswordInRange));
+    console.log(`Password found: ${password}`);
+  } catch (err) {
+    console.log(`Password not found`);
+  } finally {
+    await executor.end();
+  }
 }
 
 program

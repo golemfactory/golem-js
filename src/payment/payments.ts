@@ -61,6 +61,7 @@ export class Payments extends EventTarget {
           { timeout: 0 },
         );
         for (const event of invoiceEvents) {
+          if (!this.isRunning) return;
           if (event.eventType !== "InvoiceReceivedEvent") continue;
           const invoice = await Invoice.create(event["invoiceId"], this.yagnaApi, { ...this.options }).catch(
             (e) =>
@@ -95,6 +96,7 @@ export class Payments extends EventTarget {
           )
           .catch(() => ({ data: [] }));
         for (const event of debitNotesEvents) {
+          if (!this.isRunning) return;
           if (event.eventType !== "DebitNoteReceivedEvent") continue;
           const debitNote = await DebitNote.create(event["debitNoteId"], this.yagnaApi, { ...this.options }).catch(
             (e) =>

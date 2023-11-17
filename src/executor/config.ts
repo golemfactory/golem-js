@@ -14,6 +14,8 @@ const DEFAULTS = Object.freeze({
   taskTimeout: 1000 * 60 * 5, // 5 min,
   maxTaskRetries: 3,
   enableLogging: true,
+  startupTimeout: 1000 * 90, // 90 sec
+  exitOnNoProposals: false,
 });
 
 /**
@@ -34,6 +36,8 @@ export class ExecutorConfig {
   readonly maxTaskRetries: number;
   readonly activityExecuteTimeout?: number;
   readonly jobStorage: JobStorage;
+  readonly startupTimeout: number;
+  readonly exitOnNoProposals: boolean;
 
   constructor(options: ExecutorOptions & ActivityOptions) {
     const processEnv = !runtimeContextChecker.isBrowser
@@ -83,5 +87,7 @@ export class ExecutorConfig {
     this.eventTarget = options.eventTarget || new EventTarget();
     this.maxTaskRetries = options.maxTaskRetries ?? DEFAULTS.maxTaskRetries;
     this.jobStorage = options.jobStorage || new InMemoryJobStorage();
+    this.startupTimeout = options.startupTimeout ?? DEFAULTS.startupTimeout;
+    this.exitOnNoProposals = options.exitOnNoProposals ?? DEFAULTS.exitOnNoProposals;
   }
 }

@@ -1,15 +1,8 @@
 import { spawn } from "child_process";
 import { dirname, basename, resolve } from "path";
-import { Goth } from "../goth/goth";
 import chalk from "chalk";
 import testExamples from "./examples.json";
 
-const noGoth = process.argv[2] === "--no-goth";
-const gothConfig = resolve("../goth/assets/goth-config.yml");
-const gothStartingTimeout = 180;
-const goth = new Goth(gothConfig);
-
-const examples = !noGoth ? testExamples.filter((e) => !e?.noGoth) : testExamples;
 const criticalLogsRegExp = [/Task *. timeot/, /Task *. has been rejected/, /ERROR: TypeError/, /ERROR: Error/gim];
 
 type Example = {
@@ -17,11 +10,12 @@ type Example = {
   path: string;
   args?: string[];
   timeout?: number;
-  noGoth?: boolean;
   skip?: boolean;
 };
 
-async function test(cmd: string, path: string, args: string[] = [], timeout = 120) {
+const exitOnError = process.argv.includes("--exitOnError");
+
+async function test(cmd: string, path: string, args: string[] = [], timeout = 360) {
   const file = basename(path);
   const cwd = dirname(path);
   const spawnedExample = spawn(cmd, [file, ...args], { cwd });
@@ -62,16 +56,6 @@ async function test(cmd: string, path: string, args: string[] = [], timeout = 12
 async function testAll(examples: Example[]) {
   const failedTests = new Set<string>();
   const skippedTests = new Set<string>();
-  if (!noGoth)
-    await Promise.race([
-      goth.start(),
-      new Promise((res, rej) =>
-        setTimeout(
-          () => rej(new Error(`The Goth starting timeout was reached after ${gothStartingTimeout} seconds`)),
-          gothStartingTimeout * 1000,
-        ),
-      ),
-    ]);
   for (const example of examples) {
     try {
       console.log(chalk.yellow(`\n---- Starting test: "${example.path}" ----\n`));
@@ -84,10 +68,13 @@ async function testAll(examples: Example[]) {
       }
     } catch (error) {
       console.log(chalk.bgRed.white(" FAIL "), chalk.red(error));
+      if (exitOnError) {
+        console.log(chalk.bold.red(`\nExiting due to error in: "${example.path}"\n`));
+        process.exit(1);
+      }
       failedTests.add(example.path);
     }
   }
-  if (!noGoth) await goth.end().catch((error) => console.error(error));
   console.log(
     chalk.bold.yellow("\n\nTESTS RESULTS: "),
     chalk.bgGreen.black(`  ${examples.length - failedTests.size - skippedTests.size} passed  `),
@@ -102,4 +89,4 @@ async function testAll(examples: Example[]) {
   process.exit(failedTests.size > 0 ? 1 : 0);
 }
 
-testAll(examples).then();
+testAll(testExamples).then();

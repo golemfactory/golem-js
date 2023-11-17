@@ -1,7 +1,7 @@
 import { Batch, WorkContext } from "./index";
 import { LoggerMock, YagnaMock } from "../../tests/mock";
 import { ActivityStateEnum, ResultState } from "../activity";
-import { DownloadData, DownloadFile, Run, Script, UploadData, UploadFile } from "../script";
+import { DownloadData, DownloadFile, Run, Script, Transfer, UploadData, UploadFile } from "../script";
 import { ActivityMock } from "../../tests/mock/activity.mock";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -43,6 +43,35 @@ describe("Work Context", () => {
           return Promise.resolve(result);
         });
         expect(await context.run("/bin/ls", ["-R"])).toBe(result);
+      });
+    });
+
+    describe("spawn()", () => {
+      it("should execute spawn command", async () => {
+        const expectedResult = ActivityMock.createResult({ stdout: "Output", stderr: "Error", isBatchFinished: true });
+        activity.mockResults([expectedResult]);
+        const remoteProcess = await context.spawn("rm -rf");
+        for await (const result of remoteProcess.stdout) {
+          expect(result).toBe("Output");
+        }
+        for await (const result of remoteProcess.stderr) {
+          expect(result).toBe("Error");
+        }
+        const finalResult = await remoteProcess.waitForExit();
+        expect(finalResult.result).toBe(ResultState.Ok);
+      });
+    });
+
+    describe("transfer()", () => {
+      it("should execute transfer command", async () => {
+        const result = ActivityMock.createResult({ stdout: "Ok" });
+        runSpy.mockImplementation((cmd) => {
+          expect(cmd).toBeInstanceOf(Transfer);
+          expect(cmd["from"]).toBe("http://golem.network/test.txt");
+          expect(cmd["to"]).toBe("/golem/work/test.txt");
+          return Promise.resolve(result);
+        });
+        expect(await context.transfer("http://golem.network/test.txt", "/golem/work/test.txt")).toBe(result);
       });
     });
 
@@ -177,7 +206,7 @@ describe("Work Context", () => {
 
   describe("getWebsocketUri()", () => {
     it("should throw error if there is no network node", () => {
-      expect(context["networkNode"]).toBeUndefined();
+      expect(() => context.getIp()).toThrow(new Error("There is no network in this work context"));
     });
 
     it("should return websocket URI", () => {
@@ -187,6 +216,19 @@ describe("Work Context", () => {
       const spy = jest.spyOn(context["networkNode"] as any, "getWebsocketUri").mockReturnValue("ws://local");
       expect(context.getWebsocketUri(20)).toEqual("ws://local");
       expect(spy).toHaveBeenCalledWith(20);
+    });
+  });
+
+  describe("getIp()", () => {
+    it("should throw error if there is no network node", () => {
+      expect(() => context.getIp()).toThrow(new Error("There is no network in this work context"));
+    });
+
+    it("should return ip address of provider vpn network node", () => {
+      (context as any)["networkNode"] = {
+        ip: "192.168.0.2",
+      };
+      expect(context.getIp()).toEqual("192.168.0.2");
     });
   });
 
