@@ -44,7 +44,7 @@ export type ExecutorOptions = {
   storageProvider?: StorageProvider;
   /**
    * @deprecated this parameter will be removed in the next version.
-   * Currently has no effect on executor termination.
+   * Currently, has no effect on executor termination.
    */
   isSubprocess?: boolean;
   /** Timeout for preparing activity - creating and deploy commands */
