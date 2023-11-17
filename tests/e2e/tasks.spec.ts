@@ -1,7 +1,6 @@
 import { LoggerMock } from "../mock";
 import { readFileSync } from "fs";
-import { TaskExecutor } from "../../src";
-import fs from "fs";
+import { Result, TaskExecutor } from "../../src";
 const logger = new LoggerMock(false);
 
 describe("Task Executor", function () {
@@ -168,5 +167,29 @@ describe("Task Executor", function () {
     });
     const result = await executor.run(async (ctx) => ctx.getIp());
     expect(["192.168.0.2", "192.168.0.3"]).toContain(result);
+  });
+
+  it("should spawn command as external process", async () => {
+    executor = await TaskExecutor.create({
+      package: "golem/alpine:latest",
+      logger,
+    });
+    let stdout = "";
+    let stderr = "";
+    const finalResult = await executor.run(async (ctx) => {
+      const remoteProcess = await ctx.spawn("sleep 1 && echo 'Hello World' && echo 'Hello Golem' >&2");
+      remoteProcess.stdout.on("data", (data) => (stdout += data.trim()));
+      remoteProcess.stderr.on("data", (data) => (stderr += data.trim()));
+      return remoteProcess.waitForExit();
+    });
+    expect(stdout).toContain("Hello World");
+    expect(stderr).toContain("Hello Golem");
+    expect(finalResult?.result).toContain("Ok");
+    expect(logger.logs).toContain("Demand published on the market");
+    expect(logger.logs).toContain("New proposal has been received");
+    expect(logger.logs).toContain("Proposal has been responded");
+    expect(logger.logs).toContain("New proposal added to pool");
+    expect(logger.logs).toMatch(/Agreement confirmed by provider/);
+    expect(logger.logs).toMatch(/Activity .* created/);
   });
 });

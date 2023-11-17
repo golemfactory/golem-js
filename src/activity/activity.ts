@@ -1,12 +1,11 @@
 import { Result, ResultState, StreamingBatchEvent } from "./results";
 import EventSource from "eventsource";
 import { Readable } from "stream";
-import { Logger } from "../utils";
+import { Logger, YagnaApi } from "../utils";
 import sleep from "../utils/sleep";
 import { ActivityFactory } from "./factory";
 import { ActivityConfig } from "./config";
 import { Events } from "../events";
-import { YagnaApi } from "../utils/yagna/yagna";
 
 export enum ActivityStateEnum {
   New = "New",
@@ -42,6 +41,7 @@ export class Activity {
   private readonly logger?: Logger;
   private isRunning = true;
   private currentState: ActivityStateEnum = ActivityStateEnum.New;
+  private eventSource?: EventSource;
 
   /**
    * @param id activity ID
@@ -147,6 +147,7 @@ export class Activity {
   }
 
   private async end() {
+    this.eventSource?.close();
     await this.yagnaApi.activity.control
       .destroyActivity(this.id, this.options.activityRequestTimeout / 1000, {
         timeout: this.options.activityRequestTimeout + 1000,
@@ -218,14 +219,18 @@ export class Activity {
   }
 
   private async streamingBatch(batchId, batchSize, startTime, timeout): Promise<Readable> {
-    const basePath = this.yagnaApi.yagnaOptions.basePath;
+    const basePath = this.yagnaApi.activity.control["basePath"];
     const apiKey = this.yagnaApi.yagnaOptions.apiKey;
+
     const eventSource = new EventSource(`${basePath}/activity/${this.id}/exec/${batchId}`, {
       headers: {
         Accept: "text/event-stream",
         Authorization: `Bearer ${apiKey}`,
       },
     });
+    eventSource.addEventListener("runtime", (event) => results.push(this.parseEventToResult(event.data, batchSize)));
+    eventSource.addEventListener("error", (error) => errors.push(error.data?.message ?? error));
+    this.eventSource = eventSource;
 
     let isBatchFinished = false;
     const activityId = this.id;
@@ -233,23 +238,25 @@ export class Activity {
     const activityExecuteTimeout = this.options.activityExecuteTimeout;
 
     const errors: object[] = [];
-    eventSource.addEventListener("error", (error) => errors.push(error.data.message ?? error));
-
     const results: Result[] = [];
-    eventSource.addEventListener("runtime", (event) => results.push(this.parseEventToResult(event.data, batchSize)));
 
     return new Readable({
       objectMode: true,
       async read() {
         while (!isBatchFinished) {
+          let error: Error | undefined;
           if (startTime.valueOf() + (timeout || activityExecuteTimeout) <= new Date().valueOf()) {
-            return this.destroy(new Error(`Activity ${activityId} timeout.`));
+            error = new Error(`Activity ${activityId} timeout.`);
           }
           if (!isRunning()) {
-            return this.destroy(new Error(`Activity ${activityId} has been interrupted.`));
+            error = new Error(`Activity ${activityId} has been interrupted.`);
           }
           if (errors.length) {
-            return this.destroy(new Error(`GetExecBatchResults failed due to errors: ${JSON.stringify(errors)}`));
+            error = new Error(`GetExecBatchResults failed due to errors: ${JSON.stringify(errors)}`);
+          }
+          if (error) {
+            eventSource?.close();
+            return this.destroy(error);
           }
           if (results.length) {
             const result = results.shift();
@@ -259,6 +266,7 @@ export class Activity {
           await sleep(500, true);
         }
         this.push(null);
+        eventSource?.close();
       },
     });
   }
@@ -295,22 +303,6 @@ export class Activity {
     );
   }
 
-  private isGsbError(error) {
-    // check if `err` is caused by "endpoint address not found" GSB error
-    if (!error.response) {
-      return false;
-    }
-    if (error.response.status !== 500) {
-      return false;
-    }
-    if (!error.response.data || !error.response.data.message) {
-      this.logger?.debug(`Cannot read error message, response: ${error.response}`);
-      return false;
-    }
-    const message = error.response.data.message;
-    return message.includes("endpoint address not found") && message.includes("GSB error");
-  }
-
   private async isTerminated(): Promise<{ terminated: boolean; reason?: string; errorMessage?: string }> {
     try {
       const { data } = await this.yagnaApi.activity.state.getActivityState(this.id);
@@ -329,6 +321,8 @@ export class Activity {
   private parseEventToResult(msg: string, batchSize: number): Result {
     try {
       const event: StreamingBatchEvent = JSON.parse(msg);
+      // StreamingBatchEvent has a slightly more extensive structure,
+      // including a return code that could be added to the Result entity... (?)
       return new Result({
         index: event.index,
         eventDate: event.timestamp,
@@ -336,7 +330,9 @@ export class Activity {
           ? event?.kind?.finished?.return_code === 0
             ? ResultState.Ok
             : ResultState.Error
-          : ResultState.Error,
+          : event?.kind?.stderr
+          ? ResultState.Error
+          : ResultState.Ok,
         stdout: event?.kind?.stdout,
         stderr: event?.kind?.stderr,
         message: event?.kind?.finished?.message,

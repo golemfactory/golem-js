@@ -1,10 +1,11 @@
 import * as activityMock from "../mock/rest/activity";
-import { setExpectedErrorEvents, setExpectedEvents } from "../mock/utils/event_source";
+import { EventSourceMock, setExpectedErrorEvents, setExpectedEvents } from "../mock/utils/event_source";
 import { StorageProviderMock, YagnaMock } from "../mock";
 import { Activity, ActivityStateEnum } from "../../src/activity";
 import { sleep } from "../../src/utils";
 import { Deploy, Start, Run, Terminate, UploadFile, DownloadFile, Script, Capture } from "../../src/script";
 
+jest.mock("eventsource", () => EventSourceMock);
 describe("Activity", () => {
   const yagnaApi = new YagnaMock().getApi();
   beforeEach(() => {
