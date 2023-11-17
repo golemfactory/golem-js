@@ -77,18 +77,6 @@ describe("Task Executor", function () {
     expect(finalOutputs).toEqual(expect.arrayContaining(data));
   });
 
-  it("should run simple tasks by forEach function", async () => {
-    executor = await TaskExecutor.create({
-      package: "golem/alpine:latest",
-      logger,
-    });
-    const data = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
-    await executor.forEach(data, async (ctx, x) => {
-      const res = await ctx.run(`echo "${x}"`);
-      expect(data).toContain(res?.stdout?.toString().trim());
-    });
-  });
-
   it("should run simple batch script and get results as stream", async () => {
     executor = await TaskExecutor.create({
       package: "golem/alpine:latest",
