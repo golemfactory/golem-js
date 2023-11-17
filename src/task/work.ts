@@ -16,6 +16,7 @@ import { NullStorageProvider, StorageProvider } from "../storage";
 import { Logger, nullLogger, sleep } from "../utils";
 import { Batch } from "./batch";
 import { NetworkNode } from "../network";
+import { RemoteProcess } from "./process";
 
 export type Worker<InputType = unknown, OutputType = unknown> = (
   ctx: WorkContext,
@@ -139,6 +140,48 @@ export class WorkContext {
     const runOptions = isArray ? options : (argsOrOptions as CommandOptions);
 
     return this.runOneCommand(run, runOptions);
+  }
+
+  /**
+   * Spawn an executable on provider and return {@link RemoteProcess} object
+   * that contain stdout and stderr as Readable
+   *
+   * @param commandLine Shell command to execute.
+   * @param options Additional run options.
+   */
+  async spawn(commandLine: string, options?: Omit<CommandOptions, "capture">): Promise<RemoteProcess>;
+  /**
+   * @param executable Executable to run.
+   * @param args Executable arguments.
+   * @param options Additional run options.
+   */
+  async spawn(executable: string, args: string[], options?: CommandOptions): Promise<RemoteProcess>;
+  async spawn(
+    exeOrCmd: string,
+    argsOrOptions?: string[] | CommandOptions,
+    options?: CommandOptions,
+  ): Promise<RemoteProcess> {
+    const isArray = Array.isArray(argsOrOptions);
+    const capture: Capture = {
+      stdout: { stream: { format: "string" } },
+      stderr: { stream: { format: "string" } },
+    };
+    const run = isArray
+      ? new Run(exeOrCmd, argsOrOptions as string[], options?.env, capture)
+      : new Run("/bin/sh", ["-c", exeOrCmd], argsOrOptions?.env, capture);
+    const script = new Script([run]);
+    // In this case, the script consists only of one run command,
+    // so we skip the execution of script.before and script.after
+    const streamOfActivityResults = await this.activity
+      .execute(script.getExeScriptRequest(), true, options?.timeout)
+      .catch((e) => {
+        throw new Error(
+          `Script execution failed for command: ${JSON.stringify(run.toJson())}. ${
+            e?.response?.data?.message || e?.message || e
+          }`,
+        );
+      });
+    return new RemoteProcess(streamOfActivityResults);
   }
 
   /**
