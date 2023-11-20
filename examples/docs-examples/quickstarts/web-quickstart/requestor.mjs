@@ -34,7 +34,7 @@ async function run() {
     .run(async (ctx) => appendResults((await ctx.run("echo 'Hello World'")).stdout))
     .catch((e) => logger.error(e));
 
-  await executor.shutdown();
+  await executor.end();
 }
 
 document.getElementById("echo").onclick = run;
