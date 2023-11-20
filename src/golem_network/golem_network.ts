@@ -119,7 +119,7 @@ export class GolemNetwork {
 
   public async close() {
     if (this._executor !== null) {
-      await this._executor.end();
+      await this._executor.shutdown();
     }
   }
 }

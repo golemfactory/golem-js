@@ -12,7 +12,7 @@ describe("Task Executor", function () {
 
   afterEach(async function () {
     logger.clear();
-    await executor?.end();
+    await executor?.shutdown();
   });
 
   it("should run simple task", async () => {
@@ -107,7 +107,7 @@ describe("Task Executor", function () {
         results.on("close", () => (onEnd = "END"));
       })
       .catch((e) => {
-        executor.end();
+        executor.shutdown();
         expect(e).toBeUndefined();
       });
     await logger.expectToInclude("Task 1 computed by provider", 5000);

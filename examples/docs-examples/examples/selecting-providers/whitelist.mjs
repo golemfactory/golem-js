@@ -20,5 +20,5 @@ for (let i = 0; i < whiteListNames.length; i++) {
   await executor.run(async (ctx) =>
     console.log((await ctx.run(`echo "This task is run on ${ctx.provider.name}"`)).stdout, ctx.provider.name),
   );
-  await executor.end();
+  await executor.shutdown();
 })();

@@ -46,7 +46,7 @@ async function main(args) {
   }
   if (!password) console.log("No password found");
   else console.log(`Password found: ${password}`);
-  await executor.end();
+  await executor.shutdown();
 }
 
 program

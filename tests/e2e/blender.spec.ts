@@ -59,7 +59,7 @@ describe("Blender rendering", function () {
         expect(fs.existsSync(`${process.env.GOTH_GFTP_VOLUME || ""}${file}`)).toEqual(true);
       }
 
-      await executor.end();
+      await executor.shutdown();
     },
     1000 * 240,
   );

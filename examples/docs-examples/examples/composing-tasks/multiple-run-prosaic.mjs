@@ -16,5 +16,5 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
 
   console.log(result);
 
-  await executor.end();
+  await executor.shutdown();
 })();

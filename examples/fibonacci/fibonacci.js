@@ -15,7 +15,7 @@ async function main(fiboN = 1, tasksCount = 1, subnetTag, driver, network, debug
     const result = await ctx.run("/usr/local/bin/node", ["/golem/work/fibo.js", fiboN.toString()]);
     console.log(result.stdout);
   });
-  await executor.end();
+  await executor.shutdown();
 }
 program
   .requiredOption("-n, --fibonacci-number <n>", "fibonacci number", (val) => parseInt(val))

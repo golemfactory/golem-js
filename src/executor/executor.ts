@@ -104,7 +104,7 @@ export type YagnaOptions = {
  */
 export class TaskExecutor {
   /**
-   * EventEmitter2 instance emitting TaskExecutor events.
+   * EventEmitter (EventEmitter3) instance emitting TaskExecutor events.
    * @see TaskExecutorEventsDict for available events.
    */
   readonly events: EventEmitter<TaskExecutorEventsDict> = new EventEmitter();
@@ -134,11 +134,11 @@ export class TaskExecutor {
   private signalHandler = (signal: string) => this.cancel(signal);
 
   /**
-   * End promise.
-   * This will be set by call to end() method.
+   * Shutdown promise.
+   * This will be set by call to shutdown() method.
    * It will be resolved when the executor is fully stopped.
    */
-  private endPromise?: Promise<void>;
+  private shutdownPromise?: Promise<void>;
 
   /**
    * Create a new Task Executor
@@ -266,7 +266,18 @@ export class TaskExecutor {
     this.logger?.info(
       `Task Executor has started using subnet: ${this.options.subnetTag}, network: ${this.paymentService.config.payment.network}, driver: ${this.paymentService.config.payment.driver}`,
     );
-    this.events.emit("initialized");
+    this.events.emit("ready");
+  }
+
+  /**
+   * Stop all executor services and shut down executor instance.
+   *
+   * You can call this method multiple times, it will resolve only once the executor is shutdown.
+   *
+   * @deprecated Use TaskExecutor.shutdown() instead.
+   */
+  end(): Promise<void> {
+    return this.shutdown();
   }
 
   /**
@@ -274,21 +285,24 @@ export class TaskExecutor {
    *
    * You can call this method multiple times, it will resolve only once the executor is shutdown.
    */
-  end(): Promise<void> {
-    if (this.isRunning) {
-      this.isRunning = false;
-      this.endPromise = this.doEnd();
+  shutdown(): Promise<void> {
+    if (!this.isRunning) {
+      // Using ! is safe, because if isRunning is false, endPromise is defined.
+      return this.shutdownPromise!;
     }
 
-    return this.endPromise!;
+    this.isRunning = false;
+    this.shutdownPromise = this.doShutdown();
+
+    return this.shutdownPromise;
   }
 
   /**
    * Perform everything needed to cleanly shut down the executor.
    * @private
    */
-  private async doEnd() {
-    this.events.emit("terminating");
+  private async doShutdown() {
+    this.events.emit("beforeend");
     if (runtimeContextChecker.isNode) this.removeSignalHandlers();
     clearTimeout(this.startupTimeoutId);
     if (!this.configOptions.storageProvider) await this.storageProvider?.close();
@@ -300,7 +314,7 @@ export class TaskExecutor {
     this.printStats();
     await this.statsService.end();
     this.logger?.info("Task Executor has shut down");
-    this.events.emit("terminated");
+    this.events.emit("end");
   }
 
   /**
@@ -509,7 +523,7 @@ export class TaskExecutor {
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFailed({ reason: e.toString() }));
     this.logger?.error(e.toString());
     if (this.isRunning) this.logger?.warn("Trying to stop executor...");
-    this.end().catch((e) => this.logger?.error(e));
+    this.shutdown().catch((e) => this.logger?.error(e));
   }
 
   private installSignalHandlers() {
@@ -533,7 +547,7 @@ export class TaskExecutor {
       const message = `Executor has interrupted by the user. Reason: ${reason}.`;
       this.logger?.warn(`${message}. Stopping all tasks...`);
       this.isCanceled = true;
-      await this.end();
+      await this.shutdown();
     } catch (error) {
       this.logger?.error(`Error while cancelling the executor. ${error}`);
     }

@@ -51,7 +51,7 @@ describe("Password cracking", function () {
         }
       }
       expect(password).toEqual("yo");
-      await executor.end();
+      await executor.shutdown();
     },
     1000 * 60 * 5,
   );

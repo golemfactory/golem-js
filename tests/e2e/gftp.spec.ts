@@ -40,7 +40,7 @@ describe("GFTP transfers", function () {
         expect(fs.existsSync(file)).toEqual(true);
       }
 
-      await executor.end();
+      await executor.shutdown();
     },
     1000 * 240,
   );

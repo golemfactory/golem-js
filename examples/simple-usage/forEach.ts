@@ -7,5 +7,5 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
     const res = await ctx.run(`echo "${x}"`);
     console.log(`Result=${res.stdout}`);
   });
-  await executor.end();
+  await executor.shutdown();
 })();

@@ -124,7 +124,7 @@
           })
           .catch((e) => logger.error(e));
 
-        await executor.end();
+        await executor.shutdown();
         if (result?.data) setResponse(result.data);
       }
       window.run = run;

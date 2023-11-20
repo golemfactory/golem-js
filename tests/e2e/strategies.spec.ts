@@ -26,7 +26,7 @@ describe("Strategies", function () {
       await logger.expectToInclude(`Task 1 computed by provider provider-1`, 5000);
       await logger.expectToInclude(`Task 2 computed by provider provider-1`, 5000);
       await logger.expectToInclude(`Task 3 computed by provider provider-1`, 5000);
-      await executor.end();
+      await executor.shutdown();
     });
 
     it("should filtered providers by white list names", async () => {
@@ -47,7 +47,7 @@ describe("Strategies", function () {
       await logger.expectToInclude(`Task 1 computed by provider provider-2`, 5000);
       await logger.expectToInclude(`Task 2 computed by provider provider-2`, 5000);
       await logger.expectToInclude(`Task 3 computed by provider provider-2`, 5000);
-      await executor.end();
+      await executor.shutdown();
     });
   });
   describe("Payments", () => {
@@ -65,7 +65,7 @@ describe("Strategies", function () {
       const finalOutputs: string[] = [];
       for await (const res of results) if (res) finalOutputs.push(res);
       expect(finalOutputs).toEqual(expect.arrayContaining(data));
-      await executor.end();
+      await executor.shutdown();
       await logger.expectToInclude(`Reason: Invoice rejected by Invoice Filter`, 100);
     });
 
@@ -83,7 +83,7 @@ describe("Strategies", function () {
       const finalOutputs: string[] = [];
       for await (const res of results) if (res) finalOutputs.push(res);
       expect(finalOutputs).toEqual(expect.arrayContaining(data));
-      await executor.end();
+      await executor.shutdown();
       await logger.expectToInclude(`DebitNote rejected by DebitNote Filter`, 100);
     });
   });

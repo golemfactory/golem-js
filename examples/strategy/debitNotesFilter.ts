@@ -10,5 +10,5 @@ import { TaskExecutor, PaymentFilters } from "@golem-sdk/golem-js";
     debitNotesFilter: PaymentFilters.acceptMaxAmountDebitNoteFilter(0.00001),
   });
   await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
-  await executor.end();
+  await executor.shutdown();
 })();

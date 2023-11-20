@@ -46,7 +46,7 @@ async function main(subnetTag: string, driver?: string, network?: string, debug?
     return result?.length ? `output_${frame}.png` : "";
   });
   for await (const result of results) console.log(result);
-  await executor.end();
+  await executor.shutdown();
 }
 
 program

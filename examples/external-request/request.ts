@@ -23,5 +23,5 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
     );
     console.log(result.stdout);
   });
-  await executor.end();
+  await executor.shutdown();
 })();

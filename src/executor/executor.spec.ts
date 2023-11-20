@@ -45,7 +45,7 @@ describe("Task Executor", () => {
       const executor = await TaskExecutor.create({ package: "test", logger, yagnaOptions });
       expect(serviceRunSpy).toHaveBeenCalledTimes(4);
       expect(executor).toBeDefined();
-      await executor.end();
+      await executor.shutdown();
     });
     it("should handle a critical error if startup timeout is reached and exitOnNoProposals is enabled", async () => {
       const executor = await TaskExecutor.create({
@@ -66,7 +66,7 @@ describe("Task Executor", () => {
       });
       await sleep(10, true);
       expect(handleErrorSpy).toHaveBeenCalled();
-      await executor.end();
+      await executor.shutdown();
     });
     it("should only warn the user if startup timeout is reached and exitOnNoProposals is disabled", async () => {
       const executor = await TaskExecutor.create({
@@ -89,10 +89,10 @@ describe("Task Executor", () => {
       expect(loggerWarnSpy).toHaveBeenCalledWith(
         "Could not start any work on Golem. Processed 0 initial proposals from yagna, filters accepted 0. Check your demand if it's not too restrictive or restart yagna.",
       );
-      await executor.end();
+      await executor.shutdown();
     });
 
-    // TODO: test the "initialized" event, once init() is public and create() is deprecated.
+    it.todo('should emit "ready" event after init() completes');
   });
 
   describe("run()", () => {
@@ -100,7 +100,7 @@ describe("Task Executor", () => {
       const executor = await TaskExecutor.create({ package: "test", logger, yagnaOptions });
 
       jest.spyOn(Task.prototype, "isFinished").mockImplementation(() => true);
-      const executorEndSpy = jest.spyOn(executor as any, "doEnd");
+      const executorShutdownSpy = jest.spyOn(executor as any, "doShutdown");
 
       const rejectedSpy = jest.spyOn(Task.prototype, "isRejected");
       const resultsSpy = jest.spyOn(Task.prototype, "getResults");
@@ -121,57 +121,57 @@ describe("Task Executor", () => {
       expect(rejectedSpy).toHaveBeenCalledTimes(3);
       expect(resultsSpy).toHaveBeenCalledTimes(2);
       expect(errorSpy).toHaveBeenCalledTimes(1);
-      expect(executorEndSpy).toHaveBeenCalledTimes(0);
+      expect(executorShutdownSpy).toHaveBeenCalledTimes(0);
 
-      await executor.end();
+      await executor.shutdown();
     });
   });
 
   describe("end()", () => {
+    it("should call shutdown()", async () => {
+      const executor = await TaskExecutor.create({ package: "test", startupTimeout: 0, logger, yagnaOptions });
+      const spy = jest.spyOn(executor, "shutdown");
+      executor.end();
+      expect(spy).toHaveBeenCalled();
+    });
+  });
+
+  describe("shutdown()", () => {
     it("should allow multiple calls", async () => {
       // Implementation details: the same promise is always used, so it's safe to call end() multiple times.
       const executor = await TaskExecutor.create({ package: "test", startupTimeout: 0, logger, yagnaOptions });
       const p = Promise.resolve();
-      const spy = jest.spyOn(executor as any, "doEnd").mockReturnValue(p);
+      const spy = jest.spyOn(executor as any, "doShutdown").mockReturnValue(p);
 
-      const r1 = executor.end();
+      const r1 = executor.shutdown();
       expect(r1).toBeDefined();
       expect(r1).toStrictEqual(p);
 
-      const r2 = executor.end();
+      const r2 = executor.shutdown();
       expect(r1).toStrictEqual(r2);
 
       await r1;
 
-      const r3 = executor.end();
+      const r3 = executor.shutdown();
       expect(r3).toStrictEqual(r1);
       expect(spy).toHaveBeenCalledTimes(1);
     });
 
-    it('it should emit "end" and "ended" events', async () => {
+    it('it should emit "beforeend" and "end" events', async () => {
       const executor = await TaskExecutor.create({ package: "test", startupTimeout: 0, logger, yagnaOptions });
-      let terminated = false;
-      let terminating = false;
+      const beforeEnd = jest.fn();
+      const end = jest.fn();
 
-      executor.events.on("terminating", () => {
-        expect(terminating).toBe(false);
-        expect(terminated).toBe(false);
-        terminating = true;
-      });
+      executor.events.on("beforeend", beforeEnd);
+      executor.events.on("end", end);
 
-      executor.events.on("terminated", () => {
-        expect(terminating).toBe(true);
-        expect(terminated).toBe(false);
-        terminated = true;
-      });
-
-      await executor.end();
+      await executor.shutdown();
       // Second call shouldn't generate new events.
-      await executor.end();
+      await executor.shutdown();
 
       // Both events should have been fired.
-      expect(terminating).toBe(true);
-      expect(terminated).toBe(true);
+      expect(beforeEnd).toHaveBeenCalledTimes(1);
+      expect(end).toHaveBeenCalledTimes(1);
     });
   });
 });

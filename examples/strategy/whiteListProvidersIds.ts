@@ -17,5 +17,5 @@ const whiteListIds = [
     proposalFilter: ProposalFilters.whiteListProposalIdsFilter(whiteListIds),
   });
   await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
-  await executor.end();
+  await executor.shutdown();
 })();

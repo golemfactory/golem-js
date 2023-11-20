@@ -16,5 +16,5 @@ const myFilter: ProposalFilter = async (proposal) => {
     proposalFilter: myFilter,
   });
   await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
-  await executor.end();
+  await executor.shutdown();
 })();

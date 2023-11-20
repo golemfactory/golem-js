@@ -5,15 +5,16 @@ export interface TaskExecutorEventsDict {
   /**
    * Fires when task executor is initialized and ready to be used.
    */
-  initialized: () => void;
+  ready: () => void;
 
   /**
-   * Fires when task executor is about to shut down, immediately after TaskExecutor.end() is called.
+   * Fires when task executor is about to shut down, immediately after TaskExecutor.shutdown() is called.
+   *
    */
-  terminating: () => void;
+  beforeend: () => void;
 
   /**
    * Fires when task executor is completely terminated.
    */
-  terminated: () => void;
+  end: () => void;
 }
