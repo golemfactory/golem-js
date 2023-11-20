@@ -9,12 +9,17 @@ async function main(fiboN = 1, tasksCount = 1, subnetTag, driver, network, debug
     logLevel: debug ? "debug" : "info",
   });
 
-  const data = Array(tasksCount).fill(null);
+  const runningTasks = [];
+  for (let i = 0; i < tasksCount; i++) {
+    runningTasks.push(
+      executor.run(async (ctx) => {
+        const result = await ctx.run("/usr/local/bin/node", ["/golem/work/fibo.js", fiboN.toString()]);
+        console.log(result.stdout);
+      }),
+    );
+  }
 
-  await executor.forEach(data, async (ctx) => {
-    const result = await ctx.run("/usr/local/bin/node", ["/golem/work/fibo.js", fiboN.toString()]);
-    console.log(result.stdout);
-  });
+  await Promise.all(runningTasks);
   await executor.shutdown();
 }
 program

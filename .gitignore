@@ -32,3 +32,4 @@ logs/
 
 #Nuxt
 /examples/adv-web-example/.nuxt
+tmp/

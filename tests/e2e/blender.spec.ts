@@ -38,20 +38,23 @@ describe("Blender rendering", function () {
 
       const data = [0, 10, 20, 30, 40, 50];
 
-      const results = executor.map<number, string>(data, async (ctx, frame) => {
-        const result = await ctx
-          .beginBatch()
-          .uploadJson(blenderParams(frame), "/golem/work/params.json")
-          .run("/golem/entrypoints/run-blender.sh")
-          .downloadFile(`/golem/output/out${frame?.toString().padStart(4, "0")}.png`, `output_${frame}.png`)
-          .end()
-          .catch((error) => console.error(error.toString()));
-        return result ? `output_${frame}.png` : "";
-      });
+      const futureResults = data.map((frame) =>
+        executor.run(async (ctx) => {
+          const result = await ctx
+            .beginBatch()
+            .uploadJson(blenderParams(frame), "/golem/work/params.json")
+            .run("/golem/entrypoints/run-blender.sh")
+            .downloadFile(`/golem/output/out${frame?.toString().padStart(4, "0")}.png`, `output_${frame}.png`)
+            .end()
+            .catch((error) => console.error(error.toString()));
+          return result ? `output_${frame}.png` : "";
+        }),
+      );
 
+      const results = await Promise.all(futureResults);
       const expectedResults = data.map((d) => `output_${d}.png`);
 
-      for await (const result of results) {
+      for (const result of results) {
         expect(expectedResults).toContain(result);
       }
 
