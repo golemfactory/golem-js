@@ -31,7 +31,7 @@ async function main(subnetTag: string, driver?: string, network?: string, debug?
     maxParallelTasks,
   });
 
-  executor.beforeEach(async (ctx) => {
+  executor.onActivityReady(async (ctx) => {
     await ctx.uploadFile(`${__dirname}/cubes.blend`, "/golem/resource/scene.blend");
   });
 

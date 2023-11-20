@@ -1,5 +1,5 @@
-const beforeEachMock = { beforeEach: jest.fn() };
-const createMock = jest.fn().mockResolvedValue(beforeEachMock);
+const onActivityReadyMock = { onActivityReady: jest.fn() };
+const createMock = jest.fn().mockResolvedValue(onActivityReadyMock);
 
 jest.doMock("../../src/executor", () => ({
   TaskExecutor: {
@@ -67,7 +67,7 @@ describe.only("Golem Network", () => {
         minStorageGib: 4,
         jobStorage: config.jobStorage,
       });
-      expect(beforeEachMock.beforeEach).toHaveBeenCalledWith(config.beforeEachJob);
+      expect(onActivityReadyMock.onActivityReady).toHaveBeenCalledWith(config.beforeEachJob);
     });
   });
 });

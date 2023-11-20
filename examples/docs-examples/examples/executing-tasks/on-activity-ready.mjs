@@ -7,7 +7,7 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
     maxParallelTasks: 3,
   });
 
-  executor.beforeEach(async (ctx) => {
+  executor.onActivityReady(async (ctx) => {
     console.log(ctx.provider.name + " is downloading action_log file");
     await ctx.uploadFile("./action_log.txt", "/golem/input/action_log.txt");
   });

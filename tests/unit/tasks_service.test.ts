@@ -91,7 +91,7 @@ describe("Task Service", () => {
       const result = await ctx.run("some_shell_command");
       if (result.stdout === "invalid_value") ctx.rejectResult("Invalid value computed by provider");
     };
-    const task = new Task("1", worker, undefined, undefined, { maxRetries: 2 });
+    const task = new Task("1", worker, undefined, { maxRetries: 2 });
     queue.addToEnd(task);
     activityMock.setExpectedExeResults([{ result: "Ok", stdout: "invalid_value" }]);
     const service = new TaskService(
@@ -117,7 +117,7 @@ describe("Task Service", () => {
 
   it("should reject task if it failed max attempts", async () => {
     const worker: Worker = async (ctx) => ctx.run("some_shell_command");
-    const task = new Task("1", worker, undefined, undefined, { maxRetries: 1 });
+    const task = new Task("1", worker, undefined, { maxRetries: 1 });
     queue.addToEnd(task);
     activityMock.setExpectedErrors(new Array(20).fill(new Error()));
     const service = new TaskService(
@@ -138,12 +138,12 @@ describe("Task Service", () => {
     await service.end();
   });
 
-  it("should run init worker on each activity", async () => {
-    const initWorker: Worker = async (ctx) => ctx.run("init_shell_command");
+  it("should run setup functions on each activity", async () => {
+    const setupFunctions: Worker[] = [async (ctx) => ctx.run("init_shell_command")];
     const worker: Worker = async (ctx) => ctx.run("some_shell_command");
-    const task1 = new Task("1", worker, null, initWorker);
-    const task2 = new Task("2", worker, null, initWorker);
-    const task3 = new Task("3", worker, null, initWorker);
+    const task1 = new Task("1", worker, null, { activityReadySetupFunctions: setupFunctions });
+    const task2 = new Task("2", worker, null, { activityReadySetupFunctions: setupFunctions });
+    const task3 = new Task("3", worker, null, { activityReadySetupFunctions: setupFunctions });
     queue.addToEnd(task1);
     queue.addToEnd(task2);
     queue.addToEnd(task3);
@@ -161,9 +161,12 @@ describe("Task Service", () => {
       },
     );
     service.run().catch((e) => console.error(e));
-    await logger.expectToMatch(/Init worker done in activity((.|\n)*)Init worker done in activity/, 700);
+    await logger.expectToMatch(
+      /Activity setup completed in activity((.|\n)*)Activity setup completed in activity/,
+      700,
+    );
     await logger.expectToNotMatch(
-      /Init worker done in activity.*\nInit worker done in activity((.|\n)*)Init worker done in activity/,
+      /Activity setup completed in activity.*\nActivity setup completed in activity((.|\n)*)Activity setup completed in activity/,
     );
     await new Promise((res) => setTimeout(res, 1000));
     expect(task1.isFinished()).toEqual(true);
