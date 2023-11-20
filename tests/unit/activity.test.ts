@@ -254,7 +254,7 @@ describe("Activity", () => {
 
     it("should handle gsb error", async () => {
       const activity = await Activity.create(agreement, yagnaApi, {
-        activityExeBatchResultsFetchInterval: 10,
+        activityExeBatchResultPollIntervalSeconds: 10,
       });
       const command1 = new Deploy();
       const command2 = new Start();

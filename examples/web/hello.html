@@ -80,7 +80,6 @@
         debug: (msg) => appendLog(`[${new Date().toISOString()}] [debug] ${msg}`),
         error: (msg) => appendLog(`[${new Date().toISOString()}] [error] ${msg}`),
         info: (msg) => appendLog(`[${new Date().toISOString()}] [info] ${msg}`),
-        table: (msg) => appendLog(JSON.stringify(msg, null, "\t")),
       };
       async function run() {
         const apiKey = document.getElementById("YAGNA_APPKEY").value;
@@ -98,7 +97,7 @@
         await executor
           .run(async (ctx) => appendResults((await ctx.run("echo 'Hello World'")).stdout))
           .catch((e) => logger.error(e));
-        await executor.end();
+        await executor.shutdown();
       }
       window.run = run;
     </script>

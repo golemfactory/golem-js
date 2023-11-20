@@ -18,6 +18,8 @@ import { MarketOptions } from "../market/service";
 import { RequireAtLeastOne } from "../utils/types";
 import { v4 } from "uuid";
 import { JobStorage, Job } from "../job";
+import { TaskExecutorEventsDict } from "./events";
+import { EventEmitter } from "eventemitter3";
 
 const terminatingSignals = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
 
@@ -44,7 +46,7 @@ export type ExecutorOptions = {
   storageProvider?: StorageProvider;
   /**
    * @deprecated this parameter will be removed in the next version.
-   * Currently has no effect on executor termination.
+   * Currently, has no effect on executor termination.
    */
   isSubprocess?: boolean;
   /** Timeout for preparing activity - creating and deploy commands */
@@ -64,14 +66,21 @@ export type ExecutorOptions = {
    */
   skipProcessSignals?: boolean;
   /**
-   * Timeout for waiting for at least one offer from the market.
-   * This parameter (set to 30 sec by default) will throw an error when executing `TaskExecutor.run`
-   * if no offer from the market is accepted before this time.
+   * Timeout for waiting for at least one offer from the market expressed in milliseconds.
+   * This parameter (set to 90 sec by default) will issue a warning when executing `TaskExecutor.run`
+   * if no offer from the market is accepted before this time. If you'd like to change this behavior,
+   * and throw an error instead, set `exitOnNoProposals` to `true`.
    * You can set a slightly higher time in a situation where your parameters such as proposalFilter
    * or minimum hardware requirements are quite restrictive and finding a suitable provider
    * that meets these criteria may take a bit longer.
    */
   startupTimeout?: number;
+  /**
+   * If set to `true`, the executor will exit with an error when no proposals are accepted.
+   * You can customize how long the executor will wait for proposals using the `startupTimeout` parameter.
+   * Default is `false`.
+   */
+  exitOnNoProposals?: boolean;
 } & Omit<PackageOptions, "imageHash" | "imageTag"> &
   MarketOptions &
   TaskServiceOptions &
@@ -94,6 +103,12 @@ export type YagnaOptions = {
  * A high-level module for defining and executing tasks in the golem network
  */
 export class TaskExecutor {
+  /**
+   * EventEmitter (EventEmitter3) instance emitting TaskExecutor events.
+   * @see TaskExecutorEventsDict for available events.
+   */
+  readonly events: EventEmitter<TaskExecutorEventsDict> = new EventEmitter();
+
   private readonly options: ExecutorConfig;
   private marketService: MarketService;
   private agreementPoolService: AgreementPoolService;
@@ -119,11 +134,11 @@ export class TaskExecutor {
   private signalHandler = (signal: string) => this.cancel(signal);
 
   /**
-   * End promise.
-   * This will be set by call to end() method.
+   * Shutdown promise.
+   * This will be set by call to shutdown() method.
    * It will be resolved when the executor is fully stopped.
    */
-  private endPromise?: Promise<void>;
+  private shutdownPromise?: Promise<void>;
 
   /**
    * Create a new Task Executor
@@ -251,27 +266,47 @@ export class TaskExecutor {
     this.logger?.info(
       `Task Executor has started using subnet: ${this.options.subnetTag}, network: ${this.paymentService.config.payment.network}, driver: ${this.paymentService.config.payment.driver}`,
     );
+    this.events.emit("ready");
   }
 
   /**
    * Stop all executor services and shut down executor instance.
    *
    * You can call this method multiple times, it will resolve only once the executor is shutdown.
+   *
+   * @deprecated Use TaskExecutor.shutdown() instead.
    */
   end(): Promise<void> {
-    if (this.isRunning) {
-      this.isRunning = false;
-      this.endPromise = this.doEnd();
+    return this.shutdown();
+  }
+
+  /**
+   * Stop all executor services and shut down executor instance.
+   *
+   * You can call this method multiple times, it will resolve only once the executor is shutdown.
+   *
+   * When shutdown() is initially called, a beforeEnd event is emitted.
+   *
+   * Once the executor is fully stopped, an end event is emitted.
+   */
+  shutdown(): Promise<void> {
+    if (!this.isRunning) {
+      // Using ! is safe, because if isRunning is false, endPromise is defined.
+      return this.shutdownPromise!;
     }
 
-    return this.endPromise!;
+    this.isRunning = false;
+    this.shutdownPromise = this.doShutdown();
+
+    return this.shutdownPromise;
   }
 
   /**
    * Perform everything needed to cleanly shut down the executor.
    * @private
    */
-  private async doEnd() {
+  private async doShutdown() {
+    this.events.emit("beforeEnd");
     if (runtimeContextChecker.isNode) this.removeSignalHandlers();
     clearTimeout(this.startupTimeoutId);
     if (!this.configOptions.storageProvider) await this.storageProvider?.close();
@@ -283,6 +318,7 @@ export class TaskExecutor {
     this.printStats();
     await this.statsService.end();
     this.logger?.info("Task Executor has shut down");
+    this.events.emit("end");
   }
 
   /**
@@ -332,80 +368,7 @@ export class TaskExecutor {
     worker: Worker<undefined, OutputType>,
     options?: TaskOptions,
   ): Promise<OutputType | undefined> {
-    return this.executeTask<undefined, OutputType>(worker, undefined, options).catch(async (e) => {
-      this.handleCriticalError(e);
-      return undefined;
-    });
-  }
-
-  /**
-   * Map iterable data to worker function and return computed Task result as AsyncIterable
-   *
-   * @param data Iterable data
-   * @param worker worker function
-   * @return AsyncIterable with results of computed tasks
-   * @example
-   * ```typescript
-   * const data = [1, 2, 3, 4, 5];
-   * const results = executor.map(data, (ctx, item) => ctx.run(`echo "${item}"`));
-   * for await (const result of results) console.log(result.stdout);
-   * ```
-   */
-  map<InputType, OutputType>(
-    data: Iterable<InputType>,
-    worker: Worker<InputType, OutputType>,
-  ): AsyncIterable<OutputType | undefined> {
-    const inputs = [...data];
-    const featureResults = inputs.map((value) => this.executeTask<InputType, OutputType>(worker, value));
-    const results: OutputType[] = [];
-    let resultsCount = 0;
-    featureResults.forEach((featureResult) =>
-      featureResult
-        .then((res) => {
-          results.push(res as OutputType);
-        })
-        .catch((e) => this.handleCriticalError(e)),
-    );
-    const isRunning = () => this.isRunning;
-    return {
-      [Symbol.asyncIterator](): AsyncIterator<OutputType | undefined> {
-        return {
-          async next() {
-            if (resultsCount === inputs.length) {
-              return Promise.resolve({ done: true, value: undefined });
-            }
-            while (results.length === 0 && resultsCount < inputs.length && isRunning()) {
-              await sleep(1000, true);
-            }
-            if (!isRunning()) return Promise.resolve({ done: true, value: undefined });
-            resultsCount += 1;
-            return Promise.resolve({ done: false, value: results.pop() });
-          },
-        };
-      },
-    };
-  }
-
-  /**
-   * Iterates over given data and execute task using worker function
-   *
-   * @param data Iterable data
-   * @param worker Worker function
-   * @example
-   * ```typescript
-   * const data = [1, 2, 3, 4, 5];
-   * await executor.forEach(data, async (ctx, item) => {
-   *     console.log((await ctx.run(`echo "${item}"`)).stdout);
-   * });
-   * ```
-   */
-  async forEach<InputType, OutputType>(
-    data: Iterable<InputType>,
-    worker: Worker<InputType, OutputType>,
-  ): Promise<void> {
-    await Promise.all([...data].map((value) => this.executeTask<InputType, OutputType>(worker, value))).catch((e) =>
-      this.handleCriticalError(e),
-    );
+    return this.executeTask<undefined, OutputType>(worker, undefined, options);
   }
 
   private async createPackage(
@@ -494,7 +457,7 @@ export class TaskExecutor {
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFailed({ reason: e.toString() }));
     this.logger?.error(e.toString());
     if (this.isRunning) this.logger?.warn("Trying to stop executor...");
-    this.end().catch((e) => this.logger?.error(e));
+    this.shutdown().catch((e) => this.logger?.error(e));
   }
 
   private installSignalHandlers() {
@@ -518,7 +481,7 @@ export class TaskExecutor {
       const message = `Executor has interrupted by the user. Reason: ${reason}.`;
       this.logger?.warn(`${message}. Stopping all tasks...`);
       this.isCanceled = true;
-      await this.end();
+      await this.shutdown();
     } catch (error) {
       this.logger?.error(`Error while cancelling the executor. ${error}`);
     }
@@ -531,7 +494,11 @@ export class TaskExecutor {
     const providersCount = new Set(costsSummary.map((x) => x["Provider Name"])).size;
     this.logger?.info(`Computation finished in ${duration}`);
     this.logger?.info(`Negotiated ${costsSummary.length} agreements with ${providersCount} providers`);
-    if (costsSummary.length) this.logger?.table?.(costsSummary);
+    costsSummary.forEach((cost) => {
+      this.logger?.info(
+        `Agreement ${cost["Agreement"]} with ${cost["Provider Name"]} computed ${cost["Task Computed"]} task(s) for ${cost["Cost"]} GLM (${cost["Payment Status"]})`,
+      );
+    });
     this.logger?.info(`Total Cost: ${costs.total} Total Paid: ${costs.paid}`);
   }
 
@@ -550,11 +517,12 @@ export class TaskExecutor {
             : proposalsCount.initial === proposalsCount.rejected
               ? "All off proposals got rejected."
               : "Check your proposal filters if they are not too restrictive.";
-        this.handleCriticalError(
-          new Error(
-            `Could not start any work on Golem. Processed ${proposalsCount.initial} initial proposals from yagna, filters accepted ${proposalsCount.confirmed}. ${hint}`,
-          ),
-        );
+        const errorMessage = `Could not start any work on Golem. Processed ${proposalsCount.initial} initial proposals from yagna, filters accepted ${proposalsCount.confirmed}. ${hint}`;
+        if (this.options.exitOnNoProposals) {
+          this.handleCriticalError(new Error(errorMessage));
+        } else {
+          this.logger?.warn(errorMessage);
+        }
       }
     }, this.options.startupTimeout);
   }

@@ -57,6 +57,7 @@
   { "cmd": "node", "path": "examples/docs-examples/quickstarts/quickstart/requestor.mjs" },
 
   { "cmd": "node", "path": "examples/docs-examples/tutorials/building-custom-image/index.mjs" },
+  { "cmd": "node", "path": "examples/docs-examples/tutorials/accessing-internet/outbound-ipfs.mjs" },
   { "cmd": "node", "path": "examples/docs-examples/tutorials/quickstart/index.mjs" },
   {
     "cmd": "node",

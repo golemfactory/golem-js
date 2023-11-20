@@ -35,18 +35,22 @@ async function main(subnetTag: string, driver?: string, network?: string, debug?
     await ctx.uploadFile(`${__dirname}/cubes.blend`, "/golem/resource/scene.blend");
   });
 
-  const results = executor.map<number, string>([0, 10, 20, 30, 40, 50], async (ctx, frame) => {
-    const result = await ctx
-      .beginBatch()
-      .uploadJson(blender_params(frame), "/golem/work/params.json")
-      .run("/golem/entrypoints/run-blender.sh")
-      .downloadFile(`/golem/output/out${frame?.toString().padStart(4, "0")}.png`, `${__dirname}/output_${frame}.png`)
-      .end()
-      .catch((e) => console.error(e));
-    return result?.length ? `output_${frame}.png` : "";
-  });
-  for await (const result of results) console.log(result);
-  await executor.end();
+  const futureResults = [0, 10, 20, 30, 40, 50].map((frame) =>
+    executor.run(async (ctx) => {
+      const result = await ctx
+        .beginBatch()
+        .uploadJson(blender_params(frame), "/golem/work/params.json")
+        .run("/golem/entrypoints/run-blender.sh")
+        .downloadFile(`/golem/output/out${frame?.toString().padStart(4, "0")}.png`, `${__dirname}/output_${frame}.png`)
+        .end()
+        .catch((e) => console.error(e));
+      return result?.length ? `output_${frame}.png` : "";
+    }),
+  );
+  const results = await Promise.all(futureResults);
+  results.forEach((result) => console.log(result));
+
+  await executor.shutdown();
 }
 
 program

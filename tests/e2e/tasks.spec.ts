@@ -11,7 +11,7 @@ describe("Task Executor", function () {
 
   afterEach(async function () {
     logger.clear();
-    await executor?.end();
+    await executor?.shutdown();
   });
 
   it("should run simple task", async () => {
@@ -66,25 +66,14 @@ describe("Task Executor", function () {
       logger,
     });
     const data = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
-    const results = executor.map<string, string | undefined>(data, async (ctx, x) => {
-      const res = await ctx.run(`echo "${x}"`);
-      return res.stdout?.toString().trim();
-    });
-    const finalOutputs: string[] = [];
-    for await (const res of results) if (res) finalOutputs.push(res);
+    const futureResults = data.map((x) =>
+      executor.run(async (ctx) => {
+        const res = await ctx.run(`echo "${x}"`);
+        return res.stdout?.toString().trim();
+      }),
+    );
+    const finalOutputs = (await Promise.all(futureResults)).filter((x) => !!x);
     expect(finalOutputs).toEqual(expect.arrayContaining(data));
-  });
-
-  it("should run simple tasks by forEach function", async () => {
-    executor = await TaskExecutor.create({
-      package: "golem/alpine:latest",
-      logger,
-    });
-    const data = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
-    await executor.forEach(data, async (ctx, x) => {
-      const res = await ctx.run(`echo "${x}"`);
-      expect(data).toContain(res?.stdout?.toString().trim());
-    });
   });
 
   it("should run simple batch script and get results as stream", async () => {
@@ -106,7 +95,7 @@ describe("Task Executor", function () {
         results.on("close", () => (onEnd = "END"));
       })
       .catch((e) => {
-        executor.end();
+        executor.shutdown();
         expect(e).toBeUndefined();
       });
     await logger.expectToInclude("Task 1 computed by provider", 5000);

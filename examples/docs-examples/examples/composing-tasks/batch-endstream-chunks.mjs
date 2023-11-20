@@ -17,6 +17,6 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
 
     res.on("data", (data) => (data.index == 2 ? console.log(data.stdout) : ""));
     res.on("error", (error) => console.error(error));
-    res.on("close", () => executor.end());
+    res.on("close", () => executor.shutdown());
   });
 })();

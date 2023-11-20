@@ -9,5 +9,5 @@ import { readFileSync } from "fs";
     console.log(`Result=${res.result}`);
     console.log("File new_test.json: ", readFileSync("new_test.json", "utf-8"));
   });
-  await executor.end();
+  await executor.shutdown();
 })();

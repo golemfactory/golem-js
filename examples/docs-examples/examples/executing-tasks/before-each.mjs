@@ -12,13 +12,18 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
     await ctx.uploadFile("./action_log.txt", "/golem/input/action_log.txt");
   });
 
-  await executor.forEach([1, 2, 3, 4, 5], async (ctx, item) => {
-    await ctx
-      .beginBatch()
-      .run(`echo ` + `'processing item: ` + item + `' >> /golem/input/action_log.txt`)
-      .downloadFile("/golem/input/action_log.txt", "./output_" + ctx.provider.name + ".txt")
-      .end();
-  });
+  const inputs = [1, 2, 3, 4, 5];
 
-  await executor.end();
+  const futureResults = inputs.map(async (item) => {
+    return await executor.run(async (ctx) => {
+      await ctx
+        .beginBatch()
+        .run(`echo ` + `'processing item: ` + item + `' >> /golem/input/action_log.txt`)
+        .downloadFile("/golem/input/action_log.txt", "./output_" + ctx.provider.name + ".txt")
+        .end();
+    });
+  });
+  await Promise.all(futureResults);
+
+  await executor.shutdown();
 })();

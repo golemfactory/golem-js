@@ -8,9 +8,11 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
 
   const data = [1, 2, 3, 4, 5];
 
-  await executor.forEach(data, async (ctx, item) => {
-    console.log((await ctx.run(`echo "${item}"`)).stdout);
-  });
+  for (const item of data) {
+    await executor.run(async (ctx) => {
+      console.log((await ctx.run(`echo "${item}"`)).stdout);
+    });
+  }
 
-  await executor.end();
+  await executor.shutdown();
 })();

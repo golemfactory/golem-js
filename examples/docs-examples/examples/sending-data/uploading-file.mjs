@@ -24,5 +24,5 @@ import * as fs from "fs";
   console.log("md5 of the file sent to provider: ", result);
   console.log("Locally computed  md5: ", hash);
 
-  await executor.end();
+  await executor.shutdown();
 })();

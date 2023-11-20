@@ -8,5 +8,5 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
     return `${res1.stdout}${res2.stdout}`;
   });
   console.log(results);
-  await executor.end();
+  await executor.shutdown();
 })();
