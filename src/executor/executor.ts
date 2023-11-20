@@ -518,8 +518,6 @@ export class TaskExecutor {
   private handleCriticalError(e: Error) {
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFailed({ reason: e.toString() }));
     this.logger?.error(e.toString());
-    if (this.isRunning) this.logger?.warn("Trying to stop executor...");
-    this.end().catch((e) => this.logger?.error(e));
   }
 
   private installSignalHandlers() {
