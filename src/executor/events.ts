@@ -11,7 +11,7 @@ export interface TaskExecutorEventsDict {
    * Fires when task executor is about to shut down, immediately after TaskExecutor.shutdown() is called.
    *
    */
-  beforeend: () => void;
+  beforeEnd: () => void;
 
   /**
    * Fires when task executor is completely terminated.

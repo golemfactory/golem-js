@@ -157,12 +157,12 @@ describe("Task Executor", () => {
       expect(spy).toHaveBeenCalledTimes(1);
     });
 
-    it('it should emit "beforeend" and "end" events', async () => {
+    it('it should emit "beforeEnd" and "end" events', async () => {
       const executor = await TaskExecutor.create({ package: "test", startupTimeout: 0, logger, yagnaOptions });
       const beforeEnd = jest.fn();
       const end = jest.fn();
 
-      executor.events.on("beforeend", beforeEnd);
+      executor.events.on("beforeEnd", beforeEnd);
       executor.events.on("end", end);
 
       await executor.shutdown();

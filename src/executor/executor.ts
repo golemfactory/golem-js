@@ -284,6 +284,10 @@ export class TaskExecutor {
    * Stop all executor services and shut down executor instance.
    *
    * You can call this method multiple times, it will resolve only once the executor is shutdown.
+   *
+   * When shutdown() is initially called, a beforeEnd event is emitted.
+   *
+   * Once the executor is fully stopped, an end event is emitted.
    */
   shutdown(): Promise<void> {
     if (!this.isRunning) {
@@ -302,7 +306,7 @@ export class TaskExecutor {
    * @private
    */
   private async doShutdown() {
-    this.events.emit("beforeend");
+    this.events.emit("beforeEnd");
     if (runtimeContextChecker.isNode) this.removeSignalHandlers();
     clearTimeout(this.startupTimeoutId);
     if (!this.configOptions.storageProvider) await this.storageProvider?.close();
