@@ -13,5 +13,5 @@ const blackListProvidersNames = ["provider-1", "golem-provider", "super-provider
     proposalFilter: ProposalFilters.blackListProposalNamesFilter(blackListProvidersNames),
   });
   await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
-  await executor.end();
+  await executor.shutdown();
 })();

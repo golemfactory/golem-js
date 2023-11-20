@@ -7,7 +7,7 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
   });
 
   const result = await executor.run<string | unknown>(async (ctx) => (await ctx.run("node -v")).stdout);
-  await executor.end();
+  await executor.shutdown();
 
   console.log("Task result:", result);
 })();

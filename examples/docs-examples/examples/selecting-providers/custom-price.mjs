@@ -36,5 +36,5 @@ const myFilter = async (proposal) => {
   await executor.run(async (ctx) =>
     console.log((await ctx.run(`echo "This task is run on ${ctx.provider.id}"`)).stdout, ctx.provider.id),
   );
-  await executor.end();
+  await executor.shutdown();
 })();

@@ -46,7 +46,7 @@ async function main(args) {
   } catch (err) {
     console.log(`Password not found`);
   } finally {
-    await executor.end();
+    await executor.shutdown();
   }
 }
 

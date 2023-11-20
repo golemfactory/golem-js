@@ -55,7 +55,7 @@ describe("Password cracking", function () {
       };
 
       await expect(Promise.any(ranges.map(findPasswordInRange))).resolves.toEqual("yo");
-      await executor.end();
+      await executor.shutdown();
     },
     1000 * 60 * 5,
   );

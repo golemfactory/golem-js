@@ -25,5 +25,5 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
   });
   await Promise.all(futureResults);
 
-  await executor.end();
+  await executor.shutdown();
 })();

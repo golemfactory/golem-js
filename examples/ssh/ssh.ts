@@ -42,7 +42,7 @@ async function main(subnetTag, driver, network, count = 2, sessionTimeout = 100,
     );
   }
   await Promise.all(runningTasks);
-  await executor.end();
+  await executor.shutdown();
 }
 
 program

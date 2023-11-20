@@ -50,7 +50,7 @@ async function main(subnetTag: string, driver?: string, network?: string, debug?
   const results = await Promise.all(futureResults);
   results.forEach((result) => console.log(result));
 
-  await executor.end();
+  await executor.shutdown();
 }
 
 program
