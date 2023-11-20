@@ -13,12 +13,6 @@ const server = http.createServer((req, res) => {
   } else if (req.url === "/image") {
     res.writeHead(200, { "content-type": "text/html" });
     fs.createReadStream(`${__dirname}/image.html`).pipe(res);
-  } else if (req.url === "/worker") {
-    res.writeHead(200, { "content-type": "text/html" });
-    fs.createReadStream(`${__dirname}/worker.html`).pipe(res);
-  } else if (req.url === "/worker-fib") {
-    res.writeHead(200, { "content-type": "text/html" });
-    fs.createReadStream(`${__dirname}/worker-fib.html`).pipe(res);
   } else if (req.url === "/docs-example-transfer-data") {
     res.writeHead(200, { "content-type": "text/html" });
     fs.createReadStream(`${__dirname}/../docs-examples/examples/transferring-data/transfer-data-in-browser.html`).pipe(
