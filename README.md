@@ -63,6 +63,8 @@ or by `yarn`:
 yarn add @golem-sdk/golem-js
 ```
 
+Minimum supported Node.js version is 18.
+
 ### Building
 
 To build a library available to the NodeJS environment:
