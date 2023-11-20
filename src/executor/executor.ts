@@ -44,7 +44,7 @@ export type ExecutorOptions = {
   storageProvider?: StorageProvider;
   /**
    * @deprecated this parameter will be removed in the next version.
-   * Currently has no effect on executor termination.
+   * Currently, has no effect on executor termination.
    */
   isSubprocess?: boolean;
   /** Timeout for preparing activity - creating and deploy commands */
@@ -244,8 +244,8 @@ export class TaskExecutor {
       this.networkService?.run(),
       this.statsService.run(),
       this.storageProvider?.init(),
-    ]).catch((e) => this.logCriticalError(e));
-    this.taskService.run().catch((e) => this.logCriticalError(e));
+    ]).catch((e) => this.handleCriticalError(e));
+    this.taskService.run().catch((e) => this.handleCriticalError(e));
     if (runtimeContextChecker.isNode) this.installSignalHandlers();
     this.options.eventTarget.dispatchEvent(new Events.ComputationStarted());
     this.logger?.info(
@@ -333,7 +333,7 @@ export class TaskExecutor {
     options?: TaskOptions,
   ): Promise<OutputType | undefined> {
     return this.executeTask<undefined, OutputType>(worker, undefined, options).catch(async (e) => {
-      this.logCriticalError(e);
+      this.handleCriticalError(e);
       return undefined;
     });
   }
@@ -376,7 +376,7 @@ export class TaskExecutor {
         .then((res) => {
           results.push(res as OutputType);
         })
-        .catch((e) => this.logCriticalError(e)),
+        .catch((e) => this.handleCriticalError(e)),
     );
     const isRunning = () => this.isRunning;
     return {
@@ -429,7 +429,7 @@ export class TaskExecutor {
     worker: Worker<InputType, OutputType>,
   ): Promise<void> {
     await Promise.all([...data].map((value) => this.executeTask<InputType, OutputType>(worker, value))).catch((e) =>
-      this.logCriticalError(e),
+      this.handleCriticalError(e),
     );
   }
 
@@ -452,7 +452,7 @@ export class TaskExecutor {
     worker: Worker<InputType, OutputType>,
     data?: InputType,
     options?: TaskOptions,
-  ): Promise<OutputType> {
+  ): Promise<OutputType | undefined> {
     const task = new Task<InputType, OutputType>((++this.lastTaskIndex).toString(), worker, data, this.initWorker, {
       maxRetries: options?.maxRetries ?? this.options.maxTaskRetries,
       timeout: options?.timeout ?? this.options.taskTimeout,
@@ -460,17 +460,11 @@ export class TaskExecutor {
     this.taskQueue.addToEnd(task as Task<unknown, unknown>);
     while (this.isRunning) {
       if (task.isFinished()) {
-        if (task.isRejected()) {
-          const error = task.getError()!;
-          this.options.eventTarget?.dispatchEvent(new Events.ComputationFailed({ reason: error.toString() }));
-          throw error;
-        }
-        return task.getResults()!;
+        if (task.isRejected()) throw task.getError();
+        return task.getResults();
       }
-
       await sleep(2000, true);
     }
-    throw new Error("Executor is no longer running");
   }
 
   /**
@@ -521,9 +515,11 @@ export class TaskExecutor {
     return new Job(jobId, this.options.jobStorage);
   }
 
-  private logCriticalError(e: Error) {
+  private handleCriticalError(e: Error) {
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFailed({ reason: e.toString() }));
     this.logger?.error(e.toString());
+    if (this.isRunning) this.logger?.warn("Trying to stop executor...");
+    this.end().catch((e) => this.logger?.error(e));
   }
 
   private installSignalHandlers() {
@@ -579,7 +575,7 @@ export class TaskExecutor {
             : proposalsCount.initial === proposalsCount.rejected
               ? "All off proposals got rejected."
               : "Check your proposal filters if they are not too restrictive.";
-        this.logCriticalError(
+        this.handleCriticalError(
           new Error(
             `Could not start any work on Golem. Processed ${proposalsCount.initial} initial proposals from yagna, filters accepted ${proposalsCount.confirmed}. ${hint}`,
           ),
