@@ -27,7 +27,7 @@ export default [
       format: "es",
     },
     plugins: [
-      ignore(["tmp", "pino", "node:readline/promises"]),
+      ignore(["tmp", "pino", "eventsource"]),
       alias({
         entries: [
           { find: "stream", replacement: "stream-browserify" },
@@ -36,7 +36,6 @@ export default [
           { find: /RedisConnection/, replacement: "tests/mock/utils/empty_default.js" },
           { find: /src\/api\/provider-api$/, replacement: "." },
           { find: /\.\/gftp.js/, replacement: "tests/mock/utils/empty.js" },
-          { find: /worker-node/, replacement: "tests/mock/utils/empty.js" },
           { find: /GftpStorageProvider/, replacement: "tests/mock/utils/empty.js" },
         ],
       }),

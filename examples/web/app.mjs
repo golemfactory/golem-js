@@ -41,12 +41,6 @@ const server = http.createServer((req, res) => {
   } else if (req.url === "/golem-js.min.js") {
     res.writeHead(200, { "content-type": "text/javascript" });
     fs.createReadStream(`${__dirname}/../../dist/golem-js.min.js`).pipe(res);
-  } else if (req.url === "/worker.js") {
-    res.writeHead(200, { "content-type": "text/javascript" });
-    fs.createReadStream(`${__dirname}/worker.js`).pipe(res);
-  } else if (req.url === "/worker-fib.js") {
-    res.writeHead(200, { "content-type": "text/javascript" });
-    fs.createReadStream(`${__dirname}/worker-fib.js`).pipe(res);
   } else if (req.url === "/css/main.css") {
     res.writeHead(200, { "content-type": "text/css" });
     fs.createReadStream(`${__dirname}/css/main.css`).pipe(res);

@@ -548,8 +548,8 @@ export class TaskExecutor {
           proposalsCount.initial === 0 && proposalsCount.confirmed === 0
             ? "Check your demand if it's not too restrictive or restart yagna."
             : proposalsCount.initial === proposalsCount.rejected
-            ? "All off proposals got rejected."
-            : "Check your proposal filters if they are not too restrictive.";
+              ? "All off proposals got rejected."
+              : "Check your proposal filters if they are not too restrictive.";
         this.handleCriticalError(
           new Error(
             `Could not start any work on Golem. Processed ${proposalsCount.initial} initial proposals from yagna, filters accepted ${proposalsCount.confirmed}. ${hint}`,

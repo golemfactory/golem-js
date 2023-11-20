@@ -336,8 +336,8 @@ export class Activity {
             ? ResultState.Ok
             : ResultState.Error
           : event?.kind?.stderr
-          ? ResultState.Error
-          : ResultState.Ok,
+            ? ResultState.Error
+            : ResultState.Ok,
         stdout: event?.kind?.stdout,
         stderr: event?.kind?.stderr,
         message: event?.kind?.finished?.message,
