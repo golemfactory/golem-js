@@ -26,7 +26,7 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
       console.log(result.stdout);
     });
   } catch (err) {
-    // Handle errors here
+    console.error(err);
   } finally {
     await executor.end();
   }
