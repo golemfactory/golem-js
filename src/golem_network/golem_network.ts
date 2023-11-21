@@ -77,7 +77,7 @@ export class GolemNetwork {
       ...(this.config.demand ?? {}),
     });
     if (this.config.beforeEachJob) {
-      this.executor.beforeEach(this.config.beforeEachJob);
+      this.executor.onActivityReady(this.config.beforeEachJob);
     }
   }
 

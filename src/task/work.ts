@@ -35,7 +35,7 @@ export interface WorkOptions {
   storageProvider?: StorageProvider;
   networkNode?: NetworkNode;
   logger?: Logger;
-  initWorker?: Worker<undefined>;
+  activityReadySetupFunctions?: Worker[];
 }
 
 export interface CommandOptions {
@@ -75,7 +75,7 @@ export class WorkContext {
   async before(): Promise<Result[] | void> {
     let state = await this.activity.getState().catch((e) => this.logger.debug(e));
     if (state === ActivityStateEnum.Ready) {
-      if (this.options?.initWorker) await this.options?.initWorker(this, undefined);
+      await this.setupActivity();
       return;
     }
     if (state === ActivityStateEnum.Initialized) {
@@ -106,7 +106,16 @@ export class WorkContext {
     if (state !== ActivityStateEnum.Ready) {
       throw new Error(`Activity ${this.activity.id} cannot reach the Ready state. Current state: ${state}`);
     }
-    if (this.options?.initWorker) await this.options?.initWorker(this, undefined);
+    await this.setupActivity();
+  }
+
+  private async setupActivity() {
+    if (!this.options?.activityReadySetupFunctions) {
+      return;
+    }
+    for (const setupFunction of this.options.activityReadySetupFunctions) {
+      await setupFunction(this, undefined);
+    }
   }
 
   /**

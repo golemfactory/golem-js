@@ -116,7 +116,7 @@ export class TaskExecutor {
   private paymentService: PaymentService;
   private networkService?: NetworkService;
   private statsService: StatsService;
-  private initWorker?: Worker<unknown, unknown>;
+  private activityReadySetupFunctions: Worker[] = [];
   private taskQueue: TaskQueue<Task<unknown, unknown>>;
   private storageProvider?: StorageProvider;
   private logger?: Logger;
@@ -331,6 +331,9 @@ export class TaskExecutor {
   }
 
   /**
+   * @deprecated
+   * Use {@link TaskExecutor.onActivityReady} instead.
+   *
    * Define worker function that will be runs before every each computation Task, within the same activity.
    *
    * @param worker worker function - task
@@ -350,7 +353,32 @@ export class TaskExecutor {
    * ```
    */
   beforeEach(worker: Worker) {
-    this.initWorker = worker;
+    this.activityReadySetupFunctions = [worker];
+  }
+
+  /**
+   * Registers a worker function that will be run when an activity is ready.
+   * This is the perfect place to run setup functions that need to be run only once per
+   * activity, for example uploading files that will be used by all tasks in the activity.
+   * This function can be called multiple times, each worker will be run in the order
+   * they were registered.
+   *
+   * @param worker worker function that will be run when an activity is ready
+   * @example
+   * ```ts
+   * const uploadFile1 = async (ctx) => ctx.uploadFile("./file1.txt", "/file1.txt");
+   * const uploadFile2 = async (ctx) => ctx.uploadFile("./file2.txt", "/file2.txt");
+   *
+   * executor.onActivityReady(uploadFile1);
+   * executor.onActivityReady(uploadFile2);
+   *
+   * await executor.run(async (ctx) => {
+   *  await ctx.run("cat /file1.txt /file2.txt");
+   * });
+   * ```
+   */
+  onActivityReady(worker: Worker) {
+    this.activityReadySetupFunctions.push(worker);
   }
 
   /**
@@ -391,9 +419,10 @@ export class TaskExecutor {
     data?: InputType,
     options?: TaskOptions,
   ): Promise<OutputType | undefined> {
-    const task = new Task<InputType, OutputType>((++this.lastTaskIndex).toString(), worker, data, this.initWorker, {
+    const task = new Task<InputType, OutputType>((++this.lastTaskIndex).toString(), worker, data, {
       maxRetries: options?.maxRetries ?? this.options.maxTaskRetries,
       timeout: options?.timeout ?? this.options.taskTimeout,
+      activityReadySetupFunctions: this.activityReadySetupFunctions,
     });
     this.taskQueue.addToEnd(task as Task<unknown, unknown>);
     while (this.isRunning) {
@@ -431,9 +460,10 @@ export class TaskExecutor {
     const job = new Job<OutputType>(jobId, this.options.jobStorage);
     await job.saveInitialState();
 
-    const task = new Task(jobId, worker, undefined, this.initWorker, {
+    const task = new Task(jobId, worker, undefined, {
       maxRetries: this.options.maxTaskRetries,
       timeout: this.options.taskTimeout,
+      activityReadySetupFunctions: this.activityReadySetupFunctions,
     });
     task.onStateChange((taskState) => {
       job.saveState(taskState, task.getResults(), task.getError());

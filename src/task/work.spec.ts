@@ -241,4 +241,22 @@ describe("Work Context", () => {
       expect(spy).toHaveBeenCalledWith(context["activity"], context["storageProvider"], context["logger"]);
     });
   });
+
+  describe("setupActivity()", () => {
+    it("should call all setup functions in the order they were registered", async () => {
+      const calls: string[] = [];
+      const activityReadySetupFunctions = [
+        async () => calls.push("1"),
+        async () => calls.push("2"),
+        async () => calls.push("3"),
+      ];
+      context = new WorkContext(activity, {
+        logger: logger,
+        activityReadySetupFunctions,
+      });
+
+      await context["setupActivity"]();
+      expect(calls).toEqual(["1", "2", "3"]);
+    });
+  });
 });
