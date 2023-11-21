@@ -19,9 +19,8 @@ const blackListProvidersIds = [
 
   try {
     await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
-  } catch (err) {
-    console.error("Task execution failed:", err);
-    console.error(err);
+  } catch (error) {
+    console.error("Computation failed:", error);
   } finally {
     await executor.end();
   }

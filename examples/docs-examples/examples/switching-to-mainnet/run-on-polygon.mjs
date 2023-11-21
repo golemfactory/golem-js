@@ -11,8 +11,7 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
     const result = await executor.run(async (ctx) => (await ctx.run("node -v")).stdout);
     console.log("Task result:", result);
   } catch (err) {
-    console.error("An error occurred:", err);
-    console.error(err);
+    console.error("Computation failed:", error);
   } finally {
     await executor.end();
   }

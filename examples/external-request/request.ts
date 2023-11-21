@@ -25,8 +25,8 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
       );
       console.log(result.stdout);
     });
-  } catch (err) {
-    console.error(err);
+  } catch (error) {
+    console.error("Computation failed:", error);
   } finally {
     await executor.end();
   }

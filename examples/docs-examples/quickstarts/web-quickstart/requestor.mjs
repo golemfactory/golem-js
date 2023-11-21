@@ -33,8 +33,8 @@ async function run() {
 
   try {
     await executor.run(async (ctx) => appendResults((await ctx.run("echo 'Hello World'")).stdout));
-  } catch (e) {
-    logger.error(e);
+  } catch (error) {
+    logger.error("Computation failed:", error);
   } finally {
     await executor.end();
   }

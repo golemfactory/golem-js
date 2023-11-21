@@ -15,8 +15,8 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
       return await ctx.run("cat /golem/work/input.json");
     });
     console.log(output.stdout);
-  } catch (err) {
-    console.error(err);
+  } catch (error) {
+    console.error("Computation failed:", error);
   } finally {
     await executor.end();
   }

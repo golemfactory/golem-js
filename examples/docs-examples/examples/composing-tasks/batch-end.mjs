@@ -20,8 +20,8 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
     });
 
     console.log(result);
-  } catch (err) {
-    console.error(err);
+  } catch (error) {
+    console.error("Computation failed:", error);
   } finally {
     await executor.end();
   }

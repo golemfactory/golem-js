@@ -51,8 +51,8 @@ async function main(subnetTag: string, driver?: string, network?: string, debug?
     );
     const results = await Promise.all(futureResults);
     results.forEach((result) => console.log(result));
-  } catch (err) {
-    console.error(err);
+  } catch (error) {
+    console.error("Computation failed:", error);
   } finally {
     await executor.end();
   }
