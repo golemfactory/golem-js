@@ -34,7 +34,7 @@ export class TaskService {
 
   constructor(
     private yagnaApi: YagnaApi,
-    private tasksQueue: TaskQueue<Task<unknown, unknown>>,
+    private tasksQueue: TaskQueue<Task>,
     private agreementPoolService: AgreementPoolService,
     private paymentService: PaymentService,
     private networkService?: NetworkService,
@@ -72,7 +72,7 @@ export class TaskService {
 
   private async startTask(task: Task) {
     task.start();
-    this.logger?.debug(`Starting task. ID: ${task.id}, Data: ${task.getData()}`);
+    this.logger?.debug(`Starting task. ID: ${task.id}`);
     ++this.activeTasksCount;
 
     const agreement = await this.agreementPoolService.getAgreement();
@@ -89,17 +89,12 @@ export class TaskService {
         }),
       );
 
-      this.logger?.info(
-        `Task ${task.id} sent to provider ${agreement.provider.name}.${
-          task.getData() ? " Data: " + task.getData() : ""
-        }`,
-      );
+      this.logger?.info(`Task ${task.id} sent to provider ${agreement.provider.name}.`);
 
       this.paymentService.acceptDebitNotes(agreement.id);
       this.paymentService.acceptPayments(agreement);
       const activityReadySetupFunctions = task.getActivityReadySetupFunctions();
       const worker = task.getWorker();
-      const data = task.getData();
       const networkNode = await this.networkService?.addNode(agreement.provider.id);
       const ctx = new WorkContext(activity, {
         activityReadySetupFunctions: this.activitySetupDone.has(activity.id) ? [] : activityReadySetupFunctions,
@@ -115,14 +110,10 @@ export class TaskService {
         this.activitySetupDone.add(activity.id);
         this.logger?.debug(`Activity setup completed in activity ${activity.id}`);
       }
-      const results = await worker(ctx, data);
+      const results = await worker(ctx);
       task.stop(results);
       this.options.eventTarget?.dispatchEvent(new Events.TaskFinished({ id: task.id }));
-      this.logger?.info(
-        `Task ${task.id} computed by provider ${agreement.provider.name}.${
-          task.getData() ? " Data: " + task.getData() : ""
-        }`,
-      );
+      this.logger?.info(`Task ${task.id} computed by provider ${agreement.provider.name}.`);
     } catch (error) {
       task.stop(undefined, error);
       const reason = error?.response?.data?.message || error.message || error.toString();

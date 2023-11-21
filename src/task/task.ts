@@ -28,7 +28,7 @@ const DEFAULTS = {
  *
  * @description Represents one computation unit that will be run on the one provider machine (e.g. rendering of one frame of an animation).
  */
-export class Task<InputType = unknown, OutputType = unknown> implements QueueableTask {
+export class Task<OutputType = unknown> implements QueueableTask {
   private state = TaskState.New;
   private results?: OutputType;
   private error?: Error;
@@ -41,8 +41,7 @@ export class Task<InputType = unknown, OutputType = unknown> implements Queueabl
 
   constructor(
     public readonly id: string,
-    private worker: Worker<InputType, OutputType>,
-    private data?: InputType,
+    private worker: Worker<OutputType>,
     options?: TaskOptions,
   ) {
     this.timeout = options?.timeout ?? DEFAULTS.TIMEOUT;
@@ -99,10 +98,7 @@ export class Task<InputType = unknown, OutputType = unknown> implements Queueabl
   getResults(): OutputType | undefined {
     return this.results;
   }
-  getData(): InputType | undefined {
-    return this.data;
-  }
-  getWorker(): Worker<InputType> {
+  getWorker(): Worker<OutputType> {
     return this.worker;
   }
   getActivityReadySetupFunctions(): Worker[] {
