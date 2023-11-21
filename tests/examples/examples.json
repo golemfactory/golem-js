@@ -17,7 +17,7 @@
   { "cmd": "ts-node", "path": "examples/docs-examples/examples/composing-tasks/single-command.ts" },
   { "cmd": "ts-node", "path": "examples/docs-examples/examples/composing-tasks/alert-code.mjs" },
 
-  { "cmd": "node", "path": "examples/docs-examples/examples/executing-tasks/before-each.mjs" },
+  { "cmd": "node", "path": "examples/docs-examples/examples/executing-tasks/on-activity-ready.mjs" },
   { "cmd": "node", "path": "examples/docs-examples/examples/executing-tasks/foreach.mjs" },
   { "cmd": "node", "path": "examples/docs-examples/examples/executing-tasks/map.mjs" },
   { "cmd": "node", "path": "examples/docs-examples/examples/executing-tasks/max-parallel-tasks.mjs" },
