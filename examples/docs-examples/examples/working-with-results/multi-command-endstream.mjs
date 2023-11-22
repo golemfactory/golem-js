@@ -19,7 +19,9 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
       return new Promise((resolve) => {
         res.on("data", (result) => console.log(result));
         res.on("error", (error) => console.error(error));
-        res.once("close", resolve);
+        res.once("close", () => {
+          executor.end().then(resolve);
+        });
       });
     });
   } catch (err) {
