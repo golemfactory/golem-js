@@ -98,7 +98,7 @@ export class GolemNetwork {
    * console.log(status);
    * ```
    */
-  public async createJob<Output = unknown>(worker: Worker<Output>) {
+  public async createJob<Output>(worker: Worker<Output>) {
     return this.executor.createJob(worker);
   }
 
@@ -113,7 +113,7 @@ export class GolemNetwork {
    * @param worker Worker function to run
    * @returns Worker function result
    */
-  public async runTask<Output = unknown>(worker: Worker<Output>) {
+  public async runTask<Output>(worker: Worker<Output>) {
     return this.executor.run<Output>(worker);
   }
 

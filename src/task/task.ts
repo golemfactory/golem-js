@@ -15,7 +15,7 @@ export type TaskOptions = {
   /** timeout in ms for task execution, including retries, default = 300_000 (5min) */
   timeout?: number;
   /** array of setup functions to run on each activity */
-  activityReadySetupFunctions?: Worker[];
+  activityReadySetupFunctions?: Worker<unknown>[];
 };
 
 const DEFAULTS = {
@@ -37,7 +37,7 @@ export class Task<OutputType = unknown> implements QueueableTask {
   private timeoutId?: NodeJS.Timeout;
   private readonly timeout: number;
   private readonly maxRetries: number;
-  private readonly activityReadySetupFunctions: Worker[];
+  private readonly activityReadySetupFunctions: Worker<unknown>[];
 
   constructor(
     public readonly id: string,
@@ -101,7 +101,7 @@ export class Task<OutputType = unknown> implements QueueableTask {
   getWorker(): Worker<OutputType> {
     return this.worker;
   }
-  getActivityReadySetupFunctions(): Worker[] {
+  getActivityReadySetupFunctions(): Worker<unknown>[] {
     return this.activityReadySetupFunctions;
   }
   getRetriesCount(): number {

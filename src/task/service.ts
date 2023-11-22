@@ -34,7 +34,7 @@ export class TaskService {
 
   constructor(
     private yagnaApi: YagnaApi,
-    private tasksQueue: TaskQueue<Task>,
+    private tasksQueue: TaskQueue,
     private agreementPoolService: AgreementPoolService,
     private paymentService: PaymentService,
     private networkService?: NetworkService,
