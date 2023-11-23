@@ -64,14 +64,21 @@ export type ExecutorOptions = {
    */
   skipProcessSignals?: boolean;
   /**
-   * Timeout for waiting for at least one offer from the market.
-   * This parameter (set to 30 sec by default) will throw an error when executing `TaskExecutor.run`
-   * if no offer from the market is accepted before this time.
+   * Timeout for waiting for at least one offer from the market expressed in milliseconds.
+   * This parameter (set to 90 sec by default) will issue a warning when executing `TaskExecutor.run`
+   * if no offer from the market is accepted before this time. If you'd like to change this behavior,
+   * and throw an error instead, set `exitOnNoProposals` to `true`.
    * You can set a slightly higher time in a situation where your parameters such as proposalFilter
    * or minimum hardware requirements are quite restrictive and finding a suitable provider
    * that meets these criteria may take a bit longer.
    */
   startupTimeout?: number;
+  /**
+   * If set to `true`, the executor will exit with an error when no proposals are accepted.
+   * You can customize how long the executor will wait for proposals using the `startupTimeout` parameter.
+   * Default is `false`.
+   */
+  exitOnNoProposals?: boolean;
 } & Omit<PackageOptions, "imageHash" | "imageTag"> &
   MarketOptions &
   TaskServiceOptions &
@@ -575,11 +582,12 @@ export class TaskExecutor {
             : proposalsCount.initial === proposalsCount.rejected
               ? "All off proposals got rejected."
               : "Check your proposal filters if they are not too restrictive.";
-        this.handleCriticalError(
-          new Error(
-            `Could not start any work on Golem. Processed ${proposalsCount.initial} initial proposals from yagna, filters accepted ${proposalsCount.confirmed}. ${hint}`,
-          ),
-        );
+        const errorMessage = `Could not start any work on Golem. Processed ${proposalsCount.initial} initial proposals from yagna, filters accepted ${proposalsCount.confirmed}. ${hint}`;
+        if (this.options.exitOnNoProposals) {
+          this.handleCriticalError(new Error(errorMessage));
+        } else {
+          this.logger?.warn(errorMessage);
+        }
       }
     }, this.options.startupTimeout);
   }
