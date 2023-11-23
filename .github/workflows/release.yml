@@ -15,19 +15,19 @@ on:
   workflow_dispatch:
     inputs:
       provider_version:
-        description: "Provider version"
+        description: "Provider version (e.g., v0.12.3 or pre-rel-v0.13.1)"
         required: false
         default: "v0.12.3"
       requestor_version:
-        description: "Requestor version"
+        description: "Requestor version (e.g., v0.12.3 or pre-rel-v0.13.1)"
         required: false
         default: "v0.12.3"
       provider_wasi_version:
-        description: "Provider WASI version"
+        description: "Provider WASI version (e.g., v0.2.2)"
         required: false
         default: "v0.2.2"
       provider_vm_version:
-        description: "Provider VM version"
+        description: "Provider VM version (e.g., v0.3.0)"
         required: false
         default: "v0.3.0"
 
