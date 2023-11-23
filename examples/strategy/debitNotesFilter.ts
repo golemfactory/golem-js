@@ -9,6 +9,12 @@ import { TaskExecutor, PaymentFilters } from "@golem-sdk/golem-js";
     package: "golem/alpine:latest",
     debitNotesFilter: PaymentFilters.acceptMaxAmountDebitNoteFilter(0.00001),
   });
-  await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
-  await executor.end();
+
+  try {
+    await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
+  } catch (err) {
+    console.error("Task execution failed:", err);
+  } finally {
+    await executor.end();
+  }
 })();
