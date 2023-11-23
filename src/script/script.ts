@@ -6,14 +6,16 @@ import { Result } from "../activity";
  * @hidden
  */
 export class Script {
+  constructor(private commands: Command[] = []) {}
+
   static create(commands?: Command[]): Script {
     return new Script(commands);
   }
 
-  constructor(private commands: Command[] = []) {}
   add(command: Command) {
     this.commands.push(command);
   }
+
   async before() {
     await Promise.all(this.commands.map((cmd) => cmd.before()));
   }

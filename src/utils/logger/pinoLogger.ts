@@ -10,7 +10,6 @@ export function pinoLogger(optionsOrStream?: pino.LoggerOptions | pino.Destinati
     log: (msg) => logger.info(msg),
     warn: (msg) => logger.warn(msg),
     error: (msg) => logger.error(msg),
-    table: (object) => console.table(object),
     setLevel: function (level: string) {
       logger.level = level;
       this.level = level as LogLevel;

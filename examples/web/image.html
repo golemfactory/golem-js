@@ -104,7 +104,6 @@
         debug: (msg) => appendLog(`[${new Date().toISOString()}] [debug] ${msg}`),
         error: (msg) => appendLog(`[${new Date().toISOString()}] [error] ${msg}`),
         info: (msg) => appendLog(`[${new Date().toISOString()}] [info] ${msg}`),
-        table: (msg) => appendLog(JSON.stringify(msg, null, "\t")),
       };
 
       async function run() {
@@ -141,7 +140,7 @@
           })
           .catch((e) => logger.error(e));
 
-        await executor.end();
+        await executor.shutdown();
         if (result?.data) setResponse(result.data);
       }
       window.run = run;

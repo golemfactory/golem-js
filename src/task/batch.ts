@@ -1,8 +1,8 @@
 import { DownloadFile, Run, Script, Transfer, UploadFile } from "../script";
 import { Activity, Result } from "../activity";
 import { StorageProvider } from "../storage/provider";
-import { Logger, sleep } from "../utils";
-import { Readable, Transform, pipeline } from "stream";
+import { Logger } from "../utils";
+import { pipeline, Readable, Transform } from "stream";
 import { UploadData } from "../script/command";
 
 export class Batch {
@@ -72,40 +72,49 @@ export class Batch {
 
   /**
    * Executes the batch of commands added via {@link run} returning result for each of the steps.
-   *
-   * In case any of the commands will fail, the execution of the batch will be interrupted by the Provider.
    */
   async end(): Promise<Result[]> {
     await this.script.before();
-    await sleep(100, true);
-    let results: Readable;
+
     try {
-      results = await this.activity.execute(this.script.getExeScriptRequest());
+      const allResults: Result[] = [];
+      const script = this.script.getExeScriptRequest();
+
+      this.logger?.debug(`Sending exec script request to the exe-unit on provider: ${JSON.stringify(script)}`);
+      const results = await this.activity.execute(script);
+
+      return new Promise((resolve, reject) => {
+        this.logger?.debug("Reading the results of the batch script");
+
+        results.on("data", (res) => {
+          this.logger?.debug(`Received data for batch script execution ${JSON.stringify(res)}`);
+
+          allResults.push(res);
+        });
+
+        results.on("end", () => {
+          this.logger?.debug("End of batch script execution");
+          this.script
+            .after(allResults)
+            .then((results) => resolve(results))
+            .catch((error) => reject(error));
+        });
+
+        results.on("error", (error) => {
+          this.logger?.debug("Error in batch script execution");
+          this.script
+            .after(allResults)
+            .then(() => reject(error))
+            .catch(() => reject(error)); // Return original error, as it might be more important.
+        });
+      });
     } catch (error) {
-      // the original error is more important than the one from after()
-      await this.script.after([]).catch();
+      this.logger?.error(`Failed to send the exec script to the exe-unit on provider: ${error.toString()}`);
+      // NOTE: This is called only to ensure that each of the commands in the original script will be populated with at least `EmptyErrorResult`.
+      // That's actually a FIXME, as the command could start with an empty result, which eventually will get replaced with an actual one.
+      await this.script.after([]);
       throw error;
     }
-    const allResults: Result[] = [];
-    return new Promise((resolve, reject) => {
-      results.on("data", (res) => {
-        allResults.push(res);
-      });
-
-      results.on("end", () => {
-        this.script
-          .after(allResults)
-          .then((results) => resolve(results))
-          .catch((error) => reject(error));
-      });
-
-      results.on("error", (error) => {
-        this.script
-          .after(allResults)
-          .then(() => reject(error))
-          .catch(() => reject(error)); // Return original error, as it might be more important.
-      });
-    });
   }
 
   async endStream(): Promise<Readable> {
@@ -116,7 +125,7 @@ export class Batch {
       results = await this.activity.execute(this.script.getExeScriptRequest());
     } catch (error) {
       // the original error is more important than the one from after()
-      await script.after([]).catch();
+      await script.after([]);
       throw error;
     }
     const decodedResults: Result[] = [];

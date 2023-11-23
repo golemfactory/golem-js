@@ -8,5 +8,5 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
     results.on("error", (error) => console.error(error.toString()));
     results.on("close", () => console.log("END"));
   });
-  await executor.end();
+  await executor.shutdown();
 })();
