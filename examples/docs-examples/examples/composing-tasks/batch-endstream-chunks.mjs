@@ -16,7 +16,11 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
         .downloadFile("/golem/input/output.txt", "./output.txt")
         .endStream();
 
-      res.on("data", (data) => (data.index == 2 ? console.log(data.stdout) : ""));
+      return new Promise((resolve) => {
+        res.on("data", (result) => console.log(result));
+        res.on("error", (error) => console.error(error));
+        res.once("close", resolve);
+      });
     });
   } catch (error) {
     console.error("Computation failed:", error);
