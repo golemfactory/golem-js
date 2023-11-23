@@ -15,7 +15,7 @@ export type TaskOptions = {
   /** timeout in ms for task execution, including retries, default = 300_000 (5min) */
   timeout?: number;
   /** array of setup functions to run on each activity */
-  activityReadySetupFunctions?: Worker[];
+  activityReadySetupFunctions?: Worker<unknown>[];
 };
 
 const DEFAULTS = {
@@ -28,7 +28,7 @@ const DEFAULTS = {
  *
  * @description Represents one computation unit that will be run on the one provider machine (e.g. rendering of one frame of an animation).
  */
-export class Task<InputType = unknown, OutputType = unknown> implements QueueableTask {
+export class Task<OutputType = unknown> implements QueueableTask {
   private state = TaskState.New;
   private results?: OutputType;
   private error?: Error;
@@ -37,12 +37,11 @@ export class Task<InputType = unknown, OutputType = unknown> implements Queueabl
   private timeoutId?: NodeJS.Timeout;
   private readonly timeout: number;
   private readonly maxRetries: number;
-  private readonly activityReadySetupFunctions: Worker[];
+  private readonly activityReadySetupFunctions: Worker<unknown>[];
 
   constructor(
     public readonly id: string,
-    private worker: Worker<InputType, OutputType>,
-    private data?: InputType,
+    private worker: Worker<OutputType>,
     options?: TaskOptions,
   ) {
     this.timeout = options?.timeout ?? DEFAULTS.TIMEOUT;
@@ -99,13 +98,10 @@ export class Task<InputType = unknown, OutputType = unknown> implements Queueabl
   getResults(): OutputType | undefined {
     return this.results;
   }
-  getData(): InputType | undefined {
-    return this.data;
-  }
-  getWorker(): Worker<InputType> {
+  getWorker(): Worker<OutputType> {
     return this.worker;
   }
-  getActivityReadySetupFunctions(): Worker[] {
+  getActivityReadySetupFunctions(): Worker<unknown>[] {
     return this.activityReadySetupFunctions;
   }
   getRetriesCount(): number {

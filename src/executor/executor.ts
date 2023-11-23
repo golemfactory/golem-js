@@ -4,7 +4,6 @@ import { AgreementPoolService } from "../agreement";
 import { Task, TaskQueue, TaskService, Worker, TaskOptions } from "../task";
 import { PaymentService, PaymentOptions } from "../payment";
 import { NetworkService } from "../network";
-import { Result } from "../activity";
 import { sleep, Logger, LogLevel, runtimeContextChecker, Yagna } from "../utils";
 import { StorageProvider, GftpStorageProvider, NullStorageProvider, WebSocketBrowserStorageProvider } from "../storage";
 import { ExecutorConfig } from "./config";
@@ -116,8 +115,8 @@ export class TaskExecutor {
   private paymentService: PaymentService;
   private networkService?: NetworkService;
   private statsService: StatsService;
-  private activityReadySetupFunctions: Worker[] = [];
-  private taskQueue: TaskQueue<Task<unknown, unknown>>;
+  private activityReadySetupFunctions: Worker<unknown>[] = [];
+  private taskQueue: TaskQueue;
   private storageProvider?: StorageProvider;
   private logger?: Logger;
   private lastTaskIndex = 0;
@@ -188,7 +187,7 @@ export class TaskExecutor {
     this.logger = this.options.logger;
     this.yagna = new Yagna(this.configOptions.yagnaOptions);
     const yagnaApi = this.yagna.getApi();
-    this.taskQueue = new TaskQueue<Task<unknown, unknown>>();
+    this.taskQueue = new TaskQueue();
     this.agreementPoolService = new AgreementPoolService(yagnaApi, this.options);
     this.paymentService = new PaymentService(yagnaApi, this.options);
     this.marketService = new MarketService(this.agreementPoolService, yagnaApi, this.options);
@@ -352,7 +351,7 @@ export class TaskExecutor {
    * });
    * ```
    */
-  beforeEach(worker: Worker) {
+  beforeEach(worker: Worker<unknown>) {
     this.activityReadySetupFunctions = [worker];
   }
 
@@ -377,7 +376,7 @@ export class TaskExecutor {
    * });
    * ```
    */
-  onActivityReady(worker: Worker) {
+  onActivityReady(worker: Worker<unknown>) {
     this.activityReadySetupFunctions.push(worker);
   }
 
@@ -392,11 +391,8 @@ export class TaskExecutor {
    * await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
    * ```
    */
-  async run<OutputType = Result>(
-    worker: Worker<undefined, OutputType>,
-    options?: TaskOptions,
-  ): Promise<OutputType | undefined> {
-    return this.executeTask<undefined, OutputType>(worker, undefined, options);
+  async run<OutputType>(worker: Worker<OutputType>, options?: TaskOptions): Promise<OutputType> {
+    return this.executeTask<OutputType>(worker, options);
   }
 
   private async createPackage(
@@ -414,24 +410,21 @@ export class TaskExecutor {
     return packageInstance;
   }
 
-  private async executeTask<InputType, OutputType>(
-    worker: Worker<InputType, OutputType>,
-    data?: InputType,
-    options?: TaskOptions,
-  ): Promise<OutputType | undefined> {
-    const task = new Task<InputType, OutputType>((++this.lastTaskIndex).toString(), worker, data, {
+  private async executeTask<OutputType>(worker: Worker<OutputType>, options?: TaskOptions): Promise<OutputType> {
+    const task = new Task((++this.lastTaskIndex).toString(), worker, {
       maxRetries: options?.maxRetries ?? this.options.maxTaskRetries,
       timeout: options?.timeout ?? this.options.taskTimeout,
       activityReadySetupFunctions: this.activityReadySetupFunctions,
     });
-    this.taskQueue.addToEnd(task as Task<unknown, unknown>);
+    this.taskQueue.addToEnd(task);
     while (this.isRunning) {
       if (task.isFinished()) {
         if (task.isRejected()) throw task.getError();
-        return task.getResults();
+        return task.getResults() as OutputType;
       }
       await sleep(2000, true);
     }
+    throw new Error("Task executor has been stopped");
   }
 
   /**
@@ -453,14 +446,12 @@ export class TaskExecutor {
    * const error = await job.fetchError();
    * ```
    */
-  public async createJob<InputType = unknown, OutputType = unknown>(
-    worker: Worker<InputType, OutputType>,
-  ): Promise<Job<OutputType>> {
+  public async createJob<OutputType>(worker: Worker<OutputType>): Promise<Job<OutputType>> {
     const jobId = v4();
     const job = new Job<OutputType>(jobId, this.options.jobStorage);
     await job.saveInitialState();
 
-    const task = new Task(jobId, worker, undefined, {
+    const task = new Task(jobId, worker, {
       maxRetries: this.options.maxTaskRetries,
       timeout: this.options.taskTimeout,
       activityReadySetupFunctions: this.activityReadySetupFunctions,
@@ -468,7 +459,7 @@ export class TaskExecutor {
     task.onStateChange((taskState) => {
       job.saveState(taskState, task.getResults(), task.getError());
     });
-    this.taskQueue.addToEnd(task as Task<unknown, unknown>);
+    this.taskQueue.addToEnd(task);
 
     return job;
   }
