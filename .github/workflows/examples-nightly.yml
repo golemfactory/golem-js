@@ -77,3 +77,4 @@ jobs:
       - name: Cleanup Docker
         if: always()
         run: docker ps -q | xargs -r docker kill && docker system prune -af
+run-name: "${{ github.workflow }} - Provider: ${{ github.event.inputs.provider_version }}, Requestor: ${{ github.event.inputs.requestor_version }}, WASI: ${{ github.event.inputs.provider_wasi_version }}, VM: ${{ github.event.inputs.provider_vm_version }}"
