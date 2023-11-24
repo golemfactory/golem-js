@@ -34,6 +34,11 @@ jobs:
         id: get-matrix
         run: echo "::set-output name=matrix::{\"include\":[{\"branch\":\"master\"}]}"
   goth-tests:
+    outputs:
+      provider_version: ${{ steps.set_outputs.outputs.provider_version }}
+      requestor_version: ${{ steps.set_outputs.outputs.requestor_version }}
+      provider_wasi_version: ${{ steps.set_outputs.outputs.provider_wasi_version }}
+      provider_vm_version: ${{ steps.set_outputs.outputs.provider_vm_version }}
     runs-on: goth2
     needs: prepare-matrix-master-only
     strategy:
@@ -77,4 +82,4 @@ jobs:
       - name: Cleanup Docker
         if: always()
         run: docker ps -q | xargs -r docker kill && docker system prune -af
-run-name: "${{ github.workflow }} - Provider: ${{ github.event.inputs.provider_version }}, Requestor: ${{ github.event.inputs.requestor_version }}, WASI: ${{ github.event.inputs.provider_wasi_version }}, VM: ${{ github.event.inputs.provider_vm_version }}"
+run-name: "${{ github.workflow }} - Requestor: ${{ github.event.inputs.requestor_version }}, Provider: ${{ github.event.inputs.provider_version }}, WASI: ${{ github.event.inputs.provider_wasi_version }}, VM: ${{ github.event.inputs.provider_vm_version }}"

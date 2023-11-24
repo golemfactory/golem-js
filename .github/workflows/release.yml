@@ -171,3 +171,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npx semantic-release
+run-name: "${{ github.workflow }} - Requestor: ${{ github.event.inputs.requestor_version }}, Provider: ${{ github.event.inputs.provider_version }}, WASI: ${{ github.event.inputs.provider_wasi_version }}, VM: ${{ github.event.inputs.provider_vm_version }}"

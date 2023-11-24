@@ -81,3 +81,4 @@ jobs:
           c=$(docker ps -q)
           [[ $c ]] && docker kill $c
           docker system prune -af
+run-name: "${{ github.workflow }} - Requestor: ${{ github.event.inputs.requestor_version }}, Provider: ${{ github.event.inputs.provider_version }}, WASI: ${{ github.event.inputs.provider_wasi_version }}, VM: ${{ github.event.inputs.provider_vm_version }}"
