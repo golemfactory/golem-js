@@ -16,6 +16,12 @@ const blackListProvidersIds = [
     package: "golem/alpine:latest",
     proposalFilter: ProposalFilters.blackListProposalIdsFilter(blackListProvidersIds),
   });
-  await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
-  await executor.shutdown();
+
+  try {
+    await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
+  } catch (error) {
+    console.error("Computation failed:", error);
+  } finally {
+    await executor.shutdown();
+  }
 })();

@@ -13,6 +13,23 @@ on:
 
   # Allows triggering the workflow manually
   workflow_dispatch:
+    inputs:
+      provider_version:
+        description: "Provider version (e.g., v0.12.3 or pre-rel-v0.13.1)"
+        required: false
+        default: "v0.12.3"
+      requestor_version:
+        description: "Requestor version (e.g., v0.12.3 or pre-rel-v0.13.1)"
+        required: false
+        default: "v0.12.3"
+      provider_wasi_version:
+        description: "Provider WASI version (e.g., v0.2.2)"
+        required: false
+        default: "v0.2.2"
+      provider_vm_version:
+        description: "Provider VM version (e.g., v0.3.0)"
+        required: false
+        default: "v0.3.0"
 
 # We're going to interact with GH from the pipelines, so we need to get some permissions
 permissions:
@@ -58,16 +75,32 @@ jobs:
         # Use a random string to avoid other providers on the same subnet which might cause tests to fail because it expects only providers named provider-1 and provider-2
         run: echo "YAGNA_SUBNET=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 8 ; echo '')" >> $GITHUB_ENV
 
+      - name: Set up Versions
+        run: |
+          echo "PROVIDER_VERSION=${{ github.event.inputs.provider_version }}" >> $GITHUB_ENV
+          echo "REQUESTOR_VERSION=${{ github.event.inputs.requestor_version }}" >> $GITHUB_ENV
+          echo "PROVIDER_WASI_VERSION=${{ github.event.inputs.provider_wasi_version }}" >> $GITHUB_ENV
+          echo "PROVIDER_VM_VERSION=${{ github.event.inputs.provider_vm_version }}" >> $GITHUB_ENV
+
       - name: Build the docker containers
-        run: docker compose -f tests/docker/docker-compose.yml build
+        run: |
+          docker compose -f tests/docker/docker-compose.yml build \
+            --build-arg UBUNTU_VERSION=22.04 \
+            --build-arg YA_CORE_PROVIDER_VERSION=${PROVIDER_VERSION} \
+            --build-arg YA_CORE_REQUESTOR_VERSION=${REQUESTOR_VERSION} \
+            --build-arg YA_WASI_VERSION=${PROVIDER_WASI_VERSION} \
+            --build-arg YA_VM_VERSION=${PROVIDER_VM_VERSION}
 
       - name: Start the docker containers
-        # Restart docker to avoid issues with the docker compose down due to improper cleanup of the previous run.
-        run: sudo service docker restart && docker compose -f tests/docker/docker-compose.yml down && docker compose -f tests/docker/docker-compose.yml up -d
+        run: |
+          sudo service docker restart
+          docker compose -f tests/docker/docker-compose.yml down
+          docker compose -f tests/docker/docker-compose.yml up -d
 
       - name: Fund the requestor
-        # Use a funding script which will retry funding the requestor 3 times, else it exits with error. The faucet is not reliable and sometimes fails to fund the requestor, thus the retry.
-        run: sleep 4 && docker exec -t docker-requestor-1 /bin/sh -c "/golem-js/tests/docker/fundRequestor.sh"
+        run: |
+          sleep 10
+          docker exec -t docker-requestor-1 /bin/sh -c "/golem-js/tests/docker/fundRequestor.sh"
 
       - name: Install and build the SDK in the docker container
         run: |
@@ -99,7 +132,8 @@ jobs:
       - name: Cleanup Docker
         if: always()
         run: |
-          c=$(docker ps -q) && [[ $c ]] && docker kill $c
+          c=$(docker ps -q)
+          [[ $c ]] && docker kill $c
           docker system prune -af
 
   release:
