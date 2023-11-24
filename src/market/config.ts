@@ -6,11 +6,11 @@ import { acceptAllProposalFilter } from "./strategy";
 
 const DEFAULTS = {
   subnetTag: "public",
-  marketTimeout: 1000 * 60 * 3, // 3 min,
   maxOfferEvents: 10,
-  offerFetchingInterval: 20000,
-  marketOfferExpiration: 1000 * 60 * 30, // 30 min
-  debitNotesAcceptanceTimeout: 30,
+  offerFetchingIntervalSec: 20,
+  expirationSec: 30 * 60, // 30 min
+  debitNotesAcceptanceTimeoutSec: 2 * 60, // 2 minutes
+  midAgreementPaymentTimeoutSec: 12 * 60 * 60, // 12 hours
   proposalFilter: acceptAllProposalFilter(),
 };
 
@@ -19,22 +19,46 @@ const DEFAULTS = {
  */
 export class DemandConfig {
   public readonly yagnaOptions?: YagnaOptions;
-  public readonly timeout: number;
-  public readonly expiration: number;
+  public readonly expirationSec: number;
   public readonly subnetTag: string;
   public readonly maxOfferEvents: number;
-  public readonly offerFetchingInterval: number;
+  public readonly offerFetchingIntervalSec: number;
   public readonly logger?: Logger;
   public readonly eventTarget?: EventTarget;
+  public readonly debitNotesAcceptanceTimeoutSec: number;
+  public readonly midAgreementPaymentTimeoutSec: number;
 
   constructor(options?: DemandOptions) {
-    this.subnetTag = options?.subnetTag || EnvUtils.getYagnaSubnet() || DEFAULTS.subnetTag;
-    this.timeout = options?.marketTimeout || DEFAULTS.marketTimeout;
-    this.expiration = options?.marketOfferExpiration || DEFAULTS.marketOfferExpiration;
-    this.offerFetchingInterval = options?.offerFetchingInterval || DEFAULTS.offerFetchingInterval;
     this.logger = options?.logger;
-    this.maxOfferEvents = options?.maxOfferEvents || DEFAULTS.maxOfferEvents;
     this.eventTarget = options?.eventTarget;
+
+    this.subnetTag = options?.subnetTag || EnvUtils.getYagnaSubnet() || DEFAULTS.subnetTag;
+    this.offerFetchingIntervalSec = options?.offerFetchingIntervalSec ?? DEFAULTS.offerFetchingIntervalSec;
+    this.maxOfferEvents = options?.maxOfferEvents ?? DEFAULTS.maxOfferEvents;
+
+    this.expirationSec = options?.expirationSec ?? DEFAULTS.expirationSec;
+
+    if (!this.isPositiveInt(this.expirationSec)) {
+      throw new Error("The demand expiration time has to be a positive integer");
+    }
+
+    this.debitNotesAcceptanceTimeoutSec =
+      options?.debitNotesAcceptanceTimeoutSec ?? DEFAULTS.debitNotesAcceptanceTimeoutSec;
+
+    if (!this.isPositiveInt(this.debitNotesAcceptanceTimeoutSec)) {
+      throw new Error("The debit note acceptance timeout time has to be a positive integer");
+    }
+
+    this.midAgreementPaymentTimeoutSec =
+      options?.midAgreementPaymentTimeoutSec ?? DEFAULTS.midAgreementPaymentTimeoutSec;
+
+    if (!this.isPositiveInt(this.midAgreementPaymentTimeoutSec)) {
+      throw new Error("The mid-agreement payment timeout time has to be a positive integer");
+    }
+  }
+
+  private isPositiveInt(value: number) {
+    return value > 0 && Number.isInteger(value);
   }
 }
 
@@ -42,11 +66,15 @@ export class DemandConfig {
  * @internal
  */
 export class MarketConfig extends DemandConfig {
-  readonly debitNotesAcceptanceTimeout: number;
+  readonly debitNotesAcceptanceTimeoutSec: number;
   public readonly proposalFilter: ProposalFilter;
+
   constructor(options?: MarketOptions) {
     super(options);
-    this.debitNotesAcceptanceTimeout = options?.debitNotesAcceptanceTimeout || DEFAULTS.debitNotesAcceptanceTimeout;
+
+    this.debitNotesAcceptanceTimeoutSec =
+      options?.debitNotesAcceptanceTimeoutSec ?? DEFAULTS.debitNotesAcceptanceTimeoutSec;
+
     this.proposalFilter = options?.proposalFilter ?? DEFAULTS.proposalFilter;
   }
 }
