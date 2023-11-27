@@ -6,17 +6,25 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
     yagnaOptions: { apiKey: "try_golem" },
   });
 
-  const result = await executor.run(async (ctx) => {
-    const res = await ctx
-      .beginBatch()
-      .uploadFile("./worker.mjs", "/golem/input/worker.mjs")
-      .run("node /golem/input/worker.mjs > /golem/input/output.txt")
-      .run("cat /golem/input/output.txt")
-      .downloadFile("/golem/input/output.txt", "./output.txt")
-      .endStream();
+  try {
+    const result = await executor.run(async (ctx) => {
+      const res = await ctx
+        .beginBatch()
+        .uploadFile("./worker.mjs", "/golem/input/worker.mjs")
+        .run("node /golem/input/worker.mjs > /golem/input/output.txt")
+        .run("cat /golem/input/output.txt")
+        .downloadFile("/golem/input/output.txt", "./output.txt")
+        .endStream();
 
-    res.on("data", (data) => (data.index == 2 ? console.log(data.stdout) : ""));
-    res.on("error", (error) => console.error(error));
-    res.on("close", () => executor.shutdown());
-  });
+      return new Promise((resolve) => {
+        res.on("data", (result) => console.log(result));
+        res.on("error", (error) => console.error(error));
+        res.once("close", resolve);
+      });
+    });
+  } catch (error) {
+    console.error("Computation failed:", error);
+  } finally {
+    await executor.shutdown();
+  }
 })();

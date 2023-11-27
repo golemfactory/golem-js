@@ -46,7 +46,7 @@ export class Job<Output = unknown> {
     return this._isRunning;
   }
 
-  async startWork(workOnGolem: Worker<undefined, Output>, options: RunJobOptions) {
+  async startWork(workOnGolem: Worker<Output>, options: RunJobOptions) {
     if (this.isRunning) {
       throw new Error(`Job ${this.id} is already running`);
     }

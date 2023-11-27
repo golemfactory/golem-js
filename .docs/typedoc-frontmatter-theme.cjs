@@ -32,7 +32,8 @@ class ModifiedHugoTheme extends HugoTheme {
     return (
       "---\n" +
       Object.entries(yamlVars)
-        .map(([key, value]) => `${key}: ${value}`)
+        .map(([key, value]) => `${key}: "${value}"`)
+
         .join("\n") +
       "\n---\n" +
       contents

@@ -1,19 +1,19 @@
 import * as activityMock from "../mock/rest/activity";
-import { Task, TaskQueue, TaskService, Worker } from "../../src/task";
+import { Task, TaskQueue, TaskService, WorkContext, Worker } from "../../src/task";
 import { agreementPoolServiceMock, paymentServiceMock, networkServiceMock, LoggerMock, YagnaMock } from "../mock";
-import { Result } from "../../src";
-let queue;
+
+let queue: TaskQueue;
 const logger = new LoggerMock();
 
 describe("Task Service", () => {
   beforeEach(() => {
     logger.clear();
     activityMock.clear();
-    queue = new TaskQueue<Task<any, any>>();
+    queue = new TaskQueue();
   });
   it("should process new task in queue", async () => {
-    const worker: Worker<null, Result> = async (ctx) => ctx.run("some_shell_command");
-    const task = new Task<null, Result>("1", worker);
+    const worker = async (ctx: WorkContext) => ctx.run("some_shell_command");
+    const task = new Task("1", worker);
     queue.addToEnd(task);
     activityMock.setExpectedExeResults([{ stdout: "some_shell_results" }]);
     const service = new TaskService(
@@ -38,7 +38,7 @@ describe("Task Service", () => {
   });
 
   it("process only allowed number of tasks simultaneously", async () => {
-    const worker: Worker = async (ctx) => ctx.run("some_shell_command");
+    const worker = async (ctx: WorkContext) => ctx.run("some_shell_command");
     const task1 = new Task("1", worker);
     const task2 = new Task("2", worker);
     const task3 = new Task("3", worker);
@@ -65,7 +65,7 @@ describe("Task Service", () => {
   });
 
   it("should retry task if it failed", async () => {
-    const worker: Worker = async (ctx) => ctx.run("some_shell_command");
+    const worker = async (ctx: WorkContext) => ctx.run("some_shell_command");
     const task = new Task("1", worker);
     queue.addToEnd(task);
     activityMock.setExpectedErrors([new Error(), new Error(), new Error(), new Error(), new Error()]);
@@ -87,11 +87,11 @@ describe("Task Service", () => {
   });
 
   it("should reject task by user", async () => {
-    const worker: Worker = async (ctx) => {
+    const worker = async (ctx: WorkContext) => {
       const result = await ctx.run("some_shell_command");
       if (result.stdout === "invalid_value") ctx.rejectResult("Invalid value computed by provider");
     };
-    const task = new Task("1", worker, undefined, { maxRetries: 2 });
+    const task = new Task("1", worker, { maxRetries: 2 });
     queue.addToEnd(task);
     activityMock.setExpectedExeResults([{ result: "Ok", stdout: "invalid_value" }]);
     const service = new TaskService(
@@ -116,8 +116,8 @@ describe("Task Service", () => {
   });
 
   it("should reject task if it failed max attempts", async () => {
-    const worker: Worker = async (ctx) => ctx.run("some_shell_command");
-    const task = new Task("1", worker, undefined, { maxRetries: 1 });
+    const worker = async (ctx: WorkContext) => ctx.run("some_shell_command");
+    const task = new Task("1", worker, { maxRetries: 1 });
     queue.addToEnd(task);
     activityMock.setExpectedErrors(new Array(20).fill(new Error()));
     const service = new TaskService(
@@ -139,11 +139,11 @@ describe("Task Service", () => {
   });
 
   it("should run setup functions on each activity", async () => {
-    const setupFunctions: Worker[] = [async (ctx) => ctx.run("init_shell_command")];
-    const worker: Worker = async (ctx) => ctx.run("some_shell_command");
-    const task1 = new Task("1", worker, null, { activityReadySetupFunctions: setupFunctions });
-    const task2 = new Task("2", worker, null, { activityReadySetupFunctions: setupFunctions });
-    const task3 = new Task("3", worker, null, { activityReadySetupFunctions: setupFunctions });
+    const setupFunctions = [async (ctx: WorkContext) => ctx.run("init_shell_command")];
+    const worker = async (ctx: WorkContext) => ctx.run("some_shell_command");
+    const task1 = new Task("1", worker, { activityReadySetupFunctions: setupFunctions });
+    const task2 = new Task("2", worker, { activityReadySetupFunctions: setupFunctions });
+    const task3 = new Task("3", worker, { activityReadySetupFunctions: setupFunctions });
     queue.addToEnd(task1);
     queue.addToEnd(task2);
     queue.addToEnd(task3);

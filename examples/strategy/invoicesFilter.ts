@@ -9,6 +9,11 @@ import { TaskExecutor, PaymentFilters } from "@golem-sdk/golem-js";
     package: "golem/alpine:latest",
     invoiceFilter: PaymentFilters.acceptMaxAmountInvoiceFilter(0.00001),
   });
-  await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
-  await executor.shutdown();
+  try {
+    await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
+  } catch (err) {
+    console.error("Task execution failed:", err);
+  } finally {
+    await executor.shutdown();
+  }
 })();

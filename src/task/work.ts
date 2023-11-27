@@ -18,10 +18,7 @@ import { Batch } from "./batch";
 import { NetworkNode } from "../network";
 import { RemoteProcess } from "./process";
 
-export type Worker<InputType = unknown, OutputType = unknown> = (
-  ctx: WorkContext,
-  data?: InputType,
-) => Promise<OutputType>;
+export type Worker<OutputType> = (ctx: WorkContext) => Promise<OutputType>;
 
 const DEFAULTS = {
   activityPreparingTimeout: 300_000,
@@ -35,7 +32,7 @@ export interface WorkOptions {
   storageProvider?: StorageProvider;
   networkNode?: NetworkNode;
   logger?: Logger;
-  activityReadySetupFunctions?: Worker[];
+  activityReadySetupFunctions?: Worker<unknown>[];
 }
 
 export interface CommandOptions {
@@ -114,7 +111,7 @@ export class WorkContext {
       return;
     }
     for (const setupFunction of this.options.activityReadySetupFunctions) {
-      await setupFunction(this, undefined);
+      await setupFunction(this);
     }
   }
 

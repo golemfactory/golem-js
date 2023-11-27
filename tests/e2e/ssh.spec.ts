@@ -26,7 +26,7 @@ describe("SSH connection", function () {
         .run(`echo -e "${password}\n${password}" | passwd`)
         .run("/usr/sbin/sshd")
         .end()
-        .catch((e) => console.error(e));
+        .catch((error) => console.error(error));
       expect(results?.[3]?.result).toEqual("Ok");
       expect(websocketUri).toEqual(expect.any(String));
       processSsh = spawn(
