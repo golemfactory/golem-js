@@ -15,13 +15,13 @@ on:
   workflow_dispatch:
     inputs:
       provider_version:
-        description: "Provider version (e.g., v0.12.3 or pre-rel-v0.13.1)"
+        description: "Provider version (e.g., v0.13.2 or pre-rel-v0.13.1)"
         required: false
-        default: "v0.12.3"
+        default: "v0.13.2"
       requestor_version:
-        description: "Requestor version (e.g., v0.12.3 or pre-rel-v0.13.1)"
+        description: "Requestor version (e.g., v0.13.2 or pre-rel-v0.13.1)"
         required: false
-        default: "v0.12.3"
+        default: "v0.13.2"
       provider_wasi_version:
         description: "Provider WASI version (e.g., v0.2.2)"
         required: false
@@ -63,13 +63,20 @@ jobs:
           npm install --prefix examples
           npm run --prefix examples lint:ts
 
+      - name: Upload unit test reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: unit-test-report
+          path: reports/unit-report.xml
+
   run-integration-and-e2e-tests:
     name: Run integration and E2E tests
     needs: regular-checks
     runs-on: goth2
     env:
-      PROVIDER_VERSION: ${{ github.event.inputs.provider_version || 'v0.12.3' }}
-      REQUESTOR_VERSION: ${{ github.event.inputs.requestor_version || 'v0.12.3' }}
+      PROVIDER_VERSION: ${{ github.event.inputs.provider_version || 'v0.13.2' }}
+      REQUESTOR_VERSION: ${{ github.event.inputs.requestor_version || 'v0.13.2' }}
       PROVIDER_WASI_VERSION: ${{ github.event.inputs.provider_wasi_version || 'v0.2.2' }}
       PROVIDER_VM_VERSION: ${{ github.event.inputs.provider_vm_version || 'v0.3.0' }}
     steps:
@@ -111,10 +118,16 @@ jobs:
         run: |
           docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm i && npm run build && ./node_modules/.bin/cypress install && npm install --prefix examples && npm install ts-node"
 
-      - name: Start the e2e test
+      - name: Start the E2E test
         run: docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm run test:e2e"
 
-      #region Cypress test execution
+      - name: Upload E2E reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: e2e-test-report
+          path: reports/e2e-report.xml
+
       - name: Run web server
         run: |
           docker exec -t -d docker-requestor-1 /bin/sh -c "cd /golem-js/examples/web && node app.mjs"
@@ -128,18 +141,11 @@ jobs:
           docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm run test:examples -- --exitOnError"
 
       - name: Upload test logs
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: always()
         with:
           name: cypress-logs
           path: .cypress
-
-      - name: Upload test reports
-        uses: actions/upload-artifact@v2
-        if: always()
-        with:
-          name: test-reports
-          path: reports
 
       - name: Cleanup Docker
         if: always()
