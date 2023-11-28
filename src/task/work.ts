@@ -48,8 +48,6 @@ export interface CommandOptions {
  */
 export class WorkContext {
   public readonly provider?: { name: string; id: string; networkConfig?: object };
-  public readonly agreementId: string;
-  public readonly activityId: string;
   private readonly activityPreparingTimeout: number;
   private readonly logger: Logger;
   private readonly activityStateCheckingInterval: number;
@@ -60,8 +58,6 @@ export class WorkContext {
     public readonly activity: Activity,
     private options?: WorkOptions,
   ) {
-    this.agreementId = this.activity.agreement.id;
-    this.activityId = this.activity.id;
     this.activityPreparingTimeout = options?.activityPreparingTimeout || DEFAULTS.activityPreparingTimeout;
     this.logger = options?.logger ?? nullLogger();
     this.activityStateCheckingInterval = options?.activityStateCheckingInterval || DEFAULTS.activityStateCheckInterval;
