@@ -104,7 +104,8 @@ describe("Task Service", () => {
       },
     );
     service.run().catch((e) => console.error(e));
-    await logger.expectToInclude("Task 1 has been rejected!", 700);
+    await logger.expectToNotMatch(/Trying to redo the task/, 100);
+    await logger.expectToInclude("Task 1 has been rejected!", 100);
     await service.end();
   });
 
