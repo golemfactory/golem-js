@@ -134,6 +134,13 @@ jobs:
           name: cypress-logs
           path: .cypress
 
+      - name: Upload test reports
+        uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: test-reports
+          path: reports
+
       - name: Cleanup Docker
         if: always()
         run: |
