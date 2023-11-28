@@ -199,8 +199,12 @@ describe("Task Executor", function () {
       logger,
       maxTaskRetries: 0,
     });
-    executor.onActivityReady(async (ctx) => Promise.reject("Error"));
-    await executor.run(async (ctx) => ctx.run("echo 'Hello World'"));
+    try {
+      executor.onActivityReady(async (ctx) => Promise.reject("Error"));
+      await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
+    } catch (error) {
+      await executor.shutdown();
+    }
     expect(logger.logs).not.toContain("Trying to redo the task");
   });
 
@@ -210,8 +214,12 @@ describe("Task Executor", function () {
       logger,
       maxTaskRetries: 7,
     });
-    executor.onActivityReady(async (ctx) => Promise.reject("Error"));
-    await executor.run(async (ctx) => ctx.run("echo 'Hello World'"), { maxRetries: 0 });
+    try {
+      executor.onActivityReady(async (ctx) => Promise.reject("Error"));
+      await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout), { maxRetries: 0 });
+    } catch (error) {
+      await executor.shutdown();
+    }
     expect(logger.logs).not.toContain("Trying to redo the task");
   });
 });
