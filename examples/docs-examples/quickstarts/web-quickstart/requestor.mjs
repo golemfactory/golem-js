@@ -28,13 +28,15 @@ async function run() {
     yagnaOptions: { apiKey: "try_golem", basePath: document.getElementById("YAGNA_API_BASEPATH").value },
     subnetTag: document.getElementById("SUBNET_TAG").value,
     logger,
-  }).catch((e) => logger.error(e));
+  });
 
-  await executor
-    .run(async (ctx) => appendResults((await ctx.run("echo 'Hello World'")).stdout))
-    .catch((e) => logger.error(e));
-
-  await executor.shutdown();
+  try {
+    await executor.run(async (ctx) => appendResults((await ctx.run("echo 'Hello World'")).stdout));
+  } catch (error) {
+    logger.error("Computation failed:", error);
+  } finally {
+    await executor.end();
+  }
 }
 
 document.getElementById("echo").onclick = run;

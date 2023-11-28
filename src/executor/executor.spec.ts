@@ -125,6 +125,29 @@ describe("Task Executor", () => {
 
       await executor.shutdown();
     });
+    it("should only warn the user if startup timeout is reached and exitOnNoProposals is disabled", async () => {
+      const executor = await TaskExecutor.create({
+        package: "test",
+        startupTimeout: 0,
+        exitOnNoProposals: false,
+        logger,
+        yagnaOptions,
+      });
+      jest
+        .spyOn(MarketService.prototype, "getProposalsCount")
+        .mockImplementation(() => ({ confirmed: 0, initial: 0, rejected: 0 }));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const handleErrorSpy = jest.spyOn(executor as any, "handleCriticalError");
+      const loggerWarnSpy = jest.spyOn(logger, "warn");
+
+      await sleep(10, true);
+
+      expect(handleErrorSpy).not.toHaveBeenCalled();
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
+        "Could not start any work on Golem. Processed 0 initial proposals from yagna, filters accepted 0. Check your demand if it's not too restrictive or restart yagna.",
+      );
+      await executor.end();
+    });
   });
 
   describe("end()", () => {

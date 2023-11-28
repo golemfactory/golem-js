@@ -64,4 +64,4 @@ program
   .requiredOption("--hash <hash>");
 program.parse();
 const options = program.opts();
-main(options).catch((e) => console.error(e));
+main(options).catch((error) => console.error(error));

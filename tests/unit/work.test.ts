@@ -18,7 +18,7 @@ describe("Work Context", () => {
   describe("Executing", () => {
     it("should execute run command", async () => {
       const activity = await Activity.create(agreement, yagnaApi);
-      const worker: Worker<void, Result> = async (ctx) => ctx.run("some_shell_command");
+      const worker = async (ctx) => ctx.run("some_shell_command");
       const ctx = new WorkContext(activity, { logger, activityStateCheckingInterval: 10 });
       await ctx.before();
       const results = await worker(ctx);
@@ -27,7 +27,7 @@ describe("Work Context", () => {
 
     it("should execute upload file command", async () => {
       const activity = await Activity.create(agreement, yagnaApi);
-      const worker: Worker<void, Result> = async (ctx) => ctx.uploadFile("./file.txt", "/golem/file.txt");
+      const worker = async (ctx) => ctx.uploadFile("./file.txt", "/golem/file.txt");
       const ctx = new WorkContext(activity, {
         logger,
         activityStateCheckingInterval: 10,
@@ -41,7 +41,7 @@ describe("Work Context", () => {
 
     it("should execute upload json command", async () => {
       const activity = await Activity.create(agreement, yagnaApi);
-      const worker: Worker<void, Result> = async (ctx) => ctx.uploadJson({ test: true }, "/golem/file.txt");
+      const worker = async (ctx) => ctx.uploadJson({ test: true }, "/golem/file.txt");
       const ctx = new WorkContext(activity, {
         logger,
         activityStateCheckingInterval: 10,
@@ -55,7 +55,7 @@ describe("Work Context", () => {
 
     it("should execute download file command", async () => {
       const activity = await Activity.create(agreement, yagnaApi);
-      const worker: Worker<void, Result> = async (ctx) => ctx.downloadFile("/golem/file.txt", "./file.txt");
+      const worker = async (ctx) => ctx.downloadFile("/golem/file.txt", "./file.txt");
       const ctx = new WorkContext(activity, {
         logger,
         activityStateCheckingInterval: 10,
@@ -70,7 +70,7 @@ describe("Work Context", () => {
   describe("Batch", () => {
     it("should execute batch as promise", async () => {
       const activity = await Activity.create(agreement, yagnaApi);
-      const worker: Worker<void, Result[]> = async (ctx) => {
+      const worker = async (ctx) => {
         return ctx
           .beginBatch()
           .run("some_shell_command")
@@ -100,7 +100,7 @@ describe("Work Context", () => {
 
     it("should execute batch as stream", async () => {
       const activity = await Activity.create(agreement, yagnaApi);
-      const worker: Worker<void, Readable> = async (ctx) => {
+      const worker = async (ctx) => {
         return ctx
           .beginBatch()
           .run("some_shell_command")
@@ -140,7 +140,7 @@ describe("Work Context", () => {
   describe("Error handling", () => {
     it("should return a result with error in case the command to execute is invalid", async () => {
       const activity = await Activity.create(agreement, yagnaApi);
-      const worker: Worker<void, Result[]> = async (ctx) => ctx.beginBatch().run("invalid_shell_command").end();
+      const worker = async (ctx) => ctx.beginBatch().run("invalid_shell_command").end();
       const ctx = new WorkContext(activity, {
         logger,
         activityStateCheckingInterval: 10,
@@ -157,7 +157,7 @@ describe("Work Context", () => {
 
     it("should catch error while executing batch as stream with invalid command", async () => {
       const activity = await Activity.create(agreement, yagnaApi);
-      const worker: Worker<void, Readable> = async (ctx) => ctx.beginBatch().run("invalid_shell_command").endStream();
+      const worker = async (ctx) => ctx.beginBatch().run("invalid_shell_command").endStream();
       const ctx = new WorkContext(activity, {
         logger,
         activityStateCheckingInterval: 10,

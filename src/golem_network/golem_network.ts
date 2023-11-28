@@ -28,7 +28,7 @@ export interface GolemNetworkConfig {
   /**
    * Function that will be run before each job. You can use it to set up the environment for your job. For example, you can upload a file to the provider.
    */
-  beforeEachJob?: Worker<unknown, unknown>;
+  beforeEachJob?: Worker<unknown>;
   /**
    * Job storage. By default Golem Network uses a simple in-memory storage for job statuses and results. In a real application you should use some persistent storage (e.g. a database). See {@link JobStorage} for more information.
    */
@@ -77,7 +77,7 @@ export class GolemNetwork {
       ...(this.config.demand ?? {}),
     });
     if (this.config.beforeEachJob) {
-      this.executor.beforeEach(this.config.beforeEachJob);
+      this.executor.onActivityReady(this.config.beforeEachJob);
     }
   }
 
@@ -98,7 +98,7 @@ export class GolemNetwork {
    * console.log(status);
    * ```
    */
-  public async createJob<Output = unknown>(worker: Worker<unknown, Output>) {
+  public async createJob<Output>(worker: Worker<Output>) {
     return this.executor.createJob(worker);
   }
 
@@ -113,7 +113,7 @@ export class GolemNetwork {
    * @param worker Worker function to run
    * @returns Worker function result
    */
-  public async runTask<Output = unknown>(worker: Worker<undefined, Output>) {
+  public async runTask<Output>(worker: Worker<Output>) {
     return this.executor.run<Output>(worker);
   }
 

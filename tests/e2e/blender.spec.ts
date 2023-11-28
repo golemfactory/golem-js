@@ -31,7 +31,7 @@ describe("Blender rendering", function () {
         logger,
       });
 
-      executor.beforeEach(async (ctx) => {
+      executor.onActivityReady(async (ctx) => {
         const sourcePath = fs.realpathSync(__dirname + "/../mock/fixtures/cubes.blend");
         await ctx.uploadFile(sourcePath, "/golem/resource/scene.blend");
       });

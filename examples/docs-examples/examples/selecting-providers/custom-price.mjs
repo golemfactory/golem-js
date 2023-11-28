@@ -33,8 +33,15 @@ const myFilter = async (proposal) => {
     yagnaOptions: { apiKey: "try_golem" },
     startupTimeout: 60_000,
   });
-  await executor.run(async (ctx) =>
-    console.log((await ctx.run(`echo "This task is run on ${ctx.provider.id}"`)).stdout, ctx.provider.id),
-  );
-  await executor.shutdown();
+
+  try {
+    await executor.run(async (ctx) => {
+      const result = await ctx.run('echo "This task is run on ${ctx.provider.id}"');
+      console.log(result.stdout, ctx.provider.id);
+    });
+  } catch (err) {
+    console.error("An error occurred:", err);
+  } finally {
+    await executor.shutdown();
+  }
 })();
