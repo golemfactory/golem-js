@@ -5,28 +5,16 @@ import { Yagna } from "../utils";
 import { RunJobOptions } from "../job/job";
 
 /**
- * The starting point for using Golem Network.
- *
- * @description The GolemNetwork class is the best way to get started with developing on Golem Network. It provides a simple interface for creating jobs and running tasks.
- * @example
- * ```typescript
- * import { GolemNetwork } from "@golem-sdk/golem-js";
- * const network = new GolemNetwork();
- * network.init().then(() => {
- *  // network is ready to use
- *  const result = await network.runTask(async (ctx) => {
- *   // do some work
- *   return (await ctx.run("echo 'Hello from Golem'")).stdout;
- *  });
- *  console.log(result);
- * });
- *```
+ * The Golem Network class provides a high-level API for running jobs on the Golem Network.
  */
 export class GolemNetwork {
   private _yagna: Yagna | null = null;
 
-  private jobs = new Map<string, Job<unknown>>();
+  private jobs = new Map<string, Job>();
 
+  /**
+   * @param config - Configuration options that will be passed to all jobs created by this instance.
+   */
   constructor(private readonly config: Partial<RunJobOptions> & { yagna?: YagnaOptions }) {}
 
   private get yagna() {
@@ -51,9 +39,15 @@ export class GolemNetwork {
     this._yagna = yagna;
   }
 
-  public async createJob<Output = unknown>() {
+  /**
+   * Create a new job and add it to the list of jobs managed by this instance.
+   * This method does not start any work on the network, use {@link Job.startWork} for that.
+   *
+   * @param options - Configuration options for the job. These options will be merged with the options passed to the constructor.
+   */
+  public createJob<Output = unknown>(options: RunJobOptions = {}) {
     const jobId = v4();
-    const job = new Job<Output>(jobId, this.yagna.getApi());
+    const job = new Job<Output>(jobId, this.yagna.getApi(), { ...this.config, ...options });
     this.jobs.set(jobId, job);
     return job;
   }
@@ -62,9 +56,12 @@ export class GolemNetwork {
     return this.jobs.get(id);
   }
 
+  /**
+   * Close the connection to the Yagna service and cancel all running jobs.
+   */
   public async close() {
     const pendingJobs = Array.from(this.jobs.values()).filter((job) => job.isRunning);
-    await Promise.all(pendingJobs.map((job) => job.cancel()));
+    await Promise.allSettled(pendingJobs.map((job) => job.cancel()));
     await this.yagna.end();
   }
 }

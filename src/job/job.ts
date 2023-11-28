@@ -1,6 +1,6 @@
 import { TaskState as JobState } from "../task/task";
 import { WorkContext, WorkOptions, Worker } from "../task/work";
-import { YagnaApi } from "../utils";
+import { YagnaApi, runtimeContextChecker } from "../utils";
 import { AgreementOptions, AgreementPoolService } from "../agreement";
 import { MarketService } from "../market";
 import { NetworkService } from "../network";
@@ -10,29 +10,61 @@ import { NetworkOptions } from "../network/network";
 import { Package, PackageOptions } from "../package";
 import { Activity, ActivityOptions } from "../activity";
 export { TaskState as JobState } from "../task/task";
+import { EventEmitter } from "eventemitter3";
+import { GftpStorageProvider, NullStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../storage";
 
 export type RunJobOptions = {
   market?: MarketOptions;
   payment?: PaymentOptions;
   agreement?: AgreementOptions;
   network?: NetworkOptions;
-  package: PackageOptions;
+  package?: PackageOptions;
   activity?: ActivityOptions;
   work?: WorkOptions;
 };
 
+export interface JobEventsDict {
+  /**
+   * Emitted immediately after the job is created and initialization begins.
+   */
+  created: () => void;
+  /**
+   * Emitted when the job finishes initialization and work begins.
+   */
+  started: () => void;
+  /**
+   * Emitted when the job completes successfully.
+   */
+  success: () => void;
+  /**
+   * Emitted when the job fails.
+   */
+  error: () => void;
+  /**
+   * Emitted when the job finishes cleanup after success or error.
+   */
+  ended: () => void;
+}
+
 /**
- * State of a computation unit.
- *
- * @description Represents the state of some computation unit. The purpose of this class is to provide a way to check the state, results and error of a computation unit knowing only its id.
+ * The Job class represents a single self-contained unit of work that can be run on the Golem Network.
+ * It is responsible for managing the lifecycle of the work and providing information about its state.
+ * It also provides an event emitter that can be used to listen for state changes.
  */
 export class Job<Output = unknown> {
-  public eventTarget = new EventTarget();
+  readonly events: EventEmitter<JobEventsDict> = new EventEmitter();
 
   public results: Output | undefined;
   public error: Error | undefined;
   public state: JobState = JobState.New;
 
+  /**
+   * Create a new Job instance. It is recommended to use {@link GolemNetwork} to create jobs instead of using this constructor directly.
+   *
+   * @param id
+   * @param yagnaApi
+   * @param defaultOptions
+   */
   constructor(
     public readonly id: string,
     private yagnaApi: YagnaApi,
@@ -46,13 +78,28 @@ export class Job<Output = unknown> {
     return this._isRunning;
   }
 
-  async startWork(workOnGolem: Worker<Output>, options: RunJobOptions) {
+  /**
+   * Run your worker function on the Golem Network. This method will synchronously initialize all internal services and validate the job options. The work itself will be run asynchronously in the background.
+   * You can use the {@link Job.events} event emitter to listen for state changes.
+   * You can also use {@link Job.waitForResult} to wait for the job to finish and get the results.
+   * If you want to cancel the job, use {@link Job.cancel}.
+   * If you want to run multiple jobs in parallel, you can use {@link GolemNetwork.createJob} to create multiple jobs and run them in parallel.
+   *
+   * @param workOnGolem - Your worker function that will be run on the Golem Network.
+   * @param options - Configuration options for the job. These options will be merged with the options passed to the constructor.
+   */
+  startWork(workOnGolem: Worker<Output>, options: RunJobOptions = {}) {
     if (this.isRunning) {
       throw new Error(`Job ${this.id} is already running`);
     }
+    const packageOptions = Object.assign({}, this.defaultOptions.package, options.package);
+    if (!packageOptions.imageHash && !packageOptions.manifest && !packageOptions.imageTag) {
+      throw new Error("You must specify either imageHash, imageTag or manifest in package options");
+    }
+
     this._isRunning = true;
     this.state = JobState.Pending;
-    this.eventTarget.dispatchEvent(new Event("initialized"));
+    this.events.emit("created");
 
     const agreementService = new AgreementPoolService(this.yagnaApi, {
       ...this.defaultOptions.agreement,
@@ -65,52 +112,98 @@ export class Job<Output = unknown> {
     const networkService = new NetworkService(this.yagnaApi, { ...this.defaultOptions.network, ...options.network });
     const paymentService = new PaymentService(this.yagnaApi, { ...this.defaultOptions.payment, ...options.payment });
 
-    const packageDescription = Package.create({ ...this.defaultOptions.package, ...options.package });
+    const packageDescription = Package.create(packageOptions);
 
-    try {
-      const allocation = await paymentService.createAllocation();
-
-      await Promise.all([
-        marketService.run(packageDescription, allocation),
-        agreementService.run(),
-        networkService.run(),
-        paymentService.run(),
-      ]);
-      const agreement = await agreementService.getAgreement();
-      // agreement is created, we can stop listening for new proposals
-      await marketService.end();
-
-      paymentService.acceptPayments(agreement);
-
-      this.activity = await Activity.create(agreement.id, this.yagnaApi, options.activity);
-
-      const workContext = new WorkContext(this.activity, {
-        provider: agreement.provider,
-        storageProvider: this.defaultOptions.work?.storageProvider || options.work?.storageProvider,
-        networkNode: await networkService.addNode(agreement.provider.id),
-        activityPreparingTimeout:
-          this.defaultOptions.work?.activityPreparingTimeout || options.work?.activityPreparingTimeout,
-        activityStateCheckingInterval:
-          this.defaultOptions.work?.activityStateCheckingInterval || options.work?.activityStateCheckingInterval,
+    this._runWork({
+      worker: workOnGolem,
+      marketService,
+      agreementService,
+      networkService,
+      paymentService,
+      packageDescription,
+      options,
+    })
+      .then((results) => {
+        this.results = results;
+        this.state = JobState.Done;
+        this.events.emit("success");
+      })
+      .catch((error) => {
+        this.error = error;
+        this.state = JobState.Rejected;
+        this.events.emit("error");
+      })
+      .finally(async () => {
+        this._isRunning = false;
+        await Promise.all([agreementService.end(), networkService.end(), paymentService.end(), marketService.end()]);
+        this.events.emit("ended");
       });
-
-      this.eventTarget.dispatchEvent(new Event("started"));
-      await workContext.before();
-      const results = await workOnGolem(workContext);
-      this.results = results;
-      this.state = JobState.Done;
-      this.eventTarget.dispatchEvent(new Event("success"));
-    } catch (error) {
-      this.error = error;
-      this.state = JobState.Rejected;
-      this.eventTarget.dispatchEvent(new Event("error"));
-    } finally {
-      this._isRunning = false;
-      await Promise.all([agreementService.end(), networkService.end(), paymentService.end(), marketService.end()]);
-      this.eventTarget.dispatchEvent(new Event("ended"));
-    }
   }
 
+  private async _runWork({
+    worker,
+    marketService,
+    agreementService,
+    networkService,
+    paymentService,
+    packageDescription,
+    options,
+  }: {
+    worker: Worker<Output>;
+    marketService: MarketService;
+    agreementService: AgreementPoolService;
+    networkService: NetworkService;
+    paymentService: PaymentService;
+    packageDescription: Package;
+    options: RunJobOptions;
+  }) {
+    const allocation = await paymentService.createAllocation();
+
+    await Promise.all([
+      marketService.run(packageDescription, allocation),
+      agreementService.run(),
+      networkService.run(),
+      paymentService.run(),
+    ]);
+    const agreement = await agreementService.getAgreement();
+    // agreement is created, we can stop listening for new proposals
+    await marketService.end();
+
+    paymentService.acceptPayments(agreement);
+
+    this.activity = await Activity.create(agreement.id, this.yagnaApi, options.activity);
+
+    const storageProvider =
+      this.defaultOptions.work?.storageProvider || options.work?.storageProvider || this._getDefaultStorageProvider();
+
+    const workContext = new WorkContext(this.activity, {
+      provider: agreement.provider,
+      storageProvider,
+      networkNode: await networkService.addNode(agreement.provider.id),
+      activityPreparingTimeout:
+        this.defaultOptions.work?.activityPreparingTimeout || options.work?.activityPreparingTimeout,
+      activityStateCheckingInterval:
+        this.defaultOptions.work?.activityStateCheckingInterval || options.work?.activityStateCheckingInterval,
+    });
+
+    this.events.emit("started");
+    await workContext.before();
+    return worker(workContext);
+  }
+  private _getDefaultStorageProvider(): StorageProvider {
+    if (runtimeContextChecker.isNode) {
+      return new GftpStorageProvider();
+    }
+    if (runtimeContextChecker.isBrowser) {
+      return new WebSocketBrowserStorageProvider(this.yagnaApi, {});
+    }
+    return new NullStorageProvider();
+  }
+
+  /**
+   * Cancel the job. This method will stop the activity and wait for it to finish.
+   * Throws an error if the job is not running.
+   */
   async cancel() {
     if (!this.isRunning || !this.activity) {
       throw new Error(`Job ${this.id} is not running`);
@@ -118,21 +211,25 @@ export class Job<Output = unknown> {
     await this.activity.stop();
   }
 
+  /**
+   * Wait for the job to finish and return the results.
+   * Throws an error if the job was not started.
+   */
   async waitForResult() {
-    if (!this.isRunning) {
-      throw new Error(`Job ${this.id} is not running`);
-    }
     if (this.state === JobState.Done) {
       return this.results;
     }
     if (this.state === JobState.Rejected) {
       throw this.error;
     }
+    if (!this.isRunning) {
+      throw new Error(`Job ${this.id} is not running`);
+    }
     return new Promise((resolve, reject) => {
-      this.eventTarget.addEventListener("success", () => {
+      this.events.once("success", () => {
         resolve(this.results);
       });
-      this.eventTarget.addEventListener("error", () => {
+      this.events.once("error", () => {
         reject(this.error);
       });
     });
