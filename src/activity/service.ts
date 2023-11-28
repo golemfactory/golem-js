@@ -32,9 +32,11 @@ export class ActivityPoolService {
   async releaseActivity(activity: Activity, allowReuse: boolean = true) {
     if (allowReuse) {
       this.pool.push(activity);
+      this.logger.debug(`Activity ${activity.id} has been released for reuse`);
     } else {
       await activity.stop().catch((e) => this.logger.warn(e));
       await this.agreementService.releaseAgreement(activity.agreement.id, allowReuse);
+      this.logger.debug(`Activity ${activity.id} has been released and will be terminated`);
     }
   }
 
