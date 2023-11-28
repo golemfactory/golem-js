@@ -192,4 +192,34 @@ describe("Task Executor", function () {
     expect(logger.logs).toMatch(/Agreement confirmed by provider/);
     expect(logger.logs).toMatch(/Activity .* created/);
   });
+
+  it("should not retry the task if maxTaskRetries is zero", async () => {
+    executor = await TaskExecutor.create({
+      package: "golem/alpine:latest",
+      logger,
+      maxTaskRetries: 0,
+    });
+    try {
+      executor.onActivityReady(async (ctx) => Promise.reject("Error"));
+      await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
+    } catch (error) {
+      await executor.shutdown();
+    }
+    expect(logger.logs).not.toContain("Trying to redo the task");
+  });
+
+  it("should not retry the task if taskRetries is zero", async () => {
+    executor = await TaskExecutor.create({
+      package: "golem/alpine:latest",
+      logger,
+      maxTaskRetries: 7,
+    });
+    try {
+      executor.onActivityReady(async (ctx) => Promise.reject("Error"));
+      await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout), { maxRetries: 0 });
+    } catch (error) {
+      await executor.shutdown();
+    }
+    expect(logger.logs).not.toContain("Trying to redo the task");
+  });
 });

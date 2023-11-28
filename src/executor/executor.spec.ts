@@ -13,6 +13,7 @@ jest.mock("../network/service");
 jest.mock("../task/service");
 jest.mock("../storage/gftp");
 jest.mock("../utils/yagna/yagna");
+jest.mock("../task/task");
 
 const serviceRunSpy = jest.fn().mockImplementation(() => Promise.resolve());
 jest.spyOn(MarketService.prototype, "run").mockImplementation(serviceRunSpy);
@@ -92,6 +93,56 @@ describe("Task Executor", () => {
       await executor.shutdown();
     });
 
+    it("should pass zero for the Task entity if the maxTaskRetires option is zero", async () => {
+      const executor = await TaskExecutor.create({
+        package: "test",
+        maxTaskRetries: 0,
+        logger,
+        yagnaOptions,
+      });
+      jest.spyOn(Task.prototype, "isQueueable").mockImplementation(() => true);
+      jest.spyOn(Task.prototype, "isFinished").mockImplementation(() => true);
+
+      const worker = () => Promise.resolve(true);
+      await executor.run(worker);
+      expect(Task).toHaveBeenCalledWith("1", worker, {
+        activityReadySetupFunctions: [],
+        maxRetries: 0,
+        timeout: 300000,
+      });
+      await executor.shutdown();
+    });
+
+    it("should pass zero for the Task entity if the maxRetires params in run method is zero", async () => {
+      const executor = await TaskExecutor.create({
+        package: "test",
+        maxTaskRetries: 7,
+        logger,
+        yagnaOptions,
+      });
+      jest.spyOn(Task.prototype, "isQueueable").mockImplementation(() => true);
+      jest.spyOn(Task.prototype, "isFinished").mockImplementation(() => true);
+
+      const worker = () => Promise.resolve(true);
+      await executor.run(worker, { maxRetries: 0 });
+      expect(Task).toHaveBeenCalledWith("1", worker, {
+        activityReadySetupFunctions: [],
+        maxRetries: 0,
+        timeout: 300000,
+      });
+      await executor.shutdown();
+    });
+
+    it("should throw an error if the value of maxTaskRetries is less than zero", async () => {
+      const executorPromise = TaskExecutor.create({
+        package: "test",
+        maxTaskRetries: -1,
+        logger,
+        yagnaOptions,
+      });
+      expect(executorPromise).rejects.toThrow("The maxTaskRetries parameter cannot be less than zero");
+    });
+
     it.todo('should emit "ready" event after init() completes');
   });
 
@@ -146,7 +197,7 @@ describe("Task Executor", () => {
       expect(loggerWarnSpy).toHaveBeenCalledWith(
         "Could not start any work on Golem. Processed 0 initial proposals from yagna, filters accepted 0. Check your demand if it's not too restrictive or restart yagna.",
       );
-      await executor.end();
+      await executor.shutdown();
     });
   });
 
@@ -154,7 +205,7 @@ describe("Task Executor", () => {
     it("should call shutdown()", async () => {
       const executor = await TaskExecutor.create({ package: "test", startupTimeout: 0, logger, yagnaOptions });
       const spy = jest.spyOn(executor, "shutdown");
-      executor.end();
+      executor.shutdown();
       expect(spy).toHaveBeenCalled();
     });
   });

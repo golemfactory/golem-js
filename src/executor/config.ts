@@ -52,7 +52,12 @@ export class ExecutorConfig {
     Object.keys(options).forEach((key) => (this[key] = options[key]));
     this.activityExecuteTimeout = options.activityExecuteTimeout || options.taskTimeout;
     const apiKey = options?.yagnaOptions?.apiKey || processEnv.env.YAGNA_APPKEY;
-    if (!apiKey) throw new Error("Api key not defined");
+    if (!apiKey) {
+      throw new Error("Api key not defined");
+    }
+    if (options.maxTaskRetries && options.maxTaskRetries < 0) {
+      throw new Error("The maxTaskRetries parameter cannot be less than zero");
+    }
     this.yagnaOptions = {
       apiKey,
       basePath: options.yagnaOptions?.basePath || processEnv.env.YAGNA_API_URL || DEFAULTS.basePath,
