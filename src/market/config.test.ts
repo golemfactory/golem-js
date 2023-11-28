@@ -2,7 +2,7 @@ import { DemandConfig } from "./config";
 
 describe("Demand Config", () => {
   describe("Positive cases", () => {
-    test("It will accept proper config values without an error", () => {
+    it("It will accept proper config values without an error", () => {
       const config = new DemandConfig({
         expirationSec: 30 * 60,
         debitNotesAcceptanceTimeoutSec: 20,
@@ -40,7 +40,7 @@ describe("Demand Config", () => {
       );
     });
 
-    describe("Mig-agreement payments timeout configuration", () => {
+    describe("Mid-agreement payments timeout configuration", () => {
       test.each(INVALID_VALUES)(
         "It should throw an error when someone specifies %d as mid-agreement payment timeout",
         (value) => {

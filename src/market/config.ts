@@ -32,7 +32,7 @@ export class DemandConfig {
     this.logger = options?.logger;
     this.eventTarget = options?.eventTarget;
 
-    this.subnetTag = options?.subnetTag || EnvUtils.getYagnaSubnet() || DEFAULTS.subnetTag;
+    this.subnetTag = options?.subnetTag ?? EnvUtils.getYagnaSubnet() ?? DEFAULTS.subnetTag;
     this.offerFetchingIntervalSec = options?.offerFetchingIntervalSec ?? DEFAULTS.offerFetchingIntervalSec;
     this.maxOfferEvents = options?.maxOfferEvents ?? DEFAULTS.maxOfferEvents;
 

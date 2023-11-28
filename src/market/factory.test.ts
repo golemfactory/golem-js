@@ -8,7 +8,7 @@ import { RequestorApi as MarketRequestorApi } from "ya-ts-client/dist/ya-market/
 describe("Demand Factory", () => {
   describe("mid-agreement payments support", () => {
     describe("default behaviour", () => {
-      test("it configures mid-agreement payments by default", async () => {
+      it("it configures mid-agreement payments by default", async () => {
         // Given
         const pkg = mock(Package);
         const allocation = mock(Allocation);

@@ -28,7 +28,7 @@ export interface DemandOptions {
    * The value of this field is used to define how long the demand is valid for yagna to match against.
    * In addition, it will determine how long the resulting activity will be active.
    *
-   * For example: if `expiration` is set to 10 minutes, the demand was created and starting an activity
+   * For example: if `expirationSec` is set to 10 minutes, the demand was created and starting an activity
    * required 2 minutes, this means that the activity will be running for 8 more minutes, and then will get terminated.
    *
    * **IMPORTANT**
