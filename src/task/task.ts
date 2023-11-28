@@ -47,6 +47,9 @@ export class Task<OutputType = unknown> implements QueueableTask {
     this.timeout = options?.timeout ?? DEFAULTS.TIMEOUT;
     this.maxRetries = options?.maxRetries ?? DEFAULTS.MAX_RETRIES;
     this.activityReadySetupFunctions = options?.activityReadySetupFunctions ?? [];
+    if (this.maxRetries < 0) {
+      throw new Error("The maxRetries parameter cannot be less than zero");
+    }
   }
 
   onStateChange(listener: (state: TaskState) => void) {
