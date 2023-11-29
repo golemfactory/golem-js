@@ -33,9 +33,8 @@ export class GolemNetwork {
       return;
     }
     const yagna = new Yagna(this.config.yagna);
-    // make sure it's possible to connect to the yagna service
     // this will throw an error if yagna is not running
-    await yagna.getApi().identity.getIdentity();
+    await yagna.connect();
     this._yagna = yagna;
   }
 
