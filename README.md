@@ -131,8 +131,8 @@ the SDK makes use of the mid-agreement payments model and implements best practi
 
 By default, the SDK will:
 
-- accept debit notes sent by the Providers each 2 minutes
-- issue a mid-agreement payment each 12 hours
+- accept debit notes sent by the Providers within 2 minutes from receiving them (so that the Provider knows that we're alive, and it will continue serving the resources)
+- issue a mid-agreement payment each 12 hours (so that the provider will be paid on a regular interval for serving the resources for more than 10 hours)
 
 You can learn more about
 the [mid-agreement and other payment models from the official docs](https://docs.golem.network/docs/golem/payments).
