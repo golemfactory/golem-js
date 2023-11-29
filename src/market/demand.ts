@@ -15,9 +15,6 @@ export interface DemandDetails {
   constraints: Array<string>;
 }
 
-/**
- * @hidden
- */
 export interface DemandOptions {
   subnetTag?: string;
   yagnaOptions?: YagnaOptions;
