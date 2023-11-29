@@ -14,19 +14,67 @@ export interface DemandDetails {
   properties: Array<{ key: string; value: string | number | boolean }>;
   constraints: Array<string>;
 }
-/**
- * @hidden
- */
+
 export interface DemandOptions {
   subnetTag?: string;
   yagnaOptions?: YagnaOptions;
-  marketTimeout?: number;
-  marketOfferExpiration?: number;
+
+  /**
+   * Determines the expiration time of the offer and the resulting activity in milliseconds.
+   *
+   * The value of this field is used to define how long the demand is valid for yagna to match against.
+   * In addition, it will determine how long the resulting activity will be active.
+   *
+   * For example: if `expirationSec` is set to 10 minutes, the demand was created and starting an activity
+   * required 2 minutes, this means that the activity will be running for 8 more minutes, and then will get terminated.
+   *
+   * **IMPORTANT**
+   *
+   * It is possible that a provider will reject engaging with that demand if it's configured  without using a deadline.
+   *
+   * **GUIDE**
+   *
+   * If your activity is about to operate for 5-30 min, {@link expirationSec} is sufficient.
+   *
+   * If your activity is about to operate for 30min-10h, {@link debitNotesAcceptanceTimeoutSec} should be set as well.
+   *
+   * If your activity is about to operate longer than 10h, you need set both {@link debitNotesAcceptanceTimeoutSec} and {@link midAgreementPaymentTimeoutSec}.
+   */
+  expirationSec?: number;
+
   logger?: Logger;
   maxOfferEvents?: number;
-  offerFetchingInterval?: number;
+
+  offerFetchingIntervalSec?: number;
+
   proposalTimeout?: number;
+
   eventTarget?: EventTarget;
+
+  /**
+   * Maximum time for debit note acceptance (in seconds)
+   *
+   * If it would not be defined, the activities created for your demand would
+   * probably live only 30 minutes, as that's the default value that the providers use to control engagements
+   * that are not using mid-agreement payments.
+   *
+   * _Accepting debit notes during a long activity is considered a good practice in Golem Network._
+   * The SDK will accept debit notes each 2 minutes.
+   */
+  debitNotesAcceptanceTimeoutSec?: number;
+
+  /**
+   * Maximum time to receive payment for any debit note. At the same time, the minimum interval between mid-agreement payments.
+   *
+   * Setting this is relevant in case activities which are running for a long time (like 10 hours and more). Providers control
+   * the threshold activity duration for which they would like to enforce mid-agreement payments. This value depends on the
+   * provider configuration. Checking proposal rejections from providers in yagna's logs can give you a hint about the
+   * market expectations.
+   *
+   * _Paying in regular intervals for the computation resources is considered a good practice in Golem Network._
+   * The SDK will issue payments each 12h by default, and you can control this with this setting.
+   */
+  midAgreementPaymentTimeoutSec?: number;
 }
 
 /**
@@ -47,11 +95,15 @@ export class Demand extends EventTarget {
 
   /**
    * Create demand for given taskPackage
-   * Note: it is an "atomic" operation, ie. as soon as Demand is created, the subscription is published on the market.
-   * @param taskPackage - {@link Package}
-   * @param allocation - {@link Allocation}
-   * @param yagnaApi - {@link YagnaApi}
-   * @param options - {@link DemandOptions}
+   *
+   *  Note: it is an "atomic" operation.
+   *  When the demand is created, the SDK will use it to subscribe for provider offer proposals matching it.
+   *
+   * @param taskPackage
+   * @param allocation
+   * @param yagnaApi
+   * @param options
+   *
    * @return Demand
    */
   static async create(
@@ -83,7 +135,7 @@ export class Demand extends EventTarget {
   }
 
   /**
-   * Unsubscribe demand from the market
+   * Stop subscribing for provider offer proposals for this demand
    */
   async unsubscribe() {
     this.isRunning = false;
@@ -111,7 +163,7 @@ export class Demand extends EventTarget {
       try {
         const { data: events } = await this.yagnaApi.market.collectOffers(
           this.id,
-          this.options.offerFetchingInterval / 1000,
+          this.options.offerFetchingIntervalSec,
           this.options.maxOfferEvents,
           {
             timeout: 0,

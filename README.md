@@ -1,29 +1,5 @@
 # Golem JavaScript API
 
-## Table of contents
-
-<!-- TOC -->
-
-- [Table of contents](#table-of-contents)
-- [What's Golem and `golem-js`?](#whats-golem-and-golem-js)
-- [Golem application development](#golem-application-development)
-  - [Installation](#installation)
-  - [Building](#building)
-  - [Usage](#usage)
-    - [Node.js context](#nodejs-context)
-    - [Web Browser context](#web-browser-context)
-  - [Testing](#testing)
-  - [Running unit tests](#running-unit-tests)
-  - [Running E2E tests](#running-e2e-tests)
-    - [NodeJS](#execute-the-e2e-tests)
-    - [Cypress](#execute-the-cypress-tests)
-  - [Contributing](#contributing)
-- [Controlling interactions and costs](#controlling-interactions-and-costs)
-  - [Limit price limits to filter out offers that are too expensive](#limit-price-limits-to-filter-out-offers-that-are-too-expensive)
-  - [Work with reliable providers](#work-with-reliable-providers)
-- [See also](#see-also)
-<!-- TOC -->
-
 ![GitHub](https://img.shields.io/github/license/golemfactory/golem-js)
 ![npm](https://img.shields.io/npm/v/@golem-sdk/golem-js)
 ![node-current](https://img.shields.io/node/v/@golem-sdk/golem-js)
@@ -31,6 +7,38 @@
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/golemfactory/golem-js/goth.yml)
 [![GitHub issues](https://img.shields.io/github/issues/golemfactory/golem-js)](https://github.com/golemfactory/golem-js/issues)
 ![Discord](https://img.shields.io/discord/684703559954333727?style=flat&logo=discord)
+
+## Table of contents
+
+<!-- TOC -->
+
+- [Golem JavaScript API](#golem-javascript-api)
+  - [Table of contents](#table-of-contents)
+  - [What's Golem and `golem-js`?](#whats-golem-and-golem-js)
+  - [Golem application development](#golem-application-development)
+    - [Installation](#installation)
+    - [Building](#building)
+    - [Usage](#usage)
+      - [Node.js context](#nodejs-context)
+      - [Web Browser context](#web-browser-context)
+    - [Testing](#testing)
+    - [Running unit tests](#running-unit-tests)
+    - [Running E2E tests](#running-e2e-tests)
+      - [Prerequisites](#prerequisites)
+      - [Test Environment Preparation](#test-environment-preparation)
+        - [Build Docker Containers](#build-docker-containers)
+        - [Start Docker Containers](#start-docker-containers)
+        - [Fund the Requestor](#fund-the-requestor)
+        - [Install and Build the SDK](#install-and-build-the-sdk)
+      - [Execute the E2E Tests](#execute-the-e2e-tests)
+      - [Execute the cypress Tests](#execute-the-cypress-tests)
+    - [Contributing](#contributing)
+  - [Controlling interactions and costs](#controlling-interactions-and-costs)
+    - [Mid-agreement payments to the Providers for used resources](#mid-agreement-payments-to-the-providers-for-used-resources)
+    - [Limit price limits to filter out offers that are too expensive](#limit-price-limits-to-filter-out-offers-that-are-too-expensive)
+    - [Work with reliable providers](#work-with-reliable-providers)
+  - [See also](#see-also)
+  <!-- TOC -->
 
 ## What's Golem and `golem-js`?
 
@@ -194,14 +202,43 @@ yarn format
 
 The Golem Network provides an open marketplace where anyone can join as a Provider and supply the network with their
 computing power. In return for their service, they are billing Requestors (users of this SDK) according to the pricing
-that they define. As a Requestor, you might want to:
+that they define.
+
+As a Requestor, you might want to:
 
 - control the limit price so that you're not going to over-spend your funds
 - control the interactions with the providers if you have a list of the ones which you like or the ones which you would
   like to avoid
 
 To make this easy, we provided you with a set of predefined market proposal filters, which you can combine to implement
-your own market strategy.
+your own market strategy (described below).
+
+### Mid-agreement payments to the Providers for used resources
+
+When you obtain resources from the Provider and start using them, the billing cycle will start immediately.
+Since reliable service and payments are important for all actors in the Golem Network,
+the SDK makes use of the mid-agreement payments model and implements best practices for the market, which include:
+
+- responding and accepting debit notes for activities that last longer than 30 minutes
+- issuing mid-agreement payments (pay-as-you-go)
+
+By default, the SDK will:
+
+- accept debit notes sent by the Providers each 2 minutes
+- issue a mid-agreement payment each 12 hours
+
+You can learn more about
+the [mid-agreement and other payment models from the official docs](https://docs.golem.network/docs/golem/payments).
+
+These values are defaults and can be influenced by the following settings:
+
+- `DemandOptions.expirationSec`
+- `DemandOptions.debitNotesAcceptanceTimeoutSec`
+- `DemandOptions.midAgreementPaymentTimeoutSec`
+
+If you're using `TaskExecutor` to run tasks on Golem, you can pass them as part of the configuration object accepted
+by `TaskExecutor.create`. Consult [JS API reference](https://docs.golem.network/docs/golem-js/reference/overview) for
+details.
 
 ### Limit price limits to filter out offers that are too expensive
 
@@ -227,11 +264,14 @@ const executor = await TaskExecutor.create({
 });
 ```
 
-To learn more about other filters, please check the [API reference of the market/strategy module](https://docs.golem.network/docs/golem-js/reference/modules/market_strategy)
+To learn more about other filters, please check
+the [API reference of the market/strategy module](https://docs.golem.network/docs/golem-js/reference/modules/market_strategy)
 
 ### Work with reliable providers
 
-The `getHealthyProvidersWhiteList` helper will provide you with a list of Provider ID's that were checked with basic health-checks. Using this whitelist will increase the chance of working with a reliable provider. Please note, that you can also build up your own list of favourite providers and use it in a similar fashion.
+The `getHealthyProvidersWhiteList` helper will provide you with a list of Provider ID's that were checked with basic
+health-checks. Using this whitelist will increase the chance of working with a reliable provider. Please note, that you
+can also build up your own list of favourite providers and use it in a similar fashion.
 
 ```typescript
 import { TaskExecutor, ProposalFilters, MarketHelpers } from "@golem-sdk/golem-js";
