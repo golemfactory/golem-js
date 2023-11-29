@@ -67,6 +67,11 @@ jobs:
     name: Run integration and E2E tests
     needs: regular-checks
     runs-on: goth2
+    env:
+      PROVIDER_VERSION: ${{ github.event.inputs.provider_version || 'v0.12.3' }}
+      REQUESTOR_VERSION: ${{ github.event.inputs.requestor_version || 'v0.12.3' }}
+      PROVIDER_WASI_VERSION: ${{ github.event.inputs.provider_wasi_version || 'v0.2.2' }}
+      PROVIDER_VM_VERSION: ${{ github.event.inputs.provider_vm_version || 'v0.3.0' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -77,10 +82,10 @@ jobs:
 
       - name: Set up Versions
         run: |
-          echo "PROVIDER_VERSION=${{ github.event.inputs.provider_version }}" >> $GITHUB_ENV
-          echo "REQUESTOR_VERSION=${{ github.event.inputs.requestor_version }}" >> $GITHUB_ENV
-          echo "PROVIDER_WASI_VERSION=${{ github.event.inputs.provider_wasi_version }}" >> $GITHUB_ENV
-          echo "PROVIDER_VM_VERSION=${{ github.event.inputs.provider_vm_version }}" >> $GITHUB_ENV
+          echo "PROVIDER_VERSION=${PROVIDER_VERSION}" >> $GITHUB_ENV
+          echo "REQUESTOR_VERSION=${REQUESTOR_VERSION}" >> $GITHUB_ENV
+          echo "PROVIDER_WASI_VERSION=${PROVIDER_WASI_VERSION}" >> $GITHUB_ENV
+          echo "PROVIDER_VM_VERSION=${PROVIDER_VM_VERSION}" >> $GITHUB_ENV
 
       - name: Build the docker containers
         run: |
