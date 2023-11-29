@@ -8,8 +8,6 @@ export function defaultLogger(filename?: string) {
         destination: filename,
         colorize: !filename,
         ignore: "pid,hostname",
-        /** {@see https://github.com/pinojs/pino-pretty#usage-with-jest} */
-        sync: true,
       },
     },
   });
