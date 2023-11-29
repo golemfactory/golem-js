@@ -14,7 +14,7 @@ interface ActivityServiceOptions extends ActivityOptions {}
 export class ActivityPoolService {
   private logger: Logger;
   private pool: Activity[] = [];
-  private isServiceRunning = false;
+  private _isRunning = false;
   constructor(
     private yagnaApi: YagnaApi,
     private agreementService: AgreementPoolService,
@@ -28,15 +28,19 @@ export class ActivityPoolService {
    * Start ActivityPoolService
    */
   async run() {
-    this.isServiceRunning = true;
+    this._isRunning = true;
     this.logger.debug("Activity Pool Service has started");
+  }
+
+  get isRunning() {
+    return this._isRunning;
   }
 
   /**
    * Get an activity from the pool of available ones or create a new one
    */
   async getActivity(): Promise<Activity> {
-    if (!this.isServiceRunning) {
+    if (!this._isRunning) {
       throw new Error("Unable to get activity. Activity service is not running");
     }
     return this.pool.shift() || (await this.createActivity());
@@ -46,15 +50,15 @@ export class ActivityPoolService {
    * Release the activity back into the pool or if it is not reusable
    * it will be terminated and the agreement will be released
    * @param activity
-   * @param allowReuse
+   * @param reuse - determines whether the activity can be reused or should be terminated
    */
-  async releaseActivity(activity: Activity, allowReuse: boolean = true) {
-    if (allowReuse) {
+  async releaseActivity(activity: Activity, { reuse } = { reuse: true }) {
+    if (reuse) {
       this.pool.push(activity);
       this.logger.debug(`Activity ${activity.id} has been released for reuse`);
     } else {
       await activity.stop().catch((e) => this.logger.warn(e));
-      await this.agreementService.releaseAgreement(activity.agreement.id, allowReuse);
+      await this.agreementService.releaseAgreement(activity.agreement.id, false);
       this.logger.debug(`Activity ${activity.id} has been released and will be terminated`);
     }
   }
@@ -63,8 +67,8 @@ export class ActivityPoolService {
    * Stop the service and terminate all activities from the pool
    */
   async end() {
-    this.isServiceRunning = false;
-    this.pool.forEach((activity) => activity.stop().catch((e) => this.logger.warn(e)));
+    await Promise.all(this.pool.map((activity) => activity.stop().catch((e) => this.logger.warn(e))));
+    this._isRunning = false;
     this.logger.debug("Activity Pool Service has been stopped");
   }
 
