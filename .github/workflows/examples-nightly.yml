@@ -6,13 +6,13 @@ on:
   workflow_dispatch:
     inputs:
       provider_version:
-        description: "Provider version (e.g., v0.12.3 or pre-rel-v0.13.1)"
+        description: "Provider version (e.g., v0.13.2 or pre-rel-v0.13.1)"
         required: false
-        default: "v0.12.3"
+        default: "v0.13.2"
       requestor_version:
-        description: "Requestor version (e.g., v0.12.3 or pre-rel-v0.13.1)"
+        description: "Requestor version (e.g., v0.13.2 or pre-rel-v0.13.1)"
         required: false
-        default: "v0.12.3"
+        default: "v0.13.2"
       provider_wasi_version:
         description: "Provider WASI version (e.g., v0.2.2)"
         required: false
@@ -37,8 +37,8 @@ jobs:
     runs-on: goth2
     needs: prepare-matrix-master-only
     env:
-      PROVIDER_VERSION: ${{ github.event.inputs.provider_version || 'v0.12.3' }}
-      REQUESTOR_VERSION: ${{ github.event.inputs.requestor_version || 'v0.12.3' }}
+      PROVIDER_VERSION: ${{ github.event.inputs.provider_version || 'v0.13.2' }}
+      REQUESTOR_VERSION: ${{ github.event.inputs.requestor_version || 'v0.13.2' }}
       PROVIDER_WASI_VERSION: ${{ github.event.inputs.provider_wasi_version || 'v0.2.2' }}
       PROVIDER_VM_VERSION: ${{ github.event.inputs.provider_vm_version || 'v0.3.0' }}
     strategy:
