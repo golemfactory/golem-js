@@ -33,15 +33,19 @@ export interface JobEventsDict {
    */
   started: () => void;
   /**
-   * Emitted when the job completes successfully.
+   * Emitted when the job completes successfully and cleanup begins.
    */
   success: () => void;
   /**
-   * Emitted when the job fails.
+   * Emitted when the job fails and cleanup begins.
    */
-  error: () => void;
+  error: (error: Error) => void;
   /**
-   * Emitted when the job finishes cleanup after success or error.
+   * Emitted when the job is canceled by the user.
+   */
+  canceled: () => void;
+  /**
+   * Emitted when the job finishes cleanup after success, error or cancelation.
    */
   ended: () => void;
 }
@@ -53,6 +57,7 @@ export interface JobEventsDict {
  */
 export class Job<Output = unknown> {
   readonly events: EventEmitter<JobEventsDict> = new EventEmitter();
+  private abortController = new AbortController();
 
   public results: Output | undefined;
   public error: Error | undefined;
@@ -72,7 +77,6 @@ export class Job<Output = unknown> {
   ) {}
 
   private _isRunning = false;
-  private activity: Activity | null = null;
 
   public get isRunning() {
     return this._isRunning;
@@ -114,6 +118,9 @@ export class Job<Output = unknown> {
 
     const packageDescription = Package.create(packageOptions);
 
+    // reset abort controller
+    this.abortController = new AbortController();
+
     this._runWork({
       worker: workOnGolem,
       marketService,
@@ -122,6 +129,7 @@ export class Job<Output = unknown> {
       paymentService,
       packageDescription,
       options,
+      signal: this.abortController.signal,
     })
       .then((results) => {
         this.results = results;
@@ -131,7 +139,7 @@ export class Job<Output = unknown> {
       .catch((error) => {
         this.error = error;
         this.state = JobState.Rejected;
-        this.events.emit("error");
+        this.events.emit("error", error);
       })
       .finally(async () => {
         this._isRunning = false;
@@ -148,6 +156,7 @@ export class Job<Output = unknown> {
     paymentService,
     packageDescription,
     options,
+    signal,
   }: {
     worker: Worker<Output>;
     marketService: MarketService;
@@ -156,7 +165,13 @@ export class Job<Output = unknown> {
     paymentService: PaymentService;
     packageDescription: Package;
     options: RunJobOptions;
+    signal: AbortSignal;
   }) {
+    if (signal.aborted) {
+      this.events.emit("canceled");
+      throw new Error("Canceled");
+    }
+
     const allocation = await paymentService.createAllocation();
 
     await Promise.all([
@@ -171,12 +186,12 @@ export class Job<Output = unknown> {
 
     paymentService.acceptPayments(agreement);
 
-    this.activity = await Activity.create(agreement.id, this.yagnaApi, options.activity);
+    const activity = await Activity.create(agreement.id, this.yagnaApi, options.activity);
 
     const storageProvider =
       this.defaultOptions.work?.storageProvider || options.work?.storageProvider || this._getDefaultStorageProvider();
 
-    const workContext = new WorkContext(this.activity, {
+    const workContext = new WorkContext(activity, {
       provider: agreement.provider,
       storageProvider,
       networkNode: await networkService.addNode(agreement.provider.id),
@@ -188,8 +203,20 @@ export class Job<Output = unknown> {
 
     this.events.emit("started");
     await workContext.before();
+
+    const onAbort = async () => {
+      await agreementService.releaseAgreement(agreement.id, false);
+      await activity.stop();
+      this.events.emit("canceled");
+    };
+    if (signal.aborted) {
+      await onAbort();
+      throw new Error("Canceled");
+    }
+    signal.addEventListener("abort", onAbort, { once: true });
     return worker(workContext);
   }
+
   private _getDefaultStorageProvider(): StorageProvider {
     if (runtimeContextChecker.isNode) {
       return new GftpStorageProvider();
@@ -205,10 +232,13 @@ export class Job<Output = unknown> {
    * Throws an error if the job is not running.
    */
   async cancel() {
-    if (!this.isRunning || !this.activity) {
+    if (!this.isRunning) {
       throw new Error(`Job ${this.id} is not running`);
     }
-    await this.activity.stop();
+    this.abortController.abort();
+    return new Promise<void>((resolve) => {
+      this.events.once("ended", resolve);
+    });
   }
 
   /**
@@ -226,11 +256,12 @@ export class Job<Output = unknown> {
       throw new Error(`Job ${this.id} is not running`);
     }
     return new Promise((resolve, reject) => {
-      this.events.once("success", () => {
-        resolve(this.results);
-      });
-      this.events.once("error", () => {
-        reject(this.error);
+      this.events.once("ended", () => {
+        if (this.state === JobState.Done) {
+          resolve(this.results);
+        } else {
+          reject(this.error);
+        }
       });
     });
   }
