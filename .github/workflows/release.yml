@@ -1,4 +1,5 @@
 name: Release Pipeline
+run-name: "${{ github.workflow }} - Requestor: ${{ env.REQUESTOR_VERSION }}, Provider: ${{ env.PROVIDER_VERSION }}, WASI: ${{ env.PROVIDER_WASI_VERSION }}, VM: ${{ env.PROVIDER_VM_VERSION }}"
 
 on:
   push:
