@@ -15,28 +15,19 @@
 - [Golem JavaScript API](#golem-javascript-api)
   - [Table of contents](#table-of-contents)
   - [What's Golem and `golem-js`?](#whats-golem-and-golem-js)
-  - [Golem application development](#golem-application-development)
-    - [Installation](#installation)
-    - [Building](#building)
-    - [Usage](#usage)
-      - [Node.js context](#nodejs-context)
-      - [Web Browser context](#web-browser-context)
-    - [Testing](#testing)
-    - [Running unit tests](#running-unit-tests)
-    - [Running E2E tests](#running-e2e-tests)
-      - [Prerequisites](#prerequisites)
-      - [Test Environment Preparation](#test-environment-preparation)
-        - [Build Docker Containers](#build-docker-containers)
-        - [Start Docker Containers](#start-docker-containers)
-        - [Fund the Requestor](#fund-the-requestor)
-        - [Install and Build the SDK](#install-and-build-the-sdk)
-      - [Execute the E2E Tests](#execute-the-e2e-tests)
-      - [Execute the cypress Tests](#execute-the-cypress-tests)
-    - [Contributing](#contributing)
-  - [Controlling interactions and costs](#controlling-interactions-and-costs)
+  - [System requirements](#system-requirements)
+  - [Installation](#installation)
+  - [Building](#building)
+  - [Usage](#usage)
+    - [Hello World example](#hello-world-example)
+    - [More examples](#more-examples)
+    - [Node & Browser support](#node--browser-support)
+  - [Golem Network Market Basics](#golem-network-market-basics)
     - [Mid-agreement payments to the Providers for used resources](#mid-agreement-payments-to-the-providers-for-used-resources)
     - [Limit price limits to filter out offers that are too expensive](#limit-price-limits-to-filter-out-offers-that-are-too-expensive)
     - [Work with reliable providers](#work-with-reliable-providers)
+  - [Testing](#testing)
+  - [Contributing](#contributing)
   - [See also](#see-also)
   <!-- TOC -->
 
@@ -47,15 +38,14 @@ that will shape the technological landscape of future generations by accessing c
 Golem Network is an accessible, reliable, open access and censorship-resistant protocol, democratizing access to digital
 resources and connecting users through a flexible, open-source platform.
 
-**@golem-sdk/golem-js** is the JavaScript API that allows developers to connect to their Golem nodes and manage their
+**golem-js** is the JavaScript API that allows developers to connect to their Golem nodes and manage their
 distributed, computational loads through Golem Network.
 
-## Golem application development
+## System requirements
 
-For a detailed introduction to using Golem and `@golem-sdk/golem-js` to run your tasks on
-Golem [please consult our quickstart section](https://docs.golem.network/docs/creators/javascript/quickstarts).
+To use `golem-js`, it is necessary to have yagna installed, with a minimum version requirement of v0.13.2. Yagna is a service that communicates and performs operations on the Golem Network, upon your requests via the SDK. You can [follow these instructions](https://docs.golem.network/docs/creators/javascript/quickstarts/quickstart#install-yagna-2) to set it up.
 
-### Installation
+## Installation
 
 `@golem-sdk/golem-js` is available as a [NPM package](https://www.npmjs.com/package/@golem-sdk/golem-js).
 
@@ -71,7 +61,7 @@ or by `yarn`:
 yarn add @golem-sdk/golem-js
 ```
 
-### Building
+## Building
 
 To build a library available to the NodeJS environment:
 
@@ -83,122 +73,39 @@ yarn build
 
 This will generate production code in the `dist/` directory ready to be used in your nodejs or browser applications.
 
-### Usage
+## Usage
 
-Hello World
+### Hello World example
 
-```javascript
+```ts
 import { TaskExecutor } from "@golem-sdk/golem-js";
 
-(async function main() {
-  const executor = await TaskExecutor.create("9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae");
+(async () => {
+  const executor = await TaskExecutor.create("golem/alpine:latest");
   await executor.run(async (ctx) => console.log(await ctx.run("echo 'Hello World'")).stdout);
   await executor.shutdown();
-})();
+})().catch((err) => console.error(err, "Error in main"));
 ```
 
-#### Node.js context
+### More examples
+
+The [examples directory](./examples) in the repository contains various usage patterns for the SDK. You can browse through them and learn about the recommended practices. All examples are automatically tested during our release process.
+
+In case you find an issue with the examples, feel free to submit an [issue report](https://github.com/golemfactory/golem-js/issues) to the repository.
+
+You can find even more examples and tutorials in the [JavaScript API section of the Golem Network Docs](https://docs.golem.network/docs/creators/javascript).
+
+### Node & Browser support
+
+The SDK is designed to work with LTS versions of Node (starting from 18)
 
 ![hello_nodejs](https://user-images.githubusercontent.com/26308335/224720742-1ca115e2-e207-41a7-9537-ffa4ece11406.gif)
 
-#### Web Browser context
+and with browsers
 
 ![hello_web](https://user-images.githubusercontent.com/26308335/217530424-a1dd4487-f95f-43e6-a91b-7106b6f30802.gif)
 
-For more detailed usage examples and tutorials, see
-the [Java Script API section of the Golem Network Docs](https://docs.golem.network/docs/creators/javascript)
-
-### Testing
-
-### Running unit tests
-
-To run unit tests, you can simply execute the command:
-
-```bash
-npm run test:unit
-# or
-yarn test:unit
-```
-
-### Running E2E tests
-
-Both test cases for the NodeJS environment and the browser (cypress) require preparation of a test environment of the
-Golem Network with Providers and all the necessary infrastructure.
-
-#### Prerequisites
-
-1. Ensure you have `docker` and `docker-compose` installed in your system.
-2. Your Linux environment should have nested virtualization enabled.
-
-#### Test Environment Preparation
-
-Follow these steps to prepare your test environment:
-
-##### Build Docker Containers
-
-First, build the Docker containers using the `docker-compose.yml` file located under `tests/docker`.
-
-Execute this command to build the Docker containers:
-
-    docker-compose -f tests/docker/docker-compose.yml build
-
-##### Start Docker Containers
-
-Then, launch the Docker containers you've just built using the same `docker-compose.yml` file.
-
-Execute this command to start the Docker containers:
-
-    docker-compose -f tests/docker/docker-compose.yml down && docker-compose -f tests/docker/docker-compose.yml up -d
-
-##### Fund the Requestor
-
-The next step is to fund the requestor.
-
-    docker exec -t docker_requestor_1 /bin/sh -c "/golem-js/tests/docker/fundRequestor.sh"
-
-##### Install and Build the SDK
-
-Finally, install and build the golem-js SDK in the Docker container
-
-Run this chain of commands to install and build the SDK and prepare cypress.
-
-```docker
-docker exec -t docker_requestor_1 /bin/sh -c "cd /golem-js && npm i && npm run build && ./node_modules/.bin/cypress install"
-```
-
-#### Execute the E2E Tests
-
-With your test environment set up, you can now initiate the E2E tests. Run the following command to start:
-
-```docker
-docker exec -t docker_requestor_1 /bin/sh -c "cd /golem-js && npm run test:e2e"
-```
-
-#### Execute the cypress Tests
-
-First make sure that the webserver that's used for testing is running, by running the command
-
-```docker
-docker exec -t -d docker_requestor_1 /bin/sh -c "cd /golem-js/examples/web && node app.mjs"
-```
-
-Now you're ready to start the cypress tests by running the command
-
-```docker
-docker exec -t docker_requestor_1 /bin/sh -c "cd /golem-js && npm run test:cypress -- --browser chromium"
-```
-
-### Contributing
-
-It is recommended to run unit tests and static code analysis before committing changes.
-
-```bash
-yarn lint
-# and
-yarn format
-```
-
-## Controlling interactions and costs
+## Golem Network Market Basics
 
 The Golem Network provides an open marketplace where anyone can join as a Provider and supply the network with their
 computing power. In return for their service, they are billing Requestors (users of this SDK) according to the pricing
@@ -224,8 +131,8 @@ the SDK makes use of the mid-agreement payments model and implements best practi
 
 By default, the SDK will:
 
-- accept debit notes sent by the Providers each 2 minutes
-- issue a mid-agreement payment each 12 hours
+- accept debit notes sent by the Providers within two minutes of receipt (so that the Provider knows that we're alive, and it will continue serving the resources)
+- issue a mid-agreement payment every 12 hours (so that the provider will be paid on a regular interval for serving the resources for more than 10 hours)
 
 You can learn more about
 the [mid-agreement and other payment models from the official docs](https://docs.golem.network/docs/golem/payments).
@@ -302,6 +209,20 @@ const executor = await TaskExecutor.create({
     network: "polygon",
   },
 });
+```
+
+## Testing
+
+Read the dedicated [testing documentation](./TESTING.md) to learn more about how to run tests of the SDK.
+
+## Contributing
+
+It is recommended to run unit tests and static code analysis before committing changes.
+
+```bash
+yarn lint
+# and
+yarn format
 ```
 
 ## See also
