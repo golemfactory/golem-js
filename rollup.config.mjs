@@ -36,6 +36,7 @@ export default [
           { find: /RedisConnection/, replacement: "tests/mock/utils/empty_default.js" },
           { find: /src\/api\/provider-api$/, replacement: "." },
           { find: /\.\/gftp.js/, replacement: "tests/mock/utils/empty.js" },
+          { find: /GftpStorageProvider/, replacement: "tests/mock/utils/empty.js" },
         ],
       }),
       nodeResolve({ browser: true, preferBuiltins: true }),

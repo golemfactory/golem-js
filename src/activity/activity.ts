@@ -7,6 +7,7 @@ import { ActivityFactory } from "./factory";
 import { ActivityConfig } from "./config";
 import { Events } from "../events";
 import { AxiosError } from "axios";
+import { Agreement } from "../agreement";
 
 export enum ActivityStateEnum {
   New = "New",
@@ -46,14 +47,14 @@ export class Activity {
 
   /**
    * @param id activity ID
-   * @param agreementId agreement ID
+   * @param agreement Agreement
    * @param yagnaApi - {@link YagnaApi}
    * @param options - {@link ActivityOptions}
    * @hidden
    */
   constructor(
     public readonly id: string,
-    public readonly agreementId: string,
+    public readonly agreement: Agreement,
     protected readonly yagnaApi: YagnaApi,
     protected readonly options: ActivityConfig,
   ) {
@@ -63,19 +64,19 @@ export class Activity {
   /**
    * Create activity for given agreement ID
    *
-   * @param agreementId
+   * @param agreement
    * @param yagnaApi
    * @param options - {@link ActivityOptions}
    * @param secure - defines if activity will be secure type
    * @return Activity
    */
   static async create(
-    agreementId: string,
+    agreement: Agreement,
     yagnaApi: YagnaApi,
     options?: ActivityOptions,
     secure = false,
   ): Promise<Activity> {
-    const factory = new ActivityFactory(agreementId, yagnaApi, options);
+    const factory = new ActivityFactory(agreement, yagnaApi, options);
     return factory.create(secure);
   }
 
@@ -102,7 +103,7 @@ export class Activity {
     this.logger?.debug(`Script sent. Batch ID: ${batchId}`);
 
     this.options.eventTarget?.dispatchEvent(
-      new Events.ScriptSent({ activityId: this.id, agreementId: this.agreementId }),
+      new Events.ScriptSent({ activityId: this.id, agreementId: this.agreement.id }),
     );
 
     return stream
@@ -162,7 +163,9 @@ export class Activity {
           `Unable to destroy activity ${this.id}. ${error?.response?.data?.message || error?.message || error}`,
         );
       });
-    this.options.eventTarget?.dispatchEvent(new Events.ActivityDestroyed(this));
+    this.options.eventTarget?.dispatchEvent(
+      new Events.ActivityDestroyed({ id: this.id, agreementId: this.agreement.id }),
+    );
     this.logger?.debug(`Activity ${this.id} destroyed`);
   }
 
@@ -172,7 +175,7 @@ export class Activity {
     let lastIndex: number;
     let retryCount = 0;
     const maxRetries = 5;
-    const { id: activityId, agreementId, logger } = this;
+    const { id: activityId, agreement, logger } = this;
     const isRunning = () => this.isRunning;
     const { activityExecuteTimeout, eventTarget, activityExeBatchResultPollIntervalSeconds } = this.options;
     const api = this.yagnaApi.activity;
@@ -228,14 +231,15 @@ export class Activity {
             try {
               retryCount = await handleError(error, lastIndex, retryCount, maxRetries);
             } catch (error) {
-              eventTarget?.dispatchEvent(new Events.ScriptExecuted({ activityId, agreementId, success: false }));
+              eventTarget?.dispatchEvent(
+                new Events.ScriptExecuted({ activityId, agreementId: agreement.id, success: false }),
+              );
               return this.destroy(new Error(`Unable to get activity results. ${error?.message || error}`));
             }
           }
         }
 
-        eventTarget?.dispatchEvent(new Events.ScriptExecuted({ activityId, agreementId, success: true }));
-
+        eventTarget?.dispatchEvent(new Events.ScriptExecuted({ activityId, agreementId: agreement.id, success: true }));
         this.push(null);
       },
     });

@@ -1,1 +1,1 @@
-export { Package, PackageOptions } from "./package";
+export { Package, PackageOptions, AllPackageOptions } from "./package";
