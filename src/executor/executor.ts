@@ -136,6 +136,7 @@ export class TaskExecutor {
    * Create a new Task Executor
    * @description Factory Method that create and initialize an instance of the TaskExecutor
    *
+   *
    * @example **Simple usage of Task Executor**
    *
    * The executor can be created by passing appropriate initial parameters such as package, budget, subnet tag, payment driver, payment network etc.
@@ -170,11 +171,10 @@ export class TaskExecutor {
 
   /**
    * Create a new TaskExecutor object.
-   * @description Use {@link TaskExecutor.create} for creating a task executor
    *
    * @param options - contains information needed to start executor, if string the imageHash is required, otherwise it should be a type of {@link ExecutorOptions}
    */
-  private constructor(options: ExecutorOptionsMixin) {
+  constructor(options: ExecutorOptionsMixin) {
     this.configOptions = (typeof options === "string" ? { package: options } : options) as ExecutorOptions;
     this.options = new ExecutorConfig(this.configOptions);
     this.logger = this.options.logger;

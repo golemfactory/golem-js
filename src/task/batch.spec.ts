@@ -4,13 +4,14 @@ import { NullStorageProvider } from "../storage";
 import { ActivityMock } from "../../tests/mock/activity.mock";
 import { LoggerMock, YagnaMock } from "../../tests/mock";
 import { Result } from "../activity";
+import { agreement } from "../../tests/mock/entities/agreement";
 
 describe("Batch", () => {
   let activity: ActivityMock;
   let batch: Batch;
 
   beforeEach(() => {
-    activity = new ActivityMock("test_id", "test_id", new YagnaMock().getApi());
+    activity = new ActivityMock("test_id", agreement, new YagnaMock().getApi());
     batch = new Batch(activity, new NullStorageProvider(), new LoggerMock());
   });
 

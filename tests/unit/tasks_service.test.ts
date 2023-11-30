@@ -86,6 +86,36 @@ describe("Task Service", () => {
     await service.end();
   });
 
+  it("should not retry task if it failed and maxRetries is zero", async () => {
+    const worker = async (ctx: WorkContext) => ctx.run("some_shell_command");
+    const task = new Task("1", worker, { maxRetries: 0 });
+    queue.addToEnd(task);
+    activityMock.setExpectedErrors([new Error(), new Error(), new Error(), new Error(), new Error()]);
+    const service = new TaskService(
+      new YagnaMock().getApi(),
+      queue,
+      agreementPoolServiceMock,
+      paymentServiceMock,
+      networkServiceMock,
+      {
+        logger,
+        taskRunningInterval: 100,
+        activityStateCheckingInterval: 100,
+      },
+    );
+    service.run().catch((e) => console.error(e));
+    await logger.expectToNotMatch(/Trying to redo the task/, 100);
+    await logger.expectToInclude("Task 1 has been rejected!", 100);
+    await service.end();
+  });
+
+  it("should throw an error if maxRetries is less then zero", async () => {
+    const worker = async (ctx: WorkContext) => Promise.resolve(true);
+    expect(() => new Task("1", worker, { maxRetries: -1 })).toThrow(
+      "The maxRetries parameter cannot be less than zero",
+    );
+  });
+
   it("should reject task by user", async () => {
     const worker = async (ctx: WorkContext) => {
       const result = await ctx.run("some_shell_command");
