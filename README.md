@@ -43,7 +43,7 @@ distributed, computational loads through Golem Network.
 
 ## System requirements
 
-To use `golem-js` you need to have `yagna` installed at least in version `v0.13.2`. Yagna is a service that communicates and performs operations on the Golem Network, upon your requests via the SDK. You can [follow these instructions](https://docs.golem.network/docs/creators/javascript/quickstarts/quickstart#install-yagna-2) to set it up.
+To use `golem-js`, it is necessary to have yagna installed, with a minimum version requirement of v0.13.2. Yagna is a service that communicates and performs operations on the Golem Network, upon your requests via the SDK. You can [follow these instructions](https://docs.golem.network/docs/creators/javascript/quickstarts/quickstart#install-yagna-2) to set it up.
 
 ## Installation
 
@@ -131,8 +131,8 @@ the SDK makes use of the mid-agreement payments model and implements best practi
 
 By default, the SDK will:
 
-- accept debit notes sent by the Providers within 2 minutes from receiving them (so that the Provider knows that we're alive, and it will continue serving the resources)
-- issue a mid-agreement payment each 12 hours (so that the provider will be paid on a regular interval for serving the resources for more than 10 hours)
+- accept debit notes sent by the Providers within two minutes of receipt (so that the Provider knows that we're alive, and it will continue serving the resources)
+- issue a mid-agreement payment every 12 hours (so that the provider will be paid on a regular interval for serving the resources for more than 10 hours)
 
 You can learn more about
 the [mid-agreement and other payment models from the official docs](https://docs.golem.network/docs/golem/payments).
