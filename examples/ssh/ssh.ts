@@ -48,7 +48,7 @@ async function main(subnetTag, driver, network, count = 2, sessionTimeout = 100,
   try {
     await Promise.all(runningTasks);
   } finally {
-    await executor.end();
+    await executor.shutdown();
   }
 }
 

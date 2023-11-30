@@ -31,7 +31,7 @@ describe("Blender rendering", function () {
         logger,
       });
 
-      executor.beforeEach(async (ctx) => {
+      executor.onActivityReady(async (ctx) => {
         const sourcePath = fs.realpathSync(__dirname + "/../mock/fixtures/cubes.blend");
         await ctx.uploadFile(sourcePath, "/golem/resource/scene.blend");
       });
@@ -62,7 +62,7 @@ describe("Blender rendering", function () {
         expect(fs.existsSync(`${process.env.GOTH_GFTP_VOLUME || ""}${file}`)).toEqual(true);
       }
 
-      await executor.end();
+      await executor.shutdown();
     },
     1000 * 240,
   );

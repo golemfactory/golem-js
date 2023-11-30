@@ -23,7 +23,6 @@ logs/
 .cypress
 
 #Lock files
-package-lock.json
 *.lock
 
 #IDE
@@ -33,3 +32,5 @@ package-lock.json
 
 #Nuxt
 /examples/adv-web-example/.nuxt
+tmp/
+reports/

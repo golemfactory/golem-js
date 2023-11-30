@@ -12,6 +12,6 @@ const { TaskExecutor } = require("@golem-sdk/golem-js");
   } catch (err) {
     console.error("Task failed:", err);
   } finally {
-    await executor.end();
+    await executor.shutdown();
   }
 })();

@@ -42,6 +42,6 @@ const myFilter = async (proposal) => {
   } catch (err) {
     console.error("An error occurred:", err);
   } finally {
-    await executor.end();
+    await executor.shutdown();
   }
 })();

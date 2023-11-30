@@ -26,7 +26,7 @@ async function main(fiboN = 1, tasksCount = 1, subnetTag, driver, network, debug
   try {
     await Promise.all(runningTasks);
   } finally {
-    await executor.end();
+    await executor.shutdown();
   }
 }
 

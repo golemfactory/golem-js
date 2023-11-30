@@ -4,35 +4,34 @@ import axios from "axios";
 import { PackageConfig } from "./config";
 import { RequireAtLeastOne } from "../utils/types";
 
-export type PackageOptions = RequireAtLeastOne<
-  {
-    /** Type of engine required: vm, emscripten, sgx, sgx-js, sgx-wasm, sgx-wasi */
-    engine?: string;
-    /** Minimum required memory to execute application GB */
-    minMemGib?: number;
-    /** Minimum required disk storage to execute tasks in GB */
-    minStorageGib?: number;
-    /** Minimum required CPU threads */
-    minCpuThreads?: number;
-    /** Minimum required CPU cores */
-    minCpuCores?: number;
-    /** Required providers capabilities to run application */
-    capabilities?: string[];
-    /**  finds package by its contents hash */
-    imageHash?: string;
-    /**  finds package by registry tag  */
-    imageTag?: string;
-    manifest?: string;
-    /** Signature of base64 encoded Computation Payload Manifest **/
-    manifestSig?: string;
-    /** Algorithm of manifest signature, e.g. "sha256" **/
-    manifestSigAlgorithm?: string;
-    /** Certificate - base64 encoded public certificate (DER or PEM) matching key used to generate signature **/
-    manifestCert?: string;
-    logger?: Logger;
-  },
-  "imageHash" | "imageTag" | "manifest"
->;
+export type AllPackageOptions = {
+  /** Type of engine required: vm, emscripten, sgx, sgx-js, sgx-wasm, sgx-wasi */
+  engine?: string;
+  /** Minimum required memory to execute application GB */
+  minMemGib?: number;
+  /** Minimum required disk storage to execute tasks in GB */
+  minStorageGib?: number;
+  /** Minimum required CPU threads */
+  minCpuThreads?: number;
+  /** Minimum required CPU cores */
+  minCpuCores?: number;
+  /** Required providers capabilities to run application */
+  capabilities?: string[];
+  /**  finds package by its contents hash */
+  imageHash?: string;
+  /**  finds package by registry tag  */
+  imageTag?: string;
+  manifest?: string;
+  /** Signature of base64 encoded Computation Payload Manifest **/
+  manifestSig?: string;
+  /** Algorithm of manifest signature, e.g. "sha256" **/
+  manifestSigAlgorithm?: string;
+  /** Certificate - base64 encoded public certificate (DER or PEM) matching key used to generate signature **/
+  manifestCert?: string;
+  logger?: Logger;
+};
+
+export type PackageOptions = RequireAtLeastOne<AllPackageOptions, "imageHash" | "imageTag" | "manifest">;
 
 export interface PackageDetails {
   minMemGib: number;

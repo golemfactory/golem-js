@@ -1,7 +1,6 @@
 import { LoggerMock } from "../mock";
 import { readFileSync } from "fs";
-import { TaskExecutor } from "../../src";
-import fs from "fs";
+import { Result, TaskExecutor } from "../../src";
 const logger = new LoggerMock(false);
 
 describe("Task Executor", function () {
@@ -12,7 +11,7 @@ describe("Task Executor", function () {
 
   afterEach(async function () {
     logger.clear();
-    await executor?.end();
+    await executor?.shutdown();
   });
 
   it("should run simple task", async () => {
@@ -77,18 +76,6 @@ describe("Task Executor", function () {
     expect(finalOutputs).toEqual(expect.arrayContaining(data));
   });
 
-  it("should run simple tasks by forEach function", async () => {
-    executor = await TaskExecutor.create({
-      package: "golem/alpine:latest",
-      logger,
-    });
-    const data = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
-    await executor.forEach(data, async (ctx, x) => {
-      const res = await ctx.run(`echo "${x}"`);
-      expect(data).toContain(res?.stdout?.toString().trim());
-    });
-  });
-
   it("should run simple batch script and get results as stream", async () => {
     executor = await TaskExecutor.create({
       package: "golem/alpine:latest",
@@ -108,7 +95,7 @@ describe("Task Executor", function () {
         results.on("close", () => (onEnd = "END"));
       })
       .catch((e) => {
-        executor.end();
+        executor.shutdown();
         expect(e).toBeUndefined();
       });
     await logger.expectToInclude("Task 1 computed by provider", 5000);
@@ -180,5 +167,59 @@ describe("Task Executor", function () {
     });
     const result = await executor.run(async (ctx) => ctx.getIp());
     expect(["192.168.0.2", "192.168.0.3"]).toContain(result);
+  });
+
+  it("should spawn command as external process", async () => {
+    executor = await TaskExecutor.create({
+      package: "golem/alpine:latest",
+      logger,
+    });
+    let stdout = "";
+    let stderr = "";
+    const finalResult = await executor.run(async (ctx) => {
+      const remoteProcess = await ctx.spawn("sleep 1 && echo 'Hello World' && echo 'Hello Golem' >&2");
+      remoteProcess.stdout.on("data", (data) => (stdout += data.trim()));
+      remoteProcess.stderr.on("data", (data) => (stderr += data.trim()));
+      return remoteProcess.waitForExit();
+    });
+    expect(stdout).toContain("Hello World");
+    expect(stderr).toContain("Hello Golem");
+    expect(finalResult?.result).toContain("Ok");
+    expect(logger.logs).toContain("Demand published on the market");
+    expect(logger.logs).toContain("New proposal has been received");
+    expect(logger.logs).toContain("Proposal has been responded");
+    expect(logger.logs).toContain("New proposal added to pool");
+    expect(logger.logs).toMatch(/Agreement confirmed by provider/);
+    expect(logger.logs).toMatch(/Activity .* created/);
+  });
+
+  it("should not retry the task if maxTaskRetries is zero", async () => {
+    executor = await TaskExecutor.create({
+      package: "golem/alpine:latest",
+      logger,
+      maxTaskRetries: 0,
+    });
+    try {
+      executor.onActivityReady(async (ctx) => Promise.reject("Error"));
+      await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
+    } catch (error) {
+      await executor.shutdown();
+    }
+    expect(logger.logs).not.toContain("Trying to redo the task");
+  });
+
+  it("should not retry the task if taskRetries is zero", async () => {
+    executor = await TaskExecutor.create({
+      package: "golem/alpine:latest",
+      logger,
+      maxTaskRetries: 7,
+    });
+    try {
+      executor.onActivityReady(async (ctx) => Promise.reject("Error"));
+      await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout), { maxRetries: 0 });
+    } catch (error) {
+      await executor.shutdown();
+    }
+    expect(logger.logs).not.toContain("Trying to redo the task");
   });
 });

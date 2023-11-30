@@ -31,7 +31,7 @@ async function main(subnetTag: string, driver?: string, network?: string, debug?
   });
 
   try {
-    executor.beforeEach(async (ctx) => {
+    executor.onActivityReady(async (ctx) => {
       await ctx.uploadFile(`${__dirname}/cubes.blend`, "/golem/resource/scene.blend");
     });
 
@@ -54,7 +54,7 @@ async function main(subnetTag: string, driver?: string, network?: string, debug?
   } catch (error) {
     console.error("Computation failed:", error);
   } finally {
-    await executor.end();
+    await executor.shutdown();
   }
 }
 

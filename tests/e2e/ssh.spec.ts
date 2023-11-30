@@ -48,6 +48,6 @@ describe("SSH connection", function () {
     await new Promise((res) => setTimeout(res, 3000));
     expect(stdout).toContain("1-Alpine SMP");
     processSsh.kill();
-    await executor.end();
+    await executor.shutdown();
   });
 });

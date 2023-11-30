@@ -1,13 +1,13 @@
 import { Result, ResultState, StreamingBatchEvent } from "./results";
 import EventSource from "eventsource";
 import { Readable } from "stream";
-import { Logger } from "../utils";
+import { Logger, YagnaApi } from "../utils";
 import sleep from "../utils/sleep";
 import { ActivityFactory } from "./factory";
 import { ActivityConfig } from "./config";
 import { Events } from "../events";
-import { YagnaApi } from "../utils/yagna/yagna";
 import { AxiosError } from "axios";
+import { Agreement } from "../agreement";
 
 export enum ActivityStateEnum {
   New = "New",
@@ -43,17 +43,18 @@ export class Activity {
   private readonly logger?: Logger;
   private isRunning = true;
   private currentState: ActivityStateEnum = ActivityStateEnum.New;
+  private eventSource?: EventSource;
 
   /**
    * @param id activity ID
-   * @param agreementId agreement ID
+   * @param agreement Agreement
    * @param yagnaApi - {@link YagnaApi}
    * @param options - {@link ActivityOptions}
    * @hidden
    */
   constructor(
     public readonly id: string,
-    public readonly agreementId: string,
+    public readonly agreement: Agreement,
     protected readonly yagnaApi: YagnaApi,
     protected readonly options: ActivityConfig,
   ) {
@@ -63,19 +64,19 @@ export class Activity {
   /**
    * Create activity for given agreement ID
    *
-   * @param agreementId
+   * @param agreement
    * @param yagnaApi
    * @param options - {@link ActivityOptions}
    * @param secure - defines if activity will be secure type
    * @return Activity
    */
   static async create(
-    agreementId: string,
+    agreement: Agreement,
     yagnaApi: YagnaApi,
     options?: ActivityOptions,
     secure = false,
   ): Promise<Activity> {
-    const factory = new ActivityFactory(agreementId, yagnaApi, options);
+    const factory = new ActivityFactory(agreement, yagnaApi, options);
     return factory.create(secure);
   }
 
@@ -102,7 +103,7 @@ export class Activity {
     this.logger?.debug(`Script sent. Batch ID: ${batchId}`);
 
     this.options.eventTarget?.dispatchEvent(
-      new Events.ScriptSent({ activityId: this.id, agreementId: this.agreementId }),
+      new Events.ScriptSent({ activityId: this.id, agreementId: this.agreement.id }),
     );
 
     return stream
@@ -152,6 +153,7 @@ export class Activity {
   }
 
   private async end() {
+    this.eventSource?.close();
     await this.yagnaApi.activity.control
       .destroyActivity(this.id, this.options.activityRequestTimeout / 1000, {
         timeout: this.options.activityRequestTimeout + 1000,
@@ -161,7 +163,9 @@ export class Activity {
           `Unable to destroy activity ${this.id}. ${error?.response?.data?.message || error?.message || error}`,
         );
       });
-    this.options.eventTarget?.dispatchEvent(new Events.ActivityDestroyed(this));
+    this.options.eventTarget?.dispatchEvent(
+      new Events.ActivityDestroyed({ id: this.id, agreementId: this.agreement.id }),
+    );
     this.logger?.debug(`Activity ${this.id} destroyed`);
   }
 
@@ -171,7 +175,7 @@ export class Activity {
     let lastIndex: number;
     let retryCount = 0;
     const maxRetries = 5;
-    const { id: activityId, agreementId, logger } = this;
+    const { id: activityId, agreement, logger } = this;
     const isRunning = () => this.isRunning;
     const { activityExecuteTimeout, eventTarget, activityExeBatchResultPollIntervalSeconds } = this.options;
     const api = this.yagnaApi.activity;
@@ -227,14 +231,15 @@ export class Activity {
             try {
               retryCount = await handleError(error, lastIndex, retryCount, maxRetries);
             } catch (error) {
-              eventTarget?.dispatchEvent(new Events.ScriptExecuted({ activityId, agreementId, success: false }));
+              eventTarget?.dispatchEvent(
+                new Events.ScriptExecuted({ activityId, agreementId: agreement.id, success: false }),
+              );
               return this.destroy(new Error(`Unable to get activity results. ${error?.message || error}`));
             }
           }
         }
 
-        eventTarget?.dispatchEvent(new Events.ScriptExecuted({ activityId, agreementId, success: true }));
-
+        eventTarget?.dispatchEvent(new Events.ScriptExecuted({ activityId, agreementId: agreement.id, success: true }));
         this.push(null);
       },
     });
@@ -246,14 +251,18 @@ export class Activity {
     startTime: Date,
     timeout?: number,
   ): Promise<Readable> {
-    const basePath = this.yagnaApi.yagnaOptions.basePath;
+    const basePath = this.yagnaApi.activity.control["basePath"];
     const apiKey = this.yagnaApi.yagnaOptions.apiKey;
+
     const eventSource = new EventSource(`${basePath}/activity/${this.id}/exec/${batchId}`, {
       headers: {
         Accept: "text/event-stream",
         Authorization: `Bearer ${apiKey}`,
       },
     });
+    eventSource.addEventListener("runtime", (event) => results.push(this.parseEventToResult(event.data, batchSize)));
+    eventSource.addEventListener("error", (error) => errors.push(error.data?.message ?? error));
+    this.eventSource = eventSource;
 
     let isBatchFinished = false;
     const activityId = this.id;
@@ -262,27 +271,29 @@ export class Activity {
     const { logger } = this;
 
     const errors: object[] = [];
-    eventSource.addEventListener("error", (error) => errors.push(error.data.message ?? error));
-
     const results: Result[] = [];
-    eventSource.addEventListener("runtime", (event) => results.push(this.parseEventToResult(event.data, batchSize)));
 
     return new Readable({
       objectMode: true,
       async read() {
         while (!isBatchFinished) {
+          let error: Error | undefined;
           if (startTime.valueOf() + (timeout || activityExecuteTimeout) <= new Date().valueOf()) {
             logger?.debug("Activity probably timed-out, will stop streaming batch execution results");
-            return this.destroy(new Error(`Activity ${activityId} timeout.`));
+            error = new Error(`Activity ${activityId} timeout.`);
           }
 
           if (!isRunning()) {
             logger?.debug("Activity is no longer running, will stop streaming batch execution results");
-            return this.destroy(new Error(`Activity ${activityId} has been interrupted.`));
+            error = new Error(`Activity ${activityId} has been interrupted.`);
           }
 
           if (errors.length) {
-            return this.destroy(new Error(`GetExecBatchResults failed due to errors: ${JSON.stringify(errors)}`));
+            error = new Error(`GetExecBatchResults failed due to errors: ${JSON.stringify(errors)}`);
+          }
+          if (error) {
+            eventSource?.close();
+            return this.destroy(error);
           }
 
           if (results.length) {
@@ -294,6 +305,7 @@ export class Activity {
         }
 
         this.push(null);
+        eventSource?.close();
       },
     });
   }
@@ -346,22 +358,6 @@ export class Activity {
     );
   }
 
-  private isGsbError(error) {
-    // check if `err` is caused by "endpoint address not found" GSB error
-    if (!error.response) {
-      return false;
-    }
-    if (error.response.status !== 500) {
-      return false;
-    }
-    if (!error.response.data || !error.response.data.message) {
-      this.logger?.debug(`Cannot read error message, response: ${error.response}`);
-      return false;
-    }
-    const message = error.response.data.message;
-    return message.includes("endpoint address not found") && message.includes("GSB error");
-  }
-
   private async isTerminated(): Promise<{ terminated: boolean; reason?: string; errorMessage?: string }> {
     try {
       const { data } = await this.yagnaApi.activity.state.getActivityState(this.id);
@@ -380,6 +376,8 @@ export class Activity {
   private parseEventToResult(msg: string, batchSize: number): Result {
     try {
       const event: StreamingBatchEvent = JSON.parse(msg);
+      // StreamingBatchEvent has a slightly more extensive structure,
+      // including a return code that could be added to the Result entity... (?)
       return new Result({
         index: event.index,
         eventDate: event.timestamp,
@@ -387,7 +385,9 @@ export class Activity {
           ? event?.kind?.finished?.return_code === 0
             ? ResultState.Ok
             : ResultState.Error
-          : ResultState.Error,
+          : event?.kind?.stderr
+            ? ResultState.Error
+            : ResultState.Ok,
         stdout: event?.kind?.stdout,
         stderr: event?.kind?.stderr,
         message: event?.kind?.finished?.message,

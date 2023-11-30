@@ -1,7 +1,10 @@
 import { TaskExecutor } from "@golem-sdk/golem-js";
 
 (async function main() {
-  const executor = await TaskExecutor.create("golem/alpine:latest");
+  const executor = await TaskExecutor.create({
+    midAgreementPaymentTimeoutSec: 10,
+    debitNotesAcceptanceTimeoutSec: 10,
+  });
 
   try {
     const results = await executor.run(async (ctx) => {
@@ -13,6 +16,6 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
   } catch (err) {
     console.error("An error occurred during execution:", err);
   } finally {
-    await executor.end();
+    await executor.shutdown();
   }
 })();

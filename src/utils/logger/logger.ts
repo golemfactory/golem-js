@@ -13,11 +13,4 @@ export interface Logger {
   warn(msg);
   error(msg);
   debug(msg);
-
-  /**
-   * Produce a table representation of the supplied data.
-   * This is currently used to display cost summary.
-   * @param object
-   */
-  table?(object);
 }

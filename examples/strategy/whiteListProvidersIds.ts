@@ -22,6 +22,6 @@ const whiteListIds = [
   } catch (err) {
     console.error("Task execution failed:", err);
   } finally {
-    await executor.end();
+    await executor.shutdown();
   }
 })();

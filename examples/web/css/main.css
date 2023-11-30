@@ -42,6 +42,31 @@ h3 {
   border-left: 1px solid #ddd;
   padding-left: 20px;
 }
+.inline {
+  display: flex;
+  align-items: center;
+}
+.fieldset {
+  display: flex;
+  flex-direction: column;
+}
+.fieldset label {
+  margin: 0 5px;
+}
+.fieldset > div,
+.fieldset > div > span {
+  display: inline-flex;
+  align-items: center;
+}
+.fieldset .inline label {
+  min-width: 80px;
+}
+.inline input[type="text"] {
+  min-width: 200px;
+}
+#inputs {
+  margin-left: 30px;
+}
 
 label {
   font-style: italic;
@@ -53,6 +78,16 @@ label {
 input {
   width: 95%;
   border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+  resize: vertical;
+  margin: 0;
+  padding: 5px;
+  height: 35px;
+}
+input[type="radio"] {
+  width: inherit;
+  border: inherit;
   border-radius: 4px;
   box-sizing: border-box;
   resize: vertical;
@@ -120,7 +155,7 @@ button:disabled {
   white-space: pre-line;
 }
 #results li {
-  font-size: 3rem;
+  font-size: 1.2rem;
 }
 .console ul {
   list-style: none;

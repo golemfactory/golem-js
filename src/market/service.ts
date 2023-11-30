@@ -1,4 +1,4 @@
-import { YagnaApi, Logger, sleep } from "../utils";
+import { Logger, sleep, YagnaApi } from "../utils";
 import { Package } from "../package";
 import { Proposal } from "./proposal";
 import { AgreementPoolService } from "../agreement";
@@ -11,8 +11,6 @@ export type ProposalFilter = (proposal: Proposal) => Promise<boolean> | boolean;
 export interface MarketOptions extends DemandOptions {
   /** A custom filter that checks every proposal coming from the market */
   proposalFilter?: ProposalFilter;
-  /** Maximum time for debit note acceptance*/
-  debitNotesAcceptanceTimeout?: number;
 }
 
 /**
@@ -60,6 +58,7 @@ export class MarketService {
   getProposalsCount() {
     return this.proposalsCount;
   }
+
   private async createDemand(): Promise<true> {
     if (!this.taskPackage || !this.allocation) throw new Error("The service has not been started correctly.");
     this.demand = await Demand.create(this.taskPackage, this.allocation, this.yagnaApi, this.options);
@@ -128,7 +127,7 @@ export class MarketService {
   private async isProposalValid(proposal: Proposal): Promise<{ result: boolean; reason?: string }> {
     if (!this.allocation) throw new Error("The service has not been started correctly.");
     const timeout = proposal.properties["golem.com.payment.debit-notes.accept-timeout?"];
-    if (timeout && timeout < this.options.debitNotesAcceptanceTimeout)
+    if (timeout && timeout < this.options.debitNotesAcceptanceTimeoutSec)
       return { result: false, reason: "Debit note acceptance timeout too short" };
     if (!proposal.hasPaymentPlatform(this.allocation.paymentPlatform))
       return { result: false, reason: "No common payment platform" };

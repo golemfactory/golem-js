@@ -10,6 +10,6 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
   } catch (error) {
     console.log("Error while running the task:", error);
   } finally {
-    await executor.end();
+    await executor.shutdown();
   }
 })();

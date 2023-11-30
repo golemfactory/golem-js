@@ -1,3 +1,5 @@
+/* eslint-env node */
+
 function fibo_loop(n) {
   let a = 1,
     b = 0;

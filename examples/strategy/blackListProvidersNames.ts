@@ -18,6 +18,6 @@ const blackListProvidersNames = ["provider-1", "golem-provider", "super-provider
   } catch (err) {
     console.error("Task execution failed:", err);
   } finally {
-    await executor.end();
+    await executor.shutdown();
   }
 })();

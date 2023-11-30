@@ -20,6 +20,6 @@ const myFilter: ProposalFilter = async (proposal) => {
   } catch (err) {
     console.error("Task execution failed:", err);
   } finally {
-    await executor.end();
+    await executor.shutdown();
   }
 })();

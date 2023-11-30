@@ -6,6 +6,7 @@
 /node_modules
 /src
 /tests
+/tmp
 .github
 .gitignore
 package-lock.json

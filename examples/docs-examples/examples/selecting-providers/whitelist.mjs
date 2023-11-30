@@ -25,6 +25,6 @@ for (let i = 0; i < whiteListNames.length; i++) {
   } catch (err) {
     console.error("An error occurred:", err);
   } finally {
-    await executor.end();
+    await executor.shutdown();
   }
 })();

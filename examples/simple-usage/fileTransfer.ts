@@ -13,6 +13,6 @@ import { readFileSync } from "fs";
   } catch (err) {
     console.error("Execution failed", err);
   } finally {
-    await executor.end();
+    await executor.shutdown();
   }
 })();

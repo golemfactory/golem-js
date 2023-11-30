@@ -23,6 +23,6 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
   } catch (error) {
     console.error(error);
   } finally {
-    if (executor) await executor.end();
+    if (executor) await executor.shutdown();
   }
 })();

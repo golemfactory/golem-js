@@ -34,6 +34,6 @@ function createLogger(options) {
   } catch (err) {
     console.error("Error while running the task:", err);
   } finally {
-    await executor.end();
+    await executor.shutdown();
   }
 })(options);

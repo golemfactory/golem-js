@@ -22,6 +22,6 @@ const blackListProvidersIds = [
   } catch (error) {
     console.error("Computation failed:", error);
   } finally {
-    await executor.end();
+    await executor.shutdown();
   }
 })();

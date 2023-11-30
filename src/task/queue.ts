@@ -1,3 +1,5 @@
+import { Task } from "./task";
+
 /**
  * @internal
  */
@@ -8,15 +10,15 @@ export interface QueueableTask {
 /**
  * @internal
  */
-export class TaskQueue<Task extends QueueableTask> {
-  protected itemsStack: Array<Task> = [];
+export class TaskQueue<T extends QueueableTask = Task> {
+  protected itemsStack: Array<T> = [];
 
-  addToEnd(task: Task) {
+  addToEnd(task: T) {
     this._checkIfTaskIsEligibleForAdd(task);
     this.itemsStack.push(task);
   }
 
-  addToBegin(task: Task) {
+  addToBegin(task: T) {
     this._checkIfTaskIsEligibleForAdd(task);
     this.itemsStack.unshift(task);
   }
@@ -25,11 +27,11 @@ export class TaskQueue<Task extends QueueableTask> {
     return this.itemsStack.length;
   }
 
-  get(): Task | undefined {
+  get(): T | undefined {
     return this.itemsStack.shift();
   }
 
-  private _checkIfTaskIsEligibleForAdd(task: Task) {
+  private _checkIfTaskIsEligibleForAdd(task: T) {
     if (!task.isQueueable()) throw new Error("You cannot add a task that is not in the correct state");
   }
 }

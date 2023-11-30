@@ -18,6 +18,6 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
   } catch (error) {
     console.error("Computation failed:", error);
   } finally {
-    await executor.end();
+    await executor.shutdown();
   }
 })();

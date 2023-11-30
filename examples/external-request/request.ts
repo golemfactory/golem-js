@@ -28,6 +28,6 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
   } catch (error) {
     console.error("Computation failed:", error);
   } finally {
-    await executor.end();
+    await executor.shutdown();
   }
 })();

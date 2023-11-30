@@ -22,6 +22,6 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
   } catch (error) {
     console.error("An error occurred:", error);
   } finally {
-    await executor.end();
+    await executor.shutdown();
   }
 })();
