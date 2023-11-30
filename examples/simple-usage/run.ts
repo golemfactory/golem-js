@@ -2,6 +2,7 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
 
 (async function main() {
   const executor = await TaskExecutor.create({
+    package: "golem/alpine:latest",
     midAgreementPaymentTimeoutSec: 10,
     debitNotesAcceptanceTimeoutSec: 10,
   });
