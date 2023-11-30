@@ -143,7 +143,17 @@ describe("Task Executor", () => {
       expect(executorPromise).rejects.toThrow("The maxTaskRetries parameter cannot be less than zero");
     });
 
-    it.todo('should emit "ready" event after init() completes');
+    it('should emit "ready" event after init() completes', async () => {
+      const ready = jest.fn();
+
+      const executor = new TaskExecutor({ package: "test", logger, yagnaOptions });
+      executor.events.on("ready", ready);
+      await executor.init();
+
+      expect(serviceRunSpy).toHaveBeenCalledTimes(4);
+      expect(ready).toHaveBeenCalledTimes(1);
+      await executor.shutdown();
+    });
   });
 
   describe("run()", () => {

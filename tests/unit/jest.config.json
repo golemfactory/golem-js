@@ -2,5 +2,21 @@
   "preset": "ts-jest",
   "testEnvironment": "node",
   "roots": ["../../src", "./"],
-  "testMatch": ["**/*.test.ts", "**/*.spec.ts"]
+  "testMatch": ["**/*.test.ts", "**/*.spec.ts"],
+  "reporters": [
+    [
+      "jest-junit",
+      {
+        "outputDirectory": "reports",
+        "outputName": "unit-report.xml"
+      }
+    ],
+    [
+      "github-actions",
+      {
+        "silent": false
+      }
+    ],
+    "summary"
+  ]
 }
