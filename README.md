@@ -80,11 +80,16 @@ This will generate production code in the `dist/` directory ready to be used in 
 ```ts
 import { TaskExecutor } from "@golem-sdk/golem-js";
 
-(async () => {
+(async function main() {
   const executor = await TaskExecutor.create("golem/alpine:latest");
-  await executor.run(async (ctx) => console.log(await ctx.run("echo 'Hello World'")).stdout);
-  await executor.shutdown();
-})().catch((err) => console.error(err, "Error in main"));
+  try {
+    await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
+  } catch (error) {
+    console.error("Computation failed:", error);
+  } finally {
+    await executor.shutdown();
+  }
+})();
 ```
 
 ### More examples
