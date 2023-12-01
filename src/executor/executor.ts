@@ -1,11 +1,11 @@
 import { Package, PackageOptions } from "../package";
 import { MarketService } from "../market";
 import { AgreementPoolService } from "../agreement";
-import { Task, TaskQueue, TaskService, Worker, TaskOptions } from "../task";
-import { PaymentService, PaymentOptions } from "../payment";
+import { Task, TaskOptions, TaskQueue, TaskService, Worker } from "../task";
+import { PaymentOptions, PaymentService } from "../payment";
 import { NetworkService } from "../network";
-import { sleep, Logger, LogLevel, runtimeContextChecker, Yagna } from "../utils";
-import { StorageProvider, GftpStorageProvider, NullStorageProvider, WebSocketBrowserStorageProvider } from "../storage";
+import { Logger, LogLevel, runtimeContextChecker, sleep, Yagna } from "../utils";
+import { GftpStorageProvider, NullStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../storage";
 import { ExecutorConfig } from "./config";
 import { Events } from "../events";
 import { StatsService } from "../stats/service";
@@ -16,7 +16,7 @@ import { WorkOptions } from "../task/work";
 import { MarketOptions } from "../market/service";
 import { RequireAtLeastOne } from "../utils/types";
 import { v4 } from "uuid";
-import { JobStorage, Job } from "../job";
+import { Job, JobStorage } from "../job";
 import { TaskExecutorEventsDict } from "./events";
 import { EventEmitter } from "eventemitter3";
 
@@ -391,7 +391,7 @@ export class TaskExecutor {
    * await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
    * ```
    */
-  async run<OutputType>(worker: Worker<OutputType>, options?: TaskOptions): Promise<OutputType> {
+  async run<OutputType>(worker: Worker<OutputType>, options?: TaskOptions): Promise<OutputType | undefined> {
     return this.executeTask<OutputType>(worker, options);
   }
 
@@ -410,7 +410,10 @@ export class TaskExecutor {
     return packageInstance;
   }
 
-  private async executeTask<OutputType>(worker: Worker<OutputType>, options?: TaskOptions): Promise<OutputType> {
+  private async executeTask<OutputType>(
+    worker: Worker<OutputType>,
+    options?: TaskOptions,
+  ): Promise<OutputType | undefined> {
     const task = new Task((++this.lastTaskIndex).toString(), worker, {
       maxRetries: options?.maxRetries ?? this.options.maxTaskRetries,
       timeout: options?.timeout ?? this.options.taskTimeout,
@@ -420,11 +423,10 @@ export class TaskExecutor {
     while (this.isRunning) {
       if (task.isFinished()) {
         if (task.isRejected()) throw task.getError();
-        return task.getResults() as OutputType;
+        return task.getResults();
       }
       await sleep(2000, true);
     }
-    throw new Error("Task executor has been stopped");
   }
 
   /**
