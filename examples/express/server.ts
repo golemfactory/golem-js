@@ -13,7 +13,7 @@ app.use("/results", express.static("public"));
 
 const network = new GolemNetwork({
   // let's use one of ready-to-go images created by the Golem team
-  // if you want to use your own image take a look at https://handbook.golem.network/requestor-tutorials/vm-runtime
+  // if you want to use your own image take a look at https://docs.golem.network/docs/creators/javascript/examples/tools/converting-docker-image-to-golem-format
   image: "golem/blender:latest",
   // let's make sure the provider has enough resources to render our scene
   demand: {

@@ -234,10 +234,10 @@ yarn format
 
 - [Golem](https://golem.network), a global, open-source, decentralized supercomputer that anyone can access.
 - Learn what you need to know to set up your Golem requestor node:
-  - [Requestor development: a quick primer](https://handbook.golem.network/requestor-tutorials/flash-tutorial-of-requestor-development)
+  - [Requestor development: a quick primer](https://docs.golem.network/docs/quickstarts/python-quickstart)
   - [Quick start](https://docs.golem.network/docs/creators/javascript/quickstarts)
 - Have a look at the most important concepts behind any Golem
-  application: [Golem application fundamentals](https://handbook.golem.network/requestor-tutorials/golem-application-fundamentals)
+  application: [Golem application fundamentals](https://docs.golem.network/docs/creators/python/guides/application-fundamentals)
 - Learn about preparing your own Docker-like images for
-  the [VM runtime](https://handbook.golem.network/requestor-tutorials/vm-runtime)
+  the [VM runtime](https://docs.golem.network/docs/creators/javascript/examples/tools/converting-docker-image-to-golem-format)
 - Write your own app with [JavaScript API](https://docs.golem.network/docs/creators/javascript/quickstarts/quickstart)
