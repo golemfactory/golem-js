@@ -1,20 +1,4 @@
 {
   "preset": "ts-jest",
-  "testEnvironment": "node",
-  "reporters": [
-    [
-      "jest-junit",
-      {
-        "outputDirectory": "reports",
-        "outputName": "general-report.xml"
-      }
-    ],
-    [
-      "github-actions",
-      {
-        "silent": false
-      }
-    ],
-    "summary"
-  ]
+  "testEnvironment": "node"
 }
