@@ -10,6 +10,7 @@ const DEFAULTS = {
   offerFetchingIntervalSec: 20,
   expirationSec: 30 * 60, // 30 min
   debitNotesAcceptanceTimeoutSec: 2 * 60, // 2 minutes
+  midAgreementDebitNoteIntervalSec: 2 * 60, // 2 minutes
   midAgreementPaymentTimeoutSec: 12 * 60 * 60, // 12 hours
   proposalFilter: acceptAllProposalFilter(),
 };
@@ -26,6 +27,7 @@ export class DemandConfig {
   public readonly logger?: Logger;
   public readonly eventTarget?: EventTarget;
   public readonly debitNotesAcceptanceTimeoutSec: number;
+  public readonly midAgreementDebitNoteIntervalSec: number;
   public readonly midAgreementPaymentTimeoutSec: number;
 
   constructor(options?: DemandOptions) {
@@ -47,6 +49,13 @@ export class DemandConfig {
 
     if (!this.isPositiveInt(this.debitNotesAcceptanceTimeoutSec)) {
       throw new Error("The debit note acceptance timeout time has to be a positive integer");
+    }
+
+    this.midAgreementDebitNoteIntervalSec =
+      options?.midAgreementDebitNoteIntervalSec ?? DEFAULTS.midAgreementDebitNoteIntervalSec;
+
+    if (!this.isPositiveInt(this.midAgreementDebitNoteIntervalSec)) {
+      throw new Error("The debit note interval time has to be a positive integer");
     }
 
     this.midAgreementPaymentTimeoutSec =

@@ -125,14 +125,23 @@ export class MarketService {
   }
 
   private async isProposalValid(proposal: Proposal): Promise<{ result: boolean; reason?: string }> {
-    if (!this.allocation) throw new Error("The service has not been started correctly.");
+    if (!this.allocation) {
+      throw new Error("The service has not been started correctly.");
+    }
+
     const timeout = proposal.properties["golem.com.payment.debit-notes.accept-timeout?"];
-    if (timeout && timeout < this.options.debitNotesAcceptanceTimeoutSec)
+    if (timeout && timeout < this.options.debitNotesAcceptanceTimeoutSec) {
       return { result: false, reason: "Debit note acceptance timeout too short" };
-    if (!proposal.hasPaymentPlatform(this.allocation.paymentPlatform))
+    }
+
+    if (!proposal.hasPaymentPlatform(this.allocation.paymentPlatform)) {
       return { result: false, reason: "No common payment platform" };
-    if (!(await this.options.proposalFilter(proposal)))
+    }
+
+    if (!(await this.options.proposalFilter(proposal))) {
       return { result: false, reason: "Proposal rejected by Proposal Filter" };
+    }
+
     return { result: true };
   }
 

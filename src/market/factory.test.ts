@@ -45,6 +45,7 @@ describe("Demand Factory", () => {
 
         // The properties responsible for mid-agreements payments are set
         expect(demandRequestBody.properties["golem.com.payment.debit-notes.accept-timeout?"]).toBeDefined();
+        expect(demandRequestBody.properties["golem.com.scheme.payu.debit-note.interval-sec?"]).toBeDefined();
         expect(demandRequestBody.properties["golem.com.scheme.payu.payment-timeout-sec?"]).toBeDefined();
         expect(demandRequestBody.properties["golem.srv.comp.expiration"]).toBeDefined();
 
