@@ -58,7 +58,7 @@ export class Agreement {
    * @hidden
    */
   constructor(
-    public readonly id,
+    public readonly id: string,
     public readonly provider: ProviderInfo,
     private readonly yagnaApi: YagnaApi,
     private readonly options: AgreementConfig,
