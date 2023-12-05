@@ -52,16 +52,31 @@ export interface DemandOptions {
   eventTarget?: EventTarget;
 
   /**
-   * Maximum time for debit note acceptance (in seconds)
+   * Maximum time for allowed provider-sent debit note acceptance (in seconds)
+   *
+   * Accepting debit notes from the provider is used as a health-check of the agreement between these parties.
+   * Failing to accept 5 debit notes in a row will be considered as a valida reason to terminate the agreement earlier
+   * than {@link expirationSec} defines.
+   *
+   * _Accepting debit notes during a long activity is considered a good practice in Golem Network._
+   * The SDK will accept debit notes each 2 minutes by default.
+   */
+  debitNotesAcceptanceTimeoutSec?: number;
+
+  /**
+   * The interval between provider sent debit notes to negotiate.
    *
    * If it would not be defined, the activities created for your demand would
    * probably live only 30 minutes, as that's the default value that the providers use to control engagements
    * that are not using mid-agreement payments.
    *
-   * _Accepting debit notes during a long activity is considered a good practice in Golem Network._
-   * The SDK will accept debit notes each 2 minutes.
+   * As a requestor, you don't have to specify it, as the provider will propose a value that the SDK will simply
+   * accept without negotiations.
+   *
+   * _Accepting payable debit notes during a long activity is considered a good practice in Golem Network._
+   * The SDK will accept debit notes each 2 minutes by default.
    */
-  debitNotesAcceptanceTimeoutSec?: number;
+  midAgreementDebitNoteIntervalSec?: number;
 
   /**
    * Maximum time to receive payment for any debit note. At the same time, the minimum interval between mid-agreement payments.
