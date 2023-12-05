@@ -186,7 +186,7 @@ export class Job<Output = unknown> {
 
     paymentService.acceptPayments(agreement);
 
-    const activity = await Activity.create(agreement.id, this.yagnaApi, options.activity);
+    const activity = await Activity.create(agreement, this.yagnaApi, options.activity);
 
     const storageProvider =
       this.defaultOptions.work?.storageProvider || options.work?.storageProvider || this._getDefaultStorageProvider();

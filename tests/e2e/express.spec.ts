@@ -20,7 +20,6 @@ describe("Express", function () {
     const port = 3000;
 
     app.use(express.text());
-    app.listen(port);
 
     app.post("/tts", async (req, res) => {
       if (!req.body) {
@@ -101,12 +100,16 @@ describe("Express", function () {
       expect(statusResponse.status).toEqual(200);
       expect(statusResponse.text === JobState.New || statusResponse.text === JobState.Pending).toBeTruthy();
 
-      await new Promise((resolve) => {
+      await new Promise((resolve, reject) => {
         const interval = setInterval(async () => {
           const statusResponse = await supertest(app).get(`/tts/${jobId}`).set("Content-Type", "text/plain");
           if (statusResponse.text === JobState.Done) {
             clearInterval(interval);
             resolve(undefined);
+          }
+          if (statusResponse.text === JobState.Rejected) {
+            clearInterval(interval);
+            reject(new Error("Job rejected"));
           }
         }, 500);
       });
