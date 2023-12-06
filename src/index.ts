@@ -6,7 +6,7 @@ export {
   WebSocketBrowserStorageProvider,
   WebSocketStorageProviderOptions,
 } from "./storage";
-export { ActivityStateEnum, Result, Activity, ActivityOptions, ActivityPoolService } from "./activity";
+export { ActivityStateEnum, Result, ResultState, Activity, ActivityOptions, ActivityPoolService } from "./activity";
 export { AgreementCandidate, AgreementSelectors, AgreementPoolService, AgreementServiceOptions } from "./agreement";
 export { ProposalFilters, ProposalFilter, MarketHelpers, MarketService, MarketOptions } from "./market";
 export { Package, PackageOptions, AllPackageOptions } from "./package";
