@@ -55,7 +55,7 @@ export interface DemandOptions {
    * Maximum time for allowed provider-sent debit note acceptance (in seconds)
    *
    * Accepting debit notes from the provider is used as a health-check of the agreement between these parties.
-   * Failing to accept 5 debit notes in a row will be considered as a valida reason to terminate the agreement earlier
+   * Failing to accept several debit notes in a row will be considered as a valida reason to terminate the agreement earlier
    * than {@link expirationSec} defines.
    *
    * _Accepting debit notes during a long activity is considered a good practice in Golem Network._
