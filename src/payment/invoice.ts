@@ -3,6 +3,7 @@ import { Invoice as Model, InvoiceStatus } from "ya-ts-client/dist/ya-payment/sr
 import { Events } from "../events";
 import { Rejection } from "./rejection";
 import { YagnaApi } from "../utils";
+import { GolemError } from "../error/golem-error";
 
 export type InvoiceOptions = BasePaymentOptions;
 
@@ -159,7 +160,7 @@ export class Invoice extends BaseNote<Model> {
       this.options.eventTarget?.dispatchEvent(
         new Events.PaymentFailed({ id: this.id, agreementId: this.agreementId, reason }),
       );
-      throw new Error(`Unable to accept invoice ${this.id} ${reason}`);
+      throw new GolemError(`Unable to accept invoice ${this.id} ${reason}`);
     }
     this.options.eventTarget?.dispatchEvent(new Events.PaymentAccepted(this));
   }
@@ -174,7 +175,7 @@ export class Invoice extends BaseNote<Model> {
       // TODO: not implemented by yagna !!!!
       // await this.yagnaApi.payment.rejectInvoice(this.id, rejection);
     } catch (e) {
-      throw new Error(`Unable to reject invoice ${this.id} ${e?.response?.data?.message || e}`);
+      throw new GolemError(`Unable to reject invoice ${this.id} ${e?.response?.data?.message || e}`);
     } finally {
       this.options.eventTarget?.dispatchEvent(
         new Events.PaymentFailed({ id: this.id, agreementId: this.agreementId, reason: rejection.message }),

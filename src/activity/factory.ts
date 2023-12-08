@@ -3,6 +3,7 @@ import { ActivityConfig } from "./config";
 import { Events } from "../events";
 import { YagnaApi } from "../utils";
 import { Agreement } from "../agreement";
+import { GolemError } from "../error/golem-error";
 
 /**
  * Activity Factory
@@ -23,13 +24,13 @@ export class ActivityFactory {
   public async create(secure = false): Promise<Activity> {
     try {
       if (secure) {
-        throw new Error("Not implemented");
+        throw new GolemError("Not implemented");
       }
       return await this.createActivity();
     } catch (error) {
       const msg = `Unable to create activity: ${error?.response?.data?.message || error}`;
       this.options.logger?.error(msg);
-      throw new Error(msg);
+      throw new GolemError(msg);
     }
   }
 

@@ -8,6 +8,7 @@ import { Agent } from "http";
 import { Configuration } from "ya-ts-client/dist/ya-payment";
 import { EnvUtils } from "../env";
 import { AxiosError } from "axios";
+import { GolemError } from "../../error/golem-error";
 
 export type YagnaApi = {
   market: MarketRequestorApi;
@@ -36,7 +37,7 @@ export class Yagna {
     this.httpAgent = new Agent({ keepAlive: true });
     this.controller = new AbortController();
     this.apiKey = options?.apiKey || EnvUtils.getYagnaAppKey();
-    if (!this.apiKey) throw new Error("Api key not defined");
+    if (!this.apiKey) throw new GolemError("Api key not defined");
     this.apiBaseUrl = options?.basePath || EnvUtils.getYagnaApiUrl();
     this.api = this.createApi();
   }

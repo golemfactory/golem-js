@@ -5,6 +5,7 @@ import { Invoice, InvoiceDTO } from "./invoice";
 import { DebitNote, DebitNoteDTO } from "./debit_note";
 import { Payments, PaymentEventType, DebitNoteEvent, InvoiceEvent } from "./payments";
 import { RejectionReason } from "./rejection";
+import { GolemError } from "../error/golem-error";
 
 export interface PaymentOptions extends BasePaymentOptions {
   /** Interval for checking new invoices */
@@ -97,7 +98,7 @@ export class PaymentService {
       this.allocation = await Allocation.create(this.yagnaApi, { ...this.config.options, account, ...options });
       return this.allocation;
     } catch (error) {
-      throw new Error(
+      throw new GolemError(
         `Unable to create allocation for driver/network ${this.config.payment.driver}/${this.config.payment.network}. ${error}`,
       );
     }

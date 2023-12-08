@@ -3,6 +3,7 @@ import { Logger } from "../utils";
 import { AgreementConfig } from "./config";
 import { Events } from "../events";
 import { YagnaApi } from "../utils/yagna/yagna";
+import { GolemError } from "../error/golem-error";
 
 /**
  * AgreementFactory
@@ -45,7 +46,7 @@ export class AgreementFactory {
         name: data?.offer.properties["golem.node.id.name"],
         id: data?.offer.providerId,
       };
-      if (!provider.id || !provider.name) throw new Error("Unable to get provider info");
+      if (!provider.id || !provider.name) throw new GolemError("Unable to get provider info");
       const agreement = new Agreement(agreementId, provider, this.yagnaApi, this.options);
       this.options.eventTarget?.dispatchEvent(
         new Events.AgreementCreated({
@@ -59,7 +60,9 @@ export class AgreementFactory {
       this.logger?.debug(`Agreement ${agreementId} created`);
       return agreement;
     } catch (error) {
-      throw new Error(`Unable to create agreement ${error?.response?.data?.message || error?.response?.data || error}`);
+      throw new GolemError(
+        `Unable to create agreement ${error?.response?.data?.message || error?.response?.data || error}`,
+      );
     }
   }
 }

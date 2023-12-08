@@ -2,6 +2,7 @@ import { ExecutorOptions } from "./executor";
 import { Package, PackageOptions } from "../package";
 import { ActivityOptions } from "../activity";
 import { Logger, LogLevel, runtimeContextChecker, defaultLogger } from "../utils";
+import { GolemError } from "../error/golem-error";
 
 const DEFAULTS = Object.freeze({
   payment: { driver: "erc20", network: "goerli" },
@@ -51,10 +52,10 @@ export class ExecutorConfig {
     this.activityExecuteTimeout = options.activityExecuteTimeout || options.taskTimeout;
     const apiKey = options?.yagnaOptions?.apiKey || processEnv.env.YAGNA_APPKEY;
     if (!apiKey) {
-      throw new Error("Api key not defined");
+      throw new GolemError("Api key not defined");
     }
     if (options.maxTaskRetries && options.maxTaskRetries < 0) {
-      throw new Error("The maxTaskRetries parameter cannot be less than zero");
+      throw new GolemError("The maxTaskRetries parameter cannot be less than zero");
     }
     this.yagnaOptions = {
       apiKey,

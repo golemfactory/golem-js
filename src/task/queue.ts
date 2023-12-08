@@ -1,4 +1,5 @@
 import { Task } from "./task";
+import { GolemError } from "../error/golem-error";
 
 /**
  * @internal
@@ -32,6 +33,6 @@ export class TaskQueue<T extends QueueableTask = Task> {
   }
 
   private _checkIfTaskIsEligibleForAdd(task: T) {
-    if (!task.isQueueable()) throw new Error("You cannot add a task that is not in the correct state");
+    if (!task.isQueueable()) throw new GolemError("You cannot add a task that is not in the correct state");
   }
 }

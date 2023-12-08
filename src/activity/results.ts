@@ -1,6 +1,7 @@
 import { ExeScriptCommandResultResultEnum } from "ya-ts-client/dist/ya-activity/src/models/exe-script-command-result";
 
 export import ResultState = ExeScriptCommandResultResultEnum;
+import { GolemError } from "../error/golem-error";
 
 // FIXME: Make the `data` field Uint8Array and update the rest of the code
 // eslint-disable-next-line
@@ -52,13 +53,13 @@ export class Result<TData = any> implements ResultData<TData> {
    */
   public getOutputAsJson<Output = object>(): Output {
     if (!this.stdout) {
-      throw new Error("Can't convert Result output to JSON, because the output is missing!");
+      throw new GolemError("Can't convert Result output to JSON, because the output is missing!");
     }
 
     try {
       return JSON.parse(this.stdout.toString().trim());
     } catch (err) {
-      throw new Error(`Failed to parse output to JSON! Output: "${this.stdout.toString()}". Error: ${err}`);
+      throw new GolemError(`Failed to parse output to JSON! Output: "${this.stdout.toString()}". Error: ${err}`);
     }
   }
 }

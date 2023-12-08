@@ -4,6 +4,7 @@ import { BaseNote } from "./invoice";
 import { Events } from "../events";
 import { Rejection } from "./rejection";
 import { YagnaApi } from "../utils";
+import { GolemError } from "../error/golem-error";
 
 export type InvoiceOptions = BasePaymentOptions;
 
@@ -87,7 +88,7 @@ export class DebitNote extends BaseNote<Model> {
       this.options.eventTarget?.dispatchEvent(
         new Events.PaymentFailed({ id: this.id, agreementId: this.agreementId, reason }),
       );
-      throw new Error(`Unable to accept debit note ${this.id} ${e?.response?.data?.message || e}`);
+      throw new GolemError(`Unable to accept debit note ${this.id} ${e?.response?.data?.message || e}`);
     }
     this.options.eventTarget?.dispatchEvent(new Events.DebitNoteAccepted({ ...this, amount: totalAmountAccepted }));
   }
@@ -102,7 +103,7 @@ export class DebitNote extends BaseNote<Model> {
       // TODO: not implemented by yagna - 501 returned
       // await this.yagnaApi.payment.rejectDebitNote(this.id, rejection);
     } catch (e) {
-      throw new Error(`Unable to reject debit note ${this.id} ${e?.response?.data?.message || e}`);
+      throw new GolemError(`Unable to reject debit note ${this.id} ${e?.response?.data?.message || e}`);
     } finally {
       this.options.eventTarget?.dispatchEvent(
         new Events.PaymentFailed({ id: this.id, agreementId: this.agreementId, reason: rejection.message }),
