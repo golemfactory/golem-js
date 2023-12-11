@@ -5,6 +5,7 @@ import { AgreementFactory } from "./factory";
 import { AgreementConfig } from "./config";
 import { Events } from "../events";
 import { YagnaApi } from "../utils/yagna/yagna";
+import { GolemError } from "../error/golem-error";
 
 /**
  * @hidden
@@ -147,7 +148,7 @@ export class Agreement {
       );
       this.logger?.debug(`Agreement ${this.id} terminated`);
     } catch (error) {
-      throw new Error(
+      throw new GolemError(
         `Unable to terminate agreement ${this.id}. ${error.response?.data?.message || error.response?.data || error}`,
       );
     }

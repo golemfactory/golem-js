@@ -4,6 +4,7 @@ import { StorageProvider } from "../storage/provider";
 import { Logger } from "../utils";
 import { pipeline, Readable, Transform } from "stream";
 import { UploadData } from "../script/command";
+import { GolemError } from "../error/golem-error";
 
 export class Batch {
   private script: Script;
@@ -134,7 +135,7 @@ export class Batch {
       transform(chunk, encoding, callback) {
         const error =
           chunk?.result === "Error"
-            ? new Error(`${chunk?.message}. Stdout: ${chunk?.stdout?.trim()}. Stderr: ${chunk?.stderr?.trim()}`)
+            ? new GolemError(`${chunk?.message}. Stdout: ${chunk?.stdout?.trim()}. Stderr: ${chunk?.stderr?.trim()}`)
             : null;
         if (error) {
           script.after(decodedResults).catch();

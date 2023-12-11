@@ -1,4 +1,5 @@
 import { StorageProvider, StorageProviderDataCallback } from "./provider";
+import { GolemError } from "../error/golem-error";
 
 /**
  * Null Storage Provider.
@@ -21,22 +22,22 @@ export class NullStorageProvider implements StorageProvider {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   publishData(src: Uint8Array): Promise<string> {
-    return Promise.reject(new Error("NullStorageProvider does not support cannot upload data"));
+    return Promise.reject(new GolemError("NullStorageProvider does not support cannot upload data"));
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   publishFile(src: string): Promise<string> {
-    return Promise.reject(new Error("NullStorageProvider does not support cannot upload files"));
+    return Promise.reject(new GolemError("NullStorageProvider does not support cannot upload files"));
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   receiveFile(path: string): Promise<string> {
-    return Promise.reject(new Error("NullStorageProvider does not support cannot download files"));
+    return Promise.reject(new GolemError("NullStorageProvider does not support cannot download files"));
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   receiveData(callback: StorageProviderDataCallback): Promise<string> {
-    return Promise.reject(new Error("NullStorageProvider does not support cannot download data"));
+    return Promise.reject(new GolemError("NullStorageProvider does not support cannot download data"));
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

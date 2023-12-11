@@ -3,12 +3,16 @@ import { AllocationConfig, BasePaymentOptions } from "./config";
 import { Allocation as AllocationModel } from "ya-ts-client/dist/ya-payment/src/models/allocation";
 import { Events } from "../events";
 import { YagnaApi } from "../utils";
+import { GolemError } from "../error/golem-error";
 
 /**
  * @hidden
  */
 export interface AllocationOptions extends BasePaymentOptions {
-  account: { address: string; platform: string };
+  account: {
+    address: string;
+    platform: string;
+  };
   expires?: number;
 }
 
@@ -53,7 +57,7 @@ export class Allocation {
       allocationId: "",
     };
     const { data: newModel } = await yagnaApi.payment.createAllocation(model).catch((error) => {
-      throw new Error(
+      throw new GolemError(
         `Could not create new allocation. ${error.response?.data?.message || error.response?.data || error}`,
       );
     });
@@ -87,7 +91,9 @@ export class Allocation {
     this.totalAmount = model.totalAmount;
     this.spentAmount = model.spentAmount;
     this.remainingAmount = model.remainingAmount;
-    if (!model.address || !model.paymentPlatform) throw new Error("Account address and payment platform are required");
+    if (!model.address || !model.paymentPlatform) {
+      throw new GolemError("Account address and payment platform are required");
+    }
     this.address = model.address;
     this.paymentPlatform = model.paymentPlatform;
   }
@@ -117,7 +123,7 @@ export class Allocation {
    */
   async release() {
     await this.yagnaApi.payment.releaseAllocation(this.id).catch((e) => {
-      throw new Error(`Could not release allocation. ${e.response?.data?.message || e}`);
+      throw new GolemError(`Could not release allocation. ${e.response?.data?.message || e}`);
     });
     this.options?.logger?.debug(`Allocation ${this.id} has been released.`);
   }
@@ -129,14 +135,14 @@ export class Allocation {
    */
   async getDemandDecoration(): Promise<MarketDecoration> {
     const { data: decoration } = await this.yagnaApi.payment.getDemandDecorations([this.id]).catch((e) => {
-      throw new Error(`Unable to get demand decorations. ${e.response?.data?.message || e}`);
+      throw new GolemError(`Unable to get demand decorations. ${e.response?.data?.message || e}`);
     });
     return decoration;
   }
 
   private async refresh() {
     const { data } = await this.yagnaApi.payment.getAllocation(this.id).catch((e) => {
-      throw new Error(`Could not get allocation data. ${e.response?.data || e}`);
+      throw new GolemError(`Could not get allocation data. ${e.response?.data || e}`);
     });
     this.remainingAmount = data.remainingAmount;
     this.spentAmount = data.spentAmount;

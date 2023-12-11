@@ -12,6 +12,7 @@ import { Activity, ActivityOptions } from "../activity";
 export { TaskState as JobState } from "../task/task";
 import { EventEmitter } from "eventemitter3";
 import { GftpStorageProvider, NullStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../storage";
+import { GolemError } from "../error/golem-error";
 
 export type RunJobOptions = {
   market?: MarketOptions;
@@ -94,11 +95,11 @@ export class Job<Output = unknown> {
    */
   startWork(workOnGolem: Worker<Output>, options: RunJobOptions = {}) {
     if (this.isRunning) {
-      throw new Error(`Job ${this.id} is already running`);
+      throw new GolemError(`Job ${this.id} is already running`);
     }
     const packageOptions = Object.assign({}, this.defaultOptions.package, options.package);
     if (!packageOptions.imageHash && !packageOptions.manifest && !packageOptions.imageTag) {
-      throw new Error("You must specify either imageHash, imageTag or manifest in package options");
+      throw new GolemError("You must specify either imageHash, imageTag or manifest in package options");
     }
 
     this._isRunning = true;
@@ -169,7 +170,7 @@ export class Job<Output = unknown> {
   }) {
     if (signal.aborted) {
       this.events.emit("canceled");
-      throw new Error("Canceled");
+      throw new GolemError("Canceled");
     }
 
     const allocation = await paymentService.createAllocation();
@@ -211,7 +212,7 @@ export class Job<Output = unknown> {
     };
     if (signal.aborted) {
       await onAbort();
-      throw new Error("Canceled");
+      throw new GolemError("Canceled");
     }
     signal.addEventListener("abort", onAbort, { once: true });
     return worker(workContext);
@@ -233,7 +234,7 @@ export class Job<Output = unknown> {
    */
   async cancel() {
     if (!this.isRunning) {
-      throw new Error(`Job ${this.id} is not running`);
+      throw new GolemError(`Job ${this.id} is not running`);
     }
     this.abortController.abort();
     return new Promise<void>((resolve) => {
@@ -253,7 +254,7 @@ export class Job<Output = unknown> {
       throw this.error;
     }
     if (!this.isRunning) {
-      throw new Error(`Job ${this.id} is not running`);
+      throw new GolemError(`Job ${this.id} is not running`);
     }
     return new Promise((resolve, reject) => {
       this.events.once("ended", () => {

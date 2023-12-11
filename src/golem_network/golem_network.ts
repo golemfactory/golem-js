@@ -3,6 +3,7 @@ import { YagnaOptions } from "../executor";
 import { Job } from "../job";
 import { Yagna } from "../utils";
 import { RunJobOptions } from "../job/job";
+import { GolemError } from "../error/golem-error";
 
 /**
  * The Golem Network class provides a high-level API for running jobs on the Golem Network.
@@ -19,7 +20,7 @@ export class GolemNetwork {
 
   private get yagna() {
     if (this._yagna === null) {
-      throw new Error("GolemNetwork not initialized, please run init() first");
+      throw new GolemError("GolemNetwork not initialized, please run init() first");
     }
     return this._yagna;
   }

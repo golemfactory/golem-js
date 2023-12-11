@@ -17,6 +17,7 @@ import { MarketOptions } from "../market/service";
 import { RequireAtLeastOne } from "../utils/types";
 import { TaskExecutorEventsDict } from "./events";
 import { EventEmitter } from "eventemitter3";
+import { GolemError } from "../error/golem-error";
 
 const terminatingSignals = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
 
@@ -236,7 +237,7 @@ export class TaskExecutor {
           taskPackage = packageReference;
         }
       } else {
-        const error = new Error("No package or manifest provided");
+        const error = new GolemError("No package or manifest provided");
         this.logger?.error(error);
         throw error;
       }
@@ -417,7 +418,7 @@ export class TaskExecutor {
       }
       await sleep(2000, true);
     }
-    throw new Error("Task executor has been stopped");
+    throw new GolemError("Task executor has been stopped");
   }
 
   private handleCriticalError(e: Error) {
@@ -484,7 +485,7 @@ export class TaskExecutor {
               : "Check your proposal filters if they are not too restrictive.";
         const errorMessage = `Could not start any work on Golem. Processed ${proposalsCount.initial} initial proposals from yagna, filters accepted ${proposalsCount.confirmed}. ${hint}`;
         if (this.options.exitOnNoProposals) {
-          this.handleCriticalError(new Error(errorMessage));
+          this.handleCriticalError(new GolemError(errorMessage));
         } else {
           this.logger?.warn(errorMessage);
         }

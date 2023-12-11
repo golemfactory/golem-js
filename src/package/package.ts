@@ -3,6 +3,7 @@ import { EnvUtils, Logger } from "../utils";
 import axios from "axios";
 import { PackageConfig } from "./config";
 import { RequireAtLeastOne } from "../utils/types";
+import { GolemError } from "../error/golem-error";
 
 export type AllPackageOptions = {
   /** Type of engine required: vm, emscripten, sgx, sgx-js, sgx-wasm, sgx-wasi */
@@ -117,7 +118,7 @@ export class Package {
     });
     if (response.status != 200) {
       this.logger?.error(`Unable to get image Url of  ${tag || hash} from ${repoUrl}`);
-      throw Error(`${response.data}`);
+      throw new GolemError(`${response.data}`);
     }
     const imageUrl = isHttps ? response.data.https : response.data.http;
     hash = response.data.sha3;

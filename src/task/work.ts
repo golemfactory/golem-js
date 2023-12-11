@@ -17,6 +17,7 @@ import { Logger, nullLogger, sleep } from "../utils";
 import { Batch } from "./batch";
 import { NetworkNode } from "../network";
 import { RemoteProcess } from "./process";
+import { GolemError } from "../error/golem-error";
 
 export type Worker<OutputType> = (ctx: WorkContext) => Promise<OutputType>;
 
@@ -79,7 +80,7 @@ export class WorkContext {
           this.activityPreparingTimeout,
         )
         .catch((e) => {
-          throw new Error(`Unable to deploy activity. ${e}`);
+          throw new GolemError(`Unable to deploy activity. ${e}`);
         });
       let timeoutId;
       await Promise.race([
@@ -89,7 +90,7 @@ export class WorkContext {
         ),
         (async () => {
           for await (const res of result) {
-            if (res.result === "Error") throw new Error(`Preparing activity failed. Error: ${res.message}`);
+            if (res.result === "Error") throw new GolemError(`Preparing activity failed. Error: ${res.message}`);
           }
         })(),
       ]).finally(() => clearTimeout(timeoutId));
@@ -97,7 +98,7 @@ export class WorkContext {
     await sleep(this.activityStateCheckingInterval, true);
     state = await this.activity.getState().catch((e) => this.logger.warn(`${e} Provider: ${this.provider?.name}`));
     if (state !== ActivityStateEnum.Ready) {
-      throw new Error(`Activity ${this.activity.id} cannot reach the Ready state. Current state: ${state}`);
+      throw new GolemError(`Activity ${this.activity.id} cannot reach the Ready state. Current state: ${state}`);
     }
     await this.setupActivity();
   }
@@ -177,7 +178,7 @@ export class WorkContext {
     const streamOfActivityResults = await this.activity
       .execute(script.getExeScriptRequest(), true, options?.timeout)
       .catch((e) => {
-        throw new Error(
+        throw new GolemError(
           `Script execution failed for command: ${JSON.stringify(run.toJson())}. ${
             e?.response?.data?.message || e?.message || e
           }`,
@@ -250,16 +251,16 @@ export class WorkContext {
    * @Deprecated This function is only used to throw errors from unit tests. It should be removed.
    */
   rejectResult(msg: string) {
-    throw new Error(`Work rejected. Reason: ${msg}`);
+    throw new GolemError(`Work rejected. Reason: ${msg}`);
   }
 
   getWebsocketUri(port: number): string {
-    if (!this.networkNode) throw new Error("There is no network in this work context");
+    if (!this.networkNode) throw new GolemError("There is no network in this work context");
     return this.networkNode.getWebsocketUri(port);
   }
 
   getIp(): string {
-    if (!this.networkNode) throw new Error("There is no network in this work context");
+    if (!this.networkNode) throw new GolemError("There is no network in this work context");
     return this.networkNode.ip.toString();
   }
 
@@ -271,7 +272,7 @@ export class WorkContext {
     // Initialize script.
     const script = new Script([command]);
     await script.before().catch((e) => {
-      throw new Error(
+      throw new GolemError(
         `Script initialization failed for command: ${JSON.stringify(command.toJson())}. ${
           e?.response?.data?.message || e?.message || e
         }`,
@@ -281,7 +282,7 @@ export class WorkContext {
 
     // Send script.
     const results = await this.activity.execute(script.getExeScriptRequest(), false, options?.timeout).catch((e) => {
-      throw new Error(
+      throw new GolemError(
         `Script execution failed for command: ${JSON.stringify(command.toJson())}. ${
           e?.response?.data?.message || e?.message || e
         }`,

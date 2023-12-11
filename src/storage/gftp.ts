@@ -3,6 +3,7 @@ import { Logger, runtimeContextChecker, sleep } from "../utils";
 import path from "path";
 import fs from "fs";
 import cp from "child_process";
+import { GolemError } from "../error/golem-error";
 
 export class GftpStorageProvider implements StorageProvider {
   private gftpServerProcess?: cp.ChildProcess;
@@ -23,7 +24,7 @@ export class GftpStorageProvider implements StorageProvider {
 
   constructor(private logger?: Logger) {
     if (runtimeContextChecker.isBrowser) {
-      throw new Error(`File transfer by GFTP module is unsupported in the browser context.`);
+      throw new GolemError(`File transfer by GFTP module is unsupported in the browser context.`);
     }
   }
 
@@ -78,7 +79,7 @@ export class GftpStorageProvider implements StorageProvider {
   }
 
   receiveData(): Promise<string> {
-    throw new Error("receiveData is not implemented in GftpStorageProvider");
+    throw new GolemError("receiveData is not implemented in GftpStorageProvider");
   }
 
   async publishFile(src: string): Promise<string> {
@@ -124,18 +125,16 @@ export class GftpStorageProvider implements StorageProvider {
     this.lock = true;
     const paramsStr = JSON.stringify(params);
     const query = `{"jsonrpc": "2.0", "id": "1", "method": "${method}", "params": ${paramsStr}}\n`;
-    let valueStr = "";
     try {
       this.gftpServerProcess?.stdin?.write(query);
       const value = (await this.reader?.next())?.value;
-      if (!value) throw "Unable to get GFTP command result";
+      if (!value) throw new GolemError("Unable to get GFTP command result");
       const { result } = JSON.parse(value);
-      valueStr = value;
-      if (result === undefined) throw value;
+      if (result === undefined) throw new GolemError(value);
       return result;
     } catch (error) {
-      throw Error(
-        `Error while obtaining response to JSONRPC. query: ${query} value: ${valueStr} error: ${JSON.stringify(error)}`,
+      throw new GolemError(
+        `Error while obtaining response to JSONRPC. query: ${query} error: ${JSON.stringify(error)}`,
       );
     } finally {
       this.lock = false;

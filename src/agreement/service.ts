@@ -5,6 +5,7 @@ import { AgreementServiceConfig } from "./config";
 import { Proposal } from "../market";
 import sleep from "../utils/sleep";
 import { YagnaApi } from "../utils/yagna/yagna";
+import { GolemError } from "../error/golem-error";
 
 export interface AgreementDTO {
   id: string;
@@ -71,7 +72,7 @@ export class AgreementPoolService {
   /**
    * Release or terminate agreement by ID
    *
-   * @param agreement Agreement
+   * @param agreementId Agreement Id
    * @param allowReuse if false, terminate and remove from pool, if true, back to pool for further reuse
    */
   async releaseAgreement(agreementId: string, allowReuse: boolean) {
@@ -113,7 +114,7 @@ export class AgreementPoolService {
       }
     }
     if (!agreement && !this.isServiceRunning) {
-      throw new Error("Unable to get agreement. Agreement service is not running");
+      throw new GolemError("Unable to get agreement. Agreement service is not running");
     }
     return agreement;
   }
@@ -178,7 +179,7 @@ export class AgreementPoolService {
       const state = await agreement.getState();
 
       if (state !== AgreementStateEnum.Approved) {
-        throw new Error(`Agreement ${agreement.id} cannot be approved. Current state: ${state}`);
+        throw new GolemError(`Agreement ${agreement.id} cannot be approved. Current state: ${state}`);
       }
       this.logger?.info(`Agreement confirmed by provider ${agreement.provider.name}`);
 

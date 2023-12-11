@@ -9,6 +9,7 @@ import { Events } from "../events";
 import { ProposalEvent, ProposalRejectedEvent } from "ya-ts-client/dist/ya-market/src/models";
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
 import * as events from "../events/events";
+import { GolemError } from "../error/golem-error";
 
 export interface DemandDetails {
   properties: Array<{ key: string; value: string | number | boolean }>;
@@ -225,7 +226,9 @@ export class Demand extends EventTarget {
               new DemandEvent(
                 DemandEventType,
                 undefined,
-                new Error(`${error.code === "ECONNREFUSED" ? "Yagna connection error." : "Demand expired."} ${reason}`),
+                new GolemError(
+                  `${error.code === "ECONNREFUSED" ? "Yagna connection error." : "Demand expired."} ${reason}`,
+                ),
               ),
             );
             break;

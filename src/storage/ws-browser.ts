@@ -3,6 +3,7 @@ import { v4 } from "uuid";
 import { encode, toObject } from "flatbuffers/js/flexbuffers";
 import * as jsSha3 from "js-sha3";
 import { Logger, nullLogger, YagnaApi } from "../utils";
+import { GolemError } from "../error/golem-error";
 
 export interface WebSocketStorageProviderOptions {
   logger?: Logger;
@@ -99,7 +100,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
   }
 
   async publishFile(): Promise<string> {
-    throw new Error("Not implemented");
+    throw new GolemError("Not implemented");
   }
 
   async receiveData(callback: StorageProviderDataCallback): Promise<string> {
@@ -129,7 +130,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
   }
 
   async receiveFile(): Promise<string> {
-    throw new Error("Not implemented");
+    throw new GolemError("Not implemented");
   }
 
   async release(urls: string[]): Promise<void> {
@@ -169,7 +170,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
     const resp = await this.yagnaApi.gsb.createService(fileInfo, components);
 
     if (resp.status !== 201) {
-      throw new Error(`Invalid response: ${resp.status}`);
+      throw new GolemError(`Invalid response: ${resp.status}`);
     }
 
     const servicesId = resp.data.servicesId;
@@ -184,7 +185,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
   private async deleteService(id: string): Promise<void> {
     const resp = await this.yagnaApi.gsb.deleteService(id);
     if (resp.status !== 200) {
-      throw new Error(`Invalid response: ${resp.status}`);
+      throw new GolemError(`Invalid response: ${resp.status}`);
     }
   }
 
@@ -209,7 +210,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
     const hashHex = jsSha3.sha3_256(buf);
 
     if (hash !== hashHex) {
-      throw new Error(`File corrupted, expected hash ${hash}, got ${hashHex}`);
+      throw new GolemError(`File corrupted, expected hash ${hash}, got ${hashHex}`);
     } else {
       return buf;
     }

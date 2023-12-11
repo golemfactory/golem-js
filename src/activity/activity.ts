@@ -8,6 +8,7 @@ import { ActivityConfig } from "./config";
 import { Events } from "../events";
 import { AxiosError } from "axios";
 import { Agreement } from "../agreement";
+import { GolemError } from "../error/golem-error";
 
 export enum ActivityStateEnum {
   New = "New",
@@ -97,7 +98,7 @@ export class Activity {
       batchSize = JSON.parse(script.text).length;
     } catch (error) {
       this.logger?.error(error?.response?.data?.message || error.message || error);
-      throw new Error(error);
+      throw new GolemError(error);
     }
 
     this.logger?.debug(`Script sent. Batch ID: ${batchId}`);
@@ -159,7 +160,7 @@ export class Activity {
         timeout: this.options.activityRequestTimeout + 1000,
       })
       .catch((error) => {
-        throw new Error(
+        throw new GolemError(
           `Unable to destroy activity ${this.id}. ${error?.response?.data?.message || error?.message || error}`,
         );
       });
@@ -190,12 +191,12 @@ export class Activity {
 
           if (startTime.valueOf() + (timeout || activityExecuteTimeout) <= new Date().valueOf()) {
             logger?.debug("Activity probably timed-out, will stop polling for batch execution results");
-            return this.destroy(new Error(`Activity ${activityId} timeout.`));
+            return this.destroy(new GolemError(`Activity ${activityId} timeout.`));
           }
 
           if (!isRunning()) {
             logger?.debug("Activity is no longer running, will stop polling for batch execution results");
-            return this.destroy(new Error(`Activity ${activityId} has been interrupted.`));
+            return this.destroy(new GolemError(`Activity ${activityId} has been interrupted.`));
           }
 
           try {
@@ -234,7 +235,7 @@ export class Activity {
               eventTarget?.dispatchEvent(
                 new Events.ScriptExecuted({ activityId, agreementId: agreement.id, success: false }),
               );
-              return this.destroy(new Error(`Unable to get activity results. ${error?.message || error}`));
+              return this.destroy(new GolemError(`Unable to get activity results. ${error?.message || error}`));
             }
           }
         }
@@ -280,16 +281,16 @@ export class Activity {
           let error: Error | undefined;
           if (startTime.valueOf() + (timeout || activityExecuteTimeout) <= new Date().valueOf()) {
             logger?.debug("Activity probably timed-out, will stop streaming batch execution results");
-            error = new Error(`Activity ${activityId} timeout.`);
+            error = new GolemError(`Activity ${activityId} timeout.`);
           }
 
           if (!isRunning()) {
             logger?.debug("Activity is no longer running, will stop streaming batch execution results");
-            error = new Error(`Activity ${activityId} has been interrupted.`);
+            error = new GolemError(`Activity ${activityId} has been interrupted.`);
           }
 
           if (errors.length) {
-            error = new Error(`GetExecBatchResults failed due to errors: ${JSON.stringify(errors)}`);
+            error = new GolemError(`GetExecBatchResults failed due to errors: ${JSON.stringify(errors)}`);
           }
           if (error) {
             eventSource?.close();
@@ -336,7 +337,7 @@ export class Activity {
       this.logger?.warn(`${failMsg} Giving up after ${retryCount} attempts. ${errorMsg}`);
     }
 
-    throw new Error(`Command #${cmdIndex || 0} getExecBatchResults error: ${errorMsg}`);
+    throw new GolemError(`Command #${cmdIndex || 0} getExecBatchResults error: ${errorMsg}`);
   }
 
   private getErrorMsg(error: Error | AxiosError<{ message: string }>) {
@@ -394,7 +395,7 @@ export class Activity {
         isBatchFinished: event.index + 1 >= batchSize && Boolean(event?.kind?.finished),
       });
     } catch (error) {
-      throw new Error(`Cannot parse ${msg} as StreamingBatchEvent`);
+      throw new GolemError(`Cannot parse ${msg} as StreamingBatchEvent`);
     }
   }
 }

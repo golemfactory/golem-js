@@ -1,5 +1,6 @@
 import { Readable, Transform } from "stream";
 import { Result } from "../activity";
+import { GolemError } from "../error/golem-error";
 
 const DEFAULTS = {
   exitWaitingTimeout: 20_000,
@@ -35,7 +36,7 @@ export class RemoteProcess {
     return new Promise((resolve, reject) => {
       const timeoutInMs = timeout ?? DEFAULTS.exitWaitingTimeout;
       const timeoutId = setTimeout(
-        () => reject(new Error(`The waiting time (${timeoutInMs} ms) for the final result has been exceeded`)),
+        () => reject(new GolemError(`The waiting time (${timeoutInMs} ms) for the final result has been exceeded`)),
         timeoutInMs,
       );
       const end = () => {
@@ -43,7 +44,7 @@ export class RemoteProcess {
         if (this.lastResult) {
           resolve(this.lastResult);
         } else {
-          reject(new Error(`An error occurred while retrieving the results. ${this.streamError}`));
+          reject(new GolemError(`An error occurred while retrieving the results. ${this.streamError}`));
         }
       };
       if (this.streamOfActivityResults.closed) return end();
