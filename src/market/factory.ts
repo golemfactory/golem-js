@@ -47,12 +47,22 @@ export class DemandFactory {
   }
 
   private getBaseDecorations(): MarketDecoration {
-    return new DecorationsBuilder()
+    const builder = new DecorationsBuilder();
+
+    // Configure basic properties
+    builder
       .addProperty("golem.srv.caps.multi-activity", true)
-      .addProperty("golem.srv.comp.expiration", Date.now() + this.options.expiration)
+      .addProperty("golem.srv.comp.expiration", Date.now() + this.options.expirationSec * 1000)
       .addProperty("golem.node.debug.subnet", this.options.subnetTag)
+      .addProperty("golem.com.payment.debit-notes.accept-timeout?", this.options.debitNotesAcceptanceTimeoutSec)
       .addConstraint("golem.com.pricing.model", "linear")
-      .addConstraint("golem.node.debug.subnet", this.options.subnetTag)
-      .getDecorations();
+      .addConstraint("golem.node.debug.subnet", this.options.subnetTag);
+
+    // Configure mid-agreement payments
+    builder
+      .addProperty("golem.com.scheme.payu.debit-note.interval-sec?", this.options.midAgreementDebitNoteIntervalSec)
+      .addProperty("golem.com.scheme.payu.payment-timeout-sec?", this.options.midAgreementPaymentTimeoutSec);
+
+    return builder.getDecorations();
   }
 }

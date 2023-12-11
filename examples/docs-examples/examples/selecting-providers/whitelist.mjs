@@ -17,8 +17,14 @@ for (let i = 0; i < whiteListNames.length; i++) {
     proposalFilter: ProposalFilters.whiteListProposalNamesFilter(whiteListNames),
     yagnaOptions: { apiKey: "try_golem" },
   });
-  await executor.run(async (ctx) =>
-    console.log((await ctx.run(`echo "This task is run on ${ctx.provider.name}"`)).stdout, ctx.provider.name),
-  );
-  await executor.end();
+
+  try {
+    await executor.run(async (ctx) =>
+      console.log((await ctx.run(`echo "This task is run on ${ctx.provider.name}"`)).stdout),
+    );
+  } catch (err) {
+    console.error("An error occurred:", err);
+  } finally {
+    await executor.shutdown();
+  }
 })();

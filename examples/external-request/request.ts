@@ -14,14 +14,20 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
     // manifestSigAlgorithm: "sha256",
     capabilities: ["inet", "manifest-support"],
   });
-  await executor.run(async (ctx) => {
-    const result = await ctx.run(
-      "GOLEM_PRICE=`curl -X 'GET' \
-          'https://api.coingecko.com/api/v3/simple/price?ids=golem&vs_currencies=usd' \
-          -H 'accept: application/json' | jq .golem.usd`; \
-      echo \"Golem price: $GOLEM_PRICE USD\";",
-    );
-    console.log(result.stdout);
-  });
-  await executor.end();
+
+  try {
+    await executor.run(async (ctx) => {
+      const result = await ctx.run(
+        "GOLEM_PRICE=`curl -X 'GET' \
+        'https://api.coingecko.com/api/v3/simple/price?ids=golem&vs_currencies=usd' \
+        -H 'accept: application/json' | jq .golem.usd`; \
+        echo \"Golem price: $GOLEM_PRICE USD\";",
+      );
+      console.log(result.stdout);
+    });
+  } catch (error) {
+    console.error("Computation failed:", error);
+  } finally {
+    await executor.shutdown();
+  }
 })();

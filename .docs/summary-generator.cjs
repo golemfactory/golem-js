@@ -34,7 +34,7 @@ async function prepareDocAnchor(docsDir, type, file) {
   logStream.write(`---
 title: golem-js API reference overview
 description: Dive into the content overview of the Golem-JS API reference.
-type: reference
+type: JS API Reference
 ---
 `);
 

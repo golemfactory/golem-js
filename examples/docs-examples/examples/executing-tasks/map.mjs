@@ -6,11 +6,20 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
     yagnaOptions: { apiKey: "try_golem" },
   });
 
-  const data = [1, 2, 3, 4, 5];
+  try {
+    const data = [1, 2, 3, 4, 5];
 
-  const results = executor.map(data, (ctx, item) => ctx.run(`echo "${item}"`));
+    const futureResults = data.map(async (item) =>
+      executor.run(async (ctx) => {
+        return await ctx.run(`echo "${item}"`);
+      }),
+    );
 
-  for await (const result of results) console.log(result.stdout);
-
-  await executor.end();
+    const results = await Promise.all(futureResults);
+    results.forEach((result) => console.log(result.stdout));
+  } catch (err) {
+    console.error("An error occurred:", err);
+  } finally {
+    await executor.shutdown();
+  }
 })();

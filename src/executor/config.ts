@@ -2,7 +2,6 @@ import { ExecutorOptions } from "./executor";
 import { Package, PackageOptions } from "../package";
 import { ActivityOptions } from "../activity";
 import { Logger, LogLevel, runtimeContextChecker, defaultLogger } from "../utils";
-import { InMemoryJobStorage, JobStorage } from "../job/storage";
 
 const DEFAULTS = Object.freeze({
   payment: { driver: "erc20next", network: "goerli" },
@@ -14,7 +13,8 @@ const DEFAULTS = Object.freeze({
   taskTimeout: 1000 * 60 * 5, // 5 min,
   maxTaskRetries: 3,
   enableLogging: true,
-  startupTimeout: 1000 * 30, // 30 sec
+  startupTimeout: 1000 * 90, // 90 sec
+  exitOnNoProposals: false,
 });
 
 /**
@@ -34,8 +34,8 @@ export class ExecutorConfig {
   readonly eventTarget: EventTarget;
   readonly maxTaskRetries: number;
   readonly activityExecuteTimeout?: number;
-  readonly jobStorage: JobStorage;
   readonly startupTimeout: number;
+  readonly exitOnNoProposals: boolean;
 
   constructor(options: ExecutorOptions & ActivityOptions) {
     const processEnv = !runtimeContextChecker.isBrowser
@@ -50,7 +50,12 @@ export class ExecutorConfig {
     Object.keys(options).forEach((key) => (this[key] = options[key]));
     this.activityExecuteTimeout = options.activityExecuteTimeout || options.taskTimeout;
     const apiKey = options?.yagnaOptions?.apiKey || processEnv.env.YAGNA_APPKEY;
-    if (!apiKey) throw new Error("Api key not defined");
+    if (!apiKey) {
+      throw new Error("Api key not defined");
+    }
+    if (options.maxTaskRetries && options.maxTaskRetries < 0) {
+      throw new Error("The maxTaskRetries parameter cannot be less than zero");
+    }
     this.yagnaOptions = {
       apiKey,
       basePath: options.yagnaOptions?.basePath || processEnv.env.YAGNA_API_URL || DEFAULTS.basePath,
@@ -84,7 +89,7 @@ export class ExecutorConfig {
     this.logger?.setLevel && this.logger?.setLevel(this.logLevel);
     this.eventTarget = options.eventTarget || new EventTarget();
     this.maxTaskRetries = options.maxTaskRetries ?? DEFAULTS.maxTaskRetries;
-    this.jobStorage = options.jobStorage || new InMemoryJobStorage();
     this.startupTimeout = options.startupTimeout ?? DEFAULTS.startupTimeout;
+    this.exitOnNoProposals = options.exitOnNoProposals ?? DEFAULTS.exitOnNoProposals;
   }
 }

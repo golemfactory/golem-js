@@ -6,16 +6,18 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
     yagnaOptions: { apiKey: "try_golem" },
   });
 
-  const output = await executor.run(async (ctx) => {
-    // Upload test JSON object
+  try {
+    const output = await executor.run(async (ctx) => {
+      // Upload test JSON object
+      await ctx.uploadJson({ input: "Hello World" }, "/golem/work/input.json");
+      // Read the content of the JSON object.
+      return await ctx.run("cat /golem/work/input.json");
+    });
 
-    await ctx.uploadJson({ input: "Hello World" }, "/golem/work/input.json");
-
-    // Read the content of the JSON object.
-    return await ctx.run("cat /golem/work/input.json");
-  });
-
-  console.log(output.stdout);
-
-  await executor.end();
+    console.log(output.stdout);
+  } catch (err) {
+    console.error("An error occurred:", err);
+  } finally {
+    await executor.shutdown();
+  }
 })();

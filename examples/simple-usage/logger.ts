@@ -29,6 +29,11 @@ function createLogger(options) {
     logLevel: options.debug ? "debug" : "info",
   });
 
-  await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
-  await executor.end();
+  try {
+    await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
+  } catch (err) {
+    console.error("Error while running the task:", err);
+  } finally {
+    await executor.shutdown();
+  }
 })(options);

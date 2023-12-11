@@ -26,7 +26,7 @@ describe("SSH connection", function () {
         .run(`echo -e "${password}\n${password}" | passwd`)
         .run("/usr/sbin/sshd")
         .end()
-        .catch((e) => console.error(e));
+        .catch((error) => console.error(error));
       expect(results?.[3]?.result).toEqual("Ok");
       expect(websocketUri).toEqual(expect.any(String));
       processSsh = spawn(
@@ -48,6 +48,6 @@ describe("SSH connection", function () {
     await new Promise((res) => setTimeout(res, 3000));
     expect(stdout).toContain("1-Alpine SMP");
     processSsh.kill();
-    await executor.end();
+    await executor.shutdown();
   });
 });

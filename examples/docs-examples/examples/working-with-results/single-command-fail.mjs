@@ -6,9 +6,13 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
     yagnaOptions: { apiKey: "try_golem" },
   });
 
-  // there is a mistake and instead of 'node -v' we call 'node -w'
-  const result = await executor.run(async (ctx) => await ctx.run("node -w"));
-  console.log("Task result:", result);
-
-  await executor.end();
+  try {
+    // there is a mistake and instead of 'node -v' we call 'node -w'
+    const result = await executor.run(async (ctx) => await ctx.run("node -w"));
+    console.log("Task result:", result);
+  } catch (err) {
+    console.error("Error during the task:", err);
+  } finally {
+    await executor.shutdown();
+  }
 })();

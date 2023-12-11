@@ -3,6 +3,7 @@ import { LoggerMock, YagnaMock } from "../../tests/mock";
 import { ActivityStateEnum, ResultState } from "../activity";
 import { DownloadData, DownloadFile, Run, Script, Transfer, UploadData, UploadFile } from "../script";
 import { ActivityMock } from "../../tests/mock/activity.mock";
+import { agreement } from "../../tests/mock/entities/agreement";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -13,7 +14,7 @@ describe("Work Context", () => {
 
   beforeEach(() => {
     logger.clear();
-    activity = new ActivityMock("test_id", "test_id", new YagnaMock().getApi());
+    activity = new ActivityMock("test_id", agreement, new YagnaMock().getApi());
     context = new WorkContext(activity, {
       logger: logger,
     });
@@ -43,6 +44,22 @@ describe("Work Context", () => {
           return Promise.resolve(result);
         });
         expect(await context.run("/bin/ls", ["-R"])).toBe(result);
+      });
+    });
+
+    describe("spawn()", () => {
+      it("should execute spawn command", async () => {
+        const expectedResult = ActivityMock.createResult({ stdout: "Output", stderr: "Error", isBatchFinished: true });
+        activity.mockResults([expectedResult]);
+        const remoteProcess = await context.spawn("rm -rf");
+        for await (const result of remoteProcess.stdout) {
+          expect(result).toBe("Output");
+        }
+        for await (const result of remoteProcess.stderr) {
+          expect(result).toBe("Error");
+        }
+        const finalResult = await remoteProcess.waitForExit();
+        expect(finalResult.result).toBe(ResultState.Ok);
       });
     });
 
@@ -223,6 +240,24 @@ describe("Work Context", () => {
       const result = context.beginBatch();
       expect(result).toBe(o);
       expect(spy).toHaveBeenCalledWith(context["activity"], context["storageProvider"], context["logger"]);
+    });
+  });
+
+  describe("setupActivity()", () => {
+    it("should call all setup functions in the order they were registered", async () => {
+      const calls: string[] = [];
+      const activityReadySetupFunctions = [
+        async () => calls.push("1"),
+        async () => calls.push("2"),
+        async () => calls.push("3"),
+      ];
+      context = new WorkContext(activity, {
+        logger: logger,
+        activityReadySetupFunctions,
+      });
+
+      await context["setupActivity"]();
+      expect(calls).toEqual(["1", "2", "3"]);
     });
   });
 });

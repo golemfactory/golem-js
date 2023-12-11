@@ -4,7 +4,6 @@ import { AgreementPoolService } from "../agreement";
 import { Task, TaskQueue, TaskService, Worker, TaskOptions } from "../task";
 import { PaymentService, PaymentOptions } from "../payment";
 import { NetworkService } from "../network";
-import { Result } from "../activity";
 import { sleep, Logger, LogLevel, runtimeContextChecker, Yagna } from "../utils";
 import { StorageProvider, GftpStorageProvider, NullStorageProvider, WebSocketBrowserStorageProvider } from "../storage";
 import { ExecutorConfig } from "./config";
@@ -16,8 +15,8 @@ import { AgreementServiceOptions } from "../agreement/service";
 import { WorkOptions } from "../task/work";
 import { MarketOptions } from "../market/service";
 import { RequireAtLeastOne } from "../utils/types";
-import { v4 } from "uuid";
-import { JobStorage, Job } from "../job";
+import { TaskExecutorEventsDict } from "./events";
+import { EventEmitter } from "eventemitter3";
 
 const terminatingSignals = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
 
@@ -44,16 +43,11 @@ export type ExecutorOptions = {
   storageProvider?: StorageProvider;
   /**
    * @deprecated this parameter will be removed in the next version.
-   * Currently has no effect on executor termination.
+   * Currently, has no effect on executor termination.
    */
   isSubprocess?: boolean;
   /** Timeout for preparing activity - creating and deploy commands */
   activityPreparingTimeout?: number;
-  /**
-   * Storage for task state and results. Especially useful in a distributed environment.
-   * For more details see {@link JobStorage}. Defaults to a simple in-memory storage.
-   */
-  jobStorage?: JobStorage;
   /**
    * Do not install signal handlers for SIGINT, SIGTERM, SIGBREAK, SIGHUP.
    *
@@ -64,14 +58,21 @@ export type ExecutorOptions = {
    */
   skipProcessSignals?: boolean;
   /**
-   * Timeout for waiting for at least one offer from the market.
-   * This parameter (set to 30 sec by default) will throw an error when executing `TaskExecutor.run`
-   * if no offer from the market is accepted before this time.
+   * Timeout for waiting for at least one offer from the market expressed in milliseconds.
+   * This parameter (set to 90 sec by default) will issue a warning when executing `TaskExecutor.run`
+   * if no offer from the market is accepted before this time. If you'd like to change this behavior,
+   * and throw an error instead, set `exitOnNoProposals` to `true`.
    * You can set a slightly higher time in a situation where your parameters such as proposalFilter
    * or minimum hardware requirements are quite restrictive and finding a suitable provider
    * that meets these criteria may take a bit longer.
    */
   startupTimeout?: number;
+  /**
+   * If set to `true`, the executor will exit with an error when no proposals are accepted.
+   * You can customize how long the executor will wait for proposals using the `startupTimeout` parameter.
+   * Default is `false`.
+   */
+  exitOnNoProposals?: boolean;
 } & Omit<PackageOptions, "imageHash" | "imageTag"> &
   MarketOptions &
   TaskServiceOptions &
@@ -94,6 +95,12 @@ export type YagnaOptions = {
  * A high-level module for defining and executing tasks in the golem network
  */
 export class TaskExecutor {
+  /**
+   * EventEmitter (EventEmitter3) instance emitting TaskExecutor events.
+   * @see TaskExecutorEventsDict for available events.
+   */
+  readonly events: EventEmitter<TaskExecutorEventsDict> = new EventEmitter();
+
   private readonly options: ExecutorConfig;
   private marketService: MarketService;
   private agreementPoolService: AgreementPoolService;
@@ -101,8 +108,8 @@ export class TaskExecutor {
   private paymentService: PaymentService;
   private networkService?: NetworkService;
   private statsService: StatsService;
-  private initWorker?: Worker<unknown, unknown>;
-  private taskQueue: TaskQueue<Task<unknown, unknown>>;
+  private activityReadySetupFunctions: Worker<unknown>[] = [];
+  private taskQueue: TaskQueue;
   private storageProvider?: StorageProvider;
   private logger?: Logger;
   private lastTaskIndex = 0;
@@ -112,11 +119,23 @@ export class TaskExecutor {
   private startupTimeoutId?: NodeJS.Timeout;
   private yagna: Yagna;
 
+  /**
+   * Signal handler reference, needed to remove handlers on exit.
+   * @param signal
+   */
   private signalHandler = (signal: string) => this.cancel(signal);
+
+  /**
+   * Shutdown promise.
+   * This will be set by call to shutdown() method.
+   * It will be resolved when the executor is fully stopped.
+   */
+  private shutdownPromise?: Promise<void>;
 
   /**
    * Create a new Task Executor
    * @description Factory Method that create and initialize an instance of the TaskExecutor
+   *
    *
    * @example **Simple usage of Task Executor**
    *
@@ -152,17 +171,16 @@ export class TaskExecutor {
 
   /**
    * Create a new TaskExecutor object.
-   * @description Use {@link TaskExecutor.create} for creating a task executor
    *
    * @param options - contains information needed to start executor, if string the imageHash is required, otherwise it should be a type of {@link ExecutorOptions}
    */
-  private constructor(options: ExecutorOptionsMixin) {
+  constructor(options: ExecutorOptionsMixin) {
     this.configOptions = (typeof options === "string" ? { package: options } : options) as ExecutorOptions;
     this.options = new ExecutorConfig(this.configOptions);
     this.logger = this.options.logger;
     this.yagna = new Yagna(this.configOptions.yagnaOptions);
     const yagnaApi = this.yagna.getApi();
-    this.taskQueue = new TaskQueue<Task<unknown, unknown>>();
+    this.taskQueue = new TaskQueue();
     this.agreementPoolService = new AgreementPoolService(yagnaApi, this.options);
     this.paymentService = new PaymentService(yagnaApi, this.options);
     this.marketService = new MarketService(this.agreementPoolService, yagnaApi, this.options);
@@ -240,15 +258,48 @@ export class TaskExecutor {
     this.logger?.info(
       `Task Executor has started using subnet: ${this.options.subnetTag}, network: ${this.paymentService.config.payment.network}, driver: ${this.paymentService.config.payment.driver}`,
     );
+    this.events.emit("ready");
   }
 
   /**
-   * Stop all executor services and shut down executor instance
+   * Stop all executor services and shut down executor instance.
+   *
+   * You can call this method multiple times, it will resolve only once the executor is shutdown.
+   *
+   * @deprecated Use TaskExecutor.shutdown() instead.
    */
-  async end() {
-    if (runtimeContextChecker.isNode) this.removeSignalHandlers();
-    if (!this.isRunning) return;
+  end(): Promise<void> {
+    return this.shutdown();
+  }
+
+  /**
+   * Stop all executor services and shut down executor instance.
+   *
+   * You can call this method multiple times, it will resolve only once the executor is shutdown.
+   *
+   * When shutdown() is initially called, a beforeEnd event is emitted.
+   *
+   * Once the executor is fully stopped, an end event is emitted.
+   */
+  shutdown(): Promise<void> {
+    if (!this.isRunning) {
+      // Using ! is safe, because if isRunning is false, endPromise is defined.
+      return this.shutdownPromise!;
+    }
+
     this.isRunning = false;
+    this.shutdownPromise = this.doShutdown();
+
+    return this.shutdownPromise;
+  }
+
+  /**
+   * Perform everything needed to cleanly shut down the executor.
+   * @private
+   */
+  private async doShutdown() {
+    this.events.emit("beforeEnd");
+    if (runtimeContextChecker.isNode) this.removeSignalHandlers();
     clearTimeout(this.startupTimeoutId);
     if (!this.configOptions.storageProvider) await this.storageProvider?.close();
     await this.networkService?.end();
@@ -259,6 +310,7 @@ export class TaskExecutor {
     this.printStats();
     await this.statsService.end();
     this.logger?.info("Task Executor has shut down");
+    this.events.emit("end");
   }
 
   /**
@@ -271,6 +323,9 @@ export class TaskExecutor {
   }
 
   /**
+   * @deprecated
+   * Use {@link TaskExecutor.onActivityReady} instead.
+   *
    * Define worker function that will be runs before every each computation Task, within the same activity.
    *
    * @param worker worker function - task
@@ -289,8 +344,33 @@ export class TaskExecutor {
    * });
    * ```
    */
-  beforeEach(worker: Worker) {
-    this.initWorker = worker;
+  beforeEach(worker: Worker<unknown>) {
+    this.activityReadySetupFunctions = [worker];
+  }
+
+  /**
+   * Registers a worker function that will be run when an activity is ready.
+   * This is the perfect place to run setup functions that need to be run only once per
+   * activity, for example uploading files that will be used by all tasks in the activity.
+   * This function can be called multiple times, each worker will be run in the order
+   * they were registered.
+   *
+   * @param worker worker function that will be run when an activity is ready
+   * @example
+   * ```ts
+   * const uploadFile1 = async (ctx) => ctx.uploadFile("./file1.txt", "/file1.txt");
+   * const uploadFile2 = async (ctx) => ctx.uploadFile("./file2.txt", "/file2.txt");
+   *
+   * executor.onActivityReady(uploadFile1);
+   * executor.onActivityReady(uploadFile2);
+   *
+   * await executor.run(async (ctx) => {
+   *  await ctx.run("cat /file1.txt /file2.txt");
+   * });
+   * ```
+   */
+  onActivityReady(worker: Worker<unknown>) {
+    this.activityReadySetupFunctions.push(worker);
   }
 
   /**
@@ -304,84 +384,8 @@ export class TaskExecutor {
    * await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
    * ```
    */
-  async run<OutputType = Result>(
-    worker: Worker<undefined, OutputType>,
-    options?: TaskOptions,
-  ): Promise<OutputType | undefined> {
-    return this.executeTask<undefined, OutputType>(worker, undefined, options).catch(async (e) => {
-      this.handleCriticalError(e);
-      return undefined;
-    });
-  }
-
-  /**
-   * Map iterable data to worker function and return computed Task result as AsyncIterable
-   *
-   * @param data Iterable data
-   * @param worker worker function
-   * @return AsyncIterable with results of computed tasks
-   * @example
-   * ```typescript
-   * const data = [1, 2, 3, 4, 5];
-   * const results = executor.map(data, (ctx, item) => ctx.run(`echo "${item}"`));
-   * for await (const result of results) console.log(result.stdout);
-   * ```
-   */
-  map<InputType, OutputType>(
-    data: Iterable<InputType>,
-    worker: Worker<InputType, OutputType>,
-  ): AsyncIterable<OutputType | undefined> {
-    const inputs = [...data];
-    const featureResults = inputs.map((value) => this.executeTask<InputType, OutputType>(worker, value));
-    const results: OutputType[] = [];
-    let resultsCount = 0;
-    featureResults.forEach((featureResult) =>
-      featureResult
-        .then((res) => {
-          results.push(res as OutputType);
-        })
-        .catch((e) => this.handleCriticalError(e)),
-    );
-    const isRunning = () => this.isRunning;
-    return {
-      [Symbol.asyncIterator](): AsyncIterator<OutputType | undefined> {
-        return {
-          async next() {
-            if (resultsCount === inputs.length) {
-              return Promise.resolve({ done: true, value: undefined });
-            }
-            while (results.length === 0 && resultsCount < inputs.length && isRunning()) {
-              await sleep(1000, true);
-            }
-            if (!isRunning()) return Promise.resolve({ done: true, value: undefined });
-            resultsCount += 1;
-            return Promise.resolve({ done: false, value: results.pop() });
-          },
-        };
-      },
-    };
-  }
-
-  /**
-   * Iterates over given data and execute task using worker function
-   *
-   * @param data Iterable data
-   * @param worker Worker function
-   * @example
-   * ```typescript
-   * const data = [1, 2, 3, 4, 5];
-   * await executor.forEach(data, async (ctx, item) => {
-   *     console.log((await ctx.run(`echo "${item}"`)).stdout);
-   * });
-   * ```
-   */
-  async forEach<InputType, OutputType>(
-    data: Iterable<InputType>,
-    worker: Worker<InputType, OutputType>,
-  ): Promise<void> {
-    await Promise.all([...data].map((value) => this.executeTask<InputType, OutputType>(worker, value))).catch((e) =>
-      this.handleCriticalError(e),
-    );
+  async run<OutputType>(worker: Worker<OutputType>, options?: TaskOptions): Promise<OutputType> {
+    return this.executeTask<OutputType>(worker, options);
   }
 
   private async createPackage(
@@ -399,78 +403,26 @@ export class TaskExecutor {
     return packageInstance;
   }
 
-  private async executeTask<InputType, OutputType>(
-    worker: Worker<InputType, OutputType>,
-    data?: InputType,
-    options?: TaskOptions,
-  ): Promise<OutputType | undefined> {
-    const task = new Task<InputType, OutputType>((++this.lastTaskIndex).toString(), worker, data, this.initWorker, {
+  private async executeTask<OutputType>(worker: Worker<OutputType>, options?: TaskOptions): Promise<OutputType> {
+    const task = new Task((++this.lastTaskIndex).toString(), worker, {
       maxRetries: options?.maxRetries ?? this.options.maxTaskRetries,
       timeout: options?.timeout ?? this.options.taskTimeout,
+      activityReadySetupFunctions: this.activityReadySetupFunctions,
     });
-    this.taskQueue.addToEnd(task as Task<unknown, unknown>);
+    this.taskQueue.addToEnd(task);
     while (this.isRunning) {
       if (task.isFinished()) {
         if (task.isRejected()) throw task.getError();
-        return task.getResults();
+        return task.getResults() as OutputType;
       }
       await sleep(2000, true);
     }
-  }
-
-  /**
-   * Start a new job without waiting for the result. The job can be retrieved later using {@link TaskExecutor.getJobById}. The job's status is stored in the {@link JobStorage} provided in the {@link ExecutorOptions} (in-memory by default). For distributed environments, it is recommended to use a form of storage that is accessible from all nodes (e.g. a database).
-   *
-   * @param worker Worker function to be executed
-   * @returns Job object
-   * @example **Simple usage of createJob**
-   * ```typescript
-   * const job = executor.createJob(async (ctx) => {
-   *  return (await ctx.run("echo 'Hello World'")).stdout;
-   * });
-   * // save job.id somewhere
-   *
-   * // later...
-   * const job = await executor.fetchJob(jobId);
-   * const status = await job.fetchState();
-   * const results = await job.fetchResults();
-   * const error = await job.fetchError();
-   * ```
-   */
-  public async createJob<InputType = unknown, OutputType = unknown>(
-    worker: Worker<InputType, OutputType>,
-  ): Promise<Job<OutputType>> {
-    const jobId = v4();
-    const job = new Job<OutputType>(jobId, this.options.jobStorage);
-    await job.saveInitialState();
-
-    const task = new Task(jobId, worker, undefined, this.initWorker, {
-      maxRetries: this.options.maxTaskRetries,
-      timeout: this.options.taskTimeout,
-    });
-    task.onStateChange((taskState) => {
-      job.saveState(taskState, task.getResults(), task.getError());
-    });
-    this.taskQueue.addToEnd(task as Task<unknown, unknown>);
-
-    return job;
-  }
-
-  /**
-   * Retrieve a job by its ID. The job's status is stored in the {@link JobStorage} provided in the {@link ExecutorOptions} (in-memory by default). Use {@link Job.fetchState}, {@link Job.fetchResults} and {@link Job.fetchError} to get the job's status.
-   *
-   * @param jobId Job ID
-   * @returns Job object.
-   */
-  public getJobById(jobId: string): Job {
-    return new Job(jobId, this.options.jobStorage);
+    throw new Error("Task executor has been stopped");
   }
 
   private handleCriticalError(e: Error) {
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFailed({ reason: e.toString() }));
     this.logger?.error(e.toString());
-    if (this.isRunning) this.logger?.warn("Trying to stop executor...");
-    this.end().catch((e) => this.logger?.error(e));
   }
 
   private installSignalHandlers() {
@@ -494,7 +446,7 @@ export class TaskExecutor {
       const message = `Executor has interrupted by the user. Reason: ${reason}.`;
       this.logger?.warn(`${message}. Stopping all tasks...`);
       this.isCanceled = true;
-      await this.end();
+      await this.shutdown();
     } catch (error) {
       this.logger?.error(`Error while cancelling the executor. ${error}`);
     }
@@ -507,7 +459,11 @@ export class TaskExecutor {
     const providersCount = new Set(costsSummary.map((x) => x["Provider Name"])).size;
     this.logger?.info(`Computation finished in ${duration}`);
     this.logger?.info(`Negotiated ${costsSummary.length} agreements with ${providersCount} providers`);
-    if (costsSummary.length) this.logger?.table?.(costsSummary);
+    costsSummary.forEach((cost) => {
+      this.logger?.info(
+        `Agreement ${cost["Agreement"]} with ${cost["Provider Name"]} computed ${cost["Task Computed"]} task(s) for ${cost["Cost"]} GLM (${cost["Payment Status"]})`,
+      );
+    });
     this.logger?.info(`Total Cost: ${costs.total} Total Paid: ${costs.paid}`);
   }
 
@@ -526,11 +482,12 @@ export class TaskExecutor {
             : proposalsCount.initial === proposalsCount.rejected
               ? "All off proposals got rejected."
               : "Check your proposal filters if they are not too restrictive.";
-        this.handleCriticalError(
-          new Error(
-            `Could not start any work on Golem. Processed ${proposalsCount.initial} initial proposals from yagna, filters accepted ${proposalsCount.confirmed}. ${hint}`,
-          ),
-        );
+        const errorMessage = `Could not start any work on Golem. Processed ${proposalsCount.initial} initial proposals from yagna, filters accepted ${proposalsCount.confirmed}. ${hint}`;
+        if (this.options.exitOnNoProposals) {
+          this.handleCriticalError(new Error(errorMessage));
+        } else {
+          this.logger?.warn(errorMessage);
+        }
       }
     }, this.options.startupTimeout);
   }

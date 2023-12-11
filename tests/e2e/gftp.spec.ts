@@ -13,26 +13,29 @@ describe("GFTP transfers", function () {
         logger,
       });
 
-      executor.beforeEach(async (ctx) => {
+      executor.onActivityReady(async (ctx) => {
         const sourcePath = fs.realpathSync(__dirname + "/../mock/fixtures/eiffel.blend");
         await ctx.uploadFile(sourcePath, "/golem/work/eiffel.blend");
       });
 
       const data = [0, 1, 2, 3, 4, 5];
 
-      const results = executor.map(data, async (ctx, frame) => {
-        const result = await ctx
-          .beginBatch()
-          .run("ls -Alh /golem/work/eiffel.blend")
-          .downloadFile(`/golem/work/eiffel.blend`, `copy_${frame}.blend`)
-          .end()
-          .catch((error) => console.error(error.toString()));
-        return result ? `copy_${frame}.blend` : "";
-      });
+      const futureResults = data.map((frame) =>
+        executor.run(async (ctx) => {
+          const result = await ctx
+            .beginBatch()
+            .run("ls -Alh /golem/work/eiffel.blend")
+            .downloadFile(`/golem/work/eiffel.blend`, `copy_${frame}.blend`)
+            .end()
+            .catch((error) => console.error(error.toString()));
+          return result ? `copy_${frame}.blend` : "";
+        }),
+      );
+      const results = await Promise.all(futureResults);
 
       const expectedResults = data.map((d) => `copy_${d}.blend`);
 
-      for await (const result of results) {
+      for (const result of results) {
         expect(expectedResults).toContain(result);
       }
 
@@ -40,7 +43,7 @@ describe("GFTP transfers", function () {
         expect(fs.existsSync(file)).toEqual(true);
       }
 
-      await executor.end();
+      await executor.shutdown();
     },
     1000 * 240,
   );

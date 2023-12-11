@@ -2,13 +2,10 @@
 import { Yagna, YagnaApi } from "../../../src/utils";
 import { RequestorControlApiMock, RequestorSateApiMock } from "./activity";
 import { MarketApiMock } from "./market";
-import { EventSourceMock } from "../utils/event_source";
 import { PaymentApiMock } from "./payment";
 import { NetworkApiMock } from "./network";
 import { IdentityApiMock } from "./identity";
 import { GsbApiMock } from "./gsb";
-
-jest.mock("eventsource", () => EventSourceMock);
 
 export class YagnaMock extends Yagna {
   constructor() {

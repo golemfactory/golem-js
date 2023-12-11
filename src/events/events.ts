@@ -40,21 +40,40 @@ export class TaskStarted extends BaseEvent<{
   providerId: string;
   providerName: string;
 }> {}
+
+/**
+ * Represents the situation in which running the task failed for some reason, but it will be retried
+ */
 export class TaskRedone extends BaseEvent<{
   id: string;
   agreementId: string;
-  activityId: string;
   providerId: string;
   providerName: string;
   retriesCount: number;
+  /**
+   * The activity that was involved
+   *
+   * This might be not set when there was an issue with starting the activity on the provider
+   */
+  activityId?: string;
   reason?: string;
 }> {}
+
+/**
+ * Represents the situation where all attempts to execute the task have been unsuccessful and no further processing
+ * will be conducted.
+ */
 export class TaskRejected extends BaseEvent<{
   id: string;
   agreementId: string;
-  activityId: string;
   providerId: string;
   providerName: string;
+  /**
+   * The activity that was involved when the rejection took place
+   *
+   * This might be not set when there was an issue with starting the activity on the provider
+   */
+  activityId?: string;
   reason?: string;
 }> {}
 export class TaskFinished extends BaseEvent<{ id: string }> {}

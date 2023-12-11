@@ -1,5 +1,5 @@
 import { Logger, sleep, YagnaApi } from "../utils";
-import { Allocation } from "./allocation";
+import { Allocation, AllocationOptions } from "./allocation";
 import { BasePaymentOptions, PaymentConfig } from "./config";
 import { Invoice, InvoiceDTO } from "./invoice";
 import { DebitNote, DebitNoteDTO } from "./debit_note";
@@ -83,13 +83,18 @@ export class PaymentService {
     this.logger?.debug("Payment service has been stopped");
   }
 
-  async createAllocation(): Promise<Allocation> {
+  /**
+   * Create a new allocation that will be used to settle payments for activities
+   *
+   * @param options Additional options to apply on top of the ones provided in the constructor
+   */
+  async createAllocation(options?: Partial<AllocationOptions>): Promise<Allocation> {
     try {
       const account = {
         platform: this.getPaymentPlatform(),
         address: await this.getPaymentAddress(),
       };
-      this.allocation = await Allocation.create(this.yagnaApi, { ...this.config.options, account });
+      this.allocation = await Allocation.create(this.yagnaApi, { ...this.config.options, account, ...options });
       return this.allocation;
     } catch (error) {
       throw new Error(

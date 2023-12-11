@@ -6,15 +6,19 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
     yagnaOptions: { apiKey: "try_golem" },
   });
 
-  const result = await executor.run(async (ctx) => {
-    await ctx.uploadFile("./worker.mjs", "/golem/input/worker.mjs");
-    await ctx.run("node /golem/input/worker.mjs > /golem/input/output.txt");
-    const result = await ctx.run("cat /golem/input/output.txt");
-    await ctx.downloadFile("/golem/input/output.txt", "./output.txt");
-    return result.stdout;
-  });
+  try {
+    const result = await executor.run(async (ctx) => {
+      await ctx.uploadFile("./worker.mjs", "/golem/input/worker.mjs");
+      await ctx.run("node /golem/input/worker.mjs > /golem/input/output.txt");
+      const result = await ctx.run("cat /golem/input/output.txt");
+      await ctx.downloadFile("/golem/input/output.txt", "./output.txt");
+      return result.stdout;
+    });
 
-  console.log(result);
-
-  await executor.end();
+    console.log(result);
+  } catch (err) {
+    console.error("An error occurred:", err);
+  } finally {
+    await executor.shutdown();
+  }
 })();

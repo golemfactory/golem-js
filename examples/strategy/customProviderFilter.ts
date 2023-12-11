@@ -15,6 +15,11 @@ const myFilter: ProposalFilter = async (proposal) => {
     package: "golem/alpine:latest",
     proposalFilter: myFilter,
   });
-  await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
-  await executor.end();
+  try {
+    await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
+  } catch (err) {
+    console.error("Task execution failed:", err);
+  } finally {
+    await executor.shutdown();
+  }
 })();

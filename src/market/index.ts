@@ -1,4 +1,4 @@
-export { MarketService, ProposalFilter } from "./service";
+export { MarketService, ProposalFilter, MarketOptions } from "./service";
 export { Demand, DemandEventType, DemandOptions, DemandEvent } from "./demand";
 export { Proposal, ProposalDetails } from "./proposal";
 export { MarketDecoration } from "./builder";

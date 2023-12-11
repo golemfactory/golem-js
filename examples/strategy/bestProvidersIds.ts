@@ -16,6 +16,12 @@ const scores = {
     package: "golem/alpine:latest",
     agreementSelector: AgreementSelectors.bestAgreementSelector(scores),
   });
-  await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
-  await executor.end();
+
+  try {
+    await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
+  } catch (err) {
+    console.error("Task execution failed:", err);
+  } finally {
+    await executor.shutdown();
+  }
 })();
