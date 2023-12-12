@@ -1,6 +1,5 @@
 import { ComparisonOperator, DecorationsBuilder, MarketDecoration } from "../market/builder";
 import { EnvUtils, Logger } from "../utils";
-import axios from "axios";
 import { PackageConfig } from "./config";
 import { RequireAtLeastOne } from "../utils/types";
 import { GolemError } from "../error/golem-error";
@@ -111,18 +110,25 @@ export class Package {
 
     const url = `${repoUrl}/v1/image/info?${isDev ? "dev=true" : "count=true"}&${tag ? `tag=${tag}` : `hash=${hash}`}`;
 
-    const response = await axios.get(url, {
-      //always give reponse instead of throwing error
-      // ? this should probably go to general config
-      validateStatus: () => true,
-    });
-    if (response.status != 200) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        this.logger?.error(`Unable to get image Url of  ${tag || hash} from ${repoUrl}`);
+        throw new GolemError(await response.text());
+      }
+
+      const data = await response.json();
+
+      const imageUrl = isHttps ? data.https : data.http;
+      hash = data.sha3;
+
+      return `hash:sha3:${hash}:${imageUrl}`;
+    } catch (error) {
+      if (error instanceof GolemError) throw error;
+
       this.logger?.error(`Unable to get image Url of  ${tag || hash} from ${repoUrl}`);
-      throw new GolemError(`${response.data}`);
+      throw new GolemError(`Failed to fetch image: ${error}`);
     }
-    const imageUrl = isHttps ? response.data.https : response.data.http;
-    hash = response.data.sha3;
-    return `hash:sha3:${hash}:${imageUrl}`;
   }
 
   private addManifestDecorations(builder: DecorationsBuilder): void {

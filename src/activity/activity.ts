@@ -6,7 +6,6 @@ import sleep from "../utils/sleep";
 import { ActivityFactory } from "./factory";
 import { ActivityConfig } from "./config";
 import { Events } from "../events";
-import { AxiosError } from "axios";
 import { Agreement } from "../agreement";
 import { GolemError } from "../error/golem-error";
 
@@ -311,7 +310,7 @@ export class Activity {
     });
   }
 
-  private async handleError(error: Error | AxiosError, cmdIndex: number, retryCount: number, maxRetries: number) {
+  private async handleError(error: Error, cmdIndex: number, retryCount: number, maxRetries: number) {
     if (this.isTimeoutError(error)) {
       this.logger?.warn("API request timeout." + error.toString());
       return retryCount;
@@ -340,10 +339,8 @@ export class Activity {
     throw new GolemError(`Command #${cmdIndex || 0} getExecBatchResults error: ${errorMsg}`);
   }
 
-  private getErrorMsg(error: Error | AxiosError<{ message: string }>) {
-    if ("response" in error && error.response !== undefined) {
-      return error.response.data.message;
-    } else if ("message" in error) {
+  private getErrorMsg(error: Error) {
+    if ("message" in error) {
       return error.message;
     } else {
       return error;
