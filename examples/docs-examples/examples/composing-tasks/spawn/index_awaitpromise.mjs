@@ -25,9 +25,7 @@ dotenv.config();
 
     let result = await executor.run(async (ctx) => {
       console.log("Provider deployed");
-      let remote_process = await ctx.spawn(
-        "while sleep 1; do ls . non-existing-file ; done"
-      );
+      let remote_process = await ctx.spawn("while sleep 1; do ls . non-existing-file ; done");
 
       remote_process.stdout.on("data", (data) => console.log("stdout: ", data));
       remote_process.stderr.on("data", (data) => console.log("stderr: ", data));

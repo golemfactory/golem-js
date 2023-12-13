@@ -1,8 +1,7 @@
 import { TaskExecutor } from "@golem-sdk/golem-js";
 import { readFile } from "fs/promises";
 
-const url =
-  "https://ipfs.io/ipfs/bafybeihkoviema7g3gxyt6la7vd5ho32ictqbilu3wnlo3rs7ewhnp7lly";
+const url = "https://ipfs.io/ipfs/bafybeihkoviema7g3gxyt6la7vd5ho32ictqbilu3wnlo3rs7ewhnp7lly";
 
 (async function main() {
   // Load the manifest.

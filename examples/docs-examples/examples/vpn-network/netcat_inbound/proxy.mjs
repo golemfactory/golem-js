@@ -12,9 +12,7 @@ var tcp = null;
 async function runServer() {
   const server = new net.Server();
 
-  server.listen(PORT, () =>
-    console.log(`Requestor starts listening on port: ${PORT}.`)
-  );
+  server.listen(PORT, () => console.log(`Requestor starts listening on port: ${PORT}.`));
 
   server.on("connection", (socket) => {
     tcp = socket;
@@ -34,13 +32,7 @@ async function runServer() {
 function runWs(neworkID, IP, PORT_TGT) {
   const VPN_NETWORK = neworkID;
 
-  const URL =
-    "ws://127.0.0.1:7465/net-api/v2/vpn/net/" +
-    VPN_NETWORK +
-    "/tcp/" +
-    IP +
-    "/" +
-    "1234";
+  const URL = "ws://127.0.0.1:7465/net-api/v2/vpn/net/" + VPN_NETWORK + "/tcp/" + IP + "/" + "1234";
 
   //console.log(URL);
 
@@ -51,7 +43,7 @@ function runWs(neworkID, IP, PORT_TGT) {
         headers: {
           ["Authorization"]: "Bearer try_golem",
         },
-      }
+      },
     );
   } catch (err) {
     console.error("Error while opening ws connection to yagna", err);

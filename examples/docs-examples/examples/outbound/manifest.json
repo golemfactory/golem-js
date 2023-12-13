@@ -24,13 +24,8 @@
     "net": {
       "inet": {
         "out": {
-          "urls": [
-            "https://github.com",
-            "https://ipfs.io"
-          ],
-          "protocols": [
-            "https"
-          ]
+          "urls": ["https://github.com", "https://ipfs.io"],
+          "protocols": ["https"]
         }
       }
     }

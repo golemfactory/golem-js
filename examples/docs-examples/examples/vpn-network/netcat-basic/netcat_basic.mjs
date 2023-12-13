@@ -46,9 +46,7 @@ dotenv.config();
         await executor.run(async (ctx) => {
           console.log(`Provider ${ctx.provider.name} started as client`);
           await ctx.run(
-            `echo "Message from povider ${
-              ctx.provider.name
-            }, date: ${new Date().toISOString()}" > /golem/data`
+            `echo "Message from povider ${ctx.provider.name}, date: ${new Date().toISOString()}" > /golem/data`,
           );
           await ctx.run("ls -l /golem");
           await ctx.run("cat /golem/data");

@@ -33,11 +33,8 @@ dotenv.config();
 
       console.log((await ctx.run("npm install moment")).stdout);
       console.log(
-        (
-          await ctx.run(
-            `node -e 'const moment = require("moment"); moment().format("dddd"); console.log(new Date());'`
-          )
-        ).stdout
+        (await ctx.run(`node -e 'const moment = require("moment"); moment().format("dddd"); console.log(new Date());'`))
+          .stdout,
       );
 
       return 1;

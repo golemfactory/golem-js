@@ -32,12 +32,8 @@ dotenv.config();
       // remote_process.stderr.on("data", (data) => console.stderr("stderr: ", data));
 
       await new Promise((resolve) => {
-        remote_process.stdout.on("data", (result) =>
-          console.log("stdout", result)
-        );
-        remote_process.stderr.on("error", (error) =>
-          console.error("stderr", error)
-        );
+        remote_process.stdout.on("data", (result) => console.log("stdout", result));
+        remote_process.stderr.on("error", (error) => console.error("stderr", error));
         remote_process.stdout.on("close", resolve);
       });
       return 0;
