@@ -1,0 +1,38 @@
+{
+  "version": "0.1.0",
+  "createdAt": "2023-10-19T11:23:08.156+02:00",
+  "expiresAt": "2024-01-17T11:23:08.156+01:00",
+  "metadata": {
+    "name": "outbound-docs",
+    "description": "",
+    "version": "1.0.0"
+  },
+  "payload": [
+    {
+      "platform": {
+        "os": "linux",
+        "arch": "x86_64"
+      },
+      "hash": "sha3:dad8f776b0eb9f37ea0d63de42757034dd085fe30cc4537c2e119d80",
+      "urls": [
+        "http://registry.golem.network/download/f37c8ba2b534ca631060fb8db4ac218d3199faf656aa2c92f402c2b700797c21"
+      ]
+    }
+  ],
+  "compManifest": {
+    "version": "0.1.0",
+    "net": {
+      "inet": {
+        "out": {
+          "urls": [
+            "https://github.com",
+            "https://ipfs.io"
+          ],
+          "protocols": [
+            "https"
+          ]
+        }
+      }
+    }
+  }
+}

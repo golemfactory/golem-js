@@ -1,0 +1,52 @@
+import dotenv from "dotenv";
+
+import { TaskExecutor, LogLevel } from "@golem-sdk/golem-js";
+
+import { readFile } from "fs/promises";
+
+const manifest = await readFile(`./manifest_npm_install.json`);
+
+dotenv.config();
+
+(async function main() {
+  const executor = await TaskExecutor.create({
+    // What do you want to run
+    capabilities: ["inet", "manifest-support"],
+    manifest: manifest.toString("base64"),
+
+    yagnaOptions: { apiKey: "try_golem" },
+    budget: 0.5,
+
+    expires: 1000 * 60 * 30, //h
+
+    // Control the execution of tasks
+    maxTaskRetries: 0,
+
+    // Useful for debugging
+    logLevel: LogLevel.Info,
+    taskTimeout: 120 * 60 * 1000,
+  });
+
+  try {
+    await executor.run(async (ctx) => {
+      console.log("working on provider: ", ctx.provider.id);
+
+      console.log((await ctx.run("npm install moment")).stdout);
+      console.log(
+        (
+          await ctx.run(
+            `node -e 'const moment = require("moment"); moment().format("dddd"); console.log(new Date());'`
+          )
+        ).stdout
+      );
+
+      return 1;
+    });
+
+    console.log("task completed");
+  } catch (err) {
+    console.error("Running the task on Golem failed due to", err);
+  } finally {
+    await executor.end();
+  }
+})();

@@ -1,0 +1,33 @@
+{
+  "version": "0.1.0",
+  "createdAt": "2023-11-28T12:23:33.435+01:00",
+  "expiresAt": "2024-02-26T12:23:33.435+01:00",
+  "metadata": {
+    "name": "npm_install",
+    "description": "Example project",
+    "version": "1.0.0"
+  },
+  "payload": [
+    {
+      "platform": {
+        "os": "linux",
+        "arch": "x86_64"
+      },
+      "hash": "sha3:3d6c48bb4c192708168d53cee4f36876b263b7745c3a3c239c6749cd",
+      "urls": [
+        "http://registry.golem.network/v1/image/download?hash=3d6c48bb4c192708168d53cee4f36876b263b7745c3a3c239c6749cd"
+      ]
+    }
+  ],
+  "compManifest": {
+    "version": "0.1.0",
+    "net": {
+      "inet": {
+        "out": {
+          "urls": ["https://registry.npmjs.org"],
+          "protocols": ["https"]
+        }
+      }
+    }
+  }
+}
