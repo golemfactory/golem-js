@@ -34,11 +34,7 @@ dotenv.config();
       let idxE = netID.indexOf("/tcp");
       serverIP = ctx.getIp();
       networkID = netID.slice(idxB, idxE);
-      console.log(
-        "Netcat on the Provider will listen on: ",
-        serverIP,
-        "port: 1234"
-      );
+      console.log("Netcat on the Provider will listen on: ", serverIP, "port: 1234");
       await ctx.run(`timeout 20 nc -l ${port_tgt} > netcat_received`);
       console.log("Netcat will stop listening");
       //await new Promise((res) => setTimeout(res, 30 * 1000));
