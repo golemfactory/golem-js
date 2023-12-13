@@ -3,7 +3,7 @@ import { dirname, basename, resolve } from "path";
 import chalk from "chalk";
 import testExamples from "./examples.json";
 
-const criticalLogsRegExp = [/Task *. timeot/, /Task *. has been rejected/, /ERROR: TypeError/, /ERROR: Error/gim];
+const criticalLogsRegExp = [/Task *. timeout/, /Task *. has been rejected/, /ERROR: TypeError/, /ERROR: Error/gim];
 
 type Example = {
   cmd: string;
