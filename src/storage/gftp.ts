@@ -68,9 +68,9 @@ export class GftpStorageProvider implements StorageProvider {
   private async generateTempFileName(): Promise<string> {
     const { randomUUID } = await import("crypto");
     const tmp = await import("tmp");
-    const file_name = path.join(tmp.dirSync().name, randomUUID().toString());
-    if (fs.existsSync(file_name)) fs.unlinkSync(file_name);
-    return file_name;
+    const fileName = path.join(tmp.dirSync().name, randomUUID().toString());
+    if (fs.existsSync(fileName)) fs.unlinkSync(fileName);
+    return fileName;
   }
 
   async receiveFile(path: string): Promise<string> {
@@ -143,8 +143,8 @@ export class GftpStorageProvider implements StorageProvider {
 
   private async uploadStream(stream: AsyncGenerator<Buffer>): Promise<string> {
     // FIXME: temp file is never deleted.
-    const file_name = await this.generateTempFileName();
-    const wStream = fs.createWriteStream(file_name, {
+    const fileName = await this.generateTempFileName();
+    const wStream = fs.createWriteStream(fileName, {
       encoding: "binary",
     });
     // eslint-disable-next-line no-async-promise-executor
@@ -155,7 +155,7 @@ export class GftpStorageProvider implements StorageProvider {
       }
       wStream.end();
     });
-    const links = await this.jsonrpc("publish", { files: [file_name.toString()] });
+    const links = await this.jsonrpc("publish", { files: [fileName.toString()] });
     if (links.length !== 1) throw "invalid gftp publish response";
     return links[0]?.url;
   }

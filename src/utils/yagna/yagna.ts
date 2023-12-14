@@ -6,7 +6,7 @@ import { RequestorApi as IdentityRequestorApi } from "./identity";
 import { RequestorApi as GsbRequestorApi } from "./gsb";
 import { Agent } from "http";
 import { Configuration } from "ya-ts-client/dist/ya-payment";
-import { EnvUtils } from "../env";
+import * as EnvUtils from "../env";
 import { GolemError } from "../../error/golem-error";
 
 export type YagnaApi = {

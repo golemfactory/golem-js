@@ -1,5 +1,5 @@
 import { setExpectedProposals } from "../mock/rest/market";
-import { Demand, Proposal, DemandEventType, DemandEvent } from "../../src/market";
+import { Demand, Proposal, DEMAND_EVENT_TYPE, DemandEvent } from "../../src/market";
 import { allocationMock, packageMock, LoggerMock } from "../mock";
 import { proposalsInitial } from "../mock/fixtures";
 import { YagnaMock } from "../mock/rest/yagna";
@@ -22,7 +22,7 @@ describe("Demand", () => {
       const demand = await Demand.create(packageMock, allocationMock, yagnaApi, { subnetTag });
       setExpectedProposals(proposalsInitial);
       const event: DemandEvent = await new Promise((res) =>
-        demand.addEventListener(DemandEventType, (e) => res(e as DemandEvent)),
+        demand.addEventListener(DEMAND_EVENT_TYPE, (e) => res(e as DemandEvent)),
       );
       expect(event.proposal).toBeInstanceOf(Proposal);
       await demand.unsubscribe();

@@ -169,8 +169,8 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
   private async createService(fileInfo: GftpFileInfo, components: string[]): Promise<ServiceInfo> {
     const resp = await this.yagnaApi.gsb.createService(fileInfo, components);
     const servicesId = resp.servicesId;
-    const messages_link = `/gsb-api/v1/services/${servicesId}?authToken=${this.yagnaApi.yagnaOptions.apiKey}`;
-    const url = new URL(messages_link, this.yagnaApi.yagnaOptions.basePath);
+    const messageEndpoint = `/gsb-api/v1/services/${servicesId}?authToken=${this.yagnaApi.yagnaOptions.apiKey}`;
+    const url = new URL(messageEndpoint, this.yagnaApi.yagnaOptions.basePath);
     url.protocol = "ws:";
     this.services.set(fileInfo.url, servicesId);
 
