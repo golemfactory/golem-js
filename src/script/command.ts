@@ -13,11 +13,11 @@ const EmptyErrorResult = new Result({
  * @hidden
  */
 export class Command<T = unknown> {
-  protected args: object;
+  protected args: Record<string, unknown>;
 
   constructor(
     private commandName: string,
-    args?: object,
+    args?: Record<string, unknown>,
   ) {
     this.args = args || {};
   }
@@ -59,7 +59,7 @@ export class Command<T = unknown> {
  * @hidden
  */
 export class Deploy extends Command {
-  constructor(args?: object) {
+  constructor(args?: Record<string, unknown>) {
     super("deploy", args);
   }
 }
@@ -68,7 +68,7 @@ export class Deploy extends Command {
  * @hidden
  */
 export class Start extends Command {
-  constructor(args?: object) {
+  constructor(args?: Record<string, unknown>) {
     super("start", args);
   }
 }
@@ -103,7 +103,7 @@ export class Run extends Command {
 }
 
 export class Terminate extends Command {
-  constructor(args?: object) {
+  constructor(args?: Record<string, unknown>) {
     super("terminate", args);
   }
 }
@@ -139,7 +139,7 @@ export class UploadFile extends Transfer {
   }
 
   async after(result: Result): Promise<Result> {
-    await this.storageProvider.release([this.args["from"]]);
+    await this.storageProvider.release([this.args["from"] as string]);
     return result;
   }
 }
@@ -162,7 +162,7 @@ export class UploadData extends Transfer {
   }
 
   async after(result: Result): Promise<Result> {
-    await this.storageProvider.release([this.args["from"]]);
+    await this.storageProvider.release([this.args["from"] as string]);
     return result;
   }
 }
@@ -185,7 +185,7 @@ export class DownloadFile extends Transfer {
   }
 
   async after(result: Result): Promise<Result> {
-    await this.storageProvider.release([this.args["to"]]);
+    await this.storageProvider.release([this.args["to"] as string]);
     return result;
   }
 }
@@ -212,7 +212,7 @@ export class DownloadData extends Transfer<Uint8Array> {
   }
 
   async after(result: Result): Promise<Result<Uint8Array>> {
-    await this.storageProvider.release([this.args["to"]]);
+    await this.storageProvider.release([this.args["to"] as string]);
     if (result.result === ResultState.Ok) {
       return new Result<Uint8Array>({
         ...result,

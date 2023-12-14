@@ -10,9 +10,9 @@ interface Payload {
 }
 
 export class Providers extends AbstractAggregator<Payload, ProviderInfo> {
-  beforeAdd(payload): ProviderInfo {
+  beforeAdd(payload: Payload): ProviderInfo {
     if (payload.providerName) {
-      return payload;
+      return payload as ProviderInfo;
     }
 
     const provider = this.getById(payload.id);

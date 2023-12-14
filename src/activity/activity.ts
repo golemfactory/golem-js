@@ -350,7 +350,8 @@ export class Activity {
     }
   }
 
-  private isTimeoutError(error) {
+  private isTimeoutError(error: Error | AxiosError) {
+    if (!("isAxiosError" in error)) return false;
     const timeoutMsg = error.message && error.message.includes("timeout");
     return (
       (error.response && error.response.status === 408) ||

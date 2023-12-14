@@ -13,7 +13,7 @@ interface Payload {
 }
 
 export class Allocations extends AbstractAggregator<Payload, AllocationInfo> {
-  beforeAdd(payload): AllocationInfo {
+  beforeAdd(payload: Payload): AllocationInfo {
     return payload;
   }
 }

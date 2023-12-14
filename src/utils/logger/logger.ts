@@ -7,10 +7,10 @@ export enum LogLevel {
 }
 export interface Logger {
   level: string;
-  setLevel(level: string);
-  log(msg);
-  info(msg);
-  warn(msg);
-  error(msg);
-  debug(msg);
+  setLevel(level: string): void;
+  log(msg: unknown): void;
+  info(msg: unknown): void;
+  warn(msg: unknown): void;
+  error(msg: unknown): void;
+  debug(msg: unknown): void;
 }

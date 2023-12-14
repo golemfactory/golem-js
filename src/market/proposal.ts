@@ -211,7 +211,7 @@ export class Proposal {
   }
 
   async respond(chosenPlatform: string) {
-    this.demandRequest.properties["golem.com.payment.chosen-platform"] = chosenPlatform;
+    (this.demandRequest.properties as ProposalProperties)["golem.com.payment.chosen-platform"] = chosenPlatform;
     const { data: counteringProposalId } = await this.api
       .counterProposalDemand(this.subscriptionId, this.id, this.demandRequest, { timeout: 20000 })
       .catch((e) => {

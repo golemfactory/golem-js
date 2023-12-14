@@ -244,7 +244,7 @@ export class Demand extends EventTarget {
  * @hidden
  */
 export class DemandEvent extends Event {
-  readonly proposal: Proposal;
+  readonly proposal?: Proposal;
   readonly error?: Error;
 
   /**
@@ -253,7 +253,7 @@ export class DemandEvent extends Event {
    * @param data object with proposal data:
    * @param error optional error if occurred while subscription is active
    */
-  constructor(type, data?, error?) {
+  constructor(type: string, data?: (Proposal & EventInit) | undefined, error?: GolemError | undefined) {
     super(type, data);
     this.proposal = data;
     this.error = error;

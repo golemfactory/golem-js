@@ -166,7 +166,7 @@ export class PaymentService {
     }
   }
 
-  private async subscribePayments(event) {
+  private async subscribePayments(event: Event) {
     if (event instanceof InvoiceEvent) this.processInvoice(event.invoice).then();
     if (event instanceof DebitNoteEvent) this.processDebitNote(event.debitNote).then();
   }
