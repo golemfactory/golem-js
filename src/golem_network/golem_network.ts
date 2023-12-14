@@ -60,7 +60,7 @@ export class GolemNetwork {
    * Close the connection to the Yagna service and cancel all running jobs.
    */
   public async close() {
-    const pendingJobs = Array.from(this.jobs.values()).filter((job) => job.isRunning);
+    const pendingJobs = Array.from(this.jobs.values()).filter((job) => job.isRunning());
     await Promise.allSettled(pendingJobs.map((job) => job.cancel()));
     await this.yagna.end();
   }

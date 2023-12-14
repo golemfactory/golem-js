@@ -1,6 +1,6 @@
 import { TaskState as JobState } from "../task/task";
-import { WorkContext, WorkOptions, Worker } from "../task/work";
-import { YagnaApi, runtimeContextChecker } from "../utils";
+import { WorkContext, Worker, WorkOptions } from "../task/work";
+import { runtimeContextChecker, YagnaApi } from "../utils";
 import { AgreementOptions, AgreementPoolService } from "../agreement";
 import { MarketService } from "../market";
 import { NetworkService } from "../network";
@@ -9,10 +9,11 @@ import { MarketOptions } from "../market/service";
 import { NetworkOptions } from "../network/network";
 import { Package, PackageOptions } from "../package";
 import { Activity, ActivityOptions } from "../activity";
-export { TaskState as JobState } from "../task/task";
 import { EventEmitter } from "eventemitter3";
 import { GftpStorageProvider, NullStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../storage";
 import { GolemError } from "../error/golem-error";
+
+export { TaskState as JobState } from "../task/task";
 
 export type RunJobOptions = {
   market?: MarketOptions;
@@ -77,10 +78,10 @@ export class Job<Output = unknown> {
     private readonly defaultOptions: Partial<RunJobOptions> = {},
   ) {}
 
-  private _isRunning = false;
+  public isRunning() {
+    const inProgressStates = [JobState.Pending, JobState.Retry];
 
-  public get isRunning() {
-    return this._isRunning;
+    return inProgressStates.includes(this.state);
   }
 
   /**
@@ -94,15 +95,15 @@ export class Job<Output = unknown> {
    * @param options - Configuration options for the job. These options will be merged with the options passed to the constructor.
    */
   startWork(workOnGolem: Worker<Output>, options: RunJobOptions = {}) {
-    if (this.isRunning) {
+    if (this.isRunning()) {
       throw new GolemError(`Job ${this.id} is already running`);
     }
+
     const packageOptions = Object.assign({}, this.defaultOptions.package, options.package);
     if (!packageOptions.imageHash && !packageOptions.manifest && !packageOptions.imageTag) {
       throw new GolemError("You must specify either imageHash, imageTag or manifest in package options");
     }
 
-    this._isRunning = true;
     this.state = JobState.Pending;
     this.events.emit("created");
 
@@ -143,7 +144,6 @@ export class Job<Output = unknown> {
         this.events.emit("error", error);
       })
       .finally(async () => {
-        this._isRunning = false;
         await Promise.all([agreementService.end(), networkService.end(), paymentService.end(), marketService.end()]);
         this.events.emit("ended");
       });
@@ -253,7 +253,7 @@ export class Job<Output = unknown> {
     if (this.state === JobState.Rejected) {
       throw this.error;
     }
-    if (!this.isRunning) {
+    if (!this.isRunning()) {
       throw new GolemError(`Job ${this.id} is not running`);
     }
     return new Promise((resolve, reject) => {

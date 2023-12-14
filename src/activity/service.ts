@@ -15,7 +15,7 @@ interface ActivityServiceOptions extends ActivityOptions {}
 export class ActivityPoolService {
   private logger: Logger;
   private pool: Activity[] = [];
-  private _isRunning = false;
+  private runningState = false;
 
   constructor(
     private yagnaApi: YagnaApi,
@@ -30,19 +30,19 @@ export class ActivityPoolService {
    * Start ActivityPoolService
    */
   async run() {
-    this._isRunning = true;
+    this.runningState = true;
     this.logger.debug("Activity Pool Service has started");
   }
 
-  get isRunning() {
-    return this._isRunning;
+  isRunning() {
+    return this.runningState;
   }
 
   /**
    * Get an activity from the pool of available ones or create a new one
    */
   async getActivity(): Promise<Activity> {
-    if (!this._isRunning) {
+    if (!this.runningState) {
       throw new GolemError("Unable to get activity. Activity service is not running");
     }
     return this.pool.shift() || (await this.createActivity());
@@ -70,7 +70,7 @@ export class ActivityPoolService {
    */
   async end() {
     await Promise.all(this.pool.map((activity) => activity.stop().catch((e) => this.logger.warn(e))));
-    this._isRunning = false;
+    this.runningState = false;
     this.logger.debug("Activity Pool Service has been stopped");
   }
 
