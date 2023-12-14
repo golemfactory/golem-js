@@ -27,7 +27,7 @@
       {
         "selector": ["memberLike", "function"],
         "format": ["camelCase"],
-        "leadingUnderscore": "allow",
+        "leadingUnderscore": "forbid",
         "filter": {
           "regex": "golem.*", // ProposalProperties like 'golem.com.payment.debit-notes.accept-timeout?'
           "match": false

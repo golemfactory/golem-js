@@ -1,42 +1,39 @@
 import { v4 } from "uuid";
 import { YagnaOptions } from "../executor";
 import { Job } from "../job";
-import { Yagna } from "../utils";
+import { Yagna, YagnaApi } from "../utils";
 import { RunJobOptions } from "../job/job";
 import { GolemError } from "../error/golem-error";
+
+type GolemNetworkConfig = Partial<RunJobOptions> & { yagna?: YagnaOptions };
 
 /**
  * The Golem Network class provides a high-level API for running jobs on the Golem Network.
  */
 export class GolemNetwork {
-  private _yagna: Yagna | null = null;
+  private yagna: Yagna;
+  private api: YagnaApi | null = null;
+
+  private initializedState = false;
 
   private jobs = new Map<string, Job>();
 
   /**
    * @param config - Configuration options that will be passed to all jobs created by this instance.
    */
-  constructor(private readonly config: Partial<RunJobOptions> & { yagna?: YagnaOptions }) {}
-
-  private get yagna() {
-    if (this._yagna === null) {
-      throw new GolemError("GolemNetwork not initialized, please run init() first");
-    }
-    return this._yagna;
+  constructor(private readonly config: GolemNetworkConfig) {
+    this.yagna = new Yagna(this.config.yagna);
   }
 
   public isInitialized() {
-    return this._yagna !== null;
+    return this.initializedState;
   }
 
   public async init() {
-    if (this._yagna !== null) {
-      return;
-    }
-    const yagna = new Yagna(this.config.yagna);
-    // this will throw an error if yagna is not running
-    await yagna.connect();
-    this._yagna = yagna;
+    await this.yagna.connect();
+    this.api = this.yagna.getApi();
+
+    this.initializedState = true;
   }
 
   /**
@@ -46,13 +43,18 @@ export class GolemNetwork {
    * @param options - Configuration options for the job. These options will be merged with the options passed to the constructor.
    */
   public createJob<Output = unknown>(options: RunJobOptions = {}) {
+    this.checkInitialization();
+
     const jobId = v4();
-    const job = new Job<Output>(jobId, this.yagna.getApi(), { ...this.config, ...options });
+    const job = new Job<Output>(jobId, this.api!, { ...this.config, ...options });
     this.jobs.set(jobId, job);
+
     return job;
   }
 
   public getJobById(id: string) {
+    this.checkInitialization();
+
     return this.jobs.get(id);
   }
 
@@ -63,5 +65,12 @@ export class GolemNetwork {
     const pendingJobs = Array.from(this.jobs.values()).filter((job) => job.isRunning());
     await Promise.allSettled(pendingJobs.map((job) => job.cancel()));
     await this.yagna.end();
+    this.initializedState = false;
+  }
+
+  private checkInitialization() {
+    if (!this.initializedState || this.api === null) {
+      throw new GolemError("GolemNetwork not initialized, please run init() first");
+    }
   }
 }
