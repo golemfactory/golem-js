@@ -1,6 +1,6 @@
 import { LoggerMock } from "../mock";
 import { readFileSync } from "fs";
-import { Result, TaskExecutor } from "../../src";
+import { TaskExecutor, EventType, BaseEvent, Events } from "../../src";
 const logger = new LoggerMock(false);
 
 describe("Task Executor", function () {
@@ -221,5 +221,37 @@ describe("Task Executor", function () {
       await executor.shutdown();
     }
     expect(logger.logs).not.toContain("Trying to redo the task");
+  });
+
+  it("should clean up the agreements in the pool if the agreement has been terminated by provider", async () => {
+    const eventTarget = new EventTarget();
+    const executor = await TaskExecutor.create({
+      package: "golem/alpine:latest",
+      eventTarget,
+      // we set mid-agreement payment and a filter that will not pay for debit notes
+      // which should result in termination of the agreement by provider
+      debitNotesFilter: () => Promise.resolve(false),
+      debitNotesAcceptanceTimeoutSec: 10,
+      midAgreementPaymentTimeoutSec: 10,
+    });
+    let createdAgreementsCount = 0;
+    eventTarget.addEventListener(EventType, (event) => {
+      const ev = event as BaseEvent<unknown>;
+      if (ev instanceof Events.AgreementCreated) createdAgreementsCount++;
+    });
+    try {
+      await executor.run(async (ctx) => {
+        const proc = await ctx.spawn("timeout 15 ping 127.0.0.1");
+        proc.stdout.on("data", (data) => console.log(data));
+        return await proc.waitForExit(20_000);
+      });
+      // the first task should be terminated by the provider, the second one should not use the same agreement
+      await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
+    } catch (error) {
+      fail(`Test failed. ${error}`);
+    } finally {
+      await executor.shutdown();
+    }
+    expect(createdAgreementsCount).toBeGreaterThan(1);
   });
 });
