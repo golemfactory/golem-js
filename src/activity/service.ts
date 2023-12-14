@@ -16,6 +16,7 @@ export class ActivityPoolService {
   private logger: Logger;
   private pool: Activity[] = [];
   private _isRunning = false;
+
   constructor(
     private yagnaApi: YagnaApi,
     private agreementService: AgreementPoolService,

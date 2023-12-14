@@ -65,6 +65,8 @@ export class Result<TData = any> implements ResultData<TData> {
 }
 
 export interface StreamingBatchEvent {
+  // Reason for disable: That's something what yagna returns from its api
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   batch_id: string;
   index: number;
   timestamp: string;
@@ -83,6 +85,8 @@ interface RuntimeEventStarted {
 }
 
 interface RuntimeEventFinished {
+  // Reason for disable: That's something what yagna returns from its api
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   return_code: number;
   message: string;
 }

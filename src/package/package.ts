@@ -74,10 +74,6 @@ export class Package {
     };
   }
 
-  static GetHashFromTag(tag: string): string {
-    return tag.split(":")[1];
-  }
-
   async getDemandDecoration(): Promise<MarketDecoration> {
     const builder = new DecorationsBuilder();
     builder

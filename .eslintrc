@@ -21,13 +21,17 @@
       {
         "selector": "variable",
         "format": ["camelCase", "UPPER_CASE"],
-        "leadingUnderscore": "allow",
-        "trailingUnderscore": "allow"
+        "leadingUnderscore": "forbid",
+        "trailingUnderscore": "forbid"
       },
       {
-        "selector": ["typeMethod", "function"],
+        "selector": ["memberLike", "function"],
         "format": ["camelCase"],
-        "leadingUnderscore": "forbid"
+        "leadingUnderscore": "allow",
+        "filter": {
+          "regex": "golem.*", // ProposalProperties like 'golem.com.payment.debit-notes.accept-timeout?'
+          "match": false
+        }
       },
       {
         "selector": "typeLike",

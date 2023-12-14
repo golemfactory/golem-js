@@ -122,7 +122,7 @@ export class Job<Output = unknown> {
     // reset abort controller
     this.abortController = new AbortController();
 
-    this._runWork({
+    this.runWork({
       worker: workOnGolem,
       marketService,
       agreementService,
@@ -149,7 +149,7 @@ export class Job<Output = unknown> {
       });
   }
 
-  private async _runWork({
+  private async runWork({
     worker,
     marketService,
     agreementService,
@@ -190,7 +190,7 @@ export class Job<Output = unknown> {
     const activity = await Activity.create(agreement, this.yagnaApi, options.activity);
 
     const storageProvider =
-      this.defaultOptions.work?.storageProvider || options.work?.storageProvider || this._getDefaultStorageProvider();
+      this.defaultOptions.work?.storageProvider || options.work?.storageProvider || this.getDefaultStorageProvider();
 
     const workContext = new WorkContext(activity, {
       provider: agreement.provider,
@@ -218,7 +218,7 @@ export class Job<Output = unknown> {
     return worker(workContext);
   }
 
-  private _getDefaultStorageProvider(): StorageProvider {
+  private getDefaultStorageProvider(): StorageProvider {
     if (runtimeContextChecker.isNode) {
       return new GftpStorageProvider();
     }
