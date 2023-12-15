@@ -1,1 +1,1 @@
-export { GolemNetwork } from "./golem_network";
+export { GolemNetwork, GolemNetworkConfig } from "./golem_network";

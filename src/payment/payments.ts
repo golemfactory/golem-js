@@ -11,7 +11,7 @@ export interface PaymentOptions extends BasePaymentOptions {
   maxDebitNotesEvents?: number;
 }
 
-export const PaymentEventType = "PaymentReceived";
+export const PAYMENT_EVENT_TYPE = "PaymentReceived";
 
 export class Payments extends EventTarget {
   private isRunning = true;
@@ -70,7 +70,7 @@ export class Payments extends EventTarget {
             (e) => this.logger?.error(`Unable to create invoice ID: ${invoiceId}. ${e?.response?.data?.message || e}`),
           );
           if (!invoice) continue;
-          this.dispatchEvent(new InvoiceEvent(PaymentEventType, invoice));
+          this.dispatchEvent(new InvoiceEvent(PAYMENT_EVENT_TYPE, invoice));
           this.lastInvoiceFetchingTime = event.eventDate;
           this.options.eventTarget?.dispatchEvent(new Events.InvoiceReceived(invoice));
           this.logger?.debug(`New Invoice received for agreement ${invoice.agreementId}. Amount: ${invoice.amount}`);
@@ -106,7 +106,7 @@ export class Payments extends EventTarget {
               this.logger?.error(`Unable to create debit note ID: ${debitNoteId}. ${e?.response?.data?.message || e}`),
           );
           if (!debitNote) continue;
-          this.dispatchEvent(new DebitNoteEvent(PaymentEventType, debitNote));
+          this.dispatchEvent(new DebitNoteEvent(PAYMENT_EVENT_TYPE, debitNote));
           this.lastDebitNotesFetchingTime = event.eventDate;
           this.options.eventTarget?.dispatchEvent(
             new Events.DebitNoteReceived({

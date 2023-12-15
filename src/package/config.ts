@@ -19,8 +19,8 @@ export const DEFAULTS = Object.freeze({
  * @internal
  */
 export enum PackageFormat {
-  UNKNOWN = "",
-  GVMKIT_SQUASH = "gvmkit-squash",
+  Unknown = "",
+  GVMKitSquash = "gvmkit-squash",
 }
 
 /**
@@ -49,7 +49,7 @@ export class PackageConfig {
       throw new GolemError("You must define a package or manifest option");
     }
 
-    this.packageFormat = PackageFormat.GVMKIT_SQUASH;
+    this.packageFormat = PackageFormat.GVMKitSquash;
     this.imageHash = options.imageHash;
     this.imageTag = options.imageTag;
     this.engine = options.engine || DEFAULTS.engine;

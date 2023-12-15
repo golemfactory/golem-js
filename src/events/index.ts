@@ -1,2 +1,2 @@
 export * as Events from "./events";
-export { EventType, BaseEvent } from "./events";
+export { EVENT_TYPE, BaseEvent } from "./events";

@@ -6,7 +6,7 @@ import { RequireAtLeastOne } from "../utils/types";
 /**
  * Global Event Type with which all API events will be emitted. It should be used on all listeners that would like to handle events.
  */
-export const EventType = "GolemEvent";
+export const EVENT_TYPE = "GolemEvent";
 
 // Temporary polyfill
 // It is now implemented natively only for nodejs 19 and newest browsers
@@ -26,7 +26,7 @@ class CustomEvent<DataType> extends Event {
 
 export abstract class BaseEvent<DataType> extends CustomEvent<DataType> {
   constructor(data: DataType) {
-    super(EventType, { detail: data });
+    super(EVENT_TYPE, { detail: data });
   }
 }
 

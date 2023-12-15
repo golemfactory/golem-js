@@ -6,8 +6,7 @@ import { RequestorApi as IdentityRequestorApi } from "./identity";
 import { RequestorApi as GsbRequestorApi } from "./gsb";
 import { Agent } from "http";
 import { Configuration } from "ya-ts-client/dist/ya-payment";
-import { EnvUtils } from "../env";
-import { AxiosError } from "axios";
+import * as EnvUtils from "../env";
 import { GolemError } from "../../error/golem-error";
 
 export type YagnaApi = {
@@ -91,10 +90,10 @@ export class Yagna {
     return apiName ? `${this.apiBaseUrl}/${apiName}-api/v1` : this.apiBaseUrl;
   }
 
-  protected errorHandler(error: AxiosError): Promise<AxiosError> {
-    if (CONNECTIONS_ERROR_CODES.includes(error.code || "")) {
+  protected errorHandler(error: Error): Promise<Error> {
+    if ("code" in error && CONNECTIONS_ERROR_CODES.includes((error.code as string) ?? "")) {
       return Promise.reject(
-        `No connection to Yagna. Make sure the service is running at the address ${this.apiBaseUrl}`,
+        new GolemError(`No connection to Yagna. Make sure the service is running at the address ${this.apiBaseUrl}`),
       );
     }
     return Promise.reject(error);

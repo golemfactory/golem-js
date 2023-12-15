@@ -2,7 +2,7 @@ import { ExeScriptRequest } from "ya-ts-client/dist/ya-activity/src/models";
 import { StorageProvider } from "../storage";
 import { Result, ResultState } from "../activity";
 
-const EmptyErrorResult = new Result({
+const EMPTY_ERROR_RESULT = new Result({
   result: ResultState.Error,
   eventDate: new Date().toISOString(),
   index: -1,
@@ -51,7 +51,7 @@ export class Command<T = unknown> {
    * @param result
    */
   async after(result?: Result<T>): Promise<Result<T>> {
-    return result ?? EmptyErrorResult;
+    return result ?? EMPTY_ERROR_RESULT;
   }
 }
 

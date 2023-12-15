@@ -15,12 +15,12 @@ export class TaskQueue<T extends QueueableTask = Task> {
   protected itemsStack: Array<T> = [];
 
   addToEnd(task: T) {
-    this._checkIfTaskIsEligibleForAdd(task);
+    this.checkIfTaskIsEligibleForAdd(task);
     this.itemsStack.push(task);
   }
 
   addToBegin(task: T) {
-    this._checkIfTaskIsEligibleForAdd(task);
+    this.checkIfTaskIsEligibleForAdd(task);
     this.itemsStack.unshift(task);
   }
 
@@ -32,7 +32,7 @@ export class TaskQueue<T extends QueueableTask = Task> {
     return this.itemsStack.shift();
   }
 
-  private _checkIfTaskIsEligibleForAdd(task: T) {
+  private checkIfTaskIsEligibleForAdd(task: T) {
     if (!task.isQueueable()) throw new GolemError("You cannot add a task that is not in the correct state");
   }
 }
