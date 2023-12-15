@@ -241,5 +241,3 @@ yarn format
 - Learn about preparing your own Docker-like images for
   the [VM runtime](https://docs.golem.network/docs/creators/javascript/examples/tools/converting-docker-image-to-golem-format)
 - Write your own app with [JavaScript API](https://docs.golem.network/docs/creators/javascript/quickstarts/quickstart)
-
-## How to

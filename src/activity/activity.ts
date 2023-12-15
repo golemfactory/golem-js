@@ -327,24 +327,15 @@ export class Activity {
     ++retryCount;
 
     const failMsg = "There was an error retrieving activity results.";
-    const errorMsg = this.getErrorMsg(error);
 
     if (retryCount < maxRetries) {
       this.logger?.debug(`${failMsg} Retrying in ${this.options.activityExeBatchResultPollIntervalSeconds} seconds.`);
       return retryCount;
     } else {
-      this.logger?.warn(`${failMsg} Giving up after ${retryCount} attempts. ${errorMsg}`);
+      this.logger?.warn(`${failMsg} Giving up after ${retryCount} attempts. ${error.message}`);
     }
 
-    throw new GolemError(`Command #${cmdIndex || 0} getExecBatchResults error: ${errorMsg}`);
-  }
-
-  private getErrorMsg(error: Error) {
-    if ("message" in error) {
-      return error.message;
-    } else {
-      return error;
-    }
+    throw new GolemError(`Command #${cmdIndex || 0} getExecBatchResults error: ${error.message}`);
   }
 
   private isTimeoutError(error) {
