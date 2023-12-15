@@ -13,7 +13,7 @@ interface Payload {
 }
 
 export class Activities extends AbstractAggregator<Payload, ActivityInfo> {
-  beforeAdd(payload): ActivityInfo {
+  beforeAdd(payload: ActivityInfo): ActivityInfo {
     return payload;
   }
   getByTaskId(taskId: string) {

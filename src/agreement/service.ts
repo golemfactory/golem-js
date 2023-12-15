@@ -106,14 +106,14 @@ export class AgreementPoolService {
    * @return Agreement
    */
   async getAgreement(): Promise<Agreement> {
-    let agreement;
+    let agreement: Agreement | undefined;
     while (!agreement && this.isServiceRunning) {
       agreement = await this.getAgreementFormPool();
       if (!agreement) {
         await sleep(2);
       }
     }
-    if (!agreement && !this.isServiceRunning) {
+    if (!agreement || !this.isServiceRunning) {
       throw new GolemError("Unable to get agreement. Agreement service is not running");
     }
     return agreement;
@@ -172,7 +172,7 @@ export class AgreementPoolService {
     );
   }
 
-  async createAgreement(candidate) {
+  async createAgreement(candidate: AgreementCandidate) {
     try {
       let agreement = await Agreement.create(candidate.proposal.id, this.yagnaApi, this.config.options);
       agreement = await this.waitForAgreementApproval(agreement);

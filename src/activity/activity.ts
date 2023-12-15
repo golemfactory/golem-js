@@ -35,6 +35,11 @@ export interface ActivityOptions {
   eventTarget?: EventTarget;
 }
 
+type AxiosError = Error & { response: { status: number }; code: string };
+function isAxiosError(error: Error | AxiosError): error is AxiosError {
+  return Boolean(error && "response" in error && typeof error.response === "object" && "status" in error.response);
+}
+
 /**
  * Activity module - an object representing the runtime environment on the provider in accordance with the `Package` specification.
  * As part of a given activity, it is possible to execute exe script commands and capture their results.
@@ -338,7 +343,8 @@ export class Activity {
     throw new GolemError(`Command #${cmdIndex || 0} getExecBatchResults error: ${error.message}`);
   }
 
-  private isTimeoutError(error) {
+  private isTimeoutError(error: Error | AxiosError) {
+    if (!isAxiosError(error)) return false;
     const timeoutMsg = error.message && error.message.includes("timeout");
     return (
       (error.response && error.response.status === 408) ||

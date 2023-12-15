@@ -17,7 +17,7 @@ export class Times extends AbstractAggregator<Payload, TimesInfo> {
     return { id, stopTime: stopTime || 0, startTime, duration: stopTime ? stopTime - startTime : 0 };
   }
 
-  stop({ id, stopTime }) {
+  stop({ id, stopTime }: { id: string; stopTime: number }) {
     const item = this.items.get(id);
     this.updateItemInfo(id, { stopTime, duration: item?.startTime ? stopTime - item.startTime : 0 });
   }

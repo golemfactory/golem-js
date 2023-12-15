@@ -6,7 +6,7 @@ import { NetworkInfo } from "./network";
  */
 export class NetworkNode {
   constructor(
-    public readonly id,
+    public readonly id: string,
     public readonly ip: IPv4,
     private getNetworkInfo: () => NetworkInfo,
     private apiUrl: string,

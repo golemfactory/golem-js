@@ -76,7 +76,7 @@ export class MarketService {
   private demandEventListener(event: Event) {
     const proposal = (event as DemandEvent).proposal;
     const error = (event as DemandEvent).error;
-    if (error) {
+    if (error || !proposal) {
       this.logger?.error("Subscription failed. Trying to subscribe a new one...");
       this.resubscribeDemand().catch((e) => this.logger?.warn(e));
       return;
@@ -98,7 +98,9 @@ export class MarketService {
     let attempt = 1;
     let success = false;
     while (!success && attempt <= this.maxResubscribeRetries) {
-      success = await this.createDemand().catch((e) => this.logger?.error(`Could not resubscribe demand. ${e}`));
+      success = Boolean(
+        await this.createDemand().catch((e) => this.logger?.error(`Could not resubscribe demand. ${e}`)),
+      );
       ++attempt;
       await sleep(20);
     }

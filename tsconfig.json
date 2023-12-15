@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "module": "esnext",
-    "noImplicitAny": false,
+    "noImplicitAny": true,
     "target": "es2018",
     "strict": true,
     "esModuleInterop": true,
@@ -30,5 +30,5 @@
     "excludeInternal": true
   },
   "include": ["src"],
-  "exclude": ["**/*.spec.ts", "tmp/"]
+  "exclude": ["**/*.spec.ts", "**/*.test.ts", "tmp/"]
 }

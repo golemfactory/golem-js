@@ -4,6 +4,7 @@ import { AgreementConfig } from "./config";
 import { Events } from "../events";
 import { YagnaApi } from "../utils/yagna/yagna";
 import { GolemError } from "../error/golem-error";
+import { ProposalProperties } from "../market/proposal";
 
 /**
  * AgreementFactory
@@ -43,8 +44,8 @@ export class AgreementFactory {
       });
       const { data } = await this.yagnaApi.market.getAgreement(agreementId);
       const provider = {
-        name: data?.offer.properties["golem.node.id.name"],
-        id: data?.offer.providerId,
+        name: (data.offer.properties as ProposalProperties)["golem.node.id.name"],
+        id: data.offer.providerId,
       };
       if (!provider.id || !provider.name) throw new GolemError("Unable to get provider info");
       const agreement = new Agreement(agreementId, provider, this.yagnaApi, this.options);
