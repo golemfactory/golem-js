@@ -3,7 +3,7 @@ import { Package } from "../package";
 import { Proposal } from "./proposal";
 import { AgreementPoolService } from "../agreement";
 import { Allocation } from "../payment";
-import { Demand, DemandEvent, DemandEventType, DemandOptions } from "./demand";
+import { Demand, DemandEvent, DEMAND_EVENT_TYPE, DemandOptions } from "./demand";
 import { MarketConfig } from "./config";
 import { GolemError } from "../error/golem-error";
 
@@ -50,7 +50,7 @@ export class MarketService {
 
   async end() {
     if (this.demand) {
-      this.demand.removeEventListener(DemandEventType, this.demandEventListener.bind(this));
+      this.demand.removeEventListener(DEMAND_EVENT_TYPE, this.demandEventListener.bind(this));
       await this.demand.unsubscribe().catch((e) => this.logger?.error(`Could not unsubscribe demand. ${e}`));
     }
     this.logger?.debug("Market Service has been stopped");
@@ -63,7 +63,7 @@ export class MarketService {
   private async createDemand(): Promise<true> {
     if (!this.taskPackage || !this.allocation) throw new GolemError("The service has not been started correctly.");
     this.demand = await Demand.create(this.taskPackage, this.allocation, this.yagnaApi, this.options);
-    this.demand.addEventListener(DemandEventType, this.demandEventListener.bind(this));
+    this.demand.addEventListener(DEMAND_EVENT_TYPE, this.demandEventListener.bind(this));
     this.proposalsCount = {
       initial: 0,
       confirmed: 0,
@@ -92,7 +92,7 @@ export class MarketService {
 
   private async resubscribeDemand() {
     if (this.demand) {
-      this.demand.removeEventListener(DemandEventType, this.demandEventListener.bind(this));
+      this.demand.removeEventListener(DEMAND_EVENT_TYPE, this.demandEventListener.bind(this));
       await this.demand.unsubscribe().catch((e) => this.logger?.debug(`Could not unsubscribe demand. ${e}`));
     }
     let attempt = 1;

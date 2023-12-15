@@ -1,9 +1,9 @@
 import { TaskExecutor } from "@golem-sdk/golem-js";
 import { program } from "commander";
 import { fileURLToPath } from "url";
-const __dirname = fileURLToPath(new URL(".", import.meta.url));
+const DIR_NAME = fileURLToPath(new URL(".", import.meta.url));
 
-const blender_params = (frame) => ({
+const blenderParams = (frame) => ({
   scene_file: "/golem/resource/scene.blend",
   resolution: [400, 300],
   use_compositing: false,
@@ -32,19 +32,16 @@ async function main(subnetTag: string, driver?: string, network?: string, debug?
 
   try {
     executor.onActivityReady(async (ctx) => {
-      await ctx.uploadFile(`${__dirname}/cubes.blend`, "/golem/resource/scene.blend");
+      await ctx.uploadFile(`${DIR_NAME}/cubes.blend`, "/golem/resource/scene.blend");
     });
 
     const futureResults = [0, 10, 20, 30, 40, 50].map((frame) =>
       executor.run(async (ctx) => {
         const result = await ctx
           .beginBatch()
-          .uploadJson(blender_params(frame), "/golem/work/params.json")
+          .uploadJson(blenderParams(frame), "/golem/work/params.json")
           .run("/golem/entrypoints/run-blender.sh")
-          .downloadFile(
-            `/golem/output/out${frame?.toString().padStart(4, "0")}.png`,
-            `${__dirname}/output_${frame}.png`,
-          )
+          .downloadFile(`/golem/output/out${frame?.toString().padStart(4, "0")}.png`, `${DIR_NAME}/output_${frame}.png`)
           .end();
         return result?.length ? `output_${frame}.png` : "";
       }),
