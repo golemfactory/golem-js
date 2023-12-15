@@ -24,7 +24,7 @@ export class NetworkService {
 
   async run(networkOwnerId?: string) {
     if (!networkOwnerId) {
-      const { data } = await this.yagnaApi.identity.getIdentity();
+      const data = await this.yagnaApi.identity.getIdentity();
       networkOwnerId = data.identity;
     }
     this.network = await Network.create(this.yagnaApi, { ...this.options, networkOwnerId });

@@ -147,7 +147,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
 
   private async createFileInfo(): Promise<GftpFileInfo> {
     const id = v4();
-    const { data } = await this.yagnaApi.identity.getIdentity();
+    const data = await this.yagnaApi.identity.getIdentity();
     const me = data.identity;
 
     return {
@@ -168,12 +168,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
 
   private async createService(fileInfo: GftpFileInfo, components: string[]): Promise<ServiceInfo> {
     const resp = await this.yagnaApi.gsb.createService(fileInfo, components);
-
-    if (resp.status !== 201) {
-      throw new GolemError(`Invalid response: ${resp.status}`);
-    }
-
-    const servicesId = resp.data.servicesId;
+    const servicesId = resp.servicesId;
     const messages_link = `/gsb-api/v1/services/${servicesId}?authToken=${this.yagnaApi.yagnaOptions.apiKey}`;
     const url = new URL(messages_link, this.yagnaApi.yagnaOptions.basePath);
     url.protocol = "ws:";
@@ -183,10 +178,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
   }
 
   private async deleteService(id: string): Promise<void> {
-    const resp = await this.yagnaApi.gsb.deleteService(id);
-    if (resp.status !== 200) {
-      throw new GolemError(`Invalid response: ${resp.status}`);
-    }
+    await this.yagnaApi.gsb.deleteService(id);
   }
 
   private respond(ws: WebSocket, id: string, payload: unknown) {

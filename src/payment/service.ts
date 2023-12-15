@@ -178,7 +178,7 @@ export class PaymentService {
   }
 
   private async getPaymentAddress(): Promise<string> {
-    const { data } = await this.yagnaApi.identity.getIdentity();
+    const data = await this.yagnaApi.identity.getIdentity();
     return data.identity;
   }
 }
