@@ -9,10 +9,14 @@ interface Payload {
   providerName?: string;
 }
 
+function isProviderInfo(item: ProviderInfo | Payload): item is ProviderInfo {
+  return (item as ProviderInfo).providerName !== undefined;
+}
+
 export class Providers extends AbstractAggregator<Payload, ProviderInfo> {
   beforeAdd(payload: Payload): ProviderInfo {
-    if (payload.providerName) {
-      return payload as ProviderInfo;
+    if (isProviderInfo(payload)) {
+      return payload;
     }
 
     const provider = this.getById(payload.id);
