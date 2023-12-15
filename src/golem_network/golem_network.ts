@@ -5,7 +5,7 @@ import { Yagna, YagnaApi } from "../utils";
 import { RunJobOptions } from "../job/job";
 import { GolemError } from "../error/golem-error";
 
-type GolemNetworkConfig = Partial<RunJobOptions> & { yagna?: YagnaOptions };
+export type GolemNetworkConfig = Partial<RunJobOptions> & { yagna?: YagnaOptions };
 
 /**
  * The Golem Network class provides a high-level API for running jobs on the Golem Network.
@@ -13,8 +13,6 @@ type GolemNetworkConfig = Partial<RunJobOptions> & { yagna?: YagnaOptions };
 export class GolemNetwork {
   private yagna: Yagna;
   private api: YagnaApi | null = null;
-
-  private initializedState = false;
 
   private jobs = new Map<string, Job>();
 
@@ -26,14 +24,12 @@ export class GolemNetwork {
   }
 
   public isInitialized() {
-    return this.initializedState;
+    return this.api !== null;
   }
 
   public async init() {
     await this.yagna.connect();
     this.api = this.yagna.getApi();
-
-    this.initializedState = true;
   }
 
   /**
@@ -65,11 +61,11 @@ export class GolemNetwork {
     const pendingJobs = Array.from(this.jobs.values()).filter((job) => job.isRunning());
     await Promise.allSettled(pendingJobs.map((job) => job.cancel()));
     await this.yagna.end();
-    this.initializedState = false;
+    this.api = null;
   }
 
   private checkInitialization() {
-    if (!this.initializedState || this.api === null) {
+    if (!this.isInitialized()) {
       throw new GolemError("GolemNetwork not initialized, please run init() first");
     }
   }
