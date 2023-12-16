@@ -148,6 +148,20 @@ jobs:
           name: cypress-logs
           path: .cypress
 
+      - name: Collect logs from providers and requestor
+        run: |
+          mkdir log-output
+          docker compose -f tests/docker/docker-compose.yml logs provider-1 > log-output/provider-1.log
+          docker compose -f tests/docker/docker-compose.yml logs provider-2 > log-output/provider-2.log
+          docker compose -f tests/docker/docker-compose.yml logs requestor > log-output/requestor.log
+
+      - name: Upload provider output and logs
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: golem-provider-and-requestor-logs
+          path: log-output
+
       - name: Cleanup Docker
         if: always()
         run: |
