@@ -149,6 +149,7 @@ jobs:
           path: .cypress
 
       - name: Collect logs from providers and requestor
+        if: always()
         run: |
           mkdir log-output
           docker compose -f tests/docker/docker-compose.yml logs provider-1 > log-output/provider-1.log
