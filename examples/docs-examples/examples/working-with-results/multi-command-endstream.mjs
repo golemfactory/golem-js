@@ -3,7 +3,7 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
 (async () => {
   const executor = await TaskExecutor.create({
     package: "529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4",
-    yagnaOptions: { apiKey: "try_golem" },
+    // yagnaOptions: { apiKey: "try_golem" },
   });
 
   try {
@@ -16,11 +16,10 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
         .downloadFile("/golem/input/output.txt", "./output.txt")
         .endStream();
 
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
         res.on("data", (result) => console.log(result));
-        res.on("error", (error) => console.error(error));
-        return new Promise((resolve) => res.on("close", resolve));
-        res.once("close", resolve);
+        res.on("error", (error) => reject(error));
+        res.on("close", resolve);
       });
     });
   } catch (err) {
