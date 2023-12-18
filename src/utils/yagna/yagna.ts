@@ -8,6 +8,7 @@ import { Agent } from "http";
 import { Configuration } from "ya-ts-client/dist/ya-payment";
 import * as EnvUtils from "../env";
 import { GolemError } from "../../error/golem-error";
+import { v4 } from "uuid";
 
 export type YagnaApi = {
   market: MarketRequestorApi;
@@ -17,6 +18,7 @@ export type YagnaApi = {
   identity: IdentityRequestorApi;
   gsb: GsbRequestorApi;
   yagnaOptions: YagnaOptions;
+  appSessionId: string;
 };
 
 export type YagnaOptions = {
@@ -70,6 +72,7 @@ export class Yagna {
         apiKey: this.apiKey,
         basePath: this.apiBaseUrl,
       },
+      appSessionId: v4(),
     };
     this.addErrorHandler(api);
     return api;

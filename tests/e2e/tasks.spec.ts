@@ -1,6 +1,6 @@
 import { LoggerMock } from "../mock";
 import { readFileSync } from "fs";
-import { Result, TaskExecutor } from "../../src";
+import { TaskExecutor, EVENT_TYPE, BaseEvent, Events } from "../../src";
 const logger = new LoggerMock(false);
 
 describe("Task Executor", function () {
@@ -221,5 +221,75 @@ describe("Task Executor", function () {
       await executor.shutdown();
     }
     expect(logger.logs).not.toContain("Trying to redo the task");
+  });
+
+  /**
+   * TODO:
+   * For the test to work properly, the midAgreementDebitNoteIntervalSec parameter (which is in the beta version) is needed, so we temporarily skip this test
+   */
+  it.skip("should clean up the agreements in the pool if the agreement has been terminated by provider", async () => {
+    const eventTarget = new EventTarget();
+    const executor = await TaskExecutor.create({
+      package: "golem/alpine:latest",
+      eventTarget,
+      // we set mid-agreement payment and a filter that will not pay for debit notes
+      // which should result in termination of the agreement by provider
+      debitNotesFilter: () => Promise.resolve(false),
+      debitNotesAcceptanceTimeoutSec: 10,
+      midAgreementPaymentTimeoutSec: 10,
+    });
+    let createdAgreementsCount = 0;
+    eventTarget.addEventListener(EVENT_TYPE, (event) => {
+      const ev = event as BaseEvent<unknown>;
+      if (ev instanceof Events.AgreementCreated) createdAgreementsCount++;
+    });
+    try {
+      await executor.run(async (ctx) => {
+        const proc = await ctx.spawn("timeout 15 ping 127.0.0.1");
+        proc.stdout.on("data", (data) => console.log(data));
+        return await proc.waitForExit(20_000);
+      });
+      // the first task should be terminated by the provider, the second one should not use the same agreement
+      await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
+    } catch (error) {
+      throw new Error(`Test failed. ${error}`);
+    } finally {
+      await executor.shutdown();
+    }
+    expect(createdAgreementsCount).toBeGreaterThan(1);
+  });
+
+  it("should only accept debit notes for agreements that were created by the executor", async () => {
+    const eventTarget1 = new EventTarget();
+    const eventTarget2 = new EventTarget();
+    const executor1 = await TaskExecutor.create("golem/alpine:latest");
+    const executor2 = await TaskExecutor.create("golem/alpine:latest");
+    const createdAgreementsIds1 = new Set();
+    const createdAgreementsIds2 = new Set();
+    const acceptedDebitNoteAgreementIds1 = new Set();
+    const acceptedDebitNoteAgreementIds2 = new Set();
+    eventTarget1.addEventListener(EVENT_TYPE, (event) => {
+      const ev = event as BaseEvent<unknown>;
+      if (ev instanceof Events.AgreementCreated) createdAgreementsIds1.add(ev.detail.id);
+      if (ev instanceof Events.DebitNoteAccepted) acceptedDebitNoteAgreementIds1.add(ev.detail.agreementId);
+    });
+    eventTarget2.addEventListener(EVENT_TYPE, (event) => {
+      const ev = event as BaseEvent<unknown>;
+      if (ev instanceof Events.AgreementCreated) createdAgreementsIds2.add(ev.detail.id);
+      if (ev instanceof Events.DebitNoteAccepted) acceptedDebitNoteAgreementIds2.add(ev.detail.agreementId);
+    });
+    try {
+      await Promise.all([
+        executor1.run(async (ctx) => console.log((await ctx.run("echo 'Executor 1'")).stdout)),
+        executor2.run(async (ctx) => console.log((await ctx.run("echo 'Executor 2'")).stdout)),
+      ]);
+    } catch (error) {
+      throw new Error(`Test failed. ${error}`);
+    } finally {
+      await executor1.shutdown();
+      await executor2.shutdown();
+    }
+    expect(acceptedDebitNoteAgreementIds1).toEqual(createdAgreementsIds1);
+    expect(acceptedDebitNoteAgreementIds2).toEqual(createdAgreementsIds2);
   });
 });

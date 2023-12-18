@@ -1,10 +1,9 @@
 import Bottleneck from "bottleneck";
-import { Logger } from "../utils";
+import { Logger, YagnaApi, sleep } from "../utils";
 import { Agreement, AgreementOptions, AgreementStateEnum } from "./agreement";
 import { AgreementServiceConfig } from "./config";
 import { Proposal } from "../market";
-import sleep from "../utils/sleep";
-import { YagnaApi } from "../utils/yagna/yagna";
+import { AgreementEvent, AgreementTerminatedEvent } from "ya-ts-client/dist/ya-market";
 import { GolemError } from "../error/golem-error";
 
 export interface AgreementDTO {
@@ -22,6 +21,10 @@ export type AgreementSelector = (candidates: AgreementCandidate[]) => Promise<Ag
 export interface AgreementServiceOptions extends AgreementOptions {
   /** The selector used when choosing a provider from a pool of existing offers (from the market or already used before) */
   agreementSelector?: AgreementSelector;
+  /** The maximum number of events fetched in one request call  */
+  agreementMaxEvents?: number;
+  /** interval for fetching agreement events */
+  agreementEventsFetchingIntervalSec?: number;
 }
 
 /**
@@ -32,11 +35,9 @@ export interface AgreementServiceOptions extends AgreementOptions {
 export class AgreementPoolService {
   private logger?: Logger;
   private config: AgreementServiceConfig;
-
   private pool = new Set<AgreementCandidate>();
   private candidateMap = new Map<string, AgreementCandidate>();
   private agreements = new Map<string, Agreement>();
-
   private isServiceRunning = false;
   private limiter: Bottleneck;
 
@@ -46,7 +47,6 @@ export class AgreementPoolService {
   ) {
     this.config = new AgreementServiceConfig(agreementServiceOptions);
     this.logger = agreementServiceOptions?.logger;
-
     this.limiter = new Bottleneck({
       maxConcurrent: 1,
     });
@@ -57,6 +57,7 @@ export class AgreementPoolService {
    */
   async run() {
     this.isServiceRunning = true;
+    this.subscribeForAgreementEvents().catch(this.logger?.warn);
     this.logger?.debug("Agreement Pool Service has started");
   }
 
@@ -83,16 +84,17 @@ export class AgreementPoolService {
         this.logger?.debug(`Agreement ${agreementId} has been released for reuse`);
         return;
       } else {
-        this.logger?.warn(`Agreement ${agreementId} not found in the pool`);
+        this.logger?.debug(`Agreement ${agreementId} not found in the pool`);
       }
     } else {
       const agreement = this.agreements.get(agreementId);
       if (!agreement) {
-        this.logger?.warn(`Agreement ${agreementId} not found in the pool`);
+        this.logger?.debug(`Agreement ${agreementId} not found in the pool`);
         return;
       }
       this.logger?.debug(`Agreement ${agreementId} has been released and will be terminated`);
       try {
+        this.removeAgreementFromPool(agreement);
         await agreement.terminate();
       } catch (e) {
         this.logger?.warn(`Unable to terminate agreement ${agreement.id}: ${e.message}`);
@@ -204,11 +206,54 @@ export class AgreementPoolService {
     const state = await agreement.getState();
 
     if (state === AgreementStateEnum.Proposal) {
-      await agreement.confirm();
+      await agreement.confirm(this.yagnaApi.appSessionId);
       this.logger?.debug(`Agreement proposed to provider '${agreement.provider.name}'`);
     }
 
     await this.yagnaApi.market.waitForApproval(agreement.id, this.config.agreementWaitingForApprovalTimeout);
     return agreement;
+  }
+
+  private async subscribeForAgreementEvents() {
+    let afterTimestamp: string | undefined;
+    while (this.isServiceRunning) {
+      try {
+        // @ts-expect-error Bug in ts-client typing
+        const { data: events }: { data: Array<AgreementEvent & AgreementTerminatedEvent> } =
+          await this.yagnaApi.market.collectAgreementEvents(
+            this.config.agreementEventsFetchingIntervalSec,
+            afterTimestamp,
+            this.config.agreementMaxEvents,
+            this.yagnaApi.appSessionId,
+          );
+        events.forEach((event) => {
+          afterTimestamp = event.eventDate;
+          // @ts-expect-error: Bug in ya-tsclient: typo in eventtype
+          if (event.eventtype === "AgreementTerminatedEvent") {
+            this.handleTerminationAgreementEvent(event.agreementId, event.reason);
+          }
+        });
+      } catch (error) {
+        this.logger?.debug(`Unable to get agreement events. ${error}`);
+        await sleep(2);
+      }
+    }
+  }
+
+  private async handleTerminationAgreementEvent(agreementId: string, reason?: { [key: string]: string }) {
+    const agreement = this.agreements.get(agreementId);
+    if (agreement) {
+      await agreement.terminate(reason);
+      this.removeAgreementFromPool(agreement);
+    }
+  }
+
+  private removeAgreementFromPool(agreement: Agreement) {
+    this.agreements.delete(agreement.id);
+    const candidate = this.candidateMap.get(agreement.id);
+    if (candidate) {
+      this.pool.delete(candidate);
+      this.candidateMap.delete(agreement.id);
+    }
   }
 }
