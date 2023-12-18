@@ -20,7 +20,7 @@ interface Payload {
 }
 
 export class Agreements extends AbstractAggregator<Payload, AgreementInfo> {
-  beforeAdd(payload): AgreementInfo {
+  beforeAdd(payload: AgreementInfo): AgreementInfo {
     return { ...payload, status: AgreementStatusEnum.Pending };
   }
   confirm(id: string) {

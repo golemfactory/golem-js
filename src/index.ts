@@ -12,7 +12,7 @@ export { ProposalFilters, ProposalFilter, MarketHelpers, MarketService, MarketOp
 export { Package, PackageOptions, AllPackageOptions } from "./package";
 export { PaymentFilters, PaymentService, PaymentOptions } from "./payment";
 export { NetworkService, NetworkServiceOptions } from "./network";
-export { Events, BaseEvent, EventType } from "./events";
+export { Events, BaseEvent, EVENT_TYPE } from "./events";
 export {
   Logger,
   LogLevel,
@@ -25,5 +25,5 @@ export {
 } from "./utils";
 export { Yagna, YagnaOptions } from "./utils/yagna/yagna";
 export { Job, JobState } from "./job";
-export { GolemNetwork } from "./golem_network";
+export * from "./golem_network";
 export { Worker, WorkContext } from "./task";

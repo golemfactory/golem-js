@@ -11,7 +11,7 @@ export interface PaymentOptions extends BasePaymentOptions {
   maxDebitNotesEvents?: number;
 }
 
-export const PaymentEventType = "PaymentReceived";
+export const PAYMENT_EVENT_TYPE = "PaymentReceived";
 
 export class Payments extends EventTarget {
   private isRunning = true;
@@ -63,14 +63,14 @@ export class Payments extends EventTarget {
         for (const event of invoiceEvents) {
           if (!this.isRunning) return;
           if (event.eventType !== "InvoiceReceivedEvent") continue;
-          const invoice = await Invoice.create(event["invoiceId"], this.yagnaApi, { ...this.options }).catch(
-            (e) =>
-              this.logger?.error(
-                `Unable to create invoice ID: ${event["invoiceId"]}. ${e?.response?.data?.message || e}`,
-              ),
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore FIXME: ya-ts-client does not provide invoiceId in the event even though it is in the API response
+          const invoiceId = event["invoiceId"];
+          const invoice = await Invoice.create(invoiceId, this.yagnaApi, { ...this.options }).catch(
+            (e) => this.logger?.error(`Unable to create invoice ID: ${invoiceId}. ${e?.response?.data?.message || e}`),
           );
           if (!invoice) continue;
-          this.dispatchEvent(new InvoiceEvent(PaymentEventType, invoice));
+          this.dispatchEvent(new InvoiceEvent(PAYMENT_EVENT_TYPE, invoice));
           this.lastInvoiceFetchingTime = event.eventDate;
           this.options.eventTarget?.dispatchEvent(new Events.InvoiceReceived(invoice));
           this.logger?.debug(`New Invoice received for agreement ${invoice.agreementId}. Amount: ${invoice.amount}`);
@@ -98,14 +98,15 @@ export class Payments extends EventTarget {
         for (const event of debitNotesEvents) {
           if (!this.isRunning) return;
           if (event.eventType !== "DebitNoteReceivedEvent") continue;
-          const debitNote = await DebitNote.create(event["debitNoteId"], this.yagnaApi, { ...this.options }).catch(
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore FIXME: ya-ts-client does not provide debitNoteId in the event even though it is in the API response
+          const debitNoteId = event["debitNoteId"];
+          const debitNote = await DebitNote.create(debitNoteId, this.yagnaApi, { ...this.options }).catch(
             (e) =>
-              this.logger?.error(
-                `Unable to create debit note ID: ${event["debitNoteId"]}. ${e?.response?.data?.message || e}`,
-              ),
+              this.logger?.error(`Unable to create debit note ID: ${debitNoteId}. ${e?.response?.data?.message || e}`),
           );
           if (!debitNote) continue;
-          this.dispatchEvent(new DebitNoteEvent(PaymentEventType, debitNote));
+          this.dispatchEvent(new DebitNoteEvent(PAYMENT_EVENT_TYPE, debitNote));
           this.lastDebitNotesFetchingTime = event.eventDate;
           this.options.eventTarget?.dispatchEvent(
             new Events.DebitNoteReceived({
@@ -139,7 +140,7 @@ export class InvoiceEvent extends Event {
    * @param type A string with the name of the event:
    * @param data object with invoice data:
    */
-  constructor(type, data) {
+  constructor(type: string, data: EventInit & Invoice) {
     super(type, data);
     this.invoice = data;
   }
@@ -156,7 +157,7 @@ export class DebitNoteEvent extends Event {
    * @param type A string with the name of the event:
    * @param data object with debit note data:
    */
-  constructor(type, data) {
+  constructor(type: string, data: EventInit & DebitNote) {
     super(type, data);
     this.debitNote = data;
   }

@@ -10,6 +10,7 @@ export type PricingInfo = {
   start: number;
 };
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export type ProposalProperties = Record<string, string | number | string[] | number[] | boolean> & {
   "golem.activity.caps.transfer.protocol": string[];
   "golem.com.payment.debit-notes.accept-timeout?": number;
@@ -211,7 +212,7 @@ export class Proposal {
   }
 
   async respond(chosenPlatform: string) {
-    this.demandRequest.properties["golem.com.payment.chosen-platform"] = chosenPlatform;
+    (this.demandRequest.properties as ProposalProperties)["golem.com.payment.chosen-platform"] = chosenPlatform;
     const { data: counteringProposalId } = await this.api
       .counterProposalDemand(this.subscriptionId, this.id, this.demandRequest, { timeout: 20000 })
       .catch((e) => {

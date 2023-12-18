@@ -11,6 +11,40 @@
       {
         "checkLoops": false
       }
+    ],
+    "@typescript-eslint/naming-convention": [
+      "error",
+      {
+        "selector": "import",
+        "format": ["camelCase", "PascalCase"]
+      },
+      {
+        "selector": "variable",
+        "format": ["camelCase", "UPPER_CASE"],
+        "leadingUnderscore": "forbid",
+        "trailingUnderscore": "forbid"
+      },
+      {
+        "selector": ["memberLike", "function"],
+        "format": ["camelCase"],
+        "leadingUnderscore": "forbid",
+        "filter": {
+          "regex": "golem.*", // ProposalProperties like 'golem.com.payment.debit-notes.accept-timeout?'
+          "match": false
+        }
+      },
+      {
+        "selector": "typeLike",
+        "format": ["PascalCase"]
+      },
+      {
+        "selector": "enumMember",
+        "format": ["PascalCase"]
+      },
+      {
+        "selector": "objectLiteralProperty",
+        "format": null // We have too many varrying cases like YAGNA_APPKEY, Authorization, golem.com.scheme.payu.payment-timeout-sec? which break this constantly
+      }
     ]
   },
   "overrides": [

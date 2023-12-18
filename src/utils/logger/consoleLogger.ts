@@ -4,7 +4,7 @@ import { Logger } from "./logger";
  */
 export function consoleLogger(): Logger {
   let level = "info";
-  const print = (level, msg) => console.log(`${new Date().toISOString()} [${level}] ${msg}`);
+  const print = (level: string, msg: unknown) => console.log(`${new Date().toISOString()} [${level}] ${msg}`);
   return {
     debug: (msg) => print("debug", msg),
     error: (msg) => print("error", msg),

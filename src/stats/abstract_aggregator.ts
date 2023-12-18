@@ -17,7 +17,7 @@ export abstract class AbstractAggregator<T, R extends ItemInfo> {
   protected getByField(field: string, value: string | number): Collection<R> {
     return this.getAll().where(field, "==", value);
   }
-  protected updateItemInfo(id: string, data) {
+  protected updateItemInfo(id: string, data: Partial<R>) {
     const item = this.items.get(id);
     if (!item) return;
     this.items?.set(id, {

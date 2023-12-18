@@ -60,19 +60,19 @@ export class DecorationsBuilder {
     if (!decorations.constraints.length) constraints = "(&)";
     else if (decorations.constraints.length == 1) constraints = decorations.constraints[0];
     else constraints = `(&${decorations.constraints.join("\n\t")})`;
-    const properties = {};
+    const properties: Record<string, string | number | boolean> = {};
     decorations.properties.forEach((prop) => (properties[prop.key] = prop.value));
     return { constraints, properties };
   }
-  private parseConstraint(constraint): Constraint {
+  private parseConstraint(constraint: string): Constraint {
     for (const key in ComparisonOperator) {
-      const value = ComparisonOperator[key];
+      const value = ComparisonOperator[key as keyof typeof ComparisonOperator];
       const parsedConstraint = constraint.slice(1, -1).split(value);
       if (parsedConstraint.length === 2) {
         return {
           key: parsedConstraint[0],
           value: parsedConstraint[1],
-          comparisonOperator: ComparisonOperator[key],
+          comparisonOperator: value,
         };
       }
     }

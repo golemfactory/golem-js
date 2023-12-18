@@ -14,7 +14,7 @@ interface Payload {
 }
 
 export class Payments extends AbstractAggregator<Payload, PaymentInfo> {
-  beforeAdd(payload): PaymentInfo {
+  beforeAdd(payload: Payload): PaymentInfo {
     return {
       ...payload,
       amount: parseFloat(payload.amount),

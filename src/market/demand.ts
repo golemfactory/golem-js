@@ -97,7 +97,7 @@ export interface DemandOptions {
  * Event type with which all offers and proposals coming from the market will be emitted.
  * @hidden
  */
-export const DemandEventType = "ProposalReceived";
+export const DEMAND_EVENT_TYPE = "ProposalReceived";
 
 /**
  * Demand module - an object which can be considered an "open" or public Demand, as it is not directed at a specific Provider, but rather is sent to the market so that the matching mechanism implementation can associate relevant Offers.
@@ -206,7 +206,7 @@ export class Demand extends EventTarget {
             this.demandRequest,
             this.options.eventTarget,
           );
-          this.dispatchEvent(new DemandEvent(DemandEventType, proposal));
+          this.dispatchEvent(new DemandEvent(DEMAND_EVENT_TYPE, proposal));
           this.options.eventTarget?.dispatchEvent(
             new Events.ProposalReceived({
               id: proposal.id,
@@ -224,7 +224,7 @@ export class Demand extends EventTarget {
           if (error.code === "ECONNREFUSED" || error.response?.status === 404) {
             this.dispatchEvent(
               new DemandEvent(
-                DemandEventType,
+                DEMAND_EVENT_TYPE,
                 undefined,
                 new GolemError(
                   `${error.code === "ECONNREFUSED" ? "Yagna connection error." : "Demand expired."} ${reason}`,
@@ -244,7 +244,7 @@ export class Demand extends EventTarget {
  * @hidden
  */
 export class DemandEvent extends Event {
-  readonly proposal: Proposal;
+  readonly proposal?: Proposal;
   readonly error?: Error;
 
   /**
@@ -253,7 +253,7 @@ export class DemandEvent extends Event {
    * @param data object with proposal data:
    * @param error optional error if occurred while subscription is active
    */
-  constructor(type, data?, error?) {
+  constructor(type: string, data?: (Proposal & EventInit) | undefined, error?: GolemError | undefined) {
     super(type, data);
     this.proposal = data;
     this.error = error;

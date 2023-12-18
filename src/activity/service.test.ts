@@ -12,7 +12,7 @@ describe("Activity Pool Service", () => {
   describe("run()", () => {
     it("should start service", async () => {
       await activityService.run();
-      expect(activityService.isRunning).toEqual(true);
+      expect(activityService.isRunning()).toEqual(true);
       await activityService.end();
     });
   });
@@ -20,7 +20,7 @@ describe("Activity Pool Service", () => {
     it("should stop service", async () => {
       await activityService.run();
       await activityService.end();
-      expect(activityService.isRunning).toEqual(false);
+      expect(activityService.isRunning()).toEqual(false);
     });
   });
   describe("getActivity()", () => {

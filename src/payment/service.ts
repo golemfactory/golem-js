@@ -3,7 +3,7 @@ import { Allocation, AllocationOptions } from "./allocation";
 import { BasePaymentOptions, PaymentConfig } from "./config";
 import { Invoice, InvoiceDTO } from "./invoice";
 import { DebitNote, DebitNoteDTO } from "./debit_note";
-import { Payments, PaymentEventType, DebitNoteEvent, InvoiceEvent } from "./payments";
+import { Payments, PAYMENT_EVENT_TYPE, DebitNoteEvent, InvoiceEvent } from "./payments";
 import { RejectionReason } from "./rejection";
 import { GolemError } from "../error/golem-error";
 
@@ -55,7 +55,7 @@ export class PaymentService {
   async run() {
     this.isRunning = true;
     this.payments = await Payments.create(this.yagnaApi, this.config.options);
-    this.payments.addEventListener(PaymentEventType, this.subscribePayments.bind(this));
+    this.payments.addEventListener(PAYMENT_EVENT_TYPE, this.subscribePayments.bind(this));
     this.logger?.debug("Payment Service has started");
   }
 
@@ -78,7 +78,7 @@ export class PaymentService {
     }
     this.isRunning = false;
     await this.payments?.unsubscribe().catch((error) => this.logger?.warn(error));
-    this.payments?.removeEventListener(PaymentEventType, this.subscribePayments.bind(this));
+    this.payments?.removeEventListener(PAYMENT_EVENT_TYPE, this.subscribePayments.bind(this));
     await this.allocation?.release().catch((error) => this.logger?.warn(error));
     this.logger?.info("Allocation has been released");
     this.logger?.debug("Payment service has been stopped");
@@ -166,7 +166,7 @@ export class PaymentService {
     }
   }
 
-  private async subscribePayments(event) {
+  private async subscribePayments(event: Event) {
     if (event instanceof InvoiceEvent) this.processInvoice(event.invoice).then();
     if (event instanceof DebitNoteEvent) this.processDebitNote(event.debitNote).then();
   }
@@ -178,7 +178,7 @@ export class PaymentService {
   }
 
   private async getPaymentAddress(): Promise<string> {
-    const { data } = await this.yagnaApi.identity.getIdentity();
+    const data = await this.yagnaApi.identity.getIdentity();
     return data.identity;
   }
 }

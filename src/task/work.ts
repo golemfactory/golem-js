@@ -82,7 +82,7 @@ export class WorkContext {
         .catch((e) => {
           throw new GolemError(`Unable to deploy activity. ${e}`);
         });
-      let timeoutId;
+      let timeoutId: NodeJS.Timeout;
       await Promise.race([
         new Promise(
           (res, rej) =>

@@ -48,6 +48,8 @@ export class ExecutorConfig {
             YAGNA_SUBNET: null,
           },
         };
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore FIXME: this weirdness may not be needed anymore?
     Object.keys(options).forEach((key) => (this[key] = options[key]));
     this.activityExecuteTimeout = options.activityExecuteTimeout || options.taskTimeout;
     const apiKey = options?.yagnaOptions?.apiKey || processEnv.env.YAGNA_APPKEY;

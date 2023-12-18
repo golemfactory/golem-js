@@ -1,4 +1,4 @@
-import { Events, EventType, BaseEvent } from "../events";
+import { Events, EVENT_TYPE, BaseEvent } from "../events";
 import { Logger } from "../utils";
 import { Providers } from "./providers";
 import { Tasks } from "./tasks";
@@ -46,12 +46,12 @@ export class StatsService {
   }
 
   async run() {
-    this.eventTarget.addEventListener(EventType, (event) => this.handleEvents(event as BaseEvent<unknown>));
+    this.eventTarget.addEventListener(EVENT_TYPE, (event) => this.handleEvents(event as BaseEvent<unknown>));
     this.logger?.debug("Stats service has started");
   }
 
   async end() {
-    this.eventTarget.removeEventListener(EventType, null);
+    this.eventTarget.removeEventListener(EVENT_TYPE, null);
     this.logger?.debug("Stats service has stopped");
   }
 

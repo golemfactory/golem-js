@@ -4,6 +4,7 @@
   "exclude": ["./cypress"],
   "compilerOptions": {
     "types": ["jest"],
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "noImplicitAny": false
   }
 }
