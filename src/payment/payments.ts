@@ -95,6 +95,7 @@ export class Payments extends EventTarget {
             { timeout: 0 },
           )
           .catch(() => ({ data: [] }));
+
         for (const event of debitNotesEvents) {
           if (!this.isRunning) return;
           if (event.eventType !== "DebitNoteReceivedEvent") continue;

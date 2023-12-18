@@ -145,6 +145,21 @@ export class PaymentService {
   private async processDebitNote(debitNote: DebitNote) {
     try {
       if (this.paidDebitNotes.has(debitNote.id)) return;
+
+      if (!this.agreementsToPay.has(debitNote.agreementId)) {
+        const reason = {
+          rejectionReason: RejectionReason.NonPayableAgreement,
+          totalAmountAccepted: "0",
+          message:
+            "DebitNote rejected because the agreement is already covered with a final invoice that should be paid instead of the debit note",
+        };
+        await debitNote.reject(reason);
+        this.logger?.warn(
+          `DebitNote has been rejected for agreement ${debitNote.agreementId}. Reason: ${reason.message}`,
+        );
+        return;
+      }
+
       if (await this.config.debitNoteFilter(debitNote.dto)) {
         await debitNote.accept(debitNote.totalAmountDue, this.allocation!.id);
         this.paidDebitNotes.add(debitNote.id);
