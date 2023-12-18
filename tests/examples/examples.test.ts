@@ -3,7 +3,7 @@ import { dirname, basename, resolve } from "path";
 import chalk from "chalk";
 import testExamples from "./examples.json";
 
-const criticalLogsRegExp = [/Task *. timeot/, /Task *. has been rejected/, /ERROR: TypeError/, /ERROR: Error/gim];
+const criticalLogsRegExp = [/Task *. timeout/, /Task *. has been rejected/, /ERROR: TypeError/, /ERROR: Error/gim];
 
 type Example = {
   cmd: string;
@@ -27,7 +27,7 @@ async function test(cmd: string, path: string, args: string[] = [], timeout = 36
     spawnedExample.kill();
   }, timeout * 1000);
   return new Promise((res, rej) => {
-    spawnedExample.stdout?.on("data", (data: string) => {
+    const assertLogs = (data: string) => {
       console.log(data.trim());
       const logWithoutColors = data.replace(
         /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g,
@@ -41,8 +41,9 @@ async function test(cmd: string, path: string, args: string[] = [], timeout = 36
       if (logWithoutColors.indexOf("Task Executor has shut down") !== -1) {
         spawnedExample.kill("SIGKILL");
       }
-    });
-    spawnedExample.stderr?.on("data", (data: string) => console.log(data.trim()));
+    };
+    spawnedExample.stdout?.on("data", assertLogs);
+    spawnedExample.stderr?.on("data", assertLogs);
     spawnedExample.on("close", (code) => {
       if (!error && !code) return res(true);
       rej(`Test example "${file}" failed. ${error}`);
