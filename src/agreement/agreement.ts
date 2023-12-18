@@ -100,11 +100,13 @@ export class Agreement {
   /**
    * Confirm agreement and waits for provider approval
    * @description Blocking function waits till agreement will be confirmed and approved by provider
-   * @throws Error if the agreement will be rejected by provider or failed to confirm
+   *
+   * @param appSessionId - Optional correlation/session identifier used for querying events
+   * related to this agreement
    */
-  async confirm() {
+  async confirm(appSessionId?: string) {
     try {
-      await this.yagnaApi.market.confirmAgreement(this.id);
+      await this.yagnaApi.market.confirmAgreement(this.id, appSessionId);
       await this.yagnaApi.market.waitForApproval(this.id, this.options.agreementWaitingForApprovalTimeout);
       this.logger?.debug(`Agreement ${this.id} approved`);
       this.options.eventTarget?.dispatchEvent(
@@ -143,7 +145,7 @@ export class Agreement {
           timeout: this.options.agreementRequestTimeout,
         });
       this.options.eventTarget?.dispatchEvent(
-        new Events.AgreementTerminated({ id: this.id, providerId: this.provider.id }),
+        new Events.AgreementTerminated({ id: this.id, providerId: this.provider.id, reason: reason.message }),
       );
       this.logger?.debug(`Agreement ${this.id} terminated`);
     } catch (error) {
