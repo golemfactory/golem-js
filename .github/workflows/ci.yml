@@ -19,11 +19,13 @@ jobs:
     name: Build and unit-test on supported platforms and NodeJS versions
     strategy:
       matrix:
-        node-version: [18.x, 20.x]
+        # Make sure you're addressing it to the minor version, as sometimes macos was picking 20.9 while others 20.10
+        # and that caused issues with rollup
+        node-version: [18.19.x, 20.10.x]
         os: [ubuntu-latest, windows-latest, macos-latest]
 
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v3
@@ -35,7 +37,7 @@ jobs:
 
       - name: Perform regular checks
         run: |
-          npm install
+          npm ci
           npm run format:check
           npm run lint
           npm run test:unit
