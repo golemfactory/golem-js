@@ -16,11 +16,10 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
         .downloadFile("/golem/input/output.txt", "./output.txt")
         .endStream();
 
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
         res.on("data", (result) => console.log(result));
-        res.on("error", (error) => console.error(error));
-        return new Promise((resolve) => res.on("close", resolve));
-        res.once("close", resolve);
+        res.on("error", (error) => reject(error));
+        res.on("close", resolve);
       });
     });
   } catch (err) {
