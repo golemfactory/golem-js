@@ -57,7 +57,7 @@ export class Payments extends EventTarget {
           this.options.invoiceFetchingInterval / 1000,
           this.lastInvoiceFetchingTime,
           this.options.maxInvoiceEvents,
-          undefined,
+          this.yagnaApi.appSessionId,
           { timeout: 0 },
         );
         for (const event of invoiceEvents) {
@@ -91,7 +91,7 @@ export class Payments extends EventTarget {
             this.options.debitNotesFetchingInterval / 1000,
             this.lastDebitNotesFetchingTime,
             this.options.maxDebitNotesEvents,
-            undefined,
+            this.yagnaApi.appSessionId,
             { timeout: 0 },
           )
           .catch(() => ({ data: [] }));
