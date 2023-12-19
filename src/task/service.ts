@@ -95,8 +95,6 @@ export class TaskService {
 
       this.logger?.info(`Task ${task.id} sent to provider ${agreement.provider.name}.`);
 
-      this.paymentService.acceptDebitNotes(agreement.id);
-      this.paymentService.acceptPayments(agreement);
       const activityReadySetupFunctions = task.getActivityReadySetupFunctions();
       const worker = task.getWorker();
       const networkNode = await this.networkService?.addNode(agreement.provider.id);
@@ -181,6 +179,7 @@ export class TaskService {
     } else {
       const activity = await Activity.create(agreement, this.yagnaApi, this.options);
       this.activities.set(agreement.id, activity);
+      this.paymentService.acceptPayments(agreement);
       return activity;
     }
   }

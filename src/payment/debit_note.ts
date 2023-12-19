@@ -92,6 +92,11 @@ export class DebitNote extends BaseNote<Model> {
     this.options.eventTarget?.dispatchEvent(new Events.DebitNoteAccepted({ ...this, amount: totalAmountAccepted }));
   }
 
+  public async getStatus() {
+    await this.refreshStatus();
+    return this.status;
+  }
+
   /**
    * Reject Debit Note
    *

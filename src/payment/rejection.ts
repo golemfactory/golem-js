@@ -11,6 +11,10 @@ export enum RejectionReason {
    * as the payment will be already made when we accept the invoice.
    */
   NonPayableAgreement = "NON_PAYABLE_AGREEMENT",
+  Duplicate = "DUPLICATE",
+  RejectedByRequestorFilter = "REJECTED_BY_REQUESTOR_FILTER",
+  AlreadyAccepted = "ALREADY_ACCEPTED",
+  AgreementFinalized = "AGREEMENT_FINALIZED",
 }
 
 /**

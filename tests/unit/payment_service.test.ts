@@ -59,10 +59,9 @@ describe("Payment Service", () => {
       setExpectedEvents(debitNotesEvents);
       setExpectedDebitNotes(debitNotes);
       await paymentService.createAllocation();
-      await paymentService.run();
       await paymentService.acceptPayments(agreement);
-      await paymentService.acceptDebitNotes(agreement.id);
-      await logger.expectToInclude(`Debit Note accepted for agreement ${agreement.id}`, 100);
+      await paymentService.run();
+      await logger.expectToInclude(`DebitNote accepted for agreement ${agreement.id}`, 100);
       await paymentService.end();
     });
 
@@ -76,9 +75,8 @@ describe("Payment Service", () => {
       setExpectedEvents(debitNotesEvents);
       setExpectedDebitNotes(debitNotes);
       await paymentService.createAllocation();
-      await paymentService.run();
       await paymentService.acceptPayments(agreement);
-      await paymentService.acceptDebitNotes(agreement.id);
+      await paymentService.run();
       await logger.expectToInclude(
         `DebitNote has been rejected for agreement ${agreement.id}. Reason: DebitNote rejected by DebitNote Filter`,
         100,
@@ -95,8 +93,8 @@ describe("Payment Service", () => {
       setExpectedDebitNotes(debitNotes);
       setExpectedInvoices(invoices);
       await paymentService.createAllocation();
+      await paymentService.acceptPayments(agreement);
       await paymentService.run();
-      await paymentService.acceptDebitNotes(agreement.id);
       await logger.expectToInclude(
         `DebitNote has been rejected for agreement ${agreement.id}. Reason: DebitNote rejected because the agreement is already covered with a final invoice that should be paid instead of the debit note`,
         100,
@@ -109,16 +107,16 @@ describe("Payment Service", () => {
       const paymentService = new PaymentService(yagnaApi, {
         logger,
         invoiceFilter: alwaysRejectInvoiceFilter,
+        paymentTimeout: TEST_PAYMENT_TIMEOUT_MS,
       });
       setExpectedEvents(invoiceEvents);
       setExpectedInvoices(invoices);
       await paymentService.createAllocation();
-      await paymentService.run();
       paymentService.acceptPayments(agreement);
-      await new Promise((res) => setTimeout(res, 200));
+      await paymentService.run();
       await logger.expectToInclude(
         `Invoice has been rejected for provider ${agreement.provider.name}. Reason: Invoice rejected by Invoice Filter`,
-        100,
+        1_000,
       );
       await paymentService.end();
     });
@@ -132,9 +130,8 @@ describe("Payment Service", () => {
       setExpectedEvents(debitNotesEvents);
       setExpectedDebitNotes(debitNotes);
       await paymentService.createAllocation();
-      await paymentService.run();
       await paymentService.acceptPayments(agreement);
-      await paymentService.acceptDebitNotes(agreement.id);
+      await paymentService.run();
       await logger.expectToInclude(
         `DebitNote has been rejected for agreement ${agreement.id}. Reason: DebitNote rejected by DebitNote Filter`,
         100,
@@ -146,12 +143,13 @@ describe("Payment Service", () => {
       const paymentService = new PaymentService(yagnaApi, {
         logger,
         invoiceFilter: PaymentFilters.acceptMaxAmountInvoiceFilter(0.00001),
+        paymentTimeout: TEST_PAYMENT_TIMEOUT_MS,
       });
       setExpectedEvents(invoiceEvents);
       setExpectedInvoices(invoices);
       await paymentService.createAllocation();
-      await paymentService.run();
       paymentService.acceptPayments(agreement);
+      await paymentService.run();
       await new Promise((res) => setTimeout(res, 200));
       await logger.expectToInclude(
         `Invoice has been rejected for provider ${agreement.provider.name}. Reason: Invoice rejected by Invoice Filter`,
@@ -169,10 +167,9 @@ describe("Payment Service", () => {
       setExpectedEvents(debitNotesEvents);
       setExpectedDebitNotes(debitNotes);
       await paymentService.createAllocation();
-      await paymentService.run();
       await paymentService.acceptPayments(agreement);
-      await paymentService.acceptDebitNotes(agreement.id);
-      await logger.expectToInclude(`Debit Note accepted for agreement ${agreement.id}`, 100);
+      await paymentService.run();
+      await logger.expectToInclude(`DebitNote accepted for agreement ${agreement.id}`, 100);
       await paymentService.end();
     });
 
