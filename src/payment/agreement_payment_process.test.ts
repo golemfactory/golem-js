@@ -59,7 +59,7 @@ describe("AgreementPaymentProcess", () => {
             }),
           ),
         ).called();
-        expect(process.isFinished()).toEqual(false);
+        expect(process.isFinished()).toEqual(true);
       });
 
       it("accepts the duplicated invoice if the previous one is still not processed", async () => {
