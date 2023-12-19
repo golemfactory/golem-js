@@ -7,6 +7,11 @@ import { debitNotesEvents, debitNotes, invoices, invoiceEvents } from "../mock/f
 const logger = new LoggerMock();
 const yagnaApi = new YagnaMock().getApi();
 
+/**
+ * service.end() waits for invoices to be paid, in unit-tests that should be below 5s
+ */
+const TEST_PAYMENT_TIMEOUT_MS = 1000;
+
 describe("Payment Service", () => {
   beforeEach(() => {
     logger.clear();
@@ -34,22 +39,17 @@ describe("Payment Service", () => {
     it("should accept and process invoice for agreement", async () => {
       const paymentService = new PaymentService(yagnaApi, {
         logger,
-        paymentTimeout: 100,
+        paymentTimeout: TEST_PAYMENT_TIMEOUT_MS,
       });
       setExpectedEvents(invoiceEvents);
       setExpectedInvoices(invoices);
       await paymentService.createAllocation();
       await paymentService.run();
       paymentService.acceptPayments(agreement);
-      // await new Promise((res) => setTimeout(res, 200));
-      await logger.expectToInclude(`Invoice accepted from provider ${agreement.provider.name}`, 100);
+      //
+      await logger.expectToInclude(`Invoice accepted from provider ${agreement.provider.name}`, 1_000);
       await paymentService.end();
     });
-
-    /**
-     * service.end() waits for invoices to be paid, in unit-tests that should be below 5s
-     */
-    const TEST_PAYMENT_TIMEOUT_MS = 1000;
 
     it("should accept and process debit note for agreement", async () => {
       const paymentService = new PaymentService(yagnaApi, {
@@ -61,7 +61,7 @@ describe("Payment Service", () => {
       await paymentService.createAllocation();
       await paymentService.acceptPayments(agreement);
       await paymentService.run();
-      await logger.expectToInclude(`DebitNote accepted for agreement ${agreement.id}`, 100);
+      await logger.expectToInclude(`DebitNote accepted for agreement ${agreement.id}`, 1_000);
       await paymentService.end();
     });
 
@@ -150,7 +150,7 @@ describe("Payment Service", () => {
       await paymentService.createAllocation();
       paymentService.acceptPayments(agreement);
       await paymentService.run();
-      await new Promise((res) => setTimeout(res, 200));
+
       await logger.expectToInclude(
         `Invoice has been rejected for provider ${agreement.provider.name}. Reason: Invoice rejected by Invoice Filter`,
         100,
@@ -169,7 +169,7 @@ describe("Payment Service", () => {
       await paymentService.createAllocation();
       await paymentService.acceptPayments(agreement);
       await paymentService.run();
-      await logger.expectToInclude(`DebitNote accepted for agreement ${agreement.id}`, 100);
+      await logger.expectToInclude(`DebitNote accepted for agreement ${agreement.id}`, 1_000);
       await paymentService.end();
     });
 
@@ -183,8 +183,8 @@ describe("Payment Service", () => {
       await paymentService.createAllocation();
       await paymentService.run();
       paymentService.acceptPayments(agreement);
-      await new Promise((res) => setTimeout(res, 200));
-      await logger.expectToInclude(`Invoice accepted from provider ${agreement.provider.name}`, 100);
+
+      await logger.expectToInclude(`Invoice accepted from provider ${agreement.provider.name}`, 1_000);
       await paymentService.end();
     });
   });

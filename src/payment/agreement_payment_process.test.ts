@@ -227,7 +227,6 @@ describe("AgreementPaymentProcess", () => {
           invoiceFilter: () => true,
         });
 
-        // When
         const debitNote = instance(debitNoteMock);
 
         const firstSuccess = await process.addDebitNote(debitNote);

@@ -134,13 +134,17 @@ export class PaymentService {
   // Reason: We will remove this in 2.0
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   acceptDebitNotes(_agreementId: string) {
+    this.logger?.warn(
+      "PaymentService.acceptDebitNotes is deprecated and will be removed in the next major version. " +
+        "Use PaymentService.acceptPayments which now also deal with debit notes.",
+    );
     return;
   }
 
   private getNumberOfUnpaidAgreements() {
-    const unpaidProcesses = [...this.processes.values()].filter((p) => !p.isFinished());
+    const inProgress = [...this.processes.values()].filter((p) => !p.isFinished());
 
-    return unpaidProcesses.length;
+    return inProgress.length;
   }
 
   private async processInvoice(invoice: Invoice) {
