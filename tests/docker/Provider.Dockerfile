@@ -38,4 +38,4 @@ RUN apt-get update -q \
     && rm -Rf ${YA_DIR_INSTALLER}
 COPY ./configureProvider.py /configureProvider.py
 
-CMD ["bash", "-c", "python3 /configureProvider.py && golemsp run --payment-network testnet"]
+CMD ["bash", "-c", "python3 /configureProvider.py && ya-provider rule set outbound everyone --mode whitelist && golemsp run --payment-network testnet " ]
