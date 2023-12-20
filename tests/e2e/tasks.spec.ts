@@ -223,11 +223,7 @@ describe("Task Executor", function () {
     expect(logger.logs).not.toContain("Trying to redo the task");
   });
 
-  /**
-   * TODO:
-   * For the test to work properly, the midAgreementDebitNoteIntervalSec parameter (which is in the beta version) is needed, so we temporarily skip this test
-   */
-  it.skip("should clean up the agreements in the pool if the agreement has been terminated by provider", async () => {
+  it("should clean up the agreements in the pool if the agreement has been terminated by provider", async () => {
     const eventTarget = new EventTarget();
     const executor = await TaskExecutor.create({
       package: "golem/alpine:latest",
@@ -237,6 +233,7 @@ describe("Task Executor", function () {
       debitNotesFilter: () => Promise.resolve(false),
       debitNotesAcceptanceTimeoutSec: 10,
       midAgreementPaymentTimeoutSec: 10,
+      midAgreementDebitNoteIntervalSec: 10,
     });
     let createdAgreementsCount = 0;
     eventTarget.addEventListener(EVENT_TYPE, (event) => {
