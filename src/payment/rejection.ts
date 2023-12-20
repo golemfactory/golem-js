@@ -5,12 +5,14 @@ export enum RejectionReason {
   UnsolicitedService = "UNSOLICITED_SERVICE",
   BadService = "BAD_SERVICE",
   IncorrectAmount = "INCORRECT_AMOUNT",
+  RejectedByRequestorFilter = "REJECTED_BY_REQUESTOR_FILTER",
+
   /**
-   * We might get a debit note related to an agreement which is already covered with
-   * a final invoice. In such cases we don't want to pay for the debit note,
-   * as the payment will be already made when we accept the invoice.
+   * Use it when you're processing an event after the agreement reached it's "final state"
+   *
+   * By final state we mean: we got an invoice for that agreement
    */
-  NonPayableAgreement = "NON_PAYABLE_AGREEMENT",
+  AgreementFinalized = "AGREEMENT_FINALIZED",
 }
 
 /**
