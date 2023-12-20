@@ -3,8 +3,8 @@ import { Logger, YagnaApi, sleep } from "../utils";
 import { Agreement, AgreementOptions, AgreementStateEnum } from "./agreement";
 import { AgreementServiceConfig } from "./config";
 import { Proposal } from "../market";
-import { GolemError } from "../error/golem-error";
 import { AgreementEvent, AgreementTerminatedEvent } from "ya-ts-client/dist/ya-market";
+import { GolemError } from "../error/golem-error";
 
 export interface AgreementDTO {
   id: string;

@@ -27,7 +27,10 @@ export class RequestorApi extends BaseAPI implements GsbRequestorApi {
           components,
         },
       }),
-      headers: { authorization: `Bearer ${this.configuration?.apiKey}` },
+      headers: {
+        "Content-Type": "application/json",
+        authorization: `Bearer ${this.configuration?.apiKey}`,
+      },
     }).catch((e) => {
       throw new GolemError(`Failed to create service: ${e}`);
     });

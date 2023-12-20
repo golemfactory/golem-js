@@ -249,10 +249,44 @@ describe("Task Executor", function () {
       // the first task should be terminated by the provider, the second one should not use the same agreement
       await executor.run(async (ctx) => console.log((await ctx.run("echo 'Hello World'")).stdout));
     } catch (error) {
-      fail(`Test failed. ${error}`);
+      throw new Error(`Test failed. ${error}`);
     } finally {
       await executor.shutdown();
     }
     expect(createdAgreementsCount).toBeGreaterThan(1);
+  });
+
+  it("should only accept debit notes for agreements that were created by the executor", async () => {
+    const eventTarget1 = new EventTarget();
+    const eventTarget2 = new EventTarget();
+    const executor1 = await TaskExecutor.create("golem/alpine:latest");
+    const executor2 = await TaskExecutor.create("golem/alpine:latest");
+    const createdAgreementsIds1 = new Set();
+    const createdAgreementsIds2 = new Set();
+    const acceptedDebitNoteAgreementIds1 = new Set();
+    const acceptedDebitNoteAgreementIds2 = new Set();
+    eventTarget1.addEventListener(EVENT_TYPE, (event) => {
+      const ev = event as BaseEvent<unknown>;
+      if (ev instanceof Events.AgreementCreated) createdAgreementsIds1.add(ev.detail.id);
+      if (ev instanceof Events.DebitNoteAccepted) acceptedDebitNoteAgreementIds1.add(ev.detail.agreementId);
+    });
+    eventTarget2.addEventListener(EVENT_TYPE, (event) => {
+      const ev = event as BaseEvent<unknown>;
+      if (ev instanceof Events.AgreementCreated) createdAgreementsIds2.add(ev.detail.id);
+      if (ev instanceof Events.DebitNoteAccepted) acceptedDebitNoteAgreementIds2.add(ev.detail.agreementId);
+    });
+    try {
+      await Promise.all([
+        executor1.run(async (ctx) => console.log((await ctx.run("echo 'Executor 1'")).stdout)),
+        executor2.run(async (ctx) => console.log((await ctx.run("echo 'Executor 2'")).stdout)),
+      ]);
+    } catch (error) {
+      throw new Error(`Test failed. ${error}`);
+    } finally {
+      await executor1.shutdown();
+      await executor2.shutdown();
+    }
+    expect(acceptedDebitNoteAgreementIds1).toEqual(createdAgreementsIds1);
+    expect(acceptedDebitNoteAgreementIds2).toEqual(createdAgreementsIds2);
   });
 });
