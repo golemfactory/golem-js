@@ -80,11 +80,7 @@ export class AgreementPaymentProcess {
 
     const acceptedByFilter = await this.filters.debitNoteFilter(debitNote.dto);
 
-    if (acceptedByFilter) {
-      await debitNote.accept(debitNote.totalAmountDue, this.allocation!.id);
-      this.logger?.debug(`DebitNote accepted for agreement ${debitNote.agreementId}`);
-      return true;
-    } else {
+    if (!acceptedByFilter) {
       await this.rejectDebitNote(
         debitNote,
         RejectionReason.RejectedByRequestorFilter,
@@ -93,12 +89,17 @@ export class AgreementPaymentProcess {
 
       return false;
     }
+
+    await debitNote.accept(debitNote.totalAmountDue, this.allocation.id);
+    this.logger?.debug(`DebitNote accepted for agreement ${debitNote.agreementId}`);
+
+    return true;
   }
 
   private async hasProcessedDebitNote(debitNote: DebitNote) {
     const status = await debitNote.getStatus();
 
-    return status === InvoiceStatus.Accepted || status === InvoiceStatus.Settled || status === InvoiceStatus.Rejected;
+    return status !== InvoiceStatus.Received;
   }
 
   private async rejectDebitNote(debitNote: DebitNote, rejectionReason: RejectionReason, rejectMessage: string) {
@@ -112,22 +113,34 @@ export class AgreementPaymentProcess {
   }
 
   private async applyInvoice(invoice: Invoice) {
-    const isAlreadyFinalized = await this.hasProcessedInvoice();
+    if (this.invoice) {
+      if (invoice.isSameAs(this.invoice)) {
+        const previousStatus = await this.invoice.getStatus();
 
-    if (isAlreadyFinalized) {
-      throw new Error("This agreement is already covered with an invoice");
+        if (previousStatus !== InvoiceStatus.Received) {
+          this.logger?.warn(
+            `Received duplicate of an already processed invoice ${invoice.id} for agreement ${invoice.agreementId}, the new one will be ignored`,
+          );
+          return false;
+        }
+      } else {
+        // Protects from possible fraud: someone sends a second, different invoice for the same agreement
+        throw new Error("This agreement is already covered with an invoice");
+      }
+    }
+
+    const status = await invoice.getStatus();
+    if (status !== InvoiceStatus.Received) {
+      throw new Error(
+        `The invoice ${invoice.id} for agreement ${invoice.agreementId} has status ${status}, but we can accept only the ones with status ${InvoiceStatus.Received}`,
+      );
     }
 
     this.invoice = invoice;
 
     const acceptedByFilter = await this.filters.invoiceFilter(invoice.dto);
 
-    if (acceptedByFilter) {
-      await invoice.accept(invoice.amount, this.allocation.id);
-      this.logger?.info(`Invoice accepted from provider ${this.agreement.provider.name}`);
-
-      return true;
-    } else {
+    if (!acceptedByFilter) {
       const reason = {
         rejectionReason: RejectionReason.RejectedByRequestorFilter,
         totalAmountAccepted: "0",
@@ -140,16 +153,11 @@ export class AgreementPaymentProcess {
 
       return false;
     }
-  }
 
-  private async hasProcessedInvoice() {
-    if (this.invoice !== null) {
-      const status = await this.invoice.getStatus();
+    await invoice.accept(invoice.amount, this.allocation.id);
+    this.logger?.info(`Invoice accepted from provider ${this.agreement.provider.name}`);
 
-      return status === InvoiceStatus.Accepted || status === InvoiceStatus.Settled || status === InvoiceStatus.Rejected;
-    }
-
-    return false;
+    return true;
   }
 
   private hasReceivedInvoice() {

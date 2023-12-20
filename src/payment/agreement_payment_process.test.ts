@@ -21,10 +21,11 @@ beforeEach(() => {
 
 describe("AgreementPaymentProcess", () => {
   describe("Accepting Invoices", () => {
-    describe("Positive cases", () => {
-      it("accepts a single invoice", async () => {
+    describe("Basic use cases", () => {
+      it("accepts a invoice in RECEIVED state", async () => {
         when(allocationMock.id).thenReturn("1000");
         when(invoiceMock.amount).thenReturn("0.123");
+        when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
 
         const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
           debitNoteFilter: () => true,
@@ -41,6 +42,7 @@ describe("AgreementPaymentProcess", () => {
       it("rejects invoice if it's ignored by the user defined invoice filter", async () => {
         when(allocationMock.id).thenReturn("1000");
         when(invoiceMock.amount).thenReturn("0.123");
+        when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
 
         const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
           debitNoteFilter: () => true,
@@ -62,9 +64,34 @@ describe("AgreementPaymentProcess", () => {
         expect(process.isFinished()).toEqual(true);
       });
 
-      it("accepts the duplicated invoice if the previous one is still not processed", async () => {
+      it("throws an error when invoice in a state different than RECEIVED", async () => {
         when(allocationMock.id).thenReturn("1000");
+        when(invoiceMock.id).thenReturn("invoice-id");
+        when(invoiceMock.agreementId).thenReturn("agreement-id");
         when(invoiceMock.amount).thenReturn("0.123");
+        when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Accepted);
+
+        const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
+          debitNoteFilter: () => true,
+          invoiceFilter: () => true,
+        });
+
+        await expect(() => process.addInvoice(instance(invoiceMock))).rejects.toThrow(
+          "The invoice invoice-id for agreement agreement-id has status ACCEPTED, but we can accept only the ones with status RECEIVED",
+        );
+
+        verify(invoiceMock.accept("0.123", "1000")).never();
+        expect(process.isFinished()).toEqual(false);
+      });
+    });
+
+    describe("Dealing with duplicates", () => {
+      it("accepts the duplicated invoice if accepting the previous one failed", async () => {
+        when(allocationMock.id).thenReturn("1000");
+
+        when(invoiceMock.amount).thenReturn("0.123");
+        when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
+        when(invoiceMock.isSameAs(anything())).thenReturn(true);
 
         const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
           debitNoteFilter: () => true,
@@ -88,12 +115,15 @@ describe("AgreementPaymentProcess", () => {
         verify(invoiceMock.accept("0.123", "1000")).twice();
         expect(process.isFinished()).toEqual(true);
       });
-    });
 
-    describe("Negative cases", () => {
-      it("doesn't accept the same invoice twice if the previous one was already processed", async () => {
-        // TODO: False and no error to not break?
-        when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Accepted);
+      it("ignores the duplicate if the original invoice has been already decided upon", async () => {
+        when(allocationMock.id).thenReturn("1000");
+
+        when(invoiceMock.amount).thenReturn("0.123");
+        when(invoiceMock.getStatus())
+          .thenResolve(InvoiceStatus.Received) // On first call
+          .thenResolve(InvoiceStatus.Accepted); // On the second call;
+        when(invoiceMock.isSameAs(anything())).thenReturn(true);
 
         const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
           debitNoteFilter: () => true,
@@ -102,20 +132,88 @@ describe("AgreementPaymentProcess", () => {
 
         const invoice = instance(invoiceMock);
 
-        const success = await process.addInvoice(invoice);
+        when(invoiceMock.accept("0.123", "1000")).thenResolve();
 
-        expect(success).toEqual(true);
+        const firstSuccess = await process.addInvoice(invoice);
+        const secondSuccess = await process.addInvoice(invoice);
+
+        expect(firstSuccess).toEqual(true);
+        expect(secondSuccess).toEqual(false);
+        verify(invoiceMock.accept("0.123", "1000")).once();
         expect(process.isFinished()).toEqual(true);
+      });
+
+      it("accepts the duplicate if the original invoice has not been already decided upon (still in RECEIVED state)", async () => {
+        when(allocationMock.id).thenReturn("1000");
+
+        when(invoiceMock.amount).thenReturn("0.123");
+        when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
+        when(invoiceMock.isSameAs(anything())).thenReturn(true);
+
+        const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
+          debitNoteFilter: () => true,
+          invoiceFilter: () => true,
+        });
+
+        const invoice = instance(invoiceMock);
+
+        when(invoiceMock.accept("0.123", "1000")).thenResolve();
+
+        const firstSuccess = await process.addInvoice(invoice);
+        const secondSuccess = await process.addInvoice(invoice);
+
+        expect(firstSuccess).toEqual(true);
+        expect(secondSuccess).toEqual(true);
+        verify(invoiceMock.accept("0.123", "1000")).twice();
+        expect(process.isFinished()).toEqual(true);
+      });
+
+      it("doesn't accept the same invoice twice if the previous one was already processed", async () => {
+        when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received).thenResolve(InvoiceStatus.Accepted);
+        when(invoiceMock.isSameAs(anything())).thenReturn(true);
+
+        const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
+          debitNoteFilter: () => true,
+          invoiceFilter: () => true,
+        });
+
+        const invoice = instance(invoiceMock);
+
+        const firstSuccess = await process.addInvoice(invoice);
+        const secondSuccess = await process.addInvoice(invoice);
+
+        expect(firstSuccess).toEqual(true);
+        expect(secondSuccess).toEqual(false);
+        expect(process.isFinished()).toEqual(true);
+      });
+    });
+
+    describe("Security", () => {
+      it("throws an error when there's already an invoice present, and a different one is passed to the process", async () => {
+        when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
+        when(invoiceMock.isSameAs(anything())).thenReturn(false);
+
+        const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
+          debitNoteFilter: () => true,
+          invoiceFilter: () => true,
+        });
+
+        const invoice = instance(invoiceMock);
+
+        const sucess = await process.addInvoice(invoice);
+
+        expect(sucess).toEqual(true);
         await expect(() => process.addInvoice(invoice)).rejects.toThrow(
           "This agreement is already covered with an invoice",
         );
+        expect(process.isFinished()).toEqual(true);
       });
     });
   });
 
   describe("Accepting DebitNotes", () => {
-    describe("Positive cases", () => {
-      test("accepts a single debit note", async () => {
+    describe("Basic use cases", () => {
+      it("accepts a single debit note", async () => {
         when(allocationMock.id).thenReturn("1000");
         when(debitNoteMock.totalAmountDue).thenReturn("0.123");
 
@@ -133,7 +231,7 @@ describe("AgreementPaymentProcess", () => {
         expect(process.isFinished()).toEqual(false);
       });
 
-      test("rejects debit note if it's ignored by the user defined debit note filter", async () => {
+      it("rejects debit note if it's ignored by the user defined debit note filter", async () => {
         when(allocationMock.id).thenReturn("1000");
         when(debitNoteMock.totalAmountDue).thenReturn("0.123");
 
@@ -159,9 +257,10 @@ describe("AgreementPaymentProcess", () => {
         expect(process.isFinished()).toEqual(false);
       });
 
-      test("rejects debit note if there is already an invoice for that process", async () => {
+      it("rejects debit note if there is already an invoice for that process", async () => {
         when(allocationMock.id).thenReturn("1000");
         when(invoiceMock.amount).thenReturn("0.123");
+        when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
         when(debitNoteMock.totalAmountDue).thenReturn("0.456");
 
         const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
@@ -191,10 +290,13 @@ describe("AgreementPaymentProcess", () => {
         ).called();
         expect(process.isFinished()).toEqual(true);
       });
+    });
 
-      test("accepts the duplicated debit note if the previous one is still not processed", async () => {
+    describe("Dealing with duplicates", () => {
+      it("accepts the duplicated debit note if accepting the previous failed", async () => {
         when(allocationMock.id).thenReturn("1000");
         when(debitNoteMock.totalAmountDue).thenReturn("0.123");
+        when(debitNoteMock.getStatus()).thenResolve(InvoiceStatus.Received);
 
         const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
           debitNoteFilter: () => true,
@@ -219,7 +321,7 @@ describe("AgreementPaymentProcess", () => {
         expect(process.isFinished()).toEqual(false);
       });
 
-      test("doesn't accept the same debit note twice if the previous one was already processed", async () => {
+      it("doesn't accept the same debit note twice if the previous one was already processed", async () => {
         when(debitNoteMock.getStatus()).thenResolve(InvoiceStatus.Accepted);
 
         const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {

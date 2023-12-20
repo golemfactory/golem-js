@@ -1,8 +1,8 @@
-import { setExpectedDebitNotes, setExpectedEvents, setExpectedInvoices, clear } from "../mock/rest/payment";
+import { clear, setExpectedDebitNotes, setExpectedEvents, setExpectedInvoices } from "../mock/rest/payment";
 import { LoggerMock, YagnaMock } from "../mock";
-import { PaymentService, Allocation, PaymentFilters } from "../../src/payment";
+import { Allocation, PaymentFilters, PaymentService } from "../../src/payment";
 import { agreement } from "../mock/entities/agreement";
-import { debitNotesEvents, debitNotes, invoices, invoiceEvents } from "../mock/fixtures";
+import { debitNotes, debitNotesEvents, invoiceEvents, invoices } from "../mock/fixtures";
 
 const logger = new LoggerMock();
 const yagnaApi = new YagnaMock().getApi();
@@ -46,7 +46,7 @@ describe("Payment Service", () => {
       await paymentService.createAllocation();
       await paymentService.run();
       paymentService.acceptPayments(agreement);
-      //
+
       await logger.expectToInclude(`Invoice accepted from provider ${agreement.provider.name}`, 1_000);
       await paymentService.end();
     });
