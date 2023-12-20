@@ -47,7 +47,10 @@ describe("Payment Service", () => {
       await paymentService.run();
       paymentService.acceptPayments(agreement);
 
-      await logger.expectToInclude(`Invoice accepted from provider ${agreement.provider.name}`, 1_000);
+      await logger.expectToInclude(
+        `Invoice ${invoices[0].invoiceId} for agreement ${agreement.id} from provider ${agreement.provider.name} has been accepted`,
+        1_000,
+      );
       await paymentService.end();
     });
 
@@ -61,7 +64,10 @@ describe("Payment Service", () => {
       await paymentService.createAllocation();
       await paymentService.acceptPayments(agreement);
       await paymentService.run();
-      await logger.expectToInclude(`DebitNote accepted for agreement ${agreement.id}`, 1_000);
+      await logger.expectToInclude(
+        `DebitNote ${debitNotes[0].debitNoteId} accepted for agreement ${agreement.id}`,
+        1_000,
+      );
       await paymentService.end();
     });
 
@@ -78,7 +84,7 @@ describe("Payment Service", () => {
       await paymentService.acceptPayments(agreement);
       await paymentService.run();
       await logger.expectToInclude(
-        `DebitNote has been rejected for agreement ${agreement.id}. Reason: DebitNote rejected by DebitNote Filter`,
+        `DebitNote rejected with reason: DebitNote ${debitNotes[0].debitNoteId} for agreement ${agreement.id} rejected by DebitNote Filter`,
         100,
       );
       await paymentService.end();
@@ -96,7 +102,7 @@ describe("Payment Service", () => {
       await paymentService.acceptPayments(agreement);
       await paymentService.run();
       await logger.expectToInclude(
-        `DebitNote has been rejected for agreement ${agreement.id}. Reason: DebitNote rejected because the agreement is already covered with a final invoice that should be paid instead of the debit note`,
+        `DebitNote rejected with reason: DebitNote ${debitNotes[0].debitNoteId} rejected because the agreement ${agreement.id} is already covered with a final invoice that should be paid instead of the debit note`,
         100,
       );
       await paymentService.end();
@@ -115,7 +121,7 @@ describe("Payment Service", () => {
       paymentService.acceptPayments(agreement);
       await paymentService.run();
       await logger.expectToInclude(
-        `Invoice has been rejected for provider ${agreement.provider.name}. Reason: Invoice rejected by Invoice Filter`,
+        `Invoice rejected with reason: Invoice ${invoices[0].invoiceId} for agreement ${agreement.id} rejected by Invoice Filter`,
         1_000,
       );
       await paymentService.end();
@@ -133,7 +139,7 @@ describe("Payment Service", () => {
       await paymentService.acceptPayments(agreement);
       await paymentService.run();
       await logger.expectToInclude(
-        `DebitNote has been rejected for agreement ${agreement.id}. Reason: DebitNote rejected by DebitNote Filter`,
+        `DebitNote rejected with reason: DebitNote ${debitNotes[0].debitNoteId} for agreement ${agreement.id} rejected by DebitNote Filter`,
         100,
       );
       await paymentService.end();
@@ -152,7 +158,7 @@ describe("Payment Service", () => {
       await paymentService.run();
 
       await logger.expectToInclude(
-        `Invoice has been rejected for provider ${agreement.provider.name}. Reason: Invoice rejected by Invoice Filter`,
+        `Invoice rejected with reason: Invoice ${invoices[0].invoiceId} for agreement ${agreement.id} rejected by Invoice Filter`,
         100,
       );
       await paymentService.end();
@@ -169,7 +175,10 @@ describe("Payment Service", () => {
       await paymentService.createAllocation();
       await paymentService.acceptPayments(agreement);
       await paymentService.run();
-      await logger.expectToInclude(`DebitNote accepted for agreement ${agreement.id}`, 1_000);
+      await logger.expectToInclude(
+        `DebitNote ${debitNotes[0].debitNoteId} accepted for agreement ${agreement.id}`,
+        1_000,
+      );
       await paymentService.end();
     });
 
@@ -184,7 +193,10 @@ describe("Payment Service", () => {
       await paymentService.run();
       paymentService.acceptPayments(agreement);
 
-      await logger.expectToInclude(`Invoice accepted from provider ${agreement.provider.name}`, 1_000);
+      await logger.expectToInclude(
+        `Invoice ${invoices[0].invoiceId} for agreement ${agreement.id} from provider ${agreement.provider.name} has been accepted`,
+        1_000,
+      );
       await paymentService.end();
     });
   });

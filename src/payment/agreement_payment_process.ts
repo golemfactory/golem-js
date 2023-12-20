@@ -110,10 +110,10 @@ export class AgreementPaymentProcess {
       totalAmountAccepted: "0",
       message: rejectMessage,
     };
+
     await debitNote.reject(reason);
-    this.logger?.warn(
-      `DebitNote ${debitNote.id} has been rejected for agreement ${debitNote.agreementId}. Reason: ${reason.message}`,
-    );
+
+    this.logger?.warn(`DebitNote rejected with reason: ${reason.message}`);
   }
 
   private async applyInvoice(invoice: Invoice) {
@@ -147,16 +147,9 @@ export class AgreementPaymentProcess {
     const acceptedByFilter = await this.filters.invoiceFilter(invoice.dto);
 
     if (!acceptedByFilter) {
-      const reason = {
-        rejectionReason: RejectionReason.RejectedByRequestorFilter,
-        totalAmountAccepted: "0",
-        message: `Invoice ${invoice.id} for agreement ${invoice.agreementId} rejected by Invoice Filter`,
-      };
-      await invoice.reject(reason);
-      this.logger?.warn(
-        `Invoice ${invoice.id} for agreement ${invoice.agreementId} from provider ${this.agreement.provider.name} ` +
-          `has been rejected. Reason: ${reason.message}`,
-      );
+      const rejectionReason = RejectionReason.RejectedByRequestorFilter;
+      const message = `Invoice ${invoice.id} for agreement ${invoice.agreementId} rejected by Invoice Filter`;
+      await this.rejectInvoice(invoice, rejectionReason, message);
 
       return false;
     }
@@ -167,6 +160,22 @@ export class AgreementPaymentProcess {
     );
 
     return true;
+  }
+
+  private async rejectInvoice(
+    invoice: Invoice,
+    rejectionReason: RejectionReason.RejectedByRequestorFilter,
+    message: string,
+  ) {
+    const reason = {
+      rejectionReason: rejectionReason,
+      totalAmountAccepted: "0",
+      message: message,
+    };
+
+    await invoice.reject(reason);
+
+    this.logger?.warn(`Invoice rejected with reason: ${reason.message}`);
   }
 
   private hasReceivedInvoice() {
