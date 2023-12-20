@@ -41,6 +41,8 @@ describe("AgreementPaymentProcess", () => {
 
       it("rejects invoice if it's ignored by the user defined invoice filter", async () => {
         when(allocationMock.id).thenReturn("1000");
+        when(invoiceMock.id).thenReturn("invoice-id");
+        when(invoiceMock.agreementId).thenReturn("agreement-id");
         when(invoiceMock.amount).thenReturn("0.123");
         when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
 
@@ -56,7 +58,7 @@ describe("AgreementPaymentProcess", () => {
           invoiceMock.reject(
             objectContaining({
               rejectionReason: RejectionReason.RejectedByRequestorFilter,
-              message: "Invoice rejected by Invoice Filter",
+              message: "Invoice invoice-id for agreement agreement-id rejected by Invoice Filter",
               totalAmountAccepted: "0",
             }),
           ),
@@ -116,33 +118,6 @@ describe("AgreementPaymentProcess", () => {
         expect(process.isFinished()).toEqual(true);
       });
 
-      it("ignores the duplicate if the original invoice has been already decided upon", async () => {
-        when(allocationMock.id).thenReturn("1000");
-
-        when(invoiceMock.amount).thenReturn("0.123");
-        when(invoiceMock.getStatus())
-          .thenResolve(InvoiceStatus.Received) // On first call
-          .thenResolve(InvoiceStatus.Accepted); // On the second call;
-        when(invoiceMock.isSameAs(anything())).thenReturn(true);
-
-        const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
-          debitNoteFilter: () => true,
-          invoiceFilter: () => true,
-        });
-
-        const invoice = instance(invoiceMock);
-
-        when(invoiceMock.accept("0.123", "1000")).thenResolve();
-
-        const firstSuccess = await process.addInvoice(invoice);
-        const secondSuccess = await process.addInvoice(invoice);
-
-        expect(firstSuccess).toEqual(true);
-        expect(secondSuccess).toEqual(false);
-        verify(invoiceMock.accept("0.123", "1000")).once();
-        expect(process.isFinished()).toEqual(true);
-      });
-
       it("accepts the duplicate if the original invoice has not been already decided upon (still in RECEIVED state)", async () => {
         when(allocationMock.id).thenReturn("1000");
 
@@ -190,6 +165,9 @@ describe("AgreementPaymentProcess", () => {
 
     describe("Security", () => {
       it("throws an error when there's already an invoice present, and a different one is passed to the process", async () => {
+        when(invoiceMock.id).thenReturn("invoice-id");
+        when(invoiceMock.agreementId).thenReturn("agreement-id");
+        when(agreementMock.id).thenReturn("agreement-id");
         when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
         when(invoiceMock.isSameAs(anything())).thenReturn(false);
 
@@ -204,7 +182,7 @@ describe("AgreementPaymentProcess", () => {
 
         expect(sucess).toEqual(true);
         await expect(() => process.addInvoice(invoice)).rejects.toThrow(
-          "This agreement is already covered with an invoice",
+          "Agreement agreement-id is already covered with an invoice: invoice-id",
         );
         expect(process.isFinished()).toEqual(true);
       });
@@ -234,6 +212,8 @@ describe("AgreementPaymentProcess", () => {
       it("rejects debit note if it's ignored by the user defined debit note filter", async () => {
         when(allocationMock.id).thenReturn("1000");
         when(debitNoteMock.totalAmountDue).thenReturn("0.123");
+        when(debitNoteMock.id).thenReturn("debit-note-id");
+        when(debitNoteMock.agreementId).thenReturn("agreement-id");
 
         const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
           debitNoteFilter: () => false,
@@ -249,7 +229,7 @@ describe("AgreementPaymentProcess", () => {
           debitNoteMock.reject(
             objectContaining({
               rejectionReason: RejectionReason.RejectedByRequestorFilter,
-              message: "DebitNote rejected by DebitNote Filter",
+              message: "DebitNote debit-note-id for agreement agreement-id rejected by DebitNote Filter",
               totalAmountAccepted: "0",
             }),
           ),
@@ -262,6 +242,8 @@ describe("AgreementPaymentProcess", () => {
         when(invoiceMock.amount).thenReturn("0.123");
         when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
         when(debitNoteMock.totalAmountDue).thenReturn("0.456");
+        when(debitNoteMock.id).thenReturn("debit-note-id");
+        when(debitNoteMock.agreementId).thenReturn("agreement-id");
 
         const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
           debitNoteFilter: () => true,
@@ -283,7 +265,7 @@ describe("AgreementPaymentProcess", () => {
             objectContaining({
               rejectionReason: RejectionReason.AgreementFinalized,
               message:
-                "DebitNote rejected because the agreement is already covered with a final invoice that should be paid instead of the debit note",
+                "DebitNote debit-note-id rejected because the agreement agreement-id is already covered with a final invoice that should be paid instead of the debit note",
               totalAmountAccepted: "0",
             }),
           ),

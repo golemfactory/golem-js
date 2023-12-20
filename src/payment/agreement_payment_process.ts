@@ -60,7 +60,8 @@ export class AgreementPaymentProcess {
       await this.rejectDebitNote(
         debitNote,
         RejectionReason.AgreementFinalized,
-        "DebitNote rejected because the agreement is already covered with a final invoice that should be paid instead of the debit note",
+        `DebitNote ${debitNote.id} rejected because the agreement ${debitNote.agreementId} is already covered ` +
+          `with a final invoice that should be paid instead of the debit note`,
       );
       return false;
     }
@@ -70,7 +71,8 @@ export class AgreementPaymentProcess {
 
       if (isAlreadyProcessed) {
         this.logger?.warn(
-          `We received a duplicate debit note for agreement ${debitNote.agreementId} - the previous one was already accepted, so this one gets ignored`,
+          `We received a duplicate debit note ${debitNote.id} for agreement ${debitNote.agreementId} ` +
+            `- the previous one was already accepted, so this one gets ignored`,
         );
         return false;
       }
@@ -84,14 +86,14 @@ export class AgreementPaymentProcess {
       await this.rejectDebitNote(
         debitNote,
         RejectionReason.RejectedByRequestorFilter,
-        "DebitNote rejected by DebitNote Filter",
+        `DebitNote ${debitNote.id} for agreement ${debitNote.agreementId} rejected by DebitNote Filter`,
       );
 
       return false;
     }
 
     await debitNote.accept(debitNote.totalAmountDue, this.allocation.id);
-    this.logger?.debug(`DebitNote accepted for agreement ${debitNote.agreementId}`);
+    this.logger?.debug(`DebitNote ${debitNote.id} accepted for agreement ${debitNote.agreementId}`);
 
     return true;
   }
@@ -109,7 +111,9 @@ export class AgreementPaymentProcess {
       message: rejectMessage,
     };
     await debitNote.reject(reason);
-    this.logger?.warn(`DebitNote has been rejected for agreement ${debitNote.agreementId}. Reason: ${reason.message}`);
+    this.logger?.warn(
+      `DebitNote ${debitNote.id} has been rejected for agreement ${debitNote.agreementId}. Reason: ${reason.message}`,
+    );
   }
 
   private async applyInvoice(invoice: Invoice) {
@@ -119,20 +123,22 @@ export class AgreementPaymentProcess {
 
         if (previousStatus !== InvoiceStatus.Received) {
           this.logger?.warn(
-            `Received duplicate of an already processed invoice ${invoice.id} for agreement ${invoice.agreementId}, the new one will be ignored`,
+            `Received duplicate of an already processed invoice ${invoice.id} for agreement ${invoice.agreementId}, ` +
+              `the new one will be ignored`,
           );
           return false;
         }
       } else {
         // Protects from possible fraud: someone sends a second, different invoice for the same agreement
-        throw new Error("This agreement is already covered with an invoice");
+        throw new Error(`Agreement ${this.agreement.id} is already covered with an invoice: ${this.invoice.id}`);
       }
     }
 
     const status = await invoice.getStatus();
     if (status !== InvoiceStatus.Received) {
       throw new Error(
-        `The invoice ${invoice.id} for agreement ${invoice.agreementId} has status ${status}, but we can accept only the ones with status ${InvoiceStatus.Received}`,
+        `The invoice ${invoice.id} for agreement ${invoice.agreementId} has status ${status}, ` +
+          `but we can accept only the ones with status ${InvoiceStatus.Received}`,
       );
     }
 
@@ -144,18 +150,21 @@ export class AgreementPaymentProcess {
       const reason = {
         rejectionReason: RejectionReason.RejectedByRequestorFilter,
         totalAmountAccepted: "0",
-        message: "Invoice rejected by Invoice Filter",
+        message: `Invoice ${invoice.id} for agreement ${invoice.agreementId} rejected by Invoice Filter`,
       };
       await invoice.reject(reason);
       this.logger?.warn(
-        `Invoice has been rejected for provider ${this.agreement.provider.name}. Reason: ${reason.message}`,
+        `Invoice ${invoice.id} for agreement ${invoice.agreementId} from provider ${this.agreement.provider.name} ` +
+          `has been rejected. Reason: ${reason.message}`,
       );
 
       return false;
     }
 
     await invoice.accept(invoice.amount, this.allocation.id);
-    this.logger?.info(`Invoice accepted from provider ${this.agreement.provider.name}`);
+    this.logger?.info(
+      `Invoice ${invoice.id} for agreement ${invoice.agreementId} from provider ${this.agreement.provider.name} has been accepted`,
+    );
 
     return true;
   }
