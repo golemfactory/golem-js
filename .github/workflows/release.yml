@@ -185,7 +185,7 @@ jobs:
   cleanup-test-environment:
     name: Cleanup test environment
     if: ${{ always() }}
-    needs: [run-e2e-tests, run-cypress-tests, run-examples-tests]
+    needs: prepare-test-environment
     runs-on: goth2
     steps:
       - name: Collect logs from providers and requestor
