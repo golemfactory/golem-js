@@ -127,7 +127,9 @@ jobs:
     runs-on: goth2
     steps:
       - name: Start the E2E test
-        run: docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm run test:e2e"
+        run: |
+          docker ps
+          docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm run test:e2e"
 
       - name: Upload E2E reports
         uses: actions/upload-artifact@v3
@@ -136,24 +138,6 @@ jobs:
           name: e2e-test-report
           path: reports/e2e-report.xml
 
-      - name: Run web server
-        run: |
-          docker exec -t -d docker-requestor-1 /bin/sh -c "cd /golem-js/examples/web && node app.mjs"
-
-      - name: Run test suite
-        run: |
-          docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js &&  npm run test:cypress -- --browser chromium"
-
-      - name: Run the Examples tests
-        run: |
-          docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm run test:examples -- --exitOnError"
-
-      - name: Upload test logs
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: cypress-logs
-          path: .cypress
   run-cypress-tests:
     name: Run Cypress tests
     needs: prepare-test-environment
