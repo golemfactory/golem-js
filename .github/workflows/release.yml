@@ -76,7 +76,8 @@ jobs:
   prepare-test-environment:
     name: Prepare providers and requestor
     needs: regular-checks
-    runs-on: goth2
+    # temporarily only on goth-01, until devops update the labels for other runners
+    runs-on: goth2, goth-01
     outputs:
       runner-name: ${{ runner.name }}
     env:
@@ -126,8 +127,7 @@ jobs:
   run-e2e-tests:
     name: Run E2E tests
     needs: prepare-test-environment
-    runs-on:
-      labels: ${{ needs.prepare-test-environment.outputs.runner-name }}
+    runs-on: [goth2, "${{ needs.prepare-test-environment.outputs.runner-name }}"]
     steps:
       - name: Start the E2E test
         run: |
@@ -144,8 +144,7 @@ jobs:
   run-cypress-tests:
     name: Run Cypress tests
     needs: prepare-test-environment
-    runs-on:
-      labels: ${{ needs.prepare-test-environment.outputs.runner-name }}
+    runs-on: [goth2, "${{ needs.prepare-test-environment.outputs.runner-name }}"]
     steps:
       - name: Run web server
         run: |
@@ -164,8 +163,7 @@ jobs:
   run-examples-tests:
     name: Run Examples tests
     needs: prepare-test-environment
-    runs-on:
-      labels: ${{ needs.prepare-test-environment.outputs.runner-name }}
+    runs-on: [goth2, "${{ needs.prepare-test-environment.outputs.runner-name }}"]
     steps:
       - name: Run the Examples tests
         run: |
@@ -175,8 +173,7 @@ jobs:
     name: Cleanup test environment
     if: ${{ always() }}
     needs: [prepare-test-environment, run-e2e-tests, run-cypress-tests, run-examples-tests]
-    runs-on:
-      labels: ${{ needs.prepare-test-environment.outputs.runner-name }}
+    runs-on: [goth2, "${{ needs.prepare-test-environment.outputs.runner-name }}"]
     steps:
       - name: Collect logs from providers and requestor
         if: always()
