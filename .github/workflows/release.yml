@@ -77,6 +77,8 @@ jobs:
     name: Prepare providers and requestor
     needs: regular-checks
     runs-on: goth2
+    outputs:
+      runner-name: ${{ github.runner }}
     env:
       PROVIDER_VERSION: ${{ github.event.inputs.provider_version || 'v0.13.2' }}
       REQUESTOR_VERSION: ${{ github.event.inputs.requestor_version || 'v0.13.2' }}
@@ -85,6 +87,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: Set Runner
+        id: set-runner
+        run: |
+          echo "::set-output name=runner-name::${{ github.runner }}"
 
       - name: Use random string for subnet
         # Use a random string to avoid other providers on the same subnet which might cause tests to fail because it expects only providers named provider-1 and provider-2
@@ -124,7 +131,7 @@ jobs:
   run-e2e-tests:
     name: Run E2E tests
     needs: prepare-test-environment
-    runs-on: goth2
+    runs-on: ${{ needs.prepare-test-environment.outputs.runner-name }}
     steps:
       - name: Start the E2E test
         run: |
@@ -141,7 +148,7 @@ jobs:
   run-cypress-tests:
     name: Run Cypress tests
     needs: prepare-test-environment
-    runs-on: goth2
+    runs-on: ${{ needs.prepare-test-environment.outputs.runner-name }}
     steps:
       - name: Run web server
         run: |
@@ -160,7 +167,7 @@ jobs:
   run-examples-tests:
     name: Run Examples tests
     needs: prepare-test-environment
-    runs-on: goth2
+    runs-on: ${{ needs.prepare-test-environment.outputs.runner-name }}
     steps:
       - name: Run the Examples tests
         run: |
@@ -170,7 +177,7 @@ jobs:
     name: Cleanup test environment
     if: ${{ always() }}
     needs: [run-e2e-tests, run-cypress-tests, run-examples-tests]
-    runs-on: goth2
+    runs-on: ${{ needs.prepare-test-environment.outputs.runner-name }}
     steps:
       - name: Collect logs from providers and requestor
         if: always()
