@@ -78,7 +78,7 @@ jobs:
     needs: regular-checks
     runs-on: goth2
     outputs:
-      runner-name: ${{ github.runner }}
+      runner-name: ${{ runner.name }}
     env:
       PROVIDER_VERSION: ${{ github.event.inputs.provider_version || 'v0.13.2' }}
       REQUESTOR_VERSION: ${{ github.event.inputs.requestor_version || 'v0.13.2' }}
@@ -87,11 +87,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-
-      - name: Set Runner
-        id: set-runner
-        run: |
-          echo "::set-output name=runner-name::${{ github.runner }}"
 
       - name: Use random string for subnet
         # Use a random string to avoid other providers on the same subnet which might cause tests to fail because it expects only providers named provider-1 and provider-2
@@ -176,7 +171,7 @@ jobs:
   cleanup-test-environment:
     name: Cleanup test environment
     if: ${{ always() }}
-    needs: [run-e2e-tests, run-cypress-tests, run-examples-tests]
+    needs: [prepare-test-environment, run-e2e-tests, run-cypress-tests, run-examples-tests]
     runs-on: ${{ needs.prepare-test-environment.outputs.runner-name }}
     steps:
       - name: Collect logs from providers and requestor
