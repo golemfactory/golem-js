@@ -127,7 +127,6 @@ jobs:
     name: Run E2E tests
     needs: prepare-test-environment
     runs-on:
-      group: goth2
       labels: ${{ needs.prepare-test-environment.outputs.runner-name }}
     steps:
       - name: Start the E2E test
@@ -146,7 +145,6 @@ jobs:
     name: Run Cypress tests
     needs: prepare-test-environment
     runs-on:
-      group: goth2
       labels: ${{ needs.prepare-test-environment.outputs.runner-name }}
     steps:
       - name: Run web server
@@ -167,7 +165,6 @@ jobs:
     name: Run Examples tests
     needs: prepare-test-environment
     runs-on:
-      group: goth2
       labels: ${{ needs.prepare-test-environment.outputs.runner-name }}
     steps:
       - name: Run the Examples tests
@@ -179,7 +176,6 @@ jobs:
     if: ${{ always() }}
     needs: [prepare-test-environment, run-e2e-tests, run-cypress-tests, run-examples-tests]
     runs-on:
-      group: goth2
       labels: ${{ needs.prepare-test-environment.outputs.runner-name }}
     steps:
       - name: Collect logs from providers and requestor
