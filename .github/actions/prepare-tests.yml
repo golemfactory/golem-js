@@ -2,9 +2,6 @@ name: Prepare providers and requestor
 runs:
   using: "composite"
   steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-
     - name: Use random string for subnet
       # Use a random string to avoid other providers on the same subnet which might cause tests to fail because it expects only providers named provider-1 and provider-2
       run: echo "YAGNA_SUBNET=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 8 ; echo '')" >> $GITHUB_ENV

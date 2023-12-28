@@ -84,6 +84,8 @@ jobs:
     needs: regular-checks
     runs-on: goth2
     steps:
+      - uses: actions/checkout@v3
+
       - name: Prepare providers and requestor
         uses: ./.github/actions/prepare-tests.yml
 
@@ -105,6 +107,8 @@ jobs:
     needs: regular-checks
     runs-on: goth2
     steps:
+      - uses: actions/checkout@v3
+
       - name: Prepare providers and requestor
         uses: ./.github/actions/prepare-tests.yml
 
@@ -129,6 +133,8 @@ jobs:
     needs: regular-checks
     runs-on: goth2
     steps:
+      - uses: actions/checkout@v3
+
       - name: Prepare providers and requestor
         uses: ./.github/actions/prepare-tests.yml
 
