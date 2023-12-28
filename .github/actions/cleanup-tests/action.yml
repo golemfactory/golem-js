@@ -4,6 +4,7 @@ runs:
   using: "composite"
   steps:
     - name: Collect logs from providers and requestor
+      shell: bash
       if: always()
       run: |
         mkdir log-output
@@ -19,6 +20,7 @@ runs:
         path: log-output
 
     - name: Cleanup Docker
+      shell: bash
       if: always()
       run: |
         c=$(docker ps -q)
