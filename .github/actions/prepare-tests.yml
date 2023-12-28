@@ -1,0 +1,41 @@
+name: Prepare providers and requestor
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Use random string for subnet
+      # Use a random string to avoid other providers on the same subnet which might cause tests to fail because it expects only providers named provider-1 and provider-2
+      run: echo "YAGNA_SUBNET=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 8 ; echo '')" >> $GITHUB_ENV
+
+    - name: Set up Versions
+      run: |
+        echo "PROVIDER_VERSION=${PROVIDER_VERSION}" >> $GITHUB_ENV
+        echo "REQUESTOR_VERSION=${REQUESTOR_VERSION}" >> $GITHUB_ENV
+        echo "PROVIDER_WASI_VERSION=${PROVIDER_WASI_VERSION}" >> $GITHUB_ENV
+        echo "PROVIDER_VM_VERSION=${PROVIDER_VM_VERSION}" >> $GITHUB_ENV
+
+    - name: Build the docker containers
+      run: |
+        docker compose -f tests/docker/docker-compose.yml build \
+          --build-arg UBUNTU_VERSION=22.04 \
+          --build-arg YA_CORE_PROVIDER_VERSION=${PROVIDER_VERSION} \
+          --build-arg YA_CORE_REQUESTOR_VERSION=${REQUESTOR_VERSION} \
+          --build-arg YA_WASI_VERSION=${PROVIDER_WASI_VERSION} \
+          --build-arg YA_VM_VERSION=${PROVIDER_VM_VERSION}
+
+    - name: Start the docker containers
+      run: |
+        sudo service docker restart
+        docker compose -f tests/docker/docker-compose.yml down
+        docker compose -f tests/docker/docker-compose.yml up -d
+
+    - name: Fund the requestor
+      run: |
+        sleep 10
+        docker exec -t docker-requestor-1 /bin/sh -c "/golem-js/tests/docker/fundRequestor.sh"
+
+    - name: Install and build the SDK in the docker container
+      run: |
+        docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm i && npm run build && ./node_modules/.bin/cypress install && npm install --prefix examples && npm install ts-node"
