@@ -1,4 +1,5 @@
-name: Cleanup test environment
+name: "Cleanup test environment"
+description: "Cleanup test environment"
 runs:
   using: "composite"
   steps:

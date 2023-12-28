@@ -1,4 +1,5 @@
-name: Prepare providers and requestor
+name: "Prepare providers and requestor"
+description: "Prepare providers and requestor"
 runs:
   using: "composite"
   steps:
