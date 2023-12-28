@@ -87,7 +87,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Prepare providers and requestor
-        uses: ./.github/actions/prepare.yml
+        uses: ./.github/actions/prepare-tests
 
       - name: Start the E2E test
         run: docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm run test:e2e"
@@ -100,7 +100,7 @@ jobs:
           path: reports/e2e-report.xml
 
       - name: Cleanup test environment
-        uses: ./.github/actions/cleanup.yml
+        uses: ./.github/actions/cleanup-tests
 
   run-cypress-tests:
     name: Run Cypress tests
@@ -110,7 +110,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Prepare providers and requestor
-        uses: ./.github/actions/prepare.yml
+        uses: ./.github/actions/prepare-tests
 
       - name: Run web server
         run: docker exec -t -d docker-requestor-1 /bin/sh -c "cd /golem-js/examples/web && node app.mjs"
@@ -126,7 +126,7 @@ jobs:
           path: .cypress
 
       - name: Cleanup test environment
-        uses: ./.github/actions/cleanup.yml
+        uses: ./.github/actions/cleanup-tests
 
   run-examples-tests:
     name: Run Examples tests
@@ -136,13 +136,13 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Prepare providers and requestor
-        uses: ./.github/actions/prepare.yml
+        uses: ./.github/actions/prepare-tests
 
       - name: Run the Examples tests
         run: docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm run test:examples -- --exitOnError"
 
       - name: Cleanup test environment
-        uses: ./.github/actions/cleanup.yml
+        uses: ./.github/actions/cleanup-tests
 
   release:
     name: Release the SDK to NPM and GitHub
