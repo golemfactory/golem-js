@@ -98,7 +98,7 @@ jobs:
           path: reports/e2e-report.xml
 
       - name: Cleanup test environment
-        uses: .github/actions/cleanup-tests.yml
+        uses: ./.github/actions/cleanup-tests.yml
 
   run-cypress-tests:
     name: Run Cypress tests
@@ -122,7 +122,7 @@ jobs:
           path: .cypress
 
       - name: Cleanup test environment
-        uses: .github/actions/cleanup-tests.yml
+        uses: ./.github/actions/cleanup-tests.yml
 
   run-examples-tests:
     name: Run Examples tests
@@ -136,7 +136,7 @@ jobs:
         run: docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm run test:examples -- --exitOnError"
 
       - name: Cleanup test environment
-        uses: .github/actions/cleanup-tests.yml
+        uses: ./.github/actions/cleanup-tests.yml
 
   release:
     name: Release the SDK to NPM and GitHub
