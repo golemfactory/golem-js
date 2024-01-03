@@ -131,7 +131,13 @@ describe("Stats Module", () => {
   describe("Invoices", () => {
     it("should beforeAdd() converts payload to InvoiceInfo", async () => {
       const tests = new Invoices();
-      tests.add({ id: "id", amount: "100", providerId: "providerId", agreementId: "agreementId" });
+      tests.add({
+        id: "id",
+        amount: 100,
+        providerId: "providerId",
+        agreementId: "agreementId",
+        payeeAddr: "test_address",
+      });
       expect(tests.getAll()).toEqual(
         new Collection([
           {
@@ -139,29 +145,72 @@ describe("Stats Module", () => {
             amount: 100,
             providerId: "providerId",
             agreementId: "agreementId",
+            payeeAddr: "test_address",
           },
         ]),
       );
     });
     it("should getByProviderId() return filtered Collection of InvoiceInfo", async () => {
       const tests = new Invoices();
-      tests.add({ id: "id", amount: "100", providerId: "providerId", agreementId: "agreementId" });
-      tests.add({ id: "id2", amount: "100", providerId: "providerId2", agreementId: "agreementId2" });
-      tests.add({ id: "id3", amount: "100", providerId: "providerId", agreementId: "agreementId3" });
+      tests.add({
+        id: "id",
+        amount: 100,
+        providerId: "providerId",
+        agreementId: "agreementId",
+        payeeAddr: "test_address",
+      });
+      tests.add({
+        id: "id2",
+        amount: 100,
+        providerId: "providerId2",
+        agreementId: "agreementId2",
+        payeeAddr: "test_address2",
+      });
+      tests.add({
+        id: "id3",
+        amount: 100,
+        providerId: "providerId",
+        agreementId: "agreementId3",
+        payeeAddr: "test_address3",
+      });
       expect(tests.getByProviderId("providerId").count()).toEqual(2);
     });
     it("should getByAgreementId() return filtered Collection of InvoiceInfo", async () => {
       const tests = new Invoices();
-      tests.add({ id: "id", amount: "100", providerId: "providerId", agreementId: "agreementId" });
-      tests.add({ id: "id2", amount: "100", providerId: "providerId2", agreementId: "agreementId2" });
-      tests.add({ id: "id3", amount: "100", providerId: "providerId3", agreementId: "agreementId" });
+      tests.add({
+        id: "id",
+        amount: 100,
+        providerId: "providerId",
+        agreementId: "agreementId",
+        payeeAddr: "test_address",
+      });
+      tests.add({
+        id: "id2",
+        amount: 100,
+        providerId: "providerId2",
+        agreementId: "agreementId2",
+        payeeAddr: "test_address2",
+      });
+      tests.add({
+        id: "id3",
+        amount: 100,
+        providerId: "providerId3",
+        agreementId: "agreementId",
+        payeeAddr: "test_address3",
+      });
       expect(tests.getByAgreementId("agreementId").count()).toEqual(2);
     });
   });
   describe("Payments", () => {
     it("should beforeAdd() converts payload to PaymentInfo", async () => {
       const tests = new Payments();
-      tests.add({ id: "id", amount: "100", providerId: "providerId", agreementId: "agreementId" });
+      tests.add({
+        id: "id",
+        amount: 100,
+        providerId: "providerId",
+        agreementId: "agreementId",
+        payeeAddr: "test_address",
+      });
       expect(tests.getAll()).toEqual(
         new Collection([
           {
@@ -169,22 +218,59 @@ describe("Stats Module", () => {
             amount: 100,
             providerId: "providerId",
             agreementId: "agreementId",
+            payeeAddr: "test_address",
           },
         ]),
       );
     });
     it("should getByProviderId() return filtered Collection of PaymentInfo", async () => {
       const tests = new Payments();
-      tests.add({ id: "id", amount: "100", providerId: "providerId", agreementId: "agreementId" });
-      tests.add({ id: "id2", amount: "100", providerId: "providerId2", agreementId: "agreementId2" });
-      tests.add({ id: "id3", amount: "100", providerId: "providerId", agreementId: "agreementId3" });
+      tests.add({
+        id: "id",
+        amount: 100,
+        providerId: "providerId",
+        agreementId: "agreementId",
+        payeeAddr: "test_address",
+      });
+      tests.add({
+        id: "id2",
+        amount: 100,
+        providerId: "providerId2",
+        agreementId: "agreementId2",
+        payeeAddr: "test_address2",
+      });
+      tests.add({
+        id: "id3",
+        amount: 100,
+        providerId: "providerId",
+        agreementId: "agreementId3",
+        payeeAddr: "test_address3",
+      });
       expect(tests.getByProviderId("providerId").count()).toEqual(2);
     });
     it("should getByAgreementId() return filtered Collection of PaymentInfo", async () => {
       const tests = new Payments();
-      tests.add({ id: "id", amount: "100", providerId: "providerId", agreementId: "agreementId" });
-      tests.add({ id: "id2", amount: "100", providerId: "providerId2", agreementId: "agreementId2" });
-      tests.add({ id: "id3", amount: "100", providerId: "providerId3", agreementId: "agreementId" });
+      tests.add({
+        id: "id",
+        amount: 100,
+        providerId: "providerId",
+        agreementId: "agreementId",
+        payeeAddr: "test_address",
+      });
+      tests.add({
+        id: "id2",
+        amount: 100,
+        providerId: "providerId2",
+        agreementId: "agreementId2",
+        payeeAddr: "test_address2",
+      });
+      tests.add({
+        id: "id3",
+        amount: 100,
+        providerId: "providerId3",
+        agreementId: "agreementId",
+        payeeAddr: "test_address3",
+      });
       expect(tests.getByAgreementId("agreementId").count()).toEqual(2);
     });
   });

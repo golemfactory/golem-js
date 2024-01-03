@@ -1,4 +1,4 @@
-import { ProposalDetails } from "../market/proposal";
+import { ProposalDetails } from "../market";
 import { PackageDetails } from "../package/package";
 import { DemandDetails } from "../market/demand";
 
@@ -136,25 +136,29 @@ export class InvoiceReceived extends BaseEvent<{
   id: string;
   providerId: string;
   agreementId: string;
-  amount: string; // It is coming as a string
+  amount: number;
+  payeeAddr: string;
 }> {}
 export class DebitNoteReceived extends BaseEvent<{
   id: string;
   agreementId: string;
   activityId: string;
-  amount: string; // It is coming as a string
+  amount: number;
+  payeeAddr: string;
 }> {}
 export class PaymentAccepted extends BaseEvent<{
   id: string;
   providerId: string;
   agreementId: string;
-  amount: string; // It is coming as a string
+  amount: number;
+  payeeAddr: string;
 }> {}
 export class DebitNoteAccepted extends BaseEvent<{
   id: string;
   providerId: string;
   agreementId: string;
-  amount: string; // It is coming as a string
+  amount: number;
+  payeeAddr: string;
 }> {}
 export class PaymentFailed extends BaseEvent<{ id: string; agreementId: string; reason?: string }> {}
 export class ActivityCreated extends BaseEvent<{ id: string; agreementId: string }> {}

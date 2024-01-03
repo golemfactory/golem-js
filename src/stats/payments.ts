@@ -4,21 +4,20 @@ export interface PaymentInfo {
   id: string;
   providerId: string;
   agreementId: string;
+  payeeAddr: string;
   amount: number;
 }
 interface Payload {
   id: string;
   providerId: string;
   agreementId: string;
-  amount: string;
+  payeeAddr: string;
+  amount: number;
 }
 
 export class Payments extends AbstractAggregator<Payload, PaymentInfo> {
   beforeAdd(payload: Payload): PaymentInfo {
-    return {
-      ...payload,
-      amount: parseFloat(payload.amount),
-    };
+    return payload;
   }
   getByProviderId(providerId: string) {
     return this.getByField("providerId", providerId);

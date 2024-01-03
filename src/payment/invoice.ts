@@ -50,7 +50,7 @@ export abstract class BaseNote<ModelType extends BaseModel> {
   protected status: InvoiceStatus;
 
   protected constructor(
-    model: ModelType,
+    protected model: ModelType,
     protected options: InvoiceConfig,
   ) {
     this.providerId = model.issuerId;
@@ -64,9 +64,9 @@ export abstract class BaseNote<ModelType extends BaseModel> {
   }
   protected async getStatus(): Promise<InvoiceStatus> {
     await this.refreshStatus();
-    return this.status;
+    return this.model.status;
   }
-  protected abstract accept(totalAmountAccepted: string, allocationId: string): Promise<void>;
+  protected abstract accept(totalAmountAccepted: number, allocationId: string): Promise<void>;
   protected abstract reject(rejection: Rejection): Promise<void>;
   protected abstract refreshStatus(): Promise<void>;
 }
@@ -81,7 +81,7 @@ export class Invoice extends BaseNote<Model> {
   /** Activities IDs covered by this Invoice */
   public readonly activityIds?: string[];
   /** Amount in the invoice */
-  public readonly amount: string;
+  public readonly amount: number;
   /** Invoice creation timestamp */
   public readonly timestamp: string;
   /** Recipient ID */
@@ -108,14 +108,14 @@ export class Invoice extends BaseNote<Model> {
    * @hidden
    */
   protected constructor(
-    model: Model,
+    protected model: Model,
     protected yagnaApi: YagnaApi,
     protected options: InvoiceConfig,
   ) {
     super(model, options);
     this.id = model.invoiceId;
     this.activityIds = model.activityIds;
-    this.amount = model.amount;
+    this.amount = Number(model.amount);
     this.timestamp = model.timestamp;
     this.recipientId = model.recipientId;
   }
@@ -132,7 +132,7 @@ export class Invoice extends BaseNote<Model> {
       payeeAddr: this.payeeAddr,
       payerAddr: this.payerAddr,
       paymentPlatform: this.paymentPlatform,
-      amount: Number(this.amount),
+      amount: this.amount,
     };
   }
 
@@ -152,9 +152,12 @@ export class Invoice extends BaseNote<Model> {
    * @param totalAmountAccepted
    * @param allocationId
    */
-  async accept(totalAmountAccepted: string, allocationId: string) {
+  async accept(totalAmountAccepted: number, allocationId: string) {
     try {
-      await this.yagnaApi.payment.acceptInvoice(this.id, { totalAmountAccepted, allocationId });
+      await this.yagnaApi.payment.acceptInvoice(this.id, {
+        totalAmountAccepted: `${totalAmountAccepted}`,
+        allocationId,
+      });
     } catch (e) {
       const reason = e?.response?.data?.message || e;
       this.options.eventTarget?.dispatchEvent(
@@ -162,7 +165,15 @@ export class Invoice extends BaseNote<Model> {
       );
       throw new GolemError(`Unable to accept invoice ${this.id} ${reason}`);
     }
-    this.options.eventTarget?.dispatchEvent(new Events.PaymentAccepted(this));
+    this.options.eventTarget?.dispatchEvent(
+      new Events.PaymentAccepted({
+        id: this.id,
+        providerId: this.providerId,
+        agreementId: this.agreementId,
+        amount: this.amount,
+        payeeAddr: this.payeeAddr,
+      }),
+    );
   }
 
   /**

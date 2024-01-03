@@ -201,6 +201,7 @@ export class StatsService {
         id: event.detail.id,
         providerId: event.detail.providerId,
         agreementId: event.detail.agreementId,
+        payeeAddr: event.detail.payeeAddr,
         amount: event.detail.amount,
       });
     } else if (event instanceof Events.PaymentAccepted) {
@@ -208,6 +209,7 @@ export class StatsService {
         id: event.detail.id,
         providerId: event.detail.providerId,
         agreementId: event.detail.agreementId,
+        payeeAddr: event.detail.payeeAddr,
         amount: event.detail.amount,
       });
     }

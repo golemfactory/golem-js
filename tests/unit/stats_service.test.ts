@@ -128,14 +128,16 @@ describe("Stats Service", () => {
         id: "id",
         providerId: "providerId",
         agreementId: "agreementId",
-        amount: "100",
+        amount: 100,
+        payeeAddr: "test_address",
       });
       eventTarget.dispatchEvent(event);
       expect(spy).toHaveBeenCalledWith({
         id: "id",
         providerId: "providerId",
         agreementId: "agreementId",
-        amount: "100",
+        amount: 100,
+        payeeAddr: "test_address",
       });
     });
     // Payments
@@ -145,14 +147,16 @@ describe("Stats Service", () => {
         id: "id",
         providerId: "providerId",
         agreementId: "agreementId",
-        amount: "100",
+        amount: 100,
+        payeeAddr: "test_address",
       });
       eventTarget.dispatchEvent(event);
       expect(spy).toHaveBeenCalledWith({
         id: "id",
         providerId: "providerId",
         agreementId: "agreementId",
-        amount: "100",
+        amount: 100,
+        payeeAddr: "test_address",
       });
     });
     // Providers
