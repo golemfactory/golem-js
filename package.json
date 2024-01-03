@@ -20,7 +20,7 @@
   "jsdelivr": "dist/golem-js.min.js",
   "unpkg": "dist/golem-js.min.js",
   "scripts": {
-    "build": "rollup -c",
+    "build": "rollup -c --forceExit",
     "dev": "rollup -c -w",
     "docs": "typedoc src/ --plugin typedoc-plugin-merge-modules --plugin typedoc-theme-hierarchy",
     "docs:md": "typedoc src/ --plugin typedoc-plugin-markdown --plugin .docs/typedoc-frontmatter-theme.cjs --hideBreadcrumbs true && node .docs/summary-generator.cjs",

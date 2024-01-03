@@ -1,0 +1,28 @@
+name: "Cleanup test environment"
+description: "Cleanup test environment"
+runs:
+  using: "composite"
+  steps:
+    - name: Collect logs from providers and requestor
+      shell: bash
+      if: always()
+      run: |
+        mkdir log-output
+        docker compose -f tests/docker/docker-compose.yml logs provider-1 > log-output/provider-1.log
+        docker compose -f tests/docker/docker-compose.yml logs provider-2 > log-output/provider-2.log
+        docker compose -f tests/docker/docker-compose.yml logs requestor > log-output/requestor.log
+
+    - name: Upload provider output and logs
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: golem-provider-and-requestor-logs
+        path: log-output
+
+    - name: Cleanup Docker
+      shell: bash
+      if: always()
+      run: |
+        c=$(docker ps -q)
+        [[ $c ]] && docker kill $c
+        docker system prune -af
