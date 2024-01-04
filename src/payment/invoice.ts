@@ -62,12 +62,16 @@ export abstract class BaseNote<ModelType extends BaseModel> {
     this.paymentDueDate = model.paymentDueDate;
     this.status = model.status;
   }
+
   protected async getStatus(): Promise<InvoiceStatus> {
     await this.refreshStatus();
     return this.status;
   }
+
   protected abstract accept(totalAmountAccepted: string, allocationId: string): Promise<void>;
+
   protected abstract reject(rejection: Rejection): Promise<void>;
+
   protected abstract refreshStatus(): Promise<void>;
 }
 
@@ -181,6 +185,13 @@ export class Invoice extends BaseNote<Model> {
         new Events.PaymentFailed({ id: this.id, agreementId: this.agreementId, reason: rejection.message }),
       );
     }
+  }
+
+  /**
+   * Compares two invoices together and tells if they are the same thing
+   */
+  public isSameAs(invoice: Invoice) {
+    return this.id === invoice.id && this.amount === invoice.amount && this.agreementId === invoice.agreementId;
   }
 
   protected async refreshStatus() {
