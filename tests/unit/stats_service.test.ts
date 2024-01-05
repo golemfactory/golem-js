@@ -8,6 +8,11 @@ const eventTarget = new EventTarget();
 const statServiceOptions = { logger, eventTarget };
 setMaxListeners(20);
 
+const testProvider = {
+  id: "testId",
+  name: "test name",
+  walletAddress: "testWalletAddress",
+};
 describe("Stats Service", () => {
   let statsService: StatsService;
   beforeAll(async () => {
@@ -34,8 +39,7 @@ describe("Stats Service", () => {
         id: "taskId",
         agreementId: "agreementId",
         activityId: "activityId",
-        providerId: "providerId",
-        providerName: "providerName",
+        provider: testProvider,
       });
       eventTarget.dispatchEvent(event);
       expect(spy).toHaveBeenCalledWith({
@@ -50,8 +54,7 @@ describe("Stats Service", () => {
         id: "taskId",
         agreementId: "agreementId",
         activityId: "activityId",
-        providerId: "providerId",
-        providerName: "providerName",
+        provider: testProvider,
       });
       eventTarget.dispatchEvent(event);
       expect(spy).toHaveBeenCalledWith({ id: "activityId", taskId: "taskId", agreementId: "agreementId" });
@@ -63,8 +66,7 @@ describe("Stats Service", () => {
         agreementId: "agreementId",
         retriesCount: 1,
         activityId: "activityId",
-        providerId: "providerId",
-        providerName: "providerName",
+        provider: testProvider,
         reason: "reason",
       });
       eventTarget.dispatchEvent(event);
@@ -76,8 +78,7 @@ describe("Stats Service", () => {
         id: "id",
         agreementId: "agreementId",
         activityId: "activityId",
-        providerId: "providerId",
-        providerName: "providerName",
+        provider: testProvider,
         reason: "reason",
       });
 
@@ -103,41 +104,39 @@ describe("Stats Service", () => {
       const spy = jest.spyOn(statsService["proposals"], "add");
       const event = new Events.ProposalReceived({
         id: "id",
-        providerId: "providerId",
+        provider: testProvider,
         parentId: null,
         details: {} as ProposalDetails,
       });
       eventTarget.dispatchEvent(event);
-      expect(spy).toHaveBeenCalledWith({ id: "id", providerId: "providerId" });
+      expect(spy).toHaveBeenCalledWith({ id: "id", providerId: testProvider.id });
     });
     it("should handle ProposalReceived and call Provider.add()", async () => {
       const spy = jest.spyOn(statsService["providers"], "add");
       const event = new Events.ProposalReceived({
         id: "id",
-        providerId: "providerId",
+        provider: testProvider,
         parentId: null,
         details: {} as ProposalDetails,
       });
       eventTarget.dispatchEvent(event);
-      expect(spy).toHaveBeenCalledWith({ id: "providerId" });
+      expect(spy).toHaveBeenCalledWith({ id: testProvider.id });
     });
     // Invoices
     it("should handle InvoiceReceived and call Invoice.add()", async () => {
       const spy = jest.spyOn(statsService["invoices"], "add");
       const event = new Events.InvoiceReceived({
         id: "id",
-        providerId: "providerId",
+        provider: testProvider,
         agreementId: "agreementId",
         amount: 100,
-        payeeAddr: "test_address",
       });
       eventTarget.dispatchEvent(event);
       expect(spy).toHaveBeenCalledWith({
         id: "id",
-        providerId: "providerId",
+        provider: testProvider,
         agreementId: "agreementId",
         amount: 100,
-        payeeAddr: "test_address",
       });
     });
     // Payments
@@ -145,18 +144,16 @@ describe("Stats Service", () => {
       const spy = jest.spyOn(statsService["payments"], "add");
       const event = new Events.PaymentAccepted({
         id: "id",
-        providerId: "providerId",
+        provider: testProvider,
         agreementId: "agreementId",
         amount: 100,
-        payeeAddr: "test_address",
       });
       eventTarget.dispatchEvent(event);
       expect(spy).toHaveBeenCalledWith({
         id: "id",
-        providerId: "providerId",
+        provider: testProvider,
         agreementId: "agreementId",
         amount: 100,
-        payeeAddr: "test_address",
       });
     });
     // Providers
@@ -164,30 +161,28 @@ describe("Stats Service", () => {
       const spy = jest.spyOn(statsService["providers"], "add");
       const event = new Events.AgreementCreated({
         id: "id",
-        providerId: "providerId",
-        providerName: "providerName",
+        provider: testProvider,
         proposalId: "proposalId",
       });
       eventTarget.dispatchEvent(event);
-      expect(spy).toHaveBeenCalledWith({ id: "providerId", providerName: "providerName" });
+      expect(spy).toHaveBeenCalledWith(testProvider);
     });
     // Agreements
     it("should handle AgreementCreated and call Agreements.add()", async () => {
       const spy = jest.spyOn(statsService["agreements"], "add");
       const event = new Events.AgreementCreated({
         id: "id",
-        providerId: "providerId",
-        providerName: "providerName",
+        provider: testProvider,
         proposalId: "proposalId",
       });
       eventTarget.dispatchEvent(event);
-      expect(spy).toHaveBeenCalledWith({ id: "id", providerId: "providerId", proposalId: "proposalId" });
+      expect(spy).toHaveBeenCalledWith({ id: "id", provider: testProvider, proposalId: "proposalId" });
     });
     it("should handle AgreementConfirmed and call Agreements.confirm()", async () => {
       const spy = jest.spyOn(statsService["agreements"], "confirm");
       const event = new Events.AgreementConfirmed({
         id: "id",
-        providerId: "providerId",
+        provider: testProvider,
       });
       eventTarget.dispatchEvent(event);
       expect(spy).toHaveBeenCalledWith("id");
@@ -196,7 +191,7 @@ describe("Stats Service", () => {
       const spy = jest.spyOn(statsService["agreements"], "reject");
       const event = new Events.AgreementRejected({
         id: "id",
-        providerId: "providerId",
+        provider: testProvider,
       });
       eventTarget.dispatchEvent(event);
       expect(spy).toHaveBeenCalledWith("id");

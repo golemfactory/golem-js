@@ -5,6 +5,8 @@ import { Events } from "../events";
 import { Rejection } from "./rejection";
 import { YagnaApi } from "../utils";
 import { GolemError } from "../error/golem-error";
+import { ProviderInfo } from "../agreement";
+import { ProposalProperties } from "../market/proposal";
 
 export type InvoiceOptions = BasePaymentOptions;
 
@@ -39,12 +41,19 @@ export class DebitNote extends BaseNote<Model> {
   static async create(debitNoteId: string, yagnaApi: YagnaApi, options?: InvoiceOptions): Promise<DebitNote> {
     const config = new InvoiceConfig(options);
     const { data: model } = await yagnaApi.payment.getDebitNote(debitNoteId);
-    return new DebitNote(model, yagnaApi, config);
+    const { data: agreement } = await yagnaApi.market.getAgreement(model.agreementId);
+    const providerInfo = {
+      id: model.issuerId,
+      walletAddress: model.payeeAddr,
+      name: (agreement.offer.properties as ProposalProperties)["golem.node.id.name"],
+    };
+    return new DebitNote(model, providerInfo, yagnaApi, config);
   }
 
   /**
    *
    * @param model
+   * @param providerInfo
    * @param yagnaApi
    * @param options
    * @protected
@@ -52,10 +61,11 @@ export class DebitNote extends BaseNote<Model> {
    */
   protected constructor(
     protected model: Model,
+    providerInfo: ProviderInfo,
     protected yagnaApi: YagnaApi,
     protected options: InvoiceConfig,
   ) {
-    super(model, options);
+    super(model, providerInfo, options);
     this.id = model.debitNoteId;
     this.timestamp = model.timestamp;
     this.activityId = model.activityId;
@@ -97,9 +107,8 @@ export class DebitNote extends BaseNote<Model> {
       new Events.DebitNoteAccepted({
         id: this.id,
         agreementId: this.agreementId,
-        payeeAddr: this.payeeAddr,
-        providerId: this.providerId,
         amount: totalAmountAccepted,
+        provider: this.provider,
       }),
     );
   }

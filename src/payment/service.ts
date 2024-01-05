@@ -134,7 +134,7 @@ export class PaymentService {
         );
       }
     } catch (error) {
-      this.logger?.error(`Invoice failed from provider ${invoice.providerId}. ${error}`);
+      this.logger?.error(`Invoice failed from provider ${invoice.provider.id}. ${error}`);
     } finally {
       // Until we implement a re-acceptance mechanism for unsuccessful acceptances,
       // we no longer have to wait for the invoice during an unsuccessful attempt.

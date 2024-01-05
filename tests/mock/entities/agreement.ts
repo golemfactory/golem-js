@@ -5,7 +5,7 @@ import { AgreementStateEnum } from "ya-ts-client/dist/ya-market/src/models";
 // @ts-ignore
 export const agreement: Agreement = {
   id: "test_agreement_id",
-  provider: { id: "test_provider_id", name: "test_provider_name" },
+  provider: { id: "test_provider_id", name: "Test Provider", walletAddress: "test_wallet_address" },
   async confirm(): Promise<void> {
     return Promise.resolve(undefined);
   },

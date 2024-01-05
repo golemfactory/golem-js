@@ -75,10 +75,9 @@ export class Payments extends EventTarget {
           this.options.eventTarget?.dispatchEvent(
             new Events.InvoiceReceived({
               id: invoice.id,
-              providerId: invoice.providerId,
               agreementId: invoice.agreementId,
-              amount: Number(invoice.amount),
-              payeeAddr: invoice.payeeAddr,
+              amount: invoice.amount,
+              provider: invoice.provider,
             }),
           );
           this.logger?.debug(`New Invoice received for agreement ${invoice.agreementId}. Amount: ${invoice.amount}`);
@@ -122,8 +121,8 @@ export class Payments extends EventTarget {
               id: debitNote.id,
               agreementId: debitNote.agreementId,
               activityId: debitNote.activityId,
-              amount: Number(debitNote.totalAmountDue),
-              payeeAddr: debitNote.payeeAddr,
+              amount: debitNote.totalAmountDue,
+              provider: debitNote.provider,
             }),
           );
           this.logger?.debug(

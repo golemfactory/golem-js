@@ -1,18 +1,17 @@
 import { AbstractAggregator } from "./abstract_aggregator";
+import { ProviderInfo } from "../agreement";
 
 export interface PaymentInfo {
   id: string;
-  providerId: string;
   agreementId: string;
-  payeeAddr: string;
   amount: number;
+  provider: ProviderInfo;
 }
 interface Payload {
   id: string;
-  providerId: string;
   agreementId: string;
-  payeeAddr: string;
   amount: number;
+  provider: ProviderInfo;
 }
 
 export class Payments extends AbstractAggregator<Payload, PaymentInfo> {
@@ -20,7 +19,7 @@ export class Payments extends AbstractAggregator<Payload, PaymentInfo> {
     return payload;
   }
   getByProviderId(providerId: string) {
-    return this.getByField("providerId", providerId);
+    return this.getByField("provider.id", providerId);
   }
 
   getByAgreementId(agreementId: string) {

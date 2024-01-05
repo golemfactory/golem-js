@@ -3,6 +3,7 @@ import { PackageDetails } from "../package/package";
 import { DemandDetails } from "../market/demand";
 
 import { RequireAtLeastOne } from "../utils/types";
+import { ProviderInfo } from "../agreement";
 /**
  * Global Event Type with which all API events will be emitted. It should be used on all listeners that would like to handle events.
  */
@@ -45,8 +46,7 @@ export class TaskStarted extends BaseEvent<{
   id: string;
   agreementId: string;
   activityId: string;
-  providerId: string;
-  providerName: string;
+  provider: ProviderInfo;
 }> {}
 
 /**
@@ -55,8 +55,7 @@ export class TaskStarted extends BaseEvent<{
 export class TaskRedone extends BaseEvent<{
   id: string;
   agreementId: string;
-  providerId: string;
-  providerName: string;
+  provider: ProviderInfo;
   retriesCount: number;
   /**
    * The activity that was involved
@@ -74,8 +73,8 @@ export class TaskRedone extends BaseEvent<{
 export class TaskRejected extends BaseEvent<{
   id: string;
   agreementId: string;
-  providerId: string;
-  providerName: string;
+
+  provider: ProviderInfo;
   /**
    * The activity that was involved when the rejection took place
    *
@@ -92,28 +91,28 @@ export class DemandUnsubscribed extends BaseEvent<{ id: string }> {}
 export class CollectFailed extends BaseEvent<{ id: string; reason?: string }> {}
 export class ProposalReceived extends BaseEvent<{
   id: string;
-  providerId: string;
+  provider: ProviderInfo;
   parentId: string | null;
   details: ProposalDetails;
 }> {}
 export class ProposalRejected extends BaseEvent<{
   id: string;
-  providerId?: string;
+  provider: ProviderInfo;
   reason?: string;
   parentId: string | null;
 }> {}
 export class ProposalResponded extends BaseEvent<{
   id: string;
-  providerId: string;
+  provider: ProviderInfo;
   counteringProposalId: string;
 }> {}
 export class ProposalFailed extends BaseEvent<{
   id: string;
-  providerId: string;
+  provider: ProviderInfo;
   parentId: string | null;
   reason?: string;
 }> {}
-export class ProposalConfirmed extends BaseEvent<{ id: string; providerId: string }> {}
+export class ProposalConfirmed extends BaseEvent<{ id: string; provider: ProviderInfo }> {}
 export class PackageCreated extends BaseEvent<{
   packageReference: RequireAtLeastOne<{
     imageHash: string;
@@ -124,41 +123,37 @@ export class PackageCreated extends BaseEvent<{
 }> {}
 export class AgreementCreated extends BaseEvent<{
   id: string;
-  providerId: string;
-  providerName: string;
+  provider: ProviderInfo;
   proposalId: string;
   validTo?: string;
 }> {}
-export class AgreementConfirmed extends BaseEvent<{ id: string; providerId: string }> {}
-export class AgreementRejected extends BaseEvent<{ id: string; providerId: string; reason?: string }> {}
-export class AgreementTerminated extends BaseEvent<{ id: string; providerId: string; reason?: string }> {}
+export class AgreementConfirmed extends BaseEvent<{ id: string; provider: ProviderInfo }> {}
+export class AgreementRejected extends BaseEvent<{ id: string; provider: ProviderInfo; reason?: string }> {}
+export class AgreementTerminated extends BaseEvent<{ id: string; provider: ProviderInfo; reason?: string }> {}
 export class InvoiceReceived extends BaseEvent<{
   id: string;
-  providerId: string;
+  provider: ProviderInfo;
   agreementId: string;
   amount: number;
-  payeeAddr: string;
 }> {}
 export class DebitNoteReceived extends BaseEvent<{
   id: string;
   agreementId: string;
   activityId: string;
   amount: number;
-  payeeAddr: string;
+  provider: ProviderInfo;
 }> {}
 export class PaymentAccepted extends BaseEvent<{
   id: string;
-  providerId: string;
   agreementId: string;
   amount: number;
-  payeeAddr: string;
+  provider: ProviderInfo;
 }> {}
 export class DebitNoteAccepted extends BaseEvent<{
   id: string;
-  providerId: string;
   agreementId: string;
   amount: number;
-  payeeAddr: string;
+  provider: ProviderInfo;
 }> {}
 export class PaymentFailed extends BaseEvent<{ id: string; agreementId: string; reason?: string }> {}
 export class ActivityCreated extends BaseEvent<{ id: string; agreementId: string }> {}
