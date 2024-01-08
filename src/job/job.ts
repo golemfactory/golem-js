@@ -5,7 +5,7 @@ import { AgreementOptions, AgreementPoolService } from "../agreement";
 import { MarketService } from "../market";
 import { NetworkService } from "../network";
 import { PaymentOptions, PaymentService } from "../payment";
-import { MarketOptions } from "../market/service";
+import { MarketOptions } from "../market";
 import { NetworkOptions } from "../network/network";
 import { Package, PackageOptions } from "../package";
 import { Activity, ActivityOptions } from "../activity";
@@ -185,6 +185,7 @@ export class Job<Output = unknown> {
     // agreement is created, we can stop listening for new proposals
     await marketService.end();
 
+    console.log("Allocation", allocation);
     paymentService.acceptPayments(agreement);
 
     const activity = await Activity.create(agreement, this.yagnaApi, options.activity);

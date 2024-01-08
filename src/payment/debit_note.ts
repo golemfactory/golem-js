@@ -113,6 +113,11 @@ export class DebitNote extends BaseNote<Model> {
     );
   }
 
+  public async getStatus() {
+    await this.refreshStatus();
+    return this.status;
+  }
+
   /**
    * Reject Debit Note
    *

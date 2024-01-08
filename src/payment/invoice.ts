@@ -200,6 +200,13 @@ export class Invoice extends BaseNote<Model> {
     }
   }
 
+  /**
+   * Compares two invoices together and tells if they are the same thing
+   */
+  public isSameAs(invoice: Invoice) {
+    return this.id === invoice.id && this.amount === invoice.amount && this.agreementId === invoice.agreementId;
+  }
+
   protected async refreshStatus() {
     const { data: model } = await this.yagnaApi.payment.getInvoice(this.id);
     this.status = model.status;
