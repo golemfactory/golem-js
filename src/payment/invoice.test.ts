@@ -2,12 +2,30 @@ import { Invoice } from "./invoice";
 import { imock, instance, mock, when } from "@johanblumenberg/ts-mockito";
 import { YagnaApi } from "../utils";
 import { RequestorApi as PaymentRequestorApi } from "ya-ts-client/dist/ya-payment/src/api/requestor-api";
+import { RequestorApi as MarketRequestorApi } from "ya-ts-client/dist/ya-market/src/api/requestor-api";
 import { InvoiceStatus } from "ya-ts-client/dist/ya-payment/src/models";
+import { Agreement } from "ya-ts-client/dist/ya-market/src/models";
 
 const mockYagnaApi = imock<YagnaApi>();
 const mockPaymentApi = mock(PaymentRequestorApi);
+const mockMarketApi = mock(MarketRequestorApi);
 
 describe("Invoice", () => {
+  when(mockYagnaApi.market).thenReturn(instance(mockMarketApi));
+  when(mockMarketApi.getAgreement("agreement-id")).thenResolve({
+    config: {},
+    headers: {},
+    status: 200,
+    statusText: "OK",
+    data: {
+      agreementId: "agreement-id",
+      offer: {
+        properties: {
+          "golem.node.id.name": "provider-test",
+        },
+      },
+    } as Agreement,
+  });
   describe("isSameAs", () => {
     test("returns true if the invoices share required properties", async () => {
       when(mockYagnaApi.payment).thenReturn(instance(mockPaymentApi));
@@ -41,6 +59,7 @@ describe("Invoice", () => {
 
     test("returns false if the invoices don't share required properties", async () => {
       when(mockYagnaApi.payment).thenReturn(instance(mockPaymentApi));
+      when(mockYagnaApi.market).thenReturn(instance(mockMarketApi));
 
       when(mockPaymentApi.getInvoice("invoice-a")).thenResolve({
         config: {},
