@@ -3,6 +3,7 @@ import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
 import { Events } from "../events";
 import { GolemError } from "../error/golem-error";
+import { ProviderInfo } from "../agreement";
 
 export type PricingInfo = {
   cpuSec: number;
@@ -58,7 +59,6 @@ export interface ProposalDetails {
   cpuThreads: number;
   memory: number;
   storage: number;
-  providerName: string;
   publicNet: boolean;
   runtimeCapabilities: string[];
   runtimeName: string;
@@ -71,7 +71,7 @@ export interface ProposalDetails {
 export class Proposal {
   id: string;
   readonly issuerId: string;
-  readonly provider: { id: string; name: string };
+  readonly provider: ProviderInfo;
   readonly properties: ProposalProperties;
   readonly constraints: string;
   readonly timestamp: string;
@@ -88,6 +88,7 @@ export class Proposal {
    * @param api - {@link RequestorApi}
    * @param model - {@link ProposalModel}
    * @param demandRequest - {@link DemandOfferBase}
+   * @param paymentPlatform
    * @param eventTarget - {@link EventTarget}
    */
   constructor(
@@ -97,6 +98,7 @@ export class Proposal {
     private readonly api: RequestorApi,
     model: ProposalModel,
     private readonly demandRequest: DemandOfferBase,
+    private readonly paymentPlatform: string,
     private eventTarget?: EventTarget,
   ) {
     this.id = model.proposalId;
@@ -107,7 +109,7 @@ export class Proposal {
     this.prevProposalId = model.prevProposalId;
     this.timestamp = model.timestamp;
     this.counteringProposalId = null;
-    this.provider = { id: this.issuerId, name: this.details.providerName };
+    this.provider = this.getProviderInfo();
 
     // Run validation to ensure that the Proposal is in a complete and correct state
     this.validate();
@@ -122,7 +124,6 @@ export class Proposal {
       cpuThreads: this.properties["golem.inf.cpu.threads"],
       memory: this.properties["golem.inf.mem.gib"],
       storage: this.properties["golem.inf.storage.gib"],
-      providerName: this.properties["golem.node.id.name"],
       publicNet: this.properties["golem.node.net.is-public"],
       runtimeCapabilities: this.properties["golem.runtime.capabilities"],
       runtimeName: this.properties["golem.runtime.name"],
@@ -204,7 +205,7 @@ export class Proposal {
     this.eventTarget?.dispatchEvent(
       new Events.ProposalRejected({
         id: this.id,
-        providerId: this.issuerId,
+        provider: this.provider,
         parentId: this.id,
         reason,
       }),
@@ -220,7 +221,7 @@ export class Proposal {
         this.eventTarget?.dispatchEvent(
           new Events.ProposalFailed({
             id: this.id,
-            providerId: this.issuerId,
+            provider: this.provider,
             parentId: this.id,
             reason,
           }),
@@ -234,7 +235,7 @@ export class Proposal {
     this.eventTarget?.dispatchEvent(
       new Events.ProposalResponded({
         id: this.id,
-        providerId: this.issuerId,
+        provider: this.provider,
         counteringProposalId: counteringProposalId,
       }),
     );
@@ -251,5 +252,13 @@ export class Proposal {
         .filter((prop) => prop.startsWith("golem.com.payment.platform."))
         .map((prop) => prop.split(".")[4]) || []
     );
+  }
+
+  private getProviderInfo(): ProviderInfo {
+    return {
+      id: this.issuerId,
+      name: this.properties["golem.node.id.name"],
+      walletAddress: this.properties[`golem.com.payment.platform.${this.paymentPlatform}.address`] as string,
+    };
   }
 }

@@ -1,8 +1,7 @@
 import { Agreement, AgreementOptions } from "./agreement";
-import { Logger } from "../utils";
+import { Logger, YagnaApi } from "../utils";
 import { AgreementConfig } from "./config";
 import { Events } from "../events";
-import { YagnaApi } from "../utils/yagna/yagna";
 import { GolemError } from "../error/golem-error";
 import { ProposalProperties } from "../market/proposal";
 
@@ -43,17 +42,21 @@ export class AgreementFactory {
         timeout: this.options.agreementRequestTimeout,
       });
       const { data } = await this.yagnaApi.market.getAgreement(agreementId);
+      const offerProperties: ProposalProperties = data.offer.properties as ProposalProperties;
+      const demandProperties: ProposalProperties = data.demand.properties as ProposalProperties;
+      const chosenPaymentPlatform = demandProperties["golem.com.payment.chosen-platform"];
+      console.log({ chosenPaymentPlatform });
       const provider = {
-        name: (data.offer.properties as ProposalProperties)["golem.node.id.name"],
+        name: offerProperties["golem.node.id.name"],
         id: data.offer.providerId,
+        walletAddress: offerProperties[`golem.com.payment.platform.${chosenPaymentPlatform}.address`] as string,
       };
       if (!provider.id || !provider.name) throw new GolemError("Unable to get provider info");
       const agreement = new Agreement(agreementId, provider, this.yagnaApi, this.options);
       this.options.eventTarget?.dispatchEvent(
         new Events.AgreementCreated({
           id: agreementId,
-          providerId: provider.id,
-          providerName: provider.name,
+          provider,
           validTo: data?.validTo,
           proposalId,
         }),

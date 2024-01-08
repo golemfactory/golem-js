@@ -9,6 +9,24 @@ import { Providers } from "../../src/stats/providers";
 import { Tasks, TaskStatusEnum } from "../../src/stats/tasks";
 import { Collection } from "collect.js";
 
+const testProvider = {
+  id: "testId",
+  name: "test name",
+  walletAddress: "testWalletAddress",
+};
+
+const testProvider2 = {
+  id: "testId2",
+  name: "test name2",
+  walletAddress: "testWalletAddress2",
+};
+
+const testProvider3 = {
+  id: "testId3",
+  name: "test name3",
+  walletAddress: "testWalletAddress3",
+};
+
 describe("Stats Module", () => {
   describe("Abstract Aggregator", () => {
     it("should add() add items", async () => {
@@ -70,22 +88,22 @@ describe("Stats Module", () => {
   describe("Agreements", () => {
     it("should beforeAdd() converts payload to AgreementInfo", async () => {
       const tests = new Agreements();
-      tests.add({ id: "id", providerId: "providerId", proposalId: "proposalId" });
+      tests.add({ id: "id", provider: testProvider, proposalId: "proposalId" });
       expect(tests.getAll()).toEqual(
         new Collection([
-          { id: "id", providerId: "providerId", proposalId: "proposalId", status: AgreementStatusEnum.Pending },
+          { id: "id", provider: testProvider, proposalId: "proposalId", status: AgreementStatusEnum.Pending },
         ]),
       );
     });
     it("should confirm() flag AgreementInfo.status as confirmed ", async () => {
       const tests = new Agreements();
-      tests.add({ id: "id", providerId: "providerId", proposalId: "proposalId" });
+      tests.add({ id: "id", provider: testProvider, proposalId: "proposalId" });
       tests.confirm("id");
       expect(tests.getAll()).toEqual(
         new Collection([
           {
             id: "id",
-            providerId: "providerId",
+            provider: testProvider,
             proposalId: "proposalId",
             status: AgreementStatusEnum.Confirmed,
           },
@@ -94,28 +112,28 @@ describe("Stats Module", () => {
     });
     it("should reject() flag AgreementInfo.status as rejected ", async () => {
       const tests = new Agreements();
-      tests.add({ id: "id", providerId: "providerId", proposalId: "proposalId" });
+      tests.add({ id: "id", provider: testProvider, proposalId: "proposalId" });
       tests.reject("id");
       expect(tests.getAll()).toEqual(
         new Collection([
-          { id: "id", providerId: "providerId", proposalId: "proposalId", status: AgreementStatusEnum.Rejected },
+          { id: "id", provider: testProvider, proposalId: "proposalId", status: AgreementStatusEnum.Rejected },
         ]),
       );
     });
     it("should getByProviderId() return filtered Collection of AgreementInfo", async () => {
       const tests = new Agreements();
-      tests.add({ id: "id", providerId: "providerId", proposalId: "proposalId" });
-      tests.add({ id: "id2", providerId: "providerId2", proposalId: "proposalId" });
-      tests.add({ id: "id3", providerId: "providerId", proposalId: "proposalId" });
-      expect(tests.getByProviderId("providerId").count()).toEqual(2);
+      tests.add({ id: "id", provider: testProvider, proposalId: "proposalId" });
+      tests.add({ id: "id2", provider: testProvider2, proposalId: "proposalId" });
+      tests.add({ id: "id3", provider: testProvider, proposalId: "proposalId" });
+      expect(tests.getByProviderId(testProvider.id).count()).toEqual(2);
     });
     it("should getByStatus() return filtered Collection of AgreementInfo", async () => {
       const tests = new Agreements();
-      tests.add({ id: "id", providerId: "providerId", proposalId: "proposalId" });
+      tests.add({ id: "id", provider: testProvider, proposalId: "proposalId" });
       tests.reject("id");
-      tests.add({ id: "id2", providerId: "providerId2", proposalId: "proposalId" });
+      tests.add({ id: "id2", provider: testProvider2, proposalId: "proposalId" });
       tests.confirm("id2");
-      tests.add({ id: "id3", providerId: "providerId", proposalId: "proposalId" });
+      tests.add({ id: "id3", provider: testProvider, proposalId: "proposalId" });
       expect(tests.getByStatus(AgreementStatusEnum.Rejected).count()).toEqual(1);
       expect(tests.getByStatus(AgreementStatusEnum.Confirmed).count()).toEqual(1);
       expect(tests.getByStatus(AgreementStatusEnum.Pending).count()).toEqual(1);
@@ -131,13 +149,18 @@ describe("Stats Module", () => {
   describe("Invoices", () => {
     it("should beforeAdd() converts payload to InvoiceInfo", async () => {
       const tests = new Invoices();
-      tests.add({ id: "id", amount: "100", providerId: "providerId", agreementId: "agreementId" });
+      tests.add({
+        id: "id",
+        amount: 100,
+        provider: testProvider,
+        agreementId: "agreementId",
+      });
       expect(tests.getAll()).toEqual(
         new Collection([
           {
             id: "id",
             amount: 100,
-            providerId: "providerId",
+            provider: testProvider,
             agreementId: "agreementId",
           },
         ]),
@@ -145,29 +168,64 @@ describe("Stats Module", () => {
     });
     it("should getByProviderId() return filtered Collection of InvoiceInfo", async () => {
       const tests = new Invoices();
-      tests.add({ id: "id", amount: "100", providerId: "providerId", agreementId: "agreementId" });
-      tests.add({ id: "id2", amount: "100", providerId: "providerId2", agreementId: "agreementId2" });
-      tests.add({ id: "id3", amount: "100", providerId: "providerId", agreementId: "agreementId3" });
-      expect(tests.getByProviderId("providerId").count()).toEqual(2);
+      tests.add({
+        id: "id",
+        amount: 100,
+        provider: testProvider,
+        agreementId: "agreementId",
+      });
+      tests.add({
+        id: "id2",
+        amount: 100,
+        provider: testProvider2,
+        agreementId: "agreementId2",
+      });
+      tests.add({
+        id: "id3",
+        amount: 100,
+        provider: testProvider,
+        agreementId: "agreementId3",
+      });
+      expect(tests.getByProviderId(testProvider.id).count()).toEqual(2);
     });
     it("should getByAgreementId() return filtered Collection of InvoiceInfo", async () => {
       const tests = new Invoices();
-      tests.add({ id: "id", amount: "100", providerId: "providerId", agreementId: "agreementId" });
-      tests.add({ id: "id2", amount: "100", providerId: "providerId2", agreementId: "agreementId2" });
-      tests.add({ id: "id3", amount: "100", providerId: "providerId3", agreementId: "agreementId" });
+      tests.add({
+        id: "id",
+        amount: 100,
+        provider: testProvider,
+        agreementId: "agreementId",
+      });
+      tests.add({
+        id: "id2",
+        amount: 100,
+        provider: testProvider2,
+        agreementId: "agreementId2",
+      });
+      tests.add({
+        id: "id3",
+        amount: 100,
+        provider: testProvider3,
+        agreementId: "agreementId",
+      });
       expect(tests.getByAgreementId("agreementId").count()).toEqual(2);
     });
   });
   describe("Payments", () => {
     it("should beforeAdd() converts payload to PaymentInfo", async () => {
       const tests = new Payments();
-      tests.add({ id: "id", amount: "100", providerId: "providerId", agreementId: "agreementId" });
+      tests.add({
+        id: "id",
+        amount: 100,
+        provider: testProvider,
+        agreementId: "agreementId",
+      });
       expect(tests.getAll()).toEqual(
         new Collection([
           {
             id: "id",
             amount: 100,
-            providerId: "providerId",
+            provider: testProvider,
             agreementId: "agreementId",
           },
         ]),
@@ -175,28 +233,58 @@ describe("Stats Module", () => {
     });
     it("should getByProviderId() return filtered Collection of PaymentInfo", async () => {
       const tests = new Payments();
-      tests.add({ id: "id", amount: "100", providerId: "providerId", agreementId: "agreementId" });
-      tests.add({ id: "id2", amount: "100", providerId: "providerId2", agreementId: "agreementId2" });
-      tests.add({ id: "id3", amount: "100", providerId: "providerId", agreementId: "agreementId3" });
-      expect(tests.getByProviderId("providerId").count()).toEqual(2);
+      tests.add({
+        id: "id",
+        amount: 100,
+        provider: testProvider,
+        agreementId: "agreementId",
+      });
+      tests.add({
+        id: "id2",
+        amount: 100,
+        provider: testProvider2,
+        agreementId: "agreementId2",
+      });
+      tests.add({
+        id: "id3",
+        amount: 100,
+        provider: testProvider,
+        agreementId: "agreementId3",
+      });
+      expect(tests.getByProviderId(testProvider.id).count()).toEqual(2);
     });
     it("should getByAgreementId() return filtered Collection of PaymentInfo", async () => {
       const tests = new Payments();
-      tests.add({ id: "id", amount: "100", providerId: "providerId", agreementId: "agreementId" });
-      tests.add({ id: "id2", amount: "100", providerId: "providerId2", agreementId: "agreementId2" });
-      tests.add({ id: "id3", amount: "100", providerId: "providerId3", agreementId: "agreementId" });
+      tests.add({
+        id: "id",
+        amount: 100,
+        provider: testProvider,
+        agreementId: "agreementId",
+      });
+      tests.add({
+        id: "id2",
+        amount: 100,
+        provider: testProvider2,
+        agreementId: "agreementId2",
+      });
+      tests.add({
+        id: "id3",
+        amount: 100,
+        provider: testProvider3,
+        agreementId: "agreementId",
+      });
       expect(tests.getByAgreementId("agreementId").count()).toEqual(2);
     });
   });
   describe("Proposals", () => {
     it("should beforeAdd() converts payload to ProposalInfo", async () => {
       const tests = new Proposals();
-      tests.add({ id: "id", providerId: "providerId" });
+      tests.add({ id: "id", providerId: testProvider.id });
       expect(tests.getAll()).toEqual(
         new Collection([
           {
             id: "id",
-            providerId: "providerId",
+            providerId: testProvider.id,
           },
         ]),
       );
@@ -204,11 +292,11 @@ describe("Stats Module", () => {
 
     it("should getByProviderId() return filtered Collection of ProposalInfo", async () => {
       const tests = new Proposals();
-      tests.add({ id: "id", providerId: "providerId" });
-      tests.add({ id: "id2", providerId: "providerId2" });
-      tests.add({ id: "id3", providerId: "providerId" });
-      expect(tests.getByProviderId("providerId")).toBeInstanceOf(Collection);
-      expect(tests.getByProviderId("providerId").count()).toEqual(2);
+      tests.add({ id: "id", providerId: testProvider.id });
+      tests.add({ id: "id2", providerId: testProvider2.id });
+      tests.add({ id: "id3", providerId: testProvider.id });
+      expect(tests.getByProviderId(testProvider.id)).toBeInstanceOf(Collection);
+      expect(tests.getByProviderId(testProvider.id).count()).toEqual(2);
     });
   });
   describe("Providers", () => {

@@ -89,8 +89,7 @@ export class TaskService {
           id: task.id,
           agreementId: agreement.id,
           activityId: activity.id,
-          providerId: agreement.provider.id,
-          providerName: agreement.provider.name,
+          provider: agreement.provider,
         }),
       );
 
@@ -135,8 +134,7 @@ export class TaskService {
             id: task.id,
             activityId: activity?.id,
             agreementId: agreement.id,
-            providerId: agreement.provider.id,
-            providerName: agreement.provider.name,
+            provider: agreement.provider,
             retriesCount: task.getRetriesCount(),
             reason,
           }),
@@ -150,8 +148,7 @@ export class TaskService {
             id: task.id,
             agreementId: agreement.id,
             activityId: activity?.id,
-            providerId: agreement.provider.id,
-            providerName: agreement.provider.name,
+            provider: agreement.provider,
             reason,
           }),
         );

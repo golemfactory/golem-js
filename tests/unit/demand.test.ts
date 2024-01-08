@@ -1,8 +1,7 @@
 import { setExpectedProposals } from "../mock/rest/market";
 import { Demand, Proposal, DEMAND_EVENT_TYPE, DemandEvent } from "../../src/market";
-import { allocationMock, packageMock, LoggerMock } from "../mock";
+import { allocationMock, packageMock, LoggerMock, YagnaMock } from "../mock";
 import { proposalsInitial } from "../mock/fixtures";
-import { YagnaMock } from "../mock/rest/yagna";
 
 const subnetTag = "testnet";
 const logger = new LoggerMock();

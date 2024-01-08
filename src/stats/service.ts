@@ -59,7 +59,7 @@ export class StatsService {
     return this.agreements
       .getAll()
       .map((agreement) => {
-        const provider = this.providers.getById(agreement.providerId);
+        const provider = this.providers.getById(agreement.provider.id);
         const tasks = this.tasks.getByAgreementId(agreement.id);
         const invoices = this.invoices.getByAgreementId(agreement.id);
         const payments = this.payments.getByAgreementId(agreement.id);
@@ -141,7 +141,7 @@ export class StatsService {
       agreements: this.agreements
         .getAll()
         .map((agreement) => {
-          const provider = this.providers.getById(agreement.providerId);
+          const provider = this.providers.getById(agreement.provider.id);
           const tasks = this.tasks.getByAgreementId(agreement.id);
           const invoices = this.invoices.getByAgreementId(agreement.id);
           const payments = this.payments.getByAgreementId(agreement.id);
@@ -185,30 +185,30 @@ export class StatsService {
     } else if (event instanceof Events.AgreementCreated) {
       this.agreements.add({
         id: event.detail.id,
-        providerId: event.detail.providerId,
+        provider: event.detail.provider,
         proposalId: event.detail.proposalId,
       });
-      this.providers.add({ id: event.detail.providerId, providerName: event.detail.providerName });
+      this.providers.add(event.detail.provider);
     } else if (event instanceof Events.AgreementConfirmed) {
       this.agreements.confirm(event.detail.id);
     } else if (event instanceof Events.AgreementRejected) {
       this.agreements.reject(event.detail.id);
     } else if (event instanceof Events.ProposalReceived) {
-      this.proposals.add({ id: event.detail.id, providerId: event.detail.providerId });
-      this.providers.add({ id: event.detail.providerId });
+      this.proposals.add({ id: event.detail.id, providerId: event.detail.provider.id });
+      this.providers.add({ id: event.detail.provider.id });
     } else if (event instanceof Events.InvoiceReceived) {
       this.invoices.add({
         id: event.detail.id,
-        providerId: event.detail.providerId,
+        provider: event.detail.provider,
         agreementId: event.detail.agreementId,
         amount: event.detail.amount,
       });
     } else if (event instanceof Events.PaymentAccepted) {
       this.payments.add({
         id: event.detail.id,
-        providerId: event.detail.providerId,
         agreementId: event.detail.agreementId,
         amount: event.detail.amount,
+        provider: event.detail.provider,
       });
     }
   }

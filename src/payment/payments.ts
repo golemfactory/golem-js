@@ -72,7 +72,14 @@ export class Payments extends EventTarget {
           if (!invoice) continue;
           this.dispatchEvent(new InvoiceEvent(PAYMENT_EVENT_TYPE, invoice));
           this.lastInvoiceFetchingTime = event.eventDate;
-          this.options.eventTarget?.dispatchEvent(new Events.InvoiceReceived(invoice));
+          this.options.eventTarget?.dispatchEvent(
+            new Events.InvoiceReceived({
+              id: invoice.id,
+              agreementId: invoice.agreementId,
+              amount: invoice.amount,
+              provider: invoice.provider,
+            }),
+          );
           this.logger?.debug(`New Invoice received for agreement ${invoice.agreementId}. Amount: ${invoice.amount}`);
         }
       } catch (error) {
@@ -115,6 +122,7 @@ export class Payments extends EventTarget {
               agreementId: debitNote.agreementId,
               activityId: debitNote.activityId,
               amount: debitNote.totalAmountDue,
+              provider: debitNote.provider,
             }),
           );
           this.logger?.debug(

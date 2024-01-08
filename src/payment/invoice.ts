@@ -4,19 +4,20 @@ import { Events } from "../events";
 import { Rejection } from "./rejection";
 import { YagnaApi } from "../utils";
 import { GolemError } from "../error/golem-error";
+import { ProviderInfo } from "../agreement";
+import { ProposalProperties } from "../market/proposal";
 
 export type InvoiceOptions = BasePaymentOptions;
 
 export interface InvoiceDTO {
   id: string;
-  providerId: string;
   timestamp: string;
   activityIds?: string[];
   agreementId: string;
   paymentDueDate?: string;
   status: string;
-  payeeAddr: string;
-  payerAddr: string;
+  requestorWalletAddress: string;
+  provider: ProviderInfo;
   paymentPlatform: string;
   amount: number;
 }
@@ -40,38 +41,33 @@ export interface BaseModel {
  */
 export abstract class BaseNote<ModelType extends BaseModel> {
   public abstract readonly id: string;
-  public readonly providerId: string;
   public readonly recipientId: string;
   public readonly payeeAddr: string;
-  public readonly payerAddr: string;
+  public readonly requestorWalletAddress: string;
   public readonly paymentPlatform: string;
   public readonly agreementId: string;
   public readonly paymentDueDate?: string;
   protected status: InvoiceStatus;
 
   protected constructor(
-    model: ModelType,
+    protected model: ModelType,
+    public readonly provider: ProviderInfo,
     protected options: InvoiceConfig,
   ) {
-    this.providerId = model.issuerId;
     this.recipientId = model.recipientId;
     this.payeeAddr = model.payeeAddr;
-    this.payerAddr = model.payerAddr;
+    this.requestorWalletAddress = model.payerAddr;
     this.paymentPlatform = model.paymentPlatform;
     this.agreementId = model.agreementId;
     this.paymentDueDate = model.paymentDueDate;
     this.status = model.status;
   }
-
   protected async getStatus(): Promise<InvoiceStatus> {
     await this.refreshStatus();
-    return this.status;
+    return this.model.status;
   }
-
-  protected abstract accept(totalAmountAccepted: string, allocationId: string): Promise<void>;
-
+  protected abstract accept(totalAmountAccepted: number, allocationId: string): Promise<void>;
   protected abstract reject(rejection: Rejection): Promise<void>;
-
   protected abstract refreshStatus(): Promise<void>;
 }
 
@@ -85,7 +81,7 @@ export class Invoice extends BaseNote<Model> {
   /** Activities IDs covered by this Invoice */
   public readonly activityIds?: string[];
   /** Amount in the invoice */
-  public readonly amount: string;
+  public readonly amount: number;
   /** Invoice creation timestamp */
   public readonly timestamp: string;
   /** Recipient ID */
@@ -101,25 +97,33 @@ export class Invoice extends BaseNote<Model> {
   static async create(invoiceId: string, yagnaApi: YagnaApi, options?: InvoiceOptions): Promise<Invoice> {
     const config = new InvoiceConfig(options);
     const { data: model } = await yagnaApi.payment.getInvoice(invoiceId);
-    return new Invoice(model, yagnaApi, config);
+    const { data: agreement } = await yagnaApi.market.getAgreement(model.agreementId);
+    const providerInfo = {
+      id: model.issuerId,
+      walletAddress: model.payeeAddr,
+      name: (agreement.offer.properties as ProposalProperties)["golem.node.id.name"],
+    };
+    return new Invoice(model, providerInfo, yagnaApi, config);
   }
 
   /**
    * @param model
+   * @param providerInfo
    * @param yagnaApi
    * @param options
    * @protected
    * @hidden
    */
   protected constructor(
-    model: Model,
+    protected model: Model,
+    providerInfo: ProviderInfo,
     protected yagnaApi: YagnaApi,
     protected options: InvoiceConfig,
   ) {
-    super(model, options);
+    super(model, providerInfo, options);
     this.id = model.invoiceId;
     this.activityIds = model.activityIds;
-    this.amount = model.amount;
+    this.amount = Number(model.amount);
     this.timestamp = model.timestamp;
     this.recipientId = model.recipientId;
   }
@@ -127,16 +131,15 @@ export class Invoice extends BaseNote<Model> {
   get dto(): InvoiceDTO {
     return {
       id: this.id,
-      providerId: this.providerId,
       timestamp: this.timestamp,
       activityIds: this.activityIds,
       agreementId: this.agreementId,
       paymentDueDate: this.paymentDueDate,
       status: this.status,
-      payeeAddr: this.payeeAddr,
-      payerAddr: this.payerAddr,
+      requestorWalletAddress: this.requestorWalletAddress,
+      provider: this.provider,
       paymentPlatform: this.paymentPlatform,
-      amount: Number(this.amount),
+      amount: this.amount,
     };
   }
 
@@ -156,9 +159,12 @@ export class Invoice extends BaseNote<Model> {
    * @param totalAmountAccepted
    * @param allocationId
    */
-  async accept(totalAmountAccepted: string, allocationId: string) {
+  async accept(totalAmountAccepted: number, allocationId: string) {
     try {
-      await this.yagnaApi.payment.acceptInvoice(this.id, { totalAmountAccepted, allocationId });
+      await this.yagnaApi.payment.acceptInvoice(this.id, {
+        totalAmountAccepted: `${totalAmountAccepted}`,
+        allocationId,
+      });
     } catch (e) {
       const reason = e?.response?.data?.message || e;
       this.options.eventTarget?.dispatchEvent(
@@ -166,7 +172,14 @@ export class Invoice extends BaseNote<Model> {
       );
       throw new GolemError(`Unable to accept invoice ${this.id} ${reason}`);
     }
-    this.options.eventTarget?.dispatchEvent(new Events.PaymentAccepted(this));
+    this.options.eventTarget?.dispatchEvent(
+      new Events.PaymentAccepted({
+        id: this.id,
+        agreementId: this.agreementId,
+        amount: this.amount,
+        provider: this.provider,
+      }),
+    );
   }
 
   /**

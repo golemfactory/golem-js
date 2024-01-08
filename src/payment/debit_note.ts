@@ -5,6 +5,8 @@ import { Events } from "../events";
 import { Rejection } from "./rejection";
 import { YagnaApi } from "../utils";
 import { GolemError } from "../error/golem-error";
+import { ProviderInfo } from "../agreement";
+import { ProposalProperties } from "../market/proposal";
 
 export type InvoiceOptions = BasePaymentOptions;
 
@@ -26,7 +28,7 @@ export class DebitNote extends BaseNote<Model> {
   public readonly previousDebitNoteId?: string;
   public readonly timestamp: string;
   public readonly activityId: string;
-  public readonly totalAmountDue: string;
+  public readonly totalAmountDue: number;
   public readonly usageCounterVector?: object;
 
   /**
@@ -39,27 +41,35 @@ export class DebitNote extends BaseNote<Model> {
   static async create(debitNoteId: string, yagnaApi: YagnaApi, options?: InvoiceOptions): Promise<DebitNote> {
     const config = new InvoiceConfig(options);
     const { data: model } = await yagnaApi.payment.getDebitNote(debitNoteId);
-    return new DebitNote(model, yagnaApi, config);
+    const { data: agreement } = await yagnaApi.market.getAgreement(model.agreementId);
+    const providerInfo = {
+      id: model.issuerId,
+      walletAddress: model.payeeAddr,
+      name: (agreement.offer.properties as ProposalProperties)["golem.node.id.name"],
+    };
+    return new DebitNote(model, providerInfo, yagnaApi, config);
   }
 
   /**
    *
    * @param model
+   * @param providerInfo
    * @param yagnaApi
    * @param options
    * @protected
    * @hidden
    */
   protected constructor(
-    model: Model,
+    protected model: Model,
+    providerInfo: ProviderInfo,
     protected yagnaApi: YagnaApi,
     protected options: InvoiceConfig,
   ) {
-    super(model, options);
+    super(model, providerInfo, options);
     this.id = model.debitNoteId;
     this.timestamp = model.timestamp;
     this.activityId = model.activityId;
-    this.totalAmountDue = model.totalAmountDue;
+    this.totalAmountDue = Number(model.totalAmountDue);
     this.usageCounterVector = model.usageCounterVector;
   }
 
@@ -69,7 +79,7 @@ export class DebitNote extends BaseNote<Model> {
       timestamp: this.timestamp,
       activityId: this.activityId,
       agreementId: this.agreementId,
-      totalAmountDue: Number(this.totalAmountDue),
+      totalAmountDue: this.totalAmountDue,
       usageCounterVector: this.usageCounterVector,
     };
   }
@@ -80,9 +90,12 @@ export class DebitNote extends BaseNote<Model> {
    * @param totalAmountAccepted
    * @param allocationId
    */
-  async accept(totalAmountAccepted: string, allocationId: string) {
+  async accept(totalAmountAccepted: number, allocationId: string) {
     try {
-      await this.yagnaApi.payment.acceptDebitNote(this.id, { totalAmountAccepted, allocationId });
+      await this.yagnaApi.payment.acceptDebitNote(this.id, {
+        totalAmountAccepted: `${totalAmountAccepted}`,
+        allocationId,
+      });
     } catch (e) {
       const reason = e?.response?.data?.message || e;
       this.options.eventTarget?.dispatchEvent(
@@ -90,7 +103,14 @@ export class DebitNote extends BaseNote<Model> {
       );
       throw new GolemError(`Unable to accept debit note ${this.id} ${e?.response?.data?.message || e}`);
     }
-    this.options.eventTarget?.dispatchEvent(new Events.DebitNoteAccepted({ ...this, amount: totalAmountAccepted }));
+    this.options.eventTarget?.dispatchEvent(
+      new Events.DebitNoteAccepted({
+        id: this.id,
+        agreementId: this.agreementId,
+        amount: totalAmountAccepted,
+        provider: this.provider,
+      }),
+    );
   }
 
   public async getStatus() {
@@ -118,6 +138,6 @@ export class DebitNote extends BaseNote<Model> {
 
   protected async refreshStatus() {
     const { data: model } = await this.yagnaApi.payment.getDebitNote(this.id);
-    this.status = model.status;
+    this.model = model;
   }
 }

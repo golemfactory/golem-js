@@ -7,7 +7,7 @@ import { YagnaMock } from "../rest/yagna";
 
 const proposals: Proposal[] = [];
 const invalidProviderIds: string[] = [];
-const provider = { id: "test_provider_id", name: "Test Provider" };
+const provider = { id: "test_provider_id", name: "Test Provider", walletAddress: "test_wallet_address" };
 const yagnaApi = new YagnaMock().getApi();
 // @ts-ignore
 export const agreementPoolServiceMock: AgreementPoolService = {

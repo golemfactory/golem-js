@@ -1,4 +1,5 @@
 import { AbstractAggregator } from "./abstract_aggregator";
+import { ProviderInfo } from "../agreement";
 
 export enum AgreementStatusEnum {
   Pending = "pending",
@@ -8,15 +9,15 @@ export enum AgreementStatusEnum {
 
 export interface AgreementInfo {
   id: string;
-  providerId: string;
   proposalId: string;
+  provider: ProviderInfo;
   status: AgreementStatusEnum;
 }
 
 interface Payload {
   id: string;
-  providerId: string;
   proposalId: string;
+  provider: ProviderInfo;
 }
 
 export class Agreements extends AbstractAggregator<Payload, AgreementInfo> {
@@ -30,7 +31,7 @@ export class Agreements extends AbstractAggregator<Payload, AgreementInfo> {
     this.updateItemInfo(id, { status: AgreementStatusEnum.Rejected });
   }
   getByProviderId(providerId: string) {
-    return this.getByField("providerId", providerId);
+    return this.getByField("provider.id", providerId);
   }
   getByProposalId(proposalId: string) {
     return this.getByField("proposalId", proposalId).first();

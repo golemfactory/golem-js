@@ -1,18 +1,15 @@
-import { Logger } from "../utils";
+import { Logger, YagnaApi } from "../utils";
 import { Agreement as AgreementModel } from "ya-ts-client/dist/ya-market/src/models";
 import { YagnaOptions } from "../executor";
 import { AgreementFactory } from "./factory";
 import { AgreementConfig } from "./config";
 import { Events } from "../events";
-import { YagnaApi } from "../utils/yagna/yagna";
 import { GolemError } from "../error/golem-error";
 
-/**
- * @hidden
- */
 export interface ProviderInfo {
   name: string;
   id: string;
+  walletAddress: string;
 }
 
 /**
@@ -69,7 +66,7 @@ export class Agreement {
 
   /**
    * Create agreement for given proposal ID
-   * @param proposalId - proposal ID
+   * @param proposal
    * @param yagnaApi
    * @param agreementOptions - {@link AgreementOptions}
    * @return Agreement
@@ -110,13 +107,11 @@ export class Agreement {
       await this.yagnaApi.market.confirmAgreement(this.id, appSessionId);
       await this.yagnaApi.market.waitForApproval(this.id, this.options.agreementWaitingForApprovalTimeout);
       this.logger?.debug(`Agreement ${this.id} approved`);
-      this.options.eventTarget?.dispatchEvent(
-        new Events.AgreementConfirmed({ id: this.id, providerId: this.provider.id }),
-      );
+      this.options.eventTarget?.dispatchEvent(new Events.AgreementConfirmed({ id: this.id, provider: this.provider }));
     } catch (error) {
       this.logger?.debug(`Unable to confirm agreement with provider ${this.provider.name}. ${error}`);
       this.options.eventTarget?.dispatchEvent(
-        new Events.AgreementRejected({ id: this.id, providerId: this.provider.id, reason: error.toString() }),
+        new Events.AgreementRejected({ id: this.id, provider: this.provider, reason: error.toString() }),
       );
       throw error;
     }
@@ -146,7 +141,7 @@ export class Agreement {
           timeout: this.options.agreementRequestTimeout,
         });
       this.options.eventTarget?.dispatchEvent(
-        new Events.AgreementTerminated({ id: this.id, providerId: this.provider.id, reason: reason.message }),
+        new Events.AgreementTerminated({ id: this.id, provider: this.provider, reason: reason.message }),
       );
       this.logger?.debug(`Agreement ${this.id} terminated`);
     } catch (error) {
