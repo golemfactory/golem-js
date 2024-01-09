@@ -82,12 +82,12 @@ describe("Task Executor", () => {
         .mockImplementation(() => ({ confirmed: 0, initial: 0, rejected: 0 }));
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const handleErrorSpy = jest.spyOn(executor as any, "handleCriticalError");
-      const loggerErrorSpy = jest.spyOn(logger, "error");
+      const consoleErrorSpy = jest.spyOn(globalThis.console, "error").mockImplementation(() => {});
 
       await sleep(10, true);
 
       expect(handleErrorSpy).not.toHaveBeenCalled();
-      expect(loggerErrorSpy).toHaveBeenCalledWith(
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
         "Could not start any work on Golem. Processed 0 initial proposals from yagna, filters accepted 0. Check your demand if it's not too restrictive or restart yagna.",
       );
       await executor.shutdown();
@@ -199,12 +199,12 @@ describe("Task Executor", () => {
         .mockImplementation(() => ({ confirmed: 0, initial: 0, rejected: 0 }));
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const handleErrorSpy = jest.spyOn(executor as any, "handleCriticalError");
-      const loggerErrorSpy = jest.spyOn(logger, "error");
+      const consoleErrorSpy = jest.spyOn(globalThis.console, "error").mockImplementation(() => {});
 
       await sleep(10, true);
 
       expect(handleErrorSpy).not.toHaveBeenCalled();
-      expect(loggerErrorSpy).toHaveBeenCalledWith(
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
         "Could not start any work on Golem. Processed 0 initial proposals from yagna, filters accepted 0. Check your demand if it's not too restrictive or restart yagna.",
       );
       await executor.shutdown();

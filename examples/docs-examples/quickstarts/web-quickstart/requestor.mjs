@@ -15,11 +15,9 @@ function appendLog(msg, level = "info") {
 }
 
 const logger = {
-  log: (msg) => appendLog(msg),
-  warn: (msg) => appendLog(msg, "warn"),
-  debug: (msg) => appendLog(msg, "debug"),
   error: (msg) => appendLog(msg, "error"),
   info: (msg) => appendLog(msg, "info"),
+  child: () => logger,
 };
 
 async function run() {
