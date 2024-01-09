@@ -27,7 +27,7 @@ describe("Task Executor", function () {
     expect(logger.logs).toContain("Proposal has been responded");
     expect(logger.logs).toContain("New proposal added to pool");
     expect(logger.logs).toMatch(/Agreement confirmed by provider/);
-    expect(logger.logs).toMatch(/Activity .* created/);
+    expect(logger.logs).toMatch(/Activity created/);
   });
 
   it("should run simple task and get error for invalid command", async () => {
@@ -57,7 +57,7 @@ describe("Task Executor", function () {
     expect(logger.logs).toContain("Proposal has been responded");
     expect(logger.logs).toContain("New proposal added to pool");
     expect(logger.logs).toMatch(/Agreement confirmed by provider/);
-    expect(logger.logs).toMatch(/Activity .* created/);
+    expect(logger.logs).toMatch(/Activity created/);
   });
 
   it("should run simple tasks by map function", async () => {
@@ -98,7 +98,7 @@ describe("Task Executor", function () {
         executor.shutdown();
         expect(e).toBeUndefined();
       });
-    await logger.expectToInclude("Task computed", { taskId: 1, providerName: expect.anything() }, 5000);
+    await logger.expectToInclude("Task computed", { taskId: "1", providerName: expect.anything() }, 5000);
     expect(outputs[0]).toEqual("Hello Golem");
     expect(outputs[1]).toEqual("Hello World");
     expect(outputs[2]).toEqual("OK");
@@ -190,7 +190,7 @@ describe("Task Executor", function () {
     expect(logger.logs).toContain("Proposal has been responded");
     expect(logger.logs).toContain("New proposal added to pool");
     expect(logger.logs).toMatch(/Agreement confirmed by provider/);
-    expect(logger.logs).toMatch(/Activity .* created/);
+    expect(logger.logs).toMatch(/Activity created/);
   });
 
   it("should not retry the task if maxTaskRetries is zero", async () => {
