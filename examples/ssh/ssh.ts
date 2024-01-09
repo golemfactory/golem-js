@@ -2,7 +2,7 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
 import { program } from "commander";
 import crypto from "crypto";
 
-async function main(subnetTag, driver, network, count = 2, sessionTimeout = 100, debug) {
+async function main(subnetTag, driver, network, count = 2, sessionTimeout = 100) {
   const executor = await TaskExecutor.create({
     package: "golem/examples-ssh:latest",
     capabilities: ["vpn"],
@@ -10,7 +10,6 @@ async function main(subnetTag, driver, network, count = 2, sessionTimeout = 100,
     maxParallelTasks: count,
     subnetTag,
     payment: { driver, network },
-    logLevel: debug ? "debug" : "info",
   });
   const appKey = process.env["YAGNA_APPKEY"];
   const runningTasks: Promise<void>[] = [];
@@ -57,8 +56,7 @@ program
   .option("--payment-driver <paymentDriver>", "payment driver name, for example 'erc20'")
   .option("--payment-network <paymentNetwork>", "network name, for example 'goerli'")
   .option("--task-count, --count <count>", "task count", (val) => parseInt(val))
-  .option("-t, --timeout <timeout>", "ssh session timeout (in seconds)", (val) => parseInt(val))
-  .option("-d, --debug", "output extra debugging");
+  .option("-t, --timeout <timeout>", "ssh session timeout (in seconds)", (val) => parseInt(val));
 program.parse();
 const options = program.opts();
-main(options.subnetTag, options.paymentDriver, options.paymentNetwork, options.count, options.timeout, options.debug);
+main(options.subnetTag, options.paymentDriver, options.paymentNetwork, options.count, options.timeout);
