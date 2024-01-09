@@ -4,7 +4,7 @@ import { AgreementPoolService } from "../agreement";
 import { Task, TaskOptions, TaskQueue, TaskService, Worker } from "../task";
 import { PaymentOptions, PaymentService } from "../payment";
 import { NetworkService } from "../network";
-import { Logger, LogLevel, runtimeContextChecker, sleep, Yagna } from "../utils";
+import { Logger, runtimeContextChecker, sleep, Yagna } from "../utils";
 import { GftpStorageProvider, NullStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../storage";
 import { ExecutorConfig } from "./config";
 import { Events } from "../events";
@@ -30,8 +30,6 @@ export type ExecutorOptions = {
   subnetTag?: string;
   /** Logger module */
   logger?: Logger;
-  /** Log level: debug, info, warn, log, error */
-  logLevel?: LogLevel | string;
   /** Set to `false` to completely disable logging (even if a logger is provided) */
   enableLogging?: boolean;
   /** Yagna Options */
@@ -112,7 +110,7 @@ export class TaskExecutor {
   private activityReadySetupFunctions: Worker<unknown>[] = [];
   private taskQueue: TaskQueue;
   private storageProvider?: StorageProvider;
-  private logger?: Logger;
+  private logger: Logger;
   private lastTaskIndex = 0;
   private isRunning = true;
   private configOptions: ExecutorOptions;
@@ -182,18 +180,32 @@ export class TaskExecutor {
     this.yagna = new Yagna(this.configOptions.yagnaOptions);
     const yagnaApi = this.yagna.getApi();
     this.taskQueue = new TaskQueue();
-    this.agreementPoolService = new AgreementPoolService(yagnaApi, this.options);
-    this.paymentService = new PaymentService(yagnaApi, this.options);
-    this.marketService = new MarketService(this.agreementPoolService, yagnaApi, this.options);
-    this.networkService = this.options.networkIp ? new NetworkService(yagnaApi, this.options) : undefined;
+    this.agreementPoolService = new AgreementPoolService(yagnaApi, {
+      ...this.options,
+      logger: this.logger.child("AgreementPoolService"),
+    });
+    this.paymentService = new PaymentService(yagnaApi, {
+      ...this.options,
+      logger: this.logger.child("PaymentService"),
+    });
+    this.marketService = new MarketService(this.agreementPoolService, yagnaApi, {
+      ...this.options,
+      logger: this.logger.child("MarketService"),
+    });
+    this.networkService = this.options.networkIp
+      ? new NetworkService(yagnaApi, { ...this.options, logger: this.logger.child("NetworkService") })
+      : undefined;
 
     // Initialize storage provider.
     if (this.configOptions.storageProvider) {
       this.storageProvider = this.configOptions.storageProvider;
     } else if (runtimeContextChecker.isNode) {
-      this.storageProvider = new GftpStorageProvider(this.logger);
+      this.storageProvider = new GftpStorageProvider(this.logger.child("GftpStorageProvider"));
     } else if (runtimeContextChecker.isBrowser) {
-      this.storageProvider = new WebSocketBrowserStorageProvider(yagnaApi, this.options);
+      this.storageProvider = new WebSocketBrowserStorageProvider(yagnaApi, {
+        ...this.options,
+        logger: this.logger.child("WebSocketBrowserStorageProvider"),
+      });
     } else {
       this.storageProvider = new NullStorageProvider();
     }
@@ -204,9 +216,9 @@ export class TaskExecutor {
       this.agreementPoolService,
       this.paymentService,
       this.networkService,
-      { ...this.options, storageProvider: this.storageProvider },
+      { ...this.options, storageProvider: this.storageProvider, logger: this.logger.child("TaskService") },
     );
-    this.statsService = new StatsService(this.options);
+    this.statsService = new StatsService({ ...this.options, logger: this.logger.child("StatsService") });
   }
 
   /**
@@ -218,7 +230,7 @@ export class TaskExecutor {
     try {
       await this.yagna.connect();
     } catch (error) {
-      this.logger?.error(error);
+      this.logger.error("Initialization failed", error);
       throw error;
     }
     const manifest = this.options.packageOptions.manifest;
@@ -238,12 +250,12 @@ export class TaskExecutor {
         }
       } else {
         const error = new GolemError("No package or manifest provided");
-        this.logger?.error(error);
+        this.logger.error("No package or manifest provided", error);
         throw error;
       }
     }
 
-    this.logger?.debug("Initializing task executor services...");
+    this.logger.info("Initializing task executor services...");
     const allocations = await this.paymentService.createAllocation();
     await Promise.all([
       this.marketService.run(taskPackage, allocations).then(() => this.setStartupTimeout()),
@@ -256,9 +268,11 @@ export class TaskExecutor {
     this.taskService.run().catch((e) => this.handleCriticalError(e));
     if (runtimeContextChecker.isNode) this.installSignalHandlers();
     this.options.eventTarget.dispatchEvent(new Events.ComputationStarted());
-    this.logger?.info(
-      `Task Executor has started using subnet: ${this.options.subnetTag}, network: ${this.paymentService.config.payment.network}, driver: ${this.paymentService.config.payment.driver}`,
-    );
+    this.logger.info(`Task Executor has started`, {
+      subnet: this.options.subnetTag,
+      network: this.paymentService.config.payment.network,
+      driver: this.paymentService.config.payment.driver,
+    });
     this.events.emit("ready");
   }
 
@@ -310,7 +324,7 @@ export class TaskExecutor {
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFinished());
     this.printStats();
     await this.statsService.end();
-    this.logger?.info("Task Executor has shut down");
+    this.logger.info("Task Executor has shut down");
     this.events.emit("end");
   }
 
@@ -423,7 +437,7 @@ export class TaskExecutor {
 
   private handleCriticalError(e: Error) {
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFailed({ reason: e.toString() }));
-    this.logger?.error(e.toString());
+    this.logger.error("Critical error", e);
   }
 
   private installSignalHandlers() {
@@ -445,11 +459,13 @@ export class TaskExecutor {
       if (this.isCanceled) return;
       if (runtimeContextChecker.isNode) this.removeSignalHandlers();
       const message = `Executor has interrupted by the user. Reason: ${reason}.`;
-      this.logger?.warn(`${message}. Stopping all tasks...`);
+      this.logger.info(`${message}. Stopping all tasks...`, {
+        tasksInProgress: this.taskQueue.size,
+      });
       this.isCanceled = true;
       await this.shutdown();
     } catch (error) {
-      this.logger?.error(`Error while cancelling the executor. ${error}`);
+      this.logger.error(`Error while cancelling the executor`, error);
     }
   }
 
@@ -458,14 +474,24 @@ export class TaskExecutor {
     const costsSummary = this.statsService.getAllCostsSummary();
     const duration = this.statsService.getComputationTime();
     const providersCount = new Set(costsSummary.map((x) => x["Provider Name"])).size;
-    this.logger?.info(`Computation finished in ${duration}`);
-    this.logger?.info(`Negotiated ${costsSummary.length} agreements with ${providersCount} providers`);
-    costsSummary.forEach((cost) => {
-      this.logger?.info(
-        `Agreement ${cost["Agreement"]} with ${cost["Provider Name"]} computed ${cost["Task Computed"]} task(s) for ${cost["Cost"]} GLM (${cost["Payment Status"]})`,
-      );
+    this.logger.info(`Computation finished in ${duration}`);
+    this.logger.info(`Negotiation summary:`, {
+      agreements: costsSummary.length,
+      providers: providersCount,
     });
-    this.logger?.info(`Total Cost: ${costs.total} Total Paid: ${costs.paid}`);
+    costsSummary.forEach((cost, index) => {
+      this.logger.info(`Agreement ${index + 1}:`, {
+        agreement: cost["Agreement"],
+        provider: cost["Provider Name"],
+        tasks: cost["Task Computed"],
+        cost: cost["Cost"],
+        paymentStatus: cost["Payment Status"],
+      });
+    });
+    this.logger.info(`Cost summary:`, {
+      totalCost: costs.total,
+      totalPaid: costs.paid,
+    });
   }
 
   /**
@@ -487,7 +513,7 @@ export class TaskExecutor {
         if (this.options.exitOnNoProposals) {
           this.handleCriticalError(new GolemError(errorMessage));
         } else {
-          this.logger?.warn(errorMessage);
+          console.error(errorMessage);
         }
       }
     }, this.options.startupTimeout);

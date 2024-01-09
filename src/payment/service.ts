@@ -38,7 +38,7 @@ interface AgreementPayable {
 export class PaymentService {
   private isRunning = false;
   public readonly config: PaymentConfig;
-  private logger?: Logger;
+  private logger: Logger;
   private allocation?: Allocation;
   private agreementsToPay: Map<string, AgreementPayable> = new Map();
   private agreementsDebitNotes: Set<string> = new Set();
@@ -56,12 +56,12 @@ export class PaymentService {
     this.isRunning = true;
     this.payments = await Payments.create(this.yagnaApi, this.config.options);
     this.payments.addEventListener(PAYMENT_EVENT_TYPE, this.subscribePayments.bind(this));
-    this.logger?.debug("Payment Service has started");
+    this.logger.info("Payment Service has started");
   }
 
   async end() {
     if (this.agreementsToPay.size) {
-      this.logger?.info(`Waiting for all invoices to be paid. Unpaid agreements: ${this.agreementsToPay.size}`);
+      this.logger.info(`Waiting for all invoices to be paid`, { unpaidAgreements: this.agreementsToPay.size });
       let timeout = false;
       const timeoutId = setTimeout(() => (timeout = true), this.config.paymentTimeout);
       let i = 0;
@@ -70,18 +70,20 @@ export class PaymentService {
         await sleep(2);
         i++;
         if (i > 10) {
-          this.logger?.info(`Waiting for ${this.agreementsToPay.size} invoice to be paid...`);
+          this.logger.info(`Waiting for ${this.agreementsToPay.size} invoice to be paid...`);
           i = 0;
         }
       }
       clearTimeout(timeoutId);
     }
     this.isRunning = false;
-    await this.payments?.unsubscribe().catch((error) => this.logger?.warn(error));
+    await this.payments
+      ?.unsubscribe()
+      .catch((error) => this.logger.error("Unable to unsubscribe from payments", { error }));
     this.payments?.removeEventListener(PAYMENT_EVENT_TYPE, this.subscribePayments.bind(this));
-    await this.allocation?.release().catch((error) => this.logger?.warn(error));
-    this.logger?.info("Allocation has been released");
-    this.logger?.debug("Payment service has been stopped");
+    await this.allocation?.release().catch((error) => this.logger.error("Unable to release allocation", { error }));
+    this.logger.info("Allocation has been released");
+    this.logger.info("Payment service has been stopped");
   }
 
   /**
@@ -116,12 +118,15 @@ export class PaymentService {
     try {
       const agreement = this.agreementsToPay.get(invoice.agreementId);
       if (!agreement) {
-        this.logger?.debug(`Agreement ${invoice.agreementId} has not been accepted to payment`);
+        this.logger.info(`Agreement has not been accepted to payment`, { agreementId: invoice.agreementId });
         return;
       }
       if (await this.config.invoiceFilter(invoice.dto)) {
         await invoice.accept(invoice.amount, this.allocation!.id);
-        this.logger?.info(`Invoice accepted from provider ${agreement.provider.name}`);
+        this.logger.info(`Invoice accepted from provider`, {
+          providerName: agreement.provider.name,
+          agreementId: invoice.agreementId,
+        });
       } else {
         const reason = {
           rejectionReason: RejectionReason.IncorrectAmount,
@@ -129,12 +134,13 @@ export class PaymentService {
           message: "Invoice rejected by Invoice Filter",
         };
         await invoice.reject(reason);
-        this.logger?.warn(
-          `Invoice has been rejected for provider ${agreement.provider.name}. Reason: ${reason.message}`,
-        );
+        this.logger.error(`Invoice has been rejected`, {
+          providerName: agreement.provider.name,
+          reason,
+        });
       }
     } catch (error) {
-      this.logger?.error(`Invoice failed from provider ${invoice.providerId}. ${error}`);
+      this.logger.error(`Invoice failed`, { providerId: invoice.providerId, error });
     } finally {
       // Until we implement a re-acceptance mechanism for unsuccessful acceptances,
       // we no longer have to wait for the invoice during an unsuccessful attempt.
@@ -155,16 +161,17 @@ export class PaymentService {
             "DebitNote rejected because the agreement is already covered with a final invoice that should be paid instead of the debit note",
         };
         await debitNote.reject(reason);
-        this.logger?.warn(
-          `DebitNote has been rejected for agreement ${debitNote.agreementId}. Reason: ${reason.message}`,
-        );
+        this.logger.error(`DebitNote has been rejected`, {
+          agreementId: debitNote.agreementId,
+          reason,
+        });
         return;
       }
 
       if (await this.config.debitNoteFilter(debitNote.dto)) {
         await debitNote.accept(debitNote.totalAmountDue, this.allocation!.id);
         this.paidDebitNotes.add(debitNote.id);
-        this.logger?.debug(`Debit Note accepted for agreement ${debitNote.agreementId}`);
+        this.logger.info(`Debit Note accepted`, { agreementId: debitNote.agreementId });
       } else {
         const reason = {
           rejectionReason: RejectionReason.IncorrectAmount,
@@ -172,12 +179,13 @@ export class PaymentService {
           message: "DebitNote rejected by DebitNote Filter",
         };
         await debitNote.reject(reason);
-        this.logger?.warn(
-          `DebitNote has been rejected for agreement ${debitNote.agreementId}. Reason: ${reason.message}`,
-        );
+        this.logger.error(`DebitNote has been rejected`, {
+          agreementId: debitNote.agreementId,
+          reason,
+        });
       }
     } catch (error) {
-      this.logger?.debug(`Payment Debit Note failed for agreement ${debitNote.agreementId} ${error}`);
+      this.logger.error(`Payment Debit Note failed`, { agreementId: debitNote.agreementId, error });
     }
   }
 

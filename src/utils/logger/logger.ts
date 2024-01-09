@@ -1,16 +1,7 @@
-export enum LogLevel {
-  Debug = "debug",
-  Info = "info",
-  Warn = "warn",
-  Error = "error",
-  Log = "log",
-}
 export interface Logger {
-  level: string;
-  setLevel(level: string): void;
-  log(msg: unknown): void;
-  info(msg: unknown): void;
-  warn(msg: unknown): void;
-  error(msg: unknown): void;
-  debug(msg: unknown): void;
+  child(namespace: string): Logger;
+  info(msg: string): void;
+  info(msg: string, ctx: Record<string, unknown> | Error): void;
+  error(msg: string): void;
+  error(msg: string, ctx: Record<string, unknown> | Error): void;
 }

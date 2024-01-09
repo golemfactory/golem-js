@@ -88,7 +88,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
           offset: req.payload.offset,
         });
       } else {
-        this.logger.warn(
+        this.logger.error(
           `[WebSocketBrowserStorageProvider] Unsupported message in publishData(): ${
             (req as GsbRequest<void>).component
           }`,
@@ -118,7 +118,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
         const result = this.completeReceive(req.payload.hash, data);
         callback(result);
       } else {
-        this.logger.warn(
+        this.logger.error(
           `[WebSocketBrowserStorageProvider] Unsupported message in receiveData(): ${
             (req as GsbRequest<void>).component
           }`,
@@ -138,7 +138,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
       const serviceId = this.services.get(url);
       if (serviceId) {
         this.deleteService(serviceId).catch((e) =>
-          this.logger.warn(`[WebSocketBrowserStorageProvider] Failed to delete service ${serviceId}: ${e}`),
+          this.logger.error(`[WebSocketBrowserStorageProvider] Failed to delete service ${serviceId}: ${e}`),
         );
       }
       this.services.delete(url);

@@ -23,10 +23,10 @@ describe("Strategies", function () {
       );
       const finalOutputs = (await Promise.all(futureResults)).filter((x) => !!x);
       expect(finalOutputs).toEqual(expect.arrayContaining(data));
-      await logger.expectToInclude(`Proposal rejected by Proposal Filter`, 5000);
-      await logger.expectToInclude(`Task 1 computed by provider provider-1`, 5000);
-      await logger.expectToInclude(`Task 2 computed by provider provider-1`, 5000);
-      await logger.expectToInclude(`Task 3 computed by provider provider-1`, 5000);
+      await logger.expectToMatch(/Proposal rejected by Proposal Filter/, 5000);
+      await logger.expectToInclude(`Task computed`, { providerName: "provider-1", id: 1 }, 5000);
+      await logger.expectToInclude(`Task computed`, { providerName: "provider-1", id: 2 }, 5000);
+      await logger.expectToInclude(`Task computed`, { providerName: "provider-1", id: 3 }, 5000);
       await executor.shutdown();
     });
 
@@ -45,10 +45,10 @@ describe("Strategies", function () {
       );
       const finalOutputs = (await Promise.all(futureResults)).filter((x) => !!x);
       expect(finalOutputs).toEqual(expect.arrayContaining(data));
-      await logger.expectToInclude(`Proposal rejected by Proposal Filter`, 5000);
-      await logger.expectToInclude(`Task 1 computed by provider provider-2`, 5000);
-      await logger.expectToInclude(`Task 2 computed by provider provider-2`, 5000);
-      await logger.expectToInclude(`Task 3 computed by provider provider-2`, 5000);
+      await logger.expectToInclude(`Proposal rejected by Proposal Filter`, expect.anything(), 5000);
+      await logger.expectToInclude(`Task computed`, { providerName: `provider-2`, id: "1" }, 5000);
+      await logger.expectToInclude(`Task computed`, { providerName: `provider-2`, id: "2" }, 5000);
+      await logger.expectToInclude(`Task computed`, { providerName: `provider-2`, id: "3" }, 5000);
       await executor.shutdown();
     });
   });
@@ -70,7 +70,7 @@ describe("Strategies", function () {
 
       expect(finalOutputs).toEqual(expect.arrayContaining(data));
       await executor.shutdown();
-      await logger.expectToInclude(`Reason: Invoice rejected by Invoice Filter`, 100);
+      await logger.expectToInclude(`Reason: Invoice rejected by Invoice Filter`, expect.anything(), 100);
     });
 
     it("should only accept debit notes below 0.00001 GLM", async () => {
@@ -90,7 +90,7 @@ describe("Strategies", function () {
 
       expect(finalOutputs).toEqual(expect.arrayContaining(data));
       await executor.shutdown();
-      await logger.expectToInclude(`DebitNote rejected by DebitNote Filter`, 100);
+      await logger.expectToInclude(`DebitNote rejected by DebitNote Filter`, expect.anything(), 100);
     });
   });
 });

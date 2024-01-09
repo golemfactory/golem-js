@@ -1,5 +1,5 @@
 import { AllocationOptions } from "./allocation";
-import { EnvUtils, Logger } from "../utils";
+import { EnvUtils, Logger, defaultLogger } from "../utils";
 import { YagnaOptions } from "../executor";
 import { DebitNoteFilter, InvoiceFilter, PaymentOptions } from "./service";
 import { InvoiceOptions } from "./invoice";
@@ -34,10 +34,10 @@ export interface BasePaymentOptions {
  */
 abstract class BaseConfig {
   public readonly paymentTimeout: number;
-  public readonly logger?: Logger;
   public readonly eventTarget?: EventTarget;
   public readonly payment: { driver: string; network: string };
   public readonly options?: BasePaymentOptions;
+  public logger: Logger;
 
   constructor(options?: BasePaymentOptions) {
     this.options = options;
@@ -46,7 +46,7 @@ abstract class BaseConfig {
       driver: options?.payment?.driver || DEFAULTS.payment.driver,
       network: options?.payment?.network || EnvUtils.getPaymentNetwork() || DEFAULTS.payment.network,
     };
-    this.logger = options?.logger;
+    this.logger = options?.logger || defaultLogger("golem-js:Payment");
     this.eventTarget = options?.eventTarget;
   }
 }
@@ -85,6 +85,7 @@ export class AllocationConfig extends BaseConfig {
     if (!options || !options?.account) {
       throw new GolemError("Account option is required");
     }
+    this.logger = options?.logger || defaultLogger("golem-js:Allocation");
     this.account = options.account;
     this.budget = options?.budget || DEFAULTS.budget;
     this.payment = {

@@ -6,12 +6,8 @@ export function nullLogger(): Logger {
   };
 
   return {
-    level: "info",
-    debug: nullFunc,
+    child: () => nullLogger(),
     info: nullFunc,
-    log: nullFunc,
-    warn: nullFunc,
     error: nullFunc,
-    setLevel: nullFunc,
   };
 }

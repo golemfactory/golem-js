@@ -29,7 +29,7 @@ describe("Market Service", () => {
     const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, { logger });
     await marketService.run(packageMock, allocationMock);
     setExpectedProposals(proposalsInitial);
-    await logger.expectToInclude("Proposal has been responded", 10);
+    await logger.expectToInclude("Proposal has been responded", { id: expect.anything() }, 10);
     await marketService.end();
   });
 
@@ -37,7 +37,7 @@ describe("Market Service", () => {
     const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, { logger });
     await marketService.run(packageMock, allocationMock);
     setExpectedProposals(proposalsDraft);
-    await logger.expectToInclude("Proposal has been confirmed", 10);
+    await logger.expectToInclude("Proposal has been confirmed and added to agreement pool", expect.anything(), 10);
     const addedProposalsIds = agreementPoolServiceMock["getProposals"]().map((p) => p.id);
     expect(addedProposalsIds).toEqual(expect.arrayContaining(proposalsDraft.map((p) => p.proposal.proposalId)));
     await marketService.end();
@@ -47,7 +47,14 @@ describe("Market Service", () => {
     const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, { logger });
     await marketService.run(packageMock, allocationMock);
     setExpectedProposals([proposalsInitial[6]]);
-    await logger.expectToMatch(/Proposal has been rejected .* Reason: No common payment platform/, 10);
+    await logger.expectToInclude(
+      "Proposal has been rejected",
+      {
+        reason: "No common payment platform",
+        id: expect.anything(),
+      },
+      10,
+    );
     await marketService.end();
   });
 

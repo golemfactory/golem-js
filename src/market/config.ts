@@ -1,5 +1,5 @@
 import { DemandOptions } from "./demand";
-import { EnvUtils, Logger } from "../utils";
+import { EnvUtils, Logger, defaultLogger } from "../utils";
 import { MarketOptions, ProposalFilter } from "./service";
 import { YagnaOptions } from "../executor";
 import { acceptAllProposalFilter } from "./strategy";
@@ -25,14 +25,14 @@ export class DemandConfig {
   public readonly subnetTag: string;
   public readonly maxOfferEvents: number;
   public readonly offerFetchingIntervalSec: number;
-  public readonly logger?: Logger;
+  public readonly logger: Logger;
   public readonly eventTarget?: EventTarget;
   public readonly debitNotesAcceptanceTimeoutSec: number;
   public readonly midAgreementDebitNoteIntervalSec: number;
   public readonly midAgreementPaymentTimeoutSec: number;
 
   constructor(options?: DemandOptions) {
-    this.logger = options?.logger;
+    this.logger = options?.logger || defaultLogger("golem-js:Demand");
     this.eventTarget = options?.eventTarget;
 
     this.subnetTag = options?.subnetTag ?? EnvUtils.getYagnaSubnet() ?? DEFAULTS.subnetTag;

@@ -1,6 +1,6 @@
 import { setExpectedDebitNotes, setExpectedEvents, setExpectedInvoices, clear } from "../mock/rest/payment";
 import { LoggerMock, YagnaMock } from "../mock";
-import { PaymentService, Allocation, PaymentFilters } from "../../src/payment";
+import { PaymentService, Allocation, PaymentFilters, RejectionReason } from "../../src/payment";
 import { agreement } from "../mock/entities/agreement";
 import { debitNotesEvents, debitNotes, invoices, invoiceEvents } from "../mock/fixtures";
 
@@ -41,8 +41,11 @@ describe("Payment Service", () => {
       await paymentService.createAllocation();
       await paymentService.run();
       paymentService.acceptPayments(agreement);
-      // await new Promise((res) => setTimeout(res, 200));
-      await logger.expectToInclude(`Invoice accepted from provider ${agreement.provider.name}`, 100);
+      await logger.expectToInclude(
+        `Invoice accepted from provider`,
+        { providerName: agreement.provider.name, agreementId: "test_agreement_id" },
+        100,
+      );
       await paymentService.end();
     });
 
@@ -62,7 +65,7 @@ describe("Payment Service", () => {
       await paymentService.run();
       await paymentService.acceptPayments(agreement);
       await paymentService.acceptDebitNotes(agreement.id);
-      await logger.expectToInclude(`Debit Note accepted for agreement ${agreement.id}`, 100);
+      await logger.expectToInclude(`Debit Note accepted`, { agreementId: agreement.id }, 100);
       await paymentService.end();
     });
 
@@ -80,7 +83,15 @@ describe("Payment Service", () => {
       await paymentService.acceptPayments(agreement);
       await paymentService.acceptDebitNotes(agreement.id);
       await logger.expectToInclude(
-        `DebitNote has been rejected for agreement ${agreement.id}. Reason: DebitNote rejected by DebitNote Filter`,
+        `DebitNote has been rejected`,
+        {
+          agreementId: agreement.id,
+          reason: {
+            rejectionReason: RejectionReason.IncorrectAmount,
+            totalAmountAccepted: "0",
+            message: "DebitNote rejected by DebitNote Filter",
+          },
+        },
         100,
       );
       await paymentService.end();
@@ -98,7 +109,16 @@ describe("Payment Service", () => {
       await paymentService.run();
       await paymentService.acceptDebitNotes(agreement.id);
       await logger.expectToInclude(
-        `DebitNote has been rejected for agreement ${agreement.id}. Reason: DebitNote rejected because the agreement is already covered with a final invoice that should be paid instead of the debit note`,
+        `DebitNote has been rejected`,
+        {
+          agreementId: agreement.id,
+          reason: {
+            rejectionReason: RejectionReason.NonPayableAgreement,
+            totalAmountAccepted: "0",
+            message:
+              "DebitNote rejected because the agreement is already covered with a final invoice that should be paid instead of the debit note",
+          },
+        },
         100,
       );
       await paymentService.end();
@@ -117,7 +137,15 @@ describe("Payment Service", () => {
       paymentService.acceptPayments(agreement);
       await new Promise((res) => setTimeout(res, 200));
       await logger.expectToInclude(
-        `Invoice has been rejected for provider ${agreement.provider.name}. Reason: Invoice rejected by Invoice Filter`,
+        `Invoice has been rejected`,
+        {
+          providerName: agreement.provider.name,
+          reason: {
+            rejectionReason: RejectionReason.IncorrectAmount,
+            totalAmountAccepted: "0",
+            message: "Invoice rejected by Invoice Filter",
+          },
+        },
         100,
       );
       await paymentService.end();
@@ -136,7 +164,15 @@ describe("Payment Service", () => {
       await paymentService.acceptPayments(agreement);
       await paymentService.acceptDebitNotes(agreement.id);
       await logger.expectToInclude(
-        `DebitNote has been rejected for agreement ${agreement.id}. Reason: DebitNote rejected by DebitNote Filter`,
+        `DebitNote has been rejected`,
+        {
+          agreementId: agreement.id,
+          reason: {
+            rejectionReason: RejectionReason.IncorrectAmount,
+            totalAmountAccepted: "0",
+            message: "DebitNote rejected by DebitNote Filter",
+          },
+        },
         100,
       );
       await paymentService.end();
@@ -154,7 +190,15 @@ describe("Payment Service", () => {
       paymentService.acceptPayments(agreement);
       await new Promise((res) => setTimeout(res, 200));
       await logger.expectToInclude(
-        `Invoice has been rejected for provider ${agreement.provider.name}. Reason: Invoice rejected by Invoice Filter`,
+        `Invoice has been rejected`,
+        {
+          providerName: agreement.provider.name,
+          reason: {
+            rejectionReason: RejectionReason.IncorrectAmount,
+            totalAmountAccepted: "0",
+            message: "Invoice rejected by Invoice Filter",
+          },
+        },
         100,
       );
       await paymentService.end();
@@ -172,7 +216,7 @@ describe("Payment Service", () => {
       await paymentService.run();
       await paymentService.acceptPayments(agreement);
       await paymentService.acceptDebitNotes(agreement.id);
-      await logger.expectToInclude(`Debit Note accepted for agreement ${agreement.id}`, 100);
+      await logger.expectToInclude(`Debit Note accepted`, { agreementId: agreement.id }, 100);
       await paymentService.end();
     });
 
@@ -187,7 +231,11 @@ describe("Payment Service", () => {
       await paymentService.run();
       paymentService.acceptPayments(agreement);
       await new Promise((res) => setTimeout(res, 200));
-      await logger.expectToInclude(`Invoice accepted from provider ${agreement.provider.name}`, 100);
+      await logger.expectToInclude(
+        `Invoice accepted from provider`,
+        { providerName: agreement.provider.name, agreementId: "test_agreement_id" },
+        100,
+      );
       await paymentService.end();
     });
   });

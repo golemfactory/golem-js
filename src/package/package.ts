@@ -1,5 +1,5 @@
 import { ComparisonOperator, DecorationsBuilder, MarketDecoration } from "../market/builder";
-import { EnvUtils, Logger } from "../utils";
+import { EnvUtils, Logger, defaultLogger } from "../utils";
 import { PackageConfig } from "./config";
 import { RequireAtLeastOne } from "../utils/types";
 import { GolemError } from "../error/golem-error";
@@ -47,10 +47,10 @@ export interface PackageDetails {
  * Package module - an object for descriptions of the payload required by the requestor.
  */
 export class Package {
-  private logger?: Logger;
+  private logger: Logger;
 
   private constructor(private options: PackageConfig) {
-    this.logger = options.logger;
+    this.logger = options.logger || defaultLogger("golem-js:Package");
   }
 
   static create(options: PackageOptions): Package {
@@ -109,7 +109,7 @@ export class Package {
     try {
       const response = await fetch(url);
       if (!response.ok) {
-        this.logger?.error(`Unable to get image Url of  ${tag || hash} from ${repoUrl}`);
+        this.logger.error(`Unable to get image`, { url: tag || hash, from: repoUrl });
         throw new GolemError(await response.text());
       }
 
@@ -122,7 +122,7 @@ export class Package {
     } catch (error) {
       if (error instanceof GolemError) throw error;
 
-      this.logger?.error(`Unable to get image Url of  ${tag || hash} from ${repoUrl}`);
+      this.logger.error(`Unable to get image`, { url: tag || hash, from: repoUrl });
       throw new GolemError(`Failed to fetch image: ${error}`);
     }
   }

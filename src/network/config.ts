@@ -1,5 +1,5 @@
 import { NetworkOptions } from "./network";
-import { Logger } from "../utils";
+import { Logger, defaultLogger } from "../utils";
 
 const DEFAULTS = {
   networkIp: "192.168.0.0/24",
@@ -14,7 +14,7 @@ export class NetworkConfig {
   public readonly ownerId: string;
   public readonly ownerIp?: string;
   public readonly gateway?: string;
-  public readonly logger?: Logger;
+  public readonly logger: Logger;
 
   constructor(options: NetworkOptions) {
     this.ip = options?.networkIp || DEFAULTS.networkIp;
@@ -22,6 +22,6 @@ export class NetworkConfig {
     this.ownerId = options.networkOwnerId;
     this.ownerIp = options?.networkOwnerIp;
     this.gateway = options?.networkGateway;
-    this.logger = options?.logger;
+    this.logger = options?.logger || defaultLogger("golem-js:Network");
   }
 }
