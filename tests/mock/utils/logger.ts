@@ -1,5 +1,15 @@
 import { Logger } from "../../../src";
 
+function ctxToString(ctx: Record<string, unknown> | Error | undefined) {
+  if (!ctx) return "[no context]";
+  if (ctx instanceof Error) return ctx.message;
+  try {
+    return JSON.stringify(ctx);
+  } catch (e) {
+    return ctx.toString();
+  }
+}
+
 export class LoggerMock implements Logger {
   private _logs: { msg: string; ctx?: Record<string, unknown> | Error }[] = [];
 
@@ -27,7 +37,7 @@ export class LoggerMock implements Logger {
   }
 
   get logs() {
-    return this._logs.map(({ ctx, msg }) => `${msg} ${ctx ? JSON.stringify(ctx) : ""}`).join("\n");
+    return this._logs.map(({ ctx, msg }) => `${msg} ${ctxToString(ctx)}`).join("\n");
   }
 
   clear() {
@@ -43,12 +53,11 @@ export class LoggerMock implements Logger {
   }
 
   private log(msg: string, ctx?: Record<string, unknown> | Error, level = "info") {
-    const stringifiedContext = ctx === undefined ? "" : JSON.stringify(ctx, null, 2);
     if (!this.silent)
       console.log(
         `\x1b[32m[test]\x1b[0m \x1b[36m${new Date().toISOString()}\x1b[0m ${this.levelColor(
           level,
-        )} ${msg} ${stringifiedContext}`,
+        )} ${msg} ${ctxToString(ctx)}`,
       );
     this._logs.push({
       msg,

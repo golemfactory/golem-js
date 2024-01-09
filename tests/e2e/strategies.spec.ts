@@ -70,7 +70,7 @@ describe("Strategies", function () {
 
       expect(finalOutputs).toEqual(expect.arrayContaining(data));
       await executor.shutdown();
-      await logger.expectToInclude(`Reason: Invoice rejected by Invoice Filter`, expect.anything(), 100);
+      await logger.expectToMatch(/Invoice rejected by Invoice Filter/, 100);
     });
 
     it("should only accept debit notes below 0.00001 GLM", async () => {
@@ -90,7 +90,7 @@ describe("Strategies", function () {
 
       expect(finalOutputs).toEqual(expect.arrayContaining(data));
       await executor.shutdown();
-      await logger.expectToInclude(`DebitNote rejected by DebitNote Filter`, expect.anything(), 100);
+      await logger.expectToMatch(/DebitNote rejected by DebitNote Filter/, 100);
     });
   });
 });
