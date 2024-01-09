@@ -36,10 +36,18 @@ const createProposal = (id) => {
     },
   };
 
-  return new Proposal(id, null, mockSetCounteringProposalReference, mockAPI, model, {
-    constraints: "",
-    properties: {},
-  });
+  return new Proposal(
+    id,
+    null,
+    mockSetCounteringProposalReference,
+    mockAPI,
+    model,
+    {
+      constraints: "",
+      properties: {},
+    },
+    "test-payment-platform",
+  );
 };
 
 describe("Agreement Pool Service", () => {

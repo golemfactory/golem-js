@@ -93,15 +93,12 @@ export class TaskService {
           id: task.id,
           agreementId: agreement.id,
           activityId: activity.id,
-          providerId: agreement.provider.id,
-          providerName: agreement.provider.name,
+          provider: agreement.provider,
         }),
       );
 
       this.logger.info(`Task sent to provider`, { taskId: task.id, providerName: agreement.provider.name });
 
-      this.paymentService.acceptDebitNotes(agreement.id);
-      this.paymentService.acceptPayments(agreement);
       const activityReadySetupFunctions = task.getActivityReadySetupFunctions();
       const worker = task.getWorker();
       const networkNode = await this.networkService?.addNode(agreement.provider.id);
@@ -141,8 +138,7 @@ export class TaskService {
             id: task.id,
             activityId: activity?.id,
             agreementId: agreement.id,
-            providerId: agreement.provider.id,
-            providerName: agreement.provider.name,
+            provider: agreement.provider,
             retriesCount: task.getRetriesCount(),
             reason,
           }),
@@ -158,8 +154,7 @@ export class TaskService {
             id: task.id,
             agreementId: agreement.id,
             activityId: activity?.id,
-            providerId: agreement.provider.id,
-            providerName: agreement.provider.name,
+            provider: agreement.provider,
             reason,
           }),
         );
@@ -191,6 +186,7 @@ export class TaskService {
     } else {
       const activity = await Activity.create(agreement, this.yagnaApi, this.options);
       this.activities.set(agreement.id, activity);
+      this.paymentService.acceptPayments(agreement);
       return activity;
     }
   }

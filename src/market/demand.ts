@@ -2,7 +2,7 @@ import { Package } from "../package";
 import { Allocation } from "../payment";
 import { YagnaOptions } from "../executor";
 import { DemandFactory } from "./factory";
-import { Proposal } from "./proposal";
+import { Proposal, ProposalProperties } from "./proposal";
 import { defaultLogger, Logger, sleep, YagnaApi } from "../utils";
 import { DemandConfig } from "./config";
 import { Events } from "../events";
@@ -135,6 +135,7 @@ export class Demand extends EventTarget {
   /**
    * @param id - demand ID
    * @param demandRequest - {@link DemandOfferBase}
+   * @param allocation - {@link Allocation}
    * @param yagnaApi - {@link YagnaApi}
    * @param options - {@link DemandConfig}
    * @hidden
@@ -142,6 +143,7 @@ export class Demand extends EventTarget {
   constructor(
     public readonly id: string,
     private demandRequest: DemandOfferBase,
+    private allocation: Allocation,
     private yagnaApi: YagnaApi,
     private options: DemandConfig,
   ) {
@@ -188,11 +190,19 @@ export class Demand extends EventTarget {
         for (const event of events as Array<ProposalEvent & ProposalRejectedEvent>) {
           if (event.eventType === "ProposalRejectedEvent") {
             this.logger.info(`Proposal rejected`, { reason: event.reason?.message });
+            const proposalProperties = event.proposal.properties as ProposalProperties;
             this.options.eventTarget?.dispatchEvent(
               new Events.ProposalRejected({
                 id: event.proposalId,
                 parentId: this.findParentProposal(event.proposalId),
                 reason: event.reason?.message,
+                provider: {
+                  id: event.proposal.issuerId,
+                  name: proposalProperties["golem.node.id.name"],
+                  walletAddress: proposalProperties[
+                    `golem.com.payment.platform.${this.allocation.paymentPlatform}.address`
+                  ] as string,
+                },
               }),
             );
             continue;
@@ -204,6 +214,7 @@ export class Demand extends EventTarget {
             this.yagnaApi.market,
             event.proposal,
             this.demandRequest,
+            this.allocation.paymentPlatform,
             this.options.eventTarget,
           );
           this.dispatchEvent(new DemandEvent(DEMAND_EVENT_TYPE, proposal));
@@ -211,7 +222,7 @@ export class Demand extends EventTarget {
             new Events.ProposalReceived({
               id: proposal.id,
               parentId: this.findParentProposal(event.proposal.prevProposalId),
-              providerId: proposal.issuerId,
+              provider: proposal.provider,
               details: proposal.details,
             }),
           );

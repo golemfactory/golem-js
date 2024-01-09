@@ -3,8 +3,9 @@ import { Allocation, AllocationOptions } from "./allocation";
 import { BasePaymentOptions, PaymentConfig } from "./config";
 import { Invoice, InvoiceDTO } from "./invoice";
 import { DebitNote, DebitNoteDTO } from "./debit_note";
-import { Payments, PAYMENT_EVENT_TYPE, DebitNoteEvent, InvoiceEvent } from "./payments";
-import { RejectionReason } from "./rejection";
+import { DebitNoteEvent, InvoiceEvent, PAYMENT_EVENT_TYPE, Payments } from "./payments";
+import { Agreement } from "../agreement";
+import { AgreementPaymentProcess } from "./agreement_payment_process";
 import { GolemError } from "../error/golem-error";
 
 export interface PaymentOptions extends BasePaymentOptions {
@@ -22,13 +23,8 @@ export interface PaymentOptions extends BasePaymentOptions {
   invoiceFilter?: InvoiceFilter;
 }
 
-export type DebitNoteFilter = (debitNote: DebitNoteDTO) => Promise<boolean>;
-export type InvoiceFilter = (invoice: InvoiceDTO) => Promise<boolean>;
-
-interface AgreementPayable {
-  id: string;
-  provider: { id: string; name: string };
-}
+export type DebitNoteFilter = (debitNote: DebitNoteDTO) => Promise<boolean> | boolean;
+export type InvoiceFilter = (invoice: InvoiceDTO) => Promise<boolean> | boolean;
 
 /**
  * Payment Service
@@ -36,13 +32,11 @@ interface AgreementPayable {
  * @internal
  */
 export class PaymentService {
-  private isRunning = false;
   public readonly config: PaymentConfig;
+  private isRunning = false;
   private logger: Logger;
   private allocation?: Allocation;
-  private agreementsToPay: Map<string, AgreementPayable> = new Map();
-  private agreementsDebitNotes: Set<string> = new Set();
-  private paidDebitNotes: Set<string> = new Set();
+  private processes: Map<string, AgreementPaymentProcess> = new Map();
   private payments?: Payments;
 
   constructor(
@@ -52,6 +46,7 @@ export class PaymentService {
     this.config = new PaymentConfig(options);
     this.logger = this.config.logger;
   }
+
   async run() {
     this.isRunning = true;
     this.payments = await Payments.create(this.yagnaApi, this.config.options);
@@ -60,17 +55,20 @@ export class PaymentService {
   }
 
   async end() {
-    if (this.agreementsToPay.size) {
-      this.logger.info(`Waiting for all invoices to be paid`, { unpaidAgreements: this.agreementsToPay.size });
+    if (this.processes.size) {
+      this.logger.info(`Waiting for all agreement processes to be completed.`, {
+        numberOfProcesses: this.processes.size,
+      });
       let timeout = false;
       const timeoutId = setTimeout(() => (timeout = true), this.config.paymentTimeout);
       let i = 0;
       while (this.isRunning && !timeout) {
-        this.isRunning = this.agreementsToPay.size !== 0;
+        const numberOfUnpaidAgreements = this.getNumberOfUnpaidAgreements();
+        this.isRunning = numberOfUnpaidAgreements !== 0;
         await sleep(2);
         i++;
         if (i > 10) {
-          this.logger.info(`Waiting for ${this.agreementsToPay.size} invoice to be paid...`);
+          this.logger.info(`Waiting for ${this.processes.size} agreement processes to be completed to be paid...`);
           i = 0;
         }
       }
@@ -106,97 +104,111 @@ export class PaymentService {
     }
   }
 
-  acceptPayments(agreement: AgreementPayable) {
-    this.agreementsToPay.set(agreement.id, agreement);
+  acceptPayments(agreement: Agreement) {
+    this.logger.info(`Starting to accept payments`, { agreementId: agreement.id });
+
+    if (this.processes.has(agreement.id)) {
+      this.logger.error("Payment process has already been started for this agreement", { agreementId: agreement.id });
+      return;
+    }
+
+    if (!this.allocation) {
+      throw new GolemError("You need to create an allocation before starting any payment processes");
+    }
+
+    this.processes.set(
+      agreement.id,
+      new AgreementPaymentProcess(
+        agreement,
+        this.allocation,
+        {
+          invoiceFilter: this.config.invoiceFilter,
+          debitNoteFilter: this.config.debitNoteFilter,
+        },
+        this.logger,
+      ),
+    );
   }
 
-  acceptDebitNotes(agreementId: string) {
-    this.agreementsDebitNotes.add(agreementId);
+  /**
+   * @deprecated, Use `acceptPayments` instead
+   */
+  // Reason: We will remove this in 2.0
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  acceptDebitNotes(_agreementId: string) {
+    this.logger.error(
+      "PaymentService.acceptDebitNotes is deprecated and will be removed in the next major version. " +
+        "Use PaymentService.acceptPayments which now also deal with debit notes.",
+    );
+    return;
+  }
+
+  private getNumberOfUnpaidAgreements() {
+    const inProgress = [...this.processes.values()].filter((p) => !p.isFinished());
+
+    return inProgress.length;
   }
 
   private async processInvoice(invoice: Invoice) {
-    try {
-      const agreement = this.agreementsToPay.get(invoice.agreementId);
-      if (!agreement) {
-        this.logger.info(`Agreement has not been accepted to payment`, { agreementId: invoice.agreementId });
-        return;
-      }
-      if (await this.config.invoiceFilter(invoice.dto)) {
-        await invoice.accept(invoice.amount, this.allocation!.id);
-        this.logger.info(`Invoice accepted from provider`, {
-          providerName: agreement.provider.name,
-          agreementId: invoice.agreementId,
-        });
-      } else {
-        const reason = {
-          rejectionReason: RejectionReason.IncorrectAmount,
-          totalAmountAccepted: "0",
-          message: "Invoice rejected by Invoice Filter",
-        };
-        await invoice.reject(reason);
-        this.logger.error(`Invoice has been rejected`, {
-          providerName: agreement.provider.name,
-          reason,
-        });
-      }
-    } catch (error) {
-      this.logger.error(`Invoice failed`, { providerId: invoice.providerId, error });
-    } finally {
-      // Until we implement a re-acceptance mechanism for unsuccessful acceptances,
-      // we no longer have to wait for the invoice during an unsuccessful attempt.
-      this.agreementsDebitNotes.delete(invoice.agreementId);
-      this.agreementsToPay.delete(invoice.agreementId);
+    this.logger.info(`Attempting to process Invoice event`, {
+      invoiceId: invoice.id,
+      agreementId: invoice.agreementId,
+    });
+    const process = this.processes.get(invoice.agreementId);
+
+    // This serves two purposes:
+    // 1. We will only process invoices which have a payment process started
+    // 2. Indirectly, we reject invoices from agreements that we didn't create (TODO: guard this business rule elsewhere)
+    if (!process) {
+      throw new GolemError(
+        "No payment process was initiated for this agreement - did you forget to use 'acceptPayments' or that's not your invoice?",
+      );
     }
+
+    await process.addInvoice(invoice);
   }
 
   private async processDebitNote(debitNote: DebitNote) {
-    try {
-      if (this.paidDebitNotes.has(debitNote.id)) return;
+    this.logger.info(`Attempting to process DebitNote event`, {
+      debitNoteId: debitNote.id,
+      agreementId: debitNote.agreementId,
+    });
+    const process = this.processes.get(debitNote.agreementId);
 
-      if (!this.agreementsToPay.has(debitNote.agreementId)) {
-        const reason = {
-          rejectionReason: RejectionReason.NonPayableAgreement,
-          totalAmountAccepted: "0",
-          message:
-            "DebitNote rejected because the agreement is already covered with a final invoice that should be paid instead of the debit note",
-        };
-        await debitNote.reject(reason);
-        this.logger.error(`DebitNote has been rejected`, {
-          agreementId: debitNote.agreementId,
-          reason,
-        });
-        return;
-      }
-
-      if (await this.config.debitNoteFilter(debitNote.dto)) {
-        await debitNote.accept(debitNote.totalAmountDue, this.allocation!.id);
-        this.paidDebitNotes.add(debitNote.id);
-        this.logger.info(`Debit Note accepted`, { agreementId: debitNote.agreementId });
-      } else {
-        const reason = {
-          rejectionReason: RejectionReason.IncorrectAmount,
-          totalAmountAccepted: "0",
-          message: "DebitNote rejected by DebitNote Filter",
-        };
-        await debitNote.reject(reason);
-        this.logger.error(`DebitNote has been rejected`, {
-          agreementId: debitNote.agreementId,
-          reason,
-        });
-      }
-    } catch (error) {
-      this.logger.error(`Payment Debit Note failed`, { agreementId: debitNote.agreementId, error });
+    // This serves two purposes:
+    // 1. We will only process debit-notes which have a payment process started
+    // 2. Indirectly, we reject debit-notes from agreements that we didn't create (TODO: guard this business rule elsewhere)
+    if (!process) {
+      throw new GolemError(
+        "No payment process was initiated for this agreement - did you forget to use 'acceptPayments' or that's not your debit note?",
+      );
     }
+
+    await process.addDebitNote(debitNote);
   }
 
   private async subscribePayments(event: Event) {
-    if (event instanceof InvoiceEvent) this.processInvoice(event.invoice).then();
-    if (event instanceof DebitNoteEvent) this.processDebitNote(event.debitNote).then();
+    if (event instanceof InvoiceEvent) {
+      this.processInvoice(event.invoice)
+        .then(() => this.logger.info(`Invoice event processed`, { agreementId: event.invoice.agreementId }))
+        .catch((err) =>
+          this.logger.error(`Failed to process InvoiceEvent`, { agreementId: event.invoice.agreementId, err }),
+        );
+    }
+
+    if (event instanceof DebitNoteEvent) {
+      this.processDebitNote(event.debitNote)
+        .then(() => this.logger.info(`DebitNote event processed`, { agreementId: event.debitNote.agreementId }))
+        .catch((err) =>
+          this.logger.error(`Failed to process DebitNoteEvent`, { agreementId: event.debitNote.agreementId, err }),
+        );
+    }
   }
 
-  private getPaymentPlatform(): string {
+  private getPaymentPlatform() {
     const mainnets = ["polygon", "mainnet"];
     const token = mainnets.includes(this.config.payment.network) ? "glm" : "tglm";
+
     return `${this.config.payment.driver}-${this.config.payment.network}-${token}`;
   }
 

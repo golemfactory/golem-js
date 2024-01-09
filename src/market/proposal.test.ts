@@ -30,6 +30,7 @@ const buildTestProposal = (props: Partial<ProposalProperties>): Proposal => {
     mockApi,
     model,
     mockDemand,
+    "testPaymentPlatform",
   );
 
   return proposal;

@@ -1,12 +1,13 @@
 import { Job } from "./job";
 import { YagnaMock } from "../../tests/mock/";
-import { MarketService } from "../market";
 import { Agreement, AgreementPoolService } from "../agreement";
 import { TaskService, WorkContext } from "../task";
 import { NetworkNode, NetworkService } from "../network";
-import { Activity } from "../activity/activity";
-import { Allocation, PaymentService } from "../payment";
+import { Activity } from "../activity";
 import { Package } from "../package";
+
+jest.mock("../payment");
+jest.mock("../market");
 
 afterEach(() => {
   jest.clearAllMocks();
@@ -15,15 +16,11 @@ afterEach(() => {
 describe("Job", () => {
   describe("cancel()", () => {
     it("stops the activity and releases the agreement when canceled", async () => {
-      jest.spyOn(MarketService.prototype, "run").mockResolvedValue();
       jest.spyOn(AgreementPoolService.prototype, "run").mockResolvedValue();
       jest.spyOn(TaskService.prototype, "run").mockResolvedValue();
       jest.spyOn(NetworkService.prototype, "run").mockResolvedValue();
-      jest.spyOn(PaymentService.prototype, "run").mockResolvedValue();
       jest.spyOn(Package, "create").mockReturnValue({} as unknown as Package);
-      jest.spyOn(PaymentService.prototype, "createAllocation").mockResolvedValue({} as unknown as Allocation);
       jest.spyOn(WorkContext.prototype, "before").mockResolvedValue();
-      jest.spyOn(MarketService.prototype, "end").mockResolvedValue();
       jest.spyOn(AgreementPoolService.prototype, "releaseAgreement").mockResolvedValue();
       jest.spyOn(NetworkService.prototype, "addNode").mockResolvedValue({} as unknown as NetworkNode);
 
