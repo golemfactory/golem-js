@@ -54,7 +54,7 @@ async function main(subnetTag, driver, network, count = 2, sessionTimeout = 100)
 program
   .option("--subnet-tag <subnet>", "set subnet name, for example 'public'")
   .option("--payment-driver <paymentDriver>", "payment driver name, for example 'erc20'")
-  .option("--payment-network <paymentNetwork>", "network name, for example 'goerli'")
+  .option("--payment-network <paymentNetwork>", "network name, for example 'holesky'")
   .option("--task-count, --count <count>", "task count", (val) => parseInt(val))
   .option("-t, --timeout <timeout>", "ssh session timeout (in seconds)", (val) => parseInt(val));
 program.parse();
