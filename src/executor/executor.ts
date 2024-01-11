@@ -255,7 +255,7 @@ export class TaskExecutor {
       }
     }
 
-    this.logger.info("Initializing task executor services...");
+    this.logger.debug("Initializing task executor services...");
     const allocations = await this.paymentService.createAllocation();
     await Promise.all([
       this.marketService.run(taskPackage, allocations).then(() => this.setStartupTimeout()),
@@ -459,7 +459,7 @@ export class TaskExecutor {
       if (this.isCanceled) return;
       if (runtimeContextChecker.isNode) this.removeSignalHandlers();
       const message = `Executor has interrupted by the user. Reason: ${reason}.`;
-      this.logger.info(`${message}. Stopping all tasks...`, {
+      this.logger.warn(`${message}. Stopping all tasks...`, {
         tasksInProgress: this.taskQueue.size,
       });
       this.isCanceled = true;

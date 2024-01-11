@@ -51,7 +51,7 @@ export class PaymentService {
     this.isRunning = true;
     this.payments = await Payments.create(this.yagnaApi, this.config.options);
     this.payments.addEventListener(PAYMENT_EVENT_TYPE, this.subscribePayments.bind(this));
-    this.logger.info("Payment Service has started");
+    this.logger.debug("Payment Service has started");
   }
 
   async end() {
@@ -77,11 +77,11 @@ export class PaymentService {
     this.isRunning = false;
     await this.payments
       ?.unsubscribe()
-      .catch((error) => this.logger.error("Unable to unsubscribe from payments", { error }));
+      .catch((error) => this.logger.warn("Unable to unsubscribe from payments", { error }));
     this.payments?.removeEventListener(PAYMENT_EVENT_TYPE, this.subscribePayments.bind(this));
-    await this.allocation?.release().catch((error) => this.logger.error("Unable to release allocation", { error }));
+    await this.allocation?.release().catch((error) => this.logger.warn("Unable to release allocation", { error }));
     this.logger.info("Allocation has been released");
-    this.logger.info("Payment service has been stopped");
+    this.logger.debug("Payment service has been stopped");
   }
 
   /**
@@ -105,10 +105,10 @@ export class PaymentService {
   }
 
   acceptPayments(agreement: Agreement) {
-    this.logger.info(`Starting to accept payments`, { agreementId: agreement.id });
+    this.logger.debug(`Starting to accept payments`, { agreementId: agreement.id });
 
     if (this.processes.has(agreement.id)) {
-      this.logger.error("Payment process has already been started for this agreement", { agreementId: agreement.id });
+      this.logger.warn("Payment process has already been started for this agreement", { agreementId: agreement.id });
       return;
     }
 
@@ -136,7 +136,7 @@ export class PaymentService {
   // Reason: We will remove this in 2.0
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   acceptDebitNotes(_agreementId: string) {
-    this.logger.error(
+    this.logger.warn(
       "PaymentService.acceptDebitNotes is deprecated and will be removed in the next major version. " +
         "Use PaymentService.acceptPayments which now also deal with debit notes.",
     );
@@ -150,7 +150,7 @@ export class PaymentService {
   }
 
   private async processInvoice(invoice: Invoice) {
-    this.logger.info(`Attempting to process Invoice event`, {
+    this.logger.debug(`Attempting to process Invoice event`, {
       invoiceId: invoice.id,
       agreementId: invoice.agreementId,
     });
@@ -169,7 +169,7 @@ export class PaymentService {
   }
 
   private async processDebitNote(debitNote: DebitNote) {
-    this.logger.info(`Attempting to process DebitNote event`, {
+    this.logger.debug(`Attempting to process DebitNote event`, {
       debitNoteId: debitNote.id,
       agreementId: debitNote.agreementId,
     });
@@ -190,7 +190,7 @@ export class PaymentService {
   private async subscribePayments(event: Event) {
     if (event instanceof InvoiceEvent) {
       this.processInvoice(event.invoice)
-        .then(() => this.logger.info(`Invoice event processed`, { agreementId: event.invoice.agreementId }))
+        .then(() => this.logger.debug(`Invoice event processed`, { agreementId: event.invoice.agreementId }))
         .catch((err) =>
           this.logger.error(`Failed to process InvoiceEvent`, { agreementId: event.invoice.agreementId, err }),
         );
@@ -198,7 +198,7 @@ export class PaymentService {
 
     if (event instanceof DebitNoteEvent) {
       this.processDebitNote(event.debitNote)
-        .then(() => this.logger.info(`DebitNote event processed`, { agreementId: event.debitNote.agreementId }))
+        .then(() => this.logger.debug(`DebitNote event processed`, { agreementId: event.debitNote.agreementId }))
         .catch((err) =>
           this.logger.error(`Failed to process DebitNoteEvent`, { agreementId: event.debitNote.agreementId, err }),
         );

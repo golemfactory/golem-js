@@ -60,7 +60,7 @@ export class AgreementFactory {
           proposalId,
         }),
       );
-      this.logger.info(`Agreement created`, { id: agreementId });
+      this.logger.debug(`Agreement created`, { id: agreementId });
       return agreement;
     } catch (error) {
       throw new GolemError(

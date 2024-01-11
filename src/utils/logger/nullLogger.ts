@@ -7,7 +7,9 @@ export function nullLogger(): Logger {
 
   return {
     child: () => nullLogger(),
+    debug: nullFunc,
     info: nullFunc,
+    warn: nullFunc,
     error: nullFunc,
   };
 }

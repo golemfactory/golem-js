@@ -28,7 +28,7 @@ export class NetworkService {
       networkOwnerId = data.identity;
     }
     this.network = await Network.create(this.yagnaApi, { ...this.options, networkOwnerId });
-    this.logger.info("Network Service has started");
+    this.logger.debug("Network Service has started");
   }
 
   public async addNode(nodeId: string, ip?: string): Promise<NetworkNode> {
@@ -38,6 +38,6 @@ export class NetworkService {
 
   async end() {
     await this.network?.remove();
-    this.logger.info("Network Service has been stopped");
+    this.logger.debug("Network Service has been stopped");
   }
 }

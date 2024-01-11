@@ -52,6 +52,14 @@ export class LoggerMock implements Logger {
     this.log(msg, ctx, "info");
   }
 
+  warn(msg: string, ctx?: Record<string, unknown> | Error) {
+    this.log(msg, ctx, "warn");
+  }
+
+  debug(msg: string, ctx?: Record<string, unknown> | Error) {
+    this.log(msg, ctx, "debug");
+  }
+
   private log(msg: string, ctx?: Record<string, unknown> | Error, level = "info") {
     if (!this.silent)
       console.log(

@@ -47,7 +47,7 @@ export class TaskService {
 
   public async run() {
     this.isRunning = true;
-    this.logger.info("Task Service has started");
+    this.logger.debug("Task Service has started");
     while (this.isRunning) {
       if (this.activeTasksCount >= this.options.maxParallelTasks) {
         await sleep(this.options.taskRunningInterval, true);
@@ -66,20 +66,20 @@ export class TaskService {
 
   async end() {
     this.isRunning = false;
-    this.logger.info(`Trying to stop all activities`, { size: this.activities.size });
+    this.logger.debug(`Trying to stop all activities`, { size: this.activities.size });
     await Promise.all(
       [...this.activities.values()].map((activity) =>
         activity
           .stop()
-          .catch((error) => this.logger.error(`Stopping activity failed`, { activityId: activity.id, error })),
+          .catch((error) => this.logger.warn(`Stopping activity failed`, { activityId: activity.id, error })),
       ),
     );
-    this.logger.info("Task Service has been stopped");
+    this.logger.debug("Task Service has been stopped");
   }
 
   private async startTask(task: Task) {
     task.start();
-    this.logger.info(`Starting task`, { taskId: task.id });
+    this.logger.debug(`Starting task`, { taskId: task.id });
     ++this.activeTasksCount;
 
     const agreement = await this.agreementPoolService.getAgreement();
@@ -117,7 +117,7 @@ export class TaskService {
 
       if (activityReadySetupFunctions.length && !this.activitySetupDone.has(activity.id)) {
         this.activitySetupDone.add(activity.id);
-        this.logger.info(`Activity setup completed`, { activityId: activity.id });
+        this.logger.debug(`Activity setup completed`, { activityId: activity.id });
       }
 
       const results = await worker(ctx);
@@ -129,7 +129,7 @@ export class TaskService {
       task.stop(undefined, error);
 
       const reason = error.message || error.toString();
-      this.logger.error(`Starting task failed`, { reason });
+      this.logger.warn(`Starting task failed`, { reason });
 
       if (task.isRetry() && this.isRunning) {
         this.tasksQueue.addToBegin(task);
@@ -143,7 +143,7 @@ export class TaskService {
             reason,
           }),
         );
-        this.logger.error(`Task execution failed. Trying to redo the task.`, {
+        this.logger.warn(`Task execution failed. Trying to redo the task.`, {
           taskId: task.id,
           attempt: task.getRetriesCount(),
           reason,

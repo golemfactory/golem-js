@@ -47,12 +47,12 @@ export class StatsService {
 
   async run() {
     this.eventTarget.addEventListener(EVENT_TYPE, (event) => this.handleEvents(event as BaseEvent<unknown>));
-    this.logger.info("Stats service has started");
+    this.logger.debug("Stats service has started");
   }
 
   async end() {
     this.eventTarget.removeEventListener(EVENT_TYPE, null);
-    this.logger.info("Stats service has stopped");
+    this.logger.debug("Stats service has stopped");
   }
 
   getAllCostsSummary() {

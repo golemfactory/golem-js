@@ -57,8 +57,8 @@ export class AgreementPoolService {
    */
   async run() {
     this.isServiceRunning = true;
-    this.subscribeForAgreementEvents().catch((e) => this.logger.error("Unable to subscribe for agreement events", e));
-    this.logger.info("Agreement Pool Service has started");
+    this.subscribeForAgreementEvents().catch((e) => this.logger.warn("Unable to subscribe for agreement events", e));
+    this.logger.debug("Agreement Pool Service has started");
   }
 
   /**
@@ -66,7 +66,7 @@ export class AgreementPoolService {
    * @param proposal Proposal
    */
   async addProposal(proposal: Proposal) {
-    this.logger.info(`New proposal added to pool`, { providerName: proposal.provider.name });
+    this.logger.debug(`New proposal added to pool`, { providerName: proposal.provider.name });
     this.pool.add(new AgreementCandidate(proposal));
   }
 
@@ -81,23 +81,23 @@ export class AgreementPoolService {
       const candidate = this.candidateMap.get(agreementId);
       if (candidate) {
         this.pool.add(candidate);
-        this.logger.info(`Agreement has been released for reuse`, { id: agreementId });
+        this.logger.debug(`Agreement has been released for reuse`, { id: agreementId });
         return;
       } else {
-        this.logger.info(`Agreement not found in the pool`, { id: agreementId });
+        this.logger.debug(`Agreement not found in the pool`, { id: agreementId });
       }
     } else {
       const agreement = this.agreements.get(agreementId);
       if (!agreement) {
-        this.logger.info(`Agreement not found in the pool`, { id: agreementId });
+        this.logger.debug(`Agreement not found in the pool`, { id: agreementId });
         return;
       }
-      this.logger.info(`Agreement has been released and will be terminated`, { id: agreementId });
+      this.logger.debug(`Agreement has been released and will be terminated`, { id: agreementId });
       try {
         this.removeAgreementFromPool(agreement);
         await agreement.terminate();
       } catch (e) {
-        this.logger.error(`Unable to terminate agreement`, { id: agreementId, error: e });
+        this.logger.warn(`Unable to terminate agreement`, { id: agreementId, error: e });
       }
     }
   }
@@ -153,7 +153,7 @@ export class AgreementPoolService {
   async end() {
     this.isServiceRunning = false;
     await this.terminateAll({ message: "All computations done" });
-    this.logger.info("Agreement Pool Service has been stopped");
+    this.logger.debug("Agreement Pool Service has been stopped");
   }
 
   /**
@@ -164,12 +164,12 @@ export class AgreementPoolService {
     const agreementsToTerminate = Array.from(this.candidateMap)
       .map(([agreementId]) => this.agreements.get(agreementId))
       .filter((a) => a !== undefined) as Agreement[];
-    this.logger.info(`Trying to terminate all agreements....`, { size: agreementsToTerminate.length });
+    this.logger.debug(`Trying to terminate all agreements....`, { size: agreementsToTerminate.length });
     await Promise.all(
       agreementsToTerminate.map((agreement) =>
         agreement
           .terminate(reason)
-          .catch((e) => this.logger.error(`Agreement cannot be terminated.`, { id: agreement.id, error: e })),
+          .catch((e) => this.logger.warn(`Agreement cannot be terminated.`, { id: agreement.id, error: e })),
       ),
     );
   }
@@ -196,7 +196,7 @@ export class AgreementPoolService {
 
       return agreement;
     } catch (e) {
-      this.logger.info(`Unable to create agreement form available proposal`, e);
+      this.logger.debug(`Unable to create agreement form available proposal`, e);
       await sleep(2);
       return;
     }
@@ -207,7 +207,7 @@ export class AgreementPoolService {
 
     if (state === AgreementStateEnum.Proposal) {
       await agreement.confirm(this.yagnaApi.appSessionId);
-      this.logger.info(`Agreement proposed to provider`, { providerName: agreement.provider.name });
+      this.logger.debug(`Agreement proposed to provider`, { providerName: agreement.provider.name });
     }
 
     await this.yagnaApi.market.waitForApproval(agreement.id, this.config.agreementWaitingForApprovalTimeout);
@@ -234,7 +234,7 @@ export class AgreementPoolService {
           }
         });
       } catch (error) {
-        this.logger.info(`Unable to get agreement events.`, error);
+        this.logger.debug(`Unable to get agreement events.`, error);
         await sleep(2);
       }
     }

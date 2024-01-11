@@ -10,37 +10,37 @@ export class StorageProviderMock implements StorageProvider {
   }
 
   receiveFile(path: string): Promise<string> {
-    this.logger.info(`File received`, { path });
+    this.logger.debug(`File received`, { path });
     return Promise.resolve("");
   }
 
   receiveData(callback: StorageProviderDataCallback): Promise<string> {
-    this.logger.info(`Data received`);
+    this.logger.debug(`Data received`);
     return Promise.resolve("");
   }
 
   close(): Promise<void> {
-    this.logger.info(`Storage provider closed`);
+    this.logger.debug(`Storage provider closed`);
     return Promise.resolve(undefined);
   }
 
   init(): Promise<void> {
-    this.logger.info(`Storage provider started`);
+    this.logger.debug(`Storage provider started`);
     return Promise.resolve(undefined);
   }
 
   publishFile(src: string): Promise<string> {
-    this.logger.info(`File published`, { src });
+    this.logger.debug(`File published`, { src });
     return Promise.resolve("");
   }
 
   publishData(data: Uint8Array): Promise<string> {
-    this.logger.info(`Data published`, { data });
+    this.logger.debug(`Data published`, { data });
     return Promise.resolve("");
   }
 
   release(urls: string[]): Promise<void> {
-    this.logger.info(`Urls released`, { urls });
+    this.logger.debug(`Urls released`, { urls });
     return Promise.resolve();
   }
 }

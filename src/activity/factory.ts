@@ -39,7 +39,7 @@ export class ActivityFactory {
 
     const id = typeof data == "string" ? data : data.activityId;
 
-    this.options.logger.info(`Activity created`, { id });
+    this.options.logger.debug(`Activity created`, { id });
     this.options.eventTarget?.dispatchEvent(new Events.ActivityCreated({ id, agreementId: this.agreement.id }));
 
     return new Activity(id, this.agreement, this.yagnaApi, this.options);

@@ -81,20 +81,20 @@ export class Batch {
       const allResults: Result[] = [];
       const script = this.script.getExeScriptRequest();
 
-      this.logger.info(`Sending exec script request to the exe-unit on provider:`, { script });
+      this.logger.debug(`Sending exec script request to the exe-unit on provider:`, { script });
       const results = await this.activity.execute(script);
 
       return new Promise((resolve, reject) => {
-        this.logger.info("Reading the results of the batch script");
+        this.logger.debug("Reading the results of the batch script");
 
         results.on("data", (res) => {
-          this.logger.info(`Received data for batch script execution`, { res });
+          this.logger.debug(`Received data for batch script execution`, { res });
 
           allResults.push(res);
         });
 
         results.on("end", () => {
-          this.logger.info("End of batch script execution");
+          this.logger.debug("End of batch script execution");
           this.script
             .after(allResults)
             .then((results) => resolve(results))
@@ -102,7 +102,7 @@ export class Batch {
         });
 
         results.on("error", (error) => {
-          this.logger.info("Error in batch script execution");
+          this.logger.debug("Error in batch script execution");
           this.script
             .after(allResults)
             .then(() => reject(error))

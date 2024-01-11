@@ -32,7 +32,7 @@ export class GftpStorageProvider implements StorageProvider {
 
   async init() {
     if (this.isInitialized) {
-      this.logger.error("GFTP init attempted even though it was already ready - check the logic of your application");
+      this.logger.warn("GFTP init attempted even though it was already ready - check the logic of your application");
       return;
     }
 
@@ -42,7 +42,7 @@ export class GftpStorageProvider implements StorageProvider {
 
   private startGftpServer(): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.logger.info("Starting GFTP server");
+      this.logger.debug("Starting GFTP server");
 
       this.gftpServerProcess = cp.spawn("gftp", ["server"]);
 

@@ -45,7 +45,7 @@ export class MarketService {
     this.taskPackage = taskPackage;
     this.allocation = allocation;
     await this.createDemand();
-    this.logger.info("Market Service has started");
+    this.logger.debug("Market Service has started");
   }
 
   async end() {
@@ -53,7 +53,7 @@ export class MarketService {
       this.demand.removeEventListener(DEMAND_EVENT_TYPE, this.demandEventListener.bind(this));
       await this.demand.unsubscribe().catch((e) => this.logger.error(`Could not unsubscribe demand.`, e));
     }
-    this.logger.info("Market Service has been stopped");
+    this.logger.debug("Market Service has been stopped");
   }
 
   getProposalsCount() {
@@ -69,7 +69,7 @@ export class MarketService {
       confirmed: 0,
       rejected: 0,
     };
-    this.logger.info(`New demand has been created`, { id: this.demand.id });
+    this.logger.debug(`New demand has been created`, { id: this.demand.id });
     return true;
   }
 
@@ -77,16 +77,16 @@ export class MarketService {
     const proposal = (event as DemandEvent).proposal;
     const error = (event as DemandEvent).error;
     if (error || !proposal) {
-      this.logger.error("Subscription failed. Trying to subscribe a new one...");
-      this.resubscribeDemand().catch((e) => this.logger.error(`Could not resubscribe demand.`, e));
+      this.logger.warn("Subscription failed. Trying to subscribe a new one...");
+      this.resubscribeDemand().catch((e) => this.logger.warn(`Could not resubscribe demand.`, e));
       return;
     }
     if (proposal.isInitial()) this.processInitialProposal(proposal);
     else if (proposal.isDraft()) this.processDraftProposal(proposal);
-    else if (proposal.isExpired()) this.logger.info(`Proposal hes expired`, { id: proposal.id });
+    else if (proposal.isExpired()) this.logger.debug(`Proposal hes expired`, { id: proposal.id });
     else if (proposal.isRejected()) {
       this.proposalsCount.rejected++;
-      this.logger.info(`Proposal hes rejected`, { id: proposal.id });
+      this.logger.debug(`Proposal hes rejected`, { id: proposal.id });
     }
   }
 
@@ -106,7 +106,7 @@ export class MarketService {
 
   private async processInitialProposal(proposal: Proposal) {
     if (!this.allocation) throw new GolemError("The service has not been started correctly.");
-    this.logger.info(`New proposal has been received`, { id: proposal.id });
+    this.logger.debug(`New proposal has been received`, { id: proposal.id });
     this.proposalsCount.initial++;
     try {
       const { result: isProposalValid, reason } = await this.isProposalValid(proposal);
@@ -114,8 +114,8 @@ export class MarketService {
         const chosenPlatform = this.allocation.paymentPlatform;
         await proposal
           .respond(chosenPlatform)
-          .catch((e) => this.logger.info(`Unable to respond proposal`, { id: proposal.id, e }));
-        this.logger.info(`Proposal has been responded`, { id: proposal.id });
+          .catch((e) => this.logger.debug(`Unable to respond proposal`, { id: proposal.id, e }));
+        this.logger.debug(`Proposal has been responded`, { id: proposal.id });
       } else {
         this.proposalsCount.rejected++;
         this.logger.error(`Proposal has been rejected`, { id: proposal.id, reason });
@@ -149,7 +149,7 @@ export class MarketService {
   private async processDraftProposal(proposal: Proposal) {
     await this.agreementPoolService.addProposal(proposal);
     this.proposalsCount.confirmed++;
-    this.logger.info(`Proposal has been confirmed and added to agreement pool`, {
+    this.logger.debug(`Proposal has been confirmed and added to agreement pool`, {
       providerName: proposal.provider.name,
       id: proposal.id,
     });

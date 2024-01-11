@@ -69,7 +69,7 @@ export class WorkContext {
   async before(): Promise<Result[] | void> {
     let state = await this.activity
       .getState()
-      .catch((error) => this.logger.error("Error while getting activity state", { error }));
+      .catch((error) => this.logger.warn("Error while getting activity state", { error }));
     if (state === ActivityStateEnum.Ready) {
       await this.setupActivity();
       return;
@@ -99,7 +99,7 @@ export class WorkContext {
     }
     await sleep(this.activityStateCheckingInterval, true);
     state = await this.activity.getState().catch((e) =>
-      this.logger.error("Error while getting activity state", {
+      this.logger.warn("Error while getting activity state", {
         error: e,
         provider: this.provider?.name,
       }),
@@ -139,7 +139,7 @@ export class WorkContext {
   async run(exeOrCmd: string, argsOrOptions?: string[] | CommandOptions, options?: CommandOptions): Promise<Result> {
     const isArray = Array.isArray(argsOrOptions);
 
-    this.logger.info("Running command", {
+    this.logger.debug("Running command", {
       command: isArray ? `${exeOrCmd} ${argsOrOptions?.join(" ")}` : exeOrCmd,
       provider: this.provider?.name,
     });
@@ -202,40 +202,40 @@ export class WorkContext {
    * @param options Additional run options.
    */
   async transfer(from: string, to: string, options?: CommandOptions): Promise<Result> {
-    this.logger.info(`Transferring ${from} to ${to}`);
+    this.logger.debug(`Transferring ${from} to ${to}`);
     return this.runOneCommand(new Transfer(from, to), options);
   }
 
   async uploadFile(src: string, dst: string, options?: CommandOptions): Promise<Result> {
-    this.logger.info(`Uploading file ${src} to ${dst}`);
+    this.logger.debug(`Uploading file ${src} to ${dst}`);
     return this.runOneCommand(new UploadFile(this.storageProvider, src, dst), options);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   uploadJson(json: any, dst: string, options?: CommandOptions): Promise<Result> {
-    this.logger.info(`Uploading json to ${dst}`);
+    this.logger.debug(`Uploading json to ${dst}`);
     const src = new TextEncoder().encode(JSON.stringify(json));
     return this.runOneCommand(new UploadData(this.storageProvider, src, dst), options);
   }
 
   uploadData(data: Uint8Array, dst: string, options?: CommandOptions): Promise<Result> {
-    this.logger.info(`Uploading data to ${dst}`);
+    this.logger.debug(`Uploading data to ${dst}`);
     return this.runOneCommand(new UploadData(this.storageProvider, data, dst), options);
   }
 
   downloadFile(src: string, dst: string, options?: CommandOptions): Promise<Result> {
-    this.logger.info(`Downloading file from ${src} to ${dst}`);
+    this.logger.debug(`Downloading file from ${src} to ${dst}`);
     return this.runOneCommand(new DownloadFile(this.storageProvider, src, dst), options);
   }
 
   downloadData(src: string, options?: CommandOptions): Promise<Result<Uint8Array>> {
-    this.logger.info(`Downloading data from ${src}`);
+    this.logger.debug(`Downloading data from ${src}`);
     return this.runOneCommand(new DownloadData(this.storageProvider, src), options);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async downloadJson(src: string, options?: CommandOptions): Promise<Result> {
-    this.logger.info(`Downloading json from ${src}`);
+    this.logger.debug(`Downloading json from ${src}`);
     const result = await this.downloadData(src, options);
     if (result.result !== ResultState.Ok) {
       return new Result({
@@ -310,7 +310,7 @@ export class WorkContext {
             `Error: ${err.message}. Stdout: ${err.stdout?.toString().trim()}. Stderr: ${err.stderr?.toString().trim()}`,
         )
         .join(". ");
-      this.logger.error(`Task error`, {
+      this.logger.warn(`Task error`, {
         provider: this.provider?.name,
         error: errorMessage,
       });

@@ -106,7 +106,7 @@ export class Agreement {
     try {
       await this.yagnaApi.market.confirmAgreement(this.id, appSessionId);
       await this.yagnaApi.market.waitForApproval(this.id, this.options.agreementWaitingForApprovalTimeout);
-      this.logger.info(`Agreement approved`, { id: this.id });
+      this.logger.debug(`Agreement approved`, { id: this.id });
       this.options.eventTarget?.dispatchEvent(new Events.AgreementConfirmed({ id: this.id, provider: this.provider }));
     } catch (error) {
       this.logger.error(`Unable to confirm agreement with provider`, { providerName: this.provider.name, error });
@@ -143,7 +143,7 @@ export class Agreement {
       this.options.eventTarget?.dispatchEvent(
         new Events.AgreementTerminated({ id: this.id, provider: this.provider, reason: reason.message }),
       );
-      this.logger.info(`Agreement terminated`, { id: this.id });
+      this.logger.debug(`Agreement terminated`, { id: this.id });
     } catch (error) {
       throw new GolemError(
         `Unable to terminate agreement ${this.id}. ${error.response?.data?.message || error.response?.data || error}`,

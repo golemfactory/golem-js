@@ -159,7 +159,7 @@ export class Demand extends EventTarget {
     this.isRunning = false;
     await this.yagnaApi.market.unsubscribeDemand(this.id);
     this.options.eventTarget?.dispatchEvent(new events.DemandUnsubscribed({ id: this.id }));
-    this.logger.info(`Demand unsubscribed`, { id: this.id });
+    this.logger.debug(`Demand unsubscribed`, { id: this.id });
   }
 
   private findParentProposal(prevProposalId?: string): string | null {
@@ -189,7 +189,7 @@ export class Demand extends EventTarget {
         );
         for (const event of events as Array<ProposalEvent & ProposalRejectedEvent>) {
           if (event.eventType === "ProposalRejectedEvent") {
-            this.logger.info(`Proposal rejected`, { reason: event.reason?.message });
+            this.logger.debug(`Proposal rejected`, { reason: event.reason?.message });
             const proposalProperties = event.proposal.properties as ProposalProperties;
             this.options.eventTarget?.dispatchEvent(
               new Events.ProposalRejected({
@@ -231,7 +231,7 @@ export class Demand extends EventTarget {
         if (this.isRunning) {
           const reason = error.response?.data?.message || error;
           this.options.eventTarget?.dispatchEvent(new Events.CollectFailed({ id: this.id, reason }));
-          this.logger.error(`Unable to collect offers.`, { reason });
+          this.logger.warn(`Unable to collect offers.`, { reason });
           if (error.code === "ECONNREFUSED" || error.response?.status === 404) {
             this.dispatchEvent(
               new DemandEvent(

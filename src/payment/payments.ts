@@ -38,7 +38,7 @@ export class Payments extends EventTarget {
    */
   async unsubscribe() {
     this.isRunning = false;
-    this.logger.info(`Payments unsubscribed`);
+    this.logger.debug(`Payments unsubscribed`);
   }
 
   private async subscribe() {
@@ -76,7 +76,7 @@ export class Payments extends EventTarget {
               provider: invoice.provider,
             }),
           );
-          this.logger.info(`New Invoice received`, {
+          this.logger.debug(`New Invoice received`, {
             id: invoice.id,
             agreementId: invoice.agreementId,
             amount: invoice.amount,
@@ -124,7 +124,7 @@ export class Payments extends EventTarget {
               provider: debitNote.provider,
             }),
           );
-          this.logger.info("New Debit Note received", {
+          this.logger.debug("New Debit Note received", {
             agreementId: debitNote.agreementId,
             amount: debitNote.totalAmountDue,
           });

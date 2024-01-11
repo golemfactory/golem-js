@@ -74,7 +74,7 @@ export class AgreementPaymentProcess {
       const isAlreadyProcessed = await this.hasProcessedDebitNote(debitNote);
 
       if (isAlreadyProcessed) {
-        this.logger?.error(
+        this.logger.warn(
           `We received a duplicate debit note - the previous one was already accepted, so this one gets ignored`,
           {
             debitNoteId: debitNote.id,
@@ -100,7 +100,7 @@ export class AgreementPaymentProcess {
     }
 
     await debitNote.accept(debitNote.totalAmountDue, this.allocation.id);
-    this.logger.info(`DebitNote accepted`, {
+    this.logger.debug(`DebitNote accepted`, {
       debitNoteId: debitNote.id,
       agreementId: debitNote.agreementId,
     });
@@ -123,7 +123,7 @@ export class AgreementPaymentProcess {
 
     await debitNote.reject(reason);
 
-    this.logger.info(`DebitNote rejected`, { reason: reason.message });
+    this.logger.warn(`DebitNote rejected`, { reason: reason.message });
   }
 
   private async applyInvoice(invoice: Invoice) {
@@ -132,7 +132,7 @@ export class AgreementPaymentProcess {
         const previousStatus = await this.invoice.getStatus();
 
         if (previousStatus !== InvoiceStatus.Received) {
-          this.logger.info(`Received duplicate of an already processed invoice , the new one will be ignored`, {
+          this.logger.warn(`Received duplicate of an already processed invoice , the new one will be ignored`, {
             invoiceId: invoice.id,
             agreementId: invoice.agreementId,
           });
@@ -187,7 +187,7 @@ export class AgreementPaymentProcess {
 
     await invoice.reject(reason);
 
-    this.logger.info(`Invoice rejected`, { reason: reason.message });
+    this.logger.warn(`Invoice rejected`, { reason: reason.message });
   }
 
   private hasReceivedInvoice() {
