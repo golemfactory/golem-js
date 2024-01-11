@@ -24,7 +24,7 @@ export class AgreementFactory {
     agreementOptions?: AgreementOptions,
   ) {
     this.options = new AgreementConfig(agreementOptions);
-    this.logger = agreementOptions?.logger || defaultLogger("golem-js:AgreementFactory");
+    this.logger = agreementOptions?.logger || defaultLogger("market");
   }
 
   /**

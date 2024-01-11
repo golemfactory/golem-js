@@ -82,8 +82,8 @@ export class ExecutorConfig {
     this.logger = (() => {
       const isLoggingEnabled = options.enableLogging ?? DEFAULTS.enableLogging;
       if (!isLoggingEnabled) return nullLogger();
-      if (options.logger) return options.logger.child("TaskExecutor");
-      return defaultLogger("golem-js:TaskExecutor");
+      if (options.logger) return options.logger.child("task-executor");
+      return defaultLogger("task-executor");
     })();
     this.eventTarget = options.eventTarget || new EventTarget();
     this.maxTaskRetries = options.maxTaskRetries ?? DEFAULTS.maxTaskRetries;

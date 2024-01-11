@@ -19,7 +19,7 @@ export class NetworkService {
     private readonly yagnaApi: YagnaApi,
     private readonly options?: NetworkServiceOptions,
   ) {
-    this.logger = options?.logger || defaultLogger("golem-js:NetworkService");
+    this.logger = options?.logger || defaultLogger("network");
   }
 
   async run(networkOwnerId?: string) {

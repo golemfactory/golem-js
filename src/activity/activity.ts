@@ -63,7 +63,7 @@ export class Activity {
     protected readonly yagnaApi: YagnaApi,
     protected readonly options: ActivityConfig,
   ) {
-    this.logger = options?.logger || defaultLogger("golem-js:Activity");
+    this.logger = options?.logger || defaultLogger("work");
   }
 
   /**

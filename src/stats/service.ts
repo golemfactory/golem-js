@@ -33,7 +33,7 @@ export class StatsService {
 
   constructor(options: StatsOptions) {
     this.eventTarget = options.eventTarget;
-    this.logger = options.logger || defaultLogger("golem-js:StatsService");
+    this.logger = options.logger || defaultLogger("stats");
     this.allocations = new Allocations();
     this.activities = new Activities();
     this.agreements = new Agreements();

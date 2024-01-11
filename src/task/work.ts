@@ -60,7 +60,7 @@ export class WorkContext {
     private options?: WorkOptions,
   ) {
     this.activityPreparingTimeout = options?.activityPreparingTimeout || DEFAULTS.activityPreparingTimeout;
-    this.logger = options?.logger ?? defaultLogger("golem-js:WorkContext");
+    this.logger = options?.logger ?? defaultLogger("work");
     this.activityStateCheckingInterval = options?.activityStateCheckingInterval || DEFAULTS.activityStateCheckInterval;
     this.provider = options?.provider;
     this.storageProvider = options?.storageProvider ?? new NullStorageProvider();
@@ -251,7 +251,7 @@ export class WorkContext {
   }
 
   beginBatch() {
-    return Batch.create(this.activity, this.storageProvider, this.logger.child("Batch"));
+    return Batch.create(this.activity, this.storageProvider, this.logger);
   }
 
   /**

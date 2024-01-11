@@ -61,7 +61,7 @@ export class Agreement {
     private readonly yagnaApi: YagnaApi,
     private readonly options: AgreementConfig,
   ) {
-    this.logger = options.logger || defaultLogger("golem-js:Agreement");
+    this.logger = options.logger || defaultLogger("market");
   }
 
   /**

@@ -88,8 +88,10 @@
       }
 
       const logger = {
-        info: (msg) => appendLog(`[${new Date().toISOString()}] [info] ${msg}`),
+        warn: (msg) => appendLog(`[${new Date().toISOString()}] [warn] ${msg}`),
+        debug: (msg) => appendLog(`[${new Date().toISOString()}] [debug] ${msg}`),
         error: (msg) => appendLog(`[${new Date().toISOString()}] [error] ${msg}`),
+        info: (msg) => appendLog(`[${new Date().toISOString()}] [info] ${msg}`),
         child: () => logger,
       };
 

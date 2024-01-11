@@ -10,7 +10,7 @@ export class Batch {
   private script: Script;
 
   static create(activity: Activity, storageProvider: StorageProvider, logger?: Logger): Batch {
-    return new Batch(activity, storageProvider, logger || defaultLogger("golem-js:Batch"));
+    return new Batch(activity, storageProvider, logger || defaultLogger("work"));
   }
 
   constructor(

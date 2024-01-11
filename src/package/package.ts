@@ -50,7 +50,7 @@ export class Package {
   private logger: Logger;
 
   private constructor(private options: PackageConfig) {
-    this.logger = options.logger || defaultLogger("golem-js:Package");
+    this.logger = options.logger || defaultLogger("work");
   }
 
   static create(options: PackageOptions): Package {

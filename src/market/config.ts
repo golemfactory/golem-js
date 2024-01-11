@@ -32,7 +32,7 @@ export class DemandConfig {
   public readonly midAgreementPaymentTimeoutSec: number;
 
   constructor(options?: DemandOptions) {
-    this.logger = options?.logger || defaultLogger("golem-js:Demand");
+    this.logger = options?.logger || defaultLogger("market");
     this.eventTarget = options?.eventTarget;
 
     this.subnetTag = options?.subnetTag ?? EnvUtils.getYagnaSubnet() ?? DEFAULTS.subnetTag;

@@ -100,6 +100,16 @@
       }
 
       const logger = {
+        warn: (msg) => {
+          const fullMsg = `[${new Date().toISOString()}] [warn] ${msg}`;
+          console.warn(fullMsg);
+          appendLog(fullMsg);
+        },
+        debug: (msg) => {
+          const fullMsg = `[${new Date().toISOString()}] [debug] ${msg}`;
+          console.debug(fullMsg);
+          appendLog(fullMsg);
+        },
         error: (msg) => {
           const fullMsg = `[${new Date().toISOString()}] [error] ${msg}`;
           console.error(fullMsg);

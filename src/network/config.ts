@@ -22,6 +22,6 @@ export class NetworkConfig {
     this.ownerId = options.networkOwnerId;
     this.ownerIp = options?.networkOwnerIp;
     this.gateway = options?.networkGateway;
-    this.logger = options?.logger || defaultLogger("golem-js:Network");
+    this.logger = options?.logger || defaultLogger("network");
   }
 }

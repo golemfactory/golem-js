@@ -27,7 +27,7 @@ export class GftpStorageProvider implements StorageProvider {
     if (runtimeContextChecker.isBrowser) {
       throw new GolemError(`File transfer by GFTP module is unsupported in the browser context.`);
     }
-    this.logger = logger || defaultLogger("golem-js:GftpStorageProvider");
+    this.logger = logger || defaultLogger("storage");
   }
 
   async init() {

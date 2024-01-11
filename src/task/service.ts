@@ -42,7 +42,7 @@ export class TaskService {
     options?: TaskServiceOptions,
   ) {
     this.options = new TaskConfig(options);
-    this.logger = options?.logger || defaultLogger("golem-js:TaskService");
+    this.logger = options?.logger || defaultLogger("work");
   }
 
   public async run() {

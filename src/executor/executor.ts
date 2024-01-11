@@ -182,29 +182,29 @@ export class TaskExecutor {
     this.taskQueue = new TaskQueue();
     this.agreementPoolService = new AgreementPoolService(yagnaApi, {
       ...this.options,
-      logger: this.logger.child("AgreementPoolService"),
+      logger: this.logger.child("agreement"),
     });
     this.paymentService = new PaymentService(yagnaApi, {
       ...this.options,
-      logger: this.logger.child("PaymentService"),
+      logger: this.logger.child("payment"),
     });
     this.marketService = new MarketService(this.agreementPoolService, yagnaApi, {
       ...this.options,
-      logger: this.logger.child("MarketService"),
+      logger: this.logger.child("market"),
     });
     this.networkService = this.options.networkIp
-      ? new NetworkService(yagnaApi, { ...this.options, logger: this.logger.child("NetworkService") })
+      ? new NetworkService(yagnaApi, { ...this.options, logger: this.logger.child("network") })
       : undefined;
 
     // Initialize storage provider.
     if (this.configOptions.storageProvider) {
       this.storageProvider = this.configOptions.storageProvider;
     } else if (runtimeContextChecker.isNode) {
-      this.storageProvider = new GftpStorageProvider(this.logger.child("GftpStorageProvider"));
+      this.storageProvider = new GftpStorageProvider(this.logger.child("storage"));
     } else if (runtimeContextChecker.isBrowser) {
       this.storageProvider = new WebSocketBrowserStorageProvider(yagnaApi, {
         ...this.options,
-        logger: this.logger.child("WebSocketBrowserStorageProvider"),
+        logger: this.logger.child("storage"),
       });
     } else {
       this.storageProvider = new NullStorageProvider();
@@ -216,9 +216,9 @@ export class TaskExecutor {
       this.agreementPoolService,
       this.paymentService,
       this.networkService,
-      { ...this.options, storageProvider: this.storageProvider, logger: this.logger.child("TaskService") },
+      { ...this.options, storageProvider: this.storageProvider, logger: this.logger.child("work") },
     );
-    this.statsService = new StatsService({ ...this.options, logger: this.logger.child("StatsService") });
+    this.statsService = new StatsService({ ...this.options, logger: this.logger.child("stats") });
   }
 
   /**

@@ -23,7 +23,7 @@ export class ActivityPoolService {
     private paymentService: PaymentService,
     private options?: ActivityServiceOptions,
   ) {
-    this.logger = this.logger = options?.logger || defaultLogger("golem-js:ActivityPoolService");
+    this.logger = this.logger = options?.logger || defaultLogger("work");
   }
 
   /**

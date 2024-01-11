@@ -148,7 +148,7 @@ export class Demand extends EventTarget {
     private options: DemandConfig,
   ) {
     super();
-    this.logger = this.options.logger || defaultLogger("golem-js:Demand");
+    this.logger = this.options.logger || defaultLogger("market");
     this.subscribe().catch((e) => this.logger.error("Unable to subscribe for demand events", e));
   }
 

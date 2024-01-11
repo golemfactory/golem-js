@@ -30,7 +30,7 @@ export class TaskConfig extends ActivityConfig {
     this.taskTimeout = options?.taskTimeout || DEFAULTS.taskTimeout;
     this.activityStateCheckingInterval =
       options?.activityStateCheckingInterval || DEFAULTS.activityStateCheckingInterval;
-    this.logger = options?.logger || defaultLogger("golem-js:Task");
+    this.logger = options?.logger || defaultLogger("work");
     this.storageProvider = options?.storageProvider;
     this.activityPreparingTimeout = options?.activityPreparingTimeout || DEFAULTS.activityPreparingTimeout;
   }

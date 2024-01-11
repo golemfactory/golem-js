@@ -22,7 +22,7 @@ export class ActivityConfig {
     this.activityExecuteTimeout = options?.activityExecuteTimeout || DEFAULTS.activityExecuteTimeout;
     this.activityExeBatchResultPollIntervalSeconds =
       options?.activityExeBatchResultPollIntervalSeconds || DEFAULTS.activityExeBatchResultPollIntervalSeconds;
-    this.logger = options?.logger || defaultLogger("golem-js:Activity");
+    this.logger = options?.logger || defaultLogger("work");
     this.eventTarget = options?.eventTarget;
   }
 }

@@ -46,7 +46,7 @@ export class AgreementPoolService {
     agreementServiceOptions?: AgreementServiceOptions,
   ) {
     this.config = new AgreementServiceConfig(agreementServiceOptions);
-    this.logger = agreementServiceOptions?.logger || defaultLogger("golem-js:AgreementPoolService");
+    this.logger = agreementServiceOptions?.logger || defaultLogger("agreement");
     this.limiter = new Bottleneck({
       maxConcurrent: 1,
     });

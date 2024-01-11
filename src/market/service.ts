@@ -38,7 +38,7 @@ export class MarketService {
     options?: MarketOptions,
   ) {
     this.options = new MarketConfig(options);
-    this.logger = this.options?.logger || defaultLogger("golem-js:MarketService");
+    this.logger = this.options?.logger || defaultLogger("market");
   }
 
   async run(taskPackage: Package, allocation: Allocation) {

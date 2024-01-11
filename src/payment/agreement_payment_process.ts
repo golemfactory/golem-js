@@ -33,7 +33,7 @@ export class AgreementPaymentProcess {
     },
     logger?: Logger,
   ) {
-    this.logger = logger || defaultLogger("golem-js:AgreementPaymentProcess");
+    this.logger = logger || defaultLogger("payment");
   }
 
   /**
