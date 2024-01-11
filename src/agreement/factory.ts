@@ -45,7 +45,6 @@ export class AgreementFactory {
       const offerProperties: ProposalProperties = data.offer.properties as ProposalProperties;
       const demandProperties: ProposalProperties = data.demand.properties as ProposalProperties;
       const chosenPaymentPlatform = demandProperties["golem.com.payment.chosen-platform"];
-      console.log({ chosenPaymentPlatform });
       const provider = {
         name: offerProperties["golem.node.id.name"],
         id: data.offer.providerId,
