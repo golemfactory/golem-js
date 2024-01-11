@@ -13,9 +13,9 @@ export type ProposalFilter = (proposal: Proposal) => Promise<boolean> | boolean;
 export interface MarketOptions extends DemandOptions {
   /** A custom filter that checks every proposal coming from the market */
   proposalFilter?: ProposalFilter;
-  /** TODO */
+  /** The minimum number of proposals after which the batch of proposal will be processed in order to avoid duplicates */
   minProposalsBatchSize?: number;
-  /** TODO */
+  /** The maximum waiting time for proposals to be batched in order to avoid duplicates */
   proposalsBatchTimeout?: number;
 }
 
@@ -57,7 +57,7 @@ export class MarketService {
     this.taskPackage = taskPackage;
     this.allocation = allocation;
     await this.createDemand();
-    this.startProcessingBatchProposals();
+    this.startProcessingProposalsBatch();
     this.logger?.debug("Market Service has started");
   }
 
@@ -170,11 +170,11 @@ export class MarketService {
     );
   }
 
-  private startProcessingBatchProposals() {
-    const processBatchProposals = async () => {
+  private startProcessingProposalsBatch() {
+    const processProposalsBatch = async () => {
       const proposals = await this.proposalsBatch.getProposals();
       proposals.forEach((proposal) => this.processInitialProposal(proposal));
     };
-    this.batchIntervalId = setInterval(processBatchProposals, 1_000);
+    this.batchIntervalId = setInterval(processProposalsBatch, 1_000);
   }
 }

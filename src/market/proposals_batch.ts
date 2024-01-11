@@ -1,36 +1,49 @@
 import { Proposal } from "./proposal";
 import AsyncLock from "async-lock";
 
+export type ProposalsBatchOptions = {
+  minBatchSize?: number;
+  timeout?: number;
+  expirationSec?: number;
+};
+
 export class ProposalsBatch {
   private batch = new Map<string, Set<Proposal>>();
   private lock: AsyncLock = new AsyncLock();
-  constructor(private config: { minBatchSize: number; timeout: number; expirationSec: number }) {}
+  private config: Required<ProposalsBatchOptions>;
+  constructor(options?: ProposalsBatchOptions) {
+    this.config = {
+      minBatchSize: options?.minBatchSize ?? 100,
+      timeout: options?.timeout ?? 1_000,
+      expirationSec: options?.expirationSec ?? 1,
+    };
+  }
 
   async addProposal(proposal: Proposal) {
     const providerKey = this.getProviderKey(proposal);
     const proposals = this.batch.get(providerKey) || new Set<Proposal>();
-    await this.lock.acquire("app", () => {
+    await this.lock.acquire("proposals-batch", () => {
       this.batch.set(providerKey, proposals);
       proposals.add(proposal);
     });
   }
 
   async getProposals(): Promise<Proposal[]> {
-    return new Promise((resolve) => {
-      const startTime = Date.now();
-      const intervalId = setInterval(async () => {
-        const isTimeoutReached = Date.now() - startTime >= this.config.timeout;
-        if (this.batch.size >= this.config.minBatchSize || isTimeoutReached) {
-          const proposals: Proposal[] = [];
-          await this.lock.acquire("app", () => {
-            this.batch.forEach((providersProposals) => proposals.push(this.getBestProposal(providersProposals)));
-            this.batch.clear();
-          });
-          resolve(proposals);
-          clearInterval(intervalId);
-        }
-      }, 1_000);
-    });
+    const startTime = Date.now();
+    const drainBatch = async (resolve: (proposals: Proposal[]) => void) => {
+      const isTimeoutReached = Date.now() - startTime >= this.config.timeout;
+      if (this.batch.size >= this.config.minBatchSize || isTimeoutReached) {
+        const proposals: Proposal[] = [];
+        await this.lock.acquire("proposals-batch", () => {
+          this.batch.forEach((providersProposals) => proposals.push(this.getBestProposal(providersProposals)));
+          this.batch.clear();
+        });
+        resolve(proposals);
+      } else {
+        setTimeout(() => drainBatch(resolve), this.config.timeout < 1_000 ? this.config.timeout : 1_000);
+      }
+    };
+    return new Promise(drainBatch);
   }
 
   private getBestProposal(proposals: Set<Proposal>): Proposal {
@@ -57,7 +70,6 @@ export class ProposalsBatch {
   private estimatePrice(proposal: Proposal): number {
     const maxDurationSec = this.config.expirationSec;
     const threadsNo = proposal.properties["golem.inf.cpu.threads"];
-
     return (
       proposal.pricing.start +
       proposal.pricing.cpuSec * threadsNo * maxDurationSec +
