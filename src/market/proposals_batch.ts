@@ -5,15 +5,12 @@ export type ProposalsBatchOptions = {
   /** The minimum number of proposals after which it will be possible to return the collection */
   minBatchSize?: number;
   /** The maximum waiting time for collecting proposals after which it will be possible to return the collection */
-  timeout?: number;
-  /** Demand expiration time used to estimate the maximum proposal price */
-  expirationSec?: number;
+  timeoutMs?: number;
 };
 
 const DEFAULTS = {
   minBatchSize: 100,
   timeout: 1_000,
-  expirationSec: 1,
 };
 
 /**
@@ -30,8 +27,7 @@ export class ProposalsBatch {
   constructor(options?: ProposalsBatchOptions) {
     this.config = {
       minBatchSize: options?.minBatchSize ?? DEFAULTS.minBatchSize,
-      timeout: options?.timeout ?? DEFAULTS.timeout,
-      expirationSec: options?.expirationSec ?? DEFAULTS.expirationSec,
+      timeoutMs: options?.timeoutMs ?? DEFAULTS.timeout,
     };
   }
 
@@ -52,24 +48,30 @@ export class ProposalsBatch {
   }
 
   /**
-   * Returns a set of proposals that were collected within the specified `timeout` or their number reached the `minBatchSize` value
+   * Returns a set of proposals that were collected within the specified `timeoutMs`
+   * or their size reached the `minBatchSize` value
    */
-  async getProposals(): Promise<Proposal[]> {
-    const startTime = Date.now();
-    const drainBatch = async (resolve: (proposals: Proposal[]) => void) => {
-      const isTimeoutReached = Date.now() - startTime >= this.config.timeout;
-      if (this.batch.size >= this.config.minBatchSize || isTimeoutReached) {
-        const proposals: Proposal[] = [];
-        await this.lock.acquire("proposals-batch", () => {
-          this.batch.forEach((providersProposals) => proposals.push(this.getBestProposal(providersProposals)));
-          this.batch.clear();
-        });
-        resolve(proposals);
-      } else {
-        setTimeout(() => drainBatch(resolve), this.config.timeout < 1_000 ? this.config.timeout : 1_000);
-      }
-    };
-    return new Promise(drainBatch);
+  async *readProposals(): AsyncGenerator<Proposal[]> {
+    let timeoutId, intervalId;
+    const isTimeoutReached = new Promise((resolve) => {
+      timeoutId = setTimeout(resolve, this.config.timeoutMs);
+    });
+    const isBatchSizeReached = new Promise((resolve) => {
+      intervalId = setInterval(() => {
+        if (this.batch.size >= this.config.minBatchSize) {
+          resolve(true);
+        }
+      });
+    });
+    await Promise.race([isTimeoutReached, isBatchSizeReached]);
+    clearTimeout(timeoutId);
+    clearInterval(intervalId);
+    const proposals: Proposal[] = [];
+    await this.lock.acquire("proposals-batch", () => {
+      this.batch.forEach((providersProposals) => proposals.push(this.getBestProposal(providersProposals)));
+      this.batch.clear();
+    });
+    yield proposals;
   }
 
   /**
@@ -100,15 +102,10 @@ export class ProposalsBatch {
   }
 
   /**
-   * Estimation of the maximum price of the proposal based on the costs of CPU, Env and start
+   * Proposal price estimation based on CPU, Env and startup costs
    */
   private estimatePrice(proposal: Proposal): number {
-    const maxDurationSec = this.config.expirationSec;
     const threadsNo = proposal.properties["golem.inf.cpu.threads"];
-    return (
-      proposal.pricing.start +
-      proposal.pricing.cpuSec * threadsNo * maxDurationSec +
-      proposal.pricing.envSec * maxDurationSec
-    );
+    return proposal.pricing.start + proposal.pricing.cpuSec * threadsNo + proposal.pricing.envSec;
   }
 }

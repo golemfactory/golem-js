@@ -16,7 +16,7 @@ export interface MarketOptions extends DemandOptions {
   /** The minimum number of proposals after which the batch of proposal will be processed in order to avoid duplicates */
   minProposalsBatchSize?: number;
   /** The maximum waiting time for proposals to be batched in order to avoid duplicates */
-  proposalsBatchTimeout?: number;
+  proposalsBatchTimeoutMs?: number;
 }
 
 /**
@@ -37,7 +37,7 @@ export class MarketService {
     rejected: 0,
   };
   private proposalsBatch: ProposalsBatch;
-  private batchIntervalId?: NodeJS.Timeout;
+  private isRunning = false;
 
   constructor(
     private readonly agreementPoolService: AgreementPoolService,
@@ -48,21 +48,21 @@ export class MarketService {
     this.logger = this.options?.logger;
     this.proposalsBatch = new ProposalsBatch({
       minBatchSize: options?.minProposalsBatchSize,
-      timeout: options?.proposalsBatchTimeout,
-      expirationSec: options?.expirationSec,
+      timeoutMs: options?.proposalsBatchTimeoutMs,
     });
   }
 
   async run(taskPackage: Package, allocation: Allocation) {
+    this.isRunning = true;
     this.taskPackage = taskPackage;
     this.allocation = allocation;
     await this.createDemand();
-    this.startProcessingProposalsBatch();
+    this.startProcessingProposalsBatch().catch((e) => this.logger?.error(e));
     this.logger?.debug("Market Service has started");
   }
 
   async end() {
-    clearInterval(this.batchIntervalId);
+    this.isRunning = false;
     if (this.demand) {
       this.demand.removeEventListener(DEMAND_EVENT_TYPE, this.demandEventListener.bind(this));
       await this.demand.unsubscribe().catch((e) => this.logger?.error(`Could not unsubscribe demand. ${e}`));
@@ -170,12 +170,10 @@ export class MarketService {
     );
   }
 
-  private startProcessingProposalsBatch() {
-    const processProposalsBatch = async () => {
-      const proposals = await this.proposalsBatch.getProposals();
+  private async startProcessingProposalsBatch() {
+    for await (const proposals of this.proposalsBatch.readProposals()) {
       proposals.forEach((proposal) => this.processInitialProposal(proposal));
-    };
-    processProposalsBatch().then();
-    this.batchIntervalId = setInterval(processProposalsBatch, 1_000);
+      if (!this.isRunning) break;
+    }
   }
 }

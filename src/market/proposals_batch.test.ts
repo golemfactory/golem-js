@@ -17,10 +17,10 @@ describe("ProposalsBatch", () => {
       } as ProposalProperties);
       const proposal = instance(mockedProposal);
       await proposalsBatch.addProposal(proposal);
-      expect(await proposalsBatch.getProposals()).toContainEqual(proposal);
+      expect((await proposalsBatch.readProposals().next()).value).toContainEqual(proposal);
     });
     it("should add the proposal to the batch from the existing provider and the same hardware configuration", async () => {
-      const proposalsBatch = new ProposalsBatch({ timeout: 100 });
+      const proposalsBatch = new ProposalsBatch({ timeoutMs: 100 });
       const mockedProposal = mock(Proposal);
       when(mockedProposal.provider).thenReturn({ id: "provider-1" } as ProviderInfo);
       when(mockedProposal.properties).thenReturn({
@@ -33,7 +33,7 @@ describe("ProposalsBatch", () => {
       const proposal2 = instance(mockedProposal);
       await proposalsBatch.addProposal(proposal1);
       await proposalsBatch.addProposal(proposal2);
-      const proposals = await proposalsBatch.getProposals();
+      const proposals = (await proposalsBatch.readProposals().next()).value;
       expect(proposals.length).toEqual(1);
     });
 
@@ -59,7 +59,7 @@ describe("ProposalsBatch", () => {
       const proposal2 = instance(mockedProposal2);
       await proposalsBatch.addProposal(proposal1);
       await proposalsBatch.addProposal(proposal2);
-      const proposals = await proposalsBatch.getProposals();
+      const proposals = (await proposalsBatch.readProposals().next()).value;
       expect(proposals.length).toEqual(2);
       expect(proposals).toContainEqual(proposal1);
       expect(proposals).toContainEqual(proposal2);
@@ -67,7 +67,7 @@ describe("ProposalsBatch", () => {
   });
   describe("Getting Proposals", () => {
     it("should get the set of proposals grouped by provider key distinguished by provider id, cpu, threads, memory and storage", async () => {
-      const proposalsBatch = new ProposalsBatch({ timeout: 100 });
+      const proposalsBatch = new ProposalsBatch({ timeoutMs: 100 });
       const mockedProposal1 = mock(Proposal);
       when(mockedProposal1.provider).thenReturn({ id: "provider-1" } as ProviderInfo);
       when(mockedProposal1.properties).thenReturn({
@@ -129,7 +129,7 @@ describe("ProposalsBatch", () => {
         proposalsBatch.addProposal(proposal5),
         proposalsBatch.addProposal(proposal6),
       ]);
-      const proposals = await proposalsBatch.getProposals();
+      const proposals = (await proposalsBatch.readProposals().next()).value;
       expect(proposals.length).toEqual(5);
       expect(proposals).toContainEqual(proposal1);
       expect(proposals).not.toContainEqual(proposal2);
@@ -139,7 +139,7 @@ describe("ProposalsBatch", () => {
       expect(proposals).toContainEqual(proposal6);
     });
     it("should get the set of proposal grouped by provider key and reduced by the lowest price and highest time", async () => {
-      const proposalsBatch = new ProposalsBatch({ timeout: 100 });
+      const proposalsBatch = new ProposalsBatch({ timeoutMs: 100 });
       const mockedProposal1 = mock(Proposal);
       when(mockedProposal1.provider).thenReturn({ id: "provider-1" } as ProviderInfo);
       when(mockedProposal1.properties).thenReturn({
@@ -188,14 +188,14 @@ describe("ProposalsBatch", () => {
       await proposalsBatch.addProposal(proposal1);
       await proposalsBatch.addProposal(proposal2);
       await proposalsBatch.addProposal(proposal3);
-      const proposals = await proposalsBatch.getProposals();
+      const proposals = (await proposalsBatch.readProposals().next()).value;
       expect(proposals.length).toEqual(1);
       expect(proposals).toContainEqual(proposal2);
       expect(proposals).not.toContainEqual(proposal1);
       expect(proposals).not.toContainEqual(proposal3);
     });
     it("should drain batch after getting proposals", async () => {
-      const proposalsBatch = new ProposalsBatch({ timeout: 100 });
+      const proposalsBatch = new ProposalsBatch({ timeoutMs: 100 });
       const mockedProposal = mock(Proposal);
       when(mockedProposal.provider).thenReturn({ id: "provider-1" } as ProviderInfo);
       when(mockedProposal.properties).thenReturn({
@@ -206,12 +206,12 @@ describe("ProposalsBatch", () => {
       } as ProposalProperties);
       const proposal = instance(mockedProposal);
       await proposalsBatch.addProposal(proposal);
-      expect((await proposalsBatch.getProposals()).length).toEqual(1);
-      expect((await proposalsBatch.getProposals()).length).toEqual(0);
+      expect((await proposalsBatch.readProposals().next()).value.length).toEqual(1);
+      expect((await proposalsBatch.readProposals().next()).value.length).toEqual(0);
       await proposalsBatch.addProposal(proposal);
       await proposalsBatch.addProposal(proposal);
-      expect((await proposalsBatch.getProposals()).length).toEqual(1);
-      expect((await proposalsBatch.getProposals()).length).toEqual(0);
+      expect((await proposalsBatch.readProposals().next()).value.length).toEqual(1);
+      expect((await proposalsBatch.readProposals().next()).value.length).toEqual(0);
     });
   });
 });
