@@ -2,32 +2,57 @@ import { Proposal } from "./proposal";
 import AsyncLock from "async-lock";
 
 export type ProposalsBatchOptions = {
+  /** The minimum number of proposals after which it will be possible to return the collection */
   minBatchSize?: number;
+  /** The maximum waiting time for collecting proposals after which it will be possible to return the collection */
   timeout?: number;
+  /** Demand expiration time used to estimate the maximum proposal price */
   expirationSec?: number;
 };
 
+const DEFAULTS = {
+  minBatchSize: 100,
+  timeout: 1_000,
+  expirationSec: 1,
+};
+
+/**
+ * Proposals Batch aggregates initial proposals and returns a set grouped by the provider's key
+ * to avoid duplicate offers issued by the provider.
+ */
 export class ProposalsBatch {
+  /** Batch of proposals mapped by provider key and related set of initial proposals */
   private batch = new Map<string, Set<Proposal>>();
+  /** Lock used to synchronize adding and getting proposals from the batch */
   private lock: AsyncLock = new AsyncLock();
   private config: Required<ProposalsBatchOptions>;
   constructor(options?: ProposalsBatchOptions) {
     this.config = {
-      minBatchSize: options?.minBatchSize ?? 100,
-      timeout: options?.timeout ?? 1_000,
-      expirationSec: options?.expirationSec ?? 1,
+      minBatchSize: options?.minBatchSize ?? DEFAULTS.minBatchSize,
+      timeout: options?.timeout ?? DEFAULTS.timeout,
+      expirationSec: options?.expirationSec ?? DEFAULTS.expirationSec,
     };
   }
 
+  /**
+   * Add proposal to the batch grouped by provider key
+   * which consist of providerId, cores, threads, mem and storage
+   */
   async addProposal(proposal: Proposal) {
     const providerKey = this.getProviderKey(proposal);
-    const proposals = this.batch.get(providerKey) || new Set<Proposal>();
     await this.lock.acquire("proposals-batch", () => {
-      this.batch.set(providerKey, proposals);
+      let proposals = this.batch.get(providerKey);
+      if (!proposals) {
+        proposals = new Set<Proposal>();
+        this.batch.set(providerKey, proposals);
+      }
       proposals.add(proposal);
     });
   }
 
+  /**
+   * Returns a set of proposals that were collected within the specified `timeout` or their number reached the `minBatchSize` value
+   */
   async getProposals(): Promise<Proposal[]> {
     const startTime = Date.now();
     const drainBatch = async (resolve: (proposals: Proposal[]) => void) => {
@@ -46,6 +71,9 @@ export class ProposalsBatch {
     return new Promise(drainBatch);
   }
 
+  /**
+   * Selects the best proposal from the set according to the lowest price and the youngest proposal age
+   */
   private getBestProposal(proposals: Set<Proposal>): Proposal {
     const sortByLowerPriceAndHigherTime = (p1: Proposal, p2: Proposal) => {
       const p1Price = this.estimatePrice(p1);
@@ -57,6 +85,9 @@ export class ProposalsBatch {
     return [...proposals].sort(sortByLowerPriceAndHigherTime)[0];
   }
 
+  /**
+   * Provider key used to group proposals so that they can be distinguished based on ID and hardware configuration
+   */
   private getProviderKey(proposal: Proposal): string {
     return [
       proposal.provider.id,
@@ -67,6 +98,9 @@ export class ProposalsBatch {
     ].join("-");
   }
 
+  /**
+   * Estimation of the maximum price of the proposal based on the costs of CPU, Env and start
+   */
   private estimatePrice(proposal: Proposal): number {
     const maxDurationSec = this.config.expirationSec;
     const threadsNo = proposal.properties["golem.inf.cpu.threads"];
