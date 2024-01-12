@@ -232,7 +232,6 @@ export class Demand extends EventTarget {
           const reason = error.response?.data?.message || error;
           this.options.eventTarget?.dispatchEvent(new Events.CollectFailed({ id: this.id, reason }));
           this.logger?.warn(`Unable to collect offers. ${reason}`);
-          console.log(error);
           if (error.code === "ECONNREFUSED" || error.response?.status === 404) {
             this.dispatchEvent(
               new DemandEvent(

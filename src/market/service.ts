@@ -175,6 +175,7 @@ export class MarketService {
       const proposals = await this.proposalsBatch.getProposals();
       proposals.forEach((proposal) => this.processInitialProposal(proposal));
     };
+    processProposalsBatch().then();
     this.batchIntervalId = setInterval(processProposalsBatch, 1_000);
   }
 }
