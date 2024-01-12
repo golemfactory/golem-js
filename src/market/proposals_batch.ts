@@ -26,6 +26,7 @@ export class ProposalsBatch {
   /** Lock used to synchronize adding and getting proposals from the batch */
   private lock: AsyncLock = new AsyncLock();
   private config: Required<ProposalsBatchOptions>;
+
   constructor(options?: ProposalsBatchOptions) {
     this.config = {
       minBatchSize: options?.minBatchSize ?? DEFAULTS.minBatchSize,

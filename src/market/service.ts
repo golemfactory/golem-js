@@ -47,9 +47,9 @@ export class MarketService {
     this.options = new MarketConfig(options);
     this.logger = this.options?.logger;
     this.proposalsBatch = new ProposalsBatch({
-      minBatchSize: options?.minProposalsBatchSize ?? 100,
-      timeout: options?.proposalsBatchTimeout ?? 2_000,
-      expirationSec: options?.expirationSec ?? 30 * 60,
+      minBatchSize: options?.minProposalsBatchSize,
+      timeout: options?.proposalsBatchTimeout,
+      expirationSec: options?.expirationSec,
     });
   }
 
