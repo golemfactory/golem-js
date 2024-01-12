@@ -16,7 +16,7 @@ export interface MarketOptions extends DemandOptions {
   /** The minimum number of proposals after which the batch of proposal will be processed in order to avoid duplicates */
   minProposalsBatchSize?: number;
   /** The maximum waiting time for proposals to be batched in order to avoid duplicates */
-  proposalsBatchTimeoutMs?: number;
+  proposalsBatchReleaseTimeoutMs?: number;
 }
 
 /**
@@ -48,7 +48,7 @@ export class MarketService {
     this.logger = this.options?.logger;
     this.proposalsBatch = new ProposalsBatch({
       minBatchSize: options?.minProposalsBatchSize,
-      timeoutMs: options?.proposalsBatchTimeoutMs,
+      releaseTimeoutMs: options?.proposalsBatchReleaseTimeoutMs,
     });
   }
 

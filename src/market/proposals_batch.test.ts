@@ -19,8 +19,8 @@ describe("ProposalsBatch", () => {
       await proposalsBatch.addProposal(proposal);
       expect((await proposalsBatch.readProposals().next()).value).toContainEqual(proposal);
     });
-    it("should add the proposal to the batch from the existing provider and the same hardware configuration", async () => {
-      const proposalsBatch = new ProposalsBatch({ timeoutMs: 100 });
+    it("should not add the proposal to the batch from the existing provider and the same hardware configuration", async () => {
+      const proposalsBatch = new ProposalsBatch({ releaseTimeoutMs: 100 });
       const mockedProposal = mock(Proposal);
       when(mockedProposal.provider).thenReturn({ id: "provider-1" } as ProviderInfo);
       when(mockedProposal.properties).thenReturn({
@@ -67,7 +67,7 @@ describe("ProposalsBatch", () => {
   });
   describe("Getting Proposals", () => {
     it("should get the set of proposals grouped by provider key distinguished by provider id, cpu, threads, memory and storage", async () => {
-      const proposalsBatch = new ProposalsBatch({ timeoutMs: 100 });
+      const proposalsBatch = new ProposalsBatch({ releaseTimeoutMs: 100 });
       const mockedProposal1 = mock(Proposal);
       when(mockedProposal1.provider).thenReturn({ id: "provider-1" } as ProviderInfo);
       when(mockedProposal1.properties).thenReturn({
@@ -138,8 +138,8 @@ describe("ProposalsBatch", () => {
       expect(proposals).toContainEqual(proposal5);
       expect(proposals).toContainEqual(proposal6);
     });
-    it("should get the set of proposal grouped by provider key and reduced by the lowest price and highest time", async () => {
-      const proposalsBatch = new ProposalsBatch({ timeoutMs: 100 });
+    it("should get the set of proposal grouped by provider key and reduced to the lowest price and highest time", async () => {
+      const proposalsBatch = new ProposalsBatch({ releaseTimeoutMs: 100 });
       const mockedProposal1 = mock(Proposal);
       when(mockedProposal1.provider).thenReturn({ id: "provider-1" } as ProviderInfo);
       when(mockedProposal1.properties).thenReturn({
@@ -195,7 +195,7 @@ describe("ProposalsBatch", () => {
       expect(proposals).not.toContainEqual(proposal3);
     });
     it("should drain batch after getting proposals", async () => {
-      const proposalsBatch = new ProposalsBatch({ timeoutMs: 100 });
+      const proposalsBatch = new ProposalsBatch({ releaseTimeoutMs: 100 });
       const mockedProposal = mock(Proposal);
       when(mockedProposal.provider).thenReturn({ id: "provider-1" } as ProviderInfo);
       when(mockedProposal.properties).thenReturn({

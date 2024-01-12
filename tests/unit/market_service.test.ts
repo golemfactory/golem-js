@@ -29,7 +29,7 @@ describe("Market Service", () => {
     const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
       logger,
       minProposalsBatchSize: 1,
-      proposalsBatchTimeoutMs: 10,
+      proposalsBatchReleaseTimeoutMs: 10,
     });
     await marketService.run(packageMock, allocationMock);
     setExpectedProposals(proposalsInitial);
@@ -51,7 +51,7 @@ describe("Market Service", () => {
     const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
       logger,
       minProposalsBatchSize: 1,
-      proposalsBatchTimeoutMs: 10,
+      proposalsBatchReleaseTimeoutMs: 10,
     });
     await marketService.run(packageMock, allocationMock);
     setExpectedProposals([proposalsInitial[6]]);
@@ -63,7 +63,7 @@ describe("Market Service", () => {
     const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
       logger,
       minProposalsBatchSize: 1,
-      proposalsBatchTimeoutMs: 10,
+      proposalsBatchReleaseTimeoutMs: 10,
     });
     await marketService.run(packageMock, allocationMock);
     setExpectedProposals(proposalsWrongPaymentPlatform);
@@ -74,7 +74,7 @@ describe("Market Service", () => {
     const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
       logger,
       minProposalsBatchSize: 1,
-      proposalsBatchTimeoutMs: 10,
+      proposalsBatchReleaseTimeoutMs: 10,
     });
     await marketService.run(packageMock, allocationMock);
     setExpectedProposals(proposalsShortDebitNoteTimeout);
@@ -87,7 +87,7 @@ describe("Market Service", () => {
       logger,
       proposalFilter: proposalAlwaysBanFilter,
       minProposalsBatchSize: 1,
-      proposalsBatchTimeoutMs: 10,
+      proposalsBatchReleaseTimeoutMs: 10,
     });
     await marketService.run(packageMock, allocationMock);
     setExpectedProposals(proposalsInitial);
@@ -99,7 +99,7 @@ describe("Market Service", () => {
       logger,
       proposalFilter: ProposalFilters.blackListProposalIdsFilter(["0xee8993fe1dcff6b131d3fd759c6b3ddcb82d1655"]),
       minProposalsBatchSize: 1,
-      proposalsBatchTimeoutMs: 10,
+      proposalsBatchReleaseTimeoutMs: 10,
     });
     await marketService.run(packageMock, allocationMock);
     setExpectedProposals(proposalsInitial);
@@ -111,7 +111,7 @@ describe("Market Service", () => {
       logger,
       proposalFilter: ProposalFilters.blackListProposalRegexpFilter(/golem2004/),
       minProposalsBatchSize: 1,
-      proposalsBatchTimeoutMs: 10,
+      proposalsBatchReleaseTimeoutMs: 10,
     });
     await marketService.run(packageMock, allocationMock);
     setExpectedProposals(proposalsInitial);
@@ -123,7 +123,7 @@ describe("Market Service", () => {
       logger,
       proposalFilter: ProposalFilters.whiteListProposalIdsFilter(["0x123455"]),
       minProposalsBatchSize: 1,
-      proposalsBatchTimeoutMs: 10,
+      proposalsBatchReleaseTimeoutMs: 10,
     });
     await marketService.run(packageMock, allocationMock);
     setExpectedProposals(proposalsInitial);
@@ -135,7 +135,7 @@ describe("Market Service", () => {
       logger,
       proposalFilter: ProposalFilters.whiteListProposalRegexpFilter(/abcdefg/),
       minProposalsBatchSize: 1,
-      proposalsBatchTimeoutMs: 10,
+      proposalsBatchReleaseTimeoutMs: 10,
     });
     await marketService.run(packageMock, allocationMock);
     setExpectedProposals(proposalsInitial);
@@ -147,7 +147,7 @@ describe("Market Service", () => {
       logger,
       proposalFilter: ProposalFilters.whiteListProposalIdsFilter(["0xee8993fe1dcff6b131d3fd759c6b3ddcb82d1655"]),
       minProposalsBatchSize: 1,
-      proposalsBatchTimeoutMs: 10,
+      proposalsBatchReleaseTimeoutMs: 10,
     });
     await marketService.run(packageMock, allocationMock);
     setExpectedProposals(proposalsInitial);
@@ -159,7 +159,7 @@ describe("Market Service", () => {
       logger,
       proposalFilter: ProposalFilters.whiteListProposalRegexpFilter(/golem2004/),
       minProposalsBatchSize: 1,
-      proposalsBatchTimeoutMs: 10,
+      proposalsBatchReleaseTimeoutMs: 10,
     });
     await marketService.run(packageMock, allocationMock);
     setExpectedProposals(proposalsInitial);

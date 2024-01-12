@@ -5,12 +5,12 @@ export type ProposalsBatchOptions = {
   /** The minimum number of proposals after which it will be possible to return the collection */
   minBatchSize?: number;
   /** The maximum waiting time for collecting proposals after which it will be possible to return the collection */
-  timeoutMs?: number;
+  releaseTimeoutMs?: number;
 };
 
 const DEFAULTS = {
   minBatchSize: 100,
-  timeout: 1_000,
+  releaseTimeoutMs: 1_000,
 };
 
 /**
@@ -27,7 +27,7 @@ export class ProposalsBatch {
   constructor(options?: ProposalsBatchOptions) {
     this.config = {
       minBatchSize: options?.minBatchSize ?? DEFAULTS.minBatchSize,
-      timeoutMs: options?.timeoutMs ?? DEFAULTS.timeout,
+      releaseTimeoutMs: options?.releaseTimeoutMs ?? DEFAULTS.releaseTimeoutMs,
     };
   }
 
@@ -54,14 +54,14 @@ export class ProposalsBatch {
   async *readProposals(): AsyncGenerator<Proposal[]> {
     let timeoutId, intervalId;
     const isTimeoutReached = new Promise((resolve) => {
-      timeoutId = setTimeout(resolve, this.config.timeoutMs);
+      timeoutId = setTimeout(resolve, this.config.releaseTimeoutMs);
     });
     const isBatchSizeReached = new Promise((resolve) => {
       intervalId = setInterval(() => {
         if (this.batch.size >= this.config.minBatchSize) {
           resolve(true);
         }
-      });
+      }, 1_000);
     });
     await Promise.race([isTimeoutReached, isBatchSizeReached]);
     clearTimeout(timeoutId);
