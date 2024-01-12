@@ -2,7 +2,8 @@
   "root": true,
   "parser": "@typescript-eslint/parser",
   "env": {
-    "shared-node-browser": true
+    "shared-node-browser": true,
+    "node": true
   },
   "extends": ["eslint:recommended", "prettier"],
   "rules": {

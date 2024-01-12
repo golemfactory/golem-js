@@ -1,9 +1,0 @@
-run requestor with:
-
-node netcat_in.mjs
-
-wait till you see a messeage that netcat on provider is listening
-
-then run (on windows; on linux nc)
-
-ncat --send-only 127.0.0.1 5555 < testfile.txt
