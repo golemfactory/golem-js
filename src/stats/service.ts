@@ -65,7 +65,7 @@ export class StatsService {
         const payments = this.payments.getByAgreementId(agreement.id);
         return {
           Agreement: agreement.id.substring(0, 10),
-          "Provider Name": provider ? provider.providerName : "unknown",
+          "Provider Name": provider ? provider.name : "unknown",
           "Task Computed": tasks.where("status", "finished").count(),
           Cost: invoices.sum("amount"),
           "Payment Status": payments.count() > 0 ? "paid" : "unpaid",
@@ -195,7 +195,7 @@ export class StatsService {
       this.agreements.reject(event.detail.id);
     } else if (event instanceof Events.ProposalReceived) {
       this.proposals.add({ id: event.detail.id, providerId: event.detail.provider.id });
-      this.providers.add({ id: event.detail.provider.id });
+      this.providers.add({ ...event.detail.provider });
     } else if (event instanceof Events.InvoiceReceived) {
       this.invoices.add({
         id: event.detail.id,
