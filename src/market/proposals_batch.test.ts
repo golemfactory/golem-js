@@ -3,12 +3,18 @@ import { mock, instance, when } from "@johanblumenberg/ts-mockito";
 import { Proposal, ProposalProperties } from "./proposal";
 import { ProviderInfo } from "../agreement";
 
+const mockedProviderInfo: ProviderInfo = {
+  id: "provider-id-1",
+  name: "provider-name-1",
+  walletAddress: "0x1234566789",
+};
+
 describe("ProposalsBatch", () => {
   describe("Adding Proposals", () => {
     it("should add the proposal to the batch from new provider", async () => {
       const proposalsBatch = new ProposalsBatch({ minBatchSize: 1 });
       const mockedProposal = mock(Proposal);
-      when(mockedProposal.provider).thenReturn({ id: "provider-1" } as ProviderInfo);
+      when(mockedProposal.provider).thenReturn(mockedProviderInfo);
       when(mockedProposal.properties).thenReturn({
         ["golem.inf.cpu.cores"]: 1,
         ["golem.inf.cpu.threads"]: 1,
@@ -22,7 +28,7 @@ describe("ProposalsBatch", () => {
     it("should not add the proposal to the batch from the existing provider and the same hardware configuration", async () => {
       const proposalsBatch = new ProposalsBatch({ releaseTimeoutMs: 100 });
       const mockedProposal = mock(Proposal);
-      when(mockedProposal.provider).thenReturn({ id: "provider-1" } as ProviderInfo);
+      when(mockedProposal.provider).thenReturn(mockedProviderInfo);
       when(mockedProposal.properties).thenReturn({
         ["golem.inf.cpu.cores"]: 1,
         ["golem.inf.cpu.threads"]: 1,
@@ -40,7 +46,7 @@ describe("ProposalsBatch", () => {
     it("should add the proposal to the batch from the existing provider and different hardware configuration", async () => {
       const proposalsBatch = new ProposalsBatch({ minBatchSize: 2 });
       const mockedProposal1 = mock(Proposal);
-      when(mockedProposal1.provider).thenReturn({ id: "provider-1" } as ProviderInfo);
+      when(mockedProposal1.provider).thenReturn(mockedProviderInfo);
       when(mockedProposal1.properties).thenReturn({
         ["golem.inf.cpu.cores"]: 1,
         ["golem.inf.cpu.threads"]: 1,
@@ -48,7 +54,7 @@ describe("ProposalsBatch", () => {
         ["golem.inf.storage.gib"]: 1,
       } as ProposalProperties);
       const mockedProposal2 = mock(Proposal);
-      when(mockedProposal2.provider).thenReturn({ id: "provider-1" } as ProviderInfo);
+      when(mockedProposal2.provider).thenReturn(mockedProviderInfo);
       when(mockedProposal2.properties).thenReturn({
         ["golem.inf.cpu.cores"]: 77,
         ["golem.inf.cpu.threads"]: 77,
@@ -65,11 +71,11 @@ describe("ProposalsBatch", () => {
       expect(proposals).toContainEqual(proposal2);
     });
   });
-  describe("Getting Proposals", () => {
-    it("should get the set of proposals grouped by provider key distinguished by provider id, cpu, threads, memory and storage", async () => {
+  describe("Reading Proposals", () => {
+    it("should read the set of proposals grouped by provider key distinguished by provider id, cpu, threads, memory and storage", async () => {
       const proposalsBatch = new ProposalsBatch({ releaseTimeoutMs: 100 });
       const mockedProposal1 = mock(Proposal);
-      when(mockedProposal1.provider).thenReturn({ id: "provider-1" } as ProviderInfo);
+      when(mockedProposal1.provider).thenReturn(mockedProviderInfo);
       when(mockedProposal1.properties).thenReturn({
         ["golem.inf.cpu.cores"]: 1,
         ["golem.inf.cpu.threads"]: 1,
@@ -77,7 +83,7 @@ describe("ProposalsBatch", () => {
         ["golem.inf.storage.gib"]: 1,
       } as ProposalProperties);
       const mockedProposal2 = mock(Proposal);
-      when(mockedProposal2.provider).thenReturn({ id: "provider-1" } as ProviderInfo);
+      when(mockedProposal2.provider).thenReturn(mockedProviderInfo);
       when(mockedProposal2.properties).thenReturn({
         ["golem.inf.cpu.cores"]: 1,
         ["golem.inf.cpu.threads"]: 1,
@@ -85,7 +91,7 @@ describe("ProposalsBatch", () => {
         ["golem.inf.storage.gib"]: 1,
       } as ProposalProperties);
       const mockedProposal3 = mock(Proposal);
-      when(mockedProposal3.provider).thenReturn({ id: "provider-1" } as ProviderInfo);
+      when(mockedProposal3.provider).thenReturn(mockedProviderInfo);
       when(mockedProposal3.properties).thenReturn({
         ["golem.inf.cpu.cores"]: 1,
         ["golem.inf.cpu.threads"]: 77,
@@ -93,7 +99,7 @@ describe("ProposalsBatch", () => {
         ["golem.inf.storage.gib"]: 1,
       } as ProposalProperties);
       const mockedProposal4 = mock(Proposal);
-      when(mockedProposal4.provider).thenReturn({ id: "provider-1" } as ProviderInfo);
+      when(mockedProposal4.provider).thenReturn(mockedProviderInfo);
       when(mockedProposal4.properties).thenReturn({
         ["golem.inf.cpu.cores"]: 1,
         ["golem.inf.cpu.threads"]: 1,
@@ -101,7 +107,7 @@ describe("ProposalsBatch", () => {
         ["golem.inf.storage.gib"]: 1,
       } as ProposalProperties);
       const mockedProposal5 = mock(Proposal);
-      when(mockedProposal5.provider).thenReturn({ id: "provider-1" } as ProviderInfo);
+      when(mockedProposal5.provider).thenReturn(mockedProviderInfo);
       when(mockedProposal5.properties).thenReturn({
         ["golem.inf.cpu.cores"]: 1,
         ["golem.inf.cpu.threads"]: 1,
@@ -138,10 +144,10 @@ describe("ProposalsBatch", () => {
       expect(proposals).toContainEqual(proposal5);
       expect(proposals).toContainEqual(proposal6);
     });
-    it("should get the set of proposal grouped by provider key and reduced to the lowest price and highest time", async () => {
+    it("should read the set of proposal grouped by provider key and reduced proposals from teh same provider to the lowest price and highest time", async () => {
       const proposalsBatch = new ProposalsBatch({ releaseTimeoutMs: 100 });
       const mockedProposal1 = mock(Proposal);
-      when(mockedProposal1.provider).thenReturn({ id: "provider-1" } as ProviderInfo);
+      when(mockedProposal1.provider).thenReturn(mockedProviderInfo);
       when(mockedProposal1.properties).thenReturn({
         ["golem.inf.cpu.cores"]: 1,
         ["golem.inf.cpu.threads"]: 1,
@@ -155,7 +161,7 @@ describe("ProposalsBatch", () => {
       });
       when(mockedProposal1.timestamp).thenReturn("2024-01-01T00:00:00.000Z");
       const mockedProposal2 = mock(Proposal);
-      when(mockedProposal2.provider).thenReturn({ id: "provider-1" } as ProviderInfo);
+      when(mockedProposal2.provider).thenReturn(mockedProviderInfo);
       when(mockedProposal2.properties).thenReturn({
         ["golem.inf.cpu.cores"]: 1,
         ["golem.inf.cpu.threads"]: 1,
@@ -169,7 +175,7 @@ describe("ProposalsBatch", () => {
       });
       when(mockedProposal2.timestamp).thenReturn("2024-01-01T07:07:07.007Z");
       const mockedProposal3 = mock(Proposal);
-      when(mockedProposal3.provider).thenReturn({ id: "provider-1" } as ProviderInfo);
+      when(mockedProposal3.provider).thenReturn(mockedProviderInfo);
       when(mockedProposal3.properties).thenReturn({
         ["golem.inf.cpu.cores"]: 1,
         ["golem.inf.cpu.threads"]: 1,
@@ -194,10 +200,10 @@ describe("ProposalsBatch", () => {
       expect(proposals).not.toContainEqual(proposal1);
       expect(proposals).not.toContainEqual(proposal3);
     });
-    it("should drain batch after getting proposals", async () => {
+    it("should drain batch after reading proposals", async () => {
       const proposalsBatch = new ProposalsBatch({ releaseTimeoutMs: 100 });
       const mockedProposal = mock(Proposal);
-      when(mockedProposal.provider).thenReturn({ id: "provider-1" } as ProviderInfo);
+      when(mockedProposal.provider).thenReturn(mockedProviderInfo);
       when(mockedProposal.properties).thenReturn({
         ["golem.inf.cpu.cores"]: 1,
         ["golem.inf.cpu.threads"]: 1,
