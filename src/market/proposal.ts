@@ -246,6 +246,14 @@ export class Proposal {
     return this.getProviderPaymentPlatforms().includes(paymentPlatform);
   }
 
+  /**
+   * Proposal cost estimation based on CPU, Env and startup costs
+   */
+  getEstimatedCost(): number {
+    const threadsNo = this.properties["golem.inf.cpu.threads"] || 1;
+    return this.pricing.start + this.pricing.cpuSec * threadsNo + this.pricing.envSec;
+  }
+
   private getProviderPaymentPlatforms(): string[] {
     return (
       Object.keys(this.properties)

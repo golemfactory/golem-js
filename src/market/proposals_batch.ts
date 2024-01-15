@@ -79,8 +79,8 @@ export class ProposalsBatch {
    */
   private getBestProposal(proposals: Set<Proposal>): Proposal {
     const sortByLowerPriceAndHigherTime = (p1: Proposal, p2: Proposal) => {
-      const p1Price = this.estimatePrice(p1);
-      const p2Price = this.estimatePrice(p2);
+      const p1Price = p1.getEstimatedCost();
+      const p2Price = p2.getEstimatedCost();
       const p1Time = new Date(p1.timestamp).valueOf();
       const p2Time = new Date(p2.timestamp).valueOf();
       return p1Price !== p2Price ? p1Price - p2Price : p2Time - p1Time;
@@ -99,13 +99,5 @@ export class ProposalsBatch {
       proposal.properties["golem.inf.mem.gib"],
       proposal.properties["golem.inf.storage.gib"],
     ].join("-");
-  }
-
-  /**
-   * Proposal price estimation based on CPU, Env and startup costs
-   */
-  private estimatePrice(proposal: Proposal): number {
-    const threadsNo = proposal.properties["golem.inf.cpu.threads"];
-    return proposal.pricing.start + proposal.pricing.cpuSec * threadsNo + proposal.pricing.envSec;
   }
 }

@@ -11,7 +11,10 @@ import { ProposalsBatch } from "./proposals_batch";
 export type ProposalFilter = (proposal: Proposal) => Promise<boolean> | boolean;
 
 export interface MarketOptions extends DemandOptions {
-  /** A custom filter that checks every proposal coming from the market */
+  /**
+   * A custom filter checking the proposal from the market for each provider and its hardware configuration.
+   * Duplicate proposals from one provider are reduced to the cheapest one.
+   */
   proposalFilter?: ProposalFilter;
   /** The minimum number of proposals after which the batch of proposal will be processed in order to avoid duplicates */
   minProposalsBatchSize?: number;
