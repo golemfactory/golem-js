@@ -118,4 +118,22 @@ describe("Proposal", () => {
       });
     });
   });
+
+  describe("Estimating cost", () => {
+    test("it estimate cost based on CPU, Env and startup costs", () => {
+      const proposal = buildTestProposal({
+        "golem.inf.cpu.threads": 5,
+        "golem.com.usage.vector": ["golem.usage.duration_sec", "golem.usage.cpu_sec"],
+        "golem.com.pricing.model.linear.coeffs": [0.01, 0.02, 0.03],
+      });
+      expect(proposal.getEstimatedCost()).toEqual(0.14);
+    });
+    test("it estimate cost based on CPU, Env and startup costs if info about the number of threads is missing", () => {
+      const proposal = buildTestProposal({
+        "golem.com.usage.vector": ["golem.usage.duration_sec", "golem.usage.cpu_sec"],
+        "golem.com.pricing.model.linear.coeffs": [0.1, 0.2, 0.3],
+      });
+      expect(proposal.getEstimatedCost()).toEqual(0.6);
+    });
+  });
 });

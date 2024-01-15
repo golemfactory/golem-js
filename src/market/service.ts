@@ -6,12 +6,20 @@ import { Allocation } from "../payment";
 import { Demand, DemandEvent, DEMAND_EVENT_TYPE, DemandOptions } from "./demand";
 import { MarketConfig } from "./config";
 import { GolemError } from "../error/golem-error";
+import { ProposalsBatch } from "./proposals_batch";
 
 export type ProposalFilter = (proposal: Proposal) => Promise<boolean> | boolean;
 
 export interface MarketOptions extends DemandOptions {
-  /** A custom filter that checks every proposal coming from the market */
+  /**
+   * A custom filter checking the proposal from the market for each provider and its hardware configuration.
+   * Duplicate proposals from one provider are reduced to the cheapest one.
+   */
   proposalFilter?: ProposalFilter;
+  /** The minimum number of proposals after which the batch of proposal will be processed in order to avoid duplicates */
+  minProposalsBatchSize?: number;
+  /** The maximum waiting time for proposals to be batched in order to avoid duplicates */
+  proposalsBatchReleaseTimeoutMs?: number;
 }
 
 /**
@@ -31,6 +39,8 @@ export class MarketService {
     confirmed: 0,
     rejected: 0,
   };
+  private proposalsBatch: ProposalsBatch;
+  private isRunning = false;
 
   constructor(
     private readonly agreementPoolService: AgreementPoolService,
@@ -39,16 +49,23 @@ export class MarketService {
   ) {
     this.options = new MarketConfig(options);
     this.logger = this.options?.logger;
+    this.proposalsBatch = new ProposalsBatch({
+      minBatchSize: options?.minProposalsBatchSize,
+      releaseTimeoutMs: options?.proposalsBatchReleaseTimeoutMs,
+    });
   }
 
   async run(taskPackage: Package, allocation: Allocation) {
+    this.isRunning = true;
     this.taskPackage = taskPackage;
     this.allocation = allocation;
     await this.createDemand();
+    this.startProcessingProposalsBatch().catch((e) => this.logger?.error(e));
     this.logger?.debug("Market Service has started");
   }
 
   async end() {
+    this.isRunning = false;
     if (this.demand) {
       this.demand.removeEventListener(DEMAND_EVENT_TYPE, this.demandEventListener.bind(this));
       await this.demand.unsubscribe().catch((e) => this.logger?.error(`Could not unsubscribe demand. ${e}`));
@@ -81,7 +98,7 @@ export class MarketService {
       this.resubscribeDemand().catch((e) => this.logger?.warn(e));
       return;
     }
-    if (proposal.isInitial()) this.processInitialProposal(proposal);
+    if (proposal.isInitial()) this.proposalsBatch.addProposal(proposal);
     else if (proposal.isDraft()) this.processDraftProposal(proposal);
     else if (proposal.isExpired()) this.logger?.debug(`Proposal hes expired ${proposal.id}`);
     else if (proposal.isRejected()) {
@@ -154,5 +171,12 @@ export class MarketService {
     this.logger?.debug(
       `Proposal has been confirmed with provider ${proposal.issuerId} and added to agreement pool (${proposal.id})`,
     );
+  }
+
+  private async startProcessingProposalsBatch() {
+    for await (const proposals of this.proposalsBatch.readProposals()) {
+      proposals.forEach((proposal) => this.processInitialProposal(proposal));
+      if (!this.isRunning) break;
+    }
   }
 }
