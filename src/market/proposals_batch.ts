@@ -48,7 +48,7 @@ export class ProposalsBatch {
   }
 
   /**
-   * Returns a set of proposals that were collected within the specified `timeoutMs`
+   * Generates a set of proposals that were collected within the specified `releaseTimeoutMs`
    * or their size reached the `minBatchSize` value
    */
   async *readProposals(): AsyncGenerator<Proposal[]> {
