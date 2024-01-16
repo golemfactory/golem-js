@@ -3,7 +3,7 @@ import { v4 } from "uuid";
 import { encode, toObject } from "flatbuffers/js/flexbuffers";
 import * as jsSha3 from "js-sha3";
 import { Logger, nullLogger, YagnaApi } from "../utils";
-import { GolemError } from "../error/golem-error";
+import { GolemInternalError } from "../error/golem-error";
 
 export interface WebSocketStorageProviderOptions {
   logger?: Logger;
@@ -100,7 +100,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
   }
 
   async publishFile(): Promise<string> {
-    throw new GolemError("Not implemented");
+    throw new GolemInternalError("Not implemented");
   }
 
   async receiveData(callback: StorageProviderDataCallback): Promise<string> {
@@ -130,7 +130,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
   }
 
   async receiveFile(): Promise<string> {
-    throw new GolemError("Not implemented");
+    throw new GolemInternalError("Not implemented");
   }
 
   async release(urls: string[]): Promise<void> {
@@ -202,7 +202,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
     const hashHex = jsSha3.sha3_256(buf);
 
     if (hash !== hashHex) {
-      throw new GolemError(`File corrupted, expected hash ${hash}, got ${hashHex}`);
+      throw new GolemInternalError(`File corrupted, expected hash ${hash}, got ${hashHex}`);
     } else {
       return buf;
     }

@@ -1,6 +1,6 @@
 import { MarketProperty } from "ya-ts-client/dist/ya-payment/src/models";
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market/src/models";
-import { GolemError } from "../error/golem-error";
+import { GolemMarketError } from "./error";
 
 /**
  * Properties and constraints to be added to a market object (i.e. a demand or an offer).
@@ -76,7 +76,7 @@ export class DecorationsBuilder {
         };
       }
     }
-    throw new GolemError(`Unable to parse constraint "${constraint}"`);
+    throw new GolemMarketError(`Unable to parse constraint "${constraint}"`);
   }
   addDecoration(decoration: MarketDecoration) {
     if (decoration.properties) {

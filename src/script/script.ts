@@ -1,7 +1,7 @@
 import { ExeScriptRequest } from "ya-ts-client/dist/ya-activity/src/models";
 import { Command } from "./command";
 import { Result } from "../activity";
-import { GolemError } from "../error/golem-error";
+import { GolemInternalError } from "../error/golem-error";
 
 /**
  * @hidden
@@ -27,7 +27,7 @@ export class Script {
   }
 
   getExeScriptRequest(): ExeScriptRequest {
-    if (!this.commands.length) throw new GolemError("There are no commands in the script");
+    if (!this.commands.length) throw new GolemInternalError("There are no commands in the script");
     return { text: JSON.stringify(this.commands.map((cmd) => cmd.toJson())) };
   }
 }

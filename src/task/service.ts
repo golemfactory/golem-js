@@ -9,7 +9,7 @@ import { Activity, ActivityOptions } from "../activity";
 import { TaskConfig } from "./config";
 import { Events } from "../events";
 import { Task } from "./task";
-import { GolemError } from "../error/golem-error";
+import { GolemWorkError } from "./error";
 
 export interface TaskServiceOptions extends ActivityOptions {
   /** Number of maximum parallel running task on one TaskExecutor instance */
@@ -153,7 +153,7 @@ export class TaskService {
           }),
         );
         task.cleanup();
-        throw new GolemError(`Task ${task.id} has been rejected! ${reason}`);
+        throw new GolemWorkError(`Task ${task.id} has been rejected! ${reason}`);
       }
 
       if (activity) {

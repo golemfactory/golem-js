@@ -2,7 +2,7 @@ import { Activity, ActivityOptions } from "./activity";
 import { defaultLogger, Logger, YagnaApi } from "../utils";
 import { AgreementPoolService } from "../agreement";
 import { PaymentService } from "../payment";
-import { GolemError } from "../error/golem-error";
+import { GolemWorkError } from "../task/error";
 
 interface ActivityServiceOptions extends ActivityOptions {}
 
@@ -43,7 +43,7 @@ export class ActivityPoolService {
    */
   async getActivity(): Promise<Activity> {
     if (!this.runningState) {
-      throw new GolemError("Unable to get activity. Activity service is not running");
+      throw new GolemWorkError("Unable to get activity. Activity service is not running");
     }
     return this.pool.shift() || (await this.createActivity());
   }

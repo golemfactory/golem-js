@@ -4,7 +4,7 @@ import { YagnaOptions } from "../executor";
 import { AgreementFactory } from "./factory";
 import { AgreementConfig } from "./config";
 import { Events } from "../events";
-import { GolemError } from "../error/golem-error";
+import { GolemMarketError } from "../market/error";
 
 export interface ProviderInfo {
   name: string;
@@ -145,7 +145,7 @@ export class Agreement {
       );
       this.logger?.debug(`Agreement ${this.id} terminated`);
     } catch (error) {
-      throw new GolemError(
+      throw new GolemMarketError(
         `Unable to terminate agreement ${this.id}. ${error.response?.data?.message || error.response?.data || error}`,
       );
     }

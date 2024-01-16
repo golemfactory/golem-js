@@ -3,9 +3,9 @@ import { Package } from "../package";
 import { Proposal } from "./proposal";
 import { AgreementPoolService } from "../agreement";
 import { Allocation } from "../payment";
-import { Demand, DemandEvent, DEMAND_EVENT_TYPE, DemandOptions } from "./demand";
+import { Demand, DEMAND_EVENT_TYPE, DemandEvent, DemandOptions } from "./demand";
 import { MarketConfig } from "./config";
-import { GolemError } from "../error/golem-error";
+import { GolemMarketError, MarketErrorCode } from "./error";
 import { ProposalsBatch } from "./proposals_batch";
 
 export type ProposalFilter = (proposal: Proposal) => Promise<boolean> | boolean;
@@ -78,7 +78,8 @@ export class MarketService {
   }
 
   private async createDemand(): Promise<true> {
-    if (!this.taskPackage || !this.allocation) throw new GolemError("The service has not been started correctly.");
+    if (!this.taskPackage || !this.allocation)
+      throw new GolemMarketError("The service has not been started correctly.", MarketErrorCode.NotInitialized);
     this.demand = await Demand.create(this.taskPackage, this.allocation, this.yagnaApi, this.options);
     this.demand.addEventListener(DEMAND_EVENT_TYPE, this.demandEventListener.bind(this));
     this.proposalsCount = {
@@ -124,7 +125,12 @@ export class MarketService {
   }
 
   private async processInitialProposal(proposal: Proposal) {
-    if (!this.allocation) throw new GolemError("The service has not been started correctly.");
+    if (!this.allocation)
+      throw new GolemMarketError(
+        "The service has not been started correctly.",
+        MarketErrorCode.NotInitialized,
+        this.demand,
+      );
     this.logger?.debug(`New proposal has been received (${proposal.id})`);
     this.proposalsCount.initial++;
     try {
@@ -146,7 +152,11 @@ export class MarketService {
 
   private async isProposalValid(proposal: Proposal): Promise<{ result: boolean; reason?: string }> {
     if (!this.allocation) {
-      throw new GolemError("The service has not been started correctly.");
+      throw new GolemMarketError(
+        "The service has not been started correctly.",
+        MarketErrorCode.NotInitialized,
+        this.demand,
+      );
     }
 
     const timeout = proposal.properties["golem.com.payment.debit-notes.accept-timeout?"];

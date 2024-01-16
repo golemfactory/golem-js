@@ -2,7 +2,7 @@ import { Agreement, AgreementOptions } from "./agreement";
 import { Logger, YagnaApi } from "../utils";
 import { AgreementConfig } from "./config";
 import { Events } from "../events";
-import { GolemError } from "../error/golem-error";
+import { GolemMarketError } from "../market/error";
 import { ProposalProperties } from "../market/proposal";
 
 /**
@@ -50,7 +50,7 @@ export class AgreementFactory {
         id: data.offer.providerId,
         walletAddress: offerProperties[`golem.com.payment.platform.${chosenPaymentPlatform}.address`] as string,
       };
-      if (!provider.id || !provider.name) throw new GolemError("Unable to get provider info");
+      if (!provider.id || !provider.name) throw new GolemMarketError("Unable to get provider info");
       const agreement = new Agreement(agreementId, provider, this.yagnaApi, this.options);
       this.options.eventTarget?.dispatchEvent(
         new Events.AgreementCreated({
@@ -63,7 +63,7 @@ export class AgreementFactory {
       this.logger?.debug(`Agreement ${agreementId} created`);
       return agreement;
     } catch (error) {
-      throw new GolemError(
+      throw new GolemMarketError(
         `Unable to create agreement ${error?.response?.data?.message || error?.response?.data || error}`,
       );
     }

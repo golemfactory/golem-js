@@ -2,7 +2,7 @@ import { Logger, YagnaApi } from "../utils";
 import { Network } from "./index";
 import { NetworkOptions } from "./network";
 import { NetworkNode } from "./node";
-import { GolemError } from "../error/golem-error";
+import { GolemNetworkError } from "./error";
 
 export type NetworkServiceOptions = Omit<NetworkOptions, "networkOwnerId">;
 
@@ -32,7 +32,7 @@ export class NetworkService {
   }
 
   public async addNode(nodeId: string, ip?: string): Promise<NetworkNode> {
-    if (!this.network) throw new GolemError("The service is not started and the network does not exist");
+    if (!this.network) throw new GolemNetworkError("The service is not started and the network does not exist");
     return this.network.addNode(nodeId, ip);
   }
 

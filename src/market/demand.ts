@@ -9,7 +9,7 @@ import { Events } from "../events";
 import { ProposalEvent, ProposalRejectedEvent } from "ya-ts-client/dist/ya-market/src/models";
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
 import * as events from "../events/events";
-import { GolemError } from "../error/golem-error";
+import { GolemMarketError } from "./error";
 
 export interface DemandDetails {
   properties: Array<{ key: string; value: string | number | boolean }>;
@@ -237,7 +237,7 @@ export class Demand extends EventTarget {
               new DemandEvent(
                 DEMAND_EVENT_TYPE,
                 undefined,
-                new GolemError(
+                new GolemMarketError(
                   `${error.code === "ECONNREFUSED" ? "Yagna connection error." : "Demand expired."} ${reason}`,
                 ),
               ),
@@ -264,7 +264,7 @@ export class DemandEvent extends Event {
    * @param data object with proposal data:
    * @param error optional error if occurred while subscription is active
    */
-  constructor(type: string, data?: (Proposal & EventInit) | undefined, error?: GolemError | undefined) {
+  constructor(type: string, data?: (Proposal & EventInit) | undefined, error?: GolemMarketError | undefined) {
     super(type, data);
     this.proposal = data;
     this.error = error;

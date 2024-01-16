@@ -1,10 +1,9 @@
 import { IPv4, IPv4Mask, IPv4Prefix, IPv4CidrRange, AbstractIPNum } from "ip-num";
-import { Logger } from "../utils";
+import { Logger, YagnaApi } from "../utils";
 import { YagnaOptions } from "../executor";
 import { NetworkConfig } from "./config";
 import { NetworkNode } from "./node";
-import { YagnaApi } from "../utils/yagna/yagna";
-import { GolemError } from "../error/golem-error";
+import { GolemNetworkError } from "./error";
 
 /**
  * @hidden
@@ -33,7 +32,7 @@ export interface NetworkInfo {
   nodes: { [ip: string]: string };
 }
 
-export class NetworkError extends GolemError {}
+export class NetworkError extends GolemNetworkError {}
 
 /**
  * Network module - an object represents VPN created between the requestor and the provider nodes within Golem Network.
@@ -75,7 +74,7 @@ export class Network {
       config.logger?.info(`Network created: ID: ${id}, IP: ${ip}, Mask: ${mask}`);
       return network;
     } catch (error) {
-      throw new GolemError(`Unable to create network. ${error?.response?.data?.message || error}`);
+      throw new GolemNetworkError(`Unable to create network. ${error?.response?.data?.message || error}`);
     }
   }
 
@@ -157,7 +156,7 @@ export class Network {
 
   private nextAddress(): IPv4 {
     const ip = this.ipIterator.next().value;
-    if (!ip) throw new GolemError(`No more addresses available in ${this.ipRange.toCidrString()}`);
+    if (!ip) throw new GolemNetworkError(`No more addresses available in ${this.ipRange.toCidrString()}`);
     return ip;
   }
 

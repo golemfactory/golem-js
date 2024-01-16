@@ -3,7 +3,7 @@ import { Logger, runtimeContextChecker, sleep } from "../utils";
 import path from "path";
 import fs from "fs";
 import cp from "child_process";
-import { GolemError } from "../error/golem-error";
+import { GolemInternalError, GolemUserError } from "../error/golem-error";
 
 export class GftpStorageProvider implements StorageProvider {
   private gftpServerProcess?: cp.ChildProcess;
@@ -24,7 +24,7 @@ export class GftpStorageProvider implements StorageProvider {
 
   constructor(private logger?: Logger) {
     if (runtimeContextChecker.isBrowser) {
-      throw new GolemError(`File transfer by GFTP module is unsupported in the browser context.`);
+      throw new GolemUserError(`File transfer by GFTP module is unsupported in the browser context.`);
     }
   }
 
@@ -79,7 +79,7 @@ export class GftpStorageProvider implements StorageProvider {
   }
 
   receiveData(): Promise<string> {
-    throw new GolemError("receiveData is not implemented in GftpStorageProvider");
+    throw new GolemUserError("receiveData is not implemented in GftpStorageProvider");
   }
 
   async publishFile(src: string): Promise<string> {
@@ -128,12 +128,12 @@ export class GftpStorageProvider implements StorageProvider {
     try {
       this.gftpServerProcess?.stdin?.write(query);
       const value = (await this.reader?.next())?.value;
-      if (!value) throw new GolemError("Unable to get GFTP command result");
+      if (!value) throw new GolemInternalError("Unable to get GFTP command result");
       const { result } = JSON.parse(value);
-      if (result === undefined) throw new GolemError(value);
+      if (result === undefined) throw new GolemInternalError(value);
       return result;
     } catch (error) {
-      throw new GolemError(
+      throw new GolemInternalError(
         `Error while obtaining response to JSONRPC. query: ${query} error: ${JSON.stringify(error)}`,
       );
     } finally {

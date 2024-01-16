@@ -10,13 +10,13 @@ import { ExecutorConfig } from "./config";
 import { Events } from "../events";
 import { StatsService } from "../stats/service";
 import { TaskServiceOptions } from "../task/service";
-import { NetworkServiceOptions } from "../network/service";
-import { AgreementServiceOptions } from "../agreement/service";
-import { MarketOptions } from "../market/service";
+import { NetworkServiceOptions } from "../network";
+import { AgreementServiceOptions } from "../agreement";
+import { MarketOptions } from "../market";
 import { RequireAtLeastOne } from "../utils/types";
 import { TaskExecutorEventsDict } from "./events";
 import { EventEmitter } from "eventemitter3";
-import { GolemError } from "../error/golem-error";
+import { GolemInternalError, GolemTimeoutError, GolemUserError } from "../error/golem-error";
 import { WorkOptions } from "../task/work";
 
 const terminatingSignals = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
@@ -237,7 +237,7 @@ export class TaskExecutor {
           taskPackage = packageReference;
         }
       } else {
-        const error = new GolemError("No package or manifest provided");
+        const error = new GolemUserError("No package or manifest provided");
         this.logger?.error(error);
         throw error;
       }
@@ -418,7 +418,7 @@ export class TaskExecutor {
       }
       await sleep(2000, true);
     }
-    throw new GolemError("Task executor has been stopped");
+    throw new GolemInternalError("Task executor has been stopped");
   }
 
   private handleCriticalError(e: Error) {
@@ -485,7 +485,7 @@ export class TaskExecutor {
               : "Check your proposal filters if they are not too restrictive.";
         const errorMessage = `Could not start any work on Golem. Processed ${proposalsCount.initial} initial proposals from yagna, filters accepted ${proposalsCount.confirmed}. ${hint}`;
         if (this.options.exitOnNoProposals) {
-          this.handleCriticalError(new GolemError(errorMessage));
+          this.handleCriticalError(new GolemTimeoutError(errorMessage));
         } else {
           this.logger?.warn(errorMessage);
         }

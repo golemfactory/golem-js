@@ -7,7 +7,7 @@ import { RequestorApi as GsbRequestorApi } from "./gsb";
 import { Agent } from "http";
 import { Configuration } from "ya-ts-client/dist/ya-payment";
 import * as EnvUtils from "../env";
-import { GolemError } from "../../error/golem-error";
+import { GolemUserError } from "../../error/golem-error";
 import { v4 } from "uuid";
 
 export type YagnaApi = {
@@ -38,7 +38,7 @@ export class Yagna {
     this.httpAgent = new Agent({ keepAlive: true });
     this.controller = new AbortController();
     this.apiKey = options?.apiKey || EnvUtils.getYagnaAppKey();
-    if (!this.apiKey) throw new GolemError("Api key not defined");
+    if (!this.apiKey) throw new GolemUserError("Api key not defined");
     this.apiBaseUrl = options?.basePath || EnvUtils.getYagnaApiUrl();
     this.api = this.createApi();
   }
@@ -96,7 +96,9 @@ export class Yagna {
   protected errorHandler(error: Error): Promise<Error> {
     if ("code" in error && CONNECTIONS_ERROR_CODES.includes((error.code as string) ?? "")) {
       return Promise.reject(
-        new GolemError(`No connection to Yagna. Make sure the service is running at the address ${this.apiBaseUrl}`),
+        new GolemUserError(
+          `No connection to Yagna. Make sure the service is running at the address ${this.apiBaseUrl}`,
+        ),
       );
     }
     return Promise.reject(error);

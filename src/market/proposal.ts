@@ -2,7 +2,7 @@ import { Proposal as ProposalModel, ProposalAllOfStateEnum } from "ya-ts-client/
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
 import { Events } from "../events";
-import { GolemError } from "../error/golem-error";
+import { GolemMarketError } from "./error";
 import { ProviderInfo } from "../agreement";
 
 export type PricingInfo = {
@@ -159,23 +159,23 @@ export class Proposal {
     const priceVector = this.properties["golem.com.pricing.model.linear.coeffs"];
 
     if (!usageVector || usageVector.length === 0) {
-      throw new GolemError("Broken proposal: the `golem.com.usage.vector` does not contain price information");
+      throw new GolemMarketError("Broken proposal: the `golem.com.usage.vector` does not contain price information");
     }
 
     if (!priceVector || priceVector.length === 0) {
-      throw new GolemError(
+      throw new GolemMarketError(
         "Broken proposal: the `golem.com.pricing.model.linear.coeffs` does not contain pricing information",
       );
     }
 
     if (usageVector.length < priceVector.length - 1) {
-      throw new GolemError(
+      throw new GolemMarketError(
         "Broken proposal: the `golem.com.usage.vector` has less pricing information than `golem.com.pricing.model.linear.coeffs`",
       );
     }
 
     if (priceVector.length < usageVector.length) {
-      throw new GolemError(
+      throw new GolemMarketError(
         "Broken proposal: the `golem.com.pricing.model.linear.coeffs` should contain 3 price values",
       );
     }
@@ -200,7 +200,7 @@ export class Proposal {
   async reject(reason = "no reason") {
     // eslint-disable-next-line @typescript-eslint/ban-types
     await this.api.rejectProposalOffer(this.subscriptionId, this.id, { message: reason as {} }).catch((e) => {
-      throw new GolemError(e?.response?.data?.message || e);
+      throw new GolemMarketError(e?.response?.data?.message || e);
     });
     this.eventTarget?.dispatchEvent(
       new Events.ProposalRejected({
@@ -226,7 +226,7 @@ export class Proposal {
             reason,
           }),
         );
-        throw new GolemError(reason);
+        throw new GolemMarketError(reason);
       });
 
     if (this.setCounteringProposalReference) {

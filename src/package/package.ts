@@ -2,7 +2,7 @@ import { ComparisonOperator, DecorationsBuilder, MarketDecoration } from "../mar
 import { EnvUtils, Logger } from "../utils";
 import { PackageConfig } from "./config";
 import { RequireAtLeastOne } from "../utils/types";
-import { GolemError } from "../error/golem-error";
+import { GolemError, GolemInternalError } from "../error/golem-error";
 
 export type AllPackageOptions = {
   /** Type of engine required: vm, emscripten, sgx, sgx-js, sgx-wasm, sgx-wasi */
@@ -110,7 +110,7 @@ export class Package {
       const response = await fetch(url);
       if (!response.ok) {
         this.logger?.error(`Unable to get image Url of  ${tag || hash} from ${repoUrl}`);
-        throw new GolemError(await response.text());
+        throw new GolemInternalError(await response.text());
       }
 
       const data = await response.json();
@@ -123,7 +123,7 @@ export class Package {
       if (error instanceof GolemError) throw error;
 
       this.logger?.error(`Unable to get image Url of  ${tag || hash} from ${repoUrl}`);
-      throw new GolemError(`Failed to fetch image: ${error}`);
+      throw new GolemInternalError(`Failed to fetch image: ${error}`);
     }
   }
 

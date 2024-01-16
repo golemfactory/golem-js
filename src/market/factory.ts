@@ -5,7 +5,7 @@ import { DemandConfig } from "./config";
 import * as events from "../events/events";
 import { DecorationsBuilder, MarketDecoration } from "./builder";
 import { YagnaApi } from "../utils/yagna/yagna";
-import { GolemError } from "../error/golem-error";
+import { GolemMarketError } from "./error";
 
 /**
  * @internal
@@ -28,7 +28,7 @@ export class DemandFactory {
     const { data: id } = await this.yagnaApi.market.subscribeDemand(demandRequest).catch((e) => {
       const reason = e.response?.data?.message || e.toString();
       this.options.eventTarget?.dispatchEvent(new events.DemandFailed({ reason }));
-      throw new GolemError(`Could not publish demand on the market. ${reason}`);
+      throw new GolemMarketError(`Could not publish demand on the market. ${reason}`);
     });
     this.options.eventTarget?.dispatchEvent(
       new events.DemandSubscribed({

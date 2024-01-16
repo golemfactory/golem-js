@@ -4,7 +4,7 @@ import { YagnaOptions } from "../executor";
 import { DebitNoteFilter, InvoiceFilter, PaymentOptions } from "./service";
 import { InvoiceOptions } from "./invoice";
 import { acceptAllDebitNotesFilter, acceptAllInvoicesFilter } from "./strategy";
-import { GolemError } from "../error/golem-error";
+import { GolemPaymentError } from "./error";
 
 const DEFAULTS = Object.freeze({
   payment: { network: "goerli", driver: "erc20" },
@@ -83,7 +83,7 @@ export class AllocationConfig extends BaseConfig {
   constructor(options?: AllocationOptions) {
     super(options);
     if (!options || !options?.account) {
-      throw new GolemError("Account option is required");
+      throw new GolemPaymentError("Account option is required");
     }
     this.account = options.account;
     this.budget = options?.budget || DEFAULTS.budget;

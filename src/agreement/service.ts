@@ -4,7 +4,7 @@ import { Agreement, AgreementOptions, AgreementStateEnum } from "./agreement";
 import { AgreementServiceConfig } from "./config";
 import { Proposal } from "../market";
 import { AgreementEvent, AgreementTerminatedEvent } from "ya-ts-client/dist/ya-market";
-import { GolemError } from "../error/golem-error";
+import { GolemMarketError } from "../market/error";
 
 export interface AgreementDTO {
   id: string;
@@ -116,7 +116,7 @@ export class AgreementPoolService {
       }
     }
     if (!agreement || !this.isServiceRunning) {
-      throw new GolemError("Unable to get agreement. Agreement service is not running");
+      throw new GolemMarketError("Unable to get agreement. Agreement service is not running");
     }
     return agreement;
   }
@@ -181,7 +181,7 @@ export class AgreementPoolService {
       const state = await agreement.getState();
 
       if (state !== AgreementStateEnum.Approved) {
-        throw new GolemError(`Agreement ${agreement.id} cannot be approved. Current state: ${state}`);
+        throw new GolemMarketError(`Agreement ${agreement.id} cannot be approved. Current state: ${state}`);
       }
       this.logger?.info(`Agreement confirmed by provider ${agreement.provider.name}`);
 

@@ -6,7 +6,7 @@ import { DebitNote, DebitNoteDTO } from "./debit_note";
 import { DebitNoteEvent, InvoiceEvent, PAYMENT_EVENT_TYPE, Payments } from "./payments";
 import { Agreement } from "../agreement";
 import { AgreementPaymentProcess } from "./agreement_payment_process";
-import { GolemError } from "../error/golem-error";
+import { GolemPaymentError } from "./error";
 
 export interface PaymentOptions extends BasePaymentOptions {
   /** Interval for checking new invoices */
@@ -97,7 +97,7 @@ export class PaymentService {
       this.allocation = await Allocation.create(this.yagnaApi, { ...this.config.options, account, ...options });
       return this.allocation;
     } catch (error) {
-      throw new GolemError(
+      throw new GolemPaymentError(
         `Unable to create allocation for driver/network ${this.config.payment.driver}/${this.config.payment.network}. ${error}`,
       );
     }
@@ -112,7 +112,7 @@ export class PaymentService {
     }
 
     if (!this.allocation) {
-      throw new GolemError("You need to create an allocation before starting any payment processes");
+      throw new GolemPaymentError("You need to create an allocation before starting any payment processes");
     }
 
     this.processes.set(
@@ -156,7 +156,7 @@ export class PaymentService {
     // 1. We will only process invoices which have a payment process started
     // 2. Indirectly, we reject invoices from agreements that we didn't create (TODO: guard this business rule elsewhere)
     if (!process) {
-      throw new GolemError(
+      throw new GolemPaymentError(
         "No payment process was initiated for this agreement - did you forget to use 'acceptPayments' or that's not your invoice?",
       );
     }
@@ -174,7 +174,7 @@ export class PaymentService {
     // 1. We will only process debit-notes which have a payment process started
     // 2. Indirectly, we reject debit-notes from agreements that we didn't create (TODO: guard this business rule elsewhere)
     if (!process) {
-      throw new GolemError(
+      throw new GolemPaymentError(
         "No payment process was initiated for this agreement - did you forget to use 'acceptPayments' or that's not your debit note?",
       );
     }
