@@ -1,5 +1,10 @@
 name: "Cleanup test environment"
 description: "Cleanup test environment"
+inputs:
+  type:
+    description: "Type of test"
+    required: true
+    default: "test"
 runs:
   using: "composite"
   steps:
@@ -8,9 +13,9 @@ runs:
       if: always()
       run: |
         mkdir log-output
-        docker compose -f tests/docker/docker-compose.yml logs provider-1 > log-output/provider-1.log
-        docker compose -f tests/docker/docker-compose.yml logs provider-2 > log-output/provider-2.log
-        docker compose -f tests/docker/docker-compose.yml logs requestor > log-output/requestor.log
+        docker compose -f tests/docker/docker-compose.yml logs provider-1 > log-output/${{inputs.type}}-provider-1.log
+        docker compose -f tests/docker/docker-compose.yml logs provider-2 > log-output/${{inputs.type}}-provider-2.log
+        docker compose -f tests/docker/docker-compose.yml logs requestor > log-output/${{inputs.type}}-requestor.log
 
     - name: Upload provider output and logs
       uses: actions/upload-artifact@v3
