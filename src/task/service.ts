@@ -47,7 +47,7 @@ export class TaskService {
 
   public async run() {
     this.isRunning = true;
-    this.logger.debug("Task Service has started");
+    this.logger.info("Task Service has started");
     while (this.isRunning) {
       if (this.activeTasksCount >= this.options.maxParallelTasks) {
         await sleep(this.options.taskRunningInterval, true);
@@ -74,7 +74,7 @@ export class TaskService {
           .catch((error) => this.logger.warn(`Stopping activity failed`, { activityId: activity.id, error })),
       ),
     );
-    this.logger.debug("Task Service has been stopped");
+    this.logger.info("Task Service has been stopped");
   }
 
   private async startTask(task: Task) {

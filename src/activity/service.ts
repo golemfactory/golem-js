@@ -31,7 +31,7 @@ export class ActivityPoolService {
    */
   async run() {
     this.runningState = true;
-    this.logger.debug("Activity Pool Service has started");
+    this.logger.info("Activity Pool Service has started");
   }
 
   isRunning() {
@@ -73,7 +73,7 @@ export class ActivityPoolService {
       this.pool.map((activity) => activity.stop().catch((e) => this.logger.error("Error stopping activity", e))),
     );
     this.runningState = false;
-    this.logger.debug("Activity Pool Service has been stopped");
+    this.logger.info("Activity Pool Service has been stopped");
   }
 
   private async createActivity(): Promise<Activity> {

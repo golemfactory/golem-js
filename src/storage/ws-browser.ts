@@ -137,8 +137,8 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
     urls.forEach((url) => {
       const serviceId = this.services.get(url);
       if (serviceId) {
-        this.deleteService(serviceId).catch((e) =>
-          this.logger.error(`[WebSocketBrowserStorageProvider] Failed to delete service ${serviceId}: ${e}`),
+        this.deleteService(serviceId).catch((error) =>
+          this.logger.warn(`[WebSocketBrowserStorageProvider] Failed to delete service`, { serviceId, error }),
         );
       }
       this.services.delete(url);

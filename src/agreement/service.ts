@@ -58,7 +58,7 @@ export class AgreementPoolService {
   async run() {
     this.isServiceRunning = true;
     this.subscribeForAgreementEvents().catch((e) => this.logger.warn("Unable to subscribe for agreement events", e));
-    this.logger.debug("Agreement Pool Service has started");
+    this.logger.info("Agreement Pool Service has started");
   }
 
   /**
@@ -153,7 +153,7 @@ export class AgreementPoolService {
   async end() {
     this.isServiceRunning = false;
     await this.terminateAll({ message: "All computations done" });
-    this.logger.debug("Agreement Pool Service has been stopped");
+    this.logger.info("Agreement Pool Service has been stopped");
   }
 
   /**

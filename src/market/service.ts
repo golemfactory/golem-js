@@ -61,7 +61,7 @@ export class MarketService {
     this.allocation = allocation;
     await this.createDemand();
     this.startProcessingProposalsBatch().catch((e) => this.logger.error("Error processing proposal batch", e));
-    this.logger.debug("Market Service has started");
+    this.logger.info("Market Service has started");
   }
 
   async end() {
@@ -70,7 +70,7 @@ export class MarketService {
       this.demand.removeEventListener(DEMAND_EVENT_TYPE, this.demandEventListener.bind(this));
       await this.demand.unsubscribe().catch((e) => this.logger.error(`Could not unsubscribe demand.`, e));
     }
-    this.logger.debug("Market Service has been stopped");
+    this.logger.info("Market Service has been stopped");
   }
 
   getProposalsCount() {

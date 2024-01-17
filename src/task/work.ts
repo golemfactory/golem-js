@@ -202,40 +202,40 @@ export class WorkContext {
    * @param options Additional run options.
    */
   async transfer(from: string, to: string, options?: CommandOptions): Promise<Result> {
-    this.logger.debug(`Transferring ${from} to ${to}`);
+    this.logger.debug(`Transferring`, { from, to });
     return this.runOneCommand(new Transfer(from, to), options);
   }
 
   async uploadFile(src: string, dst: string, options?: CommandOptions): Promise<Result> {
-    this.logger.debug(`Uploading file ${src} to ${dst}`);
+    this.logger.debug(`Uploading file`, { src, dst });
     return this.runOneCommand(new UploadFile(this.storageProvider, src, dst), options);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   uploadJson(json: any, dst: string, options?: CommandOptions): Promise<Result> {
-    this.logger.debug(`Uploading json to ${dst}`);
+    this.logger.debug(`Uploading json`, { dst });
     const src = new TextEncoder().encode(JSON.stringify(json));
     return this.runOneCommand(new UploadData(this.storageProvider, src, dst), options);
   }
 
   uploadData(data: Uint8Array, dst: string, options?: CommandOptions): Promise<Result> {
-    this.logger.debug(`Uploading data to ${dst}`);
+    this.logger.debug(`Uploading data`, { dst });
     return this.runOneCommand(new UploadData(this.storageProvider, data, dst), options);
   }
 
   downloadFile(src: string, dst: string, options?: CommandOptions): Promise<Result> {
-    this.logger.debug(`Downloading file from ${src} to ${dst}`);
+    this.logger.debug(`Downloading file from`, { src, dst });
     return this.runOneCommand(new DownloadFile(this.storageProvider, src, dst), options);
   }
 
   downloadData(src: string, options?: CommandOptions): Promise<Result<Uint8Array>> {
-    this.logger.debug(`Downloading data from ${src}`);
+    this.logger.debug(`Downloading data`, { src });
     return this.runOneCommand(new DownloadData(this.storageProvider, src), options);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async downloadJson(src: string, options?: CommandOptions): Promise<Result> {
-    this.logger.debug(`Downloading json from ${src}`);
+    this.logger.debug(`Downloading json`, { src });
     const result = await this.downloadData(src, options);
     if (result.result !== ResultState.Ok) {
       return new Result({
