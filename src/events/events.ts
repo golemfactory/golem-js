@@ -97,8 +97,8 @@ export class ProposalReceived extends BaseEvent<{
 }> {}
 export class ProposalRejected extends BaseEvent<{
   id: string;
-  provider: ProviderInfo;
   reason?: string;
+  provider?: ProviderInfo;
   parentId: string | null;
 }> {}
 export class ProposalResponded extends BaseEvent<{
