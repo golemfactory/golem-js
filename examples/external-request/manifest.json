@@ -10,24 +10,22 @@
   "payload": [
     {
       "platform": {
-        "arch": "x86_64",
-        "os": "linux"
+        "os": "linux",
+        "arch": "x86_64"
       },
-      "urls": ["http://yacn2.dev.golem.network:8000/docker-golem-curl-jq-latest-58eb5b4316.gvmi"],
-      "hash": "sha3:84676b9d29cc86ec4862dd8ee991a3f64e9f15bbc00ee3fdfa78105f"
+      "hash": "sha3:dad8f776b0eb9f37ea0d63de42757034dd085fe30cc4537c2e119d80",
+      "urls": [
+        "https://registry.golem.network/download/f37c8ba2b534ca631060fb8db4ac218d3199faf656aa2c92f402c2b700797c21"
+      ]
     }
   ],
   "compManifest": {
     "version": "0.1.0",
-    "script": {
-      "commands": ["run .*curl.*"],
-      "match": "regex"
-    },
     "net": {
       "inet": {
         "out": {
-          "protocols": ["https"],
-          "urls": ["https://api.coingecko.com"]
+          "urls": ["https://ipfs.io"],
+          "protocols": ["https"]
         }
       }
     }
