@@ -26,7 +26,11 @@ describe("Market Service", () => {
   });
 
   it("should respond initial proposal", async () => {
-    const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, { logger });
+    const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
+      logger,
+      minProposalsBatchSize: 1,
+      proposalsBatchReleaseTimeoutMs: 10,
+    });
     await marketService.run(packageMock, allocationMock);
     setExpectedProposals(proposalsInitial);
     await logger.expectToInclude("Proposal has been responded", { id: expect.anything() }, 10);
@@ -44,7 +48,11 @@ describe("Market Service", () => {
   });
 
   it("should reject initial proposal without common payment platform", async () => {
-    const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, { logger });
+    const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
+      logger,
+      minProposalsBatchSize: 1,
+      proposalsBatchReleaseTimeoutMs: 10,
+    });
     await marketService.run(packageMock, allocationMock);
     setExpectedProposals([proposalsInitial[6]]);
     await logger.expectToInclude(
@@ -59,14 +67,22 @@ describe("Market Service", () => {
   });
 
   it("should reject when no common payment platform", async () => {
-    const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, { logger });
+    const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
+      logger,
+      minProposalsBatchSize: 1,
+      proposalsBatchReleaseTimeoutMs: 10,
+    });
     await marketService.run(packageMock, allocationMock);
     setExpectedProposals(proposalsWrongPaymentPlatform);
     await logger.expectToMatch(/No common payment platform/, 10);
     await marketService.end();
   });
   it("should reject initial proposal when debit note acceptance timeout too short", async () => {
-    const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, { logger });
+    const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
+      logger,
+      minProposalsBatchSize: 1,
+      proposalsBatchReleaseTimeoutMs: 10,
+    });
     await marketService.run(packageMock, allocationMock);
     setExpectedProposals(proposalsShortDebitNoteTimeout);
     await logger.expectToMatch(/Debit note acceptance timeout too short/, 10);
@@ -77,6 +93,8 @@ describe("Market Service", () => {
     const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
       logger,
       proposalFilter: proposalAlwaysBanFilter,
+      minProposalsBatchSize: 1,
+      proposalsBatchReleaseTimeoutMs: 10,
     });
     await marketService.run(packageMock, allocationMock);
     setExpectedProposals(proposalsInitial);
@@ -87,6 +105,8 @@ describe("Market Service", () => {
     const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
       logger,
       proposalFilter: ProposalFilters.blackListProposalIdsFilter(["0xee8993fe1dcff6b131d3fd759c6b3ddcb82d1655"]),
+      minProposalsBatchSize: 1,
+      proposalsBatchReleaseTimeoutMs: 10,
     });
     await marketService.run(packageMock, allocationMock);
     setExpectedProposals(proposalsInitial);
@@ -97,6 +117,8 @@ describe("Market Service", () => {
     const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
       logger,
       proposalFilter: ProposalFilters.blackListProposalRegexpFilter(/golem2004/),
+      minProposalsBatchSize: 1,
+      proposalsBatchReleaseTimeoutMs: 10,
     });
     await marketService.run(packageMock, allocationMock);
     setExpectedProposals(proposalsInitial);
@@ -107,6 +129,8 @@ describe("Market Service", () => {
     const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
       logger,
       proposalFilter: ProposalFilters.whiteListProposalIdsFilter(["0x123455"]),
+      minProposalsBatchSize: 1,
+      proposalsBatchReleaseTimeoutMs: 10,
     });
     await marketService.run(packageMock, allocationMock);
     setExpectedProposals(proposalsInitial);
@@ -117,6 +141,8 @@ describe("Market Service", () => {
     const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
       logger,
       proposalFilter: ProposalFilters.whiteListProposalRegexpFilter(/abcdefg/),
+      minProposalsBatchSize: 1,
+      proposalsBatchReleaseTimeoutMs: 10,
     });
     await marketService.run(packageMock, allocationMock);
     setExpectedProposals(proposalsInitial);
@@ -127,6 +153,8 @@ describe("Market Service", () => {
     const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
       logger,
       proposalFilter: ProposalFilters.whiteListProposalIdsFilter(["0xee8993fe1dcff6b131d3fd759c6b3ddcb82d1655"]),
+      minProposalsBatchSize: 1,
+      proposalsBatchReleaseTimeoutMs: 10,
     });
     await marketService.run(packageMock, allocationMock);
     setExpectedProposals(proposalsInitial);
@@ -137,6 +165,8 @@ describe("Market Service", () => {
     const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
       logger,
       proposalFilter: ProposalFilters.whiteListProposalRegexpFilter(/golem2004/),
+      minProposalsBatchSize: 1,
+      proposalsBatchReleaseTimeoutMs: 10,
     });
     await marketService.run(packageMock, allocationMock);
     setExpectedProposals(proposalsInitial);
