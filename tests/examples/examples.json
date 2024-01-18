@@ -14,6 +14,15 @@
   { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/multiple-run-prosaic.mjs" },
   { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/single-command.mjs" },
   { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/single-command.cjs" },
+
+  { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/spawn/index_abortcontroller.mjs" },
+  { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/spawn/index_awaitpromise.mjs" },
+  { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/spawn/index_onclose.mjs" },
+  { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/spawn/index_sigint.mjs" },
+  { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/spawn/index_waitforexit.mjs" },
+
+  { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/single-command.cjs" },
+
   { "cmd": "ts-node", "path": "examples/docs-examples/examples/composing-tasks/single-command.ts" },
   { "cmd": "ts-node", "path": "examples/docs-examples/examples/composing-tasks/alert-code.mjs" },
 
@@ -22,6 +31,12 @@
   { "cmd": "node", "path": "examples/docs-examples/examples/executing-tasks/map.mjs" },
   { "cmd": "node", "path": "examples/docs-examples/examples/executing-tasks/max-parallel-tasks.mjs" },
   { "cmd": "node", "path": "examples/docs-examples/examples/executing-tasks/single-run.mjs" },
+
+  { "cmd": "node", "path": "examples/docs-examples/examples/executing-tasks/long_term_tasks.mjs" },
+  { "cmd": "node", "path": "examples/docs-examples/examples/executing-tasks/observing_events.mjs" },
+
+  { "cmd": "node", "path": "examples/docs-examples/examples/outbound/npm_install.mjs" },
+  { "cmd": "node", "path": "examples/docs-examples/examples/outbound/outbound-basic.mjs" },
 
   { "cmd": "node", "path": "examples/docs-examples/examples/selecting-providers/custom-price.mjs", "noGoth": true },
   { "cmd": "node", "path": "examples/docs-examples/examples/selecting-providers/demand.mjs" },
@@ -36,6 +51,9 @@
   { "cmd": "node", "path": "examples/docs-examples/examples/transferring-data/upload-json.mjs" },
 
   { "cmd": "node", "path": "examples/docs-examples/examples/using-app-keys/index.mjs" },
+
+  { "cmd": "node", "path": "examples/docs-examples/examples/vpn-network/inbound_proxy/index_test.mjs" },
+  { "cmd": "node", "path": "examples/docs-examples/examples/vpn-network/netcat_basic/netcat_basic.mjs" },
 
   { "cmd": "node", "path": "examples/docs-examples/examples/working-with-images/hash.mjs" },
   { "cmd": "node", "path": "examples/docs-examples/examples/working-with-images/tag.mjs" },
