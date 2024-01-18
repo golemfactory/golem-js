@@ -67,7 +67,7 @@ export class PaymentProcessor {
    * ```
    */
   async collectInvoices({
-    after: initialAfter = new Date(0),
+    after = new Date(0),
     limit = 50,
     statuses,
     providerIds,
@@ -83,44 +83,31 @@ export class PaymentProcessor {
     maxAmount?: Numeric;
     providerWallets?: string[];
   } = {}) {
-    // for whatever reason, yagna can return the same invoice multiple times
-    // so we need to keep track of which invoices we have already seen
-    const seenInvoiceIds = new Set<string>();
-    const invoices: Invoice[] = [];
-    let after = initialAfter;
-    while (invoices.length < limit) {
-      // fetch 100 invoices at a time until we have enough
-      const batch = await this.api.payment.getInvoices(after?.toISOString(), 100).then((response) => response.data);
-      if (batch.length === 0) {
-        break;
+    // yagna api doesn't sort invoices by timestamp, so we have to fetch all invoices and sort them ourselves
+    // this is not very efficient, but it's the only way to get invoices sorted by timestamp
+    // otherwise yagna returns the invoices in seemingly random order
+    // FIXME: move to batched requests once yagna api supports it
+    const invoices = await this.api.payment.getInvoices(after?.toISOString()).then((response) => response.data);
+    const filteredInvoices = invoices.filter((invoice) => {
+      if (statuses && !statuses.includes(invoice.status)) {
+        return false;
       }
-      after = new Date(batch[batch.length - 1].timestamp);
-      const filteredBatch = batch.filter((invoice) => {
-        if (seenInvoiceIds.has(invoice.invoiceId)) {
-          return false;
-        }
-        if (statuses && !statuses.includes(invoice.status)) {
-          return false;
-        }
-        if (providerIds && !providerIds.includes(invoice.issuerId)) {
-          return false;
-        }
-        if (minAmount !== undefined && new Decimal(invoice.amount).lt(minAmount)) {
-          return false;
-        }
-        if (maxAmount !== undefined && new Decimal(invoice.amount).gt(maxAmount)) {
-          return false;
-        }
-        if (providerWallets && !providerWallets.includes(invoice.payeeAddr)) {
-          return false;
-        }
-        return true;
-      });
-      invoices.push(...filteredBatch);
-      filteredBatch.forEach((invoice) => seenInvoiceIds.add(invoice.invoiceId));
-    }
-    // only return the first `limit` invoices even if we collected more
-    return invoices.slice(0, limit);
+      if (providerIds && !providerIds.includes(invoice.issuerId)) {
+        return false;
+      }
+      if (minAmount !== undefined && new Decimal(invoice.amount).lt(minAmount)) {
+        return false;
+      }
+      if (maxAmount !== undefined && new Decimal(invoice.amount).gt(maxAmount)) {
+        return false;
+      }
+      if (providerWallets && !providerWallets.includes(invoice.payeeAddr)) {
+        return false;
+      }
+      return true;
+    });
+    filteredInvoices.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    return filteredInvoices.slice(0, limit);
   }
 
   /**
