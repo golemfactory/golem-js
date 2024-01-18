@@ -1,5 +1,5 @@
 import { Events, EVENT_TYPE, BaseEvent } from "../events";
-import { Logger } from "../utils";
+import { Logger, defaultLogger } from "../utils";
 import { Providers } from "./providers";
 import { Tasks } from "./tasks";
 import { Payments } from "./payments";
@@ -20,7 +20,7 @@ interface StatsOptions {
  */
 export class StatsService {
   private eventTarget: EventTarget;
-  private logger?: Logger;
+  private logger: Logger;
   private allocations: Allocations;
   private agreements: Agreements;
   private activities: Activities;
@@ -33,7 +33,7 @@ export class StatsService {
 
   constructor(options: StatsOptions) {
     this.eventTarget = options.eventTarget;
-    this.logger = options.logger;
+    this.logger = options.logger || defaultLogger("stats");
     this.allocations = new Allocations();
     this.activities = new Activities();
     this.agreements = new Agreements();
@@ -47,12 +47,12 @@ export class StatsService {
 
   async run() {
     this.eventTarget.addEventListener(EVENT_TYPE, (event) => this.handleEvents(event as BaseEvent<unknown>));
-    this.logger?.debug("Stats service has started");
+    this.logger.info("Stats service has started");
   }
 
   async end() {
     this.eventTarget.removeEventListener(EVENT_TYPE, null);
-    this.logger?.debug("Stats service has stopped");
+    this.logger.info("Stats service has stopped");
   }
 
   getAllCostsSummary() {

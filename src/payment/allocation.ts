@@ -68,9 +68,11 @@ export class Allocation {
         platform: newModel.paymentPlatform,
       }),
     );
-    config.logger?.debug(
-      `Allocation ${newModel.allocationId} has been created for addrress ${config.account.address} using payment platform ${config.account.platform}`,
-    );
+    config.logger.debug("Allocation has been created", {
+      allocationId: newModel.allocationId,
+      address: config.account.address,
+      platform: config.account.platform,
+    });
     return new Allocation(yagnaApi, config, newModel);
   }
 
@@ -125,7 +127,7 @@ export class Allocation {
     await this.yagnaApi.payment.releaseAllocation(this.id).catch((e) => {
       throw new GolemError(`Could not release allocation. ${e.response?.data?.message || e}`);
     });
-    this.options?.logger?.debug(`Allocation ${this.id} has been released.`);
+    this.options.logger.debug(`Allocation has been released.`, { id: this.id });
   }
 
   /**

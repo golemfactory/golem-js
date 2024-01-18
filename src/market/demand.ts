@@ -3,7 +3,7 @@ import { Allocation } from "../payment";
 import { YagnaOptions } from "../executor";
 import { DemandFactory } from "./factory";
 import { Proposal } from "./proposal";
-import { Logger, sleep, YagnaApi } from "../utils";
+import { defaultLogger, Logger, sleep, YagnaApi } from "../utils";
 import { DemandConfig } from "./config";
 import { Events } from "../events";
 import { ProposalEvent, ProposalRejectedEvent } from "ya-ts-client/dist/ya-market/src/models";
@@ -106,7 +106,7 @@ export const DEMAND_EVENT_TYPE = "ProposalReceived";
  */
 export class Demand extends EventTarget {
   private isRunning = true;
-  private logger?: Logger;
+  private logger: Logger;
   private proposalReferences: ProposalReference[] = [];
 
   /**
@@ -148,8 +148,8 @@ export class Demand extends EventTarget {
     private options: DemandConfig,
   ) {
     super();
-    this.logger = this.options.logger;
-    this.subscribe().catch((e) => this.logger?.error(e));
+    this.logger = this.options.logger || defaultLogger("market");
+    this.subscribe().catch((e) => this.logger.error("Unable to subscribe for demand events", e));
   }
 
   /**
@@ -159,7 +159,7 @@ export class Demand extends EventTarget {
     this.isRunning = false;
     await this.yagnaApi.market.unsubscribeDemand(this.id);
     this.options.eventTarget?.dispatchEvent(new events.DemandUnsubscribed({ id: this.id }));
-    this.logger?.debug(`Demand ${this.id} unsubscribed`);
+    this.logger.debug(`Demand unsubscribed`, { id: this.id });
   }
 
   private findParentProposal(prevProposalId?: string): string | null {
@@ -189,7 +189,7 @@ export class Demand extends EventTarget {
         );
         for (const event of events as Array<ProposalEvent & ProposalRejectedEvent>) {
           if (event.eventType === "ProposalRejectedEvent") {
-            this.logger?.warn(`Proposal rejected. Reason: ${event.reason?.message}`);
+            this.logger.warn(`Proposal rejected`, { reason: event.reason?.message });
             this.options.eventTarget?.dispatchEvent(
               new Events.ProposalRejected({
                 id: event.proposalId,
@@ -223,7 +223,7 @@ export class Demand extends EventTarget {
         if (this.isRunning) {
           const reason = error.response?.data?.message || error;
           this.options.eventTarget?.dispatchEvent(new Events.CollectFailed({ id: this.id, reason }));
-          this.logger?.warn(`Unable to collect offers. ${reason}`);
+          this.logger.warn(`Unable to collect offers.`, { reason });
           if (error.code === "ECONNREFUSED" || error.response?.status === 404) {
             this.dispatchEvent(
               new DemandEvent(

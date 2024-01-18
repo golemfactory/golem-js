@@ -185,7 +185,6 @@ export class Job<Output = unknown> {
     // agreement is created, we can stop listening for new proposals
     await marketService.end();
 
-    console.log("Allocation", allocation);
     paymentService.acceptPayments(agreement);
 
     const activity = await Activity.create(agreement, this.yagnaApi, options.activity);

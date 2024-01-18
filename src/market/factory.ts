@@ -36,7 +36,7 @@ export class DemandFactory {
         details: new DecorationsBuilder().addDecorations(decorations).getDecorations(),
       }),
     );
-    this.options.logger?.info(`Demand published on the market`);
+    this.options.logger.info(`Demand published on the market`, { id });
     return new Demand(id, demandRequest, this.allocation, this.yagnaApi, this.options);
   }
 

@@ -97,7 +97,7 @@ describe("Agreement Pool Service", () => {
       await agreementService.addProposal(createProposal("proposal-id"));
       const agreement = await agreementService.getAgreement();
       await agreementService.releaseAgreement(agreement.id, true);
-      expect(logger.logs).toContain(`Agreement ${agreement.id} has been released for reuse`);
+      await logger.expectToInclude(`Agreement has been released for reuse`, { id: agreement.id });
     });
 
     it("should terminate agreement if flag reuse if off", async () => {
@@ -106,8 +106,8 @@ describe("Agreement Pool Service", () => {
       await agreementService.addProposal(createProposal("proposal-id"));
       const agreement = await agreementService.getAgreement();
       await agreementService.releaseAgreement(agreement.id, false);
-      expect(logger.logs).toContain(`Agreement ${agreement.id} has been released and will be terminated`);
-      expect(logger.logs).toContain(`Agreement ${agreement.id} terminated`);
+      await logger.expectToInclude(`Agreement has been released and will be terminated`, { id: agreement.id });
+      await logger.expectToInclude(`Agreement terminated`, { id: agreement.id });
     });
 
     it("should warn if there is no agreement with given id", async () => {
@@ -116,7 +116,7 @@ describe("Agreement Pool Service", () => {
       await agreementService.addProposal(createProposal("proposal-id"));
       const agreement = await agreementService.getAgreement();
       await agreementService.releaseAgreement("not-known-id", true);
-      expect(logger.logs).toContain(`Agreement not-known-id not found in the pool`);
+      await logger.expectToInclude("Agreement not found in the pool", { id: "not-known-id" });
     });
   });
 
@@ -126,7 +126,7 @@ describe("Agreement Pool Service", () => {
       await agreementService.run();
 
       await agreementService.addProposal(createProposal("proposal-id"));
-      expect(logger.logs).toMatch(/New proposal added to pool from provider .*/);
+      expect(logger.logs).toMatch(/New proposal added to pool .*/);
 
       await agreementService.end();
     });

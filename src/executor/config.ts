@@ -1,14 +1,13 @@
 import { ExecutorOptions } from "./executor";
 import { Package, PackageOptions } from "../package";
 import { ActivityOptions } from "../activity";
-import { Logger, LogLevel, runtimeContextChecker, defaultLogger } from "../utils";
+import { Logger, runtimeContextChecker, defaultLogger, nullLogger } from "../utils";
 import { GolemError } from "../error/golem-error";
 
 const DEFAULTS = Object.freeze({
   payment: { driver: "erc20", network: "goerli" },
   budget: 1.0,
   subnetTag: "public",
-  logLevel: LogLevel.Info,
   basePath: "http://127.0.0.1:7465",
   maxParallelTasks: 5,
   taskTimeout: 1000 * 60 * 5, // 5 min,
@@ -29,9 +28,8 @@ export class ExecutorConfig {
   readonly subnetTag: string;
   readonly networkIp?: string;
   readonly packageOptions: Omit<PackageOptions, "imageHash" | "imageTag">;
-  readonly logLevel: string;
   readonly yagnaOptions: { apiKey: string; basePath: string };
-  readonly logger?: Logger;
+  readonly logger: Logger;
   readonly eventTarget: EventTarget;
   readonly maxTaskRetries: number;
   readonly activityExecuteTimeout?: number;
@@ -83,13 +81,10 @@ export class ExecutorConfig {
     this.networkIp = options.networkIp;
     this.logger = (() => {
       const isLoggingEnabled = options.enableLogging ?? DEFAULTS.enableLogging;
-      if (!isLoggingEnabled) return undefined;
-      if (options.logger) return options.logger;
-      if (!runtimeContextChecker.isBrowser) return defaultLogger();
-      return undefined;
+      if (!isLoggingEnabled) return nullLogger();
+      if (options.logger) return options.logger.child("task-executor");
+      return defaultLogger("task-executor");
     })();
-    this.logLevel = options.logLevel || DEFAULTS.logLevel;
-    this.logger?.setLevel && this.logger?.setLevel(this.logLevel);
     this.eventTarget = options.eventTarget || new EventTarget();
     this.maxTaskRetries = options.maxTaskRetries ?? DEFAULTS.maxTaskRetries;
     this.startupTimeout = options.startupTimeout ?? DEFAULTS.startupTimeout;

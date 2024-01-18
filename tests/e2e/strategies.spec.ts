@@ -1,4 +1,4 @@
-import { TaskExecutor, ProposalFilters, PaymentFilters } from "../../src";
+import { TaskExecutor, ProposalFilters } from "../../src";
 import { LoggerMock } from "../mock";
 
 const logger = new LoggerMock(false);
@@ -23,10 +23,10 @@ describe("Strategies", function () {
       );
       const finalOutputs = (await Promise.all(futureResults)).filter((x) => !!x);
       expect(finalOutputs).toEqual(expect.arrayContaining(data));
-      await logger.expectToInclude(`Proposal rejected by Proposal Filter`, 5000);
-      await logger.expectToInclude(`Task 1 computed by provider provider-1`, 5000);
-      await logger.expectToInclude(`Task 2 computed by provider provider-1`, 5000);
-      await logger.expectToInclude(`Task 3 computed by provider provider-1`, 5000);
+      await logger.expectToMatch(/Proposal rejected by Proposal Filter/, 5000);
+      await logger.expectToInclude(`Task computed`, { providerName: "provider-1", taskId: "1" }, 5000);
+      await logger.expectToInclude(`Task computed`, { providerName: "provider-1", taskId: "2" }, 5000);
+      await logger.expectToInclude(`Task computed`, { providerName: "provider-1", taskId: "3" }, 5000);
       await executor.shutdown();
     });
 
@@ -45,10 +45,10 @@ describe("Strategies", function () {
       );
       const finalOutputs = (await Promise.all(futureResults)).filter((x) => !!x);
       expect(finalOutputs).toEqual(expect.arrayContaining(data));
-      await logger.expectToInclude(`Proposal rejected by Proposal Filter`, 5000);
-      await logger.expectToInclude(`Task 1 computed by provider provider-2`, 5000);
-      await logger.expectToInclude(`Task 2 computed by provider provider-2`, 5000);
-      await logger.expectToInclude(`Task 3 computed by provider provider-2`, 5000);
+      await logger.expectToMatch(/Proposal rejected by Proposal Filter/, 5000);
+      await logger.expectToInclude(`Task computed`, { providerName: `provider-2`, taskId: "1" }, 5000);
+      await logger.expectToInclude(`Task computed`, { providerName: `provider-2`, taskId: "2" }, 5000);
+      await logger.expectToInclude(`Task computed`, { providerName: `provider-2`, taskId: "3" }, 5000);
       await executor.shutdown();
     });
   });

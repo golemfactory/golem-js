@@ -48,7 +48,7 @@ export class Network {
   private ownerIp: IPv4;
   private gateway?: IPv4;
   private nodes = new Map<string, NetworkNode>();
-  private logger?: Logger;
+  private logger: Logger;
 
   /**
    * Create a new VPN.
@@ -72,7 +72,7 @@ export class Network {
         await yagnaApi.net.removeNetwork(id as string);
         throw e;
       });
-      config.logger?.info(`Network created: ID: ${id}, IP: ${ip}, Mask: ${mask}`);
+      config.logger.info(`Network created`, { id, ip, mask });
       return network;
     } catch (error) {
       throw new GolemError(`Unable to create network. ${error?.response?.data?.message || error}`);
@@ -136,7 +136,7 @@ export class Network {
     const node = new NetworkNode(nodeId, ipv4, this.getNetworkInfo.bind(this), this.getUrl());
     this.nodes.set(nodeId, node);
     await this.yagnaApi.net.addNode(this.id, { id: nodeId, ip: ipv4.toString() });
-    this.logger?.debug(`Node has added to the network. ID: ${nodeId}, IP: ${ipv4.toString()}`);
+    this.logger.debug(`Node has added to the network.`, { id: nodeId, ip: ipv4.toString() });
     return node;
   }
 
@@ -147,11 +147,10 @@ export class Network {
     try {
       await this.yagnaApi.net.removeNetwork(this.id);
     } catch (error) {
-      if (error.status === 404)
-        this.logger?.warn(`Tried removing a network which doesn't exist. Network ID: ${this.id}`);
+      if (error.status === 404) this.logger.warn(`Tried removing a network which doesn't exist.`, { id: this.id });
       return false;
     }
-    this.logger?.info(`Network has removed: ID: ${this.id}, IP: ${this.ip}`);
+    this.logger.info(`Network has removed:`, { id: this.id, ip: this.ip.toString() });
     return true;
   }
 

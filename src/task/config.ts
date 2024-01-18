@@ -1,6 +1,6 @@
 import { TaskServiceOptions } from "./service";
 import { ActivityConfig } from "../activity/config";
-import { Logger } from "../utils";
+import { Logger, defaultLogger } from "../utils";
 import { StorageProvider } from "../storage";
 
 const DEFAULTS = {
@@ -21,7 +21,7 @@ export class TaskConfig extends ActivityConfig {
   public readonly activityStateCheckingInterval: number;
   public readonly activityPreparingTimeout: number;
   public readonly storageProvider?: StorageProvider;
-  public readonly logger?: Logger;
+  public readonly logger: Logger;
 
   constructor(options?: TaskServiceOptions) {
     super(options);
@@ -30,7 +30,7 @@ export class TaskConfig extends ActivityConfig {
     this.taskTimeout = options?.taskTimeout || DEFAULTS.taskTimeout;
     this.activityStateCheckingInterval =
       options?.activityStateCheckingInterval || DEFAULTS.activityStateCheckingInterval;
-    this.logger = options?.logger;
+    this.logger = options?.logger || defaultLogger("work");
     this.storageProvider = options?.storageProvider;
     this.activityPreparingTimeout = options?.activityPreparingTimeout || DEFAULTS.activityPreparingTimeout;
   }

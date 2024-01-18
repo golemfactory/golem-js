@@ -1,6 +1,6 @@
 import { TaskQueue } from "./queue";
 import { WorkContext } from "./work";
-import { Logger, sleep, YagnaApi } from "../utils";
+import { defaultLogger, Logger, sleep, YagnaApi } from "../utils";
 import { StorageProvider } from "../storage";
 import { Agreement, AgreementPoolService } from "../agreement";
 import { PaymentService } from "../payment";
@@ -30,7 +30,7 @@ export class TaskService {
   private activities = new Map<string, Activity>();
   private activitySetupDone: Set<string> = new Set();
   private isRunning = false;
-  private logger?: Logger;
+  private logger: Logger;
   private options: TaskConfig;
 
   constructor(
@@ -42,12 +42,12 @@ export class TaskService {
     options?: TaskServiceOptions,
   ) {
     this.options = new TaskConfig(options);
-    this.logger = options?.logger;
+    this.logger = options?.logger || defaultLogger("work");
   }
 
   public async run() {
     this.isRunning = true;
-    this.logger?.debug("Task Service has started");
+    this.logger.info("Task Service has started");
     while (this.isRunning) {
       if (this.activeTasksCount >= this.options.maxParallelTasks) {
         await sleep(this.options.taskRunningInterval, true);
@@ -59,23 +59,27 @@ export class TaskService {
         continue;
       }
       this.startTask(task).catch(
-        (error) => this.isRunning && this.logger?.error(`Issue with starting a task on Golem ${error}`),
+        (error) => this.isRunning && this.logger.error(`Issue with starting a task on Golem`, error),
       );
     }
   }
 
   async end() {
     this.isRunning = false;
-    this.logger?.debug(`Trying to stop all activities. Size: ${this.activities.size}`);
+    this.logger.debug(`Trying to stop all activities`, { size: this.activities.size });
     await Promise.all(
-      [...this.activities.values()].map((activity) => activity.stop().catch((e) => this.logger?.warn(e.toString()))),
+      [...this.activities.values()].map((activity) =>
+        activity
+          .stop()
+          .catch((error) => this.logger.warn(`Stopping activity failed`, { activityId: activity.id, error })),
+      ),
     );
-    this.logger?.debug("Task Service has been stopped");
+    this.logger.info("Task Service has been stopped");
   }
 
   private async startTask(task: Task) {
     task.start();
-    this.logger?.debug(`Starting task. ID: ${task.id}`);
+    this.logger.debug(`Starting task`, { taskId: task.id });
     ++this.activeTasksCount;
 
     const agreement = await this.agreementPoolService.getAgreement();
@@ -93,7 +97,7 @@ export class TaskService {
         }),
       );
 
-      this.logger?.info(`Task ${task.id} sent to provider ${agreement.provider.name}.`);
+      this.logger.info(`Task sent to provider`, { taskId: task.id, providerName: agreement.provider.name });
 
       const activityReadySetupFunctions = task.getActivityReadySetupFunctions();
       const worker = task.getWorker();
@@ -113,19 +117,19 @@ export class TaskService {
 
       if (activityReadySetupFunctions.length && !this.activitySetupDone.has(activity.id)) {
         this.activitySetupDone.add(activity.id);
-        this.logger?.debug(`Activity setup completed in activity ${activity.id}`);
+        this.logger.debug(`Activity setup completed`, { activityId: activity.id });
       }
 
       const results = await worker(ctx);
       task.stop(results);
 
       this.options.eventTarget?.dispatchEvent(new Events.TaskFinished({ id: task.id }));
-      this.logger?.info(`Task ${task.id} computed by provider ${agreement.provider.name}.`);
+      this.logger.info(`Task computed`, { taskId: task.id, providerName: agreement.provider.name });
     } catch (error) {
       task.stop(undefined, error);
 
       const reason = error.message || error.toString();
-      this.logger?.warn(`Starting task failed due to this issue: ${reason}`);
+      this.logger.warn(`Starting task failed`, { reason });
 
       if (task.isRetry() && this.isRunning) {
         this.tasksQueue.addToBegin(task);
@@ -139,9 +143,11 @@ export class TaskService {
             reason,
           }),
         );
-        this.logger?.warn(
-          `Task ${task.id} execution failed. Trying to redo the task. Attempt #${task.getRetriesCount()}. ${reason}`,
-        );
+        this.logger.warn(`Task execution failed. Trying to redo the task.`, {
+          taskId: task.id,
+          attempt: task.getRetriesCount(),
+          reason,
+        });
       } else {
         this.options.eventTarget?.dispatchEvent(
           new Events.TaskRejected({
@@ -153,6 +159,7 @@ export class TaskService {
           }),
         );
         task.cleanup();
+        this.logger.error(`Task has been rejected`, { taskId: task.id, reason });
         throw new GolemError(`Task ${task.id} has been rejected! ${reason}`);
       }
 
@@ -161,7 +168,9 @@ export class TaskService {
       }
     } finally {
       --this.activeTasksCount;
-      await this.agreementPoolService.releaseAgreement(agreement.id, task.isDone()).catch((e) => this.logger?.debug(e));
+      await this.agreementPoolService
+        .releaseAgreement(agreement.id, task.isDone())
+        .catch((error) => this.logger.error(`Releasing agreement failed`, { agreementId: agreement.id, error }));
     }
   }
 
