@@ -62,9 +62,9 @@ const startClient = async (repetition) => {
       ctx.run("timeout 30 node server.js");
 
       startProxy(networkID, serverIP, port_tgt);
+      await new Promise((res) => setTimeout(res, 3 * 1000));
+      startClient(3);
       await new Promise((res) => setTimeout(res, 30 * 1000));
-      //startClient(3);
-      //await new Promise((res) => setTimeout(res, 30 * 1000));
     });
   } catch (err) {
     console.error("Running the task on Golem failed due to", err);
