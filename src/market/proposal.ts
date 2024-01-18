@@ -1,9 +1,9 @@
 import { Proposal as ProposalModel, ProposalAllOfStateEnum } from "ya-ts-client/dist/ya-market/src/models";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
-import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
 import { Events } from "../events";
-import { GolemMarketError } from "./error";
+import { GolemMarketError, MarketErrorCode } from "./error";
 import { ProviderInfo } from "../agreement";
+import { Demand } from "./demand";
 
 export type PricingInfo = {
   cpuSec: number;
@@ -82,23 +82,19 @@ export class Proposal {
   /**
    * Create proposal for given subscription ID
    *
-   * @param subscriptionId - subscription ID
-   * @param parentId - Previous proposal ID with Initial state
+   * @param demand
+   * @param parentId
    * @param setCounteringProposalReference
-   * @param api - {@link RequestorApi}
-   * @param model - {@link ProposalModel}
-   * @param demandRequest - {@link DemandOfferBase}
-   * @param paymentPlatform
-   * @param eventTarget - {@link EventTarget}
+   * @param api
+   * @param model
+   * @param eventTarget
    */
   constructor(
-    private readonly subscriptionId: string,
+    public readonly demand: Demand,
     private readonly parentId: string | null,
     private readonly setCounteringProposalReference: (id: string, parentId: string) => void | null,
     private readonly api: RequestorApi,
     model: ProposalModel,
-    private readonly demandRequest: DemandOfferBase,
-    private readonly paymentPlatform: string,
     private eventTarget?: EventTarget,
   ) {
     this.id = model.proposalId;
@@ -159,24 +155,34 @@ export class Proposal {
     const priceVector = this.properties["golem.com.pricing.model.linear.coeffs"];
 
     if (!usageVector || usageVector.length === 0) {
-      throw new GolemMarketError("Broken proposal: the `golem.com.usage.vector` does not contain price information");
+      throw new GolemMarketError(
+        "Broken proposal: the `golem.com.usage.vector` does not contain price information",
+        MarketErrorCode.InvalidProposal,
+        this.demand,
+      );
     }
 
     if (!priceVector || priceVector.length === 0) {
       throw new GolemMarketError(
         "Broken proposal: the `golem.com.pricing.model.linear.coeffs` does not contain pricing information",
+        MarketErrorCode.InvalidProposal,
+        this.demand,
       );
     }
 
     if (usageVector.length < priceVector.length - 1) {
       throw new GolemMarketError(
         "Broken proposal: the `golem.com.usage.vector` has less pricing information than `golem.com.pricing.model.linear.coeffs`",
+        MarketErrorCode.InvalidProposal,
+        this.demand,
       );
     }
 
     if (priceVector.length < usageVector.length) {
       throw new GolemMarketError(
         "Broken proposal: the `golem.com.pricing.model.linear.coeffs` should contain 3 price values",
+        MarketErrorCode.InvalidProposal,
+        this.demand,
       );
     }
   }
@@ -198,48 +204,65 @@ export class Proposal {
   }
 
   async reject(reason = "no reason") {
-    // eslint-disable-next-line @typescript-eslint/ban-types
-    await this.api.rejectProposalOffer(this.subscriptionId, this.id, { message: reason as {} }).catch((e) => {
-      throw new GolemMarketError(e?.response?.data?.message || e);
-    });
-    this.eventTarget?.dispatchEvent(
-      new Events.ProposalRejected({
-        id: this.id,
-        provider: this.provider,
-        parentId: this.id,
-        reason,
-      }),
-    );
+    try {
+      // eslint-disable-next-line @typescript-eslint/ban-types
+      await this.api.rejectProposalOffer(this.demand.id, this.id, { message: reason as {} });
+      this.eventTarget?.dispatchEvent(
+        new Events.ProposalRejected({
+          id: this.id,
+          provider: this.provider,
+          parentId: this.id,
+          reason,
+        }),
+      );
+    } catch (error) {
+      throw new GolemMarketError(
+        `Failed to reject proposal. ${error?.response?.data?.message || error}`,
+        MarketErrorCode.ProposalRejectionFailed,
+        this.demand,
+        error,
+      );
+    }
   }
 
   async respond(chosenPlatform: string) {
-    (this.demandRequest.properties as ProposalProperties)["golem.com.payment.chosen-platform"] = chosenPlatform;
-    const { data: counteringProposalId } = await this.api
-      .counterProposalDemand(this.subscriptionId, this.id, this.demandRequest, { timeout: 20000 })
-      .catch((e) => {
-        const reason = e?.response?.data?.message || e.toString();
-        this.eventTarget?.dispatchEvent(
-          new Events.ProposalFailed({
-            id: this.id,
-            provider: this.provider,
-            parentId: this.id,
-            reason,
-          }),
-        );
-        throw new GolemMarketError(reason);
-      });
-
-    if (this.setCounteringProposalReference) {
-      this.setCounteringProposalReference(this.id, counteringProposalId);
+    try {
+      (this.demand.demandRequest.properties as ProposalProperties)["golem.com.payment.chosen-platform"] =
+        chosenPlatform;
+      const { data: counteringProposalId } = await this.api.counterProposalDemand(
+        this.demand.id,
+        this.id,
+        this.demand.demandRequest,
+        { timeout: 20000 },
+      );
+      if (this.setCounteringProposalReference) {
+        this.setCounteringProposalReference(this.id, counteringProposalId);
+      }
+      this.eventTarget?.dispatchEvent(
+        new Events.ProposalResponded({
+          id: this.id,
+          provider: this.provider,
+          counteringProposalId: counteringProposalId,
+        }),
+      );
+      return counteringProposalId;
+    } catch (error) {
+      const reason = error?.response?.data?.message || error.toString();
+      this.eventTarget?.dispatchEvent(
+        new Events.ProposalFailed({
+          id: this.id,
+          provider: this.provider,
+          parentId: this.id,
+          reason,
+        }),
+      );
+      throw new GolemMarketError(
+        `Failed to respond proposal. ${reason}`,
+        MarketErrorCode.ProposalResponseFailed,
+        this.demand,
+        error,
+      );
     }
-    this.eventTarget?.dispatchEvent(
-      new Events.ProposalResponded({
-        id: this.id,
-        provider: this.provider,
-        counteringProposalId: counteringProposalId,
-      }),
-    );
-    return counteringProposalId;
   }
 
   hasPaymentPlatform(paymentPlatform: string): boolean {
@@ -266,7 +289,9 @@ export class Proposal {
     return {
       id: this.issuerId,
       name: this.properties["golem.node.id.name"],
-      walletAddress: this.properties[`golem.com.payment.platform.${this.paymentPlatform}.address`] as string,
+      walletAddress: this.properties[
+        `golem.com.payment.platform.${this.demand.allocation.paymentPlatform}.address`
+      ] as string,
     };
   }
 }

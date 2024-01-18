@@ -135,6 +135,7 @@ export class GftpStorageProvider implements StorageProvider {
     } catch (error) {
       throw new GolemInternalError(
         `Error while obtaining response to JSONRPC. query: ${query} error: ${JSON.stringify(error)}`,
+        error,
       );
     } finally {
       this.lock = false;

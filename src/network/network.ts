@@ -1,9 +1,10 @@
-import { IPv4, IPv4Mask, IPv4Prefix, IPv4CidrRange, AbstractIPNum } from "ip-num";
+import { AbstractIPNum, IPv4, IPv4CidrRange, IPv4Mask, IPv4Prefix } from "ip-num";
 import { Logger, YagnaApi } from "../utils";
 import { YagnaOptions } from "../executor";
 import { NetworkConfig } from "./config";
 import { NetworkNode } from "./node";
-import { GolemNetworkError } from "./error";
+import { GolemNetworkError, NetworkErrorCode } from "./error";
+import { GolemMarketError } from "../market";
 
 /**
  * @hidden
@@ -74,7 +75,20 @@ export class Network {
       config.logger?.info(`Network created: ID: ${id}, IP: ${ip}, Mask: ${mask}`);
       return network;
     } catch (error) {
-      throw new GolemNetworkError(`Unable to create network. ${error?.response?.data?.message || error}`);
+      if (error instanceof GolemNetworkError) {
+        throw error;
+      }
+      throw new GolemNetworkError(
+        `Unable to create network. ${error?.response?.data?.message || error}`,
+        NetworkErrorCode.NetworkCreationFailed,
+        {
+          id: config.ownerId,
+          ip: config.ip,
+          mask: config.mask || "",
+          nodes: {},
+        },
+        error,
+      );
     }
   }
 
@@ -120,43 +134,62 @@ export class Network {
    * @param ip  IP address to assign to this node
    */
   async addNode(nodeId: string, ip?: string): Promise<NetworkNode> {
-    this.ensureIdUnique(nodeId);
-    let ipv4: IPv4;
-    if (ip) {
-      ipv4 = IPv4.fromString(ip);
-      this.ensureIpInNetwork(ipv4);
-      this.ensureIpUnique(ipv4);
-    } else {
-      while (true) {
-        ipv4 = this.nextAddress();
-        if (this.isIpUnique(ipv4)) break;
+    try {
+      this.ensureIdUnique(nodeId);
+      let ipv4: IPv4;
+      if (ip) {
+        ipv4 = IPv4.fromString(ip);
+        this.ensureIpInNetwork(ipv4);
+        this.ensureIpUnique(ipv4);
+      } else {
+        while (true) {
+          ipv4 = this.nextAddress();
+          if (this.isIpUnique(ipv4)) break;
+        }
       }
+      const node = new NetworkNode(nodeId, ipv4, this.getNetworkInfo.bind(this), this.getUrl());
+      this.nodes.set(nodeId, node);
+      await this.yagnaApi.net.addNode(this.id, { id: nodeId, ip: ipv4.toString() });
+      this.logger?.debug(`Node has added to the network. ID: ${nodeId}, IP: ${ipv4.toString()}`);
+      return node;
+    } catch (error) {
+      if (error instanceof GolemMarketError) {
+        throw error;
+      }
+      throw new GolemNetworkError(
+        `Unable to add node to network. ${error?.data?.message || error.toString()}`,
+        NetworkErrorCode.NodeAddingFailed,
+        this.getNetworkInfo(),
+        error,
+      );
     }
-    const node = new NetworkNode(nodeId, ipv4, this.getNetworkInfo.bind(this), this.getUrl());
-    this.nodes.set(nodeId, node);
-    await this.yagnaApi.net.addNode(this.id, { id: nodeId, ip: ipv4.toString() });
-    this.logger?.debug(`Node has added to the network. ID: ${nodeId}, IP: ${ipv4.toString()}`);
-    return node;
   }
 
   /**
    * Remove this network, terminating any connections it provides
    */
-  async remove(): Promise<boolean> {
+  async remove(): Promise<void> {
     try {
       await this.yagnaApi.net.removeNetwork(this.id);
+      this.logger?.info(`Network has removed: ID: ${this.id}, IP: ${this.ip}`);
     } catch (error) {
-      if (error.status === 404)
-        this.logger?.warn(`Tried removing a network which doesn't exist. Network ID: ${this.id}`);
-      return false;
+      throw new GolemNetworkError(
+        `Unable to remove network. ${error?.data?.message || error.toString()}`,
+        NetworkErrorCode.NetworkRemovalFailed,
+        this.getNetworkInfo(),
+        error,
+      );
     }
-    this.logger?.info(`Network has removed: ID: ${this.id}, IP: ${this.ip}`);
-    return true;
   }
 
   private nextAddress(): IPv4 {
     const ip = this.ipIterator.next().value;
-    if (!ip) throw new GolemNetworkError(`No more addresses available in ${this.ipRange.toCidrString()}`);
+    if (!ip)
+      throw new GolemNetworkError(
+        `No more addresses available in ${this.ipRange.toCidrString()}`,
+        NetworkErrorCode.NoAddressesAvailable,
+        this.getNetworkInfo(),
+      );
     return ip;
   }
 
@@ -164,17 +197,28 @@ export class Network {
     if (!this.ipRange.contains(new IPv4CidrRange(ip, new IPv4Prefix(BigInt(this.mask.prefix)))))
       throw new NetworkError(
         `The given IP ('${ip.toString()}') address must belong to the network ('${this.ipRange.toCidrString()}').`,
+        NetworkErrorCode.AddressOutOfRange,
+        this.getNetworkInfo(),
       );
     return true;
   }
 
   private ensureIpUnique(ip: IPv4) {
     if (!this.isIpUnique(ip))
-      throw new NetworkError(`IP '${ip.toString()}' has already been assigned in this network.`);
+      throw new NetworkError(
+        `IP '${ip.toString()}' has already been assigned in this network.`,
+        NetworkErrorCode.AddressAlreadyAssigned,
+        this.getNetworkInfo(),
+      );
   }
 
   private ensureIdUnique(id: string) {
-    if (this.nodes.has(id)) throw new NetworkError(`ID '${id}' has already been assigned in this network.`);
+    if (this.nodes.has(id))
+      throw new NetworkError(
+        `ID '${id}' has already been assigned in this network.`,
+        NetworkErrorCode.AddressAlreadyAssigned,
+        this.getNetworkInfo(),
+      );
   }
 
   private isIpUnique(ip: IPv4): boolean {

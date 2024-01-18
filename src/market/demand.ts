@@ -9,7 +9,8 @@ import { Events } from "../events";
 import { ProposalEvent, ProposalRejectedEvent } from "ya-ts-client/dist/ya-market/src/models";
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
 import * as events from "../events/events";
-import { GolemMarketError } from "./error";
+import { GolemMarketError, MarketErrorCode } from "./error";
+import { GolemError, GolemInternalError } from "../error/golem-error";
 
 export interface DemandDetails {
   properties: Array<{ key: string; value: string | number | boolean }>;
@@ -142,8 +143,8 @@ export class Demand extends EventTarget {
    */
   constructor(
     public readonly id: string,
-    private demandRequest: DemandOfferBase,
-    private allocation: Allocation,
+    public readonly demandRequest: DemandOfferBase,
+    public readonly allocation: Allocation,
     private yagnaApi: YagnaApi,
     private options: DemandConfig,
   ) {
@@ -208,13 +209,11 @@ export class Demand extends EventTarget {
             continue;
           } else if (event.eventType !== "ProposalEvent") continue;
           const proposal = new Proposal(
-            this.id,
+            this,
             event.proposal.state === "Draft" ? this.findParentProposal(event.proposal.prevProposalId) : null,
             this.setCounteringProposalReference.bind(this),
             this.yagnaApi.market,
             event.proposal,
-            this.demandRequest,
-            this.allocation.paymentPlatform,
             this.options.eventTarget,
           );
           this.dispatchEvent(new DemandEvent(DEMAND_EVENT_TYPE, proposal));
@@ -232,14 +231,24 @@ export class Demand extends EventTarget {
           const reason = error.response?.data?.message || error;
           this.options.eventTarget?.dispatchEvent(new Events.CollectFailed({ id: this.id, reason }));
           this.logger?.warn(`Unable to collect offers. ${reason}`);
-          if (error.code === "ECONNREFUSED" || error.response?.status === 404) {
+          if (error.code === "ECONNREFUSED") {
+            // Yagna has been disconnected
             this.dispatchEvent(
               new DemandEvent(
                 DEMAND_EVENT_TYPE,
                 undefined,
-                new GolemMarketError(
-                  `${error.code === "ECONNREFUSED" ? "Yagna connection error." : "Demand expired."} ${reason}`,
-                ),
+                new GolemInternalError(`Unable to collect offers. ${reason}`, error),
+              ),
+            );
+            break;
+          }
+          if (error.response?.status === 404) {
+            // Demand has expired
+            this.dispatchEvent(
+              new DemandEvent(
+                DEMAND_EVENT_TYPE,
+                undefined,
+                new GolemMarketError(`Demand expired. ${reason}`, MarketErrorCode.DemandExpired, this, error),
               ),
             );
             break;
@@ -264,7 +273,7 @@ export class DemandEvent extends Event {
    * @param data object with proposal data:
    * @param error optional error if occurred while subscription is active
    */
-  constructor(type: string, data?: (Proposal & EventInit) | undefined, error?: GolemMarketError | undefined) {
+  constructor(type: string, data?: (Proposal & EventInit) | undefined, error?: GolemError | undefined) {
     super(type, data);
     this.proposal = data;
     this.error = error;

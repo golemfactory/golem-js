@@ -6,7 +6,7 @@ import { DebitNote, DebitNoteDTO } from "./debit_note";
 import { DebitNoteEvent, InvoiceEvent, PAYMENT_EVENT_TYPE, Payments } from "./payments";
 import { Agreement } from "../agreement";
 import { AgreementPaymentProcess } from "./agreement_payment_process";
-import { GolemPaymentError } from "./error";
+import { GolemPaymentError, PaymentErrorCode } from "./error";
 
 export interface PaymentOptions extends BasePaymentOptions {
   /** Interval for checking new invoices */
@@ -97,8 +97,15 @@ export class PaymentService {
       this.allocation = await Allocation.create(this.yagnaApi, { ...this.config.options, account, ...options });
       return this.allocation;
     } catch (error) {
+      if (error instanceof GolemPaymentError) {
+        throw error;
+      }
       throw new GolemPaymentError(
         `Unable to create allocation for driver/network ${this.config.payment.driver}/${this.config.payment.network}. ${error}`,
+        PaymentErrorCode.AllocationCreationFailed,
+        undefined,
+        undefined,
+        error,
       );
     }
   }
@@ -112,7 +119,12 @@ export class PaymentService {
     }
 
     if (!this.allocation) {
-      throw new GolemPaymentError("You need to create an allocation before starting any payment processes");
+      throw new GolemPaymentError(
+        "You need to create an allocation before starting any payment processes",
+        PaymentErrorCode.MissingAllocation,
+        undefined,
+        agreement.provider,
+      );
     }
 
     this.processes.set(
@@ -158,6 +170,9 @@ export class PaymentService {
     if (!process) {
       throw new GolemPaymentError(
         "No payment process was initiated for this agreement - did you forget to use 'acceptPayments' or that's not your invoice?",
+        PaymentErrorCode.PaymentProcessNotInitialized,
+        this.allocation,
+        invoice.provider,
       );
     }
 
@@ -176,6 +191,9 @@ export class PaymentService {
     if (!process) {
       throw new GolemPaymentError(
         "No payment process was initiated for this agreement - did you forget to use 'acceptPayments' or that's not your debit note?",
+        PaymentErrorCode.PaymentProcessNotInitialized,
+        this.allocation,
+        debitNote.provider,
       );
     }
 

@@ -98,6 +98,7 @@ export class Yagna {
       return Promise.reject(
         new GolemUserError(
           `No connection to Yagna. Make sure the service is running at the address ${this.apiBaseUrl}`,
+          error,
         ),
       );
     }

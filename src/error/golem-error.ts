@@ -2,7 +2,12 @@
  * Base class for all errors directly thrown by Golem SDK.
  */
 export abstract class GolemError extends Error {
-  public previous?: Error;
+  constructor(
+    message: string,
+    public readonly previous?: Error,
+  ) {
+    super(message);
+  }
 }
 
 export class GolemUserError extends GolemError {}
@@ -15,8 +20,9 @@ export class GolemTimeoutError extends GolemError {}
 export abstract class GolemModuleError extends GolemError {
   constructor(
     message: string,
-    public code?: number,
+    public code: number,
+    previous?: Error,
   ) {
-    super(message);
+    super(message, previous);
   }
 }

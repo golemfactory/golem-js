@@ -1,5 +1,7 @@
-import { Network } from "../../src/network";
+import { GolemNetworkError, Network } from "../../src/network";
 import { YagnaMock } from "../mock";
+import { spy } from "@johanblumenberg/ts-mockito";
+import { NetworkErrorCode } from "../../src/network/error";
 const yagnaApi = new YagnaMock().getApi();
 
 describe("Network", () => {
@@ -131,14 +133,18 @@ describe("Network", () => {
 
   describe("Removing", () => {
     it("should remove network", async () => {
+      const spyRemove = jest.spyOn(yagnaApi.net, "removeNetwork");
       const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/24" });
-      expect(await network.remove()).toEqual(true);
+      await network.remove();
+      expect(spyRemove).toHaveBeenCalled();
     });
 
     it("should not remove network that doesn't exist", async () => {
       const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/24" });
-      network["yagnaApi"]["net"]["setExpectedError"]({ status: 404 });
-      expect(await network.remove()).toEqual(false);
+      network["yagnaApi"]["net"]["setExpectedError"](new Error("404"));
+      await expect(network.remove()).rejects.toThrow(
+        new GolemNetworkError(`Unable to remove network. Error: 404`, NetworkErrorCode.NetworkRemovalFailed),
+      );
     });
   });
 });

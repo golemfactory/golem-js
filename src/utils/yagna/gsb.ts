@@ -32,7 +32,7 @@ export class RequestorApi extends BaseAPI implements GsbRequestorApi {
         authorization: `Bearer ${this.configuration?.apiKey}`,
       },
     }).catch((e) => {
-      throw new GolemInternalError(`Failed to create service: ${e}`);
+      throw new GolemInternalError(`Failed to create service: ${e}`, e);
     });
 
     if (!response.ok) {

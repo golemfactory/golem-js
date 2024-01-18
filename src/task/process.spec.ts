@@ -16,7 +16,7 @@ describe("RemoteProcess", () => {
     activity.mockResults([expectedResult]);
     const exeScriptRequest = new Script([new Run("test_command")]).getExeScriptRequest();
     const streamOfActivityResults = await activity.execute(exeScriptRequest, true);
-    const remoteProcess = new RemoteProcess(streamOfActivityResults);
+    const remoteProcess = new RemoteProcess(streamOfActivityResults, activity);
     expect(remoteProcess).toBeDefined();
   });
 
@@ -25,7 +25,7 @@ describe("RemoteProcess", () => {
     activity.mockResults([expectedResult]);
     const exeScriptRequest = new Script([new Run("test_command")]).getExeScriptRequest();
     const streamOfActivityResults = await activity.execute(exeScriptRequest, true);
-    const remoteProcess = new RemoteProcess(streamOfActivityResults);
+    const remoteProcess = new RemoteProcess(streamOfActivityResults, activity);
     for await (const stdout of remoteProcess.stdout) {
       expect(stdout).toEqual("Output");
     }
@@ -36,7 +36,7 @@ describe("RemoteProcess", () => {
     activity.mockResults([expectedResult]);
     const exeScriptRequest = new Script([new Run("test_command")]).getExeScriptRequest();
     const streamOfActivityResults = await activity.execute(exeScriptRequest, true);
-    const remoteProcess = new RemoteProcess(streamOfActivityResults);
+    const remoteProcess = new RemoteProcess(streamOfActivityResults, activity);
     for await (const stderr of remoteProcess.stderr) {
       expect(stderr).toEqual("Error");
     }
@@ -47,7 +47,7 @@ describe("RemoteProcess", () => {
     activity.mockResults([expectedResult]);
     const exeScriptRequest = new Script([new Run("test_command")]).getExeScriptRequest();
     const streamOfActivityResults = await activity.execute(exeScriptRequest, true);
-    const remoteProcess = new RemoteProcess(streamOfActivityResults);
+    const remoteProcess = new RemoteProcess(streamOfActivityResults, activity);
     const finalResult = await remoteProcess.waitForExit();
     expect(finalResult.result).toEqual(ResultState.Ok);
   });

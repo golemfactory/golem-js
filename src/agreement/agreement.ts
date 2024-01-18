@@ -4,7 +4,8 @@ import { YagnaOptions } from "../executor";
 import { AgreementFactory } from "./factory";
 import { AgreementConfig } from "./config";
 import { Events } from "../events";
-import { GolemMarketError } from "../market/error";
+import { GolemMarketError, MarketErrorCode } from "../market/error";
+import { Proposal } from "../market";
 
 export interface ProviderInfo {
   name: string;
@@ -50,14 +51,14 @@ export class Agreement {
 
   /**
    * @param id - agreement ID
-   * @param provider - {@link ProviderInfo}
+   * @param proposal - {@link Proposal}
    * @param yagnaApi - {@link YagnaApi}
    * @param options - {@link AgreementConfig}
    * @hidden
    */
   constructor(
     public readonly id: string,
-    public readonly provider: ProviderInfo,
+    public readonly proposal: Proposal,
     private readonly yagnaApi: YagnaApi,
     private readonly options: AgreementConfig,
   ) {
@@ -65,15 +66,15 @@ export class Agreement {
   }
 
   /**
-   * Create agreement for given proposal ID
+   * Create agreement for given proposal
    * @param proposal
    * @param yagnaApi
    * @param agreementOptions - {@link AgreementOptions}
    * @return Agreement
    */
-  static async create(proposalId: string, yagnaApi: YagnaApi, agreementOptions?: AgreementOptions): Promise<Agreement> {
+  static async create(proposal: Proposal, yagnaApi: YagnaApi, agreementOptions?: AgreementOptions): Promise<Agreement> {
     const factory = new AgreementFactory(yagnaApi, agreementOptions);
-    return factory.create(proposalId);
+    return factory.create(proposal);
   }
 
   /**
@@ -93,6 +94,10 @@ export class Agreement {
   async getState(): Promise<AgreementStateEnum> {
     await this.refreshDetails();
     return this.agreementData!.state;
+  }
+
+  get provider(): ProviderInfo {
+    return this.proposal.provider;
   }
 
   /**
@@ -147,6 +152,8 @@ export class Agreement {
     } catch (error) {
       throw new GolemMarketError(
         `Unable to terminate agreement ${this.id}. ${error.response?.data?.message || error.response?.data || error}`,
+        MarketErrorCode.AgreementTerminationFailed,
+        this.proposal.demand,
       );
     }
   }

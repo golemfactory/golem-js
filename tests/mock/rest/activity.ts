@@ -12,6 +12,7 @@ import { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 import { v4 as uuidv4 } from "uuid";
 import { ExeScriptCommandResultResultEnum } from "ya-ts-client/dist/ya-activity/src/models/exe-script-command-result";
 import { RequestorStateApi } from "ya-ts-client/dist/ya-activity/src/api/requestor-state-api";
+import { Result } from "../../../src";
 
 const exampleExeResult = {
   index: 0,

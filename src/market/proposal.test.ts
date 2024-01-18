@@ -1,13 +1,17 @@
 import { Proposal as ProposalModel, ProposalAllOfStateEnum } from "ya-ts-client/dist/ya-market/src/models";
 import { Proposal, ProposalProperties } from "./proposal";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
+import { Demand } from "./demand";
+import { instance, mock, when } from "@johanblumenberg/ts-mockito";
+import { Allocation } from "../payment";
 
 jest.mock("ya-ts-client/dist/ya-market/api");
 
-const mockDemand = {
-  properties: {},
-  constraints: "",
-};
+const allocationMock = mock(Allocation);
+when(allocationMock.paymentPlatform).thenReturn("test-payment-platform");
+const demandMock = mock(Demand);
+when(demandMock.allocation).thenReturn(instance(allocationMock));
+const testDemand = instance(demandMock);
 
 const mockApi = new RequestorApi();
 
@@ -23,15 +27,7 @@ const buildTestProposal = (props: Partial<ProposalProperties>): Proposal => {
     properties: props,
   };
 
-  const proposal = new Proposal(
-    "example-subscriptionId",
-    null,
-    mockCounteringProposalReference,
-    mockApi,
-    model,
-    mockDemand,
-    "testPaymentPlatform",
-  );
+  const proposal = new Proposal(testDemand, null, mockCounteringProposalReference, mockApi, model);
 
   return proposal;
 };

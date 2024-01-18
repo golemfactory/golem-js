@@ -121,7 +121,6 @@ export class Package {
       return `hash:sha3:${hash}:${imageUrl}`;
     } catch (error) {
       if (error instanceof GolemError) throw error;
-
       this.logger?.error(`Unable to get image Url of  ${tag || hash} from ${repoUrl}`);
       throw new GolemInternalError(`Failed to fetch image: ${error}`);
     }

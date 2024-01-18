@@ -2,8 +2,7 @@ import { Agreement, AgreementOptions } from "./agreement";
 import { Logger, YagnaApi } from "../utils";
 import { AgreementConfig } from "./config";
 import { Events } from "../events";
-import { GolemMarketError } from "../market/error";
-import { ProposalProperties } from "../market/proposal";
+import { Proposal, GolemMarketError, MarketErrorCode } from "../market";
 
 /**
  * AgreementFactory
@@ -32,32 +31,23 @@ export class AgreementFactory {
    *
    * @return Agreement
    */
-  async create(proposalId: string): Promise<Agreement> {
+  async create(proposal: Proposal): Promise<Agreement> {
     try {
       const agreementProposalRequest = {
-        proposalId,
+        proposalId: proposal.id,
         validTo: new Date(+new Date() + 3600 * 1000).toISOString(),
       };
       const { data: agreementId } = await this.yagnaApi.market.createAgreement(agreementProposalRequest, {
         timeout: this.options.agreementRequestTimeout,
       });
       const { data } = await this.yagnaApi.market.getAgreement(agreementId);
-      const offerProperties: ProposalProperties = data.offer.properties as ProposalProperties;
-      const demandProperties: ProposalProperties = data.demand.properties as ProposalProperties;
-      const chosenPaymentPlatform = demandProperties["golem.com.payment.chosen-platform"];
-      const provider = {
-        name: offerProperties["golem.node.id.name"],
-        id: data.offer.providerId,
-        walletAddress: offerProperties[`golem.com.payment.platform.${chosenPaymentPlatform}.address`] as string,
-      };
-      if (!provider.id || !provider.name) throw new GolemMarketError("Unable to get provider info");
-      const agreement = new Agreement(agreementId, provider, this.yagnaApi, this.options);
+      const agreement = new Agreement(agreementId, proposal, this.yagnaApi, this.options);
       this.options.eventTarget?.dispatchEvent(
         new Events.AgreementCreated({
           id: agreementId,
-          provider,
+          provider: proposal.provider,
           validTo: data?.validTo,
-          proposalId,
+          proposalId: proposal.id,
         }),
       );
       this.logger?.debug(`Agreement ${agreementId} created`);
@@ -65,6 +55,9 @@ export class AgreementFactory {
     } catch (error) {
       throw new GolemMarketError(
         `Unable to create agreement ${error?.response?.data?.message || error?.response?.data || error}`,
+        MarketErrorCode.AgreementCreationFailed,
+        proposal.demand,
+        error,
       );
     }
   }

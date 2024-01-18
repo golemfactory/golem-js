@@ -1,13 +1,12 @@
-import { DownloadFile, Run, Script, Transfer, UploadFile } from "../script";
+import { DownloadFile, Run, Script, Transfer, UploadData, UploadFile } from "../script";
 import { Activity, Result } from "../activity";
-import { StorageProvider } from "../storage/provider";
+import { StorageProvider } from "../storage";
 import { Logger } from "../utils";
 import { pipeline, Readable, Transform } from "stream";
-import { UploadData } from "../script/command";
-import { GolemWorkError } from "./error";
+import { GolemWorkError, WorkErrorCode } from "./error";
 
 export class Batch {
-  private script: Script;
+  private readonly script: Script;
 
   static create(activity: Activity, storageProvider: StorageProvider, logger?: Logger): Batch {
     return new Batch(activity, storageProvider, logger);
@@ -130,6 +129,7 @@ export class Batch {
       throw error;
     }
     const decodedResults: Result[] = [];
+    const activity = this.activity;
     const errorResultHandler = new Transform({
       objectMode: true,
       transform(chunk, encoding, callback) {
@@ -137,6 +137,10 @@ export class Batch {
           chunk?.result === "Error"
             ? new GolemWorkError(
                 `${chunk?.message}. Stdout: ${chunk?.stdout?.trim()}. Stderr: ${chunk?.stderr?.trim()}`,
+                WorkErrorCode.ScriptExecutionFailed,
+                activity.agreement,
+                activity,
+                activity.agreement.provider,
               )
             : null;
         if (error) {

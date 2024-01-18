@@ -1,23 +1,21 @@
 import { Package, PackageOptions } from "../package";
-import { MarketService } from "../market";
-import { AgreementPoolService } from "../agreement";
+import { MarketOptions, MarketService } from "../market";
+import { AgreementPoolService, AgreementServiceOptions } from "../agreement";
 import { Task, TaskOptions, TaskQueue, TaskService, Worker } from "../task";
 import { PaymentOptions, PaymentService } from "../payment";
-import { NetworkService } from "../network";
+import { NetworkService, NetworkServiceOptions } from "../network";
 import { Logger, LogLevel, runtimeContextChecker, sleep, Yagna } from "../utils";
 import { GftpStorageProvider, NullStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../storage";
 import { ExecutorConfig } from "./config";
 import { Events } from "../events";
 import { StatsService } from "../stats/service";
 import { TaskServiceOptions } from "../task/service";
-import { NetworkServiceOptions } from "../network";
-import { AgreementServiceOptions } from "../agreement";
-import { MarketOptions } from "../market";
 import { RequireAtLeastOne } from "../utils/types";
 import { TaskExecutorEventsDict } from "./events";
 import { EventEmitter } from "eventemitter3";
 import { GolemInternalError, GolemTimeoutError, GolemUserError } from "../error/golem-error";
 import { WorkOptions } from "../task/work";
+import { GolemWorkError, WorkErrorCode } from "../task/error";
 
 const terminatingSignals = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
 
@@ -405,20 +403,34 @@ export class TaskExecutor {
   }
 
   private async executeTask<OutputType>(worker: Worker<OutputType>, options?: TaskOptions): Promise<OutputType> {
-    const task = new Task((++this.lastTaskIndex).toString(), worker, {
-      maxRetries: options?.maxRetries ?? this.options.maxTaskRetries,
-      timeout: options?.timeout ?? this.options.taskTimeout,
-      activityReadySetupFunctions: this.activityReadySetupFunctions,
-    });
-    this.taskQueue.addToEnd(task);
-    while (this.isRunning) {
-      if (task.isFinished()) {
-        if (task.isRejected()) throw task.getError();
-        return task.getResults() as OutputType;
+    try {
+      const task = new Task((++this.lastTaskIndex).toString(), worker, {
+        maxRetries: options?.maxRetries ?? this.options.maxTaskRetries,
+        timeout: options?.timeout ?? this.options.taskTimeout,
+        activityReadySetupFunctions: this.activityReadySetupFunctions,
+      });
+      this.taskQueue.addToEnd(task);
+      while (this.isRunning) {
+        if (task.isFinished()) {
+          if (task.isRejected()) throw task.getError();
+          return task.getResults() as OutputType;
+        }
+        await sleep(2000, true);
       }
-      await sleep(2000, true);
+      throw new GolemInternalError("Task executor has been stopped");
+    } catch (error) {
+      if (error instanceof GolemWorkError) {
+        throw error;
+      }
+      throw new GolemWorkError(
+        `Unable to execute task. ${error.toString()}`,
+        WorkErrorCode.TaskExecutionFailed,
+        undefined,
+        undefined,
+        undefined,
+        error,
+      );
     }
-    throw new GolemInternalError("Task executor has been stopped");
   }
 
   private handleCriticalError(e: Error) {

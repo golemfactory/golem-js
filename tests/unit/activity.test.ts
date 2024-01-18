@@ -372,7 +372,7 @@ describe("Activity", () => {
       const results = await activity.execute(script.getExeScriptRequest(), true);
       return new Promise<void>((res) => {
         results.on("error", (error) => {
-          expect(error.toString()).toEqual('Error: GetExecBatchResults failed due to errors: ["Some undefined error"]');
+          expect(error.toString()).toEqual('Error: Unable to get activity results. ["Some undefined error"]');
           return res();
         });
         results.on("data", () => null);

@@ -3,7 +3,7 @@ import { Invoice as Model, InvoiceStatus } from "ya-ts-client/dist/ya-payment/sr
 import { Events } from "../events";
 import { Rejection } from "./rejection";
 import { YagnaApi } from "../utils";
-import { GolemPaymentError } from "./error";
+import { GolemPaymentError, PaymentErrorCode } from "./error";
 import { ProviderInfo } from "../agreement";
 import { ProposalProperties } from "../market/proposal";
 
@@ -63,8 +63,18 @@ export abstract class BaseNote<ModelType extends BaseModel> {
     this.status = model.status;
   }
   protected async getStatus(): Promise<InvoiceStatus> {
-    await this.refreshStatus();
-    return this.model.status;
+    try {
+      await this.refreshStatus();
+      return this.model.status;
+    } catch (error) {
+      throw new GolemPaymentError(
+        `Unable to query payment status. ${error?.data?.message || error.toString()}`,
+        PaymentErrorCode.PaymentStatusQueryFailed,
+        undefined,
+        this.provider,
+        error,
+      );
+    }
   }
   protected abstract accept(totalAmountAccepted: number, allocationId: string): Promise<void>;
   protected abstract reject(rejection: Rejection): Promise<void>;
@@ -165,12 +175,18 @@ export class Invoice extends BaseNote<Model> {
         totalAmountAccepted: `${totalAmountAccepted}`,
         allocationId,
       });
-    } catch (e) {
-      const reason = e?.response?.data?.message || e;
+    } catch (error) {
+      const reason = error?.response?.data?.message || error;
       this.options.eventTarget?.dispatchEvent(
         new Events.PaymentFailed({ id: this.id, agreementId: this.agreementId, reason }),
       );
-      throw new GolemPaymentError(`Unable to accept invoice ${this.id} ${reason}`);
+      throw new GolemPaymentError(
+        `Unable to accept invoice ${this.id} ${reason}`,
+        PaymentErrorCode.InvoiceAcceptanceFailed,
+        undefined,
+        this.provider,
+        error,
+      );
     }
     this.options.eventTarget?.dispatchEvent(
       new Events.PaymentAccepted({
@@ -191,8 +207,14 @@ export class Invoice extends BaseNote<Model> {
     try {
       // TODO: not implemented by yagna !!!!
       // await this.yagnaApi.payment.rejectInvoice(this.id, rejection);
-    } catch (e) {
-      throw new GolemPaymentError(`Unable to reject invoice ${this.id} ${e?.response?.data?.message || e}`);
+    } catch (error) {
+      throw new GolemPaymentError(
+        `Unable to reject invoice ${this.id} ${error?.response?.data?.message || error}`,
+        PaymentErrorCode.InvoiceRejectionFailed,
+        undefined,
+        this.provider,
+        error,
+      );
     } finally {
       this.options.eventTarget?.dispatchEvent(
         new Events.PaymentFailed({ id: this.id, agreementId: this.agreementId, reason: rejection.message }),

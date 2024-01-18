@@ -79,7 +79,11 @@ export class MarketService {
 
   private async createDemand(): Promise<true> {
     if (!this.taskPackage || !this.allocation)
-      throw new GolemMarketError("The service has not been started correctly.", MarketErrorCode.NotInitialized);
+      throw new GolemMarketError(
+        "The service has not been started correctly.",
+        MarketErrorCode.ServiceNotInitialized,
+        this.demand,
+      );
     this.demand = await Demand.create(this.taskPackage, this.allocation, this.yagnaApi, this.options);
     this.demand.addEventListener(DEMAND_EVENT_TYPE, this.demandEventListener.bind(this));
     this.proposalsCount = {
@@ -94,8 +98,13 @@ export class MarketService {
   private demandEventListener(event: Event) {
     const proposal = (event as DemandEvent).proposal;
     const error = (event as DemandEvent).error;
+    if (error instanceof GolemMarketError && error.code === MarketErrorCode.DemandExpired) {
+      this.logger?.error("Demand expired. Trying to subscribe a new one...");
+      this.resubscribeDemand().catch((e) => this.logger?.warn(e));
+      return;
+    }
     if (error || !proposal) {
-      this.logger?.error("Subscription failed. Trying to subscribe a new one...");
+      this.logger?.error("Collecting offers failed. Trying to subscribe a new demand...");
       this.resubscribeDemand().catch((e) => this.logger?.warn(e));
       return;
     }
@@ -127,8 +136,8 @@ export class MarketService {
   private async processInitialProposal(proposal: Proposal) {
     if (!this.allocation)
       throw new GolemMarketError(
-        "The service has not been started correctly.",
-        MarketErrorCode.NotInitialized,
+        "Allocation is missing. The service has not been started correctly.",
+        MarketErrorCode.MissingAllocation,
         this.demand,
       );
     this.logger?.debug(`New proposal has been received (${proposal.id})`);
@@ -153,8 +162,8 @@ export class MarketService {
   private async isProposalValid(proposal: Proposal): Promise<{ result: boolean; reason?: string }> {
     if (!this.allocation) {
       throw new GolemMarketError(
-        "The service has not been started correctly.",
-        MarketErrorCode.NotInitialized,
+        "Allocation is missing. The service has not been started correctly.",
+        MarketErrorCode.MissingAllocation,
         this.demand,
       );
     }
