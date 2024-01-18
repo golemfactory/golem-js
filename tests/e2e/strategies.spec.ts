@@ -1,4 +1,4 @@
-import { TaskExecutor, ProposalFilterFactory } from "../../src";
+import { ProposalFilterFactory, TaskExecutor } from "../../src";
 import { LoggerMock } from "../mock";
 
 const logger = new LoggerMock(false);
