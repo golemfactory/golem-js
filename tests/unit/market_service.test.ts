@@ -1,5 +1,5 @@
 import { setExpectedProposals } from "../mock/rest/market";
-import { MarketService, ProposalFilters } from "../../src/market";
+import { MarketService, ProposalFilterFactory } from "../../src/market";
 import { agreementPoolServiceMock, packageMock, LoggerMock, allocationMock, YagnaMock } from "../mock";
 import {
   proposalsInitial,
@@ -89,7 +89,7 @@ describe("Market Service", () => {
     await marketService.end();
   });
   it("should reject when proposal rejected by Proposal Filter", async () => {
-    const proposalAlwaysBanFilter = () => Promise.resolve(false);
+    const proposalAlwaysBanFilter = () => false;
     const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
       logger,
       proposalFilter: proposalAlwaysBanFilter,
@@ -104,7 +104,7 @@ describe("Market Service", () => {
   it("should reject when proposal rejected by BlackListIds Proposal Filter", async () => {
     const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
       logger,
-      proposalFilter: ProposalFilters.blackListProposalIdsFilter(["0xee8993fe1dcff6b131d3fd759c6b3ddcb82d1655"]),
+      proposalFilter: ProposalFilterFactory.disallowProvidersById(["0xee8993fe1dcff6b131d3fd759c6b3ddcb82d1655"]),
       minProposalsBatchSize: 1,
       proposalsBatchReleaseTimeoutMs: 10,
     });
@@ -116,7 +116,7 @@ describe("Market Service", () => {
   it("should reject when proposal rejected by BlackListNames Proposal Filter", async () => {
     const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
       logger,
-      proposalFilter: ProposalFilters.blackListProposalRegexpFilter(/golem2004/),
+      proposalFilter: ProposalFilterFactory.disallowProvidersByNameRegex(/golem2004/),
       minProposalsBatchSize: 1,
       proposalsBatchReleaseTimeoutMs: 10,
     });
@@ -128,7 +128,7 @@ describe("Market Service", () => {
   it("should reject when proposal rejected by WhiteListIds Proposal Filter", async () => {
     const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
       logger,
-      proposalFilter: ProposalFilters.whiteListProposalIdsFilter(["0x123455"]),
+      proposalFilter: ProposalFilterFactory.allowProvidersById(["0x123455"]),
       minProposalsBatchSize: 1,
       proposalsBatchReleaseTimeoutMs: 10,
     });
@@ -140,7 +140,7 @@ describe("Market Service", () => {
   it("should reject when proposal rejected by WhiteListNames Proposal Filter", async () => {
     const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
       logger,
-      proposalFilter: ProposalFilters.whiteListProposalRegexpFilter(/abcdefg/),
+      proposalFilter: ProposalFilterFactory.allowProvidersByNameRegex(/abcdefg/),
       minProposalsBatchSize: 1,
       proposalsBatchReleaseTimeoutMs: 10,
     });
@@ -152,7 +152,7 @@ describe("Market Service", () => {
   it("should respond when provider id is whitelisted by WhiteListIds Proposal Filter", async () => {
     const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
       logger,
-      proposalFilter: ProposalFilters.whiteListProposalIdsFilter(["0xee8993fe1dcff6b131d3fd759c6b3ddcb82d1655"]),
+      proposalFilter: ProposalFilterFactory.allowProvidersById(["0xee8993fe1dcff6b131d3fd759c6b3ddcb82d1655"]),
       minProposalsBatchSize: 1,
       proposalsBatchReleaseTimeoutMs: 10,
     });
@@ -164,7 +164,7 @@ describe("Market Service", () => {
   it("should respond when provider name is whitelisted by WhiteListNames Proposal Filter", async () => {
     const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
       logger,
-      proposalFilter: ProposalFilters.whiteListProposalRegexpFilter(/golem2004/),
+      proposalFilter: ProposalFilterFactory.allowProvidersByNameRegex(/golem2004/),
       minProposalsBatchSize: 1,
       proposalsBatchReleaseTimeoutMs: 10,
     });

@@ -4,6 +4,7 @@
   "roots": ["../../src", "./"],
   "testMatch": ["**/*.test.ts", "**/*.spec.ts"],
   "reporters": [
+    "default",
     [
       "jest-junit",
       {

@@ -8,7 +8,7 @@ import { MarketConfig } from "./config";
 import { GolemError } from "../error/golem-error";
 import { ProposalsBatch } from "./proposals_batch";
 
-export type ProposalFilter = (proposal: Proposal) => Promise<boolean> | boolean;
+export type ProposalFilter = (proposal: Proposal) => boolean;
 
 export interface MarketOptions extends DemandOptions {
   /**
