@@ -202,7 +202,8 @@ export class Activity {
     let lastIndex: number;
     let retryCount = 0;
     const maxRetries = 5;
-    const activity = { ...this };
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const activity = this;
     const { id: activityId, agreement, logger } = activity;
     const isRunning = () => this.isRunning;
     const { activityExecuteTimeout, eventTarget, activityExeBatchResultPollIntervalSeconds } = this.options;
@@ -269,6 +270,7 @@ export class Activity {
                   agreement,
                   activity,
                   activity.provider,
+                  error,
                 ),
               );
             }
@@ -301,7 +303,8 @@ export class Activity {
     this.eventSource = eventSource;
 
     let isBatchFinished = false;
-    const activity = { ...this };
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const activity = this;
     const isRunning = () => this.isRunning;
     const activityExecuteTimeout = this.options.activityExecuteTimeout;
     const { logger } = this;

@@ -5,6 +5,9 @@ import { StorageProviderMock, YagnaMock } from "../mock";
 import { Activity, ActivityStateEnum } from "../../src/activity";
 import { sleep } from "../../src/utils";
 import { Deploy, Start, Run, Terminate, UploadFile, DownloadFile, Script, Capture } from "../../src/script";
+import { GolemWorkError, WorkErrorCode } from "../../src/task/error";
+import { Agreement } from "../../src/agreement";
+import { GolemInternalError, GolemTimeoutError } from "../../src/error/golem-error";
 
 jest.mock("eventsource", () => EventSourceMock);
 describe("Activity", () => {
@@ -242,7 +245,15 @@ describe("Activity", () => {
       };
       activityMock.setExpectedErrors([error, error, error, error, error, error]);
       return new Promise<void>((res) => {
-        results.on("error", (error) => {
+        results.on("error", (error: GolemWorkError) => {
+          expect(error).toBeInstanceOf(GolemWorkError);
+          expect(error.code).toEqual(WorkErrorCode.ActivityResultsFetchingFailed);
+          expect(error.activity).toBeDefined();
+          expect(error.agreement).toBeDefined();
+          expect(error.provider?.name).toEqual("Test Provider");
+          expect(error.previous?.toString()).toEqual(
+            "Error: Command #0 getExecBatchResults error: Some undefined error",
+          );
           expect(error.toString()).toEqual(
             "Error: Unable to get activity results. Command #0 getExecBatchResults error: Some undefined error",
           );
@@ -271,7 +282,15 @@ describe("Activity", () => {
       };
       activityMock.setExpectedErrors([error, error, error, error, error, error]);
       return new Promise<void>((res) => {
-        results.on("error", (error) => {
+        results.on("error", (error: GolemWorkError) => {
+          expect(error).toBeInstanceOf(GolemWorkError);
+          expect(error.code).toEqual(WorkErrorCode.ActivityResultsFetchingFailed);
+          expect(error.activity).toBeDefined();
+          expect(error.agreement).toBeDefined();
+          expect(error.provider?.name).toEqual("Test Provider");
+          expect(error.previous?.toString()).toEqual(
+            "Error: Command #0 getExecBatchResults error: GSB error: remote service at `test` error: GSB failure: Bad request: endpoint address not found",
+          );
           expect(error.toString()).toEqual(
             "Error: Unable to get activity results. Command #0 getExecBatchResults error: GSB error: remote service at `test` error: GSB failure: Bad request: endpoint address not found",
           );
@@ -295,7 +314,13 @@ describe("Activity", () => {
       activityMock.setExpectedErrors([error, error, error]);
       activityMock.setExpectedStates([ActivityStateEnum.Terminated, ActivityStateEnum.Terminated]);
       return new Promise<void>((res) => {
-        results.on("error", (error) => {
+        results.on("error", (error: GolemWorkError) => {
+          expect(error).toBeInstanceOf(GolemWorkError);
+          expect(error.code).toEqual(WorkErrorCode.ActivityResultsFetchingFailed);
+          expect(error.activity).toBeDefined();
+          expect(error.agreement).toBeDefined();
+          expect(error.provider?.name).toEqual("Test Provider");
+          expect(error.previous?.toString()).toEqual("Error: GSB error: endpoint address not found. Terminated.");
           expect(error.toString()).toEqual(
             "Error: Unable to get activity results. GSB error: endpoint address not found. Terminated.",
           );
@@ -316,7 +341,8 @@ describe("Activity", () => {
       const results = await activity.execute(script.getExeScriptRequest(), false, 1);
       await sleep(10, true);
       return new Promise<void>((res) => {
-        results.on("error", (error) => {
+        results.on("error", (error: GolemWorkError) => {
+          expect(error).toBeInstanceOf(GolemTimeoutError);
           expect(error.toString()).toMatch(/Error: Activity .* timeout/);
           return res();
         });
