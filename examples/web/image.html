@@ -100,11 +100,6 @@
       }
 
       const logger = {
-        log: (msg) => {
-          const fullMsg = `[${new Date().toISOString()}] ${msg}`;
-          console.log(fullMsg);
-          appendLog(fullMsg);
-        },
         warn: (msg) => {
           const fullMsg = `[${new Date().toISOString()}] [warn] ${msg}`;
           console.warn(fullMsg);
@@ -125,6 +120,7 @@
           console.log(fullMsg);
           appendLog(fullMsg);
         },
+        child: () => logger,
       };
 
       async function run() {

@@ -19,7 +19,7 @@ describe("Agreement", () => {
       const agreement = await Agreement.create(proposal, yagnaApi, { logger });
       expect(agreement).toBeInstanceOf(Agreement);
       expect(agreement.id).toHaveLength(64);
-      expect(logger.logs).toMatch(/Agreement .* created/);
+      await logger.expectToInclude("Agreement created", { id: agreement.id });
     });
   });
 
@@ -43,7 +43,7 @@ describe("Agreement", () => {
     it("should terminate agreement", async () => {
       const agreement = await Agreement.create(proposal, yagnaApi, { logger });
       await agreement.terminate();
-      expect(logger.logs).toMatch(/Agreement .* terminated/);
+      await logger.expectToInclude("Agreement terminated", { id: agreement.id });
     });
   });
 
@@ -51,7 +51,7 @@ describe("Agreement", () => {
     it("should confirm agreement", async () => {
       const agreement = await Agreement.create(proposal, yagnaApi, { logger });
       await agreement.confirm();
-      expect(logger.logs).toMatch(/Agreement .* approved/);
+      await logger.expectToInclude("Agreement approved", { id: agreement.id });
     });
   });
 });

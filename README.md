@@ -21,11 +21,12 @@
   - [Usage](#usage)
     - [Hello World example](#hello-world-example)
     - [More examples](#more-examples)
-    - [Node & Browser support](#node--browser-support)
+  - [Supported environments](#supported-environments)
   - [Golem Network Market Basics](#golem-network-market-basics)
     - [Mid-agreement payments to the Providers for used resources](#mid-agreement-payments-to-the-providers-for-used-resources)
     - [Limit price limits to filter out offers that are too expensive](#limit-price-limits-to-filter-out-offers-that-are-too-expensive)
     - [Work with reliable providers](#work-with-reliable-providers)
+  - [Debugging](#debugging)
   - [Testing](#testing)
   - [Contributing](#contributing)
   - [See also](#see-also)
@@ -100,15 +101,10 @@ In case you find an issue with the examples, feel free to submit an [issue repor
 
 You can find even more examples and tutorials in the [JavaScript API section of the Golem Network Docs](https://docs.golem.network/docs/creators/javascript).
 
-### Node & Browser support
+## Supported environments
 
 The SDK is designed to work with LTS versions of Node (starting from 18)
-
-![hello_nodejs](https://user-images.githubusercontent.com/26308335/224720742-1ca115e2-e207-41a7-9537-ffa4ece11406.gif)
-
-and with browsers
-
-![hello_web](https://user-images.githubusercontent.com/26308335/217530424-a1dd4487-f95f-43e6-a91b-7106b6f30802.gif)
+and with browsers.
 
 ## Golem Network Market Basics
 
@@ -215,6 +211,10 @@ const executor = await TaskExecutor.create({
   },
 });
 ```
+
+## Debugging
+
+The SDK uses the [debug](https://www.npmjs.com/package/debug) package to provide debug logs. To enable them, set the `DEBUG` environment variable to `golem-js:*` or `golem-js:market:*` to see all logs or only the market-related ones, respectively. For more information, please refer to the [debug package documentation](https://www.npmjs.com/package/debug).
 
 ## Testing
 

@@ -1,5 +1,5 @@
 import { Events, EVENT_TYPE, BaseEvent } from "../events";
-import { Logger } from "../utils";
+import { Logger, defaultLogger } from "../utils";
 import { Providers } from "./providers";
 import { Tasks } from "./tasks";
 import { Payments } from "./payments";
@@ -20,7 +20,7 @@ interface StatsOptions {
  */
 export class StatsService {
   private eventTarget: EventTarget;
-  private logger?: Logger;
+  private logger: Logger;
   private allocations: Allocations;
   private agreements: Agreements;
   private activities: Activities;
@@ -33,7 +33,7 @@ export class StatsService {
 
   constructor(options: StatsOptions) {
     this.eventTarget = options.eventTarget;
-    this.logger = options.logger;
+    this.logger = options.logger || defaultLogger("stats");
     this.allocations = new Allocations();
     this.activities = new Activities();
     this.agreements = new Agreements();
@@ -47,12 +47,12 @@ export class StatsService {
 
   async run() {
     this.eventTarget.addEventListener(EVENT_TYPE, (event) => this.handleEvents(event as BaseEvent<unknown>));
-    this.logger?.debug("Stats service has started");
+    this.logger.info("Stats service has started");
   }
 
   async end() {
     this.eventTarget.removeEventListener(EVENT_TYPE, null);
-    this.logger?.debug("Stats service has stopped");
+    this.logger.info("Stats service has stopped");
   }
 
   getAllCostsSummary() {
@@ -65,7 +65,7 @@ export class StatsService {
         const payments = this.payments.getByAgreementId(agreement.id);
         return {
           Agreement: agreement.id.substring(0, 10),
-          "Provider Name": provider ? provider.providerName : "unknown",
+          "Provider Name": provider ? provider.name : "unknown",
           "Task Computed": tasks.where("status", "finished").count(),
           Cost: invoices.sum("amount"),
           "Payment Status": payments.count() > 0 ? "paid" : "unpaid",
@@ -195,7 +195,7 @@ export class StatsService {
       this.agreements.reject(event.detail.id);
     } else if (event instanceof Events.ProposalReceived) {
       this.proposals.add({ id: event.detail.id, providerId: event.detail.provider.id });
-      this.providers.add({ id: event.detail.provider.id });
+      this.providers.add({ ...event.detail.provider });
     } else if (event instanceof Events.InvoiceReceived) {
       this.invoices.add({
         id: event.detail.id,

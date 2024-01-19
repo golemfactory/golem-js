@@ -1,7 +1,7 @@
 import { Result, ResultState, StreamingBatchEvent } from "./results";
 import EventSource from "eventsource";
 import { Readable } from "stream";
-import { Logger, YagnaApi } from "../utils";
+import { Logger, YagnaApi, defaultLogger } from "../utils";
 import sleep from "../utils/sleep";
 import { ActivityFactory } from "./factory";
 import { ActivityConfig } from "./config";
@@ -46,7 +46,7 @@ function isAxiosError(error: Error | AxiosError): error is AxiosError {
  * As part of a given activity, it is possible to execute exe script commands and capture their results.
  */
 export class Activity {
-  private readonly logger?: Logger;
+  private readonly logger: Logger;
   private isRunning = true;
   private currentState: ActivityStateEnum = ActivityStateEnum.New;
   private eventSource?: EventSource;
@@ -64,7 +64,7 @@ export class Activity {
     protected readonly yagnaApi: YagnaApi,
     protected readonly options: ActivityConfig,
   ) {
-    this.logger = options?.logger;
+    this.logger = options?.logger || defaultLogger("work");
   }
 
   /**
@@ -106,7 +106,7 @@ export class Activity {
       batchSize = JSON.parse(script.text).length;
     } catch (error) {
       const message = error?.response?.data?.message || error.message || error;
-      this.logger?.error(message);
+      this.logger.error(message);
       throw new GolemWorkError(
         `Unable to execute script ${message}`,
         WorkErrorCode.ScriptExecutionFailed,
@@ -117,7 +117,7 @@ export class Activity {
       );
     }
 
-    this.logger?.debug(`Script sent. Batch ID: ${batchId}`);
+    this.logger.debug(`Script sent. Batch ID: ${batchId}`);
 
     this.options.eventTarget?.dispatchEvent(
       new Events.ScriptSent({ activityId: this.id, agreementId: this.agreement.id }),
@@ -184,7 +184,7 @@ export class Activity {
       this.options.eventTarget?.dispatchEvent(
         new Events.ActivityDestroyed({ id: this.id, agreementId: this.agreement.id }),
       );
-      this.logger?.debug(`Activity ${this.id} destroyed`);
+      this.logger.debug(`Activity ${this.id} destroyed`);
     } catch (error) {
       throw new GolemWorkError(
         `Unable to destroy activity ${this.id}. ${error?.response?.data?.message || error?.message || error}`,
@@ -197,7 +197,7 @@ export class Activity {
   }
 
   private async pollingBatch(batchId: string, startTime: Date, timeout?: number): Promise<Readable> {
-    this.logger?.debug("Starting to poll for batch results");
+    this.logger.debug("Starting to poll for batch results");
     let isBatchFinished = false;
     let lastIndex: number;
     let retryCount = 0;
@@ -215,20 +215,20 @@ export class Activity {
 
       async read() {
         while (!isBatchFinished) {
-          logger?.debug("Polling for batch script execution result");
+          logger.debug("Polling for batch script execution result");
 
           if (startTime.valueOf() + (timeout || activityExecuteTimeout) <= new Date().valueOf()) {
-            logger?.debug("Activity probably timed-out, will stop polling for batch execution results");
+            logger.debug("Activity probably timed-out, will stop polling for batch execution results");
             return this.destroy(new GolemTimeoutError(`Activity ${activityId} timeout.`));
           }
 
           if (!isRunning()) {
-            logger?.debug("Activity is no longer running, will stop polling for batch execution results");
+            logger.debug("Activity is no longer running, will stop polling for batch execution results");
             return this.destroy(new GolemAbortError(`Activity ${activityId} has been interrupted.`));
           }
 
           try {
-            logger?.debug("Trying to poll for batch execution results from yagna");
+            logger.debug("Trying to poll for batch execution results from yagna");
             // This will ignore "incompatibility" between ExeScriptCommandResultResultEnum and ResultState, which both
             // contain exactly the same entries, however TSC refuses to compile it as it assumes the former is dynamically
             // computed.
@@ -245,7 +245,7 @@ export class Activity {
 
             const newResults = rawExecBachResults.map((rawResult) => new Result(rawResult)).slice(lastIndex + 1);
 
-            logger?.debug(`Received the following batch execution results: ${JSON.stringify(newResults)}`);
+            logger.debug(`Received batch execution results`, { results: newResults });
 
             if (Array.isArray(newResults) && newResults.length) {
               newResults.forEach((result) => {
@@ -255,7 +255,7 @@ export class Activity {
               });
             }
           } catch (error) {
-            logger?.error(`Processing batch execution results failed due to ${error}`);
+            logger.error(`Processing batch execution results failed`, error);
 
             try {
               retryCount = await handleError(error, lastIndex, retryCount, maxRetries);
@@ -318,12 +318,12 @@ export class Activity {
         while (!isBatchFinished) {
           let error: Error | undefined;
           if (startTime.valueOf() + (timeout || activityExecuteTimeout) <= new Date().valueOf()) {
-            logger?.debug("Activity probably timed-out, will stop streaming batch execution results");
+            logger.debug("Activity probably timed-out, will stop streaming batch execution results");
             error = new GolemTimeoutError(`Activity ${activity.id} timeout.`);
           }
 
           if (!isRunning()) {
-            logger?.debug("Activity is no longer running, will stop streaming batch execution results");
+            logger.debug("Activity is no longer running, will stop streaming batch execution results");
             error = new GolemAbortError(`Activity ${activity.id} has been interrupted.`);
           }
 
@@ -357,7 +357,7 @@ export class Activity {
 
   private async handleError(error: Error, cmdIndex: number, retryCount: number, maxRetries: number) {
     if (this.isTimeoutError(error)) {
-      this.logger?.warn("API request timeout." + error.toString());
+      this.logger.warn("API request timeout.", error);
       return retryCount;
     }
 
@@ -365,7 +365,7 @@ export class Activity {
 
     if (terminated) {
       const msg = (reason || "") + (errorMessage || "");
-      this.logger?.warn(`Activity ${this.id} terminated by provider. ${msg ? "Reason: " + msg : ""}`);
+      this.logger.warn(`Activity terminated by provider.`, { reason: msg, id: this.id });
       throw error;
     }
 
@@ -374,10 +374,10 @@ export class Activity {
     const failMsg = "There was an error retrieving activity results.";
 
     if (retryCount < maxRetries) {
-      this.logger?.debug(`${failMsg} Retrying in ${this.options.activityExeBatchResultPollIntervalSeconds} seconds.`);
+      this.logger.debug(`${failMsg} Retrying in ${this.options.activityExeBatchResultPollIntervalSeconds} seconds.`);
       return retryCount;
     } else {
-      this.logger?.warn(`${failMsg} Giving up after ${retryCount} attempts. ${error.message}`);
+      this.logger.warn(`${failMsg} Giving up after ${retryCount} attempts.`, error);
     }
 
     throw new GolemWorkError(
@@ -409,7 +409,7 @@ export class Activity {
         errorMessage: data?.errorMessage,
       };
     } catch (err) {
-      this.logger?.debug(`Cannot query activity state: ${err}`);
+      this.logger.debug(`Cannot query activity state:`, err);
       return { terminated: false };
     }
   }

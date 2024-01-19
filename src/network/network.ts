@@ -48,7 +48,7 @@ export class Network {
   private ownerIp: IPv4;
   private gateway?: IPv4;
   private nodes = new Map<string, NetworkNode>();
-  private logger?: Logger;
+  private logger: Logger;
 
   /**
    * Create a new VPN.
@@ -72,7 +72,7 @@ export class Network {
         await yagnaApi.net.removeNetwork(id as string);
         throw e;
       });
-      config.logger?.info(`Network created: ID: ${id}, IP: ${ip}, Mask: ${mask}`);
+      config.logger.info(`Network created`, { id, ip, mask });
       return network;
     } catch (error) {
       if (error instanceof GolemNetworkError) {
@@ -171,7 +171,7 @@ export class Network {
   async remove(): Promise<void> {
     try {
       await this.yagnaApi.net.removeNetwork(this.id);
-      this.logger?.info(`Network has removed: ID: ${this.id}, IP: ${this.ip}`);
+      this.logger.info(`Network has removed:`, { id: this.id, ip: this.ip.toString() });
     } catch (error) {
       throw new GolemNetworkError(
         `Unable to remove network. ${error?.data?.message || error.toString()}`,

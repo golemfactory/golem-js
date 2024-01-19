@@ -120,7 +120,7 @@ describe("Stats Service", () => {
         details: {} as ProposalDetails,
       });
       eventTarget.dispatchEvent(event);
-      expect(spy).toHaveBeenCalledWith({ id: testProvider.id });
+      expect(spy).toHaveBeenCalledWith(testProvider);
     });
     // Invoices
     it("should handle InvoiceReceived and call Invoice.add()", async () => {

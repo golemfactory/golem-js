@@ -66,7 +66,7 @@ export class Allocation {
           platform: newModel.paymentPlatform,
         }),
       );
-      config.logger?.debug(
+      config.logger.debug(
         `Allocation ${newModel.allocationId} has been created for address ${config.account.address} using payment platform ${config.account.platform}`,
       );
       return new Allocation(yagnaApi, config, newModel);
@@ -131,7 +131,7 @@ export class Allocation {
   async release() {
     try {
       await this.yagnaApi.payment.releaseAllocation(this.id);
-      this.options?.logger?.debug(`Allocation ${this.id} has been released.`);
+      this.options.logger.debug(`Allocation ${this.id} has been released.`);
     } catch (error) {
       throw new GolemPaymentError(
         `Could not release allocation. ${error.response?.data?.message || error}`,

@@ -1,4 +1,4 @@
-import { Logger, sleep, YagnaApi } from "../utils";
+import { defaultLogger, Logger, sleep, YagnaApi } from "../utils";
 import { Package } from "../package";
 import { Proposal } from "./proposal";
 import { AgreementPoolService } from "../agreement";
@@ -31,7 +31,7 @@ export class MarketService {
   private readonly options: MarketConfig;
   private demand?: Demand;
   private allocation?: Allocation;
-  private logger?: Logger;
+  private logger: Logger;
   private taskPackage?: Package;
   private maxResubscribeRetries = 5;
   private proposalsCount = {
@@ -48,7 +48,7 @@ export class MarketService {
     options?: MarketOptions,
   ) {
     this.options = new MarketConfig(options);
-    this.logger = this.options?.logger;
+    this.logger = this.options?.logger || defaultLogger("market");
     this.proposalsBatch = new ProposalsBatch({
       minBatchSize: options?.minProposalsBatchSize,
       releaseTimeoutMs: options?.proposalsBatchReleaseTimeoutMs,
@@ -60,17 +60,17 @@ export class MarketService {
     this.taskPackage = taskPackage;
     this.allocation = allocation;
     await this.createDemand();
-    this.startProcessingProposalsBatch().catch((e) => this.logger?.error(e));
-    this.logger?.debug("Market Service has started");
+    this.startProcessingProposalsBatch().catch((e) => this.logger.error("Error processing proposal batch", e));
+    this.logger.info("Market Service has started");
   }
 
   async end() {
     this.isRunning = false;
     if (this.demand) {
       this.demand.removeEventListener(DEMAND_EVENT_TYPE, this.demandEventListener.bind(this));
-      await this.demand.unsubscribe().catch((e) => this.logger?.error(`Could not unsubscribe demand. ${e}`));
+      await this.demand.unsubscribe().catch((e) => this.logger.error(`Could not unsubscribe demand.`, e));
     }
-    this.logger?.debug("Market Service has been stopped");
+    this.logger.info("Market Service has been stopped");
   }
 
   getProposalsCount() {
@@ -91,7 +91,7 @@ export class MarketService {
       confirmed: 0,
       rejected: 0,
     };
-    this.logger?.debug(`New demand has been created (${this.demand.id})`);
+    this.logger.debug(`New demand has been created`, { id: this.demand.id });
     return true;
   }
 
@@ -99,35 +99,33 @@ export class MarketService {
     const proposal = (event as DemandEvent).proposal;
     const error = (event as DemandEvent).error;
     if (error instanceof GolemMarketError && error.code === MarketErrorCode.DemandExpired) {
-      this.logger?.error("Demand expired. Trying to subscribe a new one...");
+      this.logger.error("Demand expired. Trying to subscribe a new one...");
       this.resubscribeDemand().catch((e) => this.logger?.warn(e));
       return;
     }
     if (error || !proposal) {
-      this.logger?.error("Collecting offers failed. Trying to subscribe a new demand...");
+      this.logger.error("Collecting offers failed. Trying to subscribe a new demand...");
       this.resubscribeDemand().catch((e) => this.logger?.warn(e));
       return;
     }
     if (proposal.isInitial()) this.proposalsBatch.addProposal(proposal);
     else if (proposal.isDraft()) this.processDraftProposal(proposal);
-    else if (proposal.isExpired()) this.logger?.debug(`Proposal hes expired ${proposal.id}`);
+    else if (proposal.isExpired()) this.logger.debug(`Proposal hes expired`, { id: proposal.id });
     else if (proposal.isRejected()) {
       this.proposalsCount.rejected++;
-      this.logger?.debug(`Proposal hes rejected ${proposal.id}`);
+      this.logger.debug(`Proposal hes rejected`, { id: proposal.id });
     }
   }
 
   private async resubscribeDemand() {
     if (this.demand) {
       this.demand.removeEventListener(DEMAND_EVENT_TYPE, this.demandEventListener.bind(this));
-      await this.demand.unsubscribe().catch((e) => this.logger?.debug(`Could not unsubscribe demand. ${e}`));
+      await this.demand.unsubscribe().catch((e) => this.logger.error(`Could not unsubscribe demand.`, e));
     }
     let attempt = 1;
     let success = false;
     while (!success && attempt <= this.maxResubscribeRetries) {
-      success = Boolean(
-        await this.createDemand().catch((e) => this.logger?.error(`Could not resubscribe demand. ${e}`)),
-      );
+      success = Boolean(await this.createDemand().catch((e) => this.logger.error(`Could not resubscribe demand.`, e)));
       ++attempt;
       await sleep(20);
     }
@@ -140,7 +138,7 @@ export class MarketService {
         MarketErrorCode.MissingAllocation,
         this.demand,
       );
-    this.logger?.debug(`New proposal has been received (${proposal.id})`);
+    this.logger.debug(`New proposal has been received`, { id: proposal.id });
     this.proposalsCount.initial++;
     try {
       const { result: isProposalValid, reason } = await this.isProposalValid(proposal);
@@ -148,14 +146,14 @@ export class MarketService {
         const chosenPlatform = this.allocation.paymentPlatform;
         await proposal
           .respond(chosenPlatform)
-          .catch((e) => this.logger?.debug(`Unable to respond proposal ${proposal.id}. ${e}`));
-        this.logger?.debug(`Proposal has been responded (${proposal.id})`);
+          .catch((e) => this.logger.debug(`Unable to respond proposal`, { id: proposal.id, e }));
+        this.logger.debug(`Proposal has been responded`, { id: proposal.id });
       } else {
         this.proposalsCount.rejected++;
-        this.logger?.debug(`Proposal has been rejected (${proposal.id}). Reason: ${reason}`);
+        this.logger.error(`Proposal has been rejected`, { id: proposal.id, reason });
       }
     } catch (error) {
-      this.logger?.error(error);
+      this.logger.error(`Unable to respond proposal`, { id: proposal.id, error });
     }
   }
 
@@ -187,9 +185,11 @@ export class MarketService {
   private async processDraftProposal(proposal: Proposal) {
     await this.agreementPoolService.addProposal(proposal);
     this.proposalsCount.confirmed++;
-    this.logger?.debug(
-      `Proposal has been confirmed with provider ${proposal.issuerId} and added to agreement pool (${proposal.id})`,
-    );
+    this.logger.debug(`Proposal has been confirmed and added to agreement pool`, {
+      providerName: proposal.provider.name,
+      issuerId: proposal.issuerId,
+      id: proposal.id,
+    });
   }
 
   private async startProcessingProposalsBatch() {

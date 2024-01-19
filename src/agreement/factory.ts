@@ -1,5 +1,5 @@
 import { Agreement, AgreementOptions } from "./agreement";
-import { Logger, YagnaApi } from "../utils";
+import { Logger, defaultLogger, YagnaApi } from "../utils";
 import { AgreementConfig } from "./config";
 import { Events } from "../events";
 import { Proposal, GolemMarketError, MarketErrorCode } from "../market";
@@ -10,7 +10,7 @@ import { Proposal, GolemMarketError, MarketErrorCode } from "../market";
  * @internal
  */
 export class AgreementFactory {
-  private readonly logger?: Logger;
+  private readonly logger: Logger;
   private readonly options: AgreementConfig;
 
   /**
@@ -23,7 +23,7 @@ export class AgreementFactory {
     agreementOptions?: AgreementOptions,
   ) {
     this.options = new AgreementConfig(agreementOptions);
-    this.logger = agreementOptions?.logger;
+    this.logger = agreementOptions?.logger || defaultLogger("market");
   }
 
   /**
@@ -50,7 +50,7 @@ export class AgreementFactory {
           proposalId: proposal.id,
         }),
       );
-      this.logger?.debug(`Agreement ${agreementId} created`);
+      this.logger.debug(`Agreement created`, { id: agreementId });
       return agreement;
     } catch (error) {
       throw new GolemMarketError(

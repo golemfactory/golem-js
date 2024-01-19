@@ -1,4 +1,4 @@
-import { Logger, YagnaApi } from "../utils";
+import { Logger, YagnaApi, defaultLogger } from "../utils";
 import { Agreement as AgreementModel } from "ya-ts-client/dist/ya-market/src/models";
 import { YagnaOptions } from "../executor";
 import { AgreementFactory } from "./factory";
@@ -47,7 +47,7 @@ export interface AgreementOptions {
  */
 export class Agreement {
   private agreementData?: AgreementModel;
-  private logger?: Logger;
+  private logger: Logger;
 
   /**
    * @param id - agreement ID
@@ -62,7 +62,7 @@ export class Agreement {
     private readonly yagnaApi: YagnaApi,
     private readonly options: AgreementConfig,
   ) {
-    this.logger = options.logger;
+    this.logger = options.logger || defaultLogger("market");
   }
 
   /**
@@ -111,10 +111,10 @@ export class Agreement {
     try {
       await this.yagnaApi.market.confirmAgreement(this.id, appSessionId);
       await this.yagnaApi.market.waitForApproval(this.id, this.options.agreementWaitingForApprovalTimeout);
-      this.logger?.debug(`Agreement ${this.id} approved`);
+      this.logger.debug(`Agreement approved`, { id: this.id });
       this.options.eventTarget?.dispatchEvent(new Events.AgreementConfirmed({ id: this.id, provider: this.provider }));
     } catch (error) {
-      this.logger?.debug(`Unable to confirm agreement with provider ${this.provider.name}. ${error}`);
+      this.logger.error(`Unable to confirm agreement with provider`, { providerName: this.provider.name, error });
       this.options.eventTarget?.dispatchEvent(
         new Events.AgreementRejected({ id: this.id, provider: this.provider, reason: error.toString() }),
       );
@@ -148,7 +148,7 @@ export class Agreement {
       this.options.eventTarget?.dispatchEvent(
         new Events.AgreementTerminated({ id: this.id, provider: this.provider, reason: reason.message }),
       );
-      this.logger?.debug(`Agreement ${this.id} terminated`);
+      this.logger.debug(`Agreement terminated`, { id: this.id });
     } catch (error) {
       throw new GolemMarketError(
         `Unable to terminate agreement ${this.id}. ${error.response?.data?.message || error.response?.data || error}`,

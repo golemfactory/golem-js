@@ -302,71 +302,29 @@ describe("Stats Module", () => {
   describe("Providers", () => {
     it("should beforeAdd() converts payload to ProviderInfo", async () => {
       const tests = new Providers();
-      tests.add({ id: "id", providerName: "providerName" });
-      expect(tests.getAll()).toEqual(
-        new Collection([
-          {
-            id: "id",
-            providerName: "providerName",
-          },
-        ]),
-      );
+      tests.add(testProvider);
+      expect(tests.getAll()).toEqual(new Collection([testProvider]));
     });
 
     it("should beforeAdd() should setup providerName as unknown by default", async () => {
       const tests = new Providers();
-      tests.add({ id: "id" });
-      expect(tests.getAll()).toEqual(
-        new Collection([
-          {
-            id: "id",
-            providerName: "unknown",
-          },
-        ]),
-      );
+      tests.add(testProvider);
+      expect(tests.getAll()).toEqual(new Collection([testProvider]));
     });
 
     it("should beforeAdd() should update providerName if provided", async () => {
       const tests = new Providers();
-      tests.add({ id: "id" });
-      expect(tests.getAll()).toEqual(
-        new Collection([
-          {
-            id: "id",
-            providerName: "unknown",
-          },
-        ]),
-      );
-      tests.add({ id: "id", providerName: "providerName" });
-      expect(tests.getAll()).toEqual(
-        new Collection([
-          {
-            id: "id",
-            providerName: "providerName",
-          },
-        ]),
-      );
+      tests.add(testProvider);
+      expect(tests.getAll()).toEqual(new Collection([testProvider]));
+      tests.add(testProvider);
+      expect(tests.getAll()).toEqual(new Collection([testProvider]));
     });
     it("should beforeAdd() should use previous providerName if is not provided", async () => {
       const tests = new Providers();
-      tests.add({ id: "id", providerName: "providerName" });
-      expect(tests.getAll()).toEqual(
-        new Collection([
-          {
-            id: "id",
-            providerName: "providerName",
-          },
-        ]),
-      );
-      tests.add({ id: "id" });
-      expect(tests.getAll()).toEqual(
-        new Collection([
-          {
-            id: "id",
-            providerName: "providerName",
-          },
-        ]),
-      );
+      tests.add(testProvider);
+      expect(tests.getAll()).toEqual(new Collection([testProvider]));
+      tests.add(testProvider);
+      expect(tests.getAll()).toEqual(new Collection([testProvider]));
     });
   });
   describe("Tasks", () => {

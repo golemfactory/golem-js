@@ -29,10 +29,9 @@ export class ActivityFactory {
       }
       return await this.createActivity();
     } catch (error) {
-      const message = `Unable to create activity: ${error?.response?.data?.message || error}`;
-      this.options.logger?.error(message);
+      this.options.logger.error("Unable to create activity", error);
       throw new GolemWorkError(
-        message,
+        `Unable to create activity: ${error?.response?.data?.message || error}`,
         WorkErrorCode.ActivityCreationFailed,
         this.agreement,
         undefined,
@@ -47,7 +46,7 @@ export class ActivityFactory {
 
     const id = typeof data == "string" ? data : data.activityId;
 
-    this.options.logger?.debug(`Activity ${id} created`);
+    this.options.logger.debug(`Activity created`, { id });
     this.options.eventTarget?.dispatchEvent(new Events.ActivityCreated({ id, agreementId: this.agreement.id }));
 
     return new Activity(id, this.agreement, this.yagnaApi, this.options);

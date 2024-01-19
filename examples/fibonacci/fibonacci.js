@@ -1,12 +1,11 @@
 import { TaskExecutor } from "@golem-sdk/golem-js";
 import { program } from "commander";
 
-async function main(fiboN = 1, tasksCount = 1, subnetTag, driver, network, debug) {
+async function main(fiboN = 1, tasksCount = 1, subnetTag, driver, network) {
   const executor = await TaskExecutor.create({
     package: "golem/js-fibonacci:latest",
     subnetTag,
     payment: { driver, network },
-    logLevel: debug ? "debug" : "info",
   });
 
   const runningTasks = [];
@@ -35,8 +34,7 @@ program
   .option("-c, --tasks-count <c>", "tasks count", (val) => parseInt(val))
   .option("--subnet-tag <subnet>", "set subnet name, for example 'public'")
   .option("--payment-driver, --driver <driver>", "payment driver name, for example 'erc20'")
-  .option("--payment-network, --network <network>", "network name, for example 'goerli'")
-  .option("-d, --debug", "output extra debugging");
+  .option("--payment-network, --network <network>", "network name, for example 'goerli'");
 program.parse();
 const options = program.opts();
-main(options.fibonacciNumber, options.tasksCount, options.subnetTag, options.driver, options.network, options.debug);
+main(options.fibonacciNumber, options.tasksCount, options.subnetTag, options.driver, options.network);

@@ -1,5 +1,5 @@
 import { StorageProvider } from "./provider";
-import { Logger, runtimeContextChecker, sleep } from "../utils";
+import { Logger, defaultLogger, runtimeContextChecker, sleep } from "../utils";
 import path from "path";
 import fs from "fs";
 import cp from "child_process";
@@ -7,6 +7,7 @@ import { GolemInternalError, GolemUserError } from "../error/golem-error";
 
 export class GftpStorageProvider implements StorageProvider {
   private gftpServerProcess?: cp.ChildProcess;
+  private logger: Logger;
 
   /**
    * All published URLs to be release on close().
@@ -22,36 +23,37 @@ export class GftpStorageProvider implements StorageProvider {
    */
   private lock = false;
 
-  constructor(private logger?: Logger) {
+  constructor(logger?: Logger) {
     if (runtimeContextChecker.isBrowser) {
       throw new GolemUserError(`File transfer by GFTP module is unsupported in the browser context.`);
     }
+    this.logger = logger || defaultLogger("storage");
   }
 
   async init() {
     if (this.isInitialized) {
-      this.logger?.warn("GFTP init attempted even though it was already ready - check the logic of your application");
+      this.logger.warn("GFTP init attempted even though it was already ready - check the logic of your application");
       return;
     }
 
     await this.startGftpServer();
-    this.logger?.info(`GFTP Version: ${await this.jsonrpc("version")}`);
+    this.logger.info(`GFTP Version: ${await this.jsonrpc("version")}`);
   }
 
   private startGftpServer(): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.logger?.debug("Starting GFTP server");
+      this.logger.debug("Starting GFTP server");
 
       this.gftpServerProcess = cp.spawn("gftp", ["server"]);
 
       this.gftpServerProcess.on("spawn", () => {
-        this.logger?.info("GFTP server spawned");
+        this.logger.info("GFTP server spawned");
         this.isInitialized = true;
         resolve();
       });
 
       this.gftpServerProcess.on("error", (error) => {
-        this.logger?.error("Error while spawning GFTP server" + error);
+        this.logger.error("Error while spawning GFTP server", error);
         reject(error);
       });
 

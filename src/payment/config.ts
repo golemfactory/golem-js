@@ -1,5 +1,5 @@
 import { AllocationOptions } from "./allocation";
-import { EnvUtils, Logger } from "../utils";
+import { EnvUtils, Logger, defaultLogger } from "../utils";
 import { YagnaOptions } from "../executor";
 import { DebitNoteFilter, InvoiceFilter, PaymentOptions } from "./service";
 import { InvoiceOptions } from "./invoice";
@@ -34,10 +34,10 @@ export interface BasePaymentOptions {
  */
 abstract class BaseConfig {
   public readonly paymentTimeout: number;
-  public readonly logger?: Logger;
   public readonly eventTarget?: EventTarget;
   public readonly payment: { driver: string; network: string };
   public readonly options?: BasePaymentOptions;
+  public readonly logger: Logger;
 
   constructor(options?: BasePaymentOptions) {
     this.options = options;
@@ -46,7 +46,7 @@ abstract class BaseConfig {
       driver: options?.payment?.driver || DEFAULTS.payment.driver,
       network: options?.payment?.network || EnvUtils.getPaymentNetwork() || DEFAULTS.payment.network,
     };
-    this.logger = options?.logger;
+    this.logger = options?.logger || defaultLogger("payment");
     this.eventTarget = options?.eventTarget;
   }
 }
