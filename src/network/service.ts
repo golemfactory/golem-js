@@ -1,4 +1,4 @@
-import { Logger, YagnaApi } from "../utils";
+import { Logger, YagnaApi, defaultLogger } from "../utils";
 import { Network } from "./index";
 import { NetworkOptions } from "./network";
 import { NetworkNode } from "./node";
@@ -13,13 +13,13 @@ export type NetworkServiceOptions = Omit<NetworkOptions, "networkOwnerId">;
  */
 export class NetworkService {
   private network?: Network;
-  private logger?: Logger;
+  private logger: Logger;
 
   constructor(
     private readonly yagnaApi: YagnaApi,
     private readonly options?: NetworkServiceOptions,
   ) {
-    this.logger = options?.logger;
+    this.logger = options?.logger || defaultLogger("network");
   }
 
   async run(networkOwnerId?: string) {
@@ -28,7 +28,7 @@ export class NetworkService {
       networkOwnerId = data.identity;
     }
     this.network = await Network.create(this.yagnaApi, { ...this.options, networkOwnerId });
-    this.logger?.debug("Network Service has started");
+    this.logger.info("Network Service has started");
   }
 
   public async addNode(nodeId: string, ip?: string): Promise<NetworkNode> {
@@ -38,6 +38,6 @@ export class NetworkService {
 
   async end() {
     await this.network?.remove();
-    await this.logger?.debug("Network Service has been stopped");
+    this.logger.info("Network Service has been stopped");
   }
 }

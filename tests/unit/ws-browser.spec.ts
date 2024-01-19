@@ -1,4 +1,4 @@
-import { consoleLogger, WebSocketBrowserStorageProvider } from "../../src";
+import { WebSocketBrowserStorageProvider, pinoLogger } from "../../src";
 import { encode, toObject } from "flatbuffers/js/flexbuffers";
 import { LoggerMock, YagnaMock } from "../mock";
 import * as jsSha3 from "js-sha3";
@@ -32,7 +32,7 @@ describe("WebSocketBrowserStorageProvider", () => {
     });
 
     it("should use provided logger", () => {
-      const logger = consoleLogger();
+      const logger = pinoLogger();
       const provider = new WebSocketBrowserStorageProvider(yagnaApi, { logger });
       expect(provider["logger"]).toBe(logger);
     });

@@ -23,7 +23,7 @@ export class ActivityPoolService {
     private paymentService: PaymentService,
     private options?: ActivityServiceOptions,
   ) {
-    this.logger = this.logger = options?.logger || defaultLogger();
+    this.logger = this.logger = options?.logger || defaultLogger("work");
   }
 
   /**
@@ -31,7 +31,7 @@ export class ActivityPoolService {
    */
   async run() {
     this.runningState = true;
-    this.logger.debug("Activity Pool Service has started");
+    this.logger.info("Activity Pool Service has started");
   }
 
   isRunning() {
@@ -57,11 +57,11 @@ export class ActivityPoolService {
   async releaseActivity(activity: Activity, { reuse } = { reuse: true }) {
     if (reuse) {
       this.pool.push(activity);
-      this.logger.debug(`Activity ${activity.id} has been released for reuse`);
+      this.logger.debug(`Activity has been released for reuse`, { id: activity.id });
     } else {
-      await activity.stop().catch((e) => this.logger.warn(e));
+      await activity.stop().catch((e) => this.logger.error("Error stopping activity", e));
       await this.agreementService.releaseAgreement(activity.agreement.id, false);
-      this.logger.debug(`Activity ${activity.id} has been released and will be terminated`);
+      this.logger.debug(`Activity has been released and will be terminated`, { id: activity.id });
     }
   }
 
@@ -69,9 +69,11 @@ export class ActivityPoolService {
    * Stop the service and terminate all activities from the pool
    */
   async end() {
-    await Promise.all(this.pool.map((activity) => activity.stop().catch((e) => this.logger.warn(e))));
+    await Promise.all(
+      this.pool.map((activity) => activity.stop().catch((e) => this.logger.error("Error stopping activity", e))),
+    );
     this.runningState = false;
-    this.logger.debug("Activity Pool Service has been stopped");
+    this.logger.info("Activity Pool Service has been stopped");
   }
 
   private async createActivity(): Promise<Activity> {

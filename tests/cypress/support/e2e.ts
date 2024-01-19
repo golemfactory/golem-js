@@ -15,3 +15,10 @@
 //
 // // Import commands.js using ES2015 syntax:
 // import "./commands";
+
+beforeEach(() => {
+  cy.intercept("GET", "https://unpkg.com/@golem-sdk/golem-js", (req) => {
+    req.url = "http://localhost:3000/golem-js.min.js";
+    req.continue();
+  });
+});

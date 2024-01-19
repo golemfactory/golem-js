@@ -1,32 +1,40 @@
-import { TaskExecutor } from "@golem-sdk/golem-js";
-import { readFileSync } from "fs";
+import { TaskExecutor, ResultState } from "@golem-sdk/golem-js";
+import { readFile } from "fs/promises";
 import { fileURLToPath } from "url";
 const DIR_NAME = fileURLToPath(new URL(".", import.meta.url));
 
 (async function main() {
+  // Load the manifest.
+  const manifest = await readFile(`${DIR_NAME}/manifest.json`);
+
+  // Create and configure a TaskExecutor instance.
   const executor = await TaskExecutor.create({
-    manifest: Buffer.from(readFileSync(`${DIR_NAME}/manifest.json`, "utf-8")).toString("base64"),
+    capabilities: ["inet", "manifest-support"],
+    manifest: manifest.toString("base64"),
     /**
      * Uncomment this if you have a certificate and a signed manifest
      */
-    // manifestSig: readFileSync(`${DIR_NAME}/manifest.json.base64.sign.sha256.base64`, "utf-8"),
-    // manifestCert: readFileSync(`${DIR_NAME}/golem-manifest.crt.pem.base64`, "utf-8"),
+    // manifestSig: (await readFile(`${DIR_NAME}/manifest.json.base64.sign.sha256`)).toString("base64"),
+    // manifestCert: (await readFile(`${DIR_NAME}/golem-manifest.crt.pem`)).toString("base64"),
     // manifestSigAlgorithm: "sha256",
-    capabilities: ["inet", "manifest-support"],
   });
 
   try {
-    await executor.run(async (ctx) => {
-      const result = await ctx.run(
-        "GOLEM_PRICE=`curl -X 'GET' \
-        'https://api.coingecko.com/api/v3/simple/price?ids=golem&vs_currencies=usd' \
-        -H 'accept: application/json' | jq .golem.usd`; \
-        echo \"Golem price: $GOLEM_PRICE USD\";",
-      );
-      console.log(result.stdout);
-    });
-  } catch (error) {
-    console.error("Computation failed:", error);
+    const url = "https://ipfs.io/ipfs/bafybeihkoviema7g3gxyt6la7vd5ho32ictqbilu3wnlo3rs7ewhnp7lly";
+    const results = await executor.run(async (ctx) =>
+      ctx
+        .beginBatch()
+        .run(`curl ${url} -o /golem/work/example.jpg`)
+        .downloadFile("/golem/work/example.jpg", `${DIR_NAME}/example.jpg`)
+        .end(),
+    );
+    if (results[1].result === ResultState.Ok) {
+      console.log("Downloaded file to", `${DIR_NAME}/example.jpg`);
+    } else {
+      console.error("Something went wrong", results[1].message);
+    }
+  } catch (err) {
+    console.error("The task failed due to", err);
   } finally {
     await executor.shutdown();
   }

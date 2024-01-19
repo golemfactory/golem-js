@@ -13,16 +13,7 @@ export { Package, PackageOptions, AllPackageOptions } from "./package";
 export { PaymentFilters, PaymentService, PaymentOptions, PaymentProcessor } from "./payment";
 export { NetworkService, NetworkServiceOptions } from "./network";
 export { Events, BaseEvent, EVENT_TYPE } from "./events";
-export {
-  Logger,
-  LogLevel,
-  jsonLogger,
-  nullLogger,
-  consoleLogger,
-  pinoLogger,
-  defaultLogger,
-  runtimeContextChecker,
-} from "./utils";
+export { Logger, jsonLogger, nullLogger, pinoLogger, defaultLogger, runtimeContextChecker } from "./utils";
 export { Yagna, YagnaOptions } from "./utils/yagna/yagna";
 export { Job, JobState } from "./job";
 export * from "./golem_network";

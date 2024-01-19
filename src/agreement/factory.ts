@@ -1,5 +1,5 @@
 import { Agreement, AgreementOptions } from "./agreement";
-import { Logger, YagnaApi } from "../utils";
+import { Logger, defaultLogger, YagnaApi } from "../utils";
 import { AgreementConfig } from "./config";
 import { Events } from "../events";
 import { GolemError } from "../error/golem-error";
@@ -11,7 +11,7 @@ import { ProposalProperties } from "../market/proposal";
  * @internal
  */
 export class AgreementFactory {
-  private readonly logger?: Logger;
+  private readonly logger: Logger;
   private readonly options: AgreementConfig;
 
   /**
@@ -24,7 +24,7 @@ export class AgreementFactory {
     agreementOptions?: AgreementOptions,
   ) {
     this.options = new AgreementConfig(agreementOptions);
-    this.logger = agreementOptions?.logger;
+    this.logger = agreementOptions?.logger || defaultLogger("market");
   }
 
   /**
@@ -45,7 +45,6 @@ export class AgreementFactory {
       const offerProperties: ProposalProperties = data.offer.properties as ProposalProperties;
       const demandProperties: ProposalProperties = data.demand.properties as ProposalProperties;
       const chosenPaymentPlatform = demandProperties["golem.com.payment.chosen-platform"];
-      console.log({ chosenPaymentPlatform });
       const provider = {
         name: offerProperties["golem.node.id.name"],
         id: data.offer.providerId,
@@ -61,7 +60,7 @@ export class AgreementFactory {
           proposalId,
         }),
       );
-      this.logger?.debug(`Agreement ${agreementId} created`);
+      this.logger.debug(`Agreement created`, { id: agreementId });
       return agreement;
     } catch (error) {
       throw new GolemError(

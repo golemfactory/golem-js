@@ -1,7 +1,7 @@
 import { DownloadFile, Run, Script, Transfer, UploadFile } from "../script";
 import { Activity, Result } from "../activity";
 import { StorageProvider } from "../storage/provider";
-import { Logger } from "../utils";
+import { Logger, defaultLogger } from "../utils";
 import { pipeline, Readable, Transform } from "stream";
 import { UploadData } from "../script/command";
 import { GolemError } from "../error/golem-error";
@@ -10,13 +10,13 @@ export class Batch {
   private script: Script;
 
   static create(activity: Activity, storageProvider: StorageProvider, logger?: Logger): Batch {
-    return new Batch(activity, storageProvider, logger);
+    return new Batch(activity, storageProvider, logger || defaultLogger("work"));
   }
 
   constructor(
     private activity: Activity,
     private storageProvider: StorageProvider,
-    private logger?: Logger,
+    private logger: Logger,
   ) {
     this.script = new Script([]);
   }
@@ -81,20 +81,20 @@ export class Batch {
       const allResults: Result[] = [];
       const script = this.script.getExeScriptRequest();
 
-      this.logger?.debug(`Sending exec script request to the exe-unit on provider: ${JSON.stringify(script)}`);
+      this.logger.debug(`Sending exec script request to the exe-unit on provider:`, { script });
       const results = await this.activity.execute(script);
 
       return new Promise((resolve, reject) => {
-        this.logger?.debug("Reading the results of the batch script");
+        this.logger.debug("Reading the results of the batch script");
 
         results.on("data", (res) => {
-          this.logger?.debug(`Received data for batch script execution ${JSON.stringify(res)}`);
+          this.logger.debug(`Received data for batch script execution`, { res });
 
           allResults.push(res);
         });
 
         results.on("end", () => {
-          this.logger?.debug("End of batch script execution");
+          this.logger.debug("End of batch script execution");
           this.script
             .after(allResults)
             .then((results) => resolve(results))
@@ -102,7 +102,7 @@ export class Batch {
         });
 
         results.on("error", (error) => {
-          this.logger?.debug("Error in batch script execution");
+          this.logger.debug("Error in batch script execution");
           this.script
             .after(allResults)
             .then(() => reject(error))
@@ -110,7 +110,7 @@ export class Batch {
         });
       });
     } catch (error) {
-      this.logger?.error(`Failed to send the exec script to the exe-unit on provider: ${error.toString()}`);
+      this.logger.error(`Failed to send the exec script to the exe-unit on provider`, { error });
       // NOTE: This is called only to ensure that each of the commands in the original script will be populated with at least `EmptyErrorResult`.
       // That's actually a FIXME, as the command could start with an empty result, which eventually will get replaced with an actual one.
       await this.script.after([]);

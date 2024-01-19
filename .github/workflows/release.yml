@@ -101,6 +101,8 @@ jobs:
 
       - name: Cleanup test environment
         uses: ./.github/actions/cleanup-tests
+        with:
+          type: "e2e"
 
   run-cypress-tests:
     name: Run Cypress tests
@@ -127,6 +129,8 @@ jobs:
 
       - name: Cleanup test environment
         uses: ./.github/actions/cleanup-tests
+        with:
+          type: "cypress"
 
   run-examples-tests:
     name: Run Examples tests
@@ -143,6 +147,8 @@ jobs:
 
       - name: Cleanup test environment
         uses: ./.github/actions/cleanup-tests
+        with:
+          type: "examples"
 
   release:
     name: Release the SDK to NPM and GitHub

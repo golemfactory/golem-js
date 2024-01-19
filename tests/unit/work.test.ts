@@ -34,7 +34,7 @@ describe("Work Context", () => {
       await ctx.before();
       const results = await worker(ctx);
       expect(results?.stdout).toEqual("test_result");
-      await logger.expectToInclude("File published: ./file.txt");
+      await logger.expectToInclude("File published", { src: "./file.txt" });
     });
 
     it("should execute upload json command", async () => {
@@ -48,7 +48,7 @@ describe("Work Context", () => {
       await ctx.before();
       const results = await worker(ctx);
       expect(results?.stdout).toEqual("test_result");
-      await logger.expectToInclude("Data published");
+      await logger.expectToInclude("Data published", { data: expect.anything() });
     });
 
     it("should execute download file command", async () => {
@@ -62,7 +62,7 @@ describe("Work Context", () => {
       await ctx.before();
       const results = await worker(ctx);
       expect(results?.stdout).toEqual("test_result");
-      await logger.expectToInclude("File received: ./file.txt");
+      await logger.expectToInclude("File received", { path: "./file.txt" });
     });
   });
   describe("Batch", () => {
@@ -91,9 +91,9 @@ describe("Work Context", () => {
       activityMock.setExpectedExeResults(expectedStdout);
       const results = await worker(ctx);
       expect(results?.map((r) => r.stdout)).toEqual(expectedStdout.map((s) => s.stdout));
-      await logger.expectToInclude("File published: ./file.txt");
-      await logger.expectToInclude("Data published");
-      await logger.expectToInclude("File received: ./file.txt");
+      await logger.expectToInclude("File published", { src: "./file.txt" });
+      await logger.expectToInclude("Data published", { data: expect.anything() });
+      await logger.expectToInclude("File received", { path: "./file.txt" });
     });
 
     it("should execute batch as stream", async () => {
@@ -130,9 +130,9 @@ describe("Work Context", () => {
         });
         results?.on("end", res);
       });
-      await logger.expectToInclude("File published: ./file.txt");
-      await logger.expectToInclude("Data published");
-      await logger.expectToInclude("File received: ./file.txt");
+      await logger.expectToInclude("File published", { src: "./file.txt" });
+      await logger.expectToInclude("Data published", { data: expect.anything() });
+      await logger.expectToInclude("File received", { path: "./file.txt" });
     });
   });
   describe("Error handling", () => {

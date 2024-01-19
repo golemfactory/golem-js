@@ -16,7 +16,7 @@ export const PAYMENT_EVENT_TYPE = "PaymentReceived";
 export class Payments extends EventTarget {
   private isRunning = true;
   private options: PaymentConfig;
-  private logger?: Logger;
+  private logger: Logger;
   private lastInvoiceFetchingTime: string = new Date().toISOString();
   private lastDebitNotesFetchingTime: string = new Date().toISOString();
   static async create(yagnaApi: YagnaApi, options?: PaymentOptions) {
@@ -30,7 +30,7 @@ export class Payments extends EventTarget {
     super();
     this.options = new PaymentConfig(options);
     this.logger = this.options.logger;
-    this.subscribe().catch((e) => this.logger?.error(e));
+    this.subscribe().catch((error) => this.logger.error(`Unable to subscribe to payments`, { error }));
   }
 
   /**
@@ -38,16 +38,12 @@ export class Payments extends EventTarget {
    */
   async unsubscribe() {
     this.isRunning = false;
-    this.logger?.debug(`Payments unsubscribed`);
+    this.logger.debug(`Payments unsubscribed`);
   }
 
   private async subscribe() {
-    this.subscribeForInvoices().catch(
-      (e) => this.logger?.debug(`Unable to collect invoices. ${e?.response?.data?.message || e}`),
-    );
-    this.subscribeForDebitNotes().catch(
-      (e) => this.logger?.debug(`Unable to collect debit notes. ${e?.response?.data?.message || e}`),
-    );
+    this.subscribeForInvoices().catch((error) => this.logger.error(`Unable to collect invoices.`, { error }));
+    this.subscribeForDebitNotes().catch((error) => this.logger.error(`Unable to collect debit notes.`, { error }));
   }
 
   private async subscribeForInvoices() {
@@ -66,8 +62,8 @@ export class Payments extends EventTarget {
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore FIXME: ya-ts-client does not provide invoiceId in the event even though it is in the API response
           const invoiceId = event["invoiceId"];
-          const invoice = await Invoice.create(invoiceId, this.yagnaApi, { ...this.options }).catch(
-            (e) => this.logger?.error(`Unable to create invoice ID: ${invoiceId}. ${e?.response?.data?.message || e}`),
+          const invoice = await Invoice.create(invoiceId, this.yagnaApi, { ...this.options }).catch((error) =>
+            this.logger.error(`Unable to create invoice`, { id: invoiceId, error }),
           );
           if (!invoice) continue;
           this.dispatchEvent(new InvoiceEvent(PAYMENT_EVENT_TYPE, invoice));
@@ -80,11 +76,15 @@ export class Payments extends EventTarget {
               provider: invoice.provider,
             }),
           );
-          this.logger?.debug(`New Invoice received for agreement ${invoice.agreementId}. Amount: ${invoice.amount}`);
+          this.logger.debug(`New Invoice received`, {
+            id: invoice.id,
+            agreementId: invoice.agreementId,
+            amount: invoice.amount,
+          });
         }
       } catch (error) {
-        const reason = error.response?.data?.message || error;
-        this.logger?.debug(`Unable to get invoices. ${reason}`);
+        const reason = error.response?.data?.message || error.message || error;
+        this.logger.error(`Unable to get invoices.`, { reason });
         await sleep(2);
       }
     }
@@ -109,9 +109,8 @@ export class Payments extends EventTarget {
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore FIXME: ya-ts-client does not provide debitNoteId in the event even though it is in the API response
           const debitNoteId = event["debitNoteId"];
-          const debitNote = await DebitNote.create(debitNoteId, this.yagnaApi, { ...this.options }).catch(
-            (e) =>
-              this.logger?.error(`Unable to create debit note ID: ${debitNoteId}. ${e?.response?.data?.message || e}`),
+          const debitNote = await DebitNote.create(debitNoteId, this.yagnaApi, { ...this.options }).catch((error) =>
+            this.logger.error(`Unable to create debit note`, { id: debitNoteId, error }),
           );
           if (!debitNote) continue;
           this.dispatchEvent(new DebitNoteEvent(PAYMENT_EVENT_TYPE, debitNote));
@@ -125,13 +124,14 @@ export class Payments extends EventTarget {
               provider: debitNote.provider,
             }),
           );
-          this.logger?.debug(
-            `New Debit Note received for agreement ${debitNote.agreementId}. Amount: ${debitNote.totalAmountDue}`,
-          );
+          this.logger.debug("New Debit Note received", {
+            agreementId: debitNote.agreementId,
+            amount: debitNote.totalAmountDue,
+          });
         }
       } catch (error) {
         const reason = error.response?.data?.message || error;
-        this.logger?.debug(`Unable to get debit notes. ${reason}`);
+        this.logger.error(`Unable to get debit notes.`, { reason });
         await sleep(2);
       }
     }
