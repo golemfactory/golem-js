@@ -106,7 +106,9 @@ export class Activity {
       batchSize = JSON.parse(script.text).length;
     } catch (error) {
       const message = error?.response?.data?.message || error.message || error;
-      this.logger.error(message);
+      this.logger.error("Execution of script failed.", {
+        reason: message,
+      });
       throw new GolemWorkError(
         `Unable to execute script ${message}`,
         WorkErrorCode.ScriptExecutionFailed,
@@ -117,7 +119,7 @@ export class Activity {
       );
     }
 
-    this.logger.debug(`Script sent. Batch ID: ${batchId}`);
+    this.logger.debug(`Script sent.`, { batchId });
 
     this.options.eventTarget?.dispatchEvent(
       new Events.ScriptSent({ activityId: this.id, agreementId: this.agreement.id }),
@@ -157,6 +159,9 @@ export class Activity {
       }
       return ActivityStateEnum[state];
     } catch (error) {
+      this.logger.warn(`Cannot query activity state`, {
+        reason: error?.response?.data?.message || error?.message || error,
+      });
       throw new GolemWorkError(
         `Cannot query activity state: ${error?.response?.data?.message || error?.message || error}`,
         WorkErrorCode.ActivityStatusQueryFailed,
@@ -184,7 +189,7 @@ export class Activity {
       this.options.eventTarget?.dispatchEvent(
         new Events.ActivityDestroyed({ id: this.id, agreementId: this.agreement.id }),
       );
-      this.logger.debug(`Activity ${this.id} destroyed`);
+      this.logger.debug(`Activity destroyed`, { id: this.id });
     } catch (error) {
       throw new GolemWorkError(
         `Unable to destroy activity ${this.id}. ${error?.response?.data?.message || error?.message || error}`,

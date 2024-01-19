@@ -150,7 +150,7 @@ export class Network {
       const node = new NetworkNode(nodeId, ipv4, this.getNetworkInfo.bind(this), this.getUrl());
       this.nodes.set(nodeId, node);
       await this.yagnaApi.net.addNode(this.id, { id: nodeId, ip: ipv4.toString() });
-      this.logger?.debug(`Node has added to the network. ID: ${nodeId}, IP: ${ipv4.toString()}`);
+      this.logger.debug(`Node has added to the network.`, { id: nodeId, ip: ipv4.toString() });
       return node;
     } catch (error) {
       if (error instanceof GolemMarketError) {
