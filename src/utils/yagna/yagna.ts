@@ -47,7 +47,7 @@ type YagnaVersionResponse = {
 
 const CONNECTIONS_ERROR_CODES = ["ECONNREFUSED"];
 
-export const MIN_SUPPORTED_YAGNA = "0.15.0";
+export const MIN_SUPPORTED_YAGNA = "0.14.0";
 
 export class Yagna {
   private readonly httpAgent: Agent;
