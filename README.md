@@ -151,7 +151,7 @@ details.
 ### Limit price limits to filter out offers that are too expensive
 
 ```typescript
-import { TaskExecutor, ProposalFilters } from "@golem-sdk/golem-js";
+import { TaskExecutor, ProposalFilterFactory } from "@golem-sdk/golem-js";
 
 const executor = await TaskExecutor.create({
   // What do you want to run
@@ -159,7 +159,7 @@ const executor = await TaskExecutor.create({
 
   // How much you wish to spend
   budget: 0.5,
-  proposalFilter: ProposalFilters.limitPriceFilter({
+  proposalFilter: ProposalFilterFactory.limitPriceFilter({
     start: 1,
     cpuPerSec: 1 / 3600,
     envPerSec: 1 / 3600,
@@ -182,20 +182,20 @@ health-checks. Using this whitelist will increase the chance of working with a r
 can also build up your own list of favourite providers and use it in a similar fashion.
 
 ```typescript
-import { TaskExecutor, ProposalFilters, MarketHelpers } from "@golem-sdk/golem-js";
-
-// Prepare the price filter
-const acceptablePrice = ProposalFilters.limitPriceFilter({
-  start: 1,
-  cpuPerSec: 1 / 3600,
-  envPerSec: 1 / 3600,
-});
+import { MarketHelpers, ProposalFilterFactory, TaskExecutor } from "@golem-sdk/golem-js";
 
 // Collect the whitelist
 const verifiedProviders = await MarketHelpers.getHealthyProvidersWhiteList();
 
 // Prepare the whitelist filter
-const whiteList = ProposalFilters.whiteListProposalIdsFilter(verifiedProviders);
+const whiteList = ProposalFilterFactory.allowProvidersById(verifiedProviders);
+
+// Prepare the price filter
+const acceptablePrice = ProposalFilterFactory.limitPriceFilter({
+  start: 1,
+  cpuPerSec: 1 / 3600,
+  envPerSec: 1 / 3600,
+});
 
 const executor = await TaskExecutor.create({
   // What do you want to run
@@ -203,7 +203,7 @@ const executor = await TaskExecutor.create({
 
   // How much you wish to spend
   budget: 0.5,
-  proposalFilter: async (proposal) => (await acceptablePrice(proposal)) && (await whiteList(proposal)),
+  proposalFilter: (proposal) => acceptablePrice(proposal) && whiteList(proposal),
 
   // Where you want to spend
   payment: {

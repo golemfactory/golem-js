@@ -1,4 +1,4 @@
-import { TaskExecutor, ProposalFilters } from "../../src";
+import { ProposalFilterFactory, TaskExecutor } from "../../src";
 import { LoggerMock } from "../mock";
 
 const logger = new LoggerMock(false);
@@ -11,7 +11,7 @@ describe("Strategies", function () {
     it("should filtered providers by black list names", async () => {
       const executor = await TaskExecutor.create({
         package: "golem/alpine:latest",
-        proposalFilter: ProposalFilters.blackListProposalRegexpFilter(/provider-2/),
+        proposalFilter: ProposalFilterFactory.disallowProvidersByNameRegex(/provider-2/),
         logger,
       });
       const data = ["one", "two", "three"];
@@ -33,7 +33,7 @@ describe("Strategies", function () {
     it("should filtered providers by white list names", async () => {
       const executor = await TaskExecutor.create({
         package: "golem/alpine:latest",
-        proposalFilter: ProposalFilters.whiteListProposalRegexpFilter(/provider-2/),
+        proposalFilter: ProposalFilterFactory.allowProvidersByNameRegex(/provider-2/),
         logger,
       });
       const data = ["one", "two", "three"];
