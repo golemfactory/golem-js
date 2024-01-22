@@ -2,12 +2,11 @@ import * as activityMock from "../mock/rest/activity";
 import { agreement } from "../mock/entities/agreement";
 import { EventSourceMock, setExpectedErrorEvents, setExpectedEvents } from "../mock/utils/event_source";
 import { StorageProviderMock, YagnaMock } from "../mock";
-import { Activity, ActivityStateEnum } from "../../src/activity";
+import { Activity, ActivityStateEnum } from "../../src";
 import { sleep } from "../../src/utils";
 import { Deploy, Start, Run, Terminate, UploadFile, DownloadFile, Script, Capture } from "../../src/script";
 import { GolemWorkError, WorkErrorCode } from "../../src/task/error";
-import { Agreement } from "../../src/agreement";
-import { GolemInternalError, GolemTimeoutError } from "../../src/error/golem-error";
+import { GolemError, GolemTimeoutError } from "../../src/error/golem-error";
 
 jest.mock("eventsource", () => EventSourceMock);
 describe("Activity", () => {
@@ -365,7 +364,8 @@ describe("Activity", () => {
       await script.before();
       const results = await activity.execute(script.getExeScriptRequest(), true, 800);
       return new Promise<void>((res, rej) => {
-        results.on("error", (error) => {
+        results.on("error", (error: GolemError) => {
+          expect(error).toBeInstanceOf(GolemTimeoutError);
           expect(error.toString()).toMatch(/Error: Activity .* timeout/);
           return res();
         });
@@ -397,7 +397,12 @@ describe("Activity", () => {
       await script.before();
       const results = await activity.execute(script.getExeScriptRequest(), true);
       return new Promise<void>((res) => {
-        results.on("error", (error) => {
+        results.on("error", (error: GolemWorkError) => {
+          expect(error).toBeInstanceOf(GolemWorkError);
+          expect(error.code).toEqual(WorkErrorCode.ActivityResultsFetchingFailed);
+          expect(error.activity).toBeDefined();
+          expect(error.agreement).toBeDefined();
+          expect(error.provider?.name).toEqual("Test Provider");
           expect(error.toString()).toEqual('Error: Unable to get activity results. ["Some undefined error"]');
           return res();
         });

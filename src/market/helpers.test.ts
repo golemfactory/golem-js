@@ -1,6 +1,7 @@
 import { MockPropertyPolicy, imock, instance, when } from "@johanblumenberg/ts-mockito";
 
 import { getHealthyProvidersWhiteList } from "./helpers";
+import { GolemInternalError } from "../error/golem-error";
 
 const mockFetch = jest.spyOn(global, "fetch");
 const response = imock<Response>();
@@ -35,7 +36,9 @@ describe("Market Helpers", () => {
 
         // When, Then
         await expect(() => getHealthyProvidersWhiteList()).rejects.toThrow(
-          "Failed to download healthy provider whitelist due to an error: Error: Request to download healthy provider whitelist failed: {error:'test'}",
+          new GolemInternalError(
+            "Failed to download healthy provider whitelist due to an error: Error: Request to download healthy provider whitelist failed: {error:'test'}",
+          ),
         );
       });
 
@@ -47,7 +50,9 @@ describe("Market Helpers", () => {
 
         // When, Then
         await expect(() => getHealthyProvidersWhiteList()).rejects.toThrow(
-          "Failed to download healthy provider whitelist due to an error: Error: Something went wrong really bad!",
+          new GolemInternalError(
+            "Failed to download healthy provider whitelist due to an error: Error: Something went wrong really bad!",
+          ),
         );
       });
     });
