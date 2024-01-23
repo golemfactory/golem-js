@@ -124,7 +124,7 @@ export class PaymentService {
         "You need to create an allocation before starting any payment processes",
         PaymentErrorCode.MissingAllocation,
         undefined,
-        agreement.provider,
+        agreement.getProviderInfo(),
       );
     }
 

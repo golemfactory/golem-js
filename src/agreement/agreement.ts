@@ -96,7 +96,7 @@ export class Agreement {
     return this.agreementData!.state;
   }
 
-  get provider(): ProviderInfo {
+  getProviderInfo(): ProviderInfo {
     return this.proposal.provider;
   }
 
@@ -112,11 +112,16 @@ export class Agreement {
       await this.yagnaApi.market.confirmAgreement(this.id, appSessionId);
       await this.yagnaApi.market.waitForApproval(this.id, this.options.agreementWaitingForApprovalTimeout);
       this.logger.debug(`Agreement approved`, { id: this.id });
-      this.options.eventTarget?.dispatchEvent(new Events.AgreementConfirmed({ id: this.id, provider: this.provider }));
-    } catch (error) {
-      this.logger.error(`Unable to confirm agreement with provider`, { providerName: this.provider.name, error });
       this.options.eventTarget?.dispatchEvent(
-        new Events.AgreementRejected({ id: this.id, provider: this.provider, reason: error.toString() }),
+        new Events.AgreementConfirmed({ id: this.id, provider: this.getProviderInfo() }),
+      );
+    } catch (error) {
+      this.logger.error(`Unable to confirm agreement with provider`, {
+        providerName: this.getProviderInfo().name,
+        error,
+      });
+      this.options.eventTarget?.dispatchEvent(
+        new Events.AgreementRejected({ id: this.id, provider: this.getProviderInfo(), reason: error.toString() }),
       );
       throw error;
     }
@@ -146,7 +151,7 @@ export class Agreement {
           timeout: this.options.agreementRequestTimeout,
         });
       this.options.eventTarget?.dispatchEvent(
-        new Events.AgreementTerminated({ id: this.id, provider: this.provider, reason: reason.message }),
+        new Events.AgreementTerminated({ id: this.id, provider: this.getProviderInfo(), reason: reason.message }),
       );
       this.logger.debug(`Agreement terminated`, { id: this.id });
     } catch (error) {

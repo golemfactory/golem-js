@@ -86,8 +86,8 @@ export class Activity {
     return factory.create(secure);
   }
 
-  public get provider(): ProviderInfo {
-    return this.agreement.provider;
+  public getProviderInfo(): ProviderInfo {
+    return this.agreement.getProviderInfo();
   }
 
   /**
@@ -114,7 +114,7 @@ export class Activity {
         WorkErrorCode.ScriptExecutionFailed,
         this.agreement,
         this,
-        this.provider,
+        this.getProviderInfo(),
         error,
       );
     }
@@ -167,7 +167,7 @@ export class Activity {
         WorkErrorCode.ActivityStatusQueryFailed,
         this.agreement,
         this,
-        this.provider,
+        this.getProviderInfo(),
         error,
       );
     }
@@ -196,7 +196,7 @@ export class Activity {
         WorkErrorCode.ActivityDestroyingFailed,
         this.agreement,
         this,
-        this.provider,
+        this.getProviderInfo(),
       );
     }
   }
@@ -274,7 +274,7 @@ export class Activity {
                   WorkErrorCode.ActivityResultsFetchingFailed,
                   agreement,
                   activity,
-                  activity.provider,
+                  activity.getProviderInfo(),
                   error,
                 ),
               );
@@ -338,7 +338,7 @@ export class Activity {
               WorkErrorCode.ActivityResultsFetchingFailed,
               activity.agreement,
               activity,
-              activity.provider,
+              activity.getProviderInfo(),
             );
           }
           if (error) {
@@ -390,7 +390,7 @@ export class Activity {
       WorkErrorCode.ActivityResultsFetchingFailed,
       this.agreement,
       this,
-      this.provider,
+      this.getProviderInfo(),
     );
   }
 

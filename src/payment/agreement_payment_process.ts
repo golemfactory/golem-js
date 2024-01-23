@@ -177,7 +177,7 @@ export class AgreementPaymentProcess {
     this.logger.info(`Invoice has been accepted`, {
       invoiceId: invoice.id,
       agreementId: invoice.agreementId,
-      providerName: this.agreement.provider?.name,
+      providerName: this.agreement.getProviderInfo().name,
     });
 
     return true;

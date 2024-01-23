@@ -18,6 +18,12 @@ beforeEach(() => {
   reset(allocationMock);
   reset(invoiceMock);
   reset(debitNoteMock);
+  const testProviderInfo = {
+    id: "test-provider-id",
+    name: "test-provider-name",
+    walletAddress: "0x1234",
+  };
+  when(agreementMock.getProviderInfo()).thenReturn(testProviderInfo);
 });
 
 describe("AgreementPaymentProcess", () => {

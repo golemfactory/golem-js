@@ -88,7 +88,7 @@ export class WorkContext {
             WorkErrorCode.ActivityDeploymentFailed,
             this.activity.agreement,
             this.activity,
-            this.activity.provider,
+            this.activity.getProviderInfo(),
             e,
           );
         });
@@ -109,7 +109,7 @@ export class WorkContext {
                 WorkErrorCode.ActivityDeploymentFailed,
                 this.activity.agreement,
                 this.activity,
-                this.activity.provider,
+                this.activity.getProviderInfo(),
               );
           }
         })(),
@@ -123,7 +123,7 @@ export class WorkContext {
             WorkErrorCode.ActivityDeploymentFailed,
             this.activity.agreement,
             this.activity,
-            this.activity.provider,
+            this.activity.getProviderInfo(),
             error,
           );
         })
@@ -143,7 +143,7 @@ export class WorkContext {
         WorkErrorCode.ActivityDeploymentFailed,
         this.activity.agreement,
         this.activity,
-        this.activity.provider,
+        this.activity.getProviderInfo(),
       );
     }
     await this.setupActivity();
@@ -230,7 +230,7 @@ export class WorkContext {
           WorkErrorCode.ScriptExecutionFailed,
           this.activity.agreement,
           this.activity,
-          this.activity.provider,
+          this.activity.getProviderInfo(),
           e,
         );
       });
@@ -311,7 +311,7 @@ export class WorkContext {
         WorkErrorCode.NetworkSetupMissing,
         this.activity.agreement,
         this.activity,
-        this.activity.provider,
+        this.activity.getProviderInfo(),
       );
     return this.networkNode.getWebsocketUri(port);
   }
@@ -323,7 +323,7 @@ export class WorkContext {
         WorkErrorCode.NetworkSetupMissing,
         this.activity.agreement,
         this.activity,
-        this.activity.provider,
+        this.activity.getProviderInfo(),
       );
     return this.networkNode.ip.toString();
   }
@@ -343,7 +343,7 @@ export class WorkContext {
         WorkErrorCode.ScriptInitializationFailed,
         this.activity.agreement,
         this.activity,
-        this.activity.provider,
+        this.activity.getProviderInfo(),
         e,
       );
     });

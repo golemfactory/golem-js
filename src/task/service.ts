@@ -93,19 +93,19 @@ export class TaskService {
           id: task.id,
           agreementId: agreement.id,
           activityId: activity.id,
-          provider: agreement.provider,
+          provider: agreement.getProviderInfo(),
         }),
       );
 
-      this.logger.info(`Task sent to provider`, { taskId: task.id, providerName: agreement.provider.name });
+      this.logger.info(`Task sent to provider`, { taskId: task.id, providerName: agreement.getProviderInfo().name });
 
       const activityReadySetupFunctions = task.getActivityReadySetupFunctions();
       const worker = task.getWorker();
-      const networkNode = await this.networkService?.addNode(agreement.provider.id);
+      const networkNode = await this.networkService?.addNode(agreement.getProviderInfo().id);
 
       const ctx = new WorkContext(activity, {
         activityReadySetupFunctions: this.activitySetupDone.has(activity.id) ? [] : activityReadySetupFunctions,
-        provider: agreement.provider,
+        provider: agreement.getProviderInfo(),
         storageProvider: this.options.storageProvider,
         networkNode,
         logger: this.logger,
@@ -124,7 +124,7 @@ export class TaskService {
       task.stop(results);
 
       this.options.eventTarget?.dispatchEvent(new Events.TaskFinished({ id: task.id }));
-      this.logger.info(`Task computed`, { taskId: task.id, providerName: agreement.provider.name });
+      this.logger.info(`Task computed`, { taskId: task.id, providerName: agreement.getProviderInfo().name });
     } catch (error) {
       task.stop(undefined, error);
 
@@ -138,7 +138,7 @@ export class TaskService {
             id: task.id,
             activityId: activity?.id,
             agreementId: agreement.id,
-            provider: agreement.provider,
+            provider: agreement.getProviderInfo(),
             retriesCount: task.getRetriesCount(),
             reason,
           }),
@@ -154,7 +154,7 @@ export class TaskService {
             id: task.id,
             agreementId: agreement.id,
             activityId: activity?.id,
-            provider: agreement.provider,
+            provider: agreement.getProviderInfo(),
             reason,
           }),
         );
@@ -165,7 +165,7 @@ export class TaskService {
           WorkErrorCode.TaskRejected,
           agreement,
           activity,
-          agreement.provider,
+          agreement.getProviderInfo(),
           error,
         );
       }

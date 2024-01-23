@@ -190,13 +190,13 @@ export class AgreementPoolService {
           agreement.proposal.demand,
         );
       }
-      this.logger.info(`Agreement confirmed by provider`, { providerName: agreement.provider.name });
+      this.logger.info(`Agreement confirmed by provider`, { providerName: agreement.getProviderInfo().name });
 
       this.agreements.set(agreement.id, agreement);
 
       candidate.agreement = {
         id: agreement.id,
-        provider: { id: agreement.provider.id, name: agreement.provider.name },
+        provider: agreement.getProviderInfo(),
       };
 
       this.candidateMap.set(agreement.id, candidate);
@@ -214,7 +214,7 @@ export class AgreementPoolService {
 
     if (state === AgreementStateEnum.Proposal) {
       await agreement.confirm(this.yagnaApi.appSessionId);
-      this.logger.debug(`Agreement proposed to provider`, { providerName: agreement.provider.name });
+      this.logger.debug(`Agreement proposed to provider`, { providerName: agreement.getProviderInfo().name });
     }
 
     await this.yagnaApi.market.waitForApproval(agreement.id, this.config.agreementWaitingForApprovalTimeout);

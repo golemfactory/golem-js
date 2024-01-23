@@ -109,7 +109,7 @@ export class Batch {
                   WorkErrorCode.ScriptExecutionFailed,
                   this.activity.agreement,
                   this.activity,
-                  this.activity.agreement.provider,
+                  this.activity.agreement.getProviderInfo(),
                   error,
                 );
           this.logger.debug("Error in batch script execution");
@@ -132,7 +132,7 @@ export class Batch {
         WorkErrorCode.ScriptExecutionFailed,
         this.activity.agreement,
         this.activity,
-        this.activity.agreement.provider,
+        this.activity.agreement.getProviderInfo(),
         error,
       );
     }
@@ -155,7 +155,7 @@ export class Batch {
         WorkErrorCode.ScriptExecutionFailed,
         this.activity.agreement,
         this.activity,
-        this.activity.agreement.provider,
+        this.activity.agreement.getProviderInfo(),
         error,
       );
     }
@@ -171,7 +171,7 @@ export class Batch {
                 WorkErrorCode.ScriptExecutionFailed,
                 activity.agreement,
                 activity,
-                activity.agreement.provider,
+                activity.agreement.getProviderInfo(),
               )
             : null;
         if (error) {

@@ -27,8 +27,8 @@ describe("Agreement", () => {
     it("should be a instance ProviderInfo with provider details", async () => {
       const agreement = await Agreement.create(proposal, yagnaApi, { logger });
       expect(agreement).toBeInstanceOf(Agreement);
-      expect(agreement.provider.id).toEqual(expect.any(String));
-      expect(agreement.provider.name).toEqual(expect.any(String));
+      expect(agreement.getProviderInfo().id).toEqual(expect.any(String));
+      expect(agreement.getProviderInfo().name).toEqual(expect.any(String));
     });
   });
 

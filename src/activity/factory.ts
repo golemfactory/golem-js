@@ -35,7 +35,7 @@ export class ActivityFactory {
         WorkErrorCode.ActivityCreationFailed,
         this.agreement,
         undefined,
-        this.agreement.provider,
+        this.agreement.getProviderInfo(),
         error,
       );
     }

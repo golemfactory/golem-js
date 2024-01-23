@@ -193,9 +193,9 @@ export class Job<Output = unknown> {
       this.defaultOptions.work?.storageProvider || options.work?.storageProvider || this.getDefaultStorageProvider();
 
     const workContext = new WorkContext(activity, {
-      provider: agreement.provider,
+      provider: agreement.getProviderInfo(),
       storageProvider,
-      networkNode: await networkService.addNode(agreement.provider.id),
+      networkNode: await networkService.addNode(agreement.getProviderInfo().id),
       activityPreparingTimeout:
         this.defaultOptions.work?.activityPreparingTimeout || options.work?.activityPreparingTimeout,
       activityStateCheckingInterval:

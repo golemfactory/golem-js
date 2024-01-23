@@ -125,7 +125,7 @@ describe("Batch", () => {
           WorkErrorCode.ScriptExecutionFailed,
           activity.agreement,
           activity,
-          activity.provider,
+          activity.getProviderInfo(),
           new Error("FAILURE"),
         ),
       );
@@ -143,7 +143,7 @@ describe("Batch", () => {
           WorkErrorCode.ScriptExecutionFailed,
           activity.agreement,
           activity,
-          activity.provider,
+          activity.getProviderInfo(),
           new Error("ERROR"),
         ),
       );
@@ -159,7 +159,7 @@ describe("Batch", () => {
           WorkErrorCode.ScriptExecutionFailed,
           activity.agreement,
           activity,
-          activity.provider,
+          activity.getProviderInfo(),
           new Error("FAILURE"),
         ),
       );
@@ -239,7 +239,7 @@ describe("Batch", () => {
           WorkErrorCode.ScriptExecutionFailed,
           activity.agreement,
           activity,
-          activity.provider,
+          activity.getProviderInfo(),
           new Error("ERROR"),
         ),
       );

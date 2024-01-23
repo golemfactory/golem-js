@@ -70,7 +70,7 @@ describe("Payment Service", () => {
         {
           invoiceId: invoices[0].invoiceId,
           agreementId: agreement.id,
-          providerName: agreement.provider.name,
+          providerName: agreement.getProviderInfo().name,
         },
         1_000,
       );
@@ -242,7 +242,7 @@ describe("Payment Service", () => {
         {
           invoiceId: invoices[0].invoiceId,
           agreementId: agreement.id,
-          providerName: agreement.provider.name,
+          providerName: agreement.getProviderInfo().name,
         },
         1_000,
       );
@@ -262,7 +262,7 @@ describe("Payment Service", () => {
           "You need to create an allocation before starting any payment processes",
           PaymentErrorCode.MissingAllocation,
           undefined,
-          agreement.provider,
+          agreement.getProviderInfo(),
         ),
       );
       await paymentService.end();

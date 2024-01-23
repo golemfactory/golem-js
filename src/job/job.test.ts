@@ -26,9 +26,9 @@ describe("Job", () => {
 
       const mockAgreement = {
         id: "test_agreement_id",
-        provider: {
+        getProviderInfo: () => ({
           id: "test_provider_id",
-        },
+        }),
       } as Agreement;
       const mockActivity = {
         stop: jest.fn(),

@@ -34,7 +34,7 @@ describe("Activity Factory", () => {
             WorkErrorCode.ScriptExecutionFailed,
             agreement,
             undefined,
-            agreement.provider,
+            agreement.getProviderInfo(),
             new Error("Foo"),
           ),
         );
