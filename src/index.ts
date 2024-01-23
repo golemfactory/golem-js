@@ -8,7 +8,7 @@ export {
 } from "./storage";
 export { ActivityStateEnum, Result, ResultState, Activity, ActivityOptions, ActivityPoolService } from "./activity";
 export { AgreementCandidate, AgreementSelectors, AgreementPoolService, AgreementServiceOptions } from "./agreement";
-export { ProposalFilters, ProposalFilter, MarketHelpers, MarketService, MarketOptions } from "./market";
+export { ProposalFilterFactory, ProposalFilter, MarketHelpers, MarketService, MarketOptions } from "./market";
 export { Package, PackageOptions, AllPackageOptions } from "./package";
 export { PaymentFilters, PaymentService, PaymentOptions, InvoiceProcessor, InvoiceAcceptResult } from "./payment";
 export { NetworkService, NetworkServiceOptions } from "./network";

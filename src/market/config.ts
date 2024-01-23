@@ -2,7 +2,7 @@ import { DemandOptions } from "./demand";
 import { EnvUtils, Logger, defaultLogger } from "../utils";
 import { MarketOptions, ProposalFilter } from "./service";
 import { YagnaOptions } from "../executor";
-import { acceptAllProposalFilter } from "./strategy";
+import { acceptAll } from "./strategy";
 import { GolemError } from "../error/golem-error";
 
 const DEFAULTS = {
@@ -13,7 +13,7 @@ const DEFAULTS = {
   debitNotesAcceptanceTimeoutSec: 2 * 60, // 2 minutes
   midAgreementDebitNoteIntervalSec: 2 * 60, // 2 minutes
   midAgreementPaymentTimeoutSec: 12 * 60 * 60, // 12 hours
-  proposalFilter: acceptAllProposalFilter(),
+  proposalFilter: acceptAll(),
 };
 
 /**
