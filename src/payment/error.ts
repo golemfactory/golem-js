@@ -3,7 +3,6 @@ import { Allocation } from "./allocation";
 import { ProviderInfo } from "../agreement";
 
 export enum PaymentErrorCode {
-  ServiceNotInitialized,
   AllocationCreationFailed,
   MissingAllocation,
   PaymentProcessNotInitialized,
