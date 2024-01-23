@@ -31,7 +31,7 @@ describe("Activity Factory", () => {
         await expect(() => factory.create()).rejects.toThrow(
           new GolemWorkError(
             "Unable to create activity: Foo",
-            WorkErrorCode.ScriptExecutionFailed,
+            WorkErrorCode.ActivityCreationFailed,
             agreement,
             undefined,
             agreement.getProviderInfo(),
