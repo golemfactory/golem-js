@@ -4,6 +4,8 @@ import { Task, TaskService } from "../task/";
 import { TaskExecutor } from "./executor";
 import { sleep } from "../utils";
 import { LoggerMock } from "../../tests/mock";
+import { GolemUserError } from "../error/golem-error";
+import { GolemWorkError, WorkErrorCode } from "../task/error";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -140,7 +142,9 @@ describe("Task Executor", () => {
         logger,
         yagnaOptions,
       });
-      expect(executorPromise).rejects.toThrow("The maxTaskRetries parameter cannot be less than zero");
+      await expect(executorPromise).rejects.toThrow(
+        new GolemUserError("The maxTaskRetries parameter cannot be less than zero"),
+      );
     });
 
     it('should emit "ready" event after init() completes', async () => {
@@ -173,7 +177,9 @@ describe("Task Executor", () => {
 
       rejectedSpy.mockImplementationOnce(() => true);
       errorSpy.mockImplementationOnce(() => new Error("error 1"));
-      await expect(executor.run(() => Promise.resolve())).rejects.toThrow("error 1");
+      await expect(executor.run(() => Promise.resolve())).rejects.toThrow(
+        new GolemWorkError("Unable to execute task. Error: error 1", WorkErrorCode.ScriptExecutionFailed),
+      );
 
       rejectedSpy.mockImplementationOnce(() => false);
       resultsSpy.mockImplementationOnce(() => "result 2");
@@ -215,7 +221,7 @@ describe("Task Executor", () => {
     it("should call shutdown()", async () => {
       const executor = await TaskExecutor.create({ package: "test", startupTimeout: 0, logger, yagnaOptions });
       const spy = jest.spyOn(executor, "shutdown");
-      executor.shutdown();
+      await executor.shutdown();
       expect(spy).toHaveBeenCalled();
     });
   });

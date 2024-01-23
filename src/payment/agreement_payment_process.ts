@@ -3,10 +3,11 @@ import { Invoice } from "./invoice";
 import { DebitNote } from "./debit_note";
 import { RejectionReason } from "./rejection";
 import { Allocation } from "./allocation";
-import { Logger, defaultLogger } from "..";
+import { defaultLogger, Logger } from "..";
 import { DebitNoteFilter, InvoiceFilter } from "./service";
 import AsyncLock from "async-lock";
 import { InvoiceStatus } from "ya-ts-client/dist/ya-payment";
+import { GolemPaymentError, PaymentErrorCode } from "./error";
 
 /**
  * Process manager that controls the logic behind processing events related to an agreement which result with payments
@@ -140,15 +141,23 @@ export class AgreementPaymentProcess {
         }
       } else {
         // Protects from possible fraud: someone sends a second, different invoice for the same agreement
-        throw new Error(`Agreement ${this.agreement.id} is already covered with an invoice: ${this.invoice.id}`);
+        throw new GolemPaymentError(
+          `Agreement ${this.agreement.id} is already covered with an invoice: ${this.invoice.id}`,
+          PaymentErrorCode.AgreementAlreadyPaid,
+          this.allocation,
+          this.invoice.provider,
+        );
       }
     }
 
     const status = await invoice.getStatus();
     if (status !== InvoiceStatus.Received) {
-      throw new Error(
+      throw new GolemPaymentError(
         `The invoice ${invoice.id} for agreement ${invoice.agreementId} has status ${status}, ` +
           `but we can accept only the ones with status ${InvoiceStatus.Received}`,
+        PaymentErrorCode.InvoiceAlreadyReceived,
+        this.allocation,
+        this.invoice?.provider,
       );
     }
 

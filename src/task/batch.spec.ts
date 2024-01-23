@@ -5,6 +5,7 @@ import { ActivityMock } from "../../tests/mock/activity.mock";
 import { LoggerMock, YagnaMock } from "../../tests/mock";
 import { Result } from "../activity";
 import { agreement } from "../../tests/mock/entities/agreement";
+import { GolemWorkError, WorkErrorCode } from "./error";
 
 describe("Batch", () => {
   let activity: ActivityMock;
@@ -118,7 +119,16 @@ describe("Batch", () => {
       const spy = jest.spyOn(batch["script"], "after");
       activity.mockResultFailure("FAILURE");
 
-      await expect(batch.end()).rejects.toThrowError();
+      await expect(batch.end()).rejects.toThrow(
+        new GolemWorkError(
+          "Unable to execute script Error: FAILURE",
+          WorkErrorCode.ScriptExecutionFailed,
+          activity.agreement,
+          activity,
+          activity.provider,
+          new Error("FAILURE"),
+        ),
+      );
 
       expect(spy).toHaveBeenCalled();
     });
@@ -127,14 +137,32 @@ describe("Batch", () => {
       const spy = jest.spyOn(batch["script"], "after");
       jest.spyOn(activity, "execute").mockRejectedValue(new Error("ERROR"));
 
-      await expect(batch.end()).rejects.toThrowError("ERROR");
+      await expect(batch.end()).rejects.toStrictEqual(
+        new GolemWorkError(
+          "Unable to execute script Error: ERROR",
+          WorkErrorCode.ScriptExecutionFailed,
+          activity.agreement,
+          activity,
+          activity.provider,
+          new Error("ERROR"),
+        ),
+      );
 
       expect(spy).toHaveBeenCalled();
     });
 
     it("should throw error on result stream error", async () => {
       activity.mockResultFailure("FAILURE");
-      await expect(batch.end()).rejects.toThrowError("FAILURE");
+      await expect(batch.end()).rejects.toStrictEqual(
+        new GolemWorkError(
+          "Unable to execute script Error: FAILURE",
+          WorkErrorCode.ScriptExecutionFailed,
+          activity.agreement,
+          activity,
+          activity.provider,
+          new Error("FAILURE"),
+        ),
+      );
     });
   });
 
@@ -205,7 +233,16 @@ describe("Batch", () => {
         for await (const r of await batch.endStream()) {
           /* empty */
         }
-      }).rejects.toThrowError("ERROR");
+      }).rejects.toThrow(
+        new GolemWorkError(
+          "Unable to execute script Error: ERROR",
+          WorkErrorCode.ScriptExecutionFailed,
+          activity.agreement,
+          activity,
+          activity.provider,
+          new Error("ERROR"),
+        ),
+      );
 
       expect(spy).toHaveBeenCalled();
     });

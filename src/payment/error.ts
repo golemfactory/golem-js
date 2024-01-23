@@ -13,6 +13,8 @@ export enum PaymentErrorCode {
   InvoiceRejectionFailed,
   DebitNoteRejectionFailed,
   PaymentStatusQueryFailed,
+  AgreementAlreadyPaid,
+  InvoiceAlreadyReceived,
 }
 export class GolemPaymentError extends GolemModuleError {
   constructor(

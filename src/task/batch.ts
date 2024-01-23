@@ -1,6 +1,6 @@
 import { DownloadFile, Run, Script, Transfer, UploadData, UploadFile } from "../script";
 import { Activity, Result } from "../activity";
-import { StorageProvider } from "../storage/provider";
+import { StorageProvider } from "../storage";
 import { Logger, defaultLogger } from "../utils";
 import { pipeline, Readable, Transform } from "stream";
 import { GolemWorkError, WorkErrorCode } from "./error";
@@ -101,11 +101,22 @@ export class Batch {
         });
 
         results.on("error", (error) => {
+          const golemError =
+            error instanceof GolemWorkError
+              ? error
+              : new GolemWorkError(
+                  `Unable to execute script ${error}`,
+                  WorkErrorCode.ScriptExecutionFailed,
+                  this.activity.agreement,
+                  this.activity,
+                  this.activity.agreement.provider,
+                  error,
+                );
           this.logger.debug("Error in batch script execution");
           this.script
             .after(allResults)
-            .then(() => reject(error))
-            .catch(() => reject(error)); // Return original error, as it might be more important.
+            .then(() => reject(golemError))
+            .catch(() => reject(golemError)); // Return original error, as it might be more important.
         });
       });
     } catch (error) {
@@ -113,7 +124,17 @@ export class Batch {
       // NOTE: This is called only to ensure that each of the commands in the original script will be populated with at least `EmptyErrorResult`.
       // That's actually a FIXME, as the command could start with an empty result, which eventually will get replaced with an actual one.
       await this.script.after([]);
-      throw error;
+      if (error instanceof GolemWorkError) {
+        throw error;
+      }
+      throw new GolemWorkError(
+        `Unable to execute script ${error}`,
+        WorkErrorCode.ScriptExecutionFailed,
+        this.activity.agreement,
+        this.activity,
+        this.activity.agreement.provider,
+        error,
+      );
     }
   }
 
@@ -126,7 +147,17 @@ export class Batch {
     } catch (error) {
       // the original error is more important than the one from after()
       await script.after([]);
-      throw error;
+      if (error instanceof GolemWorkError) {
+        throw error;
+      }
+      throw new GolemWorkError(
+        `Unable to execute script ${error}`,
+        WorkErrorCode.ScriptExecutionFailed,
+        this.activity.agreement,
+        this.activity,
+        this.activity.agreement.provider,
+        error,
+      );
     }
     const decodedResults: Result[] = [];
     const activity = this.activity;

@@ -1,7 +1,7 @@
 import { GolemNetworkError, Network } from "../../src/network";
 import { YagnaMock } from "../mock";
-import { spy } from "@johanblumenberg/ts-mockito";
 import { NetworkErrorCode } from "../../src/network/error";
+
 const yagnaApi = new YagnaMock().getApi();
 
 describe("Network", () => {
@@ -35,12 +35,22 @@ describe("Network", () => {
 
     it("should not create network with invalid ip", async () => {
       const shouldFail = Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "123.1.2" });
-      await expect(shouldFail).rejects.toThrow("Cidr notation should be in the form [ip number]/[range]");
+      await expect(shouldFail).rejects.toThrow(
+        new GolemNetworkError(
+          "Unable to create network. Error: Cidr notation should be in the form [ip number]/[range]",
+          NetworkErrorCode.NetworkCreationFailed,
+        ),
+      );
     });
 
     it("should not create network without mask", async () => {
       const shouldFail = Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "1.1.1.1" });
-      await expect(shouldFail).rejects.toThrow("Cidr notation should be in the form [ip number]/[range]");
+      await expect(shouldFail).rejects.toThrow(
+        new GolemNetworkError(
+          "Unable to create network. Error: Cidr notation should be in the form [ip number]/[range]",
+          NetworkErrorCode.NetworkCreationFailed,
+        ),
+      );
     });
 
     it("should create network with custom options", async () => {
@@ -76,21 +86,35 @@ describe("Network", () => {
 
     it("should not add node with an existing ID", async () => {
       const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/24" });
-      await expect(network.addNode("1")).rejects.toThrow("ID '1' has already been assigned in this network");
+      await expect(network.addNode("1")).rejects.toThrow(
+        new GolemNetworkError(
+          "Unable to add node to network. Error: ID '1' has already been assigned in this network.",
+          NetworkErrorCode.AddressAlreadyAssigned,
+          network.getNetworkInfo(),
+        ),
+      );
     });
 
     it("should not add node with an existing IP", async () => {
       const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/24" });
       await network.addNode("2", "192.168.0.3");
       await expect(network.addNode("3", "192.168.0.3")).rejects.toThrow(
-        "IP '192.168.0.3' has already been assigned in this network",
+        new GolemNetworkError(
+          "Unable to add node to network. Error: IP '192.168.0.3' has already been assigned in this network.",
+          NetworkErrorCode.AddressAlreadyAssigned,
+          network.getNetworkInfo(),
+        ),
       );
     });
 
     it("should not add node with address outside the network range", async () => {
       const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/24" });
       await expect(network.addNode("2", "192.168.2.2")).rejects.toThrow(
-        "The given IP ('192.168.2.2') address must belong to the network ('192.168.0.0/24')",
+        new GolemNetworkError(
+          "Unable to add node to network. Error: The given IP ('192.168.2.2') address must belong to the network ('192.168.0.0/24').",
+          NetworkErrorCode.AddressOutOfRange,
+          network.getNetworkInfo(),
+        ),
       );
     });
 
@@ -98,7 +122,13 @@ describe("Network", () => {
       const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/30" });
       await network.addNode("2");
       await network.addNode("3");
-      await expect(network.addNode("4")).rejects.toThrow("No more addresses available in 192.168.0.0/30");
+      await expect(network.addNode("4")).rejects.toThrow(
+        new GolemNetworkError(
+          "Unable to add node to network. Error: No more addresses available in 192.168.0.0/30",
+          NetworkErrorCode.NoAddressesAvailable,
+          network.getNetworkInfo(),
+        ),
+      );
     });
 
     it("should get node network config", async () => {

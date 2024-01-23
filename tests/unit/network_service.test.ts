@@ -1,5 +1,7 @@
 import { LoggerMock, YagnaMock } from "../mock";
-import { NetworkService } from "../../src/network";
+import { GolemNetworkError, NetworkService } from "../../src/network";
+import { NetworkErrorCode } from "../../src/network/error";
+
 const logger = new LoggerMock();
 const yagnaApi = new YagnaMock().getApi();
 describe("Network Service", () => {
@@ -44,7 +46,12 @@ describe("Network Service", () => {
     it("should not add node if the service is not started", async () => {
       const networkService = new NetworkService(yagnaApi, { logger });
       const result = networkService.addNode("provider_2");
-      await expect(result).rejects.toThrow("The service is not started and the network does not exist");
+      await expect(result).rejects.toThrow(
+        new GolemNetworkError(
+          "The service is not started and the network does not exist",
+          NetworkErrorCode.NetworkSetupMissing,
+        ),
+      );
     });
   });
 

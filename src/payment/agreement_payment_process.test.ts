@@ -6,6 +6,7 @@ import { Invoice } from "./invoice";
 import { InvoiceStatus } from "ya-ts-client/dist/ya-payment";
 import { RejectionReason } from "./rejection";
 import { DebitNote } from "./debit_note";
+import { GolemPaymentError, PaymentErrorCode } from "./error";
 
 const agreementMock = mock(Agreement);
 const allocationMock = mock(Allocation);
@@ -72,14 +73,20 @@ describe("AgreementPaymentProcess", () => {
         when(invoiceMock.agreementId).thenReturn("agreement-id");
         when(invoiceMock.amount).thenReturn(0.123);
         when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Accepted);
+        const allocation = instance(allocationMock);
 
-        const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
+        const process = new AgreementPaymentProcess(instance(agreementMock), allocation, {
           debitNoteFilter: () => true,
           invoiceFilter: () => true,
         });
-
-        await expect(() => process.addInvoice(instance(invoiceMock))).rejects.toThrow(
-          "The invoice invoice-id for agreement agreement-id has status ACCEPTED, but we can accept only the ones with status RECEIVED",
+        const invoice = instance(invoiceMock);
+        await expect(() => process.addInvoice(invoice)).rejects.toThrow(
+          new GolemPaymentError(
+            "The invoice invoice-id for agreement agreement-id has status ACCEPTED, but we can accept only the ones with status RECEIVED",
+            PaymentErrorCode.InvoiceAlreadyReceived,
+            allocation,
+            invoice.provider,
+          ),
         );
 
         verify(invoiceMock.accept(0.123, "1000")).never();
@@ -90,12 +97,13 @@ describe("AgreementPaymentProcess", () => {
     describe("Dealing with duplicates", () => {
       it("accepts the duplicated invoice if accepting the previous one failed", async () => {
         when(allocationMock.id).thenReturn("1000");
+        const allocation = instance(allocationMock);
 
         when(invoiceMock.amount).thenReturn(0.123);
         when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
         when(invoiceMock.isSameAs(anything())).thenReturn(true);
 
-        const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
+        const process = new AgreementPaymentProcess(instance(agreementMock), allocation, {
           debitNoteFilter: () => true,
           invoiceFilter: () => true,
         });
