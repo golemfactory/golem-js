@@ -3,44 +3,41 @@ import { Yagna } from "../utils";
 import { YagnaApi, YagnaOptions } from "../utils/yagna/yagna";
 import { Decimal, Numeric } from "decimal.js-light";
 
-/**
- * Represents a payment processor that handles the collection and acceptance of invoices.
- * This class is meant to be used as a standalone service if you want to list or pay invoices manually.
- * Check out the `stats` property for the results of all payment operations.
- */
-export class PaymentProcessor {
-  public readonly stats: (
-    | {
-        invoiceId: string;
-        allocation: Allocation;
-        success: true;
-        amount: string;
-        dryRun: boolean;
-      }
-    | {
-        invoiceId: string;
-        allocation: Allocation;
-        success: false;
-        amount: string;
-        reason: string;
-        dryRun: boolean;
-      }
-  )[] = [];
+export type InvoiceAcceptResult =
+  | {
+      invoiceId: string;
+      allocation: Allocation;
+      success: true;
+      amount: string;
+      dryRun: boolean;
+    }
+  | {
+      invoiceId: string;
+      allocation: Allocation;
+      success: false;
+      amount: string;
+      reason: unknown;
+      dryRun: boolean;
+    };
 
+/**
+ * A class that provides methods for working with invoices. It interacts with the Yagna API directly.
+ */
+export class InvoiceProcessor {
   /**
-   * Use `PaymentProcessor.create()` to create an instance of this class.
+   * Use `InvoiceProcessor.create()` to create an instance of this class.
    */
   private constructor(private readonly api: YagnaApi) {}
 
   /**
-   * Creates an instance of `PaymentProcessor` and connects to the Yagna API.
+   * Creates an instance of `InvoiceProcessor` and connects to the Yagna API.
    * @param options Options for the Yagna API.
    */
-  public static async create(options?: YagnaOptions): Promise<PaymentProcessor> {
+  public static async create(options?: YagnaOptions): Promise<InvoiceProcessor> {
     const yagna = new Yagna(options);
     await yagna.connect();
     const api = yagna.getApi();
-    return new PaymentProcessor(api);
+    return new InvoiceProcessor(api);
   }
 
   /**
@@ -52,10 +49,11 @@ export class PaymentProcessor {
    * @param minAmount Only collect invoices with an amount greater than or equal to this.
    * @param maxAmount Only collect invoices with an amount less than or equal to this.
    * @param providerWallets Only collect invoices from these provider wallets.
+   * @param paymentPlatforms Only collect invoices from these payment platforms.
    *
    * @example
    * ```typescript
-   * const invoices = await paymentProcessor.collectInvoices({
+   * const invoices = await invoiceProcessor.collectInvoices({
    *  after: new Date(Date.now() - 24 * 60 * 60 * 1000), // only collect invoices that were created in the last 24 hours
    *  limit: 100, // only collect 100 invoices max
    *  statuses: ["RECEIVED"], // only collect unpaid invoices
@@ -63,6 +61,7 @@ export class PaymentProcessor {
    *  minAmount: "0.1", // only collect invoices with an amount greater than or equal to 0.1 GLM
    *  maxAmount: "1", // only collect invoices with an amount less than or equal to 1 GLM
    *  providerWallets: ["0x1234"], // only collect invoices from this provider wallet
+   *  paymentPlatforms: ["erc20-polygon-glm"], // only collect invoices from this payment platform
    * });
    * ```
    */
@@ -74,6 +73,7 @@ export class PaymentProcessor {
     minAmount,
     maxAmount,
     providerWallets,
+    paymentPlatforms,
   }: {
     after?: Date;
     limit?: number;
@@ -82,6 +82,7 @@ export class PaymentProcessor {
     minAmount?: Numeric;
     maxAmount?: Numeric;
     providerWallets?: string[];
+    paymentPlatforms?: string[];
   } = {}) {
     // yagna api doesn't sort invoices by timestamp, so we have to fetch all invoices and sort them ourselves
     // this is not very efficient, but it's the only way to get invoices sorted by timestamp
@@ -104,6 +105,9 @@ export class PaymentProcessor {
       if (providerWallets && !providerWallets.includes(invoice.payeeAddr)) {
         return false;
       }
+      if (paymentPlatforms && !paymentPlatforms.includes(invoice.paymentPlatform)) {
+        return false;
+      }
       return true;
     });
     filteredInvoices.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -121,7 +125,13 @@ export class PaymentProcessor {
    * Creates an allocation for the exact amount of the invoice and accepts the invoice.
    * If `dryRun` is `true`, no allocation will be created and the invoice will not be accepted.
    */
-  async acceptInvoice({ invoice, dryRun = false }: { invoice: Invoice; dryRun?: boolean }): Promise<void> {
+  async acceptInvoice({
+    invoice,
+    dryRun = false,
+  }: {
+    invoice: Invoice;
+    dryRun?: boolean;
+  }): Promise<InvoiceAcceptResult> {
     let allocation: Allocation = {
       totalAmount: invoice.amount,
       paymentPlatform: invoice.paymentPlatform,
@@ -135,14 +145,13 @@ export class PaymentProcessor {
     };
 
     if (dryRun) {
-      this.stats.push({
-        invoiceId: invoice.invoiceId,
+      return {
         allocation,
-        success: true,
         amount: invoice.amount,
+        invoiceId: invoice.invoiceId,
+        success: true,
         dryRun,
-      });
-      return;
+      };
     }
 
     try {
@@ -153,23 +162,22 @@ export class PaymentProcessor {
         totalAmountAccepted: invoice.amount,
       });
 
-      this.stats.push({
-        invoiceId: invoice.invoiceId,
-        allocation,
+      return {
         success: true,
-        amount: invoice.amount,
-        dryRun,
-      });
-    } catch (e) {
-      this.stats.push({
-        invoiceId: invoice.invoiceId,
         allocation,
-        success: false,
         amount: invoice.amount,
-        reason: e.message,
+        invoiceId: invoice.invoiceId,
         dryRun,
-      });
-      throw e;
+      };
+    } catch (e) {
+      return {
+        success: false,
+        allocation,
+        amount: invoice.amount,
+        invoiceId: invoice.invoiceId,
+        reason: e,
+        dryRun,
+      };
     }
   }
 
@@ -178,8 +186,17 @@ export class PaymentProcessor {
    * Since the invoices can be from different payment platforms and payer addresses,
    * multiple allocations might be created.
    * If `dryRun` is `true`, no allocation will be created and the invoices will not be accepted.
+   * Please keep in mind that this method is not atomic, so if one of the invoices fails
+   * to be accepted, the others will still be accepted. This is a limitation of the Yagna API.
+   * Use the returned `InvoiceAcceptResult` to check which invoices were accepted successfully.
    */
-  async acceptManyInvoices({ invoices, dryRun = false }: { invoices: Invoice[]; dryRun?: boolean }): Promise<void> {
+  async acceptManyInvoices({
+    invoices,
+    dryRun = false,
+  }: {
+    invoices: Invoice[];
+    dryRun?: boolean;
+  }): Promise<InvoiceAcceptResult[]> {
     /**
      * Allocations are created per payment platform and payer address.
      * So it's necessary to group invoices by payment platform and payer address
@@ -206,8 +223,9 @@ export class PaymentProcessor {
       );
     };
 
-    const groupedByPaymentPlatform = groupByPaymentPlatform(invoices);
+    const results: InvoiceAcceptResult[] = [];
 
+    const groupedByPaymentPlatform = groupByPaymentPlatform(invoices);
     for (const [paymentPlatform, invoices] of Object.entries(groupedByPaymentPlatform)) {
       const groupedByPayerAddress = groupByPayerAddress(invoices);
       for (const [payerAddress, invoices] of Object.entries(groupedByPayerAddress)) {
@@ -228,7 +246,7 @@ export class PaymentProcessor {
         }
         for (const invoice of invoices) {
           if (dryRun) {
-            this.stats.push({
+            results.push({
               invoiceId: invoice.invoiceId,
               allocation,
               success: true,
@@ -243,7 +261,7 @@ export class PaymentProcessor {
               allocationId: allocation.allocationId,
               totalAmountAccepted: invoice.amount,
             });
-            this.stats.push({
+            results.push({
               invoiceId: invoice.invoiceId,
               allocation,
               success: true,
@@ -251,18 +269,18 @@ export class PaymentProcessor {
               dryRun,
             });
           } catch (e) {
-            this.stats.push({
+            results.push({
               invoiceId: invoice.invoiceId,
               allocation,
               success: false,
               amount: invoice.amount,
-              reason: e.message,
+              reason: e,
               dryRun,
             });
-            throw e;
           }
         }
       }
     }
+    return results;
   }
 }
