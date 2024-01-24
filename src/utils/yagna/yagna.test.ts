@@ -1,55 +1,43 @@
 import { MIN_SUPPORTED_YAGNA, Yagna } from "./yagna";
-import { imock, instance, when } from "@johanblumenberg/ts-mockito";
+import { imock, instance, spy, when } from "@johanblumenberg/ts-mockito";
+import { IdentityModel } from "./identity";
 
 const mockFetch = jest.spyOn(global, "fetch");
 const response = imock<Response>();
 
+const mockIdentityModel = imock<IdentityModel>();
+
 describe("Yagna Utils", () => {
   describe("Yagna version support checking", () => {
-    describe("Positive cases", () => {
-      it("should not throw when connect is called and the yagna version is supported", async () => {
-        when(response.json()).thenResolve({
-          current: {
-            version: "0.15.0",
-            name: "v0.15.0",
-            seen: false,
-            releaseTs: "2023-12-07T14:23:48",
-            insertionTs: "2023-12-07T18:22:45",
-            updateTs: "2023-12-07T18:22:45",
-          },
-          pending: null,
-        });
-        mockFetch.mockResolvedValue(instance(response));
+    describe("Positive cases - given min supported version is 0.14.0", () => {
+      it.each(["0.14.0", "0.15.0-rc5", "pre-rel-v0.15.0-rc5"])(
+        "should not throw when connect is called and the yagna version is %s",
+        async (version) => {
+          when(response.json()).thenResolve({
+            current: {
+              version: `${version}`,
+              name: `v${version}`,
+              seen: false,
+              releaseTs: "2023-12-07T14:23:48",
+              insertionTs: "2023-12-07T18:22:45",
+              updateTs: "2023-12-07T18:22:45",
+            },
+            pending: null,
+          });
+          mockFetch.mockResolvedValue(instance(response));
 
-        const y = new Yagna({
-          apiKey: "test-key",
-        });
+          const y = new Yagna({
+            apiKey: "test-key",
+          });
 
-        const version = await y.connect();
-        expect(version).toEqual("0.15.0");
-      });
+          const spyIdentity = spy(y.getApi().identity);
+          const model = instance(mockIdentityModel);
+          when(spyIdentity.getIdentity()).thenResolve(model);
 
-      it("should accept pre-release versions of yagna", async () => {
-        when(response.json()).thenResolve({
-          current: {
-            version: "0.15.0-rc5",
-            name: "v0.15.0-rc5",
-            seen: false,
-            releaseTs: "2023-12-07T14:23:48",
-            insertionTs: "2023-12-07T18:22:45",
-            updateTs: "2023-12-07T18:22:45",
-          },
-          pending: null,
-        });
-        mockFetch.mockResolvedValue(instance(response));
-
-        const y = new Yagna({
-          apiKey: "test-key",
-        });
-
-        const version = await y.connect();
-        expect(version).toEqual("0.15.0");
-      });
+          const identity = await y.connect();
+          expect(identity).toEqual(model);
+        },
+      );
     });
 
     describe("Negative cases", () => {

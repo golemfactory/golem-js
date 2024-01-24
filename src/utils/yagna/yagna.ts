@@ -26,6 +26,7 @@ export type YagnaApi = {
 export type YagnaOptions = {
   apiKey?: string;
   basePath?: string;
+  abortController?: AbortController;
 };
 
 type YagnaVersionInfo = {
@@ -58,7 +59,7 @@ export class Yagna {
 
   constructor(options?: YagnaOptions) {
     this.httpAgent = new Agent({ keepAlive: true });
-    this.controller = new AbortController();
+    this.controller = options?.abortController ?? new AbortController();
     this.apiKey = options?.apiKey || EnvUtils.getYagnaAppKey();
     if (!this.apiKey) throw new GolemError("Api key not defined");
     this.apiBaseUrl = options?.basePath || EnvUtils.getYagnaApiUrl();
@@ -69,7 +70,12 @@ export class Yagna {
     return this.api;
   }
 
-  async connect(): Promise<string> {
+  async connect() {
+    await this.assertSupportedVersion();
+    return this.api.identity.getIdentity();
+  }
+
+  private async assertSupportedVersion() {
     const version = await this.getYagnaVersion();
 
     const normVersion = semverCoerce(version);
