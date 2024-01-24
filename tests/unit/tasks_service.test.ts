@@ -152,7 +152,7 @@ describe("Task Service", () => {
         taskId: task.id,
         reason: "Work rejected. Reason: Invalid value computed by provider",
       },
-      2500,
+      1500,
     );
     expect(task.isFinished()).toEqual(true);
     await service.end();

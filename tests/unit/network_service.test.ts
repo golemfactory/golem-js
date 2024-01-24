@@ -1,6 +1,5 @@
 import { LoggerMock, YagnaMock } from "../mock";
-import { NetworkService } from "../../src/network";
-import exp from "node:constants";
+import { NetworkService } from "../../src";
 const logger = new LoggerMock();
 const yagnaApi = new YagnaMock().getApi();
 describe("Network Service", () => {
