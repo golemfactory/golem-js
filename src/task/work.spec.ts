@@ -193,7 +193,7 @@ describe("Work Context", () => {
         expect(result.stdout).toEqual("FAILURE");
         await logger.expectToInclude("Task error", {
           error: "Error: undefined. Stdout: FAILURE. Stderr: undefined",
-          provider: undefined,
+          provider: "Test Provider",
         });
       });
     });

@@ -2,10 +2,9 @@ import { TaskState as JobState } from "../task/task";
 import { WorkContext, Worker, WorkOptions } from "../task/work";
 import { runtimeContextChecker, YagnaApi } from "../utils";
 import { AgreementOptions, AgreementPoolService } from "../agreement";
-import { MarketService } from "../market";
+import { MarketOptions, MarketService } from "../market";
 import { NetworkService } from "../network";
 import { PaymentOptions, PaymentService } from "../payment";
-import { MarketOptions } from "../market";
 import { NetworkOptions } from "../network/network";
 import { Package, PackageOptions } from "../package";
 import { Activity, ActivityOptions } from "../activity";
@@ -193,7 +192,6 @@ export class Job<Output = unknown> {
       this.defaultOptions.work?.storageProvider || options.work?.storageProvider || this.getDefaultStorageProvider();
 
     const workContext = new WorkContext(activity, {
-      provider: agreement.provider,
       storageProvider,
       networkNode: await networkService.addNode(agreement.provider.id),
       activityPreparingTimeout:
