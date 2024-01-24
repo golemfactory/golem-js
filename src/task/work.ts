@@ -48,7 +48,7 @@ export interface CommandOptions {
  * @description
  */
 export class WorkContext {
-  public readonly provider?: ProviderInfo;
+  public readonly provider: ProviderInfo;
   private readonly activityPreparingTimeout: number;
   private readonly logger: Logger;
   private readonly activityStateCheckingInterval: number;
@@ -101,7 +101,7 @@ export class WorkContext {
     state = await this.activity.getState().catch((e) =>
       this.logger.warn("Error while getting activity state", {
         error: e,
-        provider: this.provider?.name,
+        provider: this.provider.name,
       }),
     );
 
@@ -141,7 +141,7 @@ export class WorkContext {
 
     this.logger.debug("Running command", {
       command: isArray ? `${exeOrCmd} ${argsOrOptions?.join(" ")}` : exeOrCmd,
-      provider: this.provider?.name,
+      provider: this.provider.name,
     });
 
     const run = isArray
@@ -311,7 +311,7 @@ export class WorkContext {
         )
         .join(". ");
       this.logger.warn(`Task error`, {
-        provider: this.provider?.name,
+        provider: this.provider.name,
         error: errorMessage,
       });
     }
