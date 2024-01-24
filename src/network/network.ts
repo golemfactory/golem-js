@@ -49,6 +49,7 @@ export class Network {
   private gateway?: IPv4;
   private nodes = new Map<string, NetworkNode>();
   private logger: Logger;
+  private releasedIpAddresses: Array<AbstractIPNum> = [];
 
   /**
    * Create a new VPN.
@@ -141,6 +142,33 @@ export class Network {
   }
 
   /**
+   * Remove the node from the network
+   * @param nodeId
+   */
+  async removeNode(nodeId: string): Promise<void> {
+    const node = this.nodes.get(nodeId);
+    if (!node) {
+      throw new GolemError(`Unable to remove node ${nodeId}. There is no such node in the network`);
+    }
+    try {
+      await this.yagnaApi.net.removeNode(this.id, nodeId);
+      this.nodes.delete(nodeId);
+      this.releasedIpAddresses.push(node.ip);
+      this.logger.debug(`Node has removed from the network.`, { id: nodeId, ip: node.ip.toString() });
+    } catch (error) {
+      throw new GolemError(`Unable to remove node ${nodeId}. ${error}`);
+    }
+  }
+
+  /**
+   * Checks whether the node belongs to the network
+   * @param nodeId
+   */
+  hasNode(nodeId: string): boolean {
+    return this.nodes.has(nodeId);
+  }
+
+  /**
    * Remove this network, terminating any connections it provides
    */
   async remove(): Promise<boolean> {
@@ -155,7 +183,7 @@ export class Network {
   }
 
   private nextAddress(): IPv4 {
-    const ip = this.ipIterator.next().value;
+    const ip = this.ipIterator.next().value || this.releasedIpAddresses.pop();
     if (!ip) throw new GolemError(`No more addresses available in ${this.ipRange.toCidrString()}`);
     return ip;
   }

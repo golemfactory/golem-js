@@ -1,7 +1,6 @@
 import * as activityMock from "../mock/rest/activity";
 import { Task, TaskQueue, TaskService, WorkContext, Worker } from "../../src/task";
 import { agreementPoolServiceMock, paymentServiceMock, networkServiceMock, LoggerMock, YagnaMock } from "../mock";
-import { sleep } from "../../src/utils";
 
 let queue: TaskQueue;
 const logger = new LoggerMock();
@@ -153,7 +152,7 @@ describe("Task Service", () => {
         taskId: task.id,
         reason: "Work rejected. Reason: Invalid value computed by provider",
       },
-      1500,
+      2500,
     );
     expect(task.isFinished()).toEqual(true);
     await service.end();

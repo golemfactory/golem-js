@@ -36,6 +36,16 @@ export class NetworkService {
     return this.network.addNode(nodeId, ip);
   }
 
+  public async removeNode(nodeId: string): Promise<void> {
+    if (!this.network) throw new GolemError("The service is not started and the network does not exist");
+    return this.network.removeNode(nodeId);
+  }
+
+  public hasNode(nodeId: string) {
+    if (!this.network) throw new GolemError("The service is not started and the network does not exist");
+    return this.network.hasNode(nodeId);
+  }
+
   async end() {
     await this.network?.remove();
     this.logger.info("Network Service has been stopped");
