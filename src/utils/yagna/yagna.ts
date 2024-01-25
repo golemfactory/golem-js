@@ -76,7 +76,7 @@ export class Yagna {
   }
 
   private async assertSupportedVersion() {
-    const version = await this.getYagnaVersion();
+    const version = await this.getVersion();
 
     const normVersion = semverCoerce(version);
     if (!normVersion) {
@@ -100,13 +100,17 @@ export class Yagna {
     this.httpAgent.destroy?.();
   }
 
-  public async getYagnaVersion(): Promise<string> {
-    const res: YagnaVersionResponse = await fetch(`${this.apiBaseUrl}/version/get`, {
-      method: "GET",
-      signal: this.controller.signal,
-    }).then((res) => res.json());
+  public async getVersion(): Promise<string> {
+    try {
+      const res: YagnaVersionResponse = await fetch(`${this.apiBaseUrl}/version/get`, {
+        method: "GET",
+        signal: this.controller.signal,
+      }).then((res) => res.json());
 
-    return res.current.version;
+      return res.current.version;
+    } catch (err) {
+      throw new GolemError(`Failed to establish yagna version due to: ${err}`);
+    }
   }
 
   protected createApi(): YagnaApi {

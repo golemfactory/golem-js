@@ -59,7 +59,7 @@ describe("Yagna Utils", () => {
           apiKey: "test-key",
         });
 
-        await expect(() => y.connect()).rejects.toThrowError(
+        await expect(() => y.connect()).rejects.toThrow(
           `You run yagna in version 0.12.0 and the minimal version supported by the SDK is ${MIN_SUPPORTED_YAGNA}`,
         );
       });
@@ -82,8 +82,20 @@ describe("Yagna Utils", () => {
           apiKey: "test-key",
         });
 
-        await expect(() => y.connect()).rejects.toThrowError(
+        await expect(() => y.connect()).rejects.toThrow(
           `Unreadable yana version 'broken'. Can't proceed without checking yagna version support status.`,
+        );
+      });
+
+      it("should throw an GolemError if fetching of the version information will fail", async () => {
+        mockFetch.mockRejectedValue(new Error("Something bad happened when trying to read yagna version via API"));
+
+        const y = new Yagna({
+          apiKey: "test-key",
+        });
+
+        await expect(() => y.connect()).rejects.toThrow(
+          "Failed to establish yagna version due to: Error: Something bad happened when trying",
         );
       });
     });
