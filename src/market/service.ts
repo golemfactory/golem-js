@@ -100,12 +100,12 @@ export class MarketService {
     const error = (event as DemandEvent).error;
     if (error instanceof GolemMarketError && error.code === MarketErrorCode.DemandExpired) {
       this.logger.error("Demand expired. Trying to subscribe a new one...");
-      this.resubscribeDemand().catch((e) => this.logger?.warn(e));
+      this.resubscribeDemand().catch((e) => this.logger?.warn(`Could not resubscribe demand.`, e));
       return;
     }
     if (error || !proposal) {
       this.logger.error("Collecting offers failed. Trying to subscribe a new demand...");
-      this.resubscribeDemand().catch((e) => this.logger?.warn(e));
+      this.resubscribeDemand().catch((e) => this.logger?.warn(`Could not resubscribe demand.`, e));
       return;
     }
     if (proposal.isInitial()) this.proposalsBatch.addProposal(proposal);

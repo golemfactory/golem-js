@@ -222,7 +222,7 @@ export class Demand extends EventTarget {
         if (this.isRunning) {
           const reason = error.response?.data?.message || error;
           this.options.eventTarget?.dispatchEvent(new Events.CollectFailed({ id: this.id, reason }));
-          this.logger.warn(`Unable to collect offers. ${reason}`);
+          this.logger.warn(`Unable to collect offers.`, { reason });
           if (error.code === "ECONNREFUSED") {
             // Yagna has been disconnected
             this.dispatchEvent(

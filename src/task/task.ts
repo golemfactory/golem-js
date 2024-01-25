@@ -1,6 +1,6 @@
 import { QueueableTask } from "./queue";
 import { Worker } from "./work";
-import { GolemTimeoutError, GolemUserError } from "../error/golem-error";
+import { GolemConfigurationError, GolemTimeoutError } from "../error/golem-error";
 
 export enum TaskState {
   New = "new",
@@ -49,7 +49,7 @@ export class Task<OutputType = unknown> implements QueueableTask {
     this.maxRetries = options?.maxRetries ?? DEFAULTS.MAX_RETRIES;
     this.activityReadySetupFunctions = options?.activityReadySetupFunctions ?? [];
     if (this.maxRetries < 0) {
-      throw new GolemUserError("The maxRetries parameter cannot be less than zero");
+      throw new GolemConfigurationError("The maxRetries parameter cannot be less than zero");
     }
   }
 

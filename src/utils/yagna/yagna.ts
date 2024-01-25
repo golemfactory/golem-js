@@ -7,7 +7,7 @@ import { RequestorApi as GsbRequestorApi } from "./gsb";
 import { Agent } from "http";
 import { Configuration } from "ya-ts-client/dist/ya-payment";
 import * as EnvUtils from "../env";
-import { GolemUserError } from "../../error/golem-error";
+import { GolemConfigurationError, GolemUserError } from "../../error/golem-error";
 import { v4 } from "uuid";
 
 export type YagnaApi = {
@@ -38,7 +38,7 @@ export class Yagna {
     this.httpAgent = new Agent({ keepAlive: true });
     this.controller = new AbortController();
     this.apiKey = options?.apiKey || EnvUtils.getYagnaAppKey();
-    if (!this.apiKey) throw new GolemUserError("Api key not defined");
+    if (!this.apiKey) throw new GolemConfigurationError("Api key not defined");
     this.apiBaseUrl = options?.basePath || EnvUtils.getYagnaApiUrl();
     this.api = this.createApi();
   }

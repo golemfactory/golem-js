@@ -1,6 +1,6 @@
 import { Logger } from "../utils";
 import { PackageOptions } from "./package";
-import { GolemUserError } from "../error/golem-error";
+import { GolemConfigurationError } from "../error/golem-error";
 
 /**
  * @internal
@@ -46,7 +46,7 @@ export class PackageConfig {
 
   constructor(options: PackageOptions) {
     if (!options.imageHash && !options.manifest && !options.imageTag) {
-      throw new GolemUserError("You must define a package or manifest option");
+      throw new GolemConfigurationError("You must define a package or manifest option");
     }
 
     this.packageFormat = PackageFormat.GVMKitSquash;

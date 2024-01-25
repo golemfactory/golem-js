@@ -11,7 +11,7 @@ import { Package, PackageOptions } from "../package";
 import { Activity, ActivityOptions } from "../activity";
 import { EventEmitter } from "eventemitter3";
 import { GftpStorageProvider, NullStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../storage";
-import { GolemAbortError, GolemUserError } from "../error/golem-error";
+import { GolemAbortError, GolemConfigurationError, GolemUserError } from "../error/golem-error";
 
 export { TaskState as JobState } from "../task/task";
 
@@ -101,7 +101,7 @@ export class Job<Output = unknown> {
 
     const packageOptions = Object.assign({}, this.defaultOptions.package, options.package);
     if (!packageOptions.imageHash && !packageOptions.manifest && !packageOptions.imageTag) {
-      throw new GolemUserError("You must specify either imageHash, imageTag or manifest in package options");
+      throw new GolemConfigurationError("You must specify either imageHash, imageTag or manifest in package options");
     }
 
     this.state = JobState.Pending;

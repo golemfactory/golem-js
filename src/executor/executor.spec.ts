@@ -4,7 +4,7 @@ import { Task, TaskService } from "../task/";
 import { TaskExecutor } from "./executor";
 import { sleep } from "../utils";
 import { LoggerMock } from "../../tests/mock";
-import { GolemUserError } from "../error/golem-error";
+import { GolemConfigurationError } from "../error/golem-error";
 import { GolemWorkError, WorkErrorCode } from "../task/error";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -143,7 +143,7 @@ describe("Task Executor", () => {
         yagnaOptions,
       });
       await expect(executorPromise).rejects.toThrow(
-        new GolemUserError("The maxTaskRetries parameter cannot be less than zero"),
+        new GolemConfigurationError("The maxTaskRetries parameter cannot be less than zero"),
       );
     });
 

@@ -43,7 +43,7 @@ export class RemoteProcess {
         () =>
           reject(
             new GolemWorkError(
-              `todo`,
+              `Unable to get activity results. The waiting time (${timeoutInMs} ms) for the final result has been exceeded`,
               WorkErrorCode.ActivityResultsFetchingFailed,
               this.activity.agreement,
               this.activity,
