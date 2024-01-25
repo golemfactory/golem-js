@@ -30,6 +30,9 @@ jest.mock("../payment/service", () => {
         createAllocation: jest.fn(),
         run: serviceRunSpy,
         end: jest.fn(),
+        events: {
+          on: jest.fn(),
+        },
       };
     }),
   };

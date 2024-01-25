@@ -1,6 +1,6 @@
 import { clear, setExpectedDebitNotes, setExpectedEvents, setExpectedInvoices } from "../mock/rest/payment";
 import { LoggerMock, YagnaMock } from "../mock";
-import { PaymentService, Allocation, PaymentFilters, GolemPaymentError, PaymentErrorCode } from "../../src/payment";
+import { Allocation, GolemPaymentError, PaymentErrorCode, PaymentFilters, PaymentService } from "../../src/payment";
 import { agreement } from "../mock/entities/agreement";
 import { debitNotes, debitNotesEvents, invoiceEvents, invoices } from "../mock/fixtures";
 import { anything, reset, spy, when } from "@johanblumenberg/ts-mockito";
@@ -108,7 +108,7 @@ describe("Payment Service", () => {
       setExpectedEvents(debitNotesEvents);
       setExpectedDebitNotes(debitNotes);
       await paymentService.createAllocation();
-      await paymentService.acceptPayments(agreement);
+      paymentService.acceptPayments(agreement);
       await paymentService.run();
       await logger.expectToInclude(
         `DebitNote rejected`,
@@ -129,7 +129,7 @@ describe("Payment Service", () => {
       setExpectedDebitNotes(debitNotes);
       setExpectedInvoices(invoices);
       await paymentService.createAllocation();
-      await paymentService.acceptPayments(agreement);
+      paymentService.acceptPayments(agreement);
       await paymentService.run();
       await logger.expectToInclude(
         `DebitNote rejected`,
@@ -170,7 +170,7 @@ describe("Payment Service", () => {
       setExpectedEvents(debitNotesEvents);
       setExpectedDebitNotes(debitNotes);
       await paymentService.createAllocation();
-      await paymentService.acceptPayments(agreement);
+      paymentService.acceptPayments(agreement);
       await paymentService.run();
       await logger.expectToInclude(
         `DebitNote rejected`,
@@ -213,7 +213,7 @@ describe("Payment Service", () => {
       setExpectedEvents(debitNotesEvents);
       setExpectedDebitNotes(debitNotes);
       await paymentService.createAllocation();
-      await paymentService.acceptPayments(agreement);
+      paymentService.acceptPayments(agreement);
       await paymentService.run();
       await logger.expectToInclude(
         `DebitNote accepted`,
@@ -247,6 +247,64 @@ describe("Payment Service", () => {
         1_000,
       );
       await paymentService.end();
+    });
+
+    describe("emitting 'error' event", () => {
+      it("should emit when there's an issue with processing the debit note", async () => {
+        // Given
+        const error = new Error("Broken debit note filter");
+
+        const paymentService = new PaymentService(yagnaApi, {
+          logger,
+          debitNotesFilter: () => {
+            throw error;
+          },
+          paymentTimeout: TEST_PAYMENT_TIMEOUT_MS,
+        });
+
+        setExpectedEvents(debitNotesEvents);
+        setExpectedDebitNotes(debitNotes);
+
+        const handler = jest.fn();
+        paymentService.events.once("error", handler);
+
+        // When
+        await paymentService.createAllocation();
+        paymentService.acceptPayments(agreement);
+        await paymentService.run();
+        await paymentService.end();
+
+        // Then
+        expect(handler).toHaveBeenCalledWith(error);
+      });
+
+      it("should emit an error event when there's an issue with processing the invoice", async () => {
+        // Given
+        const error = new Error("Broken invoice filter");
+
+        const paymentService = new PaymentService(yagnaApi, {
+          logger,
+          invoiceFilter: () => {
+            throw error;
+          },
+          paymentTimeout: TEST_PAYMENT_TIMEOUT_MS,
+        });
+
+        setExpectedEvents(invoiceEvents);
+        setExpectedInvoices(invoices);
+
+        const handler = jest.fn();
+        paymentService.events.once("error", handler);
+
+        // When
+        await paymentService.createAllocation();
+        paymentService.acceptPayments(agreement);
+        await paymentService.run();
+        await paymentService.end();
+
+        // Then
+        expect(handler).toHaveBeenCalledWith(error);
+      });
     });
 
     it("should throw GolemPaymentError if allocation is not created", async () => {

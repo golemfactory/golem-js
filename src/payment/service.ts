@@ -7,6 +7,17 @@ import { DebitNoteEvent, InvoiceEvent, PAYMENT_EVENT_TYPE, Payments } from "./pa
 import { Agreement } from "../agreement";
 import { AgreementPaymentProcess } from "./agreement_payment_process";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
+import { EventEmitter } from "eventemitter3";
+
+interface PaymentServiceEvents {
+  /**
+   * Triggered when the service encounters an issue in an "asynchronous sub-process"  (like accepting payments)
+   * that should be notified to the caller
+   *
+   * @param err The error raised during an asynchronous process executed by the PaymentService
+   */
+  error: (err: Error) => void;
+}
 
 export interface PaymentOptions extends BasePaymentOptions {
   /** Interval for checking new invoices */
@@ -38,6 +49,8 @@ export class PaymentService {
   private allocation?: Allocation;
   private processes: Map<string, AgreementPaymentProcess> = new Map();
   private payments?: Payments;
+
+  public events = new EventEmitter<PaymentServiceEvents>();
 
   constructor(
     private readonly yagnaApi: YagnaApi,
@@ -194,19 +207,23 @@ export class PaymentService {
 
   private async subscribePayments(event: Event) {
     if (event instanceof InvoiceEvent) {
-      this.processInvoice(event.invoice)
-        .then(() => this.logger.debug(`Invoice event processed`, { agreementId: event.invoice.agreementId }))
-        .catch((err) =>
-          this.logger.error(`Failed to process InvoiceEvent`, { agreementId: event.invoice.agreementId, err }),
-        );
+      try {
+        await this.processInvoice(event.invoice);
+        this.logger.debug(`Invoice event processed`, { agreementId: event.invoice.agreementId });
+      } catch (err) {
+        this.logger.error(`Failed to process InvoiceEvent`, { agreementId: event.invoice.agreementId, err });
+        this.events.emit("error", err);
+      }
     }
 
     if (event instanceof DebitNoteEvent) {
-      this.processDebitNote(event.debitNote)
-        .then(() => this.logger.debug(`DebitNote event processed`, { agreementId: event.debitNote.agreementId }))
-        .catch((err) =>
-          this.logger.error(`Failed to process DebitNoteEvent`, { agreementId: event.debitNote.agreementId, err }),
-        );
+      try {
+        await this.processDebitNote(event.debitNote);
+        this.logger.debug(`DebitNote event processed`, { agreementId: event.debitNote.agreementId });
+      } catch (err) {
+        this.logger.error(`Failed to process DebitNoteEvent`, { agreementId: event.debitNote.agreementId, err });
+        this.events.emit("error", err);
+      }
     }
   }
 

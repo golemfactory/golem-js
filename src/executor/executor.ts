@@ -258,7 +258,12 @@ export class TaskExecutor {
       this.statsService.run(),
       this.storageProvider?.init(),
     ]).catch((e) => this.handleCriticalError(e));
+
+    // Start listening to issues reported by the services
+    this.paymentService.events.on("error", (e) => this.handleCriticalError(e));
+
     this.taskService.run().catch((e) => this.handleCriticalError(e));
+
     if (runtimeContextChecker.isNode) this.installSignalHandlers();
     this.options.eventTarget.dispatchEvent(new Events.ComputationStarted());
     this.logger.info(`Task Executor has started`, {
@@ -405,9 +410,29 @@ export class TaskExecutor {
     }
   }
 
-  private handleCriticalError(e: Error) {
-    this.options.eventTarget?.dispatchEvent(new Events.ComputationFailed({ reason: e.toString() }));
-    this.logger.error("Critical error", e);
+  public async cancel(reason: string) {
+    try {
+      if (this.isCanceled) {
+        this.logger.warn("The executor is already cancelled, ignoring second request");
+        return;
+      }
+
+      this.isCanceled = true;
+
+      if (runtimeContextChecker.isNode) {
+        this.removeSignalHandlers();
+      }
+
+      const message = `Executor has interrupted by the user. Reason: ${reason}.`;
+
+      this.logger.info(`${message}. Stopping all tasks...`, {
+        tasksInProgress: this.taskQueue.size,
+      });
+
+      await this.shutdown();
+    } catch (error) {
+      this.logger.error(`Error while cancelling the executor`, error);
+    }
   }
 
   private installSignalHandlers() {
@@ -424,19 +449,16 @@ export class TaskExecutor {
     });
   }
 
-  public async cancel(reason?: string) {
-    try {
-      if (this.isCanceled) return;
-      if (runtimeContextChecker.isNode) this.removeSignalHandlers();
-      const message = `Executor has interrupted by the user. Reason: ${reason}.`;
-      this.logger.warn(`${message}. Stopping all tasks...`, {
-        tasksInProgress: this.taskQueue.size,
-      });
-      this.isCanceled = true;
-      await this.shutdown();
-    } catch (error) {
-      this.logger.error(`Error while cancelling the executor`, error);
-    }
+  private handleCriticalError(err: Error) {
+    this.options.eventTarget?.dispatchEvent(new Events.ComputationFailed({ reason: err.toString() }));
+    const message =
+      "TaskExecutor faced a critical error and will now cancel work, terminate agreements and request settling payments";
+    this.logger.error(message, err);
+    // Make sure users know in case they didn't configure logging
+    console.error(message, err);
+    this.cancel(`Cancelling due to critical error ${err}`).catch((cancelErr) =>
+      this.logger.error("Issue when cancelling Task Executor", { err: cancelErr }),
+    );
   }
 
   private printStats() {
