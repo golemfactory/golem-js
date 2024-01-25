@@ -10,7 +10,7 @@ import { ProposalEvent, ProposalRejectedEvent } from "ya-ts-client/dist/ya-marke
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
 import * as events from "../events/events";
 import { GolemMarketError, MarketErrorCode } from "./error";
-import { GolemError, GolemInternalError } from "../error/golem-error";
+import { GolemError, GolemPlatformError } from "../error/golem-error";
 
 export interface DemandDetails {
   properties: Array<{ key: string; value: string | number | boolean }>;
@@ -229,7 +229,7 @@ export class Demand extends EventTarget {
               new DemandEvent(
                 DEMAND_EVENT_TYPE,
                 undefined,
-                new GolemInternalError(`Unable to collect offers. ${reason}`, error),
+                new GolemPlatformError(`Unable to collect offers. ${reason}`, error),
               ),
             );
             break;

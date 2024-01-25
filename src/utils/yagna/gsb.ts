@@ -1,6 +1,6 @@
 // TODO: replace with a proper REST API client once ya-client and ya-ts-client are updated
 import { BaseAPI } from "ya-ts-client/dist/ya-net/base";
-import { GolemInternalError } from "../../error/golem-error";
+import { GolemPlatformError } from "../../error/golem-error";
 
 export type ServiceModel = {
   servicesId: string;
@@ -32,11 +32,11 @@ export class RequestorApi extends BaseAPI implements GsbRequestorApi {
         authorization: `Bearer ${this.configuration?.apiKey}`,
       },
     }).catch((e) => {
-      throw new GolemInternalError(`Failed to create service: ${e}`, e);
+      throw new GolemPlatformError(`Failed to create service: ${e}`, e);
     });
 
     if (!response.ok) {
-      throw new GolemInternalError(`Failed to create service: ${response.statusText}`);
+      throw new GolemPlatformError(`Failed to create service: ${response.statusText}`);
     }
 
     return await response.json();
@@ -47,11 +47,11 @@ export class RequestorApi extends BaseAPI implements GsbRequestorApi {
       method: "DELETE",
       headers: { authorization: `Bearer ${this.configuration?.apiKey}` },
     }).catch((e) => {
-      throw new GolemInternalError(`Failed to delete service: ${e}`);
+      throw new GolemPlatformError(`Failed to delete service: ${e}`);
     });
 
     if (!response.ok) {
-      throw new GolemInternalError(`Failed to delete service: ${response.statusText}`);
+      throw new GolemPlatformError(`Failed to delete service: ${response.statusText}`);
     }
   }
 }

@@ -7,7 +7,7 @@ import { RequestorApi as GsbRequestorApi } from "./gsb";
 import { Agent } from "http";
 import { Configuration } from "ya-ts-client/dist/ya-payment";
 import * as EnvUtils from "../env";
-import { GolemConfigurationError, GolemUserError } from "../../error/golem-error";
+import { GolemConfigurationError, GolemPlatformError, GolemUserError } from "../../error/golem-error";
 import { v4 } from "uuid";
 
 export type YagnaApi = {
@@ -102,7 +102,7 @@ export class Yagna {
         ),
       );
     }
-    return Promise.reject(error);
+    return Promise.reject(new GolemPlatformError(`Yagna request failed. ${error}`, error));
   }
 
   protected addErrorHandler(api: YagnaApi) {
