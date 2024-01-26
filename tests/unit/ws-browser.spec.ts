@@ -148,7 +148,7 @@ describe("WebSocketBrowserStorageProvider", () => {
 
   describe("publishFile()", () => {
     it("should fail", async () => {
-      await expect(() => provider.publishFile()).rejects.toThrowError(new GolemInternalError("Not implemented"));
+      await expect(() => provider.publishFile()).rejects.toMatchError(new GolemInternalError("Not implemented"));
     });
   });
 
@@ -241,7 +241,7 @@ describe("WebSocketBrowserStorageProvider", () => {
 
   describe("receiveFile()", () => {
     it("should fail", async () => {
-      await expect(() => provider.receiveFile()).rejects.toThrowError(new GolemInternalError("Not implemented"));
+      await expect(() => provider.receiveFile()).rejects.toMatchError(new GolemInternalError("Not implemented"));
     });
   });
 

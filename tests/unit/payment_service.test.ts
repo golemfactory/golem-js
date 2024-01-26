@@ -40,7 +40,7 @@ describe("Payment Service", () => {
       const errorYagnaApiMock = new Error("test error");
       when(paymentApiSpy.createAllocation(anything())).thenReject(errorYagnaApiMock);
       const paymentService = new PaymentService(yagnaApi, { logger });
-      await expect(paymentService.createAllocation()).rejects.toThrow(
+      await expect(paymentService.createAllocation()).rejects.toMatchError(
         new GolemPaymentError(
           `Could not create new allocation. ${errorYagnaApiMock}`,
           PaymentErrorCode.AllocationCreationFailed,

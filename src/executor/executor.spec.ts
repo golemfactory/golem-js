@@ -4,7 +4,7 @@ import { Task, TaskService } from "../task/";
 import { TaskExecutor } from "./executor";
 import { sleep } from "../utils";
 import { LoggerMock } from "../../tests/mock";
-import { GolemConfigurationError } from "../error/golem-error";
+import { GolemConfigError } from "../error/golem-error";
 import { GolemWorkError, WorkErrorCode } from "../task/error";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -142,8 +142,8 @@ describe("Task Executor", () => {
         logger,
         yagnaOptions,
       });
-      await expect(executorPromise).rejects.toThrow(
-        new GolemConfigurationError("The maxTaskRetries parameter cannot be less than zero"),
+      await expect(executorPromise).rejects.toMatchError(
+        new GolemConfigError("The maxTaskRetries parameter cannot be less than zero"),
       );
     });
 
@@ -177,8 +177,15 @@ describe("Task Executor", () => {
 
       rejectedSpy.mockImplementationOnce(() => true);
       errorSpy.mockImplementationOnce(() => new Error("error 1"));
-      await expect(executor.run(() => Promise.resolve())).rejects.toThrow(
-        new GolemWorkError("Unable to execute task. Error: error 1", WorkErrorCode.ScriptExecutionFailed),
+      await expect(executor.run(() => Promise.resolve())).rejects.toMatchError(
+        new GolemWorkError(
+          "Unable to execute task. Error: error 1",
+          WorkErrorCode.TaskExecutionFailed,
+          undefined,
+          undefined,
+          undefined,
+          new Error("error 1"),
+        ),
       );
 
       rejectedSpy.mockImplementationOnce(() => false);

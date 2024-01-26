@@ -4,7 +4,6 @@ import { YagnaOptions } from "../executor";
 import { NetworkConfig } from "./config";
 import { NetworkNode } from "./node";
 import { GolemNetworkError, NetworkErrorCode } from "./error";
-import { GolemMarketError } from "../market";
 
 /**
  * @hidden
@@ -32,8 +31,6 @@ export interface NetworkInfo {
   mask: string;
   nodes: { [ip: string]: string };
 }
-
-export class NetworkError extends GolemNetworkError {}
 
 /**
  * Network module - an object represents VPN created between the requestor and the provider nodes within Golem Network.
@@ -81,12 +78,7 @@ export class Network {
       throw new GolemNetworkError(
         `Unable to create network. ${error?.response?.data?.message || error}`,
         NetworkErrorCode.NetworkCreationFailed,
-        {
-          id: config.ownerId,
-          ip: config.ip,
-          mask: config.mask || "",
-          nodes: {},
-        },
+        undefined,
         error,
       );
     }
@@ -153,7 +145,7 @@ export class Network {
       this.logger.debug(`Node has added to the network.`, { id: nodeId, ip: ipv4.toString() });
       return node;
     } catch (error) {
-      if (error instanceof GolemMarketError) {
+      if (error instanceof GolemNetworkError) {
         throw error;
       }
       throw new GolemNetworkError(
@@ -195,7 +187,7 @@ export class Network {
 
   private ensureIpInNetwork(ip: IPv4): boolean {
     if (!this.ipRange.contains(new IPv4CidrRange(ip, new IPv4Prefix(BigInt(this.mask.prefix)))))
-      throw new NetworkError(
+      throw new GolemNetworkError(
         `The given IP ('${ip.toString()}') address must belong to the network ('${this.ipRange.toCidrString()}').`,
         NetworkErrorCode.AddressOutOfRange,
         this.getNetworkInfo(),
@@ -205,7 +197,7 @@ export class Network {
 
   private ensureIpUnique(ip: IPv4) {
     if (!this.isIpUnique(ip))
-      throw new NetworkError(
+      throw new GolemNetworkError(
         `IP '${ip.toString()}' has already been assigned in this network.`,
         NetworkErrorCode.AddressAlreadyAssigned,
         this.getNetworkInfo(),
@@ -214,8 +206,8 @@ export class Network {
 
   private ensureIdUnique(id: string) {
     if (this.nodes.has(id))
-      throw new NetworkError(
-        `ID '${id}' has already been assigned in this network.`,
+      throw new GolemNetworkError(
+        `Network ID '${id}' has already been assigned in this network.`,
         NetworkErrorCode.AddressAlreadyAssigned,
         this.getNetworkInfo(),
       );

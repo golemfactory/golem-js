@@ -46,7 +46,7 @@ describe("Network Service", () => {
     it("should not add node if the service is not started", async () => {
       const networkService = new NetworkService(yagnaApi, { logger });
       const result = networkService.addNode("provider_2");
-      await expect(result).rejects.toThrow(
+      await expect(result).rejects.toMatchError(
         new GolemNetworkError(
           "The service is not started and the network does not exist",
           NetworkErrorCode.NetworkSetupMissing,

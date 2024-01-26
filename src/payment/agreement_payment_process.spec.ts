@@ -24,6 +24,7 @@ beforeEach(() => {
     walletAddress: "0x1234",
   };
   when(agreementMock.getProviderInfo()).thenReturn(testProviderInfo);
+  when(invoiceMock.provider).thenReturn(testProviderInfo);
 });
 
 describe("AgreementPaymentProcess", () => {
@@ -86,7 +87,7 @@ describe("AgreementPaymentProcess", () => {
           invoiceFilter: () => true,
         });
         const invoice = instance(invoiceMock);
-        await expect(() => process.addInvoice(invoice)).rejects.toThrow(
+        await expect(() => process.addInvoice(invoice)).rejects.toMatchError(
           new GolemPaymentError(
             "The invoice invoice-id for agreement agreement-id has status ACCEPTED, but we can accept only the ones with status RECEIVED",
             PaymentErrorCode.InvoiceAlreadyReceived,
@@ -184,8 +185,10 @@ describe("AgreementPaymentProcess", () => {
         when(agreementMock.id).thenReturn("agreement-id");
         when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
         when(invoiceMock.isSameAs(anything())).thenReturn(false);
+        const allocation = instance(allocationMock);
+        const agreement = instance(agreementMock);
 
-        const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
+        const process = new AgreementPaymentProcess(agreement, allocation, {
           debitNoteFilter: () => true,
           invoiceFilter: () => true,
         });
@@ -195,8 +198,13 @@ describe("AgreementPaymentProcess", () => {
         const sucess = await process.addInvoice(invoice);
 
         expect(sucess).toEqual(true);
-        await expect(() => process.addInvoice(invoice)).rejects.toThrow(
-          "Agreement agreement-id is already covered with an invoice: invoice-id",
+        await expect(() => process.addInvoice(invoice)).rejects.toMatchError(
+          new GolemPaymentError(
+            "Agreement agreement-id is already covered with an invoice: invoice-id",
+            PaymentErrorCode.AgreementAlreadyPaid,
+            allocation,
+            agreement.getProviderInfo(),
+          ),
         );
         expect(process.isFinished()).toEqual(true);
       });

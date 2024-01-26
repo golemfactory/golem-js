@@ -13,7 +13,7 @@ import { TaskServiceOptions } from "../task/service";
 import { RequireAtLeastOne } from "../utils/types";
 import { TaskExecutorEventsDict } from "./events";
 import { EventEmitter } from "eventemitter3";
-import { GolemConfigurationError, GolemInternalError, GolemTimeoutError } from "../error/golem-error";
+import { GolemConfigError, GolemInternalError, GolemTimeoutError } from "../error/golem-error";
 import { WorkOptions } from "../task/work";
 import { GolemWorkError, WorkErrorCode } from "../task/error";
 
@@ -247,7 +247,7 @@ export class TaskExecutor {
           taskPackage = packageReference;
         }
       } else {
-        const error = new GolemConfigurationError("No package or manifest provided");
+        const error = new GolemConfigError("No package or manifest provided");
         this.logger.error("No package or manifest provided", error);
         throw error;
       }

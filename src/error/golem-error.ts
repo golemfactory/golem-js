@@ -29,7 +29,7 @@ export class GolemAbortError extends GolemUserError {}
  * Represents configuration errors.
  * @example Api key not defined
  */
-export class GolemConfigurationError extends GolemUserError {}
+export class GolemConfigError extends GolemUserError {}
 
 /**
  * Represents errors when the SDK encountered an internal error that wasn't handled correctly.

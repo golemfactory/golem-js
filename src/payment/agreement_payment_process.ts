@@ -157,7 +157,7 @@ export class AgreementPaymentProcess {
           `but we can accept only the ones with status ${InvoiceStatus.Received}`,
         PaymentErrorCode.InvoiceAlreadyReceived,
         this.allocation,
-        this.invoice?.provider,
+        invoice.provider,
       );
     }
 

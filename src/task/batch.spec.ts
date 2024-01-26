@@ -119,7 +119,7 @@ describe("Batch", () => {
       const spy = jest.spyOn(batch["script"], "after");
       activity.mockResultFailure("FAILURE");
 
-      await expect(batch.end()).rejects.toThrow(
+      await expect(batch.end()).rejects.toMatchError(
         new GolemWorkError(
           "Unable to execute script Error: FAILURE",
           WorkErrorCode.ScriptExecutionFailed,
@@ -233,7 +233,7 @@ describe("Batch", () => {
         for await (const r of await batch.endStream()) {
           /* empty */
         }
-      }).rejects.toThrow(
+      }).rejects.toMatchError(
         new GolemWorkError(
           "Unable to execute script Error: ERROR",
           WorkErrorCode.ScriptExecutionFailed,

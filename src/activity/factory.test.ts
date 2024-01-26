@@ -22,20 +22,20 @@ describe("Activity Factory", () => {
         };
 
         when(yagnaAPi.activity).thenReturn(components);
-
-        when(controlApi.createActivity(anything())).thenReject("Foo");
+        const testError = new Error("Foo");
+        when(controlApi.createActivity(anything())).thenReject(testError);
 
         const agreement = instance(agreementMock);
         const factory = new ActivityFactory(agreement, instance(yagnaAPi));
 
-        await expect(() => factory.create()).rejects.toThrow(
+        await expect(() => factory.create()).rejects.toMatchError(
           new GolemWorkError(
-            "Unable to create activity: Foo",
+            "Unable to create activity: Error: Foo",
             WorkErrorCode.ActivityCreationFailed,
             agreement,
             undefined,
             agreement.getProviderInfo(),
-            new Error("Foo"),
+            testError,
           ),
         );
       });

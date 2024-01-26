@@ -53,7 +53,7 @@ describe("Invoice", () => {
       when(mockPaymentApi.acceptInvoice("invoiceId", anything())).thenReject(errorYagnaApiMock);
       when(mockYagnaApi.payment).thenReturn(instance(mockPaymentApi));
       const invoice = await Invoice.create("invoiceId", instance(mockYagnaApi));
-      await expect(invoice.accept(1, "testAllocationId")).rejects.toThrow(
+      await expect(invoice.accept(1, "testAllocationId")).rejects.toMatchError(
         new GolemPaymentError(
           `Unable to accept invoice invoiceId ${errorYagnaApiMock}`,
           PaymentErrorCode.InvoiceAcceptanceFailed,

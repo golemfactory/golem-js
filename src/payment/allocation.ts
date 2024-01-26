@@ -4,7 +4,7 @@ import { Allocation as AllocationModel } from "ya-ts-client/dist/ya-payment/src/
 import { Events } from "../events";
 import { YagnaApi } from "../utils";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
-import { GolemConfigurationError, GolemInternalError } from "../error/golem-error";
+import { GolemConfigError, GolemInternalError } from "../error/golem-error";
 
 /**
  * @hidden
@@ -99,7 +99,7 @@ export class Allocation {
     this.spentAmount = model.spentAmount;
     this.remainingAmount = model.remainingAmount;
     if (!model.address || !model.paymentPlatform) {
-      throw new GolemConfigurationError("Account address and payment platform are required");
+      throw new GolemConfigError("Account address and payment platform are required");
     }
     this.address = model.address;
     this.paymentPlatform = model.paymentPlatform;

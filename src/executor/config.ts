@@ -1,7 +1,7 @@
 import { ExecutorOptions } from "./executor";
 import { Package, PackageOptions } from "../package";
 import { ActivityOptions } from "../activity";
-import { GolemConfigurationError } from "../error/golem-error";
+import { GolemConfigError } from "../error/golem-error";
 import { Logger, runtimeContextChecker, defaultLogger, nullLogger } from "../utils";
 
 const DEFAULTS = Object.freeze({
@@ -52,10 +52,10 @@ export class ExecutorConfig {
     this.activityExecuteTimeout = options.activityExecuteTimeout || options.taskTimeout;
     const apiKey = options?.yagnaOptions?.apiKey || processEnv.env.YAGNA_APPKEY;
     if (!apiKey) {
-      throw new GolemConfigurationError("Api key not defined");
+      throw new GolemConfigError("Api key not defined");
     }
     if (options.maxTaskRetries && options.maxTaskRetries < 0) {
-      throw new GolemConfigurationError("The maxTaskRetries parameter cannot be less than zero");
+      throw new GolemConfigError("The maxTaskRetries parameter cannot be less than zero");
     }
     this.yagnaOptions = {
       apiKey,

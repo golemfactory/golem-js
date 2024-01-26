@@ -78,7 +78,7 @@ describe("Debit Notes", () => {
       const errorYagnaApiMock = new Error("test error");
       when(paymentApiMock.acceptDebitNote("testId", anything())).thenReject(errorYagnaApiMock);
       const debitNote = await DebitNote.create("testId", instance(yagnaApiMock));
-      await expect(debitNote.accept(1, "testId")).rejects.toThrow(
+      await expect(debitNote.accept(1, "testId")).rejects.toMatchError(
         new GolemPaymentError(
           `Unable to accept debit note testId. ${errorYagnaApiMock}`,
           PaymentErrorCode.DebitNoteAcceptanceFailed,
