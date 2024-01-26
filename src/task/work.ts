@@ -19,6 +19,7 @@ import { NetworkNode } from "../network";
 import { RemoteProcess } from "./process";
 import { GolemWorkError, WorkErrorCode } from "./error";
 import { GolemTimeoutError } from "../error/golem-error";
+import { ProviderInfo } from "../agreement";
 
 export type Worker<OutputType> = (ctx: WorkContext) => Promise<OutputType>;
 
@@ -30,7 +31,6 @@ const DEFAULTS = {
 export interface WorkOptions {
   activityPreparingTimeout?: number;
   activityStateCheckingInterval?: number;
-  provider?: { name: string; id: string; networkConfig?: object };
   storageProvider?: StorageProvider;
   networkNode?: NetworkNode;
   logger?: Logger;
@@ -49,7 +49,7 @@ export interface CommandOptions {
  * @description
  */
 export class WorkContext {
-  public readonly provider?: { name: string; id: string; networkConfig?: object };
+  public readonly provider: ProviderInfo;
   private readonly activityPreparingTimeout: number;
   private readonly logger: Logger;
   private readonly activityStateCheckingInterval: number;
@@ -63,7 +63,7 @@ export class WorkContext {
     this.activityPreparingTimeout = options?.activityPreparingTimeout || DEFAULTS.activityPreparingTimeout;
     this.logger = options?.logger ?? defaultLogger("work");
     this.activityStateCheckingInterval = options?.activityStateCheckingInterval || DEFAULTS.activityStateCheckInterval;
-    this.provider = options?.provider;
+    this.provider = activity.agreement.getProviderInfo();
     this.storageProvider = options?.storageProvider ?? new NullStorageProvider();
     this.networkNode = options?.networkNode;
   }
@@ -133,7 +133,7 @@ export class WorkContext {
     state = await this.activity.getState().catch((e) =>
       this.logger.warn("Error while getting activity state", {
         error: e,
-        provider: this.provider?.name,
+        provider: this.provider.name,
       }),
     );
 
@@ -179,7 +179,7 @@ export class WorkContext {
 
     this.logger.debug("Running command", {
       command: isArray ? `${exeOrCmd} ${argsOrOptions?.join(" ")}` : exeOrCmd,
-      provider: this.provider?.name,
+      provider: this.provider.name,
     });
 
     const run = isArray
@@ -367,7 +367,7 @@ export class WorkContext {
         )
         .join(". ");
       this.logger.warn(`Task error`, {
-        provider: this.provider?.name,
+        provider: this.provider.name,
         error: errorMessage,
       });
     }

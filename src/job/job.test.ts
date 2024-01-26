@@ -32,6 +32,7 @@ describe("Job", () => {
       } as Agreement;
       const mockActivity = {
         stop: jest.fn(),
+        agreement: mockAgreement,
       } as unknown as Activity;
 
       jest.spyOn(AgreementPoolService.prototype, "getAgreement").mockResolvedValue(mockAgreement);

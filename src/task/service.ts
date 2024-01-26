@@ -105,7 +105,6 @@ export class TaskService {
 
       const ctx = new WorkContext(activity, {
         activityReadySetupFunctions: this.activitySetupDone.has(activity.id) ? [] : activityReadySetupFunctions,
-        provider: agreement.getProviderInfo(),
         storageProvider: this.options.storageProvider,
         networkNode,
         logger: this.logger,

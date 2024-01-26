@@ -10,7 +10,7 @@ export { ActivityStateEnum, Result, ResultState, Activity, ActivityOptions, Acti
 export { AgreementCandidate, AgreementSelectors, AgreementPoolService, AgreementServiceOptions } from "./agreement";
 export { ProposalFilterFactory, ProposalFilter, MarketHelpers, MarketService, MarketOptions } from "./market";
 export { Package, PackageOptions, AllPackageOptions } from "./package";
-export { PaymentFilters, PaymentService, PaymentOptions } from "./payment";
+export { PaymentFilters, PaymentService, PaymentOptions, InvoiceProcessor, InvoiceAcceptResult } from "./payment";
 export { NetworkService, NetworkServiceOptions } from "./network";
 export { Events, BaseEvent, EVENT_TYPE } from "./events";
 export { Logger, jsonLogger, nullLogger, pinoLogger, defaultLogger, runtimeContextChecker } from "./utils";

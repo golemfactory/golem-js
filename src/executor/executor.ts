@@ -152,7 +152,7 @@ export class TaskExecutor {
    * ```js
    * const executor = await TaskExecutor.create({
    *   subnetTag: "public",
-   *   payment: { driver: "erc-20", network: "goerli" },
+   *   payment: { driver: "erc-20", network: "holesky" },
    *   package: "golem/alpine:3.18.2",
    * });
    * ```

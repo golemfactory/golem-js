@@ -6,3 +6,4 @@ export { Payments, PAYMENT_EVENT_TYPE, InvoiceEvent, DebitNoteEvent } from "./pa
 export { Rejection, RejectionReason } from "./rejection";
 export * as PaymentFilters from "./strategy";
 export { GolemPaymentError, PaymentErrorCode } from "./error";
+export { InvoiceProcessor, InvoiceAcceptResult } from "./InvoiceProcessor";
