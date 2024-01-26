@@ -49,7 +49,6 @@ export class Network {
   private gateway?: IPv4;
   private nodes = new Map<string, NetworkNode>();
   private logger: Logger;
-  private releasedIpAddresses: Array<AbstractIPNum> = [];
 
   /**
    * Create a new VPN.
@@ -153,7 +152,6 @@ export class Network {
     try {
       await this.yagnaApi.net.removeNode(this.id, nodeId);
       this.nodes.delete(nodeId);
-      this.releasedIpAddresses.push(node.ip);
       this.logger.debug(`Node has removed from the network.`, { id: nodeId, ip: node.ip.toString() });
     } catch (error) {
       throw new GolemError(`Unable to remove node ${nodeId}. ${error}`);
@@ -183,7 +181,7 @@ export class Network {
   }
 
   private nextAddress(): IPv4 {
-    const ip = this.ipIterator.next().value || this.releasedIpAddresses.pop();
+    const ip = this.ipIterator.next().value;
     if (!ip) throw new GolemError(`No more addresses available in ${this.ipRange.toCidrString()}`);
     return ip;
   }

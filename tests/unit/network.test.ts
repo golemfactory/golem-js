@@ -99,14 +99,12 @@ describe("Network", () => {
       await expect(network.addNode("4")).rejects.toThrow("No more addresses available in 192.168.0.0/30");
     });
 
-    it("should add a node if the network was full and some node was removed", async () => {
+    it("should not add a node to a previously assigned address", async () => {
       const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/30" });
-      const { id, ip } = await network.addNode("2");
+      await network.addNode("2");
       await network.addNode("3");
       await network.removeNode("2");
-      const fromReleasedAddressees = await network.addNode("4");
-      expect({ id, ip: ip.toString() }).toEqual({ id: "2", ip: "192.168.0.2" });
-      expect(fromReleasedAddressees.ip.toString()).toEqual("192.168.0.2");
+      await expect(network.addNode("4")).rejects.toThrow("No more addresses available in 192.168.0.0/30");
     });
 
     it("should return true if node belongs to the network", async () => {
