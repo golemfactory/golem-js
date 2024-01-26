@@ -12,6 +12,7 @@ export interface PaymentOptions extends BasePaymentOptions {
 }
 
 export const PAYMENT_EVENT_TYPE = "PaymentReceived";
+const UNSUBSCRIBED_EVENT = "Unsubscribed";
 
 export class Payments extends EventTarget {
   private isRunning = true;
@@ -34,11 +35,25 @@ export class Payments extends EventTarget {
   }
 
   /**
-   * Unsubscribe demand from the market
+   * Unsubscribe from collecting payment events.
+   * An error will be thrown when the unsubscribe timeout expires.
    */
   async unsubscribe() {
     this.isRunning = false;
-    this.logger.debug(`Payments unsubscribed`);
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(
+        () =>
+          reject(
+            `The waiting time (${this.options.unsubscribeTimeoutInMs} ms) for unsubscribe payment has been exceeded.`,
+          ),
+        this.options.unsubscribeTimeoutInMs,
+      );
+      this.addEventListener(UNSUBSCRIBED_EVENT, () => {
+        this.logger.debug(`Payments unsubscribed`);
+        clearTimeout(timeoutId);
+        resolve(true);
+      });
+    });
   }
 
   private async subscribe() {
@@ -88,6 +103,7 @@ export class Payments extends EventTarget {
         await sleep(2);
       }
     }
+    this.dispatchEvent(new Event(UNSUBSCRIBED_EVENT));
   }
 
   private async subscribeForDebitNotes() {
