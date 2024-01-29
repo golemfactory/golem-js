@@ -5,3 +5,4 @@ export { Allocation } from "./allocation";
 export { Payments, PAYMENT_EVENT_TYPE, InvoiceEvent, DebitNoteEvent } from "./payments";
 export { Rejection, RejectionReason } from "./rejection";
 export * as PaymentFilters from "./strategy";
+export { InvoiceProcessor, InvoiceAcceptResult } from "./InvoiceProcessor";

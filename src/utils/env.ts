@@ -19,7 +19,7 @@ export function getRepoUrl(): string {
 }
 
 export function getPaymentNetwork(): string {
-  return isNode ? process.env.PAYMENT_NETWORK ?? "goerli" : "goerli";
+  return isNode ? process.env.PAYMENT_NETWORK ?? "holesky" : "holesky";
 }
 
 export function isDevMode(): boolean {

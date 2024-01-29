@@ -1,5 +1,5 @@
 import { LoggerMock, YagnaMock } from "../mock";
-import { NetworkService } from "../../src/network";
+import { NetworkService } from "../../src";
 const logger = new LoggerMock();
 const yagnaApi = new YagnaMock().getApi();
 describe("Network Service", () => {
@@ -26,25 +26,47 @@ describe("Network Service", () => {
   });
 
   describe("Nodes", () => {
-    it("should add node to network", async () => {
-      const networkService = new NetworkService(yagnaApi, { logger });
-      await networkService.run("test_owner_id");
-      await networkService.addNode("provider_2");
-      await logger.expectToInclude(
-        "Node has added to the network.",
-        {
-          id: "provider_2",
-          ip: "192.168.0.2",
-        },
-        10,
-      );
-      await networkService.end();
-    });
+    describe("adding", () => {
+      it("should add node to network", async () => {
+        const networkService = new NetworkService(yagnaApi, { logger });
+        await networkService.run("test_owner_id");
+        await networkService.addNode("provider_2");
+        await logger.expectToInclude(
+          "Node has added to the network.",
+          {
+            id: "provider_2",
+            ip: "192.168.0.2",
+          },
+          10,
+        );
+        await networkService.end();
+      });
 
-    it("should not add node if the service is not started", async () => {
-      const networkService = new NetworkService(yagnaApi, { logger });
-      const result = networkService.addNode("provider_2");
-      await expect(result).rejects.toThrow("The service is not started and the network does not exist");
+      it("should not add node if the service is not started", async () => {
+        const networkService = new NetworkService(yagnaApi, { logger });
+        const result = networkService.addNode("provider_2");
+        await expect(result).rejects.toThrow("The service is not started and the network does not exist");
+      });
+    });
+    describe("removing", () => {
+      it("should remove node from the network", async () => {
+        const networkService = new NetworkService(yagnaApi, { logger });
+        await networkService.run("test_owner_id");
+        await networkService.addNode("provider_2");
+        const removeNetworkApiSpy = jest.spyOn(yagnaApi.net, "removeNode");
+        await networkService.removeNode("provider_2");
+        expect(removeNetworkApiSpy).toHaveBeenCalled();
+        await networkService.end();
+      });
+      it("should not remove node from the network", async () => {
+        const networkService = new NetworkService(yagnaApi, { logger });
+        await networkService.run("test_owner_id");
+        await networkService.addNode("provider_2");
+        await expect(networkService.removeNode("provider_777")).rejects.toThrow(
+          "Unable to remove node provider_777. There is no such node in the network",
+        );
+        await networkService.end();
+      });
     });
   });
 

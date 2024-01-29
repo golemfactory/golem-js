@@ -4,7 +4,7 @@ import { defaultLogger, Logger, sleep, YagnaApi } from "../utils";
 import { StorageProvider } from "../storage";
 import { Agreement, AgreementPoolService } from "../agreement";
 import { PaymentService } from "../payment";
-import { NetworkService } from "../network";
+import { NetworkNode, NetworkService } from "../network";
 import { Activity, ActivityOptions } from "../activity";
 import { TaskConfig } from "./config";
 import { Events } from "../events";
@@ -84,6 +84,7 @@ export class TaskService {
 
     const agreement = await this.agreementPoolService.getAgreement();
     let activity: Activity | undefined;
+    let networkNode: NetworkNode | undefined;
 
     try {
       activity = await this.getOrCreateActivity(agreement);
@@ -101,7 +102,9 @@ export class TaskService {
 
       const activityReadySetupFunctions = task.getActivityReadySetupFunctions();
       const worker = task.getWorker();
-      const networkNode = await this.networkService?.addNode(agreement.provider.id);
+      if (this.networkService && !this.networkService.hasNode(agreement.provider.id)) {
+        networkNode = await this.networkService.addNode(agreement.provider.id);
+      }
 
       const ctx = new WorkContext(activity, {
         activityReadySetupFunctions: this.activitySetupDone.has(activity.id) ? [] : activityReadySetupFunctions,
@@ -164,6 +167,9 @@ export class TaskService {
 
       if (activity) {
         await this.stopActivity(activity, agreement);
+      }
+      if (this.networkService && networkNode) {
+        await this.networkService.removeNode(networkNode.id);
       }
     } finally {
       --this.activeTasksCount;

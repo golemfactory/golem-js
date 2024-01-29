@@ -254,13 +254,6 @@ export class WorkContext {
     return Batch.create(this.activity, this.storageProvider, this.logger);
   }
 
-  /**
-   * @Deprecated This function is only used to throw errors from unit tests. It should be removed.
-   */
-  rejectResult(msg: string) {
-    throw new GolemError(`Work rejected. Reason: ${msg}`);
-  }
-
   getWebsocketUri(port: number): string {
     if (!this.networkNode) throw new GolemError("There is no network in this work context");
     return this.networkNode.getWebsocketUri(port);

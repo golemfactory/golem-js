@@ -141,6 +141,32 @@ export class Network {
   }
 
   /**
+   * Remove the node from the network
+   * @param nodeId
+   */
+  async removeNode(nodeId: string): Promise<void> {
+    const node = this.nodes.get(nodeId);
+    if (!node) {
+      throw new GolemError(`Unable to remove node ${nodeId}. There is no such node in the network`);
+    }
+    try {
+      await this.yagnaApi.net.removeNode(this.id, nodeId);
+      this.nodes.delete(nodeId);
+      this.logger.debug(`Node has removed from the network.`, { id: nodeId, ip: node.ip.toString() });
+    } catch (error) {
+      throw new GolemError(`Unable to remove node ${nodeId}. ${error}`);
+    }
+  }
+
+  /**
+   * Checks whether the node belongs to the network
+   * @param nodeId
+   */
+  hasNode(nodeId: string): boolean {
+    return this.nodes.has(nodeId);
+  }
+
+  /**
    * Remove this network, terminating any connections it provides
    */
   async remove(): Promise<boolean> {

@@ -35,7 +35,7 @@ async function run() {
   } catch (error) {
     logger.error("Computation failed:", error);
   } finally {
-    await executor.end();
+    await executor.shutdown();
   }
 }
 

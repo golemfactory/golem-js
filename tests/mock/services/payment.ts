@@ -1,5 +1,5 @@
-import { Allocation } from "../../../src/payment/allocation";
-import { PaymentService } from "../../../src/payment";
+import { Allocation } from "../../../src/payment";
+import { PaymentService } from "../../../src";
 import { allocationMock } from "../../mock";
 import { Agreement } from "../../../src/agreement";
 
@@ -14,9 +14,6 @@ export const paymentServiceMock: PaymentService = {
     return Promise.resolve(allocationMock);
   },
   acceptPayments(agreement: Agreement) {
-    return true;
-  },
-  acceptDebitNotes(agreementId: string) {
     return true;
   },
 };

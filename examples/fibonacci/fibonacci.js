@@ -34,7 +34,7 @@ program
   .option("-c, --tasks-count <c>", "tasks count", (val) => parseInt(val))
   .option("--subnet-tag <subnet>", "set subnet name, for example 'public'")
   .option("--payment-driver, --driver <driver>", "payment driver name, for example 'erc20'")
-  .option("--payment-network, --network <network>", "network name, for example 'goerli'");
+  .option("--payment-network, --network <network>", "network name, for example 'holesky'");
 program.parse();
 const options = program.opts();
 main(options.fibonacciNumber, options.tasksCount, options.subnetTag, options.driver, options.network);
