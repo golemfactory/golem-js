@@ -99,7 +99,7 @@ describe("Network", () => {
       await expect(network.addNode("4")).rejects.toThrow("No more addresses available in 192.168.0.0/30");
     });
 
-    it("should not add a node to a previously assigned address", async () => {
+    it("should throw an error when there are no free IPs available", async () => {
       const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/30" });
       await network.addNode("2");
       await network.addNode("3");
