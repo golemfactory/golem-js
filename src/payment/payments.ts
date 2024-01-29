@@ -43,9 +43,9 @@ export class Payments extends EventTarget {
       const timeoutId = setTimeout(
         () =>
           reject(
-            `The waiting time (${this.options.unsubscribeTimeoutInMs} ms) for unsubscribe payment has been exceeded.`,
+            `The waiting time (${this.options.unsubscribeTimeoutMs} ms) for unsubscribe payment has been exceeded.`,
           ),
-        this.options.unsubscribeTimeoutInMs,
+        this.options.unsubscribeTimeoutMs,
       );
       this.addEventListener(UNSUBSCRIBED_EVENT, () => {
         this.logger.debug(`Payments unsubscribed`);
