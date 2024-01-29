@@ -3,9 +3,9 @@ import { Package } from "../package";
 import { Proposal } from "./proposal";
 import { AgreementPoolService } from "../agreement";
 import { Allocation } from "../payment";
-import { Demand, DemandEvent, DEMAND_EVENT_TYPE, DemandOptions } from "./demand";
+import { Demand, DEMAND_EVENT_TYPE, DemandEvent, DemandOptions } from "./demand";
 import { MarketConfig } from "./config";
-import { GolemError } from "../error/golem-error";
+import { GolemMarketError, MarketErrorCode } from "./error";
 import { ProposalsBatch } from "./proposals_batch";
 
 export type ProposalFilter = (proposal: Proposal) => boolean;
@@ -78,7 +78,12 @@ export class MarketService {
   }
 
   private async createDemand(): Promise<true> {
-    if (!this.taskPackage || !this.allocation) throw new GolemError("The service has not been started correctly.");
+    if (!this.taskPackage || !this.allocation)
+      throw new GolemMarketError(
+        "The service has not been started correctly.",
+        MarketErrorCode.ServiceNotInitialized,
+        this.demand,
+      );
     this.demand = await Demand.create(this.taskPackage, this.allocation, this.yagnaApi, this.options);
     this.demand.addEventListener(DEMAND_EVENT_TYPE, this.demandEventListener.bind(this));
     this.proposalsCount = {
@@ -93,9 +98,14 @@ export class MarketService {
   private demandEventListener(event: Event) {
     const proposal = (event as DemandEvent).proposal;
     const error = (event as DemandEvent).error;
+    if (error instanceof GolemMarketError && error.code === MarketErrorCode.DemandExpired) {
+      this.logger.error("Demand expired. Trying to subscribe a new one...");
+      this.resubscribeDemand().catch((e) => this.logger?.warn(`Could not resubscribe demand.`, e));
+      return;
+    }
     if (error || !proposal) {
-      this.logger.warn("Subscription failed. Trying to subscribe a new one...");
-      this.resubscribeDemand().catch((e) => this.logger.warn(`Could not resubscribe demand.`, e));
+      this.logger.error("Collecting offers failed. Trying to subscribe a new demand...");
+      this.resubscribeDemand().catch((e) => this.logger?.warn(`Could not resubscribe demand.`, e));
       return;
     }
     if (proposal.isInitial()) this.proposalsBatch.addProposal(proposal);
@@ -122,7 +132,12 @@ export class MarketService {
   }
 
   private async processInitialProposal(proposal: Proposal) {
-    if (!this.allocation) throw new GolemError("The service has not been started correctly.");
+    if (!this.allocation)
+      throw new GolemMarketError(
+        "Allocation is missing. The service has not been started correctly.",
+        MarketErrorCode.MissingAllocation,
+        this.demand,
+      );
     this.logger.debug(`New proposal has been received`, { id: proposal.id });
     this.proposalsCount.initial++;
     try {
@@ -144,7 +159,11 @@ export class MarketService {
 
   private async isProposalValid(proposal: Proposal): Promise<{ result: boolean; reason?: string }> {
     if (!this.allocation) {
-      throw new GolemError("The service has not been started correctly.");
+      throw new GolemMarketError(
+        "Allocation is missing. The service has not been started correctly.",
+        MarketErrorCode.MissingAllocation,
+        this.demand,
+      );
     }
 
     const timeout = proposal.properties["golem.com.payment.debit-notes.accept-timeout?"];

@@ -1,8 +1,9 @@
 import { clear, setExpectedDebitNotes, setExpectedEvents, setExpectedInvoices } from "../mock/rest/payment";
 import { LoggerMock, YagnaMock } from "../mock";
-import { PaymentService, Allocation, PaymentFilters, RejectionReason } from "../../src/payment";
+import { PaymentService, Allocation, PaymentFilters, GolemPaymentError, PaymentErrorCode } from "../../src/payment";
 import { agreement } from "../mock/entities/agreement";
 import { debitNotes, debitNotesEvents, invoiceEvents, invoices } from "../mock/fixtures";
+import { anything, reset, spy, when } from "@johanblumenberg/ts-mockito";
 
 const logger = new LoggerMock();
 const yagnaApi = new YagnaMock().getApi();
@@ -33,6 +34,23 @@ describe("Payment Service", () => {
       await paymentService.end();
       expect(releaseSpy).toHaveBeenCalled();
     });
+
+    it("should throw GolemPaymentError if allocation cannot be created", async () => {
+      const paymentApiSpy = spy(yagnaApi.payment);
+      const errorYagnaApiMock = new Error("test error");
+      when(paymentApiSpy.createAllocation(anything())).thenReject(errorYagnaApiMock);
+      const paymentService = new PaymentService(yagnaApi, { logger });
+      await expect(paymentService.createAllocation()).rejects.toMatchError(
+        new GolemPaymentError(
+          `Could not create new allocation. ${errorYagnaApiMock}`,
+          PaymentErrorCode.AllocationCreationFailed,
+          undefined,
+          undefined,
+          errorYagnaApiMock,
+        ),
+      );
+      reset(paymentApiSpy);
+    });
   });
 
   describe("Processing payments", () => {
@@ -52,7 +70,7 @@ describe("Payment Service", () => {
         {
           invoiceId: invoices[0].invoiceId,
           agreementId: agreement.id,
-          providerName: agreement.provider.name,
+          providerName: agreement.getProviderInfo().name,
         },
         1_000,
       );
@@ -224,9 +242,28 @@ describe("Payment Service", () => {
         {
           invoiceId: invoices[0].invoiceId,
           agreementId: agreement.id,
-          providerName: agreement.provider.name,
+          providerName: agreement.getProviderInfo().name,
         },
         1_000,
+      );
+      await paymentService.end();
+    });
+
+    it("should throw GolemPaymentError if allocation is not created", async () => {
+      const paymentService = new PaymentService(yagnaApi, {
+        logger,
+        invoiceFilter: PaymentFilters.acceptMaxAmountInvoiceFilter(7),
+      });
+      setExpectedEvents(invoiceEvents);
+      setExpectedInvoices(invoices);
+      await paymentService.run();
+      expect(() => paymentService.acceptPayments(agreement)).toThrow(
+        new GolemPaymentError(
+          "You need to create an allocation before starting any payment processes",
+          PaymentErrorCode.MissingAllocation,
+          undefined,
+          agreement.getProviderInfo(),
+        ),
       );
       await paymentService.end();
     });

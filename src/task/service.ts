@@ -9,7 +9,7 @@ import { Activity, ActivityOptions } from "../activity";
 import { TaskConfig } from "./config";
 import { Events } from "../events";
 import { Task } from "./task";
-import { GolemError } from "../error/golem-error";
+import { GolemWorkError, WorkErrorCode } from "./error";
 
 export interface TaskServiceOptions extends ActivityOptions {
   /** Number of maximum parallel running task on one TaskExecutor instance */
@@ -94,16 +94,16 @@ export class TaskService {
           id: task.id,
           agreementId: agreement.id,
           activityId: activity.id,
-          provider: agreement.provider,
+          provider: agreement.getProviderInfo(),
         }),
       );
 
-      this.logger.info(`Task sent to provider`, { taskId: task.id, providerName: agreement.provider.name });
+      this.logger.info(`Task sent to provider`, { taskId: task.id, providerName: agreement.getProviderInfo().name });
 
       const activityReadySetupFunctions = task.getActivityReadySetupFunctions();
       const worker = task.getWorker();
-      if (this.networkService && !this.networkService.hasNode(agreement.provider.id)) {
-        networkNode = await this.networkService.addNode(agreement.provider.id);
+      if (this.networkService && !this.networkService.hasNode(agreement.getProviderInfo().id)) {
+        networkNode = await this.networkService.addNode(agreement.getProviderInfo().id);
       }
 
       const ctx = new WorkContext(activity, {
@@ -126,7 +126,7 @@ export class TaskService {
       task.stop(results);
 
       this.options.eventTarget?.dispatchEvent(new Events.TaskFinished({ id: task.id }));
-      this.logger.info(`Task computed`, { taskId: task.id, providerName: agreement.provider.name });
+      this.logger.info(`Task computed`, { taskId: task.id, providerName: agreement.getProviderInfo().name });
     } catch (error) {
       task.stop(undefined, error);
 
@@ -140,7 +140,7 @@ export class TaskService {
             id: task.id,
             activityId: activity?.id,
             agreementId: agreement.id,
-            provider: agreement.provider,
+            provider: agreement.getProviderInfo(),
             retriesCount: task.getRetriesCount(),
             reason,
           }),
@@ -156,13 +156,20 @@ export class TaskService {
             id: task.id,
             agreementId: agreement.id,
             activityId: activity?.id,
-            provider: agreement.provider,
+            provider: agreement.getProviderInfo(),
             reason,
           }),
         );
         task.cleanup();
         this.logger.error(`Task has been rejected`, { taskId: task.id, reason });
-        throw new GolemError(`Task ${task.id} has been rejected! ${reason}`);
+        throw new GolemWorkError(
+          `Task ${task.id} has been rejected! ${reason}`,
+          WorkErrorCode.TaskRejected,
+          agreement,
+          activity,
+          agreement.getProviderInfo(),
+          error,
+        );
       }
 
       if (activity) {

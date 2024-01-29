@@ -1,4 +1,13 @@
 {
   "preset": "ts-jest",
-  "testEnvironment": "node"
+  "testEnvironment": "node",
+  "setupFilesAfterEnv": ["./tests/jest.setup.ts"],
+  "transform": {
+    "^.+\\.tsx?$": [
+      "ts-jest",
+      {
+        "tsconfig": "tsconfig.spec.json"
+      }
+    ]
+  }
 }

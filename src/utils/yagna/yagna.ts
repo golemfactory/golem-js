@@ -7,7 +7,7 @@ import { RequestorApi as GsbRequestorApi } from "./gsb";
 import { Agent } from "http";
 import { Configuration } from "ya-ts-client/dist/ya-payment";
 import * as EnvUtils from "../env";
-import { GolemError } from "../../error/golem-error";
+import { GolemConfigError, GolemPlatformError, GolemUserError } from "../../error/golem-error";
 import { v4 } from "uuid";
 import semverSatisfies from "semver/functions/satisfies";
 import semverCoerce from "semver/functions/coerce";
@@ -61,7 +61,7 @@ export class Yagna {
     this.httpAgent = new Agent({ keepAlive: true });
     this.controller = options?.abortController ?? new AbortController();
     this.apiKey = options?.apiKey || EnvUtils.getYagnaAppKey();
-    if (!this.apiKey) throw new GolemError("Api key not defined");
+    if (!this.apiKey) throw new GolemConfigError("Api key not defined");
     this.apiBaseUrl = options?.basePath || EnvUtils.getYagnaApiUrl();
     this.api = this.createApi();
   }
@@ -80,13 +80,13 @@ export class Yagna {
 
     const normVersion = semverCoerce(version);
     if (!normVersion) {
-      throw new GolemError(
+      throw new GolemPlatformError(
         `Unreadable yana version '${version}'. Can't proceed without checking yagna version support status.`,
       );
     }
 
     if (!semverSatisfies(normVersion, `>=${MIN_SUPPORTED_YAGNA}`)) {
-      throw new GolemError(
+      throw new GolemPlatformError(
         `You run yagna in version ${version} and the minimal version supported by the SDK is ${MIN_SUPPORTED_YAGNA}. ` +
           `Please consult the golem-js README to find matching SDK version or upgrade your yagna installation.`,
       );
@@ -109,7 +109,7 @@ export class Yagna {
 
       return res.current.version;
     } catch (err) {
-      throw new GolemError(`Failed to establish yagna version due to: ${err}`);
+      throw new GolemPlatformError(`Failed to establish yagna version due to: ${err}`, err);
     }
   }
 
@@ -156,10 +156,13 @@ export class Yagna {
   protected errorHandler(error: Error): Promise<Error> {
     if ("code" in error && CONNECTIONS_ERROR_CODES.includes((error.code as string) ?? "")) {
       return Promise.reject(
-        new GolemError(`No connection to Yagna. Make sure the service is running at the address ${this.apiBaseUrl}`),
+        new GolemUserError(
+          `No connection to Yagna. Make sure the service is running at the address ${this.apiBaseUrl}`,
+          error,
+        ),
       );
     }
-    return Promise.reject(error);
+    return Promise.reject(new GolemPlatformError(`Yagna request failed. ${error}`, error));
   }
 
   protected addErrorHandler(api: YagnaApi) {

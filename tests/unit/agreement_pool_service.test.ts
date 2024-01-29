@@ -1,3 +1,5 @@
+import { instance, mock, when } from "@johanblumenberg/ts-mockito";
+
 jest.mock("ya-ts-client/dist/ya-market/api");
 
 import { LoggerMock, YagnaMock } from "../mock";
@@ -5,7 +7,8 @@ import { Agreement, AgreementPoolService } from "../../src/agreement";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import { Proposal as ProposalModel } from "ya-ts-client/dist/ya-market/src/models/proposal";
 import { ProposalAllOfStateEnum } from "ya-ts-client/dist/ya-market";
-import { Proposal } from "../../src/market";
+import { Demand, Proposal } from "../../src/market";
+import { Allocation } from "../../src/payment";
 
 const logger = new LoggerMock();
 const mockAPI = new RequestorApi();
@@ -13,6 +16,12 @@ const mockSetCounteringProposalReference = jest.fn();
 const yagnaApi = new YagnaMock().getApi();
 
 const createProposal = (id) => {
+  const allocationMock = mock(Allocation);
+  when(allocationMock.paymentPlatform).thenReturn("test-payment-platform");
+  const demandMock = mock(Demand);
+  when(demandMock.id).thenReturn(id);
+  when(demandMock.allocation).thenReturn(instance(allocationMock));
+  const testDemand = instance(demandMock);
   const model: ProposalModel = {
     constraints: "",
     issuerId: "",
@@ -36,18 +45,7 @@ const createProposal = (id) => {
     },
   };
 
-  return new Proposal(
-    id,
-    null,
-    mockSetCounteringProposalReference,
-    mockAPI,
-    model,
-    {
-      constraints: "",
-      properties: {},
-    },
-    "test-payment-platform",
-  );
+  return new Proposal(testDemand, null, mockSetCounteringProposalReference, mockAPI, model);
 };
 
 describe("Agreement Pool Service", () => {

@@ -10,7 +10,7 @@ import { Package, PackageOptions } from "../package";
 import { Activity, ActivityOptions } from "../activity";
 import { EventEmitter } from "eventemitter3";
 import { GftpStorageProvider, NullStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../storage";
-import { GolemError } from "../error/golem-error";
+import { GolemAbortError, GolemConfigError, GolemUserError } from "../error/golem-error";
 
 export { TaskState as JobState } from "../task/task";
 
@@ -95,12 +95,12 @@ export class Job<Output = unknown> {
    */
   startWork(workOnGolem: Worker<Output>, options: RunJobOptions = {}) {
     if (this.isRunning()) {
-      throw new GolemError(`Job ${this.id} is already running`);
+      throw new GolemUserError(`Job ${this.id} is already running`);
     }
 
     const packageOptions = Object.assign({}, this.defaultOptions.package, options.package);
     if (!packageOptions.imageHash && !packageOptions.manifest && !packageOptions.imageTag) {
-      throw new GolemError("You must specify either imageHash, imageTag or manifest in package options");
+      throw new GolemConfigError("You must specify either imageHash, imageTag or manifest in package options");
     }
 
     this.state = JobState.Pending;
@@ -169,7 +169,7 @@ export class Job<Output = unknown> {
   }) {
     if (signal.aborted) {
       this.events.emit("canceled");
-      throw new GolemError("Canceled");
+      throw new GolemAbortError("Canceled");
     }
 
     const allocation = await paymentService.createAllocation();
@@ -193,7 +193,7 @@ export class Job<Output = unknown> {
 
     const workContext = new WorkContext(activity, {
       storageProvider,
-      networkNode: await networkService.addNode(agreement.provider.id),
+      networkNode: await networkService.addNode(agreement.getProviderInfo().id),
       activityPreparingTimeout:
         this.defaultOptions.work?.activityPreparingTimeout || options.work?.activityPreparingTimeout,
       activityStateCheckingInterval:
@@ -210,7 +210,7 @@ export class Job<Output = unknown> {
     };
     if (signal.aborted) {
       await onAbort();
-      throw new GolemError("Canceled");
+      throw new GolemAbortError("Canceled");
     }
     signal.addEventListener("abort", onAbort, { once: true });
     return worker(workContext);
@@ -232,7 +232,7 @@ export class Job<Output = unknown> {
    */
   async cancel() {
     if (!this.isRunning) {
-      throw new GolemError(`Job ${this.id} is not running`);
+      throw new GolemUserError(`Job ${this.id} is not running`);
     }
     this.abortController.abort();
     return new Promise<void>((resolve) => {
@@ -252,7 +252,7 @@ export class Job<Output = unknown> {
       throw this.error;
     }
     if (!this.isRunning()) {
-      throw new GolemError(`Job ${this.id} is not running`);
+      throw new GolemUserError(`Job ${this.id} is not running`);
     }
     return new Promise((resolve, reject) => {
       this.events.once("ended", () => {

@@ -1,4 +1,4 @@
-import { GolemError } from "../error/golem-error";
+import { GolemInternalError } from "../error/golem-error";
 
 /**
  * @ignore
@@ -15,5 +15,5 @@ export const isWebWorker =
  * @ignore
  */
 export function checkAndThrowUnsupportedInBrowserError(feature: string) {
-  if (isBrowser) throw new GolemError(`Feature ${feature} is unsupported in the browser.`);
+  if (isBrowser) throw new GolemInternalError(`Feature ${feature} is unsupported in the browser.`);
 }

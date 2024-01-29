@@ -6,8 +6,9 @@ import sleep from "../utils/sleep";
 import { ActivityFactory } from "./factory";
 import { ActivityConfig } from "./config";
 import { Events } from "../events";
-import { Agreement } from "../agreement";
-import { GolemError } from "../error/golem-error";
+import { Agreement, ProviderInfo } from "../agreement";
+import { GolemWorkError, WorkErrorCode } from "../task/error";
+import { GolemAbortError, GolemInternalError, GolemTimeoutError } from "../error/golem-error";
 
 export enum ActivityStateEnum {
   New = "New",
@@ -85,6 +86,10 @@ export class Activity {
     return factory.create(secure);
   }
 
+  public getProviderInfo(): ProviderInfo {
+    return this.agreement.getProviderInfo();
+  }
+
   /**
    * Execute script
    *
@@ -95,16 +100,23 @@ export class Activity {
   public async execute(script: ExeScriptRequest, stream?: boolean, timeout?: number): Promise<Readable> {
     let batchId: string, batchSize: number;
     let startTime = new Date();
-
     try {
       batchId = await this.send(script);
       startTime = new Date();
       batchSize = JSON.parse(script.text).length;
     } catch (error) {
+      const message = error?.response?.data?.message || error.message || error;
       this.logger.error("Execution of script failed.", {
-        reason: error?.response?.data?.message || error.message || error,
+        reason: message,
       });
-      throw new GolemError(error);
+      throw new GolemWorkError(
+        `Unable to execute script ${message}`,
+        WorkErrorCode.ScriptExecutionFailed,
+        this.agreement,
+        this,
+        this.getProviderInfo(),
+        error,
+      );
     }
 
     this.logger.debug(`Script sent.`, { batchId });
@@ -150,7 +162,14 @@ export class Activity {
       this.logger.warn(`Cannot query activity state`, {
         reason: error?.response?.data?.message || error?.message || error,
       });
-      throw error;
+      throw new GolemWorkError(
+        `Cannot query activity state: ${error?.response?.data?.message || error?.message || error}`,
+        WorkErrorCode.ActivityStatusQueryFailed,
+        this.agreement,
+        this,
+        this.getProviderInfo(),
+        error,
+      );
     }
   }
 
@@ -162,20 +181,24 @@ export class Activity {
   }
 
   private async end() {
-    this.eventSource?.close();
-    await this.yagnaApi.activity.control
-      .destroyActivity(this.id, this.options.activityRequestTimeout / 1000, {
+    try {
+      this.eventSource?.close();
+      await this.yagnaApi.activity.control.destroyActivity(this.id, this.options.activityRequestTimeout / 1000, {
         timeout: this.options.activityRequestTimeout + 1000,
-      })
-      .catch((error) => {
-        throw new GolemError(
-          `Unable to destroy activity ${this.id}. ${error?.response?.data?.message || error?.message || error}`,
-        );
       });
-    this.options.eventTarget?.dispatchEvent(
-      new Events.ActivityDestroyed({ id: this.id, agreementId: this.agreement.id }),
-    );
-    this.logger.debug(`Activity destroyed`, { id: this.id });
+      this.options.eventTarget?.dispatchEvent(
+        new Events.ActivityDestroyed({ id: this.id, agreementId: this.agreement.id }),
+      );
+      this.logger.debug(`Activity destroyed`, { id: this.id });
+    } catch (error) {
+      throw new GolemWorkError(
+        `Unable to destroy activity ${this.id}. ${error?.response?.data?.message || error?.message || error}`,
+        WorkErrorCode.ActivityDestroyingFailed,
+        this.agreement,
+        this,
+        this.getProviderInfo(),
+      );
+    }
   }
 
   private async pollingBatch(batchId: string, startTime: Date, timeout?: number): Promise<Readable> {
@@ -184,7 +207,9 @@ export class Activity {
     let lastIndex: number;
     let retryCount = 0;
     const maxRetries = 5;
-    const { id: activityId, agreement, logger } = this;
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const activity = this;
+    const { id: activityId, agreement, logger } = activity;
     const isRunning = () => this.isRunning;
     const { activityExecuteTimeout, eventTarget, activityExeBatchResultPollIntervalSeconds } = this.options;
     const api = this.yagnaApi.activity;
@@ -199,12 +224,12 @@ export class Activity {
 
           if (startTime.valueOf() + (timeout || activityExecuteTimeout) <= new Date().valueOf()) {
             logger.debug("Activity probably timed-out, will stop polling for batch execution results");
-            return this.destroy(new GolemError(`Activity ${activityId} timeout.`));
+            return this.destroy(new GolemTimeoutError(`Activity ${activityId} timeout.`));
           }
 
           if (!isRunning()) {
             logger.debug("Activity is no longer running, will stop polling for batch execution results");
-            return this.destroy(new GolemError(`Activity ${activityId} has been interrupted.`));
+            return this.destroy(new GolemAbortError(`Activity ${activityId} has been interrupted.`));
           }
 
           try {
@@ -243,7 +268,16 @@ export class Activity {
               eventTarget?.dispatchEvent(
                 new Events.ScriptExecuted({ activityId, agreementId: agreement.id, success: false }),
               );
-              return this.destroy(new GolemError(`Unable to get activity results. ${error?.message || error}`));
+              return this.destroy(
+                new GolemWorkError(
+                  `Unable to get activity results. ${error?.message || error}`,
+                  WorkErrorCode.ActivityResultsFetchingFailed,
+                  agreement,
+                  activity,
+                  activity.getProviderInfo(),
+                  error,
+                ),
+              );
             }
           }
         }
@@ -274,7 +308,8 @@ export class Activity {
     this.eventSource = eventSource;
 
     let isBatchFinished = false;
-    const activityId = this.id;
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const activity = this;
     const isRunning = () => this.isRunning;
     const activityExecuteTimeout = this.options.activityExecuteTimeout;
     const { logger } = this;
@@ -289,16 +324,22 @@ export class Activity {
           let error: Error | undefined;
           if (startTime.valueOf() + (timeout || activityExecuteTimeout) <= new Date().valueOf()) {
             logger.debug("Activity probably timed-out, will stop streaming batch execution results");
-            error = new GolemError(`Activity ${activityId} timeout.`);
+            error = new GolemTimeoutError(`Activity ${activity.id} timeout.`);
           }
 
           if (!isRunning()) {
             logger.debug("Activity is no longer running, will stop streaming batch execution results");
-            error = new GolemError(`Activity ${activityId} has been interrupted.`);
+            error = new GolemAbortError(`Activity ${activity.id} has been interrupted.`);
           }
 
           if (errors.length) {
-            error = new GolemError(`GetExecBatchResults failed due to errors: ${JSON.stringify(errors)}`);
+            error = new GolemWorkError(
+              `Unable to get activity results. ${JSON.stringify(errors)}`,
+              WorkErrorCode.ActivityResultsFetchingFailed,
+              activity.agreement,
+              activity,
+              activity.getProviderInfo(),
+            );
           }
           if (error) {
             eventSource?.close();
@@ -344,7 +385,13 @@ export class Activity {
       this.logger.warn(`${failMsg} Giving up after ${retryCount} attempts.`, error);
     }
 
-    throw new GolemError(`Command #${cmdIndex || 0} getExecBatchResults error: ${error.message}`);
+    throw new GolemWorkError(
+      `Command #${cmdIndex || 0} getExecBatchResults error: ${error.message}`,
+      WorkErrorCode.ActivityResultsFetchingFailed,
+      this.agreement,
+      this,
+      this.getProviderInfo(),
+    );
   }
 
   private isTimeoutError(error: Error | AxiosError) {
@@ -393,7 +440,7 @@ export class Activity {
         isBatchFinished: event.index + 1 >= batchSize && Boolean(event?.kind?.finished),
       });
     } catch (error) {
-      throw new GolemError(`Cannot parse ${msg} as StreamingBatchEvent`);
+      throw new GolemInternalError(`Cannot parse ${msg} as StreamingBatchEvent`);
     }
   }
 }

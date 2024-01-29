@@ -19,7 +19,7 @@
     "resolveJsonModule": true
   },
   "exclude": ["dist", "node_modules", "examples", "cypress.config.ts"],
-  "include": ["src/**/*.spec.ts", "tests/unit/**/*.test.ts", "tests/unit/**/*.spec.ts"],
+  "include": ["src/**/*.spec.ts", "tests/unit/**/*.test.ts", "tests/unit/**/*.spec.ts", "tests/jest.d.ts"],
   "ts-node": {
     "esm": true,
     "compilerOptions": {

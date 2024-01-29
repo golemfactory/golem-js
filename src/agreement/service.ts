@@ -2,9 +2,8 @@ import Bottleneck from "bottleneck";
 import { Logger, YagnaApi, defaultLogger, sleep } from "../utils";
 import { Agreement, AgreementOptions, AgreementStateEnum } from "./agreement";
 import { AgreementServiceConfig } from "./config";
-import { Proposal } from "../market";
+import { GolemMarketError, MarketErrorCode, Proposal } from "../market";
 import { AgreementEvent, AgreementTerminatedEvent } from "ya-ts-client/dist/ya-market";
-import { GolemError } from "../error/golem-error";
 
 export interface AgreementDTO {
   id: string;
@@ -116,7 +115,11 @@ export class AgreementPoolService {
       }
     }
     if (!agreement || !this.isServiceRunning) {
-      throw new GolemError("Unable to get agreement. Agreement service is not running");
+      throw new GolemMarketError(
+        "Unable to get agreement. Agreement service is not running",
+        MarketErrorCode.ServiceNotInitialized,
+        agreement?.proposal?.demand,
+      );
     }
     return agreement;
   }
@@ -176,20 +179,24 @@ export class AgreementPoolService {
 
   async createAgreement(candidate: AgreementCandidate) {
     try {
-      let agreement = await Agreement.create(candidate.proposal.id, this.yagnaApi, this.config.options);
+      let agreement = await Agreement.create(candidate.proposal, this.yagnaApi, this.config.options);
       agreement = await this.waitForAgreementApproval(agreement);
       const state = await agreement.getState();
 
       if (state !== AgreementStateEnum.Approved) {
-        throw new GolemError(`Agreement ${agreement.id} cannot be approved. Current state: ${state}`);
+        throw new GolemMarketError(
+          `Agreement ${agreement.id} cannot be approved. Current state: ${state}`,
+          MarketErrorCode.AgreementApprovalFailed,
+          agreement.proposal.demand,
+        );
       }
-      this.logger.info(`Agreement confirmed by provider`, { providerName: agreement.provider.name });
+      this.logger.info(`Agreement confirmed by provider`, { providerName: agreement.getProviderInfo().name });
 
       this.agreements.set(agreement.id, agreement);
 
       candidate.agreement = {
         id: agreement.id,
-        provider: { id: agreement.provider.id, name: agreement.provider.name },
+        provider: agreement.getProviderInfo(),
       };
 
       this.candidateMap.set(agreement.id, candidate);
@@ -207,7 +214,7 @@ export class AgreementPoolService {
 
     if (state === AgreementStateEnum.Proposal) {
       await agreement.confirm(this.yagnaApi.appSessionId);
-      this.logger.debug(`Agreement proposed to provider`, { providerName: agreement.provider.name });
+      this.logger.debug(`Agreement proposed to provider`, { providerName: agreement.getProviderInfo().name });
     }
 
     await this.yagnaApi.market.waitForApproval(agreement.id, this.config.agreementWaitingForApprovalTimeout);

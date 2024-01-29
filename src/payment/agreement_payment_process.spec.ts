@@ -6,6 +6,7 @@ import { Invoice } from "./invoice";
 import { InvoiceStatus } from "ya-ts-client/dist/ya-payment";
 import { RejectionReason } from "./rejection";
 import { DebitNote } from "./debit_note";
+import { GolemPaymentError, PaymentErrorCode } from "./error";
 
 const agreementMock = mock(Agreement);
 const allocationMock = mock(Allocation);
@@ -17,6 +18,13 @@ beforeEach(() => {
   reset(allocationMock);
   reset(invoiceMock);
   reset(debitNoteMock);
+  const testProviderInfo = {
+    id: "test-provider-id",
+    name: "test-provider-name",
+    walletAddress: "0x1234",
+  };
+  when(agreementMock.getProviderInfo()).thenReturn(testProviderInfo);
+  when(invoiceMock.provider).thenReturn(testProviderInfo);
 });
 
 describe("AgreementPaymentProcess", () => {
@@ -72,14 +80,20 @@ describe("AgreementPaymentProcess", () => {
         when(invoiceMock.agreementId).thenReturn("agreement-id");
         when(invoiceMock.amount).thenReturn(0.123);
         when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Accepted);
+        const allocation = instance(allocationMock);
 
-        const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
+        const process = new AgreementPaymentProcess(instance(agreementMock), allocation, {
           debitNoteFilter: () => true,
           invoiceFilter: () => true,
         });
-
-        await expect(() => process.addInvoice(instance(invoiceMock))).rejects.toThrow(
-          "The invoice invoice-id for agreement agreement-id has status ACCEPTED, but we can accept only the ones with status RECEIVED",
+        const invoice = instance(invoiceMock);
+        await expect(() => process.addInvoice(invoice)).rejects.toMatchError(
+          new GolemPaymentError(
+            "The invoice invoice-id for agreement agreement-id has status ACCEPTED, but we can accept only the ones with status RECEIVED",
+            PaymentErrorCode.InvoiceAlreadyReceived,
+            allocation,
+            invoice.provider,
+          ),
         );
 
         verify(invoiceMock.accept(0.123, "1000")).never();
@@ -90,12 +104,13 @@ describe("AgreementPaymentProcess", () => {
     describe("Dealing with duplicates", () => {
       it("accepts the duplicated invoice if accepting the previous one failed", async () => {
         when(allocationMock.id).thenReturn("1000");
+        const allocation = instance(allocationMock);
 
         when(invoiceMock.amount).thenReturn(0.123);
         when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
         when(invoiceMock.isSameAs(anything())).thenReturn(true);
 
-        const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
+        const process = new AgreementPaymentProcess(instance(agreementMock), allocation, {
           debitNoteFilter: () => true,
           invoiceFilter: () => true,
         });
@@ -170,8 +185,10 @@ describe("AgreementPaymentProcess", () => {
         when(agreementMock.id).thenReturn("agreement-id");
         when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
         when(invoiceMock.isSameAs(anything())).thenReturn(false);
+        const allocation = instance(allocationMock);
+        const agreement = instance(agreementMock);
 
-        const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
+        const process = new AgreementPaymentProcess(agreement, allocation, {
           debitNoteFilter: () => true,
           invoiceFilter: () => true,
         });
@@ -181,8 +198,13 @@ describe("AgreementPaymentProcess", () => {
         const sucess = await process.addInvoice(invoice);
 
         expect(sucess).toEqual(true);
-        await expect(() => process.addInvoice(invoice)).rejects.toThrow(
-          "Agreement agreement-id is already covered with an invoice: invoice-id",
+        await expect(() => process.addInvoice(invoice)).rejects.toMatchError(
+          new GolemPaymentError(
+            "Agreement agreement-id is already covered with an invoice: invoice-id",
+            PaymentErrorCode.AgreementAlreadyPaid,
+            allocation,
+            agreement.getProviderInfo(),
+          ),
         );
         expect(process.isFinished()).toEqual(true);
       });

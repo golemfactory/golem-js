@@ -1,4 +1,4 @@
-import { GolemError } from "../error/golem-error";
+import { GolemInternalError } from "../error/golem-error";
 
 /**
  * Helps to obtain a whitelist of providers which were health-tested.
@@ -16,9 +16,9 @@ export async function getHealthyProvidersWhiteList(): Promise<string[]> {
     } else {
       const body = await response.text();
 
-      throw new GolemError(`Request to download healthy provider whitelist failed: ${body}`);
+      throw new GolemInternalError(`Request to download healthy provider whitelist failed: ${body}`);
     }
   } catch (err) {
-    throw new GolemError(`Failed to download healthy provider whitelist due to an error: ${err}`);
+    throw new GolemInternalError(`Failed to download healthy provider whitelist due to an error: ${err}`, err);
   }
 }
