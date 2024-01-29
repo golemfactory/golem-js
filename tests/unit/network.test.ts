@@ -135,6 +135,32 @@ describe("Network", () => {
       );
     });
 
+    it("should throw an error when there are no free IPs available", async () => {
+      const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/30" });
+      await network.addNode("2");
+      await network.addNode("3");
+      await network.removeNode("2");
+      await expect(network.addNode("4")).rejects.toMatchError(
+        new GolemNetworkError(
+          "No more addresses available in 192.168.0.0/30",
+          NetworkErrorCode.NoAddressesAvailable,
+          network.getNetworkInfo(),
+        ),
+      );
+    });
+
+    it("should return true if node belongs to the network", async () => {
+      const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/30" });
+      await network.addNode("2");
+      expect(network.hasNode("2")).toEqual(true);
+    });
+
+    it("should return false if node does not belong to the network", async () => {
+      const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/30" });
+      await network.addNode("2");
+      expect(network.hasNode("77")).toEqual(false);
+    });
+
     it("should get node network config", async () => {
       const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/24" });
       const node = await network.addNode("2");
@@ -161,6 +187,26 @@ describe("Network", () => {
         `ws://${process.env?.YAGNA_API_URL?.substring(7) || "localhost"}/net-api/v1/net/${
           network.id
         }/tcp/192.168.0.2/22`,
+      );
+    });
+
+    it("should remove node from the network", async () => {
+      const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/24" });
+      const node = await network.addNode("7");
+      const removeNetworkApiSpy = jest.spyOn(yagnaApi.net, "removeNode");
+      await network.removeNode(node.id);
+      expect(removeNetworkApiSpy).toHaveBeenCalledWith(network.id, node.id);
+    });
+
+    it("should not remove node from the network if it does not exist", async () => {
+      const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/24" });
+      await network.addNode("7");
+      await expect(network.removeNode("88")).rejects.toMatchError(
+        new GolemNetworkError(
+          "Unable to remove node 88. There is no such node in the network",
+          NetworkErrorCode.NodeRemovalFailed,
+          network.getNetworkInfo(),
+        ),
       );
     });
   });

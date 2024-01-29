@@ -1,4 +1,4 @@
-import { Logger, YagnaApi, defaultLogger } from "../utils";
+import { defaultLogger, Logger, YagnaApi } from "../utils";
 import { Network } from "./index";
 import { NetworkOptions } from "./network";
 import { NetworkNode } from "./node";
@@ -38,6 +38,24 @@ export class NetworkService {
         NetworkErrorCode.NetworkSetupMissing,
       );
     return this.network.addNode(nodeId, ip);
+  }
+
+  public async removeNode(nodeId: string): Promise<void> {
+    if (!this.network)
+      throw new GolemNetworkError(
+        "The service is not started and the network does not exist",
+        NetworkErrorCode.ServiceNotInitialized,
+      );
+    return this.network.removeNode(nodeId);
+  }
+
+  public hasNode(nodeId: string) {
+    if (!this.network)
+      throw new GolemNetworkError(
+        "The service is not started and the network does not exist",
+        NetworkErrorCode.ServiceNotInitialized,
+      );
+    return this.network.hasNode(nodeId);
   }
 
   async end() {

@@ -2,12 +2,14 @@ import { GolemModuleError } from "../error/golem-error";
 import { NetworkInfo } from "./network";
 
 export enum NetworkErrorCode {
+  ServiceNotInitialized,
   NetworkSetupMissing,
   NetworkCreationFailed,
   NoAddressesAvailable,
   AddressOutOfRange,
   AddressAlreadyAssigned,
   NodeAddingFailed,
+  NodeRemovalFailed,
   NetworkRemovalFailed,
 }
 
