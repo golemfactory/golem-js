@@ -44,7 +44,7 @@
             appendResults(JSON.stringify(output.data.output, null, "\t"));
           })
           .catch((e) => logger.error(e));
-        await executor.end();
+        await executor.shutdown();
       }
       document.getElementById("echo").onclick = run;
     </script>

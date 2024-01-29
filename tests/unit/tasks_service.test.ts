@@ -124,40 +124,6 @@ describe("Task Service", () => {
     );
   });
 
-  it("should reject task by user", async () => {
-    const worker = async (ctx: WorkContext) => {
-      const result = await ctx.run("some_shell_command");
-      if (result.stdout === "invalid_value") ctx.rejectResult("Invalid value computed by provider");
-    };
-    const task = new Task("1", worker, { maxRetries: 2 });
-    queue.addToEnd(task);
-    activityMock.setExpectedExeResults([{ result: "Ok", stdout: "invalid_value" }]);
-    const service = new TaskService(
-      new YagnaMock().getApi(),
-      queue,
-      agreementPoolServiceMock,
-      paymentServiceMock,
-      networkServiceMock,
-      {
-        logger,
-        taskRunningInterval: 10,
-        activityStateCheckingInterval: 10,
-      },
-    );
-    service.run().catch((e) => console.error(e));
-
-    await logger.expectToInclude(
-      "Task has been rejected",
-      {
-        taskId: task.id,
-        reason: "Work rejected. Reason: Invalid value computed by provider",
-      },
-      1500,
-    );
-    expect(task.isFinished()).toEqual(true);
-    await service.end();
-  });
-
   it("should reject task if it failed max attempts", async () => {
     const worker = async (ctx: WorkContext) => ctx.run("some_shell_command");
     const task = new Task("1", worker, { maxRetries: 1 });

@@ -297,13 +297,6 @@ export class WorkContext {
     return Batch.create(this.activity, this.storageProvider, this.logger);
   }
 
-  /**
-   * @Deprecated This function is only used to throw errors from unit tests. It should be removed.
-   */
-  rejectResult(msg: string) {
-    throw new GolemWorkError(`Work rejected. Reason: ${msg}`, WorkErrorCode.TaskRejected);
-  }
-
   getWebsocketUri(port: number): string {
     if (!this.networkNode)
       throw new GolemWorkError(
