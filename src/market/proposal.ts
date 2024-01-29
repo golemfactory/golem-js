@@ -18,14 +18,6 @@ export type ProposalProperties = Record<string, string | number | string[] | num
   "golem.com.payment.platform.erc20-polygon-glm.address"?: string;
   "golem.com.payment.platform.erc20-holesky-tglm.address"?: string;
   "golem.com.payment.platform.erc20-mumbai-tglm.address"?: string;
-  /**
-   * @deprecated rinkeby is no longer supported, use other test networks instead
-   */
-  "golem.com.payment.platform.erc20-rinkeby-tglm.address"?: string;
-  /**
-   * @deprecated rinkeby is no longer supported, use other test networks instead
-   */
-  "golem.com.payment.platform.zksync-rinkeby-tglm.address"?: string;
   "golem.com.pricing.model": "linear";
   "golem.com.pricing.model.linear.coeffs": number[];
   "golem.com.scheme": string;
