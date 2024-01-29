@@ -3,6 +3,7 @@ import { Logger, sleep, YagnaApi } from "../utils";
 import { Invoice } from "./invoice";
 import { DebitNote } from "./debit_note";
 import { Events } from "../events";
+import { GolemTimeoutError } from "../error/golem-error";
 
 export interface PaymentOptions extends BasePaymentOptions {
   invoiceFetchingInterval?: number;
@@ -43,7 +44,9 @@ export class Payments extends EventTarget {
       const timeoutId = setTimeout(
         () =>
           reject(
-            `The waiting time (${this.options.unsubscribeTimeoutMs} ms) for unsubscribe payment has been exceeded.`,
+            new GolemTimeoutError(
+              `The waiting time (${this.options.unsubscribeTimeoutMs} ms) for unsubscribe payment has been exceeded.`,
+            ),
           ),
         this.options.unsubscribeTimeoutMs,
       );
