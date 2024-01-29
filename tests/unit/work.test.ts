@@ -2,6 +2,8 @@ import * as activityMock from "../mock/rest/activity";
 import { WorkContext, Activity } from "../../src";
 import { LoggerMock, StorageProviderMock, YagnaMock } from "../mock";
 import { agreement } from "../mock/entities/agreement";
+import { GolemWorkError, WorkErrorCode } from "../../src/task/error";
+import { GolemModuleError } from "../../src/error/golem-error";
 const logger = new LoggerMock();
 const yagnaApi = new YagnaMock().getApi();
 const storageProviderMock = new StorageProviderMock({ logger });
@@ -165,9 +167,14 @@ describe("Work Context", () => {
       activityMock.setExpectedExeResults(expectedStdout);
       const results = await worker(ctx);
 
-      results.once("error", (error) => {
-        expect(error.message).toEqual("Some error occurred. Stdout: test_result. Stderr: error");
-      });
+      await new Promise((res) =>
+        results.once("error", (error: GolemModuleError) => {
+          expect(error.message).toEqual("Some error occurred. Stdout: test_result. Stderr: error");
+          expect(error).toBeInstanceOf(GolemWorkError);
+          expect(error.code).toEqual(WorkErrorCode.ScriptExecutionFailed);
+          res(true);
+        }),
+      );
     });
   });
 });

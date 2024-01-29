@@ -1,6 +1,7 @@
 import { Readable, Transform } from "stream";
-import { Result } from "../activity";
-import { GolemError } from "../error/golem-error";
+import { Activity, Result } from "../activity";
+import { GolemWorkError, WorkErrorCode } from "./error";
+import { GolemTimeoutError } from "../error/golem-error";
 
 const DEFAULTS = {
   exitWaitingTimeout: 20_000,
@@ -19,7 +20,10 @@ export class RemoteProcess {
   readonly stderr: Readable;
   private lastResult?: Result;
   private streamError?: Error;
-  constructor(private streamOfActivityResults: Readable) {
+  constructor(
+    private streamOfActivityResults: Readable,
+    private activity: Activity,
+  ) {
     this.streamOfActivityResults.on("data", (data) => (this.lastResult = data));
     this.streamOfActivityResults.on("error", (error) => (this.streamError = error));
     const { stdout, stderr } = this.transformResultsStream();
@@ -36,7 +40,17 @@ export class RemoteProcess {
     return new Promise((resolve, reject) => {
       const timeoutInMs = timeout ?? DEFAULTS.exitWaitingTimeout;
       const timeoutId = setTimeout(
-        () => reject(new GolemError(`The waiting time (${timeoutInMs} ms) for the final result has been exceeded`)),
+        () =>
+          reject(
+            new GolemWorkError(
+              `Unable to get activity results. The waiting time (${timeoutInMs} ms) for the final result has been exceeded`,
+              WorkErrorCode.ActivityResultsFetchingFailed,
+              this.activity.agreement,
+              this.activity,
+              this.activity.getProviderInfo(),
+              new GolemTimeoutError(`The waiting time (${timeoutInMs} ms) for the final result has been exceeded`),
+            ),
+          ),
         timeoutInMs,
       );
       const end = () => {
@@ -44,7 +58,15 @@ export class RemoteProcess {
         if (this.lastResult) {
           resolve(this.lastResult);
         } else {
-          reject(new GolemError(`An error occurred while retrieving the results. ${this.streamError}`));
+          reject(
+            new GolemWorkError(
+              `An error occurred while retrieving the results. ${this.streamError}`,
+              WorkErrorCode.ActivityResultsFetchingFailed,
+              this.activity.agreement,
+              this.activity,
+              this.activity.getProviderInfo(),
+            ),
+          );
         }
       };
       if (this.streamOfActivityResults.closed) return end();

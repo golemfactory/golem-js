@@ -17,7 +17,8 @@ import { Logger, defaultLogger, sleep } from "../utils";
 import { Batch } from "./batch";
 import { NetworkNode } from "../network";
 import { RemoteProcess } from "./process";
-import { GolemError } from "../error/golem-error";
+import { GolemWorkError, WorkErrorCode } from "./error";
+import { GolemTimeoutError } from "../error/golem-error";
 import { ProviderInfo } from "../agreement";
 
 export type Worker<OutputType> = (ctx: WorkContext) => Promise<OutputType>;
@@ -62,7 +63,7 @@ export class WorkContext {
     this.activityPreparingTimeout = options?.activityPreparingTimeout || DEFAULTS.activityPreparingTimeout;
     this.logger = options?.logger ?? defaultLogger("work");
     this.activityStateCheckingInterval = options?.activityStateCheckingInterval || DEFAULTS.activityStateCheckInterval;
-    this.provider = activity.agreement.provider;
+    this.provider = activity.agreement.getProviderInfo();
     this.storageProvider = options?.storageProvider ?? new NullStorageProvider();
     this.networkNode = options?.networkNode;
   }
@@ -82,20 +83,51 @@ export class WorkContext {
           this.activityPreparingTimeout,
         )
         .catch((e) => {
-          throw new GolemError(`Unable to deploy activity. ${e}`);
+          throw new GolemWorkError(
+            `Unable to deploy activity. ${e}`,
+            WorkErrorCode.ActivityDeploymentFailed,
+            this.activity.agreement,
+            this.activity,
+            this.activity.getProviderInfo(),
+            e,
+          );
         });
       let timeoutId: NodeJS.Timeout;
       await Promise.race([
         new Promise(
           (res, rej) =>
-            (timeoutId = setTimeout(() => rej("Preparing activity timeout"), this.activityPreparingTimeout)),
+            (timeoutId = setTimeout(
+              () => rej(new GolemTimeoutError("Preparing activity timeout")),
+              this.activityPreparingTimeout,
+            )),
         ),
         (async () => {
           for await (const res of result) {
-            if (res.result === "Error") throw new GolemError(`Preparing activity failed. Error: ${res.message}`);
+            if (res.result === ResultState.Error)
+              throw new GolemWorkError(
+                `Preparing activity failed. Error: ${res.message}`,
+                WorkErrorCode.ActivityDeploymentFailed,
+                this.activity.agreement,
+                this.activity,
+                this.activity.getProviderInfo(),
+              );
           }
         })(),
-      ]).finally(() => clearTimeout(timeoutId));
+      ])
+        .catch((error) => {
+          if (error instanceof GolemWorkError) {
+            throw error;
+          }
+          throw new GolemWorkError(
+            `Preparing activity failed. Error: ${error.toString()}`,
+            WorkErrorCode.ActivityDeploymentFailed,
+            this.activity.agreement,
+            this.activity,
+            this.activity.getProviderInfo(),
+            error,
+          );
+        })
+        .finally(() => clearTimeout(timeoutId));
     }
     await sleep(this.activityStateCheckingInterval, true);
     state = await this.activity.getState().catch((e) =>
@@ -106,7 +138,13 @@ export class WorkContext {
     );
 
     if (state !== ActivityStateEnum.Ready) {
-      throw new GolemError(`Activity ${this.activity.id} cannot reach the Ready state. Current state: ${state}`);
+      throw new GolemWorkError(
+        `Activity ${this.activity.id} cannot reach the Ready state. Current state: ${state}`,
+        WorkErrorCode.ActivityDeploymentFailed,
+        this.activity.agreement,
+        this.activity,
+        this.activity.getProviderInfo(),
+      );
     }
     await this.setupActivity();
   }
@@ -185,13 +223,18 @@ export class WorkContext {
     const streamOfActivityResults = await this.activity
       .execute(script.getExeScriptRequest(), true, options?.timeout)
       .catch((e) => {
-        throw new GolemError(
+        throw new GolemWorkError(
           `Script execution failed for command: ${JSON.stringify(run.toJson())}. ${
             e?.response?.data?.message || e?.message || e
           }`,
+          WorkErrorCode.ScriptExecutionFailed,
+          this.activity.agreement,
+          this.activity,
+          this.activity.getProviderInfo(),
+          e,
         );
       });
-    return new RemoteProcess(streamOfActivityResults);
+    return new RemoteProcess(streamOfActivityResults, this.activity);
   }
 
   /**
@@ -255,12 +298,26 @@ export class WorkContext {
   }
 
   getWebsocketUri(port: number): string {
-    if (!this.networkNode) throw new GolemError("There is no network in this work context");
+    if (!this.networkNode)
+      throw new GolemWorkError(
+        "There is no network in this work context",
+        WorkErrorCode.NetworkSetupMissing,
+        this.activity.agreement,
+        this.activity,
+        this.activity.getProviderInfo(),
+      );
     return this.networkNode.getWebsocketUri(port);
   }
 
   getIp(): string {
-    if (!this.networkNode) throw new GolemError("There is no network in this work context");
+    if (!this.networkNode)
+      throw new GolemWorkError(
+        "There is no network in this work context",
+        WorkErrorCode.NetworkSetupMissing,
+        this.activity.agreement,
+        this.activity,
+        this.activity.getProviderInfo(),
+      );
     return this.networkNode.ip.toString();
   }
 
@@ -272,22 +329,21 @@ export class WorkContext {
     // Initialize script.
     const script = new Script([command]);
     await script.before().catch((e) => {
-      throw new GolemError(
+      throw new GolemWorkError(
         `Script initialization failed for command: ${JSON.stringify(command.toJson())}. ${
           e?.response?.data?.message || e?.message || e
         }`,
+        WorkErrorCode.ScriptInitializationFailed,
+        this.activity.agreement,
+        this.activity,
+        this.activity.getProviderInfo(),
+        e,
       );
     });
     await sleep(100, true);
 
     // Send script.
-    const results = await this.activity.execute(script.getExeScriptRequest(), false, options?.timeout).catch((e) => {
-      throw new GolemError(
-        `Script execution failed for command: ${JSON.stringify(command.toJson())}. ${
-          e?.response?.data?.message || e?.message || e
-        }`,
-      );
-    });
+    const results = await this.activity.execute(script.getExeScriptRequest(), false, options?.timeout);
 
     // Process result.
     let allResults: Result<T>[] = [];

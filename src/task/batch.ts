@@ -1,13 +1,12 @@
-import { DownloadFile, Run, Script, Transfer, UploadFile } from "../script";
+import { DownloadFile, Run, Script, Transfer, UploadData, UploadFile } from "../script";
 import { Activity, Result } from "../activity";
-import { StorageProvider } from "../storage/provider";
+import { StorageProvider } from "../storage";
 import { Logger, defaultLogger } from "../utils";
 import { pipeline, Readable, Transform } from "stream";
-import { UploadData } from "../script/command";
-import { GolemError } from "../error/golem-error";
+import { GolemWorkError, WorkErrorCode } from "./error";
 
 export class Batch {
-  private script: Script;
+  private readonly script: Script;
 
   static create(activity: Activity, storageProvider: StorageProvider, logger?: Logger): Batch {
     return new Batch(activity, storageProvider, logger || defaultLogger("work"));
@@ -102,11 +101,22 @@ export class Batch {
         });
 
         results.on("error", (error) => {
+          const golemError =
+            error instanceof GolemWorkError
+              ? error
+              : new GolemWorkError(
+                  `Unable to execute script ${error}`,
+                  WorkErrorCode.ScriptExecutionFailed,
+                  this.activity.agreement,
+                  this.activity,
+                  this.activity.agreement.getProviderInfo(),
+                  error,
+                );
           this.logger.debug("Error in batch script execution");
           this.script
             .after(allResults)
-            .then(() => reject(error))
-            .catch(() => reject(error)); // Return original error, as it might be more important.
+            .then(() => reject(golemError))
+            .catch(() => reject(golemError)); // Return original error, as it might be more important.
         });
       });
     } catch (error) {
@@ -114,7 +124,17 @@ export class Batch {
       // NOTE: This is called only to ensure that each of the commands in the original script will be populated with at least `EmptyErrorResult`.
       // That's actually a FIXME, as the command could start with an empty result, which eventually will get replaced with an actual one.
       await this.script.after([]);
-      throw error;
+      if (error instanceof GolemWorkError) {
+        throw error;
+      }
+      throw new GolemWorkError(
+        `Unable to execute script ${error}`,
+        WorkErrorCode.ScriptExecutionFailed,
+        this.activity.agreement,
+        this.activity,
+        this.activity.agreement.getProviderInfo(),
+        error,
+      );
     }
   }
 
@@ -127,15 +147,32 @@ export class Batch {
     } catch (error) {
       // the original error is more important than the one from after()
       await script.after([]);
-      throw error;
+      if (error instanceof GolemWorkError) {
+        throw error;
+      }
+      throw new GolemWorkError(
+        `Unable to execute script ${error}`,
+        WorkErrorCode.ScriptExecutionFailed,
+        this.activity.agreement,
+        this.activity,
+        this.activity.agreement.getProviderInfo(),
+        error,
+      );
     }
     const decodedResults: Result[] = [];
+    const activity = this.activity;
     const errorResultHandler = new Transform({
       objectMode: true,
       transform(chunk, encoding, callback) {
         const error =
           chunk?.result === "Error"
-            ? new GolemError(`${chunk?.message}. Stdout: ${chunk?.stdout?.trim()}. Stderr: ${chunk?.stderr?.trim()}`)
+            ? new GolemWorkError(
+                `${chunk?.message}. Stdout: ${chunk?.stdout?.trim()}. Stderr: ${chunk?.stderr?.trim()}`,
+                WorkErrorCode.ScriptExecutionFailed,
+                activity.agreement,
+                activity,
+                activity.agreement.getProviderInfo(),
+              )
             : null;
         if (error) {
           script.after(decodedResults).catch();

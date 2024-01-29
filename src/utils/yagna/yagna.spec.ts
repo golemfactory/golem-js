@@ -1,6 +1,7 @@
 import { MIN_SUPPORTED_YAGNA, Yagna } from "./yagna";
 import { imock, instance, spy, when } from "@johanblumenberg/ts-mockito";
 import { IdentityModel } from "./identity";
+import { GolemPlatformError } from "../../error/golem-error";
 
 const mockFetch = jest.spyOn(global, "fetch");
 const response = imock<Response>();
@@ -59,8 +60,10 @@ describe("Yagna Utils", () => {
           apiKey: "test-key",
         });
 
-        await expect(() => y.connect()).rejects.toThrow(
-          `You run yagna in version 0.12.0 and the minimal version supported by the SDK is ${MIN_SUPPORTED_YAGNA}`,
+        await expect(() => y.connect()).rejects.toMatchError(
+          new GolemPlatformError(
+            `You run yagna in version 0.12.0 and the minimal version supported by the SDK is ${MIN_SUPPORTED_YAGNA}. Please consult the golem-js README to find matching SDK version or upgrade your yagna installation.`,
+          ),
         );
       });
 
@@ -82,20 +85,23 @@ describe("Yagna Utils", () => {
           apiKey: "test-key",
         });
 
-        await expect(() => y.connect()).rejects.toThrow(
-          `Unreadable yana version 'broken'. Can't proceed without checking yagna version support status.`,
+        await expect(() => y.connect()).rejects.toMatchError(
+          new GolemPlatformError(
+            `Unreadable yana version 'broken'. Can't proceed without checking yagna version support status.`,
+          ),
         );
       });
 
       it("should throw an GolemError if fetching of the version information will fail", async () => {
-        mockFetch.mockRejectedValue(new Error("Something bad happened when trying to read yagna version via API"));
+        const testError = new Error("Something bad happened when trying to read yagna version via API");
+        mockFetch.mockRejectedValue(testError);
 
         const y = new Yagna({
           apiKey: "test-key",
         });
 
-        await expect(() => y.connect()).rejects.toThrow(
-          "Failed to establish yagna version due to: Error: Something bad happened when trying",
+        await expect(() => y.connect()).rejects.toMatchError(
+          new GolemPlatformError(`Failed to establish yagna version due to: ${testError}`, testError),
         );
       });
     });

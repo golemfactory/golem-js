@@ -3,7 +3,7 @@ import { YagnaOptions } from "../executor";
 import { Job } from "../job";
 import { Yagna, YagnaApi } from "../utils";
 import { RunJobOptions } from "../job/job";
-import { GolemError } from "../error/golem-error";
+import { GolemUserError } from "../error/golem-error";
 
 export type GolemNetworkConfig = Partial<RunJobOptions> & { yagna?: YagnaOptions };
 
@@ -66,7 +66,7 @@ export class GolemNetwork {
 
   private checkInitialization() {
     if (!this.isInitialized()) {
-      throw new GolemError("GolemNetwork not initialized, please run init() first");
+      throw new GolemUserError("GolemNetwork not initialized, please run init() first");
     }
   }
 }

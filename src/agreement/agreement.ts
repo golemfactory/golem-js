@@ -4,7 +4,8 @@ import { YagnaOptions } from "../executor";
 import { AgreementFactory } from "./factory";
 import { AgreementConfig } from "./config";
 import { Events } from "../events";
-import { GolemError } from "../error/golem-error";
+import { GolemMarketError, MarketErrorCode } from "../market/error";
+import { Proposal } from "../market";
 
 export interface ProviderInfo {
   name: string;
@@ -50,14 +51,14 @@ export class Agreement {
 
   /**
    * @param id - agreement ID
-   * @param provider - {@link ProviderInfo}
+   * @param proposal - {@link Proposal}
    * @param yagnaApi - {@link YagnaApi}
    * @param options - {@link AgreementConfig}
    * @hidden
    */
   constructor(
     public readonly id: string,
-    public readonly provider: ProviderInfo,
+    public readonly proposal: Proposal,
     private readonly yagnaApi: YagnaApi,
     private readonly options: AgreementConfig,
   ) {
@@ -65,15 +66,15 @@ export class Agreement {
   }
 
   /**
-   * Create agreement for given proposal ID
+   * Create agreement for given proposal
    * @param proposal
    * @param yagnaApi
    * @param agreementOptions - {@link AgreementOptions}
    * @return Agreement
    */
-  static async create(proposalId: string, yagnaApi: YagnaApi, agreementOptions?: AgreementOptions): Promise<Agreement> {
+  static async create(proposal: Proposal, yagnaApi: YagnaApi, agreementOptions?: AgreementOptions): Promise<Agreement> {
     const factory = new AgreementFactory(yagnaApi, agreementOptions);
-    return factory.create(proposalId);
+    return factory.create(proposal);
   }
 
   /**
@@ -95,6 +96,10 @@ export class Agreement {
     return this.agreementData!.state;
   }
 
+  getProviderInfo(): ProviderInfo {
+    return this.proposal.provider;
+  }
+
   /**
    * Confirm agreement and waits for provider approval
    * @description Blocking function waits till agreement will be confirmed and approved by provider
@@ -107,11 +112,16 @@ export class Agreement {
       await this.yagnaApi.market.confirmAgreement(this.id, appSessionId);
       await this.yagnaApi.market.waitForApproval(this.id, this.options.agreementWaitingForApprovalTimeout);
       this.logger.debug(`Agreement approved`, { id: this.id });
-      this.options.eventTarget?.dispatchEvent(new Events.AgreementConfirmed({ id: this.id, provider: this.provider }));
-    } catch (error) {
-      this.logger.error(`Unable to confirm agreement with provider`, { providerName: this.provider.name, error });
       this.options.eventTarget?.dispatchEvent(
-        new Events.AgreementRejected({ id: this.id, provider: this.provider, reason: error.toString() }),
+        new Events.AgreementConfirmed({ id: this.id, provider: this.getProviderInfo() }),
+      );
+    } catch (error) {
+      this.logger.error(`Unable to confirm agreement with provider`, {
+        providerName: this.getProviderInfo().name,
+        error,
+      });
+      this.options.eventTarget?.dispatchEvent(
+        new Events.AgreementRejected({ id: this.id, provider: this.getProviderInfo(), reason: error.toString() }),
       );
       throw error;
     }
@@ -141,12 +151,14 @@ export class Agreement {
           timeout: this.options.agreementRequestTimeout,
         });
       this.options.eventTarget?.dispatchEvent(
-        new Events.AgreementTerminated({ id: this.id, provider: this.provider, reason: reason.message }),
+        new Events.AgreementTerminated({ id: this.id, provider: this.getProviderInfo(), reason: reason.message }),
       );
       this.logger.debug(`Agreement terminated`, { id: this.id });
     } catch (error) {
-      throw new GolemError(
+      throw new GolemMarketError(
         `Unable to terminate agreement ${this.id}. ${error.response?.data?.message || error.response?.data || error}`,
+        MarketErrorCode.AgreementTerminationFailed,
+        this.proposal.demand,
       );
     }
   }

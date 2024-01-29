@@ -4,8 +4,8 @@ import { Demand, DemandOptions } from "./demand";
 import { DemandConfig } from "./config";
 import * as events from "../events/events";
 import { DecorationsBuilder, MarketDecoration } from "./builder";
-import { YagnaApi } from "../utils/yagna/yagna";
-import { GolemError } from "../error/golem-error";
+import { YagnaApi } from "../utils";
+import { GolemMarketError, MarketErrorCode } from "./error";
 
 /**
  * @internal
@@ -23,21 +23,28 @@ export class DemandFactory {
   }
 
   async create(): Promise<Demand> {
-    const decorations = await this.getDecorations();
-    const demandRequest = new DecorationsBuilder().addDecorations(decorations).getDemandRequest();
-    const { data: id } = await this.yagnaApi.market.subscribeDemand(demandRequest).catch((e) => {
-      const reason = e.response?.data?.message || e.toString();
+    try {
+      const decorations = await this.getDecorations();
+      const demandRequest = new DecorationsBuilder().addDecorations(decorations).getDemandRequest();
+      const { data: id } = await this.yagnaApi.market.subscribeDemand(demandRequest);
+      this.options.eventTarget?.dispatchEvent(
+        new events.DemandSubscribed({
+          id,
+          details: new DecorationsBuilder().addDecorations(decorations).getDecorations(),
+        }),
+      );
+      this.options.logger.info(`Demand published on the market`);
+      return new Demand(id, demandRequest, this.allocation, this.yagnaApi, this.options);
+    } catch (error) {
+      const reason = error.response?.data?.message || error.toString();
       this.options.eventTarget?.dispatchEvent(new events.DemandFailed({ reason }));
-      throw new GolemError(`Could not publish demand on the market. ${reason}`);
-    });
-    this.options.eventTarget?.dispatchEvent(
-      new events.DemandSubscribed({
-        id,
-        details: new DecorationsBuilder().addDecorations(decorations).getDecorations(),
-      }),
-    );
-    this.options.logger.info(`Demand published on the market`, { id });
-    return new Demand(id, demandRequest, this.allocation, this.yagnaApi, this.options);
+      throw new GolemMarketError(
+        `Could not publish demand on the market. ${reason}`,
+        MarketErrorCode.SubscriptionFailed,
+        undefined,
+        error,
+      );
+    }
   }
 
   private async getDecorations(): Promise<MarketDecoration[]> {

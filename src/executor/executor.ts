@@ -1,23 +1,21 @@
 import { Package, PackageOptions } from "../package";
-import { MarketService } from "../market";
-import { AgreementPoolService } from "../agreement";
+import { MarketOptions, MarketService } from "../market";
+import { AgreementPoolService, AgreementServiceOptions } from "../agreement";
 import { Task, TaskOptions, TaskQueue, TaskService, Worker } from "../task";
 import { PaymentOptions, PaymentService } from "../payment";
-import { NetworkService } from "../network";
+import { NetworkService, NetworkServiceOptions } from "../network";
 import { Logger, runtimeContextChecker, sleep, Yagna } from "../utils";
 import { GftpStorageProvider, NullStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../storage";
 import { ExecutorConfig } from "./config";
 import { Events } from "../events";
 import { StatsService } from "../stats/service";
 import { TaskServiceOptions } from "../task/service";
-import { NetworkServiceOptions } from "../network/service";
-import { AgreementServiceOptions } from "../agreement/service";
-import { MarketOptions } from "../market/service";
 import { RequireAtLeastOne } from "../utils/types";
 import { TaskExecutorEventsDict } from "./events";
 import { EventEmitter } from "eventemitter3";
-import { GolemError } from "../error/golem-error";
+import { GolemConfigError, GolemInternalError, GolemTimeoutError } from "../error/golem-error";
 import { WorkOptions } from "../task/work";
+import { GolemWorkError, WorkErrorCode } from "../task/error";
 
 const terminatingSignals = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
 
@@ -244,7 +242,7 @@ export class TaskExecutor {
           taskPackage = packageReference;
         }
       } else {
-        const error = new GolemError("No package or manifest provided");
+        const error = new GolemConfigError("No package or manifest provided");
         this.logger.error("No package or manifest provided", error);
         throw error;
       }
@@ -377,20 +375,34 @@ export class TaskExecutor {
   }
 
   private async executeTask<OutputType>(worker: Worker<OutputType>, options?: TaskOptions): Promise<OutputType> {
-    const task = new Task((++this.lastTaskIndex).toString(), worker, {
-      maxRetries: options?.maxRetries ?? this.options.maxTaskRetries,
-      timeout: options?.timeout ?? this.options.taskTimeout,
-      activityReadySetupFunctions: this.activityReadySetupFunctions,
-    });
-    this.taskQueue.addToEnd(task);
-    while (this.isRunning) {
-      if (task.isFinished()) {
-        if (task.isRejected()) throw task.getError();
-        return task.getResults() as OutputType;
+    try {
+      const task = new Task((++this.lastTaskIndex).toString(), worker, {
+        maxRetries: options?.maxRetries ?? this.options.maxTaskRetries,
+        timeout: options?.timeout ?? this.options.taskTimeout,
+        activityReadySetupFunctions: this.activityReadySetupFunctions,
+      });
+      this.taskQueue.addToEnd(task);
+      while (this.isRunning) {
+        if (task.isFinished()) {
+          if (task.isRejected()) throw task.getError();
+          return task.getResults() as OutputType;
+        }
+        await sleep(2000, true);
       }
-      await sleep(2000, true);
+      throw new GolemInternalError("Task executor has been stopped");
+    } catch (error) {
+      if (error instanceof GolemWorkError) {
+        throw error;
+      }
+      throw new GolemWorkError(
+        `Unable to execute task. ${error.toString()}`,
+        WorkErrorCode.TaskExecutionFailed,
+        undefined,
+        undefined,
+        undefined,
+        error,
+      );
     }
-    throw new GolemError("Task executor has been stopped");
   }
 
   private handleCriticalError(e: Error) {
@@ -469,7 +481,7 @@ export class TaskExecutor {
               : "Check your proposal filters if they are not too restrictive.";
         const errorMessage = `Could not start any work on Golem. Processed ${proposalsCount.initial} initial proposals from yagna, filters accepted ${proposalsCount.confirmed}. ${hint}`;
         if (this.options.exitOnNoProposals) {
-          this.handleCriticalError(new GolemError(errorMessage));
+          this.handleCriticalError(new GolemTimeoutError(errorMessage));
         } else {
           console.error(errorMessage);
         }

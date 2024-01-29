@@ -1,7 +1,7 @@
 // TODO: replace with a proper REST API client once ya-client and ya-ts-client are updated
 // https://github.com/golemfactory/golem-js/issues/290
 import { BaseAPI } from "ya-ts-client/dist/ya-net/base";
-import { GolemError } from "../../error/golem-error";
+import { GolemPlatformError } from "../../error/golem-error";
 
 export interface IdentityModel {
   identity: string;
@@ -20,7 +20,7 @@ export class RequestorApi extends BaseAPI implements IdentityRequestorApi {
     });
 
     if (!res.ok) {
-      throw new GolemError(`Failed to get identity: ${res.statusText}`);
+      throw new GolemPlatformError(`Failed to get identity: ${res.statusText}`);
     }
 
     return await res.json();

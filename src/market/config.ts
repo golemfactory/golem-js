@@ -2,8 +2,8 @@ import { DemandOptions } from "./demand";
 import { EnvUtils, Logger, defaultLogger } from "../utils";
 import { MarketOptions, ProposalFilter } from "./service";
 import { YagnaOptions } from "../executor";
+import { GolemConfigError } from "../error/golem-error";
 import { acceptAll } from "./strategy";
-import { GolemError } from "../error/golem-error";
 
 const DEFAULTS = {
   subnetTag: "public",
@@ -42,28 +42,28 @@ export class DemandConfig {
     this.expirationSec = options?.expirationSec ?? DEFAULTS.expirationSec;
 
     if (!this.isPositiveInt(this.expirationSec)) {
-      throw new GolemError("The demand expiration time has to be a positive integer");
+      throw new GolemConfigError("The demand expiration time has to be a positive integer");
     }
 
     this.debitNotesAcceptanceTimeoutSec =
       options?.debitNotesAcceptanceTimeoutSec ?? DEFAULTS.debitNotesAcceptanceTimeoutSec;
 
     if (!this.isPositiveInt(this.debitNotesAcceptanceTimeoutSec)) {
-      throw new GolemError("The debit note acceptance timeout time has to be a positive integer");
+      throw new GolemConfigError("The debit note acceptance timeout time has to be a positive integer");
     }
 
     this.midAgreementDebitNoteIntervalSec =
       options?.midAgreementDebitNoteIntervalSec ?? DEFAULTS.midAgreementDebitNoteIntervalSec;
 
     if (!this.isPositiveInt(this.midAgreementDebitNoteIntervalSec)) {
-      throw new GolemError("The debit note interval time has to be a positive integer");
+      throw new GolemConfigError("The debit note interval time has to be a positive integer");
     }
 
     this.midAgreementPaymentTimeoutSec =
       options?.midAgreementPaymentTimeoutSec ?? DEFAULTS.midAgreementPaymentTimeoutSec;
 
     if (!this.isPositiveInt(this.midAgreementPaymentTimeoutSec)) {
-      throw new GolemError("The mid-agreement payment timeout time has to be a positive integer");
+      throw new GolemConfigError("The mid-agreement payment timeout time has to be a positive integer");
     }
   }
 

@@ -4,6 +4,7 @@ import { LoggerMock, YagnaMock } from "../mock";
 import * as jsSha3 from "js-sha3";
 import { TEST_IDENTITY } from "../mock/fixtures";
 import { ServiceModel } from "../../src/utils/yagna/gsb";
+import { GolemInternalError } from "../../src/error/golem-error";
 
 jest.mock("uuid", () => ({ v4: () => "uuid" }));
 
@@ -147,7 +148,7 @@ describe("WebSocketBrowserStorageProvider", () => {
 
   describe("publishFile()", () => {
     it("should fail", async () => {
-      await expect(() => provider.publishFile()).rejects.toThrowError();
+      await expect(() => provider.publishFile()).rejects.toMatchError(new GolemInternalError("Not implemented"));
     });
   });
 
@@ -240,7 +241,7 @@ describe("WebSocketBrowserStorageProvider", () => {
 
   describe("receiveFile()", () => {
     it("should fail", async () => {
-      await expect(() => provider.receiveFile()).rejects.toThrowError();
+      await expect(() => provider.receiveFile()).rejects.toMatchError(new GolemInternalError("Not implemented"));
     });
   });
 
@@ -282,7 +283,7 @@ describe("WebSocketBrowserStorageProvider", () => {
 
     it("should throw when service creation fails", async () => {
       jest.spyOn(yagnaApi.gsb, "createService").mockImplementation((fileInfo, components) => {
-        return Promise.reject(new Error());
+        return Promise.reject(new Error("test_error"));
       });
       await expect(() => {
         return provider["createService"]({ id: "foo", url: "/file" }, []);

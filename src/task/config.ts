@@ -1,5 +1,5 @@
 import { TaskServiceOptions } from "./service";
-import { ActivityConfig } from "../activity/config";
+import { ActivityConfig } from "../activity";
 import { Logger, defaultLogger } from "../utils";
 import { StorageProvider } from "../storage";
 
