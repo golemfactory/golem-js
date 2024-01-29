@@ -40,11 +40,6 @@ export type ExecutorOptions = {
   maxTaskRetries?: number;
   /** Custom Storage Provider used for transfer files */
   storageProvider?: StorageProvider;
-  /**
-   * @deprecated this parameter will be removed in the next version.
-   * Currently, has no effect on executor termination.
-   */
-  isSubprocess?: boolean;
   /** Timeout for preparing activity - creating and deploy commands */
   activityPreparingTimeout?: number;
   /**
@@ -281,17 +276,6 @@ export class TaskExecutor {
    *
    * You can call this method multiple times, it will resolve only once the executor is shutdown.
    *
-   * @deprecated Use TaskExecutor.shutdown() instead.
-   */
-  end(): Promise<void> {
-    return this.shutdown();
-  }
-
-  /**
-   * Stop all executor services and shut down executor instance.
-   *
-   * You can call this method multiple times, it will resolve only once the executor is shutdown.
-   *
    * When shutdown() is initially called, a beforeEnd event is emitted.
    *
    * Once the executor is fully stopped, an end event is emitted.
@@ -335,32 +319,6 @@ export class TaskExecutor {
    */
   getStats() {
     return this.statsService.getStatsTree();
-  }
-
-  /**
-   * @deprecated
-   * Use {@link TaskExecutor.onActivityReady} instead.
-   *
-   * Define worker function that will be runs before every each computation Task, within the same activity.
-   *
-   * @param worker worker function - task
-   * @example
-   * ```typescript
-   * executor.beforeEach(async (ctx) => {
-   *   await ctx.uploadFile("./params.txt", "/params.txt");
-   * });
-   *
-   * await executor.forEach([1, 2, 3, 4, 5], async (ctx, item) => {
-   *    await ctx
-   *      .beginBatch()
-   *      .run(`/run_some_command.sh --input ${item} --params /input_params.txt --output /output.txt`)
-   *      .downloadFile("/output.txt", "./output.txt")
-   *      .end();
-   * });
-   * ```
-   */
-  beforeEach(worker: Worker<unknown>) {
-    this.activityReadySetupFunctions = [worker];
   }
 
   /**
