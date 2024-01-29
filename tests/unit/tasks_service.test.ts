@@ -1,7 +1,6 @@
 import * as activityMock from "../mock/rest/activity";
 import { Task, TaskQueue, TaskService, WorkContext, Worker } from "../../src/task";
 import { agreementPoolServiceMock, paymentServiceMock, networkServiceMock, LoggerMock, YagnaMock } from "../mock";
-import { sleep } from "../../src/utils";
 
 let queue: TaskQueue;
 const logger = new LoggerMock();
