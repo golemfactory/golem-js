@@ -27,7 +27,7 @@ export interface BasePaymentOptions {
   payment?: { driver?: string; network?: string };
   paymentTimeout?: number;
   paymentRequestTimeout?: number;
-  unsubscribeTimeoutInMs?: number;
+  unsubscribeTimeoutMs?: number;
   logger?: Logger;
   eventTarget?: EventTarget;
 }
@@ -70,7 +70,7 @@ export class PaymentConfig extends BaseConfig {
     this.debitNotesFetchingInterval = options?.debitNotesFetchingInterval ?? DEFAULTS.debitNotesFetchingInterval;
     this.maxInvoiceEvents = options?.maxInvoiceEvents ?? DEFAULTS.maxInvoiceEvents;
     this.maxDebitNotesEvents = options?.maxDebitNotesEvents ?? DEFAULTS.maxDebitNotesEvents;
-    this.unsubscribeTimeoutMs = options?.unsubscribeTimeoutInMs ?? DEFAULTS.unsubscribeTimeoutMs;
+    this.unsubscribeTimeoutMs = options?.unsubscribeTimeoutMs ?? DEFAULTS.unsubscribeTimeoutMs;
     this.debitNoteFilter = options?.debitNotesFilter ?? DEFAULTS.debitNoteFilter;
     this.invoiceFilter = options?.invoiceFilter ?? DEFAULTS.invoiceFilter;
   }
