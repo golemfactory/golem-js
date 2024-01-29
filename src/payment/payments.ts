@@ -39,7 +39,6 @@ export class Payments extends EventTarget {
    * An error will be thrown when the unsubscribe timeout expires.
    */
   async unsubscribe() {
-    this.isRunning = false;
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(
         () =>
@@ -53,6 +52,7 @@ export class Payments extends EventTarget {
         clearTimeout(timeoutId);
         resolve(true);
       });
+      this.isRunning = false;
     });
   }
 
@@ -72,7 +72,7 @@ export class Payments extends EventTarget {
           { timeout: 0 },
         );
         for (const event of invoiceEvents) {
-          if (!this.isRunning) return;
+          if (!this.isRunning) break;
           if (event.eventType !== "InvoiceReceivedEvent") continue;
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore FIXME: ya-ts-client does not provide invoiceId in the event even though it is in the API response
