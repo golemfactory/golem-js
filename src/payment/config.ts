@@ -14,8 +14,9 @@ const DEFAULTS = Object.freeze({
   invoiceReceiveTimeout: 1000 * 60 * 5, // 5 min
   maxInvoiceEvents: 500,
   maxDebitNotesEvents: 500,
-  invoiceFetchingInterval: 20000,
-  debitNotesFetchingInterval: 20000,
+  invoiceFetchingInterval: 5_000,
+  debitNotesFetchingInterval: 5_000,
+  unsubscribeTimeoutMs: 10_000,
   debitNoteFilter: acceptAllDebitNotesFilter(),
   invoiceFilter: acceptAllInvoicesFilter(),
 });
@@ -26,6 +27,7 @@ export interface BasePaymentOptions {
   payment?: { driver?: string; network?: string };
   paymentTimeout?: number;
   paymentRequestTimeout?: number;
+  unsubscribeTimeoutMs?: number;
   logger?: Logger;
   eventTarget?: EventTarget;
 }
@@ -58,6 +60,7 @@ export class PaymentConfig extends BaseConfig {
   public readonly debitNotesFetchingInterval: number;
   public readonly maxInvoiceEvents: number;
   public readonly maxDebitNotesEvents: number;
+  public readonly unsubscribeTimeoutMs: number;
   public readonly debitNoteFilter: DebitNoteFilter;
   public readonly invoiceFilter: InvoiceFilter;
 
@@ -67,6 +70,7 @@ export class PaymentConfig extends BaseConfig {
     this.debitNotesFetchingInterval = options?.debitNotesFetchingInterval ?? DEFAULTS.debitNotesFetchingInterval;
     this.maxInvoiceEvents = options?.maxInvoiceEvents ?? DEFAULTS.maxInvoiceEvents;
     this.maxDebitNotesEvents = options?.maxDebitNotesEvents ?? DEFAULTS.maxDebitNotesEvents;
+    this.unsubscribeTimeoutMs = options?.unsubscribeTimeoutMs ?? DEFAULTS.unsubscribeTimeoutMs;
     this.debitNoteFilter = options?.debitNotesFilter ?? DEFAULTS.debitNoteFilter;
     this.invoiceFilter = options?.invoiceFilter ?? DEFAULTS.invoiceFilter;
   }

@@ -3,6 +3,7 @@ import { Logger, sleep, YagnaApi } from "../utils";
 import { Invoice } from "./invoice";
 import { DebitNote } from "./debit_note";
 import { Events } from "../events";
+import { GolemTimeoutError } from "../error/golem-error";
 
 export interface PaymentOptions extends BasePaymentOptions {
   invoiceFetchingInterval?: number;
@@ -12,6 +13,7 @@ export interface PaymentOptions extends BasePaymentOptions {
 }
 
 export const PAYMENT_EVENT_TYPE = "PaymentReceived";
+const UNSUBSCRIBED_EVENT = "Unsubscribed";
 
 export class Payments extends EventTarget {
   private isRunning = true;
@@ -34,11 +36,27 @@ export class Payments extends EventTarget {
   }
 
   /**
-   * Unsubscribe demand from the market
+   * Unsubscribe from collecting payment events.
+   * An error will be thrown when the unsubscribe timeout expires.
    */
   async unsubscribe() {
-    this.isRunning = false;
-    this.logger.debug(`Payments unsubscribed`);
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(
+        () =>
+          reject(
+            new GolemTimeoutError(
+              `The waiting time (${this.options.unsubscribeTimeoutMs} ms) for unsubscribe payment has been exceeded.`,
+            ),
+          ),
+        this.options.unsubscribeTimeoutMs,
+      );
+      this.addEventListener(UNSUBSCRIBED_EVENT, () => {
+        this.logger.debug(`Payments unsubscribed`);
+        clearTimeout(timeoutId);
+        resolve(true);
+      });
+      this.isRunning = false;
+    });
   }
 
   private async subscribe() {
@@ -57,7 +75,7 @@ export class Payments extends EventTarget {
           { timeout: 0 },
         );
         for (const event of invoiceEvents) {
-          if (!this.isRunning) return;
+          if (!this.isRunning) break;
           if (event.eventType !== "InvoiceReceivedEvent") continue;
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore FIXME: ya-ts-client does not provide invoiceId in the event even though it is in the API response
@@ -88,6 +106,7 @@ export class Payments extends EventTarget {
         await sleep(2);
       }
     }
+    this.dispatchEvent(new Event(UNSUBSCRIBED_EVENT));
   }
 
   private async subscribeForDebitNotes() {
