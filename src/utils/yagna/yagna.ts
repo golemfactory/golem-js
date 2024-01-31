@@ -166,13 +166,13 @@ export class Yagna {
   }
 
   protected addErrorHandler(api: YagnaApi) {
-    // Ugly solution until Yagna binding is refactored or replaced,
-    // and it will be possible to pass interceptors as the config params
-    api.net["axios"].interceptors.response.use(undefined, this.errorHandler.bind(this));
-    api.market["axios"].interceptors.response.use(undefined, this.errorHandler.bind(this));
-    api.activity.control["axios"].interceptors.response.use(undefined, this.errorHandler.bind(this));
-    api.activity.state["axios"].interceptors.response.use(undefined, this.errorHandler.bind(this));
-    api.payment["axios"].interceptors.response.use(undefined, this.errorHandler.bind(this));
+    /**
+     * Ugly solution until Yagna binding is refactored or replaced,
+     * and it will be possible to pass interceptors as the config params.
+     *
+     * All RequestorAPI instances (market, identity, payment, etc.) use the same Axios instance,
+     * so it is enough to add one interceptor to one of them to make it effective in each API.
+     */
     api.identity["axios"].interceptors.response.use(undefined, this.errorHandler.bind(this));
   }
 }
