@@ -54,8 +54,8 @@ export class TaskStarted extends BaseEvent<{
  */
 export class TaskRedone extends BaseEvent<{
   id: string;
-  agreementId: string;
-  provider: ProviderInfo;
+  agreementId?: string;
+  provider?: ProviderInfo;
   retriesCount: number;
   /**
    * The activity that was involved
@@ -72,9 +72,9 @@ export class TaskRedone extends BaseEvent<{
  */
 export class TaskRejected extends BaseEvent<{
   id: string;
-  agreementId: string;
+  agreementId?: string;
 
-  provider: ProviderInfo;
+  provider?: ProviderInfo;
   /**
    * The activity that was involved when the rejection took place
    *
