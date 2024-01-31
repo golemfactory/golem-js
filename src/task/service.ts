@@ -201,7 +201,7 @@ export class TaskService {
       });
     } else {
       this.options.eventTarget?.dispatchEvent(new Events.TaskFinished({ id: task.id }));
-      this.logger.info(`Task has been successfully completed`, {
+      this.logger.info(`Task computed`, {
         taskId: task.id,
         retries: task.getRetriesCount(),
         providerName: task.getActivity()?.getProviderInfo().name,
