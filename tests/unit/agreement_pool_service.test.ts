@@ -127,7 +127,7 @@ describe("Agreement Pool Service", () => {
       await agreementService.releaseAgreement(agreement1.id, true);
       await agreementService.releaseAgreement(agreement2.id, true);
       await logger.expectToInclude(`Agreement has been released for reuse`, { id: agreement1.id });
-      await logger.expectToInclude(`Agreement cannot be released back into the pool because the pool is already full`, {
+      await logger.expectToInclude(`Agreement cannot return to the pool because the pool is already full`, {
         id: agreement2.id,
       });
       await logger.expectToInclude(`Agreement has been released and will be terminated`, { id: agreement2.id });

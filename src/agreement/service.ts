@@ -81,7 +81,7 @@ export class AgreementPoolService {
     const agreementsInPool = Array.from(this.pool).filter((a) => a.agreement);
     const isPoolFull = agreementsInPool.length >= this.config.agreementMaxPoolSize;
     if (allowReuse && isPoolFull) {
-      this.logger.debug(`Agreement cannot be released back into the pool because the pool is already full`, {
+      this.logger.debug(`Agreement cannot return to the pool because the pool is already full`, {
         id: agreementId,
       });
     }
