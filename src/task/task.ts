@@ -1,12 +1,15 @@
 import { QueueableTask } from "./queue";
 import { Worker } from "./work";
 import { GolemConfigError, GolemTimeoutError } from "../error/golem-error";
+import { Activity } from "../activity";
+import { NetworkNode } from "../network";
 
 export enum TaskState {
   New = "new",
-  Retry = "retry",
+  Queued = "queued",
   Pending = "pending",
   Done = "done",
+  Retry = "retry",
   Rejected = "rejected",
 }
 
@@ -39,6 +42,8 @@ export class Task<OutputType = unknown> implements QueueableTask {
   private readonly timeout: number;
   private readonly maxRetries: number;
   private readonly activityReadySetupFunctions: Worker<unknown>[];
+  private activity?: Activity;
+  private networkNode?: NetworkNode;
 
   constructor(
     public readonly id: string,
@@ -60,21 +65,33 @@ export class Task<OutputType = unknown> implements QueueableTask {
     // prevent memory leaks
     this.listeners.clear();
   }
+  init() {
+    this.state = TaskState.Queued;
+  }
 
-  start() {
+  start(activity: Activity, networkNode?: NetworkNode) {
     this.state = TaskState.Pending;
+    this.activity = activity;
+    this.networkNode = networkNode;
     this.listeners.forEach((listener) => listener(this.state));
     this.timeoutId = setTimeout(
-      () => this.stop(undefined, new GolemTimeoutError(`Task ${this.id} timeout`), false),
+      () => this.stop(undefined, new GolemTimeoutError(`Task ${this.id} timeout.`), true),
       this.timeout,
     );
   }
   stop(results?: OutputType, error?: Error, retry = true) {
+    if (this.isFinished() || this.isRetry()) {
+      return;
+    }
     clearTimeout(this.timeoutId);
     if (error) {
-      ++this.retriesCount;
-      this.state = retry && this.retriesCount <= this.maxRetries ? TaskState.Retry : TaskState.Rejected;
       this.error = error;
+      if (retry && this.retriesCount < this.maxRetries) {
+        this.state = TaskState.Retry;
+        ++this.retriesCount;
+      } else {
+        this.state = TaskState.Rejected;
+      }
     } else {
       this.state = TaskState.Done;
       this.results = results;
@@ -96,11 +113,17 @@ export class Task<OutputType = unknown> implements QueueableTask {
   isRejected(): boolean {
     return this.state === TaskState.Rejected;
   }
+  isQueued(): boolean {
+    return this.state === TaskState.Queued;
+  }
   isPending(): boolean {
     return this.state === TaskState.Pending;
   }
   isNew(): boolean {
     return this.state === TaskState.New;
+  }
+  isFailed(): boolean {
+    return this.state === TaskState.Rejected || this.state === TaskState.Retry;
   }
   getResults(): OutputType | undefined {
     return this.results;
@@ -116,5 +139,11 @@ export class Task<OutputType = unknown> implements QueueableTask {
   }
   getError(): Error | undefined {
     return this.error;
+  }
+  getActivity(): Activity | undefined {
+    return this.activity;
+  }
+  getNetworkNode(): NetworkNode | undefined {
+    return this.networkNode;
   }
 }

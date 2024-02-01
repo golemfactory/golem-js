@@ -375,8 +375,9 @@ export class TaskExecutor {
   }
 
   private async executeTask<OutputType>(worker: Worker<OutputType>, options?: TaskOptions): Promise<OutputType> {
+    let task;
     try {
-      const task = new Task((++this.lastTaskIndex).toString(), worker, {
+      task = new Task((++this.lastTaskIndex).toString(), worker, {
         maxRetries: options?.maxRetries ?? this.options.maxTaskRetries,
         timeout: options?.timeout ?? this.options.taskTimeout,
         activityReadySetupFunctions: this.activityReadySetupFunctions,
@@ -397,9 +398,9 @@ export class TaskExecutor {
       throw new GolemWorkError(
         `Unable to execute task. ${error.toString()}`,
         WorkErrorCode.TaskExecutionFailed,
-        undefined,
-        undefined,
-        undefined,
+        task?.getActivity()?.agreement,
+        task?.getActivity(),
+        task?.getActivity()?.getProviderInfo(),
         error,
       );
     }

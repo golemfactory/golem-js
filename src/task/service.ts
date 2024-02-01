@@ -9,7 +9,6 @@ import { Activity, ActivityOptions } from "../activity";
 import { TaskConfig } from "./config";
 import { Events } from "../events";
 import { Task } from "./task";
-import { GolemWorkError, WorkErrorCode } from "./error";
 
 export interface TaskServiceOptions extends ActivityOptions {
   /** Number of maximum parallel running task on one TaskExecutor instance */
@@ -58,6 +57,13 @@ export class TaskService {
         await sleep(this.options.taskRunningInterval, true);
         continue;
       }
+      task.onStateChange(() => {
+        if (task.isRetry()) {
+          this.retryTask(task).catch((error) => this.logger.error(`Issue with retrying a task on Golem`, error));
+        } else if (task.isFinished()) {
+          this.stopTask(task).catch((error) => this.logger.error(`Issue with stopping a task on Golem`, error));
+        }
+      });
       this.startTask(task).catch(
         (error) => this.isRunning && this.logger.error(`Issue with starting a task on Golem`, error),
       );
@@ -78,8 +84,8 @@ export class TaskService {
   }
 
   private async startTask(task: Task) {
-    task.start();
-    this.logger.debug(`Starting task`, { taskId: task.id });
+    task.init();
+    this.logger.debug(`Starting task`, { taskId: task.id, attempt: task.getRetriesCount() + 1 });
     ++this.activeTasksCount;
 
     const agreement = await this.agreementPoolService.getAgreement();
@@ -88,7 +94,7 @@ export class TaskService {
 
     try {
       activity = await this.getOrCreateActivity(agreement);
-
+      task.start(activity, networkNode);
       this.options.eventTarget?.dispatchEvent(
         new Events.TaskStarted({
           id: task.id,
@@ -97,8 +103,11 @@ export class TaskService {
           provider: agreement.getProviderInfo(),
         }),
       );
-
-      this.logger.info(`Task sent to provider`, { taskId: task.id, providerName: agreement.getProviderInfo().name });
+      this.logger.info(`Task started`, {
+        taskId: task.id,
+        providerName: agreement.getProviderInfo().name,
+        activityId: activity.id,
+      });
 
       const activityReadySetupFunctions = task.getActivityReadySetupFunctions();
       const worker = task.getWorker();
@@ -121,74 +130,18 @@ export class TaskService {
         this.activitySetupDone.add(activity.id);
         this.logger.debug(`Activity setup completed`, { activityId: activity.id });
       }
-
       const results = await worker(ctx);
       task.stop(results);
-
-      this.options.eventTarget?.dispatchEvent(new Events.TaskFinished({ id: task.id }));
-      this.logger.info(`Task computed`, { taskId: task.id, providerName: agreement.getProviderInfo().name });
     } catch (error) {
       task.stop(undefined, error);
-
-      const reason = error.message || error.toString();
-      this.logger.warn(`Starting task failed`, { reason });
-
-      if (task.isRetry() && this.isRunning) {
-        this.tasksQueue.addToBegin(task);
-        this.options.eventTarget?.dispatchEvent(
-          new Events.TaskRedone({
-            id: task.id,
-            activityId: activity?.id,
-            agreementId: agreement.id,
-            provider: agreement.getProviderInfo(),
-            retriesCount: task.getRetriesCount(),
-            reason,
-          }),
-        );
-        this.logger.warn(`Task execution failed. Trying to redo the task.`, {
-          taskId: task.id,
-          attempt: task.getRetriesCount(),
-          reason,
-        });
-      } else {
-        this.options.eventTarget?.dispatchEvent(
-          new Events.TaskRejected({
-            id: task.id,
-            agreementId: agreement.id,
-            activityId: activity?.id,
-            provider: agreement.getProviderInfo(),
-            reason,
-          }),
-        );
-        task.cleanup();
-        this.logger.error(`Task has been rejected`, { taskId: task.id, reason });
-        throw new GolemWorkError(
-          `Task ${task.id} has been rejected! ${reason}`,
-          WorkErrorCode.TaskRejected,
-          agreement,
-          activity,
-          agreement.getProviderInfo(),
-          error,
-        );
-      }
-
-      if (activity) {
-        await this.stopActivity(activity, agreement);
-      }
-      if (this.networkService && networkNode) {
-        await this.networkService.removeNode(networkNode.id);
-      }
     } finally {
       --this.activeTasksCount;
-      await this.agreementPoolService
-        .releaseAgreement(agreement.id, task.isDone())
-        .catch((error) => this.logger.error(`Releasing agreement failed`, { agreementId: agreement.id, error }));
     }
   }
 
-  private async stopActivity(activity: Activity, agreement: Agreement) {
-    await activity?.stop();
-    this.activities.delete(agreement.id);
+  private async stopActivity(activity: Activity) {
+    await activity.stop();
+    this.activities.delete(activity.agreement.id);
   }
 
   private async getOrCreateActivity(agreement: Agreement) {
@@ -200,6 +153,88 @@ export class TaskService {
       this.activities.set(agreement.id, activity);
       this.paymentService.acceptPayments(agreement);
       return activity;
+    }
+  }
+
+  private async retryTask(task: Task) {
+    if (!this.isRunning) return;
+    task.cleanup();
+    await this.releaseTaskResources(task);
+    const reason = task.getError()?.message;
+    this.options.eventTarget?.dispatchEvent(
+      new Events.TaskRedone({
+        id: task.id,
+        activityId: task.getActivity()?.id,
+        agreementId: task.getActivity()?.agreement.id,
+        provider: task.getActivity()?.getProviderInfo(),
+        retriesCount: task.getRetriesCount(),
+        reason,
+      }),
+    );
+    this.logger.warn(`Task execution failed. Trying to redo the task.`, {
+      taskId: task.id,
+      attempt: task.getRetriesCount(),
+      reason,
+    });
+    this.tasksQueue.addToBegin(task);
+  }
+
+  private async stopTask(task: Task) {
+    task.cleanup();
+    await this.releaseTaskResources(task);
+    if (task.isRejected()) {
+      const reason = task.getError()?.message;
+      this.options.eventTarget?.dispatchEvent(
+        new Events.TaskRejected({
+          id: task.id,
+          agreementId: task.getActivity()?.agreement.id,
+          activityId: task.getActivity()?.id,
+          provider: task.getActivity()?.getProviderInfo(),
+          reason,
+        }),
+      );
+      this.logger.error(`Task has been rejected`, {
+        taskId: task.id,
+        reason: task.getError()?.message,
+        retries: task.getRetriesCount(),
+        providerName: task.getActivity()?.getProviderInfo().name,
+      });
+    } else {
+      this.options.eventTarget?.dispatchEvent(new Events.TaskFinished({ id: task.id }));
+      this.logger.info(`Task computed`, {
+        taskId: task.id,
+        retries: task.getRetriesCount(),
+        providerName: task.getActivity()?.getProviderInfo().name,
+      });
+    }
+  }
+
+  private async releaseTaskResources(task: Task) {
+    const activity = task.getActivity();
+    if (activity) {
+      if (task.isFailed()) {
+        /**
+         * Activity should only be terminated when the task fails.
+         * We assume that the next attempt should be performed on a new activity instance.
+         * For successfully completed tasks, activities remain in the ready state
+         * and are ready to be used for other tasks.
+         * For them, termination will be completed with the end of service
+         */
+        await this.stopActivity(activity).catch((error) =>
+          this.logger.error(`Stopping activity failed`, { activityId: activity.id, error }),
+        );
+      }
+      await this.agreementPoolService
+        .releaseAgreement(activity.agreement.id, task.isDone())
+        .catch((error) =>
+          this.logger.error(`Releasing agreement failed`, { agreementId: activity.agreement.id, error }),
+        );
+    }
+    const networkNode = task.getNetworkNode();
+    if (this.networkService && networkNode) {
+      await this.networkService
+        .removeNode(networkNode.id)
+        .catch((error) => this.logger.error(`Removing network node failed`, { nodeId: networkNode.id, error }));
     }
   }
 }

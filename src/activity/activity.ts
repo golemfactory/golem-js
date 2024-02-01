@@ -247,10 +247,14 @@ export class Activity {
               },
             );
             retryCount = 0;
+            if (!isRunning()) {
+              logger.debug("Activity is no longer running, will stop polling for batch execution results");
+              return this.destroy(new GolemAbortError(`Activity ${activityId} has been interrupted.`));
+            }
 
             const newResults = rawExecBachResults.map((rawResult) => new Result(rawResult)).slice(lastIndex + 1);
 
-            logger.debug(`Received batch execution results`, { results: newResults });
+            logger.debug(`Received batch execution results`, { results: newResults, activityId });
 
             if (Array.isArray(newResults) && newResults.length) {
               newResults.forEach((result) => {
@@ -260,6 +264,10 @@ export class Activity {
               });
             }
           } catch (error) {
+            if (!isRunning()) {
+              logger.debug("Activity is no longer running, will stop polling for batch execution results");
+              return this.destroy(new GolemAbortError(`Activity ${activityId} has been interrupted.`, error));
+            }
             logger.error(`Processing batch execution results failed`, error);
 
             try {
@@ -361,6 +369,10 @@ export class Activity {
   }
 
   private async handleError(error: Error, cmdIndex: number, retryCount: number, maxRetries: number) {
+    if (!this.isRunning) {
+      this.logger.debug("Activity is no longer running, will stop polling for batch execution results");
+      throw new GolemAbortError(`Activity ${this.id} has been interrupted.`, error);
+    }
     if (this.isTimeoutError(error)) {
       this.logger.warn("API request timeout.", error);
       return retryCount;
