@@ -3,7 +3,7 @@ import { Agreement } from "../agreement";
 import { anything, imock, instance, mock, when } from "@johanblumenberg/ts-mockito";
 import { YagnaApi } from "../utils";
 import { RequestorControlApi } from "ya-ts-client/dist/ya-activity/api";
-import { RequestorStateApi } from "ya-ts-client/dist/ya-activity/src/api/requestor-state-api";
+import { RequestorApi as RequestorStateApi } from "../utils/yagna/activity";
 import { GolemWorkError, WorkErrorCode } from "../task/error";
 
 describe("Activity Factory", () => {
