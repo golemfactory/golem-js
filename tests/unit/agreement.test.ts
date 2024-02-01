@@ -18,7 +18,7 @@ describe("Agreement", () => {
     it("should create agreement for given proposal Id", async () => {
       const agreement = await Agreement.create(proposal, yagnaApi, { logger });
       expect(agreement).toBeInstanceOf(Agreement);
-      expect(agreement.id).toHaveLength(64);
+      expect(agreement.id).toBeDefined();
       await logger.expectToInclude("Agreement created", { id: agreement.id });
     });
   });

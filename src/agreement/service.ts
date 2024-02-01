@@ -24,6 +24,8 @@ export interface AgreementServiceOptions extends AgreementOptions {
   agreementMaxEvents?: number;
   /** interval for fetching agreement events */
   agreementEventsFetchingIntervalSec?: number;
+  /** The maximum number of agreements stored in the pool */
+  agreementMaxPoolSize?: number;
 }
 
 /**
@@ -76,7 +78,14 @@ export class AgreementPoolService {
    * @param allowReuse if false, terminate and remove from pool, if true, back to pool for further reuse
    */
   async releaseAgreement(agreementId: string, allowReuse: boolean) {
-    if (allowReuse) {
+    const agreementsInPool = Array.from(this.pool).filter((a) => a.agreement);
+    const isPoolFull = agreementsInPool.length >= this.config.agreementMaxPoolSize;
+    if (allowReuse && isPoolFull) {
+      this.logger.debug(`Agreement cannot be released back into the pool because the pool is already full`, {
+        id: agreementId,
+      });
+    }
+    if (allowReuse && !isPoolFull) {
       const candidate = this.candidateMap.get(agreementId);
       if (candidate) {
         this.pool.add(candidate);

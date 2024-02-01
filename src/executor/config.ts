@@ -35,6 +35,7 @@ export class ExecutorConfig {
   readonly activityExecuteTimeout?: number;
   readonly startupTimeout: number;
   readonly exitOnNoProposals: boolean;
+  readonly agreementMaxPoolSize: number;
 
   constructor(options: ExecutorOptions & ActivityOptions) {
     const processEnv = !runtimeContextChecker.isBrowser
@@ -89,5 +90,6 @@ export class ExecutorConfig {
     this.maxTaskRetries = options.maxTaskRetries ?? DEFAULTS.maxTaskRetries;
     this.startupTimeout = options.startupTimeout ?? DEFAULTS.startupTimeout;
     this.exitOnNoProposals = options.exitOnNoProposals ?? DEFAULTS.exitOnNoProposals;
+    this.agreementMaxPoolSize = options.agreementMaxPoolSize ?? DEFAULTS.maxParallelTasks;
   }
 }

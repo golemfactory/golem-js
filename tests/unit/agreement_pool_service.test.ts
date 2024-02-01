@@ -89,7 +89,7 @@ describe("Agreement Pool Service", () => {
     });
   });
   describe("releaseAgreement()", () => {
-    it("should return agreement to the pool if flag reuse if on", async () => {
+    it("should return agreement to the pool if flag reuse is on", async () => {
       const agreementService = new AgreementPoolService(yagnaApi, { logger });
       await agreementService.run();
       await agreementService.addProposal(createProposal("proposal-id"));
@@ -98,7 +98,7 @@ describe("Agreement Pool Service", () => {
       await logger.expectToInclude(`Agreement has been released for reuse`, { id: agreement.id });
     });
 
-    it("should terminate agreement if flag reuse if off", async () => {
+    it("should terminate agreement if flag reuse is off", async () => {
       const agreementService = new AgreementPoolService(yagnaApi, { logger });
       await agreementService.run();
       await agreementService.addProposal(createProposal("proposal-id"));
@@ -115,6 +115,22 @@ describe("Agreement Pool Service", () => {
       const agreement = await agreementService.getAgreement();
       await agreementService.releaseAgreement("not-known-id", true);
       await logger.expectToInclude("Agreement not found in the pool", { id: "not-known-id" });
+    });
+
+    it("should terminate agreement if pool is full", async () => {
+      const agreementService = new AgreementPoolService(yagnaApi, { logger, agreementMaxPoolSize: 1 });
+      await agreementService.run();
+      await agreementService.addProposal(createProposal("proposal-id-1"));
+      await agreementService.addProposal(createProposal("proposal-id-2"));
+      const agreement1 = await agreementService.getAgreement();
+      const agreement2 = await agreementService.getAgreement();
+      await agreementService.releaseAgreement(agreement1.id, true);
+      await agreementService.releaseAgreement(agreement2.id, true);
+      await logger.expectToInclude(`Agreement has been released for reuse`, { id: agreement1.id });
+      await logger.expectToInclude(`Agreement cannot be released back into the pool because the pool is already full`, {
+        id: agreement2.id,
+      });
+      await logger.expectToInclude(`Agreement has been released and will be terminated`, { id: agreement2.id });
     });
   });
 
