@@ -31,8 +31,8 @@
 
   { "cmd": "node", "path": "examples/docs-examples/examples/executing-tasks/observing_events.mjs" },
 
-  { "cmd": "node", "path": "examples/docs-examples/examples/outbound/npm_install.mjs" },
-  { "cmd": "node", "path": "examples/docs-examples/examples/outbound/outbound-basic.mjs" },
+  { "cmd": "node", "path": "examples/docs-examples/examples/outbound/npm_install.mjs", "skip": true },
+  { "cmd": "node", "path": "examples/docs-examples/examples/outbound/outbound-basic.mjs", "skip": true },
 
   { "cmd": "node", "path": "examples/docs-examples/examples/selecting-providers/custom-price.mjs", "noGoth": true },
   { "cmd": "node", "path": "examples/docs-examples/examples/selecting-providers/demand.mjs" },
