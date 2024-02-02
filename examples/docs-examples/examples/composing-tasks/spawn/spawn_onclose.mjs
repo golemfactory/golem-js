@@ -1,4 +1,4 @@
-import { TaskExecutor, LogLevel } from "@golem-sdk/golem-js";
+import { TaskExecutor } from "@golem-sdk/golem-js";
 
 dotenv.config();
 
@@ -11,8 +11,6 @@ dotenv.config();
     budget: 0.5,
     // Control the execution of tasks
     taskTimeout: 5 * 60 * 1000,
-    // Useful for debugging
-    logLevel: LogLevel.Info,
   });
 
   try {
