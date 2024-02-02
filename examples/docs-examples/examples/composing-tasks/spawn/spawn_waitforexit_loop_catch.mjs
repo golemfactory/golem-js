@@ -1,4 +1,4 @@
-import { TaskExecutor, LogLevel } from "@golem-sdk/golem-js";
+import { TaskExecutor } from "@golem-sdk/golem-js";
 
 (async function main() {
   const executor = await TaskExecutor.create({
@@ -12,8 +12,6 @@ import { TaskExecutor, LogLevel } from "@golem-sdk/golem-js";
     maxTaskRetries: 0,
     maxParallelTasks: 1,
     taskTimeout: 5 * 60 * 1000,
-    // Useful for debugging
-    logLevel: LogLevel.Info,
   });
 
   try {

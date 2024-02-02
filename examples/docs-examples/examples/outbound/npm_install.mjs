@@ -1,4 +1,4 @@
-import { TaskExecutor, LogLevel } from "@golem-sdk/golem-js";
+import { TaskExecutor } from "@golem-sdk/golem-js";
 
 import { readFile } from "fs/promises";
 
@@ -18,8 +18,6 @@ const manifest = await readFile(`./manifest_npm_install.json`);
     // Control the execution of tasks
     maxTaskRetries: 0,
 
-    // Useful for debugging
-    logLevel: LogLevel.Info,
     taskTimeout: 120 * 60 * 1000,
   });
 

@@ -1,4 +1,4 @@
-import { TaskExecutor, LogLevel } from "@golem-sdk/golem-js";
+import { TaskExecutor } from "@golem-sdk/golem-js";
 
 import { startProxy, stopProxy } from "./proxy.mjs";
 
@@ -38,8 +38,6 @@ const startClient = async (repetition) => {
     networkIp: "192.168.0.0/24",
 
     taskTimeout: 6 * 60 * 1000, // 5 min
-    // Useful for debugging
-    logLevel: LogLevel.Info,
   });
 
   let serverIP;
