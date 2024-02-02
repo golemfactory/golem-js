@@ -15,11 +15,8 @@
   { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/single-command.mjs" },
   { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/single-command.cjs" },
 
-  { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/spawn/index_abortcontroller.mjs" },
-  { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/spawn/index_awaitpromise.mjs" },
-  { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/spawn/index_onclose.mjs" },
-  { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/spawn/index_sigint.mjs" },
-  { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/spawn/index_waitforexit.mjs" },
+  { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/spawn/spawn_onclose.mjs" },
+  { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/spawn/spawn_waitforexit_loop_catch.mjs" },
 
   { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/single-command.cjs" },
 
@@ -32,7 +29,6 @@
   { "cmd": "node", "path": "examples/docs-examples/examples/executing-tasks/max-parallel-tasks.mjs" },
   { "cmd": "node", "path": "examples/docs-examples/examples/executing-tasks/single-run.mjs" },
 
-  { "cmd": "node", "path": "examples/docs-examples/examples/executing-tasks/long_term_tasks.mjs" },
   { "cmd": "node", "path": "examples/docs-examples/examples/executing-tasks/observing_events.mjs" },
 
   { "cmd": "node", "path": "examples/docs-examples/examples/outbound/npm_install.mjs" },
