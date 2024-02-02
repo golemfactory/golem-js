@@ -6,22 +6,9 @@ dotenv.config();
 (async function main() {
   const eventTarget = new EventTarget();
 
-  let showProposalReceivedFlag = true;
-  let showProposalRespondedFlag = true;
-
   eventTarget.addEventListener("GolemEvent", (event) => {
     let eventName = event.constructor.name;
 
-    if (eventName == "ProposalReceived") {
-      if (showProposalReceivedFlag) {
-        showProposalReceivedFlag = false;
-      } else return;
-    }
-    if (eventName == "ProposalResponded") {
-      if (showProposalRespondedFlag) {
-        showProposalRespondedFlag = false;
-      } else return;
-    }
     if (eventName != "ProposalRejected") {
       console.log(new Date(), eventName);
     }
