@@ -7,13 +7,8 @@ const config = require("./config.json");
 const port = config.port;
 const host = config.host;
 const provider = config.server;
-/*
-const port = 8000;
-const host = "0.0.0.0";
-const provider = "local";
-*/
+
 const reqHandler = function (req, res) {
-  //console.log("rawHeaders", req.rawHeaders);
   res.setHeader("Content-Type", "application/json");
   res.writeHead(200);
   const output = { message: "Hello Golem!", provider: provider };
