@@ -1,4 +1,5 @@
 import { ComparisonOperator, DecorationsBuilder } from "../../src/market/builder";
+import { GolemInternalError } from "../../src/error/golem-error";
 
 describe("#DecorationsBuilder()", () => {
   describe("addProperty()", () => {
@@ -91,6 +92,17 @@ describe("#DecorationsBuilder()", () => {
       const decorationsBuilder = new DecorationsBuilder();
       const flAPI = decorationsBuilder.addDecoration(decoration);
       expect(flAPI).toBeInstanceOf(DecorationsBuilder);
+    });
+
+    it("should not allow to add invalid decorations", () => {
+      const decoration = {
+        properties: [{ key: "prop_key", value: "value" }],
+        constraints: ["some_invalid_constraint"],
+      };
+      const decorationsBuilder = new DecorationsBuilder();
+      expect(() => decorationsBuilder.addDecoration(decoration)).toThrow(
+        new GolemInternalError('Unable to parse constraint "some_invalid_constraint"'),
+      );
     });
   });
   describe("getDecorations()", () => {

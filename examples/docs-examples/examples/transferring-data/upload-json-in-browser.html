@@ -19,11 +19,11 @@
         logs.appendChild(div);
       }
       const logger = {
-        log: (msg) => appendLog(msg),
         warn: (msg) => appendLog(msg, "warn"),
         debug: (msg) => 0, //appendLog(msg, 'debug'),
         error: (msg) => appendLog(msg, "error"),
         info: (msg) => appendLog(msg, "info"),
+        child: () => logger,
       };
       async function run() {
         const executor = await TaskExecutor.create({
@@ -44,7 +44,7 @@
             appendResults(JSON.stringify(output.data.output, null, "\t"));
           })
           .catch((e) => logger.error(e));
-        await executor.end();
+        await executor.shutdown();
       }
       document.getElementById("echo").onclick = run;
     </script>

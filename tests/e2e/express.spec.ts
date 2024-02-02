@@ -1,126 +1,85 @@
 import express from "express";
-import { GolemNetwork, Job, JobState } from "../../src";
+import { GolemNetwork, JobState } from "../../src";
 import supertest from "supertest";
 import fs from "fs";
 
-const blenderParams = (frame) => ({
-  scene_file: "/golem/resource/scene.blend",
-  resolution: [400, 300],
-  use_compositing: false,
-  crops: [
-    {
-      outfilebasename: "out",
-      borders_x: [0.0, 1.0],
-      borders_y: [0.0, 1.0],
-    },
-  ],
-  samples: 100,
-  frames: [frame],
-  output_format: "PNG",
-  RESOURCES_DIR: "/golem/resources",
-  WORK_DIR: "/golem/work",
-  OUTPUT_DIR: "/golem/output",
-});
-
 describe("Express", function () {
-  let network: GolemNetwork;
+  let golemClient: GolemNetwork;
+  const consoleSpy = jest.fn();
   beforeEach(async () => {
-    network = new GolemNetwork({
-      image: "golem/blender:latest",
-      demand: {
-        minMemGib: 1,
-        minStorageGib: 1,
-        minCpuThreads: 1,
-        minCpuCores: 1,
-      },
-      beforeEachJob: async (workContext) => {
-        await workContext.uploadFile(
-          fs.realpathSync(__dirname + "/../mock/fixtures/cubes.blend"),
-          "/golem/resource/scene.blend",
-        );
-      },
-      enableLogging: true,
-    });
-    await network.init();
+    golemClient = new GolemNetwork({});
+    await golemClient.init();
+    consoleSpy.mockReset();
   });
   afterEach(async () => {
-    await network.close();
+    await golemClient.close();
   });
 
   const getServer = () => {
     const app = express();
-    const port = 3001;
-    app.use(express.json());
-    app.listen(port);
+    const port = 3000;
 
-    app.post("/render-scene", async (req, res) => {
-      const frame = req.body.frame;
+    app.use(express.text());
 
-      if (typeof frame !== "number") {
-        res.status(400).send("please specify which frame to render in the request body");
+    app.post("/tts", async (req, res) => {
+      if (!req.body) {
+        res.status(400).send("Missing text parameter");
         return;
       }
+      const job = golemClient.createJob({
+        package: {
+          imageTag: "severyn/espeak:latest",
+        },
+      });
 
-      const job = await network.createJob(async (workContext) => {
-        const fileName = `EXPRESS_SPEC_output_${frame}.png`;
-        const result = await workContext
+      job.events.on("created", () => {
+        consoleSpy("Job created");
+      });
+      job.events.on("started", () => {
+        consoleSpy("Job started");
+      });
+      job.events.on("error", () => {
+        consoleSpy("Job failed", job.error);
+      });
+      job.events.on("success", () => {
+        consoleSpy("Job succeeded", job.results);
+      });
+
+      job.startWork(async (ctx) => {
+        const fileName = `EXPRESS_SPEC_OUTPUT.wav`;
+        await ctx
           .beginBatch()
-          .uploadJson(blenderParams(frame), "/golem/work/params.json")
-          .run("/golem/entrypoints/run-blender.sh")
-          .downloadFile(`/golem/output/out${frame.toString().padStart(4, "0")}.png`, fileName)
+          .run(`espeak "${req.body}" -w /golem/output/output.wav`)
+          .downloadFile("/golem/output/output.wav", fileName)
           .end();
-        if (!result?.length) {
-          throw new Error("Something went wrong, no result");
-        }
         return fileName;
       });
-      return res.json({ jobId: job.id });
+      res.send(job.id);
     });
 
-    app.get("/job/:jobId/status", async (req, res) => {
-      const jobId = req.params.jobId;
-      if (!jobId) {
-        res.status(400).send("please specify jobId in the request path");
+    app.get("/tts/:id", async (req, res) => {
+      const job = golemClient.getJobById(req.params.id);
+      if (!job) {
+        res.status(404).send("Job not found");
         return;
       }
-      let job: Job<string>;
-      let status: JobState;
-      try {
-        job = network.getJobById(jobId) as Job<string>;
-        status = await job.fetchState();
-      } catch (error) {
-        res.status(404).send("job not found");
-        return;
-      }
-      return res.json({ status });
+      res.send(job.state);
     });
 
-    app.get("/job/:jobId/result", async (req, res) => {
-      const jobId = req.params.jobId;
-      if (!jobId) {
-        res.status(400).send("please specify jobId in the request path");
+    app.get("/tts/:id/results", async (req, res) => {
+      const job = golemClient.getJobById(req.params.id);
+      if (!job) {
+        res.status(404).send("Job not found");
         return;
       }
-      let job: Job<string>;
-      let status: JobState;
-      try {
-        job = network.getJobById(jobId) as Job<string>;
-        status = await job.fetchState();
-      } catch (error) {
-        res.status(404).send("job not found");
-        return;
-      }
-      if ([JobState.New, JobState.Pending].includes(status)) {
-        res.status(400).send("job is still running, check again later!");
-        return;
-      }
-      if (status === JobState.Rejected) {
-        res.status(400).send("job failed, check logs for more details");
-        return;
+      if (job.state !== JobState.Done) {
+        await job.waitForResult();
       }
 
-      const result = await job.fetchResults();
-      return res.json("Job completed successfully! See your result at http://localhost:3001/results/" + result);
+      const results = await job.results;
+      res.send(
+        `Job completed successfully! Open the following link in your browser to listen to the result: http://localhost:${port}/results/${results}`,
+      );
     });
 
     return app;
@@ -130,39 +89,45 @@ describe("Express", function () {
     "starts the express server",
     async function () {
       const app = getServer();
-      app.get("/network-status", (req, res) => {
-        res.json({ isInitialized: network.isInitialized() });
-      });
 
-      const response = await supertest(app).post("/render-scene").send({ frame: 0 });
+      const response = await supertest(app).post("/tts").send("Hello Golem!").set("Content-Type", "text/plain");
       expect(response.status).toEqual(200);
-      expect(response.body.jobId).toBeDefined();
+      expect(response.text).toMatch(/^[a-f0-9-]{36}$/i);
 
-      const jobId = response.body.jobId;
-      let statusResponse = await supertest(app).get(`/job/${jobId}/status`);
+      const jobId = response.text;
+
+      let statusResponse = await supertest(app).get(`/tts/${jobId}`).set("Content-Type", "text/plain");
       expect(statusResponse.status).toEqual(200);
-      expect(statusResponse.body.status).toEqual(JobState.New);
+      expect(statusResponse.text === JobState.New || statusResponse.text === JobState.Pending).toBeTruthy();
 
-      await new Promise((resolve) => {
+      await new Promise((resolve, reject) => {
         const interval = setInterval(async () => {
-          const statusResponse = await supertest(app).get(`/job/${jobId}/status`);
-          if (statusResponse.body.status === JobState.Done) {
+          const statusResponse = await supertest(app).get(`/tts/${jobId}`).set("Content-Type", "text/plain");
+          if (statusResponse.text === JobState.Done) {
             clearInterval(interval);
             resolve(undefined);
+          }
+          if (statusResponse.text === JobState.Rejected) {
+            clearInterval(interval);
+            reject(new Error("Job rejected"));
           }
         }, 500);
       });
 
-      statusResponse = await supertest(app).get(`/job/${jobId}/status`);
+      statusResponse = await supertest(app).get(`/tts/${jobId}`).set("Content-Type", "text/plain");
       expect(statusResponse.status).toEqual(200);
-      expect(statusResponse.body.status).toEqual(JobState.Done);
+      expect(statusResponse.text).toEqual(JobState.Done);
 
-      const resultResponse = await supertest(app).get(`/job/${jobId}/result`);
+      const resultResponse = await supertest(app).get(`/tts/${jobId}/results`).set("Content-Type", "text/plain");
       expect(resultResponse.status).toEqual(200);
-      expect(resultResponse.body).toEqual(
-        "Job completed successfully! See your result at http://localhost:3001/results/EXPRESS_SPEC_output_0.png",
+      expect(resultResponse.text).toEqual(
+        "Job completed successfully! Open the following link in your browser to listen to the result: http://localhost:3000/results/EXPRESS_SPEC_OUTPUT.wav",
       );
-      expect(fs.existsSync(`EXPRESS_SPEC_output_0.png`)).toEqual(true);
+      expect(fs.existsSync(`EXPRESS_SPEC_OUTPUT.wav`)).toEqual(true);
+      expect(consoleSpy).toHaveBeenNthCalledWith(1, "Job created");
+      expect(consoleSpy).toHaveBeenNthCalledWith(2, "Job started");
+      expect(consoleSpy).toHaveBeenNthCalledWith(3, "Job succeeded", "EXPRESS_SPEC_OUTPUT.wav");
+      expect(consoleSpy).toHaveBeenCalledTimes(3);
     },
     1000 * 240,
   );

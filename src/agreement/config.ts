@@ -7,6 +7,8 @@ const DEFAULTS = {
   agreementRequestTimeout: 30000,
   agreementWaitingForApprovalTimeout: 60,
   agreementSelector: randomAgreementSelectorWithPriorityForExistingOnes(),
+  agreementMaxEvents: 100,
+  agreementEventsFetchingIntervalSec: 5,
 };
 
 /**
@@ -32,9 +34,14 @@ export class AgreementConfig {
  */
 export class AgreementServiceConfig extends AgreementConfig {
   readonly agreementSelector: AgreementSelector;
+  readonly agreementMaxEvents: number;
+  readonly agreementEventsFetchingIntervalSec: number;
 
   constructor(options?: AgreementServiceOptions) {
     super(options);
     this.agreementSelector = options?.agreementSelector ?? DEFAULTS.agreementSelector;
+    this.agreementMaxEvents = options?.agreementMaxEvents ?? DEFAULTS.agreementMaxEvents;
+    this.agreementEventsFetchingIntervalSec =
+      options?.agreementEventsFetchingIntervalSec ?? DEFAULTS.agreementEventsFetchingIntervalSec;
   }
 }

@@ -1,8 +1,8 @@
 import { ComparisonOperator, DecorationsBuilder, MarketDecoration } from "../market/builder";
-import { EnvUtils, Logger } from "../utils";
-import axios from "axios";
+import { EnvUtils, Logger, defaultLogger } from "../utils";
 import { PackageConfig } from "./config";
 import { RequireAtLeastOne } from "../utils/types";
+import { GolemError, GolemPlatformError } from "../error/golem-error";
 
 export type AllPackageOptions = {
   /** Type of engine required: vm, emscripten, sgx, sgx-js, sgx-wasm, sgx-wasi */
@@ -47,10 +47,10 @@ export interface PackageDetails {
  * Package module - an object for descriptions of the payload required by the requestor.
  */
 export class Package {
-  private logger?: Logger;
+  private logger: Logger;
 
   private constructor(private options: PackageConfig) {
-    this.logger = options.logger;
+    this.logger = options.logger || defaultLogger("work");
   }
 
   static create(options: PackageOptions): Package {
@@ -72,10 +72,6 @@ export class Package {
     return {
       imageHash: str,
     };
-  }
-
-  static GetHashFromTag(tag: string): string {
-    return tag.split(":")[1];
   }
 
   async getDemandDecoration(): Promise<MarketDecoration> {
@@ -110,18 +106,24 @@ export class Package {
 
     const url = `${repoUrl}/v1/image/info?${isDev ? "dev=true" : "count=true"}&${tag ? `tag=${tag}` : `hash=${hash}`}`;
 
-    const response = await axios.get(url, {
-      //always give reponse instead of throwing error
-      // ? this should probably go to general config
-      validateStatus: () => true,
-    });
-    if (response.status != 200) {
-      this.logger?.error(`Unable to get image Url of  ${tag || hash} from ${repoUrl}`);
-      throw Error(`${response.data}`);
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        this.logger.error(`Unable to get image`, { url: tag || hash, from: repoUrl });
+        throw new GolemPlatformError(`Unable to get image ${await response.text()}`);
+      }
+
+      const data = await response.json();
+
+      const imageUrl = isHttps ? data.https : data.http;
+      hash = data.sha3;
+
+      return `hash:sha3:${hash}:${imageUrl}`;
+    } catch (error) {
+      if (error instanceof GolemError) throw error;
+      this.logger.error(`Unable to get image`, { url: tag || hash, from: repoUrl });
+      throw new GolemPlatformError(`Failed to fetch image: ${error}`);
     }
-    const imageUrl = isHttps ? response.data.https : response.data.http;
-    hash = response.data.sha3;
-    return `hash:sha3:${hash}:${imageUrl}`;
   }
 
   private addManifestDecorations(builder: DecorationsBuilder): void {

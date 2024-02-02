@@ -1,17 +1,16 @@
-import { Logger } from "../utils";
+import { Logger, YagnaApi, defaultLogger } from "../utils";
 import { Agreement as AgreementModel } from "ya-ts-client/dist/ya-market/src/models";
 import { YagnaOptions } from "../executor";
 import { AgreementFactory } from "./factory";
 import { AgreementConfig } from "./config";
 import { Events } from "../events";
-import { YagnaApi } from "../utils/yagna/yagna";
+import { GolemMarketError, MarketErrorCode } from "../market/error";
+import { Proposal } from "../market";
 
-/**
- * @hidden
- */
 export interface ProviderInfo {
   name: string;
   id: string;
+  walletAddress: string;
 }
 
 /**
@@ -48,34 +47,34 @@ export interface AgreementOptions {
  */
 export class Agreement {
   private agreementData?: AgreementModel;
-  private logger?: Logger;
+  private logger: Logger;
 
   /**
    * @param id - agreement ID
-   * @param provider - {@link ProviderInfo}
+   * @param proposal - {@link Proposal}
    * @param yagnaApi - {@link YagnaApi}
    * @param options - {@link AgreementConfig}
    * @hidden
    */
   constructor(
-    public readonly id,
-    public readonly provider: ProviderInfo,
+    public readonly id: string,
+    public readonly proposal: Proposal,
     private readonly yagnaApi: YagnaApi,
     private readonly options: AgreementConfig,
   ) {
-    this.logger = options.logger;
+    this.logger = options.logger || defaultLogger("market");
   }
 
   /**
-   * Create agreement for given proposal ID
-   * @param proposalId - proposal ID
+   * Create agreement for given proposal
+   * @param proposal
    * @param yagnaApi
    * @param agreementOptions - {@link AgreementOptions}
    * @return Agreement
    */
-  static async create(proposalId: string, yagnaApi: YagnaApi, agreementOptions?: AgreementOptions): Promise<Agreement> {
+  static async create(proposal: Proposal, yagnaApi: YagnaApi, agreementOptions?: AgreementOptions): Promise<Agreement> {
     const factory = new AgreementFactory(yagnaApi, agreementOptions);
-    return factory.create(proposalId);
+    return factory.create(proposal);
   }
 
   /**
@@ -97,23 +96,32 @@ export class Agreement {
     return this.agreementData!.state;
   }
 
+  getProviderInfo(): ProviderInfo {
+    return this.proposal.provider;
+  }
+
   /**
    * Confirm agreement and waits for provider approval
    * @description Blocking function waits till agreement will be confirmed and approved by provider
-   * @throws Error if the agreement will be rejected by provider or failed to confirm
+   *
+   * @param appSessionId - Optional correlation/session identifier used for querying events
+   * related to this agreement
    */
-  async confirm() {
+  async confirm(appSessionId?: string) {
     try {
-      await this.yagnaApi.market.confirmAgreement(this.id);
+      await this.yagnaApi.market.confirmAgreement(this.id, appSessionId);
       await this.yagnaApi.market.waitForApproval(this.id, this.options.agreementWaitingForApprovalTimeout);
-      this.logger?.debug(`Agreement ${this.id} approved`);
+      this.logger.debug(`Agreement approved`, { id: this.id });
       this.options.eventTarget?.dispatchEvent(
-        new Events.AgreementConfirmed({ id: this.id, providerId: this.provider.id }),
+        new Events.AgreementConfirmed({ id: this.id, provider: this.getProviderInfo() }),
       );
     } catch (error) {
-      this.logger?.debug(`Unable to confirm agreement with provider ${this.provider.name}. ${error}`);
+      this.logger.error(`Unable to confirm agreement with provider`, {
+        providerName: this.getProviderInfo().name,
+        error,
+      });
       this.options.eventTarget?.dispatchEvent(
-        new Events.AgreementRejected({ id: this.id, providerId: this.provider.id, reason: error.toString() }),
+        new Events.AgreementRejected({ id: this.id, provider: this.getProviderInfo(), reason: error.toString() }),
       );
       throw error;
     }
@@ -143,12 +151,14 @@ export class Agreement {
           timeout: this.options.agreementRequestTimeout,
         });
       this.options.eventTarget?.dispatchEvent(
-        new Events.AgreementTerminated({ id: this.id, providerId: this.provider.id }),
+        new Events.AgreementTerminated({ id: this.id, provider: this.getProviderInfo(), reason: reason.message }),
       );
-      this.logger?.debug(`Agreement ${this.id} terminated`);
+      this.logger.debug(`Agreement terminated`, { id: this.id });
     } catch (error) {
-      throw new Error(
+      throw new GolemMarketError(
         `Unable to terminate agreement ${this.id}. ${error.response?.data?.message || error.response?.data || error}`,
+        MarketErrorCode.AgreementTerminationFailed,
+        this.proposal.demand,
       );
     }
   }

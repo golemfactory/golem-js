@@ -15,11 +15,11 @@ function appendLog(msg, level = "info") {
 }
 
 const logger = {
-  log: (msg) => appendLog(msg),
-  warn: (msg) => appendLog(msg, "warn"),
-  debug: (msg) => appendLog(msg, "debug"),
   error: (msg) => appendLog(msg, "error"),
   info: (msg) => appendLog(msg, "info"),
+  warn: (msg) => appendLog(msg, "warn"),
+  debug: (msg) => appendLog(msg, "debug"),
+  child: () => logger,
 };
 
 async function run() {
@@ -35,7 +35,7 @@ async function run() {
   } catch (error) {
     logger.error("Computation failed:", error);
   } finally {
-    await executor.end();
+    await executor.shutdown();
   }
 }
 

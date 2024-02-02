@@ -22,7 +22,7 @@ interface Payload {
 }
 
 export class Tasks extends AbstractAggregator<Payload, TaskInfo> {
-  beforeAdd(payload): TaskInfo {
+  beforeAdd(payload: Payload): TaskInfo {
     return {
       ...payload,
       stopTime: 0,

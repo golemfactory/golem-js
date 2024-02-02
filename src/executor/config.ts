@@ -1,14 +1,13 @@
 import { ExecutorOptions } from "./executor";
 import { Package, PackageOptions } from "../package";
 import { ActivityOptions } from "../activity";
-import { Logger, LogLevel, runtimeContextChecker, defaultLogger } from "../utils";
-import { InMemoryJobStorage, JobStorage } from "../job/storage";
+import { GolemConfigError } from "../error/golem-error";
+import { Logger, runtimeContextChecker, defaultLogger, nullLogger } from "../utils";
 
 const DEFAULTS = Object.freeze({
-  payment: { driver: "erc20", network: "goerli" },
+  payment: { driver: "erc20", network: "holesky" },
   budget: 1.0,
   subnetTag: "public",
-  logLevel: LogLevel.Info,
   basePath: "http://127.0.0.1:7465",
   maxParallelTasks: 5,
   taskTimeout: 1000 * 60 * 5, // 5 min,
@@ -29,13 +28,10 @@ export class ExecutorConfig {
   readonly subnetTag: string;
   readonly networkIp?: string;
   readonly packageOptions: Omit<PackageOptions, "imageHash" | "imageTag">;
-  readonly logLevel: string;
   readonly yagnaOptions: { apiKey: string; basePath: string };
-  readonly logger?: Logger;
+  readonly logger: Logger;
   readonly eventTarget: EventTarget;
   readonly maxTaskRetries: number;
-  readonly activityExecuteTimeout?: number;
-  readonly jobStorage: JobStorage;
   readonly startupTimeout: number;
   readonly exitOnNoProposals: boolean;
 
@@ -49,14 +45,15 @@ export class ExecutorConfig {
             YAGNA_SUBNET: null,
           },
         };
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore FIXME: this weirdness may not be needed anymore?
     Object.keys(options).forEach((key) => (this[key] = options[key]));
-    this.activityExecuteTimeout = options.activityExecuteTimeout || options.taskTimeout;
     const apiKey = options?.yagnaOptions?.apiKey || processEnv.env.YAGNA_APPKEY;
     if (!apiKey) {
-      throw new Error("Api key not defined");
+      throw new GolemConfigError("Api key not defined");
     }
     if (options.maxTaskRetries && options.maxTaskRetries < 0) {
-      throw new Error("The maxTaskRetries parameter cannot be less than zero");
+      throw new GolemConfigError("The maxTaskRetries parameter cannot be less than zero");
     }
     this.yagnaOptions = {
       apiKey,
@@ -82,16 +79,12 @@ export class ExecutorConfig {
     this.networkIp = options.networkIp;
     this.logger = (() => {
       const isLoggingEnabled = options.enableLogging ?? DEFAULTS.enableLogging;
-      if (!isLoggingEnabled) return undefined;
-      if (options.logger) return options.logger;
-      if (!runtimeContextChecker.isBrowser) return defaultLogger();
-      return undefined;
+      if (!isLoggingEnabled) return nullLogger();
+      if (options.logger) return options.logger.child("task-executor");
+      return defaultLogger("task-executor");
     })();
-    this.logLevel = options.logLevel || DEFAULTS.logLevel;
-    this.logger?.setLevel && this.logger?.setLevel(this.logLevel);
     this.eventTarget = options.eventTarget || new EventTarget();
     this.maxTaskRetries = options.maxTaskRetries ?? DEFAULTS.maxTaskRetries;
-    this.jobStorage = options.jobStorage || new InMemoryJobStorage();
     this.startupTimeout = options.startupTimeout ?? DEFAULTS.startupTimeout;
     this.exitOnNoProposals = options.exitOnNoProposals ?? DEFAULTS.exitOnNoProposals;
   }

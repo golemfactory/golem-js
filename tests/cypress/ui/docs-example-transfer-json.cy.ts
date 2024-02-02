@@ -5,7 +5,7 @@ describe("Docs Examples Transfer JSON", () => {
     cy.get("#SUBNET_TAG").clear().type(Cypress.env("YAGNA_SUBNET"));
     cy.get("#echo").click();
     cy.get("#results").should("include.text", `"Hello World"`, { timeout: 60000 });
-    cy.get("#logs").contains("computed by provider");
+    cy.get("#logs").contains("Task computed");
     cy.get("#logs").contains("Task Executor has shut down");
   });
 });
