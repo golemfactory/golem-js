@@ -31,6 +31,6 @@ const url = "https://ipfs.io/ipfs/bafybeihkoviema7g3gxyt6la7vd5ho32ictqbilu3wnlo
   } catch (err) {
     console.error("The task failed due to", err);
   } finally {
-    await executor.end();
+    await executor.shutdown();
   }
 })();

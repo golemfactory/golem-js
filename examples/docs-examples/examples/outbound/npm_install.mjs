@@ -35,6 +35,6 @@ const manifest = await readFile(`./manifest_npm_install.json`);
   } catch (err) {
     console.error("Running the task on Golem failed due to", err);
   } finally {
-    await executor.end();
+    await executor.shutdown();
   }
 })();
