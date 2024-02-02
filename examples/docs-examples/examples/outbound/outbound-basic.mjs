@@ -1,6 +1,9 @@
 import { TaskExecutor } from "@golem-sdk/golem-js";
 import { readFile } from "fs/promises";
 
+// The example is using url that is included in the outbound Whitelist.
+// See https://github.com/golemfactory/ya-installer-resources/tree/main/whitelist for the current default whitelist.
+
 const url = "https://ipfs.io/ipfs/bafybeihkoviema7g3gxyt6la7vd5ho32ictqbilu3wnlo3rs7ewhnp7lly";
 
 (async function main() {
