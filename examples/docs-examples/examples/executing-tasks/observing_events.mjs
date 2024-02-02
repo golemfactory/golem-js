@@ -1,4 +1,3 @@
-import * as dotenv from "dotenv";
 import { TaskExecutor } from "@golem-sdk/golem-js";
 
 dotenv.config();

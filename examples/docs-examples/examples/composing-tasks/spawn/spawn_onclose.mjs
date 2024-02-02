@@ -1,5 +1,3 @@
-import dotenv from "dotenv";
-
 import { TaskExecutor, LogLevel } from "@golem-sdk/golem-js";
 
 dotenv.config();
