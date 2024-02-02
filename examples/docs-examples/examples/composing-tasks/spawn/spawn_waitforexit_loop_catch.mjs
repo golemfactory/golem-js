@@ -1,7 +1,5 @@
 import { TaskExecutor, LogLevel } from "@golem-sdk/golem-js";
 
-dotenv.config();
-
 (async function main() {
   const executor = await TaskExecutor.create({
     // What do you want to run
