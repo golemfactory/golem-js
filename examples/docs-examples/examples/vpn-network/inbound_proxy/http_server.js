@@ -22,9 +22,10 @@ async function go() {
     console.log(`Server is running on http://${host}:${port}`);
   });
 
-  await new Promise((res) => setTimeout(res, 120 * 1000));
-  console.log("Server stops: ", new Date());
-  process.exit(0);
+  process.on("SIGINT", () => {
+    console.log("Server stops: ", new Date());
+    process.exit();
+  });
 }
 
 go();
