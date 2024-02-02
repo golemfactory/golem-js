@@ -57,9 +57,9 @@ describe("Task Service", () => {
       },
     );
     service.run().catch((e) => console.error(e));
-    expect(task1.isPending()).toEqual(true);
-    expect(task2.isPending()).toEqual(true);
-    expect(task3.isPending()).toEqual(false);
+    expect(task1.isQueued()).toEqual(true);
+    expect(task2.isQueued()).toEqual(true);
+    expect(task3.isQueued()).toEqual(false);
     expect(task3.isNew()).toEqual(true);
     await service.end();
   });
@@ -113,7 +113,11 @@ describe("Task Service", () => {
     );
     service.run().catch((e) => console.error(e));
     await logger.expectToNotMatch(/Trying to redo the task/, 100);
-    await logger.expectToInclude("Task has been rejected", { taskId: task.id, reason: expect.anything() }, 100);
+    await logger.expectToInclude(
+      "Task has been rejected",
+      { taskId: task.id, reason: expect.anything(), retries: 0, providerName: expect.anything() },
+      100,
+    );
     await service.end();
   });
 
@@ -147,6 +151,8 @@ describe("Task Service", () => {
       {
         taskId: task.id,
         reason: expect.anything(),
+        retries: 1,
+        providerName: expect.anything(),
       },
       1800,
     );
