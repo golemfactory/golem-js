@@ -32,16 +32,14 @@ dotenv.config();
         remote_process.stdout.on("data", (data) => console.log("stdout: ", item, data));
         remote_process.stderr.on("data", (data) => console.log("stderr: ", item, data));
 
-        const output = await remote_process.waitForExit(5000).catch(async (err) => {
+        return await remote_process.waitForExit(5000).catch(async (err) => {
           console.log("Spawn was interrupted");
 
           await ctx.activity.agreement.terminate();
+          console.log("Task completed", new Date().toISOString());
           console.log("Agreement terminated");
           return 1;
-        }); // default wait timeout is 20 secs
-
-        console.log("Task completed", new Date().toISOString());
-        return output;
+        }); // default wait timeout is 20 secs, here 5 secs
       });
     });
 
