@@ -1,8 +1,8 @@
 import { Agreement, AgreementOptions } from "./agreement";
-import { Logger } from "../utils";
+import { Logger, defaultLogger, YagnaApi } from "../utils";
 import { AgreementConfig } from "./config";
 import { Events } from "../events";
-import { YagnaApi } from "../utils/yagna/yagna";
+import { Proposal, GolemMarketError, MarketErrorCode } from "../market";
 
 /**
  * AgreementFactory
@@ -10,7 +10,7 @@ import { YagnaApi } from "../utils/yagna/yagna";
  * @internal
  */
 export class AgreementFactory {
-  private readonly logger?: Logger;
+  private readonly logger: Logger;
   private readonly options: AgreementConfig;
 
   /**
@@ -23,7 +23,7 @@ export class AgreementFactory {
     agreementOptions?: AgreementOptions,
   ) {
     this.options = new AgreementConfig(agreementOptions);
-    this.logger = agreementOptions?.logger;
+    this.logger = agreementOptions?.logger || defaultLogger("market");
   }
 
   /**
@@ -31,35 +31,34 @@ export class AgreementFactory {
    *
    * @return Agreement
    */
-  async create(proposalId: string): Promise<Agreement> {
+  async create(proposal: Proposal): Promise<Agreement> {
     try {
       const agreementProposalRequest = {
-        proposalId,
+        proposalId: proposal.id,
         validTo: new Date(+new Date() + 3600 * 1000).toISOString(),
       };
       const { data: agreementId } = await this.yagnaApi.market.createAgreement(agreementProposalRequest, {
         timeout: this.options.agreementRequestTimeout,
       });
       const { data } = await this.yagnaApi.market.getAgreement(agreementId);
-      const provider = {
-        name: data?.offer.properties["golem.node.id.name"],
-        id: data?.offer.providerId,
-      };
-      if (!provider.id || !provider.name) throw new Error("Unable to get provider info");
-      const agreement = new Agreement(agreementId, provider, this.yagnaApi, this.options);
+      const agreement = new Agreement(agreementId, proposal, this.yagnaApi, this.options);
       this.options.eventTarget?.dispatchEvent(
         new Events.AgreementCreated({
           id: agreementId,
-          providerId: provider.id,
-          providerName: provider.name,
+          provider: proposal.provider,
           validTo: data?.validTo,
-          proposalId,
+          proposalId: proposal.id,
         }),
       );
-      this.logger?.debug(`Agreement ${agreementId} created`);
+      this.logger.debug(`Agreement created`, { id: agreementId });
       return agreement;
     } catch (error) {
-      throw new Error(`Unable to create agreement ${error?.response?.data?.message || error?.response?.data || error}`);
+      throw new GolemMarketError(
+        `Unable to create agreement ${error?.response?.data?.message || error?.response?.data || error}`,
+        MarketErrorCode.AgreementCreationFailed,
+        proposal.demand,
+        error,
+      );
     }
   }
 }

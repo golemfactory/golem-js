@@ -1,10 +1,9 @@
 import Bottleneck from "bottleneck";
-import { Logger } from "../utils";
+import { Logger, YagnaApi, defaultLogger, sleep } from "../utils";
 import { Agreement, AgreementOptions, AgreementStateEnum } from "./agreement";
 import { AgreementServiceConfig } from "./config";
-import { Proposal } from "../market";
-import sleep from "../utils/sleep";
-import { YagnaApi } from "../utils/yagna/yagna";
+import { GolemMarketError, MarketErrorCode, Proposal } from "../market";
+import { AgreementEvent, AgreementTerminatedEvent } from "ya-ts-client/dist/ya-market";
 
 export interface AgreementDTO {
   id: string;
@@ -21,6 +20,10 @@ export type AgreementSelector = (candidates: AgreementCandidate[]) => Promise<Ag
 export interface AgreementServiceOptions extends AgreementOptions {
   /** The selector used when choosing a provider from a pool of existing offers (from the market or already used before) */
   agreementSelector?: AgreementSelector;
+  /** The maximum number of events fetched in one request call  */
+  agreementMaxEvents?: number;
+  /** interval for fetching agreement events */
+  agreementEventsFetchingIntervalSec?: number;
 }
 
 /**
@@ -29,13 +32,11 @@ export interface AgreementServiceOptions extends AgreementOptions {
  * @hidden
  */
 export class AgreementPoolService {
-  private logger?: Logger;
+  private logger: Logger;
   private config: AgreementServiceConfig;
-
   private pool = new Set<AgreementCandidate>();
   private candidateMap = new Map<string, AgreementCandidate>();
   private agreements = new Map<string, Agreement>();
-
   private isServiceRunning = false;
   private limiter: Bottleneck;
 
@@ -44,8 +45,7 @@ export class AgreementPoolService {
     agreementServiceOptions?: AgreementServiceOptions,
   ) {
     this.config = new AgreementServiceConfig(agreementServiceOptions);
-    this.logger = agreementServiceOptions?.logger;
-
+    this.logger = agreementServiceOptions?.logger || defaultLogger("agreement");
     this.limiter = new Bottleneck({
       maxConcurrent: 1,
     });
@@ -56,7 +56,8 @@ export class AgreementPoolService {
    */
   async run() {
     this.isServiceRunning = true;
-    this.logger?.debug("Agreement Pool Service has started");
+    this.subscribeForAgreementEvents().catch((e) => this.logger.warn("Unable to subscribe for agreement events", e));
+    this.logger.info("Agreement Pool Service has started");
   }
 
   /**
@@ -64,14 +65,14 @@ export class AgreementPoolService {
    * @param proposal Proposal
    */
   async addProposal(proposal: Proposal) {
-    this.logger?.debug(`New proposal added to pool from provider (${proposal.provider.name})`);
+    this.logger.debug(`New proposal added to pool`, { providerName: proposal.provider.name });
     this.pool.add(new AgreementCandidate(proposal));
   }
 
   /**
    * Release or terminate agreement by ID
    *
-   * @param agreement Agreement
+   * @param agreementId Agreement Id
    * @param allowReuse if false, terminate and remove from pool, if true, back to pool for further reuse
    */
   async releaseAgreement(agreementId: string, allowReuse: boolean) {
@@ -79,22 +80,23 @@ export class AgreementPoolService {
       const candidate = this.candidateMap.get(agreementId);
       if (candidate) {
         this.pool.add(candidate);
-        this.logger?.debug(`Agreement ${agreementId} has been released for reuse`);
+        this.logger.debug(`Agreement has been released for reuse`, { id: agreementId });
         return;
       } else {
-        this.logger?.warn(`Agreement ${agreementId} not found in the pool`);
+        this.logger.debug(`Agreement not found in the pool`, { id: agreementId });
       }
     } else {
       const agreement = this.agreements.get(agreementId);
       if (!agreement) {
-        this.logger?.warn(`Agreement ${agreementId} not found in the pool`);
+        this.logger.debug(`Agreement not found in the pool`, { id: agreementId });
         return;
       }
-      this.logger?.debug(`Agreement ${agreementId} has been released and will be terminated`);
+      this.logger.debug(`Agreement has been released and will be terminated`, { id: agreementId });
       try {
+        this.removeAgreementFromPool(agreement);
         await agreement.terminate();
       } catch (e) {
-        this.logger?.warn(`Unable to terminate agreement ${agreement.id}: ${e.message}`);
+        this.logger.warn(`Unable to terminate agreement`, { id: agreementId, error: e });
       }
     }
   }
@@ -105,15 +107,19 @@ export class AgreementPoolService {
    * @return Agreement
    */
   async getAgreement(): Promise<Agreement> {
-    let agreement;
+    let agreement: Agreement | undefined;
     while (!agreement && this.isServiceRunning) {
       agreement = await this.getAgreementFormPool();
       if (!agreement) {
         await sleep(2);
       }
     }
-    if (!agreement && !this.isServiceRunning) {
-      throw new Error("Unable to get agreement. Agreement service is not running");
+    if (!agreement || !this.isServiceRunning) {
+      throw new GolemMarketError(
+        "Unable to get agreement. Agreement service is not running",
+        MarketErrorCode.ServiceNotInitialized,
+        agreement?.proposal?.demand,
+      );
     }
     return agreement;
   }
@@ -150,7 +156,7 @@ export class AgreementPoolService {
   async end() {
     this.isServiceRunning = false;
     await this.terminateAll({ message: "All computations done" });
-    this.logger?.debug("Agreement Pool Service has been stopped");
+    this.logger.info("Agreement Pool Service has been stopped");
   }
 
   /**
@@ -161,39 +167,43 @@ export class AgreementPoolService {
     const agreementsToTerminate = Array.from(this.candidateMap)
       .map(([agreementId]) => this.agreements.get(agreementId))
       .filter((a) => a !== undefined) as Agreement[];
-    this.logger?.debug(`Trying to terminate all agreements.... Size: ${agreementsToTerminate.length}`);
+    this.logger.debug(`Trying to terminate all agreements....`, { size: agreementsToTerminate.length });
     await Promise.all(
       agreementsToTerminate.map((agreement) =>
         agreement
           .terminate(reason)
-          .catch((e) => this.logger?.warn(`Agreement ${agreement.id} cannot be terminated. ${e}`)),
+          .catch((e) => this.logger.warn(`Agreement cannot be terminated.`, { id: agreement.id, error: e })),
       ),
     );
   }
 
-  async createAgreement(candidate) {
+  async createAgreement(candidate: AgreementCandidate) {
     try {
-      let agreement = await Agreement.create(candidate.proposal.id, this.yagnaApi, this.config.options);
+      let agreement = await Agreement.create(candidate.proposal, this.yagnaApi, this.config.options);
       agreement = await this.waitForAgreementApproval(agreement);
       const state = await agreement.getState();
 
       if (state !== AgreementStateEnum.Approved) {
-        throw new Error(`Agreement ${agreement.id} cannot be approved. Current state: ${state}`);
+        throw new GolemMarketError(
+          `Agreement ${agreement.id} cannot be approved. Current state: ${state}`,
+          MarketErrorCode.AgreementApprovalFailed,
+          agreement.proposal.demand,
+        );
       }
-      this.logger?.info(`Agreement confirmed by provider ${agreement.provider.name}`);
+      this.logger.info(`Agreement confirmed by provider`, { providerName: agreement.getProviderInfo().name });
 
       this.agreements.set(agreement.id, agreement);
 
       candidate.agreement = {
         id: agreement.id,
-        provider: { id: agreement.provider.id, name: agreement.provider.name },
+        provider: agreement.getProviderInfo(),
       };
 
       this.candidateMap.set(agreement.id, candidate);
 
       return agreement;
     } catch (e) {
-      this.logger?.debug(`Unable to create agreement form available proposal: ${e?.data?.message || e}`);
+      this.logger.debug(`Unable to create agreement form available proposal`, e);
       await sleep(2);
       return;
     }
@@ -203,11 +213,54 @@ export class AgreementPoolService {
     const state = await agreement.getState();
 
     if (state === AgreementStateEnum.Proposal) {
-      await agreement.confirm();
-      this.logger?.debug(`Agreement proposed to provider '${agreement.provider.name}'`);
+      await agreement.confirm(this.yagnaApi.appSessionId);
+      this.logger.debug(`Agreement proposed to provider`, { providerName: agreement.getProviderInfo().name });
     }
 
     await this.yagnaApi.market.waitForApproval(agreement.id, this.config.agreementWaitingForApprovalTimeout);
     return agreement;
+  }
+
+  private async subscribeForAgreementEvents() {
+    let afterTimestamp: string | undefined;
+    while (this.isServiceRunning) {
+      try {
+        // @ts-expect-error Bug in ts-client typing
+        const { data: events }: { data: Array<AgreementEvent & AgreementTerminatedEvent> } =
+          await this.yagnaApi.market.collectAgreementEvents(
+            this.config.agreementEventsFetchingIntervalSec,
+            afterTimestamp,
+            this.config.agreementMaxEvents,
+            this.yagnaApi.appSessionId,
+          );
+        events.forEach((event) => {
+          afterTimestamp = event.eventDate;
+          // @ts-expect-error: Bug in ya-tsclient: typo in eventtype
+          if (event.eventtype === "AgreementTerminatedEvent") {
+            this.handleTerminationAgreementEvent(event.agreementId, event.reason);
+          }
+        });
+      } catch (error) {
+        this.logger.debug(`Unable to get agreement events.`, error);
+        await sleep(2);
+      }
+    }
+  }
+
+  private async handleTerminationAgreementEvent(agreementId: string, reason?: { [key: string]: string }) {
+    const agreement = this.agreements.get(agreementId);
+    if (agreement) {
+      await agreement.terminate(reason);
+      this.removeAgreementFromPool(agreement);
+    }
+  }
+
+  private removeAgreementFromPool(agreement: Agreement) {
+    this.agreements.delete(agreement.id);
+    const candidate = this.candidateMap.get(agreement.id);
+    if (candidate) {
+      this.pool.delete(candidate);
+      this.candidateMap.delete(agreement.id);
+    }
   }
 }

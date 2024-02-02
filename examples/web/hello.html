@@ -34,7 +34,7 @@
               </div>
               <div>
                 <label for="PAYMENT_NETWORK">Payment Network: </label>
-                <input id="PAYMENT_NETWORK" type="text" value="goerli" />
+                <input id="PAYMENT_NETWORK" type="text" value="holesky" />
               </div>
             </div>
           </div>
@@ -75,11 +75,11 @@
       }
 
       const logger = {
-        log: (msg) => appendLog(`[${new Date().toISOString()}] ${msg}`),
         warn: (msg) => appendLog(`[${new Date().toISOString()}] [warn] ${msg}`),
         debug: (msg) => appendLog(`[${new Date().toISOString()}] [debug] ${msg}`),
         error: (msg) => appendLog(`[${new Date().toISOString()}] [error] ${msg}`),
         info: (msg) => appendLog(`[${new Date().toISOString()}] [info] ${msg}`),
+        child: () => logger,
       };
       async function run() {
         const apiKey = document.getElementById("YAGNA_APPKEY").value;

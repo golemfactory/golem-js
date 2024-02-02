@@ -55,11 +55,11 @@
       }
 
       const logger = {
-        log: (msg) => appendLog(`[${new Date().toISOString()}] ${msg}`),
         warn: (msg) => appendLog(`[${new Date().toISOString()}] [warn] ${msg}`),
         debug: (msg) => console.log(msg),
         error: (msg) => appendLog(`[${new Date().toISOString()}] [error] ${msg}`),
         info: (msg) => appendLog(`[${new Date().toISOString()}] [info] ${msg}`),
+        child: () => logger,
       };
       async function run() {
         const executor = await TaskExecutor.create({
@@ -71,7 +71,7 @@
         await executor
           .run(async (ctx) => appendResults((await ctx.run("echo 'Hello World'")).stdout))
           .catch((e) => logger.error(e));
-        await executor.end();
+        await executor.shutdown();
       }
       document.getElementById("echo").onclick = run;
     </script>

@@ -3,6 +3,7 @@ import { Logger, sleep, YagnaApi } from "../utils";
 import { Invoice } from "./invoice";
 import { DebitNote } from "./debit_note";
 import { Events } from "../events";
+import { GolemTimeoutError } from "../error/golem-error";
 
 export interface PaymentOptions extends BasePaymentOptions {
   invoiceFetchingInterval?: number;
@@ -11,12 +12,13 @@ export interface PaymentOptions extends BasePaymentOptions {
   maxDebitNotesEvents?: number;
 }
 
-export const PaymentEventType = "PaymentReceived";
+export const PAYMENT_EVENT_TYPE = "PaymentReceived";
+const UNSUBSCRIBED_EVENT = "Unsubscribed";
 
 export class Payments extends EventTarget {
   private isRunning = true;
   private options: PaymentConfig;
-  private logger?: Logger;
+  private logger: Logger;
   private lastInvoiceFetchingTime: string = new Date().toISOString();
   private lastDebitNotesFetchingTime: string = new Date().toISOString();
   static async create(yagnaApi: YagnaApi, options?: PaymentOptions) {
@@ -30,24 +32,36 @@ export class Payments extends EventTarget {
     super();
     this.options = new PaymentConfig(options);
     this.logger = this.options.logger;
-    this.subscribe().catch((e) => this.logger?.error(e));
+    this.subscribe().catch((error) => this.logger.error(`Unable to subscribe to payments`, { error }));
   }
 
   /**
-   * Unsubscribe demand from the market
+   * Unsubscribe from collecting payment events.
+   * An error will be thrown when the unsubscribe timeout expires.
    */
   async unsubscribe() {
-    this.isRunning = false;
-    this.logger?.debug(`Payments unsubscribed`);
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(
+        () =>
+          reject(
+            new GolemTimeoutError(
+              `The waiting time (${this.options.unsubscribeTimeoutMs} ms) for unsubscribe payment has been exceeded.`,
+            ),
+          ),
+        this.options.unsubscribeTimeoutMs,
+      );
+      this.addEventListener(UNSUBSCRIBED_EVENT, () => {
+        this.logger.debug(`Payments unsubscribed`);
+        clearTimeout(timeoutId);
+        resolve(true);
+      });
+      this.isRunning = false;
+    });
   }
 
   private async subscribe() {
-    this.subscribeForInvoices().catch(
-      (e) => this.logger?.debug(`Unable to collect invoices. ${e?.response?.data?.message || e}`),
-    );
-    this.subscribeForDebitNotes().catch(
-      (e) => this.logger?.debug(`Unable to collect debit notes. ${e?.response?.data?.message || e}`),
-    );
+    this.subscribeForInvoices().catch((error) => this.logger.error(`Unable to collect invoices.`, { error }));
+    this.subscribeForDebitNotes().catch((error) => this.logger.error(`Unable to collect debit notes.`, { error }));
   }
 
   private async subscribeForInvoices() {
@@ -57,30 +71,42 @@ export class Payments extends EventTarget {
           this.options.invoiceFetchingInterval / 1000,
           this.lastInvoiceFetchingTime,
           this.options.maxInvoiceEvents,
-          undefined,
+          this.yagnaApi.appSessionId,
           { timeout: 0 },
         );
         for (const event of invoiceEvents) {
-          if (!this.isRunning) return;
+          if (!this.isRunning) break;
           if (event.eventType !== "InvoiceReceivedEvent") continue;
-          const invoice = await Invoice.create(event["invoiceId"], this.yagnaApi, { ...this.options }).catch(
-            (e) =>
-              this.logger?.error(
-                `Unable to create invoice ID: ${event["invoiceId"]}. ${e?.response?.data?.message || e}`,
-              ),
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore FIXME: ya-ts-client does not provide invoiceId in the event even though it is in the API response
+          const invoiceId = event["invoiceId"];
+          const invoice = await Invoice.create(invoiceId, this.yagnaApi, { ...this.options }).catch((error) =>
+            this.logger.error(`Unable to create invoice`, { id: invoiceId, error }),
           );
           if (!invoice) continue;
-          this.dispatchEvent(new InvoiceEvent(PaymentEventType, invoice));
+          this.dispatchEvent(new InvoiceEvent(PAYMENT_EVENT_TYPE, invoice));
           this.lastInvoiceFetchingTime = event.eventDate;
-          this.options.eventTarget?.dispatchEvent(new Events.InvoiceReceived(invoice));
-          this.logger?.debug(`New Invoice received for agreement ${invoice.agreementId}. Amount: ${invoice.amount}`);
+          this.options.eventTarget?.dispatchEvent(
+            new Events.InvoiceReceived({
+              id: invoice.id,
+              agreementId: invoice.agreementId,
+              amount: invoice.amount,
+              provider: invoice.provider,
+            }),
+          );
+          this.logger.debug(`New Invoice received`, {
+            id: invoice.id,
+            agreementId: invoice.agreementId,
+            amount: invoice.amount,
+          });
         }
       } catch (error) {
-        const reason = error.response?.data?.message || error;
-        this.logger?.debug(`Unable to get invoices. ${reason}`);
+        const reason = error.response?.data?.message || error.message || error;
+        this.logger.error(`Unable to get invoices.`, { reason });
         await sleep(2);
       }
     }
+    this.dispatchEvent(new Event(UNSUBSCRIBED_EVENT));
   }
 
   private async subscribeForDebitNotes() {
@@ -91,21 +117,22 @@ export class Payments extends EventTarget {
             this.options.debitNotesFetchingInterval / 1000,
             this.lastDebitNotesFetchingTime,
             this.options.maxDebitNotesEvents,
-            undefined,
+            this.yagnaApi.appSessionId,
             { timeout: 0 },
           )
           .catch(() => ({ data: [] }));
+
         for (const event of debitNotesEvents) {
           if (!this.isRunning) return;
           if (event.eventType !== "DebitNoteReceivedEvent") continue;
-          const debitNote = await DebitNote.create(event["debitNoteId"], this.yagnaApi, { ...this.options }).catch(
-            (e) =>
-              this.logger?.error(
-                `Unable to create debit note ID: ${event["debitNoteId"]}. ${e?.response?.data?.message || e}`,
-              ),
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore FIXME: ya-ts-client does not provide debitNoteId in the event even though it is in the API response
+          const debitNoteId = event["debitNoteId"];
+          const debitNote = await DebitNote.create(debitNoteId, this.yagnaApi, { ...this.options }).catch((error) =>
+            this.logger.error(`Unable to create debit note`, { id: debitNoteId, error }),
           );
           if (!debitNote) continue;
-          this.dispatchEvent(new DebitNoteEvent(PaymentEventType, debitNote));
+          this.dispatchEvent(new DebitNoteEvent(PAYMENT_EVENT_TYPE, debitNote));
           this.lastDebitNotesFetchingTime = event.eventDate;
           this.options.eventTarget?.dispatchEvent(
             new Events.DebitNoteReceived({
@@ -113,15 +140,17 @@ export class Payments extends EventTarget {
               agreementId: debitNote.agreementId,
               activityId: debitNote.activityId,
               amount: debitNote.totalAmountDue,
+              provider: debitNote.provider,
             }),
           );
-          this.logger?.debug(
-            `New Debit Note received for agreement ${debitNote.agreementId}. Amount: ${debitNote.totalAmountDue}`,
-          );
+          this.logger.debug("New Debit Note received", {
+            agreementId: debitNote.agreementId,
+            amount: debitNote.totalAmountDue,
+          });
         }
       } catch (error) {
         const reason = error.response?.data?.message || error;
-        this.logger?.debug(`Unable to get debit notes. ${reason}`);
+        this.logger.error(`Unable to get debit notes.`, { reason });
         await sleep(2);
       }
     }
@@ -139,7 +168,7 @@ export class InvoiceEvent extends Event {
    * @param type A string with the name of the event:
    * @param data object with invoice data:
    */
-  constructor(type, data) {
+  constructor(type: string, data: EventInit & Invoice) {
     super(type, data);
     this.invoice = data;
   }
@@ -156,7 +185,7 @@ export class DebitNoteEvent extends Event {
    * @param type A string with the name of the event:
    * @param data object with debit note data:
    */
-  constructor(type, data) {
+  constructor(type: string, data: EventInit & DebitNote) {
     super(type, data);
     this.debitNote = data;
   }

@@ -1,11 +1,13 @@
 import { StorageProvider } from "./provider";
-import { Logger, runtimeContextChecker, sleep } from "../utils";
+import { Logger, defaultLogger, runtimeContextChecker, sleep } from "../utils";
 import path from "path";
 import fs from "fs";
 import cp from "child_process";
+import { GolemInternalError, GolemUserError } from "../error/golem-error";
 
 export class GftpStorageProvider implements StorageProvider {
   private gftpServerProcess?: cp.ChildProcess;
+  private logger: Logger;
 
   /**
    * All published URLs to be release on close().
@@ -21,36 +23,37 @@ export class GftpStorageProvider implements StorageProvider {
    */
   private lock = false;
 
-  constructor(private logger?: Logger) {
+  constructor(logger?: Logger) {
     if (runtimeContextChecker.isBrowser) {
-      throw new Error(`File transfer by GFTP module is unsupported in the browser context.`);
+      throw new GolemUserError(`File transfer by GFTP module is unsupported in the browser context.`);
     }
+    this.logger = logger || defaultLogger("storage");
   }
 
   async init() {
     if (this.isInitialized) {
-      this.logger?.warn("GFTP init attempted even though it was already ready - check the logic of your application");
+      this.logger.warn("GFTP init attempted even though it was already ready - check the logic of your application");
       return;
     }
 
     await this.startGftpServer();
-    this.logger?.info(`GFTP Version: ${await this.jsonrpc("version")}`);
+    this.logger.info(`GFTP Version: ${await this.jsonrpc("version")}`);
   }
 
   private startGftpServer(): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.logger?.debug("Starting GFTP server");
+      this.logger.debug("Starting GFTP server");
 
       this.gftpServerProcess = cp.spawn("gftp", ["server"]);
 
       this.gftpServerProcess.on("spawn", () => {
-        this.logger?.info("GFTP server spawned");
+        this.logger.info("GFTP server spawned");
         this.isInitialized = true;
         resolve();
       });
 
       this.gftpServerProcess.on("error", (error) => {
-        this.logger?.error("Error while spawning GFTP server" + error);
+        this.logger.error("Error while spawning GFTP server", error);
         reject(error);
       });
 
@@ -67,9 +70,9 @@ export class GftpStorageProvider implements StorageProvider {
   private async generateTempFileName(): Promise<string> {
     const { randomUUID } = await import("crypto");
     const tmp = await import("tmp");
-    const file_name = path.join(tmp.dirSync().name, randomUUID().toString());
-    if (fs.existsSync(file_name)) fs.unlinkSync(file_name);
-    return file_name;
+    const fileName = path.join(tmp.dirSync().name, randomUUID().toString());
+    if (fs.existsSync(fileName)) fs.unlinkSync(fileName);
+    return fileName;
   }
 
   async receiveFile(path: string): Promise<string> {
@@ -78,7 +81,7 @@ export class GftpStorageProvider implements StorageProvider {
   }
 
   receiveData(): Promise<string> {
-    throw new Error("receiveData is not implemented in GftpStorageProvider");
+    throw new GolemUserError("receiveData is not implemented in GftpStorageProvider");
   }
 
   async publishFile(src: string): Promise<string> {
@@ -124,18 +127,17 @@ export class GftpStorageProvider implements StorageProvider {
     this.lock = true;
     const paramsStr = JSON.stringify(params);
     const query = `{"jsonrpc": "2.0", "id": "1", "method": "${method}", "params": ${paramsStr}}\n`;
-    let valueStr = "";
     try {
       this.gftpServerProcess?.stdin?.write(query);
       const value = (await this.reader?.next())?.value;
-      if (!value) throw "Unable to get GFTP command result";
+      if (!value) throw new GolemInternalError("Unable to get GFTP command result");
       const { result } = JSON.parse(value);
-      valueStr = value;
-      if (result === undefined) throw value;
+      if (result === undefined) throw new GolemInternalError(value);
       return result;
     } catch (error) {
-      throw Error(
-        `Error while obtaining response to JSONRPC. query: ${query} value: ${valueStr} error: ${JSON.stringify(error)}`,
+      throw new GolemInternalError(
+        `Error while obtaining response to JSONRPC. query: ${query} error: ${JSON.stringify(error)}`,
+        error,
       );
     } finally {
       this.lock = false;
@@ -144,8 +146,8 @@ export class GftpStorageProvider implements StorageProvider {
 
   private async uploadStream(stream: AsyncGenerator<Buffer>): Promise<string> {
     // FIXME: temp file is never deleted.
-    const file_name = await this.generateTempFileName();
-    const wStream = fs.createWriteStream(file_name, {
+    const fileName = await this.generateTempFileName();
+    const wStream = fs.createWriteStream(fileName, {
       encoding: "binary",
     });
     // eslint-disable-next-line no-async-promise-executor
@@ -156,7 +158,7 @@ export class GftpStorageProvider implements StorageProvider {
       }
       wStream.end();
     });
-    const links = await this.jsonrpc("publish", { files: [file_name.toString()] });
+    const links = await this.jsonrpc("publish", { files: [fileName.toString()] });
     if (links.length !== 1) throw "invalid gftp publish response";
     return links[0]?.url;
   }

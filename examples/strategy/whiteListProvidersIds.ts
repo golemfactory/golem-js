@@ -1,7 +1,7 @@
-import { TaskExecutor, ProposalFilters } from "@golem-sdk/golem-js";
+import { TaskExecutor, ProposalFilterFactory } from "@golem-sdk/golem-js";
 
 /**
- * Example demonstrating how to use the predefined filter `whiteListProposalIdsFilter`,
+ * Example demonstrating how to use the predefined filter `allowProvidersById`,
  * which only allows offers from a provider whose id is in the array
  */
 
@@ -14,7 +14,7 @@ const whiteListIds = [
 (async function main() {
   const executor = await TaskExecutor.create({
     package: "golem/alpine:latest",
-    proposalFilter: ProposalFilters.whiteListProposalIdsFilter(whiteListIds),
+    proposalFilter: ProposalFilterFactory.allowProvidersById(whiteListIds),
   });
 
   try {

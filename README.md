@@ -21,11 +21,12 @@
   - [Usage](#usage)
     - [Hello World example](#hello-world-example)
     - [More examples](#more-examples)
-    - [Node & Browser support](#node--browser-support)
+  - [Supported environments](#supported-environments)
   - [Golem Network Market Basics](#golem-network-market-basics)
     - [Mid-agreement payments to the Providers for used resources](#mid-agreement-payments-to-the-providers-for-used-resources)
     - [Limit price limits to filter out offers that are too expensive](#limit-price-limits-to-filter-out-offers-that-are-too-expensive)
     - [Work with reliable providers](#work-with-reliable-providers)
+  - [Debugging](#debugging)
   - [Testing](#testing)
   - [Contributing](#contributing)
   - [See also](#see-also)
@@ -43,7 +44,46 @@ distributed, computational loads through Golem Network.
 
 ## System requirements
 
-To use `golem-js`, it is necessary to have yagna installed, with a minimum version requirement of v0.13.2. Yagna is a service that communicates and performs operations on the Golem Network, upon your requests via the SDK. You can [follow these instructions](https://docs.golem.network/docs/creators/javascript/quickstarts/quickstart#install-yagna-2) to set it up.
+To use `golem-js`, it is necessary to have yagna installed, with a **minimum version requirement of v0.14.0**. Yagna is a
+service that communicates and performs operations on the Golem Network, upon your requests via the SDK. You
+can [follow these instructions](https://docs.golem.network/docs/creators/javascript/quickstarts/quickstart#install-yagna-2)
+to set it up.
+
+### Simplified installation steps
+
+In order to get started and on Golem Network and obtain test GLM tokens (`tGLM`) that will allow you to build on the
+test network, follow these steps:
+
+#### Join the network as a requestor and obtain test tokens
+
+```bash
+# Join the network as a requestor
+curl -sSf https://join.golem.network/as-requestor | bash -
+
+# Start the golem node on your machine,
+# you can use `daemonize` to run this in background
+yagna service run
+
+# IN SEPARATE TERMINAL (if not daemonized)
+# Initialize your requestor
+yagna payment init --sender --network holesky
+
+# Request funds on the test network
+yagna payment fund --network holesky
+
+# Check the status of the funds
+yagna payment status --network holesky
+```
+
+#### Obtain your `app-key` to use with SDK
+
+If you don't have any app-keys available from `yagna app-key list`, go ahead and create one with the command below.
+You will need this key in order to communicate with `yagna` from your application via `golem-js`.You can set it
+as `YAGNA_APPKEY` environment variable.
+
+```bash
+yagna app-key create my-golem-app
+```
 
 ## Installation
 
@@ -94,21 +134,20 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
 
 ### More examples
 
-The [examples directory](./examples) in the repository contains various usage patterns for the SDK. You can browse through them and learn about the recommended practices. All examples are automatically tested during our release process.
+The [examples directory](./examples) in the repository contains various usage patterns for the SDK. You can browse
+through them and learn about the recommended practices. All examples are automatically tested during our release
+process.
 
-In case you find an issue with the examples, feel free to submit an [issue report](https://github.com/golemfactory/golem-js/issues) to the repository.
+In case you find an issue with the examples, feel free to submit
+an [issue report](https://github.com/golemfactory/golem-js/issues) to the repository.
 
-You can find even more examples and tutorials in the [JavaScript API section of the Golem Network Docs](https://docs.golem.network/docs/creators/javascript).
+You can find even more examples and tutorials in
+the [JavaScript API section of the Golem Network Docs](https://docs.golem.network/docs/creators/javascript).
 
-### Node & Browser support
+## Supported environments
 
 The SDK is designed to work with LTS versions of Node (starting from 18)
-
-![hello_nodejs](https://user-images.githubusercontent.com/26308335/224720742-1ca115e2-e207-41a7-9537-ffa4ece11406.gif)
-
-and with browsers
-
-![hello_web](https://user-images.githubusercontent.com/26308335/217530424-a1dd4487-f95f-43e6-a91b-7106b6f30802.gif)
+and with browsers.
 
 ## Golem Network Market Basics
 
@@ -136,8 +175,10 @@ the SDK makes use of the mid-agreement payments model and implements best practi
 
 By default, the SDK will:
 
-- accept debit notes sent by the Providers within two minutes of receipt (so that the Provider knows that we're alive, and it will continue serving the resources)
-- issue a mid-agreement payment every 12 hours (so that the provider will be paid on a regular interval for serving the resources for more than 10 hours)
+- accept debit notes sent by the Providers within two minutes of receipt (so that the Provider knows that we're alive,
+  and it will continue serving the resources)
+- issue a mid-agreement payment every 12 hours (so that the provider will be paid on a regular interval for serving the
+  resources for more than 10 hours)
 
 You can learn more about
 the [mid-agreement and other payment models from the official docs](https://docs.golem.network/docs/golem/payments).
@@ -155,7 +196,7 @@ details.
 ### Limit price limits to filter out offers that are too expensive
 
 ```typescript
-import { TaskExecutor, ProposalFilters } from "@golem-sdk/golem-js";
+import { TaskExecutor, ProposalFilterFactory } from "@golem-sdk/golem-js";
 
 const executor = await TaskExecutor.create({
   // What do you want to run
@@ -163,7 +204,7 @@ const executor = await TaskExecutor.create({
 
   // How much you wish to spend
   budget: 0.5,
-  proposalFilter: ProposalFilters.limitPriceFilter({
+  proposalFilter: ProposalFilterFactory.limitPriceFilter({
     start: 1,
     cpuPerSec: 1 / 3600,
     envPerSec: 1 / 3600,
@@ -186,20 +227,20 @@ health-checks. Using this whitelist will increase the chance of working with a r
 can also build up your own list of favourite providers and use it in a similar fashion.
 
 ```typescript
-import { TaskExecutor, ProposalFilters, MarketHelpers } from "@golem-sdk/golem-js";
-
-// Prepare the price filter
-const acceptablePrice = ProposalFilters.limitPriceFilter({
-  start: 1,
-  cpuPerSec: 1 / 3600,
-  envPerSec: 1 / 3600,
-});
+import { MarketHelpers, ProposalFilterFactory, TaskExecutor } from "@golem-sdk/golem-js";
 
 // Collect the whitelist
 const verifiedProviders = await MarketHelpers.getHealthyProvidersWhiteList();
 
 // Prepare the whitelist filter
-const whiteList = ProposalFilters.whiteListProposalIdsFilter(verifiedProviders);
+const whiteList = ProposalFilterFactory.allowProvidersById(verifiedProviders);
+
+// Prepare the price filter
+const acceptablePrice = ProposalFilterFactory.limitPriceFilter({
+  start: 1,
+  cpuPerSec: 1 / 3600,
+  envPerSec: 1 / 3600,
+});
 
 const executor = await TaskExecutor.create({
   // What do you want to run
@@ -207,7 +248,7 @@ const executor = await TaskExecutor.create({
 
   // How much you wish to spend
   budget: 0.5,
-  proposalFilter: async (proposal) => (await acceptablePrice(proposal)) && (await whiteList(proposal)),
+  proposalFilter: (proposal) => acceptablePrice(proposal) && whiteList(proposal),
 
   // Where you want to spend
   payment: {
@@ -215,6 +256,10 @@ const executor = await TaskExecutor.create({
   },
 });
 ```
+
+## Debugging
+
+The SDK uses the [debug](https://www.npmjs.com/package/debug) package to provide debug logs. To enable them, set the `DEBUG` environment variable to `golem-js:*` or `golem-js:market:*` to see all logs or only the market-related ones, respectively. For more information, please refer to the [debug package documentation](https://www.npmjs.com/package/debug).
 
 ## Testing
 
