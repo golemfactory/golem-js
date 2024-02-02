@@ -32,10 +32,7 @@ dotenv.config();
       console.log("working on provider: ", ctx.provider.id);
 
       console.log((await ctx.run("npm install moment")).stdout);
-      console.log(
-        (await ctx.run(`node -e 'const moment = require("moment"); moment().format("dddd"); console.log(new Date());'`))
-          .stdout,
-      );
+      console.log((await ctx.run(`cat ./package.json`)).stdout);
 
       return 1;
     });
