@@ -47,8 +47,6 @@ const startClient = async (repetition) => {
   let port_tgt = 80;
 
   try {
-    // Your code goes here
-
     await executor.run(async (ctx) => {
       let netUri = ctx.getWebsocketUri(port_tgt);
       let idxB = netUri.indexOf("net/") + 4;
@@ -72,6 +70,5 @@ const startClient = async (repetition) => {
     console.log("provider server is stopped");
     stopProxy();
     await executor.shutdown();
-    //process.exit(0);
   }
 })();
