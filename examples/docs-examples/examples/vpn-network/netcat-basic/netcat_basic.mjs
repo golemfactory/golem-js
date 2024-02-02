@@ -11,10 +11,10 @@ dotenv.config();
     package: "f4a261ea7b760a1da10f21f0ad8d704c25c8d2c75d0bf16300b9721e",
 
     yagnaOptions: { apiKey: "try_golem" },
+    //payment: { driver: "erc20", network: "holesky" },
     budget: 0.5,
     networkIp: "192.168.0.0/24",
     // Control the execution of tasks
-    //maxTaskRetries: 2,
     maxParallelTasks: 2,
     taskTimeout: 5 * 60 * 1000, // 5 min
     // Useful for debugging
@@ -25,8 +25,6 @@ dotenv.config();
   let runClient = true;
 
   try {
-    // Your code goes here
-
     let result = executor.run(async (ctx) => {
       console.log("Netcat provider deployed");
       serverIP = ctx.getIp();
@@ -48,9 +46,8 @@ dotenv.config();
           await ctx.run(
             `echo "Message from povider ${ctx.provider.name}, date: ${new Date().toISOString()}" > /golem/data`,
           );
-          await ctx.run("ls -l /golem");
-          await ctx.run("cat /golem/data");
-          let res = await ctx.run(`cat /golem/data | nc -q 1 ${serverIP} 1234`);
+
+          let res = await ctx.run(`echo "Hello Golem provider" | nc -q 1 ${serverIP} 1234`);
           console.log("Client task completed");
           return res;
         });
@@ -58,8 +55,8 @@ dotenv.config();
       }
     }
     //await result;
-    let log_from_server = await result;
-    console.log(log_from_server);
+    let logsFromServer = await result;
+    console.log(logsFromServer);
   } catch (err) {
     console.error("Running the task on Golem failed due to", err);
   } finally {
