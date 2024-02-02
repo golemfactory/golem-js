@@ -3,11 +3,11 @@ import { WebSocket } from "ws";
 import net from "net";
 
 const PORT = 5555;
-var in_server = null;
+let in_server = null;
 
-var GnetworkID = null;
-var GIP = null;
-var GPORT_TGT = null;
+let GnetworkID = null;
+let GIP = null;
+let GPORT_TGT = null;
 
 async function runServer() {
   const server = new net.Server();
@@ -32,11 +32,8 @@ async function runServer() {
 function runWs(neworkID, IP, PORT_TGT, sckt, runsckt) {
   const VPN_NETWORK = neworkID;
   let ws = null;
-  const URLv2 = "ws://127.0.0.1:7465/net-api/v2/vpn/net/" + VPN_NETWORK + "/tcp/" + IP + "/" + PORT_TGT;
 
-  const URLv1 = "ws://127.0.0.1:7465/net-api/v1/net/" + VPN_NETWORK + "/tcp/" + IP + "/" + PORT_TGT;
-
-  const URL = URLv1;
+  const URL = "ws://127.0.0.1:7465/net-api/v1/net/" + VPN_NETWORK + "/tcp/" + IP + "/" + PORT_TGT;
 
   try {
     ws = new WebSocket(URL, {
