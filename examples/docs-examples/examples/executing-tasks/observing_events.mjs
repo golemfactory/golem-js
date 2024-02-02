@@ -1,7 +1,5 @@
 import { TaskExecutor } from "@golem-sdk/golem-js";
 
-dotenv.config();
-
 (async function main() {
   const eventTarget = new EventTarget();
 

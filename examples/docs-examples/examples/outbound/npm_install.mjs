@@ -4,8 +4,6 @@ import { readFile } from "fs/promises";
 
 const manifest = await readFile(`./manifest_npm_install.json`);
 
-dotenv.config();
-
 (async function main() {
   const executor = await TaskExecutor.create({
     // What do you want to run
