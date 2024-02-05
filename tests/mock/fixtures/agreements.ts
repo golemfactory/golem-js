@@ -21,7 +21,7 @@ export const agreementsApproved = [
     offer: {
       properties: {
         "golem.activity.caps.transfer.protocol": ["gftp", "http", "https"],
-        "golem.com.payment.platform.erc20-holesky-tglm.address": "0x6e7f25ca8ab5a043d91d102116cc97c2654403f0",
+        "golem.com.payment.platform.erc20-goerli-tglm.address": "0x6e7f25ca8ab5a043d91d102116cc97c2654403f0",
         "golem.com.payment.platform.erc20-mumbai-tglm.address": "0x6e7f25ca8ab5a043d91d102116cc97c2654403f0",
         "golem.com.payment.platform.erc20-rinkeby-tglm.address": "0x6e7f25ca8ab5a043d91d102116cc97c2654403f0",
         "golem.com.payment.platform.zksync-rinkeby-tglm.address": "0x6e7f25ca8ab5a043d91d102116cc97c2654403f0",

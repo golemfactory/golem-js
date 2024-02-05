@@ -10,8 +10,8 @@ const mockIdentityModel = imock<IdentityModel>();
 
 describe("Yagna Utils", () => {
   describe("Yagna version support checking", () => {
-    describe("Positive cases - given min supported version is 0.14.0", () => {
-      it.each(["0.14.0", "0.15.0-rc5", "pre-rel-v0.15.0-rc5"])(
+    describe("Positive cases - given min supported version is 0.13.2", () => {
+      it.each(["0.13.2", "0.15.0-rc5", "pre-rel-v0.15.0-rc5"])(
         "should not throw when connect is called and the yagna version is %s",
         async (version) => {
           when(response.json()).thenResolve({
