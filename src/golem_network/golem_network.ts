@@ -8,6 +8,8 @@ import { GolemUserError } from "../error/golem-error";
 export type GolemNetworkConfig = Partial<RunJobOptions> & { yagna?: YagnaOptions };
 
 /**
+ * @experimental This API is experimental and subject to change. Use at your own risk.
+ *
  * The Golem Network class provides a high-level API for running jobs on the Golem Network.
  */
 export class GolemNetwork {

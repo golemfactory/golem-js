@@ -52,6 +52,8 @@ export interface JobEventsDict {
 }
 
 /**
+ * @experimental This API is experimental and subject to change. Use at your own risk.
+ *
  * The Job class represents a single self-contained unit of work that can be run on the Golem Network.
  * It is responsible for managing the lifecycle of the work and providing information about its state.
  * It also provides an event emitter that can be used to listen for state changes.
