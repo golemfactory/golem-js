@@ -7,7 +7,7 @@ export const proposalsInitial = [
       properties: {
         "golem.activity.caps.transfer.protocol": ["http", "https", "gftp"],
         "golem.com.payment.debit-notes.accept-timeout?": 240,
-        "golem.com.payment.platform.erc20-holesky-tglm.address": "0xee8993fe1dcff6b131d3fd759c6b3ddcb82d1655",
+        "golem.com.payment.platform.erc20-goerli-tglm.address": "0xee8993fe1dcff6b131d3fd759c6b3ddcb82d1655",
         "golem.com.payment.platform.erc20-mumbai-tglm.address": "0xee8993fe1dcff6b131d3fd759c6b3ddcb82d1655",
         "golem.com.payment.platform.erc20-rinkeby-tglm.address": "0xee8993fe1dcff6b131d3fd759c6b3ddcb82d1655",
         "golem.com.payment.platform.zksync-rinkeby-tglm.address": "0xee8993fe1dcff6b131d3fd759c6b3ddcb82d1655",
@@ -122,7 +122,7 @@ export const proposalsInitial = [
       properties: {
         "golem.activity.caps.transfer.protocol": ["http", "https", "gftp"],
         "golem.com.payment.debit-notes.accept-timeout?": 240,
-        "golem.com.payment.platform.erc20-holesky-tglm.address": "0x79d38971d4a484d07925b5919aaf7cab807696f4",
+        "golem.com.payment.platform.erc20-goerli-tglm.address": "0x79d38971d4a484d07925b5919aaf7cab807696f4",
         "golem.com.payment.platform.erc20-mumbai-tglm.address": "0x79d38971d4a484d07925b5919aaf7cab807696f4",
         "golem.com.payment.platform.erc20-rinkeby-tglm.address": "0x79d38971d4a484d07925b5919aaf7cab807696f4",
         "golem.com.payment.platform.zksync-rinkeby-tglm.address": "0x79d38971d4a484d07925b5919aaf7cab807696f4",
@@ -237,7 +237,7 @@ export const proposalsInitial = [
       properties: {
         "golem.activity.caps.transfer.protocol": ["http", "https", "gftp"],
         "golem.com.payment.debit-notes.accept-timeout?": 240,
-        "golem.com.payment.platform.erc20-holesky-tglm.address": "0x3a8052f782c55f96be7ffbce22587ed917ad98b9",
+        "golem.com.payment.platform.erc20-goerli-tglm.address": "0x3a8052f782c55f96be7ffbce22587ed917ad98b9",
         "golem.com.payment.platform.erc20-mumbai-tglm.address": "0x3a8052f782c55f96be7ffbce22587ed917ad98b9",
         "golem.com.payment.platform.erc20-rinkeby-tglm.address": "0x3a8052f782c55f96be7ffbce22587ed917ad98b9",
         "golem.com.payment.platform.zksync-rinkeby-tglm.address": "0x3a8052f782c55f96be7ffbce22587ed917ad98b9",
@@ -352,7 +352,7 @@ export const proposalsInitial = [
       properties: {
         "golem.activity.caps.transfer.protocol": ["https", "http", "gftp"],
         "golem.com.payment.debit-notes.accept-timeout?": 240,
-        "golem.com.payment.platform.erc20-holesky-tglm.address": "0x44df807cd832393b254378ec33efb65adee837b8",
+        "golem.com.payment.platform.erc20-goerli-tglm.address": "0x44df807cd832393b254378ec33efb65adee837b8",
         "golem.com.payment.platform.erc20-mumbai-tglm.address": "0x44df807cd832393b254378ec33efb65adee837b8",
         "golem.com.payment.platform.erc20-rinkeby-tglm.address": "0x44df807cd832393b254378ec33efb65adee837b8",
         "golem.com.payment.platform.zksync-rinkeby-tglm.address": "0x44df807cd832393b254378ec33efb65adee837b8",
@@ -466,7 +466,7 @@ export const proposalsInitial = [
       properties: {
         "golem.activity.caps.transfer.protocol": ["https", "http", "gftp"],
         "golem.com.payment.debit-notes.accept-timeout?": 240,
-        "golem.com.payment.platform.erc20-holesky-tglm.address": "0x700e83ffc421d43f95c340774d5816b985fcf804",
+        "golem.com.payment.platform.erc20-goerli-tglm.address": "0x700e83ffc421d43f95c340774d5816b985fcf804",
         "golem.com.payment.platform.erc20-mumbai-tglm.address": "0x700e83ffc421d43f95c340774d5816b985fcf804",
         "golem.com.payment.platform.erc20-rinkeby-tglm.address": "0x700e83ffc421d43f95c340774d5816b985fcf804",
         "golem.com.payment.platform.zksync-rinkeby-tglm.address": "0x700e83ffc421d43f95c340774d5816b985fcf804",
@@ -570,7 +570,7 @@ export const proposalsInitial = [
       properties: {
         "golem.activity.caps.transfer.protocol": ["http", "https", "gftp"],
         "golem.com.payment.debit-notes.accept-timeout?": 240,
-        "golem.com.payment.platform.erc20-holesky-tglm.address": "0x4316e60d7154a99b16d4cd43202017983cdb6bcb",
+        "golem.com.payment.platform.erc20-goerli-tglm.address": "0x4316e60d7154a99b16d4cd43202017983cdb6bcb",
         "golem.com.payment.platform.erc20-mumbai-tglm.address": "0x4316e60d7154a99b16d4cd43202017983cdb6bcb",
         "golem.com.payment.platform.erc20-rinkeby-tglm.address": "0x4316e60d7154a99b16d4cd43202017983cdb6bcb",
         "golem.com.payment.platform.zksync-rinkeby-tglm.address": "0x4316e60d7154a99b16d4cd43202017983cdb6bcb",
@@ -799,7 +799,7 @@ export const proposalsDraft = [
     proposal: {
       properties: {
         "golem.activity.caps.transfer.protocol": ["http", "https", "gftp"],
-        "golem.com.payment.platform.erc20-holesky-tglm.address": "0xee8993fe1dcff6b131d3fd759c6b3ddcb82d1655",
+        "golem.com.payment.platform.erc20-goerli-tglm.address": "0xee8993fe1dcff6b131d3fd759c6b3ddcb82d1655",
         "golem.com.payment.platform.erc20-mumbai-tglm.address": "0xee8993fe1dcff6b131d3fd759c6b3ddcb82d1655",
         "golem.com.payment.platform.erc20-rinkeby-tglm.address": "0xee8993fe1dcff6b131d3fd759c6b3ddcb82d1655",
         "golem.com.payment.platform.zksync-rinkeby-tglm.address": "0xee8993fe1dcff6b131d3fd759c6b3ddcb82d1655",
@@ -911,7 +911,7 @@ export const proposalsDraft = [
     proposal: {
       properties: {
         "golem.activity.caps.transfer.protocol": ["https", "http", "gftp"],
-        "golem.com.payment.platform.erc20-holesky-tglm.address": "0x44df807cd832393b254378ec33efb65adee837b8",
+        "golem.com.payment.platform.erc20-goerli-tglm.address": "0x44df807cd832393b254378ec33efb65adee837b8",
         "golem.com.payment.platform.erc20-mumbai-tglm.address": "0x44df807cd832393b254378ec33efb65adee837b8",
         "golem.com.payment.platform.erc20-rinkeby-tglm.address": "0x44df807cd832393b254378ec33efb65adee837b8",
         "golem.com.payment.platform.zksync-rinkeby-tglm.address": "0x44df807cd832393b254378ec33efb65adee837b8",
@@ -1022,7 +1022,7 @@ export const proposalsDraft = [
     proposal: {
       properties: {
         "golem.activity.caps.transfer.protocol": ["https", "http", "gftp"],
-        "golem.com.payment.platform.erc20-holesky-tglm.address": "0x700e83ffc421d43f95c340774d5816b985fcf804",
+        "golem.com.payment.platform.erc20-goerli-tglm.address": "0x700e83ffc421d43f95c340774d5816b985fcf804",
         "golem.com.payment.platform.erc20-mumbai-tglm.address": "0x700e83ffc421d43f95c340774d5816b985fcf804",
         "golem.com.payment.platform.erc20-rinkeby-tglm.address": "0x700e83ffc421d43f95c340774d5816b985fcf804",
         "golem.com.payment.platform.zksync-rinkeby-tglm.address": "0x700e83ffc421d43f95c340774d5816b985fcf804",
@@ -1123,7 +1123,7 @@ export const proposalsDraft = [
     proposal: {
       properties: {
         "golem.activity.caps.transfer.protocol": ["gftp", "https", "http"],
-        "golem.com.payment.platform.erc20-holesky-tglm.address": "0xccf5d4e9f6dcfc553e7a4ba6a08b8b3e4fd785a2",
+        "golem.com.payment.platform.erc20-goerli-tglm.address": "0xccf5d4e9f6dcfc553e7a4ba6a08b8b3e4fd785a2",
         "golem.com.payment.platform.erc20-mumbai-tglm.address": "0xccf5d4e9f6dcfc553e7a4ba6a08b8b3e4fd785a2",
         "golem.com.payment.platform.erc20-rinkeby-tglm.address": "0xccf5d4e9f6dcfc553e7a4ba6a08b8b3e4fd785a2",
         "golem.com.payment.platform.zksync-rinkeby-tglm.address": "0xccf5d4e9f6dcfc553e7a4ba6a08b8b3e4fd785a2",
@@ -1345,7 +1345,7 @@ export const proposalsShortDebitNoteTimeout = [
       properties: {
         "golem.activity.caps.transfer.protocol": ["http", "https", "gftp"],
         "golem.com.payment.debit-notes.accept-timeout?": 15,
-        "golem.com.payment.platform.erc20-holesky-tglm.address": "0xee8993fe1dcff6b131d3fd759c6b3ddcb82d1655",
+        "golem.com.payment.platform.erc20-goerli-tglm.address": "0xee8993fe1dcff6b131d3fd759c6b3ddcb82d1655",
         "golem.com.payment.platform.erc20-mumbai-tglm.address": "0xee8993fe1dcff6b131d3fd759c6b3ddcb82d1655",
         "golem.com.payment.platform.erc20-rinkeby-tglm.address": "0xee8993fe1dcff6b131d3fd759c6b3ddcb82d1655",
         "golem.com.payment.platform.zksync-rinkeby-tglm.address": "0xee8993fe1dcff6b131d3fd759c6b3ddcb82d1655",

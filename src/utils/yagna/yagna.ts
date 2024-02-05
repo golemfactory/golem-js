@@ -30,9 +30,9 @@ export type YagnaOptions = {
 };
 
 type YagnaVersionInfo = {
-  // @example 0.14.0
+  // @example 0.13.2
   version: string;
-  // @example v0.14.0
+  // @example v0.13.2
   name: string;
   seen: boolean;
   // @example "2023-12-07T14:23:48"
@@ -48,7 +48,7 @@ type YagnaVersionResponse = {
 
 const CONNECTIONS_ERROR_CODES = ["ECONNREFUSED"];
 
-export const MIN_SUPPORTED_YAGNA = "0.14.0";
+export const MIN_SUPPORTED_YAGNA = "0.13.2";
 
 export class Yagna {
   private readonly httpAgent: Agent;

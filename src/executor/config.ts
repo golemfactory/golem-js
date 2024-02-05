@@ -5,7 +5,7 @@ import { GolemConfigError } from "../error/golem-error";
 import { Logger, runtimeContextChecker, defaultLogger, nullLogger } from "../utils";
 
 const DEFAULTS = Object.freeze({
-  payment: { driver: "erc20", network: "holesky" },
+  payment: { driver: "erc20", network: "goerli" },
   budget: 1.0,
   subnetTag: "public",
   basePath: "http://127.0.0.1:7465",
