@@ -10,7 +10,7 @@ const DEFAULTS = Object.freeze({
   payment: { network: "goerli", driver: "erc20" },
   budget: 1.0,
   paymentTimeout: 1000 * 60, // 1 min
-  allocationExpires: 1000 * 60 * 60, // 60 min
+  allocationExpirationSec: 60 * 60, // 60 min
   invoiceReceiveTimeout: 1000 * 60 * 5, // 5 min
   maxInvoiceEvents: 500,
   maxDebitNotesEvents: 500,
@@ -81,7 +81,7 @@ export class PaymentConfig extends BaseConfig {
 export class AllocationConfig extends BaseConfig {
   public readonly budget: number;
   public readonly payment: { driver: string; network: string };
-  public readonly expires: number;
+  public readonly expirationSec: number;
   public readonly account: { address: string; platform: string };
 
   constructor(options?: AllocationOptions) {
@@ -95,7 +95,7 @@ export class AllocationConfig extends BaseConfig {
       driver: options?.payment?.driver || DEFAULTS.payment.driver,
       network: options?.payment?.network || DEFAULTS.payment.network,
     };
-    this.expires = options?.expires || DEFAULTS.allocationExpires;
+    this.expirationSec = options?.expirationSec || DEFAULTS.allocationExpirationSec;
   }
 }
 /**

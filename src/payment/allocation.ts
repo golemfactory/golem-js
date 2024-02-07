@@ -14,7 +14,7 @@ export interface AllocationOptions extends BasePaymentOptions {
     address: string;
     platform: string;
   };
-  expires?: number;
+  expirationSec?: number;
 }
 
 /**
@@ -52,7 +52,7 @@ export class Allocation {
         paymentPlatform: config.account.platform,
         address: config.account.address,
         timestamp: now.toISOString(),
-        timeout: new Date(+now + config.expires).toISOString(),
+        timeout: new Date(+now + config.expirationSec * 1000).toISOString(),
         makeDeposit: false,
         remainingAmount: "",
         spentAmount: "",
