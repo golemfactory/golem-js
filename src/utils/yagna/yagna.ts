@@ -1,9 +1,10 @@
-import { RequestorControlApi, RequestorStateApi } from "ya-ts-client/dist/ya-activity/api";
+import { RequestorControlApi } from "ya-ts-client/dist/ya-activity/api";
 import { RequestorApi as MarketRequestorApi } from "ya-ts-client/dist/ya-market/api";
 import { RequestorApi as NetworkRequestorApi } from "ya-ts-client/dist/ya-net/api";
 import { RequestorApi as PaymentRequestorApi } from "ya-ts-client/dist/ya-payment/api";
 import { RequestorApi as IdentityRequestorApi } from "./identity";
 import { RequestorApi as GsbRequestorApi } from "./gsb";
+import { RequestorApi as RequestorStateApi } from "./activity";
 import { Agent } from "http";
 import { Configuration } from "ya-ts-client/dist/ya-payment";
 import * as EnvUtils from "../env";
