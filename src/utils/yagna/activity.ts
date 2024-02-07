@@ -1,4 +1,4 @@
-import { RequestorStateApi } from "ya-ts-client/dist/ya-activity";
+import { RequestorStateApi } from "ya-ts-client/dist/ya-activity/api";
 import { GolemPlatformError } from "../../error/golem-error";
 import { Agreement } from "ya-ts-client/dist/ya-market";
 
