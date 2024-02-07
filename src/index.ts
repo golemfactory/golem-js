@@ -18,3 +18,4 @@ export { Yagna, YagnaOptions } from "./utils/yagna/yagna";
 export { Job, JobState } from "./job";
 export * from "./golem_network";
 export { Worker, WorkContext } from "./task";
+export * from "./experimental";
