@@ -2,9 +2,14 @@ import { Activity } from "../../activity";
 import { AgreementPoolService } from "../../agreement";
 import { MarketService, Proposal, ProposalFilter } from "../../market";
 import { PaymentService } from "../../payment";
-import { GftpStorageProvider, StorageProvider } from "../../storage";
+import {
+  GftpStorageProvider,
+  NullStorageProvider,
+  StorageProvider,
+  WebSocketBrowserStorageProvider,
+} from "../../storage";
 import { GolemAbortError, GolemUserError } from "../../error/golem-error";
-import { defaultLogger, Logger, Yagna, YagnaApi } from "../../utils";
+import { defaultLogger, Logger, runtimeContextChecker, Yagna, YagnaApi } from "../../utils";
 import { GolemBackendConfig, GolemBackendEvents, GolemBackendState } from "./types";
 import { Package } from "../../package";
 import { WorkContext } from "../../task";
@@ -36,6 +41,9 @@ export class GolemBackend {
   private readonly storageProvider: StorageProvider;
 
   private readonly instances = new Map<GolemInstance, InstanceGroup>();
+
+  // private readonly networks: Network[] = [];
+  // private readonly managedNetwork?: Network;
 
   constructor(private readonly config: GolemBackendConfig) {
     this.logger = config.logger ?? defaultLogger("backend");
@@ -73,7 +81,15 @@ export class GolemBackend {
       },
     });
 
-    this.storageProvider = new GftpStorageProvider();
+    if (runtimeContextChecker.isNode) {
+      this.storageProvider = new GftpStorageProvider(this.logger.child("storage"));
+    } else if (runtimeContextChecker.isBrowser) {
+      this.storageProvider = new WebSocketBrowserStorageProvider(this.api, {
+        logger: this.logger.child("storage"),
+      });
+    } else {
+      this.storageProvider = new NullStorageProvider();
+    }
   }
 
   getState(): GolemBackendState {
@@ -136,6 +152,7 @@ export class GolemBackend {
     this.state = GolemBackendState.STOPPING;
     this.events.emit("beforeEnd");
 
+    // TODO: consider if we should catch and ignore individual errors here in order to release as many resource as we can.
     try {
       // Call destroyInstance() on all active instances
       const promises: Promise<void>[] = Array.from(this.instances.values()).map((group) =>

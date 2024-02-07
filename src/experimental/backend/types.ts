@@ -49,6 +49,7 @@ export interface GolemBackendConfig {
   };
   resources?: GolemBackendResources;
   market: GolemMarketConfig;
+  // networking?: string | Network[];
 }
 
 export interface GolemBackendEvents {
