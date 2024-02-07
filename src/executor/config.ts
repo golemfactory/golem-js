@@ -34,6 +34,7 @@ export class ExecutorConfig {
   readonly maxTaskRetries: number;
   readonly startupTimeout: number;
   readonly exitOnNoProposals: boolean;
+  readonly agreementMaxPoolSize: number;
 
   constructor(options: ExecutorOptions & ActivityOptions) {
     const processEnv = !runtimeContextChecker.isBrowser
@@ -87,5 +88,11 @@ export class ExecutorConfig {
     this.maxTaskRetries = options.maxTaskRetries ?? DEFAULTS.maxTaskRetries;
     this.startupTimeout = options.startupTimeout ?? DEFAULTS.startupTimeout;
     this.exitOnNoProposals = options.exitOnNoProposals ?? DEFAULTS.exitOnNoProposals;
+    /**
+     * If the user does not explicitly specify the maximum size of the aggregate pool, the value of maxParallelTask will be set.
+     * This means that the pool will contain a maximum number of agreements ready for reuse equal to the maximum number of tasks executed simultaneously.
+     * This will avoid the situation of keeping unused agreements and activities and, consequently, unnecessary costs.
+     */
+    this.agreementMaxPoolSize = options.agreementMaxPoolSize ?? DEFAULTS.maxParallelTasks;
   }
 }
