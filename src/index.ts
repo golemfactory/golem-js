@@ -30,6 +30,7 @@ export {
   MarketOptions,
   GolemMarketError,
   MarketErrorCode,
+  Proposal,
 } from "./market";
 export { Package, PackageOptions, AllPackageOptions } from "./package";
 export {
