@@ -6,8 +6,22 @@ export {
   WebSocketBrowserStorageProvider,
   WebSocketStorageProviderOptions,
 } from "./storage";
-export { ActivityStateEnum, Result, ResultState, Activity, ActivityOptions, ActivityPoolService } from "./activity";
-export { AgreementCandidate, AgreementSelectors, AgreementPoolService, AgreementServiceOptions } from "./agreement";
+export {
+  ActivityStateEnum,
+  Result,
+  ResultState,
+  Activity,
+  ActivityOptions,
+  ActivityPoolService,
+  ActivityConfig,
+} from "./activity";
+export {
+  Agreement,
+  AgreementCandidate,
+  AgreementSelectors,
+  AgreementPoolService,
+  AgreementServiceOptions,
+} from "./agreement";
 export {
   ProposalFilterFactory,
   ProposalFilter,
@@ -27,11 +41,19 @@ export {
   GolemPaymentError,
   PaymentErrorCode,
 } from "./payment";
-export { NetworkService, NetworkServiceOptions, GolemNetworkError, NetworkErrorCode } from "./network";
+export {
+  NetworkService,
+  Network,
+  NetworkNode,
+  NetworkServiceOptions,
+  GolemNetworkError,
+  NetworkErrorCode,
+} from "./network";
 export { Events, BaseEvent, EVENT_TYPE } from "./events";
 export { Logger, jsonLogger, nullLogger, pinoLogger, defaultLogger, runtimeContextChecker } from "./utils";
-export { Yagna, YagnaOptions } from "./utils/yagna/yagna";
+export { Yagna, YagnaApi, YagnaOptions } from "./utils/yagna/yagna";
 export { Job, JobState } from "./job";
 export * from "./golem_network";
-export { Worker, WorkContext, GolemWorkError, WorkErrorCode } from "./task";
+export { Worker, WorkContext, WorkOptions, GolemWorkError, WorkErrorCode } from "./task";
 export * from "./error/golem-error";
+export { StatsService } from "./stats/service";
