@@ -1,6 +1,6 @@
 import { LoggerMock } from "../mock";
 import { readFileSync } from "fs";
-import { TaskExecutor, EVENT_TYPE, BaseEvent, Events } from "../../src";
+import { TaskExecutor, EVENT_TYPE, BaseEvent, Events, Result } from "../../src";
 const logger = new LoggerMock(false);
 
 describe("Task Executor", function () {
@@ -195,6 +195,33 @@ describe("Task Executor", function () {
     expect(logger.logs).toContain("New proposal added to pool");
     expect(logger.logs).toMatch(/Agreement confirmed by provider/);
     expect(logger.logs).toMatch(/Activity created/);
+  });
+
+  it("should spawn commands as external processes and handle timeout errors", async () => {
+    executor = await TaskExecutor.create("golem/alpine:latest");
+    const stdouts: string[] = [];
+    const errors: Error[] = [];
+    const results: Result[] = [];
+    for (const i of [1, 2, 3, 4]) {
+      await executor.run(async (ctx) => {
+        const remoteProcess = await ctx.spawn("sleep 1 && echo 'Hello World'");
+        remoteProcess.stdout.on("data", (data) => (stdouts[i] = data));
+        const timeout = i % 2 === 0 ? 50 : 20_000;
+        results[i] = await remoteProcess.waitForExit(timeout).catch((e) => (errors[i] = e));
+
+        if (i % 2 === 0) {
+          expect(stdouts[i]).not.toBeDefined();
+          expect(results[i]?.result).not.toBeDefined();
+          expect(errors[i]?.message).toContain(
+            "Unable to get activity results. The waiting time (50 ms) for the final result has been exceeded",
+          );
+        } else {
+          expect(stdouts[i]).toContain("Hello World");
+          expect(results[i]?.result).toContain("Ok");
+          expect(errors[i]).not.toBeDefined();
+        }
+      });
+    }
   });
 
   it("should not retry the task if maxTaskRetries is zero", async () => {
