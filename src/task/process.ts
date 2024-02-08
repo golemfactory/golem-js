@@ -39,20 +39,19 @@ export class RemoteProcess {
   waitForExit(timeout?: number): Promise<Result> {
     return new Promise((resolve, reject) => {
       const timeoutInMs = timeout ?? DEFAULTS.exitWaitingTimeout;
-      const timeoutId = setTimeout(
-        () =>
-          reject(
-            new GolemWorkError(
-              `Unable to get activity results. The waiting time (${timeoutInMs} ms) for the final result has been exceeded`,
-              WorkErrorCode.ActivityResultsFetchingFailed,
-              this.activity.agreement,
-              this.activity,
-              this.activity.getProviderInfo(),
-              new GolemTimeoutError(`The waiting time (${timeoutInMs} ms) for the final result has been exceeded`),
-            ),
+      const timeoutId = setTimeout(() => {
+        reject(
+          new GolemWorkError(
+            `Unable to get activity results. The waiting time (${timeoutInMs} ms) for the final result has been exceeded`,
+            WorkErrorCode.ActivityResultsFetchingFailed,
+            this.activity.agreement,
+            this.activity,
+            this.activity.getProviderInfo(),
+            new GolemTimeoutError(`The waiting time (${timeoutInMs} ms) for the final result has been exceeded`),
           ),
-        timeoutInMs,
-      );
+        );
+        this.activity.stop().catch();
+      }, timeoutInMs);
       const end = () => {
         clearTimeout(timeoutId);
         if (this.lastResult) {
@@ -67,6 +66,7 @@ export class RemoteProcess {
               this.activity.getProviderInfo(),
             ),
           );
+          this.activity.stop().catch();
         }
       };
       if (this.streamOfActivityResults.closed) return end();
