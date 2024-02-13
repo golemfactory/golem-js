@@ -1,6 +1,7 @@
 import { MockPropertyPolicy, imock, instance, when } from "@johanblumenberg/ts-mockito";
 
 import { getHealthyProvidersWhiteList } from "./helpers";
+import { GolemInternalError } from "../error/golem-error";
 
 const mockFetch = jest.spyOn(global, "fetch");
 const response = imock<Response>();
@@ -34,20 +35,27 @@ describe("Market Helpers", () => {
         mockFetch.mockResolvedValue(instance(mockResponse));
 
         // When, Then
-        await expect(() => getHealthyProvidersWhiteList()).rejects.toThrow(
-          "Failed to download healthy provider whitelist due to an error: Error: Request to download healthy provider whitelist failed: {error:'test'}",
+        await expect(() => getHealthyProvidersWhiteList()).rejects.toMatchError(
+          new GolemInternalError(
+            "Failed to download healthy provider whitelist due to an error: Error: Request to download healthy provider whitelist failed: {error:'test'}",
+            new GolemInternalError("Request to download healthy provider whitelist failed: {error:'test'}"),
+          ),
         );
       });
 
       test("It throws an error when executing of fetch will fail for any reason", async () => {
         // Given
+        const testError = new Error("Something went wrong really bad!");
         mockFetch.mockImplementation(() => {
-          throw new Error("Something went wrong really bad!");
+          throw testError;
         });
 
         // When, Then
-        await expect(() => getHealthyProvidersWhiteList()).rejects.toThrow(
-          "Failed to download healthy provider whitelist due to an error: Error: Something went wrong really bad!",
+        await expect(() => getHealthyProvidersWhiteList()).rejects.toMatchError(
+          new GolemInternalError(
+            "Failed to download healthy provider whitelist due to an error: Error: Something went wrong really bad!",
+            testError,
+          ),
         );
       });
     });

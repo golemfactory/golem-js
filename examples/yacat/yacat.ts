@@ -11,7 +11,6 @@ async function main(args) {
     subnetTag: args.subnetTag,
     taskTimeout: 1000 * 60 * 8, // 8 min
     payment: { driver: args.paymentDriver, network: args.paymentNetwork },
-    logLevel: args.debug ? "debug" : "info",
   });
   const keyspace = await executor.run<number>(async (ctx) => {
     const result = await ctx.run(`hashcat --keyspace -a 3 ${args.mask} -m 400`);
@@ -58,7 +57,6 @@ program
   .option("--subnet-tag <subnet>", "set subnet name, for example 'public'")
   .option("--payment-driver, --driver <driver>", "payment driver name, for example 'erc20'")
   .option("--payment-network, --network <network>", "network name, for example 'goerli'")
-  .option("-d, --debug", "output extra debugging")
   .option("--number-of-providers <number_of_providers>", "number of providers", (value) => parseInt(value), 2)
   .option("--mask <mask>")
   .requiredOption("--hash <hash>");

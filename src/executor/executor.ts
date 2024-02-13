@@ -1,24 +1,21 @@
 import { Package, PackageOptions } from "../package";
-import { MarketService } from "../market";
-import { AgreementPoolService } from "../agreement";
-import { Task, TaskQueue, TaskService, Worker, TaskOptions } from "../task";
-import { PaymentService, PaymentOptions } from "../payment";
-import { NetworkService } from "../network";
-import { sleep, Logger, LogLevel, runtimeContextChecker, Yagna } from "../utils";
-import { StorageProvider, GftpStorageProvider, NullStorageProvider, WebSocketBrowserStorageProvider } from "../storage";
+import { MarketOptions, MarketService } from "../market";
+import { AgreementPoolService, AgreementServiceOptions } from "../agreement";
+import { Task, TaskOptions, TaskQueue, TaskService, Worker } from "../task";
+import { PaymentOptions, PaymentService } from "../payment";
+import { NetworkService, NetworkServiceOptions } from "../network";
+import { Logger, runtimeContextChecker, sleep, Yagna } from "../utils";
+import { GftpStorageProvider, NullStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../storage";
 import { ExecutorConfig } from "./config";
 import { Events } from "../events";
 import { StatsService } from "../stats/service";
 import { TaskServiceOptions } from "../task/service";
-import { NetworkServiceOptions } from "../network/service";
-import { AgreementServiceOptions } from "../agreement/service";
-import { WorkOptions } from "../task/work";
-import { MarketOptions } from "../market/service";
 import { RequireAtLeastOne } from "../utils/types";
-import { v4 } from "uuid";
-import { JobStorage, Job } from "../job";
 import { TaskExecutorEventsDict } from "./events";
 import { EventEmitter } from "eventemitter3";
+import { GolemConfigError, GolemInternalError, GolemTimeoutError } from "../error/golem-error";
+import { WorkOptions } from "../task/work";
+import { GolemWorkError, WorkErrorCode } from "../task/error";
 
 const terminatingSignals = ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"];
 
@@ -31,8 +28,6 @@ export type ExecutorOptions = {
   subnetTag?: string;
   /** Logger module */
   logger?: Logger;
-  /** Log level: debug, info, warn, log, error */
-  logLevel?: LogLevel | string;
   /** Set to `false` to completely disable logging (even if a logger is provided) */
   enableLogging?: boolean;
   /** Yagna Options */
@@ -43,18 +38,8 @@ export type ExecutorOptions = {
   maxTaskRetries?: number;
   /** Custom Storage Provider used for transfer files */
   storageProvider?: StorageProvider;
-  /**
-   * @deprecated this parameter will be removed in the next version.
-   * Currently, has no effect on executor termination.
-   */
-  isSubprocess?: boolean;
   /** Timeout for preparing activity - creating and deploy commands */
   activityPreparingTimeout?: number;
-  /**
-   * Storage for task state and results. Especially useful in a distributed environment.
-   * For more details see {@link JobStorage}. Defaults to a simple in-memory storage.
-   */
-  jobStorage?: JobStorage;
   /**
    * Do not install signal handlers for SIGINT, SIGTERM, SIGBREAK, SIGHUP.
    *
@@ -86,7 +71,7 @@ export type ExecutorOptions = {
   PaymentOptions &
   NetworkServiceOptions &
   AgreementServiceOptions &
-  Omit<WorkOptions, "isRunning">;
+  WorkOptions;
 
 /**
  * Contains information needed to start executor, if string the imageHash is required, otherwise it should be a type of {@link ExecutorOptions}
@@ -118,7 +103,7 @@ export class TaskExecutor {
   private activityReadySetupFunctions: Worker<unknown>[] = [];
   private taskQueue: TaskQueue;
   private storageProvider?: StorageProvider;
-  private logger?: Logger;
+  private logger: Logger;
   private lastTaskIndex = 0;
   private isRunning = true;
   private configOptions: ExecutorOptions;
@@ -188,18 +173,32 @@ export class TaskExecutor {
     this.yagna = new Yagna(this.configOptions.yagnaOptions);
     const yagnaApi = this.yagna.getApi();
     this.taskQueue = new TaskQueue();
-    this.agreementPoolService = new AgreementPoolService(yagnaApi, this.options);
-    this.paymentService = new PaymentService(yagnaApi, this.options);
-    this.marketService = new MarketService(this.agreementPoolService, yagnaApi, this.options);
-    this.networkService = this.options.networkIp ? new NetworkService(yagnaApi, this.options) : undefined;
+    this.agreementPoolService = new AgreementPoolService(yagnaApi, {
+      ...this.options,
+      logger: this.logger.child("agreement"),
+    });
+    this.paymentService = new PaymentService(yagnaApi, {
+      ...this.options,
+      logger: this.logger.child("payment"),
+    });
+    this.marketService = new MarketService(this.agreementPoolService, yagnaApi, {
+      ...this.options,
+      logger: this.logger.child("market"),
+    });
+    this.networkService = this.options.networkIp
+      ? new NetworkService(yagnaApi, { ...this.options, logger: this.logger.child("network") })
+      : undefined;
 
     // Initialize storage provider.
     if (this.configOptions.storageProvider) {
       this.storageProvider = this.configOptions.storageProvider;
     } else if (runtimeContextChecker.isNode) {
-      this.storageProvider = new GftpStorageProvider(this.logger);
+      this.storageProvider = new GftpStorageProvider(this.logger.child("storage"));
     } else if (runtimeContextChecker.isBrowser) {
-      this.storageProvider = new WebSocketBrowserStorageProvider(yagnaApi, this.options);
+      this.storageProvider = new WebSocketBrowserStorageProvider(yagnaApi, {
+        ...this.options,
+        logger: this.logger.child("storage"),
+      });
     } else {
       this.storageProvider = new NullStorageProvider();
     }
@@ -210,9 +209,9 @@ export class TaskExecutor {
       this.agreementPoolService,
       this.paymentService,
       this.networkService,
-      { ...this.options, storageProvider: this.storageProvider },
+      { ...this.options, storageProvider: this.storageProvider, logger: this.logger.child("work") },
     );
-    this.statsService = new StatsService(this.options);
+    this.statsService = new StatsService({ ...this.options, logger: this.logger.child("stats") });
   }
 
   /**
@@ -224,7 +223,7 @@ export class TaskExecutor {
     try {
       await this.yagna.connect();
     } catch (error) {
-      this.logger?.error(error);
+      this.logger.error("Initialization failed", error);
       throw error;
     }
     const manifest = this.options.packageOptions.manifest;
@@ -243,13 +242,13 @@ export class TaskExecutor {
           taskPackage = packageReference;
         }
       } else {
-        const error = new Error("No package or manifest provided");
-        this.logger?.error(error);
+        const error = new GolemConfigError("No package or manifest provided");
+        this.logger.error("No package or manifest provided", error);
         throw error;
       }
     }
 
-    this.logger?.debug("Initializing task executor services...");
+    this.logger.debug("Initializing task executor services...");
     const allocations = await this.paymentService.createAllocation();
     await Promise.all([
       this.marketService.run(taskPackage, allocations).then(() => this.setStartupTimeout()),
@@ -259,24 +258,20 @@ export class TaskExecutor {
       this.statsService.run(),
       this.storageProvider?.init(),
     ]).catch((e) => this.handleCriticalError(e));
+
+    // Start listening to issues reported by the services
+    this.paymentService.events.on("error", (e) => this.handleCriticalError(e));
+
     this.taskService.run().catch((e) => this.handleCriticalError(e));
+
     if (runtimeContextChecker.isNode) this.installSignalHandlers();
     this.options.eventTarget.dispatchEvent(new Events.ComputationStarted());
-    this.logger?.info(
-      `Task Executor has started using subnet: ${this.options.subnetTag}, network: ${this.paymentService.config.payment.network}, driver: ${this.paymentService.config.payment.driver}`,
-    );
+    this.logger.info(`Task Executor has started`, {
+      subnet: this.options.subnetTag,
+      network: this.paymentService.config.payment.network,
+      driver: this.paymentService.config.payment.driver,
+    });
     this.events.emit("ready");
-  }
-
-  /**
-   * Stop all executor services and shut down executor instance.
-   *
-   * You can call this method multiple times, it will resolve only once the executor is shutdown.
-   *
-   * @deprecated Use TaskExecutor.shutdown() instead.
-   */
-  end(): Promise<void> {
-    return this.shutdown();
   }
 
   /**
@@ -316,7 +311,7 @@ export class TaskExecutor {
     this.options.eventTarget?.dispatchEvent(new Events.ComputationFinished());
     this.printStats();
     await this.statsService.end();
-    this.logger?.info("Task Executor has shut down");
+    this.logger.info("Task Executor has shut down");
     this.events.emit("end");
   }
 
@@ -327,32 +322,6 @@ export class TaskExecutor {
    */
   getStats() {
     return this.statsService.getStatsTree();
-  }
-
-  /**
-   * @deprecated
-   * Use {@link TaskExecutor.onActivityReady} instead.
-   *
-   * Define worker function that will be runs before every each computation Task, within the same activity.
-   *
-   * @param worker worker function - task
-   * @example
-   * ```typescript
-   * executor.beforeEach(async (ctx) => {
-   *   await ctx.uploadFile("./params.txt", "/params.txt");
-   * });
-   *
-   * await executor.forEach([1, 2, 3, 4, 5], async (ctx, item) => {
-   *    await ctx
-   *      .beginBatch()
-   *      .run(`/run_some_command.sh --input ${item} --params /input_params.txt --output /output.txt`)
-   *      .downloadFile("/output.txt", "./output.txt")
-   *      .end();
-   * });
-   * ```
-   */
-  beforeEach(worker: Worker<unknown>) {
-    this.activityReadySetupFunctions = [worker];
   }
 
   /**
@@ -411,72 +380,60 @@ export class TaskExecutor {
   }
 
   private async executeTask<OutputType>(worker: Worker<OutputType>, options?: TaskOptions): Promise<OutputType> {
-    const task = new Task((++this.lastTaskIndex).toString(), worker, {
-      maxRetries: options?.maxRetries ?? this.options.maxTaskRetries,
-      timeout: options?.timeout ?? this.options.taskTimeout,
-      activityReadySetupFunctions: this.activityReadySetupFunctions,
-    });
-    this.taskQueue.addToEnd(task);
-    while (this.isRunning) {
-      if (task.isFinished()) {
-        if (task.isRejected()) throw task.getError();
-        return task.getResults() as OutputType;
+    let task;
+    try {
+      task = new Task((++this.lastTaskIndex).toString(), worker, {
+        maxRetries: options?.maxRetries ?? this.options.maxTaskRetries,
+        timeout: options?.timeout ?? this.options.taskTimeout,
+        activityReadySetupFunctions: this.activityReadySetupFunctions,
+      });
+      this.taskQueue.addToEnd(task);
+      while (this.isRunning) {
+        if (task.isFinished()) {
+          if (task.isRejected()) throw task.getError();
+          return task.getResults() as OutputType;
+        }
+        await sleep(2000, true);
       }
-      await sleep(2000, true);
+      throw new GolemInternalError("Task executor has been stopped");
+    } catch (error) {
+      if (error instanceof GolemWorkError) {
+        throw error;
+      }
+      throw new GolemWorkError(
+        `Unable to execute task. ${error.toString()}`,
+        WorkErrorCode.TaskExecutionFailed,
+        task?.getActivity()?.agreement,
+        task?.getActivity(),
+        task?.getActivity()?.getProviderInfo(),
+        error,
+      );
     }
-    throw new Error("Task executor has been stopped");
   }
 
-  /**
-   * Start a new job without waiting for the result. The job can be retrieved later using {@link TaskExecutor.getJobById}. The job's status is stored in the {@link JobStorage} provided in the {@link ExecutorOptions} (in-memory by default). For distributed environments, it is recommended to use a form of storage that is accessible from all nodes (e.g. a database).
-   *
-   * @param worker Worker function to be executed
-   * @returns Job object
-   * @example **Simple usage of createJob**
-   * ```typescript
-   * const job = executor.createJob(async (ctx) => {
-   *  return (await ctx.run("echo 'Hello World'")).stdout;
-   * });
-   * // save job.id somewhere
-   *
-   * // later...
-   * const job = await executor.fetchJob(jobId);
-   * const status = await job.fetchState();
-   * const results = await job.fetchResults();
-   * const error = await job.fetchError();
-   * ```
-   */
-  public async createJob<OutputType>(worker: Worker<OutputType>): Promise<Job<OutputType>> {
-    const jobId = v4();
-    const job = new Job<OutputType>(jobId, this.options.jobStorage);
-    await job.saveInitialState();
+  public async cancel(reason: string) {
+    try {
+      if (this.isCanceled) {
+        this.logger.warn("The executor is already cancelled, ignoring second request");
+        return;
+      }
 
-    const task = new Task(jobId, worker, {
-      maxRetries: this.options.maxTaskRetries,
-      timeout: this.options.taskTimeout,
-      activityReadySetupFunctions: this.activityReadySetupFunctions,
-    });
-    task.onStateChange((taskState) => {
-      job.saveState(taskState, task.getResults(), task.getError());
-    });
-    this.taskQueue.addToEnd(task);
+      this.isCanceled = true;
 
-    return job;
-  }
+      if (runtimeContextChecker.isNode) {
+        this.removeSignalHandlers();
+      }
 
-  /**
-   * Retrieve a job by its ID. The job's status is stored in the {@link JobStorage} provided in the {@link ExecutorOptions} (in-memory by default). Use {@link Job.fetchState}, {@link Job.fetchResults} and {@link Job.fetchError} to get the job's status.
-   *
-   * @param jobId Job ID
-   * @returns Job object.
-   */
-  public getJobById(jobId: string): Job {
-    return new Job(jobId, this.options.jobStorage);
-  }
+      const message = `Executor has interrupted by the user. Reason: ${reason}.`;
 
-  private handleCriticalError(e: Error) {
-    this.options.eventTarget?.dispatchEvent(new Events.ComputationFailed({ reason: e.toString() }));
-    this.logger?.error(e.toString());
+      this.logger.info(`${message}. Stopping all tasks...`, {
+        tasksInProgress: this.taskQueue.size,
+      });
+
+      await this.shutdown();
+    } catch (error) {
+      this.logger.error(`Error while cancelling the executor`, error);
+    }
   }
 
   private installSignalHandlers() {
@@ -493,17 +450,16 @@ export class TaskExecutor {
     });
   }
 
-  public async cancel(reason?: string) {
-    try {
-      if (this.isCanceled) return;
-      if (runtimeContextChecker.isNode) this.removeSignalHandlers();
-      const message = `Executor has interrupted by the user. Reason: ${reason}.`;
-      this.logger?.warn(`${message}. Stopping all tasks...`);
-      this.isCanceled = true;
-      await this.shutdown();
-    } catch (error) {
-      this.logger?.error(`Error while cancelling the executor. ${error}`);
-    }
+  private handleCriticalError(err: Error) {
+    this.options.eventTarget?.dispatchEvent(new Events.ComputationFailed({ reason: err.toString() }));
+    const message =
+      "TaskExecutor faced a critical error and will now cancel work, terminate agreements and request settling payments";
+    this.logger.error(message, err);
+    // Make sure users know in case they didn't configure logging
+    console.error(message, err);
+    this.cancel(`Cancelling due to critical error ${err}`).catch((cancelErr) =>
+      this.logger.error("Issue when cancelling Task Executor", { err: cancelErr }),
+    );
   }
 
   private printStats() {
@@ -511,14 +467,24 @@ export class TaskExecutor {
     const costsSummary = this.statsService.getAllCostsSummary();
     const duration = this.statsService.getComputationTime();
     const providersCount = new Set(costsSummary.map((x) => x["Provider Name"])).size;
-    this.logger?.info(`Computation finished in ${duration}`);
-    this.logger?.info(`Negotiated ${costsSummary.length} agreements with ${providersCount} providers`);
-    costsSummary.forEach((cost) => {
-      this.logger?.info(
-        `Agreement ${cost["Agreement"]} with ${cost["Provider Name"]} computed ${cost["Task Computed"]} task(s) for ${cost["Cost"]} GLM (${cost["Payment Status"]})`,
-      );
+    this.logger.info(`Computation finished in ${duration}`);
+    this.logger.info(`Negotiation summary:`, {
+      agreements: costsSummary.length,
+      providers: providersCount,
     });
-    this.logger?.info(`Total Cost: ${costs.total} Total Paid: ${costs.paid}`);
+    costsSummary.forEach((cost, index) => {
+      this.logger.info(`Agreement ${index + 1}:`, {
+        agreement: cost["Agreement"],
+        provider: cost["Provider Name"],
+        tasks: cost["Task Computed"],
+        cost: cost["Cost"],
+        paymentStatus: cost["Payment Status"],
+      });
+    });
+    this.logger.info(`Cost summary:`, {
+      totalCost: costs.total,
+      totalPaid: costs.paid,
+    });
   }
 
   /**
@@ -538,9 +504,9 @@ export class TaskExecutor {
               : "Check your proposal filters if they are not too restrictive.";
         const errorMessage = `Could not start any work on Golem. Processed ${proposalsCount.initial} initial proposals from yagna, filters accepted ${proposalsCount.confirmed}. ${hint}`;
         if (this.options.exitOnNoProposals) {
-          this.handleCriticalError(new Error(errorMessage));
+          this.handleCriticalError(new GolemTimeoutError(errorMessage));
         } else {
-          this.logger?.warn(errorMessage);
+          console.error(errorMessage);
         }
       }
     }, this.options.startupTimeout);

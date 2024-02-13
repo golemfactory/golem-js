@@ -1,6 +1,7 @@
 import { ExeScriptCommandResultResultEnum } from "ya-ts-client/dist/ya-activity/src/models/exe-script-command-result";
 
 export import ResultState = ExeScriptCommandResultResultEnum;
+import { GolemInternalError } from "../error/golem-error";
 
 // FIXME: Make the `data` field Uint8Array and update the rest of the code
 // eslint-disable-next-line
@@ -52,18 +53,22 @@ export class Result<TData = any> implements ResultData<TData> {
    */
   public getOutputAsJson<Output = object>(): Output {
     if (!this.stdout) {
-      throw new Error("Can't convert Result output to JSON, because the output is missing!");
+      throw new GolemInternalError("Can't convert Result output to JSON, because the output is missing!");
     }
 
     try {
       return JSON.parse(this.stdout.toString().trim());
     } catch (err) {
-      throw new Error(`Failed to parse output to JSON! Output: "${this.stdout.toString()}". Error: ${err}`);
+      throw new GolemInternalError(
+        `Failed to parse output to JSON! Output: "${this.stdout.toString()}". Error: ${err}`,
+      );
     }
   }
 }
 
 export interface StreamingBatchEvent {
+  // Reason for disable: That's something what yagna returns from its api
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   batch_id: string;
   index: number;
   timestamp: string;
@@ -82,6 +87,8 @@ interface RuntimeEventStarted {
 }
 
 interface RuntimeEventFinished {
+  // Reason for disable: That's something what yagna returns from its api
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   return_code: number;
   message: string;
 }

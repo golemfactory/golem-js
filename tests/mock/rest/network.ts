@@ -23,6 +23,16 @@ export class NetworkApiMock extends RequestorApi {
     if (this.error) return Promise.reject(this.error);
     return new Promise((res) => res({ data: undefined } as AxiosResponse));
   }
+
+  // @ts-ignore
+  removeNode(
+    networkId: string,
+    nodeId: string,
+    options?: AxiosRequestConfig,
+  ): Promise<import("axios").AxiosResponse<void>> {
+    return new Promise((res) => res({ data: undefined } as AxiosResponse));
+  }
+
   // @ts-ignore
   addAddress(
     networkId: string,

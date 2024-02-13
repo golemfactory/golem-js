@@ -1,5 +1,5 @@
-import { Events, EventType, BaseEvent } from "../events";
-import { Logger } from "../utils";
+import { Events, EVENT_TYPE, BaseEvent } from "../events";
+import { Logger, defaultLogger } from "../utils";
 import { Providers } from "./providers";
 import { Tasks } from "./tasks";
 import { Payments } from "./payments";
@@ -20,7 +20,7 @@ interface StatsOptions {
  */
 export class StatsService {
   private eventTarget: EventTarget;
-  private logger?: Logger;
+  private logger: Logger;
   private allocations: Allocations;
   private agreements: Agreements;
   private activities: Activities;
@@ -33,7 +33,7 @@ export class StatsService {
 
   constructor(options: StatsOptions) {
     this.eventTarget = options.eventTarget;
-    this.logger = options.logger;
+    this.logger = options.logger || defaultLogger("stats");
     this.allocations = new Allocations();
     this.activities = new Activities();
     this.agreements = new Agreements();
@@ -46,26 +46,26 @@ export class StatsService {
   }
 
   async run() {
-    this.eventTarget.addEventListener(EventType, (event) => this.handleEvents(event as BaseEvent<unknown>));
-    this.logger?.debug("Stats service has started");
+    this.eventTarget.addEventListener(EVENT_TYPE, (event) => this.handleEvents(event as BaseEvent<unknown>));
+    this.logger.info("Stats service has started");
   }
 
   async end() {
-    this.eventTarget.removeEventListener(EventType, null);
-    this.logger?.debug("Stats service has stopped");
+    this.eventTarget.removeEventListener(EVENT_TYPE, null);
+    this.logger.info("Stats service has stopped");
   }
 
   getAllCostsSummary() {
     return this.agreements
       .getAll()
       .map((agreement) => {
-        const provider = this.providers.getById(agreement.providerId);
+        const provider = this.providers.getById(agreement.provider.id);
         const tasks = this.tasks.getByAgreementId(agreement.id);
         const invoices = this.invoices.getByAgreementId(agreement.id);
         const payments = this.payments.getByAgreementId(agreement.id);
         return {
           Agreement: agreement.id.substring(0, 10),
-          "Provider Name": provider ? provider.providerName : "unknown",
+          "Provider Name": provider ? provider.name : "unknown",
           "Task Computed": tasks.where("status", "finished").count(),
           Cost: invoices.sum("amount"),
           "Payment Status": payments.count() > 0 ? "paid" : "unpaid",
@@ -141,7 +141,7 @@ export class StatsService {
       agreements: this.agreements
         .getAll()
         .map((agreement) => {
-          const provider = this.providers.getById(agreement.providerId);
+          const provider = this.providers.getById(agreement.provider.id);
           const tasks = this.tasks.getByAgreementId(agreement.id);
           const invoices = this.invoices.getByAgreementId(agreement.id);
           const payments = this.payments.getByAgreementId(agreement.id);
@@ -185,30 +185,30 @@ export class StatsService {
     } else if (event instanceof Events.AgreementCreated) {
       this.agreements.add({
         id: event.detail.id,
-        providerId: event.detail.providerId,
+        provider: event.detail.provider,
         proposalId: event.detail.proposalId,
       });
-      this.providers.add({ id: event.detail.providerId, providerName: event.detail.providerName });
+      this.providers.add(event.detail.provider);
     } else if (event instanceof Events.AgreementConfirmed) {
       this.agreements.confirm(event.detail.id);
     } else if (event instanceof Events.AgreementRejected) {
       this.agreements.reject(event.detail.id);
     } else if (event instanceof Events.ProposalReceived) {
-      this.proposals.add({ id: event.detail.id, providerId: event.detail.providerId });
-      this.providers.add({ id: event.detail.providerId });
+      this.proposals.add({ id: event.detail.id, providerId: event.detail.provider.id });
+      this.providers.add({ ...event.detail.provider });
     } else if (event instanceof Events.InvoiceReceived) {
       this.invoices.add({
         id: event.detail.id,
-        providerId: event.detail.providerId,
+        provider: event.detail.provider,
         agreementId: event.detail.agreementId,
         amount: event.detail.amount,
       });
     } else if (event instanceof Events.PaymentAccepted) {
       this.payments.add({
         id: event.detail.id,
-        providerId: event.detail.providerId,
         agreementId: event.detail.agreementId,
         amount: event.detail.amount,
+        provider: event.detail.provider,
       });
     }
   }

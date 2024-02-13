@@ -90,6 +90,7 @@
         li.appendChild(document.createTextNode(msg));
         logs_el.appendChild(li);
       }
+
       function setResponse(result) {
         if (urlObject) {
           URL.revokeObjectURL(urlObject);
@@ -99,11 +100,27 @@
       }
 
       const logger = {
-        log: (msg) => appendLog(`[${new Date().toISOString()}] ${msg}`),
-        warn: (msg) => appendLog(`[${new Date().toISOString()}] [warn] ${msg}`),
-        debug: (msg) => appendLog(`[${new Date().toISOString()}] [debug] ${msg}`),
-        error: (msg) => appendLog(`[${new Date().toISOString()}] [error] ${msg}`),
-        info: (msg) => appendLog(`[${new Date().toISOString()}] [info] ${msg}`),
+        warn: (msg) => {
+          const fullMsg = `[${new Date().toISOString()}] [warn] ${msg}`;
+          console.warn(fullMsg);
+          appendLog(fullMsg);
+        },
+        debug: (msg) => {
+          const fullMsg = `[${new Date().toISOString()}] [debug] ${msg}`;
+          console.debug(fullMsg);
+          appendLog(fullMsg);
+        },
+        error: (msg) => {
+          const fullMsg = `[${new Date().toISOString()}] [error] ${msg}`;
+          console.error(fullMsg);
+          appendLog(fullMsg);
+        },
+        info: (msg) => {
+          const fullMsg = `[${new Date().toISOString()}] [info] ${msg}`;
+          console.log(fullMsg);
+          appendLog(fullMsg);
+        },
+        child: () => logger,
       };
 
       async function run() {

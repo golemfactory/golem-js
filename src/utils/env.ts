@@ -1,29 +1,27 @@
 import { isNode } from "./runtimeContextChecker";
 
-export const EnvUtils = {
-  getYagnaApiUrl(): string {
-    return (isNode ? process?.env.YAGNA_API_URL : "") || "http://127.0.0.1:7465";
-  },
+export function getYagnaApiUrl(): string {
+  return (isNode ? process?.env.YAGNA_API_URL : "") || "http://127.0.0.1:7465";
+}
 
-  getYagnaAppKey(): string {
-    return isNode ? process?.env.YAGNA_APPKEY ?? "" : "";
-  },
+export function getYagnaAppKey(): string {
+  return isNode ? process?.env.YAGNA_APPKEY ?? "" : "";
+}
 
-  getYagnaSubnet(): string {
-    return isNode ? process?.env.YAGNA_SUBNET ?? "public" : "public";
-  },
+export function getYagnaSubnet(): string {
+  return isNode ? process?.env.YAGNA_SUBNET ?? "public" : "public";
+}
 
-  getRepoUrl(): string {
-    return isNode
-      ? process?.env.GOLEM_REGISTRY_URL ?? "https://registry.golem.network"
-      : "https://registry.golem.network";
-  },
+export function getRepoUrl(): string {
+  return isNode
+    ? process?.env.GOLEM_REGISTRY_URL ?? "https://registry.golem.network"
+    : "https://registry.golem.network";
+}
 
-  getPaymentNetwork(): string {
-    return isNode ? process.env.PAYMENT_NETWORK ?? "goerli" : "goerli";
-  },
+export function getPaymentNetwork(): string {
+  return isNode ? process.env.PAYMENT_NETWORK ?? "goerli" : "goerli";
+}
 
-  isDevMode(): boolean {
-    return isNode ? process?.env.GOLEM_DEV_MODE === "true" : false;
-  },
-};
+export function isDevMode(): boolean {
+  return isNode ? process?.env.GOLEM_DEV_MODE === "true" : false;
+}

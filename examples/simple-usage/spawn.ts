@@ -12,4 +12,4 @@ const finalResult = await executor.run(async (ctx) => {
 
 console.log(finalResult);
 
-await executor.end();
+await executor.shutdown();

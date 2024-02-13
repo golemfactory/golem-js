@@ -2,6 +2,7 @@ import { Activity, ActivityOptions } from "./activity";
 import { defaultLogger, Logger, YagnaApi } from "../utils";
 import { AgreementPoolService } from "../agreement";
 import { PaymentService } from "../payment";
+import { GolemWorkError, WorkErrorCode } from "../task/error";
 
 interface ActivityServiceOptions extends ActivityOptions {}
 
@@ -14,34 +15,38 @@ interface ActivityServiceOptions extends ActivityOptions {}
 export class ActivityPoolService {
   private logger: Logger;
   private pool: Activity[] = [];
-  private _isRunning = false;
+  private runningState = false;
+
   constructor(
     private yagnaApi: YagnaApi,
     private agreementService: AgreementPoolService,
     private paymentService: PaymentService,
     private options?: ActivityServiceOptions,
   ) {
-    this.logger = this.logger = options?.logger || defaultLogger();
+    this.logger = this.logger = options?.logger || defaultLogger("work");
   }
 
   /**
    * Start ActivityPoolService
    */
   async run() {
-    this._isRunning = true;
-    this.logger.debug("Activity Pool Service has started");
+    this.runningState = true;
+    this.logger.info("Activity Pool Service has started");
   }
 
-  get isRunning() {
-    return this._isRunning;
+  isRunning() {
+    return this.runningState;
   }
 
   /**
    * Get an activity from the pool of available ones or create a new one
    */
   async getActivity(): Promise<Activity> {
-    if (!this._isRunning) {
-      throw new Error("Unable to get activity. Activity service is not running");
+    if (!this.runningState) {
+      throw new GolemWorkError(
+        "Unable to get activity. Activity service is not running",
+        WorkErrorCode.ServiceNotInitialized,
+      );
     }
     return this.pool.shift() || (await this.createActivity());
   }
@@ -55,11 +60,11 @@ export class ActivityPoolService {
   async releaseActivity(activity: Activity, { reuse } = { reuse: true }) {
     if (reuse) {
       this.pool.push(activity);
-      this.logger.debug(`Activity ${activity.id} has been released for reuse`);
+      this.logger.debug(`Activity has been released for reuse`, { id: activity.id });
     } else {
-      await activity.stop().catch((e) => this.logger.warn(e));
+      await activity.stop().catch((e) => this.logger.error("Error stopping activity", e));
       await this.agreementService.releaseAgreement(activity.agreement.id, false);
-      this.logger.debug(`Activity ${activity.id} has been released and will be terminated`);
+      this.logger.debug(`Activity has been released and will be terminated`, { id: activity.id });
     }
   }
 
@@ -67,9 +72,11 @@ export class ActivityPoolService {
    * Stop the service and terminate all activities from the pool
    */
   async end() {
-    await Promise.all(this.pool.map((activity) => activity.stop().catch((e) => this.logger.warn(e))));
-    this._isRunning = false;
-    this.logger.debug("Activity Pool Service has been stopped");
+    await Promise.all(
+      this.pool.map((activity) => activity.stop().catch((e) => this.logger.error("Error stopping activity", e))),
+    );
+    this.runningState = false;
+    this.logger.info("Activity Pool Service has been stopped");
   }
 
   private async createActivity(): Promise<Activity> {

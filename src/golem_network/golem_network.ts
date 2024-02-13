@@ -1,125 +1,74 @@
-import { TaskExecutor, YagnaOptions } from "../executor";
-import { JobStorage } from "../job";
-import { PackageOptions } from "../package";
-import { Worker } from "../task";
+import { v4 } from "uuid";
+import { YagnaOptions } from "../executor";
+import { Job } from "../job";
+import { Yagna, YagnaApi } from "../utils";
+import { RunJobOptions } from "../job/job";
+import { GolemUserError } from "../error/golem-error";
 
-export interface GolemNetworkConfig {
-  /**
-   * Image that will be uploaded to the provider and used to run the task. Defaults to `golem/alpine:latest`.
-   */
-  image?: string;
-  /**
-   * Yagna options. See {@link YagnaOptions} for more information.
-   */
-  yagnaOptions?: YagnaOptions;
-  /**
-   * Minimum hardware requirements for the provider. The available options are:
-   * - `minMemGib` - minimum required RAM in GiB
-   * - `minStorageGib` - minimum required storage in GiB
-   * - `minCpuThreads` - minimum required CPU threads
-   * - `minCpuCores` - minimum required CPU cores
-   * - `capabilities` - required provider capabilities
-   */
-  demand?: Pick<PackageOptions, "minMemGib" | "minStorageGib" | "minCpuThreads" | "minCpuCores" | "capabilities">;
-  /**
-   * If you want to see logs from the Golem node set this to true. Defaults to `false`.
-   */
-  enableLogging?: boolean;
-  /**
-   * Function that will be run before each job. You can use it to set up the environment for your job. For example, you can upload a file to the provider.
-   */
-  beforeEachJob?: Worker<unknown>;
-  /**
-   * Job storage. By default Golem Network uses a simple in-memory storage for job statuses and results. In a real application you should use some persistent storage (e.g. a database). See {@link JobStorage} for more information.
-   */
-  jobStorage?: JobStorage;
-}
+export type GolemNetworkConfig = Partial<RunJobOptions> & { yagna?: YagnaOptions };
+
 /**
- * The starting point for using Golem Network.
+ * @experimental This API is experimental and subject to change. Use at your own risk.
  *
- * @description The GolemNetwork class is the best way to get started with developing on Golem Network. It provides a simple interface for creating jobs and running tasks.
- * @example
- * ```typescript
- * import { GolemNetwork } from "@golem-sdk/golem-js";
- * const network = new GolemNetwork();
- * network.init().then(() => {
- *  // network is ready to use
- *  const result = await network.runTask(async (ctx) => {
- *   // do some work
- *   return (await ctx.run("echo 'Hello from Golem'")).stdout;
- *  });
- *  console.log(result);
- * });
- *```
+ * The Golem Network class provides a high-level API for running jobs on the Golem Network.
  */
 export class GolemNetwork {
-  private _executor: TaskExecutor | null = null;
+  private yagna: Yagna;
+  private api: YagnaApi | null = null;
 
-  constructor(private readonly config: GolemNetworkConfig) {}
+  private jobs = new Map<string, Job>();
 
-  private get executor() {
-    if (this._executor === null) {
-      throw new Error("GolemNetwork not initialized, please run init() first");
-    }
-    return this._executor;
+  /**
+   * @param config - Configuration options that will be passed to all jobs created by this instance.
+   */
+  constructor(private readonly config: GolemNetworkConfig) {
+    this.yagna = new Yagna(this.config.yagna);
   }
 
   public isInitialized() {
-    return this._executor !== null;
+    return this.api !== null;
   }
 
   public async init() {
-    this._executor = await TaskExecutor.create({
-      package: this.config.image ?? "golem/alpine:latest",
-      enableLogging: this.config.enableLogging ?? false,
-      yagnaOptions: this.config.yagnaOptions,
-      jobStorage: this.config.jobStorage,
-      ...(this.config.demand ?? {}),
-    });
-    if (this.config.beforeEachJob) {
-      this.executor.onActivityReady(this.config.beforeEachJob);
-    }
+    await this.yagna.connect();
+    this.api = this.yagna.getApi();
   }
 
   /**
-   * Create a job on Golem Network.
+   * Create a new job and add it to the list of jobs managed by this instance.
+   * This method does not start any work on the network, use {@link Job.startWork} for that.
    *
-   * @description Create a job on Golem Network. You can use the job object to fetch the job status, results and errors. For more information see {@link Job}.
-   * @param worker Worker function to run
-   * @returns Job object
-   * @example
-   * ```typescript
-   * const job = await network.createJob(async (ctx) => {
-   * // do some work
-   * return (await ctx.run("echo 'Hello from Golem'")).stdout;
-   * });
-   * console.log(job.id);
-   * const status = await job.fetchState();
-   * console.log(status);
-   * ```
+   * @param options - Configuration options for the job. These options will be merged with the options passed to the constructor.
    */
-  public async createJob<Output>(worker: Worker<Output>) {
-    return this.executor.createJob(worker);
+  public createJob<Output = unknown>(options: RunJobOptions = {}) {
+    this.checkInitialization();
+
+    const jobId = v4();
+    const job = new Job<Output>(jobId, this.api!, { ...this.config, ...options });
+    this.jobs.set(jobId, job);
+
+    return job;
   }
 
   public getJobById(id: string) {
-    return this.executor.getJobById(id);
+    this.checkInitialization();
+
+    return this.jobs.get(id);
   }
 
   /**
-   * Run a task on Golem Network.
-   *
-   * @description The runTask method is the simplest way to run some code on Golem Network. Simply call `runTask` and await the promise to get your result.
-   * @param worker Worker function to run
-   * @returns Worker function result
+   * Close the connection to the Yagna service and cancel all running jobs.
    */
-  public async runTask<Output>(worker: Worker<Output>) {
-    return this.executor.run<Output>(worker);
+  public async close() {
+    const pendingJobs = Array.from(this.jobs.values()).filter((job) => job.isRunning());
+    await Promise.allSettled(pendingJobs.map((job) => job.cancel()));
+    await this.yagna.end();
+    this.api = null;
   }
 
-  public async close() {
-    if (this._executor !== null) {
-      await this._executor.shutdown();
+  private checkInitialization() {
+    if (!this.isInitialized()) {
+      throw new GolemUserError("GolemNetwork not initialized, please run init() first");
     }
   }
 }

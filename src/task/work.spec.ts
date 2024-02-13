@@ -191,7 +191,10 @@ describe("Work Context", () => {
         const result = await context["runOneCommand"](new Run("test"));
         expect(result.result).toEqual(ResultState.Error);
         expect(result.stdout).toEqual("FAILURE");
-        await logger.expectToInclude("Task error on provider");
+        await logger.expectToInclude("Task error", {
+          error: "Error: undefined. Stdout: FAILURE. Stderr: undefined",
+          provider: "Test Provider",
+        });
       });
     });
   });

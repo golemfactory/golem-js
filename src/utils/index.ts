@@ -1,11 +1,10 @@
 import sleep from "./sleep";
 export { sleep };
 export * as runtimeContextChecker from "./runtimeContextChecker";
-export { Logger, LogLevel } from "./logger/logger";
+export { Logger } from "./logger/logger";
 export { pinoLogger } from "./logger/pinoLogger";
-export { consoleLogger } from "./logger/consoleLogger";
 export { jsonLogger } from "./logger/jsonLogger";
 export { nullLogger } from "./logger/nullLogger";
 export { defaultLogger } from "./logger/defaultLogger";
-export { EnvUtils } from "./env";
+export * as EnvUtils from "./env";
 export { Yagna, YagnaApi } from "./yagna/yagna";

@@ -1,18 +1,34 @@
-import { Logger, LogLevel } from "./logger";
+import { Logger } from "./logger";
 import * as pino from "pino";
 
 export function pinoLogger(optionsOrStream?: pino.LoggerOptions | pino.DestinationStream): Logger {
   const logger = pino.pino(optionsOrStream);
+
+  function debug(msg: string): void;
+  function debug(msg: string, ctx?: Record<string, unknown> | Error) {
+    logger.debug(ctx, msg);
+  }
+
+  function info(msg: string): void;
+  function info(msg: string, ctx?: Record<string, unknown> | Error) {
+    logger.info(ctx, msg);
+  }
+
+  function warn(msg: string): void;
+  function warn(msg: string, ctx?: Record<string, unknown> | Error) {
+    logger.warn(ctx, msg);
+  }
+
+  function error(msg: string): void;
+  function error(msg: string, ctx?: Record<string, unknown> | Error) {
+    logger.error(ctx, msg);
+  }
+
   return {
-    level: logger.level as LogLevel,
-    debug: (msg) => logger.debug(msg),
-    info: (msg) => logger.info(msg),
-    log: (msg) => logger.info(msg),
-    warn: (msg) => logger.warn(msg),
-    error: (msg) => logger.error(msg),
-    setLevel: function (level: string) {
-      logger.level = level;
-      this.level = level as LogLevel;
-    },
+    child: (namespace: string) => pinoLogger(logger.child({ namespace })),
+    debug,
+    warn,
+    error,
+    info,
   };
 }

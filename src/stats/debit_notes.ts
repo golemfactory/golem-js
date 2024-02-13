@@ -9,7 +9,7 @@ interface Payload {
 }
 
 export class DebitNotes extends AbstractAggregator<Payload, DebitNoteInfo> {
-  beforeAdd(item): DebitNoteInfo {
+  beforeAdd(item: Payload): DebitNoteInfo {
     return item;
   }
 }

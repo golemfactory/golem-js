@@ -29,12 +29,12 @@ describe("Task Service", () => {
       },
     );
     service.run().catch((e) => console.error(e));
-    await logger.expectToMatch(/Activity .* created/, 500);
+    await logger.expectToInclude("Activity created", { id: expect.anything() }, 500);
     expect(task.isFinished()).toEqual(true);
     expect(task.getResults()?.stdout).toEqual("some_shell_results");
     await service.end();
-    await logger.expectToMatch(/Activity .* destroyed/, 1);
-    await logger.expectToInclude("Task Service has been stopped", 1);
+    await logger.expectToInclude("Activity destroyed", { id: expect.anything() }, 1);
+    await logger.expectToInclude("Task Service has been stopped", undefined, 1);
   });
 
   it("process only allowed number of tasks simultaneously", async () => {
@@ -57,9 +57,9 @@ describe("Task Service", () => {
       },
     );
     service.run().catch((e) => console.error(e));
-    expect(task1.isPending()).toEqual(true);
-    expect(task2.isPending()).toEqual(true);
-    expect(task3.isPending()).toEqual(false);
+    expect(task1.isQueued()).toEqual(true);
+    expect(task2.isQueued()).toEqual(true);
+    expect(task3.isQueued()).toEqual(false);
     expect(task3.isNew()).toEqual(true);
     await service.end();
   });
@@ -82,7 +82,15 @@ describe("Task Service", () => {
       },
     );
     service.run().catch((e) => console.error(e));
-    await logger.expectToInclude("Task 1 execution failed. Trying to redo the task. Attempt #", 700);
+    await logger.expectToInclude(
+      "Task execution failed. Trying to redo the task.",
+      {
+        taskId: task.id,
+        attempt: 1,
+        reason: expect.anything(),
+      },
+      700,
+    );
     await service.end();
   });
 
@@ -105,7 +113,11 @@ describe("Task Service", () => {
     );
     service.run().catch((e) => console.error(e));
     await logger.expectToNotMatch(/Trying to redo the task/, 100);
-    await logger.expectToInclude("Task 1 has been rejected!", 100);
+    await logger.expectToInclude(
+      "Task has been rejected",
+      { taskId: task.id, reason: expect.anything(), retries: 0, providerName: expect.anything() },
+      100,
+    );
     await service.end();
   });
 
@@ -114,35 +126,6 @@ describe("Task Service", () => {
     expect(() => new Task("1", worker, { maxRetries: -1 })).toThrow(
       "The maxRetries parameter cannot be less than zero",
     );
-  });
-
-  it("should reject task by user", async () => {
-    const worker = async (ctx: WorkContext) => {
-      const result = await ctx.run("some_shell_command");
-      if (result.stdout === "invalid_value") ctx.rejectResult("Invalid value computed by provider");
-    };
-    const task = new Task("1", worker, { maxRetries: 2 });
-    queue.addToEnd(task);
-    activityMock.setExpectedExeResults([{ result: "Ok", stdout: "invalid_value" }]);
-    const service = new TaskService(
-      new YagnaMock().getApi(),
-      queue,
-      agreementPoolServiceMock,
-      paymentServiceMock,
-      networkServiceMock,
-      {
-        logger,
-        taskRunningInterval: 10,
-        activityStateCheckingInterval: 10,
-      },
-    );
-    service.run().catch((e) => console.error(e));
-    await logger.expectToInclude(
-      "Error: Task 1 has been rejected! Work rejected. Reason: Invalid value computed by provider",
-      1500,
-    );
-    expect(task.isFinished()).toEqual(true);
-    await service.end();
   });
 
   it("should reject task if it failed max attempts", async () => {
@@ -163,7 +146,16 @@ describe("Task Service", () => {
       },
     );
     service.run().catch((e) => console.error(e));
-    await logger.expectToInclude("Error: Task 1 has been rejected!", 1800);
+    await logger.expectToInclude(
+      "Task has been rejected",
+      {
+        taskId: task.id,
+        reason: expect.anything(),
+        retries: 1,
+        providerName: expect.anything(),
+      },
+      1800,
+    );
     expect(task.isRejected()).toEqual(true);
     await service.end();
   });
@@ -191,14 +183,12 @@ describe("Task Service", () => {
       },
     );
     service.run().catch((e) => console.error(e));
-    await logger.expectToMatch(
-      /Activity setup completed in activity((.|\n)*)Activity setup completed in activity/,
-      700,
-    );
-    await logger.expectToNotMatch(
-      /Activity setup completed in activity.*\nActivity setup completed in activity((.|\n)*)Activity setup completed in activity/,
-    );
+
     await new Promise((res) => setTimeout(res, 1000));
+
+    const setupsCompleted = logger.logs.split("\n").filter((log) => log.includes("Activity setup completed")).length;
+    expect(setupsCompleted).toEqual(2);
+
     expect(task1.isFinished()).toEqual(true);
     expect(task2.isFinished()).toEqual(true);
     expect(task3.isFinished()).toEqual(true);

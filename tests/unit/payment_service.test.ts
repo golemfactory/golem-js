@@ -1,8 +1,9 @@
 import { clear, setExpectedDebitNotes, setExpectedEvents, setExpectedInvoices } from "../mock/rest/payment";
 import { LoggerMock, YagnaMock } from "../mock";
-import { Allocation, PaymentFilters, PaymentService } from "../../src/payment";
+import { Allocation, GolemPaymentError, PaymentErrorCode, PaymentFilters, PaymentService } from "../../src/payment";
 import { agreement } from "../mock/entities/agreement";
 import { debitNotes, debitNotesEvents, invoiceEvents, invoices } from "../mock/fixtures";
+import { anything, reset, spy, when } from "@johanblumenberg/ts-mockito";
 
 const logger = new LoggerMock();
 const yagnaApi = new YagnaMock().getApi();
@@ -33,6 +34,23 @@ describe("Payment Service", () => {
       await paymentService.end();
       expect(releaseSpy).toHaveBeenCalled();
     });
+
+    it("should throw GolemPaymentError if allocation cannot be created", async () => {
+      const paymentApiSpy = spy(yagnaApi.payment);
+      const errorYagnaApiMock = new Error("test error");
+      when(paymentApiSpy.createAllocation(anything())).thenReject(errorYagnaApiMock);
+      const paymentService = new PaymentService(yagnaApi, { logger });
+      await expect(paymentService.createAllocation()).rejects.toMatchError(
+        new GolemPaymentError(
+          `Could not create new allocation. ${errorYagnaApiMock}`,
+          PaymentErrorCode.AllocationCreationFailed,
+          undefined,
+          undefined,
+          errorYagnaApiMock,
+        ),
+      );
+      reset(paymentApiSpy);
+    });
   });
 
   describe("Processing payments", () => {
@@ -48,7 +66,12 @@ describe("Payment Service", () => {
       paymentService.acceptPayments(agreement);
 
       await logger.expectToInclude(
-        `Invoice ${invoices[0].invoiceId} for agreement ${agreement.id} from provider ${agreement.provider.name} has been accepted`,
+        `Invoice has been accepted`,
+        {
+          invoiceId: invoices[0].invoiceId,
+          agreementId: agreement.id,
+          providerName: agreement.getProviderInfo().name,
+        },
         1_000,
       );
       await paymentService.end();
@@ -62,10 +85,14 @@ describe("Payment Service", () => {
       setExpectedEvents(debitNotesEvents);
       setExpectedDebitNotes(debitNotes);
       await paymentService.createAllocation();
-      await paymentService.acceptPayments(agreement);
+      paymentService.acceptPayments(agreement);
       await paymentService.run();
       await logger.expectToInclude(
-        `DebitNote ${debitNotes[0].debitNoteId} accepted for agreement ${agreement.id}`,
+        `DebitNote accepted`,
+        {
+          debitNoteId: debitNotes[0].debitNoteId,
+          agreementId: agreement.id,
+        },
         1_000,
       );
       await paymentService.end();
@@ -81,10 +108,13 @@ describe("Payment Service", () => {
       setExpectedEvents(debitNotesEvents);
       setExpectedDebitNotes(debitNotes);
       await paymentService.createAllocation();
-      await paymentService.acceptPayments(agreement);
+      paymentService.acceptPayments(agreement);
       await paymentService.run();
       await logger.expectToInclude(
-        `DebitNote rejected with reason: DebitNote ${debitNotes[0].debitNoteId} for agreement ${agreement.id} rejected by DebitNote Filter`,
+        `DebitNote rejected`,
+        {
+          reason: `DebitNote ${debitNotes[0].debitNoteId} for agreement ${agreement.id} rejected by DebitNote Filter`,
+        },
         100,
       );
       await paymentService.end();
@@ -99,10 +129,13 @@ describe("Payment Service", () => {
       setExpectedDebitNotes(debitNotes);
       setExpectedInvoices(invoices);
       await paymentService.createAllocation();
-      await paymentService.acceptPayments(agreement);
+      paymentService.acceptPayments(agreement);
       await paymentService.run();
       await logger.expectToInclude(
-        `DebitNote rejected with reason: DebitNote ${debitNotes[0].debitNoteId} rejected because the agreement ${agreement.id} is already covered with a final invoice that should be paid instead of the debit note`,
+        `DebitNote rejected`,
+        {
+          reason: `DebitNote ${debitNotes[0].debitNoteId} rejected because the agreement ${agreement.id} is already covered with a final invoice that should be paid instead of the debit note`,
+        },
         100,
       );
       await paymentService.end();
@@ -121,7 +154,8 @@ describe("Payment Service", () => {
       paymentService.acceptPayments(agreement);
       await paymentService.run();
       await logger.expectToInclude(
-        `Invoice rejected with reason: Invoice ${invoices[0].invoiceId} for agreement ${agreement.id} rejected by Invoice Filter`,
+        `Invoice rejected`,
+        { reason: `Invoice ${invoices[0].invoiceId} for agreement ${agreement.id} rejected by Invoice Filter` },
         1_000,
       );
       await paymentService.end();
@@ -136,10 +170,13 @@ describe("Payment Service", () => {
       setExpectedEvents(debitNotesEvents);
       setExpectedDebitNotes(debitNotes);
       await paymentService.createAllocation();
-      await paymentService.acceptPayments(agreement);
+      paymentService.acceptPayments(agreement);
       await paymentService.run();
       await logger.expectToInclude(
-        `DebitNote rejected with reason: DebitNote ${debitNotes[0].debitNoteId} for agreement ${agreement.id} rejected by DebitNote Filter`,
+        `DebitNote rejected`,
+        {
+          reason: `DebitNote ${debitNotes[0].debitNoteId} for agreement ${agreement.id} rejected by DebitNote Filter`,
+        },
         100,
       );
       await paymentService.end();
@@ -158,7 +195,10 @@ describe("Payment Service", () => {
       await paymentService.run();
 
       await logger.expectToInclude(
-        `Invoice rejected with reason: Invoice ${invoices[0].invoiceId} for agreement ${agreement.id} rejected by Invoice Filter`,
+        `Invoice rejected`,
+        {
+          reason: `Invoice ${invoices[0].invoiceId} for agreement ${agreement.id} rejected by Invoice Filter`,
+        },
         100,
       );
       await paymentService.end();
@@ -173,10 +213,14 @@ describe("Payment Service", () => {
       setExpectedEvents(debitNotesEvents);
       setExpectedDebitNotes(debitNotes);
       await paymentService.createAllocation();
-      await paymentService.acceptPayments(agreement);
+      paymentService.acceptPayments(agreement);
       await paymentService.run();
       await logger.expectToInclude(
-        `DebitNote ${debitNotes[0].debitNoteId} accepted for agreement ${agreement.id}`,
+        `DebitNote accepted`,
+        {
+          debitNoteId: debitNotes[0].debitNoteId,
+          agreementId: agreement.id,
+        },
         1_000,
       );
       await paymentService.end();
@@ -194,8 +238,90 @@ describe("Payment Service", () => {
       paymentService.acceptPayments(agreement);
 
       await logger.expectToInclude(
-        `Invoice ${invoices[0].invoiceId} for agreement ${agreement.id} from provider ${agreement.provider.name} has been accepted`,
+        `Invoice has been accepted`,
+        {
+          invoiceId: invoices[0].invoiceId,
+          agreementId: agreement.id,
+          providerName: agreement.getProviderInfo().name,
+        },
         1_000,
+      );
+      await paymentService.end();
+    });
+
+    describe("emitting 'error' event", () => {
+      it("should emit when there's an issue with processing the debit note", async () => {
+        // Given
+        const error = new Error("Broken debit note filter");
+
+        const paymentService = new PaymentService(yagnaApi, {
+          logger,
+          debitNotesFilter: () => {
+            throw error;
+          },
+          paymentTimeout: TEST_PAYMENT_TIMEOUT_MS,
+        });
+
+        setExpectedEvents(debitNotesEvents);
+        setExpectedDebitNotes(debitNotes);
+
+        const handler = jest.fn();
+        paymentService.events.once("error", handler);
+
+        // When
+        await paymentService.createAllocation();
+        paymentService.acceptPayments(agreement);
+        await paymentService.run();
+        await paymentService.end();
+
+        // Then
+        expect(handler).toHaveBeenCalledWith(error);
+      });
+
+      it("should emit an error event when there's an issue with processing the invoice", async () => {
+        // Given
+        const error = new Error("Broken invoice filter");
+
+        const paymentService = new PaymentService(yagnaApi, {
+          logger,
+          invoiceFilter: () => {
+            throw error;
+          },
+          paymentTimeout: TEST_PAYMENT_TIMEOUT_MS,
+        });
+
+        setExpectedEvents(invoiceEvents);
+        setExpectedInvoices(invoices);
+
+        const handler = jest.fn();
+        paymentService.events.once("error", handler);
+
+        // When
+        await paymentService.createAllocation();
+        paymentService.acceptPayments(agreement);
+        await paymentService.run();
+        await paymentService.end();
+
+        // Then
+        expect(handler).toHaveBeenCalledWith(error);
+      });
+    });
+
+    it("should throw GolemPaymentError if allocation is not created", async () => {
+      const paymentService = new PaymentService(yagnaApi, {
+        logger,
+        invoiceFilter: PaymentFilters.acceptMaxAmountInvoiceFilter(7),
+      });
+      setExpectedEvents(invoiceEvents);
+      setExpectedInvoices(invoices);
+      await paymentService.run();
+      expect(() => paymentService.acceptPayments(agreement)).toThrow(
+        new GolemPaymentError(
+          "You need to create an allocation before starting any payment processes",
+          PaymentErrorCode.MissingAllocation,
+          undefined,
+          agreement.getProviderInfo(),
+        ),
       );
       await paymentService.end();
     });

@@ -1,5 +1,6 @@
 import { Logger } from "../utils";
 import { PackageOptions } from "./package";
+import { GolemConfigError } from "../error/golem-error";
 
 /**
  * @internal
@@ -18,8 +19,8 @@ export const DEFAULTS = Object.freeze({
  * @internal
  */
 export enum PackageFormat {
-  UNKNOWN = "",
-  GVMKIT_SQUASH = "gvmkit-squash",
+  Unknown = "",
+  GVMKitSquash = "gvmkit-squash",
 }
 
 /**
@@ -44,9 +45,11 @@ export class PackageConfig {
   readonly logger?: Logger;
 
   constructor(options: PackageOptions) {
-    if (!options.imageHash && !options.manifest && !options.imageTag)
-      throw new Error("You must define a package or manifest option");
-    this.packageFormat = PackageFormat.GVMKIT_SQUASH;
+    if (!options.imageHash && !options.manifest && !options.imageTag) {
+      throw new GolemConfigError("You must define a package or manifest option");
+    }
+
+    this.packageFormat = PackageFormat.GVMKitSquash;
     this.imageHash = options.imageHash;
     this.imageTag = options.imageTag;
     this.engine = options.engine || DEFAULTS.engine;
