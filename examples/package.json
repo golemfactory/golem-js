@@ -5,7 +5,7 @@
   "type": "module",
   "repository": "https://github.com/golemfactory/golem-js",
   "scripts": {
-    "hello": "node ./hello-world/hello.mjs",
+    "hello": "ts-node ./hello-world/hello.ts",
     "run": "ts-node ./simple-usage/run.ts",
     "spawn": "ts-node ./simple-usage/spawn.ts",
     "map": "ts-node ./simple-usage/map.ts",
