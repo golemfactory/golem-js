@@ -16,7 +16,7 @@
   { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/single-command.cjs" },
 
   { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/spawn/spawn_onclose.mjs" },
-  { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/spawn/spawn_waitforexit_loop_catch.mjs" },
+  { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/spawn/spawn_waitforexit.mjs" },
 
   { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/single-command.cjs" },
 
