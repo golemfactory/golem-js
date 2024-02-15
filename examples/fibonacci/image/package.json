@@ -1,0 +1,17 @@
+{
+  "name": "golem/js-fibonacci",
+  "version": "1.0.0",
+  "repository": "https://github.com/golemfactory/golem-js",
+  "private": true,
+  "scripts": {
+    "compile": "tsc",
+    "image:build": "docker build -t $npm_package_name:latest .",
+    "image:publish": "gvmkit-build --push $npm_package_name:latest",
+    "build": "npm run compile && npm run image:build && npm run image:publish"
+  },
+  "author": "GolemFactory <contact@golem.network>",
+  "license": "LGPL-3.0",
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}
