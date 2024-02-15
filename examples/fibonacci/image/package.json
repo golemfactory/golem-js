@@ -1,5 +1,6 @@
 {
   "name": "golem/js-fibonacci",
+  "description": "Example nodejs project that should end-up as a docker image that can be downloaded from the Golem Registry to be run on the provider",
   "version": "1.0.0",
   "repository": "https://github.com/golemfactory/golem-js",
   "private": true,
