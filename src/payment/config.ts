@@ -1,6 +1,5 @@
 import { AllocationOptions } from "./allocation";
-import { EnvUtils, Logger, defaultLogger } from "../utils";
-import { YagnaOptions } from "../executor";
+import { EnvUtils, Logger, defaultLogger, YagnaOptions } from "../utils";
 import { DebitNoteFilter, InvoiceFilter, PaymentOptions } from "./service";
 import { InvoiceOptions } from "./invoice";
 import { acceptAllDebitNotesFilter, acceptAllInvoicesFilter } from "./strategy";

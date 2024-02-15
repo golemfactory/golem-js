@@ -1,6 +1,5 @@
-import { Logger, YagnaApi, defaultLogger } from "../utils";
+import { Logger, YagnaApi, YagnaOptions, defaultLogger } from "../utils";
 import { Agreement as AgreementModel } from "ya-ts-client/dist/ya-market/src/models";
-import { YagnaOptions } from "../executor";
 import { AgreementFactory } from "./factory";
 import { AgreementConfig } from "./config";
 import { Events } from "../events";
