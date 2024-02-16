@@ -6,6 +6,7 @@ import { GolemTimeoutError } from "../error/golem-error";
 const DEFAULTS = {
   exitWaitingTimeout: 20_000,
 };
+
 /**
  * RemoteProcess class representing the process spawned on the provider by {@link WorkContext.spawn}
  */
@@ -18,8 +19,11 @@ export class RemoteProcess {
    * Stream connected to stderr from provider process
    */
   readonly stderr: Readable;
+
   private lastResult?: Result;
+
   private streamError?: Error;
+
   constructor(
     private streamOfActivityResults: Readable,
     private activity: Activity,

@@ -4,6 +4,7 @@ import { ActivityStateEnum, ResultState } from "../activity";
 import { DownloadData, DownloadFile, Run, Script, Transfer, UploadData, UploadFile } from "../script";
 import { ActivityMock } from "../../tests/mock/activity.mock";
 import { agreement } from "../../tests/mock/entities/agreement";
+import { YagnaApi } from "../utils";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -11,11 +12,14 @@ const logger = new LoggerMock();
 describe("Work Context", () => {
   let context: WorkContext;
   let activity: ActivityMock;
+  let api: YagnaApi;
 
   beforeEach(() => {
     logger.clear();
-    activity = new ActivityMock("test_id", agreement, new YagnaMock().getApi());
+    api = new YagnaMock().getApi();
+    activity = new ActivityMock("test_id", agreement, api);
     context = new WorkContext(activity, {
+      yagnaOptions: api.yagnaOptions,
       logger: logger,
     });
   });
@@ -255,6 +259,7 @@ describe("Work Context", () => {
         async () => calls.push("3"),
       ];
       context = new WorkContext(activity, {
+        yagnaOptions: api.yagnaOptions,
         logger: logger,
         activityReadySetupFunctions,
       });

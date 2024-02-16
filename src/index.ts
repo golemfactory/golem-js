@@ -14,3 +14,4 @@ export * from "./job";
 export * from "./task";
 export * from "./error/golem-error";
 export { StatsService } from "./stats/service";
+export { TcpProxy } from "./network/tcpProxy";

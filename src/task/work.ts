@@ -13,13 +13,14 @@ import {
   UploadFile,
 } from "../script";
 import { NullStorageProvider, StorageProvider } from "../storage";
-import { Logger, defaultLogger, sleep } from "../utils";
+import { defaultLogger, Logger, sleep, YagnaOptions } from "../utils";
 import { Batch } from "./batch";
 import { NetworkNode } from "../network";
 import { RemoteProcess } from "./process";
 import { GolemWorkError, WorkErrorCode } from "./error";
 import { GolemTimeoutError } from "../error/golem-error";
 import { ProviderInfo } from "../agreement";
+import { TcpProxy } from "../network/tcpProxy";
 
 export type Worker<OutputType> = (ctx: WorkContext) => Promise<OutputType>;
 
@@ -35,6 +36,7 @@ export interface WorkOptions {
   networkNode?: NetworkNode;
   logger?: Logger;
   activityReadySetupFunctions?: Worker<unknown>[];
+  yagnaOptions: YagnaOptions;
 }
 
 export interface CommandOptions {
@@ -44,29 +46,32 @@ export interface CommandOptions {
 }
 
 /**
- * Work Context
- *
- * @description
+ * Groups most common operations that the requestors might need to implement their workflows
  */
 export class WorkContext {
-  public readonly provider: ProviderInfo;
   private readonly activityPreparingTimeout: number;
-  private readonly logger: Logger;
   private readonly activityStateCheckingInterval: number;
+
+  public readonly provider: ProviderInfo;
+  private readonly logger: Logger;
   private readonly storageProvider: StorageProvider;
+
   private readonly networkNode?: NetworkNode;
 
   constructor(
     public readonly activity: Activity,
-    private options?: WorkOptions,
+    private options: WorkOptions,
   ) {
-    this.activityPreparingTimeout = options?.activityPreparingTimeout || DEFAULTS.activityPreparingTimeout;
-    this.logger = options?.logger ?? defaultLogger("work");
-    this.activityStateCheckingInterval = options?.activityStateCheckingInterval || DEFAULTS.activityStateCheckInterval;
+    this.activityPreparingTimeout = options.activityPreparingTimeout || DEFAULTS.activityPreparingTimeout;
+    this.activityStateCheckingInterval = options.activityStateCheckingInterval || DEFAULTS.activityStateCheckInterval;
+
+    this.logger = options.logger ?? defaultLogger("work");
     this.provider = activity.agreement.getProviderInfo();
-    this.storageProvider = options?.storageProvider ?? new NullStorageProvider();
-    this.networkNode = options?.networkNode;
+    this.storageProvider = options.storageProvider ?? new NullStorageProvider();
+
+    this.networkNode = options.networkNode;
   }
+
   async before(): Promise<Result[] | void> {
     let state = await this.activity
       .getState()
@@ -234,6 +239,7 @@ export class WorkContext {
           e,
         );
       });
+
     return new RemoteProcess(streamOfActivityResults, this.activity);
   }
 
@@ -297,6 +303,11 @@ export class WorkContext {
     return Batch.create(this.activity, this.storageProvider, this.logger);
   }
 
+  /**
+   * Provides a WebSocket URI that allows communicating with a remote process listening on the target port
+   *
+   * @param port The port number used by the service running within an activity on the provider
+   */
   getWebsocketUri(port: number): string {
     if (!this.networkNode)
       throw new GolemWorkError(
@@ -306,6 +317,7 @@ export class WorkContext {
         this.activity,
         this.activity.getProviderInfo(),
       );
+
     return this.networkNode.getWebsocketUri(port);
   }
 
@@ -319,6 +331,17 @@ export class WorkContext {
         this.activity.getProviderInfo(),
       );
     return this.networkNode.ip.toString();
+  }
+
+  /**
+   * Creates a new TCP proxy that will allow tunnelling the TPC traffic from the provider via the requestor
+   *
+   * @param portOnProvider The port that the service running on the provider is listening to
+   */
+  createTcpProxy(portOnProvider: number) {
+    return new TcpProxy(this.getWebsocketUri(portOnProvider), this.options.yagnaOptions.apiKey as string, {
+      logger: this.logger,
+    });
   }
 
   async getState(): Promise<ActivityStateEnum> {
