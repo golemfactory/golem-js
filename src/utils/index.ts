@@ -7,4 +7,4 @@ export { jsonLogger } from "./logger/jsonLogger";
 export { nullLogger } from "./logger/nullLogger";
 export { defaultLogger } from "./logger/defaultLogger";
 export * as EnvUtils from "./env";
-export { Yagna, YagnaApi } from "./yagna/yagna";
+export { Yagna, YagnaApi, YagnaOptions } from "./yagna/yagna";

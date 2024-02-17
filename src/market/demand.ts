@@ -1,9 +1,8 @@
 import { Package } from "../package";
 import { Allocation } from "../payment";
-import { YagnaOptions } from "../executor";
 import { DemandFactory } from "./factory";
 import { Proposal } from "./proposal";
-import { defaultLogger, Logger, sleep, YagnaApi } from "../utils";
+import { defaultLogger, Logger, sleep, YagnaApi, YagnaOptions } from "../utils";
 import { DemandConfig } from "./config";
 import { Events } from "../events";
 import { ProposalEvent, ProposalRejectedEvent } from "ya-ts-client/dist/ya-market/src/models";

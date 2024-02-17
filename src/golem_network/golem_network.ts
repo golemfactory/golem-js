@@ -1,7 +1,6 @@
 import { v4 } from "uuid";
-import { YagnaOptions } from "../executor";
 import { Job } from "../job";
-import { Yagna, YagnaApi } from "../utils";
+import { Yagna, YagnaApi, YagnaOptions } from "../utils";
 import { RunJobOptions } from "../job/job";
 import { GolemUserError } from "../error/golem-error";
 
