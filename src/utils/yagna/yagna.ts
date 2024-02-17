@@ -12,6 +12,7 @@ import { GolemConfigError, GolemPlatformError, GolemUserError } from "../../erro
 import { v4 } from "uuid";
 import semverSatisfies from "semver/functions/satisfies";
 import semverCoerce from "semver/functions/coerce";
+import { defaultLogger, Logger } from "..";
 
 export type YagnaApi = {
   market: MarketRequestorApi;
@@ -28,6 +29,7 @@ export type YagnaOptions = {
   apiKey?: string;
   basePath?: string;
   abortController?: AbortController;
+  logger?: Logger;
 };
 
 type YagnaVersionInfo = {
@@ -57,6 +59,10 @@ export class Yagna {
   protected readonly apiKey: string;
   protected readonly apiBaseUrl: string;
   private readonly api: YagnaApi;
+  private readonly logger: Logger;
+
+  /** Used to track the lifetime of the interceptor and align it with the lifetime of API instance */
+  private axiosErrorInterceptorId: number;
 
   constructor(options?: YagnaOptions) {
     this.httpAgent = new Agent({ keepAlive: true });
@@ -64,7 +70,10 @@ export class Yagna {
     this.apiKey = options?.apiKey || EnvUtils.getYagnaAppKey();
     if (!this.apiKey) throw new GolemConfigError("Api key not defined");
     this.apiBaseUrl = options?.basePath || EnvUtils.getYagnaApiUrl();
+    this.logger = options?.logger ?? defaultLogger("yagna");
+
     this.api = this.createApi();
+    this.axiosErrorInterceptorId = this.addErrorHandler(this.api);
   }
 
   getApi(): YagnaApi {
@@ -72,11 +81,13 @@ export class Yagna {
   }
 
   async connect() {
+    this.logger.info("Connecting to yagna");
     await this.assertSupportedVersion();
     return this.api.identity.getIdentity();
   }
 
   private async assertSupportedVersion() {
+    this.logger.debug("Checking yagna version support");
     const version = await this.getVersion();
 
     const normVersion = semverCoerce(version);
@@ -97,8 +108,10 @@ export class Yagna {
   }
 
   async end(): Promise<void> {
+    this.logger.debug("Disconnecting from yagna");
     this.controller.abort();
     this.httpAgent.destroy?.();
+    this.removeErrorHandler(this.api);
   }
 
   public async getVersion(): Promise<string> {
@@ -128,13 +141,12 @@ export class Yagna {
       identity: new IdentityRequestorApi(apiConfig, this.getApiUrl()),
       gsb: new GsbRequestorApi(apiConfig, this.getApiUrl("gsb")),
       yagnaOptions: {
+        logger: this.logger,
         apiKey: this.apiKey,
         basePath: this.apiBaseUrl,
       },
       appSessionId: v4(),
     };
-
-    this.addErrorHandler(api);
 
     return api;
   }
@@ -155,6 +167,7 @@ export class Yagna {
   }
 
   protected errorHandler(error: Error): Promise<Error> {
+    this.logger.debug("Invoked error handler for error: %o", error);
     if ("code" in error && CONNECTIONS_ERROR_CODES.includes((error.code as string) ?? "")) {
       return Promise.reject(
         new GolemUserError(
@@ -174,6 +187,12 @@ export class Yagna {
      * All RequestorAPI instances (market, identity, payment, etc.) use the same Axios instance,
      * so it is enough to add one interceptor to one of them to make it effective in each API.
      */
-    api.identity["axios"].interceptors.response.use(undefined, this.errorHandler.bind(this));
+    this.logger.debug("Attaching error handler to internal axios instance");
+    return api.identity["axios"].interceptors.response.use(undefined, this.errorHandler.bind(this));
+  }
+
+  protected removeErrorHandler(api: YagnaApi) {
+    this.logger.debug("Removing error handler to internal axios instance");
+    api.identity["axios"].interceptors.response.eject(this.axiosErrorInterceptorId);
   }
 }

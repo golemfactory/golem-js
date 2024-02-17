@@ -2,17 +2,12 @@
 .env
 
 #Node modules
-/node_modules
-/examples/logs
-/examples/node_modules
-/examples/adv-web-example/node_modules
-/tests/web/node_modules/
+node_modules/
 
 #Outputs
+dist/
+coverage/
 /.nyc_output
-/coverage
-/dist
-/examples/dist
 /examples/blender/*.png
 /examples/yacat/*.sh
 /examples/yacat/*.txt
