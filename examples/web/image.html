@@ -3,46 +3,55 @@
   <head>
     <meta charset="UTF-8" />
     <title>WebRequestor Task API</title>
-    <link rel="stylesheet" href="css/main.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+      crossorigin="anonymous"
+    />
   </head>
   <body>
-    <h1>WebRequestor - Meme Example</h1>
     <div class="container">
-      <div class="col-6">
-        <h3>Credentials</h3>
-        <div class="column">
-          <div>
-            <label for="YAGNA_APPKEY">YAGNA_APPKEY: </label>
-            <input id="YAGNA_APPKEY" type="text" value="" />
+      <h1 class="pb-4">WebRequestor - Meme Example</h1>
+      <div class="row">
+        <div class="col">
+          <div class="pb-4">
+            <h3>Credentials</h3>
+            <div>
+              <div class="form-group">
+                <label for="YAGNA_APPKEY">YAGNA_APPKEY: </label>
+                <input id="YAGNA_APPKEY" type="text" class="form-control" value="" />
+              </div>
+              <div class="form-group">
+                <label for="YAGNA_API_BASEPATH">YAGNA_API_BASEURL: </label>
+                <input id="YAGNA_API_BASEPATH" type="text" class="form-control" value="http://127.0.0.1:7465" />
+              </div>
+              <div class="form-group">
+                <label for="SUBNET_TAG">Subnet Tag: </label>
+                <input id="SUBNET_TAG" type="text" class="form-control" value="public" />
+              </div>
+              <div class="form-group">
+                <label for="PAYMENT_NETWORK">Payment Network: </label>
+                <input id="PAYMENT_NETWORK" type="text" class="form-control" value="goerli" />
+              </div>
+              <div class="form-group">
+                <label for="MEME_TEXT">Meme Text: </label>
+                <input id="MEME_TEXT" type="text" class="form-control" value="some meme text" />
+              </div>
+              <div class="form-group">
+                <label for="MEME_IMG">Meme Image: </label>
+                <input type="file" id="MEME_IMG" class="form-control" accept="image/*" />
+              </div>
+            </div>
           </div>
-          <div>
-            <label for="YAGNA_API_BASEPATH">YAGNA_API_BASEURL: </label>
-            <input id="YAGNA_API_BASEPATH" type="text" value="http://127.0.0.1:7465" />
-          </div>
-          <div>
-            <label for="SUBNET_TAG">Subnet Tag: </label>
-            <input id="SUBNET_TAG" type="text" value="public" />
-          </div>
-          <div>
-            <label for="PAYMENT_NETWORK">Payment Network: </label>
-            <input id="PAYMENT_NETWORK" type="text" value="goerli" />
-          </div>
-          <div>
-            <label for="MEME_TEXT">Meme Text: </label>
-            <input id="MEME_TEXT" type="text" value="some meme text" />
-          </div>
-          <div>
-            <label for="MEME_IMG">Meme Image: </label>
-            <input type="file" id="MEME_IMG" accept="image/*" />
+          <div class="pb-4">
+            <h3>Actions</h3>
+            <div>
+              <button id="RUN" class="btn btn-primary" onclick="run()">Ganerate meme</button>
+            </div>
           </div>
         </div>
-        <h3>Actions</h3>
-        <div class="row vertical">
-          <div>
-            <button id="RUN" onclick="run()">Ganerate meme</button>
-          </div>
-        </div>
-        <div class="results console">
+        <div class="col">
           <h3>Result Meme</h3>
           <img
             style="width: 100%"
@@ -52,16 +61,10 @@
           />
         </div>
       </div>
-      <div class="col-6 border-left">
-        <div class="logs console">
-          <h3>Logs</h3>
-          <ul id="logs"></ul>
-        </div>
-      </div>
     </div>
 
     <script type="module">
-      import { TaskExecutor } from "/golem-js.min.js";
+      import { TaskExecutor } from "/dist/golem-js.min.js";
 
       let activity;
       const imgInput = document.getElementById("MEME_IMG");
@@ -84,13 +87,6 @@
         });
       }
 
-      function appendLog(msg) {
-        const logs_el = document.getElementById("logs");
-        const li = document.createElement("li");
-        li.appendChild(document.createTextNode(msg));
-        logs_el.appendChild(li);
-      }
-
       function setResponse(result) {
         if (urlObject) {
           URL.revokeObjectURL(urlObject);
@@ -99,35 +95,14 @@
         imgResult.src = urlObject;
       }
 
-      const logger = {
-        warn: (msg) => {
-          const fullMsg = `[${new Date().toISOString()}] [warn] ${msg}`;
-          console.warn(fullMsg);
-          appendLog(fullMsg);
-        },
-        debug: (msg) => {
-          const fullMsg = `[${new Date().toISOString()}] [debug] ${msg}`;
-          console.debug(fullMsg);
-          appendLog(fullMsg);
-        },
-        error: (msg) => {
-          const fullMsg = `[${new Date().toISOString()}] [error] ${msg}`;
-          console.error(fullMsg);
-          appendLog(fullMsg);
-        },
-        info: (msg) => {
-          const fullMsg = `[${new Date().toISOString()}] [info] ${msg}`;
-          console.log(fullMsg);
-          appendLog(fullMsg);
-        },
-        child: () => logger,
-      };
-
       async function run() {
         if (!imgInput.files.length) {
           alert("Please select an image file");
           return;
         }
+
+        // This line allows you to watch golem-js internal logs in the browser console!
+        localStorage.debug = "golem-js:*";
 
         const fileData = await readFile(imgInput.files[0]);
         const extension = imgInput.files[0].name.split(".").pop();
@@ -144,7 +119,6 @@
           package: "golem/imagemagick:latest",
           payment: { network },
           subnetTag,
-          logger,
           startupTimeout: 120_000,
         });
 
@@ -161,6 +135,7 @@
         await executor.shutdown();
         if (result?.data) setResponse(result.data);
       }
+
       window.run = run;
     </script>
   </body>

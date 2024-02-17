@@ -20,7 +20,9 @@
     "external-request": "ts-node ./external-request/request.ts",
     "ssh": "ts-node ./ssh/ssh.ts",
     "tag": "ts-node ./simple-usage/tag.ts",
-    "web": "node ./web/app.mjs",
+    "preweb": "cp -r ../dist/ web/dist/",
+    "web": "serve web/",
+    "postweb": "rm -rf web/dist/",
     "server": "ts-node ./express/server.ts",
     "lint:ts": "tsc --project tsconfig.json --noEmit"
   },
@@ -37,6 +39,7 @@
   },
   "devDependencies": {
     "@types/node": "18",
+    "serve": "^14.2.1",
     "typescript": "^4.6.3"
   }
 }
