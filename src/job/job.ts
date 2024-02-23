@@ -194,6 +194,7 @@ export class Job<Output = unknown> {
       this.defaultOptions.work?.storageProvider || options.work?.storageProvider || this.getDefaultStorageProvider();
 
     const workContext = new WorkContext(activity, {
+      yagnaOptions: this.yagnaApi.yagnaOptions,
       storageProvider,
       networkNode: await networkService.addNode(agreement.getProviderInfo().id),
       activityPreparingTimeout:
