@@ -1,11 +1,34 @@
 import debugLogger from "debug";
 
+type DefaultLoggerOptions = {
+  /**
+   * Disables prefixing the root namespace with golem-js
+   *
+   * @default false
+   */
+  disableAutoPrefix: boolean;
+};
+
+function getNamespace(namespace: string, disablePrefix: boolean) {
+  if (disablePrefix) {
+    return namespace;
+  } else {
+    return namespace.startsWith("golem-js:") ? namespace : `golem-js:${namespace}`;
+  }
+}
+
 /**
  * Creates a logger that uses the debug library. This logger is used by default by all entities in the SDK.
- * If the namespace is not prefixed with `golem-js:`, it will be prefixed automatically.
- **/
-export function defaultLogger(namespace: string) {
-  const namespaceWithBase = namespace.startsWith("golem-js:") ? namespace : `golem-js:${namespace}`;
+ *
+ * If the namespace is not prefixed with `golem-js:`, it will be prefixed automatically - this can be controlled by `disableAutoPrefix` options.
+ */
+export function defaultLogger(
+  namespace: string,
+  opts: DefaultLoggerOptions = {
+    disableAutoPrefix: false,
+  },
+) {
+  const namespaceWithBase = getNamespace(namespace, opts.disableAutoPrefix);
   const logger = debugLogger(namespaceWithBase);
 
   function log(msg: string, ctx?: Record<string, unknown> | Error) {
@@ -37,7 +60,7 @@ export function defaultLogger(namespace: string) {
   }
 
   return {
-    child: (childNamespace: string) => defaultLogger(`${namespaceWithBase}:${childNamespace}`),
+    child: (childNamespace: string) => defaultLogger(`${namespaceWithBase}:${childNamespace}`, opts),
     info,
     error,
     warn,
