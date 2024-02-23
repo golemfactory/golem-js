@@ -116,5 +116,8 @@
     "typedoc-plugin-merge-modules": "^5.1.0",
     "typedoc-theme-hierarchy": "4.1.2",
     "typescript": "^5.3.3"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-win32-arm64-msvc": "^4"
   }
 }
