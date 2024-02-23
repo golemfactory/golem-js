@@ -29,7 +29,7 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
       await ctx.uploadFile(`./proxy/server.js`, "/golem/work/server.js");
 
       // Start the server process on the provider
-      const server = await ctx.spawn(`PORT=${PORT_ON_PROVIDER} node /golem/work/server.js`);
+      const server = await ctx.runAndStream(`PORT=${PORT_ON_PROVIDER} node /golem/work/server.js`);
 
       server.stdout.on("data", (data) => console.log("provider>", data));
       server.stderr.on("data", (data) => console.error("provider>", data));

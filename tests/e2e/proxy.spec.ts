@@ -20,7 +20,7 @@ describe("TcpProxy", function () {
     let providerStdout = "";
     await executor.run(async (ctx) => {
       await ctx.uploadFile(fs.realpathSync(__dirname + "../../../examples/proxy/server.js"), "/golem/work/server.js");
-      const server = await ctx.spawn("node /golem/work/server.js");
+      const server = await ctx.runAndStream("node /golem/work/server.js");
       server.stdout.on("data", (data) => (providerStdout += data.toString()));
       const proxy = ctx.createTcpProxy(80);
       await proxy.listen(7777);
