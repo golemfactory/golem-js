@@ -119,6 +119,7 @@
   },
   "optionalDependencies": {
     "@rollup/rollup-win32-arm64-msvc": "^4",
-    "@rollup/rollup-win32-x64-msvc": "^4"
+    "@rollup/rollup-win32-x64-msvc": "^4",
+    "@rollup/rollup-darwin-x64": "^4"
   }
 }
