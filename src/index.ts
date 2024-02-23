@@ -12,3 +12,4 @@ export * from "./utils/yagna/yagna";
 export * from "./task";
 export * from "./error/golem-error";
 export { StatsService } from "./stats/service";
+export { TcpProxy } from "./network/tcpProxy";

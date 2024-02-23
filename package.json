@@ -72,8 +72,8 @@
     "axios": "^1.6.2",
     "bottleneck": "^2.19.5",
     "collect.js": "^4.36.1",
-    "decimal.js-light": "^2.5.1",
     "debug": "^4.3.4",
+    "decimal.js-light": "^2.5.1",
     "eventemitter3": "^5.0.1",
     "eventsource": "^2.0.2",
     "flatbuffers": "^23.5.26",
@@ -84,6 +84,7 @@
     "semver": "^7.5.4",
     "tmp": "^0.2.1",
     "uuid": "^9.0.1",
+    "ws": "^8.16.0",
     "ya-ts-client": "^0.5.3"
   },
   "devDependencies": {
@@ -106,6 +107,7 @@
     "@types/supertest": "^6.0.2",
     "@types/tmp": "^0.2.6",
     "@types/uuid": "^9.0.7",
+    "@types/ws": "^8.5.10",
     "@typescript-eslint/eslint-plugin": "^7.0.1",
     "@typescript-eslint/parser": "^7.0.1",
     "buffer": "^6.0.3",
@@ -136,5 +138,10 @@
     "typedoc-plugin-merge-modules": "^5.1.0",
     "typedoc-theme-hierarchy": "4.1.2",
     "typescript": "^5.3.3"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-win32-arm64-msvc": "^4",
+    "@rollup/rollup-win32-x64-msvc": "^4",
+    "@rollup/rollup-darwin-x64": "^4"
   }
 }
