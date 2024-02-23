@@ -40,7 +40,7 @@ export const DEFAULT_AGREEMENT_WEIGHTS: ReputationWeights = {
  * Default reputation service URL.
  * @experimental
  */
-export const DEFAULT_REPUTATION_URL = "https://asia.reputation.dev-test.golem.network/v1/providers/scores";
+export const DEFAULT_REPUTATION_URL = "https://reputation.dev-test.golem.network/v1/providers/scores";
 
 /**
  * Reputation system client.
