@@ -1,4 +1,4 @@
-import { Server, Socket } from "node:net";
+import net from "net";
 import { WebSocket } from "ws";
 import { EventEmitter } from "eventemitter3";
 import { defaultLogger, Logger } from "../utils";
@@ -13,7 +13,7 @@ interface TcpProxyEvents {
  */
 interface TcpProxyOptions {
   /**
-   * The logger intsance to use for logging
+   * The logger instance to use for logging
    */
   logger: Logger;
 
@@ -27,9 +27,13 @@ interface TcpProxyOptions {
 
 /**
  * Allows proxying of TCP traffic to a service running in an activity on a provider via the requestor
+ *
+ * **IMPORTANT**
+ *
+ * This feature is supported only in the Node.js environment. In has no effect in browsers.
  */
 export class TcpProxy {
-  private server: Server;
+  private server: net.Server;
 
   public readonly events = new EventEmitter<TcpProxyEvents>();
 
@@ -54,7 +58,7 @@ export class TcpProxy {
     this.heartBeatSec = options.heartBeatSec ?? 10;
     this.logger = options.logger ? options.logger.child("tcp-proxy") : defaultLogger("tcp-proxy");
 
-    this.server = new Server({ keepAlive: true }, (socket: Socket) => {
+    this.server = new net.Server({ keepAlive: true }, (socket: net.Socket) => {
       this.logger.debug("TcpProxy Server new incoming connection");
 
       const ws = new WebSocket(this.wsUrl, { headers: { authorization: `Bearer ${this.appKey}` } });
