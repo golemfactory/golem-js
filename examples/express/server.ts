@@ -1,5 +1,5 @@
 import express from "express";
-import { GolemNetwork, JobState } from "@golem-sdk/golem-js";
+import { GolemNetwork, JobState } from "@golem-sdk/golem-js/experimental";
 
 const app = express();
 const port = 3000;
