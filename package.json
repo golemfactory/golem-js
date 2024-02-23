@@ -118,6 +118,7 @@
     "typescript": "^5.3.3"
   },
   "optionalDependencies": {
-    "@rollup/rollup-win32-arm64-msvc": "^4"
+    "@rollup/rollup-win32-arm64-msvc": "^4",
+    "@rollup/rollup-win32-x64-msvc": "^4"
   }
 }
