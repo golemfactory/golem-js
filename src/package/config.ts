@@ -6,7 +6,7 @@ import { GolemConfigError } from "../error/golem-error";
  * @internal
  */
 export const DEFAULTS = Object.freeze({
-  payment: { driver: "erc20", network: "goerli" },
+  payment: { driver: "erc20", network: "holesky" },
   engine: "vm",
   minMemGib: 0.5,
   minStorageGib: 2,
