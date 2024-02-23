@@ -115,7 +115,7 @@ jobs:
         uses: ./.github/actions/prepare-tests
 
       - name: Run web server
-        run: docker exec -t -d docker-requestor-1 /bin/sh -c "cd /golem-js/examples/web && node app.mjs"
+        run: docker exec -t -d docker-requestor-1 /bin/sh -c "cd /golem-js/examples && npm run web"
 
       - name: Run test suite
         run: docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js &&  npm run test:cypress -- --browser chromium"
