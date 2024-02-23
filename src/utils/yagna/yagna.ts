@@ -12,7 +12,8 @@ import { GolemConfigError, GolemPlatformError, GolemUserError } from "../../erro
 import { v4 } from "uuid";
 import semverSatisfies from "semver/functions/satisfies";
 import semverCoerce from "semver/functions/coerce";
-import { defaultLogger, Logger } from "..";
+import { Logger } from "../logger/logger";
+import { defaultLogger } from "../logger/defaultLogger";
 
 export type YagnaApi = {
   market: MarketRequestorApi;
