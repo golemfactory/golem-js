@@ -2,19 +2,30 @@ import { DownloadFile, Run, Transfer, UploadData, UploadFile } from "../script";
 import { Batch } from "./batch";
 import { NullStorageProvider } from "../storage";
 import { ActivityMock } from "../../tests/mock/activity.mock";
-import { LoggerMock, YagnaMock } from "../../tests/mock";
 import { Result } from "../activity";
-import { agreement } from "../../tests/mock/entities/agreement";
 import { GolemWorkError, WorkErrorCode } from "./error";
+import { imock, instance, mock, reset } from "@johanblumenberg/ts-mockito";
+import { Logger, YagnaApi } from "../utils";
+import { Agreement } from "../agreement";
+
+const mockLogger = imock<Logger>();
+const mockYagna = mock(YagnaApi);
+
+const mockAgreement = mock(Agreement);
 
 describe("Batch", () => {
   let activity: ActivityMock;
   let batch: Batch;
 
   beforeEach(() => {
-    activity = new ActivityMock("test_id", agreement, new YagnaMock().getApi());
-    batch = new Batch(activity, new NullStorageProvider(), new LoggerMock());
+    reset(mockLogger);
+    reset(mockYagna);
+
+    activity = new ActivityMock("test_id", instance(mockAgreement), yagna);
+    batch = new Batch(activity, new NullStorageProvider(), instance(mockLogger));
   });
+
+  const yagna = instance(mockYagna);
 
   describe("Commands", () => {
     describe("run()", () => {

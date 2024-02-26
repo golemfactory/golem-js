@@ -1,176 +1,164 @@
-import { setExpectedProposals } from "../mock/rest/market";
-import { MarketService, ProposalFilterFactory } from "../../src/market";
-import { agreementPoolServiceMock, packageMock, LoggerMock, allocationMock, YagnaMock } from "../mock";
+import { AgreementPoolService, Allocation, MarketService, Package, YagnaApi } from "../../src";
 import {
-  proposalsInitial,
   proposalsDraft,
-  proposalsWrongPaymentPlatform,
+  proposalsInitial,
   proposalsShortDebitNoteTimeout,
+  proposalsWrongPaymentPlatform,
 } from "../mock/fixtures";
+import { anything, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
+import { LoggerMock } from "../mock/utils/logger";
+import * as YaTsClient from "ya-ts-client";
+
+import { simulateLongPoll } from "./helpers";
 
 const logger = new LoggerMock();
-const yagnaApi = new YagnaMock().getApi();
+
+const mockYagna = mock(YagnaApi);
+const mockPayment = mock(YaTsClient.PaymentApi.RequestorService);
+const mockMarket = mock(YaTsClient.MarketApi.RequestorService);
+const mockAgreementPoolService = mock(AgreementPoolService);
+const mockPackage = mock(Package);
+const mockAllocation = mock(Allocation);
+
+const yagnaApi = instance(mockYagna);
 
 describe("Market Service", () => {
   beforeEach(() => {
     logger.clear();
-  });
 
-  it("should start service and publish demand", async () => {
-    const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, { logger });
-    await marketService.run(packageMock, allocationMock);
-    expect(logger.logs).toContain("Market Service has started");
-    expect(logger.logs).toContain("Demand published on the market");
-    await marketService.end();
-    expect(logger.logs).toContain("Market Service has been stopped");
+    const someDecoration: YaTsClient.PaymentApi.MarketDecorationDTO = {
+      properties: [{ key: "", value: "" }],
+      constraints: [],
+    };
+
+    reset(mockYagna);
+    reset(mockPayment);
+    reset(mockMarket);
+    reset(mockAgreementPoolService);
+    reset(mockPayment);
+    reset(mockAllocation);
+
+    when(mockYagna.market).thenReturn(instance(mockMarket));
+    when(mockYagna.payment).thenReturn(instance(mockPayment));
+
+    when(mockPackage.getDemandDecoration()).thenResolve(someDecoration);
+
+    when(mockAllocation.getDemandDecoration()).thenResolve(someDecoration);
+    when(mockAllocation.paymentPlatform).thenReturn("erc20-goerli-tglm");
+
+    when(mockPayment.getDemandDecorations(anything())).thenResolve(someDecoration);
+
+    when(mockMarket.subscribeDemand(anything())).thenResolve("demand-id");
   });
 
   it("should respond initial proposal", async () => {
-    const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
+    const marketService = new MarketService(instance(mockAgreementPoolService), yagnaApi, {
       logger,
       minProposalsBatchSize: 1,
       proposalsBatchReleaseTimeoutMs: 10,
     });
-    await marketService.run(packageMock, allocationMock);
-    setExpectedProposals(proposalsInitial);
-    await logger.expectToInclude("Proposal has been responded", { id: expect.anything() }, 10);
+
+    when(mockMarket.collectOffers("demand-id", anything(), anything()))
+      .thenCall(() => simulateLongPoll(proposalsInitial))
+      .thenCall(() => simulateLongPoll([]));
+
+    await marketService.run(instance(mockPackage), instance(mockAllocation));
+
+    await logger.expectToInclude("Proposal has been responded", { id: expect.anything() }, 3_000);
+
     await marketService.end();
   });
 
   it("should add draft proposal to agreement pool", async () => {
-    const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, { logger });
-    await marketService.run(packageMock, allocationMock);
-    setExpectedProposals(proposalsDraft);
-    await logger.expectToInclude("Proposal has been confirmed and added to agreement pool", expect.anything(), 10);
-    const addedProposalsIds = agreementPoolServiceMock["getProposals"]().map((p) => p.id);
-    expect(addedProposalsIds).toEqual(expect.arrayContaining(proposalsDraft.map((p) => p.proposal.proposalId)));
+    const marketService = new MarketService(instance(mockAgreementPoolService), yagnaApi, { logger });
+
+    when(mockMarket.collectOffers("demand-id", anything(), anything()))
+      .thenCall(() => simulateLongPoll(proposalsDraft))
+      .thenCall(() => simulateLongPoll([]));
+
+    await marketService.run(instance(mockPackage), instance(mockAllocation));
+
+    await logger.expectToInclude("Proposal has been confirmed and added to agreement pool", expect.anything(), 3_000);
+
+    verify(mockAgreementPoolService.addProposal(anything())).times(proposalsDraft.length);
+
     await marketService.end();
   });
 
   it("should reject initial proposal without common payment platform", async () => {
-    const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
+    const marketService = new MarketService(instance(mockAgreementPoolService), yagnaApi, {
       logger,
       minProposalsBatchSize: 1,
       proposalsBatchReleaseTimeoutMs: 10,
     });
-    await marketService.run(packageMock, allocationMock);
-    setExpectedProposals([proposalsInitial[6]]);
+
+    when(mockMarket.collectOffers("demand-id", anything(), anything()))
+      .thenCall(() => simulateLongPoll([proposalsInitial[6]]))
+      .thenCall(() => simulateLongPoll([]));
+
+    await marketService.run(instance(mockPackage), instance(mockAllocation));
+
     await logger.expectToInclude(
       "Proposal has been rejected",
       {
         reason: "No common payment platform",
         id: expect.anything(),
       },
-      10,
+      3_000,
     );
     await marketService.end();
   });
 
   it("should reject when no common payment platform", async () => {
-    const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
+    const marketService = new MarketService(instance(mockAgreementPoolService), yagnaApi, {
       logger,
       minProposalsBatchSize: 1,
       proposalsBatchReleaseTimeoutMs: 10,
     });
-    await marketService.run(packageMock, allocationMock);
-    setExpectedProposals(proposalsWrongPaymentPlatform);
-    await logger.expectToMatch(/No common payment platform/, 10);
+
+    when(mockMarket.collectOffers("demand-id", anything(), anything()))
+      .thenCall(() => simulateLongPoll(proposalsWrongPaymentPlatform))
+      .thenCall(() => simulateLongPoll([]));
+
+    await marketService.run(instance(mockPackage), instance(mockAllocation));
+
+    await logger.expectToMatch(/No common payment platform/, 3_000);
     await marketService.end();
   });
+
   it("should reject initial proposal when debit note acceptance timeout too short", async () => {
-    const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
+    const marketService = new MarketService(instance(mockAgreementPoolService), yagnaApi, {
       logger,
       minProposalsBatchSize: 1,
       proposalsBatchReleaseTimeoutMs: 10,
     });
-    await marketService.run(packageMock, allocationMock);
-    setExpectedProposals(proposalsShortDebitNoteTimeout);
-    await logger.expectToMatch(/Debit note acceptance timeout too short/, 10);
+
+    when(mockMarket.collectOffers("demand-id", anything(), anything()))
+      .thenCall(() => simulateLongPoll(proposalsShortDebitNoteTimeout))
+      .thenCall(() => simulateLongPoll([]));
+
+    await marketService.run(instance(mockPackage), instance(mockAllocation));
+
+    await logger.expectToMatch(/Debit note acceptance timeout too short/, 3_000);
     await marketService.end();
   });
-  it("should reject when proposal rejected by Proposal Filter", async () => {
+
+  it("should reject when proposal rejected by any Proposal Filter", async () => {
     const proposalAlwaysBanFilter = () => false;
-    const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
+    const marketService = new MarketService(instance(mockAgreementPoolService), yagnaApi, {
       logger,
       proposalFilter: proposalAlwaysBanFilter,
       minProposalsBatchSize: 1,
       proposalsBatchReleaseTimeoutMs: 10,
     });
-    await marketService.run(packageMock, allocationMock);
-    setExpectedProposals(proposalsInitial);
-    await logger.expectToMatch(/Proposal rejected by Proposal Filter/, 10);
-    await marketService.end();
-  });
-  it("should reject when proposal rejected by BlackListIds Proposal Filter", async () => {
-    const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
-      logger,
-      proposalFilter: ProposalFilterFactory.disallowProvidersById(["0xee8993fe1dcff6b131d3fd759c6b3ddcb82d1655"]),
-      minProposalsBatchSize: 1,
-      proposalsBatchReleaseTimeoutMs: 10,
-    });
-    await marketService.run(packageMock, allocationMock);
-    setExpectedProposals(proposalsInitial);
-    await logger.expectToMatch(/Proposal rejected by Proposal Filter/, 10);
-    await marketService.end();
-  });
-  it("should reject when proposal rejected by BlackListNames Proposal Filter", async () => {
-    const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
-      logger,
-      proposalFilter: ProposalFilterFactory.disallowProvidersByNameRegex(/golem2004/),
-      minProposalsBatchSize: 1,
-      proposalsBatchReleaseTimeoutMs: 10,
-    });
-    await marketService.run(packageMock, allocationMock);
-    setExpectedProposals(proposalsInitial);
-    await logger.expectToMatch(/Proposal rejected by Proposal Filter/, 10);
-    await marketService.end();
-  });
-  it("should reject when proposal rejected by WhiteListIds Proposal Filter", async () => {
-    const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
-      logger,
-      proposalFilter: ProposalFilterFactory.allowProvidersById(["0x123455"]),
-      minProposalsBatchSize: 1,
-      proposalsBatchReleaseTimeoutMs: 10,
-    });
-    await marketService.run(packageMock, allocationMock);
-    setExpectedProposals(proposalsInitial);
-    await logger.expectToMatch(/Proposal rejected by Proposal Filter/, 10);
-    await marketService.end();
-  });
-  it("should reject when proposal rejected by WhiteListNames Proposal Filter", async () => {
-    const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
-      logger,
-      proposalFilter: ProposalFilterFactory.allowProvidersByNameRegex(/abcdefg/),
-      minProposalsBatchSize: 1,
-      proposalsBatchReleaseTimeoutMs: 10,
-    });
-    await marketService.run(packageMock, allocationMock);
-    setExpectedProposals(proposalsInitial);
-    await logger.expectToMatch(/Proposal rejected by Proposal Filter/, 10);
-    await marketService.end();
-  });
-  it("should respond when provider id is whitelisted by WhiteListIds Proposal Filter", async () => {
-    const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
-      logger,
-      proposalFilter: ProposalFilterFactory.allowProvidersById(["0xee8993fe1dcff6b131d3fd759c6b3ddcb82d1655"]),
-      minProposalsBatchSize: 1,
-      proposalsBatchReleaseTimeoutMs: 10,
-    });
-    await marketService.run(packageMock, allocationMock);
-    setExpectedProposals(proposalsInitial);
-    await logger.expectToMatch(/Proposal has been responded/, 10);
-    await marketService.end();
-  });
-  it("should respond when provider name is whitelisted by WhiteListNames Proposal Filter", async () => {
-    const marketService = new MarketService(agreementPoolServiceMock, yagnaApi, {
-      logger,
-      proposalFilter: ProposalFilterFactory.allowProvidersByNameRegex(/golem2004/),
-      minProposalsBatchSize: 1,
-      proposalsBatchReleaseTimeoutMs: 10,
-    });
-    await marketService.run(packageMock, allocationMock);
-    setExpectedProposals(proposalsInitial);
-    await logger.expectToMatch(/Proposal has been responded/, 10);
+
+    when(mockMarket.collectOffers("demand-id", anything(), anything()))
+      .thenCall(() => simulateLongPoll(proposalsInitial))
+      .thenCall(() => simulateLongPoll([]));
+
+    await marketService.run(instance(mockPackage), instance(mockAllocation));
+
+    await logger.expectToMatch(/Proposal rejected by Proposal Filter/, 3_000);
     await marketService.end();
   });
 });

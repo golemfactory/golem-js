@@ -1,10 +1,19 @@
-import { Activity, ActivityConfig, ActivityStateEnum, Result, ResultState } from "../../src/activity";
-import { Events, nullLogger } from "../../src";
+import {
+  Activity,
+  ActivityConfig,
+  ActivityStateEnum,
+  Agreement,
+  Events,
+  nullLogger,
+  Result,
+  YagnaApi,
+} from "../../src";
 import { ExeScriptRequest } from "../../src/activity/activity";
 import { Readable } from "stream";
-import { YagnaApi } from "../../src/utils";
-import { Agreement } from "../../src/agreement";
 
+/**
+ * @deprecated Use ts-mockito instead of providing a global and central implementation of the activity mock
+ */
 export class ActivityMock extends Activity {
   private _currentState: ActivityStateEnum = ActivityStateEnum.Ready;
 
@@ -12,7 +21,7 @@ export class ActivityMock extends Activity {
 
   static createResult(props?: Partial<Result>): Result {
     return new Result({
-      result: ResultState.Ok,
+      result: "Ok",
       index: 1,
       eventDate: new Date().toISOString(),
       ...props,

@@ -26,7 +26,8 @@ export class NetworkService {
       const data = await this.yagnaApi.identity.getIdentity();
       networkOwnerId = data.identity;
     }
-    this.network = await Network.create(this.yagnaApi, { ...this.options, networkOwnerId });
+
+    this.network = await Network.create(this.yagnaApi, { ...this.options, networkOwnerId: networkOwnerId });
     this.logger.info("Network Service has started");
   }
 

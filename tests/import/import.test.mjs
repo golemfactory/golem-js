@@ -1,7 +1,7 @@
 describe("ESM Import", () => {
   test("Import @golem-sdk/golem-js", async () => {
-    const { Yagna } = await import("@golem-sdk/golem-js");
-    expect(typeof Yagna).toBe("function");
+    const { YagnaApi } = await import("@golem-sdk/golem-js");
+    expect(typeof YagnaApi).toBe("function");
   });
 
   test("Import @golem-sdk/golem-js/experimental", async () => {

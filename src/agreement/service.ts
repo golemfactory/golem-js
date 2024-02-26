@@ -1,9 +1,9 @@
 import Bottleneck from "bottleneck";
 import { Logger, YagnaApi, defaultLogger, sleep } from "../utils";
-import { Agreement, AgreementOptions, AgreementStateEnum } from "./agreement";
+import { Agreement, AgreementOptions } from "./agreement";
 import { AgreementServiceConfig } from "./config";
 import { GolemMarketError, MarketErrorCode, Proposal } from "../market";
-import { AgreementEvent, AgreementTerminatedEvent } from "ya-ts-client/dist/ya-market";
+import { MarketApi } from "ya-ts-client";
 
 export interface AgreementDTO {
   id: string;
@@ -192,7 +192,7 @@ export class AgreementPoolService {
       agreement = await this.waitForAgreementApproval(agreement);
       const state = await agreement.getState();
 
-      if (state !== AgreementStateEnum.Approved) {
+      if (state !== "Approved") {
         throw new GolemMarketError(
           `Agreement ${agreement.id} cannot be approved. Current state: ${state}`,
           MarketErrorCode.AgreementApprovalFailed,
@@ -221,7 +221,7 @@ export class AgreementPoolService {
   private async waitForAgreementApproval(agreement: Agreement) {
     const state = await agreement.getState();
 
-    if (state === AgreementStateEnum.Proposal) {
+    if (state === "Proposal") {
       await agreement.confirm(this.yagnaApi.appSessionId);
       this.logger.debug(`Agreement proposed to provider`, { providerName: agreement.getProviderInfo().name });
     }
@@ -234,17 +234,15 @@ export class AgreementPoolService {
     let afterTimestamp: string | undefined;
     while (this.isServiceRunning) {
       try {
-        // @ts-expect-error Bug in ts-client typing
-        const { data: events }: { data: Array<AgreementEvent & AgreementTerminatedEvent> } =
-          await this.yagnaApi.market.collectAgreementEvents(
-            this.config.agreementEventsFetchingIntervalSec,
-            afterTimestamp,
-            this.config.agreementMaxEvents,
-            this.yagnaApi.appSessionId,
-          );
+        const events = (await this.yagnaApi.market.collectAgreementEvents(
+          this.config.agreementEventsFetchingIntervalSec,
+          afterTimestamp,
+          this.config.agreementMaxEvents,
+          this.yagnaApi.appSessionId,
+        )) as Array<MarketApi.AgreementEventDTO & MarketApi.AgreementTerminatedEventDTO>;
         events.forEach((event) => {
           afterTimestamp = event.eventDate;
-          // @ts-expect-error: Bug in ya-tsclient: typo in eventtype
+          // @ts-expect-error: Bug in ya-tsclient: typo in eventtype #FIXME - report to core
           if (event.eventtype === "AgreementTerminatedEvent") {
             this.handleTerminationAgreementEvent(event.agreementId, event.reason);
           }

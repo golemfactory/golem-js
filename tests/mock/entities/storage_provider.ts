@@ -1,5 +1,4 @@
-import { StorageProvider } from "../../../src/storage";
-import { Logger, nullLogger } from "../../../src/utils";
+import { Logger, nullLogger, StorageProvider } from "../../../src";
 import { StorageProviderDataCallback } from "../../../src/storage/provider";
 
 export class StorageProviderMock implements StorageProvider {

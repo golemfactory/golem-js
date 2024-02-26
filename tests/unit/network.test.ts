@@ -1,10 +1,28 @@
-import { GolemNetworkError, Network } from "../../src/network";
-import { YagnaMock } from "../mock";
-import { NetworkErrorCode } from "../../src/network/error";
+import { GolemNetworkError, Network, NetworkErrorCode, YagnaApi } from "../../src";
+import { anything, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
+import { NetApi } from "ya-ts-client";
 
-const yagnaApi = new YagnaMock().getApi();
+const mockYagna = mock(YagnaApi);
+const mockNet = mock(NetApi.RequestorService);
+const yagnaApi = instance(mockYagna);
 
 describe("Network", () => {
+  beforeEach(() => {
+    reset(mockYagna);
+    reset(mockNet);
+
+    when(mockYagna.basePath).thenReturn("http://localhost");
+    when(mockYagna.net).thenReturn(instance(mockNet));
+
+    when(mockNet.createNetwork(anything())).thenCall((body) =>
+      Promise.resolve({
+        id: "network-id",
+        ip: "192.168.0.0",
+        mask: "255.255.255.0",
+        gateway: body.gateway,
+      }),
+    );
+  });
   describe("Creating", () => {
     it("should create network", async () => {
       const network = await Network.create(yagnaApi, { networkOwnerId: "test_owner_id" });
@@ -193,9 +211,8 @@ describe("Network", () => {
     it("should remove node from the network", async () => {
       const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/24" });
       const node = await network.addNode("7");
-      const removeNetworkApiSpy = jest.spyOn(yagnaApi.net, "removeNode");
       await network.removeNode(node.id);
-      expect(removeNetworkApiSpy).toHaveBeenCalledWith(network.id, node.id);
+      verify(mockNet.removeNode(network.id, node.id)).once();
     });
 
     it("should not remove node from the network if it does not exist", async () => {
@@ -213,15 +230,16 @@ describe("Network", () => {
 
   describe("Removing", () => {
     it("should remove network", async () => {
-      const spyRemove = jest.spyOn(yagnaApi.net, "removeNetwork");
       const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/24" });
       await network.remove();
-      expect(spyRemove).toHaveBeenCalled();
+      verify(mockNet.removeNetwork(anything())).once();
     });
 
     it("should not remove network that doesn't exist", async () => {
       const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/24" });
-      network["yagnaApi"]["net"]["setExpectedError"](new Error("404"));
+
+      when(mockNet.removeNetwork(anything())).thenReject(new Error("404"));
+
       await expect(network.remove()).rejects.toMatchError(
         new GolemNetworkError(
           `Unable to remove network. Error: 404`,

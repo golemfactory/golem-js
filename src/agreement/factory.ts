@@ -3,6 +3,7 @@ import { Logger, defaultLogger, YagnaApi } from "../utils";
 import { AgreementConfig } from "./config";
 import { Events } from "../events";
 import { Proposal, GolemMarketError, MarketErrorCode } from "../market";
+import { withTimeout } from "../utils/timeout";
 
 /**
  * AgreementFactory
@@ -37,10 +38,18 @@ export class AgreementFactory {
         proposalId: proposal.id,
         validTo: new Date(+new Date() + 3600 * 1000).toISOString(),
       };
-      const { data: agreementId } = await this.yagnaApi.market.createAgreement(agreementProposalRequest, {
-        timeout: this.options.agreementRequestTimeout,
-      });
-      const { data } = await this.yagnaApi.market.getAgreement(agreementId);
+      const agreementId = await withTimeout(
+        this.yagnaApi.market.createAgreement(agreementProposalRequest),
+        this.options.agreementRequestTimeout,
+      );
+      if (typeof agreementId !== "string") {
+        throw new GolemMarketError(
+          `Unable to create agreement. Invalid response from the server`,
+          MarketErrorCode.AgreementCreationFailed,
+          proposal.demand,
+        );
+      }
+      const data = await this.yagnaApi.market.getAgreement(agreementId);
       const agreement = new Agreement(agreementId, proposal, this.yagnaApi, this.options);
       this.options.eventTarget?.dispatchEvent(
         new Events.AgreementCreated({

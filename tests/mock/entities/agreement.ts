@@ -1,5 +1,5 @@
-import { Agreement } from "../../../src/agreement";
-import { AgreementStateEnum } from "ya-ts-client/dist/ya-market/src/models";
+import { Agreement } from "../../../src";
+import { MarketApi } from "ya-ts-client";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -11,8 +11,8 @@ export const agreement: Agreement = {
   async confirm(): Promise<void> {
     return Promise.resolve(undefined);
   },
-  async getState(): Promise<AgreementStateEnum> {
-    return Promise.resolve(AgreementStateEnum.Approved);
+  async getState(): Promise<MarketApi.AgreementDTO["state"]> {
+    return Promise.resolve("Approved");
   },
   async isFinalState(): Promise<boolean> {
     return Promise.resolve(true);

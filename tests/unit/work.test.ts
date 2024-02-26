@@ -1,28 +1,96 @@
-import * as activityMock from "../mock/rest/activity";
-import { Activity, GolemModuleError, GolemWorkError, WorkContext, WorkErrorCode } from "../../src";
-import { LoggerMock, StorageProviderMock, YagnaMock } from "../mock";
-import { agreement } from "../mock/entities/agreement";
+import {
+  Activity,
+  ActivityStateEnum,
+  Agreement,
+  GolemModuleError,
+  GolemWorkError,
+  NetworkNode,
+  StorageProvider,
+  WorkContext,
+  WorkErrorCode,
+  YagnaApi,
+} from "../../src";
+import { anyOfClass, anything, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
+import { LoggerMock } from "../mock/utils/logger";
+import { buildExeScriptErrorResult, buildExeScriptSuccessResult, simulateLongPoll } from "./helpers";
+import * as YaTsClient from "ya-ts-client";
+import { IPv4 } from "ip-num";
+import { StorageProviderDataCallback } from "../../src/storage/provider";
 
 const logger = new LoggerMock();
-const yagnaApi = new YagnaMock().getApi();
-const storageProviderMock = new StorageProviderMock({ logger });
+
+const mockStorageProvider = imock<StorageProvider>();
+
+const mockYagna = mock(YagnaApi);
+const mockControl = mock(YaTsClient.ActivityApi.RequestorControlService);
+const mockState = mock(YaTsClient.ActivityApi.RequestorStateService);
+const mockAgreement = mock(Agreement);
+
+const yagnaApi = instance(mockYagna);
 
 describe("Work Context", () => {
   beforeEach(() => {
     logger.clear();
-    activityMock.clear();
+
+    // Make mocks ready to re-use
+    reset(mockStorageProvider);
+    reset(mockYagna);
+    reset(mockControl);
+    reset(mockAgreement);
+
+    when(mockYagna.yagnaOptions).thenReturn({
+      logger,
+      basePath: "http://localhost",
+      apiKey: "test-key",
+    });
+
+    when(mockYagna.activity).thenReturn({
+      state: instance(mockState),
+      control: instance(mockControl),
+    });
+
+    when(mockControl.createActivity(anything())).thenResolve("activity-id");
+
+    when(mockControl.exec("activity-id", anything())).thenResolve("batch-id");
+
+    when(mockState.getActivityState("activity-id")).thenResolve({
+      state: ["Ready", null],
+      reason: "",
+      errorMessage: "",
+    });
+
+    when(mockAgreement.getProviderInfo()).thenReturn({
+      id: "provider-id",
+      name: "Test Provider",
+      walletAddress: "0x123",
+    });
   });
 
   const commonWorkOptions = {
     yagnaOptions: yagnaApi.yagnaOptions,
     logger,
     activityStateCheckingInterval: 10,
-    storageProvider: storageProviderMock,
+    storageProvider: instance(mockStorageProvider),
   };
 
+  const agreement = instance(mockAgreement);
+
   describe("Executing", () => {
-    it("should execute run command", async () => {
+    it("should execute run command with a single parameter", async () => {
       const activity = await Activity.create(agreement, yagnaApi);
+
+      when(mockControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenCall(() =>
+        simulateLongPoll([
+          {
+            index: 0,
+            eventDate: new Date().toISOString(),
+            result: "Ok",
+            stdout: "test_result",
+            isBatchFinished: true,
+          },
+        ]),
+      );
+
       const worker = async (ctx: WorkContext) => ctx.run("some_shell_command");
       const ctx = new WorkContext(activity, commonWorkOptions);
       await ctx.before();
@@ -30,36 +98,225 @@ describe("Work Context", () => {
       expect(results?.stdout).toEqual("test_result");
     });
 
-    it("should execute upload file command", async () => {
+    it("should execute run command with multiple parameters", async () => {
       const activity = await Activity.create(agreement, yagnaApi);
-      const worker = async (ctx: WorkContext) => ctx.uploadFile("./file.txt", "/golem/file.txt");
+
+      when(mockControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenCall(() =>
+        simulateLongPoll([
+          {
+            index: 0,
+            eventDate: new Date().toISOString(),
+            result: "Ok",
+            stdout: "test_result_from_ls",
+            isBatchFinished: true,
+          },
+        ]),
+      );
+
+      const worker = async (ctx: WorkContext) => ctx.run("/bin/ls", ["-R"]);
       const ctx = new WorkContext(activity, commonWorkOptions);
       await ctx.before();
       const results = await worker(ctx);
-      expect(results?.stdout).toEqual("test_result");
-      await logger.expectToInclude("File published", { src: "./file.txt" });
+
+      expect(results?.stdout).toEqual("test_result_from_ls");
     });
 
-    it("should execute upload json command", async () => {
-      const activity = await Activity.create(agreement, yagnaApi);
-      const worker = async (ctx: WorkContext) => ctx.uploadJson({ test: true }, "/golem/file.txt");
-      const ctx = new WorkContext(activity, commonWorkOptions);
-      await ctx.before();
-      const results = await worker(ctx);
-      expect(results?.stdout).toEqual("test_result");
-      await logger.expectToInclude("Data published", { data: expect.anything() });
+    describe("upload commands", () => {
+      it("should execute upload file command", async () => {
+        const activity = await Activity.create(agreement, yagnaApi);
+        const worker = async (ctx: WorkContext) => ctx.uploadFile("./file.txt", "/golem/file.txt");
+
+        when(mockControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenCall(() =>
+          simulateLongPoll([
+            {
+              index: 0,
+              eventDate: new Date().toISOString(),
+              result: "Ok",
+              stdout: "test_result",
+              isBatchFinished: true,
+            },
+          ]),
+        );
+
+        const ctx = new WorkContext(activity, commonWorkOptions);
+        await ctx.before();
+        const results = await worker(ctx);
+        expect(results?.stdout).toEqual("test_result");
+        verify(mockStorageProvider.publishFile("./file.txt")).once();
+      });
+
+      it("should execute upload json command", async () => {
+        const activity = await Activity.create(agreement, yagnaApi);
+        const worker = async (ctx: WorkContext) => ctx.uploadJson({ test: true }, "/golem/file.txt");
+
+        when(mockControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenCall(() =>
+          simulateLongPoll([
+            {
+              index: 0,
+              eventDate: new Date().toISOString(),
+              result: "Ok",
+              stdout: "test_result",
+              isBatchFinished: true,
+            },
+          ]),
+        );
+
+        const ctx = new WorkContext(activity, commonWorkOptions);
+        await ctx.before();
+        const results = await worker(ctx);
+
+        expect(results?.stdout).toEqual("test_result");
+        verify(mockStorageProvider.publishData(anyOfClass(Uint8Array))).once();
+      });
     });
 
-    it("should execute download file command", async () => {
-      const activity = await Activity.create(agreement, yagnaApi);
-      const worker = async (ctx: WorkContext) => ctx.downloadFile("/golem/file.txt", "./file.txt");
-      const ctx = new WorkContext(activity, commonWorkOptions);
-      await ctx.before();
-      const results = await worker(ctx);
-      expect(results?.stdout).toEqual("test_result");
-      await logger.expectToInclude("File received", { path: "./file.txt" });
+    describe("download commands", () => {
+      it("should execute download file command", async () => {
+        const activity = await Activity.create(agreement, yagnaApi);
+        const worker = async (ctx: WorkContext) => ctx.downloadFile("/golem/file.txt", "./file.txt");
+
+        when(mockControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenCall(() =>
+          simulateLongPoll([
+            {
+              index: 0,
+              eventDate: new Date().toISOString(),
+              result: "Ok",
+              stdout: "test_result",
+              isBatchFinished: true,
+            },
+          ]),
+        );
+
+        const ctx = new WorkContext(activity, commonWorkOptions);
+
+        await ctx.before();
+        const results = await worker(ctx);
+
+        expect(results?.stdout).toEqual("test_result");
+        verify(mockStorageProvider.receiveFile("./file.txt")).once();
+      });
+
+      it("should execute download json command", async () => {
+        const json = { hello: "World" };
+        const jsonStr = JSON.stringify(json);
+        const encoded = new TextEncoder().encode(jsonStr);
+        const activity = await Activity.create(agreement, yagnaApi);
+
+        when(mockControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenCall(() =>
+          simulateLongPoll([
+            {
+              index: 0,
+              eventDate: new Date().toISOString(),
+              result: "Ok",
+              data: encoded.buffer,
+              isBatchFinished: true,
+            },
+          ]),
+        );
+
+        when(mockStorageProvider.receiveData(anything())).thenCall(async (onData: StorageProviderDataCallback) => {
+          onData(encoded);
+          return "/golem/file.txt";
+        });
+
+        const ctx = new WorkContext(activity, commonWorkOptions);
+        const result = await ctx.downloadJson("/golem/file.txt");
+
+        expect(result.result).toEqual("Ok");
+        expect(result.data).toEqual(json);
+      });
+
+      it("should execute download data command", async () => {
+        const data = new Uint8Array(10);
+        const activity = await Activity.create(agreement, yagnaApi);
+
+        const eventDate = new Date().toISOString();
+
+        when(mockStorageProvider.receiveData(anything())).thenResolve(data.toString());
+
+        when(mockControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenCall(() =>
+          simulateLongPoll([
+            {
+              index: 0,
+              eventDate: eventDate,
+              result: "Ok",
+              data: data,
+              isBatchFinished: true,
+            },
+          ]),
+        );
+
+        when(mockStorageProvider.receiveData(anything())).thenCall(async (onData: StorageProviderDataCallback) => {
+          onData(data);
+          return "/golem/file.txt";
+        });
+
+        const ctx = new WorkContext(activity, commonWorkOptions);
+        const result = await ctx.downloadData("/golem/file.txt");
+
+        expect(result).toEqual(
+          expect.objectContaining({
+            index: 0,
+            eventDate: eventDate,
+            result: "Ok",
+            data: data,
+          }),
+        );
+      });
     });
   });
+
+  describe("Exec and stream", () => {
+    // FIXME: This test has to be redesigned as right now this leads to calling `EventSource(`${basePath}/activity/${this.id}/exec/${batchId}`
+    //  - avoiding using Yagna clients etc, and sending a direct HTTP request to Yagna. This has to be abstracted away and then mocked
+    //  in the test.
+    it.skip("should execute spawn command", async () => {
+      const activity = await Activity.create(agreement, yagnaApi);
+      const ctx = new WorkContext(activity, commonWorkOptions);
+
+      when(mockControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenCall(() =>
+        simulateLongPoll([
+          {
+            index: 0,
+            eventDate: new Date().toISOString(),
+            result: "Ok",
+            stdout: "Output",
+            stderr: "Error",
+            isBatchFinished: true,
+          },
+        ]),
+      );
+
+      const remote = await ctx.runAndStream("rm -rf foo/");
+
+      const finalResult = await remote.waitForExit();
+      expect(finalResult.result).toBe("Ok");
+    });
+  });
+
+  describe("transfer()", () => {
+    it("should execute transfer command", async () => {
+      const activity = await Activity.create(agreement, yagnaApi);
+      const ctx = new WorkContext(activity, commonWorkOptions);
+
+      when(mockControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenCall(() =>
+        simulateLongPoll([
+          {
+            index: 0,
+            eventDate: new Date().toISOString(),
+            result: "Ok",
+            stdout: "Ok",
+            stderr: "",
+            isBatchFinished: true,
+          },
+        ]),
+      );
+
+      const remote = await ctx.transfer("http://golem.network/test.txt", "/golem/work/test.txt");
+      expect(remote.result).toEqual("Ok");
+    });
+  });
+
   describe("Batch", () => {
     it("should execute batch as promise", async () => {
       const activity = await Activity.create(agreement, yagnaApi);
@@ -79,12 +336,17 @@ describe("Work Context", () => {
         { stdout: "ok_upload_json" },
         { stdout: "ok_download_file" },
       ];
-      activityMock.setExpectedExeResults(expectedStdout);
+
+      when(mockControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenResolve(
+        expectedStdout.map((e) => buildExeScriptSuccessResult(e.stdout)),
+      );
+
       const results = await worker(ctx);
       expect(results?.map((r) => r.stdout)).toEqual(expectedStdout.map((s) => s.stdout));
-      await logger.expectToInclude("File published", { src: "./file.txt" });
-      await logger.expectToInclude("Data published", { data: expect.anything() });
-      await logger.expectToInclude("File received", { path: "./file.txt" });
+
+      verify(mockStorageProvider.publishFile("./file.txt")).once();
+      verify(mockStorageProvider.publishData(anyOfClass(Uint8Array))).once();
+      verify(mockStorageProvider.receiveFile("./file.txt")).once();
     });
 
     it("should execute batch as stream", async () => {
@@ -105,7 +367,11 @@ describe("Work Context", () => {
         { stdout: "ok_upload_json" },
         { stdout: "ok_download_file" },
       ];
-      activityMock.setExpectedExeResults(expectedStdout);
+
+      when(mockControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenResolve(
+        expectedStdout.map((e) => buildExeScriptSuccessResult(e.stdout)),
+      );
+
       const results = await worker(ctx);
       await new Promise((res, rej) => {
         results?.on("data", (result) => {
@@ -117,18 +383,144 @@ describe("Work Context", () => {
         });
         results?.on("end", res);
       });
-      await logger.expectToInclude("File published", { src: "./file.txt" });
-      await logger.expectToInclude("Data published", { data: expect.anything() });
-      await logger.expectToInclude("File received", { path: "./file.txt" });
+
+      verify(mockStorageProvider.publishFile("./file.txt")).once();
+      verify(mockStorageProvider.publishData(anyOfClass(Uint8Array))).once();
+      verify(mockStorageProvider.receiveFile("./file.txt")).once();
     });
   });
+
+  describe("getState() helper function", () => {
+    it("should return activity state", async () => {
+      const mActivity = mock(Activity);
+      when(mActivity.getState()).thenResolve(ActivityStateEnum.Deployed);
+      when(mActivity.agreement).thenReturn(instance(mockAgreement));
+
+      const ctx = new WorkContext(instance(mActivity), commonWorkOptions);
+      await expect(ctx.getState()).resolves.toEqual(ActivityStateEnum.Deployed);
+    });
+  });
+
+  describe("getIp()", () => {
+    it("should throw error if there is no network node", async () => {
+      const activity = await Activity.create(instance(mockAgreement), yagnaApi);
+      const ctx = new WorkContext(activity, commonWorkOptions);
+
+      expect(() => ctx.getIp()).toThrow(new Error("There is no network in this work context"));
+    });
+
+    it("should return ip address of provider vpn network node", async () => {
+      const activity = await Activity.create(instance(mockAgreement), yagnaApi);
+      const networkNode = new NetworkNode(
+        "test-node",
+        IPv4.fromString("192.168.0.10"),
+        () => ({
+          id: "test-network",
+          ip: "192.168.0.0/24",
+          nodes: {
+            "192.168.0.10": "example-provider-id",
+          },
+          mask: "255.255.255.0",
+        }),
+        "http://localhost",
+      );
+
+      const ctx = new WorkContext(activity, {
+        ...commonWorkOptions,
+        networkNode,
+      });
+
+      expect(ctx.getIp()).toEqual("192.168.0.10");
+    });
+  });
+
+  describe("getWebsocketUri()", () => {
+    it("should throw error if there is no network node", async () => {
+      const activity = await Activity.create(instance(mockAgreement), yagnaApi);
+      const ctx = new WorkContext(activity, commonWorkOptions);
+
+      expect(() => ctx.getWebsocketUri(80)).toThrow(new Error("There is no network in this work context"));
+    });
+
+    it("should return websocket URI from the NetworkNode", async () => {
+      const activity = await Activity.create(instance(mockAgreement), yagnaApi);
+      const mockNode = mock(NetworkNode);
+
+      const ctx = new WorkContext(activity, {
+        ...commonWorkOptions,
+        networkNode: instance(mockNode),
+      });
+
+      when(mockNode.getWebsocketUri(20)).thenReturn("ws://localhost:20");
+
+      expect(ctx.getWebsocketUri(20)).toEqual("ws://localhost:20");
+    });
+  });
+
+  describe("uploadData()", () => {
+    it("should execute upload json command", async () => {
+      const input = "Hello World";
+
+      const eventDate = new Date().toISOString();
+
+      when(mockControl.getExecBatchResults("activity-id", "batch-id", anything(), anything())).thenCall(() =>
+        simulateLongPoll([
+          {
+            index: 0,
+            result: "Ok",
+            isBatchFinished: true,
+            eventDate,
+          },
+        ]),
+      );
+
+      const activity = await Activity.create(instance(mockAgreement), yagnaApi);
+      const ctx = new WorkContext(activity, commonWorkOptions);
+
+      const result = await ctx.uploadData(new TextEncoder().encode(input), "/golem/file.txt");
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          index: 0,
+          result: "Ok",
+          isBatchFinished: true,
+          eventDate,
+        }),
+      );
+    });
+  });
+
+  describe("setupActivity() - called as part of before()", () => {
+    it("should call all setup functions in the order they were registered", async () => {
+      const activity = await Activity.create(instance(mockAgreement), yagnaApi);
+
+      const calls: string[] = [];
+      const activityReadySetupFunctions = [
+        async () => calls.push("1"),
+        async () => calls.push("2"),
+        async () => calls.push("3"),
+      ];
+
+      const ctx = new WorkContext(activity, {
+        ...commonWorkOptions,
+        activityReadySetupFunctions,
+      });
+
+      await ctx.before();
+
+      expect(calls).toEqual(["1", "2", "3"]);
+    });
+  });
+
   describe("Error handling", () => {
     it("should return a result with error in case the command to execute is invalid", async () => {
       const activity = await Activity.create(agreement, yagnaApi);
       const worker = async (ctx: WorkContext) => ctx.beginBatch().run("invalid_shell_command").end();
       const ctx = new WorkContext(activity, commonWorkOptions);
-      const expectedStdout = [{ result: "Error", stderr: "error", message: "Some error occurred" }];
-      activityMock.setExpectedExeResults(expectedStdout);
+
+      when(mockControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenResolve([
+        buildExeScriptErrorResult("error", "Some error occurred"),
+      ]);
 
       const [result] = await worker(ctx);
 
@@ -140,8 +532,11 @@ describe("Work Context", () => {
       const activity = await Activity.create(agreement, yagnaApi);
       const worker = async (ctx: WorkContext) => ctx.beginBatch().run("invalid_shell_command").endStream();
       const ctx = new WorkContext(activity, commonWorkOptions);
-      const expectedStdout = [{ result: "Error", stderr: "error", message: "Some error occurred" }];
-      activityMock.setExpectedExeResults(expectedStdout);
+
+      when(mockControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenCall(() =>
+        simulateLongPoll([buildExeScriptErrorResult("error", "Some error occurred", "test_result")]),
+      );
+
       const results = await worker(ctx);
 
       await new Promise((res) =>

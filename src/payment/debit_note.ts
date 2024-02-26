@@ -1,5 +1,5 @@
 import { BasePaymentOptions, InvoiceConfig } from "./config";
-import { DebitNote as Model } from "ya-ts-client/dist/ya-payment/src/models";
+import { PaymentApi } from "ya-ts-client";
 import { BaseNote } from "./invoice";
 import { Events } from "../events";
 import { Rejection } from "./rejection";
@@ -23,7 +23,7 @@ export interface DebitNoteDTO {
  * A Debit Note is an artifact issued by the Provider to the Requestor, in the context of a specific Activity. It is a notification of Total Amount Due incurred by the Activity until the moment the Debit Note is issued. This is expected to be used as trigger for payment in upfront-payment or pay-as-you-go scenarios. NOTE: Only Debit Notes with non-null paymentDueDate are expected to trigger payments. NOTE: Debit Notes flag the current Total Amount Due, which is accumulated from the start of Activity. Debit Notes are expected to trigger payments, therefore payment amount for the newly received Debit Note is expected to be determined by difference of Total Payments for the Agreement vs Total Amount Due.
  * @hidden
  */
-export class DebitNote extends BaseNote<Model> {
+export class DebitNote extends BaseNote<PaymentApi.DebitNoteDTO> {
   public readonly id: string;
   public readonly previousDebitNoteId?: string;
   public readonly timestamp: string;
@@ -40,8 +40,8 @@ export class DebitNote extends BaseNote<Model> {
    */
   static async create(debitNoteId: string, yagnaApi: YagnaApi, options?: InvoiceOptions): Promise<DebitNote> {
     const config = new InvoiceConfig(options);
-    const { data: model } = await yagnaApi.payment.getDebitNote(debitNoteId);
-    const { data: agreement } = await yagnaApi.market.getAgreement(model.agreementId);
+    const model = await yagnaApi.payment.getDebitNote(debitNoteId);
+    const agreement = await yagnaApi.market.getAgreement(model.agreementId);
     const providerInfo = {
       id: model.issuerId,
       walletAddress: model.payeeAddr,
@@ -60,7 +60,7 @@ export class DebitNote extends BaseNote<Model> {
    * @hidden
    */
   protected constructor(
-    protected model: Model,
+    protected model: PaymentApi.DebitNoteDTO,
     providerInfo: ProviderInfo,
     protected yagnaApi: YagnaApi,
     protected options: InvoiceConfig,
@@ -149,7 +149,6 @@ export class DebitNote extends BaseNote<Model> {
   }
 
   protected async refreshStatus() {
-    const { data: model } = await this.yagnaApi.payment.getDebitNote(this.id);
-    this.model = model;
+    this.model = await this.yagnaApi.payment.getDebitNote(this.id);
   }
 }

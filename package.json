@@ -41,7 +41,7 @@
     "test:unit": "jest --config tests/unit/jest.config.json",
     "test:e2e": "jest --config tests/e2e/jest.config.json tests/e2e/**.spec.ts --runInBand --forceExit",
     "test:cypress": "cypress run",
-    "test:examples": "ts-node --project tsconfig.spec.json tests/examples/examples.test.ts",
+    "test:examples": "tsx --project tsconfig.spec.json tests/examples/examples.test.ts",
     "test:import": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config tests/import/jest.config.js",
     "lint": "npm run lint:ts && npm run lint:ts:tests && npm run lint:eslint",
     "lint:ts": "tsc --project tsconfig.json --noEmit",
@@ -77,7 +77,7 @@
     "tmp": "^0.2.2",
     "uuid": "^9.0.1",
     "ws": "^8.16.0",
-    "ya-ts-client": "^0.5.3"
+    "ya-ts-client": "^1.0.0-beta.4"
   },
   "devDependencies": {
     "@commitlint/cli": "^18.6.1",
@@ -122,9 +122,9 @@
     "supertest": "^6.3.4",
     "ts-jest": "^29.1.2",
     "ts-loader": "^9.5.1",
-    "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "tslint-config-prettier": "^1.18.0",
+    "tsx": "^4.7.1",
     "typedoc": "^0.25.9",
     "typedoc-plugin-markdown": "^3.17.1",
     "typedoc-plugin-merge-modules": "^5.1.0",

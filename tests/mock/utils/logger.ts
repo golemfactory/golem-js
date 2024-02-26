@@ -10,6 +10,9 @@ function ctxToString(ctx: Record<string, unknown> | Error | undefined) {
   }
 }
 
+/**
+ * @deprecated Avoid using this in new tests, this is going to be removed - use ts-mockito instead. In general, don't test with log lines ;)
+ */
 export class LoggerMock implements Logger {
   private _logs: { msg: string; ctx?: Record<string, unknown> | Error }[] = [];
 
@@ -19,20 +22,20 @@ export class LoggerMock implements Logger {
     return this;
   }
 
-  async expectToInclude(msg: string, ctx?: Record<string, unknown> | Error, wait?: number) {
-    if (wait) await new Promise((res) => setTimeout(res, wait));
+  async expectToInclude(msg: string, ctx?: Record<string, unknown> | Error, waitMs?: number) {
+    if (waitMs) await new Promise((res) => setTimeout(res, waitMs));
 
     return expect(this._logs).toContainEqual({ msg, ctx });
   }
 
-  async expectToMatch(msg: RegExp, wait?: number) {
-    if (wait) await new Promise((res) => setTimeout(res, wait));
+  async expectToMatch(msg: RegExp, waitMs?: number) {
+    if (waitMs) await new Promise((res) => setTimeout(res, waitMs));
 
     return expect(this.logs).toMatch(msg);
   }
 
-  async expectToNotMatch(msg: RegExp, wait?: number) {
-    if (wait) await new Promise((res) => setTimeout(res, wait));
+  async expectToNotMatch(msg: RegExp, waitMs?: number) {
+    if (waitMs) await new Promise((res) => setTimeout(res, waitMs));
     return expect(this.logs).not.toMatch(msg);
   }
 

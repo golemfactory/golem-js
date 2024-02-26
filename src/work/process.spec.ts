@@ -1,15 +1,24 @@
 import { RemoteProcess } from "./process";
 import { ActivityMock } from "../../tests/mock/activity.mock";
-import { YagnaMock } from "../../tests/mock";
 import { Run, Script } from "../script";
-import { ResultState } from "../activity";
-import { agreement } from "../../tests/mock/entities/agreement";
+import { instance, mock, reset } from "@johanblumenberg/ts-mockito";
+import { YagnaApi } from "../utils";
+import { Agreement } from "../agreement";
+
+const mockYagna = mock(YagnaApi);
+const mockAgreement = mock(Agreement);
 
 describe("RemoteProcess", () => {
   let activity: ActivityMock;
+
   beforeEach(() => {
-    activity = new ActivityMock("test_id", agreement, new YagnaMock().getApi());
+    reset(mockYagna);
+    reset(mockAgreement);
+
+    activity = new ActivityMock("test_id", instance(mockAgreement), yagna);
   });
+
+  const yagna = instance(mockYagna);
 
   it("should create remote process", async () => {
     const expectedResult = ActivityMock.createResult({ stdout: "Ok" });
@@ -49,6 +58,6 @@ describe("RemoteProcess", () => {
     const streamOfActivityResults = await activity.execute(exeScriptRequest, true);
     const remoteProcess = new RemoteProcess(streamOfActivityResults, activity);
     const finalResult = await remoteProcess.waitForExit();
-    expect(finalResult.result).toEqual(ResultState.Ok);
+    expect(finalResult.result).toEqual("Ok");
   });
 });
