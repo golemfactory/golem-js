@@ -1,7 +1,6 @@
 import { DemandOptions } from "./demand";
-import { EnvUtils, Logger, defaultLogger } from "../utils";
+import { EnvUtils, Logger, defaultLogger, YagnaOptions } from "../utils";
 import { MarketOptions, ProposalFilter } from "./service";
-import { YagnaOptions } from "../executor";
 import { GolemConfigError } from "../error/golem-error";
 import { acceptAll } from "./strategy";
 

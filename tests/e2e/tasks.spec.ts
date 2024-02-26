@@ -181,7 +181,7 @@ describe("Task Executor", function () {
     let stdout = "";
     let stderr = "";
     const finalResult = await executor.run(async (ctx) => {
-      const remoteProcess = await ctx.spawn("sleep 1 && echo 'Hello World' && echo 'Hello Golem' >&2");
+      const remoteProcess = await ctx.runAndStream("sleep 1 && echo 'Hello World' && echo 'Hello Golem' >&2");
       remoteProcess.stdout.on("data", (data) => (stdout += data.trim()));
       remoteProcess.stderr.on("data", (data) => (stderr += data.trim()));
       return remoteProcess.waitForExit();
@@ -204,7 +204,7 @@ describe("Task Executor", function () {
     const results: Result[] = [];
     for (const i of [1, 2, 3, 4]) {
       await executor.run(async (ctx) => {
-        const remoteProcess = await ctx.spawn("sleep 1 && echo 'Hello World'");
+        const remoteProcess = await ctx.runAndStream("sleep 1 && echo 'Hello World'");
         remoteProcess.stdout.on("data", (data) => (stdouts[i] = data));
         const timeout = i % 2 === 0 ? 50 : 20_000;
         results[i] = await remoteProcess.waitForExit(timeout).catch((e) => (errors[i] = e));
@@ -273,7 +273,7 @@ describe("Task Executor", function () {
     });
     try {
       await executor.run(async (ctx) => {
-        const proc = await ctx.spawn("timeout 15 ping 127.0.0.1");
+        const proc = await ctx.runAndStream("timeout 15 ping 127.0.0.1");
         proc.stdout.on("data", (data) => console.log(data));
         return await proc.waitForExit(20_000);
       });

@@ -9,7 +9,7 @@ import { AgreementPaymentProcess } from "./agreement_payment_process";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
 import { EventEmitter } from "eventemitter3";
 
-interface PaymentServiceEvents {
+export interface PaymentServiceEvents {
   /**
    * Triggered when the service encounters an issue in an "asynchronous sub-process"  (like accepting payments)
    * that should be notified to the caller
