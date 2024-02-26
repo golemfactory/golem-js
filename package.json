@@ -16,24 +16,12 @@
   "main": "dist/golem-js.cjs.js",
   "exports": {
     ".": {
-      "require": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/golem-js.cjs.js"
-      },
-      "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/golem-js.es.js"
-      }
+      "types": "./dist/index.d.ts",
+      "default": "./dist/golem-js.cjs.js"
     },
     "./experimental": {
-      "require": {
-        "types": "./dist/experimental.d.ts",
-        "default": "./dist/golem-js-experimental.cjs.js"
-      },
-      "import": {
-        "types": "./dist/experimental.d.ts",
-        "default": "./dist/golem-js-experimental.es.js"
-      }
+      "types": "./dist/experimental.d.ts",
+      "default": "./dist/golem-js-experimental.cjs.js"
     }
   },
   "browser": "dist/golem-js.min.js",
