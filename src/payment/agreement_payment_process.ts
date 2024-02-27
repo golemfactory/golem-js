@@ -3,7 +3,7 @@ import { Invoice } from "./invoice";
 import { DebitNote } from "./debit_note";
 import { RejectionReason } from "./rejection";
 import { Allocation } from "./allocation";
-import { defaultLogger, Logger } from "..";
+import { Logger, defaultLogger } from "../utils";
 import { DebitNoteFilter, InvoiceFilter } from "./service";
 import AsyncLock from "async-lock";
 import { InvoiceStatus } from "ya-ts-client/dist/ya-payment";
