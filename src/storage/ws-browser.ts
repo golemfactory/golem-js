@@ -3,6 +3,7 @@ import { v4 } from "uuid";
 import { encode, toObject } from "flatbuffers/js/flexbuffers";
 import * as jsSha3 from "js-sha3";
 import { Logger, nullLogger, YagnaApi } from "../utils";
+import { GolemInternalError } from "../error/golem-error";
 
 export interface WebSocketStorageProviderOptions {
   logger?: Logger;
@@ -87,7 +88,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
           offset: req.payload.offset,
         });
       } else {
-        this.logger.warn(
+        this.logger.error(
           `[WebSocketBrowserStorageProvider] Unsupported message in publishData(): ${
             (req as GsbRequest<void>).component
           }`,
@@ -99,7 +100,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
   }
 
   async publishFile(): Promise<string> {
-    throw new Error("Not implemented");
+    throw new GolemInternalError("Not implemented");
   }
 
   async receiveData(callback: StorageProviderDataCallback): Promise<string> {
@@ -117,7 +118,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
         const result = this.completeReceive(req.payload.hash, data);
         callback(result);
       } else {
-        this.logger.warn(
+        this.logger.error(
           `[WebSocketBrowserStorageProvider] Unsupported message in receiveData(): ${
             (req as GsbRequest<void>).component
           }`,
@@ -129,15 +130,15 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
   }
 
   async receiveFile(): Promise<string> {
-    throw new Error("Not implemented");
+    throw new GolemInternalError("Not implemented");
   }
 
   async release(urls: string[]): Promise<void> {
     urls.forEach((url) => {
       const serviceId = this.services.get(url);
       if (serviceId) {
-        this.deleteService(serviceId).catch((e) =>
-          this.logger.warn(`[WebSocketBrowserStorageProvider] Failed to delete service ${serviceId}: ${e}`),
+        this.deleteService(serviceId).catch((error) =>
+          this.logger.warn(`[WebSocketBrowserStorageProvider] Failed to delete service`, { serviceId, error }),
         );
       }
       this.services.delete(url);
@@ -146,7 +147,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
 
   private async createFileInfo(): Promise<GftpFileInfo> {
     const id = v4();
-    const { data } = await this.yagnaApi.identity.getIdentity();
+    const data = await this.yagnaApi.identity.getIdentity();
     const me = data.identity;
 
     return {
@@ -167,14 +168,9 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
 
   private async createService(fileInfo: GftpFileInfo, components: string[]): Promise<ServiceInfo> {
     const resp = await this.yagnaApi.gsb.createService(fileInfo, components);
-
-    if (resp.status !== 201) {
-      throw new Error(`Invalid response: ${resp.status}`);
-    }
-
-    const servicesId = resp.data.servicesId;
-    const messages_link = `/gsb-api/v1/services/${servicesId}?authToken=${this.yagnaApi.yagnaOptions.apiKey}`;
-    const url = new URL(messages_link, this.yagnaApi.yagnaOptions.basePath);
+    const servicesId = resp.servicesId;
+    const messageEndpoint = `/gsb-api/v1/services/${servicesId}?authToken=${this.yagnaApi.yagnaOptions.apiKey}`;
+    const url = new URL(messageEndpoint, this.yagnaApi.yagnaOptions.basePath);
     url.protocol = "ws:";
     this.services.set(fileInfo.url, servicesId);
 
@@ -182,10 +178,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
   }
 
   private async deleteService(id: string): Promise<void> {
-    const resp = await this.yagnaApi.gsb.deleteService(id);
-    if (resp.status !== 200) {
-      throw new Error(`Invalid response: ${resp.status}`);
-    }
+    await this.yagnaApi.gsb.deleteService(id);
   }
 
   private respond(ws: WebSocket, id: string, payload: unknown) {
@@ -209,7 +202,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
     const hashHex = jsSha3.sha3_256(buf);
 
     if (hash !== hashHex) {
-      throw new Error(`File corrupted, expected hash ${hash}, got ${hashHex}`);
+      throw new GolemInternalError(`File corrupted, expected hash ${hash}, got ${hashHex}`);
     } else {
       return buf;
     }

@@ -3,10 +3,11 @@ import { Invoice } from "./invoice";
 import { DebitNote } from "./debit_note";
 import { RejectionReason } from "./rejection";
 import { Allocation } from "./allocation";
-import { Logger } from "..";
+import { defaultLogger, Logger } from "..";
 import { DebitNoteFilter, InvoiceFilter } from "./service";
 import AsyncLock from "async-lock";
 import { InvoiceStatus } from "ya-ts-client/dist/ya-payment";
+import { GolemPaymentError, PaymentErrorCode } from "./error";
 
 /**
  * Process manager that controls the logic behind processing events related to an agreement which result with payments
@@ -22,6 +23,8 @@ export class AgreementPaymentProcess {
    */
   private lock: AsyncLock = new AsyncLock();
 
+  public readonly logger: Logger;
+
   constructor(
     public readonly agreement: Agreement,
     public readonly allocation: Allocation,
@@ -29,8 +32,10 @@ export class AgreementPaymentProcess {
       invoiceFilter: InvoiceFilter;
       debitNoteFilter: DebitNoteFilter;
     },
-    public readonly logger?: Logger,
-  ) {}
+    logger?: Logger,
+  ) {
+    this.logger = logger || defaultLogger("payment");
+  }
 
   /**
    * Adds the debit note to the process avoiding race conditions
@@ -70,9 +75,12 @@ export class AgreementPaymentProcess {
       const isAlreadyProcessed = await this.hasProcessedDebitNote(debitNote);
 
       if (isAlreadyProcessed) {
-        this.logger?.warn(
-          `We received a duplicate debit note ${debitNote.id} for agreement ${debitNote.agreementId} ` +
-            `- the previous one was already accepted, so this one gets ignored`,
+        this.logger.warn(
+          `We received a duplicate debit note - the previous one was already accepted, so this one gets ignored`,
+          {
+            debitNoteId: debitNote.id,
+            agreementId: debitNote.agreementId,
+          },
         );
         return false;
       }
@@ -93,7 +101,10 @@ export class AgreementPaymentProcess {
     }
 
     await debitNote.accept(debitNote.totalAmountDue, this.allocation.id);
-    this.logger?.debug(`DebitNote ${debitNote.id} accepted for agreement ${debitNote.agreementId}`);
+    this.logger.debug(`DebitNote accepted`, {
+      debitNoteId: debitNote.id,
+      agreementId: debitNote.agreementId,
+    });
 
     return true;
   }
@@ -113,7 +124,7 @@ export class AgreementPaymentProcess {
 
     await debitNote.reject(reason);
 
-    this.logger?.warn(`DebitNote rejected with reason: ${reason.message}`);
+    this.logger.warn(`DebitNote rejected`, { reason: reason.message });
   }
 
   private async applyInvoice(invoice: Invoice) {
@@ -122,23 +133,31 @@ export class AgreementPaymentProcess {
         const previousStatus = await this.invoice.getStatus();
 
         if (previousStatus !== InvoiceStatus.Received) {
-          this.logger?.warn(
-            `Received duplicate of an already processed invoice ${invoice.id} for agreement ${invoice.agreementId}, ` +
-              `the new one will be ignored`,
-          );
+          this.logger.warn(`Received duplicate of an already processed invoice , the new one will be ignored`, {
+            invoiceId: invoice.id,
+            agreementId: invoice.agreementId,
+          });
           return false;
         }
       } else {
         // Protects from possible fraud: someone sends a second, different invoice for the same agreement
-        throw new Error(`Agreement ${this.agreement.id} is already covered with an invoice: ${this.invoice.id}`);
+        throw new GolemPaymentError(
+          `Agreement ${this.agreement.id} is already covered with an invoice: ${this.invoice.id}`,
+          PaymentErrorCode.AgreementAlreadyPaid,
+          this.allocation,
+          this.invoice.provider,
+        );
       }
     }
 
     const status = await invoice.getStatus();
     if (status !== InvoiceStatus.Received) {
-      throw new Error(
+      throw new GolemPaymentError(
         `The invoice ${invoice.id} for agreement ${invoice.agreementId} has status ${status}, ` +
           `but we can accept only the ones with status ${InvoiceStatus.Received}`,
+        PaymentErrorCode.InvoiceAlreadyReceived,
+        this.allocation,
+        invoice.provider,
       );
     }
 
@@ -155,9 +174,11 @@ export class AgreementPaymentProcess {
     }
 
     await invoice.accept(invoice.amount, this.allocation.id);
-    this.logger?.info(
-      `Invoice ${invoice.id} for agreement ${invoice.agreementId} from provider ${this.agreement.provider.name} has been accepted`,
-    );
+    this.logger.info(`Invoice has been accepted`, {
+      invoiceId: invoice.id,
+      agreementId: invoice.agreementId,
+      providerName: this.agreement.getProviderInfo().name,
+    });
 
     return true;
   }
@@ -175,7 +196,7 @@ export class AgreementPaymentProcess {
 
     await invoice.reject(reason);
 
-    this.logger?.warn(`Invoice rejected with reason: ${reason.message}`);
+    this.logger.warn(`Invoice rejected`, { reason: reason.message });
   }
 
   private hasReceivedInvoice() {

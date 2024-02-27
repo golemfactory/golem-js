@@ -1,5 +1,6 @@
 import { MarketProperty } from "ya-ts-client/dist/ya-payment/src/models";
 import { DemandOfferBase } from "ya-ts-client/dist/ya-market/src/models";
+import { GolemInternalError } from "../error/golem-error";
 
 /**
  * Properties and constraints to be added to a market object (i.e. a demand or an offer).
@@ -59,23 +60,23 @@ export class DecorationsBuilder {
     if (!decorations.constraints.length) constraints = "(&)";
     else if (decorations.constraints.length == 1) constraints = decorations.constraints[0];
     else constraints = `(&${decorations.constraints.join("\n\t")})`;
-    const properties = {};
+    const properties: Record<string, string | number | boolean> = {};
     decorations.properties.forEach((prop) => (properties[prop.key] = prop.value));
     return { constraints, properties };
   }
-  private parseConstraint(constraint): Constraint {
+  private parseConstraint(constraint: string): Constraint {
     for (const key in ComparisonOperator) {
-      const value = ComparisonOperator[key];
+      const value = ComparisonOperator[key as keyof typeof ComparisonOperator];
       const parsedConstraint = constraint.slice(1, -1).split(value);
       if (parsedConstraint.length === 2) {
         return {
           key: parsedConstraint[0],
           value: parsedConstraint[1],
-          comparisonOperator: ComparisonOperator[key],
+          comparisonOperator: value,
         };
       }
     }
-    throw new Error(`Unable to parse constraint "${constraint}"`);
+    throw new GolemInternalError(`Unable to parse constraint "${constraint}"`);
   }
   addDecoration(decoration: MarketDecoration) {
     if (decoration.properties) {

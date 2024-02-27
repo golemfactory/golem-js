@@ -1,3 +1,5 @@
+import { instance, mock, when } from "@johanblumenberg/ts-mockito";
+
 jest.mock("ya-ts-client/dist/ya-market/api");
 
 import { LoggerMock, YagnaMock } from "../mock";
@@ -5,7 +7,8 @@ import { Agreement, AgreementPoolService } from "../../src/agreement";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import { Proposal as ProposalModel } from "ya-ts-client/dist/ya-market/src/models/proposal";
 import { ProposalAllOfStateEnum } from "ya-ts-client/dist/ya-market";
-import { Proposal } from "../../src/market";
+import { Demand, Proposal } from "../../src/market";
+import { Allocation } from "../../src/payment";
 
 const logger = new LoggerMock();
 const mockAPI = new RequestorApi();
@@ -13,6 +16,12 @@ const mockSetCounteringProposalReference = jest.fn();
 const yagnaApi = new YagnaMock().getApi();
 
 const createProposal = (id) => {
+  const allocationMock = mock(Allocation);
+  when(allocationMock.paymentPlatform).thenReturn("test-payment-platform");
+  const demandMock = mock(Demand);
+  when(demandMock.id).thenReturn(id);
+  when(demandMock.allocation).thenReturn(instance(allocationMock));
+  const testDemand = instance(demandMock);
   const model: ProposalModel = {
     constraints: "",
     issuerId: "",
@@ -36,10 +45,7 @@ const createProposal = (id) => {
     },
   };
 
-  return new Proposal(id, null, mockSetCounteringProposalReference, mockAPI, model, {
-    constraints: "",
-    properties: {},
-  });
+  return new Proposal(testDemand, null, mockSetCounteringProposalReference, mockAPI, model);
 };
 
 describe("Agreement Pool Service", () => {
@@ -83,23 +89,23 @@ describe("Agreement Pool Service", () => {
     });
   });
   describe("releaseAgreement()", () => {
-    it("should return agreement to the pool if flag reuse if on", async () => {
+    it("should return agreement to the pool if flag reuse is on", async () => {
       const agreementService = new AgreementPoolService(yagnaApi, { logger });
       await agreementService.run();
       await agreementService.addProposal(createProposal("proposal-id"));
       const agreement = await agreementService.getAgreement();
       await agreementService.releaseAgreement(agreement.id, true);
-      expect(logger.logs).toContain(`Agreement ${agreement.id} has been released for reuse`);
+      await logger.expectToInclude(`Agreement has been released for reuse`, { id: agreement.id });
     });
 
-    it("should terminate agreement if flag reuse if off", async () => {
+    it("should terminate agreement if flag reuse is off", async () => {
       const agreementService = new AgreementPoolService(yagnaApi, { logger });
       await agreementService.run();
       await agreementService.addProposal(createProposal("proposal-id"));
       const agreement = await agreementService.getAgreement();
       await agreementService.releaseAgreement(agreement.id, false);
-      expect(logger.logs).toContain(`Agreement ${agreement.id} has been released and will be terminated`);
-      expect(logger.logs).toContain(`Agreement ${agreement.id} terminated`);
+      await logger.expectToInclude(`Agreement has been released and will be terminated`, { id: agreement.id });
+      await logger.expectToInclude(`Agreement terminated`, { id: agreement.id });
     });
 
     it("should warn if there is no agreement with given id", async () => {
@@ -108,7 +114,23 @@ describe("Agreement Pool Service", () => {
       await agreementService.addProposal(createProposal("proposal-id"));
       const agreement = await agreementService.getAgreement();
       await agreementService.releaseAgreement("not-known-id", true);
-      expect(logger.logs).toContain(`Agreement not-known-id not found in the pool`);
+      await logger.expectToInclude("Agreement not found in the pool", { id: "not-known-id" });
+    });
+
+    it("should terminate agreement if pool is full", async () => {
+      const agreementService = new AgreementPoolService(yagnaApi, { logger, agreementMaxPoolSize: 1 });
+      await agreementService.run();
+      await agreementService.addProposal(createProposal("proposal-id-1"));
+      await agreementService.addProposal(createProposal("proposal-id-2"));
+      const agreement1 = await agreementService.getAgreement();
+      const agreement2 = await agreementService.getAgreement();
+      await agreementService.releaseAgreement(agreement1.id, true);
+      await agreementService.releaseAgreement(agreement2.id, true);
+      await logger.expectToInclude(`Agreement has been released for reuse`, { id: agreement1.id });
+      await logger.expectToInclude(`Agreement cannot return to the pool because the pool is already full`, {
+        id: agreement2.id,
+      });
+      await logger.expectToInclude(`Agreement has been released and will be terminated`, { id: agreement2.id });
     });
   });
 
@@ -118,7 +140,7 @@ describe("Agreement Pool Service", () => {
       await agreementService.run();
 
       await agreementService.addProposal(createProposal("proposal-id"));
-      expect(logger.logs).toMatch(/New proposal added to pool from provider .*/);
+      expect(logger.logs).toMatch(/New proposal added to pool .*/);
 
       await agreementService.end();
     });

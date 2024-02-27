@@ -20,8 +20,7 @@ export class MarketApiMock extends RequestorApi {
     createAgreementRequest: AgreementProposal,
     options?: AxiosRequestConfig,
   ): Promise<AxiosResponse<string>> {
-    const agreementData = agreementsApproved[0];
-    return new Promise((res) => res({ data: agreementData.agreementId } as AxiosResponse));
+    return new Promise((res) => res({ data: uuidv4() } as AxiosResponse));
   }
   // @ts-ignore
   async getAgreement(agreementId: string, options?: AxiosRequestConfig): Promise<AxiosResponse<string>> {

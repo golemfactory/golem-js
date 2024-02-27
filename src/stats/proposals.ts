@@ -10,7 +10,7 @@ interface Payload {
 }
 
 export class Proposals extends AbstractAggregator<Payload, ProposalInfo> {
-  beforeAdd(payload): ProposalInfo {
+  beforeAdd(payload: Payload): ProposalInfo {
     return payload;
   }
   getByProviderId(providerId: string) {

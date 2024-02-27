@@ -1,5 +1,7 @@
-import { Network } from "../../src/network";
+import { GolemNetworkError, Network } from "../../src/network";
 import { YagnaMock } from "../mock";
+import { NetworkErrorCode } from "../../src/network/error";
+
 const yagnaApi = new YagnaMock().getApi();
 
 describe("Network", () => {
@@ -33,12 +35,26 @@ describe("Network", () => {
 
     it("should not create network with invalid ip", async () => {
       const shouldFail = Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "123.1.2" });
-      await expect(shouldFail).rejects.toThrow("Cidr notation should be in the form [ip number]/[range]");
+      await expect(shouldFail).rejects.toMatchError(
+        new GolemNetworkError(
+          "Unable to create network. Error: Cidr notation should be in the form [ip number]/[range]",
+          NetworkErrorCode.NetworkCreationFailed,
+          undefined,
+          new Error("Cidr notation should be in the form [ip number]/[range]"),
+        ),
+      );
     });
 
     it("should not create network without mask", async () => {
       const shouldFail = Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "1.1.1.1" });
-      await expect(shouldFail).rejects.toThrow("Cidr notation should be in the form [ip number]/[range]");
+      await expect(shouldFail).rejects.toMatchError(
+        new GolemNetworkError(
+          "Unable to create network. Error: Cidr notation should be in the form [ip number]/[range]",
+          NetworkErrorCode.NetworkCreationFailed,
+          undefined,
+          new Error("Cidr notation should be in the form [ip number]/[range]"),
+        ),
+      );
     });
 
     it("should create network with custom options", async () => {
@@ -74,21 +90,35 @@ describe("Network", () => {
 
     it("should not add node with an existing ID", async () => {
       const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/24" });
-      await expect(network.addNode("1")).rejects.toThrow("ID '1' has already been assigned in this network");
+      await expect(network.addNode("1")).rejects.toMatchError(
+        new GolemNetworkError(
+          "Network ID '1' has already been assigned in this network.",
+          NetworkErrorCode.AddressAlreadyAssigned,
+          network.getNetworkInfo(),
+        ),
+      );
     });
 
     it("should not add node with an existing IP", async () => {
       const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/24" });
       await network.addNode("2", "192.168.0.3");
-      await expect(network.addNode("3", "192.168.0.3")).rejects.toThrow(
-        "IP '192.168.0.3' has already been assigned in this network",
+      await expect(network.addNode("3", "192.168.0.3")).rejects.toMatchError(
+        new GolemNetworkError(
+          "IP '192.168.0.3' has already been assigned in this network.",
+          NetworkErrorCode.AddressAlreadyAssigned,
+          network.getNetworkInfo(),
+        ),
       );
     });
 
     it("should not add node with address outside the network range", async () => {
       const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/24" });
-      await expect(network.addNode("2", "192.168.2.2")).rejects.toThrow(
-        "The given IP ('192.168.2.2') address must belong to the network ('192.168.0.0/24')",
+      await expect(network.addNode("2", "192.168.2.2")).rejects.toMatchError(
+        new GolemNetworkError(
+          "The given IP ('192.168.2.2') address must belong to the network ('192.168.0.0/24').",
+          NetworkErrorCode.AddressOutOfRange,
+          network.getNetworkInfo(),
+        ),
       );
     });
 
@@ -96,7 +126,39 @@ describe("Network", () => {
       const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/30" });
       await network.addNode("2");
       await network.addNode("3");
-      await expect(network.addNode("4")).rejects.toThrow("No more addresses available in 192.168.0.0/30");
+      await expect(network.addNode("4")).rejects.toMatchError(
+        new GolemNetworkError(
+          "No more addresses available in 192.168.0.0/30",
+          NetworkErrorCode.NoAddressesAvailable,
+          network.getNetworkInfo(),
+        ),
+      );
+    });
+
+    it("should throw an error when there are no free IPs available", async () => {
+      const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/30" });
+      await network.addNode("2");
+      await network.addNode("3");
+      await network.removeNode("2");
+      await expect(network.addNode("4")).rejects.toMatchError(
+        new GolemNetworkError(
+          "No more addresses available in 192.168.0.0/30",
+          NetworkErrorCode.NoAddressesAvailable,
+          network.getNetworkInfo(),
+        ),
+      );
+    });
+
+    it("should return true if node belongs to the network", async () => {
+      const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/30" });
+      await network.addNode("2");
+      expect(network.hasNode("2")).toEqual(true);
+    });
+
+    it("should return false if node does not belong to the network", async () => {
+      const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/30" });
+      await network.addNode("2");
+      expect(network.hasNode("77")).toEqual(false);
     });
 
     it("should get node network config", async () => {
@@ -127,18 +189,47 @@ describe("Network", () => {
         }/tcp/192.168.0.2/22`,
       );
     });
+
+    it("should remove node from the network", async () => {
+      const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/24" });
+      const node = await network.addNode("7");
+      const removeNetworkApiSpy = jest.spyOn(yagnaApi.net, "removeNode");
+      await network.removeNode(node.id);
+      expect(removeNetworkApiSpy).toHaveBeenCalledWith(network.id, node.id);
+    });
+
+    it("should not remove node from the network if it does not exist", async () => {
+      const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/24" });
+      await network.addNode("7");
+      await expect(network.removeNode("88")).rejects.toMatchError(
+        new GolemNetworkError(
+          "Unable to remove node 88. There is no such node in the network",
+          NetworkErrorCode.NodeRemovalFailed,
+          network.getNetworkInfo(),
+        ),
+      );
+    });
   });
 
   describe("Removing", () => {
     it("should remove network", async () => {
+      const spyRemove = jest.spyOn(yagnaApi.net, "removeNetwork");
       const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/24" });
-      expect(await network.remove()).toEqual(true);
+      await network.remove();
+      expect(spyRemove).toHaveBeenCalled();
     });
 
     it("should not remove network that doesn't exist", async () => {
       const network = await Network.create(yagnaApi, { networkOwnerId: "1", networkIp: "192.168.0.0/24" });
-      network["yagnaApi"]["net"]["setExpectedError"]({ status: 404 });
-      expect(await network.remove()).toEqual(false);
+      network["yagnaApi"]["net"]["setExpectedError"](new Error("404"));
+      await expect(network.remove()).rejects.toMatchError(
+        new GolemNetworkError(
+          `Unable to remove network. Error: 404`,
+          NetworkErrorCode.NetworkRemovalFailed,
+          network.getNetworkInfo(),
+          new Error("404"),
+        ),
+      );
     });
   });
 });

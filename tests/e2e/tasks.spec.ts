@@ -1,6 +1,6 @@
 import { LoggerMock } from "../mock";
 import { readFileSync } from "fs";
-import { TaskExecutor, EventType, BaseEvent, Events } from "../../src";
+import { TaskExecutor, EVENT_TYPE, BaseEvent, Events, Result } from "../../src";
 const logger = new LoggerMock(false);
 
 describe("Task Executor", function () {
@@ -27,7 +27,7 @@ describe("Task Executor", function () {
     expect(logger.logs).toContain("Proposal has been responded");
     expect(logger.logs).toContain("New proposal added to pool");
     expect(logger.logs).toMatch(/Agreement confirmed by provider/);
-    expect(logger.logs).toMatch(/Activity .* created/);
+    expect(logger.logs).toMatch(/Activity created/);
   });
 
   it("should run simple task and get error for invalid command", async () => {
@@ -57,7 +57,7 @@ describe("Task Executor", function () {
     expect(logger.logs).toContain("Proposal has been responded");
     expect(logger.logs).toContain("New proposal added to pool");
     expect(logger.logs).toMatch(/Agreement confirmed by provider/);
-    expect(logger.logs).toMatch(/Activity .* created/);
+    expect(logger.logs).toMatch(/Activity created/);
   });
 
   it("should run simple tasks by map function", async () => {
@@ -98,7 +98,11 @@ describe("Task Executor", function () {
         executor.shutdown();
         expect(e).toBeUndefined();
       });
-    await logger.expectToInclude("Task 1 computed by provider", 5000);
+    await logger.expectToInclude(
+      "Task computed",
+      { taskId: "1", providerName: expect.anything(), retries: expect.anything() },
+      5000,
+    );
     expect(outputs[0]).toEqual("Hello Golem");
     expect(outputs[1]).toEqual("Hello World");
     expect(outputs[2]).toEqual("OK");
@@ -177,7 +181,7 @@ describe("Task Executor", function () {
     let stdout = "";
     let stderr = "";
     const finalResult = await executor.run(async (ctx) => {
-      const remoteProcess = await ctx.spawn("sleep 1 && echo 'Hello World' && echo 'Hello Golem' >&2");
+      const remoteProcess = await ctx.runAndStream("sleep 1 && echo 'Hello World' && echo 'Hello Golem' >&2");
       remoteProcess.stdout.on("data", (data) => (stdout += data.trim()));
       remoteProcess.stderr.on("data", (data) => (stderr += data.trim()));
       return remoteProcess.waitForExit();
@@ -190,7 +194,34 @@ describe("Task Executor", function () {
     expect(logger.logs).toContain("Proposal has been responded");
     expect(logger.logs).toContain("New proposal added to pool");
     expect(logger.logs).toMatch(/Agreement confirmed by provider/);
-    expect(logger.logs).toMatch(/Activity .* created/);
+    expect(logger.logs).toMatch(/Activity created/);
+  });
+
+  it("should spawn commands as external processes and handle timeout errors", async () => {
+    executor = await TaskExecutor.create("golem/alpine:latest");
+    const stdouts: string[] = [];
+    const errors: Error[] = [];
+    const results: Result[] = [];
+    for (const i of [1, 2, 3, 4]) {
+      await executor.run(async (ctx) => {
+        const remoteProcess = await ctx.runAndStream("sleep 1 && echo 'Hello World'");
+        remoteProcess.stdout.on("data", (data) => (stdouts[i] = data));
+        const timeout = i % 2 === 0 ? 50 : 20_000;
+        results[i] = await remoteProcess.waitForExit(timeout).catch((e) => (errors[i] = e));
+
+        if (i % 2 === 0) {
+          expect(stdouts[i]).not.toBeDefined();
+          expect(results[i]?.result).not.toBeDefined();
+          expect(errors[i]?.message).toContain(
+            "Unable to get activity results. The waiting time (50 ms) for the final result has been exceeded",
+          );
+        } else {
+          expect(stdouts[i]).toContain("Hello World");
+          expect(results[i]?.result).toContain("Ok");
+          expect(errors[i]).not.toBeDefined();
+        }
+      });
+    }
   });
 
   it("should not retry the task if maxTaskRetries is zero", async () => {
@@ -223,11 +254,7 @@ describe("Task Executor", function () {
     expect(logger.logs).not.toContain("Trying to redo the task");
   });
 
-  /**
-   * TODO:
-   * For the test to work properly, the midAgreementDebitNoteIntervalSec parameter (which is in the beta version) is needed, so we temporarily skip this test
-   */
-  it.skip("should clean up the agreements in the pool if the agreement has been terminated by provider", async () => {
+  it("should clean up the agreements in the pool if the agreement has been terminated by provider", async () => {
     const eventTarget = new EventTarget();
     const executor = await TaskExecutor.create({
       package: "golem/alpine:latest",
@@ -237,15 +264,16 @@ describe("Task Executor", function () {
       debitNotesFilter: () => Promise.resolve(false),
       debitNotesAcceptanceTimeoutSec: 10,
       midAgreementPaymentTimeoutSec: 10,
+      midAgreementDebitNoteIntervalSec: 10,
     });
     let createdAgreementsCount = 0;
-    eventTarget.addEventListener(EventType, (event) => {
+    eventTarget.addEventListener(EVENT_TYPE, (event) => {
       const ev = event as BaseEvent<unknown>;
       if (ev instanceof Events.AgreementCreated) createdAgreementsCount++;
     });
     try {
       await executor.run(async (ctx) => {
-        const proc = await ctx.spawn("timeout 15 ping 127.0.0.1");
+        const proc = await ctx.runAndStream("timeout 15 ping 127.0.0.1");
         proc.stdout.on("data", (data) => console.log(data));
         return await proc.waitForExit(20_000);
       });
@@ -268,12 +296,12 @@ describe("Task Executor", function () {
     const createdAgreementsIds2 = new Set();
     const acceptedDebitNoteAgreementIds1 = new Set();
     const acceptedDebitNoteAgreementIds2 = new Set();
-    eventTarget1.addEventListener(EventType, (event) => {
+    eventTarget1.addEventListener(EVENT_TYPE, (event) => {
       const ev = event as BaseEvent<unknown>;
       if (ev instanceof Events.AgreementCreated) createdAgreementsIds1.add(ev.detail.id);
       if (ev instanceof Events.DebitNoteAccepted) acceptedDebitNoteAgreementIds1.add(ev.detail.agreementId);
     });
-    eventTarget2.addEventListener(EventType, (event) => {
+    eventTarget2.addEventListener(EVENT_TYPE, (event) => {
       const ev = event as BaseEvent<unknown>;
       if (ev instanceof Events.AgreementCreated) createdAgreementsIds2.add(ev.detail.id);
       if (ev instanceof Events.DebitNoteAccepted) acceptedDebitNoteAgreementIds2.add(ev.detail.agreementId);

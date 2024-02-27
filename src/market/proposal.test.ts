@@ -1,13 +1,18 @@
 import { Proposal as ProposalModel, ProposalAllOfStateEnum } from "ya-ts-client/dist/ya-market/src/models";
 import { Proposal, ProposalProperties } from "./proposal";
 import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
+import { Demand } from "./demand";
+import { instance, mock, when } from "@johanblumenberg/ts-mockito";
+import { Allocation } from "../payment";
+import { GolemMarketError, MarketErrorCode } from "./error";
 
 jest.mock("ya-ts-client/dist/ya-market/api");
 
-const mockDemand = {
-  properties: {},
-  constraints: "",
-};
+const allocationMock = mock(Allocation);
+when(allocationMock.paymentPlatform).thenReturn("test-payment-platform");
+const demandMock = mock(Demand);
+when(demandMock.allocation).thenReturn(instance(allocationMock));
+const testDemand = instance(demandMock);
 
 const mockApi = new RequestorApi();
 
@@ -23,14 +28,7 @@ const buildTestProposal = (props: Partial<ProposalProperties>): Proposal => {
     properties: props,
   };
 
-  const proposal = new Proposal(
-    "example-subscriptionId",
-    null,
-    mockCounteringProposalReference,
-    mockApi,
-    model,
-    mockDemand,
-  );
+  const proposal = new Proposal(testDemand, null, mockCounteringProposalReference, mockApi, model);
 
   return proposal;
 };
@@ -42,7 +40,13 @@ describe("Proposal", () => {
         buildTestProposal({
           "golem.com.usage.vector": ["golem.usage.cpu_sec", "golem.usage.duration_sec"],
         }),
-      ).toThrow("Broken proposal: the `golem.com.pricing.model.linear.coeffs` does not contain pricing information");
+      ).toThrow(
+        new GolemMarketError(
+          "Broken proposal: the `golem.com.pricing.model.linear.coeffs` does not contain pricing information",
+          MarketErrorCode.InvalidProposal,
+          testDemand,
+        ),
+      );
     });
 
     test("throws an error when linear pricing vector is empty", () => {
@@ -51,7 +55,13 @@ describe("Proposal", () => {
           "golem.com.usage.vector": ["golem.usage.cpu_sec", "golem.usage.duration_sec"],
           "golem.com.pricing.model.linear.coeffs": [],
         }),
-      ).toThrow("Broken proposal: the `golem.com.pricing.model.linear.coeffs` does not contain pricing information");
+      ).toThrow(
+        new GolemMarketError(
+          "Broken proposal: the `golem.com.pricing.model.linear.coeffs` does not contain pricing information",
+          MarketErrorCode.InvalidProposal,
+          testDemand,
+        ),
+      );
     });
 
     test("linear pricing vector has too few items", () => {
@@ -60,7 +70,13 @@ describe("Proposal", () => {
           "golem.com.usage.vector": ["golem.usage.cpu_sec", "golem.usage.duration_sec"],
           "golem.com.pricing.model.linear.coeffs": [1],
         }),
-      ).toThrow("Broken proposal: the `golem.com.pricing.model.linear.coeffs` should contain 3 price values");
+      ).toThrow(
+        new GolemMarketError(
+          "Broken proposal: the `golem.com.pricing.model.linear.coeffs` should contain 3 price values",
+          MarketErrorCode.InvalidProposal,
+          testDemand,
+        ),
+      );
     });
 
     test("usage vector is empty", () => {
@@ -69,7 +85,13 @@ describe("Proposal", () => {
           "golem.com.usage.vector": [],
           "golem.com.pricing.model.linear.coeffs": [1, 2, 3],
         }),
-      ).toThrow("Broken proposal: the `golem.com.usage.vector` does not contain price information");
+      ).toThrow(
+        new GolemMarketError(
+          "Broken proposal: the `golem.com.usage.vector` does not contain price information",
+          MarketErrorCode.InvalidProposal,
+          testDemand,
+        ),
+      );
     });
 
     test("usage vector is missing", () => {
@@ -77,7 +99,13 @@ describe("Proposal", () => {
         buildTestProposal({
           "golem.com.pricing.model.linear.coeffs": [1, 2, 3],
         }),
-      ).toThrow("Broken proposal: the `golem.com.usage.vector` does not contain price information");
+      ).toThrow(
+        new GolemMarketError(
+          "Broken proposal: the `golem.com.usage.vector` does not contain price information",
+          MarketErrorCode.InvalidProposal,
+          testDemand,
+        ),
+      );
     });
 
     test("usage vector is has too few items", () => {
@@ -87,7 +115,11 @@ describe("Proposal", () => {
           "golem.com.pricing.model.linear.coeffs": [1, 2, 3],
         }),
       ).toThrow(
-        "Broken proposal: the `golem.com.usage.vector` has less pricing information than `golem.com.pricing.model.linear.coeffs`",
+        new GolemMarketError(
+          "Broken proposal: the `golem.com.usage.vector` has less pricing information than `golem.com.pricing.model.linear.coeffs`",
+          MarketErrorCode.InvalidProposal,
+          testDemand,
+        ),
       );
     });
   });
@@ -115,6 +147,24 @@ describe("Proposal", () => {
         expect(proposal.pricing.cpuSec).toEqual(0.02);
         expect(proposal.pricing.start).toEqual(0.03);
       });
+    });
+  });
+
+  describe("Estimating cost", () => {
+    test("it estimate cost based on CPU, Env and startup costs", () => {
+      const proposal = buildTestProposal({
+        "golem.inf.cpu.threads": 5,
+        "golem.com.usage.vector": ["golem.usage.duration_sec", "golem.usage.cpu_sec"],
+        "golem.com.pricing.model.linear.coeffs": [0.01, 0.02, 0.03],
+      });
+      expect(proposal.getEstimatedCost()).toEqual(0.14);
+    });
+    test("it estimate cost based on CPU, Env and startup costs if info about the number of threads is missing", () => {
+      const proposal = buildTestProposal({
+        "golem.com.usage.vector": ["golem.usage.duration_sec", "golem.usage.cpu_sec"],
+        "golem.com.pricing.model.linear.coeffs": [0.1, 0.2, 0.3],
+      });
+      expect(proposal.getEstimatedCost()).toEqual(0.6);
     });
   });
 });

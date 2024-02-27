@@ -13,10 +13,14 @@ import {
   UploadFile,
 } from "../script";
 import { NullStorageProvider, StorageProvider } from "../storage";
-import { Logger, nullLogger, sleep } from "../utils";
+import { defaultLogger, Logger, sleep, YagnaOptions } from "../utils";
 import { Batch } from "./batch";
 import { NetworkNode } from "../network";
 import { RemoteProcess } from "./process";
+import { GolemWorkError, WorkErrorCode } from "./error";
+import { GolemTimeoutError } from "../error/golem-error";
+import { ProviderInfo } from "../agreement";
+import { TcpProxy } from "../network/tcpProxy";
 
 export type Worker<OutputType> = (ctx: WorkContext) => Promise<OutputType>;
 
@@ -28,11 +32,11 @@ const DEFAULTS = {
 export interface WorkOptions {
   activityPreparingTimeout?: number;
   activityStateCheckingInterval?: number;
-  provider?: { name: string; id: string; networkConfig?: object };
   storageProvider?: StorageProvider;
   networkNode?: NetworkNode;
   logger?: Logger;
   activityReadySetupFunctions?: Worker<unknown>[];
+  yagnaOptions: YagnaOptions;
 }
 
 export interface CommandOptions {
@@ -42,31 +46,36 @@ export interface CommandOptions {
 }
 
 /**
- * Work Context
- *
- * @description
+ * Groups most common operations that the requestors might need to implement their workflows
  */
 export class WorkContext {
-  public readonly provider?: { name: string; id: string; networkConfig?: object };
   private readonly activityPreparingTimeout: number;
-  private readonly logger: Logger;
   private readonly activityStateCheckingInterval: number;
+
+  public readonly provider: ProviderInfo;
+  private readonly logger: Logger;
   private readonly storageProvider: StorageProvider;
+
   private readonly networkNode?: NetworkNode;
 
   constructor(
     public readonly activity: Activity,
-    private options?: WorkOptions,
+    private options: WorkOptions,
   ) {
-    this.activityPreparingTimeout = options?.activityPreparingTimeout || DEFAULTS.activityPreparingTimeout;
-    this.logger = options?.logger ?? nullLogger();
-    this.activityStateCheckingInterval = options?.activityStateCheckingInterval || DEFAULTS.activityStateCheckInterval;
-    this.provider = options?.provider;
-    this.storageProvider = options?.storageProvider ?? new NullStorageProvider();
-    this.networkNode = options?.networkNode;
+    this.activityPreparingTimeout = options.activityPreparingTimeout || DEFAULTS.activityPreparingTimeout;
+    this.activityStateCheckingInterval = options.activityStateCheckingInterval || DEFAULTS.activityStateCheckInterval;
+
+    this.logger = options.logger ?? defaultLogger("work");
+    this.provider = activity.agreement.getProviderInfo();
+    this.storageProvider = options.storageProvider ?? new NullStorageProvider();
+
+    this.networkNode = options.networkNode;
   }
+
   async before(): Promise<Result[] | void> {
-    let state = await this.activity.getState().catch((e) => this.logger.debug(e));
+    let state = await this.activity
+      .getState()
+      .catch((error) => this.logger.warn("Error while getting activity state", { error }));
     if (state === ActivityStateEnum.Ready) {
       await this.setupActivity();
       return;
@@ -79,25 +88,68 @@ export class WorkContext {
           this.activityPreparingTimeout,
         )
         .catch((e) => {
-          throw new Error(`Unable to deploy activity. ${e}`);
+          throw new GolemWorkError(
+            `Unable to deploy activity. ${e}`,
+            WorkErrorCode.ActivityDeploymentFailed,
+            this.activity.agreement,
+            this.activity,
+            this.activity.getProviderInfo(),
+            e,
+          );
         });
-      let timeoutId;
+      let timeoutId: NodeJS.Timeout;
       await Promise.race([
         new Promise(
           (res, rej) =>
-            (timeoutId = setTimeout(() => rej("Preparing activity timeout"), this.activityPreparingTimeout)),
+            (timeoutId = setTimeout(
+              () => rej(new GolemTimeoutError("Preparing activity timeout")),
+              this.activityPreparingTimeout,
+            )),
         ),
         (async () => {
           for await (const res of result) {
-            if (res.result === "Error") throw new Error(`Preparing activity failed. Error: ${res.message}`);
+            if (res.result === ResultState.Error)
+              throw new GolemWorkError(
+                `Preparing activity failed. Error: ${res.message}`,
+                WorkErrorCode.ActivityDeploymentFailed,
+                this.activity.agreement,
+                this.activity,
+                this.activity.getProviderInfo(),
+              );
           }
         })(),
-      ]).finally(() => clearTimeout(timeoutId));
+      ])
+        .catch((error) => {
+          if (error instanceof GolemWorkError) {
+            throw error;
+          }
+          throw new GolemWorkError(
+            `Preparing activity failed. Error: ${error.toString()}`,
+            WorkErrorCode.ActivityDeploymentFailed,
+            this.activity.agreement,
+            this.activity,
+            this.activity.getProviderInfo(),
+            error,
+          );
+        })
+        .finally(() => clearTimeout(timeoutId));
     }
     await sleep(this.activityStateCheckingInterval, true);
-    state = await this.activity.getState().catch((e) => this.logger.warn(`${e} Provider: ${this.provider?.name}`));
+    state = await this.activity.getState().catch((e) =>
+      this.logger.warn("Error while getting activity state", {
+        error: e,
+        provider: this.provider.name,
+      }),
+    );
+
     if (state !== ActivityStateEnum.Ready) {
-      throw new Error(`Activity ${this.activity.id} cannot reach the Ready state. Current state: ${state}`);
+      throw new GolemWorkError(
+        `Activity ${this.activity.id} cannot reach the Ready state. Current state: ${state}`,
+        WorkErrorCode.ActivityDeploymentFailed,
+        this.activity.agreement,
+        this.activity,
+        this.activity.getProviderInfo(),
+      );
     }
     await this.setupActivity();
   }
@@ -130,11 +182,10 @@ export class WorkContext {
   async run(exeOrCmd: string, argsOrOptions?: string[] | CommandOptions, options?: CommandOptions): Promise<Result> {
     const isArray = Array.isArray(argsOrOptions);
 
-    if (isArray) {
-      this.logger.debug(`WorkContext: running command: ${exeOrCmd} ${argsOrOptions?.join(" ")}`);
-    } else {
-      this.logger.debug(`WorkContext: running command: ${exeOrCmd}`);
-    }
+    this.logger.debug("Running command", {
+      command: isArray ? `${exeOrCmd} ${argsOrOptions?.join(" ")}` : exeOrCmd,
+      provider: this.provider.name,
+    });
 
     const run = isArray
       ? new Run(exeOrCmd, argsOrOptions as string[], options?.env, options?.capture)
@@ -144,21 +195,34 @@ export class WorkContext {
     return this.runOneCommand(run, runOptions);
   }
 
+  /** @deprecated Use {@link WorkContext.runAndStream} instead */
+  async spawn(commandLine: string, options?: Omit<CommandOptions, "capture">): Promise<RemoteProcess>;
+  /** @deprecated Use {@link WorkContext.runAndStream} instead */
+  async spawn(executable: string, args: string[], options?: CommandOptions): Promise<RemoteProcess>;
+  /** @deprecated Use {@link WorkContext.runAndStream} instead */
+  async spawn(exeOrCmd: string, argsOrOptions?: string[] | CommandOptions, options?: CommandOptions) {
+    if (Array.isArray(argsOrOptions)) {
+      return this.runAndStream(exeOrCmd, argsOrOptions, options);
+    } else {
+      return this.runAndStream(exeOrCmd, options);
+    }
+  }
+
   /**
-   * Spawn an executable on provider and return {@link RemoteProcess} object
-   * that contain stdout and stderr as Readable
+   * Run an executable on provider and return {@link RemoteProcess} that will allow streaming
+   *   that contain stdout and stderr as Readable
    *
    * @param commandLine Shell command to execute.
    * @param options Additional run options.
    */
-  async spawn(commandLine: string, options?: Omit<CommandOptions, "capture">): Promise<RemoteProcess>;
+  async runAndStream(commandLine: string, options?: Omit<CommandOptions, "capture">): Promise<RemoteProcess>;
   /**
    * @param executable Executable to run.
    * @param args Executable arguments.
    * @param options Additional run options.
    */
-  async spawn(executable: string, args: string[], options?: CommandOptions): Promise<RemoteProcess>;
-  async spawn(
+  async runAndStream(executable: string, args: string[], options?: CommandOptions): Promise<RemoteProcess>;
+  async runAndStream(
     exeOrCmd: string,
     argsOrOptions?: string[] | CommandOptions,
     options?: CommandOptions,
@@ -177,13 +241,19 @@ export class WorkContext {
     const streamOfActivityResults = await this.activity
       .execute(script.getExeScriptRequest(), true, options?.timeout)
       .catch((e) => {
-        throw new Error(
+        throw new GolemWorkError(
           `Script execution failed for command: ${JSON.stringify(run.toJson())}. ${
             e?.response?.data?.message || e?.message || e
           }`,
+          WorkErrorCode.ScriptExecutionFailed,
+          this.activity.agreement,
+          this.activity,
+          this.activity.getProviderInfo(),
+          e,
         );
       });
-    return new RemoteProcess(streamOfActivityResults);
+
+    return new RemoteProcess(streamOfActivityResults, this.activity);
   }
 
   /**
@@ -194,40 +264,40 @@ export class WorkContext {
    * @param options Additional run options.
    */
   async transfer(from: string, to: string, options?: CommandOptions): Promise<Result> {
-    this.logger.debug(`WorkContext: transfering ${from} to ${to}`);
+    this.logger.debug(`Transferring`, { from, to });
     return this.runOneCommand(new Transfer(from, to), options);
   }
 
   async uploadFile(src: string, dst: string, options?: CommandOptions): Promise<Result> {
-    this.logger.debug(`WorkContext: uploading file ${src} to ${dst}`);
+    this.logger.debug(`Uploading file`, { src, dst });
     return this.runOneCommand(new UploadFile(this.storageProvider, src, dst), options);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   uploadJson(json: any, dst: string, options?: CommandOptions): Promise<Result> {
-    this.logger.debug(`WorkContext: uploading json to ${dst}`);
+    this.logger.debug(`Uploading json`, { dst });
     const src = new TextEncoder().encode(JSON.stringify(json));
     return this.runOneCommand(new UploadData(this.storageProvider, src, dst), options);
   }
 
   uploadData(data: Uint8Array, dst: string, options?: CommandOptions): Promise<Result> {
-    this.logger.debug(`WorkContext: uploading data to ${dst}`);
+    this.logger.debug(`Uploading data`, { dst });
     return this.runOneCommand(new UploadData(this.storageProvider, data, dst), options);
   }
 
   downloadFile(src: string, dst: string, options?: CommandOptions): Promise<Result> {
-    this.logger.debug(`WorkContext: downloading file from ${src} to ${dst}`);
+    this.logger.debug(`Downloading file from`, { src, dst });
     return this.runOneCommand(new DownloadFile(this.storageProvider, src, dst), options);
   }
 
   downloadData(src: string, options?: CommandOptions): Promise<Result<Uint8Array>> {
-    this.logger.debug(`WorkContext: downloading data from ${src}`);
+    this.logger.debug(`Downloading data`, { src });
     return this.runOneCommand(new DownloadData(this.storageProvider, src), options);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async downloadJson(src: string, options?: CommandOptions): Promise<Result> {
-    this.logger.debug(`WorkContext: downloading json from ${src}`);
+    this.logger.debug(`Downloading json`, { src });
     const result = await this.downloadData(src, options);
     if (result.result !== ResultState.Ok) {
       return new Result({
@@ -247,20 +317,44 @@ export class WorkContext {
   }
 
   /**
-   * @Deprecated This function is only used to throw errors from unit tests. It should be removed.
+   * Provides a WebSocket URI that allows communicating with a remote process listening on the target port
+   *
+   * @param port The port number used by the service running within an activity on the provider
    */
-  rejectResult(msg: string) {
-    throw new Error(`Work rejected. Reason: ${msg}`);
-  }
-
   getWebsocketUri(port: number): string {
-    if (!this.networkNode) throw new Error("There is no network in this work context");
+    if (!this.networkNode)
+      throw new GolemWorkError(
+        "There is no network in this work context",
+        WorkErrorCode.NetworkSetupMissing,
+        this.activity.agreement,
+        this.activity,
+        this.activity.getProviderInfo(),
+      );
+
     return this.networkNode.getWebsocketUri(port);
   }
 
   getIp(): string {
-    if (!this.networkNode) throw new Error("There is no network in this work context");
+    if (!this.networkNode)
+      throw new GolemWorkError(
+        "There is no network in this work context",
+        WorkErrorCode.NetworkSetupMissing,
+        this.activity.agreement,
+        this.activity,
+        this.activity.getProviderInfo(),
+      );
     return this.networkNode.ip.toString();
+  }
+
+  /**
+   * Creates a new TCP proxy that will allow tunnelling the TPC traffic from the provider via the requestor
+   *
+   * @param portOnProvider The port that the service running on the provider is listening to
+   */
+  createTcpProxy(portOnProvider: number) {
+    return new TcpProxy(this.getWebsocketUri(portOnProvider), this.options.yagnaOptions.apiKey as string, {
+      logger: this.logger,
+    });
   }
 
   async getState(): Promise<ActivityStateEnum> {
@@ -271,22 +365,21 @@ export class WorkContext {
     // Initialize script.
     const script = new Script([command]);
     await script.before().catch((e) => {
-      throw new Error(
+      throw new GolemWorkError(
         `Script initialization failed for command: ${JSON.stringify(command.toJson())}. ${
           e?.response?.data?.message || e?.message || e
         }`,
+        WorkErrorCode.ScriptInitializationFailed,
+        this.activity.agreement,
+        this.activity,
+        this.activity.getProviderInfo(),
+        e,
       );
     });
     await sleep(100, true);
 
     // Send script.
-    const results = await this.activity.execute(script.getExeScriptRequest(), false, options?.timeout).catch((e) => {
-      throw new Error(
-        `Script execution failed for command: ${JSON.stringify(command.toJson())}. ${
-          e?.response?.data?.message || e?.message || e
-        }`,
-      );
-    });
+    const results = await this.activity.execute(script.getExeScriptRequest(), false, options?.timeout);
 
     // Process result.
     let allResults: Result<T>[] = [];
@@ -302,7 +395,10 @@ export class WorkContext {
             `Error: ${err.message}. Stdout: ${err.stdout?.toString().trim()}. Stderr: ${err.stderr?.toString().trim()}`,
         )
         .join(". ");
-      this.logger.warn(`Task error on provider ${this.provider?.name || "'unknown'"}. ${errorMessage}`);
+      this.logger.warn(`Task error`, {
+        provider: this.provider.name,
+        error: errorMessage,
+      });
     }
 
     return allResults[0];

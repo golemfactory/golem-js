@@ -2,23 +2,17 @@ import { AbstractAggregator } from "./abstract_aggregator";
 
 export interface ProviderInfo {
   id: string;
-  providerName: string;
+  name: string;
+  walletAddress: string;
 }
 interface Payload {
   id: string;
-  providerName?: string;
+  name: string;
+  walletAddress: string;
 }
 
 export class Providers extends AbstractAggregator<Payload, ProviderInfo> {
-  beforeAdd(payload): ProviderInfo {
-    if (payload.providerName) {
-      return payload;
-    }
-
-    const provider = this.getById(payload.id);
-    return {
-      id: payload.id,
-      providerName: provider?.providerName || "unknown",
-    };
+  beforeAdd(payload: Payload): ProviderInfo {
+    return payload;
   }
 }

@@ -2,7 +2,7 @@ import { TaskExecutor } from "@golem-sdk/golem-js";
 
 const executor = await TaskExecutor.create("golem/alpine:latest");
 const finalResult = await executor.run(async (ctx) => {
-  const remoteProcess = await ctx.spawn("sleep 1 && echo 'Hello World' && echo 'Hello Golem' >&2");
+  const remoteProcess = await ctx.runAndStream("sleep 1 && echo 'Hello World' && echo 'Hello Golem' >&2");
   remoteProcess.stdout.on("data", (data) => console.log("stdout>", data));
   remoteProcess.stderr.on("data", (data) => console.error("stderr>", data));
 
@@ -12,4 +12,4 @@ const finalResult = await executor.run(async (ctx) => {
 
 console.log(finalResult);
 
-await executor.end();
+await executor.shutdown();

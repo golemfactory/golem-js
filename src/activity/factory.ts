@@ -3,6 +3,8 @@ import { ActivityConfig } from "./config";
 import { Events } from "../events";
 import { YagnaApi } from "../utils";
 import { Agreement } from "../agreement";
+import { GolemWorkError, WorkErrorCode } from "../task/error";
+import { GolemInternalError } from "../error/golem-error";
 
 /**
  * Activity Factory
@@ -23,13 +25,19 @@ export class ActivityFactory {
   public async create(secure = false): Promise<Activity> {
     try {
       if (secure) {
-        throw new Error("Not implemented");
+        throw new GolemInternalError("Creating an activity in secure mode is not implemented");
       }
       return await this.createActivity();
     } catch (error) {
-      const msg = `Unable to create activity: ${error?.response?.data?.message || error}`;
-      this.options.logger?.error(msg);
-      throw new Error(msg);
+      this.options.logger.error("Unable to create activity", error);
+      throw new GolemWorkError(
+        `Unable to create activity: ${error?.response?.data?.message || error}`,
+        WorkErrorCode.ActivityCreationFailed,
+        this.agreement,
+        undefined,
+        this.agreement.getProviderInfo(),
+        error,
+      );
     }
   }
 
@@ -38,7 +46,7 @@ export class ActivityFactory {
 
     const id = typeof data == "string" ? data : data.activityId;
 
-    this.options.logger?.debug(`Activity ${id} created`);
+    this.options.logger.debug(`Activity created`, { id });
     this.options.eventTarget?.dispatchEvent(new Events.ActivityCreated({ id, agreementId: this.agreement.id }));
 
     return new Activity(id, this.agreement, this.yagnaApi, this.options);

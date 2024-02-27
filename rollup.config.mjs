@@ -27,7 +27,7 @@ export default [
       format: "es",
     },
     plugins: [
-      ignore(["tmp", "pino", "eventsource"]),
+      ignore(["tmp", "pino"]),
       alias({
         entries: [
           { find: "stream", replacement: "stream-browserify" },

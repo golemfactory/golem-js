@@ -6,6 +6,7 @@ import { Invoice } from "./invoice";
 import { InvoiceStatus } from "ya-ts-client/dist/ya-payment";
 import { RejectionReason } from "./rejection";
 import { DebitNote } from "./debit_note";
+import { GolemPaymentError, PaymentErrorCode } from "./error";
 
 const agreementMock = mock(Agreement);
 const allocationMock = mock(Allocation);
@@ -17,6 +18,13 @@ beforeEach(() => {
   reset(allocationMock);
   reset(invoiceMock);
   reset(debitNoteMock);
+  const testProviderInfo = {
+    id: "test-provider-id",
+    name: "test-provider-name",
+    walletAddress: "0x1234",
+  };
+  when(agreementMock.getProviderInfo()).thenReturn(testProviderInfo);
+  when(invoiceMock.provider).thenReturn(testProviderInfo);
 });
 
 describe("AgreementPaymentProcess", () => {
@@ -24,7 +32,7 @@ describe("AgreementPaymentProcess", () => {
     describe("Basic use cases", () => {
       it("accepts a invoice in RECEIVED state", async () => {
         when(allocationMock.id).thenReturn("1000");
-        when(invoiceMock.amount).thenReturn("0.123");
+        when(invoiceMock.amount).thenReturn(0.123);
         when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
 
         const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
@@ -35,7 +43,7 @@ describe("AgreementPaymentProcess", () => {
         const success = await process.addInvoice(instance(invoiceMock));
 
         expect(success).toEqual(true);
-        verify(invoiceMock.accept("0.123", "1000")).called();
+        verify(invoiceMock.accept(0.123, "1000")).called();
         expect(process.isFinished()).toEqual(true);
       });
 
@@ -43,7 +51,7 @@ describe("AgreementPaymentProcess", () => {
         when(allocationMock.id).thenReturn("1000");
         when(invoiceMock.id).thenReturn("invoice-id");
         when(invoiceMock.agreementId).thenReturn("agreement-id");
-        when(invoiceMock.amount).thenReturn("0.123");
+        when(invoiceMock.amount).thenReturn(0.123);
         when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
 
         const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
@@ -70,19 +78,25 @@ describe("AgreementPaymentProcess", () => {
         when(allocationMock.id).thenReturn("1000");
         when(invoiceMock.id).thenReturn("invoice-id");
         when(invoiceMock.agreementId).thenReturn("agreement-id");
-        when(invoiceMock.amount).thenReturn("0.123");
+        when(invoiceMock.amount).thenReturn(0.123);
         when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Accepted);
+        const allocation = instance(allocationMock);
 
-        const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
+        const process = new AgreementPaymentProcess(instance(agreementMock), allocation, {
           debitNoteFilter: () => true,
           invoiceFilter: () => true,
         });
-
-        await expect(() => process.addInvoice(instance(invoiceMock))).rejects.toThrow(
-          "The invoice invoice-id for agreement agreement-id has status ACCEPTED, but we can accept only the ones with status RECEIVED",
+        const invoice = instance(invoiceMock);
+        await expect(() => process.addInvoice(invoice)).rejects.toMatchError(
+          new GolemPaymentError(
+            "The invoice invoice-id for agreement agreement-id has status ACCEPTED, but we can accept only the ones with status RECEIVED",
+            PaymentErrorCode.InvoiceAlreadyReceived,
+            allocation,
+            invoice.provider,
+          ),
         );
 
-        verify(invoiceMock.accept("0.123", "1000")).never();
+        verify(invoiceMock.accept(0.123, "1000")).never();
         expect(process.isFinished()).toEqual(false);
       });
     });
@@ -90,12 +104,13 @@ describe("AgreementPaymentProcess", () => {
     describe("Dealing with duplicates", () => {
       it("accepts the duplicated invoice if accepting the previous one failed", async () => {
         when(allocationMock.id).thenReturn("1000");
+        const allocation = instance(allocationMock);
 
-        when(invoiceMock.amount).thenReturn("0.123");
+        when(invoiceMock.amount).thenReturn(0.123);
         when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
         when(invoiceMock.isSameAs(anything())).thenReturn(true);
 
-        const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
+        const process = new AgreementPaymentProcess(instance(agreementMock), allocation, {
           debitNoteFilter: () => true,
           invoiceFilter: () => true,
         });
@@ -104,7 +119,7 @@ describe("AgreementPaymentProcess", () => {
 
         // Simulate issue with accepting the first one
         const issue = new Error("Failed to accept in yagna");
-        when(invoiceMock.accept("0.123", "1000"))
+        when(invoiceMock.accept(0.123, "1000"))
           .thenReject(issue) // On first call
           .thenResolve(); // On second call
 
@@ -114,14 +129,14 @@ describe("AgreementPaymentProcess", () => {
         const success = await process.addInvoice(invoice);
 
         expect(success).toEqual(true);
-        verify(invoiceMock.accept("0.123", "1000")).twice();
+        verify(invoiceMock.accept(0.123, "1000")).twice();
         expect(process.isFinished()).toEqual(true);
       });
 
       it("accepts the duplicate if the original invoice has not been already decided upon (still in RECEIVED state)", async () => {
         when(allocationMock.id).thenReturn("1000");
 
-        when(invoiceMock.amount).thenReturn("0.123");
+        when(invoiceMock.amount).thenReturn(0.123);
         when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
         when(invoiceMock.isSameAs(anything())).thenReturn(true);
 
@@ -132,14 +147,14 @@ describe("AgreementPaymentProcess", () => {
 
         const invoice = instance(invoiceMock);
 
-        when(invoiceMock.accept("0.123", "1000")).thenResolve();
+        when(invoiceMock.accept(0.123, "1000")).thenResolve();
 
         const firstSuccess = await process.addInvoice(invoice);
         const secondSuccess = await process.addInvoice(invoice);
 
         expect(firstSuccess).toEqual(true);
         expect(secondSuccess).toEqual(true);
-        verify(invoiceMock.accept("0.123", "1000")).twice();
+        verify(invoiceMock.accept(0.123, "1000")).twice();
         expect(process.isFinished()).toEqual(true);
       });
 
@@ -170,8 +185,10 @@ describe("AgreementPaymentProcess", () => {
         when(agreementMock.id).thenReturn("agreement-id");
         when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
         when(invoiceMock.isSameAs(anything())).thenReturn(false);
+        const allocation = instance(allocationMock);
+        const agreement = instance(agreementMock);
 
-        const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
+        const process = new AgreementPaymentProcess(agreement, allocation, {
           debitNoteFilter: () => true,
           invoiceFilter: () => true,
         });
@@ -181,8 +198,13 @@ describe("AgreementPaymentProcess", () => {
         const sucess = await process.addInvoice(invoice);
 
         expect(sucess).toEqual(true);
-        await expect(() => process.addInvoice(invoice)).rejects.toThrow(
-          "Agreement agreement-id is already covered with an invoice: invoice-id",
+        await expect(() => process.addInvoice(invoice)).rejects.toMatchError(
+          new GolemPaymentError(
+            "Agreement agreement-id is already covered with an invoice: invoice-id",
+            PaymentErrorCode.AgreementAlreadyPaid,
+            allocation,
+            agreement.getProviderInfo(),
+          ),
         );
         expect(process.isFinished()).toEqual(true);
       });
@@ -193,7 +215,7 @@ describe("AgreementPaymentProcess", () => {
     describe("Basic use cases", () => {
       it("accepts a single debit note", async () => {
         when(allocationMock.id).thenReturn("1000");
-        when(debitNoteMock.totalAmountDue).thenReturn("0.123");
+        when(debitNoteMock.totalAmountDue).thenReturn(0.123);
 
         const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
           debitNoteFilter: () => true,
@@ -205,13 +227,13 @@ describe("AgreementPaymentProcess", () => {
         const success = await process.addDebitNote(debitNote);
 
         expect(success).toEqual(true);
-        verify(debitNoteMock.accept("0.123", "1000")).called();
+        verify(debitNoteMock.accept(0.123, "1000")).called();
         expect(process.isFinished()).toEqual(false);
       });
 
       it("rejects debit note if it's ignored by the user defined debit note filter", async () => {
         when(allocationMock.id).thenReturn("1000");
-        when(debitNoteMock.totalAmountDue).thenReturn("0.123");
+        when(debitNoteMock.totalAmountDue).thenReturn(0.123);
         when(debitNoteMock.id).thenReturn("debit-note-id");
         when(debitNoteMock.agreementId).thenReturn("agreement-id");
 
@@ -239,9 +261,9 @@ describe("AgreementPaymentProcess", () => {
 
       it("rejects debit note if there is already an invoice for that process", async () => {
         when(allocationMock.id).thenReturn("1000");
-        when(invoiceMock.amount).thenReturn("0.123");
+        when(invoiceMock.amount).thenReturn(0.123);
         when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
-        when(debitNoteMock.totalAmountDue).thenReturn("0.456");
+        when(debitNoteMock.totalAmountDue).thenReturn(0.456);
         when(debitNoteMock.id).thenReturn("debit-note-id");
         when(debitNoteMock.agreementId).thenReturn("agreement-id");
 
@@ -257,7 +279,7 @@ describe("AgreementPaymentProcess", () => {
         const debitNoteSuccess = await process.addDebitNote(debitNote);
 
         expect(invoiceSuccess).toEqual(true);
-        verify(invoiceMock.accept("0.123", "1000")).called();
+        verify(invoiceMock.accept(0.123, "1000")).called();
 
         expect(debitNoteSuccess).toEqual(false);
         verify(
@@ -277,7 +299,7 @@ describe("AgreementPaymentProcess", () => {
     describe("Dealing with duplicates", () => {
       it("accepts the duplicated debit note if accepting the previous failed", async () => {
         when(allocationMock.id).thenReturn("1000");
-        when(debitNoteMock.totalAmountDue).thenReturn("0.123");
+        when(debitNoteMock.totalAmountDue).thenReturn(0.123);
         when(debitNoteMock.getStatus()).thenResolve(InvoiceStatus.Received);
 
         const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
@@ -289,7 +311,7 @@ describe("AgreementPaymentProcess", () => {
 
         // Simulate issue with accepting the first one
         const issue = new Error("Failed to accept in yagna");
-        when(debitNoteMock.accept("0.123", "1000"))
+        when(debitNoteMock.accept(0.123, "1000"))
           .thenReject(issue) // On first call
           .thenResolve(); // On second call
 
@@ -299,7 +321,7 @@ describe("AgreementPaymentProcess", () => {
         const success = await process.addDebitNote(debitNote);
 
         expect(success).toEqual(true);
-        verify(debitNoteMock.accept("0.123", "1000")).twice();
+        verify(debitNoteMock.accept(0.123, "1000")).twice();
         expect(process.isFinished()).toEqual(false);
       });
 
