@@ -11,6 +11,7 @@ import {
   ReputationWeights,
 } from "./types";
 import { Logger, nullLogger } from "../../utils";
+import { getPaymentNetwork } from "../../utils/env";
 
 /**
  * Default minimum score for proposals.
@@ -79,6 +80,11 @@ export class ReputationSystem {
   private agreementWeights: ReputationWeights = DEFAULT_AGREEMENT_WEIGHTS;
 
   /**
+   * The payment network currently used.
+   */
+  public readonly paymentNetwork: string;
+
+  /**
    * Map of provider IDs to their reputation data.
    */
   private readonly dataMap = new Map<string, ReputationProviderEntry>();
@@ -97,8 +103,8 @@ export class ReputationSystem {
   /**
    * Create a new reputation system client and fetch the reputation data.
    */
-  public static async create(): Promise<ReputationSystem> {
-    const system = new ReputationSystem();
+  public static async create(config?: ReputationConfig): Promise<ReputationSystem> {
+    const system = new ReputationSystem(config);
     await system.fetchData();
     return system;
   }
@@ -106,6 +112,7 @@ export class ReputationSystem {
   constructor(private config?: ReputationConfig) {
     this.url = this.config?.url ?? DEFAULT_REPUTATION_URL;
     this.logger = this.config?.logger?.child("reputation") ?? nullLogger();
+    this.paymentNetwork = this.config?.paymentNetwork ?? getPaymentNetwork();
   }
 
   /**
@@ -135,7 +142,10 @@ export class ReputationSystem {
     let result: Response;
 
     try {
-      result = await fetch(this.url);
+      // Add payment network to the URL.
+      const url = new URL(this.url);
+      url.searchParams.set("network", this.paymentNetwork);
+      result = await fetch(url);
     } catch (e) {
       throw new GolemReputationError("Failed to fetch reputation data", e);
     }
@@ -198,7 +208,9 @@ export class ReputationSystem {
       this.logger.debug(
         `Proposal from unlisted provider ${proposal.provider.id} (known providers: ${this.data.providers.length})`,
       );
-      return opts?.acceptUnlisted ?? false;
+
+      // Use the acceptUnlisted option by default, otherwise allow only if there are no known providers.
+      return opts?.acceptUnlisted ?? this.data.providers.length === 0;
     };
   }
 

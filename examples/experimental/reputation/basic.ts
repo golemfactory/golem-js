@@ -1,4 +1,6 @@
-import { TaskExecutor, ReputationSystem, sleep } from "@golem-sdk/golem-js";
+import { TaskExecutor, sleep } from "@golem-sdk/golem-js";
+import { ReputationSystem } from "@golem-sdk/golem-js/experimental";
+
 /**
  * This example uses the reputation system to filter out proposals from providers with low reputation and ones that were not tested yet.
  *
@@ -14,7 +16,12 @@ import { TaskExecutor, ReputationSystem, sleep } from "@golem-sdk/golem-js";
   console.log("The test will start in 5 seconds...");
   await sleep(5, false);
 
-  const reputation = await ReputationSystem.create();
+  const reputation = await ReputationSystem.create({
+    paymentNetwork: "polygon",
+  });
+
+  console.log("Listed providers:", reputation.getData().providers.length);
+
   const executor = await TaskExecutor.create({
     payment: { network: "polygon" },
     package: "golem/alpine:latest",

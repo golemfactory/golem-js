@@ -42,7 +42,7 @@ export interface ProposalFilterOptions {
   /**
    * Should providers with no reputation data be accepted.
    *
-   * Default is false
+   * Default is false if there are listed providers, true if there are no listed providers.
    */
   acceptUnlisted?: boolean;
 
@@ -87,6 +87,15 @@ export interface ReputationConfig {
    * Reputation service URL
    */
   url?: string;
+
+  /**
+   * Network to query data for.
+   *
+   * This is the main filter for the data.
+   *
+   * You can leave it empty if you are controlling the payment network through `PAYMENT_NETWORK` environment variable.
+   */
+  paymentNetwork?: string;
 
   /**
    * Logger to use.
