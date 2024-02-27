@@ -71,7 +71,7 @@ export type ExecutorOptions = {
   PaymentOptions &
   NetworkServiceOptions &
   AgreementServiceOptions &
-  WorkOptions;
+  Omit<WorkOptions, "yagnaOptions">;
 
 /**
  * Contains information needed to start executor, if string the imageHash is required, otherwise it should be a type of {@link ExecutorOptions}

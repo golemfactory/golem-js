@@ -50,11 +50,32 @@ export default [
   },
   // NodeJS
   {
-    input: "src/index.ts",
-    output: [
-      { file: pkg.main, format: "cjs", sourcemap: true },
-      { file: pkg.module, format: "es", sourcemap: true },
+    input: {
+      "golem-js.es": "src/index.ts",
+      "golem-js-experimental.es": "src/experimental.ts",
+    },
+    output: {
+      dir: "dist",
+      format: "esm",
+      sourcemap: true,
+      chunkFileNames: "shared-[hash].es.js",
+    },
+    plugins: [
+      typescript({ tsconfig: "./tsconfig.json", exclude: ["**/__tests__", "**/*.test.ts"] }),
+      filesize({ reporter: [sizeValidator, "boxen"] }),
     ],
+  },
+  {
+    input: {
+      "golem-js.cjs": "src/index.ts",
+      "golem-js-experimental.cjs": "src/experimental.ts",
+    },
+    output: {
+      dir: "dist",
+      format: "cjs",
+      sourcemap: true,
+      chunkFileNames: "shared-[hash].cjs.js",
+    },
     plugins: [
       typescript({ tsconfig: "./tsconfig.json", exclude: ["**/__tests__", "**/*.test.ts"] }),
       filesize({ reporter: [sizeValidator, "boxen"] }),

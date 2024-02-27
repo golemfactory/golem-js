@@ -22,6 +22,7 @@
     "tag": "ts-node ./simple-usage/tag.ts",
     "web": "node ./web/app.mjs",
     "server": "ts-node ./express/server.ts",
+    "proxy": "ts-node ./proxy/proxy.ts",
     "lint:ts": "tsc --project tsconfig.json --noEmit"
   },
   "author": "GolemFactory <contact@golem.network>",
@@ -37,6 +38,6 @@
   },
   "devDependencies": {
     "@types/node": "18",
-    "typescript": "^4.6.3"
+    "typescript": "^5.3.3"
   }
 }
