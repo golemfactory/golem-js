@@ -67,7 +67,7 @@ export class TcpProxy {
         this.logger.debug("TcpProxy Yagna WS opened");
 
         // Register the actual data transfer
-        socket.on("data", async (chunk) => ws.send(chunk));
+        socket.on("data", async (chunk) => ws.send(chunk.toString()));
       });
 
       ws.on("message", (message) => socket.write(message.toString()));
