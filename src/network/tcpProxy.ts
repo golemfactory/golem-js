@@ -41,6 +41,8 @@ export class TcpProxy {
 
   private readonly heartBeatSec: number;
 
+  private readonly isBinary = true;
+
   constructor(
     /**
      * The URL to the WebSocket implementing the communication transport layer
@@ -67,9 +69,10 @@ export class TcpProxy {
         this.logger.debug("TcpProxy Yagna WS opened");
 
         // Register the actual data transfer
-        socket.on("data", async (chunk) => ws.send(chunk.toString()));
+        socket.on("data", async (chunk) => ws.send(chunk));
       });
 
+      // _isBinary
       ws.on("message", (message) => socket.write(message.toString()));
 
       ws.on("end", () => {

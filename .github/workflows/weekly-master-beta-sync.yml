@@ -6,7 +6,7 @@ on:
     - cron: "0 0 * * 3"
 jobs:
   sync:
-    runs-in: ubuntu-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout files
         uses: actions/checkout@v4
