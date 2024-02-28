@@ -7,7 +7,7 @@ import { ActivityFactory } from "./factory";
 import { ActivityConfig } from "./config";
 import { Events } from "../events";
 import { Agreement, ProviderInfo } from "../agreement";
-import { GolemWorkError, WorkErrorCode } from "../task/error";
+import { GolemWorkError, WorkErrorCode } from "../work/error";
 import { GolemAbortError, GolemInternalError, GolemTimeoutError } from "../error/golem-error";
 
 export enum ActivityStateEnum {

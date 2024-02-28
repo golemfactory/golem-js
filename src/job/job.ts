@@ -1,5 +1,4 @@
-import { TaskState as JobState } from "../task/task";
-import { WorkContext, Worker, WorkOptions } from "../task/work";
+import { WorkContext, Worker, WorkOptions } from "../work";
 import { runtimeContextChecker, YagnaApi } from "../utils";
 import { AgreementOptions, AgreementPoolService } from "../agreement";
 import { MarketOptions, MarketService } from "../market";
@@ -12,7 +11,14 @@ import { EventEmitter } from "eventemitter3";
 import { GftpStorageProvider, NullStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../storage";
 import { GolemAbortError, GolemConfigError, GolemUserError } from "../error/golem-error";
 
-export { TaskState as JobState } from "../task/task";
+export enum JobState {
+  New = "new",
+  Queued = "queued",
+  Pending = "pending",
+  Done = "done",
+  Retry = "retry",
+  Rejected = "rejected",
+}
 
 export type RunJobOptions = {
   market?: MarketOptions;

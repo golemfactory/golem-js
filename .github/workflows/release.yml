@@ -104,52 +104,6 @@ jobs:
         with:
           type: "e2e"
 
-  run-cypress-tests:
-    name: Run Cypress tests
-    needs: regular-checks
-    runs-on: goth2
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Prepare providers and requestor
-        uses: ./.github/actions/prepare-tests
-
-      - name: Run web server
-        run: docker exec -t -d docker-requestor-1 /bin/sh -c "cd /golem-js/examples/web && node app.mjs"
-
-      - name: Run test suite
-        run: docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js &&  npm run test:cypress -- --browser chromium"
-
-      - name: Upload test logs
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: cypress-logs
-          path: .cypress
-
-      - name: Cleanup test environment
-        uses: ./.github/actions/cleanup-tests
-        with:
-          type: "cypress"
-
-  run-examples-tests:
-    name: Run Examples tests
-    needs: regular-checks
-    runs-on: goth2
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Prepare providers and requestor
-        uses: ./.github/actions/prepare-tests
-
-      - name: Run the Examples tests
-        run: docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm run test:examples -- --exitOnError"
-
-      - name: Cleanup test environment
-        uses: ./.github/actions/cleanup-tests
-        with:
-          type: "examples"
-
   release:
     name: Release the SDK to NPM and GitHub
     needs: [run-e2e-tests, run-cypress-tests, run-examples-tests]

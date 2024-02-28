@@ -32,66 +32,6 @@ describe("Stats Service", () => {
     });
   });
   describe("Handling Events", () => {
-    //Tasks
-    it("should handle TaskStarted and call Tasks.add()", async () => {
-      const spy = jest.spyOn(statsService["tasks"], "add");
-      const event = new Events.TaskStarted({
-        id: "taskId",
-        agreementId: "agreementId",
-        activityId: "activityId",
-        provider: testProvider,
-      });
-      eventTarget.dispatchEvent(event);
-      expect(spy).toHaveBeenCalledWith({
-        id: "taskId",
-        startTime: event.timeStamp,
-        agreementId: "agreementId",
-      });
-    });
-    it("should handle TaskStarted and call Activities.add()", async () => {
-      const spy = jest.spyOn(statsService["activities"], "add");
-      const event = new Events.TaskStarted({
-        id: "taskId",
-        agreementId: "agreementId",
-        activityId: "activityId",
-        provider: testProvider,
-      });
-      eventTarget.dispatchEvent(event);
-      expect(spy).toHaveBeenCalledWith({ id: "activityId", taskId: "taskId", agreementId: "agreementId" });
-    });
-    it("should handle TaskRedone and call Tasks.retry()", async () => {
-      const spy = jest.spyOn(statsService["tasks"], "retry");
-      const event = new Events.TaskRedone({
-        id: "id",
-        agreementId: "agreementId",
-        retriesCount: 1,
-        activityId: "activityId",
-        provider: testProvider,
-        reason: "reason",
-      });
-      eventTarget.dispatchEvent(event);
-      expect(spy).toHaveBeenCalledWith("id", 1);
-    });
-    it("should handle TaskRejected and call Tasks.reject()", async () => {
-      const spy = jest.spyOn(statsService["tasks"], "reject");
-      const event = new Events.TaskRejected({
-        id: "id",
-        agreementId: "agreementId",
-        activityId: "activityId",
-        provider: testProvider,
-        reason: "reason",
-      });
-
-      eventTarget.dispatchEvent(event);
-      expect(spy).toHaveBeenCalledWith("id", event.timeStamp, "reason");
-    });
-    it("should handle TaskFinished and call Tasks.finish()", async () => {
-      const spy = jest.spyOn(statsService["tasks"], "finish");
-      const event = new Events.TaskFinished({ id: "id" });
-      eventTarget.dispatchEvent(event);
-      expect(spy).toHaveBeenCalledWith("id", event.timeStamp);
-    });
-
     // Allocations
     it("should handle AllocationCreated and call Allocations.add()", async () => {
       const spy = jest.spyOn(statsService["allocations"], "add");

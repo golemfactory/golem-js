@@ -1,4 +1,3 @@
-export * from "./executor";
 export * from "./storage";
 export * from "./activity";
 export * from "./agreement";
@@ -11,7 +10,7 @@ export * from "./utils";
 export * from "./utils/yagna/yagna";
 export * from "./golem_network";
 export * from "./job";
-export * from "./task";
+export * from "./work";
 export * from "./error/golem-error";
 export { StatsService } from "./stats/service";
 export { TcpProxy } from "./network/tcpProxy";

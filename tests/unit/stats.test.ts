@@ -6,7 +6,6 @@ import { Invoices } from "../../src/stats/invoices";
 import { Payments } from "../../src/stats/payments";
 import { Proposals } from "../../src/stats/proposals";
 import { Providers } from "../../src/stats/providers";
-import { Tasks, TaskStatusEnum } from "../../src/stats/tasks";
 import { Collection } from "collect.js";
 
 const testProvider = {
@@ -325,76 +324,6 @@ describe("Stats Module", () => {
       expect(tests.getAll()).toEqual(new Collection([testProvider]));
       tests.add(testProvider);
       expect(tests.getAll()).toEqual(new Collection([testProvider]));
-    });
-  });
-  describe("Tasks", () => {
-    it("should beforeAdd() converts payload to TaskInfo", async () => {
-      const tests = new Tasks();
-      tests.add({ agreementId: "test_id", id: "id", startTime: 100 });
-      expect(tests.getAll()).toEqual(
-        new Collection([
-          {
-            id: "id",
-            agreementId: "test_id",
-            startTime: 100,
-            stopTime: 0,
-            retriesCount: 0,
-            status: TaskStatusEnum.Pending,
-          },
-        ]),
-      );
-    });
-    it("should retry() should setup TaskInfo.retriesCount", async () => {
-      const tests = new Tasks();
-      tests.add({ agreementId: "test_id", id: "id", startTime: 100 });
-      tests.retry("id", 1);
-      expect(tests.getAll()).toEqual(
-        new Collection([
-          {
-            agreementId: "test_id",
-            id: "id",
-            startTime: 100,
-            stopTime: 0,
-            retriesCount: 1,
-            status: TaskStatusEnum.Pending,
-          },
-        ]),
-      );
-    });
-    it("should reject() should setup TaskInfo.status as Rejected, stopTime and reason", async () => {
-      const tests = new Tasks();
-      tests.add({ agreementId: "test_id", id: "id", startTime: 100 });
-      tests.reject("id", 200, "reason");
-      expect(tests.getAll()).toEqual(
-        new Collection([
-          {
-            id: "id",
-            agreementId: "test_id",
-            startTime: 100,
-            stopTime: 200,
-            retriesCount: 0,
-            status: TaskStatusEnum.Rejected,
-            reason: "reason",
-          },
-        ]),
-      );
-    });
-    it("should finish() should setup TaskInfo.status as Finished, and stopTime", async () => {
-      const tests = new Tasks();
-      tests.add({ agreementId: "test_id", id: "id", startTime: 100 });
-      tests.finish("id", 200);
-      expect(tests.getAll()).toEqual(
-        new Collection([
-          {
-            id: "id",
-            agreementId: "test_id",
-            startTime: 100,
-            stopTime: 200,
-            retriesCount: 0,
-            status: TaskStatusEnum.Finished,
-          },
-        ]),
-      );
     });
   });
 });
