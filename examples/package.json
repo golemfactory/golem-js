@@ -7,15 +7,16 @@
   "scripts": {
     "lint:ts": "tsc --project tsconfig.json --noEmit",
     "experimental-reputation": "ts-node ./experimental/reputation/basic.ts",
-    "server": "ts-node ./express/server.ts"
+    "experimental-server": "ts-node ./express/server.ts"
   },
   "author": "GolemFactory <contact@golem.network>",
   "license": "LGPL-3.0",
   "engines": {
-    "node": ">=16.19.0"
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "@golem-sdk/golem-js": "file:..",
+    "@golem-sdk/task-executor": "^1.0.1",
     "commander": "^9.1.0",
     "express": "^4.18.2",
     "ts-node": "^10.7.0"

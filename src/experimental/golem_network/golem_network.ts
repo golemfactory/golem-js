@@ -1,8 +1,8 @@
 import { v4 } from "uuid";
 import { Job } from "../job";
-import { Yagna, YagnaApi, YagnaOptions } from "../utils";
+import { Yagna, YagnaApi, YagnaOptions } from "../../utils";
 import { RunJobOptions } from "../job/job";
-import { GolemUserError } from "../error/golem-error";
+import { GolemUserError } from "../../error/golem-error";
 
 export type GolemNetworkConfig = Partial<RunJobOptions> & { yagna?: YagnaOptions };
 

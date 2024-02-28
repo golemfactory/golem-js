@@ -1,5 +1,6 @@
-import { TaskExecutor, sleep } from "@golem-sdk/golem-js";
+import { TaskExecutor } from "@golem-sdk/task-executor";
 import { ReputationSystem } from "@golem-sdk/golem-js/experimental";
+import { sleep } from "@golem-sdk/golem-js";
 
 /**
  * This example uses the reputation system to filter out proposals from providers with low reputation and ones that were not tested yet.

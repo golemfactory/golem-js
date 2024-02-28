@@ -1,0 +1,69 @@
+version: "3.5"
+services:
+  provider-1:
+    build:
+      context: .
+      dockerfile: Provider.Dockerfile
+    image: provider:latest
+    restart: always
+    deploy:
+      replicas: 6
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /root/.local/share/yagna/
+    devices:
+      - /dev/kvm:/dev/kvm
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:7465 | grep -q 401"]
+      interval: 10s
+      timeout: 5s
+      retries: 1
+      start_period: 40s
+    environment:
+      - NODE_NAME=provider-1
+      - SUBNET=${YAGNA_SUBNET:-golemjstest}
+  provider-2:
+    build:
+      context: .
+      dockerfile: Provider.Dockerfile
+    image: provider:latest
+    restart: always
+    deploy:
+      replicas: 6
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /root/.local/share/yagna/
+    devices:
+      - /dev/kvm:/dev/kvm
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:7465 | grep -q 401"]
+      interval: 10s
+      timeout: 5s
+      retries: 1
+      start_period: 40s
+    environment:
+      - NODE_NAME=provider-2
+      - SUBNET=${YAGNA_SUBNET:-golemjstest}
+  requestor:
+    build:
+      context: .
+      dockerfile: Requestor.Dockerfile
+    image: requestor:latest
+    restart: always
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /root/.local/share/yagna/
+      - ../../:/golem-js
+    environment:
+      - YAGNA_AUTOCONF_APPKEY=try_golem
+      - YAGNA_API_URL=http://0.0.0.0:7465
+      - GSB_URL=tcp://0.0.0.0:7464
+      - YAGNA_SUBNET=${YAGNA_SUBNET:-golemjstest}
+      - YAGNA_APPKEY=try_golem
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:7465 | grep -q 401"]
+      interval: 10s
+      timeout: 5s
+      retries: 1
+      start_period: 40s

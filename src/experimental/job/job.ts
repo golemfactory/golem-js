@@ -1,15 +1,20 @@
-import { WorkContext, Worker, WorkOptions } from "../work";
-import { runtimeContextChecker, YagnaApi } from "../utils";
-import { AgreementOptions, AgreementPoolService } from "../agreement";
-import { MarketOptions, MarketService } from "../market";
-import { NetworkService } from "../network";
-import { PaymentOptions, PaymentService } from "../payment";
-import { NetworkOptions } from "../network/network";
-import { Package, PackageOptions } from "../package";
-import { Activity, ActivityOptions } from "../activity";
+import { WorkContext, Worker, WorkOptions } from "../../work";
+import { runtimeContextChecker, YagnaApi } from "../../utils";
+import { AgreementOptions, AgreementPoolService } from "../../agreement";
+import { MarketOptions, MarketService } from "../../market";
+import { NetworkService } from "../../network";
+import { PaymentOptions, PaymentService } from "../../payment";
+import { NetworkOptions } from "../../network/network";
+import { Package, PackageOptions } from "../../package";
+import { Activity, ActivityOptions } from "../../activity";
 import { EventEmitter } from "eventemitter3";
-import { GftpStorageProvider, NullStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../storage";
-import { GolemAbortError, GolemConfigError, GolemUserError } from "../error/golem-error";
+import {
+  GftpStorageProvider,
+  NullStorageProvider,
+  StorageProvider,
+  WebSocketBrowserStorageProvider,
+} from "../../storage";
+import { GolemAbortError, GolemConfigError, GolemUserError } from "../../error/golem-error";
 
 export enum JobState {
   New = "new",

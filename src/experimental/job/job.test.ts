@@ -1,13 +1,13 @@
 import { Job } from "./job";
-import { YagnaMock } from "../../tests/mock/";
-import { Agreement, AgreementPoolService } from "../agreement";
-import { WorkContext } from "../work";
-import { NetworkNode, NetworkService } from "../network";
-import { Activity } from "../activity";
-import { Package } from "../package";
+import { YagnaMock } from "../../../tests/mock/";
+import { Agreement, AgreementPoolService } from "../../agreement";
+import { WorkContext } from "../../work";
+import { NetworkNode, NetworkService } from "../../network";
+import { Activity } from "../../activity";
+import { Package } from "../../package";
 
-jest.mock("../payment");
-jest.mock("../market");
+jest.mock("../../payment");
+jest.mock("../../market");
 
 afterEach(() => {
   jest.clearAllMocks();
