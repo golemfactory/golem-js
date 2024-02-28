@@ -15,7 +15,6 @@
   },
   "dependencies": {
     "@golem-sdk/golem-js": "file:..",
-    "@golem-sdk/task-executor": "^1.0.1",
     "commander": "^9.1.0",
     "express": "^4.18.2",
     "ts-node": "^10.7.0"
