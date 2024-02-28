@@ -1,4 +1,5 @@
-import { Batch, WorkContext } from "./index";
+import { WorkContext } from "./work";
+import { Batch } from "./batch";
 import { LoggerMock, YagnaMock } from "../../tests/mock";
 import { ActivityStateEnum, ResultState } from "../activity";
 import { DownloadData, DownloadFile, Run, Script, Transfer, UploadData, UploadFile } from "../script";

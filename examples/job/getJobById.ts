@@ -1,4 +1,4 @@
-import { GolemNetwork } from "@golem-sdk/golem-js";
+import { GolemNetwork } from "@golem-sdk/golem-js/experimental";
 
 const golem = new GolemNetwork({
   yagna: {

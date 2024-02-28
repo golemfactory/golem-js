@@ -5,7 +5,9 @@
   "type": "module",
   "repository": "https://github.com/golemfactory/golem-js",
   "scripts": {
-    "lint:ts": "tsc --project tsconfig.json --noEmit"
+    "lint:ts": "tsc --project tsconfig.json --noEmit",
+    "experimental-reputation": "ts-node ./experimental/reputation/basic.ts",
+    "server": "ts-node ./express/server.ts"
   },
   "author": "GolemFactory <contact@golem.network>",
   "license": "LGPL-3.0",
