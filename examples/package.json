@@ -6,7 +6,6 @@
   "repository": "https://github.com/golemfactory/golem-js",
   "scripts": {
     "lint:ts": "tsc --project tsconfig.json --noEmit",
-    "experimental-reputation": "ts-node ./experimental/reputation/basic.ts",
     "experimental-server": "ts-node ./express/server.ts"
   },
   "author": "GolemFactory <contact@golem.network>",
@@ -23,6 +22,6 @@
   },
   "devDependencies": {
     "@types/node": "18",
-    "typescript": "^4.6.3"
+    "typescript": "^5.3.3"
   }
 }
