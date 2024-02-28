@@ -4,7 +4,7 @@ import { anything, imock, instance, mock, when } from "@johanblumenberg/ts-mocki
 import { YagnaApi } from "../utils";
 import { RequestorControlApi } from "ya-ts-client/dist/ya-activity/api";
 import { RequestorApi as RequestorStateApi } from "../utils/yagna/activity";
-import { GolemWorkError, WorkErrorCode } from "../task/error";
+import { GolemWorkError, WorkErrorCode } from "../work/error";
 
 describe("Activity Factory", () => {
   describe("Creating activities", () => {

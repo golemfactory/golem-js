@@ -5,7 +5,7 @@ import { StorageProviderMock, YagnaMock } from "../mock";
 import { Activity, ActivityStateEnum } from "../../src";
 import { sleep } from "../../src/utils";
 import { Deploy, Start, Run, Terminate, UploadFile, DownloadFile, Script, Capture } from "../../src/script";
-import { GolemWorkError, WorkErrorCode } from "../../src/task/error";
+import { GolemWorkError, WorkErrorCode } from "../../src/work/error";
 import { GolemError, GolemTimeoutError } from "../../src/error/golem-error";
 
 jest.mock("eventsource", () => EventSourceMock);

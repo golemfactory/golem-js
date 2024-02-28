@@ -5,31 +5,13 @@
   "type": "module",
   "repository": "https://github.com/golemfactory/golem-js",
   "scripts": {
-    "hello": "ts-node ./hello-world/hello.ts",
-    "run": "ts-node ./simple-usage/run.ts",
-    "spawn": "ts-node ./simple-usage/spawn.ts",
-    "map": "ts-node ./simple-usage/map.ts",
-    "forEach": "ts-node ./simple-usage/forEach.ts",
-    "fileTransfer": "ts-node ./simple-usage/fileTransfer.ts",
-    "batchPromise": "ts-node ./simple-usage/batchPromise.ts",
-    "batchStream": "ts-node ./simple-usage/batchStream.ts",
-    "logger-hello": "ts-node simple-usage/logger.ts",
-    "blender": "ts-node ./blender/blender.ts",
-    "yacat": "ts-node ./yacat/yacat.ts",
-    "fibonacci": "ts-node fibonacci/fibonacci.ts",
-    "external-request": "ts-node ./external-request/request.ts",
-    "experimental-reputation": "ts-node ./experimental/reputation/basic.ts",
-    "ssh": "ts-node ./ssh/ssh.ts",
-    "tag": "ts-node ./simple-usage/tag.ts",
-    "web": "node ./web/app.mjs",
-    "server": "ts-node ./express/server.ts",
-    "proxy": "ts-node ./proxy/proxy.ts",
-    "lint:ts": "tsc --project tsconfig.json --noEmit"
+    "lint:ts": "tsc --project tsconfig.json --noEmit",
+    "experimental-server": "ts-node ./express/server.ts"
   },
   "author": "GolemFactory <contact@golem.network>",
   "license": "LGPL-3.0",
   "engines": {
-    "node": ">=16.19.0"
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "@golem-sdk/golem-js": "file:..",

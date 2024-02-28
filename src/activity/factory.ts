@@ -3,7 +3,7 @@ import { ActivityConfig } from "./config";
 import { Events } from "../events";
 import { YagnaApi } from "../utils";
 import { Agreement } from "../agreement";
-import { GolemWorkError, WorkErrorCode } from "../task/error";
+import { GolemWorkError, WorkErrorCode } from "../work/error";
 import { GolemInternalError } from "../error/golem-error";
 
 /**

@@ -1,7 +1,6 @@
 import { Events, EVENT_TYPE, BaseEvent } from "../events";
 import { Logger, defaultLogger } from "../utils";
 import { Providers } from "./providers";
-import { Tasks } from "./tasks";
 import { Payments } from "./payments";
 import { Agreements } from "./agreements";
 import { Invoices } from "./invoices";
@@ -28,7 +27,6 @@ export class StatsService {
   private proposals: Proposals;
   private providers: Providers;
   private payments: Payments;
-  private tasks: Tasks;
   private times: Times;
 
   constructor(options: StatsOptions) {
@@ -41,7 +39,6 @@ export class StatsService {
     this.proposals = new Proposals();
     this.providers = new Providers();
     this.payments = new Payments();
-    this.tasks = new Tasks();
     this.times = new Times();
   }
 
@@ -60,13 +57,11 @@ export class StatsService {
       .getAll()
       .map((agreement) => {
         const provider = this.providers.getById(agreement.provider.id);
-        const tasks = this.tasks.getByAgreementId(agreement.id);
         const invoices = this.invoices.getByAgreementId(agreement.id);
         const payments = this.payments.getByAgreementId(agreement.id);
         return {
           Agreement: agreement.id.substring(0, 10),
           "Provider Name": provider ? provider.name : "unknown",
-          "Task Computed": tasks.where("status", "finished").count(),
           Cost: invoices.sum("amount"),
           "Payment Status": payments.count() > 0 ? "paid" : "unpaid",
         };
@@ -86,11 +81,6 @@ export class StatsService {
         costs.paid += payments.count() > 0 ? (invoices.sum("amount") as number) : 0;
       });
     return costs;
-  }
-
-  getComputationTime(): string {
-    const duration = this.times.getById("all")?.duration;
-    return `${duration ? (duration / 1000).toFixed(1) : 0}s`;
   }
 
   getStatsTree() {
@@ -113,15 +103,7 @@ export class StatsService {
                   agreement: agreement
                     ? {
                         ...agreement,
-                        activities: this.activities
-                          .getByAgreementId(agreement.id)
-                          .map((activity) => {
-                            return {
-                              ...activity,
-                              task: this.tasks.getById(activity.taskId),
-                            };
-                          })
-                          .all(),
+                        activities: this.activities.getByAgreementId(agreement.id).all(),
                         invoices: this.invoices
                           .getByAgreementId(agreement.id)
                           .map((invoice) => invoice)
@@ -142,13 +124,11 @@ export class StatsService {
         .getAll()
         .map((agreement) => {
           const provider = this.providers.getById(agreement.provider.id);
-          const tasks = this.tasks.getByAgreementId(agreement.id);
           const invoices = this.invoices.getByAgreementId(agreement.id);
           const payments = this.payments.getByAgreementId(agreement.id);
           return {
             agreementId: agreement.id,
             provider,
-            tasks: tasks.where("status", "finished").count(),
             cost: invoices.sum("amount"),
             paymentStatus: payments.count() > 0 ? "paid" : "unpaid",
           };
@@ -159,28 +139,7 @@ export class StatsService {
   }
 
   private handleEvents(event: BaseEvent<unknown>) {
-    if (event instanceof Events.ComputationStarted) {
-      this.times.add({ id: "all", startTime: event.timeStamp });
-    } else if (event instanceof Events.ComputationFinished) {
-      this.times.stop({ id: "all", stopTime: event.timeStamp });
-    } else if (event instanceof Events.TaskStarted) {
-      this.activities.add({
-        id: event.detail.activityId,
-        taskId: event.detail.id,
-        agreementId: event.detail.agreementId,
-      });
-      this.tasks.add({
-        id: event.detail.id,
-        startTime: event.timeStamp,
-        agreementId: event.detail.agreementId,
-      });
-    } else if (event instanceof Events.TaskRedone) {
-      this.tasks.retry(event.detail.id, event.detail.retriesCount);
-    } else if (event instanceof Events.TaskRejected) {
-      this.tasks.reject(event.detail.id, event.timeStamp, event.detail.reason);
-    } else if (event instanceof Events.TaskFinished) {
-      this.tasks.finish(event.detail.id, event.timeStamp);
-    } else if (event instanceof Events.AllocationCreated) {
+    if (event instanceof Events.AllocationCreated) {
       this.allocations.add({ id: event.detail.id, amount: event.detail.amount, platform: event.detail.platform });
     } else if (event instanceof Events.AgreementCreated) {
       this.agreements.add({
