@@ -101,6 +101,7 @@ jobs:
 
       - name: Cleanup test environment
         uses: ./.github/actions/cleanup-tests
+        if: always()
         with:
           type: "e2e"
 
