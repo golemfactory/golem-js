@@ -5,7 +5,7 @@
     "strict": true,
     "noImplicitAny": false,
     "esModuleInterop": true,
-    "moduleResolution": "node",
+    "moduleResolution": "Bundler",
     "removeComments": true,
     "sourceMap": true,
     "noLib": false,

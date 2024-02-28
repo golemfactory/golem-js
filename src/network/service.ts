@@ -1,6 +1,5 @@
 import { defaultLogger, Logger, YagnaApi } from "../utils";
-import { Network } from "./index";
-import { NetworkOptions } from "./network";
+import { Network, NetworkOptions } from "./network";
 import { NetworkNode } from "./node";
 import { GolemNetworkError, NetworkErrorCode } from "./error";
 

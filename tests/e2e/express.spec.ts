@@ -1,5 +1,5 @@
 import express from "express";
-import { GolemNetwork, JobState } from "../../src";
+import { GolemNetwork, JobState } from "../../src/experimental";
 import supertest from "supertest";
 import fs from "fs";
 
