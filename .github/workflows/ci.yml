@@ -44,3 +44,4 @@ jobs:
           npm run build
           npm install --prefix examples
           npm run --prefix examples lint:ts
+          npm run test:import
