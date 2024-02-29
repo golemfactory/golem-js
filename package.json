@@ -13,19 +13,22 @@
     "computer",
     "marketplace"
   ],
-  "main": "dist/golem-js.cjs.js",
+  "main": "dist/golem-js.js",
+  "type": "commonjs",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "default": "./dist/golem-js.cjs.js"
+      "import": "./dist/golem-js.mjs",
+      "require": "./dist/golem-js.js"
     },
     "./experimental": {
       "types": "./dist/experimental.d.ts",
-      "default": "./dist/golem-js-experimental.cjs.js"
+      "import": "./dist/golem-js-experimental.mjs",
+      "require": "./dist/golem-js-experimental.js"
     }
   },
   "browser": "dist/golem-js.min.js",
-  "module": "dist/golem-js.es.js",
+  "module": "dist/golem-js.mjs",
   "types": "dist/index.d.ts",
   "jsdelivr": "dist/golem-js.min.js",
   "unpkg": "dist/golem-js.min.js",
@@ -39,6 +42,7 @@
     "test:e2e": "jest --config tests/e2e/jest.config.json tests/e2e/**.spec.ts --runInBand --forceExit",
     "test:cypress": "cypress run",
     "test:examples": "ts-node --project tsconfig.spec.json tests/examples/examples.test.ts",
+    "test:import": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config tests/import/jest.config.js",
     "lint": "npm run lint:ts && npm run lint:ts:tests && npm run lint:eslint",
     "lint:ts": "tsc --project tsconfig.json --noEmit",
     "lint:ts:tests": "tsc --project tests/tsconfig.json --noEmit",

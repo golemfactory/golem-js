@@ -8,6 +8,9 @@ import nodePolyfills from "rollup-plugin-polyfill-node";
 import pkg from "./package.json" assert { type: "json" };
 import ignore from "rollup-plugin-ignore";
 import filesize from "rollup-plugin-filesize";
+import { createRequire } from "module";
+
+const resolveModule = createRequire(import.meta.url).resolve;
 
 /**
  * Looking for plugins?
@@ -51,14 +54,22 @@ export default [
   // NodeJS
   {
     input: {
-      "golem-js.es": "src/index.ts",
-      "golem-js-experimental.es": "src/experimental.ts",
+      "golem-js": "src/index.ts",
+      "golem-js-experimental": "src/experimental.ts",
     },
     output: {
       dir: "dist",
       format: "esm",
       sourcemap: true,
-      chunkFileNames: "shared-[hash].es.js",
+      chunkFileNames: "shared-[hash].mjs",
+      entryFileNames: "[name].mjs",
+      paths: (id) => {
+        if (!id.startsWith("ya-ts-client/dist")) return id;
+        // allow importing files directly from ya-ts-client/dist/... without adding .js extension
+        const resolved = resolveModule(id);
+        const path = resolved.split("node_modules/")[1];
+        return path;
+      },
     },
     plugins: [
       typescript({ tsconfig: "./tsconfig.json", exclude: ["**/__tests__", "**/*.test.ts"] }),
@@ -67,17 +78,21 @@ export default [
   },
   {
     input: {
-      "golem-js.cjs": "src/index.ts",
-      "golem-js-experimental.cjs": "src/experimental.ts",
+      "golem-js": "src/index.ts",
+      "golem-js-experimental": "src/experimental.ts",
     },
     output: {
       dir: "dist",
       format: "cjs",
       sourcemap: true,
-      chunkFileNames: "shared-[hash].cjs.js",
+      chunkFileNames: "shared-[hash].js",
     },
     plugins: [
-      typescript({ tsconfig: "./tsconfig.json", exclude: ["**/__tests__", "**/*.test.ts"] }),
+      typescript({
+        tsconfig: "./tsconfig.json",
+        exclude: ["**/__tests__", "**/*.test.ts"],
+        module: "ES2020",
+      }),
       filesize({ reporter: [sizeValidator, "boxen"] }),
     ],
   },
