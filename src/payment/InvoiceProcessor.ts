@@ -1,7 +1,7 @@
 import { Allocation, Invoice } from "ya-ts-client/dist/ya-payment";
 import { Yagna } from "../utils";
 import { YagnaApi, YagnaOptions } from "../utils/yagna/yagna";
-import { Decimal, Numeric } from "decimal.js-light";
+import Decimal, { Numeric } from "decimal.js-light";
 
 export type InvoiceAcceptResult =
   | {

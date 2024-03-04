@@ -1,5 +1,6 @@
 import { WebSocketBrowserStorageProvider, pinoLogger } from "../../src";
-import { encode, toObject } from "flatbuffers/js/flexbuffers";
+// .js added for ESM compatibility
+import { encode, toObject } from "flatbuffers/js/flexbuffers.js";
 import { LoggerMock, YagnaMock } from "../mock";
 import * as jsSha3 from "js-sha3";
 import { TEST_IDENTITY } from "../mock/fixtures";

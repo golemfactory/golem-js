@@ -10,10 +10,12 @@ import { Configuration } from "ya-ts-client/dist/ya-payment";
 import * as EnvUtils from "../env";
 import { GolemConfigError, GolemPlatformError, GolemUserError } from "../../error/golem-error";
 import { v4 } from "uuid";
-import semverSatisfies from "semver/functions/satisfies";
-import semverCoerce from "semver/functions/coerce";
 import { Logger } from "../logger/logger";
 import { defaultLogger } from "../logger/defaultLogger";
+
+// .js added for ESM compatibility
+import semverSatisfies from "semver/functions/satisfies.js";
+import semverCoerce from "semver/functions/coerce.js";
 
 export type YagnaApi = {
   market: MarketRequestorApi;

@@ -1,6 +1,7 @@
 import { StorageProvider, StorageProviderDataCallback } from "./provider";
 import { v4 } from "uuid";
-import { encode, toObject } from "flatbuffers/js/flexbuffers";
+// .js added for ESM compatibility
+import { encode, toObject } from "flatbuffers/js/flexbuffers.js";
 import * as jsSha3 from "js-sha3";
 import { Logger, nullLogger, YagnaApi } from "../utils";
 import { GolemInternalError } from "../error/golem-error";
