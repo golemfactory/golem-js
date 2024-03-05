@@ -63,7 +63,6 @@
     "async-lock": "^1.4.1",
     "axios": "^1.6.7",
     "bottleneck": "^2.19.5",
-    "collect.js": "^4.36.1",
     "debug": "^4.3.4",
     "decimal.js-light": "^2.5.1",
     "eventemitter3": "^5.0.1",
