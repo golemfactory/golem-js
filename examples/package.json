@@ -18,6 +18,7 @@
     "yacat": "ts-node ./yacat/yacat.ts",
     "fibonacci": "ts-node fibonacci/fibonacci.ts",
     "external-request": "ts-node ./external-request/request.ts",
+    "experimental-reputation": "ts-node ./experimental/reputation/basic.ts",
     "ssh": "ts-node ./ssh/ssh.ts",
     "tag": "ts-node ./simple-usage/tag.ts",
     "web": "node ./web/app.mjs",
@@ -34,7 +35,7 @@
     "@golem-sdk/golem-js": "file:..",
     "commander": "^9.1.0",
     "express": "^4.18.2",
-    "ts-node": "^10.7.0"
+    "ts-node": "^10.9.2"
   },
   "devDependencies": {
     "@types/node": "18",
