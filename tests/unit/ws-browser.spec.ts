@@ -1,11 +1,11 @@
-import { WebSocketBrowserStorageProvider, pinoLogger } from "../../src";
+import { WebSocketBrowserStorageProvider, nullLogger } from "../../src";
 // .js added for ESM compatibility
 import { encode, toObject } from "flatbuffers/js/flexbuffers.js";
 import { LoggerMock, YagnaMock } from "../mock";
 import * as jsSha3 from "js-sha3";
 import { TEST_IDENTITY } from "../mock/fixtures";
 import { ServiceModel } from "../../src/utils/yagna/gsb";
-import { GolemInternalError } from "../../src/error/golem-error";
+import { GolemInternalError } from "../../src";
 
 jest.mock("uuid", () => ({ v4: () => "uuid" }));
 
@@ -34,7 +34,7 @@ describe("WebSocketBrowserStorageProvider", () => {
     });
 
     it("should use provided logger", () => {
-      const logger = pinoLogger();
+      const logger = nullLogger();
       const provider = new WebSocketBrowserStorageProvider(yagnaApi, { logger });
       expect(provider["logger"]).toBe(logger);
     });
