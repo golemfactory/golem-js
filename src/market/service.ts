@@ -193,9 +193,14 @@ export class MarketService {
   }
 
   private async startProcessingProposalsBatch() {
-    for await (const proposals of this.proposalsBatch.readProposals()) {
+    while (this.isRunning) {
+      this.logger.debug("Waiting for proposals");
+      await this.proposalsBatch.waitForProposals();
+
+      const proposals = await this.proposalsBatch.getProposals();
+      this.logger.debug("Received batch of proposals", { count: proposals.length });
+
       proposals.forEach((proposal) => this.processInitialProposal(proposal));
-      if (!this.isRunning) break;
     }
   }
 }
