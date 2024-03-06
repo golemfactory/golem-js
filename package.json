@@ -74,7 +74,7 @@
     "pino": "^8.19.0",
     "pino-pretty": "^10.3.1",
     "semver": "^7.5.4",
-    "tmp": "^0.2.1",
+    "tmp": "^0.2.2",
     "uuid": "^9.0.1",
     "ws": "^8.16.0",
     "ya-ts-client": "^0.5.3"
@@ -135,5 +135,8 @@
     "@rollup/rollup-darwin-x64": "^4",
     "@rollup/rollup-win32-arm64-msvc": "^4",
     "@rollup/rollup-win32-x64-msvc": "^4"
-  }
+  },
+  "workspaces": [
+    "examples/"
+  ]
 }

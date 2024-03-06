@@ -1,0 +1,21 @@
+name: Weekly master to beta sync
+on:
+  workflow_dispatch:
+  schedule:
+    # Do it on Wednesday :)
+    - cron: "0 0 * * 3"
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout files
+        uses: actions/checkout@v4
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "chore: sync master to beta"
+          branch: sync/master-to-beta
+          delete-branch: true
+          base: beta
+          title: "chore: sync master to beta"
