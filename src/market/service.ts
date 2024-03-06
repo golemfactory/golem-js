@@ -175,7 +175,7 @@ export class MarketService {
       return { result: false, reason: "No common payment platform" };
     }
 
-    if (!(await this.options.proposalFilter(proposal))) {
+    if (!this.options.proposalFilter(proposal)) {
       return { result: false, reason: "Proposal rejected by Proposal Filter" };
     }
 
