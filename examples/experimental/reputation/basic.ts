@@ -26,6 +26,7 @@ import { ReputationSystem } from "@golem-sdk/golem-js/experimental";
     payment: { network: "polygon" },
     package: "golem/alpine:latest",
     proposalFilter: reputation.proposalFilter(),
+    agreementSelector: reputation.agreementSelector(),
   });
 
   try {

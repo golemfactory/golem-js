@@ -4,6 +4,7 @@ export {
   DEFAULT_PROPOSAL_WEIGHTS,
   DEFAULT_PROPOSAL_MIN_SCORE,
   DEFAULT_REPUTATION_URL,
+  DEFAULT_AGREEMENT_TOP_POOL_SIZE,
 } from "./system";
 export { ReputationWeights } from "./types";
 export { AgreementSelectorOption } from "./types";
