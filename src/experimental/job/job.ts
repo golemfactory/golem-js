@@ -112,8 +112,16 @@ export class Job<Output = unknown> {
     }
 
     const packageOptions = Object.assign({}, this.defaultOptions.package, options.package);
-    if (!packageOptions.imageHash && !packageOptions.manifest && !packageOptions.imageTag) {
+    if (
+      !packageOptions.imageHash &&
+      !packageOptions.manifest &&
+      !packageOptions.imageTag &&
+      !packageOptions.localImageServer
+    ) {
       throw new GolemConfigError("You must specify either imageHash, imageTag or manifest in package options");
+    }
+    if (packageOptions.localImageServer && !packageOptions.localImageServer.isServing()) {
+      throw new GolemConfigError("Local image server is not serving the image, did you forget to call .serve()?");
     }
 
     this.state = JobState.Pending;

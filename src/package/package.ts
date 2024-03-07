@@ -3,6 +3,7 @@ import { EnvUtils, Logger, defaultLogger } from "../utils";
 import { PackageConfig } from "./config";
 import { RequireAtLeastOne } from "../utils/types";
 import { GolemError, GolemPlatformError } from "../error/golem-error";
+import { GvmiServer } from "../experimental/gvmi/gvmiServer";
 
 export type AllPackageOptions = {
   /** Type of engine required: vm, emscripten, sgx, sgx-js, sgx-wasm, sgx-wasi */
@@ -29,9 +30,18 @@ export type AllPackageOptions = {
   /** Certificate - base64 encoded public certificate (DER or PEM) matching key used to generate signature **/
   manifestCert?: string;
   logger?: Logger;
+  /**
+   * @experimental
+   * If you want a provider to download the image from you directly (without using the registry)
+   * you can create a local server by calling `serveLocalGvmi(filepath)` and pass it here.
+   */
+  localImageServer: GvmiServer;
 };
 
-export type PackageOptions = RequireAtLeastOne<AllPackageOptions, "imageHash" | "imageTag" | "manifest">;
+export type PackageOptions = RequireAtLeastOne<
+  AllPackageOptions,
+  "imageHash" | "imageTag" | "manifest" | "localImageServer"
+>;
 
 export interface PackageDetails {
   minMemGib: number;
@@ -83,7 +93,10 @@ export class Package {
       .addConstraint("golem.runtime.name", this.options.engine)
       .addConstraint("golem.inf.cpu.cores", this.options.minCpuCores.toString(), ComparisonOperator.GtEq)
       .addConstraint("golem.inf.cpu.threads", this.options.minCpuThreads.toString(), ComparisonOperator.GtEq);
-    if (this.options.imageHash || this.options.imageTag) {
+    if (this.options.localImageServer) {
+      const taskPackage = await this.resolveTaskPackageFromLocalServer();
+      builder.addProperty("golem.srv.comp.task_package", taskPackage);
+    } else if (this.options.imageHash || this.options.imageTag) {
       const taskPackage = await this.resolveTaskPackageUrl();
       builder.addProperty("golem.srv.comp.task_package", taskPackage);
     }
@@ -91,6 +104,13 @@ export class Package {
       this.options.capabilities.forEach((cap) => builder.addConstraint("golem.runtime.capabilities", cap));
     this.addManifestDecorations(builder);
     return builder.getDecorations();
+  }
+  private async resolveTaskPackageFromLocalServer(): Promise<string> {
+    if (!this.options.localImageServer) {
+      throw new GolemPlatformError("Tried to resolve task package from local server, but no server was provided.");
+    }
+    const { url, hash } = this.options.localImageServer.getImage();
+    return `hash:sha3:${hash}:${url}`;
   }
 
   private async resolveTaskPackageUrl(): Promise<string> {

@@ -1,6 +1,7 @@
 import { Logger } from "../utils";
 import { PackageOptions } from "./package";
 import { GolemConfigError } from "../error/golem-error";
+import { GvmiServer } from "../experimental/gvmi/gvmiServer";
 
 /**
  * @internal
@@ -32,6 +33,7 @@ export class PackageConfig {
   readonly packageFormat: string;
   readonly imageHash?: string;
   readonly imageTag?: string;
+  readonly localImageServer?: GvmiServer;
   readonly engine: string;
   readonly minMemGib: number;
   readonly minStorageGib: number;
@@ -45,13 +47,14 @@ export class PackageConfig {
   readonly logger?: Logger;
 
   constructor(options: PackageOptions) {
-    if (!options.imageHash && !options.manifest && !options.imageTag) {
+    if (!options.imageHash && !options.manifest && !options.imageTag && !options.localImageServer) {
       throw new GolemConfigError("You must define a package or manifest option");
     }
 
     this.packageFormat = PackageFormat.GVMKitSquash;
     this.imageHash = options.imageHash;
     this.imageTag = options.imageTag;
+    this.localImageServer = options.localImageServer;
     this.engine = options.engine || DEFAULTS.engine;
     this.minMemGib = options.minMemGib || DEFAULTS.minMemGib;
     this.minStorageGib = options.minStorageGib || DEFAULTS.minStorageGib;

@@ -6,7 +6,8 @@
   "repository": "https://github.com/golemfactory/golem-js",
   "scripts": {
     "lint:ts": "tsc --project tsconfig.json --noEmit",
-    "experimental-server": "ts-node ./express/server.ts"
+    "experimental-server": "ts-node ./express/server.ts",
+    "experimental-local-image": "ts-node ./experimental/local-image/serveLocalGvmi.ts"
   },
   "author": "GolemFactory <contact@golem.network>",
   "license": "LGPL-3.0",
