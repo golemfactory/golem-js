@@ -7,6 +7,7 @@ import { InvoiceStatus } from "ya-ts-client/dist/ya-payment";
 import { RejectionReason } from "./rejection";
 import { DebitNote } from "./debit_note";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
+import { GolemUserError } from "../error/golem-error";
 
 const agreementMock = mock(Agreement);
 const allocationMock = mock(Allocation);
@@ -195,9 +196,9 @@ describe("AgreementPaymentProcess", () => {
 
         const invoice = instance(invoiceMock);
 
-        const sucess = await process.addInvoice(invoice);
+        const success = await process.addInvoice(invoice);
 
-        expect(sucess).toEqual(true);
+        expect(success).toEqual(true);
         await expect(() => process.addInvoice(invoice)).rejects.toMatchError(
           new GolemPaymentError(
             "Agreement agreement-id is already covered with an invoice: invoice-id",
@@ -205,6 +206,28 @@ describe("AgreementPaymentProcess", () => {
             allocation,
             agreement.getProviderInfo(),
           ),
+        );
+        expect(process.isFinished()).toEqual(true);
+      });
+      it("throws an UserError in case of error in the invoice filter", async () => {
+        when(invoiceMock.id).thenReturn("invoice-id");
+        when(invoiceMock.agreementId).thenReturn("agreement-id");
+        when(agreementMock.id).thenReturn("agreement-id");
+        when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
+        when(invoiceMock.isSameAs(anything())).thenReturn(false);
+        const allocation = instance(allocationMock);
+        const agreement = instance(agreementMock);
+
+        const process = new AgreementPaymentProcess(agreement, allocation, {
+          debitNoteFilter: () => true,
+          invoiceFilter: () => {
+            throw new Error("invoiceFilter error");
+          },
+        });
+
+        const invoice = instance(invoiceMock);
+        await expect(() => process.addInvoice(invoice)).rejects.toMatchError(
+          new GolemUserError("An error occurred in the invoice filter", new Error("invoiceFilter error")),
         );
         expect(process.isFinished()).toEqual(true);
       });
@@ -341,6 +364,27 @@ describe("AgreementPaymentProcess", () => {
         const secondSuccess = await process.addDebitNote(debitNote);
         expect(secondSuccess).toEqual(false);
         verify(debitNoteMock.reject(anything())).never();
+        expect(process.isFinished()).toEqual(false);
+      });
+    });
+    describe("Security", () => {
+      it("throws an UserError in case of error in the debitNote filter", async () => {
+        when(allocationMock.id).thenReturn("1000");
+        when(debitNoteMock.totalAmountDue).thenReturn(0.123);
+        when(debitNoteMock.getStatus()).thenResolve(InvoiceStatus.Received);
+
+        const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
+          debitNoteFilter: () => {
+            throw new Error("debitNoteFilter error");
+          },
+          invoiceFilter: () => true,
+        });
+
+        const debitNote = instance(debitNoteMock);
+
+        await expect(() => process.addDebitNote(debitNote)).rejects.toMatchError(
+          new GolemUserError("An error occurred in the debit note filter", new Error("debitNoteFilter error")),
+        );
         expect(process.isFinished()).toEqual(false);
       });
     });
