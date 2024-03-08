@@ -74,7 +74,7 @@ export class ReputationSystem {
    * Reputation data.
    */
   private data: ReputationData = {
-    providers: [],
+    testedProviders: [],
   };
 
   /**
@@ -146,16 +146,16 @@ export class ReputationSystem {
     this.rejectedProvidersMap.clear();
     this.rejectedOperatorsMap.clear();
 
-    this.data.providers.forEach((entry) => {
-      this.providersScoreMap.set(entry.providerId, entry);
+    this.data.testedProviders.forEach((entry) => {
+      this.providersScoreMap.set(entry.provider.id, entry);
     });
 
     this.data.rejectedProviders?.forEach((entry) => {
-      this.rejectedProvidersMap.set(entry.providerId, entry);
+      this.rejectedProvidersMap.set(entry.provider.id, entry);
     });
 
     this.data.rejectedOperators?.forEach((entry) => {
-      this.rejectedOperatorsMap.set(entry.wallet, entry);
+      this.rejectedOperatorsMap.set(entry.operator.walletAddress, entry);
     });
   }
 
@@ -240,9 +240,7 @@ export class ReputationSystem {
       if (operatorEntry) {
         this.logger.debug(`Proposal from ${proposal.provider.id} rejected due to rejected operator`, {
           reason: operatorEntry.reason,
-          walletAddress: proposal.provider.walletAddress,
-          providerId: proposal.provider.id,
-          providerName: proposal.provider.name,
+          provider: proposal.provider,
         });
         return false;
       }
@@ -252,9 +250,7 @@ export class ReputationSystem {
       if (providerEntry) {
         this.logger.debug(`Proposal from ${proposal.provider.id} rejected due to rejected provider`, {
           reason: providerEntry.reason,
-          walletAddress: proposal.provider.walletAddress,
-          providerId: proposal.provider.id,
-          providerName: proposal.provider.name,
+          provider: proposal.provider,
         });
         return false;
       }
@@ -265,9 +261,7 @@ export class ReputationSystem {
         const min = opts?.min ?? DEFAULT_PROPOSAL_MIN_SCORE;
         const score = this.calculateScore(scoreEntry.scores, this.proposalWeights);
         this.logger.debug(`Proposal score for ${proposal.provider.id}: ${score} - min ${min}`, {
-          walletAddress: proposal.provider.walletAddress,
-          providerId: proposal.provider.id,
-          providerName: proposal.provider.name,
+          provider: proposal.provider,
           scores: scoreEntry.scores,
           weights: this.proposalWeights,
           score,
@@ -277,11 +271,14 @@ export class ReputationSystem {
       }
 
       this.logger.debug(
-        `Proposal from unlisted provider ${proposal.provider.id} (known providers: ${this.data.providers.length})`,
+        `Proposal from unlisted provider ${proposal.provider.id} (known providers: ${this.data.testedProviders.length})`,
+        {
+          provider: proposal.provider,
+        },
       );
 
       // Use the acceptUnlisted option if provided, otherwise allow only if there are no known providers.
-      return opts?.acceptUnlisted ?? this.data.providers.length === 0;
+      return opts?.acceptUnlisted ?? this.data.testedProviders.length === 0;
     };
   }
 
@@ -351,5 +348,20 @@ export class ReputationSystem {
 
     // Return normalized score.
     return score / totalWeight;
+  }
+
+  /**
+   * Based on the current reputation data, calculate a list of providers that meet the minimum score requirement.
+   *
+   * This method is useful to validate you filter and weights vs the available provider market.
+   *
+   * @param opts
+   */
+  calculateProviderPool(opts?: ProposalFilterOptions): ReputationProviderEntry[] {
+    const min = opts?.min ?? DEFAULT_PROPOSAL_MIN_SCORE;
+    return this.data.testedProviders.filter((entry) => {
+      const score = this.calculateScore(entry.scores, this.proposalWeights);
+      return score >= min;
+    });
   }
 }

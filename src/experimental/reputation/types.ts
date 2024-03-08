@@ -1,4 +1,5 @@
 import { Logger } from "../../utils";
+import { ProviderInfo } from "../../agreement";
 
 /**
  * Set of normalized scores for a provider.
@@ -25,7 +26,7 @@ export interface ReputationProviderScores {
  * @experimental
  */
 export interface ReputationProviderEntry {
-  providerId: string;
+  provider: ProviderInfo;
   scores: ReputationProviderScores;
 }
 
@@ -33,7 +34,9 @@ export interface ReputationProviderEntry {
  * Information about a rejected operator.
  */
 export interface ReputationRejectedOperator {
-  wallet: string;
+  operator: {
+    walletAddress: string;
+  };
   reason?: string;
 }
 
@@ -41,7 +44,7 @@ export interface ReputationRejectedOperator {
  * Information about a rejected provider.
  */
 export interface ReputationRejectedProvider {
-  providerId: string;
+  provider: ProviderInfo;
   reason?: string;
 }
 
@@ -49,7 +52,7 @@ export interface ReputationRejectedProvider {
  * Information about untested provider.
  */
 export interface ReputationUntestedProvider {
-  providerId: string;
+  provider: ProviderInfo;
   scores: {
     uptime: number;
   };
@@ -60,7 +63,7 @@ export interface ReputationUntestedProvider {
  * @experimental
  */
 export interface ReputationData {
-  providers: ReputationProviderEntry[];
+  testedProviders: ReputationProviderEntry[];
   rejectedProviders?: ReputationRejectedProvider[];
   rejectedOperators?: ReputationRejectedOperator[];
   untestedProviders?: ReputationUntestedProvider[];
