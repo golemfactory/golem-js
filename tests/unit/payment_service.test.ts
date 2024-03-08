@@ -4,6 +4,7 @@ import { Allocation, GolemPaymentError, PaymentErrorCode, PaymentFilters, Paymen
 import { agreement } from "../mock/entities/agreement";
 import { debitNotes, debitNotesEvents, invoiceEvents, invoices } from "../mock/fixtures";
 import { anything, reset, spy, when } from "@johanblumenberg/ts-mockito";
+import { GolemUserError } from "../../src";
 
 const logger = new LoggerMock();
 const yagnaApi = new YagnaMock().getApi();
@@ -275,7 +276,7 @@ describe("Payment Service", () => {
         await paymentService.end();
 
         // Then
-        expect(handler).toHaveBeenCalledWith(error);
+        expect(handler).toHaveBeenCalledWith(new GolemUserError("An error occurred in the debit note filter", error));
       });
 
       it("should emit an error event when there's an issue with processing the invoice", async () => {
@@ -303,7 +304,7 @@ describe("Payment Service", () => {
         await paymentService.end();
 
         // Then
-        expect(handler).toHaveBeenCalledWith(error);
+        expect(handler).toHaveBeenCalledWith(new GolemUserError("An error occurred in the invoice filter", error));
       });
     });
 
