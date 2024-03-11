@@ -20,12 +20,13 @@ import { ReputationSystem } from "@golem-sdk/golem-js/experimental";
     paymentNetwork: "polygon",
   });
 
-  console.log("Listed providers:", reputation.getData().providers.length);
+  console.log("Listed providers:", reputation.getData().testedProviders.length);
 
   const executor = await TaskExecutor.create({
     payment: { network: "polygon" },
     package: "golem/alpine:latest",
     proposalFilter: reputation.proposalFilter(),
+    agreementSelector: reputation.agreementSelector(),
   });
 
   try {
