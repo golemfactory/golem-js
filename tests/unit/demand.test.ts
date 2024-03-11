@@ -10,7 +10,7 @@ import {
   Proposal,
   YagnaApi,
 } from "../../src";
-import { proposalsInitial } from "../mock/fixtures";
+import { proposalsInitial } from "../fixtures";
 import { anything, instance, mock, reset, when } from "@johanblumenberg/ts-mockito";
 import { LoggerMock } from "../mock/utils/logger";
 import * as YaTsClient from "ya-ts-client";

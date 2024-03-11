@@ -1,4 +1,5 @@
 import { ActivityApi } from "ya-ts-client";
+import { Readable } from "stream";
 
 /**
  * Helper function that makes it easy to prepare successful exec results creation
@@ -40,3 +41,27 @@ export const simulateLongPoll = <T>(response: T, pollingTimeSec: number = 1) =>
   new Promise<T>((resolve) => {
     setTimeout(() => resolve(response), pollingTimeSec * 1000);
   });
+
+/**
+ * Helper function that makes preparing activity result returned by Activity.execute function
+ */
+export const buildActivityResults = (
+  successResults?: Array<ActivityApi.ExeScriptCommandResultDTO>,
+  errorResults?: Array<ActivityApi.ExeScriptCommandResultDTO>,
+  error?: Error,
+) => {
+  return new Readable({
+    objectMode: true,
+    async read() {
+      if (error) {
+        this.emit("error", error);
+      }
+      const results = successResults?.length
+        ? successResults.shift()
+        : errorResults?.length
+          ? errorResults.shift()
+          : null;
+      this.push(results);
+    },
+  });
+};

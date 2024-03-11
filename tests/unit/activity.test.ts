@@ -1,5 +1,3 @@
-import { EventSourceMock, setExpectedErrorEvents, setExpectedEvents } from "../mock/utils/event_source";
-import { StorageProviderMock } from "../mock";
 import {
   Activity,
   ActivityStateEnum,
@@ -7,22 +5,30 @@ import {
   GolemError,
   GolemTimeoutError,
   GolemWorkError,
+  StorageProvider,
   WorkErrorCode,
   YagnaApi,
 } from "../../src";
 import { sleep } from "../../src/utils";
 import { Capture, Deploy, DownloadFile, Run, Script, Start, Terminate, UploadFile } from "../../src/script";
-import { anything, instance, mock, reset, when } from "@johanblumenberg/ts-mockito";
+import { anything, imock, instance, mock, reset, when } from "@johanblumenberg/ts-mockito";
 import * as YaTsClient from "ya-ts-client";
 import { buildExeScriptSuccessResult } from "./helpers";
-import { v4 } from "uuid";
+import EventEmitter from "events";
 
-jest.mock("eventsource", () => EventSourceMock);
+const mockEventSourceEmitter = new EventEmitter();
+jest.mock("eventsource", () =>
+  jest.fn(() => ({
+    addEventListener: (e, cb) => mockEventSourceEmitter.on(e, cb),
+    close: () => null,
+  })),
+);
 
 const mockYagna = mock(YagnaApi);
 const mockAgreement = mock(Agreement);
 const mockActivityControl = mock(YaTsClient.ActivityApi.RequestorControlService);
 const mockActivityState = mock(YaTsClient.ActivityApi.RequestorStateService);
+const mockStorageProvider = imock<StorageProvider>();
 
 describe("Activity", () => {
   beforeEach(() => {
@@ -141,9 +147,9 @@ describe("Activity", () => {
       const activity = await Activity.create(instance(mockAgreement), instance(mockYagna));
       const command1 = new Deploy();
       const command2 = new Start();
-      const command3 = new UploadFile(new StorageProviderMock(), "testSrc", "testDst");
+      const command3 = new UploadFile(instance(mockStorageProvider), "testSrc", "testDst");
       const command4 = new Run("test_command1");
-      const command5 = new DownloadFile(new StorageProviderMock(), "testSrc", "testDst");
+      const command5 = new DownloadFile(instance(mockStorageProvider), "testSrc", "testDst");
       const command6 = new Terminate();
       const script = Script.create([command1, command2, command3, command4, command5, command6]);
 
@@ -193,7 +199,7 @@ describe("Activity", () => {
       const command3 = new Run("test_command1", null, null, capture);
       const command4 = new Terminate();
       const script = Script.create([command1, command2, command3, command4]);
-      const expectedEvents = [
+      const mockedEvents = [
         {
           type: "runtime",
           data: '{"batch_id":"04a9b0f49e564db99e6f15ba95c35817","index":0,"timestamp":"2022-06-23T10:42:38.626573153","kind":{"stdout":"{\\"startMode\\":\\"blocking\\",\\"valid\\":{\\"Ok\\":\\"\\"},\\"vols\\":[]}"}}',
@@ -231,9 +237,9 @@ describe("Activity", () => {
           data: '{"batch_id":"04a9b0f49e564db99e6f15ba95c35817","index":3,"timestamp":"2022-06-23T10:42:40.009603540","kind":{"finished":{"return_code":0,"message":null}}}',
         },
       ];
-      setExpectedEvents(activity.id, expectedEvents);
       await script.before();
       const results = await activity.execute(script.getExeScriptRequest(), true);
+      mockedEvents.forEach((ev) => mockEventSourceEmitter.emit("runtime", ev));
       let expectedStdout;
       for await (const result of results) {
         expect(result).toHaveProperty("index");
@@ -469,7 +475,7 @@ describe("Activity", () => {
       const command3 = new Run("test_command1", null, null, capture);
       const command4 = new Terminate();
       const script = Script.create([command1, command2, command3, command4]);
-      const expectedErrors: Partial<MessageEvent>[] = [
+      const mockedErrorEvents: Partial<MessageEvent>[] = [
         {
           data: {
             type: "error",
@@ -477,9 +483,9 @@ describe("Activity", () => {
           },
         },
       ];
-      setExpectedErrorEvents(activity.id, expectedErrors);
       await script.before();
       const results = await activity.execute(script.getExeScriptRequest(), true);
+      mockedErrorEvents.forEach((er) => mockEventSourceEmitter.emit("error", er));
       return new Promise<void>((res) => {
         results.on("error", (error: GolemWorkError) => {
           expect(error).toBeInstanceOf(GolemWorkError);

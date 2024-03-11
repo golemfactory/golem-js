@@ -16,6 +16,7 @@ import { buildExeScriptErrorResult, buildExeScriptSuccessResult, simulateLongPol
 import * as YaTsClient from "ya-ts-client";
 import { IPv4 } from "ip-num";
 import { StorageProviderDataCallback } from "../../src/storage/provider";
+import EventEmitter from "events";
 
 const logger = new LoggerMock();
 
@@ -27,6 +28,14 @@ const mockState = mock(YaTsClient.ActivityApi.RequestorStateService);
 const mockAgreement = mock(Agreement);
 
 const yagnaApi = instance(mockYagna);
+
+const mockEventSourceEmitter = new EventEmitter();
+jest.mock("eventsource", () =>
+  jest.fn(() => ({
+    addEventListener: (e, cb) => mockEventSourceEmitter.on(e, cb),
+    close: () => null,
+  })),
+);
 
 describe("Work Context", () => {
   beforeEach(() => {
@@ -267,27 +276,21 @@ describe("Work Context", () => {
   });
 
   describe("Exec and stream", () => {
-    // FIXME: This test has to be redesigned as right now this leads to calling `EventSource(`${basePath}/activity/${this.id}/exec/${batchId}`
-    //  - avoiding using Yagna clients etc, and sending a direct HTTP request to Yagna. This has to be abstracted away and then mocked
-    //  in the test.
-    it.skip("should execute spawn command", async () => {
+    it("should execute runAndStream command", async () => {
       const activity = await Activity.create(agreement, yagnaApi);
       const ctx = new WorkContext(activity, commonWorkOptions);
-
-      when(mockControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenCall(() =>
-        simulateLongPoll([
-          {
-            index: 0,
-            eventDate: new Date().toISOString(),
-            result: "Ok",
-            stdout: "Output",
-            stderr: "Error",
-            isBatchFinished: true,
-          },
-        ]),
-      );
-
       const remote = await ctx.runAndStream("rm -rf foo/");
+      const mockedEvents = [
+        {
+          type: "runtime",
+          data: '{"batch_id":"04a9b0f49e564db99e6f15ba95c35817","index":0,"timestamp":"2022-06-23T10:42:38.626573153","kind":{"stdout":"{\\"startMode\\":\\"blocking\\",\\"valid\\":{\\"Ok\\":\\"\\"},\\"vols\\":[]}"}}',
+        },
+        {
+          type: "runtime",
+          data: '{"batch_id":"04a9b0f49e564db99e6f15ba95c35817","index":0,"timestamp":"2022-06-23T10:42:38.626958777","kind":{"finished":{"return_code":0,"message":null}}}',
+        },
+      ];
+      mockedEvents.forEach((ev) => mockEventSourceEmitter.emit("runtime", ev));
 
       const finalResult = await remote.waitForExit();
       expect(finalResult.result).toBe("Ok");

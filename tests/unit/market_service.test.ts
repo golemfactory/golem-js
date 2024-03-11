@@ -4,7 +4,7 @@ import {
   proposalsInitial,
   proposalsShortDebitNoteTimeout,
   proposalsWrongPaymentPlatform,
-} from "../mock/fixtures";
+} from "../fixtures";
 import { anything, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
 import { LoggerMock } from "../mock/utils/logger";
 import * as YaTsClient from "ya-ts-client";

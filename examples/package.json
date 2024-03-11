@@ -6,7 +6,7 @@
   "repository": "https://github.com/golemfactory/golem-js",
   "scripts": {
     "hello": "tsx basic/hello-world.ts",
-    "experimental-server": "tsx express/server.ts",
+    "experimental-server": "tsx experimental/express/server.ts",
     "lint:ts": "tsc --project tsconfig.json --noEmit"
   },
   "author": "GolemFactory <contact@golem.network>",

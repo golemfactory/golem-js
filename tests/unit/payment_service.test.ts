@@ -1,5 +1,5 @@
 import { Allocation, GolemPaymentError, PaymentErrorCode, PaymentFilters, PaymentService } from "../../src/payment";
-import { debitNotes, debitNotesEvents, invoiceEvents, invoices } from "../mock/fixtures";
+import { debitNotes, debitNotesEvents, invoiceEvents, invoices } from "../fixtures";
 import { anything, instance, mock, reset, when } from "@johanblumenberg/ts-mockito";
 import { LoggerMock } from "../mock/utils/logger";
 import { Agreement, GolemUserError, YagnaApi } from "../../src";
@@ -50,7 +50,7 @@ describe("Payment Service", () => {
     });
     when(mockYagna.payment).thenReturn(instance(mockPayment));
 
-    /** NOTE: The ID is also used in fixtures, make sure that it matches {@see tests/mock/fixtures/invoices.ts} */
+    /** NOTE: The ID is also used in fixtures, make sure that it matches {@see tests/fixtures/invoices.ts} */
     when(mockAgreement.id).thenReturn("test_agreement_id");
     when(mockAgreement.getProviderInfo()).thenReturn({
       id: "provider-id",

@@ -105,6 +105,23 @@ jobs:
         if: always()
         with:
           type: "e2e"
+  run-examples-tests:
+    name: Run Examples tests
+    needs: regular-checks
+    runs-on: goth2
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare providers and requestor
+        uses: ./.github/actions/prepare-tests
+
+      - name: Run the Examples tests
+        run: docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm run test:examples -- --exitOnError"
+
+      - name: Cleanup test environment
+        uses: ./.github/actions/cleanup-tests
+        with:
+          type: "examples"
 
   release:
     name: Release the SDK to NPM and GitHub

@@ -2,7 +2,7 @@ import { GolemInternalError, pinoLogger, WebSocketBrowserStorageProvider, YagnaA
 // .js added for ESM compatibility
 import { encode, toObject } from "flatbuffers/js/flexbuffers.js";
 import * as jsSha3 from "js-sha3";
-import { TEST_IDENTITY } from "../mock/fixtures";
+import { TEST_IDENTITY } from "../fixtures";
 import { GsbApi } from "ya-ts-client";
 import { LoggerMock } from "../mock/utils/logger";
 import { anything, instance, mock, reset, resetCalls, verify, when } from "@johanblumenberg/ts-mockito";
