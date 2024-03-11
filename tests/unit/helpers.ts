@@ -37,9 +37,9 @@ export const buildExeScriptErrorResult = (
  * @param response The response to return after "polling time"
  * @param pollingTimeSec The time to wait before returning the response
  */
-export const simulateLongPoll = <T>(response: T, pollingTimeSec: number = 1) =>
+export const simulateLongPoll = <T>(response: T, pollingTimeMs: number = 10) =>
   new Promise<T>((resolve) => {
-    setTimeout(() => resolve(response), pollingTimeSec * 1000);
+    setTimeout(() => resolve(response), pollingTimeMs);
   });
 
 /**

@@ -4,6 +4,7 @@ import { NetApi } from "ya-ts-client";
 
 const mockYagna = mock(YagnaApi);
 const mockNet = mock(NetApi.RequestorService);
+const mockHttpRequest = mock(NetApi.BaseHttpRequest);
 const yagnaApi = instance(mockYagna);
 
 describe("Network", () => {
@@ -11,8 +12,14 @@ describe("Network", () => {
     reset(mockYagna);
     reset(mockNet);
 
-    when(mockYagna.basePath).thenReturn("http://localhost");
     when(mockYagna.net).thenReturn(instance(mockNet));
+    when(mockNet.httpRequest).thenReturn(instance(mockHttpRequest));
+    when(mockHttpRequest.config).thenReturn({
+      BASE: "http://localhost/net-api/v1",
+      CREDENTIALS: "same-origin",
+      WITH_CREDENTIALS: true,
+      VERSION: "v1",
+    });
 
     when(mockNet.createNetwork(anything())).thenCall((body) =>
       Promise.resolve({

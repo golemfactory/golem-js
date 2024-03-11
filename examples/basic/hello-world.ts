@@ -46,7 +46,7 @@ import {
     payment.acceptPayments(agreement);
 
     const activity = await Activity.create(agreement, yagna);
-    // To cut down the noise
+    // Stop listening for new proposals
     await market.end();
 
     const ctx = new WorkContext(activity, {});

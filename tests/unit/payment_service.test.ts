@@ -50,16 +50,17 @@ describe("Payment Service", () => {
     });
     when(mockYagna.payment).thenReturn(instance(mockPayment));
 
-    /** NOTE: The ID is also used in fixtures, make sure that it matches {@see tests/fixtures/invoices.ts} */
-    when(mockAgreement.id).thenReturn("test_agreement_id");
+    const TEST_AGREEMENT_ID = invoices[0].agreementId;
+
+    when(mockAgreement.id).thenReturn(TEST_AGREEMENT_ID);
     when(mockAgreement.getProviderInfo()).thenReturn({
       id: "provider-id",
       name: "provider-name",
       walletAddress: "provider-wallet",
     });
 
-    when(mockMarket.getAgreement("test_agreement_id")).thenResolve({
-      agreementId: "test_agreement_id",
+    when(mockMarket.getAgreement(TEST_AGREEMENT_ID)).thenResolve({
+      agreementId: TEST_AGREEMENT_ID,
       demand: {
         requestorId: "requestor-id",
         demandId: "demand-id",

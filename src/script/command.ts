@@ -1,7 +1,9 @@
 import { ActivityApi } from "ya-ts-client";
 import { StorageProvider } from "../storage";
 
-// TODO: Check why `import { Result } from "../activity";` does not work correctly here
+// importing from '../activity' makes Result undefined
+// this is likely due to some circular dependency
+// temporarily importing from '../activity/results' to fix the issue
 import { Result } from "../activity/results";
 
 const EMPTY_ERROR_RESULT = new Result({

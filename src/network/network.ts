@@ -253,6 +253,6 @@ export class Network {
   }
 
   private getUrl() {
-    return this.yagnaApi.basePath + "/net-api/v1";
+    return this.yagnaApi.net.httpRequest.config.BASE;
   }
 }

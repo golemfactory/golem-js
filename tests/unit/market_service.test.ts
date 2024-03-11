@@ -64,7 +64,7 @@ describe("Market Service", () => {
 
     await marketService.run(instance(mockPackage), instance(mockAllocation));
 
-    await logger.expectToInclude("Proposal has been responded", { id: expect.anything() }, 3_000);
+    await logger.expectToInclude("Proposal has been responded", { id: expect.anything() }, 100);
 
     await marketService.end();
   });
@@ -78,7 +78,7 @@ describe("Market Service", () => {
 
     await marketService.run(instance(mockPackage), instance(mockAllocation));
 
-    await logger.expectToInclude("Proposal has been confirmed and added to agreement pool", expect.anything(), 3_000);
+    await logger.expectToInclude("Proposal has been confirmed and added to agreement pool", expect.anything(), 100);
 
     verify(mockAgreementPoolService.addProposal(anything())).times(proposalsDraft.length);
 
@@ -104,7 +104,7 @@ describe("Market Service", () => {
         reason: "No common payment platform",
         id: expect.anything(),
       },
-      3_000,
+      100,
     );
     await marketService.end();
   });
@@ -122,7 +122,7 @@ describe("Market Service", () => {
 
     await marketService.run(instance(mockPackage), instance(mockAllocation));
 
-    await logger.expectToMatch(/No common payment platform/, 3_000);
+    await logger.expectToMatch(/No common payment platform/, 100);
     await marketService.end();
   });
 
@@ -139,7 +139,7 @@ describe("Market Service", () => {
 
     await marketService.run(instance(mockPackage), instance(mockAllocation));
 
-    await logger.expectToMatch(/Debit note acceptance timeout too short/, 3_000);
+    await logger.expectToMatch(/Debit note acceptance timeout too short/, 100);
     await marketService.end();
   });
 
@@ -158,7 +158,7 @@ describe("Market Service", () => {
 
     await marketService.run(instance(mockPackage), instance(mockAllocation));
 
-    await logger.expectToMatch(/Proposal rejected by Proposal Filter/, 3_000);
+    await logger.expectToMatch(/Proposal rejected by Proposal Filter/, 100);
     await marketService.end();
   });
 });
