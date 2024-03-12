@@ -1,5 +1,6 @@
 {
   "testEnvironment": "node",
+  "setupFiles": ["<rootDir>/_setupEnv.ts"],
   "setupFilesAfterEnv": ["<rootDir>/_setupLogging.ts"],
   "testTimeout": 180000,
   "extensionsToTreatAsEsm": [".ts"],
