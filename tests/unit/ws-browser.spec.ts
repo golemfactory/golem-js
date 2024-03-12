@@ -1,4 +1,4 @@
-import { GolemInternalError, pinoLogger, WebSocketBrowserStorageProvider, YagnaApi } from "../../src";
+import { GolemInternalError, nullLogger, WebSocketBrowserStorageProvider, YagnaApi } from "../../src";
 // .js added for ESM compatibility
 import { encode, toObject } from "flatbuffers/js/flexbuffers.js";
 import * as jsSha3 from "js-sha3";
@@ -60,7 +60,7 @@ describe("WebSocketBrowserStorageProvider", () => {
     });
 
     it("should use provided logger", () => {
-      const logger = pinoLogger();
+      const logger = nullLogger();
       const provider = new WebSocketBrowserStorageProvider(yagnaApi, { logger });
       expect(provider["logger"]).toBe(logger);
     });
