@@ -55,10 +55,10 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup NodeJS ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
 
@@ -74,10 +74,10 @@ jobs:
           npm run test:import
 
       - name: Upload unit test reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: unit-test-report
+          name: unit-test-report-${{matrix.os}}-node-${{matrix.node-version}}
           path: reports/unit-report.xml
 
   run-e2e-tests:
@@ -85,7 +85,7 @@ jobs:
     needs: regular-checks
     runs-on: goth2
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Prepare providers and requestor
         uses: ./.github/actions/prepare-tests
@@ -94,7 +94,7 @@ jobs:
         run: docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm run test:e2e"
 
       - name: Upload E2E reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: e2e-test-report
@@ -125,7 +125,7 @@ jobs:
 
   release:
     name: Release the SDK to NPM and GitHub
-    needs: [run-e2e-tests]
+    needs: [run-e2e-tests, run-examples-tests]
     runs-on: ubuntu-latest
     permissions:
       contents: write # to be able to publish a GitHub release
@@ -134,12 +134,12 @@ jobs:
       id-token: write # to enable use of OIDC for npm provenance
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Setup NodeJS
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           # Semantic release requires this as bare minimum
           node-version: 20
