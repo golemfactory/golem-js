@@ -1,14 +1,15 @@
-import { Result, ResultState, StreamingBatchEvent } from "./results";
+import { Result, ResultData, StreamingBatchEvent } from "./results";
 import EventSource from "eventsource";
 import { Readable } from "stream";
-import { Logger, YagnaApi, defaultLogger } from "../utils";
+import { defaultLogger, Logger, YagnaApi } from "../utils";
 import sleep from "../utils/sleep";
 import { ActivityFactory } from "./factory";
 import { ActivityConfig } from "./config";
 import { Events } from "../events";
 import { Agreement, ProviderInfo } from "../agreement";
-import { GolemWorkError, WorkErrorCode } from "../work/error";
+import { GolemWorkError, WorkErrorCode } from "../work";
 import { GolemAbortError, GolemInternalError, GolemTimeoutError } from "../error/golem-error";
+import { withTimeout } from "../utils/timeout";
 
 export enum ActivityStateEnum {
   New = "New",
@@ -149,8 +150,15 @@ export class Activity {
    */
   public async getState(): Promise<ActivityStateEnum> {
     try {
-      const { data } = await this.yagnaApi.activity.state.getActivityState(this.id);
-      const state = data.state[0];
+      const response = await this.yagnaApi.activity.state.getActivityState(this.id);
+      const state = response.state[0];
+
+      if (state === null) {
+        throw new GolemInternalError(
+          "Tried to establish the current state of the activity but it turns out to be 'null'",
+        );
+      }
+
       if (this.currentState !== ActivityStateEnum[state]) {
         this.options.eventTarget?.dispatchEvent(
           new Events.ActivityStateChanged({ id: this.id, state: ActivityStateEnum[state] }),
@@ -174,18 +182,20 @@ export class Activity {
   }
 
   protected async send(script: ExeScriptRequest): Promise<string> {
-    const { data: batchId } = await this.yagnaApi.activity.control.exec(this.id, script, {
-      timeout: this.options.activityRequestTimeout,
-    });
+    const batchId = await withTimeout(
+      this.yagnaApi.activity.control.exec(this.id, script),
+      this.options.activityRequestTimeout,
+    );
     return batchId;
   }
 
   private async end() {
     try {
       this.eventSource?.close();
-      await this.yagnaApi.activity.control.destroyActivity(this.id, this.options.activityRequestTimeout / 1000, {
-        timeout: this.options.activityRequestTimeout + 1000,
-      });
+      await withTimeout(
+        this.yagnaApi.activity.control.destroyActivity(this.id, this.options.activityRequestTimeout / 1000),
+        this.options.activityRequestTimeout + 1000,
+      );
       this.options.eventTarget?.dispatchEvent(
         new Events.ActivityDestroyed({ id: this.id, agreementId: this.agreement.id }),
       );
@@ -212,7 +222,7 @@ export class Activity {
     const { id: activityId, agreement, logger } = activity;
     const isRunning = () => this.isRunning;
     const { activityExecuteTimeout, eventTarget, activityExeBatchResultPollIntervalSeconds } = this.options;
-    const api = this.yagnaApi.activity;
+    const api = this.yagnaApi;
     const handleError = this.handleError.bind(this);
 
     return new Readable({
@@ -237,14 +247,11 @@ export class Activity {
             // This will ignore "incompatibility" between ExeScriptCommandResultResultEnum and ResultState, which both
             // contain exactly the same entries, however TSC refuses to compile it as it assumes the former is dynamically
             // computed.
-            const { data: rawExecBachResults } = await api.control.getExecBatchResults(
+            const rawExecBachResults = await api.activity.control.getExecBatchResults(
               activityId,
               batchId,
               undefined,
               activityExeBatchResultPollIntervalSeconds,
-              {
-                timeout: 0,
-              },
             );
             retryCount = 0;
             if (!isRunning()) {
@@ -252,7 +259,9 @@ export class Activity {
               return this.destroy(new GolemAbortError(`Activity ${activityId} has been interrupted.`));
             }
 
-            const newResults = rawExecBachResults.map((rawResult) => new Result(rawResult)).slice(lastIndex + 1);
+            const newResults = rawExecBachResults
+              .map((rawResult) => new Result(rawResult as ResultData))
+              .slice(lastIndex + 1);
 
             logger.debug(`Received batch execution results`, { results: newResults, activityId });
 
@@ -302,8 +311,7 @@ export class Activity {
     startTime: Date,
     timeout?: number,
   ): Promise<Readable> {
-    const basePath = this.yagnaApi.activity.control["basePath"];
-    const apiKey = this.yagnaApi.yagnaOptions.apiKey;
+    const { basePath, apiKey } = this.yagnaApi.yagnaOptions;
 
     const eventSource = new EventSource(`${basePath}/activity/${this.id}/exec/${batchId}`, {
       headers: {
@@ -418,8 +426,16 @@ export class Activity {
 
   private async isTerminated(): Promise<{ terminated: boolean; reason?: string; errorMessage?: string }> {
     try {
-      const { data } = await this.yagnaApi.activity.state.getActivityState(this.id);
-      const state = ActivityStateEnum[data?.state?.[0]];
+      const data = await this.yagnaApi.activity.state.getActivityState(this.id);
+      const stateValue = data?.state?.[0];
+
+      if (stateValue === null) {
+        throw new GolemInternalError(
+          "Tried to establish the current state of the activity but it turns out to be 'null'",
+        );
+      }
+
+      const state = ActivityStateEnum[stateValue];
       return {
         terminated: state === ActivityStateEnum.Terminated,
         reason: data?.reason,
@@ -441,11 +457,11 @@ export class Activity {
         eventDate: event.timestamp,
         result: event?.kind?.finished
           ? event?.kind?.finished?.return_code === 0
-            ? ResultState.Ok
-            : ResultState.Error
+            ? "Ok"
+            : "Error"
           : event?.kind?.stderr
-            ? ResultState.Error
-            : ResultState.Ok,
+            ? "Error"
+            : "Ok",
         stdout: event?.kind?.stdout,
         stderr: event?.kind?.stderr,
         message: event?.kind?.finished?.message,

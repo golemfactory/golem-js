@@ -1,5 +1,5 @@
 import { Proposal, ProposalFilter } from "../../market";
-import { AgreementSelector } from "../../agreement";
+import { AgreementCandidate, AgreementSelector } from "../../agreement";
 import { GolemReputationError } from "./error";
 import {
   AgreementSelectorOption,
@@ -8,6 +8,8 @@ import {
   ReputationData,
   ReputationProviderEntry,
   ReputationProviderScores,
+  ReputationRejectedOperator,
+  ReputationRejectedProvider,
   ReputationWeights,
 } from "./types";
 import { Logger, nullLogger } from "../../utils";
@@ -41,7 +43,14 @@ export const DEFAULT_AGREEMENT_WEIGHTS: ReputationWeights = {
  * Default reputation service URL.
  * @experimental
  */
-export const DEFAULT_REPUTATION_URL = "https://reputation.dev-test.golem.network/v1/providers/scores";
+export const DEFAULT_REPUTATION_URL = "https://reputation.dev-test.golem.network/v2/providers/scores";
+
+/**
+ * The number of top scoring providers to consider when selecting an agreement.
+ *
+ * Default for `topPoolSize` agreement selector option.
+ */
+export const DEFAULT_AGREEMENT_TOP_POOL_SIZE = 2;
 
 /**
  * Reputation system client.
@@ -65,8 +74,7 @@ export class ReputationSystem {
    * Reputation data.
    */
   private data: ReputationData = {
-    providers: [],
-    rejected: [], // Currently unused.
+    testedProviders: [],
   };
 
   /**
@@ -87,7 +95,19 @@ export class ReputationSystem {
   /**
    * Map of provider IDs to their reputation data.
    */
-  private readonly dataMap = new Map<string, ReputationProviderEntry>();
+  private readonly providersScoreMap = new Map<string, ReputationProviderEntry>();
+
+  /**
+   * Map of provider IDs to their rejected status.
+   * @private
+   */
+  private readonly rejectedProvidersMap = new Map<string, ReputationRejectedProvider>();
+
+  /**
+   * Map of operators (by wallet address) to their rejected status.
+   * @private
+   */
+  private readonly rejectedOperatorsMap = new Map<string, ReputationRejectedOperator>();
 
   /**
    * Reputation service URL.
@@ -122,9 +142,20 @@ export class ReputationSystem {
    */
   setData(data: ReputationData): void {
     this.data = data;
-    this.dataMap.clear();
-    this.data.providers.forEach((entry) => {
-      this.dataMap.set(entry.providerId, entry);
+    this.providersScoreMap.clear();
+    this.rejectedProvidersMap.clear();
+    this.rejectedOperatorsMap.clear();
+
+    this.data.testedProviders.forEach((entry) => {
+      this.providersScoreMap.set(entry.provider.id, entry);
+    });
+
+    this.data.rejectedProviders?.forEach((entry) => {
+      this.rejectedProvidersMap.set(entry.provider.id, entry);
+    });
+
+    this.data.rejectedOperators?.forEach((entry) => {
+      this.rejectedOperatorsMap.set(entry.operator.walletAddress, entry);
     });
   }
 
@@ -191,35 +222,111 @@ export class ReputationSystem {
   }
 
   /**
+   * Returns scores for a provider or undefined if the provider is unlisted.
+   * @param providerId
+   */
+  getProviderScores(providerId: string): ReputationProviderScores | undefined {
+    return this.providersScoreMap.get(providerId)?.scores;
+  }
+
+  /**
    * Returns a proposal filter that can be used to filter out providers with low reputation scores.
    * @param opts
    */
   proposalFilter(opts?: ProposalFilterOptions): ProposalFilter {
     return (proposal: Proposal) => {
-      const entry = this.dataMap.get(proposal.provider.id);
-      if (entry) {
-        const score = this.calculateScore(entry.scores, this.proposalWeights);
-        this.logger.debug(
-          `Proposal score for ${proposal.id}: ${score} - min ${opts?.min ?? DEFAULT_PROPOSAL_MIN_SCORE}`,
-        );
-        return score >= (opts?.min ?? DEFAULT_PROPOSAL_MIN_SCORE);
+      // Filter out rejected operators.
+      const operatorEntry = this.rejectedOperatorsMap.get(proposal.provider.walletAddress);
+      if (operatorEntry) {
+        this.logger.debug(`Proposal from ${proposal.provider.id} rejected due to rejected operator`, {
+          reason: operatorEntry.reason,
+          provider: proposal.provider,
+        });
+        return false;
+      }
+
+      // Filter out rejected providers.
+      const providerEntry = this.rejectedProvidersMap.get(proposal.provider.id);
+      if (providerEntry) {
+        this.logger.debug(`Proposal from ${proposal.provider.id} rejected due to rejected provider`, {
+          reason: providerEntry.reason,
+          provider: proposal.provider,
+        });
+        return false;
+      }
+
+      // Filter based on reputation scores.
+      const scoreEntry = this.providersScoreMap.get(proposal.provider.id);
+      if (scoreEntry) {
+        const min = opts?.min ?? DEFAULT_PROPOSAL_MIN_SCORE;
+        const score = this.calculateScore(scoreEntry.scores, this.proposalWeights);
+        this.logger.debug(`Proposal score for ${proposal.provider.id}: ${score} - min ${min}`, {
+          provider: proposal.provider,
+          scores: scoreEntry.scores,
+          weights: this.proposalWeights,
+          score,
+          min,
+        });
+        return score >= min;
       }
 
       this.logger.debug(
-        `Proposal from unlisted provider ${proposal.provider.id} (known providers: ${this.data.providers.length})`,
+        `Proposal from unlisted provider ${proposal.provider.id} (known providers: ${this.data.testedProviders.length})`,
+        {
+          provider: proposal.provider,
+        },
       );
 
-      // Use the acceptUnlisted option by default, otherwise allow only if there are no known providers.
-      return opts?.acceptUnlisted ?? this.data.providers.length === 0;
+      // Use the acceptUnlisted option if provided, otherwise allow only if there are no known providers.
+      return opts?.acceptUnlisted ?? this.data.testedProviders.length === 0;
     };
   }
 
   /**
-   * Currently not implemented.
+   * Returns an agreement selector that can be used to select providers based on their reputation scores.
+   *
+   * The outcome of this function is determined by current provider scores and the agreement weights set.
+   *
+   * For best results, make sure you test the performance or stability of your workload using different weights.
+   *
+   * @see setAgreementWeights
+   *
    * @param opts
    */
   agreementSelector(opts?: AgreementSelectorOption): AgreementSelector {
-    throw new GolemReputationError("Not implemented" + opts);
+    return async (candidates): Promise<AgreementCandidate> => {
+      const array = Array.from(candidates);
+      // Cache scores for providers.
+      const scoresMap = new Map<string, number>();
+
+      // Sort the array by score
+      array.sort((a, b) => {
+        const aId = a.proposal.provider.id;
+        const bId = b.proposal.provider.id;
+
+        const aScoreData = this.providersScoreMap.get(aId)?.scores ?? {};
+        const bScoreData = this.providersScoreMap.get(bId)?.scores ?? {};
+
+        // Get the score values.
+        let aScoreValue = scoresMap.get(aId) ?? this.calculateScore(aScoreData, this.agreementWeights);
+        let bScoreValue = scoresMap.get(bId) ?? this.calculateScore(bScoreData, this.agreementWeights);
+
+        // Store score if not already stored.
+        if (!scoresMap.has(aId)) scoresMap.set(aId, aScoreValue);
+        if (!scoresMap.has(bId)) scoresMap.set(bId, bScoreValue);
+
+        // Add bonus for existing agreements.
+        if (a.agreement) aScoreValue += opts?.agreementBonus ?? 0;
+        if (b.agreement) bScoreValue += opts?.agreementBonus ?? 0;
+
+        return bScoreValue - aScoreValue;
+      });
+
+      const topPool = Math.min(opts?.topPoolSize ?? DEFAULT_AGREEMENT_TOP_POOL_SIZE, array.length);
+      const index = topPool === 1 ? 0 : Math.floor(Math.random() * topPool);
+
+      return array[index];
+    };
   }
 
   /**
@@ -227,7 +334,7 @@ export class ReputationSystem {
    * @param scores
    * @param weights
    */
-  calculateScore(scores: ReputationProviderScores, weights: ReputationWeights): number {
+  calculateScore(scores: Partial<ReputationProviderScores>, weights: ReputationWeights): number {
     let totalWeight = 0;
     let score = 0;
 
@@ -241,5 +348,20 @@ export class ReputationSystem {
 
     // Return normalized score.
     return score / totalWeight;
+  }
+
+  /**
+   * Based on the current reputation data, calculate a list of providers that meet the minimum score requirement.
+   *
+   * This method is useful to validate you filter and weights vs the available provider market.
+   *
+   * @param opts
+   */
+  calculateProviderPool(opts?: ProposalFilterOptions): ReputationProviderEntry[] {
+    const min = opts?.min ?? DEFAULT_PROPOSAL_MIN_SCORE;
+    return this.data.testedProviders.filter((entry) => {
+      const score = this.calculateScore(entry.scores, this.proposalWeights);
+      return score >= min;
+    });
   }
 }

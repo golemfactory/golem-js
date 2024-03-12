@@ -1,39 +1,38 @@
-import { Proposal as ProposalModel, ProposalAllOfStateEnum } from "ya-ts-client/dist/ya-market/src/models";
+import { MarketApi } from "ya-ts-client";
 import { Proposal, ProposalProperties } from "./proposal";
-import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
 import { Demand } from "./demand";
-import { instance, mock, when } from "@johanblumenberg/ts-mockito";
+import { instance, mock, reset, when } from "@johanblumenberg/ts-mockito";
 import { Allocation } from "../payment";
 import { GolemMarketError, MarketErrorCode } from "./error";
 
-jest.mock("ya-ts-client/dist/ya-market/api");
-
 const allocationMock = mock(Allocation);
-when(allocationMock.paymentPlatform).thenReturn("test-payment-platform");
 const demandMock = mock(Demand);
-when(demandMock.allocation).thenReturn(instance(allocationMock));
+const mockApi = mock(MarketApi.RequestorService);
+
 const testDemand = instance(demandMock);
 
-const mockApi = new RequestorApi();
-
-const mockCounteringProposalReference = jest.fn();
-
 const buildTestProposal = (props: Partial<ProposalProperties>): Proposal => {
-  const model: ProposalModel = {
+  const model: MarketApi.ProposalDTO = {
     constraints: "",
     issuerId: "",
     proposalId: "",
-    state: ProposalAllOfStateEnum.Initial,
+    state: "Initial",
     timestamp: "",
     properties: props,
   };
 
-  const proposal = new Proposal(testDemand, null, mockCounteringProposalReference, mockApi, model);
-
-  return proposal;
+  return new Proposal(testDemand, null, jest.fn(), instance(mockApi), model);
 };
 
 describe("Proposal", () => {
+  beforeEach(() => {
+    reset(allocationMock);
+    reset(demandMock);
+
+    when(allocationMock.paymentPlatform).thenReturn("test-payment-platform");
+    when(demandMock.allocation).thenReturn(instance(allocationMock));
+  });
+
   describe("Validation", () => {
     test("throws an error when linear pricing vector is missing", () => {
       expect(() =>

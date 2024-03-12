@@ -1,12 +1,40 @@
-import { LoggerMock, YagnaMock } from "../mock";
-import { GolemNetworkError, NetworkService } from "../../src/network";
-import { NetworkErrorCode } from "../../src/network/error";
+import { GolemNetworkError, NetworkErrorCode, NetworkService, YagnaApi } from "../../src";
+import { anything, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
+import { LoggerMock } from "../mock/utils/logger";
+import { NetApi } from "ya-ts-client";
 
 const logger = new LoggerMock();
-const yagnaApi = new YagnaMock().getApi();
+
+const mockYagna = mock(YagnaApi);
+const mockNet = mock(NetApi.RequestorService);
+const mockHttpRequest = mock(NetApi.BaseHttpRequest);
+
+const yagnaApi = instance(mockYagna);
+
 describe("Network Service", () => {
   beforeEach(() => {
     logger.clear();
+
+    reset(mockYagna);
+    reset(mockNet);
+
+    when(mockYagna.net).thenReturn(instance(mockNet));
+    when(mockNet.httpRequest).thenReturn(instance(mockHttpRequest));
+    when(mockHttpRequest.config).thenReturn({
+      BASE: "http://localhost/net-api/v1",
+      CREDENTIALS: "same-origin",
+      WITH_CREDENTIALS: true,
+      VERSION: "v1",
+    });
+
+    when(mockNet.createNetwork(anything())).thenCall((body) =>
+      Promise.resolve({
+        id: "network-id",
+        ip: "192.168.0.0",
+        mask: "255.255.255.0",
+        gateway: body.gateway,
+      }),
+    );
   });
 
   describe("Creating", () => {
@@ -59,9 +87,10 @@ describe("Network Service", () => {
           const networkService = new NetworkService(yagnaApi, { logger });
           await networkService.run("test_owner_id");
           await networkService.addNode("provider_2");
-          const removeNetworkApiSpy = jest.spyOn(yagnaApi.net, "removeNode");
           await networkService.removeNode("provider_2");
-          expect(removeNetworkApiSpy).toHaveBeenCalled();
+
+          verify(mockNet.removeNode(anything(), "provider_2")).once();
+
           await networkService.end();
         });
         it("should not remove node from the network", async () => {

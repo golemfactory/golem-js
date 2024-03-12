@@ -76,6 +76,7 @@ export class Package {
 
   async getDemandDecoration(): Promise<MarketDecoration> {
     const builder = new DecorationsBuilder();
+
     builder
       .addProperty("golem.srv.comp.vm.package_format", this.options.packageFormat)
       .addConstraint("golem.inf.mem.gib", this.options.minMemGib.toString(), ComparisonOperator.GtEq)
@@ -83,13 +84,17 @@ export class Package {
       .addConstraint("golem.runtime.name", this.options.engine)
       .addConstraint("golem.inf.cpu.cores", this.options.minCpuCores.toString(), ComparisonOperator.GtEq)
       .addConstraint("golem.inf.cpu.threads", this.options.minCpuThreads.toString(), ComparisonOperator.GtEq);
+
     if (this.options.imageHash || this.options.imageTag) {
       const taskPackage = await this.resolveTaskPackageUrl();
       builder.addProperty("golem.srv.comp.task_package", taskPackage);
     }
+
     if (this.options.capabilities.length)
       this.options.capabilities.forEach((cap) => builder.addConstraint("golem.runtime.capabilities", cap));
+
     this.addManifestDecorations(builder);
+
     return builder.getDecorations();
   }
 

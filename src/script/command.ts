@@ -1,9 +1,13 @@
-import { ExeScriptRequest } from "ya-ts-client/dist/ya-activity/src/models";
+import { ActivityApi } from "ya-ts-client";
 import { StorageProvider } from "../storage";
-import { Result, ResultState } from "../activity";
+
+// importing from '../activity' makes Result undefined
+// this is likely due to some circular dependency
+// temporarily importing from '../activity/results' to fix the issue
+import { Result } from "../activity/results";
 
 const EMPTY_ERROR_RESULT = new Result({
-  result: ResultState.Error,
+  result: "Error",
   eventDate: new Date().toISOString(),
   index: -1,
   message: "No result due to error",
@@ -28,7 +32,7 @@ export class Command<T = unknown> {
     };
   }
 
-  toExeScriptRequest(): ExeScriptRequest {
+  toExeScriptRequest(): ActivityApi.ExeScriptRequestDTO {
     return { text: JSON.stringify([this.toJson()]) };
   }
 
@@ -213,7 +217,7 @@ export class DownloadData extends Transfer<Uint8Array> {
 
   async after(result: Result): Promise<Result<Uint8Array>> {
     await this.storageProvider.release([this.args["to"] as string]);
-    if (result.result === ResultState.Ok) {
+    if (result.result === "Ok") {
       return new Result<Uint8Array>({
         ...result,
         data: this.combineChunks(),
@@ -222,7 +226,7 @@ export class DownloadData extends Transfer<Uint8Array> {
 
     return new Result<Uint8Array>({
       ...result,
-      result: ResultState.Error,
+      result: "Error",
       data: undefined,
     });
   }

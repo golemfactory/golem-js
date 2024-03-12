@@ -1,9 +1,9 @@
-import { Proposal as ProposalModel, ProposalAllOfStateEnum } from "ya-ts-client/dist/ya-market/src/models";
-import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
+import { MarketApi } from "ya-ts-client";
 import { Events } from "../events";
 import { GolemMarketError, MarketErrorCode } from "./error";
 import { ProviderInfo } from "../agreement";
 import { Demand } from "./demand";
+import { withTimeout } from "../utils/timeout";
 
 export type PricingInfo = {
   cpuSec: number;
@@ -54,7 +54,7 @@ export interface ProposalDetails {
   publicNet: boolean;
   runtimeCapabilities: string[];
   runtimeName: string;
-  state: ProposalAllOfStateEnum;
+  state: MarketApi.ProposalDTO["state"];
 }
 
 /**
@@ -68,7 +68,7 @@ export class Proposal {
   readonly constraints: string;
   readonly timestamp: string;
   counteringProposalId: string | null;
-  private readonly state: ProposalAllOfStateEnum;
+  private readonly state: MarketApi.ProposalDTO["state"];
   private readonly prevProposalId: string | undefined;
 
   /**
@@ -85,8 +85,8 @@ export class Proposal {
     public readonly demand: Demand,
     private readonly parentId: string | null,
     private readonly setCounteringProposalReference: (id: string, parentId: string) => void | null,
-    private readonly api: RequestorApi,
-    model: ProposalModel,
+    private readonly api: MarketApi.RequestorService,
+    model: MarketApi.ProposalDTO,
     private eventTarget?: EventTarget,
   ) {
     this.id = model.proposalId;
@@ -180,19 +180,19 @@ export class Proposal {
   }
 
   isInitial(): boolean {
-    return this.state === ProposalAllOfStateEnum.Initial;
+    return this.state === "Initial";
   }
 
   isDraft(): boolean {
-    return this.state === ProposalAllOfStateEnum.Draft;
+    return this.state === "Draft";
   }
 
   isExpired(): boolean {
-    return this.state === ProposalAllOfStateEnum.Expired;
+    return this.state === "Expired";
   }
 
   isRejected(): boolean {
-    return this.state === ProposalAllOfStateEnum.Rejected;
+    return this.state === "Rejected";
   }
 
   async reject(reason = "no reason") {
@@ -221,12 +221,19 @@ export class Proposal {
     try {
       (this.demand.demandRequest.properties as ProposalProperties)["golem.com.payment.chosen-platform"] =
         chosenPlatform;
-      const { data: counteringProposalId } = await this.api.counterProposalDemand(
-        this.demand.id,
-        this.id,
-        this.demand.demandRequest,
-        { timeout: 20000 },
+
+      const counteringProposalId = await withTimeout(
+        this.api.counterProposalDemand(this.demand.id, this.id, this.demand.demandRequest),
+        20_000,
       );
+
+      if (!counteringProposalId || typeof counteringProposalId !== "string") {
+        throw new GolemMarketError(
+          "Failed to respond proposal. No countering proposal ID returned",
+          MarketErrorCode.ProposalResponseFailed,
+          this.demand,
+        );
+      }
       if (this.setCounteringProposalReference) {
         this.setCounteringProposalReference(this.id, counteringProposalId);
       }

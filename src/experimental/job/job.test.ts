@@ -1,19 +1,26 @@
 import { Job } from "./job";
-import { YagnaMock } from "../../../tests/mock/";
 import { Agreement, AgreementPoolService } from "../../agreement";
 import { WorkContext } from "../../work";
 import { NetworkNode, NetworkService } from "../../network";
 import { Activity } from "../../activity";
 import { Package } from "../../package";
+import { instance, mock, reset } from "@johanblumenberg/ts-mockito";
+import { YagnaApi } from "../../utils";
 
 jest.mock("../../payment");
 jest.mock("../../market");
 
-afterEach(() => {
-  jest.clearAllMocks();
-});
+const mockYagna = mock(YagnaApi);
 
 describe("Job", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+
+    reset(mockYagna);
+  });
+
+  const yagna = instance(mockYagna);
+
   describe("cancel()", () => {
     it("stops the activity and releases the agreement when canceled", async () => {
       jest.spyOn(AgreementPoolService.prototype, "run").mockResolvedValue();
@@ -37,7 +44,6 @@ describe("Job", () => {
       jest.spyOn(AgreementPoolService.prototype, "getAgreement").mockResolvedValue(mockAgreement);
       jest.spyOn(Activity, "create").mockResolvedValue(mockActivity);
 
-      const yagna = new YagnaMock().getApi();
       const job = new Job("test_id", yagna, {
         package: {
           imageTag: "test_image",
