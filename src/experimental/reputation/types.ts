@@ -1,4 +1,5 @@
 import { Logger } from "../../utils";
+import { ProviderInfo } from "../../agreement";
 
 /**
  * Set of normalized scores for a provider.
@@ -10,10 +11,14 @@ import { Logger } from "../../utils";
  * @experimental
  */
 export interface ReputationProviderScores {
-  // Percentage of successful tasks in the last "period" (last N test runs?)
+  /** Percentage of successful tasks in the last "period" (last N test runs?) */
   successRate: number;
-  // Ping percentage that got responses.
+  /** Ping percentage that got responses. */
   uptime: number;
+  /** CPU single threaded benchmark score. */
+  cpuSingleThreadScore: number;
+  /** CPU multi-thread benchmark score. */
+  cpuMultiThreadScore: number;
 }
 
 /**
@@ -21,8 +26,36 @@ export interface ReputationProviderScores {
  * @experimental
  */
 export interface ReputationProviderEntry {
-  providerId: string;
+  provider: ProviderInfo;
   scores: ReputationProviderScores;
+}
+
+/**
+ * Information about a rejected operator.
+ */
+export interface ReputationRejectedOperator {
+  operator: {
+    walletAddress: string;
+  };
+  reason?: string;
+}
+
+/**
+ * Information about a rejected provider.
+ */
+export interface ReputationRejectedProvider {
+  provider: ProviderInfo;
+  reason?: string;
+}
+
+/**
+ * Information about untested provider.
+ */
+export interface ReputationUntestedProvider {
+  provider: ProviderInfo;
+  scores: {
+    uptime: number;
+  };
 }
 
 /**
@@ -30,8 +63,10 @@ export interface ReputationProviderEntry {
  * @experimental
  */
 export interface ReputationData {
-  providers: ReputationProviderEntry[];
-  rejected: unknown[];
+  testedProviders: ReputationProviderEntry[];
+  rejectedProviders?: ReputationRejectedProvider[];
+  rejectedOperators?: ReputationRejectedOperator[];
+  untestedProviders?: ReputationUntestedProvider[];
 }
 
 /**
@@ -60,16 +95,20 @@ export interface ProposalFilterOptions {
  */
 export interface AgreementSelectorOption {
   /**
-   * Should a provider without reputation data be used if there are no alternatives.
+   * The size of top provider pool used to pick a random one.
    *
-   * Default is false
+   * If you want to just use the best available one, set this to 1.
+   *
+   * Default is `DEFAULT_AGREEMENT_TOP_POOL_SIZE`.
    */
-  allowFallback?: boolean;
+  topPoolSize?: number;
 
   /**
-   * Pick that number of top-rated providers and pick a random one. Default: 1
+   * Add extra score to provider if it has an existing agreement.
+   *
+   * Default is 0.
    */
-  topPick?: number;
+  agreementBonus?: number;
 }
 
 /**
