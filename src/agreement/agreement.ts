@@ -1,28 +1,15 @@
-import { Logger, YagnaApi, YagnaOptions, defaultLogger } from "../utils";
-import { Agreement as AgreementModel } from "ya-ts-client/dist/ya-market/src/models";
+import { defaultLogger, Logger, YagnaApi, YagnaOptions } from "../utils";
+import { MarketApi } from "ya-ts-client";
 import { AgreementFactory } from "./factory";
 import { AgreementConfig } from "./config";
 import { Events } from "../events";
-import { GolemMarketError, MarketErrorCode } from "../market/error";
-import { Proposal } from "../market";
+import { GolemMarketError, MarketErrorCode, Proposal } from "../market";
+import { withTimeout } from "../utils/timeout";
 
 export interface ProviderInfo {
   name: string;
   id: string;
   walletAddress: string;
-}
-
-/**
- * @hidden
- */
-export enum AgreementStateEnum {
-  Proposal = "Proposal",
-  Pending = "Pending",
-  Cancelled = "Cancelled",
-  Rejected = "Rejected",
-  Approved = "Approved",
-  Expired = "Expired",
-  Terminated = "Terminated",
 }
 
 /**
@@ -45,7 +32,7 @@ export interface AgreementOptions {
  * @hidden
  */
 export class Agreement {
-  private agreementData?: AgreementModel;
+  private agreementData?: MarketApi.AgreementDTO;
   private logger: Logger;
 
   /**
@@ -80,17 +67,17 @@ export class Agreement {
    * Refresh agreement details
    */
   async refreshDetails() {
-    const { data } = await this.yagnaApi.market.getAgreement(this.id, {
-      timeout: this.options.agreementRequestTimeout,
-    });
-    this.agreementData = data;
+    this.agreementData = await withTimeout(
+      this.yagnaApi.market.getAgreement(this.id),
+      this.options.agreementRequestTimeout,
+    );
   }
 
   /**
    * Return agreement state
    * @return state
    */
-  async getState(): Promise<AgreementStateEnum> {
+  async getState(): Promise<MarketApi.AgreementDTO["state"]> {
     await this.refreshDetails();
     return this.agreementData!.state;
   }
@@ -133,7 +120,7 @@ export class Agreement {
    */
   async isFinalState(): Promise<boolean> {
     const state = await this.getState();
-    return state !== AgreementStateEnum.Pending && state !== AgreementStateEnum.Proposal;
+    return state !== "Pending" && state !== "Proposal";
   }
 
   /**
@@ -143,12 +130,11 @@ export class Agreement {
    */
   async terminate(reason: { [key: string]: string } = { message: "Finished" }) {
     try {
-      if ((await this.getState()) !== AgreementStateEnum.Terminated)
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore TODO: API binding BUG with reason type
-        await this.yagnaApi.market.terminateAgreement(this.id, reason, {
-          timeout: this.options.agreementRequestTimeout,
-        });
+      if ((await this.getState()) !== "Terminated")
+        await withTimeout(
+          this.yagnaApi.market.terminateAgreement(this.id, reason),
+          this.options.agreementRequestTimeout,
+        );
       this.options.eventTarget?.dispatchEvent(
         new Events.AgreementTerminated({ id: this.id, provider: this.getProviderInfo(), reason: reason.message }),
       );

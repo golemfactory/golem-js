@@ -1,4 +1,4 @@
-import { ExeScriptRequest } from "ya-ts-client/dist/ya-activity/src/models";
+import { ActivityApi } from "ya-ts-client";
 import { Command } from "./command";
 import { Result } from "../activity";
 import { GolemInternalError } from "../error/golem-error";
@@ -26,7 +26,7 @@ export class Script {
     return Promise.all(this.commands.map((command, i) => command.after(results[i])));
   }
 
-  getExeScriptRequest(): ExeScriptRequest {
+  getExeScriptRequest(): ActivityApi.ExeScriptRequestDTO {
     if (!this.commands.length) throw new GolemInternalError("There are no commands in the script");
     return { text: JSON.stringify(this.commands.map((cmd) => cmd.toJson())) };
   }

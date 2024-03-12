@@ -1,32 +1,37 @@
 import { ActivityFactory } from "./factory";
 import { Agreement } from "../agreement";
-import { anything, imock, instance, mock, when } from "@johanblumenberg/ts-mockito";
+import { anything, instance, mock, reset, when } from "@johanblumenberg/ts-mockito";
 import { YagnaApi } from "../utils";
-import { RequestorControlApi } from "ya-ts-client/dist/ya-activity/api";
-import { RequestorApi as RequestorStateApi } from "../utils/yagna/activity";
-import { GolemWorkError, WorkErrorCode } from "../work/error";
+import { ActivityApi } from "ya-ts-client";
+import { GolemWorkError, WorkErrorCode } from "../work";
+
+const mockYagna = mock(YagnaApi);
+const mockAgreement = mock(Agreement);
+
+const mockActivityControl = mock(ActivityApi.RequestorControlService);
+const mockActivityState = mock(ActivityApi.RequestorStateService);
 
 describe("Activity Factory", () => {
+  beforeEach(() => {
+    reset(mockYagna);
+    reset(mockAgreement);
+    reset(mockActivityControl);
+    reset(mockActivityState);
+  });
+
   describe("Creating activities", () => {
     describe("Negative cases", () => {
       it("Correctly passes the exception thrown during activity creation to the user", async () => {
-        const agreementMock = mock(Agreement);
-        const yagnaAPi = imock<YagnaApi>();
+        when(mockYagna.activity).thenReturn({
+          state: instance(mockActivityState),
+          control: instance(mockActivityControl),
+        });
 
-        const controlApi = mock(RequestorControlApi);
-        const stateApi = mock(RequestorStateApi);
-
-        const components = {
-          control: instance(controlApi),
-          state: instance(stateApi),
-        };
-
-        when(yagnaAPi.activity).thenReturn(components);
         const testError = new Error("Foo");
-        when(controlApi.createActivity(anything())).thenReject(testError);
+        when(mockActivityControl.createActivity(anything())).thenReject(testError);
 
-        const agreement = instance(agreementMock);
-        const factory = new ActivityFactory(agreement, instance(yagnaAPi));
+        const agreement = instance(mockAgreement);
+        const factory = new ActivityFactory(agreement, instance(mockYagna));
 
         await expect(() => factory.create()).rejects.toMatchError(
           new GolemWorkError(

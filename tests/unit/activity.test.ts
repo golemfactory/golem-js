@@ -1,91 +1,167 @@
-import * as activityMock from "../mock/rest/activity";
-import { agreement } from "../mock/entities/agreement";
-import { EventSourceMock, setExpectedErrorEvents, setExpectedEvents } from "../mock/utils/event_source";
-import { StorageProviderMock, YagnaMock } from "../mock";
-import { Activity, ActivityStateEnum } from "../../src";
+import {
+  Activity,
+  ActivityStateEnum,
+  Agreement,
+  GolemError,
+  GolemTimeoutError,
+  GolemWorkError,
+  StorageProvider,
+  WorkErrorCode,
+  YagnaApi,
+} from "../../src";
 import { sleep } from "../../src/utils";
-import { Deploy, Start, Run, Terminate, UploadFile, DownloadFile, Script, Capture } from "../../src/script";
-import { GolemWorkError, WorkErrorCode } from "../../src/work/error";
-import { GolemError, GolemTimeoutError } from "../../src/error/golem-error";
+import { Capture, Deploy, DownloadFile, Run, Script, Start, Terminate, UploadFile } from "../../src/script";
+import { anything, imock, instance, mock, reset, when } from "@johanblumenberg/ts-mockito";
+import * as YaTsClient from "ya-ts-client";
+import { buildExeScriptSuccessResult } from "./helpers";
+import EventEmitter from "events";
 
-jest.mock("eventsource", () => EventSourceMock);
+const mockEventSourceEmitter = new EventEmitter();
+jest.mock("eventsource", () =>
+  jest.fn(() => ({
+    addEventListener: (e, cb) => mockEventSourceEmitter.on(e, cb),
+    close: () => null,
+  })),
+);
+
+const mockYagna = mock(YagnaApi);
+const mockAgreement = mock(Agreement);
+const mockActivityControl = mock(YaTsClient.ActivityApi.RequestorControlService);
+const mockActivityState = mock(YaTsClient.ActivityApi.RequestorStateService);
+const mockStorageProvider = imock<StorageProvider>();
+
 describe("Activity", () => {
-  const yagnaApi = new YagnaMock().getApi();
   beforeEach(() => {
-    activityMock.clear();
-  });
+    reset(mockYagna);
+    reset(mockAgreement);
+    reset(mockActivityControl);
+    reset(mockActivityState);
 
+    when(mockYagna.yagnaOptions).thenReturn({
+      apiKey: "some-api-key",
+      basePath: "http://localhost",
+    });
+
+    when(mockYagna.activity).thenReturn({
+      state: instance(mockActivityState),
+      control: instance(mockActivityControl),
+    });
+
+    when(mockActivityControl.createActivity(anything())).thenResolve({
+      activityId: "activity-id",
+    });
+
+    when(mockAgreement.getProviderInfo()).thenReturn({
+      id: "provider-id",
+      name: "Test Provider",
+      walletAddress: "0xTestProvider",
+    });
+  });
   describe("Creating", () => {
     it("should create activity", async () => {
-      const activity = await Activity.create(agreement, yagnaApi);
+      const activity = await Activity.create(instance(mockAgreement), instance(mockYagna));
       expect(activity).toBeInstanceOf(Activity);
-      const GUID_REGEX =
-        /^(?:\{{0,1}(?:[0-9a-fA-F]){8}-(?:[0-9a-fA-F]){4}-(?:[0-9a-fA-F]){4}-(?:[0-9a-fA-F]){4}-(?:[0-9a-fA-F]){12}\}{0,1})$/;
-      expect(activity.id).toMatch(GUID_REGEX);
     });
   });
 
   describe("Executing", () => {
     it("should execute commands on activity", async () => {
-      const activity = await Activity.create(agreement, yagnaApi);
+      const activity = await Activity.create(instance(mockAgreement), instance(mockYagna));
+
+      when(mockActivityControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenResolve([
+        {
+          isBatchFinished: true,
+          result: "Ok",
+          stdout: "Done",
+          stderr: "",
+          index: 1,
+          eventDate: new Date().toISOString(),
+        },
+      ]);
+
       const streamResult = await activity.execute(new Deploy().toExeScriptRequest());
+
       const { value: result } = await streamResult[Symbol.asyncIterator]().next();
+
       expect(result.result).toEqual("Ok");
     });
 
     it("should execute commands and get state", async () => {
-      const activity = await Activity.create(agreement, yagnaApi);
+      const activity = await Activity.create(instance(mockAgreement), instance(mockYagna));
+
+      when(mockActivityControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenResolve([
+        {
+          isBatchFinished: true,
+          result: "Ok",
+          stdout: "Done",
+          stderr: "",
+          index: 1,
+          eventDate: new Date().toISOString(),
+        },
+      ]);
+
       const streamResult = await activity.execute(new Run("test_command").toExeScriptRequest());
+
+      when(mockActivityState.getActivityState(anything())).thenResolve({
+        state: [ActivityStateEnum.Ready, null],
+      });
+
       const { value: result } = await streamResult[Symbol.asyncIterator]().next();
-      activityMock.setExpectedStates([ActivityStateEnum.Ready, null]);
       const stateAfterRun = await activity.getState();
+
       expect(result.result).toEqual("Ok");
       expect(stateAfterRun).toEqual(ActivityStateEnum.Ready);
     });
 
     it("should execute script and get results by iterator", async () => {
-      const activity = await Activity.create(agreement, yagnaApi);
+      const activity = await Activity.create(instance(mockAgreement), instance(mockYagna));
       const command1 = new Deploy();
       const command2 = new Start();
       const command3 = new Run("test_command1");
       const command4 = new Run("test_command2");
       const command5 = new Terminate();
       const script = Script.create([command1, command2, command3, command4, command5]);
-      activityMock.setExpectedExeResults([
-        { stdout: "test" },
-        { stdout: "test" },
-        { stdout: "stdout_test_command_run_1" },
-        { stdout: "stdout_test_command_run_2" },
-        { stdout: "test" },
+
+      when(mockActivityControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenResolve([
+        buildExeScriptSuccessResult("test"),
+        buildExeScriptSuccessResult("test"),
+        buildExeScriptSuccessResult("stdout_test_command_run_1"),
+        buildExeScriptSuccessResult("stdout_test_command_run_2"),
+        buildExeScriptSuccessResult("test"),
       ]);
+
       const expectedRunStdOuts = ["test", "test", "stdout_test_command_run_1", "stdout_test_command_run_2", "test"];
       await script.before();
       const results = await activity.execute(script.getExeScriptRequest());
+
       for await (const result of results) {
         expect(result.result).toEqual("Ok");
         expect(result.stdout).toEqual(expectedRunStdOuts.shift());
       }
+
       await script.after([]);
       await activity.stop();
     });
 
     it("should execute script and get results by events", async () => {
-      const activity = await Activity.create(agreement, yagnaApi);
+      const activity = await Activity.create(instance(mockAgreement), instance(mockYagna));
       const command1 = new Deploy();
       const command2 = new Start();
-      const command3 = new UploadFile(new StorageProviderMock(), "testSrc", "testDst");
+      const command3 = new UploadFile(instance(mockStorageProvider), "testSrc", "testDst");
       const command4 = new Run("test_command1");
-      const command5 = new DownloadFile(new StorageProviderMock(), "testSrc", "testDst");
+      const command5 = new DownloadFile(instance(mockStorageProvider), "testSrc", "testDst");
       const command6 = new Terminate();
       const script = Script.create([command1, command2, command3, command4, command5, command6]);
-      activityMock.setExpectedExeResults([
-        { stdout: "test" },
-        { stdout: "test" },
-        { stdout: "stdout_test_command_run_1" },
-        { stdout: "stdout_test_command_run_2" },
-        { stdout: "test" },
-        { stdout: "test" },
+
+      when(mockActivityControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenResolve([
+        buildExeScriptSuccessResult("test"),
+        buildExeScriptSuccessResult("test"),
+        buildExeScriptSuccessResult("stdout_test_command_run_1"),
+        buildExeScriptSuccessResult("stdout_test_command_run_2"),
+        buildExeScriptSuccessResult("test"),
+        buildExeScriptSuccessResult("test"),
       ]);
+
       const expectedRunStdOuts = [
         "test",
         "test",
@@ -113,7 +189,7 @@ describe("Activity", () => {
     });
 
     it("should execute script by streaming batch", async () => {
-      const activity = await Activity.create(agreement, yagnaApi);
+      const activity = await Activity.create(instance(mockAgreement), instance(mockYagna));
       const command1 = new Deploy();
       const command2 = new Start();
       const capture: Capture = {
@@ -123,7 +199,7 @@ describe("Activity", () => {
       const command3 = new Run("test_command1", null, null, capture);
       const command4 = new Terminate();
       const script = Script.create([command1, command2, command3, command4]);
-      const expectedEvents = [
+      const mockedEvents = [
         {
           type: "runtime",
           data: '{"batch_id":"04a9b0f49e564db99e6f15ba95c35817","index":0,"timestamp":"2022-06-23T10:42:38.626573153","kind":{"stdout":"{\\"startMode\\":\\"blocking\\",\\"valid\\":{\\"Ok\\":\\"\\"},\\"vols\\":[]}"}}',
@@ -161,9 +237,9 @@ describe("Activity", () => {
           data: '{"batch_id":"04a9b0f49e564db99e6f15ba95c35817","index":3,"timestamp":"2022-06-23T10:42:40.009603540","kind":{"finished":{"return_code":0,"message":null}}}',
         },
       ];
-      setExpectedEvents(activity.id, expectedEvents);
       await script.before();
       const results = await activity.execute(script.getExeScriptRequest(), true);
+      mockedEvents.forEach((ev) => mockEventSourceEmitter.emit("runtime", ev));
       let expectedStdout;
       for await (const result of results) {
         expect(result).toHaveProperty("index");
@@ -177,8 +253,10 @@ describe("Activity", () => {
 
   describe("Getting state", () => {
     it("should get activity state", async () => {
-      const activity = await Activity.create(agreement, yagnaApi);
-      activityMock.setExpectedStates([ActivityStateEnum.Ready, ActivityStateEnum.Terminated]);
+      const activity = await Activity.create(instance(mockAgreement), instance(mockYagna));
+      when(mockActivityState.getActivityState(anything())).thenResolve({
+        state: [ActivityStateEnum.Ready, ActivityStateEnum.Terminated],
+      });
       const state = await activity.getState();
       expect(state).toEqual(ActivityStateEnum.Ready);
     });
@@ -186,7 +264,7 @@ describe("Activity", () => {
 
   describe("Cancelling", () => {
     it("should cancel activity", async () => {
-      const activity = await Activity.create(agreement, yagnaApi);
+      const activity = await Activity.create(instance(mockAgreement), instance(mockYagna));
       const command1 = new Deploy();
       const command2 = new Start();
       const command3 = new Run("test_command1");
@@ -207,7 +285,7 @@ describe("Activity", () => {
     });
 
     it("should cancel activity while streaming batch", async () => {
-      const activity = await Activity.create(agreement, yagnaApi);
+      const activity = await Activity.create(instance(mockAgreement), instance(mockYagna));
       const command1 = new Deploy();
       const command2 = new Start();
       const capture: Capture = {
@@ -232,17 +310,20 @@ describe("Activity", () => {
 
   describe("Error handling", () => {
     it("should handle some error", async () => {
-      const activity = await Activity.create(agreement, yagnaApi);
+      const activity = await Activity.create(instance(mockAgreement), instance(mockYagna));
       const command1 = new Deploy();
       const command2 = new Start();
       const command3 = new Run("test_command1");
       const script = Script.create([command1, command2, command3]);
       const results = await activity.execute(script.getExeScriptRequest());
+
       const error = {
         message: "Some undefined error",
         status: 400,
       };
-      activityMock.setExpectedErrors([error, error, error, error, error, error]);
+
+      when(mockActivityControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenReject(error);
+
       return new Promise<void>((res) => {
         results.on("error", (error: GolemWorkError) => {
           expect(error).toBeInstanceOf(GolemWorkError);
@@ -263,7 +344,7 @@ describe("Activity", () => {
     });
 
     it("should handle gsb error", async () => {
-      const activity = await Activity.create(agreement, yagnaApi, {
+      const activity = await Activity.create(instance(mockAgreement), instance(mockYagna), {
         activityExeBatchResultPollIntervalSeconds: 10,
       });
       const command1 = new Deploy();
@@ -275,11 +356,14 @@ describe("Activity", () => {
       const command7 = new Run("test_command1");
       const script = Script.create([command1, command2, command3, command4, command5, command6, command7]);
       const results = await activity.execute(script.getExeScriptRequest());
+
       const error = {
         message: "GSB error: remote service at `test` error: GSB failure: Bad request: endpoint address not found",
         status: 500,
       };
-      activityMock.setExpectedErrors([error, error, error, error, error, error]);
+
+      when(mockActivityControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenReject(error);
+
       return new Promise<void>((res) => {
         results.on("error", (error: GolemWorkError) => {
           expect(error).toBeInstanceOf(GolemWorkError);
@@ -300,7 +384,7 @@ describe("Activity", () => {
     });
 
     it("should handle termination error", async () => {
-      const activity = await Activity.create(agreement, yagnaApi);
+      const activity = await Activity.create(instance(mockAgreement), instance(mockYagna));
       const command1 = new Deploy();
       const command2 = new Start();
       const command3 = new Run("test_command1");
@@ -310,8 +394,12 @@ describe("Activity", () => {
         message: "GSB error: endpoint address not found. Terminated.",
         status: 500,
       };
-      activityMock.setExpectedErrors([error, error, error]);
-      activityMock.setExpectedStates([ActivityStateEnum.Terminated, ActivityStateEnum.Terminated]);
+
+      when(mockActivityControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenReject(error);
+      when(mockActivityState.getActivityState(anything())).thenResolve({
+        state: [ActivityStateEnum.Terminated, ActivityStateEnum.Terminated],
+      });
+
       return new Promise<void>((res) => {
         results.on("error", (error: GolemWorkError) => {
           expect(error).toBeInstanceOf(GolemWorkError);
@@ -319,7 +407,7 @@ describe("Activity", () => {
           expect(error.activity).toBeDefined();
           expect(error.agreement).toBeDefined();
           expect(error.provider?.name).toEqual("Test Provider");
-          expect(error.previous?.toString()).toEqual("Error: GSB error: endpoint address not found. Terminated.");
+          expect(error.previous?.message).toEqual("GSB error: endpoint address not found. Terminated.");
           expect(error.toString()).toEqual(
             "Error: Unable to get activity results. GSB error: endpoint address not found. Terminated.",
           );
@@ -330,7 +418,7 @@ describe("Activity", () => {
     });
 
     it("should handle timeout error", async () => {
-      const activity = await Activity.create(agreement, yagnaApi);
+      const activity = await Activity.create(instance(mockAgreement), instance(mockYagna));
       const command1 = new Deploy();
       const command2 = new Start();
       const command3 = new Run("test_command1");
@@ -351,7 +439,9 @@ describe("Activity", () => {
     });
 
     it("should handle timeout error while streaming batch", async () => {
-      const activity = await Activity.create(agreement, yagnaApi, { activityExecuteTimeout: 1 });
+      const activity = await Activity.create(instance(mockAgreement), instance(mockYagna), {
+        activityExecuteTimeout: 1,
+      });
       const command1 = new Deploy();
       const command2 = new Start();
       const capture: Capture = {
@@ -375,7 +465,7 @@ describe("Activity", () => {
     });
 
     it("should handle some error while streaming batch", async () => {
-      const activity = await Activity.create(agreement, yagnaApi);
+      const activity = await Activity.create(instance(mockAgreement), instance(mockYagna));
       const command1 = new Deploy();
       const command2 = new Start();
       const capture: Capture = {
@@ -385,7 +475,7 @@ describe("Activity", () => {
       const command3 = new Run("test_command1", null, null, capture);
       const command4 = new Terminate();
       const script = Script.create([command1, command2, command3, command4]);
-      const expectedErrors: Partial<MessageEvent>[] = [
+      const mockedErrorEvents: Partial<MessageEvent>[] = [
         {
           data: {
             type: "error",
@@ -393,9 +483,9 @@ describe("Activity", () => {
           },
         },
       ];
-      setExpectedErrorEvents(activity.id, expectedErrors);
       await script.before();
       const results = await activity.execute(script.getExeScriptRequest(), true);
+      mockedErrorEvents.forEach((er) => mockEventSourceEmitter.emit("error", er));
       return new Promise<void>((res) => {
         results.on("error", (error: GolemWorkError) => {
           expect(error).toBeInstanceOf(GolemWorkError);
@@ -413,7 +503,7 @@ describe("Activity", () => {
 
   describe("Destroying", () => {
     it("should stop activity", async () => {
-      const activity = await Activity.create(agreement, yagnaApi);
+      const activity = await Activity.create(instance(mockAgreement), instance(mockYagna));
       expect(await activity.stop()).toEqual(true);
     });
   });

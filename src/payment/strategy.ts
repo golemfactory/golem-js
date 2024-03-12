@@ -3,6 +3,7 @@ import { InvoiceDTO } from "./invoice";
 
 /** Default DebitNotes filter that accept all debit notes without any validation */
 export const acceptAllDebitNotesFilter = () => async () => true;
+
 /** Default Invoices filter that accept all invoices without any validation */
 export const acceptAllInvoicesFilter = () => async () => true;
 

@@ -7,7 +7,7 @@ export * from "./payment";
 export * from "./network";
 export * from "./events";
 export * from "./utils";
-export * from "./utils/yagna/yagna";
+export * from "./utils/yagna/yagnaApi";
 export * from "./work";
 export * from "./error/golem-error";
 export { StatsService } from "./stats/service";

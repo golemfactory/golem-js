@@ -1,4 +1,4 @@
-import { MIN_SUPPORTED_YAGNA, Yagna } from "./yagna";
+import { MIN_SUPPORTED_YAGNA, YagnaApi } from "./yagnaApi";
 import { imock, instance, spy, when } from "@johanblumenberg/ts-mockito";
 import { IdentityModel } from "./identity";
 import { GolemPlatformError } from "../../error/golem-error";
@@ -27,11 +27,11 @@ describe("Yagna Utils", () => {
           });
           mockFetch.mockResolvedValue(instance(response));
 
-          const y = new Yagna({
+          const y = new YagnaApi({
             apiKey: "test-key",
           });
 
-          const spyIdentity = spy(y.getApi().identity);
+          const spyIdentity = spy(y.identity);
           const model = instance(mockIdentityModel);
           when(spyIdentity.getIdentity()).thenResolve(model);
 
@@ -56,7 +56,7 @@ describe("Yagna Utils", () => {
         });
         mockFetch.mockResolvedValue(instance(response));
 
-        const y = new Yagna({
+        const y = new YagnaApi({
           apiKey: "test-key",
         });
 
@@ -81,7 +81,7 @@ describe("Yagna Utils", () => {
         });
         mockFetch.mockResolvedValue(instance(response));
 
-        const y = new Yagna({
+        const y = new YagnaApi({
           apiKey: "test-key",
         });
 
@@ -96,7 +96,7 @@ describe("Yagna Utils", () => {
         const testError = new Error("Something bad happened when trying to read yagna version via API");
         mockFetch.mockRejectedValue(testError);
 
-        const y = new Yagna({
+        const y = new YagnaApi({
           apiKey: "test-key",
         });
 
