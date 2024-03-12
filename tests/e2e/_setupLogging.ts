@@ -11,8 +11,8 @@ const jestConsole = console;
 
 process.env.DEBUG = "golem-js:*";
 
-beforeAll(() => {
-  global.console = require("console");
+beforeAll(async () => {
+  global.console = await import("console");
 });
 
 afterAll(() => {
