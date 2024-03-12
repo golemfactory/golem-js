@@ -1,30 +1,32 @@
 import { RemoteProcess } from "./process";
-import { ActivityMock } from "../../tests/mock/activity.mock";
-import { YagnaMock } from "../../tests/mock";
-import { Run, Script } from "../script";
-import { ResultState } from "../activity";
-import { agreement } from "../../tests/mock/entities/agreement";
+import { instance, mock, reset } from "@johanblumenberg/ts-mockito";
+import { YagnaApi } from "../utils";
+import { Agreement } from "../agreement";
+import { Activity } from "../activity";
+import { buildActivityResults, buildExeScriptErrorResult, buildExeScriptSuccessResult } from "../../tests/unit/helpers";
+
+const mockYagna = mock(YagnaApi);
+const mockAgreement = mock(Agreement);
+const mockActivity = mock(Activity);
 
 describe("RemoteProcess", () => {
-  let activity: ActivityMock;
+  let activity: Activity;
+
   beforeEach(() => {
-    activity = new ActivityMock("test_id", agreement, new YagnaMock().getApi());
+    reset(mockYagna);
+    reset(mockAgreement);
+
+    activity = instance(mockActivity);
   });
 
   it("should create remote process", async () => {
-    const expectedResult = ActivityMock.createResult({ stdout: "Ok" });
-    activity.mockResults([expectedResult]);
-    const exeScriptRequest = new Script([new Run("test_command")]).getExeScriptRequest();
-    const streamOfActivityResults = await activity.execute(exeScriptRequest, true);
+    const streamOfActivityResults = buildActivityResults([buildExeScriptSuccessResult("ok")]);
     const remoteProcess = new RemoteProcess(streamOfActivityResults, activity);
     expect(remoteProcess).toBeDefined();
   });
 
   it("should read stdout from remote process", async () => {
-    const expectedResult = ActivityMock.createResult({ stdout: "Output" });
-    activity.mockResults([expectedResult]);
-    const exeScriptRequest = new Script([new Run("test_command")]).getExeScriptRequest();
-    const streamOfActivityResults = await activity.execute(exeScriptRequest, true);
+    const streamOfActivityResults = buildActivityResults([buildExeScriptSuccessResult("Output")]);
     const remoteProcess = new RemoteProcess(streamOfActivityResults, activity);
     for await (const stdout of remoteProcess.stdout) {
       expect(stdout).toEqual("Output");
@@ -32,10 +34,7 @@ describe("RemoteProcess", () => {
   });
 
   it("should read stderr from remote process", async () => {
-    const expectedResult = ActivityMock.createResult({ stderr: "Error" });
-    activity.mockResults([expectedResult]);
-    const exeScriptRequest = new Script([new Run("test_command")]).getExeScriptRequest();
-    const streamOfActivityResults = await activity.execute(exeScriptRequest, true);
+    const streamOfActivityResults = buildActivityResults(undefined, [buildExeScriptErrorResult("Error", "Error")]);
     const remoteProcess = new RemoteProcess(streamOfActivityResults, activity);
     for await (const stderr of remoteProcess.stderr) {
       expect(stderr).toEqual("Error");
@@ -43,12 +42,9 @@ describe("RemoteProcess", () => {
   });
 
   it("should wait for exit", async () => {
-    const expectedResult = ActivityMock.createResult({ stdout: "Output", stderr: "Error" });
-    activity.mockResults([expectedResult]);
-    const exeScriptRequest = new Script([new Run("test_command")]).getExeScriptRequest();
-    const streamOfActivityResults = await activity.execute(exeScriptRequest, true);
+    const streamOfActivityResults = buildActivityResults([buildExeScriptSuccessResult("Ok")]);
     const remoteProcess = new RemoteProcess(streamOfActivityResults, activity);
     const finalResult = await remoteProcess.waitForExit();
-    expect(finalResult.result).toEqual(ResultState.Ok);
+    expect(finalResult.result).toEqual("Ok");
   });
 });

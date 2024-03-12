@@ -1,4 +1,6 @@
-export const proposalsInitial = [
+import { MarketApi } from "ya-ts-client";
+
+export const proposalsInitial: MarketApi.ProposalEventDTO[] = [
   // 0
   {
     eventType: "ProposalEvent",
@@ -792,7 +794,7 @@ export const proposalsInitial = [
   },
 ];
 
-export const proposalsDraft = [
+export const proposalsDraft: MarketApi.ProposalEventDTO[] = [
   {
     eventType: "ProposalEvent",
     eventDate: "2022-11-24T08:22:40.471Z",
@@ -1220,7 +1222,7 @@ export const proposalsDraft = [
   },
 ];
 
-export const proposalsWrongPaymentPlatform = [
+export const proposalsWrongPaymentPlatform: MarketApi.ProposalEventDTO[] = [
   // 0
   {
     eventType: "ProposalEvent",
@@ -1336,7 +1338,7 @@ export const proposalsWrongPaymentPlatform = [
   },
 ];
 
-export const proposalsShortDebitNoteTimeout = [
+export const proposalsShortDebitNoteTimeout: MarketApi.ProposalEventDTO[] = [
   // 0
   {
     eventType: "ProposalEvent",

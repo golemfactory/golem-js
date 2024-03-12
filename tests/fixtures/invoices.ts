@@ -1,4 +1,6 @@
-export const invoiceEvents = [
+import { PaymentApi } from "ya-ts-client";
+
+export const invoiceEvents: PaymentApi.InvoiceReceivedEventDTO[] = [
   {
     invoiceId: "f2f5a229-8324-4211-973a-346e45b3d3e2",
     eventDate: "2022-12-05T08:54:31.930Z",
@@ -6,7 +8,7 @@ export const invoiceEvents = [
   },
 ];
 
-export const invoices = [
+export const invoices: PaymentApi.InvoiceDTO[] = [
   {
     invoiceId: "f2f5a229-8324-4211-973a-346e45b3d3e2",
     issuerId: "0xd9a4a6ba9e1800e4f61cd88dc23f082527f4ee28",

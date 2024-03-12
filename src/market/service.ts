@@ -3,7 +3,7 @@ import { Package } from "../package";
 import { Proposal } from "./proposal";
 import { AgreementPoolService } from "../agreement";
 import { Allocation } from "../payment";
-import { Demand, DEMAND_EVENT_TYPE, DemandEvent, DemandOptions } from "./demand";
+import { Demand, EVENT_PROPOSAL_RECEIVED, DemandEvent, DemandOptions } from "./demand";
 import { MarketConfig } from "./config";
 import { GolemMarketError, MarketErrorCode } from "./error";
 import { ProposalsBatch } from "./proposals_batch";
@@ -67,7 +67,7 @@ export class MarketService {
   async end() {
     this.isRunning = false;
     if (this.demand) {
-      this.demand.removeEventListener(DEMAND_EVENT_TYPE, this.demandEventListener.bind(this));
+      this.demand.removeEventListener(EVENT_PROPOSAL_RECEIVED, this.demandEventListener.bind(this));
       await this.demand.unsubscribe().catch((e) => this.logger.error(`Could not unsubscribe demand.`, e));
     }
     this.logger.info("Market Service has been stopped");
@@ -85,7 +85,7 @@ export class MarketService {
         this.demand,
       );
     this.demand = await Demand.create(this.taskPackage, this.allocation, this.yagnaApi, this.options);
-    this.demand.addEventListener(DEMAND_EVENT_TYPE, this.demandEventListener.bind(this));
+    this.demand.addEventListener(EVENT_PROPOSAL_RECEIVED, this.demandEventListener.bind(this));
     this.proposalsCount = {
       initial: 0,
       confirmed: 0,
@@ -108,18 +108,26 @@ export class MarketService {
       this.resubscribeDemand().catch((e) => this.logger?.warn(`Could not resubscribe demand.`, e));
       return;
     }
-    if (proposal.isInitial()) this.proposalsBatch.addProposal(proposal);
-    else if (proposal.isDraft()) this.processDraftProposal(proposal);
-    else if (proposal.isExpired()) this.logger.debug(`Proposal hes expired`, { id: proposal.id });
-    else if (proposal.isRejected()) {
+    if (proposal.isInitial()) {
+      this.proposalsBatch
+        .addProposal(proposal)
+        .then(() => this.logger.debug("Added a proposal to the batch"))
+        .catch((err) => this.logger.error("Failed to add a proposal to the batch", err));
+    } else if (proposal.isDraft()) {
+      this.processDraftProposal(proposal).catch((err) => this.logger.error("Failed to process proposal draft", err));
+    } else if (proposal.isExpired()) {
+      this.logger.debug(`Proposal hes expired`, { id: proposal.id });
+    } else if (proposal.isRejected()) {
       this.proposalsCount.rejected++;
       this.logger.debug(`Proposal hes rejected`, { id: proposal.id });
+    } else {
+      this.logger.warn("Received a proposal in a state that is not handled by the SDK", { proposal });
     }
   }
 
   private async resubscribeDemand() {
     if (this.demand) {
-      this.demand.removeEventListener(DEMAND_EVENT_TYPE, this.demandEventListener.bind(this));
+      this.demand.removeEventListener(EVENT_PROPOSAL_RECEIVED, this.demandEventListener.bind(this));
       await this.demand.unsubscribe().catch((e) => this.logger.error(`Could not unsubscribe demand.`, e));
     }
     let attempt = 1;
@@ -193,9 +201,14 @@ export class MarketService {
   }
 
   private async startProcessingProposalsBatch() {
-    for await (const proposals of this.proposalsBatch.readProposals()) {
+    while (this.isRunning) {
+      this.logger.debug("Waiting for proposals");
+      await this.proposalsBatch.waitForProposals();
+
+      const proposals = await this.proposalsBatch.getProposals();
+      this.logger.debug("Received batch of proposals", { count: proposals.length });
+
       proposals.forEach((proposal) => this.processInitialProposal(proposal));
-      if (!this.isRunning) break;
     }
   }
 }

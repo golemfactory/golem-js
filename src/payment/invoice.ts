@@ -1,5 +1,5 @@
 import { BasePaymentOptions, InvoiceConfig } from "./config";
-import { Invoice as Model, InvoiceStatus } from "ya-ts-client/dist/ya-payment/src/models";
+import { PaymentApi } from "ya-ts-client";
 import { Events } from "../events";
 import { Rejection } from "./rejection";
 import { YagnaApi } from "../utils";
@@ -33,7 +33,7 @@ export interface BaseModel {
   paymentPlatform: string;
   agreementId: string;
   paymentDueDate?: string;
-  status: InvoiceStatus;
+  status: PaymentApi.InvoiceDTO["status"];
 }
 
 /**
@@ -47,7 +47,7 @@ export abstract class BaseNote<ModelType extends BaseModel> {
   public readonly paymentPlatform: string;
   public readonly agreementId: string;
   public readonly paymentDueDate?: string;
-  protected status: InvoiceStatus;
+  protected status: PaymentApi.InvoiceDTO["status"];
 
   protected constructor(
     protected model: ModelType,
@@ -62,7 +62,7 @@ export abstract class BaseNote<ModelType extends BaseModel> {
     this.paymentDueDate = model.paymentDueDate;
     this.status = model.status;
   }
-  protected async getStatus(): Promise<InvoiceStatus> {
+  protected async getStatus(): Promise<PaymentApi.InvoiceDTO["status"]> {
     try {
       await this.refreshStatus();
       return this.model.status;
@@ -85,7 +85,7 @@ export abstract class BaseNote<ModelType extends BaseModel> {
  * An Invoice is an artifact issued by the Provider to the Requestor, in the context of a specific Agreement. It indicates the total Amount owed by the Requestor in this Agreement. No further Debit Notes shall be issued after the Invoice is issued. The issue of Invoice signals the Termination of the Agreement (if it hasn't been terminated already). No Activity execution is allowed after the Invoice is issued.
  * @hidden
  */
-export class Invoice extends BaseNote<Model> {
+export class Invoice extends BaseNote<PaymentApi.InvoiceDTO> {
   /** Invoice ID */
   public readonly id: string;
   /** Activities IDs covered by this Invoice */
@@ -106,8 +106,8 @@ export class Invoice extends BaseNote<Model> {
    */
   static async create(invoiceId: string, yagnaApi: YagnaApi, options?: InvoiceOptions): Promise<Invoice> {
     const config = new InvoiceConfig(options);
-    const { data: model } = await yagnaApi.payment.getInvoice(invoiceId);
-    const { data: agreement } = await yagnaApi.market.getAgreement(model.agreementId);
+    const model = await yagnaApi.payment.getInvoice(invoiceId);
+    const agreement = await yagnaApi.market.getAgreement(model.agreementId);
     const providerInfo = {
       id: model.issuerId,
       walletAddress: model.payeeAddr,
@@ -125,7 +125,7 @@ export class Invoice extends BaseNote<Model> {
    * @hidden
    */
   protected constructor(
-    protected model: Model,
+    protected model: PaymentApi.InvoiceDTO,
     providerInfo: ProviderInfo,
     protected yagnaApi: YagnaApi,
     protected options: InvoiceConfig,
@@ -158,7 +158,7 @@ export class Invoice extends BaseNote<Model> {
    *
    * @return {@link InvoiceStatus}
    */
-  async getStatus(): Promise<InvoiceStatus> {
+  async getStatus(): Promise<PaymentApi.InvoiceDTO["status"]> {
     await this.refreshStatus();
     return this.status;
   }
@@ -230,7 +230,7 @@ export class Invoice extends BaseNote<Model> {
   }
 
   protected async refreshStatus() {
-    const { data: model } = await this.yagnaApi.payment.getInvoice(this.id);
+    const model = await this.yagnaApi.payment.getInvoice(this.id);
     this.status = model.status;
   }
 }

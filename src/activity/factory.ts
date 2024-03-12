@@ -3,7 +3,7 @@ import { ActivityConfig } from "./config";
 import { Events } from "../events";
 import { YagnaApi } from "../utils";
 import { Agreement } from "../agreement";
-import { GolemWorkError, WorkErrorCode } from "../work/error";
+import { GolemWorkError, WorkErrorCode } from "../work";
 import { GolemInternalError } from "../error/golem-error";
 
 /**
@@ -42,7 +42,7 @@ export class ActivityFactory {
   }
 
   private async createActivity(): Promise<Activity> {
-    const { data } = await this.yagnaApi.activity.control.createActivity({ agreementId: this.agreement.id });
+    const data = await this.yagnaApi.activity.control.createActivity({ agreementId: this.agreement.id });
 
     const id = typeof data == "string" ? data : data.activityId;
 

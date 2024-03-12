@@ -5,4 +5,4 @@ export { Logger } from "./logger/logger";
 export { nullLogger } from "./logger/nullLogger";
 export { defaultLogger } from "./logger/defaultLogger";
 export * as EnvUtils from "./env";
-export { Yagna, YagnaApi, YagnaOptions } from "./yagna/yagna";
+export { YagnaApi, YagnaOptions } from "./yagna/yagnaApi";

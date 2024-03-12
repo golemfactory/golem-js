@@ -1,19 +1,38 @@
 import { DownloadFile, Run, Transfer, UploadData, UploadFile } from "../script";
 import { Batch } from "./batch";
 import { NullStorageProvider } from "../storage";
-import { ActivityMock } from "../../tests/mock/activity.mock";
-import { LoggerMock, YagnaMock } from "../../tests/mock";
-import { Result } from "../activity";
-import { agreement } from "../../tests/mock/entities/agreement";
+import { Activity, Result } from "../activity";
 import { GolemWorkError, WorkErrorCode } from "./error";
+import { anything, imock, instance, mock, reset, when } from "@johanblumenberg/ts-mockito";
+import { Logger, YagnaApi } from "../utils";
+import { buildExeScriptSuccessResult, buildExeScriptErrorResult, buildActivityResults } from "../../tests/unit/helpers";
+import { Agreement } from "../agreement";
+
+const mockLogger = imock<Logger>();
+const mockYagna = mock(YagnaApi);
+const mockActivity = mock(Activity);
+const mockAgreement = mock(Agreement);
 
 describe("Batch", () => {
-  let activity: ActivityMock;
+  let activity: Activity;
   let batch: Batch;
 
   beforeEach(() => {
-    activity = new ActivityMock("test_id", agreement, new YagnaMock().getApi());
-    batch = new Batch(activity, new NullStorageProvider(), new LoggerMock());
+    reset(mockLogger);
+    reset(mockYagna);
+
+    const providerInfo = {
+      id: "provider-id",
+      name: "Test Provider",
+      walletAddress: "0xTestProvider",
+    };
+
+    when(mockAgreement.getProviderInfo()).thenReturn(providerInfo);
+    when(mockActivity.getProviderInfo()).thenReturn(providerInfo);
+    when(mockActivity.agreement).thenReturn(instance(mockAgreement));
+
+    activity = instance(mockActivity);
+    batch = new Batch(activity, new NullStorageProvider(), instance(mockLogger));
   });
 
   describe("Commands", () => {
@@ -89,8 +108,12 @@ describe("Batch", () => {
     });
 
     it("should work", async () => {
-      activity.mockResultCreate({ stdout: "Hello World" });
-      activity.mockResultCreate({ stdout: "Hello World 2" });
+      when(mockActivity.execute(anything())).thenResolve(
+        buildActivityResults([
+          buildExeScriptSuccessResult("Hello World"),
+          buildExeScriptSuccessResult("Hello World 2"),
+        ]),
+      );
 
       const results = await batch.end();
 
@@ -101,7 +124,7 @@ describe("Batch", () => {
 
     it("should initialize script with script.before()", async () => {
       const spy = jest.spyOn(batch["script"], "before");
-
+      when(mockActivity.execute(anything())).thenResolve(buildActivityResults([]));
       await batch.end();
 
       expect(spy).toHaveBeenCalled();
@@ -109,7 +132,7 @@ describe("Batch", () => {
 
     it("should call script.after() on success", async () => {
       const spy = jest.spyOn(batch["script"], "after");
-
+      when(mockActivity.execute(anything())).thenResolve(buildActivityResults([]));
       await batch.end();
 
       expect(spy).toHaveBeenCalled();
@@ -117,7 +140,10 @@ describe("Batch", () => {
 
     it("should call script.after() on failure", async () => {
       const spy = jest.spyOn(batch["script"], "after");
-      activity.mockResultFailure("FAILURE");
+
+      when(mockActivity.execute(anything())).thenResolve(
+        buildActivityResults(undefined, undefined, new Error("FAILURE")),
+      );
 
       await expect(batch.end()).rejects.toMatchError(
         new GolemWorkError(
@@ -135,7 +161,7 @@ describe("Batch", () => {
 
     it("should call script.after() on execute error", async () => {
       const spy = jest.spyOn(batch["script"], "after");
-      jest.spyOn(activity, "execute").mockRejectedValue(new Error("ERROR"));
+      when(mockActivity.execute(anything())).thenReject(new Error("ERROR"));
 
       await expect(batch.end()).rejects.toStrictEqual(
         new GolemWorkError(
@@ -152,7 +178,9 @@ describe("Batch", () => {
     });
 
     it("should throw error on result stream error", async () => {
-      activity.mockResultFailure("FAILURE");
+      when(mockActivity.execute(anything())).thenResolve(
+        buildActivityResults(undefined, undefined, new Error("FAILURE")),
+      );
       await expect(batch.end()).rejects.toStrictEqual(
         new GolemWorkError(
           "Unable to execute script Error: FAILURE",
@@ -172,8 +200,13 @@ describe("Batch", () => {
     });
 
     it("should work", async () => {
-      activity.mockResultCreate({ stdout: "Hello World" });
-      activity.mockResultCreate({ stdout: "Hello World 2" });
+      when(mockActivity.execute(anything())).thenResolve(
+        buildActivityResults([
+          buildExeScriptSuccessResult("Hello World"),
+          buildExeScriptSuccessResult("Hello World 2"),
+        ]),
+      );
+
       const results: Result[] = [];
 
       const stream = await batch.endStream();
@@ -208,7 +241,9 @@ describe("Batch", () => {
 
     it("should call script.after() on result stream error", async () => {
       const spy = jest.spyOn(batch["script"], "after");
-      activity.mockResultFailure("FAILURE");
+      when(mockActivity.execute(anything())).thenResolve(
+        buildActivityResults(undefined, [buildExeScriptErrorResult("FAILURE", "FAILURE")]),
+      );
 
       const stream = await batch.endStream();
       try {
@@ -226,7 +261,7 @@ describe("Batch", () => {
 
     it("should call script.after() on execute error", async () => {
       const spy = jest.spyOn(batch["script"], "after");
-      jest.spyOn(activity, "execute").mockRejectedValue(new Error("ERROR"));
+      when(mockActivity.execute(anything())).thenReject(new Error("ERROR"));
 
       await expect(async () => {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -248,7 +283,9 @@ describe("Batch", () => {
     });
 
     it("should destroy the stream on result stream error", async () => {
-      activity.mockResultFailure("FAILURE");
+      when(mockActivity.execute(anything())).thenResolve(
+        buildActivityResults(undefined, [buildExeScriptErrorResult("FAILURE", "FAILURE")]),
+      );
       const stream = await batch.endStream();
       try {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars

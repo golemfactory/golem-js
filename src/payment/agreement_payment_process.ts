@@ -3,11 +3,11 @@ import { Invoice } from "./invoice";
 import { DebitNote } from "./debit_note";
 import { RejectionReason } from "./rejection";
 import { Allocation } from "./allocation";
-import { Logger, defaultLogger } from "../utils";
+import { defaultLogger, Logger } from "../utils";
 import { DebitNoteFilter, InvoiceFilter } from "./service";
 import AsyncLock from "async-lock";
-import { InvoiceStatus } from "ya-ts-client/dist/ya-payment";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
+import { GolemUserError } from "../error/golem-error";
 
 /**
  * Process manager that controls the logic behind processing events related to an agreement which result with payments
@@ -88,7 +88,12 @@ export class AgreementPaymentProcess {
 
     this.debitNotes.set(debitNote.id, debitNote);
 
-    const acceptedByFilter = await this.filters.debitNoteFilter(debitNote.dto);
+    let acceptedByFilter = false;
+    try {
+      acceptedByFilter = await this.filters.debitNoteFilter(debitNote.dto);
+    } catch (error) {
+      throw new GolemUserError("An error occurred in the debit note filter", error);
+    }
 
     if (!acceptedByFilter) {
       await this.rejectDebitNote(
@@ -112,7 +117,7 @@ export class AgreementPaymentProcess {
   private async hasProcessedDebitNote(debitNote: DebitNote) {
     const status = await debitNote.getStatus();
 
-    return status !== InvoiceStatus.Received;
+    return status !== "RECEIVED";
   }
 
   private async rejectDebitNote(debitNote: DebitNote, rejectionReason: RejectionReason, rejectMessage: string) {
@@ -132,7 +137,7 @@ export class AgreementPaymentProcess {
       if (invoice.isSameAs(this.invoice)) {
         const previousStatus = await this.invoice.getStatus();
 
-        if (previousStatus !== InvoiceStatus.Received) {
+        if (previousStatus !== "RECEIVED") {
           this.logger.warn(`Received duplicate of an already processed invoice , the new one will be ignored`, {
             invoiceId: invoice.id,
             agreementId: invoice.agreementId,
@@ -151,10 +156,10 @@ export class AgreementPaymentProcess {
     }
 
     const status = await invoice.getStatus();
-    if (status !== InvoiceStatus.Received) {
+    if (status !== "RECEIVED") {
       throw new GolemPaymentError(
         `The invoice ${invoice.id} for agreement ${invoice.agreementId} has status ${status}, ` +
-          `but we can accept only the ones with status ${InvoiceStatus.Received}`,
+          `but we can accept only the ones with status RECEIVED`,
         PaymentErrorCode.InvoiceAlreadyReceived,
         this.allocation,
         invoice.provider,
@@ -163,7 +168,12 @@ export class AgreementPaymentProcess {
 
     this.invoice = invoice;
 
-    const acceptedByFilter = await this.filters.invoiceFilter(invoice.dto);
+    let acceptedByFilter = false;
+    try {
+      acceptedByFilter = await this.filters.invoiceFilter(invoice.dto);
+    } catch (error) {
+      throw new GolemUserError("An error occurred in the invoice filter", error);
+    }
 
     if (!acceptedByFilter) {
       const rejectionReason = RejectionReason.RejectedByRequestorFilter;

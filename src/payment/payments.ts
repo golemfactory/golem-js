@@ -12,8 +12,8 @@ export interface PaymentOptions extends BasePaymentOptions {
   maxDebitNotesEvents?: number;
 }
 
-export const PAYMENT_EVENT_TYPE = "PaymentReceived";
-const UNSUBSCRIBED_EVENT = "Unsubscribed";
+export const EVENT_PAYMENT_RECEIVED = "PaymentReceived";
+export const EVENT_UNSUBSCRIBED = "Unsubscribed";
 
 export class Payments extends EventTarget {
   private isRunning = true;
@@ -50,7 +50,7 @@ export class Payments extends EventTarget {
           ),
         this.options.unsubscribeTimeoutMs,
       );
-      this.addEventListener(UNSUBSCRIBED_EVENT, () => {
+      this.addEventListener(EVENT_UNSUBSCRIBED, () => {
         this.logger.debug(`Payments unsubscribed`);
         clearTimeout(timeoutId);
         resolve(true);
@@ -67,12 +67,11 @@ export class Payments extends EventTarget {
   private async subscribeForInvoices() {
     while (this.isRunning) {
       try {
-        const { data: invoiceEvents } = await this.yagnaApi.payment.getInvoiceEvents(
+        const invoiceEvents = await this.yagnaApi.payment.getInvoiceEvents(
           this.options.invoiceFetchingInterval / 1000,
           this.lastInvoiceFetchingTime,
           this.options.maxInvoiceEvents,
           this.yagnaApi.appSessionId,
-          { timeout: 0 },
         );
         for (const event of invoiceEvents) {
           if (!this.isRunning) break;
@@ -84,7 +83,7 @@ export class Payments extends EventTarget {
             this.logger.error(`Unable to create invoice`, { id: invoiceId, error }),
           );
           if (!invoice) continue;
-          this.dispatchEvent(new InvoiceEvent(PAYMENT_EVENT_TYPE, invoice));
+          this.dispatchEvent(new InvoiceEvent(EVENT_PAYMENT_RECEIVED, invoice));
           this.lastInvoiceFetchingTime = event.eventDate;
           this.options.eventTarget?.dispatchEvent(
             new Events.InvoiceReceived({
@@ -106,21 +105,20 @@ export class Payments extends EventTarget {
         await sleep(2);
       }
     }
-    this.dispatchEvent(new Event(UNSUBSCRIBED_EVENT));
+    this.dispatchEvent(new Event(EVENT_UNSUBSCRIBED));
   }
 
   private async subscribeForDebitNotes() {
     while (this.isRunning) {
       try {
-        const { data: debitNotesEvents } = await this.yagnaApi.payment
+        const debitNotesEvents = await this.yagnaApi.payment
           .getDebitNoteEvents(
             this.options.debitNotesFetchingInterval / 1000,
             this.lastDebitNotesFetchingTime,
             this.options.maxDebitNotesEvents,
             this.yagnaApi.appSessionId,
-            { timeout: 0 },
           )
-          .catch(() => ({ data: [] }));
+          .catch(() => []);
 
         for (const event of debitNotesEvents) {
           if (!this.isRunning) return;
@@ -132,7 +130,7 @@ export class Payments extends EventTarget {
             this.logger.error(`Unable to create debit note`, { id: debitNoteId, error }),
           );
           if (!debitNote) continue;
-          this.dispatchEvent(new DebitNoteEvent(PAYMENT_EVENT_TYPE, debitNote));
+          this.dispatchEvent(new DebitNoteEvent(EVENT_PAYMENT_RECEIVED, debitNote));
           this.lastDebitNotesFetchingTime = event.eventDate;
           this.options.eventTarget?.dispatchEvent(
             new Events.DebitNoteReceived({

@@ -34,12 +34,12 @@ export default [
       alias({
         entries: [
           { find: "stream", replacement: "stream-browserify" },
-          { find: /RedisDatastore/, replacement: "tests/mock/utils/empty_default.js" },
-          { find: /IORedisConnection/, replacement: "tests/mock/utils/empty_default.js" },
-          { find: /RedisConnection/, replacement: "tests/mock/utils/empty_default.js" },
+          { find: /RedisDatastore/, replacement: "tests/utils/empty_default.js" },
+          { find: /IORedisConnection/, replacement: "tests/utils/empty_default.js" },
+          { find: /RedisConnection/, replacement: "tests/utils/empty_default.js" },
           { find: /src\/api\/provider-api$/, replacement: "." },
-          { find: /\.\/gftp.js/, replacement: "tests/mock/utils/empty.js" },
-          { find: /GftpStorageProvider/, replacement: "tests/mock/utils/empty.js" },
+          { find: /\.\/gftp.js/, replacement: "tests/utils/empty.js" },
+          { find: /GftpStorageProvider/, replacement: "tests/utils/empty.js" },
         ],
       }),
       nodeResolve({ browser: true, preferBuiltins: true }),
