@@ -3,7 +3,7 @@ import { Allocation, AllocationOptions } from "./allocation";
 import { BasePaymentOptions, PaymentConfig } from "./config";
 import { Invoice, InvoiceDTO } from "./invoice";
 import { DebitNote, DebitNoteDTO } from "./debit_note";
-import { DebitNoteEvent, InvoiceEvent, PAYMENT_EVENT_TYPE, Payments } from "./payments";
+import { DebitNoteEvent, InvoiceEvent, EVENT_PAYMENT_RECEIVED, Payments } from "./payments";
 import { Agreement } from "../agreement";
 import { AgreementPaymentProcess } from "./agreement_payment_process";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
@@ -63,7 +63,7 @@ export class PaymentService {
   async run() {
     this.isRunning = true;
     this.payments = await Payments.create(this.yagnaApi, this.config.options);
-    this.payments.addEventListener(PAYMENT_EVENT_TYPE, this.subscribePayments.bind(this));
+    this.payments.addEventListener(EVENT_PAYMENT_RECEIVED, this.subscribePayments.bind(this));
     this.logger.info("Payment Service has started");
   }
 
@@ -91,7 +91,7 @@ export class PaymentService {
     await this.payments
       ?.unsubscribe()
       .catch((error) => this.logger.warn("Unable to unsubscribe from payments", { error }));
-    this.payments?.removeEventListener(PAYMENT_EVENT_TYPE, this.subscribePayments.bind(this));
+    this.payments?.removeEventListener(EVENT_PAYMENT_RECEIVED, this.subscribePayments.bind(this));
     await this.allocation?.release().catch((error) => this.logger.warn("Unable to release allocation", { error }));
     this.logger.info("Allocation has been released");
     this.logger.info("Payment service has been stopped");

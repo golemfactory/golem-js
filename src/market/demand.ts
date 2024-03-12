@@ -5,11 +5,10 @@ import { Proposal } from "./proposal";
 import { defaultLogger, Logger, sleep, YagnaApi, YagnaOptions } from "../utils";
 import { DemandConfig } from "./config";
 import { Events } from "../events";
-import { ProposalEvent, ProposalRejectedEvent } from "ya-ts-client/dist/ya-market/src/models";
-import { DemandOfferBase } from "ya-ts-client/dist/ya-market";
 import * as events from "../events/events";
 import { GolemMarketError, MarketErrorCode } from "./error";
 import { GolemError, GolemPlatformError } from "../error/golem-error";
+import { MarketApi } from "ya-ts-client";
 
 export interface DemandDetails {
   properties: Array<{ key: string; value: string | number | boolean }>;
@@ -97,7 +96,7 @@ export interface DemandOptions {
  * Event type with which all offers and proposals coming from the market will be emitted.
  * @hidden
  */
-export const DEMAND_EVENT_TYPE = "ProposalReceived";
+export const EVENT_PROPOSAL_RECEIVED = "ProposalReceived";
 
 /**
  * Demand module - an object which can be considered an "open" or public Demand, as it is not directed at a specific Provider, but rather is sent to the market so that the matching mechanism implementation can associate relevant Offers.
@@ -142,7 +141,7 @@ export class Demand extends EventTarget {
    */
   constructor(
     public readonly id: string,
-    public readonly demandRequest: DemandOfferBase,
+    public readonly demandRequest: MarketApi.DemandOfferBaseDTO,
     public readonly allocation: Allocation,
     private yagnaApi: YagnaApi,
     private options: DemandConfig,
@@ -177,17 +176,16 @@ export class Demand extends EventTarget {
   }
 
   private async subscribe() {
+    this.logger.debug("Subscribing for proposals matched with the demand", { demandId: this.id });
     while (this.isRunning) {
       try {
-        const { data: events } = await this.yagnaApi.market.collectOffers(
+        const events = await this.yagnaApi.market.collectOffers(
           this.id,
           this.options.offerFetchingIntervalSec,
           this.options.maxOfferEvents,
-          {
-            timeout: 0,
-          },
         );
-        for (const event of events as Array<ProposalEvent & ProposalRejectedEvent>) {
+        for (const event of events as Array<MarketApi.ProposalEventDTO & MarketApi.ProposalRejectedEventDTO>) {
+          this.logger.debug("Received proposal event from subscription", { event });
           if (event.eventType === "ProposalRejectedEvent") {
             this.logger.warn(`Proposal rejected`, { reason: event.reason?.message });
             this.options.eventTarget?.dispatchEvent(
@@ -207,7 +205,7 @@ export class Demand extends EventTarget {
             event.proposal,
             this.options.eventTarget,
           );
-          this.dispatchEvent(new DemandEvent(DEMAND_EVENT_TYPE, proposal));
+          this.dispatchEvent(new DemandEvent(EVENT_PROPOSAL_RECEIVED, proposal));
           this.options.eventTarget?.dispatchEvent(
             new Events.ProposalReceived({
               id: proposal.id,
@@ -226,7 +224,7 @@ export class Demand extends EventTarget {
             // Yagna has been disconnected
             this.dispatchEvent(
               new DemandEvent(
-                DEMAND_EVENT_TYPE,
+                EVENT_PROPOSAL_RECEIVED,
                 undefined,
                 new GolemPlatformError(`Unable to collect offers. ${reason}`, error),
               ),
@@ -237,7 +235,7 @@ export class Demand extends EventTarget {
             // Demand has expired
             this.dispatchEvent(
               new DemandEvent(
-                DEMAND_EVENT_TYPE,
+                EVENT_PROPOSAL_RECEIVED,
                 undefined,
                 new GolemMarketError(`Demand expired. ${reason}`, MarketErrorCode.DemandExpired, this, error),
               ),

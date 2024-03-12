@@ -85,15 +85,23 @@ export class AllocationConfig extends BaseConfig {
 
   constructor(options?: AllocationOptions) {
     super(options);
+
     if (!options || !options?.account) {
       throw new GolemConfigError("Account option is required");
     }
+
+    if (!options.account.address || !options.account.platform) {
+      throw new GolemConfigError("Account address and payment platform are required");
+    }
+
     this.account = options.account;
     this.budget = options?.budget || DEFAULTS.budget;
+
     this.payment = {
       driver: options?.payment?.driver || DEFAULTS.payment.driver,
       network: options?.payment?.network || DEFAULTS.payment.network,
     };
+
     this.expirationSec = options?.expirationSec || DEFAULTS.allocationExpirationSec;
   }
 }

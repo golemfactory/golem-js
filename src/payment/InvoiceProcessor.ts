@@ -1,19 +1,18 @@
-import { Allocation, Invoice } from "ya-ts-client/dist/ya-payment";
-import { Yagna } from "../utils";
-import { YagnaApi, YagnaOptions } from "../utils/yagna/yagna";
+import { PaymentApi } from "ya-ts-client";
+import { YagnaApi, YagnaOptions } from "../utils";
 import Decimal, { Numeric } from "decimal.js-light";
 
 export type InvoiceAcceptResult =
   | {
       invoiceId: string;
-      allocation: Allocation;
+      allocation: PaymentApi.AllocationDTO;
       success: true;
       amount: string;
       dryRun: boolean;
     }
   | {
       invoiceId: string;
-      allocation: Allocation;
+      allocation: PaymentApi.AllocationDTO;
       success: false;
       amount: string;
       reason: unknown;
@@ -34,10 +33,9 @@ export class InvoiceProcessor {
    * @param options Options for the Yagna API.
    */
   public static async create(options?: YagnaOptions): Promise<InvoiceProcessor> {
-    const yagna = new Yagna(options);
+    const yagna = new YagnaApi(options);
     await yagna.connect();
-    const api = yagna.getApi();
-    return new InvoiceProcessor(api);
+    return new InvoiceProcessor(yagna);
   }
 
   /**
@@ -88,7 +86,7 @@ export class InvoiceProcessor {
     // this is not very efficient, but it's the only way to get invoices sorted by timestamp
     // otherwise yagna returns the invoices in seemingly random order
     // FIXME: move to batched requests once yagna api supports it
-    const invoices = await this.api.payment.getInvoices(after?.toISOString()).then((response) => response.data);
+    const invoices = await this.api.payment.getInvoices(after?.toISOString());
     const filteredInvoices = invoices.filter((invoice) => {
       if (statuses && !statuses.includes(invoice.status)) {
         return false;
@@ -117,8 +115,8 @@ export class InvoiceProcessor {
   /**
    * Fetches a single invoice from the Yagna API.
    */
-  async fetchSingleInvoice(invoiceId: string): Promise<Invoice> {
-    return this.api.payment.getInvoice(invoiceId).then((res) => res.data);
+  async fetchSingleInvoice(invoiceId: string): Promise<PaymentApi.InvoiceDTO> {
+    return this.api.payment.getInvoice(invoiceId);
   }
 
   /**
@@ -129,10 +127,10 @@ export class InvoiceProcessor {
     invoice,
     dryRun = false,
   }: {
-    invoice: Invoice;
+    invoice: PaymentApi.InvoiceDTO;
     dryRun?: boolean;
   }): Promise<InvoiceAcceptResult> {
-    let allocation: Allocation = {
+    let allocation: PaymentApi.AllocationDTO = {
       totalAmount: invoice.amount,
       paymentPlatform: invoice.paymentPlatform,
       address: invoice.payerAddr,
@@ -155,7 +153,7 @@ export class InvoiceProcessor {
     }
 
     try {
-      allocation = await this.api.payment.createAllocation(allocation).then((res) => res.data);
+      allocation = await this.api.payment.createAllocation(allocation);
 
       await this.api.payment.acceptInvoice(invoice.invoiceId, {
         allocationId: allocation.allocationId,
@@ -194,7 +192,7 @@ export class InvoiceProcessor {
     invoices,
     dryRun = false,
   }: {
-    invoices: Invoice[];
+    invoices: PaymentApi.InvoiceDTO[];
     dryRun?: boolean;
   }): Promise<InvoiceAcceptResult[]> {
     /**
@@ -202,25 +200,19 @@ export class InvoiceProcessor {
      * So it's necessary to group invoices by payment platform and payer address
      * and create an allocation for each group.
      */
-    const groupByPaymentPlatform = (invoiceDetails: Invoice[]) => {
-      return invoiceDetails.reduce(
-        (acc, curr) => {
-          acc[curr.paymentPlatform] = acc[curr.paymentPlatform] || [];
-          acc[curr.paymentPlatform].push(curr);
-          return acc;
-        },
-        {} as Record<string, Invoice[]>,
-      );
+    const groupByPaymentPlatform = (invoiceDetails: PaymentApi.InvoiceDTO[]) => {
+      return invoiceDetails.reduce<Record<string, PaymentApi.InvoiceDTO[]>>((acc, curr) => {
+        acc[curr.paymentPlatform] = acc[curr.paymentPlatform] || [];
+        acc[curr.paymentPlatform].push(curr);
+        return acc;
+      }, {});
     };
-    const groupByPayerAddress = (invoiceDetails: Invoice[]) => {
-      return invoiceDetails.reduce(
-        (acc, curr) => {
-          acc[curr.payerAddr] = acc[curr.payerAddr] || [];
-          acc[curr.payerAddr].push(curr);
-          return acc;
-        },
-        {} as Record<string, Invoice[]>,
-      );
+    const groupByPayerAddress = (invoiceDetails: PaymentApi.InvoiceDTO[]) => {
+      return invoiceDetails.reduce<Record<string, PaymentApi.InvoiceDTO[]>>((acc, curr) => {
+        acc[curr.payerAddr] = acc[curr.payerAddr] || [];
+        acc[curr.payerAddr].push(curr);
+        return acc;
+      }, {});
     };
 
     const results: InvoiceAcceptResult[] = [];
@@ -230,7 +222,7 @@ export class InvoiceProcessor {
       const groupedByPayerAddress = groupByPayerAddress(invoices);
       for (const [payerAddress, invoices] of Object.entries(groupedByPayerAddress)) {
         const sum = invoices.reduce((acc, curr) => acc.plus(curr.amount), new Decimal(0));
-        let allocation: Allocation = {
+        let allocation: PaymentApi.AllocationDTO = {
           totalAmount: sum.toFixed(18),
           paymentPlatform,
           address: payerAddress,
@@ -242,7 +234,7 @@ export class InvoiceProcessor {
           allocationId: "",
         };
         if (!dryRun) {
-          allocation = await this.api.payment.createAllocation(allocation).then((res) => res.data);
+          allocation = await this.api.payment.createAllocation(allocation);
         }
         for (const invoice of invoices) {
           if (dryRun) {

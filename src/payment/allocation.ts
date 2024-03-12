@@ -1,6 +1,5 @@
-import { Allocation as Model, MarketDecoration } from "ya-ts-client/dist/ya-payment";
+import { PaymentApi } from "ya-ts-client";
 import { AllocationConfig, BasePaymentOptions } from "./config";
-import { Allocation as AllocationModel } from "ya-ts-client/dist/ya-payment/src/models/allocation";
 import { Events } from "../events";
 import { YagnaApi } from "../utils";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
@@ -39,15 +38,12 @@ export class Allocation {
 
   /**
    * Create allocation
-   *
-   * @param yagnaApi - {@link YagnaApi}
-   * @param options - {@link AllocationOptions}
    */
   static async create(yagnaApi: YagnaApi, options: AllocationOptions): Promise<Allocation> {
     try {
       const config = new AllocationConfig(options);
       const now = new Date();
-      const model: AllocationModel = {
+      const model: PaymentApi.AllocationDTO = {
         totalAmount: config.budget.toString(),
         paymentPlatform: config.account.platform,
         address: config.account.address,
@@ -58,7 +54,7 @@ export class Allocation {
         spentAmount: "",
         allocationId: "",
       };
-      const { data: newModel } = await yagnaApi.payment.createAllocation(model);
+      const newModel = await yagnaApi.payment.createAllocation(model);
       config.eventTarget?.dispatchEvent(
         new Events.AllocationCreated({
           id: newModel.allocationId,
@@ -81,16 +77,10 @@ export class Allocation {
     }
   }
 
-  /**
-   * @param yagnaApi - {@link YagnaApi}
-   * @param options - {@link AllocationConfig}
-   * @param model - {@link Model}
-   * @hidden
-   */
   constructor(
     private readonly yagnaApi: YagnaApi,
     private readonly options: AllocationConfig,
-    model: Model,
+    model: PaymentApi.AllocationDTO,
   ) {
     this.id = model.allocationId;
     this.timeout = model.timeout;
@@ -144,13 +134,13 @@ export class Allocation {
   }
 
   /**
-   * Returns Market ya-ts-client decoration
+   * Uses the helper API of yagna to provide demand decorations (properties and constraints) based on the allocation that's going to be used
    *
    * @return {@link MarketDecoration}
    */
-  async getDemandDecoration(): Promise<MarketDecoration> {
+  async getDemandDecoration(): Promise<PaymentApi.MarketDecorationDTO> {
     try {
-      const { data: decoration } = await this.yagnaApi.payment.getDemandDecorations([this.id]);
+      const decoration = await this.yagnaApi.payment.getDemandDecorations([this.id]);
       return decoration;
     } catch (error) {
       throw new GolemInternalError(
@@ -162,7 +152,7 @@ export class Allocation {
 
   private async refresh() {
     try {
-      const { data } = await this.yagnaApi.payment.getAllocation(this.id);
+      const data = await this.yagnaApi.payment.getAllocation(this.id);
       this.remainingAmount = data.remainingAmount;
       this.spentAmount = data.spentAmount;
     } catch (error) {

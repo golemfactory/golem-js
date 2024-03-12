@@ -1,7 +1,7 @@
 describe("CommonJS Import", () => {
   test("Require @golem-sdk/golem-js", () => {
-    const { Yagna } = require("@golem-sdk/golem-js");
-    expect(typeof Yagna).toBe("function");
+    const { YagnaApi } = require("@golem-sdk/golem-js");
+    expect(typeof YagnaApi).toBe("function");
   });
 
   test("Require @golem-sdk/golem-js/experimental", async () => {

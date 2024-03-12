@@ -1,6 +1,6 @@
 import { v4 } from "uuid";
 import { Job } from "../job";
-import { Yagna, YagnaApi, YagnaOptions } from "../../utils";
+import { YagnaApi, YagnaOptions } from "../../utils";
 import { RunJobOptions } from "../job/job";
 import { GolemUserError } from "../../error/golem-error";
 
@@ -12,25 +12,23 @@ export type GolemNetworkConfig = Partial<RunJobOptions> & { yagna?: YagnaOptions
  * The Golem Network class provides a high-level API for running jobs on the Golem Network.
  */
 export class GolemNetwork {
-  private yagna: Yagna;
-  private api: YagnaApi | null = null;
+  private yagna: YagnaApi | null = null;
 
   private jobs = new Map<string, Job>();
 
   /**
    * @param config - Configuration options that will be passed to all jobs created by this instance.
    */
-  constructor(private readonly config: GolemNetworkConfig) {
-    this.yagna = new Yagna(this.config.yagna);
-  }
+  constructor(private readonly config: GolemNetworkConfig) {}
 
   public isInitialized() {
-    return this.api !== null;
+    return this.yagna !== null;
   }
 
   public async init() {
-    await this.yagna.connect();
-    this.api = this.yagna.getApi();
+    const yagna = new YagnaApi(this.config.yagna);
+    await yagna.connect();
+    this.yagna = yagna;
   }
 
   /**
@@ -43,7 +41,7 @@ export class GolemNetwork {
     this.checkInitialization();
 
     const jobId = v4();
-    const job = new Job<Output>(jobId, this.api!, { ...this.config, ...options });
+    const job = new Job<Output>(jobId, this.yagna!, { ...this.config, ...options });
     this.jobs.set(jobId, job);
 
     return job;
@@ -61,8 +59,7 @@ export class GolemNetwork {
   public async close() {
     const pendingJobs = Array.from(this.jobs.values()).filter((job) => job.isRunning());
     await Promise.allSettled(pendingJobs.map((job) => job.cancel()));
-    await this.yagna.end();
-    this.api = null;
+    this.yagna = null;
   }
 
   private checkInitialization() {
