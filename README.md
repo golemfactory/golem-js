@@ -1,4 +1,4 @@
-# Golem JavaScript API
+# Golem JavaScript API (git test)
 
 ![GitHub](https://img.shields.io/github/license/golemfactory/golem-js)
 ![npm](https://img.shields.io/npm/v/@golem-sdk/golem-js)
