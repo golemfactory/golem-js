@@ -55,9 +55,7 @@ export class Network {
   static async create(yagnaApi: YagnaApi, options: NetworkOptions): Promise<Network> {
     const config = new NetworkConfig(options);
     try {
-      const {
-        data: { id, ip, mask },
-      } = await yagnaApi.net.createNetwork({
+      const { id, ip, mask } = await yagnaApi.net.createNetwork({
         id: config.ownerId,
         ip: config.ip,
         mask: config.mask,
@@ -255,6 +253,6 @@ export class Network {
   }
 
   private getUrl() {
-    return this.yagnaApi.net["basePath"];
+    return this.yagnaApi.net.httpRequest.config.BASE;
   }
 }

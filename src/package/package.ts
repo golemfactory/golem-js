@@ -86,6 +86,7 @@ export class Package {
 
   async getDemandDecoration(): Promise<MarketDecoration> {
     const builder = new DecorationsBuilder();
+
     builder
       .addProperty("golem.srv.comp.vm.package_format", this.options.packageFormat)
       .addConstraint("golem.inf.mem.gib", this.options.minMemGib.toString(), ComparisonOperator.GtEq)
@@ -100,9 +101,12 @@ export class Package {
       const taskPackage = await this.resolveTaskPackageUrl();
       builder.addProperty("golem.srv.comp.task_package", taskPackage);
     }
+
     if (this.options.capabilities.length)
       this.options.capabilities.forEach((cap) => builder.addConstraint("golem.runtime.capabilities", cap));
+
     this.addManifestDecorations(builder);
+
     return builder.getDecorations();
   }
   private async resolveTaskPackageFromLocalServer(): Promise<string> {

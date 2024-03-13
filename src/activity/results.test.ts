@@ -1,4 +1,4 @@
-import { Result, ResultState } from "./results";
+import { Result } from "./results";
 
 describe("Results", () => {
   describe("converting output to JSON", () => {
@@ -6,7 +6,7 @@ describe("Results", () => {
       test("produces JSON when the stdout contains correct data", () => {
         const result = new Result({
           index: 0,
-          result: ResultState.Ok,
+          result: "Ok",
           stdout: '{ "value": 55 }\n',
           stderr: null,
           message: null,
@@ -24,7 +24,7 @@ describe("Results", () => {
       test("throws an error when stdout does not contain nice JSON", () => {
         const result = new Result({
           index: 0,
-          result: ResultState.Ok,
+          result: "Ok",
           stdout: "not json\n",
           stderr: null,
           message: null,

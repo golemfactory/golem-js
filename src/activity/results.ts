@@ -1,6 +1,4 @@
-import { ExeScriptCommandResultResultEnum } from "ya-ts-client/dist/ya-activity/src/models/exe-script-command-result";
-
-export import ResultState = ExeScriptCommandResultResultEnum;
+import { ActivityApi } from "ya-ts-client";
 import { GolemInternalError } from "../error/golem-error";
 
 // FIXME: Make the `data` field Uint8Array and update the rest of the code
@@ -11,7 +9,7 @@ export interface ResultData<T = any> {
   /** The datetime of the event on which the result was received */
   eventDate: string;
   /** If is success */
-  result: ResultState;
+  result: ActivityApi.ExeScriptCommandResultDTO["result"];
   /** stdout of script command */
   stdout?: string | ArrayBuffer | null;
   /** stderr of script command */
@@ -30,7 +28,7 @@ export interface ResultData<T = any> {
 export class Result<TData = any> implements ResultData<TData> {
   index: number;
   eventDate: string;
-  result: ResultState;
+  result: ActivityApi.ExeScriptCommandResultDTO["result"];
   stdout?: string | ArrayBuffer | null;
   stderr?: string | ArrayBuffer | null;
   message?: string | null;

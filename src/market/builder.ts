@@ -1,5 +1,4 @@
-import { MarketProperty } from "ya-ts-client/dist/ya-payment/src/models";
-import { DemandOfferBase } from "ya-ts-client/dist/ya-market/src/models";
+import { MarketApi, PaymentApi } from "ya-ts-client";
 import { GolemInternalError } from "../error/golem-error";
 
 /**
@@ -32,7 +31,7 @@ type Constraint = {
  * @hidden
  */
 export class DecorationsBuilder {
-  private properties: Array<MarketProperty | { key: string; value: string | number | boolean }> = [];
+  private properties: Array<PaymentApi.MarketPropertyDTO | { key: string; value: string | number | boolean }> = [];
   private constraints: Array<Constraint> = [];
 
   addProperty(key: string, value: string | number | boolean) {
@@ -54,7 +53,7 @@ export class DecorationsBuilder {
       constraints: this.constraints.map((c) => `(${c.key + c.comparisonOperator + c.value})`),
     };
   }
-  getDemandRequest(): DemandOfferBase {
+  getDemandRequest(): MarketApi.DemandOfferBaseDTO {
     const decorations = this.getDecorations();
     let constraints: string;
     if (!decorations.constraints.length) constraints = "(&)";

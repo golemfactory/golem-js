@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for i in {1..3}; do
+for i in {1..5}; do
     yagna payment fund --network goerli && exit 0
 done
 

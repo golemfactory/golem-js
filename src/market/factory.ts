@@ -26,7 +26,13 @@ export class DemandFactory {
     try {
       const decorations = await this.getDecorations();
       const demandRequest = new DecorationsBuilder().addDecorations(decorations).getDemandRequest();
-      const { data: id } = await this.yagnaApi.market.subscribeDemand(demandRequest);
+      const id = await this.yagnaApi.market.subscribeDemand(demandRequest);
+      if (typeof id !== "string") {
+        throw new GolemMarketError(
+          `Invalid demand ID received from the market: ${id}`,
+          MarketErrorCode.SubscriptionFailed,
+        );
+      }
       this.options.eventTarget?.dispatchEvent(
         new events.DemandSubscribed({
           id,

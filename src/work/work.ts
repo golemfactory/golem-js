@@ -1,4 +1,4 @@
-import { Activity, ActivityStateEnum, Result, ResultState } from "../activity";
+import { Activity, ActivityStateEnum, Result } from "../activity";
 import {
   Capture,
   Command,
@@ -18,7 +18,7 @@ import { Batch } from "./batch";
 import { NetworkNode } from "../network";
 import { RemoteProcess } from "./process";
 import { GolemWorkError, WorkErrorCode } from "./error";
-import { GolemTimeoutError } from "../error/golem-error";
+import { GolemConfigError, GolemTimeoutError } from "../error/golem-error";
 import { ProviderInfo } from "../agreement";
 import { TcpProxy } from "../network/tcpProxy";
 
@@ -36,7 +36,7 @@ export interface WorkOptions {
   networkNode?: NetworkNode;
   logger?: Logger;
   activityReadySetupFunctions?: Worker<unknown>[];
-  yagnaOptions: YagnaOptions;
+  yagnaOptions?: YagnaOptions;
 }
 
 export interface CommandOptions {
@@ -76,10 +76,12 @@ export class WorkContext {
     let state = await this.activity
       .getState()
       .catch((error) => this.logger.warn("Error while getting activity state", { error }));
+
     if (state === ActivityStateEnum.Ready) {
       await this.setupActivity();
       return;
     }
+
     if (state === ActivityStateEnum.Initialized) {
       const result = await this.activity
         .execute(
@@ -108,7 +110,7 @@ export class WorkContext {
         ),
         (async () => {
           for await (const res of result) {
-            if (res.result === ResultState.Error)
+            if (res.result === "Error")
               throw new GolemWorkError(
                 `Preparing activity failed. Error: ${res.message}`,
                 WorkErrorCode.ActivityDeploymentFailed,
@@ -295,11 +297,10 @@ export class WorkContext {
     return this.runOneCommand(new DownloadData(this.storageProvider, src), options);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async downloadJson(src: string, options?: CommandOptions): Promise<Result> {
     this.logger.debug(`Downloading json`, { src });
     const result = await this.downloadData(src, options);
-    if (result.result !== ResultState.Ok) {
+    if (result.result !== "Ok") {
       return new Result({
         ...result,
         data: undefined,
@@ -352,7 +353,11 @@ export class WorkContext {
    * @param portOnProvider The port that the service running on the provider is listening to
    */
   createTcpProxy(portOnProvider: number) {
-    return new TcpProxy(this.getWebsocketUri(portOnProvider), this.options.yagnaOptions.apiKey as string, {
+    if (!this.options.yagnaOptions?.apiKey) {
+      throw new GolemConfigError("You need to provide yagna API key to use the TCP Proxy functionality");
+    }
+
+    return new TcpProxy(this.getWebsocketUri(portOnProvider), this.options.yagnaOptions.apiKey, {
       logger: this.logger,
     });
   }

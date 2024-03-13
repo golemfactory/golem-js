@@ -1,4 +1,6 @@
-export const debitNotesEvents = [
+import { PaymentApi } from "ya-ts-client";
+
+export const debitNotesEvents: PaymentApi.DebitNoteRejectedEventDTO[] = [
   {
     debitNoteId: "39c20b22-9c49-47cf-b7f9-a4d80f67b915",
     eventDate: "2022-12-05T08:54:31.833Z",
@@ -6,7 +8,7 @@ export const debitNotesEvents = [
   },
 ];
 
-export const debitNotes = [
+export const debitNotes: PaymentApi.DebitNoteDTO[] = [
   {
     debitNoteId: "39c20b22-9c49-47cf-b7f9-a4d80f67b915",
     issuerId: "0xd9a4a6ba9e1800e4f61cd88dc23f082527f4ee28",

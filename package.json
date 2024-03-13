@@ -39,9 +39,9 @@
     "docs:md": "typedoc src/ --plugin typedoc-plugin-markdown --plugin .docs/typedoc-frontmatter-theme.cjs --hideBreadcrumbs true && node .docs/summary-generator.cjs",
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "jest --config tests/unit/jest.config.json",
-    "test:e2e": "jest --config tests/e2e/jest.config.json tests/e2e/**.spec.ts --runInBand --forceExit",
+    "test:e2e": "jest --config tests/e2e/jest.config.json tests/e2e/**.spec.ts --runInBand --forceExit --passWithNoTests",
     "test:cypress": "cypress run",
-    "test:examples": "ts-node --project tsconfig.spec.json tests/examples/examples.test.ts",
+    "test:examples": "tsx tests/examples/examples.test.ts",
     "test:import": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config tests/import/jest.config.js",
     "lint": "npm run lint:ts && npm run lint:ts:tests && npm run lint:eslint",
     "lint:ts": "tsc --project tsconfig.json --noEmit",
@@ -63,7 +63,6 @@
     "async-lock": "^1.4.1",
     "axios": "^1.6.7",
     "bottleneck": "^2.19.5",
-    "collect.js": "^4.36.1",
     "debug": "^4.3.4",
     "decimal.js-light": "^2.5.1",
     "eventemitter3": "^5.0.1",
@@ -71,17 +70,15 @@
     "flatbuffers": "^23.5.26",
     "ip-num": "^1.5.1",
     "js-sha3": "^0.9.3",
-    "pino": "^8.19.0",
-    "pino-pretty": "^10.3.1",
     "semver": "^7.5.4",
-    "tmp": "^0.2.1",
+    "tmp": "^0.2.2",
     "uuid": "^9.0.1",
     "ws": "^8.16.0",
-    "ya-ts-client": "^0.5.3"
+    "ya-ts-client": "^1.0.0-beta.4"
   },
   "devDependencies": {
-    "@commitlint/cli": "^18.6.1",
-    "@commitlint/config-conventional": "^18.6.2",
+    "@commitlint/cli": "^19.0.3",
+    "@commitlint/config-conventional": "^19.0.3",
     "@johanblumenberg/ts-mockito": "^1.0.41",
     "@rollup/plugin-alias": "^5.1.0",
     "@rollup/plugin-commonjs": "^25.0.7",
@@ -122,9 +119,9 @@
     "supertest": "^6.3.4",
     "ts-jest": "^29.1.2",
     "ts-loader": "^9.5.1",
-    "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "tslint-config-prettier": "^1.18.0",
+    "tsx": "^4.7.1",
     "typedoc": "^0.25.9",
     "typedoc-plugin-markdown": "^3.17.1",
     "typedoc-plugin-merge-modules": "^5.1.0",
@@ -135,5 +132,8 @@
     "@rollup/rollup-darwin-x64": "^4",
     "@rollup/rollup-win32-arm64-msvc": "^4",
     "@rollup/rollup-win32-x64-msvc": "^4"
-  }
+  },
+  "workspaces": [
+    "examples/"
+  ]
 }

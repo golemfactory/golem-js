@@ -5,13 +5,20 @@
  * which is considered as an issue when using jest. Once we change the way we store Goth related logs, then we'll be
  * able to remove this file.
  */
+import chalk from "chalk";
 
 const jestConsole = console;
 
-beforeAll(() => {
-  global.console = require("console");
+process.env.DEBUG = "golem-js:*";
+
+beforeAll(async () => {
+  global.console = await import("console");
 });
 
 afterAll(() => {
   global.console = jestConsole;
+});
+
+beforeEach(() => {
+  console.log(chalk.yellow(`\n\n---- Starting test: "${expect.getState().currentTestName}" ----\n\n`));
 });
