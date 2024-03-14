@@ -36,8 +36,8 @@ permissions:
   contents: read # for checkout
 
 env:
-  PROVIDER_VERSION: ${{ github.event.inputs.provider_version || 'v14.0' }}
-  REQUESTOR_VERSION: ${{ github.event.inputs.requestor_version || 'v14.0' }}
+  PROVIDER_VERSION: ${{ github.event.inputs.provider_version || 'v0.14.0' }}
+  REQUESTOR_VERSION: ${{ github.event.inputs.requestor_version || 'v0.14.0' }}
   PROVIDER_WASI_VERSION: ${{ github.event.inputs.provider_wasi_version || 'v0.2.2' }}
   PROVIDER_VM_VERSION: ${{ github.event.inputs.provider_vm_version || 'v0.3.0' }}
 
