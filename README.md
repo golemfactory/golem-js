@@ -66,13 +66,13 @@ yagna service run
 
 # IN SEPARATE TERMINAL (if not daemonized)
 # Initialize your requestor
-yagna payment init --sender --network goerli
+yagna payment init --sender --network holesky
 
 # Request funds on the test network
-yagna payment fund --network goerli
+yagna payment fund --network holesky
 
 # Check the status of the funds
-yagna payment status --network goerli
+yagna payment status --network holesky
 ```
 
 #### Obtain your `app-key` to use with SDK

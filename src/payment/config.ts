@@ -6,7 +6,7 @@ import { acceptAllDebitNotesFilter, acceptAllInvoicesFilter } from "./strategy";
 import { GolemConfigError } from "../error/golem-error";
 
 const DEFAULTS = Object.freeze({
-  payment: { network: "goerli", driver: "erc20" },
+  payment: { network: "holesky", driver: "erc20" },
   budget: 1.0,
   paymentTimeout: 1000 * 60, // 1 min
   allocationExpirationSec: 60 * 60, // 60 min
