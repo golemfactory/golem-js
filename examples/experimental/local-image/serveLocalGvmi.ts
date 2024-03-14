@@ -1,40 +1,86 @@
-import { GolemNetwork, serveLocalGvmi } from "@golem-sdk/golem-js/experimental";
+import {
+  Activity,
+  AgreementPoolService,
+  MarketService,
+  Package,
+  PaymentService,
+  WorkContext,
+  YagnaApi,
+} from "@golem-sdk/golem-js";
+import { serveLocalGvmi } from "@golem-sdk/golem-js/experimental";
 import { fileURLToPath } from "url";
 
 // get the absolute path to the local image in case this file is run from a different directory
-const localImagePath = fileURLToPath(new URL("alpine.gvmi", import.meta.url).toString());
+const getImagePath = (path: string) => fileURLToPath(new URL(path, import.meta.url).toString());
 
+const localImagePath = getImagePath("./alpine.gvmi");
 const server = serveLocalGvmi(localImagePath);
-const golem = new GolemNetwork({
-  yagna: {
-    apiKey: "try_golem",
-  },
-  package: {
-    localImageServer: server,
-  },
-});
 
 async function main() {
   console.log("Serving local image to the providers...");
   await server.serve();
-  await golem.init();
+  console.log("Starting core services...");
+  const yagna = new YagnaApi();
 
-  const job = golem.createJob<string>();
-  job.startWork(async (ctx) => {
-    return String((await ctx.run("cat hello.txt")).stdout);
+  const payment = new PaymentService(yagna);
+
+  await payment.run();
+
+  const allocation = await payment.createAllocation({
+    budget: 1.0,
   });
-  const result = await job.waitForResult();
-  console.log("Job finished!");
-  console.log(result);
+
+  const agreementPool = new AgreementPoolService(yagna);
+
+  const market = new MarketService(agreementPool, yagna);
+
+  const workload = Package.create({
+    localImageServer: server,
+  });
+
+  await agreementPool.run();
+  await market.run(workload, allocation);
+  console.log("Core services started");
+
+  try {
+    const agreement = await agreementPool.getAgreement();
+    payment.acceptPayments(agreement);
+
+    const activity = await Activity.create(agreement, yagna);
+    // Stop listening for new proposals
+    await market.end();
+
+    const ctx = new WorkContext(activity, {});
+
+    console.log("Activity initialized, status:", await activity.getState());
+    await ctx.before();
+    console.log("Activity deployed and ready for use, status:", await activity.getState());
+    console.log("Provider executing the activity:", ctx.provider.name);
+
+    // Main piece of your logic
+    const result = await ctx.run("cat hello.txt");
+    console.log("===============================");
+    console.log(result.stdout?.toString().trim());
+    console.log("===============================");
+
+    console.log("Work completed");
+    // Stop the activity on the provider once you're done
+    await activity.stop();
+    // Release the agreement without plans to re-use -> it's going to terminate this agreement
+    await agreementPool.releaseAgreement(agreement.id, false);
+  } catch (err) {
+    console.error("Failed to run example on Golem", err);
+  }
+
+  console.log("Shutting down services...");
+  await market.end();
+  await agreementPool.end();
+  await payment.end();
+  console.log("Stoping the local image server...");
+  await server.close();
 }
 
-main()
-  .catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-  })
-  .finally(async () => {
-    await golem.close();
-    console.log("Stoping the local image server...");
-    await server.close();
-  });
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
