@@ -44,7 +44,7 @@ distributed, computational loads through Golem Network.
 
 ## System requirements
 
-To use `golem-js`, it is necessary to have yagna installed, with a **minimum version requirement of v0.13.2**. Yagna is a
+To use `golem-js`, it is necessary to have yagna installed, with a **recommended minimum version of v0.14.0**. Yagna is a
 service that communicates and performs operations on the Golem Network, upon your requests via the SDK. You
 can [follow these instructions](https://docs.golem.network/docs/creators/javascript/quickstarts/quickstart#install-yagna-2)
 to set it up.
