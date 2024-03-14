@@ -15,9 +15,5 @@
     "outDir": "dist",
     "typeRoots": ["node_modules/@types"]
   },
-  "exclude": ["dist", "node_modules"],
-  "ts-node": {
-    "esm": true,
-    "experimentalSpecifierResolution": "node"
-  }
+  "exclude": ["dist", "node_modules"]
 }
