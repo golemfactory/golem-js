@@ -14,6 +14,10 @@ on:
   # Allows triggering the workflow manually
   workflow_dispatch:
     inputs:
+      payment_network:
+        description: "Payment network (holesky, goerli, mainnet, mumbai, polygon, rinkeby)"
+        required: false
+        default: "goerli"
       provider_version:
         description: "Provider version (e.g., v0.13.2 or pre-rel-v0.13.1)"
         required: false
@@ -40,6 +44,7 @@ env:
   REQUESTOR_VERSION: ${{ github.event.inputs.requestor_version || 'v0.13.2' }}
   PROVIDER_WASI_VERSION: ${{ github.event.inputs.provider_wasi_version || 'v0.2.2' }}
   PROVIDER_VM_VERSION: ${{ github.event.inputs.provider_vm_version || 'v0.3.0' }}
+  PAYMENT_NETWORK: ${{ github.event.inputs.payment_network || 'goerli' }}
 
 jobs:
   regular-checks:

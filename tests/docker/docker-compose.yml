@@ -60,6 +60,7 @@ services:
       - GSB_URL=tcp://0.0.0.0:7464
       - YAGNA_SUBNET=${YAGNA_SUBNET:-golemjstest}
       - YAGNA_APPKEY=try_golem
+      - PAYMENT_NETWORK=${PAYMENT_NETWORK}
 
     healthcheck:
       test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:7465 | grep -q 401"]
