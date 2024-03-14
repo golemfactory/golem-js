@@ -14,11 +14,7 @@ import {
 
   const DURATION_SEC = 6 * 60;
 
-  const payment = new PaymentService(yagna, {
-    payment: {
-      network: "goerli",
-    },
-  });
+  const payment = new PaymentService(yagna);
 
   await payment.run();
 
