@@ -98,7 +98,12 @@ export class ProposalsBatch {
       const p2Time = new Date(p2.timestamp).valueOf();
       return p1Price !== p2Price ? p1Price - p2Price : p2Time - p1Time;
     };
-    return [...proposals].sort(sortByLowerPriceAndHigherTime)[0];
+    const sorted = [...proposals].sort(sortByLowerPriceAndHigherTime);
+    console.debug("Reduced %d proposals to 1", proposals.size);
+    console.debug(
+      `Best: ${JSON.stringify(sorted[0].pricing)} Worst: ${JSON.stringify(sorted[proposals.size - 1].pricing)}`,
+    );
+    return sorted[0];
   }
 
   /**
