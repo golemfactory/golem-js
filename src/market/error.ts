@@ -2,25 +2,30 @@ import { GolemModuleError } from "../error/golem-error";
 import { Demand } from "./demand";
 
 export enum MarketErrorCode {
-  ServiceNotInitialized,
-  MissingAllocation,
-  SubscriptionFailed,
-  InvalidProposal,
-  ProposalResponseFailed,
-  ProposalRejectionFailed,
-  DemandExpired,
-  AgreementTerminationFailed,
-  AgreementCreationFailed,
-  AgreementApprovalFailed,
+  ServiceNotInitialized = "ServiceNotInitialized",
+  MissingAllocation = "MissingAllocation",
+  SubscriptionFailed = "SubscriptionFailed",
+  InvalidProposal = "InvalidProposal",
+  ProposalResponseFailed = "ProposalResponseFailed",
+  ProposalRejectionFailed = "ProposalRejectionFailed",
+  DemandExpired = "DemandExpired",
+  AgreementTerminationFailed = "AgreementTerminationFailed",
+  AgreementCreationFailed = "AgreementCreationFailed",
+  AgreementApprovalFailed = "AgreementApprovalFailed",
 }
 
 export class GolemMarketError extends GolemModuleError {
+  #demand?: Demand;
   constructor(
     message: string,
     public code: MarketErrorCode,
-    public demand?: Demand,
+    demand?: Demand,
     public previous?: Error,
   ) {
     super(message, code, previous);
+    this.#demand = demand;
+  }
+  public getDemand(): Demand | undefined {
+    return this.#demand;
   }
 }

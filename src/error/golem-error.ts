@@ -63,7 +63,7 @@ export class GolemTimeoutError extends GolemError {}
 export abstract class GolemModuleError extends GolemError {
   protected constructor(
     message: string,
-    public code: number,
+    public code: string | number,
     previous?: Error,
   ) {
     super(message, previous);

@@ -3,25 +3,40 @@ import { Agreement, ProviderInfo } from "../agreement";
 import { Activity } from "../activity";
 
 export enum WorkErrorCode {
-  ServiceNotInitialized,
-  ScriptExecutionFailed,
-  ActivityDestroyingFailed,
-  ActivityResultsFetchingFailed,
-  ActivityCreationFailed,
-  NetworkSetupMissing,
-  ScriptInitializationFailed,
-  ActivityDeploymentFailed,
-  ActivityStatusQueryFailed,
+  ServiceNotInitialized = "ServiceNotInitialized",
+  ScriptExecutionFailed = "ScriptExecutionFailed",
+  ActivityDestroyingFailed = "ActivityDestroyingFailed",
+  ActivityResultsFetchingFailed = "ActivityResultsFetchingFailed",
+  ActivityCreationFailed = "ActivityCreationFailed",
+  NetworkSetupMissing = "NetworkSetupMissing",
+  ScriptInitializationFailed = "ScriptInitializationFailed",
+  ActivityDeploymentFailed = "ActivityDeploymentFailed",
+  ActivityStatusQueryFailed = "ActivityStatusQueryFailed",
 }
 export class GolemWorkError extends GolemModuleError {
+  #agreement?: Agreement;
+  #activity?: Activity;
+  #provider?: ProviderInfo;
   constructor(
     message: string,
     public code: WorkErrorCode,
-    public agreement?: Agreement,
-    public activity?: Activity,
-    public provider?: ProviderInfo,
+    agreement?: Agreement,
+    activity?: Activity,
+    provider?: ProviderInfo,
     public previous?: Error,
   ) {
     super(message, code, previous);
+    this.#agreement = agreement;
+    this.#activity = activity;
+    this.#provider = provider;
+  }
+  public getAgreement(): Agreement | undefined {
+    return this.#agreement;
+  }
+  public getActivity(): Activity | undefined {
+    return this.#activity;
+  }
+  public getProvider(): ProviderInfo | undefined {
+    return this.#provider;
   }
 }
