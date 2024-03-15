@@ -17,7 +17,7 @@ on:
       payment_network:
         description: "Payment network (holesky, goerli, mainnet, mumbai, polygon, rinkeby)"
         required: false
-        default: "goerli"
+        default: "holesky"
       provider_version:
         description: "Provider version (e.g., v0.14.0 or pre-rel-v0.14.1)"
         required: false
