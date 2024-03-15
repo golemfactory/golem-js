@@ -47,7 +47,7 @@ describe("Demand", () => {
       constraints: [],
     });
 
-    when(mockAllocation.paymentPlatform).thenReturn("erc20-goerli-tglm");
+    when(mockAllocation.paymentPlatform).thenReturn("erc20-holesky-tglm");
 
     when(mockPayment.getDemandDecorations(anything())).thenResolve({
       properties: [{ key: "", value: "" }],

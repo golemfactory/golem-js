@@ -14,14 +14,18 @@ on:
   # Allows triggering the workflow manually
   workflow_dispatch:
     inputs:
+      payment_network:
+        description: "Payment network (holesky, goerli, mainnet, mumbai, polygon, rinkeby)"
+        required: false
+        default: "holesky"
       provider_version:
-        description: "Provider version (e.g., v0.13.2 or pre-rel-v0.13.1)"
+        description: "Provider version (e.g., v0.14.0 or pre-rel-v0.14.1)"
         required: false
-        default: "v0.13.2"
+        default: "v0.14.0"
       requestor_version:
-        description: "Requestor version (e.g., v0.13.2 or pre-rel-v0.13.1)"
+        description: "Requestor version (e.g., v0.14.0 or pre-rel-v0.14.1)"
         required: false
-        default: "v0.13.2"
+        default: "v0.14.0"
       provider_wasi_version:
         description: "Provider WASI version (e.g., v0.2.2)"
         required: false
@@ -36,10 +40,11 @@ permissions:
   contents: read # for checkout
 
 env:
-  PROVIDER_VERSION: ${{ github.event.inputs.provider_version || 'v0.13.2' }}
-  REQUESTOR_VERSION: ${{ github.event.inputs.requestor_version || 'v0.13.2' }}
+  PROVIDER_VERSION: ${{ github.event.inputs.provider_version || 'v0.14.0' }}
+  REQUESTOR_VERSION: ${{ github.event.inputs.requestor_version || 'v0.14.0' }}
   PROVIDER_WASI_VERSION: ${{ github.event.inputs.provider_wasi_version || 'v0.2.2' }}
   PROVIDER_VM_VERSION: ${{ github.event.inputs.provider_vm_version || 'v0.3.0' }}
+  PAYMENT_NETWORK: ${{ github.event.inputs.payment_network || 'holesky' }}
 
 jobs:
   regular-checks:
@@ -120,6 +125,7 @@ jobs:
 
       - name: Cleanup test environment
         uses: ./.github/actions/cleanup-tests
+        if: always()
         with:
           type: "examples"
 
@@ -167,4 +173,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npx semantic-release
-run-name: "${{ github.workflow }} - Requestor: ${{ github.event.inputs.requestor_version }}, Provider: ${{ github.event.inputs.provider_version }}, WASI: ${{ github.event.inputs.provider_wasi_version }}, VM: ${{ github.event.inputs.provider_vm_version }}"
+run-name: "${{ github.workflow }} - Network: ${{ github.event.inputs.payment_network }}, Requestor: ${{ github.event.inputs.requestor_version }}, Provider: ${{ github.event.inputs.provider_version }}, WASI: ${{ github.event.inputs.provider_wasi_version }}, VM: ${{ github.event.inputs.provider_vm_version }}"

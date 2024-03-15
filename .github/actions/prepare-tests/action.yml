@@ -11,6 +11,7 @@ runs:
     - name: Set up Versions
       shell: bash
       run: |
+        echo "PAYMENT_NETWORK=${PAYMENT_NETWORK}" >> $GITHUB_ENV
         echo "PROVIDER_VERSION=${PROVIDER_VERSION}" >> $GITHUB_ENV
         echo "REQUESTOR_VERSION=${REQUESTOR_VERSION}" >> $GITHUB_ENV
         echo "PROVIDER_WASI_VERSION=${PROVIDER_WASI_VERSION}" >> $GITHUB_ENV
