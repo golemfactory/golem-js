@@ -44,7 +44,7 @@ describe("Market Service", () => {
     when(mockPackage.getDemandDecoration()).thenResolve(someDecoration);
 
     when(mockAllocation.getDemandDecoration()).thenResolve(someDecoration);
-    when(mockAllocation.paymentPlatform).thenReturn("erc20-goerli-tglm");
+    when(mockAllocation.paymentPlatform).thenReturn("erc20-holesky-tglm");
 
     when(mockPayment.getDemandDecorations(anything())).thenResolve(someDecoration);
 
