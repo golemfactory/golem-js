@@ -3,7 +3,6 @@ import { EnvUtils, Logger, defaultLogger } from "../utils";
 import { PackageConfig } from "./config";
 import { RequireAtLeastOne } from "../utils/types";
 import { GolemError, GolemPlatformError } from "../error/golem-error";
-import { GvmiServer } from "../experimental/gvmi/gvmiServer";
 
 export type AllPackageOptions = {
   /** Type of engine required: vm, emscripten, sgx, sgx-js, sgx-wasm, sgx-wasi */
@@ -31,17 +30,14 @@ export type AllPackageOptions = {
   manifestCert?: string;
   logger?: Logger;
   /**
-   * @experimental
-   * If you want a provider to download the image from you directly (without using the registry)
-   * you can create a local server by calling `serveLocalGvmi(filepath)` and pass it here.
+   * If you want a provider to download the image from your your local filesystem or
+   * a different registry than the default one, you can provide the image url here.
+   * Note that to use this option you need to also provide the image SHA3-224 hash.
    */
-  localImageServer: GvmiServer;
+  imageUrl: string;
 };
 
-export type PackageOptions = RequireAtLeastOne<
-  AllPackageOptions,
-  "imageHash" | "imageTag" | "manifest" | "localImageServer"
->;
+export type PackageOptions = RequireAtLeastOne<AllPackageOptions, "imageHash" | "imageTag" | "manifest" | "imageUrl">;
 
 export interface PackageDetails {
   minMemGib: number;
@@ -94,8 +90,8 @@ export class Package {
       .addConstraint("golem.runtime.name", this.options.engine)
       .addConstraint("golem.inf.cpu.cores", this.options.minCpuCores.toString(), ComparisonOperator.GtEq)
       .addConstraint("golem.inf.cpu.threads", this.options.minCpuThreads.toString(), ComparisonOperator.GtEq);
-    if (this.options.localImageServer) {
-      const taskPackage = await this.resolveTaskPackageFromLocalServer();
+    if (this.options.imageUrl) {
+      const taskPackage = await this.resolveTaskPackageFromCustomUrl();
       builder.addProperty("golem.srv.comp.task_package", taskPackage);
     } else if (this.options.imageHash || this.options.imageTag) {
       const taskPackage = await this.resolveTaskPackageUrl();
@@ -109,12 +105,16 @@ export class Package {
 
     return builder.getDecorations();
   }
-  private async resolveTaskPackageFromLocalServer(): Promise<string> {
-    if (!this.options.localImageServer) {
-      throw new GolemPlatformError("Tried to resolve task package from local server, but no server was provided.");
+  private async resolveTaskPackageFromCustomUrl(): Promise<string> {
+    if (!this.options.imageUrl) {
+      throw new GolemPlatformError("Tried to resolve task package from custom url, but no url was provided");
     }
-    const { url, hash } = this.options.localImageServer.getImage();
-    return `hash:sha3:${hash}:${url}`;
+    if (!this.options.imageHash) {
+      throw new GolemPlatformError(
+        "Tried to resolve task package from custom url, but no hash was provided. Please calculate the SHA3-224 hash of the image and provide it as `imageHash`",
+      );
+    }
+    return `hash:sha3:${this.options.imageHash}:${this.options.imageUrl}`;
   }
 
   private async resolveTaskPackageUrl(): Promise<string> {

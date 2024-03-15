@@ -1,13 +1,13 @@
-import { GftpStorageProvider } from "../../storage";
+import { GftpStorageProvider } from "../storage";
 import fs from "fs";
 import jsSha3 from "js-sha3";
-import { nullLogger } from "../../utils";
-import { GolemConfigError } from "../../error/golem-error";
+import { nullLogger } from "../utils";
+import { GolemConfigError } from "../error/golem-error";
 
 /**
- * @experimental
  * Helper class to serve a local gvmi file so a provider can
- * download it directly from you.
+ * download it directly from you. When you start serving the file,
+ * the server will calculate the hash automatically.
  */
 export class GvmiServer {
   private gftp: GftpStorageProvider;
@@ -55,10 +55,17 @@ export class GvmiServer {
 }
 
 /**
- * @experimental
  * Serve a local gvmi file so a provider can download it directly from you.
- * Don't forget to call .serve() on the returned object before starting work on Golem.
- * Don't forget to call .close() on the returned object after you're done.
+ *
+ * @example
+ * ```ts
+ * const server = serveLocalGvmi("/path/to/your.gvmi");
+ * const { url, hash } = server.getImage();
+ * const package = Package.create({
+ *  imageHash: hash,
+ *  imageUrl: url,
+ * });
+ * ```
  */
 export function serveLocalGvmi(gvmiPath: string): GvmiServer {
   return new GvmiServer(gvmiPath);

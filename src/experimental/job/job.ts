@@ -112,16 +112,13 @@ export class Job<Output = unknown> {
     }
 
     const packageOptions = Object.assign({}, this.defaultOptions.package, options.package);
-    if (
-      !packageOptions.imageHash &&
-      !packageOptions.manifest &&
-      !packageOptions.imageTag &&
-      !packageOptions.localImageServer
-    ) {
-      throw new GolemConfigError("You must specify either imageHash, imageTag or manifest in package options");
+    if (!packageOptions.imageHash && !packageOptions.manifest && !packageOptions.imageTag && !packageOptions.imageUrl) {
+      throw new GolemConfigError(
+        "You must specify either imageHash, imageTag, manifest or imageUrl in package options",
+      );
     }
-    if (packageOptions.localImageServer && !packageOptions.localImageServer.isServing()) {
-      throw new GolemConfigError("Local image server is not serving the image, did you forget to call .serve()?");
+    if (packageOptions.imageUrl && !packageOptions.imageHash) {
+      throw new GolemConfigError("If you provide an imageUrl, you must also provide it's SHA3-224 hash in imageHash");
     }
 
     this.state = JobState.Pending;

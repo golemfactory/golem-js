@@ -11,3 +11,4 @@ export * from "./utils/yagna/yagnaApi";
 export * from "./work";
 export * from "./error/golem-error";
 export { TcpProxy } from "./network/tcpProxy";
+export * from "./gvmi";

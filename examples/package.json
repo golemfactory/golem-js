@@ -7,7 +7,7 @@
   "scripts": {
     "hello": "tsx basic/hello-world.ts",
     "experimental-server": "tsx experimental/express/server.ts",
-    "experimental-local-image": "tsx experimental/local-image/serveLocalGvmi.ts",
+    "experimental-local-image": "tsx local-image/serveLocalGvmi.ts",
     "lint:ts": "tsc --project tsconfig.json --noEmit"
   },
   "author": "GolemFactory <contact@golem.network>",

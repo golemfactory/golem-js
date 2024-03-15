@@ -6,8 +6,8 @@ import {
   PaymentService,
   WorkContext,
   YagnaApi,
+  serveLocalGvmi,
 } from "@golem-sdk/golem-js";
-import { serveLocalGvmi } from "@golem-sdk/golem-js/experimental";
 import { fileURLToPath } from "url";
 
 // get the absolute path to the local image in case this file is run from a different directory
@@ -19,7 +19,14 @@ const server = serveLocalGvmi(localImagePath);
 async function main() {
   console.log("Serving local image to the providers...");
   await server.serve();
+  const { url, hash } = server.getImage();
+  const workload = Package.create({
+    imageHash: hash,
+    imageUrl: url,
+  });
+
   console.log("Starting core services...");
+
   const yagna = new YagnaApi();
 
   const payment = new PaymentService(yagna);
@@ -33,10 +40,6 @@ async function main() {
   const agreementPool = new AgreementPoolService(yagna);
 
   const market = new MarketService(agreementPool, yagna);
-
-  const workload = Package.create({
-    localImageServer: server,
-  });
 
   await agreementPool.run();
   await market.run(workload, allocation);
