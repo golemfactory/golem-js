@@ -44,7 +44,7 @@ env:
   REQUESTOR_VERSION: ${{ github.event.inputs.requestor_version || 'v0.14.0' }}
   PROVIDER_WASI_VERSION: ${{ github.event.inputs.provider_wasi_version || 'v0.2.2' }}
   PROVIDER_VM_VERSION: ${{ github.event.inputs.provider_vm_version || 'v0.3.0' }}
-  PAYMENT_NETWORK: ${{ github.event.inputs.payment_network || 'goerli' }}
+  PAYMENT_NETWORK: ${{ github.event.inputs.payment_network || 'holesky' }}
 
 jobs:
   regular-checks:
