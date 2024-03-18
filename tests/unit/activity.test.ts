@@ -328,9 +328,9 @@ describe("Activity", () => {
         results.on("error", (error: GolemWorkError) => {
           expect(error).toBeInstanceOf(GolemWorkError);
           expect(error.code).toEqual(WorkErrorCode.ActivityResultsFetchingFailed);
-          expect(error.activity).toBeDefined();
-          expect(error.agreement).toBeDefined();
-          expect(error.provider?.name).toEqual("Test Provider");
+          expect(error.getActivity()).toBeDefined();
+          expect(error.getAgreement()).toBeDefined();
+          expect(error.getProvider()?.name).toEqual("Test Provider");
           expect(error.previous?.toString()).toEqual(
             "Error: Command #0 getExecBatchResults error: Some undefined error",
           );
@@ -368,9 +368,9 @@ describe("Activity", () => {
         results.on("error", (error: GolemWorkError) => {
           expect(error).toBeInstanceOf(GolemWorkError);
           expect(error.code).toEqual(WorkErrorCode.ActivityResultsFetchingFailed);
-          expect(error.activity).toBeDefined();
-          expect(error.agreement).toBeDefined();
-          expect(error.provider?.name).toEqual("Test Provider");
+          expect(error.getActivity()).toBeDefined();
+          expect(error.getAgreement()).toBeDefined();
+          expect(error.getProvider()?.name).toEqual("Test Provider");
           expect(error.previous?.toString()).toEqual(
             "Error: Command #0 getExecBatchResults error: GSB error: remote service at `test` error: GSB failure: Bad request: endpoint address not found",
           );
@@ -404,9 +404,9 @@ describe("Activity", () => {
         results.on("error", (error: GolemWorkError) => {
           expect(error).toBeInstanceOf(GolemWorkError);
           expect(error.code).toEqual(WorkErrorCode.ActivityResultsFetchingFailed);
-          expect(error.activity).toBeDefined();
-          expect(error.agreement).toBeDefined();
-          expect(error.provider?.name).toEqual("Test Provider");
+          expect(error.getActivity()).toBeDefined();
+          expect(error.getAgreement()).toBeDefined();
+          expect(error.getProvider()?.name).toEqual("Test Provider");
           expect(error.previous?.message).toEqual("GSB error: endpoint address not found. Terminated.");
           expect(error.toString()).toEqual(
             "Error: Unable to get activity results. GSB error: endpoint address not found. Terminated.",
@@ -490,9 +490,9 @@ describe("Activity", () => {
         results.on("error", (error: GolemWorkError) => {
           expect(error).toBeInstanceOf(GolemWorkError);
           expect(error.code).toEqual(WorkErrorCode.ActivityResultsFetchingFailed);
-          expect(error.activity).toBeDefined();
-          expect(error.agreement).toBeDefined();
-          expect(error.provider?.name).toEqual("Test Provider");
+          expect(error.getActivity()).toBeDefined();
+          expect(error.getAgreement()).toBeDefined();
+          expect(error.getProvider()?.name).toEqual("Test Provider");
           expect(error.toString()).toEqual('Error: Unable to get activity results. ["Some undefined error"]');
           return res();
         });

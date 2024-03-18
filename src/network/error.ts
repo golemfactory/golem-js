@@ -2,24 +2,29 @@ import { GolemModuleError } from "../error/golem-error";
 import { NetworkInfo } from "./network";
 
 export enum NetworkErrorCode {
-  ServiceNotInitialized,
-  NetworkSetupMissing,
-  NetworkCreationFailed,
-  NoAddressesAvailable,
-  AddressOutOfRange,
-  AddressAlreadyAssigned,
-  NodeAddingFailed,
-  NodeRemovalFailed,
-  NetworkRemovalFailed,
+  ServiceNotInitialized = "ServiceNotInitialized",
+  NetworkSetupMissing = "NetworkSetupMissing",
+  NetworkCreationFailed = "NetworkCreationFailed",
+  NoAddressesAvailable = "NoAddressesAvailable",
+  AddressOutOfRange = "AddressOutOfRange",
+  AddressAlreadyAssigned = "AddressAlreadyAssigned",
+  NodeAddingFailed = "NodeAddingFailed",
+  NodeRemovalFailed = "NodeRemovalFailed",
+  NetworkRemovalFailed = "NetworkRemovalFailed",
 }
 
 export class GolemNetworkError extends GolemModuleError {
+  #network?: NetworkInfo;
   constructor(
     message: string,
     public code: NetworkErrorCode,
-    public network?: NetworkInfo,
+    network?: NetworkInfo,
     public previous?: Error,
   ) {
     super(message, code, previous);
+    this.#network = network;
+  }
+  public getNetwork(): NetworkInfo | undefined {
+    return this.#network;
   }
 }
