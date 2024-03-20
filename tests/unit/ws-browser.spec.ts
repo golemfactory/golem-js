@@ -3,17 +3,16 @@ import { GolemInternalError, nullLogger, WebSocketBrowserStorageProvider, YagnaA
 import { encode, toObject } from "flatbuffers/js/flexbuffers.js";
 import * as jsSha3 from "js-sha3";
 import { TEST_IDENTITY } from "../fixtures";
-import { GsbApi } from "ya-ts-client";
+import { GsbApi, IdentityApi } from "ya-ts-client";
 import { LoggerMock } from "../mock/utils/logger";
 import { anything, instance, mock, reset, resetCalls, verify, when } from "@johanblumenberg/ts-mockito";
-import { IdentityRequestorApi } from "../../src/utils/yagna/identity";
 
 jest.mock("uuid", () => ({ v4: () => "uuid" }));
 
 type UploadChunkChunk = { offset: number; content: Uint8Array };
 
 const mockYagna = mock(YagnaApi);
-const mockIdentity = mock(IdentityRequestorApi);
+const mockIdentity = mock(IdentityApi.DefaultService);
 const mockGsb = mock(GsbApi.RequestorService);
 
 const yagnaApi = instance(mockYagna);

@@ -1,12 +1,9 @@
 import { MIN_SUPPORTED_YAGNA, YagnaApi } from "./yagnaApi";
 import { imock, instance, spy, when } from "@johanblumenberg/ts-mockito";
-import { IdentityModel } from "./identity";
 import { GolemPlatformError } from "../../error/golem-error";
+import { IdentityApi } from "ya-ts-client";
 
-const mockFetch = jest.spyOn(global, "fetch");
-const response = imock<Response>();
-
-const mockIdentityModel = imock<IdentityModel>();
+const mockIdentityModel = imock<IdentityApi.IdentityDTO>();
 
 describe("Yagna Utils", () => {
   describe("Yagna version support checking", () => {
@@ -14,7 +11,7 @@ describe("Yagna Utils", () => {
       it.each(["0.13.2", "0.15.0-rc5", "pre-rel-v0.15.0-rc5"])(
         "should not throw when connect is called and the yagna version is %s",
         async (version) => {
-          when(response.json()).thenResolve({
+          const mockVersionResponse = {
             current: {
               version: `${version}`,
               name: `v${version}`,
@@ -23,13 +20,13 @@ describe("Yagna Utils", () => {
               insertionTs: "2023-12-07T18:22:45",
               updateTs: "2023-12-07T18:22:45",
             },
-            pending: null,
-          });
-          mockFetch.mockResolvedValue(instance(response));
-
+          };
           const y = new YagnaApi({
             apiKey: "test-key",
           });
+
+          const spyVersion = spy(y.version);
+          when(spyVersion.getVersion()).thenResolve(mockVersionResponse);
 
           const spyIdentity = spy(y.identity);
           const model = instance(mockIdentityModel);
@@ -43,7 +40,7 @@ describe("Yagna Utils", () => {
 
     describe("Negative cases", () => {
       it("should throw when connect is called and yagna version is too low", async () => {
-        when(response.json()).thenResolve({
+        const mockVersionResponse = {
           current: {
             version: "0.12.0",
             name: "v0.12.0",
@@ -52,13 +49,13 @@ describe("Yagna Utils", () => {
             insertionTs: "2023-12-07T18:22:45",
             updateTs: "2023-12-07T18:22:45",
           },
-          pending: null,
-        });
-        mockFetch.mockResolvedValue(instance(response));
+        };
 
         const y = new YagnaApi({
           apiKey: "test-key",
         });
+        const spyVersion = spy(y.version);
+        when(spyVersion.getVersion()).thenResolve(mockVersionResponse);
 
         await expect(() => y.connect()).rejects.toMatchError(
           new GolemPlatformError(
@@ -68,7 +65,7 @@ describe("Yagna Utils", () => {
       });
 
       it("should throw when connect is called and yagna version is somehow broken", async () => {
-        when(response.json()).thenResolve({
+        const mockVersionResponse = {
           current: {
             version: "broken",
             name: "broken",
@@ -77,13 +74,13 @@ describe("Yagna Utils", () => {
             insertionTs: "2023-12-07T18:22:45",
             updateTs: "2023-12-07T18:22:45",
           },
-          pending: null,
-        });
-        mockFetch.mockResolvedValue(instance(response));
+        };
 
         const y = new YagnaApi({
           apiKey: "test-key",
         });
+        const spyVersion = spy(y.version);
+        when(spyVersion.getVersion()).thenResolve(mockVersionResponse);
 
         await expect(() => y.connect()).rejects.toMatchError(
           new GolemPlatformError(
@@ -94,11 +91,13 @@ describe("Yagna Utils", () => {
 
       it("should throw an GolemError if fetching of the version information will fail", async () => {
         const testError = new Error("Something bad happened when trying to read yagna version via API");
-        mockFetch.mockRejectedValue(testError);
 
         const y = new YagnaApi({
           apiKey: "test-key",
         });
+
+        const spyVersion = spy(y.version);
+        when(spyVersion.getVersion()).thenReject(testError);
 
         await expect(() => y.connect()).rejects.toMatchError(
           new GolemPlatformError(`Failed to establish yagna version due to: ${testError}`, testError),
