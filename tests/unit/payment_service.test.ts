@@ -4,7 +4,6 @@ import { anything, instance, mock, reset, when } from "@johanblumenberg/ts-mocki
 import { LoggerMock } from "../mock/utils/logger";
 import { Agreement, GolemUserError, YagnaApi } from "../../src";
 import * as YaTsClient from "ya-ts-client";
-import { IdentityRequestorApi } from "../../src/utils/yagna/identity";
 
 import { simulateLongPoll } from "./helpers";
 
@@ -12,7 +11,7 @@ const logger = new LoggerMock();
 
 const mockYagna = mock(YagnaApi);
 
-const mockIdentity = mock(IdentityRequestorApi);
+const mockIdentity = mock(YaTsClient.IdentityApi.DefaultService);
 const mockPayment = mock(YaTsClient.PaymentApi.RequestorService);
 const mockMarket = mock(YaTsClient.MarketApi.RequestorService);
 const mockAgreement = mock(Agreement);

@@ -1,4 +1,3 @@
-import { IdentityRequestorApi } from "./identity";
 import * as YaTsClient from "ya-ts-client";
 import * as EnvUtils from "../env";
 import { GolemConfigError, GolemPlatformError } from "../../error/golem-error";
@@ -14,23 +13,6 @@ export type YagnaOptions = {
   apiKey?: string;
   basePath?: string;
   logger?: Logger;
-};
-
-type YagnaVersionInfo = {
-  // @example 0.13.2
-  version: string;
-  // @example v0.13.2
-  name: string;
-  seen: boolean;
-  // @example "2023-12-07T14:23:48"
-  releaseTs: string;
-  insertionTs: string;
-  updateTs: string;
-};
-
-type YagnaVersionResponse = {
-  current: YagnaVersionInfo;
-  pending: YagnaVersionInfo | null;
 };
 
 export const MIN_SUPPORTED_YAGNA = "0.13.2";
@@ -52,8 +34,7 @@ export class YagnaApi {
    */
   public readonly basePath: string;
 
-  // TODO: Request coverage in `ya-ts-client`
-  public readonly identity: IdentityRequestorApi;
+  public readonly identity: YaTsClient.IdentityApi.DefaultService;
 
   public market: YaTsClient.MarketApi.RequestorService;
 
@@ -67,6 +48,8 @@ export class YagnaApi {
   public payment: YaTsClient.PaymentApi.RequestorService;
 
   public gsb: YaTsClient.GsbApi.RequestorService;
+
+  public version: YaTsClient.VersionApi.DefaultService;
 
   constructor(options?: YagnaOptions) {
     const apiKey = options?.apiKey || EnvUtils.getYagnaAppKey();
@@ -125,15 +108,16 @@ export class YagnaApi {
 
     this.logger = options?.logger ?? defaultLogger("yagna");
 
-    this.identity = new IdentityRequestorApi(
-      new YaTsClient.MarketApi.FetchHttpRequest({
-        BASE: `${this.basePath}`,
-        HEADERS: commonHeaders,
-        VERSION: "1.0.0",
-        CREDENTIALS: "include",
-        WITH_CREDENTIALS: false,
-      }),
-    );
+    const identityClient = new YaTsClient.IdentityApi.Client({
+      BASE: this.basePath,
+      HEADERS: commonHeaders,
+    });
+    this.identity = identityClient.default;
+
+    const versionClient = new YaTsClient.VersionApi.Client({
+      BASE: this.basePath,
+    });
+    this.version = versionClient.default;
 
     this.yagnaOptions = yagnaOptions;
 
@@ -169,10 +153,7 @@ export class YagnaApi {
 
   public async getVersion(): Promise<string> {
     try {
-      const res: YagnaVersionResponse = await fetch(`${this.yagnaOptions.basePath}/version/get`, {
-        method: "GET",
-      }).then((res) => res.json());
-
+      const res = await this.version.getVersion();
       return res.current.version;
     } catch (err) {
       throw new GolemPlatformError(`Failed to establish yagna version due to: ${err}`, err);
