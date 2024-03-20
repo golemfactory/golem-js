@@ -1,11 +1,16 @@
 import { BasePaymentOptions, InvoiceConfig } from "./config";
 import { PaymentApi } from "ya-ts-client";
-import { Events } from "../events";
 import { Rejection } from "./rejection";
 import { YagnaApi } from "../utils";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
 import { ProviderInfo } from "../agreement";
 import { ProposalProperties } from "../market/proposal";
+import { EventEmitter } from "eventemitter3";
+
+export interface InvoiceEvents {
+  accepted: (details: { id: string; agreementId: string; amount: number; provider: ProviderInfo }) => void;
+  paymentFailed: (details: { id: string; agreementId: string; reason: string | undefined }) => void;
+}
 
 export type InvoiceOptions = BasePaymentOptions;
 
@@ -48,6 +53,7 @@ export abstract class BaseNote<ModelType extends BaseModel> {
   public readonly agreementId: string;
   public readonly paymentDueDate?: string;
   protected status: PaymentApi.InvoiceDTO["status"];
+  public readonly events = new EventEmitter<InvoiceEvents>();
 
   protected constructor(
     protected model: ModelType,
@@ -177,9 +183,7 @@ export class Invoice extends BaseNote<PaymentApi.InvoiceDTO> {
       });
     } catch (error) {
       const reason = error?.response?.data?.message || error;
-      this.options.eventTarget?.dispatchEvent(
-        new Events.PaymentFailed({ id: this.id, agreementId: this.agreementId, reason }),
-      );
+      this.events.emit("paymentFailed", { id: this.id, agreementId: this.agreementId, reason });
       throw new GolemPaymentError(
         `Unable to accept invoice ${this.id} ${reason}`,
         PaymentErrorCode.InvoiceAcceptanceFailed,
@@ -188,14 +192,12 @@ export class Invoice extends BaseNote<PaymentApi.InvoiceDTO> {
         error,
       );
     }
-    this.options.eventTarget?.dispatchEvent(
-      new Events.PaymentAccepted({
-        id: this.id,
-        agreementId: this.agreementId,
-        amount: this.amount,
-        provider: this.provider,
-      }),
-    );
+    this.events.emit("accepted", {
+      id: this.id,
+      agreementId: this.agreementId,
+      amount: totalAmountAccepted,
+      provider: this.provider,
+    });
   }
 
   /**
@@ -216,9 +218,7 @@ export class Invoice extends BaseNote<PaymentApi.InvoiceDTO> {
         error,
       );
     } finally {
-      this.options.eventTarget?.dispatchEvent(
-        new Events.PaymentFailed({ id: this.id, agreementId: this.agreementId, reason: rejection.message }),
-      );
+      this.events.emit("paymentFailed", { id: this.id, agreementId: this.agreementId, reason: rejection.message });
     }
   }
 

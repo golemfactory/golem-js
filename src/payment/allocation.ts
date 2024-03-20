@@ -1,6 +1,5 @@
 import { PaymentApi } from "ya-ts-client";
 import { AllocationConfig, BasePaymentOptions } from "./config";
-import { Events } from "../events";
 import { YagnaApi } from "../utils";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
 import { GolemConfigError, GolemInternalError } from "../error/golem-error";
@@ -55,13 +54,6 @@ export class Allocation {
         allocationId: "",
       };
       const newModel = await yagnaApi.payment.createAllocation(model);
-      config.eventTarget?.dispatchEvent(
-        new Events.AllocationCreated({
-          id: newModel.allocationId,
-          amount: parseFloat(newModel.totalAmount),
-          platform: newModel.paymentPlatform,
-        }),
-      );
       config.logger.debug(
         `Allocation ${newModel.allocationId} has been created for address ${config.account.address} using payment platform ${config.account.platform}`,
       );

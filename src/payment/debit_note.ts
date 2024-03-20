@@ -1,12 +1,17 @@
 import { BasePaymentOptions, InvoiceConfig } from "./config";
 import { PaymentApi } from "ya-ts-client";
 import { BaseNote } from "./invoice";
-import { Events } from "../events";
 import { Rejection } from "./rejection";
 import { YagnaApi } from "../utils";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
 import { ProviderInfo } from "../agreement";
 import { ProposalProperties } from "../market/proposal";
+import { EventEmitter } from "eventemitter3";
+
+export interface DebitNoteEvents {
+  accepted: (details: { id: string; agreementId: string; amount: number; provider: ProviderInfo }) => void;
+  paymentFailed: (details: { id: string; agreementId: string; reason: string | undefined }) => void;
+}
 
 export type InvoiceOptions = BasePaymentOptions;
 
@@ -30,6 +35,7 @@ export class DebitNote extends BaseNote<PaymentApi.DebitNoteDTO> {
   public readonly activityId: string;
   public readonly totalAmountDue: number;
   public readonly usageCounterVector?: object;
+  public readonly events = new EventEmitter<DebitNoteEvents>();
 
   /**
    * Create Debit Note Model
@@ -98,9 +104,7 @@ export class DebitNote extends BaseNote<PaymentApi.DebitNoteDTO> {
       });
     } catch (error) {
       const reason = error?.response?.data?.message || error;
-      this.options.eventTarget?.dispatchEvent(
-        new Events.PaymentFailed({ id: this.id, agreementId: this.agreementId, reason }),
-      );
+      this.events.emit("paymentFailed", { id: this.id, agreementId: this.agreementId, reason });
       throw new GolemPaymentError(
         `Unable to accept debit note ${this.id}. ${reason}`,
         PaymentErrorCode.DebitNoteAcceptanceFailed,
@@ -109,14 +113,12 @@ export class DebitNote extends BaseNote<PaymentApi.DebitNoteDTO> {
         error,
       );
     }
-    this.options.eventTarget?.dispatchEvent(
-      new Events.DebitNoteAccepted({
-        id: this.id,
-        agreementId: this.agreementId,
-        amount: totalAmountAccepted,
-        provider: this.provider,
-      }),
-    );
+    this.events.emit("accepted", {
+      id: this.id,
+      agreementId: this.agreementId,
+      amount: totalAmountAccepted,
+      provider: this.provider,
+    });
   }
 
   public async getStatus() {
@@ -142,9 +144,7 @@ export class DebitNote extends BaseNote<PaymentApi.DebitNoteDTO> {
         error,
       );
     } finally {
-      this.options.eventTarget?.dispatchEvent(
-        new Events.PaymentFailed({ id: this.id, agreementId: this.agreementId, reason: rejection.message }),
-      );
+      this.events.emit("paymentFailed", { id: this.id, agreementId: this.agreementId, reason: rejection.message });
     }
   }
 
