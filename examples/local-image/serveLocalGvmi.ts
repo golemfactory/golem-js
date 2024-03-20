@@ -1,6 +1,7 @@
 import {
   Activity,
   AgreementPoolService,
+  GftpStorageProvider,
   MarketService,
   Package,
   PaymentService,
@@ -12,12 +13,13 @@ import { fileURLToPath } from "url";
 
 // get the absolute path to the local image in case this file is run from a different directory
 const getImagePath = (path: string) => fileURLToPath(new URL(path, import.meta.url).toString());
-
 const localImagePath = getImagePath("./alpine.gvmi");
-const server = serveLocalGvmi(localImagePath);
 
 async function main() {
   console.log("Serving local image to the providers...");
+  const storageProvider = new GftpStorageProvider();
+  // if you don't provide a storage provider, the server will create a GftpStorageProvider
+  const server = serveLocalGvmi(localImagePath, storageProvider);
   await server.serve();
   const { url, hash } = server.getImage();
   const workload = Package.create({
@@ -53,14 +55,14 @@ async function main() {
     // Stop listening for new proposals
     await market.end();
 
-    const ctx = new WorkContext(activity, {});
+    const ctx = new WorkContext(activity, { storageProvider });
 
     console.log("Activity initialized, status:", await activity.getState());
     await ctx.before();
     console.log("Activity deployed and ready for use, status:", await activity.getState());
     console.log("Provider executing the activity:", ctx.provider.name);
 
-    // Main piece of your logic
+    // Read the file that was included in our custom image
     const result = await ctx.run("cat hello.txt");
     console.log("===============================");
     console.log(result.stdout?.toString().trim());

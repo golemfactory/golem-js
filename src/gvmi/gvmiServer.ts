@@ -1,4 +1,4 @@
-import { GftpStorageProvider } from "../storage";
+import { GftpStorageProvider, StorageProvider } from "../storage";
 import fs from "fs";
 import jsSha3 from "js-sha3";
 import { nullLogger } from "../utils";
@@ -10,13 +10,15 @@ import { GolemConfigError } from "../error/golem-error";
  * the server will calculate the hash automatically.
  */
 export class GvmiServer {
-  private gftp: GftpStorageProvider;
+  private storageProvider: StorageProvider;
   public readonly fileHash: string;
   private fileUrl?: string;
 
-  constructor(private gvmiPath: string) {
-    // no need to check if we're in a node environment here because it's already checked in GftpStorageProvider
-    this.gftp = new GftpStorageProvider(nullLogger());
+  constructor(
+    private gvmiPath: string,
+    storageProvider?: StorageProvider,
+  ) {
+    this.storageProvider = storageProvider || new GftpStorageProvider(nullLogger());
     if (!fs.existsSync(gvmiPath) || fs.lstatSync(gvmiPath).isDirectory()) {
       throw new GolemConfigError(`File ${gvmiPath} does not exist`);
     }
@@ -35,12 +37,12 @@ export class GvmiServer {
     if (this.isServing()) {
       throw new Error("Already serving");
     }
-    await this.gftp.init();
-    this.fileUrl = await this.gftp.publishFile(this.gvmiPath);
+    await this.storageProvider.init();
+    this.fileUrl = await this.storageProvider.publishFile(this.gvmiPath);
   }
 
   async close() {
-    await this.gftp.close();
+    await this.storageProvider.close();
   }
 
   getImage(): { url: string; hash: string } {
@@ -67,6 +69,6 @@ export class GvmiServer {
  * });
  * ```
  */
-export function serveLocalGvmi(gvmiPath: string): GvmiServer {
-  return new GvmiServer(gvmiPath);
+export function serveLocalGvmi(gvmiPath: string, storageProvider?: StorageProvider): GvmiServer {
+  return new GvmiServer(gvmiPath, storageProvider);
 }
