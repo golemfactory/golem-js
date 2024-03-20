@@ -29,9 +29,15 @@ export type AllPackageOptions = {
   /** Certificate - base64 encoded public certificate (DER or PEM) matching key used to generate signature **/
   manifestCert?: string;
   logger?: Logger;
+  /**
+   * If you want a provider to download the image from your your local filesystem or
+   * a different registry than the default one, you can provide the image url here.
+   * Note that to use this option you need to also provide the image SHA3-224 hash.
+   */
+  imageUrl: string;
 };
 
-export type PackageOptions = RequireAtLeastOne<AllPackageOptions, "imageHash" | "imageTag" | "manifest">;
+export type PackageOptions = RequireAtLeastOne<AllPackageOptions, "imageHash" | "imageTag" | "manifest" | "imageUrl">;
 
 export interface PackageDetails {
   minMemGib: number;
@@ -84,8 +90,10 @@ export class Package {
       .addConstraint("golem.runtime.name", this.options.engine)
       .addConstraint("golem.inf.cpu.cores", this.options.minCpuCores.toString(), ComparisonOperator.GtEq)
       .addConstraint("golem.inf.cpu.threads", this.options.minCpuThreads.toString(), ComparisonOperator.GtEq);
-
-    if (this.options.imageHash || this.options.imageTag) {
+    if (this.options.imageUrl) {
+      const taskPackage = await this.resolveTaskPackageFromCustomUrl();
+      builder.addProperty("golem.srv.comp.task_package", taskPackage);
+    } else if (this.options.imageHash || this.options.imageTag) {
       const taskPackage = await this.resolveTaskPackageUrl();
       builder.addProperty("golem.srv.comp.task_package", taskPackage);
     }
@@ -96,6 +104,17 @@ export class Package {
     this.addManifestDecorations(builder);
 
     return builder.getDecorations();
+  }
+  private async resolveTaskPackageFromCustomUrl(): Promise<string> {
+    if (!this.options.imageUrl) {
+      throw new GolemPlatformError("Tried to resolve task package from custom url, but no url was provided");
+    }
+    if (!this.options.imageHash) {
+      throw new GolemPlatformError(
+        "Tried to resolve task package from custom url, but no hash was provided. Please calculate the SHA3-224 hash of the image and provide it as `imageHash`",
+      );
+    }
+    return `hash:sha3:${this.options.imageHash}:${this.options.imageUrl}`;
   }
 
   private async resolveTaskPackageUrl(): Promise<string> {

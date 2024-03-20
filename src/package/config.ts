@@ -32,6 +32,7 @@ export class PackageConfig {
   readonly packageFormat: string;
   readonly imageHash?: string;
   readonly imageTag?: string;
+  readonly imageUrl?: string;
   readonly engine: string;
   readonly minMemGib: number;
   readonly minStorageGib: number;
@@ -45,13 +46,16 @@ export class PackageConfig {
   readonly logger?: Logger;
 
   constructor(options: PackageOptions) {
-    if (!options.imageHash && !options.manifest && !options.imageTag) {
+    if (!options.imageHash && !options.manifest && !options.imageTag && !options.imageUrl) {
       throw new GolemConfigError("You must define a package or manifest option");
     }
-
+    if (options.imageUrl && !options.imageHash) {
+      throw new GolemConfigError("If you provide an imageUrl, you must also provide it's SHA3-224 hash in imageHash");
+    }
     this.packageFormat = PackageFormat.GVMKitSquash;
     this.imageHash = options.imageHash;
     this.imageTag = options.imageTag;
+    this.imageUrl = options.imageUrl;
     this.engine = options.engine || DEFAULTS.engine;
     this.minMemGib = options.minMemGib || DEFAULTS.minMemGib;
     this.minStorageGib = options.minStorageGib || DEFAULTS.minStorageGib;
