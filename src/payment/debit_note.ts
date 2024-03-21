@@ -15,7 +15,9 @@ export interface DebitNoteDTO {
   timestamp: string;
   activityId: string;
   agreementId: string;
+  /** @deprecated this field may store invalid values for big numbers. Use `totalAmountDuePrecise` instead **/
   totalAmountDue: number;
+  totalAmountDuePrecise: string;
   usageCounterVector?: object;
 }
 
@@ -28,7 +30,11 @@ export class DebitNote extends BaseNote<Model> {
   public readonly previousDebitNoteId?: string;
   public readonly timestamp: string;
   public readonly activityId: string;
+  /**
+   * @deprecated this field may store invalid values for big numbers. Use totalAmountDuePrecise instead
+   */
   public readonly totalAmountDue: number;
+  public readonly totalAmountDuePrecise: string;
   public readonly usageCounterVector?: object;
 
   /**
@@ -70,6 +76,7 @@ export class DebitNote extends BaseNote<Model> {
     this.timestamp = model.timestamp;
     this.activityId = model.activityId;
     this.totalAmountDue = Number(model.totalAmountDue);
+    this.totalAmountDuePrecise = model.totalAmountDue;
     this.usageCounterVector = model.usageCounterVector;
   }
 
@@ -80,6 +87,7 @@ export class DebitNote extends BaseNote<Model> {
       activityId: this.activityId,
       agreementId: this.agreementId,
       totalAmountDue: this.totalAmountDue,
+      totalAmountDuePrecise: this.totalAmountDuePrecise,
       usageCounterVector: this.usageCounterVector,
     };
   }
@@ -90,10 +98,10 @@ export class DebitNote extends BaseNote<Model> {
    * @param totalAmountAccepted
    * @param allocationId
    */
-  async accept(totalAmountAccepted: number, allocationId: string) {
+  async accept(totalAmountAccepted: string, allocationId: string) {
     try {
       await this.yagnaApi.payment.acceptDebitNote(this.id, {
-        totalAmountAccepted: `${totalAmountAccepted}`,
+        totalAmountAccepted,
         allocationId,
       });
     } catch (error) {
@@ -113,7 +121,8 @@ export class DebitNote extends BaseNote<Model> {
       new Events.DebitNoteAccepted({
         id: this.id,
         agreementId: this.agreementId,
-        amount: totalAmountAccepted,
+        amount: Number(totalAmountAccepted),
+        amountPrecise: totalAmountAccepted,
         provider: this.provider,
       }),
     );

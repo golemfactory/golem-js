@@ -19,7 +19,9 @@ export interface InvoiceDTO {
   requestorWalletAddress: string;
   provider: ProviderInfo;
   paymentPlatform: string;
+  /** @deprecated this field may store invalid values for big numbers. Use `amountPrecise` instead **/
   amount: number;
+  amountPrecise: string;
 }
 
 /**
@@ -76,7 +78,7 @@ export abstract class BaseNote<ModelType extends BaseModel> {
       );
     }
   }
-  protected abstract accept(totalAmountAccepted: number, allocationId: string): Promise<void>;
+  protected abstract accept(totalAmountAccepted: string, allocationId: string): Promise<void>;
   protected abstract reject(rejection: Rejection): Promise<void>;
   protected abstract refreshStatus(): Promise<void>;
 }
@@ -90,8 +92,13 @@ export class Invoice extends BaseNote<Model> {
   public readonly id: string;
   /** Activities IDs covered by this Invoice */
   public readonly activityIds?: string[];
-  /** Amount in the invoice */
+  /**
+   * @deprecated this field may store invalid values for big numbers. Use amountPrecise instead
+   * Amount in the invoice
+   */
   public readonly amount: number;
+  /** Amount in the invoice **/
+  public readonly amountPrecise: string;
   /** Invoice creation timestamp */
   public readonly timestamp: string;
   /** Recipient ID */
@@ -134,6 +141,7 @@ export class Invoice extends BaseNote<Model> {
     this.id = model.invoiceId;
     this.activityIds = model.activityIds;
     this.amount = Number(model.amount);
+    this.amountPrecise = model.amount;
     this.timestamp = model.timestamp;
     this.recipientId = model.recipientId;
   }
@@ -150,6 +158,7 @@ export class Invoice extends BaseNote<Model> {
       provider: this.provider,
       paymentPlatform: this.paymentPlatform,
       amount: this.amount,
+      amountPrecise: this.amountPrecise,
     };
   }
 
@@ -169,7 +178,7 @@ export class Invoice extends BaseNote<Model> {
    * @param totalAmountAccepted
    * @param allocationId
    */
-  async accept(totalAmountAccepted: number, allocationId: string) {
+  async accept(totalAmountAccepted: string, allocationId: string) {
     try {
       await this.yagnaApi.payment.acceptInvoice(this.id, {
         totalAmountAccepted: `${totalAmountAccepted}`,
@@ -193,6 +202,7 @@ export class Invoice extends BaseNote<Model> {
         id: this.id,
         agreementId: this.agreementId,
         amount: this.amount,
+        amountPrecise: this.amountPrecise,
         provider: this.provider,
       }),
     );
