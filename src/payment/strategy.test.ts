@@ -30,9 +30,9 @@ describe("SDK provided Payment Filters", () => {
   describe("acceptMaxAmountDebitNoteFilter", () => {
     test("Accepts debit notes that don't exceed a specified amount", async () => {
       const mockDebitNoteDto0 = imock<DebitNoteDTO>();
-      when(mockDebitNoteDto0.totalAmountDue).thenReturn(100);
+      when(mockDebitNoteDto0.totalAmountDue).thenReturn("100");
       const mockDebitNoteDto1 = imock<DebitNoteDTO>();
-      when(mockDebitNoteDto1.totalAmountDue).thenReturn(200);
+      when(mockDebitNoteDto1.totalAmountDue).thenReturn("200");
       const debitNotes = [instance(mockDebitNoteDto0), instance(mockDebitNoteDto1)];
 
       const filter = acceptMaxAmountDebitNoteFilter(150);
@@ -43,16 +43,16 @@ describe("SDK provided Payment Filters", () => {
         }
       }
       expect(accepted.length).toEqual(1);
-      expect(accepted[0].totalAmountDue).toEqual(100);
+      expect(accepted[0].totalAmountDue).toEqual("100");
     });
   });
 
   describe("acceptMaxAmountInvoiceFilter", () => {
     test("Accepts invoices that don't exceed a specified amount", async () => {
       const mockInvoiceDto0 = imock<InvoiceDTO>();
-      when(mockInvoiceDto0.amount).thenReturn(100);
+      when(mockInvoiceDto0.amount).thenReturn("100");
       const mockInvoiceDto1 = imock<InvoiceDTO>();
-      when(mockInvoiceDto1.amount).thenReturn(200);
+      when(mockInvoiceDto1.amount).thenReturn("200");
       const invoices = [instance(mockInvoiceDto0), instance(mockInvoiceDto1)];
 
       const filter = acceptMaxAmountInvoiceFilter(150);
@@ -63,7 +63,7 @@ describe("SDK provided Payment Filters", () => {
         }
       }
       expect(accepted.length).toEqual(1);
-      expect(accepted[0].amount).toEqual(100);
+      expect(accepted[0].amount).toEqual("100");
     });
   });
 });

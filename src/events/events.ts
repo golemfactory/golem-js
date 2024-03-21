@@ -81,25 +81,33 @@ export class InvoiceReceived extends BaseEvent<{
   id: string;
   provider: ProviderInfo;
   agreementId: string;
+  /** @deprecated this field may store invalid values for big numbers. Use `amountPrecise` instead **/
   amount: number;
+  amountPrecise: string;
 }> {}
 export class DebitNoteReceived extends BaseEvent<{
   id: string;
   agreementId: string;
   activityId: string;
+  /** @deprecated this field may store invalid values for big numbers. Use `amountPrecise` instead **/
   amount: number;
+  amountPrecise: string;
   provider: ProviderInfo;
 }> {}
 export class PaymentAccepted extends BaseEvent<{
   id: string;
   agreementId: string;
+  /** @deprecated this field may store invalid values for big numbers. Use `amountPrecise` instead **/
   amount: number;
+  amountPrecise: string;
   provider: ProviderInfo;
 }> {}
 export class DebitNoteAccepted extends BaseEvent<{
   id: string;
   agreementId: string;
+  /** @deprecated this field may store invalid values for big numbers. Use `amountPrecise` instead **/
   amount: number;
+  amountPrecise: string;
   provider: ProviderInfo;
 }> {}
 export class PaymentFailed extends BaseEvent<{ id: string; agreementId: string; reason?: string }> {}
