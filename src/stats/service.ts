@@ -201,13 +201,13 @@ export class StatsService {
         id: event.detail.id,
         provider: event.detail.provider,
         agreementId: event.detail.agreementId,
-        amount: event.detail.amount,
+        amount: event.detail.amountPrecise,
       });
     } else if (event instanceof Events.PaymentAccepted) {
       this.payments.add({
         id: event.detail.id,
         agreementId: event.detail.agreementId,
-        amount: event.detail.amount,
+        amount: event.detail.amountPrecise,
         provider: event.detail.provider,
       });
     }

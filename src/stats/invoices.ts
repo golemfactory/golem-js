@@ -4,13 +4,13 @@ import { ProviderInfo } from "../agreement";
 export interface InvoiceInfo {
   id: string;
   agreementId: string;
-  amount: number;
+  amount: string;
   provider: ProviderInfo;
 }
 interface Payload {
   id: string;
   agreementId: string;
-  amount: number;
+  amount: string;
   provider: ProviderInfo;
 }
 

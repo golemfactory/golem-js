@@ -151,7 +151,7 @@ describe("Stats Module", () => {
       const tests = new Invoices();
       tests.add({
         id: "id",
-        amount: 100,
+        amount: "100",
         provider: testProvider,
         agreementId: "agreementId",
       });
@@ -159,7 +159,7 @@ describe("Stats Module", () => {
         new Collection([
           {
             id: "id",
-            amount: 100,
+            amount: "100",
             provider: testProvider,
             agreementId: "agreementId",
           },
@@ -170,19 +170,19 @@ describe("Stats Module", () => {
       const tests = new Invoices();
       tests.add({
         id: "id",
-        amount: 100,
+        amount: "100",
         provider: testProvider,
         agreementId: "agreementId",
       });
       tests.add({
         id: "id2",
-        amount: 100,
+        amount: "100",
         provider: testProvider2,
         agreementId: "agreementId2",
       });
       tests.add({
         id: "id3",
-        amount: 100,
+        amount: "100",
         provider: testProvider,
         agreementId: "agreementId3",
       });
@@ -192,19 +192,19 @@ describe("Stats Module", () => {
       const tests = new Invoices();
       tests.add({
         id: "id",
-        amount: 100,
+        amount: "100",
         provider: testProvider,
         agreementId: "agreementId",
       });
       tests.add({
         id: "id2",
-        amount: 100,
+        amount: "100",
         provider: testProvider2,
         agreementId: "agreementId2",
       });
       tests.add({
         id: "id3",
-        amount: 100,
+        amount: "100",
         provider: testProvider3,
         agreementId: "agreementId",
       });
@@ -216,7 +216,7 @@ describe("Stats Module", () => {
       const tests = new Payments();
       tests.add({
         id: "id",
-        amount: 100,
+        amount: "100",
         provider: testProvider,
         agreementId: "agreementId",
       });
@@ -224,7 +224,7 @@ describe("Stats Module", () => {
         new Collection([
           {
             id: "id",
-            amount: 100,
+            amount: "100",
             provider: testProvider,
             agreementId: "agreementId",
           },
@@ -235,19 +235,19 @@ describe("Stats Module", () => {
       const tests = new Payments();
       tests.add({
         id: "id",
-        amount: 100,
+        amount: "100",
         provider: testProvider,
         agreementId: "agreementId",
       });
       tests.add({
         id: "id2",
-        amount: 100,
+        amount: "100",
         provider: testProvider2,
         agreementId: "agreementId2",
       });
       tests.add({
         id: "id3",
-        amount: 100,
+        amount: "100",
         provider: testProvider,
         agreementId: "agreementId3",
       });
@@ -257,19 +257,19 @@ describe("Stats Module", () => {
       const tests = new Payments();
       tests.add({
         id: "id",
-        amount: 100,
+        amount: "100",
         provider: testProvider,
         agreementId: "agreementId",
       });
       tests.add({
         id: "id2",
-        amount: 100,
+        amount: "100",
         provider: testProvider2,
         agreementId: "agreementId2",
       });
       tests.add({
         id: "id3",
-        amount: 100,
+        amount: "100",
         provider: testProvider3,
         agreementId: "agreementId",
       });

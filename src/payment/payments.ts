@@ -91,6 +91,7 @@ export class Payments extends EventTarget {
               id: invoice.id,
               agreementId: invoice.agreementId,
               amount: invoice.amount,
+              amountPrecise: invoice.amountPrecise,
               provider: invoice.provider,
             }),
           );
@@ -140,6 +141,7 @@ export class Payments extends EventTarget {
               agreementId: debitNote.agreementId,
               activityId: debitNote.activityId,
               amount: debitNote.totalAmountDue,
+              amountPrecise: debitNote.totalAmountDuePrecise,
               provider: debitNote.provider,
             }),
           );

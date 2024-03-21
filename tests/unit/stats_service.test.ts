@@ -130,13 +130,14 @@ describe("Stats Service", () => {
         provider: testProvider,
         agreementId: "agreementId",
         amount: 100,
+        amountPrecise: "100",
       });
       eventTarget.dispatchEvent(event);
       expect(spy).toHaveBeenCalledWith({
         id: "id",
         provider: testProvider,
         agreementId: "agreementId",
-        amount: 100,
+        amount: "100",
       });
     });
     // Payments
@@ -147,13 +148,14 @@ describe("Stats Service", () => {
         provider: testProvider,
         agreementId: "agreementId",
         amount: 100,
+        amountPrecise: "100",
       });
       eventTarget.dispatchEvent(event);
       expect(spy).toHaveBeenCalledWith({
         id: "id",
         provider: testProvider,
         agreementId: "agreementId",
-        amount: 100,
+        amount: "100",
       });
     });
     // Providers

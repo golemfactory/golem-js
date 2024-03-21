@@ -106,7 +106,7 @@ export class AgreementPaymentProcess {
       return false;
     }
 
-    await debitNote.accept(debitNote.totalAmountDue, this.allocation.id);
+    await debitNote.accept(debitNote.totalAmountDuePrecise, this.allocation.id);
     this.logger.debug(`DebitNote accepted`, {
       debitNoteId: debitNote.id,
       agreementId: debitNote.agreementId,
@@ -184,7 +184,7 @@ export class AgreementPaymentProcess {
       return false;
     }
 
-    await invoice.accept(invoice.amount, this.allocation.id);
+    await invoice.accept(invoice.amountPrecise, this.allocation.id);
     this.logger.info(`Invoice has been accepted`, {
       invoiceId: invoice.id,
       agreementId: invoice.agreementId,
