@@ -2,16 +2,22 @@ import { Package } from "../package";
 import { Allocation } from "../payment";
 import { Demand, DemandOptions } from "./demand";
 import { DemandConfig } from "./config";
-import * as events from "../events/events";
 import { DecorationsBuilder, MarketDecoration } from "./builder";
 import { YagnaApi } from "../utils";
 import { GolemMarketError, MarketErrorCode } from "./error";
+import { EventEmitter } from "eventemitter3";
+
+export interface DemandFactoryEvents {
+  demandSubscribed: (details: { id: string; details: MarketDecoration }) => void;
+  demandFailed: (details: { reason: string }) => void;
+}
 
 /**
  * @internal
  */
 export class DemandFactory {
   private options: DemandConfig;
+  public readonly events = new EventEmitter<DemandFactoryEvents>();
 
   constructor(
     private readonly taskPackage: Package,
@@ -33,17 +39,15 @@ export class DemandFactory {
           MarketErrorCode.SubscriptionFailed,
         );
       }
-      this.options.eventTarget?.dispatchEvent(
-        new events.DemandSubscribed({
-          id,
-          details: new DecorationsBuilder().addDecorations(decorations).getDecorations(),
-        }),
-      );
+      this.events.emit("demandSubscribed", {
+        id,
+        details: new DecorationsBuilder().addDecorations(decorations).getDecorations(),
+      });
       this.options.logger.info(`Demand published on the market`);
       return new Demand(id, demandRequest, this.allocation, this.yagnaApi, this.options);
     } catch (error) {
       const reason = error.response?.data?.message || error.toString();
-      this.options.eventTarget?.dispatchEvent(new events.DemandFailed({ reason }));
+      this.events.emit("demandFailed", { reason });
       throw new GolemMarketError(
         `Could not publish demand on the market. ${reason}`,
         MarketErrorCode.SubscriptionFailed,

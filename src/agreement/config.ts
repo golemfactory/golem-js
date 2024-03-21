@@ -19,14 +19,12 @@ export class AgreementConfig {
   readonly agreementRequestTimeout: number;
   readonly agreementWaitingForApprovalTimeout: number;
   readonly logger?: Logger;
-  readonly eventTarget?: EventTarget;
 
   constructor(public readonly options?: AgreementOptions) {
     this.agreementRequestTimeout = options?.agreementRequestTimeout || DEFAULTS.agreementRequestTimeout;
     this.agreementWaitingForApprovalTimeout =
       options?.agreementWaitingForApprovalTimeout || DEFAULTS.agreementWaitingForApprovalTimeout;
     this.logger = options?.logger;
-    this.eventTarget = options?.eventTarget;
   }
 }
 

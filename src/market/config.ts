@@ -25,14 +25,12 @@ export class DemandConfig {
   public readonly maxOfferEvents: number;
   public readonly offerFetchingIntervalSec: number;
   public readonly logger: Logger;
-  public readonly eventTarget?: EventTarget;
   public readonly debitNotesAcceptanceTimeoutSec: number;
   public readonly midAgreementDebitNoteIntervalSec: number;
   public readonly midAgreementPaymentTimeoutSec: number;
 
   constructor(options?: DemandOptions) {
     this.logger = options?.logger || defaultLogger("market");
-    this.eventTarget = options?.eventTarget;
 
     this.subnetTag = options?.subnetTag ?? EnvUtils.getYagnaSubnet() ?? DEFAULTS.subnetTag;
     this.offerFetchingIntervalSec = options?.offerFetchingIntervalSec ?? DEFAULTS.offerFetchingIntervalSec;

@@ -5,11 +5,18 @@ import { defaultLogger, Logger, YagnaApi } from "../utils";
 import sleep from "../utils/sleep";
 import { ActivityFactory } from "./factory";
 import { ActivityConfig } from "./config";
-import { Events } from "../events";
 import { Agreement, ProviderInfo } from "../agreement";
 import { GolemWorkError, WorkErrorCode } from "../work";
 import { GolemAbortError, GolemInternalError, GolemTimeoutError } from "../error/golem-error";
 import { withTimeout } from "../utils/timeout";
+import { EventEmitter } from "eventemitter3";
+
+export interface ActivityEvents {
+  scriptSent: (details: { activityId: string; agreementId: string }) => void;
+  scriptExecuted: (details: { activityId: string; agreementId: string; success: boolean }) => void;
+  stateChanged: (details: { id: string; state: string }) => void;
+  destroyed: (details: { id: string; agreementId: string }) => void;
+}
 
 export enum ActivityStateEnum {
   New = "New",
@@ -33,8 +40,6 @@ export interface ActivityOptions {
   activityExeBatchResultPollIntervalSeconds?: number;
   /** Logger module */
   logger?: Logger;
-  /** Event Bus implements EventTarget  */
-  eventTarget?: EventTarget;
 }
 
 type AxiosError = Error & { response: { status: number }; code: string };
@@ -51,6 +56,7 @@ export class Activity {
   private isRunning = true;
   private currentState: ActivityStateEnum = ActivityStateEnum.New;
   private eventSource?: EventSource;
+  public readonly events = new EventEmitter<ActivityEvents>();
 
   /**
    * @param id activity ID
@@ -122,9 +128,7 @@ export class Activity {
 
     this.logger.debug(`Script sent.`, { batchId });
 
-    this.options.eventTarget?.dispatchEvent(
-      new Events.ScriptSent({ activityId: this.id, agreementId: this.agreement.id }),
-    );
+    this.events.emit("scriptSent", { activityId: this.id, agreementId: this.agreement.id });
 
     return stream
       ? this.streamingBatch(batchId, batchSize, startTime, timeout)
@@ -160,9 +164,7 @@ export class Activity {
       }
 
       if (this.currentState !== ActivityStateEnum[state]) {
-        this.options.eventTarget?.dispatchEvent(
-          new Events.ActivityStateChanged({ id: this.id, state: ActivityStateEnum[state] }),
-        );
+        this.events.emit("stateChanged", { id: this.id, state: ActivityStateEnum[state] });
         this.currentState = ActivityStateEnum[state];
       }
       return ActivityStateEnum[state];
@@ -196,9 +198,7 @@ export class Activity {
         this.yagnaApi.activity.control.destroyActivity(this.id, this.options.activityRequestTimeout / 1000),
         this.options.activityRequestTimeout + 1000,
       );
-      this.options.eventTarget?.dispatchEvent(
-        new Events.ActivityDestroyed({ id: this.id, agreementId: this.agreement.id }),
-      );
+      this.events.emit("destroyed", { id: this.id, agreementId: this.agreement.id });
       this.logger.debug(`Activity destroyed`, { id: this.id });
     } catch (error) {
       throw new GolemWorkError(
@@ -221,7 +221,8 @@ export class Activity {
     const activity = this;
     const { id: activityId, agreement, logger } = activity;
     const isRunning = () => this.isRunning;
-    const { activityExecuteTimeout, eventTarget, activityExeBatchResultPollIntervalSeconds } = this.options;
+    const { activityExecuteTimeout, activityExeBatchResultPollIntervalSeconds } = this.options;
+    const { events } = this;
     const api = this.yagnaApi;
     const handleError = this.handleError.bind(this);
 
@@ -282,9 +283,7 @@ export class Activity {
             try {
               retryCount = await handleError(error, lastIndex, retryCount, maxRetries);
             } catch (error) {
-              eventTarget?.dispatchEvent(
-                new Events.ScriptExecuted({ activityId, agreementId: agreement.id, success: false }),
-              );
+              events.emit("scriptExecuted", { activityId, agreementId: agreement.id, success: false });
               return this.destroy(
                 new GolemWorkError(
                   `Unable to get activity results. ${error?.message || error}`,
@@ -299,7 +298,7 @@ export class Activity {
           }
         }
 
-        eventTarget?.dispatchEvent(new Events.ScriptExecuted({ activityId, agreementId: agreement.id, success: true }));
+        events.emit("scriptExecuted", { activityId, agreementId: agreement.id, success: true });
         this.push(null);
       },
     });

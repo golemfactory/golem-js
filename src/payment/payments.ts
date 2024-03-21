@@ -2,8 +2,14 @@ import { BasePaymentOptions, PaymentConfig } from "./config";
 import { Logger, sleep, YagnaApi } from "../utils";
 import { Invoice } from "./invoice";
 import { DebitNote } from "./debit_note";
-import { Events } from "../events";
 import { GolemTimeoutError } from "../error/golem-error";
+import { EventEmitter } from "eventemitter3";
+
+export interface PaymentEvents {
+  invoiceReceived: (invoice: Invoice) => void;
+  debitNoteReceived: (debitNote: DebitNote) => void;
+  unsubscribed: () => void;
+}
 
 export interface PaymentOptions extends BasePaymentOptions {
   invoiceFetchingInterval?: number;
@@ -12,15 +18,14 @@ export interface PaymentOptions extends BasePaymentOptions {
   maxDebitNotesEvents?: number;
 }
 
-export const EVENT_PAYMENT_RECEIVED = "PaymentReceived";
-export const EVENT_UNSUBSCRIBED = "Unsubscribed";
-
-export class Payments extends EventTarget {
+export class Payments {
   private isRunning = true;
   private options: PaymentConfig;
   private logger: Logger;
   private lastInvoiceFetchingTime: string = new Date().toISOString();
   private lastDebitNotesFetchingTime: string = new Date().toISOString();
+  public readonly events = new EventEmitter<PaymentEvents>();
+
   static async create(yagnaApi: YagnaApi, options?: PaymentOptions) {
     return new Payments(yagnaApi, new PaymentConfig(options));
   }
@@ -29,7 +34,6 @@ export class Payments extends EventTarget {
     private readonly yagnaApi: YagnaApi,
     options?: PaymentOptions,
   ) {
-    super();
     this.options = new PaymentConfig(options);
     this.logger = this.options.logger;
     this.subscribe().catch((error) => this.logger.error(`Unable to subscribe to payments`, { error }));
@@ -50,7 +54,7 @@ export class Payments extends EventTarget {
           ),
         this.options.unsubscribeTimeoutMs,
       );
-      this.addEventListener(EVENT_UNSUBSCRIBED, () => {
+      this.events.on("unsubscribed", () => {
         this.logger.debug(`Payments unsubscribed`);
         clearTimeout(timeoutId);
         resolve(true);
@@ -83,16 +87,8 @@ export class Payments extends EventTarget {
             this.logger.error(`Unable to create invoice`, { id: invoiceId, error }),
           );
           if (!invoice) continue;
-          this.dispatchEvent(new InvoiceEvent(EVENT_PAYMENT_RECEIVED, invoice));
+          this.events.emit("invoiceReceived", invoice);
           this.lastInvoiceFetchingTime = event.eventDate;
-          this.options.eventTarget?.dispatchEvent(
-            new Events.InvoiceReceived({
-              id: invoice.id,
-              agreementId: invoice.agreementId,
-              amount: invoice.amount,
-              provider: invoice.provider,
-            }),
-          );
           this.logger.debug(`New Invoice received`, {
             id: invoice.id,
             agreementId: invoice.agreementId,
@@ -105,7 +101,7 @@ export class Payments extends EventTarget {
         await sleep(2);
       }
     }
-    this.dispatchEvent(new Event(EVENT_UNSUBSCRIBED));
+    this.events.emit("unsubscribed");
   }
 
   private async subscribeForDebitNotes() {
@@ -130,17 +126,8 @@ export class Payments extends EventTarget {
             this.logger.error(`Unable to create debit note`, { id: debitNoteId, error }),
           );
           if (!debitNote) continue;
-          this.dispatchEvent(new DebitNoteEvent(EVENT_PAYMENT_RECEIVED, debitNote));
+          this.events.emit("debitNoteReceived", debitNote);
           this.lastDebitNotesFetchingTime = event.eventDate;
-          this.options.eventTarget?.dispatchEvent(
-            new Events.DebitNoteReceived({
-              id: debitNote.id,
-              agreementId: debitNote.agreementId,
-              activityId: debitNote.activityId,
-              amount: debitNote.totalAmountDue,
-              provider: debitNote.provider,
-            }),
-          );
           this.logger.debug("New Debit Note received", {
             agreementId: debitNote.agreementId,
             amount: debitNote.totalAmountDue,

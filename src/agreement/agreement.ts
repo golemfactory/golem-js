@@ -2,10 +2,15 @@ import { defaultLogger, Logger, YagnaApi, YagnaOptions } from "../utils";
 import { MarketApi } from "ya-ts-client";
 import { AgreementFactory } from "./factory";
 import { AgreementConfig } from "./config";
-import { Events } from "../events";
 import { GolemMarketError, MarketErrorCode, Proposal } from "../market";
 import { withTimeout } from "../utils/timeout";
+import { EventEmitter } from "eventemitter3";
 
+export interface AgreementEvents {
+  confirmed: (details: { id: string; provider: ProviderInfo }) => void;
+  rejected: (details: { id: string; provider: ProviderInfo; reason: string }) => void;
+  terminated: (details: { id: string; provider: ProviderInfo; reason: string }) => void;
+}
 export interface ProviderInfo {
   name: string;
   id: string;
@@ -24,8 +29,6 @@ export interface AgreementOptions {
   agreementWaitingForApprovalTimeout?: number;
   /** Logger module */
   logger?: Logger;
-  /** Event Bus implements EventTarget  */
-  eventTarget?: EventTarget;
 }
 /**
  * Agreement module - an object representing the contract between the requestor and the provider.
@@ -34,6 +37,7 @@ export interface AgreementOptions {
 export class Agreement {
   private agreementData?: MarketApi.AgreementDTO;
   private logger: Logger;
+  public readonly events = new EventEmitter<AgreementEvents>();
 
   /**
    * @param id - agreement ID
@@ -98,17 +102,17 @@ export class Agreement {
       await this.yagnaApi.market.confirmAgreement(this.id, appSessionId);
       await this.yagnaApi.market.waitForApproval(this.id, this.options.agreementWaitingForApprovalTimeout);
       this.logger.debug(`Agreement approved`, { id: this.id });
-      this.options.eventTarget?.dispatchEvent(
-        new Events.AgreementConfirmed({ id: this.id, provider: this.getProviderInfo() }),
-      );
+      this.events.emit("confirmed", { id: this.id, provider: this.getProviderInfo() });
     } catch (error) {
       this.logger.error(`Unable to confirm agreement with provider`, {
         providerName: this.getProviderInfo().name,
         error,
       });
-      this.options.eventTarget?.dispatchEvent(
-        new Events.AgreementRejected({ id: this.id, provider: this.getProviderInfo(), reason: error.toString() }),
-      );
+      this.events.emit("rejected", {
+        id: this.id,
+        provider: this.getProviderInfo(),
+        reason: error.toString(),
+      });
       throw error;
     }
   }
@@ -135,9 +139,11 @@ export class Agreement {
           this.yagnaApi.market.terminateAgreement(this.id, reason),
           this.options.agreementRequestTimeout,
         );
-      this.options.eventTarget?.dispatchEvent(
-        new Events.AgreementTerminated({ id: this.id, provider: this.getProviderInfo(), reason: reason.message }),
-      );
+      this.events.emit("terminated", {
+        id: this.id,
+        provider: this.getProviderInfo(),
+        reason: reason.message,
+      });
       this.logger.debug(`Agreement terminated`, { id: this.id });
     } catch (error) {
       throw new GolemMarketError(

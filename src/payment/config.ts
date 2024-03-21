@@ -28,14 +28,12 @@ export interface BasePaymentOptions {
   paymentRequestTimeout?: number;
   unsubscribeTimeoutMs?: number;
   logger?: Logger;
-  eventTarget?: EventTarget;
 }
 /**
  * @internal
  */
 abstract class BaseConfig {
   public readonly paymentTimeout: number;
-  public readonly eventTarget?: EventTarget;
   public readonly payment: { driver: string; network: string };
   public readonly options?: BasePaymentOptions;
   public readonly logger: Logger;
@@ -48,7 +46,6 @@ abstract class BaseConfig {
       network: options?.payment?.network || EnvUtils.getPaymentNetwork() || DEFAULTS.payment.network,
     };
     this.logger = options?.logger || defaultLogger("payment");
-    this.eventTarget = options?.eventTarget;
   }
 }
 /**

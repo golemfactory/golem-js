@@ -75,10 +75,8 @@ describe("Demand", () => {
 
       when(mockMarket.collectOffers(anything(), anything(), anything())).thenResolve(proposalsInitial);
 
-      const event: DemandEvent = await new Promise((res) =>
-        demand.addEventListener(EVENT_PROPOSAL_RECEIVED, (e) => res(e as DemandEvent)),
-      );
-      expect(event.proposal).toBeInstanceOf(Proposal);
+      const proposal = await new Promise((res) => demand.events.on("proposalReceived", (proposal) => res(proposal)));
+      expect(proposal).toBeInstanceOf(Proposal);
       await demand.unsubscribe();
     });
   });

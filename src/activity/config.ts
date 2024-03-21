@@ -15,7 +15,6 @@ export class ActivityConfig {
   public readonly activityExecuteTimeout: number;
   public readonly activityExeBatchResultPollIntervalSeconds: number;
   public readonly logger: Logger;
-  public readonly eventTarget?: EventTarget;
 
   constructor(options?: ActivityOptions) {
     this.activityRequestTimeout = options?.activityRequestTimeout || DEFAULTS.activityRequestTimeout;
@@ -23,6 +22,5 @@ export class ActivityConfig {
     this.activityExeBatchResultPollIntervalSeconds =
       options?.activityExeBatchResultPollIntervalSeconds || DEFAULTS.activityExeBatchResultPollIntervalSeconds;
     this.logger = options?.logger || defaultLogger("work");
-    this.eventTarget = options?.eventTarget;
   }
 }

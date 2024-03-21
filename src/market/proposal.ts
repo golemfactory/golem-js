@@ -1,9 +1,15 @@
 import { MarketApi } from "ya-ts-client";
-import { Events } from "../events";
 import { GolemMarketError, MarketErrorCode } from "./error";
 import { ProviderInfo } from "../agreement";
 import { Demand } from "./demand";
 import { withTimeout } from "../utils/timeout";
+import { EventEmitter } from "eventemitter3";
+
+export interface ProposalEvents {
+  proposalResponded: (details: { id: string; provider: ProviderInfo; counteringProposalId: string }) => void;
+  proposalRejected: (details: { id: string; provider: ProviderInfo; parentId: string | null; reason: string }) => void;
+  proposalFailed: (details: { id: string; provider: ProviderInfo; parentId: string | null; reason: string }) => void;
+}
 
 export type PricingInfo = {
   cpuSec: number;
@@ -70,6 +76,7 @@ export class Proposal {
   counteringProposalId: string | null;
   private readonly state: MarketApi.ProposalDTO["state"];
   private readonly prevProposalId: string | undefined;
+  public readonly events = new EventEmitter<ProposalEvents>();
 
   /**
    * Create proposal for given subscription ID
@@ -79,7 +86,6 @@ export class Proposal {
    * @param setCounteringProposalReference
    * @param api
    * @param model
-   * @param eventTarget
    */
   constructor(
     public readonly demand: Demand,
@@ -87,7 +93,6 @@ export class Proposal {
     private readonly setCounteringProposalReference: (id: string, parentId: string) => void | null,
     private readonly api: MarketApi.RequestorService,
     model: MarketApi.ProposalDTO,
-    private eventTarget?: EventTarget,
   ) {
     this.id = model.proposalId;
     this.issuerId = model.issuerId;
@@ -199,14 +204,12 @@ export class Proposal {
     try {
       // eslint-disable-next-line @typescript-eslint/ban-types
       await this.api.rejectProposalOffer(this.demand.id, this.id, { message: reason as {} });
-      this.eventTarget?.dispatchEvent(
-        new Events.ProposalRejected({
-          id: this.id,
-          provider: this.provider,
-          parentId: this.id,
-          reason,
-        }),
-      );
+      this.events.emit("proposalRejected", {
+        id: this.id,
+        provider: this.provider,
+        parentId: this.id,
+        reason,
+      });
     } catch (error) {
       throw new GolemMarketError(
         `Failed to reject proposal. ${error?.response?.data?.message || error}`,
@@ -237,24 +240,20 @@ export class Proposal {
       if (this.setCounteringProposalReference) {
         this.setCounteringProposalReference(this.id, counteringProposalId);
       }
-      this.eventTarget?.dispatchEvent(
-        new Events.ProposalResponded({
-          id: this.id,
-          provider: this.provider,
-          counteringProposalId: counteringProposalId,
-        }),
-      );
+      this.events.emit("proposalResponded", {
+        id: this.id,
+        provider: this.provider,
+        counteringProposalId,
+      });
       return counteringProposalId;
     } catch (error) {
       const reason = error?.response?.data?.message || error.toString();
-      this.eventTarget?.dispatchEvent(
-        new Events.ProposalFailed({
-          id: this.id,
-          provider: this.provider,
-          parentId: this.id,
-          reason,
-        }),
-      );
+      this.events.emit("proposalFailed", {
+        id: this.id,
+        provider: this.provider,
+        parentId: this.id,
+        reason,
+      });
       throw new GolemMarketError(
         `Failed to respond proposal. ${reason}`,
         MarketErrorCode.ProposalResponseFailed,
