@@ -35,7 +35,6 @@ describe("AgreementPaymentProcess", () => {
         when(allocationMock.id).thenReturn("1000");
         when(invoiceMock.amount).thenReturn(0.123);
         when(invoiceMock.amountPrecise).thenReturn("0.123");
-        when(invoiceMock.amountPrecise).thenReturn("0.123");
         when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
 
         const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
@@ -55,7 +54,6 @@ describe("AgreementPaymentProcess", () => {
         when(invoiceMock.id).thenReturn("invoice-id");
         when(invoiceMock.agreementId).thenReturn("agreement-id");
         when(invoiceMock.amount).thenReturn(0.123);
-        when(invoiceMock.amountPrecise).thenReturn("0.123");
         when(invoiceMock.amountPrecise).thenReturn("0.123");
         when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
 
