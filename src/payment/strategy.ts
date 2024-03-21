@@ -1,6 +1,6 @@
 import { DebitNoteDTO } from "./debit_note";
 import { InvoiceDTO } from "./invoice";
-import { Decimal } from "decimal.js-light";
+import Decimal from "decimal.js-light";
 
 /** Default DebitNotes filter that accept all debit notes without any validation */
 export const acceptAllDebitNotesFilter = () => async () => true;

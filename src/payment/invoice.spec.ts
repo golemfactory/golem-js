@@ -3,7 +3,7 @@ import { anything, imock, instance, mock, reset, when } from "@johanblumenberg/t
 import { YagnaApi } from "../utils";
 import { PaymentApi, MarketApi } from "ya-ts-client";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
-import { Decimal } from "decimal.js-light";
+import Decimal from "decimal.js-light";
 
 const mockYagna = mock(YagnaApi);
 const mockPayment = mock(PaymentApi.RequestorService);
