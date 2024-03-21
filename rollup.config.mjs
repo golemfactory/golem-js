@@ -8,10 +8,21 @@ import nodePolyfills from "rollup-plugin-polyfill-node";
 import pkg from "./package.json" assert { type: "json" };
 import ignore from "rollup-plugin-ignore";
 import filesize from "rollup-plugin-filesize";
-import { createRequire } from "module";
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
 
-const resolveModule = createRequire(import.meta.url).resolve;
-
+function deleteExistingBundles(path) {
+  return {
+    name: "delete-existing-bundles",
+    buildStart: () => {
+      const distDir = fileURLToPath(new URL(path, import.meta.url).toString());
+      if (fs.existsSync(distDir)) {
+        fs.rmSync(distDir, { recursive: true });
+      }
+      console.log("Deleted " + distDir);
+    },
+  };
+}
 /**
  * Looking for plugins?
  *
@@ -30,6 +41,7 @@ export default [
       format: "es",
     },
     plugins: [
+      deleteExistingBundles("dist"),
       ignore(["tmp"]),
       alias({
         entries: [
@@ -63,13 +75,6 @@ export default [
       sourcemap: true,
       chunkFileNames: "shared-[hash].mjs",
       entryFileNames: "[name].mjs",
-      paths: (id) => {
-        if (!id.startsWith("ya-ts-client/dist")) return id;
-        // allow importing files directly from ya-ts-client/dist/... without adding .js extension
-        const resolved = resolveModule(id);
-        const path = resolved.split("node_modules/")[1];
-        return path;
-      },
     },
     plugins: [
       typescript({ tsconfig: "./tsconfig.json", exclude: ["**/__tests__", "**/*.test.ts"] }),
