@@ -9,7 +9,7 @@ import { ProposalProperties } from "../market/proposal";
 import { EventEmitter } from "eventemitter3";
 
 export interface DebitNoteEvents {
-  accepted: (details: { id: string; agreementId: string; amount: number; provider: ProviderInfo }) => void;
+  accepted: (details: { id: string; agreementId: string; amount: string; provider: ProviderInfo }) => void;
   paymentFailed: (details: { id: string; agreementId: string; reason: string | undefined }) => void;
 }
 
@@ -20,7 +20,7 @@ export interface DebitNoteDTO {
   timestamp: string;
   activityId: string;
   agreementId: string;
-  totalAmountDue: number;
+  totalAmountDue: string;
   usageCounterVector?: object;
 }
 
@@ -33,7 +33,7 @@ export class DebitNote extends BaseNote<PaymentApi.DebitNoteDTO> {
   public readonly previousDebitNoteId?: string;
   public readonly timestamp: string;
   public readonly activityId: string;
-  public readonly totalAmountDue: number;
+  public readonly totalAmountDue: string;
   public readonly usageCounterVector?: object;
   public readonly events = new EventEmitter<DebitNoteEvents>();
 
@@ -75,7 +75,7 @@ export class DebitNote extends BaseNote<PaymentApi.DebitNoteDTO> {
     this.id = model.debitNoteId;
     this.timestamp = model.timestamp;
     this.activityId = model.activityId;
-    this.totalAmountDue = Number(model.totalAmountDue);
+    this.totalAmountDue = model.totalAmountDue;
     this.usageCounterVector = model.usageCounterVector;
   }
 
@@ -96,10 +96,10 @@ export class DebitNote extends BaseNote<PaymentApi.DebitNoteDTO> {
    * @param totalAmountAccepted
    * @param allocationId
    */
-  async accept(totalAmountAccepted: number, allocationId: string) {
+  async accept(totalAmountAccepted: string, allocationId: string) {
     try {
       await this.yagnaApi.payment.acceptDebitNote(this.id, {
-        totalAmountAccepted: `${totalAmountAccepted}`,
+        totalAmountAccepted,
         allocationId,
       });
     } catch (error) {

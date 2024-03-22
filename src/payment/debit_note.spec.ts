@@ -3,6 +3,7 @@ import { anything, imock, instance, mock, objectContaining, reset, verify, when 
 import { YagnaApi } from "../utils";
 import { MarketApi, PaymentApi } from "ya-ts-client";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
+import Decimal from "decimal.js-light";
 
 const mockYagna = mock(YagnaApi);
 const mockPayment = mock(PaymentApi.RequestorService);
@@ -24,6 +25,7 @@ describe("Debit Notes", () => {
     when(mockDebitNote.payeeAddr).thenReturn("0x12345");
     when(mockDebitNote.issuerId).thenReturn("0x123");
     when(mockDebitNote.agreementId).thenReturn("agreementId");
+    when(mockDebitNote.totalAmountDue).thenReturn("1");
 
     when(mockAgreement.agreementId).thenReturn("agreementId");
     when(mockAgreement.offer).thenReturn({
@@ -44,12 +46,17 @@ describe("Debit Notes", () => {
       const debitNote = await DebitNote.create("testId", instance(mockYagna));
       expect(debitNote).toBeDefined();
     });
+    it("should crete debit note with a big number amount", async () => {
+      when(mockDebitNote.totalAmountDue).thenReturn("0.009551938349900001");
+      const debitNote = await DebitNote.create("testId", instance(mockYagna));
+      expect(new Decimal("0.009551938349900001").eq(new Decimal(debitNote.totalAmountDue))).toEqual(true);
+    });
   });
 
   describe("accepting", () => {
     it("should accept debit note", async () => {
       const debitNote = await DebitNote.create("testId", instance(mockYagna));
-      await debitNote.accept(1, "testId");
+      await debitNote.accept("1", "testId");
       verify(mockPayment.acceptDebitNote("testId", objectContaining({ totalAmountAccepted: "1" }))).once();
     });
 
@@ -59,7 +66,7 @@ describe("Debit Notes", () => {
 
       const debitNote = await DebitNote.create("testId", instance(mockYagna));
 
-      await expect(debitNote.accept(1, "testId")).rejects.toMatchError(
+      await expect(debitNote.accept("1", "testId")).rejects.toMatchError(
         new GolemPaymentError(
           `Unable to accept debit note testId. ${errorYagnaApiMock}`,
           PaymentErrorCode.DebitNoteAcceptanceFailed,

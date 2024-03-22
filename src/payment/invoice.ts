@@ -8,7 +8,7 @@ import { ProposalProperties } from "../market/proposal";
 import { EventEmitter } from "eventemitter3";
 
 export interface InvoiceEvents {
-  accepted: (details: { id: string; agreementId: string; amount: number; provider: ProviderInfo }) => void;
+  accepted: (details: { id: string; agreementId: string; amount: string; provider: ProviderInfo }) => void;
   paymentFailed: (details: { id: string; agreementId: string; reason: string | undefined }) => void;
 }
 
@@ -24,7 +24,7 @@ export interface InvoiceDTO {
   requestorWalletAddress: string;
   provider: ProviderInfo;
   paymentPlatform: string;
-  amount: number;
+  amount: string;
 }
 
 /**
@@ -82,7 +82,7 @@ export abstract class BaseNote<ModelType extends BaseModel> {
       );
     }
   }
-  protected abstract accept(totalAmountAccepted: number, allocationId: string): Promise<void>;
+  protected abstract accept(totalAmountAccepted: string, allocationId: string): Promise<void>;
   protected abstract reject(rejection: Rejection): Promise<void>;
   protected abstract refreshStatus(): Promise<void>;
 }
@@ -97,7 +97,7 @@ export class Invoice extends BaseNote<PaymentApi.InvoiceDTO> {
   /** Activities IDs covered by this Invoice */
   public readonly activityIds?: string[];
   /** Amount in the invoice */
-  public readonly amount: number;
+  public readonly amount: string;
   /** Invoice creation timestamp */
   public readonly timestamp: string;
   /** Recipient ID */
@@ -139,7 +139,7 @@ export class Invoice extends BaseNote<PaymentApi.InvoiceDTO> {
     super(model, providerInfo, options);
     this.id = model.invoiceId;
     this.activityIds = model.activityIds;
-    this.amount = Number(model.amount);
+    this.amount = model.amount;
     this.timestamp = model.timestamp;
     this.recipientId = model.recipientId;
   }
@@ -175,10 +175,10 @@ export class Invoice extends BaseNote<PaymentApi.InvoiceDTO> {
    * @param totalAmountAccepted
    * @param allocationId
    */
-  async accept(totalAmountAccepted: number, allocationId: string) {
+  async accept(totalAmountAccepted: string, allocationId: string) {
     try {
       await this.yagnaApi.payment.acceptInvoice(this.id, {
-        totalAmountAccepted: `${totalAmountAccepted}`,
+        totalAmountAccepted,
         allocationId,
       });
     } catch (error) {

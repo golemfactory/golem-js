@@ -3,6 +3,7 @@ import { anything, imock, instance, mock, reset, when } from "@johanblumenberg/t
 import { YagnaApi } from "../utils";
 import { PaymentApi, MarketApi } from "ya-ts-client";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
+import Decimal from "decimal.js-light";
 
 const mockYagna = mock(YagnaApi);
 const mockPayment = mock(PaymentApi.RequestorService);
@@ -44,6 +45,27 @@ describe("Invoice", () => {
     });
   });
 
+  describe("creating", () => {
+    test("create invoice with a big number amount", async () => {
+      when(mockPayment.getInvoice("invoiceId")).thenResolve({
+        invoiceId: "invoiceId",
+        issuerId: "issuer-id",
+        payeeAddr: "0xPAYEE",
+        payerAddr: "0xPAYER",
+        recipientId: "recipient-id",
+        paymentPlatform: "holesky",
+        timestamp: "2023-01-01T00:00:00.000Z",
+        agreementId: "agreement-id",
+        status: "RECEIVED",
+        amount: "0.009551938349900001",
+        paymentDueDate: "2023-01-02T00:00:00.000Z",
+        activityIds: ["activity-1"],
+      });
+      const invoice = await Invoice.create("invoiceId", instance(mockYagna));
+      expect(new Decimal("0.009551938349900001").eq(new Decimal(invoice.amount))).toEqual(true);
+    });
+  });
+
   describe("accepting", () => {
     test("throw GolemPaymentError if invoice cannot be accepted", async () => {
       const errorYagnaApiMock = new Error("test error");
@@ -51,7 +73,7 @@ describe("Invoice", () => {
 
       const invoice = await Invoice.create("invoiceId", instance(mockYagna));
 
-      await expect(invoice.accept(1, "testAllocationId")).rejects.toMatchError(
+      await expect(invoice.accept("1", "testAllocationId")).rejects.toMatchError(
         new GolemPaymentError(
           `Unable to accept invoice invoiceId ${errorYagnaApiMock}`,
           PaymentErrorCode.InvoiceAcceptanceFailed,

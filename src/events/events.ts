@@ -81,25 +81,25 @@ export class InvoiceReceived extends BaseEvent<{
   id: string;
   provider: ProviderInfo;
   agreementId: string;
-  amount: number;
+  amount: string;
 }> {}
 export class DebitNoteReceived extends BaseEvent<{
   id: string;
   agreementId: string;
   activityId: string;
-  amount: number;
+  amount: string;
   provider: ProviderInfo;
 }> {}
 export class PaymentAccepted extends BaseEvent<{
   id: string;
   agreementId: string;
-  amount: number;
+  amount: string;
   provider: ProviderInfo;
 }> {}
 export class DebitNoteAccepted extends BaseEvent<{
   id: string;
   agreementId: string;
-  amount: number;
+  amount: string;
   provider: ProviderInfo;
 }> {}
 export class PaymentFailed extends BaseEvent<{ id: string; agreementId: string; reason?: string }> {}
