@@ -70,7 +70,7 @@ async function main(subnetTag: string, driver?: string, network?: string, maxPar
 program
   .option("--subnet-tag <subnet>", "set subnet name, for example 'public'")
   .option("--payment-driver, --driver <driver>", "payment driver name, for example 'erc20'")
-  .option("--payment-network, --network <network>", "network name, for example 'goerli'")
+  .option("--payment-network, --network <network>", "network name, for example 'holesky'")
   .option("-t, --max-parallel-tasks <maxParallelTasks>", "max parallel tasks");
 program.parse();
 const options = program.opts();

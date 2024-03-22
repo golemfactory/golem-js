@@ -48,14 +48,32 @@ export class ProposalsBatch {
   }
 
   /**
-   * Generates a set of proposals that were collected within the specified `releaseTimeoutMs`
-   * or their size reached the `minBatchSize` value
+   * Returns the batched proposals from the internal buffer and empties it
    */
-  async *readProposals(): AsyncGenerator<Proposal[]> {
+  public async getProposals() {
+    const proposals: Proposal[] = [];
+
+    await this.lock.acquire("proposals-batch", () => {
+      this.batch.forEach((providersProposals) => proposals.push(this.getBestProposal(providersProposals)));
+      this.batch.clear();
+    });
+
+    return proposals;
+  }
+
+  /**
+   * Waits for the max amount time for batching or max batch size to be reached before it makes sense to process events
+   *
+   * Used to flow-control the consumption of the proposal events from the batch.
+   * The returned promise resolves when it is time to process the buffered proposal events.
+   */
+  public async waitForProposals() {
     let timeoutId, intervalId;
+
     const isTimeoutReached = new Promise((resolve) => {
       timeoutId = setTimeout(resolve, this.config.releaseTimeoutMs);
     });
+
     const isBatchSizeReached = new Promise((resolve) => {
       intervalId = setInterval(() => {
         if (this.batch.size >= this.config.minBatchSize) {
@@ -63,15 +81,10 @@ export class ProposalsBatch {
         }
       }, 1_000);
     });
+
     await Promise.race([isTimeoutReached, isBatchSizeReached]);
     clearTimeout(timeoutId);
     clearInterval(intervalId);
-    const proposals: Proposal[] = [];
-    await this.lock.acquire("proposals-batch", () => {
-      this.batch.forEach((providersProposals) => proposals.push(this.getBestProposal(providersProposals)));
-      this.batch.clear();
-    });
-    yield proposals;
   }
 
   /**

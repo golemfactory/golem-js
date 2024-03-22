@@ -8,6 +8,7 @@ import { DebitNoteFilter, InvoiceFilter } from "./service";
 import AsyncLock from "async-lock";
 import { InvoiceStatus } from "ya-ts-client/dist/ya-payment";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
+import { GolemUserError } from "../error/golem-error";
 
 /**
  * Process manager that controls the logic behind processing events related to an agreement which result with payments
@@ -88,7 +89,12 @@ export class AgreementPaymentProcess {
 
     this.debitNotes.set(debitNote.id, debitNote);
 
-    const acceptedByFilter = await this.filters.debitNoteFilter(debitNote.dto);
+    let acceptedByFilter = false;
+    try {
+      acceptedByFilter = await this.filters.debitNoteFilter(debitNote.dto);
+    } catch (error) {
+      throw new GolemUserError("An error occurred in the debit note filter", error);
+    }
 
     if (!acceptedByFilter) {
       await this.rejectDebitNote(
@@ -100,7 +106,7 @@ export class AgreementPaymentProcess {
       return false;
     }
 
-    await debitNote.accept(debitNote.totalAmountDue, this.allocation.id);
+    await debitNote.accept(debitNote.totalAmountDuePrecise, this.allocation.id);
     this.logger.debug(`DebitNote accepted`, {
       debitNoteId: debitNote.id,
       agreementId: debitNote.agreementId,
@@ -163,7 +169,12 @@ export class AgreementPaymentProcess {
 
     this.invoice = invoice;
 
-    const acceptedByFilter = await this.filters.invoiceFilter(invoice.dto);
+    let acceptedByFilter = false;
+    try {
+      acceptedByFilter = await this.filters.invoiceFilter(invoice.dto);
+    } catch (error) {
+      throw new GolemUserError("An error occurred in the invoice filter", error);
+    }
 
     if (!acceptedByFilter) {
       const rejectionReason = RejectionReason.RejectedByRequestorFilter;
@@ -173,7 +184,7 @@ export class AgreementPaymentProcess {
       return false;
     }
 
-    await invoice.accept(invoice.amount, this.allocation.id);
+    await invoice.accept(invoice.amountPrecise, this.allocation.id);
     this.logger.info(`Invoice has been accepted`, {
       invoiceId: invoice.id,
       agreementId: invoice.agreementId,

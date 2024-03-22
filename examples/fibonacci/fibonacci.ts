@@ -14,7 +14,7 @@ program
   .option("-c, --tasks-count <c>", "tasks count", "1")
   .option("--subnet-tag <subnet>", "set subnet name, for example 'public'", "public")
   .option("--payment-driver, --driver <driver>", "payment driver name, for example 'erc20'", "erc20")
-  .option("--payment-network, --network <network>", "network name, for example 'goerli'", "goerli")
+  .option("--payment-network, --network <network>", "network name, for example 'holesky'", "holesky")
   .action(async (options: MainOptions) => {
     const executor = await TaskExecutor.create({
       package: "golem/js-fibonacci:latest",
