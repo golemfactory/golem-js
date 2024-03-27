@@ -13,22 +13,22 @@ export type GolemPlugin = {
 type AllHooks = MarketHooks; // | DeploymentHooks | PaymentHooks | ...
 type AllEvents = MarketEvents; // | DeploymentEvents | PaymentEvents | ...
 
-export class GlobalPluginManager {
-  static eventEmitter = new EventEmitter<AllEvents>();
-  static hooks = new Map<keyof AllHooks, AllHooks[keyof AllHooks][]>();
+export class PluginManager {
+  private eventEmitter = new EventEmitter<AllEvents>();
+  private hooks = new Map<keyof AllHooks, AllHooks[keyof AllHooks][]>();
 
-  static registerHook<T extends keyof AllHooks>(hookName: T, hook: AllHooks[T]) {
+  private registerHook<T extends keyof AllHooks>(hookName: T, hook: AllHooks[T]) {
     if (!this.hooks.has(hookName)) {
       this.hooks.set(hookName, []);
     }
     this.hooks.get(hookName)!.push(hook as NonNullable<AllHooks[T]>);
   }
 
-  static registerPlugin(plugin: GolemPlugin) {
+  public registerPlugin(plugin: GolemPlugin) {
     const ctx = {
       market: new MarketPluginContext(
-        (eventName, callback) => GlobalPluginManager.eventEmitter.on(eventName, callback),
-        (hookName, hook) => GlobalPluginManager.registerHook(hookName, hook),
+        (eventName, callback) => this.eventEmitter.on(eventName, callback),
+        (hookName, hook) => this.registerHook(hookName, hook),
       ),
       // deployment: ...
       // payment: ...
@@ -36,10 +36,19 @@ export class GlobalPluginManager {
     };
     plugin.register(ctx);
   }
-  static getHooks<T extends keyof AllHooks>(hookName: T): AllHooks[T][] {
+  public getHooks<T extends keyof AllHooks>(hookName: T): AllHooks[T][] {
     return (this.hooks.get(hookName) || []) as AllHooks[T][];
   }
+  public emitEvent<T extends keyof AllEvents>(
+    eventName: T,
+    ...args: EventEmitter.ArgumentMap<MarketEvents>[Extract<T, keyof MarketEvents>]
+  ) {
+    this.eventEmitter.emit(eventName, ...args);
+  }
 }
+
+// eslint-disable-next-line @typescript-eslint/naming-convention
+export const GlobalPluginManager = new PluginManager();
 
 export function registerGlobalPlugin(...plugins: GolemPlugin[]) {
   plugins.forEach((plugin) => GlobalPluginManager.registerPlugin(plugin));
