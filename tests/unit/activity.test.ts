@@ -11,7 +11,7 @@ import {
 } from "../../src";
 import { sleep } from "../../src/utils";
 import { Capture, Deploy, DownloadFile, Run, Script, Start, Terminate, UploadFile } from "../../src/script";
-import { anything, imock, instance, mock, reset, when } from "@johanblumenberg/ts-mockito";
+import { anything, imock, instance, mock, reset, spy, verify, when } from "@johanblumenberg/ts-mockito";
 import * as YaTsClient from "ya-ts-client";
 import { buildExeScriptSuccessResult } from "./helpers";
 import EventEmitter from "events";
@@ -315,12 +315,9 @@ describe("Activity", () => {
       const command2 = new Start();
       const command3 = new Run("test_command1");
       const script = Script.create([command1, command2, command3]);
-      const results = await activity.execute(script.getExeScriptRequest());
+      const results = await activity.execute(script.getExeScriptRequest(), false, 200, 0);
 
-      const error = {
-        message: "Some undefined error",
-        status: 400,
-      };
+      const error = new Error("Some undefined error");
 
       when(mockActivityControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenReject(error);
 
@@ -332,10 +329,10 @@ describe("Activity", () => {
           expect(error.getAgreement()).toBeDefined();
           expect(error.getProvider()?.name).toEqual("Test Provider");
           expect(error.previous?.toString()).toEqual(
-            "Error: Command #0 getExecBatchResults error: Some undefined error",
+            "Error: Failed to fetch activity results. Attempt: 1. Error: Some undefined error",
           );
           expect(error.toString()).toEqual(
-            "Error: Unable to get activity results. Command #0 getExecBatchResults error: Some undefined error",
+            "Error: Unable to get activity results. Failed to fetch activity results. Attempt: 1. Error: Some undefined error",
           );
           return res();
         });
@@ -343,23 +340,20 @@ describe("Activity", () => {
       });
     });
 
-    it("should handle gsb error", async () => {
+    it("should handle non-retryable error", async () => {
       const activity = await Activity.create(instance(mockAgreement), instance(mockYagna), {
         activityExeBatchResultPollIntervalSeconds: 10,
       });
       const command1 = new Deploy();
       const command2 = new Start();
       const command3 = new Run("test_command1");
-      const command4 = new Run("test_command1");
-      const command5 = new Run("test_command1");
-      const command6 = new Run("test_command1");
-      const command7 = new Run("test_command1");
-      const script = Script.create([command1, command2, command3, command4, command5, command6, command7]);
-      const results = await activity.execute(script.getExeScriptRequest());
+      const script = Script.create([command1, command2, command3]);
+      const results = await activity.execute(script.getExeScriptRequest(), false, 1_000, 3);
 
       const error = {
-        message: "GSB error: remote service at `test` error: GSB failure: Bad request: endpoint address not found",
+        message: "non-retryable error",
         status: 500,
+        toString: () => `Error: non-retryable error`,
       };
 
       when(mockActivityControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenReject(error);
@@ -372,16 +366,48 @@ describe("Activity", () => {
           expect(error.getAgreement()).toBeDefined();
           expect(error.getProvider()?.name).toEqual("Test Provider");
           expect(error.previous?.toString()).toEqual(
-            "Error: Command #0 getExecBatchResults error: GSB error: remote service at `test` error: GSB failure: Bad request: endpoint address not found",
-          );
-          expect(error.toString()).toEqual(
-            "Error: Unable to get activity results. Command #0 getExecBatchResults error: GSB error: remote service at `test` error: GSB failure: Bad request: endpoint address not found",
+            "Error: Failed to fetch activity results. Attempt: 1. Error: non-retryable error",
           );
           return res();
         });
         results.on("data", () => null);
       });
     });
+
+    it("should retry when a retryable error occurs", async () => {
+      const activity = await Activity.create(instance(mockAgreement), instance(mockYagna), {
+        activityExeBatchResultPollIntervalSeconds: 10,
+      });
+      const command1 = new Deploy();
+      const command2 = new Start();
+      const command3 = new Run("test_command1");
+      const script = Script.create([command1, command2, command3]);
+
+      const error = {
+        message: "timeout",
+        status: 408,
+        toString: () => `Error: timeout`,
+      };
+      const testResult = {
+        isBatchFinished: true,
+        result: "Ok" as "Ok" | "Error",
+        stdout: "Done",
+        stderr: "",
+        index: 1,
+        eventDate: new Date().toISOString(),
+      };
+      when(mockActivityControl.getExecBatchResults(anything(), anything(), anything(), anything()))
+        .thenReject(error)
+        .thenReject(error)
+        .thenResolve([testResult]);
+
+      const results = await activity.execute(script.getExeScriptRequest(), false, 1_000, 10);
+
+      for await (const result of results) {
+        expect(result).toEqual(testResult);
+      }
+      verify(mockActivityControl.getExecBatchResults(anything(), anything(), anything(), anything())).times(3);
+    }, 7_000);
 
     it("should handle termination error", async () => {
       const activity = await Activity.create(instance(mockAgreement), instance(mockYagna));
