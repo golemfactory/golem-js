@@ -11,7 +11,7 @@ import {
 } from "../../src";
 import { sleep } from "../../src/utils";
 import { Capture, Deploy, DownloadFile, Run, Script, Start, Terminate, UploadFile } from "../../src/script";
-import { anything, imock, instance, mock, reset, when } from "@johanblumenberg/ts-mockito";
+import { anything, imock, instance, mock, reset, spy, verify, when } from "@johanblumenberg/ts-mockito";
 import * as YaTsClient from "ya-ts-client";
 import { buildExeScriptSuccessResult } from "./helpers";
 import EventEmitter from "events";
@@ -382,31 +382,32 @@ describe("Activity", () => {
       const command2 = new Start();
       const command3 = new Run("test_command1");
       const script = Script.create([command1, command2, command3]);
-      const results = await activity.execute(script.getExeScriptRequest(), false, 1_000, 1);
 
       const error = {
         message: "timeout",
         status: 408,
         toString: () => `Error: timeout`,
       };
+      const testResult = {
+        isBatchFinished: true,
+        result: "Ok" as "Ok" | "Error",
+        stdout: "Done",
+        stderr: "",
+        index: 1,
+        eventDate: new Date().toISOString(),
+      };
+      when(mockActivityControl.getExecBatchResults(anything(), anything(), anything(), anything()))
+        .thenReject(error)
+        .thenReject(error)
+        .thenResolve([testResult]);
 
-      when(mockActivityControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenReject(error);
+      const results = await activity.execute(script.getExeScriptRequest(), false, 1_000, 10);
 
-      return new Promise<void>((res) => {
-        results.on("error", (error: GolemWorkError) => {
-          expect(error).toBeInstanceOf(GolemWorkError);
-          expect(error.code).toEqual(WorkErrorCode.ActivityResultsFetchingFailed);
-          expect(error.getActivity()).toBeDefined();
-          expect(error.getAgreement()).toBeDefined();
-          expect(error.getProvider()?.name).toEqual("Test Provider");
-          expect(error.previous?.toString()).toEqual(
-            "Error: Failed to fetch activity results. Attempt: 2. Error: timeout",
-          );
-          return res();
-        });
-        results.on("data", () => null);
-      });
-    });
+      for await (const result of results) {
+        expect(result).toEqual(testResult);
+      }
+      verify(mockActivityControl.getExecBatchResults(anything(), anything(), anything(), anything())).times(3);
+    }, 7_000);
 
     it("should handle termination error", async () => {
       const activity = await Activity.create(instance(mockAgreement), instance(mockYagna));

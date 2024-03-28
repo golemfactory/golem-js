@@ -255,12 +255,13 @@ export class Activity {
           }
 
           try {
-            logger.debug("Trying to poll for batch execution results from yagna");
             const rawExecBachResults = await retry(
-              async (bail, attempt) =>
-                api.activity.control
+              async (bail, attempt) => {
+                logger.debug("Trying to poll for batch execution results from yagna");
+                return api.activity.control
                   .getExecBatchResults(activityId, batchId, undefined, activityExeBatchResultPollIntervalSeconds)
-                  .catch((err) => handleError(err, bail, attempt)),
+                  .catch((err) => handleError(err, bail, attempt));
+              },
               {
                 retries: maxRetries ?? activityExeBatchResultMaxRetries,
               },
@@ -393,13 +394,14 @@ export class Activity {
       return bail(error);
     }
     const workError = new GolemWorkError(
-      `Failed to fetch activity results. Attempt: ${attempt}. ${error.toString()}`,
+      `Failed to fetch activity results. Attempt: ${attempt}. ${error}`,
       WorkErrorCode.ActivityResultsFetchingFailed,
       this.agreement,
       this,
       this.getProviderInfo(),
       error,
     );
+    this.logger.debug(`Failed to fetch activity results. Attempt: ${attempt}. ${error}`);
     if (RETRYABLE_ERROR_STATUS_CODES.includes(error.status)) {
       throw workError;
     }
