@@ -257,7 +257,7 @@ export class Activity {
           try {
             const rawExecBachResults = await retry(
               async (bail, attempt) => {
-                logger.debug("Trying to poll for batch execution results from yagna");
+                logger.debug(`Trying to poll for batch execution results from yagna. Attempt: ${attempt}`);
                 return api.activity.control
                   .getExecBatchResults(activityId, batchId, undefined, activityExeBatchResultPollIntervalSeconds)
                   .catch((err) => handleError(err, bail, attempt));
