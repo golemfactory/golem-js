@@ -374,7 +374,7 @@ describe("Activity", () => {
       });
     });
 
-    it("should handle retryable error", async () => {
+    it("should retry when a retryable error occurs", async () => {
       const activity = await Activity.create(instance(mockAgreement), instance(mockYagna), {
         activityExeBatchResultPollIntervalSeconds: 10,
       });
