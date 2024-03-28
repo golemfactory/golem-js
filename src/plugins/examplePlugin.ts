@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { MarketApi } from "ya-ts-client";
 import { GolemPlugin, registerGlobalPlugin } from "./pluginManager";
 import { LocalPluginManager } from "./localPluginManager";
@@ -37,9 +38,7 @@ const cpuArchitecturePlugin: GolemPlugin = {
   },
 };
 
-registerGlobalPlugin(linearPricingOnlyPlugin);
-
-class ExampleDemandManager {
+class Demand {
   private pluginManager = new LocalPluginManager();
   constructor(plugins?: GolemPlugin[]) {
     if (plugins) {
@@ -61,11 +60,11 @@ class ExampleDemandManager {
   }
 }
 
-const demandManager0 = new ExampleDemandManager([cpuArchitecturePlugin]);
-const demandManager1 = new ExampleDemandManager();
+registerGlobalPlugin(linearPricingOnlyPlugin);
+const demand0 = new Demand([cpuArchitecturePlugin]);
+const demand1 = new Demand();
 
-const demandWithCpuArchitecture = await demandManager0.publish();
-const demandWithOnlyLinearPricing = await demandManager1.publish();
-
-console.log(demandWithCpuArchitecture);
-console.log(demandWithOnlyLinearPricing);
+// 👇 this demand will have pricing model and architecture set by the plugins
+const demandWithCpuArchitecture = await demand0.publish();
+// 👇 this demand will have only pricing model set by the global plugin
+const demandWithOnlyLinearPricing = await demand1.publish();
