@@ -11,7 +11,6 @@ import { GolemAbortError, GolemInternalError, GolemTimeoutError } from "../error
 import { withTimeout } from "../utils/timeout";
 import { EventEmitter } from "eventemitter3";
 import retry from "async-retry";
-import * as YaTsClient from "ya-ts-client";
 
 export interface ActivityEvents {
   scriptSent: (details: { activityId: string; agreementId: string }) => void;
@@ -46,7 +45,7 @@ export interface ActivityOptions {
   logger?: Logger;
 }
 
-const RETRYABLE_ERROR_STATUS_CODES = [408];
+const RETRYABLE_ERROR_STATUS_CODES = [408, 500];
 
 /**
  * Activity module - an object representing the runtime environment on the provider in accordance with the `Package` specification.
@@ -235,7 +234,6 @@ export class Activity {
       this.options;
     const { events } = this;
     const api = this.yagnaApi;
-    const handleError = this.handleError.bind(this);
 
     return new Readable({
       objectMode: true,
@@ -243,27 +241,38 @@ export class Activity {
       async read() {
         while (!isBatchFinished) {
           logger.debug("Polling for batch script execution result");
-
           if (startTime.valueOf() + (timeout || activityExecuteTimeout) <= new Date().valueOf()) {
             logger.debug("Activity probably timed-out, will stop polling for batch execution results");
             return this.destroy(new GolemTimeoutError(`Activity ${activityId} timeout.`));
-          }
-
-          if (!isRunning()) {
-            logger.debug("Activity is no longer running, will stop polling for batch execution results");
-            return this.destroy(new GolemAbortError(`Activity ${activityId} has been interrupted.`));
           }
 
           try {
             const rawExecBachResults = await retry(
               async (bail, attempt) => {
                 logger.debug(`Trying to poll for batch execution results from yagna. Attempt: ${attempt}`);
-                return api.activity.control
-                  .getExecBatchResults(activityId, batchId, undefined, activityExeBatchResultPollIntervalSeconds)
-                  .catch((err) => handleError(err, bail, attempt));
+                try {
+                  if (!isRunning()) {
+                    logger.debug("Activity is no longer running, will stop polling for batch execution results");
+                    return bail(new GolemAbortError(`Activity ${activityId} has been interrupted.`));
+                  }
+                  return await api.activity.control.getExecBatchResults(
+                    activityId,
+                    batchId,
+                    undefined,
+                    activityExeBatchResultPollIntervalSeconds,
+                  );
+                } catch (error) {
+                  logger.debug(`Failed to fetch activity results. Attempt: ${attempt}. ${error}`);
+                  if (RETRYABLE_ERROR_STATUS_CODES.includes(error?.status)) {
+                    throw error;
+                  } else {
+                    bail(error);
+                  }
+                }
               },
               {
                 retries: maxRetries ?? activityExeBatchResultMaxRetries,
+                maxTimeout: 15_000,
               },
             );
             if (!isRunning()) {
@@ -294,7 +303,7 @@ export class Activity {
             events.emit("scriptExecuted", { activityId, agreementId: agreement.id, success: false });
             return this.destroy(
               new GolemWorkError(
-                `Unable to get activity results. ${error?.message || error}`,
+                `Unable to get activity results. ${error}`,
                 WorkErrorCode.ActivityResultsFetchingFailed,
                 agreement,
                 activity,
@@ -380,55 +389,6 @@ export class Activity {
         eventSource?.close();
       },
     });
-  }
-
-  private async handleError(error: YaTsClient.ActivityApi.ApiError, bail: (e: Error) => void, attempt: number) {
-    if (!this.isRunning) {
-      this.logger.debug("Activity is no longer running, will stop polling for batch execution results");
-      return bail(new GolemAbortError(`Activity ${this.id} has been interrupted.`, error));
-    }
-    const { terminated, reason, errorMessage } = await this.isTerminated();
-    if (terminated) {
-      const msg = (reason || "") + (errorMessage || "");
-      this.logger.warn(`Activity terminated by provider.`, { reason: msg, id: this.id });
-      return bail(error);
-    }
-    const workError = new GolemWorkError(
-      `Failed to fetch activity results. Attempt: ${attempt}. ${error}`,
-      WorkErrorCode.ActivityResultsFetchingFailed,
-      this.agreement,
-      this,
-      this.getProviderInfo(),
-      error,
-    );
-    this.logger.debug(`Failed to fetch activity results. Attempt: ${attempt}. ${error}`);
-    if (RETRYABLE_ERROR_STATUS_CODES.includes(error.status)) {
-      throw workError;
-    }
-    bail(workError);
-  }
-
-  private async isTerminated(): Promise<{ terminated: boolean; reason?: string; errorMessage?: string }> {
-    try {
-      const data = await this.yagnaApi.activity.state.getActivityState(this.id);
-      const stateValue = data?.state?.[0];
-
-      if (stateValue === null) {
-        throw new GolemInternalError(
-          "Tried to establish the current state of the activity but it turns out to be 'null'",
-        );
-      }
-
-      const state = ActivityStateEnum[stateValue];
-      return {
-        terminated: state === ActivityStateEnum.Terminated,
-        reason: data?.reason,
-        errorMessage: data?.errorMessage,
-      };
-    } catch (err) {
-      this.logger.debug(`Cannot query activity state:`, err);
-      return { terminated: false };
-    }
   }
 
   private parseEventToResult(msg: string, batchSize: number): Result {

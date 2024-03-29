@@ -315,11 +315,11 @@ describe("Activity", () => {
       const command2 = new Start();
       const command3 = new Run("test_command1");
       const script = Script.create([command1, command2, command3]);
-      const results = await activity.execute(script.getExeScriptRequest(), false, 200, 0);
 
       const error = new Error("Some undefined error");
-
       when(mockActivityControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenReject(error);
+
+      const results = await activity.execute(script.getExeScriptRequest(), false, 200, 0);
 
       return new Promise<void>((res) => {
         results.on("error", (error: GolemWorkError) => {
@@ -328,12 +328,8 @@ describe("Activity", () => {
           expect(error.getActivity()).toBeDefined();
           expect(error.getAgreement()).toBeDefined();
           expect(error.getProvider()?.name).toEqual("Test Provider");
-          expect(error.previous?.toString()).toEqual(
-            "Error: Failed to fetch activity results. Attempt: 1. Error: Some undefined error",
-          );
-          expect(error.toString()).toEqual(
-            "Error: Unable to get activity results. Failed to fetch activity results. Attempt: 1. Error: Some undefined error",
-          );
+          expect(error.previous?.toString()).toEqual("Error: Some undefined error");
+          expect(error.toString()).toEqual("Error: Unable to get activity results. Error: Some undefined error");
           return res();
         });
         results.on("data", (data) => null);
@@ -348,15 +344,15 @@ describe("Activity", () => {
       const command2 = new Start();
       const command3 = new Run("test_command1");
       const script = Script.create([command1, command2, command3]);
-      const results = await activity.execute(script.getExeScriptRequest(), false, 1_000, 3);
 
       const error = {
         message: "non-retryable error",
-        status: 500,
+        status: 401,
         toString: () => `Error: non-retryable error`,
       };
-
       when(mockActivityControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenReject(error);
+
+      const results = await activity.execute(script.getExeScriptRequest(), false, 1_000, 3);
 
       return new Promise<void>((res) => {
         results.on("error", (error: GolemWorkError) => {
@@ -365,9 +361,7 @@ describe("Activity", () => {
           expect(error.getActivity()).toBeDefined();
           expect(error.getAgreement()).toBeDefined();
           expect(error.getProvider()?.name).toEqual("Test Provider");
-          expect(error.previous?.toString()).toEqual(
-            "Error: Failed to fetch activity results. Attempt: 1. Error: non-retryable error",
-          );
+          expect(error.previous?.toString()).toEqual("Error: non-retryable error");
           return res();
         });
         results.on("data", () => null);
@@ -415,16 +409,14 @@ describe("Activity", () => {
       const command2 = new Start();
       const command3 = new Run("test_command1");
       const script = Script.create([command1, command2, command3]);
-      const results = await activity.execute(script.getExeScriptRequest());
       const error = {
         message: "GSB error: endpoint address not found. Terminated.",
         status: 500,
+        toString: () => "Error: GSB error: endpoint address not found. Terminated.",
       };
 
       when(mockActivityControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenReject(error);
-      when(mockActivityState.getActivityState(anything())).thenResolve({
-        state: [ActivityStateEnum.Terminated, ActivityStateEnum.Terminated],
-      });
+      const results = await activity.execute(script.getExeScriptRequest(), false, undefined, 1);
 
       return new Promise<void>((res) => {
         results.on("error", (error: GolemWorkError) => {
@@ -435,7 +427,7 @@ describe("Activity", () => {
           expect(error.getProvider()?.name).toEqual("Test Provider");
           expect(error.previous?.message).toEqual("GSB error: endpoint address not found. Terminated.");
           expect(error.toString()).toEqual(
-            "Error: Unable to get activity results. GSB error: endpoint address not found. Terminated.",
+            "Error: Unable to get activity results. Error: GSB error: endpoint address not found. Terminated.",
           );
           return res();
         });
