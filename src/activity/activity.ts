@@ -275,10 +275,6 @@ export class Activity {
                 maxTimeout: 15_000,
               },
             );
-            if (!isRunning()) {
-              logger.debug("Activity is no longer running, will stop polling for batch execution results");
-              return this.destroy(new GolemAbortError(`Activity ${activityId} has been interrupted.`));
-            }
 
             const newResults =
               rawExecBachResults &&
