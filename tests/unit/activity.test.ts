@@ -11,7 +11,7 @@ import {
 } from "../../src";
 import { sleep } from "../../src/utils";
 import { Capture, Deploy, DownloadFile, Run, Script, Start, Terminate, UploadFile } from "../../src/script";
-import { anything, imock, instance, mock, reset, when } from "@johanblumenberg/ts-mockito";
+import { anything, imock, instance, mock, reset, spy, verify, when } from "@johanblumenberg/ts-mockito";
 import * as YaTsClient from "ya-ts-client";
 import { buildExeScriptSuccessResult } from "./helpers";
 import EventEmitter from "events";
@@ -315,14 +315,11 @@ describe("Activity", () => {
       const command2 = new Start();
       const command3 = new Run("test_command1");
       const script = Script.create([command1, command2, command3]);
-      const results = await activity.execute(script.getExeScriptRequest());
 
-      const error = {
-        message: "Some undefined error",
-        status: 400,
-      };
-
+      const error = new Error("Some undefined error");
       when(mockActivityControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenReject(error);
+
+      const results = await activity.execute(script.getExeScriptRequest(), false, 200, 0);
 
       return new Promise<void>((res) => {
         results.on("error", (error: GolemWorkError) => {
@@ -331,38 +328,31 @@ describe("Activity", () => {
           expect(error.getActivity()).toBeDefined();
           expect(error.getAgreement()).toBeDefined();
           expect(error.getProvider()?.name).toEqual("Test Provider");
-          expect(error.previous?.toString()).toEqual(
-            "Error: Command #0 getExecBatchResults error: Some undefined error",
-          );
-          expect(error.toString()).toEqual(
-            "Error: Unable to get activity results. Command #0 getExecBatchResults error: Some undefined error",
-          );
+          expect(error.previous?.toString()).toEqual("Error: Some undefined error");
+          expect(error.toString()).toEqual("Error: Unable to get activity results. Error: Some undefined error");
           return res();
         });
         results.on("data", (data) => null);
       });
     });
 
-    it("should handle gsb error", async () => {
+    it("should handle non-retryable error", async () => {
       const activity = await Activity.create(instance(mockAgreement), instance(mockYagna), {
         activityExeBatchResultPollIntervalSeconds: 10,
       });
       const command1 = new Deploy();
       const command2 = new Start();
       const command3 = new Run("test_command1");
-      const command4 = new Run("test_command1");
-      const command5 = new Run("test_command1");
-      const command6 = new Run("test_command1");
-      const command7 = new Run("test_command1");
-      const script = Script.create([command1, command2, command3, command4, command5, command6, command7]);
-      const results = await activity.execute(script.getExeScriptRequest());
+      const script = Script.create([command1, command2, command3]);
 
       const error = {
-        message: "GSB error: remote service at `test` error: GSB failure: Bad request: endpoint address not found",
-        status: 500,
+        message: "non-retryable error",
+        status: 401,
+        toString: () => `Error: non-retryable error`,
       };
-
       when(mockActivityControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenReject(error);
+
+      const results = await activity.execute(script.getExeScriptRequest(), false, 1_000, 3);
 
       return new Promise<void>((res) => {
         results.on("error", (error: GolemWorkError) => {
@@ -371,17 +361,47 @@ describe("Activity", () => {
           expect(error.getActivity()).toBeDefined();
           expect(error.getAgreement()).toBeDefined();
           expect(error.getProvider()?.name).toEqual("Test Provider");
-          expect(error.previous?.toString()).toEqual(
-            "Error: Command #0 getExecBatchResults error: GSB error: remote service at `test` error: GSB failure: Bad request: endpoint address not found",
-          );
-          expect(error.toString()).toEqual(
-            "Error: Unable to get activity results. Command #0 getExecBatchResults error: GSB error: remote service at `test` error: GSB failure: Bad request: endpoint address not found",
-          );
+          expect(error.previous?.toString()).toEqual("Error: non-retryable error");
           return res();
         });
         results.on("data", () => null);
       });
     });
+
+    it("should retry when a retryable error occurs", async () => {
+      const activity = await Activity.create(instance(mockAgreement), instance(mockYagna), {
+        activityExeBatchResultPollIntervalSeconds: 10,
+      });
+      const command1 = new Deploy();
+      const command2 = new Start();
+      const command3 = new Run("test_command1");
+      const script = Script.create([command1, command2, command3]);
+
+      const error = {
+        message: "timeout",
+        status: 408,
+        toString: () => `Error: timeout`,
+      };
+      const testResult = {
+        isBatchFinished: true,
+        result: "Ok" as "Ok" | "Error",
+        stdout: "Done",
+        stderr: "",
+        index: 1,
+        eventDate: new Date().toISOString(),
+      };
+      when(mockActivityControl.getExecBatchResults(anything(), anything(), anything(), anything()))
+        .thenReject(error)
+        .thenReject(error)
+        .thenResolve([testResult]);
+
+      const results = await activity.execute(script.getExeScriptRequest(), false, 1_000, 10);
+
+      for await (const result of results) {
+        expect(result).toEqual(testResult);
+      }
+      verify(mockActivityControl.getExecBatchResults(anything(), anything(), anything(), anything())).times(3);
+    }, 7_000);
 
     it("should handle termination error", async () => {
       const activity = await Activity.create(instance(mockAgreement), instance(mockYagna));
@@ -389,16 +409,14 @@ describe("Activity", () => {
       const command2 = new Start();
       const command3 = new Run("test_command1");
       const script = Script.create([command1, command2, command3]);
-      const results = await activity.execute(script.getExeScriptRequest());
       const error = {
         message: "GSB error: endpoint address not found. Terminated.",
         status: 500,
+        toString: () => "Error: GSB error: endpoint address not found. Terminated.",
       };
 
       when(mockActivityControl.getExecBatchResults(anything(), anything(), anything(), anything())).thenReject(error);
-      when(mockActivityState.getActivityState(anything())).thenResolve({
-        state: [ActivityStateEnum.Terminated, ActivityStateEnum.Terminated],
-      });
+      const results = await activity.execute(script.getExeScriptRequest(), false, undefined, 1);
 
       return new Promise<void>((res) => {
         results.on("error", (error: GolemWorkError) => {
@@ -409,7 +427,7 @@ describe("Activity", () => {
           expect(error.getProvider()?.name).toEqual("Test Provider");
           expect(error.previous?.message).toEqual("GSB error: endpoint address not found. Terminated.");
           expect(error.toString()).toEqual(
-            "Error: Unable to get activity results. GSB error: endpoint address not found. Terminated.",
+            "Error: Unable to get activity results. Error: GSB error: endpoint address not found. Terminated.",
           );
           return res();
         });
