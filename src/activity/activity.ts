@@ -294,12 +294,7 @@ export class Activity {
               });
             }
           } catch (error) {
-            if (!isRunning()) {
-              logger.debug("Activity is no longer running, will stop polling for batch execution results");
-              return this.destroy(new GolemAbortError(`Activity ${activityId} has been interrupted.`, error));
-            }
             logger.error(`Processing batch execution results failed`, error);
-
             events.emit("scriptExecuted", { activityId, agreementId: agreement.id, success: false });
             return this.destroy(
               new GolemWorkError(

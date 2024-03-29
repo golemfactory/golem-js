@@ -5,7 +5,7 @@ const DEFAULTS = {
   activityRequestTimeout: 10000,
   activityExecuteTimeout: 1000 * 60 * 5, // 5 min,
   activityExeBatchResultPollIntervalSeconds: 5,
-  activityExeBatchResultMaxRetries: 10,
+  activityExeBatchResultMaxRetries: 20,
 };
 
 /**
