@@ -244,8 +244,9 @@ export class AgreementPoolService {
           );
         events.forEach((event) => {
           afterTimestamp = event.eventDate;
-          // @ts-expect-error: Bug in ya-tsclient: typo in eventtype
-          if (event.eventtype === "AgreementTerminatedEvent") {
+          // @ts-expect-error: Bug in yagna 0.14. Fixed in 0.15. FIXME: remove once we bump MIN_SUPPORTED_YAGNA
+          const eventType = event.eventType || event.eventtype;
+          if (eventType === "AgreementTerminatedEvent") {
             this.handleTerminationAgreementEvent(event.agreementId, event.reason);
           }
         });
