@@ -13,6 +13,10 @@ export interface AllocationOptions extends BasePaymentOptions {
     platform: string;
   };
   expirationSec?: number;
+  deposit?: {
+    contract: string;
+    id: string;
+  };
 }
 
 /**
@@ -52,6 +56,7 @@ export class Allocation {
         remainingAmount: "",
         spentAmount: "",
         allocationId: "",
+        deposit: config.deposit,
       };
       const newModel = await yagnaApi.payment.createAllocation(model);
       config.logger.debug(

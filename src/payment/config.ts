@@ -59,6 +59,7 @@ export class PaymentConfig extends BaseConfig {
   public readonly unsubscribeTimeoutMs: number;
   public readonly debitNoteFilter: DebitNoteFilter;
   public readonly invoiceFilter: InvoiceFilter;
+  public readonly allocation?: Partial<AllocationOptions>;
 
   constructor(options?: PaymentOptions) {
     super(options);
@@ -69,6 +70,7 @@ export class PaymentConfig extends BaseConfig {
     this.unsubscribeTimeoutMs = options?.unsubscribeTimeoutMs ?? DEFAULTS.unsubscribeTimeoutMs;
     this.debitNoteFilter = options?.debitNotesFilter ?? DEFAULTS.debitNoteFilter;
     this.invoiceFilter = options?.invoiceFilter ?? DEFAULTS.invoiceFilter;
+    this.allocation = options?.allocation;
   }
 }
 /**
@@ -79,6 +81,7 @@ export class AllocationConfig extends BaseConfig {
   public readonly payment: { driver: string; network: string };
   public readonly expirationSec: number;
   public readonly account: { address: string; platform: string };
+  public readonly deposit?: { contract: string; id: string };
 
   constructor(options?: AllocationOptions) {
     super(options);
@@ -100,6 +103,8 @@ export class AllocationConfig extends BaseConfig {
     };
 
     this.expirationSec = options?.expirationSec || DEFAULTS.allocationExpirationSec;
+
+    this.deposit = options?.deposit;
   }
 }
 /**

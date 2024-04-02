@@ -33,6 +33,7 @@ export interface PaymentOptions extends BasePaymentOptions {
   debitNotesFilter?: DebitNoteFilter;
   /** A custom filter that checks every invoices coming from providers */
   invoiceFilter?: InvoiceFilter;
+  allocation?: Partial<AllocationOptions>;
 }
 
 export type DebitNoteFilter = (debitNote: DebitNoteDTO) => Promise<boolean> | boolean;
@@ -111,7 +112,12 @@ export class PaymentService {
         platform: this.getPaymentPlatform(),
         address: await this.getPaymentAddress(),
       };
-      this.allocation = await Allocation.create(this.yagnaApi, { ...this.config.options, account, ...options });
+      this.allocation = await Allocation.create(this.yagnaApi, {
+        ...this.config.options,
+        account,
+        ...(this.config?.allocation || {}),
+        ...options,
+      });
       this.events.emit("allocationCreated", this.allocation);
       return this.allocation;
     } catch (error) {
