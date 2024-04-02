@@ -33,6 +33,10 @@ export interface PaymentOptions extends BasePaymentOptions {
   debitNotesFilter?: DebitNoteFilter;
   /** A custom filter that checks every invoices coming from providers */
   invoiceFilter?: InvoiceFilter;
+  /** Additional options that will be used when creating an allocation. Learn more: {@link AllocationOptions}.
+   * Keep in mind that you can override these options on a per-allocation basis when creating an allocation
+   * by passing additional options to {@link PaymentService.createAllocation}
+   */
   allocation?: Partial<AllocationOptions>;
 }
 

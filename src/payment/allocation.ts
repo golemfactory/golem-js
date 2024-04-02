@@ -13,8 +13,20 @@ export interface AllocationOptions extends BasePaymentOptions {
     platform: string;
   };
   expirationSec?: number;
+  /**
+   * Optionally provide a deposit to be used for the allocation, instead of using funds from the yagna wallet.
+   * Deposit is a way to pay for the computation using someone else's funds. Learn more about deposits and allowance
+   * in the [official documentation](https://docs.golem.network/creators/javascript/tutorials/allowance).
+   * TODO: actually write the tutorial about deposits and allowance
+   */
   deposit?: {
+    /**
+     * Address of the smart contract that holds the deposit.
+     */
     contract: string;
+    /**
+     * ID of the deposit, obtained by calling the `createDeposit` method on the smart contract.
+     */
     id: string;
   };
 }
