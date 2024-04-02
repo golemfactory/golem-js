@@ -113,9 +113,9 @@ export class PaymentService {
         address: await this.getPaymentAddress(),
       };
       this.allocation = await Allocation.create(this.yagnaApi, {
-        ...this.config.options,
         account,
-        ...(this.config?.allocation || {}),
+        ...this.config.options,
+        ...this.config.allocation,
         ...options,
       });
       this.events.emit("allocationCreated", this.allocation);
