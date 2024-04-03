@@ -4,7 +4,7 @@ export interface GolemNetworkOptions {
   // todo
 }
 
-export class GolemNetwork {
+export class GolemNetworkNew {
   constructor(private readonly options: GolemNetworkOptions) {}
 
   async connect() {

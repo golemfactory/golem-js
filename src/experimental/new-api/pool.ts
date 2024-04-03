@@ -134,6 +134,10 @@ export class ActivityPool {
     this.events.emit("ready");
   }
 
+  async drain() {
+    // TODO
+  }
+
   async stop() {
     if (this.state != ActivityPoolState.READY) {
       return;

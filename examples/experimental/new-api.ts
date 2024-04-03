@@ -1,7 +1,7 @@
-import { GolemNetwork } from "../../src/experimental/new-api";
+import { GolemNetworkNew } from "@golem-sdk/golem-js/experimental";
 
 async function main() {
-  const golem = new GolemNetwork({
+  const golem = new GolemNetworkNew({
     api: {
       url: process.env.YAGNA_API_URL || "http://127.0.0.1:7465",
       key: process.env.YAGNA_APPKEY || "try-golem",
@@ -67,7 +67,7 @@ async function main() {
       network: "basic",
     });
 
-  // const deployment = builder.getDeployment();
+  const deployment = builder.getDeployment();
 
   await deployment.start();
 
