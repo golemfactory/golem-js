@@ -1,4 +1,4 @@
-import { ActivityPoolService } from "./service";
+import { ActivityPool } from "./service";
 import { Activity } from "./activity";
 import { YagnaApi } from "../utils";
 import { Agreement, AgreementPoolService } from "../agreement";
@@ -16,12 +16,12 @@ const mockPaymentService = mock(PaymentService);
 const mockAgreement = mock(Agreement);
 
 describe("Activity Pool Service", () => {
-  let activityService: ActivityPoolService;
+  let activityService: ActivityPool;
 
   const yagnaApi = instance(mockYagna);
 
   beforeEach(() => {
-    activityService = new ActivityPoolService(yagnaApi, instance(mockAgreementPool), instance(mockPaymentService));
+    activityService = new ActivityPool(yagnaApi, instance(mockAgreementPool), instance(mockPaymentService));
 
     // Reset mocks
     reset(mockYagna);
