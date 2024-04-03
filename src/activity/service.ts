@@ -2,9 +2,9 @@ import { Activity, ActivityOptions } from "./activity";
 import { defaultLogger, Logger, YagnaApi } from "../utils";
 import { AgreementPoolService } from "../agreement";
 import { PaymentService } from "../payment";
-import { GolemWorkError, WorkErrorCode } from "../work/error";
+import { GolemWorkError, WorkErrorCode } from "../work";
 
-interface ActivityServiceOptions extends ActivityOptions {}
+export interface ActivityPoolOptions extends ActivityOptions {}
 
 /**
  * Activity Pool Service
@@ -12,7 +12,7 @@ interface ActivityServiceOptions extends ActivityOptions {}
  * If the pool is empty, a new activity is created using the agreement provided by AgreementPoolService.
  * @hidden
  */
-export class ActivityPoolService {
+export class ActivityPool {
   private logger: Logger;
   private pool: Activity[] = [];
   private runningState = false;
@@ -21,7 +21,7 @@ export class ActivityPoolService {
     private yagnaApi: YagnaApi,
     private agreementService: AgreementPoolService,
     private paymentService: PaymentService,
-    private options?: ActivityServiceOptions,
+    private options?: ActivityPoolOptions,
   ) {
     this.logger = this.logger = options?.logger || defaultLogger("work");
   }

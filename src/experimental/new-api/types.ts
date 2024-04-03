@@ -1,6 +1,6 @@
 import { Logger } from "../../utils";
 
-export enum GolemBackendState {
+export enum ActivityPoolState {
   INITIAL = "INITIAL",
   STARTING = "STARTING",
   READY = "READY",
@@ -9,7 +9,7 @@ export enum GolemBackendState {
   ERROR = "ERROR",
 }
 
-export interface GolemBackendResources {
+export interface Resources {
   /** The minimum CPU requirement for each service instance. */
   minCpu?: number;
   /* The minimum memory requirement (in Gibibyte) for each service instance. */
@@ -18,15 +18,15 @@ export interface GolemBackendResources {
   minStorageGib?: number;
 }
 
-export interface GolemMarketConfig {
+export interface MarketOptions {
   /** How long you want to rent the resources in hours */
   rentHours: number;
 
-  /** How many concurrent instances you want to run */
-  expectedInstances: number;
-
-  /** What's the desired hourly rate spend in GLM/hour */
-  priceGlmPerHour: number;
+  pricing: {
+    maxStartPrice: number;
+    maxCpuPerHourPrice: number;
+    maxEnvPerHourPrice: number;
+  };
 
   /** The payment network that should be considered while looking for providers and where payments will be done */
   paymentNetwork?: string;
@@ -37,22 +37,32 @@ export interface GolemMarketConfig {
    * If not provided, the list will be pulled from: https://provider-health.golem.network/v1/provider-whitelist
    */
   withProviders?: string[];
+  withoutProviders?: string[];
+  withOperators?: string[];
+  withoutOperators?: string[];
 }
 
-export interface GolemBackendConfig {
+export interface PaymentOptions {
+  // TODO
+}
+
+export interface ActivityPoolOptions {
   image: string;
   logger?: Logger;
-  abortController?: AbortController;
-  api: {
+  api?: {
     key: string;
     url: string;
   };
-  resources?: GolemBackendResources;
-  market: GolemMarketConfig;
+  abortController?: AbortController;
+  resources?: Resources;
+  replicas?: number;
+  market: MarketOptions;
+  network?: string;
+  payment?: PaymentOptions;
   // networking?: string | Network[];
 }
 
-export interface GolemBackendEvents {
+export interface ActivityPoolEvents {
   /**
    * Fires when backend is started.
    */
@@ -75,9 +85,6 @@ export interface GolemBackendEvents {
   end: () => void;
 }
 
-export interface GolemInstanceEvents {
-  /**
-   * Fires when instance is destroyed.
-   */
-  end: () => void;
+export interface NetworkOptions {
+  // TODO
 }
