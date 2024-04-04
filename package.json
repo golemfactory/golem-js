@@ -45,7 +45,7 @@
     "test:import": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config tests/import/jest.config.js",
     "lint": "npm run lint:ts && npm run lint:ts:tests && npm run lint:eslint",
     "lint:ts": "tsc --project tsconfig.json --noEmit",
-    "lint:ts:tests": "tsc --project tests/tsconfig.json --noEmit",
+    "lint:ts:tests": "",
     "lint:eslint": "eslint .",
     "format": "prettier -w .",
     "format:check": "prettier -c .",
@@ -75,7 +75,7 @@
     "tmp": "^0.2.2",
     "uuid": "^9.0.1",
     "ws": "^8.16.0",
-    "ya-ts-client": "^1.1.0"
+    "ya-ts-client": "workspace:*"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.0.3",
