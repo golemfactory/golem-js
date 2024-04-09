@@ -12,7 +12,7 @@ describe("Deployment builder", () => {
       builder
         .createActivityPool("my-pool", {
           image: "image",
-          marketModule: {
+          market: {
             rentHours: 12,
             pricing: {
               maxStartPrice: 1,
@@ -23,7 +23,7 @@ describe("Deployment builder", () => {
         })
         .createActivityPool("my-pool", {
           image: "image",
-          marketModule: {
+          market: {
             rentHours: 12,
             pricing: {
               maxStartPrice: 1,
@@ -56,7 +56,7 @@ describe("Deployment builder", () => {
         .createActivityPool("my-pool", {
           image: "image",
           network: "non-existing-network",
-          marketModule: {
+          market: {
             rentHours: 12,
             pricing: {
               maxStartPrice: 1,
