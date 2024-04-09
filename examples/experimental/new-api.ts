@@ -1,4 +1,4 @@
-import { GolemDeploymentBuilder, GolemNetworkNew } from "@golem-sdk/golem-js/experimental";
+import { GolemNetworkNew } from "@golem-sdk/golem-js/experimental";
 
 async function main() {
   const golem = new GolemNetworkNew({
@@ -14,7 +14,7 @@ async function main() {
 
   await golem.connect();
 
-  const builder = golem.createBuilder() as GolemDeploymentBuilder;
+  const builder = golem.createBuilder();
 
   // const deployment = golem.createDeployment();
 
