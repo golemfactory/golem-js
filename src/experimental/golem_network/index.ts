@@ -1,1 +1,1 @@
-export { GolemNetwork, GolemNetworkConfig } from "./golem_network";
+export { JobManager, JobManagerConfig } from "../job/job_manager";
