@@ -32,6 +32,7 @@ export interface ReputationProviderEntry {
 
 /**
  * Information about a rejected operator.
+ * @experimental
  */
 export interface ReputationRejectedOperator {
   operator: {
@@ -42,6 +43,7 @@ export interface ReputationRejectedOperator {
 
 /**
  * Information about a rejected provider.
+ * @experimental
  */
 export interface ReputationRejectedProvider {
   provider: ProviderInfo;
@@ -50,6 +52,7 @@ export interface ReputationRejectedProvider {
 
 /**
  * Information about untested provider.
+ * @experimental
  */
 export interface ReputationUntestedProvider {
   provider: ProviderInfo;
@@ -93,7 +96,7 @@ export interface ProposalFilterOptions {
  * Options for the agreement selector.
  * @experimental
  */
-export interface AgreementSelectorOption {
+export interface AgreementSelectorOptions {
   /**
    * The size of top provider pool used to pick a random one.
    *
@@ -113,8 +116,44 @@ export interface AgreementSelectorOption {
 
 /**
  * Weights used to calculate the score for providers.
+ * @experimental
  */
 export type ReputationWeights = Partial<ReputationProviderScores>;
+
+/**
+ * Mixin for objects with reputation weights.
+ * @experimental
+ */
+export interface ReputationWeightsMixin {
+  weights?: ReputationWeights;
+}
+
+/**
+ * Preset configuration for reputation system.
+ *
+ * @experimental
+ */
+export interface ReputationPreset {
+  proposalFilter?: ProposalFilterOptions & ReputationWeightsMixin;
+  agreementSelector?: AgreementSelectorOptions & ReputationWeightsMixin;
+}
+
+/**
+ * Interface for predefined reputation presets.
+ *
+ * @experimental
+ */
+export interface ReputationPresets {
+  compute: ReputationPreset;
+  service: ReputationPreset;
+}
+
+/**
+ * Names of predefined reputation presets.
+ *
+ * @experimental
+ */
+export type ReputationPresetName = keyof ReputationPresets;
 
 /**
  * Configuration for ReputationSystem class.
@@ -140,4 +179,6 @@ export interface ReputationConfig {
    * Logger to use.
    */
   logger?: Logger;
+
+  preset?: ReputationPresetName;
 }

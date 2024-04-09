@@ -2,10 +2,12 @@ import { Proposal, ProposalFilter } from "../../market";
 import { AgreementCandidate, AgreementSelector } from "../../agreement";
 import { GolemReputationError } from "./error";
 import {
-  AgreementSelectorOption,
+  AgreementSelectorOptions,
   ProposalFilterOptions,
   ReputationConfig,
   ReputationData,
+  ReputationPresetName,
+  ReputationPresets,
   ReputationProviderEntry,
   ReputationProviderScores,
   ReputationRejectedOperator,
@@ -51,6 +53,48 @@ export const DEFAULT_REPUTATION_URL = "https://reputation.dev-test.golem.network
  * Default for `topPoolSize` agreement selector option.
  */
 export const DEFAULT_AGREEMENT_TOP_POOL_SIZE = 2;
+
+/**
+ * Predefined presets for reputation system.
+ */
+export const REPUTATION_PRESETS: ReputationPresets = {
+  /**
+   * Preset for short CPU intensive compute tasks.
+   */
+  compute: {
+    proposalFilter: {
+      min: 0.5,
+      weights: {
+        cpuSingleThreadScore: 1,
+      },
+    },
+    agreementSelector: {
+      weights: {
+        cpuSingleThreadScore: 1,
+      },
+      topPoolSize: DEFAULT_AGREEMENT_TOP_POOL_SIZE,
+    },
+  },
+  /**
+   * Preset for long-running services, where uptime is important.
+   */
+  service: {
+    proposalFilter: {
+      min: DEFAULT_PROPOSAL_MIN_SCORE,
+      weights: {
+        uptime: 0.8,
+        cpuMultiThreadScore: 0.2,
+      },
+    },
+    agreementSelector: {
+      weights: {
+        uptime: 0.5,
+        cpuMultiThreadScore: 0.5,
+      },
+      topPoolSize: DEFAULT_AGREEMENT_TOP_POOL_SIZE,
+    },
+  },
+};
 
 /**
  * Reputation system client.
@@ -121,6 +165,18 @@ export class ReputationSystem {
   private readonly logger: Logger;
 
   /**
+   * Default options used when creating proposal filter.
+   * @private
+   */
+  private defaultProposalFilterOptions: ProposalFilterOptions;
+
+  /**
+   * Default options used when creating agreement selector.
+   * @private
+   */
+  private defaultAgreementSelectorOptions: AgreementSelectorOptions;
+
+  /**
    * Create a new reputation system client and fetch the reputation data.
    */
   public static async create(config?: ReputationConfig): Promise<ReputationSystem> {
@@ -133,6 +189,49 @@ export class ReputationSystem {
     this.url = this.config?.url ?? DEFAULT_REPUTATION_URL;
     this.logger = this.config?.logger?.child("reputation") ?? nullLogger();
     this.paymentNetwork = this.config?.paymentNetwork ?? getPaymentNetwork();
+
+    this.defaultProposalFilterOptions = {
+      min: DEFAULT_PROPOSAL_MIN_SCORE,
+      acceptUnlisted: undefined,
+    };
+    this.defaultAgreementSelectorOptions = {
+      topPoolSize: DEFAULT_AGREEMENT_TOP_POOL_SIZE,
+      agreementBonus: 0,
+    };
+
+    if (this.config?.preset) {
+      this.usePreset(this.config.preset);
+    }
+  }
+
+  /**
+   * Apply preset to current reputation system configuration.
+   * @param presetName Preset name to use.
+   */
+  usePreset(presetName: ReputationPresetName): void {
+    const presetConfig = REPUTATION_PRESETS[presetName];
+    if (!presetConfig) {
+      throw new GolemReputationError(`Reputation preset not found: ${presetName}`);
+    }
+
+    if (presetConfig.proposalFilter?.weights) {
+      this.setProposalWeights(presetConfig.proposalFilter.weights);
+    }
+
+    if (presetConfig.agreementSelector?.weights) {
+      this.setAgreementWeights(presetConfig.agreementSelector.weights);
+    }
+
+    this.defaultProposalFilterOptions = {
+      min: presetConfig.proposalFilter?.min ?? this.defaultProposalFilterOptions.min,
+      acceptUnlisted: presetConfig.proposalFilter?.acceptUnlisted, // undefined is meaningful
+    };
+
+    this.defaultAgreementSelectorOptions = {
+      topPoolSize: presetConfig.agreementSelector?.topPoolSize ?? this.defaultAgreementSelectorOptions.topPoolSize,
+      agreementBonus:
+        presetConfig.agreementSelector?.agreementBonus ?? this.defaultAgreementSelectorOptions.agreementBonus,
+    };
   }
 
   /**
@@ -258,7 +357,7 @@ export class ReputationSystem {
       // Filter based on reputation scores.
       const scoreEntry = this.providersScoreMap.get(proposal.provider.id);
       if (scoreEntry) {
-        const min = opts?.min ?? DEFAULT_PROPOSAL_MIN_SCORE;
+        const min = opts?.min ?? this.defaultProposalFilterOptions.min ?? DEFAULT_PROPOSAL_MIN_SCORE;
         const score = this.calculateScore(scoreEntry.scores, this.proposalWeights);
         this.logger.debug(`Proposal score for ${proposal.provider.id}: ${score} - min ${min}`, {
           provider: proposal.provider,
@@ -278,7 +377,11 @@ export class ReputationSystem {
       );
 
       // Use the acceptUnlisted option if provided, otherwise allow only if there are no known providers.
-      return opts?.acceptUnlisted ?? this.data.testedProviders.length === 0;
+      return (
+        opts?.acceptUnlisted ??
+        this.defaultProposalFilterOptions.acceptUnlisted ??
+        this.data.testedProviders.length === 0
+      );
     };
   }
 
@@ -293,36 +396,24 @@ export class ReputationSystem {
    *
    * @param opts
    */
-  agreementSelector(opts?: AgreementSelectorOption): AgreementSelector {
+  agreementSelector(opts?: AgreementSelectorOptions): AgreementSelector {
+    const poolSize =
+      opts?.topPoolSize ?? this.defaultAgreementSelectorOptions.topPoolSize ?? DEFAULT_AGREEMENT_TOP_POOL_SIZE;
+
     return async (candidates): Promise<AgreementCandidate> => {
-      const array = Array.from(candidates);
       // Cache scores for providers.
       const scoresMap = new Map<string, number>();
 
-      // Sort the array by score
-      array.sort((a, b) => {
-        const aId = a.proposal.provider.id;
-        const bId = b.proposal.provider.id;
-
-        const aScoreData = this.providersScoreMap.get(aId)?.scores ?? {};
-        const bScoreData = this.providersScoreMap.get(bId)?.scores ?? {};
-
-        // Get the score values.
-        let aScoreValue = scoresMap.get(aId) ?? this.calculateScore(aScoreData, this.agreementWeights);
-        let bScoreValue = scoresMap.get(bId) ?? this.calculateScore(bScoreData, this.agreementWeights);
-
-        // Store score if not already stored.
-        if (!scoresMap.has(aId)) scoresMap.set(aId, aScoreValue);
-        if (!scoresMap.has(bId)) scoresMap.set(bId, bScoreValue);
-
-        // Add bonus for existing agreements.
-        if (a.agreement) aScoreValue += opts?.agreementBonus ?? 0;
-        if (b.agreement) bScoreValue += opts?.agreementBonus ?? 0;
-
-        return bScoreValue - aScoreValue;
+      candidates.forEach((c) => {
+        const data = this.providersScoreMap.get(c.proposal.provider.id)?.scores ?? {};
+        let score = this.calculateScore(data, this.agreementWeights);
+        if (c.agreement) score += opts?.agreementBonus ?? this.defaultAgreementSelectorOptions.agreementBonus ?? 0;
+        scoresMap.set(c.proposal.provider.id, score);
       });
 
-      const topPool = Math.min(opts?.topPoolSize ?? DEFAULT_AGREEMENT_TOP_POOL_SIZE, array.length);
+      const array = this.sortCandidatesByScore(candidates, scoresMap);
+
+      const topPool = Math.min(poolSize, array.length);
       const index = topPool === 1 ? 0 : Math.floor(Math.random() * topPool);
 
       return array[index];
@@ -358,10 +449,27 @@ export class ReputationSystem {
    * @param opts
    */
   calculateProviderPool(opts?: ProposalFilterOptions): ReputationProviderEntry[] {
-    const min = opts?.min ?? DEFAULT_PROPOSAL_MIN_SCORE;
+    const min = opts?.min ?? this.defaultProposalFilterOptions.min ?? DEFAULT_PROPOSAL_MIN_SCORE;
     return this.data.testedProviders.filter((entry) => {
       const score = this.calculateScore(entry.scores, this.proposalWeights);
       return score >= min;
     });
+  }
+
+  sortCandidatesByScore(candidates: AgreementCandidate[], scoresMap: Map<string, number>): AgreementCandidate[] {
+    const array = Array.from(candidates);
+
+    array.sort((a, b) => {
+      const aId = a.proposal.provider.id;
+      const bId = b.proposal.provider.id;
+
+      // Get the score values.
+      const aScoreValue = scoresMap.get(aId) ?? 0;
+      const bScoreValue = scoresMap.get(bId) ?? 0;
+
+      return bScoreValue - aScoreValue;
+    });
+
+    return array;
   }
 }

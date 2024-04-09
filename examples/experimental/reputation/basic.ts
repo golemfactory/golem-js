@@ -18,6 +18,7 @@ import { ReputationSystem } from "@golem-sdk/golem-js/experimental";
 
   const reputation = await ReputationSystem.create({
     paymentNetwork: "polygon",
+    preset: "service",
   });
 
   console.log("Listed providers:", reputation.getData().testedProviders.length);
