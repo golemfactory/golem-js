@@ -1,11 +1,10 @@
 import { GolemDeploymentBuilder } from "./builder";
+import { DeploymentOptions } from "./deployment";
 
-export interface GolemNetworkOptions {
-  // todo
-}
+export interface GolemNetworkOptions extends DeploymentOptions {}
 
 export class GolemNetworkNew {
-  constructor(private readonly options: GolemNetworkOptions) {}
+  constructor(public readonly options: GolemNetworkOptions) {}
 
   async connect() {
     // todo
@@ -16,6 +15,6 @@ export class GolemNetworkNew {
   }
 
   createBuilder(): GolemDeploymentBuilder {
-    throw new Error("TODO");
+    return new GolemDeploymentBuilder(this);
   }
 }

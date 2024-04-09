@@ -1,4 +1,4 @@
-import { GolemNetworkNew } from "@golem-sdk/golem-js/experimental";
+import { GolemDeploymentBuilder, GolemNetworkNew } from "@golem-sdk/golem-js/experimental";
 
 async function main() {
   const golem = new GolemNetworkNew({
@@ -7,13 +7,14 @@ async function main() {
       key: process.env.YAGNA_APPKEY || "try-golem",
     },
     payment: {},
+
     market: {},
     dataTransferProtocol: "gftp",
   });
 
   await golem.connect();
 
-  const builder = golem.createBuilder();
+  const builder = golem.createBuilder() as GolemDeploymentBuilder;
 
   // const deployment = golem.createDeployment();
 
