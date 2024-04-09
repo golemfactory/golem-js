@@ -1,9 +1,9 @@
 import { GolemConfigError } from "../../error/golem-error";
 import { GolemDeploymentBuilder } from "./builder";
-import { GolemNetworkNew } from "./golem";
+import { GolemNetwork } from "../../golem-network";
 import { imock } from "@johanblumenberg/ts-mockito";
 
-const mockGolemNetwork = imock<GolemNetworkNew>();
+const mockGolemNetwork = imock<GolemNetwork>();
 
 describe("Deployment builder", () => {
   it("throws an error when creating an activity pool with the same name", () => {
@@ -12,7 +12,7 @@ describe("Deployment builder", () => {
       builder
         .createActivityPool("my-pool", {
           image: "image",
-          market: {
+          marketModule: {
             rentHours: 12,
             pricing: {
               maxStartPrice: 1,
@@ -23,7 +23,7 @@ describe("Deployment builder", () => {
         })
         .createActivityPool("my-pool", {
           image: "image",
-          market: {
+          marketModule: {
             rentHours: 12,
             pricing: {
               maxStartPrice: 1,
@@ -56,7 +56,7 @@ describe("Deployment builder", () => {
         .createActivityPool("my-pool", {
           image: "image",
           network: "non-existing-network",
-          market: {
+          marketModule: {
             rentHours: 12,
             pricing: {
               maxStartPrice: 1,

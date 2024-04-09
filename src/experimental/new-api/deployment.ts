@@ -94,6 +94,7 @@ export class Deployment {
       });
     });
   }
+
   private getDataTransferProtocol(options: DeploymentOptions, yagnaApi: YagnaApi): StorageProvider {
     if (!options.dataTransferProtocol || options.dataTransferProtocol === "gftp") {
       return new GftpStorageProvider();
