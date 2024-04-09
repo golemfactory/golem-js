@@ -1,6 +1,6 @@
-import { GolemNetwork } from "@golem-sdk/golem-js/experimental";
+import { JobManager } from "@golem-sdk/golem-js/experimental";
 
-const golem = new GolemNetwork({
+const golem = new JobManager({
   yagna: {
     apiKey: "try_golem",
   },

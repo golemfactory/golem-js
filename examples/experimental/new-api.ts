@@ -1,4 +1,4 @@
-import { GolemNetwork } from "@golem-sdk/golem-js/experimental";
+import { GolemNetwork } from "@golem-sdk/golem-js";
 
 async function main() {
   const golem = new GolemNetwork({
