@@ -7,6 +7,7 @@ async function main() {
       key: process.env.YAGNA_APPKEY || "try-golem",
     },
     payment: {},
+
     market: {},
     dataTransferProtocol: "gftp",
   });
