@@ -1,7 +1,7 @@
 import { GolemConfigError } from "../../error/golem-error";
 import { NetworkOptions } from "../../network";
 import { Deployment, DeploymentComponents } from "./deployment";
-import { GolemNetworkNew } from "./golem";
+import { GolemNetwork } from "../../golem-network";
 import { ActivityPoolOptions } from "./types";
 import { validateDeployment } from "./validate-deployment";
 
@@ -18,29 +18,36 @@ export class GolemDeploymentBuilder {
     };
   }
 
-  constructor(private golemContext: GolemNetworkNew) {}
+  constructor(private glm: GolemNetwork) {}
 
   createActivityPool(name: string, options: ActivityPoolOptions): this {
     if (this.components.activityPools.some((pool) => pool.name === name)) {
       throw new GolemConfigError(`Activity pool with name ${name} already exists`);
     }
+
     this.components.activityPools.push({ name, options });
+
     return this;
   }
+
   createNetwork(name: string, options: NetworkOptions): this {
     if (this.components.networks.some((network) => network.name === name)) {
       throw new GolemConfigError(`Network with name ${name} already exists`);
     }
+
     this.components.networks.push({ name, options });
+
     return this;
   }
 
   getDeployment(): Deployment {
     validateDeployment(this.components);
     const deployment = new Deployment(this.components, {
-      ...this.golemContext.options,
+      ...this.glm.options,
     });
+
     this.reset();
+
     return deployment;
   }
 }

@@ -1,12 +1,12 @@
 import express from "express";
-import { GolemNetwork, JobState } from "@golem-sdk/golem-js/experimental";
+import { JobManager, JobState } from "@golem-sdk/golem-js/experimental";
 
 const app = express();
 const port = 3000;
 
 app.use(express.text());
 
-const golemClient = new GolemNetwork({
+const golemClient = new JobManager({
   yagna: {
     apiKey: "try_golem",
   },

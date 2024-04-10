@@ -1,13 +1,12 @@
-import { GolemNetworkNew } from "@golem-sdk/golem-js/experimental";
+import { GolemNetwork } from "@golem-sdk/golem-js";
 
 async function main() {
-  const golem = new GolemNetworkNew({
+  const golem = new GolemNetwork({
     api: {
       url: process.env.YAGNA_API_URL || "http://127.0.0.1:7465",
       key: process.env.YAGNA_APPKEY || "try-golem",
     },
     payment: {},
-
     market: {},
     dataTransferProtocol: "gftp",
   });

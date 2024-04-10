@@ -160,3 +160,14 @@ export class YagnaApi {
     }
   }
 }
+
+export interface YagnaEventSubscription<T> {
+  waitFor(matcher: (event: T) => boolean, opts: { timeout: number }): Promise<T>;
+
+  on(event: T): void;
+
+  filter(matcher: (event: T) => boolean): YagnaEventSubscription<T>;
+
+  /** Stops the subscription, resolves when all I/O is closed */
+  cancel(): Promise<void>;
+}
