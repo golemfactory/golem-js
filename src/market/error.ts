@@ -12,6 +12,7 @@ export enum MarketErrorCode {
   AgreementTerminationFailed = "AgreementTerminationFailed",
   AgreementCreationFailed = "AgreementCreationFailed",
   AgreementApprovalFailed = "AgreementApprovalFailed",
+  NoProposalAvailable = "NoProposalAvailable",
 }
 
 export class GolemMarketError extends GolemModuleError {

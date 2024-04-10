@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
-import { Promise } from "cypress/types/cy-bluebird";
 import { Demand, Proposal, ProposalFilter } from "./index";
 import { Agreement } from "../agreement";
 
@@ -48,7 +47,7 @@ export interface MarketModule {
    *
    * @return The Agreement that has been terminated via Yagna
    */
-  terminateAgreement(agreement: Agreement, reason: string): Promise<Agreement>;
+  terminateAgreement(agreement: Agreement, reason?: string): Promise<Agreement>;
 
   /**
    * Helper method that will allow reaching an agreement for the user without dealing with manual labour of demand/subscription

@@ -57,7 +57,7 @@ export class ActivityPool {
     this.pool = createPool<WorkContext>(this.createFactory(), {
       autostart: false,
       testOnBorrow: true,
-      max: options.pool?.min ?? 1,
+      max: options.pool?.max ?? options.pool?.min ?? 1,
       ...options.pool,
     });
     this.pool.on("factoryCreateError", (error) =>
