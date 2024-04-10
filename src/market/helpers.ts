@@ -1,4 +1,4 @@
-import { GolemInternalError } from "../error/golem-error";
+import { GolemInternalError } from "../shared/error/golem-error";
 
 /**
  * Helps to obtain a whitelist of providers which were health-tested.

@@ -2,7 +2,7 @@ import { BasePaymentOptions, InvoiceConfig } from "./config";
 import { PaymentApi } from "ya-ts-client";
 import { BaseNote } from "./invoice";
 import { Rejection } from "./rejection";
-import { YagnaApi } from "../utils";
+import { YagnaApi } from "../shared/utils";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
 import { ProviderInfo } from "../agreement";
 import { ProposalProperties } from "../market/proposal";

@@ -1,7 +1,7 @@
 import { ActivityApi } from "ya-ts-client";
 import { Command } from "./command";
-import { Result } from "../activity";
-import { GolemInternalError } from "../error/golem-error";
+import { Result } from "../index";
+import { GolemInternalError } from "../../shared/error/golem-error";
 
 /**
  * @hidden

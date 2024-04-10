@@ -1,5 +1,5 @@
 import { PaymentApi } from "ya-ts-client";
-import { YagnaApi, YagnaOptions } from "../utils";
+import { YagnaApi, YagnaOptions } from "../shared/utils";
 import Decimal, { Numeric } from "decimal.js-light";
 
 export type InvoiceAcceptResult =

@@ -1,5 +1,5 @@
 import { AbstractIPNum, IPv4, IPv4CidrRange, IPv4Mask, IPv4Prefix } from "ip-num";
-import { Logger, YagnaApi, YagnaOptions } from "../utils";
+import { Logger, YagnaApi, YagnaOptions } from "../shared/utils";
 import { NetworkConfig } from "./config";
 import { NetworkNode } from "./node";
 import { GolemNetworkError, NetworkErrorCode } from "./error";

@@ -1,6 +1,6 @@
 import { DeploymentOptions, GolemDeploymentBuilder, MarketOptions, PaymentOptions } from "./experimental";
-import { Logger } from "./utils";
-import { StorageProvider } from "./storage";
+import { Logger } from "./shared/utils";
+import { StorageProvider } from "./shared/storage";
 import { MarketModule, MarketModuleImpl } from "./market/market.module";
 import { PaymentModule, PaymentModuleImpl } from "./payment/payment.module";
 import { ActivityModule, ActivityModuleImpl } from "./activity/activity.module";

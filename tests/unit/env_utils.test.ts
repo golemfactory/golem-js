@@ -1,4 +1,4 @@
-import { EnvUtils } from "../../src/utils";
+import { EnvUtils } from "../../src/shared/utils";
 
 describe("EnvUtils", () => {
   describe("getYagnaApiUrl()", () => {

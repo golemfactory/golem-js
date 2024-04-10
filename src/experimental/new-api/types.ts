@@ -1,4 +1,4 @@
-import { Logger } from "../../utils";
+import { Logger } from "../../shared/utils";
 
 export enum ActivityPoolState {
   INITIAL = "INITIAL",

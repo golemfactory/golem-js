@@ -1,6 +1,6 @@
-import { Logger } from "../utils";
+import { Logger } from "../../shared/utils";
 import { PackageOptions } from "./package";
-import { GolemConfigError } from "../error/golem-error";
+import { GolemConfigError } from "../../shared/error/golem-error";
 
 /**
  * @internal

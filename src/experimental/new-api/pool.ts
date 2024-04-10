@@ -7,12 +7,12 @@ import {
   NullStorageProvider,
   StorageProvider,
   WebSocketBrowserStorageProvider,
-} from "../../storage";
-import { GolemAbortError, GolemUserError } from "../../error/golem-error";
-import { defaultLogger, Logger, runtimeContextChecker, YagnaApi } from "../../utils";
+} from "../../shared/storage";
+import { GolemAbortError, GolemUserError } from "../../shared/error/golem-error";
+import { defaultLogger, Logger, runtimeContextChecker, YagnaApi } from "../../shared/utils";
 import { ActivityPoolOptions, ActivityPoolEvents, ActivityPoolState } from "./types";
-import { Package } from "../../package";
-import { WorkContext } from "../../work";
+import { Package } from "../../market/package";
+import { WorkContext } from "../../activity/work";
 import { EventEmitter } from "eventemitter3";
 
 /**

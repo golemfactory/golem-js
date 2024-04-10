@@ -1,5 +1,5 @@
-import { defaultLogger, Logger, sleep, YagnaApi } from "../utils";
-import { Package } from "../package";
+import { defaultLogger, Logger, sleep, YagnaApi } from "../shared/utils";
+import { Package } from "./package";
 import { Proposal } from "./proposal";
 import { AgreementPoolService } from "../agreement";
 import { Allocation } from "../payment";
@@ -7,7 +7,7 @@ import { Demand, DemandOptions } from "./demand";
 import { MarketConfig } from "./config";
 import { GolemMarketError, MarketErrorCode } from "./error";
 import { ProposalsBatch } from "./proposals_batch";
-import { GolemError } from "../error/golem-error";
+import { GolemError } from "../shared/error/golem-error";
 
 export type ProposalFilter = (proposal: Proposal) => boolean;
 

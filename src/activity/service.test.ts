@@ -1,6 +1,6 @@
 import { ActivityPool } from "./service";
 import { Activity } from "./activity";
-import { YagnaApi } from "../utils";
+import { YagnaApi } from "../shared/utils";
 import { Agreement, AgreementPoolService } from "../agreement";
 import { PaymentService } from "../payment";
 import { anything, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";

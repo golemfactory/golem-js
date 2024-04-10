@@ -1,9 +1,9 @@
 import { AllocationOptions } from "./allocation";
-import { EnvUtils, Logger, defaultLogger, YagnaOptions } from "../utils";
+import { EnvUtils, Logger, defaultLogger, YagnaOptions } from "../shared/utils";
 import { DebitNoteFilter, InvoiceFilter, PaymentOptions } from "./service";
 import { InvoiceOptions } from "./invoice";
 import { acceptAllDebitNotesFilter, acceptAllInvoicesFilter } from "./strategy";
-import { GolemConfigError } from "../error/golem-error";
+import { GolemConfigError } from "../shared/error/golem-error";
 
 const DEFAULTS = Object.freeze({
   payment: { network: "holesky", driver: "erc20" },

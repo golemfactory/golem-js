@@ -1,8 +1,8 @@
 import { Activity, ActivityOptions } from "./activity";
-import { defaultLogger, Logger, YagnaApi } from "../utils";
+import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
 import { AgreementPoolService } from "../agreement";
 import { PaymentService } from "../payment";
-import { GolemWorkError, WorkErrorCode } from "../work";
+import { GolemWorkError, WorkErrorCode } from "./work";
 
 export interface ActivityPoolOptions extends ActivityOptions {}
 

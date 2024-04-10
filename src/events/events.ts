@@ -1,8 +1,8 @@
 import { ProposalDetails } from "../market";
-import { PackageDetails } from "../package/package";
+import { PackageDetails } from "../market/package/package";
 import { DemandDetails } from "../market/demand";
 
-import { RequireAtLeastOne } from "../utils/types";
+import { RequireAtLeastOne } from "../shared/utils/types";
 import { ProviderInfo } from "../agreement";
 /**
  * Global Event Type with which all API events will be emitted. It should be used on all listeners that would like to handle events.

@@ -1,7 +1,7 @@
 import { DownloadFile, Run, Script, Transfer, UploadData, UploadFile } from "../script";
-import { Activity, Result } from "../activity";
-import { StorageProvider } from "../storage";
-import { Logger, defaultLogger } from "../utils";
+import { Activity, Result } from "../index";
+import { StorageProvider } from "../../shared/storage";
+import { Logger, defaultLogger } from "../../shared/utils";
 import { pipeline, Readable, Transform } from "stream";
 import { GolemWorkError, WorkErrorCode } from "./error";
 

@@ -1,5 +1,5 @@
 import { NetworkOptions } from "./network";
-import { Logger, defaultLogger } from "../utils";
+import { Logger, defaultLogger } from "../shared/utils";
 
 const DEFAULTS = {
   networkIp: "192.168.0.0/24",

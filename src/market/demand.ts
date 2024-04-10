@@ -1,11 +1,11 @@
-import { Package } from "../package";
+import { Package } from "./package";
 import { Allocation } from "../payment";
 import { DemandFactory } from "./factory";
 import { Proposal } from "./proposal";
-import { defaultLogger, Logger, sleep, YagnaApi, YagnaOptions } from "../utils";
+import { defaultLogger, Logger, sleep, YagnaApi, YagnaOptions } from "../shared/utils";
 import { DemandConfig } from "./config";
 import { GolemMarketError, MarketErrorCode } from "./error";
-import { GolemError, GolemPlatformError } from "../error/golem-error";
+import { GolemError, GolemPlatformError } from "../shared/error/golem-error";
 import { MarketApi } from "ya-ts-client";
 import { EventEmitter } from "eventemitter3";
 

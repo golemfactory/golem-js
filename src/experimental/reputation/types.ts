@@ -1,4 +1,4 @@
-import { Logger } from "../../utils";
+import { Logger } from "../../shared/utils";
 import { ProviderInfo } from "../../agreement";
 
 /**

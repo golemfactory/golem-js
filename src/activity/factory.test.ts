@@ -1,9 +1,9 @@
 import { ActivityFactory } from "./factory";
 import { Agreement } from "../agreement";
 import { anything, instance, mock, reset, when } from "@johanblumenberg/ts-mockito";
-import { YagnaApi } from "../utils";
+import { YagnaApi } from "../shared/utils";
 import { ActivityApi } from "ya-ts-client";
-import { GolemWorkError, WorkErrorCode } from "../work";
+import { GolemWorkError, WorkErrorCode } from "./work";
 
 const mockYagna = mock(YagnaApi);
 const mockAgreement = mock(Agreement);

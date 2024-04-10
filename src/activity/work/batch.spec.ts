@@ -1,12 +1,16 @@
 import { DownloadFile, Run, Transfer, UploadData, UploadFile } from "../script";
 import { Batch } from "./batch";
-import { NullStorageProvider } from "../storage";
-import { Activity, Result } from "../activity";
+import { NullStorageProvider } from "../../shared/storage";
+import { Activity, Result } from "../index";
 import { GolemWorkError, WorkErrorCode } from "./error";
 import { anything, imock, instance, mock, reset, when } from "@johanblumenberg/ts-mockito";
-import { Logger, YagnaApi } from "../utils";
-import { buildExeScriptSuccessResult, buildExeScriptErrorResult, buildActivityResults } from "../../tests/unit/helpers";
-import { Agreement } from "../agreement";
+import { Logger, YagnaApi } from "../../shared/utils";
+import {
+  buildExeScriptSuccessResult,
+  buildExeScriptErrorResult,
+  buildActivityResults,
+} from "../../../tests/unit/helpers";
+import { Agreement } from "../../agreement";
 
 const mockLogger = imock<Logger>();
 const mockYagna = mock(YagnaApi);

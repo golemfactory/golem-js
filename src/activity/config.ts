@@ -1,5 +1,5 @@
 import { ActivityOptions } from "./activity";
-import { Logger, defaultLogger } from "../utils";
+import { Logger, defaultLogger } from "../shared/utils";
 
 const DEFAULTS = {
   activityRequestTimeout: 10000,

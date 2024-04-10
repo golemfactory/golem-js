@@ -1,4 +1,4 @@
-import { GolemConfigError } from "../../error/golem-error";
+import { GolemConfigError } from "../../shared/error/golem-error";
 import { DeploymentComponents } from "./deployment";
 
 function validateNetworks(components: DeploymentComponents) {

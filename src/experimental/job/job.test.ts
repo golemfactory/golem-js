@@ -1,11 +1,11 @@
 import { Job } from "./job";
 import { Agreement, AgreementPoolService } from "../../agreement";
-import { WorkContext } from "../../work";
+import { WorkContext } from "../../activity/work";
 import { NetworkNode, NetworkService } from "../../network";
 import { Activity } from "../../activity";
-import { Package } from "../../package";
+import { Package } from "../../market/package";
 import { instance, mock, reset } from "@johanblumenberg/ts-mockito";
-import { YagnaApi } from "../../utils";
+import { YagnaApi } from "../../shared/utils";
 
 jest.mock("../../payment");
 jest.mock("../../market");

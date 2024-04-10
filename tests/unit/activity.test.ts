@@ -9,8 +9,8 @@ import {
   WorkErrorCode,
   YagnaApi,
 } from "../../src";
-import { sleep } from "../../src/utils";
-import { Capture, Deploy, DownloadFile, Run, Script, Start, Terminate, UploadFile } from "../../src/script";
+import { sleep } from "../../src/shared/utils";
+import { Capture, Deploy, DownloadFile, Run, Script, Start, Terminate, UploadFile } from "../../src/activity/script";
 import { anything, imock, instance, mock, reset, spy, verify, when } from "@johanblumenberg/ts-mockito";
 import * as YaTsClient from "ya-ts-client";
 import { buildExeScriptSuccessResult } from "./helpers";

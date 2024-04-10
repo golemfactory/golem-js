@@ -4,7 +4,7 @@ import { Promise } from "cypress/types/cy-bluebird";
 import { Demand, Proposal, ProposalFilter } from "./index";
 import { Agreement } from "../agreement";
 
-import { YagnaEventSubscription } from "../utils";
+import { YagnaEventSubscription } from "../shared/utils";
 
 export interface MarketEvents {}
 
