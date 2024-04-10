@@ -12,3 +12,4 @@ export * from "./work";
 export * from "./error/golem-error";
 export { TcpProxy } from "./network/tcpProxy";
 export * from "./gvmi";
+export * from "./golem-network";

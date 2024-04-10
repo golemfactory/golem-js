@@ -54,6 +54,8 @@ export interface ActivityDTO {
 
 /**
  * Groups most common operations that the requestors might need to implement their workflows
+ *
+ * @deprecated Will be the new "Activity"
  */
 export class WorkContext {
   private readonly activityPreparingTimeout: number;

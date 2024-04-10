@@ -1,17 +1,16 @@
 import { v4 } from "uuid";
-import { Job } from "../job";
+import { Job, RunJobOptions } from "./job";
 import { YagnaApi, YagnaOptions } from "../../utils";
-import { RunJobOptions } from "../job/job";
 import { GolemUserError } from "../../error/golem-error";
 
-export type GolemNetworkConfig = Partial<RunJobOptions> & { yagna?: YagnaOptions };
+export type JobManagerConfig = Partial<RunJobOptions> & { yagna?: YagnaOptions };
 
 /**
  * @experimental This API is experimental and subject to change. Use at your own risk.
  *
  * The Golem Network class provides a high-level API for running jobs on the Golem Network.
  */
-export class GolemNetwork {
+export class JobManager {
   private yagna: YagnaApi | null = null;
 
   private jobs = new Map<string, Job>();
@@ -19,7 +18,7 @@ export class GolemNetwork {
   /**
    * @param config - Configuration options that will be passed to all jobs created by this instance.
    */
-  constructor(private readonly config: GolemNetworkConfig) {}
+  constructor(private readonly config: JobManagerConfig) {}
 
   public isInitialized() {
     return this.yagna !== null;

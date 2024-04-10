@@ -84,7 +84,3 @@ export interface ActivityPoolEvents {
    */
   end: () => void;
 }
-
-export interface NetworkOptions {
-  // TODO
-}

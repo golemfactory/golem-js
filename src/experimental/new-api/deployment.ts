@@ -2,6 +2,10 @@ import { GolemAbortError, GolemUserError } from "../../error/golem-error";
 import { defaultLogger, Logger, YagnaApi } from "../../utils";
 import { EventEmitter } from "eventemitter3";
 import { ActivityPool } from "./pool";
+import { ActivityPoolOptions, MarketOptions, PaymentOptions } from "./types";
+import { Network, NetworkOptions } from "../../network";
+import { GftpStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../../storage";
+import { validateDeployment } from "./validate-deployment";
 
 export enum DeploymentState {
   INITIAL = "INITIAL",
@@ -35,14 +39,20 @@ export interface DeploymentEvents {
   end: () => void;
 }
 
-interface DeploymentOptions {
-  // TODO
+export type DeploymentComponents = {
+  activityPools: { name: string; options: ActivityPoolOptions }[];
+  networks: { name: string; options: NetworkOptions }[];
+};
+
+export interface DeploymentOptions {
   logger?: Logger;
-  abortController?: AbortController;
   api: {
     key: string;
     url: string;
   };
+  market?: Partial<MarketOptions>;
+  payment?: Partial<PaymentOptions>;
+  dataTransferProtocol?: "gftp" | "ws" | StorageProvider;
 }
 
 /**
@@ -54,18 +64,27 @@ export class Deployment {
   private state: DeploymentState = DeploymentState.INITIAL;
 
   private readonly logger: Logger;
-  private readonly abortController: AbortController;
+  private readonly abortController = new AbortController();
 
   private readonly yagnaApi: YagnaApi;
 
   private readonly activityPools = new Map<string, ActivityPool>();
+  private readonly networks = new Map<string, Network>();
+  private readonly dataTransferProtocol: StorageProvider;
 
-  // private readonly networks: Network[] = [];
-  // private readonly managedNetwork?: Network;
-
-  constructor(private readonly options: DeploymentOptions) {
+  constructor(
+    private readonly components: DeploymentComponents,
+    private readonly options: DeploymentOptions,
+  ) {
+    validateDeployment(components);
     this.logger = options.logger ?? defaultLogger("deployment");
-    this.abortController = options.abortController ?? new AbortController();
+
+    this.yagnaApi = new YagnaApi({
+      apiKey: options.api.key,
+      basePath: options.api.url,
+    });
+
+    this.dataTransferProtocol = this.getDataTransferProtocol(options, this.yagnaApi);
 
     this.abortController.signal.addEventListener("abort", () => {
       this.logger.info("Abort signal received");
@@ -74,13 +93,16 @@ export class Deployment {
         // TODO: should the error be sent to event listener?
       });
     });
+  }
 
-    this.yagnaApi = new YagnaApi({
-      apiKey: options.api.key,
-      basePath: options.api.url,
-    });
-
-    // TODO
+  private getDataTransferProtocol(options: DeploymentOptions, yagnaApi: YagnaApi): StorageProvider {
+    if (!options.dataTransferProtocol || options.dataTransferProtocol === "gftp") {
+      return new GftpStorageProvider();
+    }
+    if (options.dataTransferProtocol === "ws") {
+      return new WebSocketBrowserStorageProvider(yagnaApi, {});
+    }
+    return options.dataTransferProtocol;
   }
 
   getState(): DeploymentState {
@@ -96,26 +118,40 @@ export class Deployment {
       throw new GolemUserError(`Cannot start backend, expected backend state INITIAL, current state is ${this.state}`);
     }
 
-    // TODO
+    await this.dataTransferProtocol.init();
+
+    for (const network of this.components.networks) {
+      const networkInstance = await Network.create(this.yagnaApi, network.options);
+      this.networks.set(network.name, networkInstance);
+    }
+    // TODO: add pool to network
+    // TODO: pass dataTransferProtocol to pool
+    for (const pool of this.components.activityPools) {
+      const activityPool = new ActivityPool(pool.options);
+      this.activityPools.set(pool.name, activityPool);
+    }
 
     this.events.emit("ready");
   }
 
   async stop() {
-    if (this.state != DeploymentState.READY) {
+    if (this.state === DeploymentState.STOPPING || this.state === DeploymentState.STOPPED) {
       return;
     }
 
     this.state = DeploymentState.STOPPING;
     this.events.emit("beforeEnd");
 
-    // TODO: consider if we should catch and ignore individual errors here in order to release as many resource as we can.
     try {
-      // Call destroyInstance() on all active instances
-      const promises: Promise<void>[] = Array.from(this.activityPools.values()).map((pool) => pool.stop());
-      await Promise.allSettled(promises);
+      this.abortController.abort();
 
-      // TODO
+      this.dataTransferProtocol.close();
+
+      const stopPools: Promise<void>[] = Array.from(this.activityPools.values()).map((pool) => pool.stop());
+      await Promise.allSettled(stopPools);
+
+      const stopNetworks: Promise<void>[] = Array.from(this.networks.values()).map((network) => network.remove());
+      await Promise.allSettled(stopNetworks);
 
       this.state = DeploymentState.STOPPED;
     } catch (e) {
@@ -132,5 +168,13 @@ export class Deployment {
       throw new GolemUserError(`ActivityPool ${name} not found`);
     }
     return pool;
+  }
+
+  getNetwork(name: string): Network {
+    const network = this.networks.get(name);
+    if (!network) {
+      throw new GolemUserError(`Network ${name} not found`);
+    }
+    return network;
   }
 }
