@@ -7,7 +7,7 @@ export {
   DEFAULT_AGREEMENT_TOP_POOL_SIZE,
 } from "./system";
 export { ReputationWeights } from "./types";
-export { AgreementSelectorOption } from "./types";
+export { AgreementSelectorOptions } from "./types";
 export { ProposalFilterOptions } from "./types";
 export { ReputationData } from "./types";
 export { ReputationProviderEntry } from "./types";
