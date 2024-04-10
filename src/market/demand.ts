@@ -98,12 +98,6 @@ export interface DemandOptions {
 }
 
 /**
- * Event type with which all offers and proposals coming from the market will be emitted.
- * @hidden
- */
-export const EVENT_PROPOSAL_RECEIVED = "ProposalReceived";
-
-/**
  * Demand module - an object which can be considered an "open" or public Demand, as it is not directed at a specific Provider, but rather is sent to the market so that the matching mechanism implementation can associate relevant Offers.
  * @hidden
  */
