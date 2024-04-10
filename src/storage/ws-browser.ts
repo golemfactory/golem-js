@@ -1,6 +1,7 @@
 import { StorageProvider, StorageProviderDataCallback } from "./provider";
 import { v4 } from "uuid";
-import { encode, toObject } from "flatbuffers/js/flexbuffers";
+// .js added for ESM compatibility
+import { encode, toObject } from "flatbuffers/js/flexbuffers.js";
 import * as jsSha3 from "js-sha3";
 import { Logger, nullLogger, YagnaApi } from "../utils";
 import { GolemInternalError } from "../error/golem-error";
@@ -167,7 +168,13 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
   }
 
   private async createService(fileInfo: GftpFileInfo, components: string[]): Promise<ServiceInfo> {
-    const resp = await this.yagnaApi.gsb.createService(fileInfo, components);
+    const resp = (await this.yagnaApi.gsb.bindServices({
+      listen: {
+        on: `/public/gftp/${fileInfo.id}`,
+        components,
+      },
+      // FIXME: not present in ya-client for some reason
+    })) as { servicesId: string };
     const servicesId = resp.servicesId;
     const messageEndpoint = `/gsb-api/v1/services/${servicesId}?authToken=${this.yagnaApi.yagnaOptions.apiKey}`;
     const url = new URL(messageEndpoint, this.yagnaApi.yagnaOptions.basePath);
@@ -178,7 +185,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
   }
 
   private async deleteService(id: string): Promise<void> {
-    await this.yagnaApi.gsb.deleteService(id);
+    await this.yagnaApi.gsb.unbindServices(id);
   }
 
   private respond(ws: WebSocket, id: string, payload: unknown) {

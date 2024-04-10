@@ -1,12 +1,17 @@
 import { BasePaymentOptions, InvoiceConfig } from "./config";
-import { DebitNote as Model } from "ya-ts-client/dist/ya-payment/src/models";
+import { PaymentApi } from "ya-ts-client";
 import { BaseNote } from "./invoice";
-import { Events } from "../events";
 import { Rejection } from "./rejection";
 import { YagnaApi } from "../utils";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
 import { ProviderInfo } from "../agreement";
 import { ProposalProperties } from "../market/proposal";
+import { EventEmitter } from "eventemitter3";
+
+export interface DebitNoteEvents {
+  accepted: (details: { id: string; agreementId: string; amount: string; provider: ProviderInfo }) => void;
+  paymentFailed: (details: { id: string; agreementId: string; reason: string | undefined }) => void;
+}
 
 export type InvoiceOptions = BasePaymentOptions;
 
@@ -15,9 +20,7 @@ export interface DebitNoteDTO {
   timestamp: string;
   activityId: string;
   agreementId: string;
-  /** @deprecated this field may store invalid values for big numbers. Use `totalAmountDuePrecise` instead **/
-  totalAmountDue: number;
-  totalAmountDuePrecise: string;
+  totalAmountDue: string;
   usageCounterVector?: object;
 }
 
@@ -25,17 +28,14 @@ export interface DebitNoteDTO {
  * A Debit Note is an artifact issued by the Provider to the Requestor, in the context of a specific Activity. It is a notification of Total Amount Due incurred by the Activity until the moment the Debit Note is issued. This is expected to be used as trigger for payment in upfront-payment or pay-as-you-go scenarios. NOTE: Only Debit Notes with non-null paymentDueDate are expected to trigger payments. NOTE: Debit Notes flag the current Total Amount Due, which is accumulated from the start of Activity. Debit Notes are expected to trigger payments, therefore payment amount for the newly received Debit Note is expected to be determined by difference of Total Payments for the Agreement vs Total Amount Due.
  * @hidden
  */
-export class DebitNote extends BaseNote<Model> {
+export class DebitNote extends BaseNote<PaymentApi.DebitNoteDTO> {
   public readonly id: string;
   public readonly previousDebitNoteId?: string;
   public readonly timestamp: string;
   public readonly activityId: string;
-  /**
-   * @deprecated this field may store invalid values for big numbers. Use totalAmountDuePrecise instead
-   */
-  public readonly totalAmountDue: number;
-  public readonly totalAmountDuePrecise: string;
+  public readonly totalAmountDue: string;
   public readonly usageCounterVector?: object;
+  public readonly events = new EventEmitter<DebitNoteEvents>();
 
   /**
    * Create Debit Note Model
@@ -46,8 +46,8 @@ export class DebitNote extends BaseNote<Model> {
    */
   static async create(debitNoteId: string, yagnaApi: YagnaApi, options?: InvoiceOptions): Promise<DebitNote> {
     const config = new InvoiceConfig(options);
-    const { data: model } = await yagnaApi.payment.getDebitNote(debitNoteId);
-    const { data: agreement } = await yagnaApi.market.getAgreement(model.agreementId);
+    const model = await yagnaApi.payment.getDebitNote(debitNoteId);
+    const agreement = await yagnaApi.market.getAgreement(model.agreementId);
     const providerInfo = {
       id: model.issuerId,
       walletAddress: model.payeeAddr,
@@ -66,7 +66,7 @@ export class DebitNote extends BaseNote<Model> {
    * @hidden
    */
   protected constructor(
-    protected model: Model,
+    protected model: PaymentApi.DebitNoteDTO,
     providerInfo: ProviderInfo,
     protected yagnaApi: YagnaApi,
     protected options: InvoiceConfig,
@@ -75,8 +75,7 @@ export class DebitNote extends BaseNote<Model> {
     this.id = model.debitNoteId;
     this.timestamp = model.timestamp;
     this.activityId = model.activityId;
-    this.totalAmountDue = Number(model.totalAmountDue);
-    this.totalAmountDuePrecise = model.totalAmountDue;
+    this.totalAmountDue = model.totalAmountDue;
     this.usageCounterVector = model.usageCounterVector;
   }
 
@@ -87,7 +86,6 @@ export class DebitNote extends BaseNote<Model> {
       activityId: this.activityId,
       agreementId: this.agreementId,
       totalAmountDue: this.totalAmountDue,
-      totalAmountDuePrecise: this.totalAmountDuePrecise,
       usageCounterVector: this.usageCounterVector,
     };
   }
@@ -106,9 +104,7 @@ export class DebitNote extends BaseNote<Model> {
       });
     } catch (error) {
       const reason = error?.response?.data?.message || error;
-      this.options.eventTarget?.dispatchEvent(
-        new Events.PaymentFailed({ id: this.id, agreementId: this.agreementId, reason }),
-      );
+      this.events.emit("paymentFailed", { id: this.id, agreementId: this.agreementId, reason });
       throw new GolemPaymentError(
         `Unable to accept debit note ${this.id}. ${reason}`,
         PaymentErrorCode.DebitNoteAcceptanceFailed,
@@ -117,15 +113,12 @@ export class DebitNote extends BaseNote<Model> {
         error,
       );
     }
-    this.options.eventTarget?.dispatchEvent(
-      new Events.DebitNoteAccepted({
-        id: this.id,
-        agreementId: this.agreementId,
-        amount: Number(totalAmountAccepted),
-        amountPrecise: totalAmountAccepted,
-        provider: this.provider,
-      }),
-    );
+    this.events.emit("accepted", {
+      id: this.id,
+      agreementId: this.agreementId,
+      amount: totalAmountAccepted,
+      provider: this.provider,
+    });
   }
 
   public async getStatus() {
@@ -151,14 +144,11 @@ export class DebitNote extends BaseNote<Model> {
         error,
       );
     } finally {
-      this.options.eventTarget?.dispatchEvent(
-        new Events.PaymentFailed({ id: this.id, agreementId: this.agreementId, reason: rejection.message }),
-      );
+      this.events.emit("paymentFailed", { id: this.id, agreementId: this.agreementId, reason: rejection.message });
     }
   }
 
   protected async refreshStatus() {
-    const { data: model } = await this.yagnaApi.payment.getDebitNote(this.id);
-    this.model = model;
+    this.model = await this.yagnaApi.payment.getDebitNote(this.id);
   }
 }

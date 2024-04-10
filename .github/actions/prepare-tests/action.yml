@@ -11,6 +11,7 @@ runs:
     - name: Set up Versions
       shell: bash
       run: |
+        echo "PAYMENT_NETWORK=${PAYMENT_NETWORK}" >> $GITHUB_ENV
         echo "PROVIDER_VERSION=${PROVIDER_VERSION}" >> $GITHUB_ENV
         echo "REQUESTOR_VERSION=${REQUESTOR_VERSION}" >> $GITHUB_ENV
         echo "PROVIDER_WASI_VERSION=${PROVIDER_WASI_VERSION}" >> $GITHUB_ENV
@@ -37,9 +38,13 @@ runs:
       shell: bash
       run: |
         sleep 10
+        echo "Going to fund the requestor"
         docker exec -t docker-requestor-1 /bin/sh -c "/golem-js/tests/docker/fundRequestor.sh"
+        echo "Successfully funded the requestor"
 
     - name: Install and build the SDK in the docker container
       shell: bash
       run: |
-        docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm i && npm run build && ./node_modules/.bin/cypress install && npm install --prefix examples && npm install ts-node"
+        echo "Going to build the SDK on the requestor"
+        docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm i && npm run build"
+        echo "Successfully built the SDK on the requestor"

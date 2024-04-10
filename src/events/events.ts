@@ -31,59 +31,6 @@ export abstract class BaseEvent<DataType> extends CustomEvent<DataType> {
   }
 }
 
-export class ComputationStarted extends BaseEvent<undefined> {
-  constructor() {
-    super(undefined);
-  }
-}
-export class ComputationFinished extends BaseEvent<undefined> {
-  constructor() {
-    super(undefined);
-  }
-}
-export class ComputationFailed extends BaseEvent<{ reason?: string }> {}
-export class TaskStarted extends BaseEvent<{
-  id: string;
-  agreementId: string;
-  activityId: string;
-  provider: ProviderInfo;
-}> {}
-
-/**
- * Represents the situation in which running the task failed for some reason, but it will be retried
- */
-export class TaskRedone extends BaseEvent<{
-  id: string;
-  agreementId?: string;
-  provider?: ProviderInfo;
-  retriesCount: number;
-  /**
-   * The activity that was involved
-   *
-   * This might be not set when there was an issue with starting the activity on the provider
-   */
-  activityId?: string;
-  reason?: string;
-}> {}
-
-/**
- * Represents the situation where all attempts to execute the task have been unsuccessful and no further processing
- * will be conducted.
- */
-export class TaskRejected extends BaseEvent<{
-  id: string;
-  agreementId?: string;
-
-  provider?: ProviderInfo;
-  /**
-   * The activity that was involved when the rejection took place
-   *
-   * This might be not set when there was an issue with starting the activity on the provider
-   */
-  activityId?: string;
-  reason?: string;
-}> {}
-export class TaskFinished extends BaseEvent<{ id: string }> {}
 export class AllocationCreated extends BaseEvent<{ id: string; amount: number; platform?: string }> {}
 export class DemandSubscribed extends BaseEvent<{ id: string; details: DemandDetails }> {}
 export class DemandFailed extends BaseEvent<{ reason?: string }> {}
@@ -134,33 +81,25 @@ export class InvoiceReceived extends BaseEvent<{
   id: string;
   provider: ProviderInfo;
   agreementId: string;
-  /** @deprecated this field may store invalid values for big numbers. Use `amountPrecise` instead **/
-  amount: number;
-  amountPrecise: string;
+  amount: string;
 }> {}
 export class DebitNoteReceived extends BaseEvent<{
   id: string;
   agreementId: string;
   activityId: string;
-  /** @deprecated this field may store invalid values for big numbers. Use `amountPrecise` instead **/
-  amount: number;
-  amountPrecise: string;
+  amount: string;
   provider: ProviderInfo;
 }> {}
 export class PaymentAccepted extends BaseEvent<{
   id: string;
   agreementId: string;
-  /** @deprecated this field may store invalid values for big numbers. Use `amountPrecise` instead **/
-  amount: number;
-  amountPrecise: string;
+  amount: string;
   provider: ProviderInfo;
 }> {}
 export class DebitNoteAccepted extends BaseEvent<{
   id: string;
   agreementId: string;
-  /** @deprecated this field may store invalid values for big numbers. Use `amountPrecise` instead **/
-  amount: number;
-  amountPrecise: string;
+  amount: string;
   provider: ProviderInfo;
 }> {}
 export class PaymentFailed extends BaseEvent<{ id: string; agreementId: string; reason?: string }> {}

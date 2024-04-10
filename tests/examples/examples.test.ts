@@ -3,7 +3,13 @@ import { dirname, basename, resolve } from "path";
 import chalk from "chalk";
 import testExamples from "./examples.json";
 
-const criticalLogsRegExp = [/Task *. timeout/, /Task *. has been rejected/, /ERROR: TypeError/, /ERROR: Error/gim];
+const criticalLogsRegExp = [
+  /GolemInternalError/,
+  /GolemPlatformError/,
+  /GolemWorkError/,
+  /ERROR: TypeError/,
+  /ERROR: Error/gim,
+];
 
 type Example = {
   cmd: string;
@@ -18,7 +24,8 @@ const exitOnError = process.argv.includes("--exitOnError");
 async function test(cmd: string, path: string, args: string[] = [], timeout = 360) {
   const file = basename(path);
   const cwd = dirname(path);
-  const spawnedExample = spawn(cmd, [file, ...args], { cwd });
+  const env = { ...process.env, DEBUG: "golem-js:*" };
+  const spawnedExample = spawn(cmd, [file, ...args], { cwd, env });
   spawnedExample.stdout?.setEncoding("utf-8");
   spawnedExample.stderr?.setEncoding("utf-8");
   let error = "";
@@ -36,10 +43,6 @@ async function test(cmd: string, path: string, args: string[] = [], timeout = 36
       if (criticalLogsRegExp.some((regexp) => logWithoutColors.match(regexp))) {
         error = `A critical error occurred during the test. ${logWithoutColors}`;
         spawnedExample.kill();
-      }
-      // for some reason, sometimes the process doesn't exit after Executor shut down
-      if (logWithoutColors.indexOf("Task Executor has shut down") !== -1) {
-        spawnedExample.kill("SIGKILL");
       }
     };
     spawnedExample.stdout?.on("data", assertLogs);

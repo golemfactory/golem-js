@@ -1,102 +1,71 @@
 import { DebitNote } from "./debit_note";
-import { anything, imock, instance, mock, verify, when } from "@johanblumenberg/ts-mockito";
+import { anything, imock, instance, mock, objectContaining, reset, verify, when } from "@johanblumenberg/ts-mockito";
 import { YagnaApi } from "../utils";
-import { DebitNote as DebitNoteModel } from "ya-ts-client/dist/ya-payment/src/models";
-import { Agreement as AgreementModel } from "ya-ts-client/dist/ya-market/src/models";
-import { RequestorApi as PaymentRequestorApi } from "ya-ts-client/dist/ya-payment/api";
-import { RequestorApi as MarketRequestorApi } from "ya-ts-client/dist/ya-market/api";
+import { MarketApi, PaymentApi } from "ya-ts-client";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
-import { Decimal } from "decimal.js-light";
+import Decimal from "decimal.js-light";
 
-const yagnaApiMock = imock<YagnaApi>();
-const paymentApiMock = mock(PaymentRequestorApi);
-const marketApiMock = mock(MarketRequestorApi);
-when(yagnaApiMock.payment).thenReturn(instance(paymentApiMock));
-when(yagnaApiMock.market).thenReturn(instance(marketApiMock));
+const mockYagna = mock(YagnaApi);
+const mockPayment = mock(PaymentApi.RequestorService);
+const mockMarket = mock(MarketApi.RequestorService);
+const mockDebitNote = imock<PaymentApi.DebitNoteDTO>();
+const mockAgreement = imock<MarketApi.AgreementDTO>();
 
-function creteAxiosResponseMock<T>(data: T, status = 200) {
-  return {
-    data,
-    status,
-    statusText: "ok",
-    headers: [],
-    config: {},
-  };
-}
 describe("Debit Notes", () => {
+  beforeEach(() => {
+    reset(mockYagna);
+    reset(mockPayment);
+    reset(mockMarket);
+    reset(mockDebitNote);
+
+    when(mockYagna.payment).thenReturn(instance(mockPayment));
+    when(mockYagna.market).thenReturn(instance(mockMarket));
+
+    when(mockDebitNote.debitNoteId).thenReturn("testId");
+    when(mockDebitNote.payeeAddr).thenReturn("0x12345");
+    when(mockDebitNote.issuerId).thenReturn("0x123");
+    when(mockDebitNote.agreementId).thenReturn("agreementId");
+    when(mockDebitNote.totalAmountDue).thenReturn("1");
+
+    when(mockAgreement.agreementId).thenReturn("agreementId");
+    when(mockAgreement.offer).thenReturn({
+      offerId: "offerId",
+      providerId: "providerId",
+      timestamp: new Date().toISOString(),
+      properties: { ["golem.node.id.name"]: "testProvider" },
+      constraints: "",
+    });
+
+    when(mockPayment.getDebitNote("testId")).thenResolve(instance(mockDebitNote));
+
+    when(mockMarket.getAgreement("agreementId")).thenResolve(instance(mockAgreement));
+  });
+
   describe("creating", () => {
     it("should crete debit note", async () => {
-      when(paymentApiMock.getDebitNote(anything())).thenResolve(
-        creteAxiosResponseMock({
-          debitNoteId: "testId",
-          payeeAddr: "0x12345",
-          issuerId: "0x123",
-        } as DebitNoteModel),
-      );
-      when(marketApiMock.getAgreement(anything())).thenResolve(
-        creteAxiosResponseMock({
-          agreementId: "testId",
-          offer: { properties: { ["golem.node.id.name"]: "testProvider" } },
-        } as AgreementModel),
-      );
-      const debitNote = await DebitNote.create("testId", instance(yagnaApiMock));
+      const debitNote = await DebitNote.create("testId", instance(mockYagna));
       expect(debitNote).toBeDefined();
     });
     it("should crete debit note with a big number amount", async () => {
-      when(paymentApiMock.getDebitNote(anything())).thenResolve(
-        creteAxiosResponseMock({
-          debitNoteId: "testId",
-          payeeAddr: "0x12345",
-          issuerId: "0x123",
-          totalAmountDue: "0.009551938349900001",
-        } as DebitNoteModel),
-      );
-      when(marketApiMock.getAgreement(anything())).thenResolve(
-        creteAxiosResponseMock({
-          agreementId: "testId",
-          offer: { properties: { ["golem.node.id.name"]: "testProvider" } },
-        } as AgreementModel),
-      );
-      const debitNote = await DebitNote.create("testId", instance(yagnaApiMock));
-      expect(new Decimal("0.009551938349900001").eq(new Decimal(debitNote.totalAmountDuePrecise))).toEqual(true);
+      when(mockDebitNote.totalAmountDue).thenReturn("0.009551938349900001");
+      const debitNote = await DebitNote.create("testId", instance(mockYagna));
+      expect(new Decimal("0.009551938349900001").eq(new Decimal(debitNote.totalAmountDue))).toEqual(true);
     });
   });
+
   describe("accepting", () => {
     it("should accept debit note", async () => {
-      when(paymentApiMock.getDebitNote(anything())).thenResolve(
-        creteAxiosResponseMock({
-          debitNoteId: "testId",
-          payeeAddr: "0x12345",
-          issuerId: "0x123",
-        } as DebitNoteModel),
-      );
-      when(marketApiMock.getAgreement(anything())).thenResolve(
-        creteAxiosResponseMock({
-          agreementId: "testId",
-          offer: { properties: { ["golem.node.id.name"]: "testProvider" } },
-        } as AgreementModel),
-      );
-      const debitNote = await DebitNote.create("testId", instance(yagnaApiMock));
+      const debitNote = await DebitNote.create("testId", instance(mockYagna));
       await debitNote.accept("1", "testId");
-      verify(paymentApiMock.acceptDebitNote("testId", anything())).called();
+      verify(mockPayment.acceptDebitNote("testId", objectContaining({ totalAmountAccepted: "1" }))).once();
     });
+
     it("should throw GolemPaymentError if debit note cannot be accepted", async () => {
-      when(paymentApiMock.getDebitNote(anything())).thenResolve(
-        creteAxiosResponseMock({
-          debitNoteId: "testId",
-          payeeAddr: "0x12345",
-          issuerId: "0x123",
-        } as DebitNoteModel),
-      );
-      when(marketApiMock.getAgreement(anything())).thenResolve(
-        creteAxiosResponseMock({
-          agreementId: "testId",
-          offer: { properties: { ["golem.node.id.name"]: "testProvider" } },
-        } as AgreementModel),
-      );
       const errorYagnaApiMock = new Error("test error");
-      when(paymentApiMock.acceptDebitNote("testId", anything())).thenReject(errorYagnaApiMock);
-      const debitNote = await DebitNote.create("testId", instance(yagnaApiMock));
+      when(mockPayment.acceptDebitNote("testId", anything())).thenReject(errorYagnaApiMock);
+
+      const debitNote = await DebitNote.create("testId", instance(mockYagna));
+
       await expect(debitNote.accept("1", "testId")).rejects.toMatchError(
         new GolemPaymentError(
           `Unable to accept debit note testId. ${errorYagnaApiMock}`,

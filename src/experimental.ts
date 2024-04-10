@@ -1,3 +1,3 @@
-export * from "./job";
-export * from "./golem_network";
+export * from "./experimental/job";
 export * from "./experimental/reputation";
+export * from "./experimental/new-api";

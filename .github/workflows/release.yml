@@ -14,6 +14,10 @@ on:
   # Allows triggering the workflow manually
   workflow_dispatch:
     inputs:
+      payment_network:
+        description: "Payment network (holesky, goerli, mainnet, mumbai, polygon, rinkeby)"
+        required: false
+        default: "holesky"
       provider_version:
         description: "Provider version (e.g., v0.14.0 or pre-rel-v0.14.1)"
         required: false
@@ -40,6 +44,7 @@ env:
   REQUESTOR_VERSION: ${{ github.event.inputs.requestor_version || 'v0.14.0' }}
   PROVIDER_WASI_VERSION: ${{ github.event.inputs.provider_wasi_version || 'v0.2.2' }}
   PROVIDER_VM_VERSION: ${{ github.event.inputs.provider_vm_version || 'v0.3.0' }}
+  PAYMENT_NETWORK: ${{ github.event.inputs.payment_network || 'holesky' }}
 
 jobs:
   regular-checks:
@@ -55,10 +60,10 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup NodeJS ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
 
@@ -71,12 +76,13 @@ jobs:
           npm run build
           npm install --prefix examples
           npm run --prefix examples lint:ts
+          npm run test:import
 
       - name: Upload unit test reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: unit-test-report
+          name: unit-test-report-${{matrix.os}}-node-${{matrix.node-version}}
           path: reports/unit-report.xml
 
   run-e2e-tests:
@@ -84,7 +90,7 @@ jobs:
     needs: regular-checks
     runs-on: goth2
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Prepare providers and requestor
         uses: ./.github/actions/prepare-tests
@@ -93,7 +99,7 @@ jobs:
         run: docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm run test:e2e"
 
       - name: Upload E2E reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: e2e-test-report
@@ -101,43 +107,15 @@ jobs:
 
       - name: Cleanup test environment
         uses: ./.github/actions/cleanup-tests
-        with:
-          type: "e2e"
-
-  run-cypress-tests:
-    name: Run Cypress tests
-    needs: regular-checks
-    runs-on: goth2
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Prepare providers and requestor
-        uses: ./.github/actions/prepare-tests
-
-      - name: Run web server
-        run: docker exec -t -d docker-requestor-1 /bin/sh -c "cd /golem-js/examples/web && node app.mjs"
-
-      - name: Run test suite
-        run: docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js &&  npm run test:cypress -- --browser chromium"
-
-      - name: Upload test logs
-        uses: actions/upload-artifact@v3
         if: always()
         with:
-          name: cypress-logs
-          path: .cypress
-
-      - name: Cleanup test environment
-        uses: ./.github/actions/cleanup-tests
-        with:
-          type: "cypress"
-
+          type: "e2e"
   run-examples-tests:
     name: Run Examples tests
     needs: regular-checks
     runs-on: goth2
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Prepare providers and requestor
         uses: ./.github/actions/prepare-tests
@@ -147,12 +125,13 @@ jobs:
 
       - name: Cleanup test environment
         uses: ./.github/actions/cleanup-tests
+        if: always()
         with:
           type: "examples"
 
   release:
     name: Release the SDK to NPM and GitHub
-    needs: [run-e2e-tests, run-cypress-tests, run-examples-tests]
+    needs: [run-e2e-tests, run-examples-tests]
     runs-on: ubuntu-latest
     permissions:
       contents: write # to be able to publish a GitHub release
@@ -161,15 +140,24 @@ jobs:
       id-token: write # to enable use of OIDC for npm provenance
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Setup NodeJS
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           # Semantic release requires this as bare minimum
           node-version: 20
+
+      # Why this? https://github.com/npm/cli/issues/7279
+      # Why this way? https://github.com/actions/setup-node/issues/213
+      - name: Install latest npm
+        shell: bash
+        run: |
+          npm install -g npm@latest &&
+          npm --version &&
+          npm list -g --depth 0
 
       - name: Install dependencies
         run: npm install
@@ -185,4 +173,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npx semantic-release
-run-name: "${{ github.workflow }} - Requestor: ${{ github.event.inputs.requestor_version }}, Provider: ${{ github.event.inputs.provider_version }}, WASI: ${{ github.event.inputs.provider_wasi_version }}, VM: ${{ github.event.inputs.provider_vm_version }}"
+run-name: "${{ github.workflow }} - Network: ${{ github.event.inputs.payment_network }}, Requestor: ${{ github.event.inputs.requestor_version }}, Provider: ${{ github.event.inputs.provider_version }}, WASI: ${{ github.event.inputs.provider_wasi_version }}, VM: ${{ github.event.inputs.provider_vm_version }}"

@@ -3,7 +3,7 @@ import { Allocation, AllocationOptions } from "./allocation";
 import { BasePaymentOptions, PaymentConfig } from "./config";
 import { Invoice, InvoiceDTO } from "./invoice";
 import { DebitNote, DebitNoteDTO } from "./debit_note";
-import { DebitNoteEvent, InvoiceEvent, PAYMENT_EVENT_TYPE, Payments } from "./payments";
+import { Payments } from "./payments";
 import { Agreement } from "../agreement";
 import { AgreementPaymentProcess } from "./agreement_payment_process";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
@@ -17,6 +17,7 @@ export interface PaymentServiceEvents {
    * @param err The error raised during an asynchronous process executed by the PaymentService
    */
   error: (err: Error) => void;
+  allocationCreated: (allocation: Allocation) => void;
 }
 
 export interface PaymentOptions extends BasePaymentOptions {
@@ -63,7 +64,8 @@ export class PaymentService {
   async run() {
     this.isRunning = true;
     this.payments = await Payments.create(this.yagnaApi, this.config.options);
-    this.payments.addEventListener(PAYMENT_EVENT_TYPE, this.subscribePayments.bind(this));
+    this.payments.events.on("debitNoteReceived", this.subscribeDebitNotePayments.bind(this));
+    this.payments.events.on("invoiceReceived", this.subscribeInvoicePayments.bind(this));
     this.logger.info("Payment Service has started");
   }
 
@@ -91,7 +93,8 @@ export class PaymentService {
     await this.payments
       ?.unsubscribe()
       .catch((error) => this.logger.warn("Unable to unsubscribe from payments", { error }));
-    this.payments?.removeEventListener(PAYMENT_EVENT_TYPE, this.subscribePayments.bind(this));
+    this.payments?.events.removeListener("debitNoteReceived", this.subscribeDebitNotePayments.bind(this));
+    this.payments?.events.removeListener("invoiceReceived", this.subscribeInvoicePayments.bind(this));
     await this.allocation?.release().catch((error) => this.logger.warn("Unable to release allocation", { error }));
     this.logger.info("Allocation has been released");
     this.logger.info("Payment service has been stopped");
@@ -109,6 +112,7 @@ export class PaymentService {
         address: await this.getPaymentAddress(),
       };
       this.allocation = await Allocation.create(this.yagnaApi, { ...this.config.options, account, ...options });
+      this.events.emit("allocationCreated", this.allocation);
       return this.allocation;
     } catch (error) {
       if (error instanceof GolemPaymentError) {
@@ -205,25 +209,23 @@ export class PaymentService {
     await process.addDebitNote(debitNote);
   }
 
-  private async subscribePayments(event: Event) {
-    if (event instanceof InvoiceEvent) {
-      try {
-        await this.processInvoice(event.invoice);
-        this.logger.debug(`Invoice event processed`, { agreementId: event.invoice.agreementId });
-      } catch (err) {
-        this.logger.error(`Failed to process InvoiceEvent`, { agreementId: event.invoice.agreementId, err });
-        this.events.emit("error", err);
-      }
+  private async subscribeInvoicePayments(invoice: Invoice) {
+    try {
+      await this.processInvoice(invoice);
+      this.logger.debug(`Invoice event processed`, { agreementId: invoice.agreementId });
+    } catch (err) {
+      this.logger.error(`Failed to process InvoiceEvent`, { agreementId: invoice.agreementId, err });
+      this.events.emit("error", err);
     }
+  }
 
-    if (event instanceof DebitNoteEvent) {
-      try {
-        await this.processDebitNote(event.debitNote);
-        this.logger.debug(`DebitNote event processed`, { agreementId: event.debitNote.agreementId });
-      } catch (err) {
-        this.logger.error(`Failed to process DebitNoteEvent`, { agreementId: event.debitNote.agreementId, err });
-        this.events.emit("error", err);
-      }
+  private async subscribeDebitNotePayments(debitNote: DebitNote) {
+    try {
+      await this.processDebitNote(debitNote);
+      this.logger.debug(`DebitNote event processed`, { agreementId: debitNote.agreementId });
+    } catch (err) {
+      this.logger.error(`Failed to process DebitNoteEvent`, { agreementId: debitNote.agreementId, err });
+      this.events.emit("error", err);
     }
   }
 

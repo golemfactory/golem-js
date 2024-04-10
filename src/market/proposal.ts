@@ -1,9 +1,15 @@
-import { Proposal as ProposalModel, ProposalAllOfStateEnum } from "ya-ts-client/dist/ya-market/src/models";
-import { RequestorApi } from "ya-ts-client/dist/ya-market/api";
-import { Events } from "../events";
+import { MarketApi } from "ya-ts-client";
 import { GolemMarketError, MarketErrorCode } from "./error";
 import { ProviderInfo } from "../agreement";
 import { Demand } from "./demand";
+import { withTimeout } from "../utils/timeout";
+import { EventEmitter } from "eventemitter3";
+
+export interface ProposalEvents {
+  proposalResponded: (details: { id: string; provider: ProviderInfo; counteringProposalId: string }) => void;
+  proposalRejected: (details: { id: string; provider: ProviderInfo; parentId: string | null; reason: string }) => void;
+  proposalFailed: (details: { id: string; provider: ProviderInfo; parentId: string | null; reason: string }) => void;
+}
 
 export type PricingInfo = {
   cpuSec: number;
@@ -54,7 +60,7 @@ export interface ProposalDetails {
   publicNet: boolean;
   runtimeCapabilities: string[];
   runtimeName: string;
-  state: ProposalAllOfStateEnum;
+  state: MarketApi.ProposalDTO["state"];
 }
 
 /**
@@ -68,8 +74,9 @@ export class Proposal {
   readonly constraints: string;
   readonly timestamp: string;
   counteringProposalId: string | null;
-  private readonly state: ProposalAllOfStateEnum;
+  private readonly state: MarketApi.ProposalDTO["state"];
   private readonly prevProposalId: string | undefined;
+  public readonly events = new EventEmitter<ProposalEvents>();
 
   /**
    * Create proposal for given subscription ID
@@ -79,15 +86,13 @@ export class Proposal {
    * @param setCounteringProposalReference
    * @param api
    * @param model
-   * @param eventTarget
    */
   constructor(
     public readonly demand: Demand,
     private readonly parentId: string | null,
     private readonly setCounteringProposalReference: (id: string, parentId: string) => void | null,
-    private readonly api: RequestorApi,
-    model: ProposalModel,
-    private eventTarget?: EventTarget,
+    private readonly api: MarketApi.RequestorService,
+    model: MarketApi.ProposalDTO,
   ) {
     this.id = model.proposalId;
     this.issuerId = model.issuerId;
@@ -180,33 +185,31 @@ export class Proposal {
   }
 
   isInitial(): boolean {
-    return this.state === ProposalAllOfStateEnum.Initial;
+    return this.state === "Initial";
   }
 
   isDraft(): boolean {
-    return this.state === ProposalAllOfStateEnum.Draft;
+    return this.state === "Draft";
   }
 
   isExpired(): boolean {
-    return this.state === ProposalAllOfStateEnum.Expired;
+    return this.state === "Expired";
   }
 
   isRejected(): boolean {
-    return this.state === ProposalAllOfStateEnum.Rejected;
+    return this.state === "Rejected";
   }
 
   async reject(reason = "no reason") {
     try {
       // eslint-disable-next-line @typescript-eslint/ban-types
       await this.api.rejectProposalOffer(this.demand.id, this.id, { message: reason as {} });
-      this.eventTarget?.dispatchEvent(
-        new Events.ProposalRejected({
-          id: this.id,
-          provider: this.provider,
-          parentId: this.id,
-          reason,
-        }),
-      );
+      this.events.emit("proposalRejected", {
+        id: this.id,
+        provider: this.provider,
+        parentId: this.id,
+        reason,
+      });
     } catch (error) {
       throw new GolemMarketError(
         `Failed to reject proposal. ${error?.response?.data?.message || error}`,
@@ -221,33 +224,36 @@ export class Proposal {
     try {
       (this.demand.demandRequest.properties as ProposalProperties)["golem.com.payment.chosen-platform"] =
         chosenPlatform;
-      const { data: counteringProposalId } = await this.api.counterProposalDemand(
-        this.demand.id,
-        this.id,
-        this.demand.demandRequest,
-        { timeout: 20000 },
+
+      const counteringProposalId = await withTimeout(
+        this.api.counterProposalDemand(this.demand.id, this.id, this.demand.demandRequest),
+        20_000,
       );
+
+      if (!counteringProposalId || typeof counteringProposalId !== "string") {
+        throw new GolemMarketError(
+          "Failed to respond proposal. No countering proposal ID returned",
+          MarketErrorCode.ProposalResponseFailed,
+          this.demand,
+        );
+      }
       if (this.setCounteringProposalReference) {
         this.setCounteringProposalReference(this.id, counteringProposalId);
       }
-      this.eventTarget?.dispatchEvent(
-        new Events.ProposalResponded({
-          id: this.id,
-          provider: this.provider,
-          counteringProposalId: counteringProposalId,
-        }),
-      );
+      this.events.emit("proposalResponded", {
+        id: this.id,
+        provider: this.provider,
+        counteringProposalId,
+      });
       return counteringProposalId;
     } catch (error) {
       const reason = error?.response?.data?.message || error.toString();
-      this.eventTarget?.dispatchEvent(
-        new Events.ProposalFailed({
-          id: this.id,
-          provider: this.provider,
-          parentId: this.id,
-          reason,
-        }),
-      );
+      this.events.emit("proposalFailed", {
+        id: this.id,
+        provider: this.provider,
+        parentId: this.id,
+        reason,
+      });
       throw new GolemMarketError(
         `Failed to respond proposal. ${reason}`,
         MarketErrorCode.ProposalResponseFailed,

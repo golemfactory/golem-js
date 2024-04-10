@@ -1,47 +1,48 @@
 import { DemandFactory } from "./factory";
-import { anything, capture, imock, instance, mock, when } from "@johanblumenberg/ts-mockito";
+import { anything, capture, instance, mock, reset, when } from "@johanblumenberg/ts-mockito";
 import { Package } from "../package";
 import { Allocation } from "../payment";
 import { YagnaApi } from "../utils";
-import { RequestorApi as MarketRequestorApi } from "ya-ts-client/dist/ya-market/src/api/requestor-api";
+import { MarketApi } from "ya-ts-client";
+
+const mockPackage = mock(Package);
+const mockAllocation = mock(Allocation);
+
+const mockMarket = mock(MarketApi.RequestorService);
+const mockYagna = mock(YagnaApi);
 
 describe("Demand Factory", () => {
+  beforeEach(() => {
+    reset(mockYagna);
+    reset(mockMarket);
+    reset(mockPackage);
+    reset(mockAllocation);
+
+    when(mockYagna.market).thenReturn(instance(mockMarket));
+
+    when(mockPackage.getDemandDecoration()).thenResolve({
+      properties: [],
+      constraints: [],
+    });
+
+    when(mockAllocation.getDemandDecoration()).thenResolve({
+      properties: [],
+      constraints: [],
+    });
+
+    when(mockMarket.subscribeDemand(anything())).thenResolve("subscription-id");
+  });
   describe("mid-agreement payments support", () => {
     describe("default behaviour", () => {
       it("it configures mid-agreement payments by default", async () => {
         // Given
-        const pkg = mock(Package);
-        const allocation = mock(Allocation);
-
-        const market = mock(MarketRequestorApi);
-        const api = imock<YagnaApi>();
-
         // When
-        when(api.market).thenReturn(instance(market));
 
-        when(pkg.getDemandDecoration()).thenResolve({
-          properties: [],
-          constraints: [],
-        });
-
-        when(allocation.getDemandDecoration()).thenResolve({
-          properties: [],
-          constraints: [],
-        });
-
-        when(market.subscribeDemand(anything())).thenResolve({
-          config: {},
-          headers: {},
-          status: 200,
-          statusText: "OK",
-          data: "subscription-id",
-        });
-
-        const factory = new DemandFactory(instance(pkg), instance(allocation), instance(api));
+        const factory = new DemandFactory(instance(mockPackage), instance(mockAllocation), instance(mockYagna));
         const demand = await factory.create();
 
         // Then
-        const [demandRequestBody] = capture(market.subscribeDemand).last();
+        const [demandRequestBody] = capture(mockMarket.subscribeDemand).last();
 
         // The properties responsible for mid-agreements payments are set
         expect(demandRequestBody.properties["golem.com.payment.debit-notes.accept-timeout?"]).toBeDefined();

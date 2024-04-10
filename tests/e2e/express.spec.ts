@@ -1,13 +1,14 @@
 import express from "express";
-import { GolemNetwork, JobState } from "../../src/experimental";
+import { JobManager, JobState } from "../../src/experimental";
 import supertest from "supertest";
 import fs from "fs";
+import { jest } from "@jest/globals";
 
 describe("Express", function () {
-  let golemClient: GolemNetwork;
+  let golemClient: JobManager;
   const consoleSpy = jest.fn();
   beforeEach(async () => {
-    golemClient = new GolemNetwork({});
+    golemClient = new JobManager({});
     await golemClient.init();
     consoleSpy.mockReset();
   });

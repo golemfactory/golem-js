@@ -1,10 +1,14 @@
 import { Activity, ActivityOptions } from "./activity";
 import { ActivityConfig } from "./config";
-import { Events } from "../events";
 import { YagnaApi } from "../utils";
 import { Agreement } from "../agreement";
-import { GolemWorkError, WorkErrorCode } from "../task/error";
+import { GolemWorkError, WorkErrorCode } from "../work";
 import { GolemInternalError } from "../error/golem-error";
+import { EventEmitter } from "eventemitter3";
+
+export interface ActivityFactoryEvents {
+  activityCreated: (details: { id: string; agreementId: string }) => void;
+}
 
 /**
  * Activity Factory
@@ -13,6 +17,7 @@ import { GolemInternalError } from "../error/golem-error";
  */
 export class ActivityFactory {
   private readonly options: ActivityConfig;
+  public readonly events = new EventEmitter<ActivityFactoryEvents>();
 
   constructor(
     private readonly agreement: Agreement,
@@ -42,12 +47,12 @@ export class ActivityFactory {
   }
 
   private async createActivity(): Promise<Activity> {
-    const { data } = await this.yagnaApi.activity.control.createActivity({ agreementId: this.agreement.id });
+    const data = await this.yagnaApi.activity.control.createActivity({ agreementId: this.agreement.id });
 
     const id = typeof data == "string" ? data : data.activityId;
 
     this.options.logger.debug(`Activity created`, { id });
-    this.options.eventTarget?.dispatchEvent(new Events.ActivityCreated({ id, agreementId: this.agreement.id }));
+    this.events.emit("activityCreated", { id, agreementId: this.agreement.id });
 
     return new Activity(id, this.agreement, this.yagnaApi, this.options);
   }

@@ -3,7 +3,6 @@ import { anything, instance, mock, objectContaining, reset, verify, when } from 
 import { Agreement } from "../agreement";
 import { Allocation } from "./allocation";
 import { Invoice } from "./invoice";
-import { InvoiceStatus } from "ya-ts-client/dist/ya-payment";
 import { RejectionReason } from "./rejection";
 import { DebitNote } from "./debit_note";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
@@ -33,9 +32,8 @@ describe("AgreementPaymentProcess", () => {
     describe("Basic use cases", () => {
       it("accepts a invoice in RECEIVED state", async () => {
         when(allocationMock.id).thenReturn("1000");
-        when(invoiceMock.amount).thenReturn(0.123);
-        when(invoiceMock.amountPrecise).thenReturn("0.123");
-        when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
+        when(invoiceMock.amount).thenReturn("0.123");
+        when(invoiceMock.getStatus()).thenResolve("RECEIVED");
 
         const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
           debitNoteFilter: () => true,
@@ -53,9 +51,8 @@ describe("AgreementPaymentProcess", () => {
         when(allocationMock.id).thenReturn("1000");
         when(invoiceMock.id).thenReturn("invoice-id");
         when(invoiceMock.agreementId).thenReturn("agreement-id");
-        when(invoiceMock.amount).thenReturn(0.123);
-        when(invoiceMock.amountPrecise).thenReturn("0.123");
-        when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
+        when(invoiceMock.amount).thenReturn("0.123");
+        when(invoiceMock.getStatus()).thenResolve("RECEIVED");
 
         const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
           debitNoteFilter: () => true,
@@ -81,9 +78,8 @@ describe("AgreementPaymentProcess", () => {
         when(allocationMock.id).thenReturn("1000");
         when(invoiceMock.id).thenReturn("invoice-id");
         when(invoiceMock.agreementId).thenReturn("agreement-id");
-        when(invoiceMock.amount).thenReturn(0.123);
-        when(invoiceMock.amountPrecise).thenReturn("0.123");
-        when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Accepted);
+        when(invoiceMock.amount).thenReturn("0.123");
+        when(invoiceMock.getStatus()).thenResolve("ACCEPTED");
         const allocation = instance(allocationMock);
 
         const process = new AgreementPaymentProcess(instance(agreementMock), allocation, {
@@ -110,9 +106,8 @@ describe("AgreementPaymentProcess", () => {
         when(allocationMock.id).thenReturn("1000");
         const allocation = instance(allocationMock);
 
-        when(invoiceMock.amount).thenReturn(0.123);
-        when(invoiceMock.amountPrecise).thenReturn("0.123");
-        when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
+        when(invoiceMock.amount).thenReturn("0.123");
+        when(invoiceMock.getStatus()).thenResolve("RECEIVED");
         when(invoiceMock.isSameAs(anything())).thenReturn(true);
 
         const process = new AgreementPaymentProcess(instance(agreementMock), allocation, {
@@ -141,9 +136,8 @@ describe("AgreementPaymentProcess", () => {
       it("accepts the duplicate if the original invoice has not been already decided upon (still in RECEIVED state)", async () => {
         when(allocationMock.id).thenReturn("1000");
 
-        when(invoiceMock.amount).thenReturn(0.123);
-        when(invoiceMock.amountPrecise).thenReturn("0.123");
-        when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
+        when(invoiceMock.amount).thenReturn("0.123");
+        when(invoiceMock.getStatus()).thenResolve("RECEIVED");
         when(invoiceMock.isSameAs(anything())).thenReturn(true);
 
         const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
@@ -165,7 +159,7 @@ describe("AgreementPaymentProcess", () => {
       });
 
       it("doesn't accept the same invoice twice if the previous one was already processed", async () => {
-        when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received).thenResolve(InvoiceStatus.Accepted);
+        when(invoiceMock.getStatus()).thenResolve("RECEIVED").thenResolve("ACCEPTED");
         when(invoiceMock.isSameAs(anything())).thenReturn(true);
 
         const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
@@ -189,7 +183,7 @@ describe("AgreementPaymentProcess", () => {
         when(invoiceMock.id).thenReturn("invoice-id");
         when(invoiceMock.agreementId).thenReturn("agreement-id");
         when(agreementMock.id).thenReturn("agreement-id");
-        when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
+        when(invoiceMock.getStatus()).thenResolve("RECEIVED");
         when(invoiceMock.isSameAs(anything())).thenReturn(false);
         const allocation = instance(allocationMock);
         const agreement = instance(agreementMock);
@@ -218,7 +212,7 @@ describe("AgreementPaymentProcess", () => {
         when(invoiceMock.id).thenReturn("invoice-id");
         when(invoiceMock.agreementId).thenReturn("agreement-id");
         when(agreementMock.id).thenReturn("agreement-id");
-        when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
+        when(invoiceMock.getStatus()).thenResolve("RECEIVED");
         when(invoiceMock.isSameAs(anything())).thenReturn(false);
         const allocation = instance(allocationMock);
         const agreement = instance(agreementMock);
@@ -243,8 +237,7 @@ describe("AgreementPaymentProcess", () => {
     describe("Basic use cases", () => {
       it("accepts a single debit note", async () => {
         when(allocationMock.id).thenReturn("1000");
-        when(debitNoteMock.totalAmountDue).thenReturn(0.123);
-        when(debitNoteMock.totalAmountDuePrecise).thenReturn("0.123");
+        when(debitNoteMock.totalAmountDue).thenReturn("0.123");
 
         const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
           debitNoteFilter: () => true,
@@ -262,8 +255,8 @@ describe("AgreementPaymentProcess", () => {
 
       it("rejects debit note if it's ignored by the user defined debit note filter", async () => {
         when(allocationMock.id).thenReturn("1000");
-        when(debitNoteMock.totalAmountDue).thenReturn(0.123);
-        when(debitNoteMock.totalAmountDuePrecise).thenReturn("0.123");
+        when(debitNoteMock.totalAmountDue).thenReturn("0.123");
+
         when(debitNoteMock.id).thenReturn("debit-note-id");
         when(debitNoteMock.agreementId).thenReturn("agreement-id");
 
@@ -291,10 +284,9 @@ describe("AgreementPaymentProcess", () => {
 
       it("rejects debit note if there is already an invoice for that process", async () => {
         when(allocationMock.id).thenReturn("1000");
-        when(invoiceMock.amount).thenReturn(0.123);
-        when(invoiceMock.amountPrecise).thenReturn("0.123");
-        when(invoiceMock.getStatus()).thenResolve(InvoiceStatus.Received);
-        when(debitNoteMock.totalAmountDue).thenReturn(0.456);
+        when(invoiceMock.amount).thenReturn("0.123");
+        when(invoiceMock.getStatus()).thenResolve("RECEIVED");
+        when(debitNoteMock.totalAmountDue).thenReturn("0.456");
         when(debitNoteMock.id).thenReturn("debit-note-id");
         when(debitNoteMock.agreementId).thenReturn("agreement-id");
 
@@ -330,9 +322,8 @@ describe("AgreementPaymentProcess", () => {
     describe("Dealing with duplicates", () => {
       it("accepts the duplicated debit note if accepting the previous failed", async () => {
         when(allocationMock.id).thenReturn("1000");
-        when(debitNoteMock.totalAmountDue).thenReturn(0.123);
-        when(debitNoteMock.totalAmountDuePrecise).thenReturn("0.123");
-        when(debitNoteMock.getStatus()).thenResolve(InvoiceStatus.Received);
+        when(debitNoteMock.totalAmountDue).thenReturn("0.123");
+        when(debitNoteMock.getStatus()).thenResolve("RECEIVED");
 
         const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
           debitNoteFilter: () => true,
@@ -358,7 +349,7 @@ describe("AgreementPaymentProcess", () => {
       });
 
       it("doesn't accept the same debit note twice if the previous one was already processed", async () => {
-        when(debitNoteMock.getStatus()).thenResolve(InvoiceStatus.Accepted);
+        when(debitNoteMock.getStatus()).thenResolve("ACCEPTED");
 
         const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
           debitNoteFilter: () => true,
@@ -379,8 +370,8 @@ describe("AgreementPaymentProcess", () => {
     describe("Security", () => {
       it("throws an UserError in case of error in the debitNote filter", async () => {
         when(allocationMock.id).thenReturn("1000");
-        when(debitNoteMock.totalAmountDue).thenReturn(0.123);
-        when(debitNoteMock.getStatus()).thenResolve(InvoiceStatus.Received);
+        when(debitNoteMock.totalAmountDue).thenReturn("0.123");
+        when(debitNoteMock.getStatus()).thenResolve("RECEIVED");
 
         const process = new AgreementPaymentProcess(instance(agreementMock), instance(allocationMock), {
           debitNoteFilter: () => {

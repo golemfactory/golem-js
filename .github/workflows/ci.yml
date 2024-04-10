@@ -28,10 +28,10 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup NodeJS ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
 
@@ -44,3 +44,4 @@ jobs:
           npm run build
           npm install --prefix examples
           npm run --prefix examples lint:ts
+          npm run test:import
