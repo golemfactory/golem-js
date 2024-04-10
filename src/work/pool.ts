@@ -6,7 +6,7 @@ import { PaymentOptions, PaymentService } from "../payment";
 import { Package, PackageOptions } from "../package";
 import { MarketOptions, MarketService } from "../market";
 import { ActivityDTO, WorkContext, WorkOptions } from "./work";
-import { NetworkService, NetworkServiceOptions } from "../network";
+import { NetworkService } from "../network";
 import { createDefaultStorageProvider, StorageProvider } from "../storage";
 import { EventEmitter } from "eventemitter3";
 import { GolemWorkError, WorkErrorCode } from "./error";
@@ -19,9 +19,9 @@ export interface ActivityPoolOptions {
   resources?: PackageOptions;
   pool?: GenericPoolOptions;
   market?: MarketOptions;
-  network?: NetworkServiceOptions;
   payment?: PaymentOptions;
   work?: WorkOptions;
+  network?: string;
 }
 
 export interface ActivityPoolEvents {
@@ -52,7 +52,7 @@ export class ActivityPool {
     this.agreementPoolService = new AgreementPoolService(this.yagnaApi, options.market);
     this.marketService = new MarketService(this.agreementPoolService, this.yagnaApi, options.market);
     this.paymentService = new PaymentService(this.yagnaApi, options.payment);
-    this.networkService = options.network ? new NetworkService(this.yagnaApi, options.network) : undefined;
+    // this.networkService = options.network ? new NetworkService(this.yagnaApi, options.network) : undefined;
     this.storageProvider = createDefaultStorageProvider(this.yagnaApi, this.logger);
     this.pool = createPool<WorkContext>(this.createFactory(), {
       autostart: false,

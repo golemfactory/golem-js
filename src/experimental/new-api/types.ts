@@ -1,14 +1,3 @@
-import { Logger } from "../../utils";
-
-export enum ActivityPoolState {
-  INITIAL = "INITIAL",
-  STARTING = "STARTING",
-  READY = "READY",
-  STOPPING = "STOPPING",
-  STOPPED = "STOPPED",
-  ERROR = "ERROR",
-}
-
 export interface Resources {
   /** The minimum CPU requirement for each service instance. */
   minCpu?: number;
@@ -44,43 +33,4 @@ export interface MarketOptions {
 
 export interface PaymentOptions {
   // TODO
-}
-
-export interface ActivityPoolOptions {
-  image: string;
-  logger?: Logger;
-  api?: {
-    key: string;
-    url: string;
-  };
-  abortController?: AbortController;
-  resources?: Resources;
-  replicas?: number;
-  market: MarketOptions;
-  network?: string;
-  payment?: PaymentOptions;
-  // networking?: string | Network[];
-}
-
-export interface ActivityPoolEvents {
-  /**
-   * Fires when backend is started.
-   */
-  ready: () => void;
-
-  /**
-   * Fires when a new instance encounters an error during initialization.
-   * @param error
-   */
-  // activityInitError: (error: ActivityInitError) => void;
-
-  /**
-   * Fires when backend is about to be stopped.
-   */
-  beforeEnd: () => void;
-
-  /**
-   * Fires when backend is completely terminated.
-   */
-  end: () => void;
 }
