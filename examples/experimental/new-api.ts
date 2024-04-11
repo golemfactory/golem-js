@@ -13,7 +13,7 @@ async function main() {
 
   await golem.connect();
 
-  const builder = golem.createBuilder();
+  const builder = golem.creteDeploymentBuilder();
 
   // const deployment = golem.createDeployment();
 
