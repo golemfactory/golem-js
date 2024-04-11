@@ -9,7 +9,7 @@ import { GolemInternalError } from "../error/golem-error";
  */
 export async function getHealthyProvidersWhiteList(): Promise<string[]> {
   try {
-    const response = await fetch("https://provider-health.golem.network/v1/provider-whitelist");
+    const response = await fetch("https://reputation.dev-test.golem.network/v1/provider-whitelist");
 
     if (response.ok) {
       return response.json();
