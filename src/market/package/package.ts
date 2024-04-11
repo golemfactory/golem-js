@@ -1,8 +1,8 @@
-import { ComparisonOperator, DecorationsBuilder, MarketDecoration } from "../market/builder";
-import { EnvUtils, Logger, defaultLogger } from "../utils";
+import { ComparisonOperator, DecorationsBuilder, MarketDecoration } from "../builder";
+import { EnvUtils, Logger, defaultLogger } from "../../shared/utils";
 import { PackageConfig } from "./config";
-import { RequireAtLeastOne } from "../utils/types";
-import { GolemError, GolemPlatformError } from "../error/golem-error";
+import { RequireAtLeastOne } from "../../shared/utils/types";
+import { GolemError, GolemPlatformError } from "../../shared/error/golem-error";
 
 export type AllPackageOptions = {
   /** Type of engine required: vm, emscripten, sgx, sgx-js, sgx-wasm, sgx-wasi */

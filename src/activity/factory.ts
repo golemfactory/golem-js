@@ -1,9 +1,9 @@
 import { Activity, ActivityOptions } from "./activity";
 import { ActivityConfig } from "./config";
-import { YagnaApi } from "../utils";
+import { YagnaApi } from "../shared/utils";
 import { Agreement } from "../agreement";
-import { GolemWorkError, WorkErrorCode } from "../work";
-import { GolemInternalError } from "../error/golem-error";
+import { GolemWorkError, WorkErrorCode } from "./work";
+import { GolemInternalError } from "../shared/error/golem-error";
 import { EventEmitter } from "eventemitter3";
 
 export interface ActivityFactoryEvents {

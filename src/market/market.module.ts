@@ -4,7 +4,7 @@ import { Promise } from "cypress/types/cy-bluebird";
 import { Demand, Proposal, ProposalFilter } from "./index";
 import { Agreement } from "../agreement";
 
-import { YagnaEventSubscription } from "../utils";
+import { YagnaApi, YagnaEventSubscription } from "../shared/utils";
 
 export interface MarketEvents {}
 
@@ -29,7 +29,11 @@ export interface MarketModule {
    *
    * @return A proposal which is already fully negotiated and ready to from an Agreement from
    */
-  negotiateProposal(original: Proposal, counter: Proposal): Promise<Proposal>;
+  negotiateProposal(
+    proposalStream: YagnaEventSubscription<Proposal>,
+    original: Proposal,
+    counter?: Proposal,
+  ): Promise<Proposal>;
 
   /**
    * Internally
@@ -56,42 +60,58 @@ export interface MarketModule {
   getAgreement(options: BuildDemandParams, filter: ProposalFilter): Promise<Agreement>;
 
   getAgreements(options: BuildDemandParams, filter: ProposalFilter, count: number): Promise<Agreement[]>;
-
-  generateAgreements(options: BuildDemandParams, filter: ProposalFilter): AsyncGenerator<Agreement>;
 }
 
 export class MarketModuleImpl implements MarketModule {
   events: EventEmitter<MarketEvents> = new EventEmitter<MarketEvents>();
 
-  buildDemand(_options: BuildDemandParams): Promise<Demand> {
+  constructor(private readonly yagnaApi: YagnaApi) {}
+
+  buildDemand(options: BuildDemandParams): Promise<Demand> {
     throw new Error("Method not implemented.");
   }
 
-  subscribeForProposals(_demand: Demand): YagnaEventSubscription<Proposal> {
+  subscribeForProposals(demand: Demand): YagnaEventSubscription<Proposal> {
+    // const subId = await this.yagnaApi.market.subscribeDemand(demand);
+    //
+    // // Getting a 404 while collecting offers should cancel the subscription
+    // const sub = Subscription.longPoll(() => this.yagnaApi.market.collectOffers(subId)).map(
+    //   (proposalDto: ProposalDTO) => {
+    //     const p = new Proposal(demand, null);
+    //
+    //     // More work...
+    //
+    //     return p;
+    //   },
+    // );
+    //
+    // // sub.cancel();
+    // return sub;
+
     throw new Error("Method not implemented.");
   }
 
-  negotiateProposal(_original: Proposal, _counter: Proposal): Promise<Proposal> {
+  negotiateProposal(
+    proposalStream: YagnaEventSubscription<Proposal>,
+    original: Proposal,
+    counter: Proposal,
+  ): Promise<Proposal> {
     throw new Error("Method not implemented.");
   }
 
-  proposeAgreement(_proposal: Proposal): Promise<Agreement> {
+  proposeAgreement(proposal: Proposal): Promise<Agreement> {
     throw new Error("Method not implemented.");
   }
 
-  terminateAgreement(_agreement: Agreement, _reason: string): Promise<Agreement> {
+  terminateAgreement(agreement: Agreement, reason: string): Promise<Agreement> {
     throw new Error("Method not implemented.");
   }
 
-  getAgreement(_options: BuildDemandParams, _filter: ProposalFilter): Promise<Agreement> {
+  getAgreement(options: BuildDemandParams, filter: ProposalFilter): Promise<Agreement> {
     throw new Error("Method not implemented.");
   }
 
-  getAgreements(_options: BuildDemandParams, _filter: ProposalFilter, _count: number): Promise<Agreement[]> {
-    throw new Error("Method not implemented.");
-  }
-
-  generateAgreements(_options: BuildDemandParams, _filter: ProposalFilter): AsyncGenerator<Agreement> {
+  getAgreements(options: BuildDemandParams, filter: ProposalFilter, count: number): Promise<Agreement[]> {
     throw new Error("Method not implemented.");
   }
 }

@@ -1,9 +1,9 @@
-import { defaultLogger, Logger, YagnaApi, YagnaOptions } from "../utils";
+import { defaultLogger, Logger, YagnaApi, YagnaOptions } from "../shared/utils";
 import { MarketApi } from "ya-ts-client";
 import { AgreementFactory } from "./factory";
 import { AgreementConfig } from "./config";
 import { GolemMarketError, MarketErrorCode, Proposal } from "../market";
-import { withTimeout } from "../utils/timeout";
+import { withTimeout } from "../shared/utils/timeout";
 import { EventEmitter } from "eventemitter3";
 
 export interface AgreementEvents {

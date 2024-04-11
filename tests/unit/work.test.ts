@@ -15,7 +15,7 @@ import { LoggerMock } from "../mock/utils/logger";
 import { buildExeScriptErrorResult, buildExeScriptSuccessResult, simulateLongPoll } from "./helpers";
 import * as YaTsClient from "ya-ts-client";
 import { IPv4 } from "ip-num";
-import { StorageProviderDataCallback } from "../../src/storage/provider";
+import { StorageProviderDataCallback } from "../../src/shared/storage/provider";
 import EventEmitter from "events";
 
 const logger = new LoggerMock();

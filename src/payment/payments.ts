@@ -1,8 +1,8 @@
 import { BasePaymentOptions, PaymentConfig } from "./config";
-import { Logger, sleep, YagnaApi } from "../utils";
+import { Logger, sleep, YagnaApi } from "../shared/utils";
 import { Invoice } from "./invoice";
 import { DebitNote } from "./debit_note";
-import { GolemTimeoutError } from "../error/golem-error";
+import { GolemTimeoutError } from "../shared/error/golem-error";
 import { EventEmitter } from "eventemitter3";
 
 export interface PaymentEvents {

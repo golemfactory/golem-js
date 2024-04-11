@@ -1,4 +1,4 @@
-import { GolemModuleError } from "../error/golem-error";
+import { GolemModuleError } from "../shared/error/golem-error";
 import { Demand } from "./demand";
 
 export enum MarketErrorCode {

@@ -1,11 +1,11 @@
-import { Package } from "../package";
+import { Package } from "./package";
 import { Allocation } from "../payment";
 import { DemandFactory } from "./factory";
 import { Proposal } from "./proposal";
-import { defaultLogger, Logger, sleep, YagnaApi, YagnaOptions } from "../utils";
+import { defaultLogger, Logger, sleep, YagnaApi, YagnaOptions } from "../shared/utils";
 import { DemandConfig } from "./config";
 import { GolemMarketError, MarketErrorCode } from "./error";
-import { GolemError, GolemPlatformError } from "../error/golem-error";
+import { GolemError, GolemPlatformError } from "../shared/error/golem-error";
 import { MarketApi } from "ya-ts-client";
 import { EventEmitter } from "eventemitter3";
 
@@ -96,12 +96,6 @@ export interface DemandOptions {
    */
   midAgreementPaymentTimeoutSec?: number;
 }
-
-/**
- * Event type with which all offers and proposals coming from the market will be emitted.
- * @hidden
- */
-export const EVENT_PROPOSAL_RECEIVED = "ProposalReceived";
 
 /**
  * Demand module - an object which can be considered an "open" or public Demand, as it is not directed at a specific Provider, but rather is sent to the market so that the matching mechanism implementation can associate relevant Offers.

@@ -1,5 +1,5 @@
 import Bottleneck from "bottleneck";
-import { Logger, YagnaApi, defaultLogger, sleep } from "../utils";
+import { Logger, YagnaApi, defaultLogger, sleep } from "../shared/utils";
 import { Agreement, AgreementOptions } from "./agreement";
 import { AgreementServiceConfig } from "./config";
 import { GolemMarketError, MarketErrorCode, Proposal } from "../market";

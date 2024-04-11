@@ -1,8 +1,6 @@
 import {
   Allocation,
   Demand,
-  DemandEvent,
-  EVENT_PROPOSAL_RECEIVED,
   GolemConfigError,
   GolemMarketError,
   MarketErrorCode,

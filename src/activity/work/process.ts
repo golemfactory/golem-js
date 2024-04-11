@@ -1,7 +1,7 @@
 import { Readable, Transform } from "stream";
-import { Activity, Result } from "../activity";
+import { Activity, Result } from "../index";
 import { GolemWorkError, WorkErrorCode } from "./error";
-import { GolemTimeoutError } from "../error/golem-error";
+import { GolemTimeoutError } from "../../shared/error/golem-error";
 
 const DEFAULTS = {
   exitWaitingTimeout: 20_000,

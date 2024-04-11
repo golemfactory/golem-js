@@ -1,5 +1,5 @@
 import { ComparisonOperator, DecorationsBuilder } from "../../src/market/builder";
-import { GolemInternalError } from "../../src/error/golem-error";
+import { GolemInternalError } from "../../src/shared/error/golem-error";
 
 describe("#DecorationsBuilder()", () => {
   describe("addProperty()", () => {

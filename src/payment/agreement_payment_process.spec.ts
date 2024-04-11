@@ -6,7 +6,7 @@ import { Invoice } from "./invoice";
 import { RejectionReason } from "./rejection";
 import { DebitNote } from "./debit_note";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
-import { GolemUserError } from "../error/golem-error";
+import { GolemUserError } from "../shared/error/golem-error";
 
 const agreementMock = mock(Agreement);
 const allocationMock = mock(Allocation);

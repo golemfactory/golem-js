@@ -3,7 +3,7 @@ import { EventEmitter } from "eventemitter3";
 import { Allocation, DebitNote, Invoice, InvoiceProcessor } from "./index";
 import { Promise } from "cypress/types/cy-bluebird";
 
-import { YagnaEventSubscription } from "../utils";
+import { YagnaEventSubscription } from "../shared/utils";
 
 export interface PaymentEvents {}
 

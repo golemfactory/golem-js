@@ -1,7 +1,7 @@
 import { MockPropertyPolicy, imock, instance, when } from "@johanblumenberg/ts-mockito";
 
 import { getHealthyProvidersWhiteList } from "./helpers";
-import { GolemInternalError } from "../error/golem-error";
+import { GolemInternalError } from "../shared/error/golem-error";
 
 const mockFetch = jest.spyOn(global, "fetch");
 const response = imock<Response>();

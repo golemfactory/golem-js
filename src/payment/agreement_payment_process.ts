@@ -3,11 +3,11 @@ import { Invoice } from "./invoice";
 import { DebitNote } from "./debit_note";
 import { RejectionReason } from "./rejection";
 import { Allocation } from "./allocation";
-import { defaultLogger, Logger } from "../utils";
+import { defaultLogger, Logger } from "../shared/utils";
 import { DebitNoteFilter, InvoiceFilter } from "./service";
 import AsyncLock from "async-lock";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
-import { GolemUserError } from "../error/golem-error";
+import { GolemUserError } from "../shared/error/golem-error";
 
 /**
  * Process manager that controls the logic behind processing events related to an agreement which result with payments

@@ -1,4 +1,4 @@
-import { GolemConfigError } from "../../error/golem-error";
+import { GolemConfigError } from "../../shared/error/golem-error";
 import { NetworkOptions } from "../../network";
 import { Deployment, DeploymentComponents } from "./deployment";
 import { GolemNetwork } from "../../golem-network";

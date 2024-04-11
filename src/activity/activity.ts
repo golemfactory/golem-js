@@ -1,14 +1,14 @@
 import { Result, ResultData, StreamingBatchEvent } from "./results";
 import EventSource from "eventsource";
 import { Readable } from "stream";
-import { defaultLogger, Logger, YagnaApi } from "../utils";
-import sleep from "../utils/sleep";
+import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
+import sleep from "../shared/utils/sleep";
 import { ActivityFactory } from "./factory";
 import { ActivityConfig } from "./config";
 import { Agreement, ProviderInfo } from "../agreement";
-import { GolemWorkError, WorkErrorCode } from "../work";
-import { GolemAbortError, GolemInternalError, GolemTimeoutError } from "../error/golem-error";
-import { withTimeout } from "../utils/timeout";
+import { GolemWorkError, WorkErrorCode } from "./work";
+import { GolemAbortError, GolemInternalError, GolemTimeoutError } from "../shared/error/golem-error";
+import { withTimeout } from "../shared/utils/timeout";
 import { EventEmitter } from "eventemitter3";
 import retry from "async-retry";
 

@@ -1,6 +1,6 @@
-import { GolemModuleError } from "../error/golem-error";
-import { Agreement, ProviderInfo } from "../agreement";
-import { Activity } from "../activity";
+import { GolemModuleError } from "../../shared/error/golem-error";
+import { Agreement, ProviderInfo } from "../../agreement";
+import { Activity } from "../index";
 
 export enum WorkErrorCode {
   ServiceNotInitialized = "ServiceNotInitialized",

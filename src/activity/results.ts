@@ -1,5 +1,5 @@
 import { ActivityApi } from "ya-ts-client";
-import { GolemInternalError } from "../error/golem-error";
+import { GolemInternalError } from "../shared/error/golem-error";
 
 // FIXME: Make the `data` field Uint8Array and update the rest of the code
 // eslint-disable-next-line

@@ -1,9 +1,13 @@
 import { RemoteProcess } from "./process";
 import { instance, mock, reset } from "@johanblumenberg/ts-mockito";
-import { YagnaApi } from "../utils";
-import { Agreement } from "../agreement";
-import { Activity } from "../activity";
-import { buildActivityResults, buildExeScriptErrorResult, buildExeScriptSuccessResult } from "../../tests/unit/helpers";
+import { YagnaApi } from "../../shared/utils";
+import { Agreement } from "../../agreement";
+import { Activity } from "../index";
+import {
+  buildActivityResults,
+  buildExeScriptErrorResult,
+  buildExeScriptSuccessResult,
+} from "../../../tests/unit/helpers";
 
 const mockYagna = mock(YagnaApi);
 const mockAgreement = mock(Agreement);

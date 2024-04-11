@@ -1,8 +1,8 @@
 import { Agreement, AgreementOptions, ProviderInfo } from "./agreement";
-import { Logger, defaultLogger, YagnaApi } from "../utils";
+import { Logger, defaultLogger, YagnaApi } from "../shared/utils";
 import { AgreementConfig } from "./config";
 import { Proposal, GolemMarketError, MarketErrorCode } from "../market";
-import { withTimeout } from "../utils/timeout";
+import { withTimeout } from "../shared/utils/timeout";
 import { EventEmitter } from "eventemitter3";
 
 export interface AgreementFactoryEvents {
