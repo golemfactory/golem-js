@@ -2,10 +2,10 @@ import { Agreement } from "./agreement";
 import { createPool, Factory, Options as GenericPoolOptions, Pool } from "generic-pool";
 import { defaultLogger, Logger } from "../shared/utils";
 import { ProposalPool } from "../market/pool";
-import { BuildDemandParams, MarketModule } from "../market/market.module";
-import { GolemMarketError, MarketErrorCode } from "../market";
+import { BuildDemandParams, MarketModule, GolemMarketError, MarketErrorCode } from "../market";
 import { AgreementDTO } from "./service";
 import { EventEmitter } from "eventemitter3";
+import { GolemUserError } from "../shared/error/golem-error";
 
 export interface AgreementPoolOptions {
   logger?: Logger;
@@ -38,7 +38,6 @@ export class AgreementPool {
     this.agreementPool = createPool<Agreement>(this.createPoolFactory(), {
       autostart: false,
       testOnBorrow: true,
-      max: options.pool?.max ?? options.pool?.min ?? 1,
       ...options.pool,
     });
     this.agreementPool.on("factoryCreateError", (error) =>
@@ -86,12 +85,17 @@ export class AgreementPool {
     this.events.emit("released", agreement.getDto());
   }
 
+  async destroy(agreement: Agreement): Promise<void> {
+    await this.agreementPool.destroy(agreement);
+    this.events.emit("destroyed", agreement.getDto());
+  }
+
   private createPoolFactory(): Factory<Agreement> {
     return {
       create: async (): Promise<Agreement> => {
         this.logger.debug("Creating new agreement to add to pool");
         if (!this.collectingProposals?.pool) {
-          throw new Error("xxx");
+          throw new GolemUserError("You need to start the poll first");
         }
         const proposal = await this.collectingProposals.pool.acquire();
         return this.market.proposeAgreement(proposal);
@@ -99,6 +103,7 @@ export class AgreementPool {
       destroy: async (agreement: Agreement) => {
         this.logger.debug("Destroying agreement from the pool");
         await this.market.terminateAgreement(agreement);
+        await this.collectingProposals?.pool.destroy(agreement.proposal);
       },
       validate: async (agreement: Agreement) => {
         try {

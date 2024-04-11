@@ -1,12 +1,16 @@
-import { ActivityPool } from "@golem-sdk/golem-js";
+import { ActivityPool, MarketModuleImpl, ActivityModuleImpl, YagnaApi } from "@golem-sdk/golem-js";
 
 (async function main() {
+  const yagnaApi = new YagnaApi();
+  const marketModule = new MarketModuleImpl(yagnaApi);
+  const activityModule = new ActivityModuleImpl();
+
   const pool = new ActivityPool({
     image: "golem/alpine:latest",
-    pool: {
-      min: 2,
-      max: 3,
-    },
+    demand: { paymentNetwork: "holesky" },
+    marketModule,
+    activityModule,
+    pool: { min: 2 },
   });
   try {
     await pool.start();

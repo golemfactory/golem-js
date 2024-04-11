@@ -14,6 +14,7 @@ export interface ProposalPoolEvents {
   added: (proposal: ProposalDTO) => void;
   acquired: (proposal: ProposalDTO) => void;
   released: (proposal: ProposalDTO) => void;
+  destroyed: (proposal: ProposalDTO) => void;
 }
 
 const DEFAULTS = {
@@ -42,7 +43,13 @@ export class ProposalPool {
 
   async acquire(): Promise<Proposal> {
     return this.lock.acquire("proposal-pool", () => {
+      if (this.proposals.size === 0) {
+        // TODO: ??
+      }
       const proposal = this.selector([...this.proposals]);
+      if (!this.validateProposal(proposal)) {
+        // TODO: ??
+      }
       this.proposals.delete(proposal);
       this.events.emit("acquired", proposal.getDto());
       return proposal;
@@ -51,8 +58,25 @@ export class ProposalPool {
 
   async release(proposal: Proposal): Promise<void> {
     await this.lock.acquire("proposal-pool", () => {
-      this.proposals.add(proposal);
+      if (this.validateProposal(proposal)) {
+        this.proposals.add(proposal);
+      } else {
+        // TODO: is it possible inside lock ??
+        this.destroy(proposal);
+      }
       this.events.emit("released", proposal.getDto());
     });
+  }
+
+  async destroy(proposal: Proposal): Promise<void> {
+    await this.lock.acquire("proposal-pool", () => {
+      this.proposals.delete(proposal);
+      this.events.emit("destroyed", proposal.getDto());
+    });
+  }
+
+  private validateProposal(proposal: Proposal): boolean {
+    // TODO:
+    return proposal.isInitial();
   }
 }
