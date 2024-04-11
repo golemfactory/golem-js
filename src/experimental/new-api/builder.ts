@@ -3,7 +3,7 @@ import { NetworkOptions } from "../../network";
 import { Deployment, DeploymentComponents } from "./deployment";
 import { GolemNetwork } from "../../golem-network";
 import { validateDeployment } from "./validate-deployment";
-import { ActivityPoolOptions } from "../../activity/work/pool";
+import { ActivityPoolOptions } from "../../activity/pool";
 
 export class GolemDeploymentBuilder {
   private components: DeploymentComponents = {

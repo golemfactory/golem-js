@@ -49,7 +49,7 @@ export type ProposalProperties = Record<string, string | number | string[] | num
   "golem.srv.caps.payload-manifest": boolean;
 };
 
-export interface ProposalDetails {
+export interface ProposalDTO {
   transferProtocol: string[];
   cpuBrand: string;
   cpuCapabilities: string[];
@@ -108,7 +108,7 @@ export class Proposal {
     this.validate();
   }
 
-  get details(): ProposalDetails {
+  getDto(): ProposalDTO {
     return {
       transferProtocol: this.properties["golem.activity.caps.transfer.protocol"],
       cpuBrand: this.properties["golem.inf.cpu.brand"],

@@ -3,58 +3,102 @@ import { createPool, Factory, Options as GenericPoolOptions, Pool } from "generi
 import { defaultLogger, Logger } from "../shared/utils";
 import { ProposalPool } from "../market/pool";
 import { BuildDemandParams, MarketModule } from "../market/market.module";
+import { GolemMarketError, MarketErrorCode } from "../market";
+import { AgreementDTO } from "./service";
+import { EventEmitter } from "eventemitter3";
 
-interface AgreementPoolOptions {
+export interface AgreementPoolOptions {
   logger?: Logger;
-  demand: BuildDemandParams;
   marketModule: MarketModule;
+  demandParams: BuildDemandParams;
   pool?: GenericPoolOptions;
 }
 
+export interface AgreementPoolEvents {
+  ready: () => void;
+  end: () => void;
+  acquired: (agreement: AgreementDTO) => void;
+  released: (agreement: AgreementDTO) => void;
+  destroyed: (agreement: AgreementDTO) => void;
+  error: (error: GolemMarketError) => void;
+}
+
 export class AgreementPool {
-  private pool: Pool<Agreement>;
+  public readonly events = new EventEmitter<AgreementPoolEvents>();
+
+  private market: MarketModule;
+  private agreementPool: Pool<Agreement>;
   private logger: Logger;
-  private proposalPool: ProposalPool;
+  private collectingProposals?: { pool: ProposalPool; cancel: () => void };
 
   constructor(private options: AgreementPoolOptions) {
-    this.logger = this.logger = options?.logger || defaultLogger("market");
-    this.proposalPool = new ProposalPool({ demand: options.demand, marketModule: options.marketModule });
-    this.pool = createPool<Agreement>(this.createPoolFactory(), {
+    this.market = options.marketModule;
+    this.logger = this.logger = options?.logger || defaultLogger("agreement-pool");
+
+    this.agreementPool = createPool<Agreement>(this.createPoolFactory(), {
       autostart: false,
       testOnBorrow: true,
+      max: options.pool?.max ?? options.pool?.min ?? 1,
       ...options.pool,
     });
+    this.agreementPool.on("factoryCreateError", (error) =>
+      this.events.emit(
+        "error",
+        new GolemMarketError("Creating agreement failed", MarketErrorCode.AgreementCreationFailed, undefined, error),
+      ),
+    );
+    this.agreementPool.on("factoryDestroyError", (error) =>
+      this.events.emit(
+        "error",
+        new GolemMarketError(
+          "Destroying agreement failed",
+          MarketErrorCode.AgreementTerminationFailed,
+          undefined,
+          error,
+        ),
+      ),
+    );
   }
 
   async start() {
-    await this.proposalPool.start();
+    this.collectingProposals = await this.market.startCollectingProposal({ demandParams: this.options.demandParams });
     this.logger.info("Agreement Poll started");
-    await this.pool.ready();
+    await this.agreementPool.ready();
+    this.events.emit("ready");
     this.logger.info("Agreement Poll ready");
   }
 
-  stop(): Promise<void> {
-    return Promise.resolve(undefined);
+  async stop(): Promise<void> {
+    await this.agreementPool.drain();
+    this.collectingProposals?.cancel();
+    await this.agreementPool.clear();
+    this.events.emit("end");
   }
 
-  acquire(): Promise<Agreement> {
-    return this.pool.acquire();
+  async acquire(): Promise<Agreement> {
+    const agreement = await this.agreementPool.acquire();
+    this.events.emit("acquired", agreement.getDto());
+    return agreement;
   }
 
-  release(agreement: Agreement): Promise<void> {
-    return this.pool.release(agreement);
+  async release(agreement: Agreement): Promise<void> {
+    await this.agreementPool.release(agreement);
+    this.events.emit("released", agreement.getDto());
   }
 
   private createPoolFactory(): Factory<Agreement> {
     return {
       create: async (): Promise<Agreement> => {
         this.logger.debug("Creating new agreement to add to pool");
-        const proposal = await this.proposalPool.acquire();
-        return this.options.marketModule.proposeAgreement(proposal);
+        if (!this.collectingProposals?.pool) {
+          throw new Error("xxx");
+        }
+        const proposal = await this.collectingProposals.pool.acquire();
+        return this.market.proposeAgreement(proposal);
       },
       destroy: async (agreement: Agreement) => {
         this.logger.debug("Destroying agreement from the pool");
-        await this.options.marketModule.terminateAgreement(agreement);
+        await this.market.terminateAgreement(agreement);
       },
       validate: async (agreement: Agreement) => {
         try {

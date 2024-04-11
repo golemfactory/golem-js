@@ -1,7 +1,7 @@
 import { GolemAbortError, GolemUserError } from "../../shared/error/golem-error";
 import { defaultLogger, Logger, YagnaApi } from "../../shared/utils";
 import { EventEmitter } from "eventemitter3";
-import { ActivityPool, ActivityPoolOptions } from "../../activity/work/pool";
+import { ActivityPool, ActivityPoolOptions } from "../../activity/work/pool-old";
 import { MarketOptions, PaymentOptions } from "./types";
 import { Network, NetworkOptions } from "../../network";
 import { GftpStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../../shared/storage";

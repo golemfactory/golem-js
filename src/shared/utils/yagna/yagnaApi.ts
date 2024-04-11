@@ -168,6 +168,8 @@ export interface YagnaEventSubscription<T> {
 
   filter(matcher: (event: T) => boolean): YagnaEventSubscription<T>;
 
+  batch(cb: (event: T[]) => void, options?: { timeout: number }): void;
+
   /** Stops the subscription, resolves when all I/O is closed */
   cancel(): Promise<void>;
 }

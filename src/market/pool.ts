@@ -1,49 +1,58 @@
-import { Proposal } from "./proposal";
-import { BuildDemandParams, MarketModule } from "./market.module";
-import { YagnaEventSubscription } from "../shared/utils";
-import { Demand } from "./demand";
-import { ProposalFilter } from "./service";
+import { Proposal, ProposalDTO } from "./proposal";
+import { defaultLogger, Logger } from "../shared/utils";
+import AsyncLock from "async-lock";
+import { EventEmitter } from "eventemitter3";
 
-interface ProposalPoolOptions {
-  demand: BuildDemandParams;
-  marketModule: MarketModule;
-  filter?: ProposalFilter;
+export type ProposalSelector = (proposals: Proposal[]) => Proposal;
+
+export interface ProposalPoolOptions {
+  selector?: ProposalSelector;
+  logger?: Logger;
 }
 
+export interface ProposalPoolEvents {
+  added: (proposal: ProposalDTO) => void;
+  acquired: (proposal: ProposalDTO) => void;
+  released: (proposal: ProposalDTO) => void;
+}
+
+const DEFAULTS = {
+  selector: (proposals: Proposal[]) => proposals[0],
+};
+
 export class ProposalPool {
-  private demand?: Demand;
-  private subscription?: YagnaEventSubscription<Proposal>;
-  private proposals = new Map<string, Proposal>();
+  public readonly events = new EventEmitter<ProposalPoolEvents>();
 
-  constructor(private options: ProposalPoolOptions) {}
+  private readonly selector: ProposalSelector;
+  private readonly lock: AsyncLock = new AsyncLock();
+  private readonly logger: Logger;
+  private proposals = new Set<Proposal>();
 
-  async start() {
-    this.demand = await this.options.marketModule.buildDemand(this.options.demand);
-    this.subscription = this.options.marketModule
-      .subscribeForProposals(this.demand)
-      .filter(this.options.filter ?? (() => true));
-    this.subscription.on((proposal) => this.processProposal(proposal));
+  constructor(private options?: ProposalPoolOptions) {
+    this.selector = options?.selector || DEFAULTS.selector;
+    this.logger = this.logger = options?.logger || defaultLogger("proposal-pool");
   }
 
-  async stop() {
-    throw new Error("TODO");
+  async add(proposal: Proposal) {
+    return this.lock.acquire("proposal-pool", () => {
+      this.proposals.add(proposal);
+      this.events.emit("added", proposal.getDto());
+    });
   }
 
   async acquire(): Promise<Proposal> {
-    throw new Error("TODO");
+    return this.lock.acquire("proposal-pool", () => {
+      const proposal = this.selector([...this.proposals]);
+      this.proposals.delete(proposal);
+      this.events.emit("acquired", proposal.getDto());
+      return proposal;
+    });
   }
 
   async release(proposal: Proposal): Promise<void> {
-    throw new Error(`TODO ${proposal}`);
-  }
-
-  async destroy(proposal: Proposal): Promise<void> {
-    throw new Error(`TODO ${proposal}`);
-  }
-
-  private async processProposal(proposal: Proposal) {
-    throw new Error(`TODO ${proposal}`);
-    // const negotiatedProposal = await this.options.marketModule.negotiateProposal(proposal, proposal);
-    // this.proposals.set(negotiatedProposal.id, negotiatedProposal);
+    await this.lock.acquire("proposal-pool", () => {
+      this.proposals.add(proposal);
+      this.events.emit("released", proposal.getDto());
+    });
   }
 }

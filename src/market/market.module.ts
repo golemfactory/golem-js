@@ -4,6 +4,7 @@ import { Demand, Proposal, ProposalFilter } from "./index";
 import { Agreement } from "../agreement";
 
 import { YagnaApi, YagnaEventSubscription } from "../shared/utils";
+import { ProposalPool, ProposalSelector } from "./pool";
 
 export interface MarketEvents {}
 
@@ -59,6 +60,16 @@ export interface MarketModule {
   getAgreement(options: BuildDemandParams, filter: ProposalFilter): Promise<Agreement>;
 
   getAgreements(options: BuildDemandParams, filter: ProposalFilter, count: number): Promise<Agreement[]>;
+
+  subscribeForDraftProposals(
+    initialProposalSubscription: YagnaEventSubscription<Proposal>,
+  ): Promise<YagnaEventSubscription<Proposal>>;
+
+  startCollectingProposal(options: {
+    demandParams: BuildDemandParams;
+    filter?: ProposalFilter;
+    selector?: ProposalSelector;
+  }): Promise<{ pool: ProposalPool; cancel: () => void }>;
 }
 
 export class MarketModuleImpl implements MarketModule {
@@ -111,6 +122,40 @@ export class MarketModuleImpl implements MarketModule {
   }
 
   getAgreements(options: BuildDemandParams, filter: ProposalFilter, count: number): Promise<Agreement[]> {
+    throw new Error("Method not implemented.");
+  }
+
+  async startCollectingProposal(options: {
+    demandParams: BuildDemandParams;
+    filter?: ProposalFilter;
+    selector?: ProposalSelector;
+  }): Promise<{
+    pool: ProposalPool;
+    cancel: () => void;
+  }> {
+    const pool = new ProposalPool({ selector: options.selector });
+    const demand = await this.buildDemand(options.demandParams);
+    const initialProposalSubscription = this.subscribeForProposals(demand);
+    const subscription = await this.subscribeForDraftProposals(
+      options.filter ? initialProposalSubscription.filter(options.filter) : initialProposalSubscription,
+    );
+    subscription.batch((draftProposals) => draftProposals.forEach((draft) => pool.add(draft)), {
+      timeout: 1_000,
+    });
+    const cancel = () => {
+      subscription.cancel();
+      initialProposalSubscription.cancel();
+      demand.unsubscribe();
+    };
+    return {
+      pool,
+      cancel,
+    };
+  }
+
+  async subscribeForDraftProposals(
+    initialProposalSubscription: YagnaEventSubscription<Proposal>,
+  ): Promise<YagnaEventSubscription<Proposal>> {
     throw new Error("Method not implemented.");
   }
 }
