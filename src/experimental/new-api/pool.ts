@@ -4,7 +4,7 @@ import { createPool, Factory, Options as GenericPoolOptions, Pool } from "generi
 import { WorkContext } from "../../work";
 import { ActivityStateEnum } from "../../activity";
 import { ActivityModule } from "../../activity/activity.module";
-import { AgreementPool } from "../../market/pool";
+import { AgreementPool } from "../../agreement/pool";
 
 export interface ActivityPoolOptions {
   image: string;
@@ -55,6 +55,10 @@ export class ActivityPool {
 
   async release(activity: WorkContext) {
     return this.pool.release(activity);
+  }
+
+  async destroy() {
+    // todo
   }
 
   private createPoolFactory(): Factory<WorkContext> {

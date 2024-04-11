@@ -1,87 +1,48 @@
-import { Agreement } from "../agreement";
-import { BuildDemandParams, MarketModule } from "./market.module";
-import { createPool, Factory, Options as GenericPoolOptions, Pool } from "generic-pool";
-import { defaultLogger, Logger, YagnaEventSubscription } from "../utils";
 import { Proposal } from "./proposal";
-import { GolemUserError } from "../error/golem-error";
-import { GolemMarketError, MarketErrorCode } from "./error";
+import { BuildDemandParams, MarketModule } from "./market.module";
+import { YagnaEventSubscription } from "../utils";
 import { Demand } from "./demand";
+import { ProposalFilter } from "./service";
 
-interface AgreementPoolOptions {
-  logger?: Logger;
+interface ProposalPoolOptions {
   demand: BuildDemandParams;
   marketModule: MarketModule;
-  pool?: GenericPoolOptions;
+  filter?: ProposalFilter;
 }
 
-export class AgreementPool {
-  private pool: Pool<Agreement>;
-  private logger: Logger;
-  private subscription?: YagnaEventSubscription<Proposal>;
+export class ProposalPool {
   private demand?: Demand;
+  private subscription?: YagnaEventSubscription<Proposal>;
+  private proposals = new Map<string, Proposal>();
 
-  constructor(private options: AgreementPoolOptions) {
-    this.logger = this.logger = options?.logger || defaultLogger("market");
-    this.pool = createPool<Agreement>(this.createPoolFactory(), {
-      autostart: false,
-      testOnBorrow: true,
-      ...options.pool,
-    });
-  }
+  constructor(private options: ProposalPoolOptions) {}
 
   async start() {
     this.demand = await this.options.marketModule.buildDemand(this.options.demand);
-    this.subscription = this.options.marketModule.subscribeForProposals(this.demand);
-    this.logger.info("Agreement Poll started");
-    await this.pool.ready();
-    this.logger.info("Agreement Poll ready");
+    this.subscription = this.options.marketModule
+      .subscribeForProposals(this.demand)
+      .filter(this.options.filter ?? (() => true));
+    this.subscription.on((proposal) => this.processProposal(proposal));
   }
 
-  stop(): Promise<void> {
-    return Promise.resolve(undefined);
+  async stop() {
+    throw new Error("TODO");
   }
 
-  acquire(): Promise<Agreement> {
-    return this.pool.acquire();
+  async acquire(): Promise<Proposal> {
+    throw new Error("TODO");
   }
 
-  release(agreement: Agreement): Promise<void> {
-    return this.pool.release(agreement);
+  async release(proposal: Proposal): Promise<void> {
+    throw new Error(`TODO ${proposal}`);
   }
 
-  private createPoolFactory(): Factory<Agreement> {
-    return {
-      create: async (): Promise<Agreement> => {
-        this.logger.debug("Creating new agreement to add to pool");
-        if (!this.subscription) {
-          throw new GolemUserError("You need to start the pool first");
-        }
-        const proposal = await this.subscription.waitFor(() => true, { timeout: 10_000 });
-        if (!proposal) {
-          throw new GolemMarketError(
-            "There are no offers available at the moment",
-            MarketErrorCode.NoProposalAvailable,
-            this.demand,
-          );
-        }
-        const negotiatedProposal = await this.options.marketModule.negotiateProposal(proposal, proposal);
-        return this.options.marketModule.proposeAgreement(negotiatedProposal);
-      },
-      destroy: async (agreement: Agreement) => {
-        this.logger.debug("Destroying agreement from the pool");
-        await this.options.marketModule.terminateAgreement(agreement);
-      },
-      validate: async (agreement: Agreement) => {
-        try {
-          const state = await agreement.getState();
-          const result = state !== "Approved";
-          this.logger.debug("Validating agreement in the pool.", { result, state });
-          return result;
-        } catch (err) {
-          this.logger.error("Checking agreement status failed. The agreement will be removed from the pool", err);
-          return false;
-        }
-      },
-    };
+  async destroy(proposal: Proposal): Promise<void> {
+    throw new Error(`TODO ${proposal}`);
+  }
+
+  private async processProposal(proposal: Proposal) {
+    const negotiatedProposal = await this.options.marketModule.negotiateProposal(proposal, proposal);
+    this.proposals.set(negotiatedProposal.id, negotiatedProposal);
   }
 }
