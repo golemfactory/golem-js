@@ -4,7 +4,7 @@ import { defaultLogger, Logger, YagnaApi, YagnaOptions } from "../../shared/util
 import { AgreementPoolService } from "../../agreement";
 import { PaymentOptions, PaymentService } from "../../payment";
 import { Package, PackageOptions } from "../../market/package";
-import { MarketOptions, MarketService } from "../../market";
+import { MarketServiceOptions, MarketService } from "../../market";
 import { ActivityDTO, WorkContext, WorkOptions } from "./work";
 import { NetworkService } from "../../network";
 import { createDefaultStorageProvider, StorageProvider } from "../../shared/storage";
@@ -18,7 +18,7 @@ export interface ActivityPoolOptions {
   abortController?: AbortController;
   resources?: PackageOptions;
   pool?: GenericPoolOptions;
-  market?: MarketOptions;
+  market?: MarketServiceOptions;
   payment?: PaymentOptions;
   work?: WorkOptions;
   network?: string;

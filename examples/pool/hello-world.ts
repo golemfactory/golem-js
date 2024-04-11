@@ -2,15 +2,12 @@ import { ActivityPool, MarketModuleImpl, ActivityModuleImpl, YagnaApi } from "@g
 
 (async function main() {
   const yagnaApi = new YagnaApi();
-  const marketModule = new MarketModuleImpl(yagnaApi);
-  const activityModule = new ActivityModuleImpl();
+  const modules = { market: new MarketModuleImpl(yagnaApi), activity: new ActivityModuleImpl() };
 
-  const pool = new ActivityPool({
+  const pool = new ActivityPool(modules, {
     image: "golem/alpine:latest",
-    demand: { paymentNetwork: "holesky" },
-    marketModule,
-    activityModule,
-    pool: { min: 2 },
+    market: {},
+    replicas: 2,
   });
   try {
     await pool.start();

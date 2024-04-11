@@ -1,5 +1,5 @@
 export { Activity, ActivityStateEnum, ActivityOptions } from "./activity";
 export { Result } from "./results";
 export { ActivityConfig } from "./config";
-export * from "./pool";
+export { ActivityPool, ActivityPoolOptions, ActivityPoolEvents } from "./pool";
 export * from "./activity.module";
