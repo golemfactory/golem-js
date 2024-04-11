@@ -3,7 +3,7 @@ import { EventEmitter } from "eventemitter3";
 import { Agreement } from "../agreement";
 import { Promise } from "cypress/types/cy-bluebird";
 import { Activity } from "./index";
-import { WorkContext } from "../work";
+import { WorkContext } from "../activity/work";
 
 export interface ActivityEvents {}
 

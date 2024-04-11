@@ -1,4 +1,4 @@
-import { ActivityPool } from "../../src";
+import { ActivityPool } from "../../src/activity/work/pool";
 
 describe("ActivityPool", () => {
   it("should run a simple script on the activity from the pool", async () => {

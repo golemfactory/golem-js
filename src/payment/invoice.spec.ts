@@ -1,6 +1,6 @@
 import { Invoice } from "./invoice";
 import { anything, imock, instance, mock, reset, when } from "@johanblumenberg/ts-mockito";
-import { YagnaApi } from "../utils";
+import { YagnaApi } from "../shared/utils";
 import { PaymentApi, MarketApi } from "ya-ts-client";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
 import Decimal from "decimal.js-light";

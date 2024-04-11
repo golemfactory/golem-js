@@ -1,13 +1,13 @@
 import { createPool, Factory, Options as GenericPoolOptions, Pool } from "generic-pool";
-import { Activity, ActivityStateEnum } from "../activity";
-import { defaultLogger, Logger, YagnaApi, YagnaOptions } from "../utils";
-import { AgreementPoolService } from "../agreement";
-import { PaymentOptions, PaymentService } from "../payment";
-import { Package, PackageOptions } from "../package";
-import { MarketOptions, MarketService } from "../market";
+import { Activity, ActivityStateEnum } from "../index";
+import { defaultLogger, Logger, YagnaApi, YagnaOptions } from "../../shared/utils";
+import { AgreementPoolService } from "../../agreement";
+import { PaymentOptions, PaymentService } from "../../payment";
+import { Package, PackageOptions } from "../../market/package";
+import { MarketOptions, MarketService } from "../../market";
 import { ActivityDTO, WorkContext, WorkOptions } from "./work";
-import { NetworkService } from "../network";
-import { createDefaultStorageProvider, StorageProvider } from "../storage";
+import { NetworkService } from "../../network";
+import { createDefaultStorageProvider, StorageProvider } from "../../shared/storage";
 import { EventEmitter } from "eventemitter3";
 import { GolemWorkError, WorkErrorCode } from "./error";
 

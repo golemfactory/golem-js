@@ -1,8 +1,8 @@
 import { PaymentApi } from "ya-ts-client";
 import { AllocationConfig, BasePaymentOptions } from "./config";
-import { YagnaApi } from "../utils";
+import { YagnaApi } from "../shared/utils";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
-import { GolemConfigError, GolemInternalError } from "../error/golem-error";
+import { GolemConfigError, GolemInternalError } from "../shared/error/golem-error";
 
 /**
  * @hidden

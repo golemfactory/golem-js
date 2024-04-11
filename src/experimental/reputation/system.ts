@@ -14,8 +14,8 @@ import {
   ReputationRejectedProvider,
   ReputationWeights,
 } from "./types";
-import { Logger, nullLogger } from "../../utils";
-import { getPaymentNetwork } from "../../utils/env";
+import { Logger, nullLogger } from "../../shared/utils";
+import { getPaymentNetwork } from "../../shared/utils/env";
 
 /**
  * Default minimum score for proposals.

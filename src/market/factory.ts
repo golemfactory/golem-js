@@ -1,9 +1,9 @@
-import { Package } from "../package";
+import { Package } from "./package";
 import { Allocation } from "../payment";
 import { Demand, DemandOptions } from "./demand";
 import { DemandConfig } from "./config";
 import { DecorationsBuilder, MarketDecoration } from "./builder";
-import { YagnaApi } from "../utils";
+import { YagnaApi } from "../shared/utils";
 import { GolemMarketError, MarketErrorCode } from "./error";
 import { EventEmitter } from "eventemitter3";
 

@@ -1,4 +1,4 @@
-import { GolemModuleError } from "../../error/golem-error";
+import { GolemModuleError } from "../../shared/error/golem-error";
 
 export class GolemReputationError extends GolemModuleError {
   constructor(message: string, cause?: Error) {

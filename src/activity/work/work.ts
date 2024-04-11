@@ -1,4 +1,4 @@
-import { Activity, ActivityStateEnum, Result } from "../activity";
+import { Activity, ActivityStateEnum, Result } from "../";
 import {
   Capture,
   Command,
@@ -12,16 +12,16 @@ import {
   UploadData,
   UploadFile,
 } from "../script";
-import { NullStorageProvider, StorageProvider } from "../storage";
-import { defaultLogger, Logger, sleep, YagnaOptions } from "../utils";
+import { NullStorageProvider, StorageProvider } from "../../shared/storage";
+import { defaultLogger, Logger, sleep, YagnaOptions } from "../../shared/utils";
 import { Batch } from "./batch";
-import { NetworkNode } from "../network";
+import { NetworkNode } from "../../network";
 import { RemoteProcess } from "./process";
 import { GolemWorkError, WorkErrorCode } from "./error";
-import { GolemConfigError, GolemTimeoutError } from "../error/golem-error";
-import { ProviderInfo } from "../agreement";
-import { TcpProxy } from "../network/tcpProxy";
-import { AgreementDTO } from "../agreement/service";
+import { GolemConfigError, GolemTimeoutError } from "../../shared/error/golem-error";
+import { ProviderInfo } from "../../agreement";
+import { TcpProxy } from "../../network/tcpProxy";
+import { AgreementDTO } from "../../agreement/service";
 
 export type Worker<OutputType> = (ctx: WorkContext) => Promise<OutputType>;
 

@@ -1,9 +1,9 @@
-import { GolemConfigError } from "../../error/golem-error";
+import { GolemConfigError } from "../../shared/error/golem-error";
 import { NetworkOptions } from "../../network";
 import { Deployment, DeploymentComponents } from "./deployment";
 import { GolemNetwork } from "../../golem-network";
 import { validateDeployment } from "./validate-deployment";
-import { ActivityPoolOptions } from "../../work";
+import { ActivityPoolOptions } from "../../activity/work/pool";
 
 export class GolemDeploymentBuilder {
   private components: DeploymentComponents = {

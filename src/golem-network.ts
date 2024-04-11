@@ -1,6 +1,6 @@
 import { DeploymentOptions, GolemDeploymentBuilder, MarketOptions, PaymentOptions } from "./experimental";
-import { Logger } from "./utils";
-import { StorageProvider } from "./storage";
+import { Logger, YagnaApi } from "./shared/utils";
+import { StorageProvider } from "./shared/storage";
 import { MarketModule, MarketModuleImpl } from "./market/market.module";
 import { PaymentModule, PaymentModuleImpl } from "./payment/payment.module";
 import { ActivityModule, ActivityModuleImpl } from "./activity/activity.module";
@@ -19,12 +19,19 @@ export interface GolemNetworkOptions {
 }
 
 export class GolemNetwork {
-  constructor(public readonly options: GolemNetworkOptions) {}
+  private readonly yagna: YagnaApi;
+  public readonly market: MarketModule;
+  public readonly payment: PaymentModule;
+  public readonly activity: ActivityModule;
+  public readonly network: NetworkModule;
 
-  public readonly market: MarketModule = new MarketModuleImpl();
-  public readonly payment: PaymentModule = new PaymentModuleImpl();
-  public readonly activity: ActivityModule = new ActivityModuleImpl();
-  public readonly network: NetworkModule = new NetworkModuleImpl();
+  constructor(public readonly options: GolemNetworkOptions) {
+    this.yagna = new YagnaApi();
+    this.market = new MarketModuleImpl(this.yagna);
+    this.payment = new PaymentModuleImpl();
+    this.activity = new ActivityModuleImpl();
+    this.network = new NetworkModuleImpl();
+  }
 
   async connect() {
     // todo

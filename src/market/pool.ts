@@ -1,6 +1,6 @@
 import { Proposal } from "./proposal";
 import { BuildDemandParams, MarketModule } from "./market.module";
-import { YagnaEventSubscription } from "../utils";
+import { YagnaEventSubscription } from "../shared/utils";
 import { Demand } from "./demand";
 import { ProposalFilter } from "./service";
 
@@ -42,7 +42,8 @@ export class ProposalPool {
   }
 
   private async processProposal(proposal: Proposal) {
-    const negotiatedProposal = await this.options.marketModule.negotiateProposal(proposal, proposal);
-    this.proposals.set(negotiatedProposal.id, negotiatedProposal);
+    throw new Error(`TODO ${proposal}`);
+    // const negotiatedProposal = await this.options.marketModule.negotiateProposal(proposal, proposal);
+    // this.proposals.set(negotiatedProposal.id, negotiatedProposal);
   }
 }

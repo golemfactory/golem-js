@@ -1,8 +1,8 @@
 import { DemandFactory } from "./factory";
 import { anything, capture, instance, mock, reset, when } from "@johanblumenberg/ts-mockito";
-import { Package } from "../package";
+import { Package } from "./package";
 import { Allocation } from "../payment";
-import { YagnaApi } from "../utils";
+import { YagnaApi } from "../shared/utils";
 import { MarketApi } from "ya-ts-client";
 
 const mockPackage = mock(Package);

@@ -1,4 +1,4 @@
-import { Logger, sleep, YagnaApi } from "../utils";
+import { Logger, sleep, YagnaApi } from "../shared/utils";
 import { Allocation, AllocationOptions } from "./allocation";
 import { BasePaymentOptions, PaymentConfig } from "./config";
 import { Invoice, InvoiceDTO } from "./invoice";

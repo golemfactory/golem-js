@@ -2,7 +2,7 @@ import { MarketApi } from "ya-ts-client";
 import { GolemMarketError, MarketErrorCode } from "./error";
 import { ProviderInfo } from "../agreement";
 import { Demand } from "./demand";
-import { withTimeout } from "../utils/timeout";
+import { withTimeout } from "../shared/utils/timeout";
 import { EventEmitter } from "eventemitter3";
 
 export interface ProposalEvents {

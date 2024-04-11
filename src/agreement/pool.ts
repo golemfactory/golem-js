@@ -1,6 +1,6 @@
 import { Agreement } from "./agreement";
 import { createPool, Factory, Options as GenericPoolOptions, Pool } from "generic-pool";
-import { defaultLogger, Logger } from "../utils";
+import { defaultLogger, Logger } from "../shared/utils";
 import { ProposalPool } from "../market/pool";
 import { BuildDemandParams, MarketModule } from "../market/market.module";
 

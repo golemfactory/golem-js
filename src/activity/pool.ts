@@ -1,10 +1,10 @@
-import { defaultLogger, Logger } from "../../utils";
-import { BuildDemandParams, MarketModule } from "../../market/market.module";
+import { defaultLogger, Logger } from "../shared/utils";
+import { BuildDemandParams, MarketModule } from "../market/market.module";
 import { createPool, Factory, Options as GenericPoolOptions, Pool } from "generic-pool";
-import { WorkContext } from "../../work";
-import { ActivityStateEnum } from "../../activity";
-import { ActivityModule } from "../../activity/activity.module";
-import { AgreementPool } from "../../agreement/pool";
+import { WorkContext } from "./work";
+import { ActivityStateEnum } from "./index";
+import { ActivityModule } from "./activity.module";
+import { AgreementPool } from "../agreement/pool";
 
 export interface ActivityPoolOptions {
   image: string;

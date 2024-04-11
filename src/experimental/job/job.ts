@@ -1,11 +1,11 @@
-import { WorkContext, Worker, WorkOptions } from "../../work";
-import { runtimeContextChecker, YagnaApi } from "../../utils";
+import { WorkContext, Worker, WorkOptions } from "../../activity/work";
+import { runtimeContextChecker, YagnaApi } from "../../shared/utils";
 import { AgreementOptions, AgreementPoolService } from "../../agreement";
 import { MarketOptions, MarketService } from "../../market";
 import { NetworkService } from "../../network";
 import { PaymentOptions, PaymentService } from "../../payment";
 import { NetworkOptions } from "../../network/network";
-import { Package, PackageOptions } from "../../package";
+import { Package, PackageOptions } from "../../market/package";
 import { Activity, ActivityOptions } from "../../activity";
 import { EventEmitter } from "eventemitter3";
 import {
@@ -13,8 +13,8 @@ import {
   NullStorageProvider,
   StorageProvider,
   WebSocketBrowserStorageProvider,
-} from "../../storage";
-import { GolemAbortError, GolemConfigError, GolemUserError } from "../../error/golem-error";
+} from "../../shared/storage";
+import { GolemAbortError, GolemConfigError, GolemUserError } from "../../shared/error/golem-error";
 
 export enum JobState {
   New = "new",

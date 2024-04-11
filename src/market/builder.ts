@@ -1,5 +1,5 @@
 import { MarketApi, PaymentApi } from "ya-ts-client";
-import { GolemInternalError } from "../error/golem-error";
+import { GolemInternalError } from "../shared/error/golem-error";
 
 /**
  * Properties and constraints to be added to a market object (i.e. a demand or an offer).
