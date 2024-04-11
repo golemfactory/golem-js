@@ -1,9 +1,13 @@
 import { GolemConfigError } from "../../shared/error/golem-error";
 import { GolemDeploymentBuilder } from "./builder";
 import { GolemNetwork } from "../../golem-network";
-import { imock } from "@johanblumenberg/ts-mockito";
+import { imock, instance } from "@johanblumenberg/ts-mockito";
+import { MarketModule } from "../../market";
+import { ActivityModule } from "../../activity";
 
 const mockGolemNetwork = imock<GolemNetwork>();
+const mockMarketModule = imock<MarketModule>();
+const mockActivityModule = imock<ActivityModule>();
 
 describe("Deployment builder", () => {
   it("throws an error when creating an activity pool with the same name", () => {
@@ -12,25 +16,15 @@ describe("Deployment builder", () => {
       builder
         .createActivityPool("my-pool", {
           image: "image",
-          market: {
-            rentHours: 12,
-            pricing: {
-              maxStartPrice: 1,
-              maxCpuPerHourPrice: 1,
-              maxEnvPerHourPrice: 1,
-            },
-          },
+          marketModule: instance(mockMarketModule),
+          activityModule: instance(mockActivityModule),
+          demand: { paymentNetwork: "holesky" },
         })
         .createActivityPool("my-pool", {
           image: "image",
-          market: {
-            rentHours: 12,
-            pricing: {
-              maxStartPrice: 1,
-              maxCpuPerHourPrice: 1,
-              maxEnvPerHourPrice: 1,
-            },
-          },
+          marketModule: instance(mockMarketModule),
+          activityModule: instance(mockActivityModule),
+          demand: { paymentNetwork: "holesky" },
         });
     }).toThrow(new GolemConfigError(`Activity pool with name my-pool already exists`));
   });
@@ -56,14 +50,9 @@ describe("Deployment builder", () => {
         .createActivityPool("my-pool", {
           image: "image",
           network: "non-existing-network",
-          market: {
-            rentHours: 12,
-            pricing: {
-              maxStartPrice: 1,
-              maxCpuPerHourPrice: 1,
-              maxEnvPerHourPrice: 1,
-            },
-          },
+          marketModule: instance(mockMarketModule),
+          activityModule: instance(mockActivityModule),
+          demand: { paymentNetwork: "holesky" },
         })
         .getDeployment();
     }).toThrow(new GolemConfigError(`Activity pool my-pool references non-existing network non-existing-network`));
