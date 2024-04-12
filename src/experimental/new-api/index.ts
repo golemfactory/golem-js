@@ -4,7 +4,7 @@ export * from "./builder";
 export * from "../../golem-network";
 export { MarketModuleImpl } from "../../market/market.module";
 export { MarketModule } from "../../market/market.module";
-export { BuildDemandParams } from "../../market/market.module";
+export { MarketOptions } from "../../market/market.module";
 export { MarketEvents } from "../../market/market.module";
 export { PaymentModuleImpl } from "../../payment/payment.module";
 export { PaymentModule } from "../../payment/payment.module";

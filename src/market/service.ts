@@ -11,7 +11,7 @@ import { GolemError } from "../shared/error/golem-error";
 
 export type ProposalFilter = (proposal: Proposal) => boolean;
 
-export interface MarketOptions extends DemandOptions {
+export interface MarketServiceOptions extends DemandOptions {
   /**
    * A custom filter checking the proposal from the market for each provider and its hardware configuration.
    * Duplicate proposals from one provider are reduced to the cheapest one.
@@ -46,7 +46,7 @@ export class MarketService {
   constructor(
     private readonly agreementPoolService: AgreementPoolService,
     private readonly yagnaApi: YagnaApi,
-    options?: MarketOptions,
+    options?: MarketServiceOptions,
   ) {
     this.options = new MarketConfig(options);
     this.logger = this.options?.logger || defaultLogger("market");

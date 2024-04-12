@@ -1,6 +1,6 @@
 import { DemandOptions } from "./demand";
 import { EnvUtils, Logger, defaultLogger, YagnaOptions } from "../shared/utils";
-import { MarketOptions, ProposalFilter } from "./service";
+import { MarketServiceOptions, ProposalFilter } from "./service";
 import { GolemConfigError } from "../shared/error/golem-error";
 import { acceptAll } from "./strategy";
 
@@ -76,7 +76,7 @@ export class MarketConfig extends DemandConfig {
   readonly debitNotesAcceptanceTimeoutSec: number;
   public readonly proposalFilter: ProposalFilter;
 
-  constructor(options?: MarketOptions) {
+  constructor(options?: MarketServiceOptions) {
     super(options);
 
     this.debitNotesAcceptanceTimeoutSec =

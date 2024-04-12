@@ -69,6 +69,7 @@
     "eventemitter3": "^5.0.1",
     "eventsource": "^2.0.2",
     "flatbuffers": "^24.3.7",
+    "generic-pool": "^3.9.0",
     "ip-num": "^1.5.1",
     "js-sha3": "^0.9.3",
     "semver": "^7.5.4",

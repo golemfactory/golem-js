@@ -1,11 +1,12 @@
 import { GolemAbortError, GolemUserError } from "../../shared/error/golem-error";
 import { defaultLogger, Logger, YagnaApi } from "../../shared/utils";
 import { EventEmitter } from "eventemitter3";
-import { ActivityPool } from "./pool";
-import { ActivityPoolOptions, MarketOptions, PaymentOptions } from "./types";
+import { ActivityModule, ActivityModuleImpl, ActivityPool, ActivityPoolOptions } from "../../activity";
+import { MarketOptions, PaymentOptions } from "./types";
 import { Network, NetworkOptions } from "../../network";
 import { GftpStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../../shared/storage";
 import { validateDeployment } from "./validate-deployment";
+import { MarketModule, MarketModuleImpl } from "../../market";
 
 export enum DeploymentState {
   INITIAL = "INITIAL",
@@ -71,6 +72,8 @@ export class Deployment {
   private readonly activityPools = new Map<string, ActivityPool>();
   private readonly networks = new Map<string, Network>();
   private readonly dataTransferProtocol: StorageProvider;
+  private marketModule: MarketModule;
+  private activityModule: ActivityModule;
 
   constructor(
     private readonly components: DeploymentComponents,
@@ -83,6 +86,9 @@ export class Deployment {
       apiKey: options.api.key,
       basePath: options.api.url,
     });
+
+    this.marketModule = new MarketModuleImpl(this.yagnaApi);
+    this.activityModule = new ActivityModuleImpl();
 
     this.dataTransferProtocol = this.getDataTransferProtocol(options, this.yagnaApi);
 
@@ -127,7 +133,7 @@ export class Deployment {
     // TODO: add pool to network
     // TODO: pass dataTransferProtocol to pool
     for (const pool of this.components.activityPools) {
-      const activityPool = new ActivityPool(pool.options);
+      const activityPool = new ActivityPool({ market: this.marketModule, activity: this.activityModule }, pool.options);
       this.activityPools.set(pool.name, activityPool);
     }
 

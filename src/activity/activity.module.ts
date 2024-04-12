@@ -3,6 +3,7 @@ import { EventEmitter } from "eventemitter3";
 import { Agreement } from "../agreement";
 import { Promise } from "cypress/types/cy-bluebird";
 import { Activity } from "./index";
+import { WorkContext } from "../activity/work";
 
 export interface ActivityEvents {}
 
@@ -19,7 +20,7 @@ export interface ActivityModule {
    *
    * @return An WorkContext that's fully commissioned and the user can execute their commands
    */
-  createActivity(agreement: Agreement): Promise<Activity>;
+  createActivity(agreement: Agreement): Promise<WorkContext>;
 
   /**
    * Resets the activity on the exe unit back to "New" state
@@ -39,13 +40,13 @@ export interface ActivityModule {
    *
    * @return The activity that was permanently terminated
    */
-  destroyActivity(activity: Activity, reason: string): Promise<Activity>;
+  destroyActivity(activity: Activity, reason?: string): Promise<Activity>;
 }
 
 export class ActivityModuleImpl implements ActivityModule {
   events: EventEmitter<ActivityEvents> = new EventEmitter<ActivityEvents>();
 
-  createActivity(_agreement: Agreement): Promise<Activity> {
+  createActivity(_agreement: Agreement): Promise<WorkContext> {
     throw new Error("Method not implemented.");
   }
 

@@ -5,6 +5,10 @@ import { Promise } from "cypress/types/cy-bluebird";
 
 import { YagnaEventSubscription } from "../shared/utils";
 
+export interface PaymentOptions {
+  // TODO
+}
+
 export interface PaymentEvents {}
 
 export type CreateAllocationParams = {

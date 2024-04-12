@@ -1,4 +1,4 @@
-import { Activity, ActivityStateEnum, Result } from "../index";
+import { Activity, ActivityStateEnum, Result } from "../";
 import {
   Capture,
   Command,
@@ -21,6 +21,7 @@ import { GolemWorkError, WorkErrorCode } from "./error";
 import { GolemConfigError, GolemTimeoutError } from "../../shared/error/golem-error";
 import { ProviderInfo } from "../../agreement";
 import { TcpProxy } from "../../network/tcpProxy";
+import { AgreementDTO } from "../../agreement/service";
 
 export type Worker<OutputType> = (ctx: WorkContext) => Promise<OutputType>;
 
@@ -43,6 +44,12 @@ export interface CommandOptions {
   timeout?: number;
   env?: object;
   capture?: Capture;
+}
+
+export interface ActivityDTO {
+  provider: ProviderInfo;
+  id: string;
+  agreement: AgreementDTO;
 }
 
 /**
@@ -362,6 +369,14 @@ export class WorkContext {
     return new TcpProxy(this.getWebsocketUri(portOnProvider), this.options.yagnaOptions.apiKey, {
       logger: this.logger,
     });
+  }
+
+  getDto(): ActivityDTO {
+    return {
+      provider: this.provider,
+      id: this.activity.id,
+      agreement: this.activity.agreement.getDto(),
+    };
   }
 
   async getState(): Promise<ActivityStateEnum> {

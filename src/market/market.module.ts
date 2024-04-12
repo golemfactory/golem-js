@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
-import { Promise } from "cypress/types/cy-bluebird";
 import { Demand, Proposal, ProposalFilter } from "./index";
 import { Agreement } from "../agreement";
 
 import { YagnaApi, YagnaEventSubscription } from "../shared/utils";
+import { ProposalPool, ProposalSelector } from "./pool";
 
 export interface MarketEvents {}
 
@@ -13,12 +13,43 @@ export interface MarketEvents {}
  *
  * const final = await sub.waitFor((p) => p.paretnId == 123);
  */
-export type BuildDemandParams = { paymentNetwork: string };
+export interface Resources {
+  /** The minimum CPU requirement for each service instance. */
+  minCpu?: number;
+  /* The minimum memory requirement (in Gibibyte) for each service instance. */
+  minMemGib?: number;
+  /** The minimum storage requirement (in Gibibyte) for each service instance. */
+  minStorageGib?: number;
+}
+
+export interface MarketOptions {
+  /** How long you want to rent the resources in hours */
+  rentHours?: number;
+
+  pricing?: {
+    maxStartPrice: number;
+    maxCpuPerHourPrice: number;
+    maxEnvPerHourPrice: number;
+  };
+
+  /** The payment network that should be considered while looking for providers and where payments will be done */
+  paymentNetwork?: string;
+
+  /**
+   * List of provider Golem Node IDs that should be considered
+   *
+   * If not provided, the list will be pulled from: https://provider-health.golem.network/v1/provider-whitelist
+   */
+  withProviders?: string[];
+  withoutProviders?: string[];
+  withOperators?: string[];
+  withoutOperators?: string[];
+}
 
 export interface MarketModule {
   events: EventEmitter<MarketEvents>;
 
-  buildDemand(options: BuildDemandParams): Promise<Demand>;
+  buildDemand(options: MarketOptions): Promise<Demand>;
 
   subscribeForProposals(demand: Demand): YagnaEventSubscription<Proposal>;
 
@@ -52,14 +83,24 @@ export interface MarketModule {
    *
    * @return The Agreement that has been terminated via Yagna
    */
-  terminateAgreement(agreement: Agreement, reason: string): Promise<Agreement>;
+  terminateAgreement(agreement: Agreement, reason?: string): Promise<Agreement>;
 
   /**
    * Helper method that will allow reaching an agreement for the user without dealing with manual labour of demand/subscription
    */
-  getAgreement(options: BuildDemandParams, filter: ProposalFilter): Promise<Agreement>;
+  getAgreement(options: MarketOptions, filter: ProposalFilter): Promise<Agreement>;
 
-  getAgreements(options: BuildDemandParams, filter: ProposalFilter, count: number): Promise<Agreement[]>;
+  getAgreements(options: MarketOptions, filter: ProposalFilter, count: number): Promise<Agreement[]>;
+
+  subscribeForDraftProposals(
+    initialProposalSubscription: YagnaEventSubscription<Proposal>,
+  ): Promise<YagnaEventSubscription<Proposal>>;
+
+  startCollectingProposal(options: {
+    market: MarketOptions;
+    filter?: ProposalFilter;
+    selector?: ProposalSelector;
+  }): Promise<{ pool: ProposalPool; cancel: () => void }>;
 }
 
 export class MarketModuleImpl implements MarketModule {
@@ -67,7 +108,7 @@ export class MarketModuleImpl implements MarketModule {
 
   constructor(private readonly yagnaApi: YagnaApi) {}
 
-  buildDemand(options: BuildDemandParams): Promise<Demand> {
+  buildDemand(options: MarketOptions): Promise<Demand> {
     throw new Error("Method not implemented.");
   }
 
@@ -107,11 +148,45 @@ export class MarketModuleImpl implements MarketModule {
     throw new Error("Method not implemented.");
   }
 
-  getAgreement(options: BuildDemandParams, filter: ProposalFilter): Promise<Agreement> {
+  getAgreement(options: MarketOptions, filter: ProposalFilter): Promise<Agreement> {
     throw new Error("Method not implemented.");
   }
 
-  getAgreements(options: BuildDemandParams, filter: ProposalFilter, count: number): Promise<Agreement[]> {
+  getAgreements(options: MarketOptions, filter: ProposalFilter, count: number): Promise<Agreement[]> {
+    throw new Error("Method not implemented.");
+  }
+
+  async startCollectingProposal(options: {
+    market: MarketOptions;
+    filter?: ProposalFilter;
+    selector?: ProposalSelector;
+  }): Promise<{
+    pool: ProposalPool;
+    cancel: () => void;
+  }> {
+    const pool = new ProposalPool({ selector: options.selector });
+    const demand = await this.buildDemand(options.market);
+    const initialProposalSubscription = this.subscribeForProposals(demand);
+    const subscription = await this.subscribeForDraftProposals(
+      options.filter ? initialProposalSubscription.filter(options.filter) : initialProposalSubscription,
+    );
+    subscription.batch((draftProposals) => draftProposals.forEach((draft) => pool.add(draft)), {
+      timeout: 1_000,
+    });
+    const cancel = () => {
+      subscription.cancel();
+      initialProposalSubscription.cancel();
+      demand.unsubscribe();
+    };
+    return {
+      pool,
+      cancel,
+    };
+  }
+
+  async subscribeForDraftProposals(
+    initialProposalSubscription: YagnaEventSubscription<Proposal>,
+  ): Promise<YagnaEventSubscription<Proposal>> {
     throw new Error("Method not implemented.");
   }
 }

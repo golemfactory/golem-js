@@ -5,6 +5,7 @@ import { AgreementConfig } from "./config";
 import { GolemMarketError, MarketErrorCode, Proposal } from "../market";
 import { withTimeout } from "../shared/utils/timeout";
 import { EventEmitter } from "eventemitter3";
+import { AgreementDTO } from "./service";
 
 export interface AgreementEvents {
   confirmed: (details: { id: string; provider: ProviderInfo }) => void;
@@ -88,6 +89,13 @@ export class Agreement {
 
   getProviderInfo(): ProviderInfo {
     return this.proposal.provider;
+  }
+
+  getDto(): AgreementDTO {
+    return {
+      id: this.id,
+      provider: this.getProviderInfo(),
+    };
   }
 
   /**

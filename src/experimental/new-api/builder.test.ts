@@ -12,25 +12,11 @@ describe("Deployment builder", () => {
       builder
         .createActivityPool("my-pool", {
           image: "image",
-          market: {
-            rentHours: 12,
-            pricing: {
-              maxStartPrice: 1,
-              maxCpuPerHourPrice: 1,
-              maxEnvPerHourPrice: 1,
-            },
-          },
+          market: {},
         })
         .createActivityPool("my-pool", {
           image: "image",
-          market: {
-            rentHours: 12,
-            pricing: {
-              maxStartPrice: 1,
-              maxCpuPerHourPrice: 1,
-              maxEnvPerHourPrice: 1,
-            },
-          },
+          market: {},
         });
     }).toThrow(new GolemConfigError(`Activity pool with name my-pool already exists`));
   });
@@ -56,14 +42,7 @@ describe("Deployment builder", () => {
         .createActivityPool("my-pool", {
           image: "image",
           network: "non-existing-network",
-          market: {
-            rentHours: 12,
-            pricing: {
-              maxStartPrice: 1,
-              maxCpuPerHourPrice: 1,
-              maxEnvPerHourPrice: 1,
-            },
-          },
+          market: {},
         })
         .getDeployment();
     }).toThrow(new GolemConfigError(`Activity pool my-pool references non-existing network non-existing-network`));

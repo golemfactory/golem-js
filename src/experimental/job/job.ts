@@ -1,7 +1,7 @@
 import { WorkContext, Worker, WorkOptions } from "../../activity/work";
 import { runtimeContextChecker, YagnaApi } from "../../shared/utils";
 import { AgreementOptions, AgreementPoolService } from "../../agreement";
-import { MarketOptions, MarketService } from "../../market";
+import { MarketServiceOptions, MarketService } from "../../market";
 import { NetworkService } from "../../network";
 import { PaymentOptions, PaymentService } from "../../payment";
 import { NetworkOptions } from "../../network/network";
@@ -26,7 +26,7 @@ export enum JobState {
 }
 
 export type RunJobOptions = {
-  market?: MarketOptions;
+  market?: MarketServiceOptions;
   payment?: PaymentOptions;
   agreement?: AgreementOptions;
   network?: NetworkOptions;
