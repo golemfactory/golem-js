@@ -8,8 +8,8 @@ import { PaymentModule } from "../payment";
 
 export interface AgreementPoolOptions {
   logger?: Logger;
-  pool?: GenericPoolOptions;
-  agreement?: AgreementOptions;
+  replicas?: GenericPoolOptions;
+  agreementOptions?: AgreementOptions;
 }
 
 export interface AgreementPoolEvents {
@@ -36,7 +36,7 @@ export class AgreementPool {
 
     this.agreementPool = createPool<Agreement>(this.createPoolFactory(), {
       testOnBorrow: true,
-      ...options?.pool,
+      ...options?.replicas,
     });
     this.agreementPool.on("factoryCreateError", (error) =>
       this.events.emit(
@@ -82,7 +82,7 @@ export class AgreementPool {
       create: async (): Promise<Agreement> => {
         this.logger.debug("Creating new agreement to add to pool");
         const proposal = await this.proposalPool.acquire();
-        return this.modules.market.proposeAgreement(this.modules.payment, proposal, this.options?.agreement);
+        return this.modules.market.proposeAgreement(this.modules.payment, proposal, this.options?.agreementOptions);
       },
       destroy: async (agreement: Agreement) => {
         this.logger.debug("Destroying agreement from the pool");

@@ -13,8 +13,8 @@ import { PaymentModule } from "../payment";
  */
 export interface ActivityPoolOptions {
   logger?: Logger;
-  pool?: GenericPoolOptions;
-  activity?: ActivityOptions;
+  replicas?: GenericPoolOptions;
+  activityOptions?: ActivityOptions;
 }
 
 export interface ActivityPoolEvents {
@@ -42,7 +42,7 @@ export class ActivityPool {
     this.logger = this.logger = options?.logger || defaultLogger("activity-pool");
     this.activityPool = createPool<WorkContext>(this.createPoolFactory(), {
       testOnBorrow: true,
-      ...options?.pool,
+      ...options?.replicas,
     });
     this.activityPool.on("factoryCreateError", (error) =>
       this.events.emit(

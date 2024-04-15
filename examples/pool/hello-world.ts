@@ -42,8 +42,14 @@ import {
 
     const proposalPool = new ProposalPool();
     const proposalSubscription = await modules.market.startCollectingProposal(demandOptions, proposalPool);
-    const agreementPool = new AgreementPool(modules, proposalPool, { agreement: { invoiceFilter } });
-    const activityPool = new ActivityPool(modules, agreementPool, { activity: { debitNoteFilter } });
+    const agreementPool = new AgreementPool(modules, proposalPool, {
+      replicas: { min: 1 },
+      agreementOptions: { invoiceFilter },
+    });
+    const activityPool = new ActivityPool(modules, agreementPool, {
+      replicas: { min: 2 },
+      activityOptions: { debitNoteFilter },
+    });
     const ctx = await activityPool.acquire();
     const result = await ctx.run("echo Hello World");
     console.log(result.stdout);

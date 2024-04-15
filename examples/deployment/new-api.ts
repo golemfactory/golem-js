@@ -45,7 +45,7 @@ async function main() {
           withoutOperators: ["0x123123"],
         },
       },
-      pool: { pool: { min: 1 } },
+      pool: { replicas: { min: 1 } },
       network: "basic",
     })
     .createActivityPool("db", {
@@ -65,7 +65,7 @@ async function main() {
           },
         },
       },
-      pool: { pool: { min: 3, max: 4 } },
+      pool: { replicas: { min: 3, max: 4 } },
       network: "basic",
     });
 
