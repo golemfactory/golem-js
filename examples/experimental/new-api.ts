@@ -22,48 +22,50 @@ async function main() {
       networkOwnerId: "test",
     })
     .createActivityPool("app", {
-      image: "file://golem/node:20",
-      // image: "golem/node:20",
-      // image: "http://golem.io/node:20",
-      // imageHash: "0x30984084039480493840",
-      resources: {
-        minCpu: 4,
-        minMemGib: 8,
-        minStorageGib: 16,
-      },
-      replicas: 10,
-      network: "basic",
-      market: {
-        rentHours: 12 /* REQUIRED */,
-        pricing: {
-          maxStartPrice: 1 /* REQUIRED */,
-          maxCpuPerHourPrice: 1 /* REQUIRED */,
-          maxEnvPerHourPrice: 1 /* REQUIRED */,
+      demand: {
+        image: "file://golem/node:20",
+        // image: "golem/node:20",
+        // image: "http://golem.io/node:20",
+        // imageHash: "0x30984084039480493840",
+        resources: {
+          minCpu: 4,
+          minMemGib: 8,
+          minStorageGib: 16,
         },
-        withProviders: ["0x123123"],
-        withoutProviders: ["0x123123"],
-        withOperators: ["0x123123"],
-        withoutOperators: ["0x123123"],
+        market: {
+          rentHours: 12 /* REQUIRED */,
+          pricing: {
+            maxStartPrice: 1 /* REQUIRED */,
+            maxCpuPerHourPrice: 1 /* REQUIRED */,
+            maxEnvPerHourPrice: 1 /* REQUIRED */,
+          },
+          withProviders: ["0x123123"],
+          withoutProviders: ["0x123123"],
+          withOperators: ["0x123123"],
+          withoutOperators: ["0x123123"],
+        },
       },
-      payment: {},
-      // dataTransferProtocol: "gftp",
+      pool: { pool: { min: 1 } },
+      network: "basic",
     })
     .createActivityPool("db", {
-      image: "golem/redis",
-      resources: {
-        minCpu: 2,
-        minMemGib: 16,
-        minStorageGib: 4,
-      },
-      replicas: 3,
-      market: {
-        rentHours: 12 /* REQUIRED */,
-        pricing: {
-          maxStartPrice: 1 /* REQUIRED */,
-          maxCpuPerHourPrice: 1 /* REQUIRED */,
-          maxEnvPerHourPrice: 1 /* REQUIRED */,
+      demand: {
+        image: "golem/redis",
+        resources: {
+          minCpu: 2,
+          minMemGib: 16,
+          minStorageGib: 4,
+        },
+        market: {
+          rentHours: 12 /* REQUIRED */,
+          pricing: {
+            maxStartPrice: 1 /* REQUIRED */,
+            maxCpuPerHourPrice: 1 /* REQUIRED */,
+            maxEnvPerHourPrice: 1 /* REQUIRED */,
+          },
         },
       },
+      pool: { pool: { min: 3, max: 4 } },
       network: "basic",
     });
 

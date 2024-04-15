@@ -49,7 +49,7 @@ export class ActivityPool {
   constructor(private options: ActivityPoolOptions) {
     this.logger = this.logger = options?.logger || defaultLogger("work");
     this.yagnaApi = new YagnaApi(options.api);
-    this.agreementPoolService = new AgreementPoolService(this.yagnaApi, options.market);
+    this.agreementPoolService = new AgreementPoolService(this.yagnaApi);
     this.marketService = new MarketService(this.agreementPoolService, this.yagnaApi, options.market);
     this.paymentService = new PaymentService(this.yagnaApi, options.payment);
     // this.networkService = options.network ? new NetworkService(this.yagnaApi, options.network) : undefined;

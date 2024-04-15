@@ -4,6 +4,7 @@ import { Deployment, DeploymentComponents } from "./deployment";
 import { GolemNetwork } from "../../golem-network";
 import { validateDeployment } from "./validate-deployment";
 import { ActivityPoolOptions } from "../../activity";
+import { DemandOptions } from "../../market";
 
 export class GolemDeploymentBuilder {
   private components: DeploymentComponents = {
@@ -20,7 +21,10 @@ export class GolemDeploymentBuilder {
 
   constructor(private glm: GolemNetwork) {}
 
-  createActivityPool(name: string, options: ActivityPoolOptions): this {
+  createActivityPool(
+    name: string,
+    options: { demand: DemandOptions; pool?: ActivityPoolOptions; network?: string },
+  ): this {
     if (this.components.activityPools.some((pool) => pool.name === name)) {
       throw new GolemConfigError(`Activity pool with name ${name} already exists`);
     }

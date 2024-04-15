@@ -2,10 +2,12 @@ import { Proposal, ProposalDTO } from "./proposal";
 import { defaultLogger, Logger } from "../shared/utils";
 import AsyncLock from "async-lock";
 import { EventEmitter } from "eventemitter3";
+import { ProposalFilter } from "./service";
 
 export type ProposalSelector = (proposals: Proposal[]) => Proposal;
 
 export interface ProposalPoolOptions {
+  filter?: ProposalFilter;
   selector?: ProposalSelector;
   logger?: Logger;
 }
@@ -73,6 +75,10 @@ export class ProposalPool {
       this.proposals.delete(proposal);
       this.events.emit("destroyed", proposal.getDto());
     });
+  }
+
+  async drain() {
+    // TODO
   }
 
   private validateProposal(proposal: Proposal): boolean {

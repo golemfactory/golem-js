@@ -1,28 +1,20 @@
 import { defaultLogger, Logger } from "../shared/utils";
-import { MarketModule, MarketOptions, Resources } from "../market";
 import { createPool, Factory, Options as GenericPoolOptions, Pool } from "generic-pool";
 import { GolemWorkError, WorkContext, WorkErrorCode } from "./work";
-import { ActivityStateEnum } from "./index";
+import { ActivityOptions, ActivityStateEnum } from "./index";
 import { ActivityModule } from "./activity.module";
-import { AgreementPool } from "../agreement/pool";
+import { AgreementPool } from "../agreement";
 import { ActivityDTO } from "./work/work";
 import { EventEmitter } from "eventemitter3";
-import { PaymentOptions } from "../payment";
+import { PaymentModule } from "../payment";
 
 /**
  * TODO: specify clear and user-friendly options
  */
 export interface ActivityPoolOptions {
-  image: string;
   logger?: Logger;
-  abortController?: AbortController;
-  activityPool?: GenericPoolOptions;
-  agreementPool?: GenericPoolOptions; // TODO: maybe this should be the same options as for activityPool
-  network?: string;
-  replicas?: number;
-  market: MarketOptions;
-  resources?: Resources;
-  payment?: PaymentOptions;
+  pool?: GenericPoolOptions;
+  activity?: ActivityOptions;
 }
 
 export interface ActivityPoolEvents {
@@ -40,22 +32,17 @@ export class ActivityPool {
   public readonly events = new EventEmitter<ActivityPoolEvents>();
 
   private activityPool: Pool<WorkContext>;
-  private agreementPool: AgreementPool;
   private logger: Logger;
 
   constructor(
-    private modules: { market: MarketModule; activity: ActivityModule },
-    private options: ActivityPoolOptions,
+    private modules: { activity: ActivityModule; payment: PaymentModule },
+    private agreementPool: AgreementPool,
+    private options?: ActivityPoolOptions,
   ) {
     this.logger = this.logger = options?.logger || defaultLogger("activity-pool");
-    this.agreementPool = new AgreementPool(modules, {
-      market: options.market,
-      pool: options.agreementPool,
-    });
     this.activityPool = createPool<WorkContext>(this.createPoolFactory(), {
-      autostart: false,
       testOnBorrow: true,
-      ...options.activityPool,
+      ...options?.pool,
     });
     this.activityPool.on("factoryCreateError", (error) =>
       this.events.emit(
@@ -83,22 +70,6 @@ export class ActivityPool {
         ),
       ),
     );
-  }
-
-  async start() {
-    await this.agreementPool.start();
-    this.activityPool.start();
-    this.logger.info("Activity Poll started");
-    await this.activityPool.ready();
-    this.events.emit("ready");
-    this.logger.info("Activity Poll ready");
-  }
-
-  async stop() {
-    await this.activityPool.drain();
-    await this.agreementPool.stop();
-    await this.activityPool.clear();
-    this.events.emit("end");
   }
 
   async acquire(): Promise<WorkContext> {
@@ -145,7 +116,7 @@ export class ActivityPool {
       create: async (): Promise<WorkContext> => {
         this.logger.debug("Creating new activity to add to pool");
         const agreement = await this.agreementPool.acquire();
-        return this.modules.activity.createActivity(agreement);
+        return this.modules.activity.createActivity(this.modules.payment, agreement);
       },
       destroy: async (activity: WorkContext) => {
         this.logger.debug("Destroying activity from the pool");

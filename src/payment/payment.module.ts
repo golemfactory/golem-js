@@ -3,7 +3,7 @@ import { EventEmitter } from "eventemitter3";
 import { Allocation, DebitNote, Invoice, InvoiceProcessor } from "./index";
 import { Promise } from "cypress/types/cy-bluebird";
 
-import { YagnaEventSubscription } from "../shared/utils";
+import { YagnaApi, YagnaEventSubscription } from "../shared/utils";
 
 export interface PaymentOptions {
   // TODO
@@ -47,6 +47,8 @@ export interface PaymentModule {
 
 export class PaymentModuleImpl implements PaymentModule {
   events: EventEmitter<PaymentEvents> = new EventEmitter<PaymentEvents>();
+
+  constructor(private readonly yagnaApi: YagnaApi) {}
 
   subscribeForDebitNotes(): YagnaEventSubscription<DebitNote> {
     throw new Error("Method not implemented.");

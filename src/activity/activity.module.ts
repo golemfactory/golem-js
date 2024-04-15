@@ -2,8 +2,10 @@
 import { EventEmitter } from "eventemitter3";
 import { Agreement } from "../agreement";
 import { Promise } from "cypress/types/cy-bluebird";
-import { Activity } from "./index";
+import { Activity, ActivityOptions } from "./index";
 import { WorkContext } from "../activity/work";
+import { YagnaApi } from "../shared/utils";
+import { PaymentModule } from "../payment/payment.module";
 
 export interface ActivityEvents {}
 
@@ -20,7 +22,7 @@ export interface ActivityModule {
    *
    * @return An WorkContext that's fully commissioned and the user can execute their commands
    */
-  createActivity(agreement: Agreement): Promise<WorkContext>;
+  createActivity(paymentModule: PaymentModule, agreement: Agreement, options?: ActivityOptions): Promise<WorkContext>;
 
   /**
    * Resets the activity on the exe unit back to "New" state
@@ -46,7 +48,9 @@ export interface ActivityModule {
 export class ActivityModuleImpl implements ActivityModule {
   events: EventEmitter<ActivityEvents> = new EventEmitter<ActivityEvents>();
 
-  createActivity(_agreement: Agreement): Promise<WorkContext> {
+  constructor(private readonly yagnaApi: YagnaApi) {}
+
+  createActivity(paymentModule: PaymentModule, agreement: Agreement, options?: ActivityOptions): Promise<WorkContext> {
     throw new Error("Method not implemented.");
   }
 
