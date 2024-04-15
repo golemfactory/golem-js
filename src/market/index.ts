@@ -6,4 +6,5 @@ export { DemandConfig } from "./config";
 export * as ProposalFilterFactory from "./strategy";
 export { GolemMarketError, MarketErrorCode } from "./error";
 export * as MarketHelpers from "./helpers";
+export * from "./draft-offer-proposal-pool";
 export * from "./market.module";

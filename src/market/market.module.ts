@@ -4,7 +4,7 @@ import { Demand, Proposal, ProposalFilter } from "./index";
 import { Agreement } from "../agreement";
 
 import { YagnaApi, YagnaEventSubscription } from "../shared/utils";
-import { ProposalPool, ProposalSelector } from "./pool";
+import { DraftOfferProposalPool, ProposalSelector } from "./draft-offer-proposal-pool";
 
 export interface MarketEvents {}
 
@@ -100,7 +100,7 @@ export interface MarketModule {
     market: MarketOptions;
     filter?: ProposalFilter;
     selector?: ProposalSelector;
-  }): Promise<{ pool: ProposalPool; cancel: () => void }>;
+  }): Promise<{ pool: DraftOfferProposalPool; cancel: () => void }>;
 }
 
 export class MarketModuleImpl implements MarketModule {
@@ -161,10 +161,10 @@ export class MarketModuleImpl implements MarketModule {
     filter?: ProposalFilter;
     selector?: ProposalSelector;
   }): Promise<{
-    pool: ProposalPool;
+    pool: DraftOfferProposalPool;
     cancel: () => void;
   }> {
-    const pool = new ProposalPool({ selector: options.selector });
+    const pool = new DraftOfferProposalPool({ selectProposal: options.selector });
     const demand = await this.buildDemand(options.market);
     const initialProposalSubscription = this.subscribeForProposals(demand);
     const subscription = await this.subscribeForDraftProposals(
