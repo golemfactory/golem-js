@@ -1,7 +1,7 @@
 import { Agreement } from "./agreement";
 import { createPool, Factory, Options as GenericPoolOptions, Pool } from "generic-pool";
 import { defaultLogger, Logger } from "../shared/utils";
-import { ProposalPool } from "../market/pool";
+import { DraftOfferProposalPool } from "../market/draft-offer-proposal-pool";
 import { MarketModule, GolemMarketError, MarketErrorCode, MarketOptions } from "../market";
 import { AgreementDTO } from "./service";
 import { EventEmitter } from "eventemitter3";
@@ -27,7 +27,7 @@ export class AgreementPool {
 
   private agreementPool: Pool<Agreement>;
   private logger: Logger;
-  private collectingProposals?: { pool: ProposalPool; cancel: () => void };
+  private collectingProposals?: { pool: DraftOfferProposalPool; cancel: () => void };
 
   constructor(
     private modules: { market: MarketModule },
@@ -103,7 +103,7 @@ export class AgreementPool {
       destroy: async (agreement: Agreement) => {
         this.logger.debug("Destroying agreement from the pool");
         await this.modules.market.terminateAgreement(agreement);
-        await this.collectingProposals?.pool.destroy(agreement.proposal);
+        await this.collectingProposals?.pool.remove(agreement.proposal);
       },
       validate: async (agreement: Agreement) => {
         try {
