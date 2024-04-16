@@ -84,6 +84,7 @@ export class GolemNetwork {
    * @return Resolves when all shutdown steps are completed
    */
   async disconnect() {
+    await this.yagna.disconnect();
     this.events.emit("disconnected");
   }
 

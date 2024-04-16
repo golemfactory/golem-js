@@ -3,11 +3,12 @@ import * as EnvUtils from "../env";
 import { GolemConfigError, GolemPlatformError } from "../../error/golem-error";
 import { v4 } from "uuid";
 import { Logger } from "../logger/logger";
-import { defaultLogger } from "../logger/defaultLogger";
-
-// .js added for ESM compatibility
+import { defaultLogger } from "../logger/defaultLogger"; // .js added for ESM compatibility
 import semverSatisfies from "semver/functions/satisfies.js";
 import semverCoerce from "semver/functions/coerce.js";
+import { BehaviorSubject } from "rxjs";
+import { DebitNoteEventDTO, InvoiceEventDTO } from "ya-ts-client/dist/payment-api";
+import { AgreementEventDTO, EventDTO } from "ya-ts-client/dist/market-api";
 
 export type YagnaOptions = {
   apiKey?: string;
@@ -16,6 +17,13 @@ export type YagnaOptions = {
 };
 
 export const MIN_SUPPORTED_YAGNA = "0.13.2";
+
+type CancellablePoll<T> = {
+  /** User defined name of the event stream for ease of debugging */
+  eventType: string;
+  pollValues: () => AsyncGenerator<T>;
+  cancel: () => void;
+};
 
 /**
  * Utility class that groups various Yagna APIs under a single wrapper
@@ -51,6 +59,15 @@ export class YagnaApi {
 
   public version: YaTsClient.VersionApi.DefaultService;
 
+  private debitNoteEventsPoll: CancellablePoll<DebitNoteEventDTO> | null = null;
+  public debitNoteEvents$ = new BehaviorSubject<DebitNoteEventDTO | null>(null);
+
+  private invoiceEventPoll: CancellablePoll<InvoiceEventDTO> | null = null;
+  public invoiceEvents$ = new BehaviorSubject<InvoiceEventDTO | null>(null);
+
+  private agreementEventsPoll: CancellablePoll<AgreementEventDTO> | null = null;
+  public agreementEvents$ = new BehaviorSubject<AgreementEventDTO | null>(null);
+
   constructor(options?: YagnaOptions) {
     const apiKey = options?.apiKey || EnvUtils.getYagnaAppKey();
     this.basePath = options?.basePath || EnvUtils.getYagnaApiUrl();
@@ -82,14 +99,14 @@ export class YagnaApi {
 
     this.payment = paymentClient.requestor;
 
-    const z = new YaTsClient.ActivityApi.Client({
+    const activityApiClient = new YaTsClient.ActivityApi.Client({
       BASE: `${this.basePath}/activity-api/v1`,
       HEADERS: commonHeaders,
     });
 
     this.activity = {
-      control: z.requestorControl,
-      state: z.requestorState,
+      control: activityApiClient.requestorControl,
+      state: activityApiClient.requestorState,
     };
 
     const netClient = new YaTsClient.NetApi.Client({
@@ -124,11 +141,104 @@ export class YagnaApi {
     this.appSessionId = v4();
   }
 
+  /**
+   * Effectively starts the Yagna API client including subscribing to events exposed via rxjs subjects
+   */
   async connect() {
     this.logger.info("Connecting to yagna");
+
     await this.assertSupportedVersion();
 
-    return this.identity.getIdentity();
+    const identity = this.identity.getIdentity();
+
+    this.startPollingEvents();
+
+    return identity;
+  }
+
+  /**
+   * Terminates the Yagna API related activities
+   */
+  async disconnect() {
+    this.stopPollingEvents();
+  }
+
+  private startPollingEvents() {
+    this.logger.info("Starting to poll for events from Yagna");
+
+    const pollIntervalSec = 5;
+    const maxEvents = 100;
+
+    this.agreementEventsPoll = this.createEventPoller("AgreementEvents", (lastEventTimestamp) =>
+      this.market.collectAgreementEvents(pollIntervalSec, lastEventTimestamp, maxEvents, this.appSessionId),
+    );
+    this.debitNoteEventsPoll = this.createEventPoller("DebitNoteEvents", (lastEventTimestamp) =>
+      this.payment.getDebitNoteEvents(pollIntervalSec, lastEventTimestamp, maxEvents, this.appSessionId),
+    );
+    this.invoiceEventPoll = this.createEventPoller("InvoiceEvents", (lastEventTimestamp) =>
+      this.payment.getInvoiceEvents(pollIntervalSec, lastEventTimestamp, maxEvents, this.appSessionId),
+    );
+
+    // Run the readers and don't block execution
+    this.toObserver(this.agreementEventsPoll.pollValues(), this.agreementEvents$)
+      .then(() => this.logger.info("Finished polling agreement events from Yagna"))
+      .catch((err) => this.logger.error("Error while polling agreement events from Yagna", err));
+
+    this.toObserver(this.debitNoteEventsPoll.pollValues(), this.debitNoteEvents$)
+      .then(() => this.logger.info("Finished polling debit note events from Yagna"))
+      .catch((err) => this.logger.error("Error while polling debit note events from Yagna", err));
+
+    this.toObserver(this.invoiceEventPoll.pollValues(), this.invoiceEvents$)
+      .then(() => this.logger.info("Finished polling invoice events from Yagna"))
+      .catch((err) => this.logger.error("Error while polling invoice events from Yagna", err));
+  }
+
+  private stopPollingEvents() {
+    this.logger.info("Stopping polling events from Yagna");
+    this.invoiceEventPoll?.cancel();
+    this.debitNoteEventsPoll?.cancel();
+    this.agreementEventsPoll?.cancel();
+  }
+
+  private async toObserver<T>(generator: AsyncGenerator<T>, subject: BehaviorSubject<T>) {
+    for await (const value of generator) {
+      subject.next(value);
+    }
+  }
+
+  private createEventPoller<T extends EventDTO>(
+    eventType: string,
+    eventsFetcher: (lastEventTimestamp: string) => Promise<T[]>,
+  ): CancellablePoll<T> {
+    let keepReading = true;
+    let lastTimestamp = new Date().toISOString();
+
+    const logger = this.logger;
+
+    return {
+      eventType,
+      pollValues: async function* () {
+        while (keepReading) {
+          try {
+            const events = await eventsFetcher(lastTimestamp);
+            logger.debug("Polled events from Yagna", {
+              eventType,
+              count: events.length,
+              lastEventTimestamp: lastTimestamp,
+            });
+            for (const event of events) {
+              yield event;
+              lastTimestamp = event.eventDate;
+            }
+          } catch (error) {
+            logger.error("Error fetching events from Yagna", { eventType, error });
+          }
+        }
+      },
+      cancel: function () {
+        keepReading = false;
+      },
+    };
   }
 
   private async assertSupportedVersion() {

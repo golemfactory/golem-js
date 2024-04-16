@@ -142,6 +142,7 @@ export class ActivityPool {
       this.paymentService.end(),
     ]);
     await this.pool.clear();
+    await this.yagnaApi.disconnect();
     this.events.emit("end");
   }
 
