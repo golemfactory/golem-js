@@ -6,7 +6,13 @@ import { MarketOptions, PaymentOptions } from "./types";
 import { Network, NetworkOptions } from "../../network";
 import { GftpStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../../shared/storage";
 import { validateDeployment } from "./validate-deployment";
-import { DemandBuildParams, MarketModule, MarketModuleImpl, ProposalPool, ProposalSubscription } from "../../market";
+import {
+  DemandBuildParams,
+  DraftOfferProposalPool,
+  MarketModule,
+  MarketModuleImpl,
+  ProposalSubscription,
+} from "../../market";
 import { PaymentModule, PaymentModuleImpl } from "../../payment";
 import { AgreementPool, AgreementPoolOptions } from "../../agreement";
 import { CreateActivityPoolOptions } from "./builder";
@@ -75,7 +81,7 @@ export class Deployment {
   private readonly pools = new Map<
     string,
     {
-      proposalPool: ProposalPool;
+      proposalPool: DraftOfferProposalPool;
       proposalSubscription: ProposalSubscription;
       agreementPool: AgreementPool;
       activityPool: ActivityPool;
@@ -150,7 +156,7 @@ export class Deployment {
     // TODO: add pool to network
     // TODO: pass dataTransferProtocol to pool
     for (const pool of this.components.activityPools) {
-      const proposalPool = new ProposalPool();
+      const proposalPool = new DraftOfferProposalPool();
       const { demandBuildOptions, agreementPoolOptions, activityPoolOptions } = this.prepareParams(pool.options);
       const proposalSubscription = await this.modules.market.startCollectingProposal(demandBuildOptions, proposalPool);
       const agreementPool = new AgreementPool(this.modules, proposalPool, agreementPoolOptions);
@@ -182,7 +188,7 @@ export class Deployment {
       const stopPools = Array.from(this.pools.values()).map((pool) =>
         Promise.allSettled([
           pool.proposalSubscription.cancel(),
-          pool.proposalPool.drain(),
+          pool.proposalPool.clear(),
           pool.agreementPool.drain(),
           pool.activityPool.drain(),
         ]),

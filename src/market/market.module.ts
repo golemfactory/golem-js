@@ -4,7 +4,7 @@ import { Demand, Proposal, ProposalFilter } from "./index";
 import { Agreement, AgreementOptions } from "../agreement";
 
 import { YagnaApi, YagnaEventSubscription } from "../shared/utils";
-import { ProposalPool } from "./pool";
+import { DraftOfferProposalPool } from "./draft-offer-proposal-pool";
 import { PaymentModule } from "../payment";
 
 export interface MarketEvents {}
@@ -113,7 +113,7 @@ export interface MarketModule {
     initialProposalSubscription: YagnaEventSubscription<Proposal>,
   ): Promise<YagnaEventSubscription<Proposal>>;
 
-  startCollectingProposal(options: DemandBuildParams, pool: ProposalPool): Promise<ProposalSubscription>;
+  startCollectingProposal(options: DemandBuildParams, pool: DraftOfferProposalPool): Promise<ProposalSubscription>;
 }
 
 export class MarketModuleImpl implements MarketModule {
@@ -169,7 +169,10 @@ export class MarketModuleImpl implements MarketModule {
     throw new Error("Method not implemented.");
   }
 
-  async startCollectingProposal(options: DemandBuildParams, pool: ProposalPool): Promise<ProposalSubscription> {
+  async startCollectingProposal(
+    options: DemandBuildParams,
+    pool: DraftOfferProposalPool,
+  ): Promise<ProposalSubscription> {
     const demand = await this.buildDemand(options);
     return this.subscribeForProposals(demand);
   }

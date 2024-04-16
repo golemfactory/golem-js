@@ -2,6 +2,7 @@ describe("ActivityPool", () => {
   describe("creating", () => {
     it.todo("should create a pool");
   });
+
   describe("acquiring", () => {
     it.todo("should acquire activity from pool");
   });
