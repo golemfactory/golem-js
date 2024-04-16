@@ -7,8 +7,8 @@ import { DemandOptions, MarketOptions } from "../../market";
 import { PaymentOptions } from "../../payment";
 
 interface DeploymentOptions {
-  replicas: number | { min: number; max: number };
-  network: string;
+  replicas?: number | { min: number; max: number };
+  network?: string;
 }
 
 export interface CreateActivityPoolOptions {

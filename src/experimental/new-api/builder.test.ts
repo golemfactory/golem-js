@@ -13,14 +13,14 @@ describe("Deployment builder", () => {
         .createActivityPool("my-pool", {
           demand: {
             image: "image",
-            market: {},
           },
+          market: {},
         })
         .createActivityPool("my-pool", {
           demand: {
             image: "image",
-            market: {},
           },
+          market: {},
         });
     }).toThrow(new GolemConfigError(`Activity pool with name my-pool already exists`));
   });
@@ -46,9 +46,11 @@ describe("Deployment builder", () => {
         .createActivityPool("my-pool", {
           demand: {
             image: "image",
-            market: {},
           },
-          network: "non-existing-network",
+          market: {},
+          deployment: {
+            network: "non-existing-network",
+          },
         })
         .getDeployment();
     }).toThrow(new GolemConfigError(`Activity pool my-pool references non-existing network non-existing-network`));
