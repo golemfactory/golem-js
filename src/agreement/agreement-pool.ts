@@ -37,6 +37,7 @@ export class AgreementPool {
 
     this.agreementPool = createPool<Agreement>(this.createPoolFactory(), {
       testOnBorrow: true,
+      autostart: false,
       ...options?.poolOptions,
     });
     this.agreementPool.on("factoryCreateError", (error) =>

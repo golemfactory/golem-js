@@ -39,6 +39,7 @@ export class ActivityPool {
     this.logger = this.logger = options?.logger || defaultLogger("activity-pool");
     this.activityPool = createPool<WorkContext>(this.createPoolFactory(), {
       testOnBorrow: true,
+      autostart: false,
       ...options?.poolOptions,
     });
     this.activityPool.on("factoryCreateError", (error) =>
