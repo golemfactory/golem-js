@@ -3,7 +3,7 @@ import {
   MarketModuleImpl,
   ActivityModuleImpl,
   PaymentModuleImpl,
-  ProposalPool,
+  DraftOfferProposalPool,
   AgreementPool,
   ActivityPool,
 } from "@golem-sdk/golem-js";
@@ -40,7 +40,7 @@ import {
       },
     };
 
-    const proposalPool = new ProposalPool();
+    const proposalPool = new DraftOfferProposalPool();
     const proposalSubscription = await modules.market.startCollectingProposal(demandOptions, proposalPool);
     const agreementPool = new AgreementPool(modules, proposalPool, {
       poolOptions: { min: 1 },
