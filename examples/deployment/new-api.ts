@@ -15,8 +15,6 @@ async function main() {
 
   const builder = golem.creteDeploymentBuilder();
 
-  // const deployment = golem.createDeployment();
-
   builder
     .createNetwork("basic", {
       networkOwnerId: "test",
@@ -32,21 +30,23 @@ async function main() {
           minMemGib: 8,
           minStorageGib: 16,
         },
-        market: {
-          rentHours: 12 /* REQUIRED */,
-          pricing: {
-            maxStartPrice: 1 /* REQUIRED */,
-            maxCpuPerHourPrice: 1 /* REQUIRED */,
-            maxEnvPerHourPrice: 1 /* REQUIRED */,
-          },
-          withProviders: ["0x123123"],
-          withoutProviders: ["0x123123"],
-          withOperators: ["0x123123"],
-          withoutOperators: ["0x123123"],
-        },
       },
-      pool: { replicas: { min: 1 } },
-      network: "basic",
+      market: {
+        rentHours: 12,
+        pricing: {
+          maxStartPrice: 1,
+          maxCpuPerHourPrice: 1,
+          maxEnvPerHourPrice: 1,
+        },
+        withProviders: ["0x123123"],
+        withoutProviders: ["0x123123"],
+        withOperators: ["0x123123"],
+        withoutOperators: ["0x123123"],
+      },
+      deployment: {
+        replicas: 3,
+        network: "basic",
+      },
     })
     .createActivityPool("db", {
       demand: {
@@ -56,17 +56,19 @@ async function main() {
           minMemGib: 16,
           minStorageGib: 4,
         },
-        market: {
-          rentHours: 12 /* REQUIRED */,
-          pricing: {
-            maxStartPrice: 1 /* REQUIRED */,
-            maxCpuPerHourPrice: 1 /* REQUIRED */,
-            maxEnvPerHourPrice: 1 /* REQUIRED */,
-          },
+      },
+      market: {
+        rentHours: 12 /* REQUIRED */,
+        pricing: {
+          maxStartPrice: 1 /* REQUIRED */,
+          maxCpuPerHourPrice: 1 /* REQUIRED */,
+          maxEnvPerHourPrice: 1 /* REQUIRED */,
         },
       },
-      pool: { replicas: { min: 3, max: 4 } },
-      network: "basic",
+      deployment: {
+        replicas: { min: 3, max: 4 },
+        network: "basic",
+      },
     });
 
   const deployment = builder.getDeployment();

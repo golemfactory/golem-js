@@ -18,11 +18,13 @@ import {
       payment: new PaymentModuleImpl(yagnaApi),
     };
     const demandOptions = {
-      image: "file://golem_node_20.gvmi",
-      resources: {
-        minCpu: 4,
-        minMemGib: 8,
-        minStorageGib: 16,
+      demand: {
+        image: "file://golem_node_20.gvmi",
+        resources: {
+          minCpu: 4,
+          minMemGib: 8,
+          minStorageGib: 16,
+        },
       },
       market: {
         rentHours: 12,
@@ -37,18 +39,14 @@ import {
         withoutOperators: ["0x123123"],
       },
     };
-    const invoiceFilter = () => true;
-    const debitNoteFilter = () => true;
 
     const proposalPool = new ProposalPool();
     const proposalSubscription = await modules.market.startCollectingProposal(demandOptions, proposalPool);
     const agreementPool = new AgreementPool(modules, proposalPool, {
-      replicas: { min: 1 },
-      agreementOptions: { invoiceFilter },
+      poolOptions: { min: 1 },
     });
     const activityPool = new ActivityPool(modules, agreementPool, {
-      replicas: { min: 2 },
-      activityOptions: { debitNoteFilter },
+      poolOptions: { min: 2 },
     });
     const ctx = await activityPool.acquire();
     const result = await ctx.run("echo Hello World");

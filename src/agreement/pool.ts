@@ -8,7 +8,7 @@ import { PaymentModule } from "../payment";
 
 export interface AgreementPoolOptions {
   logger?: Logger;
-  replicas?: GenericPoolOptions;
+  poolOptions?: GenericPoolOptions;
   agreementOptions?: AgreementOptions;
 }
 
@@ -36,7 +36,7 @@ export class AgreementPool {
 
     this.agreementPool = createPool<Agreement>(this.createPoolFactory(), {
       testOnBorrow: true,
-      ...options?.replicas,
+      ...options?.poolOptions,
     });
     this.agreementPool.on("factoryCreateError", (error) =>
       this.events.emit(

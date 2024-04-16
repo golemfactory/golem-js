@@ -4,9 +4,11 @@ import { Allocation, DebitNote, Invoice, InvoiceProcessor } from "./index";
 import { Promise } from "cypress/types/cy-bluebird";
 
 import { YagnaApi, YagnaEventSubscription } from "../shared/utils";
+import { DebitNoteFilter, InvoiceFilter } from "./service";
 
 export interface PaymentOptions {
-  // TODO
+  debitNoteFilter?: DebitNoteFilter;
+  invoiceFilter?: InvoiceFilter;
 }
 
 export interface PaymentEvents {}

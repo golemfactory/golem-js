@@ -17,11 +17,13 @@ import {
       payment: new PaymentModuleImpl(yagnaApi),
     };
     const demandOptions = {
-      image: "file://golem_node_20.gvmi",
-      resources: {
-        minCpu: 4,
-        minMemGib: 8,
-        minStorageGib: 16,
+      demand: {
+        image: "file://golem_node_20.gvmi",
+        resources: {
+          minCpu: 4,
+          minMemGib: 8,
+          minStorageGib: 16,
+        },
       },
       market: {
         rentHours: 12,

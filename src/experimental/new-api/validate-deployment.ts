@@ -4,11 +4,13 @@ import { DeploymentComponents } from "./deployment";
 function validateNetworks(components: DeploymentComponents) {
   const networkNames = new Set(components.networks.map((network) => network.name));
   for (const pool of components.activityPools) {
-    if (!pool.options.network) {
+    if (!pool.options.deployment?.network) {
       continue;
     }
-    if (!networkNames.has(pool.options.network)) {
-      throw new GolemConfigError(`Activity pool ${pool.name} references non-existing network ${pool.options.network}`);
+    if (!networkNames.has(pool.options.deployment.network)) {
+      throw new GolemConfigError(
+        `Activity pool ${pool.name} references non-existing network ${pool.options.deployment.network}`,
+      );
     }
   }
 }

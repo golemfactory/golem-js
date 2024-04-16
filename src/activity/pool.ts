@@ -8,12 +8,9 @@ import { ActivityDTO } from "./work/work";
 import { EventEmitter } from "eventemitter3";
 import { PaymentModule } from "../payment";
 
-/**
- * TODO: specify clear and user-friendly options
- */
 export interface ActivityPoolOptions {
   logger?: Logger;
-  replicas?: GenericPoolOptions;
+  poolOptions?: GenericPoolOptions;
   activityOptions?: ActivityOptions;
 }
 
@@ -42,7 +39,7 @@ export class ActivityPool {
     this.logger = this.logger = options?.logger || defaultLogger("activity-pool");
     this.activityPool = createPool<WorkContext>(this.createPoolFactory(), {
       testOnBorrow: true,
-      ...options?.replicas,
+      ...options?.poolOptions,
     });
     this.activityPool.on("factoryCreateError", (error) =>
       this.events.emit(

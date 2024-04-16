@@ -9,10 +9,14 @@ import { PaymentModule } from "../payment";
 
 export interface MarketEvents {}
 
+export interface DemandBuildParams {
+  demand: DemandOptions;
+  market: MarketOptions;
+}
+
 export interface DemandOptions {
   image: string;
   resources?: Resources;
-  market?: MarketOptions;
 }
 
 /**
@@ -60,7 +64,7 @@ export interface ProposalSubscription {
 export interface MarketModule {
   events: EventEmitter<MarketEvents>;
 
-  buildDemand(options: DemandOptions): Promise<Demand>;
+  buildDemand(options: DemandBuildParams): Promise<Demand>;
 
   subscribeForProposals(demand: Demand): ProposalSubscription;
 
@@ -109,7 +113,7 @@ export interface MarketModule {
     initialProposalSubscription: YagnaEventSubscription<Proposal>,
   ): Promise<YagnaEventSubscription<Proposal>>;
 
-  startCollectingProposal(options: DemandOptions, pool: ProposalPool): Promise<ProposalSubscription>;
+  startCollectingProposal(options: DemandBuildParams, pool: ProposalPool): Promise<ProposalSubscription>;
 }
 
 export class MarketModuleImpl implements MarketModule {
@@ -117,7 +121,7 @@ export class MarketModuleImpl implements MarketModule {
 
   constructor(private readonly yagnaApi: YagnaApi) {}
 
-  buildDemand(options: DemandOptions): Promise<Demand> {
+  buildDemand(options: DemandBuildParams): Promise<Demand> {
     throw new Error("Method not implemented.");
   }
 
@@ -165,7 +169,7 @@ export class MarketModuleImpl implements MarketModule {
     throw new Error("Method not implemented.");
   }
 
-  async startCollectingProposal(options: DemandOptions, pool: ProposalPool): Promise<ProposalSubscription> {
+  async startCollectingProposal(options: DemandBuildParams, pool: ProposalPool): Promise<ProposalSubscription> {
     const demand = await this.buildDemand(options);
     return this.subscribeForProposals(demand);
   }

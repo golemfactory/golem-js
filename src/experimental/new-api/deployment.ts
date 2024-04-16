@@ -6,9 +6,10 @@ import { MarketOptions, PaymentOptions } from "./types";
 import { Network, NetworkOptions } from "../../network";
 import { GftpStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../../shared/storage";
 import { validateDeployment } from "./validate-deployment";
-import { DemandOptions, MarketModule, MarketModuleImpl, ProposalPool, ProposalSubscription } from "../../market";
+import { DemandBuildParams, MarketModule, MarketModuleImpl, ProposalPool, ProposalSubscription } from "../../market";
 import { PaymentModule, PaymentModuleImpl } from "../../payment";
-import { AgreementPool } from "../../agreement";
+import { AgreementPool, AgreementPoolOptions } from "../../agreement";
+import { CreateActivityPoolOptions } from "./builder";
 
 export enum DeploymentState {
   INITIAL = "INITIAL",
@@ -43,7 +44,7 @@ export interface DeploymentEvents {
 }
 
 export type DeploymentComponents = {
-  activityPools: { name: string; options: { demand: DemandOptions; pool?: ActivityPoolOptions; network?: string } }[];
+  activityPools: { name: string; options: CreateActivityPoolOptions }[];
   networks: { name: string; options: NetworkOptions }[];
 };
 
@@ -150,9 +151,10 @@ export class Deployment {
     // TODO: pass dataTransferProtocol to pool
     for (const pool of this.components.activityPools) {
       const proposalPool = new ProposalPool();
-      const proposalSubscription = await this.modules.market.startCollectingProposal(pool.options.demand, proposalPool);
-      const agreementPool = new AgreementPool(this.modules, proposalPool, pool.options.pool);
-      const activityPool = new ActivityPool(this.modules, agreementPool, pool.options.pool);
+      const { demandBuildOptions, agreementPoolOptions, activityPoolOptions } = this.prepareParams(pool.options);
+      const proposalSubscription = await this.modules.market.startCollectingProposal(demandBuildOptions, proposalPool);
+      const agreementPool = new AgreementPool(this.modules, proposalPool, agreementPoolOptions);
+      const activityPool = new ActivityPool(this.modules, agreementPool, activityPoolOptions);
       this.pools.set(pool.name, {
         proposalPool,
         proposalSubscription,
@@ -213,5 +215,34 @@ export class Deployment {
       throw new GolemUserError(`Network ${name} not found`);
     }
     return network;
+  }
+
+  private prepareParams(options: CreateActivityPoolOptions): {
+    demandBuildOptions: DemandBuildParams;
+    activityPoolOptions: ActivityPoolOptions;
+    agreementPoolOptions: AgreementPoolOptions;
+  } {
+    const poolOptions =
+      typeof options.deployment?.replicas === "number"
+        ? { min: options.deployment?.replicas, max: options.deployment?.replicas }
+        : typeof options.deployment?.replicas === "object"
+          ? options.deployment?.replicas
+          : { min: 1, max: 1 };
+    return {
+      demandBuildOptions: {
+        demand: options.demand,
+        market: options.market,
+      },
+      activityPoolOptions: {
+        logger: this.logger.child("activity-pool"),
+        poolOptions,
+        activityOptions: { debitNoteFilter: options.payment?.debitNotesFilter },
+      },
+      agreementPoolOptions: {
+        logger: this.logger.child("agreement-pool"),
+        poolOptions,
+        agreementOptions: { invoiceFilter: options.payment?.invoiceFilter },
+      },
+    };
   }
 }
