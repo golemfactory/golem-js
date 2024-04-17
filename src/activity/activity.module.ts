@@ -7,6 +7,7 @@ import {Promise} from "cypress/types/cy-bluebird";
 import {Terminate} from "./script";
 import {PaymentModule} from "../payment";
 import {GolemWorkError, WorkErrorCode} from "./work";
+import { randomAgreementSelectorWithPriorityForExistingOnes } from "../agreement/strategy";
 
 export interface ActivityEvents {}
 
@@ -79,6 +80,7 @@ export class ActivityModuleImpl implements ActivityModule {
   }
 
   async destroyActivity(activity: Activity, reason: string): Promise<Activity> {
-    throw new Error("Method not implemented.");
+    await activity.stop();
+    return activity;
   }
 }

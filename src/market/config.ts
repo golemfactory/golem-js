@@ -6,8 +6,8 @@ import { acceptAll } from "./strategy";
 
 const DEFAULTS = {
   subnetTag: "public",
-  maxOfferEvents: 10,
-  offerFetchingIntervalSec: 20,
+  maxOfferEvents: 100,
+  offerFetchingIntervalSec: 5,
   expirationSec: 30 * 60, // 30 min
   debitNotesAcceptanceTimeoutSec: 2 * 60, // 2 minutes
   midAgreementDebitNoteIntervalSec: 2 * 60, // 2 minutes

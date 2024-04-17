@@ -2,6 +2,7 @@ import { ProposalNew } from "./proposal";
 import AsyncLock from "async-lock";
 import { EventEmitter } from "eventemitter3";
 import { GolemMarketError, MarketErrorCode } from "./error";
+import { sleep } from "../shared/utils";
 
 export type ProposalSelector = (proposals: ProposalNew[]) => ProposalNew;
 export type ProposalValidator = (proposal: ProposalNew) => boolean;
@@ -104,7 +105,6 @@ export class DraftOfferProposalPool {
     if (!proposal.isDraft()) {
       throw new GolemMarketError("Cannot add a non-draft proposal to the pool", MarketErrorCode.InvalidProposal);
     }
-
     this.available.add(proposal);
     this.events.emit("added", proposal);
   }
@@ -117,10 +117,10 @@ export class DraftOfferProposalPool {
   async acquire(): Promise<ProposalNew> {
     return this.lock.acquire(
       "proposal-pool",
-      () => {
-        if (this.available.size === 0) {
-          throw new GolemMarketError("The proposal pool is empty, cannot acquire", MarketErrorCode.NoProposalAvailable);
-        }
+      async () => {
+        // if (this.available.size === 0) {
+        //   throw new GolemMarketError("The proposal pool is empty, cannot acquire", MarketErrorCode.NoProposalAvailable);
+        // }
 
         let proposal: ProposalNew | null = null;
 
@@ -134,6 +134,7 @@ export class DraftOfferProposalPool {
             this.removeFromAvailable(proposal);
             // Keep searching
             proposal = null;
+            await sleep(1);
           }
         } while (proposal === null);
 

@@ -22,7 +22,7 @@ import {
     };
     const demandOptions = {
       demand: {
-        image: "file://golem_node_20.gvmi",
+        image: "golem/alpine:latest",
         resources: {
           minCpu: 4,
           minMemGib: 8,
@@ -43,7 +43,7 @@ import {
       },
     };
 
-    const proposalPool = new DraftOfferProposalPool();
+    const proposalPool = new DraftOfferProposalPool({ minCount: 1 });
     const workload = Package.create({
       imageTag: demandOptions.demand.image,
     });
@@ -66,14 +66,42 @@ import {
       poolOptions: { min: 1 },
     });
     const activityPool = new ActivityPool(modules, agreementPool, {
-      poolOptions: { min: 2 },
+      poolOptions: { min: 2, max: 100 },
     });
+    setInterval(
+      () =>
+        console.log(
+          "Proposals available:",
+          proposalPool.availableCount(),
+          "Proposals borrowed:",
+          proposalPool.leasedCount(),
+          "Agreement borrowed:",
+          agreementPool.getBorrowed(),
+          "Agreement pending:",
+          agreementPool.getPending(),
+          "Activities borrowed:",
+          activityPool.getBorrowed(),
+          "Activities pending:",
+          activityPool.getPending(),
+          "Activities available:",
+          activityPool.getAvailable(),
+        ),
+      2000,
+    );
+
     const ctx = await activityPool.acquire();
     const result = await ctx.run("echo Hello World");
     console.log(result.stdout);
     proposalSubscription.unsubscribe();
+
+    // await new Promise((res) => setTimeout(res, 5_000));
+    const ctx2 = await activityPool.acquire();
+    const result2 = await ctx.run("echo Hello World222222");
+    console.log(result2.stdout);
+    await activityPool.release(ctx2);
+    await new Promise((res) => setTimeout(res, 5_000));
+    await activityPool.destroy(ctx);
     await agreementPool.drain();
-    await activityPool.drain();
   } catch (err) {
     console.error("Pool execution failed:", err);
   } finally {
