@@ -186,12 +186,7 @@ export class Deployment {
       this.dataTransferProtocol.close();
 
       const stopPools = Array.from(this.pools.values()).map((pool) =>
-        Promise.allSettled([
-          pool.proposalSubscription.cancel(),
-          pool.proposalPool.clear(),
-          pool.agreementPool.drain(),
-          pool.activityPool.drain(),
-        ]),
+        Promise.allSettled([pool.proposalSubscription.cancel(), pool.agreementPool.drain(), pool.activityPool.drain()]),
       );
       await Promise.allSettled(stopPools);
 

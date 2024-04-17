@@ -52,7 +52,6 @@ import {
     const result = await ctx.run("echo Hello World");
     console.log(result.stdout);
     proposalSubscription.cancel();
-    await proposalPool.clear();
     await agreementPool.drain();
     await activityPool.drain();
   } catch (err) {
