@@ -1,71 +1,56 @@
 import {
-  Activity,
-  AgreementPoolService,
-  MarketService,
-  Package,
-  PaymentService,
-  WorkContext,
   YagnaApi,
+  MarketModuleImpl,
+  ActivityModuleImpl,
+  PaymentModuleImpl,
+  DraftOfferProposalPool,
+  WorkContext,
 } from "@golem-sdk/golem-js";
 
 (async () => {
-  console.log("Starting core services...");
-  const yagna = new YagnaApi();
-
-  const DURATION_SEC = 6 * 60;
-
-  const payment = new PaymentService(yagna);
-
-  await payment.run();
-
-  const allocation = await payment.createAllocation({
-    budget: 1.0,
-    expirationSec: DURATION_SEC,
-  });
-
-  const agreementPool = new AgreementPoolService(yagna);
-
-  const market = new MarketService(agreementPool, yagna, {
-    expirationSec: DURATION_SEC,
-  });
-
-  const workload = Package.create({
-    imageTag: "golem/alpine:latest",
-  });
-
-  await agreementPool.run();
-  await market.run(workload, allocation);
-  console.log("Core services started");
-
   try {
-    const agreement = await agreementPool.getAgreement();
-    payment.acceptPayments(agreement);
-
-    const activity = await Activity.create(agreement, yagna);
-    // Stop listening for new proposals
-    await market.end();
-
+    const yagnaApi = new YagnaApi();
+    await yagnaApi.connect();
+    const modules = {
+      market: new MarketModuleImpl(yagnaApi),
+      activity: new ActivityModuleImpl(yagnaApi),
+      payment: new PaymentModuleImpl(yagnaApi),
+    };
+    const demandOptions = {
+      demand: {
+        image: "file://golem_node_20.gvmi",
+        resources: {
+          minCpu: 4,
+          minMemGib: 8,
+          minStorageGib: 16,
+        },
+      },
+      market: {
+        rentHours: 12,
+        pricing: {
+          maxStartPrice: 1,
+          maxCpuPerHourPrice: 1,
+          maxEnvPerHourPrice: 1,
+        },
+        withProviders: ["0x123123"],
+        withoutProviders: ["0x123123"],
+        withOperators: ["0x123123"],
+        withoutOperators: ["0x123123"],
+      },
+    };
+    const invoiceFilter = () => true;
+    const debitNoteFilter = () => true;
+    const proposalPool = new DraftOfferProposalPool();
+    const proposalSubscription = await modules.market.startCollectingProposal(demandOptions, proposalPool);
+    const draftProposal = await proposalPool.acquire();
+    const agreement = await modules.market.proposeAgreement(modules.payment, draftProposal, { invoiceFilter });
+    const activity = await modules.activity.createActivity(modules.payment, agreement, { debitNoteFilter });
     const ctx = new WorkContext(activity, {});
-
-    console.log("Activity initialized, status:", await activity.getState());
-    await ctx.before();
-    console.log("Activity deployed and ready for use, status:", await activity.getState());
-
-    // Main piece of your logic
-    const result = await ctx.run("echo 'Hello World!'");
-    console.log(result);
-
-    // Stop the activity on the provider once you're done
-    await activity.stop();
-    // Release the agreement without plans to re-use -> it's going to terminate this agreement
-    await agreementPool.releaseAgreement(agreement.id, false);
+    const result = await ctx.run("echo Hello World");
+    console.log(result.stdout);
+    proposalSubscription.cancel();
+    await proposalPool.clear();
   } catch (err) {
     console.error("Failed to run example on Golem", err);
   }
-
-  console.log("Shutting down services...");
-  await market.end();
-  await agreementPool.end();
-  await payment.end();
-  console.log("Services shutdown complete...");
 })().catch(console.error);

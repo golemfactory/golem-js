@@ -3,3 +3,4 @@ export { AgreementPoolService, AgreementCandidate, AgreementSelector, AgreementS
 export { AgreementFactory } from "./factory";
 export { AgreementConfig } from "./config";
 export * as AgreementSelectors from "./strategy";
+export * from "./agreement-pool";

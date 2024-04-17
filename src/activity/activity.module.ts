@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
 import { Agreement } from "../agreement";
-import { Activity, ActivityOptions, ActivityStateEnum } from "./index";
-import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
-import { Terminate } from "./script";
-import { GolemWorkError, WorkErrorCode } from "./work";
+import { Promise } from "cypress/types/cy-bluebird";
+import { Activity, ActivityOptions } from "./index";
+import { WorkContext } from "../activity/work";
+import { YagnaApi } from "../shared/utils";
+import { PaymentModule } from "../payment/payment.module";
 
 export interface ActivityEvents {}
 
@@ -21,7 +22,7 @@ export interface ActivityModule {
    *
    * @return An WorkContext that's fully commissioned and the user can execute their commands
    */
-  createActivity(agreement: Agreement, options?: ActivityOptions): Promise<Activity>;
+  createActivity(paymentModule: PaymentModule, agreement: Agreement, options?: ActivityOptions): Promise<WorkContext>;
 
   /**
    * Resets the activity on the exe unit back to "New" state
@@ -45,34 +46,19 @@ export interface ActivityModule {
 }
 
 export class ActivityModuleImpl implements ActivityModule {
-  public readonly events: EventEmitter<ActivityEvents> = new EventEmitter<ActivityEvents>();
-  private logger: Logger;
+  events: EventEmitter<ActivityEvents> = new EventEmitter<ActivityEvents>();
 
-  constructor(private yagnaApi: YagnaApi) {
-    this.logger = defaultLogger("activity");
+  constructor(private readonly yagnaApi: YagnaApi) {}
+
+  createActivity(paymentModule: PaymentModule, agreement: Agreement, options?: ActivityOptions): Promise<WorkContext> {
+    throw new Error("Method not implemented.");
   }
 
-  async createActivity(agreement: Agreement, options?: ActivityOptions): Promise<Activity> {
-    return Activity.create(agreement, this.yagnaApi, options);
+  resetActivity(_activity: Activity): Promise<Activity> {
+    throw new Error("Method not implemented.");
   }
 
-  async resetActivity(activity: Activity): Promise<Activity> {
-    const terminateComand = new Terminate();
-    await activity.execute(terminateComand.toExeScriptRequest());
-    const state = await activity.getState();
-    if (state !== ActivityStateEnum.New) {
-      throw new GolemWorkError(
-        "Unable to reset activity",
-        WorkErrorCode.ActivityResetFailed,
-        activity.agreement,
-        activity,
-        activity.getProviderInfo(),
-      );
-    }
-    return activity;
-  }
-
-  async destroyActivity(activity: Activity, reason: string): Promise<Activity> {
+  destroyActivity(_activity: Activity, _reason: string): Promise<Activity> {
     throw new Error("Method not implemented.");
   }
 }

@@ -6,7 +6,16 @@ import { MarketOptions, PaymentOptions } from "./types";
 import { Network, NetworkOptions } from "../../network";
 import { GftpStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../../shared/storage";
 import { validateDeployment } from "./validate-deployment";
-import { MarketModule, MarketModuleImpl } from "../../market";
+import {
+  DemandBuildParams,
+  DraftOfferProposalPool,
+  MarketModule,
+  MarketModuleImpl,
+  ProposalSubscription,
+} from "../../market";
+import { PaymentModule, PaymentModuleImpl } from "../../payment";
+import { AgreementPool, AgreementPoolOptions } from "../../agreement";
+import { CreateActivityPoolOptions } from "./builder";
 
 export enum DeploymentState {
   INITIAL = "INITIAL",
@@ -41,7 +50,7 @@ export interface DeploymentEvents {
 }
 
 export type DeploymentComponents = {
-  activityPools: { name: string; options: ActivityPoolOptions }[];
+  activityPools: { name: string; options: CreateActivityPoolOptions }[];
   networks: { name: string; options: NetworkOptions }[];
 };
 
@@ -69,11 +78,22 @@ export class Deployment {
 
   private readonly yagnaApi: YagnaApi;
 
-  private readonly activityPools = new Map<string, ActivityPool>();
+  private readonly pools = new Map<
+    string,
+    {
+      proposalPool: DraftOfferProposalPool;
+      proposalSubscription: ProposalSubscription;
+      agreementPool: AgreementPool;
+      activityPool: ActivityPool;
+    }
+  >();
   private readonly networks = new Map<string, Network>();
   private readonly dataTransferProtocol: StorageProvider;
-  private marketModule: MarketModule;
-  private activityModule: ActivityModule;
+  private readonly modules: {
+    market: MarketModule;
+    activity: ActivityModule;
+    payment: PaymentModule;
+  };
 
   constructor(
     private readonly components: DeploymentComponents,
@@ -87,8 +107,11 @@ export class Deployment {
       basePath: options.api.url,
     });
 
-    this.marketModule = new MarketModuleImpl(this.yagnaApi);
-    this.activityModule = new ActivityModuleImpl(this.yagnaApi);
+    this.modules = {
+      market: new MarketModuleImpl(this.yagnaApi),
+      activity: new ActivityModuleImpl(this.yagnaApi),
+      payment: new PaymentModuleImpl(this.yagnaApi),
+    };
 
     this.dataTransferProtocol = this.getDataTransferProtocol(options, this.yagnaApi);
 
@@ -133,8 +156,17 @@ export class Deployment {
     // TODO: add pool to network
     // TODO: pass dataTransferProtocol to pool
     for (const pool of this.components.activityPools) {
-      const activityPool = new ActivityPool({ market: this.marketModule, activity: this.activityModule }, pool.options);
-      this.activityPools.set(pool.name, activityPool);
+      const proposalPool = new DraftOfferProposalPool();
+      const { demandBuildOptions, agreementPoolOptions, activityPoolOptions } = this.prepareParams(pool.options);
+      const proposalSubscription = await this.modules.market.startCollectingProposal(demandBuildOptions, proposalPool);
+      const agreementPool = new AgreementPool(this.modules, proposalPool, agreementPoolOptions);
+      const activityPool = new ActivityPool(this.modules, agreementPool, activityPoolOptions);
+      this.pools.set(pool.name, {
+        proposalPool,
+        proposalSubscription,
+        agreementPool,
+        activityPool,
+      });
     }
 
     this.events.emit("ready");
@@ -153,7 +185,14 @@ export class Deployment {
 
       this.dataTransferProtocol.close();
 
-      const stopPools: Promise<void>[] = Array.from(this.activityPools.values()).map((pool) => pool.stop());
+      const stopPools = Array.from(this.pools.values()).map((pool) =>
+        Promise.allSettled([
+          pool.proposalSubscription.cancel(),
+          pool.proposalPool.clear(),
+          pool.agreementPool.drain(),
+          pool.activityPool.drain(),
+        ]),
+      );
       await Promise.allSettled(stopPools);
 
       const stopNetworks: Promise<void>[] = Array.from(this.networks.values()).map((network) => network.remove());
@@ -169,11 +208,11 @@ export class Deployment {
   }
 
   getActivityPool(name: string): ActivityPool {
-    const pool = this.activityPools.get(name);
+    const pool = this.pools.get(name);
     if (!pool) {
       throw new GolemUserError(`ActivityPool ${name} not found`);
     }
-    return pool;
+    return pool.activityPool;
   }
 
   getNetwork(name: string): Network {
@@ -182,5 +221,34 @@ export class Deployment {
       throw new GolemUserError(`Network ${name} not found`);
     }
     return network;
+  }
+
+  private prepareParams(options: CreateActivityPoolOptions): {
+    demandBuildOptions: DemandBuildParams;
+    activityPoolOptions: ActivityPoolOptions;
+    agreementPoolOptions: AgreementPoolOptions;
+  } {
+    const poolOptions =
+      typeof options.deployment?.replicas === "number"
+        ? { min: options.deployment?.replicas, max: options.deployment?.replicas }
+        : typeof options.deployment?.replicas === "object"
+          ? options.deployment?.replicas
+          : { min: 1, max: 1 };
+    return {
+      demandBuildOptions: {
+        demand: options.demand,
+        market: options.market,
+      },
+      activityPoolOptions: {
+        logger: this.logger.child("activity-pool"),
+        poolOptions,
+        activityOptions: { debitNoteFilter: options.payment?.debitNotesFilter },
+      },
+      agreementPoolOptions: {
+        logger: this.logger.child("agreement-pool"),
+        poolOptions,
+        agreementOptions: { invoiceFilter: options.payment?.invoiceFilter },
+      },
+    };
   }
 }

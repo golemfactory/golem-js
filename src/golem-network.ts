@@ -54,7 +54,7 @@ export class GolemNetwork {
       });
 
       this.market = new MarketModuleImpl(this.yagna);
-      this.payment = new PaymentModuleImpl();
+      this.payment = new PaymentModuleImpl(this.yagna);
       this.activity = new ActivityModuleImpl(this.yagna);
       this.network = new NetworkModuleImpl();
     } catch (err) {
