@@ -88,7 +88,7 @@ export class Deployment {
     });
 
     this.marketModule = new MarketModuleImpl(this.yagnaApi);
-    this.activityModule = new ActivityModuleImpl();
+    this.activityModule = new ActivityModuleImpl(this.yagnaApi);
 
     this.dataTransferProtocol = this.getDataTransferProtocol(options, this.yagnaApi);
 

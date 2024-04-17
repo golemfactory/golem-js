@@ -12,6 +12,7 @@ export enum WorkErrorCode {
   ScriptInitializationFailed = "ScriptInitializationFailed",
   ActivityDeploymentFailed = "ActivityDeploymentFailed",
   ActivityStatusQueryFailed = "ActivityStatusQueryFailed",
+  ActivityResetFailed = "ActivityResetFailed",
 }
 export class GolemWorkError extends GolemModuleError {
   #agreement?: Agreement;

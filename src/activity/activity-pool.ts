@@ -145,7 +145,10 @@ export class ActivityPool {
       create: async (): Promise<WorkContext> => {
         this.logger.debug("Creating new activity to add to pool");
         const agreement = await this.agreementPool.acquire();
-        return this.modules.activity.createActivity(agreement);
+        const activity = await this.modules.activity.createActivity(agreement);
+        const ctx = new WorkContext(activity, {});
+        await ctx.before();
+        return ctx;
       },
       destroy: async (activity: WorkContext) => {
         this.logger.debug("Destroying activity from the pool");
