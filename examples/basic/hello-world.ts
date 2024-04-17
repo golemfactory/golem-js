@@ -49,7 +49,6 @@ import {
     const result = await ctx.run("echo Hello World");
     console.log(result.stdout);
     proposalSubscription.cancel();
-    await proposalPool.clear();
   } catch (err) {
     console.error("Failed to run example on Golem", err);
   }
