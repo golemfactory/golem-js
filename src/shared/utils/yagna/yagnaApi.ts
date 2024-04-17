@@ -7,8 +7,7 @@ import { defaultLogger } from "../logger/defaultLogger"; // .js added for ESM co
 import semverSatisfies from "semver/functions/satisfies.js";
 import semverCoerce from "semver/functions/coerce.js";
 import { BehaviorSubject } from "rxjs";
-import { DebitNoteEventDTO, InvoiceEventDTO } from "ya-ts-client/dist/payment-api";
-import { AgreementEventDTO, EventDTO } from "ya-ts-client/dist/market-api";
+import { EventDTO } from "ya-ts-client/dist/market-api";
 
 export type YagnaOptions = {
   apiKey?: string;
@@ -24,6 +23,23 @@ type CancellablePoll<T> = {
   pollValues: () => AsyncGenerator<T>;
   cancel: () => void;
 };
+
+/**
+ * Utility type extracting the type of the element of a typed array
+ */
+type ElementOf<T> = T extends Array<infer U> ? U : never;
+
+// Workarounds for an issue with missing support for discriminators
+// {@link https://github.com/ferdikoomen/openapi-typescript-codegen/issues/985}
+export type YagnaAgreementOperationEvent = ElementOf<
+  Awaited<ReturnType<YaTsClient.MarketApi.RequestorService["collectAgreementEvents"]>>
+>;
+export type YagnaInvoiceEvent = ElementOf<
+  Awaited<ReturnType<YaTsClient.PaymentApi.RequestorService["getInvoiceEvents"]>>
+>;
+export type YagnaDebitNoteEvent = ElementOf<
+  Awaited<ReturnType<YaTsClient.PaymentApi.RequestorService["getDebitNoteEvents"]>>
+>;
 
 /**
  * Utility class that groups various Yagna APIs under a single wrapper
@@ -59,14 +75,14 @@ export class YagnaApi {
 
   public version: YaTsClient.VersionApi.DefaultService;
 
-  private debitNoteEventsPoll: CancellablePoll<DebitNoteEventDTO> | null = null;
-  public debitNoteEvents$ = new BehaviorSubject<DebitNoteEventDTO | null>(null);
+  private debitNoteEventsPoll: CancellablePoll<YagnaDebitNoteEvent> | null = null;
+  public debitNoteEvents$ = new BehaviorSubject<YagnaDebitNoteEvent | null>(null);
 
-  private invoiceEventPoll: CancellablePoll<InvoiceEventDTO> | null = null;
-  public invoiceEvents$ = new BehaviorSubject<InvoiceEventDTO | null>(null);
+  private invoiceEventPoll: CancellablePoll<YagnaInvoiceEvent> | null = null;
+  public invoiceEvents$ = new BehaviorSubject<YagnaInvoiceEvent | null>(null);
 
-  private agreementEventsPoll: CancellablePoll<AgreementEventDTO> | null = null;
-  public agreementEvents$ = new BehaviorSubject<AgreementEventDTO | null>(null);
+  private agreementEventsPoll: CancellablePoll<YagnaAgreementOperationEvent> | null = null;
+  public agreementEvents$ = new BehaviorSubject<YagnaAgreementOperationEvent | null>(null);
 
   constructor(options?: YagnaOptions) {
     const apiKey = options?.apiKey || EnvUtils.getYagnaAppKey();
@@ -172,23 +188,25 @@ export class YagnaApi {
     this.agreementEventsPoll = this.createEventPoller("AgreementEvents", (lastEventTimestamp) =>
       this.market.collectAgreementEvents(pollIntervalSec, lastEventTimestamp, maxEvents, this.appSessionId),
     );
-    this.debitNoteEventsPoll = this.createEventPoller("DebitNoteEvents", (lastEventTimestamp) =>
-      this.payment.getDebitNoteEvents(pollIntervalSec, lastEventTimestamp, maxEvents, this.appSessionId),
-    );
+
+    this.debitNoteEventsPoll = this.createEventPoller("DebitNoteEvents", (lastEventTimestamp) => {
+      return this.payment.getDebitNoteEvents(pollIntervalSec, lastEventTimestamp, maxEvents, this.appSessionId);
+    });
+
     this.invoiceEventPoll = this.createEventPoller("InvoiceEvents", (lastEventTimestamp) =>
       this.payment.getInvoiceEvents(pollIntervalSec, lastEventTimestamp, maxEvents, this.appSessionId),
     );
 
     // Run the readers and don't block execution
-    this.toObserver(this.agreementEventsPoll.pollValues(), this.agreementEvents$)
+    this.pollToSubject(this.agreementEventsPoll.pollValues(), this.agreementEvents$)
       .then(() => this.logger.info("Finished polling agreement events from Yagna"))
       .catch((err) => this.logger.error("Error while polling agreement events from Yagna", err));
 
-    this.toObserver(this.debitNoteEventsPoll.pollValues(), this.debitNoteEvents$)
+    this.pollToSubject(this.debitNoteEventsPoll.pollValues(), this.debitNoteEvents$)
       .then(() => this.logger.info("Finished polling debit note events from Yagna"))
       .catch((err) => this.logger.error("Error while polling debit note events from Yagna", err));
 
-    this.toObserver(this.invoiceEventPoll.pollValues(), this.invoiceEvents$)
+    this.pollToSubject(this.invoiceEventPoll.pollValues(), this.invoiceEvents$)
       .then(() => this.logger.info("Finished polling invoice events from Yagna"))
       .catch((err) => this.logger.error("Error while polling invoice events from Yagna", err));
   }
@@ -200,7 +218,7 @@ export class YagnaApi {
     this.agreementEventsPoll?.cancel();
   }
 
-  private async toObserver<T>(generator: AsyncGenerator<T>, subject: BehaviorSubject<T>) {
+  private async pollToSubject<T>(generator: AsyncGenerator<T>, subject: BehaviorSubject<T>) {
     for await (const value of generator) {
       subject.next(value);
     }
