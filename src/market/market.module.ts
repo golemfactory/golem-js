@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
 import { DemandConfig, DemandNew, DemandOptions, ProposalFilter } from "./index";
+import { Demand, GolemMarketError, MarketErrorCode, Proposal, ProposalFilter } from "./index";
 import { Agreement, AgreementOptions } from "../agreement";
 
 import { YagnaApi } from "../shared/utils";
@@ -255,12 +256,23 @@ export class MarketModuleImpl implements MarketModule {
     return new ProposalNew(proposalModel, receivedProposal.demand);
   }
 
-  proposeAgreement(
+  async proposeAgreement(
     paymentModule: PaymentModule,
     proposal: ProposalNew,
     options?: AgreementOptions,
   ): Promise<Agreement> {
-    throw new Error("Method not implemented.");
+    const agreement = await Agreement.create(proposal, this.yagnaApi, options);
+    await agreement.confirm(this.yagnaApi.appSessionId);
+    await this.yagnaApi.market.waitForApproval(agreement.id, 60);
+    const state = await agreement.getState();
+    if (state !== "Approved") {
+      throw new GolemMarketError(
+        `Agreement ${agreement.id} cannot be approved. Current state: ${state}`,
+        MarketErrorCode.AgreementApprovalFailed,
+        agreement.proposal.demand,
+      );
+    }
+    return agreement;
   }
 
   terminateAgreement(agreement: Agreement, reason: string): Promise<Agreement> {
