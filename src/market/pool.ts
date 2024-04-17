@@ -1,9 +1,10 @@
-import { Proposal, ProposalDTO } from "./proposal";
-import { defaultLogger, Logger } from "../shared/utils";
+import { ProposalNew, ProposalDTO } from "./proposal";
+import { defaultLogger } from "../shared/utils";
+import type { Logger } from "../shared/utils";
 import AsyncLock from "async-lock";
 import { EventEmitter } from "eventemitter3";
 
-export type ProposalSelector = (proposals: Proposal[]) => Proposal;
+export type ProposalSelector = (proposals: ProposalNew[]) => ProposalNew;
 
 export interface ProposalPoolOptions {
   selector?: ProposalSelector;
@@ -18,7 +19,7 @@ export interface ProposalPoolEvents {
 }
 
 const DEFAULTS = {
-  selector: (proposals: Proposal[]) => proposals[0],
+  selector: (proposals: ProposalNew[]) => proposals[0],
 };
 
 export class ProposalPool {
@@ -27,21 +28,21 @@ export class ProposalPool {
   private readonly selector: ProposalSelector;
   private readonly lock: AsyncLock = new AsyncLock();
   private readonly logger: Logger;
-  private proposals = new Set<Proposal>();
+  private proposals = new Set<ProposalNew>();
 
   constructor(private options?: ProposalPoolOptions) {
     this.selector = options?.selector || DEFAULTS.selector;
     this.logger = this.logger = options?.logger || defaultLogger("proposal-pool");
   }
 
-  async add(proposal: Proposal) {
+  async add(proposal: ProposalNew) {
     return this.lock.acquire("proposal-pool", () => {
       this.proposals.add(proposal);
       this.events.emit("added", proposal.getDto());
     });
   }
 
-  async acquire(): Promise<Proposal> {
+  async acquire(): Promise<ProposalNew> {
     return this.lock.acquire("proposal-pool", () => {
       if (this.proposals.size === 0) {
         // TODO: ??
@@ -56,7 +57,7 @@ export class ProposalPool {
     });
   }
 
-  async release(proposal: Proposal): Promise<void> {
+  async release(proposal: ProposalNew): Promise<void> {
     await this.lock.acquire("proposal-pool", () => {
       if (this.validateProposal(proposal)) {
         this.proposals.add(proposal);
@@ -68,14 +69,14 @@ export class ProposalPool {
     });
   }
 
-  async destroy(proposal: Proposal): Promise<void> {
+  async destroy(proposal: ProposalNew): Promise<void> {
     await this.lock.acquire("proposal-pool", () => {
       this.proposals.delete(proposal);
       this.events.emit("destroyed", proposal.getDto());
     });
   }
 
-  private validateProposal(proposal: Proposal): boolean {
+  private validateProposal(proposal: ProposalNew): boolean {
     // TODO:
     return proposal.isInitial();
   }

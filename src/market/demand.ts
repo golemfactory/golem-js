@@ -97,9 +97,17 @@ export interface DemandOptions {
   midAgreementPaymentTimeoutSec?: number;
 }
 
+export class DemandNew {
+  constructor(
+    public readonly id: string,
+    public readonly offer: MarketApi.DemandOfferBaseDTO,
+  ) {}
+}
+
 /**
  * Demand module - an object which can be considered an "open" or public Demand, as it is not directed at a specific Provider, but rather is sent to the market so that the matching mechanism implementation can associate relevant Offers.
  * @hidden
+ * @deprecated
  */
 export class Demand {
   private isRunning = true;

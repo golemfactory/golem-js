@@ -2,7 +2,7 @@ import { Agreement } from "./agreement";
 import { createPool, Factory, Options as GenericPoolOptions, Pool } from "generic-pool";
 import { defaultLogger, Logger } from "../shared/utils";
 import { ProposalPool } from "../market/pool";
-import { MarketModule, GolemMarketError, MarketErrorCode, MarketOptions } from "../market";
+import { MarketModule, GolemMarketError, MarketErrorCode, MarketOptions, ProposalNew } from "../market";
 import { AgreementDTO } from "./service";
 import { EventEmitter } from "eventemitter3";
 import { GolemUserError } from "../shared/error/golem-error";
@@ -60,7 +60,8 @@ export class AgreementPool {
   }
 
   async start() {
-    this.collectingProposals = await this.modules.market.startCollectingProposal({ market: this.options.market });
+    // @ts-expect-error waiting for api changes
+    this.collectingProposals = await this.modules.market.startCollectingProposals({ market: this.options.market });
     this.logger.info("Agreement Poll started");
     await this.agreementPool.ready();
     this.events.emit("ready");
@@ -103,7 +104,8 @@ export class AgreementPool {
       destroy: async (agreement: Agreement) => {
         this.logger.debug("Destroying agreement from the pool");
         await this.modules.market.terminateAgreement(agreement);
-        await this.collectingProposals?.pool.destroy(agreement.proposal);
+        // TODO: remove typecast once migrated to ProposalNew
+        await this.collectingProposals?.pool.destroy(agreement.proposal as unknown as ProposalNew);
       },
       validate: async (agreement: Agreement) => {
         try {
