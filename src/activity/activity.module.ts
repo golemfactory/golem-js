@@ -4,6 +4,7 @@ import { Agreement } from "../agreement";
 import { Activity, ActivityOptions } from "./index";
 import { YagnaApi } from "../shared/utils";
 import { PaymentModule } from "../payment/payment.module";
+import { randomAgreementSelectorWithPriorityForExistingOnes } from "../agreement/strategy";
 
 export interface ActivityEvents {}
 
@@ -60,7 +61,8 @@ export class ActivityModuleImpl implements ActivityModule {
     throw new Error("Method not implemented.");
   }
 
-  destroyActivity(_activity: Activity, _reason: string): Promise<Activity> {
-    throw new Error("Method not implemented.");
+  async destroyActivity(activity: Activity, _reason: string): Promise<Activity> {
+    await activity.stop();
+    return activity;
   }
 }

@@ -1,5 +1,5 @@
 import { defaultLogger, Logger } from "../shared/utils";
-import { createPool, Factory, Options as GenericPoolOptions, Pool } from "generic-pool";
+import { createPool, Factory, Pool } from "generic-pool";
 import { GolemWorkError, WorkContext, WorkErrorCode } from "./work";
 import { ActivityOptions, ActivityStateEnum } from "./index";
 import { ActivityModule } from "./activity.module";
@@ -10,7 +10,7 @@ import { PaymentModule } from "../payment";
 
 export interface ActivityPoolOptions {
   logger?: Logger;
-  poolOptions?: GenericPoolOptions;
+  replicas?: number | { min: number; max: number };
   activityOptions?: ActivityOptions;
 }
 
@@ -22,6 +22,8 @@ export interface ActivityPoolEvents {
   destroyed: (activity: ActivityDTO) => void;
   error: (error: GolemWorkError) => void;
 }
+
+const MAX_REPLICAS = 100;
 
 export type Worker<OutputType> = (ctx: WorkContext) => Promise<OutputType>;
 
@@ -37,12 +39,18 @@ export class ActivityPool {
     private options?: ActivityPoolOptions,
   ) {
     this.logger = this.logger = options?.logger || defaultLogger("activity-pool");
+    const poolOptions =
+      typeof options?.replicas === "number"
+        ? { min: options?.replicas, max: MAX_REPLICAS }
+        : typeof options?.replicas === "object"
+          ? options?.replicas
+          : { min: 1, max: MAX_REPLICAS };
     this.activityPool = createPool<WorkContext>(this.createPoolFactory(), {
       testOnBorrow: true,
-      autostart: false,
-      ...options?.poolOptions,
+      autostart: true,
+      ...poolOptions,
     });
-    this.activityPool.on("factoryCreateError", (error) =>
+    this.activityPool.on("factoryCreateError", (error) => {
       this.events.emit(
         "error",
         new GolemWorkError(
@@ -53,9 +61,10 @@ export class ActivityPool {
           undefined,
           error,
         ),
-      ),
-    );
-    this.activityPool.on("factoryDestroyError", (error) =>
+      );
+      this.logger.error("Creating activity failed", error);
+    });
+    this.activityPool.on("factoryDestroyError", (error) => {
       this.events.emit(
         "error",
         new GolemWorkError(
@@ -66,8 +75,9 @@ export class ActivityPool {
           undefined,
           error,
         ),
-      ),
-    );
+      );
+      this.logger.error("Destroying activity failed", error);
+    });
   }
 
   async acquire(): Promise<WorkContext> {
@@ -83,6 +93,7 @@ export class ActivityPool {
 
   async destroy(activity: WorkContext) {
     await this.activityPool.destroy(activity);
+    await this.agreementPool.destroy(activity.activity.agreement);
     this.events.emit("destroyed", activity.getDto());
   }
 
@@ -103,6 +114,10 @@ export class ActivityPool {
 
   getBorrowed() {
     return this.activityPool.borrowed;
+  }
+
+  getPending() {
+    return this.activityPool.pending;
   }
 
   getAvailable() {

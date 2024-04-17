@@ -19,7 +19,7 @@ import {
     };
     const demandOptions = {
       demand: {
-        image: "file://golem_node_20.gvmi",
+        image: "golem/alpine:latest",
         resources: {
           minCpu: 4,
           minMemGib: 8,
@@ -40,20 +40,46 @@ import {
       },
     };
 
-    const proposalPool = new DraftOfferProposalPool();
-    const proposalSubscription = await modules.market.startCollectingProposal(demandOptions, proposalPool);
-    const agreementPool = new AgreementPool(modules, proposalPool, {
-      poolOptions: { min: 1 },
-    });
+    const proposalPool = new DraftOfferProposalPool({ minCount: 1 });
+    await modules.market.startCollectingProposal(demandOptions, proposalPool);
+    const agreementPool = new AgreementPool(modules, proposalPool);
     const activityPool = new ActivityPool(modules, agreementPool, {
-      poolOptions: { min: 2 },
+      poolOptions: { min: 2, max: 100 },
     });
+    setInterval(
+      () =>
+        console.log(
+          "Proposals available:",
+          proposalPool.availableCount(),
+          "Proposals borrowed:",
+          proposalPool.leasedCount(),
+          "Agreement borrowed:",
+          agreementPool.getBorrowed(),
+          "Agreement pending:",
+          agreementPool.getPending(),
+          "Activities borrowed:",
+          activityPool.getBorrowed(),
+          "Activities pending:",
+          activityPool.getPending(),
+          "Activities available:",
+          activityPool.getAvailable(),
+        ),
+      2000,
+    );
+
     const ctx = await activityPool.acquire();
     const result = await ctx.run("echo Hello World");
     console.log(result.stdout);
-    proposalSubscription.cancel();
+    // proposalSubscription.cancel();
+
+    // await new Promise((res) => setTimeout(res, 5_000));
+    const ctx2 = await activityPool.acquire();
+    const result2 = await ctx.run("echo Hello World222222");
+    console.log(result2.stdout);
+    await activityPool.release(ctx2);
+    await new Promise((res) => setTimeout(res, 5_000));
+    await activityPool.destroy(ctx);
     await agreementPool.drain();
-    await activityPool.drain();
   } catch (err) {
     console.error("Pool execution failed:", err);
   }

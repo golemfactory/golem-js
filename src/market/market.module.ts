@@ -5,7 +5,9 @@ import { Agreement, AgreementOptions } from "../agreement";
 
 import { YagnaApi, YagnaEventSubscription } from "../shared/utils";
 import { DraftOfferProposalPool } from "./draft-offer-proposal-pool";
-import { PaymentModule } from "../payment";
+import { Allocation, PaymentModule, PaymentService } from "../payment";
+import { MarketService2 } from "../market/service2";
+import { Package } from "./package";
 
 export interface MarketEvents {}
 
@@ -160,7 +162,10 @@ export class MarketModuleImpl implements MarketModule {
   ): Promise<Agreement> {
     const agreement = await Agreement.create(proposal, this.yagnaApi, options);
     await agreement.confirm(this.yagnaApi.appSessionId);
-    await this.yagnaApi.market.waitForApproval(agreement.id, 60);
+    await this.yagnaApi.market.waitForApproval(
+      agreement.id,
+      options?.agreementWaitingForApprovalTimeout ? options?.agreementWaitingForApprovalTimeout * 1000 : 60,
+    );
     const state = await agreement.getState();
     if (state !== "Approved") {
       throw new GolemMarketError(
@@ -172,8 +177,9 @@ export class MarketModuleImpl implements MarketModule {
     return agreement;
   }
 
-  terminateAgreement(agreement: Agreement, reason: string): Promise<Agreement> {
-    throw new Error("Method not implemented.");
+  async terminateAgreement(agreement: Agreement, reason: string): Promise<Agreement> {
+    await agreement.terminate({ reason });
+    return agreement;
   }
 
   getAgreement(options: MarketOptions, filter: ProposalFilter): Promise<Agreement> {
@@ -188,8 +194,15 @@ export class MarketModuleImpl implements MarketModule {
     options: DemandBuildParams,
     pool: DraftOfferProposalPool,
   ): Promise<ProposalSubscription> {
-    const demand = await this.buildDemand(options);
-    return this.subscribeForProposals(demand);
+    // const demand = await this.buildDemand(options);
+    // return this.subscribeForProposals(demand);
+    // TODO: to remove
+    const marketService = new MarketService2(pool, this.yagnaApi);
+    const paymentService = new PaymentService(this.yagnaApi);
+    const allocation = await paymentService.createAllocation();
+    const taskPackage = Package.create({ imageTag: options.demand.image, ...options.demand.resources });
+    await marketService.run(taskPackage, allocation);
+    return {} as ProposalSubscription;
   }
 
   async subscribeForDraftProposals(

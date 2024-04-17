@@ -21,7 +21,7 @@ async function main() {
     })
     .createActivityPool("app", {
       demand: {
-        image: "file://golem/node:20",
+        image: "golem/node:latest",
         // image: "golem/node:20",
         // image: "http://golem.io/node:20",
         // imageHash: "0x30984084039480493840",
@@ -44,13 +44,13 @@ async function main() {
         withoutOperators: ["0x123123"],
       },
       deployment: {
-        replicas: 3,
+        replicas: 2,
         network: "basic",
       },
     })
     .createActivityPool("db", {
       demand: {
-        image: "golem/redis",
+        image: "golem/alpine:latest",
         resources: {
           minCpu: 2,
           minMemGib: 16,
@@ -66,7 +66,7 @@ async function main() {
         },
       },
       deployment: {
-        replicas: { min: 3, max: 4 },
+        replicas: 1,
         network: "basic",
       },
     });
@@ -78,13 +78,15 @@ async function main() {
   const activityPoolApp = deployment.getActivityPool("app");
   const activity1 = await activityPoolApp.acquire();
 
+  const activity2 = await deployment.getActivityPool("db").acquire();
+
   const result = await activity1.run("node -v");
   console.log(result.stdout);
   await activityPoolApp.release(activity1);
   // await activityPoolApp.stop();
   await activityPoolApp.drain();
 
-  const result2 = await deployment.getActivityPool("db").runOnce((ctx) => ctx.run("redis -v"));
+  const result2 = await activity2.run("ls /");
   console.log(result2.stdout);
 
   await deployment.stop();
