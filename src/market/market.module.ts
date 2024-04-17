@@ -1,12 +1,23 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
 import { Demand, Proposal, ProposalFilter } from "./index";
-import { Agreement } from "../agreement";
+import { Agreement, AgreementOptions } from "../agreement";
 
 import { YagnaApi, YagnaEventSubscription } from "../shared/utils";
-import { DraftOfferProposalPool, ProposalSelector } from "./draft-offer-proposal-pool";
+import { DraftOfferProposalPool } from "./draft-offer-proposal-pool";
+import { PaymentModule } from "../payment";
 
 export interface MarketEvents {}
+
+export interface DemandBuildParams {
+  demand: DemandOptions;
+  market: MarketOptions;
+}
+
+export interface DemandOptions {
+  image: string;
+  resources?: Resources;
+}
 
 /**
  * -----*----*-----X----*-----X-----*
@@ -46,12 +57,16 @@ export interface MarketOptions {
   withoutOperators?: string[];
 }
 
+export interface ProposalSubscription {
+  cancel: () => void;
+}
+
 export interface MarketModule {
   events: EventEmitter<MarketEvents>;
 
-  buildDemand(options: MarketOptions): Promise<Demand>;
+  buildDemand(options: DemandBuildParams): Promise<Demand>;
 
-  subscribeForProposals(demand: Demand): YagnaEventSubscription<Proposal>;
+  subscribeForProposals(demand: Demand): ProposalSubscription;
 
   /**
    *
@@ -73,11 +88,13 @@ export interface MarketModule {
    * - ya-ts-client approveAgreement
    * - ya-ts-client "wait for approval"
    *
+   * @param paymentModule
    * @param proposal
+   * @param options
    *
    * @return Returns when the provider accepts the agreement, rejects otherwise. The resulting agreement is ready to create activities from.
    */
-  proposeAgreement(proposal: Proposal): Promise<Agreement>;
+  proposeAgreement(paymentModule: PaymentModule, proposal: Proposal, options?: AgreementOptions): Promise<Agreement>;
 
   /**
    *
@@ -96,11 +113,7 @@ export interface MarketModule {
     initialProposalSubscription: YagnaEventSubscription<Proposal>,
   ): Promise<YagnaEventSubscription<Proposal>>;
 
-  startCollectingProposal(options: {
-    market: MarketOptions;
-    filter?: ProposalFilter;
-    selector?: ProposalSelector;
-  }): Promise<{ pool: DraftOfferProposalPool; cancel: () => void }>;
+  startCollectingProposal(options: DemandBuildParams, pool: DraftOfferProposalPool): Promise<ProposalSubscription>;
 }
 
 export class MarketModuleImpl implements MarketModule {
@@ -108,11 +121,11 @@ export class MarketModuleImpl implements MarketModule {
 
   constructor(private readonly yagnaApi: YagnaApi) {}
 
-  buildDemand(options: MarketOptions): Promise<Demand> {
+  buildDemand(options: DemandBuildParams): Promise<Demand> {
     throw new Error("Method not implemented.");
   }
 
-  subscribeForProposals(demand: Demand): YagnaEventSubscription<Proposal> {
+  subscribeForProposals(demand: Demand): ProposalSubscription {
     // const subId = await this.yagnaApi.market.subscribeDemand(demand);
     //
     // // Getting a 404 while collecting offers should cancel the subscription
@@ -140,7 +153,7 @@ export class MarketModuleImpl implements MarketModule {
     throw new Error("Method not implemented.");
   }
 
-  proposeAgreement(proposal: Proposal): Promise<Agreement> {
+  proposeAgreement(paymentModule: PaymentModule, proposal: Proposal, options?: AgreementOptions): Promise<Agreement> {
     throw new Error("Method not implemented.");
   }
 
@@ -156,32 +169,12 @@ export class MarketModuleImpl implements MarketModule {
     throw new Error("Method not implemented.");
   }
 
-  async startCollectingProposal(options: {
-    market: MarketOptions;
-    filter?: ProposalFilter;
-    selector?: ProposalSelector;
-  }): Promise<{
-    pool: DraftOfferProposalPool;
-    cancel: () => void;
-  }> {
-    const pool = new DraftOfferProposalPool({ selectProposal: options.selector });
-    const demand = await this.buildDemand(options.market);
-    const initialProposalSubscription = this.subscribeForProposals(demand);
-    const subscription = await this.subscribeForDraftProposals(
-      options.filter ? initialProposalSubscription.filter(options.filter) : initialProposalSubscription,
-    );
-    subscription.batch((draftProposals) => draftProposals.forEach((draft) => pool.add(draft)), {
-      timeout: 1_000,
-    });
-    const cancel = () => {
-      subscription.cancel();
-      initialProposalSubscription.cancel();
-      demand.unsubscribe();
-    };
-    return {
-      pool,
-      cancel,
-    };
+  async startCollectingProposal(
+    options: DemandBuildParams,
+    pool: DraftOfferProposalPool,
+  ): Promise<ProposalSubscription> {
+    const demand = await this.buildDemand(options);
+    return this.subscribeForProposals(demand);
   }
 
   async subscribeForDraftProposals(

@@ -8,3 +8,4 @@ export * as PaymentFilters from "./strategy";
 export { GolemPaymentError, PaymentErrorCode } from "./error";
 export { InvoiceProcessor, InvoiceAcceptResult } from "./InvoiceProcessor";
 export { PaymentConfig } from "./config";
+export * from "./payment.module";
