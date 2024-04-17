@@ -1,16 +1,16 @@
-import { Agreement } from "./agreement";
+import { Agreement, AgreementOptions } from "./agreement";
 import { createPool, Factory, Options as GenericPoolOptions, Pool } from "generic-pool";
 import { defaultLogger, Logger } from "../shared/utils";
-import { ProposalPool } from "../market/pool";
-import { MarketModule, GolemMarketError, MarketErrorCode, MarketOptions, ProposalNew } from "../market";
+import { DraftOfferProposalPool } from "../market/draft-offer-proposal-pool";
+import { MarketModule, GolemMarketError, MarketErrorCode } from "../market";
 import { AgreementDTO } from "./service";
 import { EventEmitter } from "eventemitter3";
-import { GolemUserError } from "../shared/error/golem-error";
+import { PaymentModule } from "../payment";
 
 export interface AgreementPoolOptions {
   logger?: Logger;
-  market: MarketOptions;
-  pool?: GenericPoolOptions;
+  poolOptions?: GenericPoolOptions;
+  agreementOptions?: AgreementOptions;
 }
 
 export interface AgreementPoolEvents {
@@ -27,18 +27,18 @@ export class AgreementPool {
 
   private agreementPool: Pool<Agreement>;
   private logger: Logger;
-  private collectingProposals?: { pool: ProposalPool; cancel: () => void };
 
   constructor(
-    private modules: { market: MarketModule },
-    private options: AgreementPoolOptions,
+    private modules: { market: MarketModule; payment: PaymentModule },
+    private proposalPool: DraftOfferProposalPool,
+    private options?: AgreementPoolOptions,
   ) {
     this.logger = this.logger = options?.logger || defaultLogger("agreement-pool");
 
     this.agreementPool = createPool<Agreement>(this.createPoolFactory(), {
-      autostart: false,
       testOnBorrow: true,
-      ...options.pool,
+      autostart: false,
+      ...options?.poolOptions,
     });
     this.agreementPool.on("factoryCreateError", (error) =>
       this.events.emit(
@@ -59,22 +59,6 @@ export class AgreementPool {
     );
   }
 
-  async start() {
-    // @ts-expect-error waiting for api changes
-    this.collectingProposals = await this.modules.market.startCollectingProposals({ market: this.options.market });
-    this.logger.info("Agreement Poll started");
-    await this.agreementPool.ready();
-    this.events.emit("ready");
-    this.logger.info("Agreement Poll ready");
-  }
-
-  async stop(): Promise<void> {
-    await this.agreementPool.drain();
-    this.collectingProposals?.cancel();
-    await this.agreementPool.clear();
-    this.events.emit("end");
-  }
-
   async acquire(): Promise<Agreement> {
     const agreement = await this.agreementPool.acquire();
     this.events.emit("acquired", agreement.getDto());
@@ -91,21 +75,22 @@ export class AgreementPool {
     this.events.emit("destroyed", agreement.getDto());
   }
 
+  async drain() {
+    return this.agreementPool.drain();
+  }
+
   private createPoolFactory(): Factory<Agreement> {
     return {
       create: async (): Promise<Agreement> => {
         this.logger.debug("Creating new agreement to add to pool");
-        if (!this.collectingProposals?.pool) {
-          throw new GolemUserError("You need to start the poll first");
-        }
-        const proposal = await this.collectingProposals.pool.acquire();
-        return this.modules.market.proposeAgreement(proposal);
+        const proposal = await this.proposalPool.acquire();
+        return this.modules.market.proposeAgreement(this.modules.payment, proposal, this.options?.agreementOptions);
       },
       destroy: async (agreement: Agreement) => {
         this.logger.debug("Destroying agreement from the pool");
         await this.modules.market.terminateAgreement(agreement);
-        // TODO: remove typecast once migrated to ProposalNew
-        await this.collectingProposals?.pool.destroy(agreement.proposal as unknown as ProposalNew);
+        //@ts-expect-error TODO: make Agreement compatible with ProposalNew instead of Proposal
+        await this.proposalPool.remove(agreement.proposal);
       },
       validate: async (agreement: Agreement) => {
         try {

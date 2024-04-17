@@ -6,6 +6,7 @@ import { GolemMarketError, MarketErrorCode, Proposal } from "../market";
 import { withTimeout } from "../shared/utils/timeout";
 import { EventEmitter } from "eventemitter3";
 import { AgreementDTO } from "./service";
+import { InvoiceFilter } from "../payment/service";
 
 export interface AgreementEvents {
   confirmed: (details: { id: string; provider: ProviderInfo }) => void;
@@ -30,6 +31,8 @@ export interface AgreementOptions {
   agreementWaitingForApprovalTimeout?: number;
   /** Logger module */
   logger?: Logger;
+
+  invoiceFilter?: InvoiceFilter;
 }
 /**
  * Agreement module - an object representing the contract between the requestor and the provider.

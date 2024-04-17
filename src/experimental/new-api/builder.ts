@@ -3,7 +3,20 @@ import { NetworkOptions } from "../../network";
 import { Deployment, DeploymentComponents } from "./deployment";
 import { GolemNetwork } from "../../golem-network";
 import { validateDeployment } from "./validate-deployment";
-import { ActivityPoolOptions } from "../../activity";
+import { DemandOptions, MarketOptions } from "../../market";
+import { PaymentOptions } from "../../payment";
+
+interface DeploymentOptions {
+  replicas?: number | { min: number; max: number };
+  network?: string;
+}
+
+export interface CreateActivityPoolOptions {
+  demand: DemandOptions & { image: string };
+  market: MarketOptions;
+  deployment?: DeploymentOptions;
+  payment?: PaymentOptions;
+}
 
 export class GolemDeploymentBuilder {
   private components: DeploymentComponents = {
@@ -20,7 +33,7 @@ export class GolemDeploymentBuilder {
 
   constructor(private glm: GolemNetwork) {}
 
-  createActivityPool(name: string, options: ActivityPoolOptions): this {
+  createActivityPool(name: string, options: CreateActivityPoolOptions): this {
     if (this.components.activityPools.some((pool) => pool.name === name)) {
       throw new GolemConfigError(`Activity pool with name ${name} already exists`);
     }

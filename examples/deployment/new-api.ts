@@ -13,49 +13,50 @@ async function main() {
 
   await golem.connect();
 
-  const builder = golem.createBuilder();
-
-  // const deployment = golem.createDeployment();
+  const builder = golem.creteDeploymentBuilder();
 
   builder
     .createNetwork("basic", {
       networkOwnerId: "test",
     })
     .createActivityPool("app", {
-      image: "file://golem/node:20",
-      // image: "golem/node:20",
-      // image: "http://golem.io/node:20",
-      // imageHash: "0x30984084039480493840",
-      resources: {
-        minCpu: 4,
-        minMemGib: 8,
-        minStorageGib: 16,
+      demand: {
+        image: "file://golem/node:20",
+        // image: "golem/node:20",
+        // image: "http://golem.io/node:20",
+        // imageHash: "0x30984084039480493840",
+        resources: {
+          minCpu: 4,
+          minMemGib: 8,
+          minStorageGib: 16,
+        },
       },
-      replicas: 10,
-      network: "basic",
       market: {
-        rentHours: 12 /* REQUIRED */,
+        rentHours: 12,
         pricing: {
-          maxStartPrice: 1 /* REQUIRED */,
-          maxCpuPerHourPrice: 1 /* REQUIRED */,
-          maxEnvPerHourPrice: 1 /* REQUIRED */,
+          maxStartPrice: 1,
+          maxCpuPerHourPrice: 1,
+          maxEnvPerHourPrice: 1,
         },
         withProviders: ["0x123123"],
         withoutProviders: ["0x123123"],
         withOperators: ["0x123123"],
         withoutOperators: ["0x123123"],
       },
-      payment: {},
-      // dataTransferProtocol: "gftp",
+      deployment: {
+        replicas: 3,
+        network: "basic",
+      },
     })
     .createActivityPool("db", {
-      image: "golem/redis",
-      resources: {
-        minCpu: 2,
-        minMemGib: 16,
-        minStorageGib: 4,
+      demand: {
+        image: "golem/redis",
+        resources: {
+          minCpu: 2,
+          minMemGib: 16,
+          minStorageGib: 4,
+        },
       },
-      replicas: 3,
       market: {
         rentHours: 12 /* REQUIRED */,
         pricing: {
@@ -64,7 +65,10 @@ async function main() {
           maxEnvPerHourPrice: 1 /* REQUIRED */,
         },
       },
-      network: "basic",
+      deployment: {
+        replicas: { min: 3, max: 4 },
+        network: "basic",
+      },
     });
 
   const deployment = builder.getDeployment();

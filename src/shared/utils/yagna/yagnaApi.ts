@@ -127,6 +127,7 @@ export class YagnaApi {
   async connect() {
     this.logger.info("Connecting to yagna");
     await this.assertSupportedVersion();
+
     return this.identity.getIdentity();
   }
 

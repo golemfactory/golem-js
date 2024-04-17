@@ -1,18 +1,23 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
 import { DemandConfig, DemandNew, DemandOptions, ProposalFilter } from "./index";
-import { Agreement } from "../agreement";
+import { Agreement, AgreementOptions } from "../agreement";
 
 import { YagnaApi } from "../shared/utils";
 import { switchMap, Observable, filter, bufferCount, tap } from "rxjs";
 import { MarketApi } from "ya-ts-client";
-import { Allocation } from "../payment";
+import { Allocation, PaymentModule } from "../payment";
 import { ProposalNew } from "./proposal";
 import { Package } from "./package";
 import { DecorationsBuilder } from "./builder";
 import { ProposalFilterNew } from "./service";
 
 export interface MarketEvents {}
+
+export interface DemandBuildParams {
+  demand: DemandOptions;
+  market: MarketOptions;
+}
 
 /**
  * -----*----*-----X----*-----X-----*
@@ -93,11 +98,13 @@ export interface MarketModule {
    * - ya-ts-client approveAgreement
    * - ya-ts-client "wait for approval"
    *
+   * @param paymentModule
    * @param proposal
+   * @param options
    *
    * @return Returns when the provider accepts the agreement, rejects otherwise. The resulting agreement is ready to create activities from.
    */
-  proposeAgreement(proposal: ProposalNew): Promise<Agreement>;
+  proposeAgreement(paymentModule: PaymentModule, proposal: ProposalNew, options?: AgreementOptions): Promise<Agreement>;
 
   /**
    *
@@ -248,7 +255,11 @@ export class MarketModuleImpl implements MarketModule {
     return new ProposalNew(proposalModel, receivedProposal.demand);
   }
 
-  proposeAgreement(proposal: ProposalNew): Promise<Agreement> {
+  proposeAgreement(
+    paymentModule: PaymentModule,
+    proposal: ProposalNew,
+    options?: AgreementOptions,
+  ): Promise<Agreement> {
     throw new Error("Method not implemented.");
   }
 
