@@ -8,6 +8,7 @@ import semverSatisfies from "semver/functions/satisfies.js";
 import semverCoerce from "semver/functions/coerce.js";
 import { BehaviorSubject } from "rxjs";
 import { EventDTO } from "ya-ts-client/dist/market-api";
+import { waitForCondition } from "../waitForCondition";
 
 export type YagnaOptions = {
   apiKey?: string;
@@ -20,8 +21,22 @@ export const MIN_SUPPORTED_YAGNA = "0.13.2";
 type CancellablePoll<T> = {
   /** User defined name of the event stream for ease of debugging */
   eventType: string;
+
+  /** Tells if a poll call is currently active - reader */
+  isBusy: boolean;
+
+  /** Tells if the poll is active in general. If it's 'false' it means that the poll was cancelled and no polling attempts will be done any more */
+  isOnline: boolean;
+
+  /** Triggers the poll using the fetcher provided when the CancellablePoll was created */
   pollValues: () => AsyncGenerator<T>;
-  cancel: () => void;
+
+  /**
+   * Cancels the polling operations, stopping the reader
+   *
+   * It will wait for the last read to complete and will take the reader offline
+   */
+  cancel: () => Promise<void>;
 };
 
 /**
@@ -42,7 +57,7 @@ export type YagnaDebitNoteEvent = ElementOf<
 >;
 
 /**
- * Utility class that groups various Yagna APIs under a single wrapper
+ * Utility class that groups various Yagna APIs under a single wrapper, also an event consumer which produces events on rxjs BehaviourSubects
  */
 export class YagnaApi {
   public readonly appSessionId: string;
@@ -176,7 +191,7 @@ export class YagnaApi {
    * Terminates the Yagna API related activities
    */
   async disconnect() {
-    this.stopPollingEvents();
+    await this.stopPollingEvents();
   }
 
   private startPollingEvents() {
@@ -211,11 +226,22 @@ export class YagnaApi {
       .catch((err) => this.logger.error("Error while polling invoice events from Yagna", err));
   }
 
-  private stopPollingEvents() {
+  private async stopPollingEvents() {
     this.logger.info("Stopping polling events from Yagna");
-    this.invoiceEventPoll?.cancel();
-    this.debitNoteEventsPoll?.cancel();
-    this.agreementEventsPoll?.cancel();
+
+    if (this.invoiceEventPoll) {
+      await this.invoiceEventPoll.cancel();
+    }
+
+    if (this.debitNoteEventsPoll) {
+      await this.debitNoteEventsPoll.cancel();
+    }
+
+    if (this.agreementEventsPoll) {
+      await this.agreementEventsPoll.cancel();
+    }
+
+    this.logger.info("Stopped polling events form Yagna");
   }
 
   private async pollToSubject<T>(generator: AsyncGenerator<T>, subject: BehaviorSubject<T>) {
@@ -228,6 +254,7 @@ export class YagnaApi {
     eventType: string,
     eventsFetcher: (lastEventTimestamp: string) => Promise<T[]>,
   ): CancellablePoll<T> {
+    let isBusy = false;
     let keepReading = true;
     let lastTimestamp = new Date().toISOString();
 
@@ -235,9 +262,12 @@ export class YagnaApi {
 
     return {
       eventType,
+      isBusy,
+      isOnline: true,
       pollValues: async function* () {
         while (keepReading) {
           try {
+            isBusy = true;
             const events = await eventsFetcher(lastTimestamp);
             logger.debug("Polled events from Yagna", {
               eventType,
@@ -250,11 +280,17 @@ export class YagnaApi {
             }
           } catch (error) {
             logger.error("Error fetching events from Yagna", { eventType, error });
+          } finally {
+            isBusy = false;
           }
         }
+        logger.debug("Stopped reading events", { eventType });
+        this.isOnline = false;
       },
-      cancel: function () {
+      cancel: async function () {
         keepReading = false;
+        await waitForCondition(() => !this.isBusy && !this.isOnline);
+        logger.debug("Cancelled reading the events", { eventType });
       },
     };
   }
