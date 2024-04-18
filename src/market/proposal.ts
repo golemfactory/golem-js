@@ -84,6 +84,10 @@ export class ProposalNew {
     return this.model.state;
   }
 
+  public get id(): string {
+    return this.model.proposalId;
+  }
+
   getDto(): ProposalDTO {
     return {
       transferProtocol: this.properties["golem.activity.caps.transfer.protocol"],

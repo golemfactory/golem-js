@@ -244,7 +244,7 @@ export class MarketModuleImpl implements MarketModule {
 
     const newProposalId = await this.yagnaApi.market.counterProposalDemand(
       receivedProposal.demand.id,
-      receivedProposal.model.proposalId,
+      receivedProposal.id,
       offerClone,
     );
 
