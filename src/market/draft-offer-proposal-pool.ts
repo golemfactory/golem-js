@@ -118,6 +118,7 @@ export class DraftOfferProposalPool {
     return this.lock.acquire(
       "proposal-pool",
       async () => {
+        // TODO: causes a lot of errors when starting the application, we need to discuss when poll is ready to use
         // if (this.available.size === 0) {
         //   throw new GolemMarketError("The proposal pool is empty, cannot acquire", MarketErrorCode.NoProposalAvailable);
         // }

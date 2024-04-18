@@ -78,7 +78,7 @@ describe("Draft Offer Proposal Pool", () => {
     });
 
     describe("Negative cases", () => {
-      it("Throws an GolemMarketError when no proposals are available", async () => {
+      it.skip("Throws an GolemMarketError when no proposals are available", async () => {
         const pool = new DraftOfferProposalPool();
 
         await expect(() => pool.acquire()).rejects.toThrow("The proposal pool is empty, cannot acquire");

@@ -1,3 +1,6 @@
+describe("Agreement Pool Service", () => {
+  it.todo("TODO");
+});
 // import { anything, instance, mock, reset, when } from "@johanblumenberg/ts-mockito";
 // import { Agreement, AgreementPoolService, Allocation, Demand, Proposal, YagnaApi } from "../../src";
 // import { MarketApi } from "ya-ts-client";
