@@ -11,8 +11,9 @@ import {
 } from "@golem-sdk/golem-js";
 
 (async function main() {
+  const yagnaApi = new YagnaApi();
+
   try {
-    const yagnaApi = new YagnaApi();
     await yagnaApi.connect();
     const modules = {
       market: new MarketModuleImpl(yagnaApi),
@@ -75,5 +76,7 @@ import {
     await activityPool.drain();
   } catch (err) {
     console.error("Pool execution failed:", err);
+  } finally {
+    await yagnaApi.disconnect();
   }
 })();

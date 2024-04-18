@@ -58,6 +58,7 @@ export class JobManager {
   public async close() {
     const pendingJobs = Array.from(this.jobs.values()).filter((job) => job.isRunning());
     await Promise.allSettled(pendingJobs.map((job) => job.cancel()));
+    await this.yagna?.disconnect();
     this.yagna = null;
   }
 
