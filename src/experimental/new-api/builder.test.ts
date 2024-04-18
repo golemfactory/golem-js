@@ -13,12 +13,22 @@ describe("Deployment builder", () => {
         .createActivityPool("my-pool", {
           demand: {
             image: "image",
+            resources: {
+              minCpu: 1,
+              minMemGib: 1,
+              minStorageGib: 1,
+            },
           },
           market: {},
         })
         .createActivityPool("my-pool", {
           demand: {
             image: "image",
+            resources: {
+              minCpu: 1,
+              minMemGib: 1,
+              minStorageGib: 1,
+            },
           },
           market: {},
         });
@@ -46,6 +56,11 @@ describe("Deployment builder", () => {
         .createActivityPool("my-pool", {
           demand: {
             image: "image",
+            resources: {
+              minCpu: 1,
+              minMemGib: 1,
+              minStorageGib: 1,
+            },
           },
           market: {},
           deployment: {

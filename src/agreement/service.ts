@@ -1,9 +1,8 @@
 import Bottleneck from "bottleneck";
-import { Logger, YagnaApi, defaultLogger, sleep } from "../shared/utils";
+import { defaultLogger, Logger, sleep, YagnaApi } from "../shared/utils";
 import { Agreement, AgreementOptions } from "./agreement";
 import { AgreementServiceConfig } from "./config";
 import { GolemMarketError, MarketErrorCode, Proposal } from "../market";
-import { MarketApi } from "ya-ts-client";
 
 export interface AgreementDTO {
   id: string;
@@ -231,30 +230,17 @@ export class AgreementPoolService {
   }
 
   private async subscribeForAgreementEvents() {
-    let afterTimestamp: string | undefined;
-    while (this.isServiceRunning) {
-      try {
-        const events = (await this.yagnaApi.market.collectAgreementEvents(
-          this.config.agreementEventsFetchingIntervalSec,
-          afterTimestamp,
-          this.config.agreementMaxEvents,
-          this.yagnaApi.appSessionId,
-        )) as Array<MarketApi.AgreementEventDTO & MarketApi.AgreementTerminatedEventDTO>;
-        events.forEach((event) => {
-          afterTimestamp = event.eventDate;
-          // @ts-expect-error: Bug in ya-tsclient: typo in eventtype #FIXME - report to core
-          if (event.eventtype === "AgreementTerminatedEvent") {
-            this.handleTerminationAgreementEvent(event.agreementId, event.reason);
-          }
-        });
-      } catch (error) {
-        this.logger.debug(`Unable to get agreement events.`, error);
-        await sleep(2);
+    this.yagnaApi.agreementEvents$.subscribe((event) => {
+      this.logger.debug("Received agreement operation event", { event });
+      if (event) {
+        if (event.eventType === "AgreementTerminatedEvent" && "reason" in event) {
+          this.handleTerminationAgreementEvent(event.agreementId, event.reason);
+        }
       }
-    }
+    });
   }
 
-  private async handleTerminationAgreementEvent(agreementId: string, reason?: { [key: string]: string }) {
+  private async handleTerminationAgreementEvent(agreementId: string, reason?: Record<string, string>) {
     const agreement = this.agreements.get(agreementId);
     if (agreement) {
       await agreement.terminate(reason);

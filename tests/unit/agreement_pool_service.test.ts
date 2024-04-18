@@ -76,10 +76,6 @@ describe("Agreement Pool Service", () => {
 
     when(mockYagna.market).thenReturn(marketApi);
 
-    when(mockMarket.collectAgreementEvents(anything(), anything(), anything(), anything())).thenCall(() =>
-      simulateLongPoll([]),
-    );
-
     when(mockMarket.createAgreement(anything())).thenResolve("agreement-id");
 
     when(mockMarket.getAgreement("agreement-id"))

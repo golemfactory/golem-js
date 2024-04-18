@@ -2,10 +2,11 @@ import { Allocation, GolemPaymentError, PaymentErrorCode, PaymentFilters, Paymen
 import { debitNotes, debitNotesEvents, invoiceEvents, invoices } from "../fixtures";
 import { anything, instance, mock, reset, when } from "@johanblumenberg/ts-mockito";
 import { LoggerMock } from "../mock/utils/logger";
-import { Agreement, GolemUserError, YagnaApi } from "../../src";
+import { Agreement, GolemUserError, YagnaApi, YagnaDebitNoteEvent, YagnaInvoiceEvent } from "../../src";
 import * as YaTsClient from "ya-ts-client";
 
 import { simulateLongPoll } from "./helpers";
+import { BehaviorSubject } from "rxjs";
 
 const logger = new LoggerMock();
 
@@ -130,12 +131,18 @@ describe("Payment Service", () => {
         invoiceFilter: PaymentFilters.acceptMaxAmountInvoiceFilter(7),
       });
 
-      when(mockPayment.getInvoiceEvents(anything(), anything(), anything(), anything())).thenCall(() =>
-        simulateLongPoll(invoiceEvents),
-      );
+      const invoiceSubject$ = new BehaviorSubject<YagnaInvoiceEvent | null>(null);
+      const debitNoteSubject$ = new BehaviorSubject<YagnaDebitNoteEvent | null>(null);
+
+      when(mockYagna.invoiceEvents$).thenReturn(invoiceSubject$);
+      when(mockYagna.debitNoteEvents$).thenReturn(debitNoteSubject$);
+
       when(mockPayment.getInvoice(anything())).thenResolve(invoices[0]);
 
       await paymentService.run();
+
+      invoiceEvents.forEach((e) => invoiceSubject$.next(e));
+
       expect(() => paymentService.acceptPayments(agreement)).toThrow(
         new GolemPaymentError(
           "You need to create an allocation before starting any payment processes",
@@ -162,12 +169,11 @@ describe("Payment Service", () => {
           paymentTimeout: TEST_PAYMENT_TIMEOUT_MS,
         });
 
-        when(mockPayment.getInvoiceEvents(anything(), anything(), anything(), anything())).thenCall(() =>
-          simulateLongPoll([]),
-        );
-        when(mockPayment.getDebitNoteEvents(anything(), anything(), anything(), anything())).thenCall(() =>
-          simulateLongPoll(debitNotesEvents),
-        );
+        const invoiceSubject$ = new BehaviorSubject<YagnaInvoiceEvent | null>(null);
+        const debitNoteSubject$ = new BehaviorSubject<YagnaDebitNoteEvent | null>(null);
+
+        when(mockYagna.invoiceEvents$).thenReturn(invoiceSubject$);
+        when(mockYagna.debitNoteEvents$).thenReturn(debitNoteSubject$);
         when(mockPayment.getDebitNote(anything())).thenResolve(debitNotes[0]);
 
         const handler = jest.fn();
@@ -177,6 +183,10 @@ describe("Payment Service", () => {
         await paymentService.createAllocation();
         paymentService.acceptPayments(agreement);
         await paymentService.run();
+
+        invoiceSubject$.next(null);
+        debitNotesEvents.forEach((e) => debitNoteSubject$.next(e));
+
         await paymentService.end();
 
         // Then
@@ -195,12 +205,12 @@ describe("Payment Service", () => {
           paymentTimeout: TEST_PAYMENT_TIMEOUT_MS,
         });
 
-        when(mockPayment.getDebitNoteEvents(anything(), anything(), anything(), anything())).thenCall(() =>
-          simulateLongPoll([]),
-        );
-        when(mockPayment.getInvoiceEvents(anything(), anything(), anything(), anything())).thenCall(() =>
-          simulateLongPoll(invoiceEvents),
-        );
+        const invoiceSubject$ = new BehaviorSubject<YagnaInvoiceEvent | null>(null);
+        const debitNoteSubject$ = new BehaviorSubject<YagnaDebitNoteEvent | null>(null);
+
+        when(mockYagna.invoiceEvents$).thenReturn(invoiceSubject$);
+        when(mockYagna.debitNoteEvents$).thenReturn(debitNoteSubject$);
+
         when(mockPayment.getInvoice(anything())).thenResolve(invoices[0]);
 
         const handler = jest.fn();
@@ -210,6 +220,10 @@ describe("Payment Service", () => {
         await paymentService.createAllocation();
         paymentService.acceptPayments(agreement);
         await paymentService.run();
+
+        debitNoteSubject$.next(null);
+        invoiceEvents.forEach((e) => invoiceSubject$.next(e));
+
         await paymentService.end();
 
         // Then
