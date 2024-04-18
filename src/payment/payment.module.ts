@@ -11,6 +11,10 @@ export interface PaymentOptions {
   invoiceFilter?: InvoiceFilter;
 }
 
+export interface PaymentOptions {
+  // TODO
+}
+
 export interface PaymentEvents {}
 
 export type CreateAllocationParams = {

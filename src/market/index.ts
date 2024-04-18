@@ -1,6 +1,6 @@
 export { MarketService, ProposalFilter, MarketServiceOptions } from "./service";
-export { Demand, DemandEvent } from "./demand";
-export { Proposal, ProposalDTO } from "./proposal";
+export { Demand, DemandNew, DemandEvent, DemandOptions } from "./demand";
+export { Proposal, ProposalNew, ProposalDTO } from "./proposal";
 export { MarketDecoration } from "./builder";
 export { DemandConfig } from "./config";
 export * as ProposalFilterFactory from "./strategy";

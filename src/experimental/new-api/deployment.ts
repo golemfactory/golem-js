@@ -6,16 +6,12 @@ import { MarketOptions, PaymentOptions } from "./types";
 import { Network, NetworkOptions } from "../../network";
 import { GftpStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../../shared/storage";
 import { validateDeployment } from "./validate-deployment";
-import {
-  DemandBuildParams,
-  DraftOfferProposalPool,
-  MarketModule,
-  MarketModuleImpl,
-  ProposalSubscription,
-} from "../../market";
-import { PaymentModule, PaymentModuleImpl } from "../../payment";
+import { DemandBuildParams, DraftOfferProposalPool, MarketModule, MarketModuleImpl } from "../../market";
+import { Allocation, PaymentModule, PaymentModuleImpl } from "../../payment";
 import { AgreementPool, AgreementPoolOptions } from "../../agreement";
 import { CreateActivityPoolOptions } from "./builder";
+import { Package } from "../../market/package";
+import { Subscription } from "rxjs";
 
 export enum DeploymentState {
   INITIAL = "INITIAL",
@@ -82,7 +78,7 @@ export class Deployment {
     string,
     {
       proposalPool: DraftOfferProposalPool;
-      proposalSubscription: ProposalSubscription;
+      proposalSubscription: Subscription;
       agreementPool: AgreementPool;
       activityPool: ActivityPool;
     }
@@ -149,6 +145,14 @@ export class Deployment {
 
     await this.dataTransferProtocol.init();
 
+    const allocation = await Allocation.create(this.yagnaApi, {
+      account: {
+        address: (await this.yagnaApi.identity.getIdentity()).identity,
+        platform: "erc20-holesky-tglm", //TODO: add platform to deployment options
+      },
+      budget: 1,
+    });
+
     for (const network of this.components.networks) {
       const networkInstance = await Network.create(this.yagnaApi, network.options);
       this.networks.set(network.name, networkInstance);
@@ -156,9 +160,28 @@ export class Deployment {
     // TODO: add pool to network
     // TODO: pass dataTransferProtocol to pool
     for (const pool of this.components.activityPools) {
-      const proposalPool = new DraftOfferProposalPool();
       const { demandBuildOptions, agreementPoolOptions, activityPoolOptions } = this.prepareParams(pool.options);
-      const proposalSubscription = await this.modules.market.startCollectingProposal(demandBuildOptions, proposalPool);
+      const workload = Package.create({
+        imageTag: pool.options.demand.image,
+      });
+      const demandOffer = await this.modules.market.buildDemand(workload, allocation, {});
+      const proposalPool = new DraftOfferProposalPool();
+
+      const proposalSubscription = this.modules.market
+        .startCollectingProposals({
+          demandOffer,
+          paymentPlatform: "erc20-holesky-tglm",
+          demandOptions: demandBuildOptions.demand,
+        })
+        .subscribe({
+          next: (proposals) => {
+            proposals.forEach((proposal) => proposalPool.add(proposal));
+          },
+          error: (e) => {
+            this.logger.error("Error while collecting proposals", e);
+          },
+        });
+
       const agreementPool = new AgreementPool(this.modules, proposalPool, agreementPoolOptions);
       const activityPool = new ActivityPool(this.modules, agreementPool, activityPoolOptions);
       this.pools.set(pool.name, {
@@ -186,7 +209,11 @@ export class Deployment {
       this.dataTransferProtocol.close();
 
       const stopPools = Array.from(this.pools.values()).map((pool) =>
-        Promise.allSettled([pool.proposalSubscription.cancel(), pool.agreementPool.drain(), pool.activityPool.drain()]),
+        Promise.allSettled([
+          pool.proposalSubscription.unsubscribe(),
+          pool.agreementPool.drain(),
+          pool.activityPool.drain(),
+        ]),
       );
       await Promise.allSettled(stopPools);
 

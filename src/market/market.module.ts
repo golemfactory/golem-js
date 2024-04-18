@@ -1,22 +1,22 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
-import { Demand, Proposal, ProposalFilter } from "./index";
+import { DemandConfig, DemandNew, DemandOptions, ProposalFilter } from "./index";
 import { Agreement, AgreementOptions } from "../agreement";
 
-import { YagnaApi, YagnaEventSubscription } from "../shared/utils";
-import { DraftOfferProposalPool } from "./draft-offer-proposal-pool";
-import { PaymentModule } from "../payment";
+import { YagnaApi } from "../shared/utils";
+import { switchMap, Observable, filter, bufferCount, tap } from "rxjs";
+import { MarketApi } from "ya-ts-client";
+import { Allocation, PaymentModule } from "../payment";
+import { ProposalNew } from "./proposal";
+import { Package } from "./package";
+import { DecorationsBuilder } from "./builder";
+import { ProposalFilterNew } from "./service";
 
 export interface MarketEvents {}
 
 export interface DemandBuildParams {
   demand: DemandOptions;
   market: MarketOptions;
-}
-
-export interface DemandOptions {
-  image: string;
-  resources?: Resources;
 }
 
 /**
@@ -57,29 +57,39 @@ export interface MarketOptions {
   withoutOperators?: string[];
 }
 
-export interface ProposalSubscription {
-  cancel: () => void;
-}
-
 export interface MarketModule {
   events: EventEmitter<MarketEvents>;
 
-  buildDemand(options: DemandBuildParams): Promise<Demand>;
-
-  subscribeForProposals(demand: Demand): ProposalSubscription;
+  buildDemand(
+    taskPackage: Package,
+    allocation: Allocation,
+    options: DemandOptions,
+  ): Promise<MarketApi.DemandOfferBaseDTO>;
 
   /**
-   *
-   * Internally this starts countering the proposal from the provider up to the point
-   * where both sides reach consensus that can be used to form an agreement.
-   *
-   * @return A proposal which is already fully negotiated and ready to from an Agreement from
+   * Publishes the demand to the market and handles refreshing it when needed.
+   * Each time the demand is refreshed, a new demand is emitted by the observable.
+   * Keep in mind that since this method returns an observable, nothing will happen until you subscribe to it.
+   * Unsubscribing will remove the demand from the market.
+   */
+  publishDemand(offer: MarketApi.DemandOfferBaseDTO, expiration: number): Observable<DemandNew>;
+
+  /**
+   * Subscribes to the proposals for the given demand.
+   * If an error occurs, the observable will emit an error and complete.
+   * Keep in mind that since this method returns an observable, nothing will happen until you subscribe to it.
+   */
+  subscribeForProposals(demand: DemandNew): Observable<ProposalNew>;
+
+  /**
+   * Sends a counter-offer to the provider. Note that to get the provider's response to your
+   * counter you should listen to proposals sent to yagna using `subscribeForProposals`.
    */
   negotiateProposal(
-    proposalStream: YagnaEventSubscription<Proposal>,
-    original: Proposal,
-    counter?: Proposal,
-  ): Promise<Proposal>;
+    receivedProposal: ProposalNew,
+    offer: MarketApi.DemandOfferBaseDTO,
+    paymentPlatform: string,
+  ): Promise<ProposalNew>;
 
   /**
    * Internally
@@ -94,7 +104,7 @@ export interface MarketModule {
    *
    * @return Returns when the provider accepts the agreement, rejects otherwise. The resulting agreement is ready to create activities from.
    */
-  proposeAgreement(paymentModule: PaymentModule, proposal: Proposal, options?: AgreementOptions): Promise<Agreement>;
+  proposeAgreement(paymentModule: PaymentModule, proposal: ProposalNew, options?: AgreementOptions): Promise<Agreement>;
 
   /**
    *
@@ -109,51 +119,147 @@ export interface MarketModule {
 
   getAgreements(options: MarketOptions, filter: ProposalFilter, count: number): Promise<Agreement[]>;
 
-  subscribeForDraftProposals(
-    initialProposalSubscription: YagnaEventSubscription<Proposal>,
-  ): Promise<YagnaEventSubscription<Proposal>>;
-
-  startCollectingProposal(options: DemandBuildParams, pool: DraftOfferProposalPool): Promise<ProposalSubscription>;
+  /**
+   * Creates a demand for the given package and allocation and starts collecting, filtering and negotiating proposals.
+   * The method returns an observable that emits a batch of draft proposals every time the buffer is full.
+   * The method will automatically negotiate the proposals until they are moved to the `Draft` state.
+   * Keep in mind that since this method returns an observable, nothing will happen until you subscribe to it.
+   * Unsubscribing from the observable will stop the process and remove the demand from the market.
+   */
+  startCollectingProposals(options: {
+    demandOffer: MarketApi.DemandOfferBaseDTO;
+    paymentPlatform: string;
+    demandOptions?: DemandOptions;
+    filter?: ProposalFilterNew;
+    bufferSize?: number;
+  }): Observable<ProposalNew[]>;
 }
+
+type ProposalEvent = MarketApi.ProposalEventDTO & MarketApi.ProposalRejectedEventDTO;
 
 export class MarketModuleImpl implements MarketModule {
   events: EventEmitter<MarketEvents> = new EventEmitter<MarketEvents>();
 
   constructor(private readonly yagnaApi: YagnaApi) {}
 
-  buildDemand(options: DemandBuildParams): Promise<Demand> {
-    throw new Error("Method not implemented.");
+  async buildDemand(
+    taskPackage: Package,
+    allocation: Allocation,
+    options: DemandOptions,
+  ): Promise<MarketApi.DemandOfferBaseDTO> {
+    const config = new DemandConfig(options);
+    const builder = new DecorationsBuilder();
+
+    const taskDecorations = await taskPackage.getDemandDecoration();
+    const allocationDecoration = await allocation.getDemandDecoration();
+
+    builder.addDecorations([taskDecorations, allocationDecoration]);
+
+    // Configure basic properties
+    builder
+      .addProperty("golem.srv.caps.multi-activity", true)
+      .addProperty("golem.srv.comp.expiration", Date.now() + config.expirationSec * 1000)
+      .addProperty("golem.node.debug.subnet", config.subnetTag)
+      .addProperty("golem.com.payment.debit-notes.accept-timeout?", config.debitNotesAcceptanceTimeoutSec)
+      .addConstraint("golem.com.pricing.model", "linear")
+      .addConstraint("golem.node.debug.subnet", config.subnetTag);
+
+    // Configure mid-agreement payments
+    builder
+      .addProperty("golem.com.scheme.payu.debit-note.interval-sec?", config.midAgreementDebitNoteIntervalSec)
+      .addProperty("golem.com.scheme.payu.payment-timeout-sec?", config.midAgreementPaymentTimeoutSec);
+
+    return builder.getDemandRequest();
   }
 
-  subscribeForProposals(demand: Demand): ProposalSubscription {
-    // const subId = await this.yagnaApi.market.subscribeDemand(demand);
-    //
-    // // Getting a 404 while collecting offers should cancel the subscription
-    // const sub = Subscription.longPoll(() => this.yagnaApi.market.collectOffers(subId)).map(
-    //   (proposalDto: ProposalDTO) => {
-    //     const p = new Proposal(demand, null);
-    //
-    //     // More work...
-    //
-    //     return p;
-    //   },
-    // );
-    //
-    // // sub.cancel();
-    // return sub;
+  publishDemand(offer: MarketApi.DemandOfferBaseDTO, expiration: number = 60 * 60 * 1000): Observable<DemandNew> {
+    return new Observable<DemandNew>((subscriber) => {
+      let id: string;
 
-    throw new Error("Method not implemented.");
+      const subscribeDemand = async () => {
+        const idOrError = await this.yagnaApi.market.subscribeDemand(offer);
+        if (typeof idOrError !== "string") {
+          subscriber.error(new Error(`Failed to subscribe to demand: ${idOrError}`));
+          return;
+        }
+        id = idOrError;
+        subscriber.next(new DemandNew(id, offer));
+      };
+      subscribeDemand();
+
+      const interval = setInterval(() => {
+        this.yagnaApi.market.unsubscribeDemand(id);
+        subscribeDemand();
+      }, expiration);
+
+      return () => {
+        clearInterval(interval);
+        this.yagnaApi.market.unsubscribeDemand(id);
+      };
+    });
   }
 
-  negotiateProposal(
-    proposalStream: YagnaEventSubscription<Proposal>,
-    original: Proposal,
-    counter: Proposal,
-  ): Promise<Proposal> {
-    throw new Error("Method not implemented.");
+  subscribeForProposals(demand: DemandNew): Observable<ProposalNew> {
+    return new Observable<ProposalNew>((subscriber) => {
+      let proposalPromise: MarketApi.CancelablePromise<ProposalEvent[]>;
+      let isCancelled = false;
+      const longPoll = async () => {
+        if (isCancelled) {
+          return;
+        }
+        try {
+          proposalPromise = this.yagnaApi.market.collectOffers(demand.id) as MarketApi.CancelablePromise<
+            ProposalEvent[]
+          >;
+          const proposals = await proposalPromise;
+          const successfulProposals = proposals.filter((proposal) => !proposal.reason);
+          successfulProposals.forEach((proposal) => subscriber.next(new ProposalNew(proposal.proposal, demand)));
+        } catch (error) {
+          if (error instanceof MarketApi.CancelError) {
+            return;
+          }
+          // when the demand is unsubscribed the long poll will reject with a 404
+          if ("status" in error && error.status === 404) {
+            return;
+          }
+          subscriber.error(error);
+        }
+        longPoll();
+      };
+      longPoll();
+      return () => {
+        isCancelled = true;
+        proposalPromise.cancel();
+      };
+    });
   }
 
-  proposeAgreement(paymentModule: PaymentModule, proposal: Proposal, options?: AgreementOptions): Promise<Agreement> {
+  async negotiateProposal(
+    receivedProposal: ProposalNew,
+    offer: MarketApi.DemandOfferBaseDTO,
+    paymentPlatform: string,
+  ): Promise<ProposalNew> {
+    const offerClone = structuredClone(offer);
+    offerClone.properties["golem.com.payment.chosen-platform"] = paymentPlatform;
+
+    const newProposalId = await this.yagnaApi.market.counterProposalDemand(
+      receivedProposal.demand.id,
+      receivedProposal.id,
+      offerClone,
+    );
+
+    if (typeof newProposalId !== "string") {
+      throw new Error(`Failed to create counter-offer ${newProposalId}`);
+    }
+    const proposalModel = await this.yagnaApi.market.getProposalOffer(receivedProposal.demand.id, newProposalId);
+    return new ProposalNew(proposalModel, receivedProposal.demand);
+  }
+
+  proposeAgreement(
+    paymentModule: PaymentModule,
+    proposal: ProposalNew,
+    options?: AgreementOptions,
+  ): Promise<Agreement> {
     throw new Error("Method not implemented.");
   }
 
@@ -169,17 +275,29 @@ export class MarketModuleImpl implements MarketModule {
     throw new Error("Method not implemented.");
   }
 
-  async startCollectingProposal(
-    options: DemandBuildParams,
-    pool: DraftOfferProposalPool,
-  ): Promise<ProposalSubscription> {
-    const demand = await this.buildDemand(options);
-    return this.subscribeForProposals(demand);
-  }
-
-  async subscribeForDraftProposals(
-    initialProposalSubscription: YagnaEventSubscription<Proposal>,
-  ): Promise<YagnaEventSubscription<Proposal>> {
-    throw new Error("Method not implemented.");
+  startCollectingProposals(options: {
+    demandOffer: MarketApi.DemandOfferBaseDTO;
+    paymentPlatform: string;
+    demandOptions?: DemandOptions;
+    filter?: ProposalFilterNew;
+    bufferSize?: number;
+  }): Observable<ProposalNew[]> {
+    return this.publishDemand(options.demandOffer, options.demandOptions?.expirationSec).pipe(
+      // for each demand created -> start collecting all proposals
+      switchMap((demand) => this.subscribeForProposals(demand)),
+      // for each proposal collected -> filter out undesired and invalid ones
+      filter((proposal) => proposal.isValid()),
+      filter((proposal) => !options.filter || options.filter(proposal)),
+      // for each valid proposal -> start negotiating if it's not in draft state yet
+      tap((proposal) => {
+        if (proposal.isInitial()) {
+          this.negotiateProposal(proposal, options.demandOffer, options.paymentPlatform);
+        }
+      }),
+      // for each proposal -> filter out all states other than draft
+      filter((proposal) => proposal.isDraft()),
+      // for each draft proposal -> add them to the buffer
+      bufferCount(options.bufferSize || 50),
+    );
   }
 }

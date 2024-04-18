@@ -1,7 +1,7 @@
 import { MarketApi } from "ya-ts-client";
 import { GolemMarketError, MarketErrorCode } from "./error";
 import { ProviderInfo } from "../agreement";
-import { Demand } from "./demand";
+import { Demand, DemandNew } from "./demand";
 import { withTimeout } from "../shared/utils/timeout";
 import { EventEmitter } from "eventemitter3";
 
@@ -63,8 +63,91 @@ export interface ProposalDTO {
   state: MarketApi.ProposalDTO["state"];
 }
 
+export class ProposalNew {
+  constructor(
+    public readonly model: MarketApi.ProposalDTO,
+    public readonly demand: DemandNew,
+  ) {}
+
+  isInitial(): boolean {
+    return this.model.state === "Initial";
+  }
+  isDraft(): boolean {
+    return this.model.state === "Draft";
+  }
+
+  public get properties(): ProposalProperties {
+    return this.model.properties as ProposalProperties;
+  }
+
+  public get state(): MarketApi.ProposalDTO["state"] {
+    return this.model.state;
+  }
+
+  public get id(): string {
+    return this.model.proposalId;
+  }
+
+  getDto(): ProposalDTO {
+    return {
+      transferProtocol: this.properties["golem.activity.caps.transfer.protocol"],
+      cpuBrand: this.properties["golem.inf.cpu.brand"],
+      cpuCapabilities: this.properties["golem.inf.cpu.capabilities"],
+      cpuCores: this.properties["golem.inf.cpu.cores"],
+      cpuThreads: this.properties["golem.inf.cpu.threads"],
+      memory: this.properties["golem.inf.mem.gib"],
+      storage: this.properties["golem.inf.storage.gib"],
+      publicNet: this.properties["golem.node.net.is-public"],
+      runtimeCapabilities: this.properties["golem.runtime.capabilities"],
+      runtimeName: this.properties["golem.runtime.name"],
+      state: this.state,
+    };
+  }
+
+  get pricing(): PricingInfo {
+    const usageVector = this.properties["golem.com.usage.vector"];
+    const priceVector = this.properties["golem.com.pricing.model.linear.coeffs"];
+
+    const envIdx = usageVector.findIndex((ele) => ele === "golem.usage.duration_sec");
+    const cpuIdx = usageVector.findIndex((ele) => ele === "golem.usage.cpu_sec");
+
+    const envSec = priceVector[envIdx] ?? 0.0;
+    const cpuSec = priceVector[cpuIdx] ?? 0.0;
+    const start = priceVector[priceVector.length - 1];
+
+    return {
+      cpuSec,
+      envSec,
+      start,
+    };
+  }
+
+  public isValid(): boolean {
+    const usageVector = this.properties["golem.com.usage.vector"];
+    const priceVector = this.properties["golem.com.pricing.model.linear.coeffs"];
+
+    if (!usageVector || usageVector.length === 0) {
+      return false;
+    }
+
+    if (!priceVector || priceVector.length === 0) {
+      return false;
+    }
+
+    if (usageVector.length < priceVector.length - 1) {
+      return false;
+    }
+
+    if (priceVector.length < usageVector.length) {
+      return false;
+    }
+
+    return true;
+  }
+}
 /**
  * Proposal module - an object representing an offer in the state of a proposal from the provider.
+ * @deprecated
  */
 export class Proposal {
   id: string;
