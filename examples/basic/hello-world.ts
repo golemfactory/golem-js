@@ -21,7 +21,7 @@ import {
     };
     const demandOptions = {
       demand: {
-        image: "file://golem_node_20.gvmi",
+        image: "golem/alpine:latest",
         resources: {
           minCpu: 4,
           minMemGib: 8,
@@ -41,8 +41,7 @@ import {
         withoutOperators: ["0x123123"],
       },
     };
-    const invoiceFilter = () => true;
-    const debitNoteFilter = () => true;
+
     const proposalPool = new DraftOfferProposalPool();
     const workload = Package.create({
       imageTag: demandOptions.demand.image,
@@ -63,9 +62,10 @@ import {
       })
       .subscribe((proposalsBatch) => proposalsBatch.forEach((proposal) => proposalPool.add(proposal)));
     const draftProposal = await proposalPool.acquire();
-    const agreement = await modules.market.proposeAgreement(modules.payment, draftProposal, { invoiceFilter });
-    const activity = await modules.activity.createActivity(modules.payment, agreement, { debitNoteFilter });
+    const agreement = await modules.market.proposeAgreement(modules.payment, draftProposal);
+    const activity = await modules.activity.createActivity(modules.payment, agreement);
     const ctx = new WorkContext(activity, {});
+    await ctx.before();
     const result = await ctx.run("echo Hello World");
     console.log(result.stdout);
     proposalSubscription.unsubscribe();

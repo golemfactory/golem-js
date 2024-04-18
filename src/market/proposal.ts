@@ -64,16 +64,25 @@ export interface ProposalDTO {
 }
 
 export class ProposalNew {
+  public provider: ProviderInfo;
   constructor(
     public readonly model: MarketApi.ProposalDTO,
     public readonly demand: DemandNew,
-  ) {}
+  ) {
+    this.provider = this.getProviderInfo();
+  }
 
   isInitial(): boolean {
     return this.model.state === "Initial";
   }
   isDraft(): boolean {
     return this.model.state === "Draft";
+  }
+  isExpired(): boolean {
+    return this.model.state === "Expired";
+  }
+  isRejected(): boolean {
+    return this.model.state === "Rejected";
   }
 
   public get properties(): ProposalProperties {
@@ -122,6 +131,14 @@ export class ProposalNew {
     };
   }
 
+  /**
+   * Proposal cost estimation based on CPU, Env and startup costs
+   */
+  getEstimatedCost(): number {
+    const threadsNo = this.properties["golem.inf.cpu.threads"] || 1;
+    return this.pricing.start + this.pricing.cpuSec * threadsNo + this.pricing.envSec;
+  }
+
   public isValid(): boolean {
     const usageVector = this.properties["golem.com.usage.vector"];
     const priceVector = this.properties["golem.com.pricing.model.linear.coeffs"];
@@ -143,6 +160,17 @@ export class ProposalNew {
     }
 
     return true;
+  }
+
+  private getProviderInfo(): ProviderInfo {
+    return {
+      id: this.model.issuerId,
+      name: this.properties["golem.node.id.name"],
+      walletAddress: "todo",
+      // TODO: walletAddress: this.properties[
+      //   `golem.com.payment.platform.${this.demand.allocation.paymentPlatform}.address`
+      //   ] as string,
+    };
   }
 }
 /**

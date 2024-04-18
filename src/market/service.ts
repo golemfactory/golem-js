@@ -110,7 +110,7 @@ export class MarketService {
     return;
   }
 
-  private demandProposalEventListener(proposal: Proposal) {
+  private demandProposalEventListener(proposal: ProposalNew) {
     if (proposal.isInitial()) {
       this.proposalsBatch
         .addProposal(proposal)
@@ -143,7 +143,7 @@ export class MarketService {
     }
   }
 
-  private async processInitialProposal(proposal: Proposal) {
+  private async processInitialProposal(proposal: ProposalNew) {
     if (!this.allocation)
       throw new GolemMarketError(
         "Allocation is missing. The service has not been started correctly.",
@@ -153,12 +153,14 @@ export class MarketService {
     this.logger.debug(`New proposal has been received`, { id: proposal.id });
     this.proposalsCount.initial++;
     try {
+      // @ts-expect-error TODO
       const { result: isProposalValid, reason } = await this.isProposalValid(proposal);
       if (isProposalValid) {
-        const chosenPlatform = this.allocation.paymentPlatform;
-        await proposal
-          .respond(chosenPlatform)
-          .catch((e) => this.logger.debug(`Unable to respond proposal`, { id: proposal.id, e }));
+        // TODO
+        // const chosenPlatform = this.allocation.paymentPlatform;
+        // await proposal
+        //   .respond(chosenPlatform)
+        //   .catch((e) => this.logger.debug(`Unable to respond proposal`, { id: proposal.id, e }));
         this.logger.debug(`Proposal has been responded`, { id: proposal.id });
       } else {
         this.proposalsCount.rejected++;
@@ -194,12 +196,12 @@ export class MarketService {
     return { result: true };
   }
 
-  private async processDraftProposal(proposal: Proposal) {
+  private async processDraftProposal(proposal: ProposalNew) {
     await this.agreementPoolService.addProposal(proposal);
     this.proposalsCount.confirmed++;
     this.logger.debug(`Proposal has been confirmed and added to agreement pool`, {
       providerName: proposal.provider.name,
-      issuerId: proposal.issuerId,
+      issuerId: proposal.model.issuerId,
       id: proposal.id,
     });
   }

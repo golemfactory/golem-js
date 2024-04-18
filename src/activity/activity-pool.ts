@@ -44,7 +44,7 @@ export class ActivityPool {
         ? { min: options?.replicas, max: MAX_REPLICAS }
         : typeof options?.replicas === "object"
           ? options?.replicas
-          : { min: 1, max: MAX_REPLICAS };
+          : { min: 0, max: MAX_REPLICAS };
     this.activityPool = createPool<WorkContext>(this.createPoolFactory(), {
       testOnBorrow: true,
       autostart: true,

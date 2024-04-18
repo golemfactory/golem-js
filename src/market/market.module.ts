@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {EventEmitter} from "eventemitter3";
-import {DemandConfig, DemandNew, DemandOptions, GolemMarketError, MarketErrorCode, ProposalFilter} from "./index";
+import { DemandConfig, DemandNew, DemandOptions, GolemMarketError, MarketErrorCode, ProposalFilter } from "./index";
 import {Agreement, AgreementOptions} from "../agreement";
 import {YagnaApi} from "../shared/utils";
 import {Allocation, PaymentModule} from "../payment";
