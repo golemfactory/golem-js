@@ -8,8 +8,9 @@ import {
 } from "@golem-sdk/golem-js";
 
 (async () => {
+  const yagnaApi = new YagnaApi();
+
   try {
-    const yagnaApi = new YagnaApi();
     await yagnaApi.connect();
     const modules = {
       market: new MarketModuleImpl(yagnaApi),
@@ -51,5 +52,7 @@ import {
     proposalSubscription.cancel();
   } catch (err) {
     console.error("Failed to run example on Golem", err);
+  } finally {
+    await yagnaApi.disconnect();
   }
 })().catch(console.error);
