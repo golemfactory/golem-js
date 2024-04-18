@@ -1,6 +1,6 @@
 {
   "name": "@golem-sdk/golem-js",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "NodeJS and WebBrowser SDK for building apps running on Golem Network",
   "repository": "https://github.com/golemfactory/golem-js",
   "keywords": [
@@ -123,6 +123,7 @@
     "ts-jest": "^29.1.2",
     "ts-loader": "^9.5.1",
     "tsconfig-paths": "^4.2.0",
+    "tslib": "^2.6.2",
     "tslint-config-prettier": "^1.18.0",
     "tsx": "^4.7.1",
     "typedoc": "^0.25.9",

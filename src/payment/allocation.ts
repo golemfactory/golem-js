@@ -29,6 +29,7 @@ export interface AllocationOptions extends BasePaymentOptions {
      */
     id: string;
   };
+  id?: string;
 }
 
 /**
@@ -51,6 +52,17 @@ export class Allocation {
   private spentAmount: string;
   private remainingAmount: string;
 
+  /**
+   * Instantiate Allocation for existing allocation by id
+   */
+
+  static async fromId(yagnaApi: YagnaApi, options: AllocationOptions, id: string): Promise<Allocation> {
+    const allocation = await yagnaApi.payment.getAllocation(id);
+    if (!allocation) {
+      throw new GolemPaymentError(`Allocation with id ${id} not found.`, PaymentErrorCode.MissingAllocation);
+    }
+    return new Allocation(yagnaApi, new AllocationConfig(options), allocation);
+  }
   /**
    * Create allocation
    */

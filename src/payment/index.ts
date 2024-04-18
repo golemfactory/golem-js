@@ -7,4 +7,5 @@ export { Rejection, RejectionReason } from "./rejection";
 export * as PaymentFilters from "./strategy";
 export { GolemPaymentError, PaymentErrorCode } from "./error";
 export { InvoiceProcessor, InvoiceAcceptResult } from "./InvoiceProcessor";
-export { PaymentConfig } from "./config";
+export { PaymentConfig, AllocationConfig } from "./config";
+export { AllocationDTO } from "ya-ts-client/dist/payment-api";

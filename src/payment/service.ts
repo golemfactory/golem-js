@@ -40,6 +40,11 @@ export interface PaymentOptions extends BasePaymentOptions {
   allocation?: Partial<AllocationOptions>;
 }
 
+export type AllocationDeposit = {
+  amount: number;
+  address: string;
+};
+
 export type DebitNoteFilter = (debitNote: DebitNoteDTO) => Promise<boolean> | boolean;
 export type InvoiceFilter = (invoice: InvoiceDTO) => Promise<boolean> | boolean;
 
@@ -105,23 +110,49 @@ export class PaymentService {
     this.logger.info("Payment service has been stopped");
   }
 
+  async fromId(id: string) {
+    const account = {
+      platform: this.getPaymentPlatform(),
+      address: await this.getPaymentAddress(),
+    };
+    this.allocation = await Allocation.fromId(
+      this.yagnaApi,
+      {
+        account,
+      },
+      id,
+    );
+    return this.allocation;
+  }
+  async setAllocation(allocation: Allocation) {
+    this.allocation = allocation;
+    return this.allocation;
+  }
+
   /**
    * Create a new allocation that will be used to settle payments for activities
    *
    * @param options Additional options to apply on top of the ones provided in the constructor
    */
+
   async createAllocation(options?: Partial<AllocationOptions>): Promise<Allocation> {
     try {
       const account = {
         platform: this.getPaymentPlatform(),
         address: await this.getPaymentAddress(),
       };
+      console.log("**********************************");
+      console.log("createAllocation", options, this.config.options, this.config.allocation, account);
+      console.log("**********************************");
+
       this.allocation = await Allocation.create(this.yagnaApi, {
         account,
         ...this.config.options,
         ...this.config.allocation,
         ...options,
       });
+      console.log("createAllocation", options, this.config.options, this.config.allocation, account);
+
       this.events.emit("allocationCreated", this.allocation);
       return this.allocation;
     } catch (error) {
