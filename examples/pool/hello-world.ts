@@ -6,6 +6,8 @@ import {
   DraftOfferProposalPool,
   AgreementPool,
   ActivityPool,
+  Package,
+  Allocation,
 } from "@golem-sdk/golem-js";
 
 (async function main() {
@@ -40,41 +42,38 @@ import {
       },
     };
 
-    const proposalPool = new DraftOfferProposalPool({ minCount: 1 });
-    await modules.market.startCollectingProposal(demandOptions, proposalPool);
+    const workload = Package.create({
+      imageTag: demandOptions.demand.image,
+    });
+    const allocation = await Allocation.create(yagnaApi, {
+      account: {
+        address: (await yagnaApi.identity.getIdentity()).identity,
+        platform: "erc20-holesky-tglm",
+      },
+      budget: 1,
+    });
+    const demandOffer = await modules.market.buildDemand(workload, allocation, {});
+    const proposalSubscription = modules.market
+      .startCollectingProposals({
+        demandOffer,
+        paymentPlatform: "erc20-holesky-tglm",
+        bufferSize: 15,
+      })
+      .subscribe((proposalsBatch) => proposalsBatch.forEach((proposal) => proposalPool.add(proposal)));
+
+    const proposalPool = new DraftOfferProposalPool();
     const agreementPool = new AgreementPool(modules, proposalPool);
     const activityPool = new ActivityPool(modules, agreementPool, {
-      poolOptions: { min: 2, max: 100 },
+      replicas: 2,
     });
-    setInterval(
-      () =>
-        console.log(
-          "Proposals available:",
-          proposalPool.availableCount(),
-          "Proposals borrowed:",
-          proposalPool.leasedCount(),
-          "Agreement borrowed:",
-          agreementPool.getBorrowed(),
-          "Agreement pending:",
-          agreementPool.getPending(),
-          "Activities borrowed:",
-          activityPool.getBorrowed(),
-          "Activities pending:",
-          activityPool.getPending(),
-          "Activities available:",
-          activityPool.getAvailable(),
-        ),
-      2000,
-    );
 
     const ctx = await activityPool.acquire();
     const result = await ctx.run("echo Hello World");
     console.log(result.stdout);
-    // proposalSubscription.cancel();
+    proposalSubscription.unsubscribe();
 
-    // await new Promise((res) => setTimeout(res, 5_000));
     const ctx2 = await activityPool.acquire();
-    const result2 = await ctx.run("echo Hello World222222");
+    const result2 = await ctx.run("echo Hello Golem");
     console.log(result2.stdout);
     await activityPool.release(ctx2);
     await new Promise((res) => setTimeout(res, 5_000));

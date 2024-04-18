@@ -83,14 +83,12 @@ async function main() {
   const result = await activity1.run("node -v");
   console.log(result.stdout);
   await activityPoolApp.release(activity1);
-  // await activityPoolApp.stop();
   await activityPoolApp.drain();
 
   const result2 = await activity2.run("ls /");
   console.log(result2.stdout);
 
   await deployment.stop();
-
   await golem.disconnect();
 }
 

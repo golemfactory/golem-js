@@ -190,27 +190,6 @@ export class Deployment {
         agreementPool,
         activityPool,
       });
-      setInterval(
-        () =>
-          console.log(
-            `[${pool.name}]`,
-            "Proposals available:",
-            proposalPool.availableCount(),
-            "Proposals borrowed:",
-            proposalPool.leasedCount(),
-            "Agreement borrowed:",
-            agreementPool.getBorrowed(),
-            "Agreement pending:",
-            agreementPool.getPending(),
-            "Activities borrowed:",
-            activityPool.getBorrowed(),
-            "Activities pending:",
-            activityPool.getPending(),
-            "Activities available:",
-            activityPool.getAvailable(),
-          ),
-        2000,
-      );
     }
 
     this.events.emit("ready");

@@ -1,7 +1,7 @@
 import { Package } from "./package";
 import { Allocation } from "../payment";
 import { DemandFactory } from "./factory";
-import { Proposal } from "./proposal";
+import { Proposal, ProposalNew } from "./proposal";
 import { defaultLogger, Logger, sleep, YagnaApi, YagnaOptions } from "../shared/utils";
 import { DemandConfig } from "./config";
 import { GolemMarketError, MarketErrorCode } from "./error";
@@ -10,7 +10,7 @@ import { MarketApi } from "ya-ts-client";
 import { EventEmitter } from "eventemitter3";
 
 export interface DemandEvents {
-  proposalReceived: (proposal: Proposal) => void;
+  proposalReceived: (proposal: ProposalNew) => void;
   proposalReceivedError: (error: GolemError) => void;
   proposalRejected: (details: { id: string; parentId: string | null; reason: string }) => void;
   collectFailed: (details: { id: string; reason: string }) => void;
@@ -201,14 +201,15 @@ export class Demand {
             });
             continue;
           } else if (event.eventType !== "ProposalEvent") continue;
-          const proposal = new Proposal(
-            this,
-            event.proposal.state === "Draft" ? this.findParentProposal(event.proposal.prevProposalId) : null,
-            this.setCounteringProposalReference.bind(this),
-            this.yagnaApi.market,
-            event.proposal,
-          );
-          this.events.emit("proposalReceived", proposal);
+          // TODO:
+          // const proposal = new Proposal(
+          //   this,
+          //   event.proposal.state === "Draft" ? this.findParentProposal(event.proposal.prevProposalId) : null,
+          //   this.setCounteringProposalReference.bind(this),
+          //   this.yagnaApi.market,
+          //   event.proposal,
+          // );
+          // this.events.emit("proposalReceived", proposal);
         }
       } catch (error) {
         if (this.isRunning) {

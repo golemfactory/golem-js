@@ -114,7 +114,7 @@ export class AgreementPool {
       destroy: async (agreement: Agreement) => {
         this.logger.debug("Destroying agreement from the pool");
         await this.modules.market.terminateAgreement(agreement);
-        //@ts-expect-error TODO: make Agreement compatible with ProposalNew instead of Proposal
+        //TODO: make Agreement compatible with ProposalNew instead of Proposal
         await this.proposalPool.remove(agreement.proposal);
       },
       validate: async (agreement: Agreement) => {
