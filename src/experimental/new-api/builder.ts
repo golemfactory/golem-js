@@ -12,7 +12,7 @@ interface DeploymentOptions {
 }
 
 export interface CreateActivityPoolOptions {
-  demand: DemandOptions & { image: string };
+  demand: DemandOptions & { image: string; resources: { minCpu: number; minMemGib: number; minStorageGib: number } };
   market: MarketOptions;
   deployment?: DeploymentOptions;
   payment?: PaymentOptions;
