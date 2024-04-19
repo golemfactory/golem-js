@@ -81,7 +81,7 @@ export class DraftOfferProposalPool {
    */
   private leased = new Set<ProposalNew>();
 
-  constructor(private options?: ProposalPoolOptions) {
+  public constructor(private options?: ProposalPoolOptions) {
     if (options?.selectProposal) {
       this.selectProposal = options.selectProposal;
     }
@@ -101,7 +101,7 @@ export class DraftOfferProposalPool {
   /**
    * Pushes the provided proposal to the list of proposals available for lease
    */
-  add(proposal: ProposalNew) {
+  public add(proposal: ProposalNew) {
     if (!proposal.isDraft()) {
       throw new GolemMarketError("Cannot add a non-draft proposal to the pool", MarketErrorCode.InvalidProposal);
     }
@@ -114,17 +114,13 @@ export class DraftOfferProposalPool {
    *
    * This method will reject if no suitable proposal will be found within {@link DraftOfferProposalPool.acquireTimeoutSec} seconds.
    */
-  async acquire(): Promise<ProposalNew> {
+  public acquire(): Promise<ProposalNew> {
     return this.lock.acquire(
       "proposal-pool",
       async () => {
-        // if (this.available.size === 0) {
-        //   throw new GolemMarketError("The proposal pool is empty, cannot acquire", MarketErrorCode.NoProposalAvailable);
-        // }
-
         let proposal: ProposalNew | null = null;
 
-        do {
+        while (proposal === null) {
           // Try to get one
           proposal = this.selectProposal([...this.available]);
 
@@ -136,7 +132,7 @@ export class DraftOfferProposalPool {
             proposal = null;
             await sleep(1);
           }
-        } while (proposal === null);
+        }
 
         this.available.delete(proposal);
         this.leased.add(proposal);
@@ -157,8 +153,8 @@ export class DraftOfferProposalPool {
    * Validates if the proposal is still usable before putting it back to the list of available ones
    * @param proposal
    */
-  async release(proposal: ProposalNew): Promise<void> {
-    await this.lock.acquire("proposal-pool", () => {
+  public release(proposal: ProposalNew): Promise<void> {
+    return this.lock.acquire("proposal-pool", () => {
       this.leased.delete(proposal);
 
       if (this.validateProposal(proposal)) {
@@ -170,8 +166,8 @@ export class DraftOfferProposalPool {
     });
   }
 
-  async remove(proposal: ProposalNew): Promise<void> {
-    await this.lock.acquire("proposal-pool", () => {
+  public remove(proposal: ProposalNew): Promise<void> {
+    return this.lock.acquire("proposal-pool", () => {
       if (this.leased.has(proposal)) {
         this.leased.delete(proposal);
         this.events.emit("removed", proposal);

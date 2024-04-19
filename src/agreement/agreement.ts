@@ -13,6 +13,7 @@ export interface AgreementEvents {
   rejected: (details: { id: string; provider: ProviderInfo; reason: string }) => void;
   terminated: (details: { id: string; provider: ProviderInfo; reason: string }) => void;
 }
+
 export interface ProviderInfo {
   name: string;
   id: string;
@@ -34,6 +35,7 @@ export interface AgreementOptions {
 
   invoiceFilter?: InvoiceFilter;
 }
+
 /**
  * Agreement module - an object representing the contract between the requestor and the provider.
  * @hidden
@@ -151,24 +153,31 @@ export class Agreement {
    * @description Blocking function waits till agreement will be terminated
    * @throws Error if the agreement will be unable to terminate
    */
-  async terminate(reason: { [key: string]: string } = { message: "Finished" }) {
+  async terminate(reason = "Finished") {
     try {
-      if ((await this.getState()) !== "Terminated")
+      if ((await this.getState()) !== "Terminated") {
         await withTimeout(
-          this.yagnaApi.market.terminateAgreement(this.id, reason),
+          // TODO: Make a fix in ya-ts-client typings so that's going to be specifically {message:string}
+          this.yagnaApi.market.terminateAgreement(this.id, {
+            message: reason,
+          }),
           this.options.agreementRequestTimeout,
         );
-      this.events.emit("terminated", {
-        id: this.id,
-        provider: this.getProviderInfo(),
-        reason: reason.message,
-      });
-      this.logger.debug(`Agreement terminated`, { id: this.id });
+
+        this.events.emit("terminated", {
+          id: this.id,
+          provider: this.getProviderInfo(),
+          reason: reason,
+        });
+
+        this.logger.debug(`Agreement terminated`, { id: this.id, reason });
+      }
     } catch (error) {
       throw new GolemMarketError(
         `Unable to terminate agreement ${this.id}. ${error.response?.data?.message || error.response?.data || error}`,
         MarketErrorCode.AgreementTerminationFailed,
-        // this.proposal.demand, TODO
+        this.proposal.demand,
+        error,
       );
     }
   }

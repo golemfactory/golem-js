@@ -97,8 +97,17 @@ export class ActivityPool {
     this.events.emit("destroyed", activity.getDto());
   }
 
-  async drain() {
-    return this.activityPool.drain();
+  /**
+   * Sets the pool into draining mode and then clears it
+   *
+   * When set to drain mode, no new acquires will be possible. At the same time, all activities in the pool will be destroyed on the Provider.
+   *
+   * @return Resolves when all activities in the pool are destroyed
+   */
+  async drainAndClear() {
+    await this.activityPool.drain();
+    await this.activityPool.clear();
+    return;
   }
 
   async runOnce<OutputType>(worker: Worker<OutputType>): Promise<OutputType> {
@@ -127,17 +136,27 @@ export class ActivityPool {
   private createPoolFactory(): Factory<WorkContext> {
     return {
       create: async (): Promise<WorkContext> => {
-        this.logger.debug("Creating new activity to add to pool");
-        const agreement = await this.agreementPool.acquire();
-        const activity = await this.modules.activity.createActivity(agreement);
-        const ctx = new WorkContext(activity, {});
-        await ctx.before();
-        return ctx;
+        try {
+          this.logger.debug("Creating new activity to add to pool");
+          const agreement = await this.agreementPool.acquire();
+          const activity = await this.modules.activity.createActivity(agreement);
+          const ctx = new WorkContext(activity, {});
+          await ctx.before();
+          return ctx;
+        } catch (err) {
+          this.logger.error("Failed to create new activity for the pool", err);
+          throw err;
+        }
       },
       destroy: async (activity: WorkContext) => {
-        this.logger.debug("Destroying activity from the pool");
-        await this.modules.activity.destroyActivity(activity.activity);
-        await this.agreementPool.release(activity.activity.agreement);
+        try {
+          this.logger.debug("Destroying activity from the pool");
+          await this.modules.activity.destroyActivity(activity.activity);
+          await this.agreementPool.release(activity.activity.agreement);
+        } catch (err) {
+          this.logger.error("Failed to destroy the activity in the pool", err);
+          throw err;
+        }
       },
       validate: async (activity: WorkContext) => {
         try {

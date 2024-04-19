@@ -74,21 +74,28 @@ async function main() {
 
     const deployment = builder.getDeployment();
 
+    // Start your deployment
     await deployment.start();
 
-    const activityPoolApp = deployment.getActivityPool("app");
-    const activity1 = await activityPoolApp.acquire();
+    // Get your pool of activities for specified need
+    const appPool = deployment.getActivityPool("app");
+    const dbPool = deployment.getActivityPool("db");
 
-    const activity2 = await deployment.getActivityPool("db").acquire();
+    // Get an instance out of the pool for use
+    const app = await appPool.acquire();
+    const db = await dbPool.acquire();
 
-    const result = await activity1.run("node -v");
-    console.log(result.stdout);
-    await activityPoolApp.release(activity1);
-    await activityPoolApp.drain();
+    // Run a command on the app VM instance
+    const appResult = await app.run("node -v");
+    console.log(appResult.stdout);
+    await appPool.release(app);
 
-    const result2 = await activity2.run("ls /");
-    console.log(result2.stdout);
+    // Run a command on the db VM instance
+    const dbResult = await db.run("ls /");
+    console.log(dbResult.stdout);
+    await dbPool.release(db);
 
+    // Stop the deployment cleanly
     await deployment.stop();
   } catch (err) {
     console.error("Failed to run the example", err);

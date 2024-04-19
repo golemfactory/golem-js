@@ -106,10 +106,9 @@ export interface MarketModule {
   proposeAgreement(paymentModule: PaymentModule, proposal: ProposalNew, options?: AgreementOptions): Promise<Agreement>;
 
   /**
-   *
    * @return The Agreement that has been terminated via Yagna
    */
-  terminateAgreement(agreement: Agreement, reason?: string): Promise<Agreement>;
+  terminateAgreement(agreement: Agreement, reason: string): Promise<Agreement>;
 
   /**
    * Helper method that will allow reaching an agreement for the user without dealing with manual labour of demand/subscription
@@ -277,7 +276,7 @@ export class MarketModuleImpl implements MarketModule {
   }
 
   async terminateAgreement(agreement: Agreement, reason: string): Promise<Agreement> {
-    await agreement.terminate({ reason });
+    await agreement.terminate(reason);
     return agreement;
   }
 

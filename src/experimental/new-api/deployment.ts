@@ -211,8 +211,8 @@ export class Deployment {
       const stopPools = Array.from(this.pools.values()).map((pool) =>
         Promise.allSettled([
           pool.proposalSubscription.unsubscribe(),
-          pool.agreementPool.drain(),
-          pool.activityPool.drain(),
+          pool.agreementPool.drainAndClear(),
+          pool.activityPool.drainAndClear(),
         ]),
       );
       await Promise.allSettled(stopPools);
@@ -221,9 +221,10 @@ export class Deployment {
       await Promise.allSettled(stopNetworks);
 
       this.state = DeploymentState.STOPPED;
-    } catch (e) {
+    } catch (err) {
+      this.logger.error("The deployment failed with an error", err);
       this.state = DeploymentState.ERROR;
-      throw e;
+      throw err;
     }
 
     this.events.emit("end");

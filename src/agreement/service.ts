@@ -126,7 +126,7 @@ export class AgreementPoolService {
       throw new GolemMarketError(
         "Unable to get agreement. Agreement service is not running",
         MarketErrorCode.ServiceNotInitialized,
-        // TODO: agreement?.proposal?.demand,
+        agreement?.proposal?.demand,
       );
     }
     return agreement;
@@ -163,15 +163,14 @@ export class AgreementPoolService {
    */
   async end() {
     this.isServiceRunning = false;
-    await this.terminateAll({ message: "All computations done" });
+    await this.terminateAll();
     this.logger.info("Agreement Pool Service has been stopped");
   }
 
   /**
    * Terminate all agreements
-   * @param reason
    */
-  async terminateAll(reason?: { [key: string]: string }) {
+  async terminateAll() {
     const agreementsToTerminate = Array.from(this.candidateMap)
       .map(([agreementId]) => this.agreements.get(agreementId))
       .filter((a) => a !== undefined) as Agreement[];
@@ -179,7 +178,7 @@ export class AgreementPoolService {
     await Promise.all(
       agreementsToTerminate.map((agreement) =>
         agreement
-          .terminate(reason)
+          .terminate()
           .catch((e) => this.logger.warn(`Agreement cannot be terminated.`, { id: agreement.id, error: e })),
       ),
     );
@@ -195,7 +194,7 @@ export class AgreementPoolService {
         throw new GolemMarketError(
           `Agreement ${agreement.id} cannot be approved. Current state: ${state}`,
           MarketErrorCode.AgreementApprovalFailed,
-          // TODO: agreement.proposal.demand,
+          agreement.proposal.demand,
         );
       }
       this.logger.info(`Agreement confirmed by provider`, { providerName: agreement.getProviderInfo().name });
@@ -234,13 +233,16 @@ export class AgreementPoolService {
       this.logger.debug("Received agreement operation event", { event });
       if (event) {
         if (event.eventType === "AgreementTerminatedEvent" && "reason" in event) {
-          this.handleTerminationAgreementEvent(event.agreementId, event.reason);
+          this.handleTerminationAgreementEvent(
+            event.agreementId,
+            event.reason?.message ?? "Received AgreementTerminatedEvent from Yagna",
+          );
         }
       }
     });
   }
 
-  private async handleTerminationAgreementEvent(agreementId: string, reason?: Record<string, string>) {
+  private async handleTerminationAgreementEvent(agreementId: string, reason: string) {
     const agreement = this.agreements.get(agreementId);
     if (agreement) {
       await agreement.terminate(reason);

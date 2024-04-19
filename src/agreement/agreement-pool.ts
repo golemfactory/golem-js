@@ -85,8 +85,17 @@ export class AgreementPool {
     this.events.emit("destroyed", agreement.getDto());
   }
 
-  async drain() {
-    return this.agreementPool.drain();
+  /**
+   * Sets the pool into draining mode and then clears it
+   *
+   * When set to drain mode, no new acquires will be possible. At the same time, all agreements in the pool will be terminated with the Providers.
+   *
+   * @return Resolves when all agreements are terminated
+   */
+  async drainAndClear() {
+    await this.agreementPool.drain();
+    await this.agreementPool.clear();
+    return;
   }
 
   getSize() {
@@ -108,15 +117,24 @@ export class AgreementPool {
   private createPoolFactory(): Factory<Agreement> {
     return {
       create: async (): Promise<Agreement> => {
-        this.logger.debug("Creating new agreement to add to pool");
-        const proposal = await this.proposalPool.acquire();
-        return this.modules.market.proposeAgreement(this.modules.payment, proposal, this.options?.agreementOptions);
+        try {
+          this.logger.debug("Creating new agreement to add to pool");
+          const proposal = await this.proposalPool.acquire();
+          return this.modules.market.proposeAgreement(this.modules.payment, proposal, this.options?.agreementOptions);
+        } catch (err) {
+          this.logger.error("Failed to reach the final agreement with the Provider and add it to the pool", err);
+          throw err;
+        }
       },
       destroy: async (agreement: Agreement) => {
-        this.logger.debug("Destroying agreement from the pool");
-        await this.modules.market.terminateAgreement(agreement);
-        //TODO: make Agreement compatible with ProposalNew instead of Proposal
-        await this.proposalPool.remove(agreement.proposal);
+        try {
+          this.logger.debug("Destroying agreement from the pool");
+          await this.modules.market.terminateAgreement(agreement, "Finished");
+          await this.proposalPool.remove(agreement.proposal);
+        } catch (err) {
+          this.logger.error("Failed to destroy the agreement in the pool", err);
+          throw err;
+        }
       },
       validate: async (agreement: Agreement) => {
         try {
