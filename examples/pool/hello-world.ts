@@ -44,6 +44,7 @@ import {
     };
 
     const proposalPool = new DraftOfferProposalPool({ minCount: 1 });
+
     const workload = Package.create({
       imageTag: demandOptions.demand.image,
     });
@@ -62,23 +63,35 @@ import {
         bufferSize: 15,
       })
       .subscribe((proposalsBatch) => proposalsBatch.forEach((proposal) => proposalPool.add(proposal)));
-    const agreementPool = new AgreementPool(modules, proposalPool, { replicas: { min: 1 } });
+    const agreementPool = new AgreementPool(modules, proposalPool, { replicas: { max: 2 } });
     const activityPool = new ActivityPool(modules, agreementPool, {
       replicas: 2,
     });
 
+    const int = setInterval(() => {
+      console.log(
+        "Pool sizes (total/available/leased)",
+        proposalPool.count(),
+        proposalPool.availableCount(),
+        proposalPool.leasedCount(),
+      );
+    }, 5000);
+
     const ctx = await activityPool.acquire();
     const result = await ctx.run("echo Hello World");
     console.log(result.stdout);
-    proposalSubscription.unsubscribe();
 
     const ctx2 = await activityPool.acquire();
     const result2 = await ctx.run("echo Hello Golem");
     console.log(result2.stdout);
+
+    await activityPool.release(ctx);
     await activityPool.release(ctx2);
-    await new Promise((res) => setTimeout(res, 5_000));
-    await activityPool.destroy(ctx);
+
+    proposalSubscription.unsubscribe();
+    await activityPool.drain();
     await agreementPool.drain();
+    clearInterval(int);
   } catch (err) {
     console.error("Pool execution failed:", err);
   } finally {
