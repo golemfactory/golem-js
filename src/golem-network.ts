@@ -1,9 +1,9 @@
 import { DeploymentOptions, GolemDeploymentBuilder, MarketOptions, PaymentOptions } from "./experimental";
 import { Logger, YagnaApi } from "./shared/utils";
 import { StorageProvider } from "./shared/storage";
-import { MarketModule, MarketModuleImpl } from "./market/market.module";
-import { PaymentModule, PaymentModuleImpl } from "./payment/payment.module";
-import { ActivityModule, ActivityModuleImpl } from "./activity/activity.module";
+import { MarketModule, MarketModuleImpl } from "./market";
+import { PaymentModule, PaymentModuleImpl } from "./payment";
+import { ActivityModule, ActivityModuleImpl } from "./activity";
 import { NetworkModule, NetworkModuleImpl } from "./network/network.module";
 import { EventEmitter } from "eventemitter3";
 

@@ -250,7 +250,7 @@ export class Deployment {
     activityPoolOptions: ActivityPoolOptions;
     agreementPoolOptions: AgreementPoolOptions;
   } {
-    const poolOptions =
+    const replicas =
       typeof options.deployment?.replicas === "number"
         ? { min: options.deployment?.replicas, max: options.deployment?.replicas }
         : typeof options.deployment?.replicas === "object"
@@ -263,12 +263,10 @@ export class Deployment {
       },
       activityPoolOptions: {
         logger: this.logger.child("activity-pool"),
-        poolOptions,
-        activityOptions: { debitNoteFilter: options.payment?.debitNotesFilter },
+        replicas,
       },
       agreementPoolOptions: {
         logger: this.logger.child("agreement-pool"),
-        poolOptions,
         agreementOptions: { invoiceFilter: options.payment?.invoiceFilter },
       },
     };

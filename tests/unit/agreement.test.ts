@@ -1,4 +1,4 @@
-import { Agreement, Logger, Proposal, ProviderInfo, YagnaApi } from "../../src";
+import { Agreement, Logger, Proposal, ProposalNew, ProviderInfo, YagnaApi } from "../../src";
 import { anything, imock, instance, mock, objectContaining, reset, verify, when } from "@johanblumenberg/ts-mockito";
 import { MarketApi } from "ya-ts-client";
 
@@ -10,7 +10,7 @@ const testProvider: ProviderInfo = {
 
 const mockLogger = imock<Logger>();
 const mockYagna = mock(YagnaApi);
-const mockProposal = mock(Proposal);
+const mockProposal = mock(ProposalNew);
 const mockAgreement = imock<MarketApi.AgreementDTO>();
 const mockMarket = mock(MarketApi.RequestorService);
 
@@ -36,6 +36,14 @@ describe("Agreement", () => {
     when(mockAgreement.state).thenReturn("Approved");
 
     when(mockProposal.provider).thenReturn(testProvider);
+    when(mockProposal.model).thenReturn({
+      constraints: "",
+      issuerId: "",
+      properties: [],
+      proposalId: "",
+      state: "Accepted",
+      timestamp: "",
+    });
   });
 
   describe("create()", () => {

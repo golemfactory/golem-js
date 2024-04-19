@@ -64,16 +64,29 @@ export interface ProposalDTO {
 }
 
 export class ProposalNew {
+  public provider: ProviderInfo;
+
   constructor(
     public readonly model: MarketApi.ProposalDTO,
     public readonly demand: DemandNew,
-  ) {}
+  ) {
+    this.provider = this.getProviderInfo();
+  }
 
   isInitial(): boolean {
     return this.model.state === "Initial";
   }
+
   isDraft(): boolean {
     return this.model.state === "Draft";
+  }
+
+  isExpired(): boolean {
+    return this.model.state === "Expired";
+  }
+
+  isRejected(): boolean {
+    return this.model.state === "Rejected";
   }
 
   public get properties(): ProposalProperties {
@@ -122,6 +135,14 @@ export class ProposalNew {
     };
   }
 
+  /**
+   * Proposal cost estimation based on CPU, Env and startup costs
+   */
+  getEstimatedCost(): number {
+    const threadsNo = this.properties["golem.inf.cpu.threads"] || 1;
+    return this.pricing.start + this.pricing.cpuSec * threadsNo + this.pricing.envSec;
+  }
+
   public isValid(): boolean {
     const usageVector = this.properties["golem.com.usage.vector"];
     const priceVector = this.properties["golem.com.pricing.model.linear.coeffs"];
@@ -144,7 +165,19 @@ export class ProposalNew {
 
     return true;
   }
+
+  private getProviderInfo(): ProviderInfo {
+    return {
+      id: this.model.issuerId,
+      name: this.properties["golem.node.id.name"],
+      walletAddress: "todo",
+      // TODO: walletAddress: this.properties[
+      //   `golem.com.payment.platform.${this.demand.allocation.paymentPlatform}.address`
+      //   ] as string,
+    };
+  }
 }
+
 /**
  * Proposal module - an object representing an offer in the state of a proposal from the provider.
  * @deprecated
@@ -175,7 +208,7 @@ export class Proposal {
     private readonly parentId: string | null,
     private readonly setCounteringProposalReference: (id: string, parentId: string) => void | null,
     private readonly api: MarketApi.RequestorService,
-    model: MarketApi.ProposalDTO,
+    private readonly model: MarketApi.ProposalDTO,
   ) {
     this.id = model.proposalId;
     this.issuerId = model.issuerId;
@@ -189,6 +222,13 @@ export class Proposal {
 
     // Run validation to ensure that the Proposal is in a complete and correct state
     this.validate();
+  }
+
+  /**
+   * @deprecated Will be removed before release, glue code
+   */
+  toNewEntity(): ProposalNew {
+    return new ProposalNew(this.model, this.demand.toNewEntity());
   }
 
   getDto(): ProposalDTO {

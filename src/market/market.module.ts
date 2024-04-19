@@ -1,14 +1,13 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
-import { DemandConfig, DemandNew, DemandOptions, ProposalFilter } from "./index";
+import { DemandConfig, DemandNew, DemandOptions, GolemMarketError, MarketErrorCode, ProposalFilter } from "./index";
 import { Agreement, AgreementOptions } from "../agreement";
-
 import { YagnaApi } from "../shared/utils";
-import { switchMap, Observable, filter, bufferCount, tap } from "rxjs";
-import { MarketApi } from "ya-ts-client";
 import { Allocation, PaymentModule } from "../payment";
-import { ProposalNew } from "./proposal";
 import { Package } from "./package";
+import { bufferCount, filter, Observable, switchMap, tap } from "rxjs";
+import { MarketApi } from "ya-ts-client";
+import { ProposalNew } from "./proposal";
 import { DecorationsBuilder } from "./builder";
 import { ProposalFilterNew } from "./service";
 
@@ -255,16 +254,31 @@ export class MarketModuleImpl implements MarketModule {
     return new ProposalNew(proposalModel, receivedProposal.demand);
   }
 
-  proposeAgreement(
+  async proposeAgreement(
     paymentModule: PaymentModule,
     proposal: ProposalNew,
     options?: AgreementOptions,
   ): Promise<Agreement> {
-    throw new Error("Method not implemented.");
+    const agreement = await Agreement.create(proposal, this.yagnaApi, options);
+    await agreement.confirm(this.yagnaApi.appSessionId);
+    await this.yagnaApi.market.waitForApproval(
+      agreement.id,
+      options?.agreementWaitingForApprovalTimeout ? options?.agreementWaitingForApprovalTimeout * 1000 : 60,
+    );
+    const state = await agreement.getState();
+    if (state !== "Approved") {
+      throw new GolemMarketError(
+        `Agreement ${agreement.id} cannot be approved. Current state: ${state}`,
+        MarketErrorCode.AgreementApprovalFailed,
+        agreement.proposal.demand,
+      );
+    }
+    return agreement;
   }
 
-  terminateAgreement(agreement: Agreement, reason: string): Promise<Agreement> {
-    throw new Error("Method not implemented.");
+  async terminateAgreement(agreement: Agreement, reason: string): Promise<Agreement> {
+    await agreement.terminate({ reason });
+    return agreement;
   }
 
   getAgreement(options: MarketOptions, filter: ProposalFilter): Promise<Agreement> {

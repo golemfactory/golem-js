@@ -2,7 +2,7 @@ import { defaultLogger, Logger, YagnaApi, YagnaOptions } from "../shared/utils";
 import { MarketApi } from "ya-ts-client";
 import { AgreementFactory } from "./factory";
 import { AgreementConfig } from "./config";
-import { GolemMarketError, MarketErrorCode, Proposal } from "../market";
+import { GolemMarketError, MarketErrorCode, ProposalNew } from "../market";
 import { withTimeout } from "../shared/utils/timeout";
 import { EventEmitter } from "eventemitter3";
 import { AgreementDTO } from "./service";
@@ -52,7 +52,7 @@ export class Agreement {
    */
   constructor(
     public readonly id: string,
-    public readonly proposal: Proposal,
+    public readonly proposal: ProposalNew,
     private readonly yagnaApi: YagnaApi,
     private readonly options: AgreementConfig,
   ) {
@@ -66,7 +66,11 @@ export class Agreement {
    * @param agreementOptions - {@link AgreementOptions}
    * @return Agreement
    */
-  static async create(proposal: Proposal, yagnaApi: YagnaApi, agreementOptions?: AgreementOptions): Promise<Agreement> {
+  static async create(
+    proposal: ProposalNew,
+    yagnaApi: YagnaApi,
+    agreementOptions?: AgreementOptions,
+  ): Promise<Agreement> {
     const factory = new AgreementFactory(yagnaApi, agreementOptions);
     return factory.create(proposal);
   }
@@ -91,7 +95,11 @@ export class Agreement {
   }
 
   getProviderInfo(): ProviderInfo {
-    return this.proposal.provider;
+    return {
+      name: "todo",
+      id: "todo",
+      walletAddress: "todo",
+    };
   }
 
   getDto(): AgreementDTO {
@@ -160,7 +168,7 @@ export class Agreement {
       throw new GolemMarketError(
         `Unable to terminate agreement ${this.id}. ${error.response?.data?.message || error.response?.data || error}`,
         MarketErrorCode.AgreementTerminationFailed,
-        this.proposal.demand,
+        // this.proposal.demand, TODO
       );
     }
   }

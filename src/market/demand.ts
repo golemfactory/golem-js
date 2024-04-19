@@ -158,6 +158,12 @@ export class Demand {
   }
 
   /**
+   * @deprecated Will be removed before release, glue code
+   */
+  toNewEntity(): DemandNew {
+    return new DemandNew(this.id, this.demandRequest);
+  }
+  /**
    * Stop subscribing for provider offer proposals for this demand
    */
   async unsubscribe() {
@@ -201,14 +207,15 @@ export class Demand {
             });
             continue;
           } else if (event.eventType !== "ProposalEvent") continue;
-          const proposal = new Proposal(
-            this,
-            event.proposal.state === "Draft" ? this.findParentProposal(event.proposal.prevProposalId) : null,
-            this.setCounteringProposalReference.bind(this),
-            this.yagnaApi.market,
-            event.proposal,
-          );
-          this.events.emit("proposalReceived", proposal);
+          // TODO:
+          // const proposal = new Proposal(
+          //   this,
+          //   event.proposal.state === "Draft" ? this.findParentProposal(event.proposal.prevProposalId) : null,
+          //   this.setCounteringProposalReference.bind(this),
+          //   this.yagnaApi.market,
+          //   event.proposal,
+          // );
+          // this.events.emit("proposalReceived", proposal);
         }
       } catch (error) {
         if (this.isRunning) {

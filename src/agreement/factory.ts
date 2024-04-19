@@ -1,7 +1,7 @@
 import { Agreement, AgreementOptions, ProviderInfo } from "./agreement";
 import { Logger, defaultLogger, YagnaApi } from "../shared/utils";
 import { AgreementConfig } from "./config";
-import { Proposal, GolemMarketError, MarketErrorCode } from "../market";
+import { GolemMarketError, MarketErrorCode, ProposalNew } from "../market";
 import { withTimeout } from "../shared/utils/timeout";
 import { EventEmitter } from "eventemitter3";
 
@@ -37,7 +37,7 @@ export class AgreementFactory {
    *
    * @return Agreement
    */
-  async create(proposal: Proposal): Promise<Agreement> {
+  async create(proposal: ProposalNew): Promise<Agreement> {
     try {
       const agreementProposalRequest = {
         proposalId: proposal.id,
@@ -51,24 +51,26 @@ export class AgreementFactory {
         throw new GolemMarketError(
           `Unable to create agreement. Invalid response from the server`,
           MarketErrorCode.AgreementCreationFailed,
-          proposal.demand,
+          // proposal.demand, TODO
         );
       }
-      const data = await this.yagnaApi.market.getAgreement(agreementId);
+      // const data = await this.yagnaApi.market.getAgreement(agreementId);
       const agreement = new Agreement(agreementId, proposal, this.yagnaApi, this.options);
-      this.events.emit("agreementCreated", {
-        id: agreementId,
-        provider: proposal.provider,
-        validTo: data?.validTo,
-        proposalId: proposal.id,
-      });
+      // TODO
+      // this.events.emit("agreementCreated", {
+      //   id: agreementId,
+      //   provider: "todo",
+      //   validTo: data?.validTo,
+      //   proposalId: proposal.id,
+      // });
       this.logger.debug(`Agreement created`, { id: agreementId });
       return agreement;
     } catch (error) {
       throw new GolemMarketError(
         `Unable to create agreement ${error?.response?.data?.message || error?.response?.data || error}`,
         MarketErrorCode.AgreementCreationFailed,
-        proposal.demand,
+        undefined,
+        // proposal.demand,
         error,
       );
     }

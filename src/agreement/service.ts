@@ -2,7 +2,7 @@ import Bottleneck from "bottleneck";
 import { defaultLogger, Logger, sleep, YagnaApi } from "../shared/utils";
 import { Agreement, AgreementOptions } from "./agreement";
 import { AgreementServiceConfig } from "./config";
-import { GolemMarketError, MarketErrorCode, Proposal } from "../market";
+import { GolemMarketError, MarketErrorCode, ProposalNew } from "../market";
 
 export interface AgreementDTO {
   id: string;
@@ -11,7 +11,7 @@ export interface AgreementDTO {
 
 export class AgreementCandidate {
   agreement?: AgreementDTO;
-  constructor(readonly proposal: Proposal) {}
+  constructor(readonly proposal: ProposalNew) {}
 }
 
 export type AgreementSelector = (candidates: AgreementCandidate[]) => Promise<AgreementCandidate>;
@@ -65,8 +65,8 @@ export class AgreementPoolService {
    * Add proposal for create agreement purposes
    * @param proposal Proposal
    */
-  async addProposal(proposal: Proposal) {
-    this.logger.debug(`New proposal added to pool`, { providerName: proposal.provider.name });
+  async addProposal(proposal: ProposalNew) {
+    // TODO: this.logger.debug(`New proposal added to pool`, { providerName: proposal.provider.name });
     this.pool.add(new AgreementCandidate(proposal));
   }
 
@@ -126,7 +126,7 @@ export class AgreementPoolService {
       throw new GolemMarketError(
         "Unable to get agreement. Agreement service is not running",
         MarketErrorCode.ServiceNotInitialized,
-        agreement?.proposal?.demand,
+        // TODO: agreement?.proposal?.demand,
       );
     }
     return agreement;
@@ -195,7 +195,7 @@ export class AgreementPoolService {
         throw new GolemMarketError(
           `Agreement ${agreement.id} cannot be approved. Current state: ${state}`,
           MarketErrorCode.AgreementApprovalFailed,
-          agreement.proposal.demand,
+          // TODO: agreement.proposal.demand,
         );
       }
       this.logger.info(`Agreement confirmed by provider`, { providerName: agreement.getProviderInfo().name });

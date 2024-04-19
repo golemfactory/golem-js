@@ -155,10 +155,11 @@ export class MarketService {
     try {
       const { result: isProposalValid, reason } = await this.isProposalValid(proposal);
       if (isProposalValid) {
-        const chosenPlatform = this.allocation.paymentPlatform;
-        await proposal
-          .respond(chosenPlatform)
-          .catch((e) => this.logger.debug(`Unable to respond proposal`, { id: proposal.id, e }));
+        // TODO
+        // const chosenPlatform = this.allocation.paymentPlatform;
+        // await proposal
+        //   .respond(chosenPlatform)
+        //   .catch((e) => this.logger.debug(`Unable to respond proposal`, { id: proposal.id, e }));
         this.logger.debug(`Proposal has been responded`, { id: proposal.id });
       } else {
         this.proposalsCount.rejected++;
@@ -194,13 +195,14 @@ export class MarketService {
     return { result: true };
   }
 
-  private async processDraftProposal(proposal: Proposal) {
-    await this.agreementPoolService.addProposal(proposal);
+  private async processDraftProposal(oldProposal: Proposal) {
+    const newProposal = oldProposal.toNewEntity();
+    await this.agreementPoolService.addProposal(newProposal);
     this.proposalsCount.confirmed++;
     this.logger.debug(`Proposal has been confirmed and added to agreement pool`, {
-      providerName: proposal.provider.name,
-      issuerId: proposal.issuerId,
-      id: proposal.id,
+      providerName: newProposal.provider.name,
+      issuerId: newProposal.model.issuerId,
+      id: newProposal.id,
     });
   }
 

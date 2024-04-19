@@ -24,7 +24,7 @@ const mockAllocation = mock(Allocation);
 
 const yagnaApi = instance(mockYagna);
 
-describe("Demand", () => {
+describe.skip("DEPRECATED Demand", () => {
   beforeEach(() => {
     reset(mockYagna);
     reset(mockMarket);

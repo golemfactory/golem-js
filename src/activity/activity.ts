@@ -11,7 +11,6 @@ import { GolemAbortError, GolemInternalError, GolemTimeoutError } from "../share
 import { withTimeout } from "../shared/utils/timeout";
 import { EventEmitter } from "eventemitter3";
 import retry from "async-retry";
-import { DebitNoteFilter } from "../payment/service";
 
 export interface ActivityEvents {
   scriptSent: (details: { activityId: string; agreementId: string }) => void;
@@ -44,8 +43,6 @@ export interface ActivityOptions {
   activityExeBatchResultMaxRetries?: number;
   /** Logger module */
   logger?: Logger;
-
-  debitNoteFilter?: DebitNoteFilter;
 }
 
 const RETRYABLE_ERROR_STATUS_CODES = [408, 500];

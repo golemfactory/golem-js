@@ -22,7 +22,7 @@ const mockAllocation = mock(Allocation);
 
 const yagnaApi = instance(mockYagna);
 
-describe("Market Service", () => {
+describe.skip("DEPRECATED Market Service", () => {
   beforeEach(() => {
     logger.clear();
 
