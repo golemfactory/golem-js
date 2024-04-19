@@ -1,7 +1,7 @@
 import { Package } from "./package";
 import { Allocation } from "../payment";
 import { DemandFactory } from "./factory";
-import { Proposal, ProposalNew } from "./proposal";
+import { Proposal } from "./proposal";
 import { defaultLogger, Logger, sleep, YagnaApi, YagnaOptions } from "../shared/utils";
 import { DemandConfig } from "./config";
 import { GolemMarketError, MarketErrorCode } from "./error";
@@ -10,7 +10,7 @@ import { MarketApi } from "ya-ts-client";
 import { EventEmitter } from "eventemitter3";
 
 export interface DemandEvents {
-  proposalReceived: (proposal: ProposalNew) => void;
+  proposalReceived: (proposal: Proposal) => void;
   proposalReceivedError: (error: GolemError) => void;
   proposalRejected: (details: { id: string; parentId: string | null; reason: string }) => void;
   collectFailed: (details: { id: string; reason: string }) => void;
@@ -157,6 +157,12 @@ export class Demand {
     this.subscribe().catch((e) => this.logger.error("Unable to subscribe for demand events", e));
   }
 
+  /**
+   * @deprecated Will be removed before release, glue code
+   */
+  toNewEntity(): DemandNew {
+    return new DemandNew(this.id, this.demandRequest);
+  }
   /**
    * Stop subscribing for provider offer proposals for this demand
    */

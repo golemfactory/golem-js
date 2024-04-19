@@ -110,7 +110,7 @@ export class MarketService {
     return;
   }
 
-  private demandProposalEventListener(proposal: ProposalNew) {
+  private demandProposalEventListener(proposal: Proposal) {
     if (proposal.isInitial()) {
       this.proposalsBatch
         .addProposal(proposal)
@@ -143,7 +143,7 @@ export class MarketService {
     }
   }
 
-  private async processInitialProposal(proposal: ProposalNew) {
+  private async processInitialProposal(proposal: Proposal) {
     if (!this.allocation)
       throw new GolemMarketError(
         "Allocation is missing. The service has not been started correctly.",
@@ -153,7 +153,6 @@ export class MarketService {
     this.logger.debug(`New proposal has been received`, { id: proposal.id });
     this.proposalsCount.initial++;
     try {
-      // @ts-expect-error TODO
       const { result: isProposalValid, reason } = await this.isProposalValid(proposal);
       if (isProposalValid) {
         // TODO
@@ -196,13 +195,14 @@ export class MarketService {
     return { result: true };
   }
 
-  private async processDraftProposal(proposal: ProposalNew) {
-    await this.agreementPoolService.addProposal(proposal);
+  private async processDraftProposal(oldProposal: Proposal) {
+    const newProposal = oldProposal.toNewEntity();
+    await this.agreementPoolService.addProposal(newProposal);
     this.proposalsCount.confirmed++;
     this.logger.debug(`Proposal has been confirmed and added to agreement pool`, {
-      providerName: proposal.provider.name,
-      issuerId: proposal.model.issuerId,
-      id: proposal.id,
+      providerName: newProposal.provider.name,
+      issuerId: newProposal.model.issuerId,
+      id: newProposal.id,
     });
   }
 

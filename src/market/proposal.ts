@@ -65,6 +65,7 @@ export interface ProposalDTO {
 
 export class ProposalNew {
   public provider: ProviderInfo;
+
   constructor(
     public readonly model: MarketApi.ProposalDTO,
     public readonly demand: DemandNew,
@@ -75,12 +76,15 @@ export class ProposalNew {
   isInitial(): boolean {
     return this.model.state === "Initial";
   }
+
   isDraft(): boolean {
     return this.model.state === "Draft";
   }
+
   isExpired(): boolean {
     return this.model.state === "Expired";
   }
+
   isRejected(): boolean {
     return this.model.state === "Rejected";
   }
@@ -173,6 +177,7 @@ export class ProposalNew {
     };
   }
 }
+
 /**
  * Proposal module - an object representing an offer in the state of a proposal from the provider.
  * @deprecated
@@ -203,7 +208,7 @@ export class Proposal {
     private readonly parentId: string | null,
     private readonly setCounteringProposalReference: (id: string, parentId: string) => void | null,
     private readonly api: MarketApi.RequestorService,
-    model: MarketApi.ProposalDTO,
+    private readonly model: MarketApi.ProposalDTO,
   ) {
     this.id = model.proposalId;
     this.issuerId = model.issuerId;
@@ -217,6 +222,13 @@ export class Proposal {
 
     // Run validation to ensure that the Proposal is in a complete and correct state
     this.validate();
+  }
+
+  /**
+   * @deprecated Will be removed before release, glue code
+   */
+  toNewEntity(): ProposalNew {
+    return new ProposalNew(this.model, this.demand.toNewEntity());
   }
 
   getDto(): ProposalDTO {

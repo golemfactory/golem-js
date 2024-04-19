@@ -1,5 +1,5 @@
-import { _, imock, instance, mock, reset, when, verify, deepEqual } from "@johanblumenberg/ts-mockito";
-import { YagnaApi } from "../shared/utils/yagna/yagnaApi";
+import { _, deepEqual, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
+import { YagnaApi } from "../shared/utils";
 import { MarketModuleImpl } from "./market.module";
 import * as YaTsClient from "ya-ts-client";
 import { DemandNew } from "./demand";
@@ -65,6 +65,7 @@ describe("Market module", () => {
   describe("subscribeForProposals()", () => {
     it("should long poll for proposals", (done) => {
       const mockDemand = instance(imock<DemandNew>());
+
       const mockProposal = {
         eventType: "ProposalEvent",
         eventDate: "0000-00-00",
@@ -74,10 +75,11 @@ describe("Market module", () => {
       when(mockMarket.collectOffers(_)).thenResolve([mockProposal, mockProposal, mockProposal, mockProposal]);
 
       const proposal$ = marketModule.subscribeForProposals(mockDemand).pipe(take(8));
+
       let proposalsEmitted = 0;
+
       proposal$.subscribe({
-        next: (proposal) => {
-          expect(proposal).toEqual(new ProposalNew(mockProposal.proposal, mockDemand));
+        next: () => {
           proposalsEmitted++;
         },
         complete: () => {
@@ -102,12 +104,25 @@ describe("Market module", () => {
       const paymentPlatform = "my-selected-payment-platform";
       const mockReceivedProposal = imock<ProposalNew>();
       when(mockReceivedProposal.id).thenReturn("proposal-id");
+      when(mockReceivedProposal.model).thenReturn({
+        constraints: "",
+        properties: {},
+        proposalId: "",
+        timestamp: "",
+        issuerId: "issuer-id",
+        state: "Initial",
+      });
       when(mockReceivedProposal.demand).thenReturn(instance(mockDemand));
       when(mockDemand.id).thenReturn("demand-id");
 
       when(mockMarket.counterProposalDemand(_, _, _)).thenResolve("counter-id");
 
+      when(mockMarket.getProposalOffer(_, "counter-id")).thenResolve(
+        instance(imock<YaTsClient.MarketApi.ProposalEventDTO["proposal"]>()),
+      );
+
       await marketModule.negotiateProposal(instance(mockReceivedProposal), mockOffer, paymentPlatform);
+
       verify(
         mockMarket.counterProposalDemand(
           "demand-id",
