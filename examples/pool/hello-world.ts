@@ -62,9 +62,7 @@ import {
         bufferSize: 15,
       })
       .subscribe((proposalsBatch) => proposalsBatch.forEach((proposal) => proposalPool.add(proposal)));
-    const agreementPool = new AgreementPool(modules, proposalPool, {
-      poolOptions: { min: 1 },
-    });
+    const agreementPool = new AgreementPool(modules, proposalPool, { replicas: { min: 1 } });
     const activityPool = new ActivityPool(modules, agreementPool, {
       replicas: 2,
     });

@@ -1,13 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import {EventEmitter} from "eventemitter3";
-import {Agreement} from "../agreement";
-import {Activity, ActivityOptions, ActivityStateEnum} from "./index";
-import {defaultLogger, Logger, YagnaApi} from "../shared/utils";
-import {Promise} from "cypress/types/cy-bluebird";
-import {Terminate} from "./script";
-import {PaymentModule} from "../payment";
-import {GolemWorkError, WorkErrorCode} from "./work";
-import { randomAgreementSelectorWithPriorityForExistingOnes } from "../agreement/strategy";
+import { EventEmitter } from "eventemitter3";
+import { Agreement } from "../agreement";
+import { Activity, ActivityOptions, ActivityStateEnum } from "./index";
+import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
+import { Terminate } from "./script";
+import { GolemWorkError, WorkErrorCode } from "./work";
 
 export interface ActivityEvents {}
 
@@ -55,11 +52,7 @@ export class ActivityModuleImpl implements ActivityModule {
     this.logger = defaultLogger("activity");
   }
 
-  async createActivity(
-    paymentModule: PaymentModule,
-    agreement: Agreement,
-    options?: ActivityOptions,
-  ): Promise<Activity> {
+  async createActivity(agreement: Agreement, options?: ActivityOptions): Promise<Activity> {
     return await Activity.create(agreement, this.yagnaApi, options);
   }
 

@@ -1,15 +1,15 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import {EventEmitter} from "eventemitter3";
+import { EventEmitter } from "eventemitter3";
 import { DemandConfig, DemandNew, DemandOptions, GolemMarketError, MarketErrorCode, ProposalFilter } from "./index";
-import {Agreement, AgreementOptions} from "../agreement";
-import {YagnaApi} from "../shared/utils";
-import {Allocation, PaymentModule} from "../payment";
-import {Package} from "./package";
-import {bufferCount, filter, Observable, switchMap, tap} from "rxjs";
-import {MarketApi} from "ya-ts-client";
-import {ProposalNew} from "./proposal";
-import {DecorationsBuilder} from "./builder";
-import {ProposalFilterNew} from "./service";
+import { Agreement, AgreementOptions } from "../agreement";
+import { YagnaApi } from "../shared/utils";
+import { Allocation, PaymentModule } from "../payment";
+import { Package } from "./package";
+import { bufferCount, filter, Observable, switchMap, tap } from "rxjs";
+import { MarketApi } from "ya-ts-client";
+import { ProposalNew } from "./proposal";
+import { DecorationsBuilder } from "./builder";
+import { ProposalFilterNew } from "./service";
 
 export interface MarketEvents {}
 

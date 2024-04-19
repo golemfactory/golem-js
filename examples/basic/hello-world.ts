@@ -63,7 +63,7 @@ import {
       .subscribe((proposalsBatch) => proposalsBatch.forEach((proposal) => proposalPool.add(proposal)));
     const draftProposal = await proposalPool.acquire();
     const agreement = await modules.market.proposeAgreement(modules.payment, draftProposal);
-    const activity = await modules.activity.createActivity(modules.payment, agreement);
+    const activity = await modules.activity.createActivity(agreement);
     const ctx = new WorkContext(activity, {});
     await ctx.before();
     const result = await ctx.run("echo Hello World");

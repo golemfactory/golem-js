@@ -6,10 +6,11 @@ import { MarketModule, GolemMarketError, MarketErrorCode } from "../market";
 import { AgreementDTO } from "./service";
 import { EventEmitter } from "eventemitter3";
 import { PaymentModule } from "../payment";
+import { RequireAtLeastOne } from "../shared/utils/types";
 
 export interface AgreementPoolOptions {
   logger?: Logger;
-  replicas?: number | { min: number; max: number };
+  replicas?: number | RequireAtLeastOne<{ min: number; max: number }>;
   agreementOptions?: AgreementOptions;
 }
 
