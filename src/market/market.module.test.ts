@@ -29,8 +29,12 @@ describe("Market module", () => {
 
       const demand$ = marketModule.publishDemand(mockOffer);
       demand$.pipe(take(1)).subscribe((demand) => {
-        expect(demand).toEqual(new DemandNew("demand-id", mockOffer));
-        done();
+        try {
+          expect(demand).toEqual(new DemandNew("demand-id", mockOffer));
+          done();
+        } catch (error) {
+          done(error);
+        }
       });
     });
     it("should emit a new demand every specified interval", (done) => {
@@ -50,13 +54,17 @@ describe("Market module", () => {
           jest.advanceTimersByTime(10);
         },
         complete: () => {
-          expect(demands).toEqual([
-            new DemandNew("demand-id-1", mockOffer),
-            new DemandNew("demand-id-2", mockOffer),
-            new DemandNew("demand-id-3", mockOffer),
-          ]);
-          expect(mockUnsubscribe).toHaveBeenCalledTimes(3);
-          done();
+          try {
+            expect(demands).toEqual([
+              new DemandNew("demand-id-1", mockOffer),
+              new DemandNew("demand-id-2", mockOffer),
+              new DemandNew("demand-id-3", mockOffer),
+            ]);
+            expect(mockUnsubscribe).toHaveBeenCalledTimes(3);
+            done();
+          } catch (error) {
+            done(error);
+          }
         },
       });
     });
@@ -83,9 +91,13 @@ describe("Market module", () => {
           proposalsEmitted++;
         },
         complete: () => {
-          expect(proposalsEmitted).toBe(8);
-          verify(mockMarket.collectOffers(_)).times(2);
-          done();
+          try {
+            expect(proposalsEmitted).toBe(8);
+            verify(mockMarket.collectOffers(_)).times(2);
+            done();
+          } catch (error) {
+            done(error);
+          }
         },
       });
     });
@@ -182,11 +194,15 @@ describe("Market module", () => {
             draftProposals.push(...proposal);
           },
           complete: () => {
-            expect(draftProposals).toEqual([proposal3, proposal4]);
-            expect(marketModule.negotiateProposal).toHaveBeenCalledTimes(2);
-            expect(marketModule.negotiateProposal).toHaveBeenCalledWith(proposal1, mockOffer, "payment-platform");
-            expect(marketModule.negotiateProposal).toHaveBeenCalledWith(proposal2, mockOffer, "payment-platform");
-            done();
+            try {
+              expect(draftProposals).toEqual([proposal3, proposal4]);
+              expect(marketModule.negotiateProposal).toHaveBeenCalledTimes(2);
+              expect(marketModule.negotiateProposal).toHaveBeenCalledWith(proposal1, mockOffer, "payment-platform");
+              expect(marketModule.negotiateProposal).toHaveBeenCalledWith(proposal2, mockOffer, "payment-platform");
+              done();
+            } catch (error) {
+              done(error);
+            }
           },
         });
     });
