@@ -158,21 +158,33 @@ describe("Market module", () => {
         isInitial: () => true,
         isDraft: () => false,
         isValid: () => true,
+        getDto: () => ({
+          state: "Initial",
+        }),
       } as ProposalNew;
       const proposal2 = {
         isInitial: () => true,
         isDraft: () => false,
         isValid: () => true,
+        getDto: () => ({
+          state: "Initial",
+        }),
       } as ProposalNew;
       const proposal3 = {
         isInitial: () => false,
         isDraft: () => true,
         isValid: () => true,
+        getDto: () => ({
+          state: "Draft",
+        }),
       } as ProposalNew;
       const proposal4 = {
         isInitial: () => false,
         isDraft: () => true,
         isValid: () => true,
+        getDto: () => ({
+          state: "Draft",
+        }),
       } as ProposalNew;
 
       marketModule.publishDemand = jest.fn().mockReturnValue(of({ id: "demand-id" }));
