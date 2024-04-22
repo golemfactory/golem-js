@@ -98,10 +98,14 @@ export interface DemandOptions {
 }
 
 export class DemandNew {
+  private logger: Logger;
   constructor(
     public readonly id: string,
     public readonly offer: MarketApi.DemandOfferBaseDTO,
-  ) {}
+  ) {
+    this.logger = defaultLogger("market");
+    this.logger.debug("Subscribing for proposals matched with the demand", { demandId: this.id, offer });
+  }
 }
 
 /**
