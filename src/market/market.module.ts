@@ -314,7 +314,10 @@ export class MarketModuleImpl implements MarketModule {
         }
       }),
       // for each proposal -> filter out all states other than draft
-      filter((proposal) => proposal.isDraft()),
+      filter((proposal) => {
+        this.logger.debug("Last proposal filter", { state: proposal.getDto().state });
+        return proposal.isDraft();
+      }),
       // for each draft proposal -> add them to the buffer
       bufferCount(options.bufferSize || 50),
     );
