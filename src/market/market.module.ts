@@ -2,7 +2,7 @@
 import { EventEmitter } from "eventemitter3";
 import { DemandConfig, DemandNew, DemandOptions, GolemMarketError, MarketErrorCode, ProposalFilter } from "./index";
 import { Agreement, AgreementOptions } from "../agreement";
-import { YagnaApi } from "../shared/utils";
+import { Logger, YagnaApi, defaultLogger } from "../shared/utils";
 import { Allocation, PaymentModule } from "../payment";
 import { Package } from "./package";
 import { bufferCount, filter, Observable, switchMap, tap } from "rxjs";
@@ -136,9 +136,12 @@ export interface MarketModule {
 type ProposalEvent = MarketApi.ProposalEventDTO & MarketApi.ProposalRejectedEventDTO;
 
 export class MarketModuleImpl implements MarketModule {
+  private logger: Logger;
   events: EventEmitter<MarketEvents> = new EventEmitter<MarketEvents>();
 
-  constructor(private readonly yagnaApi: YagnaApi) {}
+  constructor(private readonly yagnaApi: YagnaApi) {
+    this.logger = defaultLogger("market");
+  }
 
   async buildDemand(
     taskPackage: Package,
@@ -182,6 +185,7 @@ export class MarketModuleImpl implements MarketModule {
         }
         id = idOrError;
         subscriber.next(new DemandNew(id, offer));
+        this.logger.debug("Subscribing for proposals matched with the demand", { demandId: id, offer });
       };
       subscribeDemand();
 
