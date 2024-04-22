@@ -304,7 +304,13 @@ export class MarketModuleImpl implements MarketModule {
       // for each demand created -> start collecting all proposals
       switchMap((demand) => this.subscribeForProposals(demand)),
       // for each proposal collected -> filter out undesired and invalid ones
-      filter((proposal) => proposal.isValid()),
+      filter((proposal) => {
+        const isValid = proposal.isValid();
+        if (!isValid) {
+          this.logger.debug("Proposal is not valid", { proposalId: proposal.id });
+        }
+        return isValid;
+      }),
       filter((proposal) => !options.filter || options.filter(proposal)),
       // for each valid proposal -> start negotiating if it's not in draft state yet
       tap((proposal) => {
