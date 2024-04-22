@@ -255,6 +255,7 @@ export class MarketModuleImpl implements MarketModule {
       throw new Error(`Failed to create counter-offer ${newProposalId}`);
     }
     const proposalModel = await this.yagnaApi.market.getProposalOffer(receivedProposal.demand.id, newProposalId);
+    this.logger.debug("A new offer has been negotiated", { proposalId: proposalModel.proposalId });
     return new ProposalNew(proposalModel, receivedProposal.demand);
   }
 
@@ -304,13 +305,7 @@ export class MarketModuleImpl implements MarketModule {
       // for each demand created -> start collecting all proposals
       switchMap((demand) => this.subscribeForProposals(demand)),
       // for each proposal collected -> filter out undesired and invalid ones
-      filter((proposal) => {
-        const isValid = proposal.isValid();
-        if (!isValid) {
-          this.logger.debug("Proposal is not valid", { proposalId: proposal.id });
-        }
-        return isValid;
-      }),
+      filter((proposal) => proposal.isValid()),
       filter((proposal) => !options.filter || options.filter(proposal)),
       // for each valid proposal -> start negotiating if it's not in draft state yet
       tap((proposal) => {
