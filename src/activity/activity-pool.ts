@@ -20,6 +20,7 @@ export interface ActivityPoolEvents {
   acquired: (activity: ActivityDTO) => void;
   released: (activity: ActivityDTO) => void;
   destroyed: (activity: ActivityDTO) => void;
+  created: (activity: ActivityDTO) => void;
   error: (error: GolemWorkError) => void;
 }
 
@@ -94,7 +95,6 @@ export class ActivityPool {
   async destroy(activity: WorkContext) {
     await this.activityPool.destroy(activity);
     await this.agreementPool.destroy(activity.activity.agreement);
-    this.events.emit("destroyed", activity.getDto());
   }
 
   /**
@@ -142,17 +142,19 @@ export class ActivityPool {
           const activity = await this.modules.activity.createActivity(agreement);
           const ctx = new WorkContext(activity, {});
           await ctx.before();
+          this.events.emit("created", ctx.getDto());
           return ctx;
         } catch (err) {
           this.logger.error("Failed to create new activity for the pool", err);
           throw err;
         }
       },
-      destroy: async (activity: WorkContext) => {
+      destroy: async (ctx: WorkContext) => {
         try {
           this.logger.debug("Destroying activity from the pool");
-          await this.modules.activity.destroyActivity(activity.activity);
-          await this.agreementPool.release(activity.activity.agreement);
+          await this.modules.activity.destroyActivity(ctx.activity);
+          await this.agreementPool.release(ctx.activity.agreement);
+          this.events.emit("destroyed", ctx.getDto());
         } catch (err) {
           this.logger.error("Failed to destroy the activity in the pool", err);
           throw err;

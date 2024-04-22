@@ -19,6 +19,7 @@ export interface AgreementPoolEvents {
   end: () => void;
   acquired: (agreement: AgreementDTO) => void;
   released: (agreement: AgreementDTO) => void;
+  created: (agreement: AgreementDTO) => void;
   destroyed: (agreement: AgreementDTO) => void;
   error: (error: GolemMarketError) => void;
 }
@@ -82,7 +83,6 @@ export class AgreementPool {
 
   async destroy(agreement: Agreement): Promise<void> {
     await this.agreementPool.destroy(agreement);
-    this.events.emit("destroyed", agreement.getDto());
   }
 
   /**
@@ -120,7 +120,13 @@ export class AgreementPool {
         try {
           this.logger.debug("Creating new agreement to add to pool");
           const proposal = await this.proposalPool.acquire();
-          return this.modules.market.proposeAgreement(this.modules.payment, proposal, this.options?.agreementOptions);
+          const agreement = await this.modules.market.proposeAgreement(
+            this.modules.payment,
+            proposal,
+            this.options?.agreementOptions,
+          );
+          this.events.emit("created", agreement.getDto());
+          return agreement;
         } catch (err) {
           this.logger.error("Failed to reach the final agreement with the Provider and add it to the pool", err);
           throw err;
@@ -131,6 +137,7 @@ export class AgreementPool {
           this.logger.debug("Destroying agreement from the pool");
           await this.modules.market.terminateAgreement(agreement, "Finished");
           await this.proposalPool.remove(agreement.proposal);
+          this.events.emit("destroyed", agreement.getDto());
         } catch (err) {
           this.logger.error("Failed to destroy the agreement in the pool", err);
           throw err;
