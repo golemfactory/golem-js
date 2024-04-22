@@ -2,7 +2,7 @@ import { ProposalNew } from "./proposal";
 import AsyncLock from "async-lock";
 import { EventEmitter } from "eventemitter3";
 import { GolemMarketError, MarketErrorCode } from "./error";
-import { sleep } from "../shared/utils";
+import { defaultLogger, Logger, sleep } from "../shared/utils";
 
 export type ProposalSelector = (proposals: ProposalNew[]) => ProposalNew;
 export type ProposalValidator = (proposal: ProposalNew) => boolean;
@@ -33,6 +33,8 @@ export interface ProposalPoolOptions {
    * @default 30
    */
   acquireTimeoutSec?: number;
+
+  logger?: Logger;
 }
 
 export interface ProposalPoolEvents {
@@ -57,6 +59,7 @@ export interface ProposalPoolEvents {
 export class DraftOfferProposalPool {
   public readonly events = new EventEmitter<ProposalPoolEvents>();
 
+  private logger: Logger;
   private readonly lock: AsyncLock = new AsyncLock();
 
   /** {@link ProposalPoolOptions.minCount} */
@@ -96,6 +99,8 @@ export class DraftOfferProposalPool {
     if (options?.acquireTimeoutSec && options.acquireTimeoutSec >= 0) {
       this.acquireTimeoutSec = options?.acquireTimeoutSec;
     }
+
+    this.logger = this.logger = options?.logger || defaultLogger("proposal-pool");
   }
 
   /**
@@ -103,10 +108,12 @@ export class DraftOfferProposalPool {
    */
   public add(proposal: ProposalNew) {
     if (!proposal.isDraft()) {
+      this.logger.error("Cannot add a non-draft proposal to the pool", { proposalId: proposal.id });
       throw new GolemMarketError("Cannot add a non-draft proposal to the pool", MarketErrorCode.InvalidProposal);
     }
     this.available.add(proposal);
     this.events.emit("added", proposal);
+    this.logger.debug("Added proposal to the poll", { proposalId: proposal.id });
   }
 
   /**
