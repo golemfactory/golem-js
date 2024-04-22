@@ -2,10 +2,10 @@
 import { EventEmitter } from "eventemitter3";
 import { DemandConfig, DemandNew, DemandOptions, GolemMarketError, MarketErrorCode, ProposalFilter } from "./index";
 import { Agreement, AgreementOptions } from "../agreement";
-import { YagnaApi } from "../shared/utils";
+import { Logger, YagnaApi, defaultLogger } from "../shared/utils";
 import { Allocation, PaymentModule } from "../payment";
 import { Package } from "./package";
-import { bufferCount, filter, Observable, switchMap, tap } from "rxjs";
+import { bufferTime, filter, Observable, switchMap, tap } from "rxjs";
 import { MarketApi } from "ya-ts-client";
 import { ProposalNew } from "./proposal";
 import { DecorationsBuilder } from "./builder";
@@ -106,10 +106,9 @@ export interface MarketModule {
   proposeAgreement(paymentModule: PaymentModule, proposal: ProposalNew, options?: AgreementOptions): Promise<Agreement>;
 
   /**
-   *
    * @return The Agreement that has been terminated via Yagna
    */
-  terminateAgreement(agreement: Agreement, reason?: string): Promise<Agreement>;
+  terminateAgreement(agreement: Agreement, reason: string): Promise<Agreement>;
 
   /**
    * Helper method that will allow reaching an agreement for the user without dealing with manual labour of demand/subscription
@@ -137,9 +136,12 @@ export interface MarketModule {
 type ProposalEvent = MarketApi.ProposalEventDTO & MarketApi.ProposalRejectedEventDTO;
 
 export class MarketModuleImpl implements MarketModule {
+  private logger: Logger;
   events: EventEmitter<MarketEvents> = new EventEmitter<MarketEvents>();
 
-  constructor(private readonly yagnaApi: YagnaApi) {}
+  constructor(private readonly yagnaApi: YagnaApi) {
+    this.logger = defaultLogger("market");
+  }
 
   async buildDemand(
     taskPackage: Package,
@@ -183,6 +185,7 @@ export class MarketModuleImpl implements MarketModule {
         }
         id = idOrError;
         subscriber.next(new DemandNew(id, offer));
+        this.logger.debug("Subscribing for proposals matched with the demand", { demandId: id, offer });
       };
       subscribeDemand();
 
@@ -213,6 +216,7 @@ export class MarketModuleImpl implements MarketModule {
           const proposals = await proposalPromise;
           const successfulProposals = proposals.filter((proposal) => !proposal.reason);
           successfulProposals.forEach((proposal) => subscriber.next(new ProposalNew(proposal.proposal, demand)));
+          this.logger.debug("Received proposal events from subscription", { count: proposals.length });
         } catch (error) {
           if (error instanceof MarketApi.CancelError) {
             return;
@@ -277,7 +281,7 @@ export class MarketModuleImpl implements MarketModule {
   }
 
   async terminateAgreement(agreement: Agreement, reason: string): Promise<Agreement> {
-    await agreement.terminate({ reason });
+    await agreement.terminate(reason);
     return agreement;
   }
 
@@ -295,6 +299,7 @@ export class MarketModuleImpl implements MarketModule {
     demandOptions?: DemandOptions;
     filter?: ProposalFilterNew;
     bufferSize?: number;
+    bufferTimeout?: number;
   }): Observable<ProposalNew[]> {
     return this.publishDemand(options.demandOffer, options.demandOptions?.expirationSec).pipe(
       // for each demand created -> start collecting all proposals
@@ -311,7 +316,7 @@ export class MarketModuleImpl implements MarketModule {
       // for each proposal -> filter out all states other than draft
       filter((proposal) => proposal.isDraft()),
       // for each draft proposal -> add them to the buffer
-      bufferCount(options.bufferSize || 50),
+      bufferTime(options.bufferTimeout ?? 1_000, null, options.bufferSize || 10),
     );
   }
 }

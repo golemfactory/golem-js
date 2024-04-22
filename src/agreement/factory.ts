@@ -51,7 +51,7 @@ export class AgreementFactory {
         throw new GolemMarketError(
           `Unable to create agreement. Invalid response from the server`,
           MarketErrorCode.AgreementCreationFailed,
-          // proposal.demand, TODO
+          proposal.demand,
         );
       }
       // const data = await this.yagnaApi.market.getAgreement(agreementId);
@@ -69,8 +69,7 @@ export class AgreementFactory {
       throw new GolemMarketError(
         `Unable to create agreement ${error?.response?.data?.message || error?.response?.data || error}`,
         MarketErrorCode.AgreementCreationFailed,
-        undefined,
-        // proposal.demand,
+        proposal.demand,
         error,
       );
     }

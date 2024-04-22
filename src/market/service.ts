@@ -155,11 +155,10 @@ export class MarketService {
     try {
       const { result: isProposalValid, reason } = await this.isProposalValid(proposal);
       if (isProposalValid) {
-        // TODO
-        // const chosenPlatform = this.allocation.paymentPlatform;
-        // await proposal
-        //   .respond(chosenPlatform)
-        //   .catch((e) => this.logger.debug(`Unable to respond proposal`, { id: proposal.id, e }));
+        const chosenPlatform = this.allocation.paymentPlatform;
+        await proposal
+          .respond(chosenPlatform)
+          .catch((e) => this.logger.debug(`Unable to respond proposal`, { id: proposal.id, e }));
         this.logger.debug(`Proposal has been responded`, { id: proposal.id });
       } else {
         this.proposalsCount.rejected++;

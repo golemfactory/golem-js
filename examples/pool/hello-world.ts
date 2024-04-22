@@ -1,13 +1,13 @@
 import {
-  YagnaApi,
-  MarketModuleImpl,
   ActivityModuleImpl,
-  PaymentModuleImpl,
-  DraftOfferProposalPool,
-  AgreementPool,
   ActivityPool,
-  Package,
+  AgreementPool,
   Allocation,
+  DraftOfferProposalPool,
+  MarketModuleImpl,
+  Package,
+  PaymentModuleImpl,
+  YagnaApi,
 } from "@golem-sdk/golem-js";
 
 (async function main() {
@@ -15,11 +15,13 @@ import {
 
   try {
     await yagnaApi.connect();
+
     const modules = {
       market: new MarketModuleImpl(yagnaApi),
       activity: new ActivityModuleImpl(yagnaApi),
       payment: new PaymentModuleImpl(yagnaApi),
     };
+
     const demandOptions = {
       demand: {
         image: "golem/alpine:latest",
@@ -48,6 +50,7 @@ import {
     const workload = Package.create({
       imageTag: demandOptions.demand.image,
     });
+
     const allocation = await Allocation.create(yagnaApi, {
       account: {
         address: (await yagnaApi.identity.getIdentity()).identity,
@@ -55,27 +58,23 @@ import {
       },
       budget: 1,
     });
+
     const demandOffer = await modules.market.buildDemand(workload, allocation, {});
+
     const proposalSubscription = modules.market
       .startCollectingProposals({
         demandOffer,
         paymentPlatform: "erc20-holesky-tglm",
-        bufferSize: 15,
       })
       .subscribe((proposalsBatch) => proposalsBatch.forEach((proposal) => proposalPool.add(proposal)));
-    const agreementPool = new AgreementPool(modules, proposalPool, { replicas: { max: 2 } });
-    const activityPool = new ActivityPool(modules, agreementPool, {
-      replicas: 2,
-    });
 
-    const int = setInterval(() => {
-      console.log(
-        "Pool sizes (total/available/leased)",
-        proposalPool.count(),
-        proposalPool.availableCount(),
-        proposalPool.leasedCount(),
-      );
-    }, 5000);
+    /** How many providers you plan to engage simultaneously */
+    const CONCURRENCY = 2;
+
+    const agreementPool = new AgreementPool(modules, proposalPool, { replicas: { max: CONCURRENCY } });
+    const activityPool = new ActivityPool(modules, agreementPool, {
+      replicas: CONCURRENCY,
+    });
 
     const ctx = await activityPool.acquire();
     const result = await ctx.run("echo Hello World");
@@ -89,9 +88,8 @@ import {
     await activityPool.release(ctx2);
 
     proposalSubscription.unsubscribe();
-    await activityPool.drain();
-    await agreementPool.drain();
-    clearInterval(int);
+    await activityPool.drainAndClear();
+    await agreementPool.drainAndClear();
   } catch (err) {
     console.error("Pool execution failed:", err);
   } finally {

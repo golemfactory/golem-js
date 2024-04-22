@@ -20,6 +20,7 @@ export interface ActivityPoolEvents {
   acquired: (activity: ActivityDTO) => void;
   released: (activity: ActivityDTO) => void;
   destroyed: (activity: ActivityDTO) => void;
+  created: (activity: ActivityDTO) => void;
   error: (error: GolemWorkError) => void;
 }
 
@@ -94,11 +95,20 @@ export class ActivityPool {
   async destroy(activity: WorkContext) {
     await this.activityPool.destroy(activity);
     await this.agreementPool.destroy(activity.activity.agreement);
-    this.events.emit("destroyed", activity.getDto());
   }
 
-  async drain() {
-    return this.activityPool.drain();
+  /**
+   * Sets the pool into draining mode and then clears it
+   *
+   * When set to drain mode, no new acquires will be possible. At the same time, all activities in the pool will be destroyed on the Provider.
+   *
+   * @return Resolves when all activities in the pool are destroyed
+   */
+  async drainAndClear() {
+    await this.activityPool.drain();
+    await this.activityPool.clear();
+    this.events.emit("end");
+    return;
   }
 
   async runOnce<OutputType>(worker: Worker<OutputType>): Promise<OutputType> {
@@ -124,6 +134,13 @@ export class ActivityPool {
     return this.activityPool.available;
   }
 
+  /**
+   * Wait till the pool is ready to use (min number of items in pool are usable)
+   */
+  ready(): Promise<void> {
+    return this.activityPool.ready();
+  }
+
   private createPoolFactory(): Factory<WorkContext> {
     return {
       create: async (): Promise<WorkContext> => {
@@ -132,12 +149,14 @@ export class ActivityPool {
         const activity = await this.modules.activity.createActivity(agreement);
         const ctx = new WorkContext(activity, {});
         await ctx.before();
+        this.events.emit("created", ctx.getDto());
         return ctx;
       },
-      destroy: async (activity: WorkContext) => {
+      destroy: async (ctx: WorkContext) => {
         this.logger.debug("Destroying activity from the pool");
-        await this.modules.activity.destroyActivity(activity.activity);
-        await this.agreementPool.release(activity.activity.agreement);
+        await this.modules.activity.destroyActivity(ctx.activity);
+        await this.agreementPool.release(ctx.activity.agreement);
+        this.events.emit("destroyed", ctx.getDto());
       },
       validate: async (activity: WorkContext) => {
         try {

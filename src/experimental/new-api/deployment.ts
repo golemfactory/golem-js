@@ -174,12 +174,8 @@ export class Deployment {
           demandOptions: demandBuildOptions.demand,
         })
         .subscribe({
-          next: (proposals) => {
-            proposals.forEach((proposal) => proposalPool.add(proposal));
-          },
-          error: (e) => {
-            this.logger.error("Error while collecting proposals", e);
-          },
+          next: (proposals) => proposals.forEach((proposal) => proposalPool.add(proposal)),
+          error: (e) => this.logger.error("Error while collecting proposals", e),
         });
 
       const agreementPool = new AgreementPool(this.modules, proposalPool, agreementPoolOptions);
@@ -191,6 +187,8 @@ export class Deployment {
         activityPool,
       });
     }
+
+    await this.waitForDeployment();
 
     this.events.emit("ready");
   }
@@ -211,8 +209,8 @@ export class Deployment {
       const stopPools = Array.from(this.pools.values()).map((pool) =>
         Promise.allSettled([
           pool.proposalSubscription.unsubscribe(),
-          pool.agreementPool.drain(),
-          pool.activityPool.drain(),
+          pool.agreementPool.drainAndClear(),
+          pool.activityPool.drainAndClear(),
         ]),
       );
       await Promise.allSettled(stopPools);
@@ -221,9 +219,10 @@ export class Deployment {
       await Promise.allSettled(stopNetworks);
 
       this.state = DeploymentState.STOPPED;
-    } catch (e) {
+    } catch (err) {
+      this.logger.error("The deployment failed with an error", err);
       this.state = DeploymentState.ERROR;
-      throw e;
+      throw err;
     }
 
     this.events.emit("end");
@@ -243,6 +242,13 @@ export class Deployment {
       throw new GolemUserError(`Network ${name} not found`);
     }
     return network;
+  }
+
+  private async waitForDeployment() {
+    this.logger.info("Waiting for all components to be deployed...");
+    const readyActivityPools = [...this.pools.values()].map((component) => component.activityPool.ready());
+    await Promise.all(readyActivityPools);
+    this.logger.info("Components deployed and ready to use");
   }
 
   private prepareParams(options: CreateActivityPoolOptions): {

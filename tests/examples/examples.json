@@ -1,1 +1,5 @@
-[{ "cmd": "tsx", "path": "examples/basic/hello-world.ts" }]
+[
+  { "cmd": "tsx", "path": "examples/basic/hello-world.ts" },
+  { "cmd": "tsx", "path": "examples/pool/hello-world.ts" },
+  { "cmd": "tsx", "path": "examples/deployment/new-api.ts" }
+]
