@@ -207,15 +207,14 @@ export class Demand {
             });
             continue;
           } else if (event.eventType !== "ProposalEvent") continue;
-          // TODO:
-          // const proposal = new Proposal(
-          //   this,
-          //   event.proposal.state === "Draft" ? this.findParentProposal(event.proposal.prevProposalId) : null,
-          //   this.setCounteringProposalReference.bind(this),
-          //   this.yagnaApi.market,
-          //   event.proposal,
-          // );
-          // this.events.emit("proposalReceived", proposal);
+          const proposal = new Proposal(
+            this,
+            event.proposal.state === "Draft" ? this.findParentProposal(event.proposal.prevProposalId) : null,
+            this.setCounteringProposalReference.bind(this),
+            this.yagnaApi.market,
+            event.proposal,
+          );
+          this.events.emit("proposalReceived", proposal);
         }
       } catch (error) {
         if (this.isRunning) {

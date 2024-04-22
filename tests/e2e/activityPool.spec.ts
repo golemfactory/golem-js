@@ -17,8 +17,8 @@ describe("ActivityPool", () => {
     activity: new ActivityModuleImpl(yagnaApi),
     payment: new PaymentModuleImpl(yagnaApi),
   };
-  const proposalPool = new DraftOfferProposalPool();
-  const agreementPool = new AgreementPool(modules, proposalPool);
+  let proposalPool;
+  let agreementPool;
   let allocation;
   let proposalSubscription;
 
@@ -39,6 +39,8 @@ describe("ActivityPool", () => {
   });
 
   beforeEach(async () => {
+    proposalPool = new DraftOfferProposalPool();
+    agreementPool = new AgreementPool(modules, proposalPool);
     const workload = Package.create({
       imageTag: "golem/alpine:latest",
     });
@@ -54,6 +56,7 @@ describe("ActivityPool", () => {
   afterEach(async () => {
     await proposalSubscription.unsubscribe();
     await agreementPool.drainAndClear();
+    proposalPool.clear();
   });
 
   it("should run a simple script on the activity from the pool", async () => {
@@ -93,7 +96,7 @@ describe("ActivityPool", () => {
   });
 
   it("should release the activity and reuse it again", async () => {
-    const pool = new ActivityPool(modules, agreementPool, { replicas: 2 });
+    const pool = new ActivityPool(modules, agreementPool, { replicas: 1 });
     const activity = await pool.acquire();
     const result1 = await activity.run("echo result-1");
     expect(result1.stdout?.toString().trim()).toEqual("result-1");
