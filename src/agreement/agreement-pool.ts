@@ -115,6 +115,13 @@ export class AgreementPool {
     return this.agreementPool.available;
   }
 
+  /**
+   * Wait till the pool is ready to use (min number of items in pool are usable)
+   */
+  ready(): Promise<void> {
+    return this.agreementPool.ready();
+  }
+
   private createPoolFactory(): Factory<Agreement> {
     return {
       create: async (): Promise<Agreement> => {
@@ -129,7 +136,7 @@ export class AgreementPool {
         return agreement;
       },
       destroy: async (agreement: Agreement) => {
-        this.logger.debug("Destroying agreement from the pool");
+        this.logger.debug("Destroying agreement from the pool", { agreementId: agreement.id });
         await this.modules.market.terminateAgreement(agreement, "Finished");
         await this.proposalPool.remove(agreement.proposal);
         this.events.emit("destroyed", agreement.getDto());
@@ -146,12 +153,5 @@ export class AgreementPool {
         }
       },
     };
-  }
-
-  /**
-   * Wait till the pool is ready to use (min number of items in pool are usable)
-   */
-  ready(): Promise<void> {
-    return this.agreementPool.ready();
   }
 }

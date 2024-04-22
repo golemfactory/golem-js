@@ -47,7 +47,6 @@ describe("ActivityPool", () => {
       .startCollectingProposals({
         demandOffer,
         paymentPlatform: "erc20-holesky-tglm",
-        bufferSize: 15,
       })
       .subscribe((proposalsBatch) => proposalsBatch.forEach((proposal) => proposalPool.add(proposal)));
   });
@@ -69,9 +68,9 @@ describe("ActivityPool", () => {
     await pool.drainAndClear();
   });
 
-  it.skip("should prepare two activity ready to use", async () => {
+  it("should prepare two activity ready to use", async () => {
     const pool = new ActivityPool(modules, agreementPool, { replicas: 2 });
-    // await pool.ready();
+    await pool.ready();
     expect(pool.getSize()).toEqual(2);
     expect(pool.getAvailable()).toEqual(2);
     expect(pool.getBorrowed()).toEqual(0);
@@ -107,7 +106,7 @@ describe("ActivityPool", () => {
     await pool.drainAndClear();
   });
 
-  it.skip("should terminate all activities and agreemnets after drain and clear the poll", async () => {
+  it("should terminate all activities and agreemnets after drain and clear the poll", async () => {
     const pool = new ActivityPool(modules, agreementPool, { replicas: 2 });
     const avtivityTerminsatedIds: string[] = [];
     const agreemnetTerminatedIds: string[] = [];
@@ -121,7 +120,9 @@ describe("ActivityPool", () => {
     await pool.release(activity2);
     await pool.drainAndClear();
     await agreementPool.drainAndClear();
-    expect(avtivityTerminsatedIds).toEqual([activity1.activity.id, activity2.activity.id]);
-    expect(agreemnetTerminatedIds).toEqual([activity1.activity.agreement.id, activity2.activity.agreement.id]);
+    expect(avtivityTerminsatedIds.sort()).toEqual([activity1.activity.id, activity2.activity.id].sort());
+    expect(agreemnetTerminatedIds.sort()).toEqual(
+      [activity1.activity.agreement.id, activity2.activity.agreement.id].sort(),
+    );
   });
 });

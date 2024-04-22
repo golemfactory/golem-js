@@ -174,12 +174,8 @@ export class Deployment {
           demandOptions: demandBuildOptions.demand,
         })
         .subscribe({
-          next: (proposals) => {
-            proposals.forEach((proposal) => proposalPool.add(proposal));
-          },
-          error: (e) => {
-            this.logger.error("Error while collecting proposals", e);
-          },
+          next: (proposals) => proposals.forEach((proposal) => proposalPool.add(proposal)),
+          error: (e) => this.logger.error("Error while collecting proposals", e),
         });
 
       const agreementPool = new AgreementPool(this.modules, proposalPool, agreementPoolOptions);

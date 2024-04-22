@@ -5,7 +5,7 @@ import { Agreement, AgreementOptions } from "../agreement";
 import { Logger, YagnaApi, defaultLogger } from "../shared/utils";
 import { Allocation, PaymentModule } from "../payment";
 import { Package } from "./package";
-import { bufferCount, filter, Observable, switchMap, tap } from "rxjs";
+import { bufferTime, filter, Observable, switchMap, tap } from "rxjs";
 import { MarketApi } from "ya-ts-client";
 import { ProposalNew } from "./proposal";
 import { DecorationsBuilder } from "./builder";
@@ -255,7 +255,6 @@ export class MarketModuleImpl implements MarketModule {
       throw new Error(`Failed to create counter-offer ${newProposalId}`);
     }
     const proposalModel = await this.yagnaApi.market.getProposalOffer(receivedProposal.demand.id, newProposalId);
-    this.logger.debug("A new offer has been negotiated", { proposalId: proposalModel.proposalId });
     return new ProposalNew(proposalModel, receivedProposal.demand);
   }
 
@@ -300,6 +299,7 @@ export class MarketModuleImpl implements MarketModule {
     demandOptions?: DemandOptions;
     filter?: ProposalFilterNew;
     bufferSize?: number;
+    bufferTimeout?: number;
   }): Observable<ProposalNew[]> {
     return this.publishDemand(options.demandOffer, options.demandOptions?.expirationSec).pipe(
       // for each demand created -> start collecting all proposals
@@ -314,12 +314,9 @@ export class MarketModuleImpl implements MarketModule {
         }
       }),
       // for each proposal -> filter out all states other than draft
-      filter((proposal) => {
-        this.logger.debug("Last proposal filter", { state: proposal.getDto().state });
-        return proposal.isDraft();
-      }),
+      filter((proposal) => proposal.isDraft()),
       // for each draft proposal -> add them to the buffer
-      bufferCount(options.bufferSize || 50),
+      bufferTime(options.bufferTimeout ?? 1_000, null, options.bufferSize || 10),
     );
   }
 }

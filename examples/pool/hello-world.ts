@@ -65,7 +65,6 @@ import {
       .startCollectingProposals({
         demandOffer,
         paymentPlatform: "erc20-holesky-tglm",
-        bufferSize: 15,
       })
       .subscribe((proposalsBatch) => proposalsBatch.forEach((proposal) => proposalPool.add(proposal)));
 

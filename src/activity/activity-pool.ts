@@ -138,7 +138,7 @@ export class ActivityPool {
    * Wait till the pool is ready to use (min number of items in pool are usable)
    */
   ready(): Promise<void> {
-    return this.agreementPool.ready();
+    return this.activityPool.ready();
   }
 
   private createPoolFactory(): Factory<WorkContext> {
