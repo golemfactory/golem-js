@@ -192,6 +192,8 @@ export class Deployment {
       });
     }
 
+    await this.waitForDeployment();
+
     this.events.emit("ready");
   }
 
@@ -244,6 +246,13 @@ export class Deployment {
       throw new GolemUserError(`Network ${name} not found`);
     }
     return network;
+  }
+
+  private async waitForDeployment() {
+    this.logger.info("Waiting for all components to be deployed...");
+    const readyActivityPools = [...this.pools.values()].map((component) => component.activityPool.ready());
+    await Promise.all(readyActivityPools);
+    this.logger.info("Components deployed and ready to use");
   }
 
   private prepareParams(options: CreateActivityPoolOptions): {

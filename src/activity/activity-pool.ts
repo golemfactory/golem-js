@@ -134,32 +134,29 @@ export class ActivityPool {
     return this.activityPool.available;
   }
 
+  /**
+   * Wait till the pool is ready to use (min number of items in pool are usable)
+   */
+  ready(): Promise<void> {
+    return this.agreementPool.ready();
+  }
+
   private createPoolFactory(): Factory<WorkContext> {
     return {
       create: async (): Promise<WorkContext> => {
-        try {
-          this.logger.debug("Creating new activity to add to pool");
-          const agreement = await this.agreementPool.acquire();
-          const activity = await this.modules.activity.createActivity(agreement);
-          const ctx = new WorkContext(activity, {});
-          await ctx.before();
-          this.events.emit("created", ctx.getDto());
-          return ctx;
-        } catch (err) {
-          this.logger.error("Failed to create new activity for the pool", err);
-          throw err;
-        }
+        this.logger.debug("Creating new activity to add to pool");
+        const agreement = await this.agreementPool.acquire();
+        const activity = await this.modules.activity.createActivity(agreement);
+        const ctx = new WorkContext(activity, {});
+        await ctx.before();
+        this.events.emit("created", ctx.getDto());
+        return ctx;
       },
       destroy: async (ctx: WorkContext) => {
-        try {
-          this.logger.debug("Destroying activity from the pool");
-          await this.modules.activity.destroyActivity(ctx.activity);
-          await this.agreementPool.release(ctx.activity.agreement);
-          this.events.emit("destroyed", ctx.getDto());
-        } catch (err) {
-          this.logger.error("Failed to destroy the activity in the pool", err);
-          throw err;
-        }
+        this.logger.debug("Destroying activity from the pool");
+        await this.modules.activity.destroyActivity(ctx.activity);
+        await this.agreementPool.release(ctx.activity.agreement);
+        this.events.emit("destroyed", ctx.getDto());
       },
       validate: async (activity: WorkContext) => {
         try {

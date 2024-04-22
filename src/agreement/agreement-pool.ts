@@ -1,8 +1,7 @@
 import { Agreement, AgreementOptions } from "./agreement";
 import { createPool, Factory, Pool } from "generic-pool";
 import { defaultLogger, Logger } from "../shared/utils";
-import { DraftOfferProposalPool } from "../market/draft-offer-proposal-pool";
-import { MarketModule, GolemMarketError, MarketErrorCode } from "../market";
+import { DraftOfferProposalPool, GolemMarketError, MarketErrorCode, MarketModule } from "../market";
 import { AgreementDTO } from "./service";
 import { EventEmitter } from "eventemitter3";
 import { PaymentModule } from "../payment";
@@ -23,6 +22,7 @@ export interface AgreementPoolEvents {
   destroyed: (agreement: AgreementDTO) => void;
   error: (error: GolemMarketError) => void;
 }
+
 const MAX_REPLICAS = 100;
 
 export class AgreementPool {
@@ -118,31 +118,21 @@ export class AgreementPool {
   private createPoolFactory(): Factory<Agreement> {
     return {
       create: async (): Promise<Agreement> => {
-        try {
-          this.logger.debug("Creating new agreement to add to pool");
-          const proposal = await this.proposalPool.acquire();
-          const agreement = await this.modules.market.proposeAgreement(
-            this.modules.payment,
-            proposal,
-            this.options?.agreementOptions,
-          );
-          this.events.emit("created", agreement.getDto());
-          return agreement;
-        } catch (err) {
-          this.logger.error("Failed to reach the final agreement with the Provider and add it to the pool", err);
-          throw err;
-        }
+        this.logger.debug("Creating new agreement to add to pool");
+        const proposal = await this.proposalPool.acquire();
+        const agreement = await this.modules.market.proposeAgreement(
+          this.modules.payment,
+          proposal,
+          this.options?.agreementOptions,
+        );
+        this.events.emit("created", agreement.getDto());
+        return agreement;
       },
       destroy: async (agreement: Agreement) => {
-        try {
-          this.logger.debug("Destroying agreement from the pool");
-          await this.modules.market.terminateAgreement(agreement, "Finished");
-          await this.proposalPool.remove(agreement.proposal);
-          this.events.emit("destroyed", agreement.getDto());
-        } catch (err) {
-          this.logger.error("Failed to destroy the agreement in the pool", err);
-          throw err;
-        }
+        this.logger.debug("Destroying agreement from the pool");
+        await this.modules.market.terminateAgreement(agreement, "Finished");
+        await this.proposalPool.remove(agreement.proposal);
+        this.events.emit("destroyed", agreement.getDto());
       },
       validate: async (agreement: Agreement) => {
         try {
@@ -156,5 +146,12 @@ export class AgreementPool {
         }
       },
     };
+  }
+
+  /**
+   * Wait till the pool is ready to use (min number of items in pool are usable)
+   */
+  ready(): Promise<void> {
+    return this.agreementPool.ready();
   }
 }
