@@ -95,6 +95,7 @@ export class AgreementPool {
   async drainAndClear() {
     await this.agreementPool.drain();
     await this.agreementPool.clear();
+    this.events.emit("end");
     return;
   }
 

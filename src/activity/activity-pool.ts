@@ -107,6 +107,7 @@ export class ActivityPool {
   async drainAndClear() {
     await this.activityPool.drain();
     await this.activityPool.clear();
+    this.events.emit("end");
     return;
   }
 
