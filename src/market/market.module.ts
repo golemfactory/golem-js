@@ -216,6 +216,7 @@ export class MarketModuleImpl implements MarketModule {
           const proposals = await proposalPromise;
           const successfulProposals = proposals.filter((proposal) => !proposal.reason);
           successfulProposals.forEach((proposal) => subscriber.next(new ProposalNew(proposal.proposal, demand)));
+          this.logger.debug("Received proposal events from subscription", { count: proposals.length });
         } catch (error) {
           if (error instanceof MarketApi.CancelError) {
             return;
