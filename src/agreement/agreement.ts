@@ -99,7 +99,7 @@ export class Agreement {
   getProviderInfo(): ProviderInfo {
     return {
       name: "todo",
-      id: "todo",
+      id: "todo" + this.id,
       walletAddress: "todo",
     };
   }
