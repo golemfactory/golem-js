@@ -3,8 +3,9 @@ import { EventEmitter } from "eventemitter3";
 import { Allocation, DebitNote, Invoice, InvoiceProcessor } from "./index";
 import { Promise } from "cypress/types/cy-bluebird";
 
-import { YagnaApi, YagnaEventSubscription } from "../shared/utils";
+import { defaultLogger, YagnaApi } from "../shared/utils";
 import { DebitNoteFilter, InvoiceFilter } from "./service";
+import { Observable } from "rxjs";
 
 export interface PaymentOptions {
   debitNoteFilter?: DebitNoteFilter;
@@ -24,9 +25,9 @@ export type CreateAllocationParams = {
 export interface PaymentModule {
   events: EventEmitter<PaymentEvents>;
 
-  subscribeForDebitNotes(): YagnaEventSubscription<DebitNote>;
+  subscribeForDebitNotes(): Observable<DebitNote>;
 
-  subscribeForInvoices(): YagnaEventSubscription<Invoice>;
+  subscribeForInvoices(): Observable<Invoice>;
 
   createAllocation(opts: CreateAllocationParams): Promise<Allocation>;
 
@@ -54,13 +55,16 @@ export interface PaymentModule {
 export class PaymentModuleImpl implements PaymentModule {
   events: EventEmitter<PaymentEvents> = new EventEmitter<PaymentEvents>();
 
-  constructor(private readonly yagnaApi: YagnaApi) {}
+  constructor(
+    private readonly yagnaApi: YagnaApi,
+    private readonly logger = defaultLogger("payment"),
+  ) {}
 
-  subscribeForDebitNotes(): YagnaEventSubscription<DebitNote> {
+  subscribeForDebitNotes(): Observable<DebitNote> {
     throw new Error("Method not implemented.");
   }
 
-  subscribeForInvoices(): YagnaEventSubscription<Invoice> {
+  subscribeForInvoices(): Observable<Invoice> {
     throw new Error("Method not implemented.");
   }
 

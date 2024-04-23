@@ -46,11 +46,11 @@ export interface ActivityModule {
 
 export class ActivityModuleImpl implements ActivityModule {
   public readonly events: EventEmitter<ActivityEvents> = new EventEmitter<ActivityEvents>();
-  private logger: Logger;
 
-  constructor(private readonly yagnaApi: YagnaApi) {
-    this.logger = defaultLogger("activity");
-  }
+  constructor(
+    private readonly yagnaApi: YagnaApi,
+    private readonly logger = defaultLogger("activity"),
+  ) {}
 
   async createActivity(agreement: Agreement, options?: ActivityOptions): Promise<Activity> {
     return await Activity.create(agreement, this.yagnaApi, options);

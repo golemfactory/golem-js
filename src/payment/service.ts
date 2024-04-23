@@ -4,10 +4,13 @@ import { BasePaymentOptions, PaymentConfig } from "./config";
 import { Invoice, InvoiceDTO } from "./invoice";
 import { DebitNote, DebitNoteDTO } from "./debit_note";
 import { Payments } from "./payments";
-import { Agreement } from "../agreement";
+import { Agreement, IPaymentApi } from "../agreement";
 import { AgreementPaymentProcess } from "./agreement_payment_process";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
 import { EventEmitter } from "eventemitter3";
+import { PaymentApiAdapter } from "../shared/yagna/adapters/payment-api-adapter";
+import { InvoiceRepository } from "../shared/yagna/repository/invoice-repository";
+import { DebitNoteRepository } from "../shared/yagna/repository/debit-note-repository";
 
 export interface PaymentServiceEvents {
   /**
@@ -53,12 +56,22 @@ export class PaymentService {
 
   public events = new EventEmitter<PaymentServiceEvents>();
 
+  /** @deprecated temporary solution */
+  public paymentApi: IPaymentApi;
+
   constructor(
     private readonly yagnaApi: YagnaApi,
     options?: PaymentOptions,
   ) {
     this.config = new PaymentConfig(options);
     this.logger = this.config.logger;
+
+    this.paymentApi = new PaymentApiAdapter(
+      this.yagnaApi,
+      new InvoiceRepository(this.yagnaApi.payment, this.yagnaApi.market),
+      new DebitNoteRepository(this.yagnaApi.payment, this.yagnaApi.market),
+      this.logger,
+    );
   }
 
   async run() {
@@ -128,6 +141,7 @@ export class PaymentService {
     }
   }
 
+  /** @deprecated, Moved to Lease Process */
   acceptPayments(agreement: Agreement) {
     this.logger.debug(`Starting to accept payments`, { agreementId: agreement.id });
 
@@ -150,6 +164,7 @@ export class PaymentService {
       new AgreementPaymentProcess(
         agreement,
         this.allocation,
+        this.paymentApi,
         {
           invoiceFilter: this.config.invoiceFilter,
           debitNoteFilter: this.config.debitNoteFilter,

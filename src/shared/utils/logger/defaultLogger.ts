@@ -1,4 +1,5 @@
 import debugLogger from "debug";
+import { Logger } from "./logger";
 
 type DefaultLoggerOptions = {
   /**
@@ -27,7 +28,7 @@ export function defaultLogger(
   opts: DefaultLoggerOptions = {
     disableAutoPrefix: false,
   },
-) {
+): Logger {
   const namespaceWithBase = getNamespace(namespace, opts.disableAutoPrefix);
   const logger = debugLogger(namespaceWithBase);
 
@@ -65,6 +66,5 @@ export function defaultLogger(
     error,
     warn,
     debug,
-    log,
   };
 }

@@ -4,3 +4,4 @@ export { AgreementFactory } from "./factory";
 export { AgreementConfig } from "./config";
 export * as AgreementSelectors from "./strategy";
 export * from "./agreement-pool";
+export * from "./lease-process";

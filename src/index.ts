@@ -6,7 +6,7 @@ export * from "./market/package";
 export * from "./payment";
 export * from "./network";
 export * from "./shared/utils";
-export * from "./shared/utils/yagna/yagnaApi";
+export * from "./shared/yagna";
 export * from "./activity/work";
 export * from "./shared/error/golem-error";
 export * from "./network/tcpProxy";
