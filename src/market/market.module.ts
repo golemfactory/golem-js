@@ -137,12 +137,12 @@ export interface MarketModule {
 type ProposalEvent = MarketApi.ProposalEventDTO & MarketApi.ProposalRejectedEventDTO;
 
 export class MarketModuleImpl implements MarketModule {
-  private logger: Logger;
   events: EventEmitter<MarketEvents> = new EventEmitter<MarketEvents>();
 
-  constructor(private readonly yagnaApi: YagnaApi) {
-    this.logger = defaultLogger("market");
-  }
+  constructor(
+    private readonly yagnaApi: YagnaApi,
+    private readonly logger = defaultLogger("market"),
+  ) {}
 
   async buildDemand(
     taskPackage: Package,

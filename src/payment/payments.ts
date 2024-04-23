@@ -5,6 +5,10 @@ import { DebitNote } from "./debit_note";
 import { GolemTimeoutError } from "../shared/error/golem-error";
 import { EventEmitter } from "eventemitter3";
 import { Subscription } from "rxjs";
+import { IPaymentApi } from "../agreement";
+import { PaymentApiAdapter } from "../shared/yagna/adapters/payment-api-adapter";
+import { InvoiceRepository } from "../shared/yagna/repository/invoice-repository";
+import { DebitNoteRepository } from "../shared/yagna/repository/debit-note-repository";
 
 export interface PaymentEvents {
   invoiceReceived: (invoice: Invoice) => void;
@@ -28,6 +32,8 @@ export class Payments {
   private debitNoteSubscription: Subscription | null = null;
   private invoiceSubscription: Subscription | null = null;
 
+  private paymentApi: IPaymentApi;
+
   static async create(yagnaApi: YagnaApi, options?: PaymentOptions) {
     return new Payments(yagnaApi, new PaymentConfig(options));
   }
@@ -38,6 +44,14 @@ export class Payments {
   ) {
     this.options = new PaymentConfig(options);
     this.logger = this.options.logger;
+
+    this.paymentApi = new PaymentApiAdapter(
+      this.yagnaApi,
+      new InvoiceRepository(yagnaApi.payment, yagnaApi.market),
+      new DebitNoteRepository(yagnaApi.payment, yagnaApi.market),
+      this.logger,
+    );
+
     this.subscribe().catch((error) => this.logger.error(`Unable to subscribe to payments`, { error }));
   }
 
@@ -78,7 +92,7 @@ export class Payments {
       if (event && event.eventType === "InvoiceReceivedEvent") {
         if (event.invoiceId) {
           try {
-            const invoice = await Invoice.create(event.invoiceId, this.yagnaApi, { ...this.options });
+            const invoice = await this.paymentApi.getInvoice(event.invoiceId);
             this.events.emit("invoiceReceived", invoice);
             this.logger.debug(`New Invoice received`, {
               id: invoice.id,
@@ -102,7 +116,7 @@ export class Payments {
       if (event && event.eventType === "DebitNoteReceivedEvent") {
         if (event.debitNoteId) {
           try {
-            const debitNote = await DebitNote.create(event.debitNoteId, this.yagnaApi, { ...this.options });
+            const debitNote = await this.paymentApi.getDebitNote(event.debitNoteId);
             this.events.emit("debitNoteReceived", debitNote);
             this.logger.debug("New Debit Note received", {
               agreementId: debitNote.agreementId,
@@ -136,9 +150,6 @@ export class InvoiceEvent extends Event {
   }
 }
 
-/**
- * @hidden
- */
 export class DebitNoteEvent extends Event {
   readonly debitNote: DebitNote;
 

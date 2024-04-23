@@ -38,7 +38,6 @@ export interface AgreementOptions {
 
 /**
  * Agreement module - an object representing the contract between the requestor and the provider.
- * @hidden
  */
 export class Agreement {
   private agreementData?: MarketApi.AgreementDTO;

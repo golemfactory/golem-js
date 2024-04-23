@@ -161,7 +161,6 @@ export class ActivityPool {
       create: async (): Promise<WorkContext> => {
         this.logger.debug("Creating new activity to add to pool");
         const agreement = await this.agreementPoolService.getAgreement();
-        this.paymentService.acceptPayments(agreement);
         const activity = await Activity.create(agreement, this.yagnaApi);
         const networkNode =
           this.networkService && this.identity ? await this.networkService?.addNode(this.identity) : undefined;

@@ -81,7 +81,6 @@ export class ActivityPool {
 
   private async createActivity(): Promise<Activity> {
     const agreement = await this.agreementService.getAgreement();
-    this.paymentService.acceptPayments(agreement);
     return Activity.create(agreement, this.yagnaApi, this.options);
   }
 }
