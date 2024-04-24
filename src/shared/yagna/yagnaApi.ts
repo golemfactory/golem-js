@@ -2,8 +2,7 @@ import * as YaTsClient from "ya-ts-client";
 import * as EnvUtils from "../utils/env";
 import { GolemConfigError, GolemPlatformError } from "../error/golem-error";
 import { v4 } from "uuid";
-import { Logger } from "../utils";
-import { defaultLogger } from "../utils";
+import { defaultLogger, ElementOf, Logger } from "../utils";
 import semverSatisfies from "semver/functions/satisfies.js"; // .js added for ESM compatibility
 import semverCoerce from "semver/functions/coerce.js"; // .js added for ESM compatibility
 import { BehaviorSubject } from "rxjs";
@@ -16,11 +15,6 @@ export type YagnaOptions = {
 };
 
 export const MIN_SUPPORTED_YAGNA = "0.13.2";
-
-/**
- * Utility type extracting the type of the element of a typed array
- */
-export type ElementOf<T> = T extends Array<infer U> ? U : never;
 
 // Workarounds for an issue with missing support for discriminators
 // {@link https://github.com/ferdikoomen/openapi-typescript-codegen/issues/985}
@@ -35,7 +29,16 @@ export type YagnaDebitNoteEvent = ElementOf<
 >;
 
 /**
- * Utility class that groups various Yagna APIs under a single wrapper, also an event consumer which produces events on rxjs BehaviourSubects
+ * Utility class that groups various Yagna APIs under a single wrapper
+ *
+ * This class has the following responsibilities:
+ *
+ * - restructures the services exposed by ya-ts-client hand makes more user-friendly
+ * - acts as a dependency container by exposing net, payment, gsb, service, activity services
+ * - implements an event reader that collects events from Yagna endpoints and allows subscribing to them on BehaviourSubjects
+ *
+ * End users of the SDK should not use this class and make use of {@link GolemNetwork} instead. This class is designed for
+ * SDK developers to use.
  */
 export class YagnaApi {
   public readonly appSessionId: string;
@@ -47,6 +50,7 @@ export class YagnaApi {
    * @example http://localhost:7465
    */
   public readonly basePath: string;
+
   public readonly identity: YaTsClient.IdentityApi.DefaultService;
   public market: YaTsClient.MarketApi.RequestorService;
   public activity: {
@@ -58,11 +62,9 @@ export class YagnaApi {
   public gsb: YaTsClient.GsbApi.RequestorService;
   public version: YaTsClient.VersionApi.DefaultService;
 
-  /** @deprecated */
   public debitNoteEvents$ = new BehaviorSubject<YagnaDebitNoteEvent | null>(null);
   private debitNoteEventsPoll: CancellablePoll<YagnaDebitNoteEvent> | null = null;
 
-  /** @deprecated */
   public invoiceEvents$ = new BehaviorSubject<YagnaInvoiceEvent | null>(null);
   private invoiceEventPoll: CancellablePoll<YagnaInvoiceEvent> | null = null;
 
@@ -157,7 +159,7 @@ export class YagnaApi {
 
     const identity = this.identity.getIdentity();
 
-    // this.startPollingEvents();
+    this.startPollingEvents();
 
     return identity;
   }
@@ -166,7 +168,7 @@ export class YagnaApi {
    * Terminates the Yagna API related activities
    */
   async disconnect() {
-    // await this.stopPollingEvents();
+    await this.stopPollingEvents();
   }
 
   public async getVersion(): Promise<string> {

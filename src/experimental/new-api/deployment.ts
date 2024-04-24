@@ -1,13 +1,12 @@
 import { GolemAbortError, GolemUserError } from "../../shared/error/golem-error";
 import { defaultLogger, Logger, YagnaApi } from "../../shared/utils";
 import { EventEmitter } from "eventemitter3";
-import { ActivityModule, ActivityModuleImpl, ActivityPool, ActivityPoolOptions } from "../../activity";
-import { MarketOptions, PaymentOptions } from "./types";
+import { ActivityModule, ActivityPool, ActivityPoolOptions } from "../../activity";
 import { Network, NetworkOptions } from "../../network";
 import { GftpStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../../shared/storage";
 import { validateDeployment } from "./validate-deployment";
-import { DemandBuildParams, DraftOfferProposalPool, MarketModule, MarketModuleImpl } from "../../market";
-import { Allocation, PaymentModule, PaymentModuleImpl } from "../../payment";
+import { DemandBuildParams, DraftOfferProposalPool, MarketModule } from "../../market";
+import { Allocation, PaymentModule } from "../../payment";
 import { AgreementPool, AgreementPoolOptions } from "../../agreement";
 import { CreateActivityPoolOptions } from "./builder";
 import { Package } from "../../market/package";
@@ -50,15 +49,10 @@ export type DeploymentComponents = {
   networks: { name: string; options: NetworkOptions }[];
 };
 
+export type DataTransferProtocol = "gftp" | "ws";
+
 export interface DeploymentOptions {
-  logger?: Logger;
-  api: {
-    key: string;
-    url: string;
-  };
-  market?: Partial<MarketOptions>;
-  payment?: Partial<PaymentOptions>;
-  dataTransferProtocol?: "gftp" | "ws" | StorageProvider;
+  dataTransferProtocol?: DataTransferProtocol;
 }
 
 /**
@@ -93,23 +87,25 @@ export class Deployment {
 
   constructor(
     private readonly components: DeploymentComponents,
-    private readonly options: DeploymentOptions,
+    deps: {
+      logger: Logger;
+      yagna: YagnaApi;
+      market: MarketModule;
+      activity: ActivityModule;
+      payment: PaymentModule;
+    },
+    options: DeploymentOptions,
   ) {
     validateDeployment(components);
-    this.logger = options.logger ?? defaultLogger("deployment");
 
-    this.yagnaApi = new YagnaApi({
-      apiKey: options.api.key,
-      basePath: options.api.url,
-    });
+    const { logger, yagna, ...modules } = deps;
 
-    this.modules = {
-      market: new MarketModuleImpl(this.yagnaApi),
-      activity: new ActivityModuleImpl(this.yagnaApi),
-      payment: new PaymentModuleImpl(this.yagnaApi),
-    };
+    this.logger = logger ?? defaultLogger("deployment");
+    this.yagnaApi = yagna;
 
-    this.dataTransferProtocol = this.getDataTransferProtocol(options, this.yagnaApi);
+    this.modules = modules;
+
+    this.dataTransferProtocol = this.getDataTransferProtocol(options.dataTransferProtocol);
 
     this.abortController.signal.addEventListener("abort", () => {
       this.logger.info("Abort signal received");
@@ -120,14 +116,18 @@ export class Deployment {
     });
   }
 
-  private getDataTransferProtocol(options: DeploymentOptions, yagnaApi: YagnaApi): StorageProvider {
-    if (!options.dataTransferProtocol || options.dataTransferProtocol === "gftp") {
+  private getDataTransferProtocol(
+    dataTransferProtocol: DataTransferProtocol | StorageProvider = "gftp",
+  ): StorageProvider {
+    if (dataTransferProtocol === "gftp") {
       return new GftpStorageProvider();
     }
-    if (options.dataTransferProtocol === "ws") {
-      return new WebSocketBrowserStorageProvider(yagnaApi, {});
+
+    if (dataTransferProtocol === "ws") {
+      return new WebSocketBrowserStorageProvider(this.yagnaApi, {});
     }
-    return options.dataTransferProtocol;
+
+    return dataTransferProtocol;
   }
 
   getState(): DeploymentState {

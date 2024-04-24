@@ -5,6 +5,7 @@ import { Activity, ActivityOptions, ActivityStateEnum } from "./index";
 import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
 import { Terminate } from "./script";
 import { GolemWorkError, WorkErrorCode } from "./work";
+import { GolemServices } from "../golem-network";
 
 export interface ActivityEvents {}
 
@@ -47,18 +48,30 @@ export interface ActivityModule {
 export class ActivityModuleImpl implements ActivityModule {
   public readonly events: EventEmitter<ActivityEvents> = new EventEmitter<ActivityEvents>();
 
-  constructor(
-    private readonly yagnaApi: YagnaApi,
-    private readonly logger = defaultLogger("activity"),
-  ) {}
+  private readonly yagnaApi: YagnaApi;
+
+  private readonly logger = defaultLogger("activity");
+
+  constructor(deps: GolemServices) {
+    this.logger = deps.logger;
+    this.yagnaApi = deps.yagna;
+  }
 
   async createActivity(agreement: Agreement, options?: ActivityOptions): Promise<Activity> {
-    return await Activity.create(agreement, this.yagnaApi, options);
+    const activity = await Activity.create(agreement, this.yagnaApi, options);
+
+    this.logger.info("Created activity", {
+      activityId: activity.id,
+      agreementId: agreement.id,
+      provider: agreement.getProviderInfo(),
+    });
+
+    return activity;
   }
 
   async resetActivity(activity: Activity): Promise<Activity> {
-    const terminateComand = new Terminate();
-    await activity.execute(terminateComand.toExeScriptRequest());
+    const terminateCommand = new Terminate();
+    await activity.execute(terminateCommand.toExeScriptRequest());
     const state = await activity.getState();
     if (state !== ActivityStateEnum.New) {
       throw new GolemWorkError(
@@ -74,6 +87,13 @@ export class ActivityModuleImpl implements ActivityModule {
 
   async destroyActivity(activity: Activity, reason: string): Promise<Activity> {
     await activity.stop();
+
+    this.logger.info("Destroyed activity", {
+      activityId: activity.id,
+      agreementId: activity.agreement.id,
+      provider: activity.agreement.getProviderInfo(),
+    });
+
     return activity;
   }
 }

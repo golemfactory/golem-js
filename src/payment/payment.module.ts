@@ -6,6 +6,7 @@ import { Promise } from "cypress/types/cy-bluebird";
 import { defaultLogger, YagnaApi } from "../shared/utils";
 import { DebitNoteFilter, InvoiceFilter } from "./service";
 import { Observable } from "rxjs";
+import { GolemServices } from "../golem-network";
 
 export interface PaymentOptions {
   debitNoteFilter?: DebitNoteFilter;
@@ -55,10 +56,14 @@ export interface PaymentModule {
 export class PaymentModuleImpl implements PaymentModule {
   events: EventEmitter<PaymentEvents> = new EventEmitter<PaymentEvents>();
 
-  constructor(
-    private readonly yagnaApi: YagnaApi,
-    private readonly logger = defaultLogger("payment"),
-  ) {}
+  private readonly yagnaApi: YagnaApi;
+
+  private readonly logger = defaultLogger("payment");
+
+  constructor(deps: GolemServices) {
+    this.logger = deps.logger;
+    this.yagnaApi = deps.yagna;
+  }
 
   subscribeForDebitNotes(): Observable<DebitNote> {
     throw new Error("Method not implemented.");

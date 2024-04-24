@@ -1,21 +1,20 @@
 import {
   ActivityPool,
-  ActivityModuleImpl,
   AgreementPool,
-  DraftOfferProposalPool,
-  MarketModuleImpl,
-  PaymentModuleImpl,
-  YagnaApi,
   Allocation,
+  DraftOfferProposalPool,
+  GolemNetwork,
   Package,
+  YagnaApi,
 } from "../../src";
 
 describe("ActivityPool", () => {
+  const glm = new GolemNetwork();
   const yagnaApi = new YagnaApi();
   const modules = {
-    market: new MarketModuleImpl(yagnaApi),
-    activity: new ActivityModuleImpl(yagnaApi),
-    payment: new PaymentModuleImpl(yagnaApi),
+    market: glm.market,
+    activity: glm.activity,
+    payment: glm.payment,
   };
   let proposalPool;
   let agreementPool;

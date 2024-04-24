@@ -1,15 +1,35 @@
 import { DebitNote } from "./debit_note";
-import { anything, imock, instance, mock, objectContaining, reset, verify, when } from "@johanblumenberg/ts-mockito";
+import { imock, instance, mock, reset, when } from "@johanblumenberg/ts-mockito";
 import { YagnaApi } from "../shared/utils";
 import { MarketApi, PaymentApi } from "ya-ts-client";
-import { GolemPaymentError, PaymentErrorCode } from "./error";
 import Decimal from "decimal.js-light";
+import { ProviderInfo } from "../agreement";
 
 const mockYagna = mock(YagnaApi);
 const mockPayment = mock(PaymentApi.RequestorService);
 const mockMarket = mock(MarketApi.RequestorService);
 const mockDebitNote = imock<PaymentApi.DebitNoteDTO>();
 const mockAgreement = imock<MarketApi.AgreementDTO>();
+
+const dto: PaymentApi.DebitNoteDTO = {
+  activityId: "activity-id",
+  agreementId: "agreement-id",
+  debitNoteId: "debit-note-id",
+  issuerId: "provider-node-id",
+  payeeAddr: "0xRequestorWallet",
+  payerAddr: "0xProviderWallet",
+  paymentPlatform: "erc20-polygon-glm",
+  recipientId: "requestor-node-id",
+  status: "RECEIVED",
+  timestamp: "2024-01-01T00.00.000Z",
+  totalAmountDue: "1",
+};
+
+const TEST_PROVIDER_INFO: ProviderInfo = {
+  name: "provider-name",
+  id: "provider-id",
+  walletAddress: "0xProviderWallet",
+};
 
 describe("Debit Notes", () => {
   beforeEach(() => {
@@ -43,42 +63,13 @@ describe("Debit Notes", () => {
 
   describe("creating", () => {
     it("should crete debit note", async () => {
-      const debitNote = await DebitNote.create("testId", instance(mockYagna));
-      expect(debitNote).toBeDefined();
+      const debitNote = new DebitNote(dto, TEST_PROVIDER_INFO);
+      expect(debitNote.id).toEqual(dto.debitNoteId);
     });
+
     it("should crete debit note with a big number amount", async () => {
-      when(mockDebitNote.totalAmountDue).thenReturn("0.009551938349900001");
-      const debitNote = await DebitNote.create("testId", instance(mockYagna));
+      const debitNote = new DebitNote({ ...dto, totalAmountDue: "0.009551938349900001" }, TEST_PROVIDER_INFO);
       expect(new Decimal("0.009551938349900001").eq(new Decimal(debitNote.totalAmountDue))).toEqual(true);
-    });
-  });
-
-  describe("accepting", () => {
-    it("should accept debit note", async () => {
-      const debitNote = await DebitNote.create("testId", instance(mockYagna));
-      await debitNote.accept("1", "testId");
-      verify(mockPayment.acceptDebitNote("testId", objectContaining({ totalAmountAccepted: "1" }))).once();
-    });
-
-    it("should throw GolemPaymentError if debit note cannot be accepted", async () => {
-      const errorYagnaApiMock = new Error("test error");
-      when(mockPayment.acceptDebitNote("testId", anything())).thenReject(errorYagnaApiMock);
-
-      const debitNote = await DebitNote.create("testId", instance(mockYagna));
-
-      await expect(debitNote.accept("1", "testId")).rejects.toMatchError(
-        new GolemPaymentError(
-          `Unable to accept debit note testId. ${errorYagnaApiMock}`,
-          PaymentErrorCode.DebitNoteAcceptanceFailed,
-          undefined,
-          {
-            id: "0x123",
-            name: "testProvider",
-            walletAddress: "0x12345",
-          },
-          errorYagnaApiMock,
-        ),
-      );
     });
   });
 });
