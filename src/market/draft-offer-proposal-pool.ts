@@ -113,7 +113,6 @@ export class DraftOfferProposalPool {
     }
     this.available.add(proposal);
     this.events.emit("added", proposal);
-    this.logger.debug("Added proposal to the poll", { proposalId: proposal.id });
   }
 
   /**

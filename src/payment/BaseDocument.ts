@@ -49,11 +49,4 @@ export abstract class BaseDocument<ModelType extends BaseModel> {
   public getStatus() {
     return this.status;
   }
-
-  /**
-   * Tells if the requestor should do anything about the document
-   */
-  public isPendingAction() {
-    return this.status === "RECEIVED";
-  }
 }

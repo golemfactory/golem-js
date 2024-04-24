@@ -1,96 +1,37 @@
 import { Invoice } from "./invoice";
-import { anything, imock, instance, mock, reset, when } from "@johanblumenberg/ts-mockito";
-import { YagnaApi } from "../shared/utils";
-import { PaymentApi, MarketApi } from "ya-ts-client";
-import { GolemPaymentError, PaymentErrorCode } from "./error";
+import { PaymentApi } from "ya-ts-client";
 import Decimal from "decimal.js-light";
 
-const mockYagna = mock(YagnaApi);
-const mockPayment = mock(PaymentApi.RequestorService);
-const mockMarket = mock(MarketApi.RequestorService);
-const mockAgreement = imock<MarketApi.AgreementDTO>();
-const mockOffer = imock<MarketApi.OfferDTO>();
+const TEST_PROVIDER_INFO = { id: "provider-id", name: "provider-name", walletAddress: "0xTestWallet" };
 
+// Skipped as the tests will be migrated to respective service unit test after refactoring
 describe("Invoice", () => {
-  beforeEach(() => {
-    reset(mockYagna);
-    reset(mockPayment);
-    reset(mockMarket);
-    reset(mockAgreement);
-    reset(mockOffer);
-
-    when(mockYagna.payment).thenReturn(instance(mockPayment));
-    when(mockYagna.market).thenReturn(instance(mockMarket));
-
-    when(mockAgreement.offer).thenReturn(instance(mockOffer));
-    when(mockOffer.properties).thenReturn({
-      "golem.node.id.name": "provider-test",
-    });
-
-    when(mockMarket.getAgreement("agreement-id")).thenResolve(instance(mockAgreement));
-
-    when(mockPayment.getInvoice("invoiceId")).thenResolve({
-      invoiceId: "invoiceId",
-      issuerId: "issuer-id",
-      payeeAddr: "0xPAYEE",
-      payerAddr: "0xPAYER",
-      recipientId: "recipient-id",
-      paymentPlatform: "holesky",
-      timestamp: "2023-01-01T00:00:00.000Z",
-      agreementId: "agreement-id",
-      status: "RECEIVED",
-      amount: "10.00",
-      paymentDueDate: "2023-01-02T00:00:00.000Z",
-      activityIds: ["activity-1"],
-    });
-  });
-
   describe("creating", () => {
     test("create invoice with a big number amount", async () => {
-      when(mockPayment.getInvoice("invoiceId")).thenResolve({
-        invoiceId: "invoiceId",
-        issuerId: "issuer-id",
-        payeeAddr: "0xPAYEE",
-        payerAddr: "0xPAYER",
-        recipientId: "recipient-id",
-        paymentPlatform: "holesky",
-        timestamp: "2023-01-01T00:00:00.000Z",
-        agreementId: "agreement-id",
-        status: "RECEIVED",
-        amount: "0.009551938349900001",
-        paymentDueDate: "2023-01-02T00:00:00.000Z",
-        activityIds: ["activity-1"],
-      });
-      const invoice = await Invoice.create("invoiceId", instance(mockYagna));
+      const invoice = new Invoice(
+        {
+          invoiceId: "invoiceId",
+          issuerId: "issuer-id",
+          payeeAddr: "0xPAYEE",
+          payerAddr: "0xPAYER",
+          recipientId: "recipient-id",
+          paymentPlatform: "holesky",
+          timestamp: "2023-01-01T00:00:00.000Z",
+          agreementId: "agreement-id",
+          status: "RECEIVED",
+          amount: "0.009551938349900001",
+          paymentDueDate: "2023-01-02T00:00:00.000Z",
+          activityIds: ["activity-1"],
+        },
+        TEST_PROVIDER_INFO,
+      );
       expect(new Decimal("0.009551938349900001").eq(new Decimal(invoice.amount))).toEqual(true);
     });
   });
 
-  describe("accepting", () => {
-    test("throw GolemPaymentError if invoice cannot be accepted", async () => {
-      const errorYagnaApiMock = new Error("test error");
-      when(mockPayment.acceptInvoice("invoiceId", anything())).thenReject(errorYagnaApiMock);
-
-      const invoice = await Invoice.create("invoiceId", instance(mockYagna));
-
-      await expect(invoice.accept("1", "testAllocationId")).rejects.toMatchError(
-        new GolemPaymentError(
-          `Unable to accept invoice invoiceId ${errorYagnaApiMock}`,
-          PaymentErrorCode.InvoiceAcceptanceFailed,
-          undefined,
-          {
-            id: "issuer-id",
-            name: "provider-test",
-            walletAddress: "0xPAYEE",
-          },
-          errorYagnaApiMock,
-        ),
-      );
-    });
-  });
   describe("isSameAs", () => {
     test("returns true if the invoices share required properties", async () => {
-      when(mockPayment.getInvoice("invoice-a")).thenResolve({
+      const dto: PaymentApi.InvoiceDTO = {
         invoiceId: "invoice-a",
         issuerId: "issuer-id",
         payeeAddr: "0xPAYEE",
@@ -103,47 +44,50 @@ describe("Invoice", () => {
         amount: "10.00",
         paymentDueDate: "2023-01-02T00:00:00.000Z",
         activityIds: ["activity-1"],
-      });
+      };
 
-      const invoiceA = await Invoice.create("invoice-a", instance(mockYagna));
-      const invoiceB = await Invoice.create("invoice-a", instance(mockYagna));
+      const invoiceA = new Invoice(dto, TEST_PROVIDER_INFO);
+      const invoiceB = new Invoice(dto, TEST_PROVIDER_INFO);
 
       expect(invoiceA.isSameAs(invoiceB)).toEqual(true);
     });
 
     test("returns false if the invoices don't share required properties", async () => {
-      when(mockPayment.getInvoice("invoice-a")).thenResolve({
-        invoiceId: "invoice-a",
-        issuerId: "issuer-id",
-        payeeAddr: "0xPAYEE",
-        payerAddr: "0xPAYER",
-        recipientId: "recipient-id",
-        paymentPlatform: "holesky",
-        timestamp: "2023-01-01T00:00:00.000Z",
-        agreementId: "agreement-id",
-        status: "RECEIVED",
-        amount: "10.00",
-        paymentDueDate: "2023-01-02T00:00:00.000Z",
-        activityIds: ["activity-1"],
-      });
+      const invoiceA = new Invoice(
+        {
+          invoiceId: "invoice-a",
+          issuerId: "issuer-id",
+          payeeAddr: "0xPAYEE",
+          payerAddr: "0xPAYER",
+          recipientId: "recipient-id",
+          paymentPlatform: "holesky",
+          timestamp: "2023-01-01T00:00:00.000Z",
+          agreementId: "agreement-id",
+          status: "RECEIVED",
+          amount: "10.00",
+          paymentDueDate: "2023-01-02T00:00:00.000Z",
+          activityIds: ["activity-1"],
+        },
+        TEST_PROVIDER_INFO,
+      );
 
-      when(mockPayment.getInvoice("invoice-b")).thenResolve({
-        invoiceId: "invoice-b",
-        issuerId: "issuer-id",
-        payeeAddr: "0xPAYEE",
-        payerAddr: "0xPAYER",
-        recipientId: "recipient-id",
-        paymentPlatform: "holesky",
-        timestamp: "2023-01-01T00:00:00.000Z",
-        agreementId: "agreement-id",
-        status: "RECEIVED",
-        amount: "1000000000000000000000000000000.00",
-        paymentDueDate: "2023-01-02T00:00:00.000Z",
-        activityIds: ["activity-cheated"],
-      });
-
-      const invoiceA = await Invoice.create("invoice-a", instance(mockYagna));
-      const invoiceB = await Invoice.create("invoice-b", instance(mockYagna));
+      const invoiceB = new Invoice(
+        {
+          invoiceId: "invoice-b",
+          issuerId: "issuer-id",
+          payeeAddr: "0xPAYEE",
+          payerAddr: "0xPAYER",
+          recipientId: "recipient-id",
+          paymentPlatform: "holesky",
+          timestamp: "2023-01-01T00:00:00.000Z",
+          agreementId: "agreement-id",
+          status: "RECEIVED",
+          amount: "1000000000000000000000000000000.00",
+          paymentDueDate: "2023-01-02T00:00:00.000Z",
+          activityIds: ["activity-cheated"],
+        },
+        TEST_PROVIDER_INFO,
+      );
 
       expect(invoiceA.isSameAs(invoiceB)).toEqual(false);
     });

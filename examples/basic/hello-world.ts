@@ -1,47 +1,20 @@
-import {
-  ActivityModuleImpl,
-  Allocation,
-  DraftOfferProposalPool,
-  MarketModuleImpl,
-  Package,
-  PaymentModuleImpl,
-  WorkContext,
-  YagnaApi,
-  LeaseProcess,
-  InvoiceRepository,
-  DebitNoteRepository,
-  PaymentApiAdapter,
-} from "@golem-sdk/golem-js";
+import { Allocation, DraftOfferProposalPool, GolemNetwork, Package, WorkContext } from "@golem-sdk/golem-js";
 
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
 (async () => {
   const logger = pinoPrettyLogger({
-    level: "info",
+    level: "debug",
   });
 
-  const yagnaApi = new YagnaApi({
+  const glm = new GolemNetwork({
     logger,
   });
-
-  const paymentApiAdapter = new PaymentApiAdapter(
-    yagnaApi,
-    new InvoiceRepository(yagnaApi.payment, yagnaApi.market),
-    new DebitNoteRepository(yagnaApi.payment, yagnaApi.market),
-    logger,
-  );
 
   try {
-    await yagnaApi.connect();
-    await paymentApiAdapter.connect();
+    await glm.connect();
 
-    const modules = {
-      market: new MarketModuleImpl(yagnaApi, logger),
-      activity: new ActivityModuleImpl(yagnaApi, logger),
-      payment: new PaymentModuleImpl(yagnaApi, logger),
-    };
-
-    const demandOptions = {
+    const demand = {
       demand: {
         image: "golem/alpine:latest",
         resources: {
@@ -69,20 +42,20 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
     });
 
     const workload = Package.create({
-      imageTag: demandOptions.demand.image,
+      imageTag: demand.demand.image,
     });
 
-    const allocation = await Allocation.create(yagnaApi, {
+    const allocation = await Allocation.create(glm.services.yagna, {
       account: {
-        address: (await yagnaApi.identity.getIdentity()).identity,
+        address: (await glm.services.yagna.identity.getIdentity()).identity,
         platform: "erc20-holesky-tglm",
       },
       budget: 1,
     });
 
-    const demandOffer = await modules.market.buildDemand(workload, allocation, {});
+    const demandOffer = await glm.market.buildDemand(workload, allocation, {});
 
-    const proposalSubscription = modules.market
+    const proposalSubscription = glm.market
       .startCollectingProposals({
         demandOffer,
         paymentPlatform: "erc20-holesky-tglm",
@@ -91,12 +64,12 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
     const draftProposal = await proposalPool.acquire();
 
-    const agreement = await modules.market.proposeAgreement(modules.payment, draftProposal);
+    const agreement = await glm.market.proposeAgreement(glm.payment, draftProposal);
+    const lease = await glm.market.createLease(agreement, allocation);
 
-    const lease = new LeaseProcess(agreement, allocation, paymentApiAdapter, logger);
     // console.log(lease)
 
-    const activity = await modules.activity.createActivity(agreement);
+    const activity = await glm.activity.createActivity(agreement);
 
     // We managed to create the activity, no need to look for more agreement candidates
     proposalSubscription.unsubscribe();
@@ -110,17 +83,16 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
     console.log("Result=", result.stdout);
 
     // Start clean shutdown procedure for business components
-    await modules.activity.destroyActivity(activity);
-    await modules.market.terminateAgreement(agreement);
+    await glm.activity.destroyActivity(activity);
+    await glm.market.terminateAgreement(agreement);
     await proposalPool.remove(draftProposal);
 
     // This will keep the script waiting for payments etc
-    await lease.terminated();
+    await lease.finalized();
   } catch (err) {
     console.error("Failed to run example on Golem", err);
   } finally {
     // Clean shutdown of infrastructure components
-    await paymentApiAdapter.disconnect();
-    await yagnaApi.disconnect();
+    await glm.disconnect();
   }
 })().catch(console.error);

@@ -2,19 +2,13 @@ import { IPaymentApi } from "../../../agreement";
 import { BehaviorSubject, from, switchMap } from "rxjs";
 import { Allocation, DebitNote, Invoice } from "../../../payment";
 import { IInvoiceRepository } from "../../../payment/invoice";
-import { CancellablePoll, EventReaderFactory } from "../event-reader-factory";
 import { Logger, YagnaApi } from "../../utils";
-import { YagnaDebitNoteEvent, YagnaInvoiceEvent } from "../yagnaApi";
 import { IDebitNoteRepository } from "../../../payment/debit_note";
 
 export class PaymentApiAdapter implements IPaymentApi {
   public receivedInvoices$ = new BehaviorSubject<Invoice | null>(null);
-  private invoiceReader: CancellablePoll<YagnaInvoiceEvent> | null = null;
 
   public receivedDebitNotes$ = new BehaviorSubject<DebitNote | null>(null);
-  private debitNoteReader: CancellablePoll<YagnaDebitNoteEvent> | null = null;
-
-  private reader = new EventReaderFactory(this.logger);
 
   constructor(
     private readonly yagna: YagnaApi,
@@ -24,19 +18,12 @@ export class PaymentApiAdapter implements IPaymentApi {
   ) {}
 
   async connect() {
-    this.logger.info("Connecting Payment API Adapter");
+    this.logger.debug("Connecting Payment API Adapter");
 
-    const pollIntervalSec = 5;
-    const maxEvents = 100;
-
-    this.invoiceReader = this.reader.createEventReader("InvoiceEvents", (lastEventTimestamp) =>
-      this.yagna.payment.getInvoiceEvents(pollIntervalSec, lastEventTimestamp, maxEvents, this.yagna.appSessionId),
-    );
-
-    from(this.invoiceReader.pollValues())
+    from(this.yagna.invoiceEvents$)
       .pipe(
         switchMap((invoice) => {
-          if (invoice.invoiceId) {
+          if (invoice && invoice.invoiceId) {
             return this.invoiceRepo.getById(invoice.invoiceId);
           } else {
             return Promise.resolve(null);
@@ -49,14 +36,10 @@ export class PaymentApiAdapter implements IPaymentApi {
         complete: () => this.logger.debug("Finished reading InvoiceEvents"),
       });
 
-    this.debitNoteReader = this.reader.createEventReader("DebitNoteEvents", (lastEventTimestamp) =>
-      this.yagna.payment.getDebitNoteEvents(pollIntervalSec, lastEventTimestamp, maxEvents, this.yagna.appSessionId),
-    );
-
-    from(this.debitNoteReader.pollValues())
+    from(this.yagna.debitNoteEvents$)
       .pipe(
         switchMap((debitNote) => {
-          if (debitNote.debitNoteId) {
+          if (debitNote && debitNote.debitNoteId) {
             return this.debitNoteRepo.getById(debitNote.debitNoteId);
           } else {
             return Promise.resolve(null);
@@ -69,7 +52,7 @@ export class PaymentApiAdapter implements IPaymentApi {
         complete: () => this.logger.debug("Finished reading DebitNoteEvents"),
       });
 
-    this.logger.info("Payment API Adapter connected");
+    this.logger.debug("Payment API Adapter connected");
   }
 
   getInvoice(id: string): Promise<Invoice> {
@@ -81,10 +64,8 @@ export class PaymentApiAdapter implements IPaymentApi {
   }
 
   async disconnect() {
-    this.logger.info("Disconnecting Payment API Adapter");
-    await this.invoiceReader?.cancel();
-    await this.debitNoteReader?.cancel();
-    this.logger.info("Payment API Adapter disconnected");
+    this.logger.debug("Disconnecting Payment API Adapter");
+    this.logger.debug("Payment API Adapter disconnected");
   }
 
   async acceptInvoice(invoice: Invoice, allocation: Allocation, amount: string): Promise<Invoice> {

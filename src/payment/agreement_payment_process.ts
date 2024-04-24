@@ -161,6 +161,12 @@ export class AgreementPaymentProcess {
   }
 
   private async applyInvoice(invoice: Invoice) {
+    this.logger.debug("Applying invoice for agreement", {
+      invoiceId: invoice.id,
+      agreementId: invoice.agreementId,
+      provider: invoice.provider,
+    });
+
     if (this.invoice) {
       // Protects from possible fraud: someone sends a second, different invoice for the same agreement
       throw new GolemPaymentError(
@@ -171,7 +177,7 @@ export class AgreementPaymentProcess {
       );
     }
 
-    if (!invoice.isPendingAction()) {
+    if (invoice.getStatus() !== "RECEIVED") {
       throw new GolemPaymentError(
         `The invoice ${invoice.id} for agreement ${invoice.agreementId} has status ${invoice.getStatus()}, ` +
           `but we can accept only the ones with status RECEIVED`,

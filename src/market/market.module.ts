@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
 import { DemandConfig, DemandNew, DemandOptions, GolemMarketError, MarketErrorCode, ProposalFilter } from "./index";
-import { Agreement, AgreementOptions } from "../agreement";
-import { Logger, YagnaApi, defaultLogger } from "../shared/utils";
+import { Agreement, AgreementOptions, LeaseProcess } from "../agreement";
+import { defaultLogger, YagnaApi } from "../shared/utils";
 import { Allocation, PaymentModule } from "../payment";
 import { Package } from "./package";
 import { bufferTime, filter, Observable, switchMap, tap } from "rxjs";
@@ -10,27 +10,45 @@ import { MarketApi } from "ya-ts-client";
 import { ProposalNew } from "./proposal";
 import { DecorationsBuilder } from "./builder";
 import { ProposalFilterNew } from "./service";
-import { ProposalsBatch } from "./proposals_batch";
+import { GolemServices } from "../golem-network";
 
 export interface MarketEvents {}
 
+/**
+ * Use by legacy demand publishing code
+ */
 export interface DemandBuildParams {
   demand: DemandOptions;
   market: MarketOptions;
 }
 
+type DemandEngine = "vm" | "vm-nvidia" | "wasmtime";
+
 /**
- * -----*----*-----X----*-----X-----*
- *
- * const final = await sub.waitFor((p) => p.paretnId == 123);
+ * Represents the new demand specification which is accepted by GolemNetwork and MarketModule
  */
-export interface Resources {
+export interface DemandSpec {
+  demand: ComputeSpec;
+  market: MarketOptions;
+}
+
+export interface ComputeSpec {
+  /** The image that you want to deploy (assumes VM-like runtime  */
+  image: string;
+  engine?: DemandEngine;
+  resources?: Partial<DemandResources>;
+  durationHours?: number;
+}
+
+export interface DemandResources {
   /** The minimum CPU requirement for each service instance. */
-  minCpu?: number;
+  minCpu: number;
+
   /* The minimum memory requirement (in Gibibyte) for each service instance. */
-  minMemGib?: number;
+  minMemGib: number;
+
   /** The minimum storage requirement (in Gibibyte) for each service instance. */
-  minStorageGib?: number;
+  minStorageGib: number;
 }
 
 export interface MarketOptions {
@@ -132,6 +150,8 @@ export interface MarketModule {
     filter?: ProposalFilterNew;
     bufferSize?: number;
   }): Observable<ProposalNew[]>;
+
+  createLease(agreement: Agreement, allocation: Allocation): LeaseProcess;
 }
 
 type ProposalEvent = MarketApi.ProposalEventDTO & MarketApi.ProposalRejectedEventDTO;
@@ -139,10 +159,13 @@ type ProposalEvent = MarketApi.ProposalEventDTO & MarketApi.ProposalRejectedEven
 export class MarketModuleImpl implements MarketModule {
   events: EventEmitter<MarketEvents> = new EventEmitter<MarketEvents>();
 
-  constructor(
-    private readonly yagnaApi: YagnaApi,
-    private readonly logger = defaultLogger("market"),
-  ) {}
+  private readonly yagnaApi: YagnaApi;
+  private readonly logger = defaultLogger("market");
+
+  constructor(private readonly deps: GolemServices) {
+    this.logger = deps.logger;
+    this.yagnaApi = deps.yagna;
+  }
 
   async buildDemand(
     taskPackage: Package,
@@ -202,43 +225,21 @@ export class MarketModuleImpl implements MarketModule {
     });
   }
 
-  subscribeForProposals(
-    demand: DemandNew,
-    options?: {
-      maxOfferEvents?: number;
-      offerFetchingIntervalSec?: number;
-      minProposalsBatchSize?: number;
-      proposalsBatchReleaseTimeoutMs?: number;
-    },
-  ): Observable<ProposalNew> {
+  subscribeForProposals(demand: DemandNew): Observable<ProposalNew> {
     return new Observable<ProposalNew>((subscriber) => {
       let proposalPromise: MarketApi.CancelablePromise<ProposalEvent[]>;
       let isCancelled = false;
-      const proposalsBatch = new ProposalsBatch({
-        minBatchSize: options?.minProposalsBatchSize,
-        releaseTimeoutMs: options?.proposalsBatchReleaseTimeoutMs,
-      });
       const longPoll = async () => {
         if (isCancelled) {
           return;
         }
         try {
-          proposalPromise = this.yagnaApi.market.collectOffers(
-            demand.id,
-            options?.offerFetchingIntervalSec ?? 5,
-            options?.maxOfferEvents ?? 100,
-          ) as MarketApi.CancelablePromise<ProposalEvent[]>;
+          proposalPromise = this.yagnaApi.market.collectOffers(demand.id) as MarketApi.CancelablePromise<
+            ProposalEvent[]
+          >;
           const proposals = await proposalPromise;
           const successfulProposals = proposals.filter((proposal) => !proposal.reason);
-          successfulProposals.forEach((proposalEvent) => {
-            const proposal = new ProposalNew(proposalEvent.proposal, demand);
-            if (proposal.isInitial()) {
-              proposalsBatch.addProposal(proposal);
-            } else {
-              subscriber.next(proposal);
-            }
-          });
-          this.logger.debug("Received proposal events from subscription", { count: proposals.length });
+          successfulProposals.forEach((proposal) => subscriber.next(new ProposalNew(proposal.proposal, demand)));
         } catch (error) {
           if (error instanceof MarketApi.CancelError) {
             return;
@@ -251,24 +252,7 @@ export class MarketModuleImpl implements MarketModule {
         }
         longPoll();
       };
-      // reduce initial proposals to a set grouped by the provider's key to avoid duplicate offers
-      const batch = async () => {
-        if (isCancelled) {
-          return;
-        }
-        this.logger.debug("Waiting for proposals");
-        try {
-          await proposalsBatch.waitForProposals();
-          const proposals = await proposalsBatch.getProposals();
-          this.logger.debug("Received batch of proposals", { count: proposals.length });
-          proposals.forEach((proposal) => subscriber.next(proposal));
-        } catch (error) {
-          subscriber.error(error);
-        }
-        batch();
-      };
       longPoll();
-      batch();
       return () => {
         isCancelled = true;
         proposalPromise.cancel();
@@ -316,11 +300,19 @@ export class MarketModuleImpl implements MarketModule {
         agreement.proposal.demand,
       );
     }
+    this.logger.info("Established agreement", { agreementId: agreement.id, provider: agreement.getProviderInfo() });
     return agreement;
   }
 
   async terminateAgreement(agreement: Agreement, reason: string): Promise<Agreement> {
     await agreement.terminate(reason);
+
+    this.logger.info("Terminated agreement", {
+      agreementId: agreement.id,
+      provider: agreement.getProviderInfo(),
+      reason,
+    });
+
     return agreement;
   }
 

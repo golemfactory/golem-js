@@ -1,10 +1,11 @@
 import { _, deepEqual, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
-import { YagnaApi } from "../shared/utils";
+import { Logger, YagnaApi } from "../shared/utils";
 import { MarketModuleImpl } from "./market.module";
 import * as YaTsClient from "ya-ts-client";
 import { DemandNew } from "./demand";
 import { from, of, take } from "rxjs";
 import { ProposalNew } from "./proposal";
+import { IPaymentApi } from "../agreement";
 
 const mockYagna = mock(YagnaApi);
 const mockMarket = mock(YaTsClient.MarketApi.RequestorService);
@@ -16,7 +17,12 @@ beforeEach(() => {
   reset(mockYagna);
   reset(mockMarket);
   when(mockYagna.market).thenReturn(instance(mockMarket));
-  marketModule = new MarketModuleImpl(instance(mockYagna));
+
+  marketModule = new MarketModuleImpl({
+    paymentApi: instance(imock<IPaymentApi>()),
+    yagna: instance(mockYagna),
+    logger: instance(imock<Logger>()),
+  });
 });
 
 describe("Market module", () => {
