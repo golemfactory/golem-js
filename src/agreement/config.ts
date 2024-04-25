@@ -1,4 +1,4 @@
-import { AgreementOptions } from "./agreement";
+import { LegacyAgreementServiceOptions } from "./agreement";
 import { AgreementSelector, AgreementServiceOptions } from "./service";
 import { Logger } from "../shared/utils";
 import { randomAgreementSelectorWithPriorityForExistingOnes } from "./strategy";
@@ -12,15 +12,12 @@ const DEFAULTS = {
   agreementMaxPoolSize: 5,
 };
 
-/**
- * @internal
- */
-export class AgreementConfig {
+export class AgreementApiConfig {
   readonly agreementRequestTimeout: number;
   readonly agreementWaitingForApprovalTimeout: number;
   readonly logger?: Logger;
 
-  constructor(public readonly options?: AgreementOptions) {
+  constructor(public readonly options?: LegacyAgreementServiceOptions) {
     this.agreementRequestTimeout = options?.agreementRequestTimeout || DEFAULTS.agreementRequestTimeout;
     this.agreementWaitingForApprovalTimeout =
       options?.agreementWaitingForApprovalTimeout || DEFAULTS.agreementWaitingForApprovalTimeout;
@@ -29,9 +26,9 @@ export class AgreementConfig {
 }
 
 /**
- * @internal
+ * TODO: What about this one?
  */
-export class AgreementServiceConfig extends AgreementConfig {
+export class AgreementServiceConfig extends AgreementApiConfig {
   readonly agreementSelector: AgreementSelector;
   readonly agreementMaxEvents: number;
   readonly agreementMaxPoolSize: number;

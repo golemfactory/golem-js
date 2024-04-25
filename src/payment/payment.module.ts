@@ -7,24 +7,27 @@ import { defaultLogger, YagnaApi } from "../shared/utils";
 import { DebitNoteFilter, InvoiceFilter } from "./service";
 import { Observable } from "rxjs";
 import { GolemServices } from "../golem-network";
+import { PaymentSpec } from "../market";
 
-export interface PaymentOptions {
+export interface PaymentModuleOptions {
   debitNoteFilter?: DebitNoteFilter;
   invoiceFilter?: InvoiceFilter;
+  payment: PaymentSpec;
 }
 
-export interface PaymentOptions {
-  // TODO
+export interface PaymentPlatformOptions {
+  driver: string;
+  network: string;
 }
 
-export interface PaymentEvents {}
+export interface PaymentModuleEvents {}
 
 export type CreateAllocationParams = {
   amount: number;
 };
 
 export interface PaymentModule {
-  events: EventEmitter<PaymentEvents>;
+  events: EventEmitter<PaymentModuleEvents>;
 
   subscribeForDebitNotes(): Observable<DebitNote>;
 
@@ -54,13 +57,23 @@ export interface PaymentModule {
 }
 
 export class PaymentModuleImpl implements PaymentModule {
-  events: EventEmitter<PaymentEvents> = new EventEmitter<PaymentEvents>();
+  events: EventEmitter<PaymentModuleEvents> = new EventEmitter<PaymentModuleEvents>();
 
   private readonly yagnaApi: YagnaApi;
 
   private readonly logger = defaultLogger("payment");
 
-  constructor(deps: GolemServices) {
+  private readonly options: PaymentModuleOptions = {
+    debitNoteFilter: () => true,
+    invoiceFilter: () => true,
+    payment: { driver: "erc20", network: "holesky" },
+  };
+
+  constructor(deps: GolemServices, options?: PaymentModuleOptions) {
+    if (options) {
+      this.options = options;
+    }
+
     this.logger = deps.logger;
     this.yagnaApi = deps.yagna;
   }

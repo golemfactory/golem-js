@@ -9,7 +9,7 @@ export { MarketEvents } from "../../market/market.module";
 export { PaymentModuleImpl } from "../../payment/payment.module";
 export { PaymentModule } from "../../payment/payment.module";
 export { CreateAllocationParams } from "../../payment/payment.module";
-export { PaymentEvents } from "../../payment/payment.module";
+export { PaymentModuleEvents } from "../../payment/payment.module";
 export { ActivityModuleImpl } from "../../activity/activity.module";
 export { ActivityModule } from "../../activity/activity.module";
 export { ActivityEvents } from "../../activity/activity.module";

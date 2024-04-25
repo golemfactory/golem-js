@@ -1,9 +1,9 @@
-import { defaultLogger, Logger } from "../shared/utils";
+import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
 import { createPool, Factory, Pool } from "generic-pool";
 import { GolemWorkError, WorkContext, WorkErrorCode } from "./work";
 import { ActivityOptions, ActivityStateEnum } from "./index";
 import { ActivityModule } from "./activity.module";
-import { AgreementPool } from "../agreement";
+import { AgreementPool, IActivityApi } from "../agreement";
 import { ActivityDTO } from "./work/work";
 import { EventEmitter } from "eventemitter3";
 import { PaymentModule } from "../payment";
@@ -31,12 +31,15 @@ export type Worker<OutputType> = (ctx: WorkContext) => Promise<OutputType>;
 export class ActivityPool {
   public readonly events = new EventEmitter<ActivityPoolEvents>();
 
-  private activityPool: Pool<WorkContext>;
+  private workerPool: Pool<WorkContext>;
+
   private logger: Logger;
 
   constructor(
     private modules: { activity: ActivityModule; payment: PaymentModule },
-    private agreementPool: AgreementPool,
+    private readonly yagna: YagnaApi,
+    private readonly activityApi: IActivityApi,
+    private readonly agreementPool: AgreementPool,
     private options?: ActivityPoolOptions,
   ) {
     this.logger = this.logger = options?.logger || defaultLogger("activity-pool");
@@ -46,12 +49,12 @@ export class ActivityPool {
         : typeof options?.replicas === "object"
           ? options?.replicas
           : { min: 0, max: MAX_REPLICAS };
-    this.activityPool = createPool<WorkContext>(this.createPoolFactory(), {
+    this.workerPool = createPool<WorkContext>(this.createPoolFactory(), {
       testOnBorrow: true,
       autostart: true,
       ...poolOptions,
     });
-    this.activityPool.on("factoryCreateError", (error) => {
+    this.workerPool.on("factoryCreateError", (error) => {
       this.events.emit(
         "error",
         new GolemWorkError(
@@ -65,7 +68,7 @@ export class ActivityPool {
       );
       this.logger.error("Creating activity failed", error);
     });
-    this.activityPool.on("factoryDestroyError", (error) => {
+    this.workerPool.on("factoryDestroyError", (error) => {
       this.events.emit(
         "error",
         new GolemWorkError(
@@ -82,18 +85,18 @@ export class ActivityPool {
   }
 
   async acquire(): Promise<WorkContext> {
-    const activity = await this.activityPool.acquire();
+    const activity = await this.workerPool.acquire();
     this.events.emit("acquired", activity.getDto());
     return activity;
   }
 
   async release(activity: WorkContext) {
-    await this.activityPool.release(activity);
+    await this.workerPool.release(activity);
     this.events.emit("released", activity.getDto());
   }
 
   async destroy(activity: WorkContext) {
-    await this.activityPool.destroy(activity);
+    await this.workerPool.destroy(activity);
     await this.agreementPool.destroy(activity.activity.agreement);
   }
 
@@ -105,8 +108,8 @@ export class ActivityPool {
    * @return Resolves when all activities in the pool are destroyed
    */
   async drainAndClear() {
-    await this.activityPool.drain();
-    await this.activityPool.clear();
+    await this.workerPool.drain();
+    await this.workerPool.clear();
     this.events.emit("end");
     return;
   }
@@ -119,26 +122,26 @@ export class ActivityPool {
   }
 
   getSize() {
-    return this.activityPool.size;
+    return this.workerPool.size;
   }
 
   getBorrowed() {
-    return this.activityPool.borrowed;
+    return this.workerPool.borrowed;
   }
 
   getPending() {
-    return this.activityPool.pending;
+    return this.workerPool.pending;
   }
 
   getAvailable() {
-    return this.activityPool.available;
+    return this.workerPool.available;
   }
 
   /**
    * Wait till the pool is ready to use (min number of items in pool are usable)
    */
   ready(): Promise<void> {
-    return this.activityPool.ready();
+    return this.workerPool.ready();
   }
 
   private createPoolFactory(): Factory<WorkContext> {
@@ -147,7 +150,13 @@ export class ActivityPool {
         this.logger.debug("Creating new activity to add to pool");
         const agreement = await this.agreementPool.acquire();
         const activity = await this.modules.activity.createActivity(agreement);
-        const ctx = new WorkContext(activity, {});
+        const ctx = new WorkContext(
+          this.activityApi,
+          this.yagna.activity.control,
+          this.yagna.activity.exec,
+          activity,
+          {},
+        );
         await ctx.before();
         this.events.emit("created", ctx.getDto());
         return ctx;
@@ -158,9 +167,9 @@ export class ActivityPool {
         await this.agreementPool.release(ctx.activity.agreement);
         this.events.emit("destroyed", ctx.getDto());
       },
-      validate: async (activity: WorkContext) => {
+      validate: async (ctx: WorkContext) => {
         try {
-          const state = await activity.getState();
+          const state = await this.activityApi.getActivityState(ctx.activity.id);
           const result = state !== ActivityStateEnum.Terminated;
           this.logger.debug("Validating activity in the pool.", { result, state });
           return result;

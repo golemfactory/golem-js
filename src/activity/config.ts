@@ -11,7 +11,7 @@ const DEFAULTS = {
 /**
  * @internal
  */
-export class ActivityConfig {
+export class ExecutionOptions {
   public readonly activityRequestTimeout: number;
   public readonly activityExecuteTimeout: number;
   public readonly activityExeBatchResultPollIntervalSeconds: number;

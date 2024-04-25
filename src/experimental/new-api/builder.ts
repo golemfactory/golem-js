@@ -4,7 +4,7 @@ import { Deployment, DeploymentComponents } from "./deployment";
 import { GolemNetwork } from "../../golem-network";
 import { validateDeployment } from "./validate-deployment";
 import { DemandOptions, MarketOptions } from "../../market";
-import { PaymentOptions } from "../../payment";
+import { PaymentModuleOptions } from "../../payment";
 
 interface DeploymentOptions {
   replicas?: number | { min: number; max: number };
@@ -15,7 +15,7 @@ export interface CreateActivityPoolOptions {
   demand: DemandOptions & { image: string; resources: { minCpu: number; minMemGib: number; minStorageGib: number } };
   market: MarketOptions;
   deployment?: DeploymentOptions;
-  payment?: PaymentOptions;
+  payment?: PaymentModuleOptions;
 }
 
 export class GolemDeploymentBuilder {
@@ -63,6 +63,7 @@ export class GolemDeploymentBuilder {
         payment: this.glm.payment,
         market: this.glm.market,
         activity: this.glm.activity,
+        activityApi: this.glm.services.activityApi,
       },
       {
         dataTransferProtocol: this.glm.options.dataTransferProtocol ?? "gftp",

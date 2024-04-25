@@ -101,7 +101,14 @@ export class DemandNew {
   constructor(
     public readonly id: string,
     public readonly offer: MarketApi.DemandOfferBaseDTO,
+    public readonly paymentPlatform: string,
   ) {}
+}
+
+export interface IDemandRepository {
+  getById(id: string): DemandNew | undefined;
+  add(demand: DemandNew): DemandNew;
+  getAll(): DemandNew[];
 }
 
 /**
@@ -161,7 +168,7 @@ export class Demand {
    * @deprecated Will be removed before release, glue code
    */
   toNewEntity(): DemandNew {
-    return new DemandNew(this.id, this.demandRequest);
+    return new DemandNew(this.id, this.demandRequest, this.allocation.paymentPlatform);
   }
   /**
    * Stop subscribing for provider offer proposals for this demand
@@ -233,7 +240,7 @@ export class Demand {
             // Demand has expired
             this.events.emit(
               "proposalReceivedError",
-              new GolemMarketError(`Demand expired. ${reason}`, MarketErrorCode.DemandExpired, this, error),
+              new GolemMarketError(`Demand expired. ${reason}`, MarketErrorCode.DemandExpired, error),
             );
             break;
           }

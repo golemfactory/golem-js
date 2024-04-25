@@ -4,7 +4,7 @@ import { Result } from "../index";
 import { GolemInternalError } from "../../shared/error/golem-error";
 
 /**
- * @hidden
+ * Represents a series of Commands that can be sent to exe-unit via yagna's API
  */
 export class Script {
   constructor(private commands: Command[] = []) {}
@@ -27,7 +27,9 @@ export class Script {
   }
 
   getExeScriptRequest(): ActivityApi.ExeScriptRequestDTO {
-    if (!this.commands.length) throw new GolemInternalError("There are no commands in the script");
+    if (!this.commands.length) {
+      throw new GolemInternalError("There are no commands in the script");
+    }
     return { text: JSON.stringify(this.commands.map((cmd) => cmd.toJson())) };
   }
 }

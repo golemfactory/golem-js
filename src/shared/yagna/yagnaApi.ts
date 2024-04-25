@@ -5,8 +5,10 @@ import { v4 } from "uuid";
 import { defaultLogger, ElementOf, Logger } from "../utils";
 import semverSatisfies from "semver/functions/satisfies.js"; // .js added for ESM compatibility
 import semverCoerce from "semver/functions/coerce.js"; // .js added for ESM compatibility
-import { BehaviorSubject } from "rxjs";
+import { BehaviorSubject, Observable } from "rxjs";
 import { CancellablePoll, EventReaderFactory } from "./event-reader-factory";
+import EventSource from "eventsource";
+import { StreamingBatchEvent } from "../../activity/results";
 
 export type YagnaOptions = {
   apiKey?: string;
@@ -27,6 +29,10 @@ export type YagnaInvoiceEvent = ElementOf<
 export type YagnaDebitNoteEvent = ElementOf<
   Awaited<ReturnType<YaTsClient.PaymentApi.RequestorService["getDebitNoteEvents"]>>
 >;
+
+export interface YagnaExeScriptObserver {
+  observeBatchExecResults(activityId: string, batchId: string): Observable<StreamingBatchEvent>;
+}
 
 /**
  * Utility class that groups various Yagna APIs under a single wrapper
@@ -56,6 +62,7 @@ export class YagnaApi {
   public activity: {
     control: YaTsClient.ActivityApi.RequestorControlService;
     state: YaTsClient.ActivityApi.RequestorStateService;
+    exec: YagnaExeScriptObserver;
   };
   public net: YaTsClient.NetApi.RequestorService;
   public payment: YaTsClient.PaymentApi.RequestorService;
@@ -113,6 +120,21 @@ export class YagnaApi {
     this.activity = {
       control: activityApiClient.requestorControl,
       state: activityApiClient.requestorState,
+      exec: {
+        observeBatchExecResults: (activityId: string, batchId: string) => {
+          return new Observable((observer) => {
+            const eventSource = new EventSource(`${this.basePath}/activity/${activityId}/exec/${batchId}`, {
+              headers: {
+                Accept: "text/event-stream",
+                Authorization: `Bearer ${apiKey}`,
+              },
+            });
+
+            eventSource.addEventListener("runtime", (event) => observer.next(JSON.parse(event.data)));
+            eventSource.addEventListener("error", (error) => observer.error(error));
+          });
+        },
+      },
     };
 
     const netClient = new YaTsClient.NetApi.Client({
@@ -153,7 +175,7 @@ export class YagnaApi {
    * Effectively starts the Yagna API client including subscribing to events exposed via rxjs subjects
    */
   async connect() {
-    this.logger.info("Connecting to yagna");
+    this.logger.info("Connecting to Yagna");
 
     await this.assertSupportedVersion();
 
@@ -168,7 +190,9 @@ export class YagnaApi {
    * Terminates the Yagna API related activities
    */
   async disconnect() {
+    this.logger.info("Disconnecting from Yagna");
     await this.stopPollingEvents();
+    this.logger.info("Disconnected from Yagna");
   }
 
   public async getVersion(): Promise<string> {

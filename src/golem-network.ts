@@ -1,22 +1,32 @@
-import { DeploymentOptions, GolemDeploymentBuilder, MarketOptions, PaymentOptions } from "./experimental";
+import { DeploymentOptions, GolemDeploymentBuilder, MarketOptions } from "./experimental";
 import { defaultLogger, Logger, YagnaApi } from "./shared/utils";
-import { DemandSpec, DraftOfferProposalPool, MarketModule, MarketModuleImpl } from "./market";
-import { Allocation, PaymentModule, PaymentModuleImpl } from "./payment";
+import { DemandNew, DemandSpec, DraftOfferProposalPool, MarketModule, MarketModuleImpl, ProposalNew } from "./market";
+import { Allocation, PaymentModule, PaymentModuleImpl, PaymentModuleOptions } from "./payment";
 import { ActivityModule, ActivityModuleImpl } from "./activity";
 import { NetworkModule, NetworkModuleImpl } from "./network/network.module";
 import { EventEmitter } from "eventemitter3";
-import { IPaymentApi, LeaseProcess } from "./agreement";
+import { IActivityApi, IPaymentApi, LeaseProcess } from "./agreement";
 import { Package } from "./market/package";
 import { DebitNoteRepository, InvoiceRepository, PaymentApiAdapter } from "./shared/yagna";
+import { ActivityApiAdapter } from "./shared/yagna/adapters/activity-api-adapter";
+import { ActivityRepository } from "./shared/yagna/repository/activity-repository";
+import { AgreementRepository } from "./shared/yagna/repository/agreement-repository";
+import { IAgreementApi } from "./agreement/agreement";
+import { AgreementApiAdapter } from "./shared/yagna/adapters/agreement-api-adapter";
+import { ProposalRepository } from "./shared/yagna/repository/proposal-repository";
+import { CacheService } from "./shared/cache/CacheService";
+import { IProposalRepository } from "./market/proposal";
+import { DemandRepository } from "./shared/yagna/repository/demand-repository";
+import { IDemandRepository } from "./market/demand";
 
 export interface GolemNetworkOptions {
   logger?: Logger;
   api?: {
-    key: string;
-    url: string;
+    key?: string;
+    url?: string;
   };
   market?: Partial<MarketOptions>;
-  payment?: Partial<PaymentOptions>;
+  payment?: PaymentModuleOptions;
   deployment?: Partial<DeploymentOptions>;
   dataTransferProtocol?: DeploymentOptions["dataTransferProtocol"];
 }
@@ -39,6 +49,11 @@ export type GolemServices = {
   yagna: YagnaApi;
   logger: Logger;
   paymentApi: IPaymentApi;
+  activityApi: IActivityApi;
+  agreementApi: IAgreementApi;
+  proposalCache: CacheService<ProposalNew>;
+  proposalRepository: IProposalRepository;
+  demandRepository: IDemandRepository;
 };
 
 /**
@@ -64,6 +79,8 @@ export class GolemNetwork {
    */
   public readonly services: GolemServices;
 
+  private hasConnection = false;
+
   constructor(public readonly options: GolemNetworkOptions = {}) {
     this.logger = options.logger ?? defaultLogger("golem-network");
 
@@ -74,19 +91,40 @@ export class GolemNetwork {
         basePath: this.options.api?.url,
       });
 
+      const demandCache = new CacheService<DemandNew>();
+      const proposalCache = new CacheService<ProposalNew>();
+
+      const demandRepository = new DemandRepository(this.yagna.market, demandCache);
+      const proposalRepository = new ProposalRepository(this.yagna.market, proposalCache);
+      const agreementRepository = new AgreementRepository(this.yagna.market, demandRepository);
+
       this.services = {
         logger: this.logger,
         yagna: this.yagna,
+        demandRepository,
+        proposalCache,
+        proposalRepository,
         paymentApi: new PaymentApiAdapter(
           this.yagna,
           new InvoiceRepository(this.yagna.payment, this.yagna.market),
           new DebitNoteRepository(this.yagna.payment, this.yagna.market),
           this.logger,
         ),
+        activityApi: new ActivityApiAdapter(
+          this.yagna.activity.state,
+          this.yagna.activity.control,
+          new ActivityRepository(this.yagna.activity.state, agreementRepository),
+        ),
+        agreementApi: new AgreementApiAdapter(
+          this.yagna.appSessionId,
+          this.yagna.market,
+          agreementRepository,
+          this.logger,
+        ),
       };
 
       this.market = new MarketModuleImpl(this.services);
-      this.payment = new PaymentModuleImpl(this.services);
+      this.payment = new PaymentModuleImpl(this.services, this.options.payment);
       this.activity = new ActivityModuleImpl(this.services);
 
       this.network = new NetworkModuleImpl();
@@ -106,6 +144,7 @@ export class GolemNetwork {
       await this.yagna.connect();
       await this.services.paymentApi.connect();
       this.events.emit("connected");
+      this.hasConnection = true;
     } catch (err) {
       this.events.emit("error", err);
       throw err;
@@ -120,7 +159,11 @@ export class GolemNetwork {
   async disconnect() {
     await this.services.paymentApi.disconnect();
     await this.yagna.disconnect();
+
+    this.services.proposalCache.flushAll();
+
     this.events.emit("disconnected");
+    this.hasConnection = false;
   }
 
   /**
@@ -183,6 +226,9 @@ export class GolemNetwork {
 
     const lease = this.market.createLease(agreement, allocation);
 
+    // We managed to create the activity, no need to look for more agreement candidates
+    proposalSubscription.unsubscribe();
+
     return lease;
 
     // TODO: Maintain a in-memory repository (pool) of Leases, so that when glm.disconnect() will be called, we can call this.leaseRepository.clear(), which will cleanly shut all of them down
@@ -227,4 +273,7 @@ export class GolemNetwork {
    * ```
    */
   // public compose(): void {}
+  isConnected() {
+    return this.hasConnection;
+  }
 }

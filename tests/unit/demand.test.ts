@@ -89,8 +89,6 @@ describe.skip("DEPRECATED Demand", () => {
         new GolemMarketError(
           `Could not publish demand on the market. Error: Test error`,
           MarketErrorCode.SubscriptionFailed,
-          undefined,
-          testError,
         ),
       );
     });
