@@ -24,13 +24,7 @@ describe.skip("ActivityPool", () => {
 
   beforeAll(async () => {
     await yagnaApi.connect();
-    allocation = await Allocation.create(yagnaApi, {
-      account: {
-        address: (await yagnaApi.identity.getIdentity()).identity,
-        platform: "erc20-holesky-tglm",
-      },
-      budget: 1,
-    });
+    allocation = await modules.payment.createAllocation({ budget: 1 });
   });
 
   afterAll(async () => {
@@ -41,14 +35,15 @@ describe.skip("ActivityPool", () => {
   beforeEach(async () => {
     proposalPool = new DraftOfferProposalPool();
     agreementPool = new AgreementPool(modules, proposalPool);
-    const workload = Package.create({
-      imageTag: "golem/alpine:latest",
-    });
-    const demandOffer = await modules.market.buildDemand(workload, allocation, {});
+    const demandSpecification = await modules.market.buildDemand(
+      {
+        imageTag: "golem/alpine:latest",
+      },
+      allocation,
+    );
     proposalSubscription = modules.market
       .startCollectingProposals({
-        demandOffer,
-        paymentPlatform: "erc20-holesky-tglm",
+        demandSpecification,
       })
       .subscribe((proposalsBatch) => proposalsBatch.forEach((proposal) => proposalPool.add(proposal)));
   });

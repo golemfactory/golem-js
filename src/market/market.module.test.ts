@@ -1,26 +1,23 @@
-import { _, deepEqual, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
+import { _, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
 import { Logger, YagnaApi } from "../shared/utils";
 import { MarketModuleImpl } from "./market.module";
 import * as YaTsClient from "ya-ts-client";
-import { DemandNew, IDemandRepository } from "./demand";
+import { DemandNew, DemandSpecification, IDemandRepository } from "./demand";
 import { from, of, take } from "rxjs";
 import { IProposalRepository, ProposalNew } from "./proposal";
-import { IAgreementApi } from "../agreement/agreement";
+import { MarketApiAdapter } from "../shared/yagna/";
 import { IActivityApi, IPaymentApi } from "../agreement";
+import { IAgreementApi } from "../agreement/agreement";
+jest.useFakeTimers();
 
-const TEST_PAYMENT_PLATFORM = "erc20-holesky-tglm";
-
+const mockMarketApiAdapter = mock(MarketApiAdapter);
 const mockYagna = mock(YagnaApi);
-const mockMarket = mock(YaTsClient.MarketApi.RequestorService);
 let marketModule: MarketModuleImpl;
 
 beforeEach(() => {
   jest.useFakeTimers();
   jest.resetAllMocks();
-  reset(mockYagna);
-  reset(mockMarket);
-  when(mockYagna.market).thenReturn(instance(mockMarket));
-
+  reset(mockMarketApiAdapter);
   marketModule = new MarketModuleImpl({
     activityApi: instance(imock<IActivityApi>()),
     paymentApi: instance(imock<IPaymentApi>()),
@@ -29,198 +26,123 @@ beforeEach(() => {
     demandRepository: instance(imock<IDemandRepository>()),
     yagna: instance(mockYagna),
     logger: instance(imock<Logger>()),
+    marketApi: instance(mockMarketApiAdapter),
   });
 });
 
 describe("Market module", () => {
   describe("publishDemand()", () => {
     it("should publish a demand", (done) => {
-      const mockOffer = instance(imock<YaTsClient.MarketApi.DemandDTO>());
-      when(mockMarket.subscribeDemand(_)).thenResolve("demand-id");
-      when(mockMarket.unsubscribeDemand(_)).thenResolve({});
-
-      const demand$ = marketModule.publishDemand(mockOffer);
-      demand$.pipe(take(1)).subscribe((demand) => {
-        try {
-          expect(demand).toEqual(new DemandNew("demand-id", mockOffer, TEST_PAYMENT_PLATFORM));
-          done();
-        } catch (error) {
-          done(error);
-        }
+      const mockSpecification = mock(DemandSpecification);
+      when(mockMarketApiAdapter.publishDemandSpecification(mockSpecification)).thenCall(async (specification) => {
+        return new DemandNew("demand-id", specification);
       });
-    });
-    it("should emit a new demand every specified interval", (done) => {
-      const mockOffer = instance(imock<YaTsClient.MarketApi.DemandDTO>());
-      when(mockMarket.subscribeDemand(_))
-        .thenResolve("demand-id-1")
-        .thenResolve("demand-id-2")
-        .thenResolve("demand-id-3");
-      const mockUnsubscribe = jest.fn();
-      when(mockMarket.unsubscribeDemand(_)).thenCall(mockUnsubscribe);
 
-      const demand$ = marketModule.publishDemand(mockOffer, {
-        expirationSec: 10,
-        paymentPlatform: TEST_PAYMENT_PLATFORM,
-      });
-      const demands: DemandNew[] = [];
-      demand$.pipe(take(3)).subscribe({
+      const demand$ = marketModule.publishDemand(mockSpecification);
+      demand$.pipe(take(1)).subscribe({
         next: (demand) => {
-          demands.push(demand);
-          jest.advanceTimersByTime(10 * 1000);
-        },
-        complete: () => {
           try {
-            expect(demands).toEqual([
-              new DemandNew("demand-id-1", mockOffer, TEST_PAYMENT_PLATFORM),
-              new DemandNew("demand-id-2", mockOffer, TEST_PAYMENT_PLATFORM),
-              new DemandNew("demand-id-3", mockOffer, TEST_PAYMENT_PLATFORM),
-            ]);
-            expect(mockUnsubscribe).toHaveBeenCalledTimes(3);
+            expect(demand).toEqual(new DemandNew("demand-id", mockSpecification));
             done();
           } catch (error) {
             done(error);
           }
         },
+        error: (error) => done(error),
+      });
+    });
+
+    it("should emit a new demand every specified interval", (done) => {
+      const mockSpecification = mock(DemandSpecification);
+      when(mockSpecification.expirationMs).thenReturn(10);
+      const mockSpecificationInstance = instance(mockSpecification);
+      const mockDemand0 = new DemandNew("demand-id-0", mockSpecificationInstance);
+      const mockDemand1 = new DemandNew("demand-id-1", mockSpecificationInstance);
+      const mockDemand2 = new DemandNew("demand-id-2", mockSpecificationInstance);
+
+      when(mockMarketApiAdapter.publishDemandSpecification(_))
+        .thenResolve(mockDemand0)
+        .thenResolve(mockDemand1)
+        .thenResolve(mockDemand2);
+      when(mockMarketApiAdapter.unpublishDemand(_)).thenResolve();
+
+      const demand$ = marketModule.publishDemand(mockSpecificationInstance);
+      const demands: DemandNew[] = [];
+      demand$.pipe(take(3)).subscribe({
+        next: (demand) => {
+          demands.push(demand);
+          jest.advanceTimersByTime(10);
+        },
+        complete: () => {
+          try {
+            expect(demands).toEqual([mockDemand0, mockDemand1, mockDemand2]);
+            verify(mockMarketApiAdapter.unpublishDemand(demands[0])).once();
+            verify(mockMarketApiAdapter.unpublishDemand(demands[1])).once();
+            verify(mockMarketApiAdapter.unpublishDemand(demands[2])).once();
+            verify(mockMarketApiAdapter.unpublishDemand(_)).times(3);
+            done();
+          } catch (error) {
+            done(error);
+          }
+        },
+        error: (error) => done(error),
       });
     });
   });
 
   describe("subscribeForProposals()", () => {
-    it("should long poll for proposals", (done) => {
+    it("should filter out rejected proposals", (done) => {
       const mockDemand = instance(imock<DemandNew>());
-
-      const mockProposalEvent = {
+      const mockProposalDTO = imock<YaTsClient.MarketApi.ProposalEventDTO["proposal"]>();
+      when(mockProposalDTO.issuerId).thenReturn("issuer-id");
+      const mockProposalEventSuccess: YaTsClient.MarketApi.ProposalEventDTO = {
         eventType: "ProposalEvent",
         eventDate: "0000-00-00",
-        proposal: instance(imock<YaTsClient.MarketApi.ProposalEventDTO["proposal"]>()),
+        proposal: instance(mockProposalDTO),
+      };
+      const mockProposalEventRejected: YaTsClient.MarketApi.ProposalRejectedEventDTO = {
+        eventType: "ProposalRejectedEvent",
+        eventDate: "0000-00-00",
+        proposalId: "proposal-id",
+        reason: { key: "value" },
       };
 
-      when(mockMarket.collectOffers(_, _, _)).thenResolve([
-        mockProposalEvent,
-        mockProposalEvent,
-        mockProposalEvent,
-        mockProposalEvent,
-      ]);
+      when(mockMarketApiAdapter.observeProposalEvents(_)).thenReturn(
+        from([
+          mockProposalEventSuccess,
+          mockProposalEventSuccess,
+          mockProposalEventRejected,
+          mockProposalEventSuccess,
+          mockProposalEventRejected,
+          mockProposalEventSuccess,
+        ]),
+      );
 
-      const proposal$ = marketModule.subscribeForProposals(mockDemand, { offerFetchingIntervalSec: 0 }).pipe(take(8));
+      const proposal$ = marketModule.subscribeForProposals(mockDemand);
 
       let proposalsEmitted = 0;
 
       proposal$.subscribe({
+        error: (error) => {
+          done(error);
+        },
         next: () => {
           proposalsEmitted++;
         },
         complete: () => {
           try {
-            expect(proposalsEmitted).toBe(8);
-            verify(mockMarket.collectOffers(_, _, _)).times(2);
+            expect(proposalsEmitted).toBe(4);
             done();
           } catch (error) {
             done(error);
           }
         },
       });
-    });
-    it("should long poll and batch proposals", (done) => {
-      jest.useRealTimers();
-      const mockDemand = instance(imock<DemandNew>());
-
-      const mockProposal = imock<YaTsClient.MarketApi.ProposalEventDTO["proposal"]>();
-      when(mockProposal.state).thenReturn("Initial");
-      when(mockProposal.issuerId).thenReturn("provider-1").thenReturn("provider-2").thenReturn("provider-1");
-      when(mockProposal.properties).thenReturn({
-        ["golem.inf.cpu.cores"]: 1,
-        ["golem.inf.cpu.threads"]: 1,
-        ["golem.inf.mem.gib"]: 1,
-        ["golem.com.usage.vector"]: ["ai-runtime.requests", "golem.usage.duration_sec", "golem.usage.gpu-sec"],
-        ["golem.com.pricing.model.linear.coeffs"]: [0.001, 0.001, 0.001, 0.001],
-      });
-      const mockProposalEvent = {
-        eventType: "ProposalEvent",
-        eventDate: "0000-00-00",
-        proposal: instance(mockProposal),
-      };
-
-      when(mockMarket.collectOffers(_, _, _)).thenCall(() => {
-        // simulate long pooling call
-        return new Promise((res) =>
-          setTimeout(() => res([mockProposalEvent, mockProposalEvent, mockProposalEvent]), 100),
-        );
-      });
-
-      const proposal$ = marketModule.subscribeForProposals(mockDemand).pipe(take(4));
-
-      const proposalsEmitted: ProposalNew[] = [];
-
-      proposal$.subscribe({
-        next: (proposal) => {
-          proposalsEmitted.push(proposal);
-        },
-        complete: () => {
-          try {
-            expect(proposalsEmitted.length).toBe(4);
-            // after the batching proposal there is only one from provider-2
-            expect(proposalsEmitted.filter((p) => p.provider.id === "provider-2").length).toBe(1);
-            done();
-          } catch (error) {
-            done(error);
-          }
-        },
-      });
-    });
-  });
-
-  describe("negotiateProposal()", () => {
-    it("should negotiate a proposal with the selected payment platform", async () => {
-      const mockDemand = imock<DemandNew>();
-      const mockOffer: YaTsClient.MarketApi.DemandOfferBaseDTO = {
-        constraints: "constraints",
-        properties: {
-          "property-key-1": "property-value-1",
-          "property-key-2": "property-value-2",
-        },
-      };
-      const paymentPlatform = "my-selected-payment-platform";
-      const mockReceivedProposal = imock<ProposalNew>();
-      when(mockReceivedProposal.id).thenReturn("proposal-id");
-      when(mockReceivedProposal.model).thenReturn({
-        constraints: "",
-        properties: {},
-        proposalId: "",
-        timestamp: "",
-        issuerId: "issuer-id",
-        state: "Initial",
-      });
-      when(mockReceivedProposal.demand).thenReturn(instance(mockDemand));
-      when(mockDemand.id).thenReturn("demand-id");
-
-      when(mockMarket.counterProposalDemand(_, _, _)).thenResolve("counter-id");
-
-      when(mockMarket.getProposalOffer(_, "counter-id")).thenResolve(
-        instance(imock<YaTsClient.MarketApi.ProposalEventDTO["proposal"]>()),
-      );
-
-      await marketModule.negotiateProposal(instance(mockReceivedProposal), mockOffer, paymentPlatform);
-
-      verify(
-        mockMarket.counterProposalDemand(
-          "demand-id",
-          "proposal-id",
-          deepEqual({
-            constraints: "constraints",
-            properties: {
-              "property-key-1": "property-value-1",
-              "property-key-2": "property-value-2",
-              "golem.com.payment.chosen-platform": "my-selected-payment-platform",
-            },
-          }),
-        ),
-      ).once();
     });
   });
   describe("startCollectingProposals()", () => {
     it("should negotiate any initial proposals", (done) => {
-      const mockOffer = imock<YaTsClient.MarketApi.DemandDTO>();
+      const mockDemandSpecification = imock<DemandSpecification>();
       const proposal1 = {
         isInitial: () => true,
         isDraft: () => false,
@@ -263,8 +185,7 @@ describe("Market module", () => {
       const draftProposals: ProposalNew[] = [];
       marketModule
         .startCollectingProposals({
-          demandOffer: mockOffer,
-          paymentPlatform: "payment-platform",
+          demandSpecification: mockDemandSpecification,
           bufferSize: 1,
         })
         .pipe(take(2))
@@ -276,13 +197,14 @@ describe("Market module", () => {
             try {
               expect(draftProposals).toEqual([proposal3, proposal4]);
               expect(marketModule.negotiateProposal).toHaveBeenCalledTimes(2);
-              expect(marketModule.negotiateProposal).toHaveBeenCalledWith(proposal1, mockOffer, "payment-platform");
-              expect(marketModule.negotiateProposal).toHaveBeenCalledWith(proposal2, mockOffer, "payment-platform");
+              expect(marketModule.negotiateProposal).toHaveBeenCalledWith(proposal1, mockDemandSpecification);
+              expect(marketModule.negotiateProposal).toHaveBeenCalledWith(proposal2, mockDemandSpecification);
               done();
             } catch (error) {
               done(error);
             }
           },
+          error: (error) => done(error),
         });
     });
   });

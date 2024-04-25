@@ -2,34 +2,35 @@ import {
   ActivityModuleImpl,
   ActivityPool,
   AgreementPool,
-  Allocation,
   DraftOfferProposalPool,
+  MarketApiAdapter,
   MarketModuleImpl,
-  Package,
   PaymentModuleImpl,
   YagnaApi,
 } from "@golem-sdk/golem-js";
 
 (async function main() {
   const yagnaApi = new YagnaApi();
+  const marketApi = new MarketApiAdapter(yagnaApi);
 
   try {
     await yagnaApi.connect();
 
     const modules = {
-      market: new MarketModuleImpl(yagnaApi),
+      market: new MarketModuleImpl(marketApi, yagnaApi),
       activity: new ActivityModuleImpl(yagnaApi),
-      payment: new PaymentModuleImpl(yagnaApi),
+      payment: new PaymentModuleImpl(yagnaApi, {
+        driver: "erc20",
+        network: "holesky",
+      }),
     };
 
     const demandOptions = {
       demand: {
-        image: "golem/alpine:latest",
-        resources: {
-          minCpu: 4,
-          minMemGib: 8,
-          minStorageGib: 16,
-        },
+        imageTag: "golem/alpine:latest",
+        minCpuCores: 4,
+        minMemGib: 8,
+        minStorageGib: 16,
       },
       market: {
         rentHours: 12,
@@ -46,27 +47,13 @@ import {
     };
 
     const proposalPool = new DraftOfferProposalPool({ minCount: 1 });
+    const allocation = await modules.payment.createAllocation({ budget: 1 });
+    const demandSpecification = await modules.market.buildDemand(demandOptions.demand, allocation);
 
-    const workload = Package.create({
-      imageTag: demandOptions.demand.image,
+    const proposals$ = modules.market.startCollectingProposals({
+      demandSpecification,
     });
-
-    const allocation = await Allocation.create(yagnaApi, {
-      account: {
-        address: (await yagnaApi.identity.getIdentity()).identity,
-        platform: "erc20-holesky-tglm",
-      },
-      budget: 1,
-    });
-
-    const demandOffer = await modules.market.buildDemand(workload, allocation, {});
-
-    const proposalSubscription = modules.market
-      .startCollectingProposals({
-        demandOffer,
-        paymentPlatform: "erc20-holesky-tglm",
-      })
-      .subscribe((proposalsBatch) => proposalsBatch.forEach((proposal) => proposalPool.add(proposal)));
+    const proposalSubscription = proposalPool.readFrom(proposals$);
 
     /** How many providers you plan to engage simultaneously */
     const CONCURRENCY = 2;

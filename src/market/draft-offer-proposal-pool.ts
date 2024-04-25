@@ -3,6 +3,7 @@ import AsyncLock from "async-lock";
 import { EventEmitter } from "eventemitter3";
 import { GolemMarketError, MarketErrorCode } from "./error";
 import { defaultLogger, Logger, sleep } from "../shared/utils";
+import { Observable, Subscription } from "rxjs";
 
 export type ProposalSelector = (proposals: ProposalNew[]) => ProposalNew;
 export type ProposalValidator = (proposal: ProposalNew) => boolean;
@@ -238,5 +239,12 @@ export class DraftOfferProposalPool {
   protected removeFromAvailable(proposal: ProposalNew): void {
     this.available.delete(proposal);
     this.events.emit("removed", proposal);
+  }
+
+  public readFrom(source: Observable<ProposalNew[]>): Subscription {
+    return source.subscribe({
+      next: (proposalBatch) => proposalBatch.forEach((proposal) => this.add(proposal)),
+      error: (e) => this.logger.error("Error while collecting proposals", e),
+    });
   }
 }
