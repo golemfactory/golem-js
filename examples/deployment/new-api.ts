@@ -21,15 +21,13 @@ async function main() {
       })
       .createActivityPool("app", {
         demand: {
-          image: "golem/node:latest",
+          imageTag: "golem/node:latest",
           // image: "golem/node:20",
           // image: "http://golem.io/node:20",
           // imageHash: "0x30984084039480493840",
-          resources: {
-            minCpu: 4,
-            minMemGib: 8,
-            minStorageGib: 16,
-          },
+          minCpuCores: 4,
+          minMemGib: 8,
+          minStorageGib: 16,
         },
         market: {
           rentHours: 12,
@@ -50,12 +48,10 @@ async function main() {
       })
       .createActivityPool("db", {
         demand: {
-          image: "golem/alpine:latest",
-          resources: {
-            minCpu: 2,
-            minMemGib: 16,
-            minStorageGib: 4,
-          },
+          imageTag: "golem/alpine:latest",
+          minCpuCores: 2,
+          minMemGib: 16,
+          minStorageGib: 4,
         },
         market: {
           rentHours: 12 /* REQUIRED */,

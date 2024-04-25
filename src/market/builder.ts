@@ -1,5 +1,6 @@
 import { MarketApi, PaymentApi } from "ya-ts-client";
 import { GolemInternalError } from "../shared/error/golem-error";
+import { DemandSpecification } from "./demand";
 
 /**
  * Properties and constraints to be added to a market object (i.e. a demand or an offer).
@@ -53,6 +54,9 @@ export class DecorationsBuilder {
       constraints: this.constraints.map((c) => `(${c.key + c.comparisonOperator + c.value})`),
     };
   }
+  /**
+   * @deprecated
+   **/
   getDemandRequest(): MarketApi.DemandOfferBaseDTO {
     const decorations = this.getDecorations();
     let constraints: string;
@@ -63,6 +67,12 @@ export class DecorationsBuilder {
     decorations.properties.forEach((prop) => (properties[prop.key] = prop.value));
     return { constraints, properties };
   }
+
+  getDemandSpecification(paymentPlatform: string, expirationMs: number): DemandSpecification {
+    const decorations = this.getDemandRequest();
+    return new DemandSpecification(decorations, paymentPlatform, expirationMs);
+  }
+
   private parseConstraint(constraint: string): Constraint {
     for (const key in ComparisonOperator) {
       const value = ComparisonOperator[key as keyof typeof ComparisonOperator];

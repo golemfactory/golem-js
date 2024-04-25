@@ -6,10 +6,9 @@ import { Network, NetworkOptions } from "../../network";
 import { GftpStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../../shared/storage";
 import { validateDeployment } from "./validate-deployment";
 import { DemandBuildParams, DraftOfferProposalPool, MarketModule } from "../../market";
-import { Allocation, PaymentModule } from "../../payment";
+import { PaymentModule } from "../../payment";
 import { AgreementPool, AgreementPoolOptions, IActivityApi } from "../../agreement";
 import { CreateActivityPoolOptions } from "./builder";
-import { Package } from "../../market/package";
 import { Subscription } from "rxjs";
 
 export enum DeploymentState {
@@ -151,11 +150,7 @@ export class Deployment {
 
     await this.dataTransferProtocol.init();
 
-    const allocation = await Allocation.create(this.yagnaApi, {
-      account: {
-        address: (await this.yagnaApi.identity.getIdentity()).identity,
-        platform: "erc20-holesky-tglm", //TODO: add platform to deployment options
-      },
+    const allocation = await this.modules.payment.createAllocation({
       budget: 1,
     });
 
@@ -167,17 +162,14 @@ export class Deployment {
     // TODO: pass dataTransferProtocol to pool
     for (const pool of this.components.activityPools) {
       const { demandBuildOptions, agreementPoolOptions, activityPoolOptions } = this.prepareParams(pool.options);
-      const workload = Package.create({
-        imageTag: pool.options.demand.image,
-      });
-      const demandOffer = await this.modules.market.buildDemand(workload, allocation, {});
+
+      const demandSpecification = await this.modules.market.buildDemand(demandBuildOptions.demand, allocation);
       const proposalPool = new DraftOfferProposalPool();
 
       const proposalSubscription = this.modules.market
         .startCollectingProposals({
-          demandOffer,
-          paymentPlatform: "erc20-holesky-tglm",
-          demandOptions: demandBuildOptions.demand,
+          demandSpecification,
+          bufferSize: 10,
         })
         .subscribe({
           next: (proposals) => proposals.forEach((proposal) => proposalPool.add(proposal)),

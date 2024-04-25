@@ -2,38 +2,34 @@
  * This example demonstrates how to scan the market for proposals
  * Let's lear what is the average start price
  */
-import { Package, MarketModuleImpl, YagnaApi, Allocation, ProposalNew } from "@golem-sdk/golem-js";
+import { MarketModuleImpl, YagnaApi, ProposalNew, MarketApiAdapter, PaymentModuleImpl } from "@golem-sdk/golem-js";
 
 const yagnaApi = new YagnaApi({
   apiKey: "try_golem",
 });
-const marketModule = new MarketModuleImpl(yagnaApi);
+const marketApi = new MarketApiAdapter(yagnaApi);
+const marketModule = new MarketModuleImpl(marketApi, yagnaApi);
+const paymentModule = new PaymentModuleImpl(yagnaApi, {
+  network: "holesky",
+  driver: "erc20",
+});
 
 async function main() {
-  const address = (await yagnaApi.identity.getIdentity()).identity;
-  const paymentPlatform = "erc20-holesky-tglm";
-
-  const allocation = await Allocation.create(yagnaApi, {
-    account: {
-      address,
-      platform: paymentPlatform,
+  const allocation = await paymentModule.createAllocation({ budget: 1 });
+  const demandSpecification = await marketModule.buildDemand(
+    {
+      imageTag: "golem/alpine:latest",
     },
-    budget: 1,
-  });
-  const workload = Package.create({
-    imageTag: "golem/alpine:latest",
-  });
-
-  const demandOffer = await marketModule.buildDemand(workload, allocation, {});
+    allocation,
+  );
 
   const offers = new Set<ProposalNew>();
 
   console.log("Scanning the market...");
   const subscription = marketModule
     .startCollectingProposals({
-      demandOffer,
-      paymentPlatform,
-      bufferSize: 10,
+      demandSpecification,
+      bufferSize: 5,
     })
     .subscribe({
       next: (proposals) => {
