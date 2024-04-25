@@ -7,10 +7,11 @@ import { GftpStorageProvider, StorageProvider, WebSocketBrowserStorageProvider }
 import { validateDeployment } from "./validate-deployment";
 import { DemandBuildParams, DraftOfferProposalPool, MarketModule } from "../../market";
 import { Allocation, PaymentModule } from "../../payment";
-import { AgreementPool, AgreementPoolOptions } from "../../agreement";
+import { AgreementPool, AgreementPoolOptions, IActivityApi } from "../../agreement";
 import { CreateActivityPoolOptions } from "./builder";
 import { Package } from "../../market/package";
 import { Subscription } from "rxjs";
+import { IActivityRepository } from "../../activity/activity";
 
 export enum DeploymentState {
   INITIAL = "INITIAL",
@@ -77,13 +78,17 @@ export class Deployment {
       activityPool: ActivityPool;
     }
   >();
+
   private readonly networks = new Map<string, Network>();
   private readonly dataTransferProtocol: StorageProvider;
+
   private readonly modules: {
     market: MarketModule;
     activity: ActivityModule;
     payment: PaymentModule;
   };
+
+  private readonly activityApi: IActivityApi;
 
   constructor(
     private readonly components: DeploymentComponents,
@@ -93,6 +98,7 @@ export class Deployment {
       market: MarketModule;
       activity: ActivityModule;
       payment: PaymentModule;
+      activityApi: IActivityApi;
     },
     options: DeploymentOptions,
   ) {
@@ -102,6 +108,7 @@ export class Deployment {
 
     this.logger = logger ?? defaultLogger("deployment");
     this.yagnaApi = yagna;
+    this.activityApi = deps.activityApi;
 
     this.modules = modules;
 
@@ -179,7 +186,13 @@ export class Deployment {
         });
 
       const agreementPool = new AgreementPool(this.modules, proposalPool, agreementPoolOptions);
-      const activityPool = new ActivityPool(this.modules, agreementPool, activityPoolOptions);
+      const activityPool = new ActivityPool(
+        this.modules,
+        this.yagnaApi,
+        this.activityApi,
+        agreementPool,
+        activityPoolOptions,
+      );
       this.pools.set(pool.name, {
         proposalPool,
         proposalSubscription,

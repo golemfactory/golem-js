@@ -82,11 +82,7 @@ export class MarketService {
 
   private async createDemand(): Promise<true> {
     if (!this.taskPackage || !this.allocation)
-      throw new GolemMarketError(
-        "The service has not been started correctly.",
-        MarketErrorCode.ServiceNotInitialized,
-        this.demand,
-      );
+      throw new GolemMarketError("The service has not been started correctly.", MarketErrorCode.ServiceNotInitialized);
     this.demand = await Demand.create(this.taskPackage, this.allocation, this.yagnaApi, this.options);
     this.demand.events.on("proposalReceived", this.demandProposalEventListener.bind(this));
     this.demand.events.on("proposalReceivedError", this.demandProposalErrorEventListener.bind(this));
@@ -148,7 +144,6 @@ export class MarketService {
       throw new GolemMarketError(
         "Allocation is missing. The service has not been started correctly.",
         MarketErrorCode.MissingAllocation,
-        this.demand,
       );
     this.logger.debug(`New proposal has been received`, { id: proposal.id });
     this.proposalsCount.initial++;
@@ -174,7 +169,6 @@ export class MarketService {
       throw new GolemMarketError(
         "Allocation is missing. The service has not been started correctly.",
         MarketErrorCode.MissingAllocation,
-        this.demand,
       );
     }
 

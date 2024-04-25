@@ -1,12 +1,11 @@
 import { WorkContext, Worker, WorkOptions } from "../../activity/work";
 import { runtimeContextChecker, YagnaApi } from "../../shared/utils";
-import { AgreementOptions, AgreementPoolService } from "../../agreement";
-import { MarketServiceOptions, MarketService } from "../../market";
-import { NetworkService } from "../../network";
-import { PaymentOptions, PaymentService } from "../../payment";
-import { NetworkOptions } from "../../network/network";
+import { AgreementPoolService, IActivityApi, LegacyAgreementServiceOptions } from "../../agreement";
+import { MarketService, MarketServiceOptions } from "../../market";
+import { NetworkOptions, NetworkService } from "../../network";
+import { PaymentModuleOptions, PaymentService } from "../../payment";
 import { Package, PackageOptions } from "../../market/package";
-import { Activity, ActivityOptions } from "../../activity";
+import { ActivityOptions } from "../../activity";
 import { EventEmitter } from "eventemitter3";
 import {
   GftpStorageProvider,
@@ -15,6 +14,7 @@ import {
   WebSocketBrowserStorageProvider,
 } from "../../shared/storage";
 import { GolemAbortError, GolemConfigError, GolemUserError } from "../../shared/error/golem-error";
+import { IAgreementApi } from "../../agreement/agreement";
 
 export enum JobState {
   New = "new",
@@ -27,8 +27,8 @@ export enum JobState {
 
 export type RunJobOptions = {
   market?: MarketServiceOptions;
-  payment?: PaymentOptions;
-  agreement?: AgreementOptions;
+  payment?: PaymentModuleOptions;
+  agreement?: LegacyAgreementServiceOptions;
   network?: NetworkOptions;
   package?: PackageOptions;
   activity?: ActivityOptions;
@@ -82,11 +82,15 @@ export class Job<Output = unknown> {
    *
    * @param id
    * @param yagnaApi
+   * @param activityApi
+   * @param agreementApi
    * @param defaultOptions
    */
   constructor(
     public readonly id: string,
     private yagnaApi: YagnaApi,
+    private readonly activityApi: IActivityApi,
+    private readonly agreementApi: IAgreementApi,
     private readonly defaultOptions: Partial<RunJobOptions> = {},
   ) {}
 
@@ -124,7 +128,7 @@ export class Job<Output = unknown> {
     this.state = JobState.Pending;
     this.events.emit("created");
 
-    const agreementService = new AgreementPoolService(this.yagnaApi, {
+    const agreementService = new AgreementPoolService(this.yagnaApi, this.agreementApi, {
       ...this.defaultOptions.agreement,
       ...options.agreement,
     });
@@ -204,27 +208,33 @@ export class Job<Output = unknown> {
 
     paymentService.acceptPayments(agreement);
 
-    const activity = await Activity.create(agreement, this.yagnaApi, options.activity);
+    const activity = await this.activityApi.createActivity(agreement, options.activity);
 
     const storageProvider =
       this.defaultOptions.work?.storageProvider || options.work?.storageProvider || this.getDefaultStorageProvider();
 
-    const workContext = new WorkContext(activity, {
-      yagnaOptions: this.yagnaApi.yagnaOptions,
-      storageProvider,
-      networkNode: await networkService.addNode(agreement.getProviderInfo().id),
-      activityPreparingTimeout:
-        this.defaultOptions.work?.activityPreparingTimeout || options.work?.activityPreparingTimeout,
-      activityStateCheckingInterval:
-        this.defaultOptions.work?.activityStateCheckingInterval || options.work?.activityStateCheckingInterval,
-    });
+    const workContext = new WorkContext(
+      this.activityApi,
+      this.yagnaApi.activity.control,
+      this.yagnaApi.activity.exec,
+      activity,
+      {
+        yagnaOptions: this.yagnaApi.yagnaOptions,
+        storageProvider,
+        networkNode: await networkService.addNode(agreement.getProviderInfo().id),
+        activityPreparingTimeout:
+          this.defaultOptions.work?.activityPreparingTimeout || options.work?.activityPreparingTimeout,
+        activityStateCheckingInterval:
+          this.defaultOptions.work?.activityStateCheckingInterval || options.work?.activityStateCheckingInterval,
+      },
+    );
 
     this.events.emit("started");
     await workContext.before();
 
     const onAbort = async () => {
       await agreementService.releaseAgreement(agreement.id, false);
-      await activity.stop();
+      await this.activityApi.destroyActivity(activity);
       this.events.emit("canceled");
     };
     if (signal.aborted) {

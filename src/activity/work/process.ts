@@ -2,6 +2,8 @@ import { Readable, Transform } from "stream";
 import { Activity, Result } from "../index";
 import { GolemWorkError, WorkErrorCode } from "./error";
 import { GolemTimeoutError } from "../../shared/error/golem-error";
+import { IActivityApi } from "../../agreement";
+import { Logger } from "../../shared/utils";
 
 const DEFAULTS = {
   exitWaitingTimeout: 20_000,
@@ -25,8 +27,10 @@ export class RemoteProcess {
   private streamError?: Error;
 
   constructor(
+    private readonly activityApi: IActivityApi,
     private streamOfActivityResults: Readable,
     private activity: Activity,
+    private readonly logger: Logger,
   ) {
     this.streamOfActivityResults.on("data", (data) => (this.lastResult = data));
     this.streamOfActivityResults.on("error", (error) => (this.streamError = error));
@@ -54,7 +58,9 @@ export class RemoteProcess {
             new GolemTimeoutError(`The waiting time (${timeoutInMs} ms) for the final result has been exceeded`),
           ),
         );
-        this.activity.stop().catch();
+        this.activityApi
+          .destroyActivity(this.activity)
+          .catch((err) => this.logger.error(`Error when destroying activity`, err));
       }, timeoutInMs);
       const end = () => {
         clearTimeout(timeoutId);
@@ -70,7 +76,9 @@ export class RemoteProcess {
               this.activity.getProviderInfo(),
             ),
           );
-          this.activity.stop().catch();
+          this.activityApi
+            .destroyActivity(this.activity)
+            .catch((err) => this.logger.error(`Error when destroying activity`, err));
         }
       };
       if (this.streamOfActivityResults.closed) return end();

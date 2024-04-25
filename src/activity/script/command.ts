@@ -14,7 +14,7 @@ const EMPTY_ERROR_RESULT = new Result({
 });
 
 /**
- * @hidden
+ * Generic command that can be send to an exe-unit via yagna's API
  */
 export class Command<T = unknown> {
   protected args: Record<string, unknown>;
@@ -26,12 +26,18 @@ export class Command<T = unknown> {
     this.args = args || {};
   }
 
+  /**
+   * Serializes the command to a JSON representation
+   */
   toJson() {
     return {
       [this.commandName]: this.args,
     };
   }
 
+  /**
+   * Converts the command into
+   */
   toExeScriptRequest(): ActivityApi.ExeScriptRequestDTO {
     return { text: JSON.stringify([this.toJson()]) };
   }
@@ -39,9 +45,7 @@ export class Command<T = unknown> {
   /**
    * Setup local environment for executing this command.
    */
-  async before() {
-    // abstract
-  }
+  async before() {}
 
   /**
    * Cleanup local setup that was needed for the command to run.
@@ -81,9 +85,11 @@ export type Capture = {
   stdout?: CaptureMode;
   stderr?: CaptureMode;
 };
+
 export type CaptureMode =
   | { atEnd: { part?: CapturePart; format?: CaptureFormat } }
   | { stream: { limit?: number; format?: CaptureFormat } };
+
 type CapturePart = { head: number } | { tail: number } | { headTail: number };
 
 type CaptureFormat = "string" | "binary";

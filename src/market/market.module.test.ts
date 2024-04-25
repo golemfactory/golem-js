@@ -2,10 +2,13 @@ import { _, deepEqual, imock, instance, mock, reset, verify, when } from "@johan
 import { Logger, YagnaApi } from "../shared/utils";
 import { MarketModuleImpl } from "./market.module";
 import * as YaTsClient from "ya-ts-client";
-import { DemandNew } from "./demand";
+import { DemandNew, IDemandRepository } from "./demand";
 import { from, of, take } from "rxjs";
-import { ProposalNew } from "./proposal";
-import { IPaymentApi } from "../agreement";
+import { IProposalRepository, ProposalNew } from "./proposal";
+import { IAgreementApi } from "../agreement/agreement";
+import { IActivityApi, IPaymentApi } from "../agreement";
+
+const TEST_PAYMENT_PLATFORM = "erc20-holesky-tglm";
 
 const mockYagna = mock(YagnaApi);
 const mockMarket = mock(YaTsClient.MarketApi.RequestorService);
@@ -19,7 +22,11 @@ beforeEach(() => {
   when(mockYagna.market).thenReturn(instance(mockMarket));
 
   marketModule = new MarketModuleImpl({
+    activityApi: instance(imock<IActivityApi>()),
     paymentApi: instance(imock<IPaymentApi>()),
+    agreementApi: instance(imock<IAgreementApi>()),
+    proposalRepository: instance(imock<IProposalRepository>()),
+    demandRepository: instance(imock<IDemandRepository>()),
     yagna: instance(mockYagna),
     logger: instance(imock<Logger>()),
   });
@@ -35,7 +42,7 @@ describe("Market module", () => {
       const demand$ = marketModule.publishDemand(mockOffer);
       demand$.pipe(take(1)).subscribe((demand) => {
         try {
-          expect(demand).toEqual(new DemandNew("demand-id", mockOffer));
+          expect(demand).toEqual(new DemandNew("demand-id", mockOffer, TEST_PAYMENT_PLATFORM));
           done();
         } catch (error) {
           done(error);
@@ -51,19 +58,22 @@ describe("Market module", () => {
       const mockUnsubscribe = jest.fn();
       when(mockMarket.unsubscribeDemand(_)).thenCall(mockUnsubscribe);
 
-      const demand$ = marketModule.publishDemand(mockOffer, 10);
+      const demand$ = marketModule.publishDemand(mockOffer, {
+        expirationSec: 10,
+        paymentPlatform: TEST_PAYMENT_PLATFORM,
+      });
       const demands: DemandNew[] = [];
       demand$.pipe(take(3)).subscribe({
         next: (demand) => {
           demands.push(demand);
-          jest.advanceTimersByTime(10);
+          jest.advanceTimersByTime(10 * 1000);
         },
         complete: () => {
           try {
             expect(demands).toEqual([
-              new DemandNew("demand-id-1", mockOffer),
-              new DemandNew("demand-id-2", mockOffer),
-              new DemandNew("demand-id-3", mockOffer),
+              new DemandNew("demand-id-1", mockOffer, TEST_PAYMENT_PLATFORM),
+              new DemandNew("demand-id-2", mockOffer, TEST_PAYMENT_PLATFORM),
+              new DemandNew("demand-id-3", mockOffer, TEST_PAYMENT_PLATFORM),
             ]);
             expect(mockUnsubscribe).toHaveBeenCalledTimes(3);
             done();

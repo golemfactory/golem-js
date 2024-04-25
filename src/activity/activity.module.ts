@@ -1,11 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
-import { Agreement } from "../agreement";
-import { Activity, ActivityOptions, ActivityStateEnum } from "./index";
-import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
-import { Terminate } from "./script";
-import { GolemWorkError, WorkErrorCode } from "./work";
+import { Agreement, IActivityApi } from "../agreement";
+import { Activity, ActivityOptions } from "./index";
+import { defaultLogger, YagnaApi } from "../shared/utils";
 import { GolemServices } from "../golem-network";
+import { WorkContext, WorkOptions } from "./work";
 
 export interface ActivityEvents {}
 
@@ -25,17 +24,6 @@ export interface ActivityModule {
   createActivity(agreement: Agreement, options?: ActivityOptions): Promise<Activity>;
 
   /**
-   * Resets the activity on the exe unit back to "New" state
-   *
-   * Internally:
-   *
-   * - Activity.terminate
-   *
-   * @return Activity that could be deployed again
-   */
-  resetActivity(activity: Activity): Promise<Activity>;
-
-  /**
    * Definitely terminate any work on the provider
    *
    * - Activity.destroy
@@ -43,6 +31,8 @@ export interface ActivityModule {
    * @return The activity that was permanently terminated
    */
   destroyActivity(activity: Activity, reason?: string): Promise<Activity>;
+
+  createWorkContext(activity: Activity): Promise<WorkContext>;
 }
 
 export class ActivityModuleImpl implements ActivityModule {
@@ -52,13 +42,16 @@ export class ActivityModuleImpl implements ActivityModule {
 
   private readonly logger = defaultLogger("activity");
 
-  constructor(deps: GolemServices) {
-    this.logger = deps.logger;
-    this.yagnaApi = deps.yagna;
+  private readonly activityApi: IActivityApi;
+
+  constructor(private readonly services: GolemServices) {
+    this.logger = services.logger;
+    this.yagnaApi = services.yagna;
+    this.activityApi = services.activityApi;
   }
 
   async createActivity(agreement: Agreement, options?: ActivityOptions): Promise<Activity> {
-    const activity = await Activity.create(agreement, this.yagnaApi, options);
+    const activity = await this.activityApi.createActivity(agreement);
 
     this.logger.info("Created activity", {
       activityId: activity.id,
@@ -69,31 +62,31 @@ export class ActivityModuleImpl implements ActivityModule {
     return activity;
   }
 
-  async resetActivity(activity: Activity): Promise<Activity> {
-    const terminateCommand = new Terminate();
-    await activity.execute(terminateCommand.toExeScriptRequest());
-    const state = await activity.getState();
-    if (state !== ActivityStateEnum.New) {
-      throw new GolemWorkError(
-        "Unable to reset activity",
-        WorkErrorCode.ActivityResetFailed,
-        activity.agreement,
-        activity,
-        activity.getProviderInfo(),
-      );
-    }
-    return activity;
-  }
-
   async destroyActivity(activity: Activity, reason: string): Promise<Activity> {
-    await activity.stop();
+    const updated = await this.activityApi.destroyActivity(activity);
 
     this.logger.info("Destroyed activity", {
-      activityId: activity.id,
-      agreementId: activity.agreement.id,
-      provider: activity.agreement.getProviderInfo(),
+      activityId: updated.id,
+      agreementId: updated.agreement.id,
+      provider: updated.agreement.getProviderInfo(),
     });
 
-    return activity;
+    return updated;
+  }
+
+  async createWorkContext(activity: Activity, options?: WorkOptions): Promise<WorkContext> {
+    this.logger.debug("Creating work context for activity", { activityId: activity.id });
+    const ctx = new WorkContext(
+      this.services.activityApi,
+      this.services.yagna.activity.control,
+      this.services.yagna.activity.exec,
+      activity,
+      options,
+    );
+
+    this.logger.debug("Initializing the exe-unit for activity", { activityId: activity.id });
+    await ctx.before();
+
+    return ctx;
   }
 }

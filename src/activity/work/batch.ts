@@ -1,19 +1,17 @@
 import { DownloadFile, Run, Script, Transfer, UploadData, UploadFile } from "../script";
-import { Activity, Result } from "../index";
+import { Activity, ExecutionOptions, Result } from "../index";
 import { StorageProvider } from "../../shared/storage";
-import { Logger, defaultLogger } from "../../shared/utils";
+import { Logger, defaultLogger, YagnaApi } from "../../shared/utils";
 import { pipeline, Readable, Transform } from "stream";
 import { GolemWorkError, WorkErrorCode } from "./error";
+
+import { ExeScriptExecutor } from "../exe-script-executor";
 
 export class Batch {
   private readonly script: Script;
 
-  static create(activity: Activity, storageProvider: StorageProvider, logger?: Logger): Batch {
-    return new Batch(activity, storageProvider, logger || defaultLogger("work"));
-  }
-
   constructor(
-    private activity: Activity,
+    private executor: ExeScriptExecutor,
     private storageProvider: StorageProvider,
     private logger: Logger,
   ) {
@@ -81,7 +79,7 @@ export class Batch {
       const script = this.script.getExeScriptRequest();
 
       this.logger.debug(`Sending exec script request to the exe-unit on provider:`, { script });
-      const results = await this.activity.execute(script);
+      const results = await this.executor.execute(script);
 
       return new Promise((resolve, reject) => {
         this.logger.debug("Reading the results of the batch script");
@@ -107,9 +105,9 @@ export class Batch {
               : new GolemWorkError(
                   `Unable to execute script ${error}`,
                   WorkErrorCode.ScriptExecutionFailed,
-                  this.activity.agreement,
-                  this.activity,
-                  this.activity.agreement.getProviderInfo(),
+                  this.executor.activity.agreement,
+                  this.executor.activity,
+                  this.executor.activity.agreement.getProviderInfo(),
                   error,
                 );
           this.logger.debug("Error in batch script execution");
@@ -130,9 +128,9 @@ export class Batch {
       throw new GolemWorkError(
         `Unable to execute script ${error}`,
         WorkErrorCode.ScriptExecutionFailed,
-        this.activity.agreement,
-        this.activity,
-        this.activity.agreement.getProviderInfo(),
+        this.executor.activity.agreement,
+        this.executor.activity,
+        this.executor.activity.agreement.getProviderInfo(),
         error,
       );
     }
@@ -143,7 +141,7 @@ export class Batch {
     await script.before();
     let results: Readable;
     try {
-      results = await this.activity.execute(this.script.getExeScriptRequest());
+      results = await this.executor.execute(this.script.getExeScriptRequest());
     } catch (error) {
       // the original error is more important than the one from after()
       await script.after([]);
@@ -153,14 +151,14 @@ export class Batch {
       throw new GolemWorkError(
         `Unable to execute script ${error}`,
         WorkErrorCode.ScriptExecutionFailed,
-        this.activity.agreement,
-        this.activity,
-        this.activity.agreement.getProviderInfo(),
+        this.executor.activity.agreement,
+        this.executor.activity,
+        this.executor.activity.agreement.getProviderInfo(),
         error,
       );
     }
     const decodedResults: Result[] = [];
-    const activity = this.activity;
+    const { activity } = this.executor;
     const errorResultHandler = new Transform({
       objectMode: true,
       transform(chunk, encoding, callback) {

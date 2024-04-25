@@ -1,7 +1,8 @@
 import { v4 } from "uuid";
 import { Job, RunJobOptions } from "./job";
-import { YagnaApi, YagnaOptions } from "../../shared/utils";
+import { defaultLogger, Logger, YagnaOptions } from "../../shared/utils";
 import { GolemUserError } from "../../shared/error/golem-error";
+import { GolemNetwork } from "../../golem-network";
 
 export type JobManagerConfig = Partial<RunJobOptions> & { yagna?: YagnaOptions };
 
@@ -11,23 +12,31 @@ export type JobManagerConfig = Partial<RunJobOptions> & { yagna?: YagnaOptions }
  * The Golem Network class provides a high-level API for running jobs on the Golem Network.
  */
 export class JobManager {
-  private yagna: YagnaApi | null = null;
-
+  private glm: GolemNetwork;
   private jobs = new Map<string, Job>();
 
   /**
    * @param config - Configuration options that will be passed to all jobs created by this instance.
+   * @param logger
    */
-  constructor(private readonly config: JobManagerConfig) {}
+  constructor(
+    private readonly config: JobManagerConfig,
+    private readonly logger: Logger = defaultLogger("jobs"),
+  ) {
+    this.glm = new GolemNetwork({
+      api: {
+        key: this.config.yagna?.apiKey,
+        url: this.config.yagna?.basePath,
+      },
+    });
+  }
 
   public isInitialized() {
-    return this.yagna !== null;
+    return this.glm.isConnected();
   }
 
   public async init() {
-    const yagna = new YagnaApi(this.config.yagna);
-    await yagna.connect();
-    this.yagna = yagna;
+    await this.glm.connect();
   }
 
   /**
@@ -40,7 +49,16 @@ export class JobManager {
     this.checkInitialization();
 
     const jobId = v4();
-    const job = new Job<Output>(jobId, this.yagna!, { ...this.config, ...options });
+    const job = new Job<Output>(
+      jobId,
+      this.glm.services.yagna,
+      this.glm.services.activityApi,
+      this.glm.services.agreementApi,
+      {
+        ...this.config,
+        ...options,
+      },
+    );
     this.jobs.set(jobId, job);
 
     return job;
@@ -58,8 +76,7 @@ export class JobManager {
   public async close() {
     const pendingJobs = Array.from(this.jobs.values()).filter((job) => job.isRunning());
     await Promise.allSettled(pendingJobs.map((job) => job.cancel()));
-    await this.yagna?.disconnect();
-    this.yagna = null;
+    await this.glm.disconnect();
   }
 
   private checkInitialization() {

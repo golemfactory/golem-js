@@ -32,32 +32,32 @@ export function defaultLogger(
   const namespaceWithBase = getNamespace(namespace, opts.disableAutoPrefix);
   const logger = debugLogger(namespaceWithBase);
 
-  function log(msg: string, ctx?: Record<string, unknown> | Error) {
+  function log(level: string, msg: string, ctx?: Record<string, unknown> | Error) {
     if (ctx) {
-      logger(`${msg} %o`, ctx);
+      logger(`[${level}] ${msg} %o`, ctx);
     } else {
-      logger(msg);
+      logger(`[${level}] ${msg}`);
     }
   }
 
   function debug(msg: string): void;
   function debug(msg: string, ctx?: Record<string, unknown> | Error) {
-    log(msg, ctx);
+    log("DEBUG", msg, ctx);
   }
 
   function info(msg: string): void;
   function info(msg: string, ctx?: Record<string, unknown> | Error) {
-    log(msg, ctx);
+    log("INFO", msg, ctx);
   }
 
   function warn(msg: string): void;
   function warn(msg: string, ctx?: Record<string, unknown> | Error) {
-    log(msg, ctx);
+    log("WARN", msg, ctx);
   }
 
   function error(msg: string): void;
   function error(msg: string, ctx?: Record<string, unknown> | Error) {
-    log(msg, ctx);
+    log("ERROR", msg, ctx);
   }
 
   return {
