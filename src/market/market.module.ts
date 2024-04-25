@@ -5,11 +5,12 @@ import { Agreement, AgreementOptions } from "../agreement";
 import { Logger, YagnaApi, defaultLogger } from "../shared/utils";
 import { Allocation, PaymentModule } from "../payment";
 import { Package } from "./package";
-import { bufferTime, filter, Observable, switchMap, tap } from "rxjs";
+import { bufferTime, filter, map, Observable, switchMap, tap } from "rxjs";
 import { MarketApi } from "ya-ts-client";
 import { ProposalNew } from "./proposal";
 import { DecorationsBuilder } from "./builder";
 import { ProposalFilterNew } from "./service";
+import { ProposalsBatch } from "./proposals_batch";
 
 export interface MarketEvents {}
 
@@ -201,21 +202,42 @@ export class MarketModuleImpl implements MarketModule {
     });
   }
 
-  subscribeForProposals(demand: DemandNew): Observable<ProposalNew> {
+  subscribeForProposals(
+    demand: DemandNew,
+    options?: {
+      maxOfferEvents?: number;
+      offerFetchingIntervalSec?: number;
+      minProposalsBatchSize?: number;
+      proposalsBatchReleaseTimeoutMs?: number;
+    },
+  ): Observable<ProposalNew> {
     return new Observable<ProposalNew>((subscriber) => {
       let proposalPromise: MarketApi.CancelablePromise<ProposalEvent[]>;
       let isCancelled = false;
+      const proposalsBatch = new ProposalsBatch({
+        minBatchSize: options?.minProposalsBatchSize,
+        releaseTimeoutMs: options?.proposalsBatchReleaseTimeoutMs,
+      });
       const longPoll = async () => {
         if (isCancelled) {
           return;
         }
         try {
-          proposalPromise = this.yagnaApi.market.collectOffers(demand.id) as MarketApi.CancelablePromise<
-            ProposalEvent[]
-          >;
+          proposalPromise = this.yagnaApi.market.collectOffers(
+            demand.id,
+            options?.offerFetchingIntervalSec ?? 5,
+            options?.maxOfferEvents ?? 100,
+          ) as MarketApi.CancelablePromise<ProposalEvent[]>;
           const proposals = await proposalPromise;
           const successfulProposals = proposals.filter((proposal) => !proposal.reason);
-          successfulProposals.forEach((proposal) => subscriber.next(new ProposalNew(proposal.proposal, demand)));
+          successfulProposals.forEach((proposalEvent) => {
+            const proposal = new ProposalNew(proposalEvent.proposal, demand);
+            if (proposal.isInitial()) {
+              proposalsBatch.addProposal(proposal);
+            } else {
+              subscriber.next(proposal);
+            }
+          });
           this.logger.debug("Received proposal events from subscription", { count: proposals.length });
         } catch (error) {
           if (error instanceof MarketApi.CancelError) {
@@ -229,7 +251,24 @@ export class MarketModuleImpl implements MarketModule {
         }
         longPoll();
       };
+      // reduce initial proposals to a set grouped by the provider's key to avoid duplicate offers
+      const batch = async () => {
+        if (isCancelled) {
+          return;
+        }
+        this.logger.debug("Waiting for proposals");
+        try {
+          await proposalsBatch.waitForProposals();
+          const proposals = await proposalsBatch.getProposals();
+          this.logger.debug("Received batch of proposals", { count: proposals.length });
+          proposals.forEach((proposal) => subscriber.next(proposal));
+        } catch (error) {
+          subscriber.error(error);
+        }
+        batch();
+      };
       longPoll();
+      batch();
       return () => {
         isCancelled = true;
         proposalPromise.cancel();

@@ -6,13 +6,12 @@ import { DemandNew } from "./demand";
 import { from, of, take } from "rxjs";
 import { ProposalNew } from "./proposal";
 
-jest.useFakeTimers();
-
 const mockYagna = mock(YagnaApi);
 const mockMarket = mock(YaTsClient.MarketApi.RequestorService);
 let marketModule: MarketModuleImpl;
 
 beforeEach(() => {
+  jest.useFakeTimers();
   jest.resetAllMocks();
   reset(mockYagna);
   reset(mockMarket);
@@ -74,15 +73,20 @@ describe("Market module", () => {
     it("should long poll for proposals", (done) => {
       const mockDemand = instance(imock<DemandNew>());
 
-      const mockProposal = {
+      const mockProposalEvent = {
         eventType: "ProposalEvent",
         eventDate: "0000-00-00",
         proposal: instance(imock<YaTsClient.MarketApi.ProposalEventDTO["proposal"]>()),
       };
 
-      when(mockMarket.collectOffers(_)).thenResolve([mockProposal, mockProposal, mockProposal, mockProposal]);
+      when(mockMarket.collectOffers(_, _, _)).thenResolve([
+        mockProposalEvent,
+        mockProposalEvent,
+        mockProposalEvent,
+        mockProposalEvent,
+      ]);
 
-      const proposal$ = marketModule.subscribeForProposals(mockDemand).pipe(take(8));
+      const proposal$ = marketModule.subscribeForProposals(mockDemand, { offerFetchingIntervalSec: 0 }).pipe(take(8));
 
       let proposalsEmitted = 0;
 
@@ -93,7 +97,54 @@ describe("Market module", () => {
         complete: () => {
           try {
             expect(proposalsEmitted).toBe(8);
-            verify(mockMarket.collectOffers(_)).times(2);
+            verify(mockMarket.collectOffers(_, _, _)).times(2);
+            done();
+          } catch (error) {
+            done(error);
+          }
+        },
+      });
+    });
+    it("should long poll and batch proposals", (done) => {
+      jest.useRealTimers();
+      const mockDemand = instance(imock<DemandNew>());
+
+      const mockProposal = imock<YaTsClient.MarketApi.ProposalEventDTO["proposal"]>();
+      when(mockProposal.state).thenReturn("Initial");
+      when(mockProposal.issuerId).thenReturn("provider-1").thenReturn("provider-2").thenReturn("provider-1");
+      when(mockProposal.properties).thenReturn({
+        ["golem.inf.cpu.cores"]: 1,
+        ["golem.inf.cpu.threads"]: 1,
+        ["golem.inf.mem.gib"]: 1,
+        ["golem.com.usage.vector"]: ["ai-runtime.requests", "golem.usage.duration_sec", "golem.usage.gpu-sec"],
+        ["golem.com.pricing.model.linear.coeffs"]: [0.001, 0.001, 0.001, 0.001],
+      });
+      const mockProposalEvent = {
+        eventType: "ProposalEvent",
+        eventDate: "0000-00-00",
+        proposal: instance(mockProposal),
+      };
+
+      when(mockMarket.collectOffers(_, _, _)).thenCall(() => {
+        // simulate long pooling call
+        return new Promise((res) =>
+          setTimeout(() => res([mockProposalEvent, mockProposalEvent, mockProposalEvent]), 100),
+        );
+      });
+
+      const proposal$ = marketModule.subscribeForProposals(mockDemand).pipe(take(4));
+
+      const proposalsEmitted: ProposalNew[] = [];
+
+      proposal$.subscribe({
+        next: (proposal) => {
+          proposalsEmitted.push(proposal);
+        },
+        complete: () => {
+          try {
+            expect(proposalsEmitted.length).toBe(4);
+            // after the batching proposal there is only one from provider-2
+            expect(proposalsEmitted.filter((p) => p.provider.id === "provider-1").length).toBe(3);
             done();
           } catch (error) {
             done(error);
