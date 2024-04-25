@@ -5,7 +5,7 @@ import { Agreement, AgreementOptions } from "../agreement";
 import { Logger, YagnaApi, defaultLogger } from "../shared/utils";
 import { Allocation, PaymentModule } from "../payment";
 import { Package } from "./package";
-import { bufferTime, filter, map, Observable, switchMap, tap } from "rxjs";
+import { bufferTime, filter, Observable, switchMap, tap } from "rxjs";
 import { MarketApi } from "ya-ts-client";
 import { ProposalNew } from "./proposal";
 import { DecorationsBuilder } from "./builder";

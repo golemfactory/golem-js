@@ -144,7 +144,7 @@ describe("Market module", () => {
           try {
             expect(proposalsEmitted.length).toBe(4);
             // after the batching proposal there is only one from provider-2
-            expect(proposalsEmitted.filter((p) => p.provider.id === "provider-1").length).toBe(3);
+            expect(proposalsEmitted.filter((p) => p.provider.id === "provider-2").length).toBe(1);
             done();
           } catch (error) {
             done(error);
