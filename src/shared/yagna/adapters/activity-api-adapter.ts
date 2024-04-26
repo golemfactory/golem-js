@@ -1,6 +1,6 @@
 import { Agreement, IActivityApi } from "../../../agreement";
 import { ActivityApi } from "ya-ts-client";
-import { Activity, ActivityOptions, ActivityStateEnum } from "../../../activity";
+import { Activity, ActivityStateEnum } from "../../../activity";
 import { IActivityRepository } from "../../../activity/activity";
 
 export class ActivityApiAdapter implements IActivityApi {
@@ -14,10 +14,9 @@ export class ActivityApiAdapter implements IActivityApi {
     return this.activityRepo.getById(id);
   }
 
-  async createActivity(agreement: Agreement, options?: ActivityOptions): Promise<Activity> {
+  async createActivity(agreement: Agreement): Promise<Activity> {
     // TODO: Use options
-    // FIXME #yagna ts types
-    // @ts-ignore
+    // @ts-expect-error: FIXME #yagna ts types
     const { activityId } = await this.control.createActivity({
       agreementId: agreement.id,
     });

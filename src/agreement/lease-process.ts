@@ -6,7 +6,7 @@ import { DebitNoteFilter, InvoiceFilter } from "../payment/service";
 import { Logger, YagnaApi } from "../shared/utils";
 import { waitForCondition } from "../shared/utils/waitForCondition";
 import { WorkContext } from "../activity/work";
-import { Activity, ActivityOptions, ActivityStateEnum } from "../activity";
+import { Activity, ActivityStateEnum } from "../activity";
 
 export interface IPaymentApi {
   receivedInvoices$: BehaviorSubject<Invoice | null>;
@@ -37,7 +37,7 @@ export interface IPaymentApi {
 export interface IActivityApi {
   getActivity(id: string): Promise<Activity>;
 
-  createActivity(agreement: Agreement, options?: ActivityOptions): Promise<Activity>;
+  createActivity(agreement: Agreement): Promise<Activity>;
 
   destroyActivity(activity: Activity): Promise<Activity>;
 

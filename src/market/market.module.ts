@@ -185,7 +185,7 @@ export class MarketModuleImpl implements MarketModule {
   private readonly proposalRepo: IProposalRepository;
   private readonly demandRepo: IDemandRepository;
 
-  private DefaultDemandExpirationSec = 60 * 60;
+  private defaultDemandExpirationSec = 60 * 60;
 
   constructor(
     private readonly deps: {
@@ -238,7 +238,7 @@ export class MarketModuleImpl implements MarketModule {
   publishDemand(
     offer: MarketApi.DemandOfferBaseDTO,
     opts = {
-      expirationSec: this.DefaultDemandExpirationSec,
+      expirationSec: this.defaultDemandExpirationSec,
       paymentPlatform: new PaymentPlatform().toString(),
     },
   ): Observable<DemandNew> {
@@ -385,7 +385,7 @@ export class MarketModuleImpl implements MarketModule {
     bufferTimeout?: number;
   }): Observable<ProposalNew[]> {
     return this.publishDemand(options.demandOffer, {
-      expirationSec: options.demandOptions?.expirationSec ?? this.DefaultDemandExpirationSec,
+      expirationSec: options.demandOptions?.expirationSec ?? this.defaultDemandExpirationSec,
       paymentPlatform: options.paymentPlatform,
     }).pipe(
       // for each demand created -> start collecting all proposals

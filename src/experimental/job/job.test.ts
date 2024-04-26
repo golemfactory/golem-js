@@ -46,7 +46,7 @@ describe.skip("Job", () => {
       jest.spyOn(AgreementPoolService.prototype, "getAgreement").mockResolvedValue(mockAgreement);
 
       const activity = instance(mockActivity);
-      when(mockActivityApi.createActivity(anything(), anything())).thenResolve(activity);
+      when(mockActivityApi.createActivity(anything())).thenResolve(activity);
 
       const job = new Job("test_id", yagna, instance(mockActivityApi), instance(mockAgreementApi), {
         package: {

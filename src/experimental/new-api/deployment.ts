@@ -11,7 +11,6 @@ import { AgreementPool, AgreementPoolOptions, IActivityApi } from "../../agreeme
 import { CreateActivityPoolOptions } from "./builder";
 import { Package } from "../../market/package";
 import { Subscription } from "rxjs";
-import { IActivityRepository } from "../../activity/activity";
 
 export enum DeploymentState {
   INITIAL = "INITIAL",
@@ -186,13 +185,7 @@ export class Deployment {
         });
 
       const agreementPool = new AgreementPool(this.modules, proposalPool, agreementPoolOptions);
-      const activityPool = new ActivityPool(
-        this.modules,
-        this.yagnaApi,
-        this.activityApi,
-        agreementPool,
-        activityPoolOptions,
-      );
+      const activityPool = new ActivityPool(this.modules, agreementPool, activityPoolOptions);
       this.pools.set(pool.name, {
         proposalPool,
         proposalSubscription,

@@ -1,10 +1,9 @@
 import { Logger } from "../shared/utils";
-import { ExecutionOptions } from "./config";
 import { Agreement, ProviderInfo } from "../agreement";
 import { EventEmitter } from "eventemitter3";
 import { ActivityApi } from "ya-ts-client";
 import { YagnaExeScriptObserver } from "../shared/yagna";
-import { ExeScriptExecutor } from "./exe-script-executor";
+import { ExecutionOptions, ExeScriptExecutor } from "./exe-script-executor";
 
 /** @deprecated */
 export interface ActivityEvents {
@@ -22,19 +21,6 @@ export enum ActivityStateEnum {
   Terminated = "Terminated",
   /** In case when we couldn't establish the in on yagna */
   Unknown = "Unknown",
-}
-
-export interface ActivityOptions {
-  /** timeout for sending and creating batch */
-  activityRequestTimeout?: number;
-  /** timeout for executing batch */
-  activityExecuteTimeout?: number;
-  /** interval for fetching batch results while polling */
-  activityExeBatchResultPollIntervalSeconds?: number;
-  /** maximum number of retries retrieving results when an error occurs, default: 10 */
-  activityExeBatchResultMaxRetries?: number;
-  /** Logger module */
-  logger?: Logger;
 }
 
 type ActivityUsageInfo = {

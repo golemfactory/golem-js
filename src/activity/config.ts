@@ -1,5 +1,5 @@
-import { ActivityOptions } from "./activity";
 import { Logger, defaultLogger } from "../shared/utils";
+import { ExecutionOptions } from "./exe-script-executor";
 
 const DEFAULTS = {
   activityRequestTimeout: 10000,
@@ -11,14 +11,14 @@ const DEFAULTS = {
 /**
  * @internal
  */
-export class ExecutionOptions {
+export class ExecutionConfig {
   public readonly activityRequestTimeout: number;
   public readonly activityExecuteTimeout: number;
   public readonly activityExeBatchResultPollIntervalSeconds: number;
   public readonly activityExeBatchResultMaxRetries: number;
   public readonly logger: Logger;
 
-  constructor(options?: ActivityOptions) {
+  constructor(options?: ExecutionOptions) {
     this.activityRequestTimeout = options?.activityRequestTimeout || DEFAULTS.activityRequestTimeout;
     this.activityExecuteTimeout = options?.activityExecuteTimeout || DEFAULTS.activityExecuteTimeout;
     this.activityExeBatchResultMaxRetries =

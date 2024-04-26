@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
 import { Agreement, IActivityApi } from "../agreement";
-import { Activity, ActivityOptions } from "./index";
+import { Activity } from "./index";
 import { defaultLogger, YagnaApi } from "../shared/utils";
 import { GolemServices } from "../golem-network";
 import { WorkContext, WorkOptions } from "./work";
@@ -21,7 +21,7 @@ export interface ActivityModule {
    *
    * @return An WorkContext that's fully commissioned and the user can execute their commands
    */
-  createActivity(agreement: Agreement, options?: ActivityOptions): Promise<Activity>;
+  createActivity(agreement: Agreement): Promise<Activity>;
 
   /**
    * Definitely terminate any work on the provider
@@ -50,7 +50,7 @@ export class ActivityModuleImpl implements ActivityModule {
     this.activityApi = services.activityApi;
   }
 
-  async createActivity(agreement: Agreement, options?: ActivityOptions): Promise<Activity> {
+  async createActivity(agreement: Agreement): Promise<Activity> {
     const activity = await this.activityApi.createActivity(agreement);
 
     this.logger.info("Created activity", {
