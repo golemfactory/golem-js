@@ -82,7 +82,7 @@ jobs:
   run-e2e-tests:
     name: Run E2E tests
     needs: regular-checks
-    runs-on: goth2
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
@@ -107,7 +107,7 @@ jobs:
   run-cypress-tests:
     name: Run Cypress tests
     needs: regular-checks
-    runs-on: goth2
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
@@ -135,7 +135,7 @@ jobs:
   run-examples-tests:
     name: Run Examples tests
     needs: regular-checks
-    runs-on: goth2
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
