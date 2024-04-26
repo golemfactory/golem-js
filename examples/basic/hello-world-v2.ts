@@ -26,6 +26,10 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
           maxEnvPerHourPrice: 1,
         },
       },
+      payment: {
+        driver: "erc20",
+        network: "holesky",
+      },
     });
 
     const exe = await lease.getExeUnit();
@@ -34,7 +38,6 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
     console.log(result.stdout);
 
     // Be nice
-    await lease.terminate();
     await lease.finalized();
   } catch (err) {
     console.error("Failed to run the example", err);

@@ -1,4 +1,4 @@
-import { Allocation, DraftOfferProposalPool, GolemNetwork, Package, WorkContext } from "@golem-sdk/golem-js";
+import { Allocation, DraftOfferProposalPool, GolemNetwork, Package } from "@golem-sdk/golem-js";
 
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
@@ -75,7 +75,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
     proposalSubscription.unsubscribe();
 
     // Access your work context to perform operations
-    const ctx = new WorkContext(activity, {});
+    const ctx = await glm.activity.createWorkContext(activity);
     await ctx.before();
 
     // Perorm your work
