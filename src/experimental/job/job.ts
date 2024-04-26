@@ -5,7 +5,6 @@ import { MarketService, MarketServiceOptions } from "../../market";
 import { NetworkOptions, NetworkService } from "../../network";
 import { PaymentModuleOptions, PaymentService } from "../../payment";
 import { Package, PackageOptions } from "../../market/package";
-import { ActivityOptions } from "../../activity";
 import { EventEmitter } from "eventemitter3";
 import {
   GftpStorageProvider,
@@ -31,7 +30,6 @@ export type RunJobOptions = {
   agreement?: LegacyAgreementServiceOptions;
   network?: NetworkOptions;
   package?: PackageOptions;
-  activity?: ActivityOptions;
   work?: WorkOptions;
 };
 
@@ -208,7 +206,7 @@ export class Job<Output = unknown> {
 
     paymentService.acceptPayments(agreement);
 
-    const activity = await this.activityApi.createActivity(agreement, options.activity);
+    const activity = await this.activityApi.createActivity(agreement);
 
     const storageProvider =
       this.defaultOptions.work?.storageProvider || options.work?.storageProvider || this.getDefaultStorageProvider();

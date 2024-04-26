@@ -1,7 +1,7 @@
 import { DownloadFile, Run, Script, Transfer, UploadData, UploadFile } from "../script";
-import { Activity, ExecutionOptions, Result } from "../index";
+import { Result } from "../index";
 import { StorageProvider } from "../../shared/storage";
-import { Logger, defaultLogger, YagnaApi } from "../../shared/utils";
+import { Logger } from "../../shared/utils";
 import { pipeline, Readable, Transform } from "stream";
 import { GolemWorkError, WorkErrorCode } from "./error";
 
@@ -169,7 +169,7 @@ export class Batch {
                 WorkErrorCode.ScriptExecutionFailed,
                 activity.agreement,
                 activity,
-                activity.agreement.getProviderInfo(),
+                activity.getProviderInfo(),
               )
             : null;
         if (error) {

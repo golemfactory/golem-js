@@ -1,9 +1,9 @@
-import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
+import { defaultLogger, Logger } from "../shared/utils";
 import { createPool, Factory, Pool } from "generic-pool";
 import { GolemWorkError, WorkContext, WorkErrorCode } from "./work";
-import { ActivityOptions, ActivityStateEnum } from "./index";
+import { ActivityStateEnum } from "./index";
 import { ActivityModule } from "./activity.module";
-import { AgreementPool, IActivityApi } from "../agreement";
+import { AgreementPool } from "../agreement";
 import { ActivityDTO } from "./work/work";
 import { EventEmitter } from "eventemitter3";
 import { PaymentModule } from "../payment";
@@ -11,7 +11,6 @@ import { PaymentModule } from "../payment";
 export interface ActivityPoolOptions {
   logger?: Logger;
   replicas?: number | { min: number; max: number };
-  activityOptions?: ActivityOptions;
 }
 
 export interface ActivityPoolEvents {
@@ -37,8 +36,6 @@ export class ActivityPool {
 
   constructor(
     private modules: { activity: ActivityModule; payment: PaymentModule },
-    private readonly yagna: YagnaApi,
-    private readonly activityApi: IActivityApi,
     private readonly agreementPool: AgreementPool,
     private options?: ActivityPoolOptions,
   ) {
@@ -150,13 +147,7 @@ export class ActivityPool {
         this.logger.debug("Creating new activity to add to pool");
         const agreement = await this.agreementPool.acquire();
         const activity = await this.modules.activity.createActivity(agreement);
-        const ctx = new WorkContext(
-          this.activityApi,
-          this.yagna.activity.control,
-          this.yagna.activity.exec,
-          activity,
-          {},
-        );
+        const ctx = await this.modules.activity.createWorkContext(activity);
         await ctx.before();
         this.events.emit("created", ctx.getDto());
         return ctx;
@@ -169,7 +160,7 @@ export class ActivityPool {
       },
       validate: async (ctx: WorkContext) => {
         try {
-          const state = await this.activityApi.getActivityState(ctx.activity.id);
+          const state = await ctx.getState();
           const result = state !== ActivityStateEnum.Terminated;
           this.logger.debug("Validating activity in the pool.", { result, state });
           return result;

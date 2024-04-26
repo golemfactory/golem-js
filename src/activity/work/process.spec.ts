@@ -4,7 +4,7 @@ import { Logger, YagnaApi } from "../../shared/utils";
 import { Agreement, IActivityApi } from "../../agreement";
 import { Activity } from "../index";
 import {
-  buildActivityResults,
+  buildExecutorResults,
   buildExeScriptErrorResult,
   buildExeScriptSuccessResult,
 } from "../../../tests/unit/helpers";
@@ -26,7 +26,7 @@ describe("RemoteProcess", () => {
   });
 
   it("should create remote process", async () => {
-    const streamOfActivityResults = buildActivityResults([buildExeScriptSuccessResult("ok")]);
+    const streamOfActivityResults = buildExecutorResults([buildExeScriptSuccessResult("ok")]);
     const remoteProcess = new RemoteProcess(
       instance(mockActivityApi),
       streamOfActivityResults,
@@ -37,7 +37,7 @@ describe("RemoteProcess", () => {
   });
 
   it("should read stdout from remote process", async () => {
-    const streamOfActivityResults = buildActivityResults([buildExeScriptSuccessResult("Output")]);
+    const streamOfActivityResults = buildExecutorResults([buildExeScriptSuccessResult("Output")]);
     const remoteProcess = new RemoteProcess(
       instance(mockActivityApi),
       streamOfActivityResults,
@@ -50,7 +50,7 @@ describe("RemoteProcess", () => {
   });
 
   it("should read stderr from remote process", async () => {
-    const streamOfActivityResults = buildActivityResults(undefined, [buildExeScriptErrorResult("Error", "Error")]);
+    const streamOfActivityResults = buildExecutorResults(undefined, [buildExeScriptErrorResult("Error", "Error")]);
     const remoteProcess = new RemoteProcess(
       instance(mockActivityApi),
       streamOfActivityResults,
@@ -63,7 +63,7 @@ describe("RemoteProcess", () => {
   });
 
   it("should wait for exit", async () => {
-    const streamOfActivityResults = buildActivityResults([buildExeScriptSuccessResult("Ok")]);
+    const streamOfActivityResults = buildExecutorResults([buildExeScriptSuccessResult("Ok")]);
     const remoteProcess = new RemoteProcess(
       instance(mockActivityApi),
       streamOfActivityResults,

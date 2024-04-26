@@ -1,7 +1,7 @@
 import { Logger } from "../shared/utils";
 import { ActivityApi } from "ya-ts-client";
 import { YagnaExeScriptObserver } from "../shared/yagna";
-import { ExecutionOptions } from "./config";
+import { ExecutionConfig } from "./config";
 import { Readable } from "stream";
 import { GolemWorkError, WorkErrorCode } from "./work";
 import { withTimeout } from "../shared/utils/timeout";
@@ -15,18 +15,34 @@ export interface ExeScriptRequest {
   text: string;
 }
 
+export interface ExecutionOptions {
+  /** timeout for sending and creating batch */
+  activityRequestTimeout?: number;
+  /** timeout for executing batch */
+  activityExecuteTimeout?: number;
+  /** interval for fetching batch results while polling */
+  activityExeBatchResultPollIntervalSeconds?: number;
+  /** maximum number of retries retrieving results when an error occurs, default: 10 */
+  activityExeBatchResultMaxRetries?: number;
+  /** Logger module */
+  logger?: Logger;
+}
+
 const RETRYABLE_ERROR_STATUS_CODES = [408, 500];
 
 export class ExeScriptExecutor {
   private isRunning = false;
+  private readonly options: ExecutionConfig;
 
   constructor(
     public readonly activity: Activity,
     private readonly logger: Logger,
     private readonly activityControl: ActivityApi.RequestorControlService,
     private readonly execObserver: YagnaExeScriptObserver,
-    private readonly options = new ExecutionOptions(),
-  ) {}
+    options?: ExecutionOptions,
+  ) {
+    this.options = new ExecutionConfig(options);
+  }
 
   /**
    * Stops the executor mid-flight
@@ -186,6 +202,8 @@ export class ExeScriptExecutor {
     startTime: Date,
     timeout?: number,
   ): Promise<Readable> {
+    const errors: object[] = [];
+    const results: Result[] = [];
     const source = this.execObserver.observeBatchExecResults(this.activity.id, batchId).subscribe({
       next: (resultEvents) => results.push(this.parseEventToResult(resultEvents, batchSize)),
       error: (err) => errors.push(err.data?.message ?? err),
@@ -197,9 +215,6 @@ export class ExeScriptExecutor {
     const activityExecuteTimeout = this.options.activityExecuteTimeout;
 
     const { logger, activity } = this;
-
-    const errors: object[] = [];
-    const results: Result[] = [];
 
     return new Readable({
       objectMode: true,

@@ -1,4 +1,4 @@
-import { Activity, ActivityStateEnum, ExecutionOptions, Result } from "../";
+import { Activity, ActivityStateEnum, ExecutionConfig, Result } from "../";
 import {
   Capture,
   Command,
@@ -76,13 +76,13 @@ export class WorkContext {
     public readonly execObserver: YagnaExeScriptObserver,
     public readonly activity: Activity,
     private options?: WorkOptions,
-    executorOptions?: ExecutionOptions,
+    executionOptions?: ExecutionConfig,
   ) {
     this.activityPreparingTimeout = options?.activityPreparingTimeout || DEFAULTS.activityPreparingTimeout;
     this.activityStateCheckingInterval = options?.activityStateCheckingInterval || DEFAULTS.activityStateCheckInterval;
 
     this.logger = options?.logger ?? defaultLogger("work");
-    this.provider = activity.agreement.getProviderInfo();
+    this.provider = activity.getProviderInfo();
     this.storageProvider = options?.storageProvider ?? new NullStorageProvider();
 
     this.networkNode = options?.networkNode;
@@ -91,7 +91,7 @@ export class WorkContext {
       this.activityControl,
       this.execObserver,
       this.logger,
-      executorOptions,
+      executionOptions,
     );
   }
 
@@ -398,7 +398,19 @@ export class WorkContext {
   }
 
   async getState(): Promise<ActivityStateEnum> {
-    return this.activity.getState();
+    return this.activityApi
+      .getActivity(this.activity.id)
+      .then((activity) => activity.getState())
+      .catch((err) => {
+        this.logger.error("Failed to read activity state", err);
+        throw new GolemWorkError(
+          "Failed to read activity state",
+          WorkErrorCode.ActivityStatusQueryFailed,
+          this.activity.agreement,
+          this.activity,
+          err,
+        );
+      });
   }
 
   private async runOneCommand<T>(command: Command<T>, options?: CommandOptions): Promise<Result<T>> {

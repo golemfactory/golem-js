@@ -1,5 +1,4 @@
 import { GolemModuleError } from "../shared/error/golem-error";
-import { Demand, DemandNew } from "./demand";
 
 export enum MarketErrorCode {
   ServiceNotInitialized = "ServiceNotInitialized",
