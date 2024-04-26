@@ -6,7 +6,6 @@ async function main() {
       url: process.env.YAGNA_API_URL || "http://127.0.0.1:7465",
       key: process.env.YAGNA_APPKEY || "try-golem",
     },
-    payment: {},
     market: {},
     dataTransferProtocol: "gftp",
   });
