@@ -1,4 +1,4 @@
-import { FileEntry, IFileServer } from "../../activity";
+import { FileServerEntry, IFileServer } from "../../activity";
 import { GolemConfigError, GolemInternalError } from "../error/golem-error";
 import { StorageProvider } from "./provider";
 import fs from "fs";
@@ -8,7 +8,7 @@ import jsSha3 from "js-sha3";
  * This class provides GFTP based implementation of the IFileServer interface used in the SDK
  */
 export class GftpServerAdapter implements IFileServer {
-  private published = new Map<string, FileEntry>();
+  private published = new Map<string, FileServerEntry>();
 
   constructor(private readonly storage: StorageProvider) {}
 
