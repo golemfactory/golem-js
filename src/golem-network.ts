@@ -1,4 +1,4 @@
-import { DeploymentOptions, GolemDeploymentBuilder, MarketOptions } from "./experimental";
+import { DataTransferProtocol, DeploymentOptions, GolemDeploymentBuilder, MarketOptions } from "./experimental";
 import { defaultLogger, Logger, YagnaApi } from "./shared/utils";
 import {
   DemandNew,
@@ -26,7 +26,7 @@ import { IProposalRepository } from "./market/proposal";
 import { DemandRepository } from "./shared/yagna/repository/demand-repository";
 import { IDemandRepository } from "./market/demand";
 import { GftpServerAdapter } from "./shared/storage/GftpServerAdapter";
-import { GftpStorageProvider } from "./shared/storage";
+import { GftpStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "./shared/storage";
 
 export interface GolemNetworkOptions {
   logger?: Logger;
@@ -37,7 +37,7 @@ export interface GolemNetworkOptions {
   market?: Partial<MarketOptions>;
   payment?: PaymentModuleOptions;
   deployment?: Partial<DeploymentOptions>;
-  dataTransferProtocol?: DeploymentOptions["dataTransferProtocol"];
+  dataTransferProtocol: DataTransferProtocol;
 }
 
 export interface GolemNetworkEvents {
@@ -76,6 +76,8 @@ export type GolemServices = {
 export class GolemNetwork {
   public readonly events = new EventEmitter<GolemNetworkEvents>();
 
+  public readonly options: GolemNetworkOptions;
+
   private readonly logger: Logger;
 
   private readonly yagna: YagnaApi;
@@ -92,10 +94,21 @@ export class GolemNetwork {
 
   private hasConnection = false;
 
-  private readonly gftpStorageProvider: GftpStorageProvider;
+  private readonly gftpStorageProvider: StorageProvider;
 
-  constructor(public readonly options: GolemNetworkOptions = {}) {
+  constructor(options: Partial<GolemNetworkOptions> = {}) {
+    const optDefaults: GolemNetworkOptions = {
+      dataTransferProtocol: "gftp",
+    };
+
+    this.options = {
+      ...optDefaults,
+      ...options,
+    };
+
     this.logger = options.logger ?? defaultLogger("golem-network");
+
+    this.logger.debug("Creating Golem Network instance with options", { options: this.options });
 
     try {
       this.yagna = new YagnaApi({
@@ -104,7 +117,7 @@ export class GolemNetwork {
         basePath: this.options.api?.url,
       });
 
-      this.gftpStorageProvider = new GftpStorageProvider();
+      this.gftpStorageProvider = this.createStorageProvider();
 
       const demandCache = new CacheService<DemandNew>();
       const proposalCache = new CacheService<ProposalNew>();
@@ -281,5 +294,15 @@ export class GolemNetwork {
   // public compose(): void {}
   isConnected() {
     return this.hasConnection;
+  }
+
+  private createStorageProvider(): StorageProvider {
+    switch (this.options.dataTransferProtocol) {
+      case "ws":
+        return new WebSocketBrowserStorageProvider(this.yagna, {});
+      case "gftp":
+      default:
+        return new GftpStorageProvider();
+    }
   }
 }
