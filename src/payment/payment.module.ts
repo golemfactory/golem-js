@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
 import { Allocation, DebitNote, Invoice, InvoiceProcessor } from "./index";
-import { Promise } from "cypress/types/cy-bluebird";
 
-import { defaultLogger, YagnaApi } from "../shared/utils";
+import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
 import { DebitNoteFilter, InvoiceFilter } from "./service";
 import { Observable } from "rxjs";
 import { GolemServices } from "../golem-network";
@@ -23,7 +22,24 @@ export interface PaymentPlatformOptions {
 export interface PaymentModuleEvents {}
 
 export type CreateAllocationParams = {
-  amount: number;
+  budget: number;
+};
+
+export type PaymentModuleConfig = {
+  /**
+   * Payment network. During development it's recommended to use the `holesky` testnet.
+   * For production use `mainnet` or `polygon`.
+   * Payments on mainnets use real GLM tokens, while on testnets they use tGLM (test glm) tokens.
+   * @default holesky
+   */
+  network?: string;
+  /**
+   * Instruct yagna to use a specific payment driver.
+   * @default erc20
+   */
+  driver?: string;
+
+  logger?: Logger;
 };
 
 export interface PaymentModule {
@@ -78,6 +94,12 @@ export class PaymentModuleImpl implements PaymentModule {
     this.yagnaApi = deps.yagna;
   }
 
+  private getPaymentPlatform(): string {
+    const mainnets = ["mainnet", "polygon"];
+    const token = mainnets.includes(this.options.payment.network) ? "glm" : "tglm";
+    return `${this.options.payment.driver}-${this.options.payment.network}-${token}`;
+  }
+
   subscribeForDebitNotes(): Observable<DebitNote> {
     throw new Error("Method not implemented.");
   }
@@ -86,8 +108,16 @@ export class PaymentModuleImpl implements PaymentModule {
     throw new Error("Method not implemented.");
   }
 
-  createAllocation(_opts: CreateAllocationParams): Promise<Allocation> {
-    throw new Error("Method not implemented.");
+  async createAllocation(allocationParams: CreateAllocationParams): Promise<Allocation> {
+    const { identity: address } = await this.yagnaApi.identity.getIdentity();
+
+    return Allocation.create(this.yagnaApi, {
+      account: {
+        address,
+        platform: this.getPaymentPlatform(),
+      },
+      ...allocationParams,
+    });
   }
 
   releaseAllocation(_allocation: Allocation): Promise<Allocation> {

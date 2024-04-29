@@ -1,12 +1,19 @@
 import { DeploymentOptions, GolemDeploymentBuilder, MarketOptions } from "./experimental";
 import { defaultLogger, Logger, YagnaApi } from "./shared/utils";
-import { DemandNew, DemandSpec, DraftOfferProposalPool, MarketModule, MarketModuleImpl, ProposalNew } from "./market";
-import { Allocation, PaymentModule, PaymentModuleImpl, PaymentModuleOptions } from "./payment";
+import {
+  DemandNew,
+  DemandSpec,
+  DraftOfferProposalPool,
+  MarketApi,
+  MarketModule,
+  MarketModuleImpl,
+  ProposalNew,
+} from "./market";
+import { PaymentModule, PaymentModuleImpl, PaymentModuleOptions } from "./payment";
 import { ActivityModule, ActivityModuleImpl } from "./activity";
 import { NetworkModule, NetworkModuleImpl } from "./network/network.module";
 import { EventEmitter } from "eventemitter3";
 import { IActivityApi, IPaymentApi, LeaseProcess } from "./agreement";
-import { Package } from "./market/package";
 import { DebitNoteRepository, InvoiceRepository, PaymentApiAdapter } from "./shared/yagna";
 import { ActivityApiAdapter } from "./shared/yagna/adapters/activity-api-adapter";
 import { ActivityRepository } from "./shared/yagna/repository/activity-repository";
@@ -18,6 +25,7 @@ import { CacheService } from "./shared/cache/CacheService";
 import { IProposalRepository } from "./market/proposal";
 import { DemandRepository } from "./shared/yagna/repository/demand-repository";
 import { IDemandRepository } from "./market/demand";
+import { MarketApiAdapter } from "./shared/yagna/adapters/market-api-adapter";
 
 export interface GolemNetworkOptions {
   logger?: Logger;
@@ -51,6 +59,7 @@ export type GolemServices = {
   paymentApi: IPaymentApi;
   activityApi: IActivityApi;
   agreementApi: IAgreementApi;
+  marketApi: MarketApi;
   proposalCache: CacheService<ProposalNew>;
   proposalRepository: IProposalRepository;
   demandRepository: IDemandRepository;
@@ -121,6 +130,7 @@ export class GolemNetwork {
           agreementRepository,
           this.logger,
         ),
+        marketApi: new MarketApiAdapter(this.yagna),
       };
 
       this.market = new MarketModuleImpl(this.services);
@@ -197,25 +207,12 @@ export class GolemNetwork {
     const proposalPool = new DraftOfferProposalPool({
       logger: this.logger,
     });
-
-    const workload = Package.create({
-      imageTag: demand.demand.image,
-    });
-
-    const allocation = await Allocation.create(this.yagna, {
-      account: {
-        address: (await this.yagna.identity.getIdentity()).identity,
-        platform: "erc20-holesky-tglm",
-      },
-      budget: 1,
-    });
-
-    const demandOffer = await this.market.buildDemand(workload, allocation, {});
+    const allocation = await this.payment.createAllocation({ budget: 1 });
+    const demandSpecification = await this.market.buildDemand(demand.demand, allocation);
 
     const proposalSubscription = this.market
       .startCollectingProposals({
-        demandOffer,
-        paymentPlatform: "erc20-holesky-tglm",
+        demandSpecification,
       })
       .subscribe((proposalsBatch) => proposalsBatch.forEach((proposal) => proposalPool.add(proposal)));
 

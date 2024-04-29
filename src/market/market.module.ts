@@ -1,19 +1,25 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
-import { DemandConfig, DemandNew, DemandOptions, GolemMarketError, MarketErrorCode, ProposalFilter } from "./index";
+import {
+  DemandConfig,
+  DemandNew,
+  DemandOptions,
+  GolemMarketError,
+  MarketApi,
+  MarketErrorCode,
+  NewProposalEvent,
+  ProposalFilter,
+} from "./index";
 import { Agreement, LegacyAgreementServiceOptions, LeaseProcess, IPaymentApi, IActivityApi } from "../agreement";
 import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
 import { Allocation, PaymentModule } from "../payment";
 import { Package } from "./package";
-import { bufferTime, filter, Observable, switchMap, tap } from "rxjs";
-import { MarketApi } from "ya-ts-client";
+import { bufferTime, filter, map, Observable, switchMap, tap } from "rxjs";
 import { IProposalRepository, ProposalNew } from "./proposal";
 import { DecorationsBuilder } from "./builder";
 import { ProposalFilterNew } from "./service";
-import { GolemServices } from "../golem-network";
 import { IAgreementApi } from "../agreement/agreement";
-import { IDemandRepository } from "./demand";
-import { PaymentPlatform } from "../payment/payment-platform";
+import { DemandOptionsNew, DemandSpecification, IDemandRepository } from "./demand";
 
 export interface MarketEvents {}
 
@@ -21,7 +27,7 @@ export interface MarketEvents {}
  * Use by legacy demand publishing code
  */
 export interface DemandBuildParams {
-  demand: DemandOptions;
+  demand: DemandOptionsNew;
   market: MarketOptions;
 }
 
@@ -37,17 +43,9 @@ export type PaymentSpec = {
  * Represents the new demand specification which is accepted by GolemNetwork and MarketModule
  */
 export interface DemandSpec {
-  demand: ComputeSpec;
+  demand: DemandOptionsNew;
   market: MarketOptions;
   payment: PaymentSpec;
-}
-
-export interface ComputeSpec {
-  /** The image that you want to deploy (assumes VM-like runtime  */
-  image: string;
-  engine?: DemandEngine;
-  resources?: Partial<DemandResources>;
-  durationHours?: number;
 }
 
 export interface DemandResources {
@@ -88,11 +86,7 @@ export interface MarketOptions {
 export interface MarketModule {
   events: EventEmitter<MarketEvents>;
 
-  buildDemand(
-    taskPackage: Package,
-    allocation: Allocation,
-    options: DemandOptions,
-  ): Promise<MarketApi.DemandOfferBaseDTO>;
+  buildDemand(options: DemandOptionsNew, allocation: Allocation): Promise<DemandSpecification>;
 
   /**
    * Publishes the demand to the market and handles refreshing it when needed.
@@ -100,13 +94,7 @@ export interface MarketModule {
    * Keep in mind that since this method returns an observable, nothing will happen until you subscribe to it.
    * Unsubscribing will remove the demand from the market.
    */
-  publishDemand(
-    offer: MarketApi.DemandOfferBaseDTO,
-    options?: {
-      expirationSec: number;
-      paymentPlatform: string;
-    },
-  ): Observable<DemandNew>;
+  publishDemand(offer: DemandSpecification): Observable<DemandNew>;
 
   /**
    * Subscribes to the proposals for the given demand.
@@ -119,11 +107,7 @@ export interface MarketModule {
    * Sends a counter-offer to the provider. Note that to get the provider's response to your
    * counter you should listen to proposals sent to yagna using `subscribeForProposals`.
    */
-  negotiateProposal(
-    receivedProposal: ProposalNew,
-    offer: MarketApi.DemandOfferBaseDTO,
-    paymentPlatform: string,
-  ): Promise<ProposalNew>;
+  negotiateProposal(receivedProposal: ProposalNew, offer: DemandSpecification): Promise<ProposalNew>;
 
   /**
    * Internally
@@ -164,17 +148,13 @@ export interface MarketModule {
    * Unsubscribing from the observable will stop the process and remove the demand from the market.
    */
   startCollectingProposals(options: {
-    demandOffer: MarketApi.DemandOfferBaseDTO;
-    paymentPlatform: string;
-    demandOptions?: DemandOptions;
+    demandSpecification: DemandSpecification;
     filter?: ProposalFilterNew;
     bufferSize?: number;
   }): Observable<ProposalNew[]>;
 
   createLease(agreement: Agreement, allocation: Allocation): LeaseProcess;
 }
-
-type ProposalEvent = MarketApi.ProposalEventDTO & MarketApi.ProposalRejectedEventDTO;
 
 export class MarketModuleImpl implements MarketModule {
   events: EventEmitter<MarketEvents> = new EventEmitter<MarketEvents>();
@@ -196,6 +176,7 @@ export class MarketModuleImpl implements MarketModule {
       demandRepository: IDemandRepository;
       paymentApi: IPaymentApi;
       activityApi: IActivityApi;
+      marketApi: MarketApi;
     },
   ) {
     this.logger = deps.logger;
@@ -205,15 +186,11 @@ export class MarketModuleImpl implements MarketModule {
     this.demandRepo = deps.demandRepository;
   }
 
-  async buildDemand(
-    taskPackage: Package,
-    allocation: Allocation,
-    options: DemandOptions,
-  ): Promise<MarketApi.DemandOfferBaseDTO> {
-    const config = new DemandConfig(options);
+  async buildDemand(options: DemandOptionsNew, allocation: Allocation): Promise<DemandSpecification> {
+    const demandSpecificConfig = new DemandConfig(options);
     const builder = new DecorationsBuilder();
 
-    const taskDecorations = await taskPackage.getDemandDecoration();
+    const taskDecorations = await Package.create(options).getDemandDecoration();
     const allocationDecoration = await allocation.getDemandDecoration();
 
     builder.addDecorations([taskDecorations, allocationDecoration]);
@@ -221,118 +198,61 @@ export class MarketModuleImpl implements MarketModule {
     // Configure basic properties
     builder
       .addProperty("golem.srv.caps.multi-activity", true)
-      .addProperty("golem.srv.comp.expiration", Date.now() + config.expirationSec * 1000)
-      .addProperty("golem.node.debug.subnet", config.subnetTag)
-      .addProperty("golem.com.payment.debit-notes.accept-timeout?", config.debitNotesAcceptanceTimeoutSec)
+      .addProperty("golem.srv.comp.expiration", Date.now() + demandSpecificConfig.expirationSec * 1000)
+      .addProperty("golem.node.debug.subnet", demandSpecificConfig.subnetTag)
+      .addProperty("golem.com.payment.debit-notes.accept-timeout?", demandSpecificConfig.debitNotesAcceptanceTimeoutSec)
       .addConstraint("golem.com.pricing.model", "linear")
-      .addConstraint("golem.node.debug.subnet", config.subnetTag);
+      .addConstraint("golem.node.debug.subnet", demandSpecificConfig.subnetTag);
 
     // Configure mid-agreement payments
     builder
-      .addProperty("golem.com.scheme.payu.debit-note.interval-sec?", config.midAgreementDebitNoteIntervalSec)
-      .addProperty("golem.com.scheme.payu.payment-timeout-sec?", config.midAgreementPaymentTimeoutSec);
+      .addProperty(
+        "golem.com.scheme.payu.debit-note.interval-sec?",
+        demandSpecificConfig.midAgreementDebitNoteIntervalSec,
+      )
+      .addProperty("golem.com.scheme.payu.payment-timeout-sec?", demandSpecificConfig.midAgreementPaymentTimeoutSec);
 
-    return builder.getDemandRequest();
+    return builder.getDemandSpecification(allocation.paymentPlatform, demandSpecificConfig.expirationSec);
   }
 
-  publishDemand(
-    offer: MarketApi.DemandOfferBaseDTO,
-    opts = {
-      expirationSec: this.defaultDemandExpirationSec,
-      paymentPlatform: new PaymentPlatform().toString(),
-    },
-  ): Observable<DemandNew> {
+  publishDemand(demandSpecification: DemandSpecification): Observable<DemandNew> {
     return new Observable<DemandNew>((subscriber) => {
-      let id: string;
+      let currentDemand: DemandNew;
 
       const subscribeDemand = async () => {
-        const idOrError = await this.yagnaApi.market.subscribeDemand(offer);
-        if (typeof idOrError !== "string") {
-          subscriber.error(new Error(`Failed to subscribe to demand: ${idOrError}`));
-          return;
-        }
-        id = idOrError;
-        subscriber.next(new DemandNew(id, offer, opts.paymentPlatform));
-        this.logger.debug("Subscribing for proposals matched with the demand", { demandId: id, offer });
+        currentDemand = await this.deps.marketApi.publishDemandSpecification(demandSpecification);
+        subscriber.next(currentDemand);
+        this.logger.debug("Subscribing for proposals matched with the demand", { demand: currentDemand });
       };
       subscribeDemand();
 
       const interval = setInterval(() => {
-        this.yagnaApi.market.unsubscribeDemand(id);
+        this.deps.marketApi
+          .unpublishDemand(currentDemand)
+          .catch((error) => this.logger.error("Failed to unpublish demand", error));
         subscribeDemand();
-      }, opts.expirationSec * 1000);
+      }, demandSpecification.expirationMs);
 
       return () => {
         clearInterval(interval);
-        this.yagnaApi.market.unsubscribeDemand(id);
+        this.deps.marketApi
+          .unpublishDemand(currentDemand)
+          .catch((error) => this.logger.error("Failed to unpublish demand", error));
       };
     });
   }
 
   subscribeForProposals(demand: DemandNew): Observable<ProposalNew> {
-    return new Observable<ProposalNew>((subscriber) => {
-      let proposalPromise: MarketApi.CancelablePromise<ProposalEvent[]>;
-      let isCancelled = false;
-      const longPoll = async () => {
-        if (isCancelled) {
-          return;
-        }
-        try {
-          proposalPromise = this.yagnaApi.market.collectOffers(demand.id) as MarketApi.CancelablePromise<
-            ProposalEvent[]
-          >;
-          const proposals = await proposalPromise;
-          const successfulProposals = proposals.filter((event) => !event.reason);
-          successfulProposals.forEach((event) => subscriber.next(new ProposalNew(event.proposal, demand)));
-        } catch (error) {
-          if (error instanceof MarketApi.CancelError) {
-            return;
-          }
-          // when the demand is unsubscribed the long poll will reject with a 404
-          if ("status" in error && error.status === 404) {
-            return;
-          }
-          subscriber.error(error);
-        }
-        longPoll();
-      };
-      longPoll();
-      return () => {
-        isCancelled = true;
-        proposalPromise.cancel();
-      };
-    });
+    return this.deps.marketApi.observeProposalEvents(demand).pipe(
+      // filter out proposal rejection events
+      filter((event) => !("reason" in event)),
+      // map proposal events to proposal models
+      map((event) => new ProposalNew((event as NewProposalEvent).proposal, demand)),
+    );
   }
 
-  async negotiateProposal(
-    receivedProposal: ProposalNew,
-    offer: MarketApi.DemandOfferBaseDTO,
-    paymentPlatform: string,
-  ): Promise<ProposalNew> {
-    const offerClone = structuredClone(offer);
-    offerClone.properties["golem.com.payment.chosen-platform"] = paymentPlatform;
-
-    const newProposalId = await this.yagnaApi.market.counterProposalDemand(
-      receivedProposal.demand.id,
-      receivedProposal.id,
-      offerClone,
-    );
-
-    this.logger.debug("Countered proposal", {
-      previousProposalId: receivedProposal.previousProposalId,
-      proposalId: receivedProposal.id,
-      counterProposalId: newProposalId,
-    });
-
-    if (typeof newProposalId !== "string") {
-      throw new Error(`Failed to create counter-offer ${newProposalId}`);
-    }
-    // TODO: Use repo here
-    const proposalModel = await this.yagnaApi.market.getProposalOffer(receivedProposal.demand.id, newProposalId);
-    const proposalNew = new ProposalNew(proposalModel, receivedProposal.demand);
-    this.proposalRepo.add(proposalNew);
-
-    return proposalNew;
+  async negotiateProposal(receivedProposal: ProposalNew, offer: DemandSpecification): Promise<ProposalNew> {
+    return this.deps.marketApi.counterProposal(receivedProposal, offer);
   }
 
   async proposeAgreement(
@@ -377,17 +297,12 @@ export class MarketModuleImpl implements MarketModule {
   }
 
   startCollectingProposals(options: {
-    demandOffer: MarketApi.DemandOfferBaseDTO;
-    paymentPlatform: string;
-    demandOptions?: DemandOptions;
+    demandSpecification: DemandSpecification;
     filter?: ProposalFilterNew;
     bufferSize?: number;
     bufferTimeout?: number;
   }): Observable<ProposalNew[]> {
-    return this.publishDemand(options.demandOffer, {
-      expirationSec: options.demandOptions?.expirationSec ?? this.defaultDemandExpirationSec,
-      paymentPlatform: options.paymentPlatform,
-    }).pipe(
+    return this.publishDemand(options.demandSpecification).pipe(
       // for each demand created -> start collecting all proposals
       switchMap((demand) => {
         this.demandRepo.add(demand);
@@ -401,7 +316,7 @@ export class MarketModuleImpl implements MarketModule {
         // Populate the cache
         this.proposalRepo.add(proposal);
         if (proposal.isInitial()) {
-          this.negotiateProposal(proposal, options.demandOffer, options.paymentPlatform);
+          this.negotiateProposal(proposal, options.demandSpecification);
         }
       }),
       // for each proposal -> filter out all states other than draft

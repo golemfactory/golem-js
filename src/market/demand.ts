@@ -1,4 +1,4 @@
-import { Package } from "./package";
+import { Package, PackageOptions } from "./package";
 import { Allocation } from "../payment";
 import { DemandFactory } from "./factory";
 import { Proposal } from "./proposal";
@@ -96,13 +96,30 @@ export interface DemandOptions {
    */
   midAgreementPaymentTimeoutSec?: number;
 }
+export type DemandOptionsNew = PackageOptions & DemandOptions;
+
+type DemandDecoration = {
+  properties: Record<string, string | number | boolean>;
+  constraints: string;
+};
+
+export class DemandSpecification {
+  constructor(
+    public readonly decoration: DemandDecoration,
+    public readonly paymentPlatform: string,
+    public readonly expirationMs: number,
+  ) {}
+}
 
 export class DemandNew {
   constructor(
     public readonly id: string,
-    public readonly offer: MarketApi.DemandOfferBaseDTO,
-    public readonly paymentPlatform: string,
+    public readonly specification: DemandSpecification,
   ) {}
+
+  get paymentPlatform(): string {
+    return this.specification.paymentPlatform;
+  }
 }
 
 export interface IDemandRepository {
@@ -168,7 +185,10 @@ export class Demand {
    * @deprecated Will be removed before release, glue code
    */
   toNewEntity(): DemandNew {
-    return new DemandNew(this.id, this.demandRequest, this.allocation.paymentPlatform);
+    return new DemandNew(
+      this.id,
+      new DemandSpecification(this.demandRequest, this.allocation.paymentPlatform, this.options.expirationSec * 1000),
+    );
   }
   /**
    * Stop subscribing for provider offer proposals for this demand

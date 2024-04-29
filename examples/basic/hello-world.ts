@@ -1,4 +1,4 @@
-import { Allocation, DraftOfferProposalPool, GolemNetwork, Package } from "@golem-sdk/golem-js";
+import { DraftOfferProposalPool, GolemNetwork } from "@golem-sdk/golem-js";
 
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
@@ -16,7 +16,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
     const demand = {
       demand: {
-        image: "golem/alpine:latest",
+        imageTag: "golem/alpine:latest",
         resources: {
           minCpu: 4,
           minMemGib: 8,
@@ -41,27 +41,13 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
       logger,
     });
 
-    const workload = Package.create({
-      imageTag: demand.demand.image,
+    const allocation = await glm.payment.createAllocation({ budget: 1 });
+    const demandSpecification = await glm.market.buildDemand(demand.demand, allocation);
+    const proposal$ = glm.market.startCollectingProposals({
+      demandSpecification,
+      bufferSize: 15,
     });
-
-    const allocation = await Allocation.create(glm.services.yagna, {
-      account: {
-        address: (await glm.services.yagna.identity.getIdentity()).identity,
-        platform: "erc20-holesky-tglm",
-      },
-      budget: 1,
-    });
-
-    const demandOffer = await glm.market.buildDemand(workload, allocation, {});
-
-    const proposalSubscription = glm.market
-      .startCollectingProposals({
-        demandOffer,
-        paymentPlatform: "erc20-holesky-tglm",
-      })
-      .subscribe((proposalsBatch) => proposalsBatch.forEach((proposal) => proposalPool.add(proposal)));
-
+    const proposalSubscription = proposalPool.readFrom(proposal$);
     const draftProposal = await proposalPool.acquire();
 
     const agreement = await glm.market.proposeAgreement(glm.payment, draftProposal);
@@ -78,7 +64,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
     const ctx = await glm.activity.createWorkContext(activity);
     await ctx.before();
 
-    // Perorm your work
+    // Perform your work
     const result = await ctx.run("echo Hello World");
     console.log("Result=", result.stdout);
 
