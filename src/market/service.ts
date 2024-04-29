@@ -3,7 +3,7 @@ import { Package } from "./package";
 import { Proposal, ProposalNew } from "./proposal";
 import { AgreementPoolService } from "../agreement";
 import { Allocation } from "../payment";
-import { Demand, DemandNew, DemandOptions } from "./demand";
+import { Demand, DemandNew, DemandOptions, DemandSpecification } from "./demand";
 import { MarketConfig } from "./config";
 import { GolemMarketError, MarketErrorCode } from "./error";
 import { ProposalsBatch } from "./proposals_batch";
@@ -109,7 +109,19 @@ export class MarketService {
   private demandProposalEventListener(proposal: Proposal) {
     if (proposal.isInitial()) {
       this.proposalsBatch
-        .addProposal(new ProposalNew(proposal.model, new DemandNew(proposal.demand.id, proposal.demand.demandRequest)))
+        .addProposal(
+          new ProposalNew(
+            proposal.model,
+            new DemandNew(
+              proposal.demand.id,
+              new DemandSpecification(
+                proposal.demand.demandRequest,
+                proposal.demand.toNewEntity().paymentPlatform,
+                proposal.demand.options.expirationSec,
+              ),
+            ),
+          ),
+        )
         .then(() => this.logger.debug("Added a proposal to the batch"))
         .catch((err) => this.logger.error("Failed to add a proposal to the batch", err));
     } else if (proposal.isDraft()) {

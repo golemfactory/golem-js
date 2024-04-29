@@ -156,6 +156,10 @@ export class ProposalNew {
     };
   }
 
+  get timestamp() {
+    return this.model.timestamp;
+  }
+
   /**
    * Proposal cost estimation based on CPU, Env and startup costs
    */

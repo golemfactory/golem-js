@@ -175,7 +175,7 @@ export class Demand {
     public readonly demandRequest: MarketApi.DemandOfferBaseDTO,
     public readonly allocation: Allocation,
     private yagnaApi: YagnaApi,
-    private options: DemandConfig,
+    public options: DemandConfig,
   ) {
     this.logger = this.options.logger || defaultLogger("market");
     this.subscribe().catch((e) => this.logger.error("Unable to subscribe for demand events", e));
