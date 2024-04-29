@@ -7,6 +7,7 @@ import { DebitNoteFilter, InvoiceFilter } from "./service";
 import { Observable } from "rxjs";
 import { GolemServices } from "../golem-network";
 import { PaymentSpec } from "../market";
+import { PayerDetails } from "./PayerDetails";
 
 export interface PaymentModuleOptions {
   debitNoteFilter?: DebitNoteFilter;
@@ -41,11 +42,6 @@ export type PaymentModuleConfig = {
 
   logger?: Logger;
 };
-
-export interface PayerDetails {
-  address: string;
-  platform: string;
-}
 
 export interface PaymentModule {
   events: EventEmitter<PaymentModuleEvents>;
@@ -113,10 +109,7 @@ export class PaymentModuleImpl implements PaymentModule {
   async getPayerDetails(): Promise<PayerDetails> {
     const { identity: address } = await this.yagnaApi.identity.getIdentity();
 
-    return {
-      address,
-      platform: this.getPaymentPlatform(),
-    };
+    return new PayerDetails(this.options.payment.network, this.options.payment.driver, address);
   }
 
   subscribeForDebitNotes(): Observable<DebitNote> {
@@ -128,9 +121,12 @@ export class PaymentModuleImpl implements PaymentModule {
   }
 
   async createAllocation(allocationParams: CreateAllocationParams): Promise<Allocation> {
-    const account = await this.getPayerDetails();
+    const payer = await this.getPayerDetails();
     return Allocation.create(this.yagnaApi, {
-      account,
+      account: {
+        address: payer.address,
+        platform: payer.getPaymentPlatform(),
+      },
       ...allocationParams,
     });
   }

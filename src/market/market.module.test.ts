@@ -8,6 +8,7 @@ import { IProposalRepository, ProposalNew } from "./proposal";
 import { MarketApiAdapter } from "../shared/yagna/";
 import { IActivityApi, IPaymentApi } from "../agreement";
 import { IAgreementApi } from "../agreement/agreement";
+import { PayerDetails } from "../payment/PayerDetails";
 jest.useFakeTimers();
 
 const mockMarketApiAdapter = mock(MarketApiAdapter);
@@ -32,10 +33,7 @@ beforeEach(() => {
 describe("Market module", () => {
   describe("buildDemand()", () => {
     it("should build a demand", async () => {
-      const payerDetails = {
-        address: "0x123",
-        platform: "erc20-holesky-tglm",
-      };
+      const payerDetails = new PayerDetails("holesky", "erc20", "0x123");
 
       const demandSpecification = await marketModule.buildDemand(
         {
@@ -73,7 +71,7 @@ describe("Market module", () => {
         "golem.com.scheme.payu.payment-timeout-sec?": 42,
       };
 
-      expect(demandSpecification.paymentPlatform).toBe(payerDetails.platform);
+      expect(demandSpecification.paymentPlatform).toBe(payerDetails.getPaymentPlatform());
       expect(demandSpecification.expirationSec).toBe(42);
       expect(demandSpecification.decoration.constraints).toBe(`(&${expectedConstraints})`);
       expect(demandSpecification.decoration.properties).toEqual(expectedProperties);

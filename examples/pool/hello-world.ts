@@ -1,14 +1,4 @@
-import {
-  ActivityModuleImpl,
-  ActivityPool,
-  AgreementPool,
-  DraftOfferProposalPool,
-  GolemNetwork,
-  MarketApiAdapter,
-  MarketModuleImpl,
-  PaymentModuleImpl,
-  YagnaApi,
-} from "@golem-sdk/golem-js";
+import { ActivityPool, AgreementPool, DraftOfferProposalPool, GolemNetwork } from "@golem-sdk/golem-js";
 
 (async function main() {
   const glm = new GolemNetwork({

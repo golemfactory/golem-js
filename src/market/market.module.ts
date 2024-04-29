@@ -12,7 +12,7 @@ import {
 } from "./index";
 import { Agreement, LegacyAgreementServiceOptions, LeaseProcess, IPaymentApi, IActivityApi } from "../agreement";
 import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
-import { Allocation, PayerDetails, PaymentModule } from "../payment";
+import { Allocation, PaymentModule } from "../payment";
 import { Package } from "./package";
 import { bufferTime, filter, map, Observable, switchMap, tap } from "rxjs";
 import { IProposalRepository, ProposalNew } from "./proposal";
@@ -20,6 +20,7 @@ import { ComparisonOperator, DecorationsBuilder } from "./builder";
 import { ProposalFilterNew } from "./service";
 import { IAgreementApi } from "../agreement/agreement";
 import { DemandOptionsNew, DemandSpecification, IDemandRepository } from "./demand";
+import { PayerDetails } from "../payment/PayerDetails";
 
 export interface MarketEvents {}
 
@@ -219,12 +220,12 @@ export class MarketModuleImpl implements MarketModule {
 
     // Configure payment platform
     builder
-      .addProperty(`golem.com.payment.platform.${payerDetails.platform}.address`, payerDetails.address)
+      .addProperty(`golem.com.payment.platform.${payerDetails.getPaymentPlatform()}.address`, payerDetails.address)
       .addProperty("golem.com.payment.protocol.version", "2")
-      .addConstraint(`golem.com.payment.platform.${payerDetails.platform}.address`, "*")
+      .addConstraint(`golem.com.payment.platform.${payerDetails.getPaymentPlatform()}.address`, "*")
       .addConstraint("golem.com.payment.protocol.version", "1", ComparisonOperator.Gt);
 
-    return builder.getDemandSpecification(payerDetails.platform, demandSpecificConfig.expirationSec);
+    return builder.getDemandSpecification(payerDetails.getPaymentPlatform(), demandSpecificConfig.expirationSec);
   }
 
   publishDemand(demandSpecification: DemandSpecification): Observable<DemandNew> {
