@@ -232,7 +232,7 @@ describe("Market module", () => {
           error: (error) => done(error),
         });
     });
-    it("should reduce proposal from the same provider", (done) => {
+    it("should reduce proposals from the same provider", (done) => {
       jest.useRealTimers();
 
       const mockSpecification = mock(DemandSpecification);
