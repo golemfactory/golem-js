@@ -2,7 +2,7 @@
 import { EventEmitter } from "eventemitter3";
 import { Agreement, IActivityApi } from "../agreement";
 import { Activity } from "./index";
-import { defaultLogger, YagnaApi } from "../shared/utils";
+import { defaultLogger } from "../shared/utils";
 import { GolemServices } from "../golem-network";
 import { WorkContext, WorkOptions } from "./work";
 
@@ -12,41 +12,81 @@ export interface ActivityModule {
   events: EventEmitter<ActivityEvents>;
 
   /**
-   * Internally:
+   * Create and start a new activity on the provider for the supplied agreement
    *
-   * - Activity.start
-   * - Activity.deploy
-   * - deploys the image
-   * - the resulting ActivityDTO from ya-ts-client should be "Deployed"
-   *
-   * @return An WorkContext that's fully commissioned and the user can execute their commands
+   * @return The resulting activity on the provider for further use
    */
   createActivity(agreement: Agreement): Promise<Activity>;
 
   /**
    * Definitely terminate any work on the provider
    *
-   * - Activity.destroy
-   *
    * @return The activity that was permanently terminated
    */
   destroyActivity(activity: Activity, reason?: string): Promise<Activity>;
 
+  /**
+   * Create a work context "within" the activity so that you can perform commands on the rented resources
+   *
+   * @return An WorkContext that's fully commissioned and the user can execute their commands
+   */
   createWorkContext(activity: Activity): Promise<WorkContext>;
 }
 
+/**
+ * Information about a file that has been published via the FileServer
+ */
+export type FileServerEntry = {
+  /** The URL of the file, that the clients can use to reach and download the file */
+  fileUrl: string;
+
+  /** The checksum that can be used by clients to validate integrity of the downloaded file */
+  fileHash: string;
+};
+
+/**
+ * An abstract interface describing a File Server that can be used to expose files from the Requestor to the Golem Network
+ */
+export interface IFileServer {
+  /**
+   * Exposes a file that can be accessed via Golem Network and GFTP
+   */
+  publishFile(sourcePath: string): Promise<FileServerEntry>;
+
+  /**
+   * Tells if the file was already published on the server
+   */
+  isFilePublished(sourcePath: string): boolean;
+
+  /**
+   * Returns publishing information for a file that has been already served
+   */
+  getPublishInfo(sourcePath: string): FileServerEntry | undefined;
+
+  /**
+   * Tells if the server is currently serving any files
+   */
+  isServing(): boolean;
+}
+
+export interface ActivityModuleOptions {}
+
 export class ActivityModuleImpl implements ActivityModule {
   public readonly events: EventEmitter<ActivityEvents> = new EventEmitter<ActivityEvents>();
-
-  private readonly yagnaApi: YagnaApi;
 
   private readonly logger = defaultLogger("activity");
 
   private readonly activityApi: IActivityApi;
 
-  constructor(private readonly services: GolemServices) {
+  private readonly fileServer?: IFileServer;
+
+  constructor(
+    private readonly services: GolemServices,
+    private readonly options: ActivityModuleOptions = {
+      fileServer: false,
+    },
+  ) {
     this.logger = services.logger;
-    this.yagnaApi = services.yagna;
     this.activityApi = services.activityApi;
   }
 

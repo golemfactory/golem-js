@@ -3,7 +3,9 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
 (async () => {
   const glm = new GolemNetwork({
-    logger: pinoPrettyLogger(),
+    logger: pinoPrettyLogger({
+      level: "debug",
+    }),
   });
 
   try {
@@ -35,8 +37,8 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
     const result = await exe.run("echo 'Hello World!'");
     console.log(result.stdout);
 
-    // Be nice
-    await lease.finalized();
+    // Wait for the lease to be fully terminated and settled
+    await lease.finalize();
   } catch (err) {
     console.error("Failed to run the example", err);
   }
