@@ -3,6 +3,7 @@ import {
   ActivityPool,
   AgreementPool,
   DraftOfferProposalPool,
+  GolemNetwork,
   MarketApiAdapter,
   MarketModuleImpl,
   PaymentModuleImpl,
@@ -10,20 +11,17 @@ import {
 } from "@golem-sdk/golem-js";
 
 (async function main() {
-  const yagnaApi = new YagnaApi();
-  const marketApi = new MarketApiAdapter(yagnaApi);
-
-  try {
-    await yagnaApi.connect();
-
-    const modules = {
-      market: new MarketModuleImpl(marketApi, yagnaApi),
-      activity: new ActivityModuleImpl(yagnaApi),
-      payment: new PaymentModuleImpl(yagnaApi, {
+  const glm = new GolemNetwork({
+    payment: {
+      payment: {
         driver: "erc20",
         network: "holesky",
-      }),
-    };
+      },
+    },
+  });
+
+  try {
+    await glm.connect();
 
     const demandOptions = {
       demand: {
@@ -47,19 +45,27 @@ import {
     };
 
     const proposalPool = new DraftOfferProposalPool({ minCount: 1 });
-    const allocation = await modules.payment.createAllocation({ budget: 1 });
-    const demandSpecification = await modules.market.buildDemand(demandOptions.demand, allocation);
+    const allocation = await glm.payment.createAllocation({ budget: 1 });
+    const demandSpecification = await glm.market.buildDemand(demandOptions.demand, allocation);
 
-    const proposals$ = modules.market.startCollectingProposals({
+    const proposals$ = glm.market.startCollectingProposals({
       demandSpecification,
     });
+
     const proposalSubscription = proposalPool.readFrom(proposals$);
 
     /** How many providers you plan to engage simultaneously */
     const CONCURRENCY = 2;
 
-    const agreementPool = new AgreementPool(modules, proposalPool, { replicas: { max: CONCURRENCY } });
-    const activityPool = new ActivityPool(modules, agreementPool, {
+    const depModules = {
+      market: glm.market,
+      activity: glm.activity,
+      payment: glm.payment,
+    };
+
+    // TODO: Optimize constructor params
+    const agreementPool = new AgreementPool(depModules, proposalPool, { replicas: { max: CONCURRENCY } });
+    const activityPool = new ActivityPool(depModules, agreementPool, {
       replicas: CONCURRENCY,
     });
 
@@ -80,6 +86,6 @@ import {
   } catch (err) {
     console.error("Pool execution failed:", err);
   } finally {
-    await yagnaApi.disconnect();
+    await glm.disconnect();
   }
 })();
