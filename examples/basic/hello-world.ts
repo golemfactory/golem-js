@@ -30,10 +30,6 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
           maxCpuPerHourPrice: 1,
           maxEnvPerHourPrice: 1,
         },
-        withProviders: ["0x123123"],
-        withoutProviders: ["0x123123"],
-        withOperators: ["0x123123"],
-        withoutOperators: ["0x123123"],
       },
     };
 
@@ -52,9 +48,6 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
     const agreement = await glm.market.proposeAgreement(glm.payment, draftProposal);
     const lease = await glm.market.createLease(agreement, allocation);
-
-    // console.log(lease)
-
     const activity = await glm.activity.createActivity(agreement);
 
     // We managed to create the activity, no need to look for more agreement candidates
@@ -62,7 +55,6 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
     // Access your work context to perform operations
     const ctx = await glm.activity.createWorkContext(activity);
-    await ctx.before();
 
     // Perform your work
     const result = await ctx.run("echo Hello World");

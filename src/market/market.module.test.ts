@@ -322,7 +322,6 @@ describe("Market module", () => {
               done(error);
             }
           },
-          error: (error) => done(error),
         });
     });
   });

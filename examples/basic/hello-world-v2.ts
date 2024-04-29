@@ -11,12 +11,10 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
     const lease = await glm.oneOf({
       demand: {
-        image: "golem/alpine:latest",
-        resources: {
-          minCpu: 4,
-          minMemGib: 8,
-          minStorageGib: 16,
-        },
+        imageTag: "golem/alpine:latest",
+        minCpuCores: 4,
+        minMemGib: 8,
+        minStorageGib: 16,
       },
       market: {
         rentHours: 12,

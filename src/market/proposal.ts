@@ -114,10 +114,6 @@ export class ProposalNew {
     return this.model.state;
   }
 
-  public get id(): string {
-    return this.model.proposalId;
-  }
-
   public get timestamp(): string {
     return this.model.timestamp;
   }
@@ -154,10 +150,6 @@ export class ProposalNew {
       envSec,
       start,
     };
-  }
-
-  get timestamp() {
-    return this.model.timestamp;
   }
 
   /**

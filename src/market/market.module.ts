@@ -9,11 +9,11 @@ import {
   NewProposalEvent,
   ProposalFilter,
 } from "./index";
-import { Agreement, IActivityApi, IPaymentApi, LeaseProcess, LegacyAgreementServiceOptions } from "../agreement";
+import { Agreement, LegacyAgreementServiceOptions, LeaseProcess, IPaymentApi, IActivityApi } from "../agreement";
 import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
 import { Allocation, PaymentModule } from "../payment";
 import { Package } from "./package";
-import { bufferTime, filter, map, Observable, OperatorFunction, switchMap, tap } from "rxjs";
+import { bufferTime, filter, map, Observable, switchMap, tap, OperatorFunction } from "rxjs";
 import { IProposalRepository, ProposalNew } from "./proposal";
 import { DecorationsBuilder } from "./builder";
 import { ProposalFilterNew } from "./service";
