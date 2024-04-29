@@ -1,19 +1,23 @@
 /**
  * This example demonstrates how to scan the market for proposals
- * Let's lear what is the average start price
+ * Lets lear what is the average start price
  */
 import { GolemNetwork, ProposalNew } from "@golem-sdk/golem-js";
+import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
-const glm = new GolemNetwork({
-  payment: {
+(async () => {
+  const glm = new GolemNetwork({
+    logger: pinoPrettyLogger({
+      level: "debug",
+    }),
     payment: {
-      network: "holesky",
-      driver: "erc20",
+      payment: {
+        network: "holesky",
+        driver: "erc20",
+      },
     },
-  },
-});
+  });
 
-async function main() {
   try {
     await glm.connect();
 
@@ -57,6 +61,4 @@ async function main() {
   } finally {
     await glm.disconnect();
   }
-}
-
-main().catch((err) => console.error(err, "Error in main"));
+})().catch(console.error);

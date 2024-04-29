@@ -35,6 +35,37 @@ export interface ActivityModule {
   createWorkContext(activity: Activity): Promise<WorkContext>;
 }
 
+export type FileEntry = {
+  fileUrl: string;
+  fileHash: string;
+};
+
+export interface IFileServer {
+  /**
+   * Exposes a file that can be accessed via Golem Network and GFTP
+   */
+  publishFile(sourcePath: string): Promise<FileEntry>;
+
+  /**
+   * Tells if the file was already published on the server
+   */
+  isFilePublished(sourcePath: string): boolean;
+
+  /**
+   * Returns publishing information for a file that has been already served
+   */
+  getPublishInfo(sourcePath: string): FileEntry | undefined;
+
+  /**
+   * Tells if the server is currentrly serving any files
+   */
+  isServing(): boolean;
+}
+
+export interface ActivityModuleOptions {
+  fileServer: boolean;
+}
+
 export class ActivityModuleImpl implements ActivityModule {
   public readonly events: EventEmitter<ActivityEvents> = new EventEmitter<ActivityEvents>();
 
@@ -44,7 +75,14 @@ export class ActivityModuleImpl implements ActivityModule {
 
   private readonly activityApi: IActivityApi;
 
-  constructor(private readonly services: GolemServices) {
+  private readonly fileServer?: IFileServer;
+
+  constructor(
+    private readonly services: GolemServices,
+    private readonly options: ActivityModuleOptions = {
+      fileServer: false,
+    },
+  ) {
     this.logger = services.logger;
     this.yagnaApi = services.yagna;
     this.activityApi = services.activityApi;
@@ -88,5 +126,13 @@ export class ActivityModuleImpl implements ActivityModule {
     await ctx.before();
 
     return ctx;
+  }
+
+  public async startFileServer() {}
+
+  public async stopFileServer() {}
+
+  public async usesFileServer() {
+    return this.options.fileServer && this.fileServer !== undefined;
   }
 }

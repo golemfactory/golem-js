@@ -20,13 +20,13 @@ export class JobManager {
    * @param logger
    */
   constructor(
-    private readonly config: JobManagerConfig,
+    private readonly config?: JobManagerConfig,
     private readonly logger: Logger = defaultLogger("jobs"),
   ) {
     this.glm = new GolemNetwork({
       api: {
-        key: this.config.yagna?.apiKey,
-        url: this.config.yagna?.basePath,
+        key: this.config?.yagna?.apiKey,
+        url: this.config?.yagna?.basePath,
       },
     });
   }

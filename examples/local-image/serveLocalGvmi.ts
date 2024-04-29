@@ -1,91 +1,82 @@
-import {
-  Activity,
-  AgreementPoolService,
-  GftpStorageProvider,
-  MarketService,
-  Package,
-  PaymentService,
-  WorkContext,
-  YagnaApi,
-  serveLocalGvmi,
-} from "@golem-sdk/golem-js";
+import { DraftOfferProposalPool, GolemNetwork } from "@golem-sdk/golem-js";
+
+import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 import { fileURLToPath } from "url";
 
 // get the absolute path to the local image in case this file is run from a different directory
 const getImagePath = (path: string) => fileURLToPath(new URL(path, import.meta.url).toString());
-const localImagePath = getImagePath("./alpine.gvmi");
 
-async function main() {
-  console.log("Serving local image to the providers...");
-  const storageProvider = new GftpStorageProvider();
-  // if you don't provide a storage provider, the server will create a GftpStorageProvider
-  const server = serveLocalGvmi(localImagePath, storageProvider);
-  await server.serve();
-  const { url, hash } = server.getImage();
-  const workload = Package.create({
-    imageHash: hash,
-    imageUrl: url,
+(async () => {
+  const logger = pinoPrettyLogger({
+    level: "debug",
   });
 
-  console.log("Starting core services...");
-
-  const yagna = new YagnaApi();
-
-  const payment = new PaymentService(yagna);
-
-  await payment.run();
-
-  const allocation = await payment.createAllocation({
-    budget: 1.0,
+  const glm = new GolemNetwork({
+    logger,
   });
-
-  const agreementPool = new AgreementPoolService(yagna);
-
-  const market = new MarketService(agreementPool, yagna);
-
-  await agreementPool.run();
-  await market.run(workload, allocation);
-  console.log("Core services started");
 
   try {
-    const agreement = await agreementPool.getAgreement();
-    payment.acceptPayments(agreement);
+    await glm.connect();
 
-    const activity = await Activity.create(agreement, yagna);
-    // Stop listening for new proposals
-    await market.end();
+    const demand = {
+      demand: {
+        // Here you supply the path to the GVMI file that you want to deploy and use
+        // using the file:// protocol will make the SDK switch to "GVMI" serving mode
+        imageUrl: `file://${getImagePath("./alpine.gvmi")}`,
+        resources: {
+          minCpu: 4,
+          minMemGib: 8,
+          minStorageGib: 16,
+        },
+      },
+      market: {
+        rentHours: 12,
+        pricing: {
+          maxStartPrice: 1,
+          maxCpuPerHourPrice: 1,
+          maxEnvPerHourPrice: 1,
+        },
+      },
+    };
 
-    const ctx = new WorkContext(activity, { storageProvider });
+    const proposalPool = new DraftOfferProposalPool({
+      logger,
+    });
 
-    console.log("Activity initialized, status:", await activity.getState());
-    await ctx.before();
-    console.log("Activity deployed and ready for use, status:", await activity.getState());
-    console.log("Provider executing the activity:", ctx.provider.name);
+    const allocation = await glm.payment.createAllocation({ budget: 1 });
+    const demandSpecification = await glm.market.buildDemand(demand.demand, allocation);
+    const proposal$ = glm.market.startCollectingProposals({
+      demandSpecification,
+      bufferSize: 15,
+    });
+    const proposalSubscription = proposalPool.readFrom(proposal$);
+    const draftProposal = await proposalPool.acquire();
 
-    // Read the file that was included in our custom image
+    const agreement = await glm.market.proposeAgreement(glm.payment, draftProposal);
+    const lease = await glm.market.createLease(agreement, allocation);
+    const activity = await glm.activity.createActivity(agreement);
+
+    // We managed to create the activity, no need to look for more agreement candidates
+    proposalSubscription.unsubscribe();
+
+    // Access your work context to perform operations
+    const ctx = await glm.activity.createWorkContext(activity);
+
+    // Perform your work
     const result = await ctx.run("cat hello.txt");
-    console.log("===============================");
-    console.log(result.stdout?.toString().trim());
-    console.log("===============================");
+    console.log("Contents of 'hello.txt': ", result.stdout?.toString().trim());
 
-    console.log("Work completed");
-    // Stop the activity on the provider once you're done
-    await activity.stop();
-    // Release the agreement without plans to re-use -> it's going to terminate this agreement
-    await agreementPool.releaseAgreement(agreement.id, false);
+    // Start clean shutdown procedure for business components
+    await glm.activity.destroyActivity(activity);
+    await glm.market.terminateAgreement(agreement);
+    await proposalPool.remove(draftProposal);
+
+    // This will keep the script waiting for payments etc
+    await lease.finalize();
   } catch (err) {
     console.error("Failed to run example on Golem", err);
+  } finally {
+    // Clean shutdown of infrastructure components
+    await glm.disconnect();
   }
-
-  console.log("Shutting down services...");
-  await market.end();
-  await agreementPool.end();
-  await payment.end();
-  console.log("Stoping the local image server...");
-  await server.close();
-}
-
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+})().catch(console.error);
