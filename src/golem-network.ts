@@ -207,8 +207,8 @@ export class GolemNetwork {
     const proposalPool = new DraftOfferProposalPool({
       logger: this.logger,
     });
-    const allocation = await this.payment.createAllocation({ budget: 1 });
-    const demandSpecification = await this.market.buildDemand(demand.demand, allocation);
+    const payerDetails = await this.payment.getPayerDetails();
+    const demandSpecification = await this.market.buildDemand(demand.demand, payerDetails);
 
     const proposalSubscription = this.market
       .startCollectingProposals({
@@ -221,6 +221,7 @@ export class GolemNetwork {
     const agreement = await this.market.proposeAgreement(this.payment, draftProposal);
     proposalSubscription.unsubscribe();
 
+    const allocation = await this.payment.createAllocation({ budget: 1 });
     const lease = this.market.createLease(agreement, allocation);
 
     // We managed to create the activity, no need to look for more agreement candidates

@@ -42,6 +42,11 @@ export type PaymentModuleConfig = {
   logger?: Logger;
 };
 
+export interface PayerDetails {
+  address: string;
+  platform: string;
+}
+
 export interface PaymentModule {
   events: EventEmitter<PaymentModuleEvents>;
 
@@ -70,6 +75,11 @@ export interface PaymentModule {
   rejectDebitNote(debitNote: DebitNote): Promise<DebitNote>;
 
   createInvoiceProcessor(): InvoiceProcessor;
+
+  /**
+   * Get the payment platform and wallet address of the payer.
+   */
+  getPayerDetails(): Promise<PayerDetails>;
 }
 
 export class PaymentModuleImpl implements PaymentModule {
@@ -100,6 +110,15 @@ export class PaymentModuleImpl implements PaymentModule {
     return `${this.options.payment.driver}-${this.options.payment.network}-${token}`;
   }
 
+  async getPayerDetails(): Promise<PayerDetails> {
+    const { identity: address } = await this.yagnaApi.identity.getIdentity();
+
+    return {
+      address,
+      platform: this.getPaymentPlatform(),
+    };
+  }
+
   subscribeForDebitNotes(): Observable<DebitNote> {
     throw new Error("Method not implemented.");
   }
@@ -109,13 +128,9 @@ export class PaymentModuleImpl implements PaymentModule {
   }
 
   async createAllocation(allocationParams: CreateAllocationParams): Promise<Allocation> {
-    const { identity: address } = await this.yagnaApi.identity.getIdentity();
-
+    const account = await this.getPayerDetails();
     return Allocation.create(this.yagnaApi, {
-      account: {
-        address,
-        platform: this.getPaymentPlatform(),
-      },
+      account,
       ...allocationParams,
     });
   }

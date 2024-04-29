@@ -30,6 +30,56 @@ beforeEach(() => {
 });
 
 describe("Market module", () => {
+  describe("buildDemand()", () => {
+    it("should build a demand", async () => {
+      const payerDetails = {
+        address: "0x123",
+        platform: "erc20-holesky-tglm",
+      };
+
+      const demandSpecification = await marketModule.buildDemand(
+        {
+          imageHash: "AAAAHASHAAAA",
+          imageUrl: "https://custom.image.url/",
+          expirationSec: 42,
+          debitNotesAcceptanceTimeoutSec: 42,
+          midAgreementDebitNoteIntervalSec: 42,
+          midAgreementPaymentTimeoutSec: 42,
+        },
+        payerDetails,
+      );
+
+      const expectedConstraints = [
+        "(golem.inf.mem.gib>=0.5)",
+        "(golem.inf.storage.gib>=2)",
+        "(golem.runtime.name=vm)",
+        "(golem.inf.cpu.cores>=1)",
+        "(golem.inf.cpu.threads>=1)",
+        "(golem.com.pricing.model=linear)",
+        "(golem.node.debug.subnet=public)",
+        "(golem.com.payment.platform.erc20-holesky-tglm.address=*)",
+        "(golem.com.payment.protocol.version>1)",
+      ].join("\n\t");
+      const expectedProperties = {
+        "golem.srv.comp.vm.package_format": "gvmkit-squash",
+        "golem.srv.comp.task_package": "hash:sha3:AAAAHASHAAAA:https://custom.image.url/",
+        "golem.com.payment.platform.erc20-holesky-tglm.address": "0x123",
+        "golem.com.payment.protocol.version": "2",
+        "golem.srv.caps.multi-activity": true,
+        "golem.srv.comp.expiration": Date.now() + 42 * 1000,
+        "golem.node.debug.subnet": "public",
+        "golem.com.payment.debit-notes.accept-timeout?": 42,
+        "golem.com.scheme.payu.debit-note.interval-sec?": 42,
+        "golem.com.scheme.payu.payment-timeout-sec?": 42,
+      };
+
+      expect(demandSpecification.paymentPlatform).toBe(payerDetails.platform);
+      expect(demandSpecification.expirationSec).toBe(42);
+      expect(demandSpecification.decoration.constraints).toBe(`(&${expectedConstraints})`);
+      expect(demandSpecification.decoration.properties).toEqual(expectedProperties);
+    });
+  });
+
   describe("publishDemand()", () => {
     it("should publish a demand", (done) => {
       const mockSpecification = mock(DemandSpecification);
@@ -53,7 +103,7 @@ describe("Market module", () => {
 
     it("should emit a new demand every specified interval", (done) => {
       const mockSpecification = mock(DemandSpecification);
-      when(mockSpecification.expirationMs).thenReturn(10);
+      when(mockSpecification.expirationSec).thenReturn(10);
       const mockSpecificationInstance = instance(mockSpecification);
       const mockDemand0 = new DemandNew("demand-id-0", mockSpecificationInstance);
       const mockDemand1 = new DemandNew("demand-id-1", mockSpecificationInstance);
@@ -70,7 +120,7 @@ describe("Market module", () => {
       demand$.pipe(take(3)).subscribe({
         next: (demand) => {
           demands.push(demand);
-          jest.advanceTimersByTime(10);
+          jest.advanceTimersByTime(10 * 1000);
         },
         complete: () => {
           try {
