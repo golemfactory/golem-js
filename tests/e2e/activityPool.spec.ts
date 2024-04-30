@@ -8,8 +8,7 @@ import {
   YagnaApi,
 } from "../../src";
 
-//TODO: fix this tests after refactoring all modules from the new architecture
-describe.skip("ActivityPool", () => {
+describe("ActivityPool", () => {
   const glm = new GolemNetwork();
   const yagnaApi = new YagnaApi();
   const modules = {
