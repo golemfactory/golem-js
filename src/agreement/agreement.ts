@@ -34,7 +34,23 @@ export interface IAgreementRepository {
 export interface IAgreementApi {
   getAgreement(id: string): Promise<Agreement>;
 
+  /**
+   * Request creating an agreement from the provided proposal
+   *
+   * Use this method if you want to decide what should happen with the agreement after it is created
+   *
+   * @return An agreement that's in a "Proposal" state (not yet usable for activity creation)
+   */
   createAgreement(proposal: ProposalNew): Promise<Agreement>;
+
+  /**
+   * Request creating an agreement from the provided proposal, send it to the Provider and wait for approval
+   *
+   * Use this method when you want to quickly finalize the deal with the Provider, but be ready for a rejection
+   *
+   * @return An agreement that's already in an "Approved" state and can be used to create activities on the Provider
+   */
+  proposeAgreement(proposal: ProposalNew): Promise<Agreement>;
 
   // TODO: Detach return type from ya-ts-client!
   getAgreementState(id: string): Promise<MarketApi.AgreementDTO["state"]>;
@@ -55,7 +71,7 @@ export class Agreement {
    */
   constructor(
     public readonly id: string,
-    private readonly model: MarketApi.AgreementDTO,
+    private model: MarketApi.AgreementDTO,
     private readonly paymentPlatform: string,
   ) {}
 
@@ -80,6 +96,10 @@ export class Agreement {
       id: this.id,
       provider: this.getProviderInfo(),
     };
+  }
+
+  public update(model: MarketApi.AgreementDTO) {
+    this.model = model;
   }
 
   /**

@@ -81,6 +81,23 @@ export class AgreementApiAdapter implements IAgreementApi {
     }
   }
 
+  async proposeAgreement(proposal: ProposalNew): Promise<Agreement> {
+    const agreement = await this.createAgreement(proposal);
+    const confirmed = await this.confirmAgreement(agreement);
+    const state = confirmed.getState();
+
+    if (state !== "Approved") {
+      throw new GolemMarketError(
+        `Agreement ${agreement.id} cannot be approved. Current state: ${state}`,
+        MarketErrorCode.AgreementApprovalFailed,
+      );
+    }
+
+    this.logger.info("Established agreement", { agreementId: agreement.id, provider: agreement.getProviderInfo() });
+
+    return confirmed;
+  }
+
   getAgreement(id: string): Promise<Agreement> {
     return this.repository.getById(id);
   }

@@ -64,9 +64,14 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
     };
 
     // TODO: Optimize constructor params
-    const agreementPool = new AgreementPool(depModules, proposalPool, { replicas: { max: CONCURRENCY } });
+    const agreementPool = new AgreementPool(proposalPool, glm.services.agreementApi, {
+      replicas: { max: CONCURRENCY },
+      logger,
+    });
+
     const activityPool = new ActivityPool(depModules, agreementPool, {
       replicas: CONCURRENCY,
+      logger,
     });
 
     const ctx = await activityPool.acquire();

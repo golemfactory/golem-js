@@ -161,7 +161,7 @@ export class ActivityPool {
         try {
           const state = await ctx.getState();
           const result = state !== ActivityStateEnum.Terminated;
-          this.logger.debug("Validating activity in the pool.", { result, state });
+          this.logger.debug("Validating activity in the pool", { result, state });
           return result;
         } catch (err) {
           this.logger.error("Checking activity status failed. The activity will be removed from the pool", err);

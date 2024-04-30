@@ -52,7 +52,7 @@ const getImagePath = (path: string) => fileURLToPath(new URL(path, import.meta.u
     const proposalSubscription = proposalPool.readFrom(proposal$);
     const draftProposal = await proposalPool.acquire();
 
-    const agreement = await glm.market.proposeAgreement(glm.payment, draftProposal);
+    const agreement = await glm.market.proposeAgreement(draftProposal);
     const allocation = await glm.payment.createAllocation({ budget: 1 });
     const lease = await glm.market.createLease(agreement, allocation);
     const activity = await glm.activity.createActivity(agreement);

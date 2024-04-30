@@ -7,9 +7,10 @@ import { GftpStorageProvider, StorageProvider, WebSocketBrowserStorageProvider }
 import { validateDeployment } from "./validate-deployment";
 import { DemandBuildParams, DraftOfferProposalPool, MarketModule } from "../../market";
 import { PaymentModule } from "../../payment";
-import { AgreementPool, AgreementPoolOptions, IActivityApi } from "../../agreement";
+import { AgreementPool, AgreementPoolOptions } from "../../agreement";
 import { CreateActivityPoolOptions } from "./builder";
 import { Subscription } from "rxjs";
+import { IAgreementApi } from "../../agreement/agreement";
 
 export enum DeploymentState {
   INITIAL = "INITIAL",
@@ -86,7 +87,7 @@ export class Deployment {
     payment: PaymentModule;
   };
 
-  private readonly activityApi: IActivityApi;
+  private readonly agreementApi: IAgreementApi;
 
   constructor(
     private readonly components: DeploymentComponents,
@@ -96,19 +97,20 @@ export class Deployment {
       market: MarketModule;
       activity: ActivityModule;
       payment: PaymentModule;
-      activityApi: IActivityApi;
+      agreementApi: IAgreementApi;
     },
     options: DeploymentOptions,
   ) {
     validateDeployment(components);
 
-    const { logger, yagna, ...modules } = deps;
+    const { logger, yagna, agreementApi, ...modules } = deps;
 
     this.logger = logger ?? defaultLogger("deployment");
     this.yagnaApi = yagna;
-    this.activityApi = deps.activityApi;
 
     this.modules = modules;
+
+    this.agreementApi = agreementApi;
 
     this.dataTransferProtocol = this.getStorageProvider(options.dataTransferProtocol);
 
@@ -177,7 +179,7 @@ export class Deployment {
           error: (e) => this.logger.error("Error while collecting proposals", e),
         });
 
-      const agreementPool = new AgreementPool(this.modules, proposalPool, agreementPoolOptions);
+      const agreementPool = new AgreementPool(proposalPool, this.agreementApi, agreementPoolOptions);
       const activityPool = new ActivityPool(this.modules, agreementPool, activityPoolOptions);
       this.pools.set(pool.name, {
         proposalPool,

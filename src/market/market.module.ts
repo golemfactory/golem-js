@@ -3,13 +3,22 @@ import { EventEmitter } from "eventemitter3";
 import {
   DemandConfig,
   DemandNew,
+  DraftOfferProposalPool,
   GolemMarketError,
   MarketApi,
   MarketErrorCode,
   NewProposalEvent,
   ProposalFilter,
 } from "./index";
-import { Agreement, LegacyAgreementServiceOptions, LeaseProcess, IPaymentApi, IActivityApi } from "../agreement";
+import {
+  Agreement,
+  LegacyAgreementServiceOptions,
+  LeaseProcess,
+  IPaymentApi,
+  IActivityApi,
+  AgreementPool,
+  AgreementPoolOptions,
+} from "../agreement";
 import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
 import { Allocation, PaymentModule } from "../payment";
 import { Package } from "./package";
@@ -125,17 +134,11 @@ export interface MarketModule {
    * - ya-ts-client approveAgreement
    * - ya-ts-client "wait for approval"
    *
-   * @param paymentModule
    * @param proposal
-   * @param options
    *
    * @return Returns when the provider accepts the agreement, rejects otherwise. The resulting agreement is ready to create activities from.
    */
-  proposeAgreement(
-    paymentModule: PaymentModule,
-    proposal: ProposalNew,
-    options?: LegacyAgreementServiceOptions,
-  ): Promise<Agreement>;
+  proposeAgreement(proposal: ProposalNew): Promise<Agreement>;
 
   /**
    * @return The Agreement that has been terminated via Yagna
@@ -163,6 +166,11 @@ export interface MarketModule {
   }): Observable<ProposalNew[]>;
 
   createLease(agreement: Agreement, allocation: Allocation): LeaseProcess;
+
+  /**
+   * Factory that creates new agreement pool that's fully configured
+   */
+  createAgreementPool(draftPool: DraftOfferProposalPool): AgreementPool;
 }
 
 export class MarketModuleImpl implements MarketModule {
@@ -303,23 +311,13 @@ export class MarketModuleImpl implements MarketModule {
     return this.deps.marketApi.counterProposal(receivedProposal, offer);
   }
 
-  async proposeAgreement(
-    paymentModule: PaymentModule,
-    proposal: ProposalNew,
-    options?: LegacyAgreementServiceOptions,
-  ): Promise<Agreement> {
-    const agreement = await this.agreementApi.createAgreement(proposal);
-    const confirmed = await this.agreementApi.confirmAgreement(agreement);
-    const state = confirmed.getState();
+  async proposeAgreement(proposal: ProposalNew): Promise<Agreement> {
+    const agreement = await this.agreementApi.proposeAgreement(proposal);
 
-    if (state !== "Approved") {
-      throw new GolemMarketError(
-        `Agreement ${agreement.id} cannot be approved. Current state: ${state}`,
-        MarketErrorCode.AgreementApprovalFailed,
-      );
-    }
-
-    this.logger.info("Established agreement", { agreementId: agreement.id, provider: agreement.getProviderInfo() });
+    this.logger.info("Proposed and got approval for agreement", {
+      agreementId: agreement.id,
+      provider: agreement.getProviderInfo(),
+    });
 
     return agreement;
   }
@@ -392,6 +390,10 @@ export class MarketModuleImpl implements MarketModule {
       this.yagnaApi, // TODO: Remove this dependency
       this.deps.storageProvider,
     );
+  }
+
+  public createAgreementPool(draftPool: DraftOfferProposalPool, options?: AgreementPoolOptions): AgreementPool {
+    return new AgreementPool(draftPool, this.agreementApi, options);
   }
 
   /**

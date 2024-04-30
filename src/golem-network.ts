@@ -247,7 +247,7 @@ export class GolemNetwork {
 
     const draftProposal = await proposalPool.acquire();
 
-    const agreement = await this.market.proposeAgreement(this.payment, draftProposal);
+    const agreement = await this.market.proposeAgreement(draftProposal);
     proposalSubscription.unsubscribe();
 
     const allocation = await this.payment.createAllocation({ budget: 1 });

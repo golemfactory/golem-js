@@ -34,7 +34,7 @@ describe.skip("ActivityPool", () => {
 
   beforeEach(async () => {
     proposalPool = new DraftOfferProposalPool();
-    agreementPool = new AgreementPool(modules, proposalPool);
+    agreementPool = new AgreementPool(proposalPool, glm.services.agreementApi);
     const payerDetails = await modules.payment.getPayerDetails();
     const demandSpecification = await modules.market.buildDemand(
       {
