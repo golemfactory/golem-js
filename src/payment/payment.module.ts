@@ -7,6 +7,7 @@ import { DebitNoteFilter, InvoiceFilter } from "./service";
 import { Observable } from "rxjs";
 import { GolemServices } from "../golem-network";
 import { PaymentSpec } from "../market";
+import { PayerDetails } from "./PayerDetails";
 
 export interface PaymentModuleOptions {
   debitNoteFilter?: DebitNoteFilter;
@@ -70,6 +71,11 @@ export interface PaymentModule {
   rejectDebitNote(debitNote: DebitNote): Promise<DebitNote>;
 
   createInvoiceProcessor(): InvoiceProcessor;
+
+  /**
+   * Get the payment platform and wallet address of the payer.
+   */
+  getPayerDetails(): Promise<PayerDetails>;
 }
 
 export class PaymentModuleImpl implements PaymentModule {
@@ -100,6 +106,12 @@ export class PaymentModuleImpl implements PaymentModule {
     return `${this.options.payment.driver}-${this.options.payment.network}-${token}`;
   }
 
+  async getPayerDetails(): Promise<PayerDetails> {
+    const { identity: address } = await this.yagnaApi.identity.getIdentity();
+
+    return new PayerDetails(this.options.payment.network, this.options.payment.driver, address);
+  }
+
   subscribeForDebitNotes(): Observable<DebitNote> {
     throw new Error("Method not implemented.");
   }
@@ -109,12 +121,11 @@ export class PaymentModuleImpl implements PaymentModule {
   }
 
   async createAllocation(allocationParams: CreateAllocationParams): Promise<Allocation> {
-    const { identity: address } = await this.yagnaApi.identity.getIdentity();
-
+    const payer = await this.getPayerDetails();
     return Allocation.create(this.yagnaApi, {
       account: {
-        address,
-        platform: this.getPaymentPlatform(),
+        address: payer.address,
+        platform: payer.getPaymentPlatform(),
       },
       ...allocationParams,
     });

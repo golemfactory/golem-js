@@ -107,7 +107,7 @@ export class DemandSpecification {
   constructor(
     public readonly decoration: DemandDecoration,
     public readonly paymentPlatform: string,
-    public readonly expirationMs: number,
+    public readonly expirationSec: number,
   ) {}
 }
 

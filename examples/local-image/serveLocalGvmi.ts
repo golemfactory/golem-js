@@ -43,8 +43,8 @@ const getImagePath = (path: string) => fileURLToPath(new URL(path, import.meta.u
       logger,
     });
 
-    const allocation = await glm.payment.createAllocation({ budget: 1 });
-    const demandSpecification = await glm.market.buildDemand(demand.demand, allocation);
+    const payerDetails = await glm.payment.getPayerDetails();
+    const demandSpecification = await glm.market.buildDemand(demand.demand, payerDetails);
     const proposal$ = glm.market.startCollectingProposals({
       demandSpecification,
       bufferSize: 15,
@@ -53,6 +53,7 @@ const getImagePath = (path: string) => fileURLToPath(new URL(path, import.meta.u
     const draftProposal = await proposalPool.acquire();
 
     const agreement = await glm.market.proposeAgreement(glm.payment, draftProposal);
+    const allocation = await glm.payment.createAllocation({ budget: 1 });
     const lease = await glm.market.createLease(agreement, allocation);
     const activity = await glm.activity.createActivity(agreement);
 

@@ -41,14 +41,18 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
     };
 
     const proposalPool = new DraftOfferProposalPool({ minCount: 1 });
-    const allocation = await glm.payment.createAllocation({ budget: 1 });
-    const demandSpecification = await glm.market.buildDemand(demandOptions.demand, allocation);
+    const payerDetails = await glm.payment.getPayerDetails();
+    const demandSpecification = await glm.market.buildDemand(demandOptions.demand, payerDetails);
 
     const proposals$ = glm.market.startCollectingProposals({
       demandSpecification,
     });
 
     const proposalSubscription = proposalPool.readFrom(proposals$);
+
+    // TODO: allocation is not used in this example?
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const allocation = await glm.payment.createAllocation({ budget: 1 });
 
     /** How many providers you plan to engage simultaneously */
     const CONCURRENCY = 2;

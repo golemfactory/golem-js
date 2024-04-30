@@ -35,11 +35,12 @@ describe.skip("ActivityPool", () => {
   beforeEach(async () => {
     proposalPool = new DraftOfferProposalPool();
     agreementPool = new AgreementPool(modules, proposalPool);
+    const payerDetails = await modules.payment.getPayerDetails();
     const demandSpecification = await modules.market.buildDemand(
       {
         imageTag: "golem/alpine:latest",
       },
-      allocation,
+      payerDetails,
     );
     proposalSubscription = modules.market
       .startCollectingProposals({

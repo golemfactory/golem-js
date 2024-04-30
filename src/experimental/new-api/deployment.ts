@@ -148,9 +148,12 @@ export class Deployment {
 
     await this.dataTransferProtocol.init();
 
+    // TODO: allocation is not used in this api?
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const allocation = await this.modules.payment.createAllocation({
       budget: 1,
     });
+    const payerDetails = await this.modules.payment.getPayerDetails();
 
     for (const network of this.components.networks) {
       const networkInstance = await Network.create(this.yagnaApi, network.options);
@@ -161,7 +164,7 @@ export class Deployment {
     for (const pool of this.components.activityPools) {
       const { demandBuildOptions, agreementPoolOptions, activityPoolOptions } = this.prepareParams(pool.options);
 
-      const demandSpecification = await this.modules.market.buildDemand(demandBuildOptions.demand, allocation);
+      const demandSpecification = await this.modules.market.buildDemand(demandBuildOptions.demand, payerDetails);
       const proposalPool = new DraftOfferProposalPool();
 
       const proposalSubscription = this.modules.market
