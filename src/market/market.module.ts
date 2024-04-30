@@ -359,22 +359,25 @@ export class MarketModuleImpl implements MarketModule {
       // for each proposal collected -> filter out undesired and invalid ones
       filter((proposal) => proposal.isValid()),
       filter((proposal) => !options.filter || options.filter(proposal)),
+      // for each proposal -> deduplicate them by provider key
       this.reduceInitialProposalsByProviderKey({
         minProposalsBatchSize: options?.minProposalsBatchSize,
         proposalsBatchReleaseTimeoutMs: options?.proposalsBatchReleaseTimeoutMs,
       }),
       // for each valid proposal -> start negotiating if it's not in draft state yet
       tap((proposal) => {
-        // Populate the cache
-        this.proposalRepo.add(proposal);
         if (proposal.isInitial()) {
           this.negotiateProposal(proposal, options.demandSpecification);
         }
       }),
+      // for each proposal -> add them to the cache
+      tap((proposal) => this.proposalRepo.add(proposal)),
       // for each proposal -> filter out all states other than draft
       filter((proposal) => proposal.isDraft()),
       // for each draft proposal -> add them to the buffer
       bufferTime(options.bufferTimeout ?? 1_000, null, options.bufferSize || 10),
+      // filter out empty buffers
+      filter((proposals) => proposals.length > 0),
     );
   }
 
@@ -410,7 +413,7 @@ export class MarketModuleImpl implements MarketModule {
           minBatchSize: options?.minProposalsBatchSize,
           releaseTimeoutMs: options?.proposalsBatchReleaseTimeoutMs,
         });
-        const subscribtion = source.subscribe((proposal) => {
+        const subscription = source.subscribe((proposal) => {
           if (proposal.isInitial()) {
             proposalsBatch.addProposal(proposal);
             this.logger.debug("Added initial proposal to batch", { proposal: proposal.id });
@@ -436,7 +439,7 @@ export class MarketModuleImpl implements MarketModule {
         batch();
         return () => {
           isCancelled = true;
-          subscribtion.unsubscribe();
+          subscription.unsubscribe();
         };
       });
   }

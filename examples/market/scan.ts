@@ -4,13 +4,9 @@
  * Notice that we don't need to even allocate any budget for this operation
  */
 import { GolemNetwork, ProposalNew } from "@golem-sdk/golem-js";
-import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
 (async () => {
   const glm = new GolemNetwork({
-    logger: pinoPrettyLogger({
-      level: "debug",
-    }),
     payment: {
       payment: {
         network: "holesky",
