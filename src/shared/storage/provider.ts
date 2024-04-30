@@ -7,6 +7,11 @@ export interface StorageProvider {
   init(): Promise<void>;
 
   /**
+   * Tells if the storage provider is ready for use
+   */
+  isReady(): boolean;
+
+  /**
    * Close storage provider and release all resources.
    */
   close(): Promise<void>;

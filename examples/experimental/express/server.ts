@@ -6,11 +6,7 @@ const port = 3000;
 
 app.use(express.text());
 
-const golemClient = new JobManager({
-  yagna: {
-    apiKey: "try_golem",
-  },
-});
+const golemClient = new JobManager();
 
 await golemClient
   .init()

@@ -110,7 +110,7 @@ export class Deployment {
 
     this.modules = modules;
 
-    this.dataTransferProtocol = this.getDataTransferProtocol(options.dataTransferProtocol);
+    this.dataTransferProtocol = this.getStorageProvider(options.dataTransferProtocol);
 
     this.abortController.signal.addEventListener("abort", () => {
       this.logger.info("Abort signal received");
@@ -121,18 +121,16 @@ export class Deployment {
     });
   }
 
-  private getDataTransferProtocol(
-    dataTransferProtocol: DataTransferProtocol | StorageProvider = "gftp",
-  ): StorageProvider {
-    if (dataTransferProtocol === "gftp") {
+  private getStorageProvider(protocol: DataTransferProtocol | StorageProvider = "gftp"): StorageProvider {
+    if (protocol === "gftp") {
       return new GftpStorageProvider();
     }
 
-    if (dataTransferProtocol === "ws") {
+    if (protocol === "ws") {
       return new WebSocketBrowserStorageProvider(this.yagnaApi, {});
     }
 
-    return dataTransferProtocol;
+    return protocol;
   }
 
   getState(): DeploymentState {
