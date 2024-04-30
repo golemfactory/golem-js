@@ -3,7 +3,7 @@ import { Logger, YagnaApi } from "../shared/utils";
 import { MarketModuleImpl } from "./market.module";
 import * as YaTsClient from "ya-ts-client";
 import { DemandNew, DemandSpecification, IDemandRepository } from "./demand";
-import { from, of, take } from "rxjs";
+import { from, of, take, takeUntil, timer } from "rxjs";
 import { IProposalRepository, ProposalNew, ProposalProperties } from "./proposal";
 import { MarketApiAdapter } from "../shared/yagna/";
 import { IActivityApi, IPaymentApi } from "../agreement";
@@ -264,8 +264,12 @@ describe("Market module", () => {
       marketModule
         .startCollectingProposals({
           demandSpecification,
+          bufferSize: 1,
+          proposalsBatchReleaseTimeoutMs: 10,
         })
-        .pipe(take(2))
+        // using timer instead of take here because proposalBatch releases initial proposals
+        // after a timeout (10ms) so draftProposals will be emitted before that happens
+        .pipe(takeUntil(timer(50)))
         .subscribe({
           next: (proposal) => {
             draftProposals.push(...proposal);
@@ -357,8 +361,12 @@ describe("Market module", () => {
       marketModule
         .startCollectingProposals({
           demandSpecification,
+          bufferSize: 1,
+          proposalsBatchReleaseTimeoutMs: 10,
         })
-        .pipe(take(2))
+        // using timer instead of take here because proposalBatch releases initial proposals
+        // after a timeout (10ms) so draftProposals will be emitted before that happens
+        .pipe(takeUntil(timer(50)))
         .subscribe({
           next: (proposal) => {
             draftProposals.push(...proposal);
