@@ -22,6 +22,7 @@ import { IAgreementApi } from "../agreement/agreement";
 import { DemandOptionsNew, DemandSpecification, IDemandRepository } from "./demand";
 import { PayerDetails } from "../payment/PayerDetails";
 import { IFileServer } from "../activity";
+import { StorageProvider } from "../shared/storage";
 
 export interface MarketEvents {}
 
@@ -187,6 +188,7 @@ export class MarketModuleImpl implements MarketModule {
       activityApi: IActivityApi;
       marketApi: MarketApi;
       fileServer: IFileServer;
+      storageProvider: StorageProvider;
     },
   ) {
     this.logger = deps.logger;
@@ -382,6 +384,7 @@ export class MarketModuleImpl implements MarketModule {
       this.agreementApi,
       this.deps.logger,
       this.yagnaApi, // TODO: Remove this dependency
+      this.deps.storageProvider,
     );
   }
 }

@@ -210,8 +210,8 @@ export class AgreementPoolService {
       this.candidateMap.set(agreement.id, candidate);
 
       return agreement;
-    } catch (e) {
-      this.logger.debug(`Unable to create agreement form available proposal`, e);
+    } catch (err) {
+      this.logger.error(`Unable to create agreement form available proposal`, err);
       await sleep(2);
       return;
     }

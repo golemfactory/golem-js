@@ -48,7 +48,7 @@ export type DeploymentComponents = {
   networks: { name: string; options: NetworkOptions }[];
 };
 
-export type DataTransferProtocol = "gftp" | "ws";
+export type DataTransferProtocol = "gftp" | "ws" | StorageProvider;
 
 export interface DeploymentOptions {
   dataTransferProtocol?: DataTransferProtocol;
