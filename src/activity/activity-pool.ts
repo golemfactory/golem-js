@@ -148,7 +148,6 @@ export class ActivityPool {
         const agreement = await this.agreementPool.acquire();
         const activity = await this.modules.activity.createActivity(agreement);
         const ctx = await this.modules.activity.createWorkContext(activity);
-        await ctx.before();
         this.events.emit("created", ctx.getDto());
         return ctx;
       },
