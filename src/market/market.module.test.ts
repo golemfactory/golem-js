@@ -10,6 +10,7 @@ import { IActivityApi, IPaymentApi } from "../agreement";
 import { IAgreementApi } from "../agreement/agreement";
 import { PayerDetails } from "../payment/PayerDetails";
 import { IFileServer } from "../activity";
+import { StorageProvider } from "../shared/storage";
 
 const mockMarketApiAdapter = mock(MarketApiAdapter);
 const mockYagna = mock(YagnaApi);
@@ -29,6 +30,7 @@ beforeEach(() => {
     logger: instance(imock<Logger>()),
     marketApi: instance(mockMarketApiAdapter),
     fileServer: instance(imock<IFileServer>()),
+    storageProvider: instance(imock<StorageProvider>()),
   });
 });
 

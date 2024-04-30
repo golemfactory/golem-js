@@ -1,10 +1,19 @@
 import { v4 } from "uuid";
 import { Job, RunJobOptions } from "./job";
-import { defaultLogger, Logger, YagnaOptions } from "../../shared/utils";
+import { defaultLogger, Logger, runtimeContextChecker, YagnaOptions } from "../../shared/utils";
 import { GolemUserError } from "../../shared/error/golem-error";
 import { GolemNetwork } from "../../golem-network";
+import {
+  GftpStorageProvider,
+  NullStorageProvider,
+  StorageProvider,
+  WebSocketBrowserStorageProvider,
+} from "../../shared/storage";
+import { DemandSpec } from "../../market";
 
-export type JobManagerConfig = Partial<RunJobOptions> & { yagna?: YagnaOptions };
+export type JobManagerConfig = Partial<RunJobOptions> & {
+  yagna?: YagnaOptions;
+};
 
 /**
  * @experimental This API is experimental and subject to change. Use at your own risk.
@@ -23,11 +32,16 @@ export class JobManager {
     private readonly config?: JobManagerConfig,
     private readonly logger: Logger = defaultLogger("jobs"),
   ) {
+    const storageProvider = this.getDefaultStorageProvider();
+
+    this.logger.debug("Jobs using storage provider", { storageProvider });
+
     this.glm = new GolemNetwork({
       api: {
         key: this.config?.yagna?.apiKey,
         url: this.config?.yagna?.basePath,
       },
+      dataTransferProtocol: storageProvider,
     });
   }
 
@@ -43,22 +57,13 @@ export class JobManager {
    * Create a new job and add it to the list of jobs managed by this instance.
    * This method does not start any work on the network, use {@link Job.startWork} for that.
    *
-   * @param options - Configuration options for the job. These options will be merged with the options passed to the constructor.
+   * @param demandSpec
    */
-  public createJob<Output = unknown>(options: RunJobOptions = {}) {
+  public createJob<Output = unknown>(demandSpec: DemandSpec) {
     this.checkInitialization();
 
     const jobId = v4();
-    const job = new Job<Output>(
-      jobId,
-      this.glm.services.yagna,
-      this.glm.services.activityApi,
-      this.glm.services.agreementApi,
-      {
-        ...this.config,
-        ...options,
-      },
-    );
+    const job = new Job<Output>(jobId, this.glm, demandSpec, this.logger);
     this.jobs.set(jobId, job);
 
     return job;
@@ -83,5 +88,17 @@ export class JobManager {
     if (!this.isInitialized()) {
       throw new GolemUserError("GolemNetwork not initialized, please run init() first");
     }
+  }
+
+  private getDefaultStorageProvider(): StorageProvider {
+    if (runtimeContextChecker.isNode) {
+      return new GftpStorageProvider();
+    }
+
+    if (runtimeContextChecker.isBrowser) {
+      return new WebSocketBrowserStorageProvider(this.glm.services.yagna, {});
+    }
+
+    return new NullStorageProvider();
   }
 }

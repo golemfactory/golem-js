@@ -1,19 +1,13 @@
-import { WorkContext, Worker, WorkOptions } from "../../activity/work";
-import { runtimeContextChecker, YagnaApi } from "../../shared/utils";
-import { AgreementPoolService, IActivityApi, LegacyAgreementServiceOptions } from "../../agreement";
-import { MarketService, MarketServiceOptions } from "../../market";
-import { NetworkOptions, NetworkService } from "../../network";
-import { PaymentModuleOptions, PaymentService } from "../../payment";
-import { Package, PackageOptions } from "../../market/package";
+import { Worker, WorkOptions } from "../../activity/work";
+import { LegacyAgreementServiceOptions } from "../../agreement";
+import { DemandSpec, MarketServiceOptions } from "../../market";
+import { NetworkOptions } from "../../network";
+import { PaymentModuleOptions } from "../../payment";
+import { PackageOptions } from "../../market/package";
 import { EventEmitter } from "eventemitter3";
-import {
-  GftpStorageProvider,
-  NullStorageProvider,
-  StorageProvider,
-  WebSocketBrowserStorageProvider,
-} from "../../shared/storage";
-import { GolemAbortError, GolemConfigError, GolemUserError } from "../../shared/error/golem-error";
-import { IAgreementApi } from "../../agreement/agreement";
+import { GolemAbortError, GolemUserError } from "../../shared/error/golem-error";
+import { GolemNetwork } from "../../golem-network";
+import { Logger } from "../../shared/utils";
 
 export enum JobState {
   New = "new",
@@ -76,20 +70,15 @@ export class Job<Output = unknown> {
   public state: JobState = JobState.New;
 
   /**
-   * Create a new Job instance. It is recommended to use {@link GolemNetwork} to create jobs instead of using this constructor directly.
-   *
    * @param id
-   * @param yagnaApi
-   * @param activityApi
-   * @param agreementApi
-   * @param defaultOptions
+   * @param glm
+   * @param demandSpec
    */
   constructor(
     public readonly id: string,
-    private yagnaApi: YagnaApi,
-    private readonly activityApi: IActivityApi,
-    private readonly agreementApi: IAgreementApi,
-    private readonly defaultOptions: Partial<RunJobOptions> = {},
+    private readonly glm: GolemNetwork,
+    private readonly demandSpec: DemandSpec,
+    private readonly logger: Logger,
   ) {}
 
   public isRunning() {
@@ -106,151 +95,65 @@ export class Job<Output = unknown> {
    * If you want to run multiple jobs in parallel, you can use {@link GolemNetwork.createJob} to create multiple jobs and run them in parallel.
    *
    * @param workOnGolem - Your worker function that will be run on the Golem Network.
-   * @param options - Configuration options for the job. These options will be merged with the options passed to the constructor.
+   * @param demandSpec - Specify the image and resource for the demand that will be used to find resources on Golem Network.
    */
-  startWork(workOnGolem: Worker<Output>, options: RunJobOptions = {}) {
+  startWork(workOnGolem: Worker<Output>) {
+    this.logger.debug("Staring work in a Job");
     if (this.isRunning()) {
       throw new GolemUserError(`Job ${this.id} is already running`);
     }
 
-    const packageOptions = Object.assign({}, this.defaultOptions.package, options.package);
-    if (!packageOptions.imageHash && !packageOptions.manifest && !packageOptions.imageTag && !packageOptions.imageUrl) {
-      throw new GolemConfigError(
-        "You must specify either imageHash, imageTag, manifest or imageUrl in package options",
-      );
-    }
-    if (packageOptions.imageUrl && !packageOptions.imageHash) {
-      throw new GolemConfigError("If you provide an imageUrl, you must also provide it's SHA3-224 hash in imageHash");
-    }
-
     this.state = JobState.Pending;
     this.events.emit("created");
-
-    const agreementService = new AgreementPoolService(this.yagnaApi, this.agreementApi, {
-      ...this.defaultOptions.agreement,
-      ...options.agreement,
-    });
-    const marketService = new MarketService(agreementService, this.yagnaApi, {
-      ...this.defaultOptions.market,
-      ...options.market,
-    });
-    const networkService = new NetworkService(this.yagnaApi, { ...this.defaultOptions.network, ...options.network });
-    const paymentService = new PaymentService(this.yagnaApi, { ...this.defaultOptions.payment, ...options.payment });
-
-    const packageDescription = Package.create(packageOptions);
 
     // reset abort controller
     this.abortController = new AbortController();
 
     this.runWork({
       worker: workOnGolem,
-      marketService,
-      agreementService,
-      networkService,
-      paymentService,
-      packageDescription,
-      options,
       signal: this.abortController.signal,
     })
       .then((results) => {
+        this.logger.debug("Finished work in job", { results });
         this.results = results;
         this.state = JobState.Done;
         this.events.emit("success");
       })
       .catch((error) => {
+        this.logger.error("Running work in job failed due to", error);
         this.error = error;
         this.state = JobState.Rejected;
         this.events.emit("error", error);
       })
       .finally(async () => {
-        await Promise.all([agreementService.end(), networkService.end(), paymentService.end(), marketService.end()]);
         this.events.emit("ended");
       });
   }
 
-  private async runWork({
-    worker,
-    marketService,
-    agreementService,
-    networkService,
-    paymentService,
-    packageDescription,
-    options,
-    signal,
-  }: {
-    worker: Worker<Output>;
-    marketService: MarketService;
-    agreementService: AgreementPoolService;
-    networkService: NetworkService;
-    paymentService: PaymentService;
-    packageDescription: Package;
-    options: RunJobOptions;
-    signal: AbortSignal;
-  }) {
+  private async runWork({ worker, signal }: { worker: Worker<Output>; signal: AbortSignal }) {
     if (signal.aborted) {
       this.events.emit("canceled");
       throw new GolemAbortError("Canceled");
     }
 
-    const allocation = await paymentService.createAllocation();
+    const lease = await this.glm.oneOf(this.demandSpec);
 
-    await Promise.all([
-      marketService.run(packageDescription, allocation),
-      agreementService.run(),
-      networkService.run(),
-      paymentService.run(),
-    ]);
-    const agreement = await agreementService.getAgreement();
-    // agreement is created, we can stop listening for new proposals
-    await marketService.end();
-
-    paymentService.acceptPayments(agreement);
-
-    const activity = await this.activityApi.createActivity(agreement);
-
-    const storageProvider =
-      this.defaultOptions.work?.storageProvider || options.work?.storageProvider || this.getDefaultStorageProvider();
-
-    const workContext = new WorkContext(
-      this.activityApi,
-      this.yagnaApi.activity.control,
-      this.yagnaApi.activity.exec,
-      activity,
-      {
-        yagnaOptions: this.yagnaApi.yagnaOptions,
-        storageProvider,
-        networkNode: await networkService.addNode(agreement.getProviderInfo().id),
-        activityPreparingTimeout:
-          this.defaultOptions.work?.activityPreparingTimeout || options.work?.activityPreparingTimeout,
-        activityStateCheckingInterval:
-          this.defaultOptions.work?.activityStateCheckingInterval || options.work?.activityStateCheckingInterval,
-      },
-    );
-
+    const workContext = await lease.getExeUnit();
     this.events.emit("started");
-    await workContext.before();
 
     const onAbort = async () => {
-      await agreementService.releaseAgreement(agreement.id, false);
-      await this.activityApi.destroyActivity(activity);
+      await lease.finalize();
       this.events.emit("canceled");
     };
+
     if (signal.aborted) {
       await onAbort();
       throw new GolemAbortError("Canceled");
     }
-    signal.addEventListener("abort", onAbort, { once: true });
-    return worker(workContext);
-  }
 
-  private getDefaultStorageProvider(): StorageProvider {
-    if (runtimeContextChecker.isNode) {
-      return new GftpStorageProvider();
-    }
-    if (runtimeContextChecker.isBrowser) {
-      return new WebSocketBrowserStorageProvider(this.yagnaApi, {});
-    }
-    return new NullStorageProvider();
+    signal.addEventListener("abort", onAbort, { once: true });
+
+    return worker(workContext);
   }
 
   /**

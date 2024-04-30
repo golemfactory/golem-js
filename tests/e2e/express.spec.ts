@@ -8,7 +8,7 @@ describe("Express", function () {
   let golemClient: JobManager;
   const consoleSpy = jest.fn();
   beforeEach(async () => {
-    golemClient = new JobManager({});
+    golemClient = new JobManager();
     await golemClient.init();
     consoleSpy.mockReset();
   });
@@ -28,8 +28,14 @@ describe("Express", function () {
         return;
       }
       const job = golemClient.createJob({
-        package: {
+        demand: {
           imageTag: "severyn/espeak:latest",
+        },
+        // TODO: This should be optional
+        market: {},
+        payment: {
+          driver: "erc20",
+          network: "holesky",
         },
       });
 

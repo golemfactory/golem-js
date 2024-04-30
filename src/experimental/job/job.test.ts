@@ -4,28 +4,21 @@ import { WorkContext } from "../../activity/work";
 import { NetworkNode, NetworkService } from "../../network";
 import { Activity } from "../../activity";
 import { Package } from "../../market/package";
-import { anything, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
-import { YagnaApi } from "../../shared/utils";
-import { IAgreementApi } from "../../agreement/agreement";
+import { anything, imock, instance, mock, verify, when } from "@johanblumenberg/ts-mockito";
+import { Logger } from "../../shared/utils";
+import { GolemNetwork } from "../../golem-network";
 
 jest.mock("../../payment");
 jest.mock("../../market");
 
-const mockYagna = mock(YagnaApi);
-
 const mockActivity = mock(Activity);
 const mockActivityApi = imock<IActivityApi>();
-const mockAgreementApi = imock<IAgreementApi>();
 
 // TODO: Unskip tests and fix them
 describe.skip("Job", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-
-    reset(mockYagna);
   });
-
-  const yagna = instance(mockYagna);
 
   describe("cancel()", () => {
     it("stops the activity and releases the agreement when canceled", async () => {
@@ -48,11 +41,21 @@ describe.skip("Job", () => {
       const activity = instance(mockActivity);
       when(mockActivityApi.createActivity(anything())).thenResolve(activity);
 
-      const job = new Job("test_id", yagna, instance(mockActivityApi), instance(mockAgreementApi), {
-        package: {
-          imageTag: "test_image",
+      const job = new Job(
+        "test_id",
+        instance(mock(GolemNetwork)),
+        {
+          demand: {
+            imageTag: "test_image",
+          },
+          market: {},
+          payment: {
+            network: "holesky",
+            driver: "erc20",
+          },
         },
-      });
+        instance(imock<Logger>()),
+      );
 
       job.startWork(() => {
         return new Promise((resolve) => setTimeout(resolve, 10000));

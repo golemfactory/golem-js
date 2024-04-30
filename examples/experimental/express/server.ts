@@ -24,8 +24,13 @@ app.post("/tts", async (req, res) => {
     return;
   }
   const job = golemClient.createJob({
-    package: {
+    demand: {
       imageTag: "severyn/espeak:latest",
+    },
+    market: {}, // TODO: This should be optional
+    payment: {
+      driver: "erc20",
+      network: "holesky",
     },
   });
 

@@ -7,6 +7,7 @@ import { Logger, YagnaApi } from "../shared/utils";
 import { waitForCondition } from "../shared/utils/waitForCondition";
 import { WorkContext } from "../activity/work";
 import { Activity, ActivityStateEnum } from "../activity";
+import { StorageProvider } from "../shared/storage";
 
 export interface IPaymentApi {
   receivedInvoices$: BehaviorSubject<Invoice | null>;
@@ -64,6 +65,7 @@ export class LeaseProcess {
     private readonly logger: Logger,
     /** @deprecated This will be removed, we want to have a nice adapter here */
     private readonly yagna: YagnaApi,
+    private readonly storageProvider: StorageProvider,
     private readonly leaseOptions?: {
       paymentOptions: {
         invoiceFilter: InvoiceFilter;
@@ -126,7 +128,10 @@ export class LeaseProcess {
     this.currentActivity = activity;
 
     // Access your work context to perform operations
-    const ctx = new WorkContext(this.activityApi, this.yagna.activity.control, this.yagna.activity.exec, activity, {});
+    const ctx = new WorkContext(this.activityApi, this.yagna.activity.control, this.yagna.activity.exec, activity, {
+      storageProvider: this.storageProvider,
+    });
+
     await ctx.before();
 
     return ctx;
