@@ -1,7 +1,13 @@
 import { ActivityPool, AgreementPool, DraftOfferProposalPool, GolemNetwork } from "@golem-sdk/golem-js";
+import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
-(async function main() {
+(async () => {
+  const logger = pinoPrettyLogger({
+    level: "debug",
+  });
+
   const glm = new GolemNetwork({
+    logger,
     payment: {
       payment: {
         driver: "erc20",
@@ -82,4 +88,4 @@ import { ActivityPool, AgreementPool, DraftOfferProposalPool, GolemNetwork } fro
   } finally {
     await glm.disconnect();
   }
-})();
+})().catch(console.error);

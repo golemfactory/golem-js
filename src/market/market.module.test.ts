@@ -9,6 +9,7 @@ import { MarketApiAdapter } from "../shared/yagna/";
 import { IActivityApi, IPaymentApi } from "../agreement";
 import { IAgreementApi } from "../agreement/agreement";
 import { PayerDetails } from "../payment/PayerDetails";
+import { IFileServer } from "../activity";
 jest.useFakeTimers();
 
 const mockMarketApiAdapter = mock(MarketApiAdapter);
@@ -27,6 +28,7 @@ beforeEach(() => {
     yagna: instance(mockYagna),
     logger: instance(imock<Logger>()),
     marketApi: instance(mockMarketApiAdapter),
+    fileServer: instance(imock<IFileServer>()),
   });
 });
 

@@ -10,5 +10,4 @@ export * from "./shared/yagna";
 export * from "./activity/work";
 export * from "./shared/error/golem-error";
 export * from "./network/tcpProxy";
-export * from "./shared/gvmi";
 export * from "./golem-network";

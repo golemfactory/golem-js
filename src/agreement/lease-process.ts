@@ -1,6 +1,6 @@
 import { Allocation, DebitNote, Invoice } from "../payment";
 import { BehaviorSubject, filter } from "rxjs";
-import { Agreement } from "./agreement";
+import { Agreement, IAgreementApi } from "./agreement";
 import { AgreementPaymentProcess } from "../payment/agreement_payment_process";
 import { DebitNoteFilter, InvoiceFilter } from "../payment/service";
 import { Logger, YagnaApi } from "../shared/utils";
@@ -60,6 +60,7 @@ export class LeaseProcess {
     private readonly allocation: Allocation,
     private readonly paymentApi: IPaymentApi,
     private readonly activityApi: IActivityApi,
+    private readonly agreementApi: IAgreementApi,
     private readonly logger: Logger,
     /** @deprecated This will be removed, we want to have a nice adapter here */
     private readonly yagna: YagnaApi,
@@ -101,8 +102,12 @@ export class LeaseProcess {
   /**
    * @return Resolves when the lease will be fully terminated and all pending business operations finalized
    */
-  async finalized() {
+  async finalize() {
     this.logger.debug("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
+    if (this.currentActivity) {
+      await this.activityApi.destroyActivity(this.currentActivity);
+      await this.agreementApi.terminateAgreement(this.agreement);
+    }
     await waitForCondition(() => {
       return this.paymentProcess.isFinished();
     });

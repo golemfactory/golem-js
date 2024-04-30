@@ -1,4 +1,4 @@
-import { DeploymentOptions, GolemDeploymentBuilder, MarketOptions } from "./experimental";
+import { DataTransferProtocol, DeploymentOptions, GolemDeploymentBuilder, MarketOptions } from "./experimental";
 import { defaultLogger, Logger, YagnaApi } from "./shared/utils";
 import {
   DemandNew,
@@ -10,11 +10,11 @@ import {
   ProposalNew,
 } from "./market";
 import { PaymentModule, PaymentModuleImpl, PaymentModuleOptions } from "./payment";
-import { ActivityModule, ActivityModuleImpl } from "./activity";
+import { ActivityModule, ActivityModuleImpl, IFileServer } from "./activity";
 import { NetworkModule, NetworkModuleImpl } from "./network/network.module";
 import { EventEmitter } from "eventemitter3";
 import { IActivityApi, IPaymentApi, LeaseProcess } from "./agreement";
-import { DebitNoteRepository, InvoiceRepository, PaymentApiAdapter } from "./shared/yagna";
+import { DebitNoteRepository, InvoiceRepository, MarketApiAdapter, PaymentApiAdapter } from "./shared/yagna";
 import { ActivityApiAdapter } from "./shared/yagna/adapters/activity-api-adapter";
 import { ActivityRepository } from "./shared/yagna/repository/activity-repository";
 import { AgreementRepository } from "./shared/yagna/repository/agreement-repository";
@@ -25,7 +25,8 @@ import { CacheService } from "./shared/cache/CacheService";
 import { IProposalRepository } from "./market/proposal";
 import { DemandRepository } from "./shared/yagna/repository/demand-repository";
 import { IDemandRepository } from "./market/demand";
-import { MarketApiAdapter } from "./shared/yagna/adapters/market-api-adapter";
+import { GftpServerAdapter } from "./shared/storage/GftpServerAdapter";
+import { GftpStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "./shared/storage";
 
 export interface GolemNetworkOptions {
   logger?: Logger;
@@ -36,7 +37,7 @@ export interface GolemNetworkOptions {
   market?: Partial<MarketOptions>;
   payment?: PaymentModuleOptions;
   deployment?: Partial<DeploymentOptions>;
-  dataTransferProtocol?: DeploymentOptions["dataTransferProtocol"];
+  dataTransferProtocol: DataTransferProtocol;
 }
 
 export interface GolemNetworkEvents {
@@ -63,6 +64,7 @@ export type GolemServices = {
   proposalCache: CacheService<ProposalNew>;
   proposalRepository: IProposalRepository;
   demandRepository: IDemandRepository;
+  fileServer: IFileServer;
 };
 
 /**
@@ -73,6 +75,8 @@ export type GolemServices = {
  */
 export class GolemNetwork {
   public readonly events = new EventEmitter<GolemNetworkEvents>();
+
+  public readonly options: GolemNetworkOptions;
 
   private readonly logger: Logger;
 
@@ -90,8 +94,21 @@ export class GolemNetwork {
 
   private hasConnection = false;
 
-  constructor(public readonly options: GolemNetworkOptions = {}) {
+  private readonly gftpStorageProvider: StorageProvider;
+
+  constructor(options: Partial<GolemNetworkOptions> = {}) {
+    const optDefaults: GolemNetworkOptions = {
+      dataTransferProtocol: "gftp",
+    };
+
+    this.options = {
+      ...optDefaults,
+      ...options,
+    };
+
     this.logger = options.logger ?? defaultLogger("golem-network");
+
+    this.logger.debug("Creating Golem Network instance with options", { options: this.options });
 
     try {
       this.yagna = new YagnaApi({
@@ -99,6 +116,8 @@ export class GolemNetwork {
         apiKey: this.options.api?.key,
         basePath: this.options.api?.url,
       });
+
+      this.gftpStorageProvider = this.createStorageProvider();
 
       const demandCache = new CacheService<DemandNew>();
       const proposalCache = new CacheService<ProposalNew>();
@@ -131,6 +150,7 @@ export class GolemNetwork {
           this.logger,
         ),
         marketApi: new MarketApiAdapter(this.yagna),
+        fileServer: new GftpServerAdapter(this.gftpStorageProvider),
       };
 
       this.market = new MarketModuleImpl(this.services);
@@ -153,6 +173,7 @@ export class GolemNetwork {
     try {
       await this.yagna.connect();
       await this.services.paymentApi.connect();
+      await this.gftpStorageProvider.init();
       this.events.emit("connected");
       this.hasConnection = true;
     } catch (err) {
@@ -167,6 +188,7 @@ export class GolemNetwork {
    * @return Resolves when all shutdown steps are completed
    */
   async disconnect() {
+    await this.gftpStorageProvider.close();
     await this.services.paymentApi.disconnect();
     await this.yagna.disconnect();
 
@@ -273,5 +295,15 @@ export class GolemNetwork {
   // public compose(): void {}
   isConnected() {
     return this.hasConnection;
+  }
+
+  private createStorageProvider(): StorageProvider {
+    switch (this.options.dataTransferProtocol) {
+      case "ws":
+        return new WebSocketBrowserStorageProvider(this.yagna, {});
+      case "gftp":
+      default:
+        return new GftpStorageProvider();
+    }
   }
 }

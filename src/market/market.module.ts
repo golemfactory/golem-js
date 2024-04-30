@@ -21,6 +21,7 @@ import { ProposalFilterNew } from "./service";
 import { IAgreementApi } from "../agreement/agreement";
 import { DemandOptionsNew, DemandSpecification, IDemandRepository } from "./demand";
 import { PayerDetails } from "../payment/PayerDetails";
+import { IFileServer } from "../activity";
 
 export interface MarketEvents {}
 
@@ -171,6 +172,7 @@ export class MarketModuleImpl implements MarketModule {
   private readonly agreementApi: IAgreementApi;
   private readonly proposalRepo: IProposalRepository;
   private readonly demandRepo: IDemandRepository;
+  private fileServer: IFileServer;
 
   private defaultDemandExpirationSec = 60 * 60;
 
@@ -184,6 +186,7 @@ export class MarketModuleImpl implements MarketModule {
       paymentApi: IPaymentApi;
       activityApi: IActivityApi;
       marketApi: MarketApi;
+      fileServer: IFileServer;
     },
   ) {
     this.logger = deps.logger;
@@ -191,13 +194,16 @@ export class MarketModuleImpl implements MarketModule {
     this.agreementApi = deps.agreementApi;
     this.proposalRepo = deps.proposalRepository;
     this.demandRepo = deps.demandRepository;
+    this.fileServer = deps.fileServer;
   }
 
   async buildDemand(options: DemandOptionsNew, payerDetails: PayerDetails): Promise<DemandSpecification> {
     const demandSpecificConfig = new DemandConfig(options);
     const builder = new DecorationsBuilder();
 
-    const taskDecorations = await Package.create(options).getDemandDecoration();
+    // Apply additional modifications
+    const pkgOptions = await this.applyLocalGVMIServeSupport(options);
+    const taskDecorations = await Package.create(pkgOptions).getDemandDecoration();
 
     builder.addDecorations([taskDecorations]);
 
@@ -226,6 +232,33 @@ export class MarketModuleImpl implements MarketModule {
       .addConstraint("golem.com.payment.protocol.version", "1", ComparisonOperator.Gt);
 
     return builder.getDemandSpecification(payerDetails.getPaymentPlatform(), demandSpecificConfig.expirationSec);
+  }
+
+  /**
+   * Augments the user-provided options with additional logic
+   *
+   * Use Case: serve the GVMI from the requestor and avoid registry
+   */
+  private async applyLocalGVMIServeSupport(options: DemandOptionsNew) {
+    if (options.imageUrl?.startsWith("file://")) {
+      const sourcePath = options.imageUrl?.replace("file://", "");
+
+      const publishInfo = this.fileServer.getPublishInfo(sourcePath) ?? (await this.fileServer.publishFile(sourcePath));
+      const { fileUrl: imageUrl, fileHash: imageHash } = publishInfo;
+
+      this.logger.debug("Applied local GVMI serve support", {
+        sourcePath,
+        publishInfo,
+      });
+
+      return {
+        ...options,
+        imageUrl,
+        imageHash,
+      };
+    }
+
+    return options;
   }
 
   publishDemand(demandSpecification: DemandSpecification): Observable<DemandNew> {
@@ -346,6 +379,7 @@ export class MarketModuleImpl implements MarketModule {
       allocation,
       this.deps.paymentApi,
       this.deps.activityApi,
+      this.agreementApi,
       this.deps.logger,
       this.yagnaApi, // TODO: Remove this dependency
     );

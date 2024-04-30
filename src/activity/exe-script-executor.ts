@@ -207,7 +207,7 @@ export class ExeScriptExecutor {
     const source = this.execObserver.observeBatchExecResults(this.activity.id, batchId).subscribe({
       next: (resultEvents) => results.push(this.parseEventToResult(resultEvents, batchSize)),
       error: (err) => errors.push(err.data?.message ?? err),
-      complete: () => console.log("Finished reading batch results"),
+      complete: () => this.logger.debug("Finished reading batch results"),
     });
 
     let isBatchFinished = false;

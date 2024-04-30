@@ -59,6 +59,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
    */
   private services = new Map<string, string>();
   private logger: Logger;
+  private ready = false;
 
   constructor(
     private readonly yagnaApi: YagnaApi,
@@ -68,10 +69,12 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
   }
 
   close(): Promise<void> {
+    this.ready = false;
     return this.release(Array.from(this.services.keys()));
   }
 
   init(): Promise<void> {
+    this.ready = true;
     return Promise.resolve(undefined);
   }
 
@@ -144,6 +147,10 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
       }
       this.services.delete(url);
     });
+  }
+
+  isReady(): boolean {
+    return this.ready;
   }
 
   private async createFileInfo(): Promise<GftpFileInfo> {

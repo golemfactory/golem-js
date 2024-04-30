@@ -68,7 +68,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
     await proposalPool.remove(draftProposal);
 
     // This will keep the script waiting for payments etc
-    await lease.finalized();
+    await lease.finalize();
   } catch (err) {
     console.error("Failed to run example on Golem", err);
   } finally {
