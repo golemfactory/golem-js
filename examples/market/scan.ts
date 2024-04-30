@@ -1,6 +1,7 @@
 /**
  * This example demonstrates how to scan the market for proposals
- * Lets lear what is the average start price
+ * Lets learn what is the average start price
+ * Notice that we don't need to even allocate any budget for this operation
  */
 import { GolemNetwork, ProposalNew } from "@golem-sdk/golem-js";
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
@@ -21,12 +22,12 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
   try {
     await glm.connect();
 
-    const allocation = await glm.payment.createAllocation({ budget: 1 });
+    const payerDetails = await glm.payment.getPayerDetails();
     const demandSpecification = await glm.market.buildDemand(
       {
         imageTag: "golem/alpine:latest",
       },
-      allocation,
+      payerDetails,
     );
 
     const offers = new Set<ProposalNew>();

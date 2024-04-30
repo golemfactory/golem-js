@@ -16,10 +16,11 @@ import { Allocation, PaymentModule } from "../payment";
 import { Package } from "./package";
 import { bufferTime, filter, map, Observable, switchMap, tap } from "rxjs";
 import { IProposalRepository, ProposalNew } from "./proposal";
-import { DecorationsBuilder } from "./builder";
+import { ComparisonOperator, DecorationsBuilder } from "./builder";
 import { ProposalFilterNew } from "./service";
 import { IAgreementApi } from "../agreement/agreement";
 import { DemandOptionsNew, DemandSpecification, IDemandRepository } from "./demand";
+import { PayerDetails } from "../payment/PayerDetails";
 import { IFileServer } from "../activity";
 
 export interface MarketEvents {}
@@ -87,7 +88,13 @@ export interface MarketOptions {
 export interface MarketModule {
   events: EventEmitter<MarketEvents>;
 
-  buildDemand(options: DemandOptionsNew, allocation: Allocation): Promise<DemandSpecification>;
+  /**
+   * Build a DemandSpecification based on the given options and payer details.
+   * You can obtain the payer details from the payment module.
+   * The method returns a DemandSpecification that can be used to publish the demand to the market,
+   * for example using the `publishDemand` method.
+   */
+  buildDemand(options: DemandOptionsNew, payerDetails: PayerDetails): Promise<DemandSpecification>;
 
   /**
    * Publishes the demand to the market and handles refreshing it when needed.
@@ -190,17 +197,15 @@ export class MarketModuleImpl implements MarketModule {
     this.fileServer = deps.fileServer;
   }
 
-  async buildDemand(options: DemandOptionsNew, allocation: Allocation): Promise<DemandSpecification> {
+  async buildDemand(options: DemandOptionsNew, payerDetails: PayerDetails): Promise<DemandSpecification> {
     const demandSpecificConfig = new DemandConfig(options);
     const builder = new DecorationsBuilder();
 
     // Apply additional modifications
     const pkgOptions = await this.applyLocalGVMIServeSupport(options);
-
     const taskDecorations = await Package.create(pkgOptions).getDemandDecoration();
-    const allocationDecoration = await allocation.getDemandDecoration();
 
-    builder.addDecorations([taskDecorations, allocationDecoration]);
+    builder.addDecorations([taskDecorations]);
 
     // Configure basic properties
     builder
@@ -219,7 +224,14 @@ export class MarketModuleImpl implements MarketModule {
       )
       .addProperty("golem.com.scheme.payu.payment-timeout-sec?", demandSpecificConfig.midAgreementPaymentTimeoutSec);
 
-    return builder.getDemandSpecification(allocation.paymentPlatform, demandSpecificConfig.expirationSec);
+    // Configure payment platform
+    builder
+      .addProperty(`golem.com.payment.platform.${payerDetails.getPaymentPlatform()}.address`, payerDetails.address)
+      .addProperty("golem.com.payment.protocol.version", "2")
+      .addConstraint(`golem.com.payment.platform.${payerDetails.getPaymentPlatform()}.address`, "*")
+      .addConstraint("golem.com.payment.protocol.version", "1", ComparisonOperator.Gt);
+
+    return builder.getDemandSpecification(payerDetails.getPaymentPlatform(), demandSpecificConfig.expirationSec);
   }
 
   /**
@@ -265,7 +277,7 @@ export class MarketModuleImpl implements MarketModule {
           .unpublishDemand(currentDemand)
           .catch((error) => this.logger.error("Failed to unpublish demand", error));
         subscribeDemand();
-      }, demandSpecification.expirationMs);
+      }, demandSpecification.expirationSec * 1000);
 
       return () => {
         clearInterval(interval);
