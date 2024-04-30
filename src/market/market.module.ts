@@ -413,6 +413,7 @@ export class MarketModuleImpl implements MarketModule {
         const subscribtion = source.subscribe((proposal) => {
           if (proposal.isInitial()) {
             proposalsBatch.addProposal(proposal);
+            this.logger.debug("Added initial proposal to batch", { proposal: proposal.id });
           } else {
             destination.next(proposal);
           }
