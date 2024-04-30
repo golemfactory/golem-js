@@ -4,20 +4,20 @@ import { MarketModuleImpl } from "./market.module";
 import * as YaTsClient from "ya-ts-client";
 import { DemandNew, DemandSpecification, IDemandRepository } from "./demand";
 import { from, of, take } from "rxjs";
-import { IProposalRepository, ProposalNew } from "./proposal";
+import { IProposalRepository, ProposalNew, ProposalProperties } from "./proposal";
 import { MarketApiAdapter } from "../shared/yagna/";
 import { IActivityApi, IPaymentApi } from "../agreement";
 import { IAgreementApi } from "../agreement/agreement";
 import { PayerDetails } from "../payment/PayerDetails";
 import { IFileServer } from "../activity";
 import { StorageProvider } from "../shared/storage";
-jest.useFakeTimers();
 
 const mockMarketApiAdapter = mock(MarketApiAdapter);
 const mockYagna = mock(YagnaApi);
 let marketModule: MarketModuleImpl;
 
 beforeEach(() => {
+  jest.useFakeTimers();
   jest.resetAllMocks();
   reset(mockMarketApiAdapter);
   marketModule = new MarketModuleImpl({
@@ -193,7 +193,14 @@ describe("Market module", () => {
   });
   describe("startCollectingProposals()", () => {
     it("should negotiate any initial proposals", (done) => {
-      const mockDemandSpecification = imock<DemandSpecification>();
+      jest.useRealTimers();
+      const mockSpecification = mock(DemandSpecification);
+      const demandSpecification = instance(mockSpecification);
+      const proposalProperties = {
+        ["golem.inf.cpu.cores"]: 1,
+        ["golem.inf.cpu.threads"]: 1,
+        ["golem.inf.mem.gib"]: 1,
+      } as ProposalProperties;
       const proposal1 = {
         isInitial: () => true,
         isDraft: () => false,
@@ -201,6 +208,11 @@ describe("Market module", () => {
         getDto: () => ({
           state: "Initial",
         }),
+        provider: {
+          id: "provider-1",
+        },
+        properties: proposalProperties,
+        getEstimatedCost: () => 1,
       } as ProposalNew;
       const proposal2 = {
         isInitial: () => true,
@@ -209,6 +221,11 @@ describe("Market module", () => {
         getDto: () => ({
           state: "Initial",
         }),
+        provider: {
+          id: "provider-2",
+        },
+        properties: proposalProperties,
+        getEstimatedCost: () => 1,
       } as ProposalNew;
       const proposal3 = {
         isInitial: () => false,
@@ -217,6 +234,11 @@ describe("Market module", () => {
         getDto: () => ({
           state: "Draft",
         }),
+        provider: {
+          id: "provider-3",
+        },
+        properties: proposalProperties,
+        getEstimatedCost: () => 1,
       } as ProposalNew;
       const proposal4 = {
         isInitial: () => false,
@@ -225,6 +247,11 @@ describe("Market module", () => {
         getDto: () => ({
           state: "Draft",
         }),
+        provider: {
+          id: "provider-1",
+        },
+        properties: proposalProperties,
+        getEstimatedCost: () => 1,
       } as ProposalNew;
 
       marketModule.publishDemand = jest.fn().mockReturnValue(of({ id: "demand-id" }));
@@ -236,8 +263,7 @@ describe("Market module", () => {
       const draftProposals: ProposalNew[] = [];
       marketModule
         .startCollectingProposals({
-          demandSpecification: mockDemandSpecification,
-          bufferSize: 1,
+          demandSpecification,
         })
         .pipe(take(2))
         .subscribe({
@@ -248,14 +274,106 @@ describe("Market module", () => {
             try {
               expect(draftProposals).toEqual([proposal3, proposal4]);
               expect(marketModule.negotiateProposal).toHaveBeenCalledTimes(2);
-              expect(marketModule.negotiateProposal).toHaveBeenCalledWith(proposal1, mockDemandSpecification);
-              expect(marketModule.negotiateProposal).toHaveBeenCalledWith(proposal2, mockDemandSpecification);
+              expect(marketModule.negotiateProposal).toHaveBeenCalledWith(proposal1, demandSpecification);
+              expect(marketModule.negotiateProposal).toHaveBeenCalledWith(proposal2, demandSpecification);
               done();
             } catch (error) {
               done(error);
             }
           },
           error: (error) => done(error),
+        });
+    });
+    it("should reduce proposals from the same provider", (done) => {
+      jest.useRealTimers();
+
+      const mockSpecification = mock(DemandSpecification);
+      const demandSpecification = instance(mockSpecification);
+      const proposalProperties = {
+        ["golem.inf.cpu.cores"]: 1,
+        ["golem.inf.cpu.threads"]: 1,
+        ["golem.inf.mem.gib"]: 1,
+      } as ProposalProperties;
+      const proposal1 = {
+        isInitial: () => true,
+        isDraft: () => false,
+        isValid: () => true,
+        getDto: () => ({
+          state: "Initial",
+        }),
+        provider: {
+          id: "provider-1",
+        },
+        properties: proposalProperties,
+        getEstimatedCost: () => 99,
+      } as ProposalNew;
+      const proposal2 = {
+        isInitial: () => true,
+        isDraft: () => false,
+        isValid: () => true,
+        getDto: () => ({
+          state: "Initial",
+        }),
+        provider: {
+          id: "provider-2",
+        },
+        properties: proposalProperties,
+        getEstimatedCost: () => 1,
+      } as ProposalNew;
+      const proposal3 = {
+        isInitial: () => true,
+        isDraft: () => false,
+        isValid: () => true,
+        getDto: () => ({
+          state: "Initial",
+        }),
+        provider: {
+          id: "provider-1",
+        },
+        properties: proposalProperties,
+        getEstimatedCost: () => 1,
+      } as ProposalNew;
+      const proposal4 = {
+        isInitial: () => false,
+        isDraft: () => true,
+        isValid: () => true,
+        getDto: () => ({
+          state: "Draft",
+        }),
+        provider: {
+          id: "provider-1",
+        },
+        properties: proposalProperties,
+        getEstimatedCost: () => 1,
+      } as ProposalNew;
+
+      marketModule.publishDemand = jest.fn().mockReturnValue(of({ id: "demand-id" }));
+      marketModule.negotiateProposal = jest.fn();
+      marketModule.subscribeForProposals = jest
+        .fn()
+        .mockReturnValue(from([proposal1, proposal2, proposal3, proposal4]));
+
+      const draftProposals: ProposalNew[] = [];
+      marketModule
+        .startCollectingProposals({
+          demandSpecification,
+        })
+        .pipe(take(2))
+        .subscribe({
+          next: (proposal) => {
+            draftProposals.push(...proposal);
+          },
+          complete: () => {
+            try {
+              expect(draftProposals.length).toBe(1);
+              expect(marketModule.negotiateProposal).toHaveBeenCalledTimes(2);
+              expect(marketModule.negotiateProposal).toHaveBeenCalledWith(proposal2, demandSpecification);
+              expect(marketModule.negotiateProposal).toHaveBeenCalledWith(proposal3, demandSpecification);
+              done();
+            } catch (error) {
+              done(error);
+            }
+          },
         });
     });
   });

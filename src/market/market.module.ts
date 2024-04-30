@@ -3,7 +3,6 @@ import { EventEmitter } from "eventemitter3";
 import {
   DemandConfig,
   DemandNew,
-  DemandOptions,
   GolemMarketError,
   MarketApi,
   MarketErrorCode,
@@ -14,12 +13,13 @@ import { Agreement, LegacyAgreementServiceOptions, LeaseProcess, IPaymentApi, IA
 import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
 import { Allocation, PaymentModule } from "../payment";
 import { Package } from "./package";
-import { bufferTime, filter, map, Observable, switchMap, tap } from "rxjs";
+import { bufferTime, filter, map, Observable, switchMap, tap, OperatorFunction } from "rxjs";
 import { IProposalRepository, ProposalNew } from "./proposal";
 import { ComparisonOperator, DecorationsBuilder } from "./builder";
 import { ProposalFilterNew } from "./service";
 import { IAgreementApi } from "../agreement/agreement";
 import { DemandOptionsNew, DemandSpecification, IDemandRepository } from "./demand";
+import { ProposalsBatch } from "./proposals_batch";
 import { PayerDetails } from "../payment/PayerDetails";
 import { IFileServer } from "../activity";
 import { StorageProvider } from "../shared/storage";
@@ -349,6 +349,8 @@ export class MarketModuleImpl implements MarketModule {
     filter?: ProposalFilterNew;
     bufferSize?: number;
     bufferTimeout?: number;
+    minProposalsBatchSize?: number;
+    proposalsBatchReleaseTimeoutMs?: number;
   }): Observable<ProposalNew[]> {
     return this.publishDemand(options.demandSpecification).pipe(
       // for each demand created -> start collecting all proposals
@@ -359,6 +361,10 @@ export class MarketModuleImpl implements MarketModule {
       // for each proposal collected -> filter out undesired and invalid ones
       filter((proposal) => proposal.isValid()),
       filter((proposal) => !options.filter || options.filter(proposal)),
+      this.reduceInitialProposalsByProviderKey({
+        minProposalsBatchSize: options?.minProposalsBatchSize,
+        proposalsBatchReleaseTimeoutMs: options?.proposalsBatchReleaseTimeoutMs,
+      }),
       // for each valid proposal -> start negotiating if it's not in draft state yet
       tap((proposal) => {
         // Populate the cache
@@ -386,5 +392,49 @@ export class MarketModuleImpl implements MarketModule {
       this.yagnaApi, // TODO: Remove this dependency
       this.deps.storageProvider,
     );
+  }
+
+  /**
+   * Reduce initial proposals to a set grouped by the provider's key to avoid duplicate offers
+   */
+  private reduceInitialProposalsByProviderKey(options?: {
+    minProposalsBatchSize?: number;
+    proposalsBatchReleaseTimeoutMs?: number;
+  }): OperatorFunction<ProposalNew, ProposalNew> {
+    return (source) =>
+      new Observable((destination) => {
+        let isCancelled = false;
+        const proposalsBatch = new ProposalsBatch({
+          minBatchSize: options?.minProposalsBatchSize,
+          releaseTimeoutMs: options?.proposalsBatchReleaseTimeoutMs,
+        });
+        const subscribtion = source.subscribe((proposal) => {
+          if (proposal.isInitial()) {
+            proposalsBatch.addProposal(proposal);
+          } else {
+            destination.next(proposal);
+          }
+        });
+        const batch = async () => {
+          if (isCancelled) {
+            return;
+          }
+          this.logger.debug("Waiting for reduced proposals...");
+          try {
+            await proposalsBatch.waitForProposals();
+            const proposals = await proposalsBatch.getProposals();
+            this.logger.debug("Received batch of proposals", { count: proposals.length });
+            proposals.forEach((proposal) => destination.next(proposal));
+          } catch (error) {
+            destination.error(error);
+          }
+          batch();
+        };
+        batch();
+        return () => {
+          isCancelled = true;
+          subscribtion.unsubscribe();
+        };
+      });
   }
 }

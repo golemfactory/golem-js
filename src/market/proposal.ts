@@ -114,6 +114,10 @@ export class ProposalNew {
     return this.model.state;
   }
 
+  public get timestamp(): string {
+    return this.model.timestamp;
+  }
+
   getDto(): ProposalDTO {
     return {
       transferProtocol: this.properties["golem.activity.caps.transfer.protocol"],
@@ -218,7 +222,7 @@ export class Proposal {
     private readonly parentId: string | null,
     private readonly setCounteringProposalReference: (id: string, parentId: string) => void | null,
     private readonly api: MarketApi.RequestorService,
-    private readonly model: MarketApi.ProposalDTO,
+    public readonly model: MarketApi.ProposalDTO,
   ) {
     this.id = model.proposalId;
     this.issuerId = model.issuerId;
