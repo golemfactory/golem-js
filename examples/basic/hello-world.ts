@@ -69,7 +69,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
     // This will keep the script waiting for payments etc
     await lease.finalize();
-    await glm.payment.releaseAllocation(allocation);
+    await allocation.release();
   } catch (err) {
     console.error("Failed to run example on Golem", err);
   } finally {
