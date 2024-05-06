@@ -43,7 +43,6 @@ describe("Proposal", () => {
         new GolemMarketError(
           "Broken proposal: the `golem.com.pricing.model.linear.coeffs` does not contain pricing information",
           MarketErrorCode.InvalidProposal,
-          testDemand,
         ),
       );
     });
@@ -58,7 +57,6 @@ describe("Proposal", () => {
         new GolemMarketError(
           "Broken proposal: the `golem.com.pricing.model.linear.coeffs` does not contain pricing information",
           MarketErrorCode.InvalidProposal,
-          testDemand,
         ),
       );
     });
@@ -73,7 +71,6 @@ describe("Proposal", () => {
         new GolemMarketError(
           "Broken proposal: the `golem.com.pricing.model.linear.coeffs` should contain 3 price values",
           MarketErrorCode.InvalidProposal,
-          testDemand,
         ),
       );
     });
@@ -88,7 +85,6 @@ describe("Proposal", () => {
         new GolemMarketError(
           "Broken proposal: the `golem.com.usage.vector` does not contain price information",
           MarketErrorCode.InvalidProposal,
-          testDemand,
         ),
       );
     });
@@ -102,7 +98,6 @@ describe("Proposal", () => {
         new GolemMarketError(
           "Broken proposal: the `golem.com.usage.vector` does not contain price information",
           MarketErrorCode.InvalidProposal,
-          testDemand,
         ),
       );
     });
@@ -117,7 +112,6 @@ describe("Proposal", () => {
         new GolemMarketError(
           "Broken proposal: the `golem.com.usage.vector` has less pricing information than `golem.com.pricing.model.linear.coeffs`",
           MarketErrorCode.InvalidProposal,
-          testDemand,
         ),
       );
     });

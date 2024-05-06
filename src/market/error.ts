@@ -1,5 +1,4 @@
 import { GolemModuleError } from "../shared/error/golem-error";
-import { Demand, DemandNew } from "./demand";
 
 export enum MarketErrorCode {
   ServiceNotInitialized = "ServiceNotInitialized",
@@ -16,19 +15,11 @@ export enum MarketErrorCode {
 }
 
 export class GolemMarketError extends GolemModuleError {
-  #demand?: DemandNew | Demand;
-
   constructor(
     message: string,
     public code: MarketErrorCode,
-    demand?: DemandNew | Demand,
     public previous?: Error,
   ) {
     super(message, code, previous);
-    this.#demand = demand;
-  }
-
-  public getDemand(): DemandNew | Demand | undefined {
-    return this.#demand;
   }
 }

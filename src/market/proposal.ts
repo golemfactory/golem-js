@@ -63,14 +63,31 @@ export interface ProposalDTO {
   state: MarketApi.ProposalDTO["state"];
 }
 
+export interface IProposalRepository {
+  add(proposal: ProposalNew): ProposalNew;
+  getById(id: string): ProposalNew | undefined;
+  getByDemandAndId(demand: DemandNew, id: string): Promise<ProposalNew>;
+}
+
+/**
+ * Issue: The final proposal that gets promoted to an agreement comes from the provider
+ * Right now the last time I can acces it directly is when I receive the counter from the provider,
+ * later it's impossible for me to get it via the API `{"message":"Path deserialize error: Id [2cb0b2820c6142fab5af7a8e90da09f0] has invalid owner type."}`
+ *
+ * FIXME #yagna should allow obtaining proposals via the API even if I'm not the owner!
+ */
 export class ProposalNew {
+  public readonly id: string;
   public provider: ProviderInfo;
+  public readonly previousProposalId: string | null = null;
 
   constructor(
     public readonly model: MarketApi.ProposalDTO,
     public readonly demand: DemandNew,
   ) {
+    this.id = model.proposalId;
     this.provider = this.getProviderInfo();
+    this.previousProposalId = model.prevProposalId ?? null;
   }
 
   isInitial(): boolean {
@@ -97,8 +114,8 @@ export class ProposalNew {
     return this.model.state;
   }
 
-  public get id(): string {
-    return this.model.proposalId;
+  public get timestamp(): string {
+    return this.model.timestamp;
   }
 
   getDto(): ProposalDTO {
@@ -166,14 +183,11 @@ export class ProposalNew {
     return true;
   }
 
-  private getProviderInfo(): ProviderInfo {
+  public getProviderInfo(): ProviderInfo {
     return {
       id: this.model.issuerId,
       name: this.properties["golem.node.id.name"],
-      walletAddress: "todo",
-      // TODO: walletAddress: this.properties[
-      //   `golem.com.payment.platform.${this.demand.allocation.paymentPlatform}.address`
-      //   ] as string,
+      walletAddress: this.properties[`golem.com.payment.platform.${this.demand.paymentPlatform}.address`] as string,
     };
   }
 }
@@ -208,7 +222,7 @@ export class Proposal {
     private readonly parentId: string | null,
     private readonly setCounteringProposalReference: (id: string, parentId: string) => void | null,
     private readonly api: MarketApi.RequestorService,
-    private readonly model: MarketApi.ProposalDTO,
+    public readonly model: MarketApi.ProposalDTO,
   ) {
     this.id = model.proposalId;
     this.issuerId = model.issuerId;
@@ -278,7 +292,6 @@ export class Proposal {
       throw new GolemMarketError(
         "Broken proposal: the `golem.com.usage.vector` does not contain price information",
         MarketErrorCode.InvalidProposal,
-        this.demand,
       );
     }
 
@@ -286,7 +299,6 @@ export class Proposal {
       throw new GolemMarketError(
         "Broken proposal: the `golem.com.pricing.model.linear.coeffs` does not contain pricing information",
         MarketErrorCode.InvalidProposal,
-        this.demand,
       );
     }
 
@@ -294,7 +306,6 @@ export class Proposal {
       throw new GolemMarketError(
         "Broken proposal: the `golem.com.usage.vector` has less pricing information than `golem.com.pricing.model.linear.coeffs`",
         MarketErrorCode.InvalidProposal,
-        this.demand,
       );
     }
 
@@ -302,7 +313,6 @@ export class Proposal {
       throw new GolemMarketError(
         "Broken proposal: the `golem.com.pricing.model.linear.coeffs` should contain 3 price values",
         MarketErrorCode.InvalidProposal,
-        this.demand,
       );
     }
   }
@@ -337,7 +347,6 @@ export class Proposal {
       throw new GolemMarketError(
         `Failed to reject proposal. ${error?.response?.data?.message || error}`,
         MarketErrorCode.ProposalRejectionFailed,
-        this.demand,
         error,
       );
     }
@@ -357,7 +366,6 @@ export class Proposal {
         throw new GolemMarketError(
           "Failed to respond proposal. No countering proposal ID returned",
           MarketErrorCode.ProposalResponseFailed,
-          this.demand,
         );
       }
       if (this.setCounteringProposalReference) {
@@ -380,7 +388,6 @@ export class Proposal {
       throw new GolemMarketError(
         `Failed to respond proposal. ${reason}`,
         MarketErrorCode.ProposalResponseFailed,
-        this.demand,
         error,
       );
     }

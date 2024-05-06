@@ -1,101 +1,44 @@
-import { Agreement, Logger, Proposal, ProposalNew, ProviderInfo, YagnaApi } from "../../src";
-import { anything, imock, instance, mock, objectContaining, reset, verify, when } from "@johanblumenberg/ts-mockito";
+import { Agreement, ProviderInfo } from "../../src";
 import { MarketApi } from "ya-ts-client";
 
-const testProvider: ProviderInfo = {
-  id: "test_provider_id",
-  name: "Test Provider",
-  walletAddress: "test_wallet_address",
+const agreementData: MarketApi.AgreementDTO = {
+  agreementId: "agreement-id",
+  demand: {
+    demandId: "demand-id",
+    requestorId: "requestor-id",
+    properties: {},
+    constraints: "",
+    timestamp: "2024-01-01T00:00:00.000Z",
+  },
+  offer: {
+    offerId: "offer-id",
+    providerId: "provider-id",
+    properties: {
+      "golem.node.id.name": "provider-name",
+      "golem.com.payment.platform.erc20-holesky-tglm.address": "0xProviderWallet",
+    },
+    constraints: "",
+    timestamp: "2024-01-01T00:00:00.000Z",
+  },
+  state: "Approved",
+  timestamp: "2024-01-01T00:00:00.000Z",
+  validTo: "2024-01-02T00:00:00.000Z",
 };
 
-const mockLogger = imock<Logger>();
-const mockYagna = mock(YagnaApi);
-const mockProposal = mock(ProposalNew);
-const mockAgreement = imock<MarketApi.AgreementDTO>();
-const mockMarket = mock(MarketApi.RequestorService);
-
 describe("Agreement", () => {
-  beforeEach(() => {
-    reset(mockLogger);
-    reset(mockYagna);
-    reset(mockProposal);
-    reset(mockAgreement);
-    reset(mockMarket);
-
-    when(mockYagna.market).thenReturn(instance(mockMarket));
-
-    when(mockMarket.createAgreement(anything())).thenResolve("agreement-id");
-    when(mockMarket.getAgreement("agreement-id")).thenResolve(instance(mockAgreement));
-    when(mockMarket.terminateAgreement("agreement-id", anything())).thenResolve({
-      message: "Ok",
-    });
-    when(mockMarket.confirmAgreement("agreement-id", anything())).thenResolve({ message: "Ok" });
-    when(mockMarket.waitForApproval("agreement-id", anything())).thenResolve({ message: "Ok" });
-
-    when(mockAgreement.agreementId).thenReturn("agreement-id");
-    when(mockAgreement.state).thenReturn("Approved");
-
-    when(mockProposal.provider).thenReturn(testProvider);
-    when(mockProposal.model).thenReturn({
-      constraints: "",
-      issuerId: "",
-      properties: [],
-      proposalId: "",
-      state: "Accepted",
-      timestamp: "",
-    });
-  });
-
-  describe("create()", () => {
-    it("should create agreement for given proposal ID", async () => {
-      const agreement = await Agreement.create(instance(mockProposal), instance(mockYagna), {
-        logger: instance(mockLogger),
-      });
-
-      expect(agreement).toBeInstanceOf(Agreement);
-      expect(agreement.id).toBeDefined();
-
-      verify(mockLogger.debug("Agreement created", objectContaining({ id: agreement.id }))).once();
-    });
-  });
-
-  describe("provider", () => {
-    it("should be a instance ProviderInfo with provider details", async () => {
-      const agreement = await Agreement.create(instance(mockProposal), instance(mockYagna), {
-        logger: instance(mockLogger),
-      });
-      expect(agreement).toBeInstanceOf(Agreement);
-      expect(agreement.getProviderInfo().id).toEqual(expect.any(String));
-      expect(agreement.getProviderInfo().name).toEqual(expect.any(String));
+  describe("getProviderInfo()", () => {
+    it("should be a instance ProviderInfo with provider details", () => {
+      const agreement = new Agreement(agreementData.agreementId, agreementData, "erc20-holesky-tglm");
+      expect(agreement.getProviderInfo().id).toEqual("provider-id");
+      expect(agreement.getProviderInfo().name).toEqual("provider-name");
+      expect(agreement.getProviderInfo().walletAddress).toEqual("0xProviderWallet");
     });
   });
 
   describe("getState()", () => {
-    it("should return state of agreement", async () => {
-      const agreement = await Agreement.create(instance(mockProposal), instance(mockYagna), {
-        logger: instance(mockLogger),
-      });
-      expect(await agreement.getState()).toEqual("Approved");
-    });
-  });
-
-  describe("terminate()", () => {
-    it("should terminate agreement", async () => {
-      const agreement = await Agreement.create(instance(mockProposal), instance(mockYagna), {
-        logger: instance(mockLogger),
-      });
-      await agreement.terminate();
-      verify(mockLogger.debug("Agreement terminated", objectContaining({ id: agreement.id }))).once();
-    });
-  });
-
-  describe("confirm()", () => {
-    it("should confirm agreement", async () => {
-      const agreement = await Agreement.create(instance(mockProposal), instance(mockYagna), {
-        logger: instance(mockLogger),
-      });
-      await agreement.confirm();
-      verify(mockLogger.debug("Agreement approved", objectContaining({ id: agreement.id }))).once();
+    it("should return state of agreement", () => {
+      const agreement = new Agreement(agreementData.agreementId, agreementData, "erc20-holesky-tglm");
+      expect(agreement.getState()).toEqual("Approved");
     });
   });
 });

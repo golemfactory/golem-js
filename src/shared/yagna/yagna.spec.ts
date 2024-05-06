@@ -1,6 +1,6 @@
 import { MIN_SUPPORTED_YAGNA, YagnaApi } from "./yagnaApi";
 import { imock, instance, spy, when } from "@johanblumenberg/ts-mockito";
-import { GolemPlatformError } from "../../error/golem-error";
+import { GolemPlatformError } from "../error/golem-error";
 import { IdentityApi } from "ya-ts-client";
 
 const mockIdentityModel = imock<IdentityApi.IdentityDTO>();

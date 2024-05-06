@@ -1,4 +1,4 @@
-import { Activity, ActivityStateEnum, Result } from "../";
+import { Activity, ActivityStateEnum, ExecutionConfig, Result } from "../";
 import {
   Capture,
   Command,
@@ -19,9 +19,12 @@ import { NetworkNode } from "../../network";
 import { RemoteProcess } from "./process";
 import { GolemWorkError, WorkErrorCode } from "./error";
 import { GolemConfigError, GolemTimeoutError } from "../../shared/error/golem-error";
-import { ProviderInfo } from "../../agreement";
+import { IActivityApi, ProviderInfo } from "../../agreement";
 import { TcpProxy } from "../../network/tcpProxy";
 import { AgreementDTO } from "../../agreement/service";
+import { ActivityApi } from "ya-ts-client";
+import { YagnaExeScriptObserver } from "../../shared/yagna";
+import { ExeScriptExecutor } from "../exe-script-executor";
 
 export type Worker<OutputType> = (ctx: WorkContext) => Promise<OutputType>;
 
@@ -54,8 +57,6 @@ export interface ActivityDTO {
 
 /**
  * Groups most common operations that the requestors might need to implement their workflows
- *
- * @deprecated Will be the new "Activity"
  */
 export class WorkContext {
   private readonly activityPreparingTimeout: number;
@@ -67,24 +68,38 @@ export class WorkContext {
 
   private readonly networkNode?: NetworkNode;
 
+  private executor: ExeScriptExecutor;
+
   constructor(
+    public readonly activityApi: IActivityApi,
+    public readonly activityControl: ActivityApi.RequestorControlService,
+    public readonly execObserver: YagnaExeScriptObserver,
     public readonly activity: Activity,
-    private options: WorkOptions,
+    private options?: WorkOptions,
+    executionOptions?: ExecutionConfig,
   ) {
-    this.activityPreparingTimeout = options.activityPreparingTimeout || DEFAULTS.activityPreparingTimeout;
-    this.activityStateCheckingInterval = options.activityStateCheckingInterval || DEFAULTS.activityStateCheckInterval;
+    this.activityPreparingTimeout = options?.activityPreparingTimeout || DEFAULTS.activityPreparingTimeout;
+    this.activityStateCheckingInterval = options?.activityStateCheckingInterval || DEFAULTS.activityStateCheckInterval;
 
-    this.logger = options.logger ?? defaultLogger("work");
-    this.provider = activity.agreement.getProviderInfo();
-    this.storageProvider = options.storageProvider ?? new NullStorageProvider();
+    this.logger = options?.logger ?? defaultLogger("work");
+    this.provider = activity.getProviderInfo();
+    this.storageProvider = options?.storageProvider ?? new NullStorageProvider();
 
-    this.networkNode = options.networkNode;
+    this.networkNode = options?.networkNode;
+
+    this.executor = this.activity.createExeScriptExecutor(
+      this.activityControl,
+      this.execObserver,
+      this.logger,
+      executionOptions,
+    );
   }
 
   async before(): Promise<Result[] | void> {
-    let state = await this.activity
-      .getState()
-      .catch((error) => this.logger.warn("Error while getting activity state", { error }));
+    let state = await this.activityApi
+      .getActivity(this.activity.id)
+      .then((activity) => activity.getState())
+      .catch((err) => this.logger.error("Failed to read activity state", err));
 
     if (state === ActivityStateEnum.Ready) {
       await this.setupActivity();
@@ -92,7 +107,7 @@ export class WorkContext {
     }
 
     if (state === ActivityStateEnum.Initialized) {
-      const result = await this.activity
+      const result = await this.executor
         .execute(
           new Script([new Deploy(this.networkNode?.getNetworkConfig?.()), new Start()]).getExeScriptRequest(),
           undefined,
@@ -108,7 +123,9 @@ export class WorkContext {
             e,
           );
         });
+
       let timeoutId: NodeJS.Timeout;
+
       await Promise.race([
         new Promise(
           (res, rej) =>
@@ -145,13 +162,13 @@ export class WorkContext {
         })
         .finally(() => clearTimeout(timeoutId));
     }
+
     await sleep(this.activityStateCheckingInterval, true);
-    state = await this.activity.getState().catch((e) =>
-      this.logger.warn("Error while getting activity state", {
-        error: e,
-        provider: this.provider.name,
-      }),
-    );
+
+    state = await this.activityApi
+      .getActivity(this.activity.id)
+      .then((activity) => activity.getState())
+      .catch((err) => this.logger.error("Failed to read activity state", err));
 
     if (state !== ActivityStateEnum.Ready) {
       throw new GolemWorkError(
@@ -162,6 +179,7 @@ export class WorkContext {
         this.activity.getProviderInfo(),
       );
     }
+
     await this.setupActivity();
   }
 
@@ -249,7 +267,7 @@ export class WorkContext {
     const script = new Script([run]);
     // In this case, the script consists only of one run command,
     // so we skip the execution of script.before and script.after
-    const streamOfActivityResults = await this.activity
+    const streamOfActivityResults = await this.executor
       .execute(script.getExeScriptRequest(), true, options?.timeout)
       .catch((e) => {
         throw new GolemWorkError(
@@ -264,7 +282,7 @@ export class WorkContext {
         );
       });
 
-    return new RemoteProcess(streamOfActivityResults, this.activity);
+    return new RemoteProcess(this.activityApi, streamOfActivityResults, this.activity, this.logger);
   }
 
   /**
@@ -323,7 +341,7 @@ export class WorkContext {
   }
 
   beginBatch() {
-    return Batch.create(this.activity, this.storageProvider, this.logger);
+    return new Batch(this.executor, this.storageProvider, this.logger);
   }
 
   /**
@@ -362,7 +380,7 @@ export class WorkContext {
    * @param portOnProvider The port that the service running on the provider is listening to
    */
   createTcpProxy(portOnProvider: number) {
-    if (!this.options.yagnaOptions?.apiKey) {
+    if (!this.options?.yagnaOptions?.apiKey) {
       throw new GolemConfigError("You need to provide yagna API key to use the TCP Proxy functionality");
     }
 
@@ -380,7 +398,19 @@ export class WorkContext {
   }
 
   async getState(): Promise<ActivityStateEnum> {
-    return this.activity.getState();
+    return this.activityApi
+      .getActivity(this.activity.id)
+      .then((activity) => activity.getState())
+      .catch((err) => {
+        this.logger.error("Failed to read activity state", err);
+        throw new GolemWorkError(
+          "Failed to read activity state",
+          WorkErrorCode.ActivityStatusQueryFailed,
+          this.activity.agreement,
+          this.activity,
+          err,
+        );
+      });
   }
 
   private async runOneCommand<T>(command: Command<T>, options?: CommandOptions): Promise<Result<T>> {
@@ -401,7 +431,7 @@ export class WorkContext {
     await sleep(100, true);
 
     // Send script.
-    const results = await this.activity.execute(script.getExeScriptRequest(), false, options?.timeout);
+    const results = await this.executor.execute(script.getExeScriptRequest(), false, options?.timeout);
 
     // Process result.
     let allResults: Result<T>[] = [];

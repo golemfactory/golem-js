@@ -1,58 +1,61 @@
 /**
  * This example demonstrates how to scan the market for proposals
- * Let's lear what is the average start price
+ * Lets learn what is the average start price
+ * Notice that we don't need to even allocate any budget for this operation
  */
-import { Package, MarketModuleImpl, YagnaApi, Allocation, ProposalNew } from "@golem-sdk/golem-js";
+import { GolemNetwork, ProposalNew } from "@golem-sdk/golem-js";
 
-const yagnaApi = new YagnaApi({
-  apiKey: "try_golem",
-});
-const marketModule = new MarketModuleImpl(yagnaApi);
-
-async function main() {
-  const address = (await yagnaApi.identity.getIdentity()).identity;
-  const paymentPlatform = "erc20-holesky-tglm";
-
-  const allocation = await Allocation.create(yagnaApi, {
-    account: {
-      address,
-      platform: paymentPlatform,
+(async () => {
+  const glm = new GolemNetwork({
+    payment: {
+      payment: {
+        network: "holesky",
+        driver: "erc20",
+      },
     },
-    budget: 1,
-  });
-  const workload = Package.create({
-    imageTag: "golem/alpine:latest",
   });
 
-  const demandOffer = await marketModule.buildDemand(workload, allocation, {});
+  try {
+    await glm.connect();
 
-  const offers = new Set<ProposalNew>();
-
-  console.log("Scanning the market...");
-  const subscription = marketModule
-    .startCollectingProposals({
-      demandOffer,
-      paymentPlatform,
-      bufferSize: 10,
-    })
-    .subscribe({
-      next: (proposals) => {
-        console.log("Received a batch of ", proposals.length, " offers...");
-        proposals.forEach((proposal) => offers.add(proposal));
+    const payerDetails = await glm.payment.getPayerDetails();
+    const demandSpecification = await glm.market.buildDemand(
+      {
+        imageTag: "golem/alpine:latest",
       },
-      error: (e) => {
-        console.error("Error while collecting proposals", e);
-      },
-    });
+      payerDetails,
+    );
 
-  setTimeout(() => {
-    subscription.unsubscribe();
+    const offers = new Set<ProposalNew>();
 
-    const offersArray = [...offers.values()];
-    const offersCount = offersArray.length;
-    const averagePrice = offersArray.reduce((total, offer) => (total += offer.pricing.start), 0) / offersCount;
+    console.log("Scanning the market...");
+    const subscription = glm.market
+      .startCollectingProposals({
+        demandSpecification,
+        bufferSize: 5,
+      })
+      .subscribe({
+        next: (proposals) => {
+          console.log("Received a batch of ", proposals.length, " offers...");
+          proposals.forEach((proposal) => offers.add(proposal));
+        },
+        error: (e) => {
+          console.error("Error while collecting proposals", e);
+        },
+      });
 
-    console.log(`Collected ${offersCount} offers from the market with the start price of ${averagePrice}`);
-  }, 10_000);
-}
-main();
+    setTimeout(() => {
+      subscription.unsubscribe();
+
+      const offersArray = [...offers.values()];
+      const offersCount = offersArray.length;
+      const averagePrice = offersArray.reduce((total, offer) => (total += offer.pricing.start), 0) / offersCount;
+
+      console.log(`Collected ${offersCount} offers from the market with the start price of ${averagePrice}`);
+    }, 10_000);
+  } catch (err) {
+    console.error("Error while executing the example", err);
+  } finally {
+    await glm.disconnect();
+  }
+})().catch(console.error);

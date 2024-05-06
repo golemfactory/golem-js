@@ -8,8 +8,13 @@ const golem = new JobManager({
 
 function startJob() {
   const job = golem.createJob<string>({
-    package: {
-      imageTag: "golem/alpine:latest",
+    demand: {
+      imageTag: "severyn/espeak:latest",
+    },
+    market: {}, // TODO: This should be optional
+    payment: {
+      driver: "erc20",
+      network: "holesky",
     },
   });
 

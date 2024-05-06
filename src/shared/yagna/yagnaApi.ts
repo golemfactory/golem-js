@@ -1,14 +1,14 @@
 import * as YaTsClient from "ya-ts-client";
-import * as EnvUtils from "../env";
-import { GolemConfigError, GolemPlatformError } from "../../error/golem-error";
+import * as EnvUtils from "../utils/env";
+import { GolemConfigError, GolemPlatformError } from "../error/golem-error";
 import { v4 } from "uuid";
-import { Logger } from "../logger/logger";
-import { defaultLogger } from "../logger/defaultLogger"; // .js added for ESM compatibility
-import semverSatisfies from "semver/functions/satisfies.js";
-import semverCoerce from "semver/functions/coerce.js";
-import { BehaviorSubject } from "rxjs";
-import { EventDTO } from "ya-ts-client/dist/market-api";
-import { waitForCondition } from "../waitForCondition";
+import { defaultLogger, ElementOf, Logger } from "../utils";
+import semverSatisfies from "semver/functions/satisfies.js"; // .js added for ESM compatibility
+import semverCoerce from "semver/functions/coerce.js"; // .js added for ESM compatibility
+import { BehaviorSubject, Observable } from "rxjs";
+import { CancellablePoll, EventReaderFactory } from "./event-reader-factory";
+import EventSource from "eventsource";
+import { StreamingBatchEvent } from "../../activity/results";
 
 export type YagnaOptions = {
   apiKey?: string;
@@ -17,32 +17,6 @@ export type YagnaOptions = {
 };
 
 export const MIN_SUPPORTED_YAGNA = "0.13.2";
-
-type CancellablePoll<T> = {
-  /** User defined name of the event stream for ease of debugging */
-  eventType: string;
-
-  /** Tells if a poll call is currently active - reader */
-  isBusy: boolean;
-
-  /** Tells if the poll is active in general. If it's 'false' it means that the poll was cancelled and no polling attempts will be done any more */
-  isOnline: boolean;
-
-  /** Triggers the poll using the fetcher provided when the CancellablePoll was created */
-  pollValues: () => AsyncGenerator<T>;
-
-  /**
-   * Cancels the polling operations, stopping the reader
-   *
-   * It will wait for the last read to complete and will take the reader offline
-   */
-  cancel: () => Promise<void>;
-};
-
-/**
- * Utility type extracting the type of the element of a typed array
- */
-type ElementOf<T> = T extends Array<infer U> ? U : never;
 
 // Workarounds for an issue with missing support for discriminators
 // {@link https://github.com/ferdikoomen/openapi-typescript-codegen/issues/985}
@@ -56,16 +30,26 @@ export type YagnaDebitNoteEvent = ElementOf<
   Awaited<ReturnType<YaTsClient.PaymentApi.RequestorService["getDebitNoteEvents"]>>
 >;
 
+export interface YagnaExeScriptObserver {
+  observeBatchExecResults(activityId: string, batchId: string): Observable<StreamingBatchEvent>;
+}
+
 /**
- * Utility class that groups various Yagna APIs under a single wrapper, also an event consumer which produces events on rxjs BehaviourSubects
+ * Utility class that groups various Yagna APIs under a single wrapper
+ *
+ * This class has the following responsibilities:
+ *
+ * - restructures the services exposed by ya-ts-client hand makes more user-friendly
+ * - acts as a dependency container by exposing net, payment, gsb, service, activity services
+ * - implements an event reader that collects events from Yagna endpoints and allows subscribing to them on BehaviourSubjects
+ *
+ * End users of the SDK should not use this class and make use of {@link GolemNetwork} instead. This class is designed for
+ * SDK developers to use.
  */
 export class YagnaApi {
   public readonly appSessionId: string;
 
   public readonly yagnaOptions: YagnaOptions;
-
-  private readonly logger: Logger;
-
   /**
    * Base path used to build paths to Yagna's API
    *
@@ -74,30 +58,28 @@ export class YagnaApi {
   public readonly basePath: string;
 
   public readonly identity: YaTsClient.IdentityApi.DefaultService;
-
   public market: YaTsClient.MarketApi.RequestorService;
-
   public activity: {
     control: YaTsClient.ActivityApi.RequestorControlService;
     state: YaTsClient.ActivityApi.RequestorStateService;
+    exec: YagnaExeScriptObserver;
   };
-
   public net: YaTsClient.NetApi.RequestorService;
-
   public payment: YaTsClient.PaymentApi.RequestorService;
-
   public gsb: YaTsClient.GsbApi.RequestorService;
-
   public version: YaTsClient.VersionApi.DefaultService;
 
-  private debitNoteEventsPoll: CancellablePoll<YagnaDebitNoteEvent> | null = null;
   public debitNoteEvents$ = new BehaviorSubject<YagnaDebitNoteEvent | null>(null);
+  private debitNoteEventsPoll: CancellablePoll<YagnaDebitNoteEvent> | null = null;
 
-  private invoiceEventPoll: CancellablePoll<YagnaInvoiceEvent> | null = null;
   public invoiceEvents$ = new BehaviorSubject<YagnaInvoiceEvent | null>(null);
+  private invoiceEventPoll: CancellablePoll<YagnaInvoiceEvent> | null = null;
 
-  private agreementEventsPoll: CancellablePoll<YagnaAgreementOperationEvent> | null = null;
   public agreementEvents$ = new BehaviorSubject<YagnaAgreementOperationEvent | null>(null);
+  private agreementEventsPoll: CancellablePoll<YagnaAgreementOperationEvent> | null = null;
+
+  private readonly logger: Logger;
+  private readonly reader: EventReaderFactory;
 
   constructor(options?: YagnaOptions) {
     const apiKey = options?.apiKey || EnvUtils.getYagnaAppKey();
@@ -138,6 +120,21 @@ export class YagnaApi {
     this.activity = {
       control: activityApiClient.requestorControl,
       state: activityApiClient.requestorState,
+      exec: {
+        observeBatchExecResults: (activityId: string, batchId: string) => {
+          return new Observable((observer) => {
+            const eventSource = new EventSource(`${this.basePath}/activity/${activityId}/exec/${batchId}`, {
+              headers: {
+                Accept: "text/event-stream",
+                Authorization: `Bearer ${apiKey}`,
+              },
+            });
+
+            eventSource.addEventListener("runtime", (event) => observer.next(JSON.parse(event.data)));
+            eventSource.addEventListener("error", (error) => observer.error(error));
+          });
+        },
+      },
     };
 
     const netClient = new YaTsClient.NetApi.Client({
@@ -170,13 +167,15 @@ export class YagnaApi {
     this.yagnaOptions = yagnaOptions;
 
     this.appSessionId = v4();
+
+    this.reader = new EventReaderFactory(this.logger);
   }
 
   /**
    * Effectively starts the Yagna API client including subscribing to events exposed via rxjs subjects
    */
   async connect() {
-    this.logger.info("Connecting to yagna");
+    this.logger.info("Connecting to Yagna");
 
     await this.assertSupportedVersion();
 
@@ -191,7 +190,18 @@ export class YagnaApi {
    * Terminates the Yagna API related activities
    */
   async disconnect() {
+    this.logger.info("Disconnecting from Yagna");
     await this.stopPollingEvents();
+    this.logger.info("Disconnected from Yagna");
+  }
+
+  public async getVersion(): Promise<string> {
+    try {
+      const res = await this.version.getVersion();
+      return res.current.version;
+    } catch (err) {
+      throw new GolemPlatformError(`Failed to establish yagna version due to: ${err}`, err);
+    }
   }
 
   private startPollingEvents() {
@@ -200,34 +210,37 @@ export class YagnaApi {
     const pollIntervalSec = 5;
     const maxEvents = 100;
 
-    this.agreementEventsPoll = this.createEventPoller("AgreementEvents", (lastEventTimestamp) =>
+    this.agreementEventsPoll = this.reader.createEventReader("AgreementEvents", (lastEventTimestamp) =>
       this.market.collectAgreementEvents(pollIntervalSec, lastEventTimestamp, maxEvents, this.appSessionId),
     );
 
-    this.debitNoteEventsPoll = this.createEventPoller("DebitNoteEvents", (lastEventTimestamp) => {
+    this.debitNoteEventsPoll = this.reader.createEventReader("DebitNoteEvents", (lastEventTimestamp) => {
       return this.payment.getDebitNoteEvents(pollIntervalSec, lastEventTimestamp, maxEvents, this.appSessionId);
     });
 
-    this.invoiceEventPoll = this.createEventPoller("InvoiceEvents", (lastEventTimestamp) =>
+    this.invoiceEventPoll = this.reader.createEventReader("InvoiceEvents", (lastEventTimestamp) =>
       this.payment.getInvoiceEvents(pollIntervalSec, lastEventTimestamp, maxEvents, this.appSessionId),
     );
 
     // Run the readers and don't block execution
-    this.pollToSubject(this.agreementEventsPoll.pollValues(), this.agreementEvents$)
+    this.reader
+      .pollToSubject(this.agreementEventsPoll.pollValues(), this.agreementEvents$)
       .then(() => this.logger.info("Finished polling agreement events from Yagna"))
       .catch((err) => this.logger.error("Error while polling agreement events from Yagna", err));
 
-    this.pollToSubject(this.debitNoteEventsPoll.pollValues(), this.debitNoteEvents$)
+    this.reader
+      .pollToSubject(this.debitNoteEventsPoll.pollValues(), this.debitNoteEvents$)
       .then(() => this.logger.info("Finished polling debit note events from Yagna"))
       .catch((err) => this.logger.error("Error while polling debit note events from Yagna", err));
 
-    this.pollToSubject(this.invoiceEventPoll.pollValues(), this.invoiceEvents$)
+    this.reader
+      .pollToSubject(this.invoiceEventPoll.pollValues(), this.invoiceEvents$)
       .then(() => this.logger.info("Finished polling invoice events from Yagna"))
       .catch((err) => this.logger.error("Error while polling invoice events from Yagna", err));
   }
 
   private async stopPollingEvents() {
-    this.logger.info("Stopping polling events from Yagna");
+    this.logger.debug("Stopping polling events from Yagna");
 
     if (this.invoiceEventPoll) {
       await this.invoiceEventPoll.cancel();
@@ -241,65 +254,18 @@ export class YagnaApi {
       await this.agreementEventsPoll.cancel();
     }
 
-    this.logger.info("Stopped polling events form Yagna");
-  }
-
-  private async pollToSubject<T>(generator: AsyncGenerator<T>, subject: BehaviorSubject<T>) {
-    for await (const value of generator) {
-      subject.next(value);
-    }
-  }
-
-  private createEventPoller<T extends EventDTO>(
-    eventType: string,
-    eventsFetcher: (lastEventTimestamp: string) => Promise<T[]>,
-  ): CancellablePoll<T> {
-    let isBusy = false;
-    let keepReading = true;
-    let lastTimestamp = new Date().toISOString();
-
-    const logger = this.logger;
-
-    return {
-      eventType,
-      isBusy,
-      isOnline: true,
-      pollValues: async function* () {
-        while (keepReading) {
-          try {
-            isBusy = true;
-            const events = await eventsFetcher(lastTimestamp);
-            logger.debug("Polled events from Yagna", {
-              eventType,
-              count: events.length,
-              lastEventTimestamp: lastTimestamp,
-            });
-            for (const event of events) {
-              yield event;
-              lastTimestamp = event.eventDate;
-            }
-          } catch (error) {
-            logger.error("Error fetching events from Yagna", { eventType, error });
-          } finally {
-            isBusy = false;
-          }
-        }
-        logger.debug("Stopped reading events", { eventType });
-        this.isOnline = false;
-      },
-      cancel: async function () {
-        keepReading = false;
-        await waitForCondition(() => !this.isBusy && !this.isOnline);
-        logger.debug("Cancelled reading the events", { eventType });
-      },
-    };
+    this.logger.debug("Stopped polling events form Yagna");
   }
 
   private async assertSupportedVersion() {
-    this.logger.debug("Checking yagna version support");
     const version = await this.getVersion();
-
     const normVersion = semverCoerce(version);
+
+    this.logger.debug("Checking Yagna version support", {
+      userInstalled: normVersion?.raw,
+      minSupported: MIN_SUPPORTED_YAGNA,
+    });
+
     if (!normVersion) {
       throw new GolemPlatformError(
         `Unreadable yana version '${version}'. Can't proceed without checking yagna version support status.`,
@@ -315,26 +281,4 @@ export class YagnaApi {
 
     return normVersion.version;
   }
-
-  public async getVersion(): Promise<string> {
-    try {
-      const res = await this.version.getVersion();
-      return res.current.version;
-    } catch (err) {
-      throw new GolemPlatformError(`Failed to establish yagna version due to: ${err}`, err);
-    }
-  }
-}
-
-export interface YagnaEventSubscription<T> {
-  waitFor(matcher: (event: T) => boolean, opts: { timeout: number }): Promise<T>;
-
-  on(cb: (event: T) => void): void;
-
-  filter(matcher: (event: T) => boolean): YagnaEventSubscription<T>;
-
-  batch(cb: (event: T[]) => void, options?: { timeout: number }): void;
-
-  /** Stops the subscription, resolves when all I/O is closed */
-  cancel(): Promise<void>;
 }

@@ -51,7 +51,6 @@ export class DemandFactory {
       throw new GolemMarketError(
         `Could not publish demand on the market. ${reason}`,
         MarketErrorCode.SubscriptionFailed,
-        undefined,
         error,
       );
     }

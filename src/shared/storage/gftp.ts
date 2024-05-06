@@ -175,4 +175,8 @@ export class GftpStorageProvider implements StorageProvider {
     const links = await this.jsonrpc("publish", { files: [file.toString()] });
     return links[0]?.url;
   }
+
+  isReady(): boolean {
+    return this.isInitialized;
+  }
 }

@@ -1,16 +1,15 @@
-import { Agreement, AgreementOptions } from "./agreement";
+import { Agreement, IAgreementApi, LegacyAgreementServiceOptions } from "./agreement";
 import { createPool, Factory, Pool } from "generic-pool";
 import { defaultLogger, Logger } from "../shared/utils";
-import { DraftOfferProposalPool, GolemMarketError, MarketErrorCode, MarketModule } from "../market";
+import { DraftOfferProposalPool, GolemMarketError, MarketErrorCode } from "../market";
 import { AgreementDTO } from "./service";
 import { EventEmitter } from "eventemitter3";
-import { PaymentModule } from "../payment";
 import { RequireAtLeastOne } from "../shared/utils/types";
 
 export interface AgreementPoolOptions {
   logger?: Logger;
   replicas?: number | RequireAtLeastOne<{ min: number; max: number }>;
-  agreementOptions?: AgreementOptions;
+  agreementOptions?: LegacyAgreementServiceOptions;
 }
 
 export interface AgreementPoolEvents {
@@ -32,8 +31,8 @@ export class AgreementPool {
   private logger: Logger;
 
   constructor(
-    private modules: { market: MarketModule; payment: PaymentModule },
     private proposalPool: DraftOfferProposalPool,
+    private readonly agreementApi: IAgreementApi,
     private options?: AgreementPoolOptions,
   ) {
     this.logger = this.logger = options?.logger || defaultLogger("agreement-pool");
@@ -52,19 +51,14 @@ export class AgreementPool {
     this.agreementPool.on("factoryCreateError", (error) => {
       this.events.emit(
         "error",
-        new GolemMarketError("Creating agreement failed", MarketErrorCode.AgreementCreationFailed, undefined, error),
+        new GolemMarketError("Creating agreement failed", MarketErrorCode.AgreementCreationFailed, error),
       );
       this.logger.error("Creating agreement failed", error);
     });
     this.agreementPool.on("factoryDestroyError", (error) => {
       this.events.emit(
         "error",
-        new GolemMarketError(
-          "Destroying agreement failed",
-          MarketErrorCode.AgreementTerminationFailed,
-          undefined,
-          error,
-        ),
+        new GolemMarketError("Destroying agreement failed", MarketErrorCode.AgreementTerminationFailed, error),
       );
       this.logger.error("Destroying agreement failed", error);
     });
@@ -127,25 +121,23 @@ export class AgreementPool {
       create: async (): Promise<Agreement> => {
         this.logger.debug("Creating new agreement to add to pool");
         const proposal = await this.proposalPool.acquire();
-        const agreement = await this.modules.market.proposeAgreement(
-          this.modules.payment,
-          proposal,
-          this.options?.agreementOptions,
-        );
+        const agreement = await this.agreementApi.proposeAgreement(proposal);
+        // After reaching an agreement, the proposal is useless
+        await this.proposalPool.remove(proposal);
         this.events.emit("created", agreement.getDto());
         return agreement;
       },
       destroy: async (agreement: Agreement) => {
         this.logger.debug("Destroying agreement from the pool", { agreementId: agreement.id });
-        await this.modules.market.terminateAgreement(agreement, "Finished");
-        await this.proposalPool.remove(agreement.proposal);
+        await this.agreementApi.terminateAgreement(agreement, "Finished");
         this.events.emit("destroyed", agreement.getDto());
       },
       validate: async (agreement: Agreement) => {
         try {
-          const state = await agreement.getState();
+          // Reach for the most recent state in Yagna (source of truth)
+          const state = await this.agreementApi.getAgreement(agreement.id).then((agreement) => agreement.getState());
           const result = state === "Approved";
-          this.logger.debug("Validating agreement in the pool.", { result, state });
+          this.logger.debug("Validating agreement in the pool", { result, state });
           return result;
         } catch (err) {
           this.logger.error("Checking agreement status failed. The agreement will be removed from the pool", err);

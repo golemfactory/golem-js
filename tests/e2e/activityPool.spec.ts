@@ -1,21 +1,20 @@
 import {
   ActivityPool,
-  ActivityModuleImpl,
   AgreementPool,
-  DraftOfferProposalPool,
-  MarketModuleImpl,
-  PaymentModuleImpl,
-  YagnaApi,
   Allocation,
+  DraftOfferProposalPool,
+  GolemNetwork,
   Package,
+  YagnaApi,
 } from "../../src";
 
 describe("ActivityPool", () => {
+  const glm = new GolemNetwork();
   const yagnaApi = new YagnaApi();
   const modules = {
-    market: new MarketModuleImpl(yagnaApi),
-    activity: new ActivityModuleImpl(yagnaApi),
-    payment: new PaymentModuleImpl(yagnaApi),
+    market: glm.market,
+    activity: glm.activity,
+    payment: glm.payment,
   };
   let proposalPool;
   let agreementPool;
@@ -24,13 +23,7 @@ describe("ActivityPool", () => {
 
   beforeAll(async () => {
     await yagnaApi.connect();
-    allocation = await Allocation.create(yagnaApi, {
-      account: {
-        address: (await yagnaApi.identity.getIdentity()).identity,
-        platform: "erc20-holesky-tglm",
-      },
-      budget: 1,
-    });
+    allocation = await modules.payment.createAllocation({ budget: 1 });
   });
 
   afterAll(async () => {
@@ -40,15 +33,17 @@ describe("ActivityPool", () => {
 
   beforeEach(async () => {
     proposalPool = new DraftOfferProposalPool();
-    agreementPool = new AgreementPool(modules, proposalPool);
-    const workload = Package.create({
-      imageTag: "golem/alpine:latest",
-    });
-    const demandOffer = await modules.market.buildDemand(workload, allocation, {});
+    agreementPool = new AgreementPool(proposalPool, glm.services.agreementApi);
+    const payerDetails = await modules.payment.getPayerDetails();
+    const demandSpecification = await modules.market.buildDemand(
+      {
+        imageTag: "golem/alpine:latest",
+      },
+      payerDetails,
+    );
     proposalSubscription = modules.market
       .startCollectingProposals({
-        demandOffer,
-        paymentPlatform: "erc20-holesky-tglm",
+        demandSpecification,
       })
       .subscribe((proposalsBatch) => proposalsBatch.forEach((proposal) => proposalPool.add(proposal)));
   });

@@ -1,35 +1,30 @@
-import {
-  ActivityModuleImpl,
-  ActivityPool,
-  AgreementPool,
-  Allocation,
-  DraftOfferProposalPool,
-  MarketModuleImpl,
-  Package,
-  PaymentModuleImpl,
-  YagnaApi,
-} from "@golem-sdk/golem-js";
+import { ActivityPool, AgreementPool, DraftOfferProposalPool, GolemNetwork } from "@golem-sdk/golem-js";
+import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
-(async function main() {
-  const yagnaApi = new YagnaApi();
+(async () => {
+  const logger = pinoPrettyLogger({
+    level: "debug",
+  });
+
+  const glm = new GolemNetwork({
+    logger,
+    payment: {
+      payment: {
+        driver: "erc20",
+        network: "holesky",
+      },
+    },
+  });
 
   try {
-    await yagnaApi.connect();
-
-    const modules = {
-      market: new MarketModuleImpl(yagnaApi),
-      activity: new ActivityModuleImpl(yagnaApi),
-      payment: new PaymentModuleImpl(yagnaApi),
-    };
+    await glm.connect();
 
     const demandOptions = {
       demand: {
-        image: "golem/alpine:latest",
-        resources: {
-          minCpu: 4,
-          minMemGib: 8,
-          minStorageGib: 16,
-        },
+        imageTag: "golem/alpine:latest",
+        minCpuCores: 4,
+        minMemGib: 8,
+        minStorageGib: 16,
       },
       market: {
         rentHours: 12,
@@ -46,34 +41,37 @@ import {
     };
 
     const proposalPool = new DraftOfferProposalPool({ minCount: 1 });
+    const payerDetails = await glm.payment.getPayerDetails();
+    const demandSpecification = await glm.market.buildDemand(demandOptions.demand, payerDetails);
 
-    const workload = Package.create({
-      imageTag: demandOptions.demand.image,
+    const proposals$ = glm.market.startCollectingProposals({
+      demandSpecification,
     });
 
-    const allocation = await Allocation.create(yagnaApi, {
-      account: {
-        address: (await yagnaApi.identity.getIdentity()).identity,
-        platform: "erc20-holesky-tglm",
-      },
-      budget: 1,
-    });
+    const proposalSubscription = proposalPool.readFrom(proposals$);
 
-    const demandOffer = await modules.market.buildDemand(workload, allocation, {});
-
-    const proposalSubscription = modules.market
-      .startCollectingProposals({
-        demandOffer,
-        paymentPlatform: "erc20-holesky-tglm",
-      })
-      .subscribe((proposalsBatch) => proposalsBatch.forEach((proposal) => proposalPool.add(proposal)));
+    // TODO: allocation is not used in this example?
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const allocation = await glm.payment.createAllocation({ budget: 1 });
 
     /** How many providers you plan to engage simultaneously */
     const CONCURRENCY = 2;
 
-    const agreementPool = new AgreementPool(modules, proposalPool, { replicas: { max: CONCURRENCY } });
-    const activityPool = new ActivityPool(modules, agreementPool, {
+    const depModules = {
+      market: glm.market,
+      activity: glm.activity,
+      payment: glm.payment,
+    };
+
+    // TODO: Optimize constructor params
+    const agreementPool = new AgreementPool(proposalPool, glm.services.agreementApi, {
+      replicas: { max: CONCURRENCY },
+      logger,
+    });
+
+    const activityPool = new ActivityPool(depModules, agreementPool, {
       replicas: CONCURRENCY,
+      logger,
     });
 
     const ctx = await activityPool.acquire();
@@ -93,6 +91,6 @@ import {
   } catch (err) {
     console.error("Pool execution failed:", err);
   } finally {
-    await yagnaApi.disconnect();
+    await glm.disconnect();
   }
-})();
+})().catch(console.error);

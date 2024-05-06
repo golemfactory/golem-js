@@ -1,27 +1,22 @@
-import {
-  YagnaApi,
-  MarketModuleImpl,
-  ActivityModuleImpl,
-  PaymentModuleImpl,
-  DraftOfferProposalPool,
-  WorkContext,
-  Package,
-  Allocation,
-} from "@golem-sdk/golem-js";
+import { DraftOfferProposalPool, GolemNetwork } from "@golem-sdk/golem-js";
+
+import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
 (async () => {
-  const yagnaApi = new YagnaApi();
+  const logger = pinoPrettyLogger({
+    level: "debug",
+  });
+
+  const glm = new GolemNetwork({
+    logger,
+  });
 
   try {
-    await yagnaApi.connect();
-    const modules = {
-      market: new MarketModuleImpl(yagnaApi),
-      activity: new ActivityModuleImpl(yagnaApi),
-      payment: new PaymentModuleImpl(yagnaApi),
-    };
-    const demandOptions = {
+    await glm.connect();
+
+    const demand = {
       demand: {
-        image: "golem/alpine:latest",
+        imageTag: "golem/alpine:latest",
         resources: {
           minCpu: 4,
           minMemGib: 8,
@@ -35,42 +30,49 @@ import {
           maxCpuPerHourPrice: 1,
           maxEnvPerHourPrice: 1,
         },
-        withProviders: ["0x123123"],
-        withoutProviders: ["0x123123"],
-        withOperators: ["0x123123"],
-        withoutOperators: ["0x123123"],
       },
     };
 
-    const proposalPool = new DraftOfferProposalPool();
-    const workload = Package.create({
-      imageTag: demandOptions.demand.image,
+    const proposalPool = new DraftOfferProposalPool({
+      logger,
     });
-    const allocation = await Allocation.create(yagnaApi, {
-      account: {
-        address: (await yagnaApi.identity.getIdentity()).identity,
-        platform: "erc20-holesky-tglm",
-      },
-      budget: 1,
+
+    const payerDetails = await glm.payment.getPayerDetails();
+    const demandSpecification = await glm.market.buildDemand(demand.demand, payerDetails);
+    const proposal$ = glm.market.startCollectingProposals({
+      demandSpecification,
+      bufferSize: 15,
     });
-    const demandOffer = await modules.market.buildDemand(workload, allocation, {});
-    const proposalSubscription = modules.market
-      .startCollectingProposals({
-        demandOffer,
-        paymentPlatform: "erc20-holesky-tglm",
-      })
-      .subscribe((proposalsBatch) => proposalsBatch.forEach((proposal) => proposalPool.add(proposal)));
+    const proposalSubscription = proposalPool.readFrom(proposal$);
     const draftProposal = await proposalPool.acquire();
-    const agreement = await modules.market.proposeAgreement(modules.payment, draftProposal);
-    const activity = await modules.activity.createActivity(agreement);
-    const ctx = new WorkContext(activity, {});
-    await ctx.before();
-    const result = await ctx.run("echo Hello World");
-    console.log(result.stdout);
+
+    const agreement = await glm.market.proposeAgreement(draftProposal);
+
+    const allocation = await glm.payment.createAllocation({ budget: 1 });
+    const lease = await glm.market.createLease(agreement, allocation);
+    const activity = await glm.activity.createActivity(agreement);
+
+    // We managed to create the activity, no need to look for more agreement candidates
     proposalSubscription.unsubscribe();
+
+    // Access your work context to perform operations
+    const ctx = await glm.activity.createWorkContext(activity);
+
+    // Perform your work
+    const result = await ctx.run("echo Hello World");
+    console.log("Result=", result.stdout);
+
+    // Start clean shutdown procedure for business components
+    await glm.activity.destroyActivity(activity);
+    await glm.market.terminateAgreement(agreement);
+    await proposalPool.remove(draftProposal);
+
+    // This will keep the script waiting for payments etc
+    await lease.finalize();
   } catch (err) {
     console.error("Failed to run example on Golem", err);
   } finally {
-    await yagnaApi.disconnect();
+    // Clean shutdown of infrastructure components
+    await glm.disconnect();
   }
 })().catch(console.error);

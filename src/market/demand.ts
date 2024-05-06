@@ -1,4 +1,4 @@
-import { Package } from "./package";
+import { Package, PackageOptions } from "./package";
 import { Allocation } from "../payment";
 import { DemandFactory } from "./factory";
 import { Proposal } from "./proposal";
@@ -96,12 +96,36 @@ export interface DemandOptions {
    */
   midAgreementPaymentTimeoutSec?: number;
 }
+export type DemandOptionsNew = PackageOptions & DemandOptions;
+
+type DemandDecoration = {
+  properties: Record<string, string | number | boolean>;
+  constraints: string;
+};
+
+export class DemandSpecification {
+  constructor(
+    public readonly decoration: DemandDecoration,
+    public readonly paymentPlatform: string,
+    public readonly expirationSec: number,
+  ) {}
+}
 
 export class DemandNew {
   constructor(
     public readonly id: string,
-    public readonly offer: MarketApi.DemandOfferBaseDTO,
+    public readonly specification: DemandSpecification,
   ) {}
+
+  get paymentPlatform(): string {
+    return this.specification.paymentPlatform;
+  }
+}
+
+export interface IDemandRepository {
+  getById(id: string): DemandNew | undefined;
+  add(demand: DemandNew): DemandNew;
+  getAll(): DemandNew[];
 }
 
 /**
@@ -151,7 +175,7 @@ export class Demand {
     public readonly demandRequest: MarketApi.DemandOfferBaseDTO,
     public readonly allocation: Allocation,
     private yagnaApi: YagnaApi,
-    private options: DemandConfig,
+    public options: DemandConfig,
   ) {
     this.logger = this.options.logger || defaultLogger("market");
     this.subscribe().catch((e) => this.logger.error("Unable to subscribe for demand events", e));
@@ -161,7 +185,10 @@ export class Demand {
    * @deprecated Will be removed before release, glue code
    */
   toNewEntity(): DemandNew {
-    return new DemandNew(this.id, this.demandRequest);
+    return new DemandNew(
+      this.id,
+      new DemandSpecification(this.demandRequest, this.allocation.paymentPlatform, this.options.expirationSec * 1000),
+    );
   }
   /**
    * Stop subscribing for provider offer proposals for this demand
@@ -233,7 +260,7 @@ export class Demand {
             // Demand has expired
             this.events.emit(
               "proposalReceivedError",
-              new GolemMarketError(`Demand expired. ${reason}`, MarketErrorCode.DemandExpired, this, error),
+              new GolemMarketError(`Demand expired. ${reason}`, MarketErrorCode.DemandExpired, error),
             );
             break;
           }

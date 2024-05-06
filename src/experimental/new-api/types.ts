@@ -42,9 +42,7 @@ export interface MarketOptions {
   withoutOperators?: string[];
 }
 
-export interface PaymentOptions {
-  // TODO
-}
+export interface ActivityPoolPaymentOptions {}
 
 export interface ActivityPoolOptions {
   image: string;
@@ -58,7 +56,7 @@ export interface ActivityPoolOptions {
   replicas?: number;
   market: MarketOptions;
   network?: string;
-  payment?: PaymentOptions;
+  payment?: ActivityPoolPaymentOptions;
   // networking?: string | Network[];
 }
 

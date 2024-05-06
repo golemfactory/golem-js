@@ -1,17 +1,16 @@
 import { GolemAbortError, GolemUserError } from "../../shared/error/golem-error";
 import { defaultLogger, Logger, YagnaApi } from "../../shared/utils";
 import { EventEmitter } from "eventemitter3";
-import { ActivityModule, ActivityModuleImpl, ActivityPool, ActivityPoolOptions } from "../../activity";
-import { MarketOptions, PaymentOptions } from "./types";
+import { ActivityModule, ActivityPool, ActivityPoolOptions } from "../../activity";
 import { Network, NetworkOptions } from "../../network";
 import { GftpStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../../shared/storage";
 import { validateDeployment } from "./validate-deployment";
-import { DemandBuildParams, DraftOfferProposalPool, MarketModule, MarketModuleImpl } from "../../market";
-import { Allocation, PaymentModule, PaymentModuleImpl } from "../../payment";
+import { DemandBuildParams, DraftOfferProposalPool, MarketModule } from "../../market";
+import { PaymentModule } from "../../payment";
 import { AgreementPool, AgreementPoolOptions } from "../../agreement";
 import { CreateActivityPoolOptions } from "./builder";
-import { Package } from "../../market/package";
 import { Subscription } from "rxjs";
+import { IAgreementApi } from "../../agreement/agreement";
 
 export enum DeploymentState {
   INITIAL = "INITIAL",
@@ -50,15 +49,10 @@ export type DeploymentComponents = {
   networks: { name: string; options: NetworkOptions }[];
 };
 
+export type DataTransferProtocol = "gftp" | "ws" | StorageProvider;
+
 export interface DeploymentOptions {
-  logger?: Logger;
-  api: {
-    key: string;
-    url: string;
-  };
-  market?: Partial<MarketOptions>;
-  payment?: Partial<PaymentOptions>;
-  dataTransferProtocol?: "gftp" | "ws" | StorageProvider;
+  dataTransferProtocol?: DataTransferProtocol;
 }
 
 /**
@@ -83,33 +77,42 @@ export class Deployment {
       activityPool: ActivityPool;
     }
   >();
+
   private readonly networks = new Map<string, Network>();
   private readonly dataTransferProtocol: StorageProvider;
+
   private readonly modules: {
     market: MarketModule;
     activity: ActivityModule;
     payment: PaymentModule;
   };
 
+  private readonly agreementApi: IAgreementApi;
+
   constructor(
     private readonly components: DeploymentComponents,
-    private readonly options: DeploymentOptions,
+    deps: {
+      logger: Logger;
+      yagna: YagnaApi;
+      market: MarketModule;
+      activity: ActivityModule;
+      payment: PaymentModule;
+      agreementApi: IAgreementApi;
+    },
+    options: DeploymentOptions,
   ) {
     validateDeployment(components);
-    this.logger = options.logger ?? defaultLogger("deployment");
 
-    this.yagnaApi = new YagnaApi({
-      apiKey: options.api.key,
-      basePath: options.api.url,
-    });
+    const { logger, yagna, agreementApi, ...modules } = deps;
 
-    this.modules = {
-      market: new MarketModuleImpl(this.yagnaApi),
-      activity: new ActivityModuleImpl(this.yagnaApi),
-      payment: new PaymentModuleImpl(this.yagnaApi),
-    };
+    this.logger = logger ?? defaultLogger("deployment");
+    this.yagnaApi = yagna;
 
-    this.dataTransferProtocol = this.getDataTransferProtocol(options, this.yagnaApi);
+    this.modules = modules;
+
+    this.agreementApi = agreementApi;
+
+    this.dataTransferProtocol = this.getStorageProvider(options.dataTransferProtocol);
 
     this.abortController.signal.addEventListener("abort", () => {
       this.logger.info("Abort signal received");
@@ -120,14 +123,16 @@ export class Deployment {
     });
   }
 
-  private getDataTransferProtocol(options: DeploymentOptions, yagnaApi: YagnaApi): StorageProvider {
-    if (!options.dataTransferProtocol || options.dataTransferProtocol === "gftp") {
+  private getStorageProvider(protocol: DataTransferProtocol | StorageProvider = "gftp"): StorageProvider {
+    if (protocol === "gftp") {
       return new GftpStorageProvider();
     }
-    if (options.dataTransferProtocol === "ws") {
-      return new WebSocketBrowserStorageProvider(yagnaApi, {});
+
+    if (protocol === "ws") {
+      return new WebSocketBrowserStorageProvider(this.yagnaApi, {});
     }
-    return options.dataTransferProtocol;
+
+    return protocol;
   }
 
   getState(): DeploymentState {
@@ -145,13 +150,12 @@ export class Deployment {
 
     await this.dataTransferProtocol.init();
 
-    const allocation = await Allocation.create(this.yagnaApi, {
-      account: {
-        address: (await this.yagnaApi.identity.getIdentity()).identity,
-        platform: "erc20-holesky-tglm", //TODO: add platform to deployment options
-      },
+    // TODO: allocation is not used in this api?
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const allocation = await this.modules.payment.createAllocation({
       budget: 1,
     });
+    const payerDetails = await this.modules.payment.getPayerDetails();
 
     for (const network of this.components.networks) {
       const networkInstance = await Network.create(this.yagnaApi, network.options);
@@ -161,24 +165,21 @@ export class Deployment {
     // TODO: pass dataTransferProtocol to pool
     for (const pool of this.components.activityPools) {
       const { demandBuildOptions, agreementPoolOptions, activityPoolOptions } = this.prepareParams(pool.options);
-      const workload = Package.create({
-        imageTag: pool.options.demand.image,
-      });
-      const demandOffer = await this.modules.market.buildDemand(workload, allocation, {});
+
+      const demandSpecification = await this.modules.market.buildDemand(demandBuildOptions.demand, payerDetails);
       const proposalPool = new DraftOfferProposalPool();
 
       const proposalSubscription = this.modules.market
         .startCollectingProposals({
-          demandOffer,
-          paymentPlatform: "erc20-holesky-tglm",
-          demandOptions: demandBuildOptions.demand,
+          demandSpecification,
+          bufferSize: 10,
         })
         .subscribe({
           next: (proposals) => proposals.forEach((proposal) => proposalPool.add(proposal)),
           error: (e) => this.logger.error("Error while collecting proposals", e),
         });
 
-      const agreementPool = new AgreementPool(this.modules, proposalPool, agreementPoolOptions);
+      const agreementPool = new AgreementPool(proposalPool, this.agreementApi, agreementPoolOptions);
       const activityPool = new ActivityPool(this.modules, agreementPool, activityPoolOptions);
       this.pools.set(pool.name, {
         proposalPool,

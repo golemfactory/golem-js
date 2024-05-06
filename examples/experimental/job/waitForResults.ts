@@ -10,8 +10,13 @@ async function main() {
   await golem.init();
 
   const job = golem.createJob<string>({
-    package: {
-      imageTag: "golem/alpine:latest",
+    demand: {
+      imageTag: "severyn/espeak:latest",
+    },
+    market: {}, // TODO: This should be optional
+    payment: {
+      driver: "erc20",
+      network: "holesky",
     },
   });
 

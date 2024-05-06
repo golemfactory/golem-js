@@ -6,14 +6,14 @@ import { GolemTimeoutError } from "../error/golem-error";
  *
  * @param {function} check - The function checking if the condition is met.
  * @param {Object} [opts] - Options controlling the timeout and check interval in seconds.
- * @param {number} [opts.timeoutSeconds=15] - The timeout value in seconds. Default is 15 seconds.
- * @param {number} [opts.intervalSeconds=1] - The interval between condition checks in seconds. Default is 1 second.
+ * @param {number} [opts.timeoutSeconds=30] - The timeout value in seconds.
+ * @param {number} [opts.intervalSeconds=1] - The interval between condition checks in seconds.
  *
  * @return {Promise<void>} - Resolves when the condition is met or rejects with a timeout error if it wasn't met on time.
  */
 export function waitForCondition(
   check: () => boolean,
-  opts = { timeoutSeconds: 15, intervalSeconds: 1 },
+  opts = { timeoutSeconds: 30, intervalSeconds: 1 },
 ): Promise<void> {
   let verifyInterval: NodeJS.Timeout | undefined;
   let waitTimeout: NodeJS.Timeout | undefined;

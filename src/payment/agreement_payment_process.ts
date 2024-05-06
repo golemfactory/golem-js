@@ -1,4 +1,4 @@
-import { Agreement } from "../agreement";
+import { Agreement, IPaymentApi } from "../agreement";
 import { Invoice } from "./invoice";
 import { DebitNote } from "./debit_note";
 import { RejectionReason } from "./rejection";
@@ -28,9 +28,13 @@ export class AgreementPaymentProcess {
   constructor(
     public readonly agreement: Agreement,
     public readonly allocation: Allocation,
+    public readonly paymentApi: IPaymentApi,
     public readonly filters: {
       invoiceFilter: InvoiceFilter;
       debitNoteFilter: DebitNoteFilter;
+    } = {
+      invoiceFilter: () => true,
+      debitNoteFilter: () => true,
     },
     logger?: Logger,
   ) {
@@ -105,13 +109,31 @@ export class AgreementPaymentProcess {
       return false;
     }
 
-    await debitNote.accept(debitNote.totalAmountDue, this.allocation.id);
-    this.logger.debug(`DebitNote accepted`, {
-      debitNoteId: debitNote.id,
-      agreementId: debitNote.agreementId,
-    });
+    try {
+      await this.paymentApi.acceptDebitNote(debitNote, this.allocation, debitNote.totalAmountDue);
+      this.logger.debug(`DebitNote accepted`, {
+        debitNoteId: debitNote.id,
+        agreementId: debitNote.agreementId,
+      });
+      // this.events.emit("accepted", {
+      //   id: this.id,
+      //   agreementId: this.agreementId,
+      //   amount: totalAmountAccepted,
+      //   provider: this.provider,
+      // });
 
-    return true;
+      return true;
+    } catch (error) {
+      const reason = error?.response?.data?.message || error;
+      // this.events.emit("paymentFailed", { id: this.id, agreementId: this.agreementId, reason });
+      throw new GolemPaymentError(
+        `Unable to accept debit note ${debitNote.id}. ${reason}`,
+        PaymentErrorCode.DebitNoteAcceptanceFailed,
+        undefined,
+        debitNote.provider,
+        error,
+      );
+    }
   }
 
   private async hasProcessedDebitNote(debitNote: DebitNote) {
@@ -121,44 +143,43 @@ export class AgreementPaymentProcess {
   }
 
   private async rejectDebitNote(debitNote: DebitNote, rejectionReason: RejectionReason, rejectMessage: string) {
-    const reason = {
-      rejectionReason: rejectionReason,
-      totalAmountAccepted: "0",
-      message: rejectMessage,
-    };
-
-    await debitNote.reject(reason);
-
-    this.logger.warn(`DebitNote rejected`, { reason: reason.message });
+    try {
+      // FIXME yagna 0.15 still doesn't support invoice rejections
+      // await this.paymentApi.rejectDebitNote(debitNote, rejectMessage);
+      this.logger.warn(`DebitNote rejected`, { reason: rejectMessage });
+    } catch (error) {
+      throw new GolemPaymentError(
+        `Unable to reject debit note ${debitNote.id}. ${error?.response?.data?.message || error}`,
+        PaymentErrorCode.DebitNoteRejectionFailed,
+        undefined,
+        debitNote.provider,
+        error,
+      );
+    } finally {
+      // this.events.emit("paymentFailed", { id: this.id, agreementId: this.agreementId, reason: rejection.message });
+    }
   }
 
   private async applyInvoice(invoice: Invoice) {
-    if (this.invoice) {
-      if (invoice.isSameAs(this.invoice)) {
-        const previousStatus = await this.invoice.getStatus();
+    this.logger.debug("Applying invoice for agreement", {
+      invoiceId: invoice.id,
+      agreementId: invoice.agreementId,
+      provider: invoice.provider,
+    });
 
-        if (previousStatus !== "RECEIVED") {
-          this.logger.warn(`Received duplicate of an already processed invoice , the new one will be ignored`, {
-            invoiceId: invoice.id,
-            agreementId: invoice.agreementId,
-          });
-          return false;
-        }
-      } else {
-        // Protects from possible fraud: someone sends a second, different invoice for the same agreement
-        throw new GolemPaymentError(
-          `Agreement ${this.agreement.id} is already covered with an invoice: ${this.invoice.id}`,
-          PaymentErrorCode.AgreementAlreadyPaid,
-          this.allocation,
-          this.invoice.provider,
-        );
-      }
+    if (this.invoice) {
+      // Protects from possible fraud: someone sends a second, different invoice for the same agreement
+      throw new GolemPaymentError(
+        `Agreement ${this.agreement.id} is already covered with an invoice: ${this.invoice.id}`,
+        PaymentErrorCode.AgreementAlreadyPaid,
+        this.allocation,
+        this.invoice.provider,
+      );
     }
 
-    const status = await invoice.getStatus();
-    if (status !== "RECEIVED") {
+    if (invoice.getStatus() !== "RECEIVED") {
       throw new GolemPaymentError(
-        `The invoice ${invoice.id} for agreement ${invoice.agreementId} has status ${status}, ` +
+        `The invoice ${invoice.id} for agreement ${invoice.agreementId} has status ${invoice.getStatus()}, ` +
           `but we can accept only the ones with status RECEIVED`,
         PaymentErrorCode.InvoiceAlreadyReceived,
         this.allocation,
@@ -183,12 +204,34 @@ export class AgreementPaymentProcess {
       return false;
     }
 
-    await invoice.accept(invoice.amount, this.allocation.id);
-    this.logger.info(`Invoice has been accepted`, {
-      invoiceId: invoice.id,
-      agreementId: invoice.agreementId,
-      providerName: this.agreement.getProviderInfo().name,
-    });
+    try {
+      await this.paymentApi.acceptInvoice(invoice, this.allocation, invoice.amount);
+      this.logger.info(`Invoice has been accepted`, {
+        invoiceId: invoice.id,
+        agreementId: invoice.agreementId,
+        amount: invoice.amount,
+        provider: this.agreement.getProviderInfo(),
+      });
+
+      // this.events.emit("invoiceAccepted", {
+      //   invoiceId: invoice.id,
+      //   agreementId: invoice.agreementId,
+      //   amount: totalAmountAccepted,
+      //   provider: invoice.provider,
+      // });
+    } catch (error) {
+      const reason = error?.response?.data?.message || error;
+
+      // this.events.emit("paymentFailed", { invoiceId: invoice.id, agreementId: invoice.agreementId, reason });
+
+      throw new GolemPaymentError(
+        `Unable to accept invoice ${invoice.id} ${reason}`,
+        PaymentErrorCode.InvoiceAcceptanceFailed,
+        undefined,
+        invoice.provider,
+        error,
+      );
+    }
 
     return true;
   }
@@ -198,15 +241,20 @@ export class AgreementPaymentProcess {
     rejectionReason: RejectionReason.RejectedByRequestorFilter,
     message: string,
   ) {
-    const reason = {
-      rejectionReason: rejectionReason,
-      totalAmountAccepted: "0",
-      message: message,
-    };
-
-    await invoice.reject(reason);
-
-    this.logger.warn(`Invoice rejected`, { reason: reason.message });
+    try {
+      await this.paymentApi.rejectInvoice(invoice, message);
+      this.logger.warn(`Invoice rejected`, { reason: message });
+    } catch (error) {
+      throw new GolemPaymentError(
+        `Unable to reject invoice ${invoice.id} ${error?.response?.data?.message || error}`,
+        PaymentErrorCode.InvoiceRejectionFailed,
+        undefined,
+        invoice.provider,
+        error,
+      );
+    } finally {
+      // this.events.emit("paymentFailed", { id: this.id, agreementId: this.agreementId, reason: rejection.message });
+    }
   }
 
   private hasReceivedInvoice() {
