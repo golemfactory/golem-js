@@ -1,12 +1,15 @@
 import { Observable } from "rxjs";
-import { MarketApi, ProposalEvent } from "../../../market/api";
+import { DemandNew, DemandSpecification, MarketApi, ProposalEvent, ProposalNew } from "../../../market";
 import { YagnaApi } from "../yagnaApi";
 import YaTsClient from "ya-ts-client";
-import { DemandNew, DemandSpecification, ProposalNew } from "../../../market";
 import { GolemInternalError } from "../../error/golem-error";
+import { Logger } from "../../utils";
 
 export class MarketApiAdapter implements MarketApi {
-  constructor(private readonly yagnaApi: YagnaApi) {}
+  constructor(
+    private readonly yagnaApi: YagnaApi,
+    private readonly logger: Logger,
+  ) {}
 
   async publishDemandSpecification(specification: DemandSpecification): Promise<DemandNew> {
     const idOrError = await this.yagnaApi.market.subscribeDemand(specification.decoration);
@@ -37,6 +40,7 @@ export class MarketApiAdapter implements MarketApi {
           >;
           const proposals = await proposalPromise;
           for (const proposal of proposals) {
+            this.logger.debug("Received proposal event from Yagna", { event: proposal });
             subscriber.next(proposal);
           }
         } catch (error) {
@@ -58,6 +62,7 @@ export class MarketApiAdapter implements MarketApi {
       };
     });
   }
+
   async counterProposal(receivedProposal: ProposalNew, specification: DemandSpecification): Promise<ProposalNew> {
     const decorationClone = structuredClone(specification.decoration);
     decorationClone.properties["golem.com.payment.chosen-platform"] = specification.paymentPlatform;
