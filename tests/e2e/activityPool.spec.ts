@@ -51,7 +51,7 @@ describe("ActivityPool", () => {
   afterEach(async () => {
     await proposalSubscription.unsubscribe();
     await agreementPool.drainAndClear();
-    proposalPool.clear();
+    await proposalPool.clear();
   });
 
   it("should run a simple script on the activity from the pool", async () => {

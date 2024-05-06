@@ -54,6 +54,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
     // We managed to create the activity, no need to look for more agreement candidates
     proposalSubscription.unsubscribe();
+    await draftProposal.clear();
 
     // Access your work context to perform operations
     const ctx = await glm.activity.createWorkContext(activity);
@@ -69,6 +70,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
     // This will keep the script waiting for payments etc
     await lease.finalize();
+    await glm.payment.releaseAllocation(allocation);
   } catch (err) {
     console.error("Failed to run example on Golem", err);
   } finally {

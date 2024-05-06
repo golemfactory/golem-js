@@ -24,6 +24,7 @@ export class MarketApiAdapter implements MarketApi {
     if (result?.message) {
       throw new Error(`Failed to unsubscribe from demand: ${result.message}`);
     }
+    this.logger.info("Demand unsubscribed", { demand: demand.id });
   }
 
   observeProposalEvents(demand: DemandNew): Observable<ProposalEvent> {
