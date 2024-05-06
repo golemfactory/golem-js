@@ -237,9 +237,9 @@ export class MarketModuleImpl implements MarketModule {
     // Configure payment platform
     builder
       .addProperty(`golem.com.payment.platform.${payerDetails.getPaymentPlatform()}.address`, payerDetails.address)
-      .addProperty("golem.com.payment.protocol.version", "2")
-      .addConstraint(`golem.com.payment.platform.${payerDetails.getPaymentPlatform()}.address`, "*")
-      .addConstraint("golem.com.payment.protocol.version", "1", ComparisonOperator.Gt);
+      // .addProperty("golem.com.payment.protocol.version", "2")
+      .addConstraint(`golem.com.payment.platform.${payerDetails.getPaymentPlatform()}.address`, "*");
+    // .addConstraint("golem.com.payment.protocol.version", "1", ComparisonOperator.Gt);
 
     return builder.getDemandSpecification(payerDetails.getPaymentPlatform(), demandSpecificConfig.expirationSec);
   }
