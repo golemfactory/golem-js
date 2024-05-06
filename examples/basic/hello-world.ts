@@ -54,7 +54,6 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
     // We managed to create the activity, no need to look for more agreement candidates
     proposalSubscription.unsubscribe();
-    await draftProposal.clear();
 
     // Access your work context to perform operations
     const ctx = await glm.activity.createWorkContext(activity);
