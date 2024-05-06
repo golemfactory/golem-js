@@ -60,13 +60,11 @@ describe("Market module", () => {
         "(golem.com.pricing.model=linear)",
         "(golem.node.debug.subnet=public)",
         "(golem.com.payment.platform.erc20-holesky-tglm.address=*)",
-        "(golem.com.payment.protocol.version>1)",
       ].join("\n\t");
       const expectedProperties = {
         "golem.srv.comp.vm.package_format": "gvmkit-squash",
         "golem.srv.comp.task_package": "hash:sha3:AAAAHASHAAAA:https://custom.image.url/",
         "golem.com.payment.platform.erc20-holesky-tglm.address": "0x123",
-        "golem.com.payment.protocol.version": "2",
         "golem.srv.caps.multi-activity": true,
         "golem.srv.comp.expiration": Date.now() + 42 * 1000,
         "golem.node.debug.subnet": "public",

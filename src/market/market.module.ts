@@ -220,9 +220,12 @@ export class MarketModuleImpl implements MarketModule {
     // Configure payment platform
     builder
       .addProperty(`golem.com.payment.platform.${payerDetails.getPaymentPlatform()}.address`, payerDetails.address)
-      .addProperty("golem.com.payment.protocol.version", "2")
-      .addConstraint(`golem.com.payment.platform.${payerDetails.getPaymentPlatform()}.address`, "*")
-      .addConstraint("golem.com.payment.protocol.version", "1", ComparisonOperator.Gt);
+      .addConstraint(`golem.com.payment.platform.${payerDetails.getPaymentPlatform()}.address`, "*");
+
+    // TODO: golem.com.payment.protocol.version > 1 one is supported only for Yagna >= 0.15.0
+    // uncomment this when upgrading the minimum version of Yagna to 0.15
+    // .addProperty("golem.com.payment.protocol.version", "2")
+    // .addConstraint("golem.com.payment.protocol.version", "1", ComparisonOperator.Gt);
 
     return builder.getDemandSpecification(payerDetails.getPaymentPlatform(), demandSpecificConfig.expirationSec);
   }
