@@ -22,8 +22,8 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
     const demandOptions = {
       demand: {
         imageTag: "golem/alpine:latest",
-        minCpuCores: 4,
-        minMemGib: 8,
+        minCpuCores: 1,
+        minMemGib: 1,
         minStorageGib: 2,
       },
       market: {
