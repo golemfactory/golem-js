@@ -41,6 +41,7 @@ export class MarketApiAdapter implements MarketApi {
           >;
           const proposals = await proposalPromise;
           for (const proposal of proposals) {
+            this.logger.debug("Received proposal event from Yagna", { event: proposal });
             subscriber.next(proposal);
           }
         } catch (error) {
