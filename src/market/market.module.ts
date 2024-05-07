@@ -1,28 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
-import {
-  DemandConfig,
-  DemandNew,
-  DraftOfferProposalPool,
-  GolemMarketError,
-  MarketApi,
-  MarketErrorCode,
-  NewProposalEvent,
-  ProposalFilter,
-} from "./index";
-import {
-  Agreement,
-  LegacyAgreementServiceOptions,
-  LeaseProcess,
-  IPaymentApi,
-  IActivityApi,
-  AgreementPool,
-  AgreementPoolOptions,
-} from "../agreement";
+import { DemandConfig, DemandNew, DraftOfferProposalPool, MarketApi, NewProposalEvent, ProposalFilter } from "./index";
+import { Agreement, AgreementPool, AgreementPoolOptions, IActivityApi, IPaymentApi, LeaseProcess } from "../agreement";
 import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
-import { Allocation, PaymentModule } from "../payment";
+import { Allocation } from "../payment";
 import { Package } from "./package";
-import { bufferTime, filter, map, Observable, switchMap, tap, OperatorFunction } from "rxjs";
+import { bufferTime, filter, map, Observable, OperatorFunction, switchMap, tap } from "rxjs";
 import { IProposalRepository, ProposalNew } from "./proposal";
 import { ComparisonOperator, DecorationsBuilder } from "./builder";
 import { ProposalFilterNew } from "./service";
@@ -237,8 +220,8 @@ export class MarketModuleImpl implements MarketModule {
     // Configure payment platform
     builder
       .addProperty(`golem.com.payment.platform.${payerDetails.getPaymentPlatform()}.address`, payerDetails.address)
-      .addProperty("golem.com.payment.protocol.version", "2")
       .addConstraint(`golem.com.payment.platform.${payerDetails.getPaymentPlatform()}.address`, "*")
+      .addProperty("golem.com.payment.protocol.version", "2")
       .addConstraint("golem.com.payment.protocol.version", "1", ComparisonOperator.Gt);
 
     return builder.getDemandSpecification(payerDetails.getPaymentPlatform(), demandSpecificConfig.expirationSec);
@@ -416,7 +399,6 @@ export class MarketModuleImpl implements MarketModule {
         const subscription = source.subscribe((proposal) => {
           if (proposal.isInitial()) {
             proposalsBatch.addProposal(proposal);
-            this.logger.debug("Added initial proposal to batch", { proposal: proposal.id });
           } else {
             destination.next(proposal);
           }

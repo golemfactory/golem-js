@@ -1,12 +1,15 @@
 import { Observable } from "rxjs";
-import { MarketApi, ProposalEvent } from "../../../market/api";
+import { DemandNew, DemandSpecification, MarketApi, ProposalEvent, ProposalNew } from "../../../market";
 import { YagnaApi } from "../yagnaApi";
 import YaTsClient from "ya-ts-client";
-import { DemandNew, DemandSpecification, ProposalNew } from "../../../market";
 import { GolemInternalError } from "../../error/golem-error";
+import { Logger } from "../../utils";
 
 export class MarketApiAdapter implements MarketApi {
-  constructor(private readonly yagnaApi: YagnaApi) {}
+  constructor(
+    private readonly yagnaApi: YagnaApi,
+    private readonly logger: Logger,
+  ) {}
 
   async publishDemandSpecification(specification: DemandSpecification): Promise<DemandNew> {
     const idOrError = await this.yagnaApi.market.subscribeDemand(specification.decoration);
@@ -21,6 +24,7 @@ export class MarketApiAdapter implements MarketApi {
     if (result?.message) {
       throw new Error(`Failed to unsubscribe from demand: ${result.message}`);
     }
+    this.logger.info("Demand unsubscribed", { demand: demand.id });
   }
 
   observeProposalEvents(demand: DemandNew): Observable<ProposalEvent> {
@@ -58,6 +62,7 @@ export class MarketApiAdapter implements MarketApi {
       };
     });
   }
+
   async counterProposal(receivedProposal: ProposalNew, specification: DemandSpecification): Promise<ProposalNew> {
     const decorationClone = structuredClone(specification.decoration);
     decorationClone.properties["golem.com.payment.chosen-platform"] = specification.paymentPlatform;

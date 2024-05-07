@@ -4,6 +4,7 @@ import { YagnaApi } from "../yagnaApi";
 import { MarketApiAdapter } from "./market-api-adapter";
 import { DemandNew, DemandSpecification, ProposalNew } from "../../../market";
 import { take, takeUntil, timer } from "rxjs";
+import { Logger } from "../../utils";
 
 const mockMarket = mock(YaTsClient.MarketApi.RequestorService);
 const mockYagna = mock(YagnaApi);
@@ -14,7 +15,7 @@ beforeEach(() => {
   reset(mockYagna);
   reset(mockMarket);
   when(mockYagna.market).thenReturn(instance(mockMarket));
-  api = new MarketApiAdapter(instance(mockYagna));
+  api = new MarketApiAdapter(instance(mockYagna), instance(imock<Logger>()));
 });
 
 describe("Market Api Adapter", () => {

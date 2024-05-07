@@ -25,9 +25,9 @@ async function main() {
           // image: "golem/node:20",
           // image: "http://golem.io/node:20",
           // imageHash: "0x30984084039480493840",
-          minCpuCores: 4,
-          minMemGib: 8,
-          minStorageGib: 16,
+          minCpuCores: 1,
+          minMemGib: 2,
+          minStorageGib: 10,
         },
         market: {
           rentHours: 12,
@@ -49,8 +49,8 @@ async function main() {
       .createActivityPool("db", {
         demand: {
           imageTag: "golem/alpine:latest",
-          minCpuCores: 2,
-          minMemGib: 16,
+          minCpuCores: 1,
+          minMemGib: 2,
           minStorageGib: 4,
         },
         market: {
