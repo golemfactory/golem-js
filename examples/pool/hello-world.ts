@@ -24,7 +24,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
         imageTag: "golem/alpine:latest",
         minCpuCores: 4,
         minMemGib: 8,
-        minStorageGib: 16,
+        minStorageGib: 2,
       },
       market: {
         rentHours: 12,
