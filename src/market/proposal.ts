@@ -5,6 +5,8 @@ import { Demand, DemandNew } from "./demand";
 import { withTimeout } from "../shared/utils/timeout";
 import { EventEmitter } from "eventemitter3";
 
+export type ProposalFilterNew = (proposal: ProposalNew) => boolean;
+
 export interface ProposalEvents {
   proposalResponded: (details: { id: string; provider: ProviderInfo; counteringProposalId: string }) => void;
   proposalRejected: (details: { id: string; provider: ProviderInfo; parentId: string | null; reason: string }) => void;
