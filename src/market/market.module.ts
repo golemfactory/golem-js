@@ -13,7 +13,7 @@ import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
 import { Allocation } from "../payment";
 import { bufferTime, filter, map, Observable, OperatorFunction, switchMap, tap } from "rxjs";
 import { IProposalRepository, ProposalFilterNew, ProposalNew } from "./proposal";
-import { DemandDetailsBuilder } from "./demand/demand-details-builder";
+import { DemandBodyBuilder } from "./demand/demand-body-builder";
 import { IAgreementApi } from "../agreement/agreement";
 import { BuildDemandOptions, DemandSpecification, IDemandRepository } from "./demand";
 import { ProposalsBatch } from "./proposals_batch";
@@ -168,7 +168,7 @@ export interface MarketModule {
  * all the final demand request body properties in a more controlled and organized manner.
  */
 export interface IDemandDirector {
-  apply(builder: DemandDetailsBuilder): Promise<void> | void;
+  apply(builder: DemandBodyBuilder): Promise<void> | void;
 }
 
 export class MarketModuleImpl implements MarketModule {
@@ -206,7 +206,7 @@ export class MarketModuleImpl implements MarketModule {
   }
 
   async buildDemandDetails(options: BuildDemandOptions, payerDetails: PayerDetails): Promise<DemandSpecification> {
-    const builder = new DemandDetailsBuilder();
+    const builder = new DemandBodyBuilder();
 
     // Instruct the builder what's required
     const basicConfig = new BasicDemandDirectorConfig(options.basic);

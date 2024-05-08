@@ -53,7 +53,7 @@ export enum ComparisonOperator {
  *
  * Demand -> DemandSpecification -> DemandPrototype -> DemandDTO
  */
-export class DemandDetailsBuilder {
+export class DemandBodyBuilder {
   private properties: Array<DemandProperty> = [];
   private constraints: Array<DemandConstraint> = [];
 

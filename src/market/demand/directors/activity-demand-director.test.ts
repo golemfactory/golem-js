@@ -1,10 +1,10 @@
-import { DemandDetailsBuilder } from "../demand-details-builder";
+import { DemandBodyBuilder } from "../demand-body-builder";
 import { ActivityDemandDirector } from "./activity-demand-director";
 import { ActivityDemandDirectorConfig } from "./activity-demand-director-config";
 
 describe("ActivityDemandDirector", () => {
   test("should create properties with task_package and package_format", async () => {
-    const builder = new DemandDetailsBuilder();
+    const builder = new DemandBodyBuilder();
 
     const director = new ActivityDemandDirector(
       new ActivityDemandDirectorConfig({
@@ -28,7 +28,7 @@ describe("ActivityDemandDirector", () => {
   });
 
   test("should create package with manifest decorations", async () => {
-    const builder = new DemandDetailsBuilder();
+    const builder = new DemandBodyBuilder();
 
     const manifest = "XNBdCI6ICIyMTAwLTAxLTAxVDAwOjAxOjAwLjAwMDAwMFoiLAogICJtZXRhZGF0YSI6IHsKICAgICJuYW1lI=";
     const manifestSig = "GzbdJDaW6FTajVYCKKZZvwpwVNBK3o40r/okna87wV9CVWW0+WUFwe=";

@@ -4,7 +4,7 @@ import { ProviderInfo } from "../agreement";
 import { Demand } from "./demand";
 import { withTimeout } from "../shared/utils/timeout";
 import { EventEmitter } from "eventemitter3";
-import { DemandBodyPrototype, DemandPropertyValue } from "./demand/demand-details-builder";
+import { DemandBodyPrototype, DemandPropertyValue } from "./demand/demand-body-builder";
 import { DemandRequestBody } from "../shared/yagna";
 
 export type ProposalFilterNew = (proposal: ProposalNew) => boolean;

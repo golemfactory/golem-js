@@ -1,10 +1,11 @@
 import { instance, when, verify, deepEqual, mock, reset, _, imock } from "@johanblumenberg/ts-mockito";
 import * as YaTsClient from "ya-ts-client";
 import { YagnaApi } from "../yagnaApi";
-import { MarketApiAdapter } from "./market-api-adapter";
+import { DemandRequestBody, MarketApiAdapter } from "./market-api-adapter";
 import { Demand, DemandSpecification, ProposalNew } from "../../../market";
 import { take, takeUntil, timer } from "rxjs";
 import { Logger } from "../../utils";
+import { DemandBodyPrototype } from "../../../market/demand/demand-body-builder";
 
 const mockMarket = mock(YaTsClient.MarketApi.RequestorService);
 const mockYagna = mock(YagnaApi);
@@ -19,43 +20,46 @@ beforeEach(() => {
 });
 
 describe("Market Api Adapter", () => {
+  const samplePrototype: DemandBodyPrototype = {
+    constraints: ["constraints"],
+    properties: [
+      {
+        key: "property-key-1",
+        value: "property-value-1",
+      },
+      {
+        key: "property-key-2",
+        value: "property-value-2",
+      },
+    ],
+  };
+
+  const expectedBody: DemandRequestBody = {
+    constraints: "constraints",
+    properties: {
+      "property-key-1": "property-value-1",
+      "property-key-2": "property-value-2",
+    },
+  };
+
   describe("publishDemandSpecification()", () => {
     it("should publish a demand", async () => {
-      const specification = new DemandSpecification(
-        {
-          constraints: "constraints",
-          properties: {
-            "property-key-1": "property-value-1",
-            "property-key-2": "property-value-2",
-          },
-        },
-        "my-selected-payment-platform",
-        60 * 60 * 1000,
-      );
+      const specification = new DemandSpecification(samplePrototype, "my-selected-payment-platform", 60 * 60 * 1000);
 
-      when(mockMarket.subscribeDemand(deepEqual(specification.prototype))).thenResolve("demand-id");
+      when(mockMarket.subscribeDemand(deepEqual(expectedBody))).thenResolve("demand-id");
 
       const demand = await api.publishDemandSpecification(specification);
 
-      verify(mockMarket.subscribeDemand(deepEqual(specification.prototype))).once();
+      verify(mockMarket.subscribeDemand(deepEqual(expectedBody))).once();
       expect(demand).toBeInstanceOf(Demand);
       expect(demand.id).toBe("demand-id");
       expect(demand.details).toBe(specification);
     });
-    it("should throw an error if the demand is not published", async () => {
-      const specification = new DemandSpecification(
-        {
-          constraints: "constraints",
-          properties: {
-            "property-key-1": "property-value-1",
-            "property-key-2": "property-value-2",
-          },
-        },
-        "my-selected-payment-platform",
-        60 * 60 * 1000,
-      );
 
-      when(mockMarket.subscribeDemand(deepEqual(specification.prototype))).thenResolve({
+    it("should throw an error if the demand is not published", async () => {
+      const specification = new DemandSpecification(samplePrototype, "my-selected-payment-platform", 60 * 60 * 1000);
+
+      when(mockMarket.subscribeDemand(deepEqual(expectedBody))).thenResolve({
         message: "error publishing demand",
       });
 
@@ -69,17 +73,7 @@ describe("Market Api Adapter", () => {
     it("should unpublish a demand", async () => {
       const demand = new Demand(
         "demand-id",
-        new DemandSpecification(
-          {
-            constraints: "constraints",
-            properties: {
-              "property-key-1": "property-value-1",
-              "property-key-2": "property-value-2",
-            },
-          },
-          "my-selected-payment-platform",
-          60 * 60 * 1000,
-        ),
+        new DemandSpecification(samplePrototype, "my-selected-payment-platform", 60 * 60 * 1000),
       );
 
       when(mockMarket.unsubscribeDemand("demand-id")).thenResolve({});
@@ -92,17 +86,7 @@ describe("Market Api Adapter", () => {
     it("should throw an error if the demand is not unpublished", async () => {
       const demand = new Demand(
         "demand-id",
-        new DemandSpecification(
-          {
-            constraints: "constraints",
-            properties: {
-              "property-key-1": "property-value-1",
-              "property-key-2": "property-value-2",
-            },
-          },
-          "my-selected-payment-platform",
-          60 * 60 * 1000,
-        ),
+        new DemandSpecification(samplePrototype, "my-selected-payment-platform", 60 * 60 * 1000),
       );
 
       when(mockMarket.unsubscribeDemand("demand-id")).thenResolve({
@@ -117,20 +101,11 @@ describe("Market Api Adapter", () => {
 
   describe("counterProposal()", () => {
     it("should negotiate a proposal with the selected payment platform", async () => {
-      const specification = new DemandSpecification(
-        {
-          constraints: "constraints",
-          properties: {
-            "property-key-1": "property-value-1",
-            "property-key-2": "property-value-2",
-          },
-        },
-        "my-selected-payment-platform",
-        60 * 60 * 1000,
-      );
+      const specification = new DemandSpecification(samplePrototype, "my-selected-payment-platform", 60 * 60 * 1000);
+
       const receivedProposal = new ProposalNew(
         {
-          ...specification.prototype,
+          ...expectedBody,
           proposalId: "proposal-id",
           timestamp: "0000-00-00",
           issuerId: "issuer-id",
@@ -142,7 +117,7 @@ describe("Market Api Adapter", () => {
       when(mockMarket.counterProposalDemand(_, _, _)).thenResolve("counter-id");
 
       when(mockMarket.getProposalOffer("demand-id", "counter-id")).thenResolve({
-        ...specification.prototype,
+        ...expectedBody,
         proposalId: "counter-id",
         timestamp: "0000-00-00",
         issuerId: "issuer-id",
@@ -170,20 +145,10 @@ describe("Market Api Adapter", () => {
       expect(counterProposal.demand).toBe(receivedProposal.demand);
     });
     it("should throw an error if the counter proposal fails", async () => {
-      const specification = new DemandSpecification(
-        {
-          constraints: "constraints",
-          properties: {
-            "property-key-1": "property-value-1",
-            "property-key-2": "property-value-2",
-          },
-        },
-        "my-selected-payment-platform",
-        60 * 60 * 1000,
-      );
+      const specification = new DemandSpecification(samplePrototype, "my-selected-payment-platform", 60 * 60 * 1000);
       const receivedProposal = new ProposalNew(
         {
-          ...specification.prototype,
+          ...expectedBody,
           proposalId: "proposal-id",
           timestamp: "0000-00-00",
           issuerId: "issuer-id",

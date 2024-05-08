@@ -241,7 +241,7 @@ export class GolemNetwork {
 
     const proposalSubscription = this.market
       .startCollectingProposals({
-        demandSpecification: demandSpecification,
+        demandSpecification,
       })
       .subscribe((proposalsBatch) => proposalsBatch.forEach((proposal) => proposalPool.add(proposal)));
 

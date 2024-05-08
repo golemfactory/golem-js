@@ -1,5 +1,5 @@
 import { ActivityDemandDirectorConfig } from "./activity-demand-director-config";
-import { ComparisonOperator, DemandDetailsBuilder } from "../demand-details-builder";
+import { ComparisonOperator, DemandBodyBuilder } from "../demand-body-builder";
 import { GolemError, GolemPlatformError } from "../../../shared/error/golem-error";
 import { IDemandDirector } from "../../market.module";
 import { EnvUtils } from "../../../shared/utils";
@@ -7,7 +7,7 @@ import { EnvUtils } from "../../../shared/utils";
 export class ActivityDemandDirector implements IDemandDirector {
   constructor(private config: ActivityDemandDirectorConfig) {}
 
-  public async apply(builder: DemandDetailsBuilder) {
+  public async apply(builder: DemandBodyBuilder) {
     builder
       .addProperty("golem.srv.comp.vm.package_format", this.config.packageFormat)
       .addConstraint("golem.runtime.name", this.config.engine);
@@ -75,7 +75,7 @@ export class ActivityDemandDirector implements IDemandDirector {
     }
   }
 
-  private addManifestDecorations(builder: DemandDetailsBuilder): void {
+  private addManifestDecorations(builder: DemandBodyBuilder): void {
     if (!this.config.manifest) return;
     builder.addProperty("golem.srv.comp.payload", this.config.manifest);
     if (this.config.manifestSig) builder.addProperty("golem.srv.comp.payload.sig", this.config.manifestSig);

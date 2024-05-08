@@ -4,7 +4,7 @@ import { YagnaApi } from "../yagnaApi";
 import YaTsClient from "ya-ts-client";
 import { GolemInternalError } from "../../error/golem-error";
 import { Logger } from "../../utils";
-import { DemandBodyPrototype, DemandPropertyValue } from "../../../market/demand/demand-details-builder";
+import { DemandBodyPrototype, DemandPropertyValue } from "../../../market/demand/demand-body-builder";
 
 /**
  * A bit more user-friendly type definition of DemandOfferBaseDTO from ya-ts-client

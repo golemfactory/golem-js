@@ -171,7 +171,7 @@ export class Deployment {
 
       const proposalSubscription = this.modules.market
         .startCollectingProposals({
-          demandSpecification: demandSpecification,
+          demandSpecification,
           bufferSize: 10,
         })
         .subscribe({

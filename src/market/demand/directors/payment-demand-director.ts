@@ -1,5 +1,5 @@
 import { PayerDetails } from "../../../payment/PayerDetails";
-import { ComparisonOperator, DemandDetailsBuilder } from "../demand-details-builder";
+import { ComparisonOperator, DemandBodyBuilder } from "../demand-body-builder";
 import { IDemandDirector } from "../../market.module";
 import { PaymentDemandDirectorConfig } from "./payment-demand-director-config";
 
@@ -9,7 +9,7 @@ export class PaymentDemandDirector implements IDemandDirector {
     private config: PaymentDemandDirectorConfig = new PaymentDemandDirectorConfig(),
   ) {}
 
-  apply(builder: DemandDetailsBuilder) {
+  apply(builder: DemandBodyBuilder) {
     // Configure mid-agreement payments
     builder
       .addProperty("golem.com.scheme.payu.debit-note.interval-sec?", this.config.midAgreementDebitNoteIntervalSec)

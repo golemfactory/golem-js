@@ -68,24 +68,54 @@ describe("Market module", () => {
         "(golem.inf.cpu.threads>=1)",
         "(golem.com.payment.platform.erc20-holesky-tglm.address=*)",
         "(golem.com.payment.protocol.version>1)",
-      ].join("\n\t");
+      ];
 
-      const expectedProperties = {
-        "golem.srv.comp.vm.package_format": "gvmkit-squash",
-        "golem.srv.comp.task_package": "hash:sha3:AAAAHASHAAAA:https://custom.image.url/",
-        "golem.com.payment.platform.erc20-holesky-tglm.address": "0x123",
-        "golem.com.payment.protocol.version": "2",
-        "golem.srv.caps.multi-activity": true,
-        "golem.srv.comp.expiration": Date.now() + 42 * 1000,
-        "golem.node.debug.subnet": "public",
-        "golem.com.payment.debit-notes.accept-timeout?": 42,
-        "golem.com.scheme.payu.debit-note.interval-sec?": 42,
-        "golem.com.scheme.payu.payment-timeout-sec?": 42,
-      };
+      const expectedProperties = [
+        {
+          key: "golem.srv.caps.multi-activity",
+          value: true,
+        },
+        {
+          key: "golem.srv.comp.expiration",
+          value: Date.now() + 42 * 1000,
+        },
+        {
+          key: "golem.node.debug.subnet",
+          value: "public",
+        },
+        {
+          key: "golem.srv.comp.vm.package_format",
+          value: "gvmkit-squash",
+        },
+        {
+          key: "golem.srv.comp.task_package",
+          value: "hash:sha3:AAAAHASHAAAA:https://custom.image.url/",
+        },
+        {
+          key: "golem.com.scheme.payu.debit-note.interval-sec?",
+          value: 42,
+        },
+        {
+          key: "golem.com.scheme.payu.payment-timeout-sec?",
+          value: 42,
+        },
+        {
+          key: "golem.com.payment.debit-notes.accept-timeout?",
+          value: 42,
+        },
+        {
+          key: "golem.com.payment.platform.erc20-holesky-tglm.address",
+          value: "0x123",
+        },
+        {
+          key: "golem.com.payment.protocol.version",
+          value: "2",
+        },
+      ];
 
       expect(demandSpecification.paymentPlatform).toBe(payerDetails.getPaymentPlatform());
       expect(demandSpecification.expirationSec).toBe(42);
-      expect(demandSpecification.prototype.constraints).toEqual(`(&${expectedConstraints})`);
+      expect(demandSpecification.prototype.constraints).toEqual(expect.arrayContaining(expectedConstraints));
       expect(demandSpecification.prototype.properties).toEqual(expectedProperties);
     });
   });
@@ -293,7 +323,7 @@ describe("Market module", () => {
       const draftProposals: ProposalNew[] = [];
       marketModule
         .startCollectingProposals({
-          demandSpecification: demandSpecification,
+          demandSpecification,
           bufferSize: 1,
           proposalsBatchReleaseTimeoutMs: 10,
         })
@@ -390,7 +420,7 @@ describe("Market module", () => {
       const draftProposals: ProposalNew[] = [];
       marketModule
         .startCollectingProposals({
-          demandSpecification: demandSpecification,
+          demandSpecification,
           bufferSize: 1,
           proposalsBatchReleaseTimeoutMs: 10,
         })
