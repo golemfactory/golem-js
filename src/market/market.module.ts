@@ -1,26 +1,15 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
-import {
-  DemandConfig,
-  DemandNew,
-  DraftOfferProposalPool,
-  GolemMarketError,
-  MarketApi,
-  MarketErrorCode,
-  NewProposalEvent,
-  ProposalFilter,
-} from "./index";
+import { DemandConfig, DemandNew, DraftOfferProposalPool, MarketApi, NewProposalEvent } from "./index";
 import {
   Agreement,
-  LegacyAgreementServiceOptions,
   LeaseProcess,
   IPaymentApi,
   IActivityApi,
-  AgreementPool,
-  AgreementPoolOptions,
+  LeaseProcessPool,
+  LeaseProcessPoolOptions,
 } from "../agreement";
 import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
-import { Allocation, PaymentModule } from "../payment";
+import { Allocation } from "../payment";
 import { Package } from "./package";
 import { bufferTime, filter, map, Observable, switchMap, tap, OperatorFunction } from "rxjs";
 import { IProposalRepository, ProposalNew } from "./proposal";
@@ -43,7 +32,7 @@ export interface DemandBuildParams {
   market: MarketOptions;
 }
 
-type DemandEngine = "vm" | "vm-nvidia" | "wasmtime";
+export type DemandEngine = "vm" | "vm-nvidia" | "wasmtime";
 
 export type PaymentSpec = {
   network: string;
@@ -146,13 +135,6 @@ export interface MarketModule {
   terminateAgreement(agreement: Agreement, reason?: string): Promise<Agreement>;
 
   /**
-   * Helper method that will allow reaching an agreement for the user without dealing with manual labour of demand/subscription
-   */
-  getAgreement(options: MarketOptions, filter: ProposalFilter): Promise<Agreement>;
-
-  getAgreements(options: MarketOptions, filter: ProposalFilter, count: number): Promise<Agreement[]>;
-
-  /**
    * Creates a demand for the given package and allocation and starts collecting, filtering and negotiating proposals.
    * The method returns an observable that emits a batch of draft proposals every time the buffer is full.
    * The method will automatically negotiate the proposals until they are moved to the `Draft` state.
@@ -170,7 +152,11 @@ export interface MarketModule {
   /**
    * Factory that creates new agreement pool that's fully configured
    */
-  createAgreementPool(draftPool: DraftOfferProposalPool): AgreementPool;
+  createLeaseProcessPool(
+    draftPool: DraftOfferProposalPool,
+    allocation: Allocation,
+    options?: LeaseProcessPoolOptions,
+  ): LeaseProcessPool;
 }
 
 export class MarketModuleImpl implements MarketModule {
@@ -334,14 +320,6 @@ export class MarketModuleImpl implements MarketModule {
     return agreement;
   }
 
-  getAgreement(options: MarketOptions, filter: ProposalFilter): Promise<Agreement> {
-    throw new Error("Method not implemented.");
-  }
-
-  getAgreements(options: MarketOptions, filter: ProposalFilter, count: number): Promise<Agreement[]> {
-    throw new Error("Method not implemented.");
-  }
-
   startCollectingProposals(options: {
     demandSpecification: DemandSpecification;
     filter?: ProposalFilterNew;
@@ -395,8 +373,20 @@ export class MarketModuleImpl implements MarketModule {
     );
   }
 
-  public createAgreementPool(draftPool: DraftOfferProposalPool, options?: AgreementPoolOptions): AgreementPool {
-    return new AgreementPool(draftPool, this.agreementApi, options);
+  public createLeaseProcessPool(
+    draftPool: DraftOfferProposalPool,
+    allocation: Allocation,
+    options?: LeaseProcessPoolOptions,
+  ): LeaseProcessPool {
+    return new LeaseProcessPool({
+      agreementApi: this.agreementApi,
+      paymentApi: this.deps.paymentApi,
+      allocation,
+      proposalPool: draftPool,
+      marketModule: this,
+      logger: options?.logger || this.logger.child("lease-process-pool"),
+      ...options,
+    });
   }
 
   /**

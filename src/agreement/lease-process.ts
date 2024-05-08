@@ -57,7 +57,7 @@ export class LeaseProcess {
   private currentActivity: Activity | null = null;
 
   public constructor(
-    private readonly agreement: Agreement,
+    public readonly agreement: Agreement,
     private readonly allocation: Allocation,
     private readonly paymentApi: IPaymentApi,
     private readonly activityApi: IActivityApi,
@@ -116,12 +116,24 @@ export class LeaseProcess {
     this.logger.debug("Payment process for agreement finalized", { agreementId: this.agreement.id });
   }
 
+  public hasActivity(): boolean {
+    return this.currentActivity !== null;
+  }
+
   /**
    * Creates an activity on the Provider, and returns a work context that can be used to operate within the activity
    */
   async getExeUnit(): Promise<WorkContext> {
     if (this.currentActivity) {
-      throw new Error("There is already an activity present");
+      return new WorkContext(
+        this.activityApi,
+        this.yagna.activity.control,
+        this.yagna.activity.exec,
+        this.currentActivity,
+        {
+          storageProvider: this.storageProvider,
+        },
+      );
     }
 
     const activity = await this.activityApi.createActivity(this.agreement);
@@ -137,14 +149,12 @@ export class LeaseProcess {
     return ctx;
   }
 
-  async destroyExeUnit(ctx?: WorkContext) {
-    if (this.currentActivity && ctx?.activity.id === this.currentActivity?.id) {
+  async destroyExeUnit() {
+    if (this.currentActivity) {
       await this.activityApi.destroyActivity(this.currentActivity);
       this.currentActivity = null;
     } else {
-      throw new Error(
-        `You cannot destroy activity ${ctx?.activity.id} because the current activity is ${this.currentActivity?.id}`,
-      );
+      throw new Error(`There is no activity to destroy.`);
     }
   }
 }
