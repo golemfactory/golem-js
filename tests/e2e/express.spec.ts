@@ -29,7 +29,9 @@ describe("Express", function () {
       }
       const job = golemClient.createJob({
         demand: {
-          imageTag: "severyn/espeak:latest",
+          workload: {
+            imageTag: "severyn/espeak:latest",
+          },
         },
         // TODO: This should be optional
         market: {},

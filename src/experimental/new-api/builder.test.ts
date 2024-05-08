@@ -12,19 +12,23 @@ describe("Deployment builder", () => {
       builder
         .createActivityPool("my-pool", {
           demand: {
-            imageTag: "image",
-            minCpuCores: 1,
-            minMemGib: 1,
-            minStorageGib: 1,
+            workload: {
+              imageTag: "image",
+              minCpuCores: 1,
+              minMemGib: 1,
+              minStorageGib: 1,
+            },
           },
           market: {},
         })
         .createActivityPool("my-pool", {
           demand: {
-            imageTag: "image",
-            minCpuCores: 1,
-            minMemGib: 1,
-            minStorageGib: 1,
+            workload: {
+              imageTag: "image",
+              minCpuCores: 1,
+              minMemGib: 1,
+              minStorageGib: 1,
+            },
           },
           market: {},
         });
@@ -51,10 +55,7 @@ describe("Deployment builder", () => {
         })
         .createActivityPool("my-pool", {
           demand: {
-            imageTag: "image",
-            minCpuCores: 1,
-            minMemGib: 1,
-            minStorageGib: 1,
+            workload: { imageTag: "image", minCpuCores: 1, minMemGib: 1, minStorageGib: 1 },
           },
           market: {},
           deployment: {

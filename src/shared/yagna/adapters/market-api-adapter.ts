@@ -1,5 +1,5 @@
 import { Observable } from "rxjs";
-import { DemandNew, DemandSpecification, MarketApi, ProposalEvent, ProposalNew } from "../../../market";
+import { Demand, DemandDetails, MarketApi, ProposalEvent, ProposalNew } from "../../../market";
 import { YagnaApi } from "../yagnaApi";
 import YaTsClient from "ya-ts-client";
 import { GolemInternalError } from "../../error/golem-error";
@@ -11,15 +11,15 @@ export class MarketApiAdapter implements MarketApi {
     private readonly logger: Logger,
   ) {}
 
-  async publishDemandSpecification(specification: DemandSpecification): Promise<DemandNew> {
-    const idOrError = await this.yagnaApi.market.subscribeDemand(specification.decoration);
+  async publishDemandSpecification(demand: DemandDetails): Promise<Demand> {
+    const idOrError = await this.yagnaApi.market.subscribeDemand(demand.body);
     if (typeof idOrError !== "string") {
       throw new Error(`Failed to subscribe to demand: ${idOrError.message}`);
     }
-    return new DemandNew(idOrError, specification);
+    return new Demand(idOrError, demand);
   }
 
-  async unpublishDemand(demand: DemandNew): Promise<void> {
+  async unpublishDemand(demand: Demand): Promise<void> {
     const result = await this.yagnaApi.market.unsubscribeDemand(demand.id);
     if (result?.message) {
       throw new Error(`Failed to unsubscribe from demand: ${result.message}`);
@@ -27,7 +27,7 @@ export class MarketApiAdapter implements MarketApi {
     this.logger.info("Demand unsubscribed", { demand: demand.id });
   }
 
-  observeProposalEvents(demand: DemandNew): Observable<ProposalEvent> {
+  observeProposalEvents(demand: Demand): Observable<ProposalEvent> {
     return new Observable<ProposalEvent>((subscriber) => {
       let proposalPromise: YaTsClient.MarketApi.CancelablePromise<ProposalEvent[]>;
       let isCancelled = false;
@@ -63,13 +63,13 @@ export class MarketApiAdapter implements MarketApi {
     });
   }
 
-  async counterProposal(receivedProposal: ProposalNew, specification: DemandSpecification): Promise<ProposalNew> {
-    const decorationClone = structuredClone(specification.decoration);
-    decorationClone.properties["golem.com.payment.chosen-platform"] = specification.paymentPlatform;
+  async counterProposal(receivedProposal: ProposalNew, demand: DemandDetails): Promise<ProposalNew> {
+    const bodyClone = structuredClone(demand.body);
+    bodyClone.properties["golem.com.payment.chosen-platform"] = demand.paymentPlatform;
     const maybeNewId = await this.yagnaApi.market.counterProposalDemand(
       receivedProposal.demand.id,
       receivedProposal.id,
-      decorationClone,
+      bodyClone,
     );
     if (typeof maybeNewId !== "string") {
       throw new GolemInternalError(`Counter proposal failed ${maybeNewId.message}`);

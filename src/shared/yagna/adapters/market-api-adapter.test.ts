@@ -2,7 +2,7 @@ import { instance, when, verify, deepEqual, mock, reset, _, imock } from "@johan
 import * as YaTsClient from "ya-ts-client";
 import { YagnaApi } from "../yagnaApi";
 import { MarketApiAdapter } from "./market-api-adapter";
-import { DemandNew, DemandSpecification, ProposalNew } from "../../../market";
+import { Demand, DemandDetails, ProposalNew } from "../../../market";
 import { take, takeUntil, timer } from "rxjs";
 import { Logger } from "../../utils";
 
@@ -21,7 +21,7 @@ beforeEach(() => {
 describe("Market Api Adapter", () => {
   describe("publishDemandSpecification()", () => {
     it("should publish a demand", async () => {
-      const specification = new DemandSpecification(
+      const specification = new DemandDetails(
         {
           constraints: "constraints",
           properties: {
@@ -33,17 +33,17 @@ describe("Market Api Adapter", () => {
         60 * 60 * 1000,
       );
 
-      when(mockMarket.subscribeDemand(deepEqual(specification.decoration))).thenResolve("demand-id");
+      when(mockMarket.subscribeDemand(deepEqual(specification.body))).thenResolve("demand-id");
 
       const demand = await api.publishDemandSpecification(specification);
 
-      verify(mockMarket.subscribeDemand(deepEqual(specification.decoration))).once();
-      expect(demand).toBeInstanceOf(DemandNew);
+      verify(mockMarket.subscribeDemand(deepEqual(specification.body))).once();
+      expect(demand).toBeInstanceOf(Demand);
       expect(demand.id).toBe("demand-id");
-      expect(demand.specification).toBe(specification);
+      expect(demand.details).toBe(specification);
     });
     it("should throw an error if the demand is not published", async () => {
-      const specification = new DemandSpecification(
+      const specification = new DemandDetails(
         {
           constraints: "constraints",
           properties: {
@@ -55,7 +55,7 @@ describe("Market Api Adapter", () => {
         60 * 60 * 1000,
       );
 
-      when(mockMarket.subscribeDemand(deepEqual(specification.decoration))).thenResolve({
+      when(mockMarket.subscribeDemand(deepEqual(specification.body))).thenResolve({
         message: "error publishing demand",
       });
 
@@ -67,9 +67,9 @@ describe("Market Api Adapter", () => {
 
   describe("unpublishDemand()", () => {
     it("should unpublish a demand", async () => {
-      const demand = new DemandNew(
+      const demand = new Demand(
         "demand-id",
-        new DemandSpecification(
+        new DemandDetails(
           {
             constraints: "constraints",
             properties: {
@@ -90,9 +90,9 @@ describe("Market Api Adapter", () => {
     });
 
     it("should throw an error if the demand is not unpublished", async () => {
-      const demand = new DemandNew(
+      const demand = new Demand(
         "demand-id",
-        new DemandSpecification(
+        new DemandDetails(
           {
             constraints: "constraints",
             properties: {
@@ -117,7 +117,7 @@ describe("Market Api Adapter", () => {
 
   describe("counterProposal()", () => {
     it("should negotiate a proposal with the selected payment platform", async () => {
-      const specification = new DemandSpecification(
+      const specification = new DemandDetails(
         {
           constraints: "constraints",
           properties: {
@@ -130,19 +130,19 @@ describe("Market Api Adapter", () => {
       );
       const receivedProposal = new ProposalNew(
         {
-          ...specification.decoration,
+          ...specification.body,
           proposalId: "proposal-id",
           timestamp: "0000-00-00",
           issuerId: "issuer-id",
           state: "Initial",
         },
-        new DemandNew("demand-id", specification),
+        new Demand("demand-id", specification),
       );
 
       when(mockMarket.counterProposalDemand(_, _, _)).thenResolve("counter-id");
 
       when(mockMarket.getProposalOffer("demand-id", "counter-id")).thenResolve({
-        ...specification.decoration,
+        ...specification.body,
         proposalId: "counter-id",
         timestamp: "0000-00-00",
         issuerId: "issuer-id",
@@ -170,7 +170,7 @@ describe("Market Api Adapter", () => {
       expect(counterProposal.demand).toBe(receivedProposal.demand);
     });
     it("should throw an error if the counter proposal fails", async () => {
-      const specification = new DemandSpecification(
+      const specification = new DemandDetails(
         {
           constraints: "constraints",
           properties: {
@@ -183,13 +183,13 @@ describe("Market Api Adapter", () => {
       );
       const receivedProposal = new ProposalNew(
         {
-          ...specification.decoration,
+          ...specification.body,
           proposalId: "proposal-id",
           timestamp: "0000-00-00",
           issuerId: "issuer-id",
           state: "Initial",
         },
-        new DemandNew("demand-id", specification),
+        new Demand("demand-id", specification),
       );
 
       when(mockMarket.counterProposalDemand(_, _, _)).thenResolve({
@@ -203,7 +203,7 @@ describe("Market Api Adapter", () => {
   });
   describe("observeProposalEvents()", () => {
     it("should long poll for proposals", (done) => {
-      const mockDemand = mock(DemandNew);
+      const mockDemand = mock(Demand);
       when(mockDemand.id).thenReturn("demand-id");
       const mockProposalDTO = imock<YaTsClient.MarketApi.ProposalEventDTO["proposal"]>();
       when(mockProposalDTO.issuerId).thenReturn("issuer-id");
@@ -238,7 +238,7 @@ describe("Market Api Adapter", () => {
       });
     });
     it("should cleanup the long poll when unsubscribed", (done) => {
-      const mockDemand = mock(DemandNew);
+      const mockDemand = mock(Demand);
       when(mockDemand.id).thenReturn("demand-id");
 
       const cancelSpy = jest.fn();

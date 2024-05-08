@@ -20,13 +20,10 @@ const getImagePath = (path: string) => fileURLToPath(new URL(path, import.meta.u
 
     const demand = {
       demand: {
-        // Here you supply the path to the GVMI file that you want to deploy and use
-        // using the file:// protocol will make the SDK switch to "GVMI" serving mode
-        imageUrl: `file://${getImagePath("./alpine.gvmi")}`,
-        resources: {
-          minCpu: 4,
-          minMemGib: 8,
-          minStorageGib: 16,
+        workload: {
+          // Here you supply the path to the GVMI file that you want to deploy and use
+          // using the file:// protocol will make the SDK switch to "GVMI" serving mode
+          imageUrl: `file://${getImagePath("./alpine.gvmi")}`,
         },
       },
       market: {
@@ -44,9 +41,9 @@ const getImagePath = (path: string) => fileURLToPath(new URL(path, import.meta.u
     });
 
     const payerDetails = await glm.payment.getPayerDetails();
-    const demandSpecification = await glm.market.buildDemand(demand.demand, payerDetails);
+    const demandDetails = await glm.market.buildDemandDetails(demand.demand, payerDetails);
     const proposal$ = glm.market.startCollectingProposals({
-      demandSpecification,
+      demandDetails,
       bufferSize: 15,
     });
     const proposalSubscription = proposalPool.readFrom(proposal$);

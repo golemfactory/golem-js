@@ -3,11 +3,11 @@ import { LegacyAgreementServiceOptions } from "../../agreement";
 import { DemandSpec } from "../../market";
 import { NetworkOptions } from "../../network";
 import { PaymentModuleOptions } from "../../payment";
-import { PackageOptions } from "../../market/package";
 import { EventEmitter } from "eventemitter3";
 import { GolemAbortError, GolemUserError } from "../../shared/error/golem-error";
 import { GolemNetwork } from "../../golem-network";
 import { Logger } from "../../shared/utils";
+import { WorkloadDemandDirectorConfigOptions } from "../../market/demand/options";
 
 export enum JobState {
   New = "new",
@@ -22,7 +22,7 @@ export type RunJobOptions = {
   payment?: PaymentModuleOptions;
   agreement?: LegacyAgreementServiceOptions;
   network?: NetworkOptions;
-  package?: PackageOptions;
+  package?: WorkloadDemandDirectorConfigOptions;
   work?: WorkOptions;
 };
 
@@ -72,6 +72,7 @@ export class Job<Output = unknown> {
    * @param id
    * @param glm
    * @param demandSpec
+   * @param logger
    */
   constructor(
     public readonly id: string,
@@ -94,7 +95,6 @@ export class Job<Output = unknown> {
    * If you want to run multiple jobs in parallel, you can use {@link GolemNetwork.createJob} to create multiple jobs and run them in parallel.
    *
    * @param workOnGolem - Your worker function that will be run on the Golem Network.
-   * @param demandSpec - Specify the image and resource for the demand that will be used to find resources on Golem Network.
    */
   startWork(workOnGolem: Worker<Output>) {
     this.logger.debug("Staring work in a Job");

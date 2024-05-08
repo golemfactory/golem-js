@@ -21,10 +21,12 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
     const demandOptions = {
       demand: {
-        imageTag: "golem/alpine:latest",
-        minCpuCores: 1,
-        minMemGib: 1,
-        minStorageGib: 2,
+        workload: {
+          imageTag: "golem/alpine:latest",
+          minCpuCores: 1,
+          minMemGib: 1,
+          minStorageGib: 2,
+        },
       },
       market: {
         rentHours: 12,
@@ -42,10 +44,10 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
     const proposalPool = new DraftOfferProposalPool({ minCount: 1 });
     const payerDetails = await glm.payment.getPayerDetails();
-    const demandSpecification = await glm.market.buildDemand(demandOptions.demand, payerDetails);
+    const demandDetails = await glm.market.buildDemandDetails(demandOptions.demand, payerDetails);
 
     const proposals$ = glm.market.startCollectingProposals({
-      demandSpecification,
+      demandDetails,
     });
 
     const proposalSubscription = proposalPool.readFrom(proposals$);

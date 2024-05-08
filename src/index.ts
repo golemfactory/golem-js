@@ -1,13 +1,21 @@
-export * from "./shared/storage";
-export * from "./activity";
-export * from "./agreement";
+//  High-level entry points
+export * from "./golem-network";
+
+// Low level entry points for advanced users
 export * from "./market";
-export * from "./market/package";
 export * from "./payment";
 export * from "./network";
-export * from "./shared/utils";
-export * from "./shared/yagna";
-export * from "./activity/work";
+export * from "./activity";
+export * from "./agreement";
+
+// Necessary domain entities for users to consume
 export * from "./shared/error/golem-error";
 export * from "./network/tcpProxy";
-export * from "./golem-network";
+
+// Internals: TODO consider hiding
+export * from "./shared/utils";
+export * from "./shared/yagna";
+export * from "./shared/storage";
+
+// TODO: Can be removed?
+export * from "./activity/work";

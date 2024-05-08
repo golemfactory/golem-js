@@ -1,30 +1,22 @@
-import { Package, PackageOptions } from "./package";
-import { Allocation } from "../payment";
-import { DemandFactory } from "./factory";
-import { Proposal } from "./proposal";
-import { defaultLogger, Logger, sleep, YagnaApi, YagnaOptions } from "../shared/utils";
-import { DemandConfig } from "./config";
-import { GolemMarketError, MarketErrorCode } from "./error";
-import { GolemError, GolemPlatformError } from "../shared/error/golem-error";
-import { MarketApi } from "ya-ts-client";
-import { EventEmitter } from "eventemitter3";
+import { WorkloadDemandDirectorConfigOptions } from "./demand/options";
 
-export interface DemandEvents {
-  proposalReceived: (proposal: Proposal) => void;
-  proposalReceivedError: (error: GolemError) => void;
-  proposalRejected: (details: { id: string; parentId: string | null; reason: string }) => void;
-  collectFailed: (details: { id: string; reason: string }) => void;
-  demandUnsubscribed: (details: { id: string }) => void;
-}
+import { BasicDemandDirectorConfigOptions } from "./demand/directors/basic-demand-director-config";
+import { PaymentDemandDirectorConfigOptions } from "./demand/directors/payment-demand-director-config";
 
-export interface DemandDetails {
-  properties: Array<{ key: string; value: string | number | boolean }>;
-  constraints: Array<string>;
-}
-
-export interface DemandOptions {
+/**
+ * This type represents a set of *parameters* that the SDK can set to particular *properties* and *constraints*
+ * of the demand that's used to subscribe for offers via Yagna
+ */
+export interface BasicDemandPropertyConfig {
+  /**
+   * Specify the name of a subnet of Golem Network that should be considered for offers
+   *
+   * Providers and Requestors can agree to a subnet tag, that they can put on their Offer and Demands
+   * so that they can create "segments" within the network for ease of finding themselves.
+   *
+   * Please note that this subnetTag is public and visible to everyone.
+   */
   subnetTag?: string;
-  yagnaOptions?: YagnaOptions;
 
   /**
    * Determines the expiration time of the offer and the resulting activity in milliseconds.
@@ -47,14 +39,7 @@ export interface DemandOptions {
    *
    * If your activity is about to operate longer than 10h, you need set both {@link debitNotesAcceptanceTimeoutSec} and {@link midAgreementPaymentTimeoutSec}.
    */
-  expirationSec?: number;
-
-  logger?: Logger;
-  maxOfferEvents?: number;
-
-  offerFetchingIntervalSec?: number;
-
-  proposalTimeout?: number;
+  expirationSec: number;
 
   /**
    * Maximum time for allowed provider-sent debit note acceptance (in seconds)
@@ -66,7 +51,7 @@ export interface DemandOptions {
    * _Accepting debit notes during a long activity is considered a good practice in Golem Network._
    * The SDK will accept debit notes each 2 minutes by default.
    */
-  debitNotesAcceptanceTimeoutSec?: number;
+  debitNotesAcceptanceTimeoutSec: number;
 
   /**
    * The interval between provider sent debit notes to negotiate.
@@ -81,7 +66,7 @@ export interface DemandOptions {
    * _Accepting payable debit notes during a long activity is considered a good practice in Golem Network._
    * The SDK will accept debit notes each 2 minutes by default.
    */
-  midAgreementDebitNoteIntervalSec?: number;
+  midAgreementDebitNoteIntervalSec: number;
 
   /**
    * Maximum time to receive payment for any debit note. At the same time, the minimum interval between mid-agreement payments.
@@ -94,206 +79,47 @@ export interface DemandOptions {
    * _Paying in regular intervals for the computation resources is considered a good practice in Golem Network._
    * The SDK will issue payments each 12h by default, and you can control this with this setting.
    */
-  midAgreementPaymentTimeoutSec?: number;
+  midAgreementPaymentTimeoutSec: number;
 }
-export type DemandOptionsNew = PackageOptions & DemandOptions;
 
-type DemandDecoration = {
-  properties: Record<string, string | number | boolean>;
+export type BuildDemandOptions = Partial<{
+  workload: Partial<WorkloadDemandDirectorConfigOptions>;
+  payment: Partial<PaymentDemandDirectorConfigOptions>;
+  basic: Partial<BasicDemandDirectorConfigOptions>;
+}>;
+
+/**
+ * Most raw representation of the demand request body payload that's used to register the demand in Yagna
+ */
+type DemandRequestBody = {
+  properties: Record<string, string | number | boolean | string[] | number[]>;
   constraints: string;
 };
 
-export class DemandSpecification {
+export interface IDemandRepository {
+  getById(id: string): Demand | undefined;
+
+  add(demand: Demand): Demand;
+
+  getAll(): Demand[];
+}
+
+export class DemandDetails {
   constructor(
-    public readonly decoration: DemandDecoration,
+    /** Represents the low level demand request body that will be used to subscribe for offers matching our "computational resource needs" */
+    public readonly body: DemandRequestBody,
     public readonly paymentPlatform: string,
     public readonly expirationSec: number,
   ) {}
 }
 
-export class DemandNew {
+export class Demand {
   constructor(
     public readonly id: string,
-    public readonly specification: DemandSpecification,
+    public readonly details: DemandDetails,
   ) {}
 
   get paymentPlatform(): string {
-    return this.specification.paymentPlatform;
+    return this.details.paymentPlatform;
   }
-}
-
-export interface IDemandRepository {
-  getById(id: string): DemandNew | undefined;
-  add(demand: DemandNew): DemandNew;
-  getAll(): DemandNew[];
-}
-
-/**
- * Demand module - an object which can be considered an "open" or public Demand, as it is not directed at a specific Provider, but rather is sent to the market so that the matching mechanism implementation can associate relevant Offers.
- * @hidden
- * @deprecated
- */
-export class Demand {
-  private isRunning = true;
-  private logger: Logger;
-  private proposalReferences: ProposalReference[] = [];
-  public readonly events = new EventEmitter<DemandEvents>();
-
-  /**
-   * Create demand for given taskPackage
-   *
-   *  Note: it is an "atomic" operation.
-   *  When the demand is created, the SDK will use it to subscribe for provider offer proposals matching it.
-   *
-   * @param taskPackage
-   * @param allocation
-   * @param yagnaApi
-   * @param options
-   *
-   * @return Demand
-   */
-  static async create(
-    taskPackage: Package,
-    allocation: Allocation,
-    yagnaApi: YagnaApi,
-    options?: DemandOptions,
-  ): Promise<Demand> {
-    const factory = new DemandFactory(taskPackage, allocation, yagnaApi, options);
-    return factory.create();
-  }
-
-  /**
-   * @param id - demand ID
-   * @param demandRequest - {@link DemandOfferBase}
-   * @param allocation - {@link Allocation}
-   * @param yagnaApi - {@link YagnaApi}
-   * @param options - {@link DemandConfig}
-   * @hidden
-   */
-  constructor(
-    public readonly id: string,
-    public readonly demandRequest: MarketApi.DemandOfferBaseDTO,
-    public readonly allocation: Allocation,
-    private yagnaApi: YagnaApi,
-    public options: DemandConfig,
-  ) {
-    this.logger = this.options.logger || defaultLogger("market");
-    this.subscribe().catch((e) => this.logger.error("Unable to subscribe for demand events", e));
-  }
-
-  /**
-   * @deprecated Will be removed before release, glue code
-   */
-  toNewEntity(): DemandNew {
-    return new DemandNew(
-      this.id,
-      new DemandSpecification(this.demandRequest, this.allocation.paymentPlatform, this.options.expirationSec * 1000),
-    );
-  }
-  /**
-   * Stop subscribing for provider offer proposals for this demand
-   */
-  async unsubscribe() {
-    this.isRunning = false;
-    await this.yagnaApi.market.unsubscribeDemand(this.id);
-    this.events.emit("demandUnsubscribed", { id: this.id });
-    this.logger.debug(`Demand unsubscribed`, { id: this.id });
-  }
-
-  private findParentProposal(prevProposalId?: string): string | null {
-    if (!prevProposalId) return null;
-    for (const proposal of this.proposalReferences) {
-      if (proposal.counteringProposalId === prevProposalId) {
-        return proposal.id;
-      }
-    }
-    return null;
-  }
-
-  private setCounteringProposalReference(id: string, counteringProposalId: string): void {
-    this.proposalReferences.push(new ProposalReference(id, counteringProposalId));
-  }
-
-  private async subscribe() {
-    this.logger.debug("Subscribing for proposals matched with the demand", { demandId: this.id });
-    while (this.isRunning) {
-      try {
-        const events = await this.yagnaApi.market.collectOffers(
-          this.id,
-          this.options.offerFetchingIntervalSec,
-          this.options.maxOfferEvents,
-        );
-        for (const event of events as Array<MarketApi.ProposalEventDTO & MarketApi.ProposalRejectedEventDTO>) {
-          this.logger.debug("Received proposal event from subscription", { event });
-          if (event.eventType === "ProposalRejectedEvent") {
-            this.logger.warn(`Proposal rejected`, { reason: event.reason?.message });
-            this.events.emit("proposalRejected", {
-              id: event.proposalId,
-              parentId: this.findParentProposal(event.proposalId),
-              reason: event.reason?.message,
-            });
-            continue;
-          } else if (event.eventType !== "ProposalEvent") continue;
-          const proposal = new Proposal(
-            this,
-            event.proposal.state === "Draft" ? this.findParentProposal(event.proposal.prevProposalId) : null,
-            this.setCounteringProposalReference.bind(this),
-            this.yagnaApi.market,
-            event.proposal,
-          );
-          this.events.emit("proposalReceived", proposal);
-        }
-      } catch (error) {
-        if (this.isRunning) {
-          const reason = error.response?.data?.message || error;
-          this.events.emit("collectFailed", { id: this.id, reason });
-          this.logger.warn(`Unable to collect offers.`, { reason });
-          if (error.code === "ECONNREFUSED") {
-            // Yagna has been disconnected
-            this.events.emit(
-              "proposalReceivedError",
-              new GolemPlatformError(`Unable to collect offers. ${reason}`, error),
-            );
-            break;
-          }
-          if (error.response?.status === 404) {
-            // Demand has expired
-            this.events.emit(
-              "proposalReceivedError",
-              new GolemMarketError(`Demand expired. ${reason}`, MarketErrorCode.DemandExpired, error),
-            );
-            break;
-          }
-          await sleep(2);
-        }
-      }
-    }
-  }
-}
-
-/**
- * @hidden
- */
-export class DemandEvent extends Event {
-  readonly proposal?: Proposal;
-  readonly error?: Error;
-
-  /**
-   * Create a new instance of DemandEvent
-   * @param type A string with the name of the event:
-   * @param data object with proposal data:
-   * @param error optional error if occurred while subscription is active
-   */
-  constructor(type: string, data?: (Proposal & EventInit) | undefined, error?: GolemError | undefined) {
-    super(type, data);
-    this.proposal = data;
-    this.error = error;
-  }
-}
-
-class ProposalReference {
-  constructor(
-    readonly id: string,
-    readonly counteringProposalId: string,
-  ) {}
 }

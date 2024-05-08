@@ -1,7 +1,7 @@
 import { MarketApi } from "ya-ts-client";
 import { GolemMarketError, MarketErrorCode } from "./error";
 import { ProviderInfo } from "../agreement";
-import { Demand, DemandNew } from "./demand";
+import { Demand } from "./demand";
 import { withTimeout } from "../shared/utils/timeout";
 import { EventEmitter } from "eventemitter3";
 
@@ -68,7 +68,7 @@ export interface ProposalDTO {
 export interface IProposalRepository {
   add(proposal: ProposalNew): ProposalNew;
   getById(id: string): ProposalNew | undefined;
-  getByDemandAndId(demand: DemandNew, id: string): Promise<ProposalNew>;
+  getByDemandAndId(demand: Demand, id: string): Promise<ProposalNew>;
 }
 
 /**
@@ -85,7 +85,7 @@ export class ProposalNew {
 
   constructor(
     public readonly model: MarketApi.ProposalDTO,
-    public readonly demand: DemandNew,
+    public readonly demand: Demand,
   ) {
     this.id = model.proposalId;
     this.provider = this.getProviderInfo();
@@ -213,14 +213,14 @@ export class Proposal {
   /**
    * Create proposal for given subscription ID
    *
-   * @param demand
+   * @param subscription
    * @param parentId
    * @param setCounteringProposalReference
    * @param api
    * @param model
    */
   constructor(
-    public readonly demand: Demand,
+    public readonly subscription: Demand,
     private readonly parentId: string | null,
     private readonly setCounteringProposalReference: (id: string, parentId: string) => void | null,
     private readonly api: MarketApi.RequestorService,
@@ -238,13 +238,6 @@ export class Proposal {
 
     // Run validation to ensure that the Proposal is in a complete and correct state
     this.validate();
-  }
-
-  /**
-   * @deprecated Will be removed before release, glue code
-   */
-  toNewEntity(): ProposalNew {
-    return new ProposalNew(this.model, this.demand.toNewEntity());
   }
 
   getDto(): ProposalDTO {
@@ -338,7 +331,7 @@ export class Proposal {
   async reject(reason = "no reason") {
     try {
       // eslint-disable-next-line @typescript-eslint/ban-types
-      await this.api.rejectProposalOffer(this.demand.id, this.id, { message: reason as {} });
+      await this.api.rejectProposalOffer(this.subscription.id, this.id, { message: reason as {} });
       this.events.emit("proposalRejected", {
         id: this.id,
         provider: this.provider,
@@ -356,11 +349,10 @@ export class Proposal {
 
   async respond(chosenPlatform: string) {
     try {
-      (this.demand.demandRequest.properties as ProposalProperties)["golem.com.payment.chosen-platform"] =
-        chosenPlatform;
+      this.subscription.details.body.properties["golem.com.payment.chosen-platform"] = chosenPlatform;
 
       const counteringProposalId = await withTimeout(
-        this.api.counterProposalDemand(this.demand.id, this.id, this.demand.demandRequest),
+        this.api.counterProposalDemand(this.subscription.id, this.id, this.subscription.details.body),
         20_000,
       );
 
@@ -420,7 +412,7 @@ export class Proposal {
       id: this.issuerId,
       name: this.properties["golem.node.id.name"],
       walletAddress: this.properties[
-        `golem.com.payment.platform.${this.demand.allocation.paymentPlatform}.address`
+        `golem.com.payment.platform.${this.subscription.paymentPlatform}.address`
       ] as string,
     };
   }

@@ -19,9 +19,9 @@ import { GolemNetwork, ProposalNew } from "@golem-sdk/golem-js";
     await glm.connect();
 
     const payerDetails = await glm.payment.getPayerDetails();
-    const demandSpecification = await glm.market.buildDemand(
+    const demandDetails = await glm.market.buildDemandDetails(
       {
-        imageTag: "golem/alpine:latest",
+        workload: { imageTag: "golem/alpine:latest" },
       },
       payerDetails,
     );
@@ -31,7 +31,7 @@ import { GolemNetwork, ProposalNew } from "@golem-sdk/golem-js";
     console.log("Scanning the market...");
     const subscription = glm.market
       .startCollectingProposals({
-        demandSpecification,
+        demandDetails,
         bufferSize: 5,
       })
       .subscribe({
