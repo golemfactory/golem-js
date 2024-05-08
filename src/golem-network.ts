@@ -156,7 +156,7 @@ export class GolemNetwork {
           agreementRepository,
           this.logger,
         ),
-        marketApi: new MarketApiAdapter(this.yagna),
+        marketApi: new MarketApiAdapter(this.yagna, this.logger),
         fileServer: new GftpServerAdapter(this.storageProvider),
       };
 

@@ -1,4 +1,4 @@
-export { MarketService, ProposalFilter, MarketServiceOptions } from "./service";
+export { ProposalFilterNew } from "./proposal";
 export { Demand, DemandNew, DemandEvent, DemandOptions, DemandSpecification } from "./demand";
 export { Proposal, ProposalNew, ProposalDTO } from "./proposal";
 export { MarketDecoration } from "./builder";

@@ -1,6 +1,5 @@
 import { DemandOptions } from "./demand";
-import { EnvUtils, Logger, defaultLogger, YagnaOptions } from "../shared/utils";
-import { MarketServiceOptions, ProposalFilter } from "./service";
+import { defaultLogger, EnvUtils, Logger, YagnaOptions } from "../shared/utils";
 import { GolemConfigError } from "../shared/error/golem-error";
 import { acceptAll } from "./strategy";
 
@@ -66,22 +65,5 @@ export class DemandConfig {
 
   private isPositiveInt(value: number) {
     return value > 0 && Number.isInteger(value);
-  }
-}
-
-/**
- * @internal
- */
-export class MarketConfig extends DemandConfig {
-  readonly debitNotesAcceptanceTimeoutSec: number;
-  public readonly proposalFilter: ProposalFilter;
-
-  constructor(options?: MarketServiceOptions) {
-    super(options);
-
-    this.debitNotesAcceptanceTimeoutSec =
-      options?.debitNotesAcceptanceTimeoutSec ?? DEFAULTS.debitNotesAcceptanceTimeoutSec;
-
-    this.proposalFilter = options?.proposalFilter ?? DEFAULTS.proposalFilter;
   }
 }

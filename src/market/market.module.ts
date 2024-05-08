@@ -1,20 +1,20 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
 import { DemandConfig, DemandNew, DraftOfferProposalPool, MarketApi, NewProposalEvent } from "./index";
 import {
   Agreement,
-  LeaseProcess,
-  IPaymentApi,
   IActivityApi,
+  IPaymentApi,
+  LeaseProcess,
   LeaseProcessPool,
   LeaseProcessPoolOptions,
 } from "../agreement";
 import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
 import { Allocation } from "../payment";
 import { Package } from "./package";
-import { bufferTime, filter, map, Observable, switchMap, tap, OperatorFunction } from "rxjs";
-import { IProposalRepository, ProposalNew } from "./proposal";
+import { bufferTime, filter, map, Observable, OperatorFunction, switchMap, tap } from "rxjs";
+import { IProposalRepository, ProposalFilterNew, ProposalNew } from "./proposal";
 import { ComparisonOperator, DecorationsBuilder } from "./builder";
-import { ProposalFilterNew } from "./service";
 import { IAgreementApi } from "../agreement/agreement";
 import { DemandOptionsNew, DemandSpecification, IDemandRepository } from "./demand";
 import { ProposalsBatch } from "./proposals_batch";
@@ -135,6 +135,13 @@ export interface MarketModule {
   terminateAgreement(agreement: Agreement, reason?: string): Promise<Agreement>;
 
   /**
+   * Helper method that will allow reaching an agreement for the user without dealing with manual labour of demand/subscription
+   */
+  getAgreement(options: MarketOptions, filter: ProposalFilterNew): Promise<Agreement>;
+
+  getAgreements(options: MarketOptions, filter: ProposalFilterNew, count: number): Promise<Agreement[]>;
+
+  /**
    * Creates a demand for the given package and allocation and starts collecting, filtering and negotiating proposals.
    * The method returns an observable that emits a batch of draft proposals every time the buffer is full.
    * The method will automatically negotiate the proposals until they are moved to the `Draft` state.
@@ -223,8 +230,8 @@ export class MarketModuleImpl implements MarketModule {
     // Configure payment platform
     builder
       .addProperty(`golem.com.payment.platform.${payerDetails.getPaymentPlatform()}.address`, payerDetails.address)
-      .addProperty("golem.com.payment.protocol.version", "2")
       .addConstraint(`golem.com.payment.platform.${payerDetails.getPaymentPlatform()}.address`, "*")
+      .addProperty("golem.com.payment.protocol.version", "2")
       .addConstraint("golem.com.payment.protocol.version", "1", ComparisonOperator.Gt);
 
     return builder.getDemandSpecification(payerDetails.getPaymentPlatform(), demandSpecificConfig.expirationSec);
@@ -320,6 +327,14 @@ export class MarketModuleImpl implements MarketModule {
     return agreement;
   }
 
+  getAgreement(options: MarketOptions, filter: ProposalFilterNew): Promise<Agreement> {
+    throw new Error("Method not implemented.");
+  }
+
+  getAgreements(options: MarketOptions, filter: ProposalFilterNew, count: number): Promise<Agreement[]> {
+    throw new Error("Method not implemented.");
+  }
+
   startCollectingProposals(options: {
     demandSpecification: DemandSpecification;
     filter?: ProposalFilterNew;
@@ -406,7 +421,6 @@ export class MarketModuleImpl implements MarketModule {
         const subscription = source.subscribe((proposal) => {
           if (proposal.isInitial()) {
             proposalsBatch.addProposal(proposal);
-            this.logger.debug("Added initial proposal to batch", { proposal: proposal.id });
           } else {
             destination.next(proposal);
           }

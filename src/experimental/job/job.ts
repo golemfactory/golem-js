@@ -1,6 +1,6 @@
 import { Worker, WorkOptions } from "../../activity/work";
 import { LegacyAgreementServiceOptions } from "../../agreement";
-import { DemandSpec, MarketServiceOptions } from "../../market";
+import { DemandSpec } from "../../market";
 import { NetworkOptions } from "../../network";
 import { PaymentModuleOptions } from "../../payment";
 import { PackageOptions } from "../../market/package";
@@ -19,7 +19,6 @@ export enum JobState {
 }
 
 export type RunJobOptions = {
-  market?: MarketServiceOptions;
   payment?: PaymentModuleOptions;
   agreement?: LegacyAgreementServiceOptions;
   network?: NetworkOptions;
