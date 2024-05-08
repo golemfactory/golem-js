@@ -1,14 +1,13 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
-import { DemandConfig, DemandNew, DraftOfferProposalPool, MarketApi, NewProposalEvent, ProposalFilter } from "./index";
+import { DemandConfig, DemandNew, DraftOfferProposalPool, MarketApi, NewProposalEvent } from "./index";
 import { Agreement, AgreementPool, AgreementPoolOptions, IActivityApi, IPaymentApi, LeaseProcess } from "../agreement";
 import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
 import { Allocation } from "../payment";
 import { Package } from "./package";
 import { bufferTime, filter, map, Observable, OperatorFunction, switchMap, tap } from "rxjs";
-import { IProposalRepository, ProposalNew } from "./proposal";
+import { IProposalRepository, ProposalFilterNew, ProposalNew } from "./proposal";
 import { ComparisonOperator, DecorationsBuilder } from "./builder";
-import { ProposalFilterNew } from "./service";
 import { IAgreementApi } from "../agreement/agreement";
 import { DemandOptionsNew, DemandSpecification, IDemandRepository } from "./demand";
 import { ProposalsBatch } from "./proposals_batch";
@@ -131,9 +130,9 @@ export interface MarketModule {
   /**
    * Helper method that will allow reaching an agreement for the user without dealing with manual labour of demand/subscription
    */
-  getAgreement(options: MarketOptions, filter: ProposalFilter): Promise<Agreement>;
+  getAgreement(options: MarketOptions, filter: ProposalFilterNew): Promise<Agreement>;
 
-  getAgreements(options: MarketOptions, filter: ProposalFilter, count: number): Promise<Agreement[]>;
+  getAgreements(options: MarketOptions, filter: ProposalFilterNew, count: number): Promise<Agreement[]>;
 
   /**
    * Creates a demand for the given package and allocation and starts collecting, filtering and negotiating proposals.
@@ -317,11 +316,11 @@ export class MarketModuleImpl implements MarketModule {
     return agreement;
   }
 
-  getAgreement(options: MarketOptions, filter: ProposalFilter): Promise<Agreement> {
+  getAgreement(options: MarketOptions, filter: ProposalFilterNew): Promise<Agreement> {
     throw new Error("Method not implemented.");
   }
 
-  getAgreements(options: MarketOptions, filter: ProposalFilter, count: number): Promise<Agreement[]> {
+  getAgreements(options: MarketOptions, filter: ProposalFilterNew, count: number): Promise<Agreement[]> {
     throw new Error("Method not implemented.");
   }
 
