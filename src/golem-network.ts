@@ -237,11 +237,11 @@ export class GolemNetwork {
       logger: this.logger,
     });
     const payerDetails = await this.payment.getPayerDetails();
-    const demandDetails = await this.market.buildDemandDetails(demand.demand, payerDetails);
+    const demandSpecification = await this.market.buildDemandDetails(demand.demand, payerDetails);
 
     const proposalSubscription = this.market
       .startCollectingProposals({
-        demandDetails: demandDetails,
+        demandSpecification: demandSpecification,
       })
       .subscribe((proposalsBatch) => proposalsBatch.forEach((proposal) => proposalPool.add(proposal)));
 

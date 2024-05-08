@@ -25,7 +25,7 @@ app.post("/tts", async (req, res) => {
   }
   const job = golemClient.createJob({
     demand: {
-      workload: {
+      activity: {
         imageTag: "severyn/espeak:latest",
       },
     },

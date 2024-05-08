@@ -12,7 +12,7 @@ describe("Deployment builder", () => {
       builder
         .createActivityPool("my-pool", {
           demand: {
-            workload: {
+            activity: {
               imageTag: "image",
               minCpuCores: 1,
               minMemGib: 1,
@@ -23,7 +23,7 @@ describe("Deployment builder", () => {
         })
         .createActivityPool("my-pool", {
           demand: {
-            workload: {
+            activity: {
               imageTag: "image",
               minCpuCores: 1,
               minMemGib: 1,
@@ -55,7 +55,7 @@ describe("Deployment builder", () => {
         })
         .createActivityPool("my-pool", {
           demand: {
-            workload: { imageTag: "image", minCpuCores: 1, minMemGib: 1, minStorageGib: 1 },
+            activity: { imageTag: "image", minCpuCores: 1, minMemGib: 1, minStorageGib: 1 },
           },
           market: {},
           deployment: {

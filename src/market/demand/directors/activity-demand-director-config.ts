@@ -1,12 +1,11 @@
-import { WorkloadDemandDirectorConfigOptions } from "../options";
+import { ActivityDemandDirectorConfigOptions } from "../options";
 import { GolemConfigError } from "../../../shared/error/golem-error";
 
 export enum PackageFormat {
   GVMKitSquash = "gvmkit-squash",
 }
 
-// ? Isn't it just a merge of object literals and no need to have a class here
-export class WorkloadDemandDirectorConfig {
+export class ActivityDemandDirectorConfig {
   readonly packageFormat: string = PackageFormat.GVMKitSquash;
   readonly engine: string = "vm";
   readonly minMemGib: number = 0.5;
@@ -23,7 +22,7 @@ export class WorkloadDemandDirectorConfig {
   readonly imageTag?: string;
   readonly imageUrl?: string;
 
-  constructor(options?: Partial<WorkloadDemandDirectorConfigOptions>) {
+  constructor(options?: Partial<ActivityDemandDirectorConfigOptions>) {
     if (options) {
       Object.assign(this, options);
     }

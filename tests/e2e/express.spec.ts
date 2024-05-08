@@ -29,7 +29,7 @@ describe("Express", function () {
       }
       const job = golemClient.createJob({
         demand: {
-          workload: {
+          activity: {
             imageTag: "severyn/espeak:latest",
           },
         },

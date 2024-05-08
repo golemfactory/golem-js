@@ -27,9 +27,9 @@ describe("ActivityPool", () => {
     proposalPool = new DraftOfferProposalPool();
     agreementPool = new AgreementPool(proposalPool, glm.services.agreementApi);
     const payerDetails = await modules.payment.getPayerDetails();
-    const demandDetails = await modules.market.buildDemandDetails(
+    const demandSpecification = await modules.market.buildDemandDetails(
       {
-        workload: {
+        activity: {
           imageTag: "golem/alpine:latest",
         },
       },
@@ -37,7 +37,7 @@ describe("ActivityPool", () => {
     );
     proposalSubscription = modules.market
       .startCollectingProposals({
-        demandDetails: demandDetails,
+        demandSpecification,
       })
       .subscribe((proposalsBatch) => proposalsBatch.forEach((proposal) => proposalPool.add(proposal)));
   });

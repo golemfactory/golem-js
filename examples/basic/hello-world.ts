@@ -16,7 +16,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
     const demand = {
       demand: {
-        workload: {
+        activity: {
           imageTag: "golem/alpine:latest",
         },
       },
@@ -35,9 +35,9 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
     });
 
     const payerDetails = await glm.payment.getPayerDetails();
-    const demandDetails = await glm.market.buildDemandDetails(demand.demand, payerDetails);
+    const demandSpecification = await glm.market.buildDemandDetails(demand.demand, payerDetails);
     const proposal$ = glm.market.startCollectingProposals({
-      demandDetails,
+      demandSpecification,
       bufferSize: 15,
     });
     const proposalSubscription = proposalPool.readFrom(proposal$);

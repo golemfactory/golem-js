@@ -2,7 +2,7 @@ import { instance, when, verify, deepEqual, mock, reset, _, imock } from "@johan
 import * as YaTsClient from "ya-ts-client";
 import { YagnaApi } from "../yagnaApi";
 import { MarketApiAdapter } from "./market-api-adapter";
-import { Demand, DemandDetails, ProposalNew } from "../../../market";
+import { Demand, DemandSpecification, ProposalNew } from "../../../market";
 import { take, takeUntil, timer } from "rxjs";
 import { Logger } from "../../utils";
 
@@ -21,7 +21,7 @@ beforeEach(() => {
 describe("Market Api Adapter", () => {
   describe("publishDemandSpecification()", () => {
     it("should publish a demand", async () => {
-      const specification = new DemandDetails(
+      const specification = new DemandSpecification(
         {
           constraints: "constraints",
           properties: {
@@ -33,17 +33,17 @@ describe("Market Api Adapter", () => {
         60 * 60 * 1000,
       );
 
-      when(mockMarket.subscribeDemand(deepEqual(specification.body))).thenResolve("demand-id");
+      when(mockMarket.subscribeDemand(deepEqual(specification.prototype))).thenResolve("demand-id");
 
       const demand = await api.publishDemandSpecification(specification);
 
-      verify(mockMarket.subscribeDemand(deepEqual(specification.body))).once();
+      verify(mockMarket.subscribeDemand(deepEqual(specification.prototype))).once();
       expect(demand).toBeInstanceOf(Demand);
       expect(demand.id).toBe("demand-id");
       expect(demand.details).toBe(specification);
     });
     it("should throw an error if the demand is not published", async () => {
-      const specification = new DemandDetails(
+      const specification = new DemandSpecification(
         {
           constraints: "constraints",
           properties: {
@@ -55,7 +55,7 @@ describe("Market Api Adapter", () => {
         60 * 60 * 1000,
       );
 
-      when(mockMarket.subscribeDemand(deepEqual(specification.body))).thenResolve({
+      when(mockMarket.subscribeDemand(deepEqual(specification.prototype))).thenResolve({
         message: "error publishing demand",
       });
 
@@ -69,7 +69,7 @@ describe("Market Api Adapter", () => {
     it("should unpublish a demand", async () => {
       const demand = new Demand(
         "demand-id",
-        new DemandDetails(
+        new DemandSpecification(
           {
             constraints: "constraints",
             properties: {
@@ -92,7 +92,7 @@ describe("Market Api Adapter", () => {
     it("should throw an error if the demand is not unpublished", async () => {
       const demand = new Demand(
         "demand-id",
-        new DemandDetails(
+        new DemandSpecification(
           {
             constraints: "constraints",
             properties: {
@@ -117,7 +117,7 @@ describe("Market Api Adapter", () => {
 
   describe("counterProposal()", () => {
     it("should negotiate a proposal with the selected payment platform", async () => {
-      const specification = new DemandDetails(
+      const specification = new DemandSpecification(
         {
           constraints: "constraints",
           properties: {
@@ -130,7 +130,7 @@ describe("Market Api Adapter", () => {
       );
       const receivedProposal = new ProposalNew(
         {
-          ...specification.body,
+          ...specification.prototype,
           proposalId: "proposal-id",
           timestamp: "0000-00-00",
           issuerId: "issuer-id",
@@ -142,7 +142,7 @@ describe("Market Api Adapter", () => {
       when(mockMarket.counterProposalDemand(_, _, _)).thenResolve("counter-id");
 
       when(mockMarket.getProposalOffer("demand-id", "counter-id")).thenResolve({
-        ...specification.body,
+        ...specification.prototype,
         proposalId: "counter-id",
         timestamp: "0000-00-00",
         issuerId: "issuer-id",
@@ -170,7 +170,7 @@ describe("Market Api Adapter", () => {
       expect(counterProposal.demand).toBe(receivedProposal.demand);
     });
     it("should throw an error if the counter proposal fails", async () => {
-      const specification = new DemandDetails(
+      const specification = new DemandSpecification(
         {
           constraints: "constraints",
           properties: {
@@ -183,7 +183,7 @@ describe("Market Api Adapter", () => {
       );
       const receivedProposal = new ProposalNew(
         {
-          ...specification.body,
+          ...specification.prototype,
           proposalId: "proposal-id",
           timestamp: "0000-00-00",
           issuerId: "issuer-id",

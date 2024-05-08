@@ -21,7 +21,7 @@ async function main() {
       })
       .createActivityPool("app", {
         demand: {
-          workload: {
+          activity: {
             imageTag: "golem/node:latest",
           },
         },
@@ -44,7 +44,7 @@ async function main() {
       })
       .createActivityPool("db", {
         demand: {
-          workload: {
+          activity: {
             imageTag: "golem/alpine:latest",
             minCpuCores: 1,
             minMemGib: 2,

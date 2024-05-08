@@ -1,7 +1,7 @@
-import { WorkloadDemandDirectorConfigOptions } from "./demand/options";
-
+import { ActivityDemandDirectorConfigOptions } from "./demand/options";
 import { BasicDemandDirectorConfigOptions } from "./demand/directors/basic-demand-director-config";
 import { PaymentDemandDirectorConfigOptions } from "./demand/directors/payment-demand-director-config";
+import { DemandBodyPrototype } from "./demand/demand-details-builder";
 
 /**
  * This type represents a set of *parameters* that the SDK can set to particular *properties* and *constraints*
@@ -83,18 +83,10 @@ export interface BasicDemandPropertyConfig {
 }
 
 export type BuildDemandOptions = Partial<{
-  workload: Partial<WorkloadDemandDirectorConfigOptions>;
+  activity: Partial<ActivityDemandDirectorConfigOptions>;
   payment: Partial<PaymentDemandDirectorConfigOptions>;
   basic: Partial<BasicDemandDirectorConfigOptions>;
 }>;
-
-/**
- * Most raw representation of the demand request body payload that's used to register the demand in Yagna
- */
-type DemandRequestBody = {
-  properties: Record<string, string | number | boolean | string[] | number[]>;
-  constraints: string;
-};
 
 export interface IDemandRepository {
   getById(id: string): Demand | undefined;
@@ -104,10 +96,10 @@ export interface IDemandRepository {
   getAll(): Demand[];
 }
 
-export class DemandDetails {
+export class DemandSpecification {
   constructor(
     /** Represents the low level demand request body that will be used to subscribe for offers matching our "computational resource needs" */
-    public readonly body: DemandRequestBody,
+    public readonly prototype: DemandBodyPrototype,
     public readonly paymentPlatform: string,
     public readonly expirationSec: number,
   ) {}
@@ -116,7 +108,7 @@ export class DemandDetails {
 export class Demand {
   constructor(
     public readonly id: string,
-    public readonly details: DemandDetails,
+    public readonly details: DemandSpecification,
   ) {}
 
   get paymentPlatform(): string {

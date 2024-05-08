@@ -1,5 +1,5 @@
 import { Observable } from "rxjs";
-import { Demand, DemandDetails } from "./demand";
+import { Demand, DemandSpecification } from "./demand";
 import YaTsClient from "ya-ts-client";
 import { ProposalNew } from "./proposal";
 
@@ -15,7 +15,7 @@ export interface MarketApi {
    * refreshed periodically (see `refreshDemand` method).
    * Use `unpublishDemand` to remove the demand from the market.
    */
-  publishDemandSpecification(specification: DemandDetails): Promise<Demand>;
+  publishDemandSpecification(specification: DemandSpecification): Promise<Demand>;
 
   /**
    * Remove the given demand from the market.
@@ -30,5 +30,5 @@ export interface MarketApi {
   /**
    * Sends a counter-proposal to the given proposal. Returns the newly created counter-proposal.
    */
-  counterProposal(receivedProposal: ProposalNew, specification: DemandDetails): Promise<ProposalNew>;
+  counterProposal(receivedProposal: ProposalNew, specification: DemandSpecification): Promise<ProposalNew>;
 }

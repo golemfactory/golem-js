@@ -166,12 +166,12 @@ export class Deployment {
     for (const pool of this.components.activityPools) {
       const { demandBuildOptions, agreementPoolOptions, activityPoolOptions } = this.prepareParams(pool.options);
 
-      const demandDetails = await this.modules.market.buildDemandDetails(demandBuildOptions.demand, payerDetails);
+      const demandSpecification = await this.modules.market.buildDemandDetails(demandBuildOptions.demand, payerDetails);
       const proposalPool = new DraftOfferProposalPool();
 
       const proposalSubscription = this.modules.market
         .startCollectingProposals({
-          demandDetails: demandDetails,
+          demandSpecification: demandSpecification,
           bufferSize: 10,
         })
         .subscribe({

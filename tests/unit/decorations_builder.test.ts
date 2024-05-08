@@ -6,13 +6,13 @@ describe("#DecorationsBuilder()", () => {
     it("should allow to add property", () => {
       const decorationsBuilder = new DemandDetailsBuilder();
       decorationsBuilder.addProperty("key", "value");
-      expect(decorationsBuilder.getDemandBodyPrototype().properties.length).toEqual(1);
+      expect(decorationsBuilder.getProduct().properties.length).toEqual(1);
     });
     it("should replace already existing property", () => {
       const decorationsBuilder = new DemandDetailsBuilder();
       decorationsBuilder.addProperty("key", "value").addProperty("key", "value2");
-      expect(decorationsBuilder.getDemandBodyPrototype().properties.length).toEqual(1);
-      expect(decorationsBuilder.getDemandBodyPrototype().properties[0].value).toEqual("value2");
+      expect(decorationsBuilder.getProduct().properties.length).toEqual(1);
+      expect(decorationsBuilder.getProduct().properties[0].value).toEqual("value2");
     });
     it("should provide fluent API", () => {
       const decorationsBuilder = new DemandDetailsBuilder();
@@ -24,32 +24,32 @@ describe("#DecorationsBuilder()", () => {
     it("should allow to add constrain", () => {
       const decorationsBuilder = new DemandDetailsBuilder();
       decorationsBuilder.addConstraint("key", "value");
-      expect(decorationsBuilder.getDemandBodyPrototype().constraints.length).toEqual(1);
+      expect(decorationsBuilder.getProduct().constraints.length).toEqual(1);
     });
     it("should allow to add constrain with >=", () => {
       const decorationsBuilder = new DemandDetailsBuilder();
       decorationsBuilder.addConstraint("key", "value", ComparisonOperator.GtEq);
-      expect(decorationsBuilder.getDemandBodyPrototype().constraints.length).toEqual(1);
+      expect(decorationsBuilder.getProduct().constraints.length).toEqual(1);
     });
     it("should allow to add constrain with <=", () => {
       const decorationsBuilder = new DemandDetailsBuilder();
       decorationsBuilder.addConstraint("key", "value", ComparisonOperator.LtEq);
-      expect(decorationsBuilder.getDemandBodyPrototype().constraints.length).toEqual(1);
+      expect(decorationsBuilder.getProduct().constraints.length).toEqual(1);
     });
     it("should allow to add constrain with >", () => {
       const decorationsBuilder = new DemandDetailsBuilder();
       decorationsBuilder.addConstraint("key", "value", ComparisonOperator.Gt);
-      expect(decorationsBuilder.getDemandBodyPrototype().constraints.length).toEqual(1);
+      expect(decorationsBuilder.getProduct().constraints.length).toEqual(1);
     });
     it("should allow to add constrain with <", () => {
       const decorationsBuilder = new DemandDetailsBuilder();
       decorationsBuilder.addConstraint("key", "value", ComparisonOperator.Lt);
-      expect(decorationsBuilder.getDemandBodyPrototype().constraints.length).toEqual(1);
+      expect(decorationsBuilder.getProduct().constraints.length).toEqual(1);
     });
     it("should allow to add constrain with =", () => {
       const decorationsBuilder = new DemandDetailsBuilder();
       decorationsBuilder.addConstraint("key", "value", ComparisonOperator.Eq);
-      expect(decorationsBuilder.getDemandBodyPrototype().constraints.length).toEqual(1);
+      expect(decorationsBuilder.getProduct().constraints.length).toEqual(1);
     });
     it("should provide fluent API", () => {
       const decorationsBuilder = new DemandDetailsBuilder();
@@ -70,8 +70,8 @@ describe("#DecorationsBuilder()", () => {
         properties: [],
       };
       const decorationsBuilder = new DemandDetailsBuilder();
-      decorationsBuilder.addDecoration(decoration);
-      expect(decorationsBuilder.getDemandBodyPrototype().constraints.length).toEqual(5);
+      decorationsBuilder.mergePrototype(decoration);
+      expect(decorationsBuilder.getProduct().constraints.length).toEqual(5);
     });
 
     it("should allow to add decorations", () => {
@@ -80,9 +80,9 @@ describe("#DecorationsBuilder()", () => {
         constraints: ["some_constraint=some_value"],
       };
       const decorationsBuilder = new DemandDetailsBuilder();
-      decorationsBuilder.addDecoration(decoration);
-      expect(decorationsBuilder.getDemandBodyPrototype().constraints.length).toEqual(1);
-      expect(decorationsBuilder.getDemandBodyPrototype().properties.length).toEqual(1);
+      decorationsBuilder.mergePrototype(decoration);
+      expect(decorationsBuilder.getProduct().constraints.length).toEqual(1);
+      expect(decorationsBuilder.getProduct().properties.length).toEqual(1);
     });
     it("should provide fluent API", () => {
       const decoration = {
@@ -90,7 +90,7 @@ describe("#DecorationsBuilder()", () => {
         constraints: ["some_constraint=some_value"],
       };
       const decorationsBuilder = new DemandDetailsBuilder();
-      const flAPI = decorationsBuilder.addDecoration(decoration);
+      const flAPI = decorationsBuilder.mergePrototype(decoration);
       expect(flAPI).toBeInstanceOf(DemandDetailsBuilder);
     });
 
@@ -100,7 +100,7 @@ describe("#DecorationsBuilder()", () => {
         constraints: ["some_invalid_constraint"],
       };
       const decorationsBuilder = new DemandDetailsBuilder();
-      expect(() => decorationsBuilder.addDecoration(decoration)).toThrow(
+      expect(() => decorationsBuilder.mergePrototype(decoration)).toThrow(
         new GolemInternalError('Unable to parse constraint "some_invalid_constraint"'),
       );
     });
@@ -117,10 +117,10 @@ describe("#DecorationsBuilder()", () => {
         .addProperty("key", "value")
         .addProperty("key2", "value");
 
-      expect(decorationsBuilder.getDemandBodyPrototype().constraints.length).toEqual(5);
-      expect(decorationsBuilder.getDemandBodyPrototype().properties.length).toEqual(2);
+      expect(decorationsBuilder.getProduct().constraints.length).toEqual(5);
+      expect(decorationsBuilder.getProduct().properties.length).toEqual(2);
 
-      expect(decorationsBuilder.getDemandBodyPrototype().constraints).toEqual([
+      expect(decorationsBuilder.getProduct().constraints).toEqual([
         "(key=value)",
         "(key>=value)",
         "(key<=value)",
@@ -128,7 +128,7 @@ describe("#DecorationsBuilder()", () => {
         "(key<value)",
       ]);
 
-      expect(decorationsBuilder.getDemandBodyPrototype().properties).toEqual([
+      expect(decorationsBuilder.getProduct().properties).toEqual([
         { key: "key", value: "value" },
         { key: "key2", value: "value" },
       ]);

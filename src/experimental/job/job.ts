@@ -7,7 +7,7 @@ import { EventEmitter } from "eventemitter3";
 import { GolemAbortError, GolemUserError } from "../../shared/error/golem-error";
 import { GolemNetwork } from "../../golem-network";
 import { Logger } from "../../shared/utils";
-import { WorkloadDemandDirectorConfigOptions } from "../../market/demand/options";
+import { ActivityDemandDirectorConfigOptions } from "../../market/demand/options";
 
 export enum JobState {
   New = "new",
@@ -22,7 +22,7 @@ export type RunJobOptions = {
   payment?: PaymentModuleOptions;
   agreement?: LegacyAgreementServiceOptions;
   network?: NetworkOptions;
-  package?: WorkloadDemandDirectorConfigOptions;
+  activity?: ActivityDemandDirectorConfigOptions;
   work?: WorkOptions;
 };
 

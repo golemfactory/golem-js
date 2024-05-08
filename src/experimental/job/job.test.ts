@@ -44,7 +44,7 @@ describe.skip("Job", () => {
         instance(mock(GolemNetwork)),
         {
           demand: {
-            workload: {
+            activity: {
               imageTag: "test_image",
             },
           },

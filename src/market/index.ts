@@ -1,5 +1,5 @@
 export { ProposalFilterNew } from "./proposal";
-export { Demand, BasicDemandPropertyConfig, DemandDetails } from "./demand";
+export { Demand, BasicDemandPropertyConfig, DemandSpecification } from "./demand";
 export { Proposal, ProposalNew, ProposalDTO } from "./proposal";
 export * as ProposalFilterFactory from "./strategy";
 export { GolemMarketError, MarketErrorCode } from "./error";
@@ -9,4 +9,4 @@ export * from "./market.module";
 export * from "./api";
 export { BasicDemandDirector } from "./demand/directors/basic-demand-director";
 export { PaymentDemandDirector } from "./demand/directors/payment-demand-director";
-export { WorkloadDemandDirector } from "./demand/directors/workload-demand-director";
+export { ActivityDemandDirector } from "./demand/directors/activity-demand-director";

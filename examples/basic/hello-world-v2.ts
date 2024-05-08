@@ -13,7 +13,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
     const lease = await glm.oneOf({
       demand: {
-        workload: { imageTag: "golem/alpine:latest" },
+        activity: { imageTag: "golem/alpine:latest" },
       },
       market: {
         rentHours: 12,

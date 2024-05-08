@@ -4,6 +4,8 @@ import { ProviderInfo } from "../agreement";
 import { Demand } from "./demand";
 import { withTimeout } from "../shared/utils/timeout";
 import { EventEmitter } from "eventemitter3";
+import { DemandBodyPrototype, DemandPropertyValue } from "./demand/demand-details-builder";
+import { DemandRequestBody } from "../shared/yagna";
 
 export type ProposalFilterNew = (proposal: ProposalNew) => boolean;
 
@@ -349,10 +351,15 @@ export class Proposal {
 
   async respond(chosenPlatform: string) {
     try {
-      this.subscription.details.body.properties["golem.com.payment.chosen-platform"] = chosenPlatform;
+      this.buildDemandRequestBody(this.subscription.details.prototype).properties["golem.com.payment.chosen-platform"] =
+        chosenPlatform;
 
       const counteringProposalId = await withTimeout(
-        this.api.counterProposalDemand(this.subscription.id, this.id, this.subscription.details.body),
+        this.api.counterProposalDemand(
+          this.subscription.id,
+          this.id,
+          this.buildDemandRequestBody(this.subscription.details.prototype),
+        ),
         20_000,
       );
 
@@ -415,5 +422,19 @@ export class Proposal {
         `golem.com.payment.platform.${this.subscription.paymentPlatform}.address`
       ] as string,
     };
+  }
+
+  /** @deprecated Glue code for migration purposes */
+  private buildDemandRequestBody(decorations: DemandBodyPrototype): DemandRequestBody {
+    let constraints: string;
+
+    if (!decorations.constraints.length) constraints = "(&)";
+    else if (decorations.constraints.length == 1) constraints = decorations.constraints[0];
+    else constraints = `(&${decorations.constraints.join("\n\t")})`;
+
+    const properties: Record<string, DemandPropertyValue> = {};
+    decorations.properties.forEach((prop) => (properties[prop.key] = prop.value));
+
+    return { constraints, properties };
   }
 }

@@ -11,7 +11,7 @@ async function main() {
 
   const job = golem.createJob<string>({
     demand: {
-      workload: {
+      activity: {
         imageTag: "severyn/espeak:latest",
       },
     },

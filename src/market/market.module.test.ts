@@ -2,7 +2,7 @@ import { _, imock, instance, mock, reset, verify, when } from "@johanblumenberg/
 import { Logger, YagnaApi } from "../shared/utils";
 import { MarketModuleImpl } from "./market.module";
 import * as YaTsClient from "ya-ts-client";
-import { Demand, DemandDetails, IDemandRepository } from "./demand";
+import { Demand, DemandSpecification, IDemandRepository } from "./demand";
 import { from, of, take, takeUntil, timer } from "rxjs";
 import { IProposalRepository, ProposalNew, ProposalProperties } from "./proposal";
 import { MarketApiAdapter } from "../shared/yagna/";
@@ -40,9 +40,9 @@ describe("Market module", () => {
     it("should build a demand", async () => {
       const payerDetails = new PayerDetails("holesky", "erc20", "0x123");
 
-      const demandDetails = await marketModule.buildDemandDetails(
+      const demandSpecification = await marketModule.buildDemandDetails(
         {
-          workload: {
+          activity: {
             imageHash: "AAAAHASHAAAA",
             imageUrl: "https://custom.image.url/",
           },
@@ -83,16 +83,16 @@ describe("Market module", () => {
         "golem.com.scheme.payu.payment-timeout-sec?": 42,
       };
 
-      expect(demandDetails.paymentPlatform).toBe(payerDetails.getPaymentPlatform());
-      expect(demandDetails.expirationSec).toBe(42);
-      expect(demandDetails.body.constraints).toEqual(`(&${expectedConstraints})`);
-      expect(demandDetails.body.properties).toEqual(expectedProperties);
+      expect(demandSpecification.paymentPlatform).toBe(payerDetails.getPaymentPlatform());
+      expect(demandSpecification.expirationSec).toBe(42);
+      expect(demandSpecification.prototype.constraints).toEqual(`(&${expectedConstraints})`);
+      expect(demandSpecification.prototype.properties).toEqual(expectedProperties);
     });
   });
 
   describe("publishDemand()", () => {
     it("should publish a demand", (done) => {
-      const mockSpecification = mock(DemandDetails);
+      const mockSpecification = mock(DemandSpecification);
       when(mockMarketApiAdapter.publishDemandSpecification(mockSpecification)).thenCall(async (specification) => {
         return new Demand("demand-id", specification);
       });
@@ -112,7 +112,7 @@ describe("Market module", () => {
     });
 
     it("should emit a new demand every specified interval", (done) => {
-      const mockSpecification = mock(DemandDetails);
+      const mockSpecification = mock(DemandSpecification);
       when(mockSpecification.expirationSec).thenReturn(10);
       const mockSpecificationInstance = instance(mockSpecification);
       const mockDemand0 = new Demand("demand-id-0", mockSpecificationInstance);
@@ -149,7 +149,7 @@ describe("Market module", () => {
     });
 
     it("should throw an error if the demand cannot be subscribed", (done) => {
-      const mockSpecification = mock(DemandDetails);
+      const mockSpecification = mock(DemandSpecification);
       const details = instance(mockSpecification);
 
       when(mockMarketApiAdapter.publishDemandSpecification(_)).thenReject(new Error("Triggered"));
@@ -224,7 +224,7 @@ describe("Market module", () => {
   describe("startCollectingProposals()", () => {
     it("should negotiate any initial proposals", (done) => {
       jest.useRealTimers();
-      const mockSpecification = mock(DemandDetails);
+      const mockSpecification = mock(DemandSpecification);
       const demandSpecification = instance(mockSpecification);
       const proposalProperties = {
         ["golem.inf.cpu.cores"]: 1,
@@ -293,7 +293,7 @@ describe("Market module", () => {
       const draftProposals: ProposalNew[] = [];
       marketModule
         .startCollectingProposals({
-          demandDetails: demandSpecification,
+          demandSpecification: demandSpecification,
           bufferSize: 1,
           proposalsBatchReleaseTimeoutMs: 10,
         })
@@ -321,7 +321,7 @@ describe("Market module", () => {
     it("should reduce proposals from the same provider", (done) => {
       jest.useRealTimers();
 
-      const mockSpecification = mock(DemandDetails);
+      const mockSpecification = mock(DemandSpecification);
       const demandSpecification = instance(mockSpecification);
       const proposalProperties = {
         ["golem.inf.cpu.cores"]: 1,
@@ -390,7 +390,7 @@ describe("Market module", () => {
       const draftProposals: ProposalNew[] = [];
       marketModule
         .startCollectingProposals({
-          demandDetails: demandSpecification,
+          demandSpecification: demandSpecification,
           bufferSize: 1,
           proposalsBatchReleaseTimeoutMs: 10,
         })

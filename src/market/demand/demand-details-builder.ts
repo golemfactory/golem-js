@@ -1,11 +1,9 @@
-import { MarketApi } from "ya-ts-client";
 import { GolemInternalError } from "../../shared/error/golem-error";
-import { DemandDetails } from "../demand";
 
 /**
  * Defines what kind of value data types one can expect in the raw Demand Properties
  */
-type DemandPropertyValue = string | number | boolean | string[] | number[];
+export type DemandPropertyValue = string | number | boolean | string[] | number[];
 
 /**
  * Represents a single property/attribute that can be set on a Demand to specify Requestor needs
@@ -13,7 +11,7 @@ type DemandPropertyValue = string | number | boolean | string[] | number[];
  * Demand properties should be understood as values for various parameters of the agreement between Provider and Requestor.
  * By defining properties on the demand, and negotiating them, the parties settle on the Terms & Conditions of the collaboration.
  */
-type DemandProperty = { key: string; value: DemandPropertyValue };
+export type DemandProperty = { key: string; value: DemandPropertyValue };
 
 /**
  * Represents requirements that the offer from the Provider has to meet, so that it's going to be matched by Yagna with the Demand
@@ -25,11 +23,15 @@ type DemandConstraint = {
 };
 
 /**
- * Represent a set of properties and constraints to be added to a market object (i.e. a demand or an offer).
+ * Data structure that represents details of the body for a demand subscription request
+ *
+ * This type belongs to our domain (use case layer), and will later be "serialized" to the body that's sent to
+ * Yagna. You should consider this as a "draft of the demand", that can be finalized by one of the {@link MarketApi}
+ * implementations.
  */
-type DemandBodyPrototype = {
-  properties: Array<DemandProperty>;
-  constraints: Array<string>;
+export type DemandBodyPrototype = {
+  properties: DemandProperty[];
+  constraints: string[];
 };
 
 export enum ComparisonOperator {
@@ -41,13 +43,15 @@ export enum ComparisonOperator {
 }
 
 /**
- * A helper class for creating market decorations for `Demand` published on the market.
+ * A helper class assisting in building the Golem Demand object
  *
  * Various directors should use the builder to add properties and constraints before the final product is received
  * from the builder and sent to yagna to subscribe for matched offers (proposals).
  *
  * The main purpose of the builder is to accept different requirements (properties and constraints) from different
  * directors who know what kind of properties and constraints are needed. Then it helps to merge these requirements.
+ *
+ * Demand -> DemandSpecification -> DemandPrototype -> DemandDTO
  */
 export class DemandDetailsBuilder {
   private properties: Array<DemandProperty> = [];
@@ -68,47 +72,28 @@ export class DemandDetailsBuilder {
     return this;
   }
 
-  getDemandBodyPrototype(): DemandBodyPrototype {
+  getProduct(): DemandBodyPrototype {
     return {
       properties: this.properties,
       constraints: this.constraints.map((c) => `(${c.key + c.comparisonOperator + c.value})`),
     };
   }
 
-  getProduct(paymentPlatform: string, expirationSec: number): DemandDetails {
-    const body = this.buildDemandRequestBody();
-    return new DemandDetails(body, paymentPlatform, expirationSec);
-  }
-
-  addDecoration(decoration: DemandBodyPrototype) {
-    if (decoration.properties) {
-      decoration.properties.forEach((prop) => {
+  mergePrototype(prototype: DemandBodyPrototype) {
+    if (prototype.properties) {
+      prototype.properties.forEach((prop) => {
         this.addProperty(prop.key, prop.value);
       });
     }
 
-    if (decoration.constraints) {
-      decoration.constraints.forEach((cons) => {
+    if (prototype.constraints) {
+      prototype.constraints.forEach((cons) => {
         const { key, value, comparisonOperator } = { ...this.parseConstraint(cons) };
         this.addConstraint(key, value, comparisonOperator);
       });
     }
 
     return this;
-  }
-
-  private buildDemandRequestBody(): MarketApi.DemandOfferBaseDTO {
-    const decorations = this.getDemandBodyPrototype();
-    let constraints: string;
-
-    if (!decorations.constraints.length) constraints = "(&)";
-    else if (decorations.constraints.length == 1) constraints = decorations.constraints[0];
-    else constraints = `(&${decorations.constraints.join("\n\t")})`;
-
-    const properties: Record<string, DemandPropertyValue> = {};
-    decorations.properties.forEach((prop) => (properties[prop.key] = prop.value));
-
-    return { constraints, properties };
   }
 
   private parseConstraint(constraint: string): DemandConstraint {

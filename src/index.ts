@@ -12,10 +12,7 @@ export * from "./agreement";
 export * from "./shared/error/golem-error";
 export * from "./network/tcpProxy";
 
-// Internals: TODO consider hiding
+// Internals
 export * from "./shared/utils";
 export * from "./shared/yagna";
 export * from "./shared/storage";
-
-// TODO: Can be removed?
-export * from "./activity/work";

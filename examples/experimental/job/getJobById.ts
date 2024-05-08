@@ -9,7 +9,7 @@ const golem = new JobManager({
 function startJob() {
   const job = golem.createJob<string>({
     demand: {
-      workload: { imageTag: "severyn/espeak:latest" },
+      activity: { imageTag: "severyn/espeak:latest" },
     },
     market: {}, // TODO: This should be optional
     payment: {

@@ -15,16 +15,16 @@ import { bufferTime, filter, map, Observable, OperatorFunction, switchMap, tap }
 import { IProposalRepository, ProposalFilterNew, ProposalNew } from "./proposal";
 import { DemandDetailsBuilder } from "./demand/demand-details-builder";
 import { IAgreementApi } from "../agreement/agreement";
-import { BuildDemandOptions, DemandDetails, IDemandRepository } from "./demand";
+import { BuildDemandOptions, DemandSpecification, IDemandRepository } from "./demand";
 import { ProposalsBatch } from "./proposals_batch";
 import { PayerDetails } from "../payment/PayerDetails";
 import { IFileServer } from "../activity";
 import { StorageProvider } from "../shared/storage";
-import { WorkloadDemandDirectorConfig } from "./demand/directors/workload-demand-director-config";
+import { ActivityDemandDirectorConfig } from "./demand/directors/activity-demand-director-config";
 import { BasicDemandDirector } from "./demand/directors/basic-demand-director";
 import { PaymentDemandDirector } from "./demand/directors/payment-demand-director";
-import { WorkloadDemandDirector } from "./demand/directors/workload-demand-director";
-import { WorkloadDemandDirectorConfigOptions } from "./demand/options";
+import { ActivityDemandDirector } from "./demand/directors/activity-demand-director";
+import { ActivityDemandDirectorConfigOptions } from "./demand/options";
 import { BasicDemandDirectorConfig } from "./demand/directors/basic-demand-director-config";
 import { PaymentDemandDirectorConfig } from "./demand/directors/payment-demand-director-config";
 
@@ -88,7 +88,7 @@ export interface MarketModule {
    * The method returns a DemandSpecification that can be used to publish the demand to the market,
    * for example using the `publishDemand` method.
    */
-  buildDemandDetails(options: BuildDemandOptions, payerDetails: PayerDetails): Promise<DemandDetails>;
+  buildDemandDetails(options: BuildDemandOptions, payerDetails: PayerDetails): Promise<DemandSpecification>;
 
   /**
    * Publishes the demand to the market and handles refreshing it when needed.
@@ -96,7 +96,7 @@ export interface MarketModule {
    * Keep in mind that since this method returns an observable, nothing will happen until you subscribe to it.
    * Unsubscribing will remove the demand from the market.
    */
-  publishDemand(demandDetails: DemandDetails): Observable<Demand>;
+  publishDemand(demandSpec: DemandSpecification): Observable<Demand>;
 
   /**
    * Subscribes to the proposals for the given demand.
@@ -109,7 +109,7 @@ export interface MarketModule {
    * Sends a counter-offer to the provider. Note that to get the provider's response to your
    * counter you should listen to proposals sent to yagna using `subscribeForProposals`.
    */
-  negotiateProposal(receivedProposal: ProposalNew, counterDemandDetails: DemandDetails): Promise<ProposalNew>;
+  negotiateProposal(receivedProposal: ProposalNew, counterDemandSpec: DemandSpecification): Promise<ProposalNew>;
 
   /**
    * Internally
@@ -144,7 +144,7 @@ export interface MarketModule {
    * Unsubscribing from the observable will stop the process and remove the demand from the market.
    */
   startCollectingProposals(options: {
-    demandDetails: DemandDetails;
+    demandSpecification: DemandSpecification;
     filter?: ProposalFilterNew;
     bufferSize?: number;
   }): Observable<ProposalNew[]>;
@@ -205,7 +205,7 @@ export class MarketModuleImpl implements MarketModule {
     this.fileServer = deps.fileServer;
   }
 
-  async buildDemandDetails(options: BuildDemandOptions, payerDetails: PayerDetails): Promise<DemandDetails> {
+  async buildDemandDetails(options: BuildDemandOptions, payerDetails: PayerDetails): Promise<DemandSpecification> {
     const builder = new DemandDetailsBuilder();
 
     // Instruct the builder what's required
@@ -213,19 +213,25 @@ export class MarketModuleImpl implements MarketModule {
     const basicDirector = new BasicDemandDirector(basicConfig);
     basicDirector.apply(builder);
 
-    const workloadOptions = options.workload
-      ? await this.applyLocalGVMIServeSupport(options.workload)
-      : options.workload;
+    const workloadOptions = options.activity
+      ? await this.applyLocalGVMIServeSupport(options.activity)
+      : options.activity;
 
-    const workloadConfig = new WorkloadDemandDirectorConfig(workloadOptions);
-    const workloadDirector = new WorkloadDemandDirector(workloadConfig);
+    const workloadConfig = new ActivityDemandDirectorConfig(workloadOptions);
+    const workloadDirector = new ActivityDemandDirector(workloadConfig);
     await workloadDirector.apply(builder);
 
     const paymentConfig = new PaymentDemandDirectorConfig(options.payment);
     const paymentDirector = new PaymentDemandDirector(payerDetails, paymentConfig);
     paymentDirector.apply(builder);
 
-    return builder.getProduct(payerDetails.getPaymentPlatform(), basicConfig.expirationSec);
+    const spec = new DemandSpecification(
+      builder.getProduct(),
+      payerDetails.getPaymentPlatform(),
+      basicConfig.expirationSec,
+    );
+
+    return spec;
   }
 
   /**
@@ -233,7 +239,7 @@ export class MarketModuleImpl implements MarketModule {
    *
    * Use Case: serve the GVMI from the requestor and avoid registry
    */
-  private async applyLocalGVMIServeSupport(options: Partial<WorkloadDemandDirectorConfigOptions>) {
+  private async applyLocalGVMIServeSupport(options: Partial<ActivityDemandDirectorConfigOptions>) {
     if (options.imageUrl?.startsWith("file://")) {
       const sourcePath = options.imageUrl?.replace("file://", "");
 
@@ -255,12 +261,12 @@ export class MarketModuleImpl implements MarketModule {
     return options;
   }
 
-  publishDemand(demandDetails: DemandDetails): Observable<Demand> {
+  publishDemand(demandSpecification: DemandSpecification): Observable<Demand> {
     return new Observable<Demand>((subscriber) => {
       let currentDemand: Demand;
 
       const subscribeDemand = async () => {
-        currentDemand = await this.deps.marketApi.publishDemandSpecification(demandDetails);
+        currentDemand = await this.deps.marketApi.publishDemandSpecification(demandSpecification);
         subscriber.next(currentDemand);
         this.logger.debug("Subscribing for proposals matched with the demand", { demand: currentDemand });
       };
@@ -280,7 +286,7 @@ export class MarketModuleImpl implements MarketModule {
             new GolemMarketError(`Could not publish demand on the market`, MarketErrorCode.SubscriptionFailed, err),
           ),
         );
-      }, demandDetails.expirationSec * 1000);
+      }, demandSpecification.expirationSec * 1000);
 
       return () => {
         clearInterval(interval);
@@ -302,7 +308,7 @@ export class MarketModuleImpl implements MarketModule {
     );
   }
 
-  async negotiateProposal(receivedProposal: ProposalNew, offer: DemandDetails): Promise<ProposalNew> {
+  async negotiateProposal(receivedProposal: ProposalNew, offer: DemandSpecification): Promise<ProposalNew> {
     return this.deps.marketApi.counterProposal(receivedProposal, offer);
   }
 
@@ -338,14 +344,14 @@ export class MarketModuleImpl implements MarketModule {
   }
 
   startCollectingProposals(options: {
-    demandDetails: DemandDetails;
+    demandSpecification: DemandSpecification;
     filter?: ProposalFilterNew;
     bufferSize?: number;
     bufferTimeout?: number;
     minProposalsBatchSize?: number;
     proposalsBatchReleaseTimeoutMs?: number;
   }): Observable<ProposalNew[]> {
-    return this.publishDemand(options.demandDetails).pipe(
+    return this.publishDemand(options.demandSpecification).pipe(
       // for each demand created -> start collecting all proposals
       switchMap((demand) => {
         this.demandRepo.add(demand);
@@ -362,7 +368,7 @@ export class MarketModuleImpl implements MarketModule {
       // for each valid proposal -> start negotiating if it's not in draft state yet
       tap((proposal) => {
         if (proposal.isInitial()) {
-          this.negotiateProposal(proposal, options.demandDetails);
+          this.negotiateProposal(proposal, options.demandSpecification);
         }
       }),
       // for each proposal -> add them to the cache
