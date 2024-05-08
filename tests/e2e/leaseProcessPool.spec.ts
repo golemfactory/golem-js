@@ -1,6 +1,6 @@
 import { DraftOfferProposalPool, GolemNetwork, YagnaApi } from "../../src";
 
-describe("ActivityPool", () => {
+describe("LeaseProcessPool", () => {
   const glm = new GolemNetwork();
   const yagnaApi = new YagnaApi();
   const modules = {

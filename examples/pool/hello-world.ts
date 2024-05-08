@@ -61,7 +61,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
       payment: glm.payment,
     };
 
-    const pool = depModules.market.createLeasePool(proposalPool, allocation, {
+    const pool = depModules.market.createLeaseProcessPool(proposalPool, allocation, {
       replicas: { max: CONCURRENCY },
       logger,
     });
@@ -81,7 +81,6 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
     proposalSubscription.unsubscribe();
     await pool.drainAndClear();
-    await allocation.release();
   } catch (err) {
     console.error("Pool execution failed:", err);
   } finally {
