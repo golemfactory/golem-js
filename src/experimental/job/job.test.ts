@@ -3,7 +3,6 @@ import { Agreement, AgreementPoolService, IActivityApi } from "../../agreement";
 import { WorkContext } from "../../activity/work";
 import { NetworkNode, NetworkService } from "../../network";
 import { Activity } from "../../activity";
-import { Package } from "../../market/package";
 import { anything, imock, instance, mock, verify, when } from "@johanblumenberg/ts-mockito";
 import { Logger } from "../../shared/utils";
 import { GolemNetwork } from "../../golem-network";
@@ -24,7 +23,6 @@ describe.skip("Job", () => {
     it("stops the activity and releases the agreement when canceled", async () => {
       jest.spyOn(AgreementPoolService.prototype, "run").mockResolvedValue();
       jest.spyOn(NetworkService.prototype, "run").mockResolvedValue();
-      jest.spyOn(Package, "create").mockReturnValue({} as unknown as Package);
       jest.spyOn(WorkContext.prototype, "before").mockResolvedValue();
       jest.spyOn(AgreementPoolService.prototype, "releaseAgreement").mockResolvedValue();
       jest.spyOn(NetworkService.prototype, "addNode").mockResolvedValue({} as unknown as NetworkNode);
@@ -46,7 +44,9 @@ describe.skip("Job", () => {
         instance(mock(GolemNetwork)),
         {
           demand: {
-            imageTag: "test_image",
+            activity: {
+              imageTag: "test_image",
+            },
           },
           market: {},
           payment: {

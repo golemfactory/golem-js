@@ -1,5 +1,5 @@
 import { anything, imock, instance, mock, reset, when } from "@johanblumenberg/ts-mockito";
-import { Agreement, AgreementPoolService, DemandNew, Proposal, ProposalNew, YagnaApi } from "../../src";
+import { Agreement, AgreementPoolService, Demand, Proposal, ProposalNew, YagnaApi } from "../../src";
 import { MarketApi } from "ya-ts-client";
 import { LoggerMock } from "../mock/utils/logger";
 import { IAgreementApi } from "../../src/agreement/agreement";
@@ -15,7 +15,7 @@ const marketApi = instance(mockMarket);
 const mockAgreementApi = imock<IAgreementApi>();
 
 const createProposal = (id: string) => {
-  const demandMock = mock(DemandNew);
+  const demandMock = mock(Demand);
   when(demandMock.id).thenReturn(id);
   const testDemand = instance(demandMock);
 

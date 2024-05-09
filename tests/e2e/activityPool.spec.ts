@@ -1,12 +1,4 @@
-import {
-  ActivityPool,
-  AgreementPool,
-  Allocation,
-  DraftOfferProposalPool,
-  GolemNetwork,
-  Package,
-  YagnaApi,
-} from "../../src";
+import { ActivityPool, AgreementPool, DraftOfferProposalPool, GolemNetwork, YagnaApi } from "../../src";
 
 describe("ActivityPool", () => {
   const glm = new GolemNetwork();
@@ -35,9 +27,11 @@ describe("ActivityPool", () => {
     proposalPool = new DraftOfferProposalPool();
     agreementPool = new AgreementPool(proposalPool, glm.services.agreementApi);
     const payerDetails = await modules.payment.getPayerDetails();
-    const demandSpecification = await modules.market.buildDemand(
+    const demandSpecification = await modules.market.buildDemandDetails(
       {
-        imageTag: "golem/alpine:latest",
+        activity: {
+          imageTag: "golem/alpine:latest",
+        },
       },
       payerDetails,
     );

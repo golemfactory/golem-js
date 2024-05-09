@@ -1,6 +1,6 @@
 import { IProposalRepository, ProposalNew } from "../../../market/proposal";
 import { MarketApi } from "ya-ts-client";
-import { DemandNew } from "../../../market";
+import { Demand } from "../../../market";
 import { CacheService } from "../../cache/CacheService";
 
 export class ProposalRepository implements IProposalRepository {
@@ -18,7 +18,7 @@ export class ProposalRepository implements IProposalRepository {
     return this.cache.get(id);
   }
 
-  async getByDemandAndId(demand: DemandNew, id: string): Promise<ProposalNew> {
+  async getByDemandAndId(demand: Demand, id: string): Promise<ProposalNew> {
     const dto = await this.api.getProposalOffer(demand.id, id);
     return new ProposalNew(dto, demand);
   }

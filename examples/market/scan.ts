@@ -19,9 +19,9 @@ import { GolemNetwork, ProposalNew } from "@golem-sdk/golem-js";
     await glm.connect();
 
     const payerDetails = await glm.payment.getPayerDetails();
-    const demandSpecification = await glm.market.buildDemand(
+    const demandSpecification = await glm.market.buildDemandDetails(
       {
-        imageTag: "golem/alpine:latest",
+        activity: { imageTag: "golem/alpine:latest" },
       },
       payerDetails,
     );

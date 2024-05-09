@@ -1,7 +1,7 @@
 import { DataTransferProtocol, DeploymentOptions, GolemDeploymentBuilder, MarketOptions } from "./experimental";
 import { defaultLogger, Logger, YagnaApi } from "./shared/utils";
 import {
-  DemandNew,
+  Demand,
   DemandSpec,
   DraftOfferProposalPool,
   MarketApi,
@@ -125,7 +125,7 @@ export class GolemNetwork {
 
       this.storageProvider = this.createStorageProvider();
 
-      const demandCache = new CacheService<DemandNew>();
+      const demandCache = new CacheService<Demand>();
       const proposalCache = new CacheService<ProposalNew>();
 
       const demandRepository = new DemandRepository(this.yagna.market, demandCache);
@@ -237,7 +237,7 @@ export class GolemNetwork {
       logger: this.logger,
     });
     const payerDetails = await this.payment.getPayerDetails();
-    const demandSpecification = await this.market.buildDemand(demand.demand, payerDetails);
+    const demandSpecification = await this.market.buildDemandDetails(demand.demand, payerDetails);
 
     const proposalSubscription = this.market
       .startCollectingProposals({

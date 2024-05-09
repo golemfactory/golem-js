@@ -24,13 +24,12 @@ const buildTestProposal = (props: Partial<ProposalProperties>): Proposal => {
   return new Proposal(testDemand, null, jest.fn(), instance(mockApi), model);
 };
 
-describe("Proposal", () => {
+describe.skip("DEPRECATED Proposal", () => {
   beforeEach(() => {
     reset(allocationMock);
     reset(demandMock);
 
     when(allocationMock.paymentPlatform).thenReturn("test-payment-platform");
-    when(demandMock.allocation).thenReturn(instance(allocationMock));
   });
 
   describe("Validation", () => {

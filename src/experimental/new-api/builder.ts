@@ -5,7 +5,7 @@ import { GolemNetwork } from "../../golem-network";
 import { validateDeployment } from "./validate-deployment";
 import { MarketOptions } from "../../market";
 import { PaymentModuleOptions } from "../../payment";
-import { DemandOptionsNew } from "../../market/demand";
+import { BuildDemandOptions } from "../../market/demand";
 
 interface DeploymentOptions {
   replicas?: number | { min: number; max: number };
@@ -13,7 +13,7 @@ interface DeploymentOptions {
 }
 
 export interface CreateActivityPoolOptions {
-  demand: DemandOptionsNew;
+  demand: BuildDemandOptions;
   market: MarketOptions;
   deployment?: DeploymentOptions;
   payment?: PaymentModuleOptions;

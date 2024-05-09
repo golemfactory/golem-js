@@ -2,13 +2,14 @@ import * as YaTsClient from "ya-ts-client";
 import * as EnvUtils from "../utils/env";
 import { GolemConfigError, GolemPlatformError } from "../error/golem-error";
 import { v4 } from "uuid";
-import { defaultLogger, ElementOf, Logger } from "../utils";
+import { defaultLogger, Logger } from "../utils";
 import semverSatisfies from "semver/functions/satisfies.js"; // .js added for ESM compatibility
 import semverCoerce from "semver/functions/coerce.js"; // .js added for ESM compatibility
 import { BehaviorSubject, Observable } from "rxjs";
 import { CancellablePoll, EventReaderFactory } from "./event-reader-factory";
 import EventSource from "eventsource";
 import { StreamingBatchEvent } from "../../activity/results";
+import { ElementOf } from "../utils/types";
 
 export type YagnaOptions = {
   apiKey?: string;
