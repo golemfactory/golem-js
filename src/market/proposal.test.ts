@@ -7,7 +7,6 @@ import { GolemMarketError, MarketErrorCode } from "./error";
 
 const allocationMock = mock(Allocation);
 const demandMock = mock(Demand);
-const mockApi = mock(MarketApi.RequestorService);
 
 const testDemand = instance(demandMock);
 
@@ -21,10 +20,10 @@ const buildTestProposal = (props: Partial<ProposalProperties>): Proposal => {
     properties: props,
   };
 
-  return new Proposal(testDemand, null, jest.fn(), instance(mockApi), model);
+  return new Proposal(model, testDemand);
 };
 
-describe.skip("DEPRECATED Proposal", () => {
+describe("Proposal", () => {
   beforeEach(() => {
     reset(allocationMock);
     reset(demandMock);

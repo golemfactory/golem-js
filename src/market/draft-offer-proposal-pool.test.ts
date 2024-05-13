@@ -1,16 +1,16 @@
 import { DraftOfferProposalPool } from "./draft-offer-proposal-pool";
 import { instance, mock, when } from "@johanblumenberg/ts-mockito";
-import { ProposalNew } from "./index";
+import { Proposal } from "./index";
 
 describe("Draft Offer Proposal Pool", () => {
   // GIVEN
-  const mockProposal = mock(ProposalNew);
+  const mockProposal = mock(Proposal);
   // Most of the time we're testing the case when the Proposal is in `Draft` status
   when(mockProposal.isDraft()).thenReturn(true);
 
   // NOTE: ts-mockito instance + JS Set.add() doesn't play along, 2x instance(mockProposal) produces "the same" value for (Set.add)
 
-  const secondMockProposal = mock(ProposalNew);
+  const secondMockProposal = mock(Proposal);
   // Most of the time we're testing the case when the Proposal is in `Draft` status
   when(secondMockProposal.isDraft()).thenReturn(true);
 
@@ -41,7 +41,7 @@ describe("Draft Offer Proposal Pool", () => {
       it("Will throw an error if the proposal is not in Draft state", async () => {
         const pool = new DraftOfferProposalPool();
 
-        const proposalMock = mock(ProposalNew);
+        const proposalMock = mock(Proposal);
         when(proposalMock.isDraft()).thenReturn(false);
 
         expect(() => pool.add(instance(proposalMock))).toThrow("Cannot add a non-draft proposal to the pool");

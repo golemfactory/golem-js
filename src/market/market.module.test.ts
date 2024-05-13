@@ -4,7 +4,7 @@ import { MarketModuleImpl } from "./market.module";
 import * as YaTsClient from "ya-ts-client";
 import { Demand, DemandSpecification, IDemandRepository } from "./demand";
 import { from, of, take, takeUntil, timer } from "rxjs";
-import { IProposalRepository, ProposalNew, ProposalProperties } from "./proposal";
+import { IProposalRepository, Proposal, ProposalProperties } from "./proposal";
 import { MarketApiAdapter } from "../shared/yagna/";
 import { IActivityApi, IPaymentApi } from "../agreement";
 import { IAgreementApi } from "../agreement/agreement";
@@ -201,10 +201,16 @@ describe("Market module", () => {
   });
 
   describe("subscribeForProposals()", () => {
-    it("should filter out rejected proposals", (done) => {
+    it("should filter out proposals that are invalid (in terms of content)", (done) => {
       const mockDemand = instance(imock<Demand>());
       const mockProposalDTO = imock<YaTsClient.MarketApi.ProposalEventDTO["proposal"]>();
+
       when(mockProposalDTO.issuerId).thenReturn("issuer-id");
+      when(mockProposalDTO.properties).thenReturn({
+        "golem.com.usage.vector": ["golem.usage.duration_sec", "golem.usage.cpu_sec"],
+        "golem.com.pricing.model.linear.coeffs": [0.1, 0.1],
+      });
+
       const mockProposalEventSuccess: YaTsClient.MarketApi.ProposalEventDTO = {
         eventType: "ProposalEvent",
         eventDate: "0000-00-00",
@@ -273,7 +279,7 @@ describe("Market module", () => {
         },
         properties: proposalProperties,
         getEstimatedCost: () => 1,
-      } as ProposalNew;
+      } as Proposal;
       const proposal2 = {
         isInitial: () => true,
         isDraft: () => false,
@@ -286,7 +292,7 @@ describe("Market module", () => {
         },
         properties: proposalProperties,
         getEstimatedCost: () => 1,
-      } as ProposalNew;
+      } as Proposal;
       const proposal3 = {
         isInitial: () => false,
         isDraft: () => true,
@@ -299,7 +305,7 @@ describe("Market module", () => {
         },
         properties: proposalProperties,
         getEstimatedCost: () => 1,
-      } as ProposalNew;
+      } as Proposal;
       const proposal4 = {
         isInitial: () => false,
         isDraft: () => true,
@@ -312,7 +318,7 @@ describe("Market module", () => {
         },
         properties: proposalProperties,
         getEstimatedCost: () => 1,
-      } as ProposalNew;
+      } as Proposal;
 
       marketModule.publishDemand = jest.fn().mockReturnValue(of({ id: "demand-id" }));
       marketModule.negotiateProposal = jest.fn();
@@ -320,7 +326,7 @@ describe("Market module", () => {
         .fn()
         .mockReturnValue(from([proposal1, proposal2, proposal3, proposal4]));
 
-      const draftProposals: ProposalNew[] = [];
+      const draftProposals: Proposal[] = [];
       marketModule
         .startCollectingProposals({
           demandSpecification,
@@ -370,7 +376,7 @@ describe("Market module", () => {
         },
         properties: proposalProperties,
         getEstimatedCost: () => 99,
-      } as ProposalNew;
+      } as Proposal;
       const proposal2 = {
         isInitial: () => true,
         isDraft: () => false,
@@ -383,7 +389,7 @@ describe("Market module", () => {
         },
         properties: proposalProperties,
         getEstimatedCost: () => 1,
-      } as ProposalNew;
+      } as Proposal;
       const proposal3 = {
         isInitial: () => true,
         isDraft: () => false,
@@ -396,7 +402,7 @@ describe("Market module", () => {
         },
         properties: proposalProperties,
         getEstimatedCost: () => 1,
-      } as ProposalNew;
+      } as Proposal;
       const proposal4 = {
         isInitial: () => false,
         isDraft: () => true,
@@ -409,7 +415,7 @@ describe("Market module", () => {
         },
         properties: proposalProperties,
         getEstimatedCost: () => 1,
-      } as ProposalNew;
+      } as Proposal;
 
       marketModule.publishDemand = jest.fn().mockReturnValue(of({ id: "demand-id" }));
       marketModule.negotiateProposal = jest.fn();
@@ -417,7 +423,7 @@ describe("Market module", () => {
         .fn()
         .mockReturnValue(from([proposal1, proposal2, proposal3, proposal4]));
 
-      const draftProposals: ProposalNew[] = [];
+      const draftProposals: Proposal[] = [];
       marketModule
         .startCollectingProposals({
           demandSpecification,

@@ -2,18 +2,8 @@ import { MarketApi } from "ya-ts-client";
 import { GolemMarketError, MarketErrorCode } from "./error";
 import { ProviderInfo } from "../agreement";
 import { Demand } from "./demand";
-import { withTimeout } from "../shared/utils/timeout";
-import { EventEmitter } from "eventemitter3";
-import { DemandBodyPrototype, DemandPropertyValue } from "./demand/demand-body-builder";
-import { DemandRequestBody } from "../shared/yagna";
 
-export type ProposalFilterNew = (proposal: ProposalNew) => boolean;
-
-export interface ProposalEvents {
-  proposalResponded: (details: { id: string; provider: ProviderInfo; counteringProposalId: string }) => void;
-  proposalRejected: (details: { id: string; provider: ProviderInfo; parentId: string | null; reason: string }) => void;
-  proposalFailed: (details: { id: string; provider: ProviderInfo; parentId: string | null; reason: string }) => void;
-}
+export type ProposalFilterNew = (proposal: Proposal) => boolean;
 
 export type PricingInfo = {
   cpuSec: number;
@@ -68,9 +58,9 @@ export interface ProposalDTO {
 }
 
 export interface IProposalRepository {
-  add(proposal: ProposalNew): ProposalNew;
-  getById(id: string): ProposalNew | undefined;
-  getByDemandAndId(demand: Demand, id: string): Promise<ProposalNew>;
+  add(proposal: Proposal): Proposal;
+  getById(id: string): Proposal | undefined;
+  getByDemandAndId(demand: Demand, id: string): Promise<Proposal>;
 }
 
 /**
@@ -80,7 +70,7 @@ export interface IProposalRepository {
  *
  * FIXME #yagna should allow obtaining proposals via the API even if I'm not the owner!
  */
-export class ProposalNew {
+export class Proposal {
   public readonly id: string;
   public provider: ProviderInfo;
   public readonly previousProposalId: string | null = null;
@@ -92,6 +82,46 @@ export class ProposalNew {
     this.id = model.proposalId;
     this.provider = this.getProviderInfo();
     this.previousProposalId = model.prevProposalId ?? null;
+
+    this.validate();
+  }
+
+  /**
+   * Validates if the proposal satisfies basic business rules, is complete and thus safe to interact with
+   *
+   * Use this method before executing any important logic, to ensure that you're working with correct, complete data
+   */
+  protected validate(): void | never {
+    const usageVector = this.properties["golem.com.usage.vector"];
+    const priceVector = this.properties["golem.com.pricing.model.linear.coeffs"];
+
+    if (!usageVector || usageVector.length === 0) {
+      throw new GolemMarketError(
+        "Broken proposal: the `golem.com.usage.vector` does not contain price information",
+        MarketErrorCode.InvalidProposal,
+      );
+    }
+
+    if (!priceVector || priceVector.length === 0) {
+      throw new GolemMarketError(
+        "Broken proposal: the `golem.com.pricing.model.linear.coeffs` does not contain pricing information",
+        MarketErrorCode.InvalidProposal,
+      );
+    }
+
+    if (usageVector.length < priceVector.length - 1) {
+      throw new GolemMarketError(
+        "Broken proposal: the `golem.com.usage.vector` has less pricing information than `golem.com.pricing.model.linear.coeffs`",
+        MarketErrorCode.InvalidProposal,
+      );
+    }
+
+    if (priceVector.length < usageVector.length) {
+      throw new GolemMarketError(
+        "Broken proposal: the `golem.com.pricing.model.linear.coeffs` should contain 3 price values",
+        MarketErrorCode.InvalidProposal,
+      );
+    }
   }
 
   isInitial(): boolean {
@@ -165,26 +195,12 @@ export class ProposalNew {
   }
 
   public isValid(): boolean {
-    const usageVector = this.properties["golem.com.usage.vector"];
-    const priceVector = this.properties["golem.com.pricing.model.linear.coeffs"];
-
-    if (!usageVector || usageVector.length === 0) {
+    try {
+      this.validate();
+      return true;
+    } catch (err) {
       return false;
     }
-
-    if (!priceVector || priceVector.length === 0) {
-      return false;
-    }
-
-    if (usageVector.length < priceVector.length - 1) {
-      return false;
-    }
-
-    if (priceVector.length < usageVector.length) {
-      return false;
-    }
-
-    return true;
   }
 
   public getProviderInfo(): ProviderInfo {
@@ -194,216 +210,9 @@ export class ProposalNew {
       walletAddress: this.properties[`golem.com.payment.platform.${this.demand.paymentPlatform}.address`] as string,
     };
   }
-}
-
-/**
- * Proposal module - an object representing an offer in the state of a proposal from the provider.
- * @deprecated
- */
-export class Proposal {
-  id: string;
-  readonly issuerId: string;
-  readonly provider: ProviderInfo;
-  readonly properties: ProposalProperties;
-  readonly constraints: string;
-  readonly timestamp: string;
-  counteringProposalId: string | null;
-  private readonly state: MarketApi.ProposalDTO["state"];
-  private readonly prevProposalId: string | undefined;
-  public readonly events = new EventEmitter<ProposalEvents>();
-
-  /**
-   * Create proposal for given subscription ID
-   *
-   * @param subscription
-   * @param parentId
-   * @param setCounteringProposalReference
-   * @param api
-   * @param model
-   */
-  constructor(
-    public readonly subscription: Demand,
-    private readonly parentId: string | null,
-    private readonly setCounteringProposalReference: (id: string, parentId: string) => void | null,
-    private readonly api: MarketApi.RequestorService,
-    public readonly model: MarketApi.ProposalDTO,
-  ) {
-    this.id = model.proposalId;
-    this.issuerId = model.issuerId;
-    this.properties = model.properties as ProposalProperties;
-    this.constraints = model.constraints;
-    this.state = model.state;
-    this.prevProposalId = model.prevProposalId;
-    this.timestamp = model.timestamp;
-    this.counteringProposalId = null;
-    this.provider = this.getProviderInfo();
-
-    // Run validation to ensure that the Proposal is in a complete and correct state
-    this.validate();
-  }
-
-  getDto(): ProposalDTO {
-    return {
-      transferProtocol: this.properties["golem.activity.caps.transfer.protocol"],
-      cpuBrand: this.properties["golem.inf.cpu.brand"],
-      cpuCapabilities: this.properties["golem.inf.cpu.capabilities"],
-      cpuCores: this.properties["golem.inf.cpu.cores"],
-      cpuThreads: this.properties["golem.inf.cpu.threads"],
-      memory: this.properties["golem.inf.mem.gib"],
-      storage: this.properties["golem.inf.storage.gib"],
-      publicNet: this.properties["golem.node.net.is-public"],
-      runtimeCapabilities: this.properties["golem.runtime.capabilities"],
-      runtimeName: this.properties["golem.runtime.name"],
-      state: this.state,
-    };
-  }
-
-  get pricing(): PricingInfo {
-    const usageVector = this.properties["golem.com.usage.vector"];
-    const priceVector = this.properties["golem.com.pricing.model.linear.coeffs"];
-
-    const envIdx = usageVector.findIndex((ele) => ele === "golem.usage.duration_sec");
-    const cpuIdx = usageVector.findIndex((ele) => ele === "golem.usage.cpu_sec");
-
-    const envSec = priceVector[envIdx] ?? 0.0;
-    const cpuSec = priceVector[cpuIdx] ?? 0.0;
-    const start = priceVector[priceVector.length - 1];
-
-    return {
-      cpuSec,
-      envSec,
-      start,
-    };
-  }
-
-  /**
-   * Validates if the proposal satisfies basic business rules, is complete and thus safe to interact with
-   *
-   * Use this method before executing any important logic, to ensure that you're working with correct, complete data
-   */
-  protected validate(): void | never {
-    const usageVector = this.properties["golem.com.usage.vector"];
-    const priceVector = this.properties["golem.com.pricing.model.linear.coeffs"];
-
-    if (!usageVector || usageVector.length === 0) {
-      throw new GolemMarketError(
-        "Broken proposal: the `golem.com.usage.vector` does not contain price information",
-        MarketErrorCode.InvalidProposal,
-      );
-    }
-
-    if (!priceVector || priceVector.length === 0) {
-      throw new GolemMarketError(
-        "Broken proposal: the `golem.com.pricing.model.linear.coeffs` does not contain pricing information",
-        MarketErrorCode.InvalidProposal,
-      );
-    }
-
-    if (usageVector.length < priceVector.length - 1) {
-      throw new GolemMarketError(
-        "Broken proposal: the `golem.com.usage.vector` has less pricing information than `golem.com.pricing.model.linear.coeffs`",
-        MarketErrorCode.InvalidProposal,
-      );
-    }
-
-    if (priceVector.length < usageVector.length) {
-      throw new GolemMarketError(
-        "Broken proposal: the `golem.com.pricing.model.linear.coeffs` should contain 3 price values",
-        MarketErrorCode.InvalidProposal,
-      );
-    }
-  }
-
-  isInitial(): boolean {
-    return this.state === "Initial";
-  }
-
-  isDraft(): boolean {
-    return this.state === "Draft";
-  }
-
-  isExpired(): boolean {
-    return this.state === "Expired";
-  }
-
-  isRejected(): boolean {
-    return this.state === "Rejected";
-  }
-
-  async reject(reason = "no reason") {
-    try {
-      // eslint-disable-next-line @typescript-eslint/ban-types
-      await this.api.rejectProposalOffer(this.subscription.id, this.id, { message: reason as {} });
-      this.events.emit("proposalRejected", {
-        id: this.id,
-        provider: this.provider,
-        parentId: this.id,
-        reason,
-      });
-    } catch (error) {
-      throw new GolemMarketError(
-        `Failed to reject proposal. ${error?.response?.data?.message || error}`,
-        MarketErrorCode.ProposalRejectionFailed,
-        error,
-      );
-    }
-  }
-
-  async respond(chosenPlatform: string) {
-    try {
-      this.buildDemandRequestBody(this.subscription.details.prototype).properties["golem.com.payment.chosen-platform"] =
-        chosenPlatform;
-
-      const counteringProposalId = await withTimeout(
-        this.api.counterProposalDemand(
-          this.subscription.id,
-          this.id,
-          this.buildDemandRequestBody(this.subscription.details.prototype),
-        ),
-        20_000,
-      );
-
-      if (!counteringProposalId || typeof counteringProposalId !== "string") {
-        throw new GolemMarketError(
-          "Failed to respond proposal. No countering proposal ID returned",
-          MarketErrorCode.ProposalResponseFailed,
-        );
-      }
-      if (this.setCounteringProposalReference) {
-        this.setCounteringProposalReference(this.id, counteringProposalId);
-      }
-      this.events.emit("proposalResponded", {
-        id: this.id,
-        provider: this.provider,
-        counteringProposalId,
-      });
-      return counteringProposalId;
-    } catch (error) {
-      const reason = error?.response?.data?.message || error.toString();
-      this.events.emit("proposalFailed", {
-        id: this.id,
-        provider: this.provider,
-        parentId: this.id,
-        reason,
-      });
-      throw new GolemMarketError(
-        `Failed to respond proposal. ${reason}`,
-        MarketErrorCode.ProposalResponseFailed,
-        error,
-      );
-    }
-  }
 
   hasPaymentPlatform(paymentPlatform: string): boolean {
     return this.getProviderPaymentPlatforms().includes(paymentPlatform);
-  }
-
-  /**
-   * Proposal cost estimation based on CPU, Env and startup costs
-   */
-  getEstimatedCost(): number {
-    const threadsNo = this.properties["golem.inf.cpu.threads"] || 1;
-    return this.pricing.start + this.pricing.cpuSec * threadsNo + this.pricing.envSec;
   }
 
   private getProviderPaymentPlatforms(): string[] {
@@ -412,29 +221,5 @@ export class Proposal {
         .filter((prop) => prop.startsWith("golem.com.payment.platform."))
         .map((prop) => prop.split(".")[4]) || []
     );
-  }
-
-  private getProviderInfo(): ProviderInfo {
-    return {
-      id: this.issuerId,
-      name: this.properties["golem.node.id.name"],
-      walletAddress: this.properties[
-        `golem.com.payment.platform.${this.subscription.paymentPlatform}.address`
-      ] as string,
-    };
-  }
-
-  /** @deprecated Glue code for migration purposes */
-  private buildDemandRequestBody(decorations: DemandBodyPrototype): DemandRequestBody {
-    let constraints: string;
-
-    if (!decorations.constraints.length) constraints = "(&)";
-    else if (decorations.constraints.length == 1) constraints = decorations.constraints[0];
-    else constraints = `(&${decorations.constraints.join("\n\t")})`;
-
-    const properties: Record<string, DemandPropertyValue> = {};
-    decorations.properties.forEach((prop) => (properties[prop.key] = prop.value));
-
-    return { constraints, properties };
   }
 }

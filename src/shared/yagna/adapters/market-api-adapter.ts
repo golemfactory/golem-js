@@ -1,5 +1,13 @@
 import { Observable } from "rxjs";
-import { Demand, DemandSpecification, MarketApi, ProposalEvent, ProposalNew } from "../../../market";
+import {
+  Demand,
+  DemandSpecification,
+  MarketApi,
+  ProposalEvent,
+  Proposal,
+  GolemMarketError,
+  MarketErrorCode,
+} from "../../../market";
 import { YagnaApi } from "../yagnaApi";
 import YaTsClient from "ya-ts-client";
 import { GolemInternalError } from "../../error/golem-error";
@@ -8,6 +16,17 @@ import { DemandBodyPrototype, DemandPropertyValue } from "../../../market/demand
 
 /**
  * A bit more user-friendly type definition of DemandOfferBaseDTO from ya-ts-client
+ *
+ * That's probably one of the most confusing elements around Golem Protocol and the API specificiation:
+ *
+ * - Providers create Offers
+ * - Requestors create Demands
+ * - Demands are used to create a subscription for Proposals - Initial ones reflect the Offer that was matched with the Demand used to subscribe
+ * - Once the proposal is countered, it's countered with a "counter proposal" which is no longer Offer + Demand,
+ *   but rather a sketch of the agreement - here both parties try to agree on the values of certain properties that
+ *   are interesting from their perspective. These "negotiated proposals (of) ...." are buit using DemandOffeBaseDTO
+ *
+ * #FIXME yagna - feedback in the note above
  */
 export type DemandRequestBody = {
   properties: Record<string, string | number | boolean | string[] | number[]>;
@@ -23,7 +42,7 @@ export class MarketApiAdapter implements MarketApi {
   async publishDemandSpecification(demand: DemandSpecification): Promise<Demand> {
     const idOrError = await this.yagnaApi.market.subscribeDemand(this.buildDemandRequestBody(demand.prototype));
 
-    if (typeof idOrError !== "string") {
+    if (idOrError && typeof idOrError !== "string") {
       throw new Error(`Failed to subscribe to demand: ${idOrError.message}`);
     }
 
@@ -79,20 +98,38 @@ export class MarketApiAdapter implements MarketApi {
     });
   }
 
-  async counterProposal(receivedProposal: ProposalNew, demand: DemandSpecification): Promise<ProposalNew> {
+  async counterProposal(receivedProposal: Proposal, demand: DemandSpecification): Promise<void> {
     const bodyClone = structuredClone(this.buildDemandRequestBody(demand.prototype));
 
     bodyClone.properties["golem.com.payment.chosen-platform"] = demand.paymentPlatform;
+
     const maybeNewId = await this.yagnaApi.market.counterProposalDemand(
       receivedProposal.demand.id,
       receivedProposal.id,
       bodyClone,
     );
+
+    this.logger.debug("Proposal counter result from yagna", { result: maybeNewId });
+
     if (typeof maybeNewId !== "string") {
       throw new GolemInternalError(`Counter proposal failed ${maybeNewId.message}`);
     }
-    const counterProposalDto = await this.yagnaApi.market.getProposalOffer(receivedProposal.demand.id, maybeNewId);
-    return new ProposalNew(counterProposalDto, receivedProposal.demand);
+  }
+
+  async rejectProposal(receivedProposal: Proposal, reason: string): Promise<void> {
+    try {
+      const result = await this.yagnaApi.market.rejectProposalOffer(receivedProposal.demand.id, receivedProposal.id, {
+        message: reason,
+      });
+
+      this.logger.debug("Proposal rejection result from yagna", { response: result });
+    } catch (error) {
+      throw new GolemMarketError(
+        `Failed to reject proposal. ${error?.response?.data?.message || error}`,
+        MarketErrorCode.ProposalRejectionFailed,
+        error,
+      );
+    }
   }
 
   private buildDemandRequestBody(decorations: DemandBodyPrototype): DemandRequestBody {

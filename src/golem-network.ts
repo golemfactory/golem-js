@@ -7,7 +7,7 @@ import {
   MarketApi,
   MarketModule,
   MarketModuleImpl,
-  ProposalNew,
+  Proposal,
 } from "./market";
 import { PaymentModule, PaymentModuleImpl, PaymentModuleOptions } from "./payment";
 import { ActivityModule, ActivityModuleImpl, IFileServer } from "./activity";
@@ -66,7 +66,7 @@ export type GolemServices = {
   activityApi: IActivityApi;
   agreementApi: IAgreementApi;
   marketApi: MarketApi;
-  proposalCache: CacheService<ProposalNew>;
+  proposalCache: CacheService<Proposal>;
   proposalRepository: IProposalRepository;
   demandRepository: IDemandRepository;
   fileServer: IFileServer;
@@ -126,7 +126,7 @@ export class GolemNetwork {
       this.storageProvider = this.createStorageProvider();
 
       const demandCache = new CacheService<Demand>();
-      const proposalCache = new CacheService<ProposalNew>();
+      const proposalCache = new CacheService<Proposal>();
 
       const demandRepository = new DemandRepository(this.yagna.market, demandCache);
       const proposalRepository = new ProposalRepository(this.yagna.market, proposalCache);

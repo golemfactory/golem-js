@@ -3,7 +3,7 @@
  * Lets learn what is the average start price
  * Notice that we don't need to even allocate any budget for this operation
  */
-import { GolemNetwork, ProposalNew } from "@golem-sdk/golem-js";
+import { GolemNetwork, Proposal } from "@golem-sdk/golem-js";
 
 (async () => {
   const glm = new GolemNetwork({
@@ -26,7 +26,7 @@ import { GolemNetwork, ProposalNew } from "@golem-sdk/golem-js";
       payerDetails,
     );
 
-    const offers = new Set<ProposalNew>();
+    const offers = new Set<Proposal>();
 
     console.log("Scanning the market...");
     const subscription = glm.market

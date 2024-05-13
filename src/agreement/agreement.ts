@@ -1,6 +1,6 @@
 import { Logger, YagnaOptions } from "../shared/utils";
 import { MarketApi } from "ya-ts-client";
-import { ProposalNew } from "../market";
+import { Proposal } from "../market";
 import { AgreementDTO } from "./service";
 import { InvoiceFilter } from "../payment/service";
 
@@ -41,7 +41,7 @@ export interface IAgreementApi {
    *
    * @return An agreement that's in a "Proposal" state (not yet usable for activity creation)
    */
-  createAgreement(proposal: ProposalNew): Promise<Agreement>;
+  createAgreement(proposal: Proposal): Promise<Agreement>;
 
   /**
    * Request creating an agreement from the provided proposal, send it to the Provider and wait for approval
@@ -50,7 +50,7 @@ export interface IAgreementApi {
    *
    * @return An agreement that's already in an "Approved" state and can be used to create activities on the Provider
    */
-  proposeAgreement(proposal: ProposalNew): Promise<Agreement>;
+  proposeAgreement(proposal: Proposal): Promise<Agreement>;
 
   // TODO: Detach return type from ya-ts-client!
   getAgreementState(id: string): Promise<MarketApi.AgreementDTO["state"]>;
