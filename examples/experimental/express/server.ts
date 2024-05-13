@@ -25,7 +25,9 @@ app.post("/tts", async (req, res) => {
   }
   const job = golemClient.createJob({
     demand: {
-      imageTag: "severyn/espeak:latest",
+      activity: {
+        imageTag: "severyn/espeak:latest",
+      },
     },
     market: {}, // TODO: This should be optional
     payment: {

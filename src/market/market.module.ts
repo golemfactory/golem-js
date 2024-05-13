@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
-import { DemandConfig, DemandNew, DraftOfferProposalPool, MarketApi, NewProposalEvent } from "./index";
 import {
   Agreement,
   IActivityApi,
@@ -9,18 +8,32 @@ import {
   LeaseProcessPool,
   LeaseProcessPoolOptions,
 } from "../agreement";
+import {
+  Demand,
+  DraftOfferProposalPool,
+  GolemMarketError,
+  MarketApi,
+  MarketErrorCode,
+  NewProposalEvent,
+} from "./index";
 import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
 import { Allocation } from "../payment";
-import { Package } from "./package";
 import { bufferTime, filter, map, Observable, OperatorFunction, switchMap, tap } from "rxjs";
 import { IProposalRepository, ProposalFilterNew, ProposalNew } from "./proposal";
-import { ComparisonOperator, DecorationsBuilder } from "./builder";
+import { DemandBodyBuilder } from "./demand/demand-body-builder";
 import { IAgreementApi } from "../agreement/agreement";
-import { DemandOptionsNew, DemandSpecification, IDemandRepository } from "./demand";
+import { BuildDemandOptions, DemandSpecification, IDemandRepository } from "./demand";
 import { ProposalsBatch } from "./proposals_batch";
 import { PayerDetails } from "../payment/PayerDetails";
 import { IFileServer } from "../activity";
 import { StorageProvider } from "../shared/storage";
+import { ActivityDemandDirectorConfig } from "./demand/directors/activity-demand-director-config";
+import { BasicDemandDirector } from "./demand/directors/basic-demand-director";
+import { PaymentDemandDirector } from "./demand/directors/payment-demand-director";
+import { ActivityDemandDirector } from "./demand/directors/activity-demand-director";
+import { ActivityDemandDirectorConfigOptions } from "./demand/options";
+import { BasicDemandDirectorConfig } from "./demand/directors/basic-demand-director-config";
+import { PaymentDemandDirectorConfig } from "./demand/directors/payment-demand-director-config";
 
 export interface MarketEvents {}
 
@@ -28,7 +41,7 @@ export interface MarketEvents {}
  * Use by legacy demand publishing code
  */
 export interface DemandBuildParams {
-  demand: DemandOptionsNew;
+  demand: BuildDemandOptions;
   market: MarketOptions;
 }
 
@@ -44,20 +57,9 @@ export type PaymentSpec = {
  * Represents the new demand specification which is accepted by GolemNetwork and MarketModule
  */
 export interface DemandSpec {
-  demand: DemandOptionsNew;
+  demand: BuildDemandOptions;
   market: MarketOptions;
   payment: PaymentSpec;
-}
-
-export interface DemandResources {
-  /** The minimum CPU requirement for each service instance. */
-  minCpu: number;
-
-  /* The minimum memory requirement (in Gibibyte) for each service instance. */
-  minMemGib: number;
-
-  /** The minimum storage requirement (in Gibibyte) for each service instance. */
-  minStorageGib: number;
 }
 
 export interface MarketOptions {
@@ -93,7 +95,7 @@ export interface MarketModule {
    * The method returns a DemandSpecification that can be used to publish the demand to the market,
    * for example using the `publishDemand` method.
    */
-  buildDemand(options: DemandOptionsNew, payerDetails: PayerDetails): Promise<DemandSpecification>;
+  buildDemandDetails(options: BuildDemandOptions, payerDetails: PayerDetails): Promise<DemandSpecification>;
 
   /**
    * Publishes the demand to the market and handles refreshing it when needed.
@@ -101,20 +103,20 @@ export interface MarketModule {
    * Keep in mind that since this method returns an observable, nothing will happen until you subscribe to it.
    * Unsubscribing will remove the demand from the market.
    */
-  publishDemand(offer: DemandSpecification): Observable<DemandNew>;
+  publishDemand(demandSpec: DemandSpecification): Observable<Demand>;
 
   /**
    * Subscribes to the proposals for the given demand.
    * If an error occurs, the observable will emit an error and complete.
    * Keep in mind that since this method returns an observable, nothing will happen until you subscribe to it.
    */
-  subscribeForProposals(demand: DemandNew): Observable<ProposalNew>;
+  subscribeForProposals(demand: Demand): Observable<ProposalNew>;
 
   /**
    * Sends a counter-offer to the provider. Note that to get the provider's response to your
    * counter you should listen to proposals sent to yagna using `subscribeForProposals`.
    */
-  negotiateProposal(receivedProposal: ProposalNew, offer: DemandSpecification): Promise<ProposalNew>;
+  negotiateProposal(receivedProposal: ProposalNew, counterDemandSpec: DemandSpecification): Promise<ProposalNew>;
 
   /**
    * Internally
@@ -166,6 +168,20 @@ export interface MarketModule {
   ): LeaseProcessPool;
 }
 
+/**
+ * Represents a director that can instruct DemandDetailsBuilder
+ *
+ * Demand is a complex concept in Golem. Requestors can place arbitrary properties and constraints on such
+ * market entity. While the demand request on the Golem Protocol level is a flat list of properties (key, value) and constraints,
+ * from the Requestor side they form logical groups that make sense together.
+ *
+ * The idea behind Directors is that you can encapsulate this grouping knowledge along with validation logic etc to prepare
+ * all the final demand request body properties in a more controlled and organized manner.
+ */
+export interface IDemandDirector {
+  apply(builder: DemandBodyBuilder): Promise<void> | void;
+}
+
 export class MarketModuleImpl implements MarketModule {
   events: EventEmitter<MarketEvents> = new EventEmitter<MarketEvents>();
 
@@ -200,41 +216,33 @@ export class MarketModuleImpl implements MarketModule {
     this.fileServer = deps.fileServer;
   }
 
-  async buildDemand(options: DemandOptionsNew, payerDetails: PayerDetails): Promise<DemandSpecification> {
-    const demandSpecificConfig = new DemandConfig(options);
-    const builder = new DecorationsBuilder();
+  async buildDemandDetails(options: BuildDemandOptions, payerDetails: PayerDetails): Promise<DemandSpecification> {
+    const builder = new DemandBodyBuilder();
 
-    // Apply additional modifications
-    const pkgOptions = await this.applyLocalGVMIServeSupport(options);
-    const taskDecorations = await Package.create(pkgOptions).getDemandDecoration();
+    // Instruct the builder what's required
+    const basicConfig = new BasicDemandDirectorConfig(options.basic);
+    const basicDirector = new BasicDemandDirector(basicConfig);
+    basicDirector.apply(builder);
 
-    builder.addDecorations([taskDecorations]);
+    const workloadOptions = options.activity
+      ? await this.applyLocalGVMIServeSupport(options.activity)
+      : options.activity;
 
-    // Configure basic properties
-    builder
-      .addProperty("golem.srv.caps.multi-activity", true)
-      .addProperty("golem.srv.comp.expiration", Date.now() + demandSpecificConfig.expirationSec * 1000)
-      .addProperty("golem.node.debug.subnet", demandSpecificConfig.subnetTag)
-      .addProperty("golem.com.payment.debit-notes.accept-timeout?", demandSpecificConfig.debitNotesAcceptanceTimeoutSec)
-      .addConstraint("golem.com.pricing.model", "linear")
-      .addConstraint("golem.node.debug.subnet", demandSpecificConfig.subnetTag);
+    const workloadConfig = new ActivityDemandDirectorConfig(workloadOptions);
+    const workloadDirector = new ActivityDemandDirector(workloadConfig);
+    await workloadDirector.apply(builder);
 
-    // Configure mid-agreement payments
-    builder
-      .addProperty(
-        "golem.com.scheme.payu.debit-note.interval-sec?",
-        demandSpecificConfig.midAgreementDebitNoteIntervalSec,
-      )
-      .addProperty("golem.com.scheme.payu.payment-timeout-sec?", demandSpecificConfig.midAgreementPaymentTimeoutSec);
+    const paymentConfig = new PaymentDemandDirectorConfig(options.payment);
+    const paymentDirector = new PaymentDemandDirector(payerDetails, paymentConfig);
+    paymentDirector.apply(builder);
 
-    // Configure payment platform
-    builder
-      .addProperty(`golem.com.payment.platform.${payerDetails.getPaymentPlatform()}.address`, payerDetails.address)
-      .addConstraint(`golem.com.payment.platform.${payerDetails.getPaymentPlatform()}.address`, "*")
-      .addProperty("golem.com.payment.protocol.version", "2")
-      .addConstraint("golem.com.payment.protocol.version", "1", ComparisonOperator.Gt);
+    const spec = new DemandSpecification(
+      builder.getProduct(),
+      payerDetails.getPaymentPlatform(),
+      basicConfig.expirationSec,
+    );
 
-    return builder.getDemandSpecification(payerDetails.getPaymentPlatform(), demandSpecificConfig.expirationSec);
+    return spec;
   }
 
   /**
@@ -242,7 +250,7 @@ export class MarketModuleImpl implements MarketModule {
    *
    * Use Case: serve the GVMI from the requestor and avoid registry
    */
-  private async applyLocalGVMIServeSupport(options: DemandOptionsNew) {
+  private async applyLocalGVMIServeSupport(options: Partial<ActivityDemandDirectorConfigOptions>) {
     if (options.imageUrl?.startsWith("file://")) {
       const sourcePath = options.imageUrl?.replace("file://", "");
 
@@ -264,34 +272,45 @@ export class MarketModuleImpl implements MarketModule {
     return options;
   }
 
-  publishDemand(demandSpecification: DemandSpecification): Observable<DemandNew> {
-    return new Observable<DemandNew>((subscriber) => {
-      let currentDemand: DemandNew;
+  publishDemand(demandSpecification: DemandSpecification): Observable<Demand> {
+    return new Observable<Demand>((subscriber) => {
+      let currentDemand: Demand;
 
       const subscribeDemand = async () => {
         currentDemand = await this.deps.marketApi.publishDemandSpecification(demandSpecification);
         subscriber.next(currentDemand);
         this.logger.debug("Subscribing for proposals matched with the demand", { demand: currentDemand });
       };
-      subscribeDemand();
+
+      subscribeDemand().catch((err) =>
+        subscriber.error(
+          new GolemMarketError(`Could not publish demand on the market`, MarketErrorCode.SubscriptionFailed, err),
+        ),
+      );
 
       const interval = setInterval(() => {
         this.deps.marketApi
           .unpublishDemand(currentDemand)
           .catch((error) => this.logger.error("Failed to unpublish demand", error));
-        subscribeDemand();
+        subscribeDemand().catch((err) =>
+          subscriber.error(
+            new GolemMarketError(`Could not publish demand on the market`, MarketErrorCode.SubscriptionFailed, err),
+          ),
+        );
       }, demandSpecification.expirationSec * 1000);
 
       return () => {
         clearInterval(interval);
-        this.deps.marketApi
-          .unpublishDemand(currentDemand)
-          .catch((error) => this.logger.error("Failed to unpublish demand", error));
+        if (currentDemand) {
+          this.deps.marketApi.unpublishDemand(currentDemand).catch((error) => {
+            this.logger.error("Failed to unpublish demand", error);
+          });
+        }
       };
     });
   }
 
-  subscribeForProposals(demand: DemandNew): Observable<ProposalNew> {
+  subscribeForProposals(demand: Demand): Observable<ProposalNew> {
     return this.deps.marketApi.observeProposalEvents(demand).pipe(
       // filter out proposal rejection events
       filter((event) => !("reason" in event)),

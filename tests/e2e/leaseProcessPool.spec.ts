@@ -26,9 +26,11 @@ describe("LeaseProcessPool", () => {
   beforeEach(async () => {
     proposalPool = new DraftOfferProposalPool();
     const payerDetails = await modules.payment.getPayerDetails();
-    const demandSpecification = await modules.market.buildDemand(
+    const demandSpecification = await modules.market.buildDemandDetails(
       {
-        imageTag: "golem/alpine:latest",
+        activity: {
+          imageTag: "golem/alpine:latest",
+        },
       },
       payerDetails,
     );

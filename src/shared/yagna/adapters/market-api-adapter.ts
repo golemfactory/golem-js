@@ -1,9 +1,18 @@
 import { Observable } from "rxjs";
-import { DemandNew, DemandSpecification, MarketApi, ProposalEvent, ProposalNew } from "../../../market";
+import { Demand, DemandSpecification, MarketApi, ProposalEvent, ProposalNew } from "../../../market";
 import { YagnaApi } from "../yagnaApi";
 import YaTsClient from "ya-ts-client";
 import { GolemInternalError } from "../../error/golem-error";
 import { Logger } from "../../utils";
+import { DemandBodyPrototype, DemandPropertyValue } from "../../../market/demand/demand-body-builder";
+
+/**
+ * A bit more user-friendly type definition of DemandOfferBaseDTO from ya-ts-client
+ */
+export type DemandRequestBody = {
+  properties: Record<string, string | number | boolean | string[] | number[]>;
+  constraints: string;
+};
 
 export class MarketApiAdapter implements MarketApi {
   constructor(
@@ -11,23 +20,27 @@ export class MarketApiAdapter implements MarketApi {
     private readonly logger: Logger,
   ) {}
 
-  async publishDemandSpecification(specification: DemandSpecification): Promise<DemandNew> {
-    const idOrError = await this.yagnaApi.market.subscribeDemand(specification.decoration);
+  async publishDemandSpecification(demand: DemandSpecification): Promise<Demand> {
+    const idOrError = await this.yagnaApi.market.subscribeDemand(this.buildDemandRequestBody(demand.prototype));
+
     if (typeof idOrError !== "string") {
       throw new Error(`Failed to subscribe to demand: ${idOrError.message}`);
     }
-    return new DemandNew(idOrError, specification);
+
+    return new Demand(idOrError, demand);
   }
 
-  async unpublishDemand(demand: DemandNew): Promise<void> {
+  async unpublishDemand(demand: Demand): Promise<void> {
     const result = await this.yagnaApi.market.unsubscribeDemand(demand.id);
+
     if (result?.message) {
       throw new Error(`Failed to unsubscribe from demand: ${result.message}`);
     }
+
     this.logger.info("Demand unsubscribed", { demand: demand.id });
   }
 
-  observeProposalEvents(demand: DemandNew): Observable<ProposalEvent> {
+  observeProposalEvents(demand: Demand): Observable<ProposalEvent> {
     return new Observable<ProposalEvent>((subscriber) => {
       let proposalPromise: YaTsClient.MarketApi.CancelablePromise<ProposalEvent[]>;
       let isCancelled = false;
@@ -53,9 +66,12 @@ export class MarketApiAdapter implements MarketApi {
           }
           subscriber.error(error);
         }
-        longPoll();
+
+        longPoll().catch((err) => subscriber.error(err));
       };
-      longPoll();
+
+      longPoll().catch((err) => subscriber.error(err));
+
       return () => {
         isCancelled = true;
         proposalPromise.cancel();
@@ -63,18 +79,32 @@ export class MarketApiAdapter implements MarketApi {
     });
   }
 
-  async counterProposal(receivedProposal: ProposalNew, specification: DemandSpecification): Promise<ProposalNew> {
-    const decorationClone = structuredClone(specification.decoration);
-    decorationClone.properties["golem.com.payment.chosen-platform"] = specification.paymentPlatform;
+  async counterProposal(receivedProposal: ProposalNew, demand: DemandSpecification): Promise<ProposalNew> {
+    const bodyClone = structuredClone(this.buildDemandRequestBody(demand.prototype));
+
+    bodyClone.properties["golem.com.payment.chosen-platform"] = demand.paymentPlatform;
     const maybeNewId = await this.yagnaApi.market.counterProposalDemand(
       receivedProposal.demand.id,
       receivedProposal.id,
-      decorationClone,
+      bodyClone,
     );
     if (typeof maybeNewId !== "string") {
       throw new GolemInternalError(`Counter proposal failed ${maybeNewId.message}`);
     }
     const counterProposalDto = await this.yagnaApi.market.getProposalOffer(receivedProposal.demand.id, maybeNewId);
     return new ProposalNew(counterProposalDto, receivedProposal.demand);
+  }
+
+  private buildDemandRequestBody(decorations: DemandBodyPrototype): DemandRequestBody {
+    let constraints: string;
+
+    if (!decorations.constraints.length) constraints = "(&)";
+    else if (decorations.constraints.length == 1) constraints = decorations.constraints[0];
+    else constraints = `(&${decorations.constraints.join("\n\t")})`;
+
+    const properties: Record<string, DemandPropertyValue> = {};
+    decorations.properties.forEach((prop) => (properties[prop.key] = prop.value));
+
+    return { constraints, properties };
   }
 }

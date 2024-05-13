@@ -2,7 +2,7 @@ import { _, imock, instance, mock, reset, verify, when } from "@johanblumenberg/
 import { Logger, YagnaApi } from "../shared/utils";
 import { MarketModuleImpl } from "./market.module";
 import * as YaTsClient from "ya-ts-client";
-import { DemandNew, DemandSpecification, IDemandRepository } from "./demand";
+import { Demand, DemandSpecification, IDemandRepository } from "./demand";
 import { from, of, take, takeUntil, timer } from "rxjs";
 import { IProposalRepository, ProposalNew, ProposalProperties } from "./proposal";
 import { MarketApiAdapter } from "../shared/yagna/";
@@ -11,6 +11,7 @@ import { IAgreementApi } from "../agreement/agreement";
 import { PayerDetails } from "../payment/PayerDetails";
 import { IFileServer } from "../activity";
 import { StorageProvider } from "../shared/storage";
+import { GolemMarketError } from "./error";
 
 const mockMarketApiAdapter = mock(MarketApiAdapter);
 const mockYagna = mock(YagnaApi);
@@ -39,46 +40,83 @@ describe("Market module", () => {
     it("should build a demand", async () => {
       const payerDetails = new PayerDetails("holesky", "erc20", "0x123");
 
-      const demandSpecification = await marketModule.buildDemand(
+      const demandSpecification = await marketModule.buildDemandDetails(
         {
-          imageHash: "AAAAHASHAAAA",
-          imageUrl: "https://custom.image.url/",
-          expirationSec: 42,
-          debitNotesAcceptanceTimeoutSec: 42,
-          midAgreementDebitNoteIntervalSec: 42,
-          midAgreementPaymentTimeoutSec: 42,
+          activity: {
+            imageHash: "AAAAHASHAAAA",
+            imageUrl: "https://custom.image.url/",
+          },
+          basic: {
+            expirationSec: 42,
+          },
+          payment: {
+            debitNotesAcceptanceTimeoutSec: 42,
+            midAgreementDebitNoteIntervalSec: 42,
+            midAgreementPaymentTimeoutSec: 42,
+          },
         },
         payerDetails,
       );
 
       const expectedConstraints = [
-        "(golem.inf.mem.gib>=0.5)",
-        "(golem.inf.storage.gib>=2)",
-        "(golem.runtime.name=vm)",
-        "(golem.inf.cpu.cores>=1)",
-        "(golem.inf.cpu.threads>=1)",
         "(golem.com.pricing.model=linear)",
         "(golem.node.debug.subnet=public)",
+        "(golem.runtime.name=vm)",
+        "(golem.inf.mem.gib>=0.5)",
+        "(golem.inf.storage.gib>=2)",
+        "(golem.inf.cpu.cores>=1)",
+        "(golem.inf.cpu.threads>=1)",
         "(golem.com.payment.platform.erc20-holesky-tglm.address=*)",
         "(golem.com.payment.protocol.version>1)",
-      ].join("\n\t");
-      const expectedProperties = {
-        "golem.srv.comp.vm.package_format": "gvmkit-squash",
-        "golem.srv.comp.task_package": "hash:sha3:AAAAHASHAAAA:https://custom.image.url/",
-        "golem.com.payment.platform.erc20-holesky-tglm.address": "0x123",
-        "golem.com.payment.protocol.version": "2",
-        "golem.srv.caps.multi-activity": true,
-        "golem.srv.comp.expiration": Date.now() + 42 * 1000,
-        "golem.node.debug.subnet": "public",
-        "golem.com.payment.debit-notes.accept-timeout?": 42,
-        "golem.com.scheme.payu.debit-note.interval-sec?": 42,
-        "golem.com.scheme.payu.payment-timeout-sec?": 42,
-      };
+      ];
+
+      const expectedProperties = [
+        {
+          key: "golem.srv.caps.multi-activity",
+          value: true,
+        },
+        {
+          key: "golem.srv.comp.expiration",
+          value: Date.now() + 42 * 1000,
+        },
+        {
+          key: "golem.node.debug.subnet",
+          value: "public",
+        },
+        {
+          key: "golem.srv.comp.vm.package_format",
+          value: "gvmkit-squash",
+        },
+        {
+          key: "golem.srv.comp.task_package",
+          value: "hash:sha3:AAAAHASHAAAA:https://custom.image.url/",
+        },
+        {
+          key: "golem.com.scheme.payu.debit-note.interval-sec?",
+          value: 42,
+        },
+        {
+          key: "golem.com.scheme.payu.payment-timeout-sec?",
+          value: 42,
+        },
+        {
+          key: "golem.com.payment.debit-notes.accept-timeout?",
+          value: 42,
+        },
+        {
+          key: "golem.com.payment.platform.erc20-holesky-tglm.address",
+          value: "0x123",
+        },
+        {
+          key: "golem.com.payment.protocol.version",
+          value: "2",
+        },
+      ];
 
       expect(demandSpecification.paymentPlatform).toBe(payerDetails.getPaymentPlatform());
       expect(demandSpecification.expirationSec).toBe(42);
-      expect(demandSpecification.decoration.constraints).toBe(`(&${expectedConstraints})`);
-      expect(demandSpecification.decoration.properties).toEqual(expectedProperties);
+      expect(demandSpecification.prototype.constraints).toEqual(expect.arrayContaining(expectedConstraints));
+      expect(demandSpecification.prototype.properties).toEqual(expectedProperties);
     });
   });
 
@@ -86,14 +124,14 @@ describe("Market module", () => {
     it("should publish a demand", (done) => {
       const mockSpecification = mock(DemandSpecification);
       when(mockMarketApiAdapter.publishDemandSpecification(mockSpecification)).thenCall(async (specification) => {
-        return new DemandNew("demand-id", specification);
+        return new Demand("demand-id", specification);
       });
 
       const demand$ = marketModule.publishDemand(mockSpecification);
       demand$.pipe(take(1)).subscribe({
         next: (demand) => {
           try {
-            expect(demand).toEqual(new DemandNew("demand-id", mockSpecification));
+            expect(demand).toEqual(new Demand("demand-id", mockSpecification));
             done();
           } catch (error) {
             done(error);
@@ -107,9 +145,9 @@ describe("Market module", () => {
       const mockSpecification = mock(DemandSpecification);
       when(mockSpecification.expirationSec).thenReturn(10);
       const mockSpecificationInstance = instance(mockSpecification);
-      const mockDemand0 = new DemandNew("demand-id-0", mockSpecificationInstance);
-      const mockDemand1 = new DemandNew("demand-id-1", mockSpecificationInstance);
-      const mockDemand2 = new DemandNew("demand-id-2", mockSpecificationInstance);
+      const mockDemand0 = new Demand("demand-id-0", mockSpecificationInstance);
+      const mockDemand1 = new Demand("demand-id-1", mockSpecificationInstance);
+      const mockDemand2 = new Demand("demand-id-2", mockSpecificationInstance);
 
       when(mockMarketApiAdapter.publishDemandSpecification(_))
         .thenResolve(mockDemand0)
@@ -118,7 +156,7 @@ describe("Market module", () => {
       when(mockMarketApiAdapter.unpublishDemand(_)).thenResolve();
 
       const demand$ = marketModule.publishDemand(mockSpecificationInstance);
-      const demands: DemandNew[] = [];
+      const demands: Demand[] = [];
       demand$.pipe(take(3)).subscribe({
         next: (demand) => {
           demands.push(demand);
@@ -139,11 +177,32 @@ describe("Market module", () => {
         error: (error) => done(error),
       });
     });
+
+    it("should throw an error if the demand cannot be subscribed", (done) => {
+      const mockSpecification = mock(DemandSpecification);
+      const details = instance(mockSpecification);
+
+      when(mockMarketApiAdapter.publishDemandSpecification(_)).thenReject(new Error("Triggered"));
+
+      const demand$ = marketModule.publishDemand(details);
+
+      demand$.subscribe({
+        error: (err: GolemMarketError) => {
+          try {
+            expect(err.message).toEqual("Could not publish demand on the market");
+            expect(err.previous?.message).toEqual("Triggered");
+            done();
+          } catch (assertionError) {
+            done(assertionError);
+          }
+        },
+      });
+    });
   });
 
   describe("subscribeForProposals()", () => {
     it("should filter out rejected proposals", (done) => {
-      const mockDemand = instance(imock<DemandNew>());
+      const mockDemand = instance(imock<Demand>());
       const mockProposalDTO = imock<YaTsClient.MarketApi.ProposalEventDTO["proposal"]>();
       when(mockProposalDTO.issuerId).thenReturn("issuer-id");
       const mockProposalEventSuccess: YaTsClient.MarketApi.ProposalEventDTO = {
@@ -191,6 +250,7 @@ describe("Market module", () => {
       });
     });
   });
+
   describe("startCollectingProposals()", () => {
     it("should negotiate any initial proposals", (done) => {
       jest.useRealTimers();

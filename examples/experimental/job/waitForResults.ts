@@ -11,7 +11,9 @@ async function main() {
 
   const job = golem.createJob<string>({
     demand: {
-      imageTag: "severyn/espeak:latest",
+      activity: {
+        imageTag: "severyn/espeak:latest",
+      },
     },
     market: {}, // TODO: This should be optional
     payment: {
