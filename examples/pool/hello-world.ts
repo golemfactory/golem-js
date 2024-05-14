@@ -69,14 +69,18 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
     });
 
     const lease = await pool.acquire();
-    const exe = await lease.getExeUnit();
-    const result = await exe.run("echo Hello World");
-    console.log(result.stdout);
-
     const lease2 = await pool.acquire();
-    const exe2 = await lease2.getExeUnit();
-    const result2 = await exe2.run("echo Hello Golem");
-    console.log(result2.stdout);
+
+    await Promise.allSettled([
+      lease
+        .getExeUnit()
+        .then((exe) => exe.run("echo Hello World from first activity"))
+        .then((result) => console.log(result.stdout)),
+      lease2
+        .getExeUnit()
+        .then((exe) => exe.run("echo Hello Golem from second activity"))
+        .then((result) => console.log(result.stdout)),
+    ]);
 
     await pool.release(lease);
     await pool.release(lease2);
