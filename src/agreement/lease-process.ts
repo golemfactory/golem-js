@@ -1,5 +1,5 @@
 import { Allocation, DebitNote, Invoice } from "../payment";
-import { BehaviorSubject, filter } from "rxjs";
+import { Subject, filter } from "rxjs";
 import { Agreement, IAgreementApi } from "./agreement";
 import { AgreementPaymentProcess } from "../payment/agreement_payment_process";
 import { DebitNoteFilter, InvoiceFilter } from "../payment/service";
@@ -10,8 +10,8 @@ import { Activity, ActivityStateEnum } from "../activity";
 import { StorageProvider } from "../shared/storage";
 
 export interface IPaymentApi {
-  receivedInvoices$: BehaviorSubject<Invoice | null>;
-  receivedDebitNotes$: BehaviorSubject<DebitNote | null>;
+  receivedInvoices$: Subject<Invoice>;
+  receivedDebitNotes$: Subject<DebitNote>;
 
   /** Starts the reader logic */
   connect(): Promise<void>;
@@ -85,7 +85,7 @@ export class LeaseProcess {
 
     // TODO: Could be hidden in the payment process itself!
     this.paymentApi.receivedInvoices$
-      .pipe(filter((invoice) => invoice !== null && invoice.agreementId === this.agreement.id))
+      .pipe(filter((invoice) => invoice.agreementId === this.agreement.id))
       .subscribe(async (invoice) => {
         if (invoice) {
           await this.paymentProcess.addInvoice(invoice);
@@ -93,7 +93,7 @@ export class LeaseProcess {
       });
 
     this.paymentApi.receivedDebitNotes$
-      .pipe(filter((debitNote) => debitNote !== null && debitNote.agreementId === this.agreement.id))
+      .pipe(filter((debitNote) => debitNote.agreementId === this.agreement.id))
       .subscribe(async (debitNote) => {
         if (debitNote) {
           await this.paymentProcess.addDebitNote(debitNote);
