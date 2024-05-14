@@ -1,12 +1,13 @@
-import { IAgreementApi, LegacyAgreementServiceOptions } from "./agreement";
-import { defaultLogger, Logger } from "../shared/utils";
-import { DraftOfferProposalPool, GolemMarketError, MarketErrorCode, MarketModule } from "../market";
-import { AgreementDTO } from "./service";
+import type { IAgreementApi, LegacyAgreementServiceOptions } from "./agreement";
+import type { Logger } from "../shared/utils";
+import { defaultLogger } from "../shared/utils";
+import type { DraftOfferProposalPool, MarketModule } from "../market";
+import { GolemMarketError, MarketErrorCode } from "../market";
+import type { AgreementDTO } from "./service";
 import { EventEmitter } from "eventemitter3";
-import { RequireAtLeastOne } from "../shared/utils/types";
-import { Allocation } from "../payment";
-import { IPaymentApi, LeaseProcess } from "./lease-process";
-import { PriorityQueue } from "../shared/utils/PriorityQueue";
+import type { RequireAtLeastOne } from "../shared/utils/types";
+import type { Allocation } from "../payment";
+import type { IPaymentApi, LeaseProcess } from "./lease-process";
 
 export interface LeaseProcessPoolDependencies {
   agreementApi: IAgreementApi;
@@ -37,7 +38,14 @@ const MAX_REPLICAS = 100;
 export class LeaseProcessPool {
   public readonly events = new EventEmitter<LeaseProcessPoolEvents>();
 
-  private leaseProcessQueue: PriorityQueue<LeaseProcess>;
+  /**
+   * Pool of lease processes that do not have an activity
+   */
+  private lowPriority = new Set<LeaseProcess>();
+  /**
+   * Pool of lease processes that have an activity
+   */
+  private highPriority = new Set<LeaseProcess>();
   private borrowed = new Set<LeaseProcess>();
   /**
    * Queue of functions that are waiting for a lease process to be available
@@ -77,10 +85,6 @@ export class LeaseProcessPool {
           return options?.replicas.max;
         }
       })() || MAX_REPLICAS;
-
-    this.leaseProcessQueue = new PriorityQueue<LeaseProcess>((a, b) =>
-      a.hasActivity() ? -1 : b.hasActivity() ? 1 : 0,
-    );
   }
 
   private async createNewLeaseProcess() {
@@ -119,7 +123,7 @@ export class LeaseProcessPool {
   }
 
   private canCreateMoreLeaseProcesses() {
-    return this.leaseProcessQueue.size() + this.borrowed.size < this.maxPoolSize;
+    return this.getSize() < this.maxPoolSize;
   }
 
   /**
@@ -127,7 +131,14 @@ export class LeaseProcessPool {
    * If there is no valid lease process, return null
    */
   private async takeValidLeaseProcess(): Promise<LeaseProcess | null> {
-    const leaseProcess = this.leaseProcessQueue.pop();
+    let leaseProcess: LeaseProcess | null = null;
+    if (this.highPriority.size > 0) {
+      leaseProcess = this.highPriority.values().next().value as LeaseProcess;
+      this.highPriority.delete(leaseProcess);
+    } else if (this.lowPriority.size > 0) {
+      leaseProcess = this.lowPriority.values().next().value as LeaseProcess;
+      this.lowPriority.delete(leaseProcess);
+    }
     if (!leaseProcess) {
       return null;
     }
@@ -150,7 +161,11 @@ export class LeaseProcessPool {
     if (!leaseProcess) {
       if (!this.canCreateMoreLeaseProcesses()) {
         return new Promise((resolve) => {
-          this.acquireQueue.push(resolve);
+          this.acquireQueue.push((leaseProcess) => {
+            this.borrowed.add(leaseProcess);
+            this.events.emit("acquired", leaseProcess.agreement.getDto());
+            resolve(leaseProcess);
+          });
         });
       }
       leaseProcess = await this.createNewLeaseProcess();
@@ -170,11 +185,15 @@ export class LeaseProcessPool {
       acquire(leaseProcess);
       return;
     }
-    this.leaseProcessQueue.push(leaseProcess);
+    if (leaseProcess.hasActivity()) {
+      this.highPriority.add(leaseProcess);
+    } else {
+      this.lowPriority.add(leaseProcess);
+    }
   }
 
   async release(leaseProcess: LeaseProcess): Promise<void> {
-    if (this.leaseProcessQueue.size() >= this.maxPoolSize) {
+    if (this.getAvailable() >= this.maxPoolSize) {
       return this.destroy(leaseProcess);
     }
     this.borrowed.delete(leaseProcess);
@@ -211,20 +230,24 @@ export class LeaseProcessPool {
   async drainAndClear() {
     this.isDraining = true;
     this.acquireQueue = [];
-    const allLeaseProcesses = Array.from(this.borrowed).concat(this.leaseProcessQueue.toArray());
+    const allLeaseProcesses = Array.from(this.borrowed)
+      .concat(Array.from(this.lowPriority))
+      .concat(Array.from(this.highPriority));
     await Promise.allSettled(allLeaseProcesses.map((leaseProcess) => this.destroy(leaseProcess)));
-    this.leaseProcessQueue.clear();
+    this.lowPriority.clear();
+    this.highPriority.clear();
+    this.borrowed.clear();
     this.isDraining = false;
     this.events.emit("end");
     return;
   }
 
   getSize() {
-    return this.leaseProcessQueue.size() + this.borrowed.size;
+    return this.getAvailable() + this.getBorrowed();
   }
 
   getAvailable() {
-    return this.leaseProcessQueue.size();
+    return this.lowPriority.size + this.highPriority.size;
   }
 
   getBorrowed() {
@@ -236,25 +259,25 @@ export class LeaseProcessPool {
    * Optionally, you can pass an AbortSignal to cancel the operation.
    */
   async ready(abortSignal?: AbortSignal): Promise<void> {
-    if (this.minPoolSize <= this.leaseProcessQueue.size()) {
+    if (this.minPoolSize <= this.getAvailable()) {
       return;
     }
     const signal = abortSignal || AbortSignal.timeout(10_000);
-    while (this.minPoolSize > this.leaseProcessQueue.size()) {
+    while (this.minPoolSize > this.getAvailable()) {
       if (signal.aborted) {
         break;
       }
       await Promise.allSettled(
-        new Array(this.minPoolSize - this.leaseProcessQueue.size()).fill(0).map(() =>
+        new Array(this.minPoolSize - this.getAvailable()).fill(0).map(() =>
           this.createNewLeaseProcess().then(
-            (leaseProcess) => this.leaseProcessQueue.push(leaseProcess),
+            (leaseProcess) => this.lowPriority.add(leaseProcess),
             (error) => this.logger.error("Creating lease process failed", error),
           ),
         ),
       );
     }
 
-    if (this.minPoolSize > this.leaseProcessQueue.size()) {
+    if (this.minPoolSize > this.getAvailable()) {
       throw new Error("Could not create enough lease processes to reach the minimum pool size in time");
     }
     this.events.emit("ready");
