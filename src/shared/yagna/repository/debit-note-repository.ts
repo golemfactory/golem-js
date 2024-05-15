@@ -1,6 +1,6 @@
 import { DebitNote, IDebitNoteRepository } from "../../../payment/debit_note";
 import { MarketApi, PaymentApi } from "ya-ts-client";
-import { ProposalProperties } from "../../../market/proposal";
+import { ProposalProperties } from "../../../market/offer-proposal";
 
 export class DebitNoteRepository implements IDebitNoteRepository {
   constructor(

@@ -1,4 +1,4 @@
-import { ProposalNew } from "./proposal";
+import { OfferProposal } from "./offer-proposal";
 import AsyncLock from "async-lock";
 
 export type ProposalsBatchOptions = {
@@ -19,7 +19,7 @@ const DEFAULTS = {
  */
 export class ProposalsBatch {
   /** Batch of proposals mapped by provider key and related set of initial proposals */
-  private batch = new Map<string, Set<ProposalNew>>();
+  private batch = new Map<string, Set<OfferProposal>>();
   /** Lock used to synchronize adding and getting proposals from the batch */
   private lock: AsyncLock = new AsyncLock();
   private config: Required<ProposalsBatchOptions>;
@@ -35,12 +35,12 @@ export class ProposalsBatch {
    * Add proposal to the batch grouped by provider key
    * which consist of providerId, cores, threads, mem and storage
    */
-  async addProposal(proposal: ProposalNew) {
+  async addProposal(proposal: OfferProposal) {
     const providerKey = this.getProviderKey(proposal);
     await this.lock.acquire("proposals-batch", () => {
       let proposals = this.batch.get(providerKey);
       if (!proposals) {
-        proposals = new Set<ProposalNew>();
+        proposals = new Set<OfferProposal>();
         this.batch.set(providerKey, proposals);
       }
       proposals.add(proposal);
@@ -51,7 +51,7 @@ export class ProposalsBatch {
    * Returns the batched proposals from the internal buffer and empties it
    */
   public async getProposals() {
-    const proposals: ProposalNew[] = [];
+    const proposals: OfferProposal[] = [];
 
     await this.lock.acquire("proposals-batch", () => {
       this.batch.forEach((providersProposals) => proposals.push(this.getBestProposal(providersProposals)));
@@ -90,8 +90,8 @@ export class ProposalsBatch {
   /**
    * Selects the best proposal from the set according to the lowest price and the youngest proposal age
    */
-  private getBestProposal(proposals: Set<ProposalNew>): ProposalNew {
-    const sortByLowerPriceAndHigherTime = (p1: ProposalNew, p2: ProposalNew) => {
+  private getBestProposal(proposals: Set<OfferProposal>): OfferProposal {
+    const sortByLowerPriceAndHigherTime = (p1: OfferProposal, p2: OfferProposal) => {
       const p1Price = p1.getEstimatedCost();
       const p2Price = p2.getEstimatedCost();
       const p1Time = new Date(p1.timestamp).valueOf();
@@ -104,7 +104,7 @@ export class ProposalsBatch {
   /**
    * Provider key used to group proposals so that they can be distinguished based on ID and hardware configuration
    */
-  private getProviderKey(proposal: ProposalNew): string {
+  private getProviderKey(proposal: OfferProposal): string {
     return [
       proposal.provider.id,
       proposal.properties["golem.inf.cpu.cores"],
