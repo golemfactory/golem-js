@@ -2,7 +2,7 @@ import { instance, when, verify, deepEqual, mock, reset, _, imock } from "@johan
 import * as YaTsClient from "ya-ts-client";
 import { YagnaApi } from "../yagnaApi";
 import { DemandRequestBody, MarketApiAdapter } from "./market-api-adapter";
-import { Demand, DemandSpecification, ProposalNew } from "../../../market";
+import { Demand, DemandSpecification, OfferProposal } from "../../../market";
 import { take, takeUntil, timer } from "rxjs";
 import { Logger } from "../../utils";
 import { DemandBodyPrototype } from "../../../market/demand/demand-body-builder";
@@ -24,6 +24,14 @@ describe("Market Api Adapter", () => {
     constraints: ["constraints"],
     properties: [
       {
+        key: "golem.com.usage.vector",
+        value: ["golem.usage.duration_sec", "golem.usage.cpu_sec"],
+      },
+      {
+        key: "golem.com.pricing.model.linear.coeffs",
+        value: [0.1, 0.1],
+      },
+      {
         key: "property-key-1",
         value: "property-value-1",
       },
@@ -37,6 +45,8 @@ describe("Market Api Adapter", () => {
   const expectedBody: DemandRequestBody = {
     constraints: "constraints",
     properties: {
+      "golem.com.usage.vector": ["golem.usage.duration_sec", "golem.usage.cpu_sec"],
+      "golem.com.pricing.model.linear.coeffs": [0.1, 0.1],
       "property-key-1": "property-value-1",
       "property-key-2": "property-value-2",
     },
@@ -103,7 +113,7 @@ describe("Market Api Adapter", () => {
     it("should negotiate a proposal with the selected payment platform", async () => {
       const specification = new DemandSpecification(samplePrototype, "my-selected-payment-platform", 60 * 60 * 1000);
 
-      const receivedProposal = new ProposalNew(
+      const receivedProposal = new OfferProposal(
         {
           ...expectedBody,
           proposalId: "proposal-id",
@@ -124,29 +134,25 @@ describe("Market Api Adapter", () => {
         state: "Draft",
       });
 
-      const counterProposal = await api.counterProposal(receivedProposal, specification);
+      await api.counterProposal(receivedProposal, specification);
 
       verify(
         mockMarket.counterProposalDemand(
           "demand-id",
           "proposal-id",
           deepEqual({
-            constraints: "constraints",
+            constraints: expectedBody.constraints,
             properties: {
-              "property-key-1": "property-value-1",
-              "property-key-2": "property-value-2",
+              ...expectedBody.properties,
               "golem.com.payment.chosen-platform": "my-selected-payment-platform",
             },
           }),
         ),
       ).once();
-      expect(counterProposal).toBeInstanceOf(ProposalNew);
-      expect(counterProposal.id).toBe("counter-id");
-      expect(counterProposal.demand).toBe(receivedProposal.demand);
     });
     it("should throw an error if the counter proposal fails", async () => {
       const specification = new DemandSpecification(samplePrototype, "my-selected-payment-platform", 60 * 60 * 1000);
-      const receivedProposal = new ProposalNew(
+      const receivedProposal = new OfferProposal(
         {
           ...expectedBody,
           proposalId: "proposal-id",

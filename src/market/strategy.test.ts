@@ -1,5 +1,5 @@
 import { instance, mock, reset, when } from "@johanblumenberg/ts-mockito";
-import { Proposal } from "./proposal";
+import { OfferProposal } from "./offer-proposal";
 import {
   acceptAll,
   allowProvidersById,
@@ -8,7 +8,7 @@ import {
   disallowProvidersByNameRegex,
 } from "./strategy";
 
-const mockProposal = mock(Proposal);
+const mockProposal = mock(OfferProposal);
 
 describe("SDK provided proposal filters", () => {
   beforeEach(() => {
@@ -40,8 +40,8 @@ describe("SDK provided proposal filters", () => {
 
   describe("disallowProvidersById", () => {
     test("Accepts only the providers with the name not listed on the blacklist", () => {
-      const p1 = mock(Proposal);
-      const p2 = mock(Proposal);
+      const p1 = mock(OfferProposal);
+      const p2 = mock(OfferProposal);
 
       when(p1.provider).thenReturn({
         id: "provider-1",
@@ -64,8 +64,8 @@ describe("SDK provided proposal filters", () => {
 
   describe("disallowProvidersByNameRegex", () => {
     test("Accepts only the providers which name doesn't match the specified regex", () => {
-      const p1 = mock(Proposal);
-      const p2 = mock(Proposal);
+      const p1 = mock(OfferProposal);
+      const p2 = mock(OfferProposal);
 
       when(p1.provider).thenReturn({
         id: "provider-1",
@@ -88,8 +88,8 @@ describe("SDK provided proposal filters", () => {
 
   describe("allowProvidersById", () => {
     test("Accepts only the providers who's ID's are on the list", () => {
-      const p1 = mock(Proposal);
-      const p2 = mock(Proposal);
+      const p1 = mock(OfferProposal);
+      const p2 = mock(OfferProposal);
 
       when(p1.provider).thenReturn({
         id: "provider-1",
@@ -111,8 +111,8 @@ describe("SDK provided proposal filters", () => {
 
     describe("allowProvidersByNameRegex", () => {
       test("Accepts only the providers who's names match the provided regex", () => {
-        const p1 = mock(Proposal);
-        const p2 = mock(Proposal);
+        const p1 = mock(OfferProposal);
+        const p2 = mock(OfferProposal);
 
         when(p1.provider).thenReturn({
           id: "provider-1",
