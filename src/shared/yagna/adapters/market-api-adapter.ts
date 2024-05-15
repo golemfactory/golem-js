@@ -42,7 +42,7 @@ export class MarketApiAdapter implements MarketApi {
   async publishDemandSpecification(demand: DemandSpecification): Promise<Demand> {
     const idOrError = await this.yagnaApi.market.subscribeDemand(this.buildDemandRequestBody(demand.prototype));
 
-    if (idOrError && typeof idOrError !== "string") {
+    if (typeof idOrError !== "string") {
       throw new Error(`Failed to subscribe to demand: ${idOrError.message}`);
     }
 
