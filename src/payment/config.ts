@@ -1,6 +1,5 @@
 import { AllocationOptions } from "./allocation";
-import { EnvUtils, Logger, defaultLogger, YagnaOptions } from "../shared/utils";
-import { DebitNoteFilter, InvoiceFilter, PaymentOptions } from "./service";
+import { defaultLogger, EnvUtils, Logger, YagnaOptions } from "../shared/utils";
 import { InvoiceOptions } from "./invoice";
 import { acceptAllDebitNotesFilter, acceptAllInvoicesFilter } from "./strategy";
 import { GolemConfigError } from "../shared/error/golem-error";
@@ -48,29 +47,7 @@ abstract class BaseConfig {
     this.logger = options?.logger || defaultLogger("payment");
   }
 }
-/**
- * @internal
- */
-export class PaymentConfig extends BaseConfig {
-  public readonly invoiceFetchingInterval: number;
-  public readonly debitNotesFetchingInterval: number;
-  public readonly maxInvoiceEvents: number;
-  public readonly maxDebitNotesEvents: number;
-  public readonly unsubscribeTimeoutMs: number;
-  public readonly debitNoteFilter: DebitNoteFilter;
-  public readonly invoiceFilter: InvoiceFilter;
 
-  constructor(options?: PaymentOptions) {
-    super(options);
-    this.invoiceFetchingInterval = options?.invoiceFetchingInterval ?? DEFAULTS.invoiceFetchingInterval;
-    this.debitNotesFetchingInterval = options?.debitNotesFetchingInterval ?? DEFAULTS.debitNotesFetchingInterval;
-    this.maxInvoiceEvents = options?.maxInvoiceEvents ?? DEFAULTS.maxInvoiceEvents;
-    this.maxDebitNotesEvents = options?.maxDebitNotesEvents ?? DEFAULTS.maxDebitNotesEvents;
-    this.unsubscribeTimeoutMs = options?.unsubscribeTimeoutMs ?? DEFAULTS.unsubscribeTimeoutMs;
-    this.debitNoteFilter = options?.debitNotesFilter ?? DEFAULTS.debitNoteFilter;
-    this.invoiceFilter = options?.invoiceFilter ?? DEFAULTS.invoiceFilter;
-  }
-}
 /**
  * @internal
  */
