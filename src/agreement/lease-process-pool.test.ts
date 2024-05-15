@@ -2,7 +2,7 @@ import { _, imock, instance, mock, reset, verify, when } from "@johanblumenberg/
 import type { Agreement, IAgreementApi } from "./agreement";
 import { type IPaymentApi, type LeaseProcess } from "./lease-process";
 import { Allocation } from "../payment";
-import type { MarketModule, ProposalNew } from "../market";
+import type { MarketModule, OfferProposal } from "../market";
 import { DraftOfferProposalPool } from "../market";
 import { LeaseProcessPool } from "./lease-process-pool";
 import { type RequireAtLeastOne } from "../shared/utils/types";
@@ -43,7 +43,7 @@ beforeEach(() => {
 describe("LeaseProcessPool", () => {
   describe("ready()", () => {
     it("prepares MIN_POOL_SIZE lease processes", async () => {
-      when(proposalPool.acquire()).thenResolve({} as ProposalNew);
+      when(proposalPool.acquire()).thenResolve({} as OfferProposal);
       when(agreementApi.proposeAgreement(_)).thenResolve({
         getDto: () => ({}),
       } as Agreement);
@@ -58,7 +58,7 @@ describe("LeaseProcessPool", () => {
       verify(proposalPool.acquire()).times(5);
     });
     it("retries on error", async () => {
-      when(proposalPool.acquire()).thenResolve({} as ProposalNew);
+      when(proposalPool.acquire()).thenResolve({} as OfferProposal);
       when(proposalPool.remove(_)).thenResolve();
       when(marketModule.createLease(_, _)).thenCall(() => ({}) as LeaseProcess);
 
@@ -78,7 +78,7 @@ describe("LeaseProcessPool", () => {
       verify(proposalPool.acquire()).times(5);
     });
     it("stops retrying after timeout", async () => {
-      when(proposalPool.acquire()).thenResolve({} as ProposalNew);
+      when(proposalPool.acquire()).thenResolve({} as OfferProposal);
       when(proposalPool.remove(_)).thenResolve();
       when(marketModule.createLease(_, _)).thenReturn({} as LeaseProcess);
 
