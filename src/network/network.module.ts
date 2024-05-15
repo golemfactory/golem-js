@@ -1,23 +1,36 @@
 import { EventEmitter } from "eventemitter3";
-import { NetworkOptions } from "./network";
+import { Network } from "./network";
 import { GolemNetworkError, NetworkErrorCode } from "./error";
 import { Logger, YagnaApi } from "../shared/utils";
+import { INetworkApi } from "./api";
+import { NetworkNode } from "./node";
 
 export interface NetworkEvents {}
 
-export interface NetworkNodeOptions {
-  // todo
+export interface NetworkOptions {
+  /** the node ID of the owner of this VPN (the requestor) */
+  id: string;
+  /** the IP address of the network. May contain netmask, e.g. "192.168.0.0/24" */
+  ip?: string;
+  /** the desired IP address of the requestor node within the newly-created network */
+  ownerIp?: string;
+  /** optional netmask (only if not provided within the `ip` argument) */
+  mask?: string;
+  /** optional gateway address for the network */
+  gateway?: string;
 }
 
 export interface NetworkModule {
   events: EventEmitter<NetworkEvents>;
   createNetwork(options: NetworkOptions): Promise<Network>;
   removeNetwork(networkId: string): Promise<void>;
-  addNetworkNode(networkId: string, options: NetworkNodeOptions): Promise<NetworkNode>;
-  removeNetworkNode(networkId: string, networkNodeId: string): Promise<void>;
+  addNetworkNode(network: Network, nodeId: string, nodeIp?: string): Promise<NetworkNode>;
+  removeNetworkNode(network: Network, nodeId: string): Promise<void>;
 }
 
 export class NetworkModuleImpl implements NetworkModule {
+  events: EventEmitter<NetworkEvents> = new EventEmitter<NetworkEvents>();
+
   constructor(
     private readonly deps: {
       logger: Logger;
@@ -28,18 +41,11 @@ export class NetworkModuleImpl implements NetworkModule {
 
   async createNetwork(options: NetworkOptions): Promise<Network> {
     try {
-      const { id, ip, mask } = await yagnaApi.net.createNetwork({
-        id: config.ownerId,
-        ip: config.ip,
-        mask: config.mask,
-        gateway: config.gateway,
-      });
-      const network = new Network(id!, yagnaApi, config);
-      await network.addNode(network.ownerId, network.ownerIp.toString()).catch(async (e) => {
-        await yagnaApi.net.removeNetwork(id as string);
-        throw e;
-      });
-      config.logger.info(`Network created`, { id, ip, mask });
+      const network = await this.deps.networkApi.createNetwork(options);
+      // add Requestor as network node
+      const { identity } = await this.deps.yagna.identity.getIdentity();
+      await this.deps.networkApi.addNetworkNode(network, identity, options.ownerIp);
+      this.deps.logger.info(`Network created`, network.getNetworkInfo());
       return network;
     } catch (error) {
       if (error instanceof GolemNetworkError) {
@@ -53,14 +59,46 @@ export class NetworkModuleImpl implements NetworkModule {
       );
     }
   }
-  removeNetwork(networkId: string): Promise<void> {
-    throw new Error("Method not implemented.");
+  async removeNetwork(networkId: string): Promise<void> {
+    try {
+      return this.deps.networkApi.removeNetwork(networkId);
+    } catch (error) {
+      throw new GolemNetworkError(
+        `Unable to remove network. ${error}`,
+        NetworkErrorCode.NetworkRemovalFailed,
+        undefined,
+        error,
+      );
+    }
   }
-  addNetworkNode(networkId: string, options: NetworkNodeOptions): Promise<NetworkNode> {
-    throw new Error("Method not implemented.");
+  async addNetworkNode(network: Network, nodeId: string, nodeIp?: string): Promise<NetworkNode> {
+    try {
+      return this.deps.networkApi.addNetworkNode(network, nodeId, nodeIp);
+    } catch (error) {
+      if (error instanceof GolemNetworkError) {
+        throw error;
+      }
+      throw new GolemNetworkError(
+        `Unable to add node to network. ${error}`,
+        NetworkErrorCode.NodeAddingFailed,
+        network.getNetworkInfo(),
+        error,
+      );
+    }
   }
-  removeNetworkNode(networkId: string, networkNodeId: string): Promise<void> {
-    throw new Error("Method not implemented.");
+  removeNetworkNode(network: Network, nodeId: string): Promise<void> {
+    try {
+      return this.deps.networkApi.removeNetworkNode(network, nodeId);
+    } catch (error) {
+      if (error instanceof GolemNetworkError) {
+        throw error;
+      }
+      throw new GolemNetworkError(
+        `Unable to remove network node. ${error}`,
+        NetworkErrorCode.NodeRemovalFailed,
+        network.getNetworkInfo(),
+        error,
+      );
+    }
   }
-  events: EventEmitter<NetworkEvents> = new EventEmitter<NetworkEvents>();
 }

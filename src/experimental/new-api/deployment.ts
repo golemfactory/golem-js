@@ -2,7 +2,7 @@ import { GolemAbortError, GolemUserError } from "../../shared/error/golem-error"
 import { defaultLogger, Logger, YagnaApi } from "../../shared/utils";
 import { EventEmitter } from "eventemitter3";
 import { ActivityModule, ActivityPool, ActivityPoolOptions } from "../../activity";
-import { Network, NetworkOptions } from "../../network";
+import { Network } from "../../network";
 import { GftpStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../../shared/storage";
 import { validateDeployment } from "./validate-deployment";
 import { DemandBuildParams, DraftOfferProposalPool, MarketModule } from "../../market";
@@ -11,6 +11,7 @@ import { AgreementPool, AgreementPoolOptions } from "../../agreement";
 import { CreateActivityPoolOptions } from "./builder";
 import { Subscription } from "rxjs";
 import { IAgreementApi } from "../../agreement/agreement";
+import { NetworkModule, NetworkOptions } from "../../network/network.module";
 
 export enum DeploymentState {
   INITIAL = "INITIAL",
@@ -85,6 +86,7 @@ export class Deployment {
     market: MarketModule;
     activity: ActivityModule;
     payment: PaymentModule;
+    network: NetworkModule;
   };
 
   private readonly agreementApi: IAgreementApi;
@@ -97,6 +99,7 @@ export class Deployment {
       market: MarketModule;
       activity: ActivityModule;
       payment: PaymentModule;
+      network: NetworkModule;
       agreementApi: IAgreementApi;
     },
     options: DeploymentOptions,
@@ -222,7 +225,9 @@ export class Deployment {
       );
       await Promise.allSettled(stopPools);
 
-      const stopNetworks: Promise<void>[] = Array.from(this.networks.values()).map((network) => network.remove());
+      const stopNetworks: Promise<void>[] = Array.from(this.networks.values()).map((network) =>
+        this.modules.network.removeNetwork(network.id),
+      );
       await Promise.allSettled(stopNetworks);
 
       this.state = DeploymentState.STOPPED;

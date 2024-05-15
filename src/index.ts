@@ -1,5 +1,6 @@
 //  High-level entry points
 export * from "./golem-network";
+export * from "./experimental";
 
 // Low level entry points for advanced users
 export * from "./market";
