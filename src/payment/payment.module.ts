@@ -8,6 +8,8 @@ import { Observable } from "rxjs";
 import { GolemServices } from "../golem-network";
 import { PaymentSpec } from "../market";
 import { PayerDetails } from "./PayerDetails";
+import { IPaymentApi } from "../agreement";
+import { all } from "axios";
 
 export interface PaymentModuleOptions {
   debitNoteFilter?: DebitNoteFilter;
@@ -15,32 +17,10 @@ export interface PaymentModuleOptions {
   payment: PaymentSpec;
 }
 
-export interface PaymentPlatformOptions {
-  driver: string;
-  network: string;
-}
-
 export interface PaymentModuleEvents {}
 
 export type CreateAllocationParams = {
   budget: number;
-};
-
-export type PaymentModuleConfig = {
-  /**
-   * Payment network. During development it's recommended to use the `holesky` testnet.
-   * For production use `mainnet` or `polygon`.
-   * Payments on mainnets use real GLM tokens, while on testnets they use tGLM (test glm) tokens.
-   * @default holesky
-   */
-  network?: string;
-  /**
-   * Instruct yagna to use a specific payment driver.
-   * @default erc20
-   */
-  driver?: string;
-
-  logger?: Logger;
 };
 
 export interface PaymentModule {
@@ -59,16 +39,14 @@ export interface PaymentModule {
   amendAllocation(allocation: Allocation, newOpts: CreateAllocationParams): Promise<Allocation>;
 
   // alt Invoice.accept()
-  acceptInvoice(invoice: Invoice): Promise<Invoice>;
+  acceptInvoice(invoice: Invoice, allocation: Allocation, amount: string): Promise<Invoice>;
 
   // alt Invoice.reject()
-  rejectInvoice(invoice: Invoice): Promise<Invoice>;
+  rejectInvoice(invoice: Invoice, reason: string): Promise<Invoice>;
 
-  // alt DebitNote.accept()
-  acceptDebitNote(debitNote: DebitNote): Promise<DebitNote>;
+  acceptDebitNote(debitNote: DebitNote, allocation: Allocation, amount: string): Promise<DebitNote>;
 
-  // alt DebitNote.reject()
-  rejectDebitNote(debitNote: DebitNote): Promise<DebitNote>;
+  rejectDebitNote(debitNote: DebitNote, reason: string): Promise<DebitNote>;
 
   createInvoiceProcessor(): InvoiceProcessor;
 
@@ -82,6 +60,8 @@ export class PaymentModuleImpl implements PaymentModule {
   events: EventEmitter<PaymentModuleEvents> = new EventEmitter<PaymentModuleEvents>();
 
   private readonly yagnaApi: YagnaApi;
+
+  private readonly paymentApi: IPaymentApi;
 
   private readonly logger = defaultLogger("payment");
 
@@ -98,6 +78,7 @@ export class PaymentModuleImpl implements PaymentModule {
 
     this.logger = deps.logger;
     this.yagnaApi = deps.yagna;
+    this.paymentApi = deps.paymentApi;
   }
 
   private getPaymentPlatform(): string {
@@ -122,6 +103,9 @@ export class PaymentModuleImpl implements PaymentModule {
 
   async createAllocation(allocationParams: CreateAllocationParams): Promise<Allocation> {
     const payer = await this.getPayerDetails();
+
+    this.logger.info("Creating allocation", { params: allocationParams, payer });
+
     return Allocation.create(this.yagnaApi, {
       account: {
         address: payer.address,
@@ -131,31 +115,38 @@ export class PaymentModuleImpl implements PaymentModule {
     });
   }
 
-  releaseAllocation(_allocation: Allocation): Promise<Allocation> {
+  releaseAllocation(allocation: Allocation): Promise<Allocation> {
     throw new Error("Method not implemented.");
   }
 
-  amendAllocation(_allocation: Allocation, _newOpts: CreateAllocationParams): Promise<Allocation> {
+  amendAllocation(allocation: Allocation, _newOpts: CreateAllocationParams): Promise<Allocation> {
     throw new Error("Method not implemented.");
   }
 
-  acceptInvoice(_invoice: Invoice): Promise<Invoice> {
-    throw new Error("Method not implemented.");
+  acceptInvoice(invoice: Invoice, allocation: Allocation, amount: string): Promise<Invoice> {
+    this.logger.info("Accepting invoice", { id: invoice.id, allocation: allocation.id, amount });
+    return this.paymentApi.acceptInvoice(invoice, allocation, amount);
   }
 
-  rejectInvoice(_invoice: Invoice): Promise<Invoice> {
-    throw new Error("Method not implemented.");
+  rejectInvoice(invoice: Invoice, reason: string): Promise<Invoice> {
+    this.logger.info("Rejecting invoice", { id: invoice.id, reason });
+    return this.paymentApi.rejectInvoice(invoice, reason);
   }
 
-  acceptDebitNote(_debitNote: DebitNote): Promise<DebitNote> {
-    throw new Error("Method not implemented.");
+  acceptDebitNote(debitNote: DebitNote, allocation: Allocation, amount: string): Promise<DebitNote> {
+    this.logger.info("Accepting debit note", { id: debitNote.id, allocation: allocation.id, amount });
+    return this.paymentApi.acceptDebitNote(debitNote, allocation, amount);
   }
 
-  rejectDebitNote(_debitNote: DebitNote): Promise<DebitNote> {
-    throw new Error("Method not implemented.");
+  rejectDebitNote(debitNote: DebitNote, reason: string): Promise<DebitNote> {
+    this.logger.info("Rejecting debit note", { id: debitNote.id, reason });
+    return this.paymentApi.rejectDebitNote(debitNote, reason);
   }
 
+  /**
+   * Creates an instance of utility class InvoiceProcessor that deals with invoice related use-cases
+   */
   createInvoiceProcessor(): InvoiceProcessor {
-    throw new Error("Method not implemented.");
+    return new InvoiceProcessor(this.yagnaApi);
   }
 }

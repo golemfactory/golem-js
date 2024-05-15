@@ -5,7 +5,7 @@ import { AgreementPaymentProcess } from "../payment/agreement_payment_process";
 import { DebitNoteFilter, InvoiceFilter } from "../payment/service";
 import { Logger, YagnaApi } from "../shared/utils";
 import { waitForCondition } from "../shared/utils/waitForCondition";
-import { WorkContext } from "../activity/work";
+import { WorkContext } from "../activity";
 import { Activity, ActivityStateEnum } from "../activity";
 import { StorageProvider } from "../shared/storage";
 

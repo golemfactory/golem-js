@@ -1,5 +1,5 @@
 import { PaymentApi } from "ya-ts-client";
-import { YagnaApi, YagnaOptions } from "../shared/utils";
+import { YagnaApi } from "../shared/utils";
 import Decimal, { Numeric } from "decimal.js-light";
 
 export type InvoiceAcceptResult =
@@ -26,17 +26,7 @@ export class InvoiceProcessor {
   /**
    * Use `InvoiceProcessor.create()` to create an instance of this class.
    */
-  private constructor(private readonly api: YagnaApi) {}
-
-  /**
-   * Creates an instance of `InvoiceProcessor` and connects to the Yagna API.
-   * @param options Options for the Yagna API.
-   */
-  public static async create(options?: YagnaOptions): Promise<InvoiceProcessor> {
-    const yagna = new YagnaApi(options);
-    await yagna.connect();
-    return new InvoiceProcessor(yagna);
-  }
+  public constructor(private readonly api: YagnaApi) {}
 
   /**
    * Collects invoices from the Yagna API until the limit is reached or there are no more invoices.

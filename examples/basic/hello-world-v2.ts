@@ -4,7 +4,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 (async () => {
   const glm = new GolemNetwork({
     logger: pinoPrettyLogger({
-      level: "debug",
+      level: "info",
     }),
   });
 
