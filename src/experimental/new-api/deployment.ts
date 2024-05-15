@@ -158,7 +158,7 @@ export class Deployment {
     const payerDetails = await this.modules.payment.getPayerDetails();
 
     for (const network of this.components.networks) {
-      const networkInstance = await Network.create(this.yagnaApi, network.options);
+      const networkInstance = await this.modules.network.createNetwork(network.options);
       this.networks.set(network.name, networkInstance);
     }
     // TODO: add pool to network
@@ -180,6 +180,12 @@ export class Deployment {
         });
 
       const agreementPool = new AgreementPool(proposalPool, this.agreementApi, agreementPoolOptions);
+
+      // TODO: add this network to constructor of LeaseProcessPool
+      // const network = pool.options.deployment?.network
+      //   ? this.networks.get(pool.options.deployment?.network)
+      //   : undefined;
+
       const activityPool = new ActivityPool(this.modules, agreementPool, activityPoolOptions);
       this.pools.set(pool.name, {
         proposalPool,

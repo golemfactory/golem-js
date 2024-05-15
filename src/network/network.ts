@@ -1,27 +1,18 @@
 import { AbstractIPNum, IPv4, IPv4CidrRange, IPv4Mask, IPv4Prefix } from "ip-num";
-import { Logger, YagnaApi, YagnaOptions } from "../shared/utils";
-import { NetworkConfig } from "./config";
 import { NetworkNode } from "./node";
 import { GolemNetworkError, NetworkErrorCode } from "./error";
 
-/**
- * @hidden
- */
 export interface NetworkOptions {
   /** the node ID of the owner of this VPN (the requestor) */
-  networkOwnerId: string;
-  /** {@link YagnaOptions} */
-  yagnaOptions?: YagnaOptions;
+  ownerId: string;
   /** the IP address of the network. May contain netmask, e.g. "192.168.0.0/24" */
-  networkIp?: string;
+  ip?: string;
   /** the desired IP address of the requestor node within the newly-created network */
-  networkOwnerIp?: string;
+  ownerIp?: string;
   /** optional netmask (only if not provided within the `ip` argument) */
-  networkMask?: string;
+  mask?: string;
   /** optional gateway address for the network */
-  networkGateway?: string;
-  /** optional custom logger module */
-  logger?: Logger;
+  gateway?: string;
 }
 
 export interface NetworkInfo {
@@ -31,10 +22,6 @@ export interface NetworkInfo {
   nodes: { [ip: string]: string };
 }
 
-/**
- * Network module - an object represents VPN created between the requestor and the provider nodes within Golem Network.
- * @hidden
- */
 export class Network {
   private readonly ip: IPv4;
   private readonly ipRange: IPv4CidrRange;
@@ -44,63 +31,26 @@ export class Network {
   private ownerIp: IPv4;
   private gateway?: IPv4;
   private nodes = new Map<string, NetworkNode>();
-  private logger: Logger;
-
-  /**
-   * Create a new VPN.
-   *
-   * @param yagnaApi - {@link YagnaApi}
-   * @param options - {@link NetworkOptions}
-   */
-  static async create(yagnaApi: YagnaApi, options: NetworkOptions): Promise<Network> {
-    const config = new NetworkConfig(options);
-    try {
-      const { id, ip, mask } = await yagnaApi.net.createNetwork({
-        id: config.ownerId,
-        ip: config.ip,
-        mask: config.mask,
-        gateway: config.gateway,
-      });
-      const network = new Network(id!, yagnaApi, config);
-      await network.addNode(network.ownerId, network.ownerIp.toString()).catch(async (e) => {
-        await yagnaApi.net.removeNetwork(id as string);
-        throw e;
-      });
-      config.logger.info(`Network created`, { id, ip, mask });
-      return network;
-    } catch (error) {
-      if (error instanceof GolemNetworkError) {
-        throw error;
-      }
-      throw new GolemNetworkError(
-        `Unable to create network. ${error?.response?.data?.message || error}`,
-        NetworkErrorCode.NetworkCreationFailed,
-        undefined,
-        error,
-      );
-    }
-  }
 
   /**
    * @param id
-   * @param yagnaApi
    * @param config
    * @private
    * @hidden
    */
   private constructor(
     public readonly id: string,
-    private readonly yagnaApi: YagnaApi,
-    public readonly config: NetworkConfig,
+    public readonly ip: string,
+    public readonly mask: string,
+    public readonly gatewey: string,
   ) {
-    this.ipRange = IPv4CidrRange.fromCidr(config.mask ? `${config.ip}/${config.mask}` : config.ip);
+    this.ipRange = IPv4CidrRange.fromCidr(mask ? `${ip}/${mask}` : ip);
     this.ipIterator = this.ipRange[Symbol.iterator]();
     this.ip = this.nextAddress();
     this.mask = this.ipRange.getPrefix().toMask();
-    this.ownerId = config.ownerId;
-    this.ownerIp = config.ownerIp ? new IPv4(config.ownerIp) : this.nextAddress();
-    this.gateway = config.gateway ? new IPv4(config.gateway) : undefined;
-    this.logger = config.logger;
+    this.ownerId = options.ownerId;
+    this.ownerIp = options.ownerIp ? new IPv4(options.ownerIp) : this.nextAddress();
+    this.gateway = options.gateway ? new IPv4(options.gateway) : undefined;
   }
 
   /**
