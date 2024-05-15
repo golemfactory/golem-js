@@ -1,6 +1,6 @@
 import { Agreement, IAgreementApi, IAgreementRepository } from "../../../agreement/agreement";
 import { MarketApi } from "ya-ts-client";
-import { GolemMarketError, MarketErrorCode, Proposal } from "../../../market";
+import { GolemMarketError, MarketErrorCode, OfferProposal } from "../../../market";
 import { withTimeout } from "../../utils/timeout";
 import { Logger } from "../../utils";
 import { AgreementApiConfig } from "../../../agreement";
@@ -38,7 +38,7 @@ export class AgreementApiAdapter implements IAgreementApi {
     }
   }
 
-  async createAgreement(proposal: Proposal): Promise<Agreement> {
+  async createAgreement(proposal: OfferProposal): Promise<Agreement> {
     try {
       const agreementProposalRequest = {
         proposalId: proposal.id,
@@ -81,7 +81,7 @@ export class AgreementApiAdapter implements IAgreementApi {
     }
   }
 
-  async proposeAgreement(proposal: Proposal): Promise<Agreement> {
+  async proposeAgreement(proposal: OfferProposal): Promise<Agreement> {
     const agreement = await this.createAgreement(proposal);
     const confirmed = await this.confirmAgreement(agreement);
     const state = confirmed.getState();

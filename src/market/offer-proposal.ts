@@ -3,7 +3,7 @@ import { GolemMarketError, MarketErrorCode } from "./error";
 import { ProviderInfo } from "../agreement";
 import { Demand } from "./demand";
 
-export type ProposalFilterNew = (proposal: Proposal) => boolean;
+export type ProposalFilterNew = (proposal: OfferProposal) => boolean;
 
 export type PricingInfo = {
   cpuSec: number;
@@ -58,19 +58,21 @@ export interface ProposalDTO {
 }
 
 export interface IProposalRepository {
-  add(proposal: Proposal): Proposal;
-  getById(id: string): Proposal | undefined;
-  getByDemandAndId(demand: Demand, id: string): Promise<Proposal>;
+  add(proposal: OfferProposal): OfferProposal;
+  getById(id: string): OfferProposal | undefined;
+  getByDemandAndId(demand: Demand, id: string): Promise<OfferProposal>;
 }
 
 /**
+ * Entity representing the offer presented by the Provider to the Requestor
+ *
  * Issue: The final proposal that gets promoted to an agreement comes from the provider
  * Right now the last time I can acces it directly is when I receive the counter from the provider,
  * later it's impossible for me to get it via the API `{"message":"Path deserialize error: Id [2cb0b2820c6142fab5af7a8e90da09f0] has invalid owner type."}`
  *
  * FIXME #yagna should allow obtaining proposals via the API even if I'm not the owner!
  */
-export class Proposal {
+export class OfferProposal {
   public readonly id: string;
   public provider: ProviderInfo;
   public readonly previousProposalId: string | null = null;

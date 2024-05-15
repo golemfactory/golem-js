@@ -1,6 +1,6 @@
 import { IInvoiceRepository, Invoice } from "../../../payment/invoice";
 import { MarketApi, PaymentApi } from "ya-ts-client";
-import { ProposalProperties } from "../../../market/proposal";
+import { ProposalProperties } from "../../../market/offer-proposal";
 
 export class InvoiceRepository implements IInvoiceRepository {
   constructor(

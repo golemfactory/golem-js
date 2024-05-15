@@ -4,7 +4,7 @@ import {
   DemandSpecification,
   MarketApi,
   ProposalEvent,
-  Proposal,
+  OfferProposal,
   GolemMarketError,
   MarketErrorCode,
 } from "../../../market";
@@ -98,7 +98,7 @@ export class MarketApiAdapter implements MarketApi {
     });
   }
 
-  async counterProposal(receivedProposal: Proposal, demand: DemandSpecification): Promise<void> {
+  async counterProposal(receivedProposal: OfferProposal, demand: DemandSpecification): Promise<void> {
     const bodyClone = structuredClone(this.buildDemandRequestBody(demand.prototype));
 
     bodyClone.properties["golem.com.payment.chosen-platform"] = demand.paymentPlatform;
@@ -116,7 +116,7 @@ export class MarketApiAdapter implements MarketApi {
     }
   }
 
-  async rejectProposal(receivedProposal: Proposal, reason: string): Promise<void> {
+  async rejectProposal(receivedProposal: OfferProposal, reason: string): Promise<void> {
     try {
       const result = await this.yagnaApi.market.rejectProposalOffer(receivedProposal.demand.id, receivedProposal.id, {
         message: reason,

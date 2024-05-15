@@ -1,5 +1,5 @@
 import { MarketApi } from "ya-ts-client";
-import { Proposal, ProposalProperties } from "./proposal";
+import { OfferProposal, ProposalProperties } from "./offer-proposal";
 import { Demand } from "./demand";
 import { instance, mock, reset, when } from "@johanblumenberg/ts-mockito";
 import { Allocation } from "../payment";
@@ -10,7 +10,7 @@ const demandMock = mock(Demand);
 
 const testDemand = instance(demandMock);
 
-const buildTestProposal = (props: Partial<ProposalProperties>): Proposal => {
+const buildTestProposal = (props: Partial<ProposalProperties>): OfferProposal => {
   const model: MarketApi.ProposalDTO = {
     constraints: "",
     issuerId: "",
@@ -20,7 +20,7 @@ const buildTestProposal = (props: Partial<ProposalProperties>): Proposal => {
     properties: props,
   };
 
-  return new Proposal(model, testDemand);
+  return new OfferProposal(model, testDemand);
 };
 
 describe("Proposal", () => {

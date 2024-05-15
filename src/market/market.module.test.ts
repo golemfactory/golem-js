@@ -4,7 +4,7 @@ import { MarketModuleImpl } from "./market.module";
 import * as YaTsClient from "ya-ts-client";
 import { Demand, DemandSpecification, IDemandRepository } from "./demand";
 import { from, of, take, takeUntil, timer } from "rxjs";
-import { IProposalRepository, Proposal, ProposalProperties } from "./proposal";
+import { IProposalRepository, OfferProposal, ProposalProperties } from "./offer-proposal";
 import { MarketApiAdapter } from "../shared/yagna/";
 import { IActivityApi, IPaymentApi } from "../agreement";
 import { IAgreementApi } from "../agreement/agreement";
@@ -279,7 +279,7 @@ describe("Market module", () => {
         },
         properties: proposalProperties,
         getEstimatedCost: () => 1,
-      } as Proposal;
+      } as OfferProposal;
       const proposal2 = {
         isInitial: () => true,
         isDraft: () => false,
@@ -292,7 +292,7 @@ describe("Market module", () => {
         },
         properties: proposalProperties,
         getEstimatedCost: () => 1,
-      } as Proposal;
+      } as OfferProposal;
       const proposal3 = {
         isInitial: () => false,
         isDraft: () => true,
@@ -305,7 +305,7 @@ describe("Market module", () => {
         },
         properties: proposalProperties,
         getEstimatedCost: () => 1,
-      } as Proposal;
+      } as OfferProposal;
       const proposal4 = {
         isInitial: () => false,
         isDraft: () => true,
@@ -318,7 +318,7 @@ describe("Market module", () => {
         },
         properties: proposalProperties,
         getEstimatedCost: () => 1,
-      } as Proposal;
+      } as OfferProposal;
 
       marketModule.publishDemand = jest.fn().mockReturnValue(of({ id: "demand-id" }));
       marketModule.negotiateProposal = jest.fn();
@@ -326,7 +326,7 @@ describe("Market module", () => {
         .fn()
         .mockReturnValue(from([proposal1, proposal2, proposal3, proposal4]));
 
-      const draftProposals: Proposal[] = [];
+      const draftProposals: OfferProposal[] = [];
       marketModule
         .startCollectingProposals({
           demandSpecification,
@@ -376,7 +376,7 @@ describe("Market module", () => {
         },
         properties: proposalProperties,
         getEstimatedCost: () => 99,
-      } as Proposal;
+      } as OfferProposal;
       const proposal2 = {
         isInitial: () => true,
         isDraft: () => false,
@@ -389,7 +389,7 @@ describe("Market module", () => {
         },
         properties: proposalProperties,
         getEstimatedCost: () => 1,
-      } as Proposal;
+      } as OfferProposal;
       const proposal3 = {
         isInitial: () => true,
         isDraft: () => false,
@@ -402,7 +402,7 @@ describe("Market module", () => {
         },
         properties: proposalProperties,
         getEstimatedCost: () => 1,
-      } as Proposal;
+      } as OfferProposal;
       const proposal4 = {
         isInitial: () => false,
         isDraft: () => true,
@@ -415,7 +415,7 @@ describe("Market module", () => {
         },
         properties: proposalProperties,
         getEstimatedCost: () => 1,
-      } as Proposal;
+      } as OfferProposal;
 
       marketModule.publishDemand = jest.fn().mockReturnValue(of({ id: "demand-id" }));
       marketModule.negotiateProposal = jest.fn();
@@ -423,7 +423,7 @@ describe("Market module", () => {
         .fn()
         .mockReturnValue(from([proposal1, proposal2, proposal3, proposal4]));
 
-      const draftProposals: Proposal[] = [];
+      const draftProposals: OfferProposal[] = [];
       marketModule
         .startCollectingProposals({
           demandSpecification,

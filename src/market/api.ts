@@ -1,7 +1,7 @@
 import { Observable } from "rxjs";
 import { Demand, DemandSpecification } from "./demand";
 import YaTsClient from "ya-ts-client";
-import { Proposal } from "./proposal";
+import { OfferProposal } from "./offer-proposal";
 
 export type NewProposalEvent = YaTsClient.MarketApi.ProposalEventDTO;
 export type ProposalRejectedEvent = YaTsClient.MarketApi.ProposalRejectedEventDTO;
@@ -30,7 +30,7 @@ export interface MarketApi {
   /**
    * Sends a counter-proposal to the given proposal. Returns the newly created counter-proposal.
    */
-  counterProposal(receivedProposal: Proposal, specification: DemandSpecification): Promise<void>;
+  counterProposal(receivedProposal: OfferProposal, specification: DemandSpecification): Promise<void>;
 
   /**
    * Sends a "reject" response for the proposal that was received from the Provider as part of the negotiation process
@@ -40,5 +40,5 @@ export interface MarketApi {
    * @param receivedProposal The proposal from the provider
    * @param reason User readable reason that should be presented to the Provider
    */
-  rejectProposal(receivedProposal: Proposal, reason: string): Promise<void>;
+  rejectProposal(receivedProposal: OfferProposal, reason: string): Promise<void>;
 }

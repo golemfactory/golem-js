@@ -1,12 +1,12 @@
-import { Proposal } from "./proposal";
+import { OfferProposal } from "./offer-proposal";
 import AsyncLock from "async-lock";
 import { EventEmitter } from "eventemitter3";
 import { GolemMarketError, MarketErrorCode } from "./error";
 import { defaultLogger, Logger, sleep } from "../shared/utils";
 import { Observable, Subscription } from "rxjs";
 
-export type ProposalSelector = (proposals: Proposal[]) => Proposal;
-export type ProposalValidator = (proposal: Proposal) => boolean;
+export type ProposalSelector = (proposals: OfferProposal[]) => OfferProposal;
+export type ProposalValidator = (proposal: OfferProposal) => boolean;
 
 export interface ProposalPoolOptions {
   /**
@@ -39,10 +39,10 @@ export interface ProposalPoolOptions {
 }
 
 export interface ProposalPoolEvents {
-  added: (proposal: Proposal) => void;
-  removed: (proposal: Proposal) => void;
-  acquired: (proposal: Proposal) => void;
-  released: (proposal: Proposal) => void;
+  added: (proposal: OfferProposal) => void;
+  removed: (proposal: OfferProposal) => void;
+  acquired: (proposal: OfferProposal) => void;
+  released: (proposal: OfferProposal) => void;
   cleared: () => void;
 }
 
@@ -70,20 +70,20 @@ export class DraftOfferProposalPool {
   private readonly acquireTimeoutSec: number = 30;
 
   /** {@link ProposalPoolOptions.selectProposal} */
-  private readonly selectProposal: ProposalSelector = (proposals: Proposal[]) => proposals[0];
+  private readonly selectProposal: ProposalSelector = (proposals: OfferProposal[]) => proposals[0];
 
   /** {@link ProposalPoolOptions.validateProposal} */
-  private readonly validateProposal: ProposalValidator = (proposal: Proposal) => proposal !== undefined;
+  private readonly validateProposal: ProposalValidator = (proposal: OfferProposal) => proposal !== undefined;
 
   /**
    * The proposals that were not yet leased to anyone and are available for lease
    */
-  private available = new Set<Proposal>();
+  private available = new Set<OfferProposal>();
 
   /**
    * The proposal that were already leased to someone and shouldn't be leased again
    */
-  private leased = new Set<Proposal>();
+  private leased = new Set<OfferProposal>();
 
   public constructor(private options?: ProposalPoolOptions) {
     if (options?.selectProposal) {
@@ -107,7 +107,7 @@ export class DraftOfferProposalPool {
   /**
    * Pushes the provided proposal to the list of proposals available for lease
    */
-  public add(proposal: Proposal) {
+  public add(proposal: OfferProposal) {
     if (!proposal.isDraft()) {
       this.logger.error("Cannot add a non-draft proposal to the pool", { proposalId: proposal.id });
       throw new GolemMarketError("Cannot add a non-draft proposal to the pool", MarketErrorCode.InvalidProposal);
@@ -121,11 +121,11 @@ export class DraftOfferProposalPool {
    *
    * This method will reject if no suitable proposal will be found within {@link DraftOfferProposalPool.acquireTimeoutSec} seconds.
    */
-  public acquire(): Promise<Proposal> {
+  public acquire(): Promise<OfferProposal> {
     return this.lock.acquire(
       "proposal-pool",
       async () => {
-        let proposal: Proposal | null = null;
+        let proposal: OfferProposal | null = null;
 
         while (proposal === null) {
           // Try to get one
@@ -160,7 +160,7 @@ export class DraftOfferProposalPool {
    * Validates if the proposal is still usable before putting it back to the list of available ones
    * @param proposal
    */
-  public release(proposal: Proposal): Promise<void> {
+  public release(proposal: OfferProposal): Promise<void> {
     return this.lock.acquire("proposal-pool", () => {
       this.leased.delete(proposal);
 
@@ -173,7 +173,7 @@ export class DraftOfferProposalPool {
     });
   }
 
-  public remove(proposal: Proposal): Promise<void> {
+  public remove(proposal: OfferProposal): Promise<void> {
     return this.lock.acquire("proposal-pool", () => {
       if (this.leased.has(proposal)) {
         this.leased.delete(proposal);
@@ -236,12 +236,12 @@ export class DraftOfferProposalPool {
     });
   }
 
-  protected removeFromAvailable(proposal: Proposal): void {
+  protected removeFromAvailable(proposal: OfferProposal): void {
     this.available.delete(proposal);
     this.events.emit("removed", proposal);
   }
 
-  public readFrom(source: Observable<Proposal[]>): Subscription {
+  public readFrom(source: Observable<OfferProposal[]>): Subscription {
     return source.subscribe({
       next: (proposalBatch) => proposalBatch.forEach((proposal) => this.add(proposal)),
       error: (e) => this.logger.error("Error while collecting proposals", e),

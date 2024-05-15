@@ -2,7 +2,7 @@ import { instance, when, verify, deepEqual, mock, reset, _, imock } from "@johan
 import * as YaTsClient from "ya-ts-client";
 import { YagnaApi } from "../yagnaApi";
 import { DemandRequestBody, MarketApiAdapter } from "./market-api-adapter";
-import { Demand, DemandSpecification, Proposal } from "../../../market";
+import { Demand, DemandSpecification, OfferProposal } from "../../../market";
 import { take, takeUntil, timer } from "rxjs";
 import { Logger } from "../../utils";
 import { DemandBodyPrototype } from "../../../market/demand/demand-body-builder";
@@ -113,7 +113,7 @@ describe("Market Api Adapter", () => {
     it("should negotiate a proposal with the selected payment platform", async () => {
       const specification = new DemandSpecification(samplePrototype, "my-selected-payment-platform", 60 * 60 * 1000);
 
-      const receivedProposal = new Proposal(
+      const receivedProposal = new OfferProposal(
         {
           ...expectedBody,
           proposalId: "proposal-id",
@@ -152,7 +152,7 @@ describe("Market Api Adapter", () => {
     });
     it("should throw an error if the counter proposal fails", async () => {
       const specification = new DemandSpecification(samplePrototype, "my-selected-payment-platform", 60 * 60 * 1000);
-      const receivedProposal = new Proposal(
+      const receivedProposal = new OfferProposal(
         {
           ...expectedBody,
           proposalId: "proposal-id",

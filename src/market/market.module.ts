@@ -12,7 +12,7 @@ import { Agreement, AgreementPool, AgreementPoolOptions, IActivityApi, IPaymentA
 import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
 import { Allocation } from "../payment";
 import { bufferTime, catchError, filter, map, mergeMap, Observable, of, OperatorFunction, switchMap, tap } from "rxjs";
-import { IProposalRepository, Proposal, ProposalFilterNew } from "./proposal";
+import { IProposalRepository, OfferProposal, ProposalFilterNew } from "./offer-proposal";
 import { DemandBodyBuilder } from "./demand/demand-body-builder";
 import { IAgreementApi } from "../agreement/agreement";
 import { BuildDemandOptions, DemandSpecification, IDemandRepository } from "./demand";
@@ -103,13 +103,13 @@ export interface MarketModule {
    * If an error occurs, the observable will emit an error and complete.
    * Keep in mind that since this method returns an observable, nothing will happen until you subscribe to it.
    */
-  subscribeForProposals(demand: Demand): Observable<Proposal>;
+  subscribeForProposals(demand: Demand): Observable<OfferProposal>;
 
   /**
    * Sends a counter-offer to the provider. Note that to get the provider's response to your
    * counter you should listen to proposals sent to yagna using `subscribeForProposals`.
    */
-  negotiateProposal(receivedProposal: Proposal, counterDemandSpec: DemandSpecification): Promise<void>;
+  negotiateProposal(receivedProposal: OfferProposal, counterDemandSpec: DemandSpecification): Promise<void>;
 
   /**
    * Internally
@@ -122,7 +122,7 @@ export interface MarketModule {
    *
    * @return Returns when the provider accepts the agreement, rejects otherwise. The resulting agreement is ready to create activities from.
    */
-  proposeAgreement(proposal: Proposal): Promise<Agreement>;
+  proposeAgreement(proposal: OfferProposal): Promise<Agreement>;
 
   /**
    * @return The Agreement that has been terminated via Yagna
@@ -147,7 +147,7 @@ export interface MarketModule {
     demandSpecification: DemandSpecification;
     filter?: ProposalFilterNew;
     bufferSize?: number;
-  }): Observable<Proposal[]>;
+  }): Observable<OfferProposal[]>;
 
   createLease(agreement: Agreement, allocation: Allocation): LeaseProcess;
 
@@ -299,7 +299,7 @@ export class MarketModuleImpl implements MarketModule {
     });
   }
 
-  subscribeForProposals(demand: Demand): Observable<Proposal> {
+  subscribeForProposals(demand: Demand): Observable<OfferProposal> {
     return this.deps.marketApi.observeProposalEvents(demand).pipe(
       tap((event) => this.logger.debug("Received proposal event from yagna", { event })),
       // filter out proposal rejection events
@@ -307,7 +307,7 @@ export class MarketModuleImpl implements MarketModule {
       // try to map the events to proposal entity, but be ready for validation errors
       mergeMap((event) => {
         return of(event).pipe(
-          map((event) => new Proposal((event as NewProposalEvent).proposal, demand)),
+          map((event) => new OfferProposal((event as NewProposalEvent).proposal, demand)),
           // in case of a validation error return a null value from the pipe
           catchError((err) => {
             this.logger.error("Failed to map the yagna proposal event to Proposal entity", err);
@@ -318,11 +318,11 @@ export class MarketModuleImpl implements MarketModule {
     );
   }
 
-  async negotiateProposal(receivedProposal: Proposal, offer: DemandSpecification): Promise<void> {
+  async negotiateProposal(receivedProposal: OfferProposal, offer: DemandSpecification): Promise<void> {
     return this.deps.marketApi.counterProposal(receivedProposal, offer);
   }
 
-  async proposeAgreement(proposal: Proposal): Promise<Agreement> {
+  async proposeAgreement(proposal: OfferProposal): Promise<Agreement> {
     const agreement = await this.agreementApi.proposeAgreement(proposal);
 
     this.logger.info("Proposed and got approval for agreement", {
@@ -360,7 +360,7 @@ export class MarketModuleImpl implements MarketModule {
     bufferTimeout?: number;
     minProposalsBatchSize?: number;
     proposalsBatchReleaseTimeoutMs?: number;
-  }): Observable<Proposal[]> {
+  }): Observable<OfferProposal[]> {
     return this.publishDemand(options.demandSpecification).pipe(
       // for each demand created -> start collecting all proposals
       switchMap((demand) => {
@@ -416,7 +416,7 @@ export class MarketModuleImpl implements MarketModule {
   private reduceInitialProposalsByProviderKey(options?: {
     minProposalsBatchSize?: number;
     proposalsBatchReleaseTimeoutMs?: number;
-  }): OperatorFunction<Proposal, Proposal> {
+  }): OperatorFunction<OfferProposal, OfferProposal> {
     return (source) =>
       new Observable((destination) => {
         let isCancelled = false;

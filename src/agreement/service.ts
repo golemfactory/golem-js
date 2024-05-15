@@ -2,7 +2,7 @@ import Bottleneck from "bottleneck";
 import { defaultLogger, Logger, sleep, YagnaApi } from "../shared/utils";
 import { Agreement, IAgreementApi, LegacyAgreementServiceOptions } from "./agreement";
 import { AgreementServiceConfig } from "./config";
-import { GolemMarketError, MarketErrorCode, Proposal } from "../market";
+import { GolemMarketError, MarketErrorCode, OfferProposal } from "../market";
 
 export interface AgreementDTO {
   id: string;
@@ -12,7 +12,7 @@ export interface AgreementDTO {
 export class AgreementCandidate {
   agreement?: AgreementDTO;
 
-  constructor(readonly proposal: Proposal) {}
+  constructor(readonly proposal: OfferProposal) {}
 }
 
 export type AgreementSelector = (candidates: AgreementCandidate[]) => Promise<AgreementCandidate>;
@@ -69,7 +69,7 @@ export class AgreementPoolService {
    * Add proposal for create agreement purposes
    * @param proposal Proposal
    */
-  async addProposal(proposal: Proposal) {
+  async addProposal(proposal: OfferProposal) {
     // TODO: this.logger.debug(`New proposal added to pool`, { providerName: proposal.provider.name });
     this.pool.add(new AgreementCandidate(proposal));
   }
