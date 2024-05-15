@@ -1,4 +1,5 @@
-import { DraftOfferProposalPool, GolemNetwork, YagnaApi } from "../../src";
+import { Subscription } from "rxjs";
+import { Allocation, DraftOfferProposalPool, GolemNetwork, YagnaApi } from "../../src";
 
 describe("LeaseProcessPool", () => {
   const glm = new GolemNetwork();
@@ -8,19 +9,18 @@ describe("LeaseProcessPool", () => {
     activity: glm.activity,
     payment: glm.payment,
   };
-  let proposalPool;
-  let agreementPool;
-  let allocation;
-  let proposalSubscription;
+  let proposalPool: DraftOfferProposalPool;
+  let allocation: Allocation;
+  let proposalSubscription: Subscription;
 
   beforeAll(async () => {
-    await yagnaApi.connect();
+    await glm.connect();
     allocation = await modules.payment.createAllocation({ budget: 1 });
   });
 
   afterAll(async () => {
     await allocation.release();
-    await yagnaApi.disconnect();
+    await glm.disconnect();
   });
 
   beforeEach(async () => {
@@ -34,21 +34,23 @@ describe("LeaseProcessPool", () => {
       },
       payerDetails,
     );
-    proposalSubscription = modules.market
-      .startCollectingProposals({
+    proposalSubscription = proposalPool.readFrom(
+      modules.market.startCollectingProposals({
         demandSpecification,
-      })
-      .subscribe((proposalsBatch) => proposalsBatch.forEach((proposal) => proposalPool.add(proposal)));
+      }),
+    );
   });
 
   afterEach(async () => {
-    await proposalSubscription.unsubscribe();
-    await agreementPool.drainAndClear();
+    proposalSubscription.unsubscribe();
     await proposalPool.clear();
   });
 
   it("should run a simple script on the activity from the pool", async () => {
     const pool = modules.market.createLeaseProcessPool(proposalPool, allocation, { replicas: 1 });
+    pool.events.on("error", (error) => {
+      throw error;
+    });
     const leaseProcess = await pool.acquire();
     expect(pool.getSize()).toEqual(1);
     expect(pool.getAvailable()).toEqual(0);
@@ -61,6 +63,9 @@ describe("LeaseProcessPool", () => {
 
   it("should prepare two activity ready to use", async () => {
     const pool = modules.market.createLeaseProcessPool(proposalPool, allocation, { replicas: 2 });
+    pool.events.on("error", (error) => {
+      throw error;
+    });
     await pool.ready();
     expect(pool.getSize()).toEqual(2);
     expect(pool.getAvailable()).toEqual(2);
@@ -87,6 +92,9 @@ describe("LeaseProcessPool", () => {
 
   it("should release the activity and reuse it again", async () => {
     const pool = modules.market.createLeaseProcessPool(proposalPool, allocation, { replicas: 1 });
+    pool.events.on("error", (error) => {
+      throw error;
+    });
     const lease = await pool.acquire();
     const activity = await lease.getExeUnit();
     const result1 = await activity.run("echo result-1");
@@ -101,12 +109,13 @@ describe("LeaseProcessPool", () => {
     await pool.drainAndClear();
   });
 
-  it("should terminate all activities and agreemnets after drain and clear the poll", async () => {
+  it("should terminate all agreements after drain and clear the poll", async () => {
     const pool = modules.market.createLeaseProcessPool(proposalPool, allocation, { replicas: 2 });
-    const activityTerminatedIds: string[] = [];
+    pool.events.on("error", (error) => {
+      throw error;
+    });
     const agreementTerminatedIds: string[] = [];
-    agreementPool.events.on("destroyed", (agreement) => agreementTerminatedIds.push(agreement.id));
-    pool.events.on("destroyed", (activity) => activityTerminatedIds.push(activity.id));
+    pool.events.on("destroyed", (agreement) => agreementTerminatedIds.push(agreement.id));
 
     const lease1 = await pool.acquire();
     const lease2 = await pool.acquire();
@@ -120,8 +129,6 @@ describe("LeaseProcessPool", () => {
     await pool.release(lease1);
     await pool.release(lease2);
     await pool.drainAndClear();
-    await agreementPool.drainAndClear();
-    expect(activityTerminatedIds.sort()).toEqual([activity1.activity.id, activity2.activity.id].sort());
     expect(agreementTerminatedIds.sort()).toEqual(
       [activity1.activity.agreement.id, activity2.activity.agreement.id].sort(),
     );
