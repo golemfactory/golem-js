@@ -1,5 +1,5 @@
 import { Logger } from "../utils";
-import { BehaviorSubject } from "rxjs";
+import { Subject } from "rxjs";
 import { EventDTO } from "ya-ts-client/dist/market-api";
 import { waitForCondition } from "../utils/waitForCondition";
 
@@ -27,7 +27,7 @@ export type CancellablePoll<T> = {
 export class EventReaderFactory {
   public constructor(private readonly logger: Logger) {}
 
-  public async pollToSubject<T>(generator: AsyncGenerator<T>, subject: BehaviorSubject<T>) {
+  public async pollToSubject<T>(generator: AsyncGenerator<T>, subject: Subject<T>) {
     for await (const value of generator) {
       subject.next(value);
     }

@@ -5,7 +5,7 @@ import { v4 } from "uuid";
 import { defaultLogger, Logger } from "../utils";
 import semverSatisfies from "semver/functions/satisfies.js"; // .js added for ESM compatibility
 import semverCoerce from "semver/functions/coerce.js"; // .js added for ESM compatibility
-import { BehaviorSubject, Observable } from "rxjs";
+import { Observable, Subject } from "rxjs";
 import { CancellablePoll, EventReaderFactory } from "./event-reader-factory";
 import EventSource from "eventsource";
 import { StreamingBatchEvent } from "../../activity/results";
@@ -70,13 +70,13 @@ export class YagnaApi {
   public gsb: YaTsClient.GsbApi.RequestorService;
   public version: YaTsClient.VersionApi.DefaultService;
 
-  public debitNoteEvents$ = new BehaviorSubject<YagnaDebitNoteEvent | null>(null);
+  public debitNoteEvents$ = new Subject<YagnaDebitNoteEvent>();
   private debitNoteEventsPoll: CancellablePoll<YagnaDebitNoteEvent> | null = null;
 
-  public invoiceEvents$ = new BehaviorSubject<YagnaInvoiceEvent | null>(null);
+  public invoiceEvents$ = new Subject<YagnaInvoiceEvent>();
   private invoiceEventPoll: CancellablePoll<YagnaInvoiceEvent> | null = null;
 
-  public agreementEvents$ = new BehaviorSubject<YagnaAgreementOperationEvent | null>(null);
+  public agreementEvents$ = new Subject<YagnaAgreementOperationEvent>();
   private agreementEventsPoll: CancellablePoll<YagnaAgreementOperationEvent> | null = null;
 
   private readonly logger: Logger;
