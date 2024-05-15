@@ -1,30 +1,30 @@
-import { Proposal } from "./proposal";
+import { OfferProposal } from "./offer-proposal";
 
 /** Default Proposal filter that accept all proposal coming from the market */
 export const acceptAll = () => () => true;
 
 /** Proposal filter blocking every offer coming from a provider whose id is in the array */
-export const disallowProvidersById = (providerIds: string[]) => (proposal: Proposal) =>
+export const disallowProvidersById = (providerIds: string[]) => (proposal: OfferProposal) =>
   !providerIds.includes(proposal.provider.id);
 
 /** Proposal filter blocking every offer coming from a provider whose name is in the array */
-export const disallowProvidersByName = (providerNames: string[]) => (proposal: Proposal) =>
+export const disallowProvidersByName = (providerNames: string[]) => (proposal: OfferProposal) =>
   !providerNames.includes(proposal.provider.name);
 
 /** Proposal filter blocking every offer coming from a provider whose name match to the regexp */
-export const disallowProvidersByNameRegex = (regexp: RegExp) => (proposal: Proposal) =>
+export const disallowProvidersByNameRegex = (regexp: RegExp) => (proposal: OfferProposal) =>
   !proposal.provider.name.match(regexp);
 
 /** Proposal filter that only allows offers from a provider whose id is in the array */
-export const allowProvidersById = (providerIds: string[]) => (proposal: Proposal) =>
+export const allowProvidersById = (providerIds: string[]) => (proposal: OfferProposal) =>
   providerIds.includes(proposal.provider.id);
 
 /** Proposal filter that only allows offers from a provider whose name is in the array */
-export const allowProvidersByName = (providerNames: string[]) => (proposal: Proposal) =>
+export const allowProvidersByName = (providerNames: string[]) => (proposal: OfferProposal) =>
   providerNames.includes(proposal.provider.name);
 
 /** Proposal filter that only allows offers from a provider whose name match to the regexp */
-export const allowProvidersByNameRegex = (regexp: RegExp) => (proposal: Proposal) =>
+export const allowProvidersByNameRegex = (regexp: RegExp) => (proposal: OfferProposal) =>
   !!proposal.provider.name.match(regexp);
 
 export type PriceLimits = {
@@ -40,7 +40,7 @@ export type PriceLimits = {
  * @param priceLimits.cpuPerSec The maximum price for CPU usage in GLM/s
  * @param priceLimits.envPerSec The maximum price for the duration of the activity in GLM/s
  */
-export const limitPriceFilter = (priceLimits: PriceLimits) => (proposal: Proposal) => {
+export const limitPriceFilter = (priceLimits: PriceLimits) => (proposal: OfferProposal) => {
   return (
     proposal.pricing.cpuSec <= priceLimits.cpuPerSec &&
     proposal.pricing.envSec <= priceLimits.envPerSec &&

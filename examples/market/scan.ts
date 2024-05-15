@@ -1,9 +1,9 @@
 /**
- * This example demonstrates how to scan the market for proposals
+ * This example demonstrates how to scan the market for OfferProposals
  * Lets learn what is the average start price
  * Notice that we don't need to even allocate any budget for this operation
  */
-import { GolemNetwork, ProposalNew } from "@golem-sdk/golem-js";
+import { GolemNetwork, OfferProposal } from "@golem-sdk/golem-js";
 
 (async () => {
   const glm = new GolemNetwork({
@@ -26,7 +26,7 @@ import { GolemNetwork, ProposalNew } from "@golem-sdk/golem-js";
       payerDetails,
     );
 
-    const offers = new Set<ProposalNew>();
+    const offers = new Set<OfferProposal>();
 
     console.log("Scanning the market...");
     const subscription = glm.market
@@ -35,12 +35,12 @@ import { GolemNetwork, ProposalNew } from "@golem-sdk/golem-js";
         bufferSize: 5,
       })
       .subscribe({
-        next: (proposals) => {
-          console.log("Received a batch of ", proposals.length, " offers...");
-          proposals.forEach((proposal) => offers.add(proposal));
+        next: (OfferProposals) => {
+          console.log("Received a batch of ", OfferProposals.length, " offers...");
+          OfferProposals.forEach((OfferProposal) => offers.add(OfferProposal));
         },
         error: (e) => {
-          console.error("Error while collecting proposals", e);
+          console.error("Error while collecting OfferProposals", e);
         },
       });
 
