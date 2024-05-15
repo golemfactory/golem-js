@@ -121,6 +121,7 @@ export class ActivityModuleImpl implements ActivityModule {
       this.services.yagna.activity.control,
       this.services.yagna.activity.exec,
       activity,
+      this.services.networkApi,
       options,
     );
 

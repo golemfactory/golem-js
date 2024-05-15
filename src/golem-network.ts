@@ -32,6 +32,8 @@ import {
   StorageProvider,
   WebSocketBrowserStorageProvider,
 } from "./shared/storage";
+import { NetworkApiAdapter } from "./shared/yagna/adapters/network-api-adapter";
+import { INetworkApi } from "./network/api";
 
 export interface GolemNetworkOptions {
   logger?: Logger;
@@ -66,6 +68,7 @@ export type GolemServices = {
   activityApi: IActivityApi;
   agreementApi: IAgreementApi;
   marketApi: MarketApi;
+  networkApi: INetworkApi;
   proposalCache: CacheService<OfferProposal>;
   proposalRepository: IProposalRepository;
   demandRepository: IDemandRepository;
@@ -158,13 +161,14 @@ export class GolemNetwork {
         ),
         marketApi: new MarketApiAdapter(this.yagna, this.logger),
         fileServer: new GftpServerAdapter(this.storageProvider),
+        networkApi: new NetworkApiAdapter(this.yagna, this.logger),
       };
 
       this.market = new MarketModuleImpl(this.services);
       this.payment = new PaymentModuleImpl(this.services, this.options.payment);
       this.activity = new ActivityModuleImpl(this.services);
 
-      this.network = new NetworkModuleImpl();
+      this.network = new NetworkModuleImpl(this.services);
     } catch (err) {
       this.events.emit("error", err);
       throw err;

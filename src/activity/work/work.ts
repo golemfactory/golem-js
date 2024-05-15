@@ -25,6 +25,7 @@ import { AgreementDTO } from "../../agreement/service";
 import { ActivityApi } from "ya-ts-client";
 import { YagnaExeScriptObserver } from "../../shared/yagna";
 import { ExeScriptExecutor } from "../exe-script-executor";
+import { INetworkApi } from "../../network/api";
 
 export type Worker<OutputType> = (ctx: WorkContext) => Promise<OutputType>;
 
@@ -75,6 +76,7 @@ export class WorkContext {
     public readonly activityControl: ActivityApi.RequestorControlService,
     public readonly execObserver: YagnaExeScriptObserver,
     public readonly activity: Activity,
+    private readonly networkApi: INetworkApi,
     private options?: WorkOptions,
     executionOptions?: ExecutionConfig,
   ) {
@@ -359,7 +361,7 @@ export class WorkContext {
         this.activity.getProviderInfo(),
       );
 
-    return this.networkNode.getWebsocketUri(port);
+    return this.networkApi.getWebsocketUri(this.networkNode, port);
   }
 
   getIp(): string {
@@ -371,7 +373,7 @@ export class WorkContext {
         this.activity,
         this.activity.getProviderInfo(),
       );
-    return this.networkNode.ip.toString();
+    return this.networkNode.ip;
   }
 
   /**

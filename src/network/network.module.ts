@@ -26,6 +26,7 @@ export interface NetworkModule {
   removeNetwork(networkId: string): Promise<void>;
   addNetworkNode(network: Network, nodeId: string, nodeIp?: string): Promise<NetworkNode>;
   removeNetworkNode(network: Network, nodeId: string): Promise<void>;
+  getWebsocketUri(networkNode: NetworkNode, port: number): string;
 }
 
 export class NetworkModuleImpl implements NetworkModule {
@@ -100,5 +101,9 @@ export class NetworkModuleImpl implements NetworkModule {
         error,
       );
     }
+  }
+
+  getWebsocketUri(networkNode: NetworkNode, port: number): string {
+    return this.deps.networkApi.getWebsocketUri(networkNode, port);
   }
 }

@@ -1,13 +1,13 @@
 import { Worker, WorkOptions } from "../../activity/work";
 import { LegacyAgreementServiceOptions } from "../../agreement";
 import { DemandSpec } from "../../market";
-import { NetworkOptions } from "../../network";
 import { PaymentModuleOptions } from "../../payment";
 import { EventEmitter } from "eventemitter3";
 import { GolemAbortError, GolemUserError } from "../../shared/error/golem-error";
 import { GolemNetwork } from "../../golem-network";
 import { Logger } from "../../shared/utils";
 import { ActivityDemandDirectorConfigOptions } from "../../market/demand/options";
+import { NetworkOptions } from "../../network/network.module";
 
 export enum JobState {
   New = "new",

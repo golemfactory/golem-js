@@ -27,6 +27,7 @@ import { ActivityDemandDirector } from "./demand/directors/activity-demand-direc
 import { ActivityDemandDirectorConfigOptions } from "./demand/options";
 import { BasicDemandDirectorConfig } from "./demand/directors/basic-demand-director-config";
 import { PaymentDemandDirectorConfig } from "./demand/directors/payment-demand-director-config";
+import { INetworkApi } from "../network/api";
 
 export interface MarketEvents {}
 
@@ -177,6 +178,7 @@ export class MarketModuleImpl implements MarketModule {
   private readonly yagnaApi: YagnaApi;
   private readonly logger = defaultLogger("market");
   private readonly agreementApi: IAgreementApi;
+  private readonly networkApi: INetworkApi;
   private readonly proposalRepo: IProposalRepository;
   private readonly demandRepo: IDemandRepository;
   private fileServer: IFileServer;
@@ -193,6 +195,7 @@ export class MarketModuleImpl implements MarketModule {
       paymentApi: IPaymentApi;
       activityApi: IActivityApi;
       marketApi: MarketApi;
+      networkApi: INetworkApi;
       fileServer: IFileServer;
       storageProvider: StorageProvider;
     },
@@ -200,6 +203,7 @@ export class MarketModuleImpl implements MarketModule {
     this.logger = deps.logger;
     this.yagnaApi = deps.yagna;
     this.agreementApi = deps.agreementApi;
+    this.networkApi = deps.networkApi;
     this.proposalRepo = deps.proposalRepository;
     this.demandRepo = deps.demandRepository;
     this.fileServer = deps.fileServer;
@@ -400,6 +404,7 @@ export class MarketModuleImpl implements MarketModule {
       this.deps.paymentApi,
       this.deps.activityApi,
       this.agreementApi,
+      this.networkApi,
       this.deps.logger,
       this.yagnaApi, // TODO: Remove this dependency
       this.deps.storageProvider,
