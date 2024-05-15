@@ -2,14 +2,13 @@
 import { EventEmitter } from "eventemitter3";
 import { Allocation, DebitNote, Invoice, InvoiceProcessor } from "./index";
 
-import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
+import { defaultLogger, YagnaApi } from "../shared/utils";
 import { DebitNoteFilter, InvoiceFilter } from "./service";
 import { Observable } from "rxjs";
 import { GolemServices } from "../golem-network";
 import { PaymentSpec } from "../market";
 import { PayerDetails } from "./PayerDetails";
 import { IPaymentApi } from "../agreement";
-import { all } from "axios";
 
 export interface PaymentModuleOptions {
   debitNoteFilter?: DebitNoteFilter;
@@ -26,9 +25,9 @@ export type CreateAllocationParams = {
 export interface PaymentModule {
   events: EventEmitter<PaymentModuleEvents>;
 
-  subscribeForDebitNotes(): Observable<DebitNote>;
+  observeDebitNotes(): Observable<DebitNote>;
 
-  subscribeForInvoices(): Observable<Invoice>;
+  observeInvoices(): Observable<Invoice>;
 
   createAllocation(opts: CreateAllocationParams): Promise<Allocation>;
 
@@ -93,12 +92,12 @@ export class PaymentModuleImpl implements PaymentModule {
     return new PayerDetails(this.options.payment.network, this.options.payment.driver, address);
   }
 
-  subscribeForDebitNotes(): Observable<DebitNote> {
-    throw new Error("Method not implemented.");
+  observeDebitNotes(): Observable<DebitNote> {
+    return this.paymentApi.receivedDebitNotes$;
   }
 
-  subscribeForInvoices(): Observable<Invoice> {
-    throw new Error("Method not implemented.");
+  observeInvoices(): Observable<Invoice> {
+    return this.paymentApi.receivedInvoices$;
   }
 
   async createAllocation(allocationParams: CreateAllocationParams): Promise<Allocation> {
