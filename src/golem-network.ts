@@ -1,4 +1,4 @@
-import { DataTransferProtocol, DeploymentOptions, GolemDeploymentBuilder, MarketOptions } from "./experimental";
+import { DataTransferProtocol, DeploymentOptions, GolemDeploymentBuilder } from "./deployment";
 import { defaultLogger, Logger, YagnaApi } from "./shared/utils";
 import {
   Demand,
@@ -7,6 +7,7 @@ import {
   MarketApi,
   MarketModule,
   MarketModuleImpl,
+  MarketOptions,
   OfferProposal,
 } from "./market";
 import { PaymentModule, PaymentModuleImpl, PaymentModuleOptions } from "./payment";
