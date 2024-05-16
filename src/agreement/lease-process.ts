@@ -75,14 +75,19 @@ export class LeaseProcess {
    * @return Resolves when the lease will be fully terminated and all pending business operations finalized
    */
   async finalize() {
-    this.logger.debug("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
-    if (this.currentActivity) {
-      await this.activityApi.destroyActivity(this.currentActivity);
-      await this.agreementApi.terminateAgreement(this.agreement);
+    try {
+      this.logger.debug("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
+      if (this.currentActivity) {
+        await this.activityApi.destroyActivity(this.currentActivity);
+        await this.agreementApi.terminateAgreement(this.agreement);
+      }
+      await waitForCondition(() => this.paymentProcess.isFinished());
+      this.logger.debug("Payment process for agreement finalized", { agreementId: this.agreement.id });
+    } catch (error) {
+      this.logger.error("Payment process finalization failed", { agreementId: this.agreement.id, error });
+    } finally {
+      this.events.emit("finalized");
     }
-    await waitForCondition(() => this.paymentProcess.isFinished());
-    this.logger.debug("Payment process for agreement finalized", { agreementId: this.agreement.id });
-    this.events.emit("finalized");
   }
 
   public hasActivity(): boolean {

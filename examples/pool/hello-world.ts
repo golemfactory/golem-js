@@ -18,9 +18,11 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
   let allocation;
 
   try {
-    await glm.connect();
-    allocation = await glm.payment.createAllocation({ budget: 1 });
+    const RENT_HOURS = 0.25;
 
+    await glm.connect();
+
+    allocation = await glm.payment.createAllocation({ budget: 1, expirationSec: RENT_HOURS * 60 * 60 });
     const demandOptions = {
       demand: {
         activity: {
@@ -31,7 +33,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
         },
       },
       market: {
-        rentHours: 12,
+        rentHours: RENT_HOURS,
         pricing: {
           model: "linear",
           maxStartPrice: 1,

@@ -6,8 +6,8 @@ import { GolemMarketError, MarketErrorCode } from "../market";
 import type { AgreementDTO } from "./service";
 import { EventEmitter } from "eventemitter3";
 import type { RequireAtLeastOne } from "../shared/utils/types";
-import type { Allocation } from "../payment";
-import type { IPaymentApi, LeaseProcess } from "./lease-process";
+import type { Allocation, IPaymentApi } from "../payment";
+import type { LeaseProcess } from "./lease-process";
 
 export interface LeaseProcessPoolDependencies {
   agreementApi: IAgreementApi;

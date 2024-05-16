@@ -74,8 +74,8 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
     await proposalPool.remove(draftProposal);
 
     // This will keep the script waiting for payments etc
-    // Also it will release the allocation internally
     await lease.finalize();
+    await glm.payment.releaseAllocation(allocation);
   } catch (err) {
     console.error("Failed to run example on Golem", err);
   } finally {
