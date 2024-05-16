@@ -15,10 +15,10 @@ export interface LeaseProcessPoolDependencies {
   allocation: Allocation;
   proposalPool: DraftOfferProposalPool;
   marketModule: MarketModule;
+  logger?: Logger;
 }
 
 export interface LeaseProcessPoolOptions {
-  logger?: Logger;
   replicas?: number | RequireAtLeastOne<{ min: number; max: number }>;
   agreementOptions?: LegacyAgreementServiceOptions;
 }
@@ -102,22 +102,19 @@ export class LeaseProcessPool {
         "error",
         new GolemMarketError("Creating lease process failed", MarketErrorCode.LeaseProcessCreationFailed, error),
       );
-      this.logger.error("Creating agreement failed", error);
+      this.logger.error("Creating lease process failed", error);
       throw error;
     }
   }
 
   private async validate(leaseProcess: LeaseProcess) {
     try {
-      // Reach for the most recent state in Yagna (source of truth)
-      const state = await this.agreementApi
-        .getAgreement(leaseProcess.agreement.id)
-        .then((agreement) => agreement.getState());
+      const state = await leaseProcess.fetchAgreementState();
       const result = state === "Approved";
-      this.logger.debug("Validating lease process in the pool", { result, state });
+      this.logger.debug("Validated lease process in the pool", { result, state });
       return result;
     } catch (err) {
-      this.logger.error("Checking agreement status failed. The agreement will be removed from the pool", err);
+      this.logger.error("Something went wrong while validating lease process, it will be destroyed", err);
       return false;
     }
   }
@@ -150,6 +147,16 @@ export class LeaseProcessPool {
     return leaseProcess;
   }
 
+  private async enqueueAcquire(): Promise<LeaseProcess> {
+    return new Promise((resolve) => {
+      this.acquireQueue.push((leaseProcess) => {
+        this.borrowed.add(leaseProcess);
+        this.events.emit("acquired", leaseProcess.agreement.getDto());
+        resolve(leaseProcess);
+      });
+    });
+  }
+
   /**
    * Borrow a lease process from the pool. If there is no valid lease process a new one will be created.
    */
@@ -160,13 +167,7 @@ export class LeaseProcessPool {
     let leaseProcess = await this.takeValidLeaseProcess();
     if (!leaseProcess) {
       if (!this.canCreateMoreLeaseProcesses()) {
-        return new Promise((resolve) => {
-          this.acquireQueue.push((leaseProcess) => {
-            this.borrowed.add(leaseProcess);
-            this.events.emit("acquired", leaseProcess.agreement.getDto());
-            resolve(leaseProcess);
-          });
-        });
+        return this.enqueueAcquire();
       }
       leaseProcess = await this.createNewLeaseProcess();
     }
@@ -179,7 +180,7 @@ export class LeaseProcessPool {
    * If there are any acquires waiting in the queue, the lease process will be passed to the first one.
    * Otherwise, the lease process will be added to the queue.
    */
-  private addLeaseProcessToQueue(leaseProcess: LeaseProcess) {
+  private passLeaseProcessToWaitingAcquireOrBackToPool(leaseProcess: LeaseProcess) {
     if (this.acquireQueue.length > 0) {
       const acquire = this.acquireQueue.shift()!;
       acquire(leaseProcess);
@@ -193,7 +194,7 @@ export class LeaseProcessPool {
   }
 
   async release(leaseProcess: LeaseProcess): Promise<void> {
-    if (this.getAvailable() >= this.maxPoolSize) {
+    if (this.getAvailableSize() >= this.maxPoolSize) {
       return this.destroy(leaseProcess);
     }
     this.borrowed.delete(leaseProcess);
@@ -202,7 +203,7 @@ export class LeaseProcessPool {
       return this.destroy(leaseProcess);
     }
     this.events.emit("released", leaseProcess.agreement.getDto());
-    this.addLeaseProcessToQueue(leaseProcess);
+    this.passLeaseProcessToWaitingAcquireOrBackToPool(leaseProcess);
   }
 
   async destroy(leaseProcess: LeaseProcess): Promise<void> {
@@ -242,33 +243,43 @@ export class LeaseProcessPool {
     return;
   }
 
+  /**
+   * Total size (available + borrowed)
+   */
   getSize() {
-    return this.getAvailable() + this.getBorrowed();
+    return this.getAvailableSize() + this.getBorrowedSize();
   }
 
-  getAvailable() {
+  /**
+   * Available size (how many lease processes are ready to be borrowed)
+   */
+  getAvailableSize() {
     return this.lowPriority.size + this.highPriority.size;
   }
 
-  getBorrowed() {
+  /**
+   * Borrowed size (how many lease processes are currently out of the pool)
+   */
+  getBorrowedSize() {
     return this.borrowed.size;
   }
 
   /**
    * Wait till the pool is ready to use (min number of items in pool are usable).
    * Optionally, you can pass an AbortSignal to cancel the operation.
+   * By default, this method will wait for 10 seconds before throwing an error.
    */
   async ready(abortSignal?: AbortSignal): Promise<void> {
-    if (this.minPoolSize <= this.getAvailable()) {
+    if (this.minPoolSize <= this.getAvailableSize()) {
       return;
     }
     const signal = abortSignal || AbortSignal.timeout(10_000);
-    while (this.minPoolSize > this.getAvailable()) {
+    while (this.minPoolSize > this.getAvailableSize()) {
       if (signal.aborted) {
         break;
       }
       await Promise.allSettled(
-        new Array(this.minPoolSize - this.getAvailable()).fill(0).map(() =>
+        new Array(this.minPoolSize - this.getAvailableSize()).fill(0).map(() =>
           this.createNewLeaseProcess().then(
             (leaseProcess) => this.lowPriority.add(leaseProcess),
             (error) => this.logger.error("Creating lease process failed", error),
@@ -277,7 +288,7 @@ export class LeaseProcessPool {
       );
     }
 
-    if (this.minPoolSize > this.getAvailable()) {
+    if (this.minPoolSize > this.getAvailableSize()) {
       throw new Error("Could not create enough lease processes to reach the minimum pool size in time");
     }
     this.events.emit("ready");

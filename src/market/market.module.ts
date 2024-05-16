@@ -428,7 +428,7 @@ export class MarketModuleImpl implements MarketModule {
       allocation,
       proposalPool: draftPool,
       marketModule: this,
-      logger: options?.logger || this.logger.child("lease-process-pool"),
+      logger: this.logger.child("lease-process-pool"),
       ...options,
     });
   }

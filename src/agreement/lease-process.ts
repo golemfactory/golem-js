@@ -157,4 +157,8 @@ export class LeaseProcess {
       throw new Error(`There is no activity to destroy.`);
     }
   }
+
+  async fetchAgreementState() {
+    return this.agreementApi.getAgreement(this.agreement.id).then((agreement) => agreement.getState());
+  }
 }

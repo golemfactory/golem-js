@@ -259,7 +259,6 @@ export class Deployment {
         market: options.market,
       },
       leaseProcessPoolOptions: {
-        logger: this.logger.child("lease-process-pool"),
         agreementOptions: { invoiceFilter: options.payment?.invoiceFilter },
         replicas,
       },
