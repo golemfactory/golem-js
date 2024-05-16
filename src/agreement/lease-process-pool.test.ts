@@ -1,6 +1,6 @@
 import { _, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
 import type { Agreement, IAgreementApi } from "./agreement";
-import { type IPaymentApi, type LeaseProcess } from "./lease-process";
+import { LeaseProcess, type IPaymentApi } from "./lease-process";
 import { Allocation } from "../payment";
 import type { MarketModule, OfferProposal } from "../market";
 import { DraftOfferProposalPool } from "../market";
@@ -78,27 +78,43 @@ describe("LeaseProcessPool", () => {
       expect(pool.getAvailableSize()).toBe(3);
       verify(proposalPool.acquire()).times(5);
     });
-    it("stops retrying after timeout", async () => {
-      when(proposalPool.acquire()).thenResolve({} as OfferProposal);
-      when(proposalPool.remove(_)).thenResolve();
-      when(marketModule.createLease(_, _)).thenReturn({} as LeaseProcess);
-
-      const fakeAgreement = { getDto: () => ({}) } as Agreement;
-      when(agreementApi.proposeAgreement(_))
-        .thenCall(() => new Promise((resolve) => setTimeout(() => resolve(fakeAgreement), 50)))
-        .thenCall(
-          () => new Promise((_, reject) => setTimeout(() => reject(new Error("Failed to propose agreement")), 50)),
-        );
-      // all further calls will return the same error
-
+    it("stops retrying after abort signal is triggered", async () => {
       const pool = getLeasePool({ min: 3 });
+      pool["createNewLeaseProcess"] = jest
+        .fn(
+          () =>
+            new Promise<LeaseProcess | never>((_, reject) =>
+              setTimeout(() => reject(new Error("Failed to propose agreement")), 50),
+            ),
+        )
+        // the first call will succeed, the rest will fail (fall back to the first implementation)
+        .mockImplementationOnce(() => new Promise((resolve) => setTimeout(() => resolve(getMockLeaseProcess()), 50)));
 
       await expect(pool.ready(AbortSignal.timeout(60))).rejects.toThrow(
         "Could not create enough lease processes to reach the minimum pool size in time",
       );
       expect(pool.getAvailableSize()).toBe(1);
       // first loop 3 times, then 2 times
-      verify(proposalPool.acquire()).times(5);
+      expect(pool["createNewLeaseProcess"]).toHaveBeenCalledTimes(5);
+    });
+    it("stops retrying after specified timeout is reached", async () => {
+      const pool = getLeasePool({ min: 3 });
+      pool["createNewLeaseProcess"] = jest
+        .fn(
+          () =>
+            new Promise<LeaseProcess | never>((_, reject) =>
+              setTimeout(() => reject(new Error("Failed to propose agreement")), 50),
+            ),
+        )
+        // the first call will succeed, the rest will fail (fall back to the first implementation)
+        .mockImplementationOnce(() => new Promise((resolve) => setTimeout(() => resolve(getMockLeaseProcess()), 50)));
+
+      await expect(pool.ready(60)).rejects.toThrow(
+        "Could not create enough lease processes to reach the minimum pool size in time",
+      );
+      expect(pool.getAvailableSize()).toBe(1);
+      // first loop 3 times, then 2 times
+      expect(pool["createNewLeaseProcess"]).toHaveBeenCalledTimes(5);
     });
   });
   describe("acquire()", () => {
@@ -132,8 +148,7 @@ describe("LeaseProcessPool", () => {
     });
     it("creates a new lease process if none are available", async () => {
       const pool = getLeasePool({ min: 3 });
-      // @ts-expect-error private method
-      jest.spyOn(pool, "createNewLeaseProcess").mockImplementation(() => Promise.resolve(getMockLeaseProcess()));
+      pool["createNewLeaseProcess"] = jest.fn(() => Promise.resolve(getMockLeaseProcess()));
 
       expect(pool.getSize()).toBe(0);
       await pool.acquire();
@@ -170,8 +185,7 @@ describe("LeaseProcessPool", () => {
       const pool = getLeasePool({ min: 3 });
       const newlyCreatedLease = getMockLeaseProcess();
       jest.spyOn(pool, "destroy");
-      // @ts-expect-error private method
-      jest.spyOn(pool, "createNewLeaseProcess").mockResolvedValue(newlyCreatedLease);
+      pool["createNewLeaseProcess"] = jest.fn(() => Promise.resolve(newlyCreatedLease));
 
       const lease1 = getMockLeaseProcess();
       lease1.fetchAgreementState = jest.fn().mockResolvedValue("Expired");

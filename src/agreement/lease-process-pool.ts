@@ -266,14 +266,35 @@ export class LeaseProcessPool {
 
   /**
    * Wait till the pool is ready to use (min number of items in pool are usable).
-   * Optionally, you can pass an AbortSignal to cancel the operation.
-   * By default, this method will wait for 10 seconds before throwing an error.
+   * If an error occurs while creating new lease processes, it will be retried until the pool is ready
+   * (potentially indefinitely). To stop this process if it fails to reach the desired state in a given time,
+   * you can pass either a timeout in milliseconds or an AbortSignal.
+   *
+   * @example
+   * ```typescript
+   * await pool.ready(10_000); // If the pool is not ready in 10 seconds, an error will be thrown
+   * ```
+   * @example
+   * ```typescript
+   * await pool.ready(AbortSignal.timeout(10_000)); // If the pool is not ready in 10 seconds, an error will be thrown
+   * ```
    */
-  async ready(abortSignal?: AbortSignal): Promise<void> {
+  async ready(timeoutMs?: number): Promise<void>;
+  async ready(abortSignal?: AbortSignal): Promise<void>;
+  async ready(timeoutOrAbortSignal?: number | AbortSignal): Promise<void> {
     if (this.minPoolSize <= this.getAvailableSize()) {
       return;
     }
-    const signal = abortSignal || AbortSignal.timeout(10_000);
+    const signal = (() => {
+      if (typeof timeoutOrAbortSignal === "number") {
+        return AbortSignal.timeout(timeoutOrAbortSignal);
+      }
+      if (timeoutOrAbortSignal instanceof AbortSignal) {
+        return timeoutOrAbortSignal;
+      }
+      return { aborted: false };
+    })();
+
     while (this.minPoolSize > this.getAvailableSize()) {
       if (signal.aborted) {
         break;
