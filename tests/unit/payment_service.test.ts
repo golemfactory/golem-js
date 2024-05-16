@@ -5,8 +5,7 @@ import { LoggerMock } from "../mock/utils/logger";
 import { Agreement, GolemUserError, YagnaApi, YagnaDebitNoteEvent, YagnaInvoiceEvent } from "../../src";
 import * as YaTsClient from "ya-ts-client";
 
-import { simulateLongPoll } from "./helpers";
-import { BehaviorSubject } from "rxjs";
+import { Subject } from "rxjs";
 
 const logger = new LoggerMock();
 
@@ -131,8 +130,8 @@ describe("Payment Service", () => {
         invoiceFilter: PaymentFilters.acceptMaxAmountInvoiceFilter(7),
       });
 
-      const invoiceSubject$ = new BehaviorSubject<YagnaInvoiceEvent | null>(null);
-      const debitNoteSubject$ = new BehaviorSubject<YagnaDebitNoteEvent | null>(null);
+      const invoiceSubject$ = new Subject<YagnaInvoiceEvent>();
+      const debitNoteSubject$ = new Subject<YagnaDebitNoteEvent>();
 
       when(mockYagna.invoiceEvents$).thenReturn(invoiceSubject$);
       when(mockYagna.debitNoteEvents$).thenReturn(debitNoteSubject$);
@@ -169,8 +168,8 @@ describe("Payment Service", () => {
           paymentTimeout: TEST_PAYMENT_TIMEOUT_MS,
         });
 
-        const invoiceSubject$ = new BehaviorSubject<YagnaInvoiceEvent | null>(null);
-        const debitNoteSubject$ = new BehaviorSubject<YagnaDebitNoteEvent | null>(null);
+        const invoiceSubject$ = new Subject<YagnaInvoiceEvent>();
+        const debitNoteSubject$ = new Subject<YagnaDebitNoteEvent>();
 
         when(mockYagna.invoiceEvents$).thenReturn(invoiceSubject$);
         when(mockYagna.debitNoteEvents$).thenReturn(debitNoteSubject$);
@@ -184,7 +183,6 @@ describe("Payment Service", () => {
         paymentService.acceptPayments(agreement);
         await paymentService.run();
 
-        invoiceSubject$.next(null);
         debitNotesEvents.forEach((e) => debitNoteSubject$.next(e));
 
         await paymentService.end();
@@ -205,8 +203,8 @@ describe("Payment Service", () => {
           paymentTimeout: TEST_PAYMENT_TIMEOUT_MS,
         });
 
-        const invoiceSubject$ = new BehaviorSubject<YagnaInvoiceEvent | null>(null);
-        const debitNoteSubject$ = new BehaviorSubject<YagnaDebitNoteEvent | null>(null);
+        const invoiceSubject$ = new Subject<YagnaInvoiceEvent>();
+        const debitNoteSubject$ = new Subject<YagnaDebitNoteEvent>();
 
         when(mockYagna.invoiceEvents$).thenReturn(invoiceSubject$);
         when(mockYagna.debitNoteEvents$).thenReturn(debitNoteSubject$);
@@ -221,7 +219,6 @@ describe("Payment Service", () => {
         paymentService.acceptPayments(agreement);
         await paymentService.run();
 
-        debitNoteSubject$.next(null);
         invoiceEvents.forEach((e) => invoiceSubject$.next(e));
 
         await paymentService.end();

@@ -1,5 +1,5 @@
 import { Allocation, DebitNote, Invoice } from "../payment";
-import { BehaviorSubject, filter } from "rxjs";
+import { Subject, filter } from "rxjs";
 import { Agreement, IAgreementApi } from "./agreement";
 import { AgreementPaymentProcess } from "../payment/agreement_payment_process";
 import { DebitNoteFilter, InvoiceFilter } from "../payment/service";
@@ -10,8 +10,8 @@ import { Activity, ActivityStateEnum } from "../activity";
 import { StorageProvider } from "../shared/storage";
 
 export interface IPaymentApi {
-  receivedInvoices$: BehaviorSubject<Invoice | null>;
-  receivedDebitNotes$: BehaviorSubject<DebitNote | null>;
+  receivedInvoices$: Subject<Invoice>;
+  receivedDebitNotes$: Subject<DebitNote>;
 
   /** Starts the reader logic */
   connect(): Promise<void>;
@@ -57,7 +57,7 @@ export class LeaseProcess {
   private currentActivity: Activity | null = null;
 
   public constructor(
-    private readonly agreement: Agreement,
+    public readonly agreement: Agreement,
     private readonly allocation: Allocation,
     private readonly paymentApi: IPaymentApi,
     private readonly activityApi: IActivityApi,
@@ -85,7 +85,7 @@ export class LeaseProcess {
 
     // TODO: Could be hidden in the payment process itself!
     this.paymentApi.receivedInvoices$
-      .pipe(filter((invoice) => invoice !== null && invoice.agreementId === this.agreement.id))
+      .pipe(filter((invoice) => invoice.agreementId === this.agreement.id))
       .subscribe(async (invoice) => {
         if (invoice) {
           await this.paymentProcess.addInvoice(invoice);
@@ -93,7 +93,7 @@ export class LeaseProcess {
       });
 
     this.paymentApi.receivedDebitNotes$
-      .pipe(filter((debitNote) => debitNote !== null && debitNote.agreementId === this.agreement.id))
+      .pipe(filter((debitNote) => debitNote.agreementId === this.agreement.id))
       .subscribe(async (debitNote) => {
         if (debitNote) {
           await this.paymentProcess.addDebitNote(debitNote);
@@ -116,12 +116,24 @@ export class LeaseProcess {
     this.logger.debug("Payment process for agreement finalized", { agreementId: this.agreement.id });
   }
 
+  public hasActivity(): boolean {
+    return this.currentActivity !== null;
+  }
+
   /**
    * Creates an activity on the Provider, and returns a work context that can be used to operate within the activity
    */
   async getExeUnit(): Promise<WorkContext> {
     if (this.currentActivity) {
-      throw new Error("There is already an activity present");
+      return new WorkContext(
+        this.activityApi,
+        this.yagna.activity.control,
+        this.yagna.activity.exec,
+        this.currentActivity,
+        {
+          storageProvider: this.storageProvider,
+        },
+      );
     }
 
     const activity = await this.activityApi.createActivity(this.agreement);
@@ -137,14 +149,16 @@ export class LeaseProcess {
     return ctx;
   }
 
-  async destroyExeUnit(ctx?: WorkContext) {
-    if (this.currentActivity && ctx?.activity.id === this.currentActivity?.id) {
+  async destroyExeUnit() {
+    if (this.currentActivity) {
       await this.activityApi.destroyActivity(this.currentActivity);
       this.currentActivity = null;
     } else {
-      throw new Error(
-        `You cannot destroy activity ${ctx?.activity.id} because the current activity is ${this.currentActivity?.id}`,
-      );
+      throw new Error(`There is no activity to destroy.`);
     }
+  }
+
+  async fetchAgreementState() {
+    return this.agreementApi.getAgreement(this.agreement.id).then((agreement) => agreement.getState());
   }
 }

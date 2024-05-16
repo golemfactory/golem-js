@@ -1,4 +1,4 @@
-import { ActivityPool, AgreementPool, DraftOfferProposalPool, GolemNetwork } from "@golem-sdk/golem-js";
+import { DraftOfferProposalPool, GolemNetwork } from "@golem-sdk/golem-js";
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
 (async () => {
@@ -15,9 +15,11 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
       },
     },
   });
+  let allocation;
 
   try {
     await glm.connect();
+    allocation = await glm.payment.createAllocation({ budget: 1 });
 
     const demandOptions = {
       demand: {
@@ -52,10 +54,6 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
     const proposalSubscription = proposalPool.readFrom(proposals$);
 
-    // TODO: allocation is not used in this example?
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const allocation = await glm.payment.createAllocation({ budget: 1 });
-
     /** How many providers you plan to engage simultaneously */
     const CONCURRENCY = 2;
 
@@ -65,34 +63,33 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
       payment: glm.payment,
     };
 
-    // TODO: Optimize constructor params
-    const agreementPool = new AgreementPool(proposalPool, glm.services.agreementApi, {
+    const pool = depModules.market.createLeaseProcessPool(proposalPool, allocation, {
       replicas: { max: CONCURRENCY },
-      logger,
     });
 
-    const activityPool = new ActivityPool(depModules, agreementPool, {
-      replicas: CONCURRENCY,
-      logger,
-    });
+    const lease = await pool.acquire();
+    const lease2 = await pool.acquire();
 
-    const ctx = await activityPool.acquire();
-    const result = await ctx.run("echo Hello World");
-    console.log(result.stdout);
+    await Promise.allSettled([
+      lease
+        .getExeUnit()
+        .then((exe) => exe.run("echo Hello World from first activity"))
+        .then((result) => console.log(result.stdout)),
+      lease2
+        .getExeUnit()
+        .then((exe) => exe.run("echo Hello Golem from second activity"))
+        .then((result) => console.log(result.stdout)),
+    ]);
 
-    const ctx2 = await activityPool.acquire();
-    const result2 = await ctx.run("echo Hello Golem");
-    console.log(result2.stdout);
-
-    await activityPool.release(ctx);
-    await activityPool.release(ctx2);
+    await pool.release(lease);
+    await pool.release(lease2);
 
     proposalSubscription.unsubscribe();
-    await activityPool.drainAndClear();
-    await agreementPool.drainAndClear();
+    await pool.drainAndClear();
   } catch (err) {
     console.error("Pool execution failed:", err);
   } finally {
     await glm.disconnect();
+    allocation?.release();
   }
 })().catch(console.error);

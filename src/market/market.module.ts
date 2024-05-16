@@ -1,6 +1,14 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
 import {
+  Agreement,
+  IActivityApi,
+  IPaymentApi,
+  LeaseProcess,
+  LeaseProcessPool,
+  LeaseProcessPoolOptions,
+} from "../agreement";
+import {
   Demand,
   DraftOfferProposalPool,
   GolemMarketError,
@@ -8,7 +16,6 @@ import {
   MarketErrorCode,
   NewProposalEvent,
 } from "./index";
-import { Agreement, AgreementPool, AgreementPoolOptions, IActivityApi, IPaymentApi, LeaseProcess } from "../agreement";
 import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
 import { Allocation } from "../payment";
 import { bufferTime, catchError, filter, map, mergeMap, Observable, of, OperatorFunction, switchMap, tap } from "rxjs";
@@ -38,7 +45,7 @@ export interface DemandBuildParams {
   market: MarketOptions;
 }
 
-type DemandEngine = "vm" | "vm-nvidia" | "wasmtime";
+export type DemandEngine = "vm" | "vm-nvidia" | "wasmtime";
 
 export type PaymentSpec = {
   network: string;
@@ -154,7 +161,11 @@ export interface MarketModule {
   /**
    * Factory that creates new agreement pool that's fully configured
    */
-  createAgreementPool(draftPool: DraftOfferProposalPool): AgreementPool;
+  createLeaseProcessPool(
+    draftPool: DraftOfferProposalPool,
+    allocation: Allocation,
+    options?: LeaseProcessPoolOptions,
+  ): LeaseProcessPool;
 }
 
 /**
@@ -406,8 +417,20 @@ export class MarketModuleImpl implements MarketModule {
     );
   }
 
-  public createAgreementPool(draftPool: DraftOfferProposalPool, options?: AgreementPoolOptions): AgreementPool {
-    return new AgreementPool(draftPool, this.agreementApi, options);
+  public createLeaseProcessPool(
+    draftPool: DraftOfferProposalPool,
+    allocation: Allocation,
+    options?: LeaseProcessPoolOptions,
+  ): LeaseProcessPool {
+    return new LeaseProcessPool({
+      agreementApi: this.agreementApi,
+      paymentApi: this.deps.paymentApi,
+      allocation,
+      proposalPool: draftPool,
+      marketModule: this,
+      logger: this.logger.child("lease-process-pool"),
+      ...options,
+    });
   }
 
   /**

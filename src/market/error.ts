@@ -8,8 +8,8 @@ export enum MarketErrorCode {
   ProposalResponseFailed = "ProposalResponseFailed",
   ProposalRejectionFailed = "ProposalRejectionFailed",
   DemandExpired = "DemandExpired",
-  AgreementTerminationFailed = "AgreementTerminationFailed",
-  AgreementCreationFailed = "AgreementCreationFailed",
+  LeaseProcessTerminationFailed = "LeaseProcessTerminationFailed",
+  LeaseProcessCreationFailed = "LeaseProcessCreationFailed",
   AgreementApprovalFailed = "AgreementApprovalFailed",
   NoProposalAvailable = "NoProposalAvailable",
 }

@@ -1,14 +1,14 @@
 import { IPaymentApi } from "../../../agreement";
-import { BehaviorSubject, from, switchMap } from "rxjs";
+import { Subject, from, mergeMap, of } from "rxjs";
 import { Allocation, DebitNote, Invoice } from "../../../payment";
 import { IInvoiceRepository } from "../../../payment/invoice";
 import { Logger, YagnaApi } from "../../utils";
 import { IDebitNoteRepository } from "../../../payment/debit_note";
 
 export class PaymentApiAdapter implements IPaymentApi {
-  public receivedInvoices$ = new BehaviorSubject<Invoice | null>(null);
+  public receivedInvoices$ = new Subject<Invoice>();
 
-  public receivedDebitNotes$ = new BehaviorSubject<DebitNote | null>(null);
+  public receivedDebitNotes$ = new Subject<DebitNote>();
 
   constructor(
     private readonly yagna: YagnaApi,
@@ -22,11 +22,11 @@ export class PaymentApiAdapter implements IPaymentApi {
 
     from(this.yagna.invoiceEvents$)
       .pipe(
-        switchMap((invoice) => {
+        mergeMap((invoice) => {
           if (invoice && invoice.invoiceId) {
             return this.invoiceRepo.getById(invoice.invoiceId);
           } else {
-            return Promise.resolve(null);
+            return of();
           }
         }),
       )
@@ -38,11 +38,11 @@ export class PaymentApiAdapter implements IPaymentApi {
 
     from(this.yagna.debitNoteEvents$)
       .pipe(
-        switchMap((debitNote) => {
+        mergeMap((debitNote) => {
           if (debitNote && debitNote.debitNoteId) {
             return this.debitNoteRepo.getById(debitNote.debitNoteId);
           } else {
-            return Promise.resolve(null);
+            return of();
           }
         }),
       )
