@@ -85,6 +85,7 @@ export class LeaseProcess {
       this.logger.debug("Payment process for agreement finalized", { agreementId: this.agreement.id });
     } catch (error) {
       this.logger.error("Payment process finalization failed", { agreementId: this.agreement.id, error });
+      throw error;
     } finally {
       this.events.emit("finalized");
     }
