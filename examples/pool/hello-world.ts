@@ -65,7 +65,6 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
     const pool = depModules.market.createLeaseProcessPool(proposalPool, allocation, {
       replicas: { max: CONCURRENCY },
-      logger,
     });
 
     const lease = await pool.acquire();
