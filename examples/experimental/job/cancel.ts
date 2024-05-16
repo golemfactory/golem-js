@@ -13,7 +13,16 @@ async function main() {
     demand: {
       activity: { imageTag: "severyn/espeak:latest" },
     },
-    market: {}, // TODO: This should be optional
+    market: {
+      maxAgreements: 1,
+      rentHours: 0.5,
+      pricing: {
+        model: "linear",
+        maxStartPrice: 1,
+        maxCpuPerHourPrice: 1,
+        maxEnvPerHourPrice: 1,
+      },
+    },
     payment: {
       driver: "erc20",
       network: "holesky",

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
-import { Allocation, DebitNote, Invoice, InvoiceProcessor } from "./index";
+import { Allocation, DebitNote, Invoice, InvoiceProcessor, IPaymentApi } from "./index";
 
 import { defaultLogger, YagnaApi } from "../shared/utils";
 import { DebitNoteFilter, InvoiceFilter } from "./service";
@@ -8,7 +8,7 @@ import { Observable } from "rxjs";
 import { GolemServices } from "../golem-network";
 import { PaymentSpec } from "../market";
 import { PayerDetails } from "./PayerDetails";
-import { IPaymentApi } from "../agreement";
+import { CreateAllocationParams } from "./types";
 
 export interface PaymentModuleOptions {
   debitNoteFilter?: DebitNoteFilter;
@@ -18,10 +18,6 @@ export interface PaymentModuleOptions {
 
 export interface PaymentModuleEvents {}
 
-export type CreateAllocationParams = {
-  budget: number;
-};
-
 export interface PaymentModule {
   events: EventEmitter<PaymentModuleEvents>;
 
@@ -29,18 +25,14 @@ export interface PaymentModule {
 
   observeInvoices(): Observable<Invoice>;
 
-  createAllocation(opts: CreateAllocationParams): Promise<Allocation>;
+  createAllocation(params: { budget: number; expirationSec: number }): Promise<Allocation>;
 
-  // alt. Allocation.release()
-  releaseAllocation(allocation: Allocation): Promise<Allocation>;
+  releaseAllocation(allocation: Allocation): Promise<void>;
 
-  // alt Allocation.amend()
-  amendAllocation(allocation: Allocation, newOpts: CreateAllocationParams): Promise<Allocation>;
+  amendAllocation(allocation: Allocation, params: CreateAllocationParams): Promise<Allocation>;
 
-  // alt Invoice.accept()
   acceptInvoice(invoice: Invoice, allocation: Allocation, amount: string): Promise<Invoice>;
 
-  // alt Invoice.reject()
   rejectInvoice(invoice: Invoice, reason: string): Promise<Invoice>;
 
   acceptDebitNote(debitNote: DebitNote, allocation: Allocation, amount: string): Promise<DebitNote>;
@@ -100,22 +92,21 @@ export class PaymentModuleImpl implements PaymentModule {
     return this.paymentApi.receivedInvoices$;
   }
 
-  async createAllocation(allocationParams: CreateAllocationParams): Promise<Allocation> {
+  async createAllocation(params: { budget: number; expirationSec: number }): Promise<Allocation> {
     const payer = await this.getPayerDetails();
 
-    this.logger.info("Creating allocation", { params: allocationParams, payer });
+    this.logger.info("Creating allocation", { params: params, payer });
 
-    return Allocation.create(this.yagnaApi, {
-      account: {
-        address: payer.address,
-        platform: payer.getPaymentPlatform(),
-      },
-      ...allocationParams,
+    return this.paymentApi.createAllocation({
+      budget: params.budget,
+      paymentPlatform: this.getPaymentPlatform(),
+      expirationSec: params.expirationSec,
     });
   }
 
-  releaseAllocation(allocation: Allocation): Promise<Allocation> {
-    throw new Error("Method not implemented.");
+  releaseAllocation(allocation: Allocation): Promise<void> {
+    this.logger.info("Releasing allocation", { id: allocation.id });
+    return this.paymentApi.releaseAllocation(allocation);
   }
 
   amendAllocation(allocation: Allocation, _newOpts: CreateAllocationParams): Promise<Allocation> {

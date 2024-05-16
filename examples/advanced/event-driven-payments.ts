@@ -1,4 +1,4 @@
-import { GolemNetwork } from "../../";
+import { GolemNetwork } from "@golem-sdk/golem-js";
 
 (async () => {
   const glm = new GolemNetwork();
@@ -8,6 +8,7 @@ import { GolemNetwork } from "../../";
 
     const allocation = await glm.payment.createAllocation({
       budget: 10,
+      expirationSec: 30 * 60, // 30 minutes
     });
 
     glm.payment.observeDebitNotes().subscribe(async (debitNote) => {

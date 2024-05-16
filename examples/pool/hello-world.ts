@@ -3,7 +3,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
 (async () => {
   const logger = pinoPrettyLogger({
-    level: "debug",
+    level: "info",
   });
 
   const glm = new GolemNetwork({
@@ -33,6 +33,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
       market: {
         rentHours: 12,
         pricing: {
+          model: "linear",
           maxStartPrice: 1,
           maxCpuPerHourPrice: 1,
           maxEnvPerHourPrice: 1,

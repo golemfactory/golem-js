@@ -7,3 +7,5 @@ export * as PaymentFilters from "./strategy";
 export { GolemPaymentError, PaymentErrorCode } from "./error";
 export { InvoiceProcessor, InvoiceAcceptResult } from "./InvoiceProcessor";
 export * from "./payment.module";
+export { IPaymentApi } from "./types";
+export { CreateAllocationParams } from "./types";

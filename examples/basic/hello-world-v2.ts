@@ -16,11 +16,13 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
         activity: { imageTag: "golem/alpine:latest" },
       },
       market: {
-        rentHours: 12,
+        maxAgreements: 1,
+        rentHours: 0.5,
         pricing: {
-          maxStartPrice: 1,
-          maxCpuPerHourPrice: 1,
-          maxEnvPerHourPrice: 1,
+          model: "linear",
+          maxStartPrice: 0.5,
+          maxCpuPerHourPrice: 1.0,
+          maxEnvPerHourPrice: 0.5,
         },
       },
       payment: {
