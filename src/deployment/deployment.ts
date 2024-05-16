@@ -1,16 +1,16 @@
-import { GolemAbortError, GolemUserError } from "../../shared/error/golem-error";
-import { defaultLogger, Logger, YagnaApi } from "../../shared/utils";
+import { GolemAbortError, GolemUserError } from "../shared/error/golem-error";
+import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
 import { EventEmitter } from "eventemitter3";
-import { ActivityModule, ActivityPool, ActivityPoolOptions } from "../../activity";
-import { Network, NetworkOptions } from "../../network";
-import { GftpStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../../shared/storage";
+import { ActivityModule, ActivityPool, ActivityPoolOptions } from "../activity";
+import { Network, NetworkOptions } from "../network";
+import { GftpStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../shared/storage";
 import { validateDeployment } from "./validate-deployment";
-import { DemandBuildParams, DraftOfferProposalPool, MarketModule } from "../../market";
-import { PaymentModule } from "../../payment";
-import { AgreementPool, AgreementPoolOptions } from "../../agreement";
+import { DemandBuildParams, DraftOfferProposalPool, MarketModule } from "../market";
+import { PaymentModule } from "../payment";
+import { AgreementPool, AgreementPoolOptions } from "../agreement";
 import { CreateActivityPoolOptions } from "./builder";
 import { Subscription } from "rxjs";
-import { IAgreementApi } from "../../agreement/agreement";
+import { IAgreementApi } from "../agreement/agreement";
 
 export enum DeploymentState {
   INITIAL = "INITIAL",

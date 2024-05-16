@@ -5,7 +5,7 @@ describe("CommonJS Import", () => {
   });
 
   test("Require @golem-sdk/golem-js/experimental", async () => {
-    const { GolemNetwork } = require("@golem-sdk/golem-js/experimental");
-    expect(typeof GolemNetwork).toBe("function");
+    const { Job } = require("@golem-sdk/golem-js/experimental");
+    expect(typeof Job).toBe("function");
   });
 });
