@@ -6,12 +6,12 @@ import { Demand, DemandSpecification, IDemandRepository } from "./demand";
 import { from, of, take, takeUntil, timer } from "rxjs";
 import { IProposalRepository, OfferProposal, ProposalProperties } from "./offer-proposal";
 import { MarketApiAdapter } from "../shared/yagna/";
-import { IActivityApi, IPaymentApi } from "../agreement";
 import { IAgreementApi } from "../agreement/agreement";
 import { PayerDetails } from "../payment/PayerDetails";
-import { IFileServer } from "../activity";
+import { IActivityApi, IFileServer } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { GolemMarketError } from "./error";
+import { IPaymentApi } from "../payment";
 
 const mockMarketApiAdapter = mock(MarketApiAdapter);
 const mockYagna = mock(YagnaApi);

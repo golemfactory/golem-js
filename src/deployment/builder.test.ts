@@ -19,7 +19,16 @@ describe("Deployment builder", () => {
               minStorageGib: 1,
             },
           },
-          market: {},
+          market: {
+            maxAgreements: 1,
+            rentHours: 1,
+            pricing: {
+              model: "linear",
+              maxStartPrice: 1,
+              maxEnvPerHourPrice: 1,
+              maxCpuPerHourPrice: 1,
+            },
+          },
         })
         .createActivityPool("my-pool", {
           demand: {
@@ -30,7 +39,16 @@ describe("Deployment builder", () => {
               minStorageGib: 1,
             },
           },
-          market: {},
+          market: {
+            maxAgreements: 1,
+            rentHours: 1,
+            pricing: {
+              model: "linear",
+              maxStartPrice: 1,
+              maxEnvPerHourPrice: 1,
+              maxCpuPerHourPrice: 1,
+            },
+          },
         });
     }).toThrow(new GolemConfigError(`Activity pool with name my-pool already exists`));
   });
@@ -57,7 +75,16 @@ describe("Deployment builder", () => {
           demand: {
             activity: { imageTag: "image", minCpuCores: 1, minMemGib: 1, minStorageGib: 1 },
           },
-          market: {},
+          market: {
+            maxAgreements: 1,
+            rentHours: 1,
+            pricing: {
+              model: "linear",
+              maxStartPrice: 1,
+              maxEnvPerHourPrice: 1,
+              maxCpuPerHourPrice: 1,
+            },
+          },
           deployment: {
             network: "non-existing-network",
           },

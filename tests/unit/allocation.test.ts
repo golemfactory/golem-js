@@ -26,36 +26,33 @@ describe("Allocation", () => {
 
   describe("Creating", () => {
     it("should create allocation", async () => {
-      const allocation = await Allocation.create(instance(mockYagna), { account });
+      const allocation = new Allocation({
+        address: "0xSomeAddress",
+        paymentPlatform: "erc20-holesky-tglm",
+        allocationId: "allocation-id",
+        makeDeposit: false,
+        remainingAmount: "1.0",
+        spentAmount: "0.0",
+        timestamp: "2024-01-01T00:00:00.000Z",
+        totalAmount: "1.0",
+      });
       expect(allocation).toBeInstanceOf(Allocation);
     });
 
-    it("should not create allocation without account options", async () => {
-      const expectedPreviousError = new GolemConfigError("Account option is required");
-      await expect(Allocation.create(instance(mockYagna), {} as AllocationOptions)).rejects.toMatchError(
-        new GolemPaymentError(
-          `Could not create new allocation. ${expectedPreviousError}`,
-          PaymentErrorCode.AllocationCreationFailed,
-          undefined,
-          undefined,
-          expectedPreviousError,
-        ),
-      );
-    });
-
-    it("should not create allocation with empty account parameters", async () => {
-      const expectedPreviousError = new GolemConfigError("Account address and payment platform are required");
-      await expect(
-        Allocation.create(instance(mockYagna), { account: { address: "", platform: "" } }),
-      ).rejects.toMatchError(
-        new GolemPaymentError(
-          `Could not create new allocation. ${expectedPreviousError}`,
-          PaymentErrorCode.AllocationCreationFailed,
-          undefined,
-          undefined,
-          expectedPreviousError,
-        ),
-      );
+    it("should not create allocation with empty account parameters", () => {
+      expect(
+        () =>
+          new Allocation({
+            address: "",
+            paymentPlatform: "",
+            allocationId: "allocation-id",
+            makeDeposit: false,
+            remainingAmount: "1.0",
+            spentAmount: "0.0",
+            timestamp: "2024-01-01T00:00:00.000Z",
+            totalAmount: "1.0",
+          }),
+      ).toThrowError(new GolemConfigError("Account address and payment platform are required"));
     });
   });
 });

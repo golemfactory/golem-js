@@ -1,10 +1,10 @@
-import { DraftOfferProposalPool, GolemNetwork } from "@golem-sdk/golem-js";
+import { DraftOfferProposalPool, GolemNetwork, DemandSpec } from "@golem-sdk/golem-js";
 
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
 (async () => {
   const logger = pinoPrettyLogger({
-    level: "debug",
+    level: "info",
   });
 
   const glm = new GolemNetwork({
@@ -14,19 +14,25 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
   try {
     await glm.connect();
 
-    const demand = {
+    const demand: DemandSpec = {
       demand: {
         activity: {
           imageTag: "golem/alpine:latest",
         },
       },
       market: {
-        rentHours: 12,
+        maxAgreements: 1,
+        rentHours: 0.5,
         pricing: {
+          model: "linear",
           maxStartPrice: 1,
           maxCpuPerHourPrice: 1,
           maxEnvPerHourPrice: 1,
         },
+      },
+      payment: {
+        network: "holesky",
+        driver: "erc20",
       },
     };
 
@@ -45,7 +51,10 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
     const agreement = await glm.market.proposeAgreement(draftProposal);
 
-    const allocation = await glm.payment.createAllocation({ budget: 1 });
+    const allocation = await glm.payment.createAllocation({
+      budget: glm.market.estimateBudget(demand),
+      expirationSec: 60 * 60, // 60 minutes
+    });
     const lease = await glm.market.createLease(agreement, allocation);
     const activity = await glm.activity.createActivity(agreement);
 
@@ -66,7 +75,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
     // This will keep the script waiting for payments etc
     await lease.finalize();
-    await allocation.release();
+    await glm.payment.releaseAllocation(allocation);
   } catch (err) {
     console.error("Failed to run example on Golem", err);
   } finally {

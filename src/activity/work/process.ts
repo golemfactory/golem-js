@@ -1,8 +1,7 @@
 import { Readable, Transform } from "stream";
-import { Activity, Result } from "../index";
+import { Activity, IActivityApi, Result } from "../index";
 import { GolemWorkError, WorkErrorCode } from "./error";
 import { GolemTimeoutError } from "../../shared/error/golem-error";
-import { IActivityApi } from "../../agreement";
 import { Logger } from "../../shared/utils";
 
 const DEFAULTS = {

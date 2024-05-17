@@ -15,11 +15,11 @@ describe("LeaseProcessPool", () => {
 
   beforeAll(async () => {
     await glm.connect();
-    allocation = await modules.payment.createAllocation({ budget: 1 });
+    allocation = await modules.payment.createAllocation({ budget: 1, expirationSec: 60 });
   });
 
   afterAll(async () => {
-    await allocation.release();
+    await glm.payment.releaseAllocation(allocation);
     await glm.disconnect();
   });
 

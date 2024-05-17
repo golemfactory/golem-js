@@ -10,11 +10,11 @@ import {
   MarketOptions,
   OfferProposal,
 } from "./market";
-import { PaymentModule, PaymentModuleImpl, PaymentModuleOptions } from "./payment";
-import { ActivityModule, ActivityModuleImpl, IFileServer } from "./activity";
+import { IPaymentApi, PaymentModule, PaymentModuleImpl, PaymentModuleOptions } from "./payment";
+import { ActivityModule, ActivityModuleImpl, IActivityApi, IFileServer } from "./activity";
 import { NetworkModule, NetworkModuleImpl } from "./network/network.module";
 import { EventEmitter } from "eventemitter3";
-import { IActivityApi, IPaymentApi, LeaseProcess } from "./agreement";
+import { LeaseProcess } from "./agreement";
 import { DebitNoteRepository, InvoiceRepository, MarketApiAdapter, PaymentApiAdapter } from "./shared/yagna";
 import { ActivityApiAdapter } from "./shared/yagna/adapters/activity-api-adapter";
 import { ActivityRepository } from "./shared/yagna/repository/activity-repository";
@@ -237,8 +237,16 @@ export class GolemNetwork {
     const proposalPool = new DraftOfferProposalPool({
       logger: this.logger,
     });
+
     const payerDetails = await this.payment.getPayerDetails();
     const demandSpecification = await this.market.buildDemandDetails(demand.demand, payerDetails);
+
+    const budget = this.market.estimateBudget(demand);
+
+    const allocation = await this.payment.createAllocation({
+      budget,
+      expirationSec: demand.market.rentHours * 60 * 60,
+    });
 
     const proposalSubscription = this.market
       .startCollectingProposals({
@@ -250,8 +258,12 @@ export class GolemNetwork {
 
     const agreement = await this.market.proposeAgreement(draftProposal);
 
-    const allocation = await this.payment.createAllocation({ budget: 1 });
     const lease = this.market.createLease(agreement, allocation);
+
+    // Attach handlers for cleanup after all work's done
+    lease.events.once("finalized", async () => {
+      await this.payment.releaseAllocation(allocation);
+    });
 
     // We managed to create the activity, no need to look for more agreement candidates
     proposalSubscription.unsubscribe();

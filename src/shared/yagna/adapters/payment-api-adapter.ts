@@ -1,6 +1,13 @@
-import { IPaymentApi } from "../../../agreement";
-import { Subject, from, mergeMap, of } from "rxjs";
-import { Allocation, DebitNote, Invoice } from "../../../payment";
+import { from, mergeMap, of, Subject } from "rxjs";
+import {
+  Allocation,
+  CreateAllocationParams,
+  DebitNote,
+  GolemPaymentError,
+  Invoice,
+  IPaymentApi,
+  PaymentErrorCode,
+} from "../../../payment";
 import { IInvoiceRepository } from "../../../payment/invoice";
 import { Logger, YagnaApi } from "../../utils";
 import { IDebitNoteRepository } from "../../../payment/debit_note";
@@ -104,5 +111,70 @@ export class PaymentApiAdapter implements IPaymentApi {
     });
 
     return this.debitNoteRepo.getById(debitNote.id);
+  }
+
+  async getAllocation(id: string) {
+    try {
+      const model = await this.yagna.payment.getAllocation(id);
+      return new Allocation(model);
+    } catch (error) {
+      throw new GolemPaymentError(
+        `Could not retrieve allocation. ${error.response?.data?.message || error.response?.data || error}`,
+        PaymentErrorCode.AllocationCreationFailed,
+        undefined,
+        undefined,
+        error,
+      );
+    }
+  }
+
+  async createAllocation(params: CreateAllocationParams): Promise<Allocation> {
+    try {
+      const { identity: address } = await this.yagna.identity.getIdentity();
+
+      const now = new Date();
+
+      const model = await this.yagna.payment.createAllocation({
+        totalAmount: params.budget.toString(),
+        paymentPlatform: params.paymentPlatform,
+        address: address,
+        timestamp: now.toISOString(),
+        timeout: new Date(+now + params.expirationSec * 1000).toISOString(),
+        makeDeposit: false,
+        remainingAmount: "",
+        spentAmount: "",
+        allocationId: "",
+      });
+
+      this.logger.debug(
+        `Allocation ${model.allocationId} has been created for address ${address} using payment platform ${params.paymentPlatform}`,
+      );
+
+      const allocation = new Allocation(model);
+
+      return allocation;
+    } catch (error) {
+      throw new GolemPaymentError(
+        `Could not create new allocation. ${error.response?.data?.message || error.response?.data || error}`,
+        PaymentErrorCode.AllocationCreationFailed,
+        undefined,
+        undefined,
+        error,
+      );
+    }
+  }
+
+  async releaseAllocation(allocation: Allocation): Promise<void> {
+    try {
+      return this.yagna.payment.releaseAllocation(allocation.id);
+    } catch (error) {
+      throw new GolemPaymentError(
+        `Could not release allocation. ${error.response?.data?.message || error}`,
+        PaymentErrorCode.AllocationReleaseFailed,
+        allocation,
+        undefined,
+        error,
+      );
+    }
   }
 }

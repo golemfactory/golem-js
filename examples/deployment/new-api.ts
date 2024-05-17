@@ -6,7 +6,16 @@ async function main() {
     logger: pinoPrettyLogger({
       level: "debug",
     }),
-    market: {},
+    market: {
+      maxAgreements: 1,
+      rentHours: 0.5,
+      pricing: {
+        model: "linear",
+        maxStartPrice: 1,
+        maxCpuPerHourPrice: 1,
+        maxEnvPerHourPrice: 1,
+      },
+    },
     dataTransferProtocol: "gftp",
   });
 
@@ -26,8 +35,10 @@ async function main() {
           },
         },
         market: {
+          maxAgreements: 1,
           rentHours: 12,
           pricing: {
+            model: "linear",
             maxStartPrice: 1,
             maxCpuPerHourPrice: 1,
             maxEnvPerHourPrice: 1,
@@ -52,8 +63,10 @@ async function main() {
           },
         },
         market: {
+          maxAgreements: 1,
           rentHours: 12 /* REQUIRED */,
           pricing: {
+            model: "linear",
             maxStartPrice: 1 /* REQUIRED */,
             maxCpuPerHourPrice: 1 /* REQUIRED */,
             maxEnvPerHourPrice: 1 /* REQUIRED */,

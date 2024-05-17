@@ -1,50 +1,19 @@
-import { Allocation, DebitNote, Invoice } from "../payment";
-import { Subject, filter } from "rxjs";
+import { Allocation, IPaymentApi } from "../payment";
+import { filter } from "rxjs";
 import { Agreement, IAgreementApi } from "./agreement";
 import { AgreementPaymentProcess } from "../payment/agreement_payment_process";
 import { DebitNoteFilter, InvoiceFilter } from "../payment/service";
 import { Logger, YagnaApi } from "../shared/utils";
 import { waitForCondition } from "../shared/utils/waitForCondition";
-import { WorkContext } from "../activity/work";
-import { Activity, ActivityStateEnum } from "../activity";
+import { Activity, IActivityApi, WorkContext } from "../activity";
 import { StorageProvider } from "../shared/storage";
+import { EventEmitter } from "eventemitter3";
 
-export interface IPaymentApi {
-  receivedInvoices$: Subject<Invoice>;
-  receivedDebitNotes$: Subject<DebitNote>;
-
-  /** Starts the reader logic */
-  connect(): Promise<void>;
-
-  /** Terminates the reader logic */
-  disconnect(): Promise<void>;
-
-  getInvoice(id: string): Promise<Invoice>;
-
-  acceptInvoice(invoice: Invoice, allocation: Allocation, amount: string): Promise<Invoice>;
-
-  rejectInvoice(invoice: Invoice, reason: string): Promise<Invoice>;
-
-  getDebitNote(id: string): Promise<DebitNote>;
-
-  acceptDebitNote(debitNote: DebitNote, allocation: Allocation, amount: string): Promise<DebitNote>;
-
-  rejectDebitNote(debitNote: DebitNote, reason: string): Promise<DebitNote>;
-}
-
-/**
- * Represents a set of use cases related to managing the lifetime of an activity
- */
-export interface IActivityApi {
-  getActivity(id: string): Promise<Activity>;
-
-  createActivity(agreement: Agreement): Promise<Activity>;
-
-  destroyActivity(activity: Activity): Promise<Activity>;
-
-  getActivityState(id: string): Promise<ActivityStateEnum>;
-
-  // executeScript(script: Script, mode: "stream" | "poll"): Promise<Readable>;
+export interface LeaseProcessEvents {
+  /**
+   * Raised when the lease process is fully finalized
+   */
+  finalized: () => void;
 }
 
 /**
@@ -52,6 +21,7 @@ export interface IActivityApi {
  */
 
 export class LeaseProcess {
+  public readonly events = new EventEmitter<LeaseProcessEvents>();
   private paymentProcess: AgreementPaymentProcess;
 
   private currentActivity: Activity | null = null;
@@ -105,15 +75,20 @@ export class LeaseProcess {
    * @return Resolves when the lease will be fully terminated and all pending business operations finalized
    */
   async finalize() {
-    this.logger.debug("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
-    if (this.currentActivity) {
-      await this.activityApi.destroyActivity(this.currentActivity);
-      await this.agreementApi.terminateAgreement(this.agreement);
+    try {
+      this.logger.debug("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
+      if (this.currentActivity) {
+        await this.activityApi.destroyActivity(this.currentActivity);
+        await this.agreementApi.terminateAgreement(this.agreement);
+      }
+      await waitForCondition(() => this.paymentProcess.isFinished());
+      this.logger.debug("Payment process for agreement finalized", { agreementId: this.agreement.id });
+    } catch (error) {
+      this.logger.error("Payment process finalization failed", { agreementId: this.agreement.id, error });
+      throw error;
+    } finally {
+      this.events.emit("finalized");
     }
-    await waitForCondition(() => {
-      return this.paymentProcess.isFinished();
-    });
-    this.logger.debug("Payment process for agreement finalized", { agreementId: this.agreement.id });
   }
 
   public hasActivity(): boolean {

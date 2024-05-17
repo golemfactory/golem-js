@@ -1,7 +1,7 @@
 import { _, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
 import type { Agreement, IAgreementApi } from "./agreement";
-import { LeaseProcess, type IPaymentApi } from "./lease-process";
-import { Allocation } from "../payment";
+import { LeaseProcess } from "./lease-process";
+import { Allocation, IPaymentApi } from "../payment";
 import type { MarketModule, OfferProposal } from "../market";
 import { DraftOfferProposalPool } from "../market";
 import { LeaseProcessPool } from "./lease-process-pool";
