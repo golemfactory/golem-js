@@ -17,7 +17,6 @@ import { DemandBodyBuilder } from "./demand/demand-body-builder";
 import { IAgreementApi } from "../agreement/agreement";
 import { BuildDemandOptions, DemandSpecification, IDemandRepository } from "./demand";
 import { ProposalsBatch } from "./proposals_batch";
-import { PayerDetails } from "../payment/PayerDetails";
 import { IActivityApi, IFileServer } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { ActivityDemandDirectorConfig } from "./demand/directors/activity-demand-director-config";
@@ -91,12 +90,12 @@ export interface MarketModule {
   events: EventEmitter<MarketEvents>;
 
   /**
-   * Build a DemandSpecification based on the given options and payer details.
-   * You can obtain the payer details from the payment module.
+   * Build a DemandSpecification based on the given options and allocation.
+   * You can obtain an allocation using the payment module.
    * The method returns a DemandSpecification that can be used to publish the demand to the market,
    * for example using the `publishDemand` method.
    */
-  buildDemandDetails(options: BuildDemandOptions, payerDetails: PayerDetails): Promise<DemandSpecification>;
+  buildDemandDetails(options: BuildDemandOptions, allocation: Allocation): Promise<DemandSpecification>;
 
   /**
    * Publishes the demand to the market and handles refreshing it when needed.
@@ -223,7 +222,7 @@ export class MarketModuleImpl implements MarketModule {
     this.fileServer = deps.fileServer;
   }
 
-  async buildDemandDetails(options: BuildDemandOptions, payerDetails: PayerDetails): Promise<DemandSpecification> {
+  async buildDemandDetails(options: BuildDemandOptions, allocation: Allocation): Promise<DemandSpecification> {
     const builder = new DemandBodyBuilder();
 
     // Instruct the builder what's required
@@ -240,14 +239,10 @@ export class MarketModuleImpl implements MarketModule {
     await workloadDirector.apply(builder);
 
     const paymentConfig = new PaymentDemandDirectorConfig(options.payment);
-    const paymentDirector = new PaymentDemandDirector(payerDetails, paymentConfig);
-    paymentDirector.apply(builder);
+    const paymentDirector = new PaymentDemandDirector(allocation, this.deps.marketApi, paymentConfig);
+    await paymentDirector.apply(builder);
 
-    const spec = new DemandSpecification(
-      builder.getProduct(),
-      payerDetails.getPaymentPlatform(),
-      basicConfig.expirationSec,
-    );
+    const spec = new DemandSpecification(builder.getProduct(), allocation.paymentPlatform, basicConfig.expirationSec);
 
     return spec;
   }

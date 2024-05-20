@@ -7,11 +7,10 @@ import { from, of, take, takeUntil, timer } from "rxjs";
 import { IProposalRepository, OfferProposal, ProposalProperties } from "./offer-proposal";
 import { MarketApiAdapter } from "../shared/yagna/";
 import { IAgreementApi } from "../agreement/agreement";
-import { PayerDetails } from "../payment/PayerDetails";
 import { IActivityApi, IFileServer } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { GolemMarketError } from "./error";
-import { IPaymentApi } from "../payment";
+import { Allocation, IPaymentApi } from "../payment";
 
 const mockMarketApiAdapter = mock(MarketApiAdapter);
 const mockYagna = mock(YagnaApi);
@@ -38,7 +37,26 @@ beforeEach(() => {
 describe("Market module", () => {
   describe("buildDemand()", () => {
     it("should build a demand", async () => {
-      const payerDetails = new PayerDetails("holesky", "erc20", "0x123");
+      const allocation = {
+        id: "allocation-id",
+        paymentPlatform: "erc20-holesky-tglm",
+      } as Allocation;
+      when(mockMarketApiAdapter.getPaymentRelatedDemandDecorations("allocation-id")).thenResolve({
+        properties: [
+          {
+            key: "golem.com.payment.platform.erc20-holesky-tglm.address",
+            value: "0x123",
+          },
+          {
+            key: "golem.com.payment.protocol.version",
+            value: "2",
+          },
+        ],
+        constraints: [
+          "(golem.com.payment.platform.erc20-holesky-tglm.address=*)",
+          "(golem.com.payment.protocol.version>1)",
+        ],
+      });
 
       const demandSpecification = await marketModule.buildDemandDetails(
         {
@@ -55,7 +73,7 @@ describe("Market module", () => {
             midAgreementPaymentTimeoutSec: 42,
           },
         },
-        payerDetails,
+        allocation,
       );
 
       const expectedConstraints = [
@@ -113,7 +131,7 @@ describe("Market module", () => {
         },
       ];
 
-      expect(demandSpecification.paymentPlatform).toBe(payerDetails.getPaymentPlatform());
+      expect(demandSpecification.paymentPlatform).toBe(allocation.paymentPlatform);
       expect(demandSpecification.expirationSec).toBe(42);
       expect(demandSpecification.prototype.constraints).toEqual(expect.arrayContaining(expectedConstraints));
       expect(demandSpecification.prototype.properties).toEqual(expectedProperties);
