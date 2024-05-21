@@ -156,7 +156,6 @@ export class Deployment {
       expirationSec: 30 * 60, // 30 minutes
     });
 
-    // TODO: add pool to network
     // TODO: pass dataTransferProtocol to pool
     for (const pool of this.components.activityPools) {
       const { demandBuildOptions, leaseProcessPoolOptions } = this.prepareParams(pool.options);
@@ -257,6 +256,7 @@ export class Deployment {
         : typeof options.deployment?.replicas === "object"
           ? options.deployment?.replicas
           : { min: 1, max: 1 };
+    const network = options.deployment?.network ? this.networks.get(options.deployment?.network) : undefined;
     return {
       demandBuildOptions: {
         demand: options.demand,
@@ -265,6 +265,7 @@ export class Deployment {
       leaseProcessPoolOptions: {
         agreementOptions: { invoiceFilter: options.payment?.invoiceFilter },
         replicas,
+        network,
       },
     };
   }

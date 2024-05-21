@@ -26,7 +26,7 @@ async function main() {
 
     builder
       .createNetwork("basic", {
-        id: "test",
+        ip: "192.168.7.0/24",
       })
       .createActivityPool("app", {
         demand: {
