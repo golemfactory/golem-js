@@ -6,6 +6,7 @@ export interface NetworkInfo {
   id: string;
   ip: string;
   mask: string;
+  gateway?: string;
   nodes: { [ip: string]: string };
 }
 
@@ -24,7 +25,7 @@ export class Network {
     gateway?: string,
   ) {
     this.ip = IPv4.fromString(ip);
-    this.ipRange = IPv4CidrRange.fromCidr(mask ? `${ip}/${mask}` : ip);
+    this.ipRange = IPv4CidrRange.fromCidr(mask ? `${ip}/${IPv4Mask.fromDecimalDottedString(mask).prefix}` : ip);
     this.ipIterator = this.ipRange[Symbol.iterator]();
     this.mask = this.ipRange.getPrefix().toMask();
     this.gateway = gateway ? new IPv4(gateway) : undefined;
@@ -39,6 +40,7 @@ export class Network {
       id: this.id,
       ip: this.ip.toString(),
       mask: this.mask.toString(),
+      gateway: this.gateway?.toString(),
       nodes: Object.fromEntries(Array.from(this.nodes).map(([id, node]) => [node.ip.toString(), id])),
     };
   }

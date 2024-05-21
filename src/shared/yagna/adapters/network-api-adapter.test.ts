@@ -1,5 +1,5 @@
 import { GolemNetworkError, Logger, NetworkErrorCode, YagnaApi } from "../../../index";
-import { anything, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
+import { anything, capture, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
 import { NetworkApiAdapter } from "./network-api-adapter";
 import * as YaTsClient from "ya-ts-client";
 
@@ -15,21 +15,29 @@ describe("Network", () => {
     reset(mockNetworkApiAdapter);
     networkApi = new NetworkApiAdapter(instance(mockYagna), instance(imock<Logger>()));
     when(mockYagna.net).thenReturn(instance(mockNet));
+    when(mockNet.createNetwork(anything())).thenResolve({
+      id: "network-id",
+      ip: "192.168.0.0",
+      mask: "255.255.255.0",
+    });
   });
   describe("Creating", () => {
     it("should create network", async () => {
       const network = await networkApi.createNetwork({ id: "test-id" });
       const { ip, mask, nodes } = network.getNetworkInfo();
-      expect(nodes["192.168.0.1"]).toEqual("test-id");
-      expect(Object.keys(nodes).length).toEqual(1);
       expect(ip).toEqual("192.168.0.0");
       expect(mask).toEqual("255.255.255.0");
     });
 
     it("should create network with 16 bit mask", async () => {
-      const network = await networkApi.createNetwork({ id: "1", ip: "192.168.7.0/16" });
-      const { ip, mask } = network.getNetworkInfo();
-      expect({ ip, mask }).toEqual({ ip: "192.168.0.0", mask: "255.255.0.0" });
+      await networkApi.createNetwork({ id: "1", ip: "192.168.7.0/16" });
+      expect(capture(mockNet.createNetwork).last()).toEqual([
+        {
+          id: "1",
+          ip: "192.168.7.0",
+          mask: "255.255.0.0",
+        },
+      ]);
     });
 
     it("should create network with 24 bit mask", async () => {

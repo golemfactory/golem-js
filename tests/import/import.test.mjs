@@ -5,7 +5,7 @@ describe("ESM Import", () => {
   });
 
   test("Import @golem-sdk/golem-js/experimental", async () => {
-    const { GolemNetwork } = await import("@golem-sdk/golem-js/experimental");
-    expect(typeof GolemNetwork).toBe("function");
+    const { Job } = await import("@golem-sdk/golem-js/experimental");
+    expect(typeof Job).toBe("function");
   });
 });

@@ -2,7 +2,7 @@ import { YagnaApi } from "../yagnaApi";
 import { Logger } from "../../utils";
 import { INetworkApi } from "../../../network/api";
 import { GolemNetworkError, Network, NetworkErrorCode, NetworkNode } from "../../../network";
-import { IPv4 } from "ip-num";
+import { IPv4, IPv4CidrRange, IPv4Mask } from "ip-num";
 import { NetworkOptions } from "../../../network/network.module";
 
 export class NetworkApiAdapter implements INetworkApi {
@@ -12,15 +12,29 @@ export class NetworkApiAdapter implements INetworkApi {
   ) {}
 
   async createNetwork(options: NetworkOptions): Promise<Network> {
-    // TODO: Can we create a network without an id? or is it a bug in ya-client ?
-    const { id, ip, mask, gateway } = await this.yagnaApi.net.createNetwork({
+    const ipSplited = options.ip?.split("/");
+    const ipString = ipSplited?.[0] || "192.168.0.0";
+    const maskPrefix = options.mask ? IPv4Mask.fromDecimalDottedString(options.mask).prefix : ipSplited?.[1] ?? 24;
+
+    const ip = IPv4.fromString(ipSplited?.[0] || "192.168.0.0");
+    const ipRange = IPv4CidrRange.fromCidr(`${ip}/${maskPrefix}`);
+    const mask = ipRange.getPrefix().toMask();
+    const gateway = options.gateway ? new IPv4(options.gateway) : undefined;
+    console.log({
       id: options.id,
-      ip: options.ip ?? "192.168.0.0",
-      mask: options.mask,
-      gateway: options.gateway,
+      ip: ip.toString(),
+      mask: mask?.toString(),
+      gateway: gateway?.toString(),
     });
-    const network = new Network(options.id, ip, mask, gateway);
-    this.logger.info(`Network created`, { id, ip, mask });
+    // TODO: Can we create a network without an id? or is it a bug in ya-client ?
+    const createdNetwork = await this.yagnaApi.net.createNetwork({
+      id: options.id,
+      ip: ip.toString(),
+      mask: mask?.toString(),
+      gateway: gateway?.toString(),
+    });
+    const network = new Network(options.id, createdNetwork.ip, createdNetwork.mask, createdNetwork.gateway);
+    this.logger.info(`Network created`, createdNetwork);
     return network;
   }
   async removeNetwork(networkId: string): Promise<void> {

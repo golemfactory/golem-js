@@ -1,11 +1,11 @@
-import { GolemConfigError } from "../../shared/error/golem-error";
-import { NetworkOptions } from "../../network";
+import { GolemConfigError } from "../shared/error/golem-error";
+import { NetworkOptions } from "../network";
 import { Deployment, DeploymentComponents } from "./deployment";
-import { GolemNetwork } from "../../golem-network";
+import { GolemNetwork } from "../golem-network";
 import { validateDeployment } from "./validate-deployment";
-import { MarketOptions } from "../../market";
-import { PaymentModuleOptions } from "../../payment";
-import { BuildDemandOptions } from "../../market/demand";
+import { MarketOptions } from "../market";
+import { PaymentModuleOptions } from "../payment";
+import { BuildDemandOptions } from "../market/demand";
 
 interface DeploymentOptions {
   replicas?: number | { min: number; max: number };
@@ -64,7 +64,7 @@ export class GolemDeploymentBuilder {
         payment: this.glm.payment,
         market: this.glm.market,
         activity: this.glm.activity,
-        agreementApi: this.glm.services.agreementApi,
+        network: this.glm.network,
       },
       {
         dataTransferProtocol: this.glm.options.dataTransferProtocol ?? "gftp",

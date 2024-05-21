@@ -71,20 +71,20 @@ async function main() {
     await deployment.start();
 
     // Get your pool of activities for specified need
-    const appPool = deployment.getActivityPool("app");
-    const dbPool = deployment.getActivityPool("db");
+    const appPool = deployment.getLeaseProcessPool("app");
+    const dbPool = deployment.getLeaseProcessPool("db");
 
     // Get an instance out of the pool for use
     const app = await appPool.acquire();
     const db = await dbPool.acquire();
 
     // Run a command on the app VM instance
-    const appResult = await app.run("node -v");
+    const appResult = await app.getExeUnit().then((exe) => exe.run("node -v"));
     console.log(appResult.stdout);
     await appPool.release(app);
 
     // Run a command on the db VM instance
-    const dbResult = await db.run("ls /");
+    const dbResult = await db.getExeUnit().then((exe) => exe.run("echo Hello World"));
     console.log(dbResult.stdout);
     await dbPool.release(db);
 
