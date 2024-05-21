@@ -165,11 +165,10 @@ export class GolemNetwork {
         networkApi: new NetworkApiAdapter(this.yagna, this.logger),
       };
 
-      this.market = new MarketModuleImpl(this.services);
+      this.network = new NetworkModuleImpl(this.services);
+      this.market = new MarketModuleImpl({ ...this.services, networkModule: this.network });
       this.payment = new PaymentModuleImpl(this.services, this.options.payment);
       this.activity = new ActivityModuleImpl(this.services);
-
-      this.network = new NetworkModuleImpl(this.services);
     } catch (err) {
       this.events.emit("error", err);
       throw err;

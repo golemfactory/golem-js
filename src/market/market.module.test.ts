@@ -13,6 +13,7 @@ import { StorageProvider } from "../shared/storage";
 import { GolemMarketError } from "./error";
 import { IPaymentApi } from "../payment";
 import { INetworkApi } from "../network/api";
+import { NetworkModule } from "../network";
 
 const mockMarketApiAdapter = mock(MarketApiAdapter);
 const mockYagna = mock(YagnaApi);
@@ -34,6 +35,7 @@ beforeEach(() => {
     marketApi: instance(mockMarketApiAdapter),
     fileServer: instance(imock<IFileServer>()),
     storageProvider: instance(imock<StorageProvider>()),
+    networkModule: instance(imock<NetworkModule>()),
   });
 });
 

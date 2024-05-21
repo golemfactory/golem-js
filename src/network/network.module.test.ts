@@ -9,6 +9,7 @@ import {
 } from "../index";
 import { mock, anything, capture, imock, instance, reset, verify, when } from "@johanblumenberg/ts-mockito";
 import { INetworkApi } from "./api";
+import { IPv4 } from "ip-num";
 
 const mockNetworkApi = imock<INetworkApi>();
 const mockNetwork = mock(Network);
@@ -32,14 +33,14 @@ describe("Network", () => {
     when(mockNetwork.isIpInNetwork(anything())).thenReturn(true);
     when(mockNetwork.isNodeIpUnique(anything())).thenReturn(true);
     when(mockNetwork.isNodeIdUnique(anything())).thenReturn(true);
+    when(mockNetwork.getFirstAvailableIpAddress()).thenReturn(IPv4.fromString("192.168.0.1"));
   });
 
   describe("Creating", () => {
     it("should create network with default ip and mask", async () => {
-      await networkModule.createNetwork({ id: "test-id" });
+      await networkModule.createNetwork();
       expect(capture(mockNetworkApi.createNetwork).last()).toEqual([
         {
-          id: "test-id",
           ip: "192.168.0.0",
           mask: "255.255.255.0",
         },
@@ -51,7 +52,7 @@ describe("Network", () => {
       expect(capture(mockNetworkApi.createNetwork).last()).toEqual([
         {
           id: "1",
-          ip: "192.168.7.0",
+          ip: "192.168.0.0",
           mask: "255.255.0.0",
         },
       ]);
@@ -73,7 +74,7 @@ describe("Network", () => {
       expect(capture(mockNetworkApi.createNetwork).last()).toEqual([
         {
           id: "1",
-          ip: "192.168.7.0",
+          ip: "192.0.0.0",
           mask: "255.0.0.0",
         },
       ]);
@@ -100,7 +101,7 @@ describe("Network", () => {
       expect(capture(mockNetworkApi.createNetwork).last()).toEqual([
         {
           id: "owner_1",
-          ip: "192.168.0.1",
+          ip: "192.168.0.0",
           mask: "255.255.255.224",
           gateway: "192.168.0.2",
         },
@@ -161,7 +162,7 @@ describe("Network", () => {
         "No more addresses available in 192.168.0.0/30",
         NetworkErrorCode.NoAddressesAvailable,
       );
-      when(mockNetwork.getNetworkInfo()).thenThrow(mockError);
+      when(mockNetwork.getFirstAvailableIpAddress()).thenThrow(mockError);
       await expect(networkModule.createNetworkNode(network, "next-id")).rejects.toMatchError(mockError);
     });
 

@@ -18,8 +18,8 @@ export class NetworkApiAdapter implements INetworkApi {
     return this.yagnaApi.net.removeNetwork(network.id);
   }
   async createNetworkNode(network: Network, nodeId: string, nodeIp: string): Promise<NetworkNode> {
-    const { id, ip } = await this.yagnaApi.net.addNode(network.id, { id: nodeId, ip: nodeIp });
-    return new NetworkNode(id, ip, network.getNetworkInfo);
+    await this.yagnaApi.net.addNode(network.id, { id: nodeId, ip: nodeIp });
+    return new NetworkNode(nodeId, nodeIp, network.getNetworkInfo.bind(network));
   }
   async removeNetworkNode(network: Network, node: NetworkNode): Promise<void> {
     await this.yagnaApi.net.removeNode(network.id, node.id);

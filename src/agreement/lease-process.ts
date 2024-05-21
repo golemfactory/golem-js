@@ -9,6 +9,7 @@ import { Activity, IActivityApi, WorkContext } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { EventEmitter } from "eventemitter3";
 import { INetworkApi } from "../network/api";
+import { NetworkNode } from "../network";
 
 export interface LeaseProcessEvents {
   /**
@@ -38,6 +39,7 @@ export class LeaseProcess {
     /** @deprecated This will be removed, we want to have a nice adapter here */
     private readonly yagna: YagnaApi,
     private readonly storageProvider: StorageProvider,
+    public readonly networkNode?: NetworkNode,
     private readonly leaseOptions?: {
       paymentOptions: {
         invoiceFilter: InvoiceFilter;
@@ -110,6 +112,7 @@ export class LeaseProcess {
         this.networkApi,
         {
           storageProvider: this.storageProvider,
+          networkNode: this.networkNode,
         },
       );
     }
@@ -126,6 +129,7 @@ export class LeaseProcess {
       this.networkApi,
       {
         storageProvider: this.storageProvider,
+        networkNode: this.networkNode,
       },
     );
 

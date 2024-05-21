@@ -23,6 +23,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
     await glm.connect();
 
     allocation = await glm.payment.createAllocation({ budget: 1, expirationSec: RENT_HOURS * 60 * 60 });
+
     const demandOptions = {
       demand: {
         activity: {
@@ -65,34 +66,37 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
       activity: glm.activity,
       payment: glm.payment,
     };
-
+    const network = await glm.network.createNetwork();
     const pool = depModules.market.createLeaseProcessPool(proposalPool, allocation, {
       replicas: { max: CONCURRENCY },
+      network,
     });
 
     const lease = await pool.acquire();
     const lease2 = await pool.acquire();
 
-    await Promise.allSettled([
+    const a = await Promise.allSettled([
       lease
         .getExeUnit()
-        .then((exe) => exe.run("echo Hello World from first activity"))
+        .then((exe) => exe.run("ping 192.168.0.2 -c 4"))
         .then((result) => console.log(result.stdout)),
       lease2
         .getExeUnit()
-        .then((exe) => exe.run("echo Hello Golem from second activity"))
+        .then((exe) => exe.run("ping 192.168.0.3 -c 4"))
         .then((result) => console.log(result.stdout)),
     ]);
+    console.log(a);
 
     await pool.release(lease);
     await pool.release(lease2);
 
     proposalSubscription.unsubscribe();
     await pool.drainAndClear();
+    await glm.network.removeNetwork(network);
   } catch (err) {
     console.error("Pool execution failed:", err);
   } finally {
     await glm.disconnect();
-    allocation?.release();
+    await glm.payment.releaseAllocation(allocation);
   }
 })().catch(console.error);

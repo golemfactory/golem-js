@@ -29,6 +29,7 @@ import { BasicDemandDirectorConfig } from "./demand/directors/basic-demand-direc
 import { PaymentDemandDirectorConfig } from "./demand/directors/payment-demand-director-config";
 import { GolemUserError } from "../shared/error/golem-error";
 import { INetworkApi } from "../network/api";
+import { Network, NetworkModule, NetworkNode } from "../network";
 
 export interface MarketEvents {}
 
@@ -158,7 +159,7 @@ export interface MarketModule {
     bufferSize?: number;
   }): Observable<OfferProposal[]>;
 
-  createLease(agreement: Agreement, allocation: Allocation): LeaseProcess;
+  createLease(agreement: Agreement, allocation: Allocation, networkNode?: NetworkNode): LeaseProcess;
 
   /**
    * Factory that creates new agreement pool that's fully configured
@@ -196,7 +197,7 @@ export class MarketModuleImpl implements MarketModule {
   private readonly yagnaApi: YagnaApi;
   private readonly logger = defaultLogger("market");
   private readonly agreementApi: IAgreementApi;
-  private readonly networkApi: INetworkApi;
+  private readonly networkModule: NetworkModule;
   private readonly proposalRepo: IProposalRepository;
   private readonly demandRepo: IDemandRepository;
   private fileServer: IFileServer;
@@ -214,6 +215,7 @@ export class MarketModuleImpl implements MarketModule {
       activityApi: IActivityApi;
       marketApi: MarketApi;
       networkApi: INetworkApi;
+      networkModule: NetworkModule;
       fileServer: IFileServer;
       storageProvider: StorageProvider;
     },
@@ -221,7 +223,7 @@ export class MarketModuleImpl implements MarketModule {
     this.logger = deps.logger;
     this.yagnaApi = deps.yagna;
     this.agreementApi = deps.agreementApi;
-    this.networkApi = deps.networkApi;
+    this.networkModule = deps.networkModule;
     this.proposalRepo = deps.proposalRepository;
     this.demandRepo = deps.demandRepository;
     this.fileServer = deps.fileServer;
@@ -414,7 +416,7 @@ export class MarketModuleImpl implements MarketModule {
     );
   }
 
-  createLease(agreement: Agreement, allocation: Allocation) {
+  createLease(agreement: Agreement, allocation: Allocation, networkNode?: NetworkNode) {
     // TODO Accept the filters
     return new LeaseProcess(
       agreement,
@@ -422,10 +424,11 @@ export class MarketModuleImpl implements MarketModule {
       this.deps.paymentApi,
       this.deps.activityApi,
       this.agreementApi,
-      this.networkApi,
+      this.deps.networkApi,
       this.deps.logger,
       this.yagnaApi, // TODO: Remove this dependency
       this.deps.storageProvider,
+      networkNode,
     );
   }
 
@@ -440,6 +443,7 @@ export class MarketModuleImpl implements MarketModule {
       allocation,
       proposalPool: draftPool,
       marketModule: this,
+      networkModule: this.deps.networkModule,
       logger: this.logger.child("lease-process-pool"),
       ...options,
     });

@@ -8,6 +8,7 @@ describe("LeaseProcessPool", () => {
     market: glm.market,
     activity: glm.activity,
     payment: glm.payment,
+    network: glm.network,
   };
   let proposalPool: DraftOfferProposalPool;
   let allocation: Allocation;
@@ -132,5 +133,25 @@ describe("LeaseProcessPool", () => {
     expect(agreementTerminatedIds.sort()).toEqual(
       [activity1.activity.agreement.id, activity2.activity.agreement.id].sort(),
     );
+  });
+
+  it("should establish a connection between two activities from pool via vpn", async () => {
+    const network = await modules.network.createNetwork();
+    const pool = modules.market.createLeaseProcessPool(proposalPool, allocation, { replicas: 1, network });
+    pool.events.on("error", (error) => {
+      throw error;
+    });
+    const leaseProcess1 = await pool.acquire();
+    const leaseProcess2 = await pool.acquire();
+    const exe1 = await leaseProcess1.getExeUnit();
+    const exe2 = await leaseProcess1.getExeUnit();
+    const result1 = await exe1.run(`ping ${exe2.getIp()} -c 4}`);
+    const result2 = await exe2.run(`ping ${exe1.getIp()} -c 4}`);
+    expect(result1.stdout?.toString().trim()).toContain("4 packets transmitted, 4 packets received, 0% packet loss");
+    expect(result2.stdout?.toString().trim()).toContain("4 packets transmitted, 4 packets received, 0% packet loss");
+    await pool.destroy(leaseProcess1);
+    await pool.destroy(leaseProcess2);
+    await pool.drainAndClear();
+    await modules.network.removeNetwork(network);
   });
 });

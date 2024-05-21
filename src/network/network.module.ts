@@ -9,8 +9,8 @@ import { IPv4, IPv4CidrRange, IPv4Mask } from "ip-num";
 export interface NetworkEvents {}
 
 export interface NetworkOptions {
-  /** the node ID of the owner of this VPN (the requestor) */
-  id: string;
+  /** the ID of the network */
+  id?: string;
   /** the IP address of the network. May contain netmask, e.g. "192.168.0.0/24" */
   ip?: string;
   /** the desired IP address of the requestor node within the newly-created network */
@@ -23,7 +23,7 @@ export interface NetworkOptions {
 
 export interface NetworkModule {
   events: EventEmitter<NetworkEvents>;
-  createNetwork(options: NetworkOptions): Promise<Network>;
+  createNetwork(options?: NetworkOptions): Promise<Network>;
   removeNetwork(network: Network): Promise<void>;
   createNetworkNode(network: Network, nodeId: string, nodeIp?: string): Promise<NetworkNode>;
   removeNetworkNode(network: Network, node: NetworkNode): Promise<void>;
@@ -40,24 +40,24 @@ export class NetworkModuleImpl implements NetworkModule {
     },
   ) {}
 
-  async createNetwork(options: NetworkOptions): Promise<Network> {
+  async createNetwork(options?: NetworkOptions): Promise<Network> {
     try {
-      const ipDecimalDottedString = options.ip?.split("/")?.[0] || "192.168.0.0";
-      const maskBinaryNotation = parseInt(options.ip?.split("/")?.[1] || "24");
-      const maskPrefix = options.mask ? IPv4Mask.fromDecimalDottedString(options.mask).prefix : maskBinaryNotation;
-      const ip = IPv4.fromString(ipDecimalDottedString);
-      const ipRange = IPv4CidrRange.fromCidr(`${ip}/${maskPrefix}`);
+      const ipDecimalDottedString = options?.ip?.split("/")?.[0] || "192.168.0.0";
+      const maskBinaryNotation = parseInt(options?.ip?.split("/")?.[1] || "24");
+      const maskPrefix = options?.mask ? IPv4Mask.fromDecimalDottedString(options.mask).prefix : maskBinaryNotation;
+      const ipRange = IPv4CidrRange.fromCidr(`${IPv4.fromString(ipDecimalDottedString)}/${maskPrefix}`);
+      const ip = ipRange.getFirst();
       const mask = ipRange.getPrefix().toMask();
-      const gateway = options.gateway ? new IPv4(options.gateway) : undefined;
+      const gateway = options?.gateway ? new IPv4(options.gateway) : undefined;
       const network = await this.deps.networkApi.createNetwork({
-        id: options.id,
+        id: options?.id,
         ip: ip.toString(),
         mask: mask?.toString(),
         gateway: gateway?.toString(),
       });
       // add Requestor as network node
-      const identity = await this.deps.networkApi.getIdentity();
-      await this.deps.networkApi.createNetworkNode(network, identity, options.ownerIp);
+      const requestorId = await this.deps.networkApi.getIdentity();
+      await this.createNetworkNode(network, requestorId, options?.ownerIp);
       this.deps.logger.info(`Network created`, network.getNetworkInfo());
       return network;
     } catch (error) {
@@ -74,7 +74,8 @@ export class NetworkModuleImpl implements NetworkModule {
   }
   async removeNetwork(network: Network): Promise<void> {
     try {
-      return await this.deps.networkApi.removeNetwork(network);
+      await this.deps.networkApi.removeNetwork(network);
+      this.deps.logger.info(`Network removed`, network.getNetworkInfo());
     } catch (error) {
       throw new GolemNetworkError(
         `Unable to remove network. ${error}`,
@@ -115,7 +116,7 @@ export class NetworkModuleImpl implements NetworkModule {
       }
       const node = await this.deps.networkApi.createNetworkNode(network, nodeId, ipv4.toString());
       network.addNode(node);
-      this.deps.logger.debug(`Node has added to the network.`, { id: nodeId, ip: ipv4.toString() });
+      this.deps.logger.info(`Node has been added to the network.`, { id: nodeId, ip: ipv4.toString() });
       return node;
     } catch (error) {
       if (error instanceof GolemNetworkError) {
@@ -138,7 +139,12 @@ export class NetworkModuleImpl implements NetworkModule {
       );
     }
     try {
-      return this.deps.networkApi.removeNetworkNode(network, node);
+      await this.deps.networkApi.removeNetworkNode(network, node);
+      network.removeNode(node);
+      this.deps.logger.info(`Node has been removed from the network.`, {
+        network: network.getNetworkInfo().ip,
+        nodeIp: node.ip,
+      });
     } catch (error) {
       if (error instanceof GolemNetworkError) {
         throw error;
