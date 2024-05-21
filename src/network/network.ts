@@ -34,8 +34,7 @@ export class Network {
   }
 
   /**
-   * Get Network Information
-   * @return NetworkInfo
+   * Returns information about the network.
    */
   public getNetworkInfo(): NetworkInfo {
     return {
@@ -47,6 +46,10 @@ export class Network {
     };
   }
 
+  /**
+   * Adds a node to the network.
+   * @param node - The network node to be added.
+   */
   public addNode(node: NetworkNode): void {
     if (this.hasNode(node)) {
       throw new GolemNetworkError(
@@ -58,13 +61,17 @@ export class Network {
   }
 
   /**
-   * Checks whether the node belongs to the network
-   * @param nodeId
+   * Checks whether the node belongs to the network.
+   * @param node - The network node to check.
    */
   public hasNode(node: NetworkNode): boolean {
     return this.nodes.has(node.id);
   }
 
+  /**
+   * Removes a node from the network.
+   * @param node - The network node to be removed.
+   */
   public removeNode(node: NetworkNode) {
     if (!this.hasNode(node)) {
       throw new GolemNetworkError(`There is no node ${node.id} in the network`, NetworkErrorCode.NodeRemovalFailed);
@@ -72,6 +79,9 @@ export class Network {
     this.nodes.delete(node.id);
   }
 
+  /**
+   * Returns the first available IP address in the network.
+   */
   public getFirstAvailableIpAddress(): IPv4 {
     const ip = this.ipIterator.next().value;
     if (!ip)
@@ -83,14 +93,25 @@ export class Network {
     return ip;
   }
 
+  /**
+   * Checks if a given IP address is within the network range.
+   * @param ip - The IPv4 address to check.
+   */
   public isIpInNetwork(ip: IPv4): boolean {
     return this.ipRange.contains(new IPv4CidrRange(ip, new IPv4Prefix(BigInt(this.mask.prefix))));
   }
 
+  /**
+   * Checks if a given node ID is unique within the network.
+   * @param id - The node ID to check.
+   */
   public isNodeIdUnique(id: string): boolean {
     return !this.nodes.has(id);
   }
 
+  /**
+   * Checks if a given IP address is unique within the network.
+   */
   public isNodeIpUnique(ip: IPv4): boolean {
     for (const node of this.nodes.values()) {
       if (new IPv4(node.ip).isEquals(ip)) return false;

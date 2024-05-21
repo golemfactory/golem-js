@@ -9,24 +9,73 @@ import { IPv4, IPv4CidrRange, IPv4Mask } from "ip-num";
 export interface NetworkEvents {}
 
 export interface NetworkOptions {
-  /** the ID of the network */
+  /**
+   * The ID of the network.
+   * This is an optional field that can be used to specify a unique identifier for the network.
+   * If not provided, it will be generated automatically.
+   */
   id?: string;
-  /** the IP address of the network. May contain netmask, e.g. "192.168.0.0/24" */
+
+  /**
+   * The IP address of the network. May contain netmask, e.g. "192.168.0.0/24".
+   * This field can include the netmask directly in CIDR notation.
+   */
   ip?: string;
-  /** the desired IP address of the requestor node within the newly-created network */
+
+  /**
+   * The desired IP address of the requestor node within the newly-created network.
+   * This field is optional and if not provided, the first available IP address will be assigned.
+   */
   ownerIp?: string;
-  /** optional netmask (only if not provided within the `ip` argument) */
+
+  /**
+   * Optional netmask (only if not provided within the `ip` argument).
+   * If the netmask is not included in the `ip` field, it can be specified here in decimal dotted notation.
+   */
   mask?: string;
-  /** optional gateway address for the network */
+
+  /**
+   * Optional gateway address for the network.
+   * This field can be used to specify a gateway IP address for the network.
+   */
   gateway?: string;
 }
 
 export interface NetworkModule {
   events: EventEmitter<NetworkEvents>;
+
+  /**
+   * Creates a new network with the specified options.
+   * @param options NetworkOptions
+   */
   createNetwork(options?: NetworkOptions): Promise<Network>;
+
+  /**
+   * Removes an existing network.
+   * @param network - The network to be removed.
+   */
   removeNetwork(network: Network): Promise<void>;
+
+  /**
+   * Creates a new node within a specified network.
+   * @param network - The network to which the node will be added.
+   * @param nodeId - The ID of the node to be created.
+   * @param nodeIp - Optional IP address for the node. If not provided, the first available IP address will be assigned.
+   */
   createNetworkNode(network: Network, nodeId: string, nodeIp?: string): Promise<NetworkNode>;
+
+  /**
+   * Removes an existing node from a specified network.
+   * @param network - The network from which the node will be removed.
+   * @param node - The node to be removed.
+   */
   removeNetworkNode(network: Network, node: NetworkNode): Promise<void>;
+
+  /**
+   * Retrieves the WebSocket URI for a specified network node and port.
+   * @param networkNode - The network node for which the WebSocket URI is retrieved.
+   * @param port - The port number for the WebSocket connection.
+   */
   getWebsocketUri(networkNode: NetworkNode, port: number): string;
 }
 
