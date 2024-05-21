@@ -11,6 +11,8 @@ export enum PaymentErrorCode {
   DebitNoteAcceptanceFailed = "DebitNoteAcceptanceFailed",
   InvoiceRejectionFailed = "InvoiceRejectionFailed",
   DebitNoteRejectionFailed = "DebitNoteRejectionFailed",
+  CouldNotGetDebitNote = "CouldNotGetDebitNote",
+  CouldNotGetInvoice = "CouldNotGetInvoice",
   PaymentStatusQueryFailed = "PaymentStatusQueryFailed",
   AgreementAlreadyPaid = "AgreementAlreadyPaid",
   InvoiceAlreadyReceived = "InvoiceAlreadyReceived",
