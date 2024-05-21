@@ -29,8 +29,8 @@ export interface NetworkOptions {
   ownerIp?: string;
 
   /**
-   * Optional netmask (only if not provided within the `ip` argument).
-   * If the netmask is not included in the `ip` field, it can be specified here in decimal dotted notation.
+   * Optional network mask given in dotted decimal notation.
+   * If the ip address was provided in Cidr notation this mask will override the mask from the Cidr notation
    */
   mask?: string;
 
