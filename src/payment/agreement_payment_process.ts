@@ -9,6 +9,7 @@ import AsyncLock from "async-lock";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
 import { GolemUserError } from "../shared/error/golem-error";
 import { IPaymentApi } from "./types";
+import { getMessageFromApiError } from "../shared/utils/apiErrorMessage";
 
 /**
  * Process manager that controls the logic behind processing events related to an agreement which result with payments
@@ -125,10 +126,10 @@ export class AgreementPaymentProcess {
 
       return true;
     } catch (error) {
-      const reason = error?.response?.data?.message || error;
+      const message = getMessageFromApiError(error);
       // this.events.emit("paymentFailed", { id: this.id, agreementId: this.agreementId, reason });
       throw new GolemPaymentError(
-        `Unable to accept debit note ${debitNote.id}. ${reason}`,
+        `Unable to accept debit note ${debitNote.id}. ${message}`,
         PaymentErrorCode.DebitNoteAcceptanceFailed,
         undefined,
         debitNote.provider,
@@ -149,8 +150,9 @@ export class AgreementPaymentProcess {
       // await this.paymentApi.rejectDebitNote(debitNote, rejectMessage);
       this.logger.warn(`DebitNote rejected`, { reason: rejectMessage });
     } catch (error) {
+      const message = getMessageFromApiError(error);
       throw new GolemPaymentError(
-        `Unable to reject debit note ${debitNote.id}. ${error?.response?.data?.message || error}`,
+        `Unable to reject debit note ${debitNote.id}. ${message}`,
         PaymentErrorCode.DebitNoteRejectionFailed,
         undefined,
         debitNote.provider,
@@ -221,12 +223,12 @@ export class AgreementPaymentProcess {
       //   provider: invoice.provider,
       // });
     } catch (error) {
-      const reason = error?.response?.data?.message || error;
+      const message = getMessageFromApiError(error);
 
       // this.events.emit("paymentFailed", { invoiceId: invoice.id, agreementId: invoice.agreementId, reason });
 
       throw new GolemPaymentError(
-        `Unable to accept invoice ${invoice.id} ${reason}`,
+        `Unable to accept invoice ${invoice.id} ${message}`,
         PaymentErrorCode.InvoiceAcceptanceFailed,
         undefined,
         invoice.provider,
@@ -246,8 +248,9 @@ export class AgreementPaymentProcess {
       await this.paymentApi.rejectInvoice(invoice, message);
       this.logger.warn(`Invoice rejected`, { reason: message });
     } catch (error) {
+      const message = getMessageFromApiError(error);
       throw new GolemPaymentError(
-        `Unable to reject invoice ${invoice.id} ${error?.response?.data?.message || error}`,
+        `Unable to reject invoice ${invoice.id} ${message}`,
         PaymentErrorCode.InvoiceRejectionFailed,
         undefined,
         invoice.provider,

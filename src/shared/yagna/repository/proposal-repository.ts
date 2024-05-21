@@ -1,6 +1,6 @@
 import { IProposalRepository, OfferProposal } from "../../../market/offer-proposal";
 import { MarketApi } from "ya-ts-client";
-import { Demand } from "../../../market";
+import { Demand, GolemMarketError, MarketErrorCode } from "../../../market";
 import { CacheService } from "../../cache/CacheService";
 
 export class ProposalRepository implements IProposalRepository {
@@ -19,7 +19,12 @@ export class ProposalRepository implements IProposalRepository {
   }
 
   async getByDemandAndId(demand: Demand, id: string): Promise<OfferProposal> {
-    const dto = await this.api.getProposalOffer(demand.id, id);
-    return new OfferProposal(dto, demand);
+    try {
+      const dto = await this.api.getProposalOffer(demand.id, id);
+      return new OfferProposal(dto, demand);
+    } catch (error) {
+      const message = error.message;
+      throw new GolemMarketError(`Failed to get proposal: ${message}`, MarketErrorCode.CouldNotGetProposal, error);
+    }
   }
 }

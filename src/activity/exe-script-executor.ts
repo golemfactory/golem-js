@@ -10,6 +10,7 @@ import retry from "async-retry";
 import { Result, ResultData, StreamingBatchEvent } from "./results";
 import sleep from "../shared/utils/sleep";
 import { Activity } from "./activity";
+import { getMessageFromApiError } from "../shared/utils/apiErrorMessage";
 
 export interface ExeScriptRequest {
   text: string;
@@ -80,7 +81,7 @@ export class ExeScriptExecutor {
         ? this.streamingBatch(batchId, batchSize, startTime, timeout)
         : this.pollingBatch(batchId, startTime, timeout, maxRetries);
     } catch (error) {
-      const message = error?.response?.data?.message || error.message || error;
+      const message = getMessageFromApiError(error);
 
       this.logger.error("Execution of script failed.", {
         reason: message,
