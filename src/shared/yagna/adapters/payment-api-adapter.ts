@@ -11,6 +11,7 @@ import {
 import { IInvoiceRepository } from "../../../payment/invoice";
 import { Logger, YagnaApi } from "../../utils";
 import { IDebitNoteRepository } from "../../../payment/debit_note";
+import { getMessageFromApiError } from "../../utils/apiErrorMessage";
 
 export class PaymentApiAdapter implements IPaymentApi {
   public receivedInvoices$ = new Subject<Invoice>();
@@ -76,41 +77,81 @@ export class PaymentApiAdapter implements IPaymentApi {
   }
 
   async acceptInvoice(invoice: Invoice, allocation: Allocation, amount: string): Promise<Invoice> {
-    await this.yagna.payment.acceptInvoice(invoice.id, {
-      totalAmountAccepted: amount,
-      allocationId: allocation.id,
-    });
+    try {
+      await this.yagna.payment.acceptInvoice(invoice.id, {
+        totalAmountAccepted: amount,
+        allocationId: allocation.id,
+      });
 
-    return this.invoiceRepo.getById(invoice.id);
+      return this.invoiceRepo.getById(invoice.id);
+    } catch (error) {
+      const message = getMessageFromApiError(error);
+      throw new GolemPaymentError(
+        `Could not accept invoice. ${message}`,
+        PaymentErrorCode.InvoiceAcceptanceFailed,
+        allocation,
+        invoice.provider,
+      );
+    }
   }
 
   async rejectInvoice(invoice: Invoice, reason: string): Promise<Invoice> {
-    await this.yagna.payment.rejectInvoice(invoice.id, {
-      rejectionReason: "BAD_SERVICE",
-      totalAmountAccepted: "0.00",
-      message: reason,
-    });
+    try {
+      await this.yagna.payment.rejectInvoice(invoice.id, {
+        rejectionReason: "BAD_SERVICE",
+        totalAmountAccepted: "0.00",
+        message: reason,
+      });
 
-    return this.invoiceRepo.getById(invoice.id);
+      return this.invoiceRepo.getById(invoice.id);
+    } catch (error) {
+      const message = getMessageFromApiError(error);
+      throw new GolemPaymentError(
+        `Could not reject invoice. ${message}`,
+        PaymentErrorCode.InvoiceRejectionFailed,
+        undefined,
+        invoice.provider,
+      );
+    }
   }
 
   async acceptDebitNote(debitNote: DebitNote, allocation: Allocation, amount: string): Promise<DebitNote> {
-    await this.yagna.payment.acceptDebitNote(debitNote.id, {
-      totalAmountAccepted: amount,
-      allocationId: allocation.id,
-    });
+    try {
+      await this.yagna.payment.acceptDebitNote(debitNote.id, {
+        totalAmountAccepted: amount,
+        allocationId: allocation.id,
+      });
 
-    return this.debitNoteRepo.getById(debitNote.id);
+      return this.debitNoteRepo.getById(debitNote.id);
+    } catch (error) {
+      const message = getMessageFromApiError(error);
+      throw new GolemPaymentError(
+        `Could not accept debit note. ${message}`,
+        PaymentErrorCode.DebitNoteAcceptanceFailed,
+        allocation,
+        debitNote.provider,
+      );
+    }
   }
 
   async rejectDebitNote(debitNote: DebitNote, reason: string): Promise<DebitNote> {
-    await this.yagna.payment.rejectDebitNote(debitNote.id, {
-      rejectionReason: "BAD_SERVICE",
-      totalAmountAccepted: "0.00",
-      message: reason,
-    });
+    try {
+      await this.yagna.payment.rejectDebitNote(debitNote.id, {
+        rejectionReason: "BAD_SERVICE",
+        totalAmountAccepted: "0.00",
+        message: reason,
+      });
 
-    return this.debitNoteRepo.getById(debitNote.id);
+      return this.debitNoteRepo.getById(debitNote.id);
+    } catch (error) {
+      const message = getMessageFromApiError(error);
+      throw new GolemPaymentError(
+        `Could not reject debit note. ${message}`,
+        PaymentErrorCode.DebitNoteRejectionFailed,
+        undefined,
+        debitNote.provider,
+      );
+    }
   }
 
   async getAllocation(id: string) {
@@ -118,8 +159,9 @@ export class PaymentApiAdapter implements IPaymentApi {
       const model = await this.yagna.payment.getAllocation(id);
       return new Allocation(model);
     } catch (error) {
+      const message = getMessageFromApiError(error);
       throw new GolemPaymentError(
-        `Could not retrieve allocation. ${error.response?.data?.message || error.response?.data || error}`,
+        `Could not retrieve allocation. ${message}`,
         PaymentErrorCode.AllocationCreationFailed,
         undefined,
         undefined,
@@ -154,8 +196,9 @@ export class PaymentApiAdapter implements IPaymentApi {
 
       return allocation;
     } catch (error) {
+      const message = getMessageFromApiError(error);
       throw new GolemPaymentError(
-        `Could not create new allocation. ${error.response?.data?.message || error.response?.data || error}`,
+        `Could not create new allocation. ${message}`,
         PaymentErrorCode.AllocationCreationFailed,
         undefined,
         undefined,

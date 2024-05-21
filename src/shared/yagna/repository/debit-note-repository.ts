@@ -1,6 +1,9 @@
 import { DebitNote, IDebitNoteRepository } from "../../../payment/debit_note";
 import { MarketApi, PaymentApi } from "ya-ts-client";
 import { ProposalProperties } from "../../../market/offer-proposal";
+import { getMessageFromApiError } from "../../utils/apiErrorMessage";
+import { GolemPaymentError, PaymentErrorCode } from "../../../payment";
+import { GolemMarketError, MarketErrorCode } from "../../../market";
 
 export class DebitNoteRepository implements IDebitNoteRepository {
   constructor(
@@ -9,8 +12,31 @@ export class DebitNoteRepository implements IDebitNoteRepository {
   ) {}
 
   async getById(id: string): Promise<DebitNote> {
-    const model = await this.paymentClient.getDebitNote(id);
-    const agreement = await this.marketClient.getAgreement(model.agreementId);
+    let model;
+    let agreement;
+    try {
+      model = await this.paymentClient.getDebitNote(id);
+    } catch (error) {
+      const message = getMessageFromApiError(error);
+      throw new GolemPaymentError(
+        `Failed to get debit note: ${message}`,
+        PaymentErrorCode.CouldNotGetDebitNote,
+        undefined,
+        undefined,
+        error,
+      );
+    }
+
+    try {
+      agreement = await this.marketClient.getAgreement(model.agreementId);
+    } catch (error) {
+      const message = getMessageFromApiError(error);
+      throw new GolemMarketError(
+        `Failed to get agreement for debit note: ${message}`,
+        MarketErrorCode.CouldNotGetAgreement,
+        error,
+      );
+    }
 
     const providerInfo = {
       id: model.issuerId,

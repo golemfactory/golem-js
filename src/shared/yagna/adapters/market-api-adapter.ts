@@ -13,6 +13,7 @@ import YaTsClient from "ya-ts-client";
 import { GolemInternalError } from "../../error/golem-error";
 import { Logger } from "../../utils";
 import { DemandBodyPrototype, DemandPropertyValue } from "../../../market/demand/demand-body-builder";
+import { getMessageFromApiError } from "../../utils/apiErrorMessage";
 
 /**
  * A bit more user-friendly type definition of DemandOfferBaseDTO from ya-ts-client
@@ -124,8 +125,9 @@ export class MarketApiAdapter implements MarketApi {
 
       this.logger.debug("Proposal rejection result from yagna", { response: result });
     } catch (error) {
+      const message = getMessageFromApiError(error);
       throw new GolemMarketError(
-        `Failed to reject proposal. ${error?.response?.data?.message || error}`,
+        `Failed to reject proposal. ${message}`,
         MarketErrorCode.ProposalRejectionFailed,
         error,
       );

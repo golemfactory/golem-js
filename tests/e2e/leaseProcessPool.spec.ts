@@ -1,5 +1,5 @@
 import { Subscription } from "rxjs";
-import { Allocation, DraftOfferProposalPool, GolemNetwork, YagnaApi } from "../../src";
+import { Allocation, DraftOfferProposalPool, GolemNetwork } from "../../src";
 
 describe("LeaseProcessPool", () => {
   const glm = new GolemNetwork();
@@ -15,7 +15,11 @@ describe("LeaseProcessPool", () => {
 
   beforeAll(async () => {
     await glm.connect();
-    allocation = await modules.payment.createAllocation({ budget: 1, expirationSec: 60 });
+    allocation = await modules.payment.createAllocation({
+      budget: 1,
+      // 30 minutes
+      expirationSec: 60 * 30,
+    });
   });
 
   afterAll(async () => {

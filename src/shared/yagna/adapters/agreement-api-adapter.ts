@@ -5,6 +5,7 @@ import { withTimeout } from "../../utils/timeout";
 import { Logger } from "../../utils";
 import { AgreementApiConfig } from "../../../agreement";
 import { GolemUserError } from "../../error/golem-error";
+import { getMessageFromApiError } from "../../utils/apiErrorMessage";
 
 export class AgreementApiAdapter implements IAgreementApi {
   constructor(
@@ -73,8 +74,9 @@ export class AgreementApiAdapter implements IAgreementApi {
 
       return this.repository.getById(agreementId);
     } catch (error) {
+      const message = getMessageFromApiError(error);
       throw new GolemMarketError(
-        `Unable to create agreement ${error?.response?.data?.message || error?.response?.data || error}`,
+        `Unable to create agreement ${message}`,
         MarketErrorCode.LeaseProcessCreationFailed,
         error,
       );
@@ -134,8 +136,9 @@ export class AgreementApiAdapter implements IAgreementApi {
 
       return this.repository.getById(agreement.id);
     } catch (error) {
+      const message = getMessageFromApiError(error);
       throw new GolemMarketError(
-        `Unable to terminate agreement ${agreement.id}. ${error.response?.data?.message || error.response?.data || error}`,
+        `Unable to terminate agreement ${agreement.id}. ${message}`,
         MarketErrorCode.LeaseProcessTerminationFailed,
         error,
       );

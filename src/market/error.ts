@@ -1,6 +1,8 @@
 import { GolemModuleError } from "../shared/error/golem-error";
 
 export enum MarketErrorCode {
+  CouldNotGetAgreement = "CouldNotGetAgreement",
+  CouldNotGetProposal = "CouldNotGetProposal",
   ServiceNotInitialized = "ServiceNotInitialized",
   MissingAllocation = "MissingAllocation",
   SubscriptionFailed = "SubscriptionFailed",
