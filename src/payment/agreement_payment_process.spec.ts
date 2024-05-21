@@ -1,11 +1,12 @@
 import { AgreementPaymentProcess } from "./agreement_payment_process";
 import { anything, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
-import { Agreement, IPaymentApi } from "../agreement";
+import { Agreement } from "../agreement";
 import { Allocation } from "./allocation";
 import { Invoice } from "./invoice";
 import { DebitNote } from "./debit_note";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
 import { GolemUserError } from "../shared/error/golem-error";
+import { IPaymentApi } from "./types";
 
 const agreementMock = mock(Agreement);
 const allocationMock = mock(Allocation);

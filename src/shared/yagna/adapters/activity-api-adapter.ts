@@ -1,6 +1,6 @@
-import { Agreement, IActivityApi } from "../../../agreement";
+import { Agreement } from "../../../agreement";
 import { ActivityApi } from "ya-ts-client";
-import { Activity, ActivityStateEnum } from "../../../activity";
+import { Activity, ActivityStateEnum, IActivityApi } from "../../../activity";
 import { IActivityRepository } from "../../../activity/activity";
 
 export class ActivityApiAdapter implements IActivityApi {

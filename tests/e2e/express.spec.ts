@@ -34,7 +34,16 @@ describe("Express", function () {
           },
         },
         // TODO: This should be optional
-        market: {},
+        market: {
+          maxAgreements: 1,
+          rentHours: 1,
+          pricing: {
+            model: "linear",
+            maxStartPrice: 1,
+            maxEnvPerHourPrice: 1,
+            maxCpuPerHourPrice: 1,
+          },
+        },
         payment: {
           driver: "erc20",
           network: "holesky",

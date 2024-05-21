@@ -1,4 +1,4 @@
-import { Agreement, IPaymentApi } from "../agreement";
+import { Agreement } from "../agreement";
 import { Invoice } from "./invoice";
 import { DebitNote } from "./debit_note";
 import { RejectionReason } from "./rejection";
@@ -8,6 +8,7 @@ import { DebitNoteFilter, InvoiceFilter } from "./service";
 import AsyncLock from "async-lock";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
 import { GolemUserError } from "../shared/error/golem-error";
+import { IPaymentApi } from "./types";
 
 /**
  * Process manager that controls the logic behind processing events related to an agreement which result with payments

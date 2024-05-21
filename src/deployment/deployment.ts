@@ -145,17 +145,19 @@ export class Deployment {
 
     await this.dataTransferProtocol.init();
 
-    // TODO: allocation is not used in this api?
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const allocation = await this.modules.payment.createAllocation({
-      budget: 1,
-    });
     const payerDetails = await this.modules.payment.getPayerDetails();
 
     for (const network of this.components.networks) {
       const networkInstance = await this.modules.network.createNetwork(network.options);
       this.networks.set(network.name, networkInstance);
     }
+
+    // TODO: Derive this from deployment spec
+    const allocation = await this.modules.payment.createAllocation({
+      budget: 1,
+      expirationSec: 30 * 60, // 30 minutes
+    });
+
     // TODO: add pool to network
     // TODO: pass dataTransferProtocol to pool
     for (const pool of this.components.activityPools) {

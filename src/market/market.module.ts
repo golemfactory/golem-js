@@ -1,13 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
-import {
-  Agreement,
-  IActivityApi,
-  IPaymentApi,
-  LeaseProcess,
-  LeaseProcessPool,
-  LeaseProcessPoolOptions,
-} from "../agreement";
+import { Agreement, LeaseProcess, LeaseProcessPool, LeaseProcessPoolOptions } from "../agreement";
 import {
   Demand,
   DraftOfferProposalPool,
@@ -17,7 +10,7 @@ import {
   NewProposalEvent,
 } from "./index";
 import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
-import { Allocation } from "../payment";
+import { Allocation, IPaymentApi } from "../payment";
 import { bufferTime, catchError, filter, map, mergeMap, Observable, of, OperatorFunction, switchMap, tap } from "rxjs";
 import { IProposalRepository, OfferProposal, ProposalFilterNew } from "./offer-proposal";
 import { DemandBodyBuilder } from "./demand/demand-body-builder";
@@ -25,7 +18,7 @@ import { IAgreementApi } from "../agreement/agreement";
 import { BuildDemandOptions, DemandSpecification, IDemandRepository } from "./demand";
 import { ProposalsBatch } from "./proposals_batch";
 import { PayerDetails } from "../payment/PayerDetails";
-import { IFileServer } from "../activity";
+import { IActivityApi, IFileServer } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { ActivityDemandDirectorConfig } from "./demand/directors/activity-demand-director-config";
 import { BasicDemandDirector } from "./demand/directors/basic-demand-director";
@@ -34,6 +27,7 @@ import { ActivityDemandDirector } from "./demand/directors/activity-demand-direc
 import { ActivityDemandDirectorConfigOptions } from "./demand/options";
 import { BasicDemandDirectorConfig } from "./demand/directors/basic-demand-director-config";
 import { PaymentDemandDirectorConfig } from "./demand/directors/payment-demand-director-config";
+import { GolemUserError } from "../shared/error/golem-error";
 import { INetworkApi } from "../network/api";
 
 export interface MarketEvents {}
@@ -64,17 +58,24 @@ export interface DemandSpec {
 }
 
 export interface MarketOptions {
+  /** The maximum number of agreements that you want to make with the market */
+  maxAgreements: number;
+
   /** How long you want to rent the resources in hours */
-  rentHours?: number;
+  rentHours: number;
 
-  pricing?: {
-    maxStartPrice: number;
-    maxCpuPerHourPrice: number;
-    maxEnvPerHourPrice: number;
-  };
-
-  /** The payment network that should be considered while looking for providers and where payments will be done */
-  paymentNetwork?: string;
+  /** Pricing strategy that will be used to filter the offers from the market */
+  pricing:
+    | {
+        model: "linear";
+        maxStartPrice: number;
+        maxCpuPerHourPrice: number;
+        maxEnvPerHourPrice: number;
+      }
+    | {
+        model: "burn-rate";
+        avgGlmPerHour: number;
+      };
 
   /**
    * List of provider Golem Node IDs that should be considered
@@ -167,6 +168,12 @@ export interface MarketModule {
     allocation: Allocation,
     options?: LeaseProcessPoolOptions,
   ): LeaseProcessPool;
+
+  /**
+   * Provides a simple estimation of the budget that's required for given demand specification
+   * @param params
+   */
+  estimateBudget(params: DemandSpec): number;
 }
 
 /**
@@ -480,5 +487,30 @@ export class MarketModuleImpl implements MarketModule {
           subscription.unsubscribe();
         };
       });
+  }
+
+  estimateBudget(params: DemandSpec): number {
+    const pricingModel = params.market.pricing.model;
+
+    // TODO: Don't assume for the user, at least not on pure golem-js level
+    const minCpuThreads = params.demand.activity?.minCpuThreads ?? 1;
+
+    const { rentHours, maxAgreements } = params.market;
+
+    switch (pricingModel) {
+      case "linear": {
+        const { maxCpuPerHourPrice, maxStartPrice, maxEnvPerHourPrice } = params.market.pricing;
+
+        const threadCost = maxAgreements * rentHours * minCpuThreads * maxCpuPerHourPrice;
+        const startCost = maxAgreements * maxStartPrice;
+        const envCost = maxAgreements * rentHours * maxEnvPerHourPrice;
+
+        return startCost + envCost + threadCost;
+      }
+      case "burn-rate":
+        return maxAgreements * rentHours * params.market.pricing.avgGlmPerHour;
+      default:
+        throw new GolemUserError(`Unsupported pricing model ${pricingModel}`);
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { Activity, ActivityStateEnum, ExecutionConfig, Result } from "../";
+import { Activity, ActivityStateEnum, ExecutionConfig, IActivityApi, Result } from "../";
 import {
   Capture,
   Command,
@@ -19,7 +19,7 @@ import { NetworkNode } from "../../network";
 import { RemoteProcess } from "./process";
 import { GolemWorkError, WorkErrorCode } from "./error";
 import { GolemConfigError, GolemTimeoutError } from "../../shared/error/golem-error";
-import { IActivityApi, ProviderInfo } from "../../agreement";
+import { ProviderInfo } from "../../agreement";
 import { TcpProxy } from "../../network/tcpProxy";
 import { AgreementDTO } from "../../agreement/service";
 import { ActivityApi } from "ya-ts-client";

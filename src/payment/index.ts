@@ -1,11 +1,11 @@
-export { PaymentService, PaymentOptions, PaymentServiceEvents } from "./service";
+export { PaymentOptions } from "./service";
 export { Invoice, InvoiceEvents } from "./invoice";
 export { DebitNote, DebitNoteEvents } from "./debit_note";
 export { Allocation } from "./allocation";
-export { Payments, InvoiceEvent, DebitNoteEvent, PaymentEvents } from "./payments";
 export { Rejection, RejectionReason } from "./rejection";
 export * as PaymentFilters from "./strategy";
 export { GolemPaymentError, PaymentErrorCode } from "./error";
 export { InvoiceProcessor, InvoiceAcceptResult } from "./InvoiceProcessor";
-export { PaymentConfig } from "./config";
 export * from "./payment.module";
+export { IPaymentApi } from "./types";
+export { CreateAllocationParams } from "./types";

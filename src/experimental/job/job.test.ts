@@ -1,8 +1,8 @@
 import { Job } from "./job";
-import { Agreement, AgreementPoolService, IActivityApi } from "../../agreement";
+import { Agreement, AgreementPoolService } from "../../agreement";
 import { WorkContext } from "../../activity/work";
 import { NetworkNode, NetworkService } from "../../network";
-import { Activity } from "../../activity";
+import { Activity, IActivityApi } from "../../activity";
 import { anything, imock, instance, mock, verify, when } from "@johanblumenberg/ts-mockito";
 import { Logger } from "../../shared/utils";
 import { GolemNetwork } from "../../golem-network";
@@ -48,7 +48,16 @@ describe.skip("Job", () => {
               imageTag: "test_image",
             },
           },
-          market: {},
+          market: {
+            maxAgreements: 1,
+            rentHours: 1,
+            pricing: {
+              model: "linear",
+              maxStartPrice: 1,
+              maxEnvPerHourPrice: 1,
+              maxCpuPerHourPrice: 1,
+            },
+          },
           payment: {
             network: "holesky",
             driver: "erc20",

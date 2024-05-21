@@ -12,7 +12,7 @@ import {
   YagnaExeScriptObserver,
 } from "../../src";
 import { _, anyOfClass, anything, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
-import { buildExeScriptErrorResult, buildExeScriptSuccessResult, buildExecutorResults } from "./helpers";
+import { buildExecutorResults, buildExeScriptErrorResult, buildExeScriptSuccessResult } from "./helpers";
 import { IPv4 } from "ip-num";
 import { StorageProviderDataCallback } from "../../src/shared/storage/provider";
 import { ActivityApi } from "ya-ts-client";

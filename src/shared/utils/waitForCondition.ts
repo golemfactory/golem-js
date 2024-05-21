@@ -12,16 +12,15 @@ import { GolemTimeoutError } from "../error/golem-error";
  * @return {Promise<void>} - Resolves when the condition is met or rejects with a timeout error if it wasn't met on time.
  */
 export function waitForCondition(
-  check: () => boolean,
+  check: () => boolean | Promise<boolean>,
   opts = { timeoutSeconds: 30, intervalSeconds: 1 },
 ): Promise<void> {
   let verifyInterval: NodeJS.Timeout | undefined;
   let waitTimeout: NodeJS.Timeout | undefined;
 
   const verify = new Promise<void>((resolve) => {
-    verifyInterval = setInterval(() => {
-      if (check()) {
-        clearInterval(verifyInterval);
+    verifyInterval = setInterval(async () => {
+      if (await check()) {
         resolve();
       }
     }, opts.intervalSeconds * 1000);
