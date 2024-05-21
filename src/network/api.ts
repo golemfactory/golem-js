@@ -4,8 +4,9 @@ import { NetworkOptions } from "./network.module";
 
 export interface INetworkApi {
   createNetwork(options: NetworkOptions): Promise<Network>;
-  removeNetwork(networkId: string): Promise<void>;
-  addNetworkNode(network: Network, nodeId: string, nodeIp?: string): Promise<NetworkNode>;
-  removeNetworkNode(network: Network, networkNodeId: string): Promise<void>;
+  removeNetwork(network: Network): Promise<void>;
+  createNetworkNode(network: Network, nodeId: string, nodeIp?: string): Promise<NetworkNode>;
+  removeNetworkNode(network: Network, node: NetworkNode): Promise<void>;
+  getIdentity(): Promise<string>;
   getWebsocketUri(networkNode: NetworkNode, port: number): string;
 }

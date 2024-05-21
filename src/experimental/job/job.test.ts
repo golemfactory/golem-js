@@ -1,7 +1,6 @@
 import { Job } from "./job";
 import { Agreement, AgreementPoolService } from "../../agreement";
 import { WorkContext } from "../../activity/work";
-import { NetworkNode, NetworkService } from "../../network";
 import { Activity, IActivityApi } from "../../activity";
 import { anything, imock, instance, mock, verify, when } from "@johanblumenberg/ts-mockito";
 import { Logger } from "../../shared/utils";
@@ -22,10 +21,8 @@ describe.skip("Job", () => {
   describe("cancel()", () => {
     it("stops the activity and releases the agreement when canceled", async () => {
       jest.spyOn(AgreementPoolService.prototype, "run").mockResolvedValue();
-      jest.spyOn(NetworkService.prototype, "run").mockResolvedValue();
       jest.spyOn(WorkContext.prototype, "before").mockResolvedValue();
       jest.spyOn(AgreementPoolService.prototype, "releaseAgreement").mockResolvedValue();
-      jest.spyOn(NetworkService.prototype, "addNode").mockResolvedValue({} as unknown as NetworkNode);
 
       const mockAgreement = {
         id: "test_agreement_id",

@@ -212,7 +212,7 @@ export class Deployment {
       await Promise.allSettled(stopPools);
 
       const stopNetworks: Promise<void>[] = Array.from(this.networks.values()).map((network) =>
-        this.modules.network.removeNetwork(network.id),
+        this.modules.network.removeNetwork(network),
       );
       await Promise.allSettled(stopNetworks);
 

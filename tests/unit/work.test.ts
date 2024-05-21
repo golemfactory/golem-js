@@ -17,8 +17,10 @@ import { IPv4 } from "ip-num";
 import { StorageProviderDataCallback } from "../../src/shared/storage/provider";
 import { ActivityApi } from "ya-ts-client";
 import { ExeScriptExecutor } from "../../src/activity/exe-script-executor";
+import { INetworkApi } from "../../src/network/api";
 
 const mockActivityApi = imock<IActivityApi>();
+const mockNetworkApi = imock<INetworkApi>();
 const mockActivity = mock(Activity);
 const mockExecutor = mock(ExeScriptExecutor);
 const mockActivityControl = imock<ActivityApi.RequestorControlService>();
@@ -30,6 +32,7 @@ describe("Work Context", () => {
   beforeEach(() => {
     // Make mocks ready to re-use
     reset(mockActivityApi);
+    reset(mockNetworkApi);
     reset(mockActivity);
     reset(mockActivityControl);
     reset(mockExecObserver);
@@ -66,6 +69,7 @@ describe("Work Context", () => {
         instance(mockActivityControl),
         instance(mockExecObserver),
         instance(mockActivity),
+        instance(mockNetworkApi),
       );
       await ctx.before();
       const results = await worker(ctx);
@@ -91,6 +95,7 @@ describe("Work Context", () => {
         instance(mockActivityControl),
         instance(mockExecObserver),
         instance(mockActivity),
+        instance(mockNetworkApi),
       );
       await ctx.before();
       const results = await worker(ctx);
@@ -119,6 +124,7 @@ describe("Work Context", () => {
           instance(mockActivityControl),
           instance(mockExecObserver),
           instance(mockActivity),
+          instance(mockNetworkApi),
           { storageProvider: instance(mockStorageProvider) },
         );
         await ctx.before();
@@ -147,6 +153,7 @@ describe("Work Context", () => {
           instance(mockActivityControl),
           instance(mockExecObserver),
           instance(mockActivity),
+          instance(mockNetworkApi),
           { storageProvider: instance(mockStorageProvider) },
         );
         await ctx.before();
@@ -178,6 +185,7 @@ describe("Work Context", () => {
           instance(mockActivityControl),
           instance(mockExecObserver),
           instance(mockActivity),
+          instance(mockNetworkApi),
           { storageProvider: instance(mockStorageProvider) },
         );
 
@@ -215,6 +223,7 @@ describe("Work Context", () => {
           instance(mockActivityControl),
           instance(mockExecObserver),
           instance(mockActivity),
+          instance(mockNetworkApi),
           { storageProvider: instance(mockStorageProvider) },
         );
         const result = await ctx.downloadJson("/golem/file.txt");
@@ -252,6 +261,7 @@ describe("Work Context", () => {
           instance(mockActivityControl),
           instance(mockExecObserver),
           instance(mockActivity),
+          instance(mockNetworkApi),
           { storageProvider: instance(mockStorageProvider) },
         );
         const result = await ctx.downloadData("/golem/file.txt");
@@ -275,6 +285,7 @@ describe("Work Context", () => {
         instance(mockActivityControl),
         instance(mockExecObserver),
         instance(mockActivity),
+        instance(mockNetworkApi),
       );
       when(mockExecutor.execute(_, _, _)).thenResolve(
         buildExecutorResults([
@@ -300,6 +311,7 @@ describe("Work Context", () => {
         instance(mockActivityControl),
         instance(mockExecObserver),
         instance(mockActivity),
+        instance(mockNetworkApi),
       );
 
       when(mockExecutor.execute(_, _, _)).thenResolve(
@@ -336,6 +348,7 @@ describe("Work Context", () => {
         instance(mockActivityControl),
         instance(mockExecObserver),
         instance(mockActivity),
+        instance(mockNetworkApi),
         { storageProvider: instance(mockStorageProvider) },
       );
       const expectedStdout = [
@@ -372,6 +385,7 @@ describe("Work Context", () => {
         instance(mockActivityControl),
         instance(mockExecObserver),
         instance(mockActivity),
+        instance(mockNetworkApi),
         { storageProvider: instance(mockStorageProvider) },
       );
       const expectedStdout = [
@@ -411,6 +425,7 @@ describe("Work Context", () => {
         instance(mockActivityControl),
         instance(mockExecObserver),
         instance(mockActivity),
+        instance(mockNetworkApi),
       );
       await expect(ctx.getState()).resolves.toEqual(ActivityStateEnum.Deployed);
     });
@@ -423,30 +438,27 @@ describe("Work Context", () => {
         instance(mockActivityControl),
         instance(mockExecObserver),
         instance(mockActivity),
+        instance(mockNetworkApi),
       );
 
       expect(() => ctx.getIp()).toThrow(new Error("There is no network in this work context"));
     });
 
     it("should return ip address of provider vpn network node", async () => {
-      const networkNode = new NetworkNode(
-        "test-node",
-        IPv4.fromString("192.168.0.10"),
-        () => ({
-          id: "test-network",
-          ip: "192.168.0.0/24",
-          nodes: {
-            "192.168.0.10": "example-provider-id",
-          },
-          mask: "255.255.255.0",
-        }),
-        "http://localhost",
-      );
+      const networkNode = new NetworkNode("test-node", "192.168.0.10", () => ({
+        id: "test-network",
+        ip: "192.168.0.0/24",
+        nodes: {
+          "192.168.0.10": "example-provider-id",
+        },
+        mask: "255.255.255.0",
+      }));
       const ctx = new WorkContext(
         instance(mockActivityApi),
         instance(mockActivityControl),
         instance(mockExecObserver),
         instance(mockActivity),
+        instance(mockNetworkApi),
         { networkNode },
       );
 
@@ -461,6 +473,7 @@ describe("Work Context", () => {
         instance(mockActivityControl),
         instance(mockExecObserver),
         instance(mockActivity),
+        instance(mockNetworkApi),
       );
 
       expect(() => ctx.getWebsocketUri(80)).toThrow(new Error("There is no network in this work context"));
@@ -474,10 +487,11 @@ describe("Work Context", () => {
         instance(mockActivityControl),
         instance(mockExecObserver),
         instance(mockActivity),
+        instance(mockNetworkApi),
         { networkNode: instance(mockNode) },
       );
 
-      when(mockNode.getWebsocketUri(20)).thenReturn("ws://localhost:20");
+      when(mockNetworkApi.getWebsocketUri(instance(mockNode), 20)).thenReturn("ws://localhost:20");
 
       expect(ctx.getWebsocketUri(20)).toEqual("ws://localhost:20");
     });
@@ -505,6 +519,7 @@ describe("Work Context", () => {
         instance(mockActivityControl),
         instance(mockExecObserver),
         instance(mockActivity),
+        instance(mockNetworkApi),
         { storageProvider: instance(mockStorageProvider) },
       );
 
@@ -535,6 +550,7 @@ describe("Work Context", () => {
         instance(mockActivityControl),
         instance(mockExecObserver),
         instance(mockActivity),
+        instance(mockNetworkApi),
         { activityReadySetupFunctions },
       );
 
@@ -552,6 +568,7 @@ describe("Work Context", () => {
         instance(mockActivityControl),
         instance(mockExecObserver),
         instance(mockActivity),
+        instance(mockNetworkApi),
       );
 
       when(mockExecutor.execute(_)).thenResolve(
@@ -570,6 +587,7 @@ describe("Work Context", () => {
         instance(mockActivityControl),
         instance(mockExecObserver),
         instance(mockActivity),
+        instance(mockNetworkApi),
       );
 
       when(mockExecutor.execute(_)).thenResolve(

@@ -24,9 +24,9 @@ export class Network {
     mask?: string,
     gateway?: string,
   ) {
-    this.ip = IPv4.fromString(ip);
     this.ipRange = IPv4CidrRange.fromCidr(mask ? `${ip}/${IPv4Mask.fromDecimalDottedString(mask).prefix}` : ip);
     this.ipIterator = this.ipRange[Symbol.iterator]();
+    this.ip = this.getFirstAvailableIpAddress();
     this.mask = this.ipRange.getPrefix().toMask();
     this.gateway = gateway ? new IPv4(gateway) : undefined;
   }
@@ -45,28 +45,29 @@ export class Network {
     };
   }
 
-  public addNode(id: string, ip: string): NetworkNode {
-    if (this.hasNode(id)) {
+  public addNode(node: NetworkNode): void {
+    if (this.hasNode(node)) {
       throw new GolemNetworkError(
-        `Node ${id} has already been adde to this network`,
+        `Node ${node.id} has already been added to this network`,
         NetworkErrorCode.AddressAlreadyAssigned,
       );
     }
-    const node = new NetworkNode(id, ip, this.getNetworkInfo.bind(this));
     this.nodes.set(node.id, node);
-    return node;
   }
 
   /**
    * Checks whether the node belongs to the network
    * @param nodeId
    */
-  public hasNode(nodeId: string): boolean {
-    return this.nodes.has(nodeId);
+  public hasNode(node: NetworkNode): boolean {
+    return this.nodes.has(node.id);
   }
 
-  public removeNode(nodeId: string) {
-    this.nodes.delete(nodeId);
+  public removeNode(node: NetworkNode) {
+    if (!this.hasNode(node)) {
+      throw new GolemNetworkError(`There is no node ${node.id} in the network`, NetworkErrorCode.NodeRemovalFailed);
+    }
+    this.nodes.delete(node.id);
   }
 
   public getFirstAvailableIpAddress(): IPv4 {
@@ -80,35 +81,15 @@ export class Network {
     return ip;
   }
 
-  public ensureIpInNetwork(ip: IPv4): boolean {
-    if (!this.ipRange.contains(new IPv4CidrRange(ip, new IPv4Prefix(BigInt(this.mask.prefix)))))
-      throw new GolemNetworkError(
-        `The given IP ('${ip.toString()}') address must belong to the network ('${this.ipRange.toCidrString()}').`,
-        NetworkErrorCode.AddressOutOfRange,
-        this.getNetworkInfo(),
-      );
-    return true;
+  public isIpInNetwork(ip: IPv4): boolean {
+    return this.ipRange.contains(new IPv4CidrRange(ip, new IPv4Prefix(BigInt(this.mask.prefix))));
   }
 
-  public ensureIpUnique(ip: IPv4) {
-    if (!this.isIpUnique(ip))
-      throw new GolemNetworkError(
-        `IP '${ip.toString()}' has already been assigned in this network.`,
-        NetworkErrorCode.AddressAlreadyAssigned,
-        this.getNetworkInfo(),
-      );
+  public isNodeIdUnique(id: string): boolean {
+    return !this.nodes.has(id);
   }
 
-  public ensureIdUnique(id: string) {
-    if (this.nodes.has(id))
-      throw new GolemNetworkError(
-        `Network ID '${id}' has already been assigned in this network.`,
-        NetworkErrorCode.AddressAlreadyAssigned,
-        this.getNetworkInfo(),
-      );
-  }
-
-  public isIpUnique(ip: IPv4): boolean {
+  public isNodeIpUnique(ip: IPv4): boolean {
     for (const node of this.nodes.values()) {
       if (new IPv4(node.ip).isEquals(ip)) return false;
     }

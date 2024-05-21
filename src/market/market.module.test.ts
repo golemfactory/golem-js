@@ -12,6 +12,7 @@ import { IActivityApi, IFileServer } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { GolemMarketError } from "./error";
 import { IPaymentApi } from "../payment";
+import { INetworkApi } from "../network/api";
 
 const mockMarketApiAdapter = mock(MarketApiAdapter);
 const mockYagna = mock(YagnaApi);
@@ -25,6 +26,7 @@ beforeEach(() => {
     activityApi: instance(imock<IActivityApi>()),
     paymentApi: instance(imock<IPaymentApi>()),
     agreementApi: instance(imock<IAgreementApi>()),
+    networkApi: instance(imock<INetworkApi>()),
     proposalRepository: instance(imock<IProposalRepository>()),
     demandRepository: instance(imock<IDemandRepository>()),
     yagna: instance(mockYagna),

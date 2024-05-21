@@ -33,8 +33,8 @@ import {
   StorageProvider,
   WebSocketBrowserStorageProvider,
 } from "./shared/storage";
-import { NetworkApiAdapter } from "./shared/yagna/adapters/network-api-adapter";
 import { INetworkApi } from "./network/api";
+import { NetworkApiAdapter } from "./shared/yagna/adapters/network-api-adapter";
 
 export interface GolemNetworkOptions {
   logger?: Logger;

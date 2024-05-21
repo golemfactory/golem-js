@@ -1,9 +1,10 @@
 import { EventEmitter } from "eventemitter3";
 import { Network } from "./network";
 import { GolemNetworkError, NetworkErrorCode } from "./error";
-import { Logger, YagnaApi } from "../shared/utils";
+import { Logger } from "../shared/utils";
 import { INetworkApi } from "./api";
 import { NetworkNode } from "./node";
+import { IPv4, IPv4CidrRange, IPv4Mask } from "ip-num";
 
 export interface NetworkEvents {}
 
@@ -23,9 +24,9 @@ export interface NetworkOptions {
 export interface NetworkModule {
   events: EventEmitter<NetworkEvents>;
   createNetwork(options: NetworkOptions): Promise<Network>;
-  removeNetwork(networkId: string): Promise<void>;
-  addNetworkNode(network: Network, nodeId: string, nodeIp?: string): Promise<NetworkNode>;
-  removeNetworkNode(network: Network, nodeId: string): Promise<void>;
+  removeNetwork(network: Network): Promise<void>;
+  createNetworkNode(network: Network, nodeId: string, nodeIp?: string): Promise<NetworkNode>;
+  removeNetworkNode(network: Network, node: NetworkNode): Promise<void>;
   getWebsocketUri(networkNode: NetworkNode, port: number): string;
 }
 
@@ -35,17 +36,28 @@ export class NetworkModuleImpl implements NetworkModule {
   constructor(
     private readonly deps: {
       logger: Logger;
-      yagna: YagnaApi;
       networkApi: INetworkApi;
     },
   ) {}
 
   async createNetwork(options: NetworkOptions): Promise<Network> {
     try {
-      const network = await this.deps.networkApi.createNetwork(options);
+      const ipDecimalDottedString = options.ip?.split("/")?.[0] || "192.168.0.0";
+      const maskBinaryNotation = parseInt(options.ip?.split("/")?.[1] || "24");
+      const maskPrefix = options.mask ? IPv4Mask.fromDecimalDottedString(options.mask).prefix : maskBinaryNotation;
+      const ip = IPv4.fromString(ipDecimalDottedString);
+      const ipRange = IPv4CidrRange.fromCidr(`${ip}/${maskPrefix}`);
+      const mask = ipRange.getPrefix().toMask();
+      const gateway = options.gateway ? new IPv4(options.gateway) : undefined;
+      const network = await this.deps.networkApi.createNetwork({
+        id: options.id,
+        ip: ip.toString(),
+        mask: mask?.toString(),
+        gateway: gateway?.toString(),
+      });
       // add Requestor as network node
-      const { identity } = await this.deps.yagna.identity.getIdentity();
-      await this.deps.networkApi.addNetworkNode(network, identity, options.ownerIp);
+      const identity = await this.deps.networkApi.getIdentity();
+      await this.deps.networkApi.createNetworkNode(network, identity, options.ownerIp);
       this.deps.logger.info(`Network created`, network.getNetworkInfo());
       return network;
     } catch (error) {
@@ -60,9 +72,9 @@ export class NetworkModuleImpl implements NetworkModule {
       );
     }
   }
-  async removeNetwork(networkId: string): Promise<void> {
+  async removeNetwork(network: Network): Promise<void> {
     try {
-      return this.deps.networkApi.removeNetwork(networkId);
+      return await this.deps.networkApi.removeNetwork(network);
     } catch (error) {
       throw new GolemNetworkError(
         `Unable to remove network. ${error}`,
@@ -72,24 +84,61 @@ export class NetworkModuleImpl implements NetworkModule {
       );
     }
   }
-  async addNetworkNode(network: Network, nodeId: string, nodeIp?: string): Promise<NetworkNode> {
+  async createNetworkNode(network: Network, nodeId: string, nodeIp?: string): Promise<NetworkNode> {
     try {
-      return this.deps.networkApi.addNetworkNode(network, nodeId, nodeIp);
+      if (!network.isNodeIdUnique(nodeId)) {
+        throw new GolemNetworkError(
+          `Network ID '${nodeId}' has already been assigned in this network.`,
+          NetworkErrorCode.AddressAlreadyAssigned,
+          network.getNetworkInfo(),
+        );
+      }
+      let ipv4: IPv4;
+      if (nodeIp) {
+        ipv4 = IPv4.fromString(nodeIp);
+        if (!network.isIpInNetwork(ipv4)) {
+          throw new GolemNetworkError(
+            `The given IP ('${nodeIp}') address must belong to the network ('${network.getNetworkInfo().ip}').`,
+            NetworkErrorCode.AddressOutOfRange,
+            network.getNetworkInfo(),
+          );
+        }
+        if (!network.isNodeIpUnique(ipv4)) {
+          throw new GolemNetworkError(
+            `IP '${nodeIp.toString()}' has already been assigned in this network.`,
+            NetworkErrorCode.AddressAlreadyAssigned,
+            network.getNetworkInfo(),
+          );
+        }
+      } else {
+        ipv4 = network.getFirstAvailableIpAddress();
+      }
+      const node = await this.deps.networkApi.createNetworkNode(network, nodeId, ipv4.toString());
+      network.addNode(node);
+      this.deps.logger.debug(`Node has added to the network.`, { id: nodeId, ip: ipv4.toString() });
+      return node;
     } catch (error) {
       if (error instanceof GolemNetworkError) {
         throw error;
       }
       throw new GolemNetworkError(
-        `Unable to add node to network. ${error}`,
+        `Unable to add node to network. ${error?.data?.message || error.toString()}`,
         NetworkErrorCode.NodeAddingFailed,
         network.getNetworkInfo(),
         error,
       );
     }
   }
-  removeNetworkNode(network: Network, nodeId: string): Promise<void> {
+  async removeNetworkNode(network: Network, node: NetworkNode): Promise<void> {
+    if (!network.hasNode(node)) {
+      throw new GolemNetworkError(
+        `The network node ${node.id} does not belong to the network`,
+        NetworkErrorCode.NodeRemovalFailed,
+        network.getNetworkInfo(),
+      );
+    }
     try {
-      return this.deps.networkApi.removeNetworkNode(network, nodeId);
+      return this.deps.networkApi.removeNetworkNode(network, node);
     } catch (error) {
       if (error instanceof GolemNetworkError) {
         throw error;
