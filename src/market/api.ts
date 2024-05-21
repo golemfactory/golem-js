@@ -2,6 +2,7 @@ import { Observable } from "rxjs";
 import { Demand, DemandSpecification } from "./demand";
 import YaTsClient from "ya-ts-client";
 import { OfferProposal } from "./offer-proposal";
+import { DemandBodyPrototype } from "./demand/demand-body-builder";
 
 export type NewProposalEvent = YaTsClient.MarketApi.ProposalEventDTO;
 export type ProposalRejectedEvent = YaTsClient.MarketApi.ProposalRejectedEventDTO;
@@ -41,4 +42,12 @@ export interface MarketApi {
    * @param reason User readable reason that should be presented to the Provider
    */
   rejectProposal(receivedProposal: OfferProposal, reason: string): Promise<void>;
+
+  /**
+   * Fetches payment related decorations, based on the given allocation ID.
+   *
+   * @param allocationId The ID of the allocation that will be used to pay for computations related to the demand
+   *
+   */
+  getPaymentRelatedDemandDecorations(allocationId: string): Promise<DemandBodyPrototype>;
 }

@@ -49,8 +49,7 @@ const demandOptions = {
     allocation = await glm.payment.createAllocation({ budget: 1, expirationSec: RENT_HOURS * 60 * 60 });
 
     const proposalPool = new DraftOfferProposalPool({ minCount: 1 });
-    const payerDetails = await glm.payment.getPayerDetails();
-    const demandSpecification = await glm.market.buildDemandDetails(demandOptions.demand, payerDetails);
+    const demandSpecification = await glm.market.buildDemandDetails(demandOptions.demand, allocation);
 
     const proposals$ = glm.market.startCollectingProposals({
       demandSpecification,

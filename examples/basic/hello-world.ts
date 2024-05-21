@@ -40,8 +40,11 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
       logger,
     });
 
-    const payerDetails = await glm.payment.getPayerDetails();
-    const demandSpecification = await glm.market.buildDemandDetails(demand.demand, payerDetails);
+    const allocation = await glm.payment.createAllocation({
+      budget: glm.market.estimateBudget(demand),
+      expirationSec: 60 * 60, // 60 minutes
+    });
+    const demandSpecification = await glm.market.buildDemandDetails(demand.demand, allocation);
     const proposal$ = glm.market.startCollectingProposals({
       demandSpecification,
       bufferSize: 15,
@@ -51,10 +54,6 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
     const agreement = await glm.market.proposeAgreement(draftProposal);
 
-    const allocation = await glm.payment.createAllocation({
-      budget: glm.market.estimateBudget(demand),
-      expirationSec: 60 * 60, // 60 minutes
-    });
     const lease = await glm.market.createLease(agreement, allocation);
     const activity = await glm.activity.createActivity(agreement);
 
