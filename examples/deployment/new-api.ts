@@ -26,7 +26,7 @@ async function main() {
 
     builder
       .createNetwork("basic", {
-        networkOwnerId: "test",
+        id: "test",
       })
       .createActivityPool("app", {
         demand: {
