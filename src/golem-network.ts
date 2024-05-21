@@ -241,15 +241,12 @@ export class GolemNetwork {
       logger: this.logger,
     });
 
-    const payerDetails = await this.payment.getPayerDetails();
-    const demandSpecification = await this.market.buildDemandDetails(demand.demand, payerDetails);
-
     const budget = this.market.estimateBudget(demand);
-
     const allocation = await this.payment.createAllocation({
       budget,
       expirationSec: demand.market.rentHours * 60 * 60,
     });
+    const demandSpecification = await this.market.buildDemandDetails(demand.demand, allocation);
 
     const proposalSubscription = this.market
       .startCollectingProposals({

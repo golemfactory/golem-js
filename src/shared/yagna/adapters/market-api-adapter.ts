@@ -144,4 +144,8 @@ export class MarketApiAdapter implements MarketApi {
 
     return { constraints, properties };
   }
+
+  public async getPaymentRelatedDemandDecorations(allocationId: string): Promise<DemandBodyPrototype> {
+    return this.yagnaApi.payment.getDemandDecorations([allocationId]);
+  }
 }

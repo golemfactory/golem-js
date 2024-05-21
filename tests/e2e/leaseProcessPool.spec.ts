@@ -3,7 +3,6 @@ import { Allocation, DraftOfferProposalPool, GolemNetwork, YagnaApi } from "../.
 
 describe("LeaseProcessPool", () => {
   const glm = new GolemNetwork();
-  const yagnaApi = new YagnaApi();
   const modules = {
     market: glm.market,
     activity: glm.activity,
@@ -26,14 +25,13 @@ describe("LeaseProcessPool", () => {
 
   beforeEach(async () => {
     proposalPool = new DraftOfferProposalPool();
-    const payerDetails = await modules.payment.getPayerDetails();
     const demandSpecification = await modules.market.buildDemandDetails(
       {
         activity: {
           imageTag: "golem/alpine:latest",
         },
       },
-      payerDetails,
+      allocation,
     );
     proposalSubscription = proposalPool.readFrom(
       modules.market.startCollectingProposals({

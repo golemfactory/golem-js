@@ -145,8 +145,6 @@ export class Deployment {
 
     await this.dataTransferProtocol.init();
 
-    const payerDetails = await this.modules.payment.getPayerDetails();
-
     for (const network of this.components.networks) {
       const networkInstance = await this.modules.network.createNetwork(network.options);
       this.networks.set(network.name, networkInstance);
@@ -163,7 +161,7 @@ export class Deployment {
     for (const pool of this.components.activityPools) {
       const { demandBuildOptions, leaseProcessPoolOptions } = this.prepareParams(pool.options);
 
-      const demandSpecification = await this.modules.market.buildDemandDetails(demandBuildOptions.demand, payerDetails);
+      const demandSpecification = await this.modules.market.buildDemandDetails(demandBuildOptions.demand, allocation);
       const proposalPool = new DraftOfferProposalPool();
 
       const proposalSubscription = this.modules.market

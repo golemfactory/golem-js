@@ -1,5 +1,31 @@
-import { DraftOfferProposalPool, GolemNetwork } from "@golem-sdk/golem-js";
+import { Allocation, DraftOfferProposalPool, GolemNetwork } from "@golem-sdk/golem-js";
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
+
+const RENT_HOURS = 0.25;
+
+const demandOptions = {
+  demand: {
+    activity: {
+      imageTag: "golem/alpine:latest",
+      minCpuCores: 1,
+      minMemGib: 1,
+      minStorageGib: 2,
+    },
+  },
+  market: {
+    rentHours: RENT_HOURS,
+    pricing: {
+      model: "linear",
+      maxStartPrice: 1,
+      maxCpuPerHourPrice: 1,
+      maxEnvPerHourPrice: 1,
+    },
+    withProviders: ["0x123123"],
+    withoutProviders: ["0x123123"],
+    withOperators: ["0x123123"],
+    withoutOperators: ["0x123123"],
+  },
+} as const;
 
 (async () => {
   const logger = pinoPrettyLogger({
@@ -15,42 +41,15 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
       },
     },
   });
-  let allocation;
+  let allocation: Allocation | undefined;
 
   try {
-    const RENT_HOURS = 0.25;
-
     await glm.connect();
 
     allocation = await glm.payment.createAllocation({ budget: 1, expirationSec: RENT_HOURS * 60 * 60 });
 
-    const demandOptions = {
-      demand: {
-        activity: {
-          imageTag: "golem/alpine:latest",
-          minCpuCores: 1,
-          minMemGib: 1,
-          minStorageGib: 2,
-        },
-      },
-      market: {
-        rentHours: RENT_HOURS,
-        pricing: {
-          model: "linear",
-          maxStartPrice: 1,
-          maxCpuPerHourPrice: 1,
-          maxEnvPerHourPrice: 1,
-        },
-        withProviders: ["0x123123"],
-        withoutProviders: ["0x123123"],
-        withOperators: ["0x123123"],
-        withoutOperators: ["0x123123"],
-      },
-    };
-
     const proposalPool = new DraftOfferProposalPool({ minCount: 1 });
-    const payerDetails = await glm.payment.getPayerDetails();
-    const demandSpecification = await glm.market.buildDemandDetails(demandOptions.demand, payerDetails);
+    const demandSpecification = await glm.market.buildDemandDetails(demandOptions.demand, allocation);
 
     const proposals$ = glm.market.startCollectingProposals({
       demandSpecification,
@@ -66,37 +65,36 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
       activity: glm.activity,
       payment: glm.payment,
     };
-    const network = await glm.network.createNetwork();
+
     const pool = depModules.market.createLeaseProcessPool(proposalPool, allocation, {
       replicas: { max: CONCURRENCY },
-      network,
     });
 
     const lease = await pool.acquire();
     const lease2 = await pool.acquire();
 
-    const a = await Promise.allSettled([
+    await Promise.allSettled([
       lease
         .getExeUnit()
-        .then((exe) => exe.run("ping 192.168.0.2 -c 4"))
+        .then((exe) => exe.run("echo Hello from first activity 👋"))
         .then((result) => console.log(result.stdout)),
       lease2
         .getExeUnit()
-        .then((exe) => exe.run("ping 192.168.0.3 -c 4"))
+        .then((exe) => exe.run("echo Hello from second activity 👋"))
         .then((result) => console.log(result.stdout)),
     ]);
-    console.log(a);
 
     await pool.release(lease);
     await pool.release(lease2);
 
     proposalSubscription.unsubscribe();
     await pool.drainAndClear();
-    await glm.network.removeNetwork(network);
   } catch (err) {
     console.error("Pool execution failed:", err);
   } finally {
     await glm.disconnect();
-    await glm.payment.releaseAllocation(allocation);
+    if (allocation) {
+      await glm.payment.releaseAllocation(allocation);
+    }
   }
 })().catch(console.error);

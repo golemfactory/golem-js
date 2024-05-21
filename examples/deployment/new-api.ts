@@ -4,7 +4,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 async function main() {
   const golem = new GolemNetwork({
     logger: pinoPrettyLogger({
-      level: "debug",
+      level: "info",
     }),
     market: {
       maxAgreements: 1,
@@ -88,18 +88,26 @@ async function main() {
     const dbPool = deployment.getLeaseProcessPool("db");
 
     // Get an instance out of the pool for use
-    const app = await appPool.acquire();
-    const db = await dbPool.acquire();
+    const appReplica1 = await appPool.acquire();
+    const appReplica2 = await appPool.acquire();
+    const dbReplica = await dbPool.acquire();
 
-    // Run a command on the app VM instance
-    const appResult = await app.getExeUnit().then((exe) => exe.run("node -v"));
-    console.log(appResult.stdout);
-    await appPool.release(app);
+    await Promise.allSettled([
+      appReplica1
+        .getExeUnit()
+        .then((exe) => exe.run("echo Running some code on app replica 1 🏃"))
+        .then((res) => console.log(res.stdout)),
+      appReplica2
+        .getExeUnit()
+        .then((exe) => exe.run("echo Running some code on app replica 2 🏃"))
+        .then((res) => console.log(res.stdout)),
+      dbReplica
+        .getExeUnit()
+        .then((exe) => exe.run("echo Running some code on db replica 🏃"))
+        .then((res) => console.log(res.stdout)),
+    ]);
 
-    // Run a command on the db VM instance
-    const dbResult = await db.getExeUnit().then((exe) => exe.run("echo Hello World"));
-    console.log(dbResult.stdout);
-    await dbPool.release(db);
+    await Promise.allSettled([appPool.destroy(appReplica1), appPool.destroy(appReplica2), dbPool.destroy(dbReplica)]);
 
     // Stop the deployment cleanly
     await deployment.stop();
