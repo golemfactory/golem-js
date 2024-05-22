@@ -12,7 +12,7 @@ import {
 } from "./market";
 import { IPaymentApi, PaymentModule, PaymentModuleImpl, PaymentModuleOptions } from "./payment";
 import { ActivityModule, ActivityModuleImpl, IActivityApi, IFileServer } from "./activity";
-import { NetworkModule, NetworkModuleImpl } from "./network/network.module";
+import { NetworkModule, NetworkModuleImpl, NetworkOptions } from "./network/network.module";
 import { EventEmitter } from "eventemitter3";
 import { LeaseProcess } from "./agreement";
 import { DebitNoteRepository, InvoiceRepository, MarketApiAdapter, PaymentApiAdapter } from "./shared/yagna";
@@ -35,6 +35,7 @@ import {
 } from "./shared/storage";
 import { INetworkApi } from "./network/api";
 import { NetworkApiAdapter } from "./shared/yagna/adapters/network-api-adapter";
+import { Network } from "./network";
 
 export interface GolemNetworkOptions {
   logger?: Logger;
@@ -236,7 +237,7 @@ export class GolemNetwork {
    *
    * @param demand
    */
-  async oneOf(demand: DemandSpec): Promise<LeaseProcess> {
+  async oneOf(demand: DemandSpec, options?: { network?: Network }): Promise<LeaseProcess> {
     const proposalPool = new DraftOfferProposalPool({
       logger: this.logger,
     });
@@ -258,10 +259,17 @@ export class GolemNetwork {
 
     const agreement = await this.market.proposeAgreement(draftProposal);
 
-    const lease = this.market.createLease(agreement, allocation);
+    const networkNode = options?.network
+      ? await this.network.createNetworkNode(options.network, agreement.getProviderInfo().id)
+      : undefined;
+
+    const lease = this.market.createLease(agreement, allocation, networkNode);
 
     // Attach handlers for cleanup after all work's done
     lease.events.once("finalized", async () => {
+      if (options?.network && networkNode) {
+        await this.network.removeNetworkNode(options.network, networkNode);
+      }
       await this.payment.releaseAllocation(allocation);
     });
 
@@ -314,6 +322,26 @@ export class GolemNetwork {
   // public compose(): void {}
   isConnected() {
     return this.hasConnection;
+  }
+
+  /**
+   * Creates a new logical network within the Golem VPN infrastructure.
+   * Allows communication between network nodes using standard network mechanisms,
+   * but requires specific implementation in the ExeUnit/runtime,
+   * which must be capable of providing a standard Unix-socket interface to their payloads
+   * and marshaling the logical network traffic through the Golem Net transport layer
+   * @param options
+   */
+  async createNetwork(options?: NetworkOptions): Promise<Network> {
+    return await this.network.createNetwork(options);
+  }
+
+  /**
+   * Removes an existing network from the Golem VPN infrastructure.
+   * @param network
+   */
+  async destroyNetwork(network: Network): Promise<void> {
+    return await this.network.removeNetwork(network);
   }
 
   private createStorageProvider(): StorageProvider {
