@@ -176,6 +176,17 @@ describe("Network", () => {
         new GolemNetworkError(`The network node 88 does not belong to the network`, NetworkErrorCode.NodeRemovalFailed),
       );
     });
+
+    it("should ignore the removal of the node if the network has been removed", async () => {
+      const network = instance(mockNetwork);
+      const mockNode = mock(NetworkNode);
+      const node = instance(mockNode);
+      when(mockNode.id).thenReturn("88");
+      when(mockNetwork.hasNode(node)).thenReturn(true);
+      when(mockNetwork.isRemoved()).thenReturn(true);
+      await networkModule.removeNetworkNode(network, node);
+      verify(mockNetworkApi.removeNetworkNode(anything(), anything())).never();
+    });
   });
 
   describe("Removing", () => {

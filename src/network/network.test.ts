@@ -57,6 +57,13 @@ describe("Network", () => {
         ),
       );
     });
+    test("should not add a node to removed network", () => {
+      const network = new Network("network-id", "192.168.0.0/24");
+      network.remove();
+      expect(() => network.addNode(instance(mockNetworkNode))).toThrow(
+        new GolemNetworkError(`Unable to add node network-node-id to removed network`, NetworkErrorCode.NetworkRemoved),
+      );
+    });
     test("should get first avialble ip adrress", () => {
       const network = new Network("network-id", "192.168.0.0/24");
       expect(network.getFirstAvailableIpAddress().toString()).toEqual("192.168.0.1");
@@ -77,6 +84,16 @@ describe("Network", () => {
       when(mockNetworkNode.id).thenReturn("test-id-2");
       expect(() => network.removeNode(instance(mockNetworkNode))).toThrow(
         new GolemNetworkError(`There is no node test-id-2 in the network`, NetworkErrorCode.NodeRemovalFailed),
+      );
+    });
+    test("should not remove a node if network has been removed", () => {
+      const network = new Network("network-id", "192.168.0.0/24");
+      const networkNode = instance(mockNetworkNode);
+      when(mockNetworkNode.id).thenReturn("test-id-1");
+      network.addNode(networkNode);
+      network.remove();
+      expect(() => network.removeNode(networkNode)).toThrow(
+        new GolemNetworkError(`Unable to remove node test-id-1 from removed network`, NetworkErrorCode.NetworkRemoved),
       );
     });
   });

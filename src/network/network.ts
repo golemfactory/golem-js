@@ -10,6 +10,11 @@ export interface NetworkInfo {
   nodes: { [ip: string]: string };
 }
 
+export enum NetworkState {
+  Active = "Active",
+  Removed = "Removed",
+}
+
 export class Network {
   private readonly ip: IPv4;
   private readonly ipRange: IPv4CidrRange;
@@ -17,6 +22,7 @@ export class Network {
   private mask: IPv4Mask;
   private gateway?: IPv4;
   private nodes = new Map<string, NetworkNode>();
+  private state: NetworkState = NetworkState.Active;
 
   constructor(
     public readonly id: string,
@@ -50,7 +56,14 @@ export class Network {
    * Adds a node to the network.
    * @param node - The network node to be added.
    */
-  public addNode(node: NetworkNode): void {
+  public addNode(node: NetworkNode) {
+    if (this.isRemoved()) {
+      throw new GolemNetworkError(
+        `Unable to add node ${node.id} to removed network`,
+        NetworkErrorCode.NetworkRemoved,
+        this.getNetworkInfo(),
+      );
+    }
     if (this.hasNode(node)) {
       throw new GolemNetworkError(
         `Node ${node.id} has already been added to this network`,
@@ -73,10 +86,24 @@ export class Network {
    * @param node - The network node to be removed.
    */
   public removeNode(node: NetworkNode) {
+    if (this.isRemoved()) {
+      throw new GolemNetworkError(
+        `Unable to remove node ${node.id} from removed network`,
+        NetworkErrorCode.NetworkRemoved,
+        this.getNetworkInfo(),
+      );
+    }
     if (!this.hasNode(node)) {
       throw new GolemNetworkError(`There is no node ${node.id} in the network`, NetworkErrorCode.NodeRemovalFailed);
     }
     this.nodes.delete(node.id);
+  }
+
+  public remove() {
+    if (this.state === NetworkState.Removed) {
+      throw new GolemNetworkError("Network already removed", NetworkErrorCode.NetworkRemoved, this.getNetworkInfo());
+    }
+    this.state = NetworkState.Removed;
   }
 
   /**
@@ -117,5 +144,9 @@ export class Network {
       if (new IPv4(node.ip).isEquals(ip)) return false;
     }
     return true;
+  }
+
+  public isRemoved() {
+    return this.state === NetworkState.Removed;
   }
 }

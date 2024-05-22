@@ -5,6 +5,7 @@ import { Logger } from "../shared/utils";
 import { INetworkApi } from "./api";
 import { NetworkNode } from "./node";
 import { IPv4, IPv4CidrRange, IPv4Mask } from "ip-num";
+import AsyncLock from "async-lock";
 
 export interface NetworkEvents {}
 
@@ -81,6 +82,7 @@ export interface NetworkModule {
 
 export class NetworkModuleImpl implements NetworkModule {
   events: EventEmitter<NetworkEvents> = new EventEmitter<NetworkEvents>();
+  private lock: AsyncLock = new AsyncLock();
 
   constructor(
     private readonly deps: {
@@ -122,38 +124,59 @@ export class NetworkModuleImpl implements NetworkModule {
     }
   }
   async removeNetwork(network: Network): Promise<void> {
-    await this.deps.networkApi.removeNetwork(network);
-    this.deps.logger.info(`Network removed`, network.getNetworkInfo());
+    await this.lock.acquire(`net-${network.id}`, async () => {
+      await this.deps.networkApi.removeNetwork(network);
+      network.remove();
+      this.deps.logger.info(`Network removed`, network.getNetworkInfo());
+    });
   }
 
   async createNetworkNode(network: Network, nodeId: string, nodeIp?: string): Promise<NetworkNode> {
-    if (!network.isNodeIdUnique(nodeId)) {
-      throw new GolemNetworkError(
-        `Network ID '${nodeId}' has already been assigned in this network.`,
-        NetworkErrorCode.AddressAlreadyAssigned,
-        network.getNetworkInfo(),
-      );
-    }
-    const ipv4 = this.getFreeIpInNetwork(network, nodeIp);
-    const node = await this.deps.networkApi.createNetworkNode(network, nodeId, ipv4.toString());
-    network.addNode(node);
-    this.deps.logger.info(`Node has been added to the network.`, { id: nodeId, ip: ipv4.toString() });
-    return node;
+    return await this.lock.acquire(`net-${network.id}`, async () => {
+      if (!network.isNodeIdUnique(nodeId)) {
+        throw new GolemNetworkError(
+          `Network ID '${nodeId}' has already been assigned in this network.`,
+          NetworkErrorCode.AddressAlreadyAssigned,
+          network.getNetworkInfo(),
+        );
+      }
+      if (network.isRemoved()) {
+        throw new GolemNetworkError(
+          `Unable to create network node ${nodeId}. Network has already been removed`,
+          NetworkErrorCode.NetworkRemoved,
+          network.getNetworkInfo(),
+        );
+      }
+      const ipv4 = this.getFreeIpInNetwork(network, nodeIp);
+      const node = await this.deps.networkApi.createNetworkNode(network, nodeId, ipv4.toString());
+      network.addNode(node);
+      this.deps.logger.info(`Node has been added to the network.`, { id: nodeId, ip: ipv4.toString() });
+      return node;
+    });
   }
 
   async removeNetworkNode(network: Network, node: NetworkNode): Promise<void> {
-    if (!network.hasNode(node)) {
-      throw new GolemNetworkError(
-        `The network node ${node.id} does not belong to the network`,
-        NetworkErrorCode.NodeRemovalFailed,
-        network.getNetworkInfo(),
-      );
-    }
-    await this.deps.networkApi.removeNetworkNode(network, node);
-    network.removeNode(node);
-    this.deps.logger.info(`Node has been removed from the network.`, {
-      network: network.getNetworkInfo().ip,
-      nodeIp: node.ip,
+    return await this.lock.acquire(`net-${network.id}`, async () => {
+      if (!network.hasNode(node)) {
+        throw new GolemNetworkError(
+          `The network node ${node.id} does not belong to the network`,
+          NetworkErrorCode.NodeRemovalFailed,
+          network.getNetworkInfo(),
+        );
+      }
+      if (network.isRemoved()) {
+        this.deps.logger.debug(`Unable to remove network node ${node.id}. Network has already been removed`, {
+          network,
+          node,
+        });
+        return;
+      }
+      await this.deps.networkApi.removeNetworkNode(network, node);
+      network.removeNode(node);
+      this.deps.logger.info(`Node has been removed from the network.`, {
+        network: network.getNetworkInfo().ip,
+        nodeIp: node.ip,
+      });
     });
   }
 

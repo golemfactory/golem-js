@@ -27,7 +27,7 @@ export class NetworkApiAdapter implements INetworkApi {
   }
   async removeNetwork(network: Network): Promise<void> {
     try {
-      return await this.yagnaApi.net.removeNetwork(network.id);
+      await this.yagnaApi.net.removeNetwork(network.id);
     } catch (error) {
       const message = getMessageFromApiError(error);
       throw new GolemNetworkError(
@@ -41,7 +41,9 @@ export class NetworkApiAdapter implements INetworkApi {
   async createNetworkNode(network: Network, nodeId: string, nodeIp: string): Promise<NetworkNode> {
     try {
       await this.yagnaApi.net.addNode(network.id, { id: nodeId, ip: nodeIp });
-      return new NetworkNode(nodeId, nodeIp, network.getNetworkInfo.bind(network));
+      const networkNode = new NetworkNode(nodeId, nodeIp, network.getNetworkInfo.bind(network));
+
+      return networkNode;
     } catch (error) {
       const message = getMessageFromApiError(error);
       throw new GolemNetworkError(
@@ -59,7 +61,7 @@ export class NetworkApiAdapter implements INetworkApi {
       const message = getMessageFromApiError(error);
       throw new GolemNetworkError(
         `Unable to remove network node. ${message}`,
-        NetworkErrorCode.GettingIdentityFailed,
+        NetworkErrorCode.NodeRemovalFailed,
         network.getNetworkInfo(),
         error,
       );
