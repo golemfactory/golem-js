@@ -159,7 +159,7 @@ export interface MarketModule {
   createLease(agreement: Agreement, allocation: Allocation): LeaseProcess;
 
   /**
-   * Factory that creates new agreement pool that's fully configured
+   * Factory that creates new lease process pool that's fully configured
    */
   createLeaseProcessPool(
     draftPool: DraftOfferProposalPool,

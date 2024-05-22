@@ -72,9 +72,14 @@ export class LeaseProcess {
   }
 
   /**
-   * @return Resolves when the lease will be fully terminated and all pending business operations finalized
+   * Resolves when the lease will be fully terminated and all pending business operations finalized.
+   * If the lease is already finalized, it will resolve immediately.
    */
   async finalize() {
+    if (this.paymentProcess.isFinished()) {
+      return;
+    }
+
     try {
       this.logger.debug("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
       if (this.currentActivity) {

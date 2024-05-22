@@ -314,4 +314,25 @@ export class LeaseProcessPool {
     }
     this.events.emit("ready");
   }
+
+  /**
+   * Acquire a lease process from the pool and release it after the callback is done
+   * @example
+   * ```typescript
+   * const result = await pool.withLease(async (lease) => {
+   *  // Do something with the lease
+   *  return result;
+   *  // pool.release(lease) is called automatically
+   *  // even if an error is thrown in the callback
+   * });
+   * ```
+   */
+  public async withLease<T>(callback: (lease: LeaseProcess) => Promise<T>): Promise<T> {
+    const lease = await this.acquire();
+    try {
+      return await callback(lease);
+    } finally {
+      await this.release(lease);
+    }
+  }
 }

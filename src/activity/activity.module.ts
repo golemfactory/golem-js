@@ -3,7 +3,7 @@ import { EventEmitter } from "eventemitter3";
 import { Agreement } from "../agreement";
 import { Activity, IActivityApi } from "./index";
 import { defaultLogger } from "../shared/utils";
-import { GolemServices } from "../golem-network";
+import { GolemServices } from "../golem-network/golem-network";
 import { WorkContext, WorkOptions } from "./work";
 
 export interface ActivityEvents {}

@@ -5,7 +5,7 @@ import { Allocation, DebitNote, Invoice, InvoiceProcessor, IPaymentApi } from ".
 import { defaultLogger, YagnaApi } from "../shared/utils";
 import { DebitNoteFilter, InvoiceFilter } from "./service";
 import { Observable } from "rxjs";
-import { GolemServices } from "../golem-network";
+import { GolemServices } from "../golem-network/golem-network";
 import { PaymentSpec } from "../market";
 import { PayerDetails } from "./PayerDetails";
 import { CreateAllocationParams } from "./types";
