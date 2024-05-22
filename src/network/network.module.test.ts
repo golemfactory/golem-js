@@ -187,15 +187,9 @@ describe("Network", () => {
 
     it("should not remove network that doesn't exist", async () => {
       const network = instance(mockNetwork);
-      when(mockNetworkApi.removeNetwork(network)).thenReject(new Error("404"));
-      await expect(networkModule.removeNetwork(network)).rejects.toMatchError(
-        new GolemNetworkError(
-          `Unable to remove network. Error: 404`,
-          NetworkErrorCode.NetworkRemovalFailed,
-          network.getNetworkInfo(),
-          new Error("404"),
-        ),
-      );
+      const mockError = new Error("404");
+      when(mockNetworkApi.removeNetwork(network)).thenReject(mockError);
+      await expect(networkModule.removeNetwork(network)).rejects.toMatchError(mockError);
     });
   });
 });

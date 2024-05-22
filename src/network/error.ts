@@ -11,6 +11,7 @@ export enum NetworkErrorCode {
   NodeAddingFailed = "NodeAddingFailed",
   NodeRemovalFailed = "NodeRemovalFailed",
   NetworkRemovalFailed = "NetworkRemovalFailed",
+  GettingIdentityFailed = "GettingIdentityFailed",
 }
 
 export class GolemNetworkError extends GolemModuleError {

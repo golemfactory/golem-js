@@ -122,63 +122,25 @@ export class NetworkModuleImpl implements NetworkModule {
     }
   }
   async removeNetwork(network: Network): Promise<void> {
-    try {
-      await this.deps.networkApi.removeNetwork(network);
-      this.deps.logger.info(`Network removed`, network.getNetworkInfo());
-    } catch (error) {
-      throw new GolemNetworkError(
-        `Unable to remove network. ${error}`,
-        NetworkErrorCode.NetworkRemovalFailed,
-        undefined,
-        error,
-      );
-    }
+    await this.deps.networkApi.removeNetwork(network);
+    this.deps.logger.info(`Network removed`, network.getNetworkInfo());
   }
+
   async createNetworkNode(network: Network, nodeId: string, nodeIp?: string): Promise<NetworkNode> {
-    try {
-      if (!network.isNodeIdUnique(nodeId)) {
-        throw new GolemNetworkError(
-          `Network ID '${nodeId}' has already been assigned in this network.`,
-          NetworkErrorCode.AddressAlreadyAssigned,
-          network.getNetworkInfo(),
-        );
-      }
-      let ipv4: IPv4;
-      if (nodeIp) {
-        ipv4 = IPv4.fromString(nodeIp);
-        if (!network.isIpInNetwork(ipv4)) {
-          throw new GolemNetworkError(
-            `The given IP ('${nodeIp}') address must belong to the network ('${network.getNetworkInfo().ip}').`,
-            NetworkErrorCode.AddressOutOfRange,
-            network.getNetworkInfo(),
-          );
-        }
-        if (!network.isNodeIpUnique(ipv4)) {
-          throw new GolemNetworkError(
-            `IP '${nodeIp.toString()}' has already been assigned in this network.`,
-            NetworkErrorCode.AddressAlreadyAssigned,
-            network.getNetworkInfo(),
-          );
-        }
-      } else {
-        ipv4 = network.getFirstAvailableIpAddress();
-      }
-      const node = await this.deps.networkApi.createNetworkNode(network, nodeId, ipv4.toString());
-      network.addNode(node);
-      this.deps.logger.info(`Node has been added to the network.`, { id: nodeId, ip: ipv4.toString() });
-      return node;
-    } catch (error) {
-      if (error instanceof GolemNetworkError) {
-        throw error;
-      }
+    if (!network.isNodeIdUnique(nodeId)) {
       throw new GolemNetworkError(
-        `Unable to add node to network. ${error?.data?.message || error.toString()}`,
-        NetworkErrorCode.NodeAddingFailed,
+        `Network ID '${nodeId}' has already been assigned in this network.`,
+        NetworkErrorCode.AddressAlreadyAssigned,
         network.getNetworkInfo(),
-        error,
       );
     }
+    const ipv4 = this.getFreeIpInNetwork(network, nodeIp);
+    const node = await this.deps.networkApi.createNetworkNode(network, nodeId, ipv4.toString());
+    network.addNode(node);
+    this.deps.logger.info(`Node has been added to the network.`, { id: nodeId, ip: ipv4.toString() });
+    return node;
   }
+
   async removeNetworkNode(network: Network, node: NetworkNode): Promise<void> {
     if (!network.hasNode(node)) {
       throw new GolemNetworkError(
@@ -187,27 +149,37 @@ export class NetworkModuleImpl implements NetworkModule {
         network.getNetworkInfo(),
       );
     }
-    try {
-      await this.deps.networkApi.removeNetworkNode(network, node);
-      network.removeNode(node);
-      this.deps.logger.info(`Node has been removed from the network.`, {
-        network: network.getNetworkInfo().ip,
-        nodeIp: node.ip,
-      });
-    } catch (error) {
-      if (error instanceof GolemNetworkError) {
-        throw error;
-      }
-      throw new GolemNetworkError(
-        `Unable to remove network node. ${error}`,
-        NetworkErrorCode.NodeRemovalFailed,
-        network.getNetworkInfo(),
-        error,
-      );
-    }
+    await this.deps.networkApi.removeNetworkNode(network, node);
+    network.removeNode(node);
+    this.deps.logger.info(`Node has been removed from the network.`, {
+      network: network.getNetworkInfo().ip,
+      nodeIp: node.ip,
+    });
   }
 
   getWebsocketUri(networkNode: NetworkNode, port: number): string {
     return this.deps.networkApi.getWebsocketUri(networkNode, port);
+  }
+
+  private getFreeIpInNetwork(network: Network, targetIp?: string): IPv4 {
+    if (!targetIp) {
+      return network.getFirstAvailableIpAddress();
+    }
+    const ipv4 = IPv4.fromString(targetIp);
+    if (!network.isIpInNetwork(ipv4)) {
+      throw new GolemNetworkError(
+        `The given IP ('${targetIp}') address must belong to the network ('${network.getNetworkInfo().ip}').`,
+        NetworkErrorCode.AddressOutOfRange,
+        network.getNetworkInfo(),
+      );
+    }
+    if (!network.isNodeIpUnique(ipv4)) {
+      throw new GolemNetworkError(
+        `IP '${targetIp.toString()}' has already been assigned in this network.`,
+        NetworkErrorCode.AddressAlreadyAssigned,
+        network.getNetworkInfo(),
+      );
+    }
+    return ipv4;
   }
 }
