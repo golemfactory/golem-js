@@ -236,6 +236,7 @@ export class GolemNetwork {
    * ```
    *
    * @param demand
+   * @param options - optional network parameter if LeaseProcess should belong to the given network as its node
    */
   async oneOf(demand: DemandSpec, options?: { network?: Network }): Promise<LeaseProcess> {
     const proposalPool = new DraftOfferProposalPool({
