@@ -192,8 +192,6 @@ export class MarketModuleImpl implements MarketModule {
   private readonly demandRepo: IDemandRepository;
   private fileServer: IFileServer;
 
-  private defaultDemandExpirationSec = 60 * 60;
-
   constructor(
     private readonly deps: {
       logger: Logger;

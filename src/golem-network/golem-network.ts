@@ -1,4 +1,3 @@
-import { DataTransferProtocol, GolemDeploymentBuilder } from "../deployment";
 import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
 import {
   Demand,
@@ -13,12 +12,12 @@ import { IPaymentApi, PaymentModule, PaymentModuleImpl, PaymentModuleOptions } f
 import { ActivityModule, ActivityModuleImpl, IActivityApi, IFileServer } from "../activity";
 import { NetworkModule, NetworkModuleImpl } from "../network/network.module";
 import { EventEmitter } from "eventemitter3";
-import { LeaseProcess, LeaseProcessPool, LeaseProcessPoolOptions } from "../agreement";
+import { LeaseProcess, LeaseProcessPool, LeaseProcessPoolOptions } from "../lease-process";
 import { DebitNoteRepository, InvoiceRepository, MarketApiAdapter, PaymentApiAdapter } from "../shared/yagna";
 import { ActivityApiAdapter } from "../shared/yagna/adapters/activity-api-adapter";
 import { ActivityRepository } from "../shared/yagna/repository/activity-repository";
 import { AgreementRepository } from "../shared/yagna/repository/agreement-repository";
-import { IAgreementApi } from "../agreement/agreement";
+import { IAgreementApi } from "../market/agreement/agreement";
 import { AgreementApiAdapter } from "../shared/yagna/adapters/agreement-api-adapter";
 import { ProposalRepository } from "../shared/yagna/repository/proposal-repository";
 import { CacheService } from "../shared/cache/CacheService";
@@ -32,6 +31,7 @@ import {
   StorageProvider,
   WebSocketBrowserStorageProvider,
 } from "../shared/storage";
+import { DataTransferProtocol } from "../shared/types";
 
 export interface GolemNetworkOptions {
   /**
@@ -246,17 +246,6 @@ export class GolemNetwork {
 
     this.events.emit("disconnected");
     this.hasConnection = false;
-  }
-
-  /**
-   * Creates a new instance of deployment builder that will be bound to this GolemNetwork instance
-   *
-   * Use Case: Building a complex deployment topology and requesting resources for the whole construct
-   *
-   * @return The new instance of the builder
-   */
-  creteDeploymentBuilder(): GolemDeploymentBuilder {
-    return new GolemDeploymentBuilder(this);
   }
 
   /**

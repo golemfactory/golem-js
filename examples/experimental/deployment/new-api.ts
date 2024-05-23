@@ -1,4 +1,5 @@
 import { GolemNetwork } from "@golem-sdk/golem-js";
+import { GolemDeploymentBuilder } from "@golem-sdk/golem-js/experimental";
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
 async function main() {
@@ -11,7 +12,7 @@ async function main() {
   try {
     await golem.connect();
 
-    const builder = golem.creteDeploymentBuilder();
+    const builder = new GolemDeploymentBuilder(golem);
 
     builder
       .createNetwork("basic", {

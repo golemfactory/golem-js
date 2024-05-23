@@ -10,3 +10,4 @@ export * from "./api";
 export { BasicDemandDirector } from "./demand/directors/basic-demand-director";
 export { PaymentDemandDirector } from "./demand/directors/payment-demand-director";
 export { ActivityDemandDirector } from "./demand/directors/activity-demand-director";
+export * from "./agreement";
