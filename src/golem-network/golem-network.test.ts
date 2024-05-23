@@ -1,6 +1,6 @@
 import { Observable, Subscription } from "rxjs";
 import { ActivityModuleImpl } from "../activity";
-import { LeaseProcess, LeaseProcessPool } from "../agreement";
+import { LeaseProcess, LeaseProcessPool } from "../lease-process";
 import { DemandSpec, DraftOfferProposalPool, MarketModuleImpl, OfferProposal } from "../market";
 import { NetworkModuleImpl } from "../network/network.module";
 import { Allocation, PaymentModuleImpl } from "../payment";

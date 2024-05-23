@@ -9,7 +9,7 @@ import { DemandBuildParams, DraftOfferProposalPool, MarketModule } from "../mark
 import { PaymentModule } from "../payment";
 import { CreateActivityPoolOptions } from "./builder";
 import { Subscription } from "rxjs";
-import { LeaseProcessPool, LeaseProcessPoolOptions } from "../agreement";
+import { LeaseProcessPool, LeaseProcessPoolOptions } from "../lease-process";
 
 export enum DeploymentState {
   INITIAL = "INITIAL",

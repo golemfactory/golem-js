@@ -1,6 +1,6 @@
 import { BasePaymentOptions } from "./config";
 import { PaymentApi } from "ya-ts-client";
-import { ProviderInfo } from "../agreement";
+import { ProviderInfo } from "../market/agreement";
 import { BaseDocument } from "./BaseDocument";
 
 export interface InvoiceEvents {

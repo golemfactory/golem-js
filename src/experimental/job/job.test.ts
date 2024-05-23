@@ -1,5 +1,5 @@
 import { Job } from "./job";
-import { Agreement, AgreementPoolService } from "../../agreement";
+import { Agreement, AgreementPoolService } from "../../market/agreement";
 import { WorkContext } from "../../activity/work";
 import { NetworkNode, NetworkService } from "../../network";
 import { Activity, IActivityApi } from "../../activity";

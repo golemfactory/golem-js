@@ -1,9 +1,9 @@
-import { Agreement, IAgreementApi, IAgreementRepository } from "../../../agreement/agreement";
+import { Agreement, IAgreementApi, IAgreementRepository } from "../../../market/agreement/agreement";
 import { MarketApi } from "ya-ts-client";
 import { GolemMarketError, MarketErrorCode, OfferProposal } from "../../../market";
 import { withTimeout } from "../../utils/timeout";
 import { Logger } from "../../utils";
-import { AgreementApiConfig } from "../../../agreement";
+import { AgreementApiConfig } from "../../../market/agreement";
 import { GolemUserError } from "../../error/golem-error";
 import { getMessageFromApiError } from "../../utils/apiErrorMessage";
 

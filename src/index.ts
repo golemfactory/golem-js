@@ -7,7 +7,8 @@ export * from "./market";
 export * from "./payment";
 export * from "./network";
 export * from "./activity";
-export * from "./agreement";
+export * from "./market/agreement";
+export * from "./lease-process";
 
 // Necessary domain entities for users to consume
 export * from "./shared/error/golem-error";

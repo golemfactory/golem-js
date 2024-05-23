@@ -1,5 +1,5 @@
 import { ProposalFilterNew, OfferProposal } from "../../market";
-import { AgreementCandidate, AgreementSelector } from "../../agreement";
+import { AgreementCandidate, AgreementSelector } from "../../market/agreement";
 import { GolemReputationError } from "./error";
 import {
   AgreementSelectorOptions,

@@ -10,7 +10,7 @@ import {
   buildExeScriptErrorResult,
   buildExecutorResults,
 } from "../../../tests/unit/helpers";
-import { Agreement } from "../../agreement";
+import { Agreement } from "../../market/agreement";
 
 import { ExeScriptExecutor } from "../exe-script-executor";
 

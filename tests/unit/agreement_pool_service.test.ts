@@ -2,7 +2,7 @@ import { anything, imock, instance, mock, reset, when } from "@johanblumenberg/t
 import { Agreement, AgreementPoolService, Demand, OfferProposal, YagnaApi } from "../../src";
 import { MarketApi } from "ya-ts-client";
 import { LoggerMock } from "../mock/utils/logger";
-import { IAgreementApi } from "../../src/agreement/agreement";
+import { IAgreementApi } from "../../src/market/agreement/agreement";
 
 const logger = new LoggerMock();
 

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
-import { Agreement } from "../agreement";
+import { Agreement } from "../market/agreement";
 import { Activity, IActivityApi } from "./index";
 import { defaultLogger } from "../shared/utils";
 import { GolemServices } from "../golem-network/golem-network";

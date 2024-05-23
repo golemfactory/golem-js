@@ -1,6 +1,6 @@
 import { GolemModuleError } from "../shared/error/golem-error";
 import { Allocation } from "./allocation";
-import { ProviderInfo } from "../agreement";
+import { ProviderInfo } from "../market/agreement";
 
 export enum PaymentErrorCode {
   AllocationCreationFailed = "AllocationCreationFailed",

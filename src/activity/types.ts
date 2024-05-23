@@ -1,5 +1,5 @@
 import { Activity, ActivityStateEnum } from "./activity";
-import { Agreement } from "../agreement";
+import { Agreement } from "../market/agreement";
 
 /**
  * Represents a set of use cases related to managing the lifetime of an activity

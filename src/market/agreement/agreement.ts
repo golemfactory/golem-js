@@ -1,8 +1,8 @@
-import { Logger, YagnaOptions } from "../shared/utils";
+import { Logger, YagnaOptions } from "../../shared/utils";
 import { MarketApi } from "ya-ts-client";
-import { OfferProposal } from "../market";
+import { OfferProposal } from "../index";
 import { AgreementDTO } from "./service";
-import { InvoiceFilter } from "../payment/service";
+import { InvoiceFilter } from "../../payment/service";
 
 export interface ProviderInfo {
   name: string;
