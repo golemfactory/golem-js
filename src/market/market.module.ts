@@ -13,7 +13,7 @@ import { Allocation, IPaymentApi } from "../payment";
 import { bufferTime, catchError, filter, map, mergeMap, Observable, of, OperatorFunction, switchMap, tap } from "rxjs";
 import { IProposalRepository, OfferProposal, ProposalFilter } from "./offer-proposal";
 import { DemandBodyBuilder } from "./demand/demand-body-builder";
-import { IAgreementApi } from "./agreement/agreement";
+import { IAgreementApi, IAgreementEvents } from "./agreement/agreement";
 import { BuildDemandOptions, DemandSpecification, IDemandRepository } from "./demand";
 import { ProposalsBatch } from "./proposals_batch";
 import { IActivityApi, IFileServer } from "../activity";
@@ -30,7 +30,15 @@ import { createAbortSignalFromTimeout } from "../shared/utils/abortSignal";
 import { MarketOrderSpec } from "../golem-network";
 import { NetworkModule, INetworkApi } from "../network";
 
-export interface MarketEvents {}
+export interface IOfferProposalEvents {
+  offerProposalSubscriptionRefreshed: (demand: Demand) => void;
+
+  subscribedForOfferProposals: (demand: Demand) => void;
+  unsubscribedForOfferProposals: (demand: Demand) => void;
+
+  /** Fired when a proposal is received from yagna, and it passes the validation and de-duplication implemented by golem-js */
+  offerProposalReceived: (offerProposal: OfferProposal) => void;
+}
 
 export type DemandEngine = "vm" | "vm-nvidia" | "wasmtime";
 
@@ -58,8 +66,13 @@ export interface MarketOptions {
   proposalFilter?: ProposalFilter;
 }
 
+type MarketModuleEventSources = {
+  agreements: EventEmitter<IAgreementEvents>;
+  offerProposals: EventEmitter<IOfferProposalEvents>;
+};
+
 export interface MarketModule {
-  events: EventEmitter<MarketEvents>;
+  events: MarketModuleEventSources;
 
   /**
    * Build a DemandSpecification based on the given options and allocation.
@@ -173,7 +186,7 @@ export interface IDemandDirector {
 }
 
 export class MarketModuleImpl implements MarketModule {
-  events: EventEmitter<MarketEvents> = new EventEmitter<MarketEvents>();
+  public events: MarketModuleEventSources;
 
   private readonly yagnaApi: YagnaApi;
   private readonly logger = defaultLogger("market");
@@ -204,6 +217,12 @@ export class MarketModuleImpl implements MarketModule {
     this.proposalRepo = deps.proposalRepository;
     this.demandRepo = deps.demandRepository;
     this.fileServer = deps.fileServer;
+
+    // Expose the event API categories
+    this.events = {
+      agreements: this.agreementApi.events,
+      offerProposals: new EventEmitter<IOfferProposalEvents>(),
+    };
   }
 
   async buildDemandDetails(options: BuildDemandOptions, allocation: Allocation): Promise<DemandSpecification> {
@@ -265,35 +284,52 @@ export class MarketModuleImpl implements MarketModule {
     return new Observable<Demand>((subscriber) => {
       let currentDemand: Demand;
 
-      const subscribeDemand = async () => {
-        currentDemand = await this.deps.marketApi.publishDemandSpecification(demandSpecification);
-        subscriber.next(currentDemand);
-        this.logger.debug("Subscribing for proposals matched with the demand", { demand: currentDemand });
+      const subscribeToOfferProposals = async () => {
+        try {
+          currentDemand = await this.deps.marketApi.publishDemandSpecification(demandSpecification);
+          subscriber.next(currentDemand);
+          this.events.offerProposals.emit("subscribedForOfferProposals", currentDemand);
+          this.logger.debug("Subscribing for proposals matched with the demand", { demand: currentDemand });
+          return currentDemand;
+        } catch (err) {
+          const golemMarketError = new GolemMarketError(
+            `Could not publish demand on the market`,
+            MarketErrorCode.SubscriptionFailed,
+            err,
+          );
+
+          subscriber.error(golemMarketError);
+        }
       };
 
-      subscribeDemand().catch((err) =>
-        subscriber.error(
-          new GolemMarketError(`Could not publish demand on the market`, MarketErrorCode.SubscriptionFailed, err),
-        ),
-      );
+      const unsubscribeFromOfferProposals = async (demand: Demand) => {
+        try {
+          await this.deps.marketApi.unpublishDemand(demand);
+          this.logger.info("Demand unpublished from the market", { demand });
+          this.events.offerProposals.emit("unsubscribedForOfferProposals", demand);
+        } catch (err) {
+          const golemMarketError = new GolemMarketError(
+            `Could not publish demand on the market`,
+            MarketErrorCode.SubscriptionFailed,
+            err,
+          );
+
+          subscriber.error(golemMarketError);
+        }
+      };
+
+      void subscribeToOfferProposals();
 
       const interval = setInterval(() => {
-        this.deps.marketApi
-          .unpublishDemand(currentDemand)
-          .catch((error) => this.logger.error("Failed to unpublish demand", error));
-        subscribeDemand().catch((err) =>
-          subscriber.error(
-            new GolemMarketError(`Could not publish demand on the market`, MarketErrorCode.SubscriptionFailed, err),
-          ),
-        );
+        Promise.all([unsubscribeFromOfferProposals(currentDemand), subscribeToOfferProposals()])
+          .then(([, demand]) => demand && this.events.offerProposals.emit("offerProposalSubscriptionRefreshed", demand))
+          .catch((err) => this.logger.error("Error while re-publishing demand for offers", err));
       }, demandSpecification.expirationSec * 1000);
 
       return () => {
         clearInterval(interval);
         if (currentDemand) {
-          this.deps.marketApi.unpublishDemand(currentDemand).catch((error) => {
-            this.logger.error("Failed to unpublish demand", error);
-          });
+          void unsubscribeFromOfferProposals(currentDemand);
         }
       };
     });
@@ -367,8 +403,9 @@ export class MarketModuleImpl implements MarketModule {
         minProposalsBatchSize: options?.minProposalsBatchSize,
         proposalsBatchReleaseTimeoutMs: options?.proposalsBatchReleaseTimeoutMs,
       }),
-      // for each valid proposal -> start negotiating if it's not in draft state yet
+      // for each valid proposal -> emit event + start negotiating if it's not in draft state yet
       tap((proposal) => {
+        this.events.offerProposals.emit("offerProposalReceived", proposal);
         if (proposal.isInitial()) {
           this.negotiateProposal(proposal, options.demandSpecification);
         }

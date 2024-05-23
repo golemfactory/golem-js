@@ -2,6 +2,13 @@ import { Logger, YagnaOptions } from "../../shared/utils";
 import { MarketApi } from "ya-ts-client";
 import { Demand, OfferProposal } from "../index";
 import { InvoiceFilter } from "../../payment/agreement_payment_process";
+import {
+  AgreementCancelledEvent,
+  AgreementConfirmedEvent,
+  AgreementRejectedEvent,
+  AgreementTerminatedEvent,
+} from "./agreement-event";
+import { EventEmitter } from "eventemitter3";
 
 /**
  * * `Proposal` - newly created by a Requestor (draft based on Proposal)
@@ -42,7 +49,16 @@ export interface IAgreementRepository {
   getById(id: string): Promise<Agreement>;
 }
 
+export interface IAgreementEvents {
+  agreementConfirmed: (agreement: AgreementConfirmedEvent) => void;
+  agreementRejected: (agreement: AgreementRejectedEvent) => void;
+  agreementTerminated: (agreement: AgreementTerminatedEvent) => void;
+  agreementCancelled: (agreement: AgreementCancelledEvent) => void;
+}
+
 export interface IAgreementApi {
+  events: EventEmitter<IAgreementEvents>;
+
   getAgreement(id: string): Promise<Agreement>;
 
   /**

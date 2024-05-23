@@ -2,11 +2,11 @@ import { Observable } from "rxjs";
 import {
   Demand,
   DemandSpecification,
-  MarketApi,
-  ProposalEvent,
-  OfferProposal,
   GolemMarketError,
+  MarketApi,
   MarketErrorCode,
+  OfferProposal,
+  ProposalEvent,
 } from "../../../market";
 import { YagnaApi } from "../yagnaApi";
 import YaTsClient from "ya-ts-client";
@@ -57,7 +57,7 @@ export class MarketApiAdapter implements MarketApi {
       throw new Error(`Failed to unsubscribe from demand: ${result.message}`);
     }
 
-    this.logger.info("Demand unsubscribed", { demand: demand.id });
+    this.logger.debug("Demand unsubscribed", { demand: demand.id });
   }
 
   observeProposalEvents(demand: Demand): Observable<ProposalEvent> {

@@ -1,20 +1,35 @@
-import { Agreement, AgreementState, IAgreementApi, IAgreementRepository } from "../../../market/agreement/agreement";
+import { Agreement, AgreementState, IAgreementApi, IAgreementEvents, IAgreementRepository } from "../../../market/agreement/agreement";
 import { MarketApi } from "ya-ts-client";
 import { GolemMarketError, MarketErrorCode, OfferProposal } from "../../../market";
 import { withTimeout } from "../../utils/timeout";
-import { Logger } from "../../utils";
-import { AgreementApiConfig } from "../../../market/agreement";
+import { Logger, YagnaApi } from "../../utils";
+import { AgreementApiConfig } from "../../../market";
 import { GolemUserError } from "../../error/golem-error";
 import { getMessageFromApiError } from "../../utils/apiErrorMessage";
+import { EventEmitter } from "eventemitter3";
+import {
+  AgreementCancelledEvent,
+  AgreementConfirmedEvent,
+  AgreementRejectedEvent,
+  AgreementTerminatedEvent,
+} from "../../../market/agreement/agreement-event";
 
 export class AgreementApiAdapter implements IAgreementApi {
+  public readonly events = new EventEmitter<IAgreementEvents>();
+
+  private readonly api: MarketApi.RequestorService;
+
   constructor(
     private readonly appSessionId: string,
-    private readonly api: MarketApi.RequestorService,
+    private readonly yagnaApi: YagnaApi,
     private readonly repository: IAgreementRepository,
     private readonly logger: Logger,
     private readonly config = new AgreementApiConfig(),
-  ) {}
+  ) {
+    this.api = this.yagnaApi.market;
+
+    this.subscribeToAgreementEvents();
+  }
 
   async confirmAgreement(agreement: Agreement): Promise<Agreement> {
     try {
@@ -134,5 +149,58 @@ export class AgreementApiAdapter implements IAgreementApi {
         error,
       );
     }
+  }
+
+  private subscribeToAgreementEvents() {
+    return this.yagnaApi.agreementEvents$.subscribe({
+      error: (err) => this.logger.error("Agreement API event subscription error", err),
+      next: async (event) => {
+        // This looks like adapter logic!
+        try {
+          const eventDate = new Date(Date.parse(event.eventDate));
+
+          // @ts-expect-error FIXME #yagna, wasn't this fixed? {@issue https://github.com/golemfactory/yagna/pull/3136}
+          const eventType = event.eventType || event.eventtype;
+
+          const agreement = await this.getAgreement(event.agreementId);
+
+          this.logger.debug("Agreement API received agreement event", { event });
+
+          switch (eventType) {
+            case "AgreementApprovedEvent":
+              this.events.emit("agreementConfirmed", new AgreementConfirmedEvent(agreement, eventDate));
+              break;
+            case "AgreementTerminatedEvent":
+              this.events.emit(
+                "agreementTerminated",
+                // @ts-expect-error FIXME #ya-ts-client event type discrimination doesn't work nicely with the current generator
+                new AgreementTerminatedEvent(agreement, eventDate, event.terminator, event.reason.message),
+              );
+              break;
+            case "AgreementRejectedEvent":
+              this.events.emit(
+                "agreementRejected",
+                // @ts-expect-error FIXME #ya-ts-client event type discrimination doesn't work nicely with the current generator
+                new AgreementRejectedEvent(agreement, eventDate, event.reason.message),
+              );
+              break;
+            case "AgreementCancelledEvent":
+              this.events.emit("agreementCancelled", new AgreementCancelledEvent(agreement, eventDate));
+              break;
+            default:
+              this.logger.warn("Unsupported agreement event type for event", { event });
+              break;
+          }
+        } catch (err) {
+          const golemMarketError = new GolemMarketError(
+            "Error while processing agreement event from yagna",
+            MarketErrorCode.InternalError,
+            err,
+          );
+          this.logger.error(golemMarketError.message, { event, err });
+        }
+      },
+      complete: () => this.logger.info("Market Module completed subscribing agreement events"),
+    });
   }
 }
