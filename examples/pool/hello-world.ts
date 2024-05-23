@@ -34,12 +34,6 @@ const demandOptions = {
 
   const glm = new GolemNetwork({
     logger,
-    payment: {
-      payment: {
-        driver: "erc20",
-        network: "holesky",
-      },
-    },
   });
   let allocation: Allocation | undefined;
 

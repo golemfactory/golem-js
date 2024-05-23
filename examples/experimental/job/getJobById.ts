@@ -21,10 +21,6 @@ function startJob() {
         maxEnvPerHourPrice: 1,
       },
     },
-    payment: {
-      driver: "erc20",
-      network: "holesky",
-    },
   });
 
   console.log("Job object created, initial status is", job.state);

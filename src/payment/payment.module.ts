@@ -5,15 +5,31 @@ import { Allocation, DebitNote, Invoice, InvoiceProcessor, IPaymentApi } from ".
 import { defaultLogger, YagnaApi } from "../shared/utils";
 import { DebitNoteFilter, InvoiceFilter } from "./service";
 import { Observable } from "rxjs";
-import { GolemServices } from "../golem-network";
-import { PaymentSpec } from "../market";
+import { GolemServices } from "../golem-network/golem-network";
 import { PayerDetails } from "./PayerDetails";
 import { CreateAllocationParams } from "./types";
 
 export interface PaymentModuleOptions {
   debitNoteFilter?: DebitNoteFilter;
   invoiceFilter?: InvoiceFilter;
-  payment: PaymentSpec;
+  /**
+   * Network used to facilitate the payment.
+   * (for example: "mainnet", "holesky")
+   * @default holesky
+   */
+  network?: string;
+  /**
+   * Payment driver used to facilitate the payment.
+   * (for example: "erc20")
+   * @default erc20
+   */
+  driver?: "erc20";
+  /**
+   * Token used to facilitate the payment.
+   * If unset, it will be inferred from the network.
+   * (for example: "glm", "tglm")
+   */
+  token?: "glm" | "tglm";
 }
 
 export interface PaymentModuleEvents {}
@@ -47,6 +63,8 @@ export interface PaymentModule {
   getPayerDetails(): Promise<PayerDetails>;
 }
 
+const MAINNETS = Object.freeze(["mainnet", "polygon"]);
+
 export class PaymentModuleImpl implements PaymentModule {
   events: EventEmitter<PaymentModuleEvents> = new EventEmitter<PaymentModuleEvents>();
 
@@ -56,15 +74,22 @@ export class PaymentModuleImpl implements PaymentModule {
 
   private readonly logger = defaultLogger("payment");
 
-  private readonly options: PaymentModuleOptions = {
+  private readonly options: Required<PaymentModuleOptions> = {
     debitNoteFilter: () => true,
     invoiceFilter: () => true,
-    payment: { driver: "erc20", network: "holesky" },
+    driver: "erc20",
+    network: "holesky",
+    token: "tglm",
   };
 
   constructor(deps: GolemServices, options?: PaymentModuleOptions) {
     if (options) {
-      this.options = options;
+      const network = options.network || this.options.network;
+      const driver = options.driver || this.options.driver;
+      const debitNoteFilter = options.debitNoteFilter || this.options.debitNoteFilter;
+      const invoiceFilter = options.invoiceFilter || this.options.invoiceFilter;
+      const token = options.token || MAINNETS.includes(network) ? "glm" : "tglm";
+      this.options = { network, driver, token, debitNoteFilter, invoiceFilter };
     }
 
     this.logger = deps.logger;
@@ -73,15 +98,13 @@ export class PaymentModuleImpl implements PaymentModule {
   }
 
   private getPaymentPlatform(): string {
-    const mainnets = ["mainnet", "polygon"];
-    const token = mainnets.includes(this.options.payment.network) ? "glm" : "tglm";
-    return `${this.options.payment.driver}-${this.options.payment.network}-${token}`;
+    return `${this.options.driver}-${this.options.network}-${this.options.token}`;
   }
 
   async getPayerDetails(): Promise<PayerDetails> {
     const { identity: address } = await this.yagnaApi.identity.getIdentity();
 
-    return new PayerDetails(this.options.payment.network, this.options.payment.driver, address);
+    return new PayerDetails(this.options.network, this.options.driver, address, this.options.token);
   }
 
   observeDebitNotes(): Observable<DebitNote> {
