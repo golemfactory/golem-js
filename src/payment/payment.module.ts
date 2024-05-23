@@ -63,6 +63,8 @@ export interface PaymentModule {
   getPayerDetails(): Promise<PayerDetails>;
 }
 
+const MAINNETS = Object.freeze(["mainnet", "polygon"]);
+
 export class PaymentModuleImpl implements PaymentModule {
   events: EventEmitter<PaymentModuleEvents> = new EventEmitter<PaymentModuleEvents>();
 
@@ -86,7 +88,7 @@ export class PaymentModuleImpl implements PaymentModule {
       const driver = options.driver || this.options.driver;
       const debitNoteFilter = options.debitNoteFilter || this.options.debitNoteFilter;
       const invoiceFilter = options.invoiceFilter || this.options.invoiceFilter;
-      const token = options.token || (network === "mainnet" ? "glm" : "tglm");
+      const token = options.token || MAINNETS.includes(network) ? "glm" : "tglm";
       this.options = { network, driver, token, debitNoteFilter, invoiceFilter };
     }
 
@@ -96,15 +98,13 @@ export class PaymentModuleImpl implements PaymentModule {
   }
 
   private getPaymentPlatform(): string {
-    const mainnets = ["mainnet", "polygon"];
-    const token = mainnets.includes(this.options.network) ? "glm" : "tglm";
-    return `${this.options.driver}-${this.options.network}-${token}`;
+    return `${this.options.driver}-${this.options.network}-${this.options.token}`;
   }
 
   async getPayerDetails(): Promise<PayerDetails> {
     const { identity: address } = await this.yagnaApi.identity.getIdentity();
 
-    return new PayerDetails(this.options.network, this.options.driver, address);
+    return new PayerDetails(this.options.network, this.options.driver, address, this.options.token);
   }
 
   observeDebitNotes(): Observable<DebitNote> {
