@@ -113,7 +113,10 @@ describe("Golem Network", () => {
 
       const glm = getGolemNetwork();
       await glm.connect();
-      const leasePool = await glm.manyOf(3, demandOptions);
+      const leasePool = await glm.manyOf({
+        concurrency: 3,
+        demand: demandOptions,
+      });
       expect(leasePool === instance(mockLeasePool)).toBe(true);
       await glm.disconnect();
       verify(mockLeasePool.drainAndClear()).once();

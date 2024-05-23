@@ -5,7 +5,7 @@
 import { DemandSpec, GolemNetwork } from "@golem-sdk/golem-js";
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
-const demandOptions: DemandSpec = {
+const demand: DemandSpec = {
   demand: {
     activity: { imageTag: "golem/alpine:latest" },
   },
@@ -31,7 +31,10 @@ const demandOptions: DemandSpec = {
   try {
     await glm.connect();
     // create a pool that can grow up to 3 leases at the same time
-    const pool = await glm.manyOf(3, demandOptions);
+    const pool = await glm.manyOf({
+      concurrency: 3,
+      demand,
+    });
     await Promise.allSettled([
       pool.withLease(async (lease) =>
         lease

@@ -13,7 +13,7 @@ import { IPaymentApi, PaymentModule, PaymentModuleImpl, PaymentModuleOptions } f
 import { ActivityModule, ActivityModuleImpl, IActivityApi, IFileServer } from "../activity";
 import { NetworkModule, NetworkModuleImpl } from "../network/network.module";
 import { EventEmitter } from "eventemitter3";
-import { LeaseProcess, LeaseProcessPool } from "../agreement";
+import { LeaseProcess, LeaseProcessPool, LeaseProcessPoolOptions } from "../agreement";
 import { DebitNoteRepository, InvoiceRepository, MarketApiAdapter, PaymentApiAdapter } from "../shared/yagna";
 import { ActivityApiAdapter } from "../shared/yagna/adapters/activity-api-adapter";
 import { ActivityRepository } from "../shared/yagna/repository/activity-repository";
@@ -82,6 +82,12 @@ export interface GolemNetworkEvents {
 
   /** Fires when all shutdown operations related to GN are completed */
   disconnected: () => void;
+}
+
+interface ManyOfOptions {
+  concurrency: LeaseProcessPoolOptions["replicas"];
+  // TODO: rename to `order` or something similar when DemandSpec is renamed to MarketOrder
+  demand: DemandSpec;
 }
 
 /**
@@ -315,7 +321,10 @@ export class GolemNetwork {
    * @example
    * ```ts
    * // create a pool that can grow up to 3 leases at the same time
-   * const pool = await glm.manyOf(3, demand);
+   * const pool = await glm.manyOf({
+   *   concurrency: 3,
+   *   demand
+   * });
    * await Promise.allSettled([
    *   pool.withLease(async (lease) =>
    *     lease
@@ -338,10 +347,9 @@ export class GolemNetwork {
    * ]);
    * ```
    *
-   * @param concurrency Maximum number of leases that can be active at the same time
-   * @param demand Demand specification
+   * @param options Demand specification and concurrency level
    */
-  public async manyOf(concurrency: number, demand: DemandSpec): Promise<LeaseProcessPool> {
+  public async manyOf({ concurrency, demand }: ManyOfOptions): Promise<LeaseProcessPool> {
     const proposalPool = new DraftOfferProposalPool({
       logger: this.logger,
     });
