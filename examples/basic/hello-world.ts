@@ -30,10 +30,6 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
           maxEnvPerHourPrice: 1,
         },
       },
-      payment: {
-        network: "holesky",
-        driver: "erc20",
-      },
     };
 
     const proposalPool = new DraftOfferProposalPool({

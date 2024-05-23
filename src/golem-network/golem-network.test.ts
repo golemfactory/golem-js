@@ -10,6 +10,7 @@ import { ActivityApiAdapter } from "../shared/yagna/adapters/activity-api-adapte
 import { AgreementApiAdapter } from "../shared/yagna/adapters/agreement-api-adapter";
 import { GolemNetwork } from "./golem-network";
 import { _, instance, mock, reset, when, verify } from "@johanblumenberg/ts-mockito";
+import { GftpStorageProvider } from "../shared/storage";
 
 const demandOptions: DemandSpec = Object.freeze({
   demand: {
@@ -25,10 +26,6 @@ const demandOptions: DemandSpec = Object.freeze({
       maxEnvPerHourPrice: 0.5,
     },
   },
-  payment: {
-    driver: "erc20",
-    network: "holesky",
-  },
 } as const);
 const mockMarket = mock(MarketModuleImpl);
 const mockPayment = mock(PaymentModuleImpl);
@@ -39,6 +36,7 @@ const mockPaymentApi = mock(PaymentApiAdapter);
 const mockActivityApi = mock(ActivityApiAdapter);
 const mockAgreementApi = mock(AgreementApiAdapter);
 const mockMarketApi = mock(MarketApiAdapter);
+const mockStorageProvider = mock(GftpStorageProvider);
 
 afterEach(() => {
   reset(mockYagna);
@@ -50,6 +48,7 @@ afterEach(() => {
   reset(mockActivityApi);
   reset(mockAgreementApi);
   reset(mockMarketApi);
+  reset(mockStorageProvider);
   jest.clearAllMocks();
 });
 function getGolemNetwork() {
@@ -64,6 +63,7 @@ function getGolemNetwork() {
       activityApi: instance(mockActivityApi),
       agreementApi: instance(mockAgreementApi),
       marketApi: instance(mockMarketApi),
+      storageProvider: instance(mockStorageProvider),
     },
   });
 }

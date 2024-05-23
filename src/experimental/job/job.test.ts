@@ -58,10 +58,6 @@ describe.skip("Job", () => {
               maxCpuPerHourPrice: 1,
             },
           },
-          payment: {
-            network: "holesky",
-            driver: "erc20",
-          },
         },
         instance(imock<Logger>()),
       );

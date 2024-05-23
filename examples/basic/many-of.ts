@@ -19,10 +19,6 @@ const demandOptions: DemandSpec = {
       maxEnvPerHourPrice: 0.5,
     },
   },
-  payment: {
-    driver: "erc20",
-    network: "holesky",
-  },
 };
 
 (async () => {

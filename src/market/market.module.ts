@@ -40,19 +40,12 @@ export interface DemandBuildParams {
 
 export type DemandEngine = "vm" | "vm-nvidia" | "wasmtime";
 
-export type PaymentSpec = {
-  network: string;
-  driver: "erc20";
-  token?: "glm" | "tglm";
-};
-
 /**
  * Represents the new demand specification which is accepted by GolemNetwork and MarketModule
  */
 export interface DemandSpec {
   demand: BuildDemandOptions;
   market: MarketOptions;
-  payment: PaymentSpec;
 }
 
 export interface MarketOptions {

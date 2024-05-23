@@ -44,10 +44,6 @@ describe("Express", function () {
             maxCpuPerHourPrice: 1,
           },
         },
-        payment: {
-          driver: "erc20",
-          network: "holesky",
-        },
       });
 
       job.events.on("created", () => {

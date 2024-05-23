@@ -1,4 +1,4 @@
-import { DataTransferProtocol, DeploymentOptions, GolemDeploymentBuilder } from "../deployment";
+import { DataTransferProtocol, GolemDeploymentBuilder } from "../deployment";
 import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
 import {
   Demand,
@@ -7,7 +7,6 @@ import {
   MarketApi,
   MarketModule,
   MarketModuleImpl,
-  MarketOptions,
   OfferProposal,
 } from "../market";
 import { IPaymentApi, PaymentModule, PaymentModuleImpl, PaymentModuleOptions } from "../payment";
@@ -35,15 +34,35 @@ import {
 } from "../shared/storage";
 
 export interface GolemNetworkOptions {
+  /**
+   * Logger instance to use for logging.
+   * If no logger is provided you can view debug logs by setting the
+   * `DEBUG` environment variable to `golem-js:*`.
+   */
   logger?: Logger;
+  /**
+   * Set the API key and URL for the Yagna API.
+   */
   api?: {
     key?: string;
     url?: string;
   };
-  market?: Partial<MarketOptions>;
-  payment?: PaymentModuleOptions;
-  deployment?: Partial<DeploymentOptions>;
+  /**
+   * Set payment-related options.
+   * This is where you can specify the network, payment driver and more.
+   * By default, the network is set to the `holesky` test network.
+   */
+  payment?: Partial<PaymentModuleOptions>;
+  /**
+   * Set the data transfer protocol to use for file transfers.
+   * Default is `gftp`.
+   */
   dataTransferProtocol?: DataTransferProtocol;
+  /**
+   * Override some of the services used by the GolemNetwork instance.
+   * This is useful for testing or when you want to provide your own implementation of some services.
+   * Only set this if you know what you are doing.
+   */
   override?: Partial<
     GolemServices & {
       market: MarketModule;
