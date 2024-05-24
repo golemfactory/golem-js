@@ -1,5 +1,5 @@
 import { PaymentApi } from "ya-ts-client";
-import { ProviderInfo } from "../agreement";
+import { ProviderInfo } from "../market/agreement";
 import { EventEmitter } from "eventemitter3";
 import { BaseDocument } from "./BaseDocument";
 

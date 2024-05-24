@@ -1,4 +1,4 @@
-import { Agreement, IAgreementRepository } from "../../../agreement/agreement";
+import { Agreement, IAgreementRepository } from "../../../market/agreement/agreement";
 import { MarketApi } from "ya-ts-client";
 import { GolemInternalError } from "../../error/golem-error";
 import { IDemandRepository } from "../../../market/demand";

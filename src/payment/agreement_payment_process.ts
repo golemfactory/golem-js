@@ -1,4 +1,4 @@
-import { Agreement } from "../agreement";
+import { Agreement } from "../market/agreement";
 import { Invoice } from "./invoice";
 import { DebitNote } from "./debit_note";
 import { RejectionReason } from "./rejection";

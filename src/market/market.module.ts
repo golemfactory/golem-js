@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
-import { Agreement, LeaseProcess, LeaseProcessPool, LeaseProcessPoolOptions } from "../agreement";
+import { Agreement } from "./agreement";
 import {
   Demand,
   DraftOfferProposalPool,
@@ -14,7 +14,7 @@ import { Allocation, IPaymentApi } from "../payment";
 import { bufferTime, catchError, filter, map, mergeMap, Observable, of, OperatorFunction, switchMap, tap } from "rxjs";
 import { IProposalRepository, OfferProposal, ProposalFilterNew } from "./offer-proposal";
 import { DemandBodyBuilder } from "./demand/demand-body-builder";
-import { IAgreementApi } from "../agreement/agreement";
+import { IAgreementApi } from "./agreement/agreement";
 import { BuildDemandOptions, DemandSpecification, IDemandRepository } from "./demand";
 import { ProposalsBatch } from "./proposals_batch";
 import { IActivityApi, IFileServer } from "../activity";
@@ -27,6 +27,7 @@ import { ActivityDemandDirectorConfigOptions } from "./demand/options";
 import { BasicDemandDirectorConfig } from "./demand/directors/basic-demand-director-config";
 import { PaymentDemandDirectorConfig } from "./demand/directors/payment-demand-director-config";
 import { GolemUserError } from "../shared/error/golem-error";
+import { LeaseProcess, LeaseProcessPool, LeaseProcessPoolOptions } from "../lease-process";
 
 export interface MarketEvents {}
 
@@ -190,8 +191,6 @@ export class MarketModuleImpl implements MarketModule {
   private readonly proposalRepo: IProposalRepository;
   private readonly demandRepo: IDemandRepository;
   private fileServer: IFileServer;
-
-  private defaultDemandExpirationSec = 60 * 60;
 
   constructor(
     private readonly deps: {

@@ -1,6 +1,6 @@
 import { Allocation, IPaymentApi } from "../payment";
 import { filter } from "rxjs";
-import { Agreement, IAgreementApi } from "./agreement";
+import { Agreement, IAgreementApi } from "../market/agreement/agreement";
 import { AgreementPaymentProcess } from "../payment/agreement_payment_process";
 import { DebitNoteFilter, InvoiceFilter } from "../payment/service";
 import { Logger, YagnaApi } from "../shared/utils";

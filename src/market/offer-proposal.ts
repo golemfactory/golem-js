@@ -1,6 +1,6 @@
 import { MarketApi } from "ya-ts-client";
 import { GolemMarketError, MarketErrorCode } from "./error";
-import { ProviderInfo } from "../agreement";
+import { ProviderInfo } from "./agreement";
 import { Demand } from "./demand";
 
 export type ProposalFilterNew = (proposal: OfferProposal) => boolean;

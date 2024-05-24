@@ -1,5 +1,5 @@
 import { Worker, WorkOptions } from "../../activity/work";
-import { LegacyAgreementServiceOptions } from "../../agreement";
+import { LegacyAgreementServiceOptions } from "../../market/agreement";
 import { DemandSpec } from "../../market";
 import { NetworkOptions } from "../../network";
 import { PaymentModuleOptions } from "../../payment";
