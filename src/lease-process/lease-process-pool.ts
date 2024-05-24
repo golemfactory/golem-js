@@ -1,9 +1,9 @@
-import type { IAgreementApi, LegacyAgreementServiceOptions } from "./agreement";
+import type { IAgreementApi, LegacyAgreementServiceOptions } from "../market/agreement/agreement";
 import type { Logger } from "../shared/utils";
 import { defaultLogger } from "../shared/utils";
 import type { DraftOfferProposalPool, MarketModule } from "../market";
 import { GolemMarketError, MarketErrorCode } from "../market";
-import type { AgreementDTO } from "./service";
+import type { AgreementDTO } from "../market/agreement/service";
 import { EventEmitter } from "eventemitter3";
 import type { RequireAtLeastOne } from "../shared/utils/types";
 import type { Allocation, IPaymentApi } from "../payment";
@@ -332,6 +332,27 @@ export class LeaseProcessPool {
         nodeIp: leaseProcess.networkNode.ip,
       });
       await this.networkModule.removeNetworkNode(this.network, leaseProcess.networkNode);
+    }
+  }
+
+  /**
+   * Acquire a lease process from the pool and release it after the callback is done
+   * @example
+   * ```typescript
+   * const result = await pool.withLease(async (lease) => {
+   *  // Do something with the lease
+   *  return result;
+   *  // pool.release(lease) is called automatically
+   *  // even if an error is thrown in the callback
+   * });
+   * ```
+   */
+  public async withLease<T>(callback: (lease: LeaseProcess) => Promise<T>): Promise<T> {
+    const lease = await this.acquire();
+    try {
+      return await callback(lease);
+    } finally {
+      await this.release(lease);
     }
   }
 }

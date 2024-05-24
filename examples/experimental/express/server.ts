@@ -39,10 +39,6 @@ app.post("/tts", async (req, res) => {
         maxEnvPerHourPrice: 1,
       },
     },
-    payment: {
-      driver: "erc20",
-      network: "holesky",
-    },
   });
 
   job.events.on("created", () => {

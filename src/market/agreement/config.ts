@@ -1,6 +1,6 @@
 import { LegacyAgreementServiceOptions } from "./agreement";
 import { AgreementSelector, AgreementServiceOptions } from "./service";
-import { Logger } from "../shared/utils";
+import { Logger } from "../../shared/utils";
 import { randomAgreementSelectorWithPriorityForExistingOnes } from "./strategy";
 
 const DEFAULTS = {

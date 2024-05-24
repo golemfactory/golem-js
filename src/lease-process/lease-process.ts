@@ -1,6 +1,6 @@
 import { Allocation, IPaymentApi } from "../payment";
 import { filter } from "rxjs";
-import { Agreement, IAgreementApi } from "./agreement";
+import { Agreement, IAgreementApi } from "../market/agreement/agreement";
 import { AgreementPaymentProcess } from "../payment/agreement_payment_process";
 import { DebitNoteFilter, InvoiceFilter } from "../payment/service";
 import { Logger, YagnaApi } from "../shared/utils";
@@ -76,9 +76,14 @@ export class LeaseProcess {
   }
 
   /**
-   * @return Resolves when the lease will be fully terminated and all pending business operations finalized
+   * Resolves when the lease will be fully terminated and all pending business operations finalized.
+   * If the lease is already finalized, it will resolve immediately.
    */
   async finalize() {
+    if (this.paymentProcess.isFinished()) {
+      return;
+    }
+
     try {
       this.logger.debug("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
       if (this.currentActivity) {

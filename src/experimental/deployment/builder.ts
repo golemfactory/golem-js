@@ -1,11 +1,11 @@
-import { GolemConfigError } from "../shared/error/golem-error";
-import { NetworkOptions } from "../network";
+import { GolemConfigError } from "../../shared/error/golem-error";
+import { NetworkOptions } from "../../network";
 import { Deployment, DeploymentComponents } from "./deployment";
-import { GolemNetwork } from "../golem-network";
+import { GolemNetwork } from "../../golem-network";
 import { validateDeployment } from "./validate-deployment";
-import { MarketOptions } from "../market";
-import { PaymentModuleOptions } from "../payment";
-import { BuildDemandOptions } from "../market/demand";
+import { MarketOptions } from "../../market";
+import { PaymentModuleOptions } from "../../payment";
+import { BuildDemandOptions } from "../../market/demand";
 
 interface DeploymentOptions {
   replicas?: number | { min: number; max: number };

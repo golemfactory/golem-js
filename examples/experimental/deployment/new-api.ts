@@ -1,4 +1,5 @@
 import { GolemNetwork } from "@golem-sdk/golem-js";
+import { GolemDeploymentBuilder } from "@golem-sdk/golem-js/experimental";
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
 async function main() {
@@ -6,23 +7,12 @@ async function main() {
     logger: pinoPrettyLogger({
       level: "info",
     }),
-    market: {
-      maxAgreements: 1,
-      rentHours: 0.5,
-      pricing: {
-        model: "linear",
-        maxStartPrice: 1,
-        maxCpuPerHourPrice: 1,
-        maxEnvPerHourPrice: 1,
-      },
-    },
-    dataTransferProtocol: "gftp",
   });
 
   try {
     await golem.connect();
 
-    const builder = golem.creteDeploymentBuilder();
+    const builder = new GolemDeploymentBuilder(golem);
 
     builder
       .createNetwork("basic", {

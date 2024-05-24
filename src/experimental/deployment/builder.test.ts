@@ -1,6 +1,6 @@
-import { GolemConfigError } from "../shared/error/golem-error";
+import { GolemConfigError } from "../../shared/error/golem-error";
 import { GolemDeploymentBuilder } from "./builder";
-import { GolemNetwork } from "../golem-network";
+import { GolemNetwork } from "../../golem-network";
 import { imock } from "@johanblumenberg/ts-mockito";
 
 const mockGolemNetwork = imock<GolemNetwork>();

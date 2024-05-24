@@ -6,7 +6,7 @@ import { Demand, DemandSpecification, IDemandRepository } from "./demand";
 import { from, of, take, takeUntil, timer } from "rxjs";
 import { IProposalRepository, OfferProposal, ProposalProperties } from "./offer-proposal";
 import { MarketApiAdapter } from "../shared/yagna/";
-import { IAgreementApi } from "../agreement/agreement";
+import { IAgreementApi } from "./agreement/agreement";
 import { IActivityApi, IFileServer } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { GolemMarketError } from "./error";

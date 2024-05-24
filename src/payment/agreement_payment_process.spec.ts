@@ -1,6 +1,6 @@
 import { AgreementPaymentProcess } from "./agreement_payment_process";
 import { anything, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
-import { Agreement } from "../agreement";
+import { Agreement } from "../market/agreement";
 import { Allocation } from "./allocation";
 import { Invoice } from "./invoice";
 import { DebitNote } from "./debit_note";

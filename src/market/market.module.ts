@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
-import { Agreement, LeaseProcess, LeaseProcessPool, LeaseProcessPoolOptions } from "../agreement";
+import { Agreement } from "./agreement";
 import {
   Demand,
   DraftOfferProposalPool,
@@ -14,7 +14,7 @@ import { Allocation, IPaymentApi } from "../payment";
 import { bufferTime, catchError, filter, map, mergeMap, Observable, of, OperatorFunction, switchMap, tap } from "rxjs";
 import { IProposalRepository, OfferProposal, ProposalFilterNew } from "./offer-proposal";
 import { DemandBodyBuilder } from "./demand/demand-body-builder";
-import { IAgreementApi } from "../agreement/agreement";
+import { IAgreementApi } from "./agreement/agreement";
 import { BuildDemandOptions, DemandSpecification, IDemandRepository } from "./demand";
 import { ProposalsBatch } from "./proposals_batch";
 import { IActivityApi, IFileServer } from "../activity";
@@ -27,8 +27,8 @@ import { ActivityDemandDirectorConfigOptions } from "./demand/options";
 import { BasicDemandDirectorConfig } from "./demand/directors/basic-demand-director-config";
 import { PaymentDemandDirectorConfig } from "./demand/directors/payment-demand-director-config";
 import { GolemUserError } from "../shared/error/golem-error";
-import { INetworkApi } from "../network/api";
-import { Network, NetworkModule, NetworkNode } from "../network";
+import { Network, NetworkModule, NetworkNode, INetworkApi } from "../network";
+import { LeaseProcess, LeaseProcessPool, LeaseProcessPoolOptions } from "../lease-process";
 
 export interface MarketEvents {}
 
@@ -42,19 +42,13 @@ export interface DemandBuildParams {
 
 export type DemandEngine = "vm" | "vm-nvidia" | "wasmtime";
 
-export type PaymentSpec = {
-  network: string;
-  driver: "erc20";
-  token?: "glm" | "tglm";
-};
-
 /**
  * Represents the new demand specification which is accepted by GolemNetwork and MarketModule
  */
 export interface DemandSpec {
   demand: BuildDemandOptions;
   market: MarketOptions;
-  payment: PaymentSpec;
+  network?: Network;
 }
 
 export interface MarketOptions {
@@ -161,7 +155,7 @@ export interface MarketModule {
   createLease(agreement: Agreement, allocation: Allocation, networkNode?: NetworkNode): LeaseProcess;
 
   /**
-   * Factory that creates new agreement pool that's fully configured
+   * Factory that creates new lease process pool that's fully configured
    */
   createLeaseProcessPool(
     draftPool: DraftOfferProposalPool,
@@ -200,8 +194,6 @@ export class MarketModuleImpl implements MarketModule {
   private readonly proposalRepo: IProposalRepository;
   private readonly demandRepo: IDemandRepository;
   private fileServer: IFileServer;
-
-  private defaultDemandExpirationSec = 60 * 60;
 
   constructor(
     private readonly deps: {

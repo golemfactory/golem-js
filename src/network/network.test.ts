@@ -59,7 +59,7 @@ describe("Network", () => {
     });
     test("should not add a node to removed network", () => {
       const network = new Network("network-id", "192.168.0.0/24");
-      network.remove();
+      network.markAsRemoved();
       expect(() => network.addNode(instance(mockNetworkNode))).toThrow(
         new GolemNetworkError(`Unable to add node network-node-id to removed network`, NetworkErrorCode.NetworkRemoved),
       );
@@ -91,7 +91,7 @@ describe("Network", () => {
       const networkNode = instance(mockNetworkNode);
       when(mockNetworkNode.id).thenReturn("test-id-1");
       network.addNode(networkNode);
-      network.remove();
+      network.markAsRemoved();
       expect(() => network.removeNode(networkNode)).toThrow(
         new GolemNetworkError(`Unable to remove node test-id-1 from removed network`, NetworkErrorCode.NetworkRemoved),
       );

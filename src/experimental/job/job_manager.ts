@@ -2,7 +2,7 @@ import { v4 } from "uuid";
 import { Job, RunJobOptions } from "./job";
 import { defaultLogger, Logger, runtimeContextChecker, YagnaOptions } from "../../shared/utils";
 import { GolemUserError } from "../../shared/error/golem-error";
-import { GolemNetwork } from "../../golem-network";
+import { GolemNetwork } from "../../golem-network/golem-network";
 import {
   GftpStorageProvider,
   NullStorageProvider,

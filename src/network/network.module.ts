@@ -126,7 +126,7 @@ export class NetworkModuleImpl implements NetworkModule {
   async removeNetwork(network: Network): Promise<void> {
     await this.lock.acquire(`net-${network.id}`, async () => {
       await this.deps.networkApi.removeNetwork(network);
-      network.remove();
+      network.markAsRemoved();
       this.deps.logger.info(`Network removed`, network.getNetworkInfo());
     });
   }

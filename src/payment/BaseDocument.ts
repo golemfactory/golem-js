@@ -1,6 +1,6 @@
 import { PaymentApi } from "ya-ts-client";
 import { EventEmitter } from "eventemitter3";
-import { ProviderInfo } from "../agreement";
+import { ProviderInfo } from "../market/agreement";
 import { InvoiceEvents } from "./invoice";
 
 export interface BaseModel {

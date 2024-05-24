@@ -1,5 +1,5 @@
 import { Logger } from "../../shared/utils";
-import { ProviderInfo } from "../../agreement";
+import { ProviderInfo } from "../../market/agreement";
 
 /**
  * Set of normalized scores for a provider.

@@ -99,7 +99,7 @@ export class Network {
     this.nodes.delete(node.id);
   }
 
-  public remove() {
+  public markAsRemoved() {
     if (this.state === NetworkState.Removed) {
       throw new GolemNetworkError("Network already removed", NetworkErrorCode.NetworkRemoved, this.getNetworkInfo());
     }

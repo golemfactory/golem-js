@@ -67,7 +67,7 @@ export default [
   {
     input: {
       "golem-js": "src/index.ts",
-      "golem-js-experimental": "src/experimental.ts",
+      "golem-js-experimental": "src/experimental/index.ts",
     },
     output: {
       dir: "dist",
@@ -84,7 +84,7 @@ export default [
   {
     input: {
       "golem-js": "src/index.ts",
-      "golem-js-experimental": "src/experimental.ts",
+      "golem-js-experimental": "src/experimental/index.ts",
     },
     output: {
       dir: "dist",

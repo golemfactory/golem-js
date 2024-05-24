@@ -1,5 +1,5 @@
 import { Job } from "./job";
-import { Agreement, AgreementPoolService } from "../../agreement";
+import { Agreement, AgreementPoolService } from "../../market/agreement";
 import { WorkContext } from "../../activity/work";
 import { Activity, IActivityApi } from "../../activity";
 import { anything, imock, instance, mock, verify, when } from "@johanblumenberg/ts-mockito";
@@ -54,10 +54,6 @@ describe.skip("Job", () => {
               maxEnvPerHourPrice: 1,
               maxCpuPerHourPrice: 1,
             },
-          },
-          payment: {
-            network: "holesky",
-            driver: "erc20",
           },
         },
         instance(imock<Logger>()),
