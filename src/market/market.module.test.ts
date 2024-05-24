@@ -6,13 +6,14 @@ import { Demand, DemandSpecification, IDemandRepository } from "./demand";
 import { from, of, take, takeUntil, timer } from "rxjs";
 import { IProposalRepository, OfferProposal, ProposalProperties } from "./offer-proposal";
 import { MarketApiAdapter } from "../shared/yagna/";
-import { IAgreementApi } from "./agreement/agreement";
+import { Agreement, IAgreementApi } from "./agreement/agreement";
 import { IActivityApi, IFileServer } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { GolemMarketError } from "./error";
 import { Allocation, IPaymentApi } from "../payment";
 import { INetworkApi } from "../network/api";
 import { NetworkModule } from "../network";
+import { DraftOfferProposalPool } from "./draft-offer-proposal-pool";
 
 const mockMarketApiAdapter = mock(MarketApiAdapter);
 const mockYagna = mock(YagnaApi);
@@ -471,6 +472,106 @@ describe("Market module", () => {
             }
           },
         });
+    });
+  });
+  describe("signAgreementFromPool()", () => {
+    it("should keep acquiring proposals until one is successfully signed", async () => {
+      const badProposal0 = {} as OfferProposal;
+      const badProposal1 = {} as OfferProposal;
+      const goodProposal = {} as OfferProposal;
+      const mockAcquire: DraftOfferProposalPool["acquire"] = jest
+        .fn()
+        .mockResolvedValueOnce(badProposal0)
+        .mockResolvedValueOnce(badProposal1)
+        .mockResolvedValueOnce(goodProposal);
+      const mockRemove: DraftOfferProposalPool["remove"] = jest.fn();
+      const mockPool = {
+        acquire: mockAcquire,
+        remove: mockRemove,
+      } as DraftOfferProposalPool;
+      const goodAgreement = {} as Agreement;
+      jest
+        .spyOn(marketModule, "proposeAgreement")
+        .mockRejectedValueOnce(new Error("Failed to sign proposal"))
+        .mockRejectedValueOnce(new Error("Failed to sign proposal"))
+        .mockResolvedValueOnce(goodAgreement);
+
+      const signedProposal = await marketModule.signAgreementFromPool(mockPool);
+      expect(mockAcquire).toHaveBeenCalledTimes(3);
+      expect(marketModule.proposeAgreement).toHaveBeenCalledTimes(3);
+      expect(mockRemove).toHaveBeenCalledTimes(3);
+      expect(mockRemove).toHaveBeenCalledWith(badProposal0);
+      expect(mockRemove).toHaveBeenCalledWith(badProposal1);
+      // goodProposal should also be removed after signing
+      expect(mockRemove).toHaveBeenCalledWith(goodProposal);
+      expect(signedProposal).toBe(goodAgreement);
+    });
+    it("should release the proposal if the operation is cancelled between acquiring and signing", async () => {
+      jest.useRealTimers();
+      const proposal = {} as OfferProposal;
+      // mock acquire to return a proposal after 100ms
+      const mockAcquire: DraftOfferProposalPool["acquire"] = jest.fn().mockImplementation(() => {
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            resolve(proposal);
+          }, 100);
+        });
+      });
+      const mockRemove: DraftOfferProposalPool["remove"] = jest.fn();
+      const mockRelease: DraftOfferProposalPool["release"] = jest.fn();
+      const mockPool = {
+        acquire: mockAcquire,
+        remove: mockRemove,
+        release: mockRelease,
+      } as DraftOfferProposalPool;
+      jest.spyOn(marketModule, "proposeAgreement");
+
+      // cancel the operation after 50ms
+      const signal = AbortSignal.timeout(50);
+      await expect(marketModule.signAgreementFromPool(mockPool, signal)).rejects.toThrow(
+        "The operation was aborted due to timeout",
+      );
+
+      expect(mockAcquire).toHaveBeenCalledTimes(1);
+      expect(mockRemove).toHaveBeenCalledTimes(0);
+      expect(mockRelease).toHaveBeenCalledTimes(1);
+      expect(mockRelease).toHaveBeenCalledWith(proposal);
+      expect(marketModule.proposeAgreement).toHaveBeenCalledTimes(0);
+    });
+    it("should abort immediately if the given signal is already aborted", async () => {
+      const mockAcquire: DraftOfferProposalPool["acquire"] = jest.fn();
+      const mockPool = {
+        acquire: mockAcquire,
+      } as DraftOfferProposalPool;
+      const signal = AbortSignal.abort();
+      await expect(marketModule.signAgreementFromPool(mockPool, signal)).rejects.toThrow("This operation was aborted");
+      expect(mockAcquire).toHaveBeenCalledTimes(0);
+    });
+    it("should abort after a set timeout", async () => {
+      const mockAcquire: DraftOfferProposalPool["acquire"] = jest
+        .fn()
+        .mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 10)));
+      const mockPool = {
+        acquire: mockAcquire,
+      } as DraftOfferProposalPool;
+      jest
+        .spyOn(marketModule, "proposeAgreement")
+        .mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 10)));
+      const timeout = 50;
+      expect(marketModule.signAgreementFromPool(mockPool, timeout)).rejects.toThrow(
+        "The operation was aborted due to timeout",
+      );
+    });
+    it("respects the timeout on draft proposal pool acquire and forwards the error", async () => {
+      const mockAcquire: DraftOfferProposalPool["acquire"] = jest
+        .fn()
+        .mockImplementation(
+          () => new Promise((_, reject) => setTimeout(() => reject(new Error("Failed to acquire")), 10)),
+        );
+      const mockPool = {
+        acquire: mockAcquire,
+      } as DraftOfferProposalPool;
+      expect(marketModule.signAgreementFromPool(mockPool)).rejects.toThrow("Failed to acquire");
     });
   });
 });

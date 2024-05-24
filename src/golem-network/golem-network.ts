@@ -285,9 +285,7 @@ export class GolemNetwork {
     });
     const proposalSubscription = proposalPool.readFrom(proposal$);
 
-    const draftProposal = await proposalPool.acquire();
-
-    const agreement = await this.market.proposeAgreement(draftProposal);
+    const agreement = await this.market.signAgreementFromPool(proposalPool);
 
     const networkNode = demand.network
       ? await this.network.createNetworkNode(demand.network, agreement.getProviderInfo().id)

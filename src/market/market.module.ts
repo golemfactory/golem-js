@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
 import { Agreement } from "./agreement";
 import {
@@ -29,6 +28,7 @@ import { PaymentDemandDirectorConfig } from "./demand/directors/payment-demand-d
 import { GolemUserError } from "../shared/error/golem-error";
 import { Network, NetworkModule, NetworkNode, INetworkApi } from "../network";
 import { LeaseProcess, LeaseProcessPool, LeaseProcessPoolOptions } from "../lease-process";
+import { createAbortSignalFromTimeout } from "../shared/utils/abortSignal";
 
 export interface MarketEvents {}
 
@@ -133,11 +133,29 @@ export interface MarketModule {
   terminateAgreement(agreement: Agreement, reason?: string): Promise<Agreement>;
 
   /**
-   * Helper method that will allow reaching an agreement for the user without dealing with manual labour of demand/subscription
+   * Acquire a proposal from the pool and sign an agreement with the provider. If signing the agreement fails,
+   * destroy the proposal and try again with another one. The method returns an agreement that's ready to be used.
+   * Optionally, you can provide a timeout in milliseconds or an AbortSignal that can be used to cancel the operation
+   * early. If the operation is cancelled, the method will throw an error.
+   * Note that this method will respect the acquire timeout set in the pool and will throw an error if no proposal
+   * is available within the specified time.
+   *
+   * @example
+   * ```ts
+   * const agreement = await marketModule.signAgreementFromPool(draftProposalPool, 10_000); // throws TimeoutError if the operation takes longer than 10 seconds
+   * ```
+   * @example
+   * ```ts
+   * const signal = AbortSignal.timeout(10_000);
+   * const agreement = await marketModule.signAgreementFromPool(draftProposalPool, signal); // throws TimeoutError if the operation takes longer than 10 seconds
+   * ```
+   * @param draftProposalPool - The pool of draft proposals to acquire from
+   * @param timeout - The timeout in milliseconds or an AbortSignal that will be used to cancel the operation
    */
-  getAgreement(options: MarketOptions, filter: ProposalFilterNew): Promise<Agreement>;
-
-  getAgreements(options: MarketOptions, filter: ProposalFilterNew, count: number): Promise<Agreement[]>;
+  signAgreementFromPool(
+    draftProposalPool: DraftOfferProposalPool,
+    signalOrTimeout?: number | AbortSignal,
+  ): Promise<Agreement>;
 
   /**
    * Creates a demand for the given package and allocation and starts collecting, filtering and negotiating proposals.
@@ -356,14 +374,6 @@ export class MarketModuleImpl implements MarketModule {
     return agreement;
   }
 
-  getAgreement(options: MarketOptions, filter: ProposalFilterNew): Promise<Agreement> {
-    throw new Error("Method not implemented.");
-  }
-
-  getAgreements(options: MarketOptions, filter: ProposalFilterNew, count: number): Promise<Agreement[]> {
-    throw new Error("Method not implemented.");
-  }
-
   startCollectingProposals(options: {
     demandSpecification: DemandSpecification;
     filter?: ProposalFilterNew;
@@ -401,6 +411,34 @@ export class MarketModuleImpl implements MarketModule {
       // filter out empty buffers
       filter((proposals) => proposals.length > 0),
     );
+  }
+
+  async signAgreementFromPool(
+    draftProposalPool: DraftOfferProposalPool,
+    signalOrTimeout?: number | AbortSignal,
+  ): Promise<Agreement> {
+    const signal = createAbortSignalFromTimeout(signalOrTimeout);
+
+    const tryProposing = async (): Promise<Agreement> => {
+      signal.throwIfAborted();
+      const proposal = await draftProposalPool.acquire();
+      if (signal.aborted) {
+        await draftProposalPool.release(proposal);
+        signal.throwIfAborted();
+      }
+
+      try {
+        const agreement = await this.proposeAgreement(proposal);
+        // agreement is valid, proposal can be destroyed
+        await draftProposalPool.remove(proposal);
+        return agreement;
+      } catch {
+        // If the proposal is not valid, remove it from the pool and try again
+        await draftProposalPool.remove(proposal);
+        return tryProposing();
+      }
+    };
+    return tryProposing();
   }
 
   createLease(agreement: Agreement, allocation: Allocation, networkNode?: NetworkNode) {

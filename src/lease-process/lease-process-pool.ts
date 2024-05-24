@@ -1,6 +1,6 @@
 import type { IAgreementApi, LegacyAgreementServiceOptions } from "../market/agreement/agreement";
 import type { Logger } from "../shared/utils";
-import { defaultLogger } from "../shared/utils";
+import { defaultLogger, sleep } from "../shared/utils";
 import type { DraftOfferProposalPool, MarketModule } from "../market";
 import { GolemMarketError, MarketErrorCode } from "../market";
 import type { AgreementDTO } from "../market/agreement/service";
@@ -9,6 +9,7 @@ import type { RequireAtLeastOne } from "../shared/utils/types";
 import type { Allocation, IPaymentApi } from "../payment";
 import type { LeaseProcess } from "./lease-process";
 import { Network, NetworkModule } from "../network";
+import { createAbortSignalFromTimeout } from "../shared/utils/abortSignal";
 
 export interface LeaseProcessPoolDependencies {
   agreementApi: IAgreementApi;
@@ -97,10 +98,7 @@ export class LeaseProcessPool {
   private async createNewLeaseProcess() {
     this.logger.debug("Creating new lease process to add to pool");
     try {
-      const proposal = await this.proposalPool.acquire();
-      const agreement = await this.agreementApi.proposeAgreement(proposal);
-      // After reaching an agreement, the proposal is useless
-      await this.proposalPool.remove(proposal);
+      const agreement = await this.marketModule.signAgreementFromPool(this.proposalPool);
       const networkNode = this.network
         ? await this.networkModule.createNetworkNode(this.network, agreement.getProviderInfo().id)
         : undefined;
@@ -295,15 +293,7 @@ export class LeaseProcessPool {
     if (this.minPoolSize <= this.getAvailableSize()) {
       return;
     }
-    const signal = (() => {
-      if (typeof timeoutOrAbortSignal === "number") {
-        return AbortSignal.timeout(timeoutOrAbortSignal);
-      }
-      if (timeoutOrAbortSignal instanceof AbortSignal) {
-        return timeoutOrAbortSignal;
-      }
-      return { aborted: false };
-    })();
+    const signal = createAbortSignalFromTimeout(timeoutOrAbortSignal);
 
     while (this.minPoolSize > this.getAvailableSize()) {
       if (signal.aborted) {
@@ -317,6 +307,12 @@ export class LeaseProcessPool {
           ),
         ),
       );
+      // Wait for at least 1 tick before trying again
+      // otherwise there is a risk of blocking the event loop and:
+      // a) the pool will never get the chance to gain more offers
+      // b) the abort signal will never change, because timers are processed once a tick
+      // leading to an infinite loop
+      await sleep(0);
     }
 
     if (this.minPoolSize > this.getAvailableSize()) {
