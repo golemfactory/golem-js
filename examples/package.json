@@ -7,6 +7,7 @@
   "scripts": {
     "basic-one-of": "tsx basic/one-of.ts",
     "basic-many-of": "tsx basic/many-of.ts",
+    "basic-vpn": "tsx basic/vpn.ts",
     "advanced-hello-world": "tsx advanced/hello-world.ts",
     "advanced-manual-pools": "tsx advanced/manual-pools.ts",
     "local-image": "tsx advanced/local-image/serveLocalGvmi.ts",
