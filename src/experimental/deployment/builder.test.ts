@@ -57,10 +57,10 @@ describe("Deployment builder", () => {
     expect(() => {
       builder
         .createNetwork("my-network", {
-          networkOwnerId: "test",
+          id: "test",
         })
         .createNetwork("my-network", {
-          networkOwnerId: "test",
+          id: "test",
         });
     }).toThrow(new GolemConfigError(`Network with name my-network already exists`));
   });
@@ -69,7 +69,7 @@ describe("Deployment builder", () => {
     expect(() => {
       builder
         .createNetwork("existing-network", {
-          networkOwnerId: "test",
+          id: "test",
         })
         .createActivityPool("my-pool", {
           demand: {

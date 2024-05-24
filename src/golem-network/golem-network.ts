@@ -10,7 +10,7 @@ import {
 } from "../market";
 import { IPaymentApi, PaymentModule, PaymentModuleImpl, PaymentModuleOptions } from "../payment";
 import { ActivityModule, ActivityModuleImpl, IActivityApi, IFileServer } from "../activity";
-import { NetworkModule, NetworkModuleImpl } from "../network/network.module";
+import { Network, NetworkModule, NetworkModuleImpl, NetworkOptions, INetworkApi } from "../network";
 import { EventEmitter } from "eventemitter3";
 import { LeaseProcess, LeaseProcessPool, LeaseProcessPoolOptions } from "../lease-process";
 import { DebitNoteRepository, InvoiceRepository, MarketApiAdapter, PaymentApiAdapter } from "../shared/yagna";
@@ -32,6 +32,7 @@ import {
   WebSocketBrowserStorageProvider,
 } from "../shared/storage";
 import { DataTransferProtocol } from "../shared/types";
+import { NetworkApiAdapter } from "../shared/yagna/adapters/network-api-adapter";
 
 export interface GolemNetworkOptions {
   /**
@@ -100,6 +101,7 @@ export type GolemServices = {
   activityApi: IActivityApi;
   agreementApi: IAgreementApi;
   marketApi: MarketApi;
+  networkApi: INetworkApi;
   proposalCache: CacheService<OfferProposal>;
   proposalRepository: IProposalRepository;
   demandRepository: IDemandRepository;
@@ -200,13 +202,14 @@ export class GolemNetwork {
           this.options.override?.agreementApi ||
           new AgreementApiAdapter(this.yagna.appSessionId, this.yagna.market, agreementRepository, this.logger),
         marketApi: this.options.override?.marketApi || new MarketApiAdapter(this.yagna, this.logger),
+        networkApi: this.options.override?.networkApi || new NetworkApiAdapter(this.yagna, this.logger),
         fileServer: this.options.override?.fileServer || new GftpServerAdapter(this.storageProvider),
       };
-
-      this.market = this.options.override?.market || new MarketModuleImpl(this.services);
+      this.network = this.options.override?.network || new NetworkModuleImpl(this.services);
+      this.market =
+        this.options.override?.market || new MarketModuleImpl({ ...this.services, networkModule: this.network });
       this.payment = this.options.override?.payment || new PaymentModuleImpl(this.services, this.options.payment);
       this.activity = this.options.override?.activity || new ActivityModuleImpl(this.services);
-      this.network = this.options.override?.network || new NetworkModuleImpl();
     } catch (err) {
       this.events.emit("error", err);
       throw err;
@@ -286,7 +289,11 @@ export class GolemNetwork {
 
     const agreement = await this.market.proposeAgreement(draftProposal);
 
-    const lease = this.market.createLease(agreement, allocation);
+    const networkNode = demand.network
+      ? await this.network.createNetworkNode(demand.network, agreement.getProviderInfo().id)
+      : undefined;
+
+    const lease = this.market.createLease(agreement, allocation, networkNode);
 
     // We managed to create the activity, no need to look for more agreement candidates
     proposalSubscription.unsubscribe();
@@ -295,6 +302,11 @@ export class GolemNetwork {
       // First finalize the lease (which will wait for all payments to be processed)
       // and only then release the allocation
       await lease.finalize().catch((err) => this.logger.error("Error while finalizing lease", err));
+      if (demand?.network && networkNode) {
+        await this.network
+          .removeNetworkNode(demand.network, networkNode)
+          .catch((err) => this.logger.error("Error while removing network node", err));
+      }
       await this.payment
         .releaseAllocation(allocation)
         .catch((err) => this.logger.error("Error while releasing allocation", err));
@@ -357,6 +369,7 @@ export class GolemNetwork {
 
     const leaseProcessPool = this.market.createLeaseProcessPool(proposalPool, allocation, {
       replicas: concurrency,
+      network: demand.network,
     });
     this.cleanupTasks.push(() => subscription.unsubscribe());
     this.cleanupTasks.push(async () => {
@@ -375,6 +388,26 @@ export class GolemNetwork {
 
   isConnected() {
     return this.hasConnection;
+  }
+
+  /**
+   * Creates a new logical network within the Golem VPN infrastructure.
+   * Allows communication between network nodes using standard network mechanisms,
+   * but requires specific implementation in the ExeUnit/runtime,
+   * which must be capable of providing a standard Unix-socket interface to their payloads
+   * and marshaling the logical network traffic through the Golem Net transport layer
+   * @param options
+   */
+  async createNetwork(options?: NetworkOptions): Promise<Network> {
+    return await this.network.createNetwork(options);
+  }
+
+  /**
+   * Removes an existing network from the Golem VPN infrastructure.
+   * @param network
+   */
+  async destroyNetwork(network: Network): Promise<void> {
+    return await this.network.removeNetwork(network);
   }
 
   private createStorageProvider(): StorageProvider {

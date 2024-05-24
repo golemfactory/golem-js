@@ -2,7 +2,7 @@ import { GolemAbortError, GolemUserError } from "../../shared/error/golem-error"
 import { defaultLogger, Logger, YagnaApi } from "../../shared/utils";
 import { EventEmitter } from "eventemitter3";
 import { ActivityModule } from "../../activity";
-import { Network, NetworkOptions } from "../../network";
+import { Network, NetworkOptions, NetworkModule } from "../../network";
 import { GftpStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../../shared/storage";
 import { validateDeployment } from "./validate-deployment";
 import { DemandBuildParams, DraftOfferProposalPool, MarketModule } from "../../market";
@@ -82,6 +82,7 @@ export class Deployment {
     market: MarketModule;
     activity: ActivityModule;
     payment: PaymentModule;
+    network: NetworkModule;
   };
 
   constructor(
@@ -92,6 +93,7 @@ export class Deployment {
       market: MarketModule;
       activity: ActivityModule;
       payment: PaymentModule;
+      network: NetworkModule;
     },
     options: DeploymentOptions,
   ) {
@@ -143,7 +145,7 @@ export class Deployment {
     await this.dataTransferProtocol.init();
 
     for (const network of this.components.networks) {
-      const networkInstance = await Network.create(this.yagnaApi, network.options);
+      const networkInstance = await this.modules.network.createNetwork(network.options);
       this.networks.set(network.name, networkInstance);
     }
 
@@ -153,7 +155,6 @@ export class Deployment {
       expirationSec: 30 * 60, // 30 minutes
     });
 
-    // TODO: add pool to network
     // TODO: pass dataTransferProtocol to pool
     for (const pool of this.components.activityPools) {
       const { demandBuildOptions, leaseProcessPoolOptions } = this.prepareParams(pool.options);
@@ -206,7 +207,9 @@ export class Deployment {
       );
       await Promise.allSettled(stopPools);
 
-      const stopNetworks: Promise<void>[] = Array.from(this.networks.values()).map((network) => network.remove());
+      const stopNetworks: Promise<void>[] = Array.from(this.networks.values()).map((network) =>
+        this.modules.network.removeNetwork(network),
+      );
       await Promise.allSettled(stopNetworks);
 
       this.state = DeploymentState.STOPPED;
@@ -252,6 +255,7 @@ export class Deployment {
         : typeof options.deployment?.replicas === "object"
           ? options.deployment?.replicas
           : { min: 1, max: 1 };
+    const network = options.deployment?.network ? this.networks.get(options.deployment?.network) : undefined;
     return {
       demandBuildOptions: {
         demand: options.demand,
@@ -260,6 +264,7 @@ export class Deployment {
       leaseProcessPoolOptions: {
         agreementOptions: { invoiceFilter: options.payment?.invoiceFilter },
         replicas,
+        network,
       },
     };
   }

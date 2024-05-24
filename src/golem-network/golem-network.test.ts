@@ -88,7 +88,7 @@ describe("Golem Network", () => {
       const mockLease = {
         finalize: jest.fn().mockImplementation(() => Promise.resolve()) as LeaseProcess["finalize"],
       } as LeaseProcess;
-      when(mockMarket.createLease(_, _)).thenReturn(mockLease);
+      when(mockMarket.createLease(_, _, _)).thenReturn(mockLease);
       const mockSubscription = mockStartCollectingProposals();
       const mockAllocation = mockPaymentCreateAllocation();
       jest.spyOn(DraftOfferProposalPool.prototype, "acquire").mockResolvedValue({} as OfferProposal);

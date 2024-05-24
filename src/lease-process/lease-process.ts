@@ -8,6 +8,8 @@ import { waitForCondition } from "../shared/utils/waitForCondition";
 import { Activity, IActivityApi, WorkContext } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { EventEmitter } from "eventemitter3";
+import { INetworkApi } from "../network/api";
+import { NetworkNode } from "../network";
 
 export interface LeaseProcessEvents {
   /**
@@ -32,10 +34,12 @@ export class LeaseProcess {
     private readonly paymentApi: IPaymentApi,
     private readonly activityApi: IActivityApi,
     private readonly agreementApi: IAgreementApi,
+    private readonly networkApi: INetworkApi,
     private readonly logger: Logger,
     /** @deprecated This will be removed, we want to have a nice adapter here */
     private readonly yagna: YagnaApi,
     private readonly storageProvider: StorageProvider,
+    public readonly networkNode?: NetworkNode,
     private readonly leaseOptions?: {
       paymentOptions: {
         invoiceFilter: InvoiceFilter;
@@ -110,8 +114,10 @@ export class LeaseProcess {
         this.yagna.activity.control,
         this.yagna.activity.exec,
         this.currentActivity,
+        this.networkApi,
         {
           storageProvider: this.storageProvider,
+          networkNode: this.networkNode,
         },
       );
     }
@@ -120,9 +126,17 @@ export class LeaseProcess {
     this.currentActivity = activity;
 
     // Access your work context to perform operations
-    const ctx = new WorkContext(this.activityApi, this.yagna.activity.control, this.yagna.activity.exec, activity, {
-      storageProvider: this.storageProvider,
-    });
+    const ctx = new WorkContext(
+      this.activityApi,
+      this.yagna.activity.control,
+      this.yagna.activity.exec,
+      activity,
+      this.networkApi,
+      {
+        storageProvider: this.storageProvider,
+        networkNode: this.networkNode,
+      },
+    );
 
     await ctx.before();
 

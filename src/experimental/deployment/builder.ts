@@ -64,6 +64,7 @@ export class GolemDeploymentBuilder {
         payment: this.glm.payment,
         market: this.glm.market,
         activity: this.glm.activity,
+        network: this.glm.network,
       },
       {
         dataTransferProtocol: this.glm.options.dataTransferProtocol ?? "gftp",
