@@ -19,7 +19,7 @@ export enum JobState {
 export type RunJobOptions = {
   payment?: PaymentModuleOptions;
   network?: NetworkOptions;
-  activity?: WorkloadDemandDirectorConfigOptions;
+  workload?: WorkloadDemandDirectorConfigOptions;
   work?: WorkOptions;
 };
 
@@ -68,13 +68,13 @@ export class Job<Output = unknown> {
   /**
    * @param id
    * @param glm
-   * @param demandSpec
+   * @param order
    * @param logger
    */
   constructor(
     public readonly id: string,
     private readonly glm: GolemNetwork,
-    private readonly demandSpec: MarketOrderSpec,
+    private readonly order: MarketOrderSpec,
     private readonly logger: Logger,
   ) {}
 
@@ -132,7 +132,7 @@ export class Job<Output = unknown> {
       throw new GolemAbortError("Canceled");
     }
 
-    const lease = await this.glm.oneOf(this.demandSpec);
+    const lease = await this.glm.oneOf(this.order);
 
     const workContext = await lease.getExeUnit();
     this.events.emit("started");

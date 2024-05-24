@@ -50,7 +50,7 @@ describe("Deployment builder", () => {
             },
           },
         });
-    }).toThrow(new GolemConfigError(`Activity pool with name my-pool already exists`));
+    }).toThrow(new GolemConfigError(`Lease Process Pool with name my-pool already exists`));
   });
   it("throws an error when creating a network with the same name", () => {
     const builder = new GolemDeploymentBuilder(mockGolemNetwork);

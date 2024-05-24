@@ -11,6 +11,11 @@ import { GolemUserError } from "../shared/error/golem-error";
 import { IPaymentApi } from "./types";
 import { getMessageFromApiError } from "../shared/utils/apiErrorMessage";
 
+export interface PaymentOptions {
+  invoiceFilter: InvoiceFilter;
+  debitNoteFilter: DebitNoteFilter;
+}
+
 /**
  * Process manager that controls the logic behind processing events related to an agreement which result with payments
  */
@@ -31,10 +36,7 @@ export class AgreementPaymentProcess {
     public readonly agreement: Agreement,
     public readonly allocation: Allocation,
     public readonly paymentApi: IPaymentApi,
-    public readonly filters: {
-      invoiceFilter: InvoiceFilter;
-      debitNoteFilter: DebitNoteFilter;
-    } = {
+    public readonly options: PaymentOptions = {
       invoiceFilter: () => true,
       debitNoteFilter: () => true,
     },
@@ -96,7 +98,7 @@ export class AgreementPaymentProcess {
 
     let acceptedByFilter = false;
     try {
-      acceptedByFilter = await this.filters.debitNoteFilter(debitNote.dto);
+      acceptedByFilter = await this.options.debitNoteFilter(debitNote.dto);
     } catch (error) {
       throw new GolemUserError("An error occurred in the debit note filter", error);
     }
@@ -194,7 +196,7 @@ export class AgreementPaymentProcess {
 
     let acceptedByFilter = false;
     try {
-      acceptedByFilter = await this.filters.invoiceFilter(invoice.dto);
+      acceptedByFilter = await this.options.invoiceFilter(invoice.dto);
     } catch (error) {
       throw new GolemUserError("An error occurred in the invoice filter", error);
     }
