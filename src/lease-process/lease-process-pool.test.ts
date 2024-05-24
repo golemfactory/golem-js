@@ -1,17 +1,19 @@
 import { _, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
-import type { Agreement, IAgreementApi } from "./agreement";
+import type { Agreement, IAgreementApi } from "../market/agreement/agreement";
 import { LeaseProcess } from "./lease-process";
 import { Allocation, IPaymentApi } from "../payment";
 import type { MarketModule, OfferProposal } from "../market";
 import { DraftOfferProposalPool } from "../market";
 import { LeaseProcessPool } from "./lease-process-pool";
 import { type RequireAtLeastOne } from "../shared/utils/types";
+import { NetworkModule } from "../network";
 
 const agreementApi = imock<IAgreementApi>();
 const paymentApi = imock<IPaymentApi>();
 const allocation = mock(Allocation);
 const proposalPool = mock(DraftOfferProposalPool);
 const marketModule = imock<MarketModule>();
+const networkModule = imock<NetworkModule>();
 
 function getMockLeaseProcess() {
   return {
@@ -28,6 +30,8 @@ function getLeasePool(replicas: RequireAtLeastOne<{ min: number; max: number }>)
     allocation: instance(allocation),
     proposalPool: instance(proposalPool),
     marketModule: instance(marketModule),
+    networkModule: instance(networkModule),
+    network: undefined,
     replicas,
   });
 }
@@ -49,7 +53,7 @@ describe("LeaseProcessPool", () => {
         getDto: () => ({}),
       } as Agreement);
       when(proposalPool.remove(_)).thenResolve();
-      when(marketModule.createLease(_, _)).thenCall(() => ({}) as LeaseProcess);
+      when(marketModule.createLease(_, _, _)).thenCall(() => ({}) as LeaseProcess);
 
       const pool = getLeasePool({ min: 5, max: 10 });
 
@@ -61,7 +65,7 @@ describe("LeaseProcessPool", () => {
     it("retries on error", async () => {
       when(proposalPool.acquire()).thenResolve({} as OfferProposal);
       when(proposalPool.remove(_)).thenResolve();
-      when(marketModule.createLease(_, _)).thenCall(() => ({}) as LeaseProcess);
+      when(marketModule.createLease(_, _, _)).thenCall(() => ({}) as LeaseProcess);
 
       const fakeAgreement = { getDto: () => ({}) } as Agreement;
       when(agreementApi.proposeAgreement(_))

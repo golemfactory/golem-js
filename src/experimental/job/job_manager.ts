@@ -2,14 +2,13 @@ import { v4 } from "uuid";
 import { Job, RunJobOptions } from "./job";
 import { defaultLogger, Logger, runtimeContextChecker, YagnaOptions } from "../../shared/utils";
 import { GolemUserError } from "../../shared/error/golem-error";
-import { GolemNetwork } from "../../golem-network/golem-network";
+import { GolemNetwork, MarketOrderSpec } from "../../golem-network/golem-network";
 import {
   GftpStorageProvider,
   NullStorageProvider,
   StorageProvider,
   WebSocketBrowserStorageProvider,
 } from "../../shared/storage";
-import { MarketOrderSpec } from "../../market";
 
 export type JobManagerConfig = Partial<RunJobOptions> & {
   yagna?: YagnaOptions;
@@ -57,13 +56,13 @@ export class JobManager {
    * Create a new job and add it to the list of jobs managed by this instance.
    * This method does not start any work on the network, use {@link Job.startWork} for that.
    *
-   * @param demandSpec
+   * @param order
    */
-  public createJob<Output = unknown>(demandSpec: MarketOrderSpec) {
+  public createJob<Output = unknown>(order: MarketOrderSpec) {
     this.checkInitialization();
 
     const jobId = v4();
-    const job = new Job<Output>(jobId, this.glm, demandSpec, this.logger);
+    const job = new Job<Output>(jobId, this.glm, order, this.logger);
     this.jobs.set(jobId, job);
 
     return job;

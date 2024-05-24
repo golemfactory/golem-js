@@ -1,15 +1,16 @@
-import { GolemAbortError, GolemUserError } from "../shared/error/golem-error";
-import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
+import { GolemAbortError, GolemUserError } from "../../shared/error/golem-error";
+import { defaultLogger, Logger, YagnaApi } from "../../shared/utils";
 import { EventEmitter } from "eventemitter3";
-import { ActivityModule } from "../activity";
-import { Network, NetworkOptions } from "../network";
-import { GftpStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../shared/storage";
+import { ActivityModule } from "../../activity";
+import { Network, NetworkModule, NetworkOptions } from "../../network";
+import { GftpStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../../shared/storage";
 import { validateDeployment } from "./validate-deployment";
-import { DraftOfferProposalPool, MarketModule } from "../market";
-import { PaymentModule } from "../payment";
-import { CreateActivityPoolOptions } from "./builder";
+import { DraftOfferProposalPool, MarketModule } from "../../market";
+import { PaymentModule } from "../../payment";
+import { CreateLeaseProcessPoolOptions } from "./builder";
 import { Subscription } from "rxjs";
-import { LeaseProcessPool, LeaseProcessPoolOptions } from "../agreement";
+import { LeaseProcessPool } from "../../lease-process";
+import { DataTransferProtocol } from "../../shared/types";
 
 export enum DeploymentState {
   INITIAL = "INITIAL",
@@ -44,11 +45,9 @@ export interface DeploymentEvents {
 }
 
 export type DeploymentComponents = {
-  activityPools: { name: string; options: CreateActivityPoolOptions }[];
+  leaseProcessPools: { name: string; options: CreateLeaseProcessPoolOptions }[];
   networks: { name: string; options: NetworkOptions }[];
 };
-
-export type DataTransferProtocol = "gftp" | "ws" | StorageProvider;
 
 export interface DeploymentOptions {
   dataTransferProtocol?: DataTransferProtocol;
@@ -83,6 +82,7 @@ export class Deployment {
     market: MarketModule;
     activity: ActivityModule;
     payment: PaymentModule;
+    network: NetworkModule;
   };
 
   constructor(
@@ -93,6 +93,7 @@ export class Deployment {
       market: MarketModule;
       activity: ActivityModule;
       payment: PaymentModule;
+      network: NetworkModule;
     },
     options: DeploymentOptions,
   ) {
@@ -144,7 +145,7 @@ export class Deployment {
     await this.dataTransferProtocol.init();
 
     for (const network of this.components.networks) {
-      const networkInstance = await Network.create(this.yagnaApi, network.options);
+      const networkInstance = await this.modules.network.createNetwork(network.options);
       this.networks.set(network.name, networkInstance);
     }
 
@@ -154,12 +155,13 @@ export class Deployment {
       expirationSec: 30 * 60, // 30 minutes
     });
 
-    // TODO: add pool to network
     // TODO: pass dataTransferProtocol to pool
-    for (const pool of this.components.activityPools) {
-      const { demandBuildOptions, leaseProcessPoolOptions } = this.prepareParams(pool.options);
+    for (const pool of this.components.leaseProcessPools) {
+      const network = pool.options?.deployment?.network
+        ? this.networks.get(pool.options?.deployment.network)
+        : undefined;
 
-      const demandSpecification = await this.modules.market.buildDemandDetails(demandBuildOptions.demand, allocation);
+      const demandSpecification = await this.modules.market.buildDemandDetails(pool.options.demand, allocation);
       const proposalPool = new DraftOfferProposalPool();
 
       const proposalSubscription = this.modules.market
@@ -172,11 +174,14 @@ export class Deployment {
           error: (e) => this.logger.error("Error while collecting proposals", e),
         });
 
-      const leaseProcessPool = this.modules.market.createLeaseProcessPool(
-        proposalPool,
-        allocation,
-        leaseProcessPoolOptions,
-      );
+      const leaseProcessPool = this.modules.market.createLeaseProcessPool(proposalPool, allocation, {
+        replicas: pool.options.deployment?.replicas,
+        network,
+        leaseProcessOptions: {
+          activity: pool.options?.activity,
+          payment: pool.options?.payment,
+        },
+      });
       this.pools.set(pool.name, {
         proposalPool,
         proposalSubscription,
@@ -207,7 +212,9 @@ export class Deployment {
       );
       await Promise.allSettled(stopPools);
 
-      const stopNetworks: Promise<void>[] = Array.from(this.networks.values()).map((network) => network.remove());
+      const stopNetworks: Promise<void>[] = Array.from(this.networks.values()).map((network) =>
+        this.modules.network.removeNetwork(network),
+      );
       await Promise.allSettled(stopNetworks);
 
       this.state = DeploymentState.STOPPED;
@@ -241,27 +248,5 @@ export class Deployment {
     const readyPools = [...this.pools.values()].map((component) => component.leaseProcessPool.ready());
     await Promise.all(readyPools);
     this.logger.info("Components deployed and ready to use");
-  }
-
-  private prepareParams(options: CreateActivityPoolOptions): {
-    demandBuildOptions: DemandBuildParams;
-    leaseProcessPoolOptions: LeaseProcessPoolOptions;
-  } {
-    const replicas =
-      typeof options.deployment?.replicas === "number"
-        ? { min: options.deployment?.replicas, max: options.deployment?.replicas }
-        : typeof options.deployment?.replicas === "object"
-          ? options.deployment?.replicas
-          : { min: 1, max: 1 };
-    return {
-      demandBuildOptions: {
-        demand: options.demand,
-        market: options.market,
-      },
-      leaseProcessPoolOptions: {
-        agreementOptions: { invoiceFilter: options.payment?.invoiceFilter },
-        replicas,
-      },
-    };
   }
 }

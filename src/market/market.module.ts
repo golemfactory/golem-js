@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
-import { Agreement, LeaseProcess, LeaseProcessOptions, LeaseProcessPool, LeaseProcessPoolOptions } from "../agreement";
+import { Agreement } from "./agreement";
 import {
   Demand,
   DraftOfferProposalPool,
@@ -10,11 +10,11 @@ import {
   NewProposalEvent,
 } from "./index";
 import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
-import { Allocation, IPaymentApi, PaymentOptions } from "../payment";
+import { Allocation, IPaymentApi } from "../payment";
 import { bufferTime, catchError, filter, map, mergeMap, Observable, of, OperatorFunction, switchMap, tap } from "rxjs";
 import { IProposalRepository, OfferProposal, ProposalFilterNew } from "./offer-proposal";
 import { DemandBodyBuilder } from "./demand/demand-body-builder";
-import { IAgreementApi } from "../agreement/agreement";
+import { IAgreementApi } from "./agreement/agreement";
 import { BuildDemandOptions, DemandSpecification, IDemandRepository } from "./demand";
 import { ProposalsBatch } from "./proposals_batch";
 import { IActivityApi, IFileServer } from "../activity";
@@ -28,6 +28,8 @@ import { BasicDemandDirectorConfig } from "./demand/directors/basic-demand-direc
 import { PaymentDemandDirectorConfig } from "./demand/directors/payment-demand-director-config";
 import { GolemUserError } from "../shared/error/golem-error";
 import { MarketOrderSpec } from "../golem-network";
+import { NetworkModule, INetworkApi } from "../network";
+import { LeaseProcess, LeaseProcessOptions, LeaseProcessPool, LeaseProcessPoolOptions } from "../lease-process";
 
 export interface MarketEvents {}
 
@@ -186,6 +188,8 @@ export class MarketModuleImpl implements MarketModule {
       paymentApi: IPaymentApi;
       activityApi: IActivityApi;
       marketApi: MarketApi;
+      networkApi: INetworkApi;
+      networkModule: NetworkModule;
       fileServer: IFileServer;
       storageProvider: StorageProvider;
     },
@@ -389,6 +393,7 @@ export class MarketModuleImpl implements MarketModule {
       this.deps.paymentApi,
       this.deps.activityApi,
       this.agreementApi,
+      this.deps.networkApi,
       this.deps.logger,
       this.yagnaApi, // TODO: Remove this dependency
       this.deps.storageProvider,
@@ -407,6 +412,7 @@ export class MarketModuleImpl implements MarketModule {
       allocation,
       proposalPool: draftPool,
       marketModule: this,
+      networkModule: this.deps.networkModule,
       logger: this.logger.child("lease-process-pool"),
       ...options,
     });

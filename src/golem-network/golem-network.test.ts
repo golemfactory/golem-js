@@ -1,6 +1,6 @@
 import { Observable, Subscription } from "rxjs";
 import { ActivityModuleImpl } from "../activity";
-import { LeaseProcess, LeaseProcessPool } from "../agreement";
+import { LeaseProcess, LeaseProcessPool } from "../lease-process";
 import { MarketOrderSpec, DraftOfferProposalPool, MarketModuleImpl, OfferProposal } from "../market";
 import { NetworkModuleImpl } from "../network/network.module";
 import { Allocation, PaymentModuleImpl } from "../payment";
@@ -88,7 +88,7 @@ describe("Golem Network", () => {
       const mockLease = {
         finalize: jest.fn().mockImplementation(() => Promise.resolve()) as LeaseProcess["finalize"],
       } as LeaseProcess;
-      when(mockMarket.createLease(_, _)).thenReturn(mockLease);
+      when(mockMarket.createLease(_, _, _)).thenReturn(mockLease);
       const mockSubscription = mockStartCollectingProposals();
       const mockAllocation = mockPaymentCreateAllocation();
       jest.spyOn(DraftOfferProposalPool.prototype, "acquire").mockResolvedValue({} as OfferProposal);

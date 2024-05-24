@@ -1,6 +1,6 @@
 import { Activity, ActivityStateEnum, IActivityRepository } from "../../../activity/activity";
 import { ActivityApi } from "ya-ts-client";
-import { IAgreementRepository } from "../../../agreement/agreement";
+import { IAgreementRepository } from "../../../market/agreement/agreement";
 import { getMessageFromApiError } from "../../utils/apiErrorMessage";
 import { GolemWorkError, WorkErrorCode } from "../../../activity";
 

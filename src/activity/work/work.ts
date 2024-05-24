@@ -1,4 +1,4 @@
-import { Activity, ActivityStateEnum, ExecutionConfig, IActivityApi, Result } from "../";
+import { Activity, ActivityStateEnum, IActivityApi, Result } from "../";
 import {
   Capture,
   Command,
@@ -19,12 +19,13 @@ import { NetworkNode } from "../../network";
 import { RemoteProcess } from "./process";
 import { GolemWorkError, WorkErrorCode } from "./error";
 import { GolemConfigError, GolemTimeoutError } from "../../shared/error/golem-error";
-import { ProviderInfo } from "../../agreement";
+import { ProviderInfo } from "../../market/agreement";
 import { TcpProxy } from "../../network/tcpProxy";
-import { AgreementDTO } from "../../agreement/service";
+import { AgreementDTO } from "../../market/agreement/service";
 import { ActivityApi } from "ya-ts-client";
 import { YagnaExeScriptObserver } from "../../shared/yagna";
 import { ExecutionOptions, ExeScriptExecutor } from "../exe-script-executor";
+import { INetworkApi } from "../../network/api";
 
 export type Worker<OutputType> = (ctx: WorkContext) => Promise<OutputType>;
 
@@ -76,6 +77,7 @@ export class WorkContext {
     public readonly activityControl: ActivityApi.RequestorControlService,
     public readonly execObserver: YagnaExeScriptObserver,
     public readonly activity: Activity,
+    private readonly networkApi: INetworkApi,
     private options?: WorkOptions,
   ) {
     this.activityPreparingTimeout = options?.activityPreparingTimeout || DEFAULTS.activityPreparingTimeout;
@@ -359,7 +361,7 @@ export class WorkContext {
         this.activity.getProviderInfo(),
       );
 
-    return this.networkNode.getWebsocketUri(port);
+    return this.networkApi.getWebsocketUri(this.networkNode, port);
   }
 
   getIp(): string {
@@ -371,7 +373,7 @@ export class WorkContext {
         this.activity,
         this.activity.getProviderInfo(),
       );
-    return this.networkNode.ip.toString();
+    return this.networkNode.ip;
   }
 
   /**

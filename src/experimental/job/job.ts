@@ -1,5 +1,4 @@
 import { Worker, WorkOptions } from "../../activity/work";
-import { LegacyAgreementServiceOptions } from "../../agreement";
 import { NetworkOptions } from "../../network";
 import { PaymentModuleOptions } from "../../payment";
 import { EventEmitter } from "eventemitter3";
@@ -19,7 +18,6 @@ export enum JobState {
 
 export type RunJobOptions = {
   payment?: PaymentModuleOptions;
-  agreement?: LegacyAgreementServiceOptions;
   network?: NetworkOptions;
   activity?: WorkloadDemandDirectorConfigOptions;
   work?: WorkOptions;

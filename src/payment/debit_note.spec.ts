@@ -3,7 +3,7 @@ import { imock, instance, mock, reset, when } from "@johanblumenberg/ts-mockito"
 import { YagnaApi } from "../shared/utils";
 import { MarketApi, PaymentApi } from "ya-ts-client";
 import Decimal from "decimal.js-light";
-import { ProviderInfo } from "../agreement";
+import { ProviderInfo } from "../market/agreement";
 
 const mockYagna = mock(YagnaApi);
 const mockPayment = mock(PaymentApi.RequestorService);

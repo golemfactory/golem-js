@@ -1,6 +1,6 @@
 import { Allocation, IPaymentApi } from "../payment";
 import { filter } from "rxjs";
-import { Agreement, IAgreementApi } from "./agreement";
+import { Agreement, IAgreementApi } from "../market/agreement/agreement";
 import { AgreementPaymentProcess } from "../payment/agreement_payment_process";
 import { DebitNoteFilter, InvoiceFilter } from "../payment/service";
 import { Logger, YagnaApi } from "../shared/utils";
@@ -8,6 +8,7 @@ import { waitForCondition } from "../shared/utils/waitForCondition";
 import { Activity, IActivityApi, WorkContext } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { EventEmitter } from "eventemitter3";
+import { NetworkNode, INetworkApi } from "../network";
 import { ExecutionOptions } from "../activity/exe-script-executor";
 
 export interface LeaseProcessEvents {
@@ -25,6 +26,7 @@ export interface PaymentOptions {
 export interface LeaseProcessOptions {
   activity?: ExecutionOptions;
   payment?: PaymentOptions;
+  networkNode?: NetworkNode;
 }
 
 /**
@@ -33,6 +35,7 @@ export interface LeaseProcessOptions {
 
 export class LeaseProcess {
   public readonly events = new EventEmitter<LeaseProcessEvents>();
+  public readonly networkNode?: NetworkNode;
   private paymentProcess: AgreementPaymentProcess;
 
   private currentActivity: Activity | null = null;
@@ -43,6 +46,7 @@ export class LeaseProcess {
     private readonly paymentApi: IPaymentApi,
     private readonly activityApi: IActivityApi,
     private readonly agreementApi: IAgreementApi,
+    private readonly networkApi: INetworkApi,
     private readonly logger: Logger,
     /** @deprecated This will be removed, we want to have a nice adapter here */
     private readonly yagna: YagnaApi,
@@ -56,6 +60,7 @@ export class LeaseProcess {
       this.leaseOptions?.payment,
       this.logger,
     );
+    this.networkNode = this.leaseOptions?.networkNode;
 
     // TODO: Listen to agreement events to know when it goes down due to provider closing it!
 
@@ -116,8 +121,10 @@ export class LeaseProcess {
         this.yagna.activity.control,
         this.yagna.activity.exec,
         this.currentActivity,
+        this.networkApi,
         {
           storageProvider: this.storageProvider,
+          networkNode: this.leaseOptions?.networkNode,
           execution: this.leaseOptions?.activity,
         },
       );
@@ -127,10 +134,18 @@ export class LeaseProcess {
     this.currentActivity = activity;
 
     // Access your work context to perform operations
-    const ctx = new WorkContext(this.activityApi, this.yagna.activity.control, this.yagna.activity.exec, activity, {
-      storageProvider: this.storageProvider,
-      execution: this.leaseOptions?.activity,
-    });
+    const ctx = new WorkContext(
+      this.activityApi,
+      this.yagna.activity.control,
+      this.yagna.activity.exec,
+      activity,
+      this.networkApi,
+      {
+        storageProvider: this.storageProvider,
+        networkNode: this.networkNode,
+        execution: this.leaseOptions?.activity,
+      },
+    );
 
     await ctx.before();
 

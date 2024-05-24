@@ -1,13 +1,14 @@
-import type { IAgreementApi, LegacyAgreementServiceOptions } from "./agreement";
+import type { IAgreementApi } from "../market/agreement/agreement";
 import type { Logger } from "../shared/utils";
 import { defaultLogger } from "../shared/utils";
 import type { DraftOfferProposalPool, MarketModule } from "../market";
 import { GolemMarketError, MarketErrorCode } from "../market";
-import type { AgreementDTO } from "./service";
+import type { AgreementDTO } from "../market/agreement/service";
 import { EventEmitter } from "eventemitter3";
 import type { RequireAtLeastOne } from "../shared/utils/types";
 import type { Allocation, IPaymentApi } from "../payment";
-import type { LeaseProcess } from "./lease-process";
+import type { LeaseProcess, LeaseProcessOptions } from "./lease-process";
+import { Network, NetworkModule } from "../network";
 
 export interface LeaseProcessPoolDependencies {
   agreementApi: IAgreementApi;
@@ -15,12 +16,14 @@ export interface LeaseProcessPoolDependencies {
   allocation: Allocation;
   proposalPool: DraftOfferProposalPool;
   marketModule: MarketModule;
+  networkModule: NetworkModule;
   logger?: Logger;
 }
 
 export interface LeaseProcessPoolOptions {
   replicas?: number | RequireAtLeastOne<{ min: number; max: number }>;
-  agreementOptions?: LegacyAgreementServiceOptions;
+  network?: Network;
+  leaseProcessOptions?: LeaseProcessOptions;
 }
 
 export interface LeaseProcessPoolEvents {
@@ -55,17 +58,23 @@ export class LeaseProcessPool {
   private logger: Logger;
 
   private allocation: Allocation;
+  private network?: Network;
   private agreementApi: IAgreementApi;
   private proposalPool: DraftOfferProposalPool;
   private marketModule: MarketModule;
+  private networkModule: NetworkModule;
   private readonly minPoolSize: number;
   private readonly maxPoolSize: number;
+  private readonly leaseProcessOptions?: LeaseProcessOptions;
 
   constructor(options: LeaseProcessPoolOptions & LeaseProcessPoolDependencies) {
     this.agreementApi = options.agreementApi;
     this.allocation = options.allocation;
     this.proposalPool = options.proposalPool;
     this.marketModule = options.marketModule;
+    this.networkModule = options.networkModule;
+    this.network = options.network;
+    this.leaseProcessOptions = options.leaseProcessOptions;
 
     this.logger = this.logger = options?.logger || defaultLogger("lease-process-pool");
 
@@ -94,7 +103,13 @@ export class LeaseProcessPool {
       const agreement = await this.agreementApi.proposeAgreement(proposal);
       // After reaching an agreement, the proposal is useless
       await this.proposalPool.remove(proposal);
-      const leaseProcess = this.marketModule.createLease(agreement, this.allocation);
+      const networkNode = this.network
+        ? await this.networkModule.createNetworkNode(this.network, agreement.getProviderInfo().id)
+        : undefined;
+      const leaseProcess = this.marketModule.createLease(agreement, this.allocation, {
+        networkNode,
+        ...this.leaseProcessOptions,
+      });
       this.events.emit("created", agreement.getDto());
       return leaseProcess;
     } catch (error) {
@@ -210,7 +225,7 @@ export class LeaseProcessPool {
     try {
       this.borrowed.delete(leaseProcess);
       this.logger.debug("Destroying lease process from the pool", { agreementId: leaseProcess.agreement.id });
-      await leaseProcess.finalize();
+      await Promise.all([leaseProcess.finalize(), this.removeNetworkNode(leaseProcess)]);
       this.events.emit("destroyed", leaseProcess.agreement.getDto());
     } catch (error) {
       this.events.emit(
@@ -313,6 +328,16 @@ export class LeaseProcessPool {
       throw new Error("Could not create enough lease processes to reach the minimum pool size in time");
     }
     this.events.emit("ready");
+  }
+
+  private async removeNetworkNode(leaseProcess: LeaseProcess) {
+    if (this.network && leaseProcess.networkNode) {
+      this.logger.debug("Removing a node from the network", {
+        network: this.network.getNetworkInfo().ip,
+        nodeIp: leaseProcess.networkNode.ip,
+      });
+      await this.networkModule.removeNetworkNode(this.network, leaseProcess.networkNode);
+    }
   }
 
   /**

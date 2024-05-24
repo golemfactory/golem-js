@@ -7,6 +7,7 @@ export * as MarketHelpers from "./helpers";
 export * from "./draft-offer-proposal-pool";
 export * from "./market.module";
 export * from "./api";
+export * from "./agreement";
 export { BasicDemandDirector } from "./demand/directors/basic-demand-director";
 export { PaymentDemandDirector } from "./demand/directors/payment-demand-director";
 export { WorkloadDemandDirector } from "./demand/directors/workload-demand-director";

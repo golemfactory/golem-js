@@ -1,8 +1,8 @@
 import Bottleneck from "bottleneck";
-import { defaultLogger, Logger, sleep, YagnaApi } from "../shared/utils";
+import { defaultLogger, Logger, sleep, YagnaApi } from "../../shared/utils";
 import { Agreement, IAgreementApi, LegacyAgreementServiceOptions } from "./agreement";
 import { AgreementServiceConfig } from "./config";
-import { GolemMarketError, MarketErrorCode, OfferProposal } from "../market";
+import { GolemMarketError, MarketErrorCode, OfferProposal } from "../index";
 
 export interface AgreementDTO {
   id: string;

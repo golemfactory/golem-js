@@ -1,5 +1,5 @@
 import { Logger } from "../shared/utils";
-import { Agreement, ProviderInfo } from "../agreement";
+import { Agreement, ProviderInfo } from "../market/agreement";
 import { EventEmitter } from "eventemitter3";
 import { ActivityApi } from "ya-ts-client";
 import { YagnaExeScriptObserver } from "../shared/yagna";

@@ -1,6 +1,6 @@
-import { GolemConfigError } from "../shared/error/golem-error";
+import { GolemConfigError } from "../../shared/error/golem-error";
 import { GolemDeploymentBuilder } from "./builder";
-import { GolemNetwork } from "../golem-network";
+import { GolemNetwork } from "../../golem-network";
 import { imock } from "@johanblumenberg/ts-mockito";
 
 const mockGolemNetwork = imock<GolemNetwork>();
@@ -10,7 +10,7 @@ describe("Deployment builder", () => {
     const builder = new GolemDeploymentBuilder(mockGolemNetwork);
     expect(() => {
       builder
-        .createActivityPool("my-pool", {
+        .createLeaseProcessPool("my-pool", {
           demand: {
             workload: {
               imageTag: "image",
@@ -30,7 +30,7 @@ describe("Deployment builder", () => {
             },
           },
         })
-        .createActivityPool("my-pool", {
+        .createLeaseProcessPool("my-pool", {
           demand: {
             workload: {
               imageTag: "image",
@@ -57,10 +57,10 @@ describe("Deployment builder", () => {
     expect(() => {
       builder
         .createNetwork("my-network", {
-          networkOwnerId: "test",
+          id: "test",
         })
         .createNetwork("my-network", {
-          networkOwnerId: "test",
+          id: "test",
         });
     }).toThrow(new GolemConfigError(`Network with name my-network already exists`));
   });
@@ -69,9 +69,9 @@ describe("Deployment builder", () => {
     expect(() => {
       builder
         .createNetwork("existing-network", {
-          networkOwnerId: "test",
+          id: "test",
         })
-        .createActivityPool("my-pool", {
+        .createLeaseProcessPool("my-pool", {
           demand: {
             workload: { imageTag: "image", minCpuCores: 1, minMemGib: 1, minStorageGib: 1 },
           },

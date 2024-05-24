@@ -1,4 +1,5 @@
 import { GolemNetwork } from "@golem-sdk/golem-js";
+import { GolemDeploymentBuilder } from "@golem-sdk/golem-js/experimental";
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
 async function main() {
@@ -11,15 +12,15 @@ async function main() {
   try {
     await golem.connect();
 
-    const builder = golem.creteDeploymentBuilder();
+    const builder = new GolemDeploymentBuilder(golem);
 
     builder
       .createNetwork("basic", {
-        networkOwnerId: "test",
+        ip: "192.168.7.0/24",
       })
-      .createActivityPool("app", {
+      .createLeaseProcessPool("app", {
         demand: {
-          activity: {
+          workload: {
             imageTag: "golem/node:latest",
           },
         },
@@ -42,9 +43,9 @@ async function main() {
           network: "basic",
         },
       })
-      .createActivityPool("db", {
+      .createLeaseProcessPool("db", {
         demand: {
-          activity: {
+          workload: {
             imageTag: "golem/alpine:latest",
             minCpuCores: 1,
             minMemGib: 2,

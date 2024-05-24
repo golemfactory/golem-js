@@ -1,7 +1,7 @@
 import { RemoteProcess } from "./process";
 import { imock, instance, mock, reset } from "@johanblumenberg/ts-mockito";
 import { Logger, YagnaApi } from "../../shared/utils";
-import { Agreement } from "../../agreement";
+import { Agreement } from "../../market/agreement";
 import { Activity, IActivityApi } from "../index";
 import {
   buildExecutorResults,

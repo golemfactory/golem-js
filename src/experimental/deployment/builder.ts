@@ -1,45 +1,39 @@
-import { GolemConfigError } from "../shared/error/golem-error";
-import { NetworkOptions } from "../network";
+import { GolemConfigError } from "../../shared/error/golem-error";
+import { NetworkOptions } from "../../network";
 import { Deployment, DeploymentComponents } from "./deployment";
-import { GolemNetwork } from "../golem-network/golem-network";
+import { GolemNetwork, MarketOrderSpec } from "../../golem-network";
 import { validateDeployment } from "./validate-deployment";
-import { MarketOptions } from "../market";
-import { PaymentModuleOptions } from "../payment";
-import { BuildDemandOptions } from "../market/demand";
 
 interface DeploymentOptions {
   replicas?: number | { min: number; max: number };
   network?: string;
 }
 
-export interface CreateActivityPoolOptions {
-  demand: BuildDemandOptions;
-  market: MarketOptions;
+export interface CreateLeaseProcessPoolOptions extends MarketOrderSpec {
   deployment?: DeploymentOptions;
-  payment?: PaymentModuleOptions;
 }
 
 export class GolemDeploymentBuilder {
   private components: DeploymentComponents = {
-    activityPools: [],
+    leaseProcessPools: [],
     networks: [],
   };
 
   public reset() {
     this.components = {
-      activityPools: [],
+      leaseProcessPools: [],
       networks: [],
     };
   }
 
   constructor(private glm: GolemNetwork) {}
 
-  createActivityPool(name: string, options: CreateActivityPoolOptions): this {
-    if (this.components.activityPools.some((pool) => pool.name === name)) {
-      throw new GolemConfigError(`Activity pool with name ${name} already exists`);
+  createLeaseProcessPool(name: string, options: CreateLeaseProcessPoolOptions): this {
+    if (this.components.leaseProcessPools.some((pool) => pool.name === name)) {
+      throw new GolemConfigError(`Lease Process Pool with name ${name} already exists`);
     }
 
-    this.components.activityPools.push({ name, options });
+    this.components.leaseProcessPools.push({ name, options });
 
     return this;
   }
@@ -64,6 +58,7 @@ export class GolemDeploymentBuilder {
         payment: this.glm.payment,
         market: this.glm.market,
         activity: this.glm.activity,
+        network: this.glm.network,
       },
       {
         dataTransferProtocol: this.glm.options.dataTransferProtocol ?? "gftp",

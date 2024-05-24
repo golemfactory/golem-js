@@ -20,7 +20,7 @@ const getImagePath = (path: string) => fileURLToPath(new URL(path, import.meta.u
 
     const demand = {
       demand: {
-        activity: {
+        workload: {
           // Here you supply the path to the GVMI file that you want to deploy and use
           // using the file:// protocol will make the SDK switch to "GVMI" serving mode
           imageUrl: `file://${getImagePath("./alpine.gvmi")}`,

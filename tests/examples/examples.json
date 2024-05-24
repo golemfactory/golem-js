@@ -1,6 +1,8 @@
 [
-  { "cmd": "tsx", "path": "examples/basic/hello-world.ts" },
-  { "cmd": "tsx", "path": "examples/pool/hello-world.ts" },
   { "cmd": "tsx", "path": "examples/basic/many-of.ts" },
-  { "cmd": "tsx", "path": "examples/deployment/new-api.ts" }
+  { "cmd": "tsx", "path": "examples/basic/one-of.ts" },
+  { "cmd": "tsx", "path": "examples/basic/vpn.ts" },
+  { "cmd": "tsx", "path": "examples/advanced/hello-world.ts" },
+  { "cmd": "tsx", "path": "examples/advanced/manual-pools.ts" },
+  { "cmd": "tsx", "path": "examples/experimental/deployment/new-api.ts" }
 ]

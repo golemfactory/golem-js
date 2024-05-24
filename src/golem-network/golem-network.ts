@@ -1,4 +1,3 @@
-import { DataTransferProtocol, GolemDeploymentBuilder } from "../deployment";
 import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
 import {
   Demand,
@@ -11,14 +10,14 @@ import {
 } from "../market";
 import { IPaymentApi, PaymentModule, PaymentModuleImpl, PaymentModuleOptions } from "../payment";
 import { ActivityModule, ActivityModuleImpl, IActivityApi, IFileServer } from "../activity";
-import { NetworkModule, NetworkModuleImpl } from "../network/network.module";
+import { Network, NetworkModule, NetworkModuleImpl, NetworkOptions, INetworkApi } from "../network";
 import { EventEmitter } from "eventemitter3";
-import { LeaseProcess, LeaseProcessOptions, LeaseProcessPool, LeaseProcessPoolOptions } from "../agreement";
+import { LeaseProcess, LeaseProcessOptions, LeaseProcessPool, LeaseProcessPoolOptions } from "../lease-process";
 import { DebitNoteRepository, InvoiceRepository, MarketApiAdapter, PaymentApiAdapter } from "../shared/yagna";
 import { ActivityApiAdapter } from "../shared/yagna/adapters/activity-api-adapter";
 import { ActivityRepository } from "../shared/yagna/repository/activity-repository";
 import { AgreementRepository } from "../shared/yagna/repository/agreement-repository";
-import { IAgreementApi } from "../agreement/agreement";
+import { IAgreementApi } from "../market/agreement/agreement";
 import { AgreementApiAdapter } from "../shared/yagna/adapters/agreement-api-adapter";
 import { ProposalRepository } from "../shared/yagna/repository/proposal-repository";
 import { CacheService } from "../shared/cache/CacheService";
@@ -32,7 +31,8 @@ import {
   StorageProvider,
   WebSocketBrowserStorageProvider,
 } from "../shared/storage";
-import { Network } from "../network";
+import { DataTransferProtocol } from "../shared/types";
+import { NetworkApiAdapter } from "../shared/yagna/adapters/network-api-adapter";
 
 export interface GolemNetworkOptions {
   /**
@@ -111,6 +111,7 @@ export type GolemServices = {
   activityApi: IActivityApi;
   agreementApi: IAgreementApi;
   marketApi: MarketApi;
+  networkApi: INetworkApi;
   proposalCache: CacheService<OfferProposal>;
   proposalRepository: IProposalRepository;
   demandRepository: IDemandRepository;
@@ -211,13 +212,14 @@ export class GolemNetwork {
           this.options.override?.agreementApi ||
           new AgreementApiAdapter(this.yagna.appSessionId, this.yagna.market, agreementRepository, this.logger),
         marketApi: this.options.override?.marketApi || new MarketApiAdapter(this.yagna, this.logger),
+        networkApi: this.options.override?.networkApi || new NetworkApiAdapter(this.yagna, this.logger),
         fileServer: this.options.override?.fileServer || new GftpServerAdapter(this.storageProvider),
       };
-
-      this.market = this.options.override?.market || new MarketModuleImpl(this.services);
+      this.network = this.options.override?.network || new NetworkModuleImpl(this.services);
+      this.market =
+        this.options.override?.market || new MarketModuleImpl({ ...this.services, networkModule: this.network });
       this.payment = this.options.override?.payment || new PaymentModuleImpl(this.services, this.options.payment);
       this.activity = this.options.override?.activity || new ActivityModuleImpl(this.services);
-      this.network = this.options.override?.network || new NetworkModuleImpl();
     } catch (err) {
       this.events.emit("error", err);
       throw err;
@@ -260,17 +262,6 @@ export class GolemNetwork {
   }
 
   /**
-   * Creates a new instance of deployment builder that will be bound to this GolemNetwork instance
-   *
-   * Use Case: Building a complex deployment topology and requesting resources for the whole construct
-   *
-   * @return The new instance of the builder
-   */
-  creteDeploymentBuilder(): GolemDeploymentBuilder {
-    return new GolemDeploymentBuilder(this);
-  }
-
-  /**
    * Define your computational resource demand and access a single instance
    *
    * Use Case: Get a single instance of a resource from the market to execute operations on
@@ -285,19 +276,19 @@ export class GolemNetwork {
    * await lease.finalize();
    * ```
    *
-   * @param demand
+   * @param order
    */
-  async oneOf(demand: MarketOrderSpec): Promise<LeaseProcess> {
+  async oneOf(order: MarketOrderSpec): Promise<LeaseProcess> {
     const proposalPool = new DraftOfferProposalPool({
       logger: this.logger,
     });
 
-    const budget = this.market.estimateBudget(demand);
+    const budget = this.market.estimateBudget(order);
     const allocation = await this.payment.createAllocation({
       budget,
-      expirationSec: demand.market.rentHours * 60 * 60,
+      expirationSec: order.market.rentHours * 60 * 60,
     });
-    const demandSpecification = await this.market.buildDemandDetails(demand.demand, allocation);
+    const demandSpecification = await this.market.buildDemandDetails(order.demand, allocation);
 
     const proposal$ = this.market.startCollectingProposals({
       demandSpecification,
@@ -308,7 +299,15 @@ export class GolemNetwork {
 
     const agreement = await this.market.proposeAgreement(draftProposal);
 
-    const lease = this.market.createLease(agreement, allocation);
+    const networkNode = order.network
+      ? await this.network.createNetworkNode(order.network, agreement.getProviderInfo().id)
+      : undefined;
+
+    const lease = this.market.createLease(agreement, allocation, {
+      payment: order.payment,
+      activity: order.activity,
+      networkNode,
+    });
 
     // We managed to create the activity, no need to look for more agreement candidates
     proposalSubscription.unsubscribe();
@@ -317,6 +316,11 @@ export class GolemNetwork {
       // First finalize the lease (which will wait for all payments to be processed)
       // and only then release the allocation
       await lease.finalize().catch((err) => this.logger.error("Error while finalizing lease", err));
+      if (order.network && networkNode) {
+        await this.network
+          .removeNetworkNode(order.network, networkNode)
+          .catch((err) => this.logger.error("Error while removing network node", err));
+      }
       await this.payment
         .releaseAllocation(allocation)
         .catch((err) => this.logger.error("Error while releasing allocation", err));
@@ -379,6 +383,11 @@ export class GolemNetwork {
 
     const leaseProcessPool = this.market.createLeaseProcessPool(proposalPool, allocation, {
       replicas: concurrency,
+      network: order.network,
+      leaseProcessOptions: {
+        activity: order.activity,
+        payment: order.payment,
+      },
     });
     this.cleanupTasks.push(() => subscription.unsubscribe());
     this.cleanupTasks.push(async () => {
@@ -397,6 +406,26 @@ export class GolemNetwork {
 
   isConnected() {
     return this.hasConnection;
+  }
+
+  /**
+   * Creates a new logical network within the Golem VPN infrastructure.
+   * Allows communication between network nodes using standard network mechanisms,
+   * but requires specific implementation in the ExeUnit/runtime,
+   * which must be capable of providing a standard Unix-socket interface to their payloads
+   * and marshaling the logical network traffic through the Golem Net transport layer
+   * @param options
+   */
+  async createNetwork(options?: NetworkOptions): Promise<Network> {
+    return await this.network.createNetwork(options);
+  }
+
+  /**
+   * Removes an existing network from the Golem VPN infrastructure.
+   * @param network
+   */
+  async destroyNetwork(network: Network): Promise<void> {
+    return await this.network.removeNetwork(network);
   }
 
   private createStorageProvider(): StorageProvider {

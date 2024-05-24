@@ -1,7 +1,7 @@
 import { MarketOrderSpec, GolemNetwork } from "@golem-sdk/golem-js";
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
-const demandOptions: MarketOrderSpec = {
+const order: MarketOrderSpec = {
   demand: {
     workload: { imageTag: "golem/alpine:latest" },
   },
@@ -26,7 +26,7 @@ const demandOptions: MarketOrderSpec = {
 
   try {
     await glm.connect();
-    const lease = await glm.oneOf(demandOptions);
+    const lease = await glm.oneOf(order);
     await lease
       .getExeUnit()
       .then((exe) => exe.run("echo Hello, Golem! 👋"))

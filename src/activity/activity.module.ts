@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
-import { Agreement } from "../agreement";
+import { Agreement } from "../market/agreement";
 import { Activity, IActivityApi } from "./index";
 import { defaultLogger } from "../shared/utils";
 import { GolemServices } from "../golem-network/golem-network";
@@ -121,6 +121,7 @@ export class ActivityModuleImpl implements ActivityModule {
       this.services.yagna.activity.control,
       this.services.yagna.activity.exec,
       activity,
+      this.services.networkApi,
       options,
     );
 

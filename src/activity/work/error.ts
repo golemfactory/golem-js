@@ -1,5 +1,5 @@
 import { GolemModuleError } from "../../shared/error/golem-error";
-import { Agreement, ProviderInfo } from "../../agreement";
+import { Agreement, ProviderInfo } from "../../market/agreement";
 import { Activity } from "../index";
 
 export enum WorkErrorCode {
