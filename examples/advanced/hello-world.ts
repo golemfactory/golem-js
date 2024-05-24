@@ -1,4 +1,4 @@
-import { DraftOfferProposalPool, GolemNetwork, DemandSpec } from "@golem-sdk/golem-js";
+import { DraftOfferProposalPool, GolemNetwork, MarketOrderSpec } from "@golem-sdk/golem-js";
 
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
@@ -14,7 +14,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
   try {
     await glm.connect();
 
-    const demand: DemandSpec = {
+    const order: MarketOrderSpec = {
       demand: {
         workload: {
           imageTag: "golem/alpine:latest",
@@ -37,10 +37,10 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
     });
 
     const allocation = await glm.payment.createAllocation({
-      budget: glm.market.estimateBudget(demand),
+      budget: glm.market.estimateBudget(order),
       expirationSec: 60 * 60, // 60 minutes
     });
-    const demandSpecification = await glm.market.buildDemandDetails(demand.demand, allocation);
+    const demandSpecification = await glm.market.buildDemandDetails(order.demand, allocation);
     const proposal$ = glm.market.startCollectingProposals({
       demandSpecification,
       bufferSize: 15,
