@@ -206,7 +206,10 @@ export class MarketModuleImpl implements MarketModule {
     const builder = new DemandBodyBuilder();
 
     // Instruct the builder what's required
-    const basicConfig = new BasicDemandDirectorConfig(options.basic);
+    const basicConfig = new BasicDemandDirectorConfig({
+      expirationSec: options.expirationSec,
+      subnetTag: options.subnetTag,
+    });
     const basicDirector = new BasicDemandDirector(basicConfig);
     basicDirector.apply(builder);
 

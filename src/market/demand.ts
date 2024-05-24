@@ -87,9 +87,9 @@ export type BuildDemandOptions = Partial<{
   workload: Partial<WorkloadDemandDirectorConfigOptions>;
   /** Demand properties that determine payment related terms & conditions of the agreement */
   payment: Partial<PaymentDemandDirectorConfigOptions>;
+}> &
   /** Demand properties that determine most common paramters of the agreement (based on golemsp implementation */
-  basic: Partial<BasicDemandDirectorConfigOptions>;
-}>;
+  Partial<BasicDemandDirectorConfigOptions>;
 
 export interface IDemandRepository {
   getById(id: string): Demand | undefined;

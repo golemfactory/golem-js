@@ -68,9 +68,7 @@ describe("Market module", () => {
             imageHash: "AAAAHASHAAAA",
             imageUrl: "https://custom.image.url/",
           },
-          basic: {
-            expirationSec: 42,
-          },
+          expirationSec: 42,
           payment: {
             debitNotesAcceptanceTimeoutSec: 42,
             midAgreementDebitNoteIntervalSec: 42,

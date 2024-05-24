@@ -19,6 +19,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
         workload: {
           imageTag: "golem/alpine:latest",
         },
+        expirationSec: 30 * 60,
       },
       market: {
         maxAgreements: 1,
