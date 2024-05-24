@@ -5,7 +5,7 @@ const RENT_HOURS = 0.25;
 
 const demandOptions = {
   demand: {
-    activity: {
+    workload: {
       imageTag: "golem/alpine:latest",
       minCpuCores: 1,
       minMemGib: 1,

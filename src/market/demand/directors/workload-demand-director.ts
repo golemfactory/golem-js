@@ -1,11 +1,11 @@
-import { ActivityDemandDirectorConfig } from "./activity-demand-director-config";
+import { WorkloadDemandDirectorConfig } from "./workload-demand-director-config";
 import { ComparisonOperator, DemandBodyBuilder } from "../demand-body-builder";
 import { GolemError, GolemPlatformError } from "../../../shared/error/golem-error";
 import { IDemandDirector } from "../../market.module";
 import { EnvUtils } from "../../../shared/utils";
 
-export class ActivityDemandDirector implements IDemandDirector {
-  constructor(private config: ActivityDemandDirectorConfig) {}
+export class WorkloadDemandDirector implements IDemandDirector {
+  constructor(private config: WorkloadDemandDirectorConfig) {}
 
   public async apply(builder: DemandBodyBuilder) {
     builder

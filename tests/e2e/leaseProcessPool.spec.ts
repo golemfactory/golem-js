@@ -30,7 +30,7 @@ describe("LeaseProcessPool", () => {
     proposalPool = new DraftOfferProposalPool();
     const demandSpecification = await modules.market.buildDemandDetails(
       {
-        activity: {
+        workload: {
           imageTag: "golem/alpine:latest",
         },
       },

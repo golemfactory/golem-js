@@ -60,7 +60,7 @@ describe("Market module", () => {
 
       const demandSpecification = await marketModule.buildDemandDetails(
         {
-          activity: {
+          workload: {
             imageHash: "AAAAHASHAAAA",
             imageUrl: "https://custom.image.url/",
           },

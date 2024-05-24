@@ -5,7 +5,7 @@ import { ActivityModule } from "../activity";
 import { Network, NetworkOptions } from "../network";
 import { GftpStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../shared/storage";
 import { validateDeployment } from "./validate-deployment";
-import { DemandBuildParams, DraftOfferProposalPool, MarketModule } from "../market";
+import { DraftOfferProposalPool, MarketModule } from "../market";
 import { PaymentModule } from "../payment";
 import { CreateActivityPoolOptions } from "./builder";
 import { Subscription } from "rxjs";

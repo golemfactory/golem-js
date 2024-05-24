@@ -2,18 +2,18 @@ import { DataTransferProtocol, GolemDeploymentBuilder } from "../deployment";
 import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
 import {
   Demand,
-  DemandSpec,
   DraftOfferProposalPool,
   MarketApi,
   MarketModule,
   MarketModuleImpl,
+  MarketOptions,
   OfferProposal,
 } from "../market";
 import { IPaymentApi, PaymentModule, PaymentModuleImpl, PaymentModuleOptions } from "../payment";
 import { ActivityModule, ActivityModuleImpl, IActivityApi, IFileServer } from "../activity";
 import { NetworkModule, NetworkModuleImpl } from "../network/network.module";
 import { EventEmitter } from "eventemitter3";
-import { LeaseProcess, LeaseProcessPool, LeaseProcessPoolOptions } from "../agreement";
+import { LeaseProcess, LeaseProcessOptions, LeaseProcessPool, LeaseProcessPoolOptions } from "../agreement";
 import { DebitNoteRepository, InvoiceRepository, MarketApiAdapter, PaymentApiAdapter } from "../shared/yagna";
 import { ActivityApiAdapter } from "../shared/yagna/adapters/activity-api-adapter";
 import { ActivityRepository } from "../shared/yagna/repository/activity-repository";
@@ -24,7 +24,7 @@ import { ProposalRepository } from "../shared/yagna/repository/proposal-reposito
 import { CacheService } from "../shared/cache/CacheService";
 import { IProposalRepository } from "../market/offer-proposal";
 import { DemandRepository } from "../shared/yagna/repository/demand-repository";
-import { IDemandRepository } from "../market/demand";
+import { BuildDemandOptions, IDemandRepository } from "../market/demand";
 import { GftpServerAdapter } from "../shared/storage/GftpServerAdapter";
 import {
   GftpStorageProvider,
@@ -32,6 +32,7 @@ import {
   StorageProvider,
   WebSocketBrowserStorageProvider,
 } from "../shared/storage";
+import { Network } from "../network";
 
 export interface GolemNetworkOptions {
   /**
@@ -73,6 +74,17 @@ export interface GolemNetworkOptions {
   >;
 }
 
+/**
+ * Represents the order specifications which will result in access to LeaseProcess.
+ */
+export interface MarketOrderSpec {
+  demand: BuildDemandOptions;
+  market: MarketOptions;
+  activity?: LeaseProcessOptions["activity"];
+  payment?: LeaseProcessOptions["payment"];
+  network?: Network;
+}
+
 export interface GolemNetworkEvents {
   /** Fires when all startup operations related to GN are completed */
   connected: () => void;
@@ -86,8 +98,7 @@ export interface GolemNetworkEvents {
 
 interface ManyOfOptions {
   concurrency: LeaseProcessPoolOptions["replicas"];
-  // TODO: rename to `order` or something similar when DemandSpec is renamed to MarketOrder
-  demand: DemandSpec;
+  order: MarketOrderSpec;
 }
 
 /**
@@ -276,7 +287,7 @@ export class GolemNetwork {
    *
    * @param demand
    */
-  async oneOf(demand: DemandSpec): Promise<LeaseProcess> {
+  async oneOf(demand: MarketOrderSpec): Promise<LeaseProcess> {
     const proposalPool = new DraftOfferProposalPool({
       logger: this.logger,
     });
@@ -349,17 +360,17 @@ export class GolemNetwork {
    *
    * @param options Demand specification and concurrency level
    */
-  public async manyOf({ concurrency, demand }: ManyOfOptions): Promise<LeaseProcessPool> {
+  public async manyOf({ concurrency, order }: ManyOfOptions): Promise<LeaseProcessPool> {
     const proposalPool = new DraftOfferProposalPool({
       logger: this.logger,
     });
 
-    const budget = this.market.estimateBudget(demand);
+    const budget = this.market.estimateBudget(order);
     const allocation = await this.payment.createAllocation({
       budget,
-      expirationSec: demand.market.rentHours * 60 * 60,
+      expirationSec: order.market.rentHours * 60 * 60,
     });
-    const demandSpecification = await this.market.buildDemandDetails(demand.demand, allocation);
+    const demandSpecification = await this.market.buildDemandDetails(order.demand, allocation);
 
     const proposal$ = this.market.startCollectingProposals({
       demandSpecification,

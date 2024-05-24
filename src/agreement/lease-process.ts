@@ -8,12 +8,23 @@ import { waitForCondition } from "../shared/utils/waitForCondition";
 import { Activity, IActivityApi, WorkContext } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { EventEmitter } from "eventemitter3";
+import { ExecutionOptions } from "../activity/exe-script-executor";
 
 export interface LeaseProcessEvents {
   /**
    * Raised when the lease process is fully finalized
    */
   finalized: () => void;
+}
+
+export interface PaymentOptions {
+  invoiceFilter: InvoiceFilter;
+  debitNoteFilter: DebitNoteFilter;
+}
+
+export interface LeaseProcessOptions {
+  activity?: ExecutionOptions;
+  payment?: PaymentOptions;
 }
 
 /**
@@ -36,18 +47,13 @@ export class LeaseProcess {
     /** @deprecated This will be removed, we want to have a nice adapter here */
     private readonly yagna: YagnaApi,
     private readonly storageProvider: StorageProvider,
-    private readonly leaseOptions?: {
-      paymentOptions: {
-        invoiceFilter: InvoiceFilter;
-        debitNoteFilter: DebitNoteFilter;
-      };
-    },
+    private readonly leaseOptions?: LeaseProcessOptions,
   ) {
     this.paymentProcess = new AgreementPaymentProcess(
       this.agreement,
       this.allocation,
       this.paymentApi,
-      this.leaseOptions?.paymentOptions,
+      this.leaseOptions?.payment,
       this.logger,
     );
 
@@ -112,6 +118,7 @@ export class LeaseProcess {
         this.currentActivity,
         {
           storageProvider: this.storageProvider,
+          execution: this.leaseOptions?.activity,
         },
       );
     }
@@ -122,6 +129,7 @@ export class LeaseProcess {
     // Access your work context to perform operations
     const ctx = new WorkContext(this.activityApi, this.yagna.activity.control, this.yagna.activity.exec, activity, {
       storageProvider: this.storageProvider,
+      execution: this.leaseOptions?.activity,
     });
 
     await ctx.before();

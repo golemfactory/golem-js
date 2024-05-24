@@ -1,9 +1,9 @@
-import { DemandSpec, GolemNetwork } from "@golem-sdk/golem-js";
+import { MarketOrderSpec, GolemNetwork } from "@golem-sdk/golem-js";
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
-const demandOptions: DemandSpec = {
+const demandOptions: MarketOrderSpec = {
   demand: {
-    activity: { imageTag: "golem/alpine:latest" },
+    workload: { imageTag: "golem/alpine:latest" },
   },
   market: {
     maxAgreements: 1,

@@ -9,7 +9,7 @@ import {
   StorageProvider,
   WebSocketBrowserStorageProvider,
 } from "../../shared/storage";
-import { DemandSpec } from "../../market";
+import { MarketOrderSpec } from "../../market";
 
 export type JobManagerConfig = Partial<RunJobOptions> & {
   yagna?: YagnaOptions;
@@ -59,7 +59,7 @@ export class JobManager {
    *
    * @param demandSpec
    */
-  public createJob<Output = unknown>(demandSpec: DemandSpec) {
+  public createJob<Output = unknown>(demandSpec: MarketOrderSpec) {
     this.checkInitialization();
 
     const jobId = v4();

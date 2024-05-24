@@ -24,7 +24,7 @@ import { TcpProxy } from "../../network/tcpProxy";
 import { AgreementDTO } from "../../agreement/service";
 import { ActivityApi } from "ya-ts-client";
 import { YagnaExeScriptObserver } from "../../shared/yagna";
-import { ExeScriptExecutor } from "../exe-script-executor";
+import { ExecutionOptions, ExeScriptExecutor } from "../exe-script-executor";
 
 export type Worker<OutputType> = (ctx: WorkContext) => Promise<OutputType>;
 
@@ -41,6 +41,7 @@ export interface WorkOptions {
   logger?: Logger;
   activityReadySetupFunctions?: Worker<unknown>[];
   yagnaOptions?: YagnaOptions;
+  execution?: ExecutionOptions;
 }
 
 export interface CommandOptions {
@@ -76,7 +77,6 @@ export class WorkContext {
     public readonly execObserver: YagnaExeScriptObserver,
     public readonly activity: Activity,
     private options?: WorkOptions,
-    executionOptions?: ExecutionConfig,
   ) {
     this.activityPreparingTimeout = options?.activityPreparingTimeout || DEFAULTS.activityPreparingTimeout;
     this.activityStateCheckingInterval = options?.activityStateCheckingInterval || DEFAULTS.activityStateCheckInterval;
@@ -91,7 +91,7 @@ export class WorkContext {
       this.activityControl,
       this.execObserver,
       this.logger,
-      executionOptions,
+      this.options?.execution,
     );
   }
 

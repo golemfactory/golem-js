@@ -1,13 +1,12 @@
 import { Worker, WorkOptions } from "../../activity/work";
 import { LegacyAgreementServiceOptions } from "../../agreement";
-import { DemandSpec } from "../../market";
 import { NetworkOptions } from "../../network";
 import { PaymentModuleOptions } from "../../payment";
 import { EventEmitter } from "eventemitter3";
 import { GolemAbortError, GolemUserError } from "../../shared/error/golem-error";
-import { GolemNetwork } from "../../golem-network/golem-network";
+import { GolemNetwork, MarketOrderSpec } from "../../golem-network/golem-network";
 import { Logger } from "../../shared/utils";
-import { ActivityDemandDirectorConfigOptions } from "../../market/demand/options";
+import { WorkloadDemandDirectorConfigOptions } from "../../market/demand/options";
 
 export enum JobState {
   New = "new",
@@ -22,7 +21,7 @@ export type RunJobOptions = {
   payment?: PaymentModuleOptions;
   agreement?: LegacyAgreementServiceOptions;
   network?: NetworkOptions;
-  activity?: ActivityDemandDirectorConfigOptions;
+  activity?: WorkloadDemandDirectorConfigOptions;
   work?: WorkOptions;
 };
 
@@ -77,7 +76,7 @@ export class Job<Output = unknown> {
   constructor(
     public readonly id: string,
     private readonly glm: GolemNetwork,
-    private readonly demandSpec: DemandSpec,
+    private readonly demandSpec: MarketOrderSpec,
     private readonly logger: Logger,
   ) {}
 

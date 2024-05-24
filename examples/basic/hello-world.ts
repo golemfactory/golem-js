@@ -16,7 +16,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
     const demand: DemandSpec = {
       demand: {
-        activity: {
+        workload: {
           imageTag: "golem/alpine:latest",
         },
       },

@@ -10,8 +10,6 @@ import { PayerDetails } from "./PayerDetails";
 import { CreateAllocationParams } from "./types";
 
 export interface PaymentModuleOptions {
-  debitNoteFilter?: DebitNoteFilter;
-  invoiceFilter?: InvoiceFilter;
   /**
    * Network used to facilitate the payment.
    * (for example: "mainnet", "holesky")
@@ -75,8 +73,6 @@ export class PaymentModuleImpl implements PaymentModule {
   private readonly logger = defaultLogger("payment");
 
   private readonly options: Required<PaymentModuleOptions> = {
-    debitNoteFilter: () => true,
-    invoiceFilter: () => true,
     driver: "erc20",
     network: "holesky",
     token: "tglm",
@@ -86,10 +82,8 @@ export class PaymentModuleImpl implements PaymentModule {
     if (options) {
       const network = options.network || this.options.network;
       const driver = options.driver || this.options.driver;
-      const debitNoteFilter = options.debitNoteFilter || this.options.debitNoteFilter;
-      const invoiceFilter = options.invoiceFilter || this.options.invoiceFilter;
       const token = options.token || MAINNETS.includes(network) ? "glm" : "tglm";
-      this.options = { network, driver, token, debitNoteFilter, invoiceFilter };
+      this.options = { network, driver, token };
     }
 
     this.logger = deps.logger;

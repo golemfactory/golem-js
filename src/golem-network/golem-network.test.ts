@@ -1,7 +1,7 @@
 import { Observable, Subscription } from "rxjs";
 import { ActivityModuleImpl } from "../activity";
 import { LeaseProcess, LeaseProcessPool } from "../agreement";
-import { DemandSpec, DraftOfferProposalPool, MarketModuleImpl, OfferProposal } from "../market";
+import { MarketOrderSpec, DraftOfferProposalPool, MarketModuleImpl, OfferProposal } from "../market";
 import { NetworkModuleImpl } from "../network/network.module";
 import { Allocation, PaymentModuleImpl } from "../payment";
 import { YagnaApi } from "../shared/utils";
@@ -12,9 +12,9 @@ import { GolemNetwork } from "./golem-network";
 import { _, instance, mock, reset, when, verify } from "@johanblumenberg/ts-mockito";
 import { GftpStorageProvider } from "../shared/storage";
 
-const demandOptions: DemandSpec = Object.freeze({
+const demandOptions: MarketOrderSpec = Object.freeze({
   demand: {
-    activity: { imageTag: "golem/alpine:latest" },
+    workload: { imageTag: "golem/alpine:latest" },
   },
   market: {
     maxAgreements: 1,
