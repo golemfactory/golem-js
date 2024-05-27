@@ -1,4 +1,4 @@
-import { ActivityDemandDirectorConfigOptions } from "./demand/options";
+import { WorkloadDemandDirectorConfigOptions } from "./demand/options";
 import { BasicDemandDirectorConfigOptions } from "./demand/directors/basic-demand-director-config";
 import { PaymentDemandDirectorConfigOptions } from "./demand/directors/payment-demand-director-config";
 import { DemandBodyPrototype } from "./demand/demand-body-builder";
@@ -84,12 +84,12 @@ export interface BasicDemandPropertyConfig {
 
 export type BuildDemandOptions = Partial<{
   /** Demand properties related to the activities that will be executed on providers */
-  activity: Partial<ActivityDemandDirectorConfigOptions>;
+  workload: Partial<WorkloadDemandDirectorConfigOptions>;
   /** Demand properties that determine payment related terms & conditions of the agreement */
   payment: Partial<PaymentDemandDirectorConfigOptions>;
+}> &
   /** Demand properties that determine most common paramters of the agreement (based on golemsp implementation */
-  basic: Partial<BasicDemandDirectorConfigOptions>;
-}>;
+  Partial<BasicDemandDirectorConfigOptions>;
 
 export interface IDemandRepository {
   getById(id: string): Demand | undefined;

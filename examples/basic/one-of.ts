@@ -1,9 +1,9 @@
-import { DemandSpec, GolemNetwork } from "@golem-sdk/golem-js";
+import { MarketOrderSpec, GolemNetwork } from "@golem-sdk/golem-js";
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
-const demandOptions: DemandSpec = {
+const order: MarketOrderSpec = {
   demand: {
-    activity: { imageTag: "golem/alpine:latest" },
+    workload: { imageTag: "golem/alpine:latest" },
   },
   market: {
     maxAgreements: 1,
@@ -26,7 +26,7 @@ const demandOptions: DemandSpec = {
 
   try {
     await glm.connect();
-    const lease = await glm.oneOf(demandOptions);
+    const lease = await glm.oneOf(order);
     await lease
       .getExeUnit()
       .then((exe) => exe.run("echo Hello, Golem! 👋"))

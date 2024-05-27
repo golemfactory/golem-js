@@ -19,37 +19,21 @@ import { BuildDemandOptions, DemandSpecification, IDemandRepository } from "./de
 import { ProposalsBatch } from "./proposals_batch";
 import { IActivityApi, IFileServer } from "../activity";
 import { StorageProvider } from "../shared/storage";
-import { ActivityDemandDirectorConfig } from "./demand/directors/activity-demand-director-config";
+import { WorkloadDemandDirectorConfig } from "./demand/directors/workload-demand-director-config";
 import { BasicDemandDirector } from "./demand/directors/basic-demand-director";
 import { PaymentDemandDirector } from "./demand/directors/payment-demand-director";
-import { ActivityDemandDirector } from "./demand/directors/activity-demand-director";
-import { ActivityDemandDirectorConfigOptions } from "./demand/options";
+import { WorkloadDemandDirector } from "./demand/directors/workload-demand-director";
+import { WorkloadDemandDirectorConfigOptions } from "./demand/options";
 import { BasicDemandDirectorConfig } from "./demand/directors/basic-demand-director-config";
 import { PaymentDemandDirectorConfig } from "./demand/directors/payment-demand-director-config";
 import { GolemUserError } from "../shared/error/golem-error";
-import { Network, NetworkModule, NetworkNode, INetworkApi } from "../network";
-import { LeaseProcess, LeaseProcessPool, LeaseProcessPoolOptions } from "../lease-process";
+import { MarketOrderSpec } from "../golem-network";
+import { NetworkModule, INetworkApi } from "../network";
+import { LeaseProcess, LeaseProcessOptions, LeaseProcessPool, LeaseProcessPoolOptions } from "../lease-process";
 
 export interface MarketEvents {}
 
-/**
- * Use by legacy demand publishing code
- */
-export interface DemandBuildParams {
-  demand: BuildDemandOptions;
-  market: MarketOptions;
-}
-
 export type DemandEngine = "vm" | "vm-nvidia" | "wasmtime";
-
-/**
- * Represents the new demand specification which is accepted by GolemNetwork and MarketModule
- */
-export interface DemandSpec {
-  demand: BuildDemandOptions;
-  market: MarketOptions;
-  network?: Network;
-}
 
 export interface MarketOptions {
   /** The maximum number of agreements that you want to make with the market */
@@ -152,7 +136,7 @@ export interface MarketModule {
     bufferSize?: number;
   }): Observable<OfferProposal[]>;
 
-  createLease(agreement: Agreement, allocation: Allocation, networkNode?: NetworkNode): LeaseProcess;
+  createLease(agreement: Agreement, allocation: Allocation, options?: LeaseProcessOptions): LeaseProcess;
 
   /**
    * Factory that creates new lease process pool that's fully configured
@@ -167,7 +151,7 @@ export interface MarketModule {
    * Provides a simple estimation of the budget that's required for given demand specification
    * @param params
    */
-  estimateBudget(params: DemandSpec): number;
+  estimateBudget(params: MarketOrderSpec): number;
 }
 
 /**
@@ -190,7 +174,6 @@ export class MarketModuleImpl implements MarketModule {
   private readonly yagnaApi: YagnaApi;
   private readonly logger = defaultLogger("market");
   private readonly agreementApi: IAgreementApi;
-  private readonly networkModule: NetworkModule;
   private readonly proposalRepo: IProposalRepository;
   private readonly demandRepo: IDemandRepository;
   private fileServer: IFileServer;
@@ -214,7 +197,6 @@ export class MarketModuleImpl implements MarketModule {
     this.logger = deps.logger;
     this.yagnaApi = deps.yagna;
     this.agreementApi = deps.agreementApi;
-    this.networkModule = deps.networkModule;
     this.proposalRepo = deps.proposalRepository;
     this.demandRepo = deps.demandRepository;
     this.fileServer = deps.fileServer;
@@ -224,16 +206,19 @@ export class MarketModuleImpl implements MarketModule {
     const builder = new DemandBodyBuilder();
 
     // Instruct the builder what's required
-    const basicConfig = new BasicDemandDirectorConfig(options.basic);
+    const basicConfig = new BasicDemandDirectorConfig({
+      expirationSec: options.expirationSec,
+      subnetTag: options.subnetTag,
+    });
     const basicDirector = new BasicDemandDirector(basicConfig);
     basicDirector.apply(builder);
 
-    const workloadOptions = options.activity
-      ? await this.applyLocalGVMIServeSupport(options.activity)
-      : options.activity;
+    const workloadOptions = options.workload
+      ? await this.applyLocalGVMIServeSupport(options.workload)
+      : options.workload;
 
-    const workloadConfig = new ActivityDemandDirectorConfig(workloadOptions);
-    const workloadDirector = new ActivityDemandDirector(workloadConfig);
+    const workloadConfig = new WorkloadDemandDirectorConfig(workloadOptions);
+    const workloadDirector = new WorkloadDemandDirector(workloadConfig);
     await workloadDirector.apply(builder);
 
     const paymentConfig = new PaymentDemandDirectorConfig(options.payment);
@@ -250,7 +235,7 @@ export class MarketModuleImpl implements MarketModule {
    *
    * Use Case: serve the GVMI from the requestor and avoid registry
    */
-  private async applyLocalGVMIServeSupport(options: Partial<ActivityDemandDirectorConfigOptions>) {
+  private async applyLocalGVMIServeSupport(options: Partial<WorkloadDemandDirectorConfigOptions>) {
     if (options.imageUrl?.startsWith("file://")) {
       const sourcePath = options.imageUrl?.replace("file://", "");
 
@@ -403,7 +388,7 @@ export class MarketModuleImpl implements MarketModule {
     );
   }
 
-  createLease(agreement: Agreement, allocation: Allocation, networkNode?: NetworkNode) {
+  createLease(agreement: Agreement, allocation: Allocation, options?: LeaseProcessOptions): LeaseProcess {
     // TODO Accept the filters
     return new LeaseProcess(
       agreement,
@@ -415,7 +400,7 @@ export class MarketModuleImpl implements MarketModule {
       this.deps.logger,
       this.yagnaApi, // TODO: Remove this dependency
       this.deps.storageProvider,
-      networkNode,
+      options,
     );
   }
 
@@ -480,11 +465,11 @@ export class MarketModuleImpl implements MarketModule {
       });
   }
 
-  estimateBudget(params: DemandSpec): number {
+  estimateBudget(params: MarketOrderSpec): number {
     const pricingModel = params.market.pricing.model;
 
     // TODO: Don't assume for the user, at least not on pure golem-js level
-    const minCpuThreads = params.demand.activity?.minCpuThreads ?? 1;
+    const minCpuThreads = params.demand.workload?.minCpuThreads ?? 1;
 
     const { rentHours, maxAgreements } = params.market;
 

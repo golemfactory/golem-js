@@ -1,13 +1,13 @@
 import { DemandBodyBuilder } from "../demand-body-builder";
-import { ActivityDemandDirector } from "./activity-demand-director";
-import { ActivityDemandDirectorConfig } from "./activity-demand-director-config";
+import { WorkloadDemandDirector } from "./workload-demand-director";
+import { WorkloadDemandDirectorConfig } from "./workload-demand-director-config";
 
 describe("ActivityDemandDirector", () => {
   test("should create properties with task_package and package_format", async () => {
     const builder = new DemandBodyBuilder();
 
-    const director = new ActivityDemandDirector(
-      new ActivityDemandDirectorConfig({
+    const director = new WorkloadDemandDirector(
+      new WorkloadDemandDirectorConfig({
         imageHash: "529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4",
       }),
     );
@@ -36,8 +36,8 @@ describe("ActivityDemandDirector", () => {
     const manifestSigAlgorithm = "sha256";
     const capabilities = ["inet", "manifest-support"];
 
-    const director = new ActivityDemandDirector(
-      new ActivityDemandDirectorConfig({
+    const director = new WorkloadDemandDirector(
+      new WorkloadDemandDirectorConfig({
         manifest,
         manifestSig,
         manifestCert,

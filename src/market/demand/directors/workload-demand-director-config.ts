@@ -1,11 +1,11 @@
-import { ActivityDemandDirectorConfigOptions } from "../options";
+import { WorkloadDemandDirectorConfigOptions } from "../options";
 import { GolemConfigError } from "../../../shared/error/golem-error";
 
 export enum PackageFormat {
   GVMKitSquash = "gvmkit-squash",
 }
 
-export class ActivityDemandDirectorConfig {
+export class WorkloadDemandDirectorConfig {
   readonly packageFormat: string = PackageFormat.GVMKitSquash;
   readonly engine: string = "vm";
   readonly minMemGib: number = 0.5;
@@ -22,7 +22,7 @@ export class ActivityDemandDirectorConfig {
   readonly imageTag?: string;
   readonly imageUrl?: string;
 
-  constructor(options?: Partial<ActivityDemandDirectorConfigOptions>) {
+  constructor(options?: Partial<WorkloadDemandDirectorConfigOptions>) {
     if (options) {
       Object.assign(this, options);
     }

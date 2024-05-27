@@ -1,13 +1,11 @@
 import { Worker, WorkOptions } from "../../activity/work";
-import { LegacyAgreementServiceOptions } from "../../market/agreement";
-import { DemandSpec } from "../../market";
+import { NetworkOptions } from "../../network";
 import { PaymentModuleOptions } from "../../payment";
 import { EventEmitter } from "eventemitter3";
 import { GolemAbortError, GolemUserError } from "../../shared/error/golem-error";
-import { GolemNetwork } from "../../golem-network/golem-network";
+import { GolemNetwork, MarketOrderSpec } from "../../golem-network/golem-network";
 import { Logger } from "../../shared/utils";
-import { ActivityDemandDirectorConfigOptions } from "../../market/demand/options";
-import { NetworkOptions } from "../../network/network.module";
+import { WorkloadDemandDirectorConfigOptions } from "../../market/demand/options";
 
 export enum JobState {
   New = "new",
@@ -20,9 +18,8 @@ export enum JobState {
 
 export type RunJobOptions = {
   payment?: PaymentModuleOptions;
-  agreement?: LegacyAgreementServiceOptions;
   network?: NetworkOptions;
-  activity?: ActivityDemandDirectorConfigOptions;
+  workload?: WorkloadDemandDirectorConfigOptions;
   work?: WorkOptions;
 };
 
@@ -71,13 +68,13 @@ export class Job<Output = unknown> {
   /**
    * @param id
    * @param glm
-   * @param demandSpec
+   * @param order
    * @param logger
    */
   constructor(
     public readonly id: string,
     private readonly glm: GolemNetwork,
-    private readonly demandSpec: DemandSpec,
+    private readonly order: MarketOrderSpec,
     private readonly logger: Logger,
   ) {}
 
@@ -135,7 +132,7 @@ export class Job<Output = unknown> {
       throw new GolemAbortError("Canceled");
     }
 
-    const lease = await this.glm.oneOf(this.demandSpec);
+    const lease = await this.glm.oneOf(this.order);
 
     const workContext = await lease.getExeUnit();
     this.events.emit("started");

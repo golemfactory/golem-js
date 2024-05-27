@@ -13,8 +13,11 @@ export class BasicDemandDirectorConfig extends BaseConfig implements BasicDemand
   constructor(options?: Partial<BasicDemandDirectorConfigOptions>) {
     super();
 
-    if (options) {
-      Object.assign(this, options);
+    if (options?.expirationSec) {
+      this.expirationSec = options.expirationSec;
+    }
+    if (options?.subnetTag) {
+      this.subnetTag = options.subnetTag;
     }
 
     if (!this.isPositiveInt(this.expirationSec)) {

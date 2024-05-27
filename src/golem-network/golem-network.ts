@@ -1,18 +1,18 @@
 import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
 import {
   Demand,
-  DemandSpec,
   DraftOfferProposalPool,
   MarketApi,
   MarketModule,
   MarketModuleImpl,
+  MarketOptions,
   OfferProposal,
 } from "../market";
 import { IPaymentApi, PaymentModule, PaymentModuleImpl, PaymentModuleOptions } from "../payment";
 import { ActivityModule, ActivityModuleImpl, IActivityApi, IFileServer } from "../activity";
 import { Network, NetworkModule, NetworkModuleImpl, NetworkOptions, INetworkApi } from "../network";
 import { EventEmitter } from "eventemitter3";
-import { LeaseProcess, LeaseProcessPool, LeaseProcessPoolOptions } from "../lease-process";
+import { LeaseProcess, LeaseProcessOptions, LeaseProcessPool, LeaseProcessPoolOptions } from "../lease-process";
 import { DebitNoteRepository, InvoiceRepository, MarketApiAdapter, PaymentApiAdapter } from "../shared/yagna";
 import { ActivityApiAdapter } from "../shared/yagna/adapters/activity-api-adapter";
 import { ActivityRepository } from "../shared/yagna/repository/activity-repository";
@@ -23,7 +23,7 @@ import { ProposalRepository } from "../shared/yagna/repository/proposal-reposito
 import { CacheService } from "../shared/cache/CacheService";
 import { IProposalRepository } from "../market/offer-proposal";
 import { DemandRepository } from "../shared/yagna/repository/demand-repository";
-import { IDemandRepository } from "../market/demand";
+import { BuildDemandOptions, IDemandRepository } from "../market/demand";
 import { GftpServerAdapter } from "../shared/storage/GftpServerAdapter";
 import {
   GftpStorageProvider,
@@ -74,6 +74,17 @@ export interface GolemNetworkOptions {
   >;
 }
 
+/**
+ * Represents the order specifications which will result in access to LeaseProcess.
+ */
+export interface MarketOrderSpec {
+  demand: BuildDemandOptions;
+  market: MarketOptions;
+  activity?: LeaseProcessOptions["activity"];
+  payment?: LeaseProcessOptions["payment"];
+  network?: Network;
+}
+
 export interface GolemNetworkEvents {
   /** Fires when all startup operations related to GN are completed */
   connected: () => void;
@@ -87,8 +98,7 @@ export interface GolemNetworkEvents {
 
 interface ManyOfOptions {
   concurrency: LeaseProcessPoolOptions["replicas"];
-  // TODO: rename to `order` or something similar when DemandSpec is renamed to MarketOrder
-  demand: DemandSpec;
+  order: MarketOrderSpec;
 }
 
 /**
@@ -266,19 +276,19 @@ export class GolemNetwork {
    * await lease.finalize();
    * ```
    *
-   * @param demand
+   * @param order
    */
-  async oneOf(demand: DemandSpec): Promise<LeaseProcess> {
+  async oneOf(order: MarketOrderSpec): Promise<LeaseProcess> {
     const proposalPool = new DraftOfferProposalPool({
       logger: this.logger,
     });
 
-    const budget = this.market.estimateBudget(demand);
+    const budget = this.market.estimateBudget(order);
     const allocation = await this.payment.createAllocation({
       budget,
-      expirationSec: demand.market.rentHours * 60 * 60,
+      expirationSec: order.market.rentHours * 60 * 60,
     });
-    const demandSpecification = await this.market.buildDemandDetails(demand.demand, allocation);
+    const demandSpecification = await this.market.buildDemandDetails(order.demand, allocation);
 
     const proposal$ = this.market.startCollectingProposals({
       demandSpecification,
@@ -289,11 +299,15 @@ export class GolemNetwork {
 
     const agreement = await this.market.proposeAgreement(draftProposal);
 
-    const networkNode = demand.network
-      ? await this.network.createNetworkNode(demand.network, agreement.getProviderInfo().id)
+    const networkNode = order.network
+      ? await this.network.createNetworkNode(order.network, agreement.getProviderInfo().id)
       : undefined;
 
-    const lease = this.market.createLease(agreement, allocation, networkNode);
+    const lease = this.market.createLease(agreement, allocation, {
+      payment: order.payment,
+      activity: order.activity,
+      networkNode,
+    });
 
     // We managed to create the activity, no need to look for more agreement candidates
     proposalSubscription.unsubscribe();
@@ -302,9 +316,9 @@ export class GolemNetwork {
       // First finalize the lease (which will wait for all payments to be processed)
       // and only then release the allocation
       await lease.finalize().catch((err) => this.logger.error("Error while finalizing lease", err));
-      if (demand?.network && networkNode) {
+      if (order.network && networkNode) {
         await this.network
-          .removeNetworkNode(demand.network, networkNode)
+          .removeNetworkNode(order.network, networkNode)
           .catch((err) => this.logger.error("Error while removing network node", err));
       }
       await this.payment
@@ -350,17 +364,17 @@ export class GolemNetwork {
    *
    * @param options Demand specification and concurrency level
    */
-  public async manyOf({ concurrency, demand }: ManyOfOptions): Promise<LeaseProcessPool> {
+  public async manyOf({ concurrency, order }: ManyOfOptions): Promise<LeaseProcessPool> {
     const proposalPool = new DraftOfferProposalPool({
       logger: this.logger,
     });
 
-    const budget = this.market.estimateBudget(demand);
+    const budget = this.market.estimateBudget(order);
     const allocation = await this.payment.createAllocation({
       budget,
-      expirationSec: demand.market.rentHours * 60 * 60,
+      expirationSec: order.market.rentHours * 60 * 60,
     });
-    const demandSpecification = await this.market.buildDemandDetails(demand.demand, allocation);
+    const demandSpecification = await this.market.buildDemandDetails(order.demand, allocation);
 
     const proposal$ = this.market.startCollectingProposals({
       demandSpecification,
@@ -369,7 +383,11 @@ export class GolemNetwork {
 
     const leaseProcessPool = this.market.createLeaseProcessPool(proposalPool, allocation, {
       replicas: concurrency,
-      network: demand.network,
+      network: order.network,
+      leaseProcessOptions: {
+        activity: order.activity,
+        payment: order.payment,
+      },
     });
     this.cleanupTasks.push(() => subscription.unsubscribe());
     this.cleanupTasks.push(async () => {

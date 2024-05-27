@@ -56,6 +56,6 @@ type ImageDemandOptions = {
   imageTag?: string;
 };
 
-export type ActivityDemandDirectorConfigOptions = RuntimeDemandOptions &
+export type WorkloadDemandDirectorConfigOptions = RuntimeDemandOptions &
   ResourceDemandOptions &
   RequireAtLeastOne<ImageDemandOptions & ManifestDemandOptions, "imageHash" | "imageTag" | "imageUrl" | "manifest">;
