@@ -1,20 +1,20 @@
 import { Observable, Subscription } from "rxjs";
 import { ActivityModuleImpl } from "../activity";
 import { LeaseProcess, LeaseProcessPool } from "../lease-process";
-import { DemandSpec, DraftOfferProposalPool, MarketModuleImpl, OfferProposal } from "../market";
+import { DraftOfferProposalPool, MarketModuleImpl, OfferProposal } from "../market";
 import { NetworkModuleImpl } from "../network/network.module";
 import { Allocation, PaymentModuleImpl } from "../payment";
 import { YagnaApi } from "../shared/utils";
 import { MarketApiAdapter, PaymentApiAdapter } from "../shared/yagna";
 import { ActivityApiAdapter } from "../shared/yagna/adapters/activity-api-adapter";
 import { AgreementApiAdapter } from "../shared/yagna/adapters/agreement-api-adapter";
-import { GolemNetwork } from "./golem-network";
+import { GolemNetwork, MarketOrderSpec } from "./golem-network";
 import { _, instance, mock, reset, when, verify } from "@johanblumenberg/ts-mockito";
 import { GftpStorageProvider } from "../shared/storage";
 
-const demandOptions: DemandSpec = Object.freeze({
+const order: MarketOrderSpec = Object.freeze({
   demand: {
-    activity: { imageTag: "golem/alpine:latest" },
+    workload: { imageTag: "golem/alpine:latest" },
   },
   market: {
     maxAgreements: 1,
@@ -95,7 +95,7 @@ describe("Golem Network", () => {
 
       const glm = getGolemNetwork();
       await glm.connect();
-      const lease = await glm.oneOf(demandOptions);
+      const lease = await glm.oneOf(order);
       expect(lease === mockLease).toBe(true);
       await glm.disconnect();
       expect(mockLease.finalize).toHaveBeenCalled();
@@ -115,7 +115,7 @@ describe("Golem Network", () => {
       await glm.connect();
       const leasePool = await glm.manyOf({
         concurrency: 3,
-        demand: demandOptions,
+        order,
       });
       expect(leasePool === instance(mockLeasePool)).toBe(true);
       await glm.disconnect();

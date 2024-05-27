@@ -1,4 +1,3 @@
-export { PaymentOptions } from "./service";
 export { Invoice, InvoiceEvents } from "./invoice";
 export { DebitNote, DebitNoteEvents } from "./debit_note";
 export { Allocation } from "./allocation";

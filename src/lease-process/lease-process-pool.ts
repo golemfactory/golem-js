@@ -1,4 +1,4 @@
-import type { IAgreementApi, LegacyAgreementServiceOptions } from "../market/agreement/agreement";
+import type { IAgreementApi } from "../market/agreement/agreement";
 import type { Logger } from "../shared/utils";
 import { defaultLogger, sleep } from "../shared/utils";
 import type { DraftOfferProposalPool, MarketModule } from "../market";
@@ -7,7 +7,7 @@ import type { AgreementDTO } from "../market/agreement/service";
 import { EventEmitter } from "eventemitter3";
 import type { RequireAtLeastOne } from "../shared/utils/types";
 import type { Allocation, IPaymentApi } from "../payment";
-import type { LeaseProcess } from "./lease-process";
+import type { LeaseProcess, LeaseProcessOptions } from "./lease-process";
 import { Network, NetworkModule } from "../network";
 import { createAbortSignalFromTimeout } from "../shared/utils/abortSignal";
 
@@ -23,8 +23,8 @@ export interface LeaseProcessPoolDependencies {
 
 export interface LeaseProcessPoolOptions {
   replicas?: number | RequireAtLeastOne<{ min: number; max: number }>;
-  agreementOptions?: LegacyAgreementServiceOptions;
   network?: Network;
+  leaseProcessOptions?: LeaseProcessOptions;
 }
 
 export interface LeaseProcessPoolEvents {
@@ -66,6 +66,7 @@ export class LeaseProcessPool {
   private networkModule: NetworkModule;
   private readonly minPoolSize: number;
   private readonly maxPoolSize: number;
+  private readonly leaseProcessOptions?: LeaseProcessOptions;
 
   constructor(options: LeaseProcessPoolOptions & LeaseProcessPoolDependencies) {
     this.agreementApi = options.agreementApi;
@@ -74,6 +75,7 @@ export class LeaseProcessPool {
     this.marketModule = options.marketModule;
     this.networkModule = options.networkModule;
     this.network = options.network;
+    this.leaseProcessOptions = options.leaseProcessOptions;
 
     this.logger = this.logger = options?.logger || defaultLogger("lease-process-pool");
 
@@ -102,7 +104,10 @@ export class LeaseProcessPool {
       const networkNode = this.network
         ? await this.networkModule.createNetworkNode(this.network, agreement.getProviderInfo().id)
         : undefined;
-      const leaseProcess = this.marketModule.createLease(agreement, this.allocation, networkNode);
+      const leaseProcess = this.marketModule.createLease(agreement, this.allocation, {
+        networkNode,
+        ...this.leaseProcessOptions,
+      });
       this.events.emit("created", agreement.getDto());
       return leaseProcess;
     } catch (error) {

@@ -2,12 +2,12 @@
  * This example demonstrates how easily lease multiple machines at once.
  */
 
-import { DemandSpec, GolemNetwork } from "@golem-sdk/golem-js";
+import { GolemNetwork, MarketOrderSpec } from "@golem-sdk/golem-js";
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
-const demand: DemandSpec = {
+const order: MarketOrderSpec = {
   demand: {
-    activity: { imageTag: "golem/alpine:latest" },
+    workload: { imageTag: "golem/alpine:latest" },
   },
   market: {
     maxAgreements: 1,
@@ -33,7 +33,7 @@ const demand: DemandSpec = {
     // create a pool that can grow up to 3 leases at the same time
     const pool = await glm.manyOf({
       concurrency: 3,
-      demand,
+      order,
     });
     await Promise.allSettled([
       pool.withLease(async (lease) =>

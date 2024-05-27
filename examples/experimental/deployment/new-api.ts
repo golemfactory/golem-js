@@ -18,9 +18,9 @@ async function main() {
       .createNetwork("basic", {
         ip: "192.168.7.0/24",
       })
-      .createActivityPool("app", {
+      .createLeaseProcessPool("app", {
         demand: {
-          activity: {
+          workload: {
             imageTag: "golem/node:latest",
           },
         },
@@ -43,9 +43,9 @@ async function main() {
           network: "basic",
         },
       })
-      .createActivityPool("db", {
+      .createLeaseProcessPool("db", {
         demand: {
-          activity: {
+          workload: {
             imageTag: "golem/alpine:latest",
             minCpuCores: 1,
             minMemGib: 2,

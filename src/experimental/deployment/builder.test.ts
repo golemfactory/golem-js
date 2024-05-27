@@ -10,9 +10,9 @@ describe("Deployment builder", () => {
     const builder = new GolemDeploymentBuilder(mockGolemNetwork);
     expect(() => {
       builder
-        .createActivityPool("my-pool", {
+        .createLeaseProcessPool("my-pool", {
           demand: {
-            activity: {
+            workload: {
               imageTag: "image",
               minCpuCores: 1,
               minMemGib: 1,
@@ -30,9 +30,9 @@ describe("Deployment builder", () => {
             },
           },
         })
-        .createActivityPool("my-pool", {
+        .createLeaseProcessPool("my-pool", {
           demand: {
-            activity: {
+            workload: {
               imageTag: "image",
               minCpuCores: 1,
               minMemGib: 1,
@@ -50,7 +50,7 @@ describe("Deployment builder", () => {
             },
           },
         });
-    }).toThrow(new GolemConfigError(`Activity pool with name my-pool already exists`));
+    }).toThrow(new GolemConfigError(`Lease Process Pool with name my-pool already exists`));
   });
   it("throws an error when creating a network with the same name", () => {
     const builder = new GolemDeploymentBuilder(mockGolemNetwork);
@@ -71,9 +71,9 @@ describe("Deployment builder", () => {
         .createNetwork("existing-network", {
           id: "test",
         })
-        .createActivityPool("my-pool", {
+        .createLeaseProcessPool("my-pool", {
           demand: {
-            activity: { imageTag: "image", minCpuCores: 1, minMemGib: 1, minStorageGib: 1 },
+            workload: { imageTag: "image", minCpuCores: 1, minMemGib: 1, minStorageGib: 1 },
           },
           market: {
             maxAgreements: 1,

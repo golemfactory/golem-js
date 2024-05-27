@@ -1,4 +1,4 @@
-import { DemandSpec, GolemNetwork } from "@golem-sdk/golem-js";
+import { MarketOrderSpec, GolemNetwork } from "@golem-sdk/golem-js";
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
 (async () => {
@@ -11,9 +11,9 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
   try {
     await glm.connect();
     const network = await glm.createNetwork({ ip: "192.168.7.0/24" });
-    const demand: DemandSpec = {
+    const order: MarketOrderSpec = {
       demand: {
-        activity: { imageTag: "golem/alpine:latest" },
+        workload: { imageTag: "golem/alpine:latest" },
       },
       market: {
         maxAgreements: 2,
@@ -27,10 +27,10 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
       },
       network,
     };
-    // create a pool that can grow up to 3 leases at the same time
+    // create a pool that can grow up to 2 leases at the same time
     const pool = await glm.manyOf({
       concurrency: 2,
-      demand,
+      order,
     });
     const lease1 = await pool.acquire();
     const lease2 = await pool.acquire();

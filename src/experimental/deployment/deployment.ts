@@ -2,14 +2,14 @@ import { GolemAbortError, GolemUserError } from "../../shared/error/golem-error"
 import { defaultLogger, Logger, YagnaApi } from "../../shared/utils";
 import { EventEmitter } from "eventemitter3";
 import { ActivityModule } from "../../activity";
-import { Network, NetworkOptions, NetworkModule } from "../../network";
+import { Network, NetworkModule, NetworkOptions } from "../../network";
 import { GftpStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../../shared/storage";
 import { validateDeployment } from "./validate-deployment";
-import { DemandBuildParams, DraftOfferProposalPool, MarketModule } from "../../market";
+import { DraftOfferProposalPool, MarketModule } from "../../market";
 import { PaymentModule } from "../../payment";
-import { CreateActivityPoolOptions } from "./builder";
+import { CreateLeaseProcessPoolOptions } from "./builder";
 import { Subscription } from "rxjs";
-import { LeaseProcessPool, LeaseProcessPoolOptions } from "../../lease-process";
+import { LeaseProcessPool } from "../../lease-process";
 import { DataTransferProtocol } from "../../shared/types";
 
 export enum DeploymentState {
@@ -45,7 +45,7 @@ export interface DeploymentEvents {
 }
 
 export type DeploymentComponents = {
-  activityPools: { name: string; options: CreateActivityPoolOptions }[];
+  leaseProcessPools: { name: string; options: CreateLeaseProcessPoolOptions }[];
   networks: { name: string; options: NetworkOptions }[];
 };
 
@@ -156,10 +156,12 @@ export class Deployment {
     });
 
     // TODO: pass dataTransferProtocol to pool
-    for (const pool of this.components.activityPools) {
-      const { demandBuildOptions, leaseProcessPoolOptions } = this.prepareParams(pool.options);
+    for (const pool of this.components.leaseProcessPools) {
+      const network = pool.options?.deployment?.network
+        ? this.networks.get(pool.options?.deployment.network)
+        : undefined;
 
-      const demandSpecification = await this.modules.market.buildDemandDetails(demandBuildOptions.demand, allocation);
+      const demandSpecification = await this.modules.market.buildDemandDetails(pool.options.demand, allocation);
       const proposalPool = new DraftOfferProposalPool();
 
       const proposalSubscription = this.modules.market
@@ -172,11 +174,14 @@ export class Deployment {
           error: (e) => this.logger.error("Error while collecting proposals", e),
         });
 
-      const leaseProcessPool = this.modules.market.createLeaseProcessPool(
-        proposalPool,
-        allocation,
-        leaseProcessPoolOptions,
-      );
+      const leaseProcessPool = this.modules.market.createLeaseProcessPool(proposalPool, allocation, {
+        replicas: pool.options.deployment?.replicas,
+        network,
+        leaseProcessOptions: {
+          activity: pool.options?.activity,
+          payment: pool.options?.payment,
+        },
+      });
       this.pools.set(pool.name, {
         proposalPool,
         proposalSubscription,
@@ -243,29 +248,5 @@ export class Deployment {
     const readyPools = [...this.pools.values()].map((component) => component.leaseProcessPool.ready());
     await Promise.all(readyPools);
     this.logger.info("Components deployed and ready to use");
-  }
-
-  private prepareParams(options: CreateActivityPoolOptions): {
-    demandBuildOptions: DemandBuildParams;
-    leaseProcessPoolOptions: LeaseProcessPoolOptions;
-  } {
-    const replicas =
-      typeof options.deployment?.replicas === "number"
-        ? { min: options.deployment?.replicas, max: options.deployment?.replicas }
-        : typeof options.deployment?.replicas === "object"
-          ? options.deployment?.replicas
-          : { min: 1, max: 1 };
-    const network = options.deployment?.network ? this.networks.get(options.deployment?.network) : undefined;
-    return {
-      demandBuildOptions: {
-        demand: options.demand,
-        market: options.market,
-      },
-      leaseProcessPoolOptions: {
-        agreementOptions: { invoiceFilter: options.payment?.invoiceFilter },
-        replicas,
-        network,
-      },
-    };
   }
 }

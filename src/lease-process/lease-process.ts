@@ -1,15 +1,14 @@
 import { Allocation, IPaymentApi } from "../payment";
 import { filter } from "rxjs";
 import { Agreement, IAgreementApi } from "../market/agreement/agreement";
-import { AgreementPaymentProcess } from "../payment/agreement_payment_process";
-import { DebitNoteFilter, InvoiceFilter } from "../payment/service";
+import { AgreementPaymentProcess, PaymentOptions } from "../payment/agreement_payment_process";
 import { Logger, YagnaApi } from "../shared/utils";
 import { waitForCondition } from "../shared/utils/waitForCondition";
 import { Activity, IActivityApi, WorkContext } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { EventEmitter } from "eventemitter3";
-import { INetworkApi } from "../network/api";
-import { NetworkNode } from "../network";
+import { NetworkNode, INetworkApi } from "../network";
+import { ExecutionOptions } from "../activity/exe-script-executor";
 
 export interface LeaseProcessEvents {
   /**
@@ -18,12 +17,19 @@ export interface LeaseProcessEvents {
   finalized: () => void;
 }
 
+export interface LeaseProcessOptions {
+  activity?: ExecutionOptions;
+  payment?: PaymentOptions;
+  networkNode?: NetworkNode;
+}
+
 /**
  * Represents a set of use-cases for invoking commands
  */
 
 export class LeaseProcess {
   public readonly events = new EventEmitter<LeaseProcessEvents>();
+  public readonly networkNode?: NetworkNode;
   private paymentProcess: AgreementPaymentProcess;
 
   private currentActivity: Activity | null = null;
@@ -39,21 +45,16 @@ export class LeaseProcess {
     /** @deprecated This will be removed, we want to have a nice adapter here */
     private readonly yagna: YagnaApi,
     private readonly storageProvider: StorageProvider,
-    public readonly networkNode?: NetworkNode,
-    private readonly leaseOptions?: {
-      paymentOptions: {
-        invoiceFilter: InvoiceFilter;
-        debitNoteFilter: DebitNoteFilter;
-      };
-    },
+    private readonly leaseOptions?: LeaseProcessOptions,
   ) {
     this.paymentProcess = new AgreementPaymentProcess(
       this.agreement,
       this.allocation,
       this.paymentApi,
-      this.leaseOptions?.paymentOptions,
+      this.leaseOptions?.payment,
       this.logger,
     );
+    this.networkNode = this.leaseOptions?.networkNode;
 
     // TODO: Listen to agreement events to know when it goes down due to provider closing it!
 
@@ -117,7 +118,8 @@ export class LeaseProcess {
         this.networkApi,
         {
           storageProvider: this.storageProvider,
-          networkNode: this.networkNode,
+          networkNode: this.leaseOptions?.networkNode,
+          execution: this.leaseOptions?.activity,
         },
       );
     }
@@ -135,6 +137,7 @@ export class LeaseProcess {
       {
         storageProvider: this.storageProvider,
         networkNode: this.networkNode,
+        execution: this.leaseOptions?.activity,
       },
     );
 

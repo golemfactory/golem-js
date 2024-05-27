@@ -3,7 +3,7 @@ import { DeploymentComponents } from "./deployment";
 
 function validateNetworks(components: DeploymentComponents) {
   const networkNames = new Set(components.networks.map((network) => network.name));
-  for (const pool of components.activityPools) {
+  for (const pool of components.leaseProcessPools) {
     if (!pool.options.deployment?.network) {
       continue;
     }
