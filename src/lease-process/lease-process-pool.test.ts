@@ -19,7 +19,7 @@ function getMockLeaseProcess() {
   return {
     hasActivity: () => false,
     fetchAgreementState: () => Promise.resolve("Approved"),
-    agreement: { id: "1", getDto: () => ({}) } as Agreement,
+    agreement: { id: "1" } as Agreement,
   } as LeaseProcess;
 }
 
@@ -49,9 +49,7 @@ describe("LeaseProcessPool", () => {
   describe("ready()", () => {
     it("prepares MIN_POOL_SIZE lease processes", async () => {
       when(proposalPool.acquire()).thenResolve({} as OfferProposal);
-      when(agreementApi.proposeAgreement(_)).thenResolve({
-        getDto: () => ({}),
-      } as Agreement);
+      when(agreementApi.proposeAgreement(_)).thenResolve({} as Agreement);
       when(proposalPool.remove(_)).thenResolve();
       when(marketModule.createLease(_, _, _)).thenCall(() => ({}) as LeaseProcess);
 
@@ -67,7 +65,7 @@ describe("LeaseProcessPool", () => {
       when(proposalPool.remove(_)).thenResolve();
       when(marketModule.createLease(_, _, _)).thenCall(() => ({}) as LeaseProcess);
 
-      const fakeAgreement = { getDto: () => ({}) } as Agreement;
+      const fakeAgreement = {} as Agreement;
       when(agreementApi.proposeAgreement(_))
         .thenResolve(fakeAgreement)
         .thenReject(new Error("Failed to propose agreement"))

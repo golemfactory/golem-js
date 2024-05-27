@@ -6,19 +6,6 @@ import Decimal from "decimal.js-light";
 
 export type InvoiceOptions = BasePaymentOptions;
 
-export interface InvoiceDTO {
-  id: string;
-  timestamp: string;
-  activityIds?: string[];
-  agreementId: string;
-  paymentDueDate?: string;
-  status: string;
-  requestorWalletAddress: string;
-  provider: ProviderInfo;
-  paymentPlatform: string;
-  amount: string;
-}
-
 export interface IInvoiceRepository {
   getById(id: string): Promise<Invoice>;
 }
@@ -49,21 +36,6 @@ export class Invoice extends BaseDocument<PaymentApi.InvoiceDTO> {
     this.amount = model.amount;
     this.timestamp = model.timestamp;
     this.recipientId = model.recipientId;
-  }
-
-  get dto(): InvoiceDTO {
-    return {
-      id: this.id,
-      timestamp: this.timestamp,
-      activityIds: this.activityIds,
-      agreementId: this.agreementId,
-      paymentDueDate: this.paymentDueDate,
-      status: this.status,
-      requestorWalletAddress: this.requestorWalletAddress,
-      provider: this.provider,
-      paymentPlatform: this.paymentPlatform,
-      amount: this.amount,
-    };
   }
 
   public getPreciseAmount(): Decimal {
