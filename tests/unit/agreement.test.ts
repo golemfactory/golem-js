@@ -1,4 +1,4 @@
-import { Agreement, ProviderInfo } from "../../src";
+import { Agreement, Demand, DemandSpecification, ProviderInfo } from "../../src";
 import { MarketApi } from "ya-ts-client";
 
 const agreementData: MarketApi.AgreementDTO = {
@@ -25,10 +25,22 @@ const agreementData: MarketApi.AgreementDTO = {
   validTo: "2024-01-02T00:00:00.000Z",
 };
 
+const demand = new Demand(
+  "demand-id",
+  new DemandSpecification(
+    {
+      constraints: [],
+      properties: [],
+    },
+    "erc20-holesky-tglm",
+    30 * 60,
+  ),
+);
+
 describe("Agreement", () => {
   describe("getProviderInfo()", () => {
     it("should be a instance ProviderInfo with provider details", () => {
-      const agreement = new Agreement(agreementData.agreementId, agreementData, "erc20-holesky-tglm");
+      const agreement = new Agreement(agreementData.agreementId, agreementData, demand);
       expect(agreement.getProviderInfo().id).toEqual("provider-id");
       expect(agreement.getProviderInfo().name).toEqual("provider-name");
       expect(agreement.getProviderInfo().walletAddress).toEqual("0xProviderWallet");
@@ -37,7 +49,7 @@ describe("Agreement", () => {
 
   describe("getState()", () => {
     it("should return state of agreement", () => {
-      const agreement = new Agreement(agreementData.agreementId, agreementData, "erc20-holesky-tglm");
+      const agreement = new Agreement(agreementData.agreementId, agreementData, demand);
       expect(agreement.getState()).toEqual("Approved");
     });
   });

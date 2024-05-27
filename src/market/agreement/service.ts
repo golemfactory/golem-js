@@ -4,13 +4,8 @@ import { Agreement, IAgreementApi, LegacyAgreementServiceOptions } from "./agree
 import { AgreementServiceConfig } from "./config";
 import { GolemMarketError, MarketErrorCode, OfferProposal } from "../index";
 
-export interface AgreementDTO {
-  id: string;
-  provider: { id: string; name: string };
-}
-
 export class AgreementCandidate {
-  agreement?: AgreementDTO;
+  agreement?: Agreement;
 
   constructor(readonly proposal: OfferProposal) {}
 }
@@ -202,10 +197,7 @@ export class AgreementPoolService {
 
       this.agreements.set(agreement.id, agreement);
 
-      candidate.agreement = {
-        id: agreement.id,
-        provider: agreement.getProviderInfo(),
-      };
+      candidate.agreement = agreement;
 
       this.candidateMap.set(agreement.id, candidate);
 

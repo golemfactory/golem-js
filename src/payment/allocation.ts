@@ -33,10 +33,10 @@ export class Allocation {
   public readonly totalAmount: string;
 
   /** The amount that has been already spent */
-  private spentAmount: string;
+  public readonly spentAmount: string;
 
   /** The amount left for spending */
-  private remainingAmount: string;
+  public readonly remainingAmount: string;
 
   constructor(private readonly model: PaymentApi.AllocationDTO) {
     this.id = model.allocationId;

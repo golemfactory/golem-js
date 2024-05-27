@@ -1,9 +1,8 @@
-import type { IAgreementApi } from "../market/agreement/agreement";
+import type { Agreement, IAgreementApi } from "../market/agreement/agreement";
 import type { Logger } from "../shared/utils";
 import { defaultLogger } from "../shared/utils";
 import type { DraftOfferProposalPool, MarketModule } from "../market";
 import { GolemMarketError, MarketErrorCode } from "../market";
-import type { AgreementDTO } from "../market/agreement/service";
 import { EventEmitter } from "eventemitter3";
 import type { RequireAtLeastOne } from "../shared/utils/types";
 import type { Allocation, IPaymentApi } from "../payment";
@@ -29,10 +28,10 @@ export interface LeaseProcessPoolOptions {
 export interface LeaseProcessPoolEvents {
   ready: () => void;
   end: () => void;
-  acquired: (agreement: AgreementDTO) => void;
-  released: (agreement: AgreementDTO) => void;
-  created: (agreement: AgreementDTO) => void;
-  destroyed: (agreement: AgreementDTO) => void;
+  acquired: (agreement: Agreement) => void;
+  released: (agreement: Agreement) => void;
+  created: (agreement: Agreement) => void;
+  destroyed: (agreement: Agreement) => void;
   error: (error: GolemMarketError) => void;
 }
 
@@ -110,7 +109,7 @@ export class LeaseProcessPool {
         networkNode,
         ...this.leaseProcessOptions,
       });
-      this.events.emit("created", agreement.getDto());
+      this.events.emit("created", agreement);
       return leaseProcess;
     } catch (error) {
       this.events.emit(
@@ -166,7 +165,7 @@ export class LeaseProcessPool {
     return new Promise((resolve) => {
       this.acquireQueue.push((leaseProcess) => {
         this.borrowed.add(leaseProcess);
-        this.events.emit("acquired", leaseProcess.agreement.getDto());
+        this.events.emit("acquired", leaseProcess.agreement);
         resolve(leaseProcess);
       });
     });
@@ -187,7 +186,7 @@ export class LeaseProcessPool {
       leaseProcess = await this.createNewLeaseProcess();
     }
     this.borrowed.add(leaseProcess);
-    this.events.emit("acquired", leaseProcess.agreement.getDto());
+    this.events.emit("acquired", leaseProcess.agreement);
     return leaseProcess;
   }
 
@@ -217,7 +216,7 @@ export class LeaseProcessPool {
     if (!isValid) {
       return this.destroy(leaseProcess);
     }
-    this.events.emit("released", leaseProcess.agreement.getDto());
+    this.events.emit("released", leaseProcess.agreement);
     this.passLeaseProcessToWaitingAcquireOrBackToPool(leaseProcess);
   }
 
@@ -226,7 +225,7 @@ export class LeaseProcessPool {
       this.borrowed.delete(leaseProcess);
       this.logger.debug("Destroying lease process from the pool", { agreementId: leaseProcess.agreement.id });
       await Promise.all([leaseProcess.finalize(), this.removeNetworkNode(leaseProcess)]);
-      this.events.emit("destroyed", leaseProcess.agreement.getDto());
+      this.events.emit("destroyed", leaseProcess.agreement);
     } catch (error) {
       this.events.emit(
         "error",

@@ -10,6 +10,7 @@
     "basic-vpn": "tsx basic/vpn.ts",
     "advanced-hello-world": "tsx advanced/hello-world.ts",
     "advanced-manual-pools": "tsx advanced/manual-pools.ts",
+    "advanced-payment-filters": "tsx advanced/payment-filters.ts",
     "local-image": "tsx advanced/local-image/serveLocalGvmi.ts",
     "deployment": "tsx experimental/deployment/new-api.ts",
     "market-scan": "tsx market/scan.ts",

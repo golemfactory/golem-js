@@ -1,7 +1,5 @@
 import { PaymentApi } from "ya-ts-client";
-import { EventEmitter } from "eventemitter3";
 import { ProviderInfo } from "../market/agreement";
-import { InvoiceEvents } from "./invoice";
 
 export interface BaseModel {
   issuerId: string;
@@ -26,8 +24,6 @@ export abstract class BaseDocument<ModelType extends BaseModel> {
   public readonly paymentDueDate?: string;
 
   protected status: PaymentApi.InvoiceDTO["status"];
-
-  public readonly events = new EventEmitter<InvoiceEvents>();
 
   protected constructor(
     public readonly id: string,

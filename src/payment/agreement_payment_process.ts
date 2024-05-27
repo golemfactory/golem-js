@@ -4,14 +4,31 @@ import { DebitNote } from "./debit_note";
 import { RejectionReason } from "./rejection";
 import { Allocation } from "./allocation";
 import { defaultLogger, Logger } from "../shared/utils";
-import { DebitNoteFilter, InvoiceFilter } from "./service";
 import AsyncLock from "async-lock";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
 import { GolemUserError } from "../shared/error/golem-error";
 import { IPaymentApi } from "./types";
 import { getMessageFromApiError } from "../shared/utils/apiErrorMessage";
+import { Demand } from "../market";
 
-export interface PaymentOptions {
+export type DebitNoteFilter = (
+  debitNote: DebitNote,
+  context: {
+    agreement: Agreement;
+    allocation: Allocation;
+    demand: Demand;
+  },
+) => Promise<boolean> | boolean;
+export type InvoiceFilter = (
+  invoice: Invoice,
+  context: {
+    agreement: Agreement;
+    allocation: Allocation;
+    demand: Demand;
+  },
+) => Promise<boolean> | boolean;
+
+export interface PaymentProcessOptions {
   invoiceFilter: InvoiceFilter;
   debitNoteFilter: DebitNoteFilter;
 }
@@ -36,7 +53,7 @@ export class AgreementPaymentProcess {
     public readonly agreement: Agreement,
     public readonly allocation: Allocation,
     public readonly paymentApi: IPaymentApi,
-    public readonly options: PaymentOptions = {
+    public readonly options: PaymentProcessOptions = {
       invoiceFilter: () => true,
       debitNoteFilter: () => true,
     },
@@ -98,7 +115,11 @@ export class AgreementPaymentProcess {
 
     let acceptedByFilter = false;
     try {
-      acceptedByFilter = await this.options.debitNoteFilter(debitNote.dto);
+      acceptedByFilter = await this.options.debitNoteFilter(debitNote, {
+        agreement: this.agreement,
+        allocation: this.allocation,
+        demand: this.agreement.demand,
+      });
     } catch (error) {
       throw new GolemUserError("An error occurred in the debit note filter", error);
     }
@@ -196,7 +217,11 @@ export class AgreementPaymentProcess {
 
     let acceptedByFilter = false;
     try {
-      acceptedByFilter = await this.options.invoiceFilter(invoice.dto);
+      acceptedByFilter = await this.options.invoiceFilter(invoice, {
+        agreement: this.agreement,
+        allocation: this.allocation,
+        demand: this.agreement.demand,
+      });
     } catch (error) {
       throw new GolemUserError("An error occurred in the invoice filter", error);
     }
