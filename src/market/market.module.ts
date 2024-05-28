@@ -415,11 +415,18 @@ export class MarketModuleImpl implements MarketModule {
       try {
         const agreement = await this.proposeAgreement(proposal);
         // agreement is valid, proposal can be destroyed
-        await draftProposalPool.remove(proposal);
+        await draftProposalPool.remove(proposal).catch((error) => {
+          this.logger.warn("Signed the agreement but failed to remove the proposal from the pool", { error });
+        });
         return agreement;
-      } catch {
-        // If the proposal is not valid, remove it from the pool and try again
-        await draftProposalPool.remove(proposal);
+      } catch (error) {
+        this.logger.debug("Failed to propose agreement, retrying", { error });
+        // We failed to propose the agreement, destroy the proposal and try again with another one
+        await draftProposalPool.remove(proposal).catch((error) => {
+          this.logger.warn("Failed to remove the proposal from the pool after unsuccessful agreement proposal", {
+            error,
+          });
+        });
         return tryProposing();
       }
     };
