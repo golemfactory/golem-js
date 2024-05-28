@@ -47,6 +47,7 @@ export class AgreementPaymentProcess {
    * Example of a rule: you shouldn't accept a debit note if an invoice is already in place
    */
   private lock: AsyncLock = new AsyncLock();
+  private options: PaymentProcessOptions;
 
   public readonly logger: Logger;
 
@@ -56,13 +57,14 @@ export class AgreementPaymentProcess {
     public readonly agreement: Agreement,
     public readonly allocation: Allocation,
     public readonly paymentApi: IPaymentApi,
-    public readonly options: PaymentProcessOptions = {
-      invoiceFilter: () => true,
-      debitNoteFilter: () => true,
-    },
+    options?: Partial<PaymentProcessOptions>,
     logger?: Logger,
   ) {
     this.logger = logger || defaultLogger("payment");
+    this.options = {
+      invoiceFilter: options?.invoiceFilter || (() => true),
+      debitNoteFilter: options?.debitNoteFilter || (() => true),
+    };
   }
 
   /**
