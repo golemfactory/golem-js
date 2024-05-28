@@ -8,7 +8,7 @@ import {
   MarketErrorCode,
   NewProposalEvent,
 } from "./index";
-import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
+import { defaultLogger, Logger, runOnNextEventLoopIteration, YagnaApi } from "../shared/utils";
 import { Allocation, IPaymentApi } from "../payment";
 import { bufferTime, catchError, filter, map, mergeMap, Observable, of, OperatorFunction, switchMap, tap } from "rxjs";
 import { IProposalRepository, OfferProposal, ProposalFilterNew } from "./offer-proposal";
@@ -427,7 +427,7 @@ export class MarketModuleImpl implements MarketModule {
             error,
           });
         });
-        return tryProposing();
+        return runOnNextEventLoopIteration(tryProposing);
       }
     };
     return tryProposing();
