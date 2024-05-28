@@ -59,7 +59,7 @@ export interface PaymentModule {
   createAgreementPaymentProcess(
     agreement: Agreement,
     allocation: Allocation,
-    options?: PaymentProcessOptions,
+    options?: Partial<PaymentProcessOptions>,
   ): AgreementPaymentProcess;
 
   /**
@@ -167,7 +167,7 @@ export class PaymentModuleImpl implements PaymentModule {
   createAgreementPaymentProcess(
     agreement: Agreement,
     allocation: Allocation,
-    options?: PaymentProcessOptions,
+    options?: Partial<PaymentProcessOptions>,
   ): AgreementPaymentProcess {
     return new AgreementPaymentProcess(
       agreement,
