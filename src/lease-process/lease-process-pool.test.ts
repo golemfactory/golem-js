@@ -2,7 +2,7 @@ import { _, imock, instance, mock, reset, verify, when } from "@johanblumenberg/
 import type { Agreement, IAgreementApi } from "../market/agreement/agreement";
 import { LeaseProcess } from "./lease-process";
 import { Allocation, IPaymentApi } from "../payment";
-import type { MarketModule, OfferProposal } from "../market";
+import type { MarketModule } from "../market";
 import { DraftOfferProposalPool } from "../market";
 import { LeaseProcessPool } from "./lease-process-pool";
 import { type RequireAtLeastOne } from "../shared/utils/types";
@@ -48,11 +48,9 @@ beforeEach(() => {
 describe("LeaseProcessPool", () => {
   describe("ready()", () => {
     it("prepares MIN_POOL_SIZE lease processes", async () => {
-      when(proposalPool.acquire()).thenResolve({} as OfferProposal);
-      when(agreementApi.proposeAgreement(_)).thenResolve({
+      when(marketModule.signAgreementFromPool(_)).thenResolve({
         getDto: () => ({}),
       } as Agreement);
-      when(proposalPool.remove(_)).thenResolve();
       when(marketModule.createLease(_, _, _)).thenCall(() => ({}) as LeaseProcess);
 
       const pool = getLeasePool({ min: 5, max: 10 });
@@ -60,15 +58,13 @@ describe("LeaseProcessPool", () => {
       await pool.ready();
 
       expect(pool.getAvailableSize()).toBe(5);
-      verify(proposalPool.acquire()).times(5);
+      verify(marketModule.signAgreementFromPool(_)).times(5);
     });
     it("retries on error", async () => {
-      when(proposalPool.acquire()).thenResolve({} as OfferProposal);
-      when(proposalPool.remove(_)).thenResolve();
       when(marketModule.createLease(_, _, _)).thenCall(() => ({}) as LeaseProcess);
 
       const fakeAgreement = { getDto: () => ({}) } as Agreement;
-      when(agreementApi.proposeAgreement(_))
+      when(marketModule.signAgreementFromPool(_))
         .thenResolve(fakeAgreement)
         .thenReject(new Error("Failed to propose agreement"))
         .thenResolve(fakeAgreement)
@@ -80,7 +76,7 @@ describe("LeaseProcessPool", () => {
       await pool.ready();
 
       expect(pool.getAvailableSize()).toBe(3);
-      verify(proposalPool.acquire()).times(5);
+      verify(marketModule.signAgreementFromPool(_)).times(5);
     });
     it("stops retrying after abort signal is triggered", async () => {
       const pool = getLeasePool({ min: 3 });
