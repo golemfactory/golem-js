@@ -1,5 +1,5 @@
-export { Invoice, InvoiceEvents } from "./invoice";
-export { DebitNote, DebitNoteEvents } from "./debit_note";
+export { Invoice } from "./invoice";
+export { DebitNote } from "./debit_note";
 export { Allocation } from "./allocation";
 export { Rejection, RejectionReason } from "./rejection";
 export * as PaymentFilters from "./strategy";
@@ -8,3 +8,4 @@ export { InvoiceProcessor, InvoiceAcceptResult } from "./InvoiceProcessor";
 export * from "./payment.module";
 export { IPaymentApi } from "./types";
 export { CreateAllocationParams } from "./types";
+export { InvoiceFilter, DebitNoteFilter } from "./agreement_payment_process";

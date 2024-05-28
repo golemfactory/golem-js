@@ -1,6 +1,5 @@
 import { BasePaymentOptions } from "./config";
-import { InvoiceDTO } from "./invoice";
-import { DebitNoteDTO } from "./debit_note";
+import { DebitNoteFilter, InvoiceFilter } from "./agreement_payment_process";
 
 export interface PaymentOptions extends BasePaymentOptions {
   /** Interval for checking new invoices */
@@ -16,6 +15,3 @@ export interface PaymentOptions extends BasePaymentOptions {
   /** A custom filter that checks every invoices coming from providers */
   invoiceFilter?: InvoiceFilter;
 }
-
-export type DebitNoteFilter = (debitNote: DebitNoteDTO) => Promise<boolean> | boolean;
-export type InvoiceFilter = (invoice: InvoiceDTO) => Promise<boolean> | boolean;

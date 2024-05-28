@@ -1,8 +1,7 @@
 import { Logger, YagnaOptions } from "../../shared/utils";
 import { MarketApi } from "ya-ts-client";
-import { OfferProposal } from "../index";
-import { AgreementDTO } from "./service";
-import { InvoiceFilter } from "../../payment/service";
+import { Demand, OfferProposal } from "../index";
+import { InvoiceFilter } from "../../payment/agreement_payment_process";
 
 export interface ProviderInfo {
   name: string;
@@ -71,8 +70,8 @@ export class Agreement {
    */
   constructor(
     public readonly id: string,
-    private model: MarketApi.AgreementDTO,
-    private readonly paymentPlatform: string,
+    private readonly model: MarketApi.AgreementDTO,
+    public readonly demand: Demand,
   ) {}
 
   /**
@@ -87,19 +86,8 @@ export class Agreement {
     return {
       id: this.model.offer.providerId,
       name: this.model.offer.properties["golem.node.id.name"],
-      walletAddress: this.model.offer.properties[`golem.com.payment.platform.${this.paymentPlatform}.address`],
+      walletAddress: this.model.offer.properties[`golem.com.payment.platform.${this.demand.paymentPlatform}.address`],
     };
-  }
-
-  getDto(): AgreementDTO {
-    return {
-      id: this.id,
-      provider: this.getProviderInfo(),
-    };
-  }
-
-  public update(model: MarketApi.AgreementDTO) {
-    this.model = model;
   }
 
   /**

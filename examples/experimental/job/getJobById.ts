@@ -1,4 +1,5 @@
 import { JobManager } from "@golem-sdk/golem-js/experimental";
+import { MarketOrderSpec } from "@golem-sdk/golem-js";
 
 const golem = new JobManager({
   yagna: {
@@ -6,22 +7,24 @@ const golem = new JobManager({
   },
 });
 
+const order: MarketOrderSpec = {
+  demand: {
+    workload: { imageTag: "severyn/espeak:latest" },
+  },
+  market: {
+    maxAgreements: 1,
+    rentHours: 0.5,
+    pricing: {
+      model: "linear",
+      maxStartPrice: 1,
+      maxCpuPerHourPrice: 1,
+      maxEnvPerHourPrice: 1,
+    },
+  },
+};
+
 function startJob() {
-  const job = golem.createJob<string>({
-    demand: {
-      activity: { imageTag: "severyn/espeak:latest" },
-    },
-    market: {
-      maxAgreements: 1,
-      rentHours: 0.5,
-      pricing: {
-        model: "linear",
-        maxStartPrice: 1,
-        maxCpuPerHourPrice: 1,
-        maxEnvPerHourPrice: 1,
-      },
-    },
-  });
+  const job = golem.createJob<string>(order);
 
   console.log("Job object created, initial status is", job.state);
 

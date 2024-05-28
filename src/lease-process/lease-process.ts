@@ -1,7 +1,7 @@
 import { Allocation, IPaymentApi } from "../payment";
 import { filter } from "rxjs";
 import { Agreement, IAgreementApi } from "../market/agreement/agreement";
-import { AgreementPaymentProcess, PaymentOptions } from "../payment/agreement_payment_process";
+import { AgreementPaymentProcess, PaymentProcessOptions } from "../payment/agreement_payment_process";
 import { Logger, YagnaApi } from "../shared/utils";
 import { waitForCondition } from "../shared/utils/waitForCondition";
 import { Activity, IActivityApi, WorkContext } from "../activity";
@@ -19,7 +19,7 @@ export interface LeaseProcessEvents {
 
 export interface LeaseProcessOptions {
   activity?: ExecutionOptions;
-  payment?: PaymentOptions;
+  payment?: PaymentProcessOptions;
   networkNode?: NetworkNode;
 }
 

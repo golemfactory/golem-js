@@ -1,21 +1,7 @@
 import { PaymentApi } from "ya-ts-client";
 import { ProviderInfo } from "../market/agreement";
-import { EventEmitter } from "eventemitter3";
 import { BaseDocument } from "./BaseDocument";
-
-export interface DebitNoteEvents {
-  accepted: (details: { id: string; agreementId: string; amount: string; provider: ProviderInfo }) => void;
-  paymentFailed: (details: { id: string; agreementId: string; reason: string | undefined }) => void;
-}
-
-export interface DebitNoteDTO {
-  id: string;
-  timestamp: string;
-  activityId: string;
-  agreementId: string;
-  totalAmountDue: string;
-  usageCounterVector?: object;
-}
+import Decimal from "decimal.js-light";
 
 export interface IDebitNoteRepository {
   getById(id: string): Promise<DebitNote>;
@@ -31,7 +17,6 @@ export class DebitNote extends BaseDocument<PaymentApi.DebitNoteDTO> {
   public readonly activityId: string;
   public readonly totalAmountDue: string;
   public readonly usageCounterVector?: object;
-  public readonly events = new EventEmitter<DebitNoteEvents>();
 
   /**
    *
@@ -50,14 +35,7 @@ export class DebitNote extends BaseDocument<PaymentApi.DebitNoteDTO> {
     this.usageCounterVector = model.usageCounterVector;
   }
 
-  get dto(): DebitNoteDTO {
-    return {
-      id: this.id,
-      timestamp: this.timestamp,
-      activityId: this.activityId,
-      agreementId: this.agreementId,
-      totalAmountDue: this.totalAmountDue,
-      usageCounterVector: this.usageCounterVector,
-    };
+  public getPreciseAmount(): Decimal {
+    return new Decimal(this.totalAmountDue);
   }
 }

@@ -3,7 +3,6 @@ import { EventEmitter } from "eventemitter3";
 import { Allocation, DebitNote, Invoice, InvoiceProcessor, IPaymentApi } from "./index";
 
 import { defaultLogger, YagnaApi } from "../shared/utils";
-import { DebitNoteFilter, InvoiceFilter } from "./service";
 import { Observable } from "rxjs";
 import { GolemServices } from "../golem-network/golem-network";
 import { PayerDetails } from "./PayerDetails";

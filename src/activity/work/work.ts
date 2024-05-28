@@ -19,9 +19,8 @@ import { NetworkNode } from "../../network";
 import { RemoteProcess } from "./process";
 import { GolemWorkError, WorkErrorCode } from "./error";
 import { GolemConfigError, GolemTimeoutError } from "../../shared/error/golem-error";
-import { ProviderInfo } from "../../market/agreement";
+import { Agreement, ProviderInfo } from "../../market/agreement";
 import { TcpProxy } from "../../network/tcpProxy";
-import { AgreementDTO } from "../../market/agreement/service";
 import { ActivityApi } from "ya-ts-client";
 import { YagnaExeScriptObserver } from "../../shared/yagna";
 import { ExecutionOptions, ExeScriptExecutor } from "../exe-script-executor";
@@ -54,7 +53,7 @@ export interface CommandOptions {
 export interface ActivityDTO {
   provider: ProviderInfo;
   id: string;
-  agreement: AgreementDTO;
+  agreement: Agreement;
 }
 
 /**
@@ -395,7 +394,7 @@ export class WorkContext {
     return {
       provider: this.provider,
       id: this.activity.id,
-      agreement: this.activity.agreement.getDto(),
+      agreement: this.activity.agreement,
     };
   }
 
