@@ -19,7 +19,7 @@ export interface LeaseProcessEvents {
 
 export interface LeaseProcessOptions {
   activity?: ExecutionOptions;
-  payment?: PaymentProcessOptions;
+  payment?: Partial<PaymentProcessOptions>;
   networkNode?: NetworkNode;
 }
 
