@@ -2,6 +2,7 @@
   { "cmd": "tsx", "path": "examples/basic/many-of.ts" },
   { "cmd": "tsx", "path": "examples/basic/one-of.ts" },
   { "cmd": "tsx", "path": "examples/basic/vpn.ts" },
+  { "cmd": "tsx", "path": "examples/basic/transfer.ts" },
   { "cmd": "tsx", "path": "examples/advanced/hello-world.ts" },
   { "cmd": "tsx", "path": "examples/advanced/manual-pools.ts" },
   { "cmd": "tsx", "path": "examples/advanced/payment-filters.ts" },
