@@ -2,6 +2,7 @@ import { MarketApi } from "ya-ts-client";
 import { GolemMarketError, MarketErrorCode } from "./error";
 import { ProviderInfo } from "./agreement";
 import { Demand } from "./demand";
+import { GolemInternalError } from "../shared/error/golem-error";
 
 export type ProposalFilter = (proposal: OfferProposal) => boolean;
 
@@ -12,38 +13,54 @@ export type PricingInfo = {
 };
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-export type ProposalProperties = Record<string, string | number | string[] | number[] | boolean> & {
-  "golem.activity.caps.transfer.protocol": string[];
-  "golem.com.payment.debit-notes.accept-timeout?": number;
-  "golem.com.payment.platform.erc20-polygon-glm.address"?: string;
-  "golem.com.payment.platform.erc20-holesky-tglm.address"?: string;
-  "golem.com.payment.platform.erc20-mumbai-tglm.address"?: string;
-  "golem.com.pricing.model": "linear";
-  "golem.com.pricing.model.linear.coeffs": number[];
-  "golem.com.scheme": string;
-  "golem.com.scheme.payu.debit-note.interval-sec?"?: number;
-  "golem.com.scheme.payu.payment-timeout-sec?"?: number;
-  "golem.com.usage.vector": string[];
-  "golem.inf.cpu.architecture": string;
-  "golem.inf.cpu.brand": string;
-  "golem.inf.cpu.capabilities": string[];
-  "golem.inf.cpu.cores": number;
-  "golem.inf.cpu.model": string;
-  "golem.inf.cpu.threads": number;
-  "golem.inf.cpu.vendor": string[];
-  "golem.inf.mem.gib": number;
-  "golem.inf.storage.gib": number;
-  "golem.node.debug.subnet": string;
-  "golem.node.id.name": string;
-  "golem.node.net.is-public": boolean;
-  "golem.runtime.capabilities": string[];
-  "golem.runtime.name": string;
-  "golem.runtime.version": string;
-  "golem.srv.caps.multi-activity": boolean;
-  "golem.srv.caps.payload-manifest": boolean;
-};
+export type ProposalProperties = Record<string, string | number | string[] | number[] | boolean> &
+  /**
+   * This type is made Partial on purpose. Golem Protocol defines "properties" as a flat list of key/value pairs.
+   *
+   * The protocol itself does not dictate what properties should or shouldn't be defined. Such details
+   * are left for the Provider and Requestor to agree upon outside the protocol.
+   *
+   * The mentioned agreements can be done in a P2P manner between the involved entities, or both parties
+   * can decide to adhere to a specific "standard" which determines which properties are "mandatory".
+   *
+   * One example of such standard would be:
+   * https://github.com/golemfactory/golem-architecture/blob/master/gaps/gap-3_mid_agreement_payments/gap-3_mid_agreement_payments.md
+   *
+   * golem-js in its current form partially implements some of the standards, but it's not committed to implementing them fully
+   */
 
-export interface ProposalDTO {
+  Partial<{
+    "golem.activity.caps.transfer.protocol": string[];
+    "golem.com.payment.debit-notes.accept-timeout?": number;
+    "golem.com.payment.platform.erc20-polygon-glm.address"?: string;
+    "golem.com.payment.platform.erc20-holesky-tglm.address"?: string;
+    "golem.com.payment.platform.erc20-mumbai-tglm.address"?: string;
+    "golem.com.pricing.model": "linear";
+    "golem.com.pricing.model.linear.coeffs": number[];
+    "golem.com.scheme": string;
+    "golem.com.scheme.payu.debit-note.interval-sec?"?: number;
+    "golem.com.scheme.payu.payment-timeout-sec?"?: number;
+    "golem.com.usage.vector": string[];
+    "golem.inf.cpu.architecture": string;
+    "golem.inf.cpu.brand": string;
+    "golem.inf.cpu.capabilities": string[];
+    "golem.inf.cpu.cores": number;
+    "golem.inf.cpu.model": string;
+    "golem.inf.cpu.threads": number;
+    "golem.inf.cpu.vendor": string[];
+    "golem.inf.mem.gib": number;
+    "golem.inf.storage.gib": number;
+    "golem.node.debug.subnet": string;
+    "golem.node.id.name": string;
+    "golem.node.net.is-public": boolean;
+    "golem.runtime.capabilities": string[];
+    "golem.runtime.name": string;
+    "golem.runtime.version": string;
+    "golem.srv.caps.multi-activity": boolean;
+    "golem.srv.caps.payload-manifest": boolean;
+  }>;
+
+export type ProposalDTO = Partial<{
   transferProtocol: string[];
   cpuBrand: string;
   cpuCapabilities: string[];
@@ -55,7 +72,7 @@ export interface ProposalDTO {
   runtimeCapabilities: string[];
   runtimeName: string;
   state: MarketApi.ProposalDTO["state"];
-}
+}>;
 
 export interface IProposalRepository {
   add(proposal: OfferProposal): OfferProposal;
@@ -174,6 +191,18 @@ export class OfferProposal {
     const usageVector = this.properties["golem.com.usage.vector"];
     const priceVector = this.properties["golem.com.pricing.model.linear.coeffs"];
 
+    if (!usageVector) {
+      throw new GolemInternalError(
+        "The proposal does not contain 'golem.com.usage.vector' property. We can't estimate the costs.",
+      );
+    }
+
+    if (!priceVector) {
+      throw new GolemInternalError(
+        "The proposal does not contain 'golem.com.pricing.model.linear.coeffs' property. We can't estimate costs.",
+      );
+    }
+
     const envIdx = usageVector.findIndex((ele) => ele === "golem.usage.duration_sec");
     const cpuIdx = usageVector.findIndex((ele) => ele === "golem.usage.cpu_sec");
 
@@ -208,7 +237,7 @@ export class OfferProposal {
   public getProviderInfo(): ProviderInfo {
     return {
       id: this.model.issuerId,
-      name: this.properties["golem.node.id.name"],
+      name: this.properties["golem.node.id.name"] ?? "",
       walletAddress: this.properties[`golem.com.payment.platform.${this.demand.paymentPlatform}.address`] as string,
     };
   }

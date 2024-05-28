@@ -3,17 +3,18 @@ import { Logger, YagnaApi } from "../shared/utils";
 import { MarketModuleImpl } from "./market.module";
 import * as YaTsClient from "ya-ts-client";
 import { Demand, DemandSpecification, IDemandRepository } from "./demand";
-import { from, of, take, takeUntil, timer } from "rxjs";
+import { from, Subject, take } from "rxjs";
 import { IProposalRepository, OfferProposal, ProposalProperties } from "./offer-proposal";
 import { MarketApiAdapter } from "../shared/yagna/";
-import { Agreement, IAgreementApi } from "./agreement/agreement";
 import { IActivityApi, IFileServer } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { GolemMarketError } from "./error";
 import { Allocation, IPaymentApi } from "../payment";
-import { INetworkApi } from "../network/api";
-import { NetworkModule } from "../network";
+import { INetworkApi, NetworkModule } from "../network";
 import { DraftOfferProposalPool } from "./draft-offer-proposal-pool";
+import { Agreement, ProviderInfo } from "./agreement";
+import { EventEmitter } from "eventemitter3";
+import { OfferSubscriptionEvents } from "./api";
 
 const mockMarketApiAdapter = mock(MarketApiAdapter);
 const mockYagna = mock(YagnaApi);
@@ -23,10 +24,10 @@ beforeEach(() => {
   jest.useFakeTimers();
   jest.resetAllMocks();
   reset(mockMarketApiAdapter);
+
   marketModule = new MarketModuleImpl({
     activityApi: instance(imock<IActivityApi>()),
     paymentApi: instance(imock<IPaymentApi>()),
-    agreementApi: instance(imock<IAgreementApi>()),
     networkApi: instance(imock<INetworkApi>()),
     proposalRepository: instance(imock<IProposalRepository>()),
     demandRepository: instance(imock<IDemandRepository>()),
@@ -148,7 +149,7 @@ describe("Market module", () => {
         return new Demand("demand-id", specification);
       });
 
-      const demand$ = marketModule.publishDemand(mockSpecification);
+      const demand$ = marketModule.publishAndRefreshDemand(mockSpecification);
       demand$.pipe(take(1)).subscribe({
         next: (demand) => {
           try {
@@ -176,7 +177,7 @@ describe("Market module", () => {
         .thenResolve(mockDemand2);
       when(mockMarketApiAdapter.unpublishDemand(_)).thenResolve();
 
-      const demand$ = marketModule.publishDemand(mockSpecificationInstance);
+      const demand$ = marketModule.publishAndRefreshDemand(mockSpecificationInstance);
       const demands: Demand[] = [];
       demand$.pipe(take(3)).subscribe({
         next: (demand) => {
@@ -205,7 +206,7 @@ describe("Market module", () => {
 
       when(mockMarketApiAdapter.publishDemandSpecification(_)).thenReject(new Error("Triggered"));
 
-      const demand$ = marketModule.publishDemand(details);
+      const demand$ = marketModule.publishAndRefreshDemand(details);
 
       demand$.subscribe({
         error: (err: GolemMarketError) => {
@@ -255,7 +256,7 @@ describe("Market module", () => {
         ]),
       );
 
-      const proposal$ = marketModule.subscribeForProposals(mockDemand);
+      const proposal$ = marketModule.observeOfferProposals(mockDemand);
 
       let proposalsEmitted = 0;
 
@@ -279,197 +280,166 @@ describe("Market module", () => {
   });
 
   describe("startCollectingProposals()", () => {
-    it("should negotiate any initial proposals", (done) => {
+    test("should negotiate any initial proposal", (done) => {
       jest.useRealTimers();
-      const mockSpecification = mock(DemandSpecification);
-      const demandSpecification = instance(mockSpecification);
-      const proposalProperties = {
-        ["golem.inf.cpu.cores"]: 1,
-        ["golem.inf.cpu.threads"]: 1,
-        ["golem.inf.mem.gib"]: 1,
-      } as ProposalProperties;
-      const proposal1 = {
-        isInitial: () => true,
-        isDraft: () => false,
-        isValid: () => true,
-        getDto: () => ({
-          state: "Initial",
-        }),
-        provider: {
-          id: "provider-1",
-        },
-        properties: proposalProperties,
-        getEstimatedCost: () => 1,
-      } as OfferProposal;
-      const proposal2 = {
-        isInitial: () => true,
-        isDraft: () => false,
-        isValid: () => true,
-        getDto: () => ({
-          state: "Initial",
-        }),
-        provider: {
-          id: "provider-2",
-        },
-        properties: proposalProperties,
-        getEstimatedCost: () => 1,
-      } as OfferProposal;
-      const proposal3 = {
-        isInitial: () => false,
-        isDraft: () => true,
-        isValid: () => true,
-        getDto: () => ({
-          state: "Draft",
-        }),
-        provider: {
-          id: "provider-3",
-        },
-        properties: proposalProperties,
-        getEstimatedCost: () => 1,
-      } as OfferProposal;
-      const proposal4 = {
-        isInitial: () => false,
-        isDraft: () => true,
-        isValid: () => true,
-        getDto: () => ({
-          state: "Draft",
-        }),
-        provider: {
-          id: "provider-1",
-        },
-        properties: proposalProperties,
-        getEstimatedCost: () => 1,
-      } as OfferProposal;
 
-      marketModule.publishDemand = jest.fn().mockReturnValue(of({ id: "demand-id" }));
-      marketModule.negotiateProposal = jest.fn();
-      marketModule.subscribeForProposals = jest
-        .fn()
-        .mockReturnValue(from([proposal1, proposal2, proposal3, proposal4]));
+      const spec = new DemandSpecification(
+        {
+          properties: [],
+          constraints: [],
+        },
+        "erc20-holesky-tglm",
+        60 * 60,
+      );
 
-      const draftProposals: OfferProposal[] = [];
-      marketModule
-        .startCollectingProposals({
-          demandSpecification,
-          bufferSize: 1,
-          proposalsBatchReleaseTimeoutMs: 10,
-        })
-        // using timer instead of take here because proposalBatch releases initial proposals
-        // after a timeout (10ms) so draftProposals will be emitted before that happens
-        .pipe(takeUntil(timer(50)))
-        .subscribe({
-          next: (proposal) => {
-            draftProposals.push(...proposal);
-          },
-          complete: () => {
-            try {
-              expect(draftProposals).toEqual([proposal3, proposal4]);
-              expect(marketModule.negotiateProposal).toHaveBeenCalledTimes(2);
-              expect(marketModule.negotiateProposal).toHaveBeenCalledWith(proposal1, demandSpecification);
-              expect(marketModule.negotiateProposal).toHaveBeenCalledWith(proposal2, demandSpecification);
-              done();
-            } catch (error) {
-              done(error);
-            }
-          },
-          error: (error) => done(error),
-        });
+      const providerInfo: ProviderInfo = {
+        id: "test-provider-id",
+        name: "test-provider-name",
+        walletAddress: "0xTestWallet",
+      };
+
+      const initialOfferProperties: ProposalProperties = {
+        "golem.inf.cpu.cores": 2,
+        "golem.inf.cpu.threads": 2,
+        "golem.inf.mem.gib": 1,
+        "golem.inf.storage.gib": 1,
+      };
+
+      const mockInitialOfferProposal = mock(OfferProposal);
+      when(mockInitialOfferProposal.isInitial()).thenReturn(true);
+      when(mockInitialOfferProposal.isValid()).thenReturn(true);
+      when(mockInitialOfferProposal.provider).thenReturn(providerInfo);
+      when(mockInitialOfferProposal.properties).thenReturn(initialOfferProperties);
+
+      const mockDraftOfferProposal = mock(OfferProposal);
+      when(mockDraftOfferProposal.isDraft()).thenReturn(true);
+      when(mockDraftOfferProposal.isValid()).thenReturn(true);
+      when(mockDraftOfferProposal.provider).thenReturn(providerInfo);
+      when(mockDraftOfferProposal.properties).thenReturn(initialOfferProperties);
+
+      const initialProposal = instance(mockInitialOfferProposal);
+      const draftProposal = instance(mockDraftOfferProposal);
+
+      const feedback = {
+        initialOfferProposals$: new Subject<OfferProposal>(),
+        draftOfferProposals$: new Subject<OfferProposal>(),
+        events: new EventEmitter<OfferSubscriptionEvents>(),
+        cancel: jest.fn(),
+      };
+
+      when(mockMarketApiAdapter.observeDemandResponse(_)).thenReturn(feedback);
+
+      // When
+      const proposals$ = marketModule.startCollectingDraftOfferProposals({
+        demandSpecification: spec,
+      });
+
+      const next = jest.fn();
+
+      proposals$.pipe(take(1)).subscribe({
+        next: next,
+        error: (err) => done(err),
+        complete: () => {
+          try {
+            expect(next).toHaveBeenCalledWith([draftProposal]);
+
+            verify(mockMarketApiAdapter.counterProposal(initialProposal, spec)).once();
+            // Right now we don't expect counter draft proposals (advanced negotiations)
+            verify(mockMarketApiAdapter.counterProposal(draftProposal, spec)).never();
+
+            done();
+          } catch (err) {
+            done(err);
+          }
+        },
+      });
+
+      // We need this because the actual demand publishing is async, so the result of that publishing will be available
+      // on the next tick. Only then it makes sense to push the proposals into the test subjects.
+      setImmediate(() => {
+        // Emit the values on the subjects
+        feedback.initialOfferProposals$.next(initialProposal);
+        feedback.draftOfferProposals$.next(draftProposal);
+      });
     });
-    it("should reduce proposals from the same provider", (done) => {
+
+    test("should reduce proposals from the same provider", (done) => {
       jest.useRealTimers();
 
-      const mockSpecification = mock(DemandSpecification);
-      const demandSpecification = instance(mockSpecification);
-      const proposalProperties = {
-        ["golem.inf.cpu.cores"]: 1,
-        ["golem.inf.cpu.threads"]: 1,
-        ["golem.inf.mem.gib"]: 1,
-      } as ProposalProperties;
-      const proposal1 = {
-        isInitial: () => true,
-        isDraft: () => false,
-        isValid: () => true,
-        getDto: () => ({
-          state: "Initial",
-        }),
-        provider: {
-          id: "provider-1",
+      const spec = new DemandSpecification(
+        {
+          properties: [],
+          constraints: [],
         },
-        properties: proposalProperties,
-        getEstimatedCost: () => 99,
-      } as OfferProposal;
-      const proposal2 = {
-        isInitial: () => true,
-        isDraft: () => false,
-        isValid: () => true,
-        getDto: () => ({
-          state: "Initial",
-        }),
-        provider: {
-          id: "provider-2",
-        },
-        properties: proposalProperties,
-        getEstimatedCost: () => 1,
-      } as OfferProposal;
-      const proposal3 = {
-        isInitial: () => true,
-        isDraft: () => false,
-        isValid: () => true,
-        getDto: () => ({
-          state: "Initial",
-        }),
-        provider: {
-          id: "provider-1",
-        },
-        properties: proposalProperties,
-        getEstimatedCost: () => 1,
-      } as OfferProposal;
-      const proposal4 = {
-        isInitial: () => false,
-        isDraft: () => true,
-        isValid: () => true,
-        getDto: () => ({
-          state: "Draft",
-        }),
-        provider: {
-          id: "provider-1",
-        },
-        properties: proposalProperties,
-        getEstimatedCost: () => 1,
-      } as OfferProposal;
+        "erc20-holesky-tglm",
+        60 * 60,
+      );
 
-      marketModule.publishDemand = jest.fn().mockReturnValue(of({ id: "demand-id" }));
-      marketModule.negotiateProposal = jest.fn();
-      marketModule.subscribeForProposals = jest
-        .fn()
-        .mockReturnValue(from([proposal1, proposal2, proposal3, proposal4]));
+      const providerInfo: ProviderInfo = {
+        id: "test-provider-id",
+        name: "test-provider-name",
+        walletAddress: "0xTestWallet",
+      };
 
-      const draftProposals: OfferProposal[] = [];
-      marketModule
-        .startCollectingProposals({
-          demandSpecification,
-          bufferSize: 1,
-          proposalsBatchReleaseTimeoutMs: 10,
-        })
-        // using timer instead of take here because proposalBatch releases initial proposals
-        // after a timeout (10ms) so draftProposals will be emitted before that happens
-        .pipe(takeUntil(timer(50)))
-        .subscribe({
-          next: (proposal) => {
-            draftProposals.push(...proposal);
-          },
-          complete: () => {
-            try {
-              expect(draftProposals.length).toBe(1);
-              expect(marketModule.negotiateProposal).toHaveBeenCalledTimes(2);
-              expect(marketModule.negotiateProposal).toHaveBeenCalledWith(proposal2, demandSpecification);
-              expect(marketModule.negotiateProposal).toHaveBeenCalledWith(proposal3, demandSpecification);
-              done();
-            } catch (error) {
-              done(error);
-            }
-          },
-        });
+      const initialOfferProperties: ProposalProperties = {
+        "golem.inf.cpu.cores": 2,
+        "golem.inf.cpu.threads": 2,
+        "golem.inf.mem.gib": 1,
+        "golem.inf.storage.gib": 1,
+      };
+
+      const mockInitialOfferProposal = mock(OfferProposal);
+      when(mockInitialOfferProposal.isInitial()).thenReturn(true);
+      when(mockInitialOfferProposal.isValid()).thenReturn(true);
+      when(mockInitialOfferProposal.provider).thenReturn(providerInfo);
+      when(mockInitialOfferProposal.properties).thenReturn(initialOfferProperties);
+
+      const mockDraftOfferProposal = mock(OfferProposal);
+      when(mockDraftOfferProposal.isDraft()).thenReturn(true);
+      when(mockDraftOfferProposal.isValid()).thenReturn(true);
+      when(mockDraftOfferProposal.provider).thenReturn(providerInfo);
+      when(mockDraftOfferProposal.properties).thenReturn(initialOfferProperties);
+
+      const initialProposal = instance(mockInitialOfferProposal);
+      const draftProposal = instance(mockDraftOfferProposal);
+
+      const feedback = {
+        initialOfferProposals$: new Subject<OfferProposal>(),
+        draftOfferProposals$: new Subject<OfferProposal>(),
+        events: new EventEmitter<OfferSubscriptionEvents>(),
+        cancel: jest.fn(),
+      };
+
+      when(mockMarketApiAdapter.observeDemandResponse(_)).thenReturn(feedback);
+
+      // When
+      const proposals$ = marketModule.startCollectingDraftOfferProposals({
+        demandSpecification: spec,
+      });
+
+      const next = jest.fn();
+
+      proposals$.pipe(take(1)).subscribe({
+        next: next,
+        error: (err) => done(err),
+        complete: () => {
+          try {
+            // Three initial proposals came in, only one got negotiated
+            verify(mockMarketApiAdapter.counterProposal(initialProposal, spec)).once();
+            done();
+          } catch (err) {
+            done(err);
+          }
+        },
+      });
+
+      setImmediate(() => {
+        feedback.initialOfferProposals$.next(initialProposal);
+        feedback.initialOfferProposals$.next(initialProposal);
+        feedback.initialOfferProposals$.next(initialProposal);
+        // To be able to finish the test...
+        feedback.draftOfferProposals$.next(draftProposal);
+      });
     });
   });
   describe("signAgreementFromPool()", () => {

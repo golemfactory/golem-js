@@ -1,4 +1,4 @@
-import { Agreement } from "../market/agreement";
+import { Agreement } from "../market";
 import { Invoice } from "./invoice";
 import { DebitNote } from "./debit_note";
 import { RejectionReason } from "./rejection";
@@ -20,6 +20,7 @@ export type DebitNoteFilter = (
     demand: Demand;
   },
 ) => Promise<boolean> | boolean;
+
 export type InvoiceFilter = (
   invoice: Invoice,
   context: {

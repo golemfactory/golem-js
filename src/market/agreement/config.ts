@@ -6,7 +6,7 @@ const DEFAULTS = {
   agreementWaitingForApprovalTimeout: 60,
 };
 
-export class AgreementApiConfig {
+export class MarketApiConfig {
   readonly agreementRequestTimeout: number;
   readonly agreementWaitingForApprovalTimeout: number;
   readonly logger?: Logger;

@@ -209,7 +209,7 @@ export class YagnaApi {
   }
 
   private startPollingEvents() {
-    this.logger.info("Starting to poll for events from Yagna");
+    this.logger.info("Starting to poll for events from Yagna", { appSessionId: this.appSessionId });
 
     const pollIntervalSec = 5;
     const maxEvents = 100;

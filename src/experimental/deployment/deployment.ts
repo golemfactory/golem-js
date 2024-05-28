@@ -150,7 +150,7 @@ export class Deployment {
       const proposalPool = new DraftOfferProposalPool();
 
       const proposalSubscription = this.modules.market
-        .startCollectingProposals({
+        .startCollectingDraftOfferProposals({
           demandSpecification,
           filter: pool.options.market.proposalFilter,
           bufferSize: 10,

@@ -32,7 +32,7 @@ describe("LeaseProcessPool", () => {
       allocation,
     );
     proposalSubscription = proposalPool.readFrom(
-      glm.market.startCollectingProposals({
+      glm.market.startCollectingDraftOfferProposals({
         demandSpecification,
       }),
     );

@@ -1,14 +1,7 @@
 import { Logger, YagnaOptions } from "../../shared/utils";
 import { MarketApi } from "ya-ts-client";
-import { Demand, OfferProposal } from "../index";
-import { InvoiceFilter } from "../../payment/agreement_payment_process";
-import {
-  AgreementCancelledEvent,
-  AgreementConfirmedEvent,
-  AgreementRejectedEvent,
-  AgreementTerminatedEvent,
-} from "./agreement-event";
-import { EventEmitter } from "eventemitter3";
+import { InvoiceFilter } from "../../payment";
+import { Demand } from "../demand";
 
 /**
  * * `Proposal` - newly created by a Requestor (draft based on Proposal)
@@ -47,43 +40,6 @@ export interface LegacyAgreementServiceOptions {
 
 export interface IAgreementRepository {
   getById(id: string): Promise<Agreement>;
-}
-
-export interface IAgreementEvents {
-  agreementConfirmed: (agreement: AgreementConfirmedEvent) => void;
-  agreementRejected: (agreement: AgreementRejectedEvent) => void;
-  agreementTerminated: (agreement: AgreementTerminatedEvent) => void;
-  agreementCancelled: (agreement: AgreementCancelledEvent) => void;
-}
-
-export interface IAgreementApi {
-  events: EventEmitter<IAgreementEvents>;
-
-  getAgreement(id: string): Promise<Agreement>;
-
-  /**
-   * Request creating an agreement from the provided proposal
-   *
-   * Use this method if you want to decide what should happen with the agreement after it is created
-   *
-   * @return An agreement that's in a "Proposal" state (not yet usable for activity creation)
-   */
-  createAgreement(proposal: OfferProposal): Promise<Agreement>;
-
-  /**
-   * Request creating an agreement from the provided proposal, send it to the Provider and wait for approval
-   *
-   * Use this method when you want to quickly finalize the deal with the Provider, but be ready for a rejection
-   *
-   * @return An agreement that's already in an "Approved" state and can be used to create activities on the Provider
-   */
-  proposeAgreement(proposal: OfferProposal): Promise<Agreement>;
-
-  getAgreementState(id: string): Promise<AgreementState>;
-
-  confirmAgreement(agreement: Agreement): Promise<Agreement>;
-
-  terminateAgreement(agreement: Agreement, reason?: string): Promise<Agreement>;
 }
 
 /**

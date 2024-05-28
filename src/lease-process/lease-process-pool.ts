@@ -1,8 +1,7 @@
-import type { Agreement } from "../market/agreement/agreement";
+import type { Agreement, DraftOfferProposalPool, MarketModule } from "../market";
+import { GolemMarketError, MarketErrorCode } from "../market";
 import type { Logger } from "../shared/utils";
 import { createAbortSignalFromTimeout, runOnNextEventLoopIteration } from "../shared/utils";
-import type { DraftOfferProposalPool, MarketModule } from "../market";
-import { GolemMarketError, MarketErrorCode } from "../market";
 import { EventEmitter } from "eventemitter3";
 import type { RequireAtLeastOne } from "../shared/utils/types";
 import type { Allocation } from "../payment";

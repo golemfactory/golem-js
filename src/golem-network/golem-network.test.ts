@@ -7,7 +7,6 @@ import { Allocation, PaymentModuleImpl } from "../payment";
 import { YagnaApi } from "../shared/utils";
 import { MarketApiAdapter, PaymentApiAdapter } from "../shared/yagna";
 import { ActivityApiAdapter } from "../shared/yagna/adapters/activity-api-adapter";
-import { AgreementApiAdapter } from "../shared/yagna/adapters/agreement-api-adapter";
 import { GolemNetwork, MarketOrderSpec } from "./golem-network";
 import { _, instance, mock, reset, when, verify } from "@johanblumenberg/ts-mockito";
 import { GftpStorageProvider } from "../shared/storage";
@@ -36,7 +35,6 @@ const mockLease = mock(LeaseModuleImpl);
 const mockYagna = mock(YagnaApi);
 const mockPaymentApi = mock(PaymentApiAdapter);
 const mockActivityApi = mock(ActivityApiAdapter);
-const mockAgreementApi = mock(AgreementApiAdapter);
 const mockMarketApi = mock(MarketApiAdapter);
 const mockStorageProvider = mock(GftpStorageProvider);
 
@@ -49,7 +47,6 @@ afterEach(() => {
   reset(mockLease);
   reset(mockPaymentApi);
   reset(mockActivityApi);
-  reset(mockAgreementApi);
   reset(mockMarketApi);
   reset(mockStorageProvider);
   jest.clearAllMocks();
@@ -65,7 +62,6 @@ function getGolemNetwork() {
       lease: instance(mockLease),
       paymentApi: instance(mockPaymentApi),
       activityApi: instance(mockActivityApi),
-      agreementApi: instance(mockAgreementApi),
       marketApi: instance(mockMarketApi),
       storageProvider: instance(mockStorageProvider),
     },
@@ -77,7 +73,7 @@ function mockStartCollectingProposals() {
   const mockObservable = {
     subscribe: jest.fn().mockReturnValue(mockSubscription) as Observable<OfferProposal[]>["subscribe"],
   } as Observable<OfferProposal[]>;
-  when(mockMarket.startCollectingProposals(_)).thenReturn(mockObservable);
+  when(mockMarket.startCollectingDraftOfferProposals(_)).thenReturn(mockObservable);
   return mockSubscription;
 }
 function mockPaymentCreateAllocation() {

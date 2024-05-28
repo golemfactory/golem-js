@@ -2,7 +2,7 @@ import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
 import {
   Demand,
   DraftOfferProposalPool,
-  MarketApi,
+  IMarketApi,
   MarketModule,
   MarketModuleImpl,
   MarketOptions,
@@ -17,8 +17,6 @@ import { DebitNoteRepository, InvoiceRepository, MarketApiAdapter, PaymentApiAda
 import { ActivityApiAdapter } from "../shared/yagna/adapters/activity-api-adapter";
 import { ActivityRepository } from "../shared/yagna/repository/activity-repository";
 import { AgreementRepository } from "../shared/yagna/repository/agreement-repository";
-import { IAgreementApi } from "../market/agreement/agreement";
-import { AgreementApiAdapter } from "../shared/yagna/adapters/agreement-api-adapter";
 import { ProposalRepository } from "../shared/yagna/repository/proposal-repository";
 import { CacheService } from "../shared/cache/CacheService";
 import { IProposalRepository } from "../market/offer-proposal";
@@ -111,8 +109,7 @@ export type GolemServices = {
   logger: Logger;
   paymentApi: IPaymentApi;
   activityApi: IActivityApi;
-  agreementApi: IAgreementApi;
-  marketApi: MarketApi;
+  marketApi: IMarketApi;
   networkApi: INetworkApi;
   proposalCache: CacheService<OfferProposal>;
   proposalRepository: IProposalRepository;
@@ -211,10 +208,8 @@ export class GolemNetwork {
             this.yagna.activity.control,
             new ActivityRepository(this.yagna.activity.state, agreementRepository),
           ),
-        agreementApi:
-          this.options.override?.agreementApi ||
-          new AgreementApiAdapter(this.yagna.appSessionId, this.yagna, agreementRepository, this.logger),
-        marketApi: this.options.override?.marketApi || new MarketApiAdapter(this.yagna, this.logger),
+        marketApi:
+          this.options.override?.marketApi || new MarketApiAdapter(this.yagna, agreementRepository, this.logger),
         networkApi: this.options.override?.networkApi || new NetworkApiAdapter(this.yagna, this.logger),
         fileServer: this.options.override?.fileServer || new GftpServerAdapter(this.storageProvider),
       };
@@ -301,12 +296,14 @@ export class GolemNetwork {
       budget,
       expirationSec: order.market.rentHours * 60 * 60,
     });
+
     const demandSpecification = await this.market.buildDemandDetails(order.demand, allocation);
 
-    const proposal$ = this.market.startCollectingProposals({
+    const proposal$ = this.market.startCollectingDraftOfferProposals({
       demandSpecification,
       filter: order.market.proposalFilter,
     });
+
     const proposalSubscription = proposalPool.readFrom(proposal$);
 
     const agreement = await this.market.signAgreementFromPool(proposalPool);
@@ -388,7 +385,7 @@ export class GolemNetwork {
     });
     const demandSpecification = await this.market.buildDemandDetails(order.demand, allocation);
 
-    const proposal$ = this.market.startCollectingProposals({
+    const proposal$ = this.market.startCollectingDraftOfferProposals({
       demandSpecification,
       filter: order.market.proposalFilter,
     });
