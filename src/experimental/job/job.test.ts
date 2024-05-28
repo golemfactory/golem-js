@@ -1,44 +1,27 @@
 import { Job } from "./job";
-import { Agreement, AgreementPoolService } from "../../market/agreement";
 import { WorkContext } from "../../activity/work";
-import { Activity, IActivityApi } from "../../activity";
-import { anything, imock, instance, mock, verify, when } from "@johanblumenberg/ts-mockito";
+import { anything, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
 import { Logger } from "../../shared/utils";
 import { GolemNetwork } from "../../golem-network";
+import { LeaseProcess } from "../../lease-process";
 
-jest.mock("../../payment");
-jest.mock("../../market");
-
-const mockActivity = mock(Activity);
-const mockActivityApi = imock<IActivityApi>();
-
-// TODO: Unskip tests and fix them
-describe.skip("Job", () => {
+const mockGlm = mock(GolemNetwork);
+const mockLease = mock(LeaseProcess);
+const mockWorkContext = mock(WorkContext);
+describe("Job", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    reset(mockGlm);
+    reset(mockLease);
+    reset(mockWorkContext);
   });
 
   describe("cancel()", () => {
     it("stops the activity and releases the agreement when canceled", async () => {
-      jest.spyOn(AgreementPoolService.prototype, "run").mockResolvedValue();
-      jest.spyOn(WorkContext.prototype, "before").mockResolvedValue();
-      jest.spyOn(AgreementPoolService.prototype, "releaseAgreement").mockResolvedValue();
-
-      const mockAgreement = {
-        id: "test_agreement_id",
-        getProviderInfo: () => ({
-          id: "test_provider_id",
-        }),
-      } as Agreement;
-
-      jest.spyOn(AgreementPoolService.prototype, "getAgreement").mockResolvedValue(mockAgreement);
-
-      const activity = instance(mockActivity);
-      when(mockActivityApi.createActivity(anything())).thenResolve(activity);
-
+      when(mockLease.getExeUnit()).thenResolve(instance(mockWorkContext));
+      when(mockGlm.oneOf(anything())).thenResolve(instance(mockLease));
       const job = new Job(
         "test_id",
-        instance(mock(GolemNetwork)),
+        instance(mockGlm),
         {
           demand: {
             workload: {
@@ -67,8 +50,7 @@ describe.skip("Job", () => {
 
       await expect(job.waitForResult()).rejects.toThrow("Canceled");
 
-      verify(mockActivityApi.destroyActivity(activity)).once();
-      expect(AgreementPoolService.prototype.releaseAgreement).toHaveBeenCalledWith(mockAgreement.id, false);
+      verify(mockLease.finalize()).once();
     });
   });
 });
