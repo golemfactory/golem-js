@@ -10,6 +10,7 @@ import { GolemUserError } from "../shared/error/golem-error";
 import { IPaymentApi } from "./types";
 import { getMessageFromApiError } from "../shared/utils/apiErrorMessage";
 import { Demand } from "../market";
+import { filter } from "rxjs";
 
 export type DebitNoteFilter = (
   debitNote: DebitNote,
@@ -48,6 +49,8 @@ export class AgreementPaymentProcess {
   private lock: AsyncLock = new AsyncLock();
 
   public readonly logger: Logger;
+
+  private cleanup: (() => void) | null = null;
 
   constructor(
     public readonly agreement: Agreement,
@@ -290,5 +293,42 @@ export class AgreementPaymentProcess {
 
   private hasReceivedInvoice() {
     return this.invoice !== null;
+  }
+
+  public isStarted() {
+    return this.cleanup !== null;
+  }
+
+  /**
+   * Subscribe to payment events and add each invoice and debit note
+   * to the payment process.
+   * To stop the subscription, call `.stop()`.
+   */
+  public start(): void {
+    if (this.isStarted()) {
+      throw new GolemUserError("Payment process already started");
+    }
+    const invoiceSubscription = this.paymentApi.receivedInvoices$
+      .pipe(filter((invoice) => invoice.agreementId === this.agreement.id))
+      .subscribe(async (invoice) => {
+        await this.addInvoice(invoice);
+      });
+
+    const debitNoteSubscription = this.paymentApi.receivedDebitNotes$
+      .pipe(filter((debitNote) => debitNote.agreementId === this.agreement.id))
+      .subscribe(async (debitNote) => {
+        await this.addDebitNote(debitNote);
+      });
+    this.cleanup = () => {
+      invoiceSubscription.unsubscribe();
+      debitNoteSubscription.unsubscribe();
+    };
+  }
+
+  public stop(): void {
+    if (!this.isStarted()) {
+      throw new GolemUserError("Payment process not started");
+    }
+    this.cleanup?.();
   }
 }

@@ -3,19 +3,13 @@ import { Allocation, DraftOfferProposalPool, GolemNetwork } from "../../src";
 
 describe("LeaseProcessPool", () => {
   const glm = new GolemNetwork();
-  const modules = {
-    market: glm.market,
-    activity: glm.activity,
-    payment: glm.payment,
-    network: glm.network,
-  };
   let proposalPool: DraftOfferProposalPool;
   let allocation: Allocation;
   let proposalSubscription: Subscription;
 
   beforeAll(async () => {
     await glm.connect();
-    allocation = await modules.payment.createAllocation({
+    allocation = await glm.payment.createAllocation({
       budget: 1,
       // 30 minutes
       expirationSec: 60 * 30,
@@ -29,7 +23,7 @@ describe("LeaseProcessPool", () => {
 
   beforeEach(async () => {
     proposalPool = new DraftOfferProposalPool();
-    const demandSpecification = await modules.market.buildDemandDetails(
+    const demandSpecification = await glm.market.buildDemandDetails(
       {
         workload: {
           imageTag: "golem/alpine:latest",
@@ -38,7 +32,7 @@ describe("LeaseProcessPool", () => {
       allocation,
     );
     proposalSubscription = proposalPool.readFrom(
-      modules.market.startCollectingProposals({
+      glm.market.startCollectingProposals({
         demandSpecification,
       }),
     );
@@ -50,7 +44,7 @@ describe("LeaseProcessPool", () => {
   });
 
   it("should run a simple script on the activity from the pool", async () => {
-    const pool = modules.market.createLeaseProcessPool(proposalPool, allocation, { replicas: 1 });
+    const pool = glm.lease.createLeaseProcessPool(proposalPool, allocation, { replicas: 1 });
     pool.events.on("error", (error) => {
       throw error;
     });
@@ -65,7 +59,7 @@ describe("LeaseProcessPool", () => {
   });
 
   it("should prepare two activity ready to use", async () => {
-    const pool = modules.market.createLeaseProcessPool(proposalPool, allocation, { replicas: 2 });
+    const pool = glm.lease.createLeaseProcessPool(proposalPool, allocation, { replicas: 2 });
     pool.events.on("error", (error) => {
       throw error;
     });
@@ -94,7 +88,7 @@ describe("LeaseProcessPool", () => {
   });
 
   it("should release the activity and reuse it again", async () => {
-    const pool = modules.market.createLeaseProcessPool(proposalPool, allocation, { replicas: 1 });
+    const pool = glm.lease.createLeaseProcessPool(proposalPool, allocation, { replicas: 1 });
     pool.events.on("error", (error) => {
       throw error;
     });
@@ -113,7 +107,7 @@ describe("LeaseProcessPool", () => {
   });
 
   it("should terminate all agreements after drain and clear the poll", async () => {
-    const pool = modules.market.createLeaseProcessPool(proposalPool, allocation, { replicas: 2 });
+    const pool = glm.lease.createLeaseProcessPool(proposalPool, allocation, { replicas: 2 });
     pool.events.on("error", (error) => {
       throw error;
     });
@@ -138,8 +132,8 @@ describe("LeaseProcessPool", () => {
   });
 
   it("should establish a connection between two activities from pool via vpn", async () => {
-    const network = await modules.network.createNetwork();
-    const pool = modules.market.createLeaseProcessPool(proposalPool, allocation, { replicas: 2, network });
+    const network = await glm.network.createNetwork();
+    const pool = glm.lease.createLeaseProcessPool(proposalPool, allocation, { replicas: 2, network });
     pool.events.on("error", (error) => {
       throw error;
     });
@@ -155,6 +149,6 @@ describe("LeaseProcessPool", () => {
     await pool.destroy(leaseProcess1);
     await pool.destroy(leaseProcess2);
     await pool.drainAndClear();
-    await modules.network.removeNetwork(network);
+    await glm.network.removeNetwork(network);
   });
 });

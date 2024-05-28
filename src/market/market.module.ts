@@ -29,7 +29,6 @@ import { GolemUserError } from "../shared/error/golem-error";
 import { createAbortSignalFromTimeout } from "../shared/utils/abortSignal";
 import { MarketOrderSpec } from "../golem-network";
 import { NetworkModule, INetworkApi } from "../network";
-import { LeaseProcess, LeaseProcessOptions, LeaseProcessPool, LeaseProcessPoolOptions } from "../lease-process";
 
 export interface MarketEvents {}
 
@@ -154,22 +153,16 @@ export interface MarketModule {
     bufferSize?: number;
   }): Observable<OfferProposal[]>;
 
-  createLease(agreement: Agreement, allocation: Allocation, options?: LeaseProcessOptions): LeaseProcess;
-
-  /**
-   * Factory that creates new lease process pool that's fully configured
-   */
-  createLeaseProcessPool(
-    draftPool: DraftOfferProposalPool,
-    allocation: Allocation,
-    options?: LeaseProcessPoolOptions,
-  ): LeaseProcessPool;
-
   /**
    * Provides a simple estimation of the budget that's required for given demand specification
    * @param params
    */
   estimateBudget(params: MarketOrderSpec): number;
+
+  /**
+   * Fetch the most up-to-date agreement details from the yagna
+   */
+  fetchAgreement(agreementId: string): Promise<Agreement>;
 }
 
 /**
@@ -426,39 +419,6 @@ export class MarketModuleImpl implements MarketModule {
     return tryProposing();
   }
 
-  createLease(agreement: Agreement, allocation: Allocation, options?: LeaseProcessOptions): LeaseProcess {
-    // TODO Accept the filters
-    return new LeaseProcess(
-      agreement,
-      allocation,
-      this.deps.paymentApi,
-      this.deps.activityApi,
-      this.agreementApi,
-      this.deps.networkApi,
-      this.deps.logger,
-      this.yagnaApi, // TODO: Remove this dependency
-      this.deps.storageProvider,
-      options,
-    );
-  }
-
-  public createLeaseProcessPool(
-    draftPool: DraftOfferProposalPool,
-    allocation: Allocation,
-    options?: LeaseProcessPoolOptions,
-  ): LeaseProcessPool {
-    return new LeaseProcessPool({
-      agreementApi: this.agreementApi,
-      paymentApi: this.deps.paymentApi,
-      allocation,
-      proposalPool: draftPool,
-      marketModule: this,
-      networkModule: this.deps.networkModule,
-      logger: this.logger.child("lease-process-pool"),
-      ...options,
-    });
-  }
-
   /**
    * Reduce initial proposals to a set grouped by the provider's key to avoid duplicate offers
    */
@@ -526,5 +486,9 @@ export class MarketModuleImpl implements MarketModule {
       default:
         throw new GolemUserError(`Unsupported pricing model ${pricingModel}`);
     }
+  }
+
+  async fetchAgreement(agreementId: string): Promise<Agreement> {
+    return this.agreementApi.getAgreement(agreementId);
   }
 }

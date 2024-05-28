@@ -1,23 +1,23 @@
-import type { Agreement, IAgreementApi } from "../market/agreement/agreement";
+import type { Agreement } from "../market/agreement/agreement";
 import type { Logger } from "../shared/utils";
-import { defaultLogger, sleep } from "../shared/utils";
+import { sleep } from "../shared/utils";
 import type { DraftOfferProposalPool, MarketModule } from "../market";
 import { GolemMarketError, MarketErrorCode } from "../market";
 import { EventEmitter } from "eventemitter3";
 import type { RequireAtLeastOne } from "../shared/utils/types";
-import type { Allocation, IPaymentApi } from "../payment";
+import type { Allocation } from "../payment";
 import type { LeaseProcess, LeaseProcessOptions } from "./lease-process";
 import { Network, NetworkModule } from "../network";
 import { createAbortSignalFromTimeout } from "../shared/utils/abortSignal";
+import { LeaseModule } from "./lease.module";
 
 export interface LeaseProcessPoolDependencies {
-  agreementApi: IAgreementApi;
-  paymentApi: IPaymentApi;
   allocation: Allocation;
   proposalPool: DraftOfferProposalPool;
   marketModule: MarketModule;
   networkModule: NetworkModule;
-  logger?: Logger;
+  leaseModule: LeaseModule;
+  logger: Logger;
 }
 
 export interface LeaseProcessPoolOptions {
@@ -59,24 +59,24 @@ export class LeaseProcessPool {
 
   private allocation: Allocation;
   private network?: Network;
-  private agreementApi: IAgreementApi;
   private proposalPool: DraftOfferProposalPool;
   private marketModule: MarketModule;
   private networkModule: NetworkModule;
+  private leaseModule: LeaseModule;
   private readonly minPoolSize: number;
   private readonly maxPoolSize: number;
   private readonly leaseProcessOptions?: LeaseProcessOptions;
 
   constructor(options: LeaseProcessPoolOptions & LeaseProcessPoolDependencies) {
-    this.agreementApi = options.agreementApi;
     this.allocation = options.allocation;
     this.proposalPool = options.proposalPool;
     this.marketModule = options.marketModule;
+    this.leaseModule = options.leaseModule;
     this.networkModule = options.networkModule;
     this.network = options.network;
     this.leaseProcessOptions = options.leaseProcessOptions;
 
-    this.logger = this.logger = options?.logger || defaultLogger("lease-process-pool");
+    this.logger = options.logger;
 
     this.minPoolSize =
       (() => {
@@ -103,7 +103,7 @@ export class LeaseProcessPool {
       const networkNode = this.network
         ? await this.networkModule.createNetworkNode(this.network, agreement.getProviderInfo().id)
         : undefined;
-      const leaseProcess = this.marketModule.createLease(agreement, this.allocation, {
+      const leaseProcess = this.leaseModule.createLease(agreement, this.allocation, {
         networkNode,
         ...this.leaseProcessOptions,
       });

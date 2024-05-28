@@ -33,6 +33,7 @@ import {
 } from "../shared/storage";
 import { DataTransferProtocol } from "../shared/types";
 import { NetworkApiAdapter } from "../shared/yagna/adapters/network-api-adapter";
+import { LeaseModule, LeaseModuleImpl } from "../lease-process/lease.module";
 
 export interface GolemNetworkOptions {
   /**
@@ -70,6 +71,7 @@ export interface GolemNetworkOptions {
       payment: PaymentModule;
       activity: ActivityModule;
       network: NetworkModule;
+      lease: LeaseModule;
     }
   >;
 }
@@ -138,6 +140,7 @@ export class GolemNetwork {
   public readonly payment: PaymentModule;
   public readonly activity: ActivityModule;
   public readonly network: NetworkModule;
+  public readonly lease: LeaseModule;
 
   /**
    * Dependency Container
@@ -220,6 +223,16 @@ export class GolemNetwork {
         this.options.override?.market || new MarketModuleImpl({ ...this.services, networkModule: this.network });
       this.payment = this.options.override?.payment || new PaymentModuleImpl(this.services, this.options.payment);
       this.activity = this.options.override?.activity || new ActivityModuleImpl(this.services);
+      this.lease =
+        this.options.override?.lease ||
+        new LeaseModuleImpl({
+          activityModule: this.activity,
+          paymentModule: this.payment,
+          marketModule: this.market,
+          networkModule: this.network,
+          logger: this.logger,
+          storageProvider: this.storageProvider,
+        });
     } catch (err) {
       this.events.emit("error", err);
       throw err;
@@ -301,7 +314,7 @@ export class GolemNetwork {
       ? await this.network.createNetworkNode(order.network, agreement.getProviderInfo().id)
       : undefined;
 
-    const lease = this.market.createLease(agreement, allocation, {
+    const lease = this.lease.createLease(agreement, allocation, {
       payment: order.payment,
       activity: order.activity,
       networkNode,
@@ -379,7 +392,7 @@ export class GolemNetwork {
     });
     const subscription = proposalPool.readFrom(proposal$);
 
-    const leaseProcessPool = this.market.createLeaseProcessPool(proposalPool, allocation, {
+    const leaseProcessPool = this.lease.createLeaseProcessPool(proposalPool, allocation, {
       replicas: concurrency,
       network: order.network,
       leaseProcessOptions: {

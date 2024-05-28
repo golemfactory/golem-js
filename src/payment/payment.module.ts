@@ -7,6 +7,8 @@ import { Observable } from "rxjs";
 import { GolemServices } from "../golem-network/golem-network";
 import { PayerDetails } from "./PayerDetails";
 import { CreateAllocationParams } from "./types";
+import { AgreementPaymentProcess, PaymentProcessOptions } from "./agreement_payment_process";
+import { Agreement } from "../market";
 
 export interface PaymentModuleOptions {
   /**
@@ -53,6 +55,12 @@ export interface PaymentModule {
   rejectDebitNote(debitNote: DebitNote, reason: string): Promise<DebitNote>;
 
   createInvoiceProcessor(): InvoiceProcessor;
+
+  createAgreementPaymentProcess(
+    agreement: Agreement,
+    allocation: Allocation,
+    options?: PaymentProcessOptions,
+  ): AgreementPaymentProcess;
 
   /**
    * Get the payment platform and wallet address of the payer.
@@ -154,5 +162,19 @@ export class PaymentModuleImpl implements PaymentModule {
    */
   createInvoiceProcessor(): InvoiceProcessor {
     return new InvoiceProcessor(this.yagnaApi);
+  }
+
+  createAgreementPaymentProcess(
+    agreement: Agreement,
+    allocation: Allocation,
+    options?: PaymentProcessOptions,
+  ): AgreementPaymentProcess {
+    return new AgreementPaymentProcess(
+      agreement,
+      allocation,
+      this.paymentApi,
+      options,
+      this.logger.child("agreement-payment-process"),
+    );
   }
 }
