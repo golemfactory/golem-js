@@ -8,8 +8,7 @@ import { DraftOfferProposalPool, MarketModule } from "../../market";
 import { PaymentModule } from "../../payment";
 import { CreateLeaseProcessPoolOptions } from "./builder";
 import { Subscription } from "rxjs";
-import { LeaseProcessPool } from "../../lease-process";
-import { LeaseModule } from "../../lease-process/lease.module";
+import { LeaseModule, LeaseProcessPool } from "../../lease-process";
 
 export enum DeploymentState {
   INITIAL = "INITIAL",
@@ -149,16 +148,15 @@ export class Deployment {
       const demandSpecification = await this.modules.market.buildDemandDetails(pool.options.demand, allocation);
       const proposalPool = new DraftOfferProposalPool();
 
-      const proposalSubscription = this.modules.market
-        .startCollectingDraftOfferProposals({
-          demandSpecification,
-          filter: pool.options.market.proposalFilter,
-          bufferSize: 10,
-        })
-        .subscribe({
-          next: (proposals) => proposals.forEach((proposal) => proposalPool.add(proposal)),
-          error: (e) => this.logger.error("Error while collecting proposals", e),
-        });
+      const draftProposal$ = this.modules.market.collectDraftOfferProposals({
+        demandSpecification,
+        filter: pool.options.market.proposalFilter,
+      });
+
+      const proposalSubscription = draftProposal$.subscribe({
+        next: (proposal) => proposalPool.add(proposal),
+        error: (err) => this.logger.error("Error while collecting proposals", err),
+      });
 
       const leaseProcessPool = this.modules.lease.createLeaseProcessPool(proposalPool, allocation, {
         replicas: pool.options.deployment?.replicas,

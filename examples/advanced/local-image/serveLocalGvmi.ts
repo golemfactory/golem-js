@@ -45,11 +45,10 @@ const getImagePath = (path: string) => fileURLToPath(new URL(path, import.meta.u
       expirationSec: 30 * 60, // 30 minutes
     });
     const demandSpecification = await glm.market.buildDemandDetails(demand.demand, allocation);
-    const proposal$ = glm.market.startCollectingProposals({
+    const draftProposal$ = glm.market.collectDraftOfferProposals({
       demandSpecification,
-      bufferSize: 15,
     });
-    const proposalSubscription = proposalPool.readFrom(proposal$);
+    const proposalSubscription = proposalPool.readFrom(draftProposal$);
     const draftProposal = await proposalPool.acquire();
 
     const agreement = await glm.market.proposeAgreement(draftProposal);

@@ -10,9 +10,16 @@ import {
 } from "../market";
 import { IPaymentApi, PaymentModule, PaymentModuleImpl, PaymentModuleOptions } from "../payment";
 import { ActivityModule, ActivityModuleImpl, IActivityApi, IFileServer } from "../activity";
-import { Network, NetworkModule, NetworkModuleImpl, NetworkOptions, INetworkApi } from "../network";
+import { INetworkApi, Network, NetworkModule, NetworkModuleImpl, NetworkOptions } from "../network";
 import { EventEmitter } from "eventemitter3";
-import { LeaseProcess, LeaseProcessOptions, LeaseProcessPool, LeaseProcessPoolOptions } from "../lease-process";
+import {
+  LeaseModule,
+  LeaseModuleImpl,
+  LeaseProcess,
+  LeaseProcessOptions,
+  LeaseProcessPool,
+  LeaseProcessPoolOptions,
+} from "../lease-process";
 import { DebitNoteRepository, InvoiceRepository, MarketApiAdapter, PaymentApiAdapter } from "../shared/yagna";
 import { ActivityApiAdapter } from "../shared/yagna/adapters/activity-api-adapter";
 import { ActivityRepository } from "../shared/yagna/repository/activity-repository";
@@ -31,7 +38,6 @@ import {
 } from "../shared/storage";
 import { DataTransferProtocol } from "../shared/types";
 import { NetworkApiAdapter } from "../shared/yagna/adapters/network-api-adapter";
-import { LeaseModule, LeaseModuleImpl } from "../lease-process/lease.module";
 
 export interface GolemNetworkOptions {
   /**
@@ -183,7 +189,7 @@ export class GolemNetwork {
       const proposalCache = new CacheService<OfferProposal>();
 
       const demandRepository = new DemandRepository(this.yagna.market, demandCache);
-      const proposalRepository = new ProposalRepository(this.yagna.market, proposalCache);
+      const proposalRepository = new ProposalRepository(this.yagna.market, this.yagna.identity, proposalCache);
       const agreementRepository = new AgreementRepository(this.yagna.market, demandRepository);
 
       this.services = {
@@ -209,7 +215,8 @@ export class GolemNetwork {
             new ActivityRepository(this.yagna.activity.state, agreementRepository),
           ),
         marketApi:
-          this.options.override?.marketApi || new MarketApiAdapter(this.yagna, agreementRepository, this.logger),
+          this.options.override?.marketApi ||
+          new MarketApiAdapter(this.yagna, agreementRepository, proposalRepository, this.logger),
         networkApi: this.options.override?.networkApi || new NetworkApiAdapter(this.yagna, this.logger),
         fileServer: this.options.override?.fileServer || new GftpServerAdapter(this.storageProvider),
       };
@@ -299,12 +306,12 @@ export class GolemNetwork {
 
     const demandSpecification = await this.market.buildDemandDetails(order.demand, allocation);
 
-    const proposal$ = this.market.startCollectingDraftOfferProposals({
+    const draftProposal$ = this.market.collectDraftOfferProposals({
       demandSpecification,
       filter: order.market.proposalFilter,
     });
 
-    const proposalSubscription = proposalPool.readFrom(proposal$);
+    const proposalSubscription = proposalPool.readFrom(draftProposal$);
 
     const agreement = await this.market.signAgreementFromPool(proposalPool);
 
@@ -385,11 +392,11 @@ export class GolemNetwork {
     });
     const demandSpecification = await this.market.buildDemandDetails(order.demand, allocation);
 
-    const proposal$ = this.market.startCollectingDraftOfferProposals({
+    const draftProposal$ = this.market.collectDraftOfferProposals({
       demandSpecification,
       filter: order.market.proposalFilter,
     });
-    const subscription = proposalPool.readFrom(proposal$);
+    const subscription = proposalPool.readFrom(draftProposal$);
 
     const leaseProcessPool = this.lease.createLeaseProcessPool(proposalPool, allocation, {
       replicas: concurrency,
@@ -399,13 +406,16 @@ export class GolemNetwork {
         payment: order.payment,
       },
     });
-    this.cleanupTasks.push(() => subscription.unsubscribe());
+    this.cleanupTasks.push(() => {
+      subscription.unsubscribe();
+    });
     this.cleanupTasks.push(async () => {
       // First drain the pool (which will wait for all leases to be paid for)
       // and only then release the allocation
       await leaseProcessPool
         .drainAndClear()
         .catch((err) => this.logger.error("Error while draining lease process pool", err));
+
       await this.payment
         .releaseAllocation(allocation)
         .catch((err) => this.logger.error("Error while releasing allocation", err));

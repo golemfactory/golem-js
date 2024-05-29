@@ -112,7 +112,9 @@ export class DraftOfferProposalPool {
       this.logger.error("Cannot add a non-draft proposal to the pool", { proposalId: proposal.id });
       throw new GolemMarketError("Cannot add a non-draft proposal to the pool", MarketErrorCode.InvalidProposal);
     }
+
     this.available.add(proposal);
+
     this.events.emit("added", proposal);
   }
 
@@ -241,10 +243,10 @@ export class DraftOfferProposalPool {
     this.events.emit("removed", proposal);
   }
 
-  public readFrom(source: Observable<OfferProposal[]>): Subscription {
+  public readFrom(source: Observable<OfferProposal>): Subscription {
     return source.subscribe({
-      next: (proposalBatch) => proposalBatch.forEach((proposal) => this.add(proposal)),
-      error: (e) => this.logger.error("Error while collecting proposals", e),
+      next: (proposal) => this.add(proposal),
+      error: (err) => this.logger.error("Error while collecting proposals", err),
     });
   }
 }

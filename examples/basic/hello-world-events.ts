@@ -6,7 +6,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
 const demandOptions: DemandSpec = {
   demand: {
-    activity: { imageTag: "golem/alpine:latest" },
+    workload: { imageTag: "golem/alpine:latest" },
   },
   market: {
     maxAgreements: 1,
@@ -34,18 +34,16 @@ const demandOptions: DemandSpec = {
   try {
     await glm.connect();
 
-    glm.market.events.agreements.on("agreementConfirmed", (event) => {
-      console.log("Agreement '%s' confirmed at %s", event.agreement.id, event.timestamp);
+    glm.market.events.on("agreementConfirmed", (agreement) => {
+      console.log("Agreement '%s' confirmed", agreement.id);
     });
 
-    glm.market.events.agreements.on("agreementTerminated", (event) => {
-      console.log(
-        "Agreement '%s' terminated by '%s' with reason '%s' at %s",
-        event.agreement.id,
-        event.terminatedBy,
-        event.reason,
-        event.timestamp,
-      );
+    glm.market.events.on("agreementTerminated", (agreement, terminatedBy, reason) => {
+      console.log("Agreement '%s' terminated by '%s' with reason '%s'", agreement.id, terminatedBy, reason);
+    });
+
+    glm.market.events.on("counterProposalRejectedByProvider", (proposal, reason) => {
+      console.warn("Proposal rejected by provider", proposal, reason);
     });
 
     const lease = await glm.oneOf(demandOptions);
@@ -53,6 +51,7 @@ const demandOptions: DemandSpec = {
       .getExeUnit()
       .then((exe) => exe.run("echo Hello, Golem! 👋"))
       .then((res) => console.log(res.stdout));
+
     await lease.finalize();
   } catch (err) {
     console.error("Failed to run the example", err);

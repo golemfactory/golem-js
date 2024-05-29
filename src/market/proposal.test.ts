@@ -20,7 +20,7 @@ const buildTestProposal = (props: Partial<ProposalProperties>): OfferProposal =>
     properties: props,
   };
 
-  return new OfferProposal(model, testDemand);
+  return new OfferProposal(model, "Provider", testDemand);
 };
 
 describe("Proposal", () => {

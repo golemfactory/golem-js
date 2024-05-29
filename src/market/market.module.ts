@@ -9,9 +9,15 @@ import {
   MarketErrorCode,
   NewProposalEvent,
 } from "./index";
-import { defaultLogger, Logger, runOnNextEventLoopIteration, YagnaApi } from "../shared/utils";
+import {
+  createAbortSignalFromTimeout,
+  defaultLogger,
+  Logger,
+  runOnNextEventLoopIteration,
+  YagnaApi,
+} from "../shared/utils";
 import { Allocation, IPaymentApi } from "../payment";
-import { bufferTime, catchError, filter, map, mergeMap, Observable, of, OperatorFunction, switchMap, tap } from "rxjs";
+import { catchError, filter, map, mergeMap, Observable, of, OperatorFunction, switchMap, tap } from "rxjs";
 import { IProposalRepository, OfferProposal, ProposalFilter } from "./offer-proposal";
 import { DemandBodyBuilder } from "./demand/demand-body-builder";
 import { BuildDemandOptions, DemandSpecification, IDemandRepository } from "./demand";
@@ -26,9 +32,8 @@ import { WorkloadDemandDirectorConfigOptions } from "./demand/options";
 import { BasicDemandDirectorConfig } from "./demand/directors/basic-demand-director-config";
 import { PaymentDemandDirectorConfig } from "./demand/directors/payment-demand-director-config";
 import { GolemUserError } from "../shared/error/golem-error";
-import { createAbortSignalFromTimeout } from "../shared/utils/abortSignal";
 import { MarketOrderSpec } from "../golem-network";
-import { NetworkModule, INetworkApi } from "../network";
+import { INetworkApi, NetworkModule } from "../network";
 
 export interface IOfferProposalEvents {
   offerProposalSubscriptionRefreshed: (demand: Demand) => void;
@@ -103,8 +108,10 @@ export interface MarketModule {
   /**
    * Sends a counter-offer to the provider. Note that to get the provider's response to your
    * counter you should listen to proposals sent to yagna using `subscribeForProposals`.
+   *
+   * @returns The counter-proposal that the requestor made to the Provider
    */
-  negotiateProposal(receivedProposal: OfferProposal, counterDemandSpec: DemandSpecification): Promise<void>;
+  negotiateProposal(receivedProposal: OfferProposal, counterDemandSpec: DemandSpecification): Promise<OfferProposal>;
 
   /**
    * Internally
@@ -156,11 +163,12 @@ export interface MarketModule {
    * Keep in mind that since this method returns an observable, nothing will happen until you subscribe to it.
    * Unsubscribing from the observable will stop the process and remove the demand from the market.
    */
-  startCollectingDraftOfferProposals(options: {
+  collectDraftOfferProposals(options: {
     demandSpecification: DemandSpecification;
     filter?: ProposalFilter;
-    bufferSize?: number;
-  }): Observable<OfferProposal[]>;
+    minProposalsBatchSize?: number;
+    proposalsBatchReleaseTimeoutMs?: number;
+  }): Observable<OfferProposal>;
 
   /**
    * Provides a simple estimation of the budget that's required for given demand specification
@@ -189,9 +197,8 @@ export interface IDemandDirector {
 }
 
 export class MarketModuleImpl implements MarketModule {
-  public events: EventEmitter<IMarketEvents>;
+  public events = new EventEmitter<IMarketEvents>();
 
-  private readonly yagnaApi: YagnaApi;
   private readonly logger = defaultLogger("market");
   private readonly marketApi: IMarketApi;
   private readonly proposalRepo: IProposalRepository;
@@ -214,14 +221,12 @@ export class MarketModuleImpl implements MarketModule {
     },
   ) {
     this.logger = deps.logger;
-    this.yagnaApi = deps.yagna;
     this.marketApi = deps.marketApi;
     this.proposalRepo = deps.proposalRepository;
     this.demandRepo = deps.demandRepository;
     this.fileServer = deps.fileServer;
 
-    // Expose the event API categories
-    this.events = this.marketApi.events;
+    this.observeAndEmitAgreementEvents();
   }
 
   async buildDemandDetails(options: BuildDemandOptions, allocation: Allocation): Promise<DemandSpecification> {
@@ -232,6 +237,7 @@ export class MarketModuleImpl implements MarketModule {
       expirationSec: options.expirationSec,
       subnetTag: options.subnetTag,
     });
+
     const basicDirector = new BasicDemandDirector(basicConfig);
     basicDirector.apply(builder);
 
@@ -247,9 +253,7 @@ export class MarketModuleImpl implements MarketModule {
     const paymentDirector = new PaymentDemandDirector(allocation, this.deps.marketApi, paymentConfig);
     await paymentDirector.apply(builder);
 
-    const spec = new DemandSpecification(builder.getProduct(), allocation.paymentPlatform, basicConfig.expirationSec);
-
-    return spec;
+    return new DemandSpecification(builder.getProduct(), allocation.paymentPlatform, basicConfig.expirationSec);
   }
 
   /**
@@ -289,7 +293,9 @@ export class MarketModuleImpl implements MarketModule {
       const subscribeToOfferProposals = async () => {
         try {
           currentDemand = await this.deps.marketApi.publishDemandSpecification(demandSpecification);
+          this.demandRepo.add(currentDemand);
           subscriber.next(currentDemand);
+          this.events.emit("subscribedToOfferProposals", currentDemand);
           this.logger.debug("Subscribing for proposals matched with the demand", { demand: currentDemand });
           return currentDemand;
         } catch (err) {
@@ -307,6 +313,7 @@ export class MarketModuleImpl implements MarketModule {
         try {
           await this.deps.marketApi.unpublishDemand(demand);
           this.logger.info("Demand unpublished from the market", { demand });
+          this.events.emit("unsubscribedFromOfferProposals", demand);
         } catch (err) {
           const golemMarketError = new GolemMarketError(
             `Could not publish demand on the market`,
@@ -322,10 +329,16 @@ export class MarketModuleImpl implements MarketModule {
 
       const interval = setInterval(() => {
         Promise.all([unsubscribeFromOfferProposals(currentDemand), subscribeToOfferProposals()])
-          .then(([, demand]) =>
-            this.logger.info("Refreshed subscription for offer proposals with the new demand", { demand }),
-          )
-          .catch((err) => this.logger.error("Error while re-publishing demand for offers", err));
+          .then(([, demand]) => {
+            if (demand) {
+              this.events.emit("refreshedOfferProposalSubscription", demand);
+              this.logger.info("Refreshed subscription for offer proposals with the new demand", { demand });
+            }
+          })
+          .catch((err) => {
+            this.logger.error("Error while re-publishing demand for offers", err);
+            subscriber.error(err);
+          });
       }, demandSpecification.expirationSec * 1000);
 
       return () => {
@@ -346,7 +359,7 @@ export class MarketModuleImpl implements MarketModule {
       // try to map the events to proposal entity, but be ready for validation errors
       mergeMap((event) => {
         return of(event).pipe(
-          map((event) => new OfferProposal((event as NewProposalEvent).proposal, demand)),
+          map((event) => new OfferProposal((event as NewProposalEvent).proposal, "Provider", demand)),
           // in case of a validation error return a null value from the pipe
           catchError((err) => {
             this.logger.error("Failed to map the yagna proposal event to Proposal entity", err);
@@ -357,12 +370,12 @@ export class MarketModuleImpl implements MarketModule {
     );
   }
 
-  public observeDraftOfferProposal(demand: Demand) {
-    return this.marketApi.observeDemandResponse(demand).draftOfferProposals$;
-  }
+  async negotiateProposal(offerProposal: OfferProposal, counterDemand: DemandSpecification): Promise<OfferProposal> {
+    const counterProposal = await this.deps.marketApi.counterProposal(offerProposal, counterDemand);
 
-  async negotiateProposal(offerProposal: OfferProposal, counterDemand: DemandSpecification): Promise<void> {
-    return this.deps.marketApi.counterProposal(offerProposal, counterDemand);
+    this.logger.debug("Counter proposal sent", counterProposal);
+
+    return counterProposal;
   }
 
   async proposeAgreement(proposal: OfferProposal): Promise<Agreement> {
@@ -388,90 +401,90 @@ export class MarketModuleImpl implements MarketModule {
     return agreement;
   }
 
-  startCollectingDraftOfferProposals(options: {
+  /**
+   * @inheritDoc
+   *
+   * ---
+   *
+   * NOTE: This method actually implements a negotiator that produces acceptable draft offers
+   */
+  collectDraftOfferProposals(options: {
     demandSpecification: DemandSpecification;
     filter?: ProposalFilter;
-    bufferSize?: number;
-    bufferTimeout?: number;
     minProposalsBatchSize?: number;
     proposalsBatchReleaseTimeoutMs?: number;
-  }): Observable<OfferProposal[]> {
+  }): Observable<OfferProposal> {
     // Utility predicates
-    const addDemandToRepository = (demand: Demand) => this.demandRepo.add(demand);
-    const acceptByUserFilter = (proposal: OfferProposal) => !options.filter || options.filter(proposal);
-    const acceptValidInitialProposal = (proposal: OfferProposal) => proposal.isValid() && proposal.isInitial();
-    const acceptValidDraftProposal = (proposal: OfferProposal) => proposal.isValid() && proposal.isDraft();
+    const acceptByUserFilter = (proposal: OfferProposal) => {
+      if (options.filter) {
+        try {
+          const result = options.filter(proposal);
+
+          if (!result) {
+            this.events.emit("offerProposalRejectedByFilter", proposal);
+          }
+
+          return result;
+        } catch (err) {
+          this.logger.error("Executing user provided proposal filter resulted with an error", err);
+          throw err;
+        }
+      }
+
+      return true;
+    };
     const rememberProposal = (proposal: OfferProposal) => this.proposalRepo.add(proposal);
-    const dropEmptyProposalBatches = (proposals: OfferProposal[]) => proposals.length > 0;
 
     // Initialize the process of continuous demand re-subscription for fresh offers from the market
     // Oder of transformation = Demand -> OfferProposal(status=Draft)[]
 
     return this.publishAndRefreshDemand(options.demandSpecification).pipe(
-      // for each demand created -> memorize the demand
-      tap(addDemandToRepository),
-
-      // switch to OfferProposal generation
-      // focus on processing the feedback from the market interactions (proposals, counter-proposals, responses and queries)
-      switchMap((freshDemand) => {
-        // Start "listening" to the feedback for the operations
-        const marketResponse = this.marketApi.observeDemandResponse(freshDemand);
-
-        // Process any initial proposals
-        const negotiatorSub = marketResponse.initialOfferProposals$
-          // Prepare
-          .pipe(
-            filter(acceptValidInitialProposal),
-            filter(acceptByUserFilter),
-            this.reduceInitialProposalsByProviderKey({
-              minProposalsBatchSize: options?.minProposalsBatchSize,
-              proposalsBatchReleaseTimeoutMs: options?.proposalsBatchReleaseTimeoutMs,
-            }),
-            tap(rememberProposal),
-          )
-          // Act: Trigger negotiations
-          .subscribe((proposal) => {
-            this.negotiateProposal(proposal, options.demandSpecification).catch((err) =>
-              this.logger.error("Failed to counter the offer proposal", {
-                proposal,
-                err,
-                counterDemand: options.demandSpecification,
-              }),
-            );
-          });
-
-        // Make the user aware about getting rejected
-        marketResponse.events.on("counterProposalRejected", () =>
-          this.logger.warn("The provider rejected our counter proposal"),
-        );
-
-        // Make the user aware about getting asked for information by the Provider
-        marketResponse.events.on("propertyQueryReceived", () =>
-          this.logger.warn("The provider queries is for information but we don't support that"),
-        );
-
-        // Once we get some offers out of the negotiations in form of "draft offer proposals", we can pass them to the users
-        const draftOfferProposalBatch$ = marketResponse.draftOfferProposals$.pipe(
-          filter(acceptValidDraftProposal),
-          filter(acceptByUserFilter),
-          tap(rememberProposal),
-          // TODO: Batch and buffer initials only?
-          // for each draft proposal -> add them to the buffer
-          bufferTime(options.bufferTimeout ?? 1_000, null, options.bufferSize || 10),
-          // filter out empty buffers
-          filter(dropEmptyProposalBatches),
-        );
-
-        return new Observable<OfferProposal[]>((observer) => {
-          const forwardResultsSub = draftOfferProposalBatch$.subscribe((value) => observer.next(value));
-
-          return () => {
-            forwardResultsSub.unsubscribe();
-            negotiatorSub.unsubscribe();
-            marketResponse.cancel();
-          };
-        });
+      // For each fresh demand, start to watch the related market conversation events
+      switchMap((freshDemand) => this.marketApi.observeDemandResponse(freshDemand)),
+      // Pluck the proposal received events, notify about the rest
+      switchMap(
+        (event) =>
+          // Negotiator Observable who has side effects and its main product: acceptable draft offers
+          new Observable<OfferProposal>((observer) => {
+            const { type } = event;
+            switch (type) {
+              case "ProposalReceived":
+                this.events.emit("offerProposalReceived", event.proposal);
+                observer.next(event.proposal);
+                break;
+              case "ProposalRejected":
+                this.events.emit("counterProposalRejectedByProvider", event.proposal, event.reason);
+                break;
+              case "PropertyQueryReceived":
+                this.events.emit("propertyQueryReceived");
+                break;
+              default:
+                this.logger.warn("Unsupported event type", type);
+                break;
+            }
+          }),
+      ),
+      // Always memorize the proposals that we got, then execute further processing
+      tap(rememberProposal),
+      // We are interested only in Initial and Draft proposals
+      filter((proposal) => proposal.isInitial() || proposal.isDraft()),
+      // for each proposal -> deduplicate them by provider key
+      this.reduceInitialProposalsByProviderKey({
+        minProposalsBatchSize: options?.minProposalsBatchSize,
+        proposalsBatchReleaseTimeoutMs: options?.proposalsBatchReleaseTimeoutMs,
       }),
+      // Tap-in negotiator logic and negotiate initials
+      tap((proposal) => {
+        if (proposal.isInitial()) {
+          this.negotiateProposal(proposal, options.demandSpecification).catch((err) =>
+            this.logger.error("Failed to negotiate the proposal", err),
+          );
+        }
+      }),
+      // Continue only with drafts
+      filter((proposal) => proposal.isDraft()),
+      // If they are accepted by the user filter
+      filter(acceptByUserFilter),
     );
   }
 
@@ -517,18 +530,20 @@ export class MarketModuleImpl implements MarketModule {
     minProposalsBatchSize?: number;
     proposalsBatchReleaseTimeoutMs?: number;
   }): OperatorFunction<OfferProposal, OfferProposal> {
-    return (source) =>
-      new Observable((destination) => {
+    return (input) =>
+      new Observable((observer) => {
         let isCancelled = false;
         const proposalsBatch = new ProposalsBatch({
           minBatchSize: options?.minProposalsBatchSize,
           releaseTimeoutMs: options?.proposalsBatchReleaseTimeoutMs,
         });
-        const subscription = source.subscribe((proposal) => {
+        const subscription = input.subscribe((proposal) => {
           if (proposal.isInitial()) {
-            proposalsBatch.addProposal(proposal);
+            proposalsBatch
+              .addProposal(proposal)
+              .catch((err) => this.logger.error("Failed to add the initial proposal to the batch", err));
           } else {
-            destination.next(proposal);
+            observer.next(proposal);
           }
         });
 
@@ -542,10 +557,10 @@ export class MarketModuleImpl implements MarketModule {
             const proposals = await proposalsBatch.getProposals();
             if (proposals.length > 0) {
               this.logger.debug("Received batch of proposals", { count: proposals.length });
-              proposals.forEach((proposal) => destination.next(proposal));
+              proposals.forEach((proposal) => observer.next(proposal));
             }
           } catch (error) {
-            destination.error(error);
+            observer.error(error);
           }
           batch();
         };
@@ -585,5 +600,24 @@ export class MarketModuleImpl implements MarketModule {
 
   async fetchAgreement(agreementId: string): Promise<Agreement> {
     return this.marketApi.getAgreement(agreementId);
+  }
+
+  private observeAndEmitAgreementEvents() {
+    this.marketApi.observeAgreementEvents().subscribe((event) => {
+      switch (event.type) {
+        case "AgreementConfirmed":
+          this.events.emit("agreementConfirmed", event.agreement);
+          break;
+        case "AgreementCancelled":
+          this.events.emit("agreementCancelled", event.agreement);
+          break;
+        case "AgreementTerminated":
+          this.events.emit("agreementTerminated", event.agreement, event.terminatedBy, event.reason);
+          break;
+        case "AgreementRejected":
+          this.events.emit("agreementRejected", event.agreement, event.reason);
+          break;
+      }
+    });
   }
 }

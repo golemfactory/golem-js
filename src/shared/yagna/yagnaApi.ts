@@ -6,7 +6,7 @@ import { defaultLogger, Logger } from "../utils";
 import semverSatisfies from "semver/functions/satisfies.js"; // .js added for ESM compatibility
 import semverCoerce from "semver/functions/coerce.js"; // .js added for ESM compatibility
 import { Observable, Subject } from "rxjs";
-import { CancellablePoll, EventReaderFactory } from "./event-reader-factory";
+import { CancellablePoll, EventReader } from "./event-reader";
 import EventSource from "eventsource";
 import { StreamingBatchEvent } from "../../activity/results";
 import { ElementOf } from "../utils/types";
@@ -40,9 +40,10 @@ export interface YagnaExeScriptObserver {
  *
  * This class has the following responsibilities:
  *
- * - restructures the services exposed by ya-ts-client hand makes more user-friendly
- * - acts as a dependency container by exposing net, payment, gsb, service, activity services
- * - implements an event reader that collects events from Yagna endpoints and allows subscribing to them on BehaviourSubjects
+ * - selectively exposes services from ya-ts-client in a more user-friendly manner
+ * - implements an event reader that collects events from Yagna endpoints and allows subscribing to them as Observables
+ *   for agreements, debit notes and invoices. These observables emit ya-ts-client types onoutputs
+ * - provides shorthand methods for reading additional types of events in form of Observables which emit ya-ts-client types on output
  *
  * End users of the SDK should not use this class and make use of {@link GolemNetwork} instead. This class is designed for
  * SDK developers to use.
@@ -80,7 +81,7 @@ export class YagnaApi {
   private agreementEventsPoll: CancellablePoll<YagnaAgreementOperationEvent> | null = null;
 
   private readonly logger: Logger;
-  private readonly reader: EventReaderFactory;
+  private readonly reader: EventReader;
 
   constructor(options?: YagnaOptions) {
     const apiKey = options?.apiKey || EnvUtils.getYagnaAppKey();
@@ -172,7 +173,7 @@ export class YagnaApi {
 
     this.appSessionId = v4();
 
-    this.reader = new EventReaderFactory(this.logger);
+    this.reader = new EventReader(this.logger);
   }
 
   /**
@@ -214,15 +215,15 @@ export class YagnaApi {
     const pollIntervalSec = 5;
     const maxEvents = 100;
 
-    this.agreementEventsPoll = this.reader.createEventReader("AgreementEvents", (lastEventTimestamp) =>
+    this.agreementEventsPoll = this.reader.createReader("AgreementEvents", (lastEventTimestamp) =>
       this.market.collectAgreementEvents(pollIntervalSec, lastEventTimestamp, maxEvents, this.appSessionId),
     );
 
-    this.debitNoteEventsPoll = this.reader.createEventReader("DebitNoteEvents", (lastEventTimestamp) => {
+    this.debitNoteEventsPoll = this.reader.createReader("DebitNoteEvents", (lastEventTimestamp) => {
       return this.payment.getDebitNoteEvents(pollIntervalSec, lastEventTimestamp, maxEvents, this.appSessionId);
     });
 
-    this.invoiceEventPoll = this.reader.createEventReader("InvoiceEvents", (lastEventTimestamp) =>
+    this.invoiceEventPoll = this.reader.createReader("InvoiceEvents", (lastEventTimestamp) =>
       this.payment.getInvoiceEvents(pollIntervalSec, lastEventTimestamp, maxEvents, this.appSessionId),
     );
 

@@ -13,17 +13,26 @@ import { Allocation, IPaymentApi } from "../payment";
 import { INetworkApi, NetworkModule } from "../network";
 import { DraftOfferProposalPool } from "./draft-offer-proposal-pool";
 import { Agreement, ProviderInfo } from "./agreement";
-import { EventEmitter } from "eventemitter3";
-import { OfferSubscriptionEvents } from "./api";
+import { AgreementEvent } from "./agreement/agreement-event";
+import { DemandOfferEvent } from "./api";
+import { waitAndCall, waitForCondition } from "../shared/utils/wait";
 
 const mockMarketApiAdapter = mock(MarketApiAdapter);
 const mockYagna = mock(YagnaApi);
+const mockAgreement = mock(Agreement);
+
+const testAgreementEvent$ = new Subject<AgreementEvent>();
+
 let marketModule: MarketModuleImpl;
 
 beforeEach(() => {
   jest.useFakeTimers();
   jest.resetAllMocks();
+
   reset(mockMarketApiAdapter);
+  reset(mockAgreement);
+
+  when(mockMarketApiAdapter.observeAgreementEvents()).thenReturn(testAgreementEvent$);
 
   marketModule = new MarketModuleImpl({
     activityApi: instance(imock<IActivityApi>()),
@@ -280,7 +289,7 @@ describe("Market module", () => {
   });
 
   describe("startCollectingProposals()", () => {
-    test("should negotiate any initial proposal", (done) => {
+    test("should negotiate any initial proposal", async () => {
       jest.useRealTimers();
 
       const spec = new DemandSpecification(
@@ -320,50 +329,47 @@ describe("Market module", () => {
       const initialProposal = instance(mockInitialOfferProposal);
       const draftProposal = instance(mockDraftOfferProposal);
 
-      const feedback = {
-        initialOfferProposals$: new Subject<OfferProposal>(),
-        draftOfferProposals$: new Subject<OfferProposal>(),
-        events: new EventEmitter<OfferSubscriptionEvents>(),
-        cancel: jest.fn(),
-      };
+      const demandOfferEvent$ = new Subject<DemandOfferEvent>();
 
-      when(mockMarketApiAdapter.observeDemandResponse(_)).thenReturn(feedback);
+      when(mockMarketApiAdapter.observeDemandResponse(_)).thenReturn(demandOfferEvent$);
 
       // When
-      const proposals$ = marketModule.startCollectingDraftOfferProposals({
+      const draftProposal$ = marketModule.collectDraftOfferProposals({
         demandSpecification: spec,
       });
 
-      const next = jest.fn();
+      const draftListener = jest.fn();
 
-      proposals$.pipe(take(1)).subscribe({
-        next: next,
-        error: (err) => done(err),
-        complete: () => {
-          try {
-            expect(next).toHaveBeenCalledWith([draftProposal]);
-
-            verify(mockMarketApiAdapter.counterProposal(initialProposal, spec)).once();
-            // Right now we don't expect counter draft proposals (advanced negotiations)
-            verify(mockMarketApiAdapter.counterProposal(draftProposal, spec)).never();
-
-            done();
-          } catch (err) {
-            done(err);
-          }
-        },
-      });
+      // Control the test using a subscription
+      const testSub = draftProposal$.subscribe(draftListener);
 
       // We need this because the actual demand publishing is async, so the result of that publishing will be available
       // on the next tick. Only then it makes sense to push the proposals into the test subjects.
       setImmediate(() => {
         // Emit the values on the subjects
-        feedback.initialOfferProposals$.next(initialProposal);
-        feedback.draftOfferProposals$.next(draftProposal);
+        demandOfferEvent$.next({
+          type: "ProposalReceived",
+          proposal: initialProposal,
+          timestamp: new Date(),
+        });
+        demandOfferEvent$.next({
+          type: "ProposalReceived",
+          proposal: draftProposal,
+          timestamp: new Date(),
+        });
       });
+
+      await waitForCondition(() => draftListener.mock.calls.length > 0);
+      testSub.unsubscribe();
+
+      expect(draftListener).toHaveBeenCalledWith(draftProposal);
+
+      verify(mockMarketApiAdapter.counterProposal(initialProposal, spec)).once();
+      // Right now we don't expect counter draft proposals (advanced negotiations)
+      verify(mockMarketApiAdapter.counterProposal(draftProposal, spec)).never();
     });
 
-    test("should reduce proposals from the same provider", (done) => {
+    test("should reduce proposals from the same provider", async () => {
       jest.useRealTimers();
 
       const spec = new DemandSpecification(
@@ -394,54 +400,45 @@ describe("Market module", () => {
       when(mockInitialOfferProposal.provider).thenReturn(providerInfo);
       when(mockInitialOfferProposal.properties).thenReturn(initialOfferProperties);
 
-      const mockDraftOfferProposal = mock(OfferProposal);
-      when(mockDraftOfferProposal.isDraft()).thenReturn(true);
-      when(mockDraftOfferProposal.isValid()).thenReturn(true);
-      when(mockDraftOfferProposal.provider).thenReturn(providerInfo);
-      when(mockDraftOfferProposal.properties).thenReturn(initialOfferProperties);
-
       const initialProposal = instance(mockInitialOfferProposal);
-      const draftProposal = instance(mockDraftOfferProposal);
 
-      const feedback = {
-        initialOfferProposals$: new Subject<OfferProposal>(),
-        draftOfferProposals$: new Subject<OfferProposal>(),
-        events: new EventEmitter<OfferSubscriptionEvents>(),
-        cancel: jest.fn(),
-      };
+      const demandOfferEvent$ = new Subject<DemandOfferEvent>();
 
-      when(mockMarketApiAdapter.observeDemandResponse(_)).thenReturn(feedback);
+      when(mockMarketApiAdapter.observeDemandResponse(_)).thenReturn(demandOfferEvent$);
 
       // When
-      const proposals$ = marketModule.startCollectingDraftOfferProposals({
+      const draftProposal$ = marketModule.collectDraftOfferProposals({
         demandSpecification: spec,
       });
 
-      const next = jest.fn();
-
-      proposals$.pipe(take(1)).subscribe({
-        next: next,
-        error: (err) => done(err),
-        complete: () => {
-          try {
-            // Three initial proposals came in, only one got negotiated
-            verify(mockMarketApiAdapter.counterProposal(initialProposal, spec)).once();
-            done();
-          } catch (err) {
-            done(err);
-          }
-        },
-      });
-
+      // Drop 3 initial proposals about the same thing
       setImmediate(() => {
-        feedback.initialOfferProposals$.next(initialProposal);
-        feedback.initialOfferProposals$.next(initialProposal);
-        feedback.initialOfferProposals$.next(initialProposal);
-        // To be able to finish the test...
-        feedback.draftOfferProposals$.next(draftProposal);
+        demandOfferEvent$.next({
+          type: "ProposalReceived",
+          proposal: initialProposal,
+          timestamp: new Date(),
+        });
+        demandOfferEvent$.next({
+          type: "ProposalReceived",
+          proposal: initialProposal,
+          timestamp: new Date(),
+        });
+        demandOfferEvent$.next({
+          type: "ProposalReceived",
+          proposal: initialProposal,
+          timestamp: new Date(),
+        });
       });
+
+      const testSub = draftProposal$.subscribe();
+
+      // It's 2s to wait for the batching to work
+      await waitAndCall(() => testSub.unsubscribe(), 2);
+
+      verify(mockMarketApiAdapter.counterProposal(initialProposal, spec)).once();
     });
   });
+
   describe("signAgreementFromPool()", () => {
     beforeEach(() => {
       jest.useRealTimers();
@@ -517,6 +514,85 @@ describe("Market module", () => {
         acquire: mockAcquire,
       } as DraftOfferProposalPool;
       expect(marketModule.signAgreementFromPool(mockPool)).rejects.toThrow("Failed to acquire");
+    });
+  });
+
+  describe("emitted events", () => {
+    describe("agreement related events", () => {
+      test("Emits 'agreementConfirmed'", () => {
+        // Given
+        const agreement = instance(mockAgreement);
+
+        const listener = jest.fn();
+        marketModule.events.on("agreementConfirmed", listener);
+
+        // When
+        testAgreementEvent$.next({
+          type: "AgreementConfirmed",
+          agreement,
+          timestamp: new Date(),
+        });
+
+        // Then
+        expect(listener).toHaveBeenCalled();
+      });
+
+      test("Emits 'agreementTerminated'", () => {
+        // Given
+        const agreement = instance(mockAgreement);
+
+        const listener = jest.fn();
+        marketModule.events.on("agreementTerminated", listener);
+
+        // When
+        testAgreementEvent$.next({
+          type: "AgreementTerminated",
+          agreement,
+          terminatedBy: "Provider",
+          reason: "Because I can",
+          timestamp: new Date(),
+        });
+
+        // Then
+        expect(listener).toHaveBeenCalled();
+      });
+
+      test("Emits 'agreementRejected'", () => {
+        // Given
+        const agreement = instance(mockAgreement);
+
+        const listener = jest.fn();
+        marketModule.events.on("agreementRejected", listener);
+
+        // When
+        testAgreementEvent$.next({
+          type: "AgreementRejected",
+          agreement,
+          reason: "I didn't like it",
+          timestamp: new Date(),
+        });
+
+        // Then
+        expect(listener).toHaveBeenCalled();
+      });
+
+      test("Emits 'agreementCancelled'", () => {
+        // Given
+        const agreement = instance(mockAgreement);
+
+        const listener = jest.fn();
+        marketModule.events.on("agreementCancelled", listener);
+
+        // When
+        testAgreementEvent$.next({
+          type: "AgreementCancelled",
+          agreement,
+          timestamp: new Date(),
+        });
+
+        // Then
+        expect(listener).toHaveBeenCalled();
+      });
     });
   });
 });

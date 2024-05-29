@@ -1,44 +1,51 @@
-import { Observable, Subject } from "rxjs";
+import { Observable } from "rxjs";
 import { Demand, DemandSpecification } from "./demand";
 import YaTsClient, { MarketApi } from "ya-ts-client";
 import { OfferProposal } from "./offer-proposal";
 import { DemandBodyPrototype } from "./demand/demand-body-builder";
-import { EventEmitter } from "eventemitter3";
-import {
-  AgreementCancelledEvent,
-  AgreementConfirmedEvent,
-  AgreementRejectedEvent,
-  AgreementTerminatedEvent,
-} from "./agreement/agreement-event";
+import { AgreementEvent } from "./agreement/agreement-event";
 import { Agreement } from "./agreement";
 
 export type NewProposalEvent = YaTsClient.MarketApi.ProposalEventDTO;
 export type ProposalRejectedEvent = YaTsClient.MarketApi.ProposalRejectedEventDTO;
 export type YagnaProposalEvent = NewProposalEvent | ProposalRejectedEvent;
 
+export type DemandOfferEvent =
+  | {
+      type: "ProposalReceived";
+      proposal: OfferProposal;
+      timestamp: Date;
+    }
+  | {
+      type: "ProposalRejected";
+      proposal: OfferProposal;
+      reason: string;
+      timestamp: Date;
+    }
+  | {
+      type: "PropertyQueryReceived";
+      timestamp: Date;
+    };
+
 export interface IMarketEvents {
   subscribedToOfferProposals: (demand: Demand) => void;
+  refreshedOfferProposalSubscription: (demand: Demand) => void;
   unsubscribedFromOfferProposals: (demand: Demand) => void;
 
-  /** Fired when a proposal is received from yagna, and it passes the validation and de-duplication implemented by golem-js */
-  offerProposalReceived: (offerProposal: OfferProposal) => void;
+  propertyQueryReceived: () => void;
 
-  agreementConfirmed: (agreement: AgreementConfirmedEvent) => void;
-  agreementRejected: (agreement: AgreementRejectedEvent) => void;
-  agreementTerminated: (agreement: AgreementTerminatedEvent) => void;
-  agreementCancelled: (agreement: AgreementCancelledEvent) => void;
+  offerProposalReceived: (offerProposal: OfferProposal) => void;
+  offerProposalRejectedByFilter: (offerProposal: OfferProposal, reason?: string) => void;
+
+  counterProposalRejectedByProvider: (counterOfferProposal: OfferProposal, reason: string) => void;
+
+  agreementConfirmed: (agreement: Agreement) => void;
+  agreementRejected: (agreement: Agreement, reason: string) => void;
+  agreementTerminated: (agreement: Agreement, terminatedBy: "Provider" | "Requestor", reason: string) => void;
+  agreementCancelled: (agreement: Agreement) => void;
 }
 
-export type OfferSubscriptionEvents = {
-  counterProposalRejected: () => void;
-  propertyQueryReceived: () => void;
-  initialOfferProposalReceived: (offerProposal: OfferProposal) => void;
-  draftOfferProposalReceived: (offerProposal: OfferProposal) => void;
-};
-
 export interface IMarketApi {
-  events: EventEmitter<IMarketEvents>;
-
   /**
    * Creates a new demand based on the given specification and publishes
    * it to the market.
@@ -74,17 +81,17 @@ export interface IMarketApi {
    *
    * @returns A complex object that allows subscribing to these categories of feedback mentioned above
    */
-  observeDemandResponse(demand: Demand): {
-    initialOfferProposals$: Subject<OfferProposal>;
-    draftOfferProposals$: Subject<OfferProposal>;
-    events: EventEmitter<OfferSubscriptionEvents>;
-    cancel: () => void;
-  };
+  observeDemandResponse(demand: Demand): Observable<DemandOfferEvent>;
+
+  /**
+   * Start looking at the Agreement related events
+   */
+  observeAgreementEvents(): Observable<AgreementEvent>;
 
   /**
    * Sends a counter-proposal to the given proposal. Returns the newly created counter-proposal.
    */
-  counterProposal(receivedProposal: OfferProposal, specification: DemandSpecification): Promise<void>;
+  counterProposal(receivedProposal: OfferProposal, specification: DemandSpecification): Promise<OfferProposal>;
 
   /**
    * Sends a "reject" response for the proposal that was received from the Provider as part of the negotiation process

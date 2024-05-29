@@ -96,6 +96,7 @@ export class OfferProposal {
 
   constructor(
     public readonly model: MarketApi.ProposalDTO,
+    public readonly issuer: "Provider" | "Requestor",
     public readonly demand: Demand,
   ) {
     this.id = model.proposalId;
@@ -111,35 +112,37 @@ export class OfferProposal {
    * Use this method before executing any important logic, to ensure that you're working with correct, complete data
    */
   protected validate(): void | never {
-    const usageVector = this.properties["golem.com.usage.vector"];
-    const priceVector = this.properties["golem.com.pricing.model.linear.coeffs"];
+    if (this.issuer === "Provider") {
+      const usageVector = this.properties["golem.com.usage.vector"];
+      const priceVector = this.properties["golem.com.pricing.model.linear.coeffs"];
 
-    if (!usageVector || usageVector.length === 0) {
-      throw new GolemMarketError(
-        "Broken proposal: the `golem.com.usage.vector` does not contain price information",
-        MarketErrorCode.InvalidProposal,
-      );
-    }
+      if (!usageVector || usageVector.length === 0) {
+        throw new GolemMarketError(
+          "Broken proposal: the `golem.com.usage.vector` does not contain price information",
+          MarketErrorCode.InvalidProposal,
+        );
+      }
 
-    if (!priceVector || priceVector.length === 0) {
-      throw new GolemMarketError(
-        "Broken proposal: the `golem.com.pricing.model.linear.coeffs` does not contain pricing information",
-        MarketErrorCode.InvalidProposal,
-      );
-    }
+      if (!priceVector || priceVector.length === 0) {
+        throw new GolemMarketError(
+          "Broken proposal: the `golem.com.pricing.model.linear.coeffs` does not contain pricing information",
+          MarketErrorCode.InvalidProposal,
+        );
+      }
 
-    if (usageVector.length < priceVector.length - 1) {
-      throw new GolemMarketError(
-        "Broken proposal: the `golem.com.usage.vector` has less pricing information than `golem.com.pricing.model.linear.coeffs`",
-        MarketErrorCode.InvalidProposal,
-      );
-    }
+      if (usageVector.length < priceVector.length - 1) {
+        throw new GolemMarketError(
+          "Broken proposal: the `golem.com.usage.vector` has less pricing information than `golem.com.pricing.model.linear.coeffs`",
+          MarketErrorCode.InvalidProposal,
+        );
+      }
 
-    if (priceVector.length < usageVector.length) {
-      throw new GolemMarketError(
-        "Broken proposal: the `golem.com.pricing.model.linear.coeffs` should contain 3 price values",
-        MarketErrorCode.InvalidProposal,
-      );
+      if (priceVector.length < usageVector.length) {
+        throw new GolemMarketError(
+          "Broken proposal: the `golem.com.pricing.model.linear.coeffs` should contain 3 price values",
+          MarketErrorCode.InvalidProposal,
+        );
+      }
     }
   }
 
@@ -215,6 +218,10 @@ export class OfferProposal {
       envSec,
       start,
     };
+  }
+
+  isCounterProposal() {
+    return this.issuer === "Requestor";
   }
 
   /**

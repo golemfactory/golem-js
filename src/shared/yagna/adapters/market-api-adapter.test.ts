@@ -2,23 +2,18 @@ import { _, deepEqual, imock, instance, mock, reset, verify, when } from "@johan
 import * as YaTsClient from "ya-ts-client";
 import { YagnaAgreementOperationEvent, YagnaApi } from "../yagnaApi";
 import { DemandRequestBody, MarketApiAdapter } from "./market-api-adapter";
-import { Agreement, Demand, DemandSpecification, OfferProposal } from "../../../market";
+import { Demand, DemandSpecification, OfferProposal } from "../../../market";
 import { Subject, take, takeUntil, timer } from "rxjs";
 import { Logger } from "../../utils";
 import { DemandBodyPrototype } from "../../../market/demand/demand-body-builder";
 import { IAgreementRepository } from "../../../market/agreement/agreement";
-import {
-  AgreementCancelledEvent,
-  AgreementConfirmedEvent,
-  AgreementRejectedEvent,
-  AgreementTerminatedEvent,
-} from "../../../market/agreement/agreement-event";
+import { IProposalRepository } from "../../../market/offer-proposal";
 
 const mockLogger = imock<Logger>();
 const mockMarket = mock(YaTsClient.MarketApi.RequestorService);
 const mockYagna = mock(YagnaApi);
 const mockAgreementRepo = imock<IAgreementRepository>();
-const mockAgreement = mock(Agreement);
+const mockProposalRepo = imock<IProposalRepository>();
 
 /** Test subject mocking the one exposed by YagnaApi */
 const agreementEvents$ = new Subject<YagnaAgreementOperationEvent>();
@@ -35,7 +30,12 @@ beforeEach(() => {
   when(mockYagna.market).thenReturn(instance(mockMarket));
   when(mockYagna.agreementEvents$).thenReturn(agreementEvents$);
 
-  api = new MarketApiAdapter(instance(mockYagna), instance(mockAgreementRepo), instance(mockLogger));
+  api = new MarketApiAdapter(
+    instance(mockYagna),
+    instance(mockAgreementRepo),
+    instance(mockProposalRepo),
+    instance(mockLogger),
+  );
 });
 
 describe("Market API Adapter", () => {
@@ -140,6 +140,7 @@ describe("Market API Adapter", () => {
           issuerId: "issuer-id",
           state: "Initial",
         },
+        "Provider",
         new Demand("demand-id", specification),
       );
 
@@ -179,6 +180,7 @@ describe("Market API Adapter", () => {
           issuerId: "issuer-id",
           state: "Initial",
         },
+        "Provider",
         new Demand("demand-id", specification),
       );
 
@@ -273,137 +275,6 @@ describe("Market API Adapter", () => {
 
       // trigger the `timer(10)` observable
       jest.advanceTimersByTime(10);
-    });
-  });
-
-  describe("Agreement related APIs", () => {
-    describe("EventAPI", () => {
-      test("Maps yagna AgreementApprovedEvent into AgreementConfirmedEvent and emits 'agreementConfirmed'", (done) => {
-        // Given
-        const agreement = instance(mockAgreement);
-
-        const dto = {
-          eventType: "AgreementApprovedEvent",
-          eventDate: new Date().toString(),
-          agreementId: "test-agreement-id",
-        };
-
-        when(mockAgreementRepo.getById("test-agreement-id")).thenResolve(agreement);
-
-        // When
-        agreementEvents$.next(dto);
-
-        // Then
-        api.events.on("agreementConfirmed", (event) => {
-          try {
-            expect(event).toBeInstanceOf(AgreementConfirmedEvent);
-            expect(event.agreement).toBe(agreement);
-            done();
-          } catch (err) {
-            done(err);
-          }
-        });
-      });
-
-      test("Maps yagna AgreementTerminatedEvent into AgreementTerminatedEvent and emits 'agreementTerminated'", (done) => {
-        // Given
-        const agreement = instance(mockAgreement);
-
-        const dto = {
-          eventType: "AgreementTerminatedEvent",
-          eventDate: new Date().toString(),
-          agreementId: "test-agreement-id",
-          terminator: "Provider",
-          reason: {
-            message: "Serious",
-          },
-        };
-
-        when(mockAgreementRepo.getById("test-agreement-id")).thenResolve(agreement);
-
-        // When
-        agreementEvents$.next(dto);
-
-        // Then
-        api.events.on("agreementTerminated", (event) => {
-          try {
-            expect(event).toBeInstanceOf(AgreementTerminatedEvent);
-            expect(event.agreement).toBe(agreement);
-            expect(event.reason).toBe("Serious");
-            expect(event.terminatedBy).toBe("Provider");
-
-            done();
-          } catch (err) {
-            done(err);
-          }
-        });
-      });
-
-      test("Maps yagna AgreementRejectedEvent into AgreementRejectedEvent and emits 'agreementRejected'", (done) => {
-        // Given
-        const agreement = instance(mockAgreement);
-
-        const testSubject$ = new Subject<YagnaAgreementOperationEvent>();
-        when(mockYagna.agreementEvents$).thenReturn(testSubject$);
-
-        const dto = {
-          eventType: "AgreementRejectedEvent",
-          eventDate: new Date().toString(),
-          agreementId: "test-agreement-id",
-          reason: {
-            message: "Serious",
-          },
-        };
-
-        when(mockAgreementRepo.getById("test-agreement-id")).thenResolve(agreement);
-
-        // When
-        agreementEvents$.next(dto);
-
-        // Then
-        api.events.on("agreementRejected", (event) => {
-          try {
-            expect(event).toBeInstanceOf(AgreementRejectedEvent);
-            expect(event.agreement).toBe(agreement);
-            expect(event.reason).toBe("Serious");
-
-            done();
-          } catch (err) {
-            done(err);
-          }
-        });
-      });
-
-      test("Maps yagna AgreementCancelledEvent into AgreementCancelledEvent and emits 'agreementCancelled'", (done) => {
-        // Given
-        const agreement = instance(mockAgreement);
-
-        const testSubject$ = new Subject<YagnaAgreementOperationEvent>();
-        when(mockYagna.agreementEvents$).thenReturn(testSubject$);
-
-        const dto = {
-          eventType: "AgreementCancelledEvent",
-          eventDate: new Date().toString(),
-          agreementId: "test-agreement-id",
-        };
-
-        when(mockAgreementRepo.getById("test-agreement-id")).thenResolve(agreement);
-
-        // When
-        agreementEvents$.next(dto);
-
-        // Then
-        api.events.on("agreementCancelled", (event) => {
-          try {
-            expect(event).toBeInstanceOf(AgreementCancelledEvent);
-            expect(event.agreement).toBe(agreement);
-
-            done();
-          } catch (err) {
-            done(err);
-          }
-        });
-      });
     });
   });
 });

@@ -1,4 +1,3 @@
-import { clearInterval } from "node:timers";
 import { GolemTimeoutError } from "../error/golem-error";
 
 /**
@@ -35,5 +34,21 @@ export function waitForCondition(
   return Promise.race([verify, wait]).finally(() => {
     clearInterval(verifyInterval);
     clearTimeout(waitTimeout);
+  });
+}
+
+/**
+ * Simple utility that allows you to wait n-seconds and then call the provided function
+ */
+export function waitAndCall<T>(fn: () => Promise<T> | T, waitSeconds: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    setTimeout(async () => {
+      try {
+        const val = await fn();
+        resolve(val);
+      } catch (err) {
+        reject(err);
+      }
+    }, waitSeconds * 1_000);
   });
 }

@@ -1,4 +1,4 @@
 export * from "./adapters";
 export * from "./repository";
 export * from "./yagnaApi";
-export * from "./event-reader-factory";
+export * from "./event-reader";

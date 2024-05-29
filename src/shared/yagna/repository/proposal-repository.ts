@@ -1,11 +1,12 @@
 import { IProposalRepository, OfferProposal } from "../../../market/offer-proposal";
-import { MarketApi } from "ya-ts-client";
+import { MarketApi, IdentityApi } from "ya-ts-client";
 import { Demand, GolemMarketError, MarketErrorCode } from "../../../market";
 import { CacheService } from "../../cache/CacheService";
 
 export class ProposalRepository implements IProposalRepository {
   constructor(
-    private readonly api: MarketApi.RequestorService,
+    private readonly marketService: MarketApi.RequestorService,
+    private readonly identityService: IdentityApi.DefaultService,
     private readonly cache: CacheService<OfferProposal>,
   ) {}
 
@@ -20,8 +21,11 @@ export class ProposalRepository implements IProposalRepository {
 
   async getByDemandAndId(demand: Demand, id: string): Promise<OfferProposal> {
     try {
-      const dto = await this.api.getProposalOffer(demand.id, id);
-      return new OfferProposal(dto, demand);
+      const dto = await this.marketService.getProposalOffer(demand.id, id);
+      const identity = await this.identityService.getIdentity();
+      const issuer = identity.identity === dto.issuerId ? "Requestor" : "Provider";
+
+      return new OfferProposal(dto, issuer, demand);
     } catch (error) {
       const message = error.message;
       throw new GolemMarketError(`Failed to get proposal: ${message}`, MarketErrorCode.CouldNotGetProposal, error);
