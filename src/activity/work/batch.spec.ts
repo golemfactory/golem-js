@@ -49,7 +49,8 @@ describe("Batch", () => {
       it("should accept shell command", async () => {
         expect(batch.run("rm -rf")).toBe(batch);
         expect(batch["script"]["commands"][0]).toBeInstanceOf(Run);
-        // TODO: check if constructed script is correct.
+        expect(batch["script"]["commands"][0]["args"]["entry_point"]).toBe("/bin/sh");
+        expect(batch["script"]["commands"][0]["args"]["args"]).toStrictEqual(["-c", "rm -rf"]);
       });
 
       it("should accept executable", async () => {
