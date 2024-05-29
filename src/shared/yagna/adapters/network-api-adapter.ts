@@ -13,7 +13,7 @@ export class NetworkApiAdapter implements INetworkApi {
   async createNetwork(options: { id: string; ip: string; mask?: string; gateway?: string }): Promise<Network> {
     try {
       const { id, ip, mask, gateway } = await this.yagnaApi.net.createNetwork(options);
-      // @ts-expect-error TODO: Can we create a network without an id or is this just a bug in ya-clinet spec?
+      // @ts-expect-error TODO: Remove when this PR is merged: https://github.com/golemfactory/ya-client/pull/179
       return new Network(id, ip, mask, gateway);
     } catch (error) {
       const message = getMessageFromApiError(error);
