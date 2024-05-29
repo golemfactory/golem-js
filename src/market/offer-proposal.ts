@@ -3,7 +3,7 @@ import { GolemMarketError, MarketErrorCode } from "./error";
 import { ProviderInfo } from "./agreement";
 import { Demand } from "./demand";
 
-export type ProposalFilterNew = (proposal: OfferProposal) => boolean;
+export type ProposalFilter = (proposal: OfferProposal) => boolean;
 
 export type PricingInfo = {
   cpuSec: number;

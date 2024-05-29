@@ -1,4 +1,4 @@
-import { ProposalFilterNew, OfferProposal } from "../../market";
+import { ProposalFilter, OfferProposal } from "../../market";
 import { AgreementCandidate, AgreementSelector } from "../../market/agreement";
 import { GolemReputationError } from "./error";
 import {
@@ -332,7 +332,7 @@ export class ReputationSystem {
    * Returns a proposal filter that can be used to filter out providers with low reputation scores.
    * @param opts
    */
-  proposalFilter(opts?: ProposalFilterOptions): ProposalFilterNew {
+  proposalFilter(opts?: ProposalFilterOptions): ProposalFilter {
     return (proposal: OfferProposal) => {
       // Filter out rejected operators.
       const operatorEntry = this.rejectedOperatorsMap.get(proposal.provider.walletAddress);

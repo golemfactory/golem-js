@@ -170,6 +170,7 @@ export class Deployment {
       const proposalSubscription = this.modules.market
         .startCollectingProposals({
           demandSpecification,
+          filter: pool.options.market.proposalFilter,
           bufferSize: 10,
         })
         .subscribe({

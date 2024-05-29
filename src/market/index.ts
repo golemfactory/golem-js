@@ -1,4 +1,4 @@
-export { ProposalFilterNew } from "./offer-proposal";
+export { ProposalFilter } from "./offer-proposal";
 export { Demand, BasicDemandPropertyConfig, DemandSpecification } from "./demand";
 export { OfferProposal, ProposalDTO } from "./offer-proposal";
 export * as ProposalFilterFactory from "./strategy";
