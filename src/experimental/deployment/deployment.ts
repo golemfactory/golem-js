@@ -127,10 +127,18 @@ export class Deployment {
       this.networks.set(network.name, networkInstance);
     }
 
-    // TODO: Derive this from deployment spec
+    // Allocation is re-used for all demands so the expiration date should
+    // be the equal to the longest expiration date of all demands
+    const longestExpiration =
+      Math.max(...this.components.leaseProcessPools.map((pool) => pool.options.market.rentHours)) * 3600;
+    const totalBudget = this.components.leaseProcessPools.reduce(
+      (acc, pool) => acc + this.modules.market.estimateBudget(pool.options),
+      0,
+    );
+
     const allocation = await this.modules.payment.createAllocation({
-      budget: 1,
-      expirationSec: 30 * 60, // 30 minutes
+      budget: totalBudget,
+      expirationSec: longestExpiration,
     });
 
     for (const pool of this.components.leaseProcessPools) {
