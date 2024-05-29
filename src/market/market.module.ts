@@ -11,7 +11,7 @@ import {
 import { defaultLogger, Logger, runOnNextEventLoopIteration, YagnaApi } from "../shared/utils";
 import { Allocation, IPaymentApi } from "../payment";
 import { bufferTime, catchError, filter, map, mergeMap, Observable, of, OperatorFunction, switchMap, tap } from "rxjs";
-import { IProposalRepository, OfferProposal, ProposalFilterNew } from "./offer-proposal";
+import { IProposalRepository, OfferProposal, ProposalFilter } from "./offer-proposal";
 import { DemandBodyBuilder } from "./demand/demand-body-builder";
 import { IAgreementApi } from "./agreement/agreement";
 import { BuildDemandOptions, DemandSpecification, IDemandRepository } from "./demand";
@@ -54,15 +54,8 @@ export interface MarketOptions {
         avgGlmPerHour: number;
       };
 
-  /**
-   * List of provider Golem Node IDs that should be considered
-   *
-   * If not provided, the list will be pulled from: https://provider-health.golem.network/v1/provider-whitelist
-   */
-  withProviders?: string[];
-  withoutProviders?: string[];
-  withOperators?: string[];
-  withoutOperators?: string[];
+  /** An optional filter that can filter proposals from the market before signing an agreement */
+  proposalFilter?: ProposalFilter;
 }
 
 export interface MarketModule {
@@ -149,7 +142,7 @@ export interface MarketModule {
    */
   startCollectingProposals(options: {
     demandSpecification: DemandSpecification;
-    filter?: ProposalFilterNew;
+    filter?: ProposalFilter;
     bufferSize?: number;
   }): Observable<OfferProposal[]>;
 
@@ -354,7 +347,7 @@ export class MarketModuleImpl implements MarketModule {
 
   startCollectingProposals(options: {
     demandSpecification: DemandSpecification;
-    filter?: ProposalFilterNew;
+    filter?: ProposalFilter;
     bufferSize?: number;
     bufferTimeout?: number;
     minProposalsBatchSize?: number;

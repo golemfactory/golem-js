@@ -305,6 +305,7 @@ export class GolemNetwork {
 
     const proposal$ = this.market.startCollectingProposals({
       demandSpecification,
+      filter: order.market.proposalFilter,
     });
     const proposalSubscription = proposalPool.readFrom(proposal$);
 
@@ -389,6 +390,7 @@ export class GolemNetwork {
 
     const proposal$ = this.market.startCollectingProposals({
       demandSpecification,
+      filter: order.market.proposalFilter,
     });
     const subscription = proposalPool.readFrom(proposal$);
 
