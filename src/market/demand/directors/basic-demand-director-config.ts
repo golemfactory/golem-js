@@ -1,5 +1,6 @@
 import { BaseConfig } from "./base-config";
 import { GolemConfigError } from "../../../shared/error/golem-error";
+import * as EnvUtils from "../../../shared/utils/env";
 
 export interface BasicDemandDirectorConfigOptions {
   expirationSec: number;
@@ -8,7 +9,7 @@ export interface BasicDemandDirectorConfigOptions {
 
 export class BasicDemandDirectorConfig extends BaseConfig implements BasicDemandDirectorConfigOptions {
   public readonly expirationSec = 30 * 60; // 30 minutes
-  public readonly subnetTag: string = "public";
+  public readonly subnetTag: string = EnvUtils.getYagnaSubnet() || "public";
 
   constructor(options?: Partial<BasicDemandDirectorConfigOptions>) {
     super();
