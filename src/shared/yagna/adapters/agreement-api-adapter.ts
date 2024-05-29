@@ -64,14 +64,6 @@ export class AgreementApiAdapter implements IAgreementApi {
         demandId: proposal.demand.id,
       });
 
-      // TODO - do we need it?
-      // this.events.emit("agreementCreated", {
-      //   id: agreementId,
-      //   provider: "todo",
-      //   validTo: data?.validTo,
-      //   proposalId: proposal.id,
-      // });
-
       return this.repository.getById(agreementId);
     } catch (error) {
       const message = getMessageFromApiError(error);
