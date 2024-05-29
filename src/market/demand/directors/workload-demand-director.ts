@@ -47,7 +47,6 @@ export class WorkloadDemandDirector implements IDemandDirector {
   private async resolveTaskPackageUrl(): Promise<string> {
     const repoUrl = EnvUtils.getRepoUrl();
 
-    //TODO : in future this should be passed probably through config
     const useHttps = this.config.useHttps;
 
     const isDev = EnvUtils.isDevMode();

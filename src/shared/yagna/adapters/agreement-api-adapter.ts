@@ -111,7 +111,6 @@ export class AgreementApiAdapter implements IAgreementApi {
       }
 
       await withTimeout(
-        // TODO: Make a fix in ya-ts-client typings so that's going to be specifically {message:string}
         this.api.terminateAgreement(current.id, {
           message: reason,
         }),
