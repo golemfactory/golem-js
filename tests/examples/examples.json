@@ -6,6 +6,8 @@
   { "cmd": "tsx", "path": "examples/advanced/hello-world.ts" },
   { "cmd": "tsx", "path": "examples/advanced/manual-pools.ts" },
   { "cmd": "tsx", "path": "examples/advanced/payment-filters.ts" },
+  { "cmd": "tsx", "path": "examples/advanced/proposal-filter.ts" },
+  { "cmd": "tsx", "path": "examples/advanced/proposal-predefined-filter.ts" },
   { "cmd": "tsx", "path": "examples/experimental/deployment/new-api.ts" },
   { "cmd": "tsx", "path": "examples/experimental/job/getJobById.ts" },
   { "cmd": "tsx", "path": "examples/experimental/job/waitForResults.ts" },
