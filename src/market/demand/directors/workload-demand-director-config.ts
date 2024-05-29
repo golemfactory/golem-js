@@ -17,7 +17,7 @@ export class WorkloadDemandDirectorConfig {
   readonly manifestSig?: string;
   readonly manifestSigAlgorithm?: string;
   readonly manifestCert?: string;
-
+  readonly useHttps?: boolean = false;
   readonly imageHash?: string;
   readonly imageTag?: string;
   readonly imageUrl?: string;
