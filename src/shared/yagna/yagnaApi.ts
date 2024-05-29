@@ -117,22 +117,25 @@ export class YagnaApi {
       BASE: `${this.basePath}/activity-api/v1`,
       HEADERS: commonHeaders,
     });
-
     this.activity = {
       control: activityApiClient.requestorControl,
       state: activityApiClient.requestorState,
       exec: {
         observeBatchExecResults: (activityId: string, batchId: string) => {
           return new Observable((observer) => {
-            const eventSource = new EventSource(`${this.basePath}/activity/${activityId}/exec/${batchId}`, {
-              headers: {
-                Accept: "text/event-stream",
-                Authorization: `Bearer ${apiKey}`,
+            const eventSource = new EventSource(
+              `${this.basePath}/activity-api/v1/activity/${activityId}/exec/${batchId}`,
+              {
+                headers: {
+                  Accept: "text/event-stream",
+                  Authorization: `Bearer ${apiKey}`,
+                },
               },
-            });
+            );
 
             eventSource.addEventListener("runtime", (event) => observer.next(JSON.parse(event.data)));
             eventSource.addEventListener("error", (error) => observer.error(error));
+            return () => eventSource.close();
           });
         },
       },
