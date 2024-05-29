@@ -8,7 +8,7 @@ import {
   MarketErrorCode,
   NewProposalEvent,
 } from "./index";
-import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
+import { defaultLogger, Logger, runOnNextEventLoopIteration, YagnaApi } from "../shared/utils";
 import { Allocation, IPaymentApi } from "../payment";
 import { bufferTime, catchError, filter, map, mergeMap, Observable, of, OperatorFunction, switchMap, tap } from "rxjs";
 import { IProposalRepository, OfferProposal, ProposalFilterNew } from "./offer-proposal";
@@ -408,12 +408,19 @@ export class MarketModuleImpl implements MarketModule {
       try {
         const agreement = await this.proposeAgreement(proposal);
         // agreement is valid, proposal can be destroyed
-        await draftProposalPool.remove(proposal);
+        await draftProposalPool.remove(proposal).catch((error) => {
+          this.logger.warn("Signed the agreement but failed to remove the proposal from the pool", { error });
+        });
         return agreement;
-      } catch {
-        // If the proposal is not valid, remove it from the pool and try again
-        await draftProposalPool.remove(proposal);
-        return tryProposing();
+      } catch (error) {
+        this.logger.debug("Failed to propose agreement, retrying", { error });
+        // We failed to propose the agreement, destroy the proposal and try again with another one
+        await draftProposalPool.remove(proposal).catch((error) => {
+          this.logger.warn("Failed to remove the proposal from the pool after unsuccessful agreement proposal", {
+            error,
+          });
+        });
+        return runOnNextEventLoopIteration(tryProposing);
       }
     };
     return tryProposing();

@@ -1,6 +1,6 @@
 import type { Agreement } from "../market/agreement/agreement";
 import type { Logger } from "../shared/utils";
-import { sleep } from "../shared/utils";
+import { createAbortSignalFromTimeout, runOnNextEventLoopIteration } from "../shared/utils";
 import type { DraftOfferProposalPool, MarketModule } from "../market";
 import { GolemMarketError, MarketErrorCode } from "../market";
 import { EventEmitter } from "eventemitter3";
@@ -8,7 +8,6 @@ import type { RequireAtLeastOne } from "../shared/utils/types";
 import type { Allocation } from "../payment";
 import type { LeaseProcess, LeaseProcessOptions } from "./lease-process";
 import { Network, NetworkModule } from "../network";
-import { createAbortSignalFromTimeout } from "../shared/utils/abortSignal";
 import { LeaseModule } from "./lease.module";
 
 export interface LeaseProcessPoolDependencies {
@@ -299,10 +298,7 @@ export class LeaseProcessPool {
     }
     const signal = createAbortSignalFromTimeout(timeoutOrAbortSignal);
 
-    while (this.minPoolSize > this.getAvailableSize()) {
-      if (signal.aborted) {
-        break;
-      }
+    const tryCreatingMissingLeaseProcesses = async () => {
       await Promise.allSettled(
         new Array(this.minPoolSize - this.getAvailableSize()).fill(0).map(() =>
           this.createNewLeaseProcess().then(
@@ -311,12 +307,13 @@ export class LeaseProcessPool {
           ),
         ),
       );
-      // Wait for at least 1 tick before trying again
-      // otherwise there is a risk of blocking the event loop and:
-      // a) the pool will never get the chance to gain more offers
-      // b) the abort signal will never change, because timers are processed once a tick
-      // leading to an infinite loop
-      await sleep(0);
+    };
+
+    while (this.minPoolSize > this.getAvailableSize()) {
+      if (signal.aborted) {
+        break;
+      }
+      await runOnNextEventLoopIteration(tryCreatingMissingLeaseProcesses);
     }
 
     if (this.minPoolSize > this.getAvailableSize()) {
