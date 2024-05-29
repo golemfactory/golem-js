@@ -54,7 +54,7 @@ const getImagePath = (path: string) => fileURLToPath(new URL(path, import.meta.u
 
     const agreement = await glm.market.proposeAgreement(draftProposal);
 
-    const lease = await glm.market.createLease(agreement, allocation);
+    const lease = glm.lease.createLease(agreement, allocation);
     const activity = await glm.activity.createActivity(agreement);
 
     // We managed to create the activity, no need to look for more agreement candidates

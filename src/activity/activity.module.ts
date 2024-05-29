@@ -30,7 +30,7 @@ export interface ActivityModule {
    *
    * @return An WorkContext that's fully commissioned and the user can execute their commands
    */
-  createWorkContext(activity: Activity): Promise<WorkContext>;
+  createWorkContext(activity: Activity, options?: WorkOptions): Promise<WorkContext>;
 }
 
 /**

@@ -58,9 +58,10 @@ const demandOptions = {
       market: glm.market,
       activity: glm.activity,
       payment: glm.payment,
+      lease: glm.lease,
     };
 
-    const pool = depModules.market.createLeaseProcessPool(proposalPool, allocation, {
+    const pool = depModules.lease.createLeaseProcessPool(proposalPool, allocation, {
       replicas: { max: CONCURRENCY },
     });
 

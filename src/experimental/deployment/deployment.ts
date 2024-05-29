@@ -11,6 +11,7 @@ import { CreateLeaseProcessPoolOptions } from "./builder";
 import { Subscription } from "rxjs";
 import { LeaseProcessPool } from "../../lease-process";
 import { DataTransferProtocol } from "../../shared/types";
+import { LeaseModule } from "../../lease-process/lease.module";
 
 export enum DeploymentState {
   INITIAL = "INITIAL",
@@ -83,6 +84,7 @@ export class Deployment {
     activity: ActivityModule;
     payment: PaymentModule;
     network: NetworkModule;
+    lease: LeaseModule;
   };
 
   constructor(
@@ -94,6 +96,7 @@ export class Deployment {
       activity: ActivityModule;
       payment: PaymentModule;
       network: NetworkModule;
+      lease: LeaseModule;
     },
     options: DeploymentOptions,
   ) {
@@ -174,7 +177,7 @@ export class Deployment {
           error: (e) => this.logger.error("Error while collecting proposals", e),
         });
 
-      const leaseProcessPool = this.modules.market.createLeaseProcessPool(proposalPool, allocation, {
+      const leaseProcessPool = this.modules.lease.createLeaseProcessPool(proposalPool, allocation, {
         replicas: pool.options.deployment?.replicas,
         network,
         leaseProcessOptions: {

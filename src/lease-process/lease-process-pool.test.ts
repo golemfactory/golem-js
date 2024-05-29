@@ -1,19 +1,20 @@
+import type { Agreement } from "../market/agreement/agreement";
 import { _, imock, instance, mock, reset, spy, verify, when } from "@johanblumenberg/ts-mockito";
-import type { Agreement, IAgreementApi } from "../market/agreement/agreement";
 import { LeaseProcess } from "./lease-process";
-import { Allocation, IPaymentApi } from "../payment";
+import { Allocation } from "../payment";
 import type { MarketModule } from "../market";
 import { DraftOfferProposalPool } from "../market";
 import { LeaseProcessPool } from "./lease-process-pool";
 import { type RequireAtLeastOne } from "../shared/utils/types";
 import { NetworkModule } from "../network";
+import { LeaseModule } from "./lease.module";
+import { Logger } from "../shared/utils";
 
-const agreementApi = imock<IAgreementApi>();
-const paymentApi = imock<IPaymentApi>();
 const allocation = mock(Allocation);
 const proposalPool = mock(DraftOfferProposalPool);
 const marketModule = imock<MarketModule>();
 const networkModule = imock<NetworkModule>();
+const leaseModule = imock<LeaseModule>();
 
 function getMockLeaseProcess() {
   return {
@@ -25,12 +26,12 @@ function getMockLeaseProcess() {
 
 function getLeasePool(replicas: RequireAtLeastOne<{ min: number; max: number }>) {
   return new LeaseProcessPool({
-    agreementApi: instance(agreementApi),
-    paymentApi: instance(paymentApi),
     allocation: instance(allocation),
     proposalPool: instance(proposalPool),
     marketModule: instance(marketModule),
     networkModule: instance(networkModule),
+    leaseModule: instance(leaseModule),
+    logger: instance(imock<Logger>()),
     network: undefined,
     replicas,
   });
@@ -38,18 +39,18 @@ function getLeasePool(replicas: RequireAtLeastOne<{ min: number; max: number }>)
 
 beforeEach(() => {
   jest.clearAllMocks();
-  reset(agreementApi);
-  reset(paymentApi);
   reset(allocation);
   reset(proposalPool);
   reset(marketModule);
+  reset(networkModule);
+  reset(leaseModule);
 });
 
 describe("LeaseProcessPool", () => {
   describe("ready()", () => {
     it("prepares MIN_POOL_SIZE lease processes", async () => {
       when(marketModule.signAgreementFromPool(_)).thenResolve({} as Agreement);
-      when(marketModule.createLease(_, _, _)).thenCall(() => ({}) as LeaseProcess);
+      when(leaseModule.createLease(_, _, _)).thenCall(() => ({}) as LeaseProcess);
 
       const pool = getLeasePool({ min: 5, max: 10 });
 
@@ -59,7 +60,7 @@ describe("LeaseProcessPool", () => {
       verify(marketModule.signAgreementFromPool(_)).times(5);
     });
     it("retries on error", async () => {
-      when(marketModule.createLease(_, _, _)).thenCall(() => ({}) as LeaseProcess);
+      when(leaseModule.createLease(_, _, _)).thenCall(() => ({}) as LeaseProcess);
 
       const fakeAgreement = {} as Agreement;
       when(marketModule.signAgreementFromPool(_))

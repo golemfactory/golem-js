@@ -1,14 +1,13 @@
-import { Allocation, IPaymentApi } from "../payment";
-import { filter } from "rxjs";
-import { Agreement, IAgreementApi } from "../market/agreement/agreement";
+import { Agreement } from "../market/agreement/agreement";
 import { AgreementPaymentProcess, PaymentProcessOptions } from "../payment/agreement_payment_process";
-import { Logger, YagnaApi } from "../shared/utils";
+import { Logger } from "../shared/utils";
 import { waitForCondition } from "../shared/utils/waitForCondition";
-import { Activity, IActivityApi, WorkContext } from "../activity";
+import { ActivityModule, WorkContext } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { EventEmitter } from "eventemitter3";
-import { NetworkNode, INetworkApi } from "../network";
+import { NetworkNode } from "../network";
 import { ExecutionOptions } from "../activity/exe-script-executor";
+import { MarketModule } from "../market";
 
 export interface LeaseProcessEvents {
   /**
@@ -30,50 +29,21 @@ export interface LeaseProcessOptions {
 export class LeaseProcess {
   public readonly events = new EventEmitter<LeaseProcessEvents>();
   public readonly networkNode?: NetworkNode;
-  private paymentProcess: AgreementPaymentProcess;
 
-  private currentActivity: Activity | null = null;
+  private currentWorkContext: WorkContext | null = null;
 
   public constructor(
     public readonly agreement: Agreement,
-    private readonly allocation: Allocation,
-    private readonly paymentApi: IPaymentApi,
-    private readonly activityApi: IActivityApi,
-    private readonly agreementApi: IAgreementApi,
-    private readonly networkApi: INetworkApi,
-    private readonly logger: Logger,
-    /** @deprecated This will be removed, we want to have a nice adapter here */
-    private readonly yagna: YagnaApi,
     private readonly storageProvider: StorageProvider,
+    private readonly paymentProcess: AgreementPaymentProcess,
+    private readonly marketModule: MarketModule,
+    private readonly activityModule: ActivityModule,
+    private readonly logger: Logger,
     private readonly leaseOptions?: LeaseProcessOptions,
   ) {
-    this.paymentProcess = new AgreementPaymentProcess(
-      this.agreement,
-      this.allocation,
-      this.paymentApi,
-      this.leaseOptions?.payment,
-      this.logger,
-    );
     this.networkNode = this.leaseOptions?.networkNode;
 
     // TODO: Listen to agreement events to know when it goes down due to provider closing it!
-
-    // TODO: Could be hidden in the payment process itself!
-    this.paymentApi.receivedInvoices$
-      .pipe(filter((invoice) => invoice.agreementId === this.agreement.id))
-      .subscribe(async (invoice) => {
-        if (invoice) {
-          await this.paymentProcess.addInvoice(invoice);
-        }
-      });
-
-    this.paymentApi.receivedDebitNotes$
-      .pipe(filter((debitNote) => debitNote.agreementId === this.agreement.id))
-      .subscribe(async (debitNote) => {
-        if (debitNote) {
-          await this.paymentProcess.addDebitNote(debitNote);
-        }
-      });
   }
 
   /**
@@ -87,9 +57,9 @@ export class LeaseProcess {
 
     try {
       this.logger.debug("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
-      if (this.currentActivity) {
-        await this.activityApi.destroyActivity(this.currentActivity);
-        await this.agreementApi.terminateAgreement(this.agreement);
+      if (this.currentWorkContext) {
+        await this.activityModule.destroyActivity(this.currentWorkContext.activity);
+        await this.marketModule.terminateAgreement(this.agreement);
       }
       await waitForCondition(() => this.paymentProcess.isFinished());
       this.logger.debug("Payment process for agreement finalized", { agreementId: this.agreement.id });
@@ -102,60 +72,37 @@ export class LeaseProcess {
   }
 
   public hasActivity(): boolean {
-    return this.currentActivity !== null;
+    return this.currentWorkContext !== null;
   }
 
   /**
    * Creates an activity on the Provider, and returns a work context that can be used to operate within the activity
    */
   async getExeUnit(): Promise<WorkContext> {
-    if (this.currentActivity) {
-      return new WorkContext(
-        this.activityApi,
-        this.yagna.activity.control,
-        this.yagna.activity.exec,
-        this.currentActivity,
-        this.networkApi,
-        {
-          storageProvider: this.storageProvider,
-          networkNode: this.leaseOptions?.networkNode,
-          execution: this.leaseOptions?.activity,
-        },
-      );
+    if (this.currentWorkContext) {
+      return this.currentWorkContext;
     }
 
-    const activity = await this.activityApi.createActivity(this.agreement);
-    this.currentActivity = activity;
+    const activity = await this.activityModule.createActivity(this.agreement);
+    this.currentWorkContext = await this.activityModule.createWorkContext(activity, {
+      storageProvider: this.storageProvider,
+      networkNode: this.leaseOptions?.networkNode,
+      execution: this.leaseOptions?.activity,
+    });
 
-    // Access your work context to perform operations
-    const ctx = new WorkContext(
-      this.activityApi,
-      this.yagna.activity.control,
-      this.yagna.activity.exec,
-      activity,
-      this.networkApi,
-      {
-        storageProvider: this.storageProvider,
-        networkNode: this.networkNode,
-        execution: this.leaseOptions?.activity,
-      },
-    );
-
-    await ctx.before();
-
-    return ctx;
+    return this.currentWorkContext;
   }
 
   async destroyExeUnit() {
-    if (this.currentActivity) {
-      await this.activityApi.destroyActivity(this.currentActivity);
-      this.currentActivity = null;
+    if (this.currentWorkContext) {
+      await this.activityModule.destroyActivity(this.currentWorkContext.activity);
+      this.currentWorkContext = null;
     } else {
       throw new Error(`There is no activity to destroy.`);
     }
   }
 
   async fetchAgreementState() {
-    return this.agreementApi.getAgreement(this.agreement.id).then((agreement) => agreement.getState());
+    return this.marketModule.fetchAgreement(this.agreement.id).then((agreement) => agreement.getState());
   }
 }
