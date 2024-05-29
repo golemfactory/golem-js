@@ -10,7 +10,7 @@ import { LeaseProcessPool, LeaseProcessPoolOptions } from "./lease-process-pool"
 export interface LeaseModule {
   /**
    * Factory that creates a new lease process that's fully configured.
-   * This method will also create and start the payment process for the agreement.
+   * This method will also create the payment process for the agreement.
    *
    */
   createLease(agreement: Agreement, allocation: Allocation, options?: LeaseProcessOptions): LeaseProcess;
@@ -51,10 +51,6 @@ export class LeaseModuleImpl implements LeaseModule {
       this.deps.logger.child("lease-process"),
       options,
     );
-    paymentProcess.start();
-    lease.events.once("finalized", () => {
-      paymentProcess.stop();
-    });
     return lease;
   }
 

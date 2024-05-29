@@ -35,7 +35,9 @@ export interface PaymentProcessOptions {
 }
 
 /**
- * Process manager that controls the logic behind processing events related to an agreement which result with payments
+ * Process manager that controls the logic behind processing payments for an agreement (debit notes and invoices).
+ * The process is started automatically and ends when the final invoice is received.
+ * You can stop the process earlier by calling the `stop` method. You cannot restart the process after stopping it.
  */
 export class AgreementPaymentProcess {
   private invoice: Invoice | null = null;
@@ -51,7 +53,7 @@ export class AgreementPaymentProcess {
 
   public readonly logger: Logger;
 
-  private cleanup: (() => void) | null = null;
+  private readonly cleanupSubscriptions: () => void;
 
   constructor(
     public readonly agreement: Agreement,
@@ -64,6 +66,19 @@ export class AgreementPaymentProcess {
     this.options = {
       invoiceFilter: options?.invoiceFilter || (() => true),
       debitNoteFilter: options?.debitNoteFilter || (() => true),
+    };
+
+    const invoiceSubscription = this.paymentApi.receivedInvoices$
+      .pipe(filter((invoice) => invoice.agreementId === this.agreement.id))
+      .subscribe((invoice) => this.addInvoice(invoice));
+
+    const debitNoteSubscription = this.paymentApi.receivedDebitNotes$
+      .pipe(filter((debitNote) => debitNote.agreementId === this.agreement.id))
+      .subscribe((debitNote) => this.addDebitNote(debitNote));
+
+    this.cleanupSubscriptions = () => {
+      invoiceSubscription.unsubscribe();
+      debitNoteSubscription.unsubscribe();
     };
   }
 
@@ -191,6 +206,11 @@ export class AgreementPaymentProcess {
     }
   }
 
+  private finalize(invoice: Invoice) {
+    this.invoice = invoice;
+    this.cleanupSubscriptions();
+  }
+
   private async applyInvoice(invoice: Invoice) {
     this.logger.debug("Applying invoice for agreement", {
       invoiceId: invoice.id,
@@ -218,7 +238,7 @@ export class AgreementPaymentProcess {
       );
     }
 
-    this.invoice = invoice;
+    this.finalize(invoice);
 
     let acceptedByFilter = false;
     try {
@@ -298,39 +318,10 @@ export class AgreementPaymentProcess {
   }
 
   public isStarted() {
-    return this.cleanup !== null;
-  }
-
-  /**
-   * Subscribe to payment events and add each invoice and debit note
-   * to the payment process.
-   * To stop the subscription, call `.stop()`.
-   */
-  public start(): void {
-    if (this.isStarted()) {
-      throw new GolemUserError("Payment process already started");
-    }
-    const invoiceSubscription = this.paymentApi.receivedInvoices$
-      .pipe(filter((invoice) => invoice.agreementId === this.agreement.id))
-      .subscribe(async (invoice) => {
-        await this.addInvoice(invoice);
-      });
-
-    const debitNoteSubscription = this.paymentApi.receivedDebitNotes$
-      .pipe(filter((debitNote) => debitNote.agreementId === this.agreement.id))
-      .subscribe(async (debitNote) => {
-        await this.addDebitNote(debitNote);
-      });
-    this.cleanup = () => {
-      invoiceSubscription.unsubscribe();
-      debitNoteSubscription.unsubscribe();
-    };
+    return this.cleanupSubscriptions !== null;
   }
 
   public stop(): void {
-    if (!this.isStarted()) {
-      throw new GolemUserError("Payment process not started");
-    }
-    this.cleanup?.();
+    this.cleanupSubscriptions();
   }
 }

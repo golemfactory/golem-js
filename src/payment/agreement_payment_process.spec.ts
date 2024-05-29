@@ -7,6 +7,7 @@ import { DebitNote } from "./debit_note";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
 import { GolemUserError } from "../shared/error/golem-error";
 import { IPaymentApi } from "./types";
+import { Subject } from "rxjs";
 
 const agreementMock = mock(Agreement);
 const allocationMock = mock(Allocation);
@@ -30,6 +31,8 @@ beforeEach(() => {
 
   when(agreementMock.getProviderInfo()).thenReturn(testProviderInfo);
   when(invoiceMock.provider).thenReturn(testProviderInfo);
+  when(mockPaymentApi.receivedInvoices$).thenReturn(new Subject());
+  when(mockPaymentApi.receivedDebitNotes$).thenReturn(new Subject());
 });
 
 describe("AgreementPaymentProcess", () => {
