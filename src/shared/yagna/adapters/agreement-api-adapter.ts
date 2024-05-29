@@ -1,4 +1,4 @@
-import { Agreement, IAgreementApi, IAgreementRepository } from "../../../market/agreement/agreement";
+import { Agreement, AgreementState, IAgreementApi, IAgreementRepository } from "../../../market/agreement/agreement";
 import { MarketApi } from "ya-ts-client";
 import { GolemMarketError, MarketErrorCode, OfferProposal } from "../../../market";
 import { withTimeout } from "../../utils/timeout";
@@ -96,7 +96,7 @@ export class AgreementApiAdapter implements IAgreementApi {
     return this.repository.getById(id);
   }
 
-  async getAgreementState(id: string): Promise<MarketApi.AgreementDTO["state"]> {
+  async getAgreementState(id: string): Promise<AgreementState> {
     const entry = await this.repository.getById(id);
     return entry.getState();
   }
