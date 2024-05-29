@@ -7,7 +7,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
  */
 const myFilter: ProposalFilter = (proposal) => {
   return (
-    proposal.provider.name !== "bad-provider" || !proposal.properties["golem.runtime.capabilities"]?.includes("vpn")
+    proposal.provider.name !== "bad-provider" && proposal.properties["golem.runtime.capabilities"]?.includes("vpn")
   );
 };
 
