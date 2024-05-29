@@ -17,13 +17,16 @@ export class ActivityApiAdapter implements IActivityApi {
 
   async createActivity(agreement: Agreement): Promise<Activity> {
     try {
-      // TODO: Use options
-      // @ts-expect-error: FIXME #yagna ts types
-      const { activityId } = await this.control.createActivity({
+      const activityOrError = await this.control.createActivity({
         agreementId: agreement.id,
       });
 
-      return this.activityRepo.getById(activityId);
+      if (typeof activityOrError !== "object" || !("activityId" in activityOrError)) {
+        // will be caught in the catch block and converted to GolemWorkError
+        throw new Error(activityOrError);
+      }
+
+      return this.activityRepo.getById(activityOrError.activityId);
     } catch (error) {
       const message = getMessageFromApiError(error);
       throw new GolemWorkError(
