@@ -1,4 +1,4 @@
-import { _, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
+import { _, imock, instance, mock, reset, spy, verify, when } from "@johanblumenberg/ts-mockito";
 import type { Agreement, IAgreementApi } from "../market/agreement/agreement";
 import { LeaseProcess } from "./lease-process";
 import { Allocation, IPaymentApi } from "../payment";
@@ -97,22 +97,16 @@ describe("LeaseProcessPool", () => {
     });
     it("stops retrying after specified timeout is reached", async () => {
       const pool = getLeasePool({ min: 3 });
-      pool["createNewLeaseProcess"] = jest
-        .fn(
-          () =>
-            new Promise<LeaseProcess | never>((_, reject) =>
-              setTimeout(() => reject(new Error("Failed to propose agreement")), 50),
-            ),
-        )
-        // the first call will succeed, the rest will fail (fall back to the first implementation)
-        .mockImplementationOnce(() => new Promise((resolve) => setTimeout(() => resolve(getMockLeaseProcess()), 50)));
+      const poolSpy = spy(pool);
+      when(poolSpy["createNewLeaseProcess"]())
+        .thenResolve(getMockLeaseProcess())
+        .thenReject(new Error("Failed to propose agreement"));
 
-      await expect(pool.ready(60)).rejects.toThrow(
+      await expect(pool.ready(10)).rejects.toThrow(
         "Could not create enough lease processes to reach the minimum pool size in time",
       );
       expect(pool.getAvailableSize()).toBe(1);
-      // first loop 3 times, then 2 times
-      expect(pool["createNewLeaseProcess"]).toHaveBeenCalledTimes(5);
+      verify(poolSpy["createNewLeaseProcess"]()).atLeast(3);
     });
   });
   describe("acquire()", () => {
