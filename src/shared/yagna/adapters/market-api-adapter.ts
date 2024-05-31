@@ -221,13 +221,7 @@ export class MarketApiAdapter implements IMarketApi {
 
       // Get fresh copy
       return this.agreementRepo.getById(agreement.id);
-      // this.events.emit("confirmed", { id: this.id, provider: this.getProviderInfo() });
     } catch (error) {
-      // this.events.emit("rejected", {
-      //   id: this.id,
-      //   provider: this.getProviderInfo(),
-      //   reason: error.toString(),
-      // });
       throw new GolemMarketError(
         `Unable to confirm agreement with provider`,
         MarketErrorCode.AgreementApprovalFailed,
