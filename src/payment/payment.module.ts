@@ -9,6 +9,7 @@ import { PayerDetails } from "./PayerDetails";
 import { CreateAllocationParams } from "./types";
 import { AgreementPaymentProcess, PaymentProcessOptions } from "./agreement_payment_process";
 import { Agreement } from "../market";
+import * as EnvUtils from "../shared/utils/env";
 
 export interface PaymentModuleOptions {
   /**
@@ -81,7 +82,7 @@ export class PaymentModuleImpl implements PaymentModule {
 
   private readonly options: Required<PaymentModuleOptions> = {
     driver: "erc20",
-    network: "holesky",
+    network: EnvUtils.getPaymentNetwork(),
     token: "tglm",
   };
 
