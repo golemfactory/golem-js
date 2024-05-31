@@ -1,4 +1,4 @@
-import { Agreement, IAgreementApi, IAgreementRepository } from "../../../market/agreement/agreement";
+import { Agreement, AgreementState, IAgreementApi, IAgreementRepository } from "../../../market/agreement/agreement";
 import { MarketApi } from "ya-ts-client";
 import { GolemMarketError, MarketErrorCode, OfferProposal } from "../../../market";
 import { withTimeout } from "../../utils/timeout";
@@ -64,14 +64,6 @@ export class AgreementApiAdapter implements IAgreementApi {
         demandId: proposal.demand.id,
       });
 
-      // TODO - do we need it?
-      // this.events.emit("agreementCreated", {
-      //   id: agreementId,
-      //   provider: "todo",
-      //   validTo: data?.validTo,
-      //   proposalId: proposal.id,
-      // });
-
       return this.repository.getById(agreementId);
     } catch (error) {
       const message = getMessageFromApiError(error);
@@ -104,7 +96,7 @@ export class AgreementApiAdapter implements IAgreementApi {
     return this.repository.getById(id);
   }
 
-  async getAgreementState(id: string): Promise<MarketApi.AgreementDTO["state"]> {
+  async getAgreementState(id: string): Promise<AgreementState> {
     const entry = await this.repository.getById(id);
     return entry.getState();
   }
@@ -119,7 +111,6 @@ export class AgreementApiAdapter implements IAgreementApi {
       }
 
       await withTimeout(
-        // TODO: Make a fix in ya-ts-client typings so that's going to be specifically {message:string}
         this.api.terminateAgreement(current.id, {
           message: reason,
         }),

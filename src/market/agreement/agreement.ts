@@ -3,6 +3,18 @@ import { MarketApi } from "ya-ts-client";
 import { Demand, OfferProposal } from "../index";
 import { InvoiceFilter } from "../../payment/agreement_payment_process";
 
+/**
+ * * `Proposal` - newly created by a Requestor (draft based on Proposal)
+ * * `Pending` - confirmed by a Requestor and send to Provider for approval
+ * * `Cancelled` by a Requestor
+ * * `Rejected` by a Provider
+ * * `Approved` by both sides
+ * * `Expired` - not approved, rejected nor cancelled within validity period
+ * * `Terminated` - finished after approval.
+ *
+ */
+export type AgreementState = "Proposal" | "Pending" | "Cancelled" | "Rejected" | "Approved" | "Expired" | "Terminated";
+
 export interface ProviderInfo {
   name: string;
   id: string;
@@ -51,8 +63,7 @@ export interface IAgreementApi {
    */
   proposeAgreement(proposal: OfferProposal): Promise<Agreement>;
 
-  // TODO: Detach return type from ya-ts-client!
-  getAgreementState(id: string): Promise<MarketApi.AgreementDTO["state"]>;
+  getAgreementState(id: string): Promise<AgreementState>;
 
   confirmAgreement(agreement: Agreement): Promise<Agreement>;
 

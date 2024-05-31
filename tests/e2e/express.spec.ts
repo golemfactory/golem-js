@@ -33,7 +33,6 @@ describe("Express", function () {
             imageTag: "severyn/espeak:latest",
           },
         },
-        // TODO: This should be optional
         market: {
           maxAgreements: 1,
           rentHours: 1,

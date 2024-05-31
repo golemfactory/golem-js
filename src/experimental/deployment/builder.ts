@@ -50,21 +50,15 @@ export class GolemDeploymentBuilder {
 
   getDeployment(): Deployment {
     validateDeployment(this.components);
-    const deployment = new Deployment(
-      this.components,
-      {
-        logger: this.glm.services.logger,
-        yagna: this.glm.services.yagna,
-        payment: this.glm.payment,
-        market: this.glm.market,
-        activity: this.glm.activity,
-        network: this.glm.network,
-        lease: this.glm.lease,
-      },
-      {
-        dataTransferProtocol: this.glm.options.dataTransferProtocol ?? "gftp",
-      },
-    );
+    const deployment = new Deployment(this.components, {
+      logger: this.glm.services.logger,
+      yagna: this.glm.services.yagna,
+      payment: this.glm.payment,
+      market: this.glm.market,
+      activity: this.glm.activity,
+      network: this.glm.network,
+      lease: this.glm.lease,
+    });
 
     this.reset();
 

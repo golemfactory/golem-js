@@ -3,14 +3,12 @@ import { defaultLogger, Logger, YagnaApi } from "../../shared/utils";
 import { EventEmitter } from "eventemitter3";
 import { ActivityModule } from "../../activity";
 import { Network, NetworkModule, NetworkOptions } from "../../network";
-import { GftpStorageProvider, StorageProvider, WebSocketBrowserStorageProvider } from "../../shared/storage";
 import { validateDeployment } from "./validate-deployment";
 import { DraftOfferProposalPool, MarketModule } from "../../market";
 import { PaymentModule } from "../../payment";
 import { CreateLeaseProcessPoolOptions } from "./builder";
 import { Subscription } from "rxjs";
 import { LeaseProcessPool } from "../../lease-process";
-import { DataTransferProtocol } from "../../shared/types";
 import { LeaseModule } from "../../lease-process/lease.module";
 
 export enum DeploymentState {
@@ -50,10 +48,6 @@ export type DeploymentComponents = {
   networks: { name: string; options: NetworkOptions }[];
 };
 
-export interface DeploymentOptions {
-  dataTransferProtocol?: DataTransferProtocol;
-}
-
 /**
  * @experimental This feature is experimental!!!
  */
@@ -77,7 +71,6 @@ export class Deployment {
   >();
 
   private readonly networks = new Map<string, Network>();
-  private readonly dataTransferProtocol: StorageProvider;
 
   private readonly modules: {
     market: MarketModule;
@@ -98,7 +91,6 @@ export class Deployment {
       network: NetworkModule;
       lease: LeaseModule;
     },
-    options: DeploymentOptions,
   ) {
     validateDeployment(components);
 
@@ -109,27 +101,12 @@ export class Deployment {
 
     this.modules = modules;
 
-    this.dataTransferProtocol = this.getStorageProvider(options.dataTransferProtocol);
-
     this.abortController.signal.addEventListener("abort", () => {
       this.logger.info("Abort signal received");
       this.stop().catch((e) => {
         this.logger.error("stop() error on abort", { error: e });
-        // TODO: should the error be sent to event listener?
       });
     });
-  }
-
-  private getStorageProvider(protocol: DataTransferProtocol | StorageProvider = "gftp"): StorageProvider {
-    if (protocol === "gftp") {
-      return new GftpStorageProvider();
-    }
-
-    if (protocol === "ws") {
-      return new WebSocketBrowserStorageProvider(this.yagnaApi, {});
-    }
-
-    return protocol;
   }
 
   getState(): DeploymentState {
@@ -145,20 +122,25 @@ export class Deployment {
       throw new GolemUserError(`Cannot start backend, expected backend state INITIAL, current state is ${this.state}`);
     }
 
-    await this.dataTransferProtocol.init();
-
     for (const network of this.components.networks) {
       const networkInstance = await this.modules.network.createNetwork(network.options);
       this.networks.set(network.name, networkInstance);
     }
 
-    // TODO: Derive this from deployment spec
+    // Allocation is re-used for all demands so the expiration date should
+    // be the equal to the longest expiration date of all demands
+    const longestExpiration =
+      Math.max(...this.components.leaseProcessPools.map((pool) => pool.options.market.rentHours)) * 3600;
+    const totalBudget = this.components.leaseProcessPools.reduce(
+      (acc, pool) => acc + this.modules.market.estimateBudget(pool.options),
+      0,
+    );
+
     const allocation = await this.modules.payment.createAllocation({
-      budget: 1,
-      expirationSec: 30 * 60, // 30 minutes
+      budget: totalBudget,
+      expirationSec: longestExpiration,
     });
 
-    // TODO: pass dataTransferProtocol to pool
     for (const pool of this.components.leaseProcessPools) {
       const network = pool.options?.deployment?.network
         ? this.networks.get(pool.options?.deployment.network)
@@ -208,8 +190,6 @@ export class Deployment {
 
     try {
       this.abortController.abort();
-
-      this.dataTransferProtocol.close();
 
       const stopPools = Array.from(this.pools.values()).map((pool) =>
         Promise.allSettled([pool.proposalSubscription.unsubscribe(), pool.leaseProcessPool.drainAndClear()]),

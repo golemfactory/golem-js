@@ -1,4 +1,3 @@
-// TODO: Implement these tests as they survive separation from old Activity entity
 import { Activity } from "./activity";
 import { _, anything, imock, instance, mock, verify, when } from "@johanblumenberg/ts-mockito";
 import { Capture, Deploy, DownloadFile, Run, Script, Start, Terminate, UploadFile } from "./script";

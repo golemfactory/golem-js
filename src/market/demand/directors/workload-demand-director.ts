@@ -47,8 +47,7 @@ export class WorkloadDemandDirector implements IDemandDirector {
   private async resolveTaskPackageUrl(): Promise<string> {
     const repoUrl = EnvUtils.getRepoUrl();
 
-    //TODO : in future this should be passed probably through config
-    const isHttps = false;
+    const useHttps = this.config.useHttps;
 
     const isDev = EnvUtils.isDevMode();
 
@@ -65,7 +64,7 @@ export class WorkloadDemandDirector implements IDemandDirector {
 
       const data = await response.json();
 
-      const imageUrl = isHttps ? data.https : data.http;
+      const imageUrl = useHttps ? data.https : data.http;
       hash = data.sha3;
 
       return `hash:sha3:${hash}:${imageUrl}`;

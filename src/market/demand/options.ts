@@ -54,6 +54,13 @@ type ImageDemandOptions = {
 
   /**  finds package by registry tag  */
   imageTag?: string;
+
+  /**
+   * Force the image download url that will be passed to the provider to use HTTPS.
+   * This option is only relevant when you use `imageHash` or `imageTag` options.
+   * Default is false
+   */
+  useHttps?: boolean;
 };
 
 export type WorkloadDemandDirectorConfigOptions = RuntimeDemandOptions &
