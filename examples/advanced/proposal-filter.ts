@@ -5,11 +5,10 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
  * Example demonstrating how to write a custom proposal filter.
  * In this case the proposal must include VPN access and must not be from "bad-provider"
  */
-const myFilter: ProposalFilter = (proposal) => {
-  return (
-    proposal.provider.name !== "bad-provider" && proposal.properties["golem.runtime.capabilities"]?.includes("vpn")
+const myFilter: ProposalFilter = (proposal) =>
+  Boolean(
+    proposal.provider.name !== "bad-provider" && proposal.properties["golem.runtime.capabilities"]?.includes("vpn"),
   );
-};
 
 const order: MarketOrderSpec = {
   demand: {

@@ -1,24 +1,8 @@
 /**
  * This example showcases how users can listen to various events exposed from golem-js
  */
-import { DemandSpec, GolemNetwork } from "@golem-sdk/golem-js";
+import { GolemNetwork } from "@golem-sdk/golem-js";
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
-
-const demandOptions: DemandSpec = {
-  demand: {
-    workload: { imageTag: "golem/alpine:latest" },
-  },
-  market: {
-    maxAgreements: 1,
-    rentHours: 0.5,
-    pricing: {
-      model: "linear",
-      maxStartPrice: 0.5,
-      maxCpuPerHourPrice: 1.0,
-      maxEnvPerHourPrice: 0.5,
-    },
-  },
-};
 
 (async () => {
   const glm = new GolemNetwork({
@@ -46,7 +30,22 @@ const demandOptions: DemandSpec = {
       console.warn("Proposal rejected by provider", proposal, reason);
     });
 
-    const lease = await glm.oneOf(demandOptions);
+    const lease = await glm.oneOf({
+      demand: {
+        workload: { imageTag: "golem/alpine:latest" },
+      },
+      market: {
+        maxAgreements: 1,
+        rentHours: 0.5,
+        pricing: {
+          model: "linear",
+          maxStartPrice: 0.5,
+          maxCpuPerHourPrice: 1.0,
+          maxEnvPerHourPrice: 0.5,
+        },
+      },
+    });
+
     await lease
       .getExeUnit()
       .then((exe) => exe.run("echo Hello, Golem! 👋"))

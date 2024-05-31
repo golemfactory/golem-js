@@ -13,7 +13,7 @@ import {
   YagnaProposalEvent,
 } from "../../../market";
 import { YagnaApi } from "../yagnaApi";
-import YaTsClient, { MarketApi } from "ya-ts-client";
+import YaTsClient from "ya-ts-client";
 import { GolemInternalError, GolemUserError } from "../../error/golem-error";
 import { Logger } from "../../utils";
 import { DemandBodyPrototype, DemandPropertyValue } from "../../../market/demand/demand-body-builder";
