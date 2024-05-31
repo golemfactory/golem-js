@@ -82,7 +82,7 @@ export class PaymentModuleImpl implements PaymentModule {
 
   private readonly options: Required<PaymentModuleOptions> = {
     driver: "erc20",
-    network: EnvUtils.getPaymentNetwork() || "holesky",
+    network: EnvUtils.getPaymentNetwork(),
     token: "tglm",
   };
 

@@ -9,7 +9,7 @@ export interface BasicDemandDirectorConfigOptions {
 
 export class BasicDemandDirectorConfig extends BaseConfig implements BasicDemandDirectorConfigOptions {
   public readonly expirationSec = 30 * 60; // 30 minutes
-  public readonly subnetTag: string = EnvUtils.getYagnaSubnet() || "public";
+  public readonly subnetTag: string = EnvUtils.getYagnaSubnet();
 
   constructor(options?: Partial<BasicDemandDirectorConfigOptions>) {
     super();
