@@ -34,7 +34,19 @@ const order: MarketOrderSpec = {
     const lease = await glm.oneOf(order);
     const exe = await lease.getExeUnit();
 
-    const remoteProcess = await exe.runAndStream("sleep 1 && echo 'Hello World' && echo 'Hello Golem' >&2");
+    const remoteProcess = await exe.runAndStream(
+      `
+      sleep 1
+      echo -n 'Hello from stdout' >&1
+      echo -n 'Hello from stderr' >&2
+      sleep 1
+      echo -n 'Hello from stdout again' >&1
+      echo -n 'Hello from stderr again' >&2
+      sleep 1
+      echo -n 'Hello from stdout yet again' >&1
+      echo -n 'Hello from stderr yet again' >&2
+      `,
+    );
     remoteProcess.stdout.on("data", (data) => console.log("stdout>", data));
     remoteProcess.stderr.on("data", (data) => console.error("stderr>", data));
     await remoteProcess.waitForExit();
