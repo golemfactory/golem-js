@@ -1,49 +1,44 @@
 import { Observable } from "rxjs";
-import { Demand, DemandSpecification } from "./demand";
-import YaTsClient, { MarketApi } from "ya-ts-client";
+import {
+  Demand,
+  DemandBodyPrototype,
+  DemandOfferEvent,
+  DemandSpecification,
+  OfferPropertyQueryReceivedEvent,
+  OfferProposalReceivedEvent,
+  OfferProposalRejectedEvent,
+} from "./demand";
 import { OfferProposal } from "./offer-proposal";
-import { DemandBodyPrototype } from "./demand/demand-body-builder";
-import { AgreementEvent } from "./agreement/agreement-event";
-import { Agreement } from "./agreement";
+import {
+  AgreementApproved,
+  AgreementCancelledEvent,
+  AgreementEvent,
+  AgreementRejectedEvent,
+  AgreementTerminatedEvent,
+} from "./agreement/agreement-event";
+import { Agreement, AgreementState } from "./agreement";
 
-export type NewProposalEvent = YaTsClient.MarketApi.ProposalEventDTO;
-export type ProposalRejectedEvent = YaTsClient.MarketApi.ProposalRejectedEventDTO;
-export type YagnaProposalEvent = NewProposalEvent | ProposalRejectedEvent;
+export type MarketEvents = {
+  demandSubscriptionStarted: (demand: Demand) => void;
+  demandSubscriptionRefreshed: (demand: Demand) => void;
+  demandSubscriptionStopped: (demand: Demand) => void;
 
-export type DemandOfferEvent =
-  | {
-      type: "ProposalReceived";
-      proposal: OfferProposal;
-      timestamp: Date;
-    }
-  | {
-      type: "ProposalRejected";
-      proposal: OfferProposal;
-      reason: string;
-      timestamp: Date;
-    }
-  | {
-      type: "PropertyQueryReceived";
-      timestamp: Date;
-    };
+  /** Emitted when offer proposal from the Provider is received */
+  offerProposalReceived: (event: OfferProposalReceivedEvent) => void;
 
-export interface IMarketEvents {
-  subscribedToOfferProposals: (demand: Demand) => void;
-  refreshedOfferProposalSubscription: (demand: Demand) => void;
-  unsubscribedFromOfferProposals: (demand: Demand) => void;
+  /** Emitted when the Provider rejects the counter-proposal that the Requestor sent */
+  offerCounterProposalRejected: (event: OfferProposalRejectedEvent) => void;
 
-  propertyQueryReceived: () => void;
+  /** Not implemented */
+  offerPropertyQueryReceived: (event: OfferPropertyQueryReceivedEvent) => void;
 
-  offerProposalReceived: (offerProposal: OfferProposal) => void;
   offerProposalRejectedByFilter: (offerProposal: OfferProposal, reason?: string) => void;
 
-  counterProposalRejectedByProvider: (counterOfferProposal: OfferProposal, reason: string) => void;
-
-  agreementConfirmed: (agreement: Agreement) => void;
-  agreementRejected: (agreement: Agreement, reason: string) => void;
-  agreementTerminated: (agreement: Agreement, terminatedBy: "Provider" | "Requestor", reason: string) => void;
-  agreementCancelled: (agreement: Agreement) => void;
-}
+  agreementApproved: (event: AgreementApproved) => void;
+  agreementRejected: (event: AgreementRejectedEvent) => void;
+  agreementTerminated: (event: AgreementTerminatedEvent) => void;
+  agreementCancelled: (event: AgreementCancelledEvent) => void;
+};
 
 export interface IMarketApi {
   /**
@@ -59,13 +54,6 @@ export interface IMarketApi {
    * Remove the given demand from the market.
    */
   unpublishDemand(demand: Demand): Promise<void>;
-
-  /**
-   * Creates a new observable that emits proposal events related to the given demand.
-   *
-   * @deprecated replaced observeDemandResponse
-   */
-  observeProposalEvents(demand: Demand): Observable<YagnaProposalEvent>;
 
   /**
    * "Publishes" the demand on the network and stats to listen (event polling) for the events representing the feedback
@@ -111,6 +99,9 @@ export interface IMarketApi {
    */
   getPaymentRelatedDemandDecorations(allocationId: string): Promise<DemandBodyPrototype>;
 
+  /**
+   * Retrieves an agreement based on the provided ID.
+   */
   getAgreement(id: string): Promise<Agreement>;
 
   /**
@@ -131,10 +122,18 @@ export interface IMarketApi {
    */
   proposeAgreement(proposal: OfferProposal): Promise<Agreement>;
 
-  // TODO: Detach return type from ya-ts-client!
-  getAgreementState(id: string): Promise<MarketApi.AgreementDTO["state"]>;
-
+  /**
+   * Confirms the agreement with the provider
+   */
   confirmAgreement(agreement: Agreement, appSessionId: string): Promise<Agreement>;
 
+  /**
+   * Terminates an agreement.
+   */
   terminateAgreement(agreement: Agreement, reason?: string): Promise<Agreement>;
+
+  /**
+   * Retrieves the state of an agreement based on the provided agreement ID.
+   */
+  getAgreementState(id: string): Promise<AgreementState>;
 }

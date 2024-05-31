@@ -40,7 +40,7 @@ export class DebitNoteRepository implements IDebitNoteRepository {
     const providerInfo = {
       id: model.issuerId,
       walletAddress: model.payeeAddr,
-      name: agreement.offer.properties["golem.node.id.name"] ?? "",
+      name: agreement.offer.properties["golem.node.id.name"],
     };
 
     return new DebitNote(model, providerInfo);

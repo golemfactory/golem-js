@@ -42,8 +42,7 @@ export interface YagnaExeScriptObserver {
  *
  * - selectively exposes services from ya-ts-client in a more user-friendly manner
  * - implements an event reader that collects events from Yagna endpoints and allows subscribing to them as Observables
- *   for agreements, debit notes and invoices. These observables emit ya-ts-client types onoutputs
- * - provides shorthand methods for reading additional types of events in form of Observables which emit ya-ts-client types on output
+ *   for agreements, debit notes and invoices. These observables emit ya-ts-client types on outputs
  *
  * End users of the SDK should not use this class and make use of {@link GolemNetwork} instead. This class is designed for
  * SDK developers to use.

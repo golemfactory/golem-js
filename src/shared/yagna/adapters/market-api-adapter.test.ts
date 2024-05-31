@@ -3,9 +3,9 @@ import * as YaTsClient from "ya-ts-client";
 import { YagnaAgreementOperationEvent, YagnaApi } from "../yagnaApi";
 import { DemandRequestBody, MarketApiAdapter } from "./market-api-adapter";
 import { Demand, DemandSpecification, OfferProposal } from "../../../market";
-import { Subject, take, takeUntil, timer } from "rxjs";
+import { Subject, take } from "rxjs";
 import { Logger } from "../../utils";
-import { DemandBodyPrototype } from "../../../market/demand/demand-body-builder";
+import { DemandBodyPrototype } from "../../../market/demand";
 import { IAgreementRepository } from "../../../market/agreement/agreement";
 import { IProposalRepository } from "../../../market/offer-proposal";
 
@@ -194,12 +194,16 @@ describe("Market API Adapter", () => {
     });
   });
 
-  describe("observeProposalEvents()", () => {
+  describe("observeDemandResponse()", () => {
     it("should long poll for proposals", (done) => {
       const mockDemand = mock(Demand);
       when(mockDemand.id).thenReturn("demand-id");
       const mockProposalDTO = imock<YaTsClient.MarketApi.ProposalEventDTO["proposal"]>();
       when(mockProposalDTO.issuerId).thenReturn("issuer-id");
+      when(mockProposalDTO.properties).thenReturn({
+        "golem.com.usage.vector": ["golem.usage.cpu_sec", "golem.usage.duration_sec"],
+        "golem.com.pricing.model.linear.coeffs": [0.0001, 0.00005, 0],
+      });
       const mockProposalEvent: YaTsClient.MarketApi.ProposalEventDTO = {
         eventType: "ProposalEvent",
         eventDate: "0000-00-00",
@@ -208,7 +212,7 @@ describe("Market API Adapter", () => {
 
       when(mockMarket.collectOffers("demand-id")).thenResolve([mockProposalEvent, mockProposalEvent]);
 
-      const proposal$ = api.observeProposalEvents(instance(mockDemand)).pipe(take(4));
+      const proposal$ = api.observeDemandResponse(instance(mockDemand)).pipe(take(4));
 
       let proposalsEmitted = 0;
 
@@ -229,52 +233,6 @@ describe("Market API Adapter", () => {
           }
         },
       });
-    });
-
-    it("should cleanup the long poll when unsubscribed", (done) => {
-      const mockDemand = mock(Demand);
-      when(mockDemand.id).thenReturn("demand-id");
-
-      const cancelSpy = jest.fn();
-
-      when(mockMarket.collectOffers("demand-id")).thenCall(() => {
-        let timeout: NodeJS.Timeout;
-        const longRunningPromise = new YaTsClient.MarketApi.CancelablePromise<[]>((resolve) => {
-          timeout = setTimeout(() => {
-            resolve([]);
-          }, 1000000);
-        });
-        longRunningPromise.cancel = cancelSpy.mockImplementation(() => {
-          clearTimeout(timeout);
-        });
-        return longRunningPromise;
-      });
-
-      const proposal$ = api.observeProposalEvents(instance(mockDemand)).pipe(
-        // cancel the long poll after 10ms
-        takeUntil(timer(10)),
-      );
-
-      proposal$.subscribe({
-        error: (error) => {
-          done(error);
-        },
-        complete: async () => {
-          // the cleanup function will be called at the end of this event loop cycle
-          // so we need to wait for the next cycle
-          await jest.runAllTimersAsync();
-          try {
-            expect(cancelSpy).toHaveBeenCalledTimes(1);
-            verify(mockMarket.collectOffers("demand-id")).once();
-            done();
-          } catch (error) {
-            // done(error);
-          }
-        },
-      });
-
-      // trigger the `timer(10)` observable
-      jest.advanceTimersByTime(10);
     });
   });
 });

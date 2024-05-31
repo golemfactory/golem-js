@@ -28,7 +28,7 @@ import { ProposalRepository } from "../shared/yagna/repository/proposal-reposito
 import { CacheService } from "../shared/cache/CacheService";
 import { IProposalRepository } from "../market/offer-proposal";
 import { DemandRepository } from "../shared/yagna/repository/demand-repository";
-import { BuildDemandOptions, IDemandRepository } from "../market/demand";
+import { BuildDemandOptions, IDemandRepository } from "../market/demand/demand";
 import { GftpServerAdapter } from "../shared/storage/GftpServerAdapter";
 import {
   GftpStorageProvider,

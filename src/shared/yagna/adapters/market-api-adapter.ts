@@ -10,13 +10,12 @@ import {
   MarketApiConfig,
   MarketErrorCode,
   OfferProposal,
-  YagnaProposalEvent,
 } from "../../../market";
 import { YagnaApi } from "../yagnaApi";
 import YaTsClient from "ya-ts-client";
 import { GolemInternalError, GolemUserError } from "../../error/golem-error";
 import { Logger } from "../../utils";
-import { DemandBodyPrototype, DemandPropertyValue } from "../../../market/demand/demand-body-builder";
+import { DemandBodyPrototype, DemandPropertyValue } from "../../../market/demand";
 import { getMessageFromApiError } from "../../utils/apiErrorMessage";
 import { withTimeout } from "../../utils/timeout";
 import { IAgreementRepository } from "../../../market/agreement/agreement";
@@ -71,45 +70,6 @@ export class MarketApiAdapter implements IMarketApi {
     }
   }
 
-  observeProposalEvents(demand: Demand): Observable<YagnaProposalEvent> {
-    return new Observable<YagnaProposalEvent>((subscriber) => {
-      let offerProposalEvents: YaTsClient.MarketApi.CancelablePromise<YagnaProposalEvent[]>;
-      let isCancelled = false;
-      const longPoll = async () => {
-        if (isCancelled) {
-          return;
-        }
-        try {
-          offerProposalEvents = this.yagnaApi.market.collectOffers(demand.id) as YaTsClient.MarketApi.CancelablePromise<
-            YagnaProposalEvent[]
-          >;
-          const proposals = await offerProposalEvents;
-          for (const proposal of proposals) {
-            subscriber.next(proposal);
-          }
-        } catch (error) {
-          if (error instanceof YaTsClient.MarketApi.CancelError) {
-            return;
-          }
-          // when the demand is unsubscribed the long poll will reject with a 404
-          if ("status" in error && error.status === 404) {
-            return;
-          }
-          subscriber.error(error);
-        }
-
-        longPoll().catch((err) => subscriber.error(err));
-      };
-
-      longPoll().catch((err) => subscriber.error(err));
-
-      return () => {
-        isCancelled = true;
-        offerProposalEvents.cancel();
-      };
-    });
-  }
-
   observeDemandResponse(demand: Demand): Observable<DemandOfferEvent> {
     return new Observable((observer) => {
       let isCancelled = false;
@@ -149,7 +109,7 @@ export class MarketApiAdapter implements IMarketApi {
                 if (counterProposal) {
                   observer.next({
                     type: "ProposalRejected",
-                    proposal: counterProposal,
+                    counterProposal,
                     reason: reason.message,
                     timestamp,
                   });
@@ -213,11 +173,8 @@ export class MarketApiAdapter implements IMarketApi {
     }
 
     const dto = await this.yagnaApi.market.getProposalOffer(receivedProposal.demand.id, maybeNewId);
-    const counterOffer = new OfferProposal(dto, "Requestor", receivedProposal.demand);
 
-    this.proposalRepo.add(counterOffer);
-
-    return counterOffer;
+    return new OfferProposal(dto, "Requestor", receivedProposal.demand);
   }
 
   async rejectProposal(receivedProposal: OfferProposal, reason: string): Promise<void> {
@@ -388,7 +345,7 @@ export class MarketApiAdapter implements IMarketApi {
                   switch (eventType) {
                     case "AgreementApprovedEvent":
                       observer.next({
-                        type: "AgreementConfirmed",
+                        type: "AgreementApproved",
                         agreement,
                         timestamp,
                       });

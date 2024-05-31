@@ -1,26 +1,34 @@
 import { Agreement } from "./agreement";
 
+export type AgreementApproved = {
+  type: "AgreementApproved";
+  agreement: Agreement;
+  timestamp: Date;
+};
+
+export type AgreementTerminatedEvent = {
+  type: "AgreementTerminated";
+  terminatedBy: "Provider" | "Requestor";
+  reason: string;
+  agreement: Agreement;
+  timestamp: Date;
+};
+
+export type AgreementRejectedEvent = {
+  type: "AgreementRejected";
+  agreement: Agreement;
+  reason: string;
+  timestamp: Date;
+};
+
+export type AgreementCancelledEvent = {
+  type: "AgreementCancelled";
+  agreement: Agreement;
+  timestamp: Date;
+};
+
 export type AgreementEvent =
-  | {
-      type: "AgreementConfirmed";
-      agreement: Agreement;
-      timestamp: Date;
-    }
-  | {
-      type: "AgreementTerminated";
-      terminatedBy: "Provider" | "Requestor";
-      reason: string;
-      agreement: Agreement;
-      timestamp: Date;
-    }
-  | {
-      type: "AgreementRejected";
-      agreement: Agreement;
-      reason: string;
-      timestamp: Date;
-    }
-  | {
-      type: "AgreementCancelled";
-      agreement: Agreement;
-      timestamp: Date;
-    };
+  | AgreementApproved
+  | AgreementTerminatedEvent
+  | AgreementRejectedEvent
+  | AgreementCancelledEvent;

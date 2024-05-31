@@ -39,7 +39,7 @@ export class InvoiceRepository implements IInvoiceRepository {
     const providerInfo = {
       id: model.issuerId,
       walletAddress: model.payeeAddr,
-      name: agreement.offer.properties["golem.node.id.name"] ?? "",
+      name: agreement.offer.properties["golem.node.id.name"],
     };
 
     return new Invoice(model, providerInfo);

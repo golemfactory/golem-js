@@ -1,7 +1,8 @@
 import { ProposalsBatch } from "./proposals_batch";
 import { mock, instance, when } from "@johanblumenberg/ts-mockito";
-import { OfferProposal, ProposalProperties } from "./offer-proposal";
+import { OfferProposal } from "./offer-proposal";
 import { ProviderInfo } from "./agreement";
+import { ProposalProperties } from "./proposal-properties";
 
 const mockedProviderInfo: ProviderInfo = {
   id: "provider-id-1",

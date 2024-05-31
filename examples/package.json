@@ -9,7 +9,7 @@
     "basic-many-of": "tsx basic/many-of.ts",
     "basic-vpn": "tsx basic/vpn.ts",
     "basic-transfer": "tsx basic/transfer.ts",
-    "basic-events": "tsx basic/hello-world-events.ts",
+    "basic-events": "tsx basic/events.ts",
     "basic-run-and-stream": "tsx basic/run-and-stream.ts",
     "advanced-hello-world": "tsx advanced/hello-world.ts",
     "advanced-manual-pools": "tsx advanced/manual-pools.ts",

@@ -18,16 +18,21 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
   try {
     await glm.connect();
 
-    glm.market.events.on("agreementConfirmed", (agreement) => {
-      console.log("Agreement '%s' confirmed", agreement.id);
+    glm.market.events.on("agreementApproved", (event) => {
+      console.log("Agreement '%s' approved at %s", event.agreement.id, event.timestamp);
     });
 
-    glm.market.events.on("agreementTerminated", (agreement, terminatedBy, reason) => {
-      console.log("Agreement '%s' terminated by '%s' with reason '%s'", agreement.id, terminatedBy, reason);
+    glm.market.events.on("agreementTerminated", (event) => {
+      console.log(
+        "Agreement '%s' terminated by '%s' with reason '%s'",
+        event.agreement.id,
+        event.terminatedBy,
+        event.reason,
+      );
     });
 
-    glm.market.events.on("counterProposalRejectedByProvider", (proposal, reason) => {
-      console.warn("Proposal rejected by provider", proposal, reason);
+    glm.market.events.on("offerCounterProposalRejected", (event) => {
+      console.warn("Proposal rejected by provider", event);
     });
 
     const lease = await glm.oneOf({

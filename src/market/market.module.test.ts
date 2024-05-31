@@ -1,10 +1,9 @@
 import { _, imock, instance, mock, reset, spy, verify, when } from "@johanblumenberg/ts-mockito";
 import { Logger, YagnaApi } from "../shared/utils";
 import { MarketModuleImpl } from "./market.module";
-import * as YaTsClient from "ya-ts-client";
-import { Demand, DemandSpecification, IDemandRepository } from "./demand";
-import { from, Subject, take } from "rxjs";
-import { IProposalRepository, OfferProposal, ProposalProperties } from "./offer-proposal";
+import { Demand, DemandOfferEvent, DemandSpecification, IDemandRepository } from "./demand";
+import { Subject, take } from "rxjs";
+import { IProposalRepository, OfferProposal } from "./offer-proposal";
 import { MarketApiAdapter } from "../shared/yagna/";
 import { IActivityApi, IFileServer } from "../activity";
 import { StorageProvider } from "../shared/storage";
@@ -14,8 +13,8 @@ import { INetworkApi, NetworkModule } from "../network";
 import { DraftOfferProposalPool } from "./draft-offer-proposal-pool";
 import { Agreement, ProviderInfo } from "./agreement";
 import { AgreementEvent } from "./agreement/agreement-event";
-import { DemandOfferEvent } from "./api";
 import { waitAndCall, waitForCondition } from "../shared/utils/wait";
+import { ProposalProperties } from "./proposal-properties";
 
 const mockMarketApiAdapter = mock(MarketApiAdapter);
 const mockYagna = mock(YagnaApi);
@@ -231,64 +230,34 @@ describe("Market module", () => {
     });
   });
 
-  describe("subscribeForProposals()", () => {
-    it("should filter out proposals that are invalid (in terms of content)", (done) => {
-      const mockDemand = instance(imock<Demand>());
-      const mockProposalDTO = imock<YaTsClient.MarketApi.ProposalEventDTO["proposal"]>();
-
-      when(mockProposalDTO.issuerId).thenReturn("issuer-id");
-      when(mockProposalDTO.properties).thenReturn({
-        "golem.com.usage.vector": ["golem.usage.duration_sec", "golem.usage.cpu_sec"],
-        "golem.com.pricing.model.linear.coeffs": [0.1, 0.1],
-      });
-
-      const mockProposalEventSuccess: YaTsClient.MarketApi.ProposalEventDTO = {
-        eventType: "ProposalEvent",
-        eventDate: "0000-00-00",
-        proposal: instance(mockProposalDTO),
-      };
-      const mockProposalEventRejected: YaTsClient.MarketApi.ProposalRejectedEventDTO = {
-        eventType: "ProposalRejectedEvent",
-        eventDate: "0000-00-00",
-        proposalId: "proposal-id",
-        reason: { key: "value" },
-      };
-
-      when(mockMarketApiAdapter.observeProposalEvents(_)).thenReturn(
-        from([
-          mockProposalEventSuccess,
-          mockProposalEventSuccess,
-          mockProposalEventRejected,
-          mockProposalEventSuccess,
-          mockProposalEventRejected,
-          mockProposalEventSuccess,
-        ]),
-      );
-
-      const proposal$ = marketModule.observeOfferProposals(mockDemand);
-
-      let proposalsEmitted = 0;
-
-      proposal$.subscribe({
-        error: (error) => {
-          done(error);
-        },
-        next: () => {
-          proposalsEmitted++;
-        },
-        complete: () => {
-          try {
-            expect(proposalsEmitted).toBe(4);
-            done();
-          } catch (error) {
-            done(error);
-          }
-        },
-      });
-    });
-  });
-
   describe("startCollectingProposals()", () => {
+    const initialOfferProperties: ProposalProperties = {
+      "golem.activity.caps.transfer.protocol": ["http"],
+      "golem.com.payment.chosen-platform": "erc20-hoeslky-glm",
+      "golem.com.payment.debit-notes.accept-timeout?": 120,
+      "golem.com.payment.protocol.version": 2,
+      "golem.com.pricing.model": "linear",
+      "golem.com.pricing.model.linear.coeffs": [0.0, 0.0, 0.0],
+      "golem.com.scheme": "payu",
+      "golem.com.usage.vector": [],
+      "golem.inf.cpu.architecture": "",
+      "golem.inf.cpu.brand": "",
+      "golem.inf.cpu.capabilities": [],
+      "golem.inf.cpu.model": "",
+      "golem.inf.cpu.vendor": "GenuineIntel",
+      "golem.node.id.name": "",
+      "golem.runtime.capabilities": [],
+      "golem.runtime.name": "",
+      "golem.runtime.version": "",
+      "golem.srv.caps.multi-activity": false,
+      "golem.srv.comp.expiration": 0,
+      "golem.srv.comp.task_package": "",
+      "golem.inf.cpu.cores": 2,
+      "golem.inf.cpu.threads": 2,
+      "golem.inf.mem.gib": 1,
+      "golem.inf.storage.gib": 1,
+    };
+
     test("should negotiate any initial proposal", async () => {
       jest.useRealTimers();
 
@@ -305,13 +274,6 @@ describe("Market module", () => {
         id: "test-provider-id",
         name: "test-provider-name",
         walletAddress: "0xTestWallet",
-      };
-
-      const initialOfferProperties: ProposalProperties = {
-        "golem.inf.cpu.cores": 2,
-        "golem.inf.cpu.threads": 2,
-        "golem.inf.mem.gib": 1,
-        "golem.inf.storage.gib": 1,
       };
 
       const mockInitialOfferProposal = mock(OfferProposal);
@@ -385,13 +347,6 @@ describe("Market module", () => {
         id: "test-provider-id",
         name: "test-provider-name",
         walletAddress: "0xTestWallet",
-      };
-
-      const initialOfferProperties: ProposalProperties = {
-        "golem.inf.cpu.cores": 2,
-        "golem.inf.cpu.threads": 2,
-        "golem.inf.mem.gib": 1,
-        "golem.inf.storage.gib": 1,
       };
 
       const mockInitialOfferProposal = mock(OfferProposal);
@@ -524,11 +479,11 @@ describe("Market module", () => {
         const agreement = instance(mockAgreement);
 
         const listener = jest.fn();
-        marketModule.events.on("agreementConfirmed", listener);
+        marketModule.events.on("agreementApproved", listener);
 
         // When
         testAgreementEvent$.next({
-          type: "AgreementConfirmed",
+          type: "AgreementApproved",
           agreement,
           timestamp: new Date(),
         });
