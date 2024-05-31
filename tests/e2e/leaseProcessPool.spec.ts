@@ -10,7 +10,7 @@ describe("LeaseProcessPool", () => {
   beforeAll(async () => {
     await glm.connect();
     allocation = await glm.payment.createAllocation({
-      budget: 1,
+      budget: 5,
       // 30 minutes
       expirationSec: 60 * 30,
     });

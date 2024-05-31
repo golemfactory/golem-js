@@ -25,7 +25,7 @@ async function main() {
           },
         },
         market: {
-          maxAgreements: 1,
+          maxAgreements: 2,
           rentHours: 12,
           pricing: {
             model: "linear",
