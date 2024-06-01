@@ -3,7 +3,7 @@ import {
   Agreement,
   AgreementState,
   Demand,
-  DemandOfferEvent,
+  MarketProposalEvent,
   DemandSpecification,
   GolemMarketError,
   IMarketApi,
@@ -71,7 +71,7 @@ export class MarketApiAdapter implements IMarketApi {
     }
   }
 
-  observeDemandResponse(demand: Demand): Observable<DemandOfferEvent> {
+  observeDemandResponse(demand: Demand): Observable<MarketProposalEvent> {
     return new Observable((observer) => {
       let isCancelled = false;
 

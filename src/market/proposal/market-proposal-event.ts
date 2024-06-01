@@ -1,5 +1,5 @@
-import { OfferProposal } from "../proposal/offer-proposal";
-import { OfferCounterProposal } from "../proposal/offer-counter-proposal";
+import { OfferProposal } from "./offer-proposal";
+import { OfferCounterProposal } from "./offer-counter-proposal";
 
 export type OfferProposalReceivedEvent = {
   type: "ProposalReceived";
@@ -19,7 +19,7 @@ export type OfferPropertyQueryReceivedEvent = {
   timestamp: Date;
 };
 
-export type DemandOfferEvent =
+export type MarketProposalEvent =
   | OfferProposalReceivedEvent
   | OfferCounterProposalRejectedEvent
   | OfferPropertyQueryReceivedEvent;

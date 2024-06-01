@@ -2,12 +2,12 @@ import { EventEmitter } from "eventemitter3";
 import { Agreement } from "./agreement";
 import {
   Demand,
-  DemandOfferEvent,
   DraftOfferProposalPool,
   GolemMarketError,
   IMarketApi,
   MarketErrorCode,
   MarketEvents,
+  MarketProposalEvent,
 } from "./index";
 import {
   createAbortSignalFromTimeout,
@@ -19,14 +19,8 @@ import {
 import { Allocation, IPaymentApi } from "../payment";
 import { filter, map, Observable, OperatorFunction, switchMap, tap } from "rxjs";
 import { OfferProposal, ProposalFilter } from "./proposal/offer-proposal";
-import {
-  BuildDemandOptions,
-  DemandBodyBuilder,
-  DemandSpecification,
-  IDemandRepository,
-  OfferProposalReceivedEvent,
-} from "./demand";
-import { ProposalsBatch } from "./proposal/proposals_batch";
+import { BuildDemandOptions, DemandBodyBuilder, DemandSpecification, IDemandRepository } from "./demand";
+import { OfferProposalReceivedEvent, ProposalsBatch } from "./proposal";
 import { IActivityApi, IFileServer } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { WorkloadDemandDirectorConfig } from "./demand/directors/workload-demand-director-config";
@@ -88,7 +82,7 @@ export interface MarketModule {
   /**
    * Return an observable that will emit values representing various events related to this demand
    */
-  collectDemandOfferEvents(demand: Demand): Observable<DemandOfferEvent>;
+  collectDemandOfferEvents(demand: Demand): Observable<MarketProposalEvent>;
 
   /**
    * Subscribes to the proposals for the given demand.
@@ -350,7 +344,7 @@ export class MarketModuleImpl implements MarketModule {
     });
   }
 
-  collectDemandOfferEvents(demand: Demand): Observable<DemandOfferEvent> {
+  collectDemandOfferEvents(demand: Demand): Observable<MarketProposalEvent> {
     return this.deps.marketApi
       .observeDemandResponse(demand)
       .pipe(tap((event) => this.logger.debug("Received demand offer event from yagna", { event })));
@@ -456,7 +450,7 @@ export class MarketModuleImpl implements MarketModule {
     );
   }
 
-  private mapToOfferProposalAndEmitEvents(event: DemandOfferEvent) {
+  private mapToOfferProposalAndEmitEvents(event: MarketProposalEvent) {
     return new Observable<OfferProposal>((observer) => {
       const { type } = event;
       switch (type) {

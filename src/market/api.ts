@@ -1,23 +1,22 @@
 import { Observable } from "rxjs";
+import { Demand, DemandBodyPrototype, DemandSpecification } from "./demand";
 import {
-  Demand,
-  DemandBodyPrototype,
-  DemandOfferEvent,
-  DemandSpecification,
-  OfferPropertyQueryReceivedEvent,
-  OfferProposalReceivedEvent,
+  MarketProposalEvent,
+  OfferCounterProposal,
   OfferCounterProposalRejectedEvent,
-} from "./demand";
-import { OfferProposal } from "./proposal/offer-proposal";
+  OfferPropertyQueryReceivedEvent,
+  OfferProposal,
+  OfferProposalReceivedEvent,
+} from "./proposal";
 import {
+  Agreement,
   AgreementApproved,
   AgreementCancelledEvent,
   AgreementEvent,
   AgreementRejectedEvent,
+  AgreementState,
   AgreementTerminatedEvent,
-} from "./agreement/agreement-event";
-import { Agreement, AgreementState } from "./agreement";
-import { OfferCounterProposal } from "./proposal/offer-counter-proposal";
+} from "./agreement";
 
 export type MarketEvents = {
   demandSubscriptionStarted: (demand: Demand) => void;
@@ -70,7 +69,7 @@ export interface IMarketApi {
    *
    * @returns A complex object that allows subscribing to these categories of feedback mentioned above
    */
-  observeDemandResponse(demand: Demand): Observable<DemandOfferEvent>;
+  observeDemandResponse(demand: Demand): Observable<MarketProposalEvent>;
 
   /**
    * Start looking at the Agreement related events

@@ -1,9 +1,9 @@
 import { _, imock, instance, mock, reset, spy, verify, when } from "@johanblumenberg/ts-mockito";
 import { Logger, YagnaApi } from "../shared/utils";
 import { MarketModuleImpl } from "./market.module";
-import { Demand, DemandOfferEvent, DemandSpecification, IDemandRepository } from "./demand";
+import { Demand, DemandSpecification, IDemandRepository } from "./demand";
 import { Subject, take } from "rxjs";
-import { OfferProposal } from "./proposal/offer-proposal";
+import { IProposalRepository, MarketProposalEvent, OfferProposal, ProposalProperties } from "./proposal";
 import { MarketApiAdapter } from "../shared/yagna/";
 import { IActivityApi, IFileServer } from "../activity";
 import { StorageProvider } from "../shared/storage";
@@ -11,11 +11,8 @@ import { GolemMarketError } from "./error";
 import { Allocation, IPaymentApi } from "../payment";
 import { INetworkApi, NetworkModule } from "../network";
 import { DraftOfferProposalPool } from "./draft-offer-proposal-pool";
-import { Agreement, ProviderInfo } from "./agreement";
-import { AgreementEvent } from "./agreement/agreement-event";
+import { Agreement, AgreementEvent, ProviderInfo } from "./agreement";
 import { waitAndCall, waitForCondition } from "../shared/utils/wait";
-import { ProposalProperties } from "./proposal/proposal-properties";
-import { IProposalRepository } from "./proposal/types";
 
 const mockMarketApiAdapter = mock(MarketApiAdapter);
 const mockYagna = mock(YagnaApi);
@@ -292,7 +289,7 @@ describe("Market module", () => {
       const initialProposal = instance(mockInitialOfferProposal);
       const draftProposal = instance(mockDraftOfferProposal);
 
-      const demandOfferEvent$ = new Subject<DemandOfferEvent>();
+      const demandOfferEvent$ = new Subject<MarketProposalEvent>();
 
       when(mockMarketApiAdapter.observeDemandResponse(_)).thenReturn(demandOfferEvent$);
 
@@ -358,7 +355,7 @@ describe("Market module", () => {
 
       const initialProposal = instance(mockInitialOfferProposal);
 
-      const demandOfferEvent$ = new Subject<DemandOfferEvent>();
+      const demandOfferEvent$ = new Subject<MarketProposalEvent>();
 
       when(mockMarketApiAdapter.observeDemandResponse(_)).thenReturn(demandOfferEvent$);
 

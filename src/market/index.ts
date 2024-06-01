@@ -11,4 +11,4 @@ export * from "./agreement";
 export { BasicDemandDirector } from "./demand/directors/basic-demand-director";
 export { PaymentDemandDirector } from "./demand/directors/payment-demand-director";
 export { WorkloadDemandDirector } from "./demand/directors/workload-demand-director";
-export { DemandOfferEvent } from "./demand/demand-events";
+export { MarketProposalEvent } from "./proposal/market-proposal-event";
