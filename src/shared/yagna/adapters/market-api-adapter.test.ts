@@ -7,8 +7,7 @@ import { Subject, take } from "rxjs";
 import { Logger } from "../../utils";
 import { DemandBodyPrototype } from "../../../market/demand";
 import { IAgreementRepository } from "../../../market/agreement/agreement";
-
-import { IProposalRepository } from "../../../market/proposal/types";
+import { IProposalRepository } from "../../../market/proposal";
 
 const mockLogger = imock<Logger>();
 const mockMarket = mock(YaTsClient.MarketApi.RequestorService);
@@ -211,7 +210,7 @@ describe("Market API Adapter", () => {
 
       when(mockMarket.collectOffers("demand-id")).thenResolve([mockProposalEvent, mockProposalEvent]);
 
-      const proposal$ = api.observeDemandResponse(instance(mockDemand)).pipe(take(4));
+      const proposal$ = api.collectMarketProposalEvents(instance(mockDemand)).pipe(take(4));
 
       let proposalsEmitted = 0;
 

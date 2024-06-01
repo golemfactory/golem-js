@@ -69,12 +69,12 @@ export interface IMarketApi {
    *
    * @returns A complex object that allows subscribing to these categories of feedback mentioned above
    */
-  observeDemandResponse(demand: Demand): Observable<MarketProposalEvent>;
+  collectMarketProposalEvents(demand: Demand): Observable<MarketProposalEvent>;
 
   /**
    * Start looking at the Agreement related events
    */
-  observeAgreementEvents(): Observable<AgreementEvent>;
+  collectAgreementEvents(): Observable<AgreementEvent>;
 
   /**
    * Sends a counter-proposal to the given proposal. Returns the newly created counter-proposal.

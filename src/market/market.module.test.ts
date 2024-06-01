@@ -29,7 +29,7 @@ beforeEach(() => {
   reset(mockMarketApiAdapter);
   reset(mockAgreement);
 
-  when(mockMarketApiAdapter.observeAgreementEvents()).thenReturn(testAgreementEvent$);
+  when(mockMarketApiAdapter.collectAgreementEvents()).thenReturn(testAgreementEvent$);
 
   marketModule = new MarketModuleImpl({
     activityApi: instance(imock<IActivityApi>()),
@@ -291,7 +291,7 @@ describe("Market module", () => {
 
       const demandOfferEvent$ = new Subject<MarketProposalEvent>();
 
-      when(mockMarketApiAdapter.observeDemandResponse(_)).thenReturn(demandOfferEvent$);
+      when(mockMarketApiAdapter.collectMarketProposalEvents(_)).thenReturn(demandOfferEvent$);
 
       // When
       const draftProposal$ = marketModule.collectDraftOfferProposals({
@@ -357,7 +357,7 @@ describe("Market module", () => {
 
       const demandOfferEvent$ = new Subject<MarketProposalEvent>();
 
-      when(mockMarketApiAdapter.observeDemandResponse(_)).thenReturn(demandOfferEvent$);
+      when(mockMarketApiAdapter.collectMarketProposalEvents(_)).thenReturn(demandOfferEvent$);
 
       // When
       const draftProposal$ = marketModule.collectDraftOfferProposals({

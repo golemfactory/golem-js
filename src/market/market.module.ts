@@ -18,9 +18,15 @@ import {
 } from "../shared/utils";
 import { Allocation, IPaymentApi } from "../payment";
 import { filter, map, Observable, OperatorFunction, switchMap, tap } from "rxjs";
-import { OfferProposal, ProposalFilter } from "./proposal/offer-proposal";
+import {
+  IProposalRepository,
+  OfferCounterProposal,
+  OfferProposal,
+  OfferProposalReceivedEvent,
+  ProposalFilter,
+  ProposalsBatch,
+} from "./proposal";
 import { BuildDemandOptions, DemandBodyBuilder, DemandSpecification, IDemandRepository } from "./demand";
-import { OfferProposalReceivedEvent, ProposalsBatch } from "./proposal";
 import { IActivityApi, IFileServer } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { WorkloadDemandDirectorConfig } from "./demand/directors/workload-demand-director-config";
@@ -33,8 +39,6 @@ import { PaymentDemandDirectorConfig } from "./demand/directors/payment-demand-d
 import { GolemUserError } from "../shared/error/golem-error";
 import { MarketOrderSpec } from "../golem-network";
 import { INetworkApi, NetworkModule } from "../network";
-import { IProposalRepository } from "./proposal/types";
-import { OfferCounterProposal } from "./proposal/offer-counter-proposal";
 
 export interface MarketOptions {
   /** The maximum number of agreements that you want to make with the market */
@@ -82,7 +86,7 @@ export interface MarketModule {
   /**
    * Return an observable that will emit values representing various events related to this demand
    */
-  collectDemandOfferEvents(demand: Demand): Observable<MarketProposalEvent>;
+  collectMarketProposalEvents(demand: Demand): Observable<MarketProposalEvent>;
 
   /**
    * Subscribes to the proposals for the given demand.
@@ -220,7 +224,7 @@ export class MarketModuleImpl implements MarketModule {
     this.demandRepo = deps.demandRepository;
     this.fileServer = deps.fileServer;
 
-    this.observeAndEmitAgreementEvents();
+    this.collectAndEmitAgreementEvents();
   }
 
   async buildDemandDetails(options: BuildDemandOptions, allocation: Allocation): Promise<DemandSpecification> {
@@ -344,14 +348,14 @@ export class MarketModuleImpl implements MarketModule {
     });
   }
 
-  collectDemandOfferEvents(demand: Demand): Observable<MarketProposalEvent> {
+  collectMarketProposalEvents(demand: Demand): Observable<MarketProposalEvent> {
     return this.deps.marketApi
-      .observeDemandResponse(demand)
+      .collectMarketProposalEvents(demand)
       .pipe(tap((event) => this.logger.debug("Received demand offer event from yagna", { event })));
   }
 
   collectAllOfferProposals(demand: Demand): Observable<OfferProposal> {
-    return this.collectDemandOfferEvents(demand).pipe(
+    return this.collectMarketProposalEvents(demand).pipe(
       filter((event): event is OfferProposalReceivedEvent => event.type === "ProposalReceived"),
       map((event: OfferProposalReceivedEvent) => event.proposal),
     );
@@ -421,7 +425,7 @@ export class MarketModuleImpl implements MarketModule {
 
     return this.publishAndRefreshDemand(options.demandSpecification).pipe(
       // For each fresh demand, start to watch the related market conversation events
-      switchMap((freshDemand) => this.collectDemandOfferEvents(freshDemand)),
+      switchMap((freshDemand) => this.collectMarketProposalEvents(freshDemand)),
       // Pluck the proposal received events, notify about the rest
       switchMap((event) => this.mapToOfferProposalAndEmitEvents(event)),
       // Issue debug message
@@ -589,8 +593,8 @@ export class MarketModuleImpl implements MarketModule {
    * Subscribes to an observable that maps yagna events into our domain events
    * and emits these domain events via EventEmitter
    */
-  private observeAndEmitAgreementEvents() {
-    this.marketApi.observeAgreementEvents().subscribe((event) => {
+  private collectAndEmitAgreementEvents() {
+    this.marketApi.collectAgreementEvents().subscribe((event) => {
       switch (event.type) {
         case "AgreementApproved":
           this.events.emit("agreementApproved", event);

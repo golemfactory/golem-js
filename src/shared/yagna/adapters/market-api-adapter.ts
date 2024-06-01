@@ -1,14 +1,15 @@
 import { Observable, switchMap } from "rxjs";
 import {
   Agreement,
+  AgreementEvent,
   AgreementState,
   Demand,
-  MarketProposalEvent,
   DemandSpecification,
   GolemMarketError,
   IMarketApi,
   MarketApiConfig,
   MarketErrorCode,
+  MarketProposalEvent,
   OfferProposal,
 } from "../../../market";
 import { YagnaApi } from "../yagnaApi";
@@ -19,9 +20,7 @@ import { DemandBodyPrototype, DemandPropertyValue } from "../../../market/demand
 import { getMessageFromApiError } from "../../utils/apiErrorMessage";
 import { withTimeout } from "../../utils/timeout";
 import { IAgreementRepository } from "../../../market/agreement/agreement";
-import { AgreementEvent } from "../../../market/agreement/agreement-event";
-import { IProposalRepository, isOfferCounterProposal } from "../../../market/proposal/types";
-import { OfferCounterProposal } from "../../../market/proposal/offer-counter-proposal";
+import { IProposalRepository, isOfferCounterProposal, OfferCounterProposal } from "../../../market/proposal";
 
 /**
  * A bit more user-friendly type definition of DemandOfferBaseDTO from ya-ts-client
@@ -71,7 +70,7 @@ export class MarketApiAdapter implements IMarketApi {
     }
   }
 
-  observeDemandResponse(demand: Demand): Observable<MarketProposalEvent> {
+  collectMarketProposalEvents(demand: Demand): Observable<MarketProposalEvent> {
     return new Observable((observer) => {
       let isCancelled = false;
 
@@ -325,7 +324,7 @@ export class MarketApiAdapter implements IMarketApi {
     }
   }
 
-  public observeAgreementEvents(): Observable<AgreementEvent> {
+  public collectAgreementEvents(): Observable<AgreementEvent> {
     return this.yagnaApi.agreementEvents$.pipe(
       switchMap(
         (event) =>
