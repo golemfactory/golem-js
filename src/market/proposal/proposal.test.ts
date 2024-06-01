@@ -1,9 +1,9 @@
 import { MarketApi } from "ya-ts-client";
 import { OfferProposal } from "./offer-proposal";
-import { Demand } from "./demand/demand";
+import { Demand } from "../demand";
 import { instance, mock, reset, when } from "@johanblumenberg/ts-mockito";
-import { Allocation } from "../payment";
-import { GolemMarketError, MarketErrorCode } from "./error";
+import { Allocation } from "../../payment";
+import { GolemMarketError, MarketErrorCode } from "../error";
 import { ProposalProperties } from "./proposal-properties";
 
 const allocationMock = mock(Allocation);
@@ -21,7 +21,7 @@ const buildTestProposal = (props: Partial<ProposalProperties>): OfferProposal =>
     properties: props,
   };
 
-  return new OfferProposal(model, "Provider", testDemand);
+  return new OfferProposal(model, testDemand);
 };
 
 describe("Proposal", () => {

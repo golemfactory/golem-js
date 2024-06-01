@@ -26,7 +26,6 @@ import { ActivityRepository } from "../shared/yagna/repository/activity-reposito
 import { AgreementRepository } from "../shared/yagna/repository/agreement-repository";
 import { ProposalRepository } from "../shared/yagna/repository/proposal-repository";
 import { CacheService } from "../shared/cache/CacheService";
-import { IProposalRepository } from "../market/offer-proposal";
 import { DemandRepository } from "../shared/yagna/repository/demand-repository";
 import { BuildDemandOptions, IDemandRepository } from "../market/demand/demand";
 import { GftpServerAdapter } from "../shared/storage/GftpServerAdapter";
@@ -38,6 +37,7 @@ import {
 } from "../shared/storage";
 import { DataTransferProtocol } from "../shared/types";
 import { NetworkApiAdapter } from "../shared/yagna/adapters/network-api-adapter";
+import { IProposalRepository } from "../market/proposal/types";
 
 export interface GolemNetworkOptions {
   /**

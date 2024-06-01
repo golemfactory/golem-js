@@ -1,4 +1,4 @@
-import { OfferProposal } from "./offer-proposal";
+import { OfferProposal } from "./proposal/offer-proposal";
 import AsyncLock from "async-lock";
 import { EventEmitter } from "eventemitter3";
 import { GolemMarketError, MarketErrorCode } from "./error";

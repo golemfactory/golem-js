@@ -7,7 +7,8 @@ import { Subject, take } from "rxjs";
 import { Logger } from "../../utils";
 import { DemandBodyPrototype } from "../../../market/demand";
 import { IAgreementRepository } from "../../../market/agreement/agreement";
-import { IProposalRepository } from "../../../market/offer-proposal";
+
+import { IProposalRepository } from "../../../market/proposal/types";
 
 const mockLogger = imock<Logger>();
 const mockMarket = mock(YaTsClient.MarketApi.RequestorService);
@@ -140,7 +141,6 @@ describe("Market API Adapter", () => {
           issuerId: "issuer-id",
           state: "Initial",
         },
-        "Provider",
         new Demand("demand-id", specification),
       );
 
@@ -180,7 +180,6 @@ describe("Market API Adapter", () => {
           issuerId: "issuer-id",
           state: "Initial",
         },
-        "Provider",
         new Demand("demand-id", specification),
       );
 

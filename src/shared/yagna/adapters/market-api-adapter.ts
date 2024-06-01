@@ -20,7 +20,8 @@ import { getMessageFromApiError } from "../../utils/apiErrorMessage";
 import { withTimeout } from "../../utils/timeout";
 import { IAgreementRepository } from "../../../market/agreement/agreement";
 import { AgreementEvent } from "../../../market/agreement/agreement-event";
-import { IProposalRepository } from "../../../market/offer-proposal";
+import { IProposalRepository, isOfferCounterProposal } from "../../../market/proposal/types";
+import { OfferCounterProposal } from "../../../market/proposal/offer-counter-proposal";
 
 /**
  * A bit more user-friendly type definition of DemandOfferBaseDTO from ya-ts-client
@@ -88,7 +89,7 @@ export class MarketApiAdapter implements IMarketApi {
                 {
                   try {
                     // @ts-expect-error FIXME #ya-ts-client, #ya-client: Fix mappings and type discriminators
-                    const offerProposal = new OfferProposal(event.proposal, "Provider", demand);
+                    const offerProposal = new OfferProposal(event.proposal, demand);
                     observer.next({
                       type: "ProposalReceived",
                       proposal: offerProposal,
@@ -104,19 +105,22 @@ export class MarketApiAdapter implements IMarketApi {
                 // @ts-expect-error FIXME #ya-ts-client, #ya-client: Fix mappings and type discriminators
                 const { proposalId, reason } = event;
 
-                const counterProposal = this.proposalRepo.getById(proposalId);
+                const marketProposal = this.proposalRepo.getById(proposalId);
 
-                if (counterProposal) {
+                if (marketProposal && isOfferCounterProposal(marketProposal)) {
                   observer.next({
                     type: "ProposalRejected",
-                    counterProposal,
+                    counterProposal: marketProposal,
                     reason: reason.message,
                     timestamp,
                   });
                 } else {
-                  this.logger.error("Could not locate counter proposal with ID while handling ProposalRejectedEvent", {
-                    event,
-                  });
+                  this.logger.error(
+                    "Could not locate counter proposal with ID issued by the Requestor while handling ProposalRejectedEvent",
+                    {
+                      event,
+                    },
+                  );
                 }
                 break;
               }
@@ -155,7 +159,7 @@ export class MarketApiAdapter implements IMarketApi {
     });
   }
 
-  async counterProposal(receivedProposal: OfferProposal, demand: DemandSpecification): Promise<OfferProposal> {
+  async counterProposal(receivedProposal: OfferProposal, demand: DemandSpecification): Promise<OfferCounterProposal> {
     const bodyClone = structuredClone(this.buildDemandRequestBody(demand.prototype));
 
     bodyClone.properties["golem.com.payment.chosen-platform"] = demand.paymentPlatform;
@@ -174,7 +178,7 @@ export class MarketApiAdapter implements IMarketApi {
 
     const dto = await this.yagnaApi.market.getProposalOffer(receivedProposal.demand.id, maybeNewId);
 
-    return new OfferProposal(dto, "Requestor", receivedProposal.demand);
+    return new OfferCounterProposal(dto);
   }
 
   async rejectProposal(receivedProposal: OfferProposal, reason: string): Promise<void> {

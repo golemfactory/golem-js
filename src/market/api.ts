@@ -6,9 +6,9 @@ import {
   DemandSpecification,
   OfferPropertyQueryReceivedEvent,
   OfferProposalReceivedEvent,
-  OfferProposalRejectedEvent,
+  OfferCounterProposalRejectedEvent,
 } from "./demand";
-import { OfferProposal } from "./offer-proposal";
+import { OfferProposal } from "./proposal/offer-proposal";
 import {
   AgreementApproved,
   AgreementCancelledEvent,
@@ -17,6 +17,7 @@ import {
   AgreementTerminatedEvent,
 } from "./agreement/agreement-event";
 import { Agreement, AgreementState } from "./agreement";
+import { OfferCounterProposal } from "./proposal/offer-counter-proposal";
 
 export type MarketEvents = {
   demandSubscriptionStarted: (demand: Demand) => void;
@@ -27,7 +28,7 @@ export type MarketEvents = {
   offerProposalReceived: (event: OfferProposalReceivedEvent) => void;
 
   /** Emitted when the Provider rejects the counter-proposal that the Requestor sent */
-  offerCounterProposalRejected: (event: OfferProposalRejectedEvent) => void;
+  offerCounterProposalRejected: (event: OfferCounterProposalRejectedEvent) => void;
 
   /** Not implemented */
   offerPropertyQueryReceived: (event: OfferPropertyQueryReceivedEvent) => void;
@@ -79,7 +80,7 @@ export interface IMarketApi {
   /**
    * Sends a counter-proposal to the given proposal. Returns the newly created counter-proposal.
    */
-  counterProposal(receivedProposal: OfferProposal, specification: DemandSpecification): Promise<OfferProposal>;
+  counterProposal(receivedProposal: OfferProposal, specification: DemandSpecification): Promise<OfferCounterProposal>;
 
   /**
    * Sends a "reject" response for the proposal that was received from the Provider as part of the negotiation process

@@ -1,4 +1,4 @@
-import { OfferProposal } from "./offer-proposal";
+import { OfferProposal } from "./proposal/offer-proposal";
 
 /** Default Proposal filter that accept all proposal coming from the market */
 export const acceptAll = () => () => true;

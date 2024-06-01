@@ -1,4 +1,4 @@
-import { OfferProposal } from "../offer-proposal";
+import { OfferProposal } from "../proposal/offer-proposal";
 import { Agreement } from "./agreement";
 
 export class AgreementCandidate {

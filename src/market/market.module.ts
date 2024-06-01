@@ -18,7 +18,7 @@ import {
 } from "../shared/utils";
 import { Allocation, IPaymentApi } from "../payment";
 import { filter, map, Observable, OperatorFunction, switchMap, tap } from "rxjs";
-import { IProposalRepository, OfferProposal, ProposalFilter } from "./offer-proposal";
+import { OfferProposal, ProposalFilter } from "./proposal/offer-proposal";
 import {
   BuildDemandOptions,
   DemandBodyBuilder,
@@ -26,7 +26,7 @@ import {
   IDemandRepository,
   OfferProposalReceivedEvent,
 } from "./demand";
-import { ProposalsBatch } from "./proposals_batch";
+import { ProposalsBatch } from "./proposal/proposals_batch";
 import { IActivityApi, IFileServer } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { WorkloadDemandDirectorConfig } from "./demand/directors/workload-demand-director-config";
@@ -39,6 +39,8 @@ import { PaymentDemandDirectorConfig } from "./demand/directors/payment-demand-d
 import { GolemUserError } from "../shared/error/golem-error";
 import { MarketOrderSpec } from "../golem-network";
 import { INetworkApi, NetworkModule } from "../network";
+import { IProposalRepository } from "./proposal/types";
+import { OfferCounterProposal } from "./proposal/offer-counter-proposal";
 
 export interface MarketOptions {
   /** The maximum number of agreements that you want to make with the market */
@@ -106,7 +108,10 @@ export interface MarketModule {
    *
    * @returns The counter-proposal that the requestor made to the Provider
    */
-  negotiateProposal(receivedProposal: OfferProposal, counterDemandSpec: DemandSpecification): Promise<OfferProposal>;
+  negotiateProposal(
+    receivedProposal: OfferProposal,
+    counterDemandSpec: DemandSpecification,
+  ): Promise<OfferCounterProposal>;
 
   /**
    * Internally
@@ -358,7 +363,10 @@ export class MarketModuleImpl implements MarketModule {
     );
   }
 
-  async negotiateProposal(offerProposal: OfferProposal, counterDemand: DemandSpecification): Promise<OfferProposal> {
+  async negotiateProposal(
+    offerProposal: OfferProposal,
+    counterDemand: DemandSpecification,
+  ): Promise<OfferCounterProposal> {
     const counterProposal = await this.deps.marketApi.counterProposal(offerProposal, counterDemand);
     this.proposalRepo.add(counterProposal);
 

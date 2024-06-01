@@ -3,7 +3,7 @@ import { Logger, YagnaApi } from "../shared/utils";
 import { MarketModuleImpl } from "./market.module";
 import { Demand, DemandOfferEvent, DemandSpecification, IDemandRepository } from "./demand";
 import { Subject, take } from "rxjs";
-import { IProposalRepository, OfferProposal } from "./offer-proposal";
+import { OfferProposal } from "./proposal/offer-proposal";
 import { MarketApiAdapter } from "../shared/yagna/";
 import { IActivityApi, IFileServer } from "../activity";
 import { StorageProvider } from "../shared/storage";
@@ -14,7 +14,8 @@ import { DraftOfferProposalPool } from "./draft-offer-proposal-pool";
 import { Agreement, ProviderInfo } from "./agreement";
 import { AgreementEvent } from "./agreement/agreement-event";
 import { waitAndCall, waitForCondition } from "../shared/utils/wait";
-import { ProposalProperties } from "./proposal-properties";
+import { ProposalProperties } from "./proposal/proposal-properties";
+import { IProposalRepository } from "./proposal/types";
 
 const mockMarketApiAdapter = mock(MarketApiAdapter);
 const mockYagna = mock(YagnaApi);

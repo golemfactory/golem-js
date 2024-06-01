@@ -1,4 +1,5 @@
-import { OfferProposal } from "../offer-proposal";
+import { OfferProposal } from "../proposal/offer-proposal";
+import { OfferCounterProposal } from "../proposal/offer-counter-proposal";
 
 export type OfferProposalReceivedEvent = {
   type: "ProposalReceived";
@@ -6,10 +7,9 @@ export type OfferProposalReceivedEvent = {
   timestamp: Date;
 };
 
-export type OfferProposalRejectedEvent = {
+export type OfferCounterProposalRejectedEvent = {
   type: "ProposalRejected";
-  /** The proposal that the Requestor made */
-  counterProposal: OfferProposal;
+  counterProposal: OfferCounterProposal;
   reason: string;
   timestamp: Date;
 };
@@ -21,5 +21,5 @@ export type OfferPropertyQueryReceivedEvent = {
 
 export type DemandOfferEvent =
   | OfferProposalReceivedEvent
-  | OfferProposalRejectedEvent
+  | OfferCounterProposalRejectedEvent
   | OfferPropertyQueryReceivedEvent;
