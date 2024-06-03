@@ -20,7 +20,6 @@ describe("Deployment builder", () => {
             },
           },
           market: {
-            maxAgreements: 1,
             rentHours: 1,
             pricing: {
               model: "linear",
@@ -28,6 +27,9 @@ describe("Deployment builder", () => {
               maxEnvPerHourPrice: 1,
               maxCpuPerHourPrice: 1,
             },
+          },
+          deployment: {
+            replicas: 1,
           },
         })
         .createLeaseProcessPool("my-pool", {
@@ -40,7 +42,6 @@ describe("Deployment builder", () => {
             },
           },
           market: {
-            maxAgreements: 1,
             rentHours: 1,
             pricing: {
               model: "linear",
@@ -48,6 +49,9 @@ describe("Deployment builder", () => {
               maxEnvPerHourPrice: 1,
               maxCpuPerHourPrice: 1,
             },
+          },
+          deployment: {
+            replicas: 1,
           },
         });
     }).toThrow(new GolemConfigError(`Lease Process Pool with name my-pool already exists`));
@@ -76,7 +80,6 @@ describe("Deployment builder", () => {
             workload: { imageTag: "image", minCpuCores: 1, minMemGib: 1, minStorageGib: 1 },
           },
           market: {
-            maxAgreements: 1,
             rentHours: 1,
             pricing: {
               model: "linear",
@@ -87,6 +90,7 @@ describe("Deployment builder", () => {
           },
           deployment: {
             network: "non-existing-network",
+            replicas: 1,
           },
         })
         .getDeployment();

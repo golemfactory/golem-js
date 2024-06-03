@@ -12,7 +12,6 @@ const order: MarketOrderSpec = {
     workload: { imageTag: "severyn/espeak:latest" },
   },
   market: {
-    maxAgreements: 1,
     rentHours: 0.5,
     pricing: {
       model: "linear",

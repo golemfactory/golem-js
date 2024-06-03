@@ -16,7 +16,6 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
         workload: { imageTag: "golem/alpine:latest" },
       },
       market: {
-        maxAgreements: 2,
         rentHours: 0.5,
         pricing: {
           model: "linear",

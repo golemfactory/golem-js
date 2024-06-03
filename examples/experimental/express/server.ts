@@ -30,7 +30,6 @@ app.post("/tts", async (req, res) => {
       },
     },
     market: {
-      maxAgreements: 1,
       rentHours: 0.5,
       pricing: {
         model: "linear",

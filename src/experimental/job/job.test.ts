@@ -29,7 +29,6 @@ describe("Job", () => {
             },
           },
           market: {
-            maxAgreements: 1,
             rentHours: 1,
             pricing: {
               model: "linear",
