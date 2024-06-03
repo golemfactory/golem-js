@@ -29,15 +29,13 @@ import { GolemUserError } from "../shared/error/golem-error";
 import { createAbortSignalFromTimeout } from "../shared/utils/abortSignal";
 import { MarketOrderSpec } from "../golem-network";
 import { NetworkModule, INetworkApi } from "../network";
+import { Concurrency } from "../lease-process";
 
 export interface MarketEvents {}
 
 export type DemandEngine = "vm" | "vm-nvidia" | "wasmtime";
 
 export interface MarketOptions {
-  /** The maximum number of agreements that you want to make with the market */
-  maxAgreements: number;
-
   /** How long you want to rent the resources in hours */
   rentHours: number;
 
@@ -147,11 +145,13 @@ export interface MarketModule {
   }): Observable<OfferProposal[]>;
 
   /**
-   * Provides a simple estimation of the budget that's required for given demand specification
+   * Estimate the budget for the given order and concurrency level.
+   * Keep in mind that this is just an estimate and the actual cost may vary.
+   * To get a more accurate estimate, make sure to specify an exact or maximum concurrency level.
+   * The method returns the estimated budget in GLM.
    * @param params
    */
-  estimateBudget(params: MarketOrderSpec): number;
-
+  estimateBudget({ concurrency, order }: { concurrency: Concurrency; order: MarketOrderSpec }): number;
   /**
    * Fetch the most up-to-date agreement details from the yagna
    */
@@ -463,17 +463,29 @@ export class MarketModuleImpl implements MarketModule {
       });
   }
 
-  estimateBudget(params: MarketOrderSpec): number {
-    const pricingModel = params.market.pricing.model;
+  estimateBudget({ concurrency, order }: { concurrency: Concurrency; order: MarketOrderSpec }): number {
+    const pricingModel = order.market.pricing.model;
 
     // TODO: Don't assume for the user, at least not on pure golem-js level
-    const minCpuThreads = params.demand.workload?.minCpuThreads ?? 1;
+    const minCpuThreads = order.demand.workload?.minCpuThreads ?? 1;
 
-    const { rentHours, maxAgreements } = params.market;
+    const { rentHours } = order.market;
+    const maxAgreements = (() => {
+      if (typeof concurrency === "number") {
+        return concurrency;
+      }
+      if (concurrency.max) {
+        return concurrency.max;
+      }
+      if (concurrency.min) {
+        return concurrency.min;
+      }
+      return 1;
+    })();
 
     switch (pricingModel) {
       case "linear": {
-        const { maxCpuPerHourPrice, maxStartPrice, maxEnvPerHourPrice } = params.market.pricing;
+        const { maxCpuPerHourPrice, maxStartPrice, maxEnvPerHourPrice } = order.market.pricing;
 
         const threadCost = maxAgreements * rentHours * minCpuThreads * maxCpuPerHourPrice;
         const startCost = maxAgreements * maxStartPrice;
@@ -482,7 +494,7 @@ export class MarketModuleImpl implements MarketModule {
         return startCost + envCost + threadCost;
       }
       case "burn-rate":
-        return maxAgreements * rentHours * params.market.pricing.avgGlmPerHour;
+        return maxAgreements * rentHours * order.market.pricing.avgGlmPerHour;
       default:
         throw new GolemUserError(`Unsupported pricing model ${pricingModel}`);
     }
