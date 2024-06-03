@@ -1,16 +1,15 @@
 import { Logger } from "../shared/utils";
-import { ActivityApi } from "ya-ts-client";
-import { YagnaExeScriptObserver } from "../shared/yagna";
 import { ExecutionConfig } from "./config";
 import { Readable } from "stream";
 import { GolemWorkError, WorkErrorCode } from "./work";
 import { withTimeout } from "../shared/utils/timeout";
 import { GolemAbortError, GolemTimeoutError } from "../shared/error/golem-error";
 import retry from "async-retry";
-import { Result, ResultData, StreamingBatchEvent } from "./results";
+import { Result, StreamingBatchEvent } from "./results";
 import sleep from "../shared/utils/sleep";
 import { Activity } from "./activity";
 import { getMessageFromApiError } from "../shared/utils/apiErrorMessage";
+import { IActivityApi } from "./types";
 
 export interface ExeScriptRequest {
   text: string;
@@ -37,9 +36,8 @@ export class ExeScriptExecutor {
 
   constructor(
     public readonly activity: Activity,
+    private readonly activityApi: IActivityApi,
     private readonly logger: Logger,
-    private readonly activityControl: ActivityApi.RequestorControlService,
-    private readonly execObserver: YagnaExeScriptObserver,
     options?: ExecutionOptions,
   ) {
     this.options = new ExecutionConfig(options);
@@ -99,7 +97,7 @@ export class ExeScriptExecutor {
   }
 
   protected async send(script: ExeScriptRequest): Promise<string> {
-    return withTimeout(this.activityControl.exec(this.activity.id, script), this.options.activityRequestTimeout);
+    return withTimeout(this.activityApi.executeScript(this.activity, script), this.options.activityRequestTimeout);
   }
 
   private async pollingBatch(
@@ -119,7 +117,7 @@ export class ExeScriptExecutor {
 
     const { activityExecuteTimeout, activityExeBatchResultPollIntervalSeconds, activityExeBatchResultMaxRetries } =
       this.options;
-    const { logger, activity, activityControl } = this;
+    const { logger, activity, activityApi } = this;
 
     return new Readable({
       objectMode: true,
@@ -134,7 +132,7 @@ export class ExeScriptExecutor {
           }
 
           try {
-            const rawExecBachResults = await retry(
+            const results = await retry(
               async (bail, attempt) => {
                 logger.debug(`Trying to poll for batch execution results from yagna. Attempt: ${attempt}`);
                 try {
@@ -142,8 +140,8 @@ export class ExeScriptExecutor {
                     logger.debug("Activity is no longer running, will stop polling for batch execution results");
                     return bail(new GolemAbortError(`Activity ${activityId} has been interrupted.`));
                   }
-                  return await activityControl.getExecBatchResults(
-                    activityId,
+                  return await activityApi.getExecBatchResults(
+                    activity,
                     batchId,
                     undefined,
                     activityExeBatchResultPollIntervalSeconds,
@@ -163,9 +161,7 @@ export class ExeScriptExecutor {
               },
             );
 
-            const newResults =
-              rawExecBachResults &&
-              rawExecBachResults.map((rawResult) => new Result(rawResult as ResultData)).slice(lastIndex + 1);
+            const newResults = results && results.slice(lastIndex + 1);
 
             logger.debug(`Received batch execution results`, { results: newResults, activityId });
 
@@ -180,14 +176,16 @@ export class ExeScriptExecutor {
             logger.error(`Processing batch execution results failed`, error);
 
             return this.destroy(
-              new GolemWorkError(
-                `Unable to get activity results. ${error}`,
-                WorkErrorCode.ActivityResultsFetchingFailed,
-                agreement,
-                activity,
-                activity.getProviderInfo(),
-                error,
-              ),
+              error instanceof GolemWorkError
+                ? error
+                : new GolemWorkError(
+                    `Unable to get activity results. ${error}`,
+                    WorkErrorCode.ActivityResultsFetchingFailed,
+                    agreement,
+                    activity,
+                    activity.getProviderInfo(),
+                    error,
+                  ),
             );
           }
         }
@@ -205,7 +203,8 @@ export class ExeScriptExecutor {
   ): Promise<Readable> {
     const errors: object[] = [];
     const results: Result[] = [];
-    const source = this.execObserver.observeBatchExecResults(this.activity.id, batchId).subscribe({
+
+    const source = this.activityApi.getExecBatchEvents(this.activity, batchId).subscribe({
       next: (resultEvents) => results.push(this.parseEventToResult(resultEvents, batchSize)),
       error: (err) => errors.push(err.data?.message ?? err),
       complete: () => this.logger.debug("Finished reading batch results"),

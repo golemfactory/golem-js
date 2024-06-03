@@ -209,6 +209,7 @@ export class GolemNetwork {
           new ActivityApiAdapter(
             this.yagna.activity.state,
             this.yagna.activity.control,
+            this.yagna.activity.exec,
             new ActivityRepository(this.yagna.activity.state, agreementRepository),
           ),
         agreementApi:

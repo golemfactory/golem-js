@@ -21,8 +21,6 @@ import { GolemWorkError, WorkErrorCode } from "./error";
 import { GolemConfigError, GolemTimeoutError } from "../../shared/error/golem-error";
 import { Agreement, ProviderInfo } from "../../market/agreement";
 import { TcpProxy } from "../../network/tcpProxy";
-import { ActivityApi } from "ya-ts-client";
-import { YagnaExeScriptObserver } from "../../shared/yagna";
 import { ExecutionOptions, ExeScriptExecutor } from "../exe-script-executor";
 import { INetworkApi } from "../../network/api";
 
@@ -72,10 +70,8 @@ export class WorkContext {
   private executor: ExeScriptExecutor;
 
   constructor(
-    public readonly activityApi: IActivityApi,
-    public readonly activityControl: ActivityApi.RequestorControlService,
-    public readonly execObserver: YagnaExeScriptObserver,
     public readonly activity: Activity,
+    public readonly activityApi: IActivityApi,
     private readonly networkApi: INetworkApi,
     private options?: WorkOptions,
   ) {
@@ -88,12 +84,7 @@ export class WorkContext {
 
     this.networkNode = options?.networkNode;
 
-    this.executor = this.activity.createExeScriptExecutor(
-      this.activityControl,
-      this.execObserver,
-      this.logger,
-      this.options?.execution,
-    );
+    this.executor = this.activity.createExeScriptExecutor(this.activityApi, this.logger, this.options?.execution);
   }
 
   async before(): Promise<Result[] | void> {
