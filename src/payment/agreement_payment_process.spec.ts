@@ -1,5 +1,5 @@
 import { AgreementPaymentProcess } from "./agreement_payment_process";
-import { anything, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
+import { anything, imock, instance, mock, reset, spy, verify, when } from "@johanblumenberg/ts-mockito";
 import { Agreement } from "../market/agreement";
 import { Allocation } from "./allocation";
 import { Invoice } from "./invoice";
@@ -8,6 +8,7 @@ import { GolemPaymentError, PaymentErrorCode } from "./error";
 import { GolemUserError } from "../shared/error/golem-error";
 import { IPaymentApi } from "./types";
 import { Subject } from "rxjs";
+import { RejectionReason } from "./rejection";
 
 const agreementMock = mock(Agreement);
 const allocationMock = mock(Allocation);
@@ -113,85 +114,34 @@ describe("AgreementPaymentProcess", () => {
       });
     });
 
-    // Revisit if that's really possible?
-    describe.skip("Dealing with duplicates", () => {
-      it("accepts the duplicated invoice if accepting the previous one failed", async () => {
+    describe("Dealing with duplicates", () => {
+      it("doesn't accept the second invoice", async () => {
         const allocation = instance(allocationMock);
 
+        when(invoiceMock.id).thenReturn("invoice-id");
         when(invoiceMock.amount).thenReturn("0.123");
         when(invoiceMock.getStatus()).thenReturn("RECEIVED");
-        when(invoiceMock.isSameAs(anything())).thenReturn(true);
+
+        when(agreementMock.id).thenReturn("agreement-id");
 
         const process = new AgreementPaymentProcess(instance(agreementMock), allocation, instance(mockPaymentApi), {
           debitNoteFilter: () => true,
           invoiceFilter: () => true,
         });
 
-        const invoice = instance(invoiceMock);
+        const invoice1 = instance(invoiceMock);
+        const invoice2 = instance(invoiceMock);
 
-        // Simulate issue with accepting the first one
-        const issue = new Error("Failed to accept in yagna");
-        when(mockPaymentApi.acceptInvoice(invoice, allocation, "0.123"))
-          .thenReject(issue) // On first call
-          .thenResolve(invoice); // On second call
-
-        await expect(() => process.addInvoice(invoice)).rejects.toThrow(issue);
-
-        // Then simulate the duplicate coming again
-        const success = await process.addInvoice(invoice);
-
-        expect(success).toEqual(true);
-        verify(mockPaymentApi.acceptInvoice(invoice, allocation, "0.123")).twice();
-        expect(process.isFinished()).toEqual(true);
-      });
-
-      it("accepts the duplicate if the original invoice has not been already decided upon (still in RECEIVED state)", async () => {
-        when(invoiceMock.amount).thenReturn("0.123");
-        when(invoiceMock.getStatus()).thenReturn("RECEIVED");
-        when(invoiceMock.isSameAs(anything())).thenReturn(true);
-
-        const allocation = instance(allocationMock);
-
-        const process = new AgreementPaymentProcess(instance(agreementMock), allocation, instance(mockPaymentApi), {
-          debitNoteFilter: () => true,
-          invoiceFilter: () => true,
-        });
-
-        const invoice = instance(invoiceMock);
-
-        when(mockPaymentApi.acceptInvoice(invoice, allocation, "0.123")).thenResolve(invoice);
-
-        const firstSuccess = await process.addInvoice(invoice);
-        const secondSuccess = await process.addInvoice(invoice);
-
+        const firstSuccess = await process.addInvoice(invoice1);
         expect(firstSuccess).toEqual(true);
-        expect(secondSuccess).toEqual(true);
-        verify(mockPaymentApi.acceptInvoice(invoice, allocation, "0.123")).twice();
-        expect(process.isFinished()).toEqual(true);
-      });
-
-      it("doesn't accept the same invoice twice if the previous one was already processed", async () => {
-        when(invoiceMock.getStatus()).thenReturn("RECEIVED").thenReturn("ACCEPTED");
-        when(invoiceMock.isSameAs(anything())).thenReturn(true);
-
-        const process = new AgreementPaymentProcess(
-          instance(agreementMock),
-          instance(allocationMock),
-          instance(mockPaymentApi),
-          {
-            debitNoteFilter: () => true,
-            invoiceFilter: () => true,
-          },
+        await expect(() => process.addInvoice(invoice2)).rejects.toMatchError(
+          new GolemPaymentError(
+            "Agreement agreement-id is already covered with an invoice: invoice-id",
+            PaymentErrorCode.AgreementAlreadyPaid,
+            allocation,
+            invoice1.provider,
+          ),
         );
-
-        const invoice = instance(invoiceMock);
-
-        const firstSuccess = await process.addInvoice(invoice);
-        const secondSuccess = await process.addInvoice(invoice);
-
-        expect(firstSuccess).toEqual(true);
-        expect(secondSuccess).toEqual(false);
-        expect(process.isFinished()).toEqual(true);
       });
     });
 
@@ -272,7 +222,7 @@ describe("AgreementPaymentProcess", () => {
       });
 
       // Reason: Debit note rejections are not implemented in yagna yet
-      it.skip("rejects debit note if it's ignored by the user defined debit note filter", async () => {
+      it("rejects debit note if it's ignored by the user defined debit note filter", async () => {
         when(debitNoteMock.totalAmountDue).thenReturn("0.123");
 
         when(debitNoteMock.id).thenReturn("debit-note-id");
@@ -287,6 +237,7 @@ describe("AgreementPaymentProcess", () => {
             invoiceFilter: () => true,
           },
         );
+        const processSpy = spy(process);
 
         const debitNote = instance(debitNoteMock);
 
@@ -294,8 +245,9 @@ describe("AgreementPaymentProcess", () => {
 
         expect(success).toEqual(false);
         verify(
-          mockPaymentApi.rejectDebitNote(
+          processSpy["rejectDebitNote"](
             debitNote,
+            RejectionReason.RejectedByRequestorFilter,
             "DebitNote debit-note-id for agreement agreement-id rejected by DebitNote Filter",
           ),
         ).called();
@@ -303,7 +255,7 @@ describe("AgreementPaymentProcess", () => {
       });
 
       // Reason: Debit note rejections are not implemented in yagna yet
-      it.skip("rejects debit note if there is already an invoice for that process", async () => {
+      it("rejects debit note if there is already an invoice for that process", async () => {
         const allocation = instance(allocationMock);
 
         when(invoiceMock.amount).thenReturn("0.123");
@@ -316,6 +268,7 @@ describe("AgreementPaymentProcess", () => {
           debitNoteFilter: () => true,
           invoiceFilter: () => true,
         });
+        const processSpy = spy(process);
 
         const invoice = instance(invoiceMock);
         const debitNote = instance(debitNoteMock);
@@ -328,8 +281,9 @@ describe("AgreementPaymentProcess", () => {
 
         expect(debitNoteSuccess).toEqual(false);
         verify(
-          mockPaymentApi.rejectDebitNote(
+          processSpy["rejectDebitNote"](
             debitNote,
+            RejectionReason.AgreementFinalized,
             "DebitNote debit-note-id rejected because the agreement agreement-id is already covered with a final invoice that should be paid instead of the debit note",
           ),
         ).called();
@@ -337,40 +291,7 @@ describe("AgreementPaymentProcess", () => {
       });
     });
 
-    // Verify if that's even possible to get duplicates? Or that's an issue with our reading? At least once delivery?
-    describe.skip("Dealing with duplicates", () => {
-      it("accepts the duplicated debit note if accepting the previous failed", async () => {
-        const allocation = instance(allocationMock);
-
-        when(debitNoteMock.totalAmountDue).thenReturn("0.123");
-        when(debitNoteMock.getStatus()).thenReturn("RECEIVED");
-
-        const process = new AgreementPaymentProcess(instance(agreementMock), allocation, instance(mockPaymentApi), {
-          debitNoteFilter: () => true,
-          invoiceFilter: () => true,
-        });
-
-        when(debitNoteMock.id).thenReturn("debit-note-id");
-        const debitNote = instance(debitNoteMock);
-
-        // Simulate issue with accepting the first one
-        const issue = new Error("Failed to accept in yagna");
-        when(mockPaymentApi.acceptDebitNote(debitNote, allocation, "0.123"))
-          .thenReject(issue) // On first call
-          .thenResolve(debitNote); // On second call
-
-        await expect(() => process.addDebitNote(debitNote)).rejects.toThrow(
-          "Unable to accept debit note debit-note-id. Error: Failed to accept in yagna",
-        );
-
-        // Then simulate the duplicate coming again
-        const success = await process.addDebitNote(debitNote);
-
-        expect(success).toEqual(true);
-        verify(mockPaymentApi.acceptDebitNote(debitNote, allocation, "0.123")).twice();
-        expect(process.isFinished()).toEqual(false);
-      });
-
+    describe("Dealing with duplicates", () => {
       it("doesn't accept the same debit note twice if the previous one was already processed", async () => {
         when(debitNoteMock.getStatus()).thenReturn("ACCEPTED");
 
