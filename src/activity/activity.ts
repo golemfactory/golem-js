@@ -1,9 +1,8 @@
 import { Logger } from "../shared/utils";
 import { Agreement, ProviderInfo } from "../market/agreement";
 import { EventEmitter } from "eventemitter3";
-import { ActivityApi } from "ya-ts-client";
-import { YagnaExeScriptObserver } from "../shared/yagna";
 import { ExecutionOptions, ExeScriptExecutor } from "./exe-script-executor";
+import { IActivityApi } from "./types";
 
 /** @deprecated */
 export interface ActivityEvents {
@@ -61,13 +60,8 @@ export class Activity {
   /**
    * Temporary helper method that will build a script executor bound to this activity
    */
-  public createExeScriptExecutor(
-    activityControl: ActivityApi.RequestorControlService,
-    execObserver: YagnaExeScriptObserver,
-    logger: Logger,
-    options?: ExecutionOptions,
-  ) {
-    return new ExeScriptExecutor(this, logger, activityControl, execObserver, options);
+  public createExeScriptExecutor(activityApi: IActivityApi, logger: Logger, options?: ExecutionOptions) {
+    return new ExeScriptExecutor(this, activityApi, logger, options);
   }
 
   public getState() {

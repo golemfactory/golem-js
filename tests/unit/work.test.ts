@@ -42,7 +42,7 @@ describe("Work Context", () => {
       name: "test-provider-name",
       walletAddress: "0xProviderWallet",
     });
-    when(mockActivity.createExeScriptExecutor(_, _, _, _)).thenReturn(instance(mockExecutor));
+    when(mockActivity.createExeScriptExecutor(_, _, _)).thenReturn(instance(mockExecutor));
     when(mockActivity.getState()).thenReturn(ActivityStateEnum.Ready);
     when(mockActivityApi.getActivity(_)).thenResolve(instance(mockActivity));
     when(mockActivity.agreement).thenReturn(instance(mockAgreement));
@@ -64,13 +64,7 @@ describe("Work Context", () => {
       );
 
       const worker = async (ctx: WorkContext) => ctx.run("some_shell_command");
-      const ctx = new WorkContext(
-        instance(mockActivityApi),
-        instance(mockActivityControl),
-        instance(mockExecObserver),
-        instance(mockActivity),
-        instance(mockNetworkApi),
-      );
+      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityApi), instance(mockNetworkApi));
       await ctx.before();
       const results = await worker(ctx);
       expect(results?.stdout).toEqual("test_result");
@@ -90,13 +84,7 @@ describe("Work Context", () => {
       );
 
       const worker = async (ctx: WorkContext) => ctx.run("/bin/ls", ["-R"]);
-      const ctx = new WorkContext(
-        instance(mockActivityApi),
-        instance(mockActivityControl),
-        instance(mockExecObserver),
-        instance(mockActivity),
-        instance(mockNetworkApi),
-      );
+      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityApi), instance(mockNetworkApi));
       await ctx.before();
       const results = await worker(ctx);
 
@@ -119,14 +107,9 @@ describe("Work Context", () => {
           ]),
         );
 
-        const ctx = new WorkContext(
-          instance(mockActivityApi),
-          instance(mockActivityControl),
-          instance(mockExecObserver),
-          instance(mockActivity),
-          instance(mockNetworkApi),
-          { storageProvider: instance(mockStorageProvider) },
-        );
+        const ctx = new WorkContext(instance(mockActivity), instance(mockActivityApi), instance(mockNetworkApi), {
+          storageProvider: instance(mockStorageProvider),
+        });
         await ctx.before();
         const results = await worker(ctx);
         expect(results?.stdout).toEqual("test_result");
@@ -148,14 +131,9 @@ describe("Work Context", () => {
           ]),
         );
 
-        const ctx = new WorkContext(
-          instance(mockActivityApi),
-          instance(mockActivityControl),
-          instance(mockExecObserver),
-          instance(mockActivity),
-          instance(mockNetworkApi),
-          { storageProvider: instance(mockStorageProvider) },
-        );
+        const ctx = new WorkContext(instance(mockActivity), instance(mockActivityApi), instance(mockNetworkApi), {
+          storageProvider: instance(mockStorageProvider),
+        });
         await ctx.before();
         const results = await worker(ctx);
 
@@ -180,14 +158,9 @@ describe("Work Context", () => {
           ]),
         );
 
-        const ctx = new WorkContext(
-          instance(mockActivityApi),
-          instance(mockActivityControl),
-          instance(mockExecObserver),
-          instance(mockActivity),
-          instance(mockNetworkApi),
-          { storageProvider: instance(mockStorageProvider) },
-        );
+        const ctx = new WorkContext(instance(mockActivity), instance(mockActivityApi), instance(mockNetworkApi), {
+          storageProvider: instance(mockStorageProvider),
+        });
 
         await ctx.before();
         const results = await worker(ctx);
@@ -218,14 +191,9 @@ describe("Work Context", () => {
           return "/golem/file.txt";
         });
 
-        const ctx = new WorkContext(
-          instance(mockActivityApi),
-          instance(mockActivityControl),
-          instance(mockExecObserver),
-          instance(mockActivity),
-          instance(mockNetworkApi),
-          { storageProvider: instance(mockStorageProvider) },
-        );
+        const ctx = new WorkContext(instance(mockActivity), instance(mockActivityApi), instance(mockNetworkApi), {
+          storageProvider: instance(mockStorageProvider),
+        });
         const result = await ctx.downloadJson("/golem/file.txt");
 
         expect(result.result).toEqual("Ok");
@@ -256,14 +224,9 @@ describe("Work Context", () => {
           return "/golem/file.txt";
         });
 
-        const ctx = new WorkContext(
-          instance(mockActivityApi),
-          instance(mockActivityControl),
-          instance(mockExecObserver),
-          instance(mockActivity),
-          instance(mockNetworkApi),
-          { storageProvider: instance(mockStorageProvider) },
-        );
+        const ctx = new WorkContext(instance(mockActivity), instance(mockActivityApi), instance(mockNetworkApi), {
+          storageProvider: instance(mockStorageProvider),
+        });
         const result = await ctx.downloadData("/golem/file.txt");
 
         expect(result).toEqual(
@@ -280,13 +243,7 @@ describe("Work Context", () => {
 
   describe("Exec and stream", () => {
     it("should execute runAndStream command", async () => {
-      const ctx = new WorkContext(
-        instance(mockActivityApi),
-        instance(mockActivityControl),
-        instance(mockExecObserver),
-        instance(mockActivity),
-        instance(mockNetworkApi),
-      );
+      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityApi), instance(mockNetworkApi));
       when(mockExecutor.execute(_, _, _)).thenResolve(
         buildExecutorResults([
           {
@@ -306,13 +263,7 @@ describe("Work Context", () => {
 
   describe("transfer()", () => {
     it("should execute transfer command", async () => {
-      const ctx = new WorkContext(
-        instance(mockActivityApi),
-        instance(mockActivityControl),
-        instance(mockExecObserver),
-        instance(mockActivity),
-        instance(mockNetworkApi),
-      );
+      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityApi), instance(mockNetworkApi));
 
       when(mockExecutor.execute(_, _, _)).thenResolve(
         buildExecutorResults([
@@ -343,14 +294,9 @@ describe("Work Context", () => {
           .downloadFile("/golem/file.txt", "./file.txt")
           .end();
       };
-      const ctx = new WorkContext(
-        instance(mockActivityApi),
-        instance(mockActivityControl),
-        instance(mockExecObserver),
-        instance(mockActivity),
-        instance(mockNetworkApi),
-        { storageProvider: instance(mockStorageProvider) },
-      );
+      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityApi), instance(mockNetworkApi), {
+        storageProvider: instance(mockStorageProvider),
+      });
       const expectedStdout = [
         { stdout: "ok_run" },
         { stdout: "ok_upload_file" },
@@ -380,14 +326,9 @@ describe("Work Context", () => {
           .downloadFile("/golem/file.txt", "./file.txt")
           .endStream();
       };
-      const ctx = new WorkContext(
-        instance(mockActivityApi),
-        instance(mockActivityControl),
-        instance(mockExecObserver),
-        instance(mockActivity),
-        instance(mockNetworkApi),
-        { storageProvider: instance(mockStorageProvider) },
-      );
+      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityApi), instance(mockNetworkApi), {
+        storageProvider: instance(mockStorageProvider),
+      });
       const expectedStdout = [
         { stdout: "ok_run" },
         { stdout: "ok_upload_file" },
@@ -420,26 +361,14 @@ describe("Work Context", () => {
   describe("getState() helper function", () => {
     it("should return activity state", async () => {
       when(mockActivity.getState()).thenReturn(ActivityStateEnum.Deployed);
-      const ctx = new WorkContext(
-        instance(mockActivityApi),
-        instance(mockActivityControl),
-        instance(mockExecObserver),
-        instance(mockActivity),
-        instance(mockNetworkApi),
-      );
+      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityApi), instance(mockNetworkApi));
       await expect(ctx.getState()).resolves.toEqual(ActivityStateEnum.Deployed);
     });
   });
 
   describe("getIp()", () => {
     it("should throw error if there is no network node", async () => {
-      const ctx = new WorkContext(
-        instance(mockActivityApi),
-        instance(mockActivityControl),
-        instance(mockExecObserver),
-        instance(mockActivity),
-        instance(mockNetworkApi),
-      );
+      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityApi), instance(mockNetworkApi));
 
       expect(() => ctx.getIp()).toThrow(new Error("There is no network in this work context"));
     });
@@ -453,14 +382,9 @@ describe("Work Context", () => {
         },
         mask: "255.255.255.0",
       }));
-      const ctx = new WorkContext(
-        instance(mockActivityApi),
-        instance(mockActivityControl),
-        instance(mockExecObserver),
-        instance(mockActivity),
-        instance(mockNetworkApi),
-        { networkNode },
-      );
+      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityApi), instance(mockNetworkApi), {
+        networkNode,
+      });
 
       expect(ctx.getIp()).toEqual("192.168.0.10");
     });
@@ -468,13 +392,7 @@ describe("Work Context", () => {
 
   describe("getWebsocketUri()", () => {
     it("should throw error if there is no network node", async () => {
-      const ctx = new WorkContext(
-        instance(mockActivityApi),
-        instance(mockActivityControl),
-        instance(mockExecObserver),
-        instance(mockActivity),
-        instance(mockNetworkApi),
-      );
+      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityApi), instance(mockNetworkApi));
 
       expect(() => ctx.getWebsocketUri(80)).toThrow(new Error("There is no network in this work context"));
     });
@@ -482,14 +400,9 @@ describe("Work Context", () => {
     it("should return websocket URI from the NetworkNode", async () => {
       const mockNode = mock(NetworkNode);
 
-      const ctx = new WorkContext(
-        instance(mockActivityApi),
-        instance(mockActivityControl),
-        instance(mockExecObserver),
-        instance(mockActivity),
-        instance(mockNetworkApi),
-        { networkNode: instance(mockNode) },
-      );
+      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityApi), instance(mockNetworkApi), {
+        networkNode: instance(mockNode),
+      });
 
       when(mockNetworkApi.getWebsocketUri(instance(mockNode), 20)).thenReturn("ws://localhost:20");
 
@@ -514,14 +427,9 @@ describe("Work Context", () => {
         ]),
       );
 
-      const ctx = new WorkContext(
-        instance(mockActivityApi),
-        instance(mockActivityControl),
-        instance(mockExecObserver),
-        instance(mockActivity),
-        instance(mockNetworkApi),
-        { storageProvider: instance(mockStorageProvider) },
-      );
+      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityApi), instance(mockNetworkApi), {
+        storageProvider: instance(mockStorageProvider),
+      });
 
       const result = await ctx.uploadData(new TextEncoder().encode(input), "/golem/file.txt");
 
@@ -545,14 +453,9 @@ describe("Work Context", () => {
         async () => calls.push("3"),
       ];
 
-      const ctx = new WorkContext(
-        instance(mockActivityApi),
-        instance(mockActivityControl),
-        instance(mockExecObserver),
-        instance(mockActivity),
-        instance(mockNetworkApi),
-        { activityReadySetupFunctions },
-      );
+      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityApi), instance(mockNetworkApi), {
+        activityReadySetupFunctions,
+      });
 
       await ctx.before();
 
@@ -563,13 +466,7 @@ describe("Work Context", () => {
   describe("Error handling", () => {
     it("should return a result with error in case the command to execute is invalid", async () => {
       const worker = async (ctx: WorkContext) => ctx.beginBatch().run("invalid_shell_command").end();
-      const ctx = new WorkContext(
-        instance(mockActivityApi),
-        instance(mockActivityControl),
-        instance(mockExecObserver),
-        instance(mockActivity),
-        instance(mockNetworkApi),
-      );
+      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityApi), instance(mockNetworkApi));
 
       when(mockExecutor.execute(_)).thenResolve(
         buildExecutorResults(undefined, [buildExeScriptErrorResult("error", "Some error occurred")]),
@@ -582,13 +479,7 @@ describe("Work Context", () => {
 
     it("should catch error while executing batch as stream with invalid command", async () => {
       const worker = async (ctx: WorkContext) => ctx.beginBatch().run("invalid_shell_command").endStream();
-      const ctx = new WorkContext(
-        instance(mockActivityApi),
-        instance(mockActivityControl),
-        instance(mockExecObserver),
-        instance(mockActivity),
-        instance(mockNetworkApi),
-      );
+      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityApi), instance(mockNetworkApi));
 
       when(mockExecutor.execute(_)).thenResolve(
         buildExecutorResults(undefined, [buildExeScriptErrorResult("error", "Some error occurred", "test_result")]),
