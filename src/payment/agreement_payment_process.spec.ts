@@ -6,23 +6,23 @@ import { Invoice } from "./invoice";
 import { DebitNote } from "./debit_note";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
 import { GolemUserError } from "../shared/error/golem-error";
-import { IPaymentApi } from "./types";
 import { Subject } from "rxjs";
 import { RejectionReason } from "./rejection";
+import { PaymentModule } from "./payment.module";
 
 const agreementMock = mock(Agreement);
 const allocationMock = mock(Allocation);
 const invoiceMock = mock(Invoice);
 const debitNoteMock = mock(DebitNote);
 
-const mockPaymentApi = imock<IPaymentApi>();
+const mockPaymentModule = imock<PaymentModule>();
 
 beforeEach(() => {
   reset(agreementMock);
   reset(allocationMock);
   reset(invoiceMock);
   reset(debitNoteMock);
-  reset(mockPaymentApi);
+  reset(mockPaymentModule);
 
   const testProviderInfo = {
     id: "test-provider-id",
@@ -32,8 +32,8 @@ beforeEach(() => {
 
   when(agreementMock.getProviderInfo()).thenReturn(testProviderInfo);
   when(invoiceMock.provider).thenReturn(testProviderInfo);
-  when(mockPaymentApi.receivedInvoices$).thenReturn(new Subject());
-  when(mockPaymentApi.receivedDebitNotes$).thenReturn(new Subject());
+  when(mockPaymentModule.observeInvoices()).thenReturn(new Subject());
+  when(mockPaymentModule.observeDebitNotes()).thenReturn(new Subject());
 });
 
 describe("AgreementPaymentProcess", () => {
@@ -45,7 +45,7 @@ describe("AgreementPaymentProcess", () => {
         when(invoiceMock.amount).thenReturn("0.123");
         when(invoiceMock.getStatus()).thenReturn("RECEIVED");
 
-        const process = new AgreementPaymentProcess(instance(agreementMock), allocation, instance(mockPaymentApi), {
+        const process = new AgreementPaymentProcess(instance(agreementMock), allocation, instance(mockPaymentModule), {
           debitNoteFilter: () => true,
           invoiceFilter: () => true,
         });
@@ -54,7 +54,7 @@ describe("AgreementPaymentProcess", () => {
         const success = await process.addInvoice(invoice);
 
         expect(success).toEqual(true);
-        verify(mockPaymentApi.acceptInvoice(invoice, allocation, "0.123")).called();
+        verify(mockPaymentModule.acceptInvoice(invoice, allocation, "0.123")).called();
         expect(process.isFinished()).toEqual(true);
       });
 
@@ -67,7 +67,7 @@ describe("AgreementPaymentProcess", () => {
         const process = new AgreementPaymentProcess(
           instance(agreementMock),
           instance(allocationMock),
-          instance(mockPaymentApi),
+          instance(mockPaymentModule),
           {
             debitNoteFilter: () => true,
             invoiceFilter: () => false,
@@ -79,7 +79,7 @@ describe("AgreementPaymentProcess", () => {
 
         expect(success).toEqual(false);
         verify(
-          mockPaymentApi.rejectInvoice(
+          mockPaymentModule.rejectInvoice(
             invoice,
             "Invoice invoice-id for agreement agreement-id rejected by Invoice Filter",
           ),
@@ -94,7 +94,7 @@ describe("AgreementPaymentProcess", () => {
         when(invoiceMock.getStatus()).thenReturn("ACCEPTED");
         const allocation = instance(allocationMock);
 
-        const process = new AgreementPaymentProcess(instance(agreementMock), allocation, instance(mockPaymentApi), {
+        const process = new AgreementPaymentProcess(instance(agreementMock), allocation, instance(mockPaymentModule), {
           debitNoteFilter: () => true,
           invoiceFilter: () => true,
         });
@@ -109,7 +109,7 @@ describe("AgreementPaymentProcess", () => {
           ),
         );
 
-        verify(mockPaymentApi.acceptInvoice(invoice, allocation, "0.123")).never();
+        verify(mockPaymentModule.acceptInvoice(invoice, allocation, "0.123")).never();
         expect(process.isFinished()).toEqual(false);
       });
     });
@@ -124,7 +124,7 @@ describe("AgreementPaymentProcess", () => {
 
         when(agreementMock.id).thenReturn("agreement-id");
 
-        const process = new AgreementPaymentProcess(instance(agreementMock), allocation, instance(mockPaymentApi), {
+        const process = new AgreementPaymentProcess(instance(agreementMock), allocation, instance(mockPaymentModule), {
           debitNoteFilter: () => true,
           invoiceFilter: () => true,
         });
@@ -155,7 +155,7 @@ describe("AgreementPaymentProcess", () => {
         const allocation = instance(allocationMock);
         const agreement = instance(agreementMock);
 
-        const process = new AgreementPaymentProcess(agreement, allocation, instance(mockPaymentApi), {
+        const process = new AgreementPaymentProcess(agreement, allocation, instance(mockPaymentModule), {
           debitNoteFilter: () => true,
           invoiceFilter: () => true,
         });
@@ -184,7 +184,7 @@ describe("AgreementPaymentProcess", () => {
         const allocation = instance(allocationMock);
         const agreement = instance(agreementMock);
 
-        const process = new AgreementPaymentProcess(agreement, allocation, instance(mockPaymentApi), {
+        const process = new AgreementPaymentProcess(agreement, allocation, instance(mockPaymentModule), {
           debitNoteFilter: () => true,
           invoiceFilter: () => {
             throw new Error("invoiceFilter error");
@@ -207,7 +207,7 @@ describe("AgreementPaymentProcess", () => {
 
         when(debitNoteMock.totalAmountDue).thenReturn("0.123");
 
-        const process = new AgreementPaymentProcess(instance(agreementMock), allocation, instance(mockPaymentApi), {
+        const process = new AgreementPaymentProcess(instance(agreementMock), allocation, instance(mockPaymentModule), {
           debitNoteFilter: () => true,
           invoiceFilter: () => true,
         });
@@ -217,7 +217,7 @@ describe("AgreementPaymentProcess", () => {
         const success = await process.addDebitNote(debitNote);
 
         expect(success).toEqual(true);
-        verify(mockPaymentApi.acceptDebitNote(debitNote, allocation, "0.123")).called();
+        verify(mockPaymentModule.acceptDebitNote(debitNote, allocation, "0.123")).called();
         expect(process.isFinished()).toEqual(false);
       });
 
@@ -231,7 +231,7 @@ describe("AgreementPaymentProcess", () => {
         const process = new AgreementPaymentProcess(
           instance(agreementMock),
           instance(allocationMock),
-          instance(mockPaymentApi),
+          instance(mockPaymentModule),
           {
             debitNoteFilter: () => false,
             invoiceFilter: () => true,
@@ -264,7 +264,7 @@ describe("AgreementPaymentProcess", () => {
         when(debitNoteMock.id).thenReturn("debit-note-id");
         when(debitNoteMock.agreementId).thenReturn("agreement-id");
 
-        const process = new AgreementPaymentProcess(instance(agreementMock), allocation, instance(mockPaymentApi), {
+        const process = new AgreementPaymentProcess(instance(agreementMock), allocation, instance(mockPaymentModule), {
           debitNoteFilter: () => true,
           invoiceFilter: () => true,
         });
@@ -277,7 +277,7 @@ describe("AgreementPaymentProcess", () => {
         const debitNoteSuccess = await process.addDebitNote(debitNote);
 
         expect(invoiceSuccess).toEqual(true);
-        verify(mockPaymentApi.acceptInvoice(invoice, allocation, "0.123")).called();
+        verify(mockPaymentModule.acceptInvoice(invoice, allocation, "0.123")).called();
 
         expect(debitNoteSuccess).toEqual(false);
         verify(
@@ -298,7 +298,7 @@ describe("AgreementPaymentProcess", () => {
         const process = new AgreementPaymentProcess(
           instance(agreementMock),
           instance(allocationMock),
-          instance(mockPaymentApi),
+          instance(mockPaymentModule),
           {
             debitNoteFilter: () => true,
             invoiceFilter: () => true,
@@ -312,7 +312,7 @@ describe("AgreementPaymentProcess", () => {
 
         const secondSuccess = await process.addDebitNote(debitNote);
         expect(secondSuccess).toEqual(false);
-        verify(mockPaymentApi.rejectDebitNote(debitNote, anything())).never();
+        verify(mockPaymentModule.rejectDebitNote(debitNote, anything())).never();
         expect(process.isFinished()).toEqual(false);
       });
     });
@@ -324,7 +324,7 @@ describe("AgreementPaymentProcess", () => {
         const process = new AgreementPaymentProcess(
           instance(agreementMock),
           instance(allocationMock),
-          instance(mockPaymentApi),
+          instance(mockPaymentModule),
           {
             debitNoteFilter: () => {
               throw new Error("debitNoteFilter error");
