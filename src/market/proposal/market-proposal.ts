@@ -1,6 +1,15 @@
 import { ProposalProperties } from "./proposal-properties";
 import { MarketApi } from "ya-ts-client";
 import { ProposalState } from "./offer-proposal";
+import { Demand } from "../demand";
+
+export interface IProposalRepository {
+  add(proposal: MarketProposal): MarketProposal;
+
+  getById(id: string): MarketProposal | undefined;
+
+  getByDemandAndId(demand: Demand, id: string): Promise<MarketProposal>;
+}
 
 /**
  * Base representation of a market proposal that can be issued either by the Provider (offer proposal)

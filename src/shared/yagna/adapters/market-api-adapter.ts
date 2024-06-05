@@ -18,7 +18,7 @@ import { DemandBodyPrototype, DemandPropertyValue, IDemandRepository } from "../
 import { getMessageFromApiError } from "../../utils/apiErrorMessage";
 import { withTimeout } from "../../utils/timeout";
 import { AgreementOptions, IAgreementRepository } from "../../../market/agreement/agreement";
-import { IProposalRepository, isOfferCounterProposal, OfferCounterProposal } from "../../../market/proposal";
+import { IProposalRepository, MarketProposal, OfferCounterProposal } from "../../../market/proposal";
 
 /**
  * A bit more user-friendly type definition of DemandOfferBaseDTO from ya-ts-client
@@ -79,7 +79,7 @@ export class MarketApiAdapter implements IMarketApi {
         }
 
         try {
-          for await (const event of await this.yagnaApi.market.collectOffers(demand.id)) {
+          for (const event of await this.yagnaApi.market.collectOffers(demand.id)) {
             const timestamp = new Date(Date.parse(event.eventDate));
 
             switch (event.eventType) {
@@ -106,7 +106,7 @@ export class MarketApiAdapter implements IMarketApi {
 
                 const marketProposal = this.proposalRepo.getById(proposalId);
 
-                if (marketProposal && isOfferCounterProposal(marketProposal)) {
+                if (marketProposal && this.isOfferCounterProposal(marketProposal)) {
                   observer.next({
                     type: "ProposalRejected",
                     counterProposal: marketProposal,
@@ -388,5 +388,9 @@ export class MarketApiAdapter implements IMarketApi {
           }),
       ),
     );
+  }
+
+  private isOfferCounterProposal(proposal: MarketProposal): proposal is OfferCounterProposal {
+    return proposal.issuer === "Requestor";
   }
 }

@@ -2,8 +2,7 @@ import { OfferProposal } from "../../../market/proposal/offer-proposal";
 import { MarketApi, IdentityApi } from "ya-ts-client";
 import { Demand, GolemMarketError, MarketErrorCode } from "../../../market";
 import { CacheService } from "../../cache/CacheService";
-import { IProposalRepository } from "../../../market/proposal/types";
-import { MarketProposal } from "../../../market/proposal/market-proposal";
+import { IProposalRepository, MarketProposal } from "../../../market/proposal/market-proposal";
 import { OfferCounterProposal } from "../../../market/proposal/offer-counter-proposal";
 
 export class ProposalRepository implements IProposalRepository {

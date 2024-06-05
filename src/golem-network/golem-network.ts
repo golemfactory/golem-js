@@ -37,7 +37,7 @@ import {
 } from "../shared/storage";
 import { DataTransferProtocol } from "../shared/types";
 import { NetworkApiAdapter } from "../shared/yagna/adapters/network-api-adapter";
-import { IProposalRepository } from "../market/proposal/types";
+import { IProposalRepository } from "../market/proposal";
 
 export interface GolemNetworkOptions {
   /**
