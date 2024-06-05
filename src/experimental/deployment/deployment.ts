@@ -153,10 +153,7 @@ export class Deployment {
         filter: pool.options.market.proposalFilter,
       });
 
-      const proposalSubscription = draftProposal$.subscribe({
-        next: (proposal) => proposalPool.add(proposal),
-        error: (err) => this.logger.error("Error while collecting proposals", err),
-      });
+      const proposalSubscription = proposalPool.readFrom(draftProposal$);
 
       const leaseProcessPool = this.modules.lease.createLeaseProcessPool(proposalPool, allocation, {
         replicas: pool.options.deployment?.replicas,
