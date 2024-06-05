@@ -195,10 +195,7 @@ export class ActivityModuleImpl implements ActivityModule {
     this.logger.info("Fetching activity state", { activityId });
     try {
       const upToDateActivity = await this.activityApi.getActivity(activityId);
-      //TODO: ?
-      // if (upToDateActivity.getState() !== activity.getState()) {
-      //   this.events.emit("activityStateChanged", upToDateActivity, upToDateActivity.getState());
-      // }
+      this.events.emit("activityStateChanged", upToDateActivity, upToDateActivity.getState());
       return upToDateActivity;
     } catch (error) {
       this.events.emit("errorFetchingActivityState", activityId, error);
