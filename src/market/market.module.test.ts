@@ -387,7 +387,7 @@ describe("Market module", () => {
 
       const testSub = draftProposal$.subscribe();
 
-      await waitAndCall(() => testSub.unsubscribe(), 0.001);
+      await waitAndCall(() => testSub.unsubscribe(), 0.01);
 
       verify(mockMarketApiAdapter.counterProposal(initialProposal, spec)).once();
     });
