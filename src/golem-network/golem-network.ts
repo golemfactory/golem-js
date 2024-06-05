@@ -296,6 +296,8 @@ export class GolemNetwork {
   async oneOf(order: MarketOrderSpec): Promise<LeaseProcess> {
     const proposalPool = new DraftOfferProposalPool({
       logger: this.logger,
+      validateProposal: order.market.proposalFilter,
+      selectProposal: order.market.proposalSelector,
     });
 
     const budget = this.market.estimateBudget(order);
@@ -383,6 +385,8 @@ export class GolemNetwork {
   public async manyOf({ concurrency, order }: ManyOfOptions): Promise<LeaseProcessPool> {
     const proposalPool = new DraftOfferProposalPool({
       logger: this.logger,
+      validateProposal: order.market.proposalFilter,
+      selectProposal: order.market.proposalSelector,
     });
 
     const budget = this.market.estimateBudget(order);

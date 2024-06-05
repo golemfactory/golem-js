@@ -8,6 +8,7 @@ import {
   MarketErrorCode,
   MarketEvents,
   MarketProposalEvent,
+  ProposalSelector,
 } from "./index";
 import {
   createAbortSignalFromTimeout,
@@ -60,8 +61,11 @@ export interface MarketOptions {
         avgGlmPerHour: number;
       };
 
-  /** An optional filter that can filter proposals from the market before signing an agreement */
+  /** A user-defined filter function which will determine if the proposal is valid for use. */
   proposalFilter?: ProposalFilter;
+
+  /** A user-defined function that will be used to pick the best fitting proposal from available ones */
+  proposalSelector?: ProposalSelector;
 }
 
 export interface MarketModule {

@@ -146,7 +146,11 @@ export class Deployment {
         : undefined;
 
       const demandSpecification = await this.modules.market.buildDemandDetails(pool.options.demand, allocation);
-      const proposalPool = new DraftOfferProposalPool();
+      const proposalPool = new DraftOfferProposalPool({
+        logger: this.logger,
+        validateProposal: pool.options.market.proposalFilter,
+        selectProposal: pool.options.market.proposalSelector,
+      });
 
       const draftProposal$ = this.modules.market.collectDraftOfferProposals({
         demandSpecification,

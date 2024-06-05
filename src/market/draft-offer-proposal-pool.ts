@@ -1,4 +1,4 @@
-import { OfferProposal } from "./proposal/offer-proposal";
+import { OfferProposal, ProposalFilter } from "./proposal/offer-proposal";
 import AsyncLock from "async-lock";
 import { EventEmitter } from "eventemitter3";
 import { GolemMarketError, MarketErrorCode } from "./error";
@@ -6,7 +6,6 @@ import { defaultLogger, Logger, sleep } from "../shared/utils";
 import { Observable, Subscription } from "rxjs";
 
 export type ProposalSelector = (proposals: OfferProposal[]) => OfferProposal;
-export type ProposalValidator = (proposal: OfferProposal) => boolean;
 
 export interface ProposalPoolOptions {
   /**
@@ -19,7 +18,7 @@ export interface ProposalPoolOptions {
    *
    * Proposals are validated before being handled to the caller of {@link DraftOfferProposalPool.acquire}
    */
-  validateProposal?: ProposalValidator;
+  validateProposal?: ProposalFilter;
 
   /**
    * Min number of proposals in pool so that it can be considered as ready to use
@@ -73,7 +72,7 @@ export class DraftOfferProposalPool {
   private readonly selectProposal: ProposalSelector = (proposals: OfferProposal[]) => proposals[0];
 
   /** {@link ProposalPoolOptions.validateProposal} */
-  private readonly validateProposal: ProposalValidator = (proposal: OfferProposal) => proposal !== undefined;
+  private readonly validateProposal: ProposalFilter = (proposal: OfferProposal) => proposal !== undefined;
 
   /**
    * The proposals that were not yet leased to anyone and are available for lease
