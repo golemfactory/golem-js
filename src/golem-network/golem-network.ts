@@ -317,7 +317,7 @@ export class GolemNetwork {
     const proposalSubscription = proposalPool.readFrom(draftProposal$);
 
     const agreement = await this.market.signAgreementFromPool(proposalPool, {
-      expirationSec: order.market.rentHours / 3600,
+      expirationSec: order.market.rentHours * 60 * 60,
     });
 
     const networkNode = order.network
@@ -413,7 +413,7 @@ export class GolemNetwork {
         payment: order.payment,
       },
       agreementOptions: {
-        expirationSec: order.market.rentHours / 3600,
+        expirationSec: order.market.rentHours * 60 * 60,
       },
     });
     this.cleanupTasks.push(() => {
