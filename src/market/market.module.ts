@@ -431,13 +431,17 @@ export class MarketModuleImpl implements MarketModule {
     return this.publishAndRefreshDemand(options.demandSpecification).pipe(
       // For each fresh demand, start to watch the related market conversation events
       switchMap((freshDemand) => this.collectMarketProposalEvents(freshDemand)),
-      // Pluck the proposal received events, notify about the rest
-      switchMap((event) => this.mapToOfferProposalAndEmitEvents(event)),
-      // Issue debug message
-      tap((proposal) => this.logger.debug("Received offer proposal from market", { proposal })),
-      // We are interested only in Initial and Draft proposals
-      filter((proposal) => proposal.isInitial() || proposal.isDraft()),
-      // batch initial proposals and  deduplicate them by provider key, pass-though proposals in other states
+      // Notify of proposals event
+      tap((event) => this.emitMarketProposalEvents(event)),
+      // Select only events for proposal received
+      filter((event) => event.type === "ProposalReceived"),
+      // Convert event to proposal
+      map((event) => (event as OfferProposalReceivedEvent).proposal),
+      // We are interested only in Initial and Draft proposals, that are valid
+      filter((proposal) => (proposal.isInitial() || proposal.isDraft()) && proposal.isValid()),
+      // If they are accepted by the user filter
+      filter(acceptByUserFilter),
+      // Batch initial proposals and  deduplicate them by provider key, pass-though proposals in other states
       this.reduceInitialProposalsByProviderKey({
         minProposalsBatchSize: options?.minProposalsBatchSize,
         proposalsBatchReleaseTimeoutMs: options?.proposalsBatchReleaseTimeoutMs,
@@ -452,30 +456,26 @@ export class MarketModuleImpl implements MarketModule {
       }),
       // Continue only with drafts
       filter((proposal) => proposal.isDraft()),
-      // If they are accepted by the user filter
-      filter(acceptByUserFilter),
     );
   }
 
-  private mapToOfferProposalAndEmitEvents(event: MarketProposalEvent) {
-    return new Observable<OfferProposal>((observer) => {
-      const { type } = event;
-      switch (type) {
-        case "ProposalReceived":
-          this.events.emit("offerProposalReceived", event);
-          observer.next(event.proposal);
-          break;
-        case "ProposalRejected":
-          this.events.emit("offerCounterProposalRejected", event);
-          break;
-        case "PropertyQueryReceived":
-          this.events.emit("offerPropertyQueryReceived", event);
-          break;
-        default:
-          this.logger.warn("Unsupported event type in event", { event });
-          break;
-      }
-    });
+  private emitMarketProposalEvents(event: MarketProposalEvent) {
+    this.logger.debug("Received offer proposal from market", { event });
+    const { type } = event;
+    switch (type) {
+      case "ProposalReceived":
+        this.events.emit("offerProposalReceived", event);
+        break;
+      case "ProposalRejected":
+        this.events.emit("offerCounterProposalRejected", event);
+        break;
+      case "PropertyQueryReceived":
+        this.events.emit("offerPropertyQueryReceived", event);
+        break;
+      default:
+        this.logger.warn("Unsupported event type in event", { event });
+        break;
+    }
   }
 
   async signAgreementFromPool(
