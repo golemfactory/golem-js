@@ -208,7 +208,7 @@ export class ActivityModuleImpl implements ActivityModule {
 
   async createWorkContext(activity: Activity, options?: WorkOptions): Promise<WorkContext> {
     this.logger.info("Creating work context for activity", { activityId: activity.id });
-    const ctx = new WorkContext(activity, this, this.services.networkApi, {
+    const ctx = new WorkContext(activity, this, {
       yagnaOptions: this.services.yagna.yagnaOptions,
       logger: this.logger.child("work-context"),
       ...options,

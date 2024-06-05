@@ -22,7 +22,6 @@ import { GolemConfigError, GolemTimeoutError } from "../../shared/error/golem-er
 import { Agreement, ProviderInfo } from "../../market/agreement";
 import { TcpProxy } from "../../network/tcpProxy";
 import { ExecutionOptions, ExeScriptExecutor } from "../exe-script-executor";
-import { INetworkApi } from "../../network/api";
 
 export type Worker<OutputType> = (ctx: WorkContext) => Promise<OutputType>;
 
@@ -72,7 +71,6 @@ export class WorkContext {
   constructor(
     public readonly activity: Activity,
     public readonly activityModule: ActivityModule,
-    private readonly networkApi: INetworkApi,
     private options?: WorkOptions,
   ) {
     this.activityPreparingTimeout = options?.activityPreparingTimeout || DEFAULTS.activityPreparingTimeout;
@@ -360,7 +358,7 @@ export class WorkContext {
         this.activity.getProviderInfo(),
       );
 
-    return this.networkApi.getWebsocketUri(this.networkNode, port);
+    return this.networkNode.getWebsocketUri(port);
   }
 
   getIp(): string {
