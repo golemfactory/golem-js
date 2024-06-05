@@ -172,7 +172,7 @@ export class Deployment {
           payment: pool.options?.payment,
         },
         agreementOptions: {
-          expirationSec: pool.options.market.rentHours / 3600,
+          expirationSec: pool.options.market.rentHours * 3600,
         },
       });
       this.pools.set(pool.name, {
