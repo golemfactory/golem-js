@@ -166,6 +166,9 @@ export class Deployment {
           activity: pool.options?.activity,
           payment: pool.options?.payment,
         },
+        agreementOptions: {
+          expirationSec: pool.options.market.rentHours / 3600,
+        },
       });
       this.pools.set(pool.name, {
         proposalPool,

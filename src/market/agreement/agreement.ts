@@ -1,6 +1,4 @@
-import { Logger, YagnaOptions } from "../../shared/utils";
 import { MarketApi } from "ya-ts-client";
-import { InvoiceFilter } from "../../payment";
 import { Demand } from "../demand";
 
 /**
@@ -21,21 +19,9 @@ export interface ProviderInfo {
   walletAddress: string;
 }
 
-/**
- * @hidden
- * @deprecated
- */
-export interface LegacyAgreementServiceOptions {
-  /** yagnaOptions */
-  yagnaOptions?: YagnaOptions;
-  /** timeout for create agreement and refresh details in ms */
-  agreementRequestTimeout?: number;
-  /** timeout for wait for provider approval after requestor confirmation in ms */
-  agreementWaitingForApprovalTimeout?: number;
-  /** Logger module */
-  logger?: Logger;
-
-  invoiceFilter?: InvoiceFilter;
+export interface AgreementOptions {
+  expirationSec?: number;
+  waitingForApprovalTimeoutSec?: number;
 }
 
 export interface IAgreementRepository {

@@ -40,6 +40,7 @@ import { PaymentDemandDirectorConfig } from "./demand/directors/payment-demand-d
 import { GolemUserError } from "../shared/error/golem-error";
 import { MarketOrderSpec } from "../golem-network";
 import { INetworkApi, NetworkModule } from "../network";
+import { AgreementOptions } from "./agreement/agreement";
 
 export interface MarketOptions {
   /** The maximum number of agreements that you want to make with the market */
@@ -155,6 +156,7 @@ export interface MarketModule {
    */
   signAgreementFromPool(
     draftProposalPool: DraftOfferProposalPool,
+    agreementOptions?: AgreementOptions,
     signalOrTimeout?: number | AbortSignal,
   ): Promise<Agreement>;
 
@@ -295,7 +297,6 @@ export class MarketModuleImpl implements MarketModule {
       const subscribeToOfferProposals = async () => {
         try {
           currentDemand = await this.deps.marketApi.publishDemandSpecification(demandSpecification);
-          this.demandRepo.add(currentDemand);
           subscriber.next(currentDemand);
           this.events.emit("demandSubscriptionStarted", currentDemand);
           this.logger.debug("Subscribing for proposals matched with the demand", { demand: currentDemand });
@@ -370,15 +371,14 @@ export class MarketModuleImpl implements MarketModule {
     counterDemand: DemandSpecification,
   ): Promise<OfferCounterProposal> {
     const counterProposal = await this.deps.marketApi.counterProposal(offerProposal, counterDemand);
-    this.proposalRepo.add(counterProposal);
 
     this.logger.debug("Counter proposal sent", counterProposal);
 
     return counterProposal;
   }
 
-  async proposeAgreement(proposal: OfferProposal): Promise<Agreement> {
-    const agreement = await this.marketApi.proposeAgreement(proposal);
+  async proposeAgreement(proposal: OfferProposal, options?: AgreementOptions): Promise<Agreement> {
+    const agreement = await this.marketApi.proposeAgreement(proposal, options);
 
     this.logger.info("Proposed and got approval for agreement", {
       agreementId: agreement.id,
@@ -425,7 +425,6 @@ export class MarketModuleImpl implements MarketModule {
 
       return true;
     };
-    const rememberProposal = (proposal: OfferProposal) => this.proposalRepo.add(proposal);
 
     return this.publishAndRefreshDemand(options.demandSpecification).pipe(
       // For each fresh demand, start to watch the related market conversation events
@@ -434,8 +433,6 @@ export class MarketModuleImpl implements MarketModule {
       switchMap((event) => this.mapToOfferProposalAndEmitEvents(event)),
       // Issue debug message
       tap((proposal) => this.logger.debug("Received offer proposal from market", { proposal })),
-      // Always memorize the proposals that we got, then execute further processing
-      tap(rememberProposal),
       // We are interested only in Initial and Draft proposals
       filter((proposal) => proposal.isInitial() || proposal.isDraft()),
       // batch initial proposals and  deduplicate them by provider key, pass-though proposals in other states
@@ -481,6 +478,7 @@ export class MarketModuleImpl implements MarketModule {
 
   async signAgreementFromPool(
     draftProposalPool: DraftOfferProposalPool,
+    agreementOptions?: AgreementOptions,
     signalOrTimeout?: number | AbortSignal,
   ): Promise<Agreement> {
     const signal = createAbortSignalFromTimeout(signalOrTimeout);
@@ -494,7 +492,7 @@ export class MarketModuleImpl implements MarketModule {
       }
 
       try {
-        const agreement = await this.proposeAgreement(proposal);
+        const agreement = await this.proposeAgreement(proposal, agreementOptions);
         // agreement is valid, proposal can be destroyed
         await draftProposalPool.remove(proposal).catch((error) => {
           this.logger.warn("Signed the agreement but failed to remove the proposal from the pool", { error });

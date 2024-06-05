@@ -5,7 +5,7 @@ import { DemandRequestBody, MarketApiAdapter } from "./market-api-adapter";
 import { Demand, DemandSpecification, OfferProposal } from "../../../market";
 import { Subject, take } from "rxjs";
 import { Logger } from "../../utils";
-import { DemandBodyPrototype } from "../../../market/demand";
+import { DemandBodyPrototype, IDemandRepository } from "../../../market/demand";
 import { IAgreementRepository } from "../../../market/agreement/agreement";
 import { IProposalRepository } from "../../../market/proposal";
 
@@ -14,6 +14,7 @@ const mockMarket = mock(YaTsClient.MarketApi.RequestorService);
 const mockYagna = mock(YagnaApi);
 const mockAgreementRepo = imock<IAgreementRepository>();
 const mockProposalRepo = imock<IProposalRepository>();
+const mockDemandRepo = imock<IDemandRepository>();
 
 /** Test subject mocking the one exposed by YagnaApi */
 const agreementEvents$ = new Subject<YagnaAgreementOperationEvent>();
@@ -34,6 +35,7 @@ beforeEach(() => {
     instance(mockYagna),
     instance(mockAgreementRepo),
     instance(mockProposalRepo),
+    instance(mockDemandRepo),
     instance(mockLogger),
   );
 });

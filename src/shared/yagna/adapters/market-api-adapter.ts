@@ -7,19 +7,17 @@ import {
   DemandSpecification,
   GolemMarketError,
   IMarketApi,
-  MarketApiConfig,
   MarketErrorCode,
   MarketProposalEvent,
   OfferProposal,
 } from "../../../market";
 import { YagnaApi } from "../yagnaApi";
-import YaTsClient from "ya-ts-client";
 import { GolemInternalError, GolemUserError } from "../../error/golem-error";
 import { Logger } from "../../utils";
-import { DemandBodyPrototype, DemandPropertyValue } from "../../../market/demand";
+import { DemandBodyPrototype, DemandPropertyValue, IDemandRepository } from "../../../market/demand";
 import { getMessageFromApiError } from "../../utils/apiErrorMessage";
 import { withTimeout } from "../../utils/timeout";
-import { IAgreementRepository } from "../../../market/agreement/agreement";
+import { AgreementOptions, IAgreementRepository } from "../../../market/agreement/agreement";
 import { IProposalRepository, isOfferCounterProposal, OfferCounterProposal } from "../../../market/proposal";
 
 /**
@@ -46,8 +44,8 @@ export class MarketApiAdapter implements IMarketApi {
     private readonly yagnaApi: YagnaApi,
     private readonly agreementRepo: IAgreementRepository,
     private readonly proposalRepo: IProposalRepository,
+    private readonly demandRepo: IDemandRepository,
     private readonly logger: Logger,
-    private readonly config: MarketApiConfig = new MarketApiConfig(),
   ) {}
 
   async publishDemandSpecification(spec: DemandSpecification): Promise<Demand> {
@@ -58,6 +56,7 @@ export class MarketApiAdapter implements IMarketApi {
     }
 
     const demand = new Demand(idOrError, spec);
+    this.demandRepo.add(demand);
 
     return demand;
   }
@@ -89,6 +88,7 @@ export class MarketApiAdapter implements IMarketApi {
                   try {
                     // @ts-expect-error FIXME #ya-ts-client, #ya-client: Fix mappings and type discriminators
                     const offerProposal = new OfferProposal(event.proposal, demand);
+                    this.proposalRepo.add(offerProposal);
                     observer.next({
                       type: "ProposalReceived",
                       proposal: offerProposal,
@@ -134,10 +134,6 @@ export class MarketApiAdapter implements IMarketApi {
             }
           }
         } catch (error) {
-          if (error instanceof YaTsClient.MarketApi.CancelError) {
-            return;
-          }
-
           // when the demand is unsubscribed the long poll will reject with a 404
           if ("status" in error && error.status === 404) {
             return;
@@ -177,7 +173,9 @@ export class MarketApiAdapter implements IMarketApi {
 
     const dto = await this.yagnaApi.market.getProposalOffer(receivedProposal.demand.id, maybeNewId);
 
-    return new OfferCounterProposal(dto);
+    const counterProposal = new OfferCounterProposal(dto);
+    this.proposalRepo.add(counterProposal);
+    return counterProposal;
   }
 
   async rejectProposal(receivedProposal: OfferProposal, reason: string): Promise<void> {
@@ -214,12 +212,12 @@ export class MarketApiAdapter implements IMarketApi {
     return this.yagnaApi.payment.getDemandDecorations([allocationId]);
   }
 
-  async confirmAgreement(agreement: Agreement): Promise<Agreement> {
+  async confirmAgreement(agreement: Agreement, options?: AgreementOptions): Promise<Agreement> {
     try {
       // FIXME #yagna, If we don't provide the app-session ID when confirming the agreement, we won't be able to collect invoices with that app-session-id
       //   it's hard to know when the appSessionId is mandatory and when it isn't
       await this.yagnaApi.market.confirmAgreement(agreement.id, this.yagnaApi.appSessionId);
-      await this.yagnaApi.market.waitForApproval(agreement.id, this.config.agreementWaitingForApprovalTimeout);
+      await this.yagnaApi.market.waitForApproval(agreement.id, options?.waitingForApprovalTimeoutSec || 60);
       this.logger.debug(`Agreement approved`, { id: agreement.id });
 
       // Get fresh copy
@@ -233,17 +231,15 @@ export class MarketApiAdapter implements IMarketApi {
     }
   }
 
-  async createAgreement(proposal: OfferProposal): Promise<Agreement> {
+  async createAgreement(proposal: OfferProposal, options?: AgreementOptions): Promise<Agreement> {
+    const expirationSec = options?.expirationSec || 3600;
     try {
       const agreementProposalRequest = {
         proposalId: proposal.id,
-        validTo: new Date(+new Date() + 3600 * 1000).toISOString(),
+        validTo: new Date(+new Date() + expirationSec * 1000).toISOString(),
       };
 
-      const agreementId = await withTimeout(
-        this.yagnaApi.market.createAgreement(agreementProposalRequest),
-        this.config.agreementRequestTimeout,
-      );
+      const agreementId = await withTimeout(this.yagnaApi.market.createAgreement(agreementProposalRequest), 30000);
 
       if (typeof agreementId !== "string") {
         throw new GolemMarketError(
@@ -269,8 +265,8 @@ export class MarketApiAdapter implements IMarketApi {
     }
   }
 
-  async proposeAgreement(proposal: OfferProposal): Promise<Agreement> {
-    const agreement = await this.createAgreement(proposal);
+  async proposeAgreement(proposal: OfferProposal, options?: AgreementOptions): Promise<Agreement> {
+    const agreement = await this.createAgreement(proposal, options);
     const confirmed = await this.confirmAgreement(agreement);
     const state = confirmed.getState();
 
@@ -308,7 +304,7 @@ export class MarketApiAdapter implements IMarketApi {
         this.yagnaApi.market.terminateAgreement(current.id, {
           message: reason,
         }),
-        this.config.agreementRequestTimeout,
+        30000,
       );
 
       this.logger.debug(`Agreement terminated`, { id: agreement.id, reason });

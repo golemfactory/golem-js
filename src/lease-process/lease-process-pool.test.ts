@@ -49,7 +49,7 @@ beforeEach(() => {
 describe("LeaseProcessPool", () => {
   describe("ready()", () => {
     it("prepares MIN_POOL_SIZE lease processes", async () => {
-      when(marketModule.signAgreementFromPool(_)).thenResolve({} as Agreement);
+      when(marketModule.signAgreementFromPool(_, _)).thenResolve({} as Agreement);
       when(leaseModule.createLease(_, _, _)).thenCall(() => ({}) as LeaseProcess);
 
       const pool = getLeasePool({ min: 5, max: 10 });
@@ -57,13 +57,13 @@ describe("LeaseProcessPool", () => {
       await pool.ready();
 
       expect(pool.getAvailableSize()).toBe(5);
-      verify(marketModule.signAgreementFromPool(_)).times(5);
+      verify(marketModule.signAgreementFromPool(_, _)).times(5);
     });
     it("retries on error", async () => {
       when(leaseModule.createLease(_, _, _)).thenCall(() => ({}) as LeaseProcess);
 
       const fakeAgreement = {} as Agreement;
-      when(marketModule.signAgreementFromPool(_))
+      when(marketModule.signAgreementFromPool(_, _))
         .thenResolve(fakeAgreement)
         .thenReject(new Error("Failed to propose agreement"))
         .thenResolve(fakeAgreement)
@@ -75,7 +75,7 @@ describe("LeaseProcessPool", () => {
       await pool.ready();
 
       expect(pool.getAvailableSize()).toBe(3);
-      verify(marketModule.signAgreementFromPool(_)).times(5);
+      verify(marketModule.signAgreementFromPool(_, _)).times(5);
     });
     it("stops retrying after abort signal is triggered", async () => {
       const pool = getLeasePool({ min: 3 });

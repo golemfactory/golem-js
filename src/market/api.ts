@@ -17,6 +17,7 @@ import {
   AgreementState,
   AgreementTerminatedEvent,
 } from "./agreement";
+import { AgreementOptions } from "./agreement/agreement";
 
 export type MarketEvents = {
   demandSubscriptionStarted: (demand: Demand) => void;
@@ -111,7 +112,7 @@ export interface IMarketApi {
    *
    * @return An agreement that's in a "Proposal" state (not yet usable for activity creation)
    */
-  createAgreement(proposal: OfferProposal): Promise<Agreement>;
+  createAgreement(proposal: OfferProposal, options?: AgreementOptions): Promise<Agreement>;
 
   /**
    * Request creating an agreement from the provided proposal, send it to the Provider and wait for approval
@@ -120,12 +121,12 @@ export interface IMarketApi {
    *
    * @return An agreement that's already in an "Approved" state and can be used to create activities on the Provider
    */
-  proposeAgreement(proposal: OfferProposal): Promise<Agreement>;
+  proposeAgreement(proposal: OfferProposal, options?: AgreementOptions): Promise<Agreement>;
 
   /**
    * Confirms the agreement with the provider
    */
-  confirmAgreement(agreement: Agreement, appSessionId: string): Promise<Agreement>;
+  confirmAgreement(agreement: Agreement, options?: AgreementOptions): Promise<Agreement>;
 
   /**
    * Terminates an agreement.

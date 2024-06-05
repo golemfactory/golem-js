@@ -405,18 +405,18 @@ describe("Market module", () => {
       when(mockPool.remove(_)).thenResolve();
       const goodAgreement = {} as Agreement;
       const marketSpy = spy(marketModule);
-      when(marketSpy.proposeAgreement(goodProposal)).thenResolve(goodAgreement);
-      when(marketSpy.proposeAgreement(badProposal0)).thenReject(new Error("Failed to sign proposal"));
-      when(marketSpy.proposeAgreement(badProposal1)).thenReject(new Error("Failed to sign proposal"));
+      when(marketSpy.proposeAgreement(goodProposal, _)).thenResolve(goodAgreement);
+      when(marketSpy.proposeAgreement(badProposal0, _)).thenReject(new Error("Failed to sign proposal"));
+      when(marketSpy.proposeAgreement(badProposal1, _)).thenReject(new Error("Failed to sign proposal"));
 
       const signedProposal = await marketModule.signAgreementFromPool(instance(mockPool));
 
       verify(mockPool.acquire()).thrice();
-      verify(marketSpy.proposeAgreement(badProposal0)).once();
+      verify(marketSpy.proposeAgreement(badProposal0, _)).once();
       verify(mockPool.remove(badProposal0)).once();
-      verify(marketSpy.proposeAgreement(badProposal1)).once();
+      verify(marketSpy.proposeAgreement(badProposal1, _)).once();
       verify(mockPool.remove(badProposal1)).once();
-      verify(marketSpy.proposeAgreement(goodProposal)).once();
+      verify(marketSpy.proposeAgreement(goodProposal, _)).once();
       verify(mockPool.remove(goodProposal)).once();
       expect(signedProposal).toBe(goodAgreement);
     });
@@ -431,7 +431,7 @@ describe("Market module", () => {
       });
       const marketSpy = spy(marketModule);
 
-      await expect(marketModule.signAgreementFromPool(instance(mockPool), ac.signal)).rejects.toThrow(error);
+      await expect(marketModule.signAgreementFromPool(instance(mockPool), {}, ac.signal)).rejects.toThrow(error);
 
       verify(mockPool.acquire()).once();
       verify(mockPool.release(proposal)).once();
@@ -441,7 +441,7 @@ describe("Market module", () => {
     it("should abort immediately if the given signal is already aborted", async () => {
       const mockPool = mock(DraftOfferProposalPool);
       const signal = AbortSignal.abort();
-      await expect(marketModule.signAgreementFromPool(instance(mockPool), signal)).rejects.toThrow(
+      await expect(marketModule.signAgreementFromPool(instance(mockPool), {}, signal)).rejects.toThrow(
         "This operation was aborted",
       );
       verify(mockPool.acquire()).never();
@@ -453,7 +453,7 @@ describe("Market module", () => {
       const marketSpy = spy(marketModule);
       when(marketSpy.proposeAgreement(_)).thenReject(new Error("Failed to sign proposal"));
 
-      await expect(marketModule.signAgreementFromPool(instance(mockPool), 50)).rejects.toThrow(
+      await expect(marketModule.signAgreementFromPool(instance(mockPool), {}, 50)).rejects.toThrow(
         "The operation was aborted due to timeout",
       );
     });

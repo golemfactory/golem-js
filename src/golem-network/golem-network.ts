@@ -216,7 +216,7 @@ export class GolemNetwork {
           ),
         marketApi:
           this.options.override?.marketApi ||
-          new MarketApiAdapter(this.yagna, agreementRepository, proposalRepository, this.logger),
+          new MarketApiAdapter(this.yagna, agreementRepository, proposalRepository, demandRepository, this.logger),
         networkApi: this.options.override?.networkApi || new NetworkApiAdapter(this.yagna, this.logger),
         fileServer: this.options.override?.fileServer || new GftpServerAdapter(this.storageProvider),
       };
@@ -315,7 +315,9 @@ export class GolemNetwork {
 
     const proposalSubscription = proposalPool.readFrom(draftProposal$);
 
-    const agreement = await this.market.signAgreementFromPool(proposalPool);
+    const agreement = await this.market.signAgreementFromPool(proposalPool, {
+      expirationSec: order.market.rentHours / 3600,
+    });
 
     const networkNode = order.network
       ? await this.network.createNetworkNode(order.network, agreement.getProviderInfo().id)
@@ -408,6 +410,9 @@ export class GolemNetwork {
       leaseProcessOptions: {
         activity: order.activity,
         payment: order.payment,
+      },
+      agreementOptions: {
+        expirationSec: order.market.rentHours / 3600,
       },
     });
     this.cleanupTasks.push(() => {
