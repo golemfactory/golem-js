@@ -19,7 +19,7 @@ const yagnaApi = instance(mockYagna);
 describe("WebSocketBrowserStorageProvider", () => {
   const createProvider = () =>
     new WebSocketBrowserStorageProvider(yagnaApi, {
-      logger,
+      logger: instance(logger),
     });
   let provider: WebSocketBrowserStorageProvider;
 
