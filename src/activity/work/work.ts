@@ -1,4 +1,4 @@
-import { Activity, ActivityStateEnum, IActivityApi, Result } from "../";
+import { Activity, ActivityModule, ActivityStateEnum, Result } from "../";
 import {
   Capture,
   Command,
@@ -71,7 +71,7 @@ export class WorkContext {
 
   constructor(
     public readonly activity: Activity,
-    public readonly activityApi: IActivityApi,
+    public readonly activityModule: ActivityModule,
     private readonly networkApi: INetworkApi,
     private options?: WorkOptions,
   ) {
@@ -84,15 +84,27 @@ export class WorkContext {
 
     this.networkNode = options?.networkNode;
 
-    this.executor = this.activity.createExeScriptExecutor(this.activityApi, this.logger, this.options?.execution);
+    this.executor = this.activityModule.createScriptExecutor(this.activity, this.options?.execution);
+  }
+
+  private async fetchState(): Promise<ActivityStateEnum> {
+    return this.activityModule
+      .fetchActivity(this.activity.id)
+      .then((activity) => activity.getState())
+      .catch((err) => {
+        this.logger.error("Failed to read activity state", err);
+        throw new GolemWorkError(
+          "Failed to read activity state",
+          WorkErrorCode.ActivityStatusQueryFailed,
+          this.activity.agreement,
+          this.activity,
+          err,
+        );
+      });
   }
 
   async before(): Promise<Result[] | void> {
-    let state = await this.activityApi
-      .getActivity(this.activity.id)
-      .then((activity) => activity.getState())
-      .catch((err) => this.logger.error("Failed to read activity state", err));
-
+    let state = await this.fetchState();
     if (state === ActivityStateEnum.Ready) {
       await this.setupActivity();
       return;
@@ -157,10 +169,7 @@ export class WorkContext {
 
     await sleep(this.activityStateCheckingInterval, true);
 
-    state = await this.activityApi
-      .getActivity(this.activity.id)
-      .then((activity) => activity.getState())
-      .catch((err) => this.logger.error("Failed to read activity state", err));
+    state = await this.fetchState();
 
     if (state !== ActivityStateEnum.Ready) {
       throw new GolemWorkError(
@@ -274,7 +283,7 @@ export class WorkContext {
         );
       });
 
-    return new RemoteProcess(this.activityApi, streamOfActivityResults, this.activity, this.logger);
+    return new RemoteProcess(this.activityModule, streamOfActivityResults, this.activity, this.logger);
   }
 
   /**
@@ -387,22 +396,6 @@ export class WorkContext {
       id: this.activity.id,
       agreement: this.activity.agreement,
     };
-  }
-
-  async getState(): Promise<ActivityStateEnum> {
-    return this.activityApi
-      .getActivity(this.activity.id)
-      .then((activity) => activity.getState())
-      .catch((err) => {
-        this.logger.error("Failed to read activity state", err);
-        throw new GolemWorkError(
-          "Failed to read activity state",
-          WorkErrorCode.ActivityStatusQueryFailed,
-          this.activity.agreement,
-          this.activity,
-          err,
-        );
-      });
   }
 
   private async runOneCommand<T>(command: Command<T>, options?: CommandOptions): Promise<Result<T>> {

@@ -9,7 +9,7 @@ import { Result, StreamingBatchEvent } from "./results";
 import sleep from "../shared/utils/sleep";
 import { Activity } from "./activity";
 import { getMessageFromApiError } from "../shared/utils/apiErrorMessage";
-import { IActivityApi } from "./api";
+import { ActivityModule } from "./activity.module";
 
 export interface ExeScriptRequest {
   text: string;
@@ -24,8 +24,6 @@ export interface ExecutionOptions {
   activityExeBatchResultPollIntervalSeconds?: number;
   /** maximum number of retries retrieving results when an error occurs, default: 10 */
   activityExeBatchResultMaxRetries?: number;
-  /** Logger module */
-  logger?: Logger;
 }
 
 const RETRYABLE_ERROR_STATUS_CODES = [408, 500];
@@ -36,7 +34,7 @@ export class ExeScriptExecutor {
 
   constructor(
     public readonly activity: Activity,
-    private readonly activityApi: IActivityApi,
+    private readonly activityModule: ActivityModule,
     private readonly logger: Logger,
     options?: ExecutionOptions,
   ) {
@@ -97,7 +95,7 @@ export class ExeScriptExecutor {
   }
 
   protected async send(script: ExeScriptRequest): Promise<string> {
-    return withTimeout(this.activityApi.executeScript(this.activity, script), this.options.activityRequestTimeout);
+    return withTimeout(this.activityModule.executeScript(this.activity, script), this.options.activityRequestTimeout);
   }
 
   private async pollingBatch(
@@ -117,7 +115,7 @@ export class ExeScriptExecutor {
 
     const { activityExecuteTimeout, activityExeBatchResultPollIntervalSeconds, activityExeBatchResultMaxRetries } =
       this.options;
-    const { logger, activity, activityApi } = this;
+    const { logger, activity, activityModule } = this;
 
     return new Readable({
       objectMode: true,
@@ -140,7 +138,7 @@ export class ExeScriptExecutor {
                     logger.debug("Activity is no longer running, will stop polling for batch execution results");
                     return bail(new GolemAbortError(`Activity ${activityId} has been interrupted.`));
                   }
-                  return await activityApi.getExecBatchResults(
+                  return await activityModule.getBatchResults(
                     activity,
                     batchId,
                     undefined,
@@ -204,7 +202,7 @@ export class ExeScriptExecutor {
     const errors: object[] = [];
     const results: Result[] = [];
 
-    const source = this.activityApi.getExecBatchEvents(this.activity, batchId).subscribe({
+    const source = this.activityModule.observeStreamingBatchEvents(this.activity, batchId).subscribe({
       next: (resultEvents) => results.push(this.parseEventToResult(resultEvents, batchSize)),
       error: (err) => errors.push(err.data?.message ?? err),
       complete: () => this.logger.debug("Finished reading batch results"),

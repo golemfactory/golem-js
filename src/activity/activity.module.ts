@@ -1,9 +1,12 @@
 import { EventEmitter } from "eventemitter3";
 import { Agreement } from "../market/agreement";
-import { Activity, IActivityApi, ActivityEvents } from "./index";
+import { Activity, IActivityApi, ActivityEvents, Result } from "./index";
 import { defaultLogger } from "../shared/utils";
 import { GolemServices } from "../golem-network/golem-network";
 import { WorkContext, WorkOptions } from "./work";
+import { ExeScriptExecutor, ExeScriptRequest, ExecutionOptions } from "./exe-script-executor";
+import { Observable, catchError, tap } from "rxjs";
+import { StreamingBatchEvent } from "./results";
 
 export interface ActivityModule {
   events: EventEmitter<ActivityEvents>;
@@ -34,6 +37,30 @@ export interface ActivityModule {
    * @return An WorkContext that's fully commissioned and the user can execute their commands
    */
   createWorkContext(activity: Activity, options?: WorkOptions): Promise<WorkContext>;
+
+  /**
+   * Factory method for creating a script executor for the activity
+   */
+  createScriptExecutor(activity: Activity, options?: ExecutionOptions): ExeScriptExecutor;
+
+  /**
+   * Execute a script on the activity.
+   */
+  executeScript(activity: Activity, script: ExeScriptRequest): Promise<string>;
+
+  /**
+   * Fetch the results of a batch execution.
+   */
+  getBatchResults(activity: Activity, batchId: string, commandIndex?: number, timeout?: number): Promise<Result[]>;
+
+  /**
+   * Create an observable that will emit events from the streaming batch.
+   */
+  observeStreamingBatchEvents(
+    activity: Activity,
+    batchId: string,
+    commandIndex?: number,
+  ): Observable<StreamingBatchEvent>;
 }
 
 /**
@@ -81,16 +108,56 @@ export class ActivityModuleImpl implements ActivityModule {
 
   private readonly activityApi: IActivityApi;
 
-  private readonly fileServer?: IFileServer;
-
-  constructor(
-    private readonly services: GolemServices,
-    private readonly options: ActivityModuleOptions = {
-      fileServer: false,
-    },
-  ) {
+  constructor(private readonly services: GolemServices) {
     this.logger = services.logger;
     this.activityApi = services.activityApi;
+  }
+  createScriptExecutor(activity: Activity, options?: ExecutionOptions): ExeScriptExecutor {
+    return new ExeScriptExecutor(activity, this, this.logger.child("executor"), options);
+  }
+
+  async executeScript(activity: Activity, script: ExeScriptRequest): Promise<string> {
+    this.logger.info("Executing script on activity", { activityId: activity.id });
+    try {
+      const result = await this.activityApi.executeScript(activity, script);
+      this.events.emit("scriptExecuted", activity, script, result);
+      return result;
+    } catch (error) {
+      this.events.emit("errorExecutingScript", activity, script, error);
+      throw error;
+    }
+  }
+  async getBatchResults(
+    activity: Activity,
+    batchId: string,
+    commandIndex?: number | undefined,
+    timeout?: number | undefined,
+  ): Promise<Result[]> {
+    this.logger.info("Fetching batch results", { activityId: activity.id, batchId });
+    try {
+      const results = await this.activityApi.getExecBatchResults(activity, batchId, commandIndex, timeout);
+      this.events.emit("batchResultsReceived", activity, batchId, results);
+      return results;
+    } catch (error) {
+      this.events.emit("errorGettingBatchResults", activity, batchId, error);
+      throw error;
+    }
+  }
+  observeStreamingBatchEvents(
+    activity: Activity,
+    batchId: string,
+    commandIndex?: number | undefined,
+  ): Observable<StreamingBatchEvent> {
+    this.logger.info("Observing streaming batch events", { activityId: activity.id, batchId });
+    return this.activityApi.getExecBatchEvents(activity, batchId, commandIndex).pipe(
+      tap((event) => {
+        this.events.emit("batchEventsReceived", activity, batchId, event);
+      }),
+      catchError((error) => {
+        this.events.emit("errorGettingBatchEvents", activity, batchId, error);
+        throw error;
+      }),
+    );
   }
 
   async createActivity(agreement: Agreement): Promise<Activity> {
@@ -141,7 +208,7 @@ export class ActivityModuleImpl implements ActivityModule {
 
   async createWorkContext(activity: Activity, options?: WorkOptions): Promise<WorkContext> {
     this.logger.info("Creating work context for activity", { activityId: activity.id });
-    const ctx = new WorkContext(activity, this.services.activityApi, this.services.networkApi, {
+    const ctx = new WorkContext(activity, this, this.services.networkApi, {
       yagnaOptions: this.services.yagna.yagnaOptions,
       logger: this.logger.child("work-context"),
       ...options,

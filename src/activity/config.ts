@@ -1,4 +1,3 @@
-import { Logger, defaultLogger } from "../shared/utils";
 import { ExecutionOptions } from "./exe-script-executor";
 
 const DEFAULTS = {
@@ -16,7 +15,6 @@ export class ExecutionConfig {
   public readonly activityExecuteTimeout: number;
   public readonly activityExeBatchResultPollIntervalSeconds: number;
   public readonly activityExeBatchResultMaxRetries: number;
-  public readonly logger: Logger;
 
   constructor(options?: ExecutionOptions) {
     this.activityRequestTimeout = options?.activityRequestTimeout || DEFAULTS.activityRequestTimeout;
@@ -25,6 +23,5 @@ export class ExecutionConfig {
       options?.activityExeBatchResultMaxRetries || DEFAULTS.activityExeBatchResultMaxRetries;
     this.activityExeBatchResultPollIntervalSeconds =
       options?.activityExeBatchResultPollIntervalSeconds || DEFAULTS.activityExeBatchResultPollIntervalSeconds;
-    this.logger = options?.logger || defaultLogger("work");
   }
 }
