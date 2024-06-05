@@ -22,7 +22,6 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
         expirationSec: 30 * 60,
       },
       market: {
-        maxAgreements: 1,
         rentHours: 0.5,
         pricing: {
           model: "linear",
@@ -38,7 +37,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
     });
 
     const allocation = await glm.payment.createAllocation({
-      budget: glm.market.estimateBudget(order),
+      budget: glm.market.estimateBudget({ order, concurrency: 1 }),
       expirationSec: 60 * 60, // 60 minutes
     });
     const demandSpecification = await glm.market.buildDemandDetails(order.demand, allocation);

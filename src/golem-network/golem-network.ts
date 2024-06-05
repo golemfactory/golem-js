@@ -13,12 +13,12 @@ import { ActivityModule, ActivityModuleImpl, IActivityApi, IFileServer } from ".
 import { INetworkApi, Network, NetworkModule, NetworkModuleImpl, NetworkOptions } from "../network";
 import { EventEmitter } from "eventemitter3";
 import {
+  Concurrency,
   LeaseModule,
   LeaseModuleImpl,
   LeaseProcess,
   LeaseProcessOptions,
   LeaseProcessPool,
-  LeaseProcessPoolOptions,
 } from "../lease-process";
 import { DebitNoteRepository, InvoiceRepository, MarketApiAdapter, PaymentApiAdapter } from "../shared/yagna";
 import { ActivityApiAdapter } from "../shared/yagna/adapters/activity-api-adapter";
@@ -103,7 +103,7 @@ export interface GolemNetworkEvents {
 }
 
 interface ManyOfOptions {
-  concurrency: LeaseProcessPoolOptions["replicas"];
+  concurrency: Concurrency;
   order: MarketOrderSpec;
 }
 
@@ -212,6 +212,7 @@ export class GolemNetwork {
           new ActivityApiAdapter(
             this.yagna.activity.state,
             this.yagna.activity.control,
+            this.yagna.activity.exec,
             new ActivityRepository(this.yagna.activity.state, agreementRepository),
           ),
         marketApi:
@@ -300,7 +301,7 @@ export class GolemNetwork {
       selectProposal: order.market.proposalSelector,
     });
 
-    const budget = this.market.estimateBudget(order);
+    const budget = this.market.estimateBudget({ order, concurrency: 1 });
     const allocation = await this.payment.createAllocation({
       budget,
       expirationSec: order.market.rentHours * 60 * 60,
@@ -391,7 +392,7 @@ export class GolemNetwork {
       selectProposal: order.market.proposalSelector,
     });
 
-    const budget = this.market.estimateBudget(order);
+    const budget = this.market.estimateBudget({ concurrency, order });
     const allocation = await this.payment.createAllocation({
       budget,
       expirationSec: order.market.rentHours * 60 * 60,

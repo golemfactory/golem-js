@@ -5,12 +5,12 @@ import { GolemNetwork, MarketOrderSpec } from "../../golem-network";
 import { validateDeployment } from "./validate-deployment";
 
 interface DeploymentOptions {
-  replicas?: number | { min: number; max: number };
+  replicas: number | { min: number; max: number };
   network?: string;
 }
 
 export interface CreateLeaseProcessPoolOptions extends MarketOrderSpec {
-  deployment?: DeploymentOptions;
+  deployment: DeploymentOptions;
 }
 
 export class GolemDeploymentBuilder {

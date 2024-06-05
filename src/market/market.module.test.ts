@@ -13,6 +13,7 @@ import { INetworkApi, NetworkModule } from "../network";
 import { DraftOfferProposalPool } from "./draft-offer-proposal-pool";
 import { Agreement, AgreementEvent, ProviderInfo } from "./agreement";
 import { waitAndCall, waitForCondition } from "../shared/utils/wait";
+import { MarketOrderSpec } from "../golem-network";
 
 const mockMarketApiAdapter = mock(MarketApiAdapter);
 const mockYagna = mock(YagnaApi);
@@ -546,6 +547,83 @@ describe("Market module", () => {
         // Then
         expect(listener).toHaveBeenCalled();
       });
+    });
+  });
+  describe("estimateBudget()", () => {
+    it("estimates budget for the exact concurrency level", () => {
+      const order: MarketOrderSpec = {
+        demand: {
+          workload: {
+            imageTag: "image",
+            minCpuThreads: 5,
+          },
+        },
+        market: {
+          rentHours: 5,
+          pricing: {
+            model: "linear",
+            maxStartPrice: 1,
+            maxEnvPerHourPrice: 2,
+            maxCpuPerHourPrice: 0.5,
+          },
+        },
+      };
+      const concurrency = 3;
+      const cpuPrice = 0.5 * 5 * 5; // 5 threads for 0.5 per hour for 5 hours
+      const envPrice = 2 * 5; // 2 per hour for 5 hours
+      const totalPricePerMachine = 1 + cpuPrice + envPrice;
+      const expectedBudget = totalPricePerMachine * concurrency;
+
+      const budget = marketModule.estimateBudget({ order, concurrency });
+      expect(budget).toBeCloseTo(expectedBudget, 5);
+    });
+    it("estimates budget for max concurrency level", () => {
+      const order: MarketOrderSpec = {
+        demand: {
+          workload: {
+            imageTag: "image",
+            minCpuThreads: 5,
+          },
+        },
+        market: {
+          rentHours: 5,
+          pricing: {
+            model: "linear",
+            maxStartPrice: 1,
+            maxEnvPerHourPrice: 2,
+            maxCpuPerHourPrice: 0.5,
+          },
+        },
+      };
+      const concurrency = { max: 10 };
+      const cpuPrice = 0.5 * 5 * 5; // 5 threads for 0.5 per hour for 5 hours
+      const envPrice = 2 * 5; // 2 per hour for 5 hours
+      const totalPricePerMachine = 1 + cpuPrice + envPrice;
+      const expectedBudget = totalPricePerMachine * concurrency.max;
+
+      const budget = marketModule.estimateBudget({ order, concurrency });
+      expect(budget).toBeCloseTo(expectedBudget, 5);
+    });
+    it("estimates budget for non-linear pricing model", () => {
+      const order: MarketOrderSpec = {
+        demand: {
+          workload: {
+            imageTag: "image",
+          },
+        },
+        market: {
+          rentHours: 5,
+          pricing: {
+            model: "burn-rate",
+            avgGlmPerHour: 2,
+          },
+        },
+      };
+      const concurrency = 3;
+      const expectedBudget = 5 * 2 * concurrency;
+
+      const budget = marketModule.estimateBudget({ order, concurrency });
+      expect(budget).toBeCloseTo(expectedBudget, 5);
     });
   });
 });

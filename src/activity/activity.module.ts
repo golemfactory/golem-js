@@ -116,14 +116,10 @@ export class ActivityModuleImpl implements ActivityModule {
 
   async createWorkContext(activity: Activity, options?: WorkOptions): Promise<WorkContext> {
     this.logger.debug("Creating work context for activity", { activityId: activity.id });
-    const ctx = new WorkContext(
-      this.services.activityApi,
-      this.services.yagna.activity.control,
-      this.services.yagna.activity.exec,
-      activity,
-      this.services.networkApi,
-      options,
-    );
+    const ctx = new WorkContext(activity, this.services.activityApi, this.services.networkApi, {
+      yagnaOptions: this.services.yagna.yagnaOptions,
+      ...options,
+    });
 
     this.logger.debug("Initializing the exe-unit for activity", { activityId: activity.id });
     await ctx.before();

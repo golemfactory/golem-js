@@ -131,7 +131,12 @@ export class Deployment {
     const longestExpiration =
       Math.max(...this.components.leaseProcessPools.map((pool) => pool.options.market.rentHours)) * 3600;
     const totalBudget = this.components.leaseProcessPools.reduce(
-      (acc, pool) => acc + this.modules.market.estimateBudget(pool.options),
+      (acc, pool) =>
+        acc +
+        this.modules.market.estimateBudget({
+          order: pool.options,
+          concurrency: pool.options.deployment.replicas,
+        }),
       0,
     );
 

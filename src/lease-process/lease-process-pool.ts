@@ -19,8 +19,10 @@ export interface LeaseProcessPoolDependencies {
   logger: Logger;
 }
 
+export type Concurrency = number | RequireAtLeastOne<{ min: number; max: number }>;
+
 export interface LeaseProcessPoolOptions {
-  replicas?: number | RequireAtLeastOne<{ min: number; max: number }>;
+  replicas?: Concurrency;
   network?: Network;
   leaseProcessOptions?: LeaseProcessOptions;
   agreementOptions?: AgreementOptions;

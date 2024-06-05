@@ -15,7 +15,6 @@ const order: MarketOrderSpec = {
     workload: { imageTag: "golem/alpine:latest" },
   },
   market: {
-    maxAgreements: 1,
     rentHours: 0.5,
     pricing: {
       model: "linear",
