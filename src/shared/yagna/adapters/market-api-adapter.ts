@@ -104,11 +104,12 @@ export class MarketApiAdapter implements MarketApi {
 
     bodyClone.properties["golem.com.payment.chosen-platform"] = demand.paymentPlatform;
 
-    const maybeNewId = await this.yagnaApi.market.counterProposalDemand(
+    const maybeNewId = (await this.yagnaApi.market.counterProposalDemand(
       receivedProposal.demand.id,
       receivedProposal.id,
       bodyClone,
-    );
+      // FIXME: a bug in 1.1.1, already reported to core
+    )) as unknown as string | YaTsClient.MarketApi.ApiError;
 
     this.logger.debug("Proposal counter result from yagna", { result: maybeNewId });
 
