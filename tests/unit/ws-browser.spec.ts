@@ -1,11 +1,10 @@
-import { GolemInternalError, nullLogger, WebSocketBrowserStorageProvider, YagnaApi } from "../../src";
+import { GolemInternalError, Logger, nullLogger, WebSocketBrowserStorageProvider, YagnaApi } from "../../src";
 // .js added for ESM compatibility
 import { encode, toObject } from "flatbuffers/js/flexbuffers.js";
 import * as jsSha3 from "js-sha3";
 import { TEST_IDENTITY } from "../fixtures";
 import { GsbApi, IdentityApi } from "ya-ts-client";
-import { LoggerMock } from "../mock/utils/logger";
-import { anything, instance, mock, reset, resetCalls, verify, when } from "@johanblumenberg/ts-mockito";
+import { anything, imock, instance, mock, reset, resetCalls, verify, when } from "@johanblumenberg/ts-mockito";
 
 jest.mock("uuid", () => ({ v4: () => "uuid" }));
 
@@ -14,12 +13,10 @@ type UploadChunkChunk = { offset: number; content: Uint8Array };
 const mockYagna = mock(YagnaApi);
 const mockIdentity = mock(IdentityApi.DefaultService);
 const mockGsb = mock(GsbApi.RequestorService);
-
+const logger = imock<Logger>();
 const yagnaApi = instance(mockYagna);
 
 describe("WebSocketBrowserStorageProvider", () => {
-  let logger: LoggerMock;
-
   const createProvider = () =>
     new WebSocketBrowserStorageProvider(yagnaApi, {
       logger,
@@ -27,7 +24,6 @@ describe("WebSocketBrowserStorageProvider", () => {
   let provider: WebSocketBrowserStorageProvider;
 
   beforeEach(() => {
-    logger = new LoggerMock();
     provider = createProvider();
 
     jest.clearAllMocks();
@@ -35,6 +31,7 @@ describe("WebSocketBrowserStorageProvider", () => {
     reset(mockYagna);
     reset(mockIdentity);
     reset(mockGsb);
+    reset(logger);
 
     when(mockYagna.yagnaOptions).thenReturn({
       apiKey: "example-api-key",
@@ -157,7 +154,7 @@ describe("WebSocketBrowserStorageProvider", () => {
         expect(spy1).toHaveBeenCalled();
       });
 
-      it("should log invalid requests", async () => {
+      it("should not respond to invalid requests", async () => {
         const data = {
           id: "foo",
           component: "Foo",
@@ -167,7 +164,6 @@ describe("WebSocketBrowserStorageProvider", () => {
         const spy1 = jest.spyOn(provider as any, "respond").mockReturnThis();
         socket.dispatchEvent(new MessageEvent("message", { data: encode(data).buffer }));
         expect(spy1).not.toHaveBeenCalled();
-        await logger.expectToInclude("[WebSocketBrowserStorageProvider] Unsupported message in publishData(): Foo");
       });
     });
   });
@@ -247,7 +243,7 @@ describe("WebSocketBrowserStorageProvider", () => {
         expect(callback).toHaveBeenCalledWith(result);
       });
 
-      it("should log invalid requests", async () => {
+      it("should not respond to invalid requests", async () => {
         const callback = jest.fn();
         const data = {
           id: "foo",
@@ -260,7 +256,6 @@ describe("WebSocketBrowserStorageProvider", () => {
         socket.dispatchEvent(new MessageEvent("message", { data: encode(data).buffer }));
         expect(spy1).not.toHaveBeenCalled();
         expect(spy2).not.toHaveBeenCalled();
-        await logger.expectToInclude("[WebSocketBrowserStorageProvider] Unsupported message in receiveData(): Foo");
       });
     });
   });
