@@ -363,6 +363,7 @@ describe("Market module", () => {
       // When
       const draftProposal$ = marketModule.collectDraftOfferProposals({
         demandSpecification: spec,
+        proposalsBatchReleaseTimeoutMs: 1,
       });
 
       // Drop 3 initial proposals about the same thing
@@ -386,8 +387,7 @@ describe("Market module", () => {
 
       const testSub = draftProposal$.subscribe();
 
-      // It's 2s to wait for the batching to work
-      await waitAndCall(() => testSub.unsubscribe(), 2);
+      await waitAndCall(() => testSub.unsubscribe(), 0.001);
 
       verify(mockMarketApiAdapter.counterProposal(initialProposal, spec)).once();
     });
