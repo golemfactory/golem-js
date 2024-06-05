@@ -45,22 +45,24 @@ import { Concurrency } from "../lease-process";
 
 export type DemandEngine = "vm" | "vm-nvidia" | "wasmtime";
 
+export type PricingOptions =
+  | {
+      model: "linear";
+      maxStartPrice: number;
+      maxCpuPerHourPrice: number;
+      maxEnvPerHourPrice: number;
+    }
+  | {
+      model: "burn-rate";
+      avgGlmPerHour: number;
+    };
+
 export interface MarketOptions {
   /** How long you want to rent the resources in hours */
   rentHours: number;
 
   /** Pricing strategy that will be used to filter the offers from the market */
-  pricing:
-    | {
-        model: "linear";
-        maxStartPrice: number;
-        maxCpuPerHourPrice: number;
-        maxEnvPerHourPrice: number;
-      }
-    | {
-        model: "burn-rate";
-        avgGlmPerHour: number;
-      };
+  pricing: PricingOptions;
 
   /** A user-defined filter function which will determine if the proposal is valid for use. */
   proposalFilter?: ProposalFilter;
@@ -169,6 +171,7 @@ export interface MarketModule {
    */
   collectDraftOfferProposals(options: {
     demandSpecification: DemandSpecification;
+    pricing: PricingOptions;
     filter?: ProposalFilter;
     minProposalsBatchSize?: number;
     proposalsBatchReleaseTimeoutMs?: number;
@@ -405,30 +408,11 @@ export class MarketModuleImpl implements MarketModule {
 
   collectDraftOfferProposals(options: {
     demandSpecification: DemandSpecification;
+    pricing: PricingOptions;
     filter?: ProposalFilter;
     minProposalsBatchSize?: number;
     proposalsBatchReleaseTimeoutMs?: number;
   }): Observable<OfferProposal> {
-    // Utility predicates
-    const acceptByUserFilter = (proposal: OfferProposal) => {
-      if (options.filter) {
-        try {
-          const result = options.filter(proposal);
-
-          if (!result) {
-            this.events.emit("offerProposalRejectedByFilter", proposal);
-          }
-
-          return result;
-        } catch (err) {
-          this.logger.error("Executing user provided proposal filter resulted with an error", err);
-          throw err;
-        }
-      }
-
-      return true;
-    };
-
     return this.publishAndRefreshDemand(options.demandSpecification).pipe(
       // For each fresh demand, start to watch the related market conversation events
       switchMap((freshDemand) => this.collectMarketProposalEvents(freshDemand)),
@@ -438,8 +422,9 @@ export class MarketModuleImpl implements MarketModule {
       map((event) => (event as OfferProposalReceivedEvent).proposal),
       // We are interested only in Initial and Draft proposals, that are valid
       filter((proposal) => (proposal.isInitial() || proposal.isDraft()) && proposal.isValid()),
+      filter((proposal) => this.filterProposalsByPricingOptions(options.pricing, proposal)),
       // If they are accepted by the user filter
-      filter(acceptByUserFilter),
+      filter((proposal) => (options?.filter ? this.filterProposalsByUserFilter(options.filter, proposal) : true)),
       // Batch initial proposals and  deduplicate them by provider key, pass-though proposals in other states
       this.reduceInitialProposalsByProviderKey({
         minProposalsBatchSize: options?.minProposalsBatchSize,
@@ -624,5 +609,34 @@ export class MarketModuleImpl implements MarketModule {
           break;
       }
     });
+  }
+
+  private filterProposalsByUserFilter(filter: ProposalFilter, proposal: OfferProposal) {
+    try {
+      const result = filter(proposal);
+
+      if (!result) {
+        this.events.emit("offerProposalRejectedByFilter", proposal);
+      }
+
+      return result;
+    } catch (err) {
+      this.logger.error("Executing user provided proposal filter resulted with an error", err);
+      throw err;
+    }
+  }
+
+  private filterProposalsByPricingOptions(pricing: PricingOptions, proposal: OfferProposal) {
+    let isPriceValid = true;
+    if (pricing.model === "linear") {
+      isPriceValid =
+        proposal.pricing.cpuSec <= pricing.maxCpuPerHourPrice / 3600 &&
+        proposal.pricing.envSec <= pricing.maxEnvPerHourPrice / 3600 &&
+        proposal.pricing.start <= pricing.maxStartPrice;
+    }
+    if (!isPriceValid) {
+      this.events.emit("offerProposalRejectedByPriceFilter", proposal);
+    }
+    return isPriceValid;
   }
 }

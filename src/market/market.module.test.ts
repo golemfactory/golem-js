@@ -280,12 +280,22 @@ describe("Market module", () => {
       when(mockInitialOfferProposal.isValid()).thenReturn(true);
       when(mockInitialOfferProposal.provider).thenReturn(providerInfo);
       when(mockInitialOfferProposal.properties).thenReturn(initialOfferProperties);
+      when(mockInitialOfferProposal.pricing).thenReturn({
+        cpuSec: 0.4 / 3600,
+        envSec: 0.9 / 3600,
+        start: 0.4,
+      });
 
       const mockDraftOfferProposal = mock(OfferProposal);
       when(mockDraftOfferProposal.isDraft()).thenReturn(true);
       when(mockDraftOfferProposal.isValid()).thenReturn(true);
       when(mockDraftOfferProposal.provider).thenReturn(providerInfo);
       when(mockDraftOfferProposal.properties).thenReturn(initialOfferProperties);
+      when(mockDraftOfferProposal.pricing).thenReturn({
+        cpuSec: 0.4 / 3600,
+        envSec: 0.9 / 3600,
+        start: 0.4,
+      });
 
       const initialProposal = instance(mockInitialOfferProposal);
       const draftProposal = instance(mockDraftOfferProposal);
@@ -297,6 +307,12 @@ describe("Market module", () => {
       // When
       const draftProposal$ = marketModule.collectDraftOfferProposals({
         demandSpecification: spec,
+        pricing: {
+          model: "linear",
+          maxStartPrice: 0.5,
+          maxCpuPerHourPrice: 1.0,
+          maxEnvPerHourPrice: 0.5,
+        },
       });
 
       const draftListener = jest.fn();
@@ -353,6 +369,11 @@ describe("Market module", () => {
       when(mockInitialOfferProposal.isValid()).thenReturn(true);
       when(mockInitialOfferProposal.provider).thenReturn(providerInfo);
       when(mockInitialOfferProposal.properties).thenReturn(initialOfferProperties);
+      when(mockInitialOfferProposal.pricing).thenReturn({
+        cpuSec: 0.4 / 3600,
+        envSec: 0.9 / 3600,
+        start: 0.4,
+      });
 
       const initialProposal = instance(mockInitialOfferProposal);
 
@@ -364,6 +385,12 @@ describe("Market module", () => {
       const draftProposal$ = marketModule.collectDraftOfferProposals({
         demandSpecification: spec,
         proposalsBatchReleaseTimeoutMs: 1,
+        pricing: {
+          model: "linear",
+          maxStartPrice: 0.5,
+          maxCpuPerHourPrice: 1.0,
+          maxEnvPerHourPrice: 0.5,
+        },
       });
 
       // Drop 3 initial proposals about the same thing

@@ -159,6 +159,7 @@ export class Deployment {
 
       const draftProposal$ = this.modules.market.collectDraftOfferProposals({
         demandSpecification,
+        pricing: pool.options.market.pricing,
         filter: pool.options.market.proposalFilter,
       });
 

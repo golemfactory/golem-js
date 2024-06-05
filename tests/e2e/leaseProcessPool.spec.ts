@@ -34,6 +34,12 @@ describe("LeaseProcessPool", () => {
 
     const draftProposal$ = glm.market.collectDraftOfferProposals({
       demandSpecification,
+      pricing: {
+        model: "linear",
+        maxStartPrice: 0.5,
+        maxCpuPerHourPrice: 1.0,
+        maxEnvPerHourPrice: 0.5,
+      },
     });
 
     draftProposalSub = proposalPool.readFrom(draftProposal$);

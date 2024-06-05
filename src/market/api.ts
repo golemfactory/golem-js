@@ -35,6 +35,9 @@ export type MarketEvents = {
 
   offerProposalRejectedByFilter: (offerProposal: OfferProposal, reason?: string) => void;
 
+  /** Emitted when proposal price does not meet user criteria */
+  offerProposalRejectedByPriceFilter: (offerProposal: OfferProposal, reason?: string) => void;
+
   agreementApproved: (event: AgreementApproved) => void;
   agreementRejected: (event: AgreementRejectedEvent) => void;
   agreementTerminated: (event: AgreementTerminatedEvent) => void;
