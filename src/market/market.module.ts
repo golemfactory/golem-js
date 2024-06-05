@@ -356,9 +356,10 @@ export class MarketModuleImpl implements MarketModule {
   }
 
   collectMarketProposalEvents(demand: Demand): Observable<MarketProposalEvent> {
-    return this.deps.marketApi
-      .collectMarketProposalEvents(demand)
-      .pipe(tap((event) => this.logger.debug("Received demand offer event from yagna", { event })));
+    return this.deps.marketApi.collectMarketProposalEvents(demand).pipe(
+      tap((event) => this.logger.debug("Received demand offer event from yagna", { event })),
+      tap((event) => this.emitMarketProposalEvents(event)),
+    );
   }
 
   collectAllOfferProposals(demand: Demand): Observable<OfferProposal> {
@@ -431,8 +432,6 @@ export class MarketModuleImpl implements MarketModule {
     return this.publishAndRefreshDemand(options.demandSpecification).pipe(
       // For each fresh demand, start to watch the related market conversation events
       switchMap((freshDemand) => this.collectMarketProposalEvents(freshDemand)),
-      // Notify of proposals event
-      tap((event) => this.emitMarketProposalEvents(event)),
       // Select only events for proposal received
       filter((event) => event.type === "ProposalReceived"),
       // Convert event to proposal
@@ -460,7 +459,6 @@ export class MarketModuleImpl implements MarketModule {
   }
 
   private emitMarketProposalEvents(event: MarketProposalEvent) {
-    this.logger.debug("Received offer proposal from market", { event });
     const { type } = event;
     switch (type) {
       case "ProposalReceived":

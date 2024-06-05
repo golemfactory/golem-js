@@ -132,12 +132,17 @@ export class DraftOfferProposalPool {
           // Try to get one
           proposal = this.selectProposal([...this.available]);
 
-          // Validate
-          if (!this.validateProposal(proposal)) {
-            // Drop if not valid
-            this.removeFromAvailable(proposal);
-            // Keep searching
-            proposal = null;
+          if (proposal) {
+            // Validate
+            if (!this.validateProposal(proposal)) {
+              // Drop if not valid
+              this.removeFromAvailable(proposal);
+              // Keep searching
+              proposal = null;
+            }
+          }
+          // if not found or not valid wait a while for next try
+          if (!proposal) {
             await sleep(1);
           }
         }
