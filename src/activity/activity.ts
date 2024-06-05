@@ -2,7 +2,7 @@ import { Logger } from "../shared/utils";
 import { Agreement, ProviderInfo } from "../market/agreement";
 import { EventEmitter } from "eventemitter3";
 import { ExecutionOptions, ExeScriptExecutor } from "./exe-script-executor";
-import { IActivityApi } from "./types";
+import { IActivityApi } from "./api";
 
 /** @deprecated */
 export interface ActivityEvents {

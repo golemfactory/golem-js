@@ -9,7 +9,7 @@ import { Result, StreamingBatchEvent } from "./results";
 import sleep from "../shared/utils/sleep";
 import { Activity } from "./activity";
 import { getMessageFromApiError } from "../shared/utils/apiErrorMessage";
-import { IActivityApi } from "./types";
+import { IActivityApi } from "./api";
 
 export interface ExeScriptRequest {
   text: string;

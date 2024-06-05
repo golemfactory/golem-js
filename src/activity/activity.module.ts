@@ -1,12 +1,9 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
 import { Agreement } from "../market/agreement";
-import { Activity, IActivityApi } from "./index";
+import { Activity, IActivityApi, ActivityEvents } from "./index";
 import { defaultLogger } from "../shared/utils";
 import { GolemServices } from "../golem-network/golem-network";
 import { WorkContext, WorkOptions } from "./work";
-
-export interface ActivityEvents {}
 
 export interface ActivityModule {
   events: EventEmitter<ActivityEvents>;
@@ -23,7 +20,13 @@ export interface ActivityModule {
    *
    * @return The activity that was permanently terminated
    */
-  destroyActivity(activity: Activity, reason?: string): Promise<Activity>;
+  destroyActivity(activity: Activity): Promise<Activity>;
+
+  /**
+   * Fetches the latest state of the activity. It's recommended to use this method
+   * before performing any actions on the activity to make sure it's in the correct state
+   */
+  fetchActivity(activityId: Activity["id"]): Promise<Activity>;
 
   /**
    * Create a work context "within" the activity so that you can perform commands on the rented resources
@@ -91,39 +94,67 @@ export class ActivityModuleImpl implements ActivityModule {
   }
 
   async createActivity(agreement: Agreement): Promise<Activity> {
-    const activity = await this.activityApi.createActivity(agreement);
-
-    this.logger.info("Created activity", {
-      activityId: activity.id,
+    this.logger.info("Creating activity", {
       agreementId: agreement.id,
       provider: agreement.getProviderInfo(),
     });
-
-    return activity;
+    try {
+      const activity = await this.activityApi.createActivity(agreement);
+      this.events.emit("activityCreated", activity);
+      return activity;
+    } catch (error) {
+      this.events.emit("errorCreatingActivity", error);
+      throw error;
+    }
   }
 
-  async destroyActivity(activity: Activity, reason: string): Promise<Activity> {
-    const updated = await this.activityApi.destroyActivity(activity);
-
-    this.logger.info("Destroyed activity", {
-      activityId: updated.id,
-      agreementId: updated.agreement.id,
-      provider: updated.agreement.getProviderInfo(),
+  async destroyActivity(activity: Activity): Promise<Activity> {
+    this.logger.info("Destroying activity", {
+      activityId: activity.id,
+      agreementId: activity.agreement.id,
+      provider: activity.agreement.getProviderInfo(),
     });
+    try {
+      const updated = await this.activityApi.destroyActivity(activity);
+      this.events.emit("activityDestroyed", updated);
+      return updated;
+    } catch (error) {
+      this.events.emit("errorDestroyingActivity", activity, error);
+      throw error;
+    }
+  }
 
-    return updated;
+  async fetchActivity(activityId: Activity["id"]): Promise<Activity> {
+    this.logger.info("Fetching activity state", { activityId });
+    try {
+      const upToDateActivity = await this.activityApi.getActivity(activityId);
+      //TODO: ?
+      // if (upToDateActivity.getState() !== activity.getState()) {
+      //   this.events.emit("activityStateChanged", upToDateActivity, upToDateActivity.getState());
+      // }
+      return upToDateActivity;
+    } catch (error) {
+      this.events.emit("errorFetchingActivityState", activityId, error);
+      throw error;
+    }
   }
 
   async createWorkContext(activity: Activity, options?: WorkOptions): Promise<WorkContext> {
-    this.logger.debug("Creating work context for activity", { activityId: activity.id });
+    this.logger.info("Creating work context for activity", { activityId: activity.id });
     const ctx = new WorkContext(activity, this.services.activityApi, this.services.networkApi, {
       yagnaOptions: this.services.yagna.yagnaOptions,
+      logger: this.logger.child("work-context"),
       ...options,
     });
 
     this.logger.debug("Initializing the exe-unit for activity", { activityId: activity.id });
-    await ctx.before();
-
-    return ctx;
+    try {
+      await ctx.before();
+      this.events.emit("activityInitialized", activity);
+      return ctx;
+    } catch (error) {
+      this.events.emit("errorInitializingActivity", activity, error);
+      throw error;
+    }
   }
 }
