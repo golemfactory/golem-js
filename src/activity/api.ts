@@ -14,8 +14,8 @@ export type ActivityEvents = {
   activityInitialized: (activity: Activity) => void;
   errorInitializingActivity: (activity: Activity, error: Error) => void;
 
-  activityStateChanged: (activity: Activity, state: ActivityStateEnum) => void;
-  errorFetchingActivityState: (activityId: Activity["id"], error: Error) => void;
+  activityStateChanged: (activity: Activity, previousState: ActivityStateEnum) => void;
+  errorRefreshingActivity: (activity: Activity, error: Error) => void;
 
   scriptExecuted: (activity: Activity, script: ExeScriptRequest, result: string) => void;
   errorExecutingScript: (activity: Activity, script: ExeScriptRequest, error: Error) => void;

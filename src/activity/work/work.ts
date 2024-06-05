@@ -87,7 +87,7 @@ export class WorkContext {
 
   private async fetchState(): Promise<ActivityStateEnum> {
     return this.activityModule
-      .fetchActivity(this.activity.id)
+      .refreshActivity(this.activity)
       .then((activity) => activity.getState())
       .catch((err) => {
         this.logger.error("Failed to read activity state", err);

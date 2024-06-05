@@ -27,9 +27,15 @@ export interface ActivityModule {
 
   /**
    * Fetches the latest state of the activity. It's recommended to use this method
-   * before performing any actions on the activity to make sure it's in the correct state
+   * before performing any actions on the activity to make sure it's in the correct state.
+   * If the fetched activity's state is different from the one you have, an event will be emitted.
    */
-  fetchActivity(activityId: Activity["id"]): Promise<Activity>;
+  refreshActivity(staleActivity: Activity): Promise<Activity>;
+
+  /**
+   * Fetches the activity by its ID from yagna. If the activity doesn't exist, an error will be thrown.
+   */
+  findActivityById(activityId: string): Promise<Activity>;
 
   /**
    * Create a work context "within" the activity so that you can perform commands on the rented resources
@@ -191,16 +197,28 @@ export class ActivityModuleImpl implements ActivityModule {
     }
   }
 
-  async fetchActivity(activityId: Activity["id"]): Promise<Activity> {
-    this.logger.info("Fetching activity state", { activityId });
+  async refreshActivity(staleActivity: Activity): Promise<Activity> {
+    this.logger.info("Fetching latest activity state", { activityId: staleActivity.id });
     try {
-      const upToDateActivity = await this.activityApi.getActivity(activityId);
-      this.events.emit("activityStateChanged", upToDateActivity, upToDateActivity.getState());
-      return upToDateActivity;
+      const freshActivity = await this.activityApi.getActivity(staleActivity.id);
+      if (freshActivity.getState() !== staleActivity.getState()) {
+        this.logger.debug("Activity state changed", {
+          activityId: staleActivity.id,
+          previousState: staleActivity.getState(),
+          newState: freshActivity.getState(),
+        });
+        this.events.emit("activityStateChanged", freshActivity, staleActivity.getState());
+      }
+      return freshActivity;
     } catch (error) {
-      this.events.emit("errorFetchingActivityState", activityId, error);
+      this.events.emit("errorRefreshingActivity", staleActivity, error);
       throw error;
     }
+  }
+
+  async findActivityById(activityId: string): Promise<Activity> {
+    this.logger.info("Fetching activity by ID", { activityId });
+    return await this.activityApi.getActivity(activityId);
   }
 
   async createWorkContext(activity: Activity, options?: WorkOptions): Promise<WorkContext> {

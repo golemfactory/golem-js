@@ -48,7 +48,7 @@ describe("Work Context", () => {
     });
     when(mockActivityModule.createScriptExecutor(_, _)).thenReturn(instance(mockExecutor));
     when(mockActivity.getState()).thenReturn(ActivityStateEnum.Ready);
-    when(mockActivityModule.fetchActivity(_)).thenResolve(instance(mockActivity));
+    when(mockActivityModule.refreshActivity(_)).thenResolve(instance(mockActivity));
     when(mockActivity.agreement).thenReturn(instance(mockAgreement));
     when(mockExecutor.activity).thenReturn(instance(mockActivity));
   });
