@@ -14,6 +14,13 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
   try {
     await glm.connect();
 
+    const pricing = {
+      model: "linear",
+      maxStartPrice: 1,
+      maxCpuPerHourPrice: 1,
+      maxEnvPerHourPrice: 1,
+    };
+
     const order: MarketOrderSpec = {
       demand: {
         workload: {
@@ -23,12 +30,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
       },
       market: {
         rentHours: 0.5,
-        pricing: {
-          model: "linear",
-          maxStartPrice: 1,
-          maxCpuPerHourPrice: 1,
-          maxEnvPerHourPrice: 1,
-        },
+        pricing,
       },
     };
 
@@ -43,6 +45,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
     const demandSpecification = await glm.market.buildDemandDetails(order.demand, allocation);
     const draftProposal$ = glm.market.collectDraftOfferProposals({
       demandSpecification,
+      pricing,
     });
     const proposalSubscription = proposalPool.readFrom(draftProposal$);
     const draftProposal = await proposalPool.acquire();
