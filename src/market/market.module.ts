@@ -422,6 +422,7 @@ export class MarketModuleImpl implements MarketModule {
       map((event) => (event as OfferProposalReceivedEvent).proposal),
       // We are interested only in Initial and Draft proposals, that are valid
       filter((proposal) => (proposal.isInitial() || proposal.isDraft()) && proposal.isValid()),
+      // If they are accepted by the pricing criteria
       filter((proposal) => this.filterProposalsByPricingOptions(options.pricing, proposal)),
       // If they are accepted by the user filter
       filter((proposal) => (options?.filter ? this.filterProposalsByUserFilter(options.filter, proposal) : true)),
