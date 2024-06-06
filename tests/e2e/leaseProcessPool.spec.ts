@@ -5,7 +5,7 @@ describe("LeaseProcessPool", () => {
   const glm = new GolemNetwork();
   let proposalPool: DraftOfferProposalPool;
   let allocation: Allocation;
-  let proposalSubscription: Subscription;
+  let draftProposalSub: Subscription;
 
   beforeAll(async () => {
     await glm.connect();
@@ -31,15 +31,16 @@ describe("LeaseProcessPool", () => {
       },
       allocation,
     );
-    proposalSubscription = proposalPool.readFrom(
-      glm.market.startCollectingProposals({
-        demandSpecification,
-      }),
-    );
+
+    const draftProposal$ = glm.market.collectDraftOfferProposals({
+      demandSpecification,
+    });
+
+    draftProposalSub = proposalPool.readFrom(draftProposal$);
   });
 
   afterEach(async () => {
-    proposalSubscription.unsubscribe();
+    draftProposalSub.unsubscribe();
     await proposalPool.clear();
   });
 

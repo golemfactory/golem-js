@@ -1,9 +1,10 @@
 import { MarketApi } from "ya-ts-client";
-import { OfferProposal, ProposalProperties } from "./offer-proposal";
-import { Demand } from "./demand";
+import { OfferProposal } from "./offer-proposal";
+import { Demand } from "../demand";
 import { instance, mock, reset, when } from "@johanblumenberg/ts-mockito";
-import { Allocation } from "../payment";
-import { GolemMarketError, MarketErrorCode } from "./error";
+import { Allocation } from "../../payment";
+import { GolemMarketError, MarketErrorCode } from "../error";
+import { ProposalProperties } from "./proposal-properties";
 
 const allocationMock = mock(Allocation);
 const demandMock = mock(Demand);
@@ -81,7 +82,7 @@ describe("Proposal", () => {
         }),
       ).toThrow(
         new GolemMarketError(
-          "Broken proposal: the `golem.com.usage.vector` does not contain price information",
+          "Broken proposal: the `golem.com.usage.vector` does not contain valid information about structure of the usage counters vector",
           MarketErrorCode.InvalidProposal,
         ),
       );
@@ -94,7 +95,7 @@ describe("Proposal", () => {
         }),
       ).toThrow(
         new GolemMarketError(
-          "Broken proposal: the `golem.com.usage.vector` does not contain price information",
+          "Broken proposal: the `golem.com.usage.vector` does not contain valid information about structure of the usage counters vector",
           MarketErrorCode.InvalidProposal,
         ),
       );

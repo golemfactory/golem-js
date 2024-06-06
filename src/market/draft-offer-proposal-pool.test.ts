@@ -75,6 +75,37 @@ describe("Draft Offer Proposal Pool", () => {
 
         expect(a).not.toBe(b);
       });
+
+      it("ascquire a proposal using proposalSelector", async () => {
+        when(mockProposal.provider).thenReturn({
+          name: "provider-1",
+          walletAddress: "1",
+          id: "1",
+        });
+        when(secondMockProposal.provider).thenReturn({
+          name: "provider-2",
+          walletAddress: "2",
+          id: "2",
+        });
+        const proposal1 = instance(mockProposal);
+        const proposal2 = instance(secondMockProposal);
+        const scores = {
+          "provider-2": 100,
+          "provider-1": 50,
+        };
+        const bestProviderSelector = (scores: { [providerName: string]: number }) => (proposals: OfferProposal[]) => {
+          proposals.sort((a, b) => ((scores?.[a.provider.name] || 0) >= (scores?.[b.provider.name] || 0) ? -1 : 1));
+          return proposals[0];
+        };
+        const pool = new DraftOfferProposalPool({ selectProposal: bestProviderSelector(scores) });
+
+        pool.add(proposal1);
+        pool.add(proposal2);
+
+        const a = await pool.acquire();
+
+        expect(a).toBe(proposal2);
+      });
     });
   });
 

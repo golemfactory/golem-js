@@ -2,12 +2,12 @@ import { DemandBodyBuilder } from "../demand-body-builder";
 import { IDemandDirector } from "../../market.module";
 import { PaymentDemandDirectorConfig } from "./payment-demand-director-config";
 import { Allocation } from "../../../payment";
-import { MarketApi } from "../../api";
+import { IMarketApi } from "../../api";
 
 export class PaymentDemandDirector implements IDemandDirector {
   constructor(
     private allocation: Allocation,
-    private marketApiAdapter: MarketApi,
+    private marketApiAdapter: IMarketApi,
     private config: PaymentDemandDirectorConfig = new PaymentDemandDirectorConfig(),
   ) {}
 

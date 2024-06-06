@@ -1,17 +1,15 @@
-import { Observable, Subscription } from "rxjs";
+import { Subject } from "rxjs";
 import { ActivityModuleImpl } from "../activity";
-import { LeaseProcess, LeaseProcessPool } from "../lease-process";
+import { LeaseModuleImpl, LeaseProcess, LeaseProcessPool } from "../lease-process";
 import { DraftOfferProposalPool, MarketModuleImpl, OfferProposal } from "../market";
-import { NetworkModuleImpl } from "../network/network.module";
+import { NetworkModuleImpl } from "../network";
 import { Allocation, PaymentModuleImpl } from "../payment";
 import { YagnaApi } from "../shared/utils";
 import { MarketApiAdapter, PaymentApiAdapter } from "../shared/yagna";
 import { ActivityApiAdapter } from "../shared/yagna/adapters/activity-api-adapter";
-import { AgreementApiAdapter } from "../shared/yagna/adapters/agreement-api-adapter";
 import { GolemNetwork, MarketOrderSpec } from "./golem-network";
-import { _, instance, mock, reset, when, verify } from "@johanblumenberg/ts-mockito";
+import { _, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
 import { GftpStorageProvider } from "../shared/storage";
-import { LeaseModuleImpl } from "../lease-process/lease.module";
 
 const order: MarketOrderSpec = Object.freeze({
   demand: {
@@ -35,7 +33,6 @@ const mockLease = mock(LeaseModuleImpl);
 const mockYagna = mock(YagnaApi);
 const mockPaymentApi = mock(PaymentApiAdapter);
 const mockActivityApi = mock(ActivityApiAdapter);
-const mockAgreementApi = mock(AgreementApiAdapter);
 const mockMarketApi = mock(MarketApiAdapter);
 const mockStorageProvider = mock(GftpStorageProvider);
 
@@ -48,9 +45,9 @@ afterEach(() => {
   reset(mockLease);
   reset(mockPaymentApi);
   reset(mockActivityApi);
-  reset(mockAgreementApi);
   reset(mockMarketApi);
   reset(mockStorageProvider);
+
   jest.clearAllMocks();
 });
 function getGolemNetwork() {
@@ -64,67 +61,71 @@ function getGolemNetwork() {
       lease: instance(mockLease),
       paymentApi: instance(mockPaymentApi),
       activityApi: instance(mockActivityApi),
-      agreementApi: instance(mockAgreementApi),
       marketApi: instance(mockMarketApi),
       storageProvider: instance(mockStorageProvider),
     },
   });
 }
 
-function mockStartCollectingProposals() {
-  const mockSubscription = { unsubscribe: jest.fn() as Subscription["unsubscribe"] } as Subscription;
-  const mockObservable = {
-    subscribe: jest.fn().mockReturnValue(mockSubscription) as Observable<OfferProposal[]>["subscribe"],
-  } as Observable<OfferProposal[]>;
-  when(mockMarket.startCollectingProposals(_)).thenReturn(mockObservable);
-  return mockSubscription;
-}
-function mockPaymentCreateAllocation() {
-  const mockAllocation = {} as Allocation;
-  when(mockPayment.createAllocation(_)).thenReturn(Promise.resolve(mockAllocation));
-  return mockAllocation;
-}
-
 describe("Golem Network", () => {
   describe("oneOf()", () => {
     it("should create a lease and clean it up when disconnected", async () => {
-      const mockLeaseProcess = {
-        finalize: jest.fn().mockImplementation(() => Promise.resolve()) as LeaseProcess["finalize"],
-      } as LeaseProcess;
-      when(mockLease.createLease(_, _, _)).thenReturn(mockLeaseProcess);
-      const mockSubscription = mockStartCollectingProposals();
-      const mockAllocation = mockPaymentCreateAllocation();
+      const mockLeaseProcess = mock(LeaseProcess);
+      const testProcess = instance(mockLeaseProcess);
+
+      when(mockLeaseProcess.finalize()).thenResolve();
+      when(mockLease.createLease(_, _, _)).thenReturn(testProcess);
+
+      const draftProposal$ = new Subject<OfferProposal>();
+      when(mockMarket.collectDraftOfferProposals(_)).thenReturn(draftProposal$);
+
+      const allocation = instance(mock(Allocation));
+      when(mockPayment.createAllocation(_)).thenResolve(allocation);
+
       jest.spyOn(DraftOfferProposalPool.prototype, "acquire").mockResolvedValue({} as OfferProposal);
 
       const glm = getGolemNetwork();
       await glm.connect();
+
       const lease = await glm.oneOf(order);
-      expect(lease === mockLeaseProcess).toBe(true);
+
+      expect(lease).toBe(testProcess);
+
       await glm.disconnect();
-      expect(mockLeaseProcess.finalize).toHaveBeenCalled();
-      expect(mockSubscription.unsubscribe).toHaveBeenCalled();
-      verify(mockPayment.releaseAllocation(mockAllocation)).once();
+
+      verify(mockLeaseProcess.finalize()).once();
+      verify(mockPayment.releaseAllocation(allocation)).once();
     });
   });
+
   describe("manyOf()", () => {
     it("should create a pool and clean it up when disconnected", async () => {
-      const mockSubscription = mockStartCollectingProposals();
-      const mockAllocation = mockPaymentCreateAllocation();
+      const allocation = instance(mock(Allocation));
+      when(mockPayment.createAllocation(_)).thenResolve(allocation);
+
+      const draftProposal$ = new Subject<OfferProposal>();
+      when(mockMarket.collectDraftOfferProposals(_)).thenReturn(draftProposal$);
+
       const mockLeasePool = mock(LeaseProcessPool);
       when(mockLeasePool.drainAndClear()).thenResolve();
-      when(mockLease.createLeaseProcessPool(_, _, _)).thenReturn(instance(mockLeasePool));
+      const leasePool = instance(mockLeasePool);
+      when(mockLease.createLeaseProcessPool(_, _, _)).thenReturn(leasePool);
 
       const glm = getGolemNetwork();
+
       await glm.connect();
-      const leasePool = await glm.manyOf({
+
+      const pool = await glm.manyOf({
         concurrency: 3,
         order,
       });
-      expect(leasePool === instance(mockLeasePool)).toBe(true);
+
+      expect(pool).toBe(leasePool);
+
       await glm.disconnect();
+
       verify(mockLeasePool.drainAndClear()).once();
-      expect(mockSubscription.unsubscribe).toHaveBeenCalled();
-      verify(mockPayment.releaseAllocation(mockAllocation)).once();
+      verify(mockPayment.releaseAllocation(allocation)).once();
     });
   });
 });

@@ -1,8 +1,7 @@
-import { ProposalFilter, OfferProposal } from "../../market";
-import { AgreementCandidate, AgreementSelector } from "../../market/agreement";
+import { ProposalFilter, OfferProposal, ProposalSelector } from "../../market";
 import { GolemReputationError } from "./error";
 import {
-  AgreementSelectorOptions,
+  ProposalSelectorOptions,
   ProposalFilterOptions,
   ReputationConfig,
   ReputationData,
@@ -68,7 +67,7 @@ export const REPUTATION_PRESETS: ReputationPresets = {
         cpuSingleThreadScore: 1,
       },
     },
-    agreementSelector: {
+    proposalSelector: {
       weights: {
         cpuSingleThreadScore: 1,
       },
@@ -86,7 +85,7 @@ export const REPUTATION_PRESETS: ReputationPresets = {
         cpuMultiThreadScore: 0.2,
       },
     },
-    agreementSelector: {
+    proposalSelector: {
       weights: {
         uptime: 0.5,
         cpuMultiThreadScore: 0.5,
@@ -174,7 +173,7 @@ export class ReputationSystem {
    * Default options used when creating agreement selector.
    * @private
    */
-  private defaultAgreementSelectorOptions: AgreementSelectorOptions;
+  private defaultAgreementSelectorOptions: ProposalSelectorOptions;
 
   /**
    * Create a new reputation system client and fetch the reputation data.
@@ -196,7 +195,6 @@ export class ReputationSystem {
     };
     this.defaultAgreementSelectorOptions = {
       topPoolSize: DEFAULT_AGREEMENT_TOP_POOL_SIZE,
-      agreementBonus: 0,
     };
 
     if (this.config?.preset) {
@@ -218,8 +216,8 @@ export class ReputationSystem {
       this.setProposalWeights(presetConfig.proposalFilter.weights);
     }
 
-    if (presetConfig.agreementSelector?.weights) {
-      this.setAgreementWeights(presetConfig.agreementSelector.weights);
+    if (presetConfig.proposalSelector?.weights) {
+      this.setAgreementWeights(presetConfig.proposalSelector.weights);
     }
 
     this.defaultProposalFilterOptions = {
@@ -228,9 +226,10 @@ export class ReputationSystem {
     };
 
     this.defaultAgreementSelectorOptions = {
-      topPoolSize: presetConfig.agreementSelector?.topPoolSize ?? this.defaultAgreementSelectorOptions.topPoolSize,
-      agreementBonus:
-        presetConfig.agreementSelector?.agreementBonus ?? this.defaultAgreementSelectorOptions.agreementBonus,
+      topPoolSize: presetConfig.proposalSelector?.topPoolSize ?? this.defaultAgreementSelectorOptions.topPoolSize,
+      // TODO: to be discussed with the reputation team
+      // agreementBonus:
+      //   presetConfig.proposalSelector?.agreementBonus ?? this.defaultAgreementSelectorOptions.agreementBonus,
     };
   }
 
@@ -396,22 +395,23 @@ export class ReputationSystem {
    *
    * @param opts
    */
-  agreementSelector(opts?: AgreementSelectorOptions): AgreementSelector {
+  agreementSelector(opts?: ProposalSelectorOptions): ProposalSelector {
     const poolSize =
       opts?.topPoolSize ?? this.defaultAgreementSelectorOptions.topPoolSize ?? DEFAULT_AGREEMENT_TOP_POOL_SIZE;
 
-    return async (candidates): Promise<AgreementCandidate> => {
+    return (proposals): OfferProposal => {
       // Cache scores for providers.
       const scoresMap = new Map<string, number>();
 
-      candidates.forEach((c) => {
-        const data = this.providersScoreMap.get(c.proposal.provider.id)?.scores ?? {};
-        let score = this.calculateScore(data, this.agreementWeights);
-        if (c.agreement) score += opts?.agreementBonus ?? this.defaultAgreementSelectorOptions.agreementBonus ?? 0;
-        scoresMap.set(c.proposal.provider.id, score);
+      proposals.forEach((c) => {
+        const data = this.providersScoreMap.get(c.provider.id)?.scores ?? {};
+        const score = this.calculateScore(data, this.agreementWeights);
+        // TODO: to be discussed with the reputation team
+        // if (c.agreement) score += opts?.agreementBonus ?? this.defaultAgreementSelectorOptions.agreementBonus ?? 0;
+        scoresMap.set(c.provider.id, score);
       });
 
-      const array = this.sortCandidatesByScore(candidates, scoresMap);
+      const array = this.sortCandidatesByScore(proposals, scoresMap);
 
       const topPool = Math.min(poolSize, array.length);
       const index = topPool === 1 ? 0 : Math.floor(Math.random() * topPool);
@@ -456,12 +456,12 @@ export class ReputationSystem {
     });
   }
 
-  sortCandidatesByScore(candidates: AgreementCandidate[], scoresMap: Map<string, number>): AgreementCandidate[] {
-    const array = Array.from(candidates);
+  sortCandidatesByScore(proposals: OfferProposal[], scoresMap: Map<string, number>): OfferProposal[] {
+    const array = Array.from(proposals);
 
     array.sort((a, b) => {
-      const aId = a.proposal.provider.id;
-      const bId = b.proposal.provider.id;
+      const aId = a.provider.id;
+      const bId = b.provider.id;
 
       // Get the score values.
       const aScoreValue = scoresMap.get(aId) ?? 0;

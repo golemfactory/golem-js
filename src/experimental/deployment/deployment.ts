@@ -8,8 +8,7 @@ import { DraftOfferProposalPool, MarketModule } from "../../market";
 import { PaymentModule } from "../../payment";
 import { CreateLeaseProcessPoolOptions } from "./builder";
 import { Subscription } from "rxjs";
-import { LeaseProcessPool } from "../../lease-process";
-import { LeaseModule } from "../../lease-process/lease.module";
+import { LeaseModule, LeaseProcessPool } from "../../lease-process";
 
 export enum DeploymentState {
   INITIAL = "INITIAL",
@@ -152,18 +151,18 @@ export class Deployment {
         : undefined;
 
       const demandSpecification = await this.modules.market.buildDemandDetails(pool.options.demand, allocation);
-      const proposalPool = new DraftOfferProposalPool();
+      const proposalPool = new DraftOfferProposalPool({
+        logger: this.logger,
+        validateProposal: pool.options.market.proposalFilter,
+        selectProposal: pool.options.market.proposalSelector,
+      });
 
-      const proposalSubscription = this.modules.market
-        .startCollectingProposals({
-          demandSpecification,
-          filter: pool.options.market.proposalFilter,
-          bufferSize: 10,
-        })
-        .subscribe({
-          next: (proposals) => proposals.forEach((proposal) => proposalPool.add(proposal)),
-          error: (e) => this.logger.error("Error while collecting proposals", e),
-        });
+      const draftProposal$ = this.modules.market.collectDraftOfferProposals({
+        demandSpecification,
+        filter: pool.options.market.proposalFilter,
+      });
+
+      const proposalSubscription = proposalPool.readFrom(draftProposal$);
 
       const leaseProcessPool = this.modules.lease.createLeaseProcessPool(proposalPool, allocation, {
         replicas: pool.options.deployment?.replicas,
@@ -171,6 +170,9 @@ export class Deployment {
         leaseProcessOptions: {
           activity: pool.options?.activity,
           payment: pool.options?.payment,
+        },
+        agreementOptions: {
+          expirationSec: pool.options.market.rentHours * 3600,
         },
       });
       this.pools.set(pool.name, {

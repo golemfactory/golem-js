@@ -1,6 +1,5 @@
 import { DebitNote, IDebitNoteRepository } from "../../../payment/debit_note";
 import { MarketApi, PaymentApi } from "ya-ts-client";
-import { ProposalProperties } from "../../../market/offer-proposal";
 import { getMessageFromApiError } from "../../utils/apiErrorMessage";
 import { GolemPaymentError, PaymentErrorCode } from "../../../payment";
 import { GolemMarketError, MarketErrorCode } from "../../../market";
@@ -41,7 +40,7 @@ export class DebitNoteRepository implements IDebitNoteRepository {
     const providerInfo = {
       id: model.issuerId,
       walletAddress: model.payeeAddr,
-      name: (agreement.offer.properties as ProposalProperties)["golem.node.id.name"],
+      name: agreement.offer.properties["golem.node.id.name"],
     };
 
     return new DebitNote(model, providerInfo);

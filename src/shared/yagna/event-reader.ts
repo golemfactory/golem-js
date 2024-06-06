@@ -1,7 +1,7 @@
 import { Logger } from "../utils";
 import { Subject } from "rxjs";
 import { EventDTO } from "ya-ts-client/dist/market-api";
-import { waitForCondition } from "../utils/waitForCondition";
+import { waitForCondition } from "../utils/wait";
 
 export type CancellablePoll<T> = {
   /** User defined name of the event stream for ease of debugging */
@@ -24,20 +24,25 @@ export type CancellablePoll<T> = {
   cancel: () => Promise<void>;
 };
 
-export class EventReaderFactory {
+type EventsFetcherWithCursor<T extends EventDTO> = (lastEventTimestamp: string) => Promise<T[]>;
+
+export class EventReader {
   public constructor(private readonly logger: Logger) {}
 
   public async pollToSubject<T>(generator: AsyncGenerator<T>, subject: Subject<T>) {
     for await (const value of generator) {
       subject.next(value);
     }
+
+    subject.complete();
   }
 
-  public createEventReader<T extends EventDTO>(
+  public createReader<T extends EventDTO>(
     eventType: string,
-    eventsFetcher: (lastEventTimestamp: string) => Promise<T[]>,
+    eventsFetcher: EventsFetcherWithCursor<T>,
   ): CancellablePoll<T> {
     let isBusy = false;
+    let isOnline = true;
     let keepReading = true;
     let lastTimestamp = new Date().toISOString();
 
@@ -46,7 +51,7 @@ export class EventReaderFactory {
     return {
       eventType,
       isBusy,
-      isOnline: true,
+      isOnline,
       pollValues: async function* () {
         while (keepReading) {
           try {
@@ -68,11 +73,11 @@ export class EventReaderFactory {
           }
         }
         logger.debug("Stopped reading events", { eventType });
-        this.isOnline = false;
+        isOnline = false;
       },
       cancel: async function () {
         keepReading = false;
-        await waitForCondition(() => !this.isBusy && !this.isOnline);
+        await waitForCondition(() => !isBusy && !isOnline);
         logger.debug("Cancelled reading the events", { eventType });
       },
     };

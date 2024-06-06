@@ -1,5 +1,5 @@
 import { instance, mock, reset, when } from "@johanblumenberg/ts-mockito";
-import { OfferProposal } from "./offer-proposal";
+import { OfferProposal } from "./proposal/offer-proposal";
 import {
   acceptAll,
   allowProvidersById,

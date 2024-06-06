@@ -2,7 +2,7 @@ import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
 import {
   Demand,
   DraftOfferProposalPool,
-  MarketApi,
+  IMarketApi,
   MarketModule,
   MarketModuleImpl,
   MarketOptions,
@@ -10,20 +10,24 @@ import {
 } from "../market";
 import { IPaymentApi, PaymentModule, PaymentModuleImpl, PaymentModuleOptions } from "../payment";
 import { ActivityModule, ActivityModuleImpl, IActivityApi, IFileServer } from "../activity";
-import { Network, NetworkModule, NetworkModuleImpl, NetworkOptions, INetworkApi } from "../network";
+import { INetworkApi, Network, NetworkModule, NetworkModuleImpl, NetworkOptions } from "../network";
 import { EventEmitter } from "eventemitter3";
-import { Concurrency, LeaseProcess, LeaseProcessOptions, LeaseProcessPool } from "../lease-process";
+import {
+  Concurrency,
+  LeaseModule,
+  LeaseModuleImpl,
+  LeaseProcess,
+  LeaseProcessOptions,
+  LeaseProcessPool,
+} from "../lease-process";
 import { DebitNoteRepository, InvoiceRepository, MarketApiAdapter, PaymentApiAdapter } from "../shared/yagna";
 import { ActivityApiAdapter } from "../shared/yagna/adapters/activity-api-adapter";
 import { ActivityRepository } from "../shared/yagna/repository/activity-repository";
 import { AgreementRepository } from "../shared/yagna/repository/agreement-repository";
-import { IAgreementApi } from "../market/agreement/agreement";
-import { AgreementApiAdapter } from "../shared/yagna/adapters/agreement-api-adapter";
 import { ProposalRepository } from "../shared/yagna/repository/proposal-repository";
 import { CacheService } from "../shared/cache/CacheService";
-import { IProposalRepository } from "../market/offer-proposal";
 import { DemandRepository } from "../shared/yagna/repository/demand-repository";
-import { BuildDemandOptions, IDemandRepository } from "../market/demand";
+import { BuildDemandOptions, IDemandRepository } from "../market/demand/demand";
 import { GftpServerAdapter } from "../shared/storage/GftpServerAdapter";
 import {
   GftpStorageProvider,
@@ -33,7 +37,7 @@ import {
 } from "../shared/storage";
 import { DataTransferProtocol } from "../shared/types";
 import { NetworkApiAdapter } from "../shared/yagna/adapters/network-api-adapter";
-import { LeaseModule, LeaseModuleImpl } from "../lease-process/lease.module";
+import { IProposalRepository } from "../market/proposal";
 
 export interface GolemNetworkOptions {
   /**
@@ -111,8 +115,7 @@ export type GolemServices = {
   logger: Logger;
   paymentApi: IPaymentApi;
   activityApi: IActivityApi;
-  agreementApi: IAgreementApi;
-  marketApi: MarketApi;
+  marketApi: IMarketApi;
   networkApi: INetworkApi;
   proposalCache: CacheService<OfferProposal>;
   proposalRepository: IProposalRepository;
@@ -186,7 +189,7 @@ export class GolemNetwork {
       const proposalCache = new CacheService<OfferProposal>();
 
       const demandRepository = new DemandRepository(this.yagna.market, demandCache);
-      const proposalRepository = new ProposalRepository(this.yagna.market, proposalCache);
+      const proposalRepository = new ProposalRepository(this.yagna.market, this.yagna.identity, proposalCache);
       const agreementRepository = new AgreementRepository(this.yagna.market, demandRepository);
 
       this.services = {
@@ -212,10 +215,9 @@ export class GolemNetwork {
             this.yagna.activity.exec,
             new ActivityRepository(this.yagna.activity.state, agreementRepository),
           ),
-        agreementApi:
-          this.options.override?.agreementApi ||
-          new AgreementApiAdapter(this.yagna.appSessionId, this.yagna.market, agreementRepository, this.logger),
-        marketApi: this.options.override?.marketApi || new MarketApiAdapter(this.yagna, this.logger),
+        marketApi:
+          this.options.override?.marketApi ||
+          new MarketApiAdapter(this.yagna, agreementRepository, proposalRepository, demandRepository, this.logger),
         networkApi: this.options.override?.networkApi || new NetworkApiAdapter(this.yagna, this.logger),
         fileServer: this.options.override?.fileServer || new GftpServerAdapter(this.storageProvider),
       };
@@ -295,6 +297,8 @@ export class GolemNetwork {
   async oneOf(order: MarketOrderSpec): Promise<LeaseProcess> {
     const proposalPool = new DraftOfferProposalPool({
       logger: this.logger,
+      validateProposal: order.market.proposalFilter,
+      selectProposal: order.market.proposalSelector,
     });
 
     const budget = this.market.estimateBudget({ order, concurrency: 1 });
@@ -302,15 +306,19 @@ export class GolemNetwork {
       budget,
       expirationSec: order.market.rentHours * 60 * 60,
     });
+
     const demandSpecification = await this.market.buildDemandDetails(order.demand, allocation);
 
-    const proposal$ = this.market.startCollectingProposals({
+    const draftProposal$ = this.market.collectDraftOfferProposals({
       demandSpecification,
       filter: order.market.proposalFilter,
     });
-    const proposalSubscription = proposalPool.readFrom(proposal$);
 
-    const agreement = await this.market.signAgreementFromPool(proposalPool);
+    const proposalSubscription = proposalPool.readFrom(draftProposal$);
+
+    const agreement = await this.market.signAgreementFromPool(proposalPool, {
+      expirationSec: order.market.rentHours * 60 * 60,
+    });
 
     const networkNode = order.network
       ? await this.network.createNetworkNode(order.network, agreement.getProviderInfo().id)
@@ -380,6 +388,8 @@ export class GolemNetwork {
   public async manyOf({ concurrency, order }: ManyOfOptions): Promise<LeaseProcessPool> {
     const proposalPool = new DraftOfferProposalPool({
       logger: this.logger,
+      validateProposal: order.market.proposalFilter,
+      selectProposal: order.market.proposalSelector,
     });
 
     const budget = this.market.estimateBudget({ concurrency, order });
@@ -389,11 +399,11 @@ export class GolemNetwork {
     });
     const demandSpecification = await this.market.buildDemandDetails(order.demand, allocation);
 
-    const proposal$ = this.market.startCollectingProposals({
+    const draftProposal$ = this.market.collectDraftOfferProposals({
       demandSpecification,
       filter: order.market.proposalFilter,
     });
-    const subscription = proposalPool.readFrom(proposal$);
+    const subscription = proposalPool.readFrom(draftProposal$);
 
     const leaseProcessPool = this.lease.createLeaseProcessPool(proposalPool, allocation, {
       replicas: concurrency,
@@ -402,14 +412,20 @@ export class GolemNetwork {
         activity: order.activity,
         payment: order.payment,
       },
+      agreementOptions: {
+        expirationSec: order.market.rentHours * 60 * 60,
+      },
     });
-    this.cleanupTasks.push(() => subscription.unsubscribe());
+    this.cleanupTasks.push(() => {
+      subscription.unsubscribe();
+    });
     this.cleanupTasks.push(async () => {
       // First drain the pool (which will wait for all leases to be paid for)
       // and only then release the allocation
       await leaseProcessPool
         .drainAndClear()
         .catch((err) => this.logger.error("Error while draining lease process pool", err));
+
       await this.payment
         .releaseAllocation(allocation)
         .catch((err) => this.logger.error("Error while releasing allocation", err));

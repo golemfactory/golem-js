@@ -1,6 +1,5 @@
 import { IInvoiceRepository, Invoice } from "../../../payment/invoice";
 import { MarketApi, PaymentApi } from "ya-ts-client";
-import { ProposalProperties } from "../../../market/offer-proposal";
 import { getMessageFromApiError } from "../../utils/apiErrorMessage";
 import { GolemPaymentError, PaymentErrorCode } from "../../../payment";
 import { GolemMarketError, MarketErrorCode } from "../../../market";
@@ -40,7 +39,7 @@ export class InvoiceRepository implements IInvoiceRepository {
     const providerInfo = {
       id: model.issuerId,
       walletAddress: model.payeeAddr,
-      name: (agreement.offer.properties as ProposalProperties)["golem.node.id.name"],
+      name: agreement.offer.properties["golem.node.id.name"],
     };
 
     return new Invoice(model, providerInfo);
