@@ -385,6 +385,7 @@ describe("Market module", () => {
       const draftProposal$ = marketModule.collectDraftOfferProposals({
         demandSpecification: spec,
         proposalsBatchReleaseTimeoutMs: 1,
+        minProposalsBatchSize: 3,
         pricing: {
           model: "linear",
           maxStartPrice: 0.5,
@@ -414,7 +415,7 @@ describe("Market module", () => {
 
       const testSub = draftProposal$.subscribe();
 
-      await waitAndCall(() => testSub.unsubscribe(), 0.1);
+      await waitAndCall(() => testSub.unsubscribe(), 0.4);
 
       verify(mockMarketApiAdapter.counterProposal(initialProposal, spec)).once();
     });
