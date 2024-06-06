@@ -41,11 +41,10 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
       expirationSec: 60 * 60, // 60 minutes
     });
     const demandSpecification = await glm.market.buildDemandDetails(order.demand, allocation);
-    const proposal$ = glm.market.startCollectingProposals({
+    const draftProposal$ = glm.market.collectDraftOfferProposals({
       demandSpecification,
-      bufferSize: 15,
     });
-    const proposalSubscription = proposalPool.readFrom(proposal$);
+    const proposalSubscription = proposalPool.readFrom(draftProposal$);
     const draftProposal = await proposalPool.acquire();
 
     const agreement = await glm.market.proposeAgreement(draftProposal);

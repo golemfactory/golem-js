@@ -1,14 +1,14 @@
-import type { Agreement } from "../market/agreement/agreement";
+import type { Agreement, DraftOfferProposalPool, MarketModule } from "../market";
+import { GolemMarketError, MarketErrorCode } from "../market";
 import type { Logger } from "../shared/utils";
 import { createAbortSignalFromTimeout, runOnNextEventLoopIteration } from "../shared/utils";
-import type { DraftOfferProposalPool, MarketModule } from "../market";
-import { GolemMarketError, MarketErrorCode } from "../market";
 import { EventEmitter } from "eventemitter3";
 import type { RequireAtLeastOne } from "../shared/utils/types";
 import type { Allocation } from "../payment";
 import type { LeaseProcess, LeaseProcessOptions } from "./lease-process";
 import { Network, NetworkModule } from "../network";
 import { LeaseModule } from "./lease.module";
+import { AgreementOptions } from "../market/agreement/agreement";
 
 export interface LeaseProcessPoolDependencies {
   allocation: Allocation;
@@ -25,6 +25,7 @@ export interface LeaseProcessPoolOptions {
   replicas?: Concurrency;
   network?: Network;
   leaseProcessOptions?: LeaseProcessOptions;
+  agreementOptions?: AgreementOptions;
 }
 
 export interface LeaseProcessPoolEvents {
@@ -67,6 +68,7 @@ export class LeaseProcessPool {
   private readonly minPoolSize: number;
   private readonly maxPoolSize: number;
   private readonly leaseProcessOptions?: LeaseProcessOptions;
+  private readonly agreementOptions?: AgreementOptions;
 
   constructor(options: LeaseProcessPoolOptions & LeaseProcessPoolDependencies) {
     this.allocation = options.allocation;
@@ -76,6 +78,7 @@ export class LeaseProcessPool {
     this.networkModule = options.networkModule;
     this.network = options.network;
     this.leaseProcessOptions = options.leaseProcessOptions;
+    this.agreementOptions = options.agreementOptions;
 
     this.logger = options.logger;
 
@@ -100,7 +103,7 @@ export class LeaseProcessPool {
   private async createNewLeaseProcess() {
     this.logger.debug("Creating new lease process to add to pool");
     try {
-      const agreement = await this.marketModule.signAgreementFromPool(this.proposalPool);
+      const agreement = await this.marketModule.signAgreementFromPool(this.proposalPool, this.agreementOptions);
       const networkNode = this.network
         ? await this.networkModule.createNetworkNode(this.network, agreement.getProviderInfo().id)
         : undefined;

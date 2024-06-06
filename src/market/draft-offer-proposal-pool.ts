@@ -1,4 +1,4 @@
-import { OfferProposal } from "./offer-proposal";
+import { OfferProposal, ProposalFilter } from "./proposal/offer-proposal";
 import AsyncLock from "async-lock";
 import { EventEmitter } from "eventemitter3";
 import { GolemMarketError, MarketErrorCode } from "./error";
@@ -6,7 +6,6 @@ import { defaultLogger, Logger, sleep } from "../shared/utils";
 import { Observable, Subscription } from "rxjs";
 
 export type ProposalSelector = (proposals: OfferProposal[]) => OfferProposal;
-export type ProposalValidator = (proposal: OfferProposal) => boolean;
 
 export interface ProposalPoolOptions {
   /**
@@ -19,7 +18,7 @@ export interface ProposalPoolOptions {
    *
    * Proposals are validated before being handled to the caller of {@link DraftOfferProposalPool.acquire}
    */
-  validateProposal?: ProposalValidator;
+  validateProposal?: ProposalFilter;
 
   /**
    * Min number of proposals in pool so that it can be considered as ready to use
@@ -73,7 +72,7 @@ export class DraftOfferProposalPool {
   private readonly selectProposal: ProposalSelector = (proposals: OfferProposal[]) => proposals[0];
 
   /** {@link ProposalPoolOptions.validateProposal} */
-  private readonly validateProposal: ProposalValidator = (proposal: OfferProposal) => proposal !== undefined;
+  private readonly validateProposal: ProposalFilter = (proposal: OfferProposal) => proposal !== undefined;
 
   /**
    * The proposals that were not yet leased to anyone and are available for lease
@@ -112,7 +111,9 @@ export class DraftOfferProposalPool {
       this.logger.error("Cannot add a non-draft proposal to the pool", { proposalId: proposal.id });
       throw new GolemMarketError("Cannot add a non-draft proposal to the pool", MarketErrorCode.InvalidProposal);
     }
+
     this.available.add(proposal);
+
     this.events.emit("added", proposal);
   }
 
@@ -129,14 +130,19 @@ export class DraftOfferProposalPool {
 
         while (proposal === null) {
           // Try to get one
-          proposal = this.selectProposal([...this.available]);
+          proposal = this.available.size > 0 ? this.selectProposal([...this.available]) : null;
 
-          // Validate
-          if (!this.validateProposal(proposal)) {
-            // Drop if not valid
-            this.removeFromAvailable(proposal);
-            // Keep searching
-            proposal = null;
+          if (proposal) {
+            // Validate
+            if (!this.validateProposal(proposal)) {
+              // Drop if not valid
+              this.removeFromAvailable(proposal);
+              // Keep searching
+              proposal = null;
+            }
+          }
+          // if not found or not valid wait a while for next try
+          if (!proposal) {
             await sleep(1);
           }
         }
@@ -241,10 +247,10 @@ export class DraftOfferProposalPool {
     this.events.emit("removed", proposal);
   }
 
-  public readFrom(source: Observable<OfferProposal[]>): Subscription {
+  public readFrom(source: Observable<OfferProposal>): Subscription {
     return source.subscribe({
-      next: (proposalBatch) => proposalBatch.forEach((proposal) => this.add(proposal)),
-      error: (e) => this.logger.error("Error while collecting proposals", e),
+      next: (proposal) => this.add(proposal),
+      error: (err) => this.logger.error("Error while collecting proposals", err),
     });
   }
 }

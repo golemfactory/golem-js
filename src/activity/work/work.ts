@@ -223,19 +223,6 @@ export class WorkContext {
     return this.runOneCommand(run, runOptions);
   }
 
-  /** @deprecated Use {@link WorkContext.runAndStream} instead */
-  async spawn(commandLine: string, options?: Omit<CommandOptions, "capture">): Promise<RemoteProcess>;
-  /** @deprecated Use {@link WorkContext.runAndStream} instead */
-  async spawn(executable: string, args: string[], options?: CommandOptions): Promise<RemoteProcess>;
-  /** @deprecated Use {@link WorkContext.runAndStream} instead */
-  async spawn(exeOrCmd: string, argsOrOptions?: string[] | CommandOptions, options?: CommandOptions) {
-    if (Array.isArray(argsOrOptions)) {
-      return this.runAndStream(exeOrCmd, argsOrOptions, options);
-    } else {
-      return this.runAndStream(exeOrCmd, options);
-    }
-  }
-
   /**
    * Run an executable on provider and return {@link RemoteProcess} that will allow streaming
    *   that contain stdout and stderr as Readable

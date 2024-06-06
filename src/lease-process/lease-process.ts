@@ -1,7 +1,7 @@
 import { Agreement } from "../market/agreement/agreement";
 import { AgreementPaymentProcess, PaymentProcessOptions } from "../payment/agreement_payment_process";
 import { Logger } from "../shared/utils";
-import { waitForCondition } from "../shared/utils/waitForCondition";
+import { waitForCondition } from "../shared/utils/wait";
 import { ActivityModule, WorkContext } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { EventEmitter } from "eventemitter3";

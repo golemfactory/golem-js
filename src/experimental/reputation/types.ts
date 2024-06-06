@@ -96,7 +96,7 @@ export interface ProposalFilterOptions {
  * Options for the agreement selector.
  * @experimental
  */
-export interface AgreementSelectorOptions {
+export interface ProposalSelectorOptions {
   /**
    * The size of top provider pool used to pick a random one.
    *
@@ -105,13 +105,6 @@ export interface AgreementSelectorOptions {
    * Default is `DEFAULT_AGREEMENT_TOP_POOL_SIZE`.
    */
   topPoolSize?: number;
-
-  /**
-   * Add extra score to provider if it has an existing agreement.
-   *
-   * Default is 0.
-   */
-  agreementBonus?: number;
 }
 
 /**
@@ -135,7 +128,7 @@ export interface ReputationWeightsMixin {
  */
 export interface ReputationPreset {
   proposalFilter?: ProposalFilterOptions & ReputationWeightsMixin;
-  agreementSelector?: AgreementSelectorOptions & ReputationWeightsMixin;
+  proposalSelector?: ProposalSelectorOptions & ReputationWeightsMixin;
 }
 
 /**

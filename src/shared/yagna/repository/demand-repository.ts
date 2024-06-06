@@ -1,4 +1,4 @@
-import { Demand, IDemandRepository } from "../../../market/demand";
+import { Demand, IDemandRepository } from "../../../market/demand/demand";
 import { MarketApi } from "ya-ts-client";
 import { CacheService } from "../../cache/CacheService";
 

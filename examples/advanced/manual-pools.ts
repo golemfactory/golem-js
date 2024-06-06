@@ -45,11 +45,11 @@ const demandOptions = {
     const proposalPool = new DraftOfferProposalPool({ minCount: 1 });
     const demandSpecification = await glm.market.buildDemandDetails(demandOptions.demand, allocation);
 
-    const proposals$ = glm.market.startCollectingProposals({
+    const draftProposal$ = glm.market.collectDraftOfferProposals({
       demandSpecification,
     });
 
-    const proposalSubscription = proposalPool.readFrom(proposals$);
+    const proposalSubscription = proposalPool.readFrom(draftProposal$);
 
     /** How many providers you plan to engage simultaneously */
     const CONCURRENCY = 2;
