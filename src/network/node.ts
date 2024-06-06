@@ -8,6 +8,7 @@ export class NetworkNode {
     public readonly id: string,
     public readonly ip: string,
     public getNetworkInfo: () => NetworkInfo,
+    public yagnaBaseUri: string,
   ) {}
 
   /**
@@ -24,5 +25,11 @@ export class NetworkNode {
         },
       ],
     };
+  }
+
+  getWebsocketUri(port: number): string {
+    const url = new URL(this.yagnaBaseUri);
+    url.protocol = "ws";
+    return `${url.href}/net/${this.getNetworkInfo().id}/tcp/${this.ip}/${port}`;
   }
 }

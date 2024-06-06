@@ -35,11 +35,4 @@ export interface INetworkApi {
    * Returns the identifier of the requesor
    */
   getIdentity(): Promise<string>;
-
-  /**
-   * Retrieves the WebSocket URI for a specified network node and port.
-   * @param networkNode - The network node for which the WebSocket URI is retrieved.
-   * @param port - The port number for the WebSocket connection.
-   */
-  getWebsocketUri(networkNode: NetworkNode, port: number): string;
 }

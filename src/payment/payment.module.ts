@@ -1,12 +1,17 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { EventEmitter } from "eventemitter3";
-import { Allocation, DebitNote, Invoice, InvoiceProcessor, IPaymentApi } from "./index";
-
+import {
+  Allocation,
+  DebitNote,
+  Invoice,
+  InvoiceProcessor,
+  IPaymentApi,
+  CreateAllocationParams,
+  PaymentEvents,
+} from "./index";
 import { defaultLogger, YagnaApi } from "../shared/utils";
 import { Observable } from "rxjs";
 import { GolemServices } from "../golem-network/golem-network";
 import { PayerDetails } from "./PayerDetails";
-import { CreateAllocationParams } from "./types";
 import { AgreementPaymentProcess, PaymentProcessOptions } from "./agreement_payment_process";
 import { Agreement } from "../market";
 import * as EnvUtils from "../shared/utils/env";
@@ -32,10 +37,8 @@ export interface PaymentModuleOptions {
   token?: "glm" | "tglm";
 }
 
-export interface PaymentModuleEvents {}
-
 export interface PaymentModule {
-  events: EventEmitter<PaymentModuleEvents>;
+  events: EventEmitter<PaymentEvents>;
 
   observeDebitNotes(): Observable<DebitNote>;
 
@@ -72,7 +75,7 @@ export interface PaymentModule {
 const MAINNETS = Object.freeze(["mainnet", "polygon"]);
 
 export class PaymentModuleImpl implements PaymentModule {
-  events: EventEmitter<PaymentModuleEvents> = new EventEmitter<PaymentModuleEvents>();
+  events: EventEmitter<PaymentEvents> = new EventEmitter<PaymentEvents>();
 
   private readonly yagnaApi: YagnaApi;
 
@@ -97,6 +100,17 @@ export class PaymentModuleImpl implements PaymentModule {
     this.logger = deps.logger;
     this.yagnaApi = deps.yagna;
     this.paymentApi = deps.paymentApi;
+    this.startEmittingPaymentEvents();
+  }
+
+  private startEmittingPaymentEvents() {
+    this.paymentApi.receivedInvoices$.subscribe((invoice) => {
+      this.events.emit("invoiceReceived", invoice);
+    });
+
+    this.paymentApi.receivedDebitNotes$.subscribe((debitNote) => {
+      this.events.emit("debitNoteReceived", debitNote);
+    });
   }
 
   private getPaymentPlatform(): string {
@@ -122,40 +136,83 @@ export class PaymentModuleImpl implements PaymentModule {
 
     this.logger.info("Creating allocation", { params: params, payer });
 
-    return this.paymentApi.createAllocation({
-      budget: params.budget,
-      paymentPlatform: this.getPaymentPlatform(),
-      expirationSec: params.expirationSec,
-    });
+    try {
+      const allocation = await this.paymentApi.createAllocation({
+        budget: params.budget,
+        paymentPlatform: this.getPaymentPlatform(),
+        expirationSec: params.expirationSec,
+      });
+      this.events.emit("allocationCreated", allocation);
+      return allocation;
+    } catch (error) {
+      this.events.emit("errorCreatingAllocation", error);
+      throw error;
+    }
   }
 
-  releaseAllocation(allocation: Allocation): Promise<void> {
+  async releaseAllocation(allocation: Allocation): Promise<void> {
     this.logger.info("Releasing allocation", { id: allocation.id });
-    return this.paymentApi.releaseAllocation(allocation);
+    try {
+      await this.paymentApi.releaseAllocation(allocation);
+      this.events.emit("allocationReleased", allocation);
+    } catch (error) {
+      this.events.emit("errorReleasingAllocation", allocation, error);
+      throw error;
+    }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   amendAllocation(allocation: Allocation, _newOpts: CreateAllocationParams): Promise<Allocation> {
-    throw new Error("Method not implemented.");
+    this.events.emit("errorAmendingAllocation", allocation, new Error("Amending allocation is not supported yet"));
+    throw new Error("Amending allocation is not supported yet");
   }
 
-  acceptInvoice(invoice: Invoice, allocation: Allocation, amount: string): Promise<Invoice> {
+  async acceptInvoice(invoice: Invoice, allocation: Allocation, amount: string): Promise<Invoice> {
     this.logger.info("Accepting invoice", { id: invoice.id, allocation: allocation.id, amount });
-    return this.paymentApi.acceptInvoice(invoice, allocation, amount);
+    try {
+      const acceptedInvoice = await this.paymentApi.acceptInvoice(invoice, allocation, amount);
+      this.events.emit("invoiceAccepted", acceptedInvoice);
+      return acceptedInvoice;
+    } catch (error) {
+      this.events.emit("errorAcceptingInvoice", invoice, error);
+      throw error;
+    }
   }
 
-  rejectInvoice(invoice: Invoice, reason: string): Promise<Invoice> {
+  async rejectInvoice(invoice: Invoice, reason: string): Promise<Invoice> {
     this.logger.info("Rejecting invoice", { id: invoice.id, reason });
-    return this.paymentApi.rejectInvoice(invoice, reason);
+    try {
+      const rejectedInvoice = await this.paymentApi.rejectInvoice(invoice, reason);
+      this.events.emit("invoiceRejected", rejectedInvoice);
+      return rejectedInvoice;
+    } catch (error) {
+      this.events.emit("errorRejectingInvoice", invoice, error);
+      throw error;
+    }
   }
 
-  acceptDebitNote(debitNote: DebitNote, allocation: Allocation, amount: string): Promise<DebitNote> {
+  async acceptDebitNote(debitNote: DebitNote, allocation: Allocation, amount: string): Promise<DebitNote> {
     this.logger.info("Accepting debit note", { id: debitNote.id, allocation: allocation.id, amount });
-    return this.paymentApi.acceptDebitNote(debitNote, allocation, amount);
+    try {
+      const acceptedDebitNote = await this.paymentApi.acceptDebitNote(debitNote, allocation, amount);
+      this.events.emit("debitNoteAccepted", acceptedDebitNote);
+      return acceptedDebitNote;
+    } catch (error) {
+      this.events.emit("errorAcceptingDebitNote", debitNote, error);
+      throw error;
+    }
   }
 
-  rejectDebitNote(debitNote: DebitNote, reason: string): Promise<DebitNote> {
+  async rejectDebitNote(debitNote: DebitNote, reason: string): Promise<DebitNote> {
     this.logger.info("Rejecting debit note", { id: debitNote.id, reason });
-    return this.paymentApi.rejectDebitNote(debitNote, reason);
+    try {
+      const rejectedDebitNote = await this.paymentApi.rejectDebitNote(debitNote, reason);
+      this.events.emit("debitNoteRejected", rejectedDebitNote);
+      return rejectedDebitNote;
+    } catch (error) {
+      this.events.emit("errorAcceptingDebitNote", debitNote, error);
+      throw error;
+    }
   }
 
   /**
@@ -173,7 +230,7 @@ export class PaymentModuleImpl implements PaymentModule {
     return new AgreementPaymentProcess(
       agreement,
       allocation,
-      this.paymentApi,
+      this,
       options,
       this.logger.child("agreement-payment-process"),
     );
