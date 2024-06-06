@@ -20,10 +20,6 @@ const demandOptions = {
       maxCpuPerHourPrice: 1,
       maxEnvPerHourPrice: 1,
     },
-    withProviders: ["0x123123"],
-    withoutProviders: ["0x123123"],
-    withOperators: ["0x123123"],
-    withoutOperators: ["0x123123"],
   },
 } as const;
 
@@ -47,6 +43,7 @@ const demandOptions = {
 
     const draftProposal$ = glm.market.collectDraftOfferProposals({
       demandSpecification,
+      pricing: demandOptions.market.pricing,
     });
 
     const proposalSubscription = proposalPool.readFrom(draftProposal$);
