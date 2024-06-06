@@ -1,4 +1,4 @@
-import { DraftOfferProposalPool, GolemNetwork } from "@golem-sdk/golem-js";
+import { DraftOfferProposalPool, GolemNetwork, MarketOrderSpec } from "@golem-sdk/golem-js";
 
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 import { fileURLToPath } from "url";
@@ -18,7 +18,7 @@ const getImagePath = (path: string) => fileURLToPath(new URL(path, import.meta.u
   try {
     await glm.connect();
 
-    const demand = {
+    const order: MarketOrderSpec = {
       demand: {
         workload: {
           // Here you supply the path to the GVMI file that you want to deploy and use
@@ -29,6 +29,7 @@ const getImagePath = (path: string) => fileURLToPath(new URL(path, import.meta.u
       market: {
         rentHours: 12,
         pricing: {
+          model: "linear",
           maxStartPrice: 1,
           maxCpuPerHourPrice: 1,
           maxEnvPerHourPrice: 1,
@@ -44,9 +45,10 @@ const getImagePath = (path: string) => fileURLToPath(new URL(path, import.meta.u
       budget: 1,
       expirationSec: 30 * 60, // 30 minutes
     });
-    const demandSpecification = await glm.market.buildDemandDetails(demand.demand, allocation);
+    const demandSpecification = await glm.market.buildDemandDetails(order.demand, allocation);
     const draftProposal$ = glm.market.collectDraftOfferProposals({
       demandSpecification,
+      pricing: order.market.pricing,
     });
     const proposalSubscription = proposalPool.readFrom(draftProposal$);
     const draftProposal = await proposalPool.acquire();
