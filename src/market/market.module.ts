@@ -634,6 +634,10 @@ export class MarketModuleImpl implements MarketModule {
         proposal.pricing.cpuSec <= pricing.maxCpuPerHourPrice / 3600 &&
         proposal.pricing.envSec <= pricing.maxEnvPerHourPrice / 3600 &&
         proposal.pricing.start <= pricing.maxStartPrice;
+    } else if (pricing.model === "burn-rate") {
+      isPriceValid =
+        proposal.pricing.start + proposal.pricing.envSec * 3600 + proposal.pricing.cpuSec * 3600 <=
+        pricing.avgGlmPerHour;
     }
     if (!isPriceValid) {
       this.events.emit("offerProposalRejectedByPriceFilter", proposal);
