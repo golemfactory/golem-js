@@ -2,6 +2,20 @@ import { Network } from "./network";
 import { NetworkNode } from "./node";
 import { NetworkOptions } from "./network.module";
 
+export interface NetworkEvents {
+  networkCreated: (network: Network) => void;
+  errorCreatingNetwork: (error: Error) => void;
+
+  networkRemoved: (network: Network) => void;
+  errorRemovingNetwork: (network: Network, error: Error) => void;
+
+  nodeCreated: (network: Network, node: NetworkNode) => void;
+  errorCreatingNode: (network: Network, error: Error) => void;
+
+  nodeRemoved: (network: Network, node: NetworkNode) => void;
+  errorRemovingNode: (network: Network, node: NetworkNode, error: Error) => void;
+}
+
 export interface INetworkApi {
   /**
    * Creates a new network with the specified options.
