@@ -130,7 +130,7 @@ export class DraftOfferProposalPool {
 
         while (proposal === null) {
           // Try to get one
-          proposal = this.selectProposal([...this.available]);
+          proposal = this.available.size > 0 ? this.selectProposal([...this.available]) : null;
 
           if (proposal) {
             // Validate
