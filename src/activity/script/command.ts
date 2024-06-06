@@ -1,9 +1,5 @@
 import { ActivityApi } from "ya-ts-client";
 import { StorageProvider } from "../../shared/storage";
-
-// importing from '../activity' makes Result undefined
-// this is likely due to some circular dependency
-// temporarily importing from '../activity/results' to fix the issue
 import { Result } from "../results";
 
 const EMPTY_ERROR_RESULT = new Result({
@@ -63,18 +59,12 @@ export class Command<T = unknown> {
   }
 }
 
-/**
- * @hidden
- */
 export class Deploy extends Command {
   constructor(args?: Record<string, unknown>) {
     super("deploy", args);
   }
 }
 
-/**
- * @hidden
- */
 export class Start extends Command {
   constructor(args?: Record<string, unknown>) {
     super("start", args);
@@ -94,9 +84,6 @@ type CapturePart = { head: number } | { tail: number } | { headTail: number };
 
 type CaptureFormat = "string" | "binary";
 
-/**
- * @hidden
- */
 export class Run extends Command {
   constructor(cmd: string, args?: string[] | null, env?: object | null, capture?: Capture) {
     const captureOpt = capture || {
@@ -118,9 +105,6 @@ export class Terminate extends Command {
   }
 }
 
-/**
- * @hidden
- */
 export class Transfer<T = unknown> extends Command<T> {
   constructor(
     protected from?: string,
@@ -131,9 +115,6 @@ export class Transfer<T = unknown> extends Command<T> {
   }
 }
 
-/**
- * @hidden
- */
 export class UploadFile extends Transfer {
   constructor(
     private storageProvider: StorageProvider,
@@ -177,9 +158,6 @@ export class UploadData extends Transfer {
   }
 }
 
-/**
- * @hidden
- */
 export class DownloadFile extends Transfer {
   constructor(
     private storageProvider: StorageProvider,

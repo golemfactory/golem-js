@@ -1,6 +1,3 @@
-/**
- * @hidden
- */
 export enum RejectionReason {
   UnsolicitedService = "UNSOLICITED_SERVICE",
   BadService = "BAD_SERVICE",
@@ -15,9 +12,6 @@ export enum RejectionReason {
   AgreementFinalized = "AGREEMENT_FINALIZED",
 }
 
-/**
- * @hidden
- */
 export interface Rejection {
   rejectionReason: RejectionReason;
   totalAmountAccepted: string;
