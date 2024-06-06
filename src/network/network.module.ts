@@ -126,7 +126,7 @@ export class NetworkModuleImpl implements NetworkModule {
     }
   }
   async removeNetwork(network: Network): Promise<void> {
-    this.logger.debug(`Removing network`, { id: network.id, ip: network.getNetworkInfo().ip });
+    this.logger.debug(`Removing network`, network.getNetworkInfo());
     await this.lock.acquire(`net-${network.id}`, async () => {
       try {
         await this.networkApi.removeNetwork(network);
