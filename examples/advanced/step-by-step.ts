@@ -33,8 +33,8 @@ import { filter, map, switchMap, take } from "rxjs";
       demand: {
         workload: {
           imageTag: "golem/alpine:latest",
-          minCpuCores: 2,
-          minMemGib: 4,
+          minCpuCores: 1,
+          minMemGib: 2,
         },
         expirationSec: 30 * 60,
       },
