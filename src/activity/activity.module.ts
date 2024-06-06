@@ -198,7 +198,11 @@ export class ActivityModuleImpl implements ActivityModule {
   }
 
   async refreshActivity(staleActivity: Activity): Promise<Activity> {
-    this.logger.info("Fetching latest activity state", { activityId: staleActivity.id });
+    // logging to debug level to avoid spamming the logs because this method is called frequently
+    this.logger.debug("Fetching latest activity state", {
+      activityId: staleActivity.id,
+      lastState: staleActivity.getState(),
+    });
     try {
       const freshActivity = await this.activityApi.getActivity(staleActivity.id);
       if (freshActivity.getState() !== staleActivity.getState()) {
