@@ -13,7 +13,7 @@ export interface NetworkEvents {
   errorCreatingNode: (network: Network, error: Error) => void;
 
   nodeRemoved: (network: Network, node: NetworkNode) => void;
-  errorRemovingNode: (network: Network, error: Error) => void;
+  errorRemovingNode: (network: Network, node: NetworkNode, error: Error) => void;
 }
 
 export interface INetworkApi {

@@ -197,7 +197,7 @@ export class NetworkModuleImpl implements NetworkModule {
         });
         this.events.emit("nodeRemoved", network, node);
       } catch (error) {
-        this.events.emit("errorRemovingNode", network, error);
+        this.events.emit("errorRemovingNode", network, node, error);
         throw error;
       }
     });
