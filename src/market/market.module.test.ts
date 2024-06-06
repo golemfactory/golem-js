@@ -282,7 +282,7 @@ describe("Market module", () => {
       when(mockInitialOfferProposal.properties).thenReturn(initialOfferProperties);
       when(mockInitialOfferProposal.pricing).thenReturn({
         cpuSec: 0.4 / 3600,
-        envSec: 0.9 / 3600,
+        envSec: 0.4 / 3600,
         start: 0.4,
       });
 
@@ -293,7 +293,7 @@ describe("Market module", () => {
       when(mockDraftOfferProposal.properties).thenReturn(initialOfferProperties);
       when(mockDraftOfferProposal.pricing).thenReturn({
         cpuSec: 0.4 / 3600,
-        envSec: 0.9 / 3600,
+        envSec: 0.4 / 3600,
         start: 0.4,
       });
 
@@ -371,7 +371,7 @@ describe("Market module", () => {
       when(mockInitialOfferProposal.properties).thenReturn(initialOfferProperties);
       when(mockInitialOfferProposal.pricing).thenReturn({
         cpuSec: 0.4 / 3600,
-        envSec: 0.9 / 3600,
+        envSec: 0.4 / 3600,
         start: 0.4,
       });
 
@@ -415,7 +415,7 @@ describe("Market module", () => {
 
       const testSub = draftProposal$.subscribe();
 
-      await waitAndCall(() => testSub.unsubscribe(), 0.4);
+      await waitAndCall(() => testSub.unsubscribe(), 0.2);
 
       verify(mockMarketApiAdapter.counterProposal(initialProposal, spec)).once();
     });
