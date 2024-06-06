@@ -107,8 +107,8 @@ export class NetworkModuleImpl implements NetworkModule {
       // add Requestor as network node
       const requestorId = await this.networkApi.getIdentity();
       await this.createNetworkNode(network, requestorId, options?.ownerIp);
-      this.events.emit("networkCreated", network);
       this.logger.info(`Network created`, network.getNetworkInfo());
+      this.events.emit("networkCreated", network);
       return network;
     } catch (err) {
       const message = getMessageFromApiError(err);
@@ -126,7 +126,7 @@ export class NetworkModuleImpl implements NetworkModule {
     }
   }
   async removeNetwork(network: Network): Promise<void> {
-    this.logger.debug(`Removing network`, network);
+    this.logger.debug(`Removing network`, { id: network.id, ip: network.getNetworkInfo().ip });
     await this.lock.acquire(`net-${network.id}`, async () => {
       try {
         await this.networkApi.removeNetwork(network);
