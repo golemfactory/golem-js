@@ -1,7 +1,4 @@
-import { Logger } from "../shared/utils";
 import { Agreement, ProviderInfo } from "../market/agreement";
-import { ExecutionOptions, ExeScriptExecutor } from "./exe-script-executor";
-import { IActivityApi } from "./types";
 
 export enum ActivityStateEnum {
   New = "New",
@@ -45,13 +42,6 @@ export class Activity {
 
   public getProviderInfo(): ProviderInfo {
     return this.agreement.getProviderInfo();
-  }
-
-  /**
-   * Temporary helper method that will build a script executor bound to this activity
-   */
-  public createExeScriptExecutor(activityApi: IActivityApi, logger: Logger, options?: ExecutionOptions) {
-    return new ExeScriptExecutor(this, activityApi, logger, options);
   }
 
   public getState() {

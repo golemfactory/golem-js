@@ -1,5 +1,5 @@
 import { Activity } from "./activity";
-import { _, anything, imock, instance, mock, verify, when } from "@johanblumenberg/ts-mockito";
+import { _, anything, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
 import { Capture, Deploy, DownloadFile, Run, Script, Start, Terminate, UploadFile } from "./script";
 import { buildExeScriptSuccessResult } from "../../tests/unit/helpers";
 import { GolemWorkError, WorkErrorCode } from "./work";
@@ -9,29 +9,37 @@ import { ExeScriptExecutor } from "./exe-script-executor";
 import { StorageProvider } from "../shared/storage";
 import { from, of, throwError } from "rxjs";
 import { Result, StreamingBatchEvent } from "./results";
-import { IActivityApi } from "./types";
 import resetAllMocks = jest.resetAllMocks;
+import { ActivityModule } from "./activity.module";
 
 describe("ExeScriptExecutor", () => {
   const mockActivity = mock(Activity);
   const mockLogger = imock<Logger>();
-  const mockActivityApi = imock<IActivityApi>();
+  const mockActivityModule = imock<ActivityModule>();
   const mockStorageProvider = imock<StorageProvider>();
-  when(mockActivity.getProviderInfo()).thenReturn({
-    id: "test-provider-id",
-    name: "test-provider-name",
-    walletAddress: "0xProviderWallet",
-  });
 
   beforeEach(() => {
+    reset(mockActivity);
+    reset(mockLogger);
+    reset(mockStorageProvider);
+    reset(mockActivityModule);
     resetAllMocks();
+    when(mockActivity.getProviderInfo()).thenReturn({
+      id: "test-provider-id",
+      name: "test-provider-name",
+      walletAddress: "0xProviderWallet",
+    });
   });
 
   describe("Executing", () => {
     it("should execute commands on activity", async () => {
-      const executor = new ExeScriptExecutor(instance(mockActivity), instance(mockActivityApi), instance(mockLogger));
+      const executor = new ExeScriptExecutor(
+        instance(mockActivity),
+        instance(mockActivityModule),
+        instance(mockLogger),
+      );
 
-      when(mockActivityApi.getExecBatchResults(anything(), anything(), anything(), anything())).thenResolve([
+      when(mockActivityModule.getBatchResults(anything(), anything(), anything(), anything())).thenResolve([
         new Result({
           isBatchFinished: true,
           result: "Ok",
@@ -48,7 +56,11 @@ describe("ExeScriptExecutor", () => {
     });
 
     it("should execute script and get results by iterator", async () => {
-      const executor = new ExeScriptExecutor(instance(mockActivity), instance(mockActivityApi), instance(mockLogger));
+      const executor = new ExeScriptExecutor(
+        instance(mockActivity),
+        instance(mockActivityModule),
+        instance(mockLogger),
+      );
       const command1 = new Deploy();
       const command2 = new Start();
       const command3 = new Run("test_command1");
@@ -56,7 +68,7 @@ describe("ExeScriptExecutor", () => {
       const command5 = new Terminate();
       const script = Script.create([command1, command2, command3, command4, command5]);
 
-      when(mockActivityApi.getExecBatchResults(anything(), anything(), anything(), anything())).thenResolve([
+      when(mockActivityModule.getBatchResults(anything(), anything(), anything(), anything())).thenResolve([
         buildExeScriptSuccessResult("test"),
         buildExeScriptSuccessResult("test"),
         buildExeScriptSuccessResult("stdout_test_command_run_1"),
@@ -78,7 +90,11 @@ describe("ExeScriptExecutor", () => {
     });
 
     it("should execute script and get results by events", async () => {
-      const executor = new ExeScriptExecutor(instance(mockActivity), instance(mockActivityApi), instance(mockLogger));
+      const executor = new ExeScriptExecutor(
+        instance(mockActivity),
+        instance(mockActivityModule),
+        instance(mockLogger),
+      );
       const command1 = new Deploy();
       const command2 = new Start();
       const command3 = new UploadFile(instance(mockStorageProvider), "testSrc", "testDst");
@@ -87,7 +103,7 @@ describe("ExeScriptExecutor", () => {
       const command6 = new Terminate();
       const script = Script.create([command1, command2, command3, command4, command5, command6]);
 
-      when(mockActivityApi.getExecBatchResults(anything(), anything(), anything(), anything())).thenResolve([
+      when(mockActivityModule.getBatchResults(anything(), anything(), anything(), anything())).thenResolve([
         buildExeScriptSuccessResult("test"),
         buildExeScriptSuccessResult("test"),
         buildExeScriptSuccessResult("stdout_test_command_run_1"),
@@ -123,7 +139,11 @@ describe("ExeScriptExecutor", () => {
     });
 
     it("should execute script by streaming batch", async () => {
-      const executor = new ExeScriptExecutor(instance(mockActivity), instance(mockActivityApi), instance(mockLogger));
+      const executor = new ExeScriptExecutor(
+        instance(mockActivity),
+        instance(mockActivityModule),
+        instance(mockLogger),
+      );
       const command1 = new Deploy();
       const command2 = new Start();
       const capture: Capture = {
@@ -199,7 +219,7 @@ describe("ExeScriptExecutor", () => {
           kind: { finished: { return_code: 0, message: null } },
         },
       ];
-      when(mockActivityApi.getExecBatchEvents(_, _)).thenReturn(from<StreamingBatchEvent[]>(mockedEvents));
+      when(mockActivityModule.observeStreamingBatchEvents(_, _)).thenReturn(from<StreamingBatchEvent[]>(mockedEvents));
       await script.before();
       const results = await executor.execute(script.getExeScriptRequest(), true);
       let expectedStdout;
@@ -215,7 +235,11 @@ describe("ExeScriptExecutor", () => {
 
   describe("Cancelling", () => {
     it("should cancel executor", async () => {
-      const executor = new ExeScriptExecutor(instance(mockActivity), instance(mockActivityApi), instance(mockLogger));
+      const executor = new ExeScriptExecutor(
+        instance(mockActivity),
+        instance(mockActivityModule),
+        instance(mockLogger),
+      );
       const command1 = new Deploy();
       const command2 = new Start();
       const command3 = new Run("test_command1");
@@ -236,8 +260,12 @@ describe("ExeScriptExecutor", () => {
     });
 
     it("should cancel executor while streaming batch", async () => {
-      when(mockActivityApi.getExecBatchEvents(_, _)).thenReturn(of<StreamingBatchEvent>());
-      const executor = new ExeScriptExecutor(instance(mockActivity), instance(mockActivityApi), instance(mockLogger));
+      when(mockActivityModule.observeStreamingBatchEvents(_, _)).thenReturn(of<StreamingBatchEvent>());
+      const executor = new ExeScriptExecutor(
+        instance(mockActivity),
+        instance(mockActivityModule),
+        instance(mockLogger),
+      );
       const command1 = new Deploy();
       const command2 = new Start();
       const capture: Capture = {
@@ -262,14 +290,18 @@ describe("ExeScriptExecutor", () => {
 
   describe("Error handling", () => {
     it("should handle some error", async () => {
-      const executor = new ExeScriptExecutor(instance(mockActivity), instance(mockActivityApi), instance(mockLogger));
+      const executor = new ExeScriptExecutor(
+        instance(mockActivity),
+        instance(mockActivityModule),
+        instance(mockLogger),
+      );
       const command1 = new Deploy();
       const command2 = new Start();
       const command3 = new Run("test_command1");
       const script = Script.create([command1, command2, command3]);
 
       const error = new Error("Some undefined error");
-      when(mockActivityApi.getExecBatchResults(anything(), anything(), anything(), anything())).thenReject(error);
+      when(mockActivityModule.getBatchResults(anything(), anything(), anything(), anything())).thenReject(error);
 
       const results = await executor.execute(script.getExeScriptRequest(), false, 200, 0);
 
@@ -289,9 +321,14 @@ describe("ExeScriptExecutor", () => {
     });
 
     it("should handle non-retryable error", async () => {
-      const executor = new ExeScriptExecutor(instance(mockActivity), instance(mockActivityApi), instance(mockLogger), {
-        activityExeBatchResultPollIntervalSeconds: 10,
-      });
+      const executor = new ExeScriptExecutor(
+        instance(mockActivity),
+        instance(mockActivityModule),
+        instance(mockLogger),
+        {
+          activityExeBatchResultPollIntervalSeconds: 10,
+        },
+      );
       const command1 = new Deploy();
       const command2 = new Start();
       const command3 = new Run("test_command1");
@@ -302,7 +339,7 @@ describe("ExeScriptExecutor", () => {
         status: 401,
         toString: () => `Error: non-retryable error`,
       };
-      when(mockActivityApi.getExecBatchResults(anything(), anything(), anything(), anything())).thenReject(error);
+      when(mockActivityModule.getBatchResults(anything(), anything(), anything(), anything())).thenReject(error);
 
       const results = await executor.execute(script.getExeScriptRequest(), false, 1_000, 3);
 
@@ -321,8 +358,11 @@ describe("ExeScriptExecutor", () => {
     });
 
     it("should retry when a retryable error occurs", async () => {
-      const mockActivityApi = imock<IActivityApi>();
-      const executor = new ExeScriptExecutor(instance(mockActivity), instance(mockActivityApi), instance(mockLogger));
+      const executor = new ExeScriptExecutor(
+        instance(mockActivity),
+        instance(mockActivityModule),
+        instance(mockLogger),
+      );
       const command1 = new Deploy();
       const command2 = new Start();
       const command3 = new Run("test_command1");
@@ -341,7 +381,7 @@ describe("ExeScriptExecutor", () => {
         index: 1,
         eventDate: new Date().toISOString(),
       });
-      when(mockActivityApi.getExecBatchResults(anything(), anything(), anything(), anything()))
+      when(mockActivityModule.getBatchResults(anything(), anything(), anything(), anything()))
         .thenReject(error)
         .thenReject(error)
         .thenResolve([testResult]);
@@ -351,11 +391,15 @@ describe("ExeScriptExecutor", () => {
       for await (const result of results) {
         expect(result).toEqual(testResult);
       }
-      verify(mockActivityApi.getExecBatchResults(anything(), anything(), anything(), anything())).times(3);
+      verify(mockActivityModule.getBatchResults(anything(), anything(), anything(), anything())).times(3);
     }, 7_000);
 
     it("should handle termination error", async () => {
-      const executor = new ExeScriptExecutor(instance(mockActivity), instance(mockActivityApi), instance(mockLogger));
+      const executor = new ExeScriptExecutor(
+        instance(mockActivity),
+        instance(mockActivityModule),
+        instance(mockLogger),
+      );
       const command1 = new Deploy();
       const command2 = new Start();
       const command3 = new Run("test_command1");
@@ -366,7 +410,7 @@ describe("ExeScriptExecutor", () => {
         toString: () => "Error: GSB error: endpoint address not found. Terminated.",
       };
 
-      when(mockActivityApi.getExecBatchResults(anything(), anything(), anything(), anything())).thenReject(error);
+      when(mockActivityModule.getBatchResults(anything(), anything(), anything(), anything())).thenReject(error);
       const results = await executor.execute(script.getExeScriptRequest(), false, undefined, 1);
 
       return new Promise<void>((res) => {
@@ -387,7 +431,11 @@ describe("ExeScriptExecutor", () => {
     });
 
     it("should handle timeout error", async () => {
-      const executor = new ExeScriptExecutor(instance(mockActivity), instance(mockActivityApi), instance(mockLogger));
+      const executor = new ExeScriptExecutor(
+        instance(mockActivity),
+        instance(mockActivityModule),
+        instance(mockLogger),
+      );
       const command1 = new Deploy();
       const command2 = new Start();
       const command3 = new Run("test_command1");
@@ -408,9 +456,15 @@ describe("ExeScriptExecutor", () => {
     });
 
     it("should handle timeout error while streaming batch", async () => {
-      const executor = new ExeScriptExecutor(instance(mockActivity), instance(mockActivityApi), instance(mockLogger), {
-        activityExecuteTimeout: 1,
-      });
+      when(mockActivityModule.observeStreamingBatchEvents(anything(), anything())).thenReturn(of());
+      const executor = new ExeScriptExecutor(
+        instance(mockActivity),
+        instance(mockActivityModule),
+        instance(mockLogger),
+        {
+          activityExecuteTimeout: 1,
+        },
+      );
       const command1 = new Deploy();
       const command2 = new Start();
       const capture: Capture = {
@@ -434,7 +488,11 @@ describe("ExeScriptExecutor", () => {
     });
 
     it("should handle some error while streaming batch", async () => {
-      const executor = new ExeScriptExecutor(instance(mockActivity), instance(mockActivityApi), instance(mockLogger));
+      const executor = new ExeScriptExecutor(
+        instance(mockActivity),
+        instance(mockActivityModule),
+        instance(mockLogger),
+      );
       const command1 = new Deploy();
       const command2 = new Start();
       const capture: Capture = {
@@ -445,7 +503,9 @@ describe("ExeScriptExecutor", () => {
       const command4 = new Terminate();
       const script = Script.create([command1, command2, command3, command4]);
       const mockedEventSourceErrorMessage = "Some undefined error";
-      when(mockActivityApi.getExecBatchEvents(_, _)).thenReturn(throwError(() => mockedEventSourceErrorMessage));
+      when(mockActivityModule.observeStreamingBatchEvents(_, _)).thenReturn(
+        throwError(() => mockedEventSourceErrorMessage),
+      );
       await script.before();
       const results = await executor.execute(script.getExeScriptRequest(), true);
       return new Promise<void>((res) => {

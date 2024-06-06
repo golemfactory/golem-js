@@ -1,5 +1,5 @@
 import { Readable, Transform } from "stream";
-import { Activity, IActivityApi, Result } from "../index";
+import { Activity, ActivityModule, Result } from "../index";
 import { GolemWorkError, WorkErrorCode } from "./error";
 import { GolemTimeoutError } from "../../shared/error/golem-error";
 import { Logger } from "../../shared/utils";
@@ -26,7 +26,7 @@ export class RemoteProcess {
   private streamError?: Error;
 
   constructor(
-    private readonly activityApi: IActivityApi,
+    private readonly activityModule: ActivityModule,
     private streamOfActivityResults: Readable,
     private activity: Activity,
     private readonly logger: Logger,
@@ -57,7 +57,7 @@ export class RemoteProcess {
             new GolemTimeoutError(`The waiting time (${timeoutInMs} ms) for the final result has been exceeded`),
           ),
         );
-        this.activityApi
+        this.activityModule
           .destroyActivity(this.activity)
           .catch((err) => this.logger.error(`Error when destroying activity`, err));
       }, timeoutInMs);
@@ -75,7 +75,7 @@ export class RemoteProcess {
               this.activity.getProviderInfo(),
             ),
           );
-          this.activityApi
+          this.activityModule
             .destroyActivity(this.activity)
             .catch((err) => this.logger.error(`Error when destroying activity`, err));
         }

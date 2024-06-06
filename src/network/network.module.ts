@@ -71,13 +71,6 @@ export interface NetworkModule {
    * @param node - The node to be removed.
    */
   removeNetworkNode(network: Network, node: NetworkNode): Promise<void>;
-
-  /**
-   * Retrieves the WebSocket URI for a specified network node and port.
-   * @param networkNode - The network node for which the WebSocket URI is retrieved.
-   * @param port - The port number for the WebSocket connection.
-   */
-  getWebsocketUri(networkNode: NetworkNode, port: number): string;
 }
 
 export class NetworkModuleImpl implements NetworkModule {
@@ -178,10 +171,6 @@ export class NetworkModuleImpl implements NetworkModule {
         nodeIp: node.ip,
       });
     });
-  }
-
-  getWebsocketUri(networkNode: NetworkNode, port: number): string {
-    return this.deps.networkApi.getWebsocketUri(networkNode, port);
   }
 
   private getFreeIpInNetwork(network: Network, targetIp?: string): IPv4 {
