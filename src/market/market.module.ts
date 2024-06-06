@@ -644,7 +644,7 @@ export class MarketModuleImpl implements MarketModule {
       this.events.emit("offerProposalRejectedByPriceFilter", proposal);
       this.logger.debug("The offer was rejected because the price was too high", {
         id: proposal.id,
-        prieing: proposal.pricing,
+        pricing: proposal.pricing,
       });
     }
     return isPriceValid;
