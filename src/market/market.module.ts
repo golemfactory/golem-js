@@ -618,6 +618,7 @@ export class MarketModuleImpl implements MarketModule {
 
       if (!result) {
         this.events.emit("offerProposalRejectedByFilter", proposal);
+        this.logger.debug("The offer was rejected by the user filter", { id: proposal.id });
       }
 
       return result;
@@ -641,6 +642,10 @@ export class MarketModuleImpl implements MarketModule {
     }
     if (!isPriceValid) {
       this.events.emit("offerProposalRejectedByPriceFilter", proposal);
+      this.logger.debug("The offer was rejected because the price was too high", {
+        id: proposal.id,
+        pricing: proposal.pricing,
+      });
     }
     return isPriceValid;
   }
