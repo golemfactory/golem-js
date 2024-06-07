@@ -1,4 +1,4 @@
-import { defaultLogger, Logger, YagnaApi } from "../shared/utils";
+import { defaultLogger, isNode, Logger, YagnaApi } from "../shared/utils";
 import {
   Demand,
   DraftOfferProposalPool,
@@ -162,7 +162,7 @@ export class GolemNetwork {
 
   constructor(options: Partial<GolemNetworkOptions> = {}) {
     const optDefaults: GolemNetworkOptions = {
-      dataTransferProtocol: "gftp",
+      dataTransferProtocol: isNode ? "gftp" : "ws",
     };
 
     this.options = {
