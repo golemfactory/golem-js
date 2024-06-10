@@ -1,5 +1,10 @@
 name: "Prepare providers and requestor"
 description: "Prepare providers and requestor"
+inputs:
+  type:
+    description: "Type of test"
+    required: true
+    default: "test"
 runs:
   using: "composite"
   steps:
@@ -48,3 +53,9 @@ runs:
         echo "Going to build the SDK on the requestor"
         docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm i && npm run build"
         echo "Successfully built the SDK on the requestor"
+
+    - name: Install Cypress
+      if: ${{ inputs.type == 'cypress' }}
+      shell: bash
+      run: |
+        docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && ./node_modules/.bin/cypress install"

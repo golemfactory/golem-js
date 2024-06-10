@@ -1,6 +1,6 @@
 import { v4 } from "uuid";
 import { Job, RunJobOptions } from "./job";
-import { defaultLogger, Logger, runtimeContextChecker, YagnaOptions } from "../../shared/utils";
+import { defaultLogger, Logger, YagnaOptions, isNode, isBrowser } from "../../shared/utils";
 import { GolemUserError } from "../../shared/error/golem-error";
 import { GolemNetwork, MarketOrderSpec } from "../../golem-network/golem-network";
 import {
@@ -90,11 +90,11 @@ export class JobManager {
   }
 
   private getDefaultStorageProvider(): StorageProvider {
-    if (runtimeContextChecker.isNode) {
+    if (isNode) {
       return new GftpStorageProvider();
     }
 
-    if (runtimeContextChecker.isBrowser) {
+    if (isBrowser) {
       return new WebSocketBrowserStorageProvider(this.glm.services.yagna, {});
     }
 

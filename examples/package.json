@@ -19,6 +19,9 @@
     "local-image": "tsx advanced/local-image/serveLocalGvmi.ts",
     "deployment": "tsx experimental/deployment/new-api.ts",
     "market-scan": "tsx market/scan.ts",
+    "preweb": "cp -r ../dist/ web/dist/",
+    "postweb": "rm -rf web/dist/",
+    "web": "serve web/",
     "experimental-server": "tsx experimental/express/server.ts",
     "lint": "npm run lint:ts",
     "lint:ts": "tsc --project tsconfig.json --noEmit"
@@ -37,6 +40,8 @@
   },
   "devDependencies": {
     "@types/node": "20",
+    "cypress": "^13.11.0",
+    "serve": "^14.2.3",
     "typescript": "^5.3.3"
   }
 }
