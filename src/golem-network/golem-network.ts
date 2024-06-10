@@ -43,7 +43,7 @@ import { IProposalRepository } from "../market/proposal";
  * Instance of an object or a factory function that you can call `new` on.
  * Optionally you can provide constructor arguments.
  */
-type InstanceOrFactory<TargetInterface, ConstructorArgs extends unknown[] = never[]> =
+export type InstanceOrFactory<TargetInterface, ConstructorArgs extends unknown[] = never[]> =
   | TargetInterface
   | { new (...args: ConstructorArgs): TargetInterface };
 
@@ -133,7 +133,7 @@ export interface GolemNetworkEvents {
   disconnected: () => void;
 }
 
-interface ManyOfOptions {
+export interface ManyOfOptions {
   concurrency: Concurrency;
   order: MarketOrderSpec;
 }

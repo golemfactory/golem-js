@@ -54,7 +54,7 @@ export class JobManager {
 
   /**
    * Create a new job and add it to the list of jobs managed by this instance.
-   * This method does not start any work on the network, use {@link Job.startWork} for that.
+   * This method does not start any work on the network, use {@link experimental/job/job.Job.startWork} for that.
    *
    * @param order
    */

@@ -19,12 +19,12 @@
   },
   "typedocOptions": {
     "entryPoints": ["src"],
-    "exclude": ["**/*.spec.ts", "src/stats/*.ts"],
+    "exclude": ["**/*.spec.ts", "**/*.test.ts"],
     "entryPointStrategy": "expand",
     "out": "docs",
     "sort": "static-first",
     "excludePrivate": true,
-    "name": "JavaScript API reference",
+    "name": "Golem-JS API reference",
     "categorizeByGroup": false,
     "excludeExternals": true,
     "excludeInternal": true

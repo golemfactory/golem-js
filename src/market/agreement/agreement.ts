@@ -35,7 +35,7 @@ export class Agreement {
   /**
    * @param id
    * @param model
-   * @param paymentPlatform
+   * @param demand
    */
   constructor(
     public readonly id: string,

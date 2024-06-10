@@ -11,7 +11,7 @@ export enum ActivityStateEnum {
   Unknown = "Unknown",
 }
 
-type ActivityUsageInfo = {
+export type ActivityUsageInfo = {
   currentUsage?: number[];
   timestamp: number;
 };

@@ -80,11 +80,11 @@ export interface RuntimeEventKind {
   finished?: RuntimeEventFinished;
 }
 
-interface RuntimeEventStarted {
+export interface RuntimeEventStarted {
   command: object;
 }
 
-interface RuntimeEventFinished {
+export interface RuntimeEventFinished {
   // Reason for disable: That's something what yagna returns from its api
   // eslint-disable-next-line @typescript-eslint/naming-convention
   return_code: number;

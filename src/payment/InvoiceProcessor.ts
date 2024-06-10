@@ -30,14 +30,15 @@ export class InvoiceProcessor {
 
   /**
    * Collects invoices from the Yagna API until the limit is reached or there are no more invoices.
-   * @param after Only collect invoices that were created after this date.
-   * @param limit Maximum number of invoices to collect.
-   * @param statuses Only collect invoices with these statuses.
-   * @param providerIds Only collect invoices from these providers.
-   * @param minAmount Only collect invoices with an amount greater than or equal to this.
-   * @param maxAmount Only collect invoices with an amount less than or equal to this.
-   * @param providerWallets Only collect invoices from these provider wallets.
-   * @param paymentPlatforms Only collect invoices from these payment platforms.
+   * @param {Object} options - The parameters for collecting invoices.
+   * @param options.after Only collect invoices that were created after this date.
+   * @param options.limit Maximum number of invoices to collect.
+   * @param options.statuses Only collect invoices with these statuses.
+   * @param options.providerIds Only collect invoices from these providers.
+   * @param options.minAmount Only collect invoices with an amount greater than or equal to this.
+   * @param options.maxAmount Only collect invoices with an amount less than or equal to this.
+   * @param options.providerWallets Only collect invoices from these provider wallets.
+   * @param options.paymentPlatforms Only collect invoices from these payment platforms.
    *
    * @example
    * ```typescript

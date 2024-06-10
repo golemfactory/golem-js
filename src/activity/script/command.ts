@@ -80,9 +80,9 @@ export type CaptureMode =
   | { atEnd: { part?: CapturePart; format?: CaptureFormat } }
   | { stream: { limit?: number; format?: CaptureFormat } };
 
-type CapturePart = { head: number } | { tail: number } | { headTail: number };
+export type CapturePart = { head: number } | { tail: number } | { headTail: number };
 
-type CaptureFormat = "string" | "binary";
+export type CaptureFormat = "string" | "binary";
 
 export class Run extends Command {
   constructor(cmd: string, args?: string[] | null, env?: object | null, capture?: Capture) {
@@ -135,9 +135,6 @@ export class UploadFile extends Transfer {
   }
 }
 
-/**
- * @category Mid-level
- */
 export class UploadData extends Transfer {
   constructor(
     private storageProvider: StorageProvider,
@@ -178,9 +175,6 @@ export class DownloadFile extends Transfer {
   }
 }
 
-/**
- * @category Mid-level
- */
 export class DownloadData extends Transfer<Uint8Array> {
   private chunks: Uint8Array[] = [];
 
