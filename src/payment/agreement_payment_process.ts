@@ -187,14 +187,17 @@ export class AgreementPaymentProcess {
       await this.paymentModule.rejectDebitNote(debitNote, rejectMessage);
       this.logger.warn(`DebitNote rejected`, { reason: rejectMessage });
     } catch (error) {
-      const message = getMessageFromApiError(error);
-      throw new GolemPaymentError(
-        `Unable to reject debit note ${debitNote.id}. ${message}`,
-        PaymentErrorCode.DebitNoteRejectionFailed,
-        undefined,
-        debitNote.provider,
-        error,
-      );
+      this.logger.warn(`DebitNote rejected`, { reason: rejectMessage });
+      // TODO: this endpoint is not implemented in Yagna, it always responds 501:NotImplemented.
+      // Until it is implemented ny Yagna, it only logs as a warning
+      // const message = getMessageFromApiError(error);
+      // throw new GolemPaymentError(
+      //   `Unable to reject debit note ${debitNote.id}. ${message}`,
+      //   PaymentErrorCode.DebitNoteRejectionFailed,
+      //   undefined,
+      //   debitNote.provider,
+      //   error,
+      // );
     }
   }
 
@@ -282,14 +285,17 @@ export class AgreementPaymentProcess {
       await this.paymentModule.rejectInvoice(invoice, message);
       this.logger.warn(`Invoice rejected`, { reason: message });
     } catch (error) {
-      const message = getMessageFromApiError(error);
-      throw new GolemPaymentError(
-        `Unable to reject invoice ${invoice.id} ${message}`,
-        PaymentErrorCode.InvoiceRejectionFailed,
-        undefined,
-        invoice.provider,
-        error,
-      );
+      this.logger.warn(`Invoice rejected`, { reason: message });
+      // TODO: this endpoint is not implemented in Yagna, it always responds 501:NotImplemented.
+      // Until it is implemented ny Yagna, it only logs as a warning
+      // const message = getMessageFromApiError(error);
+      // throw new GolemPaymentError(
+      //   `Unable to reject invoice ${invoice.id} ${message}`,
+      //   PaymentErrorCode.InvoiceRejectionFailed,
+      //   undefined,
+      //   invoice.provider,
+      //   error,
+      // );
     }
   }
 

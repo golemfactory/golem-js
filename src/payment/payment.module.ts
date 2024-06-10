@@ -210,7 +210,7 @@ export class PaymentModuleImpl implements PaymentModule {
       this.events.emit("debitNoteRejected", rejectedDebitNote);
       return rejectedDebitNote;
     } catch (error) {
-      this.events.emit("errorAcceptingDebitNote", debitNote, error);
+      this.events.emit("errorRejectingDebitNote", debitNote, error);
       throw error;
     }
   }

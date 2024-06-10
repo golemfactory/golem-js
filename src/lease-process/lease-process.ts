@@ -59,7 +59,9 @@ export class LeaseProcess {
       this.logger.debug("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
       if (this.currentWorkContext) {
         await this.activityModule.destroyActivity(this.currentWorkContext.activity);
-        await this.marketModule.terminateAgreement(this.agreement);
+        if ((await this.fetchAgreementState()) !== "Terminated") {
+          await this.marketModule.terminateAgreement(this.agreement);
+        }
       }
       await waitForCondition(() => this.paymentProcess.isFinished());
       this.logger.debug("Payment process for agreement finalized", { agreementId: this.agreement.id });
