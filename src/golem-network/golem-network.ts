@@ -39,6 +39,36 @@ import { DataTransferProtocol } from "../shared/types";
 import { NetworkApiAdapter } from "../shared/yagna/adapters/network-api-adapter";
 import { IProposalRepository } from "../market/proposal";
 
+/**
+ * Instance of an object or a factory function that you can call `new` on.
+ * Optionally you can provide constructor arguments.
+ */
+type InstanceOrFactory<TargetInterface, ConstructorArgs extends unknown[] = never[]> =
+  | TargetInterface
+  | { new (...args: ConstructorArgs): TargetInterface };
+
+/**
+ * If no override is provided, return a function that creates a new instance of the default factory.
+ * If override is a factory, return a function that creates a new instance of that factory.
+ * If override is an instance, return a function that returns that instance (ignoring the arguments).
+ */
+function getFactory<
+  DefaultFactoryConstructorArgs extends unknown[],
+  InstanceType extends object,
+  FactoryType extends { new (...args: DefaultFactoryConstructorArgs): InstanceType },
+>(
+  defaultFactory: FactoryType,
+  override: InstanceOrFactory<InstanceType, DefaultFactoryConstructorArgs> | undefined,
+): (...args: ConstructorParameters<FactoryType>) => InstanceType {
+  if (override) {
+    if (typeof override === "function") {
+      return (...args) => new override(...args);
+    }
+    return () => override;
+  }
+  return (...args) => new defaultFactory(...args);
+}
+
 export interface GolemNetworkOptions {
   /**
    * Logger instance to use for logging.
@@ -68,14 +98,15 @@ export interface GolemNetworkOptions {
    * Override some of the services used by the GolemNetwork instance.
    * This is useful for testing or when you want to provide your own implementation of some services.
    * Only set this if you know what you are doing.
+   * To override a module you can pass either an instance of an object or a factory function (that we can call `new` on).
    */
   override?: Partial<
     GolemServices & {
-      market: MarketModule;
-      payment: PaymentModule;
-      activity: ActivityModule;
-      network: NetworkModule;
-      lease: LeaseModule;
+      market: InstanceOrFactory<MarketModule>;
+      payment: InstanceOrFactory<PaymentModule>;
+      activity: InstanceOrFactory<ActivityModule>;
+      network: InstanceOrFactory<NetworkModule>;
+      lease: InstanceOrFactory<LeaseModule>;
     }
   >;
 }
@@ -221,21 +252,27 @@ export class GolemNetwork {
         networkApi: this.options.override?.networkApi || new NetworkApiAdapter(this.yagna, this.logger),
         fileServer: this.options.override?.fileServer || new GftpServerAdapter(this.storageProvider),
       };
-      this.network = this.options.override?.network || new NetworkModuleImpl(this.services);
-      this.market =
-        this.options.override?.market || new MarketModuleImpl({ ...this.services, networkModule: this.network });
-      this.payment = this.options.override?.payment || new PaymentModuleImpl(this.services, this.options.payment);
-      this.activity = this.options.override?.activity || new ActivityModuleImpl(this.services);
-      this.lease =
-        this.options.override?.lease ||
-        new LeaseModuleImpl({
-          activityModule: this.activity,
-          paymentModule: this.payment,
-          marketModule: this.market,
-          networkModule: this.network,
-          logger: this.logger,
-          storageProvider: this.storageProvider,
-        });
+      this.network = getFactory(NetworkModuleImpl, this.options.override?.network)(this.services);
+      this.market = getFactory(
+        MarketModuleImpl,
+        this.options.override?.market,
+      )({
+        ...this.services,
+        networkModule: this.network,
+      });
+      this.payment = getFactory(PaymentModuleImpl, this.options.override?.payment)(this.services, this.options.payment);
+      this.activity = getFactory(ActivityModuleImpl, this.options.override?.activity)(this.services);
+      this.lease = getFactory(
+        LeaseModuleImpl,
+        this.options.override?.lease,
+      )({
+        activityModule: this.activity,
+        paymentModule: this.payment,
+        marketModule: this.market,
+        networkModule: this.network,
+        logger: this.logger,
+        storageProvider: this.storageProvider,
+      });
     } catch (err) {
       this.events.emit("error", err);
       throw err;
