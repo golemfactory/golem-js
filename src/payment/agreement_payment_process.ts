@@ -189,7 +189,7 @@ export class AgreementPaymentProcess {
     } catch (error) {
       this.logger.warn(`DebitNote rejected`, { reason: rejectMessage });
       // TODO: this endpoint is not implemented in Yagna, it always responds 501:NotImplemented.
-      // Until it is implemented ny Yagna, it only logs as a warning
+      // Until it is implemented by Yagna, it only logs as a warning
       // const message = getMessageFromApiError(error);
       // throw new GolemPaymentError(
       //   `Unable to reject debit note ${debitNote.id}. ${message}`,
@@ -287,7 +287,7 @@ export class AgreementPaymentProcess {
     } catch (error) {
       this.logger.warn(`Invoice rejected`, { reason: message });
       // TODO: this endpoint is not implemented in Yagna, it always responds 501:NotImplemented.
-      // Until it is implemented ny Yagna, it only logs as a warning
+      // Until it is implemented by Yagna, it only logs as a warning
       // const message = getMessageFromApiError(error);
       // throw new GolemPaymentError(
       //   `Unable to reject invoice ${invoice.id} ${message}`,
