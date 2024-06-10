@@ -68,9 +68,4 @@ export class Agreement {
     const state = this.getState();
     return state !== "Pending" && state !== "Proposal";
   }
-
-  canBeTerminated(): boolean {
-    const state = this.getState();
-    return state !== "Rejected" && state !== "Cancelled" && state !== "Terminated";
-  }
 }
