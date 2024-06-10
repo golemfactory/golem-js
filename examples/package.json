@@ -20,6 +20,7 @@
     "deployment": "tsx experimental/deployment/new-api.ts",
     "market-scan": "tsx market/scan.ts",
     "preweb": "cp -r ../dist/ web/dist/",
+    "postweb": "rm -rf web/dist/",
     "web": "serve web/",
     "experimental-server": "tsx experimental/express/server.ts",
     "lint": "npm run lint:ts",
