@@ -28,15 +28,15 @@ const scanOptions: ScanOptions = {
   glm.market
     .scan(spec)
     .pipe(
-      tap((scannedProposal) => {
-        console.log("Received proposal from:", scannedProposal.getProviderInfo().name);
+      tap((scannedOffer) => {
+        console.log("Found offer from", scannedOffer.getProviderInfo().name);
       }),
       // calculate the cost of an hour of work
       map(
-        (scannedProposal) =>
-          scannedProposal.pricing.start + //
-          scannedProposal.pricing.cpuSec * 3600 +
-          scannedProposal.pricing.envSec * 3600,
+        (scannedOffer) =>
+          scannedOffer.pricing.start + //
+          scannedOffer.pricing.cpuSec * 3600 +
+          scannedOffer.pricing.envSec * 3600,
       ),
       // calculate the running average
       scan((total, cost) => total + cost, 0),
