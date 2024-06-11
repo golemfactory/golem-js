@@ -444,7 +444,8 @@ export class MarketApiAdapter implements IMarketApi {
             eventSource.close();
             void cleanupIterator();
           };
-        });
+        })
+        .catch((error) => observer.error(error));
       return () => {
         ac.abort();
       };
