@@ -4,7 +4,7 @@ import { Deployment, DeploymentComponents } from "./deployment";
 import { GolemNetwork, MarketOrderSpec } from "../../golem-network";
 import { validateDeployment } from "./validate-deployment";
 
-interface DeploymentOptions {
+export interface DeploymentOptions {
   replicas: number | { min: number; max: number };
   network?: string;
 }

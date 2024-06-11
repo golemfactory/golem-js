@@ -9,7 +9,7 @@ const DEFAULTS = {
 };
 
 /**
- * RemoteProcess class representing the process spawned on the provider by {@link WorkContext.runAndStream}
+ * RemoteProcess class representing the process spawned on the provider by {@link activity/work/work.WorkContext.runAndStream}
  */
 export class RemoteProcess {
   /**

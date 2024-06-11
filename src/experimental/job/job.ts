@@ -86,10 +86,10 @@ export class Job<Output = unknown> {
 
   /**
    * Run your worker function on the Golem Network. This method will synchronously initialize all internal services and validate the job options. The work itself will be run asynchronously in the background.
-   * You can use the {@link Job.events} event emitter to listen for state changes.
-   * You can also use {@link Job.waitForResult} to wait for the job to finish and get the results.
-   * If you want to cancel the job, use {@link Job.cancel}.
-   * If you want to run multiple jobs in parallel, you can use {@link GolemNetwork.createJob} to create multiple jobs and run them in parallel.
+   * You can use the {@link experimental/job/job.Job.events} event emitter to listen for state changes.
+   * You can also use {@link experimental/job/job.Job.waitForResult} to wait for the job to finish and get the results.
+   * If you want to cancel the job, use {@link experimental/job/job.Job.cancel}.
+   * If you want to run multiple jobs in parallel, you can use {@link experimental/job/job_manager.JobManager.createJob} to create multiple jobs and run them in parallel.
    *
    * @param workOnGolem - Your worker function that will be run on the Golem Network.
    */

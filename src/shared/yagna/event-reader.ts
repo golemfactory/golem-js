@@ -24,7 +24,7 @@ export type CancellablePoll<T> = {
   cancel: () => Promise<void>;
 };
 
-type EventsFetcherWithCursor<T extends EventDTO> = (lastEventTimestamp: string) => Promise<T[]>;
+export type EventsFetcherWithCursor<T extends EventDTO> = (lastEventTimestamp: string) => Promise<T[]>;
 
 export class EventReader {
   public constructor(private readonly logger: Logger) {}
