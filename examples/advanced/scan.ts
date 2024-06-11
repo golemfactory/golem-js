@@ -22,6 +22,13 @@ const scanOptions: ScanOptions = {
   await glm.connect();
   const spec = glm.market.buildScanSpecification(scanOptions);
 
+  /* For advanced users: you can also add properties and constraints manually:
+  spec.properties.push({
+    key: "golem.inf.cpu.architecture",
+    value: "x86_64",
+  });
+  */
+
   const SCAN_DURATION_MS = 10_000;
 
   console.log(`Scanning for ${SCAN_DURATION_MS / 1000} seconds...`);
