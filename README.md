@@ -31,6 +31,7 @@
     - [Custom filters](#custom-filters)
     - [Custom ranking of proposals](#custom-ranking-of-proposals)
     - [Uploading local images to the provider](#uploading-local-images-to-the-provider)
+    - [Market scan](#market-scan)
   - [Going further](#going-further)
   - [More examples](#more-examples)
   - [Debugging](#debugging)
@@ -356,25 +357,26 @@ const order: MarketOrderSpec = {
 
 [Check the full example](./examples/advanced//local-image/)
 
-<!--
-TODO:
- ### Market scan
+### Market scan
 
 You can scan the market for available providers and their offers. This is useful when you want to see what's available
 before placing an order.
 
 ```ts
-await glm.market.scan(order).subscribe({
-  next: (proposal) => {
-    console.log("Received proposal from provider", proposal.provider.name);
-  },
-  complete: () => {
-    console.log("Market scan completed");
-  },
-});
+await glm.market
+  .scan(order)
+  .pipe(takeUntil(timer(10_000)))
+  .subscribe({
+    next: (proposal) => {
+      console.log("Received proposal from provider", proposal.provider.name);
+    },
+    complete: () => {
+      console.log("Market scan completed");
+    },
+  });
 ```
 
-[Check the full example](./examples/basic/market-scan.ts) -->
+[Check the full example](./examples/advanced/scan.ts)
 
 ## Going further
 

@@ -19,6 +19,8 @@ import { getMessageFromApiError } from "../../utils/apiErrorMessage";
 import { withTimeout } from "../../utils/timeout";
 import { AgreementOptions, IAgreementRepository } from "../../../market/agreement/agreement";
 import { IProposalRepository, MarketProposal, OfferCounterProposal } from "../../../market/proposal";
+import EventSource from "eventsource";
+import { ScanSpecification, ScannedOffer } from "../../../market/scan";
 
 /**
  * A bit more user-friendly type definition of DemandOfferBaseDTO from ya-ts-client
@@ -392,5 +394,60 @@ export class MarketApiAdapter implements IMarketApi {
 
   private isOfferCounterProposal(proposal: MarketProposal): proposal is OfferCounterProposal {
     return proposal.issuer === "Requestor";
+  }
+
+  public scan(spec: ScanSpecification): Observable<ScannedOffer> {
+    const ac = new AbortController();
+    return new Observable((observer) => {
+      this.yagnaApi.market.httpRequest
+        .request<string>({
+          body: {
+            ...this.buildDemandRequestBody(spec),
+            type: "offer",
+          },
+          method: "POST",
+          url: "/scan",
+        })
+        .then((iterator) => {
+          const cleanupIterator = () =>
+            this.yagnaApi.market.httpRequest.request({
+              method: "DELETE",
+              url: `/scan/${iterator}`,
+            });
+
+          if (ac.signal.aborted) {
+            void cleanupIterator();
+            return;
+          }
+
+          const eventSource = new EventSource(
+            `${this.yagnaApi.market.httpRequest.config.BASE}/scan/${iterator}/events`,
+            {
+              headers: {
+                Accept: "text/event-stream",
+                Authorization: `Bearer ${this.yagnaApi.yagnaOptions.apiKey}`,
+              },
+            },
+          );
+
+          eventSource.addEventListener("offer", (event) => {
+            try {
+              const parsed = JSON.parse(event.data);
+              observer.next(new ScannedOffer(parsed));
+            } catch (error) {
+              observer.error(error);
+            }
+          });
+          eventSource.addEventListener("error", (error) => observer.error(error));
+
+          ac.signal.onabort = () => {
+            eventSource.close();
+            void cleanupIterator();
+          };
+        });
+      return () => {
+        ac.abort();
+      };
+    });
   }
 }

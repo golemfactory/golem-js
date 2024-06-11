@@ -12,3 +12,4 @@ export { BasicDemandDirector } from "./demand/directors/basic-demand-director";
 export { PaymentDemandDirector } from "./demand/directors/payment-demand-director";
 export { WorkloadDemandDirector } from "./demand/directors/workload-demand-director";
 export * from "./proposal/market-proposal-event";
+export * from "./scan";

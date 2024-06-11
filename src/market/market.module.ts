@@ -42,6 +42,7 @@ import { MarketOrderSpec } from "../golem-network";
 import { INetworkApi, NetworkModule } from "../network";
 import { AgreementOptions } from "./agreement/agreement";
 import { Concurrency } from "../lease-process";
+import { ScanDirector, ScanOptions, ScanSpecification, ScannedOffer } from "./scan";
 
 export type DemandEngine = "vm" | "vm-nvidia" | "wasmtime";
 
@@ -81,6 +82,13 @@ export interface MarketModule {
    * for example using the `publishDemand` method.
    */
   buildDemandDetails(options: BuildDemandOptions, allocation: Allocation): Promise<DemandSpecification>;
+
+  /**
+   * Build a ScanSpecification that can be used to scan the market for offers.
+   * The difference between this method and `buildDemandDetails` is that this method does not require an
+   * allocation, doesn't set payment related properties and doesn't provide any defaults.
+   */
+  buildScanSpecification(options: ScanOptions): ScanSpecification;
 
   /**
    * Publishes the demand to the market and handles refreshing it when needed.
@@ -189,6 +197,11 @@ export interface MarketModule {
    * Fetch the most up-to-date agreement details from the yagna
    */
   fetchAgreement(agreementId: string): Promise<Agreement>;
+
+  /**
+   * Scan the market for offers that match the given demand specification.
+   */
+  scan(scanSpecification: ScanSpecification): Observable<ScannedOffer>;
 }
 
 /**
@@ -263,6 +276,13 @@ export class MarketModuleImpl implements MarketModule {
     await paymentDirector.apply(builder);
 
     return new DemandSpecification(builder.getProduct(), allocation.paymentPlatform, basicConfig.expirationSec);
+  }
+
+  buildScanSpecification(options: ScanOptions): ScanSpecification {
+    const builder = new DemandBodyBuilder();
+    const director = new ScanDirector(options);
+    director.apply(builder);
+    return builder.getProduct();
   }
 
   /**
@@ -648,5 +668,9 @@ export class MarketModuleImpl implements MarketModule {
       });
     }
     return isPriceValid;
+  }
+
+  scan(scanSpecification: ScanSpecification): Observable<ScannedOffer> {
+    return this.deps.marketApi.scan(scanSpecification);
   }
 }
