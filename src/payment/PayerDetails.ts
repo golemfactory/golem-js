@@ -3,7 +3,8 @@ export class PayerDetails {
     public readonly network: string,
     public readonly driver: string,
     public readonly address: string,
-    public readonly token: "glm" | "tglm",
+    // eslint-disable-next-line @typescript-eslint/ban-types -- keep the autocomplete for "glm" and "tglm" but allow any string
+    public readonly token: "glm" | "tglm" | (string & {}),
   ) {}
 
   getPaymentPlatform() {
