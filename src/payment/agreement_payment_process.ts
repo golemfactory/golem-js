@@ -185,7 +185,6 @@ export class AgreementPaymentProcess {
   private async rejectDebitNote(debitNote: DebitNote, rejectionReason: RejectionReason, rejectMessage: string) {
     try {
       await this.paymentModule.rejectDebitNote(debitNote, rejectMessage);
-      this.logger.warn(`DebitNote rejected`, { reason: rejectMessage });
     } catch (error) {
       const message = getMessageFromApiError(error);
       throw new GolemPaymentError(
