@@ -33,7 +33,7 @@ export type MarketEvents = {
   /** Not implemented */
   offerPropertyQueryReceived: (event: OfferPropertyQueryReceivedEvent) => void;
 
-  offerProposalRejectedByFilter: (offerProposal: OfferProposal, reason?: string) => void;
+  offerProposalRejectedByProposalFilter: (offerProposal: OfferProposal, reason?: string) => void;
 
   /** Emitted when proposal price does not meet user criteria */
   offerProposalRejectedByPriceFilter: (offerProposal: OfferProposal, reason?: string) => void;

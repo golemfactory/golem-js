@@ -618,7 +618,7 @@ export class MarketModuleImpl implements MarketModule {
       const result = filter(proposal);
 
       if (!result) {
-        this.events.emit("offerProposalRejectedByFilter", proposal);
+        this.events.emit("offerProposalRejectedByProposalFilter", proposal);
         this.logger.debug("The offer was rejected by the user filter", { id: proposal.id });
       }
 
