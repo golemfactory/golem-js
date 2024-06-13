@@ -389,7 +389,7 @@ export class MarketModuleImpl implements MarketModule {
 
     this.logger.info("Proposed and got approval for agreement", {
       agreementId: agreement.id,
-      provider: agreement.getProviderInfo(),
+      provider: agreement.provider,
     });
 
     return agreement;
@@ -400,7 +400,7 @@ export class MarketModuleImpl implements MarketModule {
 
     this.logger.info("Terminated agreement", {
       agreementId: agreement.id,
-      provider: agreement.getProviderInfo(),
+      provider: agreement.provider,
       reason,
     });
 

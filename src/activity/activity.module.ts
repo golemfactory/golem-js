@@ -195,7 +195,7 @@ export class ActivityModuleImpl implements ActivityModule {
   async createActivity(agreement: Agreement): Promise<Activity> {
     this.logger.info("Creating activity", {
       agreementId: agreement.id,
-      provider: agreement.getProviderInfo(),
+      provider: agreement.provider,
     });
     try {
       const activity = await this.activityApi.createActivity(agreement);
@@ -211,7 +211,7 @@ export class ActivityModuleImpl implements ActivityModule {
     this.logger.info("Destroying activity", {
       activityId: activity.id,
       agreementId: activity.agreement.id,
-      provider: activity.agreement.getProviderInfo(),
+      provider: activity.agreement.provider,
     });
     try {
       const updated = await this.activityApi.destroyActivity(activity);

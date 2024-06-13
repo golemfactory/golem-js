@@ -88,7 +88,7 @@ export class ExeScriptExecutor {
         WorkErrorCode.ScriptExecutionFailed,
         this.activity.agreement,
         this.activity,
-        this.activity.getProviderInfo(),
+        this.activity.provider,
         error,
       );
     }
@@ -181,7 +181,7 @@ export class ExeScriptExecutor {
                     WorkErrorCode.ActivityResultsFetchingFailed,
                     agreement,
                     activity,
-                    activity.getProviderInfo(),
+                    activity.provider,
                     error,
                   ),
             );
@@ -235,7 +235,7 @@ export class ExeScriptExecutor {
               WorkErrorCode.ActivityResultsFetchingFailed,
               activity.agreement,
               activity,
-              activity.getProviderInfo(),
+              activity.provider,
             );
           }
           if (error) {

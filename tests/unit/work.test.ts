@@ -41,7 +41,7 @@ describe("Work Context", () => {
     reset(mockStorageProvider);
     reset(mockAgreement);
     reset(mockActivityModule);
-    when(mockActivity.getProviderInfo()).thenReturn({
+    when(mockActivity.provider).thenReturn({
       id: "test-provider-id",
       name: "test-provider-name",
       walletAddress: "0xProviderWallet",

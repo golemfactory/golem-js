@@ -42,8 +42,8 @@ export class Activity {
     protected readonly usage: ActivityUsageInfo,
   ) {}
 
-  public getProviderInfo(): ProviderInfo {
-    return this.agreement.getProviderInfo();
+  public get provider(): ProviderInfo {
+    return this.agreement.provider;
   }
 
   public getState() {

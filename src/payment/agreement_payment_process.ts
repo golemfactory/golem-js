@@ -256,7 +256,7 @@ export class AgreementPaymentProcess {
         invoiceId: invoice.id,
         agreementId: invoice.agreementId,
         amount: invoice.amount,
-        provider: this.agreement.getProviderInfo(),
+        provider: this.agreement.provider,
       });
     } catch (error) {
       const message = getMessageFromApiError(error);
