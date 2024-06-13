@@ -9,6 +9,7 @@ import type { LeaseProcess, LeaseProcessOptions } from "./lease-process";
 import { Network, NetworkModule } from "../network";
 import { LeaseModule } from "./lease.module";
 import { AgreementOptions } from "../market/agreement/agreement";
+import AsyncLock from "async-lock";
 
 export interface LeaseProcessPoolDependencies {
   allocation: Allocation;
@@ -69,6 +70,7 @@ export class LeaseProcessPool {
   private readonly maxPoolSize: number;
   private readonly leaseProcessOptions?: LeaseProcessOptions;
   private readonly agreementOptions?: AgreementOptions;
+  private readonly lock = new AsyncLock();
 
   constructor(options: LeaseProcessPoolOptions & LeaseProcessPoolDependencies) {
     this.allocation = options.allocation;
@@ -180,16 +182,18 @@ export class LeaseProcessPool {
     if (this.isDraining) {
       throw new Error("The pool is in draining mode");
     }
-    let leaseProcess = await this.takeValidLeaseProcess();
-    if (!leaseProcess) {
-      if (!this.canCreateMoreLeaseProcesses()) {
-        return this.enqueueAcquire();
+    return this.lock.acquire("lease-process-pool", async () => {
+      let leaseProcess = await this.takeValidLeaseProcess();
+      if (!leaseProcess) {
+        if (!this.canCreateMoreLeaseProcesses()) {
+          return this.enqueueAcquire();
+        }
+        leaseProcess = await this.createNewLeaseProcess();
       }
-      leaseProcess = await this.createNewLeaseProcess();
-    }
-    this.borrowed.add(leaseProcess);
-    this.events.emit("acquired", leaseProcess.agreement);
-    return leaseProcess;
+      this.borrowed.add(leaseProcess);
+      this.events.emit("acquired", leaseProcess.agreement);
+      return leaseProcess;
+    });
   }
 
   /**
