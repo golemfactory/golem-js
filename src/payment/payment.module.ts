@@ -53,6 +53,8 @@ export interface PaymentModule {
 
   amendAllocation(allocation: Allocation, params: CreateAllocationParams): Promise<Allocation>;
 
+  getAllocation(id: string): Promise<Allocation>;
+
   acceptInvoice(invoice: Invoice, allocation: Allocation, amount: string): Promise<Invoice>;
 
   rejectInvoice(invoice: Invoice, reason: string): Promise<Invoice>;
@@ -156,12 +158,22 @@ export class PaymentModuleImpl implements PaymentModule {
   async releaseAllocation(allocation: Allocation): Promise<void> {
     this.logger.info("Releasing allocation", { id: allocation.id });
     try {
+      const lastKnownAllocationState = await this.getAllocation(allocation.id);
       await this.paymentApi.releaseAllocation(allocation);
-      this.events.emit("allocationReleased", allocation);
+      this.events.emit("allocationReleased", lastKnownAllocationState);
     } catch (error) {
-      this.events.emit("errorReleasingAllocation", allocation, error);
+      this.events.emit(
+        "errorReleasingAllocation",
+        await this.paymentApi.getAllocation(allocation.id).catch(() => allocation),
+        error,
+      );
       throw error;
     }
+  }
+
+  getAllocation(id: string): Promise<Allocation> {
+    this.logger.debug("Fetching allocation by id", { id });
+    return this.paymentApi.getAllocation(id);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
