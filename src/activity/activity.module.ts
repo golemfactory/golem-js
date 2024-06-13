@@ -262,10 +262,14 @@ export class ActivityModuleImpl implements ActivityModule {
     this.logger.debug("Initializing the exe-unit for activity", { activityId: activity.id });
     try {
       await ctx.before();
-      this.events.emit("activityInitialized", await this.refreshActivity(activity).catch(() => activity));
+      this.events.emit("workContextInitialized", await this.refreshActivity(activity).catch(() => activity));
       return ctx;
     } catch (error) {
-      this.events.emit("errorInitializingActivity", await this.refreshActivity(activity).catch(() => activity), error);
+      this.events.emit(
+        "errorInitializingWorkContext",
+        await this.refreshActivity(activity).catch(() => activity),
+        error,
+      );
       throw error;
     }
   }
