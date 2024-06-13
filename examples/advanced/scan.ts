@@ -36,7 +36,7 @@ const scanOptions: ScanOptions = {
     .scan(spec)
     .pipe(
       tap((scannedOffer) => {
-        console.log("Found offer from", scannedOffer.getProviderInfo().name);
+        console.log("Found offer from", scannedOffer.provider.name);
       }),
       // calculate the cost of an hour of work
       map(

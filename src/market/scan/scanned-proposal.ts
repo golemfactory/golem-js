@@ -52,7 +52,7 @@ export class ScannedOffer {
     };
   }
 
-  getProviderInfo() {
+  get provider() {
     return {
       id: this.model.providerId,
       name: this.properties["golem.node.id.name"] || "<unknown>",

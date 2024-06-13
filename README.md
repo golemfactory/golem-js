@@ -368,7 +368,7 @@ await glm.market
   .pipe(takeUntil(timer(10_000)))
   .subscribe({
     next: (scannedOffer) => {
-      console.log("Found offer from", scannedOffer.getProviderInfo().name);
+      console.log("Found offer from", scannedOffer.provider.name);
     },
     complete: () => {
       console.log("Market scan completed");
