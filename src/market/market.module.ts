@@ -37,7 +37,7 @@ import { WorkloadDemandDirector } from "./demand/directors/workload-demand-direc
 import { WorkloadDemandDirectorConfigOptions } from "./demand/options";
 import { BasicDemandDirectorConfig } from "./demand/directors/basic-demand-director-config";
 import { PaymentDemandDirectorConfig } from "./demand/directors/payment-demand-director-config";
-import { GolemUserError } from "../shared/error/golem-error";
+import { GolemAbortError, GolemTimeoutError, GolemUserError } from "../shared/error/golem-error";
 import { MarketOrderSpec } from "../golem-network";
 import { INetworkApi, NetworkModule } from "../network";
 import { AgreementOptions } from "./agreement/agreement";
@@ -470,14 +470,27 @@ export class MarketModuleImpl implements MarketModule {
   ): Promise<Agreement> {
     const signal = createAbortSignalFromTimeout(signalOrTimeout);
 
-    const tryProposing = async (): Promise<Agreement> => {
-      signal.throwIfAborted();
-      const proposal = await draftProposalPool.acquire();
-      if (signal.aborted) {
-        await draftProposalPool.release(proposal);
+    const getProposal = async () => {
+      try {
         signal.throwIfAborted();
+        const proposal = await draftProposalPool.acquire(signalOrTimeout);
+        if (signal.aborted) {
+          await draftProposalPool.release(proposal);
+          signal.throwIfAborted();
+        }
+        return proposal;
+      } catch (error) {
+        if (signal.aborted) {
+          throw signal.reason.name === "TimeoutError"
+            ? new GolemTimeoutError("Could not sign any agreement in time")
+            : new GolemAbortError("The signing of the agreement has been interrupted", error);
+        }
+        throw error;
       }
+    };
 
+    const tryProposing = async (): Promise<Agreement> => {
+      const proposal = await getProposal();
       try {
         const agreement = await this.proposeAgreement(proposal, agreementOptions);
         // agreement is valid, proposal can be destroyed

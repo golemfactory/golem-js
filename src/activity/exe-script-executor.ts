@@ -1,4 +1,4 @@
-import { Logger } from "../shared/utils";
+import { createAbortSignalFromTimeout, Logger } from "../shared/utils";
 import { ExecutionConfig } from "./config";
 import { Readable } from "stream";
 import { GolemWorkError, WorkErrorCode } from "./work";
@@ -24,13 +24,14 @@ export interface ExecutionOptions {
   activityExeBatchResultPollIntervalSeconds?: number;
   /** maximum number of retries retrieving results when an error occurs, default: 10 */
   activityExeBatchResultMaxRetries?: number;
+  signalOrTimeout?: number | AbortSignal;
 }
 
 const RETRYABLE_ERROR_STATUS_CODES = [408, 500];
 
 export class ExeScriptExecutor {
-  private isRunning = false;
   private readonly options: ExecutionConfig;
+  private readonly abortSignal: AbortSignal;
 
   constructor(
     public readonly activity: Activity,
@@ -39,13 +40,7 @@ export class ExeScriptExecutor {
     options?: ExecutionOptions,
   ) {
     this.options = new ExecutionConfig(options);
-  }
-
-  /**
-   * Stops the executor mid-flight
-   */
-  public stop() {
-    this.isRunning = false;
+    this.abortSignal = createAbortSignalFromTimeout(options?.signalOrTimeout);
   }
 
   /**
@@ -64,13 +59,14 @@ export class ExeScriptExecutor {
   ): Promise<Readable> {
     let batchId: string, batchSize: number;
     let startTime = new Date();
-    this.isRunning = true;
 
     try {
+      this.abortSignal.throwIfAborted();
       batchId = await this.send(script);
       startTime = new Date();
       batchSize = JSON.parse(script.text).length;
 
+      this.abortSignal.throwIfAborted();
       this.logger.debug(`Script sent.`, { batchId });
 
       return stream
@@ -111,17 +107,18 @@ export class ExeScriptExecutor {
 
     const { id: activityId, agreement } = this.activity;
 
-    const isRunning = () => this.isRunning;
-
     const { activityExecuteTimeout, activityExeBatchResultPollIntervalSeconds, activityExeBatchResultMaxRetries } =
       this.options;
-    const { logger, activity, activityModule } = this;
+    const { logger, activity, activityModule, abortSignal } = this;
 
     return new Readable({
       objectMode: true,
 
       async read() {
-        while (!isBatchFinished) {
+        abortSignal.addEventListener("abort", () =>
+          this.destroy(new GolemAbortError(`Processing of batch execution has been aborted`, abortSignal.reason)),
+        );
+        while (!isBatchFinished && !abortSignal.aborted) {
           logger.debug("Polling for batch script execution result");
 
           if (startTime.valueOf() + (timeout || activityExecuteTimeout) <= new Date().valueOf()) {
@@ -134,9 +131,11 @@ export class ExeScriptExecutor {
               async (bail, attempt) => {
                 logger.debug(`Trying to poll for batch execution results from yagna. Attempt: ${attempt}`);
                 try {
-                  if (!isRunning()) {
+                  if (abortSignal.aborted) {
                     logger.debug("Activity is no longer running, will stop polling for batch execution results");
-                    return bail(new GolemAbortError(`Activity ${activityId} has been interrupted.`));
+                    return bail(
+                      new GolemAbortError(`Activity ${activityId} has been interrupted.`, abortSignal.reason),
+                    );
                   }
                   return await activityModule.getBatchResults(
                     activity,
@@ -171,6 +170,11 @@ export class ExeScriptExecutor {
               });
             }
           } catch (error) {
+            if (abortSignal.aborted) {
+              const message = "Processing of batch execution has been aborted";
+              logger.warn(message, { reason: abortSignal.reason });
+              return this.destroy(new GolemAbortError(message, abortSignal.reason));
+            }
             logger.error(`Processing batch execution results failed`, error);
 
             return this.destroy(
@@ -187,8 +191,11 @@ export class ExeScriptExecutor {
             );
           }
         }
-
-        this.push(null);
+        if (abortSignal.aborted) {
+          this.destroy(new GolemAbortError(`Processing of batch execution has been aborted`, abortSignal.reason));
+        } else {
+          this.push(null);
+        }
       },
     });
   }
@@ -209,10 +216,9 @@ export class ExeScriptExecutor {
     });
 
     let isBatchFinished = false;
-    const isRunning = () => this.isRunning;
     const activityExecuteTimeout = this.options.activityExecuteTimeout;
 
-    const { logger, activity } = this;
+    const { logger, activity, abortSignal } = this;
 
     return new Readable({
       objectMode: true,
@@ -224,9 +230,9 @@ export class ExeScriptExecutor {
             error = new GolemTimeoutError(`Activity ${activity.id} timeout.`);
           }
 
-          if (!isRunning()) {
+          if (abortSignal.aborted) {
             logger.debug("Activity is no longer running, will stop streaming batch execution results");
-            error = new GolemAbortError(`Activity ${activity.id} has been interrupted.`);
+            error = new GolemAbortError(`Processing of batch execution has been aborted`, abortSignal.reason);
           }
 
           if (errors.length) {
@@ -250,8 +256,11 @@ export class ExeScriptExecutor {
           }
           await sleep(500, true);
         }
-
-        this.push(null);
+        if (abortSignal.aborted) {
+          this.destroy(new GolemAbortError(`Processing of batch execution has been aborted`, abortSignal.reason));
+        } else {
+          this.push(null);
+        }
         source.unsubscribe();
       },
     });

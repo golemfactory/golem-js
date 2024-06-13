@@ -1,5 +1,5 @@
 import { Subscription } from "rxjs";
-import { Allocation, DraftOfferProposalPool, GolemNetwork } from "../../src";
+import { Allocation, DraftOfferProposalPool, GolemAbortError, GolemNetwork } from "../../src";
 
 describe("LeaseProcessPool", () => {
   const glm = new GolemNetwork();
@@ -157,5 +157,48 @@ describe("LeaseProcessPool", () => {
     await pool.destroy(leaseProcess2);
     await pool.drainAndClear();
     await glm.network.removeNetwork(network);
+  });
+
+  it("should abort lease process by abort call", async () => {
+    const pool = glm.lease.createLeaseProcessPool(proposalPool, allocation, { replicas: 1 });
+    const leaseProcess = await pool.acquire();
+    return new Promise(async (res) => {
+      leaseProcess.events.on("finalized", async () => res(true));
+      leaseProcess.abort("test reason");
+    });
+  });
+
+  it("should abort lease process during execution by abort call", async () => {
+    const pool = glm.lease.createLeaseProcessPool(proposalPool, allocation, { replicas: 1 });
+    const leaseProcess = await pool.acquire();
+    const exe = await leaseProcess.getExeUnit();
+    setTimeout(() => leaseProcess.abort(), 8_000);
+    await expect(exe.run("sleep 10 && echo Hello World")).rejects.toThrow(
+      new GolemAbortError("Processing of batch execution has been aborted"),
+    );
+    await pool.drainAndClear();
+  });
+
+  it("should abort lease during execution process by signal", async () => {
+    const pool = glm.lease.createLeaseProcessPool(proposalPool, allocation, { replicas: 1 });
+    const ac = new AbortController();
+    const leaseProcess = await pool.acquire(ac.signal);
+    const exe = await leaseProcess.getExeUnit();
+    setTimeout(() => ac.abort(), 8_000);
+    await expect(exe.run("sleep 10 && echo Hello World")).rejects.toThrow(
+      new GolemAbortError("Processing of batch execution has been aborted"),
+    );
+    await pool.drainAndClear();
+  });
+
+  it("should abort lease during execution process by timeout", async () => {
+    const pool = glm.lease.createLeaseProcessPool(proposalPool, allocation, { replicas: 1 });
+    const ac = new AbortController();
+    const leaseProcess = await pool.acquire(8_000);
+    const exe = await leaseProcess.getExeUnit();
+    await expect(exe.run("sleep 10 && echo Hello World")).rejects.toThrow(
+      new GolemAbortError("Processing of batch execution has been aborted"),
+    );
+    await pool.drainAndClear();
   });
 });

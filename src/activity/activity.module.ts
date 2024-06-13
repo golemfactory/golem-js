@@ -7,6 +7,7 @@ import { WorkContext, WorkOptions } from "./work";
 import { ExeScriptExecutor, ExeScriptRequest, ExecutionOptions } from "./exe-script-executor";
 import { Observable, catchError, tap } from "rxjs";
 import { StreamingBatchEvent } from "./results";
+import { GolemAbortError } from "../shared/error/golem-error";
 
 export interface ActivityModule {
   events: EventEmitter<ActivityEvents>;
@@ -123,7 +124,7 @@ export class ActivityModuleImpl implements ActivityModule {
   }
 
   async executeScript(activity: Activity, script: ExeScriptRequest): Promise<string> {
-    this.logger.info("Executing script on activity", { activityId: activity.id });
+    this.logger.debug("Executing script on activity", { activityId: activity.id });
     try {
       const result = await this.activityApi.executeScript(activity, script);
       this.events.emit("scriptExecuted", activity, script, result);
@@ -139,7 +140,7 @@ export class ActivityModuleImpl implements ActivityModule {
     commandIndex?: number | undefined,
     timeout?: number | undefined,
   ): Promise<Result[]> {
-    this.logger.info("Fetching batch results", { activityId: activity.id, batchId });
+    this.logger.debug("Fetching batch results", { activityId: activity.id, batchId });
     try {
       const results = await this.activityApi.getExecBatchResults(activity, batchId, commandIndex, timeout);
       this.events.emit("batchResultsReceived", activity, batchId, results);
@@ -154,7 +155,7 @@ export class ActivityModuleImpl implements ActivityModule {
     batchId: string,
     commandIndex?: number | undefined,
   ): Observable<StreamingBatchEvent> {
-    this.logger.info("Observing streaming batch events", { activityId: activity.id, batchId });
+    this.logger.debug("Observing streaming batch events", { activityId: activity.id, batchId });
     return this.activityApi.getExecBatchEvents(activity, batchId, commandIndex).pipe(
       tap((event) => {
         this.events.emit("batchEventsReceived", activity, batchId, event);
@@ -240,6 +241,9 @@ export class ActivityModuleImpl implements ActivityModule {
       return ctx;
     } catch (error) {
       this.events.emit("errorInitializingActivity", activity, error);
+      if (options?.signalOrTimeout instanceof AbortSignal && options.signalOrTimeout.aborted) {
+        throw new GolemAbortError("Initialization of the exe-unit has been aborted", options?.signalOrTimeout.reason);
+      }
       throw error;
     }
   }

@@ -13,7 +13,7 @@ import {
   UploadFile,
 } from "../script";
 import { NullStorageProvider, StorageProvider } from "../../shared/storage";
-import { defaultLogger, Logger, sleep, YagnaOptions } from "../../shared/utils";
+import { createAbortSignalFromTimeout, defaultLogger, Logger, sleep, YagnaOptions } from "../../shared/utils";
 import { Batch } from "./batch";
 import { NetworkNode } from "../../network";
 import { RemoteProcess } from "./process";
@@ -39,6 +39,7 @@ export interface WorkOptions {
   activityReadySetupFunctions?: Worker<unknown>[];
   yagnaOptions?: YagnaOptions;
   execution?: ExecutionOptions;
+  signalOrTimeout?: number | AbortSignal;
 }
 
 export interface CommandOptions {
@@ -67,6 +68,7 @@ export class WorkContext {
   private readonly networkNode?: NetworkNode;
 
   private executor: ExeScriptExecutor;
+  private readonly abortSignal: AbortSignal;
 
   constructor(
     public readonly activity: Activity,
@@ -81,11 +83,17 @@ export class WorkContext {
     this.storageProvider = options?.storageProvider ?? new NullStorageProvider();
 
     this.networkNode = options?.networkNode;
-
-    this.executor = this.activityModule.createScriptExecutor(this.activity, this.options?.execution);
+    this.abortSignal = createAbortSignalFromTimeout(options?.signalOrTimeout);
+    this.executor = this.activityModule.createScriptExecutor(this.activity, {
+      ...this.options?.execution,
+      signalOrTimeout: this.abortSignal,
+    });
   }
 
   private async fetchState(): Promise<ActivityStateEnum> {
+    if (this.abortSignal.aborted) {
+      return ActivityStateEnum.Unknown;
+    }
     return this.activityModule
       .refreshActivity(this.activity)
       .then((activity) => activity.getState())
@@ -150,6 +158,10 @@ export class WorkContext {
         })(),
       ])
         .catch((error) => {
+          if (this.abortSignal.aborted) {
+            this.logger.warn("Initializing of activity has been aborted", { reason: this.abortSignal.reason });
+            return;
+          }
           if (error instanceof GolemWorkError) {
             throw error;
           }

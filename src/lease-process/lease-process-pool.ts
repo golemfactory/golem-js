@@ -100,16 +100,21 @@ export class LeaseProcessPool {
       })() || MAX_REPLICAS;
   }
 
-  private async createNewLeaseProcess() {
+  private async createNewLeaseProcess(signalOrTimeout?: number | AbortSignal) {
     this.logger.debug("Creating new lease process to add to pool");
     try {
-      const agreement = await this.marketModule.signAgreementFromPool(this.proposalPool, this.agreementOptions);
+      const agreement = await this.marketModule.signAgreementFromPool(
+        this.proposalPool,
+        this.agreementOptions,
+        signalOrTimeout,
+      );
       const networkNode = this.network
         ? await this.networkModule.createNetworkNode(this.network, agreement.getProviderInfo().id)
         : undefined;
       const leaseProcess = this.leaseModule.createLease(agreement, this.allocation, {
         networkNode,
         ...this.leaseProcessOptions,
+        signalOrTimeout,
       });
       this.events.emit("created", agreement);
       return leaseProcess;
@@ -176,7 +181,7 @@ export class LeaseProcessPool {
   /**
    * Borrow a lease process from the pool. If there is no valid lease process a new one will be created.
    */
-  async acquire(): Promise<LeaseProcess> {
+  async acquire(signalOrTimeout?: number | AbortSignal): Promise<LeaseProcess> {
     if (this.isDraining) {
       throw new Error("The pool is in draining mode");
     }
@@ -185,7 +190,7 @@ export class LeaseProcessPool {
       if (!this.canCreateMoreLeaseProcesses()) {
         return this.enqueueAcquire();
       }
-      leaseProcess = await this.createNewLeaseProcess();
+      leaseProcess = await this.createNewLeaseProcess(signalOrTimeout);
     }
     this.borrowed.add(leaseProcess);
     this.events.emit("acquired", leaseProcess.agreement);
@@ -349,8 +354,11 @@ export class LeaseProcessPool {
    * });
    * ```
    */
-  public async withLease<T>(callback: (lease: LeaseProcess) => Promise<T>): Promise<T> {
-    const lease = await this.acquire();
+  public async withLease<T>(
+    callback: (lease: LeaseProcess) => Promise<T>,
+    signalOrTimeout?: number | AbortSignal,
+  ): Promise<T> {
+    const lease = await this.acquire(signalOrTimeout);
     try {
       return await callback(lease);
     } finally {

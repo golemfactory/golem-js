@@ -4,7 +4,7 @@ import { Capture, Deploy, DownloadFile, Run, Script, Start, Terminate, UploadFil
 import { buildExeScriptSuccessResult } from "../../tests/unit/helpers";
 import { GolemWorkError, WorkErrorCode } from "./work";
 import { Logger, sleep } from "../shared/utils";
-import { GolemError, GolemTimeoutError } from "../shared/error/golem-error";
+import { GolemAbortError, GolemError, GolemTimeoutError } from "../shared/error/golem-error";
 import { ExeScriptExecutor } from "./exe-script-executor";
 import { StorageProvider } from "../shared/storage";
 import { from, of, throwError } from "rxjs";
@@ -86,7 +86,6 @@ describe("ExeScriptExecutor", () => {
       }
 
       await script.after([]);
-      await executor.stop();
     });
 
     it("should execute script and get results by events", async () => {
@@ -131,7 +130,6 @@ describe("ExeScriptExecutor", () => {
         });
         results.on("end", async () => {
           await script.after([]);
-          await executor.stop();
           expect(resultCount).toEqual(6);
           return res();
         });
@@ -229,16 +227,17 @@ describe("ExeScriptExecutor", () => {
       }
       expect(expectedStdout).toEqual("test");
       await script.after([]);
-      await executor.stop();
     });
   });
 
   describe("Cancelling", () => {
     it("should cancel executor", async () => {
+      const ac = new AbortController();
       const executor = new ExeScriptExecutor(
         instance(mockActivity),
         instance(mockActivityModule),
         instance(mockLogger),
+        { signalOrTimeout: ac.signal },
       );
       const command1 = new Deploy();
       const command2 = new Start();
@@ -249,10 +248,12 @@ describe("ExeScriptExecutor", () => {
       const script = Script.create([command1, command2, command3, command4, command5, command6]);
       await script.before();
       const results = await executor.execute(script.getExeScriptRequest(), undefined, undefined);
-      await executor.stop();
+      ac.abort(new Error("test reson"));
       return new Promise<void>((res) => {
         results.on("error", (error) => {
-          expect(error.toString()).toMatch(/Error: Activity .* has been interrupted/);
+          expect(error).toMatchError(
+            new GolemAbortError(`Processing of batch execution has been aborted`, new Error("test reson")),
+          );
           return res();
         });
         results.on("data", () => null);
@@ -261,10 +262,14 @@ describe("ExeScriptExecutor", () => {
 
     it("should cancel executor while streaming batch", async () => {
       when(mockActivityModule.observeStreamingBatchEvents(_, _)).thenReturn(of<StreamingBatchEvent>());
+      const ac = new AbortController();
       const executor = new ExeScriptExecutor(
         instance(mockActivity),
         instance(mockActivityModule),
         instance(mockLogger),
+        {
+          signalOrTimeout: ac.signal,
+        },
       );
       const command1 = new Deploy();
       const command2 = new Start();
@@ -277,10 +282,12 @@ describe("ExeScriptExecutor", () => {
       const script = Script.create([command1, command2, command3, command4]);
       await script.before();
       const results = await executor.execute(script.getExeScriptRequest(), true, undefined);
-      await executor.stop();
+      ac.abort(new Error("test reson"));
       return new Promise<void>((res) => {
         results.on("error", (error) => {
-          expect(error.toString()).toMatch(/Error: Activity .* has been interrupted/);
+          expect(error).toMatchError(
+            new GolemAbortError(`Processing of batch execution has been aborted`, new Error("test reson")),
+          );
           return res();
         });
         results.on("data", () => null);

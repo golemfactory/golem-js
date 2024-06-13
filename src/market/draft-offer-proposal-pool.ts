@@ -2,8 +2,9 @@ import { OfferProposal, ProposalFilter } from "./proposal/offer-proposal";
 import AsyncLock from "async-lock";
 import { EventEmitter } from "eventemitter3";
 import { GolemMarketError, MarketErrorCode } from "./error";
-import { defaultLogger, Logger, sleep } from "../shared/utils";
+import { createAbortSignalFromTimeout, defaultLogger, Logger, sleep } from "../shared/utils";
 import { Observable, Subscription } from "rxjs";
+import { GolemAbortError, GolemTimeoutError } from "../shared/error/golem-error";
 
 export type ProposalSelector = (proposals: OfferProposal[]) => OfferProposal;
 
@@ -26,13 +27,6 @@ export interface ProposalPoolOptions {
    * @default 0
    */
   minCount?: number;
-
-  /**
-   * Number of seconds to wait for an acquire call to finish before throwing an exception
-   *
-   * @default 30
-   */
-  acquireTimeoutSec?: number;
 
   logger?: Logger;
 }
@@ -65,9 +59,6 @@ export class DraftOfferProposalPool {
   /** {@link ProposalPoolOptions.minCount} */
   private readonly minCount: number = 0;
 
-  /** {@link ProposalPoolOptions.acquireTimeoutSec} */
-  private readonly acquireTimeoutSec: number = 30;
-
   /** {@link ProposalPoolOptions.selectProposal} */
   private readonly selectProposal: ProposalSelector = (proposals: OfferProposal[]) => proposals[0];
 
@@ -96,10 +87,6 @@ export class DraftOfferProposalPool {
       this.minCount = options.minCount;
     }
 
-    if (options?.acquireTimeoutSec && options.acquireTimeoutSec >= 0) {
-      this.acquireTimeoutSec = options?.acquireTimeoutSec;
-    }
-
     this.logger = this.logger = options?.logger || defaultLogger("proposal-pool");
   }
 
@@ -118,46 +105,45 @@ export class DraftOfferProposalPool {
   }
 
   /**
-   * Attempts to obtain a single proposal from the pool
-   *
-   * This method will reject if no suitable proposal will be found within {@link DraftOfferProposalPool.acquireTimeoutSec} seconds.
+   * Attempts to obtain a single proposal from the poolonds.
+   * @param TODO
    */
-  public acquire(): Promise<OfferProposal> {
-    return this.lock.acquire(
-      "proposal-pool",
-      async () => {
-        let proposal: OfferProposal | null = null;
+  public acquire(signalOrTimeout?: number | AbortSignal): Promise<OfferProposal> {
+    const signal = createAbortSignalFromTimeout(signalOrTimeout);
+    return this.lock.acquire("proposal-pool", async () => {
+      let proposal: OfferProposal | null = null;
 
-        while (proposal === null) {
-          // Try to get one
-          proposal = this.available.size > 0 ? this.selectProposal([...this.available]) : null;
+      while (proposal === null) {
+        if (signal.aborted) {
+          throw signal.reason.name === "TimeoutError"
+            ? new GolemTimeoutError("Could not provide any proposal in time")
+            : new GolemAbortError("The acquiring of proposals has been interrupted", signal.reason);
+        }
+        // Try to get one
+        proposal = this.available.size > 0 ? this.selectProposal([...this.available]) : null;
 
-          if (proposal) {
-            // Validate
-            if (!this.validateProposal(proposal)) {
-              // Drop if not valid
-              this.removeFromAvailable(proposal);
-              // Keep searching
-              proposal = null;
-            }
-          }
-          // if not found or not valid wait a while for next try
-          if (!proposal) {
-            await sleep(1);
+        if (proposal) {
+          // Validate
+          if (!this.validateProposal(proposal)) {
+            // Drop if not valid
+            this.removeFromAvailable(proposal);
+            // Keep searching
+            proposal = null;
           }
         }
+        // if not found or not valid wait a while for next try
+        if (!proposal) {
+          await sleep(1);
+        }
+      }
 
-        this.available.delete(proposal);
-        this.leased.add(proposal);
+      this.available.delete(proposal);
+      this.leased.add(proposal);
 
-        this.events.emit("acquired", proposal);
+      this.events.emit("acquired", proposal);
 
-        return proposal;
-      },
-      {
-        maxOccupationTime: this.acquireTimeoutSec * 1000,
-      },
-    );
+      return proposal;
+    });
   }
 
   /**
