@@ -24,7 +24,7 @@ describe("ExeScriptExecutor", () => {
     reset(mockStorageProvider);
     reset(mockActivityModule);
     resetAllMocks();
-    when(mockactivity.provider).thenReturn({
+    when(mockActivity.provider).thenReturn({
       id: "test-provider-id",
       name: "test-provider-name",
       walletAddress: "0xProviderWallet",

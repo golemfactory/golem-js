@@ -34,8 +34,8 @@ describe("Batch", () => {
       walletAddress: "0xTestProvider",
     };
 
-    when(mockagreement.provider).thenReturn(providerInfo);
-    when(mockactivity.provider).thenReturn(providerInfo);
+    when(mockAgreement.provider).thenReturn(providerInfo);
+    when(mockActivity.provider).thenReturn(providerInfo);
     when(mockActivity.agreement).thenReturn(instance(mockAgreement));
 
     activity = instance(mockActivity);
