@@ -127,10 +127,15 @@ export class ActivityModuleImpl implements ActivityModule {
     try {
       this.events.emit("scriptSent", activity, script);
       const result = await this.activityApi.executeScript(activity, script);
-      this.events.emit("scriptExecuted", activity, script, result);
+      this.events.emit("scriptExecuted", await this.refreshActivity(activity).catch(() => activity), script, result);
       return result;
     } catch (error) {
-      this.events.emit("errorExecutingScript", activity, script, error);
+      this.events.emit(
+        "errorExecutingScript",
+        await this.refreshActivity(activity).catch(() => activity),
+        script,
+        error,
+      );
       throw error;
     }
   }
@@ -143,10 +148,20 @@ export class ActivityModuleImpl implements ActivityModule {
     this.logger.info("Fetching batch results", { activityId: activity.id, batchId });
     try {
       const results = await this.activityApi.getExecBatchResults(activity, batchId, commandIndex, timeout);
-      this.events.emit("batchResultsReceived", activity, batchId, results);
+      this.events.emit(
+        "batchResultsReceived",
+        await this.refreshActivity(activity).catch(() => activity),
+        batchId,
+        results,
+      );
       return results;
     } catch (error) {
-      this.events.emit("errorGettingBatchResults", activity, batchId, error);
+      this.events.emit(
+        "errorGettingBatchResults",
+        await this.refreshActivity(activity).catch(() => activity),
+        batchId,
+        error,
+      );
       throw error;
     }
   }
@@ -157,11 +172,21 @@ export class ActivityModuleImpl implements ActivityModule {
   ): Observable<StreamingBatchEvent> {
     this.logger.info("Observing streaming batch events", { activityId: activity.id, batchId });
     return this.activityApi.getExecBatchEvents(activity, batchId, commandIndex).pipe(
-      tap((event) => {
-        this.events.emit("batchEventsReceived", activity, batchId, event);
+      tap(async (event) => {
+        this.events.emit(
+          "batchEventsReceived",
+          await this.refreshActivity(activity).catch(() => activity),
+          batchId,
+          event,
+        );
       }),
-      catchError((error) => {
-        this.events.emit("errorGettingBatchEvents", activity, batchId, error);
+      catchError(async (error) => {
+        this.events.emit(
+          "errorGettingBatchEvents",
+          await this.refreshActivity(activity).catch(() => activity),
+          batchId,
+          error,
+        );
         throw error;
       }),
     );
@@ -206,13 +231,13 @@ export class ActivityModuleImpl implements ActivityModule {
     });
     try {
       const freshActivity = await this.activityApi.getActivity(staleActivity.id);
-      if (freshActivity.getState() !== staleActivity.getState()) {
+      if (freshActivity.getState() !== freshActivity.getPreviousState()) {
         this.logger.debug("Activity state changed", {
           activityId: staleActivity.id,
-          previousState: staleActivity.getState(),
+          previousState: freshActivity.getPreviousState(),
           newState: freshActivity.getState(),
         });
-        this.events.emit("activityStateChanged", freshActivity, staleActivity.getState());
+        this.events.emit("activityStateChanged", freshActivity, freshActivity.getPreviousState());
       }
       return freshActivity;
     } catch (error) {
@@ -237,10 +262,10 @@ export class ActivityModuleImpl implements ActivityModule {
     this.logger.debug("Initializing the exe-unit for activity", { activityId: activity.id });
     try {
       await ctx.before();
-      this.events.emit("activityInitialized", activity);
+      this.events.emit("activityInitialized", await this.refreshActivity(activity).catch(() => activity));
       return ctx;
     } catch (error) {
-      this.events.emit("errorInitializingActivity", activity, error);
+      this.events.emit("errorInitializingActivity", await this.refreshActivity(activity).catch(() => activity), error);
       throw error;
     }
   }

@@ -31,12 +31,14 @@ export class Activity {
    * @param id The ID of the activity in Yagna
    * @param agreement The agreement that's related to this activity
    * @param currentState The current state as it was obtained from yagna
+   * @param previousState The previous state (or New if this is the first time we're creating the activity)
    * @param usage Current resource usage vector information
    */
   constructor(
     public readonly id: string,
     public readonly agreement: Agreement,
     protected readonly currentState: ActivityStateEnum = ActivityStateEnum.New,
+    protected readonly previousState: ActivityStateEnum = ActivityStateEnum.Unknown,
     protected readonly usage: ActivityUsageInfo,
   ) {}
 
@@ -46,5 +48,9 @@ export class Activity {
 
   public getState() {
     return this.currentState;
+  }
+
+  public getPreviousState() {
+    return this.previousState;
   }
 }
