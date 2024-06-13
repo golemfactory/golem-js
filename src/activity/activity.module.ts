@@ -125,6 +125,7 @@ export class ActivityModuleImpl implements ActivityModule {
   async executeScript(activity: Activity, script: ExeScriptRequest): Promise<string> {
     this.logger.info("Executing script on activity", { activityId: activity.id });
     try {
+      this.events.emit("scriptSent", activity, script);
       const result = await this.activityApi.executeScript(activity, script);
       this.events.emit("scriptExecuted", activity, script, result);
       return result;
