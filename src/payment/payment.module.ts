@@ -29,13 +29,15 @@ export interface PaymentModuleOptions {
    * (for example: "erc20")
    * @default erc20
    */
-  driver?: "erc20";
+  // eslint-disable-next-line @typescript-eslint/ban-types -- keep the autocomplete for "erc20" but allow any string
+  driver?: "erc20" | (string & {});
   /**
    * Token used to facilitate the payment.
    * If unset, it will be inferred from the network.
    * (for example: "glm", "tglm")
    */
-  token?: "glm" | "tglm";
+  // eslint-disable-next-line @typescript-eslint/ban-types -- keep the autocomplete for "glm" and "tglm" but allow any string
+  token?: "glm" | "tglm" | (string & {});
 }
 
 export interface PaymentModule {
