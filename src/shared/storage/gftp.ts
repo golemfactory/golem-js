@@ -1,5 +1,5 @@
 import { StorageProvider } from "./provider";
-import { Logger, defaultLogger, runtimeContextChecker, sleep } from "../utils";
+import { Logger, defaultLogger, isBrowser, sleep } from "../utils";
 import path from "path";
 import fs from "fs";
 import cp from "child_process";
@@ -24,7 +24,7 @@ export class GftpStorageProvider implements StorageProvider {
   private lock = false;
 
   constructor(logger?: Logger) {
-    if (runtimeContextChecker.isBrowser) {
+    if (isBrowser) {
       throw new GolemUserError(`File transfer by GFTP module is unsupported in the browser context.`);
     }
     this.logger = logger || defaultLogger("storage");

@@ -14,20 +14,20 @@
  * @link https://github.com/golemfactory/golem-architecture/tree/master/standards Golem standards
  * @link https://github.com/golemfactory/golem-architecture/tree/master/gaps Golem Architecture Proposals
  */
-type GenericGolemProtocolPropertyType = Record<string, string | number | string[] | number[] | boolean>;
+export type GenericGolemProtocolPropertyType = Record<string, string | number | string[] | number[] | boolean>;
 /**
  * Properties defined by GAP-3
  *
  * @link https://github.com/golemfactory/golem-architecture/blob/master/gaps/gap-3_mid_agreement_payments/gap-3_mid_agreement_payments.md
  */
-type Gap3MidAgreementPaymentProps = {
+export type Gap3MidAgreementPaymentProps = {
   "golem.com.scheme.payu.debit-note.interval-sec?"?: number;
   "golem.com.scheme.payu.payment-timeout-sec?"?: number;
 };
 /**
  * @link https://github.com/golemfactory/golem-architecture/tree/master/standards/0-commons
  */
-type StandardCommonProps = {
+export type StandardCommonProps = {
   "golem.activity.caps.transfer.protocol": ("http" | "https" | "gftp")[];
   "golem.inf.cpu.architecture": string;
   "golem.inf.cpu.brand": string;
@@ -46,7 +46,7 @@ type StandardCommonProps = {
 /**
  * https://github.com/golemfactory/golem-architecture/blob/master/standards/2-service/srv.md
  */
-type StandardNodeProps = {
+export type StandardNodeProps = {
   "golem.node.id.name": string;
   /** @deprecated Do not rely on this, it's mentioned in the standard, but not implemented FIXME #yagna */
   "golem.node.geo.country_code"?: string;
@@ -55,7 +55,7 @@ type StandardNodeProps = {
 /**
  * @link https://github.com/golemfactory/golem-architecture/blob/master/standards/3-commercial/com.md
  */
-type StandardCommercialProps = {
+export type StandardCommercialProps = {
   "golem.com.payment.debit-notes.accept-timeout?": number;
   /** @example "erc20-polygon-glm" */
   "golem.com.payment.chosen-platform": string;
@@ -75,14 +75,14 @@ type StandardCommercialProps = {
 /**
  * @link https://github.com/golemfactory/golem-architecture/blob/master/standards/2-service/srv.md
  */
-type StandardServiceProps = {
+export type StandardServiceProps = {
   "golem.srv.caps.multi-activity": boolean;
 };
 
 /**
  * @link https://github.com/golemfactory/golem-architecture/blob/master/standards/2-service/srv/comp.md
  */
-type StandardComputationPlatformProps = {
+export type StandardComputationPlatformProps = {
   "golem.srv.comp.expiration": number;
   "golem.srv.comp.task_package": string;
 };

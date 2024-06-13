@@ -35,7 +35,7 @@ export class Agreement {
   /**
    * @param id
    * @param model
-   * @param paymentPlatform
+   * @param demand
    */
   constructor(
     public readonly id: string,
@@ -64,7 +64,7 @@ export class Agreement {
    * @description if the final state is true, agreement will not change state further anymore
    * @return boolean
    */
-  async isFinalState(): Promise<boolean> {
+  isFinalState(): boolean {
     const state = this.getState();
     return state !== "Pending" && state !== "Proposal";
   }

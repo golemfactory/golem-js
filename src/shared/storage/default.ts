@@ -1,8 +1,7 @@
 import { GftpStorageProvider } from "./gftp";
 import { WebSocketBrowserStorageProvider } from "./ws-browser";
 import { NullStorageProvider } from "./null";
-import { Logger, YagnaApi } from "../utils";
-import { isNode, isBrowser } from "../utils/runtimeContextChecker";
+import { Logger, YagnaApi, isNode, isBrowser } from "../utils";
 
 export function createDefaultStorageProvider(yagnaApi: YagnaApi, logger?: Logger) {
   if (isNode) {

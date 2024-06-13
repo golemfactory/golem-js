@@ -134,13 +134,15 @@ export class PaymentApiAdapter implements IPaymentApi {
     }
   }
 
-  async rejectDebitNote(debitNote: DebitNote, reason: string): Promise<DebitNote> {
+  async rejectDebitNote(debitNote: DebitNote): Promise<DebitNote> {
     try {
-      await this.yagna.payment.rejectDebitNote(debitNote.id, {
-        rejectionReason: "BAD_SERVICE",
-        totalAmountAccepted: "0.00",
-        message: reason,
-      });
+      // TODO: this endpoint is not implemented in Yagna, it always responds 501:NotImplemented.
+      // Reported in https://github.com/golemfactory/yagna/issues/1249
+      // await this.yagna.payment.rejectDebitNote(debitNote.id, {
+      //   rejectionReason: "BAD_SERVICE",
+      //   totalAmountAccepted: "0.00",
+      //   message: reason,
+      // });
 
       return this.debitNoteRepo.getById(debitNote.id);
     } catch (error) {
@@ -150,6 +152,7 @@ export class PaymentApiAdapter implements IPaymentApi {
         PaymentErrorCode.DebitNoteRejectionFailed,
         undefined,
         debitNote.provider,
+        error,
       );
     }
   }

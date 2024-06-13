@@ -1,7 +1,7 @@
 import debugLogger from "debug";
 import { Logger } from "./logger";
 
-type DefaultLoggerOptions = {
+export type DefaultLoggerOptions = {
   /**
    * Disables prefixing the root namespace with golem-js
    *

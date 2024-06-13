@@ -162,7 +162,8 @@ export interface MarketModule {
    * const agreement = await marketModule.signAgreementFromPool(draftProposalPool, signal); // throws TimeoutError if the operation takes longer than 10 seconds
    * ```
    * @param draftProposalPool - The pool of draft proposals to acquire from
-   * @param timeout - The timeout in milliseconds or an AbortSignal that will be used to cancel the operation
+   * @param agreementOptions - options used to sign the agreement such as expiration or waitingForApprovalTimeout
+   * @param signalOrTimeout - The timeout in milliseconds or an AbortSignal that will be used to cancel the operation
    */
   signAgreementFromPool(
     draftProposalPool: DraftOfferProposalPool,

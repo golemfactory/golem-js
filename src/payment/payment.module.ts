@@ -15,6 +15,7 @@ import { PayerDetails } from "./PayerDetails";
 import { AgreementPaymentProcess, PaymentProcessOptions } from "./agreement_payment_process";
 import { Agreement } from "../market";
 import * as EnvUtils from "../shared/utils/env";
+import { GolemInternalError } from "../shared/error/golem-error";
 
 export interface PaymentModuleOptions {
   /**
@@ -28,13 +29,15 @@ export interface PaymentModuleOptions {
    * (for example: "erc20")
    * @default erc20
    */
-  driver?: "erc20";
+  // eslint-disable-next-line @typescript-eslint/ban-types -- keep the autocomplete for "erc20" but allow any string
+  driver?: "erc20" | (string & {});
   /**
    * Token used to facilitate the payment.
    * If unset, it will be inferred from the network.
    * (for example: "glm", "tglm")
    */
-  token?: "glm" | "tglm";
+  // eslint-disable-next-line @typescript-eslint/ban-types -- keep the autocomplete for "glm" and "tglm" but allow any string
+  token?: "glm" | "tglm" | (string & {});
 }
 
 export interface PaymentModule {
@@ -205,14 +208,20 @@ export class PaymentModuleImpl implements PaymentModule {
 
   async rejectDebitNote(debitNote: DebitNote, reason: string): Promise<DebitNote> {
     this.logger.info("Rejecting debit note", { id: debitNote.id, reason });
-    try {
-      const rejectedDebitNote = await this.paymentApi.rejectDebitNote(debitNote, reason);
-      this.events.emit("debitNoteRejected", rejectedDebitNote);
-      return rejectedDebitNote;
-    } catch (error) {
-      this.events.emit("errorAcceptingDebitNote", debitNote, error);
-      throw error;
-    }
+    // TODO: this is not supported by PaymnetAdapter
+    const message = "Unable to send debitNote rejection to provider. This feature is not yet supported.";
+    this.logger.warn(message);
+    this.events.emit("errorRejectingDebitNote", debitNote, new GolemInternalError(message));
+    return debitNote;
+    // this.logger.debug("Rejecting debit note", { id: debitNote.id, reason });
+    // try {
+    //   const rejectedDebitNote = await this.paymentApi.rejectDebitNote(debitNote, reason);
+    //   this.events.emit("debitNoteRejected", rejectedDebitNote);
+    //   return rejectedDebitNote;
+    // } catch (error) {
+    //   this.events.emit("errorRejectingDebitNote", debitNote, error);
+    //   throw error;
+    // }
   }
 
   /**
