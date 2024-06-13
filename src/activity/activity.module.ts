@@ -123,7 +123,7 @@ export class ActivityModuleImpl implements ActivityModule {
   }
 
   async executeScript(activity: Activity, script: ExeScriptRequest): Promise<string> {
-    this.logger.info("Executing script on activity", { activityId: activity.id });
+    this.logger.debug("Executing script on activity", { activityId: activity.id });
     try {
       this.events.emit("scriptSent", activity, script);
       const result = await this.activityApi.executeScript(activity, script);
@@ -145,7 +145,7 @@ export class ActivityModuleImpl implements ActivityModule {
     commandIndex?: number | undefined,
     timeout?: number | undefined,
   ): Promise<Result[]> {
-    this.logger.info("Fetching batch results", { activityId: activity.id, batchId });
+    this.logger.debug("Fetching batch results", { activityId: activity.id, batchId });
     try {
       const results = await this.activityApi.getExecBatchResults(activity, batchId, commandIndex, timeout);
       this.events.emit(
