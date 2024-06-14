@@ -27,6 +27,9 @@ export type MarketEvents = {
   /** Emitted when offer proposal from the Provider is received */
   offerProposalReceived: (event: OfferProposalReceivedEvent) => void;
 
+  offerCounterProposalSent: (offerProposal: OfferProposal, counterProposal: OfferCounterProposal) => void;
+  errorSendingCounterProposal: (offerProposal: OfferProposal, error: Error) => void;
+
   /** Emitted when the Provider rejects the counter-proposal that the Requestor sent */
   offerCounterProposalRejected: (event: OfferCounterProposalRejectedEvent) => void;
 

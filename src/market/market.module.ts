@@ -20,14 +20,13 @@ import {
 import { Allocation, IPaymentApi } from "../payment";
 import { filter, map, Observable, OperatorFunction, switchMap, tap } from "rxjs";
 import {
-  IProposalRepository,
   OfferCounterProposal,
   OfferProposal,
   OfferProposalReceivedEvent,
   ProposalFilter,
   ProposalsBatch,
 } from "./proposal";
-import { BuildDemandOptions, DemandBodyBuilder, DemandSpecification, IDemandRepository } from "./demand";
+import { BuildDemandOptions, DemandBodyBuilder, DemandSpecification } from "./demand";
 import { IActivityApi, IFileServer } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { WorkloadDemandDirectorConfig } from "./demand/directors/workload-demand-director-config";
@@ -211,16 +210,12 @@ export class MarketModuleImpl implements MarketModule {
 
   private readonly logger = defaultLogger("market");
   private readonly marketApi: IMarketApi;
-  private readonly proposalRepo: IProposalRepository;
-  private readonly demandRepo: IDemandRepository;
   private fileServer: IFileServer;
 
   constructor(
     private readonly deps: {
       logger: Logger;
       yagna: YagnaApi;
-      proposalRepository: IProposalRepository;
-      demandRepository: IDemandRepository;
       paymentApi: IPaymentApi;
       activityApi: IActivityApi;
       marketApi: IMarketApi;
@@ -232,8 +227,6 @@ export class MarketModuleImpl implements MarketModule {
   ) {
     this.logger = deps.logger;
     this.marketApi = deps.marketApi;
-    this.proposalRepo = deps.proposalRepository;
-    this.demandRepo = deps.demandRepository;
     this.fileServer = deps.fileServer;
 
     this.collectAndEmitAgreementEvents();
@@ -377,11 +370,15 @@ export class MarketModuleImpl implements MarketModule {
     offerProposal: OfferProposal,
     counterDemand: DemandSpecification,
   ): Promise<OfferCounterProposal> {
-    const counterProposal = await this.deps.marketApi.counterProposal(offerProposal, counterDemand);
-
-    this.logger.debug("Counter proposal sent", counterProposal);
-
-    return counterProposal;
+    try {
+      const counterProposal = await this.deps.marketApi.counterProposal(offerProposal, counterDemand);
+      this.logger.debug("Counter proposal sent", counterProposal);
+      this.events.emit("offerCounterProposalSent", offerProposal, counterProposal);
+      return counterProposal;
+    } catch (error) {
+      this.events.emit("errorSendingCounterProposal", offerProposal, error);
+      throw error;
+    }
   }
 
   async proposeAgreement(proposal: OfferProposal, options?: AgreementOptions): Promise<Agreement> {
