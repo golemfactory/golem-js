@@ -6,14 +6,19 @@ import { last, map, scan, takeUntil, tap, timer } from "rxjs";
 
 // What providers are we looking for?
 const scanOptions: ScanOptions = {
-  subnetTag: "public",
+  // fairly powerful machine but not too powerful
   workload: {
     engine: "vm",
     minCpuCores: 4,
-    minMemGib: 8,
-    minCpuThreads: 8,
+    maxCpuCores: 16,
+    minMemGib: 4,
+    maxMemGib: 8,
     capabilities: ["vpn"],
     minStorageGib: 16,
+  },
+  // let's only look at mainnet providers only
+  payment: {
+    network: "polygon",
   },
 };
 

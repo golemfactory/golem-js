@@ -197,15 +197,15 @@ export class MarketApiAdapter implements IMarketApi {
     }
   }
 
-  private buildDemandRequestBody(decorations: DemandBodyPrototype): DemandRequestBody {
+  private buildDemandRequestBody(decorations: Partial<DemandBodyPrototype>): DemandRequestBody {
     let constraints: string;
 
-    if (!decorations.constraints.length) constraints = "(&)";
+    if (!decorations.constraints?.length) constraints = "(&)";
     else if (decorations.constraints.length == 1) constraints = decorations.constraints[0];
     else constraints = `(&${decorations.constraints.join("\n\t")})`;
 
     const properties: Record<string, DemandPropertyValue> = {};
-    decorations.properties.forEach((prop) => (properties[prop.key] = prop.value));
+    decorations.properties?.forEach((prop) => (properties[prop.key] = prop.value));
 
     return { constraints, properties };
   }

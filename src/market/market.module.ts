@@ -86,7 +86,8 @@ export interface MarketModule {
   /**
    * Build a ScanSpecification that can be used to scan the market for offers.
    * The difference between this method and `buildDemandDetails` is that this method does not require an
-   * allocation, doesn't set payment related properties and doesn't provide any defaults.
+   * allocation, doesn't inherit payment properties from `GolemNetwork` settings and doesn't provide any defaults.
+   * If you wish to set the payment platform, you need to specify it in the ScanOptions.
    */
   buildScanSpecification(options: ScanOptions): ScanSpecification;
 
