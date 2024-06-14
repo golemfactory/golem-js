@@ -445,7 +445,12 @@ export class MarketApiAdapter implements IMarketApi {
             void cleanupIterator();
           };
         })
-        .catch((error) => observer.error(error));
+        .catch((error) => {
+          const message = getMessageFromApiError(error);
+          observer.error(
+            new GolemMarketError(`Error while scanning for offers. ${message}`, MarketErrorCode.ScanFailed, error),
+          );
+        });
       return () => {
         ac.abort();
       };
