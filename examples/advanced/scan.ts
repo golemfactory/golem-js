@@ -16,7 +16,7 @@ const scanOptions: ScanOptions = {
     capabilities: ["vpn"],
     minStorageGib: 16,
   },
-  // let's only look at mainnet providers only
+  // let's look at mainnet providers only
   payment: {
     network: "polygon",
   },
