@@ -114,7 +114,6 @@ export class LeaseProcessPool {
       const leaseProcess = this.leaseModule.createLease(agreement, this.allocation, {
         networkNode,
         ...this.leaseProcessOptions,
-        signalOrTimeout,
       });
       this.events.emit("created", agreement);
       return leaseProcess;
@@ -230,7 +229,7 @@ export class LeaseProcessPool {
   async destroy(leaseProcess: LeaseProcess): Promise<void> {
     try {
       this.borrowed.delete(leaseProcess);
-      this.logger.debug("Destroying lease process from the pool", { agreementId: leaseProcess.agreement.id });
+      this.logger.info("Destroying lease process from the pool", { agreementId: leaseProcess.agreement.id });
       await Promise.all([leaseProcess.finalize(), this.removeNetworkNode(leaseProcess)]);
       this.events.emit("destroyed", leaseProcess.agreement);
     } catch (error) {

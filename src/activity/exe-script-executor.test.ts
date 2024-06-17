@@ -248,12 +248,10 @@ describe("ExeScriptExecutor", () => {
       const script = Script.create([command1, command2, command3, command4, command5, command6]);
       await script.before();
       const results = await executor.execute(script.getExeScriptRequest(), undefined, undefined);
-      ac.abort(new Error("test reson"));
+      ac.abort();
       return new Promise<void>((res) => {
         results.on("error", (error) => {
-          expect(error).toMatchError(
-            new GolemAbortError(`Processing of batch execution has been aborted`, new Error("test reson")),
-          );
+          expect(error).toEqual(new GolemAbortError(`Processing of script execution has been aborted`));
           return res();
         });
         results.on("data", () => null);
@@ -282,12 +280,10 @@ describe("ExeScriptExecutor", () => {
       const script = Script.create([command1, command2, command3, command4]);
       await script.before();
       const results = await executor.execute(script.getExeScriptRequest(), true, undefined);
-      ac.abort(new Error("test reson"));
+      ac.abort();
       return new Promise<void>((res) => {
         results.on("error", (error) => {
-          expect(error).toMatchError(
-            new GolemAbortError(`Processing of batch execution has been aborted`, new Error("test reson")),
-          );
+          expect(error).toEqual(new GolemAbortError(`Processing of script execution has been aborted`));
           return res();
         });
         results.on("data", () => null);

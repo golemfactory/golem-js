@@ -113,11 +113,12 @@ export class ExeScriptExecutor {
 
     return new Readable({
       objectMode: true,
-
       async read() {
-        abortSignal.addEventListener("abort", () =>
-          this.destroy(new GolemAbortError(`Processing of batch execution has been aborted`, abortSignal.reason)),
-        );
+        const abortError = new GolemAbortError("Processing of script execution has been aborted", abortSignal.reason);
+        abortSignal.addEventListener("abort", () => {
+          logger.warn(abortError.message, { activityId: activity.id, batchId, reason: abortSignal.reason });
+          this.destroy(abortError);
+        });
         while (!isBatchFinished && !abortSignal.aborted) {
           logger.debug("Polling for batch script execution result");
 
@@ -132,9 +133,8 @@ export class ExeScriptExecutor {
                 logger.debug(`Trying to poll for batch execution results from yagna. Attempt: ${attempt}`);
                 try {
                   if (abortSignal.aborted) {
-                    logger.debug("Activity is no longer running, will stop polling for batch execution results");
                     return bail(
-                      new GolemAbortError(`Activity ${activityId} has been interrupted.`, abortSignal.reason),
+                      new GolemAbortError(`Processing of script execution has been aborted`, abortSignal.reason),
                     );
                   }
                   return await activityModule.getBatchResults(
@@ -171,11 +171,9 @@ export class ExeScriptExecutor {
             }
           } catch (error) {
             if (abortSignal.aborted) {
-              const message = "Processing of batch execution has been aborted";
-              logger.warn(message, { reason: abortSignal.reason });
-              return this.destroy(new GolemAbortError(message, abortSignal.reason));
+              return;
             }
-            logger.error(`Processing batch execution results failed`, error);
+            logger.error(`Processing script execution results failed`, error);
 
             return this.destroy(
               error instanceof GolemWorkError
@@ -192,10 +190,10 @@ export class ExeScriptExecutor {
           }
         }
         if (abortSignal.aborted) {
-          this.destroy(new GolemAbortError(`Processing of batch execution has been aborted`, abortSignal.reason));
-        } else {
-          this.push(null);
+          this.destroy(abortError);
+          return;
         }
+        this.push(null);
       },
     });
   }
@@ -223,7 +221,12 @@ export class ExeScriptExecutor {
     return new Readable({
       objectMode: true,
       async read() {
-        while (!isBatchFinished) {
+        const abortError = new GolemAbortError("Processing of script execution has been aborted", abortSignal.reason);
+        abortSignal.addEventListener("abort", () => {
+          logger.warn(abortError.message, { activityId: activity.id, batchId, reason: abortSignal.reason });
+          this.destroy(abortError);
+        });
+        while (!isBatchFinished && !abortSignal.aborted) {
           let error: Error | undefined;
           if (startTime.valueOf() + (timeout || activityExecuteTimeout) <= new Date().valueOf()) {
             logger.debug("Activity probably timed-out, will stop streaming batch execution results");
@@ -231,8 +234,7 @@ export class ExeScriptExecutor {
           }
 
           if (abortSignal.aborted) {
-            logger.debug("Activity is no longer running, will stop streaming batch execution results");
-            error = new GolemAbortError(`Processing of batch execution has been aborted`, abortSignal.reason);
+            error = abortError;
           }
 
           if (errors.length) {
@@ -257,7 +259,8 @@ export class ExeScriptExecutor {
           await sleep(500, true);
         }
         if (abortSignal.aborted) {
-          this.destroy(new GolemAbortError(`Processing of batch execution has been aborted`, abortSignal.reason));
+          this.destroy(abortError);
+          return;
         } else {
           this.push(null);
         }

@@ -1,6 +1,6 @@
 import { Agreement } from "../market/agreement/agreement";
 import { AgreementPaymentProcess, PaymentProcessOptions } from "../payment/agreement_payment_process";
-import { createAbortSignalFromTimeout, Logger } from "../shared/utils";
+import { Logger } from "../shared/utils";
 import { waitForCondition } from "../shared/utils/wait";
 import { ActivityModule, WorkContext } from "../activity";
 import { StorageProvider } from "../shared/storage";
@@ -9,6 +9,7 @@ import { NetworkNode } from "../network";
 import { ExecutionOptions } from "../activity/exe-script-executor";
 import { MarketModule } from "../market";
 import { GolemUserError } from "../shared/error/golem-error";
+import AsyncLock from "async-lock";
 
 export interface LeaseProcessEvents {
   /**
@@ -21,7 +22,6 @@ export interface LeaseProcessOptions {
   activity?: ExecutionOptions;
   payment?: Partial<PaymentProcessOptions>;
   networkNode?: NetworkNode;
-  signalOrTimeout?: number | AbortSignal;
 }
 
 /**
@@ -34,7 +34,8 @@ export class LeaseProcess {
 
   private currentWorkContext: WorkContext | null = null;
   private abortController = new AbortController();
-  private finalizeTask?: () => Promise<void>;
+  private finalizeTask?: Promise<void>;
+  private asyncLock = new AsyncLock();
 
   public constructor(
     public readonly agreement: Agreement,
@@ -47,13 +48,6 @@ export class LeaseProcess {
   ) {
     this.networkNode = this.leaseOptions?.networkNode;
 
-    const abortSignal = createAbortSignalFromTimeout(leaseOptions?.signalOrTimeout);
-    abortSignal.addEventListener("abort", () => this.abortController.abort(abortSignal.reason));
-    this.abortController.signal.addEventListener("abort", () => {
-      this.logger.warn("The lease process has been aborted.", { reason: this.abortController.signal.reason });
-      this.finalize();
-    });
-
     // TODO: Listen to agreement events to know when it goes down due to provider closing it!
   }
 
@@ -62,40 +56,38 @@ export class LeaseProcess {
    * If the lease is already finalized, it will resolve immediately.
    */
   async finalize() {
-    // Prevent to call this method  more than once
-    if (!this.finalizeTask) {
-      this.finalizeTask = async () => {
-        if (this.paymentProcess.isFinished()) {
-          return;
-        }
-        try {
-          this.logger.info("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
-          if (this.currentWorkContext) {
-            await this.activityModule.destroyActivity(this.currentWorkContext.activity);
+    return this.asyncLock.acquire("finalize", () => {
+      // Prevent this task from being performed more than once
+      if (!this.finalizeTask) {
+        this.finalizeTask = (async () => {
+          this.abortController.abort("Finalising the leasing rocess");
+          if (this.paymentProcess.isFinished()) {
+            return;
           }
-          if ((await this.fetchAgreementState()) !== "Terminated") {
-            await this.marketModule.terminateAgreement(this.agreement);
+          try {
+            this.logger.info("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
+            if (this.currentWorkContext) {
+              await this.activityModule.destroyActivity(this.currentWorkContext.activity);
+            }
+            if ((await this.fetchAgreementState()) !== "Terminated") {
+              await this.marketModule.terminateAgreement(this.agreement);
+            }
+            await waitForCondition(() => this.paymentProcess.isFinished());
+            this.logger.info("Payment process for agreement finalized", { agreementId: this.agreement.id });
+          } catch (error) {
+            this.logger.error("Payment process finalization failed", { agreementId: this.agreement.id, error });
+            throw error;
+          } finally {
+            this.events.emit("finalized");
           }
-          await waitForCondition(() => this.paymentProcess.isFinished());
-          this.logger.info("Payment process for agreement finalized", { agreementId: this.agreement.id });
-        } catch (error) {
-          this.logger.error("Payment process finalization failed", { agreementId: this.agreement.id, error });
-          throw error;
-        } finally {
-          this.events.emit("finalized");
-        }
-      };
-    }
-    return this.finalizeTask();
+        })();
+      }
+      return this.finalizeTask;
+    });
   }
 
   public hasActivity(): boolean {
     return this.currentWorkContext !== null;
-  }
-
-  public abort(reason?: Error | string) {
-    this.abortController.abort(reason);
-    return this.abortController;
   }
 
   /**

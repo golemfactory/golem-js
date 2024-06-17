@@ -462,7 +462,7 @@ describe("Market module", () => {
       const marketSpy = spy(marketModule);
 
       await expect(marketModule.signAgreementFromPool(instance(mockPool), {}, ac.signal)).rejects.toMatchError(
-        new GolemAbortError("The signing of the agreement has been interrupted", error),
+        new GolemAbortError("The signing of the agreement has been aborted", error),
       );
 
       verify(mockPool.acquire(_)).once();
@@ -474,7 +474,7 @@ describe("Market module", () => {
       const mockPool = mock(DraftOfferProposalPool);
       const signal = AbortSignal.abort();
       await expect(marketModule.signAgreementFromPool(instance(mockPool), {}, signal)).rejects.toThrow(
-        "The signing of the agreement has been interrupted",
+        "The signing of the agreement has been aborted",
       );
       verify(mockPool.acquire()).never();
     });

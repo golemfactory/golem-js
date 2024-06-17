@@ -370,7 +370,6 @@ export class GolemNetwork {
       payment: order.payment,
       activity: order.activity,
       networkNode,
-      signalOrTimeout,
     });
 
     // We managed to create the activity, no need to look for more agreement candidates

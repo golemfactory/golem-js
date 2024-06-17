@@ -483,7 +483,7 @@ export class MarketModuleImpl implements MarketModule {
         if (signal.aborted) {
           throw signal.reason.name === "TimeoutError"
             ? new GolemTimeoutError("Could not sign any agreement in time")
-            : new GolemAbortError("The signing of the agreement has been interrupted", error);
+            : new GolemAbortError("The signing of the agreement has been aborted", error);
         }
         throw error;
       }

@@ -159,7 +159,8 @@ export class WorkContext {
       ])
         .catch((error) => {
           if (this.abortSignal.aborted) {
-            this.logger.warn("Initializing of activity has been aborted", { reason: this.abortSignal.reason });
+            const message = "Initializing of activity has been aborted";
+            this.logger.warn(message, { activityId: this.activity.id, reason: this.abortSignal.reason });
             return;
           }
           if (error instanceof GolemWorkError) {
