@@ -9,7 +9,6 @@ import type { LeaseProcess, LeaseProcessOptions } from "./lease-process";
 import { Network, NetworkModule } from "../network";
 import { LeaseModule } from "./lease.module";
 import { AgreementOptions } from "../market/agreement/agreement";
-import AsyncLock from "async-lock";
 
 export interface LeaseProcessPoolDependencies {
   allocation: Allocation;
@@ -70,7 +69,11 @@ export class LeaseProcessPool {
   private readonly maxPoolSize: number;
   private readonly leaseProcessOptions?: LeaseProcessOptions;
   private readonly agreementOptions?: AgreementOptions;
-  private readonly lock = new AsyncLock();
+  /**
+   * Number of lease processes that are currently being signed.
+   * This is used to prevent creating more lease processes than the pool size allows.
+   */
+  private leasesBeingSigned = 0;
 
   constructor(options: LeaseProcessPoolOptions & LeaseProcessPoolDependencies) {
     this.allocation = options.allocation;
@@ -105,6 +108,7 @@ export class LeaseProcessPool {
   private async createNewLeaseProcess() {
     this.logger.debug("Creating new lease process to add to pool");
     try {
+      this.leasesBeingSigned++;
       const agreement = await this.marketModule.signAgreementFromPool(this.proposalPool, this.agreementOptions);
       const networkNode = this.network
         ? await this.networkModule.createNetworkNode(this.network, agreement.getProviderInfo().id)
@@ -122,6 +126,8 @@ export class LeaseProcessPool {
       );
       this.logger.error("Creating lease process failed", error);
       throw error;
+    } finally {
+      this.leasesBeingSigned--;
     }
   }
 
@@ -138,7 +144,7 @@ export class LeaseProcessPool {
   }
 
   private canCreateMoreLeaseProcesses() {
-    return this.getSize() < this.maxPoolSize;
+    return this.getSize() + this.leasesBeingSigned < this.maxPoolSize;
   }
 
   /**
@@ -182,18 +188,16 @@ export class LeaseProcessPool {
     if (this.isDraining) {
       throw new Error("The pool is in draining mode");
     }
-    return this.lock.acquire("lease-process-pool", async () => {
-      let leaseProcess = await this.takeValidLeaseProcess();
-      if (!leaseProcess) {
-        if (!this.canCreateMoreLeaseProcesses()) {
-          return this.enqueueAcquire();
-        }
-        leaseProcess = await this.createNewLeaseProcess();
+    let leaseProcess = await this.takeValidLeaseProcess();
+    if (!leaseProcess) {
+      if (!this.canCreateMoreLeaseProcesses()) {
+        return this.enqueueAcquire();
       }
-      this.borrowed.add(leaseProcess);
-      this.events.emit("acquired", leaseProcess.agreement);
-      return leaseProcess;
-    });
+      leaseProcess = await this.createNewLeaseProcess();
+    }
+    this.borrowed.add(leaseProcess);
+    this.events.emit("acquired", leaseProcess.agreement);
+    return leaseProcess;
   }
 
   /**

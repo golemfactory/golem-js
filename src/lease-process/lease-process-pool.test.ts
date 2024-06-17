@@ -196,6 +196,29 @@ describe("LeaseProcessPool", () => {
       expect(pool["destroy"]).toHaveBeenCalledWith(lease1);
       expect(pool["destroy"]).toHaveBeenCalledWith(lease2);
     });
+    it("should not create more processes than allowed", async () => {
+      jest.useFakeTimers();
+      const pool = getLeasePool({ min: 3, max: 3 });
+      pool["createNewLeaseProcess"] = jest.fn(async () => {
+        pool["leasesBeingSigned"]++;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        pool["leasesBeingSigned"]--;
+        return getMockLeaseProcess();
+      });
+      expect(pool.getSize()).toBe(0);
+      pool.acquire(); // should be resolved after 50ms
+      pool.acquire(); // should be resolved after 50ms
+      pool.acquire(); // should be resolved after 50ms
+      pool.acquire(); // should be added to the queue
+      pool.acquire(); // should be added to the queue
+      pool.acquire(); // should be added to the queue
+      pool.acquire(); // should be added to the queue
+      await jest.advanceTimersByTimeAsync(50);
+      expect(pool.getSize()).toBe(3);
+      expect(pool.getBorrowedSize()).toBe(3);
+      expect(pool.getAvailableSize()).toBe(0);
+      expect(pool["acquireQueue"].length).toBe(4);
+    });
   });
   describe("release()", () => {
     it("releases a lease process back to the pool", async () => {

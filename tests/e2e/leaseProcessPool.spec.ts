@@ -172,7 +172,6 @@ describe("LeaseProcessPool", () => {
         ),
       ),
     );
-    expect(poolSizesDuringWork.length).toBeGreaterThan(1);
-    poolSizesDuringWork.forEach((size) => expect(size).toBeLessThanOrEqual(maxPoolSize));
+    expect(Math.max(...poolSizesDuringWork)).toEqual(maxPoolSize);
   });
 });
