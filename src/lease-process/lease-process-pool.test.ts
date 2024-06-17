@@ -335,6 +335,7 @@ describe("LeaseProcessPool", () => {
       expect(pool["destroy"]).toHaveBeenCalledWith(lease3);
     });
     it("prevents new leases from being acquired during the drain", async () => {
+      jest.useFakeTimers();
       const pool = getLeasePool({ max: 3 });
       const realDestroy = pool.destroy;
       jest.spyOn(pool, "destroy").mockImplementation(async (...args) => {
@@ -354,6 +355,7 @@ describe("LeaseProcessPool", () => {
       expect(pool.getAvailableSize()).toBe(1);
       const drainPromise = pool.drainAndClear();
       expect(pool.acquire()).rejects.toThrow("The pool is in draining mode");
+      jest.advanceTimersByTime(100);
       await drainPromise;
       expect(pool.getBorrowedSize()).toBe(0);
       expect(pool.getAvailableSize()).toBe(0);
