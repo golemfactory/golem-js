@@ -79,8 +79,11 @@ export class ExeScriptExecutor {
         reason: message,
       });
 
+      if (this.abortSignal.aborted) {
+        throw new GolemAbortError("Executions of script has been aborted", this.abortSignal.reason);
+      }
       throw new GolemWorkError(
-        `Unable to execute script ${message}`,
+        `Unable to execute script. ${message}`,
         WorkErrorCode.ScriptExecutionFailed,
         this.activity.agreement,
         this.activity,
