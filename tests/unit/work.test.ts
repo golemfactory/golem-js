@@ -14,7 +14,6 @@ import {
 } from "../../src";
 import { _, anyOfClass, anything, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
 import { buildExecutorResults, buildExeScriptErrorResult, buildExeScriptSuccessResult } from "./helpers";
-import { IPv4 } from "ip-num";
 import { StorageProviderDataCallback } from "../../src/shared/storage/provider";
 import { ActivityApi } from "ya-ts-client";
 import { ExeScriptExecutor } from "../../src/activity/exe-script-executor";
@@ -55,7 +54,7 @@ describe("Work Context", () => {
 
   describe("Executing", () => {
     it("should execute run command with a single parameter", async () => {
-      when(mockExecutor.execute(_, _, _)).thenResolve(
+      when(mockExecutor.execute(_, _, _, _)).thenResolve(
         buildExecutorResults([
           {
             index: 0,
@@ -75,7 +74,7 @@ describe("Work Context", () => {
     });
 
     it("should execute run command with multiple parameters", async () => {
-      when(mockExecutor.execute(_, _, _)).thenResolve(
+      when(mockExecutor.execute(_, _, _, _)).thenResolve(
         buildExecutorResults([
           {
             index: 0,
@@ -99,7 +98,7 @@ describe("Work Context", () => {
       it("should execute upload file command", async () => {
         const worker = async (ctx: WorkContext) => ctx.uploadFile("./file.txt", "/golem/file.txt");
 
-        when(mockExecutor.execute(_, _, _)).thenResolve(
+        when(mockExecutor.execute(_, _, _, _)).thenResolve(
           buildExecutorResults([
             {
               index: 0,
@@ -123,7 +122,7 @@ describe("Work Context", () => {
       it("should execute upload json command", async () => {
         const worker = async (ctx: WorkContext) => ctx.uploadJson({ test: true }, "/golem/file.txt");
 
-        when(mockExecutor.execute(_, _, _)).thenResolve(
+        when(mockExecutor.execute(_, _, _, _)).thenResolve(
           buildExecutorResults([
             {
               index: 0,
@@ -150,7 +149,7 @@ describe("Work Context", () => {
       it("should execute download file command", async () => {
         const worker = async (ctx: WorkContext) => ctx.downloadFile("/golem/file.txt", "./file.txt");
 
-        when(mockExecutor.execute(_, _, _)).thenResolve(
+        when(mockExecutor.execute(_, _, _, _)).thenResolve(
           buildExecutorResults([
             {
               index: 0,
@@ -178,7 +177,7 @@ describe("Work Context", () => {
         const jsonStr = JSON.stringify(json);
         const encoded = new TextEncoder().encode(jsonStr);
 
-        when(mockExecutor.execute(_, _, _)).thenResolve(
+        when(mockExecutor.execute(_, _, _, _)).thenResolve(
           buildExecutorResults([
             {
               index: 0,
@@ -211,7 +210,7 @@ describe("Work Context", () => {
 
         when(mockStorageProvider.receiveData(anything())).thenResolve(data.toString());
 
-        when(mockExecutor.execute(_, _, _)).thenResolve(
+        when(mockExecutor.execute(_, _, _, _)).thenResolve(
           buildExecutorResults([
             {
               index: 0,
@@ -248,7 +247,7 @@ describe("Work Context", () => {
   describe("Exec and stream", () => {
     it("should execute runAndStream command", async () => {
       const ctx = new WorkContext(instance(mockActivity), instance(mockActivityModule));
-      when(mockExecutor.execute(_, _, _)).thenResolve(
+      when(mockExecutor.execute(_, _, _, _)).thenResolve(
         buildExecutorResults([
           {
             index: 0,
@@ -269,7 +268,7 @@ describe("Work Context", () => {
     it("should execute transfer command", async () => {
       const ctx = new WorkContext(instance(mockActivity), instance(mockActivityModule));
 
-      when(mockExecutor.execute(_, _, _)).thenResolve(
+      when(mockExecutor.execute(_, _, _, _)).thenResolve(
         buildExecutorResults([
           {
             index: 0,
@@ -425,7 +424,7 @@ describe("Work Context", () => {
 
       const eventDate = new Date().toISOString();
 
-      when(mockExecutor.execute(_, _, _)).thenResolve(
+      when(mockExecutor.execute(_, _, _, _)).thenResolve(
         buildExecutorResults([
           {
             index: 0,

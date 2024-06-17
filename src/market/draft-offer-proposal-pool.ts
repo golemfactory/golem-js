@@ -106,7 +106,7 @@ export class DraftOfferProposalPool {
 
   /**
    * Attempts to obtain a single proposal from the poolonds.
-   * @param TODO
+   * @param signalOrTimeout - the timeout in milliseconds or an AbortSignal that will be used to cancel the acquiring
    */
   public acquire(signalOrTimeout?: number | AbortSignal): Promise<OfferProposal> {
     const signal = createAbortSignalFromTimeout(signalOrTimeout);
@@ -117,7 +117,7 @@ export class DraftOfferProposalPool {
         if (signal.aborted) {
           throw signal.reason.name === "TimeoutError"
             ? new GolemTimeoutError("Could not provide any proposal in time")
-            : new GolemAbortError("The acquiring of proposals has been interrupted", signal.reason);
+            : new GolemAbortError("The acquiring of proposals has been aborted", signal.reason);
         }
         // Try to get one
         proposal = this.available.size > 0 ? this.selectProposal([...this.available]) : null;

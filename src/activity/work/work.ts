@@ -43,7 +43,8 @@ export interface WorkOptions {
 }
 
 export interface CommandOptions {
-  timeout?: number;
+  signalOrTimeout?: number | AbortSignal;
+  maxRetries?: number;
   env?: object;
   capture?: Capture;
 }
@@ -267,7 +268,7 @@ export class WorkContext {
     // In this case, the script consists only of one run command,
     // so we skip the execution of script.before and script.after
     const streamOfActivityResults = await this.executor
-      .execute(script.getExeScriptRequest(), true, options?.timeout)
+      .execute(script.getExeScriptRequest(), true, options?.signalOrTimeout, options?.maxRetries)
       .catch((e) => {
         throw new GolemWorkError(
           `Script execution failed for command: ${JSON.stringify(run.toJson())}. ${
@@ -414,7 +415,12 @@ export class WorkContext {
     await sleep(100, true);
 
     // Send script.
-    const results = await this.executor.execute(script.getExeScriptRequest(), false, options?.timeout);
+    const results = await this.executor.execute(
+      script.getExeScriptRequest(),
+      false,
+      options?.signalOrTimeout,
+      options?.maxRetries,
+    );
 
     // Process result.
     let allResults: Result<T>[] = [];

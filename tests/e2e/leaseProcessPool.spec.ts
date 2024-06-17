@@ -1,6 +1,5 @@
 import { Subscription } from "rxjs";
 import { Allocation, DraftOfferProposalPool, GolemAbortError, GolemNetwork } from "../../src";
-import exp from "node:constants";
 
 describe("LeaseProcessPool", () => {
   const glm = new GolemNetwork();
