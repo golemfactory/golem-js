@@ -2,7 +2,7 @@ import { Agreement } from "../market/agreement/agreement";
 import { AgreementPaymentProcess, PaymentProcessOptions } from "../payment/agreement_payment_process";
 import { Logger } from "../shared/utils";
 import { waitForCondition } from "../shared/utils/wait";
-import { ActivityModule, WorkContext } from "../activity";
+import { ActivityModule, ExeUnit } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { EventEmitter } from "eventemitter3";
 import { NetworkNode } from "../network";
@@ -30,7 +30,7 @@ export class LeaseProcess {
   public readonly events = new EventEmitter<LeaseProcessEvents>();
   public readonly networkNode?: NetworkNode;
 
-  private currentWorkContext: WorkContext | null = null;
+  private currentExeUnit: ExeUnit | null = null;
 
   public constructor(
     public readonly agreement: Agreement,
@@ -57,8 +57,8 @@ export class LeaseProcess {
 
     try {
       this.logger.debug("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
-      if (this.currentWorkContext) {
-        await this.activityModule.destroyActivity(this.currentWorkContext.activity);
+      if (this.currentExeUnit) {
+        await this.activityModule.destroyActivity(this.currentExeUnit.activity);
         if ((await this.fetchAgreementState()) !== "Terminated") {
           await this.marketModule.terminateAgreement(this.agreement);
         }
@@ -74,31 +74,31 @@ export class LeaseProcess {
   }
 
   public hasActivity(): boolean {
-    return this.currentWorkContext !== null;
+    return this.currentExeUnit !== null;
   }
 
   /**
    * Creates an activity on the Provider, and returns a work context that can be used to operate within the activity
    */
-  async getExeUnit(): Promise<WorkContext> {
-    if (this.currentWorkContext) {
-      return this.currentWorkContext;
+  async getExeUnit(): Promise<ExeUnit> {
+    if (this.currentExeUnit) {
+      return this.currentExeUnit;
     }
 
     const activity = await this.activityModule.createActivity(this.agreement);
-    this.currentWorkContext = await this.activityModule.createWorkContext(activity, {
+    this.currentExeUnit = await this.activityModule.createExeUnit(activity, {
       storageProvider: this.storageProvider,
       networkNode: this.leaseOptions?.networkNode,
       execution: this.leaseOptions?.activity,
     });
 
-    return this.currentWorkContext;
+    return this.currentExeUnit;
   }
 
   async destroyExeUnit() {
-    if (this.currentWorkContext) {
-      await this.activityModule.destroyActivity(this.currentWorkContext.activity);
-      this.currentWorkContext = null;
+    if (this.currentExeUnit) {
+      await this.activityModule.destroyActivity(this.currentExeUnit.activity);
+      this.currentExeUnit = null;
     } else {
       throw new Error(`There is no activity to destroy.`);
     }

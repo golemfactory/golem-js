@@ -8,17 +8,20 @@ import {
   IActivityApi,
   NetworkNode,
   StorageProvider,
-  WorkContext,
+  ExeUnit,
   WorkErrorCode,
   YagnaExeScriptObserver,
-} from "../../src";
+} from "../../index";
 import { _, anyOfClass, anything, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
-import { buildExecutorResults, buildExeScriptErrorResult, buildExeScriptSuccessResult } from "./helpers";
-import { IPv4 } from "ip-num";
-import { StorageProviderDataCallback } from "../../src/shared/storage/provider";
+import {
+  buildExecutorResults,
+  buildExeScriptErrorResult,
+  buildExeScriptSuccessResult,
+} from "../../../tests/utils/helpers";
+import { StorageProviderDataCallback } from "../../shared/storage/provider";
 import { ActivityApi } from "ya-ts-client";
-import { ExeScriptExecutor } from "../../src/activity/exe-script-executor";
-import { INetworkApi } from "../../src/network/api";
+import { ExeScriptExecutor } from "../exe-script-executor";
+import { INetworkApi } from "../../network/api";
 
 const mockActivityApi = imock<IActivityApi>();
 const mockNetworkApi = imock<INetworkApi>();
@@ -30,7 +33,7 @@ const mockStorageProvider = imock<StorageProvider>();
 const mockAgreement = mock(Agreement);
 const mockActivityModule = imock<ActivityModule>();
 
-describe("Work Context", () => {
+describe("ExeUnit", () => {
   beforeEach(() => {
     // Make mocks ready to re-use
     reset(mockActivityApi);
@@ -67,10 +70,10 @@ describe("Work Context", () => {
         ]),
       );
 
-      const worker = async (ctx: WorkContext) => ctx.run("some_shell_command");
-      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityModule));
-      await ctx.before();
-      const results = await worker(ctx);
+      const worker = async (exe: ExeUnit) => exe.run("some_shell_command");
+      const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule));
+      await exe.before();
+      const results = await worker(exe);
       expect(results?.stdout).toEqual("test_result");
     });
 
@@ -87,17 +90,17 @@ describe("Work Context", () => {
         ]),
       );
 
-      const worker = async (ctx: WorkContext) => ctx.run("/bin/ls", ["-R"]);
-      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityModule));
-      await ctx.before();
-      const results = await worker(ctx);
+      const worker = async (exe: ExeUnit) => exe.run("/bin/ls", ["-R"]);
+      const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule));
+      await exe.before();
+      const results = await worker(exe);
 
       expect(results?.stdout).toEqual("test_result_from_ls");
     });
 
     describe("upload commands", () => {
       it("should execute upload file command", async () => {
-        const worker = async (ctx: WorkContext) => ctx.uploadFile("./file.txt", "/golem/file.txt");
+        const worker = async (exe: ExeUnit) => exe.uploadFile("./file.txt", "/golem/file.txt");
 
         when(mockExecutor.execute(_, _, _)).thenResolve(
           buildExecutorResults([
@@ -111,17 +114,17 @@ describe("Work Context", () => {
           ]),
         );
 
-        const ctx = new WorkContext(instance(mockActivity), instance(mockActivityModule), {
+        const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule), {
           storageProvider: instance(mockStorageProvider),
         });
-        await ctx.before();
-        const results = await worker(ctx);
+        await exe.before();
+        const results = await worker(exe);
         expect(results?.stdout).toEqual("test_result");
         verify(mockStorageProvider.publishFile("./file.txt")).once();
       });
 
       it("should execute upload json command", async () => {
-        const worker = async (ctx: WorkContext) => ctx.uploadJson({ test: true }, "/golem/file.txt");
+        const worker = async (exe: ExeUnit) => exe.uploadJson({ test: true }, "/golem/file.txt");
 
         when(mockExecutor.execute(_, _, _)).thenResolve(
           buildExecutorResults([
@@ -135,11 +138,11 @@ describe("Work Context", () => {
           ]),
         );
 
-        const ctx = new WorkContext(instance(mockActivity), instance(mockActivityModule), {
+        const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule), {
           storageProvider: instance(mockStorageProvider),
         });
-        await ctx.before();
-        const results = await worker(ctx);
+        await exe.before();
+        const results = await worker(exe);
 
         expect(results?.stdout).toEqual("test_result");
         verify(mockStorageProvider.publishData(anyOfClass(Uint8Array))).once();
@@ -148,7 +151,7 @@ describe("Work Context", () => {
 
     describe("download commands", () => {
       it("should execute download file command", async () => {
-        const worker = async (ctx: WorkContext) => ctx.downloadFile("/golem/file.txt", "./file.txt");
+        const worker = async (exe: ExeUnit) => exe.downloadFile("/golem/file.txt", "./file.txt");
 
         when(mockExecutor.execute(_, _, _)).thenResolve(
           buildExecutorResults([
@@ -162,12 +165,12 @@ describe("Work Context", () => {
           ]),
         );
 
-        const ctx = new WorkContext(instance(mockActivity), instance(mockActivityModule), {
+        const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule), {
           storageProvider: instance(mockStorageProvider),
         });
 
-        await ctx.before();
-        const results = await worker(ctx);
+        await exe.before();
+        const results = await worker(exe);
 
         expect(results?.stdout).toEqual("test_result");
         verify(mockStorageProvider.receiveFile("./file.txt")).once();
@@ -195,10 +198,10 @@ describe("Work Context", () => {
           return "/golem/file.txt";
         });
 
-        const ctx = new WorkContext(instance(mockActivity), instance(mockActivityModule), {
+        const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule), {
           storageProvider: instance(mockStorageProvider),
         });
-        const result = await ctx.downloadJson("/golem/file.txt");
+        const result = await exe.downloadJson("/golem/file.txt");
 
         expect(result.result).toEqual("Ok");
         expect(result.data).toEqual(json);
@@ -228,10 +231,10 @@ describe("Work Context", () => {
           return "/golem/file.txt";
         });
 
-        const ctx = new WorkContext(instance(mockActivity), instance(mockActivityModule), {
+        const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule), {
           storageProvider: instance(mockStorageProvider),
         });
-        const result = await ctx.downloadData("/golem/file.txt");
+        const result = await exe.downloadData("/golem/file.txt");
 
         expect(result).toEqual(
           expect.objectContaining({
@@ -247,7 +250,7 @@ describe("Work Context", () => {
 
   describe("Exec and stream", () => {
     it("should execute runAndStream command", async () => {
-      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityModule));
+      const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule));
       when(mockExecutor.execute(_, _, _)).thenResolve(
         buildExecutorResults([
           {
@@ -258,7 +261,7 @@ describe("Work Context", () => {
           },
         ]),
       );
-      const remote = await ctx.runAndStream("rm -rf foo/");
+      const remote = await exe.runAndStream("rm -rf foo/");
 
       const finalResult = await remote.waitForExit();
       expect(finalResult.result).toBe("Ok");
@@ -267,7 +270,7 @@ describe("Work Context", () => {
 
   describe("transfer()", () => {
     it("should execute transfer command", async () => {
-      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityModule));
+      const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule));
 
       when(mockExecutor.execute(_, _, _)).thenResolve(
         buildExecutorResults([
@@ -282,15 +285,15 @@ describe("Work Context", () => {
         ]),
       );
 
-      const remote = await ctx.transfer("http://golem.network/test.txt", "/golem/work/test.txt");
+      const remote = await exe.transfer("http://golem.network/test.txt", "/golem/work/test.txt");
       expect(remote.result).toEqual("Ok");
     });
   });
 
   describe("Batch", () => {
     it("should execute batch as promise", async () => {
-      const worker = async (ctx: WorkContext) => {
-        return ctx
+      const worker = async (exe: ExeUnit) => {
+        return exe
           .beginBatch()
           .run("some_shell_command")
           .uploadFile("./file.txt", "/golem/file.txt")
@@ -298,7 +301,7 @@ describe("Work Context", () => {
           .downloadFile("/golem/file.txt", "./file.txt")
           .end();
       };
-      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityModule), {
+      const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule), {
         storageProvider: instance(mockStorageProvider),
       });
       const expectedStdout = [
@@ -312,7 +315,7 @@ describe("Work Context", () => {
         buildExecutorResults(expectedStdout.map((e) => buildExeScriptSuccessResult(e.stdout))),
       );
 
-      const results = await worker(ctx);
+      const results = await worker(exe);
       expect(results?.map((r) => r.stdout)).toEqual(expectedStdout.map((s) => s.stdout));
 
       verify(mockStorageProvider.publishFile("./file.txt")).once();
@@ -321,8 +324,8 @@ describe("Work Context", () => {
     });
 
     it("should execute batch as stream", async () => {
-      const worker = async (ctx: WorkContext) => {
-        return ctx
+      const worker = async (exe: ExeUnit) => {
+        return exe
           .beginBatch()
           .run("some_shell_command")
           .uploadFile("./file.txt", "/golem/file.txt")
@@ -330,7 +333,7 @@ describe("Work Context", () => {
           .downloadFile("/golem/file.txt", "./file.txt")
           .endStream();
       };
-      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityModule), {
+      const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule), {
         storageProvider: instance(mockStorageProvider),
       });
       const expectedStdout = [
@@ -344,7 +347,7 @@ describe("Work Context", () => {
         buildExecutorResults(expectedStdout.map((e) => buildExeScriptSuccessResult(e.stdout))),
       );
 
-      const results = await worker(ctx);
+      const results = await worker(exe);
       await new Promise((res, rej) => {
         results?.on("data", (result) => {
           try {
@@ -365,16 +368,16 @@ describe("Work Context", () => {
   describe("fetchState() helper function", () => {
     it("should return activity state", async () => {
       when(mockActivity.getState()).thenReturn(ActivityStateEnum.Deployed);
-      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityModule));
-      await expect(ctx["fetchState"]()).resolves.toEqual(ActivityStateEnum.Deployed);
+      const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule));
+      await expect(exe["fetchState"]()).resolves.toEqual(ActivityStateEnum.Deployed);
     });
   });
 
   describe("getIp()", () => {
     it("should throw error if there is no network node", async () => {
-      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityModule));
+      const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule));
 
-      expect(() => ctx.getIp()).toThrow(new Error("There is no network in this work context"));
+      expect(() => exe.getIp()).toThrow(new Error("There is no network in this work context"));
     });
 
     it("should return ip address of provider vpn network node", async () => {
@@ -391,31 +394,31 @@ describe("Work Context", () => {
         }),
         "http://127.0.0.1:7465",
       );
-      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityModule), {
+      const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule), {
         networkNode,
       });
 
-      expect(ctx.getIp()).toEqual("192.168.0.10");
+      expect(exe.getIp()).toEqual("192.168.0.10");
     });
   });
 
   describe("getWebsocketUri()", () => {
     it("should throw error if there is no network node", async () => {
-      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityModule));
+      const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule));
 
-      expect(() => ctx.getWebsocketUri(80)).toThrow(new Error("There is no network in this work context"));
+      expect(() => exe.getWebsocketUri(80)).toThrow(new Error("There is no network in this work context"));
     });
 
     it("should return websocket URI from the NetworkNode", async () => {
       const mockNode = mock(NetworkNode);
 
-      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityModule), {
+      const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule), {
         networkNode: instance(mockNode),
       });
 
       when(mockNode.getWebsocketUri(20)).thenReturn("ws://localhost:20");
 
-      expect(ctx.getWebsocketUri(20)).toEqual("ws://localhost:20");
+      expect(exe.getWebsocketUri(20)).toEqual("ws://localhost:20");
     });
   });
 
@@ -436,11 +439,11 @@ describe("Work Context", () => {
         ]),
       );
 
-      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityModule), {
+      const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule), {
         storageProvider: instance(mockStorageProvider),
       });
 
-      const result = await ctx.uploadData(new TextEncoder().encode(input), "/golem/file.txt");
+      const result = await exe.uploadData(new TextEncoder().encode(input), "/golem/file.txt");
 
       expect(result).toEqual(
         expect.objectContaining({
@@ -457,16 +460,16 @@ describe("Work Context", () => {
     it("should call all setup functions in the order they were registered", async () => {
       const calls: string[] = [];
       const activityReadySetupFunctions = [
-        async () => calls.push("1"),
-        async () => calls.push("2"),
-        async () => calls.push("3"),
+        async () => void calls.push("1"),
+        async () => void calls.push("2"),
+        async () => void calls.push("3"),
       ];
 
-      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityModule), {
+      const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule), {
         activityReadySetupFunctions,
       });
 
-      await ctx.before();
+      await exe.before();
 
       expect(calls).toEqual(["1", "2", "3"]);
     });
@@ -474,27 +477,27 @@ describe("Work Context", () => {
 
   describe("Error handling", () => {
     it("should return a result with error in case the command to execute is invalid", async () => {
-      const worker = async (ctx: WorkContext) => ctx.beginBatch().run("invalid_shell_command").end();
-      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityModule));
+      const worker = async (exe: ExeUnit) => exe.beginBatch().run("invalid_shell_command").end();
+      const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule));
 
       when(mockExecutor.execute(_)).thenResolve(
         buildExecutorResults(undefined, [buildExeScriptErrorResult("error", "Some error occurred")]),
       );
-      const [result] = await worker(ctx);
+      const [result] = await worker(exe);
 
       expect(result.result).toEqual("Error");
       expect(result.message).toEqual("Some error occurred");
     });
 
     it("should catch error while executing batch as stream with invalid command", async () => {
-      const worker = async (ctx: WorkContext) => ctx.beginBatch().run("invalid_shell_command").endStream();
-      const ctx = new WorkContext(instance(mockActivity), instance(mockActivityModule));
+      const worker = async (exe: ExeUnit) => exe.beginBatch().run("invalid_shell_command").endStream();
+      const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule));
 
       when(mockExecutor.execute(_)).thenResolve(
         buildExecutorResults(undefined, [buildExeScriptErrorResult("error", "Some error occurred", "test_result")]),
       );
 
-      const results = await worker(ctx);
+      const results = await worker(exe);
 
       await new Promise((res) =>
         results.once("error", (error: GolemModuleError) => {

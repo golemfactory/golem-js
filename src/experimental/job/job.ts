@@ -1,4 +1,4 @@
-import { Worker, WorkOptions } from "../../activity/work";
+import { ExeUnitOptions, ExeUnit } from "../../activity/exe-unit";
 import { NetworkOptions } from "../../network";
 import { PaymentModuleOptions } from "../../payment";
 import { EventEmitter } from "eventemitter3";
@@ -20,8 +20,10 @@ export type RunJobOptions = {
   payment?: PaymentModuleOptions;
   network?: NetworkOptions;
   workload?: WorkloadDemandDirectorConfigOptions;
-  work?: WorkOptions;
+  work?: ExeUnitOptions;
 };
+
+export type WorkFunction<OutputType> = (exe: ExeUnit) => Promise<OutputType>;
 
 export interface JobEventsDict {
   /**
@@ -93,7 +95,7 @@ export class Job<Output = unknown> {
    *
    * @param workOnGolem - Your worker function that will be run on the Golem Network.
    */
-  startWork(workOnGolem: Worker<Output>) {
+  startWork(workOnGolem: WorkFunction<Output>) {
     this.logger.debug("Staring work in a Job");
     if (this.isRunning()) {
       throw new GolemUserError(`Job ${this.id} is already running`);
@@ -106,7 +108,7 @@ export class Job<Output = unknown> {
     this.abortController = new AbortController();
 
     this.runWork({
-      worker: workOnGolem,
+      workOnGolem,
       signal: this.abortController.signal,
     })
       .then((results) => {
@@ -126,7 +128,7 @@ export class Job<Output = unknown> {
       });
   }
 
-  private async runWork({ worker, signal }: { worker: Worker<Output>; signal: AbortSignal }) {
+  private async runWork({ workOnGolem, signal }: { workOnGolem: WorkFunction<Output>; signal: AbortSignal }) {
     if (signal.aborted) {
       this.events.emit("canceled");
       throw new GolemAbortError("Canceled");
@@ -134,7 +136,7 @@ export class Job<Output = unknown> {
 
     const lease = await this.glm.oneOf(this.order);
 
-    const workContext = await lease.getExeUnit();
+    const exeUnit = await lease.getExeUnit();
     this.events.emit("started");
 
     const onAbort = async () => {
@@ -149,7 +151,7 @@ export class Job<Output = unknown> {
 
     signal.addEventListener("abort", onAbort, { once: true });
 
-    return worker(workContext);
+    return workOnGolem(exeUnit);
   }
 
   /**

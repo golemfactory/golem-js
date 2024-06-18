@@ -1,4 +1,3 @@
-import { ActivityApi } from "ya-ts-client";
 import { Readable } from "stream";
 import { Result, ResultData } from "../../src/activity/results";
 

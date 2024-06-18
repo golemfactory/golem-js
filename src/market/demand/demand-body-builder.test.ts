@@ -1,5 +1,5 @@
-import { ComparisonOperator, DemandBodyBuilder } from "../../src/market/demand/demand-body-builder";
-import { GolemInternalError } from "../../src/shared/error/golem-error";
+import { ComparisonOperator, DemandBodyBuilder } from "./demand-body-builder";
+import { GolemInternalError } from "../../shared/error/golem-error";
 
 describe("#DecorationsBuilder()", () => {
   describe("addProperty()", () => {

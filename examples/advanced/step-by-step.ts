@@ -136,11 +136,11 @@ import { filter, map, switchMap, take } from "rxjs";
     // Start the computation
     // First lets start the activity - this will deploy our image on the provider's machine
     const activity = await glm.activity.createActivity(agreement);
-    // Then let's create a WorkContext, which is a set of utilities to interact with the
+    // Then let's create a ExeUnit, which is a set of utilities to interact with the
     // providers machine, like running commands, uploading files, etc.
-    const ctx = await glm.activity.createWorkContext(activity);
+    const exe = await glm.activity.createExeUnit(activity);
     // Now we can run a simple command on the provider's machine
-    const result = await ctx.run("echo Hello, Golem 👋!");
+    const result = await exe.run("echo Hello, Golem 👋!");
     console.log("Result of the command ran on the provider's machine:", result.stdout);
 
     // We're done, let's clean up

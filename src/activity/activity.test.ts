@@ -1,4 +1,4 @@
-import { Activity, ActivityStateEnum, Agreement } from "../../src";
+import { Activity, ActivityStateEnum, Agreement } from "../index";
 import { instance, mock } from "@johanblumenberg/ts-mockito";
 
 const mockAgreement = mock(Agreement);

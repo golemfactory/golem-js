@@ -53,9 +53,9 @@ app.post("/tts", async (req, res) => {
     console.log("Job succeeded", job.results);
   });
 
-  job.startWork(async (ctx) => {
+  job.startWork(async (exe) => {
     const fileName = `${Math.random().toString(36).slice(2)}.wav`;
-    await ctx
+    await exe
       .beginBatch()
       .run(`espeak "${req.body}" -w /golem/output/output.wav`)
       .downloadFile("/golem/output/output.wav", `public/${fileName}`)

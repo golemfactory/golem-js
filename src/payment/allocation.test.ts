@@ -1,4 +1,4 @@
-import { Allocation, GolemConfigError, YagnaApi } from "../../src";
+import { Allocation, GolemConfigError, YagnaApi } from "../index";
 import { anything, imock, instance, mock, reset, when } from "@johanblumenberg/ts-mockito";
 import { PaymentApi } from "ya-ts-client";
 

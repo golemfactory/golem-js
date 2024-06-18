@@ -1,9 +1,9 @@
 {
   "preset": "ts-jest",
   "testEnvironment": "node",
-  "roots": ["../../src", "./"],
+  "roots": ["../src"],
   "testMatch": ["**/*.test.ts", "**/*.spec.ts"],
-  "setupFilesAfterEnv": ["../jest.setup.ts"],
+  "setupFilesAfterEnv": ["./jest.setup.ts"],
   "reporters": [
     "default",
     [

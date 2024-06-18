@@ -9,7 +9,7 @@ import {
   buildExeScriptSuccessResult,
   buildExeScriptErrorResult,
   buildExecutorResults,
-} from "../../../tests/unit/helpers";
+} from "../../../tests/utils/helpers";
 import { Agreement } from "../../market/agreement";
 
 import { ExeScriptExecutor } from "../exe-script-executor";

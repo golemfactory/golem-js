@@ -23,20 +23,20 @@ import { Agreement, ProviderInfo } from "../../market/agreement";
 import { TcpProxy } from "../../network/tcpProxy";
 import { ExecutionOptions, ExeScriptExecutor } from "../exe-script-executor";
 
-export type Worker<OutputType> = (ctx: WorkContext) => Promise<OutputType>;
+export type SetupFunction = (exe: ExeUnit) => Promise<void>;
 
 const DEFAULTS = {
   activityPreparingTimeout: 300_000,
   activityStateCheckInterval: 1000,
 };
 
-export interface WorkOptions {
+export interface ExeUnitOptions {
   activityPreparingTimeout?: number;
   activityStateCheckingInterval?: number;
   storageProvider?: StorageProvider;
   networkNode?: NetworkNode;
   logger?: Logger;
-  activityReadySetupFunctions?: Worker<unknown>[];
+  activityReadySetupFunctions?: SetupFunction[];
   yagnaOptions?: YagnaOptions;
   execution?: ExecutionOptions;
 }
@@ -56,7 +56,7 @@ export interface ActivityDTO {
 /**
  * Groups most common operations that the requestors might need to implement their workflows
  */
-export class WorkContext {
+export class ExeUnit {
   private readonly activityPreparingTimeout: number;
   private readonly activityStateCheckingInterval: number;
 
@@ -71,7 +71,7 @@ export class WorkContext {
   constructor(
     public readonly activity: Activity,
     public readonly activityModule: ActivityModule,
-    private options?: WorkOptions,
+    private options?: ExeUnitOptions,
   ) {
     this.activityPreparingTimeout = options?.activityPreparingTimeout || DEFAULTS.activityPreparingTimeout;
     this.activityStateCheckingInterval = options?.activityStateCheckingInterval || DEFAULTS.activityStateCheckInterval;

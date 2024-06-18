@@ -7,7 +7,7 @@ import {
   buildExecutorResults,
   buildExeScriptErrorResult,
   buildExeScriptSuccessResult,
-} from "../../../tests/unit/helpers";
+} from "../../../tests/utils/helpers";
 
 const mockYagna = mock(YagnaApi);
 const mockAgreement = mock(Agreement);

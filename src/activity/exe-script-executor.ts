@@ -1,7 +1,7 @@
 import { Logger } from "../shared/utils";
 import { ExecutionConfig } from "./config";
 import { Readable } from "stream";
-import { GolemWorkError, WorkErrorCode } from "./work";
+import { GolemWorkError, WorkErrorCode } from "./exe-unit";
 import { withTimeout } from "../shared/utils/timeout";
 import { GolemAbortError, GolemTimeoutError } from "../shared/error/golem-error";
 import retry from "async-retry";

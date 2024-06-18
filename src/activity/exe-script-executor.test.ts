@@ -1,8 +1,8 @@
 import { Activity } from "./activity";
 import { _, anything, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
 import { Capture, Deploy, DownloadFile, Run, Script, Start, Terminate, UploadFile } from "./script";
-import { buildExeScriptSuccessResult } from "../../tests/unit/helpers";
-import { GolemWorkError, WorkErrorCode } from "./work";
+import { buildExeScriptSuccessResult } from "../../tests/utils/helpers";
+import { GolemWorkError, WorkErrorCode } from "./exe-unit";
 import { Logger, sleep } from "../shared/utils";
 import { GolemError, GolemTimeoutError } from "../shared/error/golem-error";
 import { ExeScriptExecutor } from "./exe-script-executor";

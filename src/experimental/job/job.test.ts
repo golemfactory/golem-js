@@ -1,5 +1,5 @@
 import { Job } from "./job";
-import { WorkContext } from "../../activity/work";
+import { ExeUnit } from "../../activity/exe-unit";
 import { anything, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
 import { Logger } from "../../shared/utils";
 import { GolemNetwork } from "../../golem-network";
@@ -7,17 +7,17 @@ import { LeaseProcess } from "../../lease-process";
 
 const mockGlm = mock(GolemNetwork);
 const mockLease = mock(LeaseProcess);
-const mockWorkContext = mock(WorkContext);
+const mockExeUnit = mock(ExeUnit);
 describe("Job", () => {
   beforeEach(() => {
     reset(mockGlm);
     reset(mockLease);
-    reset(mockWorkContext);
+    reset(mockExeUnit);
   });
 
   describe("cancel()", () => {
     it("stops the activity and releases the agreement when canceled", async () => {
-      when(mockLease.getExeUnit()).thenResolve(instance(mockWorkContext));
+      when(mockLease.getExeUnit()).thenResolve(instance(mockExeUnit));
       when(mockGlm.oneOf(anything())).thenResolve(instance(mockLease));
       const job = new Job(
         "test_id",

@@ -3,7 +3,7 @@ import { Agreement } from "../market/agreement";
 import { Activity, IActivityApi, ActivityEvents, Result } from "./index";
 import { defaultLogger } from "../shared/utils";
 import { GolemServices } from "../golem-network/golem-network";
-import { WorkContext, WorkOptions } from "./work";
+import { ExeUnit, ExeUnitOptions } from "./exe-unit";
 import { ExeScriptExecutor, ExeScriptRequest, ExecutionOptions } from "./exe-script-executor";
 import { Observable, catchError, tap } from "rxjs";
 import { StreamingBatchEvent } from "./results";
@@ -38,11 +38,11 @@ export interface ActivityModule {
   findActivityById(activityId: string): Promise<Activity>;
 
   /**
-   * Create a work context "within" the activity so that you can perform commands on the rented resources
+   * Create a exe-unit "within" the activity so that you can perform commands on the rented resources
    *
-   * @return An WorkContext that's fully commissioned and the user can execute their commands
+   * @return An ExeUnit that's fully commissioned and the user can execute their commands
    */
-  createWorkContext(activity: Activity, options?: WorkOptions): Promise<WorkContext>;
+  createExeUnit(activity: Activity, options?: ExeUnitOptions): Promise<ExeUnit>;
 
   /**
    * Factory method for creating a script executor for the activity
@@ -225,19 +225,19 @@ export class ActivityModuleImpl implements ActivityModule {
     return await this.activityApi.getActivity(activityId);
   }
 
-  async createWorkContext(activity: Activity, options?: WorkOptions): Promise<WorkContext> {
+  async createExeUnit(activity: Activity, options?: ExeUnitOptions): Promise<ExeUnit> {
     this.logger.info("Creating work context for activity", { activityId: activity.id });
-    const ctx = new WorkContext(activity, this, {
+    const exe = new ExeUnit(activity, this, {
       yagnaOptions: this.services.yagna.yagnaOptions,
-      logger: this.logger.child("work-context"),
+      logger: this.logger.child("exe-unit"),
       ...options,
     });
 
     this.logger.debug("Initializing the exe-unit for activity", { activityId: activity.id });
     try {
-      await ctx.before();
+      await exe.before();
       this.events.emit("activityInitialized", activity);
-      return ctx;
+      return exe;
     } catch (error) {
       this.events.emit("errorInitializingActivity", activity, error);
       throw error;

@@ -1,4 +1,4 @@
-import { Agreement, Demand, DemandSpecification, ProviderInfo } from "../../src";
+import { Agreement, Demand, DemandSpecification } from "../index";
 import { MarketApi } from "ya-ts-client";
 
 const agreementData: MarketApi.AgreementDTO = {

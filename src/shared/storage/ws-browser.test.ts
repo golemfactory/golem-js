@@ -1,10 +1,12 @@
-import { GolemInternalError, Logger, nullLogger, WebSocketBrowserStorageProvider, YagnaApi } from "../../src";
+// TODO: improve mocks - remove as any
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { GolemInternalError, Logger, nullLogger, WebSocketBrowserStorageProvider, YagnaApi } from "../../index";
 // .js added for ESM compatibility
 import { encode, toObject } from "flatbuffers/js/flexbuffers.js";
 import * as jsSha3 from "js-sha3";
-import { TEST_IDENTITY } from "../fixtures";
+import { TEST_IDENTITY } from "../../../tests/fixtures";
 import { GsbApi, IdentityApi } from "ya-ts-client";
-import { anything, imock, instance, mock, reset, resetCalls, verify, when } from "@johanblumenberg/ts-mockito";
+import { anything, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
 
 jest.mock("uuid", () => ({ v4: () => "uuid" }));
 
