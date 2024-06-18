@@ -57,7 +57,31 @@ export interface IPaymentApi {
 }
 
 export type CreateAllocationParams = {
+  /**
+   * How much to allocate
+   */
   budget: number;
-  paymentPlatform: string;
+  /**
+   * How long the allocation should be valid
+   */
   expirationSec: number;
+  /**
+   * Optionally override the payment platform to use for this allocation
+   */
+  paymentPlatform?: string;
+  /**
+   * Optionally provide a deposit to be used for the allocation, instead of using funds from the yagna wallet.
+   * Deposit is a way to pay for the computation using someone else's funds. The other party has to
+   * call the `createDeposit` method on the `LockPayment` smart contract and provide the deposit ID.
+   */
+  deposit?: {
+    /**
+     * Address of the smart contract that holds the deposit.
+     */
+    contract: string;
+    /**
+     * ID of the deposit, obtained by calling the `createDeposit` method on the smart contract.
+     */
+    id: string;
+  };
 };

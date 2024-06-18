@@ -47,11 +47,13 @@ export interface PaymentModule {
 
   observeInvoices(): Observable<Invoice>;
 
-  createAllocation(params: { budget: number; expirationSec: number }): Promise<Allocation>;
+  createAllocation(params: CreateAllocationParams): Promise<Allocation>;
 
   releaseAllocation(allocation: Allocation): Promise<void>;
 
   amendAllocation(allocation: Allocation, params: CreateAllocationParams): Promise<Allocation>;
+
+  getAllocation(id: string): Promise<Allocation>;
 
   acceptInvoice(invoice: Invoice, allocation: Allocation, amount: string): Promise<Invoice>;
 
@@ -134,16 +136,13 @@ export class PaymentModuleImpl implements PaymentModule {
     return this.paymentApi.receivedInvoices$;
   }
 
-  async createAllocation(params: { budget: number; expirationSec: number }): Promise<Allocation> {
-    const payer = await this.getPayerDetails();
-
-    this.logger.info("Creating allocation", { params: params, payer });
+  async createAllocation(params: CreateAllocationParams): Promise<Allocation> {
+    this.logger.info("Creating allocation", { params: params });
 
     try {
       const allocation = await this.paymentApi.createAllocation({
-        budget: params.budget,
         paymentPlatform: this.getPaymentPlatform(),
-        expirationSec: params.expirationSec,
+        ...params,
       });
       this.events.emit("allocationCreated", allocation);
       return allocation;
@@ -162,6 +161,11 @@ export class PaymentModuleImpl implements PaymentModule {
       this.events.emit("errorReleasingAllocation", allocation, error);
       throw error;
     }
+  }
+
+  getAllocation(id: string): Promise<Allocation> {
+    this.logger.debug("Fetching allocation by id", { id });
+    return this.paymentApi.getAllocation(id);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
