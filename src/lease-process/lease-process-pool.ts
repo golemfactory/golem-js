@@ -69,6 +69,11 @@ export class LeaseProcessPool {
   private readonly maxPoolSize: number;
   private readonly leaseProcessOptions?: LeaseProcessOptions;
   private readonly agreementOptions?: AgreementOptions;
+  /**
+   * Number of lease processes that are currently being signed.
+   * This is used to prevent creating more lease processes than the pool size allows.
+   */
+  private leasesBeingSigned = 0;
 
   constructor(options: LeaseProcessPoolOptions & LeaseProcessPoolDependencies) {
     this.allocation = options.allocation;
@@ -103,6 +108,7 @@ export class LeaseProcessPool {
   private async createNewLeaseProcess(signalOrTimeout?: number | AbortSignal) {
     this.logger.debug("Creating new lease process to add to pool");
     try {
+      this.leasesBeingSigned++;
       const agreement = await this.marketModule.signAgreementFromPool(
         this.proposalPool,
         this.agreementOptions,
@@ -124,6 +130,8 @@ export class LeaseProcessPool {
       );
       this.logger.error("Creating lease process failed", error);
       throw error;
+    } finally {
+      this.leasesBeingSigned--;
     }
   }
 
@@ -140,7 +148,7 @@ export class LeaseProcessPool {
   }
 
   private canCreateMoreLeaseProcesses() {
-    return this.getSize() < this.maxPoolSize;
+    return this.getSize() + this.leasesBeingSigned < this.maxPoolSize;
   }
 
   /**
