@@ -158,4 +158,20 @@ describe("LeaseProcessPool", () => {
     await pool.drainAndClear();
     await glm.network.removeNetwork(network);
   });
+
+  it("should not lease more process than maximum size", async () => {
+    const maxPoolSize = 3;
+    const pool = glm.lease.createLeaseProcessPool(proposalPool, allocation, { replicas: { min: 1, max: maxPoolSize } });
+    const poolSizesDuringWork: number[] = [];
+    pool.events.on("acquired", () => poolSizesDuringWork.push(pool.getSize()));
+    const data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    await Promise.allSettled(
+      data.map((item) =>
+        pool.withLease((lease) =>
+          lease.getExeUnit().then((exe) => exe.run(`echo ${item} from provider ${exe.provider.name}`)),
+        ),
+      ),
+    );
+    expect(Math.max(...poolSizesDuringWork)).toEqual(maxPoolSize);
+  });
 });
