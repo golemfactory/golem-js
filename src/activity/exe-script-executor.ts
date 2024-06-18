@@ -56,6 +56,7 @@ export class ExeScriptExecutor {
   ): Promise<Readable> {
     let batchId: string, batchSize: number;
     const abortController = new AbortController();
+    // abort execution in case of cancellation by global signal or by local signal (from parameter)
     this.abortSignal.addEventListener("abort", () => abortController.abort(this.abortSignal.reason));
     if (signalOrTimeout) {
       const abortSignal = createAbortSignalFromTimeout(signalOrTimeout);
