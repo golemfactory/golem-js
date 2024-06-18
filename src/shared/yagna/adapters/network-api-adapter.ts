@@ -1,7 +1,6 @@
 import { YagnaApi } from "../yagnaApi";
 import { Logger } from "../../utils";
-import { INetworkApi } from "../../../network/api";
-import { GolemNetworkError, Network, NetworkErrorCode, NetworkNode } from "../../../network";
+import { GolemNetworkError, INetworkApi, Network, NetworkErrorCode, NetworkNode } from "../../../network";
 import { getMessageFromApiError } from "../../utils/apiErrorMessage";
 
 export class NetworkApiAdapter implements INetworkApi {
@@ -13,7 +12,6 @@ export class NetworkApiAdapter implements INetworkApi {
   async createNetwork(options: { id: string; ip: string; mask?: string; gateway?: string }): Promise<Network> {
     try {
       const { id, ip, mask, gateway } = await this.yagnaApi.net.createNetwork(options);
-      // @ts-expect-error TODO: Remove when this PR is merged: https://github.com/golemfactory/ya-client/pull/179
       return new Network(id, ip, mask, gateway);
     } catch (error) {
       const message = getMessageFromApiError(error);
