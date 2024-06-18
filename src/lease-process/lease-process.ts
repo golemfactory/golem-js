@@ -78,7 +78,7 @@ export class LeaseProcess {
   }
 
   /**
-   * Creates an activity on the Provider, and returns a work context that can be used to operate within the activity
+   * Creates an activity on the Provider, and returns a exe-unit that can be used to operate within the activity
    */
   async getExeUnit(): Promise<ExeUnit> {
     if (this.currentExeUnit) {

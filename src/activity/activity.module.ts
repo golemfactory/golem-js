@@ -226,7 +226,7 @@ export class ActivityModuleImpl implements ActivityModule {
   }
 
   async createExeUnit(activity: Activity, options?: ExeUnitOptions): Promise<ExeUnit> {
-    this.logger.info("Creating work context for activity", { activityId: activity.id });
+    this.logger.info("Creating exe-unit for activity", { activityId: activity.id });
     const exe = new ExeUnit(activity, this, {
       yagnaOptions: this.services.yagna.yagnaOptions,
       logger: this.logger.child("exe-unit"),

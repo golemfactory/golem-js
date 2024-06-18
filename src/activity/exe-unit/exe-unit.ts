@@ -338,7 +338,7 @@ export class ExeUnit {
   getWebsocketUri(port: number): string {
     if (!this.networkNode)
       throw new GolemWorkError(
-        "There is no network in this work context",
+        "There is no network in this exe-unit",
         WorkErrorCode.NetworkSetupMissing,
         this.activity.agreement,
         this.activity,
@@ -351,7 +351,7 @@ export class ExeUnit {
   getIp(): string {
     if (!this.networkNode)
       throw new GolemWorkError(
-        "There is no network in this work context",
+        "There is no network in this exe-unit",
         WorkErrorCode.NetworkSetupMissing,
         this.activity.agreement,
         this.activity,

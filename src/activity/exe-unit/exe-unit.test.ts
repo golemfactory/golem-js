@@ -377,7 +377,7 @@ describe("ExeUnit", () => {
     it("should throw error if there is no network node", async () => {
       const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule));
 
-      expect(() => exe.getIp()).toThrow(new Error("There is no network in this work context"));
+      expect(() => exe.getIp()).toThrow(new Error("There is no network in this exe-unit"));
     });
 
     it("should return ip address of provider vpn network node", async () => {
@@ -406,7 +406,7 @@ describe("ExeUnit", () => {
     it("should throw error if there is no network node", async () => {
       const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule));
 
-      expect(() => exe.getWebsocketUri(80)).toThrow(new Error("There is no network in this work context"));
+      expect(() => exe.getWebsocketUri(80)).toThrow(new Error("There is no network in this exe-unit"));
     });
 
     it("should return websocket URI from the NetworkNode", async () => {
