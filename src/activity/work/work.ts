@@ -18,7 +18,7 @@ import { Batch } from "./batch";
 import { NetworkNode } from "../../network";
 import { RemoteProcess } from "./process";
 import { GolemWorkError, WorkErrorCode } from "./error";
-import { GolemConfigError, GolemTimeoutError } from "../../shared/error/golem-error";
+import { GolemAbortError, GolemConfigError, GolemTimeoutError } from "../../shared/error/golem-error";
 import { Agreement, ProviderInfo } from "../../market/agreement";
 import { TcpProxy } from "../../network/tcpProxy";
 import { ExecutionOptions, ExeScriptExecutor } from "../exe-script-executor";
@@ -93,7 +93,7 @@ export class WorkContext {
 
   private async fetchState(): Promise<ActivityStateEnum> {
     if (this.abortSignal.aborted) {
-      return ActivityStateEnum.Unknown;
+      throw new GolemAbortError("ExeUnit has been aborted");
     }
     return this.activityModule
       .refreshActivity(this.activity)
@@ -162,7 +162,7 @@ export class WorkContext {
           if (this.abortSignal.aborted) {
             const message = "Initializing of activity has been aborted";
             this.logger.warn(message, { activityId: this.activity.id, reason: this.abortSignal.reason });
-            return;
+            throw new GolemAbortError(message, this.abortSignal.reason);
           }
           if (error instanceof GolemWorkError) {
             throw error;

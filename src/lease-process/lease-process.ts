@@ -34,7 +34,7 @@ export class LeaseProcess {
 
   private currentWorkContext: WorkContext | null = null;
   private abortController = new AbortController();
-  private finalizeTask?: Promise<void>;
+  private finalizePromise?: Promise<void>;
   private asyncLock = new AsyncLock();
 
   public constructor(
@@ -56,11 +56,11 @@ export class LeaseProcess {
    * If the lease is already finalized, it will resolve immediately.
    */
   async finalize() {
+    // Prevent this task from being performed more than once
     return this.asyncLock.acquire("finalize", () => {
-      // Prevent this task from being performed more than once
-      if (!this.finalizeTask) {
-        this.finalizeTask = (async () => {
-          this.abortController.abort("Finalising the leasing rocess");
+      if (!this.finalizePromise) {
+        this.finalizePromise = (async () => {
+          this.abortController.abort("The lease process is finalizing");
           if (this.paymentProcess.isFinished()) {
             return;
           }
@@ -82,7 +82,7 @@ export class LeaseProcess {
           }
         })();
       }
-      return this.finalizeTask;
+      return this.finalizePromise;
     });
   }
 
@@ -94,7 +94,7 @@ export class LeaseProcess {
    * Creates an activity on the Provider, and returns a work context that can be used to operate within the activity
    */
   async getExeUnit(): Promise<WorkContext> {
-    if (this.finalizeTask || this.abortController.signal.aborted) {
+    if (this.finalizePromise || this.abortController.signal.aborted) {
       throw new GolemUserError("The lease process is not active. It may have been aborted or finalized");
     }
     if (this.currentWorkContext) {

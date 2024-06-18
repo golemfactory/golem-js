@@ -63,11 +63,11 @@ export class ExeScriptExecutor {
     }
 
     try {
-      this.abortSignal.throwIfAborted();
+      abortController.signal.throwIfAborted();
       batchId = await this.send(script);
       batchSize = JSON.parse(script.text).length;
 
-      this.abortSignal.throwIfAborted();
+      abortController.signal.throwIfAborted();
       this.logger.debug(`Script sent.`, { batchId });
 
       return stream
@@ -80,7 +80,7 @@ export class ExeScriptExecutor {
         reason: message,
       });
 
-      if (this.abortSignal.aborted) {
+      if (abortController.signal.aborted) {
         throw new GolemAbortError("Executions of script has been aborted", this.abortSignal.reason);
       }
       throw new GolemWorkError(

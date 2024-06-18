@@ -473,7 +473,7 @@ export class MarketModuleImpl implements MarketModule {
     const getProposal = async () => {
       try {
         signal.throwIfAborted();
-        const proposal = await draftProposalPool.acquire(signalOrTimeout);
+        const proposal = await draftProposalPool.acquire(signal);
         if (signal.aborted) {
           await draftProposalPool.release(proposal);
           signal.throwIfAborted();

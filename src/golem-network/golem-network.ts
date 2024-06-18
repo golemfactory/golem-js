@@ -330,6 +330,7 @@ export class GolemNetwork {
    * ```
    *
    * @param order
+   * @param signalOrTimeout - the timeout in milliseconds or an AbortSignal that will be used to cancel the lease request
    */
   async oneOf(order: MarketOrderSpec, signalOrTimeout?: number | AbortSignal): Promise<LeaseProcess> {
     const proposalPool = new DraftOfferProposalPool({

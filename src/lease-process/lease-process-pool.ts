@@ -179,6 +179,7 @@ export class LeaseProcessPool {
 
   /**
    * Borrow a lease process from the pool. If there is no valid lease process a new one will be created.
+   * @param signalOrTimeout - the timeout in milliseconds or an AbortSignal that will be used to cancel the lease request
    */
   async acquire(signalOrTimeout?: number | AbortSignal): Promise<LeaseProcess> {
     if (this.isDraining) {
@@ -229,7 +230,7 @@ export class LeaseProcessPool {
   async destroy(leaseProcess: LeaseProcess): Promise<void> {
     try {
       this.borrowed.delete(leaseProcess);
-      this.logger.info("Destroying lease process from the pool", { agreementId: leaseProcess.agreement.id });
+      this.logger.debug("Destroying lease process from the pool", { agreementId: leaseProcess.agreement.id });
       await Promise.all([leaseProcess.finalize(), this.removeNetworkNode(leaseProcess)]);
       this.events.emit("destroyed", leaseProcess.agreement);
     } catch (error) {
@@ -352,6 +353,8 @@ export class LeaseProcessPool {
    *  // even if an error is thrown in the callback
    * });
    * ```
+   * @param callback - a function that takes a `lease` object as its argument. The lease is automatically released after the callback is executed, regardless of whether it completes successfully or throws an error.
+   * @param signalOrTimeout - the timeout in milliseconds or an AbortSignal that will be used to cancel the lease request
    */
   public async withLease<T>(
     callback: (lease: LeaseProcess) => Promise<T>,
