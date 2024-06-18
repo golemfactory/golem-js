@@ -249,7 +249,7 @@ export class GolemNetwork {
         marketApi:
           this.options.override?.marketApi ||
           new MarketApiAdapter(this.yagna, agreementRepository, proposalRepository, demandRepository, this.logger),
-        networkApi: this.options.override?.networkApi || new NetworkApiAdapter(this.yagna, this.logger),
+        networkApi: this.options.override?.networkApi || new NetworkApiAdapter(this.yagna),
         fileServer: this.options.override?.fileServer || new GftpServerAdapter(this.storageProvider),
       };
       this.network = getFactory(NetworkModuleImpl, this.options.override?.network)(this.services);

@@ -164,7 +164,6 @@ export class MarketApiAdapter implements IMarketApi {
       receivedProposal.id,
       bodyClone,
     );
-
     this.logger.debug("Proposal counter result from yagna", { result: maybeNewId });
 
     if (typeof maybeNewId !== "string") {

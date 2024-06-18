@@ -10,15 +10,9 @@ import { getMessageFromApiError } from "../shared/utils/apiErrorMessage";
 
 export interface NetworkOptions {
   /**
-   * The ID of the network.
-   * This is an optional field that can be used to specify a unique identifier for the network.
-   * If not provided, it will be generated automatically.
-   */
-  id?: string;
-
-  /**
    * The IP address of the network. May contain netmask, e.g. "192.168.0.0/24".
    * This field can include the netmask directly in CIDR notation.
+   * @default "192.168.0.0"
    */
   ip?: string;
 
@@ -99,7 +93,6 @@ export class NetworkModuleImpl implements NetworkModule {
       const mask = ipRange.getPrefix().toMask();
       const gateway = options?.gateway ? new IPv4(options.gateway) : undefined;
       const network = await this.networkApi.createNetwork({
-        id: options?.id,
         ip: ip.toString(),
         mask: mask?.toString(),
         gateway: gateway?.toString(),

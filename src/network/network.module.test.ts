@@ -48,10 +48,9 @@ describe("Network", () => {
     });
 
     it("should create network with 16 bit mask", async () => {
-      await networkModule.createNetwork({ id: "1", ip: "192.168.7.0/16" });
+      await networkModule.createNetwork({ ip: "192.168.7.0/16" });
       expect(capture(mockNetworkApi.createNetwork).last()).toEqual([
         {
-          id: "1",
           ip: "192.168.0.0",
           mask: "255.255.0.0",
         },
@@ -59,10 +58,9 @@ describe("Network", () => {
     });
 
     it("should create network with 24 bit mask", async () => {
-      await networkModule.createNetwork({ id: "1", ip: "192.168.7.0/24" });
+      await networkModule.createNetwork({ ip: "192.168.7.0/24" });
       expect(capture(mockNetworkApi.createNetwork).last()).toEqual([
         {
-          id: "1",
           ip: "192.168.7.0",
           mask: "255.255.255.0",
         },
@@ -70,10 +68,9 @@ describe("Network", () => {
     });
 
     it("should create network with 8 bit mask", async () => {
-      await networkModule.createNetwork({ id: "1", ip: "192.168.7.0/8" });
+      await networkModule.createNetwork({ ip: "192.168.7.0/8" });
       expect(capture(mockNetworkApi.createNetwork).last()).toEqual([
         {
-          id: "1",
           ip: "192.0.0.0",
           mask: "255.0.0.0",
         },
@@ -81,7 +78,7 @@ describe("Network", () => {
     });
 
     it("should not create network with invalid ip", async () => {
-      const shouldFail = networkModule.createNetwork({ id: "1", ip: "123.1.2" });
+      const shouldFail = networkModule.createNetwork({ ip: "123.1.2" });
       await expect(shouldFail).rejects.toMatchError(
         new GolemNetworkError(
           "Unable to create network. An IP4 number cannot have less or greater than 4 octets",
@@ -95,12 +92,10 @@ describe("Network", () => {
     it("should create network with custom gateway", async () => {
       await networkModule.createNetwork({
         ip: "192.168.0.1/27",
-        id: "owner_1",
         gateway: "192.168.0.2",
       });
       expect(capture(mockNetworkApi.createNetwork).last()).toEqual([
         {
-          id: "owner_1",
           ip: "192.168.0.0",
           mask: "255.255.255.224",
           gateway: "192.168.0.2",
