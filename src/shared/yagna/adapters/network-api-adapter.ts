@@ -1,12 +1,11 @@
 import { YagnaApi } from "../yagnaApi";
-import { INetworkApi } from "../../../network/api";
-import { GolemNetworkError, Network, NetworkErrorCode, NetworkNode } from "../../../network";
+import { GolemNetworkError, INetworkApi, Network, NetworkErrorCode, NetworkNode } from "../../../network";
 import { getMessageFromApiError } from "../../utils/apiErrorMessage";
 
 export class NetworkApiAdapter implements INetworkApi {
   constructor(private readonly yagnaApi: YagnaApi) {}
 
-  async createNetwork(options: { id: string; ip: string; mask?: string; gateway?: string }): Promise<Network> {
+  async createNetwork(options: { ip: string; mask?: string; gateway?: string }): Promise<Network> {
     try {
       const { id, ip, mask, gateway } = await this.yagnaApi.net.createNetwork(options);
       return new Network(id, ip, mask, gateway);
