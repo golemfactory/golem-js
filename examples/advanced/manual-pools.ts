@@ -20,10 +20,6 @@ const demandOptions = {
       maxCpuPerHourPrice: 1,
       maxEnvPerHourPrice: 1,
     },
-    withProviders: ["0x123123"],
-    withoutProviders: ["0x123123"],
-    withOperators: ["0x123123"],
-    withoutOperators: ["0x123123"],
   },
 } as const;
 
@@ -45,11 +41,12 @@ const demandOptions = {
     const proposalPool = new DraftOfferProposalPool({ minCount: 1 });
     const demandSpecification = await glm.market.buildDemandDetails(demandOptions.demand, allocation);
 
-    const proposals$ = glm.market.startCollectingProposals({
+    const draftProposal$ = glm.market.collectDraftOfferProposals({
       demandSpecification,
+      pricing: demandOptions.market.pricing,
     });
 
-    const proposalSubscription = proposalPool.readFrom(proposals$);
+    const proposalSubscription = proposalPool.readFrom(draftProposal$);
 
     /** How many providers you plan to engage simultaneously */
     const CONCURRENCY = 2;

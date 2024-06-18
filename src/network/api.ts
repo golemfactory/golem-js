@@ -2,6 +2,20 @@ import { Network } from "./network";
 import { NetworkNode } from "./node";
 import { NetworkOptions } from "./network.module";
 
+export interface NetworkEvents {
+  networkCreated: (network: Network) => void;
+  errorCreatingNetwork: (error: Error) => void;
+
+  networkRemoved: (network: Network) => void;
+  errorRemovingNetwork: (network: Network, error: Error) => void;
+
+  nodeCreated: (network: Network, node: NetworkNode) => void;
+  errorCreatingNode: (network: Network, error: Error) => void;
+
+  nodeRemoved: (network: Network, node: NetworkNode) => void;
+  errorRemovingNode: (network: Network, node: NetworkNode, error: Error) => void;
+}
+
 export interface INetworkApi {
   /**
    * Creates a new network with the specified options.
@@ -35,11 +49,4 @@ export interface INetworkApi {
    * Returns the identifier of the requesor
    */
   getIdentity(): Promise<string>;
-
-  /**
-   * Retrieves the WebSocket URI for a specified network node and port.
-   * @param networkNode - The network node for which the WebSocket URI is retrieved.
-   * @param port - The port number for the WebSocket connection.
-   */
-  getWebsocketUri(networkNode: NetworkNode, port: number): string;
 }

@@ -110,6 +110,7 @@ jobs:
         if: always()
         with:
           type: "e2e"
+
   run-examples-tests:
     name: Run Examples tests
     needs: regular-checks
@@ -129,9 +130,39 @@ jobs:
         with:
           type: "examples"
 
+  run-cypress-tests:
+    name: Run Cypress tests
+    needs: regular-checks
+    runs-on: goth2
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare providers and requestor
+        uses: ./.github/actions/prepare-tests
+        with:
+          type: "cypress"
+
+      - name: Run web server
+        run: docker exec -t -d docker-requestor-1 /bin/sh -c "cd /golem-js/examples && npm run web"
+
+      - name: Run test suite
+        run: docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js &&  npm run test:cypress -- --browser chromium"
+
+      - name: Upload test logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cypress-logs
+          path: .cypress
+
+      - name: Cleanup test environment
+        uses: ./.github/actions/cleanup-tests
+        with:
+          type: "cypress"
+
   release:
     name: Release the SDK to NPM and GitHub
-    needs: [run-e2e-tests, run-examples-tests]
+    needs: [run-e2e-tests, run-examples-tests, run-cypress-tests]
     runs-on: ubuntu-latest
     permissions:
       contents: write # to be able to publish a GitHub release

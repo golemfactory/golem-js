@@ -2,7 +2,7 @@ import { RemoteProcess } from "./process";
 import { imock, instance, mock, reset } from "@johanblumenberg/ts-mockito";
 import { Logger, YagnaApi } from "../../shared/utils";
 import { Agreement } from "../../market/agreement";
-import { Activity, IActivityApi } from "../index";
+import { Activity, ActivityModule } from "../index";
 import {
   buildExecutorResults,
   buildExeScriptErrorResult,
@@ -13,14 +13,16 @@ const mockYagna = mock(YagnaApi);
 const mockAgreement = mock(Agreement);
 const mockActivity = mock(Activity);
 const mockLogger = imock<Logger>();
-const mockActivityApi = imock<IActivityApi>();
-
+const mockActivityModule = imock<ActivityModule>();
 describe("RemoteProcess", () => {
   let activity: Activity;
 
   beforeEach(() => {
     reset(mockYagna);
     reset(mockAgreement);
+    reset(mockActivity);
+    reset(mockLogger);
+    reset(mockActivityModule);
 
     activity = instance(mockActivity);
   });
@@ -28,7 +30,7 @@ describe("RemoteProcess", () => {
   it("should create remote process", async () => {
     const streamOfActivityResults = buildExecutorResults([buildExeScriptSuccessResult("ok")]);
     const remoteProcess = new RemoteProcess(
-      instance(mockActivityApi),
+      instance(mockActivityModule),
       streamOfActivityResults,
       activity,
       instance(mockLogger),
@@ -39,7 +41,7 @@ describe("RemoteProcess", () => {
   it("should read stdout from remote process", async () => {
     const streamOfActivityResults = buildExecutorResults([buildExeScriptSuccessResult("Output")]);
     const remoteProcess = new RemoteProcess(
-      instance(mockActivityApi),
+      instance(mockActivityModule),
       streamOfActivityResults,
       activity,
       instance(mockLogger),
@@ -52,7 +54,7 @@ describe("RemoteProcess", () => {
   it("should read stderr from remote process", async () => {
     const streamOfActivityResults = buildExecutorResults(undefined, [buildExeScriptErrorResult("Error", "Error")]);
     const remoteProcess = new RemoteProcess(
-      instance(mockActivityApi),
+      instance(mockActivityModule),
       streamOfActivityResults,
       activity,
       instance(mockLogger),
@@ -65,7 +67,7 @@ describe("RemoteProcess", () => {
   it("should wait for exit", async () => {
     const streamOfActivityResults = buildExecutorResults([buildExeScriptSuccessResult("Ok")]);
     const remoteProcess = new RemoteProcess(
-      instance(mockActivityApi),
+      instance(mockActivityModule),
       streamOfActivityResults,
       activity,
       instance(mockLogger),

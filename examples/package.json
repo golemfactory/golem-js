@@ -9,6 +9,7 @@
     "basic-many-of": "tsx basic/many-of.ts",
     "basic-vpn": "tsx basic/vpn.ts",
     "basic-transfer": "tsx basic/transfer.ts",
+    "basic-events": "tsx basic/events.ts",
     "basic-run-and-stream": "tsx basic/run-and-stream.ts",
     "advanced-hello-world": "tsx advanced/hello-world.ts",
     "advanced-manual-pools": "tsx advanced/manual-pools.ts",
@@ -18,6 +19,9 @@
     "local-image": "tsx advanced/local-image/serveLocalGvmi.ts",
     "deployment": "tsx experimental/deployment/new-api.ts",
     "market-scan": "tsx market/scan.ts",
+    "preweb": "cp -r ../dist/ web/dist/",
+    "postweb": "rm -rf web/dist/",
+    "web": "serve web/",
     "experimental-server": "tsx experimental/express/server.ts",
     "lint": "npm run lint:ts",
     "lint:ts": "tsc --project tsconfig.json --noEmit"
@@ -36,6 +40,8 @@
   },
   "devDependencies": {
     "@types/node": "20",
+    "cypress": "^13.11.0",
+    "serve": "^14.2.3",
     "typescript": "^5.3.3"
   }
 }

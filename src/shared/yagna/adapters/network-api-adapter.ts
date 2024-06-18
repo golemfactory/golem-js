@@ -36,7 +36,12 @@ export class NetworkApiAdapter implements INetworkApi {
   async createNetworkNode(network: Network, nodeId: string, nodeIp: string): Promise<NetworkNode> {
     try {
       await this.yagnaApi.net.addNode(network.id, { id: nodeId, ip: nodeIp });
-      const networkNode = new NetworkNode(nodeId, nodeIp, network.getNetworkInfo.bind(network));
+      const networkNode = new NetworkNode(
+        nodeId,
+        nodeIp,
+        network.getNetworkInfo.bind(network),
+        this.yagnaApi.net.httpRequest.config.BASE,
+      );
 
       return networkNode;
     } catch (error) {
@@ -75,11 +80,5 @@ export class NetworkApiAdapter implements INetworkApi {
         error,
       );
     }
-  }
-
-  getWebsocketUri(networkNode: NetworkNode, port: number) {
-    const url = new URL(this.yagnaApi.net.httpRequest.config.BASE);
-    url.protocol = "ws";
-    return `${url.href}/net/${networkNode.getNetworkInfo().id}/tcp/${networkNode.ip}/${port}`;
   }
 }

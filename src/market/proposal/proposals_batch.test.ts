@@ -1,7 +1,8 @@
 import { ProposalsBatch } from "./proposals_batch";
 import { mock, instance, when } from "@johanblumenberg/ts-mockito";
-import { OfferProposal, ProposalProperties } from "./offer-proposal";
-import { ProviderInfo } from "./agreement";
+import { OfferProposal } from "./offer-proposal";
+import { ProviderInfo } from "../agreement";
+import { ProposalProperties } from "./proposal-properties";
 
 const mockedProviderInfo: ProviderInfo = {
   id: "provider-id-1",
@@ -163,7 +164,7 @@ describe("ProposalsBatch", () => {
         envSec: 1,
         start: 1,
       });
-      when(mockedProposal1.timestamp).thenReturn("2024-01-01T00:00:00.000Z");
+      when(mockedProposal1.timestamp).thenReturn(new Date(Date.parse("2024-01-01T00:00:00.000Z")));
       const mockedProposal2 = mock(OfferProposal);
       when(mockedProposal2.provider).thenReturn(mockedProviderInfo);
       when(mockedProposal2.properties).thenReturn({
@@ -177,7 +178,7 @@ describe("ProposalsBatch", () => {
         envSec: 1,
         start: 1,
       });
-      when(mockedProposal2.timestamp).thenReturn("2024-01-01T07:07:07.007Z");
+      when(mockedProposal2.timestamp).thenReturn(new Date(Date.parse("2024-01-01T07:07:07.007Z")));
       const mockedProposal3 = mock(OfferProposal);
       when(mockedProposal3.provider).thenReturn(mockedProviderInfo);
       when(mockedProposal3.properties).thenReturn({
@@ -191,7 +192,7 @@ describe("ProposalsBatch", () => {
         envSec: 2,
         start: 2,
       });
-      when(mockedProposal3.timestamp).thenReturn("2024-01-01T07:07:07.007Z");
+      when(mockedProposal3.timestamp).thenReturn(new Date(Date.parse("2024-01-01T07:07:07.007Z")));
       const proposal1 = instance(mockedProposal1);
       const proposal2 = instance(mockedProposal2);
       const proposal3 = instance(mockedProposal3);

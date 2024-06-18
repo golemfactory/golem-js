@@ -1,7 +1,7 @@
 import { Agreement, IAgreementRepository } from "../../../market/agreement/agreement";
 import { MarketApi } from "ya-ts-client";
 import { GolemInternalError } from "../../error/golem-error";
-import { IDemandRepository } from "../../../market/demand";
+import { IDemandRepository } from "../../../market/demand/demand";
 import { getMessageFromApiError } from "../../utils/apiErrorMessage";
 import { GolemMarketError, MarketErrorCode } from "../../../market";
 

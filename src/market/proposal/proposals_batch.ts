@@ -94,8 +94,8 @@ export class ProposalsBatch {
     const sortByLowerPriceAndHigherTime = (p1: OfferProposal, p2: OfferProposal) => {
       const p1Price = p1.getEstimatedCost();
       const p2Price = p2.getEstimatedCost();
-      const p1Time = new Date(p1.timestamp).valueOf();
-      const p2Time = new Date(p2.timestamp).valueOf();
+      const p1Time = p1.timestamp.valueOf();
+      const p2Time = p2.timestamp.valueOf();
       return p1Price !== p2Price ? p1Price - p2Price : p2Time - p1Time;
     };
     return [...proposals].sort(sortByLowerPriceAndHigherTime)[0];

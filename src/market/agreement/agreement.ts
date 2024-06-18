@@ -1,7 +1,5 @@
-import { Logger, YagnaOptions } from "../../shared/utils";
 import { MarketApi } from "ya-ts-client";
-import { Demand, OfferProposal } from "../index";
-import { InvoiceFilter } from "../../payment/agreement_payment_process";
+import { Demand } from "../demand";
 
 /**
  * * `Proposal` - newly created by a Requestor (draft based on Proposal)
@@ -21,53 +19,13 @@ export interface ProviderInfo {
   walletAddress: string;
 }
 
-/**
- * @hidden
- * @deprecated
- */
-export interface LegacyAgreementServiceOptions {
-  /** yagnaOptions */
-  yagnaOptions?: YagnaOptions;
-  /** timeout for create agreement and refresh details in ms */
-  agreementRequestTimeout?: number;
-  /** timeout for wait for provider approval after requestor confirmation in ms */
-  agreementWaitingForApprovalTimeout?: number;
-  /** Logger module */
-  logger?: Logger;
-
-  invoiceFilter?: InvoiceFilter;
+export interface AgreementOptions {
+  expirationSec?: number;
+  waitingForApprovalTimeoutSec?: number;
 }
 
 export interface IAgreementRepository {
   getById(id: string): Promise<Agreement>;
-}
-
-export interface IAgreementApi {
-  getAgreement(id: string): Promise<Agreement>;
-
-  /**
-   * Request creating an agreement from the provided proposal
-   *
-   * Use this method if you want to decide what should happen with the agreement after it is created
-   *
-   * @return An agreement that's in a "Proposal" state (not yet usable for activity creation)
-   */
-  createAgreement(proposal: OfferProposal): Promise<Agreement>;
-
-  /**
-   * Request creating an agreement from the provided proposal, send it to the Provider and wait for approval
-   *
-   * Use this method when you want to quickly finalize the deal with the Provider, but be ready for a rejection
-   *
-   * @return An agreement that's already in an "Approved" state and can be used to create activities on the Provider
-   */
-  proposeAgreement(proposal: OfferProposal): Promise<Agreement>;
-
-  getAgreementState(id: string): Promise<AgreementState>;
-
-  confirmAgreement(agreement: Agreement): Promise<Agreement>;
-
-  terminateAgreement(agreement: Agreement, reason?: string): Promise<Agreement>;
 }
 
 /**
@@ -77,7 +35,7 @@ export class Agreement {
   /**
    * @param id
    * @param model
-   * @param paymentPlatform
+   * @param demand
    */
   constructor(
     public readonly id: string,
@@ -106,7 +64,7 @@ export class Agreement {
    * @description if the final state is true, agreement will not change state further anymore
    * @return boolean
    */
-  async isFinalState(): Promise<boolean> {
+  isFinalState(): boolean {
     const state = this.getState();
     return state !== "Pending" && state !== "Proposal";
   }

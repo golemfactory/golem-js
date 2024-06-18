@@ -1,7 +1,7 @@
-import { WorkloadDemandDirectorConfigOptions } from "./demand/options";
-import { BasicDemandDirectorConfigOptions } from "./demand/directors/basic-demand-director-config";
-import { PaymentDemandDirectorConfigOptions } from "./demand/directors/payment-demand-director-config";
-import { DemandBodyPrototype } from "./demand/demand-body-builder";
+import { WorkloadDemandDirectorConfigOptions } from "./options";
+import { BasicDemandDirectorConfigOptions } from "./directors/basic-demand-director-config";
+import { PaymentDemandDirectorConfigOptions } from "./directors/payment-demand-director-config";
+import { DemandBodyPrototype } from "./demand-body-builder";
 
 /**
  * This type represents a set of *parameters* that the SDK can set to particular *properties* and *constraints*

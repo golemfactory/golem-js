@@ -1,4 +1,4 @@
-import { Activity, ActivityStateEnum, IActivityApi, Result } from "../";
+import { Activity, ActivityModule, ActivityStateEnum, Result } from "../";
 import {
   Capture,
   Command,
@@ -22,7 +22,6 @@ import { GolemConfigError, GolemTimeoutError } from "../../shared/error/golem-er
 import { Agreement, ProviderInfo } from "../../market/agreement";
 import { TcpProxy } from "../../network/tcpProxy";
 import { ExecutionOptions, ExeScriptExecutor } from "../exe-script-executor";
-import { INetworkApi } from "../../network/api";
 
 export type Worker<OutputType> = (ctx: WorkContext) => Promise<OutputType>;
 
@@ -71,8 +70,7 @@ export class WorkContext {
 
   constructor(
     public readonly activity: Activity,
-    public readonly activityApi: IActivityApi,
-    private readonly networkApi: INetworkApi,
+    public readonly activityModule: ActivityModule,
     private options?: WorkOptions,
   ) {
     this.activityPreparingTimeout = options?.activityPreparingTimeout || DEFAULTS.activityPreparingTimeout;
@@ -84,15 +82,27 @@ export class WorkContext {
 
     this.networkNode = options?.networkNode;
 
-    this.executor = this.activity.createExeScriptExecutor(this.activityApi, this.logger, this.options?.execution);
+    this.executor = this.activityModule.createScriptExecutor(this.activity, this.options?.execution);
+  }
+
+  private async fetchState(): Promise<ActivityStateEnum> {
+    return this.activityModule
+      .refreshActivity(this.activity)
+      .then((activity) => activity.getState())
+      .catch((err) => {
+        this.logger.error("Failed to read activity state", err);
+        throw new GolemWorkError(
+          "Failed to read activity state",
+          WorkErrorCode.ActivityStatusQueryFailed,
+          this.activity.agreement,
+          this.activity,
+          err,
+        );
+      });
   }
 
   async before(): Promise<Result[] | void> {
-    let state = await this.activityApi
-      .getActivity(this.activity.id)
-      .then((activity) => activity.getState())
-      .catch((err) => this.logger.error("Failed to read activity state", err));
-
+    let state = await this.fetchState();
     if (state === ActivityStateEnum.Ready) {
       await this.setupActivity();
       return;
@@ -157,10 +167,7 @@ export class WorkContext {
 
     await sleep(this.activityStateCheckingInterval, true);
 
-    state = await this.activityApi
-      .getActivity(this.activity.id)
-      .then((activity) => activity.getState())
-      .catch((err) => this.logger.error("Failed to read activity state", err));
+    state = await this.fetchState();
 
     if (state !== ActivityStateEnum.Ready) {
       throw new GolemWorkError(
@@ -216,19 +223,6 @@ export class WorkContext {
     return this.runOneCommand(run, runOptions);
   }
 
-  /** @deprecated Use {@link WorkContext.runAndStream} instead */
-  async spawn(commandLine: string, options?: Omit<CommandOptions, "capture">): Promise<RemoteProcess>;
-  /** @deprecated Use {@link WorkContext.runAndStream} instead */
-  async spawn(executable: string, args: string[], options?: CommandOptions): Promise<RemoteProcess>;
-  /** @deprecated Use {@link WorkContext.runAndStream} instead */
-  async spawn(exeOrCmd: string, argsOrOptions?: string[] | CommandOptions, options?: CommandOptions) {
-    if (Array.isArray(argsOrOptions)) {
-      return this.runAndStream(exeOrCmd, argsOrOptions, options);
-    } else {
-      return this.runAndStream(exeOrCmd, options);
-    }
-  }
-
   /**
    * Run an executable on provider and return {@link RemoteProcess} that will allow streaming
    *   that contain stdout and stderr as Readable
@@ -274,7 +268,7 @@ export class WorkContext {
         );
       });
 
-    return new RemoteProcess(this.activityApi, streamOfActivityResults, this.activity, this.logger);
+    return new RemoteProcess(this.activityModule, streamOfActivityResults, this.activity, this.logger);
   }
 
   /**
@@ -351,7 +345,7 @@ export class WorkContext {
         this.activity.getProviderInfo(),
       );
 
-    return this.networkApi.getWebsocketUri(this.networkNode, port);
+    return this.networkNode.getWebsocketUri(port);
   }
 
   getIp(): string {
@@ -387,22 +381,6 @@ export class WorkContext {
       id: this.activity.id,
       agreement: this.activity.agreement,
     };
-  }
-
-  async getState(): Promise<ActivityStateEnum> {
-    return this.activityApi
-      .getActivity(this.activity.id)
-      .then((activity) => activity.getState())
-      .catch((err) => {
-        this.logger.error("Failed to read activity state", err);
-        throw new GolemWorkError(
-          "Failed to read activity state",
-          WorkErrorCode.ActivityStatusQueryFailed,
-          this.activity.agreement,
-          this.activity,
-          err,
-        );
-      });
   }
 
   private async runOneCommand<T>(command: Command<T>, options?: CommandOptions): Promise<Result<T>> {

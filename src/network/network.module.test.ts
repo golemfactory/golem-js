@@ -81,7 +81,7 @@ describe("Network", () => {
       const shouldFail = networkModule.createNetwork({ ip: "123.1.2" });
       await expect(shouldFail).rejects.toMatchError(
         new GolemNetworkError(
-          "Unable to create network. Error: An IP4 number cannot have less or greater than 4 octets",
+          "Unable to create network. An IP4 number cannot have less or greater than 4 octets",
           NetworkErrorCode.NetworkCreationFailed,
           undefined,
           new Error("An IP4 number cannot have less or greater than 4 octets"),

@@ -1,7 +1,7 @@
 import { Agreement } from "../market/agreement/agreement";
 import { AgreementPaymentProcess, PaymentProcessOptions } from "../payment/agreement_payment_process";
 import { Logger } from "../shared/utils";
-import { waitForCondition } from "../shared/utils/waitForCondition";
+import { waitForCondition } from "../shared/utils/wait";
 import { ActivityModule, WorkContext } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { EventEmitter } from "eventemitter3";
@@ -59,7 +59,9 @@ export class LeaseProcess {
       this.logger.debug("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
       if (this.currentWorkContext) {
         await this.activityModule.destroyActivity(this.currentWorkContext.activity);
-        await this.marketModule.terminateAgreement(this.agreement);
+        if ((await this.fetchAgreementState()) !== "Terminated") {
+          await this.marketModule.terminateAgreement(this.agreement);
+        }
       }
       await waitForCondition(() => this.paymentProcess.isFinished());
       this.logger.debug("Payment process for agreement finalized", { agreementId: this.agreement.id });

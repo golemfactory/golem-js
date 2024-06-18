@@ -3,7 +3,7 @@ import { RequireAtLeastOne } from "../../shared/utils/types";
 /**
  * Specifies a set of options related to computation resources that will be used to form the demand
  */
-type ResourceDemandOptions = {
+export type ResourceDemandOptions = {
   /** Minimum required memory to execute application GB */
   minMemGib: number;
   /** Minimum required disk storage to execute tasks in GB */
@@ -17,7 +17,7 @@ type ResourceDemandOptions = {
 /**
  * Specifies a set of options related to runtime configuration that will be used to form the demand
  */
-type RuntimeDemandOptions = {
+export type RuntimeDemandOptions = {
   /** Type of engine required: vm, wasm, vm-nvidia, etc... */
   engine: string;
 
@@ -28,7 +28,7 @@ type RuntimeDemandOptions = {
 /**
  * Specifies a set of options related to computation manifest that can be used to form the demand
  */
-type ManifestDemandOptions = {
+export type ManifestDemandOptions = {
   manifest: string;
   /** Signature of base64 encoded Computation Payload Manifest **/
   manifestSig: string;
@@ -41,7 +41,7 @@ type ManifestDemandOptions = {
 /**
  * Specifies a set of options related to the Golem VM Image (GVMI) that will be used to form the demand
  */
-type ImageDemandOptions = {
+export type ImageDemandOptions = {
   /**
    * If you want a provider to download the image from your local filesystem or
    * a different registry than the default one, you can provide the image url here.

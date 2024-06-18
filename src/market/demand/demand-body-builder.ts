@@ -26,7 +26,7 @@ type DemandConstraint = {
  * Data structure that represents details of the body for a demand subscription request
  *
  * This type belongs to our domain (use case layer), and will later be "serialized" to the body that's sent to
- * Yagna. You should consider this as a "draft of the demand", that can be finalized by one of the {@link MarketApi}
+ * Yagna. You should consider this as a "draft of the demand", that can be finalized by one of the {@link market/api.IMarketApi}
  * implementations.
  */
 export type DemandBodyPrototype = {

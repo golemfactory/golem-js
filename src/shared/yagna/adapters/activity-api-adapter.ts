@@ -1,4 +1,4 @@
-import { Agreement } from "../../../market/agreement";
+import { Agreement } from "../../../market";
 import { ActivityApi } from "ya-ts-client";
 import { Activity, ActivityStateEnum, GolemWorkError, IActivityApi, Result, WorkErrorCode } from "../../../activity";
 import { IActivityRepository } from "../../../activity/activity";

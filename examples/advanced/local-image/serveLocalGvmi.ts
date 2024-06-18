@@ -1,14 +1,16 @@
-import { DraftOfferProposalPool, GolemNetwork } from "@golem-sdk/golem-js";
-
+/**
+ * This example demonstrates how to upload a local GVMI file to the provider.
+ * Take a look at the `Dockerfile` in the same directory to see what's inside the image.
+ */
+import { GolemNetwork, MarketOrderSpec } from "@golem-sdk/golem-js";
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
-import { fileURLToPath } from "url";
 
 // get the absolute path to the local image in case this file is run from a different directory
-const getImagePath = (path: string) => fileURLToPath(new URL(path, import.meta.url).toString());
+const getImagePath = (path: string) => new URL(path, import.meta.url).toString();
 
 (async () => {
   const logger = pinoPrettyLogger({
-    level: "debug",
+    level: "info",
   });
 
   const glm = new GolemNetwork({
@@ -18,17 +20,18 @@ const getImagePath = (path: string) => fileURLToPath(new URL(path, import.meta.u
   try {
     await glm.connect();
 
-    const demand = {
+    const order: MarketOrderSpec = {
       demand: {
         workload: {
-          // Here you supply the path to the GVMI file that you want to deploy and use
-          // using the file:// protocol will make the SDK switch to "GVMI" serving mode
-          imageUrl: `file://${getImagePath("./alpine.gvmi")}`,
+          // if the image url starts with "file://" it will be treated as a local file
+          // and the sdk will automatically serve it to the provider
+          imageUrl: getImagePath("./alpine.gvmi"),
         },
       },
       market: {
-        rentHours: 12,
+        rentHours: 5 / 60,
         pricing: {
+          model: "linear",
           maxStartPrice: 1,
           maxCpuPerHourPrice: 1,
           maxEnvPerHourPrice: 1,
@@ -36,48 +39,16 @@ const getImagePath = (path: string) => fileURLToPath(new URL(path, import.meta.u
       },
     };
 
-    const proposalPool = new DraftOfferProposalPool({
-      logger,
-    });
-
-    const allocation = await glm.payment.createAllocation({
-      budget: 1,
-      expirationSec: 30 * 60, // 30 minutes
-    });
-    const demandSpecification = await glm.market.buildDemandDetails(demand.demand, allocation);
-    const proposal$ = glm.market.startCollectingProposals({
-      demandSpecification,
-      bufferSize: 15,
-    });
-    const proposalSubscription = proposalPool.readFrom(proposal$);
-    const draftProposal = await proposalPool.acquire();
-
-    const agreement = await glm.market.proposeAgreement(draftProposal);
-
-    const lease = glm.lease.createLease(agreement, allocation);
-    const activity = await glm.activity.createActivity(agreement);
-
-    // We managed to create the activity, no need to look for more agreement candidates
-    proposalSubscription.unsubscribe();
-
-    // Access your work context to perform operations
-    const ctx = await glm.activity.createWorkContext(activity);
-
-    // Perform your work
-    const result = await ctx.run("cat hello.txt");
-    console.log("Contents of 'hello.txt': ", result.stdout?.toString().trim());
-
-    // Start clean shutdown procedure for business components
-    await glm.activity.destroyActivity(activity);
-    await glm.market.terminateAgreement(agreement);
-    await proposalPool.remove(draftProposal);
-
-    // This will keep the script waiting for payments etc
-    await lease.finalize();
+    const lease = await glm.oneOf(order);
+    // in our Dockerfile we have created a file called hello.txt, let's read it
+    const result = await lease
+      .getExeUnit()
+      .then((exe) => exe.run("cat hello.txt"))
+      .then((res) => res.stdout);
+    console.log(result);
   } catch (err) {
     console.error("Failed to run example on Golem", err);
   } finally {
-    // Clean shutdown of infrastructure components
     await glm.disconnect();
   }
 })().catch(console.error);
