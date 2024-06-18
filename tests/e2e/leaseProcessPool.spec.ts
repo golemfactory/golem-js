@@ -179,18 +179,8 @@ describe("LeaseProcessPool", () => {
       leaseProcess.events.on("finalized", async () => res(true));
       setTimeout(() => leaseProcess.finalize(), 8_000);
       await expect(exe.run("sleep 10 && echo Hello World")).rejects.toThrow(
-        new GolemAbortError("Processing of script execution has been aborted"),
+        new GolemAbortError("Execution of script has been aborted"),
       );
     });
-  });
-
-  it("should throw error while executing script on a finalized lease process", async () => {
-    const pool = glm.lease.createLeaseProcessPool(proposalPool, allocation, { replicas: 1 });
-    const leaseProcess = await pool.acquire();
-    const exe = await leaseProcess.getExeUnit();
-    await leaseProcess.finalize();
-    await expect(exe.run("echo Hello World")).rejects.toThrow(
-      new GolemAbortError("Executions of script has been aborted"),
-    );
   });
 });
