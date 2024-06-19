@@ -366,7 +366,11 @@ export class GolemNetwork {
    * await lease.finalize();
    * ```
    *
-   * @param options  timeout in milliseconds or an AbortSignal that will be used to cancel the lease request
+   * @param {Object} options
+   * @param options.order - represents the order specifications which will result in access to LeaseProcess.
+   * @param options.signalOrTimeout - timeout in milliseconds or an AbortSignal that will be used to cancel the lease request
+   * @param options.setup - an optional function that is called as soon as the exe unit is ready
+   * @param options.teardown - an optional function that is called before the exe unit is destroyed
    */
   async oneOf({ order, setup, teardown, signalOrTimeout }: OneOfOptions): Promise<LeaseProcess> {
     const proposalPool = new DraftOfferProposalPool({
@@ -462,7 +466,11 @@ export class GolemNetwork {
    * ]);
    * ```
    *
-   * @param options Demand specification and concurrency level
+   * @param @param {Object} options
+   * @param options.order - represents the order specifications which will result in access to LeaseProcess.
+   * @param options.concurrency - concurrency level, can be defined as a number or an object with min and max fields
+   * @param options.setup - an optional function that is called as soon as the exe unit is ready
+   * @param options.teardown - an optional function that is called before the exe unit is destroyed
    */
   public async manyOf({ concurrency, order, setup, teardown }: ManyOfOptions): Promise<LeaseProcessPool> {
     const proposalPool = new DraftOfferProposalPool({
