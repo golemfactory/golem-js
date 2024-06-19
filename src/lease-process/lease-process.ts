@@ -58,18 +58,22 @@ export class LeaseProcess {
     // Prevent this task from being performed more than once
     if (!this.finalizePromise) {
       this.finalizePromise = (async () => {
-        this.abortController.abort("The lease process is finalizing");
-        if (this.paymentProcess.isFinished()) {
-          return;
-        }
         try {
-          this.logger.info("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
           if (this.currentExeUnit) {
+            await this.currentExeUnit.teardown();
+          }
+          this.abortController.abort("The lease process is finalizing");
+          if (this.currentExeUnit?.activity) {
             await this.activityModule.destroyActivity(this.currentExeUnit.activity);
           }
           if ((await this.fetchAgreementState()) !== "Terminated") {
             await this.marketModule.terminateAgreement(this.agreement);
           }
+          if (this.paymentProcess.isFinished()) {
+            return;
+          }
+
+          this.logger.info("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
           await waitForCondition(() => this.paymentProcess.isFinished());
           this.logger.info("Payment process for agreement finalized", { agreementId: this.agreement.id });
         } catch (error) {

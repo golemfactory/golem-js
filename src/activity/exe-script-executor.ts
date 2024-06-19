@@ -114,10 +114,7 @@ export class ExeScriptExecutor {
       objectMode: true,
       async read() {
         const abortError = new GolemAbortError("Execution of script has been aborted", abortSignal.reason);
-        abortSignal.addEventListener("abort", () => {
-          logger.warn(abortError.message, { activityId: activity.id, batchId, reason: abortSignal.reason });
-          this.destroy(abortError);
-        });
+        abortSignal.addEventListener("abort", () => this.destroy(abortError));
         while (!isBatchFinished && !abortSignal.aborted) {
           logger.debug("Polling for batch script execution result");
 
@@ -163,6 +160,7 @@ export class ExeScriptExecutor {
             }
           } catch (error) {
             if (abortSignal.aborted) {
+              logger.warn(abortError.message, { activityId: activity.id, batchId, reason: abortSignal.reason });
               return this.destroy(abortError);
             }
             logger.error(`Processing script execution results failed`, error);
@@ -207,10 +205,7 @@ export class ExeScriptExecutor {
       objectMode: true,
       async read() {
         const abortError = new GolemAbortError("Execution of script has been aborted", abortSignal.reason);
-        abortSignal.addEventListener("abort", () => {
-          logger.warn(abortError.message, { activityId: activity.id, batchId, reason: abortSignal.reason });
-          this.destroy(abortError);
-        });
+        abortSignal.addEventListener("abort", () => this.destroy(abortError));
         while (!isBatchFinished && !abortSignal.aborted) {
           let error: Error | undefined;
 
@@ -240,8 +235,8 @@ export class ExeScriptExecutor {
           await sleep(500, true);
         }
         if (abortSignal.aborted) {
-          this.destroy(abortError);
-          return;
+          logger.warn(abortError.message, { activityId: activity.id, batchId, reason: abortSignal.reason });
+          return this.destroy(abortError);
         } else {
           this.push(null);
         }
