@@ -27,13 +27,16 @@ export type MarketEvents = {
   /** Emitted when offer proposal from the Provider is received */
   offerProposalReceived: (event: OfferProposalReceivedEvent) => void;
 
+  offerCounterProposalSent: (offerProposal: OfferProposal, counterProposal: OfferCounterProposal) => void;
+  errorSendingCounterProposal: (offerProposal: OfferProposal, error: Error) => void;
+
   /** Emitted when the Provider rejects the counter-proposal that the Requestor sent */
   offerCounterProposalRejected: (event: OfferCounterProposalRejectedEvent) => void;
 
   /** Not implemented */
   offerPropertyQueryReceived: (event: OfferPropertyQueryReceivedEvent) => void;
 
-  offerProposalRejectedByFilter: (offerProposal: OfferProposal, reason?: string) => void;
+  offerProposalRejectedByProposalFilter: (offerProposal: OfferProposal, reason?: string) => void;
 
   /** Emitted when proposal price does not meet user criteria */
   offerProposalRejectedByPriceFilter: (offerProposal: OfferProposal, reason?: string) => void;

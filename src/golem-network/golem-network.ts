@@ -359,7 +359,7 @@ export class GolemNetwork {
     });
 
     const networkNode = order.network
-      ? await this.network.createNetworkNode(order.network, agreement.getProviderInfo().id)
+      ? await this.network.createNetworkNode(order.network, agreement.provider.id)
       : undefined;
 
     const lease = this.lease.createLease(agreement, allocation, {

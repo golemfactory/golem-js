@@ -38,12 +38,12 @@ const demand = new Demand(
 );
 
 describe("Agreement", () => {
-  describe("getProviderInfo()", () => {
+  describe("get provider()", () => {
     it("should be a instance ProviderInfo with provider details", () => {
       const agreement = new Agreement(agreementData.agreementId, agreementData, demand);
-      expect(agreement.getProviderInfo().id).toEqual("provider-id");
-      expect(agreement.getProviderInfo().name).toEqual("provider-name");
-      expect(agreement.getProviderInfo().walletAddress).toEqual("0xProviderWallet");
+      expect(agreement.provider.id).toEqual("provider-id");
+      expect(agreement.provider.name).toEqual("provider-name");
+      expect(agreement.provider.walletAddress).toEqual("0xProviderWallet");
     });
   });
 

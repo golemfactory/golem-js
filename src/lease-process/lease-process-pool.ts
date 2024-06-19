@@ -111,7 +111,7 @@ export class LeaseProcessPool {
       this.leasesBeingSigned++;
       const agreement = await this.marketModule.signAgreementFromPool(this.proposalPool, this.agreementOptions);
       const networkNode = this.network
-        ? await this.networkModule.createNetworkNode(this.network, agreement.getProviderInfo().id)
+        ? await this.networkModule.createNetworkNode(this.network, agreement.provider.id)
         : undefined;
       const leaseProcess = this.leaseModule.createLease(agreement, this.allocation, {
         networkNode,

@@ -34,8 +34,8 @@ describe("Batch", () => {
       walletAddress: "0xTestProvider",
     };
 
-    when(mockAgreement.getProviderInfo()).thenReturn(providerInfo);
-    when(mockActivity.getProviderInfo()).thenReturn(providerInfo);
+    when(mockAgreement.provider).thenReturn(providerInfo);
+    when(mockActivity.provider).thenReturn(providerInfo);
     when(mockActivity.agreement).thenReturn(instance(mockAgreement));
 
     activity = instance(mockActivity);
@@ -161,7 +161,7 @@ describe("Batch", () => {
           WorkErrorCode.ScriptExecutionFailed,
           activity.agreement,
           activity,
-          activity.getProviderInfo(),
+          activity.provider,
           new Error("FAILURE"),
         ),
       );
@@ -179,7 +179,7 @@ describe("Batch", () => {
           WorkErrorCode.ScriptExecutionFailed,
           activity.agreement,
           activity,
-          activity.getProviderInfo(),
+          activity.provider,
           new Error("ERROR"),
         ),
       );
@@ -197,7 +197,7 @@ describe("Batch", () => {
           WorkErrorCode.ScriptExecutionFailed,
           activity.agreement,
           activity,
-          activity.getProviderInfo(),
+          activity.provider,
           new Error("FAILURE"),
         ),
       );
@@ -284,7 +284,7 @@ describe("Batch", () => {
           WorkErrorCode.ScriptExecutionFailed,
           activity.agreement,
           activity,
-          activity.getProviderInfo(),
+          activity.provider,
           new Error("ERROR"),
         ),
       );
