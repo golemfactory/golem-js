@@ -4,7 +4,6 @@ import { GolemInternalError, Logger, nullLogger, WebSocketBrowserStorageProvider
 // .js added for ESM compatibility
 import { encode, toObject } from "flatbuffers/js/flexbuffers.js";
 import * as jsSha3 from "js-sha3";
-import { TEST_IDENTITY } from "../../../tests/fixtures";
 import { GsbApi, IdentityApi } from "ya-ts-client";
 import { anything, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
 
@@ -17,6 +16,7 @@ const mockIdentity = mock(IdentityApi.DefaultService);
 const mockGsb = mock(GsbApi.RequestorService);
 const logger = imock<Logger>();
 const yagnaApi = instance(mockYagna);
+const TEST_IDENTITY = "0x19ee20228a4c4bf8d4aebc79d9d3af2a01433456";
 
 describe("WebSocketBrowserStorageProvider", () => {
   const createProvider = () =>
