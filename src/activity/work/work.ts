@@ -26,13 +26,11 @@ import { ExecutionOptions, ExeScriptExecutor } from "../exe-script-executor";
 export type Worker<OutputType> = (ctx: WorkContext) => Promise<OutputType>;
 
 const DEFAULTS = {
-  activityPreparingTimeout: 300_000,
-  activityStateCheckInterval: 1000,
+  activityDeployingTimeout: 300_000,
 };
 
 export interface WorkOptions {
-  activityPreparingTimeout?: number;
-  activityStateCheckingInterval?: number;
+  activityDeployingTimeout?: number;
   storageProvider?: StorageProvider;
   networkNode?: NetworkNode;
   logger?: Logger;
@@ -59,8 +57,7 @@ export interface ActivityDTO {
  * Groups most common operations that the requestors might need to implement their workflows
  */
 export class WorkContext {
-  private readonly activityPreparingTimeout: number;
-  private readonly activityStateCheckingInterval: number;
+  private readonly activityDeployingTimeout: number;
 
   public readonly provider: ProviderInfo;
   private readonly logger: Logger;
@@ -76,8 +73,7 @@ export class WorkContext {
     public readonly activityModule: ActivityModule,
     private options?: WorkOptions,
   ) {
-    this.activityPreparingTimeout = options?.activityPreparingTimeout || DEFAULTS.activityPreparingTimeout;
-    this.activityStateCheckingInterval = options?.activityStateCheckingInterval || DEFAULTS.activityStateCheckInterval;
+    this.activityDeployingTimeout = options?.activityDeployingTimeout || DEFAULTS.activityDeployingTimeout;
 
     this.logger = options?.logger ?? defaultLogger("work");
     this.provider = activity.getProviderInfo();
@@ -111,89 +107,98 @@ export class WorkContext {
   }
 
   async before(): Promise<Result[] | void> {
-    let state = await this.fetchState();
-    if (state === ActivityStateEnum.Ready) {
+    try {
+      let state = await this.fetchState();
+      if (state === ActivityStateEnum.Ready) {
+        await this.setupActivity();
+        return;
+      }
+
+      if (state === ActivityStateEnum.Initialized) {
+        await this.deployActivity();
+      }
+
+      await sleep(1000, true);
+      state = await this.fetchState();
+
+      if (state !== ActivityStateEnum.Ready) {
+        throw new GolemWorkError(
+          `Activity ${this.activity.id} cannot reach the Ready state. Current state: ${state}`,
+          WorkErrorCode.ActivityDeploymentFailed,
+          this.activity.agreement,
+          this.activity,
+          this.activity.getProviderInfo(),
+        );
+      }
       await this.setupActivity();
-      return;
+    } catch (error) {
+      if (this.abortSignal.aborted) {
+        throw this.abortSignal.reason.name === "TimeoutError"
+          ? new GolemTimeoutError(
+              "Initializing of the exe-unit has been aborted due to a timeout",
+              this.abortSignal.reason,
+            )
+          : new GolemAbortError("Initializing of the exe-unit has been aborted", this.abortSignal.reason);
+      }
+      throw error;
     }
+  }
 
-    if (state === ActivityStateEnum.Initialized) {
-      const result = await this.executor
-        .execute(
-          new Script([new Deploy(this.networkNode?.getNetworkConfig?.()), new Start()]).getExeScriptRequest(),
-          undefined,
-          this.activityPreparingTimeout,
-        )
-        .catch((e) => {
-          throw new GolemWorkError(
-            `Unable to deploy activity. ${e}`,
-            WorkErrorCode.ActivityDeploymentFailed,
-            this.activity.agreement,
-            this.activity,
-            this.activity.getProviderInfo(),
-            e,
-          );
-        });
+  private async deployActivity() {
+    const result = await this.executor
+      .execute(
+        new Script([new Deploy(this.networkNode?.getNetworkConfig?.()), new Start()]).getExeScriptRequest(),
+        undefined,
+        this.activityDeployingTimeout,
+      )
+      .catch((e) => {
+        throw new GolemWorkError(
+          `Unable to deploy activity. ${e}`,
+          WorkErrorCode.ActivityDeploymentFailed,
+          this.activity.agreement,
+          this.activity,
+          this.activity.getProviderInfo(),
+          e,
+        );
+      });
 
-      let timeoutId: NodeJS.Timeout;
+    let timeoutId: NodeJS.Timeout;
 
-      await Promise.race([
-        new Promise(
-          (res, rej) =>
-            (timeoutId = setTimeout(
-              () => rej(new GolemTimeoutError("Preparing activity timeout")),
-              this.activityPreparingTimeout,
-            )),
-        ),
-        (async () => {
-          for await (const res of result) {
-            if (res.result === "Error")
-              throw new GolemWorkError(
-                `Preparing activity failed. Error: ${res.message}`,
-                WorkErrorCode.ActivityDeploymentFailed,
-                this.activity.agreement,
-                this.activity,
-                this.activity.getProviderInfo(),
-              );
-          }
-        })(),
-      ])
-        .catch((error) => {
-          if (this.abortSignal.aborted) {
-            const message = "Initializing of activity has been aborted";
-            this.logger.warn(message, { activityId: this.activity.id, reason: this.abortSignal.reason });
-            throw new GolemAbortError(message, this.abortSignal.reason);
-          }
-          if (error instanceof GolemWorkError) {
-            throw error;
-          }
-          throw new GolemWorkError(
-            `Preparing activity failed. Error: ${error.toString()}`,
-            WorkErrorCode.ActivityDeploymentFailed,
-            this.activity.agreement,
-            this.activity,
-            this.activity.getProviderInfo(),
-            error,
-          );
-        })
-        .finally(() => clearTimeout(timeoutId));
-    }
-
-    await sleep(this.activityStateCheckingInterval, true);
-
-    state = await this.fetchState();
-
-    if (state !== ActivityStateEnum.Ready) {
-      throw new GolemWorkError(
-        `Activity ${this.activity.id} cannot reach the Ready state. Current state: ${state}`,
-        WorkErrorCode.ActivityDeploymentFailed,
-        this.activity.agreement,
-        this.activity,
-        this.activity.getProviderInfo(),
-      );
-    }
-
-    await this.setupActivity();
+    await Promise.race([
+      new Promise(
+        (res, rej) =>
+          (timeoutId = setTimeout(
+            () => rej(new GolemTimeoutError("Deploing activity has been aborted due to a timeout")),
+            this.activityDeployingTimeout,
+          )),
+      ),
+      (async () => {
+        for await (const res of result) {
+          if (res.result === "Error")
+            throw new GolemWorkError(
+              `Deploing activity failed. Error: ${res.message}`,
+              WorkErrorCode.ActivityDeploymentFailed,
+              this.activity.agreement,
+              this.activity,
+              this.activity.getProviderInfo(),
+            );
+        }
+      })(),
+    ])
+      .catch((error) => {
+        if (error instanceof GolemWorkError) {
+          throw error;
+        }
+        throw new GolemWorkError(
+          `Deploing activity failed. Error: ${error.toString()}`,
+          WorkErrorCode.ActivityDeploymentFailed,
+          this.activity.agreement,
+          this.activity,
+          this.activity.getProviderInfo(),
+          error,
+        );
+      })
+      .finally(() => clearTimeout(timeoutId));
   }
 
   private async setupActivity() {

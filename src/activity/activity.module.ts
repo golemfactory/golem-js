@@ -7,7 +7,6 @@ import { WorkContext, WorkOptions } from "./work";
 import { ExeScriptExecutor, ExeScriptRequest, ExecutionOptions } from "./exe-script-executor";
 import { Observable, catchError, tap } from "rxjs";
 import { StreamingBatchEvent } from "./results";
-import { GolemAbortError, GolemTimeoutError } from "../shared/error/golem-error";
 
 export interface ActivityModule {
   events: EventEmitter<ActivityEvents>;
@@ -241,16 +240,6 @@ export class ActivityModuleImpl implements ActivityModule {
       return ctx;
     } catch (error) {
       this.events.emit("errorInitializingActivity", activity, error);
-      if (options?.signalOrTimeout instanceof AbortSignal && options.signalOrTimeout.aborted) {
-        const error =
-          options.signalOrTimeout.reason.name === "TimeoutError"
-            ? new GolemTimeoutError(
-                "Initializing of the exe-unit has been aborted due to a timeout",
-                options.signalOrTimeout.reason,
-              )
-            : new GolemAbortError("Initializing of the exe-unit has been aborted", options.signalOrTimeout.reason);
-        throw error;
-      }
       throw error;
     }
   }
