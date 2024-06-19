@@ -39,7 +39,7 @@ const getImagePath = (path: string) => new URL(path, import.meta.url).toString()
       },
     };
 
-    const lease = await glm.oneOf(order);
+    const lease = await glm.oneOf({ order });
     // in our Dockerfile we have created a file called hello.txt, let's read it
     const result = await lease
       .getExeUnit()

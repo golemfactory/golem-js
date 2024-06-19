@@ -87,7 +87,7 @@ describe("Golem Network", () => {
       const glm = getGolemNetwork();
       await glm.connect();
 
-      const lease = await glm.oneOf(order);
+      const lease = await glm.oneOf({ order });
 
       expect(lease).toBe(testProcess);
 

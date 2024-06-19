@@ -72,7 +72,7 @@ describe("ExeUnit", () => {
 
       const worker = async (exe: ExeUnit) => exe.run("some_shell_command");
       const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule));
-      await exe.before();
+      await exe.setup();
       const results = await worker(exe);
       expect(results?.stdout).toEqual("test_result");
     });
@@ -92,7 +92,7 @@ describe("ExeUnit", () => {
 
       const worker = async (exe: ExeUnit) => exe.run("/bin/ls", ["-R"]);
       const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule));
-      await exe.before();
+      await exe.setup();
       const results = await worker(exe);
 
       expect(results?.stdout).toEqual("test_result_from_ls");
@@ -117,7 +117,7 @@ describe("ExeUnit", () => {
         const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule), {
           storageProvider: instance(mockStorageProvider),
         });
-        await exe.before();
+        await exe.setup();
         const results = await worker(exe);
         expect(results?.stdout).toEqual("test_result");
         verify(mockStorageProvider.publishFile("./file.txt")).once();
@@ -141,7 +141,7 @@ describe("ExeUnit", () => {
         const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule), {
           storageProvider: instance(mockStorageProvider),
         });
-        await exe.before();
+        await exe.setup();
         const results = await worker(exe);
 
         expect(results?.stdout).toEqual("test_result");
@@ -169,7 +169,7 @@ describe("ExeUnit", () => {
           storageProvider: instance(mockStorageProvider),
         });
 
-        await exe.before();
+        await exe.setup();
         const results = await worker(exe);
 
         expect(results?.stdout).toEqual("test_result");
@@ -457,21 +457,11 @@ describe("ExeUnit", () => {
   });
 
   describe("setupActivity() - called as part of before()", () => {
-    it("should call all setup functions in the order they were registered", async () => {
-      const calls: string[] = [];
-      const activityReadySetupFunctions = [
-        async () => void calls.push("1"),
-        async () => void calls.push("2"),
-        async () => void calls.push("3"),
-      ];
-
-      const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule), {
-        activityReadySetupFunctions,
-      });
-
-      await exe.before();
-
-      expect(calls).toEqual(["1", "2", "3"]);
+    it("should call setup function", async () => {
+      const setup = jest.fn();
+      const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule), { setup });
+      await exe.setup();
+      expect(setup).toHaveBeenCalled();
     });
   });
 

@@ -2,7 +2,7 @@ import { Agreement } from "../market/agreement/agreement";
 import { AgreementPaymentProcess, PaymentProcessOptions } from "../payment/agreement_payment_process";
 import { Logger } from "../shared/utils";
 import { waitForCondition } from "../shared/utils/wait";
-import { ActivityModule, ExeUnit } from "../activity";
+import { ActivityModule, ExeUnit, ExeUnitOptions } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { EventEmitter } from "eventemitter3";
 import { NetworkNode } from "../network";
@@ -17,6 +17,7 @@ export interface LeaseProcessEvents {
 }
 
 export interface LeaseProcessOptions {
+  exeUnit?: Pick<ExeUnitOptions, "setup" | "teardown" | "activityDeployingTimeout">;
   activity?: ExecutionOptions;
   payment?: Partial<PaymentProcessOptions>;
   networkNode?: NetworkNode;
@@ -89,7 +90,8 @@ export class LeaseProcess {
     this.currentExeUnit = await this.activityModule.createExeUnit(activity, {
       storageProvider: this.storageProvider,
       networkNode: this.leaseOptions?.networkNode,
-      execution: this.leaseOptions?.activity,
+      executionOptions: this.leaseOptions?.activity,
+      ...this.leaseOptions?.exeUnit,
     });
 
     return this.currentExeUnit;

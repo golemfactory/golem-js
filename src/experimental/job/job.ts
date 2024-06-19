@@ -134,7 +134,7 @@ export class Job<Output = unknown> {
       throw new GolemAbortError("Canceled");
     }
 
-    const lease = await this.glm.oneOf(this.order);
+    const lease = await this.glm.oneOf({ order: this.order });
 
     const exeUnit = await lease.getExeUnit();
     this.events.emit("started");

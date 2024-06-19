@@ -23,22 +23,23 @@ import { Agreement, ProviderInfo } from "../../market/agreement";
 import { TcpProxy } from "../../network/tcpProxy";
 import { ExecutionOptions, ExeScriptExecutor } from "../exe-script-executor";
 
-export type SetupFunction = (exe: ExeUnit) => Promise<void>;
+export type LifecycleFunction = (exe: ExeUnit) => Promise<void>;
 
 const DEFAULTS = {
-  activityPreparingTimeout: 300_000,
-  activityStateCheckInterval: 1000,
+  activityDeployingTimeout: 300_000,
 };
 
 export interface ExeUnitOptions {
-  activityPreparingTimeout?: number;
-  activityStateCheckingInterval?: number;
+  activityDeployingTimeout?: number;
   storageProvider?: StorageProvider;
   networkNode?: NetworkNode;
   logger?: Logger;
-  activityReadySetupFunctions?: SetupFunction[];
   yagnaOptions?: YagnaOptions;
-  execution?: ExecutionOptions;
+  /** this function is called as soon as the exe unit is ready */
+  setup?: LifecycleFunction;
+  /** this function is called before the exe unit is destroyed */
+  teardown?: LifecycleFunction;
+  executionOptions?: ExecutionOptions;
 }
 
 export interface CommandOptions {
@@ -58,7 +59,6 @@ export interface ActivityDTO {
  */
 export class ExeUnit {
   private readonly activityPreparingTimeout: number;
-  private readonly activityStateCheckingInterval: number;
 
   public readonly provider: ProviderInfo;
   private readonly logger: Logger;
@@ -73,8 +73,7 @@ export class ExeUnit {
     public readonly activityModule: ActivityModule,
     private options?: ExeUnitOptions,
   ) {
-    this.activityPreparingTimeout = options?.activityPreparingTimeout || DEFAULTS.activityPreparingTimeout;
-    this.activityStateCheckingInterval = options?.activityStateCheckingInterval || DEFAULTS.activityStateCheckInterval;
+    this.activityPreparingTimeout = options?.activityDeployingTimeout || DEFAULTS.activityDeployingTimeout;
 
     this.logger = options?.logger ?? defaultLogger("work");
     this.provider = activity.getProviderInfo();
@@ -82,7 +81,7 @@ export class ExeUnit {
 
     this.networkNode = options?.networkNode;
 
-    this.executor = this.activityModule.createScriptExecutor(this.activity, this.options?.execution);
+    this.executor = this.activityModule.createScriptExecutor(this.activity, this.options?.executionOptions);
   }
 
   private async fetchState(): Promise<ActivityStateEnum> {
@@ -101,7 +100,7 @@ export class ExeUnit {
       });
   }
 
-  async before(): Promise<Result[] | void> {
+  async setup(): Promise<void> {
     let state = await this.fetchState();
     if (state === ActivityStateEnum.Ready) {
       await this.setupActivity();
@@ -165,7 +164,7 @@ export class ExeUnit {
         .finally(() => clearTimeout(timeoutId));
     }
 
-    await sleep(this.activityStateCheckingInterval, true);
+    await sleep(1);
 
     state = await this.fetchState();
 
@@ -182,12 +181,15 @@ export class ExeUnit {
     await this.setupActivity();
   }
 
-  private async setupActivity() {
-    if (!this.options?.activityReadySetupFunctions) {
-      return;
+  async teardown(): Promise<void> {
+    if (this.options?.teardown) {
+      await this.options.teardown(this);
     }
-    for (const setupFunction of this.options.activityReadySetupFunctions) {
-      await setupFunction(this);
+  }
+
+  private async setupActivity() {
+    if (this.options?.setup) {
+      await this.options.setup(this);
     }
   }
 

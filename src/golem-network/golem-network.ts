@@ -9,7 +9,7 @@ import {
   OfferProposal,
 } from "../market";
 import { IPaymentApi, PaymentModule, PaymentModuleImpl, PaymentModuleOptions } from "../payment";
-import { ActivityModule, ActivityModuleImpl, IActivityApi, IFileServer } from "../activity";
+import { ActivityModule, ActivityModuleImpl, ExeUnitOptions, IActivityApi, IFileServer } from "../activity";
 import { INetworkApi, Network, NetworkModule, NetworkModuleImpl, NetworkOptions } from "../network";
 import { EventEmitter } from "eventemitter3";
 import {
@@ -133,9 +133,14 @@ export interface GolemNetworkEvents {
   disconnected: () => void;
 }
 
-export interface ManyOfOptions {
-  concurrency: Concurrency;
+export interface OneOfOptions {
   order: MarketOrderSpec;
+  setup?: ExeUnitOptions["setup"];
+  teardown?: ExeUnitOptions["teardown"];
+}
+
+export interface ManyOfOptions extends OneOfOptions {
+  concurrency: Concurrency;
 }
 
 /**
@@ -331,7 +336,7 @@ export class GolemNetwork {
    *
    * @param order
    */
-  async oneOf(order: MarketOrderSpec): Promise<LeaseProcess> {
+  async oneOf({ order, setup, teardown }: OneOfOptions): Promise<LeaseProcess> {
     const proposalPool = new DraftOfferProposalPool({
       logger: this.logger,
       validateProposal: order.market.proposalFilter,
@@ -366,6 +371,7 @@ export class GolemNetwork {
       payment: order.payment,
       activity: order.activity,
       networkNode,
+      exeUnit: { setup, teardown },
     });
 
     // We managed to create the activity, no need to look for more agreement candidates
@@ -423,7 +429,7 @@ export class GolemNetwork {
    *
    * @param options Demand specification and concurrency level
    */
-  public async manyOf({ concurrency, order }: ManyOfOptions): Promise<LeaseProcessPool> {
+  public async manyOf({ concurrency, order, setup, teardown }: ManyOfOptions): Promise<LeaseProcessPool> {
     const proposalPool = new DraftOfferProposalPool({
       logger: this.logger,
       validateProposal: order.market.proposalFilter,
@@ -450,6 +456,7 @@ export class GolemNetwork {
       leaseProcessOptions: {
         activity: order.activity,
         payment: order.payment,
+        exeUnit: { setup, teardown },
       },
       agreementOptions: {
         expirationSec: order.market.rentHours * 60 * 60,

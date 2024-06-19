@@ -235,7 +235,7 @@ export class ActivityModuleImpl implements ActivityModule {
 
     this.logger.debug("Initializing the exe-unit for activity", { activityId: activity.id });
     try {
-      await exe.before();
+      await exe.setup();
       this.events.emit("activityInitialized", activity);
       return exe;
     } catch (error) {
