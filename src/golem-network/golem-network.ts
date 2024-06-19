@@ -14,12 +14,12 @@ import { INetworkApi, Network, NetworkModule, NetworkModuleImpl, NetworkOptions 
 import { EventEmitter } from "eventemitter3";
 import {
   Concurrency,
-  LeaseModule,
-  LeaseModuleImpl,
-  LeaseProcess,
-  LeaseProcessOptions,
-  LeaseProcessPool,
-} from "../lease-process";
+  RentalModule,
+  RentalModuleImpl,
+  ResourceRental,
+  ResourceRentalOptions,
+  ResourceRentalPool,
+} from "../resource-rental";
 import { DebitNoteRepository, InvoiceRepository, MarketApiAdapter, PaymentApiAdapter } from "../shared/yagna";
 import { ActivityApiAdapter } from "../shared/yagna/adapters/activity-api-adapter";
 import { ActivityRepository } from "../shared/yagna/repository/activity-repository";
@@ -106,7 +106,7 @@ export interface GolemNetworkOptions {
       payment: InstanceOrFactory<PaymentModule>;
       activity: InstanceOrFactory<ActivityModule>;
       network: InstanceOrFactory<NetworkModule>;
-      lease: InstanceOrFactory<LeaseModule>;
+      lease: InstanceOrFactory<RentalModule>;
     }
   >;
 }
@@ -125,8 +125,8 @@ type AllocationOptions = {
 export interface MarketOrderSpec {
   demand: BuildDemandOptions;
   market: MarketOptions;
-  activity?: LeaseProcessOptions["activity"];
-  payment?: LeaseProcessOptions["payment"] & AllocationOptions;
+  activity?: ResourceRentalOptions["activity"];
+  payment?: ResourceRentalOptions["payment"] & AllocationOptions;
   network?: Network;
 }
 
@@ -182,7 +182,7 @@ export class GolemNetwork {
   public readonly payment: PaymentModule;
   public readonly activity: ActivityModule;
   public readonly network: NetworkModule;
-  public readonly lease: LeaseModule;
+  public readonly rental: RentalModule;
 
   /**
    * Dependency Container
@@ -270,8 +270,8 @@ export class GolemNetwork {
       });
       this.payment = getFactory(PaymentModuleImpl, this.options.override?.payment)(this.services, this.options.payment);
       this.activity = getFactory(ActivityModuleImpl, this.options.override?.activity)(this.services);
-      this.lease = getFactory(
-        LeaseModuleImpl,
+      this.rental = getFactory(
+        RentalModuleImpl,
         this.options.override?.lease,
       )({
         activityModule: this.activity,
@@ -359,7 +359,7 @@ export class GolemNetwork {
    *
    * @param order
    */
-  async oneOf(order: MarketOrderSpec): Promise<LeaseProcess> {
+  async oneOf(order: MarketOrderSpec): Promise<ResourceRental> {
     const proposalPool = new DraftOfferProposalPool({
       logger: this.logger,
       validateProposal: order.market.proposalFilter,
@@ -385,7 +385,7 @@ export class GolemNetwork {
       ? await this.network.createNetworkNode(order.network, agreement.provider.id)
       : undefined;
 
-    const lease = this.lease.createLease(agreement, allocation, {
+    const lease = this.rental.createResourceRental(agreement, allocation, {
       payment: order.payment,
       activity: order.activity,
       networkNode,
@@ -450,7 +450,7 @@ export class GolemNetwork {
    *
    * @param options Demand specification and concurrency level
    */
-  public async manyOf({ concurrency, order }: ManyOfOptions): Promise<LeaseProcessPool> {
+  public async manyOf({ concurrency, order }: ManyOfOptions): Promise<ResourceRentalPool> {
     const proposalPool = new DraftOfferProposalPool({
       logger: this.logger,
       validateProposal: order.market.proposalFilter,
@@ -467,10 +467,10 @@ export class GolemNetwork {
     });
     const subscription = proposalPool.readFrom(draftProposal$);
 
-    const leaseProcessPool = this.lease.createLeaseProcessPool(proposalPool, allocation, {
+    const leaseProcessPool = this.rental.createResourceRentalPool(proposalPool, allocation, {
       replicas: concurrency,
       network: order.network,
-      leaseProcessOptions: {
+      resourceRentalOptions: {
         activity: order.activity,
         payment: order.payment,
       },

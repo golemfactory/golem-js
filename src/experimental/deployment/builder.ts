@@ -57,7 +57,7 @@ export class GolemDeploymentBuilder {
       market: this.glm.market,
       activity: this.glm.activity,
       network: this.glm.network,
-      lease: this.glm.lease,
+      lease: this.glm.rental,
     });
 
     this.reset();

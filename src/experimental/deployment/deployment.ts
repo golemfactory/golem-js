@@ -8,7 +8,7 @@ import { DraftOfferProposalPool, MarketModule } from "../../market";
 import { PaymentModule } from "../../payment";
 import { CreateLeaseProcessPoolOptions } from "./builder";
 import { Subscription } from "rxjs";
-import { LeaseModule, LeaseProcessPool } from "../../lease-process";
+import { RentalModule, ResourceRentalPool } from "../../resource-rental";
 
 export enum DeploymentState {
   INITIAL = "INITIAL",
@@ -65,7 +65,7 @@ export class Deployment {
     {
       proposalPool: DraftOfferProposalPool;
       proposalSubscription: Subscription;
-      leaseProcessPool: LeaseProcessPool;
+      leaseProcessPool: ResourceRentalPool;
     }
   >();
 
@@ -76,7 +76,7 @@ export class Deployment {
     activity: ActivityModule;
     payment: PaymentModule;
     network: NetworkModule;
-    lease: LeaseModule;
+    lease: RentalModule;
   };
 
   constructor(
@@ -88,7 +88,7 @@ export class Deployment {
       activity: ActivityModule;
       payment: PaymentModule;
       network: NetworkModule;
-      lease: LeaseModule;
+      lease: RentalModule;
     },
   ) {
     validateDeployment(components);
@@ -165,10 +165,10 @@ export class Deployment {
 
       const proposalSubscription = proposalPool.readFrom(draftProposal$);
 
-      const leaseProcessPool = this.modules.lease.createLeaseProcessPool(proposalPool, allocation, {
+      const leaseProcessPool = this.modules.lease.createResourceRentalPool(proposalPool, allocation, {
         replicas: pool.options.deployment?.replicas,
         network,
-        leaseProcessOptions: {
+        resourceRentalOptions: {
           activity: pool.options?.activity,
           payment: pool.options?.payment,
         },
@@ -219,7 +219,7 @@ export class Deployment {
     this.events.emit("end");
   }
 
-  getLeaseProcessPool(name: string): LeaseProcessPool {
+  getLeaseProcessPool(name: string): ResourceRentalPool {
     const pool = this.pools.get(name);
     if (!pool) {
       throw new GolemUserError(`LeaseProcessPool ${name} not found`);

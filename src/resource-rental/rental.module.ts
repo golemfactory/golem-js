@@ -4,27 +4,27 @@ import { NetworkModule } from "../network";
 import { Allocation, PaymentModule } from "../payment";
 import { StorageProvider } from "../shared/storage";
 import { Logger } from "../shared/utils";
-import { LeaseProcess, LeaseProcessOptions } from "./lease-process";
-import { LeaseProcessPool, LeaseProcessPoolOptions } from "./lease-process-pool";
+import { ResourceRental, ResourceRentalOptions } from "./resource-rental";
+import { ResourceRentalPool, ResourceRentalPoolOptions } from "./resource-rental-pool";
 
-export interface LeaseModule {
+export interface RentalModule {
   /**
    * Factory that creates a new lease process that's fully configured.
    * This method will also create the payment process for the agreement.
    *
    */
-  createLease(agreement: Agreement, allocation: Allocation, options?: LeaseProcessOptions): LeaseProcess;
+  createResourceRental(agreement: Agreement, allocation: Allocation, options?: ResourceRentalOptions): ResourceRental;
   /**
    * Factory that creates new lease process pool that's fully configured
    */
-  createLeaseProcessPool(
+  createResourceRentalPool(
     draftPool: DraftOfferProposalPool,
     allocation: Allocation,
-    options?: LeaseProcessPoolOptions,
-  ): LeaseProcessPool;
+    options?: ResourceRentalPoolOptions,
+  ): ResourceRentalPool;
 }
 
-export class LeaseModuleImpl implements LeaseModule {
+export class RentalModuleImpl implements RentalModule {
   constructor(
     private readonly deps: {
       marketModule: MarketModule;
@@ -36,13 +36,13 @@ export class LeaseModuleImpl implements LeaseModule {
     },
   ) {}
 
-  createLease(agreement: Agreement, allocation: Allocation, options?: LeaseProcessOptions): LeaseProcess {
+  createResourceRental(agreement: Agreement, allocation: Allocation, options?: ResourceRentalOptions): ResourceRental {
     const paymentProcess = this.deps.paymentModule.createAgreementPaymentProcess(
       agreement,
       allocation,
       options?.payment,
     );
-    const lease = new LeaseProcess(
+    const lease = new ResourceRental(
       agreement,
       this.deps.storageProvider,
       paymentProcess,
@@ -54,19 +54,19 @@ export class LeaseModuleImpl implements LeaseModule {
     return lease;
   }
 
-  public createLeaseProcessPool(
+  public createResourceRentalPool(
     draftPool: DraftOfferProposalPool,
     allocation: Allocation,
-    options?: LeaseProcessPoolOptions,
-  ): LeaseProcessPool {
-    return new LeaseProcessPool({
+    options?: ResourceRentalPoolOptions,
+  ): ResourceRentalPool {
+    return new ResourceRentalPool({
       allocation,
-      leaseModule: this,
+      rentalModule: this,
       marketModule: this.deps.marketModule,
       networkModule: this.deps.networkModule,
       proposalPool: draftPool,
-      leaseProcessOptions: options?.leaseProcessOptions,
-      logger: this.deps.logger.child("lease-process-pool"),
+      resourceRentalOptions: options?.resourceRentalOptions,
+      logger: this.deps.logger.child("resource-rental-pool"),
       network: options?.network,
       replicas: options?.replicas,
     });
