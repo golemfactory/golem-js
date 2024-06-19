@@ -109,6 +109,11 @@ export class ExeUnit {
       });
   }
 
+  /**
+   * This function initializes the exe unit by deploying the image to the remote machine
+   * and preparing and running the environment.
+   * This process also includes running setup function if the user has defined it
+   */
   async setup(): Promise<Result[] | void> {
     try {
       let state = await this.fetchState();
@@ -144,6 +149,16 @@ export class ExeUnit {
           : new GolemAbortError("Initializing of the exe-unit has been aborted", this.abortSignal.reason);
       }
       throw error;
+    }
+  }
+
+  /**
+   * This function starts the teardown function if the user has defined it.
+   * It is run before the machine is destroyed.
+   */
+  async teardown(): Promise<void> {
+    if (this.options?.teardown) {
+      await this.options.teardown(this);
     }
   }
 
@@ -202,12 +217,6 @@ export class ExeUnit {
         );
       })
       .finally(() => clearTimeout(timeoutId));
-  }
-
-  async teardown(): Promise<void> {
-    if (this.options?.teardown) {
-      await this.options.teardown(this);
-    }
   }
 
   private async setupActivity() {
