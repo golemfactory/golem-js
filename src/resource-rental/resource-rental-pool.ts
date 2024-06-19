@@ -108,11 +108,15 @@ export class ResourceRentalPool {
       })() || MAX_REPLICAS;
   }
 
-  private async createNewResourceRental() {
+  private async createNewResourceRental(signalOrTimeout?: number | AbortSignal) {
     this.logger.debug("Creating new resource rental to add to pool");
     try {
       this.rentalsBeingSigned++;
-      const agreement = await this.marketModule.signAgreementFromPool(this.proposalPool, this.agreementOptions);
+      const agreement = await this.marketModule.signAgreementFromPool(
+        this.proposalPool,
+        this.agreementOptions,
+        signalOrTimeout,
+      );
       const networkNode = this.network
         ? await this.networkModule.createNetworkNode(this.network, agreement.provider.id)
         : undefined;
@@ -187,8 +191,9 @@ export class ResourceRentalPool {
   /**
    * Borrow a resource rental from the pool.
    * If there is no valid resource rental a new one will be created.
+   * @param signalOrTimeout - the timeout in milliseconds or an AbortSignal that will be used to cancel the lease request
    */
-  async acquire(): Promise<ResourceRental> {
+  async acquire(signalOrTimeout?: number | AbortSignal): Promise<ResourceRental> {
     if (this.isDraining) {
       throw new Error("The pool is in draining mode");
     }
@@ -197,7 +202,7 @@ export class ResourceRentalPool {
       if (!this.canCreateMoreResourceRentals()) {
         return this.enqueueAcquire();
       }
-      resourceRental = await this.createNewResourceRental();
+      resourceRental = await this.createNewResourceRental(signalOrTimeout);
     }
     this.borrowed.add(resourceRental);
     this.events.emit("acquired", resourceRental.agreement);
@@ -364,9 +369,14 @@ export class ResourceRentalPool {
    *  // even if an error is thrown in the callback
    * });
    * ```
+   * @param callback - a function that takes a `lease` object as its argument. The lease is automatically released after the callback is executed, regardless of whether it completes successfully or throws an error.
+   * @param signalOrTimeout - the timeout in milliseconds or an AbortSignal that will be used to cancel the lease request
    */
-  public async withRental<T>(callback: (rental: ResourceRental) => Promise<T>): Promise<T> {
-    const rental = await this.acquire();
+  public async withRental<T>(
+    callback: (lease: ResourceRental) => Promise<T>,
+    signalOrTimeout?: number | AbortSignal,
+  ): Promise<T> {
+    const rental = await this.acquire(signalOrTimeout);
     try {
       return await callback(rental);
     } finally {

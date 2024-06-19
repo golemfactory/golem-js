@@ -187,7 +187,7 @@ export class ActivityModuleImpl implements ActivityModule {
     batchId: string,
     commandIndex?: number | undefined,
   ): Observable<StreamingBatchEvent> {
-    this.logger.info("Observing streaming batch events", { activityId: activity.id, batchId });
+    this.logger.debug("Observing streaming batch events", { activityId: activity.id, batchId });
     return this.activityApi.getExecBatchEvents(activity, batchId, commandIndex).pipe(
       tap(async (event) => {
         this.events.emit(
