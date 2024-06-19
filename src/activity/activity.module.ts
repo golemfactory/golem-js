@@ -248,10 +248,7 @@ export class ActivityModuleImpl implements ActivityModule {
                 "Initializing of the exe-unit has been aborted due to a timeout",
                 options.signalOrTimeout.reason,
               )
-            : new GolemAbortError(
-                "Initializing of the exe-unit has been aborted by a signal",
-                options.signalOrTimeout.reason,
-              );
+            : new GolemAbortError("Initializing of the exe-unit has been aborted", options.signalOrTimeout.reason);
         throw error;
       }
       throw error;

@@ -9,7 +9,6 @@ import { NetworkNode } from "../network";
 import { ExecutionOptions } from "../activity/exe-script-executor";
 import { MarketModule } from "../market";
 import { GolemUserError } from "../shared/error/golem-error";
-import AsyncLock from "async-lock";
 
 export interface LeaseProcessEvents {
   /**
@@ -35,7 +34,6 @@ export class LeaseProcess {
   private currentWorkContext: WorkContext | null = null;
   private abortController = new AbortController();
   private finalizePromise?: Promise<void>;
-  private asyncLock = new AsyncLock();
 
   public constructor(
     public readonly agreement: Agreement,
@@ -57,33 +55,31 @@ export class LeaseProcess {
    */
   async finalize() {
     // Prevent this task from being performed more than once
-    return this.asyncLock.acquire("finalize", () => {
-      if (!this.finalizePromise) {
-        this.finalizePromise = (async () => {
-          this.abortController.abort("The lease process is finalizing");
-          if (this.paymentProcess.isFinished()) {
-            return;
+    if (!this.finalizePromise) {
+      this.finalizePromise = (async () => {
+        this.abortController.abort("The lease process is finalizing");
+        if (this.paymentProcess.isFinished()) {
+          return;
+        }
+        try {
+          this.logger.info("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
+          if (this.currentWorkContext) {
+            await this.activityModule.destroyActivity(this.currentWorkContext.activity);
           }
-          try {
-            this.logger.info("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
-            if (this.currentWorkContext) {
-              await this.activityModule.destroyActivity(this.currentWorkContext.activity);
-            }
-            if ((await this.fetchAgreementState()) !== "Terminated") {
-              await this.marketModule.terminateAgreement(this.agreement);
-            }
-            await waitForCondition(() => this.paymentProcess.isFinished());
-            this.logger.info("Payment process for agreement finalized", { agreementId: this.agreement.id });
-          } catch (error) {
-            this.logger.error("Payment process finalization failed", { agreementId: this.agreement.id, error });
-            throw error;
-          } finally {
-            this.events.emit("finalized");
+          if ((await this.fetchAgreementState()) !== "Terminated") {
+            await this.marketModule.terminateAgreement(this.agreement);
           }
-        })();
-      }
-      return this.finalizePromise;
-    });
+          await waitForCondition(() => this.paymentProcess.isFinished());
+          this.logger.info("Payment process for agreement finalized", { agreementId: this.agreement.id });
+        } catch (error) {
+          this.logger.error("Payment process finalization failed", { agreementId: this.agreement.id, error });
+          throw error;
+        } finally {
+          this.events.emit("finalized");
+        }
+      })();
+    }
+    return this.finalizePromise;
   }
 
   public hasActivity(): boolean {

@@ -105,7 +105,7 @@ export class DraftOfferProposalPool {
   }
 
   /**
-   * Attempts to obtain a single proposal from the poolonds.
+   * Attempts to obtain a single proposal from the pool
    * @param signalOrTimeout - the timeout in milliseconds or an AbortSignal that will be used to cancel the acquiring
    */
   public acquire(signalOrTimeout?: number | AbortSignal): Promise<OfferProposal> {

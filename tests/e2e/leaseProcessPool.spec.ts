@@ -188,6 +188,7 @@ describe("LeaseProcessPool", () => {
   });
 
   it("should finalize the lease process during execution", async () => {
+    expect.assertions(1);
     const pool = glm.lease.createLeaseProcessPool(proposalPool, allocation, { replicas: 1 });
     const leaseProcess = await pool.acquire();
     const exe = await leaseProcess.getExeUnit();
