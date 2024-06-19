@@ -127,12 +127,23 @@ export class ActivityModuleImpl implements ActivityModule {
     try {
       this.events.emit("scriptSent", activity, script);
       const result = await this.activityApi.executeScript(activity, script);
-      this.events.emit("scriptExecuted", await this.refreshActivity(activity).catch(() => activity), script, result);
+      this.events.emit(
+        "scriptExecuted",
+        await this.refreshActivity(activity).catch(() => {
+          this.logger.warn("Failed to refresh activity after script execution", { activityId: activity.id });
+          return activity;
+        }),
+        script,
+        result,
+      );
       return result;
     } catch (error) {
       this.events.emit(
         "errorExecutingScript",
-        await this.refreshActivity(activity).catch(() => activity),
+        await this.refreshActivity(activity).catch(() => {
+          this.logger.warn("Failed to refresh activity after script execution error", { activityId: activity.id });
+          return activity;
+        }),
         script,
         error,
       );
@@ -150,7 +161,10 @@ export class ActivityModuleImpl implements ActivityModule {
       const results = await this.activityApi.getExecBatchResults(activity, batchId, commandIndex, timeout);
       this.events.emit(
         "batchResultsReceived",
-        await this.refreshActivity(activity).catch(() => activity),
+        await this.refreshActivity(activity).catch(() => {
+          this.logger.warn("Failed to refresh activity after batch results received", { activityId: activity.id });
+          return activity;
+        }),
         batchId,
         results,
       );
@@ -158,7 +172,10 @@ export class ActivityModuleImpl implements ActivityModule {
     } catch (error) {
       this.events.emit(
         "errorGettingBatchResults",
-        await this.refreshActivity(activity).catch(() => activity),
+        await this.refreshActivity(activity).catch(() => {
+          this.logger.warn("Failed to refresh activity after batch results error", { activityId: activity.id });
+          return activity;
+        }),
         batchId,
         error,
       );
@@ -175,7 +192,10 @@ export class ActivityModuleImpl implements ActivityModule {
       tap(async (event) => {
         this.events.emit(
           "batchEventsReceived",
-          await this.refreshActivity(activity).catch(() => activity),
+          await this.refreshActivity(activity).catch(() => {
+            this.logger.warn("Failed to refresh activity after batch events received", { activityId: activity.id });
+            return activity;
+          }),
           batchId,
           event,
         );
@@ -183,7 +203,10 @@ export class ActivityModuleImpl implements ActivityModule {
       catchError(async (error) => {
         this.events.emit(
           "errorGettingBatchEvents",
-          await this.refreshActivity(activity).catch(() => activity),
+          await this.refreshActivity(activity).catch(() => {
+            this.logger.warn("Failed to refresh activity after batch events error", { activityId: activity.id });
+            return activity;
+          }),
           batchId,
           error,
         );
@@ -262,12 +285,23 @@ export class ActivityModuleImpl implements ActivityModule {
     this.logger.debug("Initializing the exe-unit for activity", { activityId: activity.id });
     try {
       await ctx.before();
-      this.events.emit("workContextInitialized", await this.refreshActivity(activity).catch(() => activity));
+      this.events.emit(
+        "workContextInitialized",
+        await this.refreshActivity(activity).catch(() => {
+          this.logger.warn("Failed to refresh activity after work context initialization", { activityId: activity.id });
+          return activity;
+        }),
+      );
       return ctx;
     } catch (error) {
       this.events.emit(
         "errorInitializingWorkContext",
-        await this.refreshActivity(activity).catch(() => activity),
+        await this.refreshActivity(activity).catch(() => {
+          this.logger.warn("Failed to refresh activity after work context initialization error", {
+            activityId: activity.id,
+          });
+          return activity;
+        }),
         error,
       );
       throw error;
