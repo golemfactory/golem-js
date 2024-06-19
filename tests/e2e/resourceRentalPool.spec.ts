@@ -177,26 +177,26 @@ describe("ResourceRentalPool", () => {
     expect(Math.max(...poolSizesDuringWork)).toEqual(maxPoolSize);
   });
 
-  it("should abort acquiring lease process by signal", async () => {
+  it("should abort acquiring resource rental by signal", async () => {
     const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { replicas: 1 });
-    const abortControler = new AbortController();
-    abortControler.abort();
-    await expect(pool.acquire(abortControler.signal)).rejects.toThrow("The signing of the agreement has been aborted");
+    const abortController = new AbortController();
+    abortController.abort();
+    await expect(pool.acquire(abortController.signal)).rejects.toThrow("The signing of the agreement has been aborted");
   });
 
-  it("should abort acquiring lease process by timeout", async () => {
+  it("should abort acquiring resource rental by timeout", async () => {
     const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { replicas: 1 });
     await expect(pool.acquire(1_000)).rejects.toThrow("Could not sign any agreement in time");
   });
 
-  it("should finalize the lease process during execution", async () => {
+  it("should finalize the resource rental during execution", async () => {
     expect.assertions(1);
     const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { replicas: 1 });
-    const leaseProcess = await pool.acquire();
-    const exe = await leaseProcess.getExeUnit();
+    const resourceRental = await pool.acquire();
+    const exe = await resourceRental.getExeUnit();
     return new Promise(async (res) => {
-      leaseProcess.events.on("finalized", async () => res(true));
-      setTimeout(() => leaseProcess.finalize(), 8_000);
+      resourceRental.events.on("finalized", async () => res(true));
+      setTimeout(() => resourceRental.finalize(), 8_000);
       await expect(exe.run("sleep 10 && echo Hello World")).rejects.toThrow(
         new GolemAbortError("Execution of script has been aborted"),
       );
