@@ -111,9 +111,11 @@ describe("Golem Network", () => {
       await glm.connect();
 
       const lease = await glm.oneOf({
-        ...order,
-        payment: {
-          allocation,
+        order: {
+          ...order,
+          payment: {
+            allocation,
+          },
         },
       });
 
