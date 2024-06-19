@@ -69,12 +69,12 @@ function getGolemNetwork() {
 
 describe("Golem Network", () => {
   describe("oneOf()", () => {
-    it("should create a lease and clean it up when disconnected", async () => {
+    it("should create a rental and clean it up when disconnected", async () => {
       const mockResourceRental = mock(ResourceRental);
-      const testProcess = instance(mockResourceRental);
+      const mockResourceRentalInstance = instance(mockResourceRental);
 
       when(mockResourceRental.finalize()).thenResolve();
-      when(mockRental.createResourceRental(_, _, _)).thenReturn(testProcess);
+      when(mockRental.createResourceRental(_, _, _)).thenReturn(mockResourceRentalInstance);
 
       const draftProposal$ = new Subject<OfferProposal>();
       when(mockMarket.collectDraftOfferProposals(_)).thenReturn(draftProposal$);
@@ -87,9 +87,9 @@ describe("Golem Network", () => {
       const glm = getGolemNetwork();
       await glm.connect();
 
-      const lease = await glm.oneOf(order);
+      const rental = await glm.oneOf(order);
 
-      expect(lease).toBe(testProcess);
+      expect(rental).toBe(mockResourceRentalInstance);
 
       await glm.disconnect();
 
@@ -100,9 +100,9 @@ describe("Golem Network", () => {
       const allocation = instance(mock(Allocation));
 
       const mockResourceRental = mock(ResourceRental);
-      const testProcess = instance(mockResourceRental);
+      const mockResourceRentalInstance = instance(mockResourceRental);
       when(mockResourceRental.finalize()).thenResolve();
-      when(mockRental.createResourceRental(_, _, _)).thenReturn(testProcess);
+      when(mockRental.createResourceRental(_, _, _)).thenReturn(mockResourceRentalInstance);
 
       when(mockMarket.collectDraftOfferProposals(_)).thenReturn(new Subject<OfferProposal>());
       jest.spyOn(DraftOfferProposalPool.prototype, "acquire").mockResolvedValue({} as OfferProposal);
@@ -110,14 +110,14 @@ describe("Golem Network", () => {
       const glm = getGolemNetwork();
       await glm.connect();
 
-      const lease = await glm.oneOf({
+      const rental = await glm.oneOf({
         ...order,
         payment: {
           allocation,
         },
       });
 
-      expect(lease).toBe(testProcess);
+      expect(rental).toBe(mockResourceRentalInstance);
 
       await glm.disconnect();
 
@@ -135,10 +135,10 @@ describe("Golem Network", () => {
       const draftProposal$ = new Subject<OfferProposal>();
       when(mockMarket.collectDraftOfferProposals(_)).thenReturn(draftProposal$);
 
-      const mockLeasePool = mock(ResourceRentalPool);
-      when(mockLeasePool.drainAndClear()).thenResolve();
-      const leasePool = instance(mockLeasePool);
-      when(mockRental.createResourceRentalPool(_, _, _)).thenReturn(leasePool);
+      const mockRentalPool = mock(ResourceRentalPool);
+      when(mockRentalPool.drainAndClear()).thenResolve();
+      const rentalPool = instance(mockRentalPool);
+      when(mockRental.createResourceRentalPool(_, _, _)).thenReturn(rentalPool);
 
       const glm = getGolemNetwork();
 
@@ -149,21 +149,21 @@ describe("Golem Network", () => {
         order,
       });
 
-      expect(pool).toBe(leasePool);
+      expect(pool).toBe(rentalPool);
 
       await glm.disconnect();
 
-      verify(mockLeasePool.drainAndClear()).once();
+      verify(mockRentalPool.drainAndClear()).once();
       verify(mockPayment.releaseAllocation(allocation)).once();
     });
     it("should not release the allocation if it was provided by the user", async () => {
       const allocation = instance(mock(Allocation));
 
       when(mockMarket.collectDraftOfferProposals(_)).thenReturn(new Subject<OfferProposal>());
-      const mockLeasePool = mock(ResourceRentalPool);
-      when(mockLeasePool.drainAndClear()).thenResolve();
-      const leasePool = instance(mockLeasePool);
-      when(mockRental.createResourceRentalPool(_, _, _)).thenReturn(leasePool);
+      const mockRentalPool = mock(ResourceRentalPool);
+      when(mockRentalPool.drainAndClear()).thenResolve();
+      const rentalPool = instance(mockRentalPool);
+      when(mockRental.createResourceRentalPool(_, _, _)).thenReturn(rentalPool);
 
       const glm = getGolemNetwork();
       await glm.connect();
@@ -178,9 +178,9 @@ describe("Golem Network", () => {
         },
       });
 
-      expect(pool).toBe(leasePool);
+      expect(pool).toBe(rentalPool);
       await glm.disconnect();
-      verify(mockLeasePool.drainAndClear()).once();
+      verify(mockRentalPool.drainAndClear()).once();
       verify(mockPayment.createAllocation(_)).never();
       verify(mockPayment.releaseAllocation(allocation)).never();
     });

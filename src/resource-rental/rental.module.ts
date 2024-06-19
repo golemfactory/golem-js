@@ -9,13 +9,13 @@ import { ResourceRentalPool, ResourceRentalPoolOptions } from "./resource-rental
 
 export interface RentalModule {
   /**
-   * Factory that creates a new lease process that's fully configured.
+   * Factory that creates a new resource rental that's fully configured.
    * This method will also create the payment process for the agreement.
    *
    */
   createResourceRental(agreement: Agreement, allocation: Allocation, options?: ResourceRentalOptions): ResourceRental;
   /**
-   * Factory that creates new lease process pool that's fully configured
+   * Factory that creates new resource rental pool that's fully configured
    */
   createResourceRentalPool(
     draftPool: DraftOfferProposalPool,
@@ -42,16 +42,16 @@ export class RentalModuleImpl implements RentalModule {
       allocation,
       options?.payment,
     );
-    const lease = new ResourceRental(
+    const rental = new ResourceRental(
       agreement,
       this.deps.storageProvider,
       paymentProcess,
       this.deps.marketModule,
       this.deps.activityModule,
-      this.deps.logger.child("lease-process"),
+      this.deps.logger.child("resource-rental"),
       options,
     );
-    return lease;
+    return rental;
   }
 
   public createResourceRentalPool(
