@@ -108,7 +108,7 @@ yagna payment fund --network holesky
 yagna payment status --network holesky
 ```
 
-#### Obtain an `app-key` to use with SDK
+### Obtain an `app-key` to use with SDK
 
 If you don't have any app-keys available from `yagna app-key list`, go ahead and create one with the command below.
 You will need this key in order to communicate with `yagna` from your application. You can set it
@@ -147,13 +147,13 @@ const order: MarketOrderSpec = {
 
   try {
     await glm.connect();
-    // Lease a machine
-    const lease = await glm.oneOf(order);
-    await lease
+    // Rent a machine
+    const rental = await glm.oneOf(order);
+    await rental
       .getExeUnit()
       .then((exe) => exe.run("echo Hello, Golem! 👋"))
       .then((res) => console.log(res.stdout));
-    await lease.finalize();
+    await rental.finalize();
   } catch (err) {
     console.error("Failed to run the example", err);
   } finally {
@@ -188,27 +188,27 @@ const order: MarketOrderSpec = {
 
   try {
     await glm.connect();
-    // create a pool that can grow up to 3 leases at the same time
+    // create a pool that can grow up to 3 rentals at the same time
     const pool = await glm.manyOf({
       concurrency: 3,
       order,
     });
     // run 3 tasks in parallel on 3 different machines
     await Promise.allSettled([
-      pool.withLease(async (lease) =>
-        lease
+      pool.withRental(async (rental) =>
+        rental
           .getExeUnit()
           .then((exe) => exe.run("echo Hello, Golem from the first machine! 👋"))
           .then((res) => console.log(res.stdout)),
       ),
-      pool.withLease(async (lease) =>
-        lease
+      pool.withRental(async (rental) =>
+        rental
           .getExeUnit()
           .then((exe) => exe.run("echo Hello, Golem from the second machine! 👋"))
           .then((res) => console.log(res.stdout)),
       ),
-      pool.withLease(async (lease) =>
-        lease
+      pool.withRental(async (rental) =>
+        rental
           .getExeUnit()
           .then((exe) => exe.run("echo Hello, Golem from the third machine! 👋"))
           .then((res) => console.log(res.stdout)),
@@ -270,8 +270,8 @@ securely between the nodes.
 ```ts
 const network = await glm.createNetwork({ ip: "192.168.7.0/24" });
 // ...
-const exe1 = await lease1.getExeUnit();
-const exe2 = await lease2.getExeUnit();
+const exe1 = await rental1.getExeUnit();
+const exe2 = await rental2.getExeUnit();
 await exe1
   .run(`ping ${exe2.getIp()} -c 4`)
   .then((res) => console.log(`Response from provider: ${exe1.provider.name} (ip: ${exe1.getIp()})`, res.stdout));
