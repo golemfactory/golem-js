@@ -8,7 +8,7 @@ import {
   MarketOptions,
   OfferProposal,
 } from "../market";
-import { IPaymentApi, PaymentModule, PaymentModuleImpl, PaymentModuleOptions } from "../payment";
+import { Allocation, IPaymentApi, PaymentModule, PaymentModuleImpl, PaymentModuleOptions } from "../payment";
 import { ActivityModule, ActivityModuleImpl, IActivityApi, IFileServer } from "../activity";
 import { INetworkApi, Network, NetworkModule, NetworkModuleImpl, NetworkOptions } from "../network";
 import { EventEmitter } from "eventemitter3";
@@ -111,6 +111,14 @@ export interface GolemNetworkOptions {
   >;
 }
 
+type AllocationOptions = {
+  /**
+   * Optionally pass an existing allocation to use or an ID of an allocation that already exists in yagna.
+   * If this is not provided, a new allocation will be created based on an estimated budget.
+   */
+  allocation?: Allocation | string;
+};
+
 /**
  * Represents the order specifications which will result in access to LeaseProcess.
  */
@@ -118,7 +126,7 @@ export interface MarketOrderSpec {
   demand: BuildDemandOptions;
   market: MarketOptions;
   activity?: LeaseProcessOptions["activity"];
-  payment?: LeaseProcessOptions["payment"];
+  payment?: LeaseProcessOptions["payment"] & AllocationOptions;
   network?: Network;
 }
 
@@ -249,7 +257,7 @@ export class GolemNetwork {
         marketApi:
           this.options.override?.marketApi ||
           new MarketApiAdapter(this.yagna, agreementRepository, proposalRepository, demandRepository, this.logger),
-        networkApi: this.options.override?.networkApi || new NetworkApiAdapter(this.yagna, this.logger),
+        networkApi: this.options.override?.networkApi || new NetworkApiAdapter(this.yagna),
         fileServer: this.options.override?.fileServer || new GftpServerAdapter(this.storageProvider),
       };
       this.network = getFactory(NetworkModuleImpl, this.options.override?.network)(this.services);
@@ -314,6 +322,26 @@ export class GolemNetwork {
     this.hasConnection = false;
   }
 
+  private async getAllocationFromOrder({
+    order,
+    concurrency,
+  }: {
+    order: MarketOrderSpec;
+    concurrency: Concurrency;
+  }): Promise<Allocation> {
+    if (!order.payment?.allocation) {
+      const budget = this.market.estimateBudget({ order, concurrency });
+      return this.payment.createAllocation({
+        budget,
+        expirationSec: order.market.rentHours * 60 * 60,
+      });
+    }
+    if (typeof order.payment.allocation === "string") {
+      return this.payment.getAllocation(order.payment.allocation);
+    }
+    return order.payment.allocation;
+  }
+
   /**
    * Define your computational resource demand and access a single instance
    *
@@ -339,12 +367,7 @@ export class GolemNetwork {
       selectProposal: order.market.proposalSelector,
     });
 
-    const budget = this.market.estimateBudget({ order, concurrency: 1 });
-    const allocation = await this.payment.createAllocation({
-      budget,
-      expirationSec: order.market.rentHours * 60 * 60,
-    });
-
+    const allocation = await this.getAllocationFromOrder({ order, concurrency: 1 });
     const demandSpecification = await this.market.buildDemandDetails(order.demand, allocation);
 
     const draftProposal$ = this.market.collectDraftOfferProposals({
@@ -364,7 +387,7 @@ export class GolemNetwork {
     );
 
     const networkNode = order.network
-      ? await this.network.createNetworkNode(order.network, agreement.getProviderInfo().id)
+      ? await this.network.createNetworkNode(order.network, agreement.provider.id)
       : undefined;
 
     const lease = this.lease.createLease(agreement, allocation, {
@@ -384,6 +407,10 @@ export class GolemNetwork {
         await this.network
           .removeNetworkNode(order.network, networkNode)
           .catch((err) => this.logger.error("Error while removing network node", err));
+      }
+      // Don't release the allocation if it was provided by the user
+      if (order.payment?.allocation) {
+        return;
       }
       await this.payment
         .releaseAllocation(allocation)
@@ -435,11 +462,7 @@ export class GolemNetwork {
       selectProposal: order.market.proposalSelector,
     });
 
-    const budget = this.market.estimateBudget({ concurrency, order });
-    const allocation = await this.payment.createAllocation({
-      budget,
-      expirationSec: order.market.rentHours * 60 * 60,
-    });
+    const allocation = await this.getAllocationFromOrder({ order, concurrency });
     const demandSpecification = await this.market.buildDemandDetails(order.demand, allocation);
 
     const draftProposal$ = this.market.collectDraftOfferProposals({
@@ -469,7 +492,10 @@ export class GolemNetwork {
       await leaseProcessPool
         .drainAndClear()
         .catch((err) => this.logger.error("Error while draining lease process pool", err));
-
+      // Don't release the allocation if it was provided by the user
+      if (order.payment?.allocation) {
+        return;
+      }
       await this.payment
         .releaseAllocation(allocation)
         .catch((err) => this.logger.error("Error while releasing allocation", err));

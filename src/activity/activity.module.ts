@@ -125,11 +125,28 @@ export class ActivityModuleImpl implements ActivityModule {
   async executeScript(activity: Activity, script: ExeScriptRequest): Promise<string> {
     this.logger.debug("Executing script on activity", { activityId: activity.id });
     try {
+      this.events.emit("scriptSent", activity, script);
       const result = await this.activityApi.executeScript(activity, script);
-      this.events.emit("scriptExecuted", activity, script, result);
+      this.events.emit(
+        "scriptExecuted",
+        await this.refreshActivity(activity).catch(() => {
+          this.logger.warn("Failed to refresh activity after script execution", { activityId: activity.id });
+          return activity;
+        }),
+        script,
+        result,
+      );
       return result;
     } catch (error) {
-      this.events.emit("errorExecutingScript", activity, script, error);
+      this.events.emit(
+        "errorExecutingScript",
+        await this.refreshActivity(activity).catch(() => {
+          this.logger.warn("Failed to refresh activity after script execution error", { activityId: activity.id });
+          return activity;
+        }),
+        script,
+        error,
+      );
       throw error;
     }
   }
@@ -142,10 +159,26 @@ export class ActivityModuleImpl implements ActivityModule {
     this.logger.debug("Fetching batch results", { activityId: activity.id, batchId });
     try {
       const results = await this.activityApi.getExecBatchResults(activity, batchId, commandIndex, timeout);
-      this.events.emit("batchResultsReceived", activity, batchId, results);
+      this.events.emit(
+        "batchResultsReceived",
+        await this.refreshActivity(activity).catch(() => {
+          this.logger.warn("Failed to refresh activity after batch results received", { activityId: activity.id });
+          return activity;
+        }),
+        batchId,
+        results,
+      );
       return results;
     } catch (error) {
-      this.events.emit("errorGettingBatchResults", activity, batchId, error);
+      this.events.emit(
+        "errorGettingBatchResults",
+        await this.refreshActivity(activity).catch(() => {
+          this.logger.warn("Failed to refresh activity after batch results error", { activityId: activity.id });
+          return activity;
+        }),
+        batchId,
+        error,
+      );
       throw error;
     }
   }
@@ -156,11 +189,27 @@ export class ActivityModuleImpl implements ActivityModule {
   ): Observable<StreamingBatchEvent> {
     this.logger.debug("Observing streaming batch events", { activityId: activity.id, batchId });
     return this.activityApi.getExecBatchEvents(activity, batchId, commandIndex).pipe(
-      tap((event) => {
-        this.events.emit("batchEventsReceived", activity, batchId, event);
+      tap(async (event) => {
+        this.events.emit(
+          "batchEventsReceived",
+          await this.refreshActivity(activity).catch(() => {
+            this.logger.warn("Failed to refresh activity after batch events received", { activityId: activity.id });
+            return activity;
+          }),
+          batchId,
+          event,
+        );
       }),
-      catchError((error) => {
-        this.events.emit("errorGettingBatchEvents", activity, batchId, error);
+      catchError(async (error) => {
+        this.events.emit(
+          "errorGettingBatchEvents",
+          await this.refreshActivity(activity).catch(() => {
+            this.logger.warn("Failed to refresh activity after batch events error", { activityId: activity.id });
+            return activity;
+          }),
+          batchId,
+          error,
+        );
         throw error;
       }),
     );
@@ -169,7 +218,7 @@ export class ActivityModuleImpl implements ActivityModule {
   async createActivity(agreement: Agreement): Promise<Activity> {
     this.logger.info("Creating activity", {
       agreementId: agreement.id,
-      provider: agreement.getProviderInfo(),
+      provider: agreement.provider,
     });
     try {
       const activity = await this.activityApi.createActivity(agreement);
@@ -185,7 +234,7 @@ export class ActivityModuleImpl implements ActivityModule {
     this.logger.info("Destroying activity", {
       activityId: activity.id,
       agreementId: activity.agreement.id,
-      provider: activity.agreement.getProviderInfo(),
+      provider: activity.agreement.provider,
     });
     try {
       const updated = await this.activityApi.destroyActivity(activity);
@@ -205,13 +254,13 @@ export class ActivityModuleImpl implements ActivityModule {
     });
     try {
       const freshActivity = await this.activityApi.getActivity(staleActivity.id);
-      if (freshActivity.getState() !== staleActivity.getState()) {
+      if (freshActivity.getState() !== freshActivity.getPreviousState()) {
         this.logger.debug("Activity state changed", {
           activityId: staleActivity.id,
-          previousState: staleActivity.getState(),
+          previousState: freshActivity.getPreviousState(),
           newState: freshActivity.getState(),
         });
-        this.events.emit("activityStateChanged", freshActivity, staleActivity.getState());
+        this.events.emit("activityStateChanged", freshActivity, freshActivity.getPreviousState());
       }
       return freshActivity;
     } catch (error) {
@@ -236,10 +285,25 @@ export class ActivityModuleImpl implements ActivityModule {
     this.logger.debug("Initializing the exe-unit for activity", { activityId: activity.id });
     try {
       await ctx.before();
-      this.events.emit("activityInitialized", activity);
+      this.events.emit(
+        "workContextInitialized",
+        await this.refreshActivity(activity).catch(() => {
+          this.logger.warn("Failed to refresh activity after work context initialization", { activityId: activity.id });
+          return activity;
+        }),
+      );
       return ctx;
     } catch (error) {
-      this.events.emit("errorInitializingActivity", activity, error);
+      this.events.emit(
+        "errorInitializingWorkContext",
+        await this.refreshActivity(activity).catch(() => {
+          this.logger.warn("Failed to refresh activity after work context initialization error", {
+            activityId: activity.id,
+          });
+          return activity;
+        }),
+        error,
+      );
       throw error;
     }
   }

@@ -96,6 +96,35 @@ describe("Golem Network", () => {
       verify(mockLeaseProcess.finalize()).once();
       verify(mockPayment.releaseAllocation(allocation)).once();
     });
+    it("should not release the allocation if it was provided by the user", async () => {
+      const allocation = instance(mock(Allocation));
+
+      const mockLeaseProcess = mock(LeaseProcess);
+      const testProcess = instance(mockLeaseProcess);
+      when(mockLeaseProcess.finalize()).thenResolve();
+      when(mockLease.createLease(_, _, _)).thenReturn(testProcess);
+
+      when(mockMarket.collectDraftOfferProposals(_)).thenReturn(new Subject<OfferProposal>());
+      jest.spyOn(DraftOfferProposalPool.prototype, "acquire").mockResolvedValue({} as OfferProposal);
+
+      const glm = getGolemNetwork();
+      await glm.connect();
+
+      const lease = await glm.oneOf({
+        ...order,
+        payment: {
+          allocation,
+        },
+      });
+
+      expect(lease).toBe(testProcess);
+
+      await glm.disconnect();
+
+      verify(mockLeaseProcess.finalize()).once();
+      verify(mockPayment.createAllocation(_)).never();
+      verify(mockPayment.releaseAllocation(allocation)).never();
+    });
   });
 
   describe("manyOf()", () => {
@@ -126,6 +155,34 @@ describe("Golem Network", () => {
 
       verify(mockLeasePool.drainAndClear()).once();
       verify(mockPayment.releaseAllocation(allocation)).once();
+    });
+    it("should not release the allocation if it was provided by the user", async () => {
+      const allocation = instance(mock(Allocation));
+
+      when(mockMarket.collectDraftOfferProposals(_)).thenReturn(new Subject<OfferProposal>());
+      const mockLeasePool = mock(LeaseProcessPool);
+      when(mockLeasePool.drainAndClear()).thenResolve();
+      const leasePool = instance(mockLeasePool);
+      when(mockLease.createLeaseProcessPool(_, _, _)).thenReturn(leasePool);
+
+      const glm = getGolemNetwork();
+      await glm.connect();
+
+      const pool = await glm.manyOf({
+        concurrency: 3,
+        order: {
+          ...order,
+          payment: {
+            allocation,
+          },
+        },
+      });
+
+      expect(pool).toBe(leasePool);
+      await glm.disconnect();
+      verify(mockLeasePool.drainAndClear()).once();
+      verify(mockPayment.createAllocation(_)).never();
+      verify(mockPayment.releaseAllocation(allocation)).never();
     });
   });
 });

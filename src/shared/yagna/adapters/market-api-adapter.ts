@@ -164,7 +164,6 @@ export class MarketApiAdapter implements IMarketApi {
       receivedProposal.id,
       bodyClone,
     );
-
     this.logger.debug("Proposal counter result from yagna", { result: maybeNewId });
 
     if (typeof maybeNewId !== "string") {
@@ -277,7 +276,7 @@ export class MarketApiAdapter implements IMarketApi {
       );
     }
 
-    this.logger.info("Established agreement", { agreementId: agreement.id, provider: agreement.getProviderInfo() });
+    this.logger.info("Established agreement", { agreementId: agreement.id, provider: agreement.provider });
 
     return confirmed;
   }

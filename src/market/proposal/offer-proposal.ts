@@ -40,15 +40,12 @@ export type ProposalDTO = Partial<{
  */
 export class OfferProposal extends MarketProposal {
   public readonly issuer = "Provider";
-  public provider: ProviderInfo;
 
   constructor(
     model: MarketApi.ProposalDTO,
     public readonly demand: Demand,
   ) {
     super(model);
-
-    this.provider = this.getProviderInfo();
 
     this.validate();
   }
@@ -107,7 +104,7 @@ export class OfferProposal extends MarketProposal {
     return this.pricing.start + this.pricing.cpuSec * threadsNo + this.pricing.envSec;
   }
 
-  public getProviderInfo(): ProviderInfo {
+  public get provider(): ProviderInfo {
     return {
       id: this.model.issuerId,
       name: this.properties["golem.node.id.name"],

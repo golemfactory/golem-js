@@ -59,22 +59,14 @@ describe("Deployment builder", () => {
   it("throws an error when creating a network with the same name", () => {
     const builder = new GolemDeploymentBuilder(mockGolemNetwork);
     expect(() => {
-      builder
-        .createNetwork("my-network", {
-          id: "test",
-        })
-        .createNetwork("my-network", {
-          id: "test",
-        });
+      builder.createNetwork("my-network").createNetwork("my-network");
     }).toThrow(new GolemConfigError(`Network with name my-network already exists`));
   });
   it("throws an error when creating a deployment with an activity pool referencing a non-existing network", () => {
     const builder = new GolemDeploymentBuilder(mockGolemNetwork);
     expect(() => {
       builder
-        .createNetwork("existing-network", {
-          id: "test",
-        })
+        .createNetwork("existing-network")
         .createLeaseProcessPool("my-pool", {
           demand: {
             workload: { imageTag: "image", minCpuCores: 1, minMemGib: 1, minStorageGib: 1 },

@@ -1,9 +1,9 @@
 import { _, imock, instance, mock, reset, spy, verify, when } from "@johanblumenberg/ts-mockito";
 import { Logger, YagnaApi } from "../shared/utils";
 import { MarketModuleImpl } from "./market.module";
-import { Demand, DemandSpecification, IDemandRepository } from "./demand";
+import { Demand, DemandSpecification } from "./demand";
 import { Subject, take } from "rxjs";
-import { IProposalRepository, MarketProposalEvent, OfferProposal, ProposalProperties } from "./proposal";
+import { MarketProposalEvent, OfferProposal, ProposalProperties } from "./proposal";
 import { MarketApiAdapter } from "../shared/yagna/";
 import { IActivityApi, IFileServer } from "../activity";
 import { StorageProvider } from "../shared/storage";
@@ -37,8 +37,6 @@ beforeEach(() => {
     activityApi: instance(imock<IActivityApi>()),
     paymentApi: instance(imock<IPaymentApi>()),
     networkApi: instance(imock<INetworkApi>()),
-    proposalRepository: instance(imock<IProposalRepository>()),
-    demandRepository: instance(imock<IDemandRepository>()),
     yagna: instance(mockYagna),
     logger: instance(imock<Logger>()),
     marketApi: instance(mockMarketApiAdapter),

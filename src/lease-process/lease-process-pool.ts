@@ -115,7 +115,7 @@ export class LeaseProcessPool {
         signalOrTimeout,
       );
       const networkNode = this.network
-        ? await this.networkModule.createNetworkNode(this.network, agreement.getProviderInfo().id)
+        ? await this.networkModule.createNetworkNode(this.network, agreement.provider.id)
         : undefined;
       const leaseProcess = this.leaseModule.createLease(agreement, this.allocation, {
         networkNode,

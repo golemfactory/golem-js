@@ -76,7 +76,7 @@ export class WorkContext {
     this.activityDeployingTimeout = options?.activityDeployingTimeout || DEFAULTS.activityDeployingTimeout;
 
     this.logger = options?.logger ?? defaultLogger("work");
-    this.provider = activity.getProviderInfo();
+    this.provider = activity.provider;
     this.storageProvider = options?.storageProvider ?? new NullStorageProvider();
 
     this.networkNode = options?.networkNode;
@@ -127,7 +127,7 @@ export class WorkContext {
           WorkErrorCode.ActivityDeploymentFailed,
           this.activity.agreement,
           this.activity,
-          this.activity.getProviderInfo(),
+          this.activity.provider,
         );
       }
       await this.setupActivity();
@@ -157,7 +157,7 @@ export class WorkContext {
           WorkErrorCode.ActivityDeploymentFailed,
           this.activity.agreement,
           this.activity,
-          this.activity.getProviderInfo(),
+          this.activity.provider,
           e,
         );
       });
@@ -180,7 +180,7 @@ export class WorkContext {
               WorkErrorCode.ActivityDeploymentFailed,
               this.activity.agreement,
               this.activity,
-              this.activity.getProviderInfo(),
+              this.activity.provider,
             );
         }
       })(),
@@ -194,7 +194,7 @@ export class WorkContext {
           WorkErrorCode.ActivityDeploymentFailed,
           this.activity.agreement,
           this.activity,
-          this.activity.getProviderInfo(),
+          this.activity.provider,
           error,
         );
       })
@@ -282,7 +282,7 @@ export class WorkContext {
           WorkErrorCode.ScriptExecutionFailed,
           this.activity.agreement,
           this.activity,
-          this.activity.getProviderInfo(),
+          this.activity.provider,
           e,
         );
       });
@@ -361,7 +361,7 @@ export class WorkContext {
         WorkErrorCode.NetworkSetupMissing,
         this.activity.agreement,
         this.activity,
-        this.activity.getProviderInfo(),
+        this.activity.provider,
       );
 
     return this.networkNode.getWebsocketUri(port);
@@ -374,7 +374,7 @@ export class WorkContext {
         WorkErrorCode.NetworkSetupMissing,
         this.activity.agreement,
         this.activity,
-        this.activity.getProviderInfo(),
+        this.activity.provider,
       );
     return this.networkNode.ip;
   }
@@ -413,7 +413,7 @@ export class WorkContext {
         WorkErrorCode.ScriptInitializationFailed,
         this.activity.agreement,
         this.activity,
-        this.activity.getProviderInfo(),
+        this.activity.provider,
         e,
       );
     });
