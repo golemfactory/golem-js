@@ -358,8 +358,9 @@ export class GolemNetwork {
    * ```
    *
    * @param order
+   * @param signalOrTimeout - the timeout in milliseconds or an AbortSignal that will be used to cancel the lease request
    */
-  async oneOf(order: MarketOrderSpec): Promise<LeaseProcess> {
+  async oneOf(order: MarketOrderSpec, signalOrTimeout?: number | AbortSignal): Promise<LeaseProcess> {
     const proposalPool = new DraftOfferProposalPool({
       logger: this.logger,
       validateProposal: order.market.proposalFilter,
@@ -377,9 +378,13 @@ export class GolemNetwork {
 
     const proposalSubscription = proposalPool.readFrom(draftProposal$);
 
-    const agreement = await this.market.signAgreementFromPool(proposalPool, {
-      expirationSec: order.market.rentHours * 60 * 60,
-    });
+    const agreement = await this.market.signAgreementFromPool(
+      proposalPool,
+      {
+        expirationSec: order.market.rentHours * 60 * 60,
+      },
+      signalOrTimeout,
+    );
 
     const networkNode = order.network
       ? await this.network.createNetworkNode(order.network, agreement.provider.id)

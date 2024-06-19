@@ -105,11 +105,15 @@ export class LeaseProcessPool {
       })() || MAX_REPLICAS;
   }
 
-  private async createNewLeaseProcess() {
+  private async createNewLeaseProcess(signalOrTimeout?: number | AbortSignal) {
     this.logger.debug("Creating new lease process to add to pool");
     try {
       this.leasesBeingSigned++;
-      const agreement = await this.marketModule.signAgreementFromPool(this.proposalPool, this.agreementOptions);
+      const agreement = await this.marketModule.signAgreementFromPool(
+        this.proposalPool,
+        this.agreementOptions,
+        signalOrTimeout,
+      );
       const networkNode = this.network
         ? await this.networkModule.createNetworkNode(this.network, agreement.provider.id)
         : undefined;
@@ -183,8 +187,9 @@ export class LeaseProcessPool {
 
   /**
    * Borrow a lease process from the pool. If there is no valid lease process a new one will be created.
+   * @param signalOrTimeout - the timeout in milliseconds or an AbortSignal that will be used to cancel the lease request
    */
-  async acquire(): Promise<LeaseProcess> {
+  async acquire(signalOrTimeout?: number | AbortSignal): Promise<LeaseProcess> {
     if (this.isDraining) {
       throw new Error("The pool is in draining mode");
     }
@@ -193,7 +198,7 @@ export class LeaseProcessPool {
       if (!this.canCreateMoreLeaseProcesses()) {
         return this.enqueueAcquire();
       }
-      leaseProcess = await this.createNewLeaseProcess();
+      leaseProcess = await this.createNewLeaseProcess(signalOrTimeout);
     }
     this.borrowed.add(leaseProcess);
     this.events.emit("acquired", leaseProcess.agreement);
@@ -356,9 +361,14 @@ export class LeaseProcessPool {
    *  // even if an error is thrown in the callback
    * });
    * ```
+   * @param callback - a function that takes a `lease` object as its argument. The lease is automatically released after the callback is executed, regardless of whether it completes successfully or throws an error.
+   * @param signalOrTimeout - the timeout in milliseconds or an AbortSignal that will be used to cancel the lease request
    */
-  public async withLease<T>(callback: (lease: LeaseProcess) => Promise<T>): Promise<T> {
-    const lease = await this.acquire();
+  public async withLease<T>(
+    callback: (lease: LeaseProcess) => Promise<T>,
+    signalOrTimeout?: number | AbortSignal,
+  ): Promise<T> {
+    const lease = await this.acquire(signalOrTimeout);
     try {
       return await callback(lease);
     } finally {
