@@ -51,7 +51,7 @@ export class Agreement {
     return this.model.state;
   }
 
-  getProviderInfo(): ProviderInfo {
+  get provider(): ProviderInfo {
     return {
       id: this.model.offer.providerId,
       name: this.model.offer.properties["golem.node.id.name"],

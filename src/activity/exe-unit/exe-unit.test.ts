@@ -44,7 +44,7 @@ describe("ExeUnit", () => {
     reset(mockStorageProvider);
     reset(mockAgreement);
     reset(mockActivityModule);
-    when(mockActivity.getProviderInfo()).thenReturn({
+    when(mockActivity.provider).thenReturn({
       id: "test-provider-id",
       name: "test-provider-name",
       walletAddress: "0xProviderWallet",
@@ -58,7 +58,7 @@ describe("ExeUnit", () => {
 
   describe("Executing", () => {
     it("should execute run command with a single parameter", async () => {
-      when(mockExecutor.execute(_, _, _)).thenResolve(
+      when(mockExecutor.execute(_, _, _, _)).thenResolve(
         buildExecutorResults([
           {
             index: 0,
@@ -78,7 +78,7 @@ describe("ExeUnit", () => {
     });
 
     it("should execute run command with multiple parameters", async () => {
-      when(mockExecutor.execute(_, _, _)).thenResolve(
+      when(mockExecutor.execute(_, _, _, _)).thenResolve(
         buildExecutorResults([
           {
             index: 0,
@@ -102,7 +102,7 @@ describe("ExeUnit", () => {
       it("should execute upload file command", async () => {
         const worker = async (exe: ExeUnit) => exe.uploadFile("./file.txt", "/golem/file.txt");
 
-        when(mockExecutor.execute(_, _, _)).thenResolve(
+        when(mockExecutor.execute(_, _, _, _)).thenResolve(
           buildExecutorResults([
             {
               index: 0,
@@ -126,7 +126,7 @@ describe("ExeUnit", () => {
       it("should execute upload json command", async () => {
         const worker = async (exe: ExeUnit) => exe.uploadJson({ test: true }, "/golem/file.txt");
 
-        when(mockExecutor.execute(_, _, _)).thenResolve(
+        when(mockExecutor.execute(_, _, _, _)).thenResolve(
           buildExecutorResults([
             {
               index: 0,
@@ -153,7 +153,7 @@ describe("ExeUnit", () => {
       it("should execute download file command", async () => {
         const worker = async (exe: ExeUnit) => exe.downloadFile("/golem/file.txt", "./file.txt");
 
-        when(mockExecutor.execute(_, _, _)).thenResolve(
+        when(mockExecutor.execute(_, _, _, _)).thenResolve(
           buildExecutorResults([
             {
               index: 0,
@@ -181,7 +181,7 @@ describe("ExeUnit", () => {
         const jsonStr = JSON.stringify(json);
         const encoded = new TextEncoder().encode(jsonStr);
 
-        when(mockExecutor.execute(_, _, _)).thenResolve(
+        when(mockExecutor.execute(_, _, _, _)).thenResolve(
           buildExecutorResults([
             {
               index: 0,
@@ -214,7 +214,7 @@ describe("ExeUnit", () => {
 
         when(mockStorageProvider.receiveData(anything())).thenResolve(data.toString());
 
-        when(mockExecutor.execute(_, _, _)).thenResolve(
+        when(mockExecutor.execute(_, _, _, _)).thenResolve(
           buildExecutorResults([
             {
               index: 0,
@@ -251,7 +251,7 @@ describe("ExeUnit", () => {
   describe("Exec and stream", () => {
     it("should execute runAndStream command", async () => {
       const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule));
-      when(mockExecutor.execute(_, _, _)).thenResolve(
+      when(mockExecutor.execute(_, _, _, _)).thenResolve(
         buildExecutorResults([
           {
             index: 0,
@@ -272,7 +272,7 @@ describe("ExeUnit", () => {
     it("should execute transfer command", async () => {
       const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule));
 
-      when(mockExecutor.execute(_, _, _)).thenResolve(
+      when(mockExecutor.execute(_, _, _, _)).thenResolve(
         buildExecutorResults([
           {
             index: 0,
@@ -428,7 +428,7 @@ describe("ExeUnit", () => {
 
       const eventDate = new Date().toISOString();
 
-      when(mockExecutor.execute(_, _, _)).thenResolve(
+      when(mockExecutor.execute(_, _, _, _)).thenResolve(
         buildExecutorResults([
           {
             index: 0,

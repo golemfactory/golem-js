@@ -53,7 +53,7 @@ export class RemoteProcess {
             WorkErrorCode.ActivityResultsFetchingFailed,
             this.activity.agreement,
             this.activity,
-            this.activity.getProviderInfo(),
+            this.activity.provider,
             new GolemTimeoutError(`The waiting time (${timeoutInMs} ms) for the final result has been exceeded`),
           ),
         );
@@ -72,7 +72,7 @@ export class RemoteProcess {
               WorkErrorCode.ActivityResultsFetchingFailed,
               this.activity.agreement,
               this.activity,
-              this.activity.getProviderInfo(),
+              this.activity.provider,
             ),
           );
           this.activityModule

@@ -1,6 +1,7 @@
 import { DraftOfferProposalPool } from "./draft-offer-proposal-pool";
 import { instance, mock, when } from "@johanblumenberg/ts-mockito";
 import { OfferProposal } from "./index";
+import { GolemAbortError, GolemTimeoutError } from "../shared/error/golem-error";
 
 describe("Draft Offer Proposal Pool", () => {
   // GIVEN
@@ -105,6 +106,20 @@ describe("Draft Offer Proposal Pool", () => {
         const a = await pool.acquire();
 
         expect(a).toBe(proposal2);
+      });
+    });
+    describe("Negative cases", () => {
+      it("should abort the acquiring proposal by timeout", async () => {
+        const pool = new DraftOfferProposalPool();
+        await expect(pool.acquire(1)).rejects.toThrow(new GolemTimeoutError("Could not provide any proposal in time"));
+      });
+      it("should abort the acquiring proposal by signal", async () => {
+        const pool = new DraftOfferProposalPool();
+        const ac = new AbortController();
+        ac.abort();
+        await expect(pool.acquire(ac.signal)).rejects.toThrow(
+          new GolemAbortError("The acquiring of proposals has been aborted"),
+        );
       });
     });
   });

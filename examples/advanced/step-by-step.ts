@@ -104,7 +104,7 @@ import { filter, map, switchMap, take } from "rxjs";
     // To keep this example simple, we will not retry and just crash if the signing fails
     const draftProposal = draftProposals[0]!;
     const agreement = await glm.market.proposeAgreement(draftProposal);
-    console.log("Agreement signed with provider", agreement.getProviderInfo().name);
+    console.log("Agreement signed with provider", agreement.provider.name);
 
     // Provider is ready to start the computation
     // Let's setup payment first

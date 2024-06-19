@@ -1,9 +1,9 @@
 import { _, imock, instance, mock, reset, spy, verify, when } from "@johanblumenberg/ts-mockito";
 import { Logger, YagnaApi } from "../shared/utils";
 import { MarketModuleImpl } from "./market.module";
-import { Demand, DemandSpecification, IDemandRepository } from "./demand";
+import { Demand, DemandSpecification } from "./demand";
 import { Subject, take } from "rxjs";
-import { IProposalRepository, MarketProposalEvent, OfferProposal, ProposalProperties } from "./proposal";
+import { MarketProposalEvent, OfferProposal, ProposalProperties } from "./proposal";
 import { MarketApiAdapter } from "../shared/yagna/";
 import { IActivityApi, IFileServer } from "../activity";
 import { StorageProvider } from "../shared/storage";
@@ -14,6 +14,7 @@ import { DraftOfferProposalPool } from "./draft-offer-proposal-pool";
 import { Agreement, AgreementEvent, ProviderInfo } from "./agreement";
 import { waitAndCall, waitForCondition } from "../shared/utils/wait";
 import { MarketOrderSpec } from "../golem-network";
+import { GolemAbortError } from "../shared/error/golem-error";
 
 const mockMarketApiAdapter = mock(MarketApiAdapter);
 const mockYagna = mock(YagnaApi);
@@ -36,8 +37,6 @@ beforeEach(() => {
     activityApi: instance(imock<IActivityApi>()),
     paymentApi: instance(imock<IPaymentApi>()),
     networkApi: instance(imock<INetworkApi>()),
-    proposalRepository: instance(imock<IProposalRepository>()),
-    demandRepository: instance(imock<IDemandRepository>()),
     yagna: instance(mockYagna),
     logger: instance(imock<Logger>()),
     marketApi: instance(mockMarketApiAdapter),
@@ -430,7 +429,7 @@ describe("Market module", () => {
       const badProposal1 = {} as OfferProposal;
       const goodProposal = {} as OfferProposal;
       const mockPool = mock(DraftOfferProposalPool);
-      when(mockPool.acquire()).thenResolve(badProposal0).thenResolve(badProposal1).thenResolve(goodProposal);
+      when(mockPool.acquire(_)).thenResolve(badProposal0).thenResolve(badProposal1).thenResolve(goodProposal);
       when(mockPool.remove(_)).thenResolve();
       const goodAgreement = {} as Agreement;
       const marketSpy = spy(marketModule);
@@ -440,7 +439,7 @@ describe("Market module", () => {
 
       const signedProposal = await marketModule.signAgreementFromPool(instance(mockPool));
 
-      verify(mockPool.acquire()).thrice();
+      verify(mockPool.acquire(_)).thrice();
       verify(marketSpy.proposeAgreement(badProposal0, _)).once();
       verify(mockPool.remove(badProposal0)).once();
       verify(marketSpy.proposeAgreement(badProposal1, _)).once();
@@ -454,15 +453,17 @@ describe("Market module", () => {
       const error = new Error("Operation cancelled");
       const proposal = {} as OfferProposal;
       const mockPool = mock(DraftOfferProposalPool);
-      when(mockPool.acquire()).thenCall(async () => {
+      when(mockPool.acquire(_)).thenCall(async () => {
         ac.abort(error);
         return proposal;
       });
       const marketSpy = spy(marketModule);
 
-      await expect(marketModule.signAgreementFromPool(instance(mockPool), {}, ac.signal)).rejects.toThrow(error);
+      await expect(marketModule.signAgreementFromPool(instance(mockPool), {}, ac.signal)).rejects.toMatchError(
+        new GolemAbortError("The signing of the agreement has been aborted", error),
+      );
 
-      verify(mockPool.acquire()).once();
+      verify(mockPool.acquire(_)).once();
       verify(mockPool.release(proposal)).once();
       verify(mockPool.remove(_)).never();
       verify(marketSpy.proposeAgreement(_)).never();
@@ -471,7 +472,7 @@ describe("Market module", () => {
       const mockPool = mock(DraftOfferProposalPool);
       const signal = AbortSignal.abort();
       await expect(marketModule.signAgreementFromPool(instance(mockPool), {}, signal)).rejects.toThrow(
-        "This operation was aborted",
+        "The signing of the agreement has been aborted",
       );
       verify(mockPool.acquire()).never();
     });
@@ -483,7 +484,7 @@ describe("Market module", () => {
       when(marketSpy.proposeAgreement(_)).thenReject(new Error("Failed to sign proposal"));
 
       await expect(marketModule.signAgreementFromPool(instance(mockPool), {}, 50)).rejects.toThrow(
-        "The operation was aborted due to timeout",
+        "Could not sign any agreement in time",
       );
     });
     it("respects the timeout on draft proposal pool acquire and forwards the error", async () => {

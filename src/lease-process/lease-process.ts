@@ -8,6 +8,7 @@ import { EventEmitter } from "eventemitter3";
 import { NetworkNode } from "../network";
 import { ExecutionOptions } from "../activity/exe-script-executor";
 import { MarketModule } from "../market";
+import { GolemUserError } from "../shared/error/golem-error";
 
 export interface LeaseProcessEvents {
   /**
@@ -32,6 +33,8 @@ export class LeaseProcess {
   public readonly networkNode?: NetworkNode;
 
   private currentExeUnit: ExeUnit | null = null;
+  private abortController = new AbortController();
+  private finalizePromise?: Promise<void>;
 
   public constructor(
     public readonly agreement: Agreement,
@@ -52,26 +55,32 @@ export class LeaseProcess {
    * If the lease is already finalized, it will resolve immediately.
    */
   async finalize() {
-    if (this.paymentProcess.isFinished()) {
-      return;
-    }
-
-    try {
-      this.logger.debug("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
-      if (this.currentExeUnit) {
-        await this.activityModule.destroyActivity(this.currentExeUnit.activity);
-        if ((await this.fetchAgreementState()) !== "Terminated") {
-          await this.marketModule.terminateAgreement(this.agreement);
+    // Prevent this task from being performed more than once
+    if (!this.finalizePromise) {
+      this.finalizePromise = (async () => {
+        this.abortController.abort("The lease process is finalizing");
+        if (this.paymentProcess.isFinished()) {
+          return;
         }
-      }
-      await waitForCondition(() => this.paymentProcess.isFinished());
-      this.logger.debug("Payment process for agreement finalized", { agreementId: this.agreement.id });
-    } catch (error) {
-      this.logger.error("Payment process finalization failed", { agreementId: this.agreement.id, error });
-      throw error;
-    } finally {
-      this.events.emit("finalized");
+        try {
+          this.logger.info("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
+          if (this.currentExeUnit) {
+            await this.activityModule.destroyActivity(this.currentExeUnit.activity);
+          }
+          if ((await this.fetchAgreementState()) !== "Terminated") {
+            await this.marketModule.terminateAgreement(this.agreement);
+          }
+          await waitForCondition(() => this.paymentProcess.isFinished());
+          this.logger.info("Payment process for agreement finalized", { agreementId: this.agreement.id });
+        } catch (error) {
+          this.logger.error("Payment process finalization failed", { agreementId: this.agreement.id, error });
+          throw error;
+        } finally {
+          this.events.emit("finalized");
+        }
+      })();
     }
+    return this.finalizePromise;
   }
 
   public hasActivity(): boolean {
@@ -82,6 +91,9 @@ export class LeaseProcess {
    * Creates an activity on the Provider, and returns a exe-unit that can be used to operate within the activity
    */
   async getExeUnit(): Promise<ExeUnit> {
+    if (this.finalizePromise || this.abortController.signal.aborted) {
+      throw new GolemUserError("The lease process is not active. It may have been aborted or finalized");
+    }
     if (this.currentExeUnit) {
       return this.currentExeUnit;
     }
@@ -91,6 +103,7 @@ export class LeaseProcess {
       storageProvider: this.storageProvider,
       networkNode: this.leaseOptions?.networkNode,
       executionOptions: this.leaseOptions?.activity,
+      signalOrTimeout: this.abortController.signal,
       ...this.leaseOptions?.exeUnit,
     });
 

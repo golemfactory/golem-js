@@ -38,7 +38,7 @@ export class GolemDeploymentBuilder {
     return this;
   }
 
-  createNetwork(name: string, options: NetworkOptions): this {
+  createNetwork(name: string, options: NetworkOptions = {}): this {
     if (this.components.networks.some((network) => network.name === name)) {
       throw new GolemConfigError(`Network with name ${name} already exists`);
     }

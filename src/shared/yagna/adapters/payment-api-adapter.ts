@@ -182,13 +182,14 @@ export class PaymentApiAdapter implements IPaymentApi {
       const model = await this.yagna.payment.createAllocation({
         totalAmount: params.budget.toString(),
         paymentPlatform: params.paymentPlatform,
-        address: address,
+        address,
         timestamp: now.toISOString(),
         timeout: new Date(+now + params.expirationSec * 1000).toISOString(),
         makeDeposit: false,
         remainingAmount: "",
         spentAmount: "",
         allocationId: "",
+        deposit: params.deposit,
       });
 
       this.logger.debug(
