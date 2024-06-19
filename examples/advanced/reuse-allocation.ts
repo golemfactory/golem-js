@@ -52,8 +52,8 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
       },
     };
 
-    const lease1 = await glm.oneOf(firstOrder);
-    const lease2 = await glm.oneOf(secondOrder);
+    const lease1 = await glm.oneOf({ order: firstOrder });
+    const lease2 = await glm.oneOf({ order: secondOrder });
 
     await lease1
       .getExeUnit()

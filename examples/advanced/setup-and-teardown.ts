@@ -37,7 +37,7 @@ const order: MarketOrderSpec = {
         .then((res) => console.log(res.stdout));
 
     const pool = await glm.manyOf({
-      concurrency: 3,
+      concurrency: 2,
       order,
       setup,
       teardown,
