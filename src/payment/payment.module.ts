@@ -47,7 +47,7 @@ export interface PaymentModule {
 
   observeInvoices(): Observable<Invoice>;
 
-  createAllocation(params: { budget: number; expirationSec: number }): Promise<Allocation>;
+  createAllocation(params: CreateAllocationParams): Promise<Allocation>;
 
   releaseAllocation(allocation: Allocation): Promise<void>;
 
@@ -136,16 +136,13 @@ export class PaymentModuleImpl implements PaymentModule {
     return this.paymentApi.receivedInvoices$;
   }
 
-  async createAllocation(params: { budget: number; expirationSec: number }): Promise<Allocation> {
-    const payer = await this.getPayerDetails();
-
-    this.logger.info("Creating allocation", { params: params, payer });
+  async createAllocation(params: CreateAllocationParams): Promise<Allocation> {
+    this.logger.info("Creating allocation", { params: params });
 
     try {
       const allocation = await this.paymentApi.createAllocation({
-        budget: params.budget,
         paymentPlatform: this.getPaymentPlatform(),
-        expirationSec: params.expirationSec,
+        ...params,
       });
       this.events.emit("allocationCreated", allocation);
       return allocation;
