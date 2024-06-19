@@ -49,7 +49,7 @@ describe("Job", () => {
 
       await expect(job.waitForResult()).rejects.toThrow("Canceled");
 
-      verify(mockRental.finalize()).once();
+      verify(mockRental.stopAndFinalize()).once();
     });
   });
 });

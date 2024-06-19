@@ -64,8 +64,8 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
       .then((exe) => exe.run("echo Running on second rental"))
       .then((res) => console.log(res.stdout));
 
-    await rental1.finalize();
-    await rental2.finalize();
+    await rental1.stopAndFinalize();
+    await rental2.stopAndFinalize();
     await glm.payment.releaseAllocation(allocation);
   } catch (err) {
     console.error("Failed to run the example", err);

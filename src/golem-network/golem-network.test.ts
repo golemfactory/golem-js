@@ -73,7 +73,7 @@ describe("Golem Network", () => {
       const mockResourceRental = mock(ResourceRental);
       const mockResourceRentalInstance = instance(mockResourceRental);
 
-      when(mockResourceRental.finalize()).thenResolve();
+      when(mockResourceRental.stopAndFinalize()).thenResolve();
       when(mockRental.createResourceRental(_, _, _)).thenReturn(mockResourceRentalInstance);
 
       const draftProposal$ = new Subject<OfferProposal>();
@@ -93,7 +93,7 @@ describe("Golem Network", () => {
 
       await glm.disconnect();
 
-      verify(mockResourceRental.finalize()).once();
+      verify(mockResourceRental.stopAndFinalize()).once();
       verify(mockPayment.releaseAllocation(allocation)).once();
     });
     it("should not release the allocation if it was provided by the user", async () => {
@@ -101,7 +101,7 @@ describe("Golem Network", () => {
 
       const mockResourceRental = mock(ResourceRental);
       const mockResourceRentalInstance = instance(mockResourceRental);
-      when(mockResourceRental.finalize()).thenResolve();
+      when(mockResourceRental.stopAndFinalize()).thenResolve();
       when(mockRental.createResourceRental(_, _, _)).thenReturn(mockResourceRentalInstance);
 
       when(mockMarket.collectDraftOfferProposals(_)).thenReturn(new Subject<OfferProposal>());
@@ -121,7 +121,7 @@ describe("Golem Network", () => {
 
       await glm.disconnect();
 
-      verify(mockResourceRental.finalize()).once();
+      verify(mockResourceRental.stopAndFinalize()).once();
       verify(mockPayment.createAllocation(_)).never();
       verify(mockPayment.releaseAllocation(allocation)).never();
     });

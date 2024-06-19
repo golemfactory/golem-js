@@ -120,7 +120,7 @@
             .then(async (exe) =>
               appendResults("Reply: " + (await exe.run(`echo 'Hello Golem! 👋 from ${exe.provider.name}!'`)).stdout),
             );
-          await rental.finalize();
+          await rental.stopAndFinalize();
           appendResults("Finalized renting process");
         } catch (err) {
           console.error("Failed to run the example", err);

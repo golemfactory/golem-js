@@ -243,7 +243,7 @@ export class ResourceRentalPool {
     try {
       this.borrowed.delete(resourceRental);
       this.logger.debug("Destroying resource rental from the pool", { agreementId: resourceRental.agreement.id });
-      await Promise.all([resourceRental.finalize(), this.removeNetworkNode(resourceRental)]);
+      await Promise.all([resourceRental.stopAndFinalize(), this.removeNetworkNode(resourceRental)]);
       this.events.emit("destroyed", resourceRental.agreement);
     } catch (error) {
       this.events.emit(

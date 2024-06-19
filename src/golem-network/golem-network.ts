@@ -354,7 +354,7 @@ export class GolemNetwork {
    *  .getExeUnit()
    *  .then((exe) => exe.run("echo Hello, Golem! 👋"))
    *  .then((res) => console.log(res.stdout));
-   * await rental.finalize();
+   * await rental.stopAndFinalize();
    * ```
    *
    * @param order
@@ -402,7 +402,7 @@ export class GolemNetwork {
     this.cleanupTasks.push(async () => {
       // First finalize the rental (which will wait for all payments to be processed)
       // and only then release the allocation
-      await rental.finalize().catch((err) => this.logger.error("Error while finalizing rental", err));
+      await rental.stopAndFinalize().catch((err) => this.logger.error("Error while finalizing rental", err));
       if (order.network && networkNode) {
         await this.network
           .removeNetworkNode(order.network, networkNode)

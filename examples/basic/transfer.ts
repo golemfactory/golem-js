@@ -54,8 +54,8 @@ const order: MarketOrderSpec = {
     console.log("File content: ");
     console.log(await readFile("./results.txt", { encoding: "utf-8" }));
 
-    await rental1.finalize();
-    await rental2.finalize();
+    await rental1.stopAndFinalize();
+    await rental2.stopAndFinalize();
   } catch (err) {
     console.error("Failed to run the example", err);
   } finally {

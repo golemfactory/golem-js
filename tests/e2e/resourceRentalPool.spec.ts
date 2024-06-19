@@ -196,7 +196,7 @@ describe("ResourceRentalPool", () => {
     const exe = await resourceRental.getExeUnit();
     return new Promise(async (res) => {
       resourceRental.events.on("finalized", async () => res(true));
-      setTimeout(() => resourceRental.finalize(), 8_000);
+      setTimeout(() => resourceRental.stopAndFinalize(), 8_000);
       await expect(exe.run("sleep 10 && echo Hello World")).rejects.toThrow(
         new GolemAbortError("Execution of script has been aborted"),
       );

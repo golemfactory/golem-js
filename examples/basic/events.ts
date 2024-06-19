@@ -55,7 +55,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
       .then((exe) => exe.run("echo Hello, Golem! 👋"))
       .then((res) => console.log(res.stdout));
 
-    await rental.finalize();
+    await rental.stopAndFinalize();
   } catch (err) {
     console.error("Failed to run the example", err);
   } finally {

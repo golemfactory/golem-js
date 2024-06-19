@@ -50,7 +50,7 @@ const order: MarketOrderSpec = {
     remoteProcess.stderr.on("data", (data) => console.error("stderr>", data));
     await remoteProcess.waitForExit();
 
-    await rental.finalize();
+    await rental.stopAndFinalize();
   } catch (err) {
     console.error("Failed to run the example", err);
   } finally {

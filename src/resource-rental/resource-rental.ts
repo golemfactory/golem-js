@@ -49,10 +49,11 @@ export class ResourceRental {
   }
 
   /**
+   * Terminates the activity and agreement (stopping any ongoing work) and finalizes the payment process.
    * Resolves when the rental will be fully terminated and all pending business operations finalized.
    * If the rental is already finalized, it will resolve immediately.
    */
-  async finalize() {
+  async stopAndFinalize() {
     // Prevent this task from being performed more than once
     if (!this.finalizePromise) {
       this.finalizePromise = (async () => {

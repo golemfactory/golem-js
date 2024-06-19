@@ -138,7 +138,7 @@ export class Job<Output = unknown> {
     this.events.emit("started");
 
     const onAbort = async () => {
-      await rental.finalize();
+      await rental.stopAndFinalize();
       this.events.emit("canceled");
     };
 
