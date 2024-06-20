@@ -21,7 +21,7 @@ async function prepareDocAnchor(docsDir, type, file) {
 }
 
 (async () => {
-  const docsDir = process.argv[2] || "docs";
+  const docsDir = process.argv[2] || "api-reference";
   const directoryPath = path.join(__dirname, "..", docsDir);
   const logFilePath = path.join(process.argv[3] || docsDir, "overview.md");
   const logStream = fs.createWriteStream(logFilePath, { flags: "w" });
