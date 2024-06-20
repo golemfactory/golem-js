@@ -191,7 +191,7 @@ export class ResourceRentalPool {
   /**
    * Borrow a resource rental from the pool.
    * If there is no valid resource rental a new one will be created.
-   * @param signalOrTimeout - the timeout in milliseconds or an AbortSignal that will be used to cancel the lease request
+   * @param signalOrTimeout - the timeout in milliseconds or an AbortSignal that will be used to cancel the rental request
    */
   async acquire(signalOrTimeout?: number | AbortSignal): Promise<ResourceRental> {
     if (this.isDraining) {
@@ -369,11 +369,11 @@ export class ResourceRentalPool {
    *  // even if an error is thrown in the callback
    * });
    * ```
-   * @param callback - a function that takes a `lease` object as its argument. The lease is automatically released after the callback is executed, regardless of whether it completes successfully or throws an error.
-   * @param signalOrTimeout - the timeout in milliseconds or an AbortSignal that will be used to cancel the lease request
+   * @param callback - a function that takes a `rental` object as its argument. The renatl is automatically released after the callback is executed, regardless of whether it completes successfully or throws an error.
+   * @param signalOrTimeout - the timeout in milliseconds or an AbortSignal that will be used to cancel the rental request
    */
   public async withRental<T>(
-    callback: (lease: ResourceRental) => Promise<T>,
+    callback: (rental: ResourceRental) => Promise<T>,
     signalOrTimeout?: number | AbortSignal,
   ): Promise<T> {
     const rental = await this.acquire(signalOrTimeout);

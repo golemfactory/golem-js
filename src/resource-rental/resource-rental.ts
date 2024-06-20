@@ -62,7 +62,7 @@ export class ResourceRental {
           if (this.currentExeUnit) {
             await this.currentExeUnit.teardown();
           }
-          this.abortController.abort("The lease process is finalizing");
+          this.abortController.abort("The resource rental is finalizing");
           if (this.currentExeUnit?.activity) {
             await this.activityModule.destroyActivity(this.currentExeUnit.activity);
           }
@@ -96,7 +96,7 @@ export class ResourceRental {
    */
   async getExeUnit(): Promise<ExeUnit> {
     if (this.finalizePromise || this.abortController.signal.aborted) {
-      throw new GolemUserError("The lease process is not active. It may have been aborted or finalized");
+      throw new GolemUserError("The resource rental is not active. It may have been aborted or finalized");
     }
     if (this.currentExeUnit) {
       return this.currentExeUnit;
