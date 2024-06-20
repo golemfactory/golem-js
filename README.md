@@ -31,6 +31,7 @@
     - [Custom filters](#custom-filters)
     - [Custom ranking of proposals](#custom-ranking-of-proposals)
     - [Uploading local images to the provider](#uploading-local-images-to-the-provider)
+    - [Setup and teardown methods](#setup-and-teardown-methods)
   - [Going further](#going-further)
   - [More examples](#more-examples)
   - [Debugging](#debugging)
@@ -355,6 +356,29 @@ const order: MarketOrderSpec = {
 ```
 
 [Check the full example](./examples/advanced//local-image/)
+
+### Setup and teardown methods
+
+You can define a setup method that will be executed the first time a provider is rented and a teardown method
+that will be executed before the rental is done. This is useful when you want to avoid doing the same work
+multiple times when running multiple tasks on the same provider.
+
+```ts
+// I want to upload a big file to each provider only once
+const setup: LifecycleFunction = async (exe) => exe.uploadFile("./big-file.txt", "/golem/work/big-file.txt");
+
+// I want to remove the file after I'm done
+const teardown: LifecycleFunction = async (exe) => exe.run("rm /golem/work/big-file.txt");
+
+const pool = await glm.manyOf({
+  order,
+  concurrency,
+  setup,
+  teardown,
+});
+```
+
+[Check the full example](./examples/advanced/setup-and-teardown.ts)
 
 <!--
 TODO:
