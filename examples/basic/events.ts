@@ -36,16 +36,18 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
     });
 
     const rental = await glm.oneOf({
-      demand: {
-        workload: { imageTag: "golem/alpine:latest" },
-      },
-      market: {
-        rentHours: 0.5,
-        pricing: {
-          model: "linear",
-          maxStartPrice: 0.5,
-          maxCpuPerHourPrice: 1.0,
-          maxEnvPerHourPrice: 0.5,
+      order: {
+        demand: {
+          workload: { imageTag: "golem/alpine:latest" },
+        },
+        market: {
+          rentHours: 0.5,
+          pricing: {
+            model: "linear",
+            maxStartPrice: 0.5,
+            maxCpuPerHourPrice: 1.0,
+            maxEnvPerHourPrice: 0.5,
+          },
         },
       },
     });

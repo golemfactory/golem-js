@@ -11,8 +11,8 @@ export type ActivityEvents = {
   activityDestroyed: (activity: Activity) => void;
   errorDestroyingActivity: (activity: Activity, error: Error) => void;
 
-  workContextInitialized: (activity: Activity) => void;
-  errorInitializingWorkContext: (activity: Activity, error: Error) => void;
+  exeUnitInitialized: (activity: Activity) => void;
+  errorInitializingExeUnit: (activity: Activity, error: Error) => void;
 
   activityStateChanged: (activity: Activity, previousState: ActivityStateEnum) => void;
   errorRefreshingActivity: (activity: Activity, error: Error) => void;

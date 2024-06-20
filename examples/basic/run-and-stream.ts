@@ -30,7 +30,7 @@ const order: MarketOrderSpec = {
 
   try {
     await glm.connect();
-    const rental = await glm.oneOf(order);
+    const rental = await glm.oneOf({ order });
     const exe = await rental.getExeUnit();
 
     const remoteProcess = await exe.runAndStream(

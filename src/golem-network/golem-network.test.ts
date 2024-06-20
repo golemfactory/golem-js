@@ -87,7 +87,7 @@ describe("Golem Network", () => {
       const glm = getGolemNetwork();
       await glm.connect();
 
-      const rental = await glm.oneOf(order);
+      const rental = await glm.oneOf({ order });
 
       expect(rental).toBe(mockResourceRentalInstance);
 
@@ -111,9 +111,11 @@ describe("Golem Network", () => {
       await glm.connect();
 
       const rental = await glm.oneOf({
-        ...order,
-        payment: {
-          allocation,
+        order: {
+          ...order,
+          payment: {
+            allocation,
+          },
         },
       });
 

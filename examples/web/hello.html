@@ -114,7 +114,7 @@
           appendResults("Establishing a connection to the Golem Network");
           await glm.connect();
           appendResults("Request for renting a provider machine");
-          const rental = await glm.oneOf(order);
+          const rental = await glm.oneOf({ order });
           await rental
             .getExeUnit()
             .then(async (exe) =>

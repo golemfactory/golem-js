@@ -9,7 +9,7 @@ import {
   OfferProposal,
 } from "../market";
 import { Allocation, IPaymentApi, PaymentModule, PaymentModuleImpl, PaymentModuleOptions } from "../payment";
-import { ActivityModule, ActivityModuleImpl, IActivityApi, IFileServer } from "../activity";
+import { ActivityModule, ActivityModuleImpl, ExeUnitOptions, IActivityApi, IFileServer } from "../activity";
 import { INetworkApi, Network, NetworkModule, NetworkModuleImpl, NetworkOptions } from "../network";
 import { EventEmitter } from "eventemitter3";
 import {
@@ -141,9 +141,18 @@ export interface GolemNetworkEvents {
   disconnected: () => void;
 }
 
-export interface ManyOfOptions {
-  concurrency: Concurrency;
+export interface OneOfOptions {
   order: MarketOrderSpec;
+  signalOrTimeout?: number | AbortSignal;
+  setup?: ExeUnitOptions["setup"];
+  teardown?: ExeUnitOptions["teardown"];
+}
+
+export interface ManyOfOptions {
+  order: MarketOrderSpec;
+  concurrency: Concurrency;
+  setup?: ExeUnitOptions["setup"];
+  teardown?: ExeUnitOptions["teardown"];
 }
 
 /**
@@ -357,10 +366,13 @@ export class GolemNetwork {
    * await rental.stopAndFinalize();
    * ```
    *
-   * @param order
-   * @param signalOrTimeout - the timeout in milliseconds or an AbortSignal that will be used to cancel the lease request
+   * @param {Object} options
+   * @param options.order - represents the order specifications which will result in access to ResourceRental.
+   * @param options.signalOrTimeout - timeout in milliseconds or an AbortSignal that will be used to cancel the rental request
+   * @param options.setup - an optional function that is called as soon as the exe unit is ready
+   * @param options.teardown - an optional function that is called before the exe unit is destroyed
    */
-  async oneOf(order: MarketOrderSpec, signalOrTimeout?: number | AbortSignal): Promise<ResourceRental> {
+  async oneOf({ order, setup, teardown, signalOrTimeout }: OneOfOptions): Promise<ResourceRental> {
     const proposalPool = new DraftOfferProposalPool({
       logger: this.logger,
       validateProposal: order.market.proposalFilter,
@@ -394,6 +406,7 @@ export class GolemNetwork {
       payment: order.payment,
       activity: order.activity,
       networkNode,
+      exeUnit: { setup, teardown },
     });
 
     // We managed to create the activity, no need to look for more agreement candidates
@@ -453,9 +466,13 @@ export class GolemNetwork {
    * ]);
    * ```
    *
-   * @param options Demand specification and concurrency level
+   * @param @param {Object} options
+   * @param options.order - represents the order specifications which will result in access to LeaseProcess.
+   * @param options.concurrency - concurrency level, can be defined as a number or an object with min and max fields
+   * @param options.setup - an optional function that is called as soon as the exe unit is ready
+   * @param options.teardown - an optional function that is called before the exe unit is destroyed
    */
-  public async manyOf({ concurrency, order }: ManyOfOptions): Promise<ResourceRentalPool> {
+  public async manyOf({ concurrency, order, setup, teardown }: ManyOfOptions): Promise<ResourceRentalPool> {
     const proposalPool = new DraftOfferProposalPool({
       logger: this.logger,
       validateProposal: order.market.proposalFilter,
@@ -478,6 +495,7 @@ export class GolemNetwork {
       resourceRentalOptions: {
         activity: order.activity,
         payment: order.payment,
+        exeUnit: { setup, teardown },
       },
       agreementOptions: {
         expirationSec: order.market.rentHours * 60 * 60,

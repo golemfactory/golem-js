@@ -40,8 +40,8 @@ async function main() {
     console.log("Job ended event emitted");
   });
 
-  job.startWork(async (ctx) => {
-    return String((await ctx.run("echo -n 'Hello Golem!'")).stdout);
+  job.startWork(async (exe) => {
+    return String((await exe.run("echo -n 'Hello Golem!'")).stdout);
   });
 
   const result = await job.waitForResult();

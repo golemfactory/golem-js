@@ -2,7 +2,7 @@ import { Agreement } from "../market/agreement/agreement";
 import { AgreementPaymentProcess, PaymentProcessOptions } from "../payment/agreement_payment_process";
 import { Logger } from "../shared/utils";
 import { waitForCondition } from "../shared/utils/wait";
-import { ActivityModule, WorkContext } from "../activity";
+import { ActivityModule, ExeUnit, ExeUnitOptions } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { EventEmitter } from "eventemitter3";
 import { NetworkNode } from "../network";
@@ -18,6 +18,7 @@ export interface ResourceRentalEvents {
 }
 
 export interface ResourceRentalOptions {
+  exeUnit?: Pick<ExeUnitOptions, "setup" | "teardown" | "activityDeployingTimeout">;
   activity?: ExecutionOptions;
   payment?: Partial<PaymentProcessOptions>;
   networkNode?: NetworkNode;
@@ -30,7 +31,7 @@ export class ResourceRental {
   public readonly events = new EventEmitter<ResourceRentalEvents>();
   public readonly networkNode?: NetworkNode;
 
-  private currentWorkContext: WorkContext | null = null;
+  private currentExeUnit: ExeUnit | null = null;
   private abortController = new AbortController();
   private finalizePromise?: Promise<void>;
 
@@ -57,18 +58,22 @@ export class ResourceRental {
     // Prevent this task from being performed more than once
     if (!this.finalizePromise) {
       this.finalizePromise = (async () => {
-        this.abortController.abort("The lease process is finalizing");
-        if (this.paymentProcess.isFinished()) {
-          return;
-        }
         try {
-          this.logger.info("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
-          if (this.currentWorkContext) {
-            await this.activityModule.destroyActivity(this.currentWorkContext.activity);
+          if (this.currentExeUnit) {
+            await this.currentExeUnit.teardown();
+          }
+          this.abortController.abort("The resource rental is finalizing");
+          if (this.currentExeUnit?.activity) {
+            await this.activityModule.destroyActivity(this.currentExeUnit.activity);
           }
           if ((await this.fetchAgreementState()) !== "Terminated") {
             await this.marketModule.terminateAgreement(this.agreement);
           }
+          if (this.paymentProcess.isFinished()) {
+            return;
+          }
+
+          this.logger.info("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
           await waitForCondition(() => this.paymentProcess.isFinished());
           this.logger.info("Payment process for agreement finalized", { agreementId: this.agreement.id });
         } catch (error) {
@@ -83,35 +88,36 @@ export class ResourceRental {
   }
 
   public hasActivity(): boolean {
-    return this.currentWorkContext !== null;
+    return this.currentExeUnit !== null;
   }
 
   /**
-   * Creates an activity on the Provider, and returns a work context that can be used to operate within the activity
+   * Creates an activity on the Provider, and returns a exe-unit that can be used to operate within the activity
    */
-  async getExeUnit(): Promise<WorkContext> {
+  async getExeUnit(): Promise<ExeUnit> {
     if (this.finalizePromise || this.abortController.signal.aborted) {
-      throw new GolemUserError("The lease process is not active. It may have been aborted or finalized");
+      throw new GolemUserError("The resource rental is not active. It may have been aborted or finalized");
     }
-    if (this.currentWorkContext) {
-      return this.currentWorkContext;
+    if (this.currentExeUnit) {
+      return this.currentExeUnit;
     }
 
     const activity = await this.activityModule.createActivity(this.agreement);
-    this.currentWorkContext = await this.activityModule.createWorkContext(activity, {
+    this.currentExeUnit = await this.activityModule.createExeUnit(activity, {
       storageProvider: this.storageProvider,
       networkNode: this.resourceRentalOptions?.networkNode,
-      execution: { ...this.resourceRentalOptions?.activity },
+      executionOptions: this.resourceRentalOptions?.activity,
       signalOrTimeout: this.abortController.signal,
+      ...this.resourceRentalOptions?.exeUnit,
     });
 
-    return this.currentWorkContext;
+    return this.currentExeUnit;
   }
 
   async destroyExeUnit() {
-    if (this.currentWorkContext) {
-      await this.activityModule.destroyActivity(this.currentWorkContext.activity);
-      this.currentWorkContext = null;
+    if (this.currentExeUnit) {
+      await this.activityModule.destroyActivity(this.currentExeUnit.activity);
+      this.currentExeUnit = null;
     } else {
       throw new Error(`There is no activity to destroy.`);
     }

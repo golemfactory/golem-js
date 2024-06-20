@@ -33,7 +33,7 @@ const order: MarketOrderSpec = {
 
   try {
     await glm.connect();
-    const rental = await glm.oneOf(order);
+    const rental = await glm.oneOf({ order });
     await rental
       .getExeUnit()
       .then((exe) => exe.run(`echo [provider:${exe.provider.name}] Hello, Golem! 👋`))
