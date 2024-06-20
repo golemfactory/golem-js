@@ -52,20 +52,20 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
       },
     };
 
-    const lease1 = await glm.oneOf({ order: firstOrder });
-    const lease2 = await glm.oneOf({ order: secondOrder });
+    const rental1 = await glm.oneOf({ order: firstOrder });
+    const rental2 = await glm.oneOf({ order: secondOrder });
 
-    await lease1
+    await rental1
       .getExeUnit()
-      .then((exe) => exe.run("echo Running on first lease"))
+      .then((exe) => exe.run("echo Running on first rental"))
       .then((res) => console.log(res.stdout));
-    await lease2
+    await rental2
       .getExeUnit()
-      .then((exe) => exe.run("echo Running on second lease"))
+      .then((exe) => exe.run("echo Running on second rental"))
       .then((res) => console.log(res.stdout));
 
-    await lease1.finalize();
-    await lease2.finalize();
+    await rental1.stopAndFinalize();
+    await rental2.stopAndFinalize();
     await glm.payment.releaseAllocation(allocation);
   } catch (err) {
     console.error("Failed to run the example", err);

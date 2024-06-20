@@ -35,7 +35,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
       console.warn("Proposal rejected by provider", event);
     });
 
-    const lease = await glm.oneOf({
+    const rental = await glm.oneOf({
       order: {
         demand: {
           workload: { imageTag: "golem/alpine:latest" },
@@ -52,12 +52,12 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
       },
     });
 
-    await lease
+    await rental
       .getExeUnit()
       .then((exe) => exe.run("echo Hello, Golem! 👋"))
       .then((res) => console.log(res.stdout));
 
-    await lease.finalize();
+    await rental.stopAndFinalize();
   } catch (err) {
     console.error("Failed to run the example", err);
   } finally {

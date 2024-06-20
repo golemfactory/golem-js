@@ -14,12 +14,12 @@ import { INetworkApi, Network, NetworkModule, NetworkModuleImpl, NetworkOptions 
 import { EventEmitter } from "eventemitter3";
 import {
   Concurrency,
-  LeaseModule,
-  LeaseModuleImpl,
-  LeaseProcess,
-  LeaseProcessOptions,
-  LeaseProcessPool,
-} from "../lease-process";
+  RentalModule,
+  RentalModuleImpl,
+  ResourceRental,
+  ResourceRentalOptions,
+  ResourceRentalPool,
+} from "../resource-rental";
 import { DebitNoteRepository, InvoiceRepository, MarketApiAdapter, PaymentApiAdapter } from "../shared/yagna";
 import { ActivityApiAdapter } from "../shared/yagna/adapters/activity-api-adapter";
 import { ActivityRepository } from "../shared/yagna/repository/activity-repository";
@@ -106,7 +106,7 @@ export interface GolemNetworkOptions {
       payment: InstanceOrFactory<PaymentModule>;
       activity: InstanceOrFactory<ActivityModule>;
       network: InstanceOrFactory<NetworkModule>;
-      lease: InstanceOrFactory<LeaseModule>;
+      rental: InstanceOrFactory<RentalModule>;
     }
   >;
 }
@@ -120,13 +120,13 @@ type AllocationOptions = {
 };
 
 /**
- * Represents the order specifications which will result in access to LeaseProcess.
+ * Represents the order specifications which will result in access to ResourceRental.
  */
 export interface MarketOrderSpec {
   demand: BuildDemandOptions;
   market: MarketOptions;
-  activity?: LeaseProcessOptions["activity"];
-  payment?: LeaseProcessOptions["payment"] & AllocationOptions;
+  activity?: ResourceRentalOptions["activity"];
+  payment?: ResourceRentalOptions["payment"] & AllocationOptions;
   network?: Network;
 }
 
@@ -191,7 +191,7 @@ export class GolemNetwork {
   public readonly payment: PaymentModule;
   public readonly activity: ActivityModule;
   public readonly network: NetworkModule;
-  public readonly lease: LeaseModule;
+  public readonly rental: RentalModule;
 
   /**
    * Dependency Container
@@ -204,7 +204,7 @@ export class GolemNetwork {
 
   /**
    * List af additional tasks that should be executed when the network is being shut down
-   * (for example finalizing lease processes created with `oneOf`)
+   * (for example finalizing resource rental created with `oneOf`)
    */
   private readonly cleanupTasks: (() => Promise<void> | void)[] = [];
 
@@ -279,9 +279,9 @@ export class GolemNetwork {
       });
       this.payment = getFactory(PaymentModuleImpl, this.options.override?.payment)(this.services, this.options.payment);
       this.activity = getFactory(ActivityModuleImpl, this.options.override?.activity)(this.services);
-      this.lease = getFactory(
-        LeaseModuleImpl,
-        this.options.override?.lease,
+      this.rental = getFactory(
+        RentalModuleImpl,
+        this.options.override?.rental,
       )({
         activityModule: this.activity,
         paymentModule: this.payment,
@@ -358,12 +358,12 @@ export class GolemNetwork {
    *
    * @example
    * ```ts
-   * const lease = await glm.oneOf(demand);
-   * await lease
+   * const rental = await glm.oneOf(demand);
+   * await rental
    *  .getExeUnit()
    *  .then((exe) => exe.run("echo Hello, Golem! 👋"))
    *  .then((res) => console.log(res.stdout));
-   * await lease.finalize();
+   * await rental.stopAndFinalize();
    * ```
    *
    * @param {Object} options
@@ -372,7 +372,7 @@ export class GolemNetwork {
    * @param options.setup - an optional function that is called as soon as the exe unit is ready
    * @param options.teardown - an optional function that is called before the exe unit is destroyed
    */
-  async oneOf({ order, setup, teardown, signalOrTimeout }: OneOfOptions): Promise<LeaseProcess> {
+  async oneOf({ order, setup, teardown, signalOrTimeout }: OneOfOptions): Promise<ResourceRental> {
     const proposalPool = new DraftOfferProposalPool({
       logger: this.logger,
       validateProposal: order.market.proposalFilter,
@@ -402,7 +402,7 @@ export class GolemNetwork {
       ? await this.network.createNetworkNode(order.network, agreement.provider.id)
       : undefined;
 
-    const lease = this.lease.createLease(agreement, allocation, {
+    const rental = this.rental.createResourceRental(agreement, allocation, {
       payment: order.payment,
       activity: order.activity,
       networkNode,
@@ -413,9 +413,9 @@ export class GolemNetwork {
     proposalSubscription.unsubscribe();
 
     this.cleanupTasks.push(async () => {
-      // First finalize the lease (which will wait for all payments to be processed)
+      // First finalize the rental (which will wait for all payments to be processed)
       // and only then release the allocation
-      await lease.finalize().catch((err) => this.logger.error("Error while finalizing lease", err));
+      await rental.stopAndFinalize().catch((err) => this.logger.error("Error while finalizing rental", err));
       if (order.network && networkNode) {
         await this.network
           .removeNetworkNode(order.network, networkNode)
@@ -430,7 +430,7 @@ export class GolemNetwork {
         .catch((err) => this.logger.error("Error while releasing allocation", err));
     });
 
-    return lease;
+    return rental;
   }
 
   /**
@@ -439,26 +439,26 @@ export class GolemNetwork {
    *
    * @example
    * ```ts
-   * // create a pool that can grow up to 3 leases at the same time
+   * // create a pool that can grow up to 3 rentals at the same time
    * const pool = await glm.manyOf({
    *   concurrency: 3,
    *   demand
    * });
    * await Promise.allSettled([
-   *   pool.withLease(async (lease) =>
-   *     lease
+   *   pool.withRental(async (rental) =>
+   *     rental
    *       .getExeUnit()
    *       .then((exe) => exe.run("echo Hello, Golem from the first machine! 👋"))
    *       .then((res) => console.log(res.stdout)),
    *   ),
-   *   pool.withLease(async (lease) =>
-   *     lease
+   *   pool.withRental(async (rental) =>
+   *     rental
    *       .getExeUnit()
    *       .then((exe) => exe.run("echo Hello, Golem from the second machine! 👋"))
    *       .then((res) => console.log(res.stdout)),
    *   ),
-   *   pool.withLease(async (lease) =>
-   *     lease
+   *   pool.withRental(async (rental) =>
+   *     rental
    *       .getExeUnit()
    *       .then((exe) => exe.run("echo Hello, Golem from the third machine! 👋"))
    *       .then((res) => console.log(res.stdout)),
@@ -472,7 +472,7 @@ export class GolemNetwork {
    * @param options.setup - an optional function that is called as soon as the exe unit is ready
    * @param options.teardown - an optional function that is called before the exe unit is destroyed
    */
-  public async manyOf({ concurrency, order, setup, teardown }: ManyOfOptions): Promise<LeaseProcessPool> {
+  public async manyOf({ concurrency, order, setup, teardown }: ManyOfOptions): Promise<ResourceRentalPool> {
     const proposalPool = new DraftOfferProposalPool({
       logger: this.logger,
       validateProposal: order.market.proposalFilter,
@@ -489,10 +489,10 @@ export class GolemNetwork {
     });
     const subscription = proposalPool.readFrom(draftProposal$);
 
-    const leaseProcessPool = this.lease.createLeaseProcessPool(proposalPool, allocation, {
+    const resourceRentalPool = this.rental.createResourceRentalPool(proposalPool, allocation, {
       replicas: concurrency,
       network: order.network,
-      leaseProcessOptions: {
+      resourceRentalOptions: {
         activity: order.activity,
         payment: order.payment,
         exeUnit: { setup, teardown },
@@ -505,11 +505,11 @@ export class GolemNetwork {
       subscription.unsubscribe();
     });
     this.cleanupTasks.push(async () => {
-      // First drain the pool (which will wait for all leases to be paid for)
+      // First drain the pool (which will wait for all rentals to be paid for
       // and only then release the allocation
-      await leaseProcessPool
+      await resourceRentalPool
         .drainAndClear()
-        .catch((err) => this.logger.error("Error while draining lease process pool", err));
+        .catch((err) => this.logger.error("Error while draining resource rental pool", err));
       // Don't release the allocation if it was provided by the user
       if (order.payment?.allocation) {
         return;
@@ -519,7 +519,7 @@ export class GolemNetwork {
         .catch((err) => this.logger.error("Error while releasing allocation", err));
     });
 
-    return leaseProcessPool;
+    return resourceRentalPool;
   }
 
   isConnected() {

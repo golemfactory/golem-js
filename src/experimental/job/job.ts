@@ -134,13 +134,13 @@ export class Job<Output = unknown> {
       throw new GolemAbortError("Canceled");
     }
 
-    const lease = await this.glm.oneOf({ order: this.order });
+    const rental = await this.glm.oneOf({ order: this.order });
 
-    const exeUnit = await lease.getExeUnit();
+    const exeUnit = await rental.getExeUnit();
     this.events.emit("started");
 
     const onAbort = async () => {
-      await lease.finalize();
+      await rental.stopAndFinalize();
       this.events.emit("canceled");
     };
 

@@ -1,5 +1,5 @@
 /**
- * This example demonstrates how easily lease multiple machines at once.
+ * This example demonstrates how easily rent multiple machines at once.
  */
 
 import { GolemNetwork, MarketOrderSpec } from "@golem-sdk/golem-js";
@@ -29,26 +29,26 @@ const order: MarketOrderSpec = {
 
   try {
     await glm.connect();
-    // create a pool that can grow up to 3 leases at the same time
+    // create a pool that can grow up to 3 rentals at the same time
     const pool = await glm.manyOf({
       concurrency: 3,
       order,
     });
     await Promise.allSettled([
-      pool.withLease(async (lease) =>
-        lease
+      pool.withRental(async (rental) =>
+        rental
           .getExeUnit()
           .then((exe) => exe.run("echo Hello, Golem from the first machine! 👋"))
           .then((res) => console.log(res.stdout)),
       ),
-      pool.withLease(async (lease) =>
-        lease
+      pool.withRental(async (rental) =>
+        rental
           .getExeUnit()
           .then((exe) => exe.run("echo Hello, Golem from the second machine! 👋"))
           .then((res) => console.log(res.stdout)),
       ),
-      pool.withLease(async (lease) =>
-        lease
+      pool.withRental(async (rental) =>
+        rental
           .getExeUnit()
           .then((exe) => exe.run("echo Hello, Golem from the third machine! 👋"))
           .then((res) => console.log(res.stdout)),

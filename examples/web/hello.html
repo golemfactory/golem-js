@@ -113,15 +113,15 @@
         try {
           appendResults("Establishing a connection to the Golem Network");
           await glm.connect();
-          appendResults("Request for leasing a provider machine");
-          const lease = await glm.oneOf({ order });
-          await lease
+          appendResults("Request for renting a provider machine");
+          const rental = await glm.oneOf({ order });
+          await rental
             .getExeUnit()
             .then(async (exe) =>
               appendResults("Reply: " + (await exe.run(`echo 'Hello Golem! 👋 from ${exe.provider.name}!'`)).stdout),
             );
-          await lease.finalize();
-          appendResults("Finalized leasing process");
+          await rental.stopAndFinalize();
+          appendResults("Finalized renting process");
         } catch (err) {
           console.error("Failed to run the example", err);
         } finally {

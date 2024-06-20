@@ -243,7 +243,7 @@ export class MarketApiAdapter implements IMarketApi {
       if (typeof agreementId !== "string") {
         throw new GolemMarketError(
           `Unable to create agreement. Invalid response from the server`,
-          MarketErrorCode.LeaseProcessCreationFailed,
+          MarketErrorCode.ResourceRentalCreationFailed,
         );
       }
 
@@ -258,7 +258,7 @@ export class MarketApiAdapter implements IMarketApi {
       const message = getMessageFromApiError(error);
       throw new GolemMarketError(
         `Unable to create agreement ${message}`,
-        MarketErrorCode.LeaseProcessCreationFailed,
+        MarketErrorCode.ResourceRentalCreationFailed,
         error,
       );
     }
@@ -313,7 +313,7 @@ export class MarketApiAdapter implements IMarketApi {
       const message = getMessageFromApiError(error);
       throw new GolemMarketError(
         `Unable to terminate agreement ${agreement.id}. ${message}`,
-        MarketErrorCode.LeaseProcessTerminationFailed,
+        MarketErrorCode.ResourceRentalTerminationFailed,
         error,
       );
     }
