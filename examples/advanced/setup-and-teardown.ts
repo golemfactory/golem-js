@@ -8,8 +8,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 const order: MarketOrderSpec = {
   demand: {
     workload: {
-      // TODO: upload image to golem account
-      imageTag: "severyn/alpine-openssl:latest",
+      imageTag: "golem/examples-openssl:latest",
     },
   },
   market: {
