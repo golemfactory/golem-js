@@ -1,6 +1,5 @@
 import { Subscription } from "rxjs";
 import { Allocation, DraftOfferProposalPool, GolemAbortError, GolemNetwork } from "../../src";
-import { aborted } from "node:util";
 
 describe("ResourceRentalPool", () => {
   const glm = new GolemNetwork();

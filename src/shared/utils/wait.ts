@@ -37,13 +37,13 @@ export function waitForCondition(
     if (abortSignal.aborted) {
       return reject(abortError);
     }
-    abortSignal.addEventListener("abort", () => {
+    abortSignal.addEventListener("abort", () =>
       reject(
         abortSignal.reason.name === "TimeoutError"
           ? new GolemTimeoutError(`Waiting for a condition has been aborted due to a timeout`, abortSignal.reason)
           : abortError,
-      );
-    });
+      ),
+    );
   });
 
   return Promise.race([verify, wait]).finally(() => {
