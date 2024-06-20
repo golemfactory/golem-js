@@ -246,19 +246,21 @@ export class YagnaApi {
   private async stopPollingEvents() {
     this.logger.debug("Stopping polling events from Yagna");
 
+    const promises: Promise<void>[] = [];
     if (this.invoiceEventPoll) {
-      await this.invoiceEventPoll.cancel();
+      promises.push(this.invoiceEventPoll.cancel());
     }
 
     if (this.debitNoteEventsPoll) {
-      await this.debitNoteEventsPoll.cancel();
+      promises.push(this.debitNoteEventsPoll.cancel());
     }
 
     if (this.agreementEventsPoll) {
-      await this.agreementEventsPoll.cancel();
+      promises.push(this.agreementEventsPoll.cancel());
     }
+    await Promise.allSettled(promises);
 
-    this.logger.debug("Stopped polling events form Yagna");
+    this.logger.debug("Stopped polling events from Yagna");
   }
 
   private async assertSupportedVersion() {
@@ -272,7 +274,7 @@ export class YagnaApi {
 
     if (!normVersion) {
       throw new GolemPlatformError(
-        `Unreadable yana version '${version}'. Can't proceed without checking yagna version support status.`,
+        `Unreadable yagna version '${version}'. Can't proceed without checking yagna version support status.`,
       );
     }
 

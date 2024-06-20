@@ -71,11 +71,6 @@ export class PaymentApiAdapter implements IPaymentApi {
     return this.debitNoteRepo.getById(id);
   }
 
-  async disconnect() {
-    this.logger.debug("Disconnecting Payment API Adapter");
-    this.logger.debug("Payment API Adapter disconnected");
-  }
-
   async acceptInvoice(invoice: Invoice, allocation: Allocation, amount: string): Promise<Invoice> {
     try {
       await this.yagna.payment.acceptInvoice(invoice.id, {
