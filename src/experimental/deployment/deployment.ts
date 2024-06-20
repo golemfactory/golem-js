@@ -6,9 +6,9 @@ import { Network, NetworkModule, NetworkOptions } from "../../network";
 import { validateDeployment } from "./validate-deployment";
 import { DraftOfferProposalPool, MarketModule } from "../../market";
 import { PaymentModule } from "../../payment";
-import { CreateLeaseProcessPoolOptions } from "./builder";
+import { CreateResourceRentalPoolOptions } from "./builder";
 import { Subscription } from "rxjs";
-import { LeaseModule, LeaseProcessPool } from "../../lease-process";
+import { RentalModule, ResourceRentalPool } from "../../resource-rental";
 
 export enum DeploymentState {
   INITIAL = "INITIAL",
@@ -43,7 +43,7 @@ export interface DeploymentEvents {
 }
 
 export type DeploymentComponents = {
-  leaseProcessPools: { name: string; options: CreateLeaseProcessPoolOptions }[];
+  resourceRentalPools: { name: string; options: CreateResourceRentalPoolOptions }[];
   networks: { name: string; options: NetworkOptions }[];
 };
 
@@ -65,7 +65,7 @@ export class Deployment {
     {
       proposalPool: DraftOfferProposalPool;
       proposalSubscription: Subscription;
-      leaseProcessPool: LeaseProcessPool;
+      resourceRentalPool: ResourceRentalPool;
     }
   >();
 
@@ -76,7 +76,7 @@ export class Deployment {
     activity: ActivityModule;
     payment: PaymentModule;
     network: NetworkModule;
-    lease: LeaseModule;
+    rental: RentalModule;
   };
 
   constructor(
@@ -88,7 +88,7 @@ export class Deployment {
       activity: ActivityModule;
       payment: PaymentModule;
       network: NetworkModule;
-      lease: LeaseModule;
+      rental: RentalModule;
     },
   ) {
     validateDeployment(components);
@@ -129,8 +129,8 @@ export class Deployment {
     // Allocation is re-used for all demands so the expiration date should
     // be the equal to the longest expiration date of all demands
     const longestExpiration =
-      Math.max(...this.components.leaseProcessPools.map((pool) => pool.options.market.rentHours)) * 3600;
-    const totalBudget = this.components.leaseProcessPools.reduce(
+      Math.max(...this.components.resourceRentalPools.map((pool) => pool.options.market.rentHours)) * 3600;
+    const totalBudget = this.components.resourceRentalPools.reduce(
       (acc, pool) =>
         acc +
         this.modules.market.estimateBudget({
@@ -145,7 +145,7 @@ export class Deployment {
       expirationSec: longestExpiration,
     });
 
-    for (const pool of this.components.leaseProcessPools) {
+    for (const pool of this.components.resourceRentalPools) {
       const network = pool.options?.deployment?.network
         ? this.networks.get(pool.options?.deployment.network)
         : undefined;
@@ -165,10 +165,10 @@ export class Deployment {
 
       const proposalSubscription = proposalPool.readFrom(draftProposal$);
 
-      const leaseProcessPool = this.modules.lease.createLeaseProcessPool(proposalPool, allocation, {
+      const resourceRentalPool = this.modules.rental.createResourceRentalPool(proposalPool, allocation, {
         replicas: pool.options.deployment?.replicas,
         network,
-        leaseProcessOptions: {
+        resourceRentalOptions: {
           activity: pool.options?.activity,
           payment: pool.options?.payment,
         },
@@ -179,7 +179,7 @@ export class Deployment {
       this.pools.set(pool.name, {
         proposalPool,
         proposalSubscription,
-        leaseProcessPool,
+        resourceRentalPool,
       });
     }
 
@@ -200,7 +200,7 @@ export class Deployment {
       this.abortController.abort();
 
       const stopPools = Array.from(this.pools.values()).map((pool) =>
-        Promise.allSettled([pool.proposalSubscription.unsubscribe(), pool.leaseProcessPool.drainAndClear()]),
+        Promise.allSettled([pool.proposalSubscription.unsubscribe(), pool.resourceRentalPool.drainAndClear()]),
       );
       await Promise.allSettled(stopPools);
 
@@ -219,12 +219,12 @@ export class Deployment {
     this.events.emit("end");
   }
 
-  getLeaseProcessPool(name: string): LeaseProcessPool {
+  getResourceRentalPool(name: string): ResourceRentalPool {
     const pool = this.pools.get(name);
     if (!pool) {
-      throw new GolemUserError(`LeaseProcessPool ${name} not found`);
+      throw new GolemUserError(`ResourceRentalPool ${name} not found`);
     }
-    return pool.leaseProcessPool;
+    return pool.resourceRentalPool;
   }
 
   getNetwork(name: string): Network {
@@ -237,7 +237,7 @@ export class Deployment {
 
   private async waitForDeployment() {
     this.logger.info("Waiting for all components to be deployed...");
-    const readyPools = [...this.pools.values()].map((component) => component.leaseProcessPool.ready());
+    const readyPools = [...this.pools.values()].map((component) => component.resourceRentalPool.ready());
     await Promise.all(readyPools);
     this.logger.info("Components deployed and ready to use");
   }

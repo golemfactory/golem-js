@@ -10,25 +10,24 @@ import { ExecutionOptions } from "../activity/exe-script-executor";
 import { MarketModule } from "../market";
 import { GolemUserError } from "../shared/error/golem-error";
 
-export interface LeaseProcessEvents {
+export interface ResourceRentalEvents {
   /**
-   * Raised when the lease process is fully finalized
+   * Raised when the rental process is fully finalized
    */
   finalized: () => void;
 }
 
-export interface LeaseProcessOptions {
+export interface ResourceRentalOptions {
   activity?: ExecutionOptions;
   payment?: Partial<PaymentProcessOptions>;
   networkNode?: NetworkNode;
 }
 
 /**
- * Represents a set of use-cases for invoking commands
+ * Combines an agreement, activity, exe unit and payment process into a single high-level abstraction.
  */
-
-export class LeaseProcess {
-  public readonly events = new EventEmitter<LeaseProcessEvents>();
+export class ResourceRental {
+  public readonly events = new EventEmitter<ResourceRentalEvents>();
   public readonly networkNode?: NetworkNode;
 
   private currentWorkContext: WorkContext | null = null;
@@ -42,18 +41,19 @@ export class LeaseProcess {
     private readonly marketModule: MarketModule,
     private readonly activityModule: ActivityModule,
     private readonly logger: Logger,
-    private readonly leaseOptions?: LeaseProcessOptions,
+    private readonly resourceRentalOptions?: ResourceRentalOptions,
   ) {
-    this.networkNode = this.leaseOptions?.networkNode;
+    this.networkNode = this.resourceRentalOptions?.networkNode;
 
     // TODO: Listen to agreement events to know when it goes down due to provider closing it!
   }
 
   /**
-   * Resolves when the lease will be fully terminated and all pending business operations finalized.
-   * If the lease is already finalized, it will resolve immediately.
+   * Terminates the activity and agreement (stopping any ongoing work) and finalizes the payment process.
+   * Resolves when the rental will be fully terminated and all pending business operations finalized.
+   * If the rental is already finalized, it will resolve immediately.
    */
-  async finalize() {
+  async stopAndFinalize() {
     // Prevent this task from being performed more than once
     if (!this.finalizePromise) {
       this.finalizePromise = (async () => {
@@ -100,8 +100,8 @@ export class LeaseProcess {
     const activity = await this.activityModule.createActivity(this.agreement);
     this.currentWorkContext = await this.activityModule.createWorkContext(activity, {
       storageProvider: this.storageProvider,
-      networkNode: this.leaseOptions?.networkNode,
-      execution: { ...this.leaseOptions?.activity },
+      networkNode: this.resourceRentalOptions?.networkNode,
+      execution: { ...this.resourceRentalOptions?.activity },
       signalOrTimeout: this.abortController.signal,
     });
 

@@ -35,12 +35,12 @@ const order: MarketOrderSpec = {
 
   try {
     await glm.connect();
-    const lease = await glm.oneOf(order);
-    await lease
+    const rental = await glm.oneOf(order);
+    await rental
       .getExeUnit()
       .then((exe) => exe.run(`echo [provider:${exe.provider.name}] Hello, Golem! 👋`))
       .then((res) => console.log(res.stdout));
-    await lease.finalize();
+    await rental.stopAndFinalize();
   } catch (err) {
     console.error("Failed to run the example", err);
   } finally {

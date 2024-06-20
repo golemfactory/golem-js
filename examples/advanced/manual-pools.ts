@@ -55,29 +55,29 @@ const demandOptions = {
       market: glm.market,
       activity: glm.activity,
       payment: glm.payment,
-      lease: glm.lease,
+      rental: glm.rental,
     };
 
-    const pool = depModules.lease.createLeaseProcessPool(proposalPool, allocation, {
+    const pool = depModules.rental.createResourceRentalPool(proposalPool, allocation, {
       replicas: { max: CONCURRENCY },
     });
 
-    const lease = await pool.acquire();
-    const lease2 = await pool.acquire();
+    const rental1 = await pool.acquire();
+    const rental2 = await pool.acquire();
 
     await Promise.allSettled([
-      lease
+      rental1
         .getExeUnit()
         .then((exe) => exe.run("echo Hello from first activity 👋"))
         .then((result) => console.log(result.stdout)),
-      lease2
+      rental2
         .getExeUnit()
         .then((exe) => exe.run("echo Hello from second activity 👋"))
         .then((result) => console.log(result.stdout)),
     ]);
 
-    await pool.release(lease);
-    await pool.release(lease2);
+    await pool.release(rental1);
+    await pool.release(rental2);
 
     proposalSubscription.unsubscribe();
     await pool.drainAndClear();

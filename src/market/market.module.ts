@@ -40,7 +40,7 @@ import { GolemAbortError, GolemTimeoutError, GolemUserError } from "../shared/er
 import { MarketOrderSpec } from "../golem-network";
 import { INetworkApi, NetworkModule } from "../network";
 import { AgreementOptions } from "./agreement/agreement";
-import { Concurrency } from "../lease-process";
+import { Concurrency } from "../resource-rental";
 
 export type DemandEngine = "vm" | "vm-nvidia" | "wasmtime";
 
