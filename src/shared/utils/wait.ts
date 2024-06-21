@@ -1,11 +1,12 @@
 import { GolemAbortError, GolemTimeoutError } from "../error/golem-error";
+import { createAbortSignalFromTimeout } from "./abortSignal";
 
 /**
  * Utility function that helps to block the execution until a condition is met (check returns true) or the timeout happens.
  *
  * @param {function} check - The function checking if the condition is met.
  * @param {Object} [opts] - Options controlling the timeout and check interval in seconds.
- * @param {number} [opts.signalOrTimeout=30] - The timeout value in seconds or AbortSignal.
+ * @param {number} [opts.signalOrTimeout=30_000] - The timeout value in miliseconds or AbortSignal.
  * @param {number} [opts.intervalSeconds=1] - The interval between condition checks in seconds.
  *
  * @return {Promise<void>} - Resolves when the condition is met or rejects with a timeout error if it wasn't met on time.
@@ -14,13 +15,7 @@ export function waitForCondition(
   check: () => boolean | Promise<boolean>,
   opts?: { signalOrTimeout?: number | AbortSignal; intervalSeconds?: number },
 ): Promise<void> {
-  const DEFAULT_TIMEOUT_SECONDS = 30;
-  const abortSignal =
-    opts?.signalOrTimeout instanceof AbortSignal
-      ? opts.signalOrTimeout
-      : AbortSignal.timeout(
-          typeof opts?.signalOrTimeout === "number" ? opts.signalOrTimeout * 1000 : DEFAULT_TIMEOUT_SECONDS * 1000,
-        );
+  const abortSignal = createAbortSignalFromTimeout(opts?.signalOrTimeout ?? 30_000);
   const intervalSeconds = opts?.intervalSeconds ?? 1;
   let verifyInterval: NodeJS.Timeout | undefined;
 

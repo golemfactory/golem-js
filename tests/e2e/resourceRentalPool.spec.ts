@@ -225,7 +225,7 @@ describe("ResourceRentalPool", () => {
     const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { replicas: 1 });
     const rental = await pool.acquire();
     await expect(rental.stopAndFinalize(10)).rejects.toThrow(
-      new GolemAbortError("The finalization of payment process has been aborted due to a timeout (10ms)"),
+      new GolemAbortError("The finalization of payment process has been aborted due to a timeout"),
     );
   });
 
