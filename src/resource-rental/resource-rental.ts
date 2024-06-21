@@ -49,41 +49,45 @@ export class ResourceRental {
     // TODO: Listen to agreement events to know when it goes down due to provider closing it!
   }
 
+  private async startStopAndFinalize() {
+    try {
+      if (this.currentExeUnit) {
+        await this.currentExeUnit.teardown();
+      }
+      this.abortController.abort("The resource rental is finalizing");
+      if (this.currentExeUnit?.activity) {
+        await this.activityModule.destroyActivity(this.currentExeUnit.activity);
+      }
+      if ((await this.fetchAgreementState()) !== "Terminated") {
+        await this.marketModule.terminateAgreement(this.agreement);
+      }
+      if (this.paymentProcess.isFinished()) {
+        return;
+      }
+
+      this.logger.info("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
+      await waitForCondition(() => this.paymentProcess.isFinished());
+      this.logger.info("Payment process for agreement finalized", { agreementId: this.agreement.id });
+    } catch (error) {
+      this.logger.error("Payment process finalization failed", { agreementId: this.agreement.id, error });
+      throw error;
+    } finally {
+      this.events.emit("finalized");
+    }
+  }
+
   /**
    * Terminates the activity and agreement (stopping any ongoing work) and finalizes the payment process.
    * Resolves when the rental will be fully terminated and all pending business operations finalized.
    * If the rental is already finalized, it will resolve immediately.
    */
   async stopAndFinalize() {
-    // Prevent this task from being performed more than once
-    if (!this.finalizePromise) {
-      this.finalizePromise = (async () => {
-        try {
-          if (this.currentExeUnit) {
-            await this.currentExeUnit.teardown();
-          }
-          this.abortController.abort("The resource rental is finalizing");
-          if (this.currentExeUnit?.activity) {
-            await this.activityModule.destroyActivity(this.currentExeUnit.activity);
-          }
-          if ((await this.fetchAgreementState()) !== "Terminated") {
-            await this.marketModule.terminateAgreement(this.agreement);
-          }
-          if (this.paymentProcess.isFinished()) {
-            return;
-          }
-
-          this.logger.info("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
-          await waitForCondition(() => this.paymentProcess.isFinished());
-          this.logger.info("Payment process for agreement finalized", { agreementId: this.agreement.id });
-        } catch (error) {
-          this.logger.error("Payment process finalization failed", { agreementId: this.agreement.id, error });
-          throw error;
-        } finally {
-          this.events.emit("finalized");
-        }
-      })();
+    if (this.finalizePromise) {
+      return this.finalizePromise;
     }
+    this.finalizePromise = this.startStopAndFinalize().finally(() => {
+      this.finalizePromise = undefined;
+    });
     return this.finalizePromise;
   }
 

@@ -362,5 +362,19 @@ describe("ResourceRentalPool", () => {
       expect(pool["destroy"]).toHaveBeenCalledWith(rental2);
       expect(pool["destroy"]).toHaveBeenCalledWith(rental3);
     });
+    it("reuses the same promise if called multiple times", async () => {
+      const pool = getRentalPool({ max: 3 });
+      const poolSpy = spy(pool);
+      when(poolSpy["startDrain"]()).thenResolve();
+
+      expect(pool["drainPromise"]).toBeUndefined();
+      const drainPromise1 = pool.drainAndClear();
+      const drainPromise2 = pool.drainAndClear();
+      const drainPromise3 = pool.drainAndClear();
+      expect(pool["drainPromise"]).toBeDefined();
+      await Promise.all([drainPromise1, drainPromise2, drainPromise3]);
+      verify(poolSpy["startDrain"]()).once();
+      expect(pool["drainPromise"]).toBeUndefined();
+    });
   });
 });

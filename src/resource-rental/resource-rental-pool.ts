@@ -59,8 +59,9 @@ export class ResourceRentalPool {
    * Queue of functions that are waiting for a lease process to be available
    */
   private acquireQueue: Array<(rental: ResourceRental) => void> = [];
-  private isDraining = false;
   private logger: Logger;
+
+  private drainPromise?: Promise<void>;
 
   private allocation: Allocation;
   private network?: Network;
@@ -258,6 +259,28 @@ export class ResourceRentalPool {
     }
   }
 
+  private get isDraining(): boolean {
+    return !!this.drainPromise;
+  }
+
+  private async startDrain() {
+    try {
+      this.acquireQueue = [];
+      const allResourceRentals = Array.from(this.borrowed)
+        .concat(Array.from(this.lowPriority))
+        .concat(Array.from(this.highPriority));
+      await Promise.allSettled(allResourceRentals.map((resourceRental) => this.destroy(resourceRental)));
+      this.lowPriority.clear();
+      this.highPriority.clear();
+      this.borrowed.clear();
+    } catch (error) {
+      this.logger.error("Draining the pool failed", error);
+      throw error;
+    } finally {
+      this.events.emit("end");
+    }
+  }
+
   /**
    * Sets the pool into draining mode and then clears it
    *
@@ -266,20 +289,14 @@ export class ResourceRentalPool {
    * @return Resolves when all agreements are terminated
    */
   async drainAndClear() {
-    this.isDraining = true;
-    this.acquireQueue = [];
-    const allResourceRentals = Array.from(this.borrowed)
-      .concat(Array.from(this.lowPriority))
-      .concat(Array.from(this.highPriority));
-    await Promise.allSettled(allResourceRentals.map((resourceRental) => this.destroy(resourceRental)));
-    this.lowPriority.clear();
-    this.highPriority.clear();
-    this.borrowed.clear();
-    this.isDraining = false;
-    this.events.emit("end");
-    return;
+    if (this.isDraining) {
+      return this.drainPromise;
+    }
+    this.drainPromise = this.startDrain().finally(() => {
+      this.drainPromise = undefined;
+    });
+    return this.drainPromise;
   }
-
   /**
    * Total size (available + borrowed)
    */

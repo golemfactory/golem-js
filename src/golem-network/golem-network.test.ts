@@ -8,7 +8,7 @@ import { YagnaApi } from "../shared/utils";
 import { MarketApiAdapter, PaymentApiAdapter } from "../shared/yagna";
 import { ActivityApiAdapter } from "../shared/yagna/adapters/activity-api-adapter";
 import { GolemNetwork, MarketOrderSpec } from "./golem-network";
-import { _, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
+import { _, instance, mock, reset, spy, verify, when } from "@johanblumenberg/ts-mockito";
 import { GftpStorageProvider } from "../shared/storage";
 
 const order: MarketOrderSpec = Object.freeze({
@@ -185,6 +185,21 @@ describe("Golem Network", () => {
       verify(mockRentalPool.drainAndClear()).once();
       verify(mockPayment.createAllocation(_)).never();
       verify(mockPayment.releaseAllocation(allocation)).never();
+    });
+  });
+  describe("disconnect()", () => {
+    it("reuses the same promise if called multiple times", async () => {
+      const glm = getGolemNetwork();
+      const glmSpy = spy(glm);
+      when(glmSpy["startDisconnect"]()).thenResolve();
+      expect(glm["disconnectPromise"]).toBeUndefined();
+      const promise1 = glm.disconnect();
+      const promise2 = glm.disconnect();
+      const promise3 = glm.disconnect();
+      expect(glm["disconnectPromise"]).toBeDefined();
+      await Promise.all([promise1, promise2, promise3]);
+      verify(glmSpy["startDisconnect"]()).once();
+      expect(glm["disconnectPromise"]).toBeUndefined();
     });
   });
 });

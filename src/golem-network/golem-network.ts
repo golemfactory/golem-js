@@ -199,6 +199,7 @@ export class GolemNetwork {
   public readonly services: GolemServices;
 
   private hasConnection = false;
+  private disconnectPromise: Promise<void> | undefined;
 
   private readonly storageProvider: StorageProvider;
 
@@ -314,20 +315,35 @@ export class GolemNetwork {
     }
   }
 
+  private async startDisconnect() {
+    try {
+      await Promise.allSettled(this.cleanupTasks.map((task) => task()));
+      await this.storageProvider.close();
+      await this.yagna.disconnect();
+
+      this.services.proposalCache.flushAll();
+    } catch (err) {
+      this.logger.error("Error while disconnecting", err);
+      throw err;
+    } finally {
+      this.events.emit("disconnected");
+      this.hasConnection = false;
+    }
+  }
+
   /**
    * "Disconnects" from the Golem Network
    *
    * @return Resolves when all shutdown steps are completed
    */
   async disconnect() {
-    await Promise.allSettled(this.cleanupTasks.map((task) => task()));
-    await this.storageProvider.close();
-    await this.yagna.disconnect();
-
-    this.services.proposalCache.flushAll();
-
-    this.events.emit("disconnected");
-    this.hasConnection = false;
+    if (this.disconnectPromise) {
+      return this.disconnectPromise;
+    }
+    this.disconnectPromise = this.startDisconnect().finally(() => {
+      this.disconnectPromise = undefined;
+    });
+    return this.disconnectPromise;
   }
 
   private async getAllocationFromOrder({
