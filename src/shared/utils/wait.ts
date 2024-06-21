@@ -12,8 +12,10 @@ import { GolemTimeoutError } from "../error/golem-error";
  */
 export function waitForCondition(
   check: () => boolean | Promise<boolean>,
-  opts = { timeoutSeconds: 30, intervalSeconds: 1 },
+  opts?: { timeoutSeconds?: number; intervalSeconds?: number },
 ): Promise<void> {
+  const timeoutSeconds = opts?.timeoutSeconds ?? 30;
+  const intervalSeconds = opts?.intervalSeconds ?? 1;
   let verifyInterval: NodeJS.Timeout | undefined;
   let waitTimeout: NodeJS.Timeout | undefined;
 
@@ -22,13 +24,13 @@ export function waitForCondition(
       if (await check()) {
         resolve();
       }
-    }, opts.intervalSeconds * 1000);
+    }, intervalSeconds * 1000);
   });
 
   const wait = new Promise<void>((_, reject) => {
     waitTimeout = setTimeout(() => {
-      reject(new GolemTimeoutError(`Condition was not met within ${opts.timeoutSeconds}s`));
-    }, opts.timeoutSeconds * 1000);
+      reject(new GolemTimeoutError(`Condition was not met within ${timeoutSeconds}s`));
+    }, timeoutSeconds * 1000);
   });
 
   return Promise.race([verify, wait]).finally(() => {

@@ -84,7 +84,7 @@ describe("Yagna Utils", () => {
 
         await expect(() => y.connect()).rejects.toMatchError(
           new GolemPlatformError(
-            `Unreadable yana version 'broken'. Can't proceed without checking yagna version support status.`,
+            `Unreadable yagna version 'broken'. Can't proceed without checking yagna version support status.`,
           ),
         );
       });
