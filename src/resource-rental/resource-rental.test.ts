@@ -1,4 +1,4 @@
-import { imock, instance, mock, reset, spy, when, verify } from "@johanblumenberg/ts-mockito";
+import { imock, instance, mock, reset, spy, when, verify, _ } from "@johanblumenberg/ts-mockito";
 import { Agreement, MarketModule } from "../market";
 import { StorageProvider } from "../shared/storage";
 import { AgreementPaymentProcess } from "../payment/agreement_payment_process";
@@ -40,7 +40,7 @@ describe("ResourceRental", () => {
   describe("stopAndFinalize", () => {
     it("reuses the same promise if called multiple times", async () => {
       const rentalSpy = spy(resourceRental);
-      when(rentalSpy["startStopAndFinalize"]()).thenResolve();
+      when(rentalSpy["startStopAndFinalize"](_)).thenResolve();
       expect(resourceRental["finalizePromise"]).toBeUndefined();
       const promise1 = resourceRental.stopAndFinalize();
       const promise2 = resourceRental.stopAndFinalize();

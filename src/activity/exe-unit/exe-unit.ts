@@ -25,10 +25,6 @@ import { ExecutionOptions, ExeScriptExecutor } from "../exe-script-executor";
 
 export type LifecycleFunction = (exe: ExeUnit) => Promise<void>;
 
-const DEFAULTS = {
-  activityDeployingTimeout: 300_000,
-};
-
 export interface ExeUnitOptions {
   activityDeployingTimeout?: number;
   storageProvider?: StorageProvider;
@@ -60,8 +56,6 @@ export interface ActivityDTO {
  * Groups most common operations that the requestors might need to implement their workflows
  */
 export class ExeUnit {
-  private readonly activityDeployingTimeout: number;
-
   public readonly provider: ProviderInfo;
   private readonly logger: Logger;
   private readonly storageProvider: StorageProvider;
@@ -76,8 +70,6 @@ export class ExeUnit {
     public readonly activityModule: ActivityModule,
     private options?: ExeUnitOptions,
   ) {
-    this.activityDeployingTimeout = options?.activityDeployingTimeout || DEFAULTS.activityDeployingTimeout;
-
     this.logger = options?.logger ?? defaultLogger("work");
     this.provider = activity.provider;
     this.storageProvider = options?.storageProvider ?? new NullStorageProvider();
@@ -163,60 +155,25 @@ export class ExeUnit {
   }
 
   private async deployActivity() {
-    const result = await this.executor
-      .execute(
+    try {
+      const result = await this.executor.execute(
         new Script([new Deploy(this.networkNode?.getNetworkConfig?.()), new Start()]).getExeScriptRequest(),
-        undefined,
-        this.activityDeployingTimeout,
-      )
-      .catch((e) => {
-        throw new GolemWorkError(
-          `Unable to deploy activity. ${e}`,
-          WorkErrorCode.ActivityDeploymentFailed,
-          this.activity.agreement,
-          this.activity,
-          this.activity.provider,
-          e,
-        );
-      });
-
-    let timeoutId: NodeJS.Timeout;
-
-    await Promise.race([
-      new Promise(
-        (res, rej) =>
-          (timeoutId = setTimeout(
-            () => rej(new GolemTimeoutError("Deploing activity has been aborted due to a timeout")),
-            this.activityDeployingTimeout,
-          )),
-      ),
-      (async () => {
-        for await (const res of result) {
-          if (res.result === "Error")
-            throw new GolemWorkError(
-              `Deploing activity failed. Error: ${res.message}`,
-              WorkErrorCode.ActivityDeploymentFailed,
-              this.activity.agreement,
-              this.activity,
-              this.activity.provider,
-            );
+      );
+      for await (const res of result) {
+        if (res.result === "Error") {
+          throw new Error(res.message);
         }
-      })(),
-    ])
-      .catch((error) => {
-        if (error instanceof GolemWorkError) {
-          throw error;
-        }
-        throw new GolemWorkError(
-          `Deploing activity failed. Error: ${error.toString()}`,
-          WorkErrorCode.ActivityDeploymentFailed,
-          this.activity.agreement,
-          this.activity,
-          this.activity.provider,
-          error,
-        );
-      })
-      .finally(() => clearTimeout(timeoutId));
+      }
+    } catch (error) {
+      throw new GolemWorkError(
+        `Unable to deploy activity. ${error}`,
+        WorkErrorCode.ActivityDeploymentFailed,
+        this.activity.agreement,
+        this.activity,
+        this.activity.provider,
+        error,
+      );
+    }
   }
 
   private async setupActivity() {
