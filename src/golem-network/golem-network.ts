@@ -322,7 +322,6 @@ export class GolemNetwork {
   async disconnect() {
     await Promise.allSettled(this.cleanupTasks.map((task) => task()));
     await this.storageProvider.close();
-    await this.services.paymentApi.disconnect();
     await this.yagna.disconnect();
 
     this.services.proposalCache.flushAll();

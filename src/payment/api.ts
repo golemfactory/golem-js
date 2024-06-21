@@ -34,9 +34,6 @@ export interface IPaymentApi {
   /** Starts the reader logic */
   connect(): Promise<void>;
 
-  /** Terminates the reader logic */
-  disconnect(): Promise<void>;
-
   getInvoice(id: string): Promise<Invoice>;
 
   acceptInvoice(invoice: Invoice, allocation: Allocation, amount: string): Promise<Invoice>;
