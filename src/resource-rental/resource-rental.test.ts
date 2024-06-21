@@ -47,7 +47,7 @@ describe("ResourceRental", () => {
       const promise3 = resourceRental.stopAndFinalize();
       expect(resourceRental["finalizePromise"]).toBeDefined();
       await Promise.all([promise1, promise2, promise3]);
-      verify(rentalSpy["startStopAndFinalize"]()).once();
+      verify(rentalSpy["startStopAndFinalize"](_)).once();
       expect(resourceRental["finalizePromise"]).toBeUndefined();
     });
   });
