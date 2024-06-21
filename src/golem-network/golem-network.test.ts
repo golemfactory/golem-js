@@ -4,7 +4,7 @@ import { RentalModuleImpl, ResourceRental, ResourceRentalPool } from "../resourc
 import { DraftOfferProposalPool, MarketModuleImpl, OfferProposal } from "../market";
 import { NetworkModuleImpl } from "../network";
 import { Allocation, PaymentModuleImpl } from "../payment";
-import { YagnaApi } from "../shared/utils";
+import { YagnaApi, sleep } from "../shared/utils";
 import { MarketApiAdapter, PaymentApiAdapter } from "../shared/yagna";
 import { ActivityApiAdapter } from "../shared/yagna/adapters/activity-api-adapter";
 import { GolemNetwork, MarketOrderSpec } from "./golem-network";
@@ -190,6 +190,7 @@ describe("Golem Network", () => {
   describe("disconnect()", () => {
     it("reuses the same promise if called multiple times", async () => {
       const glm = getGolemNetwork();
+      await glm.connect();
       const glmSpy = spy(glm);
       when(glmSpy["startDisconnect"]()).thenResolve();
       expect(glm["disconnectPromise"]).toBeUndefined();
@@ -200,6 +201,60 @@ describe("Golem Network", () => {
       await Promise.all([promise1, promise2, promise3]);
       verify(glmSpy["startDisconnect"]()).once();
       expect(glm["disconnectPromise"]).toBeUndefined();
+    });
+    it("stops any oneOf() rentals that are in the process of being created", async () => {
+      const allocation = instance(mock(Allocation));
+      when(mockPayment.createAllocation(_)).thenResolve(allocation);
+      when(mockPayment.releaseAllocation(allocation)).thenResolve();
+
+      // simulate some operation taking a long time
+      when(mockPayment.createAllocation(_)).thenCall(async () => {
+        await sleep(100, true);
+        return allocation;
+      });
+
+      const glm = getGolemNetwork();
+      await glm.connect();
+
+      expect.assertions(1);
+      const rentalPromise = glm
+        .oneOf({ order })
+        .then(() => {
+          throw new Error("Rental should not be created");
+        })
+        .catch((err) => {
+          expect(err).toBe("Golem Network is disconnecting");
+        });
+      await glm.disconnect();
+      await rentalPromise;
+      verify(mockPayment.releaseAllocation(allocation)).once();
+    });
+    it("stops any manyOf() rentals that are in the process of being created", async () => {
+      const allocation = instance(mock(Allocation));
+      when(mockPayment.createAllocation(_)).thenResolve(allocation);
+      when(mockPayment.releaseAllocation(allocation)).thenResolve();
+
+      // simulate some operation taking a long time
+      when(mockPayment.createAllocation(_)).thenCall(async () => {
+        await sleep(100, true);
+        return allocation;
+      });
+
+      const glm = getGolemNetwork();
+      await glm.connect();
+
+      expect.assertions(1);
+      const rentalPromise = glm
+        .manyOf({ concurrency: 3, order })
+        .then(() => {
+          throw new Error("Pool should not be created");
+        })
+        .catch((err) => {
+          expect(err).toBe("Golem Network is disconnecting");
+        });
+      await glm.disconnect();
+      await rentalPromise;
+      verify(mockPayment.releaseAllocation(allocation)).once();
     });
   });
 });

@@ -1,4 +1,4 @@
-import type { Agreement } from "../market/agreement/agreement";
+import { Agreement } from "../market/agreement/agreement";
 import { _, imock, instance, mock, reset, spy, verify, when } from "@johanblumenberg/ts-mockito";
 import { ResourceRental } from "./resource-rental";
 import { Allocation } from "../payment";
@@ -80,22 +80,18 @@ describe("ResourceRentalPool", () => {
     });
     it("stops retrying after abort signal is triggered", async () => {
       const pool = getRentalPool({ min: 3 });
-      pool["createNewResourceRental"] = jest
-        .fn(
-          () =>
-            new Promise<ResourceRental | never>((_, reject) =>
-              setTimeout(() => reject(new Error("Failed to propose agreement")), 50),
-            ),
-        )
-        // the first call will succeed, the rest will fail (fall back to the first implementation)
-        .mockImplementationOnce(() => new Promise((resolve) => setTimeout(() => resolve(getMockResourceRental()), 50)));
-
-      await expect(pool.ready(AbortSignal.timeout(60))).rejects.toThrow(
+      const poolSpy = spy(pool);
+      // first call will succeed, the rest will fail (fall back to the first implementation)
+      when(poolSpy["createNewResourceRental"]())
+        .thenCall(() => new Promise((resolve) => setTimeout(() => resolve(getMockResourceRental()), 10)))
+        .thenCall(
+          () => new Promise((_, reject) => setTimeout(() => reject(new Error("Failed to propose agreement")), 10)),
+        );
+      await expect(pool.ready(AbortSignal.timeout(100))).rejects.toThrow(
         "Could not create enough resource rentals to reach the minimum pool size in time",
       );
-      expect(pool.getAvailableSize()).toBe(1);
-      // first loop 3 times, then 2 times
-      expect(pool["createNewResourceRental"]).toHaveBeenCalledTimes(5);
+      // at least the first iteration was finished (with 1 rental created) and the second one was started
+      verify(poolSpy["createNewResourceRental"](_)).atLeast(5);
     });
     it("stops retrying after specified timeout is reached", async () => {
       const pool = getRentalPool({ min: 3 });
@@ -108,7 +104,7 @@ describe("ResourceRentalPool", () => {
         "Could not create enough resource rentals to reach the minimum pool size in time",
       );
       expect(pool.getAvailableSize()).toBe(1);
-      verify(poolSpy["createNewResourceRental"]()).atLeast(3);
+      verify(poolSpy["createNewResourceRental"](_)).atLeast(3);
     });
   });
   describe("acquire()", () => {
@@ -375,6 +371,34 @@ describe("ResourceRentalPool", () => {
       await Promise.all([drainPromise1, drainPromise2, drainPromise3]);
       verify(poolSpy["startDrain"]()).once();
       expect(pool["drainPromise"]).toBeUndefined();
+    });
+    it("stops rentals that are in the process of being signed", async () => {
+      const pool = getRentalPool({ max: 3 });
+      const mockAgreement = mock(Agreement);
+      const agreement = instance(mockAgreement);
+
+      // simulate signing process taking a long time
+      when(marketModule.signAgreementFromPool(_, _, _)).thenCall((_1, _2, signal: AbortSignal) => {
+        return new Promise((resolve, reject) => {
+          signal.throwIfAborted();
+          signal.addEventListener("abort", () => reject(signal.reason));
+          setTimeout(() => resolve(agreement), 1000);
+        });
+      });
+
+      expect.assertions(3);
+      const acquirePromise = pool
+        .acquire()
+        .then(() => {
+          throw new Error("Acquire resolved even though it should have been rejected");
+        })
+        .catch((error) => {
+          expect(error).toBe("The pool is in draining mode");
+        });
+      await pool.drainAndClear();
+      await acquirePromise;
+      expect(pool.getSize()).toBe(0);
+      expect(pool["rentalsBeingSigned"]).toBe(0);
     });
   });
 });

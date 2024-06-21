@@ -1,7 +1,7 @@
 import type { Agreement, DraftOfferProposalPool, MarketModule } from "../market";
 import { GolemMarketError, MarketErrorCode } from "../market";
 import type { Logger } from "../shared/utils";
-import { createAbortSignalFromTimeout, runOnNextEventLoopIteration } from "../shared/utils";
+import { anyAbortSignal, createAbortSignalFromTimeout, runOnNextEventLoopIteration } from "../shared/utils";
 import { EventEmitter } from "eventemitter3";
 import type { RequireAtLeastOne } from "../shared/utils/types";
 import type { Allocation } from "../payment";
@@ -62,6 +62,7 @@ export class ResourceRentalPool {
   private logger: Logger;
 
   private drainPromise?: Promise<void>;
+  private abortController: AbortController;
 
   private allocation: Allocation;
   private network?: Network;
@@ -107,17 +108,17 @@ export class ResourceRentalPool {
           return options?.replicas.max;
         }
       })() || MAX_REPLICAS;
+
+    this.abortController = new AbortController();
   }
 
   private async createNewResourceRental(signalOrTimeout?: number | AbortSignal) {
     this.logger.debug("Creating new resource rental to add to pool");
+    const signal = anyAbortSignal(this.abortController.signal, createAbortSignalFromTimeout(signalOrTimeout));
+
     try {
       this.rentalsBeingSigned++;
-      const agreement = await this.marketModule.signAgreementFromPool(
-        this.proposalPool,
-        this.agreementOptions,
-        signalOrTimeout,
-      );
+      const agreement = await this.marketModule.signAgreementFromPool(this.proposalPool, this.agreementOptions, signal);
       const networkNode = this.network
         ? await this.networkModule.createNetworkNode(this.network, agreement.provider.id)
         : undefined;
@@ -265,6 +266,7 @@ export class ResourceRentalPool {
 
   private async startDrain() {
     try {
+      this.abortController.abort("The pool is in draining mode");
       this.acquireQueue = [];
       const allResourceRentals = Array.from(this.borrowed)
         .concat(Array.from(this.lowPriority))
@@ -273,6 +275,7 @@ export class ResourceRentalPool {
       this.lowPriority.clear();
       this.highPriority.clear();
       this.borrowed.clear();
+      this.abortController = new AbortController();
     } catch (error) {
       this.logger.error("Draining the pool failed", error);
       throw error;
@@ -339,12 +342,11 @@ export class ResourceRentalPool {
     if (this.minPoolSize <= this.getAvailableSize()) {
       return;
     }
-    const signal = createAbortSignalFromTimeout(timeoutOrAbortSignal);
-
+    const signal = anyAbortSignal(this.abortController.signal, createAbortSignalFromTimeout(timeoutOrAbortSignal));
     const tryCreatingMissingResourceRentals = async () => {
       await Promise.allSettled(
         new Array(this.minPoolSize - this.getAvailableSize()).fill(0).map(() =>
-          this.createNewResourceRental().then(
+          this.createNewResourceRental(signal).then(
             (resourceRental) => this.lowPriority.add(resourceRental),
             (error) => this.logger.error("Creating resource rental failed", error),
           ),
