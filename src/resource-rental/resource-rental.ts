@@ -83,7 +83,7 @@ export class ResourceRental {
             this.paymentProcess.stop();
             if (error instanceof GolemTimeoutError) {
               throw new GolemTimeoutError(
-                `The finalization of payment process has been aborted due to a timeout (${+signalOrTimeout!}ms)`,
+                `The finalization of payment process has been aborted due to a timeout (${signalOrTimeout}ms)`,
                 abortSignal.reason,
               );
             }
