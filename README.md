@@ -1,3 +1,9 @@
+<br />
+
+<p align=center>
+ <img src=https://repository-images.githubusercontent.com/293524572/b8635cf6-9653-416d-ae56-bc9c6a43e503 alt="golem-js SDK logo" width=480 />
+</p>
+
 # Golem JavaScript API
 
 ![GitHub](https://img.shields.io/github/license/golemfactory/golem-js)
@@ -23,12 +29,12 @@
   - [Getting started with Golem Network](#getting-started-with-golem-network)
     - [Obtain an `app-key` to use with SDK](#obtain-an-app-key-to-use-with-sdk)
   - [Usage](#usage)
-    - [Read more](#read-more)
   - [Examples](#examples)
   - [Documentation](#documentation)
   - [Debugging](#debugging)
   - [Testing](#testing)
-  - [Reporting issues](#reporting-issues)
+  - [Contributing](#contributing)
+  - [Discord](#discord)
   - [See also](#see-also)
   <!-- TOC -->
 
@@ -37,7 +43,7 @@
 Become a **Requestor** in the **Golem Network** and use this SDK to:
 
 - 🌐 Acquire compute resources from Providers using a convenient API
-- 🚢 Deploy run your workloads with these resources and get the results back to your machine
+- 🚢 Run your workloads with these resources and get the results back to your machine
 - 🔐 Build N-tier application deployments and run them within a VPN
 - 💰 Settle payments with Providers for the resources you've utilized
 
@@ -159,7 +165,7 @@ const order: MarketOrderSpec = {
   try {
     await glm.connect();
     // Rent a machine
-    const rental = await glm.oneOf(order);
+    const rental = await glm.oneOf({ order });
     await rental
       .getExeUnit()
       .then((exe) => exe.run("echo Hello, Golem! 👋"))
@@ -173,11 +179,7 @@ const order: MarketOrderSpec = {
 })().catch(console.error);
 ```
 
-### Read more
-
-- Read about [other available usage patterns](./docs/USAGE.md) to learn more on how you can leverage the SDK.
-- Check the [`examples` directory](./examples) for working examples showcasing various features of the SDK. All examples
-  are continuously E2E tested.
+Read about [other available usage patterns](./docs/USAGE.md) to learn more on how you can leverage the SDK.
 
 ## Examples
 
@@ -202,12 +204,16 @@ the [debug package documentation](https://www.npmjs.com/package/debug).
 
 ## Testing
 
-Read the dedicated [testing documentation](./TESTING.md) to learn more about how to run tests of the SDK.
+Read the dedicated [testing documentation](./docs/TESTING.md) to learn more about how to run tests of the SDK.
 
-## Reporting issues
+## Contributing
 
-In case you find an issue with the examples or the SDK itself, feel free to submit
+Read the [Contributing Guide](./CONTRIBUTING.md) for details on how you can get involved. In case you find an issue with the examples or the SDK itself, feel free to submit
 an [issue report](https://github.com/golemfactory/golem-js/issues) to the repository.
+
+## Discord
+
+Feel invited to join our [Discord](http://discord.gg/golem). You can meet other SDK users and developers in the `#sdk-discussion` and `#js-discussion` channels.
 
 ## See also
 

@@ -17,7 +17,7 @@ This document explains the concepts modelled by the SDK which foster your intera
     - [Why is it needed](#why-is-it-needed)
     - [What it should do](#what-it-should-do-1)
     - [How it was done](#how-it-was-done-1)
-  <!-- TOC -->
+    <!-- TOC -->
 
 ## Resource Rental Model
 
@@ -70,7 +70,7 @@ If you're familiar with containers, you can picture the architecture in the foll
 >
 > The above comparison is used only for illustrative purposes. Golem GVMIs, ExeUnits and Activities behave differently compared to Docker or Kubernetes.
 
-As a Requestor you're interested in quickly executing your commands within the container that runs youre image. The `ExeUnit` abstraction delivered by the SDK is meant to do enable you to do so.
+As a Requestor you're interested in quickly executing your commands within the container that runs your image. The `ExeUnit` abstraction delivered by the SDK is meant to do enable you to do so.
 
 ### What it should do
 
