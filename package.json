@@ -75,7 +75,7 @@
     "rxjs": "^7.8.1",
     "semver": "^7.5.4",
     "tmp": "^0.2.2",
-    "uuid": "^9.0.1",
+    "uuid": "^10.0.0",
     "ws": "^8.16.0",
     "ya-ts-client": "^1.1.2"
   },
@@ -99,7 +99,7 @@
     "@types/semver": "^7.5.8",
     "@types/supertest": "^6.0.2",
     "@types/tmp": "^0.2.6",
-    "@types/uuid": "^9.0.8",
+    "@types/uuid": "^10.0.0",
     "@types/ws": "^8.5.10",
     "@typescript-eslint/eslint-plugin": "^7.1.0",
     "@typescript-eslint/parser": "^7.1.0",
