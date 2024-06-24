@@ -21,7 +21,7 @@ This document explains the concepts modelled by the SDK which foster your intera
     - [Why is it needed](#why-is-it-needed-1)
     - [What it should do](#what-it-should-do-1)
     - [How it was done](#how-it-was-done-2)
-  <!-- TOC -->
+    <!-- TOC -->
 
 ## GolemNetwork module
 
