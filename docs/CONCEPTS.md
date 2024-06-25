@@ -102,17 +102,6 @@ When using the `ResourceRental` model, you can still access these lower level do
 
 When you obtain resources via the Golem Network, your _Golem Virtual Machine Image (GVMI for short)_ is going to be deployed by `golem-js` into the _Activity_ running on the Provider. Technically, on the Provider instantiates an _ExeUnit_ which is a physical implementation of the _Activity_ of the Golem Network Protocol. Without digging in too much details, it's this _ExeUnit_ which at the end performs the operations that you issue via the Golem Network.
 
-If you're familiar with Docker, you can picture the architecture in the following way:
-
-| Golem              | Docker       | Kubernetes   |
-| ------------------ | ------------ | ------------ |
-| GVMI               | Docker Image | Docker Image |
-| Activity (ExeUnit) | Container    | Container    |
-
-> **DISCLAIMER**
->
-> The above comparison is used only for illustrative purposes. Golem GVMIs, ExeUnits and Activities behave differently compared to Docker or Kubernetes.
-
 As a Requestor you're interested in quickly executing your commands within the container that runs your image. The `ExeUnit` abstraction delivered by the SDK is meant to do enable you to do so. The `ExeUnit` type documents the available features of particular ExeUnit type so that you can build up your solution faster, and in a type-safe manner.
 
 ### What it should do

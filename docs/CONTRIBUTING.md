@@ -7,7 +7,7 @@ You want to contribute to `golem-js`? That's great! This guide will help you get
 1. Clone this repository
 2. In the root of this project run `npm install` to install all necessary dependencies
 3. To build the SDK run `npm run build`
-4. Install yagna as described in the [README](./README.md) file - you will need it to test your changes against testnet (no real funds will be required to execute workloads on Golem Network)
+4. Install yagna as described in the [README](../README.md) file - you will need it to test your changes against testnet (no real funds will be required to execute workloads on Golem Network)
 
 ### Unit Testing
 

@@ -208,7 +208,7 @@ Read the dedicated [testing documentation](./docs/TESTING.md) to learn more abou
 
 ## Contributing
 
-Read the [Contributing Guide](./CONTRIBUTING.md) for details on how you can get involved. In case you find an issue with the examples or the SDK itself, feel free to submit
+Read the [Contributing Guide](docs/CONTRIBUTING.md) for details on how you can get involved. In case you find an issue with the examples or the SDK itself, feel free to submit
 an [issue report](https://github.com/golemfactory/golem-js/issues) to the repository.
 
 ## Discord

@@ -1,6 +1,6 @@
 # Upgrade Guide
 
-This document describes the breaking changes introduced in each major version of MyLibraryJS and the necessary steps you need to take to ensure your application continues to work correctly.
+This document describes the breaking changes introduced in each major version of `golem-js` and the necessary steps you need to take to ensure your application continues to work correctly.
 
 ## Upgrading from 2.x to 3.x
 
@@ -83,6 +83,18 @@ import { GolemNetwork } from "@golem-sdk/golem-js";
 Areas where the changes are needed:
 
 - Instead of referring the `TaskExecutor` instance in the `map` function, you need to switch to the `ExeUnit` instance provided by the `ResourceRental`
+
+> **IMPORTANT DIFFERENCE**
+>
+> `TaskExecutor` by default assumed that users want to run these commands in parallel, so it
+> was establishing up to 5 agreements with different providers and then sent out these
+> commands to different providers to leverage parallelism.
+>
+> With `golem-js@3.0`, when you use `oneOf` to rent resources, you are establishing one agreement
+> with a single provider and the commands which you issue with `Array.map` will be executed
+> sequentially by that single provider.
+>
+> If you want to achieve _parallel command execution_ on different providers, refer to the [Engaging with many providers at the same time](#engaging-with-many-providers-at-the-same-time) example.
 
 **Before:**
 
