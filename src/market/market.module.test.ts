@@ -579,34 +579,7 @@ describe("Market module", () => {
     });
   });
   describe("estimateBudget()", () => {
-    it("estimates budget for the exact poolSize level", () => {
-      const order: MarketOrderSpec = {
-        demand: {
-          workload: {
-            imageTag: "image",
-            minCpuThreads: 5,
-          },
-        },
-        market: {
-          rentHours: 5,
-          pricing: {
-            model: "linear",
-            maxStartPrice: 1,
-            maxEnvPerHourPrice: 2,
-            maxCpuPerHourPrice: 0.5,
-          },
-        },
-      };
-      const maxAgreements = 3;
-      const cpuPrice = 0.5 * 5 * 5; // 5 threads for 0.5 per hour for 5 hours
-      const envPrice = 2 * 5; // 2 per hour for 5 hours
-      const totalPricePerMachine = 1 + cpuPrice + envPrice;
-      const expectedBudget = totalPricePerMachine * maxAgreements;
-
-      const budget = marketModule.estimateBudget({ order, maxAgreements });
-      expect(budget).toBeCloseTo(expectedBudget, 5);
-    });
-    it("estimates budget for max poolSize level", () => {
+    it("estimates budget for max number of agreeements", () => {
       const order: MarketOrderSpec = {
         demand: {
           workload: {
