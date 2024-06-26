@@ -63,10 +63,10 @@ export interface MarketOptions {
   /** Pricing strategy that will be used to filter the offers from the market */
   pricing: PricingOptions;
 
-  /** A user-defined filter function which will determine if the proposal is valid for use. */
+  /** A user-defined filter function which will determine if the offer proposal is valid for use. */
   offerProposalFilter?: OfferProposalFilter;
 
-  /** A user-defined function that will be used to pick the best fitting proposal from available ones */
+  /** A user-defined function that will be used to pick the best fitting offer proposal from available ones */
   offerProposalSelector?: OfferProposalSelector;
 }
 

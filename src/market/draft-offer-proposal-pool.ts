@@ -10,14 +10,14 @@ export type OfferProposalSelector = (proposals: OfferProposal[]) => OfferProposa
 
 export interface ProposalPoolOptions {
   /**
-   * A user-defined function that will be used by {@link DraftOfferProposalPool.acquire} to pick the best fitting proposal from available ones
+   * A user-defined function that will be used by {@link DraftOfferProposalPool.acquire} to pick the best fitting offer proposal from available ones
    */
   selectOfferProposal?: OfferProposalSelector;
 
   /**
-   * User defined filter function which will determine if the proposal is valid for use.
+   * User defined filter function which will determine if the offer proposal is valid for use.
    *
-   * Proposals are validated before being handled to the caller of {@link DraftOfferProposalPool.acquire}
+   * Offer proposals are validated before being handled to the caller of {@link DraftOfferProposalPool.acquire}
    */
   validateOfferProposal?: OfferProposalFilter;
 
