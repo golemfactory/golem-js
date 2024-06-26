@@ -1,4 +1,4 @@
-import { OfferProposal, ProposalFilter } from "./proposal/offer-proposal";
+import { OfferProposal, OfferProposalFilter } from "./proposal/offer-proposal";
 import AsyncLock from "async-lock";
 import { EventEmitter } from "eventemitter3";
 import { GolemMarketError, MarketErrorCode } from "./error";
@@ -6,20 +6,20 @@ import { createAbortSignalFromTimeout, defaultLogger, Logger, sleep } from "../s
 import { Observable, Subscription } from "rxjs";
 import { GolemAbortError, GolemTimeoutError } from "../shared/error/golem-error";
 
-export type ProposalSelector = (proposals: OfferProposal[]) => OfferProposal;
+export type OfferProposalSelector = (proposals: OfferProposal[]) => OfferProposal;
 
 export interface ProposalPoolOptions {
   /**
    * A user-defined function that will be used by {@link DraftOfferProposalPool.acquire} to pick the best fitting proposal from available ones
    */
-  selectProposal?: ProposalSelector;
+  selectOfferProposal?: OfferProposalSelector;
 
   /**
    * User defined filter function which will determine if the proposal is valid for use.
    *
    * Proposals are validated before being handled to the caller of {@link DraftOfferProposalPool.acquire}
    */
-  validateProposal?: ProposalFilter;
+  validateOfferProposal?: OfferProposalFilter;
 
   /**
    * Min number of proposals in pool so that it can be considered as ready to use
@@ -59,11 +59,11 @@ export class DraftOfferProposalPool {
   /** {@link ProposalPoolOptions.minCount} */
   private readonly minCount: number = 0;
 
-  /** {@link ProposalPoolOptions.selectProposal} */
-  private readonly selectProposal: ProposalSelector = (proposals: OfferProposal[]) => proposals[0];
+  /** {@link ProposalPoolOptions.selectOfferProposal} */
+  private readonly selectOfferProposal: OfferProposalSelector = (proposals: OfferProposal[]) => proposals[0];
 
-  /** {@link ProposalPoolOptions.validateProposal} */
-  private readonly validateProposal: ProposalFilter = (proposal: OfferProposal) => proposal !== undefined;
+  /** {@link ProposalPoolOptions.validateOfferProposal} */
+  private readonly validateOfferProposal: OfferProposalFilter = (proposal: OfferProposal) => proposal !== undefined;
 
   /**
    * The proposals that were not yet leased to anyone and are available for lease
@@ -76,11 +76,11 @@ export class DraftOfferProposalPool {
   private leased = new Set<OfferProposal>();
 
   public constructor(private options?: ProposalPoolOptions) {
-    if (options?.selectProposal) {
-      this.selectProposal = options.selectProposal;
+    if (options?.selectOfferProposal) {
+      this.selectOfferProposal = options.selectOfferProposal;
     }
-    if (options?.validateProposal) {
-      this.validateProposal = options.validateProposal;
+    if (options?.validateOfferProposal) {
+      this.validateOfferProposal = options.validateOfferProposal;
     }
 
     if (options?.minCount && options.minCount >= 0) {
@@ -120,11 +120,11 @@ export class DraftOfferProposalPool {
             : new GolemAbortError("The acquiring of proposals has been aborted", signal.reason);
         }
         // Try to get one
-        proposal = this.available.size > 0 ? this.selectProposal([...this.available]) : null;
+        proposal = this.available.size > 0 ? this.selectOfferProposal([...this.available]) : null;
 
         if (proposal) {
           // Validate
-          if (!this.validateProposal(proposal)) {
+          if (!this.validateOfferProposal(proposal)) {
             // Drop if not valid
             this.removeFromAvailable(proposal);
             // Keep searching
@@ -156,7 +156,7 @@ export class DraftOfferProposalPool {
     return this.lock.acquire("proposal-pool", () => {
       this.leased.delete(proposal);
 
-      if (this.validateProposal(proposal)) {
+      if (this.validateOfferProposal(proposal)) {
         this.available.add(proposal);
         this.events.emit("released", proposal);
       } else {
