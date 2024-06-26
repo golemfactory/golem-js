@@ -52,7 +52,7 @@ import { filter, map, switchMap, take } from "rxjs";
     // Allocate funds to cover the order, we will only pay for the actual usage
     // so any unused funds will be returned to us at the end
     allocation = await glm.payment.createAllocation({
-      budget: glm.market.estimateBudget({ order, concurrency: 1 }),
+      budget: glm.market.estimateBudget({ order, maxAgreements: 1 }),
       expirationSec: order.market.rentHours * 60 * 60,
     });
 

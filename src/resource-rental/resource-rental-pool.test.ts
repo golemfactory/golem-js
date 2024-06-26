@@ -33,7 +33,7 @@ function getRentalPool(replicas: RequireAtLeastOne<{ min: number; max: number }>
     rentalModule: instance(rentalModule),
     logger: instance(imock<Logger>()),
     network: undefined,
-    replicas,
+    poolSize: replicas,
   });
 }
 

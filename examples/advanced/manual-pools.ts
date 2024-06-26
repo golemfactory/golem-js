@@ -49,7 +49,7 @@ const demandOptions = {
     const proposalSubscription = proposalPool.readFrom(draftProposal$);
 
     /** How many providers you plan to engage simultaneously */
-    const CONCURRENCY = 2;
+    const PARALLELISM = 2;
 
     const depModules = {
       market: glm.market,
@@ -59,7 +59,7 @@ const demandOptions = {
     };
 
     const pool = depModules.rental.createResourceRentalPool(proposalPool, allocation, {
-      replicas: { max: CONCURRENCY },
+      poolSize: { max: PARALLELISM },
     });
 
     const rental1 = await pool.acquire();

@@ -40,7 +40,6 @@ import { GolemAbortError, GolemTimeoutError, GolemUserError } from "../shared/er
 import { MarketOrderSpec } from "../golem-network";
 import { INetworkApi, NetworkModule } from "../network";
 import { AgreementOptions } from "./agreement/agreement";
-import { Concurrency } from "../resource-rental";
 
 export type DemandEngine = "vm" | "vm-nvidia" | "wasmtime";
 
@@ -178,13 +177,12 @@ export interface MarketModule {
   }): Observable<OfferProposal>;
 
   /**
-   * Estimate the budget for the given order and concurrency level.
+   * Estimate the budget for the given order and maximum numbers of agreemnets.
    * Keep in mind that this is just an estimate and the actual cost may vary.
-   * To get a more accurate estimate, make sure to specify an exact or maximum concurrency level.
    * The method returns the estimated budget in GLM.
    * @param params
    */
-  estimateBudget({ concurrency, order }: { concurrency: Concurrency; order: MarketOrderSpec }): number;
+  estimateBudget({ maxAgreements, order }: { maxAgreements: number; order: MarketOrderSpec }): number;
   /**
    * Fetch the most up-to-date agreement details from the yagna
    */
@@ -559,25 +557,13 @@ export class MarketModuleImpl implements MarketModule {
       });
   }
 
-  estimateBudget({ concurrency, order }: { concurrency: Concurrency; order: MarketOrderSpec }): number {
+  estimateBudget({ order, maxAgreements }: { order: MarketOrderSpec; maxAgreements: number }): number {
     const pricingModel = order.market.pricing.model;
 
     // TODO: Don't assume for the user, at least not on pure golem-js level
     const minCpuThreads = order.demand.workload?.minCpuThreads ?? 1;
 
     const { rentHours } = order.market;
-    const maxAgreements = (() => {
-      if (typeof concurrency === "number") {
-        return concurrency;
-      }
-      if (concurrency.max) {
-        return concurrency.max;
-      }
-      if (concurrency.min) {
-        return concurrency.min;
-      }
-      return 1;
-    })();
 
     switch (pricingModel) {
       case "linear": {

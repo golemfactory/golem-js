@@ -147,7 +147,7 @@ describe("Golem Network", () => {
       await glm.connect();
 
       const pool = await glm.manyOf({
-        concurrency: 3,
+        poolSize: 3,
         order,
       });
 
@@ -171,7 +171,7 @@ describe("Golem Network", () => {
       await glm.connect();
 
       const pool = await glm.manyOf({
-        concurrency: 3,
+        poolSize: 3,
         order: {
           ...order,
           payment: {

@@ -68,7 +68,7 @@ export class RentalModuleImpl implements RentalModule {
       resourceRentalOptions: options?.resourceRentalOptions,
       logger: this.deps.logger.child("resource-rental-pool"),
       network: options?.network,
-      replicas: options?.replicas,
+      poolSize: options?.poolSize,
     });
   }
 }

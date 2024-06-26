@@ -579,7 +579,7 @@ describe("Market module", () => {
     });
   });
   describe("estimateBudget()", () => {
-    it("estimates budget for the exact concurrency level", () => {
+    it("estimates budget for the exact poolSize level", () => {
       const order: MarketOrderSpec = {
         demand: {
           workload: {
@@ -597,16 +597,16 @@ describe("Market module", () => {
           },
         },
       };
-      const concurrency = 3;
+      const maxAgreements = 3;
       const cpuPrice = 0.5 * 5 * 5; // 5 threads for 0.5 per hour for 5 hours
       const envPrice = 2 * 5; // 2 per hour for 5 hours
       const totalPricePerMachine = 1 + cpuPrice + envPrice;
-      const expectedBudget = totalPricePerMachine * concurrency;
+      const expectedBudget = totalPricePerMachine * maxAgreements;
 
-      const budget = marketModule.estimateBudget({ order, concurrency });
+      const budget = marketModule.estimateBudget({ order, maxAgreements });
       expect(budget).toBeCloseTo(expectedBudget, 5);
     });
-    it("estimates budget for max concurrency level", () => {
+    it("estimates budget for max poolSize level", () => {
       const order: MarketOrderSpec = {
         demand: {
           workload: {
@@ -624,13 +624,13 @@ describe("Market module", () => {
           },
         },
       };
-      const concurrency = { max: 10 };
+      const maxAgreements = 10;
       const cpuPrice = 0.5 * 5 * 5; // 5 threads for 0.5 per hour for 5 hours
       const envPrice = 2 * 5; // 2 per hour for 5 hours
       const totalPricePerMachine = 1 + cpuPrice + envPrice;
-      const expectedBudget = totalPricePerMachine * concurrency.max;
+      const expectedBudget = totalPricePerMachine * maxAgreements;
 
-      const budget = marketModule.estimateBudget({ order, concurrency });
+      const budget = marketModule.estimateBudget({ order, maxAgreements });
       expect(budget).toBeCloseTo(expectedBudget, 5);
     });
     it("estimates budget for non-linear pricing model", () => {
@@ -648,10 +648,10 @@ describe("Market module", () => {
           },
         },
       };
-      const concurrency = 3;
-      const expectedBudget = 5 * 2 * concurrency;
+      const maxAgreements = 3;
+      const expectedBudget = 5 * 2 * maxAgreements;
 
-      const budget = marketModule.estimateBudget({ order, concurrency });
+      const budget = marketModule.estimateBudget({ order, maxAgreements });
       expect(budget).toBeCloseTo(expectedBudget, 5);
     });
   });

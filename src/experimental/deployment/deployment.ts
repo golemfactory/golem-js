@@ -130,15 +130,28 @@ export class Deployment {
     // be the equal to the longest expiration date of all demands
     const longestExpiration =
       Math.max(...this.components.resourceRentalPools.map((pool) => pool.options.market.rentHours)) * 3600;
-    const totalBudget = this.components.resourceRentalPools.reduce(
-      (acc, pool) =>
+
+    const totalBudget = this.components.resourceRentalPools.reduce((acc, pool) => {
+      const maxAgreements = (() => {
+        if (typeof pool.options.deployment.replicas === "number") {
+          return pool.options.deployment.replicas;
+        }
+        if (pool.options.deployment.replicas.max) {
+          return pool.options.deployment.replicas.max;
+        }
+        if (pool.options.deployment.replicas.min) {
+          return pool.options.deployment.replicas.min;
+        }
+        return 1;
+      })();
+      return (
         acc +
         this.modules.market.estimateBudget({
           order: pool.options,
-          concurrency: pool.options.deployment.replicas,
-        }),
-      0,
-    );
+          maxAgreements,
+        })
+      );
+    }, 0);
 
     const allocation = await this.modules.payment.createAllocation({
       budget: totalBudget,
@@ -166,7 +179,7 @@ export class Deployment {
       const proposalSubscription = proposalPool.readFrom(draftProposal$);
 
       const resourceRentalPool = this.modules.rental.createResourceRentalPool(proposalPool, allocation, {
-        replicas: pool.options.deployment?.replicas,
+        poolSize: pool.options.deployment?.replicas,
         network,
         resourceRentalOptions: {
           activity: pool.options?.activity,
