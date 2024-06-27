@@ -19,10 +19,10 @@ export interface ResourceRentalPoolDependencies {
   logger: Logger;
 }
 
-export type Concurrency = number | RequireAtLeastOne<{ min: number; max: number }>;
+export type PoolSize = number | RequireAtLeastOne<{ min: number; max: number }>;
 
 export interface ResourceRentalPoolOptions {
-  replicas?: Concurrency;
+  poolSize?: PoolSize;
   network?: Network;
   resourceRentalOptions?: ResourceRentalOptions;
   agreementOptions?: AgreementOptions;
@@ -38,7 +38,7 @@ export interface ResourceRentalPoolEvents {
   error: (error: GolemMarketError) => void;
 }
 
-const MAX_REPLICAS = 100;
+const MAX_POOL_SIZE = 100;
 
 /**
  * Pool of resource rentals that can be borrowed, released or destroyed.
@@ -92,20 +92,20 @@ export class ResourceRentalPool {
 
     this.minPoolSize =
       (() => {
-        if (typeof options?.replicas === "number") {
-          return options?.replicas;
+        if (typeof options?.poolSize === "number") {
+          return options?.poolSize;
         }
-        if (typeof options?.replicas === "object") {
-          return options?.replicas.min;
+        if (typeof options?.poolSize === "object") {
+          return options?.poolSize.min;
         }
       })() || 0;
 
     this.maxPoolSize =
       (() => {
-        if (typeof options?.replicas === "object") {
-          return options?.replicas.max;
+        if (typeof options?.poolSize === "object") {
+          return options?.poolSize.max;
         }
-      })() || MAX_REPLICAS;
+      })() || MAX_POOL_SIZE;
   }
 
   private async createNewResourceRental(signalOrTimeout?: number | AbortSignal) {

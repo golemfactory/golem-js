@@ -13,7 +13,7 @@ import { ActivityModule, ActivityModuleImpl, ExeUnitOptions, IActivityApi, IFile
 import { INetworkApi, Network, NetworkModule, NetworkModuleImpl, NetworkOptions } from "../network";
 import { EventEmitter } from "eventemitter3";
 import {
-  Concurrency,
+  PoolSize,
   RentalModule,
   RentalModuleImpl,
   ResourceRental,
@@ -150,7 +150,7 @@ export interface OneOfOptions {
 
 export interface ManyOfOptions {
   order: MarketOrderSpec;
-  concurrency: Concurrency;
+  poolSize: PoolSize;
   setup?: ExeUnitOptions["setup"];
   teardown?: ExeUnitOptions["teardown"];
 }
@@ -332,13 +332,13 @@ export class GolemNetwork {
 
   private async getAllocationFromOrder({
     order,
-    concurrency,
+    maxAgreements,
   }: {
     order: MarketOrderSpec;
-    concurrency: Concurrency;
+    maxAgreements: number;
   }): Promise<Allocation> {
     if (!order.payment?.allocation) {
-      const budget = this.market.estimateBudget({ order, concurrency });
+      const budget = this.market.estimateBudget({ order, maxAgreements });
       return this.payment.createAllocation({
         budget,
         expirationSec: order.market.rentHours * 60 * 60,
@@ -378,7 +378,7 @@ export class GolemNetwork {
       selectOfferProposal: order.market.offerProposalSelector,
     });
 
-    const allocation = await this.getAllocationFromOrder({ order, concurrency: 1 });
+    const allocation = await this.getAllocationFromOrder({ order, maxAgreements: 1 });
     const demandSpecification = await this.market.buildDemandDetails(order.demand, allocation);
 
     const draftProposal$ = this.market.collectDraftOfferProposals({
@@ -434,13 +434,13 @@ export class GolemNetwork {
 
   /**
    * Define your computational resource demand and access a pool of instances.
-   * The pool will grow up to the specified concurrency level.
+   * The pool will grow up to the specified poolSize.
    *
    * @example
    * ```ts
    * // create a pool that can grow up to 3 rentals at the same time
    * const pool = await glm.manyOf({
-   *   concurrency: 3,
+   *   poolSize: 3,
    *   demand
    * });
    * await Promise.allSettled([
@@ -465,20 +465,34 @@ export class GolemNetwork {
    * ]);
    * ```
    *
-   * @param @param {Object} options
+   * @param {Object} options
    * @param options.order - represents the order specifications which will result in access to LeaseProcess.
-   * @param options.concurrency - concurrency level, can be defined as a number or an object with min and max fields
+   * @param options.poolSize {Object | number} - can be defined as a number or an object with min and max fields, if defined as a number it will be treated as a min parameter.
+   * @param options.poolSize.min - the minimum pool size to achieve ready state (default = 0)
+   * @param options.poolSize.max - the maximum pool size, if reached, the next pool element will only be available if the borrowed resource is released or destroyed (dafault = 100)
    * @param options.setup - an optional function that is called as soon as the exe unit is ready
    * @param options.teardown - an optional function that is called before the exe unit is destroyed
    */
-  public async manyOf({ concurrency, order, setup, teardown }: ManyOfOptions): Promise<ResourceRentalPool> {
+  public async manyOf({ poolSize, order, setup, teardown }: ManyOfOptions): Promise<ResourceRentalPool> {
     const proposalPool = new DraftOfferProposalPool({
       logger: this.logger,
       validateOfferProposal: order.market.offerProposalFilter,
       selectOfferProposal: order.market.offerProposalSelector,
     });
 
-    const allocation = await this.getAllocationFromOrder({ order, concurrency });
+    const maxAgreements = (() => {
+      if (typeof poolSize === "number") {
+        return poolSize;
+      }
+      if (poolSize.max) {
+        return poolSize.max;
+      }
+      if (poolSize.min) {
+        return poolSize.min;
+      }
+      return 1;
+    })();
+    const allocation = await this.getAllocationFromOrder({ order, maxAgreements });
     const demandSpecification = await this.market.buildDemandDetails(order.demand, allocation);
 
     const draftProposal$ = this.market.collectDraftOfferProposals({
@@ -489,7 +503,7 @@ export class GolemNetwork {
     const subscription = proposalPool.readFrom(draftProposal$);
 
     const resourceRentalPool = this.rental.createResourceRentalPool(proposalPool, allocation, {
-      replicas: concurrency,
+      poolSize,
       network: order.network,
       resourceRentalOptions: {
         activity: order.activity,

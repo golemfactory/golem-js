@@ -64,7 +64,7 @@ U2FsdGVkX18jQbGQ7KTAaRask5efrXEWvvGhe4jQ0MT9mwwH4ULjvoWDm1mNlsjYtb1nRt0O6iBd4O9m
         .then(() => console.log("Removed the encrypted messages from the provider %s", exe.provider.name));
 
     const pool = await glm.manyOf({
-      concurrency: { max: 3 }, // I want to decrypt in parallel on a maximum of 3 machines simultaneously
+      poolSize: { max: 3 }, // I want to decrypt in parallel on a maximum of 3 machines simultaneously
       order,
       setup,
       teardown,
