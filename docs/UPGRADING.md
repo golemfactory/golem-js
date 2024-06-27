@@ -82,7 +82,7 @@ import { GolemNetwork } from "@golem-sdk/golem-js";
 
 Areas where the changes are needed:
 
-- instead of using `maxParallelTasks` from `TaskExecutor`, use `concurrency` option on `GolemNetwork.manyOf` market order spec argument.
+- instead of using `maxParallelTasks` from `TaskExecutor`, use `poolSize` option on `GolemNetwork.manyOf` market order spec argument.
 
 **Before:**
 
@@ -127,7 +127,7 @@ import { GolemNetwork } from "@golem-sdk/golem-js";
     // 🌟 You acquire a pool of ResourceRentals
     const pool = await glm.manyOf({
       // 🔢 Number of max providers which you want to engage with
-      concurrency: 3,
+      poolSize: 3,
       order: {
         demand: {
           workload: { imageTag: "golem/alpine:latest" },

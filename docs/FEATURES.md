@@ -166,7 +166,7 @@ const teardown: LifecycleFunction = async (exe) => exe.run("rm /golem/work/big-f
 
 const pool = await glm.manyOf({
   order,
-  concurrency,
+  poolSize,
   setup,
   teardown,
 });
