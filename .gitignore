@@ -13,7 +13,7 @@ coverage/
 /examples/yacat/*.txt
 /examples/yacat/*.hash
 /examples/yacat/*.potfile
-/docs
+api-reference/
 logs/
 .cypress
 

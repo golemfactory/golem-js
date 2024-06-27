@@ -51,7 +51,7 @@ describe("ResourceRentalPool", () => {
   });
 
   it("should run a simple script on the activity from the pool", async () => {
-    const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { replicas: 1 });
+    const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 1 });
     pool.events.on("error", (error) => {
       throw error;
     });
@@ -66,7 +66,7 @@ describe("ResourceRentalPool", () => {
   });
 
   it("should prepare two activity ready to use", async () => {
-    const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { replicas: 2 });
+    const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 2 });
     pool.events.on("error", (error) => {
       throw error;
     });
@@ -95,7 +95,7 @@ describe("ResourceRentalPool", () => {
   });
 
   it("should release the activity and reuse it again", async () => {
-    const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { replicas: 1 });
+    const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 1 });
     pool.events.on("error", (error) => {
       throw error;
     });
@@ -114,7 +114,7 @@ describe("ResourceRentalPool", () => {
   });
 
   it("should terminate all agreements after drain and clear the poll", async () => {
-    const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { replicas: 2 });
+    const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 2 });
     pool.events.on("error", (error) => {
       throw error;
     });
@@ -140,7 +140,7 @@ describe("ResourceRentalPool", () => {
 
   it("should establish a connection between two activities from pool via vpn", async () => {
     const network = await glm.network.createNetwork();
-    const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { replicas: 2, network });
+    const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 2, network });
     pool.events.on("error", (error) => {
       throw error;
     });
@@ -162,7 +162,7 @@ describe("ResourceRentalPool", () => {
   it("should not rent more resources than maximum size", async () => {
     const maxPoolSize = 3;
     const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, {
-      replicas: { min: 1, max: maxPoolSize },
+      poolSize: { min: 1, max: maxPoolSize },
     });
     const poolSizesDuringWork: number[] = [];
     pool.events.on("acquired", () => poolSizesDuringWork.push(pool.getSize()));
@@ -178,20 +178,20 @@ describe("ResourceRentalPool", () => {
   });
 
   it("should abort acquiring resource rental by signal", async () => {
-    const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { replicas: 1 });
+    const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 1 });
     const abortController = new AbortController();
     abortController.abort();
     await expect(pool.acquire(abortController.signal)).rejects.toThrow("The signing of the agreement has been aborted");
   });
 
   it("should abort acquiring resource rental by timeout", async () => {
-    const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { replicas: 1 });
+    const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 1 });
     await expect(pool.acquire(1_000)).rejects.toThrow("Could not sign any agreement in time");
   });
 
   it("should finalize the resource rental during execution", async () => {
     expect.assertions(1);
-    const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { replicas: 1 });
+    const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 1 });
     const resourceRental = await pool.acquire();
     const exe = await resourceRental.getExeUnit();
     return new Promise(async (res) => {
@@ -204,7 +204,7 @@ describe("ResourceRentalPool", () => {
   });
 
   it("should abort getting exe-unit by timeout", async () => {
-    const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { replicas: 1 });
+    const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 1 });
     const rental = await pool.acquire();
     await expect(rental.getExeUnit(10)).rejects.toThrow(
       new GolemAbortError("Initializing of the exe-unit has been aborted due to a timeout"),
@@ -212,7 +212,7 @@ describe("ResourceRentalPool", () => {
   });
 
   it("should abort getting exe-unit by signal", async () => {
-    const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { replicas: 1 });
+    const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 1 });
     const abortController = new AbortController();
     const rental = await pool.acquire();
     abortController.abort();
@@ -222,7 +222,7 @@ describe("ResourceRentalPool", () => {
   });
 
   it("should abort finalizing resource rental by timeout", async () => {
-    const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { replicas: 1 });
+    const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 1 });
     const rental = await pool.acquire();
     await expect(rental.stopAndFinalize(10)).rejects.toThrow(
       new GolemAbortError("The finalization of payment process has been aborted due to a timeout"),
@@ -230,7 +230,7 @@ describe("ResourceRentalPool", () => {
   });
 
   it("should abort finalizing resource rental by signal", async () => {
-    const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { replicas: 1 });
+    const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 1 });
     const abortController = new AbortController();
     const rental = await pool.acquire();
     abortController.abort();

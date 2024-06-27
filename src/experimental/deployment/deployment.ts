@@ -130,15 +130,18 @@ export class Deployment {
     // be the equal to the longest expiration date of all demands
     const longestExpiration =
       Math.max(...this.components.resourceRentalPools.map((pool) => pool.options.market.rentHours)) * 3600;
-    const totalBudget = this.components.resourceRentalPools.reduce(
-      (acc, pool) =>
+
+    const totalBudget = this.components.resourceRentalPools.reduce((acc, pool) => {
+      const replicas = pool.options.deployment.replicas;
+      const maxAgreements = typeof replicas === "number" ? replicas : replicas?.max ?? replicas?.min ?? 1;
+      return (
         acc +
         this.modules.market.estimateBudget({
           order: pool.options,
-          concurrency: pool.options.deployment.replicas,
-        }),
-      0,
-    );
+          maxAgreements,
+        })
+      );
+    }, 0);
 
     const allocation = await this.modules.payment.createAllocation({
       budget: totalBudget,
@@ -153,20 +156,20 @@ export class Deployment {
       const demandSpecification = await this.modules.market.buildDemandDetails(pool.options.demand, allocation);
       const proposalPool = new DraftOfferProposalPool({
         logger: this.logger,
-        validateProposal: pool.options.market.proposalFilter,
-        selectProposal: pool.options.market.proposalSelector,
+        validateOfferProposal: pool.options.market.offerProposalFilter,
+        selectOfferProposal: pool.options.market.offerProposalSelector,
       });
 
       const draftProposal$ = this.modules.market.collectDraftOfferProposals({
         demandSpecification,
         pricing: pool.options.market.pricing,
-        filter: pool.options.market.proposalFilter,
+        filter: pool.options.market.offerProposalFilter,
       });
 
       const proposalSubscription = proposalPool.readFrom(draftProposal$);
 
       const resourceRentalPool = this.modules.rental.createResourceRentalPool(proposalPool, allocation, {
-        replicas: pool.options.deployment?.replicas,
+        poolSize: pool.options.deployment?.replicas,
         network,
         resourceRentalOptions: {
           activity: pool.options?.activity,

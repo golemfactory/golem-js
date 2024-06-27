@@ -1,8 +1,8 @@
-import { MarketOrderSpec, GolemNetwork, ProposalFilterFactory } from "@golem-sdk/golem-js";
+import { MarketOrderSpec, GolemNetwork, OfferProposalFilterFactory } from "@golem-sdk/golem-js";
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
 /**
- * Example showing how to use a proposal filter using the predefined filter `disallowProvidersByName`,
+ * Example showing how to use a offer proposal filter using the predefined filter `disallowProvidersByName`,
  * which blocks any proposal from a provider whose name is in the array of
  */
 
@@ -20,7 +20,7 @@ const order: MarketOrderSpec = {
       maxCpuPerHourPrice: 1.0,
       maxEnvPerHourPrice: 0.5,
     },
-    proposalFilter: ProposalFilterFactory.disallowProvidersByName(blackListProvidersNames),
+    offerProposalFilter: OfferProposalFilterFactory.disallowProvidersByName(blackListProvidersNames),
   },
 };
 
