@@ -1,11 +1,11 @@
-import { MarketOrderSpec, GolemNetwork, ProposalFilter } from "@golem-sdk/golem-js";
+import { MarketOrderSpec, GolemNetwork, OfferProposalFilter } from "@golem-sdk/golem-js";
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
 /**
- * Example demonstrating how to write a custom proposal filter.
- * In this case the proposal must include VPN access and must not be from "bad-provider"
+ * Example demonstrating how to write a custom offer proposal filter.
+ * In this case the offer proposal must include VPN access and must not be from "bad-provider"
  */
-const myFilter: ProposalFilter = (proposal) =>
+const myFilter: OfferProposalFilter = (proposal) =>
   Boolean(
     proposal.provider.name !== "bad-provider" && proposal.properties["golem.runtime.capabilities"]?.includes("vpn"),
   );
@@ -22,7 +22,7 @@ const order: MarketOrderSpec = {
       maxCpuPerHourPrice: 1.0,
       maxEnvPerHourPrice: 0.5,
     },
-    proposalFilter: myFilter,
+    offerProposalFilter: myFilter,
   },
 };
 

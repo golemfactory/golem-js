@@ -1,4 +1,4 @@
-import { ProposalFilter, OfferProposal, ProposalSelector } from "../../market";
+import { OfferProposalFilter, OfferProposal, OfferProposalSelector } from "../../market";
 import { GolemReputationError } from "./error";
 import {
   ProposalSelectorOptions,
@@ -61,13 +61,13 @@ export const REPUTATION_PRESETS: ReputationPresets = {
    * Preset for short CPU intensive compute tasks.
    */
   compute: {
-    proposalFilter: {
+    offerProposalFilter: {
       min: 0.5,
       weights: {
         cpuSingleThreadScore: 1,
       },
     },
-    proposalSelector: {
+    offerProposalSelector: {
       weights: {
         cpuSingleThreadScore: 1,
       },
@@ -78,14 +78,14 @@ export const REPUTATION_PRESETS: ReputationPresets = {
    * Preset for long-running services, where uptime is important.
    */
   service: {
-    proposalFilter: {
+    offerProposalFilter: {
       min: DEFAULT_PROPOSAL_MIN_SCORE,
       weights: {
         uptime: 0.8,
         cpuMultiThreadScore: 0.2,
       },
     },
-    proposalSelector: {
+    offerProposalSelector: {
       weights: {
         uptime: 0.5,
         cpuMultiThreadScore: 0.5,
@@ -212,21 +212,21 @@ export class ReputationSystem {
       throw new GolemReputationError(`Reputation preset not found: ${presetName}`);
     }
 
-    if (presetConfig.proposalFilter?.weights) {
-      this.setProposalWeights(presetConfig.proposalFilter.weights);
+    if (presetConfig.offerProposalFilter?.weights) {
+      this.setProposalWeights(presetConfig.offerProposalFilter.weights);
     }
 
-    if (presetConfig.proposalSelector?.weights) {
-      this.setAgreementWeights(presetConfig.proposalSelector.weights);
+    if (presetConfig.offerProposalSelector?.weights) {
+      this.setAgreementWeights(presetConfig.offerProposalSelector.weights);
     }
 
     this.defaultProposalFilterOptions = {
-      min: presetConfig.proposalFilter?.min ?? this.defaultProposalFilterOptions.min,
-      acceptUnlisted: presetConfig.proposalFilter?.acceptUnlisted, // undefined is meaningful
+      min: presetConfig.offerProposalFilter?.min ?? this.defaultProposalFilterOptions.min,
+      acceptUnlisted: presetConfig.offerProposalFilter?.acceptUnlisted, // undefined is meaningful
     };
 
     this.defaultAgreementSelectorOptions = {
-      topPoolSize: presetConfig.proposalSelector?.topPoolSize ?? this.defaultAgreementSelectorOptions.topPoolSize,
+      topPoolSize: presetConfig.offerProposalSelector?.topPoolSize ?? this.defaultAgreementSelectorOptions.topPoolSize,
       // TODO: to be discussed with the reputation team
       // agreementBonus:
       //   presetConfig.proposalSelector?.agreementBonus ?? this.defaultAgreementSelectorOptions.agreementBonus,
@@ -331,7 +331,7 @@ export class ReputationSystem {
    * Returns a proposal filter that can be used to filter out providers with low reputation scores.
    * @param opts
    */
-  proposalFilter(opts?: ProposalFilterOptions): ProposalFilter {
+  offerProposalFilter(opts?: ProposalFilterOptions): OfferProposalFilter {
     return (proposal: OfferProposal) => {
       // Filter out rejected operators.
       const operatorEntry = this.rejectedOperatorsMap.get(proposal.provider.walletAddress);
@@ -395,7 +395,7 @@ export class ReputationSystem {
    *
    * @param opts
    */
-  agreementSelector(opts?: ProposalSelectorOptions): ProposalSelector {
+  offerProposalSelector(opts?: ProposalSelectorOptions): OfferProposalSelector {
     const poolSize =
       opts?.topPoolSize ?? this.defaultAgreementSelectorOptions.topPoolSize ?? DEFAULT_AGREEMENT_TOP_POOL_SIZE;
 

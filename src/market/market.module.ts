@@ -8,7 +8,7 @@ import {
   MarketErrorCode,
   MarketEvents,
   MarketProposalEvent,
-  ProposalSelector,
+  OfferProposalSelector,
 } from "./index";
 import {
   createAbortSignalFromTimeout,
@@ -23,7 +23,7 @@ import {
   OfferCounterProposal,
   OfferProposal,
   OfferProposalReceivedEvent,
-  ProposalFilter,
+  OfferProposalFilter,
   ProposalsBatch,
 } from "./proposal";
 import { BuildDemandOptions, DemandBodyBuilder, DemandSpecification } from "./demand";
@@ -63,11 +63,11 @@ export interface MarketOptions {
   /** Pricing strategy that will be used to filter the offers from the market */
   pricing: PricingOptions;
 
-  /** A user-defined filter function which will determine if the proposal is valid for use. */
-  proposalFilter?: ProposalFilter;
+  /** A user-defined filter function which will determine if the offer proposal is valid for use. */
+  offerProposalFilter?: OfferProposalFilter;
 
-  /** A user-defined function that will be used to pick the best fitting proposal from available ones */
-  proposalSelector?: ProposalSelector;
+  /** A user-defined function that will be used to pick the best fitting offer proposal from available ones */
+  offerProposalSelector?: OfferProposalSelector;
 }
 
 export interface MarketModule {
@@ -172,7 +172,7 @@ export interface MarketModule {
   collectDraftOfferProposals(options: {
     demandSpecification: DemandSpecification;
     pricing: PricingOptions;
-    filter?: ProposalFilter;
+    filter?: OfferProposalFilter;
     minProposalsBatchSize?: number;
     proposalsBatchReleaseTimeoutMs?: number;
   }): Observable<OfferProposal>;
@@ -407,7 +407,7 @@ export class MarketModuleImpl implements MarketModule {
   collectDraftOfferProposals(options: {
     demandSpecification: DemandSpecification;
     pricing: PricingOptions;
-    filter?: ProposalFilter;
+    filter?: OfferProposalFilter;
     minProposalsBatchSize?: number;
     proposalsBatchReleaseTimeoutMs?: number;
   }): Observable<OfferProposal> {
@@ -623,7 +623,7 @@ export class MarketModuleImpl implements MarketModule {
     });
   }
 
-  private filterProposalsByUserFilter(filter: ProposalFilter, proposal: OfferProposal) {
+  private filterProposalsByUserFilter(filter: OfferProposalFilter, proposal: OfferProposal) {
     try {
       const result = filter(proposal);
 

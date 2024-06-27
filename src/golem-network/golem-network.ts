@@ -374,8 +374,8 @@ export class GolemNetwork {
   async oneOf({ order, setup, teardown, signalOrTimeout }: OneOfOptions): Promise<ResourceRental> {
     const proposalPool = new DraftOfferProposalPool({
       logger: this.logger,
-      validateProposal: order.market.proposalFilter,
-      selectProposal: order.market.proposalSelector,
+      validateOfferProposal: order.market.offerProposalFilter,
+      selectOfferProposal: order.market.offerProposalSelector,
     });
 
     const allocation = await this.getAllocationFromOrder({ order, concurrency: 1 });
@@ -384,7 +384,7 @@ export class GolemNetwork {
     const draftProposal$ = this.market.collectDraftOfferProposals({
       demandSpecification,
       pricing: order.market.pricing,
-      filter: order.market.proposalFilter,
+      filter: order.market.offerProposalFilter,
     });
 
     const proposalSubscription = proposalPool.readFrom(draftProposal$);
@@ -474,8 +474,8 @@ export class GolemNetwork {
   public async manyOf({ concurrency, order, setup, teardown }: ManyOfOptions): Promise<ResourceRentalPool> {
     const proposalPool = new DraftOfferProposalPool({
       logger: this.logger,
-      validateProposal: order.market.proposalFilter,
-      selectProposal: order.market.proposalSelector,
+      validateOfferProposal: order.market.offerProposalFilter,
+      selectOfferProposal: order.market.offerProposalSelector,
     });
 
     const allocation = await this.getAllocationFromOrder({ order, concurrency });
@@ -484,7 +484,7 @@ export class GolemNetwork {
     const draftProposal$ = this.market.collectDraftOfferProposals({
       demandSpecification,
       pricing: order.market.pricing,
-      filter: order.market.proposalFilter,
+      filter: order.market.offerProposalFilter,
     });
     const subscription = proposalPool.readFrom(draftProposal$);
 
