@@ -218,7 +218,7 @@ export class ExeScriptExecutor {
   private streamingBatch(batchId: string, batchSize: number): Observable<Result> {
     return this.activityModule.observeStreamingBatchEvents(this.activity, batchId).pipe(
       map((resultEvents) => this.parseEventToResult(resultEvents, batchSize)),
-      takeWhile((result) => !result.isBatchFinished),
+      takeWhile((result) => !result.isBatchFinished, true),
       // transform to domain error
       catchError((error) => {
         throw new GolemWorkError(
