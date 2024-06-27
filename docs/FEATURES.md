@@ -96,7 +96,7 @@ const myFilter: ProposalFilter = (proposal) => proposal.provider.name !== "bad-p
 
 const order: MarketOrderSpec = {
   market: {
-    proposalFilter: myFilter,
+    offerProposalFilter: myFilter,
     // other options
   },
 };
