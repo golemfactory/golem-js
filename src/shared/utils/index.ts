@@ -9,3 +9,4 @@ export * as EnvUtils from "./env";
 export { YagnaApi, YagnaOptions } from "../yagna/yagnaApi";
 export * from "./abortSignal";
 export * from "./eventLoop";
+export * from "./rxjs";

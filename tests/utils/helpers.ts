@@ -1,4 +1,4 @@
-import { Readable } from "stream";
+import { map, of, throwError } from "rxjs";
 import { Result, ResultData } from "../../src/activity/results";
 
 /**
@@ -44,18 +44,8 @@ export const simulateLongPoll = <T>(response: T, pollingTimeMs: number = 10) =>
  * Helper function that makes preparing activity result returned by Activity.execute function
  */
 export const buildExecutorResults = (successResults?: ResultData[], errorResults?: ResultData[], error?: Error) => {
-  return new Readable({
-    objectMode: true,
-    async read() {
-      if (error) {
-        this.emit("error", error);
-      }
-      const results = successResults?.length
-        ? successResults.shift()
-        : errorResults?.length
-          ? errorResults.shift()
-          : null;
-      this.push(results);
-    },
-  });
+  if (error) {
+    return throwError(() => error);
+  }
+  return of(...(successResults ?? []), ...(errorResults ?? [])).pipe(map((resultData) => new Result(resultData)));
 };

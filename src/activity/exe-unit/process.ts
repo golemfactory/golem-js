@@ -1,8 +1,8 @@
-import { Readable, Transform } from "stream";
 import { Activity, ActivityModule, Result } from "../index";
 import { GolemWorkError, WorkErrorCode } from "./error";
 import { GolemTimeoutError } from "../../shared/error/golem-error";
 import { Logger } from "../../shared/utils";
+import { Observable, Subject, Subscription, finalize } from "rxjs";
 
 const DEFAULTS = {
   exitWaitingTimeout: 20_000,
@@ -15,27 +15,39 @@ export class RemoteProcess {
   /**
    * Stream connected to stdout from provider process
    */
-  readonly stdout: Readable;
+  readonly stdout: Subject<Result["stdout"]> = new Subject();
   /**
    * Stream connected to stderr from provider process
    */
-  readonly stderr: Readable;
+  readonly stderr: Subject<Result["stderr"]> = new Subject();
 
   private lastResult?: Result;
 
   private streamError?: Error;
 
+  private subscription: Subscription;
+
   constructor(
     private readonly activityModule: ActivityModule,
-    private streamOfActivityResults: Readable,
+    activityResult$: Observable<Result>,
     private activity: Activity,
     private readonly logger: Logger,
   ) {
-    this.streamOfActivityResults.on("data", (data) => (this.lastResult = data));
-    this.streamOfActivityResults.on("error", (error) => (this.streamError = error));
-    const { stdout, stderr } = this.transformResultsStream();
-    this.stdout = stdout;
-    this.stderr = stderr;
+    this.subscription = activityResult$
+      .pipe(
+        finalize(() => {
+          this.stdout.complete();
+          this.stderr.complete();
+        }),
+      )
+      .subscribe({
+        next: (result) => {
+          this.lastResult = result;
+          if (result.stdout) this.stdout.next(result.stdout);
+          if (result.stderr) this.stderr.next(result.stderr);
+        },
+        error: (error) => (this.streamError = error),
+      });
   }
 
   /**
@@ -80,22 +92,7 @@ export class RemoteProcess {
             .catch((err) => this.logger.error(`Error when destroying activity`, err));
         }
       };
-      if (this.streamOfActivityResults.closed) return end();
-      this.streamOfActivityResults.on("close", end);
+      this.subscription.add(() => end());
     });
-  }
-
-  private transformResultsStream(): { stdout: Readable; stderr: Readable } {
-    const transform = (std: string) =>
-      new Transform({
-        objectMode: true,
-        transform(chunk, encoding, callback) {
-          callback(null, chunk?.[std]);
-        },
-      });
-    return {
-      stdout: this.streamOfActivityResults.pipe(transform("stdout")),
-      stderr: this.streamOfActivityResults.pipe(transform("stderr")),
-    };
   }
 }
