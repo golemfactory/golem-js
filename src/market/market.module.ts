@@ -312,7 +312,8 @@ export class MarketModuleImpl implements MarketModule {
       const unsubscribeFromOfferProposals = async (demand: Demand) => {
         try {
           await this.deps.marketApi.unpublishDemand(demand);
-          this.logger.info("Demand unpublished from the market", { demand });
+          this.logger.info("Unpublished demand", { demandId: demand.id });
+          this.logger.debug("Unpublished demand", demand);
           this.events.emit("demandSubscriptionStopped", demand);
         } catch (err) {
           const golemMarketError = new GolemMarketError(

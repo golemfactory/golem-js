@@ -179,13 +179,15 @@ export class YagnaApi {
    * Effectively starts the Yagna API client including subscribing to events exposed via rxjs subjects
    */
   async connect() {
-    this.logger.info("Connecting to Yagna");
+    this.logger.debug("Connecting to Yagna");
 
-    await this.assertSupportedVersion();
+    const version = await this.assertSupportedVersion();
 
-    const identity = this.identity.getIdentity();
+    const identity = await this.identity.getIdentity();
 
     this.startPollingEvents();
+
+    this.logger.info("Connected to Yagna", { version, identity: identity.identity });
 
     return identity;
   }
@@ -194,7 +196,7 @@ export class YagnaApi {
    * Terminates the Yagna API related activities
    */
   async disconnect() {
-    this.logger.info("Disconnecting from Yagna");
+    this.logger.debug("Disconnecting from Yagna");
     await this.stopPollingEvents();
     this.logger.info("Disconnected from Yagna");
   }
@@ -209,7 +211,7 @@ export class YagnaApi {
   }
 
   private startPollingEvents() {
-    this.logger.info("Starting to poll for events from Yagna", { appSessionId: this.appSessionId });
+    this.logger.debug("Starting to poll for events from Yagna", { appSessionId: this.appSessionId });
 
     const pollIntervalSec = 5;
     const maxEvents = 100;
@@ -229,17 +231,17 @@ export class YagnaApi {
     // Run the readers and don't block execution
     this.reader
       .pollToSubject(this.agreementEventsPoll.pollValues(), this.agreementEvents$)
-      .then(() => this.logger.info("Finished polling agreement events from Yagna"))
+      .then(() => this.logger.debug("Finished polling agreement events from Yagna"))
       .catch((err) => this.logger.error("Error while polling agreement events from Yagna", err));
 
     this.reader
       .pollToSubject(this.debitNoteEventsPoll.pollValues(), this.debitNoteEvents$)
-      .then(() => this.logger.info("Finished polling debit note events from Yagna"))
+      .then(() => this.logger.debug("Finished polling debit note events from Yagna"))
       .catch((err) => this.logger.error("Error while polling debit note events from Yagna", err));
 
     this.reader
       .pollToSubject(this.invoiceEventPoll.pollValues(), this.invoiceEvents$)
-      .then(() => this.logger.info("Finished polling invoice events from Yagna"))
+      .then(() => this.logger.debug("Finished polling invoice events from Yagna"))
       .catch((err) => this.logger.error("Error while polling invoice events from Yagna", err));
   }
 

@@ -90,9 +90,9 @@ export class ResourceRental {
             }
             throw new GolemAbortError("The finalization of payment process has been aborted", abortSignal.reason);
           });
-          this.logger.info("Payment process for agreement finalized", { agreementId: this.agreement.id });
+          this.logger.info("Finalized payment process", { agreementId: this.agreement.id });
         } catch (error) {
-          this.logger.error("Payment process finalization failed", { agreementId: this.agreement.id, error });
+          this.logger.error("Filed to finalize payment process", { agreementId: this.agreement.id, error });
           throw error;
         } finally {
           this.events.emit("finalized");

@@ -100,7 +100,7 @@ export class NetworkModuleImpl implements NetworkModule {
       // add Requestor as network node
       const requestorId = await this.networkApi.getIdentity();
       await this.createNetworkNode(network, requestorId, options?.ownerIp);
-      this.logger.info(`Network created`, network.getNetworkInfo());
+      this.logger.info(`Created network`, network.getNetworkInfo());
       this.events.emit("networkCreated", network);
       return network;
     } catch (err) {
@@ -124,7 +124,7 @@ export class NetworkModuleImpl implements NetworkModule {
       try {
         await this.networkApi.removeNetwork(network);
         network.markAsRemoved();
-        this.logger.info(`Network removed`, network.getNetworkInfo());
+        this.logger.info(`Removed network`, network.getNetworkInfo());
         this.events.emit("networkRemoved", network);
       } catch (error) {
         this.events.emit("errorRemovingNetwork", network, error);
@@ -154,7 +154,7 @@ export class NetworkModuleImpl implements NetworkModule {
         const ipv4 = this.getFreeIpInNetwork(network, nodeIp);
         const node = await this.networkApi.createNetworkNode(network, nodeId, ipv4.toString());
         network.addNode(node);
-        this.logger.info(`Node has been added to the network.`, { id: nodeId, ip: ipv4.toString() });
+        this.logger.info(`Added network node`, { id: nodeId, ip: ipv4.toString() });
         this.events.emit("nodeCreated", network, node);
         return node;
       } catch (error) {
@@ -184,7 +184,7 @@ export class NetworkModuleImpl implements NetworkModule {
         }
         await this.networkApi.removeNetworkNode(network, node);
         network.removeNode(node);
-        this.logger.info(`Node has been removed from the network.`, {
+        this.logger.info(`Removed network node`, {
           network: network.getNetworkInfo().ip,
           nodeIp: node.ip,
         });
