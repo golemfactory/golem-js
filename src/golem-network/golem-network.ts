@@ -357,7 +357,7 @@ export class GolemNetwork {
    *
    * @example
    * ```ts
-   * const rental = await glm.oneOf(demand);
+   * const rental = await glm.oneOf({ order });
    * await rental
    *  .getExeUnit()
    *  .then((exe) => exe.run("echo Hello, Golem! 👋"))
