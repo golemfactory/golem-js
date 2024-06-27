@@ -120,7 +120,6 @@
     "rollup-plugin-polyfill-node": "^0.13.0",
     "rollup-plugin-visualizer": "^5.12.0",
     "semantic-release": "^23.0.2",
-    "stream-browserify": "^3.0.0",
     "supertest": "^6.3.4",
     "ts-jest": "^29.1.2",
     "ts-loader": "^9.5.1",
