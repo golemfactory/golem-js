@@ -434,7 +434,7 @@ export class GolemNetwork {
 
   /**
    * Define your computational resource demand and access a pool of instances.
-   * The pool will grow up to the specified poolSize level.
+   * The pool will grow up to the specified poolSize.
    *
    * @example
    * ```ts
