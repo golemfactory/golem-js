@@ -162,9 +162,14 @@ export class ResourceRental {
           ...this.resourceRentalOptions?.exeUnit,
         });
         return this.currentExeUnit;
-      })().finally(() => {
-        this.exeUnitPromise = undefined;
-      });
+      })()
+        .catch((error) => {
+          this.logger.error(`Failed to create exe-unit. ${error}`, { agreementId: this.agreement.id });
+          throw error;
+        })
+        .finally(() => {
+          this.exeUnitPromise = undefined;
+        });
     }
     return this.exeUnitPromise;
   }
