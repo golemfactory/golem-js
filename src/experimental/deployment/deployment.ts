@@ -132,18 +132,8 @@ export class Deployment {
       Math.max(...this.components.resourceRentalPools.map((pool) => pool.options.market.rentHours)) * 3600;
 
     const totalBudget = this.components.resourceRentalPools.reduce((acc, pool) => {
-      const maxAgreements = (() => {
-        if (typeof pool.options.deployment.replicas === "number") {
-          return pool.options.deployment.replicas;
-        }
-        if (pool.options.deployment.replicas.max) {
-          return pool.options.deployment.replicas.max;
-        }
-        if (pool.options.deployment.replicas.min) {
-          return pool.options.deployment.replicas.min;
-        }
-        return 1;
-      })();
+      const replicas = pool.options.deployment.replicas;
+      const maxAgreements = typeof replicas === "number" ? replicas : replicas?.max ?? replicas?.min ?? 1;
       return (
         acc +
         this.modules.market.estimateBudget({
