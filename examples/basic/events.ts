@@ -19,7 +19,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
     await glm.connect();
 
     glm.market.events.on("agreementApproved", (event) => {
-      console.log("Agreement '%s' approved at %s", event.agreement.id, event.timestamp);
+      console.log("Agreement '%s' approved", event.agreement.id);
     });
 
     glm.market.events.on("agreementTerminated", (event) => {

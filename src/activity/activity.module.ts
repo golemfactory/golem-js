@@ -1,11 +1,11 @@
 import { EventEmitter } from "eventemitter3";
-import { Agreement } from "../market/agreement";
-import { Activity, IActivityApi, ActivityEvents, Result } from "./index";
+import { Agreement } from "../market";
+import { Activity, ActivityEvents, IActivityApi, Result } from "./index";
 import { defaultLogger } from "../shared/utils";
-import { GolemServices } from "../golem-network/golem-network";
+import { GolemServices } from "../golem-network";
 import { ExeUnit, ExeUnitOptions } from "./exe-unit";
-import { ExeScriptExecutor, ExeScriptRequest, ExecutionOptions } from "./exe-script-executor";
-import { Observable, catchError, tap } from "rxjs";
+import { ExecutionOptions, ExeScriptExecutor, ExeScriptRequest } from "./exe-script-executor";
+import { catchError, Observable, tap } from "rxjs";
 import { StreamingBatchEvent } from "./results";
 
 export interface ActivityModule {
@@ -105,8 +105,6 @@ export interface IFileServer {
   isServing(): boolean;
 }
 
-export interface ActivityModuleOptions {}
-
 export class ActivityModuleImpl implements ActivityModule {
   public readonly events: EventEmitter<ActivityEvents> = new EventEmitter<ActivityEvents>();
 
@@ -125,28 +123,33 @@ export class ActivityModuleImpl implements ActivityModule {
   async executeScript(activity: Activity, script: ExeScriptRequest): Promise<string> {
     this.logger.debug("Executing script on activity", { activityId: activity.id });
     try {
-      this.events.emit("scriptSent", activity, script);
+      this.events.emit("scriptSent", {
+        activity,
+        script,
+      });
+
       const result = await this.activityApi.executeScript(activity, script);
-      this.events.emit(
-        "scriptExecuted",
-        await this.refreshActivity(activity).catch(() => {
+
+      this.events.emit("scriptExecuted", {
+        activity: await this.refreshActivity(activity).catch(() => {
           this.logger.warn("Failed to refresh activity after script execution", { activityId: activity.id });
           return activity;
         }),
         script,
         result,
-      );
+      });
+
       return result;
     } catch (error) {
-      this.events.emit(
-        "errorExecutingScript",
-        await this.refreshActivity(activity).catch(() => {
+      this.events.emit("errorExecutingScript", {
+        activity: await this.refreshActivity(activity).catch(() => {
           this.logger.warn("Failed to refresh activity after script execution error", { activityId: activity.id });
           return activity;
         }),
         script,
         error,
-      );
+      });
+
       throw error;
     }
   }
@@ -159,26 +162,24 @@ export class ActivityModuleImpl implements ActivityModule {
     this.logger.debug("Fetching batch results", { activityId: activity.id, batchId });
     try {
       const results = await this.activityApi.getExecBatchResults(activity, batchId, commandIndex, timeout);
-      this.events.emit(
-        "batchResultsReceived",
-        await this.refreshActivity(activity).catch(() => {
+      this.events.emit("batchResultsReceived", {
+        activity: await this.refreshActivity(activity).catch(() => {
           this.logger.warn("Failed to refresh activity after batch results received", { activityId: activity.id });
           return activity;
         }),
         batchId,
         results,
-      );
+      });
       return results;
     } catch (error) {
-      this.events.emit(
-        "errorGettingBatchResults",
-        await this.refreshActivity(activity).catch(() => {
+      this.events.emit("errorGettingBatchResults", {
+        activity: await this.refreshActivity(activity).catch(() => {
           this.logger.warn("Failed to refresh activity after batch results error", { activityId: activity.id });
           return activity;
         }),
         batchId,
         error,
-      );
+      });
       throw error;
     }
   }
@@ -190,26 +191,24 @@ export class ActivityModuleImpl implements ActivityModule {
     this.logger.debug("Observing streaming batch events", { activityId: activity.id, batchId });
     return this.activityApi.getExecBatchEvents(activity, batchId, commandIndex).pipe(
       tap(async (event) => {
-        this.events.emit(
-          "batchEventsReceived",
-          await this.refreshActivity(activity).catch(() => {
+        this.events.emit("batchEventsReceived", {
+          activity: await this.refreshActivity(activity).catch(() => {
             this.logger.warn("Failed to refresh activity after batch events received", { activityId: activity.id });
             return activity;
           }),
           batchId,
           event,
-        );
+        });
       }),
       catchError(async (error) => {
-        this.events.emit(
-          "errorGettingBatchEvents",
-          await this.refreshActivity(activity).catch(() => {
+        this.events.emit("errorGettingBatchEvents", {
+          activity: await this.refreshActivity(activity).catch(() => {
             this.logger.warn("Failed to refresh activity after batch events error", { activityId: activity.id });
             return activity;
           }),
           batchId,
           error,
-        );
+        });
         throw error;
       }),
     );
@@ -222,7 +221,7 @@ export class ActivityModuleImpl implements ActivityModule {
     });
     try {
       const activity = await this.activityApi.createActivity(agreement);
-      this.events.emit("activityCreated", activity);
+      this.events.emit("activityCreated", { activity });
       this.logger.info("Created activity", {
         activityId: activity.id,
         agreementId: agreement.id,
@@ -239,15 +238,19 @@ export class ActivityModuleImpl implements ActivityModule {
     this.logger.debug("Destroying activity", activity);
     try {
       const updated = await this.activityApi.destroyActivity(activity);
-      this.events.emit("activityDestroyed", updated);
+      this.events.emit("activityDestroyed", {
+        activity: updated,
+      });
+
       this.logger.info("Destroyed activity", {
         activityId: updated.id,
         agreementId: updated.agreement.id,
         provider: updated.agreement.provider,
       });
+
       return updated;
     } catch (error) {
-      this.events.emit("errorDestroyingActivity", activity, error);
+      this.events.emit("errorDestroyingActivity", { activity, error });
       throw error;
     }
   }
@@ -266,11 +269,17 @@ export class ActivityModuleImpl implements ActivityModule {
           previousState: freshActivity.getPreviousState(),
           newState: freshActivity.getState(),
         });
-        this.events.emit("activityStateChanged", freshActivity, freshActivity.getPreviousState());
+        this.events.emit("activityStateChanged", {
+          activity: freshActivity,
+          previousState: freshActivity.getPreviousState(),
+        });
       }
       return freshActivity;
     } catch (error) {
-      this.events.emit("errorRefreshingActivity", staleActivity, error);
+      this.events.emit("errorRefreshingActivity", {
+        activity: staleActivity,
+        error,
+      });
       throw error;
     }
   }
@@ -282,6 +291,7 @@ export class ActivityModuleImpl implements ActivityModule {
 
   async createExeUnit(activity: Activity, options?: ExeUnitOptions): Promise<ExeUnit> {
     this.logger.debug("Creating exe-unit for activity", { activityId: activity.id });
+
     const exe = new ExeUnit(activity, this, {
       yagnaOptions: this.services.yagna.yagnaOptions,
       logger: this.logger.child("exe-unit"),
@@ -289,29 +299,31 @@ export class ActivityModuleImpl implements ActivityModule {
     });
 
     this.logger.debug("Initializing the exe-unit for activity", { activityId: activity.id });
+
     try {
       await exe.setup();
       const refreshedActivity = await this.refreshActivity(activity).catch(() => {
         this.logger.warn("Failed to refresh activity after work context initialization", { activityId: activity.id });
         return activity;
       });
-      this.events.emit("exeUnitInitialized", refreshedActivity);
+      this.events.emit("exeUnitInitialized", {
+        activity: refreshedActivity,
+      });
       this.logger.info("Initialized exe-unit", {
         activityId: activity.id,
         state: refreshedActivity.getState(),
       });
       return exe;
     } catch (error) {
-      this.events.emit(
-        "errorInitializingExeUnit",
-        await this.refreshActivity(activity).catch(() => {
+      this.events.emit("errorInitializingExeUnit", {
+        activity: await this.refreshActivity(activity).catch(() => {
           this.logger.warn("Failed to refresh activity after exe-unit initialization error", {
             activityId: activity.id,
           });
           return activity;
         }),
         error,
-      );
+      });
       throw error;
     }
   }

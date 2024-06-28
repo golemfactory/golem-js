@@ -1,4 +1,4 @@
-import { OfferProposal, OfferProposalFilter } from "./proposal/offer-proposal";
+import { OfferProposal, OfferProposalFilter } from "./proposal";
 import AsyncLock from "async-lock";
 import { EventEmitter } from "eventemitter3";
 import { GolemMarketError, MarketErrorCode } from "./error";
@@ -32,10 +32,10 @@ export interface ProposalPoolOptions {
 }
 
 export interface ProposalPoolEvents {
-  added: (proposal: OfferProposal) => void;
-  removed: (proposal: OfferProposal) => void;
-  acquired: (proposal: OfferProposal) => void;
-  released: (proposal: OfferProposal) => void;
+  added: (event: { proposal: OfferProposal }) => void;
+  removed: (event: { proposal: OfferProposal }) => void;
+  acquired: (event: { proposal: OfferProposal }) => void;
+  released: (event: { proposal: OfferProposal }) => void;
   cleared: () => void;
 }
 
@@ -101,7 +101,7 @@ export class DraftOfferProposalPool {
 
     this.available.add(proposal);
 
-    this.events.emit("added", proposal);
+    this.events.emit("added", { proposal });
   }
 
   /**
@@ -140,7 +140,7 @@ export class DraftOfferProposalPool {
       this.available.delete(proposal);
       this.leased.add(proposal);
 
-      this.events.emit("acquired", proposal);
+      this.events.emit("acquired", { proposal });
 
       return proposal;
     });
@@ -158,9 +158,9 @@ export class DraftOfferProposalPool {
 
       if (this.validateOfferProposal(proposal)) {
         this.available.add(proposal);
-        this.events.emit("released", proposal);
+        this.events.emit("released", { proposal });
       } else {
-        this.events.emit("removed", proposal);
+        this.events.emit("removed", { proposal });
       }
     });
   }
@@ -169,12 +169,12 @@ export class DraftOfferProposalPool {
     return this.lock.acquire("proposal-pool", () => {
       if (this.leased.has(proposal)) {
         this.leased.delete(proposal);
-        this.events.emit("removed", proposal);
+        this.events.emit("removed", { proposal });
       }
 
       if (this.available.has(proposal)) {
         this.available.delete(proposal);
-        this.events.emit("removed", proposal);
+        this.events.emit("removed", { proposal });
       }
     });
   }
@@ -214,12 +214,12 @@ export class DraftOfferProposalPool {
     return this.lock.acquire("proposal-pool", () => {
       for (const proposal of this.available) {
         this.available.delete(proposal);
-        this.events.emit("removed", proposal);
+        this.events.emit("removed", { proposal });
       }
 
       for (const proposal of this.leased) {
         this.leased.delete(proposal);
-        this.events.emit("removed", proposal);
+        this.events.emit("removed", { proposal });
       }
 
       this.available = new Set();
@@ -230,7 +230,7 @@ export class DraftOfferProposalPool {
 
   protected removeFromAvailable(proposal: OfferProposal): void {
     this.available.delete(proposal);
-    this.events.emit("removed", proposal);
+    this.events.emit("removed", { proposal });
   }
 
   public readFrom(source: Observable<OfferProposal>): Subscription {

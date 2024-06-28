@@ -32,16 +32,18 @@ export interface ResourceRentalPoolOptions {
 export interface ResourceRentalPoolEvents {
   /** Triggered when the pool has the minimal number of rentals prepared for operations */
   ready: () => void;
+
   /** Triggered when the pool is emptied from all rentals */
   end: () => void;
 
-  acquired: (agreement: Agreement) => void;
-  released: (agreement: Agreement) => void;
-  created: (agreement: Agreement) => void;
-  destroyed: (agreement: Agreement) => void;
+  acquired: (event: { agreement: Agreement }) => void;
+  released: (event: { agreement: Agreement }) => void;
 
-  /** Fired when the pool will encounter an error */
-  error: (error: GolemMarketError) => void;
+  created: (event: { agreement: Agreement }) => void;
+  errorDestroyingRental: (event: { agreement: Agreement; error: GolemMarketError }) => void;
+
+  destroyed: (event: { agreement: Agreement }) => void;
+  errorCreatingRental: (event: { error: GolemMarketError }) => void;
 
   /** Triggered when the pool enters the "draining" state */
   draining: () => void;
@@ -135,13 +137,16 @@ export class ResourceRentalPool {
         networkNode,
         ...this.resourceRentalOptions,
       });
-      this.events.emit("created", agreement);
+      this.events.emit("created", { agreement });
       return resourceRental;
     } catch (error) {
-      this.events.emit(
-        "error",
-        new GolemMarketError("Creating resource rental failed", MarketErrorCode.ResourceRentalCreationFailed, error),
-      );
+      this.events.emit("errorCreatingRental", {
+        error: new GolemMarketError(
+          "Creating resource rental failed",
+          MarketErrorCode.ResourceRentalCreationFailed,
+          error,
+        ),
+      });
       this.logger.error("Creating resource rental failed", error);
       throw error;
     } finally {
@@ -193,7 +198,9 @@ export class ResourceRentalPool {
     return new Promise((resolve) => {
       this.acquireQueue.push((resourceRental) => {
         this.borrowed.add(resourceRental);
-        this.events.emit("acquired", resourceRental.agreement);
+        this.events.emit("acquired", {
+          agreement: resourceRental.agreement,
+        });
         resolve(resourceRental);
       });
     });
@@ -219,7 +226,9 @@ export class ResourceRentalPool {
     }
 
     this.borrowed.add(resourceRental);
-    this.events.emit("acquired", resourceRental.agreement);
+    this.events.emit("acquired", {
+      agreement: resourceRental.agreement,
+    });
 
     return resourceRental;
   }
@@ -250,7 +259,9 @@ export class ResourceRentalPool {
     if (!isValid) {
       return this.destroy(resourceRental);
     }
-    this.events.emit("released", resourceRental.agreement);
+    this.events.emit("released", {
+      agreement: resourceRental.agreement,
+    });
     this.passResourceRentalToWaitingAcquireOrBackToPool(resourceRental);
   }
 
@@ -259,16 +270,18 @@ export class ResourceRentalPool {
       this.borrowed.delete(resourceRental);
       this.logger.debug("Destroying resource rental from the pool", { agreementId: resourceRental.agreement.id });
       await Promise.all([resourceRental.stopAndFinalize(), this.removeNetworkNode(resourceRental)]);
-      this.events.emit("destroyed", resourceRental.agreement);
+      this.events.emit("destroyed", {
+        agreement: resourceRental.agreement,
+      });
     } catch (error) {
-      this.events.emit(
-        "error",
-        new GolemMarketError(
+      this.events.emit("errorDestroyingRental", {
+        agreement: resourceRental.agreement,
+        error: new GolemMarketError(
           "Destroying resource rental failed",
           MarketErrorCode.ResourceRentalTerminationFailed,
           error,
         ),
-      );
+      });
       this.logger.error("Destroying resource rental failed", error);
     }
   }
@@ -314,6 +327,7 @@ export class ResourceRentalPool {
     });
     return this.drainPromise;
   }
+
   /**
    * Total size (available + borrowed)
    */
