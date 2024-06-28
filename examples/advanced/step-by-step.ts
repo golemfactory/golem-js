@@ -24,7 +24,7 @@ import { filter, map, switchMap, take } from "rxjs";
     logger,
   });
 
-  const RENTAL_DURATION_HOURS = 5 / 60;
+  const RENTAL_DURATION_HOURS = 10 / 60;
   const ALLOCATION_DURATION_HOURS = RENTAL_DURATION_HOURS + 0.25;
 
   console.assert(
