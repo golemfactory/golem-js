@@ -206,6 +206,9 @@ describe("ResourceRentalPool", () => {
   it("should abort getting exe-unit by timeout", async () => {
     const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 1 });
     const rental = await pool.acquire();
+    // wait for init and destroy the exe-unit created automatically on startup renatl
+    await rental.getExeUnit();
+    await rental.destroyExeUnit();
     await expect(rental.getExeUnit(10)).rejects.toThrow(
       new GolemAbortError("Initializing of the exe-unit has been aborted due to a timeout"),
     );
@@ -215,6 +218,9 @@ describe("ResourceRentalPool", () => {
     const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 1 });
     const abortController = new AbortController();
     const rental = await pool.acquire();
+    // wait for init and destroy the exe-unit created automatically on startup renatl
+    await rental.getExeUnit();
+    await rental.destroyExeUnit();
     abortController.abort();
     await expect(rental.getExeUnit(abortController.signal)).rejects.toThrow(
       new GolemAbortError("Initializing of the exe-unit has been aborted"),
@@ -224,6 +230,7 @@ describe("ResourceRentalPool", () => {
   it("should abort finalizing resource rental by timeout", async () => {
     const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 1 });
     const rental = await pool.acquire();
+    await rental.getExeUnit();
     await expect(rental.stopAndFinalize(10)).rejects.toThrow(
       new GolemAbortError("The finalization of payment process has been aborted due to a timeout"),
     );
@@ -233,6 +240,7 @@ describe("ResourceRentalPool", () => {
     const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 1 });
     const abortController = new AbortController();
     const rental = await pool.acquire();
+    await rental.getExeUnit();
     abortController.abort();
     await expect(rental.stopAndFinalize(abortController.signal)).rejects.toThrow(
       new GolemAbortError("The finalization of payment process has been aborted"),
