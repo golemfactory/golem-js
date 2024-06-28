@@ -33,7 +33,6 @@ const demand = new Demand(
       properties: [],
     },
     "erc20-holesky-tglm",
-    30 * 60,
   ),
 );
 

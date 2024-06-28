@@ -8,7 +8,6 @@ export class BasicDemandDirector implements IDemandDirector {
   apply(builder: DemandBodyBuilder) {
     builder
       .addProperty("golem.srv.caps.multi-activity", true)
-      .addProperty("golem.srv.comp.expiration", Date.now() + this.config.expirationSec * 1000)
       .addProperty("golem.node.debug.subnet", this.config.subnetTag);
 
     builder

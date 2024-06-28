@@ -215,9 +215,11 @@ export class MarketApiAdapter implements IMarketApi {
     try {
       // FIXME #yagna, If we don't provide the app-session ID when confirming the agreement, we won't be able to collect invoices with that app-session-id
       //   it's hard to know when the appSessionId is mandatory and when it isn't
+      this.logger.debug("Confirming agreement by Requestor", { agreementId: agreement.id });
       await this.yagnaApi.market.confirmAgreement(agreement.id, this.yagnaApi.appSessionId);
+      this.logger.debug("Waiting for agreement approval by Provider", { agreementId: agreement.id });
       await this.yagnaApi.market.waitForApproval(agreement.id, options?.waitingForApprovalTimeoutSec || 60);
-      this.logger.debug(`Agreement approved`, { id: agreement.id });
+      this.logger.debug(`Agreement approved by Provider`, { agreementId: agreement.id });
 
       // Get fresh copy
       return this.agreementRepo.getById(agreement.id);
@@ -232,6 +234,7 @@ export class MarketApiAdapter implements IMarketApi {
 
   async createAgreement(proposal: OfferProposal, options?: AgreementOptions): Promise<Agreement> {
     const expirationSec = options?.expirationSec || 3600;
+
     try {
       const agreementProposalRequest = {
         proposalId: proposal.id,
@@ -247,13 +250,15 @@ export class MarketApiAdapter implements IMarketApi {
         );
       }
 
+      const agreement = await this.agreementRepo.getById(agreementId);
+
       this.logger.debug(`Agreement created`, {
-        agreementId: agreementId,
+        agreement,
         proposalId: proposal.id,
         demandId: proposal.demand.id,
       });
 
-      return this.agreementRepo.getById(agreementId);
+      return agreement;
     } catch (error) {
       const message = getMessageFromApiError(error);
       throw new GolemMarketError(

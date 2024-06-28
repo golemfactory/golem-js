@@ -9,6 +9,7 @@ import type { ResourceRental, ResourceRentalOptions } from "./resource-rental";
 import { Network, NetworkModule } from "../network";
 import { RentalModule } from "./rental.module";
 import { AgreementOptions } from "../market/agreement/agreement";
+import { GolemAbortError } from "../shared/error/golem-error";
 
 export interface ResourceRentalPoolDependencies {
   allocation: Allocation;
@@ -29,13 +30,21 @@ export interface ResourceRentalPoolOptions {
 }
 
 export interface ResourceRentalPoolEvents {
+  /** Triggered when the pool has the minimal number of rentals prepared for operations */
   ready: () => void;
+  /** Triggered when the pool is emptied from all rentals */
   end: () => void;
+
   acquired: (agreement: Agreement) => void;
   released: (agreement: Agreement) => void;
   created: (agreement: Agreement) => void;
   destroyed: (agreement: Agreement) => void;
+
+  /** Fired when the pool will encounter an error */
   error: (error: GolemMarketError) => void;
+
+  /** Triggered when the pool enters the "draining" state */
+  draining: () => void;
 }
 
 const MAX_POOL_SIZE = 100;
@@ -197,17 +206,21 @@ export class ResourceRentalPool {
    */
   async acquire(signalOrTimeout?: number | AbortSignal): Promise<ResourceRental> {
     if (this.isDraining) {
-      throw new Error("The pool is in draining mode");
+      throw new GolemAbortError("The pool is in draining mode, you cannot acquire new resources");
     }
+
     let resourceRental = await this.takeValidResourceRental();
+
     if (!resourceRental) {
       if (!this.canCreateMoreResourceRentals()) {
         return this.enqueueAcquire();
       }
       resourceRental = await this.createNewResourceRental(signalOrTimeout);
     }
+
     this.borrowed.add(resourceRental);
     this.events.emit("acquired", resourceRental.agreement);
+
     return resourceRental;
   }
 
@@ -267,6 +280,7 @@ export class ResourceRentalPool {
   private async startDrain() {
     try {
       this.abortController.abort("The pool is in draining mode");
+      this.events.emit("draining");
       this.acquireQueue = [];
       const allResourceRentals = Array.from(this.borrowed)
         .concat(Array.from(this.lowPriority))

@@ -26,7 +26,7 @@ import {
   OfferProposalFilter,
   ProposalsBatch,
 } from "./proposal";
-import { BuildDemandOptions, DemandBodyBuilder, DemandSpecification } from "./demand";
+import { OrderDemandOptions, DemandBodyBuilder, DemandSpecification } from "./demand";
 import { IActivityApi, IFileServer } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { WorkloadDemandDirectorConfig } from "./demand/directors/workload-demand-director-config";
@@ -55,7 +55,7 @@ export type PricingOptions =
       avgGlmPerHour: number;
     };
 
-export interface MarketOptions {
+export interface OrderMarketOptions {
   /** How long you want to rent the resources in hours */
   rentHours: number;
 
@@ -69,6 +69,16 @@ export interface MarketOptions {
   offerProposalSelector?: OfferProposalSelector;
 }
 
+export interface MarketModuleOptions {
+  /**
+   * Number of seconds after which the demand will be un-subscribed and subscribed again to get fresh
+   * offers from the market
+   *
+   * @default 30 minutes
+   */
+  demandRefreshIntervalSec: number;
+}
+
 export interface MarketModule {
   events: EventEmitter<MarketEvents>;
 
@@ -78,7 +88,11 @@ export interface MarketModule {
    * The method returns a DemandSpecification that can be used to publish the demand to the market,
    * for example using the `publishDemand` method.
    */
-  buildDemandDetails(options: BuildDemandOptions, allocation: Allocation): Promise<DemandSpecification>;
+  buildDemandDetails(
+    demandOptions: OrderDemandOptions,
+    orderOptions: OrderMarketOptions,
+    allocation: Allocation,
+  ): Promise<DemandSpecification>;
 
   /**
    * Publishes the demand to the market and handles refreshing it when needed.
@@ -209,6 +223,7 @@ export class MarketModuleImpl implements MarketModule {
   private readonly logger = defaultLogger("market");
   private readonly marketApi: IMarketApi;
   private fileServer: IFileServer;
+  private options: MarketModuleOptions;
 
   constructor(
     private readonly deps: {
@@ -222,39 +237,51 @@ export class MarketModuleImpl implements MarketModule {
       fileServer: IFileServer;
       storageProvider: StorageProvider;
     },
+    options?: Partial<MarketModuleOptions>,
   ) {
     this.logger = deps.logger;
     this.marketApi = deps.marketApi;
     this.fileServer = deps.fileServer;
 
+    this.options = {
+      ...{ demandRefreshIntervalSec: 30 * 60 },
+      ...options,
+    };
+
     this.collectAndEmitAgreementEvents();
   }
 
-  async buildDemandDetails(options: BuildDemandOptions, allocation: Allocation): Promise<DemandSpecification> {
+  async buildDemandDetails(
+    demandOptions: OrderDemandOptions,
+    orderOptions: OrderMarketOptions,
+    allocation: Allocation,
+  ): Promise<DemandSpecification> {
     const builder = new DemandBodyBuilder();
 
     // Instruct the builder what's required
     const basicConfig = new BasicDemandDirectorConfig({
-      expirationSec: options.expirationSec,
-      subnetTag: options.subnetTag,
+      subnetTag: demandOptions.subnetTag,
     });
 
     const basicDirector = new BasicDemandDirector(basicConfig);
     basicDirector.apply(builder);
 
-    const workloadOptions = options.workload
-      ? await this.applyLocalGVMIServeSupport(options.workload)
-      : options.workload;
+    const workloadOptions = demandOptions.workload
+      ? await this.applyLocalGVMIServeSupport(demandOptions.workload)
+      : demandOptions.workload;
 
-    const workloadConfig = new WorkloadDemandDirectorConfig(workloadOptions);
+    const workloadConfig = new WorkloadDemandDirectorConfig({
+      ...workloadOptions,
+      expirationSec: orderOptions.rentHours * 60 * 60, // hours to seconds
+    });
     const workloadDirector = new WorkloadDemandDirector(workloadConfig);
     await workloadDirector.apply(builder);
 
-    const paymentConfig = new PaymentDemandDirectorConfig(options.payment);
+    const paymentConfig = new PaymentDemandDirectorConfig(demandOptions.payment);
     const paymentDirector = new PaymentDemandDirector(allocation, this.deps.marketApi, paymentConfig);
     await paymentDirector.apply(builder);
 
-    return new DemandSpecification(builder.getProduct(), allocation.paymentPlatform, basicConfig.expirationSec);
+    return new DemandSpecification(builder.getProduct(), allocation.paymentPlatform);
   }
 
   /**
@@ -340,7 +367,7 @@ export class MarketModuleImpl implements MarketModule {
             this.logger.error("Error while re-publishing demand for offers", err);
             subscriber.error(err);
           });
-      }, demandSpecification.expirationSec * 1000);
+      }, this.options.demandRefreshIntervalSec * 1000);
 
       return () => {
         clearInterval(interval);
@@ -640,7 +667,7 @@ export class MarketModuleImpl implements MarketModule {
     }
     if (!isPriceValid) {
       this.events.emit("offerProposalRejectedByPriceFilter", proposal);
-      this.logger.debug("The offer was rejected because the price was too high", {
+      this.logger.debug("The offer was ignored because the price was too high", {
         id: proposal.id,
         pricing: proposal.pricing,
       });
