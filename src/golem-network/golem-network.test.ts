@@ -245,7 +245,7 @@ describe("Golem Network", () => {
 
       expect.assertions(1);
       const rentalPromise = glm
-        .manyOf({ concurrency: 3, order })
+        .manyOf({ poolSize: 3, order })
         .then(() => {
           throw new Error("Pool should not be created");
         })
