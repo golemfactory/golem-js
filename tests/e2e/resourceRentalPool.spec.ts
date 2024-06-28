@@ -203,7 +203,7 @@ describe("ResourceRentalPool", () => {
     });
   });
 
-  it("should abort getting exe-unit by timeout", async () => {
+  it("should abort getting the newly created exe-unit by timeout", async () => {
     const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 1 });
     const rental = await pool.acquire();
     // wait for init and destroy the exe-unit created automatically on startup renatl
@@ -214,7 +214,7 @@ describe("ResourceRentalPool", () => {
     );
   });
 
-  it("should abort getting exe-unit by signal", async () => {
+  it("should abort getting the newly created exe-unit by signal", async () => {
     const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 1 });
     const abortController = new AbortController();
     const rental = await pool.acquire();
