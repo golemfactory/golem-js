@@ -50,55 +50,60 @@ export class ResourceRental {
     // TODO: Listen to agreement events to know when it goes down due to provider closing it!
   }
 
+  private async startStopAndFinalize(signalOrTimeout?: number | AbortSignal) {
+    try {
+      if (this.currentExeUnit) {
+        await this.currentExeUnit.teardown();
+      }
+      this.abortController.abort("The resource rental is finalizing");
+      if (this.currentExeUnit?.activity) {
+        await this.activityModule.destroyActivity(this.currentExeUnit.activity);
+      }
+      if ((await this.fetchAgreementState()) !== "Terminated") {
+        await this.marketModule.terminateAgreement(this.agreement);
+      }
+      if (this.paymentProcess.isFinished()) {
+        return;
+      }
+
+      this.logger.info("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
+      const abortSignal = createAbortSignalFromTimeout(signalOrTimeout);
+      await waitForCondition(() => this.paymentProcess.isFinished(), {
+        signalOrTimeout: abortSignal,
+      }).catch((error) => {
+        this.paymentProcess.stop();
+        if (error instanceof GolemTimeoutError) {
+          throw new GolemTimeoutError(
+            `The finalization of payment process has been aborted due to a timeout`,
+            abortSignal.reason,
+          );
+        }
+        throw new GolemAbortError("The finalization of payment process has been aborted", abortSignal.reason);
+      });
+      this.logger.info("Finalized payment process", { agreementId: this.agreement.id });
+    } catch (error) {
+      this.logger.error("Filed to finalize payment process", { agreementId: this.agreement.id, error });
+      throw error;
+    } finally {
+      this.events.emit("finalized");
+    }
+  }
+
   /**
    * Terminates the activity and agreement (stopping any ongoing work) and finalizes the payment process.
    * Resolves when the rental will be fully terminated and all pending business operations finalized.
    * If the rental is already finalized, it will resolve immediately.
    * @param signalOrTimeout - timeout in milliseconds or an AbortSignal that will be used to cancel the finalization process, especially the payment process.
    * Please note that canceling the payment process may fail to comply with the terms of the agreement.
+   * If this method is called multiple times, it will return the same promise, ignoring the signal or timeout.
    */
   async stopAndFinalize(signalOrTimeout?: number | AbortSignal) {
-    // Prevent this task from being performed more than once
-    if (!this.finalizePromise) {
-      this.finalizePromise = (async () => {
-        try {
-          if (this.currentExeUnit) {
-            await this.currentExeUnit.teardown();
-          }
-          this.abortController.abort("The resource rental is finalizing");
-          if (this.currentExeUnit?.activity) {
-            await this.activityModule.destroyActivity(this.currentExeUnit.activity);
-          }
-          if ((await this.fetchAgreementState()) !== "Terminated") {
-            await this.marketModule.terminateAgreement(this.agreement);
-          }
-          if (this.paymentProcess.isFinished()) {
-            return;
-          }
-
-          this.logger.info("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
-          const abortSignal = createAbortSignalFromTimeout(signalOrTimeout);
-          await waitForCondition(() => this.paymentProcess.isFinished(), {
-            signalOrTimeout: abortSignal,
-          }).catch((error) => {
-            this.paymentProcess.stop();
-            if (error instanceof GolemTimeoutError) {
-              throw new GolemTimeoutError(
-                `The finalization of payment process has been aborted due to a timeout`,
-                abortSignal.reason,
-              );
-            }
-            throw new GolemAbortError("The finalization of payment process has been aborted", abortSignal.reason);
-          });
-          this.logger.info("Finalized payment process", { agreementId: this.agreement.id });
-        } catch (error) {
-          this.logger.error("Filed to finalize payment process", { agreementId: this.agreement.id, error });
-          throw error;
-        } finally {
-          this.events.emit("finalized");
-        }
-      })();
+    if (this.finalizePromise) {
+      return this.finalizePromise;
     }
+    this.finalizePromise = this.startStopAndFinalize(signalOrTimeout).finally(() => {
+      this.finalizePromise = undefined;
+    });
     return this.finalizePromise;
   }
 

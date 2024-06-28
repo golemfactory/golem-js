@@ -1,7 +1,7 @@
 import type { Agreement, DraftOfferProposalPool, MarketModule } from "../market";
 import { GolemMarketError, MarketErrorCode } from "../market";
 import type { Logger } from "../shared/utils";
-import { createAbortSignalFromTimeout, runOnNextEventLoopIteration } from "../shared/utils";
+import { anyAbortSignal, createAbortSignalFromTimeout, runOnNextEventLoopIteration } from "../shared/utils";
 import { EventEmitter } from "eventemitter3";
 import type { RequireAtLeastOne } from "../shared/utils/types";
 import type { Allocation } from "../payment";
@@ -59,8 +59,10 @@ export class ResourceRentalPool {
    * Queue of functions that are waiting for a lease process to be available
    */
   private acquireQueue: Array<(rental: ResourceRental) => void> = [];
-  private isDraining = false;
   private logger: Logger;
+
+  private drainPromise?: Promise<void>;
+  private abortController: AbortController;
 
   private allocation: Allocation;
   private network?: Network;
@@ -106,17 +108,17 @@ export class ResourceRentalPool {
           return options?.poolSize.max;
         }
       })() || MAX_POOL_SIZE;
+
+    this.abortController = new AbortController();
   }
 
   private async createNewResourceRental(signalOrTimeout?: number | AbortSignal) {
     this.logger.debug("Creating new resource rental to add to pool");
+    const signal = anyAbortSignal(this.abortController.signal, createAbortSignalFromTimeout(signalOrTimeout));
+
     try {
       this.rentalsBeingSigned++;
-      const agreement = await this.marketModule.signAgreementFromPool(
-        this.proposalPool,
-        this.agreementOptions,
-        signalOrTimeout,
-      );
+      const agreement = await this.marketModule.signAgreementFromPool(this.proposalPool, this.agreementOptions, signal);
       const networkNode = this.network
         ? await this.networkModule.createNetworkNode(this.network, agreement.provider.id)
         : undefined;
@@ -258,6 +260,30 @@ export class ResourceRentalPool {
     }
   }
 
+  private get isDraining(): boolean {
+    return !!this.drainPromise;
+  }
+
+  private async startDrain() {
+    try {
+      this.abortController.abort("The pool is in draining mode");
+      this.acquireQueue = [];
+      const allResourceRentals = Array.from(this.borrowed)
+        .concat(Array.from(this.lowPriority))
+        .concat(Array.from(this.highPriority));
+      await Promise.allSettled(allResourceRentals.map((resourceRental) => this.destroy(resourceRental)));
+      this.lowPriority.clear();
+      this.highPriority.clear();
+      this.borrowed.clear();
+      this.abortController = new AbortController();
+    } catch (error) {
+      this.logger.error("Draining the pool failed", error);
+      throw error;
+    } finally {
+      this.events.emit("end");
+    }
+  }
+
   /**
    * Sets the pool into draining mode and then clears it
    *
@@ -266,20 +292,14 @@ export class ResourceRentalPool {
    * @return Resolves when all agreements are terminated
    */
   async drainAndClear() {
-    this.isDraining = true;
-    this.acquireQueue = [];
-    const allResourceRentals = Array.from(this.borrowed)
-      .concat(Array.from(this.lowPriority))
-      .concat(Array.from(this.highPriority));
-    await Promise.allSettled(allResourceRentals.map((resourceRental) => this.destroy(resourceRental)));
-    this.lowPriority.clear();
-    this.highPriority.clear();
-    this.borrowed.clear();
-    this.isDraining = false;
-    this.events.emit("end");
-    return;
+    if (this.isDraining) {
+      return this.drainPromise;
+    }
+    this.drainPromise = this.startDrain().finally(() => {
+      this.drainPromise = undefined;
+    });
+    return this.drainPromise;
   }
-
   /**
    * Total size (available + borrowed)
    */
@@ -322,12 +342,11 @@ export class ResourceRentalPool {
     if (this.minPoolSize <= this.getAvailableSize()) {
       return;
     }
-    const signal = createAbortSignalFromTimeout(timeoutOrAbortSignal);
-
+    const signal = anyAbortSignal(this.abortController.signal, createAbortSignalFromTimeout(timeoutOrAbortSignal));
     const tryCreatingMissingResourceRentals = async () => {
       await Promise.allSettled(
         new Array(this.minPoolSize - this.getAvailableSize()).fill(0).map(() =>
-          this.createNewResourceRental().then(
+          this.createNewResourceRental(signal).then(
             (resourceRental) => this.lowPriority.add(resourceRental),
             (error) => this.logger.error("Creating resource rental failed", error),
           ),
@@ -369,7 +388,7 @@ export class ResourceRentalPool {
    *  // even if an error is thrown in the callback
    * });
    * ```
-   * @param callback - a function that takes a `rental` object as its argument. The renatl is automatically released after the callback is executed, regardless of whether it completes successfully or throws an error.
+   * @param callback - a function that takes a `rental` object as its argument. The rental is automatically released after the callback is executed, regardless of whether it completes successfully or throws an error.
    * @param signalOrTimeout - the timeout in milliseconds or an AbortSignal that will be used to cancel the rental request
    */
   public async withRental<T>(

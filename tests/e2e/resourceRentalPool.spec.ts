@@ -246,4 +246,12 @@ describe("ResourceRentalPool", () => {
       new GolemAbortError("The finalization of payment process has been aborted"),
     );
   });
+
+  it("should abort creating a resource rental when drained", async () => {
+    const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 1 });
+    const acquirePromise = pool.acquire();
+    await pool.drainAndClear();
+    await expect(acquirePromise).rejects.toThrow("The signing of the agreement has been aborted");
+    expect(pool.getSize()).toEqual(0);
+  });
 });
