@@ -27,7 +27,7 @@ const order: MarketOrderSpec = {
   try {
     await glm.connect();
     const pool = await glm.manyOf({
-      concurrency: 2,
+      poolSize: 2,
       order,
     });
     const rental1 = await pool.acquire();

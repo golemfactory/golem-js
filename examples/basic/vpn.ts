@@ -28,7 +28,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
     };
     // create a pool that can grow up to 2 rentals at the same time
     const pool = await glm.manyOf({
-      concurrency: 2,
+      poolSize: 2,
       order,
     });
     const rental1 = await pool.acquire();

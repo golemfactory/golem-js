@@ -216,13 +216,18 @@ export class ActivityModuleImpl implements ActivityModule {
   }
 
   async createActivity(agreement: Agreement): Promise<Activity> {
-    this.logger.info("Creating activity", {
+    this.logger.debug("Creating activity", {
       agreementId: agreement.id,
       provider: agreement.provider,
     });
     try {
       const activity = await this.activityApi.createActivity(agreement);
       this.events.emit("activityCreated", activity);
+      this.logger.info("Created activity", {
+        activityId: activity.id,
+        agreementId: agreement.id,
+        provider: agreement.provider,
+      });
       return activity;
     } catch (error) {
       this.events.emit("errorCreatingActivity", error);
@@ -231,14 +236,15 @@ export class ActivityModuleImpl implements ActivityModule {
   }
 
   async destroyActivity(activity: Activity): Promise<Activity> {
-    this.logger.info("Destroying activity", {
-      activityId: activity.id,
-      agreementId: activity.agreement.id,
-      provider: activity.agreement.provider,
-    });
+    this.logger.debug("Destroying activity", activity);
     try {
       const updated = await this.activityApi.destroyActivity(activity);
       this.events.emit("activityDestroyed", updated);
+      this.logger.info("Destroyed activity", {
+        activityId: updated.id,
+        agreementId: updated.agreement.id,
+        provider: updated.agreement.provider,
+      });
       return updated;
     } catch (error) {
       this.events.emit("errorDestroyingActivity", activity, error);
@@ -275,7 +281,7 @@ export class ActivityModuleImpl implements ActivityModule {
   }
 
   async createExeUnit(activity: Activity, options?: ExeUnitOptions): Promise<ExeUnit> {
-    this.logger.info("Creating exe-unit for activity", { activityId: activity.id });
+    this.logger.debug("Creating exe-unit for activity", { activityId: activity.id });
     const exe = new ExeUnit(activity, this, {
       yagnaOptions: this.services.yagna.yagnaOptions,
       logger: this.logger.child("exe-unit"),
@@ -285,13 +291,15 @@ export class ActivityModuleImpl implements ActivityModule {
     this.logger.debug("Initializing the exe-unit for activity", { activityId: activity.id });
     try {
       await exe.setup();
-      this.events.emit(
-        "exeUnitInitialized",
-        await this.refreshActivity(activity).catch(() => {
-          this.logger.warn("Failed to refresh activity after work context initialization", { activityId: activity.id });
-          return activity;
-        }),
-      );
+      const refreshedActivity = await this.refreshActivity(activity).catch(() => {
+        this.logger.warn("Failed to refresh activity after work context initialization", { activityId: activity.id });
+        return activity;
+      });
+      this.events.emit("exeUnitInitialized", refreshedActivity);
+      this.logger.info("Initialized exe-unit", {
+        activityId: activity.id,
+        state: refreshedActivity.getState(),
+      });
       return exe;
     } catch (error) {
       this.events.emit(

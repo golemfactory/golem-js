@@ -6,7 +6,7 @@
  * therefore this feature is not recommended for most users.
  */
 
-import { Concurrency, MarketOrderSpec, GolemNetwork } from "@golem-sdk/golem-js";
+import { MarketOrderSpec, GolemNetwork } from "@golem-sdk/golem-js";
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
 // let's override the `estimateBudget` method from the `MarketModule` interface
@@ -15,9 +15,9 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 import { MarketModuleImpl } from "@golem-sdk/golem-js";
 
 class MyMarketModule extends MarketModuleImpl {
-  estimateBudget({ concurrency, order }: { concurrency: Concurrency; order: MarketOrderSpec }): number {
+  estimateBudget({ maxAgreements, order }: { maxAgreements: number; order: MarketOrderSpec }): number {
     // let's take the original estimate and add 20% to it as a buffer
-    const originalEstimate = super.estimateBudget({ concurrency, order });
+    const originalEstimate = super.estimateBudget({ maxAgreements, order });
     return originalEstimate * 1.2;
   }
 }

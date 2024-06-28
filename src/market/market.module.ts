@@ -8,7 +8,7 @@ import {
   MarketErrorCode,
   MarketEvents,
   MarketProposalEvent,
-  ProposalSelector,
+  OfferProposalSelector,
 } from "./index";
 import {
   createAbortSignalFromTimeout,
@@ -23,7 +23,7 @@ import {
   OfferCounterProposal,
   OfferProposal,
   OfferProposalReceivedEvent,
-  ProposalFilter,
+  OfferProposalFilter,
   ProposalsBatch,
 } from "./proposal";
 import { BuildDemandOptions, DemandBodyBuilder, DemandSpecification } from "./demand";
@@ -40,7 +40,6 @@ import { GolemAbortError, GolemTimeoutError, GolemUserError } from "../shared/er
 import { MarketOrderSpec } from "../golem-network";
 import { INetworkApi, NetworkModule } from "../network";
 import { AgreementOptions } from "./agreement/agreement";
-import { Concurrency } from "../resource-rental";
 
 export type DemandEngine = "vm" | "vm-nvidia" | "wasmtime";
 
@@ -63,11 +62,11 @@ export interface MarketOptions {
   /** Pricing strategy that will be used to filter the offers from the market */
   pricing: PricingOptions;
 
-  /** A user-defined filter function which will determine if the proposal is valid for use. */
-  proposalFilter?: ProposalFilter;
+  /** A user-defined filter function which will determine if the offer proposal is valid for use. */
+  offerProposalFilter?: OfferProposalFilter;
 
-  /** A user-defined function that will be used to pick the best fitting proposal from available ones */
-  proposalSelector?: ProposalSelector;
+  /** A user-defined function that will be used to pick the best fitting offer proposal from available ones */
+  offerProposalSelector?: OfferProposalSelector;
 }
 
 export interface MarketModule {
@@ -172,19 +171,18 @@ export interface MarketModule {
   collectDraftOfferProposals(options: {
     demandSpecification: DemandSpecification;
     pricing: PricingOptions;
-    filter?: ProposalFilter;
+    filter?: OfferProposalFilter;
     minProposalsBatchSize?: number;
     proposalsBatchReleaseTimeoutMs?: number;
   }): Observable<OfferProposal>;
 
   /**
-   * Estimate the budget for the given order and concurrency level.
+   * Estimate the budget for the given order and maximum numbers of agreemnets.
    * Keep in mind that this is just an estimate and the actual cost may vary.
-   * To get a more accurate estimate, make sure to specify an exact or maximum concurrency level.
    * The method returns the estimated budget in GLM.
    * @param params
    */
-  estimateBudget({ concurrency, order }: { concurrency: Concurrency; order: MarketOrderSpec }): number;
+  estimateBudget({ maxAgreements, order }: { maxAgreements: number; order: MarketOrderSpec }): number;
   /**
    * Fetch the most up-to-date agreement details from the yagna
    */
@@ -314,7 +312,8 @@ export class MarketModuleImpl implements MarketModule {
       const unsubscribeFromOfferProposals = async (demand: Demand) => {
         try {
           await this.deps.marketApi.unpublishDemand(demand);
-          this.logger.info("Demand unpublished from the market", { demand });
+          this.logger.info("Unpublished demand", { demandId: demand.id });
+          this.logger.debug("Unpublished demand", demand);
           this.events.emit("demandSubscriptionStopped", demand);
         } catch (err) {
           const golemMarketError = new GolemMarketError(
@@ -407,7 +406,7 @@ export class MarketModuleImpl implements MarketModule {
   collectDraftOfferProposals(options: {
     demandSpecification: DemandSpecification;
     pricing: PricingOptions;
-    filter?: ProposalFilter;
+    filter?: OfferProposalFilter;
     minProposalsBatchSize?: number;
     proposalsBatchReleaseTimeoutMs?: number;
   }): Observable<OfferProposal> {
@@ -559,25 +558,13 @@ export class MarketModuleImpl implements MarketModule {
       });
   }
 
-  estimateBudget({ concurrency, order }: { concurrency: Concurrency; order: MarketOrderSpec }): number {
+  estimateBudget({ order, maxAgreements }: { order: MarketOrderSpec; maxAgreements: number }): number {
     const pricingModel = order.market.pricing.model;
 
     // TODO: Don't assume for the user, at least not on pure golem-js level
     const minCpuThreads = order.demand.workload?.minCpuThreads ?? 1;
 
     const { rentHours } = order.market;
-    const maxAgreements = (() => {
-      if (typeof concurrency === "number") {
-        return concurrency;
-      }
-      if (concurrency.max) {
-        return concurrency.max;
-      }
-      if (concurrency.min) {
-        return concurrency.min;
-      }
-      return 1;
-    })();
 
     switch (pricingModel) {
       case "linear": {
@@ -623,7 +610,7 @@ export class MarketModuleImpl implements MarketModule {
     });
   }
 
-  private filterProposalsByUserFilter(filter: ProposalFilter, proposal: OfferProposal) {
+  private filterProposalsByUserFilter(filter: OfferProposalFilter, proposal: OfferProposal) {
     try {
       const result = filter(proposal);
 

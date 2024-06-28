@@ -5,7 +5,7 @@ import { Demand } from "../demand";
 import { GolemInternalError } from "../../shared/error/golem-error";
 import { MarketProposal } from "./market-proposal";
 
-export type ProposalFilter = (proposal: OfferProposal) => boolean;
+export type OfferProposalFilter = (proposal: OfferProposal) => boolean;
 
 export type PricingInfo = {
   cpuSec: number;

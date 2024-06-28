@@ -31,7 +31,7 @@ const order: MarketOrderSpec = {
     await glm.connect();
     // create a pool that can grow up to 3 rentals at the same time
     const pool = await glm.manyOf({
-      concurrency: 3,
+      poolSize: 3,
       order,
     });
     await Promise.allSettled([

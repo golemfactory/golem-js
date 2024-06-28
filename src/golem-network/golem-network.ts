@@ -13,7 +13,7 @@ import { ActivityModule, ActivityModuleImpl, ExeUnitOptions, IActivityApi, IFile
 import { INetworkApi, Network, NetworkModule, NetworkModuleImpl, NetworkNode, NetworkOptions } from "../network";
 import { EventEmitter } from "eventemitter3";
 import {
-  Concurrency,
+  PoolSize,
   RentalModule,
   RentalModuleImpl,
   ResourceRental,
@@ -151,7 +151,7 @@ export interface OneOfOptions {
 
 export interface ManyOfOptions {
   order: MarketOrderSpec;
-  concurrency: Concurrency;
+  poolSize: PoolSize;
   setup?: ExeUnitOptions["setup"];
   teardown?: ExeUnitOptions["teardown"];
 }
@@ -355,13 +355,13 @@ export class GolemNetwork {
 
   private async getAllocationFromOrder({
     order,
-    concurrency,
+    maxAgreements,
   }: {
     order: MarketOrderSpec;
-    concurrency: Concurrency;
+    maxAgreements: number;
   }): Promise<Allocation> {
     if (!order.payment?.allocation) {
-      const budget = this.market.estimateBudget({ order, concurrency });
+      const budget = this.market.estimateBudget({ order, maxAgreements });
       return this.payment.createAllocation({
         budget,
         expirationSec: order.market.rentHours * 60 * 60,
@@ -380,7 +380,7 @@ export class GolemNetwork {
    *
    * @example
    * ```ts
-   * const rental = await glm.oneOf(demand);
+   * const rental = await glm.oneOf({ order });
    * await rental
    *  .getExeUnit()
    *  .then((exe) => exe.run("echo Hello, Golem! 👋"))
@@ -427,18 +427,18 @@ export class GolemNetwork {
     try {
       const proposalPool = new DraftOfferProposalPool({
         logger: this.logger,
-        validateProposal: order.market.proposalFilter,
-        selectProposal: order.market.proposalSelector,
+        validateOfferProposal: order.market.offerProposalFilter,
+        selectOfferProposal: order.market.offerProposalSelector,
       });
 
-      allocation = await this.getAllocationFromOrder({ order, concurrency: 1 });
+      allocation = await this.getAllocationFromOrder({ order, maxAgreements: 1 });
       signal.throwIfAborted();
 
       const demandSpecification = await this.market.buildDemandDetails(order.demand, allocation);
       const draftProposal$ = this.market.collectDraftOfferProposals({
         demandSpecification,
         pricing: order.market.pricing,
-        filter: order.market.proposalFilter,
+        filter: order.market.offerProposalFilter,
       });
 
       proposalSubscription = proposalPool.readFrom(draftProposal$);
@@ -478,13 +478,13 @@ export class GolemNetwork {
 
   /**
    * Define your computational resource demand and access a pool of instances.
-   * The pool will grow up to the specified concurrency level.
+   * The pool will grow up to the specified poolSize.
    *
    * @example
    * ```ts
    * // create a pool that can grow up to 3 rentals at the same time
    * const pool = await glm.manyOf({
-   *   concurrency: 3,
+   *   poolSize: 3,
    *   demand
    * });
    * await Promise.allSettled([
@@ -509,13 +509,15 @@ export class GolemNetwork {
    * ]);
    * ```
    *
-   * @param @param {Object} options
+   * @param {Object} options
    * @param options.order - represents the order specifications which will result in access to LeaseProcess.
-   * @param options.concurrency - concurrency level, can be defined as a number or an object with min and max fields
+   * @param options.poolSize {Object | number} - can be defined as a number or an object with min and max fields, if defined as a number it will be treated as a min parameter.
+   * @param options.poolSize.min - the minimum pool size to achieve ready state (default = 0)
+   * @param options.poolSize.max - the maximum pool size, if reached, the next pool element will only be available if the borrowed resource is released or destroyed (dafault = 100)
    * @param options.setup - an optional function that is called as soon as the exe unit is ready
    * @param options.teardown - an optional function that is called before the exe unit is destroyed
    */
-  public async manyOf({ concurrency, order, setup, teardown }: ManyOfOptions): Promise<ResourceRentalPool> {
+  public async manyOf({ poolSize, order, setup, teardown }: ManyOfOptions): Promise<ResourceRentalPool> {
     const signal = this.abortController.signal;
     let allocation: Allocation | undefined = undefined;
     let resourceRentalPool: ResourceRentalPool | undefined = undefined;
@@ -544,23 +546,25 @@ export class GolemNetwork {
     try {
       const proposalPool = new DraftOfferProposalPool({
         logger: this.logger,
-        validateProposal: order.market.proposalFilter,
-        selectProposal: order.market.proposalSelector,
+        validateOfferProposal: order.market.offerProposalFilter,
+        selectOfferProposal: order.market.offerProposalSelector,
       });
 
-      allocation = await this.getAllocationFromOrder({ order, concurrency });
+      const maxAgreements = typeof poolSize === "number" ? poolSize : poolSize?.max ?? poolSize?.min ?? 1;
+      allocation = await this.getAllocationFromOrder({ order, maxAgreements });
       signal.throwIfAborted();
 
       const demandSpecification = await this.market.buildDemandDetails(order.demand, allocation);
+
       const draftProposal$ = this.market.collectDraftOfferProposals({
         demandSpecification,
         pricing: order.market.pricing,
-        filter: order.market.proposalFilter,
+        filter: order.market.offerProposalFilter,
       });
       subscription = proposalPool.readFrom(draftProposal$);
 
       resourceRentalPool = this.rental.createResourceRentalPool(proposalPool, allocation, {
-        replicas: concurrency,
+        poolSize,
         network: order.network,
         resourceRentalOptions: {
           activity: order.activity,

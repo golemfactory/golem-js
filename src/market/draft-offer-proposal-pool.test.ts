@@ -77,7 +77,7 @@ describe("Draft Offer Proposal Pool", () => {
         expect(a).not.toBe(b);
       });
 
-      it("ascquire a proposal using proposalSelector", async () => {
+      it("ascquire a proposal using offerProposalSelector", async () => {
         when(mockProposal.provider).thenReturn({
           name: "provider-1",
           walletAddress: "1",
@@ -98,7 +98,7 @@ describe("Draft Offer Proposal Pool", () => {
           proposals.sort((a, b) => ((scores?.[a.provider.name] || 0) >= (scores?.[b.provider.name] || 0) ? -1 : 1));
           return proposals[0];
         };
-        const pool = new DraftOfferProposalPool({ selectProposal: bestProviderSelector(scores) });
+        const pool = new DraftOfferProposalPool({ selectOfferProposal: bestProviderSelector(scores) });
 
         pool.add(proposal1);
         pool.add(proposal2);

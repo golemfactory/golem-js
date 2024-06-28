@@ -127,8 +127,8 @@ export interface ReputationWeightsMixin {
  * @experimental
  */
 export interface ReputationPreset {
-  proposalFilter?: ProposalFilterOptions & ReputationWeightsMixin;
-  proposalSelector?: ProposalSelectorOptions & ReputationWeightsMixin;
+  offerProposalFilter?: ProposalFilterOptions & ReputationWeightsMixin;
+  offerProposalSelector?: ProposalSelectorOptions & ReputationWeightsMixin;
 }
 
 /**

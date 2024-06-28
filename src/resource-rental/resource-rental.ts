@@ -34,6 +34,7 @@ export class ResourceRental {
   private currentExeUnit: ExeUnit | null = null;
   private abortController = new AbortController();
   private finalizePromise?: Promise<void>;
+  private exeUnitPromise?: Promise<ExeUnit>;
 
   public constructor(
     public readonly agreement: Agreement,
@@ -45,7 +46,7 @@ export class ResourceRental {
     private readonly resourceRentalOptions?: ResourceRentalOptions,
   ) {
     this.networkNode = this.resourceRentalOptions?.networkNode;
-
+    this.createExeUnit(this.abortController.signal);
     // TODO: Listen to agreement events to know when it goes down due to provider closing it!
   }
 
@@ -79,9 +80,9 @@ export class ResourceRental {
         }
         throw new GolemAbortError("The finalization of payment process has been aborted", abortSignal.reason);
       });
-      this.logger.info("Payment process for agreement finalized", { agreementId: this.agreement.id });
+      this.logger.info("Finalized payment process", { agreementId: this.agreement.id });
     } catch (error) {
-      this.logger.error("Payment process finalization failed", { agreementId: this.agreement.id, error });
+      this.logger.error("Filed to finalize payment process", { agreementId: this.agreement.id, error });
       throw error;
     } finally {
       this.events.emit("finalized");
@@ -119,10 +120,9 @@ export class ResourceRental {
     if (this.finalizePromise || this.abortController.signal.aborted) {
       throw new GolemUserError("The resource rental is not active. It may have been aborted or finalized");
     }
-    if (this.currentExeUnit) {
+    if (this.currentExeUnit !== null) {
       return this.currentExeUnit;
     }
-
     const abortController = new AbortController();
     this.abortController.signal.addEventListener("abort", () =>
       abortController.abort(this.abortController.signal.reason),
@@ -134,29 +134,48 @@ export class ResourceRental {
         abortController.abort(signalOrTimeout.reason);
       }
     }
-
-    const activity = await this.activityModule.createActivity(this.agreement);
-    this.currentExeUnit = await this.activityModule.createExeUnit(activity, {
-      storageProvider: this.storageProvider,
-      networkNode: this.resourceRentalOptions?.networkNode,
-      executionOptions: this.resourceRentalOptions?.activity,
-      signalOrTimeout: abortController.signal,
-      ...this.resourceRentalOptions?.exeUnit,
-    });
-
-    return this.currentExeUnit;
+    return this.createExeUnit(abortController.signal);
   }
 
+  /**
+   * Destroy previously created exe-unit.
+   * Please note that if ResourceRental is left without ExeUnit for some time (default 90s)
+   * the provider will terminate the Agreement and ResourceRental will be unuseble
+   */
   async destroyExeUnit() {
-    if (this.currentExeUnit) {
+    if (this.currentExeUnit !== null) {
       await this.activityModule.destroyActivity(this.currentExeUnit.activity);
       this.currentExeUnit = null;
     } else {
-      throw new Error(`There is no activity to destroy.`);
+      throw new GolemUserError(`There is no exe-unit to destroy.`);
     }
   }
 
   async fetchAgreementState() {
     return this.marketModule.fetchAgreement(this.agreement.id).then((agreement) => agreement.getState());
+  }
+
+  private async createExeUnit(abortSignal: AbortSignal) {
+    if (!this.exeUnitPromise) {
+      this.exeUnitPromise = (async () => {
+        const activity = await this.activityModule.createActivity(this.agreement);
+        this.currentExeUnit = await this.activityModule.createExeUnit(activity, {
+          storageProvider: this.storageProvider,
+          networkNode: this.resourceRentalOptions?.networkNode,
+          executionOptions: this.resourceRentalOptions?.activity,
+          signalOrTimeout: abortSignal,
+          ...this.resourceRentalOptions?.exeUnit,
+        });
+        return this.currentExeUnit;
+      })()
+        .catch((error) => {
+          this.logger.error(`Failed to create exe-unit. ${error}`, { agreementId: this.agreement.id });
+          throw error;
+        })
+        .finally(() => {
+          this.exeUnitPromise = undefined;
+        });
+    }
+    return this.exeUnitPromise;
   }
 }

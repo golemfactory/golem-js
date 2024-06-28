@@ -276,7 +276,7 @@ export class MarketApiAdapter implements IMarketApi {
       );
     }
 
-    this.logger.info("Established agreement", { agreementId: agreement.id, provider: agreement.provider });
+    this.logger.debug("Established agreement", agreement);
 
     return confirmed;
   }

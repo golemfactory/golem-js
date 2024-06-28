@@ -28,7 +28,7 @@ const order: MarketOrderSpec = {
       maxCpuPerHourPrice: 1.0,
       maxEnvPerHourPrice: 0.5,
     },
-    proposalSelector: bestProviderSelector(scores),
+    offerProposalSelector: bestProviderSelector(scores),
   },
 };
 

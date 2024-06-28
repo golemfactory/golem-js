@@ -19,10 +19,10 @@ export interface ResourceRentalPoolDependencies {
   logger: Logger;
 }
 
-export type Concurrency = number | RequireAtLeastOne<{ min: number; max: number }>;
+export type PoolSize = number | RequireAtLeastOne<{ min: number; max: number }>;
 
 export interface ResourceRentalPoolOptions {
-  replicas?: Concurrency;
+  poolSize?: PoolSize;
   network?: Network;
   resourceRentalOptions?: ResourceRentalOptions;
   agreementOptions?: AgreementOptions;
@@ -38,7 +38,7 @@ export interface ResourceRentalPoolEvents {
   error: (error: GolemMarketError) => void;
 }
 
-const MAX_REPLICAS = 100;
+const MAX_POOL_SIZE = 100;
 
 /**
  * Pool of resource rentals that can be borrowed, released or destroyed.
@@ -94,20 +94,20 @@ export class ResourceRentalPool {
 
     this.minPoolSize =
       (() => {
-        if (typeof options?.replicas === "number") {
-          return options?.replicas;
+        if (typeof options?.poolSize === "number") {
+          return options?.poolSize;
         }
-        if (typeof options?.replicas === "object") {
-          return options?.replicas.min;
+        if (typeof options?.poolSize === "object") {
+          return options?.poolSize.min;
         }
       })() || 0;
 
     this.maxPoolSize =
       (() => {
-        if (typeof options?.replicas === "object") {
-          return options?.replicas.max;
+        if (typeof options?.poolSize === "object") {
+          return options?.poolSize.max;
         }
-      })() || MAX_REPLICAS;
+      })() || MAX_POOL_SIZE;
 
     this.abortController = new AbortController();
   }
@@ -388,7 +388,7 @@ export class ResourceRentalPool {
    *  // even if an error is thrown in the callback
    * });
    * ```
-   * @param callback - a function that takes a `rental` object as its argument. The renatl is automatically released after the callback is executed, regardless of whether it completes successfully or throws an error.
+   * @param callback - a function that takes a `rental` object as its argument. The rental is automatically released after the callback is executed, regardless of whether it completes successfully or throws an error.
    * @param signalOrTimeout - the timeout in milliseconds or an AbortSignal that will be used to cancel the rental request
    */
   public async withRental<T>(

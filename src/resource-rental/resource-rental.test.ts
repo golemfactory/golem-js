@@ -3,7 +3,7 @@ import { Agreement, MarketModule } from "../market";
 import { StorageProvider } from "../shared/storage";
 import { AgreementPaymentProcess } from "../payment/agreement_payment_process";
 import { ResourceRental, ResourceRentalOptions } from ".";
-import { ActivityModule } from "../activity";
+import { ActivityModule, ExeUnit } from "../activity";
 import { Logger } from "../shared/utils";
 
 const mockAgreement = mock(Agreement);
@@ -25,6 +25,7 @@ beforeEach(() => {
   reset(mockActivityModule);
   reset(mockLogger);
   reset(mockResourceRentalOptions);
+  when(mockActivityModule.createExeUnit(_, _)).thenResolve(instance(mock(ExeUnit)));
   resourceRental = new ResourceRental(
     instance(mockAgreement),
     instance(mockStorageProvider),
@@ -49,6 +50,34 @@ describe("ResourceRental", () => {
       await Promise.all([promise1, promise2, promise3]);
       verify(rentalSpy["startStopAndFinalize"](_)).once();
       expect(resourceRental["finalizePromise"]).toBeUndefined();
+    });
+    describe("ExeUnit", () => {
+      it("should create an exe unit on startup and use it later", async () => {
+        expect(resourceRental["currentExeUnit"]).toBeDefined();
+        verify(mockActivityModule.createExeUnit(_, _)).once();
+        await resourceRental.getExeUnit();
+        verify(mockActivityModule.createExeUnit(_, _)).once();
+      });
+
+      it("should reuse the same promise if called multiple times", async () => {
+        expect(resourceRental["currentExeUnit"]).toBeDefined();
+        const promise1 = resourceRental.getExeUnit();
+        const promise2 = resourceRental.getExeUnit();
+        const promise3 = resourceRental.getExeUnit();
+        await Promise.all([promise1, promise2, promise3]);
+        verify(mockActivityModule.createExeUnit(_, _)).once();
+      });
+
+      it("should reuse the same promise if called multiple time after destroy exe-unit created on strtup", async () => {
+        expect(resourceRental["currentExeUnit"]).toBeDefined();
+        await resourceRental.destroyExeUnit();
+        const promise1 = resourceRental.getExeUnit();
+        const promise2 = resourceRental.getExeUnit();
+        const promise3 = resourceRental.getExeUnit();
+        expect(resourceRental["exeUnitPromise"]).toBeDefined();
+        await Promise.all([promise1, promise2, promise3]);
+        verify(mockActivityModule.createExeUnit(_, _)).twice();
+      });
     });
   });
 });

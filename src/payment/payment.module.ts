@@ -137,7 +137,7 @@ export class PaymentModuleImpl implements PaymentModule {
   }
 
   async createAllocation(params: CreateAllocationParams): Promise<Allocation> {
-    this.logger.info("Creating allocation", { params: params });
+    this.logger.debug("Creating allocation", { params: params });
 
     try {
       const allocation = await this.paymentApi.createAllocation({
@@ -145,6 +145,12 @@ export class PaymentModuleImpl implements PaymentModule {
         ...params,
       });
       this.events.emit("allocationCreated", allocation);
+      this.logger.info("Created allocation", {
+        allocationId: allocation.id,
+        budget: allocation.totalAmount,
+        platform: this.getPaymentPlatform(),
+      });
+      this.logger.debug("Created allocation", allocation);
       return allocation;
     } catch (error) {
       this.events.emit("errorCreatingAllocation", error);
@@ -153,7 +159,7 @@ export class PaymentModuleImpl implements PaymentModule {
   }
 
   async releaseAllocation(allocation: Allocation): Promise<void> {
-    this.logger.info("Releasing allocation", { id: allocation.id });
+    this.logger.debug("Releasing allocation", allocation);
     try {
       const lastKnownAllocationState = await this.getAllocation(allocation.id).catch(() => {
         this.logger.warn("Failed to fetch allocation before releasing", { id: allocation.id });
@@ -161,6 +167,11 @@ export class PaymentModuleImpl implements PaymentModule {
       });
       await this.paymentApi.releaseAllocation(allocation);
       this.events.emit("allocationReleased", lastKnownAllocationState);
+      this.logger.info("Released allocation", {
+        allocationId: lastKnownAllocationState.id,
+        totalAmount: lastKnownAllocationState.totalAmount,
+        spentAmount: lastKnownAllocationState.spentAmount,
+      });
     } catch (error) {
       this.events.emit(
         "errorReleasingAllocation",
@@ -186,37 +197,67 @@ export class PaymentModuleImpl implements PaymentModule {
   }
 
   async acceptInvoice(invoice: Invoice, allocation: Allocation, amount: string): Promise<Invoice> {
-    this.logger.info("Accepting invoice", { id: invoice.id, allocation: allocation.id, amount });
+    this.logger.debug("Accepting invoice", invoice);
     try {
       const acceptedInvoice = await this.paymentApi.acceptInvoice(invoice, allocation, amount);
       this.events.emit("invoiceAccepted", acceptedInvoice);
+      this.logger.info("Accepted invoice", {
+        id: invoice.id,
+        allocationId: allocation.id,
+        agreementId: invoice.agreementId,
+        provider: invoice.provider,
+        amount,
+      });
       return acceptedInvoice;
     } catch (error) {
       this.events.emit("errorAcceptingInvoice", invoice, error);
+      this.logger.error(`Failed to accept invoice. ${error}`, {
+        id: invoice.id,
+        allocationId: allocation.id,
+        agreementId: invoice.agreementId,
+        provider: invoice.provider,
+        amount,
+      });
       throw error;
     }
   }
 
   async rejectInvoice(invoice: Invoice, reason: string): Promise<Invoice> {
-    this.logger.info("Rejecting invoice", { id: invoice.id, reason });
+    this.logger.debug("Rejecting invoice", { id: invoice.id, reason });
     try {
       const rejectedInvoice = await this.paymentApi.rejectInvoice(invoice, reason);
       this.events.emit("invoiceRejected", rejectedInvoice);
+      this.logger.warn("Rejeced invoice", { id: invoice.id, reason });
       return rejectedInvoice;
     } catch (error) {
       this.events.emit("errorRejectingInvoice", invoice, error);
+      this.logger.error(`Failed to reject invoice. ${error}`, { id: invoice.id, reason });
       throw error;
     }
   }
 
   async acceptDebitNote(debitNote: DebitNote, allocation: Allocation, amount: string): Promise<DebitNote> {
-    this.logger.info("Accepting debit note", { id: debitNote.id, allocation: allocation.id, amount });
+    this.logger.debug("Accepting debit note", debitNote);
     try {
       const acceptedDebitNote = await this.paymentApi.acceptDebitNote(debitNote, allocation, amount);
       this.events.emit("debitNoteAccepted", acceptedDebitNote);
+      this.logger.debug("Accepted debit note", {
+        id: debitNote.id,
+        allocationId: allocation.id,
+        activityId: debitNote.activityId,
+        provider: debitNote.provider,
+        amount,
+      });
       return acceptedDebitNote;
     } catch (error) {
       this.events.emit("errorAcceptingDebitNote", debitNote, error);
+      this.logger.error(`Failed to accept debitNote. ${error}`, {
+        id: debitNote.id,
+        allocationId: allocation.id,
+        activityId: debitNote.activityId,
+        provider: debitNote.provider,
+        amount,
+      });
       throw error;
     }
   }
