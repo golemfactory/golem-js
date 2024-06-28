@@ -29,6 +29,13 @@ describe("ResourceRentalPool", () => {
           imageTag: "golem/alpine:latest",
         },
       },
+      {
+        rentHours: 1,
+        pricing: {
+          model: "burn-rate",
+          avgGlmPerHour: 1,
+        },
+      },
       allocation,
     );
 

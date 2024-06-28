@@ -20,7 +20,7 @@ export interface RentalModule {
   createResourceRentalPool(
     draftPool: DraftOfferProposalPool,
     allocation: Allocation,
-    options?: ResourceRentalPoolOptions,
+    options: ResourceRentalPoolOptions,
   ): ResourceRentalPool;
 }
 

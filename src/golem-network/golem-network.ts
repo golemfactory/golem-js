@@ -5,8 +5,9 @@ import {
   IMarketApi,
   MarketModule,
   MarketModuleImpl,
-  MarketOptions,
+  MarketModuleOptions,
   OfferProposal,
+  OrderMarketOptions,
 } from "../market";
 import { Allocation, IPaymentApi, PaymentModule, PaymentModuleImpl, PaymentModuleOptions } from "../payment";
 import { ActivityModule, ActivityModuleImpl, ExeUnitOptions, IActivityApi, IFileServer } from "../activity";
@@ -27,7 +28,7 @@ import { AgreementRepository } from "../shared/yagna/repository/agreement-reposi
 import { ProposalRepository } from "../shared/yagna/repository/proposal-repository";
 import { CacheService } from "../shared/cache/CacheService";
 import { DemandRepository } from "../shared/yagna/repository/demand-repository";
-import { BuildDemandOptions, IDemandRepository } from "../market/demand/demand";
+import { IDemandRepository, OrderDemandOptions } from "../market/demand";
 import { GftpServerAdapter } from "../shared/storage/GftpServerAdapter";
 import {
   GftpStorageProvider,
@@ -77,6 +78,7 @@ export interface GolemNetworkOptions {
    * `DEBUG` environment variable to `golem-js:*`.
    */
   logger?: Logger;
+
   /**
    * Set the API key and URL for the Yagna API.
    */
@@ -84,17 +86,29 @@ export interface GolemNetworkOptions {
     key?: string;
     url?: string;
   };
+
   /**
    * Set payment-related options.
+   *
    * This is where you can specify the network, payment driver and more.
    * By default, the network is set to the `holesky` test network.
    */
   payment?: Partial<PaymentModuleOptions>;
+
+  /**
+   * Set market related options.
+   *
+   * This is where you can globally specify several options that determine how the SDK will
+   * interact with the market.
+   */
+  market?: Partial<MarketModuleOptions>;
+
   /**
    * Set the data transfer protocol to use for file transfers.
    * Default is `gftp`.
    */
   dataTransferProtocol?: DataTransferProtocol;
+
   /**
    * Override some of the services used by the GolemNetwork instance.
    * This is useful for testing or when you want to provide your own implementation of some services.
@@ -124,10 +138,11 @@ type AllocationOptions = {
  * Represents the order specifications which will result in access to ResourceRental.
  */
 export interface MarketOrderSpec {
-  demand: BuildDemandOptions;
-  market: MarketOptions;
+  demand: OrderDemandOptions;
+  market: OrderMarketOptions;
   activity?: ResourceRentalOptions["activity"];
   payment?: ResourceRentalOptions["payment"] & AllocationOptions;
+  /** The network that should be used for communication between the resources rented as part of this order */
   network?: Network;
 }
 
@@ -273,13 +288,13 @@ export class GolemNetwork {
         fileServer: this.options.override?.fileServer || new GftpServerAdapter(this.storageProvider),
       };
       this.network = getFactory(NetworkModuleImpl, this.options.override?.network)(this.services);
-      this.market = getFactory(
-        MarketModuleImpl,
-        this.options.override?.market,
-      )({
-        ...this.services,
-        networkModule: this.network,
-      });
+      this.market = getFactory(MarketModuleImpl, this.options.override?.market)(
+        {
+          ...this.services,
+          networkModule: this.network,
+        },
+        this.options.market,
+      );
       this.payment = getFactory(PaymentModuleImpl, this.options.override?.payment)(this.services, this.options.payment);
       this.activity = getFactory(ActivityModuleImpl, this.options.override?.activity)(this.services);
       this.rental = getFactory(
@@ -362,14 +377,27 @@ export class GolemNetwork {
   }): Promise<Allocation> {
     if (!order.payment?.allocation) {
       const budget = this.market.estimateBudget({ order, maxAgreements });
+
+      /**
+       * We need to create allocations that will exist longer than the agreements made.
+       *
+       * Without this in the event of agreement termination due to its expiry,
+       * the invoice for the agreement arrives, and we try to accept the invoice with
+       * an allocation that already expired (had the same expiration time as the agreement),
+       * which leads to unpaid invoices.
+       */
+      const EXPIRATION_BUFFER_MINUTES = 15;
+
       return this.payment.createAllocation({
         budget,
-        expirationSec: order.market.rentHours * 60 * 60,
+        expirationSec: order.market.rentHours * (60 + EXPIRATION_BUFFER_MINUTES) * 60,
       });
     }
+
     if (typeof order.payment.allocation === "string") {
       return this.payment.getAllocation(order.payment.allocation);
     }
+
     return order.payment.allocation;
   }
 
@@ -434,7 +462,7 @@ export class GolemNetwork {
       allocation = await this.getAllocationFromOrder({ order, maxAgreements: 1 });
       signal.throwIfAborted();
 
-      const demandSpecification = await this.market.buildDemandDetails(order.demand, allocation);
+      const demandSpecification = await this.market.buildDemandDetails(order.demand, order.market, allocation);
       const draftProposal$ = this.market.collectDraftOfferProposals({
         demandSpecification,
         pricing: order.market.pricing,
@@ -554,7 +582,7 @@ export class GolemNetwork {
       allocation = await this.getAllocationFromOrder({ order, maxAgreements });
       signal.throwIfAborted();
 
-      const demandSpecification = await this.market.buildDemandDetails(order.demand, allocation);
+      const demandSpecification = await this.market.buildDemandDetails(order.demand, order.market, allocation);
 
       const draftProposal$ = this.market.collectDraftOfferProposals({
         demandSpecification,
@@ -562,6 +590,8 @@ export class GolemNetwork {
         filter: order.market.offerProposalFilter,
       });
       subscription = proposalPool.readFrom(draftProposal$);
+
+      const rentSeconds = order.market.rentHours * 60 * 60;
 
       resourceRentalPool = this.rental.createResourceRentalPool(proposalPool, allocation, {
         poolSize,
@@ -572,9 +602,10 @@ export class GolemNetwork {
           exeUnit: { setup, teardown },
         },
         agreementOptions: {
-          expirationSec: order.market.rentHours * 60 * 60,
+          expirationSec: rentSeconds,
         },
       });
+
       this.cleanupTasks.push(cleanup);
 
       return resourceRentalPool;

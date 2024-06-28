@@ -4,7 +4,16 @@
  */
 import { MarketOrderSpec, GolemNetwork } from "@golem-sdk/golem-js";
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
+
 (async () => {
+  const ALLOCATION_DURATION_HOURS = 1;
+  const RENTAL_DURATION_HOURS = 0.5;
+
+  console.assert(
+    ALLOCATION_DURATION_HOURS > RENTAL_DURATION_HOURS,
+    "Always create allocations that will live longer than the planned rental duration",
+  );
+
   const glm = new GolemNetwork({
     logger: pinoPrettyLogger({
       level: "info",
@@ -16,7 +25,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
     const allocation = await glm.payment.createAllocation({
       budget: 1,
-      expirationSec: 3600,
+      expirationSec: ALLOCATION_DURATION_HOURS * 60 * 60,
     });
 
     const firstOrder: MarketOrderSpec = {
@@ -24,7 +33,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
         workload: { imageTag: "golem/alpine:latest" },
       },
       market: {
-        rentHours: 0.5,
+        rentHours: RENTAL_DURATION_HOURS,
         pricing: {
           model: "burn-rate",
           avgGlmPerHour: 0.5,
@@ -40,7 +49,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
         workload: { imageTag: "golem/alpine:latest" },
       },
       market: {
-        rentHours: 0.5,
+        rentHours: RENTAL_DURATION_HOURS,
         pricing: {
           model: "burn-rate",
           avgGlmPerHour: 0.5,

@@ -8,6 +8,8 @@ export class WorkloadDemandDirector implements IDemandDirector {
   constructor(private config: WorkloadDemandDirectorConfig) {}
 
   public async apply(builder: DemandBodyBuilder) {
+    builder.addProperty("golem.srv.comp.expiration", Date.now() + this.config.expirationSec * 1000);
+
     builder
       .addProperty("golem.srv.comp.vm.package_format", this.config.packageFormat)
       .addConstraint("golem.runtime.name", this.config.engine);

@@ -24,6 +24,8 @@ const testAgreementEvent$ = new Subject<AgreementEvent>();
 
 let marketModule: MarketModuleImpl;
 
+const DEMAND_REFRESH_INTERVAL_SEC = 60;
+
 beforeEach(() => {
   jest.useFakeTimers();
   jest.resetAllMocks();
@@ -33,17 +35,22 @@ beforeEach(() => {
 
   when(mockMarketApiAdapter.collectAgreementEvents()).thenReturn(testAgreementEvent$);
 
-  marketModule = new MarketModuleImpl({
-    activityApi: instance(imock<IActivityApi>()),
-    paymentApi: instance(imock<IPaymentApi>()),
-    networkApi: instance(imock<INetworkApi>()),
-    yagna: instance(mockYagna),
-    logger: instance(imock<Logger>()),
-    marketApi: instance(mockMarketApiAdapter),
-    fileServer: instance(imock<IFileServer>()),
-    storageProvider: instance(imock<StorageProvider>()),
-    networkModule: instance(imock<NetworkModule>()),
-  });
+  marketModule = new MarketModuleImpl(
+    {
+      activityApi: instance(imock<IActivityApi>()),
+      paymentApi: instance(imock<IPaymentApi>()),
+      networkApi: instance(imock<INetworkApi>()),
+      yagna: instance(mockYagna),
+      logger: instance(imock<Logger>()),
+      marketApi: instance(mockMarketApiAdapter),
+      fileServer: instance(imock<IFileServer>()),
+      storageProvider: instance(imock<StorageProvider>()),
+      networkModule: instance(imock<NetworkModule>()),
+    },
+    {
+      demandRefreshIntervalSec: DEMAND_REFRESH_INTERVAL_SEC,
+    },
+  );
 });
 
 describe("Market module", () => {
@@ -53,6 +60,7 @@ describe("Market module", () => {
         id: "allocation-id",
         paymentPlatform: "erc20-holesky-tglm",
       } as Allocation;
+
       when(mockMarketApiAdapter.getPaymentRelatedDemandDecorations("allocation-id")).thenResolve({
         properties: [
           {
@@ -70,17 +78,24 @@ describe("Market module", () => {
         ],
       });
 
+      const rentalDurationHours = 1;
       const demandSpecification = await marketModule.buildDemandDetails(
         {
           workload: {
             imageHash: "AAAAHASHAAAA",
             imageUrl: "https://custom.image.url/",
           },
-          expirationSec: 42,
           payment: {
             debitNotesAcceptanceTimeoutSec: 42,
             midAgreementDebitNoteIntervalSec: 42,
             midAgreementPaymentTimeoutSec: 42,
+          },
+        },
+        {
+          rentHours: rentalDurationHours,
+          pricing: {
+            model: "burn-rate",
+            avgGlmPerHour: 1,
           },
         },
         allocation,
@@ -104,12 +119,12 @@ describe("Market module", () => {
           value: true,
         },
         {
-          key: "golem.srv.comp.expiration",
-          value: Date.now() + 42 * 1000,
-        },
-        {
           key: "golem.node.debug.subnet",
           value: "public",
+        },
+        {
+          key: "golem.srv.comp.expiration",
+          value: Date.now() + rentalDurationHours * 60 * 60 * 1000,
         },
         {
           key: "golem.srv.comp.vm.package_format",
@@ -142,7 +157,6 @@ describe("Market module", () => {
       ];
 
       expect(demandSpecification.paymentPlatform).toBe(allocation.paymentPlatform);
-      expect(demandSpecification.expirationSec).toBe(42);
       expect(demandSpecification.prototype.constraints).toEqual(expect.arrayContaining(expectedConstraints));
       expect(demandSpecification.prototype.properties).toEqual(expectedProperties);
     });
@@ -171,7 +185,6 @@ describe("Market module", () => {
 
     it("should emit a new demand every specified interval", (done) => {
       const mockSpecification = mock(DemandSpecification);
-      when(mockSpecification.expirationSec).thenReturn(10);
       const mockSpecificationInstance = instance(mockSpecification);
       const mockDemand0 = new Demand("demand-id-0", mockSpecificationInstance);
       const mockDemand1 = new Demand("demand-id-1", mockSpecificationInstance);
@@ -188,7 +201,7 @@ describe("Market module", () => {
       demand$.pipe(take(3)).subscribe({
         next: (demand) => {
           demands.push(demand);
-          jest.advanceTimersByTime(10 * 1000);
+          jest.advanceTimersByTime(DEMAND_REFRESH_INTERVAL_SEC * 1000);
         },
         complete: () => {
           try {
@@ -265,7 +278,6 @@ describe("Market module", () => {
           constraints: [],
         },
         "erc20-holesky-tglm",
-        60 * 60,
       );
 
       const providerInfo: ProviderInfo = {
@@ -354,7 +366,6 @@ describe("Market module", () => {
           constraints: [],
         },
         "erc20-holesky-tglm",
-        60 * 60,
       );
 
       const providerInfo: ProviderInfo = {
