@@ -163,6 +163,7 @@ export class ResourceRental {
     } catch (error) {
       this.events.emit("errorDestroyingExeUnit", error);
       this.logger.error(`Failed to destroy exe-unit. ${error}`, { activityId: this.currentExeUnit?.activity });
+      throw error;
     }
   }
 
