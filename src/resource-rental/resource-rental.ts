@@ -17,14 +17,11 @@ export interface ResourceRentalEvents {
   /** Emitted when ExeUnit is successfully created and initialised */
   exeUnitCreated: (activity: Activity) => void;
 
-  /** Emitted when there is an error while creating the ExeUnit */
-  errorCreatingExeUnit: (error: Error) => void;
-
   /** Emitted when the ExeUnit is successfully destroyed */
   exeUnitDestroyed: (activity: Activity) => void;
 
-  /** Emitted when there is an error while destroying the ExeUnit */
-  errorDestroyingExeUnit: (error: Error) => void;
+  /** Emitted when there is an error while creating or destroying the ExeUnit */
+  error: (error: Error) => void;
 }
 
 export interface ResourceRentalOptions {
@@ -161,7 +158,7 @@ export class ResourceRental {
         throw new GolemUserError(`There is no exe-unit to destroy.`);
       }
     } catch (error) {
-      this.events.emit("errorDestroyingExeUnit", error);
+      this.events.emit("error", error);
       this.logger.error(`Failed to destroy exe-unit. ${error}`, { activityId: this.currentExeUnit?.activity });
       throw error;
     }
@@ -186,7 +183,7 @@ export class ResourceRental {
         return this.currentExeUnit;
       })()
         .catch((error) => {
-          this.events.emit("errorCreatingExeUnit", error);
+          this.events.emit("error", error);
           this.logger.error(`Failed to create exe-unit. ${error}`, { agreementId: this.agreement.id });
           throw error;
         })
