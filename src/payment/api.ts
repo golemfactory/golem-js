@@ -70,6 +70,10 @@ export type CreateAllocationParams = {
    * Optionally provide a deposit to be used for the allocation, instead of using funds from the yagna wallet.
    * Deposit is a way to pay for the computation using someone else's funds. The other party has to
    * call the `createDeposit` method on the `LockPayment` smart contract and provide the deposit ID.
+   *
+   * @deprecated NOT IMPLEMENTED BY YAGNA
+   *  This is a feature that's not yet released in Yagna.
+   *  The deprecation note will be removed once the feature will be supported by the network.
    */
   deposit?: {
     /**
