@@ -10,15 +10,9 @@ import { getMessageFromApiError } from "../shared/utils/apiErrorMessage";
 
 export interface NetworkOptions {
   /**
-   * The ID of the network.
-   * This is an optional field that can be used to specify a unique identifier for the network.
-   * If not provided, it will be generated automatically.
-   */
-  id?: string;
-
-  /**
    * The IP address of the network. May contain netmask, e.g. "192.168.0.0/24".
    * This field can include the netmask directly in CIDR notation.
+   * @default "192.168.0.0"
    */
   ip?: string;
 
@@ -99,7 +93,6 @@ export class NetworkModuleImpl implements NetworkModule {
       const mask = ipRange.getPrefix().toMask();
       const gateway = options?.gateway ? new IPv4(options.gateway) : undefined;
       const network = await this.networkApi.createNetwork({
-        id: options?.id,
         ip: ip.toString(),
         mask: mask?.toString(),
         gateway: gateway?.toString(),
@@ -107,8 +100,8 @@ export class NetworkModuleImpl implements NetworkModule {
       // add Requestor as network node
       const requestorId = await this.networkApi.getIdentity();
       await this.createNetworkNode(network, requestorId, options?.ownerIp);
-      this.logger.info(`Network created`, network.getNetworkInfo());
-      this.events.emit("networkCreated", network);
+      this.logger.info(`Created network`, network.getNetworkInfo());
+      this.events.emit("networkCreated", { network });
       return network;
     } catch (err) {
       const message = getMessageFromApiError(err);
@@ -121,7 +114,7 @@ export class NetworkModuleImpl implements NetworkModule {
               undefined,
               err,
             );
-      this.events.emit("errorCreatingNetwork", error);
+      this.events.emit("errorCreatingNetwork", { error });
       throw error;
     }
   }
@@ -131,10 +124,10 @@ export class NetworkModuleImpl implements NetworkModule {
       try {
         await this.networkApi.removeNetwork(network);
         network.markAsRemoved();
-        this.logger.info(`Network removed`, network.getNetworkInfo());
-        this.events.emit("networkRemoved", network);
+        this.logger.info(`Removed network`, network.getNetworkInfo());
+        this.events.emit("networkRemoved", { network });
       } catch (error) {
-        this.events.emit("errorRemovingNetwork", network, error);
+        this.events.emit("errorRemovingNetwork", { network, error });
         throw error;
       }
     });
@@ -161,11 +154,11 @@ export class NetworkModuleImpl implements NetworkModule {
         const ipv4 = this.getFreeIpInNetwork(network, nodeIp);
         const node = await this.networkApi.createNetworkNode(network, nodeId, ipv4.toString());
         network.addNode(node);
-        this.logger.info(`Node has been added to the network.`, { id: nodeId, ip: ipv4.toString() });
-        this.events.emit("nodeCreated", network, node);
+        this.logger.info(`Added network node`, { id: nodeId, ip: ipv4.toString() });
+        this.events.emit("nodeCreated", { network, node });
         return node;
       } catch (error) {
-        this.events.emit("errorCreatingNode", network, error);
+        this.events.emit("errorCreatingNode", { network, error });
         throw error;
       }
     });
@@ -191,13 +184,13 @@ export class NetworkModuleImpl implements NetworkModule {
         }
         await this.networkApi.removeNetworkNode(network, node);
         network.removeNode(node);
-        this.logger.info(`Node has been removed from the network.`, {
+        this.logger.info(`Removed network node`, {
           network: network.getNetworkInfo().ip,
           nodeIp: node.ip,
         });
-        this.events.emit("nodeRemoved", network, node);
+        this.events.emit("nodeRemoved", { network, node });
       } catch (error) {
-        this.events.emit("errorRemovingNode", network, node, error);
+        this.events.emit("errorRemovingNode", { network, node, error });
         throw error;
       }
     });

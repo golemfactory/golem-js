@@ -11,6 +11,8 @@
   { "cmd": "tsx", "path": "examples/advanced/proposal-predefined-filter.ts" },
   { "cmd": "tsx", "path": "examples/advanced/override-module.ts" },
   { "cmd": "tsx", "path": "examples/advanced/scan.ts" },
+  { "cmd": "tsx", "path": "examples/advanced/reuse-allocation.ts" },
+  { "cmd": "tsx", "path": "examples/advanced/setup-and-teardown.ts" },
   { "cmd": "tsx", "path": "examples/experimental/deployment/new-api.ts" },
   { "cmd": "tsx", "path": "examples/experimental/job/getJobById.ts" },
   { "cmd": "tsx", "path": "examples/experimental/job/waitForResults.ts" },

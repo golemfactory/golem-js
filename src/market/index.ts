@@ -1,7 +1,7 @@
-export { ProposalFilter } from "./proposal/offer-proposal";
+export { OfferProposalFilter } from "./proposal/offer-proposal";
 export { Demand, BasicDemandPropertyConfig, DemandSpecification } from "./demand/demand";
 export { OfferProposal, ProposalDTO } from "./proposal/offer-proposal";
-export * as ProposalFilterFactory from "./strategy";
+export * as OfferProposalFilterFactory from "./strategy";
 export { GolemMarketError, MarketErrorCode } from "./error";
 export * as MarketHelpers from "./helpers";
 export * from "./draft-offer-proposal-pool";

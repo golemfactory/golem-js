@@ -1,7 +1,8 @@
 import { Allocation, DraftOfferProposalPool, GolemNetwork } from "@golem-sdk/golem-js";
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
-const RENT_HOURS = 0.25;
+const RENTAL_DURATION_HOURS = 0.25;
+const ALLOCATION_DURATION_HOURS = RENTAL_DURATION_HOURS + 0.25;
 
 const demandOptions = {
   demand: {
@@ -13,7 +14,7 @@ const demandOptions = {
     },
   },
   market: {
-    rentHours: RENT_HOURS,
+    rentHours: RENTAL_DURATION_HOURS,
     pricing: {
       model: "linear",
       maxStartPrice: 1,
@@ -31,15 +32,25 @@ const demandOptions = {
   const glm = new GolemNetwork({
     logger,
   });
+
+  console.assert(
+    ALLOCATION_DURATION_HOURS > RENTAL_DURATION_HOURS,
+    "Always create allocations that will live longer than the planned rental duration",
+  );
+
   let allocation: Allocation | undefined;
 
   try {
     await glm.connect();
 
-    allocation = await glm.payment.createAllocation({ budget: 1, expirationSec: RENT_HOURS * 60 * 60 });
+    allocation = await glm.payment.createAllocation({ budget: 1, expirationSec: ALLOCATION_DURATION_HOURS * 60 * 60 });
 
     const proposalPool = new DraftOfferProposalPool({ minCount: 1 });
-    const demandSpecification = await glm.market.buildDemandDetails(demandOptions.demand, allocation);
+    const demandSpecification = await glm.market.buildDemandDetails(
+      demandOptions.demand,
+      demandOptions.market,
+      allocation,
+    );
 
     const draftProposal$ = glm.market.collectDraftOfferProposals({
       demandSpecification,
@@ -49,35 +60,35 @@ const demandOptions = {
     const proposalSubscription = proposalPool.readFrom(draftProposal$);
 
     /** How many providers you plan to engage simultaneously */
-    const CONCURRENCY = 2;
+    const PARALLELISM = 2;
 
     const depModules = {
       market: glm.market,
       activity: glm.activity,
       payment: glm.payment,
-      lease: glm.lease,
+      rental: glm.rental,
     };
 
-    const pool = depModules.lease.createLeaseProcessPool(proposalPool, allocation, {
-      replicas: { max: CONCURRENCY },
+    const pool = depModules.rental.createResourceRentalPool(proposalPool, allocation, {
+      poolSize: { max: PARALLELISM },
     });
 
-    const lease = await pool.acquire();
-    const lease2 = await pool.acquire();
+    const rental1 = await pool.acquire();
+    const rental2 = await pool.acquire();
 
     await Promise.allSettled([
-      lease
+      rental1
         .getExeUnit()
         .then((exe) => exe.run("echo Hello from first activity 👋"))
         .then((result) => console.log(result.stdout)),
-      lease2
+      rental2
         .getExeUnit()
         .then((exe) => exe.run("echo Hello from second activity 👋"))
         .then((result) => console.log(result.stdout)),
     ]);
 
-    await pool.release(lease);
-    await pool.release(lease2);
+    await pool.release(rental1);
+    await pool.release(rental2);
 
     proposalSubscription.unsubscribe();
     await pool.drainAndClear();

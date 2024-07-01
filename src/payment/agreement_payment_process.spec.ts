@@ -30,7 +30,7 @@ beforeEach(() => {
     walletAddress: "0x1234",
   };
 
-  when(agreementMock.getProviderInfo()).thenReturn(testProviderInfo);
+  when(agreementMock.provider).thenReturn(testProviderInfo);
   when(invoiceMock.provider).thenReturn(testProviderInfo);
   when(mockPaymentModule.observeInvoices()).thenReturn(new Subject());
   when(mockPaymentModule.observeDebitNotes()).thenReturn(new Subject());
@@ -170,7 +170,7 @@ describe("AgreementPaymentProcess", () => {
             "Agreement agreement-id is already covered with an invoice: invoice-id",
             PaymentErrorCode.AgreementAlreadyPaid,
             allocation,
-            agreement.getProviderInfo(),
+            agreement.provider,
           ),
         );
         expect(process.isFinished()).toEqual(true);

@@ -8,7 +8,7 @@ import {
   MarketErrorCode,
   MarketEvents,
   MarketProposalEvent,
-  ProposalSelector,
+  OfferProposalSelector,
 } from "./index";
 import {
   createAbortSignalFromTimeout,
@@ -20,14 +20,13 @@ import {
 import { Allocation, IPaymentApi } from "../payment";
 import { filter, map, Observable, OperatorFunction, switchMap, tap } from "rxjs";
 import {
-  IProposalRepository,
   OfferCounterProposal,
   OfferProposal,
+  OfferProposalFilter,
   OfferProposalReceivedEvent,
-  ProposalFilter,
   ProposalsBatch,
 } from "./proposal";
-import { BuildDemandOptions, DemandBodyBuilder, DemandSpecification, IDemandRepository } from "./demand";
+import { DemandBodyBuilder, DemandSpecification, OrderDemandOptions } from "./demand";
 import { IActivityApi, IFileServer } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { WorkloadDemandDirectorConfig } from "./demand/directors/workload-demand-director-config";
@@ -37,11 +36,10 @@ import { WorkloadDemandDirector } from "./demand/directors/workload-demand-direc
 import { WorkloadDemandDirectorConfigOptions } from "./demand/options";
 import { BasicDemandDirectorConfig } from "./demand/directors/basic-demand-director-config";
 import { PaymentDemandDirectorConfig } from "./demand/directors/payment-demand-director-config";
-import { GolemUserError } from "../shared/error/golem-error";
+import { GolemAbortError, GolemTimeoutError, GolemUserError } from "../shared/error/golem-error";
 import { MarketOrderSpec } from "../golem-network";
 import { INetworkApi, NetworkModule } from "../network";
 import { AgreementOptions } from "./agreement/agreement";
-import { Concurrency } from "../lease-process";
 import { ScanDirector, ScanOptions, ScanSpecification, ScannedOffer } from "./scan";
 
 export type DemandEngine = "vm" | "vm-nvidia" | "wasmtime";
@@ -58,18 +56,28 @@ export type PricingOptions =
       avgGlmPerHour: number;
     };
 
-export interface MarketOptions {
+export interface OrderMarketOptions {
   /** How long you want to rent the resources in hours */
   rentHours: number;
 
   /** Pricing strategy that will be used to filter the offers from the market */
   pricing: PricingOptions;
 
-  /** A user-defined filter function which will determine if the proposal is valid for use. */
-  proposalFilter?: ProposalFilter;
+  /** A user-defined filter function which will determine if the offer proposal is valid for use. */
+  offerProposalFilter?: OfferProposalFilter;
 
-  /** A user-defined function that will be used to pick the best fitting proposal from available ones */
-  proposalSelector?: ProposalSelector;
+  /** A user-defined function that will be used to pick the best fitting offer proposal from available ones */
+  offerProposalSelector?: OfferProposalSelector;
+}
+
+export interface MarketModuleOptions {
+  /**
+   * Number of seconds after which the demand will be un-subscribed and subscribed again to get fresh
+   * offers from the market
+   *
+   * @default 30 minutes
+   */
+  demandRefreshIntervalSec: number;
 }
 
 export interface MarketModule {
@@ -81,7 +89,11 @@ export interface MarketModule {
    * The method returns a DemandSpecification that can be used to publish the demand to the market,
    * for example using the `publishDemand` method.
    */
-  buildDemandDetails(options: BuildDemandOptions, allocation: Allocation): Promise<DemandSpecification>;
+  buildDemandDetails(
+    demandOptions: OrderDemandOptions,
+    orderOptions: OrderMarketOptions,
+    allocation: Allocation,
+  ): Promise<DemandSpecification>;
 
   /**
    * Build a ScanSpecification that can be used to scan the market for offers.
@@ -182,19 +194,19 @@ export interface MarketModule {
   collectDraftOfferProposals(options: {
     demandSpecification: DemandSpecification;
     pricing: PricingOptions;
-    filter?: ProposalFilter;
+    filter?: OfferProposalFilter;
     minProposalsBatchSize?: number;
     proposalsBatchReleaseTimeoutMs?: number;
   }): Observable<OfferProposal>;
 
   /**
-   * Estimate the budget for the given order and concurrency level.
+   * Estimate the budget for the given order and maximum numbers of agreemnets.
    * Keep in mind that this is just an estimate and the actual cost may vary.
-   * To get a more accurate estimate, make sure to specify an exact or maximum concurrency level.
    * The method returns the estimated budget in GLM.
    * @param params
    */
-  estimateBudget({ concurrency, order }: { concurrency: Concurrency; order: MarketOrderSpec }): number;
+  estimateBudget({ maxAgreements, order }: { maxAgreements: number; order: MarketOrderSpec }): number;
+
   /**
    * Fetch the most up-to-date agreement details from the yagna
    */
@@ -225,16 +237,13 @@ export class MarketModuleImpl implements MarketModule {
 
   private readonly logger = defaultLogger("market");
   private readonly marketApi: IMarketApi;
-  private readonly proposalRepo: IProposalRepository;
-  private readonly demandRepo: IDemandRepository;
   private fileServer: IFileServer;
+  private options: MarketModuleOptions;
 
   constructor(
     private readonly deps: {
       logger: Logger;
       yagna: YagnaApi;
-      proposalRepository: IProposalRepository;
-      demandRepository: IDemandRepository;
       paymentApi: IPaymentApi;
       activityApi: IActivityApi;
       marketApi: IMarketApi;
@@ -243,41 +252,51 @@ export class MarketModuleImpl implements MarketModule {
       fileServer: IFileServer;
       storageProvider: StorageProvider;
     },
+    options?: Partial<MarketModuleOptions>,
   ) {
     this.logger = deps.logger;
     this.marketApi = deps.marketApi;
-    this.proposalRepo = deps.proposalRepository;
-    this.demandRepo = deps.demandRepository;
     this.fileServer = deps.fileServer;
+
+    this.options = {
+      ...{ demandRefreshIntervalSec: 30 * 60 },
+      ...options,
+    };
 
     this.collectAndEmitAgreementEvents();
   }
 
-  async buildDemandDetails(options: BuildDemandOptions, allocation: Allocation): Promise<DemandSpecification> {
+  async buildDemandDetails(
+    demandOptions: OrderDemandOptions,
+    orderOptions: OrderMarketOptions,
+    allocation: Allocation,
+  ): Promise<DemandSpecification> {
     const builder = new DemandBodyBuilder();
 
     // Instruct the builder what's required
     const basicConfig = new BasicDemandDirectorConfig({
-      expirationSec: options.expirationSec,
-      subnetTag: options.subnetTag,
+      subnetTag: demandOptions.subnetTag,
     });
 
     const basicDirector = new BasicDemandDirector(basicConfig);
     basicDirector.apply(builder);
 
-    const workloadOptions = options.workload
-      ? await this.applyLocalGVMIServeSupport(options.workload)
-      : options.workload;
+    const workloadOptions = demandOptions.workload
+      ? await this.applyLocalGVMIServeSupport(demandOptions.workload)
+      : demandOptions.workload;
 
-    const workloadConfig = new WorkloadDemandDirectorConfig(workloadOptions);
+    const workloadConfig = new WorkloadDemandDirectorConfig({
+      ...workloadOptions,
+      expirationSec: orderOptions.rentHours * 60 * 60, // hours to seconds
+    });
     const workloadDirector = new WorkloadDemandDirector(workloadConfig);
     await workloadDirector.apply(builder);
 
-    const paymentConfig = new PaymentDemandDirectorConfig(options.payment);
+    const paymentConfig = new PaymentDemandDirectorConfig(demandOptions.payment);
     const paymentDirector = new PaymentDemandDirector(allocation, this.deps.marketApi, paymentConfig);
     await paymentDirector.apply(builder);
 
-    return new DemandSpecification(builder.getProduct(), allocation.paymentPlatform, basicConfig.expirationSec);
+    return new DemandSpecification(builder.getProduct(), allocation.paymentPlatform);
   }
 
   buildScanSpecification(options: ScanOptions): ScanSpecification {
@@ -325,7 +344,9 @@ export class MarketModuleImpl implements MarketModule {
         try {
           currentDemand = await this.deps.marketApi.publishDemandSpecification(demandSpecification);
           subscriber.next(currentDemand);
-          this.events.emit("demandSubscriptionStarted", currentDemand);
+          this.events.emit("demandSubscriptionStarted", {
+            demand: currentDemand,
+          });
           this.logger.debug("Subscribing for proposals matched with the demand", { demand: currentDemand });
           return currentDemand;
         } catch (err) {
@@ -342,8 +363,11 @@ export class MarketModuleImpl implements MarketModule {
       const unsubscribeFromOfferProposals = async (demand: Demand) => {
         try {
           await this.deps.marketApi.unpublishDemand(demand);
-          this.logger.info("Demand unpublished from the market", { demand });
-          this.events.emit("demandSubscriptionStopped", demand);
+          this.logger.info("Unpublished demand", { demandId: demand.id });
+          this.logger.debug("Unpublished demand", demand);
+          this.events.emit("demandSubscriptionStopped", {
+            demand,
+          });
         } catch (err) {
           const golemMarketError = new GolemMarketError(
             `Could not publish demand on the market`,
@@ -361,7 +385,9 @@ export class MarketModuleImpl implements MarketModule {
         Promise.all([unsubscribeFromOfferProposals(currentDemand), subscribeToOfferProposals()])
           .then(([, demand]) => {
             if (demand) {
-              this.events.emit("demandSubscriptionRefreshed", demand);
+              this.events.emit("demandSubscriptionRefreshed", {
+                demand,
+              });
               this.logger.info("Refreshed subscription for offer proposals with the new demand", { demand });
             }
           })
@@ -369,7 +395,7 @@ export class MarketModuleImpl implements MarketModule {
             this.logger.error("Error while re-publishing demand for offers", err);
             subscriber.error(err);
           });
-      }, demandSpecification.expirationSec * 1000);
+      }, this.options.demandRefreshIntervalSec * 1000);
 
       return () => {
         clearInterval(interval);
@@ -398,11 +424,21 @@ export class MarketModuleImpl implements MarketModule {
     offerProposal: OfferProposal,
     counterDemand: DemandSpecification,
   ): Promise<OfferCounterProposal> {
-    const counterProposal = await this.deps.marketApi.counterProposal(offerProposal, counterDemand);
-
-    this.logger.debug("Counter proposal sent", counterProposal);
-
-    return counterProposal;
+    try {
+      const counterProposal = await this.deps.marketApi.counterProposal(offerProposal, counterDemand);
+      this.logger.debug("Counter proposal sent", counterProposal);
+      this.events.emit("offerCounterProposalSent", {
+        offerProposal,
+        counterProposal,
+      });
+      return counterProposal;
+    } catch (error) {
+      this.events.emit("errorSendingCounterProposal", {
+        offerProposal,
+        error,
+      });
+      throw error;
+    }
   }
 
   async proposeAgreement(proposal: OfferProposal, options?: AgreementOptions): Promise<Agreement> {
@@ -410,7 +446,7 @@ export class MarketModuleImpl implements MarketModule {
 
     this.logger.info("Proposed and got approval for agreement", {
       agreementId: agreement.id,
-      provider: agreement.getProviderInfo(),
+      provider: agreement.provider,
     });
 
     return agreement;
@@ -421,7 +457,7 @@ export class MarketModuleImpl implements MarketModule {
 
     this.logger.info("Terminated agreement", {
       agreementId: agreement.id,
-      provider: agreement.getProviderInfo(),
+      provider: agreement.provider,
       reason,
     });
 
@@ -431,7 +467,7 @@ export class MarketModuleImpl implements MarketModule {
   collectDraftOfferProposals(options: {
     demandSpecification: DemandSpecification;
     pricing: PricingOptions;
-    filter?: ProposalFilter;
+    filter?: OfferProposalFilter;
     minProposalsBatchSize?: number;
     proposalsBatchReleaseTimeoutMs?: number;
   }): Observable<OfferProposal> {
@@ -470,13 +506,18 @@ export class MarketModuleImpl implements MarketModule {
     const { type } = event;
     switch (type) {
       case "ProposalReceived":
-        this.events.emit("offerProposalReceived", event);
+        this.events.emit("offerProposalReceived", {
+          offerProposal: event.proposal,
+        });
         break;
       case "ProposalRejected":
-        this.events.emit("offerCounterProposalRejected", event);
+        this.events.emit("offerCounterProposalRejected", {
+          counterProposal: event.counterProposal,
+          reason: event.reason,
+        });
         break;
       case "PropertyQueryReceived":
-        this.events.emit("offerPropertyQueryReceived", event);
+        this.events.emit("offerPropertyQueryReceived");
         break;
       default:
         this.logger.warn("Unsupported event type in event", { event });
@@ -491,14 +532,27 @@ export class MarketModuleImpl implements MarketModule {
   ): Promise<Agreement> {
     const signal = createAbortSignalFromTimeout(signalOrTimeout);
 
-    const tryProposing = async (): Promise<Agreement> => {
-      signal.throwIfAborted();
-      const proposal = await draftProposalPool.acquire();
-      if (signal.aborted) {
-        await draftProposalPool.release(proposal);
+    const getProposal = async () => {
+      try {
         signal.throwIfAborted();
+        const proposal = await draftProposalPool.acquire(signal);
+        if (signal.aborted) {
+          await draftProposalPool.release(proposal);
+          signal.throwIfAborted();
+        }
+        return proposal;
+      } catch (error) {
+        if (signal.aborted) {
+          throw signal.reason.name === "TimeoutError"
+            ? new GolemTimeoutError("Could not sign any agreement in time")
+            : new GolemAbortError("The signing of the agreement has been aborted", error);
+        }
+        throw error;
       }
+    };
 
+    const tryProposing = async (): Promise<Agreement> => {
+      const proposal = await getProposal();
       try {
         const agreement = await this.proposeAgreement(proposal, agreementOptions);
         // agreement is valid, proposal can be destroyed
@@ -570,25 +624,13 @@ export class MarketModuleImpl implements MarketModule {
       });
   }
 
-  estimateBudget({ concurrency, order }: { concurrency: Concurrency; order: MarketOrderSpec }): number {
+  estimateBudget({ order, maxAgreements }: { order: MarketOrderSpec; maxAgreements: number }): number {
     const pricingModel = order.market.pricing.model;
 
     // TODO: Don't assume for the user, at least not on pure golem-js level
     const minCpuThreads = order.demand.workload?.minCpuThreads ?? 1;
 
     const { rentHours } = order.market;
-    const maxAgreements = (() => {
-      if (typeof concurrency === "number") {
-        return concurrency;
-      }
-      if (concurrency.max) {
-        return concurrency.max;
-      }
-      if (concurrency.min) {
-        return concurrency.min;
-      }
-      return 1;
-    })();
 
     switch (pricingModel) {
       case "linear": {
@@ -619,27 +661,40 @@ export class MarketModuleImpl implements MarketModule {
     this.marketApi.collectAgreementEvents().subscribe((event) => {
       switch (event.type) {
         case "AgreementApproved":
-          this.events.emit("agreementApproved", event);
+          this.events.emit("agreementApproved", {
+            agreement: event.agreement,
+          });
           break;
         case "AgreementCancelled":
-          this.events.emit("agreementCancelled", event);
+          this.events.emit("agreementCancelled", {
+            agreement: event.agreement,
+          });
           break;
         case "AgreementTerminated":
-          this.events.emit("agreementTerminated", event);
+          this.events.emit("agreementTerminated", {
+            agreement: event.agreement,
+            reason: event.reason,
+            terminatedBy: event.terminatedBy,
+          });
           break;
         case "AgreementRejected":
-          this.events.emit("agreementRejected", event);
+          this.events.emit("agreementRejected", {
+            agreement: event.agreement,
+            reason: event.reason,
+          });
           break;
       }
     });
   }
 
-  private filterProposalsByUserFilter(filter: ProposalFilter, proposal: OfferProposal) {
+  private filterProposalsByUserFilter(filter: OfferProposalFilter, proposal: OfferProposal) {
     try {
       const result = filter(proposal);
 
       if (!result) {
-        this.events.emit("offerProposalRejectedByFilter", proposal);
+        this.events.emit("offerProposalRejectedByProposalFilter", {
+          offerProposal: proposal,
+        });
         this.logger.debug("The offer was rejected by the user filter", { id: proposal.id });
       }
 
@@ -663,8 +718,10 @@ export class MarketModuleImpl implements MarketModule {
         pricing.avgGlmPerHour;
     }
     if (!isPriceValid) {
-      this.events.emit("offerProposalRejectedByPriceFilter", proposal);
-      this.logger.debug("The offer was rejected because the price was too high", {
+      this.events.emit("offerProposalRejectedByPriceFilter", {
+        offerProposal: proposal,
+      });
+      this.logger.debug("The offer was ignored because the price was too high", {
         id: proposal.id,
         pricing: proposal.pricing,
       });

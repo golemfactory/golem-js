@@ -27,14 +27,14 @@ const order: MarketOrderSpec = {
   try {
     await glm.connect();
     const pool = await glm.manyOf({
-      concurrency: 2,
+      poolSize: 2,
       order,
     });
-    const lease1 = await pool.acquire();
-    const lease2 = await pool.acquire();
+    const rental1 = await pool.acquire();
+    const rental2 = await pool.acquire();
 
-    const exe1 = await lease1.getExeUnit();
-    const exe2 = await lease2.getExeUnit();
+    const exe1 = await rental1.getExeUnit();
+    const exe2 = await rental2.getExeUnit();
 
     await exe1
       .beginBatch()
@@ -54,8 +54,8 @@ const order: MarketOrderSpec = {
     console.log("File content: ");
     console.log(await readFile("./results.txt", { encoding: "utf-8" }));
 
-    await lease1.finalize();
-    await lease2.finalize();
+    await rental1.stopAndFinalize();
+    await rental2.stopAndFinalize();
   } catch (err) {
     console.error("Failed to run the example", err);
   } finally {

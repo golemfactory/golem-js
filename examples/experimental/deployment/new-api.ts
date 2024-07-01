@@ -18,7 +18,7 @@ async function main() {
       .createNetwork("basic", {
         ip: "192.168.7.0/24",
       })
-      .createLeaseProcessPool("app", {
+      .createResourceRentalPool("app", {
         demand: {
           workload: {
             imageTag: "golem/node:latest",
@@ -32,17 +32,13 @@ async function main() {
             maxCpuPerHourPrice: 1,
             maxEnvPerHourPrice: 1,
           },
-          withProviders: ["0x123123"],
-          withoutProviders: ["0x123123"],
-          withOperators: ["0x123123"],
-          withoutOperators: ["0x123123"],
         },
         deployment: {
           replicas: 2,
           network: "basic",
         },
       })
-      .createLeaseProcessPool("db", {
+      .createResourceRentalPool("db", {
         demand: {
           workload: {
             imageTag: "golem/alpine:latest",
@@ -72,8 +68,8 @@ async function main() {
     await deployment.start();
 
     // Get your pool of activities for specified need
-    const appPool = deployment.getLeaseProcessPool("app");
-    const dbPool = deployment.getLeaseProcessPool("db");
+    const appPool = deployment.getResourceRentalPool("app");
+    const dbPool = deployment.getResourceRentalPool("db");
 
     // Get an instance out of the pool for use
     const appReplica1 = await appPool.acquire();

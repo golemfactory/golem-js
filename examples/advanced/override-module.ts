@@ -6,7 +6,7 @@
  * therefore this feature is not recommended for most users.
  */
 
-import { Concurrency, MarketOrderSpec, GolemNetwork } from "@golem-sdk/golem-js";
+import { MarketOrderSpec, GolemNetwork } from "@golem-sdk/golem-js";
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 
 // let's override the `estimateBudget` method from the `MarketModule` interface
@@ -15,9 +15,9 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 import { MarketModuleImpl } from "@golem-sdk/golem-js";
 
 class MyMarketModule extends MarketModuleImpl {
-  estimateBudget({ concurrency, order }: { concurrency: Concurrency; order: MarketOrderSpec }): number {
+  estimateBudget({ maxAgreements, order }: { maxAgreements: number; order: MarketOrderSpec }): number {
     // let's take the original estimate and add 20% to it as a buffer
-    const originalEstimate = super.estimateBudget({ concurrency, order });
+    const originalEstimate = super.estimateBudget({ maxAgreements, order });
     return originalEstimate * 1.2;
   }
 }
@@ -52,18 +52,18 @@ const order: MarketOrderSpec = {
   });
 
   // look at the console output to see the budget estimate
-  glm.payment.events.on("allocationCreated", (allocation) => {
+  glm.payment.events.on("allocationCreated", ({ allocation }) => {
     console.log("Allocation created with budget:", Number(allocation.remainingAmount).toFixed(2));
   });
 
   try {
     await glm.connect();
-    const lease = await glm.oneOf(order);
-    await lease
+    const rental = await glm.oneOf({ order });
+    await rental
       .getExeUnit()
       .then((exe) => exe.run("echo Hello, Golem! 👋"))
       .then((res) => console.log(res.stdout));
-    await lease.finalize();
+    await rental.stopAndFinalize();
   } catch (err) {
     console.error("Failed to run the example", err);
   } finally {

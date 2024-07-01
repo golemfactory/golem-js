@@ -27,7 +27,7 @@ const scanOptions: ScanOptions = {
   await glm.connect();
   const spec = glm.market.buildScanSpecification(scanOptions);
 
-  // For advanced users: you can also add properties and constraints manually:
+  // For advanced users: you can also add constraints manually:
   // spec.constraints.push("(golem.node.id.name=my-favorite-provider)");
 
   const SCAN_DURATION_MS = 10_000;

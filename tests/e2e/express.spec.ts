@@ -57,9 +57,9 @@ describe("Express", function () {
         consoleSpy("Job succeeded", job.results);
       });
 
-      job.startWork(async (ctx) => {
+      job.startWork(async (exe) => {
         const fileName = `EXPRESS_SPEC_OUTPUT.wav`;
-        await ctx
+        await exe
           .beginBatch()
           .run(`espeak "${req.body}" -w /golem/output/output.wav`)
           .downloadFile("/golem/output/output.wav", fileName)

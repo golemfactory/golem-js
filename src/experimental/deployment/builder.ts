@@ -9,36 +9,36 @@ export interface DeploymentOptions {
   network?: string;
 }
 
-export interface CreateLeaseProcessPoolOptions extends MarketOrderSpec {
+export interface CreateResourceRentalPoolOptions extends MarketOrderSpec {
   deployment: DeploymentOptions;
 }
 
 export class GolemDeploymentBuilder {
   private components: DeploymentComponents = {
-    leaseProcessPools: [],
+    resourceRentalPools: [],
     networks: [],
   };
 
   public reset() {
     this.components = {
-      leaseProcessPools: [],
+      resourceRentalPools: [],
       networks: [],
     };
   }
 
   constructor(private glm: GolemNetwork) {}
 
-  createLeaseProcessPool(name: string, options: CreateLeaseProcessPoolOptions): this {
-    if (this.components.leaseProcessPools.some((pool) => pool.name === name)) {
-      throw new GolemConfigError(`Lease Process Pool with name ${name} already exists`);
+  createResourceRentalPool(name: string, options: CreateResourceRentalPoolOptions): this {
+    if (this.components.resourceRentalPools.some((pool) => pool.name === name)) {
+      throw new GolemConfigError(`Resource Rental Pool with name ${name} already exists`);
     }
 
-    this.components.leaseProcessPools.push({ name, options });
+    this.components.resourceRentalPools.push({ name, options });
 
     return this;
   }
 
-  createNetwork(name: string, options: NetworkOptions): this {
+  createNetwork(name: string, options: NetworkOptions = {}): this {
     if (this.components.networks.some((network) => network.name === name)) {
       throw new GolemConfigError(`Network with name ${name} already exists`);
     }
@@ -57,7 +57,7 @@ export class GolemDeploymentBuilder {
       market: this.glm.market,
       activity: this.glm.activity,
       network: this.glm.network,
-      lease: this.glm.lease,
+      rental: this.glm.rental,
     });
 
     this.reset();
