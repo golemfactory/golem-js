@@ -8,7 +8,6 @@ import { EventEmitter } from "eventemitter3";
 import { NetworkNode } from "../network";
 import { ExecutionOptions } from "../activity/exe-script-executor";
 import { GolemAbortError, GolemTimeoutError, GolemUserError } from "../shared/error/golem-error";
-import AsyncLock from "async-lock";
 
 export interface ResourceRentalEvents {
   /** Emitted when the rental process is fully finalized */
@@ -42,7 +41,6 @@ export class ResourceRental {
   private abortController = new AbortController();
   private finalizePromise?: Promise<void>;
   private exeUnitPromise?: Promise<ExeUnit>;
-  private lock: AsyncLock;
 
   public constructor(
     public readonly agreement: Agreement,
@@ -54,7 +52,6 @@ export class ResourceRental {
     private readonly resourceRentalOptions?: ResourceRentalOptions,
   ) {
     this.networkNode = this.resourceRentalOptions?.networkNode;
-    this.lock = new AsyncLock();
 
     this.createExeUnit(this.abortController.signal);
     // TODO: Listen to agreement events to know when it goes down due to provider closing it!
