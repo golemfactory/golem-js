@@ -10,6 +10,7 @@ import { Network, NetworkModule } from "../network";
 import { RentalModule } from "./rental.module";
 import { AgreementOptions } from "../market/agreement/agreement";
 import { GolemAbortError } from "../shared/error/golem-error";
+import AsyncLock from "async-lock";
 
 export interface ResourceRentalPoolDependencies {
   allocation: Allocation;
@@ -85,6 +86,7 @@ export class ResourceRentalPool {
   private readonly maxPoolSize: number;
   private readonly resourceRentalOptions?: ResourceRentalOptions;
   private readonly agreementOptions?: AgreementOptions;
+  private asyncLock = new AsyncLock();
   /**
    * Number of resource rentals that are currently being signed.
    * This is used to prevent creating more resource rentals than the pool size allows.
@@ -251,18 +253,20 @@ export class ResourceRentalPool {
   }
 
   async release(resourceRental: ResourceRental): Promise<void> {
-    if (this.getAvailableSize() >= this.maxPoolSize) {
-      return this.destroy(resourceRental);
-    }
-    this.borrowed.delete(resourceRental);
-    const isValid = await this.validate(resourceRental);
-    if (!isValid) {
-      return this.destroy(resourceRental);
-    }
-    this.events.emit("released", {
-      agreement: resourceRental.agreement,
+    return this.asyncLock.acquire("resource-rental-pool", async () => {
+      if (this.getAvailableSize() >= this.maxPoolSize) {
+        return this.destroy(resourceRental);
+      }
+      this.borrowed.delete(resourceRental);
+      const isValid = await this.validate(resourceRental);
+      if (!isValid) {
+        return this.destroy(resourceRental);
+      }
+      this.passResourceRentalToWaitingAcquireOrBackToPool(resourceRental);
+      this.events.emit("released", {
+        agreement: resourceRental.agreement,
+      });
     });
-    this.passResourceRentalToWaitingAcquireOrBackToPool(resourceRental);
   }
 
   async destroy(resourceRental: ResourceRental): Promise<void> {
@@ -292,17 +296,19 @@ export class ResourceRentalPool {
 
   private async startDrain() {
     try {
-      this.abortController.abort("The pool is in draining mode");
-      this.events.emit("draining");
-      this.acquireQueue = [];
-      const allResourceRentals = Array.from(this.borrowed)
-        .concat(Array.from(this.lowPriority))
-        .concat(Array.from(this.highPriority));
-      await Promise.allSettled(allResourceRentals.map((resourceRental) => this.destroy(resourceRental)));
-      this.lowPriority.clear();
-      this.highPriority.clear();
-      this.borrowed.clear();
-      this.abortController = new AbortController();
+      await this.asyncLock.acquire("resource-rental-pool", async () => {
+        this.abortController.abort("The pool is in draining mode");
+        this.events.emit("draining");
+        this.acquireQueue = [];
+        const allResourceRentals = Array.from(this.borrowed)
+          .concat(Array.from(this.lowPriority))
+          .concat(Array.from(this.highPriority));
+        await Promise.allSettled(allResourceRentals.map((resourceRental) => this.destroy(resourceRental)));
+        this.lowPriority.clear();
+        this.highPriority.clear();
+        this.borrowed.clear();
+        this.abortController = new AbortController();
+      });
     } catch (error) {
       this.logger.error("Draining the pool failed", error);
       throw error;

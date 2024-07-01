@@ -8,7 +8,7 @@ import { ResourceRentalPool } from "./resource-rental-pool";
 import { type RequireAtLeastOne } from "../shared/utils/types";
 import { NetworkModule } from "../network";
 import { RentalModule } from "./rental.module";
-import { Logger } from "../shared/utils";
+import { Logger, sleep } from "../shared/utils";
 
 const allocation = mock(Allocation);
 const proposalPool = mock(DraftOfferProposalPool);
@@ -24,7 +24,7 @@ function getMockResourceRental() {
   } as ResourceRental;
 }
 
-function getRentalPool(replicas: RequireAtLeastOne<{ min: number; max: number }>) {
+function getRentalPool(poolSize: RequireAtLeastOne<{ min: number; max: number }>) {
   return new ResourceRentalPool({
     allocation: instance(allocation),
     proposalPool: instance(proposalPool),
@@ -33,7 +33,7 @@ function getRentalPool(replicas: RequireAtLeastOne<{ min: number; max: number }>
     rentalModule: instance(rentalModule),
     logger: instance(imock<Logger>()),
     network: undefined,
-    poolSize: replicas,
+    poolSize,
   });
 }
 
@@ -399,6 +399,39 @@ describe("ResourceRentalPool", () => {
       await acquirePromise;
       expect(pool.getSize()).toBe(0);
       expect(pool["rentalsBeingSigned"]).toBe(0);
+    });
+    it("destroy all rentals by drainAndClear that release process was previously started asynchronously", async () => {
+      const maxPoolSize = 4;
+      const pool = getRentalPool({ min: 1, max: maxPoolSize });
+      const poolSpy = spy(pool);
+      pool["createNewResourceRental"] = jest.fn(async () => {
+        pool["rentalsBeingSigned"]++;
+        await sleep(10, true);
+        pool["rentalsBeingSigned"]--;
+        return getMockResourceRental();
+      });
+      // simulate slow validation to slow down the release process
+      pool["validate"] = jest.fn(async () => {
+        await sleep(100, true);
+        return true;
+      });
+      // run 12 tasks simultaneously after which the release process will start, but without waiting for it to finish
+      await Promise.allSettled(
+        Array(12)
+          .fill(0)
+          .map(() =>
+            pool.acquire().then(async (rental) => {
+              await sleep(100, true);
+              pool.release(rental);
+            }),
+          ),
+      );
+      await pool.drainAndClear();
+      expect(pool.getAvailableSize()).toEqual(0);
+      expect(pool.getBorrowedSize()).toEqual(0);
+      expect(pool.getSize()).toEqual(0);
+      verify(poolSpy.release(_)).times(12);
+      verify(poolSpy.destroy(_)).times(maxPoolSize);
     });
   });
 });
