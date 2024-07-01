@@ -50,8 +50,9 @@ describe("ExeScriptExecutor", () => {
         }),
       ]);
 
-      const streamResult = executor.execute(new Deploy().toExeScriptRequest());
-      const result = await lastValueFrom(streamResult);
+      const executionMetadata = await executor.execute(new Deploy().toExeScriptRequest());
+      const result$ = executor.getResultsObservable(executionMetadata);
+      const result = await lastValueFrom(result$);
       expect(result.result).toEqual("Ok");
     });
 
@@ -78,7 +79,8 @@ describe("ExeScriptExecutor", () => {
 
       const expectedRunStdOuts = ["test", "test", "stdout_test_command_run_1", "stdout_test_command_run_2", "test"];
       await script.before();
-      const result$ = executor.execute(script.getExeScriptRequest());
+      const executionMetadata = await executor.execute(script.getExeScriptRequest());
+      const result$ = executor.getResultsObservable(executionMetadata);
       const results = await lastValueFrom(result$.pipe(toArray()));
       for (const result of results) {
         expect(result.result).toEqual("Ok");
@@ -120,12 +122,13 @@ describe("ExeScriptExecutor", () => {
         "test",
       ];
       await script.before();
-      const results = executor.execute(script.getExeScriptRequest());
+      const executionMetadata = await executor.execute(script.getExeScriptRequest());
+      const result$ = executor.getResultsObservable(executionMetadata);
       let resultCount = 0;
       // each result 2 assertions and 1 in "complete"
       expect.assertions(12 + 1);
       return new Promise<void>((res, rej) => {
-        results.subscribe({
+        result$.subscribe({
           next: (result) => {
             expect(result.result).toEqual("Ok");
             expect(result.stdout).toEqual(expectedRunStdOuts.shift());
@@ -228,7 +231,8 @@ describe("ExeScriptExecutor", () => {
       ];
       when(mockActivityModule.observeStreamingBatchEvents(_, _)).thenReturn(from<StreamingBatchEvent[]>(mockedEvents));
       await script.before();
-      const result$ = executor.execute(script.getExeScriptRequest(), true);
+      const executionMetadata = await executor.execute(script.getExeScriptRequest());
+      const result$ = executor.getResultsObservable(executionMetadata, true);
       let expectedStdout;
       const results = await lastValueFrom(result$.pipe(toArray()));
       for (const result of results) {
@@ -257,12 +261,13 @@ describe("ExeScriptExecutor", () => {
       const command6 = new Terminate();
       const script = Script.create([command1, command2, command3, command4, command5, command6]);
       await script.before();
-      const results = executor.execute(script.getExeScriptRequest(), undefined, undefined);
+      const executionMetadata = await executor.execute(script.getExeScriptRequest());
+      const result$ = executor.getResultsObservable(executionMetadata, undefined, undefined);
       ac.abort();
 
       expect.assertions(1);
       return new Promise<void>((res, rej) => {
-        results.subscribe({
+        result$.subscribe({
           complete: () => rej("Shouldn't have completed"),
           error: (error) => {
             try {
@@ -297,12 +302,13 @@ describe("ExeScriptExecutor", () => {
       const command4 = new Terminate();
       const script = Script.create([command1, command2, command3, command4]);
       await script.before();
-      const results = executor.execute(script.getExeScriptRequest(), true, undefined);
+      const executionMetadata = await executor.execute(script.getExeScriptRequest());
+      const result$ = executor.getResultsObservable(executionMetadata, true, undefined);
       ac.abort();
 
       expect.assertions(1);
       return new Promise<void>((res, rej) => {
-        results.subscribe({
+        result$.subscribe({
           complete: () => rej("Shouldn't have completed"),
           error: (error) => {
             try {
@@ -332,11 +338,12 @@ describe("ExeScriptExecutor", () => {
       const error = new Error("Some undefined error");
       when(mockActivityModule.getBatchResults(anything(), anything(), anything(), anything())).thenReject(error);
 
-      const results = executor.execute(script.getExeScriptRequest(), false, 200, 0);
+      const executionMetadata = await executor.execute(script.getExeScriptRequest());
+      const result$ = executor.getResultsObservable(executionMetadata, false, 200, 0);
 
       expect.assertions(7);
       return new Promise<void>((res, rej) => {
-        results.subscribe({
+        result$.subscribe({
           complete: () => rej("Shouldn't have completed"),
           error: (error) => {
             try {
@@ -377,11 +384,12 @@ describe("ExeScriptExecutor", () => {
       };
       when(mockActivityModule.getBatchResults(anything(), anything(), anything(), anything())).thenReject(error);
 
-      const results = executor.execute(script.getExeScriptRequest(), false, 1_000, 3);
+      const executionMetadata = await executor.execute(script.getExeScriptRequest());
+      const result$ = executor.getResultsObservable(executionMetadata, false, 1_000, 3);
 
       expect.assertions(6);
       return new Promise<void>((res, rej) => {
-        results.subscribe({
+        result$.subscribe({
           complete: () => rej("Shouldn't have completed"),
           error: (error) => {
             try {
@@ -429,7 +437,8 @@ describe("ExeScriptExecutor", () => {
         .thenReject(error)
         .thenResolve([testResult]);
 
-      const result$ = executor.execute(script.getExeScriptRequest(), false, undefined, 10);
+      const executionMetadata = await executor.execute(script.getExeScriptRequest());
+      const result$ = executor.getResultsObservable(executionMetadata, false, undefined, 10);
       const results = await lastValueFrom(result$.pipe(toArray()));
       for (const result of results) {
         expect(result).toEqual(testResult);
@@ -454,11 +463,12 @@ describe("ExeScriptExecutor", () => {
       };
 
       when(mockActivityModule.getBatchResults(anything(), anything(), anything(), anything())).thenReject(error);
-      const results = executor.execute(script.getExeScriptRequest(), false, undefined, 1);
+      const executionMetadata = await executor.execute(script.getExeScriptRequest());
+      const result$ = executor.getResultsObservable(executionMetadata, false, undefined, 1);
 
       expect.assertions(7);
       return new Promise<void>((res, rej) => {
-        results.subscribe({
+        result$.subscribe({
           complete: () => rej("Shouldn't have completed"),
           error: (error) => {
             try {
@@ -492,14 +502,15 @@ describe("ExeScriptExecutor", () => {
       const command4 = new Run("test_command2");
       const command5 = new Run("test_command3");
       const script = Script.create([command1, command2, command3, command4, command5]);
-      const results = executor.execute(script.getExeScriptRequest(), false, 1);
+      const executionMetadata = await executor.execute(script.getExeScriptRequest());
+      const result$ = executor.getResultsObservable(executionMetadata, false, 1);
 
       // wait for execute timeout to fire
       await sleep(10, true);
 
       expect.assertions(2);
       return new Promise<void>((res, rej) => {
-        results.subscribe({
+        result$.subscribe({
           complete: () => rej("Shouldn't have completed"),
           error: (error) => {
             try {
@@ -534,14 +545,15 @@ describe("ExeScriptExecutor", () => {
       const command4 = new Terminate();
       const script = Script.create([command1, command2, command3, command4]);
       await script.before();
-      const results = executor.execute(script.getExeScriptRequest(), true, 800);
+      const executionMetadata = await executor.execute(script.getExeScriptRequest());
+      const result$ = executor.getResultsObservable(executionMetadata, true, 800);
 
       // wait for ExeScriptExecutor abort signal to fire
       await sleep(10, true);
 
       expect.assertions(2);
       return new Promise<void>((res, rej) => {
-        results.subscribe({
+        result$.subscribe({
           complete: () => rej("Shouldn't have completed"),
           error: (error) => {
             try {
@@ -576,11 +588,12 @@ describe("ExeScriptExecutor", () => {
         throwError(() => mockedEventSourceErrorMessage),
       );
       await script.before();
-      const results = executor.execute(script.getExeScriptRequest(), true);
+      const executionMetadata = await executor.execute(script.getExeScriptRequest());
+      const result$ = executor.getResultsObservable(executionMetadata, true);
 
       expect.assertions(7);
       return new Promise<void>((res, rej) => {
-        results.subscribe({
+        result$.subscribe({
           complete: () => rej("Shouldn't have completed"),
           error: (error) => {
             try {

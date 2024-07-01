@@ -4,7 +4,7 @@ import { StorageProvider } from "../../shared/storage";
 import { Logger } from "../../shared/utils";
 import { GolemWorkError, WorkErrorCode } from "./error";
 
-import { ExeScriptExecutor } from "../exe-script-executor";
+import { ExeScriptExecutor, ScriptExecutionMetadata } from "../exe-script-executor";
 import { Observable, finalize, map, tap } from "rxjs";
 
 export class Batch {
@@ -79,7 +79,8 @@ export class Batch {
       const script = this.script.getExeScriptRequest();
 
       this.logger.debug(`Sending exec script request to the exe-unit on provider:`, { script });
-      const result$ = this.executor.execute(script);
+      const executionMetadata = await this.executor.execute(script);
+      const result$ = this.executor.getResultsObservable(executionMetadata);
 
       return new Promise((resolve, reject) => {
         this.logger.debug("Reading the results of the batch script");
@@ -138,9 +139,9 @@ export class Batch {
   async endStream(): Promise<Observable<Result>> {
     const script = this.script;
     await script.before();
-    let results: Observable<Result>;
+    let executionMetadata: ScriptExecutionMetadata;
     try {
-      results = await this.executor.execute(this.script.getExeScriptRequest());
+      executionMetadata = await this.executor.execute(this.script.getExeScriptRequest());
     } catch (error) {
       // the original error is more important than the one from after()
       await script.after([]);
@@ -158,7 +159,8 @@ export class Batch {
     }
     const decodedResults: Result[] = [];
     const { activity } = this.executor;
-    return results.pipe(
+    const result$ = this.executor.getResultsObservable(executionMetadata);
+    return result$.pipe(
       map((chunk) => {
         if (chunk.result !== "Error") {
           return chunk;

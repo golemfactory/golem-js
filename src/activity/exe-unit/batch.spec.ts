@@ -13,7 +13,7 @@ import {
 import { Agreement } from "../../market/agreement";
 
 import { ExeScriptExecutor } from "../exe-script-executor";
-import { lastValueFrom, toArray } from "rxjs";
+import { lastValueFrom, of, toArray } from "rxjs";
 
 const mockLogger = imock<Logger>();
 const mockYagna = mock(YagnaApi);
@@ -28,6 +28,9 @@ describe("Batch", () => {
   beforeEach(() => {
     reset(mockLogger);
     reset(mockYagna);
+    reset(mockActivity);
+    reset(mockAgreement);
+    reset(mockExecutor);
 
     const providerInfo = {
       id: "provider-id",
@@ -38,6 +41,7 @@ describe("Batch", () => {
     when(mockAgreement.provider).thenReturn(providerInfo);
     when(mockActivity.provider).thenReturn(providerInfo);
     when(mockActivity.agreement).thenReturn(instance(mockAgreement));
+    when(mockExecutor.getResultsObservable(anything())).thenReturn(of());
 
     activity = instance(mockActivity);
 
@@ -119,7 +123,7 @@ describe("Batch", () => {
     });
 
     it("should work", async () => {
-      when(mockExecutor.execute(anything())).thenReturn(
+      when(mockExecutor.getResultsObservable(anything())).thenReturn(
         buildExecutorResults([
           buildExeScriptSuccessResult("Hello World"),
           buildExeScriptSuccessResult("Hello World 2"),
@@ -135,7 +139,7 @@ describe("Batch", () => {
 
     it("should initialize script with script.before()", async () => {
       const spy = jest.spyOn(batch["script"], "before");
-      when(mockExecutor.execute(anything())).thenReturn(buildExecutorResults([]));
+      when(mockExecutor.getResultsObservable(anything())).thenReturn(buildExecutorResults([]));
       await batch.end();
 
       expect(spy).toHaveBeenCalled();
@@ -143,7 +147,7 @@ describe("Batch", () => {
 
     it("should call script.after() on success", async () => {
       const spy = jest.spyOn(batch["script"], "after");
-      when(mockExecutor.execute(anything())).thenReturn(buildExecutorResults([]));
+      when(mockExecutor.getResultsObservable(anything())).thenReturn(buildExecutorResults([]));
       await batch.end();
 
       expect(spy).toHaveBeenCalled();
@@ -152,7 +156,7 @@ describe("Batch", () => {
     it("should call script.after() on failure", async () => {
       const spy = jest.spyOn(batch["script"], "after");
 
-      when(mockExecutor.execute(anything())).thenReturn(
+      when(mockExecutor.getResultsObservable(anything())).thenReturn(
         buildExecutorResults(undefined, undefined, new Error("FAILURE")),
       );
 
@@ -189,7 +193,7 @@ describe("Batch", () => {
     });
 
     it("should throw error on result stream error", async () => {
-      when(mockExecutor.execute(anything())).thenReturn(
+      when(mockExecutor.getResultsObservable(anything())).thenReturn(
         buildExecutorResults(undefined, undefined, new Error("FAILURE")),
       );
       await expect(batch.end()).rejects.toStrictEqual(
@@ -211,7 +215,7 @@ describe("Batch", () => {
     });
 
     it("should work", async () => {
-      when(mockExecutor.execute(anything())).thenReturn(
+      when(mockExecutor.getResultsObservable(anything())).thenReturn(
         buildExecutorResults([
           buildExeScriptSuccessResult("Hello World"),
           buildExeScriptSuccessResult("Hello World 2"),
@@ -243,15 +247,16 @@ describe("Batch", () => {
     it("should call script.after() on success", async () => {
       const spy = jest.spyOn(batch["script"], "after");
 
-      // just wait for the stream to end
-      await lastValueFrom(await batch.endStream());
+      const result$ = await batch.endStream();
+      // lastValueFrom errors if the stream is empty, so we need to provide a default value
+      await lastValueFrom(result$, { defaultValue: undefined });
 
       expect(spy).toHaveBeenCalled();
     });
 
     it("should call script.after() on result stream error", async () => {
       const spy = jest.spyOn(batch["script"], "after");
-      when(mockExecutor.execute(anything())).thenReturn(
+      when(mockExecutor.getResultsObservable(anything())).thenReturn(
         buildExecutorResults(undefined, [buildExeScriptErrorResult("FAILURE", "FAILURE")]),
       );
 
@@ -270,9 +275,7 @@ describe("Batch", () => {
       const spy = jest.spyOn(batch["script"], "after");
       when(mockExecutor.execute(anything())).thenThrow(new Error("ERROR"));
 
-      await expect(async () => {
-        await lastValueFrom(await batch.endStream());
-      }).rejects.toMatchError(
+      await expect(batch.endStream()).rejects.toMatchError(
         new GolemWorkError(
           "Unable to execute script Error: ERROR",
           WorkErrorCode.ScriptExecutionFailed,

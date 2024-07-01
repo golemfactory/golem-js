@@ -157,9 +157,10 @@ export class ExeUnit {
 
   private async deployActivity() {
     try {
-      const result$ = this.executor.execute(
+      const executionMetadata = await this.executor.execute(
         new Script([new Deploy(this.networkNode?.getNetworkConfig?.()), new Start()]).getExeScriptRequest(),
       );
+      const result$ = this.executor.getResultsObservable(executionMetadata);
       // if any result is an error, throw an error
       await lastValueFrom(
         result$.pipe(
@@ -250,8 +251,9 @@ export class ExeUnit {
     const script = new Script([run]);
     // In this case, the script consists only of one run command,
     // so we skip the execution of script.before and script.after
-    const activityResult$ = this.executor.execute(
-      script.getExeScriptRequest(),
+    const executionMetadata = await this.executor.execute(script.getExeScriptRequest());
+    const activityResult$ = this.executor.getResultsObservable(
+      executionMetadata,
       true,
       options?.signalOrTimeout,
       options?.maxRetries,
@@ -390,15 +392,16 @@ export class ExeUnit {
     await sleep(100, true);
 
     // Send script.
-    const results = this.executor.execute(
-      script.getExeScriptRequest(),
+    const executionMetadata = await this.executor.execute(script.getExeScriptRequest());
+    const result$ = this.executor.getResultsObservable(
+      executionMetadata,
       false,
       options?.signalOrTimeout,
       options?.maxRetries,
     );
 
     // Process result.
-    let allResults: Result<T>[] = await lastValueFrom(results.pipe(toArray()));
+    let allResults: Result<T>[] = await lastValueFrom(result$.pipe(toArray()));
     allResults = await script.after(allResults);
 
     // Handle errors.

@@ -1,4 +1,5 @@
 import {
+  anyAbortSignal,
   createAbortSignalFromTimeout,
   Logger,
   mergeUntilFirstComplete,
@@ -13,7 +14,15 @@ import { Result, StreamingBatchEvent } from "./results";
 import { Activity } from "./activity";
 import { getMessageFromApiError } from "../shared/utils/apiErrorMessage";
 import { ActivityModule } from "./activity.module";
-import { catchError, map, mergeMap, Observable, takeWhile } from "rxjs";
+import { catchError, map, Observable, takeWhile } from "rxjs";
+
+/**
+ * Information needed to fetch the results of a script execution
+ */
+export interface ScriptExecutionMetadata {
+  batchId: string;
+  batchSize: number;
+}
 
 export interface ExeScriptRequest {
   text: string;
@@ -45,87 +54,77 @@ export class ExeScriptExecutor {
   }
 
   /**
-   * Create an observable that when subscribed to, will execute the provided script and emit results.
-   * If the provided abort signal is already aborted, the script won't be executed and the returned
-   * observable will emit an error.
+   * Executes the provided script and returns the batch id and batch size that can be used
+   * to fetch it's results
+   * @param script
+   * @returns script execution metadata - batch id and batch size that can be used to fetch results using `getResultsObservable`
+   */
+  public async execute(script: ExeScriptRequest): Promise<ScriptExecutionMetadata> {
+    try {
+      this.abortSignal.throwIfAborted();
+      const batchId = await this.send(script);
+      const batchSize = JSON.parse(script.text).length;
+
+      this.logger.debug(`Script sent.`, { batchId });
+      return { batchId, batchSize };
+    } catch (error) {
+      const message = getMessageFromApiError(error);
+
+      this.logger.error("Execution of script failed.", {
+        reason: message,
+      });
+
+      if (this.abortSignal.aborted) {
+        throw new GolemAbortError("Executions of script has been aborted", this.abortSignal.reason);
+      }
+      throw new GolemWorkError(
+        `Unable to execute script. ${message}`,
+        WorkErrorCode.ScriptExecutionFailed,
+        this.activity.agreement,
+        this.activity,
+        this.activity.provider,
+        error,
+      );
+    }
+  }
+
+  /**
+   * Given a batch id and batch size collect the results from yagna. You can choose to either
+   * stream them as they go or poll for them. When a timeout is reached (by either the timeout provided
+   * as an argument here or in the constructor) the observable will emit an error.
    *
-   * @param script - exe script request
+   *
+   * @param batch - batch id and batch size
    * @param stream - define type of getting results from execution (polling or streaming)
    * @param signalOrTimeout - the timeout in milliseconds or an AbortSignal that will be used to cancel the execution
    * @param maxRetries - maximum number of retries retrieving results when an error occurs, default: 10
    */
-  public execute(
-    script: ExeScriptRequest,
+  public getResultsObservable(
+    batch: ScriptExecutionMetadata,
     stream?: boolean,
     signalOrTimeout?: number | AbortSignal,
     maxRetries?: number,
   ): Observable<Result> {
-    const abortController = new AbortController();
-    // abort execution in case of cancellation by global signal or by local signal (from parameter)
-    this.abortSignal.addEventListener("abort", () => abortController.abort(this.abortSignal.reason));
-    if (signalOrTimeout) {
-      const abortSignal = createAbortSignalFromTimeout(signalOrTimeout);
-      abortSignal.addEventListener("abort", () => abortController.abort(abortSignal.reason));
-    }
+    const signal = anyAbortSignal(this.abortSignal, createAbortSignalFromTimeout(signalOrTimeout));
 
     // observable that emits when the script execution should be aborted
     const abort$ = new Observable<never>((subscriber) => {
-      const getError = () => new GolemAbortError("Execution of script has been aborted", abortController.signal.reason);
+      const getError = () => new GolemAbortError("Execution of script has been aborted", signal.reason);
 
-      if (abortController.signal.aborted) {
+      if (signal.aborted) {
         subscriber.error(getError());
       }
-      abortController.signal.addEventListener("abort", () => {
+      signal.addEventListener("abort", () => {
         subscriber.error(getError());
       });
     });
 
-    // observable that when subscribed to, will execute the provided script and emit it's batchId and batchSize
-    const sendScript$ = new Observable<{ batchId: string; batchSize: number }>((subscriber) => {
-      const send = async () => {
-        try {
-          this.abortSignal.throwIfAborted();
-          const batchId = await this.send(script);
-          const batchSize = JSON.parse(script.text).length;
-
-          this.logger.debug(`Script sent.`, { batchId });
-          return { batchId, batchSize };
-        } catch (error) {
-          const message = getMessageFromApiError(error);
-
-          this.logger.error("Execution of script failed.", {
-            reason: message,
-          });
-
-          if (abortController.signal.aborted) {
-            throw new GolemAbortError("Executions of script has been aborted", this.abortSignal.reason);
-          }
-          throw new GolemWorkError(
-            `Unable to execute script. ${message}`,
-            WorkErrorCode.ScriptExecutionFailed,
-            this.activity.agreement,
-            this.activity,
-            this.activity.provider,
-            error,
-          );
-        }
-      };
-      send()
-        .then((result) => {
-          subscriber.next(result);
-          subscriber.complete();
-        })
-        .catch((error) => subscriber.error(error));
-    });
-
     // get an observable that will emit results of a batch execution
-    const getResults = ({ batchId, batchSize }: { batchId: string; batchSize: number }) =>
-      stream ? this.streamingBatch(batchId, batchSize) : this.pollingBatch(batchId, maxRetries);
+    const results$ = stream
+      ? this.streamingBatch(batch.batchId, batch.batchSize)
+      : this.pollingBatch(batch.batchId, maxRetries);
 
-    // observable that when subscribed to, will execute the provided script and emit results
-    const sendAndStreamResults$ = sendScript$.pipe(mergeMap(getResults));
-
-    return mergeUntilFirstComplete(abort$, sendAndStreamResults$);
+    return mergeUntilFirstComplete(abort$, results$);
   }
 
   protected async send(script: ExeScriptRequest): Promise<string> {
