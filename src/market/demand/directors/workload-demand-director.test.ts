@@ -9,6 +9,7 @@ describe("ActivityDemandDirector", () => {
     const director = new WorkloadDemandDirector(
       new WorkloadDemandDirectorConfig({
         imageHash: "529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4",
+        expirationSec: 600,
       }),
     );
     await director.apply(builder);
@@ -43,6 +44,7 @@ describe("ActivityDemandDirector", () => {
         manifestCert,
         manifestSigAlgorithm,
         capabilities,
+        expirationSec: 600,
       }),
     );
     await director.apply(builder);
@@ -70,5 +72,17 @@ describe("ActivityDemandDirector", () => {
         "(golem.runtime.capabilities=manifest-support)",
       ]),
     );
+  });
+
+  test("should throw an error if user providers a negative expirationSec value", () => {
+    expect(
+      () =>
+        new WorkloadDemandDirector(
+          new WorkloadDemandDirectorConfig({
+            imageHash: "529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4",
+            expirationSec: -3,
+          }),
+        ),
+    ).toThrow("The expirationSec param has to be a positive integer");
   });
 });

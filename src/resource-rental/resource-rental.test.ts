@@ -1,4 +1,4 @@
-import { imock, instance, mock, reset, when, verify, _ } from "@johanblumenberg/ts-mockito";
+import { imock, instance, mock, reset, spy, when, verify, _ } from "@johanblumenberg/ts-mockito";
 import { Agreement, MarketModule } from "../market";
 import { StorageProvider } from "../shared/storage";
 import { AgreementPaymentProcess } from "../payment/agreement_payment_process";
@@ -13,6 +13,7 @@ const mockMarketModule = imock<MarketModule>();
 const mockActivityModule = imock<ActivityModule>();
 const mockLogger = imock<Logger>();
 const mockResourceRentalOptions = imock<ResourceRentalOptions>();
+when(mockResourceRentalOptions.networkNode).thenReturn(undefined);
 
 let resourceRental: ResourceRental;
 
@@ -37,32 +38,46 @@ beforeEach(() => {
 });
 
 describe("ResourceRental", () => {
-  describe("ExeUnit", () => {
-    it("should create an exe unit on startup and use it later", async () => {
-      expect(resourceRental["currentExeUnit"]).toBeDefined();
-      verify(mockActivityModule.createExeUnit(_, _)).once();
-      await resourceRental.getExeUnit();
-      verify(mockActivityModule.createExeUnit(_, _)).once();
-    });
-
-    it("should reuse the same promise if called multiple times", async () => {
-      expect(resourceRental["currentExeUnit"]).toBeDefined();
-      const promise1 = resourceRental.getExeUnit();
-      const promise2 = resourceRental.getExeUnit();
-      const promise3 = resourceRental.getExeUnit();
+  describe("stopAndFinalize", () => {
+    it("reuses the same promise if called multiple times", async () => {
+      const rentalSpy = spy(resourceRental);
+      when(rentalSpy["startStopAndFinalize"](_)).thenResolve();
+      expect(resourceRental["finalizePromise"]).toBeUndefined();
+      const promise1 = resourceRental.stopAndFinalize();
+      const promise2 = resourceRental.stopAndFinalize();
+      const promise3 = resourceRental.stopAndFinalize();
+      expect(resourceRental["finalizePromise"]).toBeDefined();
       await Promise.all([promise1, promise2, promise3]);
-      verify(mockActivityModule.createExeUnit(_, _)).once();
+      verify(rentalSpy["startStopAndFinalize"](_)).once();
+      expect(resourceRental["finalizePromise"]).toBeUndefined();
     });
+    describe("ExeUnit", () => {
+      it("should create an exe unit on startup and use it later", async () => {
+        expect(resourceRental["currentExeUnit"]).toBeDefined();
+        verify(mockActivityModule.createExeUnit(_, _)).once();
+        await resourceRental.getExeUnit();
+        verify(mockActivityModule.createExeUnit(_, _)).once();
+      });
 
-    it("should reuse the same promise if called multiple time after destroy exe-unit created on strtup", async () => {
-      expect(resourceRental["currentExeUnit"]).toBeDefined();
-      await resourceRental.destroyExeUnit();
-      const promise1 = resourceRental.getExeUnit();
-      const promise2 = resourceRental.getExeUnit();
-      const promise3 = resourceRental.getExeUnit();
-      expect(resourceRental["exeUnitPromise"]).toBeDefined();
-      await Promise.all([promise1, promise2, promise3]);
-      verify(mockActivityModule.createExeUnit(_, _)).twice();
+      it("should reuse the same promise if called multiple times", async () => {
+        expect(resourceRental["currentExeUnit"]).toBeDefined();
+        const promise1 = resourceRental.getExeUnit();
+        const promise2 = resourceRental.getExeUnit();
+        const promise3 = resourceRental.getExeUnit();
+        await Promise.all([promise1, promise2, promise3]);
+        verify(mockActivityModule.createExeUnit(_, _)).once();
+      });
+
+      it("should reuse the same promise if called multiple time after destroy exe-unit created on strtup", async () => {
+        expect(resourceRental["currentExeUnit"]).toBeDefined();
+        await resourceRental.destroyExeUnit();
+        const promise1 = resourceRental.getExeUnit();
+        const promise2 = resourceRental.getExeUnit();
+        const promise3 = resourceRental.getExeUnit();
+        expect(resourceRental["exeUnitPromise"]).toBeDefined();
+        await Promise.all([promise1, promise2, promise3]);
+        verify(mockActivityModule.createExeUnit(_, _)).twice();
+      });
     });
   });
 });

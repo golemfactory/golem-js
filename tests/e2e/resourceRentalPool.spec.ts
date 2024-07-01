@@ -29,6 +29,13 @@ describe("ResourceRentalPool", () => {
           imageTag: "golem/alpine:latest",
         },
       },
+      {
+        rentHours: 1,
+        pricing: {
+          model: "burn-rate",
+          avgGlmPerHour: 1,
+        },
+      },
       allocation,
     );
 
@@ -203,18 +210,24 @@ describe("ResourceRentalPool", () => {
     });
   });
 
-  it("should abort getting exe-unit by timeout", async () => {
+  it("should abort getting the newly created exe-unit by timeout", async () => {
     const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 1 });
     const rental = await pool.acquire();
+    // wait for init and destroy the exe-unit created automatically on startup renatl
+    await rental.getExeUnit();
+    await rental.destroyExeUnit();
     await expect(rental.getExeUnit(10)).rejects.toThrow(
       new GolemAbortError("Initializing of the exe-unit has been aborted due to a timeout"),
     );
   });
 
-  it("should abort getting exe-unit by signal", async () => {
+  it("should abort getting the newly created exe-unit by signal", async () => {
     const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 1 });
     const abortController = new AbortController();
     const rental = await pool.acquire();
+    // wait for init and destroy the exe-unit created automatically on startup renatl
+    await rental.getExeUnit();
+    await rental.destroyExeUnit();
     abortController.abort();
     await expect(rental.getExeUnit(abortController.signal)).rejects.toThrow(
       new GolemAbortError("Initializing of the exe-unit has been aborted"),
@@ -224,6 +237,7 @@ describe("ResourceRentalPool", () => {
   it("should abort finalizing resource rental by timeout", async () => {
     const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 1 });
     const rental = await pool.acquire();
+    await rental.getExeUnit();
     await expect(rental.stopAndFinalize(10)).rejects.toThrow(
       new GolemAbortError("The finalization of payment process has been aborted due to a timeout"),
     );
@@ -233,9 +247,18 @@ describe("ResourceRentalPool", () => {
     const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 1 });
     const abortController = new AbortController();
     const rental = await pool.acquire();
+    await rental.getExeUnit();
     abortController.abort();
     await expect(rental.stopAndFinalize(abortController.signal)).rejects.toThrow(
       new GolemAbortError("The finalization of payment process has been aborted"),
     );
+  });
+
+  it("should abort creating a resource rental when drained", async () => {
+    const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 1 });
+    const acquirePromise = pool.acquire();
+    await pool.drainAndClear();
+    await expect(acquirePromise).rejects.toThrow("The signing of the agreement has been aborted");
+    expect(pool.getSize()).toEqual(0);
   });
 });

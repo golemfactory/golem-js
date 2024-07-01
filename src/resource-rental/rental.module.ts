@@ -6,8 +6,18 @@ import { StorageProvider } from "../shared/storage";
 import { Logger } from "../shared/utils";
 import { ResourceRental, ResourceRentalOptions } from "./resource-rental";
 import { ResourceRentalPool, ResourceRentalPoolOptions } from "./resource-rental-pool";
+import { EventEmitter } from "eventemitter3";
+
+export interface ResourceRentalModuleEvents {
+  /** Emitted when ResourceRenatl is successfully created */
+  resourceRentalCreated: (agreement: Agreement) => void;
+
+  /** Emitted when ResourceRenatlPool is successfully created */
+  resourceRentalPoolCreated: () => void;
+}
 
 export interface RentalModule {
+  events: EventEmitter<ResourceRentalModuleEvents>;
   /**
    * Factory that creates a new resource rental that's fully configured.
    * This method will also create the payment process for the agreement.
@@ -20,11 +30,12 @@ export interface RentalModule {
   createResourceRentalPool(
     draftPool: DraftOfferProposalPool,
     allocation: Allocation,
-    options?: ResourceRentalPoolOptions,
+    options: ResourceRentalPoolOptions,
   ): ResourceRentalPool;
 }
 
 export class RentalModuleImpl implements RentalModule {
+  events = new EventEmitter<ResourceRentalModuleEvents>();
   constructor(
     private readonly deps: {
       marketModule: MarketModule;
@@ -51,6 +62,7 @@ export class RentalModuleImpl implements RentalModule {
       this.deps.logger.child("resource-rental"),
       options,
     );
+    this.events.emit("resourceRentalCreated", rental.agreement);
     return rental;
   }
 
@@ -59,7 +71,7 @@ export class RentalModuleImpl implements RentalModule {
     allocation: Allocation,
     options?: ResourceRentalPoolOptions,
   ): ResourceRentalPool {
-    return new ResourceRentalPool({
+    const pool = new ResourceRentalPool({
       allocation,
       rentalModule: this,
       marketModule: this.deps.marketModule,
@@ -70,5 +82,7 @@ export class RentalModuleImpl implements RentalModule {
       network: options?.network,
       poolSize: options?.poolSize,
     });
+    this.events.emit("resourceRentalPoolCreated");
+    return pool;
   }
 }

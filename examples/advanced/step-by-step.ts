@@ -24,11 +24,20 @@ import { filter, map, switchMap, take } from "rxjs";
     logger,
   });
 
+  const RENTAL_DURATION_HOURS = 10 / 60;
+  const ALLOCATION_DURATION_HOURS = RENTAL_DURATION_HOURS + 0.25;
+
+  console.assert(
+    ALLOCATION_DURATION_HOURS > RENTAL_DURATION_HOURS,
+    "Always create allocations that will live longer than the planned rental duration",
+  );
+
   let allocation: Allocation | undefined;
   try {
     await glm.connect();
 
     // Define the order that we're going to place on the market
+
     const order: MarketOrderSpec = {
       demand: {
         workload: {
@@ -36,11 +45,10 @@ import { filter, map, switchMap, take } from "rxjs";
           minCpuCores: 1,
           minMemGib: 2,
         },
-        expirationSec: 30 * 60,
       },
       market: {
         // We're only going to rent the provider for 5 minutes max
-        rentHours: 5 / 60,
+        rentHours: RENTAL_DURATION_HOURS,
         pricing: {
           model: "linear",
           maxStartPrice: 1,
@@ -51,13 +59,14 @@ import { filter, map, switchMap, take } from "rxjs";
     };
     // Allocate funds to cover the order, we will only pay for the actual usage
     // so any unused funds will be returned to us at the end
+
     allocation = await glm.payment.createAllocation({
       budget: glm.market.estimateBudget({ order, maxAgreements: 1 }),
-      expirationSec: order.market.rentHours * 60 * 60,
+      expirationSec: ALLOCATION_DURATION_HOURS * 60 * 60,
     });
 
     // Convert the human-readable order to a protocol-level format that we will publish on the network
-    const demandSpecification = await glm.market.buildDemandDetails(order.demand, allocation);
+    const demandSpecification = await glm.market.buildDemandDetails(order.demand, order.market, allocation);
 
     // Publish the order on the market
     // This methods creates and observable that publishes the order and refreshes it every 30 minutes.

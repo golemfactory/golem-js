@@ -1,16 +1,17 @@
-import { defaultLogger, isNode, Logger, YagnaApi } from "../shared/utils";
+import { anyAbortSignal, createAbortSignalFromTimeout, defaultLogger, isNode, Logger, YagnaApi } from "../shared/utils";
 import {
   Demand,
   DraftOfferProposalPool,
   IMarketApi,
   MarketModule,
   MarketModuleImpl,
-  MarketOptions,
+  MarketModuleOptions,
   OfferProposal,
+  OrderMarketOptions,
 } from "../market";
 import { Allocation, IPaymentApi, PaymentModule, PaymentModuleImpl, PaymentModuleOptions } from "../payment";
 import { ActivityModule, ActivityModuleImpl, ExeUnitOptions, IActivityApi, IFileServer } from "../activity";
-import { INetworkApi, Network, NetworkModule, NetworkModuleImpl, NetworkOptions } from "../network";
+import { INetworkApi, Network, NetworkModule, NetworkModuleImpl, NetworkNode, NetworkOptions } from "../network";
 import { EventEmitter } from "eventemitter3";
 import {
   PoolSize,
@@ -27,7 +28,7 @@ import { AgreementRepository } from "../shared/yagna/repository/agreement-reposi
 import { ProposalRepository } from "../shared/yagna/repository/proposal-repository";
 import { CacheService } from "../shared/cache/CacheService";
 import { DemandRepository } from "../shared/yagna/repository/demand-repository";
-import { BuildDemandOptions, IDemandRepository } from "../market/demand/demand";
+import { IDemandRepository, OrderDemandOptions } from "../market/demand";
 import { GftpServerAdapter } from "../shared/storage/GftpServerAdapter";
 import {
   GftpStorageProvider,
@@ -38,6 +39,7 @@ import {
 import { DataTransferProtocol } from "../shared/types";
 import { NetworkApiAdapter } from "../shared/yagna/adapters/network-api-adapter";
 import { IProposalRepository } from "../market/proposal";
+import { Subscription } from "rxjs";
 
 /**
  * Instance of an object or a factory function that you can call `new` on.
@@ -76,6 +78,7 @@ export interface GolemNetworkOptions {
    * `DEBUG` environment variable to `golem-js:*`.
    */
   logger?: Logger;
+
   /**
    * Set the API key and URL for the Yagna API.
    */
@@ -83,17 +86,29 @@ export interface GolemNetworkOptions {
     key?: string;
     url?: string;
   };
+
   /**
    * Set payment-related options.
+   *
    * This is where you can specify the network, payment driver and more.
    * By default, the network is set to the `holesky` test network.
    */
   payment?: Partial<PaymentModuleOptions>;
+
+  /**
+   * Set market related options.
+   *
+   * This is where you can globally specify several options that determine how the SDK will
+   * interact with the market.
+   */
+  market?: Partial<MarketModuleOptions>;
+
   /**
    * Set the data transfer protocol to use for file transfers.
    * Default is `gftp`.
    */
   dataTransferProtocol?: DataTransferProtocol;
+
   /**
    * Override some of the services used by the GolemNetwork instance.
    * This is useful for testing or when you want to provide your own implementation of some services.
@@ -123,10 +138,11 @@ type AllocationOptions = {
  * Represents the order specifications which will result in access to ResourceRental.
  */
 export interface MarketOrderSpec {
-  demand: BuildDemandOptions;
-  market: MarketOptions;
+  demand: OrderDemandOptions;
+  market: OrderMarketOptions;
   activity?: ResourceRentalOptions["activity"];
   payment?: ResourceRentalOptions["payment"] & AllocationOptions;
+  /** The network that should be used for communication between the resources rented as part of this order */
   network?: Network;
 }
 
@@ -199,6 +215,8 @@ export class GolemNetwork {
   public readonly services: GolemServices;
 
   private hasConnection = false;
+  private disconnectPromise: Promise<void> | undefined;
+  private abortController = new AbortController();
 
   private readonly storageProvider: StorageProvider;
 
@@ -206,7 +224,7 @@ export class GolemNetwork {
    * List af additional tasks that should be executed when the network is being shut down
    * (for example finalizing resource rental created with `oneOf`)
    */
-  private readonly cleanupTasks: (() => Promise<void> | void)[] = [];
+  private cleanupTasks: (() => Promise<void> | void)[] = [];
 
   constructor(options: Partial<GolemNetworkOptions> = {}) {
     const optDefaults: GolemNetworkOptions = {
@@ -270,13 +288,13 @@ export class GolemNetwork {
         fileServer: this.options.override?.fileServer || new GftpServerAdapter(this.storageProvider),
       };
       this.network = getFactory(NetworkModuleImpl, this.options.override?.network)(this.services);
-      this.market = getFactory(
-        MarketModuleImpl,
-        this.options.override?.market,
-      )({
-        ...this.services,
-        networkModule: this.network,
-      });
+      this.market = getFactory(MarketModuleImpl, this.options.override?.market)(
+        {
+          ...this.services,
+          networkModule: this.network,
+        },
+        this.options.market,
+      );
       this.payment = getFactory(PaymentModuleImpl, this.options.override?.payment)(this.services, this.options.payment);
       this.activity = getFactory(ActivityModuleImpl, this.options.override?.activity)(this.services);
       this.rental = getFactory(
@@ -314,20 +332,40 @@ export class GolemNetwork {
     }
   }
 
+  private async startDisconnect() {
+    try {
+      this.abortController.abort("Golem Network is disconnecting");
+      await Promise.allSettled(this.cleanupTasks.map((task) => task()));
+      this.cleanupTasks = [];
+      await this.storageProvider.close();
+      await this.yagna.disconnect();
+      this.services.proposalCache.flushAll();
+      this.abortController = new AbortController();
+    } catch (err) {
+      this.logger.error("Error while disconnecting", err);
+      throw err;
+    } finally {
+      this.events.emit("disconnected");
+      this.hasConnection = false;
+    }
+  }
+
   /**
    * "Disconnects" from the Golem Network
    *
    * @return Resolves when all shutdown steps are completed
    */
   async disconnect() {
-    await Promise.allSettled(this.cleanupTasks.map((task) => task()));
-    await this.storageProvider.close();
-    await this.yagna.disconnect();
-
-    this.services.proposalCache.flushAll();
-
-    this.events.emit("disconnected");
-    this.hasConnection = false;
+    if (!this.isConnected()) {
+      return;
+    }
+    if (this.disconnectPromise) {
+      return this.disconnectPromise;
+    }
+    this.disconnectPromise = this.startDisconnect().finally(() => {
+      this.disconnectPromise = undefined;
+    });
+    return this.disconnectPromise;
   }
 
   private async getAllocationFromOrder({
@@ -339,14 +377,27 @@ export class GolemNetwork {
   }): Promise<Allocation> {
     if (!order.payment?.allocation) {
       const budget = this.market.estimateBudget({ order, maxAgreements });
+
+      /**
+       * We need to create allocations that will exist longer than the agreements made.
+       *
+       * Without this in the event of agreement termination due to its expiry,
+       * the invoice for the agreement arrives, and we try to accept the invoice with
+       * an allocation that already expired (had the same expiration time as the agreement),
+       * which leads to unpaid invoices.
+       */
+      const EXPIRATION_BUFFER_MINUTES = 15;
+
       return this.payment.createAllocation({
         budget,
-        expirationSec: order.market.rentHours * 60 * 60,
+        expirationSec: order.market.rentHours * (60 + EXPIRATION_BUFFER_MINUTES) * 60,
       });
     }
+
     if (typeof order.payment.allocation === "string") {
       return this.payment.getAllocation(order.payment.allocation);
     }
+
     return order.payment.allocation;
   }
 
@@ -372,64 +423,85 @@ export class GolemNetwork {
    * @param options.teardown - an optional function that is called before the exe unit is destroyed
    */
   async oneOf({ order, setup, teardown, signalOrTimeout }: OneOfOptions): Promise<ResourceRental> {
-    const proposalPool = new DraftOfferProposalPool({
-      logger: this.logger,
-      validateOfferProposal: order.market.offerProposalFilter,
-      selectOfferProposal: order.market.offerProposalSelector,
-    });
+    const signal = anyAbortSignal(createAbortSignalFromTimeout(signalOrTimeout), this.abortController.signal);
 
-    const allocation = await this.getAllocationFromOrder({ order, maxAgreements: 1 });
-    const demandSpecification = await this.market.buildDemandDetails(order.demand, allocation);
+    let allocation: Allocation | undefined = undefined;
+    let proposalSubscription: Subscription | undefined = undefined;
+    let rental: ResourceRental | undefined = undefined;
+    let networkNode: NetworkNode | undefined = undefined;
 
-    const draftProposal$ = this.market.collectDraftOfferProposals({
-      demandSpecification,
-      pricing: order.market.pricing,
-      filter: order.market.offerProposalFilter,
-    });
-
-    const proposalSubscription = proposalPool.readFrom(draftProposal$);
-
-    const agreement = await this.market.signAgreementFromPool(
-      proposalPool,
-      {
-        expirationSec: order.market.rentHours * 60 * 60,
-      },
-      signalOrTimeout,
-    );
-
-    const networkNode = order.network
-      ? await this.network.createNetworkNode(order.network, agreement.provider.id)
-      : undefined;
-
-    const rental = this.rental.createResourceRental(agreement, allocation, {
-      payment: order.payment,
-      activity: order.activity,
-      networkNode,
-      exeUnit: { setup, teardown },
-    });
-
-    // We managed to create the activity, no need to look for more agreement candidates
-    proposalSubscription.unsubscribe();
-
-    this.cleanupTasks.push(async () => {
+    const cleanup = async () => {
+      if (proposalSubscription) {
+        proposalSubscription.unsubscribe();
+      }
       // First finalize the rental (which will wait for all payments to be processed)
       // and only then release the allocation
-      await rental.stopAndFinalize().catch((err) => this.logger.error("Error while finalizing rental", err));
+      if (rental) {
+        await rental.stopAndFinalize().catch((err) => this.logger.error("Error while finalizing rental", err));
+      }
       if (order.network && networkNode) {
         await this.network
           .removeNetworkNode(order.network, networkNode)
           .catch((err) => this.logger.error("Error while removing network node", err));
       }
       // Don't release the allocation if it was provided by the user
-      if (order.payment?.allocation) {
+      if (order.payment?.allocation || !allocation) {
         return;
       }
       await this.payment
         .releaseAllocation(allocation)
         .catch((err) => this.logger.error("Error while releasing allocation", err));
-    });
+    };
+    try {
+      const proposalPool = new DraftOfferProposalPool({
+        logger: this.logger,
+        validateOfferProposal: order.market.offerProposalFilter,
+        selectOfferProposal: order.market.offerProposalSelector,
+      });
 
-    return rental;
+      allocation = await this.getAllocationFromOrder({ order, maxAgreements: 1 });
+      signal.throwIfAborted();
+
+      const demandSpecification = await this.market.buildDemandDetails(order.demand, order.market, allocation);
+      const draftProposal$ = this.market.collectDraftOfferProposals({
+        demandSpecification,
+        pricing: order.market.pricing,
+        filter: order.market.offerProposalFilter,
+      });
+
+      proposalSubscription = proposalPool.readFrom(draftProposal$);
+      const agreement = await this.market.signAgreementFromPool(
+        proposalPool,
+        {
+          expirationSec: order.market.rentHours * 60 * 60,
+        },
+        signal,
+      );
+
+      networkNode = order.network
+        ? await this.network.createNetworkNode(order.network, agreement.provider.id)
+        : undefined;
+
+      rental = this.rental.createResourceRental(agreement, allocation, {
+        payment: order.payment,
+        activity: order.activity,
+        networkNode,
+        exeUnit: { setup, teardown },
+      });
+
+      // We managed to create the activity, no need to look for more agreement candidates
+      proposalSubscription.unsubscribe();
+
+      this.cleanupTasks.push(cleanup);
+
+      return rental;
+    } catch (err) {
+      this.logger.error("Error while creating rental", err);
+      // if the execution was interrupted before we got the chance to add the cleanup task
+      // we need to call it manually
+      await cleanup();
+      throw err;
+    }
   }
 
   /**
@@ -474,55 +546,76 @@ export class GolemNetwork {
    * @param options.teardown - an optional function that is called before the exe unit is destroyed
    */
   public async manyOf({ poolSize, order, setup, teardown }: ManyOfOptions): Promise<ResourceRentalPool> {
-    const proposalPool = new DraftOfferProposalPool({
-      logger: this.logger,
-      validateOfferProposal: order.market.offerProposalFilter,
-      selectOfferProposal: order.market.offerProposalSelector,
-    });
+    const signal = this.abortController.signal;
+    let allocation: Allocation | undefined = undefined;
+    let resourceRentalPool: ResourceRentalPool | undefined = undefined;
+    let subscription: Subscription | undefined = undefined;
 
-    const maxAgreements = typeof poolSize === "number" ? poolSize : poolSize?.max ?? poolSize?.min ?? 1;
-
-    const allocation = await this.getAllocationFromOrder({ order, maxAgreements });
-    const demandSpecification = await this.market.buildDemandDetails(order.demand, allocation);
-
-    const draftProposal$ = this.market.collectDraftOfferProposals({
-      demandSpecification,
-      pricing: order.market.pricing,
-      filter: order.market.offerProposalFilter,
-    });
-    const subscription = proposalPool.readFrom(draftProposal$);
-
-    const resourceRentalPool = this.rental.createResourceRentalPool(proposalPool, allocation, {
-      poolSize,
-      network: order.network,
-      resourceRentalOptions: {
-        activity: order.activity,
-        payment: order.payment,
-        exeUnit: { setup, teardown },
-      },
-      agreementOptions: {
-        expirationSec: order.market.rentHours * 60 * 60,
-      },
-    });
-    this.cleanupTasks.push(() => {
-      subscription.unsubscribe();
-    });
-    this.cleanupTasks.push(async () => {
+    const cleanup = async () => {
+      if (subscription) {
+        subscription.unsubscribe();
+      }
       // First drain the pool (which will wait for all rentals to be paid for
       // and only then release the allocation
-      await resourceRentalPool
-        .drainAndClear()
-        .catch((err) => this.logger.error("Error while draining resource rental pool", err));
+      if (resourceRentalPool) {
+        await resourceRentalPool
+          .drainAndClear()
+          .catch((err) => this.logger.error("Error while draining resource rental pool", err));
+      }
       // Don't release the allocation if it was provided by the user
-      if (order.payment?.allocation) {
+      if (order.payment?.allocation || !allocation) {
         return;
       }
       await this.payment
         .releaseAllocation(allocation)
         .catch((err) => this.logger.error("Error while releasing allocation", err));
-    });
+    };
 
-    return resourceRentalPool;
+    try {
+      const proposalPool = new DraftOfferProposalPool({
+        logger: this.logger,
+        validateOfferProposal: order.market.offerProposalFilter,
+        selectOfferProposal: order.market.offerProposalSelector,
+      });
+
+      const maxAgreements = typeof poolSize === "number" ? poolSize : poolSize?.max ?? poolSize?.min ?? 1;
+      allocation = await this.getAllocationFromOrder({ order, maxAgreements });
+      signal.throwIfAborted();
+
+      const demandSpecification = await this.market.buildDemandDetails(order.demand, order.market, allocation);
+
+      const draftProposal$ = this.market.collectDraftOfferProposals({
+        demandSpecification,
+        pricing: order.market.pricing,
+        filter: order.market.offerProposalFilter,
+      });
+      subscription = proposalPool.readFrom(draftProposal$);
+
+      const rentSeconds = order.market.rentHours * 60 * 60;
+
+      resourceRentalPool = this.rental.createResourceRentalPool(proposalPool, allocation, {
+        poolSize,
+        network: order.network,
+        resourceRentalOptions: {
+          activity: order.activity,
+          payment: order.payment,
+          exeUnit: { setup, teardown },
+        },
+        agreementOptions: {
+          expirationSec: rentSeconds,
+        },
+      });
+
+      this.cleanupTasks.push(cleanup);
+
+      return resourceRentalPool;
+    } catch (err) {
+      this.logger.error("Error while creating rental pool", err);
+      // if the execution was interrupted before we got the chance to add the cleanup task
+      // we need to call it manually
+      await cleanup();
+      throw err;
+    }
   }
 
   isConnected() {

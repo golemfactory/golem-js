@@ -153,7 +153,12 @@ export class Deployment {
         ? this.networks.get(pool.options?.deployment.network)
         : undefined;
 
-      const demandSpecification = await this.modules.market.buildDemandDetails(pool.options.demand, allocation);
+      const demandSpecification = await this.modules.market.buildDemandDetails(
+        pool.options.demand,
+        pool.options.market,
+        allocation,
+      );
+
       const proposalPool = new DraftOfferProposalPool({
         logger: this.logger,
         validateOfferProposal: pool.options.market.offerProposalFilter,
