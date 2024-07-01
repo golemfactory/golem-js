@@ -530,6 +530,7 @@ export class MarketModuleImpl implements MarketModule {
     agreementOptions?: AgreementOptions,
     signalOrTimeout?: number | AbortSignal,
   ): Promise<Agreement> {
+    this.logger.info("Trying to sign an agreement ...");
     const signal = createAbortSignalFromTimeout(signalOrTimeout);
 
     const getProposal = async () => {

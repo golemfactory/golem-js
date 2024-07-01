@@ -8,7 +8,7 @@ const mockIdentityModel = imock<IdentityApi.IdentityDTO>();
 describe("Yagna Utils", () => {
   describe("Yagna version support checking", () => {
     describe("Positive cases - given min supported version is 0.15.0", () => {
-      it.each(["0.15.0", "0.15.2", "0.15.3-rc5", "pre-rel-v0.15.3-rc5"])(
+      it.each(["0.15.2", "0.15.3-rc5", "pre-rel-v0.15.3-rc5"])(
         "should not throw when connect is called and the yagna version is %s",
         async (version) => {
           const mockVersionResponse = {
@@ -42,8 +42,8 @@ describe("Yagna Utils", () => {
       it("should throw when connect is called and yagna version is too low", async () => {
         const mockVersionResponse = {
           current: {
-            version: "0.12.0",
-            name: "v0.12.0",
+            version: "0.15.0",
+            name: "v0.15.0",
             seen: false,
             releaseTs: "2023-12-07T14:23:48",
             insertionTs: "2023-12-07T18:22:45",
@@ -59,7 +59,7 @@ describe("Yagna Utils", () => {
 
         await expect(() => y.connect()).rejects.toMatchError(
           new GolemPlatformError(
-            `You run yagna in version 0.12.0 and the minimal version supported by the SDK is ${MIN_SUPPORTED_YAGNA}. Please consult the golem-js README to find matching SDK version or upgrade your yagna installation.`,
+            `You run yagna in version 0.15.0 and the minimal version supported by the SDK is ${MIN_SUPPORTED_YAGNA}. Please consult the golem-js README to find matching SDK version or upgrade your yagna installation.`,
           ),
         );
       });
