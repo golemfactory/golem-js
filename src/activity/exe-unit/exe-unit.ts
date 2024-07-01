@@ -22,6 +22,7 @@ import { GolemAbortError, GolemConfigError, GolemTimeoutError } from "../../shar
 import { Agreement, ProviderInfo } from "../../market";
 import { TcpProxy } from "../../network/tcpProxy";
 import { ExecutionOptions, ExeScriptExecutor } from "../exe-script-executor";
+import { lastValueFrom, tap, toArray } from "rxjs";
 
 export type LifecycleFunction = (exe: ExeUnit) => Promise<void>;
 
@@ -156,14 +157,20 @@ export class ExeUnit {
 
   private async deployActivity() {
     try {
-      const result = await this.executor.execute(
+      const executionMetadata = await this.executor.execute(
         new Script([new Deploy(this.networkNode?.getNetworkConfig?.()), new Start()]).getExeScriptRequest(),
       );
-      for await (const res of result) {
-        if (res.result === "Error") {
-          throw new Error(res.message);
-        }
-      }
+      const result$ = this.executor.getResultsObservable(executionMetadata);
+      // if any result is an error, throw an error
+      await lastValueFrom(
+        result$.pipe(
+          tap((result) => {
+            if (result.result === "Error") {
+              throw new Error(String(result.message));
+            }
+          }),
+        ),
+      );
     } catch (error) {
       throw new GolemWorkError(
         `Unable to deploy activity. ${error}`,
@@ -244,22 +251,15 @@ export class ExeUnit {
     const script = new Script([run]);
     // In this case, the script consists only of one run command,
     // so we skip the execution of script.before and script.after
-    const streamOfActivityResults = await this.executor
-      .execute(script.getExeScriptRequest(), true, options?.signalOrTimeout, options?.maxRetries)
-      .catch((e) => {
-        throw new GolemWorkError(
-          `Script execution failed for command: ${JSON.stringify(run.toJson())}. ${
-            e?.response?.data?.message || e?.message || e
-          }`,
-          WorkErrorCode.ScriptExecutionFailed,
-          this.activity.agreement,
-          this.activity,
-          this.activity.provider,
-          e,
-        );
-      });
+    const executionMetadata = await this.executor.execute(script.getExeScriptRequest());
+    const activityResult$ = this.executor.getResultsObservable(
+      executionMetadata,
+      true,
+      options?.signalOrTimeout,
+      options?.maxRetries,
+    );
 
-    return new RemoteProcess(this.activityModule, streamOfActivityResults, this.activity, this.logger);
+    return new RemoteProcess(this.activityModule, activityResult$, this.activity, this.logger);
   }
 
   /**
@@ -392,16 +392,16 @@ export class ExeUnit {
     await sleep(100, true);
 
     // Send script.
-    const results = await this.executor.execute(
-      script.getExeScriptRequest(),
+    const executionMetadata = await this.executor.execute(script.getExeScriptRequest());
+    const result$ = this.executor.getResultsObservable(
+      executionMetadata,
       false,
       options?.signalOrTimeout,
       options?.maxRetries,
     );
 
     // Process result.
-    let allResults: Result<T>[] = [];
-    for await (const result of results) allResults.push(result);
+    let allResults: Result<T>[] = await lastValueFrom(result$.pipe(toArray()));
     allResults = await script.after(allResults);
 
     // Handle errors.

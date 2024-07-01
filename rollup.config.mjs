@@ -31,9 +31,6 @@ export default [
     plugins: [
       deleteExistingBundles("dist"),
       ignore(["tmp"]),
-      alias({
-        entries: [{ find: "stream", replacement: "stream-browserify" }],
-      }),
       nodeResolve({ browser: true, preferBuiltins: true }),
       commonjs(),
       nodePolyfills(),

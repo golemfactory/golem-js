@@ -46,8 +46,8 @@ const order: MarketOrderSpec = {
       echo -n 'Hello from stderr yet again' >&2
       `,
     );
-    remoteProcess.stdout.on("data", (data) => console.log("stdout>", data));
-    remoteProcess.stderr.on("data", (data) => console.error("stderr>", data));
+    remoteProcess.stdout.subscribe((data) => console.log("stdout>", data));
+    remoteProcess.stderr.subscribe((data) => console.error("stderr>", data));
     await remoteProcess.waitForExit();
 
     await rental.stopAndFinalize();

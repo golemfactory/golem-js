@@ -8,6 +8,7 @@ import {
   buildExeScriptErrorResult,
   buildExeScriptSuccessResult,
 } from "../../../tests/utils/helpers";
+import { lastValueFrom, toArray } from "rxjs";
 
 const mockYagna = mock(YagnaApi);
 const mockAgreement = mock(Agreement);
@@ -46,7 +47,8 @@ describe("RemoteProcess", () => {
       activity,
       instance(mockLogger),
     );
-    for await (const stdout of remoteProcess.stdout) {
+    const allStdout = await lastValueFrom(remoteProcess.stdout.pipe(toArray()));
+    for (const stdout of allStdout) {
       expect(stdout).toEqual("Output");
     }
   });
@@ -59,7 +61,8 @@ describe("RemoteProcess", () => {
       activity,
       instance(mockLogger),
     );
-    for await (const stderr of remoteProcess.stderr) {
+    const allStderr = await lastValueFrom(remoteProcess.stderr.pipe(toArray()));
+    for (const stderr of allStderr) {
       expect(stderr).toEqual("Error");
     }
   });

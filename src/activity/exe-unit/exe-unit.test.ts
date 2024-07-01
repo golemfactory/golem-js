@@ -58,7 +58,7 @@ describe("ExeUnit", () => {
 
   describe("Executing", () => {
     it("should execute run command with a single parameter", async () => {
-      when(mockExecutor.execute(_, _, _, _)).thenResolve(
+      when(mockExecutor.getResultsObservable(_, _, _, _)).thenReturn(
         buildExecutorResults([
           {
             index: 0,
@@ -78,7 +78,7 @@ describe("ExeUnit", () => {
     });
 
     it("should execute run command with multiple parameters", async () => {
-      when(mockExecutor.execute(_, _, _, _)).thenResolve(
+      when(mockExecutor.getResultsObservable(_, _, _, _)).thenReturn(
         buildExecutorResults([
           {
             index: 0,
@@ -102,7 +102,7 @@ describe("ExeUnit", () => {
       it("should execute upload file command", async () => {
         const worker = async (exe: ExeUnit) => exe.uploadFile("./file.txt", "/golem/file.txt");
 
-        when(mockExecutor.execute(_, _, _, _)).thenResolve(
+        when(mockExecutor.getResultsObservable(_, _, _, _)).thenReturn(
           buildExecutorResults([
             {
               index: 0,
@@ -126,7 +126,7 @@ describe("ExeUnit", () => {
       it("should execute upload json command", async () => {
         const worker = async (exe: ExeUnit) => exe.uploadJson({ test: true }, "/golem/file.txt");
 
-        when(mockExecutor.execute(_, _, _, _)).thenResolve(
+        when(mockExecutor.getResultsObservable(_, _, _, _)).thenReturn(
           buildExecutorResults([
             {
               index: 0,
@@ -153,7 +153,7 @@ describe("ExeUnit", () => {
       it("should execute download file command", async () => {
         const worker = async (exe: ExeUnit) => exe.downloadFile("/golem/file.txt", "./file.txt");
 
-        when(mockExecutor.execute(_, _, _, _)).thenResolve(
+        when(mockExecutor.getResultsObservable(_, _, _, _)).thenReturn(
           buildExecutorResults([
             {
               index: 0,
@@ -181,7 +181,7 @@ describe("ExeUnit", () => {
         const jsonStr = JSON.stringify(json);
         const encoded = new TextEncoder().encode(jsonStr);
 
-        when(mockExecutor.execute(_, _, _, _)).thenResolve(
+        when(mockExecutor.getResultsObservable(_, _, _, _)).thenReturn(
           buildExecutorResults([
             {
               index: 0,
@@ -214,7 +214,7 @@ describe("ExeUnit", () => {
 
         when(mockStorageProvider.receiveData(anything())).thenResolve(data.toString());
 
-        when(mockExecutor.execute(_, _, _, _)).thenResolve(
+        when(mockExecutor.getResultsObservable(_, _, _, _)).thenReturn(
           buildExecutorResults([
             {
               index: 0,
@@ -251,7 +251,7 @@ describe("ExeUnit", () => {
   describe("Exec and stream", () => {
     it("should execute runAndStream command", async () => {
       const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule));
-      when(mockExecutor.execute(_, _, _, _)).thenResolve(
+      when(mockExecutor.getResultsObservable(_, _, _, _)).thenReturn(
         buildExecutorResults([
           {
             index: 0,
@@ -272,7 +272,7 @@ describe("ExeUnit", () => {
     it("should execute transfer command", async () => {
       const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule));
 
-      when(mockExecutor.execute(_, _, _, _)).thenResolve(
+      when(mockExecutor.getResultsObservable(_, _, _, _)).thenReturn(
         buildExecutorResults([
           {
             index: 0,
@@ -311,7 +311,7 @@ describe("ExeUnit", () => {
         { stdout: "ok_download_file" },
       ];
 
-      when(mockExecutor.execute(_)).thenResolve(
+      when(mockExecutor.getResultsObservable(_)).thenReturn(
         buildExecutorResults(expectedStdout.map((e) => buildExeScriptSuccessResult(e.stdout))),
       );
 
@@ -343,20 +343,22 @@ describe("ExeUnit", () => {
         { stdout: "ok_download_file" },
       ];
 
-      when(mockExecutor.execute(_)).thenResolve(
+      when(mockExecutor.getResultsObservable(_)).thenReturn(
         buildExecutorResults(expectedStdout.map((e) => buildExeScriptSuccessResult(e.stdout))),
       );
 
       const results = await worker(exe);
-      await new Promise((res, rej) => {
-        results?.on("data", (result) => {
-          try {
-            expect(result.stdout).toEqual(expectedStdout?.shift()?.stdout);
-          } catch (e) {
-            rej(e);
-          }
+      await new Promise<void>((res, rej) => {
+        results.subscribe({
+          next: (result) => {
+            try {
+              expect(result.stdout).toEqual(expectedStdout?.shift()?.stdout);
+            } catch (e) {
+              rej(e);
+            }
+          },
+          complete: () => res(),
         });
-        results?.on("end", res);
       });
 
       verify(mockStorageProvider.publishFile("./file.txt")).once();
@@ -428,7 +430,7 @@ describe("ExeUnit", () => {
 
       const eventDate = new Date().toISOString();
 
-      when(mockExecutor.execute(_, _, _, _)).thenResolve(
+      when(mockExecutor.getResultsObservable(_, _, _, _)).thenReturn(
         buildExecutorResults([
           {
             index: 0,
@@ -470,7 +472,7 @@ describe("ExeUnit", () => {
       const worker = async (exe: ExeUnit) => exe.beginBatch().run("invalid_shell_command").end();
       const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule));
 
-      when(mockExecutor.execute(_)).thenResolve(
+      when(mockExecutor.getResultsObservable(_)).thenReturn(
         buildExecutorResults(undefined, [buildExeScriptErrorResult("error", "Some error occurred")]),
       );
       const [result] = await worker(exe);
@@ -483,18 +485,20 @@ describe("ExeUnit", () => {
       const worker = async (exe: ExeUnit) => exe.beginBatch().run("invalid_shell_command").endStream();
       const exe = new ExeUnit(instance(mockActivity), instance(mockActivityModule));
 
-      when(mockExecutor.execute(_)).thenResolve(
+      when(mockExecutor.getResultsObservable(_)).thenReturn(
         buildExecutorResults(undefined, [buildExeScriptErrorResult("error", "Some error occurred", "test_result")]),
       );
 
       const results = await worker(exe);
 
       await new Promise((res) =>
-        results.once("error", (error: GolemModuleError) => {
-          expect(error.message).toEqual("Some error occurred. Stdout: test_result. Stderr: error");
-          expect(error).toBeInstanceOf(GolemWorkError);
-          expect(error.code).toEqual(WorkErrorCode.ScriptExecutionFailed);
-          res(true);
+        results.subscribe({
+          error: (error: GolemModuleError) => {
+            expect(error.message).toEqual("Some error occurred. Stdout: test_result. Stderr: error");
+            expect(error).toBeInstanceOf(GolemWorkError);
+            expect(error.code).toEqual(WorkErrorCode.ScriptExecutionFailed);
+            res(true);
+          },
         }),
       );
     });

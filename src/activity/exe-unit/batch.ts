@@ -2,10 +2,10 @@ import { DownloadFile, Run, Script, Transfer, UploadData, UploadFile } from "../
 import { Result } from "../index";
 import { StorageProvider } from "../../shared/storage";
 import { Logger } from "../../shared/utils";
-import { pipeline, Readable, Transform } from "stream";
 import { GolemWorkError, WorkErrorCode } from "./error";
 
-import { ExeScriptExecutor } from "../exe-script-executor";
+import { ExeScriptExecutor, ScriptExecutionMetadata } from "../exe-script-executor";
+import { Observable, finalize, map, tap } from "rxjs";
 
 export class Batch {
   private readonly script: Script;
@@ -79,42 +79,42 @@ export class Batch {
       const script = this.script.getExeScriptRequest();
 
       this.logger.debug(`Sending exec script request to the exe-unit on provider:`, { script });
-      const results = await this.executor.execute(script);
+      const executionMetadata = await this.executor.execute(script);
+      const result$ = this.executor.getResultsObservable(executionMetadata);
 
       return new Promise((resolve, reject) => {
         this.logger.debug("Reading the results of the batch script");
 
-        results.on("data", (res) => {
-          this.logger.debug(`Received data for batch script execution`, { res });
-
-          allResults.push(res);
-        });
-
-        results.on("end", () => {
-          this.logger.debug("End of batch script execution");
-          this.script
-            .after(allResults)
-            .then((results) => resolve(results))
-            .catch((error) => reject(error));
-        });
-
-        results.on("error", (error) => {
-          const golemError =
-            error instanceof GolemWorkError
-              ? error
-              : new GolemWorkError(
-                  `Unable to execute script ${error}`,
-                  WorkErrorCode.ScriptExecutionFailed,
-                  this.executor.activity.agreement,
-                  this.executor.activity,
-                  this.executor.activity.agreement.provider,
-                  error,
-                );
-          this.logger.debug("Error in batch script execution");
-          this.script
-            .after(allResults)
-            .then(() => reject(golemError))
-            .catch(() => reject(golemError)); // Return original error, as it might be more important.
+        result$.subscribe({
+          next: (res) => {
+            this.logger.debug(`Received data for batch script execution`, { res });
+            allResults.push(res);
+          },
+          complete: () => {
+            this.logger.debug("End of batch script execution");
+            this.script
+              .after(allResults)
+              .then((results) => resolve(results))
+              .catch((error) => reject(error));
+          },
+          error: (error) => {
+            const golemError =
+              error instanceof GolemWorkError
+                ? error
+                : new GolemWorkError(
+                    `Unable to execute script ${error}`,
+                    WorkErrorCode.ScriptExecutionFailed,
+                    this.executor.activity.agreement,
+                    this.executor.activity,
+                    this.executor.activity.agreement.provider,
+                    error,
+                  );
+            this.logger.debug("Error in batch script execution");
+            this.script
+              .after(allResults)
+              .then(() => reject(golemError))
+              .catch(() => reject(golemError)); // Return original error, as it might be more important.
+          },
         });
       });
     } catch (error) {
@@ -136,12 +136,12 @@ export class Batch {
     }
   }
 
-  async endStream(): Promise<Readable> {
+  async endStream(): Promise<Observable<Result>> {
     const script = this.script;
     await script.before();
-    let results: Readable;
+    let executionMetadata: ScriptExecutionMetadata;
     try {
-      results = await this.executor.execute(this.script.getExeScriptRequest());
+      executionMetadata = await this.executor.execute(this.script.getExeScriptRequest());
     } catch (error) {
       // the original error is more important than the one from after()
       await script.after([]);
@@ -159,32 +159,26 @@ export class Batch {
     }
     const decodedResults: Result[] = [];
     const { activity } = this.executor;
-    const errorResultHandler = new Transform({
-      objectMode: true,
-      transform(chunk, encoding, callback) {
-        const error =
-          chunk?.result === "Error"
-            ? new GolemWorkError(
-                `${chunk?.message}. Stdout: ${chunk?.stdout?.trim()}. Stderr: ${chunk?.stderr?.trim()}`,
-                WorkErrorCode.ScriptExecutionFailed,
-                activity.agreement,
-                activity,
-                activity.provider,
-              )
-            : null;
-        if (error) {
-          script.after(decodedResults).catch();
-          this.destroy(error);
-        } else {
-          decodedResults.push(chunk);
-          // FIXME: This is broken, chunk result didn't go through after() at this point yet, it might be incomplete.
-          callback(null, chunk);
+    const result$ = this.executor.getResultsObservable(executionMetadata);
+    return result$.pipe(
+      map((chunk) => {
+        if (chunk.result !== "Error") {
+          return chunk;
         }
-      },
-    });
-    const resultsWithErrorHandling = pipeline(results, errorResultHandler, () => {
-      script.after(decodedResults).catch();
-    });
-    return resultsWithErrorHandling;
+        throw new GolemWorkError(
+          `${chunk?.message}. Stdout: ${String(chunk?.stdout).trim()}. Stderr: ${String(chunk?.stderr).trim()}`,
+          WorkErrorCode.ScriptExecutionFailed,
+          activity.agreement,
+          activity,
+          activity.provider,
+        );
+      }),
+      tap((chunk) => {
+        decodedResults.push(chunk);
+      }),
+      finalize(() =>
+        script.after(decodedResults).catch((error) => this.logger.error("Failed to cleanup script", { error })),
+      ),
+    );
   }
 }
