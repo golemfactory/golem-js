@@ -17,7 +17,7 @@ export type YagnaOptions = {
   logger?: Logger;
 };
 
-export const MIN_SUPPORTED_YAGNA = "0.15.0";
+export const MIN_SUPPORTED_YAGNA = "0.15.2";
 
 // Workarounds for an issue with missing support for discriminators
 // {@link https://github.com/ferdikoomen/openapi-typescript-codegen/issues/985}
