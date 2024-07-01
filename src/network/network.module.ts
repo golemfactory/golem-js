@@ -101,7 +101,7 @@ export class NetworkModuleImpl implements NetworkModule {
       const requestorId = await this.networkApi.getIdentity();
       await this.createNetworkNode(network, requestorId, options?.ownerIp);
       this.logger.info(`Created network`, network.getNetworkInfo());
-      this.events.emit("networkCreated", network);
+      this.events.emit("networkCreated", { network });
       return network;
     } catch (err) {
       const message = getMessageFromApiError(err);
@@ -114,7 +114,7 @@ export class NetworkModuleImpl implements NetworkModule {
               undefined,
               err,
             );
-      this.events.emit("errorCreatingNetwork", error);
+      this.events.emit("errorCreatingNetwork", { error });
       throw error;
     }
   }
@@ -125,9 +125,9 @@ export class NetworkModuleImpl implements NetworkModule {
         await this.networkApi.removeNetwork(network);
         network.markAsRemoved();
         this.logger.info(`Removed network`, network.getNetworkInfo());
-        this.events.emit("networkRemoved", network);
+        this.events.emit("networkRemoved", { network });
       } catch (error) {
-        this.events.emit("errorRemovingNetwork", network, error);
+        this.events.emit("errorRemovingNetwork", { network, error });
         throw error;
       }
     });
@@ -155,10 +155,10 @@ export class NetworkModuleImpl implements NetworkModule {
         const node = await this.networkApi.createNetworkNode(network, nodeId, ipv4.toString());
         network.addNode(node);
         this.logger.info(`Added network node`, { id: nodeId, ip: ipv4.toString() });
-        this.events.emit("nodeCreated", network, node);
+        this.events.emit("nodeCreated", { network, node });
         return node;
       } catch (error) {
-        this.events.emit("errorCreatingNode", network, error);
+        this.events.emit("errorCreatingNode", { network, error });
         throw error;
       }
     });
@@ -188,9 +188,9 @@ export class NetworkModuleImpl implements NetworkModule {
           network: network.getNetworkInfo().ip,
           nodeIp: node.ip,
         });
-        this.events.emit("nodeRemoved", network, node);
+        this.events.emit("nodeRemoved", { network, node });
       } catch (error) {
-        this.events.emit("errorRemovingNode", network, node, error);
+        this.events.emit("errorRemovingNode", { network, node, error });
         throw error;
       }
     });

@@ -1,4 +1,4 @@
-import { Agreement } from "../market/agreement/agreement";
+import { Agreement, MarketModule } from "../market";
 import { AgreementPaymentProcess, PaymentProcessOptions } from "../payment/agreement_payment_process";
 import { createAbortSignalFromTimeout, Logger } from "../shared/utils";
 import { waitForCondition } from "../shared/utils/wait";
@@ -7,7 +7,6 @@ import { StorageProvider } from "../shared/storage";
 import { EventEmitter } from "eventemitter3";
 import { NetworkNode } from "../network";
 import { ExecutionOptions } from "../activity/exe-script-executor";
-import { MarketModule } from "../market";
 import { GolemAbortError, GolemTimeoutError, GolemUserError } from "../shared/error/golem-error";
 
 export interface ResourceRentalEvents {
@@ -53,6 +52,7 @@ export class ResourceRental {
     private readonly resourceRentalOptions?: ResourceRentalOptions,
   ) {
     this.networkNode = this.resourceRentalOptions?.networkNode;
+
     this.createExeUnit(this.abortController.signal);
     // TODO: Listen to agreement events to know when it goes down due to provider closing it!
   }

@@ -52,7 +52,7 @@ const order: MarketOrderSpec = {
   });
 
   // look at the console output to see the budget estimate
-  glm.payment.events.on("allocationCreated", (allocation) => {
+  glm.payment.events.on("allocationCreated", ({ allocation }) => {
     console.log("Allocation created with budget:", Number(allocation.remainingAmount).toFixed(2));
   });
 

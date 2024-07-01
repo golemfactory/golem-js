@@ -22,11 +22,11 @@ import { filter, map, Observable, OperatorFunction, switchMap, tap } from "rxjs"
 import {
   OfferCounterProposal,
   OfferProposal,
-  OfferProposalReceivedEvent,
   OfferProposalFilter,
+  OfferProposalReceivedEvent,
   ProposalsBatch,
 } from "./proposal";
-import { OrderDemandOptions, DemandBodyBuilder, DemandSpecification } from "./demand";
+import { DemandBodyBuilder, DemandSpecification, OrderDemandOptions } from "./demand";
 import { IActivityApi, IFileServer } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { WorkloadDemandDirectorConfig } from "./demand/directors/workload-demand-director-config";
@@ -197,6 +197,7 @@ export interface MarketModule {
    * @param params
    */
   estimateBudget({ maxAgreements, order }: { maxAgreements: number; order: MarketOrderSpec }): number;
+
   /**
    * Fetch the most up-to-date agreement details from the yagna
    */
@@ -322,7 +323,9 @@ export class MarketModuleImpl implements MarketModule {
         try {
           currentDemand = await this.deps.marketApi.publishDemandSpecification(demandSpecification);
           subscriber.next(currentDemand);
-          this.events.emit("demandSubscriptionStarted", currentDemand);
+          this.events.emit("demandSubscriptionStarted", {
+            demand: currentDemand,
+          });
           this.logger.debug("Subscribing for proposals matched with the demand", { demand: currentDemand });
           return currentDemand;
         } catch (err) {
@@ -341,7 +344,9 @@ export class MarketModuleImpl implements MarketModule {
           await this.deps.marketApi.unpublishDemand(demand);
           this.logger.info("Unpublished demand", { demandId: demand.id });
           this.logger.debug("Unpublished demand", demand);
-          this.events.emit("demandSubscriptionStopped", demand);
+          this.events.emit("demandSubscriptionStopped", {
+            demand,
+          });
         } catch (err) {
           const golemMarketError = new GolemMarketError(
             `Could not publish demand on the market`,
@@ -359,7 +364,9 @@ export class MarketModuleImpl implements MarketModule {
         Promise.all([unsubscribeFromOfferProposals(currentDemand), subscribeToOfferProposals()])
           .then(([, demand]) => {
             if (demand) {
-              this.events.emit("demandSubscriptionRefreshed", demand);
+              this.events.emit("demandSubscriptionRefreshed", {
+                demand,
+              });
               this.logger.info("Refreshed subscription for offer proposals with the new demand", { demand });
             }
           })
@@ -399,10 +406,16 @@ export class MarketModuleImpl implements MarketModule {
     try {
       const counterProposal = await this.deps.marketApi.counterProposal(offerProposal, counterDemand);
       this.logger.debug("Counter proposal sent", counterProposal);
-      this.events.emit("offerCounterProposalSent", offerProposal, counterProposal);
+      this.events.emit("offerCounterProposalSent", {
+        offerProposal,
+        counterProposal,
+      });
       return counterProposal;
     } catch (error) {
-      this.events.emit("errorSendingCounterProposal", offerProposal, error);
+      this.events.emit("errorSendingCounterProposal", {
+        offerProposal,
+        error,
+      });
       throw error;
     }
   }
@@ -472,13 +485,18 @@ export class MarketModuleImpl implements MarketModule {
     const { type } = event;
     switch (type) {
       case "ProposalReceived":
-        this.events.emit("offerProposalReceived", event);
+        this.events.emit("offerProposalReceived", {
+          offerProposal: event.proposal,
+        });
         break;
       case "ProposalRejected":
-        this.events.emit("offerCounterProposalRejected", event);
+        this.events.emit("offerCounterProposalRejected", {
+          counterProposal: event.counterProposal,
+          reason: event.reason,
+        });
         break;
       case "PropertyQueryReceived":
-        this.events.emit("offerPropertyQueryReceived", event);
+        this.events.emit("offerPropertyQueryReceived");
         break;
       default:
         this.logger.warn("Unsupported event type in event", { event });
@@ -622,16 +640,27 @@ export class MarketModuleImpl implements MarketModule {
     this.marketApi.collectAgreementEvents().subscribe((event) => {
       switch (event.type) {
         case "AgreementApproved":
-          this.events.emit("agreementApproved", event);
+          this.events.emit("agreementApproved", {
+            agreement: event.agreement,
+          });
           break;
         case "AgreementCancelled":
-          this.events.emit("agreementCancelled", event);
+          this.events.emit("agreementCancelled", {
+            agreement: event.agreement,
+          });
           break;
         case "AgreementTerminated":
-          this.events.emit("agreementTerminated", event);
+          this.events.emit("agreementTerminated", {
+            agreement: event.agreement,
+            reason: event.reason,
+            terminatedBy: event.terminatedBy,
+          });
           break;
         case "AgreementRejected":
-          this.events.emit("agreementRejected", event);
+          this.events.emit("agreementRejected", {
+            agreement: event.agreement,
+            reason: event.reason,
+          });
           break;
       }
     });
@@ -642,7 +671,9 @@ export class MarketModuleImpl implements MarketModule {
       const result = filter(proposal);
 
       if (!result) {
-        this.events.emit("offerProposalRejectedByProposalFilter", proposal);
+        this.events.emit("offerProposalRejectedByProposalFilter", {
+          offerProposal: proposal,
+        });
         this.logger.debug("The offer was rejected by the user filter", { id: proposal.id });
       }
 
@@ -666,7 +697,9 @@ export class MarketModuleImpl implements MarketModule {
         pricing.avgGlmPerHour;
     }
     if (!isPriceValid) {
-      this.events.emit("offerProposalRejectedByPriceFilter", proposal);
+      this.events.emit("offerProposalRejectedByPriceFilter", {
+        offerProposal: proposal,
+      });
       this.logger.debug("The offer was ignored because the price was too high", {
         id: proposal.id,
         pricing: proposal.pricing,

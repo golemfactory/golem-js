@@ -1,16 +1,16 @@
 import { EventEmitter } from "eventemitter3";
 import {
   Allocation,
+  CreateAllocationParams,
   DebitNote,
   Invoice,
   InvoiceProcessor,
   IPaymentApi,
-  CreateAllocationParams,
   PaymentEvents,
 } from "./index";
 import { defaultLogger, YagnaApi } from "../shared/utils";
 import { Observable } from "rxjs";
-import { GolemServices } from "../golem-network/golem-network";
+import { GolemServices } from "../golem-network";
 import { PayerDetails } from "./PayerDetails";
 import { AgreementPaymentProcess, PaymentProcessOptions } from "./agreement_payment_process";
 import { Agreement } from "../market";
@@ -95,26 +95,27 @@ export class PaymentModuleImpl implements PaymentModule {
   };
 
   constructor(deps: GolemServices, options?: PaymentModuleOptions) {
-    if (options) {
-      const network = options.network || this.options.network;
-      const driver = options.driver || this.options.driver;
-      const token = options.token || MAINNETS.includes(network) ? "glm" : "tglm";
-      this.options = { network, driver, token };
-    }
+    const network = options?.network ?? this.options.network;
+    const driver = options?.driver ?? this.options.driver;
+    const token = options?.token ?? MAINNETS.includes(network) ? "glm" : "tglm";
+    this.options = { network, driver, token };
 
     this.logger = deps.logger;
     this.yagnaApi = deps.yagna;
     this.paymentApi = deps.paymentApi;
+
     this.startEmittingPaymentEvents();
   }
 
   private startEmittingPaymentEvents() {
     this.paymentApi.receivedInvoices$.subscribe((invoice) => {
-      this.events.emit("invoiceReceived", invoice);
+      this.events.emit("invoiceReceived", {
+        invoice,
+      });
     });
 
     this.paymentApi.receivedDebitNotes$.subscribe((debitNote) => {
-      this.events.emit("debitNoteReceived", debitNote);
+      this.events.emit("debitNoteReceived", { debitNote });
     });
   }
 
@@ -144,7 +145,7 @@ export class PaymentModuleImpl implements PaymentModule {
         paymentPlatform: this.getPaymentPlatform(),
         ...params,
       });
-      this.events.emit("allocationCreated", allocation);
+      this.events.emit("allocationCreated", { allocation });
       this.logger.info("Created allocation", {
         allocationId: allocation.id,
         budget: allocation.totalAmount,
@@ -166,21 +167,22 @@ export class PaymentModuleImpl implements PaymentModule {
         return allocation;
       });
       await this.paymentApi.releaseAllocation(allocation);
-      this.events.emit("allocationReleased", lastKnownAllocationState);
+      this.events.emit("allocationReleased", {
+        allocation: lastKnownAllocationState,
+      });
       this.logger.info("Released allocation", {
         allocationId: lastKnownAllocationState.id,
         totalAmount: lastKnownAllocationState.totalAmount,
         spentAmount: lastKnownAllocationState.spentAmount,
       });
     } catch (error) {
-      this.events.emit(
-        "errorReleasingAllocation",
-        await this.paymentApi.getAllocation(allocation.id).catch(() => {
+      this.events.emit("errorReleasingAllocation", {
+        allocation: await this.paymentApi.getAllocation(allocation.id).catch(() => {
           this.logger.warn("Failed to fetch allocation after failed release attempt", { id: allocation.id });
           return allocation;
         }),
         error,
-      );
+      });
       throw error;
     }
   }
@@ -192,15 +194,23 @@ export class PaymentModuleImpl implements PaymentModule {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   amendAllocation(allocation: Allocation, _newOpts: CreateAllocationParams): Promise<Allocation> {
-    this.events.emit("errorAmendingAllocation", allocation, new Error("Amending allocation is not supported yet"));
-    throw new Error("Amending allocation is not supported yet");
+    const err = Error("Amending allocation is not supported yet");
+
+    this.events.emit("errorAmendingAllocation", {
+      allocation,
+      error: err,
+    });
+
+    throw err;
   }
 
   async acceptInvoice(invoice: Invoice, allocation: Allocation, amount: string): Promise<Invoice> {
     this.logger.debug("Accepting invoice", invoice);
     try {
       const acceptedInvoice = await this.paymentApi.acceptInvoice(invoice, allocation, amount);
-      this.events.emit("invoiceAccepted", acceptedInvoice);
+      this.events.emit("invoiceAccepted", {
+        invoice: acceptedInvoice,
+      });
       this.logger.info("Accepted invoice", {
         id: invoice.id,
         allocationId: allocation.id,
@@ -210,7 +220,7 @@ export class PaymentModuleImpl implements PaymentModule {
       });
       return acceptedInvoice;
     } catch (error) {
-      this.events.emit("errorAcceptingInvoice", invoice, error);
+      this.events.emit("errorAcceptingInvoice", { invoice, error });
       this.logger.error(`Failed to accept invoice. ${error}`, {
         id: invoice.id,
         allocationId: allocation.id,
@@ -226,11 +236,13 @@ export class PaymentModuleImpl implements PaymentModule {
     this.logger.debug("Rejecting invoice", { id: invoice.id, reason });
     try {
       const rejectedInvoice = await this.paymentApi.rejectInvoice(invoice, reason);
-      this.events.emit("invoiceRejected", rejectedInvoice);
+      this.events.emit("invoiceRejected", {
+        invoice: rejectedInvoice,
+      });
       this.logger.warn("Rejeced invoice", { id: invoice.id, reason });
       return rejectedInvoice;
     } catch (error) {
-      this.events.emit("errorRejectingInvoice", invoice, error);
+      this.events.emit("errorRejectingInvoice", { invoice, error });
       this.logger.error(`Failed to reject invoice. ${error}`, { id: invoice.id, reason });
       throw error;
     }
@@ -240,7 +252,9 @@ export class PaymentModuleImpl implements PaymentModule {
     this.logger.debug("Accepting debit note", debitNote);
     try {
       const acceptedDebitNote = await this.paymentApi.acceptDebitNote(debitNote, allocation, amount);
-      this.events.emit("debitNoteAccepted", acceptedDebitNote);
+      this.events.emit("debitNoteAccepted", {
+        debitNote: acceptedDebitNote,
+      });
       this.logger.debug("Accepted debit note", {
         id: debitNote.id,
         allocationId: allocation.id,
@@ -250,7 +264,7 @@ export class PaymentModuleImpl implements PaymentModule {
       });
       return acceptedDebitNote;
     } catch (error) {
-      this.events.emit("errorAcceptingDebitNote", debitNote, error);
+      this.events.emit("errorAcceptingDebitNote", { debitNote, error });
       this.logger.error(`Failed to accept debitNote. ${error}`, {
         id: debitNote.id,
         allocationId: allocation.id,
@@ -267,7 +281,7 @@ export class PaymentModuleImpl implements PaymentModule {
     // TODO: this is not supported by PaymnetAdapter
     const message = "Unable to send debitNote rejection to provider. This feature is not yet supported.";
     this.logger.warn(message);
-    this.events.emit("errorRejectingDebitNote", debitNote, new GolemInternalError(message));
+    this.events.emit("errorRejectingDebitNote", { debitNote, error: new GolemInternalError(message) });
     return debitNote;
     // this.logger.debug("Rejecting debit note", { id: debitNote.id, reason });
     // try {
