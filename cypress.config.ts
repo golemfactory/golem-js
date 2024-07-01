@@ -3,7 +3,6 @@ import { defineConfig } from "cypress";
 export default defineConfig({
   fileServerFolder: "examples/web",
   supportFolder: "tests/cypress/support",
-  fixturesFolder: "tests/cypress/fixtures",
   videosFolder: ".cypress/video",
   screenshotsFolder: ".cypress/screenshots",
   defaultCommandTimeout: 180000,
@@ -19,6 +18,7 @@ export default defineConfig({
         config.env.YAGNA_APPKEY = process.env.YAGNA_APPKEY;
         config.env.YAGNA_API_BASEPATH = process.env.YAGNA_API_URL;
         config.env.YAGNA_SUBNET = process.env.YAGNA_SUBNET;
+        config.env.PAYMENT_NETWORK = process.env.PAYMENT_NETWORK;
         res(config);
       });
     },

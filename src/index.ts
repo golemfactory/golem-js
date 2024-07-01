@@ -1,15 +1,18 @@
-export * from "./executor";
-export * from "./storage";
-export * from "./activity";
-export * from "./agreement";
+//  High-level entry points
+export * from "./golem-network";
+export * from "./resource-rental";
+
+// Low level entry points for advanced users
 export * from "./market";
-export * from "./package";
 export * from "./payment";
 export * from "./network";
-export * from "./events";
-export * from "./utils";
-export * from "./utils/yagna/yagna";
-export * from "./task";
-export * from "./error/golem-error";
-export { StatsService } from "./stats/service";
-export { TcpProxy } from "./network/tcpProxy";
+export * from "./activity";
+
+// Necessary domain entities for users to consume
+export * from "./shared/error/golem-error";
+export * from "./network/tcpProxy";
+
+// Internals
+export * from "./shared/utils";
+export * from "./shared/yagna";
+export * from "./shared/storage";

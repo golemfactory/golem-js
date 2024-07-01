@@ -1,5 +1,5 @@
-import { Logger } from "../../utils";
-import { ProviderInfo } from "../../agreement";
+import { Logger } from "../../shared/utils";
+import { ProviderInfo } from "../../market/agreement";
 
 /**
  * Set of normalized scores for a provider.
@@ -32,6 +32,7 @@ export interface ReputationProviderEntry {
 
 /**
  * Information about a rejected operator.
+ * @experimental
  */
 export interface ReputationRejectedOperator {
   operator: {
@@ -42,6 +43,7 @@ export interface ReputationRejectedOperator {
 
 /**
  * Information about a rejected provider.
+ * @experimental
  */
 export interface ReputationRejectedProvider {
   provider: ProviderInfo;
@@ -50,6 +52,7 @@ export interface ReputationRejectedProvider {
 
 /**
  * Information about untested provider.
+ * @experimental
  */
 export interface ReputationUntestedProvider {
   provider: ProviderInfo;
@@ -93,7 +96,7 @@ export interface ProposalFilterOptions {
  * Options for the agreement selector.
  * @experimental
  */
-export interface AgreementSelectorOption {
+export interface ProposalSelectorOptions {
   /**
    * The size of top provider pool used to pick a random one.
    *
@@ -102,19 +105,48 @@ export interface AgreementSelectorOption {
    * Default is `DEFAULT_AGREEMENT_TOP_POOL_SIZE`.
    */
   topPoolSize?: number;
-
-  /**
-   * Add extra score to provider if it has an existing agreement.
-   *
-   * Default is 0.
-   */
-  agreementBonus?: number;
 }
 
 /**
  * Weights used to calculate the score for providers.
+ * @experimental
  */
 export type ReputationWeights = Partial<ReputationProviderScores>;
+
+/**
+ * Mixin for objects with reputation weights.
+ * @experimental
+ */
+export interface ReputationWeightsMixin {
+  weights?: ReputationWeights;
+}
+
+/**
+ * Preset configuration for reputation system.
+ *
+ * @experimental
+ */
+export interface ReputationPreset {
+  offerProposalFilter?: ProposalFilterOptions & ReputationWeightsMixin;
+  offerProposalSelector?: ProposalSelectorOptions & ReputationWeightsMixin;
+}
+
+/**
+ * Interface for predefined reputation presets.
+ *
+ * @experimental
+ */
+export interface ReputationPresets {
+  compute: ReputationPreset;
+  service: ReputationPreset;
+}
+
+/**
+ * Names of predefined reputation presets.
+ *
+ * @experimental
+ */
+export type ReputationPresetName = keyof ReputationPresets;
 
 /**
  * Configuration for ReputationSystem class.
@@ -140,4 +172,6 @@ export interface ReputationConfig {
    * Logger to use.
    */
   logger?: Logger;
+
+  preset?: ReputationPresetName;
 }

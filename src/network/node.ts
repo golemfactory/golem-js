@@ -1,4 +1,3 @@
-import { IPv4 } from "ip-num";
 import { NetworkInfo } from "./network";
 
 /**
@@ -7,9 +6,9 @@ import { NetworkInfo } from "./network";
 export class NetworkNode {
   constructor(
     public readonly id: string,
-    public readonly ip: IPv4,
-    private getNetworkInfo: () => NetworkInfo,
-    private apiUrl: string,
+    public readonly ip: string,
+    public getNetworkInfo: () => NetworkInfo,
+    public yagnaBaseUri: string,
   ) {}
 
   /**
@@ -22,19 +21,14 @@ export class NetworkNode {
       net: [
         {
           ...this.getNetworkInfo(),
-          nodeIp: this.ip.toString(),
+          nodeIp: this.ip,
         },
       ],
     };
   }
 
-  /**
-   * Get the websocket URI corresponding with a specific TCP port on this Node.
-   * @param port TCP port of the service within the runtime
-   * @return the url
-   */
-  getWebsocketUri(port: number) {
-    const url = new URL(this.apiUrl);
+  getWebsocketUri(port: number): string {
+    const url = new URL(this.yagnaBaseUri);
     url.protocol = "ws";
     return `${url.href}/net/${this.getNetworkInfo().id}/tcp/${this.ip}/${port}`;
   }

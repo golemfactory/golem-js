@@ -1,9 +1,9 @@
 import net from "net";
 import { WebSocket } from "ws";
 import { EventEmitter } from "eventemitter3";
-import { defaultLogger, Logger } from "../utils";
+import { defaultLogger, Logger } from "../shared/utils";
 
-interface TcpProxyEvents {
+export interface TcpProxyEvents {
   /** Raised when the proxy encounters any sort of error */
   error: (err: unknown) => void;
 }
@@ -11,7 +11,7 @@ interface TcpProxyEvents {
 /**
  * Configuration required by the TcpProxy to work properly
  */
-interface TcpProxyOptions {
+export interface TcpProxyOptions {
   /**
    * The logger instance to use for logging
    */

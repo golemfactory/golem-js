@@ -3,102 +3,132 @@
   <head>
     <meta charset="UTF-8" />
     <title>WebRequestor Task API</title>
-    <!--    <script type="module" src="./../js/golem-js.min.js"></script>-->
-    <link rel="stylesheet" href="css/main.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+      crossorigin="anonymous"
+    />
   </head>
   <body>
-    <h1>WebRequestor - Hello World</h1>
     <div class="container">
-      <div class="col-6">
+      <h1 class="pb-4">Hello Golem</h1>
+      <div class="row pb-4">
         <h3>Options</h3>
-        <div id="options">
-          <div class="col-12">
-            <div class="row">
-              <div>
-                <label for="YAGNA_APPKEY">Yagna AppKey: </label>
-                <input id="YAGNA_APPKEY" type="text" value="" />
-              </div>
-              <div>
-                <label for="YAGNA_API_BASEPATH">Yagna Api Url: </label>
-                <input id="YAGNA_API_BASEPATH" type="text" value="http://127.0.0.1:7465" />
-              </div>
-            </div>
-            <div class="row">
-              <div>
-                <label for="IMAGE_TAG">Image Tag: </label>
-                <input id="IMAGE_TAG" type="text" value="golem/alpine:latest" />
-              </div>
-              <div>
-                <label for="SUBNET_TAG">Subnet Tag: </label>
-                <input id="SUBNET_TAG" type="text" value="public" />
-              </div>
-              <div>
-                <label for="PAYMENT_NETWORK">Payment Network: </label>
-                <input id="PAYMENT_NETWORK" type="text" value="holesky" />
-              </div>
-            </div>
+        <div id="options" class="row">
+          <div class="col-4 form-group">
+            <label for="YAGNA_APPKEY">Yagna AppKey: </label>
+            <input id="YAGNA_APPKEY" class="form-control" type="text" value="" />
+          </div>
+          <div class="col-4 form-group">
+            <label for="YAGNA_API_BASEPATH">Yagna Api Url: </label>
+            <input id="YAGNA_API_BASEPATH" class="form-control" type="text" value="http://127.0.0.1:7465" />
           </div>
         </div>
-        <h3>Actions</h3>
-        <div class="row vertical">
-          <div>
-            <button id="echo" onclick="run()">Echo Hello World</button>
+        <div class="row pb-4">
+          <div class="col-4 form-group">
+            <label for="IMAGE_TAG">Image Tag: </label>
+            <input id="IMAGE_TAG" type="text" class="form-control" value="golem/alpine:latest" />
           </div>
-        </div>
-        <div class="results console">
-          <h3>Results</h3>
-          <ul id="results"></ul>
+          <div class="col-4 form-group">
+            <label for="SUBNET_TAG">Subnet Tag: </label>
+            <input id="SUBNET_TAG" type="text" class="form-control" value="public" />
+          </div>
+          <div class="col-4 form-group">
+            <label for="PAYMENT_NETWORK">Payment Network: </label>
+            <input id="PAYMENT_NETWORK" type="text" class="form-control" value="holesky" />
+          </div>
         </div>
       </div>
-      <div class="col-6 border-left">
-        <div class="logs console">
-          <h3>Logs</h3>
-          <ul id="logs"></ul>
+      <div class="row pb-4">
+        <h3>Actions</h3>
+        <div>
+          <button id="echo" class="btn btn-primary" onclick="run()">Echo Hello World</button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="alert alert-info" role="alert">
+          <h4 class="alert-heading">Debugging</h4>
+          <p>You can see <code>@golem-sdk/golem-js</code> logs in your browser&apos;s <code>console</code> :)</p>
+        </div>
+        <h3>Results</h3>
+        <div class="col">
+          <ul id="results"></ul>
         </div>
       </div>
     </div>
 
     <script type="module">
-      import { TaskExecutor } from "/golem-js.min.js";
-      let activity;
-      export function appendLog(msg) {
-        const logs_el = document.getElementById("logs");
-        const li = document.createElement("li");
-        li.appendChild(document.createTextNode(msg));
-        logs_el.appendChild(li);
-      }
+      import { GolemNetwork } from "https://unpkg.com/@golem-sdk/golem-js";
+
       export function appendResults(result) {
-        const results_el = document.getElementById("results");
+        const resultsEl = document.getElementById("results");
         const li = document.createElement("li");
         li.appendChild(document.createTextNode(result));
-        results_el.appendChild(li);
+        resultsEl.appendChild(li);
       }
 
-      const logger = {
-        warn: (msg) => appendLog(`[${new Date().toISOString()}] [warn] ${msg}`),
-        debug: (msg) => appendLog(`[${new Date().toISOString()}] [debug] ${msg}`),
-        error: (msg) => appendLog(`[${new Date().toISOString()}] [error] ${msg}`),
-        info: (msg) => appendLog(`[${new Date().toISOString()}] [info] ${msg}`),
-        child: () => logger,
-      };
       async function run() {
-        const apiKey = document.getElementById("YAGNA_APPKEY").value;
-        const basePath = document.getElementById("YAGNA_API_BASEPATH").value;
+        // This line allows you to watch golem-js internal logs in the browser console!
+        localStorage.debug = "golem-js:*";
+
+        const key = document.getElementById("YAGNA_APPKEY").value;
+
+        if (!key) {
+          alert("You didn't provide your Yagna AppKey");
+          return;
+        }
+
+        const url = document.getElementById("YAGNA_API_BASEPATH").value;
         const subnetTag = document.getElementById("SUBNET_TAG").value;
         const imageTag = document.getElementById("IMAGE_TAG").value;
         const network = document.getElementById("PAYMENT_NETWORK").value;
-        const executor = await TaskExecutor.create({
-          yagnaOptions: { apiKey, basePath },
-          package: imageTag,
-          subnetTag,
+
+        // Define the order that we're going to place on the market
+        const order = {
+          demand: {
+            workload: {
+              imageTag,
+            },
+            subnetTag,
+          },
+          market: {
+            rentHours: 0.5,
+            pricing: {
+              model: "linear",
+              maxStartPrice: 0.5,
+              maxCpuPerHourPrice: 1.0,
+              maxEnvPerHourPrice: 0.5,
+            },
+          },
           payment: { network },
-          logger,
+        };
+
+        const glm = new GolemNetwork({
+          api: { key, url },
         });
-        await executor
-          .run(async (ctx) => appendResults((await ctx.run("echo 'Hello World'")).stdout))
-          .catch((e) => logger.error(e));
-        await executor.shutdown();
+
+        glm.payment.events.on("invoiceAccepted", (invoice) => appendResults(`Total cost: ${invoice.amount} GLM`));
+
+        try {
+          appendResults("Establishing a connection to the Golem Network");
+          await glm.connect();
+          appendResults("Request for renting a provider machine");
+          const rental = await glm.oneOf({ order });
+          await rental
+            .getExeUnit()
+            .then(async (exe) =>
+              appendResults("Reply: " + (await exe.run(`echo 'Hello Golem! 👋 from ${exe.provider.name}!'`)).stdout),
+            );
+          await rental.stopAndFinalize();
+          appendResults("Finalized renting process");
+        } catch (err) {
+          console.error("Failed to run the example", err);
+        } finally {
+          await glm.disconnect();
+        }
       }
+
       window.run = run;
     </script>
   </body>

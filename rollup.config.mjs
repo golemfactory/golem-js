@@ -8,6 +8,8 @@ import nodePolyfills from "rollup-plugin-polyfill-node";
 import pkg from "./package.json" assert { type: "json" };
 import ignore from "rollup-plugin-ignore";
 import filesize from "rollup-plugin-filesize";
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
 
 /**
  * Looking for plugins?
@@ -27,61 +29,68 @@ export default [
       format: "es",
     },
     plugins: [
-      ignore(["tmp", "pino"]),
-      alias({
-        entries: [
-          { find: "stream", replacement: "stream-browserify" },
-          { find: /RedisDatastore/, replacement: "tests/mock/utils/empty_default.js" },
-          { find: /IORedisConnection/, replacement: "tests/mock/utils/empty_default.js" },
-          { find: /RedisConnection/, replacement: "tests/mock/utils/empty_default.js" },
-          { find: /src\/api\/provider-api$/, replacement: "." },
-          { find: /\.\/gftp.js/, replacement: "tests/mock/utils/empty.js" },
-          { find: /GftpStorageProvider/, replacement: "tests/mock/utils/empty.js" },
-        ],
-      }),
+      deleteExistingBundles("dist"),
+      ignore(["tmp"]),
       nodeResolve({ browser: true, preferBuiltins: true }),
       commonjs(),
       nodePolyfills(),
-      json(), // Required because one our dependencies (bottleneck) loads its own 'version.json'
-      typescript({ tsconfig: "./tsconfig.json", exclude: ["**/__tests__", "**/*.test.ts"] }),
-      terser({ keep_classnames: true }),
+      typescript({ tsconfig: "./tsconfig.json", exclude: ["**/*.test.ts"] }),
+      terser(),
       filesize({ reporter: [sizeValidator, "boxen"] }),
     ],
   },
   // NodeJS
   {
     input: {
-      "golem-js.es": "src/index.ts",
-      "golem-js-experimental.es": "src/experimental.ts",
+      "golem-js": "src/index.ts",
+      "golem-js-experimental": "src/experimental/index.ts",
     },
     output: {
       dir: "dist",
       format: "esm",
       sourcemap: true,
-      chunkFileNames: "shared-[hash].es.js",
+      chunkFileNames: "shared-[hash].mjs",
+      entryFileNames: "[name].mjs",
     },
     plugins: [
-      typescript({ tsconfig: "./tsconfig.json", exclude: ["**/__tests__", "**/*.test.ts"] }),
+      typescript({ tsconfig: "./tsconfig.json", exclude: ["**/*.test.ts"] }),
       filesize({ reporter: [sizeValidator, "boxen"] }),
     ],
   },
   {
     input: {
-      "golem-js.cjs": "src/index.ts",
-      "golem-js-experimental.cjs": "src/experimental.ts",
+      "golem-js": "src/index.ts",
+      "golem-js-experimental": "src/experimental/index.ts",
     },
     output: {
       dir: "dist",
       format: "cjs",
       sourcemap: true,
-      chunkFileNames: "shared-[hash].cjs.js",
+      chunkFileNames: "shared-[hash].js",
     },
     plugins: [
-      typescript({ tsconfig: "./tsconfig.json", exclude: ["**/__tests__", "**/*.test.ts"] }),
+      typescript({
+        tsconfig: "./tsconfig.json",
+        exclude: ["**/*.test.ts"],
+        module: "ES2020",
+      }),
       filesize({ reporter: [sizeValidator, "boxen"] }),
     ],
   },
 ];
+
+function deleteExistingBundles(path) {
+  return {
+    name: "delete-existing-bundles",
+    buildStart: () => {
+      const distDir = fileURLToPath(new URL(path, import.meta.url).toString());
+      if (fs.existsSync(distDir)) {
+        fs.rmSync(distDir, { recursive: true });
+      }
+      console.log("Deleted " + distDir);
+    },
+  };
+}
 
 function sizeValidator(options, bundle, { bundleSize }) {
   if (parseInt(bundleSize) === 0) {

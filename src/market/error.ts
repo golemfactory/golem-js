@@ -1,24 +1,27 @@
-import { GolemModuleError } from "../error/golem-error";
-import { Demand } from "./demand";
+import { GolemModuleError } from "../shared/error/golem-error";
 
 export enum MarketErrorCode {
-  ServiceNotInitialized,
-  MissingAllocation,
-  SubscriptionFailed,
-  InvalidProposal,
-  ProposalResponseFailed,
-  ProposalRejectionFailed,
-  DemandExpired,
-  AgreementTerminationFailed,
-  AgreementCreationFailed,
-  AgreementApprovalFailed,
+  CouldNotGetAgreement = "CouldNotGetAgreement",
+  CouldNotGetProposal = "CouldNotGetProposal",
+  ServiceNotInitialized = "ServiceNotInitialized",
+  MissingAllocation = "MissingAllocation",
+  SubscriptionFailed = "SubscriptionFailed",
+  InvalidProposal = "InvalidProposal",
+  ProposalResponseFailed = "ProposalResponseFailed",
+  ProposalRejectionFailed = "ProposalRejectionFailed",
+  DemandExpired = "DemandExpired",
+  ResourceRentalTerminationFailed = "ResourceRentalTerminationFailed",
+  ResourceRentalCreationFailed = "ResourceRentalCreationFailed",
+  AgreementApprovalFailed = "AgreementApprovalFailed",
+  NoProposalAvailable = "NoProposalAvailable",
+  InternalError = "InternalError",
+  ScanFailed = "ScanFailed",
 }
 
 export class GolemMarketError extends GolemModuleError {
   constructor(
     message: string,
     public code: MarketErrorCode,
-    public demand?: Demand,
     public previous?: Error,
   ) {
     super(message, code, previous);

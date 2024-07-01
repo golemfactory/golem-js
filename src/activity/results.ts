@@ -1,7 +1,5 @@
-import { ExeScriptCommandResultResultEnum } from "ya-ts-client/dist/ya-activity/src/models/exe-script-command-result";
-
-export import ResultState = ExeScriptCommandResultResultEnum;
-import { GolemInternalError } from "../error/golem-error";
+import { ActivityApi } from "ya-ts-client";
+import { GolemInternalError } from "../shared/error/golem-error";
 
 // FIXME: Make the `data` field Uint8Array and update the rest of the code
 // eslint-disable-next-line
@@ -11,7 +9,7 @@ export interface ResultData<T = any> {
   /** The datetime of the event on which the result was received */
   eventDate: string;
   /** If is success */
-  result: ResultState;
+  result: ActivityApi.ExeScriptCommandResultDTO["result"];
   /** stdout of script command */
   stdout?: string | ArrayBuffer | null;
   /** stderr of script command */
@@ -30,7 +28,7 @@ export interface ResultData<T = any> {
 export class Result<TData = any> implements ResultData<TData> {
   index: number;
   eventDate: string;
-  result: ResultState;
+  result: ActivityApi.ExeScriptCommandResultDTO["result"];
   stdout?: string | ArrayBuffer | null;
   stderr?: string | ArrayBuffer | null;
   message?: string | null;
@@ -82,13 +80,13 @@ export interface RuntimeEventKind {
   finished?: RuntimeEventFinished;
 }
 
-interface RuntimeEventStarted {
+export interface RuntimeEventStarted {
   command: object;
 }
 
-interface RuntimeEventFinished {
+export interface RuntimeEventFinished {
   // Reason for disable: That's something what yagna returns from its api
   // eslint-disable-next-line @typescript-eslint/naming-convention
   return_code: number;
-  message: string;
+  message: string | null;
 }

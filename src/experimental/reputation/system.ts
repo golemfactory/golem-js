@@ -1,19 +1,20 @@
-import { Proposal, ProposalFilter } from "../../market";
-import { AgreementCandidate, AgreementSelector } from "../../agreement";
+import { OfferProposalFilter, OfferProposal, OfferProposalSelector } from "../../market";
 import { GolemReputationError } from "./error";
 import {
-  AgreementSelectorOption,
+  ProposalSelectorOptions,
   ProposalFilterOptions,
   ReputationConfig,
   ReputationData,
+  ReputationPresetName,
+  ReputationPresets,
   ReputationProviderEntry,
   ReputationProviderScores,
   ReputationRejectedOperator,
   ReputationRejectedProvider,
   ReputationWeights,
 } from "./types";
-import { Logger, nullLogger } from "../../utils";
-import { getPaymentNetwork } from "../../utils/env";
+import { Logger, nullLogger } from "../../shared/utils";
+import { getPaymentNetwork } from "../../shared/utils/env";
 
 /**
  * Default minimum score for proposals.
@@ -51,6 +52,48 @@ export const DEFAULT_REPUTATION_URL = "https://reputation.dev-test.golem.network
  * Default for `topPoolSize` agreement selector option.
  */
 export const DEFAULT_AGREEMENT_TOP_POOL_SIZE = 2;
+
+/**
+ * Predefined presets for reputation system.
+ */
+export const REPUTATION_PRESETS: ReputationPresets = {
+  /**
+   * Preset for short CPU intensive compute tasks.
+   */
+  compute: {
+    offerProposalFilter: {
+      min: 0.5,
+      weights: {
+        cpuSingleThreadScore: 1,
+      },
+    },
+    offerProposalSelector: {
+      weights: {
+        cpuSingleThreadScore: 1,
+      },
+      topPoolSize: DEFAULT_AGREEMENT_TOP_POOL_SIZE,
+    },
+  },
+  /**
+   * Preset for long-running services, where uptime is important.
+   */
+  service: {
+    offerProposalFilter: {
+      min: DEFAULT_PROPOSAL_MIN_SCORE,
+      weights: {
+        uptime: 0.8,
+        cpuMultiThreadScore: 0.2,
+      },
+    },
+    offerProposalSelector: {
+      weights: {
+        uptime: 0.5,
+        cpuMultiThreadScore: 0.5,
+      },
+      topPoolSize: DEFAULT_AGREEMENT_TOP_POOL_SIZE,
+    },
+  },
+};
 
 /**
  * Reputation system client.
@@ -121,6 +164,18 @@ export class ReputationSystem {
   private readonly logger: Logger;
 
   /**
+   * Default options used when creating proposal filter.
+   * @private
+   */
+  private defaultProposalFilterOptions: ProposalFilterOptions;
+
+  /**
+   * Default options used when creating agreement selector.
+   * @private
+   */
+  private defaultAgreementSelectorOptions: ProposalSelectorOptions;
+
+  /**
    * Create a new reputation system client and fetch the reputation data.
    */
   public static async create(config?: ReputationConfig): Promise<ReputationSystem> {
@@ -133,6 +188,49 @@ export class ReputationSystem {
     this.url = this.config?.url ?? DEFAULT_REPUTATION_URL;
     this.logger = this.config?.logger?.child("reputation") ?? nullLogger();
     this.paymentNetwork = this.config?.paymentNetwork ?? getPaymentNetwork();
+
+    this.defaultProposalFilterOptions = {
+      min: DEFAULT_PROPOSAL_MIN_SCORE,
+      acceptUnlisted: undefined,
+    };
+    this.defaultAgreementSelectorOptions = {
+      topPoolSize: DEFAULT_AGREEMENT_TOP_POOL_SIZE,
+    };
+
+    if (this.config?.preset) {
+      this.usePreset(this.config.preset);
+    }
+  }
+
+  /**
+   * Apply preset to current reputation system configuration.
+   * @param presetName Preset name to use.
+   */
+  usePreset(presetName: ReputationPresetName): void {
+    const presetConfig = REPUTATION_PRESETS[presetName];
+    if (!presetConfig) {
+      throw new GolemReputationError(`Reputation preset not found: ${presetName}`);
+    }
+
+    if (presetConfig.offerProposalFilter?.weights) {
+      this.setProposalWeights(presetConfig.offerProposalFilter.weights);
+    }
+
+    if (presetConfig.offerProposalSelector?.weights) {
+      this.setAgreementWeights(presetConfig.offerProposalSelector.weights);
+    }
+
+    this.defaultProposalFilterOptions = {
+      min: presetConfig.offerProposalFilter?.min ?? this.defaultProposalFilterOptions.min,
+      acceptUnlisted: presetConfig.offerProposalFilter?.acceptUnlisted, // undefined is meaningful
+    };
+
+    this.defaultAgreementSelectorOptions = {
+      topPoolSize: presetConfig.offerProposalSelector?.topPoolSize ?? this.defaultAgreementSelectorOptions.topPoolSize,
+      // TODO: to be discussed with the reputation team
+      // agreementBonus:
+      //   presetConfig.proposalSelector?.agreementBonus ?? this.defaultAgreementSelectorOptions.agreementBonus,
+    };
   }
 
   /**
@@ -233,8 +331,8 @@ export class ReputationSystem {
    * Returns a proposal filter that can be used to filter out providers with low reputation scores.
    * @param opts
    */
-  proposalFilter(opts?: ProposalFilterOptions): ProposalFilter {
-    return (proposal: Proposal) => {
+  offerProposalFilter(opts?: ProposalFilterOptions): OfferProposalFilter {
+    return (proposal: OfferProposal) => {
       // Filter out rejected operators.
       const operatorEntry = this.rejectedOperatorsMap.get(proposal.provider.walletAddress);
       if (operatorEntry) {
@@ -258,7 +356,7 @@ export class ReputationSystem {
       // Filter based on reputation scores.
       const scoreEntry = this.providersScoreMap.get(proposal.provider.id);
       if (scoreEntry) {
-        const min = opts?.min ?? DEFAULT_PROPOSAL_MIN_SCORE;
+        const min = opts?.min ?? this.defaultProposalFilterOptions.min ?? DEFAULT_PROPOSAL_MIN_SCORE;
         const score = this.calculateScore(scoreEntry.scores, this.proposalWeights);
         this.logger.debug(`Proposal score for ${proposal.provider.id}: ${score} - min ${min}`, {
           provider: proposal.provider,
@@ -278,7 +376,11 @@ export class ReputationSystem {
       );
 
       // Use the acceptUnlisted option if provided, otherwise allow only if there are no known providers.
-      return opts?.acceptUnlisted ?? this.data.testedProviders.length === 0;
+      return (
+        opts?.acceptUnlisted ??
+        this.defaultProposalFilterOptions.acceptUnlisted ??
+        this.data.testedProviders.length === 0
+      );
     };
   }
 
@@ -293,36 +395,25 @@ export class ReputationSystem {
    *
    * @param opts
    */
-  agreementSelector(opts?: AgreementSelectorOption): AgreementSelector {
-    return async (candidates): Promise<AgreementCandidate> => {
-      const array = Array.from(candidates);
+  offerProposalSelector(opts?: ProposalSelectorOptions): OfferProposalSelector {
+    const poolSize =
+      opts?.topPoolSize ?? this.defaultAgreementSelectorOptions.topPoolSize ?? DEFAULT_AGREEMENT_TOP_POOL_SIZE;
+
+    return (proposals): OfferProposal => {
       // Cache scores for providers.
       const scoresMap = new Map<string, number>();
 
-      // Sort the array by score
-      array.sort((a, b) => {
-        const aId = a.proposal.provider.id;
-        const bId = b.proposal.provider.id;
-
-        const aScoreData = this.providersScoreMap.get(aId)?.scores ?? {};
-        const bScoreData = this.providersScoreMap.get(bId)?.scores ?? {};
-
-        // Get the score values.
-        let aScoreValue = scoresMap.get(aId) ?? this.calculateScore(aScoreData, this.agreementWeights);
-        let bScoreValue = scoresMap.get(bId) ?? this.calculateScore(bScoreData, this.agreementWeights);
-
-        // Store score if not already stored.
-        if (!scoresMap.has(aId)) scoresMap.set(aId, aScoreValue);
-        if (!scoresMap.has(bId)) scoresMap.set(bId, bScoreValue);
-
-        // Add bonus for existing agreements.
-        if (a.agreement) aScoreValue += opts?.agreementBonus ?? 0;
-        if (b.agreement) bScoreValue += opts?.agreementBonus ?? 0;
-
-        return bScoreValue - aScoreValue;
+      proposals.forEach((c) => {
+        const data = this.providersScoreMap.get(c.provider.id)?.scores ?? {};
+        const score = this.calculateScore(data, this.agreementWeights);
+        // TODO: to be discussed with the reputation team
+        // if (c.agreement) score += opts?.agreementBonus ?? this.defaultAgreementSelectorOptions.agreementBonus ?? 0;
+        scoresMap.set(c.provider.id, score);
       });
 
-      const topPool = Math.min(opts?.topPoolSize ?? DEFAULT_AGREEMENT_TOP_POOL_SIZE, array.length);
+      const array = this.sortCandidatesByScore(proposals, scoresMap);
+
+      const topPool = Math.min(poolSize, array.length);
       const index = topPool === 1 ? 0 : Math.floor(Math.random() * topPool);
 
       return array[index];
@@ -358,10 +449,27 @@ export class ReputationSystem {
    * @param opts
    */
   calculateProviderPool(opts?: ProposalFilterOptions): ReputationProviderEntry[] {
-    const min = opts?.min ?? DEFAULT_PROPOSAL_MIN_SCORE;
+    const min = opts?.min ?? this.defaultProposalFilterOptions.min ?? DEFAULT_PROPOSAL_MIN_SCORE;
     return this.data.testedProviders.filter((entry) => {
       const score = this.calculateScore(entry.scores, this.proposalWeights);
       return score >= min;
     });
+  }
+
+  sortCandidatesByScore(proposals: OfferProposal[], scoresMap: Map<string, number>): OfferProposal[] {
+    const array = Array.from(proposals);
+
+    array.sort((a, b) => {
+      const aId = a.provider.id;
+      const bId = b.provider.id;
+
+      // Get the score values.
+      const aScoreValue = scoresMap.get(aId) ?? 0;
+      const bScoreValue = scoresMap.get(bId) ?? 0;
+
+      return bScoreValue - aScoreValue;
+    });
+
+    return array;
   }
 }

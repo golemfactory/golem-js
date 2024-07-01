@@ -1,13 +1,14 @@
 import express from "express";
-import { GolemNetwork, JobState } from "../../src/experimental";
+import { JobManager, JobState } from "../../src/experimental";
 import supertest from "supertest";
 import fs from "fs";
+import { jest } from "@jest/globals";
 
 describe("Express", function () {
-  let golemClient: GolemNetwork;
+  let golemClient: JobManager;
   const consoleSpy = jest.fn();
   beforeEach(async () => {
-    golemClient = new GolemNetwork({});
+    golemClient = new JobManager();
     await golemClient.init();
     consoleSpy.mockReset();
   });
@@ -27,8 +28,19 @@ describe("Express", function () {
         return;
       }
       const job = golemClient.createJob({
-        package: {
-          imageTag: "severyn/espeak:latest",
+        demand: {
+          workload: {
+            imageTag: "severyn/espeak:latest",
+          },
+        },
+        market: {
+          rentHours: 1,
+          pricing: {
+            model: "linear",
+            maxStartPrice: 1,
+            maxEnvPerHourPrice: 1,
+            maxCpuPerHourPrice: 1,
+          },
         },
       });
 
@@ -45,9 +57,9 @@ describe("Express", function () {
         consoleSpy("Job succeeded", job.results);
       });
 
-      job.startWork(async (ctx) => {
+      job.startWork(async (exe) => {
         const fileName = `EXPRESS_SPEC_OUTPUT.wav`;
-        await ctx
+        await exe
           .beginBatch()
           .run(`espeak "${req.body}" -w /golem/output/output.wav`)
           .downloadFile("/golem/output/output.wav", fileName)

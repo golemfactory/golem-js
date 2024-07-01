@@ -1,17 +1,44 @@
-import { Agreement } from "../agreement";
+import { Agreement } from "../market";
 import { Invoice } from "./invoice";
 import { DebitNote } from "./debit_note";
 import { RejectionReason } from "./rejection";
 import { Allocation } from "./allocation";
-import { Logger, defaultLogger } from "../utils";
-import { DebitNoteFilter, InvoiceFilter } from "./service";
+import { defaultLogger, Logger } from "../shared/utils";
 import AsyncLock from "async-lock";
-import { InvoiceStatus } from "ya-ts-client/dist/ya-payment";
 import { GolemPaymentError, PaymentErrorCode } from "./error";
-import { GolemUserError } from "../error/golem-error";
+import { GolemUserError } from "../shared/error/golem-error";
+import { getMessageFromApiError } from "../shared/utils/apiErrorMessage";
+import { Demand } from "../market";
+import { filter } from "rxjs";
+import { PaymentModule } from "./payment.module";
+
+export type DebitNoteFilter = (
+  debitNote: DebitNote,
+  context: {
+    agreement: Agreement;
+    allocation: Allocation;
+    demand: Demand;
+  },
+) => Promise<boolean> | boolean;
+
+export type InvoiceFilter = (
+  invoice: Invoice,
+  context: {
+    agreement: Agreement;
+    allocation: Allocation;
+    demand: Demand;
+  },
+) => Promise<boolean> | boolean;
+
+export interface PaymentProcessOptions {
+  invoiceFilter: InvoiceFilter;
+  debitNoteFilter: DebitNoteFilter;
+}
 
 /**
- * Process manager that controls the logic behind processing events related to an agreement which result with payments
+ * Process manager that controls the logic behind processing payments for an agreement (debit notes and invoices).
+ * The process is started automatically and ends when the final invoice is received.
+ * You can stop the process earlier by calling the `stop` method. You cannot restart the process after stopping it.
  */
 export class AgreementPaymentProcess {
   private invoice: Invoice | null = null;
@@ -23,19 +50,39 @@ export class AgreementPaymentProcess {
    * Example of a rule: you shouldn't accept a debit note if an invoice is already in place
    */
   private lock: AsyncLock = new AsyncLock();
+  private options: PaymentProcessOptions;
 
   public readonly logger: Logger;
+
+  private readonly cleanupSubscriptions: () => void;
 
   constructor(
     public readonly agreement: Agreement,
     public readonly allocation: Allocation,
-    public readonly filters: {
-      invoiceFilter: InvoiceFilter;
-      debitNoteFilter: DebitNoteFilter;
-    },
+    public readonly paymentModule: PaymentModule,
+    options?: Partial<PaymentProcessOptions>,
     logger?: Logger,
   ) {
     this.logger = logger || defaultLogger("payment");
+    this.options = {
+      invoiceFilter: options?.invoiceFilter || (() => true),
+      debitNoteFilter: options?.debitNoteFilter || (() => true),
+    };
+
+    const invoiceSubscription = this.paymentModule
+      .observeInvoices()
+      .pipe(filter((invoice) => invoice.agreementId === this.agreement.id))
+      .subscribe((invoice) => this.addInvoice(invoice));
+
+    const debitNoteSubscription = this.paymentModule
+      .observeDebitNotes()
+      .pipe(filter((debitNote) => debitNote.agreementId === this.agreement.id))
+      .subscribe((debitNote) => this.addDebitNote(debitNote));
+
+    this.cleanupSubscriptions = () => {
+      invoiceSubscription.unsubscribe();
+      debitNoteSubscription.unsubscribe();
+    };
   }
 
   /**
@@ -91,7 +138,11 @@ export class AgreementPaymentProcess {
 
     let acceptedByFilter = false;
     try {
-      acceptedByFilter = await this.filters.debitNoteFilter(debitNote.dto);
+      acceptedByFilter = await this.options.debitNoteFilter(debitNote, {
+        agreement: this.agreement,
+        allocation: this.allocation,
+        demand: this.agreement.demand,
+      });
     } catch (error) {
       throw new GolemUserError("An error occurred in the debit note filter", error);
     }
@@ -106,72 +157,87 @@ export class AgreementPaymentProcess {
       return false;
     }
 
-    await debitNote.accept(debitNote.totalAmountDuePrecise, this.allocation.id);
-    this.logger.debug(`DebitNote accepted`, {
-      debitNoteId: debitNote.id,
-      agreementId: debitNote.agreementId,
-    });
-
-    return true;
+    try {
+      await this.paymentModule.acceptDebitNote(debitNote, this.allocation, debitNote.totalAmountDue);
+      this.logger.debug(`DebitNote accepted`, {
+        debitNoteId: debitNote.id,
+        agreementId: debitNote.agreementId,
+      });
+      return true;
+    } catch (error) {
+      const message = getMessageFromApiError(error);
+      throw new GolemPaymentError(
+        `Unable to accept debit note ${debitNote.id}. ${message}`,
+        PaymentErrorCode.DebitNoteAcceptanceFailed,
+        undefined,
+        debitNote.provider,
+        error,
+      );
+    }
   }
 
   private async hasProcessedDebitNote(debitNote: DebitNote) {
     const status = await debitNote.getStatus();
 
-    return status !== InvoiceStatus.Received;
+    return status !== "RECEIVED";
   }
 
   private async rejectDebitNote(debitNote: DebitNote, rejectionReason: RejectionReason, rejectMessage: string) {
-    const reason = {
-      rejectionReason: rejectionReason,
-      totalAmountAccepted: "0",
-      message: rejectMessage,
-    };
+    try {
+      await this.paymentModule.rejectDebitNote(debitNote, rejectMessage);
+    } catch (error) {
+      const message = getMessageFromApiError(error);
+      throw new GolemPaymentError(
+        `Unable to reject debit note ${debitNote.id}. ${message}`,
+        PaymentErrorCode.DebitNoteRejectionFailed,
+        undefined,
+        debitNote.provider,
+        error,
+      );
+    }
+  }
 
-    await debitNote.reject(reason);
-
-    this.logger.warn(`DebitNote rejected`, { reason: reason.message });
+  private finalize(invoice: Invoice) {
+    this.invoice = invoice;
+    this.cleanupSubscriptions();
   }
 
   private async applyInvoice(invoice: Invoice) {
-    if (this.invoice) {
-      if (invoice.isSameAs(this.invoice)) {
-        const previousStatus = await this.invoice.getStatus();
+    this.logger.debug("Applying invoice for agreement", {
+      invoiceId: invoice.id,
+      agreementId: invoice.agreementId,
+      provider: invoice.provider,
+    });
 
-        if (previousStatus !== InvoiceStatus.Received) {
-          this.logger.warn(`Received duplicate of an already processed invoice , the new one will be ignored`, {
-            invoiceId: invoice.id,
-            agreementId: invoice.agreementId,
-          });
-          return false;
-        }
-      } else {
-        // Protects from possible fraud: someone sends a second, different invoice for the same agreement
-        throw new GolemPaymentError(
-          `Agreement ${this.agreement.id} is already covered with an invoice: ${this.invoice.id}`,
-          PaymentErrorCode.AgreementAlreadyPaid,
-          this.allocation,
-          this.invoice.provider,
-        );
-      }
+    if (this.invoice) {
+      // Protects from possible fraud: someone sends a second, different invoice for the same agreement
+      throw new GolemPaymentError(
+        `Agreement ${this.agreement.id} is already covered with an invoice: ${this.invoice.id}`,
+        PaymentErrorCode.AgreementAlreadyPaid,
+        this.allocation,
+        this.invoice.provider,
+      );
     }
 
-    const status = await invoice.getStatus();
-    if (status !== InvoiceStatus.Received) {
+    if (invoice.getStatus() !== "RECEIVED") {
       throw new GolemPaymentError(
-        `The invoice ${invoice.id} for agreement ${invoice.agreementId} has status ${status}, ` +
-          `but we can accept only the ones with status ${InvoiceStatus.Received}`,
+        `The invoice ${invoice.id} for agreement ${invoice.agreementId} has status ${invoice.getStatus()}, ` +
+          `but we can accept only the ones with status RECEIVED`,
         PaymentErrorCode.InvoiceAlreadyReceived,
         this.allocation,
         invoice.provider,
       );
     }
 
-    this.invoice = invoice;
+    this.finalize(invoice);
 
     let acceptedByFilter = false;
     try {
-      acceptedByFilter = await this.filters.invoiceFilter(invoice.dto);
+      acceptedByFilter = await this.options.invoiceFilter(invoice, {
+        agreement: this.agreement,
+        allocation: this.allocation,
+        demand: this.agreement.demand,
+      });
     } catch (error) {
       throw new GolemUserError("An error occurred in the invoice filter", error);
     }
@@ -184,12 +250,18 @@ export class AgreementPaymentProcess {
       return false;
     }
 
-    await invoice.accept(invoice.amountPrecise, this.allocation.id);
-    this.logger.info(`Invoice has been accepted`, {
-      invoiceId: invoice.id,
-      agreementId: invoice.agreementId,
-      providerName: this.agreement.getProviderInfo().name,
-    });
+    try {
+      await this.paymentModule.acceptInvoice(invoice, this.allocation, invoice.amount);
+    } catch (error) {
+      const message = getMessageFromApiError(error);
+      throw new GolemPaymentError(
+        `Unable to accept invoice ${invoice.id} ${message}`,
+        PaymentErrorCode.InvoiceAcceptanceFailed,
+        undefined,
+        invoice.provider,
+        error,
+      );
+    }
 
     return true;
   }
@@ -199,18 +271,30 @@ export class AgreementPaymentProcess {
     rejectionReason: RejectionReason.RejectedByRequestorFilter,
     message: string,
   ) {
-    const reason = {
-      rejectionReason: rejectionReason,
-      totalAmountAccepted: "0",
-      message: message,
-    };
-
-    await invoice.reject(reason);
-
-    this.logger.warn(`Invoice rejected`, { reason: reason.message });
+    try {
+      await this.paymentModule.rejectInvoice(invoice, message);
+      this.logger.warn(`Invoice rejected`, { reason: message });
+    } catch (error) {
+      const message = getMessageFromApiError(error);
+      throw new GolemPaymentError(
+        `Unable to reject invoice ${invoice.id} ${message}`,
+        PaymentErrorCode.InvoiceRejectionFailed,
+        undefined,
+        invoice.provider,
+        error,
+      );
+    }
   }
 
   private hasReceivedInvoice() {
     return this.invoice !== null;
+  }
+
+  public isStarted() {
+    return this.cleanupSubscriptions !== null;
+  }
+
+  public stop(): void {
+    this.cleanupSubscriptions();
   }
 }

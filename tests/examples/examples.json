@@ -1,68 +1,20 @@
 [
-  { "cmd": "node", "path": "examples/docs-examples/quickstarts/retrievable-task/task.mjs", "noGoth": true },
-  { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/batch-end.mjs", "noGoth": true },
-  {
-    "cmd": "node",
-    "path": "examples/docs-examples/examples/composing-tasks/batch-endstream-chunks.mjs",
-    "noGoth": true
-  },
-  {
-    "cmd": "node",
-    "path": "examples/docs-examples/examples/composing-tasks/batch-endstream-forawait.mjs",
-    "noGoth": true
-  },
-  { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/multiple-run-prosaic.mjs" },
-  { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/single-command.mjs" },
-  { "cmd": "node", "path": "examples/docs-examples/examples/composing-tasks/single-command.cjs" },
-  { "cmd": "ts-node", "path": "examples/docs-examples/examples/composing-tasks/single-command.ts" },
-  { "cmd": "ts-node", "path": "examples/docs-examples/examples/composing-tasks/alert-code.mjs" },
-
-  { "cmd": "node", "path": "examples/docs-examples/examples/executing-tasks/on-activity-ready.mjs" },
-  { "cmd": "node", "path": "examples/docs-examples/examples/executing-tasks/foreach.mjs" },
-  { "cmd": "node", "path": "examples/docs-examples/examples/executing-tasks/map.mjs" },
-  { "cmd": "node", "path": "examples/docs-examples/examples/executing-tasks/max-parallel-tasks.mjs" },
-  { "cmd": "node", "path": "examples/docs-examples/examples/executing-tasks/single-run.mjs" },
-
-  { "cmd": "node", "path": "examples/docs-examples/examples/selecting-providers/custom-price.mjs", "noGoth": true },
-  { "cmd": "node", "path": "examples/docs-examples/examples/selecting-providers/demand.mjs" },
-  { "cmd": "node", "path": "examples/docs-examples/examples/selecting-providers/whitelist.mjs" },
-
-  { "cmd": "node", "path": "examples/docs-examples/examples/sending-data/downloading-file.mjs" },
-  { "cmd": "node", "path": "examples/docs-examples/examples/sending-data/uploading-file.mjs" },
-  { "cmd": "node", "path": "examples/docs-examples/examples/sending-data/uploading-json.mjs" },
-
-  { "cmd": "node", "path": "examples/docs-examples/examples/transferring-data/download-file.mjs" },
-  { "cmd": "node", "path": "examples/docs-examples/examples/transferring-data/upload-file.mjs" },
-  { "cmd": "node", "path": "examples/docs-examples/examples/transferring-data/upload-json.mjs" },
-
-  { "cmd": "node", "path": "examples/docs-examples/examples/using-app-keys/index.mjs" },
-
-  { "cmd": "node", "path": "examples/docs-examples/examples/working-with-images/hash.mjs" },
-  { "cmd": "node", "path": "examples/docs-examples/examples/working-with-images/tag.mjs" },
-
-  { "cmd": "node", "path": "examples/docs-examples/examples/working-with-results/multi-command-end.mjs" },
-  {
-    "cmd": "node",
-    "path": "examples/docs-examples/examples/working-with-results/multi-command-endstream.mjs",
-    "noGoth": true
-  },
-  {
-    "cmd": "node",
-    "path": "examples/docs-examples/examples/working-with-results/multi-command-fail.mjs",
-    "skip": true
-  },
-  { "cmd": "node", "path": "examples/docs-examples/examples/working-with-results/single-command.mjs" },
-  { "cmd": "node", "path": "examples/docs-examples/examples/working-with-results/single-command-fail.mjs" },
-
-  { "cmd": "node", "path": "examples/docs-examples/quickstarts/quickstart/requestor.mjs" },
-
-  { "cmd": "node", "path": "examples/docs-examples/tutorials/building-custom-image/index.mjs" },
-  { "cmd": "node", "path": "examples/docs-examples/tutorials/accessing-internet/outbound-ipfs.mjs" },
-  { "cmd": "node", "path": "examples/docs-examples/tutorials/quickstart/index.mjs" },
-  {
-    "cmd": "node",
-    "path": "examples/docs-examples/tutorials/running-parallel-tasks/index.mjs",
-    "args": ["--mask", "?a?a", "--hash", "$P$5ZDzPE45CigTC6EY4cXbyJSLj/pGee0"],
-    "timeout": 1000
-  }
+  { "cmd": "tsx", "path": "examples/basic/many-of.ts" },
+  { "cmd": "tsx", "path": "examples/basic/one-of.ts" },
+  { "cmd": "tsx", "path": "examples/basic/vpn.ts" },
+  { "cmd": "tsx", "path": "examples/basic/transfer.ts" },
+  { "cmd": "tsx", "path": "examples/basic/run-and-stream.ts" },
+  { "cmd": "tsx", "path": "examples/advanced/step-by-step.ts" },
+  { "cmd": "tsx", "path": "examples/advanced/manual-pools.ts" },
+  { "cmd": "tsx", "path": "examples/advanced/payment-filters.ts" },
+  { "cmd": "tsx", "path": "examples/advanced/proposal-filter.ts" },
+  { "cmd": "tsx", "path": "examples/advanced/proposal-predefined-filter.ts" },
+  { "cmd": "tsx", "path": "examples/advanced/override-module.ts" },
+  { "cmd": "tsx", "path": "examples/advanced/scan.ts" },
+  { "cmd": "tsx", "path": "examples/advanced/reuse-allocation.ts" },
+  { "cmd": "tsx", "path": "examples/advanced/setup-and-teardown.ts" },
+  { "cmd": "tsx", "path": "examples/experimental/deployment/new-api.ts" },
+  { "cmd": "tsx", "path": "examples/experimental/job/getJobById.ts" },
+  { "cmd": "tsx", "path": "examples/experimental/job/waitForResults.ts" },
+  { "cmd": "tsx", "path": "examples/experimental/job/cancel.ts" }
 ]

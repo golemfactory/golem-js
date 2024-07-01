@@ -1,214 +1,115 @@
 import { AbstractIPNum, IPv4, IPv4CidrRange, IPv4Mask, IPv4Prefix } from "ip-num";
-import { Logger, YagnaApi, YagnaOptions } from "../utils";
-import { NetworkConfig } from "./config";
 import { NetworkNode } from "./node";
 import { GolemNetworkError, NetworkErrorCode } from "./error";
-
-/**
- * @hidden
- */
-export interface NetworkOptions {
-  /** the node ID of the owner of this VPN (the requestor) */
-  networkOwnerId: string;
-  /** {@link YagnaOptions} */
-  yagnaOptions?: YagnaOptions;
-  /** the IP address of the network. May contain netmask, e.g. "192.168.0.0/24" */
-  networkIp?: string;
-  /** the desired IP address of the requestor node within the newly-created network */
-  networkOwnerIp?: string;
-  /** optional netmask (only if not provided within the `ip` argument) */
-  networkMask?: string;
-  /** optional gateway address for the network */
-  networkGateway?: string;
-  /** optional custom logger module */
-  logger?: Logger;
-}
 
 export interface NetworkInfo {
   id: string;
   ip: string;
   mask: string;
+  gateway?: string;
   nodes: { [ip: string]: string };
 }
 
-/**
- * Network module - an object represents VPN created between the requestor and the provider nodes within Golem Network.
- * @hidden
- */
+export enum NetworkState {
+  Active = "Active",
+  Removed = "Removed",
+}
+
 export class Network {
   private readonly ip: IPv4;
   private readonly ipRange: IPv4CidrRange;
   private ipIterator: Iterator<AbstractIPNum>;
   private mask: IPv4Mask;
-  private ownerId: string;
-  private ownerIp: IPv4;
   private gateway?: IPv4;
   private nodes = new Map<string, NetworkNode>();
-  private logger: Logger;
+  private state: NetworkState = NetworkState.Active;
 
-  /**
-   * Create a new VPN.
-   *
-   * @param yagnaApi - {@link YagnaApi}
-   * @param options - {@link NetworkOptions}
-   */
-  static async create(yagnaApi: YagnaApi, options: NetworkOptions): Promise<Network> {
-    const config = new NetworkConfig(options);
-    try {
-      const {
-        data: { id, ip, mask },
-      } = await yagnaApi.net.createNetwork({
-        id: config.ownerId,
-        ip: config.ip,
-        mask: config.mask,
-        gateway: config.gateway,
-      });
-      const network = new Network(id!, yagnaApi, config);
-      await network.addNode(network.ownerId, network.ownerIp.toString()).catch(async (e) => {
-        await yagnaApi.net.removeNetwork(id as string);
-        throw e;
-      });
-      config.logger.info(`Network created`, { id, ip, mask });
-      return network;
-    } catch (error) {
-      if (error instanceof GolemNetworkError) {
-        throw error;
-      }
-      throw new GolemNetworkError(
-        `Unable to create network. ${error?.response?.data?.message || error}`,
-        NetworkErrorCode.NetworkCreationFailed,
-        undefined,
-        error,
-      );
-    }
-  }
-
-  /**
-   * @param id
-   * @param yagnaApi
-   * @param config
-   * @private
-   * @hidden
-   */
-  private constructor(
+  constructor(
     public readonly id: string,
-    private readonly yagnaApi: YagnaApi,
-    public readonly config: NetworkConfig,
+    ip: string,
+    mask?: string,
+    gateway?: string,
   ) {
-    this.ipRange = IPv4CidrRange.fromCidr(config.mask ? `${config.ip}/${config.mask}` : config.ip);
+    this.ipRange = IPv4CidrRange.fromCidr(
+      mask ? `${ip.split("/")[0]}/${IPv4Mask.fromDecimalDottedString(mask).prefix}` : ip,
+    );
     this.ipIterator = this.ipRange[Symbol.iterator]();
-    this.ip = this.nextAddress();
+    this.ip = this.getFirstAvailableIpAddress();
     this.mask = this.ipRange.getPrefix().toMask();
-    this.ownerId = config.ownerId;
-    this.ownerIp = config.ownerIp ? new IPv4(config.ownerIp) : this.nextAddress();
-    this.gateway = config.gateway ? new IPv4(config.gateway) : undefined;
-    this.logger = config.logger;
+    this.gateway = gateway ? new IPv4(gateway) : undefined;
   }
 
   /**
-   * Get Network Information
-   * @return NetworkInfo
+   * Returns information about the network.
    */
-  getNetworkInfo(): NetworkInfo {
+  public getNetworkInfo(): NetworkInfo {
     return {
       id: this.id,
       ip: this.ip.toString(),
       mask: this.mask.toString(),
-      nodes: Object.fromEntries(Array.from(this.nodes).map(([id, node]) => [node.ip.toString(), id])),
+      gateway: this.gateway?.toString?.(),
+      nodes: Object.fromEntries(Array.from(this.nodes).map(([id, node]) => [node.ip, id])),
     };
   }
 
   /**
-   * Add a new node to the network.
-   *
-   * @param nodeId Node ID within the Golem network of this VPN node
-   * @param ip  IP address to assign to this node
+   * Adds a node to the network.
+   * @param node - The network node to be added.
    */
-  async addNode(nodeId: string, ip?: string): Promise<NetworkNode> {
-    try {
-      this.ensureIdUnique(nodeId);
-      let ipv4: IPv4;
-      if (ip) {
-        ipv4 = IPv4.fromString(ip);
-        this.ensureIpInNetwork(ipv4);
-        this.ensureIpUnique(ipv4);
-      } else {
-        while (true) {
-          ipv4 = this.nextAddress();
-          if (this.isIpUnique(ipv4)) break;
-        }
-      }
-      const node = new NetworkNode(nodeId, ipv4, this.getNetworkInfo.bind(this), this.getUrl());
-      this.nodes.set(nodeId, node);
-      await this.yagnaApi.net.addNode(this.id, { id: nodeId, ip: ipv4.toString() });
-      this.logger.debug(`Node has added to the network.`, { id: nodeId, ip: ipv4.toString() });
-      return node;
-    } catch (error) {
-      if (error instanceof GolemNetworkError) {
-        throw error;
-      }
+  public addNode(node: NetworkNode) {
+    if (this.isRemoved()) {
       throw new GolemNetworkError(
-        `Unable to add node to network. ${error?.data?.message || error.toString()}`,
-        NetworkErrorCode.NodeAddingFailed,
+        `Unable to add node ${node.id} to removed network`,
+        NetworkErrorCode.NetworkRemoved,
         this.getNetworkInfo(),
-        error,
       );
     }
+    if (this.hasNode(node)) {
+      throw new GolemNetworkError(
+        `Node ${node.id} has already been added to this network`,
+        NetworkErrorCode.AddressAlreadyAssigned,
+      );
+    }
+    this.nodes.set(node.id, node);
   }
 
   /**
-   * Remove the node from the network
-   * @param nodeId
+   * Checks whether the node belongs to the network.
+   * @param node - The network node to check.
    */
-  async removeNode(nodeId: string): Promise<void> {
-    const node = this.nodes.get(nodeId);
-    if (!node) {
-      throw new GolemNetworkError(
-        `Unable to remove node ${nodeId}. There is no such node in the network`,
-        NetworkErrorCode.NodeRemovalFailed,
-        this.getNetworkInfo(),
-      );
-    }
-    try {
-      await this.yagnaApi.net.removeNode(this.id, nodeId);
-      this.nodes.delete(nodeId);
-      this.logger.debug(`Node has removed from the network.`, { id: nodeId, ip: node.ip.toString() });
-    } catch (error) {
-      throw new GolemNetworkError(
-        `Unable to remove node ${nodeId}. ${error}`,
-        NetworkErrorCode.NetworkRemovalFailed,
-        this.getNetworkInfo(),
-        error,
-      );
-    }
+  public hasNode(node: NetworkNode): boolean {
+    return this.nodes.has(node.id);
   }
 
   /**
-   * Checks whether the node belongs to the network
-   * @param nodeId
+   * Removes a node from the network.
+   * @param node - The network node to be removed.
    */
-  hasNode(nodeId: string): boolean {
-    return this.nodes.has(nodeId);
+  public removeNode(node: NetworkNode) {
+    if (this.isRemoved()) {
+      throw new GolemNetworkError(
+        `Unable to remove node ${node.id} from removed network`,
+        NetworkErrorCode.NetworkRemoved,
+        this.getNetworkInfo(),
+      );
+    }
+    if (!this.hasNode(node)) {
+      throw new GolemNetworkError(`There is no node ${node.id} in the network`, NetworkErrorCode.NodeRemovalFailed);
+    }
+    this.nodes.delete(node.id);
+  }
+
+  public markAsRemoved() {
+    if (this.state === NetworkState.Removed) {
+      throw new GolemNetworkError("Network already removed", NetworkErrorCode.NetworkRemoved, this.getNetworkInfo());
+    }
+    this.state = NetworkState.Removed;
   }
 
   /**
-   * Remove this network, terminating any connections it provides
+   * Returns the first available IP address in the network.
    */
-  async remove(): Promise<void> {
-    try {
-      await this.yagnaApi.net.removeNetwork(this.id);
-      this.logger.info(`Network has removed:`, { id: this.id, ip: this.ip.toString() });
-    } catch (error) {
-      throw new GolemNetworkError(
-        `Unable to remove network. ${error?.data?.message || error.toString()}`,
-        NetworkErrorCode.NetworkRemovalFailed,
-        this.getNetworkInfo(),
-        error,
-      );
-    }
-  }
-
-  private nextAddress(): IPv4 {
+  public getFirstAvailableIpAddress(): IPv4 {
     const ip = this.ipIterator.next().value;
     if (!ip)
       throw new GolemNetworkError(
@@ -219,42 +120,33 @@ export class Network {
     return ip;
   }
 
-  private ensureIpInNetwork(ip: IPv4): boolean {
-    if (!this.ipRange.contains(new IPv4CidrRange(ip, new IPv4Prefix(BigInt(this.mask.prefix)))))
-      throw new GolemNetworkError(
-        `The given IP ('${ip.toString()}') address must belong to the network ('${this.ipRange.toCidrString()}').`,
-        NetworkErrorCode.AddressOutOfRange,
-        this.getNetworkInfo(),
-      );
-    return true;
+  /**
+   * Checks if a given IP address is within the network range.
+   * @param ip - The IPv4 address to check.
+   */
+  public isIpInNetwork(ip: IPv4): boolean {
+    return this.ipRange.contains(new IPv4CidrRange(ip, new IPv4Prefix(BigInt(this.mask.prefix))));
   }
 
-  private ensureIpUnique(ip: IPv4) {
-    if (!this.isIpUnique(ip))
-      throw new GolemNetworkError(
-        `IP '${ip.toString()}' has already been assigned in this network.`,
-        NetworkErrorCode.AddressAlreadyAssigned,
-        this.getNetworkInfo(),
-      );
+  /**
+   * Checks if a given node ID is unique within the network.
+   * @param id - The node ID to check.
+   */
+  public isNodeIdUnique(id: string): boolean {
+    return !this.nodes.has(id);
   }
 
-  private ensureIdUnique(id: string) {
-    if (this.nodes.has(id))
-      throw new GolemNetworkError(
-        `Network ID '${id}' has already been assigned in this network.`,
-        NetworkErrorCode.AddressAlreadyAssigned,
-        this.getNetworkInfo(),
-      );
-  }
-
-  private isIpUnique(ip: IPv4): boolean {
+  /**
+   * Checks if a given IP address is unique within the network.
+   */
+  public isNodeIpUnique(ip: IPv4): boolean {
     for (const node of this.nodes.values()) {
-      if (node.ip.isEquals(ip)) return false;
+      if (new IPv4(node.ip).isEquals(ip)) return false;
     }
     return true;
   }
 
-  private getUrl() {
-    return this.yagnaApi.net["basePath"];
+  public isRemoved() {
+    return this.state === NetworkState.Removed;
   }
 }
