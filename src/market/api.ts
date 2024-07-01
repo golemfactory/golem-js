@@ -1,50 +1,39 @@
 import { Observable } from "rxjs";
 import { Demand, DemandBodyPrototype, DemandSpecification } from "./demand";
-import {
-  MarketProposalEvent,
-  OfferCounterProposal,
-  OfferCounterProposalRejectedEvent,
-  OfferPropertyQueryReceivedEvent,
-  OfferProposal,
-  OfferProposalReceivedEvent,
-} from "./proposal";
-import {
-  Agreement,
-  AgreementApproved,
-  AgreementCancelledEvent,
-  AgreementEvent,
-  AgreementRejectedEvent,
-  AgreementState,
-  AgreementTerminatedEvent,
-} from "./agreement";
+import { MarketProposalEvent, OfferCounterProposal, OfferProposal } from "./proposal";
+import { Agreement, AgreementEvent, AgreementState } from "./agreement";
 import { AgreementOptions } from "./agreement/agreement";
 
 export type MarketEvents = {
-  demandSubscriptionStarted: (demand: Demand) => void;
-  demandSubscriptionRefreshed: (demand: Demand) => void;
-  demandSubscriptionStopped: (demand: Demand) => void;
+  demandSubscriptionStarted: (event: { demand: Demand }) => void;
+  demandSubscriptionRefreshed: (event: { demand: Demand }) => void;
+  demandSubscriptionStopped: (event: { demand: Demand }) => void;
 
   /** Emitted when offer proposal from the Provider is received */
-  offerProposalReceived: (event: OfferProposalReceivedEvent) => void;
+  offerProposalReceived: (event: { offerProposal: OfferProposal }) => void;
 
-  offerCounterProposalSent: (offerProposal: OfferProposal, counterProposal: OfferCounterProposal) => void;
-  errorSendingCounterProposal: (offerProposal: OfferProposal, error: Error) => void;
+  offerCounterProposalSent: (event: { offerProposal: OfferProposal; counterProposal: OfferCounterProposal }) => void;
+  errorSendingCounterProposal: (event: { offerProposal: OfferProposal; error: Error }) => void;
 
   /** Emitted when the Provider rejects the counter-proposal that the Requestor sent */
-  offerCounterProposalRejected: (event: OfferCounterProposalRejectedEvent) => void;
+  offerCounterProposalRejected: (event: { counterProposal: OfferCounterProposal; reason: string }) => void;
 
   /** Not implemented */
-  offerPropertyQueryReceived: (event: OfferPropertyQueryReceivedEvent) => void;
+  offerPropertyQueryReceived: () => void;
 
-  offerProposalRejectedByProposalFilter: (offerProposal: OfferProposal, reason?: string) => void;
+  offerProposalRejectedByProposalFilter: (event: { offerProposal: OfferProposal; reason?: string }) => void;
 
   /** Emitted when proposal price does not meet user criteria */
-  offerProposalRejectedByPriceFilter: (offerProposal: OfferProposal, reason?: string) => void;
+  offerProposalRejectedByPriceFilter: (event: { offerProposal: OfferProposal; reason?: string }) => void;
 
-  agreementApproved: (event: AgreementApproved) => void;
-  agreementRejected: (event: AgreementRejectedEvent) => void;
-  agreementTerminated: (event: AgreementTerminatedEvent) => void;
-  agreementCancelled: (event: AgreementCancelledEvent) => void;
+  agreementApproved: (event: { agreement: Agreement }) => void;
+  agreementRejected: (event: { agreement: Agreement; reason: string }) => void;
+  agreementTerminated: (event: {
+    agreement: Agreement;
+    reason: string;
+    terminatedBy: "Provider" | "Requestor";
+  }) => void;
+  agreementCancelled: (event: { agreement: Agreement }) => void;
 };
 
 export interface IMarketApi {

@@ -59,7 +59,7 @@ describe("ResourceRentalPool", () => {
 
   it("should run a simple script on the activity from the pool", async () => {
     const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 1 });
-    pool.events.on("error", (error) => {
+    pool.events.on("errorCreatingRental", ({ error }) => {
       throw error;
     });
     const resourceRental = await pool.acquire();
@@ -74,7 +74,7 @@ describe("ResourceRentalPool", () => {
 
   it("should prepare two activity ready to use", async () => {
     const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 2 });
-    pool.events.on("error", (error) => {
+    pool.events.on("errorCreatingRental", ({ error }) => {
       throw error;
     });
     await pool.ready();
@@ -103,7 +103,7 @@ describe("ResourceRentalPool", () => {
 
   it("should release the activity and reuse it again", async () => {
     const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 1 });
-    pool.events.on("error", (error) => {
+    pool.events.on("errorCreatingRental", ({ error }) => {
       throw error;
     });
     const rental = await pool.acquire();
@@ -122,11 +122,11 @@ describe("ResourceRentalPool", () => {
 
   it("should terminate all agreements after drain and clear the poll", async () => {
     const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 2 });
-    pool.events.on("error", (error) => {
+    pool.events.on("errorDestroyingRental", ({ error }) => {
       throw error;
     });
     const agreementTerminatedIds: string[] = [];
-    pool.events.on("destroyed", (agreement) => agreementTerminatedIds.push(agreement.id));
+    pool.events.on("destroyed", ({ agreement }) => agreementTerminatedIds.push(agreement.id));
 
     const rental1 = await pool.acquire();
     const rental2 = await pool.acquire();
@@ -148,7 +148,7 @@ describe("ResourceRentalPool", () => {
   it("should establish a connection between two activities from pool via vpn", async () => {
     const network = await glm.network.createNetwork();
     const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 2, network });
-    pool.events.on("error", (error) => {
+    pool.events.on("errorCreatingRental", ({ error }) => {
       throw error;
     });
     const resourceRental1 = await pool.acquire();

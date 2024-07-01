@@ -3,17 +3,17 @@ import { NetworkNode } from "./node";
 import { NetworkOptions } from "./network.module";
 
 export interface NetworkEvents {
-  networkCreated: (network: Network) => void;
-  errorCreatingNetwork: (error: Error) => void;
+  networkCreated: (event: { network: Network }) => void;
+  errorCreatingNetwork: (event: { error: Error }) => void;
 
-  networkRemoved: (network: Network) => void;
-  errorRemovingNetwork: (network: Network, error: Error) => void;
+  networkRemoved: (event: { network: Network }) => void;
+  errorRemovingNetwork: (event: { network: Network; error: Error }) => void;
 
-  nodeCreated: (network: Network, node: NetworkNode) => void;
-  errorCreatingNode: (network: Network, error: Error) => void;
+  nodeCreated: (event: { network: Network; node: NetworkNode }) => void;
+  errorCreatingNode: (event: { network: Network; error: Error }) => void;
 
-  nodeRemoved: (network: Network, node: NetworkNode) => void;
-  errorRemovingNode: (network: Network, node: NetworkNode, error: Error) => void;
+  nodeRemoved: (event: { network: Network; node: NetworkNode }) => void;
+  errorRemovingNode: (event: { network: Network; node: NetworkNode; error: Error }) => void;
 }
 
 export interface INetworkApi {

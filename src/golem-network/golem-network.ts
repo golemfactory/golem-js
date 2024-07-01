@@ -151,7 +151,7 @@ export interface GolemNetworkEvents {
   connected: () => void;
 
   /** Fires when an error will be encountered */
-  error: (err: Error) => void;
+  error: (error: Error) => void;
 
   /** Fires when all shutdown operations related to GN are completed */
   disconnected: () => void;
