@@ -403,24 +403,22 @@ export class MarketApiAdapter implements IMarketApi {
   public scan(spec: ScanSpecification): Observable<ScannedOffer> {
     const ac = new AbortController();
     return new Observable((observer) => {
-      this.yagnaApi.market.httpRequest
-        .request<string>({
-          body: {
-            ...this.buildDemandRequestBody(spec),
-            type: "offer",
-          },
-          method: "POST",
-          url: "/scan",
+      this.yagnaApi.market
+        .beginScan({
+          type: "offer",
+          ...this.buildDemandRequestBody(spec),
         })
         .then((iterator) => {
-          const cleanupIterator = () =>
-            this.yagnaApi.market.httpRequest.request({
-              method: "DELETE",
-              url: `/scan/${iterator}`,
-            });
+          if (typeof iterator !== "string") {
+            throw new Error(`Something went wrong while starting the scan, ${iterator.message}`);
+          }
+          return iterator;
+        })
+        .then(async (iterator) => {
+          const cleanupIterator = () => this.yagnaApi.market.endScan(iterator);
 
           if (ac.signal.aborted) {
-            void cleanupIterator();
+            await cleanupIterator();
             return;
           }
 
@@ -444,9 +442,9 @@ export class MarketApiAdapter implements IMarketApi {
           });
           eventSource.addEventListener("error", (error) => observer.error(error));
 
-          ac.signal.onabort = () => {
+          ac.signal.onabort = async () => {
             eventSource.close();
-            void cleanupIterator();
+            await cleanupIterator();
           };
         })
         .catch((error) => {

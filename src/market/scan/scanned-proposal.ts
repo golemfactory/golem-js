@@ -1,21 +1,14 @@
 import { PricingInfo, ProposalProperties } from "../proposal";
 import { GolemInternalError } from "../../shared/error/golem-error";
+import type { MarketApi } from "ya-ts-client";
 
-// Raw response from yagna
-// TODO: add to ya-client
-type ScannedOfferDTO = {
-  properties: ProposalProperties;
-  constraints: string;
-  offerId: string;
-  providerId: string;
-  timestamp: string;
-};
+type ScannedOfferDTO = MarketApi.OfferDTO;
 
 export class ScannedOffer {
   constructor(private readonly model: ScannedOfferDTO) {}
 
   get properties(): ProposalProperties {
-    return this.model.properties;
+    return this.model.properties as ProposalProperties;
   }
 
   get constraints(): string {
