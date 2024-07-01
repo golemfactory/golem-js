@@ -13,7 +13,8 @@
   - [Custom filters](#custom-filters)
   - [Custom ranking of proposals](#custom-ranking-of-proposals)
   - [Uploading local images to the provider](#uploading-local-images-to-the-provider)
-    - [Setup and teardown methods](#setup-and-teardown-methods)
+  - [Setup and teardown methods](#setup-and-teardown-methods)
+  - [Market scan](#market-scan)
   - [Read more](#read-more)
   <!-- TOC -->
 
@@ -151,7 +152,7 @@ const order: MarketOrderSpec = {
 
 [Check the full example](../examples/advanced//local-image/)
 
-### Setup and teardown methods
+## Setup and teardown methods
 
 You can define a setup method that will be executed the first time a provider is rented and a teardown method
 that will be executed before the rental is done. This is useful when you want to avoid doing the same work
@@ -174,26 +175,26 @@ const pool = await glm.manyOf({
 
 [Check the full example](../examples/advanced/setup-and-teardown.ts)
 
-<!--
-TODO:
- ### Market scan
+## Market scan
 
 You can scan the market for available providers and their offers. This is useful when you want to see what's available
 before placing an order.
 
 ```ts
-await glm.market.scan(order).subscribe({
-  next: (proposal) => {
-    console.log("Received proposal from provider", proposal.provider.name);
-  },
-  complete: () => {
-    console.log("Market scan completed");
-  },
-});
+await glm.market
+  .scan(order)
+  .pipe(takeUntil(timer(10_000)))
+  .subscribe({
+    next: (scannedOffer) => {
+      console.log("Found offer from", scannedOffer.provider.name);
+    },
+    complete: () => {
+      console.log("Market scan completed");
+    },
+  });
 ```
 
-[Check the full example](../examples/basic/market-scan.ts)
--->
+[Check the full example](../examples/advanced/scan.ts)
 
 ## Read more
 

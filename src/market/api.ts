@@ -3,6 +3,7 @@ import { Demand, DemandBodyPrototype, DemandSpecification } from "./demand";
 import { MarketProposalEvent, OfferCounterProposal, OfferProposal } from "./proposal";
 import { Agreement, AgreementEvent, AgreementState } from "./agreement";
 import { AgreementOptions } from "./agreement/agreement";
+import { ScanSpecification, ScannedOffer } from "./scan";
 
 export type MarketEvents = {
   demandSubscriptionStarted: (event: { demand: Demand }) => void;
@@ -132,4 +133,9 @@ export interface IMarketApi {
    * Retrieves the state of an agreement based on the provided agreement ID.
    */
   getAgreementState(id: string): Promise<AgreementState>;
+
+  /**
+   * Scan the market for offers that match the given specification.
+   */
+  scan(scanSpecification: ScanSpecification): Observable<ScannedOffer>;
 }

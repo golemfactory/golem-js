@@ -17,6 +17,7 @@
     "advanced-payment-filters": "tsx advanced/payment-filters.ts",
     "advanced-proposal-filters": "tsx advanced/proposal-filter.ts",
     "advanced-proposal-predefined-filter": "tsx advanced/proposal-predefined-filter.ts",
+    "advanced-scan": "tsx advanced/scan.ts",
     "advanced-setup-and-teardown": "tsx advanced/setup-and-teardown.ts",
     "local-image": "tsx advanced/local-image/serveLocalGvmi.ts",
     "deployment": "tsx experimental/deployment/new-api.ts",

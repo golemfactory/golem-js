@@ -19,6 +19,8 @@ import { getMessageFromApiError } from "../../utils/apiErrorMessage";
 import { withTimeout } from "../../utils/timeout";
 import { AgreementOptions, IAgreementRepository } from "../../../market/agreement/agreement";
 import { IProposalRepository, MarketProposal, OfferCounterProposal } from "../../../market/proposal";
+import EventSource from "eventsource";
+import { ScanSpecification, ScannedOffer } from "../../../market/scan";
 
 /**
  * A bit more user-friendly type definition of DemandOfferBaseDTO from ya-ts-client
@@ -194,15 +196,15 @@ export class MarketApiAdapter implements IMarketApi {
     }
   }
 
-  private buildDemandRequestBody(decorations: DemandBodyPrototype): DemandRequestBody {
+  private buildDemandRequestBody(decorations: Partial<DemandBodyPrototype>): DemandRequestBody {
     let constraints: string;
 
-    if (!decorations.constraints.length) constraints = "(&)";
+    if (!decorations.constraints?.length) constraints = "(&)";
     else if (decorations.constraints.length == 1) constraints = decorations.constraints[0];
     else constraints = `(&${decorations.constraints.join("\n\t")})`;
 
     const properties: Record<string, DemandPropertyValue> = {};
-    decorations.properties.forEach((prop) => (properties[prop.key] = prop.value));
+    decorations.properties?.forEach((prop) => (properties[prop.key] = prop.value));
 
     return { constraints, properties };
   }
@@ -396,5 +398,64 @@ export class MarketApiAdapter implements IMarketApi {
 
   private isOfferCounterProposal(proposal: MarketProposal): proposal is OfferCounterProposal {
     return proposal.issuer === "Requestor";
+  }
+
+  public scan(spec: ScanSpecification): Observable<ScannedOffer> {
+    const ac = new AbortController();
+    return new Observable((observer) => {
+      this.yagnaApi.market
+        .beginScan({
+          type: "offer",
+          ...this.buildDemandRequestBody(spec),
+        })
+        .then((iterator) => {
+          if (typeof iterator !== "string") {
+            throw new Error(`Something went wrong while starting the scan, ${iterator.message}`);
+          }
+          return iterator;
+        })
+        .then(async (iterator) => {
+          const cleanupIterator = () => this.yagnaApi.market.endScan(iterator);
+
+          if (ac.signal.aborted) {
+            await cleanupIterator();
+            return;
+          }
+
+          const eventSource = new EventSource(
+            `${this.yagnaApi.market.httpRequest.config.BASE}/scan/${iterator}/events`,
+            {
+              headers: {
+                Accept: "text/event-stream",
+                Authorization: `Bearer ${this.yagnaApi.yagnaOptions.apiKey}`,
+              },
+            },
+          );
+
+          eventSource.addEventListener("offer", (event) => {
+            try {
+              const parsed = JSON.parse(event.data);
+              observer.next(new ScannedOffer(parsed));
+            } catch (error) {
+              observer.error(error);
+            }
+          });
+          eventSource.addEventListener("error", (error) => observer.error(error));
+
+          ac.signal.onabort = async () => {
+            eventSource.close();
+            await cleanupIterator();
+          };
+        })
+        .catch((error) => {
+          const message = getMessageFromApiError(error);
+          observer.error(
+            new GolemMarketError(`Error while scanning for offers. ${message}`, MarketErrorCode.ScanFailed, error),
+          );
+        });
+      return () => {
+        ac.abort();
+      };
+    });
   }
 }

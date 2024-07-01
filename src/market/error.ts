@@ -15,6 +15,7 @@ export enum MarketErrorCode {
   AgreementApprovalFailed = "AgreementApprovalFailed",
   NoProposalAvailable = "NoProposalAvailable",
   InternalError = "InternalError",
+  ScanFailed = "ScanFailed",
 }
 
 export class GolemMarketError extends GolemModuleError {
