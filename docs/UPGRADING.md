@@ -155,7 +155,7 @@ import { GolemNetwork } from "@golem-sdk/golem-js";
           rental
             // 🌟🌟🌟 You issue the comands as in case of a single-provider scenario
             .getExeUnit()
-            .run(`echo 'Hello ${input}`)
+            .then((exe) => exe.run(`echo 'Hello ${input}`))
             .then((res) => res.stdout),
         ),
       ),
