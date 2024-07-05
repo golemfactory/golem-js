@@ -24,7 +24,9 @@ const buildTestProposal = (props: Partial<ProposalProperties>): OfferProposal =>
   return new OfferProposal(model, testDemand);
 };
 
-describe("Proposal", () => {
+const SECONDS_IN_HOUR = 60 * 60;
+
+describe("Offer Proposal", () => {
   beforeEach(() => {
     reset(allocationMock);
     reset(demandMock);
@@ -144,19 +146,44 @@ describe("Proposal", () => {
 
   describe("Estimating cost", () => {
     test("it estimate cost based on CPU, Env and startup costs", () => {
+      const START_PRICE = 0.03;
+
       const proposal = buildTestProposal({
         "golem.inf.cpu.threads": 5,
         "golem.com.usage.vector": ["golem.usage.duration_sec", "golem.usage.cpu_sec"],
-        "golem.com.pricing.model.linear.coeffs": [0.01, 0.02, 0.03],
+        "golem.com.pricing.model.linear.coeffs": [0.01, 0.02, START_PRICE],
       });
-      expect(proposal.getEstimatedCost()).toEqual(0.14);
+
+      const estimate = START_PRICE + 5 * SECONDS_IN_HOUR * 0.02 + SECONDS_IN_HOUR * 0.01;
+      expect(proposal.getEstimatedCost()).toEqual(estimate);
     });
+
     test("it estimate cost based on CPU, Env and startup costs if info about the number of threads is missing", () => {
+      const START_PRICE = 0.3;
       const proposal = buildTestProposal({
         "golem.com.usage.vector": ["golem.usage.duration_sec", "golem.usage.cpu_sec"],
-        "golem.com.pricing.model.linear.coeffs": [0.1, 0.2, 0.3],
+        "golem.com.pricing.model.linear.coeffs": [0.1, 0.2, START_PRICE],
       });
-      expect(proposal.getEstimatedCost()).toEqual(0.6);
+
+      const estimate = START_PRICE + 1 * SECONDS_IN_HOUR * 0.2 + SECONDS_IN_HOUR * 0.1;
+      expect(proposal.getEstimatedCost()).toEqual(estimate);
+    });
+
+    test("it accepts user-provided rental time for estimation", () => {
+      const START_PRICE = 0.0;
+      const THREADS_COUNT = 2;
+
+      const proposal = buildTestProposal({
+        "golem.inf.cpu.threads": THREADS_COUNT,
+        "golem.com.usage.vector": ["golem.usage.duration_sec", "golem.usage.cpu_sec"],
+        "golem.com.pricing.model.linear.coeffs": [0.01, 0.02, START_PRICE],
+      });
+
+      const rentHours = 2;
+      const estimate =
+        START_PRICE + rentHours * SECONDS_IN_HOUR * 0.02 * THREADS_COUNT + rentHours * SECONDS_IN_HOUR * 0.01;
+
+      expect(proposal.getEstimatedCost(rentHours)).toEqual(estimate);
     });
   });
 });
