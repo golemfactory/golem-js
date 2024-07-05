@@ -1,13 +1,13 @@
 import { Activity } from "./activity";
 import { _, anything, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
 import { Capture, Deploy, DownloadFile, Run, Script, Start, Terminate, UploadFile } from "./script";
-import { buildExeScriptSuccessResult } from "../../tests/unit/helpers";
-import { GolemWorkError, WorkErrorCode } from "./work";
+import { buildExeScriptSuccessResult } from "../../tests/utils/helpers";
+import { GolemWorkError, WorkErrorCode } from "./exe-unit";
 import { Logger, sleep } from "../shared/utils";
-import { GolemError, GolemTimeoutError } from "../shared/error/golem-error";
+import { GolemAbortError } from "../shared/error/golem-error";
 import { ExeScriptExecutor } from "./exe-script-executor";
 import { StorageProvider } from "../shared/storage";
-import { from, of, throwError } from "rxjs";
+import { from, lastValueFrom, of, throwError, toArray } from "rxjs";
 import { Result, StreamingBatchEvent } from "./results";
 import resetAllMocks = jest.resetAllMocks;
 import { ActivityModule } from "./activity.module";
@@ -24,7 +24,7 @@ describe("ExeScriptExecutor", () => {
     reset(mockStorageProvider);
     reset(mockActivityModule);
     resetAllMocks();
-    when(mockActivity.getProviderInfo()).thenReturn({
+    when(mockActivity.provider).thenReturn({
       id: "test-provider-id",
       name: "test-provider-name",
       walletAddress: "0xProviderWallet",
@@ -50,8 +50,9 @@ describe("ExeScriptExecutor", () => {
         }),
       ]);
 
-      const streamResult = await executor.execute(new Deploy().toExeScriptRequest());
-      const { value: result } = await streamResult[Symbol.asyncIterator]().next();
+      const executionMetadata = await executor.execute(new Deploy().toExeScriptRequest());
+      const result$ = executor.getResultsObservable(executionMetadata);
+      const result = await lastValueFrom(result$);
       expect(result.result).toEqual("Ok");
     });
 
@@ -78,15 +79,15 @@ describe("ExeScriptExecutor", () => {
 
       const expectedRunStdOuts = ["test", "test", "stdout_test_command_run_1", "stdout_test_command_run_2", "test"];
       await script.before();
-      const results = await executor.execute(script.getExeScriptRequest());
-
-      for await (const result of results) {
+      const executionMetadata = await executor.execute(script.getExeScriptRequest());
+      const result$ = executor.getResultsObservable(executionMetadata);
+      const results = await lastValueFrom(result$.pipe(toArray()));
+      for (const result of results) {
         expect(result.result).toEqual("Ok");
         expect(result.stdout).toEqual(expectedRunStdOuts.shift());
       }
 
       await script.after([]);
-      await executor.stop();
     });
 
     it("should execute script and get results by events", async () => {
@@ -103,7 +104,7 @@ describe("ExeScriptExecutor", () => {
       const command6 = new Terminate();
       const script = Script.create([command1, command2, command3, command4, command5, command6]);
 
-      when(mockActivityModule.getBatchResults(anything(), anything(), anything(), anything())).thenResolve([
+      when(mockActivityModule.getBatchResults(_, _, _, _)).thenResolve([
         buildExeScriptSuccessResult("test"),
         buildExeScriptSuccessResult("test"),
         buildExeScriptSuccessResult("stdout_test_command_run_1"),
@@ -121,19 +122,28 @@ describe("ExeScriptExecutor", () => {
         "test",
       ];
       await script.before();
-      const results = await executor.execute(script.getExeScriptRequest());
+      const executionMetadata = await executor.execute(script.getExeScriptRequest());
+      const result$ = executor.getResultsObservable(executionMetadata);
       let resultCount = 0;
-      return new Promise<void>((res) => {
-        results.on("data", (result) => {
-          expect(result.result).toEqual("Ok");
-          expect(result.stdout).toEqual(expectedRunStdOuts.shift());
-          ++resultCount;
-        });
-        results.on("end", async () => {
-          await script.after([]);
-          await executor.stop();
-          expect(resultCount).toEqual(6);
-          return res();
+      // each result 2 assertions and 1 in "complete"
+      expect.assertions(12 + 1);
+      return new Promise<void>((res, rej) => {
+        result$.subscribe({
+          next: (result) => {
+            expect(result.result).toEqual("Ok");
+            expect(result.stdout).toEqual(expectedRunStdOuts.shift());
+            ++resultCount;
+          },
+          complete: async () => {
+            try {
+              await script.after([]);
+              expect(resultCount).toEqual(6);
+              return res();
+            } catch (err) {
+              rej(err);
+            }
+          },
+          error: (error) => rej(error),
         });
       });
     });
@@ -221,24 +231,27 @@ describe("ExeScriptExecutor", () => {
       ];
       when(mockActivityModule.observeStreamingBatchEvents(_, _)).thenReturn(from<StreamingBatchEvent[]>(mockedEvents));
       await script.before();
-      const results = await executor.execute(script.getExeScriptRequest(), true);
+      const executionMetadata = await executor.execute(script.getExeScriptRequest());
+      const result$ = executor.getResultsObservable(executionMetadata, true);
       let expectedStdout;
-      for await (const result of results) {
+      const results = await lastValueFrom(result$.pipe(toArray()));
+      for (const result of results) {
         expect(result).toHaveProperty("index");
         if (result.index === 2 && result.stdout) expectedStdout = result.stdout;
       }
       expect(expectedStdout).toEqual("test");
       await script.after([]);
-      await executor.stop();
     });
   });
 
   describe("Cancelling", () => {
     it("should cancel executor", async () => {
+      const ac = new AbortController();
       const executor = new ExeScriptExecutor(
         instance(mockActivity),
         instance(mockActivityModule),
         instance(mockLogger),
+        { signalOrTimeout: ac.signal },
       );
       const command1 = new Deploy();
       const command2 = new Start();
@@ -248,23 +261,36 @@ describe("ExeScriptExecutor", () => {
       const command6 = new Terminate();
       const script = Script.create([command1, command2, command3, command4, command5, command6]);
       await script.before();
-      const results = await executor.execute(script.getExeScriptRequest(), undefined, undefined);
-      await executor.stop();
-      return new Promise<void>((res) => {
-        results.on("error", (error) => {
-          expect(error.toString()).toMatch(/Error: Activity .* has been interrupted/);
-          return res();
+      const executionMetadata = await executor.execute(script.getExeScriptRequest());
+      const result$ = executor.getResultsObservable(executionMetadata, undefined, undefined);
+      ac.abort();
+
+      expect.assertions(1);
+      return new Promise<void>((res, rej) => {
+        result$.subscribe({
+          complete: () => rej("Shouldn't have completed"),
+          error: (error) => {
+            try {
+              expect(error).toEqual(new GolemAbortError(`Execution of script has been aborted`));
+              return res();
+            } catch (err) {
+              rej(err);
+            }
+          },
         });
-        results.on("data", () => null);
       });
     });
 
     it("should cancel executor while streaming batch", async () => {
-      when(mockActivityModule.observeStreamingBatchEvents(_, _)).thenReturn(of<StreamingBatchEvent>());
+      when(mockActivityModule.observeStreamingBatchEvents(_, _)).thenReturn(of());
+      const ac = new AbortController();
       const executor = new ExeScriptExecutor(
         instance(mockActivity),
         instance(mockActivityModule),
         instance(mockLogger),
+        {
+          signalOrTimeout: ac.signal,
+        },
       );
       const command1 = new Deploy();
       const command2 = new Start();
@@ -276,14 +302,23 @@ describe("ExeScriptExecutor", () => {
       const command4 = new Terminate();
       const script = Script.create([command1, command2, command3, command4]);
       await script.before();
-      const results = await executor.execute(script.getExeScriptRequest(), true, undefined);
-      await executor.stop();
-      return new Promise<void>((res) => {
-        results.on("error", (error) => {
-          expect(error.toString()).toMatch(/Error: Activity .* has been interrupted/);
-          return res();
+      const executionMetadata = await executor.execute(script.getExeScriptRequest());
+      const result$ = executor.getResultsObservable(executionMetadata, true, undefined);
+      ac.abort();
+
+      expect.assertions(1);
+      return new Promise<void>((res, rej) => {
+        result$.subscribe({
+          complete: () => rej("Shouldn't have completed"),
+          error: (error) => {
+            try {
+              expect(error).toEqual(new GolemAbortError(`Execution of script has been aborted`));
+              return res();
+            } catch (err) {
+              rej(err);
+            }
+          },
         });
-        results.on("data", () => null);
       });
     });
   });
@@ -303,20 +338,28 @@ describe("ExeScriptExecutor", () => {
       const error = new Error("Some undefined error");
       when(mockActivityModule.getBatchResults(anything(), anything(), anything(), anything())).thenReject(error);
 
-      const results = await executor.execute(script.getExeScriptRequest(), false, 200, 0);
+      const executionMetadata = await executor.execute(script.getExeScriptRequest());
+      const result$ = executor.getResultsObservable(executionMetadata, false, 200, 0);
 
-      return new Promise<void>((res) => {
-        results.on("error", (error: GolemWorkError) => {
-          expect(error).toBeInstanceOf(GolemWorkError);
-          expect(error.code).toEqual(WorkErrorCode.ActivityResultsFetchingFailed);
-          expect(error.getActivity()).toBeDefined();
-          expect(error.getAgreement()).toBeDefined();
-          expect(error.getProvider()?.name).toEqual("test-provider-name");
-          expect(error.previous?.toString()).toEqual("Error: Some undefined error");
-          expect(error.toString()).toEqual("Error: Unable to get activity results. Error: Some undefined error");
-          return res();
+      expect.assertions(7);
+      return new Promise<void>((res, rej) => {
+        result$.subscribe({
+          complete: () => rej("Shouldn't have completed"),
+          error: (error) => {
+            try {
+              expect(error).toBeInstanceOf(GolemWorkError);
+              expect(error.code).toEqual(WorkErrorCode.ActivityResultsFetchingFailed);
+              expect(error.getActivity()).toBeDefined();
+              expect(error.getAgreement()).toBeDefined();
+              expect(error.getProvider()?.name).toEqual("test-provider-name");
+              expect(error.previous?.toString()).toEqual("Error: Some undefined error");
+              expect(error.toString()).toEqual("Error: Unable to get activity results. Error: Some undefined error");
+              return res();
+            } catch (err) {
+              rej(err);
+            }
+          },
         });
-        results.on("data", () => null);
       });
     });
 
@@ -341,19 +384,27 @@ describe("ExeScriptExecutor", () => {
       };
       when(mockActivityModule.getBatchResults(anything(), anything(), anything(), anything())).thenReject(error);
 
-      const results = await executor.execute(script.getExeScriptRequest(), false, 1_000, 3);
+      const executionMetadata = await executor.execute(script.getExeScriptRequest());
+      const result$ = executor.getResultsObservable(executionMetadata, false, 1_000, 3);
 
-      return new Promise<void>((res) => {
-        results.on("error", (error: GolemWorkError) => {
-          expect(error).toBeInstanceOf(GolemWorkError);
-          expect(error.code).toEqual(WorkErrorCode.ActivityResultsFetchingFailed);
-          expect(error.getActivity()).toBeDefined();
-          expect(error.getAgreement()).toBeDefined();
-          expect(error.getProvider()?.name).toEqual("test-provider-name");
-          expect(error.previous?.toString()).toEqual("Error: non-retryable error");
-          return res();
+      expect.assertions(6);
+      return new Promise<void>((res, rej) => {
+        result$.subscribe({
+          complete: () => rej("Shouldn't have completed"),
+          error: (error) => {
+            try {
+              expect(error).toBeInstanceOf(GolemWorkError);
+              expect(error.code).toEqual(WorkErrorCode.ActivityResultsFetchingFailed);
+              expect(error.getActivity()).toBeDefined();
+              expect(error.getAgreement()).toBeDefined();
+              expect(error.getProvider()?.name).toEqual("test-provider-name");
+              expect(error.previous?.toString()).toEqual("Error: non-retryable error");
+              return res();
+            } catch (err) {
+              rej(err);
+            }
+          },
         });
-        results.on("data", () => null);
       });
     });
 
@@ -386,9 +437,10 @@ describe("ExeScriptExecutor", () => {
         .thenReject(error)
         .thenResolve([testResult]);
 
-      const results = await executor.execute(script.getExeScriptRequest(), false, 1_000, 10);
-
-      for await (const result of results) {
+      const executionMetadata = await executor.execute(script.getExeScriptRequest());
+      const result$ = executor.getResultsObservable(executionMetadata, false, undefined, 10);
+      const results = await lastValueFrom(result$.pipe(toArray()));
+      for (const result of results) {
         expect(result).toEqual(testResult);
       }
       verify(mockActivityModule.getBatchResults(anything(), anything(), anything(), anything())).times(3);
@@ -407,26 +459,34 @@ describe("ExeScriptExecutor", () => {
       const error = {
         message: "GSB error: endpoint address not found. Terminated.",
         status: 500,
-        toString: () => "Error: GSB error: endpoint address not found. Terminated.",
+        toString: () => "GSB error: endpoint address not found. Terminated.",
       };
 
       when(mockActivityModule.getBatchResults(anything(), anything(), anything(), anything())).thenReject(error);
-      const results = await executor.execute(script.getExeScriptRequest(), false, undefined, 1);
+      const executionMetadata = await executor.execute(script.getExeScriptRequest());
+      const result$ = executor.getResultsObservable(executionMetadata, false, undefined, 1);
 
-      return new Promise<void>((res) => {
-        results.on("error", (error: GolemWorkError) => {
-          expect(error).toBeInstanceOf(GolemWorkError);
-          expect(error.code).toEqual(WorkErrorCode.ActivityResultsFetchingFailed);
-          expect(error.getActivity()).toBeDefined();
-          expect(error.getAgreement()).toBeDefined();
-          expect(error.getProvider()?.name).toEqual("test-provider-name");
-          expect(error.previous?.message).toEqual("GSB error: endpoint address not found. Terminated.");
-          expect(error.toString()).toEqual(
-            "Error: Unable to get activity results. Error: GSB error: endpoint address not found. Terminated.",
-          );
-          return res();
+      expect.assertions(7);
+      return new Promise<void>((res, rej) => {
+        result$.subscribe({
+          complete: () => rej("Shouldn't have completed"),
+          error: (error) => {
+            try {
+              expect(error).toBeInstanceOf(GolemWorkError);
+              expect(error.code).toEqual(WorkErrorCode.ActivityResultsFetchingFailed);
+              expect(error.getActivity()).toBeDefined();
+              expect(error.getAgreement()).toBeDefined();
+              expect(error.getProvider()?.name).toEqual("test-provider-name");
+              expect(error.previous?.message).toEqual("GSB error: endpoint address not found. Terminated.");
+              expect(error.toString()).toEqual(
+                "Error: Unable to get activity results. GSB error: endpoint address not found. Terminated.",
+              );
+              return res();
+            } catch (err) {
+              rej(err);
+            }
+          },
         });
-        results.on("data", () => null);
       });
     });
 
@@ -442,27 +502,37 @@ describe("ExeScriptExecutor", () => {
       const command4 = new Run("test_command2");
       const command5 = new Run("test_command3");
       const script = Script.create([command1, command2, command3, command4, command5]);
-      const results = await executor.execute(script.getExeScriptRequest(), false, 1);
+      const executionMetadata = await executor.execute(script.getExeScriptRequest());
+      const result$ = executor.getResultsObservable(executionMetadata, false, 1);
+
+      // wait for execute timeout to fire
       await sleep(10, true);
-      return new Promise<void>((res) => {
-        results.on("error", (error: GolemWorkError) => {
-          expect(error).toBeInstanceOf(GolemTimeoutError);
-          expect(error.toString()).toMatch(/Error: Activity .* timeout/);
-          return res();
+
+      expect.assertions(2);
+      return new Promise<void>((res, rej) => {
+        result$.subscribe({
+          complete: () => rej("Shouldn't have completed"),
+          error: (error) => {
+            try {
+              expect(error).toBeInstanceOf(GolemAbortError);
+              expect(error.toString()).toEqual("Error: Execution of script has been aborted");
+              return res();
+            } catch (err) {
+              rej(err);
+            }
+          },
         });
-        // results.on("end", () => rej());
-        results.on("data", () => null);
       });
     });
 
-    it("should handle timeout error while streaming batch", async () => {
+    it("should handle abort error while streaming batch", async () => {
       when(mockActivityModule.observeStreamingBatchEvents(anything(), anything())).thenReturn(of());
       const executor = new ExeScriptExecutor(
         instance(mockActivity),
         instance(mockActivityModule),
         instance(mockLogger),
         {
-          activityExecuteTimeout: 1,
+          signalOrTimeout: 1,
         },
       );
       const command1 = new Deploy();
@@ -475,15 +545,26 @@ describe("ExeScriptExecutor", () => {
       const command4 = new Terminate();
       const script = Script.create([command1, command2, command3, command4]);
       await script.before();
-      const results = await executor.execute(script.getExeScriptRequest(), true, 800);
+      const executionMetadata = await executor.execute(script.getExeScriptRequest());
+      const result$ = executor.getResultsObservable(executionMetadata, true, 800);
+
+      // wait for ExeScriptExecutor abort signal to fire
+      await sleep(10, true);
+
+      expect.assertions(2);
       return new Promise<void>((res, rej) => {
-        results.on("error", (error: GolemError) => {
-          expect(error).toBeInstanceOf(GolemTimeoutError);
-          expect(error.toString()).toMatch(/Error: Activity .* timeout/);
-          return res();
+        result$.subscribe({
+          complete: () => rej("Shouldn't have completed"),
+          error: (error) => {
+            try {
+              expect(error).toBeInstanceOf(GolemAbortError);
+              expect(error.toString()).toEqual("Error: Execution of script has been aborted");
+              return res();
+            } catch (err) {
+              rej(err);
+            }
+          },
         });
-        results.on("end", () => rej());
-        results.on("data", () => null);
       });
     });
 
@@ -507,18 +588,28 @@ describe("ExeScriptExecutor", () => {
         throwError(() => mockedEventSourceErrorMessage),
       );
       await script.before();
-      const results = await executor.execute(script.getExeScriptRequest(), true);
-      return new Promise<void>((res) => {
-        results.on("error", (error: GolemWorkError) => {
-          expect(error).toBeInstanceOf(GolemWorkError);
-          expect(error.code).toEqual(WorkErrorCode.ActivityResultsFetchingFailed);
-          expect(error.getActivity()).toBeDefined();
-          expect(error.getAgreement()).toBeDefined();
-          expect(error.getProvider()?.name).toEqual("test-provider-name");
-          expect(error.toString()).toEqual('Error: Unable to get activity results. ["Some undefined error"]');
-          return res();
+      const executionMetadata = await executor.execute(script.getExeScriptRequest());
+      const result$ = executor.getResultsObservable(executionMetadata, true);
+
+      expect.assertions(7);
+      return new Promise<void>((res, rej) => {
+        result$.subscribe({
+          complete: () => rej("Shouldn't have completed"),
+          error: (error) => {
+            try {
+              expect(error).toBeInstanceOf(GolemWorkError);
+              expect(error.code).toEqual(WorkErrorCode.ActivityResultsFetchingFailed);
+              expect(error.getActivity()).toBeDefined();
+              expect(error.getAgreement()).toBeDefined();
+              expect(error.getProvider()?.name).toEqual("test-provider-name");
+              expect(error.previous?.toString()).toEqual("Some undefined error");
+              expect(error.toString()).toEqual("Error: Unable to get activity results. Some undefined error");
+              return res();
+            } catch (err) {
+              rej(err);
+            }
+          },
         });
-        results.on("data", () => null);
       });
     });
   });

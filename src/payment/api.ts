@@ -4,27 +4,27 @@ import { DebitNote } from "./debit_note";
 import { Allocation } from "./allocation";
 
 export type PaymentEvents = {
-  allocationCreated: (allocation: Allocation) => void;
-  errorCreatingAllocation: (error: Error) => void;
+  allocationCreated: (event: { allocation: Allocation }) => void;
+  errorCreatingAllocation: (event: { error: Error }) => void;
 
-  allocationReleased: (allocation: Allocation) => void;
-  errorReleasingAllocation: (allocation: Allocation, error: Error) => void;
+  allocationReleased: (event: { allocation: Allocation }) => void;
+  errorReleasingAllocation: (event: { allocation: Allocation; error: Error }) => void;
 
-  allocationAmended: (allocation: Allocation) => void;
-  errorAmendingAllocation: (allocation: Allocation, error: Error) => void;
+  allocationAmended: (event: { allocation: Allocation }) => void;
+  errorAmendingAllocation: (event: { allocation: Allocation; error: Error }) => void;
 
-  invoiceReceived: (invoice: Invoice) => void;
-  debitNoteReceived: (debitNote: DebitNote) => void;
+  invoiceReceived: (event: { invoice: Invoice }) => void;
+  debitNoteReceived: (event: { debitNote: DebitNote }) => void;
 
-  invoiceAccepted: (invoice: Invoice) => void;
-  invoiceRejected: (invoice: Invoice) => void;
-  errorAcceptingInvoice: (invoice: Invoice, error: Error) => void;
-  errorRejectingInvoice: (invoice: Invoice, error: Error) => void;
+  invoiceAccepted: (event: { invoice: Invoice }) => void;
+  invoiceRejected: (event: { invoice: Invoice }) => void;
+  errorAcceptingInvoice: (event: { invoice: Invoice; error: Error }) => void;
+  errorRejectingInvoice: (event: { invoice: Invoice; error: Error }) => void;
 
-  debitNoteAccepted: (debitNote: DebitNote) => void;
-  debitNoteRejected: (debitNote: DebitNote) => void;
-  errorAcceptingDebitNote: (debitNote: DebitNote, error: Error) => void;
-  errorRejectingDebitNote: (debitNote: DebitNote, error: Error) => void;
+  debitNoteAccepted: (event: { debitNote: DebitNote }) => void;
+  debitNoteRejected: (event: { debitNote: DebitNote }) => void;
+  errorAcceptingDebitNote: (event: { debitNote: DebitNote; error: Error }) => void;
+  errorRejectingDebitNote: (event: { debitNote: DebitNote; error: Error }) => void;
 };
 
 export interface IPaymentApi {
@@ -33,9 +33,6 @@ export interface IPaymentApi {
 
   /** Starts the reader logic */
   connect(): Promise<void>;
-
-  /** Terminates the reader logic */
-  disconnect(): Promise<void>;
 
   getInvoice(id: string): Promise<Invoice>;
 
@@ -57,7 +54,35 @@ export interface IPaymentApi {
 }
 
 export type CreateAllocationParams = {
+  /**
+   * How much to allocate
+   */
   budget: number;
-  paymentPlatform: string;
+  /**
+   * How long the allocation should be valid
+   */
   expirationSec: number;
+  /**
+   * Optionally override the payment platform to use for this allocation
+   */
+  paymentPlatform?: string;
+  /**
+   * Optionally provide a deposit to be used for the allocation, instead of using funds from the yagna wallet.
+   * Deposit is a way to pay for the computation using someone else's funds. The other party has to
+   * call the `createDeposit` method on the `LockPayment` smart contract and provide the deposit ID.
+   *
+   * @deprecated NOT IMPLEMENTED BY YAGNA
+   *  This is a feature that's not yet released in Yagna.
+   *  The deprecation note will be removed once the feature will be supported by the network.
+   */
+  deposit?: {
+    /**
+     * Address of the smart contract that holds the deposit.
+     */
+    contract: string;
+    /**
+     * ID of the deposit, obtained by calling the `createDeposit` method on the smart contract.
+     */
+    id: string;
+  };
 };

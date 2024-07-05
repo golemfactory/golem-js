@@ -10,8 +10,8 @@ const job = golem.createJob({
     imageTag: "golem/alpine:latest",
   },
 });
-job.startWork(async (ctx) => {
-  const response = await ctx.run("echo 'Hello, Golem!'");
+job.startWork(async (exe) => {
+  const response = await exe.run("echo 'Hello, Golem!'");
   return response.stdout;
 });
 

@@ -1,24 +1,24 @@
 import { Job } from "./job";
-import { WorkContext } from "../../activity/work";
+import { ExeUnit } from "../../activity/exe-unit";
 import { anything, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
 import { Logger } from "../../shared/utils";
 import { GolemNetwork } from "../../golem-network";
-import { LeaseProcess } from "../../lease-process";
+import { ResourceRental } from "../../resource-rental";
 
 const mockGlm = mock(GolemNetwork);
-const mockLease = mock(LeaseProcess);
-const mockWorkContext = mock(WorkContext);
+const mockRental = mock(ResourceRental);
+const mockExeUnit = mock(ExeUnit);
 describe("Job", () => {
   beforeEach(() => {
     reset(mockGlm);
-    reset(mockLease);
-    reset(mockWorkContext);
+    reset(mockRental);
+    reset(mockExeUnit);
   });
 
   describe("cancel()", () => {
     it("stops the activity and releases the agreement when canceled", async () => {
-      when(mockLease.getExeUnit()).thenResolve(instance(mockWorkContext));
-      when(mockGlm.oneOf(anything())).thenResolve(instance(mockLease));
+      when(mockRental.getExeUnit()).thenResolve(instance(mockExeUnit));
+      when(mockGlm.oneOf(anything())).thenResolve(instance(mockRental));
       const job = new Job(
         "test_id",
         instance(mockGlm),
@@ -49,7 +49,7 @@ describe("Job", () => {
 
       await expect(job.waitForResult()).rejects.toThrow("Canceled");
 
-      verify(mockLease.finalize()).once();
+      verify(mockRental.stopAndFinalize()).once();
     });
   });
 });

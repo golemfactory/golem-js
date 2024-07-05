@@ -75,7 +75,7 @@ describe("Market API Adapter", () => {
 
   describe("publishDemandSpecification()", () => {
     it("should publish a demand", async () => {
-      const specification = new DemandSpecification(samplePrototype, "my-selected-payment-platform", 60 * 60 * 1000);
+      const specification = new DemandSpecification(samplePrototype, "my-selected-payment-platform");
 
       when(mockMarket.subscribeDemand(deepEqual(expectedBody))).thenResolve("demand-id");
 
@@ -88,7 +88,7 @@ describe("Market API Adapter", () => {
     });
 
     it("should throw an error if the demand is not published", async () => {
-      const specification = new DemandSpecification(samplePrototype, "my-selected-payment-platform", 60 * 60 * 1000);
+      const specification = new DemandSpecification(samplePrototype, "my-selected-payment-platform");
 
       when(mockMarket.subscribeDemand(deepEqual(expectedBody))).thenResolve({
         message: "error publishing demand",
@@ -102,10 +102,7 @@ describe("Market API Adapter", () => {
 
   describe("unpublishDemand()", () => {
     it("should unpublish a demand", async () => {
-      const demand = new Demand(
-        "demand-id",
-        new DemandSpecification(samplePrototype, "my-selected-payment-platform", 60 * 60 * 1000),
-      );
+      const demand = new Demand("demand-id", new DemandSpecification(samplePrototype, "my-selected-payment-platform"));
 
       when(mockMarket.unsubscribeDemand("demand-id")).thenResolve({});
 
@@ -115,10 +112,7 @@ describe("Market API Adapter", () => {
     });
 
     it("should throw an error if the demand is not unpublished", async () => {
-      const demand = new Demand(
-        "demand-id",
-        new DemandSpecification(samplePrototype, "my-selected-payment-platform", 60 * 60 * 1000),
-      );
+      const demand = new Demand("demand-id", new DemandSpecification(samplePrototype, "my-selected-payment-platform"));
 
       when(mockMarket.unsubscribeDemand("demand-id")).thenResolve({
         message: "error unpublishing demand",
@@ -132,7 +126,7 @@ describe("Market API Adapter", () => {
 
   describe("counterProposal()", () => {
     it("should negotiate a proposal with the selected payment platform", async () => {
-      const specification = new DemandSpecification(samplePrototype, "my-selected-payment-platform", 60 * 60 * 1000);
+      const specification = new DemandSpecification(samplePrototype, "my-selected-payment-platform");
 
       const receivedProposal = new OfferProposal(
         {
@@ -172,7 +166,7 @@ describe("Market API Adapter", () => {
       ).once();
     });
     it("should throw an error if the counter proposal fails", async () => {
-      const specification = new DemandSpecification(samplePrototype, "my-selected-payment-platform", 60 * 60 * 1000);
+      const specification = new DemandSpecification(samplePrototype, "my-selected-payment-platform");
       const receivedProposal = new OfferProposal(
         {
           ...expectedBody,

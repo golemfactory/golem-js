@@ -1,24 +1,25 @@
-import { OfferProposal, ProposalFilter } from "./proposal/offer-proposal";
+import { OfferProposal, OfferProposalFilter } from "./proposal";
 import AsyncLock from "async-lock";
 import { EventEmitter } from "eventemitter3";
 import { GolemMarketError, MarketErrorCode } from "./error";
-import { defaultLogger, Logger, sleep } from "../shared/utils";
+import { createAbortSignalFromTimeout, defaultLogger, Logger, sleep } from "../shared/utils";
 import { Observable, Subscription } from "rxjs";
+import { GolemAbortError, GolemTimeoutError } from "../shared/error/golem-error";
 
-export type ProposalSelector = (proposals: OfferProposal[]) => OfferProposal;
+export type OfferProposalSelector = (proposals: OfferProposal[]) => OfferProposal;
 
 export interface ProposalPoolOptions {
   /**
-   * A user-defined function that will be used by {@link DraftOfferProposalPool.acquire} to pick the best fitting proposal from available ones
+   * A user-defined function that will be used by {@link DraftOfferProposalPool.acquire} to pick the best fitting offer proposal from available ones
    */
-  selectProposal?: ProposalSelector;
+  selectOfferProposal?: OfferProposalSelector;
 
   /**
-   * User defined filter function which will determine if the proposal is valid for use.
+   * User defined filter function which will determine if the offer proposal is valid for use.
    *
-   * Proposals are validated before being handled to the caller of {@link DraftOfferProposalPool.acquire}
+   * Offer proposals are validated before being handled to the caller of {@link DraftOfferProposalPool.acquire}
    */
-  validateProposal?: ProposalFilter;
+  validateOfferProposal?: OfferProposalFilter;
 
   /**
    * Min number of proposals in pool so that it can be considered as ready to use
@@ -27,21 +28,14 @@ export interface ProposalPoolOptions {
    */
   minCount?: number;
 
-  /**
-   * Number of seconds to wait for an acquire call to finish before throwing an exception
-   *
-   * @default 30
-   */
-  acquireTimeoutSec?: number;
-
   logger?: Logger;
 }
 
 export interface ProposalPoolEvents {
-  added: (proposal: OfferProposal) => void;
-  removed: (proposal: OfferProposal) => void;
-  acquired: (proposal: OfferProposal) => void;
-  released: (proposal: OfferProposal) => void;
+  added: (event: { proposal: OfferProposal }) => void;
+  removed: (event: { proposal: OfferProposal }) => void;
+  acquired: (event: { proposal: OfferProposal }) => void;
+  released: (event: { proposal: OfferProposal }) => void;
   cleared: () => void;
 }
 
@@ -65,14 +59,11 @@ export class DraftOfferProposalPool {
   /** {@link ProposalPoolOptions.minCount} */
   private readonly minCount: number = 0;
 
-  /** {@link ProposalPoolOptions.acquireTimeoutSec} */
-  private readonly acquireTimeoutSec: number = 30;
+  /** {@link ProposalPoolOptions.selectOfferProposal} */
+  private readonly selectOfferProposal: OfferProposalSelector = (proposals: OfferProposal[]) => proposals[0];
 
-  /** {@link ProposalPoolOptions.selectProposal} */
-  private readonly selectProposal: ProposalSelector = (proposals: OfferProposal[]) => proposals[0];
-
-  /** {@link ProposalPoolOptions.validateProposal} */
-  private readonly validateProposal: ProposalFilter = (proposal: OfferProposal) => proposal !== undefined;
+  /** {@link ProposalPoolOptions.validateOfferProposal} */
+  private readonly validateOfferProposal: OfferProposalFilter = (proposal: OfferProposal) => proposal !== undefined;
 
   /**
    * The proposals that were not yet leased to anyone and are available for lease
@@ -85,19 +76,15 @@ export class DraftOfferProposalPool {
   private leased = new Set<OfferProposal>();
 
   public constructor(private options?: ProposalPoolOptions) {
-    if (options?.selectProposal) {
-      this.selectProposal = options.selectProposal;
+    if (options?.selectOfferProposal) {
+      this.selectOfferProposal = options.selectOfferProposal;
     }
-    if (options?.validateProposal) {
-      this.validateProposal = options.validateProposal;
+    if (options?.validateOfferProposal) {
+      this.validateOfferProposal = options.validateOfferProposal;
     }
 
     if (options?.minCount && options.minCount >= 0) {
       this.minCount = options.minCount;
-    }
-
-    if (options?.acquireTimeoutSec && options.acquireTimeoutSec >= 0) {
-      this.acquireTimeoutSec = options?.acquireTimeoutSec;
     }
 
     this.logger = this.logger = options?.logger || defaultLogger("proposal-pool");
@@ -114,50 +101,49 @@ export class DraftOfferProposalPool {
 
     this.available.add(proposal);
 
-    this.events.emit("added", proposal);
+    this.events.emit("added", { proposal });
   }
 
   /**
    * Attempts to obtain a single proposal from the pool
-   *
-   * This method will reject if no suitable proposal will be found within {@link DraftOfferProposalPool.acquireTimeoutSec} seconds.
+   * @param signalOrTimeout - the timeout in milliseconds or an AbortSignal that will be used to cancel the acquiring
    */
-  public acquire(): Promise<OfferProposal> {
-    return this.lock.acquire(
-      "proposal-pool",
-      async () => {
-        let proposal: OfferProposal | null = null;
+  public acquire(signalOrTimeout?: number | AbortSignal): Promise<OfferProposal> {
+    const signal = createAbortSignalFromTimeout(signalOrTimeout);
+    return this.lock.acquire("proposal-pool", async () => {
+      let proposal: OfferProposal | null = null;
 
-        while (proposal === null) {
-          // Try to get one
-          proposal = this.available.size > 0 ? this.selectProposal([...this.available]) : null;
+      while (proposal === null) {
+        if (signal.aborted) {
+          throw signal.reason.name === "TimeoutError"
+            ? new GolemTimeoutError("Could not provide any proposal in time")
+            : new GolemAbortError("The acquiring of proposals has been aborted", signal.reason);
+        }
+        // Try to get one
+        proposal = this.available.size > 0 ? this.selectOfferProposal([...this.available]) : null;
 
-          if (proposal) {
-            // Validate
-            if (!this.validateProposal(proposal)) {
-              // Drop if not valid
-              this.removeFromAvailable(proposal);
-              // Keep searching
-              proposal = null;
-            }
-          }
-          // if not found or not valid wait a while for next try
-          if (!proposal) {
-            await sleep(1);
+        if (proposal) {
+          // Validate
+          if (!this.validateOfferProposal(proposal)) {
+            // Drop if not valid
+            this.removeFromAvailable(proposal);
+            // Keep searching
+            proposal = null;
           }
         }
+        // if not found or not valid wait a while for next try
+        if (!proposal) {
+          await sleep(1);
+        }
+      }
 
-        this.available.delete(proposal);
-        this.leased.add(proposal);
+      this.available.delete(proposal);
+      this.leased.add(proposal);
 
-        this.events.emit("acquired", proposal);
+      this.events.emit("acquired", { proposal });
 
-        return proposal;
-      },
-      {
-        maxOccupationTime: this.acquireTimeoutSec * 1000,
-      },
-    );
+      return proposal;
+    });
   }
 
   /**
@@ -170,11 +156,11 @@ export class DraftOfferProposalPool {
     return this.lock.acquire("proposal-pool", () => {
       this.leased.delete(proposal);
 
-      if (this.validateProposal(proposal)) {
+      if (this.validateOfferProposal(proposal)) {
         this.available.add(proposal);
-        this.events.emit("released", proposal);
+        this.events.emit("released", { proposal });
       } else {
-        this.events.emit("removed", proposal);
+        this.events.emit("removed", { proposal });
       }
     });
   }
@@ -183,12 +169,12 @@ export class DraftOfferProposalPool {
     return this.lock.acquire("proposal-pool", () => {
       if (this.leased.has(proposal)) {
         this.leased.delete(proposal);
-        this.events.emit("removed", proposal);
+        this.events.emit("removed", { proposal });
       }
 
       if (this.available.has(proposal)) {
         this.available.delete(proposal);
-        this.events.emit("removed", proposal);
+        this.events.emit("removed", { proposal });
       }
     });
   }
@@ -228,12 +214,12 @@ export class DraftOfferProposalPool {
     return this.lock.acquire("proposal-pool", () => {
       for (const proposal of this.available) {
         this.available.delete(proposal);
-        this.events.emit("removed", proposal);
+        this.events.emit("removed", { proposal });
       }
 
       for (const proposal of this.leased) {
         this.leased.delete(proposal);
-        this.events.emit("removed", proposal);
+        this.events.emit("removed", { proposal });
       }
 
       this.available = new Set();
@@ -244,7 +230,7 @@ export class DraftOfferProposalPool {
 
   protected removeFromAvailable(proposal: OfferProposal): void {
     this.available.delete(proposal);
-    this.events.emit("removed", proposal);
+    this.events.emit("removed", { proposal });
   }
 
   public readFrom(source: Observable<OfferProposal>): Subscription {

@@ -1,9 +1,9 @@
 import { _, imock, instance, mock, reset, spy, verify, when } from "@johanblumenberg/ts-mockito";
 import { Logger, YagnaApi } from "../shared/utils";
 import { MarketModuleImpl } from "./market.module";
-import { Demand, DemandSpecification, IDemandRepository } from "./demand";
+import { Demand, DemandSpecification } from "./demand";
 import { Subject, take } from "rxjs";
-import { IProposalRepository, MarketProposalEvent, OfferProposal, ProposalProperties } from "./proposal";
+import { MarketProposalEvent, OfferProposal, ProposalProperties } from "./proposal";
 import { MarketApiAdapter } from "../shared/yagna/";
 import { IActivityApi, IFileServer } from "../activity";
 import { StorageProvider } from "../shared/storage";
@@ -14,6 +14,7 @@ import { DraftOfferProposalPool } from "./draft-offer-proposal-pool";
 import { Agreement, AgreementEvent, ProviderInfo } from "./agreement";
 import { waitAndCall, waitForCondition } from "../shared/utils/wait";
 import { MarketOrderSpec } from "../golem-network";
+import { GolemAbortError } from "../shared/error/golem-error";
 
 const mockMarketApiAdapter = mock(MarketApiAdapter);
 const mockYagna = mock(YagnaApi);
@@ -22,6 +23,8 @@ const mockAgreement = mock(Agreement);
 const testAgreementEvent$ = new Subject<AgreementEvent>();
 
 let marketModule: MarketModuleImpl;
+
+const DEMAND_REFRESH_INTERVAL_SEC = 60;
 
 beforeEach(() => {
   jest.useFakeTimers();
@@ -32,19 +35,22 @@ beforeEach(() => {
 
   when(mockMarketApiAdapter.collectAgreementEvents()).thenReturn(testAgreementEvent$);
 
-  marketModule = new MarketModuleImpl({
-    activityApi: instance(imock<IActivityApi>()),
-    paymentApi: instance(imock<IPaymentApi>()),
-    networkApi: instance(imock<INetworkApi>()),
-    proposalRepository: instance(imock<IProposalRepository>()),
-    demandRepository: instance(imock<IDemandRepository>()),
-    yagna: instance(mockYagna),
-    logger: instance(imock<Logger>()),
-    marketApi: instance(mockMarketApiAdapter),
-    fileServer: instance(imock<IFileServer>()),
-    storageProvider: instance(imock<StorageProvider>()),
-    networkModule: instance(imock<NetworkModule>()),
-  });
+  marketModule = new MarketModuleImpl(
+    {
+      activityApi: instance(imock<IActivityApi>()),
+      paymentApi: instance(imock<IPaymentApi>()),
+      networkApi: instance(imock<INetworkApi>()),
+      yagna: instance(mockYagna),
+      logger: instance(imock<Logger>()),
+      marketApi: instance(mockMarketApiAdapter),
+      fileServer: instance(imock<IFileServer>()),
+      storageProvider: instance(imock<StorageProvider>()),
+      networkModule: instance(imock<NetworkModule>()),
+    },
+    {
+      demandRefreshIntervalSec: DEMAND_REFRESH_INTERVAL_SEC,
+    },
+  );
 });
 
 describe("Market module", () => {
@@ -54,6 +60,7 @@ describe("Market module", () => {
         id: "allocation-id",
         paymentPlatform: "erc20-holesky-tglm",
       } as Allocation;
+
       when(mockMarketApiAdapter.getPaymentRelatedDemandDecorations("allocation-id")).thenResolve({
         properties: [
           {
@@ -71,17 +78,24 @@ describe("Market module", () => {
         ],
       });
 
+      const rentalDurationHours = 1;
       const demandSpecification = await marketModule.buildDemandDetails(
         {
           workload: {
             imageHash: "AAAAHASHAAAA",
             imageUrl: "https://custom.image.url/",
           },
-          expirationSec: 42,
           payment: {
             debitNotesAcceptanceTimeoutSec: 42,
             midAgreementDebitNoteIntervalSec: 42,
             midAgreementPaymentTimeoutSec: 42,
+          },
+        },
+        {
+          rentHours: rentalDurationHours,
+          pricing: {
+            model: "burn-rate",
+            avgGlmPerHour: 1,
           },
         },
         allocation,
@@ -105,12 +119,12 @@ describe("Market module", () => {
           value: true,
         },
         {
-          key: "golem.srv.comp.expiration",
-          value: Date.now() + 42 * 1000,
-        },
-        {
           key: "golem.node.debug.subnet",
           value: "public",
+        },
+        {
+          key: "golem.srv.comp.expiration",
+          value: Date.now() + rentalDurationHours * 60 * 60 * 1000,
         },
         {
           key: "golem.srv.comp.vm.package_format",
@@ -143,7 +157,6 @@ describe("Market module", () => {
       ];
 
       expect(demandSpecification.paymentPlatform).toBe(allocation.paymentPlatform);
-      expect(demandSpecification.expirationSec).toBe(42);
       expect(demandSpecification.prototype.constraints).toEqual(expect.arrayContaining(expectedConstraints));
       expect(demandSpecification.prototype.properties).toEqual(expectedProperties);
     });
@@ -172,7 +185,6 @@ describe("Market module", () => {
 
     it("should emit a new demand every specified interval", (done) => {
       const mockSpecification = mock(DemandSpecification);
-      when(mockSpecification.expirationSec).thenReturn(10);
       const mockSpecificationInstance = instance(mockSpecification);
       const mockDemand0 = new Demand("demand-id-0", mockSpecificationInstance);
       const mockDemand1 = new Demand("demand-id-1", mockSpecificationInstance);
@@ -189,7 +201,7 @@ describe("Market module", () => {
       demand$.pipe(take(3)).subscribe({
         next: (demand) => {
           demands.push(demand);
-          jest.advanceTimersByTime(10 * 1000);
+          jest.advanceTimersByTime(DEMAND_REFRESH_INTERVAL_SEC * 1000);
         },
         complete: () => {
           try {
@@ -266,7 +278,6 @@ describe("Market module", () => {
           constraints: [],
         },
         "erc20-holesky-tglm",
-        60 * 60,
       );
 
       const providerInfo: ProviderInfo = {
@@ -355,7 +366,6 @@ describe("Market module", () => {
           constraints: [],
         },
         "erc20-holesky-tglm",
-        60 * 60,
       );
 
       const providerInfo: ProviderInfo = {
@@ -430,7 +440,7 @@ describe("Market module", () => {
       const badProposal1 = {} as OfferProposal;
       const goodProposal = {} as OfferProposal;
       const mockPool = mock(DraftOfferProposalPool);
-      when(mockPool.acquire()).thenResolve(badProposal0).thenResolve(badProposal1).thenResolve(goodProposal);
+      when(mockPool.acquire(_)).thenResolve(badProposal0).thenResolve(badProposal1).thenResolve(goodProposal);
       when(mockPool.remove(_)).thenResolve();
       const goodAgreement = {} as Agreement;
       const marketSpy = spy(marketModule);
@@ -440,7 +450,7 @@ describe("Market module", () => {
 
       const signedProposal = await marketModule.signAgreementFromPool(instance(mockPool));
 
-      verify(mockPool.acquire()).thrice();
+      verify(mockPool.acquire(_)).thrice();
       verify(marketSpy.proposeAgreement(badProposal0, _)).once();
       verify(mockPool.remove(badProposal0)).once();
       verify(marketSpy.proposeAgreement(badProposal1, _)).once();
@@ -454,15 +464,17 @@ describe("Market module", () => {
       const error = new Error("Operation cancelled");
       const proposal = {} as OfferProposal;
       const mockPool = mock(DraftOfferProposalPool);
-      when(mockPool.acquire()).thenCall(async () => {
+      when(mockPool.acquire(_)).thenCall(async () => {
         ac.abort(error);
         return proposal;
       });
       const marketSpy = spy(marketModule);
 
-      await expect(marketModule.signAgreementFromPool(instance(mockPool), {}, ac.signal)).rejects.toThrow(error);
+      await expect(marketModule.signAgreementFromPool(instance(mockPool), {}, ac.signal)).rejects.toMatchError(
+        new GolemAbortError("The signing of the agreement has been aborted", error),
+      );
 
-      verify(mockPool.acquire()).once();
+      verify(mockPool.acquire(_)).once();
       verify(mockPool.release(proposal)).once();
       verify(mockPool.remove(_)).never();
       verify(marketSpy.proposeAgreement(_)).never();
@@ -471,7 +483,7 @@ describe("Market module", () => {
       const mockPool = mock(DraftOfferProposalPool);
       const signal = AbortSignal.abort();
       await expect(marketModule.signAgreementFromPool(instance(mockPool), {}, signal)).rejects.toThrow(
-        "This operation was aborted",
+        "The signing of the agreement has been aborted",
       );
       verify(mockPool.acquire()).never();
     });
@@ -483,7 +495,7 @@ describe("Market module", () => {
       when(marketSpy.proposeAgreement(_)).thenReject(new Error("Failed to sign proposal"));
 
       await expect(marketModule.signAgreementFromPool(instance(mockPool), {}, 50)).rejects.toThrow(
-        "The operation was aborted due to timeout",
+        "Could not sign any agreement in time",
       );
     });
     it("respects the timeout on draft proposal pool acquire and forwards the error", async () => {
@@ -578,7 +590,7 @@ describe("Market module", () => {
     });
   });
   describe("estimateBudget()", () => {
-    it("estimates budget for the exact concurrency level", () => {
+    it("estimates budget for max number of agreeements", () => {
       const order: MarketOrderSpec = {
         demand: {
           workload: {
@@ -596,40 +608,13 @@ describe("Market module", () => {
           },
         },
       };
-      const concurrency = 3;
+      const maxAgreements = 10;
       const cpuPrice = 0.5 * 5 * 5; // 5 threads for 0.5 per hour for 5 hours
       const envPrice = 2 * 5; // 2 per hour for 5 hours
       const totalPricePerMachine = 1 + cpuPrice + envPrice;
-      const expectedBudget = totalPricePerMachine * concurrency;
+      const expectedBudget = totalPricePerMachine * maxAgreements;
 
-      const budget = marketModule.estimateBudget({ order, concurrency });
-      expect(budget).toBeCloseTo(expectedBudget, 5);
-    });
-    it("estimates budget for max concurrency level", () => {
-      const order: MarketOrderSpec = {
-        demand: {
-          workload: {
-            imageTag: "image",
-            minCpuThreads: 5,
-          },
-        },
-        market: {
-          rentHours: 5,
-          pricing: {
-            model: "linear",
-            maxStartPrice: 1,
-            maxEnvPerHourPrice: 2,
-            maxCpuPerHourPrice: 0.5,
-          },
-        },
-      };
-      const concurrency = { max: 10 };
-      const cpuPrice = 0.5 * 5 * 5; // 5 threads for 0.5 per hour for 5 hours
-      const envPrice = 2 * 5; // 2 per hour for 5 hours
-      const totalPricePerMachine = 1 + cpuPrice + envPrice;
-      const expectedBudget = totalPricePerMachine * concurrency.max;
-
-      const budget = marketModule.estimateBudget({ order, concurrency });
+      const budget = marketModule.estimateBudget({ order, maxAgreements });
       expect(budget).toBeCloseTo(expectedBudget, 5);
     });
     it("estimates budget for non-linear pricing model", () => {
@@ -647,10 +632,10 @@ describe("Market module", () => {
           },
         },
       };
-      const concurrency = 3;
-      const expectedBudget = 5 * 2 * concurrency;
+      const maxAgreements = 3;
+      const expectedBudget = 5 * 2 * maxAgreements;
 
-      const budget = marketModule.estimateBudget({ order, concurrency });
+      const budget = marketModule.estimateBudget({ order, maxAgreements });
       expect(budget).toBeCloseTo(expectedBudget, 5);
     });
   });

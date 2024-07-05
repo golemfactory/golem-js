@@ -1,16 +1,16 @@
 import { EventEmitter } from "eventemitter3";
 import {
   Allocation,
+  CreateAllocationParams,
   DebitNote,
   Invoice,
   InvoiceProcessor,
   IPaymentApi,
-  CreateAllocationParams,
   PaymentEvents,
 } from "./index";
 import { defaultLogger, YagnaApi } from "../shared/utils";
 import { Observable } from "rxjs";
-import { GolemServices } from "../golem-network/golem-network";
+import { GolemServices } from "../golem-network";
 import { PayerDetails } from "./PayerDetails";
 import { AgreementPaymentProcess, PaymentProcessOptions } from "./agreement_payment_process";
 import { Agreement } from "../market";
@@ -29,13 +29,15 @@ export interface PaymentModuleOptions {
    * (for example: "erc20")
    * @default erc20
    */
-  driver?: "erc20";
+  // eslint-disable-next-line @typescript-eslint/ban-types -- keep the autocomplete for "erc20" but allow any string
+  driver?: "erc20" | (string & {});
   /**
    * Token used to facilitate the payment.
    * If unset, it will be inferred from the network.
    * (for example: "glm", "tglm")
    */
-  token?: "glm" | "tglm";
+  // eslint-disable-next-line @typescript-eslint/ban-types -- keep the autocomplete for "glm" and "tglm" but allow any string
+  token?: "glm" | "tglm" | (string & {});
 }
 
 export interface PaymentModule {
@@ -45,11 +47,13 @@ export interface PaymentModule {
 
   observeInvoices(): Observable<Invoice>;
 
-  createAllocation(params: { budget: number; expirationSec: number }): Promise<Allocation>;
+  createAllocation(params: CreateAllocationParams): Promise<Allocation>;
 
   releaseAllocation(allocation: Allocation): Promise<void>;
 
   amendAllocation(allocation: Allocation, params: CreateAllocationParams): Promise<Allocation>;
+
+  getAllocation(id: string): Promise<Allocation>;
 
   acceptInvoice(invoice: Invoice, allocation: Allocation, amount: string): Promise<Invoice>;
 
@@ -91,26 +95,27 @@ export class PaymentModuleImpl implements PaymentModule {
   };
 
   constructor(deps: GolemServices, options?: PaymentModuleOptions) {
-    if (options) {
-      const network = options.network || this.options.network;
-      const driver = options.driver || this.options.driver;
-      const token = options.token || MAINNETS.includes(network) ? "glm" : "tglm";
-      this.options = { network, driver, token };
-    }
+    const network = options?.network ?? this.options.network;
+    const driver = options?.driver ?? this.options.driver;
+    const token = options?.token ?? MAINNETS.includes(network) ? "glm" : "tglm";
+    this.options = { network, driver, token };
 
     this.logger = deps.logger;
     this.yagnaApi = deps.yagna;
     this.paymentApi = deps.paymentApi;
+
     this.startEmittingPaymentEvents();
   }
 
   private startEmittingPaymentEvents() {
     this.paymentApi.receivedInvoices$.subscribe((invoice) => {
-      this.events.emit("invoiceReceived", invoice);
+      this.events.emit("invoiceReceived", {
+        invoice,
+      });
     });
 
     this.paymentApi.receivedDebitNotes$.subscribe((debitNote) => {
-      this.events.emit("debitNoteReceived", debitNote);
+      this.events.emit("debitNoteReceived", { debitNote });
     });
   }
 
@@ -132,18 +137,21 @@ export class PaymentModuleImpl implements PaymentModule {
     return this.paymentApi.receivedInvoices$;
   }
 
-  async createAllocation(params: { budget: number; expirationSec: number }): Promise<Allocation> {
-    const payer = await this.getPayerDetails();
-
-    this.logger.info("Creating allocation", { params: params, payer });
+  async createAllocation(params: CreateAllocationParams): Promise<Allocation> {
+    this.logger.debug("Creating allocation", { params: params });
 
     try {
       const allocation = await this.paymentApi.createAllocation({
-        budget: params.budget,
         paymentPlatform: this.getPaymentPlatform(),
-        expirationSec: params.expirationSec,
+        ...params,
       });
-      this.events.emit("allocationCreated", allocation);
+      this.events.emit("allocationCreated", { allocation });
+      this.logger.info("Created allocation", {
+        allocationId: allocation.id,
+        budget: allocation.totalAmount,
+        platform: this.getPaymentPlatform(),
+      });
+      this.logger.debug("Created allocation", allocation);
       return allocation;
     } catch (error) {
       this.events.emit("errorCreatingAllocation", error);
@@ -152,54 +160,118 @@ export class PaymentModuleImpl implements PaymentModule {
   }
 
   async releaseAllocation(allocation: Allocation): Promise<void> {
-    this.logger.info("Releasing allocation", { id: allocation.id });
+    this.logger.debug("Releasing allocation", allocation);
     try {
+      const lastKnownAllocationState = await this.getAllocation(allocation.id).catch(() => {
+        this.logger.warn("Failed to fetch allocation before releasing", { id: allocation.id });
+        return allocation;
+      });
       await this.paymentApi.releaseAllocation(allocation);
-      this.events.emit("allocationReleased", allocation);
+      this.events.emit("allocationReleased", {
+        allocation: lastKnownAllocationState,
+      });
+      this.logger.info("Released allocation", {
+        allocationId: lastKnownAllocationState.id,
+        totalAmount: lastKnownAllocationState.totalAmount,
+        spentAmount: lastKnownAllocationState.spentAmount,
+      });
     } catch (error) {
-      this.events.emit("errorReleasingAllocation", allocation, error);
+      this.events.emit("errorReleasingAllocation", {
+        allocation: await this.paymentApi.getAllocation(allocation.id).catch(() => {
+          this.logger.warn("Failed to fetch allocation after failed release attempt", { id: allocation.id });
+          return allocation;
+        }),
+        error,
+      });
       throw error;
     }
   }
 
+  getAllocation(id: string): Promise<Allocation> {
+    this.logger.debug("Fetching allocation by id", { id });
+    return this.paymentApi.getAllocation(id);
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   amendAllocation(allocation: Allocation, _newOpts: CreateAllocationParams): Promise<Allocation> {
-    this.events.emit("errorAmendingAllocation", allocation, new Error("Amending allocation is not supported yet"));
-    throw new Error("Amending allocation is not supported yet");
+    const err = Error("Amending allocation is not supported yet");
+
+    this.events.emit("errorAmendingAllocation", {
+      allocation,
+      error: err,
+    });
+
+    throw err;
   }
 
   async acceptInvoice(invoice: Invoice, allocation: Allocation, amount: string): Promise<Invoice> {
-    this.logger.info("Accepting invoice", { id: invoice.id, allocation: allocation.id, amount });
+    this.logger.debug("Accepting invoice", invoice);
     try {
       const acceptedInvoice = await this.paymentApi.acceptInvoice(invoice, allocation, amount);
-      this.events.emit("invoiceAccepted", acceptedInvoice);
+      this.events.emit("invoiceAccepted", {
+        invoice: acceptedInvoice,
+      });
+      this.logger.info("Accepted invoice", {
+        id: invoice.id,
+        allocationId: allocation.id,
+        agreementId: invoice.agreementId,
+        provider: invoice.provider,
+        amount,
+      });
       return acceptedInvoice;
     } catch (error) {
-      this.events.emit("errorAcceptingInvoice", invoice, error);
+      this.events.emit("errorAcceptingInvoice", { invoice, error });
+      this.logger.error(`Failed to accept invoice. ${error}`, {
+        id: invoice.id,
+        allocationId: allocation.id,
+        agreementId: invoice.agreementId,
+        provider: invoice.provider,
+        amount,
+      });
       throw error;
     }
   }
 
   async rejectInvoice(invoice: Invoice, reason: string): Promise<Invoice> {
-    this.logger.info("Rejecting invoice", { id: invoice.id, reason });
+    this.logger.debug("Rejecting invoice", { id: invoice.id, reason });
     try {
       const rejectedInvoice = await this.paymentApi.rejectInvoice(invoice, reason);
-      this.events.emit("invoiceRejected", rejectedInvoice);
+      this.events.emit("invoiceRejected", {
+        invoice: rejectedInvoice,
+      });
+      this.logger.warn("Rejeced invoice", { id: invoice.id, reason });
       return rejectedInvoice;
     } catch (error) {
-      this.events.emit("errorRejectingInvoice", invoice, error);
+      this.events.emit("errorRejectingInvoice", { invoice, error });
+      this.logger.error(`Failed to reject invoice. ${error}`, { id: invoice.id, reason });
       throw error;
     }
   }
 
   async acceptDebitNote(debitNote: DebitNote, allocation: Allocation, amount: string): Promise<DebitNote> {
-    this.logger.info("Accepting debit note", { id: debitNote.id, allocation: allocation.id, amount });
+    this.logger.debug("Accepting debit note", debitNote);
     try {
       const acceptedDebitNote = await this.paymentApi.acceptDebitNote(debitNote, allocation, amount);
-      this.events.emit("debitNoteAccepted", acceptedDebitNote);
+      this.events.emit("debitNoteAccepted", {
+        debitNote: acceptedDebitNote,
+      });
+      this.logger.debug("Accepted debit note", {
+        id: debitNote.id,
+        allocationId: allocation.id,
+        activityId: debitNote.activityId,
+        provider: debitNote.provider,
+        amount,
+      });
       return acceptedDebitNote;
     } catch (error) {
-      this.events.emit("errorAcceptingDebitNote", debitNote, error);
+      this.events.emit("errorAcceptingDebitNote", { debitNote, error });
+      this.logger.error(`Failed to accept debitNote. ${error}`, {
+        id: debitNote.id,
+        allocationId: allocation.id,
+        activityId: debitNote.activityId,
+        provider: debitNote.provider,
+        amount,
+      });
       throw error;
     }
   }
@@ -209,7 +281,7 @@ export class PaymentModuleImpl implements PaymentModule {
     // TODO: this is not supported by PaymnetAdapter
     const message = "Unable to send debitNote rejection to provider. This feature is not yet supported.";
     this.logger.warn(message);
-    this.events.emit("errorRejectingDebitNote", debitNote, new GolemInternalError(message));
+    this.events.emit("errorRejectingDebitNote", { debitNote, error: new GolemInternalError(message) });
     return debitNote;
     // this.logger.debug("Rejecting debit note", { id: debitNote.id, reason });
     // try {

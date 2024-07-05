@@ -30,8 +30,8 @@ const order: MarketOrderSpec = {
 
   try {
     await glm.connect();
-    const lease = await glm.oneOf(order);
-    const exe = await lease.getExeUnit();
+    const rental = await glm.oneOf({ order });
+    const exe = await rental.getExeUnit();
 
     const remoteProcess = await exe.runAndStream(
       `
@@ -46,11 +46,11 @@ const order: MarketOrderSpec = {
       echo -n 'Hello from stderr yet again' >&2
       `,
     );
-    remoteProcess.stdout.on("data", (data) => console.log("stdout>", data));
-    remoteProcess.stderr.on("data", (data) => console.error("stderr>", data));
+    remoteProcess.stdout.subscribe((data) => console.log("stdout>", data));
+    remoteProcess.stderr.subscribe((data) => console.error("stderr>", data));
     await remoteProcess.waitForExit();
 
-    await lease.finalize();
+    await rental.stopAndFinalize();
   } catch (err) {
     console.error("Failed to run the example", err);
   } finally {

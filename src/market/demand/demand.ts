@@ -82,7 +82,7 @@ export interface BasicDemandPropertyConfig {
   midAgreementPaymentTimeoutSec: number;
 }
 
-export type BuildDemandOptions = Partial<{
+export type OrderDemandOptions = Partial<{
   /** Demand properties related to the activities that will be executed on providers */
   workload: Partial<WorkloadDemandDirectorConfigOptions>;
   /** Demand properties that determine payment related terms & conditions of the agreement */
@@ -104,7 +104,6 @@ export class DemandSpecification {
     /** Represents the low level demand request body that will be used to subscribe for offers matching our "computational resource needs" */
     public readonly prototype: DemandBodyPrototype,
     public readonly paymentPlatform: string,
-    public readonly expirationSec: number,
   ) {}
 }
 

@@ -35,10 +35,10 @@
   "scripts": {
     "build": "rollup -c --forceExit",
     "dev": "rollup -c -w",
-    "docs": "typedoc src/ --plugin typedoc-plugin-merge-modules --plugin typedoc-theme-hierarchy",
-    "docs:md": "typedoc src/ --plugin typedoc-plugin-markdown --plugin .docs/typedoc-frontmatter-theme.cjs --hideBreadcrumbs true && node .docs/summary-generator.cjs",
+    "docs": "typedoc src/ --plugin typedoc-plugin-merge-modules --plugin typedoc-theme-hierarchy --out api-reference",
+    "docs:md": "typedoc src/ --plugin typedoc-plugin-markdown --plugin .typedoc/typedoc-frontmatter-theme.cjs --hideBreadcrumbs true --out api-reference && node .typedoc/summary-generator.cjs",
     "test": "npm run test:unit && npm run test:e2e",
-    "test:unit": "jest --config tests/unit/jest.config.json",
+    "test:unit": "jest --config tests/jest.config.json",
     "test:e2e": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --config tests/e2e/jest.config.json tests/e2e/**.spec.ts --runInBand --forceExit",
     "test:cypress": "cypress run",
     "test:examples": "tsx tests/examples/examples.test.ts",
@@ -75,9 +75,9 @@
     "rxjs": "^7.8.1",
     "semver": "^7.5.4",
     "tmp": "^0.2.2",
-    "uuid": "^9.0.1",
+    "uuid": "^10.0.0",
     "ws": "^8.16.0",
-    "ya-ts-client": "^1.1.1-beta.1"
+    "ya-ts-client": "^1.1.3"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.0.3",
@@ -99,7 +99,7 @@
     "@types/semver": "^7.5.8",
     "@types/supertest": "^6.0.2",
     "@types/tmp": "^0.2.6",
-    "@types/uuid": "^9.0.8",
+    "@types/uuid": "^10.0.0",
     "@types/ws": "^8.5.10",
     "@typescript-eslint/eslint-plugin": "^7.1.0",
     "@typescript-eslint/parser": "^7.1.0",
@@ -120,7 +120,6 @@
     "rollup-plugin-polyfill-node": "^0.13.0",
     "rollup-plugin-visualizer": "^5.12.0",
     "semantic-release": "^23.0.2",
-    "stream-browserify": "^3.0.0",
     "supertest": "^6.3.4",
     "ts-jest": "^29.1.2",
     "ts-loader": "^9.5.1",

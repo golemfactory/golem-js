@@ -39,7 +39,7 @@ export class ActivityApiAdapter implements IActivityApi {
         WorkErrorCode.ActivityCreationFailed,
         agreement,
         undefined,
-        agreement.getProviderInfo(),
+        agreement.provider,
       );
     }
   }
@@ -55,7 +55,7 @@ export class ActivityApiAdapter implements IActivityApi {
         WorkErrorCode.ActivityDestroyingFailed,
         activity.agreement,
         activity,
-        activity.agreement.getProviderInfo(),
+        activity.agreement.provider,
       );
     }
   }
@@ -74,7 +74,7 @@ export class ActivityApiAdapter implements IActivityApi {
         WorkErrorCode.ScriptExecutionFailed,
         activity.agreement,
         activity,
-        activity.agreement.getProviderInfo(),
+        activity.agreement.provider,
       );
     }
   }
@@ -95,7 +95,7 @@ export class ActivityApiAdapter implements IActivityApi {
         WorkErrorCode.ActivityResultsFetchingFailed,
         activity.agreement,
         activity,
-        activity.getProviderInfo(),
+        activity.provider,
         error,
       );
     }

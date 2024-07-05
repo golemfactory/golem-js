@@ -252,12 +252,6 @@ export class AgreementPaymentProcess {
 
     try {
       await this.paymentModule.acceptInvoice(invoice, this.allocation, invoice.amount);
-      this.logger.info(`Invoice has been accepted`, {
-        invoiceId: invoice.id,
-        agreementId: invoice.agreementId,
-        amount: invoice.amount,
-        provider: this.agreement.getProviderInfo(),
-      });
     } catch (error) {
       const message = getMessageFromApiError(error);
       throw new GolemPaymentError(

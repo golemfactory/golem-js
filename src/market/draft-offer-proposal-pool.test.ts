@@ -1,6 +1,7 @@
 import { DraftOfferProposalPool } from "./draft-offer-proposal-pool";
 import { instance, mock, when } from "@johanblumenberg/ts-mockito";
 import { OfferProposal } from "./index";
+import { GolemAbortError, GolemTimeoutError } from "../shared/error/golem-error";
 
 describe("Draft Offer Proposal Pool", () => {
   // GIVEN
@@ -76,7 +77,7 @@ describe("Draft Offer Proposal Pool", () => {
         expect(a).not.toBe(b);
       });
 
-      it("ascquire a proposal using proposalSelector", async () => {
+      it("ascquire a proposal using offerProposalSelector", async () => {
         when(mockProposal.provider).thenReturn({
           name: "provider-1",
           walletAddress: "1",
@@ -97,7 +98,7 @@ describe("Draft Offer Proposal Pool", () => {
           proposals.sort((a, b) => ((scores?.[a.provider.name] || 0) >= (scores?.[b.provider.name] || 0) ? -1 : 1));
           return proposals[0];
         };
-        const pool = new DraftOfferProposalPool({ selectProposal: bestProviderSelector(scores) });
+        const pool = new DraftOfferProposalPool({ selectOfferProposal: bestProviderSelector(scores) });
 
         pool.add(proposal1);
         pool.add(proposal2);
@@ -105,6 +106,20 @@ describe("Draft Offer Proposal Pool", () => {
         const a = await pool.acquire();
 
         expect(a).toBe(proposal2);
+      });
+    });
+    describe("Negative cases", () => {
+      it("should abort the acquiring proposal by timeout", async () => {
+        const pool = new DraftOfferProposalPool();
+        await expect(pool.acquire(1)).rejects.toThrow(new GolemTimeoutError("Could not provide any proposal in time"));
+      });
+      it("should abort the acquiring proposal by signal", async () => {
+        const pool = new DraftOfferProposalPool();
+        const ac = new AbortController();
+        ac.abort();
+        await expect(pool.acquire(ac.signal)).rejects.toThrow(
+          new GolemAbortError("The acquiring of proposals has been aborted"),
+        );
       });
     });
   });

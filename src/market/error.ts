@@ -10,11 +10,12 @@ export enum MarketErrorCode {
   ProposalResponseFailed = "ProposalResponseFailed",
   ProposalRejectionFailed = "ProposalRejectionFailed",
   DemandExpired = "DemandExpired",
-  LeaseProcessTerminationFailed = "LeaseProcessTerminationFailed",
-  LeaseProcessCreationFailed = "LeaseProcessCreationFailed",
+  ResourceRentalTerminationFailed = "ResourceRentalTerminationFailed",
+  ResourceRentalCreationFailed = "ResourceRentalCreationFailed",
   AgreementApprovalFailed = "AgreementApprovalFailed",
   NoProposalAvailable = "NoProposalAvailable",
   InternalError = "InternalError",
+  ScanFailed = "ScanFailed",
 }
 
 export class GolemMarketError extends GolemModuleError {
