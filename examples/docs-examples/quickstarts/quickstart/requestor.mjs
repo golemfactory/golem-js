@@ -4,7 +4,6 @@
 
 import { GolemNetwork } from "@golem-sdk/golem-js";
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
-import { randomInt } from "node:crypto";
 
 const order = {
   demand: {
@@ -26,29 +25,37 @@ const order = {
     logger: pinoPrettyLogger({
       level: "info",
     }),
-    // api: { key: "try_golem" }
+    api: { key: "try_golem" },
   });
 
   try {
     await glm.connect();
     const pool = await glm.manyOf({
-      // I want to have a minimum of one machine in the pool, but only a maximum of 3 machines can work at the same time
+      // I want to have a minimum of one machine in the pool,
+      // but only a maximum of 3 machines can work at the same time
       concurrency: { min: 1, max: 3 },
       order,
     });
-    const data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    // I have 5 parts of the task to perform in parallel
+    const data = [...Array(5).keys()];
     const results = await Promise.allSettled(
-      data.map((item) =>
-        pool.withLease((lease) =>
-          lease.getExeUnit().then((exe) => exe.run(`echo ${item} from provider ${exe.provider.name}`)),
+      data.map((i) =>
+        pool.withRental((rental) =>
+          rental
+            .getExeUnit()
+            .then((exe) =>
+              exe.run(
+                `echo Part #${i} compute on provider ${exe.provider.name} with cpu && cat /proc/cpuinfo | grep 'model name'`,
+              ),
+            ),
         ),
       ),
     );
     results.forEach((result) => {
       if (result.status === "fulfilled") {
-        console.log("Success", result.value.stdout);
+        console.log("Success:", result.value.stdout);
       } else {
-        console.log("Failure", result.reason);
+        console.log("Failure:", result.reason);
       }
     });
   } catch (err) {
