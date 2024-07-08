@@ -1,14 +1,18 @@
 import express from "express";
 import { JobManager, JobState } from "@golem-sdk/golem-js/experimental";
+import { fileURLToPath } from "url";
 
 const app = express();
 const port = 3000;
 
+// get the absolute path to the public directory in case this file is run from a different directory
+const publicDirectoryPath = fileURLToPath(new URL("./public", import.meta.url));
+
 app.use(express.text());
 
-const golemClient = new JobManager();
+const jobManager = new JobManager();
 
-await golemClient
+await jobManager
   .init()
   .then(() => {
     console.log("Connected to the Golem Network!");
@@ -23,19 +27,17 @@ app.post("/tts", async (req, res) => {
     res.status(400).send("Missing text parameter");
     return;
   }
-  const job = golemClient.createJob({
+  const job = jobManager.createJob({
     demand: {
-      activity: {
-        imageTag: "severyn/espeak:latest",
-      },
+      workload: { imageTag: "severyn/espeak:latest" },
     },
     market: {
       rentHours: 0.5,
       pricing: {
         model: "linear",
-        maxStartPrice: 1,
-        maxCpuPerHourPrice: 1,
-        maxEnvPerHourPrice: 1,
+        maxStartPrice: 0.5,
+        maxCpuPerHourPrice: 1.0,
+        maxEnvPerHourPrice: 0.5,
       },
     },
   });
@@ -58,15 +60,19 @@ app.post("/tts", async (req, res) => {
     await exe
       .beginBatch()
       .run(`espeak "${req.body}" -w /golem/output/output.wav`)
-      .downloadFile("/golem/output/output.wav", `public/${fileName}`)
+      .downloadFile("/golem/output/output.wav", `${publicDirectoryPath}/${fileName}`)
       .end();
     return fileName;
   });
-  res.send(`Job started! ID: ${job.id}`);
+  res.send(
+    `Job started! ID: ${job.id}\n` +
+      `You can check it's state by calling:\ncurl http://localhost:${port}/tts/${job.id}\n` +
+      `And it's results by calling:\ncurl http://localhost:${port}/tts/${job.id}/results\n`,
+  );
 });
 
 app.get("/tts/:id", async (req, res) => {
-  const job = golemClient.getJobById(req.params.id);
+  const job = jobManager.getJobById(req.params.id);
   if (!job) {
     res.status(404).send("Job not found");
     return;
@@ -75,10 +81,10 @@ app.get("/tts/:id", async (req, res) => {
 });
 
 // serve files in the /public directory
-app.use("/results", express.static("public"));
+app.use("/results", express.static(publicDirectoryPath));
 
 app.get("/tts/:id/results", async (req, res) => {
-  const job = golemClient.getJobById(req.params.id);
+  const job = jobManager.getJobById(req.params.id);
   if (!job) {
     res.status(404).send("Job not found");
     return;
@@ -89,7 +95,7 @@ app.get("/tts/:id/results", async (req, res) => {
 
   const results = await job.results;
   res.send(
-    `Job completed successfully! Open the following link in your browser to listen to the result: http://localhost:${port}/results/${results}`,
+    `Job completed successfully! Open the following link in your browser to listen to the result: http://localhost:${port}/results/${results}\n`,
   );
 });
 
@@ -98,8 +104,9 @@ app.listen(port, () => {
 });
 
 process.on("SIGINT", async () => {
+  console.log("Gracefully shutting down...");
   // cancel and cleanup all running jobs
-  await golemClient.close();
+  await jobManager.close();
   process.exit(0);
 });
 
