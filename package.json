@@ -18,11 +18,13 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "browser": "./dist/golem-js.min.js",
       "import": "./dist/golem-js.mjs",
       "require": "./dist/golem-js.js"
     },
     "./experimental": {
       "types": "./dist/experimental.d.ts",
+      "browser": null,
       "import": "./dist/golem-js-experimental.mjs",
       "require": "./dist/golem-js-experimental.js"
     }
