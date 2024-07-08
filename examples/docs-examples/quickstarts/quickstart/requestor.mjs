@@ -45,7 +45,7 @@ const order = {
             .getExeUnit()
             .then((exe) =>
               exe.run(
-                `echo Part #${i} compute on provider ${exe.provider.name} with cpu && cat /proc/cpuinfo | grep 'model name'`,
+                `echo "Part #${i} compute on provider ${exe.provider.name} with CPU:" && cat /proc/cpuinfo | grep 'model name'`,
               ),
             ),
         ),
