@@ -42,10 +42,8 @@ describe("ResourceRentalPool", () => {
     const draftProposal$ = glm.market.collectDraftOfferProposals({
       demandSpecification,
       pricing: {
-        model: "linear",
-        maxStartPrice: 0.5,
-        maxCpuPerHourPrice: 1.0,
-        maxEnvPerHourPrice: 0.5,
+        model: "burn-rate",
+        avgGlmPerHour: 1,
       },
     });
 
@@ -213,7 +211,7 @@ describe("ResourceRentalPool", () => {
   it("should abort getting the newly created exe-unit by timeout", async () => {
     const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 1 });
     const rental = await pool.acquire();
-    // wait for init and destroy the exe-unit created automatically on startup renatl
+    // wait for init and destroy the exe-unit created automatically on startup rental
     await rental.getExeUnit();
     await rental.destroyExeUnit();
     await expect(rental.getExeUnit(10)).rejects.toThrow(
@@ -225,7 +223,7 @@ describe("ResourceRentalPool", () => {
     const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 1 });
     const abortController = new AbortController();
     const rental = await pool.acquire();
-    // wait for init and destroy the exe-unit created automatically on startup renatl
+    // wait for init and destroy the exe-unit created automatically on startup rental
     await rental.getExeUnit();
     await rental.destroyExeUnit();
     abortController.abort();
