@@ -23,7 +23,7 @@
       "require": "./dist/golem-js.js"
     },
     "./experimental": {
-      "types": "./dist/experimental.d.ts",
+      "types": "./dist/experimental/index.d.ts",
       "browser": null,
       "import": "./dist/golem-js-experimental.mjs",
       "require": "./dist/golem-js-experimental.js"
