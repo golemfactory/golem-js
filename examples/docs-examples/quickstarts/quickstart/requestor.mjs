@@ -25,7 +25,7 @@ const order = {
     logger: pinoPrettyLogger({
       level: "info",
     }),
-    api: { key: "try_golem" },
+    // api: { key: "try_golem" },
   });
 
   try {
@@ -45,7 +45,7 @@ const order = {
             .getExeUnit()
             .then((exe) =>
               exe.run(
-                `echo "Part #${i} compute on provider ${exe.provider.name} with CPU:" && cat /proc/cpuinfo | grep 'model name'`,
+                `echo "Part #${i} computed on provider ${exe.provider.name} with CPU:" && cat /proc/cpuinfo | grep 'model name'`,
               ),
             ),
         ),
