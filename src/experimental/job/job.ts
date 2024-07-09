@@ -151,7 +151,7 @@ export class Job<Output = unknown> {
 
     signal.addEventListener("abort", onAbort, { once: true });
 
-    return workOnGolem(exeUnit);
+    return workOnGolem(exeUnit).finally(() => rental.stopAndFinalize());
   }
 
   /**

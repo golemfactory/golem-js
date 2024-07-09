@@ -41,6 +41,7 @@ export class JobManager {
         url: this.config?.yagna?.basePath,
       },
       dataTransferProtocol: storageProvider,
+      logger: this.logger,
     });
   }
 
