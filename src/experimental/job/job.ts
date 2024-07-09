@@ -139,17 +139,12 @@ export class Job<Output = unknown> {
       const exeUnit = await rental.getExeUnit();
       this.events.emit("started");
 
-      const onAbort = async () => {
-        await rental.stopAndFinalize();
-        this.events.emit("canceled");
-      };
-
       if (signal.aborted) {
-        await onAbort();
+        this.events.emit("canceled");
         throw new GolemAbortError("Canceled");
       }
 
-      signal.addEventListener("abort", onAbort, { once: true });
+      signal.addEventListener("abort", () => this.events.emit("canceled"), { once: true });
       return workOnGolem(exeUnit);
     } finally {
       await rental.stopAndFinalize();
