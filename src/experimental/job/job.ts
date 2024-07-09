@@ -136,7 +136,7 @@ export class Job<Output = unknown> {
 
     const rental = await this.glm.oneOf({ order: this.order, signalOrTimeout: signal });
     try {
-      const exeUnit = await rental.getExeUnit();
+      const exeUnit = await rental.getExeUnit(signal);
       this.events.emit("started");
 
       if (signal.aborted) {
