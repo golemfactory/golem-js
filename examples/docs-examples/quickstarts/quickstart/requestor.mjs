@@ -25,7 +25,7 @@ const order = {
     logger: pinoPrettyLogger({
       level: "info",
     }),
-    // api: { key: "try_golem" },
+    api: { key: "try_golem" },
   });
 
   try {
