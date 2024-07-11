@@ -95,4 +95,11 @@ export class RemoteProcess {
       this.subscription.add(() => end());
     });
   }
+
+  /**
+   * Checks if the exe-script batch from Yagna has completed, reflecting all work and streaming to be completed
+   */
+  isFinished() {
+    return this.lastResult?.isBatchFinished ?? false;
+  }
 }
