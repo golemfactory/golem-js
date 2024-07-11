@@ -135,6 +135,7 @@ export class YagnaApi {
 
             eventSource.addEventListener("runtime", (event) => observer.next(JSON.parse(event.data)));
             eventSource.addEventListener("error", (error) => observer.error(error));
+
             return () => eventSource.close();
           });
         },
@@ -155,7 +156,7 @@ export class YagnaApi {
 
     this.gsb = gsbClient.requestor;
 
-    this.logger = options?.logger ?? defaultLogger("yagna");
+    this.logger = options?.logger ? options.logger.child("yagna") : defaultLogger("yagna");
 
     const identityClient = new YaTsClient.IdentityApi.Client({
       BASE: this.basePath,
