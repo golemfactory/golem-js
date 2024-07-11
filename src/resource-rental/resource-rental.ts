@@ -53,10 +53,7 @@ export class ResourceRental {
   ) {
     this.networkNode = this.resourceRentalOptions?.networkNode;
 
-    this.createExeUnit(this.abortController.signal).catch((error) => {
-      this.events.emit("error", error);
-      this.logger.error(`Failed to create exe-unit. ${error}`, { agreementId: this.agreement.id });
-    });
+    this.createExeUnit(this.abortController.signal).catch(() => null);
     // TODO: Listen to agreement events to know when it goes down due to provider closing it!
   }
 
@@ -184,9 +181,15 @@ export class ResourceRental {
         });
         this.events.emit("exeUnitCreated", activity);
         return this.currentExeUnit;
-      })().finally(() => {
-        this.exeUnitPromise = undefined;
-      });
+      })()
+        .catch((error) => {
+          this.events.emit("error", error);
+          this.logger.error(`Failed to create exe-unit. ${error}`, { agreementId: this.agreement.id });
+          throw error;
+        })
+        .finally(() => {
+          this.exeUnitPromise = undefined;
+        });
     }
     return this.exeUnitPromise;
   }
