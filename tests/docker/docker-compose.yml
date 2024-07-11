@@ -20,6 +20,7 @@ services:
       retries: 1
       start_period: 40s
     environment:
+      - YA_NET_BROADCAST_SIZE=10
       - NODE_NAME=provider-1
       - SUBNET=${YAGNA_SUBNET:-golemjstest}
   provider-2:
@@ -42,6 +43,7 @@ services:
       retries: 1
       start_period: 40s
     environment:
+      - YA_NET_BROADCAST_SIZE=10
       - NODE_NAME=provider-2
       - SUBNET=${YAGNA_SUBNET:-golemjstest}
   requestor:
@@ -55,6 +57,7 @@ services:
       - /root/.local/share/yagna/
       - ../../:/golem-js
     environment:
+      - YA_NET_BROADCAST_SIZE=10
       - YAGNA_AUTOCONF_APPKEY=try_golem
       - YAGNA_API_URL=http://0.0.0.0:7465
       - GSB_URL=tcp://0.0.0.0:7464
