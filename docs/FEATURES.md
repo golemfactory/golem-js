@@ -16,7 +16,6 @@
   - [Setup and teardown methods](#setup-and-teardown-methods)
   - [Market scan](#market-scan)
   - [Read more](#read-more)
-  <!-- TOC -->
 
 ## Streaming command results
 
@@ -39,7 +38,7 @@ remoteProcess.stdout.on("data", (data) => console.log("stdout>", data));
 await remoteProcess.waitForExit();
 ```
 
-[Check the full example](../examples/basic/run-and-stream.ts)
+[Check the full example](../examples/rental-model/basic/run-and-stream.ts)
 
 ## File transfer
 
@@ -55,7 +54,7 @@ await exe
 console.log(await readFile("./results.txt", { encoding: "utf-8" }));
 ```
 
-[Check the full example](../examples/basic/transfer.ts)
+[Check the full example](../examples/rental-model/basic/transfer.ts)
 
 ## VPN
 
@@ -72,7 +71,7 @@ await exe1
   .then((res) => console.log(`Response from provider: ${exe1.provider.name} (ip: ${exe1.getIp()})`, res.stdout));
 ```
 
-[Check the full example](../examples/basic/vpn.ts)
+[Check the full example](../examples/rental-model/basic/vpn.ts)
 
 ## Events
 
@@ -85,7 +84,7 @@ glm.payment.events.on("invoiceAccepted", (invoice) => {
 });
 ```
 
-[Check the full example](../examples/basic/events.ts)
+[Check the full example](../examples/rental-model/basic/events.ts)
 
 ## Custom filters
 
@@ -103,10 +102,10 @@ const order: MarketOrderSpec = {
 };
 ```
 
-[Check the full example](../examples/advanced/proposal-filter.ts)
+[Check the full example](../examples/rental-model/advanced/proposal-filter.ts)
 
 We have also prepared a set of predefined filters for common
-use-cases. [Check out the example with predefined filters here](../examples/advanced/proposal-predefined-filter.ts)
+use-cases. [Check out the example with predefined filters here](../examples/rental-model/advanced/proposal-predefined-filter.ts)
 
 ## Custom ranking of proposals
 
@@ -132,7 +131,7 @@ const order: MarketOrderSpec = {
 };
 ```
 
-[Check the full example](../examples/advanced/proposal-selector.ts)
+[Check the full example](../examples/rental-model/advanced/proposal-selector.ts)
 
 ## Uploading local images to the provider
 
@@ -150,7 +149,7 @@ const order: MarketOrderSpec = {
 };
 ```
 
-[Check the full example](../examples/advanced//local-image/)
+[Check the full example](../examples/rental-model/advanced/local-image/)
 
 ## Setup and teardown methods
 
@@ -173,7 +172,7 @@ const pool = await glm.manyOf({
 });
 ```
 
-[Check the full example](../examples/advanced/setup-and-teardown.ts)
+[Check the full example](../examples/rental-model/advanced/setup-and-teardown.ts)
 
 ## Market scan
 
@@ -194,12 +193,12 @@ await glm.market
   });
 ```
 
-[Check the full example](../examples/advanced/scan.ts)
+[Check the full example](../examples/core-api/scan.ts)
 
 ## Read more
 
 If you wish to learn more about how the SDK functions under the hood, please check out our more advanced examples:
 
-- [Creating pools manually](./.../examples/advanced/manual-pools.ts)
-- [Performing all market operations manually](./.../examples/advanced/step-by-step.ts)
-- [(for library authors) Override internal module](./.../examples/advanced/override-module.ts)
+- [Creating pools manually](../examples/core-api/manual-pools.ts)
+- [Performing all market operations manually](../examples/core-api/step-by-step.ts)
+- [(for library authors) Override internal module](../examples/core-api/override-module.ts)

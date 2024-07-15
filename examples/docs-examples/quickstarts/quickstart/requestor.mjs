@@ -33,7 +33,7 @@ const order = {
     const pool = await glm.manyOf({
       // I want to have a minimum of one machine in the pool,
       // but only a maximum of 3 machines can work at the same time
-      concurrency: { min: 1, max: 3 },
+      poolSize: { min: 1, max: 3 },
       order,
     });
     // I have 5 parts of the task to perform in parallel
@@ -45,7 +45,7 @@ const order = {
             .getExeUnit()
             .then((exe) =>
               exe.run(
-                `echo "Part #${i} compute on provider ${exe.provider.name} with CPU:" && cat /proc/cpuinfo | grep 'model name'`,
+                `echo "Part #${i} computed on provider ${exe.provider.name} with CPU:" && cat /proc/cpuinfo | grep 'model name'`,
               ),
             ),
         ),
