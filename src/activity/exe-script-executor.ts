@@ -65,7 +65,7 @@ export class ExeScriptExecutor {
       const batchId = await this.send(script);
       const batchSize = JSON.parse(script.text).length;
 
-      this.logger.debug(`Script sent.`, { batchId });
+      this.logger.debug(`Script sent.`, { batchId, script });
       return { batchId, batchSize };
     } catch (error) {
       const message = getMessageFromApiError(error);
@@ -235,7 +235,7 @@ export class ExeScriptExecutor {
   private parseEventToResult(event: StreamingBatchEvent, batchSize: number): Result {
     // StreamingBatchEvent has a slightly more extensive structure,
     // including a return code that could be added to the Result entity... (?)
-    return new Result({
+    const result = new Result({
       index: event.index,
       eventDate: event.timestamp,
       result: event?.kind?.finished
@@ -250,5 +250,9 @@ export class ExeScriptExecutor {
       message: event?.kind?.finished?.message,
       isBatchFinished: event.index + 1 >= batchSize && Boolean(event?.kind?.finished),
     });
+
+    this.logger.debug("Received stream batch execution result", { result });
+
+    return result;
   }
 }

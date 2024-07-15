@@ -109,7 +109,7 @@ export class Batch {
                     this.executor.activity.agreement.provider,
                     error,
                   );
-            this.logger.debug("Error in batch script execution");
+            this.logger.debug("Error in batch script execution", { error });
             this.script
               .after(allResults)
               .then(() => reject(golemError))
