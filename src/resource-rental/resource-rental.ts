@@ -53,7 +53,9 @@ export class ResourceRental {
   ) {
     this.networkNode = this.resourceRentalOptions?.networkNode;
 
-    this.createExeUnit(this.abortController.signal).catch(() => null);
+    this.createExeUnit(this.abortController.signal).catch((error) =>
+      this.logger.debug(`Failed to automatically create the exe unit during resource rental initialization`, { error }),
+    );
     // TODO: Listen to agreement events to know when it goes down due to provider closing it!
   }
 
