@@ -40,6 +40,7 @@ export class AcquireQueue<T> {
    */
   public async get(signalOrTimeout?: number | AbortSignal): Promise<T> {
     const signal = anyAbortSignal(createAbortSignalFromTimeout(signalOrTimeout), this.abortController.signal);
+    signal.throwIfAborted();
     const { resolve, promise } = withResolvers<T>();
     this.queue.push(resolve);
 

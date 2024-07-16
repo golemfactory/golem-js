@@ -143,6 +143,10 @@ export class ResourceRentalPool {
       this.events.emit("created", { agreement });
       return resourceRental;
     } catch (error) {
+      if (signal.aborted) {
+        this.logger.debug("Creating resource rental was aborted", error);
+        throw error;
+      }
       this.events.emit("errorCreatingRental", {
         error: new GolemMarketError(
           "Creating resource rental failed",
@@ -207,6 +211,34 @@ export class ResourceRentalPool {
   }
 
   /**
+   * Sign a new resource rental or wait for one to become available in the pool,
+   * whichever comes first.
+   */
+  private async raceNewRentalWithAcquireQueue(signalOrTimeout?: number | AbortSignal) {
+    const ac = new AbortController();
+    const signal = anyAbortSignal(
+      ac.signal,
+      createAbortSignalFromTimeout(signalOrTimeout),
+      this.abortController.signal,
+    );
+    return Promise.any([
+      this.createNewResourceRental(signal),
+      this.acquireQueue.get(signal).then((rental) => {
+        this.logger.info("A rental became available in the pool, using it instead of creating a new one");
+        return rental;
+      }),
+    ])
+      .catch((err: AggregateError) => {
+        // if all promises fail (i.e. the signal is aborted by the user) then
+        // rethrow the error produced by `createNewResourceRental` because it's more relevant
+        throw err.errors[0];
+      })
+      .finally(() => {
+        ac.abort();
+      });
+  }
+
+  /**
    * Borrow a resource rental from the pool.
    * If there is no valid resource rental a new one will be created.
    * @param signalOrTimeout - the timeout in milliseconds or an AbortSignal that will be used to cancel the rental request
@@ -222,7 +254,7 @@ export class ResourceRentalPool {
       if (!this.canCreateMoreResourceRentals()) {
         return this.enqueueAcquire(signalOrTimeout);
       }
-      resourceRental = await this.createNewResourceRental(signalOrTimeout);
+      resourceRental = await this.raceNewRentalWithAcquireQueue(signalOrTimeout);
     }
 
     this.borrowed.add(resourceRental);

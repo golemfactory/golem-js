@@ -393,8 +393,12 @@ describe("ResourceRentalPool", () => {
           throw new Error("Acquire resolved even though it should have been rejected");
         })
         .catch((error) => {
-          expect(error).toBe("The pool is in draining mode");
+          expect(error).toEqual("The pool is in draining mode");
         });
+
+      // flush the promise queue to make sure the acquire promise is created
+      await new Promise(setImmediate);
+
       await pool.drainAndClear();
       await acquirePromise;
       expect(pool.getSize()).toBe(0);
