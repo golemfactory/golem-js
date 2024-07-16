@@ -1,10 +1,9 @@
 import { OfferProposal, OfferProposalFilter } from "./proposal";
-import AsyncLock from "async-lock";
 import { EventEmitter } from "eventemitter3";
 import { GolemMarketError, MarketErrorCode } from "./error";
-import { createAbortSignalFromTimeout, defaultLogger, Logger, sleep } from "../shared/utils";
+import { createAbortSignalFromTimeout, defaultLogger, Logger, runOnNextEventLoopIteration } from "../shared/utils";
 import { Observable, Subscription } from "rxjs";
-import { GolemAbortError, GolemTimeoutError } from "../shared/error/golem-error";
+import { AcquireQueue } from "../shared/utils/acquireQueue";
 
 export type OfferProposalSelector = (proposals: OfferProposal[]) => OfferProposal;
 
@@ -54,7 +53,7 @@ export class DraftOfferProposalPool {
   public readonly events = new EventEmitter<ProposalPoolEvents>();
 
   private logger: Logger;
-  private readonly lock: AsyncLock = new AsyncLock();
+  private acquireQueue = new AcquireQueue<OfferProposal>();
 
   /** {@link ProposalPoolOptions.minCount} */
   private readonly minCount: number = 0;
@@ -98,6 +97,11 @@ export class DraftOfferProposalPool {
       this.logger.error("Cannot add a non-draft proposal to the pool", { proposalId: proposal.id });
       throw new GolemMarketError("Cannot add a non-draft proposal to the pool", MarketErrorCode.InvalidProposal);
     }
+    // if someone is waiting for a proposal, give it to them
+    if (this.acquireQueue.hasAcquirers()) {
+      this.acquireQueue.put(proposal);
+      return;
+    }
 
     this.available.add(proposal);
 
@@ -108,42 +112,41 @@ export class DraftOfferProposalPool {
    * Attempts to obtain a single proposal from the pool
    * @param signalOrTimeout - the timeout in milliseconds or an AbortSignal that will be used to cancel the acquiring
    */
-  public acquire(signalOrTimeout?: number | AbortSignal): Promise<OfferProposal> {
+  public async acquire(signalOrTimeout?: number | AbortSignal): Promise<OfferProposal> {
     const signal = createAbortSignalFromTimeout(signalOrTimeout);
-    return this.lock.acquire("proposal-pool", async () => {
-      let proposal: OfferProposal | null = null;
 
-      while (proposal === null) {
-        if (signal.aborted) {
-          throw signal.reason.name === "TimeoutError"
-            ? new GolemTimeoutError("Could not provide any proposal in time")
-            : new GolemAbortError("The acquiring of proposals has been aborted", signal.reason);
-        }
-        // Try to get one
-        proposal = this.available.size > 0 ? this.selectOfferProposal([...this.available]) : null;
+    signal.throwIfAborted();
 
-        if (proposal) {
-          // Validate
-          if (!this.validateOfferProposal(proposal)) {
-            // Drop if not valid
-            this.removeFromAvailable(proposal);
-            // Keep searching
-            proposal = null;
-          }
-        }
-        // if not found or not valid wait a while for next try
-        if (!proposal) {
-          await sleep(1);
-        }
+    // iterate over available proposals until we find a valid one
+    const tryGettingFromAvailable = async (): Promise<OfferProposal | undefined> => {
+      signal.throwIfAborted();
+
+      const proposal = this.available.size > 0 ? this.selectOfferProposal([...this.available]) : null;
+      if (!proposal) {
+        // No proposal was selected, either `available` is empty or the user's proposal filter didn't select anything
+        // no point retrying
+        return;
       }
+      if (!this.validateOfferProposal(proposal)) {
+        // Drop if not valid
+        this.removeFromAvailable(proposal);
+        // and try again
+        return runOnNextEventLoopIteration(tryGettingFromAvailable);
+      }
+      // valid proposal found
+      return proposal;
+    };
+    const proposal = await tryGettingFromAvailable();
+    // Try to get one
 
+    if (proposal) {
       this.available.delete(proposal);
       this.leased.add(proposal);
-
       this.events.emit("acquired", { proposal });
-
       return proposal;
-    });
+    }
+    // if no valid proposal was found, wait for one to appear
+    return this.acquireQueue.get(signal);
   }
 
   /**
@@ -152,31 +155,33 @@ export class DraftOfferProposalPool {
    * Validates if the proposal is still usable before putting it back to the list of available ones
    * @param proposal
    */
-  public release(proposal: OfferProposal): Promise<void> {
-    return this.lock.acquire("proposal-pool", () => {
-      this.leased.delete(proposal);
+  public release(proposal: OfferProposal): void {
+    this.leased.delete(proposal);
 
-      if (this.validateOfferProposal(proposal)) {
-        this.available.add(proposal);
-        this.events.emit("released", { proposal });
-      } else {
-        this.events.emit("removed", { proposal });
+    if (this.validateOfferProposal(proposal)) {
+      this.events.emit("released", { proposal });
+      // if someone is waiting for a proposal, give it to them
+      if (this.acquireQueue.hasAcquirers()) {
+        this.acquireQueue.put(proposal);
+        return;
       }
-    });
+      // otherwise, put it back to the list of available proposals
+      this.available.add(proposal);
+    } else {
+      this.events.emit("removed", { proposal });
+    }
   }
 
-  public remove(proposal: OfferProposal): Promise<void> {
-    return this.lock.acquire("proposal-pool", () => {
-      if (this.leased.has(proposal)) {
-        this.leased.delete(proposal);
-        this.events.emit("removed", { proposal });
-      }
+  public remove(proposal: OfferProposal): void {
+    if (this.leased.has(proposal)) {
+      this.leased.delete(proposal);
+      this.events.emit("removed", { proposal });
+    }
 
-      if (this.available.has(proposal)) {
-        this.available.delete(proposal);
-        this.events.emit("removed", { proposal });
-      }
-    });
+    if (this.available.has(proposal)) {
+      this.available.delete(proposal);
+      this.events.emit("removed", { proposal });
+    }
   }
 
   /**
@@ -211,21 +216,20 @@ export class DraftOfferProposalPool {
    * Clears the pool entirely
    */
   public async clear() {
-    return this.lock.acquire("proposal-pool", () => {
-      for (const proposal of this.available) {
-        this.available.delete(proposal);
-        this.events.emit("removed", { proposal });
-      }
+    this.acquireQueue.releaseAll();
+    for (const proposal of this.available) {
+      this.available.delete(proposal);
+      this.events.emit("removed", { proposal });
+    }
 
-      for (const proposal of this.leased) {
-        this.leased.delete(proposal);
-        this.events.emit("removed", { proposal });
-      }
+    for (const proposal of this.leased) {
+      this.leased.delete(proposal);
+      this.events.emit("removed", { proposal });
+    }
 
-      this.available = new Set();
-      this.leased = new Set();
-      this.events.emit("cleared");
-    });
+    this.available = new Set();
+    this.leased = new Set();
+    this.events.emit("cleared");
   }
 
   protected removeFromAvailable(proposal: OfferProposal): void {

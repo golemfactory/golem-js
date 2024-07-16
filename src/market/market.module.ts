@@ -538,7 +538,7 @@ export class MarketModuleImpl implements MarketModule {
         signal.throwIfAborted();
         const proposal = await draftProposalPool.acquire(signal);
         if (signal.aborted) {
-          await draftProposalPool.release(proposal);
+          draftProposalPool.release(proposal);
           signal.throwIfAborted();
         }
         return proposal;
@@ -557,18 +557,12 @@ export class MarketModuleImpl implements MarketModule {
       try {
         const agreement = await this.proposeAgreement(proposal, agreementOptions);
         // agreement is valid, proposal can be destroyed
-        await draftProposalPool.remove(proposal).catch((error) => {
-          this.logger.warn("Signed the agreement but failed to remove the proposal from the pool", { error });
-        });
+        draftProposalPool.remove(proposal);
         return agreement;
       } catch (error) {
         this.logger.debug("Failed to propose agreement, retrying", { error });
         // We failed to propose the agreement, destroy the proposal and try again with another one
-        await draftProposalPool.remove(proposal).catch((error) => {
-          this.logger.warn("Failed to remove the proposal from the pool after unsuccessful agreement proposal", {
-            error,
-          });
-        });
+        draftProposalPool.remove(proposal);
         return runOnNextEventLoopIteration(tryProposing);
       }
     };
