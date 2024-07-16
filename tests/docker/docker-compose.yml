@@ -7,7 +7,7 @@ services:
     image: provider:latest
     restart: always
     deploy:
-      replicas: 12
+      replicas: 6
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /root/.local/share/yagna/
@@ -20,9 +20,11 @@ services:
       retries: 1
       start_period: 40s
     environment:
-      - YA_NET_BROADCAST_SIZE=30
+      - YA_NET_BROADCAST_SIZE=10
       - NODE_NAME=provider-1
       - SUBNET=${YAGNA_SUBNET:-golemjstest}
+      - YA_NET_BIND_URL=udp://0.0.0.0:0
+      - YA_NET_RELAY_HOST=63.34.24.27:7477
   provider-2:
     build:
       context: .
@@ -30,7 +32,7 @@ services:
     image: provider:latest
     restart: always
     deploy:
-      replicas: 12
+      replicas: 6
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /root/.local/share/yagna/
@@ -43,9 +45,11 @@ services:
       retries: 1
       start_period: 40s
     environment:
-      - YA_NET_BROADCAST_SIZE=30
+      - YA_NET_BROADCAST_SIZE=10
       - NODE_NAME=provider-2
       - SUBNET=${YAGNA_SUBNET:-golemjstest}
+      - YA_NET_BIND_URL=udp://0.0.0.0:0
+      - YA_NET_RELAY_HOST=63.34.24.27:7477
   requestor:
     build:
       context: .
@@ -57,14 +61,15 @@ services:
       - /root/.local/share/yagna/
       - ../../:/golem-js
     environment:
-      - YA_NET_BROADCAST_SIZE=30
+      - YA_NET_BROADCAST_SIZE=10
       - YAGNA_AUTOCONF_APPKEY=try_golem
       - YAGNA_API_URL=http://0.0.0.0:7465
       - GSB_URL=tcp://0.0.0.0:7464
       - YAGNA_SUBNET=${YAGNA_SUBNET:-golemjstest}
       - YAGNA_APPKEY=try_golem
       - PAYMENT_NETWORK=${PAYMENT_NETWORK}
-
+      - YA_NET_BIND_URL=udp://0.0.0.0:0
+      - YA_NET_RELAY_HOST=63.34.24.27:7477
     healthcheck:
       test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:7465 | grep -q 401"]
       interval: 10s
