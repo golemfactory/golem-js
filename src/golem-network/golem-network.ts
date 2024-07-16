@@ -646,10 +646,12 @@ export class GolemNetwork {
     if (typeof this.options.dataTransferProtocol === "string") {
       switch (this.options.dataTransferProtocol) {
         case "ws":
-          return new WebSocketBrowserStorageProvider(this.yagna, {});
+          return new WebSocketBrowserStorageProvider(this.yagna, {
+            logger: this.logger,
+          });
         case "gftp":
         default:
-          return new GftpStorageProvider();
+          return new GftpStorageProvider(this.logger);
       }
     } else if (this.options.dataTransferProtocol !== undefined) {
       return this.options.dataTransferProtocol;
