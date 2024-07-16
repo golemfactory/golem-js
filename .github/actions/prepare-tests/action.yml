@@ -51,7 +51,7 @@ runs:
       shell: bash
       run: |
         echo "Going to build the SDK on the requestor"
-        docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm i && npm run build"
+        docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm i --no-progress && npm run build"
         echo "Successfully built the SDK on the requestor"
 
     - name: Install Cypress
