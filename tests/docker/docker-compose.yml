@@ -7,7 +7,7 @@ services:
     image: provider:latest
     restart: always
     deploy:
-      replicas: 12
+      replicas: 6
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /root/.local/share/yagna/
@@ -30,7 +30,7 @@ services:
     image: provider:latest
     restart: always
     deploy:
-      replicas: 12
+      replicas: 6
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /root/.local/share/yagna/
