@@ -17,9 +17,6 @@ const order: MarketOrderSpec = {
       maxCpuPerHourPrice: 1.0,
       maxEnvPerHourPrice: 0.5,
     },
-    offerProposalFilter: (offer) => {
-      return offer.provider.name === "q53.h";
-    },
   },
 };
 
