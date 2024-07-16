@@ -1,4 +1,4 @@
-import { _, imock, instance, mock, reset, spy, verify, when } from "@johanblumenberg/ts-mockito";
+import { _, imock, instance, mock, MockPropertyPolicy, reset, spy, verify, when } from "@johanblumenberg/ts-mockito";
 import { Logger, YagnaApi } from "../shared/utils";
 import { MarketModuleImpl } from "./market.module";
 import { Demand, DemandSpecification } from "./demand";
@@ -439,9 +439,11 @@ describe("Market module", () => {
       const badProposal0 = {} as OfferProposal;
       const badProposal1 = {} as OfferProposal;
       const goodProposal = {} as OfferProposal;
-      const mockPool = mock(DraftOfferProposalPool);
-      when(mockPool.acquire(_)).thenResolve(badProposal0).thenResolve(badProposal1).thenResolve(goodProposal);
+
+      const mockPool = mock(DraftOfferProposalPool, MockPropertyPolicy.StubAsProperty);
       when(mockPool.remove(_)).thenResolve();
+      when(mockPool.acquire(_)).thenResolve(badProposal0).thenResolve(badProposal1).thenResolve(goodProposal);
+
       const goodAgreement = {} as Agreement;
       const marketSpy = spy(marketModule);
       when(marketSpy.proposeAgreement(goodProposal, _)).thenResolve(goodAgreement);
@@ -499,15 +501,11 @@ describe("Market module", () => {
       );
     });
     it("respects the timeout on draft proposal pool acquire and forwards the error", async () => {
-      const mockAcquire: DraftOfferProposalPool["acquire"] = jest
-        .fn()
-        .mockImplementation(
-          () => new Promise((_, reject) => setTimeout(() => reject(new Error("Failed to acquire")), 10)),
-        );
-      const mockPool = {
-        acquire: mockAcquire,
-      } as DraftOfferProposalPool;
-      expect(marketModule.signAgreementFromPool(mockPool)).rejects.toThrow("Failed to acquire");
+      const mockPool = mock(DraftOfferProposalPool);
+      when(mockPool.acquire(_)).thenCall(
+        () => new Promise((_, reject) => setTimeout(() => reject(new Error("Failed to acquire")), 10)),
+      );
+      expect(marketModule.signAgreementFromPool(instance(mockPool))).rejects.toThrow("Failed to acquire");
     });
   });
 
