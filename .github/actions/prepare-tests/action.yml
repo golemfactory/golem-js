@@ -59,3 +59,22 @@ runs:
       shell: bash
       run: |
         docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && ./node_modules/.bin/cypress install"
+
+    - name: Run a preliminary scan of offers
+      shell: bash
+      run: |
+        docker exec -t docker-requestor-1 /bin/sh -c "npx @golem-sdk/cli market scan -k try_golem"
+
+    - name: List down sessions seen on that requestor
+      shell: bash
+      run: |
+        docker exec docker-requestor-1 /bin/sh -c "npx @golem-sdk/cli market scan -k try_golem"
+
+    - name: Sleep for a while to wait for further propagation
+      shell: bash
+      run: sleep 300 # 5 minutes
+
+    - name: Run a secondary scan of offers
+      shell: bash
+      run: |
+        docker exec -t docker-requestor-1 /bin/sh -c "npx @golem-sdk/cli market scan -k try_golem"
