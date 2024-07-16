@@ -43,7 +43,7 @@ const order: MarketOrderSpec = {
 (async () => {
   const glm = new GolemNetwork({
     logger: pinoPrettyLogger({
-      level: "info",
+      level: "debug",
     }),
     // here's where we provide our own implementation
     override: {

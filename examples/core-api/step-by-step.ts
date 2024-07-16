@@ -17,7 +17,7 @@ import { filter, map, switchMap, take } from "rxjs";
 
 (async () => {
   const logger = pinoPrettyLogger({
-    level: "info",
+    level: "debug",
   });
 
   const glm = new GolemNetwork({
