@@ -610,7 +610,6 @@ export class MarketModuleImpl implements MarketModule {
           if (isCancelled) {
             return;
           }
-          this.logger.debug("Waiting for reduced proposals...");
           try {
             await proposalsBatch.waitForProposals();
             const proposals = await proposalsBatch.getProposals();
