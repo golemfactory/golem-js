@@ -26,7 +26,7 @@ const demandOptions = {
 
 (async () => {
   const logger = pinoPrettyLogger({
-    level: "debug",
+    level: "info",
   });
 
   const glm = new GolemNetwork({

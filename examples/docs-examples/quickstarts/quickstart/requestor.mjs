@@ -23,7 +23,7 @@ const order = {
 (async () => {
   const glm = new GolemNetwork({
     logger: pinoPrettyLogger({
-      level: "debug",
+      level: "info",
     }),
     api: { key: "try_golem" },
   });

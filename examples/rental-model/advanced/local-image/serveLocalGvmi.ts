@@ -10,7 +10,7 @@ const getImagePath = (path: string) => new URL(path, import.meta.url).toString()
 
 (async () => {
   const logger = pinoPrettyLogger({
-    level: "debug",
+    level: "info",
   });
 
   const glm = new GolemNetwork({

@@ -29,7 +29,7 @@ const order: MarketOrderSpec = {
 (async () => {
   const glm = new GolemNetwork({
     logger: pinoPrettyLogger({
-      level: "debug",
+      level: "info",
     }),
   });
 
