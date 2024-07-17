@@ -1,4 +1,4 @@
-import { _, imock, instance, mock, MockPropertyPolicy, reset, spy, verify, when } from "@johanblumenberg/ts-mockito";
+import { _, imock, instance, mock, reset, spy, verify, when } from "@johanblumenberg/ts-mockito";
 import { Logger, YagnaApi } from "../shared/utils";
 import { MarketModuleImpl } from "./market.module";
 import { Demand, DemandSpecification } from "./demand";
@@ -440,7 +440,7 @@ describe("Market module", () => {
       const badProposal1 = {} as OfferProposal;
       const goodProposal = {} as OfferProposal;
 
-      const mockPool = mock(DraftOfferProposalPool, MockPropertyPolicy.StubAsProperty);
+      const mockPool = mock(DraftOfferProposalPool);
       when(mockPool.acquire(_)).thenResolve(badProposal0).thenResolve(badProposal1).thenResolve(goodProposal);
       const goodAgreement = {} as Agreement;
       const marketSpy = spy(marketModule);
