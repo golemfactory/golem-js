@@ -443,7 +443,6 @@ describe("Market module", () => {
       const mockPool = mock(DraftOfferProposalPool, MockPropertyPolicy.StubAsProperty);
       when(mockPool.remove(_)).thenResolve();
       when(mockPool.acquire(_)).thenResolve(badProposal0).thenResolve(badProposal1).thenResolve(goodProposal);
-
       const goodAgreement = {} as Agreement;
       const marketSpy = spy(marketModule);
       when(marketSpy.proposeAgreement(goodProposal, _)).thenResolve(goodAgreement);
@@ -492,7 +491,6 @@ describe("Market module", () => {
     it("should abort after a set timeout", async () => {
       const mockPool = mock(DraftOfferProposalPool);
       when(mockPool.acquire()).thenResolve({} as OfferProposal);
-      when(mockPool.remove(_)).thenResolve();
       const marketSpy = spy(marketModule);
       when(marketSpy.proposeAgreement(_)).thenReject(new Error("Failed to sign proposal"));
 
