@@ -63,7 +63,7 @@ runs:
     - name: Run a preliminary scan of offers
       shell: bash
       run: |
-        docker exec -t docker-requestor-1 /bin/sh -c "npm install -g @prekucki/wait-for-n && wait-for-n --limit=6 --appkey=try_golem --subnet=$YAGNA_SUBNET"
+        docker exec -t docker-requestor-1 /bin/sh -c "npm install --no-progress -g @prekucki/wait-for-n && wait-for-n --limit=6 --appkey=try_golem --subnet=$YAGNA_SUBNET"
 
     - name: List down sessions seen on that requestor
       shell: bash
