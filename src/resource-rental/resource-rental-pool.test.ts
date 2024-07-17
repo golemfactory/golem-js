@@ -164,12 +164,12 @@ describe("ResourceRentalPool", () => {
       const acquiredRentalPromise = pool.acquire();
       // go to the next tick
       await Promise.resolve();
-      expect(pool["acquireQueue"].length).toBe(1);
+      expect(pool["acquireQueue"].size()).toBe(1);
       pool.release(acquiredRental1);
       await acquiredRentalPromise;
       expect(pool.getAvailableSize()).toBe(0);
       expect(pool.getBorrowedSize()).toBe(3);
-      expect(pool["acquireQueue"].length).toBe(0);
+      expect(pool["acquireQueue"].size()).toBe(0);
     });
     it("validates the resource rental before returning it", async () => {
       const pool = getRentalPool({ min: 3 });
@@ -214,7 +214,7 @@ describe("ResourceRentalPool", () => {
       expect(pool.getSize()).toBe(3);
       expect(pool.getBorrowedSize()).toBe(3);
       expect(pool.getAvailableSize()).toBe(0);
-      expect(pool["acquireQueue"].length).toBe(4);
+      expect(pool["acquireQueue"].size()).toBe(4);
     });
   });
   describe("release()", () => {
@@ -393,8 +393,12 @@ describe("ResourceRentalPool", () => {
           throw new Error("Acquire resolved even though it should have been rejected");
         })
         .catch((error) => {
-          expect(error).toBe("The pool is in draining mode");
+          expect(error).toEqual("The pool is in draining mode");
         });
+
+      // flush the promise queue to make sure the acquire promise is created
+      await new Promise(setImmediate);
+
       await pool.drainAndClear();
       await acquirePromise;
       expect(pool.getSize()).toBe(0);

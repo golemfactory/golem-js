@@ -1,5 +1,5 @@
 import { Subscription } from "rxjs";
-import { Allocation, DraftOfferProposalPool, GolemAbortError, GolemNetwork } from "../../src";
+import { Allocation, DraftOfferProposalPool, GolemAbortError, GolemNetwork, GolemTimeoutError } from "../../src";
 
 describe("ResourceRentalPool", () => {
   const glm = new GolemNetwork();
@@ -258,5 +258,28 @@ describe("ResourceRentalPool", () => {
     await pool.drainAndClear();
     await expect(acquirePromise).rejects.toThrow("The signing of the agreement has been aborted");
     expect(pool.getSize()).toEqual(0);
+  });
+  it("should do all tasks on the same provider if that's the only one available", async () => {
+    // simulate a situation where only one provider is available
+    const offer = await proposalPool.acquire();
+    const newPool = new DraftOfferProposalPool();
+    newPool.add(offer);
+
+    const pool = glm.rental.createResourceRentalPool(newPool, allocation, { poolSize: 3 });
+    expect.assertions(3);
+    await Promise.all([
+      pool.withRental(async (rental) => {
+        const exe = await rental.getExeUnit();
+        expect(exe.provider.id).toEqual(offer.provider.id);
+      }),
+      pool.withRental(async (rental) => {
+        const exe = await rental.getExeUnit();
+        expect(exe.provider.id).toEqual(offer.provider.id);
+      }),
+      pool.withRental(async (rental) => {
+        const exe = await rental.getExeUnit();
+        expect(exe.provider.id).toEqual(offer.provider.id);
+      }),
+    ]);
   });
 });

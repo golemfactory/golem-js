@@ -145,7 +145,8 @@ export class Job<Output = unknown> {
       }
 
       signal.addEventListener("abort", () => this.events.emit("canceled"), { once: true });
-      return workOnGolem(exeUnit);
+      // remember to `await` here so that the `finally` block is executed AFTER the work is done
+      return await workOnGolem(exeUnit);
     } finally {
       await rental.stopAndFinalize();
     }
