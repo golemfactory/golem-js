@@ -441,7 +441,6 @@ describe("Market module", () => {
       const goodProposal = {} as OfferProposal;
 
       const mockPool = mock(DraftOfferProposalPool, MockPropertyPolicy.StubAsProperty);
-      when(mockPool.remove(_)).thenResolve();
       when(mockPool.acquire(_)).thenResolve(badProposal0).thenResolve(badProposal1).thenResolve(goodProposal);
       const goodAgreement = {} as Agreement;
       const marketSpy = spy(marketModule);
