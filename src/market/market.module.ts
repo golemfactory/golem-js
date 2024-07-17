@@ -530,13 +530,20 @@ export class MarketModuleImpl implements MarketModule {
     agreementOptions?: AgreementOptions,
     signalOrTimeout?: number | AbortSignal,
   ): Promise<Agreement> {
-    this.logger.info("Trying to sign an agreement ...");
+    this.logger.info("Trying to sign an agreement...");
     const signal = createAbortSignalFromTimeout(signalOrTimeout);
 
     const getProposal = async () => {
       try {
         signal.throwIfAborted();
+        this.logger.debug("Acquiring proposal from draft proposal pool", {
+          draftPoolCounters: {
+            total: draftProposalPool.count(),
+            available: draftProposalPool.availableCount(),
+          },
+        });
         const proposal = await draftProposalPool.acquire(signal);
+        this.logger.debug("Acquired proposal from the pool", { proposal });
         if (signal.aborted) {
           draftProposalPool.release(proposal);
           signal.throwIfAborted();
@@ -597,7 +604,6 @@ export class MarketModuleImpl implements MarketModule {
           if (isCancelled) {
             return;
           }
-          this.logger.debug("Waiting for reduced proposals...");
           try {
             await proposalsBatch.waitForProposals();
             const proposals = await proposalsBatch.getProposals();

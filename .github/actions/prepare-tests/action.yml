@@ -51,7 +51,7 @@ runs:
       shell: bash
       run: |
         echo "Going to build the SDK on the requestor"
-        docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm i && npm run build"
+        docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm i --no-progress && npm run build"
         echo "Successfully built the SDK on the requestor"
 
     - name: Install Cypress
@@ -59,3 +59,18 @@ runs:
       shell: bash
       run: |
         docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && ./node_modules/.bin/cypress install"
+
+    - name: Run a preliminary scan of offers
+      shell: bash
+      run: |
+        docker exec -t docker-requestor-1 /bin/sh -c "npm install --no-progress -g @prekucki/wait-for-n && wait-for-n --limit=6 --appkey=try_golem --subnet=$YAGNA_SUBNET"
+
+    - name: List down sessions seen on that requestor
+      shell: bash
+      run: |
+        docker exec docker-requestor-1 /bin/sh -c "yagna net sessions"
+
+    - name: Run a secondary scan of offers
+      shell: bash
+      run: |
+        docker exec -t docker-requestor-1 /bin/sh -c "npx --no-progress --yes @golem-sdk/cli market scan -k try_golem --subnet-tag $YAGNA_SUBNET --payment-network $PAYMENT_NETWORK"

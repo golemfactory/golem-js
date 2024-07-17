@@ -439,6 +439,7 @@ describe("Market module", () => {
       const badProposal0 = {} as OfferProposal;
       const badProposal1 = {} as OfferProposal;
       const goodProposal = {} as OfferProposal;
+
       const mockPool = mock(DraftOfferProposalPool);
       when(mockPool.acquire(_)).thenResolve(badProposal0).thenResolve(badProposal1).thenResolve(goodProposal);
       const goodAgreement = {} as Agreement;
@@ -497,15 +498,11 @@ describe("Market module", () => {
       );
     });
     it("respects the timeout on draft proposal pool acquire and forwards the error", async () => {
-      const mockAcquire: DraftOfferProposalPool["acquire"] = jest
-        .fn()
-        .mockImplementation(
-          () => new Promise((_, reject) => setTimeout(() => reject(new Error("Failed to acquire")), 10)),
-        );
-      const mockPool = {
-        acquire: mockAcquire,
-      } as DraftOfferProposalPool;
-      expect(marketModule.signAgreementFromPool(mockPool)).rejects.toThrow("Failed to acquire");
+      const mockPool = mock(DraftOfferProposalPool);
+      when(mockPool.acquire(_)).thenCall(
+        () => new Promise((_, reject) => setTimeout(() => reject(new Error("Failed to acquire")), 10)),
+      );
+      expect(marketModule.signAgreementFromPool(instance(mockPool))).rejects.toThrow("Failed to acquire");
     });
   });
 
