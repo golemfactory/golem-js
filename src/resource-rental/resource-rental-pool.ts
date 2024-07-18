@@ -11,6 +11,7 @@ import { RentalModule } from "./rental.module";
 import { AgreementOptions } from "../market/agreement/agreement";
 import { GolemAbortError } from "../shared/error/golem-error";
 import AsyncLock from "async-lock";
+import { AcquireQueue } from "../shared/utils/acquireQueue";
 
 export interface ResourceRentalPoolDependencies {
   allocation: Allocation;
@@ -70,7 +71,7 @@ export class ResourceRentalPool {
   /**
    * Queue of functions that are waiting for a lease process to be available
    */
-  private acquireQueue: Array<(rental: ResourceRental) => void> = [];
+  private acquireQueue = new AcquireQueue<ResourceRental>();
   private logger: Logger;
 
   private drainPromise?: Promise<void>;
@@ -142,6 +143,10 @@ export class ResourceRentalPool {
       this.events.emit("created", { agreement });
       return resourceRental;
     } catch (error) {
+      if (signal.aborted) {
+        this.logger.debug("Creating resource rental was aborted", error);
+        throw error;
+      }
       this.events.emit("errorCreatingRental", {
         error: new GolemMarketError(
           "Creating resource rental failed",
@@ -196,16 +201,41 @@ export class ResourceRentalPool {
     return resourceRental;
   }
 
-  private async enqueueAcquire(): Promise<ResourceRental> {
-    return new Promise((resolve) => {
-      this.acquireQueue.push((resourceRental) => {
-        this.borrowed.add(resourceRental);
-        this.events.emit("acquired", {
-          agreement: resourceRental.agreement,
-        });
-        resolve(resourceRental);
-      });
+  private async enqueueAcquire(signalOrTimeout?: number | AbortSignal): Promise<ResourceRental> {
+    const rental = await this.acquireQueue.get(signalOrTimeout);
+    this.borrowed.add(rental);
+    this.events.emit("acquired", {
+      agreement: rental.agreement,
     });
+    return rental;
+  }
+
+  /**
+   * Sign a new resource rental or wait for one to become available in the pool,
+   * whichever comes first.
+   */
+  private async raceNewRentalWithAcquireQueue(signalOrTimeout?: number | AbortSignal) {
+    const ac = new AbortController();
+    const signal = anyAbortSignal(
+      ac.signal,
+      createAbortSignalFromTimeout(signalOrTimeout),
+      this.abortController.signal,
+    );
+    return Promise.any([
+      this.createNewResourceRental(signal),
+      this.acquireQueue.get(signal).then((rental) => {
+        this.logger.info("A rental became available in the pool, using it instead of creating a new one");
+        return rental;
+      }),
+    ])
+      .catch((err: AggregateError) => {
+        // if all promises fail (i.e. the signal is aborted by the user) then
+        // rethrow the error produced by `createNewResourceRental` because it's more relevant
+        throw err.errors[0];
+      })
+      .finally(() => {
+        ac.abort();
+      });
   }
 
   /**
@@ -222,9 +252,9 @@ export class ResourceRentalPool {
 
     if (!resourceRental) {
       if (!this.canCreateMoreResourceRentals()) {
-        return this.enqueueAcquire();
+        return this.enqueueAcquire(signalOrTimeout);
       }
-      resourceRental = await this.createNewResourceRental(signalOrTimeout);
+      resourceRental = await this.raceNewRentalWithAcquireQueue(signalOrTimeout);
     }
 
     this.borrowed.add(resourceRental);
@@ -240,9 +270,8 @@ export class ResourceRentalPool {
    * Otherwise, the resource rental will be added to the queue.
    */
   private passResourceRentalToWaitingAcquireOrBackToPool(resourceRental: ResourceRental) {
-    if (this.acquireQueue.length > 0) {
-      const acquire = this.acquireQueue.shift()!;
-      acquire(resourceRental);
+    if (this.acquireQueue.hasAcquirers()) {
+      this.acquireQueue.put(resourceRental);
       return;
     }
     if (resourceRental.hasActivity()) {
@@ -299,7 +328,7 @@ export class ResourceRentalPool {
       await this.asyncLock.acquire("resource-rental-pool", async () => {
         this.abortController.abort("The pool is in draining mode");
         this.events.emit("draining");
-        this.acquireQueue = [];
+        this.acquireQueue.releaseAll();
         const allResourceRentals = Array.from(this.borrowed)
           .concat(Array.from(this.lowPriority))
           .concat(Array.from(this.highPriority));

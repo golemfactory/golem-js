@@ -134,24 +134,22 @@ export class Job<Output = unknown> {
       throw new GolemAbortError("Canceled");
     }
 
-    const rental = await this.glm.oneOf({ order: this.order });
+    const rental = await this.glm.oneOf({ order: this.order, signalOrTimeout: signal });
+    try {
+      const exeUnit = await rental.getExeUnit(signal);
+      this.events.emit("started");
 
-    const exeUnit = await rental.getExeUnit();
-    this.events.emit("started");
+      if (signal.aborted) {
+        this.events.emit("canceled");
+        throw new GolemAbortError("Canceled");
+      }
 
-    const onAbort = async () => {
+      signal.addEventListener("abort", () => this.events.emit("canceled"), { once: true });
+      // remember to `await` here so that the `finally` block is executed AFTER the work is done
+      return await workOnGolem(exeUnit);
+    } finally {
       await rental.stopAndFinalize();
-      this.events.emit("canceled");
-    };
-
-    if (signal.aborted) {
-      await onAbort();
-      throw new GolemAbortError("Canceled");
     }
-
-    signal.addEventListener("abort", onAbort, { once: true });
-
-    return workOnGolem(exeUnit);
   }
 
   /**

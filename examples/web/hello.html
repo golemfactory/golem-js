@@ -115,11 +115,13 @@
           await glm.connect();
           appendResults("Request for renting a provider machine");
           const rental = await glm.oneOf({ order });
+          appendResults("Rented resources from", rental.agreement.provider.name);
           await rental
             .getExeUnit()
             .then(async (exe) =>
               appendResults("Reply: " + (await exe.run(`echo 'Hello Golem! 👋 from ${exe.provider.name}!'`)).stdout),
             );
+          appendResults("Finished all work with the resources");
           await rental.stopAndFinalize();
           appendResults("Finalized renting process");
         } catch (err) {
