@@ -175,7 +175,8 @@ export class ExeScriptExecutor {
               }
             } catch (error) {
               logger.debug(`Failed to fetch activity results. Attempt: ${attempt}. ${error}`);
-              if (RETRYABLE_ERROR_STATUS_CODES.includes(error?.status)) {
+              const errorStatus = error?.status ?? error.previous?.status;
+              if (RETRYABLE_ERROR_STATUS_CODES.includes(errorStatus)) {
                 throw error;
               } else {
                 bail(error);
