@@ -136,7 +136,7 @@ export class AgreementPaymentProcess {
 
     this.debitNotes.set(debitNote.id, debitNote);
 
-    let acceptedByFilter: boolean = false;
+    let acceptedByFilter = false;
     try {
       acceptedByFilter = await this.options.debitNoteFilter(debitNote, {
         agreement: this.agreement,
