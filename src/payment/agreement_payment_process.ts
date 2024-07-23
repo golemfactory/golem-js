@@ -136,7 +136,7 @@ export class AgreementPaymentProcess {
 
     this.debitNotes.set(debitNote.id, debitNote);
 
-    let acceptedByFilter = false;
+    let acceptedByFilter: boolean = false;
     try {
       acceptedByFilter = await this.options.debitNoteFilter(debitNote, {
         agreement: this.agreement,
@@ -144,6 +144,10 @@ export class AgreementPaymentProcess {
         demand: this.agreement.demand,
       });
     } catch (error) {
+      if (error == "ignore debit note") {
+        // This is a special case when the filter wants to ignore the debit note
+        return false;
+      }
       throw new GolemUserError("An error occurred in the debit note filter", error);
     }
 
