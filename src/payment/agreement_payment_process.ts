@@ -146,6 +146,10 @@ export class AgreementPaymentProcess {
     } catch (error) {
       if (error == "ignore debit note") {
         // This is a special case when the filter wants to ignore the debit note
+        this.logger.debug(`DebitNote ignored`, {
+          debitNoteId: debitNote.id,
+          agreementId: debitNote.agreementId,
+        });
         return false;
       }
       throw new GolemUserError("An error occurred in the debit note filter", error);
