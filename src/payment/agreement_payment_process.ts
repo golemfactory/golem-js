@@ -144,7 +144,7 @@ export class AgreementPaymentProcess {
         demand: this.agreement.demand,
       });
     } catch (error) {
-      if (error == "ignore debit note") {
+      if (error === "ignore debit note") {
         // This is a special case when the filter wants to ignore the debit note
         this.logger.debug(`DebitNote ignored`, {
           debitNoteId: debitNote.id,
