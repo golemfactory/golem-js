@@ -145,14 +145,15 @@ export class ScannedOffer {
    * ```
    */
   get paymentPlatformAddresses(): PaymentPlatformAddressSet {
-    const platformProps = Object.entries(this.model.properties).filter(([key]) =>
-      key.startsWith("golem.com.payment.platform."),
-    );
+    const propRegex = /golem.com.payment.platform.([a-z0-9-]+).address/;
+    const platformProps = Object.entries(this.model.properties).filter(([key]) => key.match(propRegex));
 
-    const platformAddress = platformProps.map(([key, address]) => [
-      key.replace("golem.com.payment.platform.", "").replace(".address", ""),
-      address,
-    ]);
+    const platformAddress = platformProps
+      .map<[string, string]>(([key, address]) => {
+        const match = key.match(propRegex);
+        return [match ? match[1] : "", address];
+      })
+      .filter(([key]) => !!key);
 
     return Object.fromEntries(platformAddress);
   }
