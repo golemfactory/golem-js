@@ -101,4 +101,15 @@ export class ScannedOffer {
   get runtimeName() {
     return this.properties["golem.runtime.name"];
   }
+
+  /**
+   * Get the ID of the offer published by the Provider
+   *
+   * Note:
+   * - this ID will change after the provider refreshes the offer (usually after 1h)
+   * - this ID will remain unchanged for the same published offer between different scans
+   */
+  get offerId() {
+    return this.model.offerId;
+  }
 }
