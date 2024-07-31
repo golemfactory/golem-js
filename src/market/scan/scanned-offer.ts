@@ -51,33 +51,43 @@ export class ScannedOffer {
       name: this.properties["golem.node.id.name"] || "<unknown>",
     };
   }
+
   get transferProtocol() {
     return this.properties["golem.activity.caps.transfer.protocol"];
   }
+
   get cpuBrand() {
     return this.properties["golem.inf.cpu.brand"];
   }
+
   get cpuCapabilities() {
     return this.properties["golem.inf.cpu.capabilities"];
   }
+
   get cpuCores() {
     return this.properties["golem.inf.cpu.cores"];
   }
+
   get cpuThreads() {
     return this.properties["golem.inf.cpu.threads"];
   }
+
   get memory() {
     return this.properties["golem.inf.mem.gib"];
   }
+
   get storage() {
     return this.properties["golem.inf.storage.gib"];
   }
+
   get publicNet() {
     return this.properties["golem.node.net.is-public"];
   }
+
   get runtimeCapabilities() {
     return this.properties["golem.runtime.capabilities"];
   }
+
   get runtimeName() {
     return this.properties["golem.runtime.name"];
   }
