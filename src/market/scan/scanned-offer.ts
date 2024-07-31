@@ -72,11 +72,21 @@ export class ScannedOffer {
     return this.properties["golem.inf.cpu.threads"];
   }
 
+  /** @deprecated Use {@link memoryGib} instead */
   get memory() {
+    return this.memoryGib;
+  }
+
+  get memoryGib() {
     return this.properties["golem.inf.mem.gib"];
   }
 
+  /** @deprecated Use {@link storageGib} instead */
   get storage() {
+    return this.storageGib;
+  }
+
+  get storageGib() {
     return this.properties["golem.inf.storage.gib"];
   }
 
