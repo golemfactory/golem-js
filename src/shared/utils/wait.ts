@@ -11,7 +11,7 @@ import { createAbortSignalFromTimeout } from "./abortSignal";
  *
  * @return {Promise<void>} - Resolves when the condition is met or rejects with a timeout error if it wasn't met on time.
  */
-export function waitForCondition(
+export function waitFor(
   check: () => boolean | Promise<boolean>,
   opts?: { signalOrTimeout?: number | AbortSignal; intervalSeconds?: number },
 ): Promise<void> {

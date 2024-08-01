@@ -1,7 +1,7 @@
 import { Logger } from "../utils";
 import { Subject } from "rxjs";
 import { EventDTO } from "ya-ts-client/dist/market-api";
-import { waitForCondition } from "../utils/wait";
+import { waitFor } from "../utils/wait";
 
 export type CancellablePoll<T> = {
   /** User defined name of the event stream for ease of debugging */
@@ -79,7 +79,7 @@ export class EventReader {
         if (currentPoll) {
           currentPoll.cancel();
         }
-        await waitForCondition(() => isFinished, { intervalSeconds: 0 });
+        await waitFor(() => isFinished, { intervalSeconds: 0 });
         logger.debug("Cancelled reading the events", { eventType });
       },
     };

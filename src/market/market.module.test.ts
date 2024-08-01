@@ -12,7 +12,7 @@ import { Allocation, IPaymentApi } from "../payment";
 import { INetworkApi, NetworkModule } from "../network";
 import { DraftOfferProposalPool } from "./draft-offer-proposal-pool";
 import { Agreement, AgreementEvent, ProviderInfo } from "./agreement";
-import { waitAndCall, waitForCondition } from "../shared/utils/wait";
+import { waitAndCall, waitFor } from "../shared/utils/wait";
 import { MarketOrderSpec } from "../golem-network";
 import { GolemAbortError } from "../shared/error/golem-error";
 
@@ -347,7 +347,7 @@ describe("Market module", () => {
         });
       });
 
-      await waitForCondition(() => draftListener.mock.calls.length > 0);
+      await waitFor(() => draftListener.mock.calls.length > 0);
       testSub.unsubscribe();
 
       expect(draftListener).toHaveBeenCalledWith(draftProposal);
