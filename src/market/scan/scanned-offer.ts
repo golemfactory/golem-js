@@ -145,10 +145,9 @@ export class ScannedOffer {
    * ```
    */
   get paymentPlatformAddresses(): PaymentPlatformAddressSet {
-    const propRegex = /golem.com.payment.platform.([a-z0-9-]+).address/;
-    const platformProps = Object.entries(this.model.properties).filter(([key]) => key.match(propRegex));
+    const propRegex = /golem\.com\.payment\.platform\.([a-z0-9-]+)\.address/;
 
-    const platformAddress = platformProps
+    const platformAddress = Object.entries(this.model.properties)
       .map<[string, string]>(([key, address]) => {
         const match = key.match(propRegex);
         return [match ? match[1] : "", address];
