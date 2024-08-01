@@ -20,10 +20,28 @@ export type GenericGolemProtocolPropertyType = Record<string, string | number | 
  *
  * @link https://github.com/golemfactory/golem-architecture/blob/master/gaps/gap-3_mid_agreement_payments/gap-3_mid_agreement_payments.md
  */
-export type Gap3MidAgreementPaymentProps = {
-  "golem.com.scheme.payu.debit-note.interval-sec?"?: number;
-  "golem.com.scheme.payu.payment-timeout-sec?"?: number;
-};
+export type Gap3MidAgreementPaymentProps = Partial<{
+  "golem.com.scheme.payu.debit-note.interval-sec?": number;
+  "golem.com.scheme.payu.payment-timeout-sec?": number;
+}>;
+
+/**
+ * Properties defined by GAP-35
+ *
+ * @link https://github.com/golemfactory/golem-architecture/blob/master/gaps/gap-35_gpu_pci_capability/gap-35_gpu_pci_capability.md
+ */
+export type Gap35GpuSupportProps = Partial<{
+  "golem.!exp.gap-35.v1.inf.gpu.model": string;
+  "golem.!exp.gap-35.v1.inf.gpu.clocks.graphics.mhz": number;
+  "golem.!exp.gap-35.v1.inf.gpu.clocks.memory.mhz": number;
+  "golem.!exp.gap-35.v1.inf.gpu.clocks.sm.mhz": number;
+  "golem.!exp.gap-35.v1.inf.gpu.clocks.video.mhz": number;
+  "golem.!exp.gap-35.v1.inf.gpu.cuda.cores": number;
+  "golem.!exp.gap-35.v1.inf.gpu.cuda.enabled": boolean;
+  "golem.!exp.gap-35.v1.inf.gpu.cuda.version": string;
+  "golem.!exp.gap-35.v1.inf.gpu.memory.bandwidth.gib": number;
+  "golem.!exp.gap-35.v1.inf.gpu.memory.total.gib": number;
+}>;
 /**
  * @link https://github.com/golemfactory/golem-architecture/tree/master/standards/0-commons
  */
@@ -98,6 +116,7 @@ export type ProposalProperties =
     StandardComputationPlatformProps &
     // Attach GAP specific property sets
     Gap3MidAgreementPaymentProps &
+    Gap35GpuSupportProps &
     /**
      * These are around byt not really specified in any standard
      * FIXME #yagna - Standardize?
