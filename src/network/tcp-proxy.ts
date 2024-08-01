@@ -35,13 +35,13 @@ export interface TcpProxyOptions {
  *
  * General solution description:
  *
- * - [x] Open a TCP server and listen to connections
- * - [x] When a new connection arrives, establish a WS connection with yagna
- * - [ ] Pass any incoming data from the client TCP socket to the WS, buffer it when the socket is not ready yet
- * - [ ] Pass any returning data from the WS to the client TCP socket, but don't do it if the client socket already disconnected
- * - [ ] When the WS will be closed, then close the client socket as well
- * - [ ] When the client TCP socket will be closed, close the WS as well
- * - [ ] Handle teardown of the TCP-WS bridge by clearing communication buffers to avoid memory leaks
+ * - Open a TCP server and listen to connections
+ * - When a new connection arrives, establish a WS connection with yagna
+ * - Pass any incoming data from the client TCP socket to the WS, buffer it when the socket is not ready yet
+ * - Pass any returning data from the WS to the client TCP socket, but don't do it if the client socket already disconnected
+ * - When the WS will be closed, then close the client socket as well
+ * - When the client TCP socket will be closed, close the WS as well
+ * - Handle teardown of the TCP-WS bridge by clearing communication buffers to avoid memory leaks
  */
 export class TcpProxy {
   private server: net.Server;

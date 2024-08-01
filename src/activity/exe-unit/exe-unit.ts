@@ -20,7 +20,7 @@ import { RemoteProcess } from "./process";
 import { GolemWorkError, WorkErrorCode } from "./error";
 import { GolemAbortError, GolemConfigError, GolemTimeoutError } from "../../shared/error/golem-error";
 import { Agreement, ProviderInfo } from "../../market";
-import { TcpProxy } from "../../network/tcpProxy";
+import { TcpProxy } from "../../network/tcp-proxy";
 import { ExecutionOptions, ExeScriptExecutor } from "../exe-script-executor";
 import { lastValueFrom, tap, toArray } from "rxjs";
 
