@@ -77,6 +77,7 @@ export class ExeScriptExecutor {
       if (this.abortSignal.aborted) {
         throw new GolemAbortError("Executions of script has been aborted", this.abortSignal.reason);
       }
+
       throw new GolemWorkError(
         `Unable to execute script. ${message}`,
         WorkErrorCode.ScriptExecutionFailed,
@@ -114,6 +115,7 @@ export class ExeScriptExecutor {
       if (signal.aborted) {
         subscriber.error(getError());
       }
+
       signal.addEventListener("abort", () => {
         subscriber.error(getError());
       });

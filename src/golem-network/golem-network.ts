@@ -356,15 +356,14 @@ export class GolemNetwork {
    * @return Resolves when all shutdown steps are completed
    */
   async disconnect() {
-    if (!this.isConnected()) {
-      return;
-    }
     if (this.disconnectPromise) {
       return this.disconnectPromise;
     }
+
     this.disconnectPromise = this.startDisconnect().finally(() => {
       this.disconnectPromise = undefined;
     });
+
     return this.disconnectPromise;
   }
 

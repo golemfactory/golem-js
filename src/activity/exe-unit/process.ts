@@ -2,14 +2,14 @@ import { Activity, ActivityModule, Result } from "../index";
 import { GolemWorkError, WorkErrorCode } from "./error";
 import { GolemTimeoutError } from "../../shared/error/golem-error";
 import { Logger } from "../../shared/utils";
-import { Observable, Subject, Subscription, finalize } from "rxjs";
+import { finalize, Observable, Subject, Subscription } from "rxjs";
 
 const DEFAULTS = {
   exitWaitingTimeout: 20_000,
 };
 
 /**
- * RemoteProcess class representing the process spawned on the provider by {@link activity/exe-unit/exeunit.ExeUnit.runAndStream}
+ * RemoteProcess class representing the process spawned on the provider by {@link ExeUnit.runAndStream}
  */
 export class RemoteProcess {
   /**
@@ -46,7 +46,9 @@ export class RemoteProcess {
           if (result.stdout) this.stdout.next(result.stdout);
           if (result.stderr) this.stderr.next(result.stderr);
         },
-        error: (error) => (this.streamError = error),
+        error: (error) => {
+          this.streamError = error;
+        },
       });
   }
 
@@ -100,6 +102,6 @@ export class RemoteProcess {
    * Checks if the exe-script batch from Yagna has completed, reflecting all work and streaming to be completed
    */
   isFinished() {
-    return this.lastResult?.isBatchFinished ?? false;
+    return this.subscription.closed;
   }
 }
