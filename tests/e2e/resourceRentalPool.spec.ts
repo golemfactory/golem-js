@@ -237,7 +237,7 @@ describe("ResourceRentalPool", () => {
     const rental = await pool.acquire();
     await rental.getExeUnit();
     await expect(rental.stopAndFinalize(10)).rejects.toThrow(
-      new GolemAbortError("The finalization of payment process has been aborted due to a timeout"),
+      new GolemAbortError("The finalization of payment process has been aborted"),
     );
   });
 
