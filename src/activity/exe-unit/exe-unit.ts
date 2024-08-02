@@ -252,6 +252,7 @@ export class ExeUnit {
     // In this case, the script consists only of one run command,
     // so we skip the execution of script.before and script.after
     const executionMetadata = await this.executor.execute(script.getExeScriptRequest());
+
     const activityResult$ = this.executor.getResultsObservable(
       executionMetadata,
       true,

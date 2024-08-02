@@ -5,9 +5,12 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
   const logger = pinoPrettyLogger({
     level: "info",
   });
+
   const glm = new GolemNetwork({
     logger,
   });
+
+  const abortController = new AbortController();
 
   try {
     await glm.connect();
@@ -33,18 +36,21 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
         },
         network,
       },
+      signalOrTimeout: abortController.signal,
     });
 
     const PORT_ON_PROVIDER = 80;
     const PORT_ON_REQUESTOR = 8080;
 
-    const exe = await rental.getExeUnit();
+    const exe = await rental.getExeUnit(abortController.signal);
 
     // Install the server script
     await exe.uploadFile(`./rental-model/advanced/tcp-proxy/server.js`, "/golem/work/server.js");
 
     // Start the server process on the provider
-    const server = await exe.runAndStream(`PORT=${PORT_ON_PROVIDER} node /golem/work/server.js`);
+    const server = await exe.runAndStream(`PORT=${PORT_ON_PROVIDER} node /golem/work/server.js`, {
+      signalOrTimeout: abortController.signal,
+    });
 
     server.stdout.subscribe((data) => console.log("provider>", data));
     server.stderr.subscribe((data) => console.error("provider>", data));
@@ -60,24 +66,27 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
     let isClosing = false;
     const stopServer = async () => {
       if (isClosing) {
-        console.log("Already closing, ignoring subsequent shutdown request");
+        console.log("Already closing, ignoring subsequent shutdown request. Process PID: %d", process.pid);
         return;
       }
+
+      abortController.abort("SIGINT called");
 
       isClosing = true;
 
       console.log("Shutting down gracefully");
       await proxy.close();
+      logger.info("Shutdown routine completed");
     };
 
     process.on("SIGINT", () => {
       stopServer()
         .then(() => rental.stopAndFinalize())
-        .then(() => logger.info("Shutdown routine completed"))
         .catch((err) => logger.error("Failed to shutdown cleanly", err));
     });
 
     await waitFor(() => server.isFinished());
+    console.log("Server process finished");
   } catch (error) {
     logger.error("Failed to run the example", error);
   } finally {

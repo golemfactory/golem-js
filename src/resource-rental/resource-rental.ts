@@ -78,7 +78,7 @@ export class ResourceRental {
       this.logger.info("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
       const abortSignal = createAbortSignalFromTimeout(signalOrTimeout);
       await waitFor(() => this.paymentProcess.isFinished(), {
-        signalOrTimeout: abortSignal,
+        abortSignal: abortSignal,
       }).catch((error) => {
         this.paymentProcess.stop();
         if (error instanceof GolemTimeoutError) {
