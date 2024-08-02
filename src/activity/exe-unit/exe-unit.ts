@@ -20,7 +20,7 @@ import { RemoteProcess } from "./process";
 import { GolemWorkError, WorkErrorCode } from "./error";
 import { GolemAbortError, GolemConfigError, GolemTimeoutError } from "../../shared/error/golem-error";
 import { Agreement, ProviderInfo } from "../../market";
-import { TcpProxy } from "../../network/tcpProxy";
+import { TcpProxy } from "../../network/tcp-proxy";
 import { ExecutionOptions, ExeScriptExecutor } from "../exe-script-executor";
 import { lastValueFrom, tap, toArray } from "rxjs";
 
@@ -252,6 +252,7 @@ export class ExeUnit {
     // In this case, the script consists only of one run command,
     // so we skip the execution of script.before and script.after
     const executionMetadata = await this.executor.execute(script.getExeScriptRequest());
+
     const activityResult$ = this.executor.getResultsObservable(
       executionMetadata,
       true,

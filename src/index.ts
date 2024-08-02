@@ -10,7 +10,7 @@ export * from "./activity";
 
 // Necessary domain entities for users to consume
 export * from "./shared/error/golem-error";
-export * from "./network/tcpProxy";
+export * from "./network/tcp-proxy";
 
 // Internals
 export * from "./shared/utils";

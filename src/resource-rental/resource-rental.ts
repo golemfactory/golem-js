@@ -1,7 +1,7 @@
 import { Agreement, MarketModule } from "../market";
 import { AgreementPaymentProcess, PaymentProcessOptions } from "../payment/agreement_payment_process";
 import { createAbortSignalFromTimeout, Logger } from "../shared/utils";
-import { waitForCondition } from "../shared/utils/wait";
+import { waitFor } from "../shared/utils/wait";
 import { Activity, ActivityModule, ExeUnit, ExeUnitOptions } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { EventEmitter } from "eventemitter3";
@@ -77,8 +77,8 @@ export class ResourceRental {
 
       this.logger.info("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
       const abortSignal = createAbortSignalFromTimeout(signalOrTimeout);
-      await waitForCondition(() => this.paymentProcess.isFinished(), {
-        signalOrTimeout: abortSignal,
+      await waitFor(() => this.paymentProcess.isFinished(), {
+        abortSignal: abortSignal,
       }).catch((error) => {
         this.paymentProcess.stop();
         if (error instanceof GolemTimeoutError) {
