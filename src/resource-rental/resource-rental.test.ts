@@ -13,6 +13,7 @@ const mockMarketModule = imock<MarketModule>();
 const mockActivityModule = imock<ActivityModule>();
 const mockLogger = imock<Logger>();
 const mockResourceRentalOptions = imock<ResourceRentalOptions>();
+const mockExeUnit = mock(ExeUnit);
 when(mockResourceRentalOptions.networkNode).thenReturn(undefined);
 
 let resourceRental: ResourceRental;
@@ -25,7 +26,7 @@ beforeEach(() => {
   reset(mockActivityModule);
   reset(mockLogger);
   reset(mockResourceRentalOptions);
-  when(mockActivityModule.createExeUnit(_, _)).thenResolve(instance(mock(ExeUnit)));
+  when(mockActivityModule.createExeUnit(_, _)).thenResolve(instance(mockExeUnit));
   resourceRental = new ResourceRental(
     instance(mockAgreement),
     instance(mockStorageProvider),
@@ -41,7 +42,6 @@ describe("ResourceRental", () => {
   describe("stopAndFinalize", () => {
     it("reuses the same promise if called multiple times", async () => {
       const rentalSpy = spy(resourceRental);
-      when(rentalSpy["startStopAndFinalize"](_)).thenResolve();
       expect(resourceRental["finalizePromise"]).toBeUndefined();
       const promise1 = resourceRental.stopAndFinalize();
       const promise2 = resourceRental.stopAndFinalize();
@@ -49,6 +49,17 @@ describe("ResourceRental", () => {
       expect(resourceRental["finalizePromise"]).toBeDefined();
       await Promise.all([promise1, promise2, promise3]);
       verify(rentalSpy["startStopAndFinalize"](_)).once();
+      expect(resourceRental["finalizePromise"]).toBeUndefined();
+    });
+    it("should not run terdown multiple times", async () => {
+      const rentalSpy = spy(resourceRental);
+      when(rentalSpy["fetchAgreementState"]()).thenResolve("Terminated");
+      when(mockPaymentProcess.isFinished()).thenReturn(true);
+      expect(resourceRental["finalizePromise"]).toBeUndefined();
+      await resourceRental.stopAndFinalize();
+      await resourceRental.stopAndFinalize();
+      await resourceRental.stopAndFinalize();
+      verify(mockExeUnit.teardown()).once();
       expect(resourceRental["finalizePromise"]).toBeUndefined();
     });
     describe("ExeUnit", () => {

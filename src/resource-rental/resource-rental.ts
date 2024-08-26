@@ -41,6 +41,7 @@ export class ResourceRental {
   private abortController = new AbortController();
   private finalizePromise?: Promise<void>;
   private exeUnitPromise?: Promise<ExeUnit>;
+  private isFinalized = false;
 
   public constructor(
     public readonly agreement: Agreement,
@@ -61,6 +62,9 @@ export class ResourceRental {
 
   private async startStopAndFinalize(signalOrTimeout?: number | AbortSignal) {
     try {
+      if (this.isFinalized) {
+        return;
+      }
       if (this.currentExeUnit) {
         await this.currentExeUnit.teardown();
       }
@@ -95,6 +99,7 @@ export class ResourceRental {
       throw error;
     } finally {
       this.events.emit("finalized");
+      this.isFinalized = true;
     }
   }
 
