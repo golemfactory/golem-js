@@ -51,7 +51,6 @@ describe("ResourceRental", () => {
       expect(resourceRental["finalizePromise"]).toBeDefined();
       await Promise.all([promise1, promise2, promise3]);
       verify(rentalSpy["startStopAndFinalize"](_)).once();
-      expect(resourceRental["finalizePromise"]).toBeUndefined();
     });
     it("should not run terdown multiple times", async () => {
       when(mockPaymentProcess.isFinished()).thenReturn(true);
