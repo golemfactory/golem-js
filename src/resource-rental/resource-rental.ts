@@ -101,7 +101,7 @@ export class ResourceRental {
   /**
    * Terminates the activity and agreement (stopping any ongoing work) and finalizes the payment process.
    * Resolves when the rental will be fully terminated and all pending business operations finalized.
-   * If the rental is already finalized, it will resolve immediately.
+   * If the rental is already finalized, it will resolve immediately with the last finalization result.
    * @param signalOrTimeout - timeout in milliseconds or an AbortSignal that will be used to cancel the finalization process, especially the payment process.
    * Please note that canceling the payment process may fail to comply with the terms of the agreement.
    * If this method is called multiple times, it will return the same promise, ignoring the signal or timeout.
@@ -110,9 +110,7 @@ export class ResourceRental {
     if (this.finalizePromise) {
       return this.finalizePromise;
     }
-    this.finalizePromise = this.startStopAndFinalize(signalOrTimeout).finally(() => {
-      this.finalizePromise = undefined;
-    });
+    this.finalizePromise = this.startStopAndFinalize(signalOrTimeout);
     return this.finalizePromise;
   }
 

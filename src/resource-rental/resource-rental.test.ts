@@ -13,6 +13,7 @@ const mockMarketModule = imock<MarketModule>();
 const mockActivityModule = imock<ActivityModule>();
 const mockLogger = imock<Logger>();
 const mockResourceRentalOptions = imock<ResourceRentalOptions>();
+const mockExeUnit = mock(ExeUnit);
 when(mockResourceRentalOptions.networkNode).thenReturn(undefined);
 
 let resourceRental: ResourceRental;
@@ -25,7 +26,8 @@ beforeEach(() => {
   reset(mockActivityModule);
   reset(mockLogger);
   reset(mockResourceRentalOptions);
-  when(mockActivityModule.createExeUnit(_, _)).thenResolve(instance(mock(ExeUnit)));
+  when(mockActivityModule.createExeUnit(_, _)).thenResolve(instance(mockExeUnit));
+  when(mockMarketModule.fetchAgreement(_)).thenResolve(instance(mockAgreement));
   resourceRental = new ResourceRental(
     instance(mockAgreement),
     instance(mockStorageProvider),
@@ -49,7 +51,14 @@ describe("ResourceRental", () => {
       expect(resourceRental["finalizePromise"]).toBeDefined();
       await Promise.all([promise1, promise2, promise3]);
       verify(rentalSpy["startStopAndFinalize"](_)).once();
-      expect(resourceRental["finalizePromise"]).toBeUndefined();
+    });
+    it("should not run terdown multiple times", async () => {
+      when(mockPaymentProcess.isFinished()).thenReturn(true);
+      when(mockAgreement.getState()).thenReturn("Terminated");
+      await resourceRental.stopAndFinalize();
+      await resourceRental.stopAndFinalize();
+      await resourceRental.stopAndFinalize();
+      verify(mockExeUnit.teardown()).once();
     });
     describe("ExeUnit", () => {
       it("should create an exe unit on startup and use it later", async () => {
