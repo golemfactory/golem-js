@@ -1,5 +1,4 @@
 import {
-  anyAbortSignal,
   createAbortSignalFromTimeout,
   Logger,
   mergeUntilFirstComplete,
@@ -14,7 +13,7 @@ import { Result, StreamingBatchEvent } from "./results";
 import { Activity } from "./activity";
 import { getMessageFromApiError } from "../shared/utils/apiErrorMessage";
 import { ActivityModule } from "./activity.module";
-import { catchError, map, Observable, takeWhile } from "rxjs";
+import { catchError, finalize, map, Observable, takeWhile } from "rxjs";
 
 /**
  * Information needed to fetch the results of a script execution
@@ -106,17 +105,25 @@ export class ExeScriptExecutor {
     signalOrTimeout?: number | AbortSignal,
     maxRetries?: number,
   ): Observable<Result> {
-    const signal = anyAbortSignal(this.abortSignal, createAbortSignalFromTimeout(signalOrTimeout));
+    const abortController = new AbortController();
+    const signal = createAbortSignalFromTimeout(signalOrTimeout);
+    const onAbort = () => abortController.abort();
+    if (signal.aborted || this.abortSignal.aborted) {
+      abortController.abort(signal.reason);
+    } else {
+      signal.addEventListener("abort", onAbort);
+      this.abortSignal.addEventListener("abort", onAbort);
+    }
 
     // observable that emits when the script execution should be aborted
     const abort$ = new Observable<never>((subscriber) => {
-      const getError = () => new GolemAbortError("Execution of script has been aborted", signal.reason);
+      const getError = () => new GolemAbortError("Execution of script has been aborted", abortController.signal.reason);
 
-      if (signal.aborted) {
+      if (abortController.signal.aborted) {
         subscriber.error(getError());
       }
 
-      signal.addEventListener("abort", () => {
+      abortController.signal.addEventListener("abort", () => {
         subscriber.error(getError());
       });
     });
@@ -126,7 +133,12 @@ export class ExeScriptExecutor {
       ? this.streamingBatch(batch.batchId, batch.batchSize)
       : this.pollingBatch(batch.batchId, maxRetries);
 
-    return mergeUntilFirstComplete(abort$, results$);
+    return mergeUntilFirstComplete(abort$, results$).pipe(
+      finalize(() => {
+        this.abortSignal.removeEventListener("abort", onAbort);
+        signal.removeEventListener("abort", onAbort);
+      }),
+    );
   }
 
   protected async send(script: ExeScriptRequest): Promise<string> {
