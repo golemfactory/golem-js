@@ -22,7 +22,7 @@ export class GftpServerAdapter implements IFileServer {
     }
 
     const fileUrl = await this.storage.publishFile(sourcePath);
-    const fileHash = this.calculateFileHash(sourcePath);
+    const fileHash = await this.calculateFileHash(sourcePath);
 
     const entry = {
       fileUrl,
@@ -46,8 +46,14 @@ export class GftpServerAdapter implements IFileServer {
     return this.published.has(sourcePath);
   }
 
-  private calculateFileHash(localPath: string): string {
-    const fileBuffer = fs.readFileSync(localPath);
-    return jsSha3.sha3_224(fileBuffer);
+  private async calculateFileHash(localPath: string): Promise<string> {
+    const fileStream = fs.createReadStream(localPath);
+    const hash = jsSha3.sha3_224.create();
+
+    return new Promise((resolve, reject) => {
+      fileStream.on("data", (chunk: Buffer) => hash.update(chunk));
+      fileStream.on("end", () => resolve(hash.hex()));
+      fileStream.on("error", (err) => reject(new GolemInternalError(`Error calculating file hash: ${err}`, err)));
+    });
   }
 }
