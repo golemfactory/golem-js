@@ -9,6 +9,7 @@
   { "cmd": "tsx", "path": "examples/rental-model/advanced/proposal-predefined-filter.ts" },
   { "cmd": "tsx", "path": "examples/rental-model/advanced/setup-and-teardown.ts" },
   { "cmd": "tsx", "path": "examples/rental-model/advanced/reuse-allocation.ts" },
+  { "cmd": "tsx", "path": "examples/rental-model/advanced/local-image/local-image.ts" },
   { "cmd": "tsx", "path": "examples/core-api/scan.ts" },
   { "cmd": "tsx", "path": "examples/core-api/override-module.ts" },
   { "cmd": "tsx", "path": "examples/core-api/manual-pools.ts" },
