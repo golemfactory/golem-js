@@ -108,13 +108,11 @@ export class ExeScriptExecutor {
     const abortController = new AbortController();
     const signal = createAbortSignalFromTimeout(signalOrTimeout);
 
-    const onAbort = () => abortController.abort();
-
     if (signal.aborted || this.abortSignal.aborted) {
-      onAbort();
+      abortController.abort();
     } else {
-      signal.addEventListener("abort", onAbort);
-      this.abortSignal.addEventListener("abort", onAbort);
+      this.abortSignal.addEventListener("abort", abortController.abort);
+      signal.addEventListener("abort", abortController.abort);
     }
 
     // observable that emits when the script execution should be aborted
@@ -137,8 +135,8 @@ export class ExeScriptExecutor {
 
     return mergeUntilFirstComplete(abort$, results$).pipe(
       finalize(() => {
-        this.abortSignal.removeEventListener("abort", onAbort);
-        signal.removeEventListener("abort", onAbort);
+        this.abortSignal.removeEventListener("abort", abortController.abort);
+        signal.removeEventListener("abort", abortController.abort);
       }),
     );
   }
