@@ -107,9 +107,11 @@ export class ExeScriptExecutor {
   ): Observable<Result> {
     const abortController = new AbortController();
     const signal = createAbortSignalFromTimeout(signalOrTimeout);
+
     const onAbort = () => abortController.abort();
+
     if (signal.aborted || this.abortSignal.aborted) {
-      abortController.abort(signal.reason);
+      onAbort();
     } else {
       signal.addEventListener("abort", onAbort);
       this.abortSignal.addEventListener("abort", onAbort);
