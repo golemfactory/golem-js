@@ -22,6 +22,7 @@ async function main() {
         demand: {
           workload: {
             imageTag: "golem/node:latest",
+            capabilities: ["vpn"],
           },
         },
         market: {

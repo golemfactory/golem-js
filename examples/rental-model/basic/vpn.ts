@@ -13,7 +13,10 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
     const network = await glm.createNetwork({ ip: "192.168.7.0/24" });
     const order: MarketOrderSpec = {
       demand: {
-        workload: { imageTag: "golem/alpine:latest" },
+        workload: {
+          imageTag: "golem/alpine:latest",
+          capabilities: ["vpn"],
+        },
       },
       market: {
         rentHours: 0.5,
