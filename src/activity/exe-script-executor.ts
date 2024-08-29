@@ -109,7 +109,7 @@ export class ExeScriptExecutor {
     const signal = createAbortSignalFromTimeout(signalOrTimeout);
 
     if (signal.aborted || this.abortSignal.aborted) {
-      abortController.abort();
+      abortController.abort(signal.reason || this.abortSignal.reason);
     } else {
       this.abortSignal.addEventListener("abort", abortController.abort);
       signal.addEventListener("abort", abortController.abort);
