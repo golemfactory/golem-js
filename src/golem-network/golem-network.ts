@@ -337,8 +337,14 @@ export class GolemNetwork {
       this.abortController.abort("Golem Network is disconnecting");
       await Promise.allSettled(this.cleanupTasks.map((task) => task()));
       this.cleanupTasks = [];
-      await this.storageProvider.close();
-      await this.yagna.disconnect();
+      await this.storageProvider
+        .close()
+        .catch((err) => this.logger.warn("Closing storage provider resulted with an error, it will be ignored", err));
+      await this.yagna
+        .disconnect()
+        .catch((err) =>
+          this.logger.warn("Closing connections with yagna resulted with an error, it will be ignored", err),
+        );
       this.services.proposalCache.flushAll();
       this.abortController = new AbortController();
     } catch (err) {
