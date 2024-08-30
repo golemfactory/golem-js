@@ -120,8 +120,6 @@ jobs:
     name: Run Examples tests
     needs: regular-checks
     runs-on: goth2
-    env:
-      GOLEM_PINO_LOG_LEVEL: ${{ env.GOLEM_PINO_LOG_LEVEL }}
     steps:
       - uses: actions/checkout@v4
 
