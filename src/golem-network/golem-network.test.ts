@@ -50,6 +50,12 @@ afterEach(() => {
 
   jest.clearAllMocks();
 });
+
+beforeEach(() => {
+  when(mockStorageProvider.close()).thenResolve();
+  when(mockYagna.disconnect()).thenResolve();
+});
+
 function getGolemNetwork() {
   return new GolemNetwork({
     override: {
