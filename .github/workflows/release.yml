@@ -121,7 +121,7 @@ jobs:
     needs: regular-checks
     runs-on: goth2
     env:
-      GOLEM_PINO_LOG_LEVEL: "debug"
+      GOLEM_PINO_LOG_LEVEL: ${{ env.GOLEM_PINO_LOG_LEVEL }}
     steps:
       - uses: actions/checkout@v4
 
@@ -129,7 +129,7 @@ jobs:
         uses: ./.github/actions/prepare-tests
 
       - name: Run the Examples tests
-        run: docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm run test:examples -- --exitOnError"
+        run: docker exec -t -e GOLEM_PINO_LOG_LEVEL="${{ env.GOLEM_PINO_LOG_LEVEL }}" docker-requestor-1 /bin/sh -c "cd /golem-js && npm run test:examples -- --exitOnError"
 
       - name: Cleanup test environment
         uses: ./.github/actions/cleanup-tests
