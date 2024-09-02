@@ -108,7 +108,7 @@ describe("ActivityDemandDirector", () => {
     );
   });
 
-  test("should throw an error if user providers a engine and runtime name", () => {
+  test("should throw an error if user providers both engine and runtime.name params", () => {
     expect(
       () =>
         new WorkloadDemandDirector(
