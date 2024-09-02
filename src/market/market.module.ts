@@ -296,7 +296,7 @@ export class MarketModuleImpl implements MarketModule {
      * an agreement with the provider. Therefore, we assume a minimum time of 15 minutes,
      * if the value calculated based on the user-defined rentHourse is less.
      */
-    const MIN_EXPIRATION_SEC = 15;
+    const MIN_EXPIRATION_SEC = 15 * 60;
 
     const expirationSecBasedOnRentTime = orderOptions.rentHours * 3600;
     const expirationSec =
