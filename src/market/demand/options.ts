@@ -24,7 +24,15 @@ export type RuntimeDemandOptions = {
   engine: string;
 
   runtime: Partial<{
+    /**
+     * Name of the runtime supported by the provider: vm, wasm, vm-nvidia, etc...
+     * @default vm
+     * */
     name: string;
+    /**
+     * Runtime version supported by provider
+     * @default 0.3.0
+     */
     version: string;
   }>;
 
