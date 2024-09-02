@@ -85,4 +85,44 @@ describe("ActivityDemandDirector", () => {
         ),
     ).toThrow("The expirationSec param has to be a positive integer");
   });
+
+  test("should create constraints with runtime name and runtime version", async () => {
+    const builder = new DemandBodyBuilder();
+
+    const director = new WorkloadDemandDirector(
+      new WorkloadDemandDirectorConfig({
+        runtime: {
+          name: "vm-test",
+          version: "0.7.0",
+        },
+        expirationSec: 2,
+        imageHash: "529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4",
+      }),
+    );
+    await director.apply(builder);
+
+    const decorations = builder.getProduct();
+
+    expect(decorations.constraints).toEqual(
+      expect.arrayContaining(["(golem.runtime.name=vm-test)", "(golem.runtime.version=0.7.0)"]),
+    );
+  });
+
+  test("should throw an error if user providers a engine and runtime name", () => {
+    expect(
+      () =>
+        new WorkloadDemandDirector(
+          new WorkloadDemandDirectorConfig({
+            engine: "vm",
+            runtime: {
+              name: "vm",
+            },
+            expirationSec: 2,
+            imageHash: "529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4",
+          }),
+        ),
+    ).toThrow(
+      "The engine parameter is deprecated and cannot be used with the runtime parameter. Use the runtime option only",
+    );
+  });
 });
