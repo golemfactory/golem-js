@@ -298,7 +298,7 @@ export class MarketModuleImpl implements MarketModule {
      */
     const MIN_EXPIRATION_SEC = 15 * 60;
 
-    const expirationSecBasedOnRentTime = orderOptions.rentHours * 3600;
+    const expirationSecBasedOnRentTime = orderOptions.rentHours * 60 * 60;
     const expirationSec =
       expirationSecBasedOnRentTime < MIN_EXPIRATION_SEC ? MIN_EXPIRATION_SEC : expirationSecBasedOnRentTime;
 
