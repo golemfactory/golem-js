@@ -20,7 +20,7 @@ export class ScanDirector {
   }
 
   private addWorkloadDecorations(builder: DemandBodyBuilder): void {
-    if (this.options.workload?.engine && this.options.workload?.runtime?.name) {
+    if (this.options.workload?.engine && this.options.workload?.runtime) {
       throw new GolemConfigError(
         "The engine parameter is deprecated and cannot be used with the runtime parameter. Use the runtime parameter only",
       );
