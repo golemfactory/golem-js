@@ -13,6 +13,10 @@ export function createAbortSignalFromTimeout(timeoutOrSignal: number | AbortSign
   return new AbortController().signal;
 }
 
+interface AbortEvent extends Event {
+  target: EventTarget & { reason?: string | Error };
+}
+
 /**
  * Combine multiple AbortSignals into a single signal that will be aborted if any
  * of the input signals are aborted. If any of the input signals are already aborted,
@@ -20,18 +24,33 @@ export function createAbortSignalFromTimeout(timeoutOrSignal: number | AbortSign
  *
  * Polyfill for AbortSignal.any(), since it's only available starting in Node 20
  * https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal/any_static
+ *
+ * The function returns a signal and a cleanup function that allows you
+ * to remove listeners when they are no longer needed.
  */
-export function anyAbortSignal(...signals: AbortSignal[]) {
+
+export function anyAbortSignal(...signals: AbortSignal[]): { signal: AbortSignal; cleanup: () => void } {
   const controller = new AbortController();
+
+  const onAbort = (ev: Event) => {
+    if (controller.signal.aborted) return;
+    const reason = (ev as AbortEvent).target.reason;
+    controller.abort(reason);
+  };
+
   for (const signal of signals) {
     if (signal.aborted) {
       controller.abort(signal.reason);
       break;
     }
-    signal.addEventListener("abort", () => {
-      if (controller.signal.aborted) return;
-      controller.abort(signal.reason);
-    });
+    signal.addEventListener("abort", onAbort);
   }
-  return controller.signal;
+
+  const cleanup = () => {
+    for (const signal of signals) {
+      signal.removeEventListener("abort", onAbort);
+    }
+  };
+
+  return { signal: controller.signal, cleanup };
 }
