@@ -432,7 +432,10 @@ export class GolemNetwork {
    * @param options.teardown - an optional function that is called before the exe unit is destroyed
    */
   async oneOf({ order, setup, teardown, signalOrTimeout }: OneOfOptions): Promise<ResourceRental> {
-    const signal = anyAbortSignal(createAbortSignalFromTimeout(signalOrTimeout), this.abortController.signal);
+    const { signal, cleanup: cleanupAbortSignals } = anyAbortSignal(
+      createAbortSignalFromTimeout(signalOrTimeout),
+      this.abortController.signal,
+    );
 
     let allocation: Allocation | undefined = undefined;
     let proposalSubscription: Subscription | undefined = undefined;
@@ -440,6 +443,8 @@ export class GolemNetwork {
     let networkNode: NetworkNode | undefined = undefined;
 
     const cleanup = async () => {
+      cleanupAbortSignals();
+
       if (proposalSubscription) {
         proposalSubscription.unsubscribe();
       }

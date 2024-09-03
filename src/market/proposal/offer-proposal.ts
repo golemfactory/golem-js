@@ -26,6 +26,7 @@ export type ProposalDTO = Partial<{
   publicNet: boolean;
   runtimeCapabilities: string[];
   runtimeName: string;
+  runtimeVersion: string;
   state: ProposalState;
 }>;
 
@@ -92,6 +93,7 @@ export class OfferProposal extends MarketProposal {
       publicNet: this.properties["golem.node.net.is-public"],
       runtimeCapabilities: this.properties["golem.runtime.capabilities"],
       runtimeName: this.properties["golem.runtime.name"],
+      runtimeVersion: this.properties["golem.runtime.version"],
       state: this.state,
     };
   }

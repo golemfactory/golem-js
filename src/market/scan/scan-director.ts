@@ -1,5 +1,6 @@
 import { ComparisonOperator, DemandBodyBuilder } from "../demand";
 import { ScanOptions } from "./types";
+import { GolemConfigError } from "../../shared/error/golem-error";
 
 export class ScanDirector {
   constructor(private options: ScanOptions) {}
@@ -19,8 +20,20 @@ export class ScanDirector {
   }
 
   private addWorkloadDecorations(builder: DemandBodyBuilder): void {
+    if (this.options.workload?.engine && this.options.workload?.runtime) {
+      throw new GolemConfigError(
+        "The engine parameter is deprecated and cannot be used with the runtime parameter. Use the runtime parameter only",
+      );
+    }
+    /** @deprecated  */
     if (this.options.workload?.engine) {
       builder.addConstraint("golem.runtime.name", this.options.workload?.engine);
+    }
+    if (this.options.workload?.runtime?.name) {
+      builder.addConstraint("golem.runtime.name", this.options.workload.runtime.name);
+    }
+    if (this.options.workload?.runtime?.version) {
+      builder.addConstraint("golem.runtime.version", this.options.workload.runtime.version);
     }
     if (this.options.workload?.capabilities)
       this.options.workload?.capabilities.forEach((cap) => builder.addConstraint("golem.runtime.capabilities", cap));

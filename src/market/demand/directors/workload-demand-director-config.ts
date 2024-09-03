@@ -14,6 +14,10 @@ type RequiredWorkloadDemandConfigOptions = {
 export class WorkloadDemandDirectorConfig extends BaseConfig {
   readonly packageFormat: string = PackageFormat.GVMKitSquash;
   readonly engine: string = "vm";
+  readonly runtime = {
+    name: "vm",
+    version: "0.3.0",
+  };
   readonly minMemGib: number = 0.5;
   readonly minStorageGib: number = 2;
   readonly minCpuThreads: number = 1;
@@ -36,6 +40,13 @@ export class WorkloadDemandDirectorConfig extends BaseConfig {
 
     Object.assign(this, options);
 
+    if (!this.runtime.name) {
+      this.runtime.name = this.engine;
+    }
+    if (!this.runtime.version) {
+      this.runtime.version = "0.3.0";
+    }
+
     this.expirationSec = options.expirationSec;
 
     if (!this.imageHash && !this.manifest && !this.imageTag && !this.imageUrl) {
@@ -48,6 +59,12 @@ export class WorkloadDemandDirectorConfig extends BaseConfig {
 
     if (!this.isPositiveInt(this.expirationSec)) {
       throw new GolemConfigError("The expirationSec param has to be a positive integer");
+    }
+
+    if (options.engine && options.runtime) {
+      throw new GolemConfigError(
+        "The engine parameter is deprecated and cannot be used with the runtime parameter. Use the runtime option only",
+      );
     }
   }
 }

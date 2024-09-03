@@ -285,9 +285,24 @@ export class MarketModuleImpl implements MarketModule {
       ? await this.applyLocalGVMIServeSupport(demandOptions.workload)
       : demandOptions.workload;
 
+    const expirationSec = orderOptions.rentHours * 60 * 60;
+
+    /**
+     * Default value on providers for MIN_AGREEMENT_EXPIRATION = 5min.
+     * This means that if the user declares a rentHours time of less than 5 min,
+     * offers will be rejected during negotiations with these providers.
+     */
+    const MIN_EXPIRATION_SEC_WARN = 5 * 60;
+
+    if (expirationSec < MIN_EXPIRATION_SEC_WARN) {
+      this.logger.warn(
+        "The declared value of rentHours is less than 5 min. This may cause offers to be rejected during negotiations.",
+      );
+    }
+
     const workloadConfig = new WorkloadDemandDirectorConfig({
       ...workloadOptions,
-      expirationSec: orderOptions.rentHours * 60 * 60, // hours to seconds
+      expirationSec,
     });
     const workloadDirector = new WorkloadDemandDirector(workloadConfig);
     await workloadDirector.apply(builder);

@@ -115,6 +115,10 @@ export class ScannedOffer {
     return this.properties["golem.runtime.name"];
   }
 
+  get runtimeVersion() {
+    return this.properties["golem.runtime.version"];
+  }
+
   /**
    * Get the ID of the offer published by the Provider
    *

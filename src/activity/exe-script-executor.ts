@@ -14,7 +14,7 @@ import { Result, StreamingBatchEvent } from "./results";
 import { Activity } from "./activity";
 import { getMessageFromApiError } from "../shared/utils/apiErrorMessage";
 import { ActivityModule } from "./activity.module";
-import { catchError, map, Observable, takeWhile } from "rxjs";
+import { catchError, finalize, map, Observable, takeWhile } from "rxjs";
 
 /**
  * Information needed to fetch the results of a script execution
@@ -106,7 +106,7 @@ export class ExeScriptExecutor {
     signalOrTimeout?: number | AbortSignal,
     maxRetries?: number,
   ): Observable<Result> {
-    const signal = anyAbortSignal(this.abortSignal, createAbortSignalFromTimeout(signalOrTimeout));
+    const { signal, cleanup } = anyAbortSignal(this.abortSignal, createAbortSignalFromTimeout(signalOrTimeout));
 
     // observable that emits when the script execution should be aborted
     const abort$ = new Observable<never>((subscriber) => {
@@ -126,7 +126,7 @@ export class ExeScriptExecutor {
       ? this.streamingBatch(batch.batchId, batch.batchSize)
       : this.pollingBatch(batch.batchId, maxRetries);
 
-    return mergeUntilFirstComplete(abort$, results$);
+    return mergeUntilFirstComplete(abort$, results$).pipe(finalize(cleanup));
   }
 
   protected async send(script: ExeScriptRequest): Promise<string> {
