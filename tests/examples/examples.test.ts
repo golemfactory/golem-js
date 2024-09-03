@@ -2,7 +2,6 @@ import { spawn } from "child_process";
 import { dirname, basename, resolve } from "path";
 import chalk from "chalk";
 import testExamples from "./examples.json";
-import * as wtf from "wtfnode";
 
 const criticalLogsRegExp = [
   /GolemInternalError/,
@@ -32,7 +31,6 @@ async function test(cmd: string, path: string, args: string[] = [], timeout = 36
   let error = "";
   const timeoutId = setTimeout(() => {
     error = `Test timeout was reached after ${timeout} seconds.`;
-    wtf.dump();
     spawnedExample.kill();
   }, timeout * 1000);
   return new Promise((res, rej) => {
