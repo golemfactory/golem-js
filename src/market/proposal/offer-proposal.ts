@@ -99,12 +99,12 @@ export class OfferProposal extends MarketProposal {
   }
 
   /**
-   * Proposal cost estimation based on CPU, Env and startup costs
+   * Cost estimation based on CPU/h, ENV/h and start prices
    *
    * @param rentHours Number of hours of rental to use for the estimation
    */
   getEstimatedCost(rentHours = 1): number {
-    const threadsNo = this.properties["golem.inf.cpu.threads"] ?? 1;
+    const threadsNo = this.getDto().cpuThreads ?? 1;
     const rentSeconds = rentHours * 60 * 60;
 
     return this.pricing.start + this.pricing.cpuSec * threadsNo * rentSeconds + this.pricing.envSec * rentSeconds;
