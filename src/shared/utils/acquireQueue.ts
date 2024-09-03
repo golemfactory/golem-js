@@ -39,7 +39,10 @@ export class AcquireQueue<T> {
    * Queue up for the next available item.
    */
   public async get(signalOrTimeout?: number | AbortSignal): Promise<T> {
-    const signal = anyAbortSignal(createAbortSignalFromTimeout(signalOrTimeout), this.abortController.signal);
+    const { signal, cleanup } = anyAbortSignal(
+      createAbortSignalFromTimeout(signalOrTimeout),
+      this.abortController.signal,
+    );
     signal.throwIfAborted();
     const { resolve, promise } = withResolvers<T>();
     this.queue.push(resolve);
@@ -50,7 +53,7 @@ export class AcquireQueue<T> {
         reject(signal.reason);
       });
     });
-    return Promise.race([promise, abortPromise]);
+    return Promise.race([promise, abortPromise]).finally(cleanup);
   }
 
   /**

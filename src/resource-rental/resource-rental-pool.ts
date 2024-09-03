@@ -128,7 +128,10 @@ export class ResourceRentalPool {
 
   private async createNewResourceRental(signalOrTimeout?: number | AbortSignal) {
     this.logger.debug("Creating new resource rental to add to pool");
-    const signal = anyAbortSignal(this.abortController.signal, createAbortSignalFromTimeout(signalOrTimeout));
+    const { signal, cleanup } = anyAbortSignal(
+      this.abortController.signal,
+      createAbortSignalFromTimeout(signalOrTimeout),
+    );
 
     try {
       this.rentalsBeingSigned++;
@@ -158,6 +161,7 @@ export class ResourceRentalPool {
       throw error;
     } finally {
       this.rentalsBeingSigned--;
+      cleanup();
     }
   }
 
@@ -216,7 +220,7 @@ export class ResourceRentalPool {
    */
   private async raceNewRentalWithAcquireQueue(signalOrTimeout?: number | AbortSignal) {
     const ac = new AbortController();
-    const signal = anyAbortSignal(
+    const { signal, cleanup } = anyAbortSignal(
       ac.signal,
       createAbortSignalFromTimeout(signalOrTimeout),
       this.abortController.signal,
@@ -235,6 +239,7 @@ export class ResourceRentalPool {
       })
       .finally(() => {
         ac.abort();
+        cleanup();
       });
   }
 
@@ -405,7 +410,10 @@ export class ResourceRentalPool {
     if (this.minPoolSize <= this.getAvailableSize()) {
       return;
     }
-    const signal = anyAbortSignal(this.abortController.signal, createAbortSignalFromTimeout(timeoutOrAbortSignal));
+    const { signal, cleanup } = anyAbortSignal(
+      this.abortController.signal,
+      createAbortSignalFromTimeout(timeoutOrAbortSignal),
+    );
     const tryCreatingMissingResourceRentals = async () => {
       await Promise.allSettled(
         new Array(this.minPoolSize - this.getAvailableSize()).fill(0).map(() =>
@@ -423,6 +431,8 @@ export class ResourceRentalPool {
       }
       await runOnNextEventLoopIteration(tryCreatingMissingResourceRentals);
     }
+
+    cleanup();
 
     if (this.minPoolSize > this.getAvailableSize()) {
       throw new Error("Could not create enough resource rentals to reach the minimum pool size in time");

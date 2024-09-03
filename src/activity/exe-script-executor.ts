@@ -1,4 +1,5 @@
 import {
+  anyAbortSignal,
   createAbortSignalFromTimeout,
   Logger,
   mergeUntilFirstComplete,
@@ -105,27 +106,17 @@ export class ExeScriptExecutor {
     signalOrTimeout?: number | AbortSignal,
     maxRetries?: number,
   ): Observable<Result> {
-    const abortController = new AbortController();
-    const signal = createAbortSignalFromTimeout(signalOrTimeout);
-
-    const onAbort = () => abortController.abort(this.abortSignal.reason || signal.reason);
-
-    if (signal.aborted || this.abortSignal.aborted) {
-      onAbort();
-    } else {
-      this.abortSignal.addEventListener("abort", onAbort);
-      signal.addEventListener("abort", onAbort);
-    }
+    const { signal, cleanup } = anyAbortSignal(this.abortSignal, createAbortSignalFromTimeout(signalOrTimeout));
 
     // observable that emits when the script execution should be aborted
     const abort$ = new Observable<never>((subscriber) => {
-      const getError = () => new GolemAbortError("Execution of script has been aborted", abortController.signal.reason);
+      const getError = () => new GolemAbortError("Execution of script has been aborted", signal.reason);
 
-      if (abortController.signal.aborted) {
+      if (signal.aborted) {
         subscriber.error(getError());
       }
 
-      abortController.signal.addEventListener("abort", () => {
+      signal.addEventListener("abort", () => {
         subscriber.error(getError());
       });
     });
@@ -135,12 +126,7 @@ export class ExeScriptExecutor {
       ? this.streamingBatch(batch.batchId, batch.batchSize)
       : this.pollingBatch(batch.batchId, maxRetries);
 
-    return mergeUntilFirstComplete(abort$, results$).pipe(
-      finalize(() => {
-        this.abortSignal.removeEventListener("abort", onAbort);
-        signal.removeEventListener("abort", onAbort);
-      }),
-    );
+    return mergeUntilFirstComplete(abort$, results$).pipe(finalize(cleanup));
   }
 
   protected async send(script: ExeScriptRequest): Promise<string> {
