@@ -160,4 +160,16 @@ export class ScannedOffer {
 
     return Object.fromEntries(platformAddress);
   }
+
+  /**
+   * Cost estimation based on CPU/h, ENV/h and start prices
+   *
+   * @param rentHours Number of hours of rental to use for the estimation
+   */
+  public getEstimatedCost(rentHours = 1): number {
+    const threadsNo = this.cpuThreads;
+    const rentSeconds = rentHours * 60 * 60;
+
+    return this.pricing.start + this.pricing.cpuSec * threadsNo * rentSeconds + this.pricing.envSec * rentSeconds;
+  }
 }
