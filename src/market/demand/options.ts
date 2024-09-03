@@ -18,8 +18,23 @@ export type ResourceDemandOptions = {
  * Specifies a set of options related to runtime configuration that will be used to form the demand
  */
 export type RuntimeDemandOptions = {
-  /** Type of engine required: vm, wasm, vm-nvidia, etc... */
+  /** Type of engine required: vm, wasm, vm-nvidia, etc...
+   * @deprecated This field is deprecated and will be removed in future versions. Please use the 'runtime.name' instead.
+   */
   engine: string;
+
+  runtime: Partial<{
+    /**
+     * Name of the runtime supported by the provider: vm, wasm, vm-nvidia, etc...
+     * @default vm
+     * */
+    name: string;
+    /**
+     * Runtime version supported by provider
+     * @default 0.3.0
+     */
+    version: string;
+  }>;
 
   /** Required providers capabilities to run application: example: ["vpn"] */
   capabilities: string[];

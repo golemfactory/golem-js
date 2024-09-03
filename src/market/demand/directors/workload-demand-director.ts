@@ -12,7 +12,8 @@ export class WorkloadDemandDirector implements IDemandDirector {
 
     builder
       .addProperty("golem.srv.comp.vm.package_format", this.config.packageFormat)
-      .addConstraint("golem.runtime.name", this.config.engine);
+      .addConstraint("golem.runtime.name", this.config.runtime.name)
+      .addConstraint("golem.runtime.version", this.config.runtime.version);
 
     if (this.config.capabilities.length)
       this.config.capabilities.forEach((cap) => builder.addConstraint("golem.runtime.capabilities", cap));

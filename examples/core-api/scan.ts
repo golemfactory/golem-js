@@ -8,7 +8,9 @@ import { last, map, scan, takeUntil, tap, timer } from "rxjs";
 const scanOptions: ScanOptions = {
   // fairly powerful machine but not too powerful
   workload: {
-    engine: "vm",
+    runtime: {
+      name: "vm",
+    },
     minCpuCores: 4,
     maxCpuCores: 16,
     minMemGib: 4,
