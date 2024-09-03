@@ -20,6 +20,7 @@ services:
       retries: 1
       start_period: 40s
     environment:
+      - MIN_AGREEMENT_EXPIRATION=30s
       - YA_NET_BROADCAST_SIZE=10
       - NODE_NAME=provider-1
       - SUBNET=${YAGNA_SUBNET:-golemjstest}
@@ -45,6 +46,7 @@ services:
       retries: 1
       start_period: 40s
     environment:
+      - MIN_AGREEMENT_EXPIRATION=30s
       - YA_NET_BROADCAST_SIZE=10
       - NODE_NAME=provider-2
       - SUBNET=${YAGNA_SUBNET:-golemjstest}
