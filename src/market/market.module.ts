@@ -285,22 +285,20 @@ export class MarketModuleImpl implements MarketModule {
       ? await this.applyLocalGVMIServeSupport(demandOptions.workload)
       : demandOptions.workload;
 
-    /**
-     * We need to publish a demand with a minimum expiration time of no less than 5 minutes.
-     *
-     * When negotiating an offer and sending a counter proposal, providers (on default settings)
-     * reject offers with an expirationSec of less than 5 minutes.
-     * By default, the expirationSec in CounterProposal value is copied from the value defined in the demand.
-     *
-     * Additionally, we want to avoid a situation when the demand expires before finding and signing
-     * an agreement with the provider. Therefore, we assume a minimum time of 15 minutes,
-     * if the value calculated based on the user-defined rentHourse is less.
-     */
-    const MIN_EXPIRATION_SEC = 15 * 60;
+    const expirationSec = orderOptions.rentHours * 60 * 60;
 
-    const expirationSecBasedOnRentTime = orderOptions.rentHours * 60 * 60;
-    const expirationSec =
-      expirationSecBasedOnRentTime < MIN_EXPIRATION_SEC ? MIN_EXPIRATION_SEC : expirationSecBasedOnRentTime;
+    /**
+     * Default value on providers for MIN_AGREEMENT_EXPIRATION = 5min.
+     * This means that if the user declares a rentHours time of less than 5 min,
+     * offers will be rejected during negotiations with these providers.
+     */
+    const MIN_EXPIRATION_SEC_WARN = 5 * 60;
+
+    if (expirationSec < MIN_EXPIRATION_SEC_WARN) {
+      this.logger.warn(
+        "The declared value of rentHours is less than 5 min. This may cause offers to be rejected during negotiations.",
+      );
+    }
 
     const workloadConfig = new WorkloadDemandDirectorConfig({
       ...workloadOptions,
