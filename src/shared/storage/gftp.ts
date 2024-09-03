@@ -2,13 +2,14 @@ import { StorageProvider } from "./provider";
 import { defaultLogger, isBrowser, Logger } from "../utils";
 import path from "path";
 import fs from "fs";
-import cp from "child_process";
+import { ChildProcess } from "child_process";
+import spawn from "cross-spawn";
 import { GolemInternalError, GolemUserError } from "../error/golem-error";
 import { v4 } from "uuid";
 import AsyncLock from "async-lock";
 
 export class GftpStorageProvider implements StorageProvider {
-  private gftpServerProcess?: cp.ChildProcess;
+  private gftpServerProcess?: ChildProcess;
   private logger: Logger;
 
   /**
@@ -48,7 +49,7 @@ export class GftpStorageProvider implements StorageProvider {
     return new Promise((resolve, reject) => {
       this.logger.debug("Starting GFTP server");
 
-      this.gftpServerProcess = cp.spawn("gftp", ["server"]);
+      this.gftpServerProcess = spawn("gftp", ["server"]);
 
       this.gftpServerProcess.on("spawn", () => {
         this.logger.info("GFTP server spawned");
