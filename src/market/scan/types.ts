@@ -1,6 +1,13 @@
 export type ScanOptions = {
   workload?: {
+    /**
+     * @deprecated This param is deprecated and will be removed in future versions. Please use the 'runtime.name' instead.
+     */
     engine?: string;
+    runtime?: {
+      name?: string;
+      version?: string;
+    };
     capabilities?: string[];
     minMemGib?: number;
     maxMemGib?: number;
