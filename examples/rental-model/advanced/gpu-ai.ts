@@ -69,7 +69,7 @@ import chalk from "chalk";
     console.log(
       `Server Proxy listen at http://localhost:${PORT_ON_REQUESTOR}\n` +
         "Now you can talk to the model, for example using the command:\n\n" +
-        chalk.inverse(
+        chalk.magenta(
           `curl http://localhost:11434/v1/chat/completions -d '{ "model": "qwen2:0.5b", "messages": [ { "role": "user", "content": "What is Golem?" } ]}'\n`,
         ),
     );
