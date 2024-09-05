@@ -1,5 +1,6 @@
 import { GolemNetwork, MarketOrderSpec, waitFor } from "@golem-sdk/golem-js";
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
+import chalk from "chalk";
 
 (async () => {
   const glm = new GolemNetwork({
@@ -11,10 +12,6 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
   try {
     await glm.connect();
     const network = await glm.createNetwork({ ip: "192.168.0.0/24" });
-
-    const abortController = new AbortController();
-    const signal = abortController.signal;
-    process.on("SIGINT", () => abortController.abort("Process interrupted at user request"));
 
     const order: MarketOrderSpec = {
       demand: {
@@ -38,22 +35,26 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
       network,
     };
 
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+    process.on("SIGINT", () => abortController.abort("Process interrupted at user request"));
+
     const rental = await glm.oneOf({ order, signalOrTimeout: signal });
     const exe = await rental.getExeUnit(signal);
 
-    const PORT_ON_PROVIDER = 11434; // default port
-    const PORT_ON_REQUESTOR = 11434; // will use the same outside
+    const PORT_ON_PROVIDER = 11434;
+    const PORT_ON_REQUESTOR = 11434;
     let isServerReady = false;
 
-    console.log("Will start ollama on provider", exe.provider.name);
+    console.log(`Starting Ollama on provider ${exe.provider.name}...`);
 
     const server = await exe.runAndStream("sleep 1 && /usr/bin/ollama serve", {
       signalOrTimeout: signal,
     });
 
-    server.stdout.subscribe((data) => console.log("provider>", data));
+    server.stdout.subscribe((data) => console.log(chalk.yellow(data?.toString().trim())));
     server.stderr.subscribe((data) => {
-      console.log("provider>", data);
+      console.log(chalk.yellow(data?.toString().trim()));
       if (data?.toString().includes("Listening on [::]:11434")) {
         isServerReady = true;
       }
@@ -65,7 +66,13 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
     proxy.events.on("error", (error) => console.error("TcpProxy reported an error:", error));
 
     await proxy.listen(PORT_ON_REQUESTOR);
-    console.log(`Server Proxy listen at http://localhost:${PORT_ON_REQUESTOR}`);
+    console.log(
+      `Server Proxy listen at http://localhost:${PORT_ON_REQUESTOR}\n` +
+        "Now you can talk to the model, for example using the command:\n\n" +
+        chalk.inverse(
+          `curl http://localhost:11434/v1/chat/completions -d '{ "model": "qwen2:0.5b", "messages": [ { "role": "user", "content": "What is Golem?" } ]}'\n`,
+        ),
+    );
 
     let isClosing = false;
     const stopServer = async () => {
@@ -76,9 +83,14 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
       isClosing = true;
       console.log("Shutting down gracefully");
       await proxy.close();
+      console.log("Shutdown routine completed");
     };
 
-    abortController.signal.addEventListener("abort", () => stopServer().then(() => rental.stopAndFinalize()));
+    abortController.signal.addEventListener("abort", () =>
+      stopServer()
+        .catch((err) => console.error("Something went wrong while stopping the server", err))
+        .finally(() => rental.stopAndFinalize()),
+    );
 
     await waitFor(() => server.isFinished(), { abortSignal: AbortSignal.timeout(120_000) });
   } catch (err) {
