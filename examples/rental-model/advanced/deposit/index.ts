@@ -8,6 +8,8 @@
  *
  * In order to check if everything went correctly, the Observer logs transaction information
  * in the smart contract and the script waits for confirmation on the blockchain until the deposit is closed.
+ *
+ * IMPORTANT: this feature is only supported with yagna versions >= 0.16.0
  */
 
 import funder from "./funder";
