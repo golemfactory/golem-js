@@ -40,7 +40,6 @@ import { DataTransferProtocol } from "../shared/types";
 import { NetworkApiAdapter } from "../shared/yagna/adapters/network-api-adapter";
 import { IProposalRepository } from "../market/proposal";
 import { Subscription } from "rxjs";
-import { Identity } from "ya-ts-client/dist/identity/models/Identity";
 import { GolemUserError } from "../shared/error/golem-error";
 
 /**
@@ -188,6 +187,12 @@ export type GolemServices = {
   demandRepository: IDemandRepository;
   fileServer: IFileServer;
   storageProvider: StorageProvider;
+};
+
+export type Identity = {
+  identity: string;
+  name: string;
+  role: string;
 };
 
 /**
