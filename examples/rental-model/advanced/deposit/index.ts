@@ -1,12 +1,12 @@
 /**
  * In this example we demonstrate executing tasks on a golem but using funds deposited by another person.
- * In this example, it is called Funder. The funder is responsible for allocating the deposit,
+ * It is called Funder. The funder is responsible for allocating the deposit,
  * which will then be used by the Spender (requestor) to create an allocation for a payment.
  *
  * To run the example, it is necessary to define the funder's address in the config.ts file and a private key
  * that will allow depositing specific funds on the contract.
  *
- * In order to check if everything went correctly, the observer object logs transaction information
+ * In order to check if everything went correctly, the Observer logs transaction information
  * in the smart contract and the script waits for confirmation on the blockchain until the deposit is closed.
  */
 
