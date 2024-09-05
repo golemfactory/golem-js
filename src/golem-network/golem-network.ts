@@ -40,6 +40,8 @@ import { DataTransferProtocol } from "../shared/types";
 import { NetworkApiAdapter } from "../shared/yagna/adapters/network-api-adapter";
 import { IProposalRepository } from "../market/proposal";
 import { Subscription } from "rxjs";
+import { Identity } from "ya-ts-client/dist/identity/models/Identity";
+import { GolemUserError } from "../shared/error/golem-error";
 
 /**
  * Instance of an object or a factory function that you can call `new` on.
@@ -226,6 +228,8 @@ export class GolemNetwork {
    */
   private cleanupTasks: (() => Promise<void> | void)[] = [];
 
+  private identity?: Identity;
+
   constructor(options: Partial<GolemNetworkOptions> = {}) {
     const optDefaults: GolemNetworkOptions = {
       dataTransferProtocol: isNode ? "gftp" : "ws",
@@ -321,7 +325,7 @@ export class GolemNetwork {
    */
   async connect() {
     try {
-      await this.yagna.connect();
+      this.identity = await this.yagna.connect();
       await this.services.paymentApi.connect();
       await this.storageProvider.init();
       this.events.emit("connected");
@@ -630,6 +634,13 @@ export class GolemNetwork {
 
   isConnected() {
     return this.hasConnection;
+  }
+
+  getIdentity(): Identity {
+    if (!this.isConnected() || !this.identity) {
+      throw new GolemUserError("To obtain an Identity, you must first connect to the Golem Network.");
+    }
+    return this.identity;
   }
 
   /**
