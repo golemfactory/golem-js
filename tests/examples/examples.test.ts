@@ -93,4 +93,8 @@ async function testAll(examples: Example[]) {
   process.exit(failedTests.size > 0 ? 1 : 0);
 }
 
-testAll(testExamples).then();
+let forDebug = testExamples.concat(testExamples);
+for (let i = 0; i < 10; ++i) {
+  forDebug = forDebug.concat(forDebug);
+}
+testAll(forDebug).then();
