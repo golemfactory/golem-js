@@ -16,7 +16,7 @@ export class WorkloadDemandDirectorConfig extends BaseConfig {
   readonly engine: string = "vm";
   readonly runtime = {
     name: "vm",
-    version: "0.3.0",
+    version: undefined,
   };
   readonly minMemGib: number = 0.5;
   readonly minStorageGib: number = 2;
@@ -42,9 +42,6 @@ export class WorkloadDemandDirectorConfig extends BaseConfig {
 
     if (!this.runtime.name) {
       this.runtime.name = this.engine;
-    }
-    if (!this.runtime.version) {
-      this.runtime.version = "0.3.0";
     }
 
     this.expirationSec = options.expirationSec;
