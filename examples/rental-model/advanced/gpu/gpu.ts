@@ -11,7 +11,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
   const order: MarketOrderSpec = {
     demand: {
       workload: {
-        imageHash: "594a2491e578f7ad817d1996bd181b44130d22f3f2db6160214a60b4",
+        imageTag: "nvidia/cuda:12.6.0-cudnn-runtime-ubuntu24.04",
         capabilities: ["!exp:gpu"],
         runtime: {
           name: "vm-nvidia",
@@ -34,12 +34,19 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
     const rental = await glm.oneOf({ order });
     const exe = await rental.getExeUnit();
 
-    await exe.uploadFile("./bandwidth-test", "/storage/bandwidth-test");
-    await exe.run("chmod +x /storage/bandwidth-test");
+    // The executable binary from the Samples for CUDA Developers package.
+    // This is a simple test program to measure the memcopy bandwidth of the GPU.
+    // https://github.com/NVIDIA/cuda-samples
+    await exe.uploadFile("./bandwidthTest", "/storage/bandwidthTest");
+    await exe.run("chmod +x /storage/bandwidthTest");
 
-    console.log((await exe.run("/storage/bandwidth-test")).stdout);
+    const bandwidthResult = await exe.run("/storage/bandwidthTest");
+    console.log("\nCUDA Bandwidth Test:\n\n", bandwidthResult.stdout);
 
-    console.log((await exe.run("nvidia-smi")).stdout);
+    // Run native command nvidia-smi provided by nvidia driver.
+    // https://developer.nvidia.com/system-management-interface
+    const nvidiaSmiResult = await exe.run("nvidia-smi");
+    console.log("\n\nNVIDIA SMI Test:\n\n", nvidiaSmiResult.stdout);
 
     await rental.stopAndFinalize();
   } catch (err) {
