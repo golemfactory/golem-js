@@ -8,6 +8,7 @@ import config from "./config.js";
 const abiGlm = JSON.parse(await readFile("./contracts/glmAbi.json", "utf8"));
 const abiLock = JSON.parse(await readFile("./contracts/lockAbi.json", "utf8"));
 const funderAccount = privateKeyToAccount(<Hex>config.funder.privateKey);
+const nonce = Math.floor(Math.random() * config.funder.nonceSpace);
 
 // walletClient for writeContract functions
 const walletClient = createWalletClient({
@@ -31,15 +32,15 @@ const GLM_CONTRACT = {
   abi: abiGlm,
 };
 
-const nonce = Math.floor(Math.random() * config.funder.nonceSpace);
-
 async function createAllowance({ budget, fee }: { budget: number; fee: number }) {
   const amountWei = parseEther(`${budget}`);
   const flatFeeAmountWei = parseEther(`${fee}`);
   const allowanceBudget = amountWei + flatFeeAmountWei;
 
   console.log(
-    chalk.blue(`\nCreating allowance of ${formatEther(allowanceBudget)} GLM for ${LOCK_CONTRACT.address} contract ...`),
+    chalk.yellow(
+      `\nCreating allowance of ${formatEther(allowanceBudget)} GLM for ${LOCK_CONTRACT.address} contract ...`,
+    ),
   );
 
   const hash = await walletClient.writeContract({
@@ -55,13 +56,13 @@ async function createAllowance({ budget, fee }: { budget: number; fee: number })
     hash,
   });
 
-  console.log(chalk.blue(`Allowance successfully created with Tx ${receipt.transactionHash}.`));
+  console.log(chalk.yellow(`Allowance successfully created with Tx ${receipt.transactionHash}.`));
 }
 
 async function checkAllowance() {
   const args = [config.funder.address, LOCK_CONTRACT.address];
 
-  console.log(chalk.blue(`\nChecking allowance for ${args[1]} contract ...`));
+  console.log(chalk.yellow(`\nChecking allowance for ${args[1]} contract ...`));
 
   const allowance = <bigint>await publicClient.readContract({
     abi: GLM_CONTRACT.abi,
@@ -70,7 +71,7 @@ async function checkAllowance() {
     args,
   });
 
-  console.log(chalk.blue(`Allowance of ${formatEther(allowance)} GLM is set.`));
+  console.log(chalk.yellow(`Allowance of ${formatEther(allowance)} GLM is set.`));
 }
 
 type DepositParams = {
@@ -85,11 +86,11 @@ async function createDeposit({ address, budget, fee, expirationSec }: DepositPar
   const args = [BigInt(nonce), address, parseEther(`${budget}`), parseEther(`${fee}`), BigInt(validToTimestamp)];
 
   console.log(
-    chalk.grey(
+    chalk.blueBright(
       `\nCreating deposit of amount: ${formatEther(<bigint>args[2])} GLM, flatFeeAmount: ${formatEther(<bigint>args[3])} GLM, for ${(expirationSec / 3600).toFixed(2)} hours.`,
     ),
   );
-  console.log(chalk.grey(`Using contract at address: ${LOCK_CONTRACT.address}.`));
+  console.log(chalk.blueBright(`Using contract at address: ${LOCK_CONTRACT.address}.`));
 
   const hash = await walletClient.writeContract({
     address: <Hex>LOCK_CONTRACT.address,
@@ -104,7 +105,7 @@ async function createDeposit({ address, budget, fee, expirationSec }: DepositPar
     hash,
   });
 
-  console.log(chalk.grey(`Deposit successfully created with Tx ${hash}.`));
+  console.log(chalk.blueBright(`Deposit successfully created with Tx ${hash}.`));
 
   const depositId = await getDepositID();
   const depositDetails = await getDepositDetails();
@@ -125,11 +126,11 @@ async function extendDeposit({ budget, fee, expirationSec }: Partial<DepositPara
   ];
 
   console.log(
-    chalk.grey(
+    chalk.blueBright(
       `\nExtending deposit of additional amount: ${formatEther(<bigint>args[1])}  GLM, flatFeeAmount: ${formatEther(<bigint>args[2])}  GLM, for ${(expirationSec / 3600).toFixed(2)} hours.`,
     ),
   );
-  console.log(chalk.grey(`Using contract at address: ${LOCK_CONTRACT.address}.`));
+  console.log(chalk.blueBright(`Using contract at address: ${LOCK_CONTRACT.address}.`));
 
   const hash = await walletClient.writeContract({
     abi: LOCK_CONTRACT.abi,
@@ -144,7 +145,7 @@ async function extendDeposit({ budget, fee, expirationSec }: Partial<DepositPara
     hash,
   });
 
-  console.log(chalk.grey(`Deposit successfully extended with Tx ${hash}.`));
+  console.log(chalk.blueBright(`Deposit successfully extended with Tx ${hash}.`));
 }
 
 async function getDepositID() {
@@ -155,7 +156,9 @@ async function getDepositID() {
     args: [BigInt(nonce), config.funder.address],
   });
 
-  console.log(chalk.grey(`\nDepositID: ${depositID} available on contract at address: ${LOCK_CONTRACT.address}.`));
+  console.log(
+    chalk.blueBright(`\nDepositID: ${depositID} available on contract at address: ${LOCK_CONTRACT.address}.`),
+  );
   return depositID;
 }
 
@@ -172,7 +175,11 @@ async function getDepositDetails() {
     args: [BigInt(nonce), config.funder.address],
   });
 
-  console.log(chalk.grey(`\nDeposit of `), deposit, chalk.grey(` available on contract ${LOCK_CONTRACT.address}.`));
+  console.log(
+    chalk.blueBright(`\nDeposit of `),
+    deposit,
+    chalk.grey(` available on contract ${LOCK_CONTRACT.address}.`),
+  );
   const depositData = {
     amount: formatEther(deposit.amount),
     id: deposit.id.toString(),
@@ -181,7 +188,7 @@ async function getDepositDetails() {
   return depositData;
 }
 
-export const clearAllowance = async () => {
+async function clearAllowance() {
   const args = [LOCK_CONTRACT.address, BigInt(0)];
 
   console.log(chalk.yellow(`\nClearing allowance for ${args[0]} contract ...`));
@@ -200,7 +207,7 @@ export const clearAllowance = async () => {
   });
 
   console.log(chalk.yellow(`Allowance cleared with Tx ${hash}.\n`));
-};
+}
 
 export default {
   createAllowance,

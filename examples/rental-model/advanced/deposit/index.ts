@@ -1,8 +1,19 @@
+/**
+ * In this example we demonstrate executing tasks on a golem but using funds deposited by another person.
+ * In this example, it is called Funder. The funder is responsible for allocating the deposit,
+ * which will then be used by the Spender (requestor) to create an allocation for a payment.
+ *
+ * To run the example, it is necessary to define the funder's address in the config.ts file and a private key
+ * that will allow depositing specific funds on the contract.
+ *
+ * In order to check if everything went correctly, the observer object logs transaction information
+ * in the smart contract and the script waits for confirmation on the blockchain until the deposit is closed.
+ */
+
 import funder from "./funder";
 import observer from "./observer";
 import { GolemNetwork, MarketOrderSpec, waitFor } from "@golem-sdk/golem-js";
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
-import chalk from "chalk";
 
 (async () => {
   const glm = new GolemNetwork({
@@ -12,8 +23,7 @@ import chalk from "chalk";
   try {
     await glm.connect();
 
-    // const spenderAddress = glm.getIdentity().identity; TODO
-    const spenderAddress = "0x19ee20338a4c4bf8f6aebc79d9d3af2a01434119";
+    const { identity: spenderAddress } = await glm.services.yagna.identity.getIdentity();
     const budget = 1.0;
     const fee = 0.5;
     const expirationSec = 60 * 60; // 1 hour
@@ -30,14 +40,15 @@ import chalk from "chalk";
     // After the deposit is properly prepared, the funder can clear the allowance
     await funder.clearAllowance();
 
+    // Now the Spender (requestor) can use the deposit to create an allocation
     const allocation = await glm.payment.createAllocation({
       deposit,
       budget,
       expirationSec,
     });
 
-    const { stopWatchingContractTransactions, isDepositClosed } =
-      await observer.startWatchingContractTransactions(spenderAddress);
+    // We are starting the contract transaction observations for the spender address
+    const observation = await observer.startWatchingContractTransactions(spenderAddress);
 
     const order1: MarketOrderSpec = {
       demand: {
@@ -75,8 +86,8 @@ import chalk from "chalk";
 
     await rental1
       .getExeUnit()
-      .then((exe) => exe.run(`echo Task 1 running on ${exe.provider.name}`))
-      .then((res) => console.log(chalk.inverse("\n", res.stdout)));
+      .then((exe) => exe.run(`echo Task 1 running on provider ${exe.provider.name} 👽`))
+      .then((res) => console.log(res.stdout));
 
     await rental1.stopAndFinalize();
 
@@ -84,17 +95,17 @@ import chalk from "chalk";
 
     await rental2
       .getExeUnit()
-      .then((exe) => exe.run(`echo Task 2 Running on ${exe.provider.name}`))
-      .then((res) => console.log(chalk.inverse("\n", res.stdout)));
+      .then((exe) => exe.run(`echo Task 2 Running on provider ${exe.provider.name} 🤠`))
+      .then((res) => console.log(res.stdout));
 
     await rental2.stopAndFinalize();
 
-    // Once the spender releases the allocation, the deposit will be closed
-    // and you will not be able to use it again.
+    // Once Spender releases the allocation, the deposit will be closed and cannot be used again.
     await glm.payment.releaseAllocation(allocation);
 
-    await waitFor(isDepositClosed);
-    stopWatchingContractTransactions();
+    // We wait (max 2 mins) for confirmation from blockchain
+    await waitFor(observation.isDepositClosed, { abortSignal: AbortSignal.timeout(120_000) });
+    observation.stopWatchingContractTransactions();
   } catch (err) {
     console.error("Failed to run the example", err);
   } finally {

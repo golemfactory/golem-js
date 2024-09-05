@@ -19,20 +19,21 @@ async function checkIsDopositClosed(spenderAddress: Address, funderAddress: Addr
       abi: abiLock,
       data: transaction.input,
     });
-    const functionNamePlusArgs = `${parsedMethod.functionName}(${parsedMethod.args.join(",")})`;
-    console.log(chalk.magenta("\ncall:", functionNamePlusArgs));
+    const functionNameWithArgs = `${parsedMethod.functionName}(${parsedMethod.args.join(",")})`;
+    console.log(chalk.magenta("\nContract transaction log:"));
+    console.log(chalk.magenta("call:"), functionNameWithArgs);
     console.log(chalk.magenta("event:"), log["eventName"]);
     console.log(chalk.magenta("from:"), transaction.from);
     console.log(chalk.magenta("hash:"), transaction.hash, "\n");
     const functionName = parsedMethod.functionName.toLowerCase();
-    // if deposit is closed by spender (requestor), stop observing
+    // if deposit is closed by spender (requestor)
     if (functionName.includes("close") && transaction.from === spenderAddress) {
-      console.log(chalk.grey(`Deposit has been closed by spender.`));
+      console.log(chalk.blueBright(`Deposit has been closed by spender.`));
       return true;
     }
-    // if deposit is terminated by spender (requestor), stop observing
+    // if deposit is terminated by funder
     if (functionName === "terminatedeposit" && transaction.from === funderAddress) {
-      console.log(chalk.grey(`Deposit has been terminated by spender.`));
+      console.log(chalk.blueBright(`Deposit has been terminated by spender.`));
       return true;
     }
   }
@@ -44,7 +45,7 @@ async function startWatchingContractTransactions(address: string) {
   const funderAddress = <Address>config.funder.address;
   let isDepositClosed = false;
 
-  const stopWatchingContractTransactions = publicClient.watchEvent({
+  const unwatch = publicClient.watchEvent({
     onLogs: async (logs) => (isDepositClosed = await checkIsDopositClosed(spenderAddress, funderAddress, logs)),
     events: parseAbi([
       "event DepositCreated(uint256 indexed id, address spender)",
@@ -57,7 +58,7 @@ async function startWatchingContractTransactions(address: string) {
     address: <Address>config.lockPaymentContract.holeskyAddress,
   });
   return {
-    stopWatchingContractTransactions,
+    stopWatchingContractTransactions: unwatch,
     isDepositClosed: () => isDepositClosed,
   };
 }
