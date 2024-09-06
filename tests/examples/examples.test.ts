@@ -30,6 +30,14 @@ async function test(cmd: string, path: string, args: string[] = [], timeout = 36
   let error = "";
   const timeoutId = setTimeout(() => {
     error = `Test timeout was reached after ${timeout} seconds.`;
+    console.log({
+      error,
+      connected: spawnedExample.connected,
+      code: spawnedExample.exitCode,
+      signal: spawnedExample.signalCode,
+      pid: spawnedExample.pid,
+      eventNames: spawnedExample.eventNames(),
+    });
     spawnedExample.kill();
   }, timeout * 1000);
   return new Promise((res, rej) => {
