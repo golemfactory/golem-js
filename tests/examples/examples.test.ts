@@ -47,10 +47,10 @@ async function test(cmd: string, path: string, args: string[] = [], timeout = 36
     };
     spawnedExample.stdout?.on("data", assertLogs);
     spawnedExample.stderr?.on("data", assertLogs);
-    spawnedExample.on("exit", (code, siganl) => {
+    spawnedExample.on("exit", (code, signal) => {
       clearTimeout(timeoutId);
       if (!error && !code) return res(true);
-      rej(`Test example "${file}" failed. Exited with code ${code} by signal ${siganl}. ${error}`);
+      rej(`Test example "${file}" failed. Exited with code ${code} by signal ${signal}. ${error}`);
     });
   }).finally(() => {
     clearTimeout(timeoutId);
