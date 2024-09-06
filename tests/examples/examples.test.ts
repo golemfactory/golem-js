@@ -2,7 +2,6 @@ import { spawn } from "child_process";
 import { dirname, basename, resolve } from "path";
 import chalk from "chalk";
 import testExamples from "./examples.json";
-import * as wtf from "wtfnode";
 const criticalLogsRegExp = [
   /GolemInternalError/,
   /GolemPlatformError/,
@@ -25,7 +24,7 @@ async function test(cmd: string, path: string, args: string[] = [], timeout = 36
   const file = basename(path);
   const cwd = dirname(path);
   const env = { ...process.env, DEBUG: "golem-js:*" };
-  const spawnedExample = spawn(cmd, [file, ...args], { cwd, env });
+  const spawnedExample = spawn(cmd, [file, ...args], { cwd, env, stdio: ["ignore", "pipe", "pipe"] });
   spawnedExample.stdout?.setEncoding("utf-8");
   spawnedExample.stderr?.setEncoding("utf-8");
   let error = "";
@@ -34,6 +33,26 @@ async function test(cmd: string, path: string, args: string[] = [], timeout = 36
     spawnedExample.kill();
   }, timeout * 1000);
   return new Promise((res, rej) => {
+    let isFinishing = false;
+    const finishTest = (code?: number, signal?: string) => {
+      if (isFinishing) {
+        console.log("Test finishing has already been triggered by another event");
+        return;
+      }
+      console.log(`Subprocess with test ${file} exited with code ${code} by signal ${signal}`);
+      isFinishing = true;
+      spawnedExample.removeAllListeners();
+      spawnedExample.stdout.removeAllListeners();
+      spawnedExample.stderr.removeAllListeners();
+      clearTimeout(timeoutId);
+      if (!error && !code) return res(true);
+      rej(`Test example "${file}" failed. ${error}`);
+    };
+    spawnedExample.on("exit", finishTest);
+    spawnedExample.on("error", (err) => {
+      error = `The test ended with an error: ${err}`;
+      spawnedExample.kill();
+    });
     const assertLogs = (data: string) => {
       console.log(data.trim());
       const logWithoutColors = data.replace(
@@ -47,30 +66,6 @@ async function test(cmd: string, path: string, args: string[] = [], timeout = 36
     };
     spawnedExample.stdout?.on("data", assertLogs);
     spawnedExample.stderr?.on("data", assertLogs);
-    let isFinishing = false;
-    const finishTest = (code?: number, signal?: string) => {
-      console.log("FINISH TEST", { isFinishing, code, signal, error });
-      if (isFinishing) {
-        console.log("Test finishing has already been triggered by another event");
-        return;
-      }
-      isFinishing = true;
-      spawnedExample.removeAllListeners();
-      spawnedExample.stdout.removeAllListeners();
-      spawnedExample.stderr.removeAllListeners();
-      clearTimeout(timeoutId);
-      setTimeout(() => {
-        wtf.dump();
-      }, 20_000);
-      if (!error && !code) return res(true);
-      rej(`Test example "${file}" failed. Exited with code ${code} by signal ${signal}. ${error}`);
-    };
-    spawnedExample.on("close", finishTest);
-    spawnedExample.on("exit", finishTest);
-    spawnedExample.on("error", (err) => {
-      error = `The test ended with an error: ${err}`;
-      spawnedExample.kill();
-    });
   }).finally(() => {
     clearTimeout(timeoutId);
     spawnedExample.kill("SIGKILL");

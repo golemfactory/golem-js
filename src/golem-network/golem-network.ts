@@ -40,7 +40,6 @@ import { DataTransferProtocol } from "../shared/types";
 import { NetworkApiAdapter } from "../shared/yagna/adapters/network-api-adapter";
 import { IProposalRepository } from "../market/proposal";
 import { Subscription } from "rxjs";
-import * as wtf from "wtfnode";
 
 /**
  * Instance of an object or a factory function that you can call `new` on.
@@ -354,9 +353,6 @@ export class GolemNetwork {
     } finally {
       this.events.emit("disconnected");
       this.hasConnection = false;
-      setTimeout(() => {
-        wtf.dump();
-      }, 20_000);
     }
   }
 
