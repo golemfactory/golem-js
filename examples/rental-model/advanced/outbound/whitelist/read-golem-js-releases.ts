@@ -15,6 +15,12 @@
  * @link https://github.com/golemfactory/ya-installer-resources/tree/main/whitelist Pre-installed whitelist
  *
  * This example reaches out to the whitelisted registry.npmjs.org to download golem-js release information
+ *
+ * WORKING WITH THE MANIFEST
+ *
+ * `@golem-sdk/cli` to the rescue - check the `manifest` sub-command to generate the manifest for your
+ * requestor and maintain the outbound configuration
+ *
  */
 import { GolemNetwork } from "@golem-sdk/golem-js";
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
