@@ -32,7 +32,7 @@ const dirName = path.dirname(fileURLToPath(import.meta.url));
 
 (async () => {
   const logger = pinoPrettyLogger({
-    level: "debug",
+    level: "info",
   });
 
   const glm = new GolemNetwork({
@@ -40,6 +40,8 @@ const dirName = path.dirname(fileURLToPath(import.meta.url));
   });
 
   try {
+    await glm.connect();
+
     /**
      * Used to terminate the script after 60s in any case
      *
@@ -73,7 +75,9 @@ const dirName = path.dirname(fileURLToPath(import.meta.url));
     timeoutSignal.removeEventListener("abort", onTimeout);
 
     const exe = await rental.getExeUnit();
-    console.log(await exe.run("curl https://registry.npmjs.org/-/package/@golem-sdk/golem-js/dist-tags"));
+    const result = await exe.run("curl https://registry.npmjs.org/-/package/@golem-sdk/golem-js/dist-tags");
+
+    console.log("golem-js release tags:", result.getOutputAsJson());
 
     await rental.stopAndFinalize();
   } catch (err) {
