@@ -189,12 +189,6 @@ export type GolemServices = {
   storageProvider: StorageProvider;
 };
 
-export type Identity = {
-  identity: string;
-  name: string;
-  role: string;
-};
-
 /**
  * General purpose and high-level API for the Golem Network
  *
@@ -233,7 +227,7 @@ export class GolemNetwork {
    */
   private cleanupTasks: (() => Promise<void> | void)[] = [];
 
-  private identity?: Identity;
+  private identity?: string;
 
   constructor(options: Partial<GolemNetworkOptions> = {}) {
     const optDefaults: GolemNetworkOptions = {
@@ -330,7 +324,7 @@ export class GolemNetwork {
    */
   async connect() {
     try {
-      this.identity = await this.yagna.connect();
+      this.identity = (await this.yagna.connect()).identity;
       await this.services.paymentApi.connect();
       await this.storageProvider.init();
       this.events.emit("connected");
@@ -641,9 +635,13 @@ export class GolemNetwork {
     return this.hasConnection;
   }
 
-  getIdentity(): Identity {
+  /**
+   * Yagna Node Id used by the requester.
+   * It depends on the Yagny Api Key used and reflects the user's eth wallet address.
+   */
+  getIdentity(): string {
     if (!this.isConnected() || !this.identity) {
-      throw new GolemUserError("To obtain an Identity, you must first connect to the Golem Network.");
+      throw new GolemUserError("To obtain an identity, you must first connect to the Golem Network.");
     }
     return this.identity;
   }
