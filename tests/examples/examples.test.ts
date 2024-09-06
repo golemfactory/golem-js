@@ -49,11 +49,15 @@ async function test(cmd: string, path: string, args: string[] = [], timeout = 36
     spawnedExample.stderr?.on("data", assertLogs);
     let isFinishing = false;
     const finishTest = (code?: number, signal?: string) => {
+      console.log("FINISH TEST", { isFinishing, code, signal, error });
       if (isFinishing) {
         console.log("Test finishing has already been triggered by another event");
         return;
       }
       isFinishing = true;
+      spawnedExample.removeAllListeners();
+      spawnedExample.stdout.removeAllListeners();
+      spawnedExample.stderr.removeAllListeners();
       clearTimeout(timeoutId);
       if (!error && !code) return res(true);
       rej(`Test example "${file}" failed. Exited with code ${code} by signal ${signal}. ${error}`);
