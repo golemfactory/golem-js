@@ -47,10 +47,22 @@ async function test(cmd: string, path: string, args: string[] = [], timeout = 36
     };
     spawnedExample.stdout?.on("data", assertLogs);
     spawnedExample.stderr?.on("data", assertLogs);
-    spawnedExample.on("exit", (code, signal) => {
+    let isFinishing = false;
+    const finishTest = (code?: number, signal?: string) => {
+      if (isFinishing) {
+        console.log("Test finishing has already been triggered by another event");
+        return;
+      }
+      isFinishing = true;
       clearTimeout(timeoutId);
       if (!error && !code) return res(true);
       rej(`Test example "${file}" failed. Exited with code ${code} by signal ${signal}. ${error}`);
+    };
+    spawnedExample.on("close", finishTest);
+    spawnedExample.on("exit", finishTest);
+    spawnedExample.on("error", (err) => {
+      error = `The test ended with an error: ${err}`;
+      spawnedExample.kill();
     });
   }).finally(() => {
     clearTimeout(timeoutId);
