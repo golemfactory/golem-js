@@ -2,7 +2,7 @@ import { spawn } from "child_process";
 import { dirname, basename, resolve } from "path";
 import chalk from "chalk";
 import testExamples from "./examples.json";
-
+import * as wtf from "wtfnode";
 const criticalLogsRegExp = [
   /GolemInternalError/,
   /GolemPlatformError/,
@@ -59,6 +59,9 @@ async function test(cmd: string, path: string, args: string[] = [], timeout = 36
       spawnedExample.stdout.removeAllListeners();
       spawnedExample.stderr.removeAllListeners();
       clearTimeout(timeoutId);
+      setTimeout(() => {
+        wtf.dump();
+      }, 20_000);
       if (!error && !code) return res(true);
       rej(`Test example "${file}" failed. Exited with code ${code} by signal ${signal}. ${error}`);
     };
