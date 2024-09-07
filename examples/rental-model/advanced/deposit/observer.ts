@@ -22,7 +22,7 @@ async function checkIsDopositClosed(spenderAddress: Address, funderAddress: Addr
     const functionNameWithArgs = `${parsedMethod.functionName}(${parsedMethod.args.join(",")})`;
     console.log(chalk.magenta("\nContract transaction log:"));
     console.log(chalk.magenta("call:"), functionNameWithArgs);
-    console.log(chalk.magenta("event:"), log["eventName"]);
+    console.log(chalk.magenta("event:"), "eventName" in log ? log["eventName"] : "<unknown>");
     console.log(chalk.magenta("from:"), transaction.from);
     console.log(chalk.magenta("hash:"), transaction.hash, "\n");
     const functionName = parsedMethod.functionName.toLowerCase();
