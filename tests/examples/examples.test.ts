@@ -47,7 +47,7 @@ async function test(cmd: string, path: string, args: string[] = [], timeout = 36
         console.log("Test finishing has already been triggered by another event");
         return;
       }
-      console.log(`Subprocess with test ${file} exited with code ${code} by signal ${signal}`);
+      console.log(`Subprocess with test "${file}" exited with code ${code}, signal ${signal}`);
       isFinishing = true;
       spawnedExample.removeAllListeners();
       spawnedExample.stdout.removeAllListeners();

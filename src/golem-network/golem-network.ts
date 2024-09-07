@@ -1,3 +1,4 @@
+import * as wtf from "wtfnode";
 import { anyAbortSignal, createAbortSignalFromTimeout, defaultLogger, isNode, Logger, YagnaApi } from "../shared/utils";
 import {
   Demand,
@@ -362,6 +363,9 @@ export class GolemNetwork {
    * @return Resolves when all shutdown steps are completed
    */
   async disconnect() {
+    setTimeout(() => {
+      wtf.dump();
+    }, 33_333);
     if (this.disconnectPromise) {
       return this.disconnectPromise;
     }
