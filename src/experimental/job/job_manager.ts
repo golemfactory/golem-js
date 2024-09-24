@@ -5,7 +5,7 @@ import { GolemUserError } from "../../shared/error/golem-error";
 import { GolemNetwork, GolemNetworkOptions, MarketOrderSpec } from "../../golem-network/golem-network";
 
 export type JobManagerConfig = Partial<GolemNetworkOptions> & {
-  /** Type of engine required: vm, wasm, vm-nvidia, etc...
+  /**
    * @deprecated This field is deprecated and will be removed in future versions. Please use the 'api.key` and `api.url' instead.
    */
   yagna?: YagnaOptions;
