@@ -40,7 +40,7 @@ export class WorkloadDemandDirectorConfig extends BaseConfig {
 
     Object.assign(this, options);
 
-    if (!this.runtime.name) {
+    if (!options.runtime?.name) {
       this.runtime.name = this.engine;
     }
 
