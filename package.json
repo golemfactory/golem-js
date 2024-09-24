@@ -135,7 +135,9 @@
     "typedoc-plugin-markdown": "^3.17.1",
     "typedoc-plugin-merge-modules": "^5.1.0",
     "typedoc-theme-hierarchy": "4.1.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "@types/wtfnode": "^0.7.3",
+    "wtfnode": "^0.9.3"
   },
   "optionalDependencies": {
     "@rollup/rollup-darwin-x64": "^4",
