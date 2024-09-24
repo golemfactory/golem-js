@@ -125,4 +125,21 @@ describe("ActivityDemandDirector", () => {
       "The engine parameter is deprecated and cannot be used with the runtime parameter. Use the runtime option only",
     );
   });
+
+  test("should use deprecated engine param as runtime name", async () => {
+    const builder = new DemandBodyBuilder();
+
+    const director = new WorkloadDemandDirector(
+      new WorkloadDemandDirectorConfig({
+        engine: "vm-test",
+        expirationSec: 2,
+        imageHash: "529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4",
+      }),
+    );
+    await director.apply(builder);
+
+    const decorations = builder.getProduct();
+
+    expect(decorations.constraints).toEqual(expect.arrayContaining(["(golem.runtime.name=vm-test)"]));
+  });
 });
