@@ -1,16 +1,13 @@
 import { v4 } from "uuid";
-import { Job, RunJobOptions } from "./job";
-import { defaultLogger, Logger, YagnaOptions, isNode, isBrowser } from "../../shared/utils";
+import { Job } from "./job";
+import { defaultLogger, Logger, YagnaOptions } from "../../shared/utils";
 import { GolemUserError } from "../../shared/error/golem-error";
-import { GolemNetwork, MarketOrderSpec } from "../../golem-network/golem-network";
-import {
-  GftpStorageProvider,
-  NullStorageProvider,
-  StorageProvider,
-  WebSocketBrowserStorageProvider,
-} from "../../shared/storage";
+import { GolemNetwork, GolemNetworkOptions, MarketOrderSpec } from "../../golem-network/golem-network";
 
-export type JobManagerConfig = Partial<RunJobOptions> & {
+export type JobManagerConfig = Partial<GolemNetworkOptions> & {
+  /** Type of engine required: vm, wasm, vm-nvidia, etc...
+   * @deprecated This field is deprecated and will be removed in future versions. Please use the 'api.key` and `api.url' instead.
+   */
   yagna?: YagnaOptions;
 };
 
@@ -28,20 +25,16 @@ export class JobManager {
    * @param logger
    */
   constructor(
-    private readonly config?: JobManagerConfig,
+    config?: JobManagerConfig,
     private readonly logger: Logger = defaultLogger("jobs"),
   ) {
-    const storageProvider = this.getDefaultStorageProvider();
-
-    this.logger.debug("Jobs using storage provider", { storageProvider });
-
     this.glm = new GolemNetwork({
       api: {
-        key: this.config?.yagna?.apiKey,
-        url: this.config?.yagna?.basePath,
+        key: config?.yagna?.apiKey,
+        url: config?.yagna?.basePath,
       },
-      dataTransferProtocol: storageProvider,
       logger: this.logger,
+      ...config,
     });
   }
 
@@ -88,17 +81,5 @@ export class JobManager {
     if (!this.isInitialized()) {
       throw new GolemUserError("GolemNetwork not initialized, please run init() first");
     }
-  }
-
-  private getDefaultStorageProvider(): StorageProvider {
-    if (isNode) {
-      return new GftpStorageProvider();
-    }
-
-    if (isBrowser) {
-      return new WebSocketBrowserStorageProvider(this.glm.services.yagna, {});
-    }
-
-    return new NullStorageProvider();
   }
 }

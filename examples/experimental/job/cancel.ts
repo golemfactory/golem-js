@@ -1,8 +1,8 @@
 import { JobManager } from "@golem-sdk/golem-js/experimental";
 import { MarketOrderSpec } from "@golem-sdk/golem-js";
 const golem = new JobManager({
-  yagna: {
-    apiKey: "try_golem",
+  api: {
+    key: "try_golem",
   },
 });
 
