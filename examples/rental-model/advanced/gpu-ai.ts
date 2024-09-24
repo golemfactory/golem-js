@@ -7,6 +7,9 @@ import chalk from "chalk";
     logger: pinoPrettyLogger({
       level: "info",
     }),
+    payment: {
+      network: "polygon",
+    },
   });
 
   try {

@@ -6,6 +6,9 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
     logger: pinoPrettyLogger({
       level: "info",
     }),
+    payment: {
+      network: "polygon",
+    },
   });
 
   const order: MarketOrderSpec = {
