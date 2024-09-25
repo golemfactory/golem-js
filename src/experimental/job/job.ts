@@ -1,11 +1,8 @@
-import { ExeUnitOptions, ExeUnit } from "../../activity/exe-unit";
-import { NetworkOptions } from "../../network";
-import { PaymentModuleOptions } from "../../payment";
+import { ExeUnit } from "../../activity/exe-unit";
 import { EventEmitter } from "eventemitter3";
 import { GolemAbortError, GolemUserError } from "../../shared/error/golem-error";
 import { GolemNetwork, MarketOrderSpec } from "../../golem-network/golem-network";
 import { Logger } from "../../shared/utils";
-import { WorkloadDemandDirectorConfigOptions } from "../../market/demand/options";
 
 export enum JobState {
   New = "new",
@@ -15,13 +12,6 @@ export enum JobState {
   Retry = "retry",
   Rejected = "rejected",
 }
-
-export type RunJobOptions = {
-  payment?: PaymentModuleOptions;
-  network?: NetworkOptions;
-  workload?: WorkloadDemandDirectorConfigOptions;
-  work?: ExeUnitOptions;
-};
 
 export type WorkFunction<OutputType> = (exe: ExeUnit) => Promise<OutputType>;
 
