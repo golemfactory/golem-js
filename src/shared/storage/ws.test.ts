@@ -6,12 +6,13 @@ import { encode, toObject } from "flatbuffers/js/flexbuffers.js";
 import * as jsSha3 from "js-sha3";
 import { GsbApi, IdentityApi } from "ya-ts-client";
 import { anything, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
-import fs, { FileHandle } from "fs/promises";
-import { Stats } from "fs";
 import WebSocket from "ws";
+import * as fs from "fs";
 
 jest.mock("uuid", () => ({ v4: () => "uuid" }));
-jest.mock("fs/promises");
+jest.mock("fs", () => ({
+  promises: {},
+}));
 const mockFs = fs as jest.Mocked<typeof fs>;
 
 type UploadChunkChunk = { offset: number; content: Uint8Array };
@@ -178,7 +179,7 @@ describe("WebSocketStorageProvider", () => {
   describe("publishFile()", () => {
     let socket: EventTarget & { send: jest.Mock };
     let fileInfo: { id: string; url: string };
-    let fileHandle: FileHandle;
+    let fileHandle: fs.promises.FileHandle;
 
     beforeEach(() => {
       socket = Object.assign(new EventTarget(), { send: jest.fn() });
@@ -189,12 +190,12 @@ describe("WebSocketStorageProvider", () => {
 
       jest.spyOn(provider as any, "createFileInfo").mockImplementation(() => Promise.resolve(fileInfo));
       jest.spyOn(provider as any, "createSocket").mockImplementation(() => Promise.resolve(socket));
-      mockFs.stat.mockResolvedValue({ size: 10 } as unknown as Stats);
+      mockFs.promises.stat = jest.fn().mockResolvedValue({ size: 10 } as unknown as fs.Stats);
       fileHandle = {
         read: jest.fn(),
         close: jest.fn(),
-      } as unknown as jest.Mocked<FileHandle>;
-      mockFs.open.mockResolvedValue(fileHandle);
+      } as unknown as jest.Mocked<fs.promises.FileHandle>;
+      mockFs.promises.open = jest.fn().mockResolvedValue(fileHandle);
     });
 
     it("should read the file and upload it", async () => {
@@ -202,8 +203,8 @@ describe("WebSocketStorageProvider", () => {
       const result = await provider["publishFile"]("./file.txt");
       expect(result).toBe(fileInfo.url);
       expect(provider["createSocket"]).toHaveBeenCalledWith(fileInfo, ["GetMetadata", "GetChunk"]);
-      expect(mockFs.stat).toHaveBeenCalledWith("./file.txt");
-      expect(mockFs.open).toHaveBeenCalledWith("./file.txt", "r");
+      expect(mockFs.promises.stat).toHaveBeenCalledWith("./file.txt");
+      expect(mockFs.promises.open).toHaveBeenCalledWith("./file.txt", "r");
 
       async function sendGetChunk(chunk: number[], offset: number, id: string) {
         fileHandle.read = jest.fn().mockImplementationOnce((buffer: Buffer) => {
@@ -352,7 +353,7 @@ describe("WebSocketStorageProvider", () => {
   describe("receiveFile()", () => {
     let socket: EventTarget & { send: jest.Mock };
     let fileInfo: { id: string; url: string };
-    let fileHandle: FileHandle;
+    let fileHandle: fs.promises.FileHandle;
 
     beforeEach(async () => {
       socket = Object.assign(new EventTarget(), { send: jest.fn() });
@@ -366,8 +367,8 @@ describe("WebSocketStorageProvider", () => {
       fileHandle = {
         write: jest.fn(),
         close: jest.fn(),
-      } as unknown as jest.Mocked<FileHandle>;
-      mockFs.open.mockResolvedValue(fileHandle);
+      } as unknown as jest.Mocked<fs.promises.FileHandle>;
+      mockFs.promises.open = jest.fn().mockResolvedValue(fileHandle);
     });
 
     it("should receive the file and write it to the disc", async () => {
@@ -375,7 +376,7 @@ describe("WebSocketStorageProvider", () => {
       const result = await provider["receiveFile"]("./file.txt");
       expect(result).toBe(fileInfo.url);
       expect(provider["createSocket"]).toHaveBeenCalledWith(fileInfo, ["UploadChunk", "UploadFinished"]);
-      expect(mockFs.open).toHaveBeenCalledWith("./file.txt", "w");
+      expect(mockFs.promises.open).toHaveBeenCalledWith("./file.txt", "w");
 
       async function sendUploadChunk(chunk: number[], id: string) {
         const expectedBuffer = Buffer.alloc(chunk.length);

@@ -5,8 +5,11 @@ import { encode, toObject } from "flatbuffers/js/flexbuffers.js";
 import * as jsSha3 from "js-sha3";
 import { defaultLogger, isBrowser, Logger, YagnaApi } from "../utils";
 import { GolemInternalError } from "../error/golem-error";
-import fsPromises, { FileHandle } from "fs/promises";
 import WebSocket from "ws";
+
+// FIXME: cannot import fs/promises because the rollup polyfill doesn't work with it
+import * as fs from "fs";
+const fsPromises = fs.promises;
 
 export interface WebSocketStorageProviderOptions {
   logger?: Logger;
@@ -62,7 +65,7 @@ export class WebSocketStorageProvider implements StorageProvider {
   private services = new Map<string, string>();
   private logger: Logger;
   private ready = false;
-  private openHandles = new Set<FileHandle>();
+  private openHandles = new Set<fs.promises.FileHandle>();
 
   constructor(
     private readonly yagnaApi: YagnaApi,
