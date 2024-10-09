@@ -8,6 +8,7 @@ import { GsbApi, IdentityApi } from "ya-ts-client";
 import { anything, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
 import fs, { FileHandle } from "fs/promises";
 import { Stats } from "fs";
+import WebSocket from "ws";
 
 jest.mock("uuid", () => ({ v4: () => "uuid" }));
 jest.mock("fs/promises");
@@ -175,12 +176,12 @@ describe("WebSocketStorageProvider", () => {
   });
 
   describe("publishFile()", () => {
-    let socket: WebSocket;
+    let socket: EventTarget & { send: jest.Mock };
     let fileInfo: { id: string; url: string };
     let fileHandle: FileHandle;
 
     beforeEach(() => {
-      socket = Object.assign(new EventTarget(), { send: jest.fn() }) as unknown as WebSocket;
+      socket = Object.assign(new EventTarget(), { send: jest.fn() });
       fileInfo = {
         id: "10",
         url: "http://localhost:8080",
@@ -349,12 +350,12 @@ describe("WebSocketStorageProvider", () => {
   });
 
   describe("receiveFile()", () => {
-    let socket: WebSocket;
+    let socket: EventTarget & { send: jest.Mock };
     let fileInfo: { id: string; url: string };
     let fileHandle: FileHandle;
 
     beforeEach(async () => {
-      socket = Object.assign(new EventTarget(), { send: jest.fn() }) as unknown as WebSocket;
+      socket = Object.assign(new EventTarget(), { send: jest.fn() });
       fileInfo = {
         id: "10",
         url: "http://localhost:8080",
