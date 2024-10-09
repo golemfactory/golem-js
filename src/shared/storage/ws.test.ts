@@ -1,13 +1,17 @@
 // TODO: improve mocks - remove as any
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { GolemInternalError, Logger, nullLogger, WebSocketBrowserStorageProvider, YagnaApi } from "../../index";
+import { Logger, nullLogger, WebSocketStorageProvider, YagnaApi } from "../../index";
 // .js added for ESM compatibility
 import { encode, toObject } from "flatbuffers/js/flexbuffers.js";
 import * as jsSha3 from "js-sha3";
 import { GsbApi, IdentityApi } from "ya-ts-client";
 import { anything, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
+import fs, { FileHandle } from "fs/promises";
+import { Stats } from "fs";
 
 jest.mock("uuid", () => ({ v4: () => "uuid" }));
+jest.mock("fs/promises");
+const mockFs = fs as jest.Mocked<typeof fs>;
 
 type UploadChunkChunk = { offset: number; content: Uint8Array };
 
@@ -18,12 +22,12 @@ const logger = imock<Logger>();
 const yagnaApi = instance(mockYagna);
 const TEST_IDENTITY = "0x19ee20228a4c4bf8d4aebc79d9d3af2a01433456";
 
-describe("WebSocketBrowserStorageProvider", () => {
+describe("WebSocketStorageProvider", () => {
   const createProvider = () =>
-    new WebSocketBrowserStorageProvider(yagnaApi, {
+    new WebSocketStorageProvider(yagnaApi, {
       logger: instance(logger),
     });
-  let provider: WebSocketBrowserStorageProvider;
+  let provider: WebSocketStorageProvider;
 
   beforeEach(() => {
     provider = createProvider();
@@ -53,13 +57,13 @@ describe("WebSocketBrowserStorageProvider", () => {
 
   describe("constructor", () => {
     it("should create default logger", () => {
-      const provider = new WebSocketBrowserStorageProvider(yagnaApi, {});
+      const provider = new WebSocketStorageProvider(yagnaApi, {});
       expect(provider["logger"]).toBeDefined();
     });
 
     it("should use provided logger", () => {
       const logger = nullLogger();
-      const provider = new WebSocketBrowserStorageProvider(yagnaApi, { logger });
+      const provider = new WebSocketStorageProvider(yagnaApi, { logger });
       expect(provider["logger"]).toBe(logger);
     });
   });
@@ -171,8 +175,90 @@ describe("WebSocketBrowserStorageProvider", () => {
   });
 
   describe("publishFile()", () => {
-    it("should fail", async () => {
-      await expect(() => provider.publishFile()).rejects.toMatchError(new GolemInternalError("Not implemented"));
+    let socket: WebSocket;
+    let fileInfo: { id: string; url: string };
+    let fileHandle: FileHandle;
+
+    beforeEach(() => {
+      socket = Object.assign(new EventTarget(), { send: jest.fn() }) as unknown as WebSocket;
+      fileInfo = {
+        id: "10",
+        url: "http://localhost:8080",
+      };
+
+      jest.spyOn(provider as any, "createFileInfo").mockImplementation(() => Promise.resolve(fileInfo));
+      jest.spyOn(provider as any, "createSocket").mockImplementation(() => Promise.resolve(socket));
+      mockFs.stat.mockResolvedValue({ size: 10 } as unknown as Stats);
+      fileHandle = {
+        read: jest.fn(),
+        close: jest.fn(),
+      } as unknown as jest.Mocked<FileHandle>;
+      mockFs.open.mockResolvedValue(fileHandle);
+    });
+
+    it("should read the file and upload it", async () => {
+      expect.assertions(9);
+      const result = await provider["publishFile"]("./file.txt");
+      expect(result).toBe(fileInfo.url);
+      expect(provider["createSocket"]).toHaveBeenCalledWith(fileInfo, ["GetMetadata", "GetChunk"]);
+      expect(mockFs.stat).toHaveBeenCalledWith("./file.txt");
+      expect(mockFs.open).toHaveBeenCalledWith("./file.txt", "r");
+
+      async function sendGetChunk(chunk: number[], offset: number, id: string) {
+        fileHandle.read = jest.fn().mockImplementationOnce((buffer: Buffer) => {
+          for (let i = 0; i < chunk.length; i++) {
+            buffer.writeUInt8(chunk[i], i);
+          }
+        });
+        socket.dispatchEvent(
+          new MessageEvent("message", {
+            data: encode({
+              id,
+              component: "GetChunk",
+              payload: {
+                offset,
+                size: chunk.length,
+              },
+            }).buffer,
+          }),
+        );
+        await new Promise(setImmediate);
+        const expectedBuffer = Buffer.alloc(chunk.length);
+        for (let i = 0; i < chunk.length; i++) {
+          expectedBuffer.writeUInt8(chunk[i], i);
+        }
+        expect(socket.send).toHaveBeenLastCalledWith(
+          encode({
+            id,
+            payload: {
+              content: expectedBuffer,
+              offset,
+            },
+          }),
+        );
+      }
+
+      socket.dispatchEvent(
+        new MessageEvent("message", {
+          data: encode({
+            id: "1",
+            component: "GetMetadata",
+          }).buffer,
+        }),
+      );
+      expect(socket.send).toHaveBeenCalledWith(
+        encode({
+          id: "1",
+          payload: {
+            fileSize: 10,
+          },
+        }),
+      );
+
+      await sendGetChunk([10, 11, 12, 13], 0, "2");
+      await sendGetChunk([14, 15, 16, 17], 4, "3");
+      await sendGetChunk([18, 19], 8, "4");
+      expect(fileHandle.close).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -263,8 +349,74 @@ describe("WebSocketBrowserStorageProvider", () => {
   });
 
   describe("receiveFile()", () => {
-    it("should fail", async () => {
-      await expect(() => provider.receiveFile()).rejects.toMatchError(new GolemInternalError("Not implemented"));
+    let socket: WebSocket;
+    let fileInfo: { id: string; url: string };
+    let fileHandle: FileHandle;
+
+    beforeEach(async () => {
+      socket = Object.assign(new EventTarget(), { send: jest.fn() }) as unknown as WebSocket;
+      fileInfo = {
+        id: "10",
+        url: "http://localhost:8080",
+      };
+
+      jest.spyOn(provider as any, "createFileInfo").mockImplementation(() => Promise.resolve(fileInfo));
+      jest.spyOn(provider as any, "createSocket").mockImplementation(() => Promise.resolve(socket));
+      fileHandle = {
+        write: jest.fn(),
+        close: jest.fn(),
+      } as unknown as jest.Mocked<FileHandle>;
+      mockFs.open.mockResolvedValue(fileHandle);
+    });
+
+    it("should receive the file and write it to the disc", async () => {
+      expect.assertions(10);
+      const result = await provider["receiveFile"]("./file.txt");
+      expect(result).toBe(fileInfo.url);
+      expect(provider["createSocket"]).toHaveBeenCalledWith(fileInfo, ["UploadChunk", "UploadFinished"]);
+      expect(mockFs.open).toHaveBeenCalledWith("./file.txt", "w");
+
+      async function sendUploadChunk(chunk: number[], id: string) {
+        const expectedBuffer = Buffer.alloc(chunk.length);
+        for (let i = 0; i < chunk.length; i++) {
+          expectedBuffer.writeUInt8(chunk[i], i);
+        }
+        socket.dispatchEvent(
+          new MessageEvent("message", {
+            data: encode({
+              id,
+              component: "UploadChunk",
+              payload: {
+                chunk: {
+                  content: expectedBuffer,
+                },
+              },
+            }).buffer,
+          }),
+        );
+        await new Promise(setImmediate);
+        expect(fileHandle.write).toHaveBeenCalledWith(Uint8Array.from(expectedBuffer));
+        expect(socket.send).toHaveBeenLastCalledWith(
+          encode({
+            id,
+            payload: null,
+          }),
+        );
+      }
+
+      await sendUploadChunk([10, 11, 12, 13], "1");
+      await sendUploadChunk([14, 15, 16, 17], "2");
+      await sendUploadChunk([18, 19], "3");
+      socket.dispatchEvent(
+        new MessageEvent("message", {
+          data: encode({
+            id: "4",
+            component: "UploadFinished",
+          }).buffer,
+        }),
+      );
+      await new Promise(setImmediate);
+      expect(fileHandle.close).toHaveBeenCalled();
     });
   });
 

@@ -3,8 +3,9 @@ import { v4 } from "uuid";
 // .js added for ESM compatibility
 import { encode, toObject } from "flatbuffers/js/flexbuffers.js";
 import * as jsSha3 from "js-sha3";
-import { Logger, nullLogger, YagnaApi } from "../utils";
+import { defaultLogger, isBrowser, Logger, YagnaApi } from "../utils";
 import { GolemInternalError } from "../error/golem-error";
+import fsPromises from "fs/promises";
 
 export interface WebSocketStorageProviderOptions {
   logger?: Logger;
@@ -53,7 +54,7 @@ type GftpFileInfo = {
 /**
  * Storage provider that uses GFTP over WebSockets.
  */
-export class WebSocketBrowserStorageProvider implements StorageProvider {
+export class WebSocketStorageProvider implements StorageProvider {
   /**
    * Map of open services (IDs) indexed by GFTP url.
    */
@@ -63,9 +64,9 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
 
   constructor(
     private readonly yagnaApi: YagnaApi,
-    private readonly options: WebSocketStorageProviderOptions,
+    private readonly options?: WebSocketStorageProviderOptions,
   ) {
-    this.logger = options.logger ?? nullLogger();
+    this.logger = options?.logger || defaultLogger("storage");
   }
 
   close(): Promise<void> {
@@ -92,19 +93,56 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
           offset: req.payload.offset,
         });
       } else {
-        this.logger.error(
-          `[WebSocketBrowserStorageProvider] Unsupported message in publishData(): ${
-            (req as GsbRequest<void>).component
-          }`,
-        );
+        this.logger.error(`Unsupported message in publishData(): ${(req as GsbRequest<void>).component}`);
       }
     });
 
     return fileInfo.url;
   }
 
-  async publishFile(): Promise<string> {
-    throw new GolemInternalError("Not implemented");
+  async publishFile(src: string): Promise<string> {
+    if (isBrowser) {
+      throw new GolemInternalError("Cannot publish files in browser context, did you mean to use `publishData()`?");
+    }
+
+    this.logger.info("Preparing file upload", { sourcePath: src });
+
+    const fileInfo = await this.createFileInfo();
+    const ws = await this.createSocket(fileInfo, ["GetMetadata", "GetChunk"]);
+    const fileStats = await fsPromises.stat(src);
+    const fileSize = fileStats.size;
+
+    const fd = await fsPromises.open(src, "r");
+
+    ws.addEventListener("message", async (event) => {
+      const req = toObject(event.data) as GsbRequestPublishUnion;
+
+      if (req.component === "GetMetadata") {
+        this.respond(ws, req.id, { fileSize });
+      } else if (req.component === "GetChunk") {
+        const { offset, size } = req.payload;
+
+        const chunkSize = Math.min(size, fileSize - offset);
+        const chunk = Buffer.alloc(chunkSize);
+
+        try {
+          await fd.read(chunk, 0, chunkSize, offset);
+          this.respond(ws, req.id, {
+            content: chunk,
+            offset,
+          });
+        } finally {
+          // After the last chunk, close the file descriptor
+          if (offset + chunkSize >= fileSize) {
+            await fd.close();
+          }
+        }
+      } else {
+        this.logger.error(`Unsupported message in publishFile(): ${(req as GsbRequest<void>).component}`);
+      }
+    });
+
+    return fileInfo.url;
   }
 
   async receiveData(callback: StorageProviderDataCallback): Promise<string> {
@@ -122,19 +160,39 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
         const result = this.completeReceive(req.payload.hash, data);
         callback(result);
       } else {
-        this.logger.error(
-          `[WebSocketBrowserStorageProvider] Unsupported message in receiveData(): ${
-            (req as GsbRequest<void>).component
-          }`,
-        );
+        this.logger.error(`Unsupported message in receiveData(): ${(req as GsbRequest<void>).component}`);
       }
     });
 
     return fileInfo.url;
   }
 
-  async receiveFile(): Promise<string> {
-    throw new GolemInternalError("Not implemented");
+  async receiveFile(path: string): Promise<string> {
+    if (isBrowser) {
+      throw new GolemInternalError("Cannot receive files in browser context, did you mean to use `receiveData()`?");
+    }
+
+    this.logger.info("Preparing file download", { destination: path });
+
+    const fileInfo = await this.createFileInfo();
+    const fileHandle = await fsPromises.open(path, "w");
+    const ws = await this.createSocket(fileInfo, ["UploadChunk", "UploadFinished"]);
+
+    ws.addEventListener("message", (event) => {
+      const req = toObject(event.data) as GsbRequestReceiveUnion;
+      if (req.component === "UploadChunk") {
+        fileHandle.write(req.payload.chunk.content);
+        this.respond(ws, req.id, null);
+      } else if (req.component === "UploadFinished") {
+        this.respond(ws, req.id, null);
+
+        fileHandle.close();
+      } else {
+        this.logger.error(`Unsupported message in receiveFile(): ${(req as GsbRequest<void>).component}`);
+      }
+    });
+
+    return fileInfo.url;
   }
 
   async release(urls: string[]): Promise<void> {
@@ -142,7 +200,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
       const serviceId = this.services.get(url);
       if (serviceId) {
         this.deleteService(serviceId).catch((error) =>
-          this.logger.warn(`[WebSocketBrowserStorageProvider] Failed to delete service`, { serviceId, error }),
+          this.logger.warn(`Failed to delete service`, { serviceId, error }),
         );
       }
       this.services.delete(url);
@@ -168,7 +226,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
     const service = await this.createService(fileInfo, components);
     const ws = new WebSocket(service.url, ["gsb+flexbuffers"]);
     ws.addEventListener("error", () => {
-      this.logger.error(`[WebSocketBrowserStorageProvider] Socket Error (${fileInfo.id})`);
+      this.logger.error(`Socket Error (${fileInfo.id})`);
     });
     ws.binaryType = "arraybuffer";
     return ws;
