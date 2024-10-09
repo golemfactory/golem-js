@@ -21,8 +21,8 @@ const order: MarketOrderSpec = {
     workload: { imageTag: "golem/alpine:latest" },
   },
   market: {
-    // We're only going to rent the provider for 5 minutes max
-    rentHours: 5 / 60,
+    // We're only going to rent the provider for 15 minutes max
+    rentHours: 15 / 60,
     pricing: {
       model: "linear",
       maxStartPrice: 0.5,

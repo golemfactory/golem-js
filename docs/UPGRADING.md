@@ -47,14 +47,14 @@ import { GolemNetwork } from "@golem-sdk/golem-js";
   try {
     await glm.connect();
 
-    const retnal = await glm.oneOf({
+    const rental = await glm.oneOf({
       order: {
         demand: {
           workload: { imageTag: "golem/alpine:latest" },
         },
-        // You have to be now explicit about about your terms and expectatios from the market
+        // You have to be now explicit about about your terms and expectations from the market
         market: {
-          rentHours: 5 / 60,
+          rentHours: 15 / 60,
           pricing: {
             model: "linear",
             maxStartPrice: 0.5,
@@ -132,9 +132,9 @@ import { GolemNetwork } from "@golem-sdk/golem-js";
         demand: {
           workload: { imageTag: "golem/alpine:latest" },
         },
-        // You have to be now explicit about about your terms and expectatios from the market
+        // You have to be now explicit about about your terms and expectations from the market
         market: {
-          rentHours: 5 / 60,
+          rentHours: 15 / 60,
           pricing: {
             model: "linear",
             maxStartPrice: 0.5,
@@ -147,13 +147,13 @@ import { GolemNetwork } from "@golem-sdk/golem-js";
 
     const inputs = [1, 2, 3, 4, 5];
 
-    // You still take the necessary precaucions, pipeline your work and processing
+    // You still take the necessary precautions, pipeline your work and processing
     const results = await Promise.allSettled(
       inputs.map((input) =>
         // 🌟🌟 You access rentals from the pool
         pool.withRental((rental) =>
           rental
-            // 🌟🌟🌟 You issue the comands as in case of a single-provider scenario
+            // 🌟🌟🌟 You issue the commands as in case of a single-provider scenario
             .getExeUnit()
             .then((exe) => exe.run(`echo 'Hello ${input}`))
             .then((res) => res.stdout),
