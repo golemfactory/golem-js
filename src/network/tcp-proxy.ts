@@ -1,7 +1,7 @@
 import net from "net";
 import { WebSocket } from "ws";
 import { EventEmitter } from "eventemitter3";
-import { defaultLogger, Logger } from "../shared/utils";
+import { checkAndThrowUnsupportedInBrowserError, defaultLogger, Logger } from "../shared/utils";
 import { Buffer } from "buffer";
 
 export interface TcpProxyEvents {
@@ -64,8 +64,10 @@ export class TcpProxy {
     /**
      * Additional options of the proxy
      */
-    options: Partial<TcpProxyOptions>,
+    options: Partial<TcpProxyOptions> = {},
   ) {
+    checkAndThrowUnsupportedInBrowserError("TCP Proxy");
+
     this.heartBeatSec = options.heartBeatSec ?? 10;
     this.logger = options.logger ? options.logger.child("tcp-proxy") : defaultLogger("tcp-proxy");
 
