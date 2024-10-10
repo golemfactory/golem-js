@@ -4,7 +4,7 @@ import { v4 } from "uuid";
 import { encode, toObject } from "flatbuffers/js/flexbuffers.js";
 import * as jsSha3 from "js-sha3";
 import { defaultLogger, isBrowser, Logger, YagnaApi } from "../utils";
-import { GolemInternalError } from "../error/golem-error";
+import { GolemInternalError, GolemUserError } from "../error/golem-error";
 import WebSocket from "ws";
 
 // FIXME: cannot import fs/promises because the rollup polyfill doesn't work with it
@@ -115,7 +115,7 @@ export class WebSocketStorageProvider implements StorageProvider {
 
   async publishFile(src: string): Promise<string> {
     if (isBrowser) {
-      throw new GolemInternalError("Cannot publish files in browser context, did you mean to use `publishData()`?");
+      throw new GolemUserError("Cannot publish files in browser context, did you mean to use `publishData()`?");
     }
 
     this.logger.info("Preparing file upload", { sourcePath: src });
@@ -152,12 +152,8 @@ export class WebSocketStorageProvider implements StorageProvider {
             content: chunk,
             offset,
           });
-        } finally {
-          // After the last chunk, close the file descriptor
-          if (offset + chunkSize >= fileSize) {
-            await fileHandle.close();
-            this.openHandles.delete(fileHandle);
-          }
+        } catch (error) {
+          this.logger.error("Something went wrong while sending the file chunk", { error });
         }
       } else {
         this.logger.error(`Unsupported message in publishFile(): ${(req as GsbRequest<void>).component}`);
@@ -199,7 +195,7 @@ export class WebSocketStorageProvider implements StorageProvider {
 
   async receiveFile(path: string): Promise<string> {
     if (isBrowser) {
-      throw new GolemInternalError("Cannot receive files in browser context, did you mean to use `receiveData()`?");
+      throw new GolemUserError("Cannot receive files in browser context, did you mean to use `receiveData()`?");
     }
 
     this.logger.info("Preparing file download", { destination: path });

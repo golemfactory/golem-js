@@ -1,11 +1,11 @@
 // TODO: improve mocks - remove as any
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Logger, nullLogger, WebSocketStorageProvider, YagnaApi } from "../../index";
+import { Logger, WebSocketStorageProvider, YagnaApi } from "../../index";
 // .js added for ESM compatibility
 import { encode, toObject } from "flatbuffers/js/flexbuffers.js";
 import * as jsSha3 from "js-sha3";
 import { GsbApi, IdentityApi } from "ya-ts-client";
-import { anything, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
+import { _, anything, imock, instance, mock, reset, verify, when } from "@johanblumenberg/ts-mockito";
 import WebSocket from "ws";
 import * as fs from "fs";
 
@@ -64,9 +64,13 @@ describe("WebSocketStorageProvider", () => {
     });
 
     it("should use provided logger", () => {
-      const logger = nullLogger();
-      const provider = new WebSocketStorageProvider(yagnaApi, { logger });
-      expect(provider["logger"]).toBe(logger);
+      const mockLogger = imock<Logger>();
+      const mockLoggerChild = imock<Logger>();
+      const mockLoggerChildInstance = instance(mockLoggerChild);
+      when(mockLogger.child(_)).thenReturn(mockLoggerChildInstance);
+      const provider = new WebSocketStorageProvider(yagnaApi, { logger: instance(mockLogger) });
+      expect(provider["logger"]).toBe(mockLoggerChildInstance);
+      verify(mockLogger.child("storage")).once();
     });
   });
 
@@ -199,7 +203,7 @@ describe("WebSocketStorageProvider", () => {
     });
 
     it("should read the file and upload it", async () => {
-      expect.assertions(9);
+      expect.assertions(10);
       const result = await provider["publishFile"]("./file.txt");
       expect(result).toBe(fileInfo.url);
       expect(provider["createSocket"]).toHaveBeenCalledWith(fileInfo, ["GetMetadata", "GetChunk"]);
@@ -260,6 +264,8 @@ describe("WebSocketStorageProvider", () => {
       await sendGetChunk([10, 11, 12, 13], 0, "2");
       await sendGetChunk([14, 15, 16, 17], 4, "3");
       await sendGetChunk([18, 19], 8, "4");
+      expect(fileHandle.close).toHaveBeenCalledTimes(0);
+      await provider.close();
       expect(fileHandle.close).toHaveBeenCalledTimes(1);
     });
   });
