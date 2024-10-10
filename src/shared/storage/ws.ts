@@ -69,9 +69,9 @@ export class WebSocketStorageProvider implements StorageProvider {
 
   constructor(
     private readonly yagnaApi: YagnaApi,
-    private readonly options?: WebSocketStorageProviderOptions,
+    options?: WebSocketStorageProviderOptions,
   ) {
-    this.logger = options?.logger || defaultLogger("storage");
+    this.logger = options?.logger?.child("storage") || defaultLogger("storage");
   }
 
   async close(): Promise<void> {
@@ -95,6 +95,9 @@ export class WebSocketStorageProvider implements StorageProvider {
         return;
       }
       const req = toObject(event.data) as GsbRequestPublishUnion;
+
+      this.logger.debug("Received GFTP request for publishData", req);
+
       if (req.component === "GetMetadata") {
         this.respond(ws, req.id, { fileSize: data.byteLength });
       } else if (req.component === "GetChunk") {
@@ -132,6 +135,8 @@ export class WebSocketStorageProvider implements StorageProvider {
       }
 
       const req = toObject(event.data) as GsbRequestPublishUnion;
+
+      this.logger.debug("Received GFTP request for publishFile", req);
 
       if (req.component === "GetMetadata") {
         this.respond(ws, req.id, { fileSize });
@@ -172,7 +177,11 @@ export class WebSocketStorageProvider implements StorageProvider {
         this.logger.error("Received non-ArrayBuffer data from the socket", { data: event.data });
         return;
       }
+
       const req = toObject(event.data) as GsbRequestReceiveUnion;
+
+      this.logger.debug("Received GFTP request for receiveData", req);
+
       if (req.component === "UploadChunk") {
         data.push(req.payload.chunk);
         this.respond(ws, req.id, null);
@@ -206,6 +215,9 @@ export class WebSocketStorageProvider implements StorageProvider {
         return;
       }
       const req = toObject(event.data) as GsbRequestReceiveUnion;
+
+      this.logger.debug("Received GFTP request for receiveFile", req);
+
       if (req.component === "UploadChunk") {
         await fileHandle.write(req.payload.chunk.content);
         this.respond(ws, req.id, null);
