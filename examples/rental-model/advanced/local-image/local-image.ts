@@ -29,7 +29,7 @@ const getImagePath = (path: string) => new URL(path, import.meta.url).toString()
         },
       },
       market: {
-        rentHours: 5 / 60,
+        rentHours: 15 / 60,
         pricing: {
           model: "linear",
           maxStartPrice: 1,

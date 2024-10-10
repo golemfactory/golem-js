@@ -5,9 +5,10 @@ import fs from "fs";
 import jsSha3 from "js-sha3";
 
 /**
- * This class provides GFTP based implementation of the IFileServer interface used in the SDK
+ * IFileServer implementation that uses any StorageProvider to serve files.
+ * Make sure that the storage provider implements the `.publishFile()` method.
  */
-export class GftpServerAdapter implements IFileServer {
+class StorageServerAdapter implements IFileServer {
   private published = new Map<string, FileServerEntry>();
 
   constructor(private readonly storage: StorageProvider) {}
@@ -57,3 +58,12 @@ export class GftpServerAdapter implements IFileServer {
     });
   }
 }
+
+/**
+ * @deprecated Use StorageServerAdapter instead. This will be removed in the next major version.
+ *
+ * This class provides GFTP based implementation of the IFileServer interface used in the SDK
+ */
+class GftpServerAdapter extends StorageServerAdapter {}
+
+export { GftpServerAdapter, StorageServerAdapter };

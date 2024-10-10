@@ -1,4 +1,4 @@
-import { anyAbortSignal, createAbortSignalFromTimeout, defaultLogger, isNode, Logger, YagnaApi } from "../shared/utils";
+import { anyAbortSignal, createAbortSignalFromTimeout, defaultLogger, Logger, YagnaApi } from "../shared/utils";
 import {
   Demand,
   DraftOfferProposalPool,
@@ -29,17 +29,13 @@ import { ProposalRepository } from "../shared/yagna/repository/proposal-reposito
 import { CacheService } from "../shared/cache/CacheService";
 import { DemandRepository } from "../shared/yagna/repository/demand-repository";
 import { IDemandRepository, OrderDemandOptions } from "../market/demand";
-import { GftpServerAdapter } from "../shared/storage/GftpServerAdapter";
-import {
-  GftpStorageProvider,
-  NullStorageProvider,
-  StorageProvider,
-  WebSocketBrowserStorageProvider,
-} from "../shared/storage";
+import { StorageServerAdapter } from "../shared/storage/StorageServerAdapter";
+import { GftpStorageProvider, NullStorageProvider, StorageProvider, WebSocketStorageProvider } from "../shared/storage";
 import { DataTransferProtocol } from "../shared/types";
 import { NetworkApiAdapter } from "../shared/yagna/adapters/network-api-adapter";
 import { IProposalRepository } from "../market/proposal";
 import { Subscription } from "rxjs";
+import { GolemConfigError } from "../shared/error/golem-error";
 
 /**
  * Instance of an object or a factory function that you can call `new` on.
@@ -105,7 +101,7 @@ export interface GolemNetworkOptions {
 
   /**
    * Set the data transfer protocol to use for file transfers.
-   * Default is `gftp`.
+   * Default is `ws`.
    */
   dataTransferProtocol?: DataTransferProtocol;
 
@@ -228,7 +224,7 @@ export class GolemNetwork {
 
   constructor(options: Partial<GolemNetworkOptions> = {}) {
     const optDefaults: GolemNetworkOptions = {
-      dataTransferProtocol: isNode ? "gftp" : "ws",
+      dataTransferProtocol: "ws",
     };
 
     this.options = {
@@ -285,7 +281,7 @@ export class GolemNetwork {
           this.options.override?.marketApi ||
           new MarketApiAdapter(this.yagna, agreementRepository, proposalRepository, demandRepository, this.logger),
         networkApi: this.options.override?.networkApi || new NetworkApiAdapter(this.yagna),
-        fileServer: this.options.override?.fileServer || new GftpServerAdapter(this.storageProvider),
+        fileServer: this.options.override?.fileServer || new StorageServerAdapter(this.storageProvider),
       };
       this.network = getFactory(NetworkModuleImpl, this.options.override?.network)(this.services);
       this.market = getFactory(MarketModuleImpl, this.options.override?.market)(
@@ -655,13 +651,16 @@ export class GolemNetwork {
   private createStorageProvider(): StorageProvider {
     if (typeof this.options.dataTransferProtocol === "string") {
       switch (this.options.dataTransferProtocol) {
+        case "gftp":
+          return new GftpStorageProvider(this.logger);
         case "ws":
-          return new WebSocketBrowserStorageProvider(this.yagna, {
+          return new WebSocketStorageProvider(this.yagna, {
             logger: this.logger,
           });
-        case "gftp":
         default:
-          return new GftpStorageProvider(this.logger);
+          throw new GolemConfigError(
+            `Unsupported data transfer protocol ${this.options.dataTransferProtocol}. Supported protocols are "gftp" and "ws"`,
+          );
       }
     } else if (this.options.dataTransferProtocol !== undefined) {
       return this.options.dataTransferProtocol;

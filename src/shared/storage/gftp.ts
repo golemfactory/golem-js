@@ -8,6 +8,11 @@ import { GolemInternalError, GolemUserError } from "../error/golem-error";
 import { v4 } from "uuid";
 import AsyncLock from "async-lock";
 
+/**
+ * @deprecated Use WebSocketStorageProvider instead. This will be removed in the next major version.
+ *
+ * Storage provider that spawns a GFTP process and uses it to serve files.
+ */
 export class GftpStorageProvider implements StorageProvider {
   private gftpServerProcess?: ChildProcess;
   private logger: Logger;
