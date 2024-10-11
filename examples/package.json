@@ -41,7 +41,7 @@
     "tsx": "^4.7.1"
   },
   "devDependencies": {
-    "@types/node": "20",
+    "@types/node": "22",
     "cypress": "^13.11.0",
     "serve": "^14.2.3",
     "typescript": "^5.3.3"
