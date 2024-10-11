@@ -3,8 +3,13 @@ import { v4 } from "uuid";
 // .js added for ESM compatibility
 import { encode, toObject } from "flatbuffers/js/flexbuffers.js";
 import * as jsSha3 from "js-sha3";
-import { Logger, nullLogger, YagnaApi } from "../utils";
-import { GolemInternalError } from "../error/golem-error";
+import { defaultLogger, isBrowser, Logger, YagnaApi } from "../utils";
+import { GolemInternalError, GolemUserError } from "../error/golem-error";
+import WebSocket from "ws";
+
+// FIXME: cannot import fs/promises because the rollup polyfill doesn't work with it
+import * as fs from "fs";
+const fsPromises = fs.promises;
 
 export interface WebSocketStorageProviderOptions {
   logger?: Logger;
@@ -53,23 +58,25 @@ type GftpFileInfo = {
 /**
  * Storage provider that uses GFTP over WebSockets.
  */
-export class WebSocketBrowserStorageProvider implements StorageProvider {
+export class WebSocketStorageProvider implements StorageProvider {
   /**
    * Map of open services (IDs) indexed by GFTP url.
    */
   private services = new Map<string, string>();
   private logger: Logger;
   private ready = false;
+  private openHandles = new Set<fs.promises.FileHandle>();
 
   constructor(
     private readonly yagnaApi: YagnaApi,
-    private readonly options: WebSocketStorageProviderOptions,
+    options?: WebSocketStorageProviderOptions,
   ) {
-    this.logger = options.logger ?? nullLogger();
+    this.logger = options?.logger?.child("storage") || defaultLogger("storage");
   }
 
-  close(): Promise<void> {
+  async close(): Promise<void> {
     this.ready = false;
+    await Promise.allSettled(Array.from(this.openHandles).map((handle) => handle.close()));
     return this.release(Array.from(this.services.keys()));
   }
 
@@ -83,7 +90,14 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
 
     const ws = await this.createSocket(fileInfo, ["GetMetadata", "GetChunk"]);
     ws.addEventListener("message", (event) => {
+      if (!(event.data instanceof ArrayBuffer)) {
+        this.logger.error("Received non-ArrayBuffer data from the socket", { data: event.data });
+        return;
+      }
       const req = toObject(event.data) as GsbRequestPublishUnion;
+
+      this.logger.debug("Received GFTP request for publishData", req);
+
       if (req.component === "GetMetadata") {
         this.respond(ws, req.id, { fileSize: data.byteLength });
       } else if (req.component === "GetChunk") {
@@ -92,19 +106,61 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
           offset: req.payload.offset,
         });
       } else {
-        this.logger.error(
-          `[WebSocketBrowserStorageProvider] Unsupported message in publishData(): ${
-            (req as GsbRequest<void>).component
-          }`,
-        );
+        this.logger.error(`Unsupported message in publishData(): ${(req as GsbRequest<void>).component}`);
       }
     });
 
     return fileInfo.url;
   }
 
-  async publishFile(): Promise<string> {
-    throw new GolemInternalError("Not implemented");
+  async publishFile(src: string): Promise<string> {
+    if (isBrowser) {
+      throw new GolemUserError("Cannot publish files in browser context, did you mean to use `publishData()`?");
+    }
+
+    this.logger.info("Preparing file upload", { sourcePath: src });
+
+    const fileInfo = await this.createFileInfo();
+    const ws = await this.createSocket(fileInfo, ["GetMetadata", "GetChunk"]);
+    const fileStats = await fsPromises.stat(src);
+    const fileSize = fileStats.size;
+
+    const fileHandle = await fsPromises.open(src, "r");
+    this.openHandles.add(fileHandle);
+
+    ws.addEventListener("message", async (event) => {
+      if (!(event.data instanceof ArrayBuffer)) {
+        this.logger.error("Received non-ArrayBuffer data from the socket", { data: event.data });
+        return;
+      }
+
+      const req = toObject(event.data) as GsbRequestPublishUnion;
+
+      this.logger.debug("Received GFTP request for publishFile", req);
+
+      if (req.component === "GetMetadata") {
+        this.respond(ws, req.id, { fileSize });
+      } else if (req.component === "GetChunk") {
+        const { offset, size } = req.payload;
+
+        const chunkSize = Math.min(size, fileSize - offset);
+        const chunk = Buffer.alloc(chunkSize);
+
+        try {
+          await fileHandle.read(chunk, 0, chunkSize, offset);
+          this.respond(ws, req.id, {
+            content: chunk,
+            offset,
+          });
+        } catch (error) {
+          this.logger.error("Something went wrong while sending the file chunk", { error });
+        }
+      } else {
+        this.logger.error(`Unsupported message in publishFile(): ${(req as GsbRequest<void>).component}`);
+      }
+    });
+
+    return fileInfo.url;
   }
 
   async receiveData(callback: StorageProviderDataCallback): Promise<string> {
@@ -113,7 +169,15 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
 
     const ws = await this.createSocket(fileInfo, ["UploadChunk", "UploadFinished"]);
     ws.addEventListener("message", (event) => {
+      if (!(event.data instanceof ArrayBuffer)) {
+        this.logger.error("Received non-ArrayBuffer data from the socket", { data: event.data });
+        return;
+      }
+
       const req = toObject(event.data) as GsbRequestReceiveUnion;
+
+      this.logger.debug("Received GFTP request for receiveData", req);
+
       if (req.component === "UploadChunk") {
         data.push(req.payload.chunk);
         this.respond(ws, req.id, null);
@@ -122,19 +186,47 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
         const result = this.completeReceive(req.payload.hash, data);
         callback(result);
       } else {
-        this.logger.error(
-          `[WebSocketBrowserStorageProvider] Unsupported message in receiveData(): ${
-            (req as GsbRequest<void>).component
-          }`,
-        );
+        this.logger.error(`Unsupported message in receiveData(): ${(req as GsbRequest<void>).component}`);
       }
     });
 
     return fileInfo.url;
   }
 
-  async receiveFile(): Promise<string> {
-    throw new GolemInternalError("Not implemented");
+  async receiveFile(path: string): Promise<string> {
+    if (isBrowser) {
+      throw new GolemUserError("Cannot receive files in browser context, did you mean to use `receiveData()`?");
+    }
+
+    this.logger.info("Preparing file download", { destination: path });
+
+    const fileInfo = await this.createFileInfo();
+    const fileHandle = await fsPromises.open(path, "w");
+    this.openHandles.add(fileHandle);
+    const ws = await this.createSocket(fileInfo, ["UploadChunk", "UploadFinished"]);
+
+    ws.addEventListener("message", async (event) => {
+      if (!(event.data instanceof ArrayBuffer)) {
+        this.logger.error("Received non-ArrayBuffer data from the socket", { data: event.data });
+        return;
+      }
+      const req = toObject(event.data) as GsbRequestReceiveUnion;
+
+      this.logger.debug("Received GFTP request for receiveFile", req);
+
+      if (req.component === "UploadChunk") {
+        await fileHandle.write(req.payload.chunk.content);
+        this.respond(ws, req.id, null);
+      } else if (req.component === "UploadFinished") {
+        this.respond(ws, req.id, null);
+        await fileHandle.close();
+        this.openHandles.delete(fileHandle);
+      } else {
+        this.logger.error(`Unsupported message in receiveFile(): ${(req as GsbRequest<void>).component}`);
+      }
+    });
+
+    return fileInfo.url;
   }
 
   async release(urls: string[]): Promise<void> {
@@ -142,7 +234,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
       const serviceId = this.services.get(url);
       if (serviceId) {
         this.deleteService(serviceId).catch((error) =>
-          this.logger.warn(`[WebSocketBrowserStorageProvider] Failed to delete service`, { serviceId, error }),
+          this.logger.warn(`Failed to delete service`, { serviceId, error }),
         );
       }
       this.services.delete(url);
@@ -168,7 +260,7 @@ export class WebSocketBrowserStorageProvider implements StorageProvider {
     const service = await this.createService(fileInfo, components);
     const ws = new WebSocket(service.url, ["gsb+flexbuffers"]);
     ws.addEventListener("error", () => {
-      this.logger.error(`[WebSocketBrowserStorageProvider] Socket Error (${fileInfo.id})`);
+      this.logger.error(`Socket Error (${fileInfo.id})`);
     });
     ws.binaryType = "arraybuffer";
     return ws;
