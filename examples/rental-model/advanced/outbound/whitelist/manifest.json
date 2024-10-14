@@ -1,0 +1,32 @@
+{
+  "version": "0.1.0",
+  "createdAt": "2024-08-21T21:55:37.123+02:00",
+  "expiresAt": "2024-11-19T21:55:37.123+01:00",
+  "metadata": {
+    "name": "outbound-example-project",
+    "version": "1.0.0"
+  },
+  "payload": [
+    {
+      "platform": {
+        "os": "linux",
+        "arch": "x86_64"
+      },
+      "hash": "sha3:f985714e913cf2f448c8dac86b3b4a82d3f2e7ece490e24428d6c675",
+      "urls": [
+        "http://registry.golem.network/download/656b365b59fb63da42918f861a1ddba85c61223021efd4cc9ef0c017089ac0df"
+      ]
+    }
+  ],
+  "compManifest": {
+    "version": "0.1.0",
+    "net": {
+      "inet": {
+        "out": {
+          "urls": ["https://registry.npmjs.org"],
+          "protocols": ["https"]
+        }
+      }
+    }
+  }
+}
