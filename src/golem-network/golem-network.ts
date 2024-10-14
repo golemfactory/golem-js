@@ -584,7 +584,7 @@ export class GolemNetwork {
         selectOfferProposal: order.market.offerProposalSelector,
       });
 
-      const maxAgreements = typeof poolSize === "number" ? poolSize : poolSize?.max ?? poolSize?.min ?? 1;
+      const maxAgreements = typeof poolSize === "number" ? poolSize : (poolSize?.max ?? poolSize?.min ?? 1);
       allocation = await this.getAllocationFromOrder({ order, maxAgreements });
       signal.throwIfAborted();
 
