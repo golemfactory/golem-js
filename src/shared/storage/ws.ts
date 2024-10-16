@@ -5,7 +5,9 @@ import { encode, toObject } from "flatbuffers/js/flexbuffers.js";
 import * as jsSha3 from "js-sha3";
 import { defaultLogger, isBrowser, Logger, YagnaApi } from "../utils";
 import { GolemInternalError, GolemUserError } from "../error/golem-error";
-import WebSocket from "ws";
+import NodeWebSocket from "ws";
+
+type WebSocketLike = NodeWebSocket | WebSocket;
 
 // FIXME: cannot import fs/promises because the rollup polyfill doesn't work with it
 import * as fs from "fs";
@@ -256,9 +258,16 @@ export class WebSocketStorageProvider implements StorageProvider {
     };
   }
 
-  private async createSocket(fileInfo: GftpFileInfo, components: string[]): Promise<WebSocket> {
+  private getWsConstructor() {
+    if (isBrowser) {
+      return WebSocket;
+    }
+    return NodeWebSocket;
+  }
+
+  private async createSocket(fileInfo: GftpFileInfo, components: string[]): Promise<WebSocketLike> {
     const service = await this.createService(fileInfo, components);
-    const ws = new WebSocket(service.url, ["gsb+flexbuffers"]);
+    const ws = new (this.getWsConstructor())(service.url, ["gsb+flexbuffers"]);
     ws.addEventListener("error", () => {
       this.logger.error(`Socket Error (${fileInfo.id})`);
     });
@@ -287,7 +296,7 @@ export class WebSocketStorageProvider implements StorageProvider {
     await this.yagnaApi.gsb.unbindServices(id);
   }
 
-  private respond(ws: WebSocket, id: string, payload: unknown) {
+  private respond(ws: WebSocketLike, id: string, payload: unknown) {
     ws.send(
       encode({
         id,
