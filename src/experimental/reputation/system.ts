@@ -44,7 +44,7 @@ export const DEFAULT_AGREEMENT_WEIGHTS: ReputationWeights = {
  * Default reputation service URL.
  * @experimental
  */
-export const DEFAULT_REPUTATION_URL = "https://reputation.dev-test.golem.network/v2/providers/scores";
+export const DEFAULT_REPUTATION_URL = "https://reputation.golem.network/v2/providers/scores";
 
 /**
  * The number of top scoring providers to consider when selecting an agreement.
