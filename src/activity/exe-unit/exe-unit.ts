@@ -23,8 +23,16 @@ import { Agreement, ProviderInfo } from "../../market";
 import { TcpProxy } from "../../network/tcp-proxy";
 import { ExecutionOptions, ExeScriptExecutor } from "../exe-script-executor";
 import { lastValueFrom, tap, toArray } from "rxjs";
+import { DeployArgs } from "../script/command";
 
 export type LifecycleFunction = (exe: ExeUnit) => Promise<void>;
+
+export type VolumeSpec = {
+  /** Size of the volume to mount */
+  sizeGib: number;
+  /** Location of the volume */
+  path: string;
+};
 
 export interface ExeUnitOptions {
   activityDeployingTimeout?: number;
@@ -38,6 +46,7 @@ export interface ExeUnitOptions {
   teardown?: LifecycleFunction;
   executionOptions?: ExecutionOptions;
   signalOrTimeout?: number | AbortSignal;
+  volumes?: Record<string, VolumeSpec>;
 }
 
 export interface CommandOptions {
@@ -158,7 +167,13 @@ export class ExeUnit {
   private async deployActivity() {
     try {
       const executionMetadata = await this.executor.execute(
-        new Script([new Deploy(this.networkNode?.getNetworkConfig?.()), new Start()]).getExeScriptRequest(),
+        new Script([
+          new Deploy({
+            ...this.networkNode?.getNetworkDeploymentArg?.(),
+            ...this.getVolumeDeploymentArg(),
+          }),
+          new Start(),
+        ]).getExeScriptRequest(),
       );
       const result$ = this.executor.getResultsObservable(executionMetadata);
       // if any result is an error, throw an error
@@ -421,5 +436,23 @@ export class ExeUnit {
     }
 
     return allResults[0];
+  }
+
+  private getVolumeDeploymentArg(): Pick<DeployArgs, "volumes"> {
+    if (!this.options?.volumes) {
+      return {};
+    }
+
+    const argument: Required<Pick<DeployArgs, "volumes">> = {
+      volumes: {},
+    };
+
+    for (const [, volumeSpec] of Object.entries(this.options.volumes)) {
+      argument.volumes[volumeSpec.path] = {
+        storage: { size: `${volumeSpec.sizeGib}g`, errors: "panic" },
+      };
+    }
+
+    return argument;
   }
 }

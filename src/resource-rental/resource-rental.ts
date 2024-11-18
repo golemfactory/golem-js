@@ -24,7 +24,7 @@ export interface ResourceRentalEvents {
 }
 
 export interface ResourceRentalOptions {
-  exeUnit?: Pick<ExeUnitOptions, "setup" | "teardown" | "activityDeployingTimeout">;
+  exeUnit?: Pick<ExeUnitOptions, "setup" | "teardown" | "activityDeployingTimeout" | "volumes">;
   activity?: ExecutionOptions;
   payment?: Partial<PaymentProcessOptions>;
   networkNode?: NetworkNode;
