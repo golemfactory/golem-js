@@ -59,8 +59,32 @@ export class Command<T = unknown> {
   }
 }
 
+export type DeployArgs = {
+  net?: DeployNetworkArgs[];
+  volumes?: DeployVolumesArgs;
+};
+
+type DeployNetworkArgs = {
+  id: string;
+  ip: string;
+  mask: string;
+  gateway?: string;
+  nodes: { [ip: string]: string };
+  nodeIp: string;
+};
+
+type DeployVolumesArgs = {
+  [path: string]: {
+    storage: {
+      /** @example 7000m */
+      size: string;
+      errors?: "panic";
+    };
+  };
+};
+
 export class Deploy extends Command {
-  constructor(args?: Record<string, unknown>) {
+  constructor(args?: DeployArgs) {
     super("deploy", args);
   }
 }

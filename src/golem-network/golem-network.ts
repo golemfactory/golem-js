@@ -35,7 +35,7 @@ import { DataTransferProtocol } from "../shared/types";
 import { NetworkApiAdapter } from "../shared/yagna/adapters/network-api-adapter";
 import { IProposalRepository } from "../market/proposal";
 import { Subscription } from "rxjs";
-import { GolemConfigError } from "../shared/error/golem-error";
+import { GolemConfigError, GolemUserError } from "../shared/error/golem-error";
 
 /**
  * Instance of an object or a factory function that you can call `new` on.
@@ -158,6 +158,13 @@ export interface OneOfOptions {
   signalOrTimeout?: number | AbortSignal;
   setup?: ExeUnitOptions["setup"];
   teardown?: ExeUnitOptions["teardown"];
+
+  /**
+   * Define additional volumes ot be mounted when the activity is deployed
+   *
+   * @experimental The Provider has to run yagna 0.17.x or newer and offer `vm` runtime 0.5.x or newer
+   */
+  volumes?: ExeUnitOptions["volumes"];
 }
 
 export interface ManyOfOptions {
@@ -165,6 +172,13 @@ export interface ManyOfOptions {
   poolSize: PoolSize;
   setup?: ExeUnitOptions["setup"];
   teardown?: ExeUnitOptions["teardown"];
+
+  /**
+   * Define additional volumes ot be mounted when the activity is deployed
+   *
+   * @experimental The Provider has to run yagna 0.17.x or newer and offer `vm` runtime 0.5.x or newer
+   */
+  volumes?: ExeUnitOptions["volumes"];
 }
 
 /**
@@ -423,7 +437,12 @@ export class GolemNetwork {
    * @param options.setup - an optional function that is called as soon as the exe unit is ready
    * @param options.teardown - an optional function that is called before the exe unit is destroyed
    */
-  async oneOf({ order, setup, teardown, signalOrTimeout }: OneOfOptions): Promise<ResourceRental> {
+  async oneOf({ order, setup, teardown, signalOrTimeout, volumes }: OneOfOptions): Promise<ResourceRental> {
+    this.validateSettings({
+      order,
+      volumes,
+    });
+
     const { signal, cleanup: cleanupAbortSignals } = anyAbortSignal(
       createAbortSignalFromTimeout(signalOrTimeout),
       this.abortController.signal,
@@ -458,6 +477,7 @@ export class GolemNetwork {
         .releaseAllocation(allocation)
         .catch((err) => this.logger.error("Error while releasing allocation", err));
     };
+
     try {
       const proposalPool = new DraftOfferProposalPool({
         logger: this.logger,
@@ -492,7 +512,7 @@ export class GolemNetwork {
         payment: order.payment,
         activity: order.activity,
         networkNode,
-        exeUnit: { setup, teardown },
+        exeUnit: { setup, teardown, volumes },
       });
 
       // We managed to create the activity, no need to look for more agreement candidates
@@ -551,7 +571,12 @@ export class GolemNetwork {
    * @param options.setup - an optional function that is called as soon as the exe unit is ready
    * @param options.teardown - an optional function that is called before the exe unit is destroyed
    */
-  public async manyOf({ poolSize, order, setup, teardown }: ManyOfOptions): Promise<ResourceRentalPool> {
+  public async manyOf({ poolSize, order, setup, teardown, volumes }: ManyOfOptions): Promise<ResourceRentalPool> {
+    this.validateSettings({
+      order,
+      volumes,
+    });
+
     const signal = this.abortController.signal;
     let allocation: Allocation | undefined = undefined;
     let resourceRentalPool: ResourceRentalPool | undefined = undefined;
@@ -605,7 +630,7 @@ export class GolemNetwork {
         resourceRentalOptions: {
           activity: order.activity,
           payment: order.payment,
-          exeUnit: { setup, teardown },
+          exeUnit: { setup, teardown, volumes },
         },
         agreementOptions: {
           expirationSec: rentSeconds,
@@ -666,6 +691,25 @@ export class GolemNetwork {
       return this.options.dataTransferProtocol;
     } else {
       return new NullStorageProvider();
+    }
+  }
+
+  /**
+   * A helper method used to check if the user provided settings and settings are reasonable
+   * @param settings
+   * @private
+   */
+  private validateSettings(settings: { volumes?: ExeUnitOptions["volumes"]; order: MarketOrderSpec }) {
+    // Rule: If user specifies volumes and the min storage size, then the min storage has to be at least of the largest volume size
+    if (settings.volumes && settings.order.demand.workload?.minStorageGib !== undefined) {
+      const largestVolumeSizeGib = Math.max(...Object.values(settings.volumes).map((spec) => spec.sizeGib));
+      if (settings.order.demand.workload.minStorageGib < largestVolumeSizeGib) {
+        throw new GolemUserError("Your minStorageGib requirement is below your expected largest volume size.");
+      }
+    }
+    // Rule: Require minStorageGib settings for volume users to ensure that they will get suitable providers from the market
+    if (settings.volumes && settings.order.demand.workload?.minStorageGib === undefined) {
+      throw new GolemUserError("You have specified volumes but did not specify a minStorageGib requirement.");
     }
   }
 }
