@@ -1,18 +1,5 @@
 # Golem Network Plugins
 
-<!-- TOC -->
-
-- [Golem Network Plugins](#golem-network-plugins)
-  - [Why do we need plugins?](#why-do-we-need-plugins)
-    - [Requestor script maintainability](#requestor-script-maintainability)
-    - [Opening the ecosystem for extensions](#opening-the-ecosystem-for-extensions)
-  - [Example plugins](#example-plugins)
-    - [Provider tracker](#provider-tracker)
-      - [Check GLM price before starting (asynchronous plugin)](#check-glm-price-before-starting-asynchronous-plugin)
-  - [Plugin lifecycle and cleanup](#plugin-lifecycle-and-cleanup)
-  - [Synchronous and asynchronous plugins](#synchronous-and-asynchronous-plugins)
-  <!-- TOC -->
-
 Welcome to the Golem Network Plugins documentation! Here we aim to provide friendly and comprehensive guidance for
 developers interested in creating reusable and generic modules for the Golem Network.
 
@@ -36,8 +23,7 @@ We warmly invite other developers to [contribute](./CONTRIBUTING.md) to our ecos
 SDK components requires considerable effort and dedication.
 
 To make contributions more accessible, we're introducing a new pathway for developers familiar with `golem-js` to create
-their `GolemNetwork` plugins and share them via NPM. Let us know about your plugins so we can feature them in our
-documentation.
+their `GolemNetwork` plugins and share them via NPM.
 
 ## Example plugins
 
@@ -136,4 +122,14 @@ useful for plugins that allocate resources, use timers, or open database connect
 The SDK supports both synchronous and asynchronous plugins. You can register all of them using the `GolemNetwork.use`
 method, and they will be initialized sequentially in the order they were registered.
 
-We hope you find this guide helpful and enjoy contributing to the Golem Network! Happy coding!
+## Dear developers!
+
+### Become a Golem Network Creator
+
+We hope you find this guide helpful and enjoy contributing to the Golem Network. Happy coding!
+
+### Community developed plugins
+
+Here's the list of plugins developed by Golem's Community.
+
+> Let us know about your plugins so we can feature them in our documentation.
