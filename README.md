@@ -65,6 +65,7 @@ distributed, computational loads through Golem Network.
   disposal.
 - [Usage documentation](./docs/USAGE.md) - Explore supported usage and implementation patterns.
 - [Feature documentation](./docs/FEATURES.md) - Description of interesting features that we've prepared.
+- [Plugin documentation](./docs/PLUGINS.md) - Learn how to write plugins that can enhance `GolemNetwork` user's experience by introducing code reusability and modularity.
 
 ## Installation
 
