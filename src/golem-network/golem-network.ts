@@ -36,6 +36,7 @@ import { NetworkApiAdapter } from "../shared/yagna/adapters/network-api-adapter"
 import { IProposalRepository } from "../market/proposal";
 import { Subscription } from "rxjs";
 import { GolemConfigError, GolemUserError } from "../shared/error/golem-error";
+import { GolemPluginInitializer, GolemPluginOptions, GolemPluginRegistration } from "./plugin";
 
 /**
  * Instance of an object or a factory function that you can call `new` on.
@@ -236,6 +237,8 @@ export class GolemNetwork {
    */
   private cleanupTasks: (() => Promise<void> | void)[] = [];
 
+  private registeredPlugins: GolemPluginRegistration[] = [];
+
   constructor(options: Partial<GolemNetworkOptions> = {}) {
     const optDefaults: GolemNetworkOptions = {
       dataTransferProtocol: "ws",
@@ -334,6 +337,7 @@ export class GolemNetwork {
       await this.yagna.connect();
       await this.services.paymentApi.connect();
       await this.storageProvider.init();
+      await this.connectPlugins();
       this.events.emit("connected");
       this.hasConnection = true;
     } catch (err) {
@@ -673,6 +677,21 @@ export class GolemNetwork {
     return await this.network.removeNetwork(network);
   }
 
+  public use(pluginCallback: GolemPluginInitializer): void;
+  public use<TPOptions extends GolemPluginOptions>(
+    pluginCallback: GolemPluginInitializer<TPOptions>,
+    pluginOptions: TPOptions,
+  ): void;
+  public use<TPOptions extends GolemPluginOptions>(
+    pluginCallback: GolemPluginInitializer<TPOptions>,
+    pluginOptions?: TPOptions,
+  ): void {
+    this.registeredPlugins.push({
+      initializer: pluginCallback,
+      options: pluginOptions,
+    });
+  }
+
   private createStorageProvider(): StorageProvider {
     if (typeof this.options.dataTransferProtocol === "string") {
       switch (this.options.dataTransferProtocol) {
@@ -692,6 +711,17 @@ export class GolemNetwork {
     } else {
       return new NullStorageProvider();
     }
+  }
+
+  private async connectPlugins() {
+    this.logger.debug("Started plugin initialization");
+    for (const plugin of this.registeredPlugins) {
+      const cleanup = await plugin.initializer(this, plugin.options);
+      if (cleanup) {
+        this.cleanupTasks.push(cleanup);
+      }
+    }
+    this.logger.debug("Finished plugin initialization");
   }
 
   /**
