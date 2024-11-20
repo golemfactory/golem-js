@@ -19,7 +19,7 @@ export type GolemPluginOptions = Record<string, any> | undefined;
  *
  * Golem plugins are initialized during {@link GolemNetwork.connect}
  *
- * A plugin initializer may return a cleanup function which will be called udring {@link GolemNetwork.disconnect}
+ * A plugin initializer may return a cleanup function which will be called during {@link GolemNetwork.disconnect}
  */
 export type GolemPluginInitializer<T extends GolemPluginOptions = undefined> = (
   glm: GolemNetwork,
