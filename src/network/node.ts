@@ -1,4 +1,5 @@
 import { NetworkInfo } from "./network";
+import { DeployArgs } from "../activity/script/command";
 
 /**
  * Describes a node in a VPN, mapping a Golem node id to an IP address
@@ -13,10 +14,10 @@ export class NetworkNode {
 
   /**
    * Generate a dictionary of arguments that are required for the appropriate
-   *`Deploy` command of an exescript in order to pass the network configuration to the runtime
+   *`Deploy` command of an exe-script in order to pass the network configuration to the runtime
    * on the provider's end.
    */
-  getNetworkConfig() {
+  getNetworkDeploymentArg(): Pick<DeployArgs, "net"> {
     return {
       net: [
         {
