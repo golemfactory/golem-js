@@ -584,7 +584,7 @@ describe("Market module", () => {
     });
   });
   describe("estimateBudget()", () => {
-    it("estimates budget for max number of agreeements", () => {
+    it("estimates budget for max number of agreements", () => {
       const order: MarketOrderSpec = {
         demand: {
           workload: {

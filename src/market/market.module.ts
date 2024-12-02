@@ -200,7 +200,7 @@ export interface MarketModule {
   }): Observable<OfferProposal>;
 
   /**
-   * Estimate the budget for the given order and maximum numbers of agreemnets.
+   * Estimate the budget for the given order and maximum numbers of agreements.
    * Keep in mind that this is just an estimate and the actual cost may vary.
    * The method returns the estimated budget in GLM.
    * @param params
