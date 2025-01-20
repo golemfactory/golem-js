@@ -43,8 +43,8 @@
     "viem": "^2.21.1"
   },
   "devDependencies": {
-    "@types/node": "20",
-    "cypress": "^13.15.0",
+    "@types/node": "22",
+    "cypress": "^14.0.0",
     "serve": "^14.2.3",
     "typescript": "^5.4.5"
   }
