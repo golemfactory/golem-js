@@ -59,7 +59,7 @@ export class ResourceRental {
     // TODO: Listen to agreement events to know when it goes down due to provider closing it!
   }
 
-  private async startStopAndFinalize(signalOrTimeout?: number | AbortSignal) {
+  private async startStopAndFinalize(_signalOrTimeout?: number | AbortSignal) {
     try {
       if (this.currentExeUnit) {
         await this.currentExeUnit.teardown();
@@ -71,26 +71,6 @@ export class ResourceRental {
       if ((await this.fetchAgreementState()) !== "Terminated") {
         await this.marketModule.terminateAgreement(this.agreement);
       }
-      if (this.paymentProcess.isFinished()) {
-        return;
-      }
-
-      /*
-      this.logger.info("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
-      const abortSignal = createAbortSignalFromTimeout(signalOrTimeout);
-      await waitFor(() => this.paymentProcess.isFinished(), {
-        abortSignal: abortSignal,
-      }).catch((error) => {
-        this.paymentProcess.stop();
-        if (error instanceof GolemTimeoutError) {
-          throw new GolemTimeoutError(
-            `The finalization of payment process has been aborted due to a timeout`,
-            abortSignal.reason,
-          );
-        }
-        throw new GolemAbortError("The finalization of payment process has been aborted", abortSignal.reason);
-      });
-      this.logger.info("Finalized payment process", { agreementId: this.agreement.id });*/
     } catch (error) {
       this.logger.error("Filed to finalize payment process", { agreementId: this.agreement.id, error });
       throw error;
