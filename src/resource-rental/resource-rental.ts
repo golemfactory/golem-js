@@ -1,13 +1,12 @@
 import { Agreement, MarketModule } from "../market";
 import { AgreementPaymentProcess, PaymentProcessOptions } from "../payment/agreement_payment_process";
 import { createAbortSignalFromTimeout, Logger } from "../shared/utils";
-import { waitFor } from "../shared/utils/wait";
 import { Activity, ActivityModule, ExeUnit, ExeUnitOptions } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { EventEmitter } from "eventemitter3";
 import { NetworkNode } from "../network";
 import { ExecutionOptions } from "../activity/exe-script-executor";
-import { GolemAbortError, GolemTimeoutError, GolemUserError } from "../shared/error/golem-error";
+import { GolemUserError } from "../shared/error/golem-error";
 
 export interface ResourceRentalEvents {
   /** Emitted when the rental process is fully finalized */
