@@ -58,7 +58,8 @@ export class ResourceRental {
     // TODO: Listen to agreement events to know when it goes down due to provider closing it!
   }
 
-  private async startStopAndFinalize(_signalOrTimeout?: number | AbortSignal) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private async startStopAndFinalize(signalOrTimeout?: number | AbortSignal) {
     try {
       if (this.currentExeUnit) {
         await this.currentExeUnit.teardown();
