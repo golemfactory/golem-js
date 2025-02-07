@@ -75,6 +75,7 @@ export class ResourceRental {
         return;
       }
 
+      /*
       this.logger.info("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
       const abortSignal = createAbortSignalFromTimeout(signalOrTimeout);
       await waitFor(() => this.paymentProcess.isFinished(), {
@@ -89,7 +90,7 @@ export class ResourceRental {
         }
         throw new GolemAbortError("The finalization of payment process has been aborted", abortSignal.reason);
       });
-      this.logger.info("Finalized payment process", { agreementId: this.agreement.id });
+      this.logger.info("Finalized payment process", { agreementId: this.agreement.id });*/
     } catch (error) {
       this.logger.error("Filed to finalize payment process", { agreementId: this.agreement.id, error });
       throw error;
