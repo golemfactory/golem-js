@@ -14,7 +14,9 @@
  *
  * @link https://github.com/golemfactory/ya-installer-resources/tree/main/whitelist Pre-installed whitelist
  *
- * This example reaches out to the whitelisted registry.npmjs.org to download golem-js release information
+ * For the purpose of this example, a special group of machines (providers) has been launched
+ * that operate in the subnet named `satori` and have a predefined whitelist containing the domain tcpbin.com.
+ *
  *
  * WORKING WITH THE MANIFEST
  *
@@ -43,7 +45,7 @@ const dirName = path.dirname(fileURLToPath(import.meta.url));
     await glm.connect();
 
     /**
-     * Used to terminate the script after 60s in any case
+     * Used to terminate the script after 120s in any case
      *
      * It's possible that no provider will be accepting your offer due to not having the base URL
      * which you are trying to reach on their whitelist, or they don't allow whitelist outbound
@@ -56,9 +58,8 @@ const dirName = path.dirname(fileURLToPath(import.meta.url));
     const rental = await glm.oneOf({
       order: {
         demand: {
-          subnetTag: "mgortat",
+          subnetTag: "satori",
           workload: {
-            imageTag: "golem/node:latest",
             manifest: fs.readFileSync(path.join(dirName, "manifest.json")).toString("base64"),
           },
         },
@@ -78,8 +79,11 @@ const dirName = path.dirname(fileURLToPath(import.meta.url));
     timeoutSignal.removeEventListener("abort", onTimeout);
 
     const exe = await rental.getExeUnit();
-    const result = await exe.run("echo 'Hello via tcp' | nc tcpbin.com 4242");
 
+    // The following command will be executed by the Provider:
+    // It sends "Hello via tcp" to the tcpbin.com service on port 4242 using the TCP protocol.
+    // Provider will receive the response back from the tcpbin.com service.
+    const result = await exe.run("echo 'Hello via tcp' | nc tcpbin.com 4242");
     console.log("Results:", result);
 
     await rental.stopAndFinalize();

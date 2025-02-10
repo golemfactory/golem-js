@@ -12,9 +12,9 @@
         "os": "linux",
         "arch": "x86_64"
       },
-      "hash": "sha3:f985714e913cf2f448c8dac86b3b4a82d3f2e7ece490e24428d6c675",
+      "hash": "sha3:fa8b342c173d73b7c65180f8781362869eb4ad70314a576eb5e66504",
       "urls": [
-        "http://registry.golem.network/download/656b365b59fb63da42918f861a1ddba85c61223021efd4cc9ef0c017089ac0df"
+        "https://registry.golem.network/download/07d315dfb78dd7557b75ed1b4dd97e94df6bb868488dd7b9b30ed55b1da1c12d"
       ]
     }
   ],
@@ -23,8 +23,8 @@
     "net": {
       "inet": {
         "out": {
-          "urls": ["https://tcpbin.com"],
-          "protocols": ["tcp"]
+          "urls": ["https://tcpbin.com:4242"],
+          "protocols": ["https"]
         }
       }
     }
