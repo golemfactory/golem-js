@@ -15,7 +15,7 @@ import net from "net";
     const order: MarketOrderSpec = {
       demand: {
         workload: {
-          imageTag: "golem/alpine:latest",
+          imageTag: "golem/node:20-alpine",
           capabilities: ["vpn"],
         },
       },
@@ -41,31 +41,31 @@ import net from "net";
     // Install the server script on the worker1
     await worker1.uploadFile(`./server.js`, "/golem/work/server.js");
 
+    const PORT_ON_WORKER = 5000;
+
     // Start the server process on the worker1
-    const server1 = await worker1.runAndStream(`node /golem/work/server.js`);
+    const server1 = await worker1.runAndStream(`PORT=${PORT_ON_WORKER} /usr/local/bin/node /golem/work/server.js`);
 
     server1.stdout.subscribe((data) => console.log("worker1>", data));
     server1.stderr.subscribe((data) => console.error("worker1>", data));
 
     // Create a proxy instance
-    const proxy1 = worker1.createTcpProxy(5000);
+    const proxy1 = worker1.createTcpProxy(PORT_ON_WORKER);
     proxy1.events.on("error", (error) => console.error("TcpProxy reported an error:", error));
 
     // Start listening and expose the port on your requestor machine
-    await proxy1.listen(5000);
-    console.log(`Server Proxy listen at http://localhost:5000`);
+    await proxy1.listen(5001);
+    console.log(`Server Proxy listen at http://localhost:5001`);
 
     const client = new net.Socket();
-
-    client.connect(5000, "127.0.0.1", () => {
-      console.log("Connected to proxy");
+    client.connect(5001, "localhost", () => {
+      console.log("Connected to proxy. Sending message...");
+      client.write("Hello, world!");
     });
 
     client.on("data", (data) => {
       console.log("Received:", data.toString());
     });
-
-    client.write("Hello, world!");
 
     // Wait 5 seconds before finishing work
     await new Promise((resolve) => setTimeout(resolve, 5000));

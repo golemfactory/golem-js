@@ -136,6 +136,7 @@ export class TcpProxy {
       // ERROR HANDLERS
       ws.on("error", (error) => {
         this.notifyOfError("Yagna WS encountered an error", error);
+        console.log({ error });
         teardownBridge();
       });
 
