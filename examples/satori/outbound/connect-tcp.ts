@@ -58,7 +58,6 @@ const dirName = path.dirname(fileURLToPath(import.meta.url));
     const rental = await glm.oneOf({
       order: {
         demand: {
-          subnetTag: "satori",
           workload: {
             manifest: fs.readFileSync(path.join(dirName, "manifest.json")).toString("base64"),
           },
