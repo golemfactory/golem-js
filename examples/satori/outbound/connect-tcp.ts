@@ -34,7 +34,7 @@ const dirName = path.dirname(fileURLToPath(import.meta.url));
 
 (async () => {
   const logger = pinoPrettyLogger({
-    level: "debug",
+    level: "info",
   });
 
   const glm = new GolemNetwork({

@@ -57,6 +57,9 @@ import net from "net";
     await proxy1.listen(5001);
     console.log(`Server Proxy listen at http://localhost:5001`);
 
+    // wait a moment until the server starts on the worker
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+
     const client = new net.Socket();
     client.connect(5001, "localhost", () => {
       console.log("Connected to proxy. Sending message...");
